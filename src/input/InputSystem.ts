@@ -1,4 +1,5 @@
 import type { Application } from '#core/Application';
+import { logger } from '#core/Logger';
 import { Signal } from '#core/Signal';
 import type { Seconds } from '#core/units';
 import { getPreciseTime, stopEvent } from '#core/utils';
@@ -252,6 +253,27 @@ export class InputSystem {
   /** Platform subscriptions held for the system's lifetime, undone on destroy. */
   private readonly listeners: PlatformSubscription[] = [];
 
+  /**
+   * Exceptions input listeners raised while the frame's input window is open,
+   * rethrown by {@link _finishInteractionFrame} once node-level interaction
+   * has been dispatched as well - see {@link _closeInputFrame}.
+   */
+  private readonly listenerErrors: unknown[] = [];
+  /**
+   * Open from the start of {@link preFrame} until {@link _finishInteractionFrame}.
+   * A listener error raised outside it - a focus change reported from a host
+   * event between frames, or from a later phase - belongs to no input frame
+   * and is reported at once instead of failing a frame that did nothing wrong.
+   */
+  private inputFrameOpen = false;
+  private readonly reportListenerError = (error: unknown): void => {
+    if (this.inputFrameOpen) {
+      this.listenerErrors.push(error);
+    } else {
+      this._reportImmediately(error);
+    }
+  };
+
   public readonly onCanvasFocusChange = new Signal<[focused: boolean]>();
   /**
    * Fires whenever {@link InputSystem.pointerLocked} changes, including a lock
@@ -283,7 +305,7 @@ export class InputSystem {
    * same units as a pixel-mode one.
    *
    * The values are plain numbers rather than a `Vector` on purpose: the
-   * offset is reset to zero right after dispatch, so a shared instance would
+   * offset is reset to zero as it is published, so a shared instance would
    * be stale by the time a listener that kept it read it again.
    */
   public readonly onMouseWheel = new Signal<[deltaX: number, deltaY: number]>();
@@ -732,14 +754,48 @@ export class InputSystem {
    * {@link SystemMethods.preFrame} phase, registered on `app.systems` by the
    * {@link Application} at {@link SystemOrder.CoreInput} - ahead of every other
    * core system, so this frame's snapshot is current before anything
-   * simulates. Polls the gamepad API, drains queued keyboard/pointer/wheel
-   * deltas into the channel buffer, fires the corresponding Signals, then
-   * evaluates each registered binding.
+   * simulates.
+   *
+   * Runs in two stages. First every piece of input state is brought up to
+   * date with no listener running: gamepads are polled, bindings advanced,
+   * action maps and scopes sampled. Only then are the frame's notifications
+   * published, by category - gamepad controls, bindings, keys, the wheel,
+   * then pointer phases and context-menu requests in arrival order - so every
+   * callback, whatever its kind, reads the same generation of state. Slot
+   * lifecycle signals (connect, disconnect, reassign) are the exception: they
+   * fire during the poll, as slots are assigned.
+   *
+   * A listener that throws stops neither the other listeners nor later
+   * occurrences, and nothing published is delivered again on a later frame.
+   * The frame's listener exceptions are rethrown by
+   * {@link _finishInteractionFrame}, once node-level interaction has been
+   * dispatched for the same frame: one as itself, several as an
+   * `AggregateError`, for the frame guard to report.
    *
    * `delta` is also the clock a pending long-press matures on - see
    * {@link GestureRecognizer.update}.
    */
   public preFrame(delta: Seconds): void {
+    // Everything the sample stage read; a batch a listener raises while the
+    // frame is published arrives after it and is kept for the next frame.
+    let consumed = Number.POSITIVE_INFINITY;
+
+    this.inputFrameOpen = true;
+
+    try {
+      this._sampleFrame(delta);
+      consumed = this.frameBatches.length;
+      this._publishFrame();
+    } finally {
+      // Close the frame: the ordered batch log is released here rather than
+      // where it is read - every action within the frame must see the same
+      // sequence. Even after a failure, or the next frame would replay this
+      // one's transitions.
+      this._releaseBatches(consumed);
+    }
+  }
+
+  private _sampleFrame(delta: Seconds): void {
     for (const pointer of this.pointers.values()) {
       pointer._beginFrame();
     }
@@ -748,7 +804,7 @@ export class InputSystem {
     this._recordChannelChanges(ChannelOffset.Gamepads, ChannelSize.Category);
 
     for (const binding of this.bindings) {
-      binding.update(this.channels, this.frameBatches);
+      binding._sample(this.channels, this.frameBatches);
     }
 
     // A fresh id per real frame - the guard an action shared by two attached
@@ -776,15 +832,70 @@ export class InputSystem {
     if (this.gestureRecognizer.hasPendingLongPress && !this._app.scenes.paused) {
       this.gestureRecognizer.update(delta);
     }
+  }
+
+  private _publishFrame(): void {
+    for (const pad of this._gamepads) {
+      pad._publish(this.reportListenerError);
+    }
+
+    for (const binding of this.bindings) {
+      binding._publish(this.reportListenerError);
+    }
 
     if (this.flags.value !== InputSystemFlag.None || this.journal.length > 0) {
       this.updateEvents();
     }
+  }
 
-    // Close the frame: the ordered batch log is cleared here rather than
-    // where it is read - every action within the frame must see the same
-    // sequence, and the next frame starts from an empty log.
-    this.frameBatches.length = 0;
+  /** Drop the first `consumed` batches of the log, keeping any that arrived after them in order. */
+  private _releaseBatches(consumed: number): void {
+    const batches = this.frameBatches;
+    const kept = Math.max(0, batches.length - consumed);
+
+    batches.copyWithin(0, batches.length - kept);
+    batches.length = kept;
+  }
+
+  /**
+   * Close the input window {@link preFrame} opened. With `rethrow`, what input
+   * listeners raised in it is thrown - one exception as itself, several as one
+   * `AggregateError` in the order they were raised - so the frame guard
+   * reports it once. Without, it is reported directly, because another error
+   * is already failing the frame and must not be replaced.
+   */
+  private _closeInputFrame(rethrow: boolean): void {
+    this.inputFrameOpen = false;
+
+    const errors = this.listenerErrors;
+
+    if (errors.length === 0) {
+      return;
+    }
+
+    const raised = errors.splice(0);
+
+    if (!rethrow) {
+      for (const error of raised) {
+        this._reportImmediately(error);
+      }
+
+      return;
+    }
+
+    throw raised.length === 1
+      ? raised[0]
+      : new AggregateError(raised, `[ExoJS] InputSystem: ${raised.length} input listeners threw during one frame.`);
+  }
+
+  /** Log a listener error and forward it to {@link Application.onError} without failing a frame. */
+  private _reportImmediately(error: unknown): void {
+    const normalized = error instanceof Error ? error : new Error(String(error));
+
+    logger.error('An input listener threw.', { source: 'InputSystem', error: normalized });
+    // Isolated: reporting must not throw back into the host event handler or
+    // frame stage that raised the failure.
+    this._app.onError.dispatchIsolated(() => {}, normalized);
   }
 
   public destroy(): void {
@@ -818,6 +929,8 @@ export class InputSystem {
     this.keyEvents.length = 0;
     this.frameBatches.length = 0;
     this.journal.length = 0;
+    this.listenerErrors.length = 0;
+    this.inputFrameOpen = false;
     this.pointerSlots.clear();
     this.freeSlots.length = 0;
     this.wheelOffset.destroy();
@@ -971,14 +1084,17 @@ export class InputSystem {
   }
 
   private wireGamepadEvents(pad: Gamepad): void {
+    // Isolated here as well: the pad isolates its own listeners, and this
+    // relay is one of them, so a plain dispatch would let one throwing
+    // app-wide listener silence every app-wide listener after it.
     pad.onButtonDown.add((button, value) => {
-      this.onAnyGamepadButtonDown.dispatch(pad, button, value);
+      this.onAnyGamepadButtonDown.dispatchIsolated(this.reportListenerError, pad, button, value);
     });
     pad.onButtonUp.add((button, value) => {
-      this.onAnyGamepadButtonUp.dispatch(pad, button, value);
+      this.onAnyGamepadButtonUp.dispatchIsolated(this.reportListenerError, pad, button, value);
     });
     pad.onAxisChange.add((axis, value) => {
-      this.onAnyGamepadAxisChange.dispatch(pad, axis, value);
+      this.onAnyGamepadAxisChange.dispatchIsolated(this.reportListenerError, pad, axis, value);
     });
   }
 
@@ -1400,7 +1516,9 @@ export class InputSystem {
       this.releaseAllKeyboardChannels();
     }
 
-    this.onCanvasFocusChange.dispatch(focused);
+    // Raised from inside a host event handler that still has its event to
+    // record once this returns - a throwing listener must not cost it that.
+    this.onCanvasFocusChange.dispatchIsolated(this.reportListenerError, focused);
   }
 
   private handleCanvasFocus(): void {
@@ -1509,7 +1627,7 @@ export class InputSystem {
         }
 
         this.gamepadsByBrowserIndex.set(browserIndex, pad);
-        this.onGamepadConnected.dispatch(pad);
+        this.onGamepadConnected.dispatchIsolated(this.reportListenerError, pad);
       } else {
         // The browser hands back a fresh snapshot object each poll; re-point the
         // slot at it so button/axis state doesn't freeze at connect-time values.
@@ -1537,7 +1655,7 @@ export class InputSystem {
     }
 
     for (const pad of this._gamepads) {
-      pad.update();
+      pad._sample();
     }
 
     return this;
@@ -1548,7 +1666,7 @@ export class InputSystem {
 
     for (const pad of this._gamepads) {
       if (!pad.connected) {
-        pad._bind(browserGamepad, definition);
+        pad._bind(browserGamepad, definition, this.reportListenerError);
 
         return pad;
       }
@@ -1561,8 +1679,8 @@ export class InputSystem {
     if (this.slotStrategy !== 'compact') {
       // Sticky: pad's slot becomes empty in place; fire onDisconnect
       // on that slot directly.
-      pad._unbind();
-      this.onGamepadDisconnected.dispatch(pad);
+      pad._unbind(this.reportListenerError);
+      this.onGamepadDisconnected.dispatchIsolated(this.reportListenerError, pad);
 
       return;
     }
@@ -1611,8 +1729,8 @@ export class InputSystem {
           this.gamepadsByBrowserIndex.set(browserIndex, targetPad);
         }
 
-        targetPad.onPadReassigned.dispatch(sourceSlot);
-        this.onAnyGamepadReassigned.dispatch(targetPad, sourceSlot);
+        targetPad.onPadReassigned.dispatchIsolated(this.reportListenerError, sourceSlot);
+        this.onAnyGamepadReassigned.dispatchIsolated(this.reportListenerError, targetPad, sourceSlot);
         break;
       }
     }
@@ -1621,8 +1739,8 @@ export class InputSystem {
       const emptiedSlot = this._gamepads[lastOccupiedSlot];
 
       if (emptiedSlot !== undefined) {
-        emptiedSlot._dispatchDisconnect();
-        this.onGamepadDisconnected.dispatch(emptiedSlot);
+        emptiedSlot._dispatchDisconnect(this.reportListenerError);
+        this.onGamepadDisconnected.dispatchIsolated(this.reportListenerError, emptiedSlot);
       }
     }
   }
@@ -1634,9 +1752,9 @@ export class InputSystem {
       // Shift held when Tab's handler runs and misread it as Shift+Tab.
       for (const event of this.keyEvents) {
         if (event.pressed) {
-          this.onKeyDown.dispatch(event.channel);
+          this.onKeyDown.dispatchIsolated(this.reportListenerError, event.channel);
         } else {
-          this.onKeyUp.dispatch(event.channel);
+          this.onKeyUp.dispatchIsolated(this.reportListenerError, event.channel);
         }
       }
 
@@ -1644,8 +1762,12 @@ export class InputSystem {
     }
 
     if (this.flags.popMask(InputSystemFlag.MouseWheel)) {
-      this.onMouseWheel.dispatch(this.wheelOffset.x, this.wheelOffset.y);
+      const { x, y } = this.wheelOffset;
+
+      // Spent before it is published, so a wheel event a listener raises
+      // starts the next frame's offset instead of vanishing in this reset.
       this.wheelOffset.set(0, 0);
+      this.onMouseWheel.dispatchIsolated(this.reportListenerError, x, y);
     }
 
     if (this.journal.length > 0) {
@@ -1683,22 +1805,22 @@ export class InputSystem {
       if (entry.kind === 'contextmenu') {
         // Fires regardless of `request.pointer` - see this signal's own doc
         // comment for why a missing pointer must not swallow the request.
-        this.onContextMenu.dispatch(entry.request);
+        this.onContextMenu.dispatchIsolated(this.reportListenerError, entry.request);
         continue;
       }
 
       if (entry.kind === 'pinch') {
-        this.onPinch.dispatch(entry.scale, entry.x, entry.y);
+        this.onPinch.dispatchIsolated(this.reportListenerError, entry.scale, entry.x, entry.y);
         continue;
       }
 
       if (entry.kind === 'rotate') {
-        this.onRotate.dispatch(entry.angleDelta, entry.x, entry.y);
+        this.onRotate.dispatchIsolated(this.reportListenerError, entry.angleDelta, entry.x, entry.y);
         continue;
       }
 
       if (entry.kind === 'longpress') {
-        this.onLongPress.dispatch(entry.pointer);
+        this.onLongPress.dispatchIsolated(this.reportListenerError, entry.pointer);
         continue;
       }
 
@@ -1706,38 +1828,38 @@ export class InputSystem {
 
       switch (entry.flag) {
         case PointerStateFlag.Over:
-          this.onPointerEnter.dispatch(pointer, x, y);
+          this.onPointerEnter.dispatchIsolated(this.reportListenerError, pointer, x, y);
           break;
 
         case PointerStateFlag.Down:
-          this.onPointerDown.dispatch(pointer, x, y);
+          this.onPointerDown.dispatchIsolated(this.reportListenerError, pointer, x, y);
           break;
 
         case PointerStateFlag.Move:
-          this.onPointerMove.dispatch(pointer, x, y);
+          this.onPointerMove.dispatchIsolated(this.reportListenerError, pointer, x, y);
           break;
 
         case PointerStateFlag.Up:
-          this.onPointerUp.dispatch(pointer, x, y);
+          this.onPointerUp.dispatchIsolated(this.reportListenerError, pointer, x, y);
 
           // A press that travelled far and came back is a swipe, not a tap -
           // hence THIS press's own accumulated maximum, not the release distance.
           if (entry.closedPress) {
             if (entry.maxDistance < this.pointerDistanceThreshold) {
-              this.onPointerTap.dispatch(pointer, x, y);
+              this.onPointerTap.dispatchIsolated(this.reportListenerError, pointer, x, y);
             } else {
-              this.onPointerSwipe.dispatch(pointer, x, y);
+              this.onPointerSwipe.dispatchIsolated(this.reportListenerError, pointer, x, y);
             }
           }
 
           break;
 
         case PointerStateFlag.Cancel:
-          this.onPointerCancel.dispatch(pointer, x, y);
+          this.onPointerCancel.dispatchIsolated(this.reportListenerError, pointer, x, y);
           break;
 
         case PointerStateFlag.Leave:
-          this.onPointerLeave.dispatch(pointer, x, y);
+          this.onPointerLeave.dispatchIsolated(this.reportListenerError, pointer, x, y);
           break;
 
         default:
@@ -1778,9 +1900,15 @@ export class InputSystem {
    * a fresh, non-terminal `Pointer` for that same id; that new object must
    * never be torn down here.
    *
+   * Also closes the frame's input window: what input listeners raised during
+   * {@link preFrame} is rethrown here, after the node-level events of the same
+   * frame were dispatched rather than skipped. `dispatchCompleted: false`
+   * means the node-level dispatch is already failing the frame; the listener
+   * errors are then reported directly instead of replacing that failure.
+   *
    * @internal
    */
-  public _finishInteractionFrame(): void {
+  public _finishInteractionFrame(dispatchCompleted = true): void {
     for (const pointer of this.pendingPointerRetirements) {
       const stillTerminal = pointer.currentState === PointerState.OutsideCanvas || pointer.currentState === PointerState.Cancelled;
 
@@ -1790,5 +1918,6 @@ export class InputSystem {
     }
 
     this.pendingPointerRetirements.clear();
+    this._closeInputFrame(dispatchCompleted);
   }
 }

@@ -583,10 +583,11 @@ export class InteractionSystem {
    *
    * Gated by the active scope's {@link SceneState} (only `Active` dispatches
    * - pause does not gate interaction; `Preparing`/`Suspended`/`Destroying`/
-   * `Destroyed`/no-scene do not dispatch) and by the director's transition
-   * gate - gated frames discard the pending queue rather than deferring it,
-   * so a pointer-down queued before a transition never replays once it
-   * clears. A gated frame still fails closed the same way a throwing handler
+   * `Destroyed`/no-scene do not dispatch), by the director's transition
+   * gate, and by a stop earlier in the same frame, whose scene is still
+   * registered until its teardown runs - gated frames discard the pending
+   * queue rather than deferring it, so a pointer-down queued before a
+   * transition never replays once it clears. A gated frame still fails closed the same way a throwing handler
    * does (see {@link _drainJournal}): every pointer that queued an entry this
    * flush has its drag ended, capture released, and press/hover state
    * forgotten, so a press that started right before the gate opened cannot
@@ -597,26 +598,15 @@ export class InteractionSystem {
       return;
     }
 
-    const state = this._app.scenes.state;
-    const gated = (state !== null && state !== SceneState.Active) || this._app.scenes._transitionGateOpen;
+    const { state, _transitionGateOpen: transitioning, _frameSceneEnded: sceneEnded } = this._app.scenes;
+    const gated = (state !== null && state !== SceneState.Active) || transitioning || sceneEnded;
     const hoverDirty = this._hoverDirty;
 
     this._dirty = false;
     this._hoverDirty = false;
 
     if (gated) {
-      const touchedIds = new Set<number>();
-
-      for (const entry of this._journal) {
-        touchedIds.add(entry.pointer.id);
-      }
-
-      this._journal.length = 0;
-
-      for (const id of touchedIds) {
-        this._teardownPointerState(id);
-      }
-
+      this._discardJournal(new Set<number>());
       this._updateCursor();
 
       return;
@@ -654,13 +644,18 @@ export class InteractionSystem {
    * drained is destroying them safe - and it must still happen if a node
    * handler threw. Keeping both halves inside this one phase is what lets the
    * pair be a single system: `order` alone could not express "B runs after A
-   * even when A throws".
+   * even when A throws". The same step closes the input frame, which is why
+   * an input listener's exception surfaces only after this frame's node-level
+   * events were dispatched instead of skipping them.
    */
   public preFrame(_delta: Seconds): void {
+    let completed = false;
+
     try {
       this._dispatchFrame();
+      completed = true;
     } finally {
-      this._app.input._finishInteractionFrame();
+      this._app.input._finishInteractionFrame(completed);
     }
   }
 
@@ -1037,15 +1032,7 @@ export class InteractionSystem {
       // A handler may have enqueued additional interaction entries
       // re-entrantly before throwing. Include those ids in the same failed
       // batch cleanup before discarding the journal.
-      for (const entry of this._journal) {
-        touchedIds.add(entry.pointer.id);
-      }
-
-      this._journal.length = 0;
-
-      for (const id of touchedIds) {
-        this._teardownPointerState(id);
-      }
+      this._discardJournal(touchedIds);
 
       // Keep the host cursor consistent with the now-cleared capture/hover
       // state, while preserving the original user-handler exception.
@@ -1056,6 +1043,22 @@ export class InteractionSystem {
       }
 
       throw error;
+    }
+  }
+
+  /**
+   * Fail closed: drop every queued entry and forget the drag, capture, press
+   * and hover state of each pointer in `touchedIds` or in the journal.
+   */
+  private _discardJournal(touchedIds: Set<number>): void {
+    for (const entry of this._journal) {
+      touchedIds.add(entry.pointer.id);
+    }
+
+    this._journal.length = 0;
+
+    for (const id of touchedIds) {
+      this._teardownPointerState(id);
     }
   }
 

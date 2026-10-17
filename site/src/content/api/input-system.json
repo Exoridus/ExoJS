@@ -916,7 +916,7 @@
             }
           ],
           "returnType": "void",
-          "description": "SystemMethods.preFrame phase, registered on app.systems by the Application at SystemOrder.CoreInput - ahead of every other core system, so this frame's snapshot is current before anything simulates. Polls the gamepad API, drains queued keyboard/pointer/wheel deltas into the channel buffer, fires the corresponding Signals, then evaluates each registered binding. delta is also the clock a pending long-press matures on - see GestureRecognizer.update."
+          "description": "SystemMethods.preFrame phase, registered on app.systems by the Application at SystemOrder.CoreInput - ahead of every other core system, so this frame's snapshot is current before anything simulates. Runs in two stages. First every piece of input state is brought up to date with no listener running: gamepads are polled, bindings advanced, action maps and scopes sampled. Only then are the frame's notifications published, by category - gamepad controls, bindings, keys, the wheel, then pointer phases and context-menu requests in arrival order - so every callback, whatever its kind, reads the same generation of state. Slot lifecycle signals (connect, disconnect, reassign) are the exception: they fire during the poll, as slots are assigned. A listener that throws stops neither the other listeners nor later occurrences, and nothing published is delivered again on a later frame. The frame's listener exceptions are rethrown by _finishInteractionFrame, once node-level interaction has been dispatched for the same frame: one as itself, several as an AggregateError, for the frame guard to report. delta is also the clock a pending long-press matures on - see GestureRecognizer.update."
         },
         {
           "name": "unlockPointer",
@@ -1768,7 +1768,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires once per frame in which the wheel moved, with the accumulated offset for that frame. deltaY is the usual scroll axis; deltaX carries horizontal wheels and trackpad swipes. Both are normalized out of the event's deltaMode, so a line- or page-mode wheel arrives in the same units as a pixel-mode one. The values are plain numbers rather than a Vector on purpose: the offset is reset to zero right after dispatch, so a shared instance would be stale by the time a listener that kept it read it again."
+          "description": "Fires once per frame in which the wheel moved, with the accumulated offset for that frame. deltaY is the usual scroll axis; deltaX carries horizontal wheels and trackpad swipes. Both are normalized out of the event's deltaMode, so a line- or page-mode wheel arrives in the same units as a pixel-mode one. The values are plain numbers rather than a Vector on purpose: the offset is reset to zero as it is published, so a shared instance would be stale by the time a listener that kept it read it again."
         },
         {
           "name": "onPinch",
