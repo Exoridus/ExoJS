@@ -191,6 +191,15 @@ export class BeatDetector {
   public readonly onTempoChange = new Signal<[number, number]>();
   public readonly onDownbeat = new Signal<[BeatInfo]>();
   public readonly onBarStart = new Signal<[BarInfo]>();
+  /**
+   * Dispatched with the first entry of each new {@link lookahead} schedule.
+   *
+   * The detector computes a schedule once per tracked beat, so a listener hears
+   * about every upcoming beat once, not on every state update. A newer schedule
+   * supersedes the times an earlier one predicted for the same beats, and one
+   * replaced before the main thread received it is skipped. Nothing is
+   * dispatched while the detector coasts through silence.
+   */
   public readonly onBeatPredicted = new Signal<[UpcomingBeat]>();
 
   // ---- Options ----
@@ -225,6 +234,7 @@ export class BeatDetector {
   private _timeSignature: TimeSignature = { numerator: 4, denominator: 4 };
   private _nextDownbeatTime = 0;
   private _lookahead: readonly UpcomingBeat[] = Object.freeze([]);
+  private _lookaheadRevision = 0;
 
   /**
    * Half-life in seconds for the {@link pulse} envelope. Mutable; default 0.15.
@@ -402,6 +412,11 @@ export class BeatDetector {
     return this._nextDownbeatTime;
   }
 
+  /**
+   * The next eight beats, extrapolated from the last tracked beat at the current
+   * tempo and numbered from the bar position that follows it. Predictions, not
+   * analysed audio: a tempo change or break is not anticipated.
+   */
   public get lookahead(): readonly UpcomingBeat[] {
     return this._lookahead;
   }
@@ -573,9 +588,11 @@ export class BeatDetector {
 
         {
           const lookahead = (message.lookahead as UpcomingBeat[]) ?? [];
+          const revision = (message.lookaheadRevision as number) ?? 0;
           this._lookahead = Object.freeze(lookahead);
 
-          if (lookahead.length > 0) {
+          if (revision !== this._lookaheadRevision && lookahead.length > 0) {
+            this._lookaheadRevision = revision;
             this.onBeatPredicted.dispatch(lookahead[0]!);
           }
         }
