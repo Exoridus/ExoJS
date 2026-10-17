@@ -689,14 +689,13 @@ export class Sound implements Playable {
    * Index of the voice to stop when the pool is at capacity, or `-1` when the
    * pool is empty.
    *
-   * Paused voices are considered only as a last resort. A paused voice is not a
-   * stale one - it is frozen exactly where a scene pause or retention
-   * suspension left it, waiting for `resume()` - but its pool bookkeeping
-   * (`startedAt`) keeps aging against the still-running context clock, so both
-   * strategies would otherwise single it out: FIFO sees the oldest entry, LRU
-   * the one with the least time left. Evicting it stops it for good, and
-   * {@link SceneAudio.restore} then passes over it (it is `ended`, not
-   * `paused`), so the ambience never comes back.
+   * Silent voices - paused by their caller or held by a paused or retained
+   * scene - are considered only as a last resort. Such a voice is not a stale
+   * one - it is frozen exactly where it stopped, waiting to play on - but its
+   * pool bookkeeping (`startedAt`) keeps aging against the still-running
+   * context clock, so both strategies would otherwise single it out: FIFO sees
+   * the oldest entry, LRU the one with the least time left. Evicting it stops
+   * it for good, so the ambience never comes back.
    */
   private _pickEvictionVictim(): number {
     const unpaused = this._pickVictim(false);
@@ -725,7 +724,7 @@ export class Sound implements Playable {
     for (let i = 0; i < this._activeVoices.length; i++) {
       const candidate = this._activeVoices[i];
 
-      if (candidate !== undefined && (includePaused || !candidate.voice.paused)) {
+      if (candidate !== undefined && (includePaused || !candidate.voice._isHalted)) {
         return i;
       }
     }
@@ -741,7 +740,7 @@ export class Sound implements Playable {
     for (let i = 0; i < this._activeVoices.length; i++) {
       const src = this._activeVoices[i];
 
-      if (src === undefined || (!includePaused && src.voice.paused)) {
+      if (src === undefined || (!includePaused && src.voice._isHalted)) {
         continue;
       }
 

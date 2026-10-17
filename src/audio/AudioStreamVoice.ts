@@ -103,21 +103,42 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
       return;
     }
 
+    this._pauseRequested = true;
     this._clearUnlockHandler();
     this._element.pause();
   }
 
-  /** While audio is still locked, defers the start to the unlock gesture again. */
+  /**
+   * While audio is still locked, defers the start to the unlock gesture again.
+   * While the voice's owner holds it (a paused scene), playback starts once
+   * the hold is released.
+   */
   public resume(): void {
-    if (this._ended || this._unlockHandler !== null) {
+    if (this._ended) {
+      return;
+    }
+
+    this._pauseRequested = false;
+
+    if (this._held || this._unlockHandler !== null) {
       return;
     }
 
     this._startPlayback();
   }
 
+  /** While held, the caller's own pause; otherwise whether the element is paused, which includes a start still waiting for the autoplay unlock. */
   public get paused(): boolean {
-    return this._element.paused;
+    return this._held ? this._pauseRequested : this._element.paused;
+  }
+
+  protected override _applyHold(): void {
+    if (this._held) {
+      this._clearUnlockHandler();
+      this._element.pause();
+    } else if (!this._pauseRequested) {
+      this._startPlayback();
+    }
   }
 
   // -------------------------------------------------------------------------

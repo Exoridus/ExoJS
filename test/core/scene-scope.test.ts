@@ -465,18 +465,15 @@ describe('SceneScope', () => {
 
       const inputsSuspendSpy = vi.spyOn(scope.inputs, 'suspend');
       const interactionSuspendSpy = vi.spyOn(scope.interaction, 'suspend');
-      const tweensSuspendSpy = vi.spyOn(scope.tweens, 'suspend');
-      const audioSuspendSpy = vi.spyOn(scope.audio, 'suspend');
-      const animationsSuspendSpy = vi.spyOn(scope.animations, 'suspend');
+      const audioSyncSpy = vi.spyOn(scope.audio, '_sync');
 
       expect(scope.suspend()).toBe(true);
 
+      // Tweens and animations read the state live; audio has to be told.
       expect(scope.state).toBe(SceneState.Suspended);
       expect(inputsSuspendSpy).toHaveBeenCalledTimes(1);
       expect(interactionSuspendSpy).toHaveBeenCalledTimes(1);
-      expect(tweensSuspendSpy).toHaveBeenCalledTimes(1);
-      expect(audioSuspendSpy).toHaveBeenCalledTimes(1);
-      expect(animationsSuspendSpy).toHaveBeenCalledTimes(1);
+      expect(audioSyncSpy).toHaveBeenCalledTimes(1);
     });
 
     test('suspend() while paused preserves the paused flag across suspend/restore', async () => {
@@ -542,16 +539,14 @@ describe('SceneScope', () => {
 
       const inputsResumeSpy = vi.spyOn(scope.inputs, 'resume');
       const interactionResumeSpy = vi.spyOn(scope.interaction, 'resume');
-      const tweensRestoreSpy = vi.spyOn(scope.tweens, 'restore');
-      const audioRestoreSpy = vi.spyOn(scope.audio, 'restore');
+      const audioSyncSpy = vi.spyOn(scope.audio, '_sync');
 
       expect(scope.restore()).toBe(true);
 
       expect(scope.state).toBe(SceneState.Active);
       expect(inputsResumeSpy).toHaveBeenCalledTimes(1);
       expect(interactionResumeSpy).toHaveBeenCalledTimes(1);
-      expect(tweensRestoreSpy).toHaveBeenCalledTimes(1);
-      expect(audioRestoreSpy).toHaveBeenCalledTimes(1);
+      expect(audioSyncSpy).toHaveBeenCalledTimes(1);
     });
 
     test('restore() is a no-op outside Suspended', async () => {
@@ -651,38 +646,20 @@ describe('SceneScope', () => {
       expect(onPause).toHaveBeenCalledTimes(1);
     });
 
-    test('pause() calls tweens.pause(), audio.pause() and animations.pause()', async () => {
+    test('pause() and resume() each re-apply the audio holds after the flag flips', async () => {
       const app = createAppStub();
       const scene = new Scene();
       const scope = await activate(app, scene);
+      const pausedAtSync: boolean[] = [];
 
-      const tweensPauseSpy = vi.spyOn(scope.tweens, 'pause');
-      const audioPauseSpy = vi.spyOn(scope.audio, 'pause');
-      const animationsPauseSpy = vi.spyOn(scope.animations, 'pause');
-
-      scope.pause();
-
-      expect(tweensPauseSpy).toHaveBeenCalledTimes(1);
-      expect(audioPauseSpy).toHaveBeenCalledTimes(1);
-      expect(animationsPauseSpy).toHaveBeenCalledTimes(1);
-    });
-
-    test('resume() calls tweens.resume(), audio.resume() and animations.resume()', async () => {
-      const app = createAppStub();
-      const scene = new Scene();
-      const scope = await activate(app, scene);
+      vi.spyOn(scope.audio, '_sync').mockImplementation(() => {
+        pausedAtSync.push(scope.paused);
+      });
 
       scope.pause();
-
-      const tweensResumeSpy = vi.spyOn(scope.tweens, 'resume');
-      const audioResumeSpy = vi.spyOn(scope.audio, 'resume');
-      const animationsResumeSpy = vi.spyOn(scope.animations, 'resume');
-
       scope.resume();
 
-      expect(tweensResumeSpy).toHaveBeenCalledTimes(1);
-      expect(audioResumeSpy).toHaveBeenCalledTimes(1);
-      expect(animationsResumeSpy).toHaveBeenCalledTimes(1);
+      expect(pausedAtSync).toEqual([true, false]);
     });
 
     test('pause() is a no-op outside Active, and a no-op when already paused', async () => {

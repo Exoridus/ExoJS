@@ -82,10 +82,25 @@ export class SceneScope<Data = unknown> {
       () => this._state,
       () => this._paused,
     );
-    this.tweens = new SceneTweens(app, () => this._state);
-    this.coroutines = new SceneCoroutines(app, () => this._state);
-    this.audio = new SceneAudio(app, () => this._state);
-    this.animations = new SceneAnimations();
+    this.tweens = new SceneTweens(
+      app,
+      () => this._state,
+      () => this._paused,
+    );
+    this.coroutines = new SceneCoroutines(
+      app,
+      () => this._state,
+      () => this._paused,
+    );
+    this.audio = new SceneAudio(
+      app,
+      () => this._state,
+      () => this._paused,
+    );
+    this.animations = new SceneAnimations(
+      () => this._state,
+      () => this._paused,
+    );
 
     scene._attach(app, this);
 
@@ -187,8 +202,9 @@ export class SceneScope<Data = unknown> {
     });
     this._guard(errors, () => this.interaction.resume());
     this._guard(errors, () => this.tweens.activate());
-    this._guard(errors, () => this.coroutines.activate());
+    this._guard(errors, () => this.coroutines._sync());
     this._guard(errors, () => this.audio._flushPending());
+    this._guard(errors, () => this.audio._sync());
     this._guard(errors, () => this._components?.setLive(true));
     this._guard(errors, () => this.scene.onActivate.dispatchIsolated(error => this._reportError(error)));
 
@@ -198,10 +214,9 @@ export class SceneScope<Data = unknown> {
   }
 
   /**
-   * Pause this scope: freezes `fixedUpdate`/`update` while `Active`, applies
-   * the `when` pause policy to tweens/audio/animations (see
-   * {@link SceneTweens.pause}/{@link SceneAudio.pause}/
-   * {@link SceneAnimations.pause}), and dispatches {@link Scene.onPause}. Every
+   * Pause this scope: freezes `fixedUpdate`/`update` while `Active`, brings
+   * held audio in line with the `when` policies (tweens and animations read
+   * the flag live), and dispatches {@link Scene.onPause}. Every
    * stage is individually guarded and a throwing listener is reported through
    * the application error pipeline rather than thrown, so the pause policy is
    * never left half-applied. Returns whether the flag actually changed.
@@ -215,10 +230,8 @@ export class SceneScope<Data = unknown> {
 
     const errors: unknown[] = [];
 
-    this._guard(errors, () => this.tweens.pause());
-    this._guard(errors, () => this.coroutines.pause());
-    this._guard(errors, () => this.audio.pause());
-    this._guard(errors, () => this.animations.pause());
+    this._guard(errors, () => this.coroutines._sync());
+    this._guard(errors, () => this.audio._sync());
     this._guard(errors, () => this.interaction.resume());
     this._guard(errors, () => this.scene.onPause.dispatchIsolated(error => this._reportError(error)));
 
@@ -229,8 +242,7 @@ export class SceneScope<Data = unknown> {
 
   /**
    * Resume this scope: undoes {@link SceneScope.pause} - including the
-   * tweens/audio/animations `when` policy (see {@link SceneTweens.resume}/
-   * {@link SceneAudio.resume}/{@link SceneAnimations.resume}) - and dispatches
+   * `when` policies - and dispatches
    * {@link Scene.onResume}. Same error-guarding contract as
    * {@link SceneScope.pause}. Returns whether the flag actually changed.
    */
@@ -243,10 +255,8 @@ export class SceneScope<Data = unknown> {
 
     const errors: unknown[] = [];
 
-    this._guard(errors, () => this.tweens.resume());
-    this._guard(errors, () => this.coroutines.resume());
-    this._guard(errors, () => this.audio.resume());
-    this._guard(errors, () => this.animations.resume());
+    this._guard(errors, () => this.coroutines._sync());
+    this._guard(errors, () => this.audio._sync());
     this._guard(errors, () => this.interaction.resume());
     this._guard(errors, () => this.scene.onResume.dispatchIsolated(error => this._reportError(error)));
 
@@ -287,10 +297,8 @@ export class SceneScope<Data = unknown> {
         this._detachAutoRoots();
       }
     });
-    this._guard(errors, () => this.tweens.suspend());
-    this._guard(errors, () => this.coroutines.suspend());
-    this._guard(errors, () => this.audio.suspend());
-    this._guard(errors, () => this.animations.suspend());
+    this._guard(errors, () => this.coroutines._sync());
+    this._guard(errors, () => this.audio._sync());
     this._guard(errors, () => this.scene.onSuspend.dispatchIsolated(error => this._reportError(error)));
 
     this._reportErrors(errors);
@@ -323,11 +331,9 @@ export class SceneScope<Data = unknown> {
         this._attachAutoRoots();
       }
     });
-    this._guard(errors, () => this.tweens.restore());
-    this._guard(errors, () => this.coroutines.restore());
-    this._guard(errors, () => this.audio.restore());
-    this._guard(errors, () => this.animations.restore());
+    this._guard(errors, () => this.coroutines._sync());
     this._guard(errors, () => this.audio._flushPending());
+    this._guard(errors, () => this.audio._sync());
     this._guard(errors, () => this._components?.setLive(true));
     this._guard(errors, () => this.scene.onActivate.dispatchIsolated(error => this._reportError(error)));
 

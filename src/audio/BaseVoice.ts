@@ -84,6 +84,10 @@ export abstract class BaseVoice implements Voice {
   protected _bus: AudioBus;
   protected _volume: number;
   protected _ended = false;
+  /** Owner-imposed silence - see {@link BaseVoice._setHeld}. */
+  protected _held = false;
+  /** The caller's own pause, kept apart from {@link BaseVoice._held}. */
+  protected _pauseRequested = false;
   protected _stopTimer: ReturnType<typeof setTimeout> | null = null;
 
   public readonly onEnd = new Signal();
@@ -139,6 +143,36 @@ export abstract class BaseVoice implements Voice {
     // covered regardless of how it was constructed - `open()`, sprite playback
     // and pooled replays all go through this constructor. `_finish` deregisters.
     this._system._registerVoice(this);
+  }
+
+  // -------------------------------------------------------------------------
+  // Hold
+  // -------------------------------------------------------------------------
+
+  /**
+   * Silence (`true`) or release (`false`) the voice on behalf of an owner
+   * such as a scene, independently of the caller's own pause: a held voice
+   * renders nothing and advances no playhead, while `paused` keeps reporting
+   * what the caller last asked for, and releasing it plays only if the caller
+   * has not paused it. A voice that cannot pause ignores this. No-op once the
+   * voice has ended.
+   * @internal
+   */
+  public _setHeld(held: boolean): void {
+    if (this._ended || this._held === held) {
+      return;
+    }
+
+    this._held = held;
+    this._applyHold();
+  }
+
+  /**
+   * Bring a pausable voice's actual output in line with `_held` and the caller's pause.
+   * @internal
+   */
+  protected _applyHold(): void {
+    // A voice that cannot pause has nothing it could hold.
   }
 
   // -------------------------------------------------------------------------
