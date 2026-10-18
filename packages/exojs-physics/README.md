@@ -20,7 +20,7 @@ import { BoxShape, Collider, PhysicsBody, PhysicsWorld } from '@codexo/exojs-phy
 
 export class GameScene extends Scene {
   override init(): void {
-    const world = new PhysicsWorld({ gravity: { x: 0, y: 980 } });
+    const world = new PhysicsWorld({ fixedDelta: this.app.fixedTimeStep, gravity: { x: 0, y: 980 } });
 
     this.systems.add(world, { order: SystemOrder.Physics });
     world.add(
@@ -41,7 +41,7 @@ export class GameScene extends Scene {
 }
 ```
 
-The scene registry drives and destroys this world. The snippet creates simulation only; bodies do not draw themselves. Use `world.attach(node, definition)` or `world.bind(body, node)` to connect visible nodes, and render them from the scene's `draw` hook. The [Physics guide](https://exoridus.github.io/ExoJS/en/guide/physics/physics-basics/) supplies a complete, asset-free falling-box application.
+The scene registry drives and destroys this world: it steps once per application fixed step, after the scene's own `fixedUpdate` and its behaviours, so a command they issue is applied by that same step. A hosted world simulates its own `fixedDelta` per step, so it is built with `app.fixedTimeStep`; a world whose `fixedDelta` differs from the host step throws on its first step instead of running too fast or too slow. The snippet creates simulation only; bodies do not draw themselves. Use `world.attach(node, definition)` or `world.bind(body, node)` to connect visible nodes and add those nodes to the scene, which renders them with the rest of its root. The [Physics guide](https://exoridus.github.io/ExoJS/en/guide/physics/physics-basics/) supplies a complete, asset-free falling-box application.
 
 ## Bodies owned by nodes
 
@@ -80,7 +80,7 @@ class Drift extends BehaviorComponent {
 
 export class RoomScene extends Scene {
   override init(): void {
-    const world = new PhysicsWorld();
+    const world = new PhysicsWorld({ fixedDelta: this.app.fixedTimeStep });
     const hero = new Container();
     const physics = hero.addComponent(new PhysicsBodyComponent(world, { type: 'kinematic', colliders: [{ shape: new CircleShape(16) }] }));
     const movement = hero.addComponent(new KinematicMovementComponent(physics, { maxSpeed: 240 }));
@@ -114,31 +114,23 @@ const controls = new ActionMap({
 });
 
 class Controls extends BehaviorComponent {
-  private jumpQueued = false;
-
   public constructor(private readonly character: CharacterMovementComponent) {
     super();
-  }
-
-  // Presses are per frame, fixed steps are not: latch here, act in fixedUpdate.
-  public override update(): void {
-    this.jumpQueued ||= controls.jump.pressed;
   }
 
   public override fixedUpdate(): void {
     this.character.move(controls.walk.value);
 
-    if (this.jumpQueued && this.character.grounded) {
+    // `tick` hands each press to exactly one fixed step, however many steps a frame runs.
+    if (controls.jump.tick.pressed && this.character.grounded) {
       this.character.launch({ x: 0, y: -520 });
     }
-
-    this.jumpQueued = false;
   }
 }
 
 export class LevelScene extends Scene {
   override init(): void {
-    const world = new PhysicsWorld();
+    const world = new PhysicsWorld({ fixedDelta: this.app.fixedTimeStep });
     const hero = new Container();
     const physics = hero.addComponent(
       new PhysicsBodyComponent(world, { type: 'kinematic', colliders: [{ shape: new CapsuleShape(0, -12, 0, 12, 8) }] }),
@@ -156,7 +148,9 @@ export class LevelScene extends Scene {
 
 ## Important boundaries
 
-Choose one stepping clock. A world registered in `scene.systems` is stepped by the host; do not also call `step()`. An independently hosted world can use `step(frameDeltaSeconds)` and its own accumulator.
+Choose one stepping clock. A world registered in `scene.systems` is stepped by the host, once per fixed step, and needs `fixedDelta: app.fixedTimeStep`; do not also call `step()`, which development builds report. A world that is not registered can use `step(frameDeltaSeconds)` and its own accumulator, at any rate. A world registered in `app.systems` instead steps before every scene's fixed-step code and keeps stepping while the scene is paused: an advanced setup, not a substitute for the scene-owned world.
+
+An interpolating hosted world reads its blend factor from the host: `new PhysicsWorld({ fixedDelta: app.fixedTimeStep, interpolation: true, frameAlphaSource: () => app.frameAlpha })`. A world stepped by hand defaults to its own accumulator.
 
 Physics angles use radians and clockwise-positive screen rotation. Scene-node rotation uses degrees with the opposite screen sign; the built-in binding performs the conversion. Interpolation affects bound-node presentation, not the number of collision steps.
 

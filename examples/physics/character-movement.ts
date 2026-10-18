@@ -70,7 +70,6 @@ class Shuttle extends BehaviorComponent {
 /** The game's movement rules on top of the engine's physical movement. */
 class PlayerControls extends BehaviorComponent {
   public airJumpsLeft = AIR_JUMPS;
-  private jumpQueued = false;
   private dropUntilBelow: number | null = null;
 
   public constructor(
@@ -83,23 +82,16 @@ class PlayerControls extends BehaviorComponent {
     super();
   }
 
-  // Button edges belong to frames and fixed steps can run zero or several
-  // times per frame, so the press is latched here and consumed below.
-  public override update(): void {
-    if (this.jump.pressed) {
-      this.jumpQueued = true;
-    }
+  // Fixed steps run zero or several times per frame; an action's `tick` view
+  // hands each press to exactly one of them.
+  public override fixedUpdate(): void {
+    const character = this.character;
+    const platform = character.groundCollider;
 
-    const platform = this.character.groundCollider;
-
-    if (this.drop.pressed && platform?.filter.category === ONE_WAY) {
+    if (this.drop.tick.pressed && platform?.filter.category === ONE_WAY) {
       this.collider.filter.mask &= ~ONE_WAY;
       this.dropUntilBelow = platform.aabb.maxY;
     }
-  }
-
-  public override fixedUpdate(): void {
-    const character = this.character;
 
     character.move(this.walk.value);
 
@@ -107,9 +99,7 @@ class PlayerControls extends BehaviorComponent {
       this.airJumpsLeft = AIR_JUMPS;
     }
 
-    if (this.jumpQueued) {
-      this.jumpQueued = false;
-
+    if (this.jump.tick.pressed) {
       if (character.grounded) {
         character.launch({ x: 0, y: -JUMP_SPEED });
       } else if (this.airJumpsLeft > 0) {
@@ -127,7 +117,7 @@ class PlayerControls extends BehaviorComponent {
 }
 
 class CharacterMovementScene extends Scene {
-  private readonly world = new PhysicsWorld();
+  private world!: PhysicsWorld;
   private readonly input = new ActionMap({
     walk: new AxisAction([
       { negative: Keyboard.A, positive: Keyboard.D },
@@ -143,7 +133,7 @@ class CharacterMovementScene extends Scene {
   private hud!: ReturnType<typeof mountControls>;
 
   override init(): void {
-    this.systems.add(this.world, { order: SystemOrder.Physics });
+    this.world = this.systems.add(new PhysicsWorld({ fixedDelta: this.app.fixedTimeStep }), { order: SystemOrder.Physics });
     this.inputs.attach(this.input);
 
     this.buildLevel();

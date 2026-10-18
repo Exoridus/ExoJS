@@ -70,7 +70,6 @@ class PlayerControls extends BehaviorComponent {
   jump;
   drop;
   airJumpsLeft = AIR_JUMPS;
-  jumpQueued = false;
   dropUntilBelow = null;
   constructor(character, collider, walk, jump, drop) {
     super();
@@ -80,26 +79,20 @@ class PlayerControls extends BehaviorComponent {
     this.jump = jump;
     this.drop = drop;
   }
-  // Button edges belong to frames and fixed steps can run zero or several
-  // times per frame, so the press is latched here and consumed below.
-  update() {
-    if (this.jump.pressed) {
-      this.jumpQueued = true;
-    }
-    const platform = this.character.groundCollider;
-    if (this.drop.pressed && platform?.filter.category === ONE_WAY) {
+  // Fixed steps run zero or several times per frame; an action's `tick` view
+  // hands each press to exactly one of them.
+  fixedUpdate() {
+    const character = this.character;
+    const platform = character.groundCollider;
+    if (this.drop.tick.pressed && platform?.filter.category === ONE_WAY) {
       this.collider.filter.mask &= ~ONE_WAY;
       this.dropUntilBelow = platform.aabb.maxY;
     }
-  }
-  fixedUpdate() {
-    const character = this.character;
     character.move(this.walk.value);
     if (character.grounded) {
       this.airJumpsLeft = AIR_JUMPS;
     }
-    if (this.jumpQueued) {
-      this.jumpQueued = false;
+    if (this.jump.tick.pressed) {
       if (character.grounded) {
         character.launch({ x: 0, y: -JUMP_SPEED });
       } else if (this.airJumpsLeft > 0) {
@@ -115,7 +108,7 @@ class PlayerControls extends BehaviorComponent {
   }
 }
 class CharacterMovementScene extends Scene {
-  world = new PhysicsWorld();
+  world;
   input = new ActionMap({
     walk: new AxisAction([
       { negative: Keyboard.A, positive: Keyboard.D },
@@ -130,7 +123,7 @@ class CharacterMovementScene extends Scene {
   debug;
   hud;
   init() {
-    this.systems.add(this.world, { order: SystemOrder.Physics });
+    this.world = this.systems.add(new PhysicsWorld({ fixedDelta: this.app.fixedTimeStep }), { order: SystemOrder.Physics });
     this.inputs.attach(this.input);
     this.buildLevel();
     const hero = new Container();

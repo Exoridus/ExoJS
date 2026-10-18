@@ -188,7 +188,13 @@ export interface StepController {
 export interface PhysicsWorldOptions {
   /** Gravity in px/s² (+Y down). Integrated each sub-step. Default `(0, 0)`. */
   gravity?: Readonly<PointLike>;
-  /** Fixed timestep in seconds. Default `1 / 60`. */
+  /**
+   * Fixed timestep in seconds. Default `1 / 60`.
+   *
+   * A world registered as a system steps once per host fixed step and must
+   * use the host's duration - pass `app.fixedTimeStep`. A mismatch throws on
+   * the first step; see {@link PhysicsWorld.fixedUpdate}.
+   */
   fixedDelta?: number;
   /** Maximum fixed steps per `step` call (spiral-of-death guard). Default `8`. */
   maxSubSteps?: number;
@@ -216,18 +222,18 @@ export interface PhysicsWorldOptions {
    * to the latest one, which smooths motion when the fixed rate is below the
    * frame rate. Default `false`.
    *
-   * The blend factor comes from {@link frameAlphaSource}; a world driven as a
-   * `System` has to supply one.
+   * The blend factor comes from {@link frameAlphaSource}; a world registered
+   * as a system has to supply one.
    */
   interpolation?: boolean;
   /**
    * Where interpolated bindings read their blend factor, in `[0, 1)`.
    *
    * Defaults to this world's own accumulator - correct when the world is driven
-   * with {@link PhysicsWorld.step}, which is what advances it. A world driven as
-   * a `System` goes through {@link PhysicsWorld.fixedUpdate} and bypasses that
-   * accumulator entirely, so the host owns the fraction: pass
-   * `() => app.frameAlpha`.
+   * with {@link PhysicsWorld.step}, which is what advances it. A world
+   * registered as a system is stepped by its host and has no fraction of its
+   * own: pass the host's, `() => app.frameAlpha`. Without one, a hosted world
+   * presents the latest step unsmoothed and development builds warn.
    */
   frameAlphaSource?: () => number;
   /** Linear speed at or below which a body is a sleep candidate, px/s. Default `5`. */
@@ -389,8 +395,9 @@ export class PhysicsWorld implements BodyOwner {
   /**
    * Supplies the `[0, 1)` blend factor for interpolated bindings. Defaults to
    * this world's own accumulator; point it at the host's own fraction
-   * (`() => app.frameAlpha`) when the world runs as a `System`, because
-   * {@link fixedUpdate} never advances the local accumulator.
+   * (`() => app.frameAlpha`) when the world runs as a system, because
+   * {@link fixedUpdate} never advances the local accumulator. The default
+   * presents a hosted world's latest step as it stands.
    */
   public frameAlphaSource: () => number;
 
@@ -512,7 +519,7 @@ export class PhysicsWorld implements BodyOwner {
     this.timeToSleep = options.timeToSleep ?? 0.5;
     this.contactModifier = options.contactModifier ?? null;
     this.interpolation = options.interpolation ?? false;
-    this.frameAlphaSource = options.frameAlphaSource ?? (() => this.timeStepper.alpha);
+    this.frameAlphaSource = options.frameAlphaSource ?? this.timeStepper._ownAlpha;
     this._query = new QueryEngine(this._detectionColliders, this._backend.spatialIndex);
     this._backend.contactGraph._useUncollidablePairs(this._uncollidableJointPairs);
   }
@@ -800,29 +807,25 @@ export class PhysicsWorld implements BodyOwner {
   // ── stepping ───────────────────────────────────────────────────────────
 
   /**
-   * Advance the world by `frameDeltaSeconds`. Accumulates into fixed steps; each
-   * fixed step runs detection once, then a TGS-Soft sub-step loop (integrate
-   * gravity, solve contacts with a soft bias, integrate positions, relax) and a
-   * restitution pass, then writes the accumulated motion into each body. Finally
-   * dispatches events and writes bound node transforms.
+   * Advance the world by `frameDeltaSeconds` on its own clock. Accumulates into
+   * fixed steps of {@link PhysicsWorldOptions.fixedDelta}; each fixed step runs
+   * detection once, then a TGS-Soft sub-step loop (integrate gravity, solve
+   * contacts with a soft bias, integrate positions, relax) and a restitution
+   * pass, then writes the accumulated motion into each body. Finally dispatches
+   * events and presents bound nodes.
    *
-   * **Prefer registering the world as a system instead**
-   * (`app.systems.add(world, { order: SystemOrder.Physics })` or the scene
-   * equivalent) so {@link fixedUpdate} drives stepping directly from the
-   * engine's own fixed-timestep scheduler - one call per fixed step, no
-   * accumulator duplication. `step` remains available here for manual/advanced
-   * driving (e.g. a fixed-but-non-standard rate, or stepping outside the
-   * normal frame loop entirely): pass any delta and this accumulator converts
-   * it into the right number of fixed sub-steps (0, 1, or several, clamped by
-   * {@link PhysicsWorldOptions.maxSubSteps}).
+   * **In a scene, prefer registering the world as the scene's system instead**
+   * (`this.systems.add(world, { order: SystemOrder.Physics })`), so
+   * {@link fixedUpdate} steps it on the application's fixed-step clock. `step`
+   * is the manual path for a world with no host: pass any delta and the
+   * accumulator converts it into 0, 1 or several fixed steps, at most
+   * {@link PhysicsWorldOptions.maxSubSteps}, dropping the backlog beyond that.
+   * A world is driven one way or the other; a registered world that is also
+   * stepped by hand advances twice, which development builds report.
    *
-   * Either way the simulation is frame-rate independent and deterministic -
-   * the same sequence of deltas replays identically. `timeStepper.alpha`
-   * (`[0, 1)`) is the leftover sub-step fraction after this call, for callers
-   * that want to interpolate a bound node's rendered position between the last
-   * two fixed states instead of snapping to the latest one (bindings do not do
-   * this automatically - {@link bind} always writes the latest fixed-step
-   * transform verbatim).
+   * The same sequence of deltas replays identically. `timeStepper.alpha`
+   * (`[0, 1)`) is the leftover fraction of a step after this call, which an
+   * interpolating world uses by default to place bound nodes.
    */
   public step(frameDeltaSeconds: number): void {
     this._assertAlive();
@@ -854,24 +857,22 @@ export class PhysicsWorld implements BodyOwner {
   }
 
   /**
-   * Advance by exactly one fixed step, driven directly by the engine's own
-   * fixed-timestep scheduler when this world is registered as a `System`
-   * (`app.systems.add(world, { order: SystemOrder.Physics })` or the scene
-   * equivalent) - bypasses {@link timeStepper}'s variable-delta accumulator
-   * entirely, since the caller has already decided exactly when a fixed step
-   * occurs. Prefer this over manual {@link step} once the world is
-   * system-registered; `step` remains available for advanced manual driving.
-   * Always advances by exactly {@link timeStepper}'s configured `fixedDelta`,
-   * regardless of the caller's actual fixed-step interval - if the engine's
-   * `Application.fixedTimeStep` doesn't match this world's `fixedDelta`, the
-   * simulation stays deterministic but runs at the wrong wall-clock speed
-   * relative to real time.
+   * Advance by exactly one fixed step on the host's clock. Called by the system
+   * registry the world is registered with (`scene.systems` or `app.systems`),
+   * once per host fixed step; the world's own accumulator is not involved.
+   *
+   * `step` must equal this world's {@link PhysicsWorldOptions.fixedDelta}:
+   * construct a hosted world with `fixedDelta: app.fixedTimeStep`. A step that
+   * differs by more than 1e-9 relative to fixedDelta, or is not a positive finite
+   * number, throws before anything in the world changes - no body, controller,
+   * contact or queued command is touched - because simulating `fixedDelta` per
+   * host step would run the world faster or slower than its host.
    */
-  public fixedUpdate(_step: Seconds): void {
+  public fixedUpdate(step: Seconds): void {
     this._assertAlive();
 
     const subStepCount = this.subStepCount;
-    const h = this.timeStepper.fixedDelta / subStepCount;
+    const h = this.timeStepper._hostStep(step) / subStepCount;
 
     this._stepOnce(
       h,
@@ -906,7 +907,7 @@ export class PhysicsWorld implements BodyOwner {
     this._assertAlive();
 
     if (this.interpolation) {
-      this._bindings.syncInterpolated(clampAlpha(this.frameAlphaSource()));
+      this._bindings.syncInterpolated(clampAlpha(this.timeStepper._readAlpha(this.frameAlphaSource)));
     }
   }
 
