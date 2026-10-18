@@ -19,14 +19,14 @@ Only ExoJS packages move together. Vite, TypeScript and the rest of the build to
 
 ## Templates
 
-| Template         | Starting point                                                                 |
-| ---------------- | ------------------------------------------------------------------------------ |
-| `minimal`        | One visible animated object in one scene.                                      |
-| `game-starter`   | Keyboard-controlled gameplay and a game-over scene.                            |
-| `platformer`     | Side-scrolling physics, camera follow, and jump handling.                      |
-| `top-down`       | Tilemaps, collision, and click-to-move pathfinding; procedural or Tiled input. |
-| `ui-app`         | A settings interface built from Core UI widgets.                               |
-| `audio-reactive` | Shapes driven by live audio analysis.                                          |
+| Template         | Starting point                                                                  |
+| ---------------- | ------------------------------------------------------------------------------- |
+| `minimal`        | One visible animated object in one scene.                                       |
+| `game-starter`   | Keyboard-controlled gameplay and a game-over scene.                             |
+| `platformer`     | Side-scrolling physics, camera follow, and jump handling.                       |
+| `top-down`       | A Tiled map whose walls and door drive collision and click-to-move pathfinding. |
+| `ui-app`         | A settings interface built from Core UI widgets.                                |
+| `audio-reactive` | Shapes driven by live audio analysis.                                           |
 
 Availability follows the scaffolder version you run. The repository's `next` branch can contain a template that is not yet in an older npm release. A specialized template includes more systems; it is not a prerequisite for using the engine.
 

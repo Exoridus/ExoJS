@@ -454,6 +454,14 @@ export const CHECKED_README_PATHS: readonly string[] = [
  *                                        profile-only commit reaches no other
  *                                        area that runs a test.
  *
+ *   - `packages/create-exo-app/templates/top-down/`
+ *                                        the starter that
+ *                                        `test/templates/top-down-consumer`
+ *                                        plays end to end. The create-exo-app
+ *                                        area only scaffolds and builds it, so a
+ *                                        template-only change would otherwise
+ *                                        never run the suite that plays it.
+ *
  *   - `CHECKED_README_PATHS`             the READMEs whose complete examples
  *                                        `test/site/readme-examples` typechecks.
  *                                        Read before the prose exemption, or a
@@ -482,6 +490,10 @@ const isSiteDataPath = (file: string): boolean => {
   }
 
   if (file.startsWith('packages/exojs-bench/results/')) {
+    return true;
+  }
+
+  if (file.startsWith('packages/create-exo-app/templates/top-down/')) {
     return true;
   }
 
