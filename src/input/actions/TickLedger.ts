@@ -106,6 +106,12 @@ export class TickLedger {
 
   /** Forget everything not yet delivered. */
   public drop(): void {
+    // A step that already owns the window must keep one snapshot for all of
+    // its readers. Its counts expire with the clock even if the map pauses.
+    if (this._delivered()) {
+      return;
+    }
+
     this._window = -1;
     this._first = 0;
     this._second = 0;
