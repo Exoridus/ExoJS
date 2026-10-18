@@ -42,6 +42,7 @@ afterAll(() => {
 const writeFixture = (name: string, content: string): string => {
   const abs = join(TMP_DIR, name);
   writeFileSync(abs, content, 'utf8');
+
   return `${TMP_REL}/${name}`;
 };
 
@@ -54,7 +55,14 @@ describe('extractSnippetRegion', () => {
     test('extracts lines between markers', () => {
       const rel = writeFixture(
         'basic.ts',
-        ['const a = 1;', '// #region guide:my-region', 'const b = 2;', 'const c = 3;', '// #endregion guide:my-region', 'const d = 4;'].join('\n'),
+        [
+          'const a = 1;',
+          '// #region guide:my-region',
+          'const b = 2;',
+          'const c = 3;',
+          '// #endregion guide:my-region',
+          'const d = 4;',
+        ].join('\n'),
       );
 
       const result = extractSnippetRegion(rel, 'my-region');
@@ -124,7 +132,14 @@ describe('extractSnippetRegion', () => {
     test('throws for a duplicate region', () => {
       const rel = writeFixture(
         'duplicate.ts',
-        ['// #region guide:dup', 'first();', '// #endregion guide:dup', '// #region guide:dup', 'second();', '// #endregion guide:dup'].join('\n'),
+        [
+          '// #region guide:dup',
+          'first();',
+          '// #endregion guide:dup',
+          '// #region guide:dup',
+          'second();',
+          '// #endregion guide:dup',
+        ].join('\n'),
       );
 
       expect(() => extractSnippetRegion(rel, 'dup')).toThrow('Duplicate region');
@@ -139,7 +154,14 @@ describe('extractSnippetRegion', () => {
     test('does not confuse regions with similar names', () => {
       const rel = writeFixture(
         'similar.ts',
-        ['// #region guide:foo', 'inFoo();', '// #endregion guide:foo', '// #region guide:foo-bar', 'inFooBar();', '// #endregion guide:foo-bar'].join('\n'),
+        [
+          '// #region guide:foo',
+          'inFoo();',
+          '// #endregion guide:foo',
+          '// #region guide:foo-bar',
+          'inFooBar();',
+          '// #endregion guide:foo-bar',
+        ].join('\n'),
       );
 
       expect(extractSnippetRegion(rel, 'foo')).toBe('inFoo();');

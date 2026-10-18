@@ -163,7 +163,10 @@ export class Text extends AbstractText {
     this._pixelRatio = options.pixelRatio === undefined ? 0 : assertPixelRatio(options.pixelRatio);
 
     const face = this._extractFace(options);
-    if (face !== null) void this._loadFace(face);
+
+    if (face !== null) {
+      void this._loadFace(face);
+    }
   }
 
   /**
@@ -186,7 +189,9 @@ export class Text extends AbstractText {
    * @stable
    */
   public static measure(text: string, options: TextOptions = {}): TextSize {
-    if (text.length === 0) return { width: 0, height: 0 };
+    if (text.length === 0) {
+      return { width: 0, height: 0 };
+    }
 
     const style = new TextStyle(options);
     const pool = getDefaultGlyphAtlasPool();
@@ -213,7 +218,10 @@ export class Text extends AbstractText {
 
     if (!(v instanceof TextStyle)) {
       const face = this._extractFace(v);
-      if (face !== null) void this._loadFace(face);
+
+      if (face !== null) {
+        void this._loadFace(face);
+      }
     }
   }
 
@@ -255,7 +263,9 @@ export class Text extends AbstractText {
   public set pixelRatio(v: number | undefined) {
     const next = v === undefined ? 0 : assertPixelRatio(v);
 
-    if (this._pixelRatio === next) return;
+    if (this._pixelRatio === next) {
+      return;
+    }
 
     this._pixelRatio = next;
     // 'font' rather than 'layout': the atlas this node draws from is keyed on
@@ -285,11 +295,15 @@ export class Text extends AbstractText {
   public _setSurfacePixelRatio(pixelRatio: number): void {
     const next = Number.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : 1;
 
-    if (this._surfacePixelRatio === next) return;
+    if (this._surfacePixelRatio === next) {
+      return;
+    }
 
     this._surfacePixelRatio = next;
 
-    if (this._pixelRatio === 0) this._markDirty('font');
+    if (this._pixelRatio === 0) {
+      this._markDirty('font');
+    }
   }
 
   /**
@@ -328,7 +342,9 @@ export class Text extends AbstractText {
   public get textPages(): readonly AtlasPage[] {
     this.syncDirty();
 
-    if (this._shapingMode === 'browser' && this._shapedSource !== null) return this._shapedSource.pages;
+    if (this._shapingMode === 'browser' && this._shapedSource !== null) {
+      return this._shapedSource.pages;
+    }
 
     return this._atlas?.pages ?? [];
   }
@@ -346,8 +362,14 @@ export class Text extends AbstractText {
 
   /** Extract a {@link FontFace} from raw style options, or return null. */
   private _extractFace(opts: TextStyleOptions): FontFace | null {
-    if (typeof FontFace === 'undefined') return null;
-    if (opts.font instanceof FontFace) return opts.font;
+    if (typeof FontFace === 'undefined') {
+      return null;
+    }
+
+    if (opts.font instanceof FontFace) {
+      return opts.font;
+    }
+
     return null;
   }
 
@@ -359,7 +381,9 @@ export class Text extends AbstractText {
    * before the previous face finishes loading.
    */
   private async _loadFace(face: FontFace): Promise<void> {
-    if (typeof document === 'undefined' || !document.fonts) return;
+    if (typeof document === 'undefined' || !document.fonts) {
+      return;
+    }
 
     const version = ++this._faceLoadVersion;
 
@@ -373,7 +397,9 @@ export class Text extends AbstractText {
       return;
     }
 
-    if (this._destroyed || version !== this._faceLoadVersion) return;
+    if (this._destroyed || version !== this._faceLoadVersion) {
+      return;
+    }
 
     // Not `Text._acquireAtlas(...).clear()`: before this node's first collection
     // `rasterPixelRatio` resolves through the surface-ratio default of 1
@@ -381,7 +407,11 @@ export class Text extends AbstractText {
     // actually rasterize at once it is drawn. Clearing by ratio would clear
     // the wrong atlas and leave the one this node uses holding fallback-font
     // tiles indefinitely; clearing the whole variant reaches every ratio.
-    getDefaultGlyphAtlasPool().clearVariant({ family: this._style.fontFamily, fontStyle: this._style.fontStyle, fontWeight: this._style.fontWeight });
+    getDefaultGlyphAtlasPool().clearVariant({
+      family: this._style.fontFamily,
+      fontStyle: this._style.fontStyle,
+      fontWeight: this._style.fontWeight,
+    });
     this._markDirty('font');
   }
 
@@ -398,7 +428,9 @@ export class Text extends AbstractText {
     // Only a 'font' change can invalidate which atlas this node draws from;
     // a re-flow reuses the one already resolved.
     const atlas =
-      hint === 'font' || this._atlas === null ? Text._acquireAtlas(this._style, this._colorGlyphs, this._sdfRadius, this.rasterPixelRatio) : this._atlas;
+      hint === 'font' || this._atlas === null
+        ? Text._acquireAtlas(this._style, this._colorGlyphs, this._sdfRadius, this.rasterPixelRatio)
+        : this._atlas;
 
     if (atlas !== this._atlas) {
       this._atlas?.onCleared.remove(this._onAtlasCleared);
@@ -441,7 +473,9 @@ export class Text extends AbstractText {
     const variant = `${style.fontFamily}:${style.fontStyle}:${style.fontVariant}:${style.fontWeight}`;
     const key = `${variant}:${mode}:${this._sdfRadius}:${pixelRatio}:${direction}:${letterSpacing}`;
 
-    if (this._shapedSource !== null && this._shapedKey === key) return this._shapedSource;
+    if (this._shapedSource !== null && this._shapedKey === key) {
+      return this._shapedSource;
+    }
 
     this._releaseShapedSource();
 

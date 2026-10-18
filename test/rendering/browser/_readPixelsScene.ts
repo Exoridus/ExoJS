@@ -58,6 +58,7 @@ export const expectQuadrantLayout = (
 
     return [data[offset]!, data[offset + 1]!, data[offset + 2]!, data[offset + 3]!];
   };
+
   // Relative to what was read, so this holds for a whole-texture read and for a
   // smaller rectangle centred on the same crossing.
   const nearX = Math.floor(width / 4);

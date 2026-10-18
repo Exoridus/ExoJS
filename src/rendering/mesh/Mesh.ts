@@ -255,10 +255,22 @@ export class Mesh extends Drawable {
       // In-bounds: `vertices.length` is an even (x, y) count (validated on construction).
       const x = this.vertices[i]!;
       const y = this.vertices[i + 1]!;
-      if (x < minX) minX = x;
-      if (x > maxX) maxX = x;
-      if (y < minY) minY = y;
-      if (y > maxY) maxY = y;
+
+      if (x < minX) {
+        minX = x;
+      }
+
+      if (x > maxX) {
+        maxX = x;
+      }
+
+      if (y < minY) {
+        minY = y;
+      }
+
+      if (y > maxY) {
+        maxY = y;
+      }
     }
 
     this.setLocalBounds(minX, minY, maxX - minX, maxY - minY);
@@ -357,6 +369,7 @@ const readPackedColor = (view: DataView, offset: number, attribute: GeometryAttr
     const g = view.getUint8(offset + 1);
     const b = view.getUint8(offset + 2);
     const a = view.getUint8(offset + 3);
+
     return (r | (g << 8) | (b << 16) | (a << 24)) >>> 0;
   }
 
@@ -365,6 +378,7 @@ const readPackedColor = (view: DataView, offset: number, attribute: GeometryAttr
     const g = Math.round(clamp01(view.getFloat32(offset + 4, true)) * 255);
     const b = Math.round(clamp01(view.getFloat32(offset + 8, true)) * 255);
     const a = Math.round(clamp01(view.getFloat32(offset + 12, true)) * 255);
+
     return (r | (g << 8) | (b << 16) | (a << 24)) >>> 0;
   }
 
@@ -372,7 +386,13 @@ const readPackedColor = (view: DataView, offset: number, attribute: GeometryAttr
 };
 
 const clamp01 = (value: number): number => {
-  if (value < 0) return 0;
-  if (value > 1) return 1;
+  if (value < 0) {
+    return 0;
+  }
+
+  if (value > 1) {
+    return 1;
+  }
+
   return value;
 };

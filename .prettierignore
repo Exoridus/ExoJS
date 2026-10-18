@@ -17,6 +17,13 @@ site/public/**
 # Generated API reference; the generator owns its shape and a sync gate pins it.
 site/src/content/api/**
 
+# The changelog is a historical record with its own gate (`lint:changelog`); its
+# embedded code samples keep the width they were written at.
+CHANGELOG.md
+
+# Recorded benchmark evidence is the harness's output, like the profiles below.
+test/perf/rendering/evidence/**
+
 # Measured benchmark profiles. The harness writes them and a signature gate pins
 # their contents, so their layout is the writer's output, not a style choice.
 packages/exojs-bench/results/*.json

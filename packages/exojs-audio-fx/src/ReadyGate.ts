@@ -40,14 +40,20 @@ export class ReadyGate {
   }
 
   public resolve(): void {
-    if (this._state !== 'pending') return;
+    if (this._state !== 'pending') {
+      return;
+    }
+
     this._state = 'ready';
     this._resolve?.();
     this._clear();
   }
 
   public fail(error: unknown): void {
-    if (this._state !== 'pending') return;
+    if (this._state !== 'pending') {
+      return;
+    }
+
     this._state = 'failed';
     this._failure = error instanceof Error ? error : new Error(String(error));
     this._reject?.(this._failure);
@@ -56,7 +62,10 @@ export class ReadyGate {
 
   /** Rejects a gate that is still pending; a settled gate keeps its outcome. */
   public abort(): void {
-    if (this._state !== 'pending') return;
+    if (this._state !== 'pending') {
+      return;
+    }
+
     this._state = 'aborted';
     this._reject?.(this._createAbortError());
     this._clear();

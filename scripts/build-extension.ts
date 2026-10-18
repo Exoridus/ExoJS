@@ -16,9 +16,8 @@ import { existsSync, rmSync } from 'node:fs';
 import { resolve as resolvePath } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { rolldown, type OutputOptions, type RolldownOptions } from 'rolldown';
-
 import { runTypeScriptCompiler } from '@codexo/exojs-config/typescript/compiler';
+import { type OutputOptions, rolldown, type RolldownOptions } from 'rolldown';
 
 import { writeSourceStamp } from './source-hash.ts';
 
@@ -34,11 +33,24 @@ await bundle.write(options.output as OutputOptions);
 await bundle.close();
 
 const buildTsconfig = resolvePath(cwd, 'tsconfig.build.json');
+
 if (existsSync(buildTsconfig)) {
   const { status } = runTypeScriptCompiler(
-    ['-p', 'tsconfig.build.json', '--emitDeclarationOnly', '--outDir', 'dist/esm', '--declarationDir', 'dist/esm', '--inlineSources', '--incremental', 'false'],
+    [
+      '-p',
+      'tsconfig.build.json',
+      '--emitDeclarationOnly',
+      '--outDir',
+      'dist/esm',
+      '--declarationDir',
+      'dist/esm',
+      '--inlineSources',
+      '--incremental',
+      'false',
+    ],
     { cwd },
   );
+
   if (status !== 0) {
     throw new Error(`declaration emit failed (tsc exit ${status})`);
   }

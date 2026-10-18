@@ -15,7 +15,7 @@ const GRID_COLUMNS = 56;
 const GRID_ROWS = 30;
 
 class SpriteStressScene extends Scene {
-  private sprites!: {
+  private sprites!: Array<{
     sprite: Sprite;
     offsetX: number;
     offsetY: number;
@@ -24,7 +24,7 @@ class SpriteStressScene extends Scene {
     driftX: number;
     driftY: number;
     rotationSpeed: number;
-  }[];
+  }>;
   private spriteLayer!: Container;
 
   override init(): void {
@@ -36,8 +36,20 @@ class SpriteStressScene extends Scene {
     this.spriteLayer = new Container();
     this.spriteLayer.setPosition(width / 2, height / 2);
 
-    const frameChoices = [new Rectangle(0, 0, 64, 64), new Rectangle(64, 0, 64, 64), new Rectangle(0, 64, 64, 64), new Rectangle(64, 64, 64, 64)];
-    const tintPalette = [Color.white, new Color(0x87ceeb), new Color(0xffd700), new Color(0xff69b4), new Color(0x00fa9a), new Color(0xffa500)];
+    const frameChoices = [
+      new Rectangle(0, 0, 64, 64),
+      new Rectangle(64, 0, 64, 64),
+      new Rectangle(0, 64, 64, 64),
+      new Rectangle(64, 64, 64, 64),
+    ];
+    const tintPalette = [
+      Color.white,
+      new Color(0x87ceeb),
+      new Color(0xffd700),
+      new Color(0xff69b4),
+      new Color(0x00fa9a),
+      new Color(0xffa500),
+    ];
 
     let index = 0;
 
@@ -116,7 +128,7 @@ app.start(SpriteStressScene).catch(() => {
   void app.destroy();
 });
 
-function createAtlasTexture(): Texture {
+const createAtlasTexture = (): Texture => {
   const atlasCanvas = document.createElement('canvas');
   const context = atlasCanvas.getContext('2d')!;
 
@@ -129,9 +141,16 @@ function createAtlasTexture(): Texture {
   drawAtlasCell(context, 64, 64, '#23163c', '#7dd3fc', 'triangle');
 
   return new Texture(atlasCanvas);
-}
+};
 
-function drawAtlasCell(context: CanvasRenderingContext2D, x: number, y: number, background: string, accent: string, shape: string): void {
+const drawAtlasCell = (
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  background: string,
+  accent: string,
+  shape: string,
+): void => {
   context.fillStyle = background;
   context.fillRect(x, y, 64, 64);
 
@@ -166,6 +185,7 @@ function drawAtlasCell(context: CanvasRenderingContext2D, x: number, y: number, 
 
       context.lineTo(innerX, innerY);
     }
+
     context.closePath();
   } else {
     context.moveTo(x + 32, y + 9);
@@ -175,4 +195,4 @@ function drawAtlasCell(context: CanvasRenderingContext2D, x: number, y: number, 
   }
 
   context.fill();
-}
+};

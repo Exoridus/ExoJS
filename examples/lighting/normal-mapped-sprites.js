@@ -1,5 +1,16 @@
 // Auto-generated from normal-mapped-sprites.ts - edit the .ts source, not this file.
-import { Application, Color, Container, DataTexture, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture, TextureFormat } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  Container,
+  DataTexture,
+  FixedResolutionCanvasSizing,
+  ScaleModes,
+  Scene,
+  Sprite,
+  Texture,
+  TextureFormat,
+} from '@codexo/exojs';
 import { ForwardLighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
 import { mountControls } from '@examples/runtime';
 // Forward normal mapping on plain sprites. A LitMaterial samples a
@@ -15,7 +26,9 @@ const canvasTexture = (size, paint) => {
   canvas.width = size;
   canvas.height = size;
   const context = canvas.getContext('2d');
-  if (context === null) throw new Error('2D canvas context unavailable.');
+  if (context === null) {
+    throw new Error('2D canvas context unavailable.');
+  }
   paint(context);
   return new Texture(canvas, { scaleMode: ScaleModes.Linear, generateMipMap: false });
 };
@@ -42,7 +55,9 @@ const albedoTexture = canvasTexture(TILE_SIZE, context => {
   context.fillStyle = '#8a8070';
   for (let y = 0; y < 4; y++) {
     for (let x = 0; x < 4; x++) {
-      if ((x + y) % 2 === 0) continue;
+      if ((x + y) % 2 === 0) {
+        continue;
+      }
       context.save();
       context.beginPath();
       context.arc(half, half, half - 2, 0, Math.PI * 2);
@@ -132,7 +147,9 @@ class NormalMappedSpritesScene extends Scene {
     const { width, height } = this.app;
     this.elapsed += delta;
     for (const tile of this.tiles) {
-      if (tile.spin !== 0) tile.sprite.rotate(delta * tile.spin);
+      if (tile.spin !== 0) {
+        tile.sprite.rotate(delta * tile.spin);
+      }
     }
     for (let index = 0; index < LIGHT_COUNT; index++) {
       const phase = this.elapsed * (0.4 + index * 0.15) + (index * Math.PI) / 2;

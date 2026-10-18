@@ -204,6 +204,7 @@ const createTestBackend = (): RenderBackend => {
     },
     setView(v: View | null) {
       renderTarget.setView(v);
+
       return this;
     },
     setRenderTarget() {
@@ -278,6 +279,7 @@ describe('RenderPlanBuilder._peekCurrentScopeEntries / _replayRetainedDraw', () 
     const outerEntry = outerEntries[0]!;
 
     expect(outerEntry.kind).toBe(RenderEntryKind.Group);
+
     if (outerEntry.kind !== RenderEntryKind.Group) {
       throw new Error('unreachable');
     }
@@ -288,6 +290,7 @@ describe('RenderPlanBuilder._peekCurrentScopeEntries / _replayRetainedDraw', () 
     const entry = entries[0]!;
 
     expect(entry.kind).toBe(RenderEntryKind.Draw);
+
     if (entry.kind === RenderEntryKind.Draw) {
       expect(entry.command.drawable).toBe(drawable);
       expect(entry.command.material).toBe(slot.material); // reused reference, not recomputed

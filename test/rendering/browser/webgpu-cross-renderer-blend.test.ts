@@ -24,7 +24,9 @@ describe('WebGPU blend state across renderer types', () => {
     const scene = buildCrossRendererBlendScene();
 
     try {
-      if (!(await renderWebGpuEncoded(ctx, backend, scene.root, blendClearColor))) return;
+      if (!(await renderWebGpuEncoded(ctx, backend, scene.root, blendClearColor))) {
+        return;
+      }
 
       expect(backend.stats.drawCalls).toBe(3);
 

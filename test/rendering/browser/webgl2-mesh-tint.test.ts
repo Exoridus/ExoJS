@@ -86,7 +86,8 @@ const renderMesh = (backend: WebGl2Backend, mesh: Mesh, encoded = true): void =>
 };
 
 // A full-canvas quad in pixel space with UVs spanning the whole texture.
-const fullQuadVertices = (): Float32Array => new Float32Array([0, 0, canvasSize, 0, canvasSize, canvasSize, 0, 0, canvasSize, canvasSize, 0, canvasSize]);
+const fullQuadVertices = (): Float32Array =>
+  new Float32Array([0, 0, canvasSize, 0, canvasSize, canvasSize, 0, 0, canvasSize, canvasSize, 0, canvasSize]);
 const fullQuadUvs = (): Float32Array => new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]);
 
 describe('WebGL2 mesh tint and texture sampling', () => {
@@ -100,7 +101,13 @@ describe('WebGL2 mesh tint and texture sampling', () => {
       data.set([levels[i], levels[i], levels[i], 255], i * 4);
     }
 
-    const texture = new DataTexture({ width, height: 1, format: TextureFormat.Rgba8, data, textureOptions: { scaleMode: ScaleModes.Nearest } });
+    const texture = new DataTexture({
+      width,
+      height: 1,
+      format: TextureFormat.Rgba8,
+      data,
+      textureOptions: { scaleMode: ScaleModes.Nearest },
+    });
     const mesh = new Mesh({ vertices: fullQuadVertices(), uvs: fullQuadUvs(), texture });
 
     try {

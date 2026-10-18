@@ -42,11 +42,14 @@ const versions = [...new Set(packages.map(p => p.version))];
 
 if (versions.length !== 1) {
   process.stderr.write('verify-lockstep: VERSION MISMATCH across official packages:\n');
+
   for (const p of packages) {
     process.stderr.write(`  ${p.name}: ${p.version}\n`);
   }
+
   process.stderr.write(
-    `\nAll ${packages.length} packages must be on the same version before release.\n` + 'Update every package.json file to the same version.\n',
+    `\nAll ${packages.length} packages must be on the same version before release.\n` +
+      'Update every package.json file to the same version.\n',
   );
   process.exit(1);
 }
@@ -77,4 +80,6 @@ if (peerProblems.length > 0) {
   process.exit(1);
 }
 
-process.stdout.write(`verify-lockstep: all ${packages.length} packages at v${versions[0]}; every official peer range = "${expectedPeer}" ✓\n`);
+process.stdout.write(
+  `verify-lockstep: all ${packages.length} packages at v${versions[0]}; every official peer range = "${expectedPeer}" ✓\n`,
+);

@@ -6,11 +6,11 @@ import { describe, expect, it } from 'vitest';
 import { useSignal } from '../src/useSignal';
 
 /** Reads a live counter through `useSignal` and renders it as text. */
-function Counter({ signal, getValue }: { signal: Signal<[number]> | null; getValue: () => number }): ReactElement {
+const Counter = ({ signal, getValue }: { signal: Signal<[number]> | null; getValue: () => number }): ReactElement => {
   const value = useSignal(signal, getValue);
 
   return <span data-testid="value">{value}</span>;
-}
+};
 
 describe('useSignal', () => {
   it('returns the initial snapshot on first render without any dispatch', () => {

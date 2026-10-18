@@ -125,9 +125,11 @@ export class View {
     if (options.viewport) {
       view.viewport = options.viewport;
     }
+
     if (options.rotation && options.rotation !== 0) {
       view.rotation = options.rotation;
     }
+
     if (options.zoom !== undefined && options.zoom !== 1) {
       view.setZoom(options.zoom);
     }
@@ -720,7 +722,10 @@ export class View {
       return;
     }
 
-    this.setCenter(this._center.x + (targetX - this._center.x) * this._followLerp, this._center.y + (targetY - this._center.y) * this._followLerp);
+    this.setCenter(
+      this._center.x + (targetX - this._center.x) * this._followLerp,
+      this._center.y + (targetY - this._center.y) * this._followLerp,
+    );
   }
 
   private _applyBoundsConstraint(): void {

@@ -12,7 +12,10 @@ const entry = manifest.bin['create-exo-app'];
 
 describe('create-exo-app executable', () => {
   it('can be linked from a fresh checkout before build scripts run', () => {
-    const sourceFiles = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', packagePath], { cwd: root, encoding: 'utf8' })
+    const sourceFiles = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', packagePath], {
+      cwd: root,
+      encoding: 'utf8',
+    })
       .trim()
       .split('\n');
 
@@ -22,6 +25,7 @@ describe('create-exo-app executable', () => {
 
   it('loads the built CLI relative to its package and preserves arguments and exit status', () => {
     const directory = mkdtempSync(join(tmpdir(), 'exo-scaffolder-bin-'));
+
     try {
       const entryPath = join(directory, entry);
       mkdirSync(dirname(entryPath), { recursive: true });

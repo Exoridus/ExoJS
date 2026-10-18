@@ -81,7 +81,9 @@ const agreedEngineVersion = (stamps: ReadonlyArray<{ readonly engineVersion: str
   const versions = [...new Set(stamps.map(stamp => stamp.engineVersion))];
 
   if (versions.length !== 1 || versions[0] === undefined || versions[0].length === 0) {
-    throw new Error(`Cannot write a profile from runs at different engine versions (${versions.join(', ')}). Re-measure both domains on one tree.`);
+    throw new Error(
+      `Cannot write a profile from runs at different engine versions (${versions.join(', ')}). Re-measure both domains on one tree.`,
+    );
   }
 
   return versions[0];
@@ -113,7 +115,10 @@ const agreedRunCount = (counts: readonly number[]): number => {
  * platform and a physics measurement on the shipping release it became are as
  * much "not one machine" as two different operating systems are.
  */
-const describePlatform = (stamp: { readonly os: string; readonly platformVersion: { readonly major: number; readonly source: string } }): string => {
+const describePlatform = (stamp: {
+  readonly os: string;
+  readonly platformVersion: { readonly major: number; readonly source: string };
+}): string => {
   const name = normalizeOsName(stamp.os);
 
   if (name.length === 0) {
@@ -135,7 +140,10 @@ const describePlatform = (stamp: { readonly os: string; readonly platformVersion
  */
 const requireOneMachine = (renderingStamps: readonly RenderingStamp[], physicsStamp: PhysicsStamp | undefined): void => {
   const rendering = renderingStamps.map(describePlatform).find(name => name.length > 0);
-  const physics = physicsStamp === undefined ? undefined : describePlatform({ os: physicsStamp.host.os, platformVersion: physicsStamp.host.platformVersion });
+  const physics =
+    physicsStamp === undefined
+      ? undefined
+      : describePlatform({ os: physicsStamp.host.os, platformVersion: physicsStamp.host.platformVersion });
 
   if (rendering !== undefined && physics !== undefined && rendering !== physics) {
     throw new Error(

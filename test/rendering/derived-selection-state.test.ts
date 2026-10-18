@@ -12,7 +12,13 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Drawable } from '#rendering/Drawable';
 import { DerivedSelectionState } from '#rendering/plan/DerivedSelectionState';
 import { RenderEntryKind } from '#rendering/plan/renderCommand';
-import { createSourceScope, finalizeSourceScopes, LiveEntryReason, type SourceGroup, type SourceScope } from '#rendering/plan/renderSourceItem';
+import {
+  createSourceScope,
+  finalizeSourceScopes,
+  LiveEntryReason,
+  type SourceGroup,
+  type SourceScope,
+} from '#rendering/plan/renderSourceItem';
 import { MembershipBits } from '#rendering/plan/SourceVisibilityIndex';
 
 const drawable = (): Drawable => ({}) as Drawable;
@@ -76,7 +82,14 @@ describe('DerivedSelectionState', () => {
     fill(root, 1);
     const group = nest(root, 1, itemMark);
     const child = nest(group, 0, 1);
-    const live = { kind: RenderEntryKind.Barrier as const, seq: 0, zIndex: 0, node: drawable(), reason: LiveEntryReason.Barrier, itemMark: 0 };
+    const live = {
+      kind: RenderEntryKind.Barrier as const,
+      seq: 0,
+      zIndex: 0,
+      node: drawable(),
+      reason: LiveEntryReason.Barrier,
+      itemMark: 0,
+    };
 
     child.others.push(live);
     const scopes = finalize(root);

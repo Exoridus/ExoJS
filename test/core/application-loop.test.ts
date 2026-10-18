@@ -11,7 +11,13 @@ import { DirtyChannel } from '#core/nodeDirtyIndex';
 import type { SceneNode } from '#core/SceneNode';
 import { type Seconds, Time } from '#core/units';
 
-import { frameClockOf, lastFrameTimestampOf, setFrameLoopActive, setLastFrameTimestamp, tickFrame } from '../support/application-frame-loop';
+import {
+  frameClockOf,
+  lastFrameTimestampOf,
+  setFrameLoopActive,
+  setLastFrameTimestamp,
+  tickFrame,
+} from '../support/application-frame-loop';
 
 // ---------------------------------------------------------------------------
 // Backend stubs - keep WebGL2 / WebGPU out of jsdom.
@@ -147,6 +153,7 @@ const forceRunning = (app: Application): void => {
  */
 const mockFrameElapsed = (app: Application, ms: number): MockInstance => {
   const previous = lastFrameTimestampOf(app);
+
   return vi.spyOn(app.platform, 'now').mockReturnValue(previous + ms);
 };
 
@@ -820,7 +827,10 @@ describe('Application.update() — loop timing', () => {
               return true;
             });
 
-            if (covered) perFrameCounts.push(count);
+            if (covered) {
+              perFrameCounts.push(count);
+            }
+
             cursor = index.sequence;
           },
           postFrame: () => {

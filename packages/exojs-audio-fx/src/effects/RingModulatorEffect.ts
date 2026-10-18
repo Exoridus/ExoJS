@@ -84,7 +84,10 @@ export class RingModulatorEffect extends AudioEffect {
    * not yet initialized.
    */
   public get inputNode(): AudioNode {
-    if (!this._setup) throw new Error('RingModulatorEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('RingModulatorEffect not yet initialized.');
+    }
+
     return this._setup.inputGain;
   }
 
@@ -93,7 +96,10 @@ export class RingModulatorEffect extends AudioEffect {
    * not yet initialized.
    */
   public get outputNode(): AudioNode {
-    if (!this._setup) throw new Error('RingModulatorEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('RingModulatorEffect not yet initialized.');
+    }
+
     return this._setup.outputGain;
   }
 
@@ -107,6 +113,7 @@ export class RingModulatorEffect extends AudioEffect {
 
   public set frequency(value: number) {
     this._frequency = Math.max(0, Math.min(20000, value));
+
     if (this._setup) {
       const ctx = this._setup.inputGain.context;
       this._setup.carrierOsc.frequency.setTargetAtTime(this._frequency, ctx.currentTime, 0.01);
@@ -124,6 +131,7 @@ export class RingModulatorEffect extends AudioEffect {
 
   public set waveform(value: OscillatorType) {
     this._waveform = value;
+
     if (this._setup) {
       this._setup.carrierOsc.type = this._waveform;
     }
@@ -139,6 +147,7 @@ export class RingModulatorEffect extends AudioEffect {
 
   public set wet(value: number) {
     this._wet = Math.max(0, Math.min(1, value));
+
     if (this._setup) {
       const ctx = this._setup.wetGain.context;
       this._setup.wetGain.gain.setTargetAtTime(this._wet, ctx.currentTime, 0.01);
@@ -148,6 +157,7 @@ export class RingModulatorEffect extends AudioEffect {
 
   public override destroy(): void {
     this._teardown();
+
     if (this._setup) {
       this._setup.carrierOsc.stop();
       this._setup.carrierOsc.disconnect();

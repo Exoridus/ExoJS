@@ -205,14 +205,19 @@ export class MapObjectSpawner<Context = void, Result extends Destroyable = Scene
 
         // Push before the abort check so a result that arrived after the abort
         // is rolled back with the rest instead of being left unowned.
-        if (result !== null) entries.push([object.id, result]);
+        if (result !== null) {
+          entries.push([object.id, result]);
+        }
 
         throwIfAborted(signal);
       }
     } catch (error) {
       for (let i = entries.length - 1; i >= 0; i--) {
         const entry = entries[i];
-        if (entry === undefined) continue;
+
+        if (entry === undefined) {
+          continue;
+        }
 
         // A failing rollback step must neither replace the error that caused
         // the rollback nor strand the objects before it.
@@ -248,7 +253,8 @@ const runFactory = async <Context, Result extends Destroyable>(
       'factory-failed',
       object.id,
       object.kind,
-      `MapObjectSpawner: the factory for "${object.kind ?? '<no kind>'}" failed on object "${object.id}" ` + `of layer "${object.layer.name}".`,
+      `MapObjectSpawner: the factory for "${object.kind ?? '<no kind>'}" failed on object "${object.id}" ` +
+        `of layer "${object.layer.name}".`,
       { cause: error },
     );
   }
@@ -266,5 +272,6 @@ let sharedNeverAborts: AbortSignal | undefined;
 
 const neverAborts = (): AbortSignal => {
   sharedNeverAborts ??= new AbortController().signal;
+
   return sharedNeverAborts;
 };

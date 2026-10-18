@@ -50,6 +50,7 @@ export class SubTimingTracker {
 
   public start(label: string): () => void {
     const startTime = performance.now();
+
     return () => {
       const elapsed = performance.now() - startTime;
       const acc = this._accumulators.get(label) ?? { totalMs: 0, samples: 0 };
@@ -86,6 +87,7 @@ export class CallCounter {
   public wrap<F extends (...args: unknown[]) => unknown>(label: string, fn: F): F {
     return ((...args: unknown[]): unknown => {
       this.count(label);
+
       return fn(...args);
     }) as F;
   }
@@ -112,6 +114,7 @@ export class MemoryTracker {
     if (this._gcAvailable) {
       (globalThis as { gc: () => void }).gc();
     }
+
     this._baselineHeapBytes = process.memoryUsage().heapUsed;
   }
 
@@ -119,7 +122,9 @@ export class MemoryTracker {
     if (this._gcAvailable) {
       (globalThis as { gc: () => void }).gc();
     }
+
     const heapUsedDeltaBytes = process.memoryUsage().heapUsed - this._baselineHeapBytes;
+
     return {
       heapUsedDeltaBytes,
       heapUsedDeltaMb: heapUsedDeltaBytes / (1024 * 1024),

@@ -1,4 +1,14 @@
-import { Application, Color, FixedResolutionCanvasSizing, LutFilter, type RenderingContext, Scene, type Seconds, Sprite, Texture } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  LutFilter,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  Sprite,
+  type Texture,
+} from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const PRIMARY_RAMP = assets.technical.color.primaryRamp;
@@ -8,12 +18,13 @@ const RAMP_SIZE = 256;
 // One sine curve per channel, each a third of a cycle out of phase. A 1D LUT
 // grades every channel through its OWN curve, so shifting all three by the same
 // offset each frame sweeps the sprite through the colour wheel.
-function buildRampCanvas(offset: number): HTMLCanvasElement {
+const buildRampCanvas = (offset: number): HTMLCanvasElement => {
   const canvas = document.createElement('canvas');
   canvas.width = RAMP_SIZE;
   canvas.height = 1;
   const ctx = canvas.getContext('2d')!;
   const image = ctx.createImageData(RAMP_SIZE, 1);
+
   for (let i = 0; i < RAMP_SIZE; i++) {
     const phase = ((i + offset) / RAMP_SIZE) * Math.PI * 2;
     const r = Math.round(127 + 127 * Math.sin(phase));
@@ -25,9 +36,11 @@ function buildRampCanvas(offset: number): HTMLCanvasElement {
     image.data[o + 2] = b;
     image.data[o + 3] = 255;
   }
+
   ctx.putImageData(image, 0, 0);
+
   return canvas;
-}
+};
 
 class ColourRampCyclingScene extends Scene {
   private ramp!: Texture;

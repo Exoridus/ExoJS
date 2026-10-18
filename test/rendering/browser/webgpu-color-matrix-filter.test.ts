@@ -14,17 +14,29 @@ import { createWebGpuTestBackend, readWebGpuPixels, renderWebGpuEncoded } from '
 import { CLEAR, MATRIX_SCENE_SIZE, matrixScene, SAMPLE } from './_colorMatrixFixture';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 
-const render = async (ctx: { skip: (reason: string) => void }, css: string, filters: readonly Filter[], expected: RgbaTuple, tolerance = 3): Promise<void> => {
+const render = async (
+  ctx: { skip: (reason: string) => void },
+  css: string,
+  filters: readonly Filter[],
+  expected: RgbaTuple,
+  tolerance = 3,
+): Promise<void> => {
   const backend = await createWebGpuTestBackend(MATRIX_SCENE_SIZE);
   const { root, textures } = matrixScene(css, filters);
 
   try {
-    if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) return;
+    if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) {
+      return;
+    }
 
     expectPixelNear(readWebGpuPixels(backend, MATRIX_SCENE_SIZE)(SAMPLE, SAMPLE), expected, tolerance);
   } finally {
     root.destroy();
-    for (const texture of textures) texture.destroy();
+
+    for (const texture of textures) {
+      texture.destroy();
+    }
+
     backend.destroy();
   }
 };

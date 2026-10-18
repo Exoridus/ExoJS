@@ -347,7 +347,11 @@ export interface RetainedBatchCapableRenderer {
  * uploaded rows/quads stay view-independent - a snapped draw is fully recordable.
  * @internal
  */
-export const isRetainedFragmentRecordable = (entries: readonly RetainedFragmentEntry[], entryCount: number, backend: RenderBackend): boolean => {
+export const isRetainedFragmentRecordable = (
+  entries: readonly RetainedFragmentEntry[],
+  entryCount: number,
+  backend: RenderBackend,
+): boolean => {
   const registry = rendererLookupOf(backend);
 
   if (registry === null) {

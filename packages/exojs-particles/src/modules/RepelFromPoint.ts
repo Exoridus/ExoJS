@@ -41,8 +41,13 @@ export class RepelFromPoint extends UpdateModule {
       const dy = (posY[i] ?? 0) - y;
       const distSq = dx * dx + dy * dy;
 
-      if (distSq < 1e-10) continue;
-      if (radius > 0 && distSq > radiusSq) continue;
+      if (distSq < 1e-10) {
+        continue;
+      }
+
+      if (radius > 0 && distSq > radiusSq) {
+        continue;
+      }
 
       const dist = Math.sqrt(distSq);
       const falloff = radius > 0 ? 1 - dist / radius : 1;

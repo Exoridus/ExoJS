@@ -48,16 +48,15 @@ const acquire = (
   source = 'url:/a.txt',
   fetch: () => Promise<string> = () => Promise.resolve('fresh'),
   connectivity?: Connectivity,
-): Promise<string> => {
-  return cache.resolve<string>({
+): Promise<string> =>
+  cache.resolve<string>({
     namespace: 'text',
     sourceKey: source,
     layout: SingleEntryLayout.version<string>(1),
     network: connectivity?.snapshot() ?? unrestrictedNetwork,
     fetch,
-    report: () => undefined,
+    report: () => {},
   });
-};
 
 describe('a route resolves its policy per acquisition', () => {
   test('a fixed policy is used as-is', async () => {
@@ -90,7 +89,9 @@ describe('a route resolves its policy per acquisition', () => {
     const store = createCacheStoreDouble();
     const cache = new AssetCache({
       stores: store,
-      routes: [new CacheRoute({ types: ['config'], policy: { policyFor: () => new NetworkOnlyPolicy() } as CachePolicyResolver, stores: store })],
+      routes: [
+        new CacheRoute({ types: ['config'], policy: { policyFor: () => new NetworkOnlyPolicy() } as CachePolicyResolver, stores: store }),
+      ],
     });
 
     await cache.resolve<string>({
@@ -99,7 +100,7 @@ describe('a route resolves its policy per acquisition', () => {
       layout: SingleEntryLayout.version<string>(1),
       network: unrestrictedNetwork,
       fetch: () => Promise.resolve('fresh'),
-      report: () => undefined,
+      report: () => {},
     });
 
     // NetworkOnly writes nothing, so the config route left the store empty
@@ -221,7 +222,9 @@ describe('ConnectivityPolicyResolver', () => {
     const connectivity = new Connectivity(hintSource('offline').source);
     const resolver = new ConnectivityPolicyResolver();
 
-    expect(resolver.policyFor({ namespace: 'text', sourceKey: 'url:/a.txt', network: connectivity.snapshot() })).toBeInstanceOf(CacheOnlyPolicy);
+    expect(resolver.policyFor({ namespace: 'text', sourceKey: 'url:/a.txt', network: connectivity.snapshot() })).toBeInstanceOf(
+      CacheOnlyPolicy,
+    );
   });
 
   test('it holds no connectivity, so one resolver serves applications that disagree', () => {

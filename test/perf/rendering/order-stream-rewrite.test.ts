@@ -29,7 +29,15 @@ import type { DerivedSlotStats } from '#rendering/plan/DerivedSelectionState';
 import type { RetainedRootRepresentation } from '#rendering/plan/RetainedRootRepresentation';
 import type { RenderNode } from '#rendering/RenderNode';
 
-import { beginProbeFrame, buildScrollingWorld, endProbeFrame, installTierProbe, SCROLLING_WORLD, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from './cullMarginProbe';
+import {
+  beginProbeFrame,
+  buildScrollingWorld,
+  endProbeFrame,
+  installTierProbe,
+  SCROLLING_WORLD,
+  VIEWPORT_HEIGHT,
+  VIEWPORT_WIDTH,
+} from './cullMarginProbe';
 import { createWebGl2Harness } from './harness';
 
 const LEAF_COUNT = 4000;

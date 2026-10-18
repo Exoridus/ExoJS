@@ -31,6 +31,7 @@ describe('perf runs', () => {
 
   it.each(runNames.filter(name => 'runs' in PERF_RUNS[name]))('`%s` composes runs that exist', name => {
     const run = PERF_RUNS[name] as { runs: readonly string[] };
+
     for (const child of run.runs) {
       expect(runNames).toContain(child);
     }
@@ -39,11 +40,14 @@ describe('perf runs', () => {
   it('smokes every in-process benchmark under test/perf/*-benchmark.ts', () => {
     const benchmarks = runNames.filter(name => {
       const run = PERF_RUNS[name] as { module?: string };
+
       return run.module?.endsWith('-benchmark.ts') && !run.module.includes('profile');
     });
+
     for (const benchmark of benchmarks) {
       expect(PERF_RUNS.smoke.runs).toContain(benchmark);
     }
+
     expect(PERF_RUNS.smoke.runs).toContain('profile');
   });
 

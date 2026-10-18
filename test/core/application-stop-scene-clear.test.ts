@@ -8,7 +8,12 @@
 import { Application } from '#core/Application';
 import { Scene } from '#core/scene/Scene';
 import { ConcurrentSceneNavigationError } from '#core/scene/sceneErrors';
-import { SceneTransition, type SceneTransitionEnvironment, type SceneTransitionRequirements, type SceneTransitionSession } from '#core/scene/SceneTransition';
+import {
+  SceneTransition,
+  type SceneTransitionEnvironment,
+  type SceneTransitionRequirements,
+  type SceneTransitionSession,
+} from '#core/scene/SceneTransition';
 import { Time } from '#core/units';
 
 vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
@@ -56,12 +61,15 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
 class ManualSession implements SceneTransitionSession {
   public readonly placement = 'screen' as const;
   public done = false;
+
   public update(): void {
     // driven manually
   }
+
   public render(): void {
     // nothing to draw
   }
+
   public destroy(): void {
     // nothing to release
   }

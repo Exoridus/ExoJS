@@ -45,7 +45,12 @@ describe('color format capabilities', () => {
     const floatTargets = webGlBackend(true, false, false, [1]);
     const float32FullyEnabled = webGlBackend(true, true, true, [1]);
 
-    expect(unavailable.getColorFormatCapabilities(TextureFormat.Rgba16F)).toEqual({ renderable: false, filterable: true, blendable: false, sampleCounts: [1] });
+    expect(unavailable.getColorFormatCapabilities(TextureFormat.Rgba16F)).toEqual({
+      renderable: false,
+      filterable: true,
+      blendable: false,
+      sampleCounts: [1],
+    });
     expect(floatTargets.getColorFormatCapabilities(TextureFormat.Rgba32F)).toEqual({
       renderable: true,
       filterable: false,
@@ -80,7 +85,12 @@ describe('color format capabilities', () => {
   test('WebGL2 answers a single sample for a format it cannot render into at all', () => {
     const backend = webGlBackend(false, false, false, [1, 2, 4]);
 
-    expect(backend.getColorFormatCapabilities(TextureFormat.Rgba16F)).toEqual({ renderable: false, filterable: true, blendable: false, sampleCounts: [1] });
+    expect(backend.getColorFormatCapabilities(TextureFormat.Rgba16F)).toEqual({
+      renderable: false,
+      filterable: true,
+      blendable: false,
+      sampleCounts: [1],
+    });
   });
 
   test('WebGPU reads float32 capabilities from features granted to the device', () => {
@@ -88,9 +98,24 @@ describe('color format capabilities', () => {
     const filterable = webGpuBackend(['float32-filterable']);
     const fullyEnabled = webGpuBackend(['float32-filterable', 'float32-blendable']);
 
-    expect(unavailable.getColorFormatCapabilities(TextureFormat.Rgba32F)).toEqual({ renderable: true, filterable: false, blendable: false, sampleCounts: [1] });
-    expect(filterable.getColorFormatCapabilities(TextureFormat.Rgba32F)).toEqual({ renderable: true, filterable: true, blendable: false, sampleCounts: [1] });
-    expect(fullyEnabled.getColorFormatCapabilities(TextureFormat.Rgba32F)).toEqual({ renderable: true, filterable: true, blendable: true, sampleCounts: [1] });
+    expect(unavailable.getColorFormatCapabilities(TextureFormat.Rgba32F)).toEqual({
+      renderable: true,
+      filterable: false,
+      blendable: false,
+      sampleCounts: [1],
+    });
+    expect(filterable.getColorFormatCapabilities(TextureFormat.Rgba32F)).toEqual({
+      renderable: true,
+      filterable: true,
+      blendable: false,
+      sampleCounts: [1],
+    });
+    expect(fullyEnabled.getColorFormatCapabilities(TextureFormat.Rgba32F)).toEqual({
+      renderable: true,
+      filterable: true,
+      blendable: true,
+      sampleCounts: [1],
+    });
     expect(unavailable.supportsColorFormat(TextureFormat.Rgba32F)).toBe(true);
   });
 
@@ -155,9 +180,9 @@ describe('optional capability failures', () => {
     (globalThis as { createImageBitmap?: unknown }).createImageBitmap = undefined;
 
     try {
-      await expect(decodeImageBlob(new Blob([new Uint8Array(4)]), { create: () => 'blob:x', revoke: () => undefined } as never, 'data')).rejects.toThrow(
-        /colorSpaceConversion: 'none'/,
-      );
+      await expect(
+        decodeImageBlob(new Blob([new Uint8Array(4)]), { create: () => 'blob:x', revoke: () => {} } as never, 'data'),
+      ).rejects.toThrow(/colorSpaceConversion: 'none'/);
     } finally {
       (globalThis as { createImageBitmap?: unknown }).createImageBitmap = original;
     }
@@ -174,7 +199,7 @@ describe('optional capability failures', () => {
     };
 
     try {
-      const pool = { create: () => 'blob:x', revoke: () => undefined } as never;
+      const pool = { create: () => 'blob:x', revoke: () => {} } as never;
 
       await decodeImageBlob(new Blob([new Uint8Array(4)]), pool, 'color');
       await decodeImageBlob(new Blob([new Uint8Array(4)]), pool, 'data');

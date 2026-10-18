@@ -22,7 +22,7 @@ const createStubRuntime = (): RenderBackend => {
   const stats = createRenderStats();
 
   return {
-    ...createRenderBackendDouble({ renderTarget: renderTarget, stats }),
+    ...createRenderBackendDouble({ renderTarget, stats }),
     stats,
     renderTarget,
     get view() {
@@ -33,6 +33,7 @@ const createStubRuntime = (): RenderBackend => {
     },
     resetStats() {
       resetRenderStats(stats);
+
       return this;
     },
     clear() {
@@ -40,10 +41,12 @@ const createStubRuntime = (): RenderBackend => {
     },
     resize(w, h) {
       renderTarget.resize(w, h);
+
       return this;
     },
     setView(v) {
       renderTarget.setView(v);
+
       return this;
     },
     setRenderTarget() {
@@ -63,10 +66,12 @@ const createStubRuntime = (): RenderBackend => {
     },
     releaseRenderTexture(t) {
       t.destroy();
+
       return this;
     },
     draw() {
       stats.submittedNodes++;
+
       return this;
     },
     execute() {
@@ -85,16 +90,19 @@ const createNode = (x: number, y: number, size = 16): Drawable => {
   const node = new Drawable();
   node.setLocalBounds(0, 0, size, size);
   node.setPosition(x, y);
+
   return node;
 };
 
 const createGridScene = (cols: number, rows: number, spacing: number, ox = 0, oy = 0): Container => {
   const root = new Container();
+
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       root.addChild(createNode(ox + c * spacing, oy + r * spacing));
     }
   }
+
   return root;
 };
 

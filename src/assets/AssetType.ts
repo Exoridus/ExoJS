@@ -303,7 +303,10 @@ export abstract class AssetType<Source, Resource, Options = undefined, Stored = 
     // lifting that constraint is what this API exists for - but both names are
     // resolved through the same app-local lookup, so the widening is a naming
     // question rather than a dispatch one.
-    return new AssetImpl(_requestConfig(this.id, source, options[0]), this as AnyAssetType) as unknown as AssetDescriptor<this['leaf'], Resource>;
+    return new AssetImpl(_requestConfig(this.id, source, options[0]), this as AnyAssetType) as unknown as AssetDescriptor<
+      this['leaf'],
+      Resource
+    >;
   }
 }
 

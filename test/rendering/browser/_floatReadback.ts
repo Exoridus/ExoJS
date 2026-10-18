@@ -31,12 +31,19 @@ export const checkFloatReadback = async (backend: RenderBackend, format: ColorTe
   const filter = ShaderFilter.from(shader);
   const reader = context.createPixelReader(target, { dataType: 'float32', region: new Rectangle(1, 1, 17, 2), slots: 1 });
   const transferBytes = backend.backendType === RenderBackendType.WebGl2 || format === TextureFormat.Rgba32F ? 16 : 8;
+
   const check = (data: Float32Array, width: number, height: number, x: number, y: number): void => {
     expect(data).toBeInstanceOf(Float32Array);
     expect(data.length).toBe(width * height * 4);
+
     for (let row = 0; row < height; row++) {
       for (let col = 0; col < width; col++) {
-        expect(Array.from(data.subarray((row * width + col) * 4, (row * width + col + 1) * 4))).toEqual([col + x - 2.5, row + y + 2.25, -0.5, 1]);
+        expect(Array.from(data.subarray((row * width + col) * 4, (row * width + col + 1) * 4))).toEqual([
+          col + x - 2.5,
+          row + y + 2.25,
+          -0.5,
+          1,
+        ]);
       }
     }
   };

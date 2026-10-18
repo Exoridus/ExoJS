@@ -1,5 +1,5 @@
 import { Scene, type Seconds, Sprite, type Voice } from '@codexo/exojs';
-import { Constant, ParticleSystem } from '@codexo/exojs-particles';
+import { Constant, type ParticleSystem } from '@codexo/exojs-particles';
 
 class ThrustScene extends Scene {
   private thrust = { x: 0, y: 0 };

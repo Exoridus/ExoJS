@@ -80,7 +80,9 @@ const infiniteRepeat = -1;
  */
 const assertValidRepeat = (context: string, repeat: number): void => {
   if (!Number.isInteger(repeat) || (repeat !== infiniteRepeat && repeat < 1)) {
-    throw new Error(`AnimatedSprite ${context} has an invalid repeat value (${repeat}). Must be ${infiniteRepeat} (infinite) or a positive integer.`);
+    throw new Error(
+      `AnimatedSprite ${context} has an invalid repeat value (${repeat}). Must be ${infiniteRepeat} (infinite) or a positive integer.`,
+    );
   }
 };
 
@@ -120,6 +122,7 @@ export class AnimatedSprite extends Sprite {
    * after the owning stage has already been swapped out.
    */
   private _system: AnimationSystem | null = null;
+  private _availability: (() => boolean) | null = null;
 
   public readonly onComplete = new Signal<[clip: string]>();
   public readonly onFrame = new Signal<[clip: string, frame: number]>();
@@ -209,7 +212,9 @@ export class AnimatedSprite extends Sprite {
 
     if (clip.frameDurations) {
       if (clip.frameDurations.length !== frames.length) {
-        throw new Error(`AnimatedSprite clip "${name}" frameDurations length (${clip.frameDurations.length}) must match its frame count (${frames.length}).`);
+        throw new Error(
+          `AnimatedSprite clip "${name}" frameDurations length (${clip.frameDurations.length}) must match its frame count (${frames.length}).`,
+        );
       }
 
       for (const duration of clip.frameDurations) {
@@ -225,7 +230,9 @@ export class AnimatedSprite extends Sprite {
 
     if (clip.frameOffsets) {
       if (clip.frameOffsets.length !== frames.length) {
-        throw new Error(`AnimatedSprite clip "${name}" frameOffsets length (${clip.frameOffsets.length}) must match its frame count (${frames.length}).`);
+        throw new Error(
+          `AnimatedSprite clip "${name}" frameOffsets length (${clip.frameOffsets.length}) must match its frame count (${frames.length}).`,
+        );
       }
 
       for (const offset of clip.frameOffsets) {
@@ -274,7 +281,10 @@ export class AnimatedSprite extends Sprite {
    * state the normalized internal store no longer exposes directly.
    * @internal
    */
-  public _getClipDefinitions(): Record<string, Required<Pick<AnimatedSpriteClipDefinition, 'frames' | 'repeat'>> & AnimatedSpriteClipDefinition> {
+  public _getClipDefinitions(): Record<
+    string,
+    Required<Pick<AnimatedSpriteClipDefinition, 'frames' | 'repeat'>> & AnimatedSpriteClipDefinition
+  > {
     const out: Record<string, Required<Pick<AnimatedSpriteClipDefinition, 'frames' | 'repeat'>> & AnimatedSpriteClipDefinition> = {};
 
     for (const [name, clip] of this._clips) {
@@ -342,6 +352,7 @@ export class AnimatedSprite extends Sprite {
     if (options.repeat !== undefined) {
       this._repeatOverride = options.repeat;
     }
+
     this._playing = true;
     this._syncSystemRegistration();
 
@@ -387,6 +398,25 @@ export class AnimatedSprite extends Sprite {
   }
 
   /**
+   * Bind playback time to an owner's availability: while `available` reports
+   * `false`, {@link update} advances nothing, and {@link playing} keeps
+   * reporting what was last requested. `null` unbinds.
+   * @internal
+   */
+  public _setAvailability(available: (() => boolean) | null): void {
+    this._availability = available;
+  }
+
+  /**
+   * Whether `available` is the binding currently in force - so an owner can
+   * tell whether the sprite is still its own to stop and unbind.
+   * @internal
+   */
+  public _isBoundTo(available: () => boolean): boolean {
+    return this._availability === available;
+  }
+
+  /**
    * Advance playback by `deltaSeconds` - seconds, the same unit as
    * {@link Tween.update}, and the unit a `Time` delta reports through
    * `delta.seconds`. Clip authoring stays in its own units:
@@ -398,10 +428,12 @@ export class AnimatedSprite extends Sprite {
    * is not part of an application's scene tree, or to step playback manually.
    * Dispatches `onFrame` for each frame boundary crossed and `onComplete` when
    * the clip completes its final {@link AnimatedSpriteClipDefinition.repeat}
-   * cycle.
+   * cycle. A handler that pauses, stops, plays another clip or destroys the sprite
+   * ends the advance at that frame: the rest of `deltaSeconds` is not played,
+   * and a later {@link resume} starts the paused frame's hold afresh.
    */
   public update(deltaSeconds: number): this {
-    if (!this._playing || this._currentClipName === null) {
+    if (!this._playing || this._currentClipName === null || (this._availability !== null && !this._availability())) {
       return this;
     }
 
@@ -452,6 +484,11 @@ export class AnimatedSprite extends Sprite {
           // Normalized clips always hold at least one frame.
           this._applyFrame(clip, 0);
           this.onFrame.dispatch(this._currentClipName, 0);
+
+          if (this._isInterrupted(clip)) {
+            break;
+          }
+
           threshold = clip.frameDurations?.[this._currentFrameIndex] ?? clip.frameDuration;
           continue;
         }
@@ -472,6 +509,11 @@ export class AnimatedSprite extends Sprite {
       // In-bounds: nextFrame < frames.length.
       this._applyFrame(clip, this._currentFrameIndex);
       this.onFrame.dispatch(this._currentClipName, this._currentFrameIndex);
+
+      if (this._isInterrupted(clip)) {
+        break;
+      }
+
       threshold = clip.frameDurations?.[this._currentFrameIndex] ?? clip.frameDuration;
     }
 
@@ -527,6 +569,22 @@ export class AnimatedSprite extends Sprite {
     }
 
     return new AnimatedSprite(spritesheet.texture, clips);
+  }
+
+  /**
+   * Whether an `onFrame` handler changed playback under the advance loop in
+   * {@link update}. A pause discards the time still owed to the run, so the
+   * paused frame holds for its full duration once resumed rather than replaying
+   * the remainder of the interrupted update.
+   */
+  private _isInterrupted(clip: NormalizedAnimatedSpriteClip): boolean {
+    if (!this._playing) {
+      this._elapsedFrameTime = seconds(0);
+
+      return true;
+    }
+
+    return this._currentClipName === null || this._clips.get(this._currentClipName) !== clip;
   }
 
   /**

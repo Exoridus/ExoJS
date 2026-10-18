@@ -1,0 +1,1063 @@
+{
+  "title": "NavigationAgentComponent",
+  "description": "Moves its actor to a destination, or after a moving target, through any NavigationSpace: it plans the route, progresses along its waypoints, slows down onto the destination, notices when the route goes stale and plans again. An agent decides where to go; a NavigationMovement performs the motion. It never touches the actor's transform itself, so the same agent drives a physics-backed movement, one that writes a node position, or one the game provides. Positions, destinations and targets are all read in the navigation space's coordinates. It steers in its fixed update, which a scene runs before its systems, so a movement backed by a physics world registered as a scene system receives each step's command before that world steps. Nothing is searched every step: a route is planned on a new command and replanned only when it went stale - the space's revision changed, a followed target moved to another node, a budget-limited partial route ran out, or the actor made no progress - and automatic replans are at most one per NavigationAgentOptions.repathInterval. Disabling the component stops the movement and keeps the command; enabling it again plans a fresh route to it. Pausing the scene pauses it.",
+  "symbol": "NavigationAgentComponent",
+  "kind": "class",
+  "subsystem": "pathfinding",
+  "importPath": "@codexo/exojs-pathfinding",
+  "tier": "stable",
+  "memberCount": 29,
+  "counts": {
+    "constructors": 1,
+    "methods": 12,
+    "properties": 15,
+    "events": 1
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Moves its actor to a destination, or after a moving target, through any NavigationSpace: it plans the route, progresses along its waypoints, slows down onto the destination, notices when the route goes stale and plans again.",
+        "An agent decides where to go; a NavigationMovement performs the motion. It never touches the actor's transform itself, so the same agent drives a physics-backed movement, one that writes a node position, or one the game provides. Positions, destinations and targets are all read in the navigation space's coordinates.",
+        "It steers in its fixed update, which a scene runs before its systems, so a movement backed by a physics world registered as a scene system receives each step's command before that world steps. Nothing is searched every step: a route is planned on a new command and replanned only when it went stale - the space's revision changed, a followed target moved to another node, a budget-limited partial route ran out, or the actor made no progress - and automatic replans are at most one per NavigationAgentOptions.repathInterval.",
+        "Disabling the component stops the movement and keeps the command; enabling it again plans a fresh route to it. Pausing the scene pauses it."
+      ],
+      "importLine": "import { NavigationAgentComponent } from '@codexo/exojs-pathfinding'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: NavigationAgentOptions<Payload>): NavigationAgentComponent<Payload>",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NavigationAgentOptions",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Payload",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NavigationAgentComponent",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Payload",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "NavigationAgentOptions<Payload>",
+              "optional": false
+            }
+          ],
+          "returnType": "NavigationAgentComponent<Payload>",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "End the component for good: disable it if active, detach it from its node if attached, then run onDestroy. Idempotent. Destroying a node destroys every component still attached to it. Every step runs even when a hook throws; the first error is rethrown afterwards."
+        },
+        {
+          "name": "fixedUpdate",
+          "signature": "fixedUpdate(step: Seconds): void",
+          "signatureTokens": [
+            {
+              "text": "fixedUpdate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "step",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "step",
+              "type": "Seconds",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Advance by one fixed-timestep step, after the scene's own Scene.fixedUpdate and before its systems. Must be synchronous."
+        },
+        {
+          "name": "follow",
+          "signature": "follow(target: Readonly<PointLike>): void",
+          "signatureTokens": [
+            {
+              "text": "follow",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "target",
+              "type": "Readonly<PointLike>",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Follows a target whose position is read live every fixed step - a physics body, a node in navigation coordinates, any object with x/y. The route is replanned when the target enters another node, and the agent steers onto the target itself once they share the final node. Following continues after arrival until stop or another command."
+        },
+        {
+          "name": "moveTo",
+          "signature": "moveTo(destination: Readonly<PointLike>): void",
+          "signatureTokens": [
+            {
+              "text": "moveTo",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "destination",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "destination",
+              "type": "Readonly<PointLike>",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Navigates to a fixed point, which is copied. A destination in the node the current route already ends in reuses the route; any other one is searched in the next fixed step."
+        },
+        {
+          "name": "onAttach",
+          "signature": "onAttach(): Synchronous",
+          "signatureTokens": [
+            {
+              "text": "onAttach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Synchronous",
+          "description": "Called after the component was attached to node. The node may not be in any scene yet."
+        },
+        {
+          "name": "onDestroy",
+          "signature": "onDestroy(): void",
+          "signatureTokens": [
+            {
+              "text": "onDestroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Called once, at the end of destroy."
+        },
+        {
+          "name": "onDetach",
+          "signature": "onDetach(): Synchronous",
+          "signatureTokens": [
+            {
+              "text": "onDetach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Synchronous",
+          "description": "Called after the component was removed from its node; node is no longer readable."
+        },
+        {
+          "name": "onDisable",
+          "signature": "onDisable(): void",
+          "signatureTokens": [
+            {
+              "text": "onDisable",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Called when the component stops being active."
+        },
+        {
+          "name": "onEnable",
+          "signature": "onEnable(): void",
+          "signatureTokens": [
+            {
+              "text": "onEnable",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Called when the component becomes active. Release in onDisable what this acquires."
+        },
+        {
+          "name": "repath",
+          "signature": "repath(): void",
+          "signatureTokens": [
+            {
+              "text": "repath",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Plans a fresh route in the next fixed step, regardless of the repath interval."
+        },
+        {
+          "name": "stop",
+          "signature": "stop(): void",
+          "signatureTokens": [
+            {
+              "text": "stop",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Cancels navigation: the status becomes idle and the movement is stopped."
+        },
+        {
+          "name": "update",
+          "signature": "update(_delta: Seconds): Synchronous",
+          "signatureTokens": [
+            {
+              "text": "update",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "_delta",
+              "type": "Seconds",
+              "optional": false
+            }
+          ],
+          "returnType": "Synchronous",
+          "description": "Advance by the variable frame delta, after the scene's own Scene.update and before its systems. Must be synchronous."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "[componentHost]",
+          "signature": "[componentHost]: SceneNode",
+          "signatureTokens": [
+            {
+              "text": "[componentHost]",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Type-only carrier of the accepted host type, read by ComponentHostCheck. Never present at runtime."
+        },
+        {
+          "name": "movement",
+          "signature": "movement: NavigationMovement",
+          "signatureTokens": [
+            {
+              "text": "movement",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NavigationMovement",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "pathfinder",
+          "signature": "pathfinder: Pathfinder",
+          "signatureTokens": [
+            {
+              "text": "pathfinder",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Pathfinder",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "space",
+          "signature": "space: NavigationSpace<Payload>",
+          "signatureTokens": [
+            {
+              "text": "space",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NavigationSpace",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Payload",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "active",
+          "signature": "active: boolean",
+          "signatureTokens": [
+            {
+              "text": "active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the component is enabled in an active scene right now: between its onEnable and onDisable. Stays true while the scene is paused."
+        },
+        {
+          "name": "attached",
+          "signature": "attached: boolean",
+          "signatureTokens": [
+            {
+              "text": "attached",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the component is attached to a node."
+        },
+        {
+          "name": "destination",
+          "signature": "destination: Readonly<Vector> | null",
+          "signatureTokens": [
+            {
+              "text": "destination",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Where navigation is heading: the fixed destination, or the followed target's position when it was last read. null while idle."
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether destroy has run. A destroyed component cannot be attached again."
+        },
+        {
+          "name": "enabled",
+          "signature": "enabled: boolean",
+          "signatureTokens": [
+            {
+              "text": "enabled",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The component's own switch. true by default. Turning it off disables an active component (and stops a BehaviorComponent's frame hooks) without detaching it: it stays on its node and in Scene.query results. Turning it back on enables it again once its node is in an active scene - during a frame, from the next frame on."
+        },
+        {
+          "name": "node",
+          "signature": "node: N",
+          "signatureTokens": [
+            {
+              "text": "node",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "N",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node this component is attached to."
+        },
+        {
+          "name": "path",
+          "signature": "path: PathResult<Payload> | null",
+          "signatureTokens": [
+            {
+              "text": "path",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PathResult",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Payload",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The route being followed, or null before the first search and after stop."
+        },
+        {
+          "name": "scene",
+          "signature": "scene: Scene<void, Application<object>> | null",
+          "signatureTokens": [
+            {
+              "text": "scene",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scene",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The scene whose root or UI layer the component's node belongs to, or null while it belongs to none. A retained scene still counts."
+        },
+        {
+          "name": "status",
+          "signature": "status: NavigationStatus",
+          "signatureTokens": [
+            {
+              "text": "status",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NavigationStatus",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "target",
+          "signature": "target: Readonly<PointLike> | null",
+          "signatureTokens": [
+            {
+              "text": "target",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The followed target, or null when navigating to a fixed destination or idle."
+        },
+        {
+          "name": "waypointIndex",
+          "signature": "waypointIndex: number",
+          "signatureTokens": [
+            {
+              "text": "waypointIndex",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Index into path's points of the waypoint currently steered for."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "members": [
+        {
+          "name": "onStatusChange",
+          "signature": "onStatusChange: Signal<[status]>",
+          "signatureTokens": [
+            {
+              "text": "onStatusChange",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "status",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires with the new status whenever status changes."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-pathfinding/src/navigation/NavigationAgentComponent.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/navigation/NavigationAgentComponent.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-pathfinding/src/navigation/NavigationAgentComponent.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/navigation/NavigationAgentComponent.ts"
+}

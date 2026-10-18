@@ -6,7 +6,7 @@ import type { Texture } from '#rendering/texture/Texture';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const makeTexture = (w = 64, h = 64): Texture => ({ width: w, height: h, flipY: false, updateSource: () => undefined }) as unknown as Texture;
+const makeTexture = (w = 64, h = 64): Texture => ({ width: w, height: h, flipY: false, updateSource: () => {} }) as unknown as Texture;
 
 // ---------------------------------------------------------------------------
 // Public API - Drawable.pixelSnapMode

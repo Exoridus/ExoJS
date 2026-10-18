@@ -84,7 +84,10 @@ export class DistortionEffect extends AudioEffect {
    * not yet initialized.
    */
   public get inputNode(): AudioNode {
-    if (!this._setup) throw new Error('DistortionEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('DistortionEffect not yet initialized.');
+    }
+
     return this._setup.inputGain;
   }
 
@@ -93,7 +96,10 @@ export class DistortionEffect extends AudioEffect {
    * not yet initialized.
    */
   public get outputNode(): AudioNode {
-    if (!this._setup) throw new Error('DistortionEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('DistortionEffect not yet initialized.');
+    }
+
     return this._setup.outputGain;
   }
 
@@ -108,6 +114,7 @@ export class DistortionEffect extends AudioEffect {
 
   public set drive(value: number) {
     this._drive = Math.max(0, Math.min(1, value));
+
     if (this._setup) {
       this._setup.waveShaper.curve = DistortionEffect._buildCurve(this._drive);
     }
@@ -123,6 +130,7 @@ export class DistortionEffect extends AudioEffect {
 
   public set wet(value: number) {
     this._wet = Math.max(0, Math.min(1, value));
+
     if (this._setup) {
       const ctx = this._setup.wetGain.context;
       this._setup.wetGain.gain.setTargetAtTime(this._wet, ctx.currentTime, 0.01);
@@ -140,6 +148,7 @@ export class DistortionEffect extends AudioEffect {
 
   public set oversample(value: OverSampleType) {
     this._oversample = value;
+
     if (this._setup) {
       this._setup.waveShaper.oversample = this._oversample;
     }
@@ -156,6 +165,7 @@ export class DistortionEffect extends AudioEffect {
 
   public set tone(value: number) {
     this._tone = Math.max(0, Math.min(1, value));
+
     if (this._setup) {
       const ctx = this._setup.toneFilter.context;
       this._setup.toneFilter.frequency.setTargetAtTime(DistortionEffect._toneToFrequency(this._tone), ctx.currentTime, 0.01);
@@ -164,6 +174,7 @@ export class DistortionEffect extends AudioEffect {
 
   public override destroy(): void {
     this._teardown();
+
     if (this._setup) {
       this._setup.inputGain.disconnect();
       this._setup.waveShaper.disconnect();
@@ -189,10 +200,12 @@ export class DistortionEffect extends AudioEffect {
     const curve: Float32Array<ArrayBuffer> = new Float32Array(n);
     const amount = drive * 400 + 1;
     const norm = Math.tanh(amount);
+
     for (let i = 0; i < n; i++) {
       const x = (i * 2) / (n - 1) - 1;
       curve[i] = x * (1 - drive) + (Math.tanh(x * amount) / norm) * drive;
     }
+
     return curve;
   }
 

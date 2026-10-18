@@ -34,10 +34,13 @@ const SHADER_FIXTURE_DIRECTORY = 'src/__inline-source-fixtures__';
 
 /** Strings that name a marker without being a module, and must stay silent. */
 const ACCEPTED: Readonly<Record<string, string>> = {
-  'prose-about-worklets': "export const hint = 'Call registerProcessor(name, ctor) at the end of your worklet module, once it is authored.';",
-  'error-message': "export const message = 'self.postMessage() is unavailable: this code is not running inside a Worker global scope at all.';",
+  'prose-about-worklets':
+    "export const hint = 'Call registerProcessor(name, ctor) at the end of your worklet module, once it is authored.';",
+  'error-message':
+    "export const message = 'self.postMessage() is unavailable: this code is not running inside a Worker global scope at all.';",
   'short-literal': "export const marker = 'self.onmessage = handler;';",
-  'wgsl-identifier-in-prose': "export const note = 'The @fragment entry point is supplied by the material author, not by the engine, in every backend.';",
+  'wgsl-identifier-in-prose':
+    "export const note = 'The @fragment entry point is supplied by the material author, not by the engine, in every backend.';",
 };
 
 /** Strings that are a module the repository would otherwise be maintaining as text. */

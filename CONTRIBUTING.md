@@ -126,6 +126,14 @@ Scripts forward their arguments, so a variant is an argument rather than a scrip
 
 The root gate and lane runners share an output policy. `auto` is the default: it uses `normal` for an interactive terminal and `compact` for CI or redirected output. Override it with `--output normal|compact|silent|verbose`, or set `EXOJS_OUTPUT` for a process tree. Compact and silent runs stream complete output to `.workspace/logs/` without buffering it in memory; failures print the last diagnostic lines and the log path. Benchmark and release lanes keep at least normal output.
 
+## Code style
+
+One authoring style covers Core, the extension packages, the example catalog, the guide sources, tests, scripts and the site, so a file does not reveal which tree it came from. How strictly a tree is typed is a separate question: the examples keep a lighter correctness profile and still look exactly like engine source.
+
+Prettier owns the mechanical layout: indentation, quotes, semicolons, commas, wrapping at 140 columns, and the formatting of JSON, Markdown, CSS, YAML and HTML. ESLint owns what needs the syntax tree, and its authoring rules live in one place, `@codexo/exojs-config/eslint/style`: control-flow bodies are always blocks and a block is never squeezed onto one line (`if (ready) return;` and `if (ready) { return; }` are both rejected), functions are expressions rather than declarations, class members are separated by blank lines (runs of plain fields may stay grouped), `return` and `throw` and multi-line blocks get a blank line around them, imports are sorted with inline `type` specifiers, and comments start with a space. Correctness rules stay in `eslint/correctness` and the per-tree factories; the style layer never changes what code means.
+
+`pnpm lint:fix` applies every autofixable ESLint rule across the repository, `pnpm format` runs Prettier, and the pre-commit hook runs ESLint and then Prettier on each staged file in that order. Guide pages (`*.mdx`) are formatted by hand because Prettier would reflow their JSX and the aligned comments in their listings; their long listings come from `examples/guides/**` through `SourceSnippet` and follow the style above.
+
 ## Shared configuration
 
 `@codexo/exojs-config` (private, unpublished, never a runtime dependency) centralizes reusable tooling — TypeScript profiles (`extends`-able JSON), Prettier, ESLint import-boundary presets, Vitest project factories, the Rollup extension factory, and the package-policy verifier. It is consumed with no build step. Repository-specific concerns (browser WebGL2/WebGPU test projects, ESLint globs, release assembly) stay in the Root, not in the config package.

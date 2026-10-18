@@ -155,6 +155,7 @@ const hash21 = (x: number, y: number): number => {
   n = Math.imul(n ^ (n >>> 16), 0x7feb352d);
   n = Math.imul(n ^ (n >>> 15), 0x846ca68b);
   n ^= n >>> 16;
+
   return (n >>> 8) / 16777216;
 };
 
@@ -174,5 +175,6 @@ const valueNoise2 = (x: number, y: number): number => {
 
   const ab = a + (b - a) * u;
   const cd = c + (d - c) * u;
+
   return ab + (cd - ab) * v;
 };

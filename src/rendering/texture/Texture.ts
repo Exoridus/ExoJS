@@ -667,6 +667,7 @@ export class Texture {
       this._validateResolvedMetadata(metadata);
     } catch (error) {
       this._requestedColorSpace = previous;
+
       throw error;
     }
 
@@ -693,6 +694,7 @@ export class Texture {
       this._validateResolvedMetadata(metadata);
     } catch (error) {
       this._requestedAlphaMode = previous;
+
       throw error;
     }
 
@@ -725,7 +727,12 @@ export class Texture {
         payloadAlphaMode: sourceMetadata.alphaMode,
       });
 
-      return Object.freeze({ storageFormat: resolved.storageFormat, colorSpace: resolved.colorSpace, alphaMode: resolved.alphaMode, mipLevelCount: 1 });
+      return Object.freeze({
+        storageFormat: resolved.storageFormat,
+        colorSpace: resolved.colorSpace,
+        alphaMode: resolved.alphaMode,
+        mipLevelCount: 1,
+      });
     }
 
     if (pixels !== null) {

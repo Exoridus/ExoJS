@@ -9,7 +9,7 @@ import {
   type Seconds,
   Size,
   Sprite,
-  Texture,
+  type Texture,
   Time,
   Timer,
   Vector,

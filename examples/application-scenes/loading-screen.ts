@@ -1,4 +1,16 @@
-import { Application, Asset, Assets, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, Sprite, Text } from '@codexo/exojs';
+import {
+  Application,
+  Asset,
+  Assets,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  Keyboard,
+  type RenderingContext,
+  Scene,
+  Sprite,
+  Text,
+} from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const GameAssets = Assets.from({
@@ -47,23 +59,29 @@ class BootScene extends Scene {
     // Every listener is kept in a field so `unload()` can take it off again.
     this.onLoadStart = (key: string) => {
       this.loading = true;
+
       if (!this.failed) {
         this.message = `Loading ${key}…`;
       }
     };
+
     this.onLoadProgress = (loaded: number, total: number, key: string) => {
       this.loaded = loaded;
       this.total = total;
+
       if (!this.failed) {
         this.message = `${loaded} / ${total} — ${key}`;
       }
     };
+
     this.onLoadError = (key: string, error: Error) => {
       this.failed = true;
       this.message = `Failed to load "${key}": ${error.message}`;
     };
+
     this.onLoadComplete = () => {
       this.loading = false;
+
       if (this.failed) {
         this.message = 'Load failed. Press Space to retry.';
       } else {

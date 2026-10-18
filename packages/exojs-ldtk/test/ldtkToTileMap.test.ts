@@ -119,8 +119,8 @@ const layeredData: LdtkData = {
           visible: true,
           iid: 'bbbbbbbb-0000-0000-0000-000000000002',
           intGridCsv: [
-            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
           ],
         },
         {
@@ -429,7 +429,8 @@ describe('ldtkToTileMap', () => {
         },
         levels: layeredData.levels.map(level => ({
           ...level,
-          layerInstances: level.layerInstances?.map(layer => (layer.layerDefUid === 101 ? { ...layer, pxOffsetX: 3, pxOffsetY: 4 } : layer)) ?? null,
+          layerInstances:
+            level.layerInstances?.map(layer => (layer.layerDefUid === 101 ? { ...layer, pxOffsetX: 3, pxOffsetY: 4 } : layer)) ?? null,
         })),
       };
       const tilesLayer = ldtkToTileMap(data).levels[0]?.layers.find(l => l.name === 'Tiles');
@@ -480,6 +481,7 @@ describe('ldtkToTileMap', () => {
   describe('single-world backward compatibility (no data.worlds)', () => {
     it('never adds an ldtkWorldIid property key when the document has no worlds', () => {
       const result = ldtkToTileMap(multiLevelData);
+
       for (const level of result.levels) {
         expect(Object.hasOwn(level.properties, 'ldtkWorldIid')).toBe(false);
       }

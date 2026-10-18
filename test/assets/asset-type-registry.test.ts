@@ -7,7 +7,8 @@ import { testAssetType } from './test-asset-type';
 class TypeA {}
 class TypeB {}
 
-const adapter = (): never => ({ createPlaceholder: vi.fn(), stateOf: vi.fn(), begin: vi.fn(), fill: vi.fn(), fail: vi.fn(), evict: vi.fn() }) as never;
+const adapter = (): never =>
+  ({ createPlaceholder: vi.fn(), stateOf: vi.fn(), begin: vi.fn(), fill: vi.fn(), fail: vi.fn(), evict: vi.fn() }) as never;
 
 /** An installable type, with everything the individual test does not care about defaulted. */
 const type = (spec: {
@@ -17,8 +18,8 @@ const type = (spec: {
   leaf?: unknown;
   destroy?: () => void;
   resourceIdentity?: (request: { source: string; options?: unknown }) => string;
-}): ReturnType<typeof testAssetType> => {
-  return testAssetType<string, unknown>({
+}): ReturnType<typeof testAssetType> =>
+  testAssetType<string, unknown>({
     id: spec.id,
     ...(spec.token !== undefined && { token: spec.token as never }),
     ...(spec.extensions !== undefined && { extensions: spec.extensions }),
@@ -27,7 +28,6 @@ const type = (spec: {
     ...(spec.resourceIdentity !== undefined && { resourceIdentity: spec.resourceIdentity as never }),
     create: async source => source,
   });
-};
 
 describe('AssetTypeRegistry', () => {
   test('installs a type under its id, its token and every suffix it claims', () => {
@@ -78,9 +78,9 @@ describe('AssetTypeRegistry', () => {
   test('installing two types on one dispatch token is rejected before anything is written', () => {
     const registry = new AssetTypeRegistry();
 
-    expect(() => registry.installAll([type({ id: 'first', token: TypeA }), type({ id: 'second', token: TypeA, extensions: ['later'] })])).toThrow(
-      /another installed type already uses/,
-    );
+    expect(() =>
+      registry.installAll([type({ id: 'first', token: TypeA }), type({ id: 'second', token: TypeA, extensions: ['later'] })]),
+    ).toThrow(/another installed type already uses/);
     expect(registry.hasAssetType('first')).toBe(false);
     expect(registry.hasExtension('later')).toBe(false);
   });
@@ -89,7 +89,10 @@ describe('AssetTypeRegistry', () => {
     const registry = new AssetTypeRegistry();
 
     expect(() =>
-      registry.installAll([type({ id: 'json', token: TypeA, extensions: ['shared'] }), type({ id: 'text', token: TypeB, extensions: ['shared'] })]),
+      registry.installAll([
+        type({ id: 'json', token: TypeA, extensions: ['shared'] }),
+        type({ id: 'text', token: TypeB, extensions: ['shared'] }),
+      ]),
     ).toThrow(/already claimed by asset type/);
     expect(registry.hasAssetType('json')).toBe(false);
     expect(registry.hasLoadable(TypeB)).toBe(false);
@@ -98,7 +101,9 @@ describe('AssetTypeRegistry', () => {
   test('one type declaring a suffix twice is rejected', () => {
     const registry = new AssetTypeRegistry();
 
-    expect(() => registry.installAll([type({ id: 'json', token: TypeA, extensions: ['dup', 'DUP'] })])).toThrow(/declares the extension ".dup" twice/);
+    expect(() => registry.installAll([type({ id: 'json', token: TypeA, extensions: ['dup', 'DUP'] })])).toThrow(
+      /declares the extension ".dup" twice/,
+    );
   });
 
   test('an id must be a non-empty string', () => {
@@ -127,7 +132,11 @@ describe('AssetTypeRegistry', () => {
 
     registry.installAll([
       type({ id: 'plain', token: TypeB }),
-      type({ id: 'discriminated', token: TypeA, resourceIdentity: request => String((request.options as { format?: string } | undefined)?.format) }),
+      type({
+        id: 'discriminated',
+        token: TypeA,
+        resourceIdentity: request => String((request.options as { format?: string } | undefined)?.format),
+      }),
     ]);
 
     expect(registry._identityDiscriminator(TypeB, 'a.png', { format: 'x' })).toBeUndefined();
@@ -139,7 +148,11 @@ describe('AssetTypeRegistry', () => {
     const registry = new AssetTypeRegistry();
 
     registry.installAll([
-      type({ id: 'discriminated', token: TypeA, resourceIdentity: request => String((request.options as { format?: string } | undefined)?.format) }),
+      type({
+        id: 'discriminated',
+        token: TypeA,
+        resourceIdentity: request => String((request.options as { format?: string } | undefined)?.format),
+      }),
     ]);
 
     const hostile = {
@@ -155,7 +168,10 @@ describe('AssetTypeRegistry', () => {
   test('_resolveTypeForPath matches the longest claimed dot-suffix first', () => {
     const registry = new AssetTypeRegistry();
 
-    registry.installAll([type({ id: 'json', token: TypeA, extensions: ['json'] }), type({ id: 'text', token: TypeB, extensions: ['aseprite.json'] })]);
+    registry.installAll([
+      type({ id: 'json', token: TypeA, extensions: ['json'] }),
+      type({ id: 'text', token: TypeB, extensions: ['aseprite.json'] }),
+    ]);
 
     expect(registry._resolveTypeForPath('hero.aseprite.json')).toBe('text');
     expect(registry._resolveTypeForPath('plain.json')).toBe('json');
@@ -262,7 +278,9 @@ describe('AssetTypeRegistry.installAll atomicity', () => {
     const secondDestroy = vi.fn();
     const order: string[] = [];
     const first = factoryType('first', () => ({ create: async () => 1, destroy: () => (firstDestroy(), order.push('first')) }), ['first']);
-    const second = factoryType('second', () => ({ create: async () => 2, destroy: () => (secondDestroy(), order.push('second')) }), ['second']);
+    const second = factoryType('second', () => ({ create: async () => 2, destroy: () => (secondDestroy(), order.push('second')) }), [
+      'second',
+    ]);
     const failing = factoryType('failing', () => {
       throw new Error('factory failed');
     });

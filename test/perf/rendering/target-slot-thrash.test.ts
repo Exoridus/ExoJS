@@ -206,12 +206,15 @@ describe('retained products — one root, several render targets per frame', () 
   });
 
   test('a descendant move reaches the product the frame is not drawing, so both stay replayable', () => {
-    const movingLeaf = (arm: Arm): RenderNode => (arm.root as unknown as { children: RenderNode[] }).children.find(child => child instanceof Sprite)!;
+    const movingLeaf = (arm: Arm): RenderNode =>
+      (arm.root as unknown as { children: RenderNode[] }).children.find(child => child instanceof Sprite)!;
+
     const stepLeaf =
       (arm: Arm) =>
       (frame: number): void => {
         movingLeaf(arm).setPosition(400 + frame, 300);
       };
+
     const control = openScene();
     const twoTargets = openScene();
 

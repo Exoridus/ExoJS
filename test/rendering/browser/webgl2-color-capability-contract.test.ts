@@ -26,7 +26,13 @@ import { createWebGl2TestBackend, readWebGl2Pixel, renderWebGl2Encoded } from '.
 import { expectPixelNear } from './_pixels';
 
 const size = 8;
-const trackedExtensions = ['EXT_color_buffer_float', 'OES_texture_float_linear', 'EXT_float_blend', 'WEBGL_lose_context', 'WEBGL_compressed_texture_s3tc'];
+const trackedExtensions = [
+  'EXT_color_buffer_float',
+  'OES_texture_float_linear',
+  'EXT_float_blend',
+  'WEBGL_lose_context',
+  'WEBGL_compressed_texture_s3tc',
+];
 
 const describeEnvironment = (backend: WebGl2Backend): string => {
   const gl = backend.context;

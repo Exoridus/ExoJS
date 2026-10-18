@@ -20,11 +20,11 @@
 //
 // Requires a built + vendored site (pnpm build && pnpm --dir site vendor:sync:exo
 // && pnpm --dir site examples:sync) so site/public has the current engine.
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { readFileSync, existsSync, statSync, mkdirSync, writeFileSync } from 'node:fs';
-import { join, resolve, extname } from 'node:path';
 import { createRequire } from 'node:module';
 import type { AddressInfo } from 'node:net';
+import { extname, join, resolve } from 'node:path';
 
 const REPO = resolve(import.meta.dirname, '..');
 const PUBLIC = resolve(REPO, 'site/public');
@@ -34,7 +34,7 @@ const example = process.argv[2] ?? null;
 
 // Resolved from `site/` so the probe uses the same Playwright install the
 // browser lanes do, rather than requiring one at the repo root.
-const require = createRequire(resolve(REPO, 'site') + '/');
+const require = createRequire(`${resolve(REPO, 'site')}/`);
 const { chromium } = require('playwright') as typeof import('playwright');
 
 const MIME: Readonly<Record<string, string>> = {
@@ -71,27 +71,45 @@ const startServer = (): Promise<ProbeServer> => {
   const server = createServer((req, res) => {
     try {
       let urlPath = decodeURIComponent((req.url ?? '/').split('?')[0]!);
-      if (urlPath.startsWith(BASE)) urlPath = urlPath.slice(BASE.length) || '/';
+
+      if (urlPath.startsWith(BASE)) {
+        urlPath = urlPath.slice(BASE.length) || '/';
+      }
+
       let filePath = resolve(join(PUBLIC, urlPath));
+
       if (!filePath.startsWith(PUBLIC)) {
         res.writeHead(403);
         res.end();
+
         return;
       }
-      if (existsSync(filePath) && statSync(filePath).isDirectory()) filePath = join(filePath, 'index.html');
+
+      if (existsSync(filePath) && statSync(filePath).isDirectory()) {
+        filePath = join(filePath, 'index.html');
+      }
+
       if (!existsSync(filePath)) {
         res.writeHead(404);
-        res.end('Not found: ' + urlPath);
+        res.end(`Not found: ${urlPath}`);
+
         return;
       }
-      res.writeHead(200, { 'Content-Type': MIME[extname(filePath).toLowerCase()] ?? 'application/octet-stream', 'Cache-Control': 'no-store' });
+
+      res.writeHead(200, {
+        'Content-Type': MIME[extname(filePath).toLowerCase()] ?? 'application/octet-stream',
+        'Cache-Control': 'no-store',
+      });
       res.end(readFileSync(filePath));
     } catch (e) {
       res.writeHead(500);
       res.end(String(e));
     }
   });
-  return new Promise(resolvePort => server.listen(0, '127.0.0.1', () => resolvePort({ port: (server.address() as AddressInfo).port, server })));
+
+  return new Promise(resolvePort =>
+    server.listen(0, '127.0.0.1', () => resolvePort({ port: (server.address() as AddressInfo).port, server })),
+  );
 };
 
 const { port, server } = await startServer();
@@ -107,9 +125,11 @@ const context = await browser.newContext({ viewport: { width: 1280, height: 720 
 const page = await context.newPage();
 const errors: string[] = [];
 page.on('console', m => {
-  if (m.type() === 'error') errors.push(m.text().replace(/\s+/g, ' ').slice(0, 200));
+  if (m.type() === 'error') {
+    errors.push(m.text().replace(/\s+/g, ' ').slice(0, 200));
+  }
 });
-page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message.replace(/\s+/g, ' ').slice(0, 200)));
+page.on('pageerror', e => errors.push(`PAGEERROR: ${e.message.replace(/\s+/g, ' ').slice(0, 200)}`));
 
 await page.goto(`${baseUrl}${BASE}/preview.html`, { waitUntil: 'domcontentloaded', timeout: 20000 });
 
@@ -123,31 +143,37 @@ interface ProbeCaps {
 
 const caps = await page.evaluate(async (): Promise<ProbeCaps> => {
   const out: ProbeCaps = { secureContext: isSecureContext, hasGpu: !!navigator.gpu };
+
   if (navigator.gpu) {
     try {
       const a = await navigator.gpu.requestAdapter();
       out.adapter = a ? 'non-null' : 'null';
+
       if (a) {
         out.adapterInfo = a.info ? `${a.info.vendor}/${a.info.architecture}` : 'n/a';
+
         try {
           out.device = (await a.requestDevice()) ? 'non-null' : 'null';
         } catch (e) {
-          out.device = 'THROW: ' + (e as Error).message.slice(0, 80);
+          out.device = `THROW: ${(e as Error).message.slice(0, 80)}`;
         }
       }
     } catch (e) {
-      out.adapter = 'THROW: ' + (e as Error).message.slice(0, 80);
+      out.adapter = `THROW: ${(e as Error).message.slice(0, 80)}`;
     }
   }
+
   return out;
 });
 console.log('[webgpu-probe] caps:', JSON.stringify(caps));
+
 if (caps.device !== 'non-null') {
   console.log('[webgpu-probe] WARNING: no usable WebGPU device — check channel:chromium and that you did NOT pass --use-angle=d3d11.');
 }
 
 if (example) {
   const srcFile = join(PUBLIC, 'examples', example);
+
   if (!existsSync(srcFile)) {
     console.log('[webgpu-probe] example source missing:', example);
   } else {
@@ -169,9 +195,10 @@ if (example) {
         } catch {
           host.assets = {};
         }
+
         const s = document.createElement('script');
         s.type = 'module';
-        s.textContent = exampleSource + '\n';
+        s.textContent = `${exampleSource}\n`;
         document.body.appendChild(s);
       },
       { exampleSource: source, meta: { path: example } },
@@ -179,11 +206,12 @@ if (example) {
     await page.waitForTimeout(3000);
     const backendType = await page.evaluate(
       () =>
-        (globalThis as typeof globalThis & { __app?: { _backendType?: string } }).__app?._backendType ?? 'unknown (example does not expose globalThis.__app)',
+        (globalThis as typeof globalThis & { __app?: { _backendType?: string } }).__app?._backendType ??
+        'unknown (example does not expose globalThis.__app)',
     );
     const buf = await page.screenshot({ clip: { x: 0, y: 0, width: 1280, height: 720 } });
     mkdirSync(OUT, { recursive: true });
-    const shot = join(OUT, example.replace(/[\\/]/g, '__').replace(/\.js$/, '') + '.png');
+    const shot = join(OUT, `${example.replace(/[\\/]/g, '__').replace(/\.js$/, '')}.png`);
     writeFileSync(shot, buf);
     const blank = await page.evaluate(
       async url => {
@@ -208,21 +236,26 @@ if (example) {
         let rs = 0,
           gs = 0,
           bs = 0;
+
         for (let i = 0; i < d.length; i += 4) {
-          const k = (d[i] >> 4) + ',' + (d[i + 1] >> 4) + ',' + (d[i + 2] >> 4);
+          const k = `${d[i] >> 4},${d[i + 1] >> 4},${d[i + 2] >> 4}`;
           counts.set(k, (counts.get(k) || 0) + 1);
           rs += d[i];
           gs += d[i + 1];
           bs += d[i + 2];
         }
+
         return { uniqueColors: counts.size, avg: [Math.round(rs / n), Math.round(gs / n), Math.round(bs / n)] };
       },
-      'data:image/png;base64,' + buf.toString('base64'),
+      `data:image/png;base64,${buf.toString('base64')}`,
     );
     console.log('[webgpu-probe] example:', example, '| active backend:', backendType);
     console.log('[webgpu-probe] render:', JSON.stringify(blank), blank.uniqueColors <= 3 ? '→ BLANK' : '→ RENDERS');
     console.log('[webgpu-probe] screenshot:', shot);
-    if (errors.length) console.log('[webgpu-probe] errors:', JSON.stringify(errors.slice(0, 5)));
+
+    if (errors.length) {
+      console.log('[webgpu-probe] errors:', JSON.stringify(errors.slice(0, 5)));
+    }
   }
 }
 

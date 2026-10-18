@@ -106,11 +106,15 @@ const reservedFieldNames = new Set<string>(['set', 'setPacked', 'commit', 'at', 
 export const validateUniformFields = (fields: UniformFields, path: string): void => {
   for (const name of Object.keys(fields)) {
     if (!identifierPattern.test(name) || name.startsWith('gl_') || name.includes('__')) {
-      throw new Error(`Uniform field \`${path}${name}\` is not a valid shader identifier (no leading digit, no \`gl_\` prefix, no \`__\`).`);
+      throw new Error(
+        `Uniform field \`${path}${name}\` is not a valid shader identifier (no leading digit, no \`gl_\` prefix, no \`__\`).`,
+      );
     }
 
     if (reservedFieldNames.has(name)) {
-      throw new Error(`Uniform field \`${path}${name}\` uses a name reserved by the uniform accessor API (${[...reservedFieldNames].join(', ')}).`);
+      throw new Error(
+        `Uniform field \`${path}${name}\` uses a name reserved by the uniform accessor API (${[...reservedFieldNames].join(', ')}).`,
+      );
     }
   }
 
@@ -190,11 +194,15 @@ export class UniformBlock<F extends UniformFields = UniformFields> {
 
 /** The declaration entry's field type, at runtime. @internal */
 export const uniformFieldTypeOf = (declaration: UniformFieldDeclaration): UniformFieldType =>
-  typeof declaration === 'string' || declaration instanceof UniformStruct || declaration instanceof UniformArray ? declaration : declaration.type;
+  typeof declaration === 'string' || declaration instanceof UniformStruct || declaration instanceof UniformArray
+    ? declaration
+    : declaration.type;
 
 /** The declaration entry's default value, or `undefined`. @internal */
 export const uniformFieldDefaultOf = (declaration: UniformFieldDeclaration): unknown =>
-  typeof declaration === 'string' || declaration instanceof UniformStruct || declaration instanceof UniformArray ? undefined : declaration.default;
+  typeof declaration === 'string' || declaration instanceof UniformStruct || declaration instanceof UniformArray
+    ? undefined
+    : declaration.default;
 
 /**
  * The declared defaults of `fields` as one nested value record, or `null` when

@@ -53,7 +53,11 @@ const wgsl = `
     return textureSample(uTexture, uSampler, uv);
 }`;
 
-const warpShader = createFilterShader({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: UniformType.Float, uPointer: UniformType.Vec2 } });
+const warpShader = createFilterShader({
+  glsl: { fragment: glsl },
+  wgsl,
+  uniforms: { uTime: UniformType.Float, uPointer: UniformType.Vec2 },
+});
 
 class CustomFragmentShaderScene extends Scene {
   private time = 0;

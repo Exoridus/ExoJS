@@ -88,7 +88,11 @@ const PROFILES: readonly Profile[] = [
         sourceMap: false,
         paths: { '@codexo/exojs': ['./src/index.ts'] },
       },
-      include: ['test/type-tests/loader-catalog-input.type-test.ts', 'test/type-tests/loader-catalog-leaf.type-test.ts', 'src/typings.d.ts'],
+      include: [
+        'test/type-tests/loader-catalog-input.type-test.ts',
+        'test/type-tests/loader-catalog-leaf.type-test.ts',
+        'src/typings.d.ts',
+      ],
     },
   },
 ];
@@ -104,7 +108,13 @@ const fail = (message: string): never => {
  * path in it mean what they would mean in a root tsconfig.
  */
 const parseProfile = (profile: Profile): ts.ParsedCommandLine => {
-  const parsed = ts.parseJsonConfigFileContent(profile.config, ts.sys, REPO_ROOT, undefined, resolve(REPO_ROOT, `tsconfig.type-tests-${profile.name}.json`));
+  const parsed = ts.parseJsonConfigFileContent(
+    profile.config,
+    ts.sys,
+    REPO_ROOT,
+    undefined,
+    resolve(REPO_ROOT, `tsconfig.type-tests-${profile.name}.json`),
+  );
 
   if (parsed.errors.length > 0) {
     fail(ts.formatDiagnosticsWithColorAndContext(parsed.errors, FORMAT_HOST));

@@ -25,9 +25,14 @@ export const readOutputOptions = (
 
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index]!;
+
     if (argument === '--output') {
       const value = argv[index + 1];
-      if (value === undefined) throw new Error('--output requires a mode.');
+
+      if (value === undefined) {
+        throw new Error('--output requires a mode.');
+      }
+
       requested = value;
       index += 1;
     } else if (argument.startsWith('--output=')) {
@@ -38,11 +43,17 @@ export const readOutputOptions = (
   }
 
   const raw = requested ?? env['EXOJS_OUTPUT'] ?? 'auto';
-  if (!isOutputMode(raw)) throw invalidMode(raw);
 
-  if (raw !== 'auto') return { mode: raw, argv: remaining };
+  if (!isOutputMode(raw)) {
+    throw invalidMode(raw);
+  }
+
+  if (raw !== 'auto') {
+    return { mode: raw, argv: remaining };
+  }
 
   const ci = env['CI'] === 'true' || env['CI'] === '1';
+
   return { mode: ci || !isTTY ? 'compact' : 'normal', argv: remaining };
 };
 

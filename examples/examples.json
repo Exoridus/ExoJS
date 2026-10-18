@@ -970,6 +970,17 @@
       "level": "intermediate"
     },
     {
+      "slug": "hexagonal-grid",
+      "path": "tilemap/hexagonal-grid.js",
+      "language": "typescript",
+      "title": "Hexagonal & Staggered Grids",
+      "description": "Lay out hexagonal and staggered tile maps the way Tiled does, pick cells under the pointer, and draw every tile from its own image with trees overhanging the row above.",
+      "backend": "core",
+      "tags": ["tilemap", "hexagonal", "pointer"],
+      "capabilities": ["pointer"],
+      "level": "intermediate"
+    },
+    {
       "slug": "tile-chunks-and-bands",
       "path": "tilemap/tile-chunks-and-bands.js",
       "language": "typescript",
@@ -1028,10 +1039,10 @@
       "path": "pathfinding/tilemap-navigation.js",
       "language": "typescript",
       "title": "Editable Map Navigation",
-      "description": "Click to route an agent; switch to wall editing and click a tile to open or close a path while the route updates.",
+      "description": "Move through a tile map while navigation agents hunt you around its walls; click a tile to open or close it and watch every route adapt.",
       "backend": "core",
-      "tags": ["pathfinding", "tilemap", "pointer"],
-      "capabilities": ["pointer"],
+      "tags": ["pathfinding", "tilemap", "physics", "keyboard", "pointer"],
+      "capabilities": ["keyboard", "pointer"],
       "level": "intermediate"
     },
     {
@@ -1089,6 +1100,28 @@
       "tags": ["physics", "binding", "pointer", "joints"],
       "capabilities": ["pointer", "keyboard"],
       "level": "intro"
+    },
+    {
+      "slug": "kinematic-movement",
+      "path": "physics/kinematic-movement.js",
+      "language": "typescript",
+      "title": "Kinematic Movement",
+      "description": "Steer a kinematic body with the keyboard; it stops at walls, slides along them and comes to rest in tight corners.",
+      "backend": "core",
+      "tags": ["physics", "movement", "keyboard"],
+      "capabilities": ["keyboard"],
+      "level": "intro"
+    },
+    {
+      "slug": "character-movement",
+      "path": "physics/character-movement.js",
+      "language": "typescript",
+      "title": "Character Movement",
+      "description": "Run, jump and double-jump a capsule character over a slope, steps, a one-way platform and moving platforms, with live ground and velocity readouts.",
+      "backend": "core",
+      "tags": ["physics", "movement", "platformer", "keyboard"],
+      "capabilities": ["keyboard"],
+      "level": "intermediate"
     },
     {
       "slug": "tiled-map-physics-actor",

@@ -7,20 +7,18 @@ import type { TileDefinition } from '../src/types';
 
 // ── Test helpers ──────────────────────────────────────────────────────────
 
-const fakeTexture = (width = 512, height = 512): Texture => {
-  return {
+const fakeTexture = (width = 512, height = 512): Texture =>
+  ({
     width,
     height,
     uid: 0,
     label: 'test',
     destroy: () => {},
     destroyed: false,
-  } as unknown as Texture;
-};
+  }) as unknown as Texture;
 
-const fakeRegion = (width = 512, height = 512): TextureRegion => {
-  return new TextureRegion(fakeTexture(width, height), { x: 0, y: 0, width, height });
-};
+const fakeRegion = (width = 512, height = 512): TextureRegion =>
+  new TextureRegion(fakeTexture(width, height), { x: 0, y: 0, width, height });
 
 // ═══════════════════════════════════════════════════════════════════════════
 

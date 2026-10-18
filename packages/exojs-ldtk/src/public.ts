@@ -11,7 +11,13 @@ export type { LdtkRuntimeOptions } from './LdtkProject';
 export { LdtkProject } from './LdtkProject';
 export { ldtkToMapWorld } from './ldtkToMapWorld';
 export type { LdtkToTileMapOptions } from './ldtkToTileMap';
-export { createLdtkIntGridCellSource, getLdtkIntGridValueAt, ldtkIntGridCsvProperty, ldtkIntGridValuesProperty, ldtkToTileMap } from './ldtkToTileMap';
+export {
+  createLdtkIntGridCellSource,
+  getLdtkIntGridValueAt,
+  ldtkIntGridCsvProperty,
+  ldtkIntGridValuesProperty,
+  ldtkToTileMap,
+} from './ldtkToTileMap';
 
 // ── Raw LDtk JSON types ───────────────────────────────────────────────────────
 export type {
@@ -26,7 +32,9 @@ export type {
   LdtkLayerType,
   LdtkLevel,
   LdtkLevelNeighbour,
+  LdtkTileCustomData,
   LdtkTileData,
+  LdtkTileEnumTag,
   LdtkTilesetDef,
   LdtkWorldData,
   LdtkWorldLayout,

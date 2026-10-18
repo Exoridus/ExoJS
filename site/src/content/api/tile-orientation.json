@@ -1,0 +1,88 @@
+{
+  "title": "TileOrientation",
+  "description": "How cells are laid out. - `orthogonal`: rectangles in rows and columns. - `isometric`: diamonds along two diagonal axes. - `staggered`: diamonds in rows and columns, every other row (or column) shifted by half a cell. - `hexagonal`: hexagons laid out like `staggered`, with straight sides of TileProjectionOptions.hexSideLength along the stagger axis.",
+  "symbol": "TileOrientation",
+  "kind": "type",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "How cells are laid out.",
+        "- `orthogonal`: rectangles in rows and columns. - `isometric`: diamonds along two diagonal axes. - `staggered`: diamonds in rows and columns, every other row (or column) shifted by half a cell. - `hexagonal`: hexagons laid out like `staggered`, with straight sides of TileProjectionOptions.hexSideLength along the stagger axis."
+      ],
+      "importLine": "import { TileOrientation } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "TileOrientation",
+          "signature": "\"hexagonal\" | \"isometric\" | \"orthogonal\" | \"staggered\"",
+          "signatureTokens": [
+            {
+              "text": "\"hexagonal\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"isometric\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"orthogonal\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"staggered\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/TileProjection.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileProjection.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/TileProjection.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileProjection.ts"
+}

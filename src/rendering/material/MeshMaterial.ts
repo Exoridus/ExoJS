@@ -81,7 +81,10 @@ export interface MeshMaterialOptions<
  * declares.
  * @advanced
  */
-export class MeshMaterial<F extends UniformFields | undefined = undefined, B extends UniformBlockRecord | undefined = undefined> extends Material<F, B> {
+export class MeshMaterial<
+  F extends UniformFields | undefined = undefined,
+  B extends UniformBlockRecord | undefined = undefined,
+> extends Material<F, B> {
   public readonly target = 'mesh';
 
   /** Whether draws with this material write into the target's depth attachment. */

@@ -70,6 +70,7 @@ class TextEntryScene extends Scene {
 
       if (!name || !note) {
         this.status.text = 'Enter a name and a note first.';
+
         return;
       }
 

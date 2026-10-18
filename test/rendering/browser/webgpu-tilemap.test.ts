@@ -11,10 +11,11 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TileMapNode } from '@codexo/exojs-tilemap';
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileLayerNode, TileMap, TileMapNode } from '@codexo/exojs-tilemap';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
@@ -22,9 +23,11 @@ import { readWebGpuPixels } from './_backendSetup';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 import {
   createQuadrantTexture,
+  createSolidRectTexture,
   createSolidTexture,
   isometricOverlapMap,
   makeTileset,
+  orthogonalOverhangLayer,
   singleTileMap,
   wireTilemapRenderers,
   wireViaTiledExtension,
@@ -53,7 +56,8 @@ const setupBackend = async (wire: (backend: WebGpuBackend) => void = wireTilemap
   return backend;
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const renderScene = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<boolean> => {
   const device = getBackendDevice(backend);
@@ -157,6 +161,7 @@ describe('WebGPU tilemap — tile orientation', () => {
 
       if (!(await renderScene(ctx, backend, node))) {
         node.destroy();
+
         return null;
       }
 
@@ -167,6 +172,7 @@ describe('WebGPU tilemap — tile orientation', () => {
         [at(1, 0), at(1, 1)],
       ];
       node.destroy();
+
       return result;
     };
 
@@ -190,13 +196,20 @@ describe('WebGPU tilemap — tile orientation', () => {
               for (const cy of [0, 1]) {
                 let su = cx;
                 let sv = cy;
+
                 if (diagonal) {
                   const t = su;
                   su = sv;
                   sv = t;
                 }
-                if (flipX) su = 1 - su;
-                if (flipY) sv = 1 - sv;
+
+                if (flipX) {
+                  su = 1 - su;
+                }
+
+                if (flipY) {
+                  sv = 1 - sv;
+                }
 
                 expectPixelNear(measured[cx][cy], identity[su][sv]);
               }
@@ -219,10 +232,22 @@ describe('WebGPU tilemap — chunk culling', () => {
 
     const texture = createSolidTexture('#ff0000');
     const tileset = makeTileset(texture);
-    const layer = new TileLayer({ id: 1, name: 'l', width: 8, height: 1, tileWidth: 16, tileHeight: 16, chunkWidth: 2, chunkHeight: 2, tilesets: [tileset] });
+    const layer = new TileLayer({
+      id: 1,
+      name: 'l',
+      width: 8,
+      height: 1,
+      tileWidth: 16,
+      tileHeight: 16,
+      chunkWidth: 2,
+      chunkHeight: 2,
+      tilesets: [tileset],
+    });
+
     for (let tx = 0; tx < 8; tx++) {
       layer.setTileAt(tx, 0, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
     }
+
     const map = new TileMap({ name: 'm', width: 8, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset], layers: [layer] });
     const node = new TileMapNode(map);
 
@@ -260,7 +285,16 @@ describe('WebGPU tilemap — layer opacity', () => {
 
     const texture = createSolidTexture('#ffffff');
     const tileset = makeTileset(texture);
-    const layer = new TileLayer({ id: 1, name: 'l', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset], opacity: 0.5 });
+    const layer = new TileLayer({
+      id: 1,
+      name: 'l',
+      width: 1,
+      height: 1,
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      opacity: 0.5,
+    });
     layer.setTileAt(0, 0, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
     const map = new TileMap({ name: 'm', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset], layers: [layer] });
     const node = new TileMapNode(map);
@@ -314,10 +348,15 @@ describe('webgpu isometric tilemap', () => {
     const texture = createSolidTexture('rgba(255, 0, 0, 0.5)');
     const map = isometricOverlapMap(texture, texture);
     const node = new TileMapNode(map);
+
     try {
       node.y = 16;
+
       for (let frame = 0; frame < 3; frame++) {
-        if (!(await renderScene(ctx, backend, node))) return;
+        if (!(await renderScene(ctx, backend, node))) {
+          return;
+        }
+
         expectPixelNear(readWebGpuPixels(backend, canvasSize)(30, 33), [239, 0, 0, 255]);
         expectPixelNear(readWebGpuPixels(backend, canvasSize)(30, 45), [128, 0, 0, 255]);
       }
@@ -335,28 +374,91 @@ describe('webgpu isometric tilemap', () => {
     const blue = createSolidTexture('#0000ff');
     const map = isometricOverlapMap(red, blue);
     const node = new TileMapNode(map);
+
     try {
       node.y = 16;
-      if (!(await renderScene(ctx, backend, node))) return;
+
+      if (!(await renderScene(ctx, backend, node))) {
+        return;
+      }
+
       const read = readWebGpuPixels(backend, canvasSize);
       expectPixelNear(read(30, 33), [255, 0, 0, 255]);
       expectPixelNear(read(22, 29), [0, 0, 255, 255]);
       map.layers[0]!.clearTileAt(3, 3);
-      if (!(await renderScene(ctx, backend, node))) return;
+
+      if (!(await renderScene(ctx, backend, node))) {
+        return;
+      }
+
       const read2 = readWebGpuPixels(backend, canvasSize);
       expectPixelNear(read2(30, 33), [0, 0, 255, 255]);
       node.y = 68;
-      if (!(await renderScene(ctx, backend, node))) return;
+
+      if (!(await renderScene(ctx, backend, node))) {
+        return;
+      }
+
       const read3 = readWebGpuPixels(backend, canvasSize);
       expectPixelNear(read3(32, 62), [255, 0, 0, 255]);
       node.y = 1000;
-      if (!(await renderScene(ctx, backend, node))) return;
+
+      if (!(await renderScene(ctx, backend, node))) {
+        return;
+      }
+
       expect(backend.stats.drawCalls).toBe(0);
     } finally {
       node.destroy();
       map.destroy();
       red.destroy();
       blue.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+describe('webgpu orthogonal tilemap', () => {
+  test('draws overhanging artwork over neighbouring chunks like Tiled, whatever the load order, and keeps it when its cells are culled', async ctx => {
+    const backend = await setupBackend();
+    const blue = createSolidTexture('#0000ff');
+    const red = createSolidRectTexture('#ff0000', 16, 48);
+    const green = createSolidRectTexture('#00ff00', 32, 32);
+    const { layer, streamIn } = orthogonalOverhangLayer(blue, red, green);
+    const node = new TileLayerNode(layer);
+    const root = new Container();
+
+    root.addChild(node);
+
+    try {
+      streamIn();
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const read = readWebGpuPixels(backend, canvasSize);
+      expectPixelNear(read(8, 8), [255, 0, 0, 255]);
+      expectPixelNear(read(8, 24), [255, 0, 0, 255]);
+      expectPixelNear(read(24, 8), [0, 0, 255, 255]);
+      expectPixelNear(read(56, 8), [0, 255, 0, 255]);
+      expectPixelNear(read(40, 40), [0, 0, 0, 255]);
+
+      // The tree's cell is now below the canvas; only its overhang is in view.
+      root.y = 32;
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const culled = readWebGpuPixels(backend, canvasSize);
+      expectPixelNear(culled(8, 40), [255, 0, 0, 255]);
+      expectPixelNear(culled(8, 56), [255, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      blue.destroy();
+      red.destroy();
+      green.destroy();
       backend.destroy();
     }
   });

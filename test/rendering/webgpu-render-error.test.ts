@@ -81,7 +81,7 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     createSampler: vi.fn(() => ({}) as GPUSampler),
     addEventListener,
     removeEventListener,
-    lost: new Promise<GPUDeviceLostInfo>(() => undefined),
+    lost: new Promise<GPUDeviceLostInfo>(() => {}),
     queue: { writeBuffer: vi.fn(), submit: vi.fn(), copyExternalImageToTexture: vi.fn(), writeTexture: vi.fn() },
   } as unknown as GPUDevice;
 

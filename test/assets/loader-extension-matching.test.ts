@@ -50,6 +50,7 @@ const applicationTextType = testAssetType<string, string>({
 const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
+
   return loader;
 };
 
@@ -98,6 +99,7 @@ describe('compound extension matching', () => {
     loader.registerType('mock.json', 'json');
     global.fetch = vi.fn(async (url: string | URL | Request): Promise<Response> => {
       seen.push(url instanceof Request ? url.url : String(url));
+
       return {
         ok: true,
         status: 200,

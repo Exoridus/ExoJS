@@ -79,7 +79,8 @@ const findFixture = (file: string): ManifestEntry => {
 };
 
 /** The sRGB code for a linear value, from the spec formula rather than the engine's. */
-const encodeSrgb = (linear: number): number => Math.round(255 * (linear <= 0.0031308 ? linear * 12.92 : 1.055 * linear ** (1 / 2.4) - 0.055));
+const encodeSrgb = (linear: number): number =>
+  Math.round(255 * (linear <= 0.0031308 ? linear * 12.92 : 1.055 * linear ** (1 / 2.4) - 0.055));
 
 describe('colour fixture manifest', () => {
   test('every listed fixture is present and byte-identical to its recorded hash', () => {
@@ -155,11 +156,15 @@ describe('colour fixture manifest', () => {
     // differing only in transfer. That is what makes transfer a carried
     // property rather than something inferred from the format name.
     for (const entry of compressed.filter(candidate => candidate.file.endsWith('-srgb.ktx2'))) {
-      const twin = compressed.find(candidate => candidate.file === entry.file.replace('-unorm-srgb.ktx2', '-unorm.ktx2').replace('-srgb.ktx2', '-unorm.ktx2'));
+      const twin = compressed.find(
+        candidate => candidate.file === entry.file.replace('-unorm-srgb.ktx2', '-unorm.ktx2').replace('-srgb.ktx2', '-unorm.ktx2'),
+      );
 
       expect(twin, `${entry.file} has a linear twin`).toBeDefined();
 
-      if (twin === undefined) continue;
+      if (twin === undefined) {
+        continue;
+      }
 
       expect(twin.levels[0]?.byteLength, `${entry.file} matches its twin's size`).toBe(entry.levels[0]?.byteLength);
       expect(new Uint8Array(readFixture(twin.file)).byteLength).toBe(new Uint8Array(readFixture(entry.file)).byteLength);
@@ -180,7 +185,10 @@ const exposedAstcBlockSizes: readonly string[] = [
       .map(format => /^astc-(\d+x\d+)-/.exec(format)?.[1])
       .filter((size): size is string => size !== undefined),
   ),
-].sort((a, b) => Number.parseInt(a, 10) - Number.parseInt(b, 10) || Number.parseInt(b.split('x')[1]!, 10) - Number.parseInt(a.split('x')[1]!, 10));
+].sort(
+  (a, b) =>
+    Number.parseInt(a, 10) - Number.parseInt(b, 10) || Number.parseInt(b.split('x')[1]!, 10) - Number.parseInt(a.split('x')[1]!, 10),
+);
 
 describe('committed native block-compressed fixtures', () => {
   const compressed = manifest.fixtures.filter(entry => entry.bytesPerBlock !== undefined);
@@ -227,7 +235,9 @@ describe('committed native block-compressed fixtures', () => {
 
     expect(payload.kind).toBe('compressed');
 
-    if (payload.kind !== 'compressed') return;
+    if (payload.kind !== 'compressed') {
+      return;
+    }
 
     // The engine's own vkFormat mapping, so a file carrying a different format
     // than its name claims cannot pass.
@@ -261,7 +271,9 @@ describe('committed native block-compressed fixtures', () => {
     for (const entry of compressed) {
       const payload = parseKtx2(readFixture(entry.file), entry.file);
 
-      if (payload.kind !== 'compressed') continue;
+      if (payload.kind !== 'compressed') {
+        continue;
+      }
 
       const blocks: string[] = [];
       const blockBytes = entry.bytesPerBlock!;
@@ -284,7 +296,9 @@ describe('committed native block-compressed fixtures', () => {
 
     // The blocks are byte-identical, so only the format identity can keep the
     // two apart: the same bytes read as +1.0 unsigned and -1.0 signed.
-    if (unsigned.kind !== 'compressed' || signed.kind !== 'compressed') return;
+    if (unsigned.kind !== 'compressed' || signed.kind !== 'compressed') {
+      return;
+    }
 
     expect(unsigned.format).not.toBe(signed.format);
     expect(unsigned.levels[0]?.data).toEqual(signed.levels[0]?.data);
@@ -317,7 +331,9 @@ describe('committed KTX2 colour fixtures', () => {
     expect(linear).toMatchObject({ kind: 'rgba8', colorSpace: 'linear-srgb', alphaMode: 'straight' });
     expect(srgb).toMatchObject({ kind: 'rgba8', colorSpace: 'srgb', alphaMode: 'straight' });
 
-    if (linear.kind !== 'rgba8' || srgb.kind !== 'rgba8') return;
+    if (linear.kind !== 'rgba8' || srgb.kind !== 'rgba8') {
+      return;
+    }
 
     expect(srgb.levels[0]?.data).toEqual(linear.levels[0]?.data);
   });
@@ -328,7 +344,9 @@ describe('committed KTX2 colour fixtures', () => {
 
     expect(payload.kind).toBe('rgba8');
 
-    if (payload.kind !== 'rgba8') return;
+    if (payload.kind !== 'rgba8') {
+      return;
+    }
 
     expect(payload.levels).toHaveLength(entry.levels.length);
 
@@ -365,7 +383,9 @@ describe('committed KTX2 colour fixtures', () => {
     expect(inflatedPayload.kind).toBe('rgba8');
     expect(plain.kind).toBe('rgba8');
 
-    if (inflatedPayload.kind !== 'rgba8' || plain.kind !== 'rgba8') return;
+    if (inflatedPayload.kind !== 'rgba8' || plain.kind !== 'rgba8') {
+      return;
+    }
 
     expect(inflatedPayload.colorSpace).toBe(plain.colorSpace);
     expect(inflatedPayload.levels[0]?.data).toEqual(plain.levels[0]?.data);
@@ -381,7 +401,9 @@ describe('committed KTX2 colour fixtures', () => {
     expect(straight).toMatchObject({ kind: 'rgba8', alphaMode: 'straight' });
     expect(premultiplied).toMatchObject({ kind: 'rgba8', alphaMode: 'premultiplied' });
 
-    if (straight.kind !== 'rgba8' || premultiplied.kind !== 'rgba8') return;
+    if (straight.kind !== 'rgba8' || premultiplied.kind !== 'rgba8') {
+      return;
+    }
 
     // The premultiplied authoring definition is E(linearRGB * alpha), NOT
     // E(rgb) * alpha. The sRGB transfer is concave with E(0) = 0, so for a

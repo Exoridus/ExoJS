@@ -36,10 +36,23 @@ export interface AutoTileOptions {
  */
 const computeEdgeMask = (tx: number, ty: number, inGroup: (nx: number, ny: number) => boolean): number => {
   let mask = 0;
-  if (inGroup(tx, ty - 1)) mask |= 1;
-  if (inGroup(tx + 1, ty)) mask |= 2;
-  if (inGroup(tx, ty + 1)) mask |= 4;
-  if (inGroup(tx - 1, ty)) mask |= 8;
+
+  if (inGroup(tx, ty - 1)) {
+    mask |= 1;
+  }
+
+  if (inGroup(tx + 1, ty)) {
+    mask |= 2;
+  }
+
+  if (inGroup(tx, ty + 1)) {
+    mask |= 4;
+  }
+
+  if (inGroup(tx - 1, ty)) {
+    mask |= 8;
+  }
+
   return mask;
 };
 
@@ -61,15 +74,40 @@ const computeBlobMask = (tx: number, ty: number, inGroup: (nx: number, ny: numbe
   const bottom = inGroup(tx, ty + 1);
   const left = inGroup(tx - 1, ty);
   let mask = 0;
-  if (top) mask |= 2;
-  if (right) mask |= 16;
-  if (bottom) mask |= 64;
-  if (left) mask |= 8;
+
+  if (top) {
+    mask |= 2;
+  }
+
+  if (right) {
+    mask |= 16;
+  }
+
+  if (bottom) {
+    mask |= 64;
+  }
+
+  if (left) {
+    mask |= 8;
+  }
+
   // Corner bits: only when BOTH adjacent cardinals are set.
-  if (top && left && inGroup(tx - 1, ty - 1)) mask |= 1;
-  if (top && right && inGroup(tx + 1, ty - 1)) mask |= 4;
-  if (bottom && left && inGroup(tx - 1, ty + 1)) mask |= 32;
-  if (bottom && right && inGroup(tx + 1, ty + 1)) mask |= 128;
+  if (top && left && inGroup(tx - 1, ty - 1)) {
+    mask |= 1;
+  }
+
+  if (top && right && inGroup(tx + 1, ty - 1)) {
+    mask |= 4;
+  }
+
+  if (bottom && left && inGroup(tx - 1, ty + 1)) {
+    mask |= 32;
+  }
+
+  if (bottom && right && inGroup(tx + 1, ty + 1)) {
+    mask |= 128;
+  }
+
   return mask;
 };
 
@@ -84,10 +122,16 @@ const computeMask = (wangSet: WangSet, tx: number, ty: number, inGroup: (nx: num
  */
 const applyVariant = (layer: TileLayer, wangSet: WangSet, tx: number, ty: number, inGroup: (nx: number, ny: number) => boolean): void => {
   const newLocalTileId = wangSet.getTileId(computeMask(wangSet, tx, ty, inGroup));
-  if (newLocalTileId === undefined) return;
+
+  if (newLocalTileId === undefined) {
+    return;
+  }
 
   const tileset = layer.tilesets[wangSet.tilesetIndex];
-  if (!tileset) return;
+
+  if (!tileset) {
+    return;
+  }
 
   // Preserve the existing orientation transform if the cell already holds one.
   const existing = layer.getTileAt(tx, ty);
@@ -139,6 +183,7 @@ export const autoTile = (layer: TileLayer, wangSet: WangSet, options?: AutoTileO
   const wrapBorder = options?.wrapBorder ?? true;
   const w = layer.width;
   const h = layer.height;
+
   if (w === undefined || h === undefined) {
     throw new Error('autoTile() requires a bounded layer (sweeps the whole layer) — use refreshCell() on an unbounded layer instead.');
   }
@@ -156,9 +201,17 @@ export const autoTile = (layer: TileLayer, wangSet: WangSet, options?: AutoTileO
   for (let ty = 0; ty < h; ty++) {
     for (let tx = 0; tx < w; tx++) {
       const packed = layer.getRawTileAt(tx, ty);
-      if (packed === 0) continue;
+
+      if (packed === 0) {
+        continue;
+      }
+
       const decoded = unpackTile(packed);
-      if (!decoded) continue;
+
+      if (!decoded) {
+        continue;
+      }
+
       snapshot.set(ty * w + tx, decoded);
     }
   }
@@ -166,10 +219,20 @@ export const autoTile = (layer: TileLayer, wangSet: WangSet, options?: AutoTileO
   // ── Membership test (reads the snapshot) ─────────────────────────────
 
   const isInGroup = (nx: number, ny: number): boolean => {
-    if (nx < 0 || nx >= w || ny < 0 || ny >= h) return wrapBorder;
+    if (nx < 0 || nx >= w || ny < 0 || ny >= h) {
+      return wrapBorder;
+    }
+
     const cell = snapshot.get(ny * w + nx);
-    if (!cell) return false;
-    if (matchFn) return matchFn(cell.localTileId, cell.tilesetIndex, nx, ny);
+
+    if (!cell) {
+      return false;
+    }
+
+    if (matchFn) {
+      return matchFn(cell.localTileId, cell.tilesetIndex, nx, ny);
+    }
+
     return cell.tilesetIndex === wangSet.tilesetIndex && wangSet.isMember(cell.localTileId);
   };
 
@@ -178,13 +241,19 @@ export const autoTile = (layer: TileLayer, wangSet: WangSet, options?: AutoTileO
   for (let ty = 0; ty < h; ty++) {
     for (let tx = 0; tx < w; tx++) {
       const cellInfo = snapshot.get(ty * w + tx);
-      if (!cellInfo) continue;
+
+      if (!cellInfo) {
+        continue;
+      }
 
       // Skip cells that are not part of the group.
       const isMember = matchFn
         ? matchFn(cellInfo.localTileId, cellInfo.tilesetIndex, tx, ty)
         : cellInfo.tilesetIndex === wangSet.tilesetIndex && wangSet.isMember(cellInfo.localTileId);
-      if (!isMember) continue;
+
+      if (!isMember) {
+        continue;
+      }
 
       applyVariant(layer, wangSet, tx, ty, isInGroup);
     }
@@ -223,11 +292,22 @@ export const refreshCell = (layer: TileLayer, x: number, y: number, wangSet: Wan
 
   // Live membership test (reads the current layer; variant-stable by default).
   const isInGroup = (nx: number, ny: number): boolean => {
-    if ((w !== undefined && (nx < 0 || nx >= w)) || (h !== undefined && (ny < 0 || ny >= h))) return wrapBorder;
+    if ((w !== undefined && (nx < 0 || nx >= w)) || (h !== undefined && (ny < 0 || ny >= h))) {
+      return wrapBorder;
+    }
+
     const tile = layer.getTileAt(nx, ny);
-    if (!tile) return false;
+
+    if (!tile) {
+      return false;
+    }
+
     const tsi = layer.tilesets.indexOf(tile.tileset);
-    if (matchFn) return matchFn(tile.localTileId, tsi, nx, ny);
+
+    if (matchFn) {
+      return matchFn(tile.localTileId, tsi, nx, ny);
+    }
+
     return tsi === wangSet.tilesetIndex && wangSet.isMember(tile.localTileId);
   };
 
@@ -236,8 +316,15 @@ export const refreshCell = (layer: TileLayer, x: number, y: number, wangSet: Wan
     for (let dx = -1; dx <= 1; dx++) {
       const tx = x + dx;
       const ty = y + dy;
-      if (!layer.inBounds(tx, ty)) continue;
-      if (!isInGroup(tx, ty)) continue;
+
+      if (!layer.inBounds(tx, ty)) {
+        continue;
+      }
+
+      if (!isInGroup(tx, ty)) {
+        continue;
+      }
+
       applyVariant(layer, wangSet, tx, ty, isInGroup);
     }
   }

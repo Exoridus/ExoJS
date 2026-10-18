@@ -52,7 +52,11 @@ import { compositorShaderSource as maskCompositorWgsl } from '#rendering/webgpu/
 import { instancedMeshShaderSource, meshShaderSource } from '#rendering/webgpu/WebGpuMeshRenderer';
 import { outputPassShaderSource } from '#rendering/webgpu/WebGpuOutputPass';
 import { scalableSpriteShaderSource } from '#rendering/webgpu/WebGpuScalableSpriteRenderer';
-import { buildPersistentSpriteShaderSource, buildSpriteShaderSource, spriteBatchTextureSlotTiers } from '#rendering/webgpu/WebGpuSpriteRenderer';
+import {
+  buildPersistentSpriteShaderSource,
+  buildSpriteShaderSource,
+  spriteBatchTextureSlotTiers,
+} from '#rendering/webgpu/WebGpuSpriteRenderer';
 import { stencilWriteShaderSource } from '#rendering/webgpu/WebGpuStencilClipper';
 import { textShaderSource } from '#rendering/webgpu/WebGpuTextRenderer';
 
@@ -83,7 +87,10 @@ const shaders: readonly ShaderEntry[] = [
   { name: 'WebGpuScalableSpriteRenderer (combined)', source: scalableSpriteShaderSource },
   // The sprite shader is generated per slot tier from the device limits
   // Every tier that can ever ship is compiled here.
-  ...spriteBatchTextureSlotTiers.map(tier => ({ name: `WebGpuSpriteRenderer (${tier} texture slots)`, source: buildSpriteShaderSource(tier) })),
+  ...spriteBatchTextureSlotTiers.map(tier => ({
+    name: `WebGpuSpriteRenderer (${tier} texture slots)`,
+    source: buildSpriteShaderSource(tier),
+  })),
   // The persistent-indexed variant is generated for the same tiers: same
   // fragment stage and same shared vertex core, fed from slot-addressed storage.
   ...spriteBatchTextureSlotTiers.map(tier => ({
@@ -113,7 +120,8 @@ const shaders: readonly ShaderEntry[] = [
 // On the software (SwiftShader) adapter the WebGPU device can drop
 // mid-test; treat that as an unavailable-adapter skip rather than a failure,
 // matching every other WebGPU browser spec in this directory.
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const requestTestDevice = async (): Promise<GPUDevice> => {
   const adapter = await navigator.gpu.requestAdapter();

@@ -16,6 +16,8 @@ npm install @codexo/exojs @codexo/exojs-tilemap @codexo/exojs-physics @codexo/ex
 
 `TileColliderStreamer` keeps a physics world's static tile colliders in sync with a `TileLayer`: one static body per chunk-sized partition of the layer, rebuilt when that partition is edited, destroyed when its chunk is evicted.
 
+Only orthogonal and isometric layers have the rectangular logical cells required by tile collision. Constructing a `TileColliderStreamer` for a staggered or hexagonal layer throws immediately, before creating physics bodies; these grids require colliders built separately.
+
 ```ts
 import { PhysicsWorld } from '@codexo/exojs-physics';
 import { TileColliderStreamer } from '@codexo/exojs-tilemap-physics';

@@ -8,7 +8,7 @@ const makeTexture = (w = 128, h = 64): Texture =>
     width: w,
     height: h,
     flipY: false,
-    updateSource: () => undefined,
+    updateSource: () => {},
   }) as unknown as Texture;
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 {
   "title": "PhysicsBody",
-  "description": "A rigid body: a world transform plus mass properties aggregated from its colliders. Dynamic bodies integrate under gravity, accumulated forces/torque and contact impulses each fixed sub-step; static bodies never move; kinematic bodies move by their velocity only and stay immovable under contacts. Drive a body with applyForce, applyTorque and applyImpulse, or set linearVelocityX/linearVelocityY/angularVelocity directly; reposition it (teleport, no velocity) with setTransform.",
+  "description": "A rigid body: a world transform plus mass properties aggregated from its colliders. Dynamic bodies integrate under gravity, accumulated forces/torque and contact impulses each fixed sub-step; static bodies never move; kinematic bodies move by their velocity only and stay immovable under contacts. Drive a body with applyForce, applyTorque and applyImpulse, or set linearVelocityX/linearVelocityY/angularVelocity directly; reposition it (teleport, no velocity) with setTransform. The force, torque, impulse and transform methods wake a sleeping body; the velocity fields are plain fields and do not, so call wake before steering a body that may have fallen asleep by writing its velocity.",
   "symbol": "PhysicsBody",
   "kind": "class",
   "subsystem": "physics",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A rigid body: a world transform plus mass properties aggregated from its colliders. Dynamic bodies integrate under gravity, accumulated forces/torque and contact impulses each fixed sub-step; static bodies never move; kinematic bodies move by their velocity only and stay immovable under contacts. Drive a body with applyForce, applyTorque and applyImpulse, or set linearVelocityX/linearVelocityY/angularVelocity directly; reposition it (teleport, no velocity) with setTransform."
+        "A rigid body: a world transform plus mass properties aggregated from its colliders. Dynamic bodies integrate under gravity, accumulated forces/torque and contact impulses each fixed sub-step; static bodies never move; kinematic bodies move by their velocity only and stay immovable under contacts. Drive a body with applyForce, applyTorque and applyImpulse, or set linearVelocityX/linearVelocityY/angularVelocity directly; reposition it (teleport, no velocity) with setTransform. The force, torque, impulse and transform methods wake a sleeping body; the velocity fields are plain fields and do not, so call wake before steering a body that may have fallen asleep by writing its velocity."
       ],
       "importLine": "import { PhysicsBody } from '@codexo/exojs-physics'",
       "sourceLink": null
@@ -580,7 +580,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Angular velocity in rad/s."
+          "description": "Angular velocity in rad/s. Writing it does not wake a sleeping body."
         },
         {
           "name": "fixedRotation",
@@ -748,7 +748,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Linear velocity X in px/s."
+          "description": "Linear velocity X in px/s. Writing it does not wake a sleeping body."
         },
         {
           "name": "linearVelocityY",
@@ -769,7 +769,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Linear velocity Y in px/s."
+          "description": "Linear velocity Y in px/s. Writing it does not wake a sleeping body."
         },
         {
           "name": "mass",

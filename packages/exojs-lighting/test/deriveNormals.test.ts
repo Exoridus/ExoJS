@@ -32,7 +32,8 @@ const block = (size: number, inset: number): Float32Array => {
   return alpha;
 };
 
-const channelAt = (buffer: Uint8Array, width: number, x: number, y: number, channel: number): number => buffer[(y * width + x) * 4 + channel]!;
+const channelAt = (buffer: Uint8Array, width: number, x: number, y: number, channel: number): number =>
+  buffer[(y * width + x) * 4 + channel]!;
 
 describe('normalsFromAlphaField', () => {
   test('produces a map the size of its field, in a bindable format', () => {

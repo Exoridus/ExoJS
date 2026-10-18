@@ -67,7 +67,9 @@ export function createExtensionBuildOptions(opts) {
     input: inputs,
     external: isExternal,
     transform: { define: defines },
-    resolve: sourceCondition ? { conditionNames: [sourceCondition, 'browser', 'module', 'import', 'default'], extensions: ['.ts', '.js'] } : undefined,
+    resolve: sourceCondition
+      ? { conditionNames: [sourceCondition, 'browser', 'module', 'import', 'default'], extensions: ['.ts', '.js'] }
+      : undefined,
     // Shader text ships inside string literals, which no JavaScript minifier
     // descends into, so its comments are payload every consumer downloads:
     // stripped here, as the core's minified bundles strip them.

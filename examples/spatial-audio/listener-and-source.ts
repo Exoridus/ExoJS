@@ -16,12 +16,15 @@ const attenuation = (model: FalloffModel, distance: number): number => {
   if (distance <= REF_DISTANCE) {
     return 1;
   }
+
   if (model === 'linear') {
     return Math.max(0, 1 - (ROLLOFF * (distance - REF_DISTANCE)) / (MAX_DISTANCE - REF_DISTANCE));
   }
+
   if (model === 'inverse') {
     return REF_DISTANCE / (REF_DISTANCE + ROLLOFF * (distance - REF_DISTANCE));
   }
+
   return Math.pow(distance / REF_DISTANCE, -ROLLOFF);
 };
 
@@ -84,11 +87,13 @@ class ListenerAndSourceScene extends Scene {
         this.angle = Math.atan2((this.source.y - this.listener.y) / 160, (this.source.x - this.listener.x) / 220);
       },
     });
+
     for (const model of ['linear', 'inverse', 'exponential'] as const) {
       panel.addButton({
         label: model,
         onClick: () => {
           this.model = model;
+
           if (this.voice) {
             this.voice.distanceModel = model;
           }
@@ -102,6 +107,7 @@ class ListenerAndSourceScene extends Scene {
     app.input.onPointerDown.add(pointer => {
       const dx = pointer.x - this.source.x;
       const dy = pointer.y - this.source.y;
+
       // Generous grab radius so the source is easy to pick up.
       if (this.mode === 'drag' && dx * dx + dy * dy < SOURCE_RADIUS * SOURCE_RADIUS * 4) {
         this.dragging = true;
@@ -111,8 +117,10 @@ class ListenerAndSourceScene extends Scene {
       if (!this.dragging) {
         return;
       }
+
       this.source.x = pointer.x;
       this.source.y = pointer.y;
+
       if (this.voice) {
         this.voice.position = this.source;
       }
@@ -144,9 +152,11 @@ class ListenerAndSourceScene extends Scene {
     if (this.mode !== 'orbit') {
       return;
     }
+
     this.angle += delta * 1.1;
     this.source.x = this.listener.x + Math.cos(this.angle) * 220;
     this.source.y = this.listener.y + Math.sin(this.angle) * 160;
+
     if (this.voice) {
       this.voice.position = this.source;
     }

@@ -29,7 +29,11 @@ export const resolveDefaults = (options: ColliderDefaults): ResolvedMaterial => 
 });
 
 /** Apply a resolver's overrides over already-resolved defaults. */
-export const resolveMaterial = (defaults: ResolvedMaterial, resolver: ColliderDefaults['material'], context: TileColliderContext): ResolvedMaterial => {
+export const resolveMaterial = (
+  defaults: ResolvedMaterial,
+  resolver: ColliderDefaults['material'],
+  context: TileColliderContext,
+): ResolvedMaterial => {
   const override = resolver?.(context);
 
   if (override === undefined || override === null) {

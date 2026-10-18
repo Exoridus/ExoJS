@@ -50,7 +50,12 @@ const hashUintScratch = new Uint32Array(hashFloatScratch.buffer, hashFloatScratc
  * vertex stage, gated on this flag.
  * @internal
  */
-export const packTransformRow = (target: Float32Array, offset: number, transform: Matrix, snapMode: PixelSnapMode = PixelSnapMode.None): void => {
+export const packTransformRow = (
+  target: Float32Array,
+  offset: number,
+  transform: Matrix,
+  snapMode: PixelSnapMode = PixelSnapMode.None,
+): void => {
   target[offset + 0] = transform.a;
   target[offset + 1] = transform.b;
   target[offset + 2] = transform.c;
@@ -267,8 +272,13 @@ export class TransformBuffer {
       this._dirtyMin = slot;
       this._dirtyMax = slot;
     } else {
-      if (slot < this._dirtyMin) this._dirtyMin = slot;
-      if (slot > this._dirtyMax) this._dirtyMax = slot;
+      if (slot < this._dirtyMin) {
+        this._dirtyMin = slot;
+      }
+
+      if (slot > this._dirtyMax) {
+        this._dirtyMax = slot;
+      }
     }
 
     this._frameHash = this._mix(this._frameHash, slot);
@@ -286,7 +296,8 @@ export class TransformBuffer {
     // would wrongly report `changed: false`, skipping the tint texture's upload.
     const tintOffset = slot * tintBytesPerSlot;
     const tintData = this._tintData;
-    const packedTint = (tintData[tintOffset]! << 24) | (tintData[tintOffset + 1]! << 16) | (tintData[tintOffset + 2]! << 8) | tintData[tintOffset + 3]!;
+    const packedTint =
+      (tintData[tintOffset]! << 24) | (tintData[tintOffset + 1]! << 16) | (tintData[tintOffset + 2]! << 8) | tintData[tintOffset + 3]!;
 
     this._frameHash = this._mix(this._frameHash, packedTint >>> 0);
 

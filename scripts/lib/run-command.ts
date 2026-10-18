@@ -1,4 +1,4 @@
-import { spawn, spawnSync, type ChildProcess, type SpawnOptions } from 'node:child_process';
+import { type ChildProcess, spawn, type SpawnOptions, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createWriteStream, mkdirSync, openSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
@@ -34,8 +34,12 @@ export interface RunCommandResult {
 }
 
 const duration = (milliseconds: number): string => `${(milliseconds / 1000).toFixed(1)}s`;
+
 const positiveTimer = (value: number, name: string): number => {
-  if (!Number.isInteger(value) || value <= 0 || value > 2_147_483_647) throw new Error(`${name} must be a positive timer value below 2^31 ms.`);
+  if (!Number.isInteger(value) || value <= 0 || value > 2_147_483_647) {
+    throw new Error(`${name} must be a positive timer value below 2^31 ms.`);
+  }
+
   return value;
 };
 
@@ -64,7 +68,10 @@ class TailBuffer {
  * name - and terminates nothing.
  */
 const describeOwnedTree = (root: number | undefined): string[] => {
-  if (root === undefined) return ['(no pid)'];
+  if (root === undefined) {
+    return ['(no pid)'];
+  }
+
   const script =
     '$rootPid = [int]$env:EXOJS_TREE_ROOT;' +
     '$all = Get-CimInstance Win32_Process | Select-Object ProcessId, ParentProcessId, Name;' +
@@ -78,6 +85,7 @@ const describeOwnedTree = (root: number | undefined): string[] => {
     env: { ...process.env, EXOJS_TREE_ROOT: String(root) },
   });
   const text = (out.stdout || out.stderr || 'snapshot failed').trim();
+
   return text
     .split('\n')
     .map(line => line.trim())
@@ -89,7 +97,10 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
   const timeoutMs = options.timeoutMs === undefined ? undefined : positiveTimer(options.timeoutMs, 'timeoutMs');
   const graceMs = positiveTimer(options.killGraceMs ?? 2000, 'killGraceMs');
   const started = Date.now();
-  if (options.signal?.aborted) return { status: 130, signal: null, durationMs: 0, aborted: true };
+
+  if (options.signal?.aborted) {
+    return { status: 130, signal: null, durationMs: 0, aborted: true };
+  }
 
   const cwd = resolve(options.cwd ?? process.cwd());
   const logDirectory = resolve(cwd, '.workspace/logs');
@@ -100,13 +111,16 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
       .toLowerCase() || 'command';
   const path = resolve(logDirectory, `${safe}-${Date.now()}-${process.pid}-${randomUUID()}.log`);
   let fd: number;
+
   try {
     mkdirSync(logDirectory, { recursive: true });
     fd = openSync(path, 'wx');
   } catch (error) {
     process.stderr.write(`FAIL ${options.label}: cannot open log: ${String(error)}\n`);
+
     return { status: 1, signal: null, durationMs: Date.now() - started, logPath: path, logError: String(error) };
   }
+
   const log = createWriteStream(path, { fd, autoClose: true });
   const tail = new TailBuffer(options.minimumTailLines ?? DEFAULT_TAIL_LINES);
   const live = options.output === 'normal' || options.output === 'verbose';
@@ -149,18 +163,27 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
       // `close` is emitted from inside the last pipe's `close`, ahead of the
       // listeners registered here. `writable` is false once the log is ended,
       // errored or destroyed.
-      if (!log.writable) return;
+      if (!log.writable) {
+        return;
+      }
+
       const at = Date.now() - spawnStarted;
       const streams = (['stdout', 'stderr'] as const)
         .map(name => {
           const stream = child[name];
-          if (!stream) return `${name}=absent`;
+
+          if (!stream) {
+            return `${name}=absent`;
+          }
+
           const readable = stream as Readable & { readableLength?: number };
+
           return `${name}[ended=${readable.readableEnded ?? false} destroyed=${stream.destroyed} paused=${readable.isPaused?.() ?? false} buffered=${readable.readableLength ?? 0}]`;
         })
         .join(' ');
       log.write(`trace t+${at}ms pid=${child.pid ?? '?'} ${event} exitedAt=${exitedAt === undefined ? 'no' : 'yes'} ${streams} ${extra}\n`);
     };
+
     try {
       child = windowsShell
         ? spawn(
@@ -177,6 +200,7 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
       const result = { status: 1, signal: null, durationMs: Date.now() - started, logPath: path };
       log.once('error', () => resolveResult(result));
       log.end(message, () => resolveResult(result));
+
       return;
     }
 
@@ -186,20 +210,32 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
       exitedAt = Date.now();
       trace('child-exit', `code=${code} signal=${signal}`);
     });
+
     for (const name of ['stdout', 'stderr'] as const) {
       const stream = child[name];
-      if (!stream) continue;
+
+      if (!stream) {
+        continue;
+      }
+
       stream.once('end', () => trace(`${name}-end`));
       stream.once('close', () => trace(`${name}-close`));
       stream.once('error', error => trace(`${name}-error`, error.message));
     }
 
     const resume = (): void => {
-      for (const stream of paused) stream.resume();
+      for (const stream of paused) {
+        stream.resume();
+      }
+
       paused.clear();
     };
+
     const report = (): void => {
-      if (finished || closing || !closed || (reason && !cleanupDone)) return;
+      if (finished || closing || !closed || (reason && !cleanupDone)) {
+        return;
+      }
+
       closing = true;
       clearTimeout(timeout);
       clearInterval(heartbeat);
@@ -210,7 +246,8 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
       options.signal?.removeEventListener('abort', onAbort);
       resume();
       const result: RunCommandResult = {
-        status: reason === 'timeout' ? 124 : reason === 'abort' ? (requestedSignal === 'SIGTERM' ? 143 : 130) : logError ? 1 : closed.status,
+        status:
+          reason === 'timeout' ? 124 : reason === 'abort' ? (requestedSignal === 'SIGTERM' ? 143 : 130) : logError ? 1 : closed.status,
         signal: requestedSignal ?? closed.signal,
         durationMs: Date.now() - started,
         logPath: path,
@@ -219,45 +256,81 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
         ...(reason === 'timeout' ? { timedOut: true } : {}),
         ...(reason === 'abort' ? { aborted: true } : {}),
       };
+
       const complete = (): void => {
-        if (finished) return;
+        if (finished) {
+          return;
+        }
+
         finished = true;
+
         if (logError) {
           // A late filesystem failure must not turn into a successful result.
-          if (result.status === 0) Object.assign(result, { status: 1 });
+          if (result.status === 0) {
+            Object.assign(result, { status: 1 });
+          }
+
           Object.assign(result, { logError });
         }
+
         if (result.status !== 0) {
           process.stderr.write(`FAIL ${options.label} (${reason ?? `exit ${result.status}`}, ${duration(result.durationMs)})\n`);
-          if (logError) process.stderr.write(`Log write failed: ${logError}\n`);
-          if (cleanupError) process.stderr.write(`Cleanup: ${cleanupError}\n`);
-          if (!live && tail.text()) process.stderr.write(`--- diagnostic tail ---\n${tail.text()}\n`);
+
+          if (logError) {
+            process.stderr.write(`Log write failed: ${logError}\n`);
+          }
+
+          if (cleanupError) {
+            process.stderr.write(`Cleanup: ${cleanupError}\n`);
+          }
+
+          if (!live && tail.text()) {
+            process.stderr.write(`--- diagnostic tail ---\n${tail.text()}\n`);
+          }
+
           process.stderr.write(`Full log: ${displayPath}\n`);
-        } else if (showProgress) process.stdout.write(`PASS ${options.label} ${duration(result.durationMs)}\n`);
+        } else if (showProgress) {
+          process.stdout.write(`PASS ${options.label} ${duration(result.durationMs)}\n`);
+        }
+
         resolveResult(result);
       };
-      if (!log.destroyed)
+
+      if (!log.destroyed) {
         log.write(
           `\nexit=${result.status}\nsignal=${result.signal ?? 'none'}\nreason=${reason ?? (logError ? 'log' : 'exit')}\ndurationMs=${result.durationMs}\n`,
         );
-      if (log.destroyed) complete();
-      else {
+      }
+
+      if (log.destroyed) {
+        complete();
+      } else {
         log.once('close', complete);
         log.end();
       }
     };
+
     const stop = (why: 'timeout' | 'abort' | 'log', signal: NodeJS.Signals | null = null): void => {
-      if (finished || closing || stopping) return;
+      if (finished || closing || stopping) {
+        return;
+      }
+
       reason = why;
       requestedSignal = signal;
       trace('stop', `why=${why} signal=${signal ?? 'none'} tree=[${describeOwnedTree(child.pid).join(' | ')}]`);
       process.stderr.write(`STOP ${options.label}: ${why}; owned PID ${child.pid ?? 'not started'}; log ${displayPath}\n`);
-      stopping = stopProcessTree(child, graceMs, { earliest: spawnStarted, latest: spawnFinished, ...(exitedAt === undefined ? {} : { exitedAt }) })
+      stopping = stopProcessTree(child, graceMs, {
+        earliest: spawnStarted,
+        latest: spawnFinished,
+        ...(exitedAt === undefined ? {} : { exitedAt }),
+      })
         .then(error => {
           cleanupError = error;
           cleanupDone = true;
-          if (closed) report();
-          else {
+
+          if (closed) {
+            report();
+          } else {
             // Broken inherited pipes or a failed OS cleanup cannot keep the supervisor alive forever.
             drainTimer = setTimeout(() => {
               cleanupError ??= 'Owned process did not close after termination; inspect descendants before retrying.';
@@ -279,28 +352,36 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
           report();
         });
     };
+
     const onInterrupt = (): void => stop('abort', 'SIGINT');
     const onTerminate = (): void => stop('abort', 'SIGTERM');
     const onAbort = (): void => stop('abort', options.signal?.reason === 'SIGTERM' ? 'SIGTERM' : null);
     const timeout = timeoutMs === undefined ? undefined : setTimeout(() => stop('timeout'), timeoutMs);
     const heartbeat = setInterval(() => {
-      if (showProgress)
+      if (showProgress) {
         process.stdout.write(
           `RUN ${options.label} ${duration(Date.now() - started)} / ${timeoutMs === undefined ? 'no deadline' : duration(timeoutMs)}; PID ${child.pid ?? '?'}; log ${displayPath}\n`,
         );
+      }
     }, 30_000);
     process.on('SIGINT', onInterrupt);
     process.on('SIGTERM', onTerminate);
     options.signal?.addEventListener('abort', onAbort, { once: true });
+
     // Covers an abort between the preflight check and listener registration.
-    if (options.signal?.aborted) onAbort();
+    if (options.signal?.aborted) {
+      onAbort();
+    }
+
     log.on('error', error => {
       logError ??= error.message;
       resume();
       stop('log');
     });
     log.on('drain', resume);
-    log.write(`$ ${options.command}${options.args?.length ? ` ${options.args.join(' ')}` : ''}\ncwd=${cwd}\ntimeoutMs=${timeoutMs ?? 'none'}\n`);
+    log.write(
+      `$ ${options.command}${options.args?.length ? ` ${options.args.join(' ')}` : ''}\ncwd=${cwd}\ntimeoutMs=${timeoutMs ?? 'none'}\n`,
+    );
 
     // A stall is only diagnosable while it is happening. After a minute without
     // output the owned tree is recorded, so a log that later ends in a deadline
@@ -316,19 +397,30 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
     });
     const idle = setInterval(() => {
       const idleMs = Date.now() - lastActivity;
-      if (finished || closing || idleMs < IDLE_MS) return;
+
+      if (finished || closing || idleMs < IDLE_MS) {
+        return;
+      }
+
       const tree = describeOwnedTree(child.pid);
       trace('idle-snapshot', `idleMs=${idleMs} tree=[${tree.join(' | ')}]`);
     }, 15_000);
     idle.unref?.();
-    if (showProgress)
+
+    if (showProgress) {
       process.stdout.write(
         `RUN ${options.label}; PID ${child.pid ?? '?'}; timeout ${timeoutMs === undefined ? 'no deadline' : duration(timeoutMs)}; log ${displayPath}\n`,
       );
+    }
+
     const consume = (stream: Readable, destination: NodeJS.WriteStream): void => {
       stream.on('data', (chunk: Buffer) => {
         tail.append(chunk.toString());
-        if (live) destination.write(chunk);
+
+        if (live) {
+          destination.write(chunk);
+        }
+
         if (!logError && !log.destroyed && !log.write(chunk)) {
           stream.pause();
           paused.add(stream);
@@ -341,13 +433,21 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
         stop('log');
       });
     };
+
     consume(child.stdout!, process.stdout);
     consume(child.stderr!, process.stderr);
     child.once('error', error => {
       const diagnostic = `Failed to start ${options.label}: ${error.message}\n`;
       tail.append(diagnostic);
-      if (live) process.stderr.write(diagnostic);
-      if (!logError && !log.destroyed) log.write(diagnostic);
+
+      if (live) {
+        process.stderr.write(diagnostic);
+      }
+
+      if (!logError && !log.destroyed) {
+        log.write(diagnostic);
+      }
+
       closed = { status: 1, signal: null };
       report();
     });

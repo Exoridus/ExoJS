@@ -174,7 +174,10 @@ export abstract class Widget extends ThemedContainer {
 
     const [ax, ay] = anchorFactors(this._uiAnchor);
 
-    this.setPosition(ax * (containerWidth - this._uiWidth) + this._uiAnchorOffsetX, ay * (containerHeight - this._uiHeight) + this._uiAnchorOffsetY);
+    this.setPosition(
+      ax * (containerWidth - this._uiWidth) + this._uiAnchorOffsetX,
+      ay * (containerHeight - this._uiHeight) + this._uiAnchorOffsetY,
+    );
   }
 
   /**

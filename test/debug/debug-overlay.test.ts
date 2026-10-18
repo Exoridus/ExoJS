@@ -228,7 +228,14 @@ describe('DebugOverlay — lifecycle', () => {
     // A binding is what marks a key consumed, so the browser's own F1 help
     // window / F3 find bar stay shut while the overlay owns those keys. A
     // plain `onKeyDown` subscription runs a frame late and prevents nothing.
-    expect([...mockInput(app).bound.keys()].sort((a, b) => a - b)).toEqual([Keyboard.F1, Keyboard.F2, Keyboard.F3, Keyboard.F4, Keyboard.F6, Keyboard.F7]);
+    expect([...mockInput(app).bound.keys()].sort((a, b) => a - b)).toEqual([
+      Keyboard.F1,
+      Keyboard.F2,
+      Keyboard.F3,
+      Keyboard.F4,
+      Keyboard.F6,
+      Keyboard.F7,
+    ]);
 
     debug.destroy();
   });

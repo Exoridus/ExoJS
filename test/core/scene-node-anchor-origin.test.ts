@@ -11,7 +11,7 @@ const createTextureStub = (): Texture =>
     width: 128,
     height: 64,
     flipY: false,
-    updateSource: () => undefined,
+    updateSource: () => {},
   }) as unknown as Texture;
 
 /** Two triangles spanning -50..+50 on both axes, i.e. centred on (0, 0). */

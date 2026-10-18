@@ -183,7 +183,10 @@ export class RetainedCaptureSlot {
    */
   public matchesNonViewKeys(contentRevision: number, structureRevision: number, ancestryStamp: number): boolean {
     return (
-      this._hasCapture && this._contentRevision === contentRevision && this._structureRevision === structureRevision && this._ancestryStamp === ancestryStamp
+      this._hasCapture &&
+      this._contentRevision === contentRevision &&
+      this._structureRevision === structureRevision &&
+      this._ancestryStamp === ancestryStamp
     );
   }
 

@@ -55,14 +55,17 @@ const setupSourceSpy = (): { sources: MockBufferSource[]; restore: () => void } 
       buffer: null,
     };
     sources.push(node);
+
     return node as unknown as AudioBufferSourceNode;
   });
+
   return { sources, restore: () => spy.mockRestore() };
 };
 
 const makeStubEffect = (): AudioEffect => {
   const inputNode = { connect: vi.fn(), disconnect: vi.fn() } as unknown as AudioNode;
   const outputNode = { connect: vi.fn(), disconnect: vi.fn() } as unknown as AudioNode;
+
   return { inputNode, outputNode, destroy: vi.fn(), ready: Promise.resolve(), _isWired: true } as unknown as AudioEffect;
 };
 
@@ -88,12 +91,21 @@ const captureVoiceOutput = (): { get node(): MockGainNode | null; restore: () =>
       captured = {
         connect: vi.fn(),
         disconnect: vi.fn(),
-        gain: { setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn(), setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), value: 1 },
+        gain: {
+          setTargetAtTime: vi.fn(),
+          cancelScheduledValues: vi.fn(),
+          setValueAtTime: vi.fn(),
+          linearRampToValueAtTime: vi.fn(),
+          value: 1,
+        },
       };
+
       return captured as unknown as GainNode;
     }
+
     return original();
   });
+
   return {
     get node() {
       return captured;
@@ -132,8 +144,10 @@ const setupPannerSpy = (): { panners: MockPanner[]; restore: () => void } => {
       positionZ: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
     };
     panners.push(panner);
+
     return panner as unknown as PannerNode;
   });
+
   return { panners, restore: () => spy.mockRestore() };
 };
 
@@ -596,7 +610,10 @@ describe('BaseVoice — deferred bus connect while the bus is not yet set up', (
     expect(onAudioContextReady.count).toBe(signalCountBefore);
 
     // Ending the voices before the bus comes online unsubscribes their queued reconnects.
-    for (const voice of voices) voice.stop();
+    for (const voice of voices) {
+      voice.stop();
+    }
+
     expect(pendingCount()).toBe(0);
 
     factory.restore();

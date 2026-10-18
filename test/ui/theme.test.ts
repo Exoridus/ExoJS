@@ -49,7 +49,13 @@ describe('createUITheme', () => {
   });
 
   test('replaces named skin fields and keeps the rest', () => {
-    const background: UIFillBackground = { kind: 'fill', color: new Color(1, 2, 3, 1), borderColor: new Color(0, 0, 0, 1), borderWidth: 2, cornerRadius: 0 };
+    const background: UIFillBackground = {
+      kind: 'fill',
+      color: new Color(1, 2, 3, 1),
+      borderColor: new Color(0, 0, 0, 1),
+      borderWidth: 2,
+      cornerRadius: 0,
+    };
     const theme = createUITheme({ panel: { normal: { background } } });
 
     expect(theme.panel.normal.background).toBe(background);

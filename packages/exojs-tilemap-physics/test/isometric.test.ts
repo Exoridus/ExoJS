@@ -1,6 +1,13 @@
 import { Container, type Texture, TextureRegion } from '@codexo/exojs';
 import { PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
-import { buildTileCollisionGeometry, ObjectLayer, TILE_TRANSFORM_IDENTITY, TileLayer, TileProjection, TileSet } from '@codexo/exojs-tilemap';
+import {
+  buildTileCollisionGeometry,
+  ObjectLayer,
+  TILE_TRANSFORM_IDENTITY,
+  TileLayer,
+  TileProjection,
+  TileSet,
+} from '@codexo/exojs-tilemap';
 import { describe, expect, it } from 'vitest';
 
 import { buildObjectLayerColliders } from '../src/objectLayer';
@@ -8,7 +15,19 @@ import { TileColliderStreamer } from '../src/TileColliderStreamer';
 import { TilePhysicsBinding } from '../src/TilePhysicsBinding';
 
 const projection = () => new TileProjection({ orientation: 'isometric', tileWidth: 64, tileHeight: 32, originX: 128 });
-const shape = { id: 1, name: '', type: 'solid', visible: true, properties: {}, kind: 'rectangle' as const, x: 32, y: 32, width: 32, height: 32, rotation: 0 };
+const shape = {
+  id: 1,
+  name: '',
+  type: 'solid',
+  visible: true,
+  properties: {},
+  kind: 'rectangle' as const,
+  x: 32,
+  y: 32,
+  width: 32,
+  height: 32,
+  rotation: 0,
+};
 
 describe('isometric logical physics', () => {
   it('builds square logical cells with inverse-projected display offsets', () => {

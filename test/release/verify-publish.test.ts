@@ -23,6 +23,7 @@ const setup = () => {
   const error = vi.spyOn(console, 'error').mockImplementation(() => {});
   const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
   const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
   return { log, error, stdout, stderr };
 };
 
@@ -65,7 +66,11 @@ describe('publish verification output', () => {
     state.run.mockImplementationOnce(() =>
       failingCheck === 0 ? { code: 1, stdout: 'full pack diagnostic\n', stderr: 'pack error\n' } : { code: 0, stdout: '', stderr: '' },
     );
-    if (failingCheck === 1) state.run.mockImplementationOnce(() => ({ code: 1, stdout: 'full publint diagnostic\n', stderr: 'publint error\n' }));
+
+    if (failingCheck === 1) {
+      state.run.mockImplementationOnce(() => ({ code: 1, stdout: 'full publint diagnostic\n', stderr: 'publint error\n' }));
+    }
+
     vi.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('exit 1');
     });

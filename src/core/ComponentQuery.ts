@@ -16,7 +16,8 @@ const staleIterationError = (): Error =>
       'keep the query itself and start a new iteration instead.',
   );
 
-const disposedError = (): Error => new Error('ComponentQuery: the scene this query belongs to has ended. Make a new query on the scene that is active now.');
+const disposedError = (): Error =>
+  new Error('ComponentQuery: the scene this query belongs to has ended. Make a new query on the scene that is active now.');
 
 /**
  * A reusable, typed selection of the nodes in one scene that carry an exact
@@ -166,6 +167,7 @@ export class ComponentQuery<T extends readonly ComponentClass[]> implements Iter
 
     const types = this._types;
     const components: Component[] = new Array<Component>(types.length);
+
     // A snapshot of the driver's members would cost an array per call; the
     // stamp check below gives the same "candidates as of the start" view, and a
     // Set iteration already skips entries deleted while it runs.

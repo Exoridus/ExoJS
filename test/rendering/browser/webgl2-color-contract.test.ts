@@ -190,7 +190,9 @@ const grayImage = (byte: number, alpha = 1): Texture => {
 
   const context = source.getContext('2d');
 
-  if (context === null) throw new Error('A 2D context is required to build test textures.');
+  if (context === null) {
+    throw new Error('A 2D context is required to build test textures.');
+  }
 
   context.fillStyle = `rgba(${byte}, ${byte}, ${byte}, ${alpha})`;
   context.fillRect(0, 0, 1, 1);

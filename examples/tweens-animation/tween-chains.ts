@@ -1,4 +1,14 @@
-import { Application, Color, Ease, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sprite, Tween } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  Ease,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  type RenderingContext,
+  Scene,
+  Sprite,
+  type Tween,
+} from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const WAYPOINTS = [
@@ -19,6 +29,7 @@ class TweenSequencesScene extends Scene {
     this.path = new Graphics();
     this.path.lineWidth = 3;
     this.path.lineColor = new Color(60, 100, 150);
+
     for (let i = 0; i < points.length; i++) {
       const next = points[(i + 1) % points.length];
       this.path.drawLine(points[i].x, points[i].y, next.x, next.y);
@@ -41,9 +52,11 @@ class TweenSequencesScene extends Scene {
           .easing(Ease.sineInOut)
           .onStart(() => this.hud.setStatus(`Leg ${index + 1} / ${points.length}`)),
       );
+
     for (let i = 0; i < this.steps.length - 1; i++) {
       this.steps[i].chain(this.steps[i + 1]);
     }
+
     this.steps.at(-1)!.onComplete(() => this.steps[0].start());
     this.steps[0].start();
   }

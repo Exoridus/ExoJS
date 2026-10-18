@@ -1,5 +1,5 @@
 import type { Voice } from '@codexo/exojs';
-import { Asset, AudioStream, Scene, Sound } from '@codexo/exojs';
+import { Asset, type AudioStream, Scene, type Sound } from '@codexo/exojs';
 
 // #region guide:audio-scene
 class AudioScene extends Scene {
@@ -8,7 +8,10 @@ class AudioScene extends Scene {
   private themeVoice!: Voice;
 
   async load() {
-    const [laser, theme] = await Promise.all([this.loader.load('audio/laser.ogg'), this.loader.load(Asset.type('music', 'audio/theme.ogg'))]);
+    const [laser, theme] = await Promise.all([
+      this.loader.load('audio/laser.ogg'),
+      this.loader.load(Asset.type('music', 'audio/theme.ogg')),
+    ]);
     this.laser = laser;
     this.theme = theme;
   }

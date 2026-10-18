@@ -11,6 +11,8 @@ import eslintReact from '@eslint-react/eslint-plugin';
 import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 
+import { authoringStyleConfig } from './style.js';
+
 /**
  * React/TSX policy, shared by every React consumer in the repository: the
  * integration package and the documentation site's interactive islands.
@@ -23,6 +25,7 @@ import globals from 'globals';
  */
 export function reactConfig({ files, tsconfigRootDir }) {
   return [
+    ...authoringStyleConfig({ files, typeAware: true }),
     {
       files,
       languageOptions: {
@@ -48,9 +51,6 @@ export function reactConfig({ files, tsconfigRootDir }) {
         ...eslintReact.configs['disable-conflict-eslint-plugin-react-hooks'].rules,
         ...reactHooks.configs.recommended.rules,
 
-        'simple-import-sort/imports': 'error',
-        'simple-import-sort/exports': 'error',
-        'unused-imports/no-unused-imports': 'error',
         'unused-imports/no-unused-vars': [
           'warn',
           {
@@ -62,7 +62,6 @@ export function reactConfig({ files, tsconfigRootDir }) {
           },
         ],
 
-        '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports', disallowTypeAnnotations: false, fixStyle: 'inline-type-imports' }],
         '@typescript-eslint/array-type': 'off',
         '@typescript-eslint/consistent-indexed-object-style': 'off',
         '@typescript-eslint/consistent-type-definitions': 'off',
@@ -143,15 +142,11 @@ export function reactConfig({ files, tsconfigRootDir }) {
         'react-hooks/preserve-manual-memoization': 'error',
         'react-hooks/set-state-in-effect': 'error',
 
-        curly: 'error',
         eqeqeq: ['error', 'always', { null: 'ignore' }],
         // Allow console.error/console.warn for intentional diagnostics (e.g. the
         // fetch/parse error logging in request-manager.ts); only console.log/debug warn.
         'no-console': ['error', { allow: ['warn', 'error'] }],
         'no-nested-ternary': 'error',
-        'object-shorthand': 'error',
-        'prefer-object-spread': 'error',
-        'prefer-template': 'error',
         radix: 'error',
       },
     },

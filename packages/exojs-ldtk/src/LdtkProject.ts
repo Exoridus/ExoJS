@@ -158,7 +158,12 @@ export class LdtkProject {
    * on a later load.
    */
   private async _resolveLevel(level: LdtkLevel, scope: LoaderScope): Promise<LdtkLevel> {
-    if (level.layerInstances !== null || level.externalRelPath === undefined || level.externalRelPath === null || level.externalRelPath === '') {
+    if (
+      level.layerInstances !== null ||
+      level.externalRelPath === undefined ||
+      level.externalRelPath === null ||
+      level.externalRelPath === ''
+    ) {
       return level;
     }
 

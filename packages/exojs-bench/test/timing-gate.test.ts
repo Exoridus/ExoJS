@@ -51,7 +51,8 @@ const recorded = {
 };
 
 /** A baseline holding one cell at `baselineMs`. */
-const baselineAt = (baselineMs: number): TimingBaseline => recordTimingBaseline([cell({ archetype: 'static-heavy', cpuMsMedian: baselineMs })], recorded);
+const baselineAt = (baselineMs: number): TimingBaseline =>
+  recordTimingBaseline([cell({ archetype: 'static-heavy', cpuMsMedian: baselineMs })], recorded);
 
 describe('compareToTimingBaseline', () => {
   test('passes a cell inside the threshold', () => {
@@ -82,8 +83,12 @@ describe('compareToTimingBaseline', () => {
     // At this baseline the floor and the threshold coincide, so the pair of cases
     // pins both boundaries at once: "more than 25 %" is strict.
     const baselineMs = TIMING_FLOOR_MS / TIMING_THRESHOLD;
-    const atThreshold = compareToTimingBaseline(baselineAt(baselineMs), [cell({ archetype: 'static-heavy', cpuMsMedian: baselineMs + TIMING_FLOOR_MS })]);
-    const past = compareToTimingBaseline(baselineAt(baselineMs), [cell({ archetype: 'static-heavy', cpuMsMedian: baselineMs + TIMING_FLOOR_MS + 0.001 })]);
+    const atThreshold = compareToTimingBaseline(baselineAt(baselineMs), [
+      cell({ archetype: 'static-heavy', cpuMsMedian: baselineMs + TIMING_FLOOR_MS }),
+    ]);
+    const past = compareToTimingBaseline(baselineAt(baselineMs), [
+      cell({ archetype: 'static-heavy', cpuMsMedian: baselineMs + TIMING_FLOOR_MS + 0.001 }),
+    ]);
 
     expect(atThreshold.comparisons[0]!.failed).toBe(false);
     expect(past.comparisons[0]!.failed).toBe(true);
@@ -111,8 +116,14 @@ describe('compareToTimingBaseline', () => {
   });
 
   test('sorts the worst regression first, so the report leads with what matters', () => {
-    const baseline = recordTimingBaseline([cell({ archetype: 'static-heavy', cpuMsMedian: 10 }), cell({ archetype: 'overdraw', cpuMsMedian: 10 })], recorded);
-    const outcome = compareToTimingBaseline(baseline, [cell({ archetype: 'static-heavy', cpuMsMedian: 11 }), cell({ archetype: 'overdraw', cpuMsMedian: 20 })]);
+    const baseline = recordTimingBaseline(
+      [cell({ archetype: 'static-heavy', cpuMsMedian: 10 }), cell({ archetype: 'overdraw', cpuMsMedian: 10 })],
+      recorded,
+    );
+    const outcome = compareToTimingBaseline(baseline, [
+      cell({ archetype: 'static-heavy', cpuMsMedian: 11 }),
+      cell({ archetype: 'overdraw', cpuMsMedian: 20 }),
+    ]);
 
     expect(outcome.comparisons.map(comparison => comparison.cell.archetype)).toEqual(['overdraw', 'static-heavy']);
   });

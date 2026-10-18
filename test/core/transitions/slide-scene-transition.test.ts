@@ -15,9 +15,11 @@ class TestableSlideSceneTransition extends SlideSceneTransition {
   public callEnter(context: SceneTransitionPhaseContext): void {
     this.enter(context, this._testState);
   }
+
   public callExit(context: SceneTransitionPhaseContext): void {
     this.exit(context, this._testState);
   }
+
   public callGetPhaseRequirements(phase: 'enter' | 'exit', context: SceneTransitionContext): SceneTransitionPhaseRequirements {
     return this.getPhaseRequirements(phase, context);
   }
@@ -92,13 +94,17 @@ describe('SlideSceneTransition', () => {
       const rendering = stubRendering(render);
       const currentTexture = { current: true } as never;
 
-      slide.callExit(stubContext({ phase: 'exit', presence: 1, frame: { outgoing: null, current: currentTexture, committed: false }, rendering }));
+      slide.callExit(
+        stubContext({ phase: 'exit', presence: 1, frame: { outgoing: null, current: currentTexture, committed: false }, rendering }),
+      );
       let [node] = render.mock.calls[render.mock.calls.length - 1] as [Sprite];
       expect(node.x).toBe(0);
       expect(node.y).toBe(0);
       expect(node.texture).toBe(currentTexture);
 
-      slide.callExit(stubContext({ phase: 'exit', presence: 0, frame: { outgoing: null, current: currentTexture, committed: false }, rendering }));
+      slide.callExit(
+        stubContext({ phase: 'exit', presence: 0, frame: { outgoing: null, current: currentTexture, committed: false }, rendering }),
+      );
       [node] = render.mock.calls[render.mock.calls.length - 1] as [Sprite];
       expect(node.x).toBe(-800);
       expect(node.y).toBe(0);
@@ -110,11 +116,15 @@ describe('SlideSceneTransition', () => {
       const rendering = stubRendering(render);
       const currentTexture = { current: true } as never;
 
-      slide.callEnter(stubContext({ phase: 'enter', presence: 0, frame: { outgoing: null, current: currentTexture, committed: false }, rendering }));
+      slide.callEnter(
+        stubContext({ phase: 'enter', presence: 0, frame: { outgoing: null, current: currentTexture, committed: false }, rendering }),
+      );
       let [node] = render.mock.calls[render.mock.calls.length - 1] as [Sprite];
       expect(node.x).toBe(800);
 
-      slide.callEnter(stubContext({ phase: 'enter', presence: 1, frame: { outgoing: null, current: currentTexture, committed: false }, rendering }));
+      slide.callEnter(
+        stubContext({ phase: 'enter', presence: 1, frame: { outgoing: null, current: currentTexture, committed: false }, rendering }),
+      );
       [node] = render.mock.calls[render.mock.calls.length - 1] as [Sprite];
       expect(node.x).toBe(0);
     });
@@ -125,7 +135,9 @@ describe('SlideSceneTransition', () => {
       const rendering = stubRendering(render);
       const currentTexture = { current: true } as never;
 
-      slide.callExit(stubContext({ phase: 'exit', presence: 0, frame: { outgoing: null, current: currentTexture, committed: false }, rendering }));
+      slide.callExit(
+        stubContext({ phase: 'exit', presence: 0, frame: { outgoing: null, current: currentTexture, committed: false }, rendering }),
+      );
       const [node] = render.mock.calls[render.mock.calls.length - 1] as [Sprite];
       expect(node.x).toBe(800);
     });
@@ -136,7 +148,9 @@ describe('SlideSceneTransition', () => {
       const rendering = stubRendering(render);
       const currentTexture = { current: true } as never;
 
-      slide.callExit(stubContext({ phase: 'exit', presence: 0, frame: { outgoing: null, current: currentTexture, committed: false }, rendering }));
+      slide.callExit(
+        stubContext({ phase: 'exit', presence: 0, frame: { outgoing: null, current: currentTexture, committed: false }, rendering }),
+      );
       const [node] = render.mock.calls[render.mock.calls.length - 1] as [Sprite];
       expect(node.x).toBe(0);
       expect(node.y).toBe(-600);

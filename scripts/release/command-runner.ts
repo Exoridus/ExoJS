@@ -42,7 +42,11 @@ let logSequence = 0;
  * the rerun that follows it. Returns the path, or `undefined` when the log
  * could not be written (a log failure never changes what the command did).
  */
-export const writeCommandLog = (logDirectory: string, invocation: CommandInvocation, result: Omit<CommandResult, 'logPath'>): string | undefined => {
+export const writeCommandLog = (
+  logDirectory: string,
+  invocation: CommandInvocation,
+  result: Omit<CommandResult, 'logPath'>,
+): string | undefined => {
   const label =
     [invocation.command, ...invocation.args.filter(arg => !arg.startsWith('-'))]
       .slice(0, 3)
@@ -79,12 +83,18 @@ export interface ExecRunnerOptions {
 export const createExecRunner = (options: ExecRunnerOptions = {}): CommandRunner => ({
   run(invocation) {
     const { command, args, cwd } = invocation;
+
     if (options.echo) {
       process.stdout.write(`$ ${command} ${args.join(' ')}\n`);
     }
+
     const nodeCli =
       process.platform === 'win32' && (command === 'npm' || command === 'pnpm')
-        ? resolve(dirname(process.execPath), 'node_modules', ...(command === 'npm' ? ['npm', 'bin', 'npm-cli.js'] : ['corepack', 'dist', 'pnpm.js']))
+        ? resolve(
+            dirname(process.execPath),
+            'node_modules',
+            ...(command === 'npm' ? ['npm', 'bin', 'npm-cli.js'] : ['corepack', 'dist', 'pnpm.js']),
+          )
         : undefined;
     const executable = nodeCli && existsSync(nodeCli) ? process.execPath : command;
     const argv = nodeCli && existsSync(nodeCli) ? [nodeCli, ...args] : [...args];
@@ -114,11 +124,13 @@ export const createRecordingRunner = (
   responder: (invocation: CommandInvocation, index: number) => CommandResult,
 ): CommandRunner & { invocations: CommandInvocation[] } => {
   const invocations: CommandInvocation[] = [];
+
   return {
     invocations,
     run(invocation) {
       const index = invocations.length;
       invocations.push(invocation);
+
       return responder(invocation, index);
     },
   };

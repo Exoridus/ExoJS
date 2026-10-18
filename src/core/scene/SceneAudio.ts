@@ -19,7 +19,8 @@ import type {
 } from '#audio/Playable';
 import type { Sound } from '#audio/Sound';
 import type { Application } from '#core/Application';
-import { SceneAvailability } from '#core/scene/SceneAvailability';
+import { logger } from '#core/Logger';
+import { SceneAvailability, sceneAvailabilityAllows } from '#core/scene/SceneAvailability';
 import { SceneState } from '#core/scene/SceneState';
 import type { SceneNode } from '#core/SceneNode';
 import { Signal } from '#core/Signal';
@@ -29,18 +30,23 @@ import { Vector } from '#math/Vector';
 
 const isPausable = (voice: Voice): voice is Voice & Pausable => 'pause' in voice && 'resume' in voice;
 
+/** A voice an owner can silence without touching the caller's own pause - every engine voice that can pause. */
+const isHoldable = (voice: Voice): voice is Voice & { _setHeld(held: boolean): void } => '_setHeld' in voice && isPausable(voice);
+
 /** Options accepted by {@link SceneAudio.play}, extending the base {@link PlayOptions}. */
 export interface SceneAudioPlayOptions extends PlayOptions {
   /**
    * Availability relative to {@link SceneDirector.pause}/{@link SceneDirector.resume}.
-   * `'always'` (default) ignores scene pause entirely - today's behavior.
-   * `'active'` freezes the moment the scene pauses, resumes when it resumes.
-   * `'paused'` is the mirror image: plays only while the scene is paused.
-   * Has no effect on a {@link Voice} that doesn't support {@link Pausable}.
+   * `'always'` (default) ignores scene pause. `'active'` is audible only while
+   * the scene runs, `'paused'` only while it is paused. The policy holds from
+   * the moment the voice starts, not only from the next pause or resume.
    *
-   * Applied only at the scene's pause/resume transitions, not re-checked at
-   * creation time - a voice started while the scene is already paused plays
-   * immediately and is only corrected at the next pause/resume cycle.
+   * The scene silences a voice without pausing it: `voice.paused` keeps
+   * reporting the caller's own pause, and a voice the caller paused stays
+   * paused when the scene lets it play again. A {@link Voice} that doesn't
+   * support {@link Pausable} cannot be silenced and keeps playing; a
+   * development build warns when such a voice is given a policy other than
+   * `'always'`.
    */
   when?: SceneAvailability;
 }
@@ -830,18 +836,17 @@ class PendingVoice implements Voice {
  *
  * ## Pause and retention
  *
- * Two independent transitions touch tracked voices, and both act only on
- * voices that support pausing - anything else keeps playing:
- *
- * - **Scene pause** ({@link SceneDirector.pause}/{@link SceneDirector.resume})
- *   applies each voice's {@link SceneAudioPlayOptions.when} policy: `'active'`
- *   voices are paused, `'paused'` voices are started, `'always'` voices are
- *   left alone. Resuming reverses exactly what the pause did, and skips a voice
- *   the caller has since paused or resumed itself.
- * - **Retention** (a scene kept alive while another runs) pauses every tracked
- *   voice that is currently playing, whatever its `when` policy, and restores
- *   exactly that set. A retained scene's paused flag survives, so a scene
- *   retained while paused comes back paused.
+ * A tracked voice that supports pausing is audible only while the scene is
+ * `Active` and its pause flag permits the voice's
+ * {@link SceneAudioPlayOptions.when} policy - checked when the voice starts
+ * and again at every pause, resume, suspension and restore. The scene holds
+ * the voice rather than pausing it, so the caller's own pause and resume
+ * stay the caller's: a voice the caller paused is never restarted by the
+ * scene, and one the caller resumes while held starts once the hold lifts.
+ * Anything that cannot pause keeps playing, and a generator note already in
+ * its release when the scene holds it ends there, exactly as on `pause()`. A
+ * retained scene's paused flag survives, so a scene retained while paused
+ * comes back paused.
  *
  * Permanent teardown stops every tracked voice, deferred ones included, and
  * releases the tracking. A play call made during teardown is refused: a
@@ -850,13 +855,11 @@ class PendingVoice implements Voice {
 export class SceneAudio implements Destroyable {
   private readonly _tracked = new Map<Voice, SceneAvailability>();
   private readonly _pending = new Set<PendingVoice>();
-  private _suspended: Set<Voice & Pausable> | null = null;
-  private _frozenByPause: Set<Voice & Pausable> | null = null;
-  private _thawedByPause: Set<Voice & Pausable> | null = null;
 
   public constructor(
     private readonly _app: Application,
     private readonly _getState: () => SceneState,
+    private readonly _getPaused: () => boolean = () => false,
   ) {}
 
   /**
@@ -904,6 +907,7 @@ export class SceneAudio implements Destroyable {
 
       this._pending.add(pending);
       this._tracked.set(pending, pending.when);
+      this._warnIfUnholdable(pending, pending.when);
 
       return pending;
     }
@@ -954,7 +958,19 @@ export class SceneAudio implements Destroyable {
 
   /** Track an already-created {@link Voice} (e.g. from `app.audio.play(...)`) for scene-lifetime cleanup. Returns it unchanged. */
   public add(voice: Voice, options?: SceneAudioTrackOptions): Voice {
-    this._tracked.set(voice, options?.when ?? SceneAvailability.Always);
+    const when = options?.when ?? SceneAvailability.Always;
+
+    // Pruned here as well as on every sync: a scene that fires one-shots while
+    // it runs would otherwise keep every ended voice until its next pause.
+    for (const tracked of this._tracked.keys()) {
+      if (tracked.ended) {
+        this._tracked.delete(tracked);
+      }
+    }
+
+    this._tracked.set(voice, when);
+    this._warnIfUnholdable(voice, when);
+    this._hold(voice, when);
 
     return voice;
   }
@@ -963,9 +979,8 @@ export class SceneAudio implements Destroyable {
    * Start every voice queued by {@link SceneAudio.play} while the scope was
    * `Preparing`. Called once, by {@link SceneScope.activate}. Swaps each
    * flushed {@link PendingVoice} wrapper in `_tracked` for the real `Voice`
-   * it created - carrying its `when` policy across - so
-   * `suspend()`/`restore()`/`pause()`/`resume()`/`destroy()` see the
-   * capability-bearing voice. The caller's own reference stays the wrapper,
+   * it created - carrying its `when` policy across - so {@link SceneAudio._sync}
+   * and {@link SceneAudio.destroy} see the capability-bearing voice. The caller's own reference stays the wrapper,
    * which forwards to the real voice transparently.
    * @internal
    */
@@ -982,110 +997,81 @@ export class SceneAudio implements Destroyable {
   }
 
   /**
-   * Pause every tracked, currently-playing {@link Pausable} voice, recording
-   * exactly that set so {@link SceneAudio.restore} can reinstate it. Reserved
-   * for retention suspension - voices without pause support ({@link InputVoice},
-   * {@link NoopVoice}) are left playing, matching the definition's "suspended
-   * where supported" contract.
+   * Bring every tracked voice's hold in line with the scope's current state
+   * and pause flag. Called on every scope transition that can change what a
+   * policy allows, and dropping voices that have ended on the way.
    * @internal
    */
-  public suspend(): void {
-    const playing = new Set<Voice & Pausable>();
-
-    for (const voice of this._tracked.keys()) {
-      if (!voice.ended && isPausable(voice) && !voice.paused) {
-        voice.pause();
-        playing.add(voice);
-      }
-    }
-
-    this._suspended = playing;
-  }
-
-  /** Restore exactly the voices paused by {@link SceneAudio.suspend}. @internal */
-  public restore(): void {
-    if (this._suspended === null) {
-      return;
-    }
-
-    for (const voice of this._suspended) {
-      if (!voice.ended) {
-        voice.resume();
-      }
-    }
-
-    this._suspended = null;
-  }
-
-  /**
-   * Apply the `when` pause policy for every tracked, `Pausable` voice:
-   * `'active'` voices currently playing are paused; `'paused'` voices
-   * currently paused are woken up early. Called by {@link SceneScope.pause}.
-   * Does not touch a `'paused'` voice that happens to already be playing -
-   * see {@link SceneAudioPlayOptions.when}, a documented, accepted
-   * limitation - or any non-`Pausable` voice.
-   * @internal
-   */
-  public pause(): void {
-    const frozen = new Set<Voice & Pausable>();
-    const thawed = new Set<Voice & Pausable>();
-
+  public _sync(): void {
     for (const [voice, when] of this._tracked) {
-      if (!isPausable(voice) || voice.ended) {
+      if (voice.ended) {
+        this._tracked.delete(voice);
         continue;
       }
 
-      if (when === SceneAvailability.Active && !voice.paused) {
-        voice.pause();
-        frozen.add(voice);
-      } else if (when === SceneAvailability.Paused && voice.paused) {
-        voice.resume();
-        thawed.add(voice);
-      }
+      this._hold(voice, when);
     }
+  }
 
-    this._frozenByPause = frozen;
-    this._thawedByPause = thawed;
+  private _hold(voice: Voice, when: SceneAvailability): void {
+    if (isHoldable(voice)) {
+      voice._setHeld(!sceneAvailabilityAllows(when, this._getState(), this._getPaused()));
+    }
+  }
+
+  private _warnIfUnholdable(voice: Voice, when: SceneAvailability): void {
+    // A stand-in is held through the real voice it starts once flushed.
+    const followsPolicy = voice instanceof PendingVoice ? isPausable(voice) : isHoldable(voice);
+
+    if (__DEV__ && when !== SceneAvailability.Always && !voice.ended && !followsPolicy) {
+      logger.warn(
+        `SceneAudio: a voice the scene cannot pause was given the '${when}' policy. It keeps playing whatever the scene's pause state - only the engine's own pausable voices can follow a scene policy.`,
+        { source: 'SceneAudio' },
+      );
+    }
   }
 
   /**
-   * Undo {@link SceneAudio.pause}: resumes everything it froze, re-freezes
-   * everything it woke up early - each only if still in the state this
-   * facade left it in, so a voice the caller paused/resumed manually in
-   * between is left alone. Called by {@link SceneScope.resume}.
-   * @internal
+   * Stops every tracked voice, deferred ones included, and releases the
+   * tracking. A voice whose `stop()` throws - its own implementation, or a
+   * caller's `onEnd` listener it dispatches - is logged and released rather
+   * than retried, and the remaining voices are still stopped. Calling it again
+   * is a no-op.
    */
-  public resume(): void {
-    if (this._frozenByPause !== null) {
-      for (const voice of this._frozenByPause) {
-        if (!voice.ended && voice.paused) {
-          voice.resume();
-        }
-      }
-
-      this._frozenByPause = null;
-    }
-
-    if (this._thawedByPause !== null) {
-      for (const voice of this._thawedByPause) {
-        if (!voice.ended && !voice.paused) {
-          voice.pause();
-        }
-      }
-
-      this._thawedByPause = null;
-    }
+  public destroy(): void {
+    this._destroy(error => {
+      logger.error('SceneAudio.destroy(): a voice threw while being stopped.', {
+        source: 'SceneAudio',
+        ...(error instanceof Error && { error }),
+      });
+    });
   }
 
-  public destroy(): void {
+  /**
+   * @internal {@link SceneAudio.destroy}, handing each voice's failure to
+   * `onFailure` instead of logging it - for an owner that reports teardown
+   * failures through its own error pipeline.
+   */
+  public _destroy(onFailure: (error: unknown) => void): void {
+    const failures: unknown[] = [];
+
+    // Drained rather than iterated over a snapshot: an `onEnd` handler may
+    // track another voice, which a Map iterator still visits, and removing each
+    // entry before stopping it releases a voice whose stop throws exactly once.
     for (const voice of this._tracked.keys()) {
-      voice.stop();
+      this._tracked.delete(voice);
+
+      try {
+        voice.stop();
+      } catch (error) {
+        failures.push(error);
+      }
     }
 
-    this._tracked.clear();
-    this._suspended = null;
-    this._frozenByPause = null;
-    this._thawedByPause = null;
     this._pending.clear();
+
+    for (const error of failures) {
+      onFailure(error);
+    }
   }
 }

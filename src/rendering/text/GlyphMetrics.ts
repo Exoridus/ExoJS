@@ -6,13 +6,19 @@ type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 const makeMeasureCtx = (): Ctx2D => {
   if (typeof OffscreenCanvas !== 'undefined') {
     const ctx = new OffscreenCanvas(1, 1).getContext('2d');
-    if (!ctx) throw new Error('GlyphMetrics: could not obtain OffscreenCanvas 2D context.');
+
+    if (!ctx) {
+      throw new Error('GlyphMetrics: could not obtain OffscreenCanvas 2D context.');
+    }
 
     return ctx;
   }
 
   const ctx = document.createElement('canvas').getContext('2d');
-  if (!ctx) throw new Error('GlyphMetrics: could not obtain canvas 2D context.');
+
+  if (!ctx) {
+    throw new Error('GlyphMetrics: could not obtain canvas 2D context.');
+  }
 
   return ctx;
 };
@@ -70,7 +76,10 @@ export class GlyphMetrics implements GlyphProvider {
   public getGlyph(char: string, fontSize: number): GlyphInfo {
     const key = `${char}:${fontSize}`;
     const cached = this._infos.get(key);
-    if (cached !== undefined) return cached;
+
+    if (cached !== undefined) {
+      return cached;
+    }
 
     const info: GlyphInfo = {
       x: 0,
@@ -94,7 +103,10 @@ export class GlyphMetrics implements GlyphProvider {
   public getKerning(prev: string, next: string, fontSize: number): number {
     const key = `${prev}${next}:${fontSize}`;
     const cached = this._kerning.get(key);
-    if (cached !== undefined) return cached;
+
+    if (cached !== undefined) {
+      return cached;
+    }
 
     const pair = this._measure(prev + next, fontSize).width;
     const a = this._measure(prev, fontSize).width;
@@ -117,7 +129,10 @@ export class GlyphMetrics implements GlyphProvider {
    */
   public getFontMetrics(fontSize: number): TextFontMetrics {
     const cached = this._fontMetrics.get(fontSize);
-    if (cached !== undefined) return cached;
+
+    if (cached !== undefined) {
+      return cached;
+    }
 
     type Vertical = TextMetrics & {
       fontBoundingBoxAscent?: number;
@@ -159,7 +174,12 @@ export class GlyphMetrics implements GlyphProvider {
     // Through the shared applier rather than by hand: a small-cap advance only
     // comes out right when the caps attribute is set alongside the shorthand,
     // and a measurement that skipped it would disagree with the raster.
-    applyCanvasTextState(ctx, { font: this.cssFont(fontSize), direction: 'ltr', letterSpacing: 0, variantCaps: this._font.fontVariant ?? 'normal' });
+    applyCanvasTextState(ctx, {
+      font: this.cssFont(fontSize),
+      direction: 'ltr',
+      letterSpacing: 0,
+      variantCaps: this._font.fontVariant ?? 'normal',
+    });
 
     return ctx.measureText(text);
   }

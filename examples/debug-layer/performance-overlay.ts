@@ -1,4 +1,15 @@
-import { Application, Color, Container, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, type Seconds, Sprite, Time } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  Container,
+  FixedResolutionCanvasSizing,
+  Keyboard,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  Sprite,
+  Time,
+} from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 
 // The HUD counts every frame longer than this budget, paints those rows red,
@@ -6,7 +17,7 @@ import { DebugOverlay } from '@codexo/exojs/debug';
 const budgets = [Time.seconds(1 / 60), Time.seconds(1 / 30), Time.seconds(1 / 144)];
 
 class PerformanceOverlayScene extends Scene {
-  private sprites!: { sprite: Sprite; vx: number; vy: number }[];
+  private sprites!: Array<{ sprite: Sprite; vx: number; vy: number }>;
   private layer!: Container;
   private budgetIndex = 0;
 
@@ -23,6 +34,7 @@ class PerformanceOverlayScene extends Scene {
       const sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(0.25);
       sprite.setPosition(Math.random() * width, Math.random() * height);
       this.layer.addChild(sprite);
+
       return {
         sprite,
         vx: (Math.random() - 0.5) * 120,
@@ -47,8 +59,14 @@ class PerformanceOverlayScene extends Scene {
 
     for (const item of this.sprites) {
       item.sprite.move(item.vx * delta, item.vy * delta);
-      if (item.sprite.position.x < 0 || item.sprite.position.x > width) item.vx *= -1;
-      if (item.sprite.position.y < 0 || item.sprite.position.y > height) item.vy *= -1;
+
+      if (item.sprite.position.x < 0 || item.sprite.position.x > width) {
+        item.vx *= -1;
+      }
+
+      if (item.sprite.position.y < 0 || item.sprite.position.y > height) {
+        item.vy *= -1;
+      }
     }
   }
 

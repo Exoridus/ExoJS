@@ -10,7 +10,9 @@ class SaturatorProcessor extends AudioWorkletProcessor {
     const input = inputs[0]?.[0];
     const output = outputs[0]?.[0];
 
-    if (!output) return true;
+    if (!output) {
+      return true;
+    }
 
     for (let index = 0; index < output.length; index++) {
       output[index] = saturate(input?.[index] ?? 0, DRIVE);

@@ -1,5 +1,5 @@
 import type { RenderingContext, Seconds } from '@codexo/exojs';
-import { Application, Asset, AudioStream, Color, Graphics, Scene } from '@codexo/exojs';
+import { Application, Asset, type AudioStream, Color, Graphics, Scene } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 
 // #region guide:full-visualizer
@@ -38,6 +38,7 @@ class AudioReactiveScene extends Scene {
     const barW = width / bands.length;
 
     this.bars.clear();
+
     for (let i = 0; i < bands.length; i++) {
       const h = (bands[i] / 255) * height;
       const t = i / Math.max(1, bands.length - 1);

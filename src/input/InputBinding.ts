@@ -72,6 +72,14 @@ interface InternalChannelDetacher {
   detach(binding: InputBinding): void;
 }
 
+/** Codes of the notifications a sampled frame leaves for {@link InputBinding._publish}. */
+const enum PendingNotification {
+  Start = 0,
+  Active = 1,
+  Stop = 2,
+  Trigger = 3,
+}
+
 /**
  * One subscription to one or more input channels. Tracks active state, fires
  * the {@link onStart} / {@link onActive} / {@link onStop} / {@link onTrigger}
@@ -82,6 +90,11 @@ interface InternalChannelDetacher {
  * Construct via the owner's `onStart` / `onActive` / `onStop` /
  * `onTrigger` factory methods rather than `new InputBinding(...)` directly -
  * the returned binding is caller-owned from that point on.
+ *
+ * Its Signals fire once the owner has advanced every binding and action map
+ * for the frame, so a callback reads all of them - this binding's own
+ * {@link value} and {@link active} included - at the frame's final state. The
+ * callback argument carries the value of the one transition it reports.
  *
  * Lifecycle: a binding lives until {@link unbind} is called, the owner
  * disposes it, or - for scene-bound bindings - the scene unloads.
@@ -135,6 +148,14 @@ export class InputBinding {
    * may omit it and retain the legacy watermark reconstruction fallback.
    */
   private readonly _constructionBaseline: Float32Array | null;
+  /**
+   * Notifications the last {@link _sample} produced, as `(code, value)` pairs
+   * in the order they occurred, waiting for {@link _publish}. Written by index
+   * against {@link _pendingLength} so a binding held across frames reuses the
+   * same storage instead of regrowing it every frame.
+   */
+  private readonly _pending: number[] = [];
+  private _pendingLength = 0;
   /** `false` until the first `update()` call - see `update`'s doc comment. */
   private _seeded = false;
   private _value = 0;
@@ -166,8 +187,23 @@ export class InputBinding {
   }
 
   /**
-   * Read the latest channel state and dispatch the appropriate Signals.
-   * Called once per frame by the owning system.
+   * Read the latest channel state and dispatch the appropriate Signals - a
+   * {@link _sample} immediately followed by its {@link _publish}, with
+   * listener exceptions propagating.
+   *
+   * @internal
+   */
+  public update(channels: Float32Array, batches?: readonly ChannelEventBatch[]): void {
+    this._sample(channels, batches);
+    this._publish();
+  }
+
+  /**
+   * Advance this binding to the latest channel state without notifying
+   * anyone: {@link value} and {@link active} move to the frame's final state,
+   * and every transition found on the way is held for {@link _publish}. An
+   * owner samples all of its bindings before publishing any, so a callback
+   * reads every binding - not only its own - at the same frame state.
    *
    * `batches`, when supplied, is replayed in true order, evaluating the
    * aggregate value once per whole batch (see {@link ChannelEventBatch}'s
@@ -189,10 +225,14 @@ export class InputBinding {
    *
    * @internal
    */
-  public update(channels: Float32Array, batches?: readonly ChannelEventBatch[]): void {
+  public _sample(channels: Float32Array, batches?: readonly ChannelEventBatch[]): void {
     if (this._unbound) {
       return;
     }
+
+    // Notifications a skipped publish left behind belong to a frame that is
+    // over; delivering them now would replay it.
+    this._pendingLength = 0;
 
     if (batches === undefined) {
       this._seeded = true;
@@ -219,7 +259,7 @@ export class InputBinding {
       this._seedUntouchedChannels(channels, batches, relevant);
 
       if (relevant.length > 0) {
-        // Establish the seeded baseline's active/inactive state (dispatching
+        // Establish the seeded baseline's active/inactive state (queueing
         // `onStart` if the seed reveals an already-active source, exactly as
         // a plain live-value read always did) BEFORE replaying `relevant` on
         // top of it - otherwise a channel seeded active from a pre-watermark
@@ -250,7 +290,11 @@ export class InputBinding {
    * post-construction release batch. Legacy/direct callers without a snapshot
    * fall back to the last PRE-watermark batch value, if any.
    */
-  private _seedUntouchedChannels(channels: Float32Array, allBatches: readonly ChannelEventBatch[], relevant: readonly ChannelEventBatch[]): void {
+  private _seedUntouchedChannels(
+    channels: Float32Array,
+    allBatches: readonly ChannelEventBatch[],
+    relevant: readonly ChannelEventBatch[],
+  ): void {
     const constructionBaseline = this._constructionBaseline;
     const relevantSet = new Set(relevant);
     const touchedByRelevant = new Set<number>();
@@ -344,15 +388,66 @@ export class InputBinding {
     }
 
     if (this._value !== 0) {
-      this.onActive.dispatch(this._value);
+      this._queue(PendingNotification.Active, this._value);
+    }
+  }
+
+  private _queue(code: PendingNotification, value: number): void {
+    this._pending[this._pendingLength++] = code;
+    this._pending[this._pendingLength++] = value;
+  }
+
+  /**
+   * Deliver what the last {@link _sample} found, in the order it occurred.
+   * With `onError`, every listener runs even when an earlier one throws, and
+   * each exception goes to `onError` instead of propagating. Either way the
+   * notifications are spent once this returns: nothing is delivered twice.
+   *
+   * @internal
+   */
+  public _publish(onError?: (error: unknown) => void): void {
+    const pending = this._pending;
+    const length = this._pendingLength;
+
+    // Spent before the first listener runs, so one that throws (without
+    // `onError`) cannot leave the rest to be delivered by a later publish.
+    this._pendingLength = 0;
+
+    if (this._unbound) {
+      return;
+    }
+
+    for (let i = 0; i < length; i += 2) {
+      const code = pending[i] as PendingNotification;
+      const value = pending[i + 1]!;
+      const signal = this._signalFor(code);
+
+      if (onError === undefined) {
+        signal.dispatch(value);
+      } else {
+        signal.dispatchIsolated(onError, value);
+      }
+    }
+  }
+
+  private _signalFor(code: PendingNotification): Signal<[number]> {
+    switch (code) {
+      case PendingNotification.Start:
+        return this.onStart;
+      case PendingNotification.Active:
+        return this.onActive;
+      case PendingNotification.Stop:
+        return this.onStop;
+      default:
+        return this.onTrigger;
     }
   }
 
   /**
-   * Recompute the aggregate value from `_channelValues` and dispatch a
+   * Recompute the aggregate value from `_channelValues` and queue a
    * transition only on a REAL crossing - `onStart` on 0 → nonzero, `onStop`
    * on nonzero → 0. A value that stays on the same side of zero (still
-   * active, still inactive) dispatches nothing here; see
+   * active, still inactive) queues nothing here; see
    * {@link _replayOrEvaluate} for the once-per-call `onActive`
    * final-state signal that covers that case instead.
    *
@@ -384,19 +479,19 @@ export class InputBinding {
 
     if (!wasActive && value !== 0) {
       this._activationTimestamp = occurredAt;
-      this.onStart.dispatch(value);
+      this._queue(PendingNotification.Start, value);
 
       return;
     }
 
     if (wasActive && value === 0) {
-      this.onStop.dispatch(0);
+      this._queue(PendingNotification.Stop, 0);
 
       const activatedAt = this._activationTimestamp;
       const duration = activatedAt !== null && occurredAt !== null ? occurredAt - activatedAt : -1;
 
       if (duration >= 0 && duration < this._triggerThreshold) {
-        this.onTrigger.dispatch(0);
+        this._queue(PendingNotification.Trigger, 0);
       }
 
       this._activationTimestamp = null;

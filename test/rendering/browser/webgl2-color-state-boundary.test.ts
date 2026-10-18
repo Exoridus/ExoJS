@@ -45,7 +45,9 @@ const snapshot = (gl: WebGL2RenderingContext): RasterSnapshot => {
     framebuffer: gl.getParameter(gl.FRAMEBUFFER_BINDING) as WebGLFramebuffer | null,
     viewport: [...(gl.getParameter(gl.VIEWPORT) as Int32Array)],
     scissor: [...(gl.getParameter(gl.SCISSOR_BOX) as Int32Array)],
-    capabilities: [gl.BLEND, gl.SCISSOR_TEST, gl.STENCIL_TEST, gl.DEPTH_TEST, gl.CULL_FACE, gl.DITHER].map(capability => gl.isEnabled(capability)),
+    capabilities: [gl.BLEND, gl.SCISSOR_TEST, gl.STENCIL_TEST, gl.DEPTH_TEST, gl.CULL_FACE, gl.DITHER].map(capability =>
+      gl.isEnabled(capability),
+    ),
     colorMask: [...(gl.getParameter(gl.COLOR_WRITEMASK) as boolean[])],
     activeTexture,
     unitBindings,

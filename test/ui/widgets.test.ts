@@ -29,7 +29,19 @@ import { createUIApp, press } from '../support/text-field-harness';
 
 // Text (used by Label/Button) needs a glyph atlas; inject a deterministic mock
 // so widgets are constructible without a real canvas (jsdom has no measureText).
-const fixedGlyphInfo: GlyphInfo = { x: 0, y: 0, width: 8, height: 16, advance: 10, ascent: 13, page: 0, uvLeft: 0, uvTop: 0, uvRight: 0.01, uvBottom: 0.02 };
+const fixedGlyphInfo: GlyphInfo = {
+  x: 0,
+  y: 0,
+  width: 8,
+  height: 16,
+  advance: 10,
+  ascent: 13,
+  page: 0,
+  uvLeft: 0,
+  uvTop: 0,
+  uvRight: 0.01,
+  uvBottom: 0.02,
+};
 const mockPage = {
   texture: {
     width: 1024,
@@ -43,7 +55,7 @@ const mockPage = {
     flipY: false,
     addDestroyListener: () => mockPage.texture,
     removeDestroyListener: () => mockPage.texture,
-    destroy: () => undefined,
+    destroy: () => {},
   },
   index: 0,
   mode: 'sdf' as const,
@@ -469,8 +481,8 @@ const textureStub = (): Texture =>
     height: 64,
     version: 1,
     source: null,
-    addDestroyListener: () => undefined,
-    removeDestroyListener: () => undefined,
+    addDestroyListener: () => {},
+    removeDestroyListener: () => {},
   }) as unknown as Texture;
 
 const themeWith = (color: Color): UITheme =>

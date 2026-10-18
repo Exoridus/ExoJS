@@ -119,7 +119,9 @@ export const createRapierAdapter = async (): Promise<PhysicsAdapter> => {
         const body = created.createRigidBody(bodyDesc);
 
         const colliderDesc = (
-          desc.shape.kind === 'box' ? R.ColliderDesc.cuboid(desc.shape.width / 2, desc.shape.height / 2) : R.ColliderDesc.ball(desc.shape.radius)
+          desc.shape.kind === 'box'
+            ? R.ColliderDesc.cuboid(desc.shape.width / 2, desc.shape.height / 2)
+            : R.ColliderDesc.ball(desc.shape.radius)
         )
           .setDensity(desc.density)
           .setFriction(desc.friction)

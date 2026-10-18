@@ -58,7 +58,9 @@ const resolveVertexFormat = (attribute: GeometryAttribute): GPUVertexFormat => {
   const format = vertexFormatsByKey[`${normalized ? 'n' : ''}${attribute.type}x${attribute.size}`];
 
   if (format === undefined) {
-    throw new Error(`WebGpuParticleRenderer: attribute "${attribute.name}" (${attribute.type} x${attribute.size}) has no WebGPU vertex format.`);
+    throw new Error(
+      `WebGpuParticleRenderer: attribute "${attribute.name}" (${attribute.type} x${attribute.size}) has no WebGPU vertex format.`,
+    );
   }
 
   return format;
@@ -232,7 +234,9 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         backend.passCoordinator.acquirePass();
         backend.passCoordinator.endPass();
       }
+
       this._drawCallCount = 0;
+
       return;
     }
 
@@ -402,7 +406,9 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     this._writeUniformData(backend, system, drawCall.texture);
 
     const vertexBuffer =
-      gpuState !== null ? gpuState.instanceBuffer : this._uploadModeData(device, resources, mode, targetVertexBytes, vertexByteOffset, drawCount);
+      gpuState !== null
+        ? gpuState.instanceBuffer
+        : this._uploadModeData(device, resources, mode, targetVertexBytes, vertexByteOffset, drawCount);
 
     device.queue.writeBuffer(
       this._uniformBuffer!,
@@ -680,7 +686,13 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     const meshData = meshGeometry.vertexData;
 
     resources.meshVersion = meshGeometry.version;
-    device.queue.writeBuffer(resources.meshBuffer, 0, meshData instanceof Float32Array ? meshData.buffer : meshData, 0, meshData.byteLength);
+    device.queue.writeBuffer(
+      resources.meshBuffer,
+      0,
+      meshData instanceof Float32Array ? meshData.buffer : meshData,
+      0,
+      meshData.byteLength,
+    );
   }
 
   private _destroyResources(resources: ParticleModeResources): void {
@@ -840,7 +852,12 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     u[43] = uvMaxY;
   }
 
-  private _getPipeline(resources: ParticleModeResources, blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
+  private _getPipeline(
+    resources: ParticleModeResources,
+    blendMode: BlendModes,
+    format: GPUTextureFormat,
+    stencil: boolean,
+  ): GPURenderPipeline {
     const pipelineKey = `${blendMode}:${format}:${stencil ? 's' : 'n'}`;
     const existingPipeline = resources.pipelines.get(pipelineKey);
 

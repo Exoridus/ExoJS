@@ -50,7 +50,7 @@ interface Variant {
   readonly alpha: boolean;
   readonly codec: string;
   /** `ktx` invocations, `{in}`/`{out}` standing for the previous and the next file. */
-  readonly steps: readonly (readonly string[])[];
+  readonly steps: ReadonlyArray<readonly string[]>;
 }
 
 const uastcStep = (transfer: Transfer): readonly string[] => [
@@ -178,7 +178,8 @@ try {
     source: {
       file: 'source.png',
       sha256: sha256(sourcePath),
-      description: 'RGBA 16x16, four 8x8 quadrants: red, green, blue and half-transparent yellow. Authored for this repository; no third-party artwork.',
+      description:
+        'RGBA 16x16, four 8x8 quadrants: red, green, blue and half-transparent yellow. Authored for this repository; no third-party artwork.',
     },
     tolerance: 4,
     fixtures: entries,

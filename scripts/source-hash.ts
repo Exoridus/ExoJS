@@ -23,8 +23,11 @@ const listFiles = (dir: string, out: string[]): string[] => {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
 
-    if (entry.isDirectory()) listFiles(path, out);
-    else if (entry.isFile()) out.push(path);
+    if (entry.isDirectory()) {
+      listFiles(path, out);
+    } else if (entry.isFile()) {
+      out.push(path);
+    }
   }
 
   return out;
@@ -55,9 +58,13 @@ export const writeSourceStamp = (sourceDir: string, distDir: string): void => {
 export const readSourceStamp = (distDir: string): string | null => {
   const file = join(distDir, SOURCE_STAMP_FILE);
 
-  if (!existsSync(file)) return null;
+  if (!existsSync(file)) {
+    return null;
+  }
 
   const parsed: unknown = JSON.parse(readFileSync(file, 'utf8'));
 
-  return typeof parsed === 'object' && parsed !== null && typeof (parsed as SourceStamp).sourceHash === 'string' ? (parsed as SourceStamp).sourceHash : null;
+  return typeof parsed === 'object' && parsed !== null && typeof (parsed as SourceStamp).sourceHash === 'string'
+    ? (parsed as SourceStamp).sourceHash
+    : null;
 };

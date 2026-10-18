@@ -56,12 +56,18 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
 
 // The software (SwiftShader) adapter can drop the device mid-test; treat that as
 // an unavailable-adapter skip rather than a failure.
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // Render a scene through the real plan path inside a validation error scope and
 // assert it produced valid GPU work. Returns false when the device dropped
 // mid-test (the caller should bail).
-const renderAndValidate = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode, encoded = false): Promise<boolean> => {
+const renderAndValidate = async (
+  ctx: { skip: (reason: string) => void },
+  backend: WebGpuBackend,
+  root: RenderNode,
+  encoded = false,
+): Promise<boolean> => {
   const device = getBackendDevice(backend);
 
   device.pushErrorScope('validation');
@@ -70,7 +76,9 @@ const renderAndValidate = async (ctx: { skip: (reason: string) => void }, backen
 
   try {
     if (encoded) {
-      if (!(await renderWebGpuEncoded(ctx, backend, root))) return false;
+      if (!(await renderWebGpuEncoded(ctx, backend, root))) {
+        return false;
+      }
     } else {
       backend.resetStats();
       backend.clear(Color.black);

@@ -35,6 +35,7 @@ const setupPannerSpy = () => {
         positionZ: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
       }) as unknown as PannerNode,
   );
+
   return { restore: () => spy.mockRestore() };
 };
 
@@ -133,6 +134,7 @@ describe('AudioSystem.update()', () => {
       _renderTransition: vi.fn(),
     };
     rawApp['input'] = { ...preFrameStub('input'), _finishInteractionFrame: () => callOrder.push('finishInteraction') };
+    rawApp['_inputTickClock'] = { open: vi.fn(), close: vi.fn(), retire: vi.fn() };
     rawApp['interaction'] = {
       preFrame: (): void => {
         callOrder.push('interaction');

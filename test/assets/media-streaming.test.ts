@@ -24,15 +24,16 @@ const originalCreateElement = document.createElement.bind(document);
 let capturedMedia: HTMLMediaElement[];
 
 /** The element the factory created last, once it exists. */
-const nextMedia = async (): Promise<HTMLMediaElement> => {
-  return vi.waitFor(() => {
+const nextMedia = async (): Promise<HTMLMediaElement> =>
+  vi.waitFor(() => {
     const element = capturedMedia.at(-1);
 
-    if (!element) throw new Error('No media element was created yet.');
+    if (!element) {
+      throw new Error('No media element was created yet.');
+    }
 
     return element;
   });
-};
 
 /** Drives a media load to its `canplay` readiness and returns the element it used. */
 const reachReadiness = async (): Promise<HTMLMediaElement> => {
@@ -65,7 +66,9 @@ beforeEach(() => {
   vi.spyOn(document, 'createElement').mockImplementation(((tagName: string, options?: ElementCreationOptions): HTMLElement => {
     const element = originalCreateElement(tagName, options);
 
-    if (tagName === 'video' || tagName === 'audio') capturedMedia.push(element as HTMLMediaElement);
+    if (tagName === 'video' || tagName === 'audio') {
+      capturedMedia.push(element as HTMLMediaElement);
+    }
 
     return element;
   }) as typeof document.createElement);

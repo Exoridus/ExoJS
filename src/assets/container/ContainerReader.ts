@@ -124,7 +124,9 @@ export class ContainerReader {
   public async readEntry(entry: ContainerEntry): Promise<ArrayBuffer> {
     const [bytes] = await this.readEntries([entry]);
 
-    if (bytes === undefined) fail(`entry "${entry.source}" produced no bytes`);
+    if (bytes === undefined) {
+      fail(`entry "${entry.source}" produced no bytes`);
+    }
 
     return bytes;
   }
@@ -140,7 +142,9 @@ export class ContainerReader {
     const needed = new Set<number>();
 
     for (const entry of entries) {
-      for (const index of this._blocksCovering(entry)) needed.add(index);
+      for (const index of this._blocksCovering(entry)) {
+        needed.add(index);
+      }
     }
 
     await Promise.all([...needed].map(async index => this._block(index)));
@@ -195,7 +199,9 @@ export class ContainerReader {
     const end = offset + length;
 
     for (const [index, block] of this.container.blocks.entries()) {
-      if (block.offset < end && block.offset + block.length > offset) covering.push(index);
+      if (block.offset < end && block.offset + block.length > offset) {
+        covering.push(index);
+      }
     }
 
     // A zero-length region covers nothing by the half-open test above, yet it
@@ -204,7 +210,9 @@ export class ContainerReader {
     if (covering.length === 0 && length === 0) {
       const index = this.container.blocks.findIndex(block => block.offset <= offset && offset <= block.offset + block.length);
 
-      if (index !== -1) covering.push(index);
+      if (index !== -1) {
+        covering.push(index);
+      }
     }
 
     return covering;
@@ -214,11 +222,15 @@ export class ContainerReader {
   private async _block(index: number): Promise<Uint8Array<ArrayBuffer>> {
     const held = this._decoded.get(index);
 
-    if (held !== undefined) return held;
+    if (held !== undefined) {
+      return held;
+    }
 
     const inFlight = this._pending.get(index);
 
-    if (inFlight !== undefined) return inFlight;
+    if (inFlight !== undefined) {
+      return inFlight;
+    }
 
     const decoding = this._fetchAndDecode(index).then(bytes => {
       this._decoded.set(index, bytes);
@@ -241,7 +253,9 @@ export class ContainerReader {
   private _blockAt(index: number): ContainerBlock {
     const block = this.container.blocks[index];
 
-    if (block === undefined) fail(`block ${index} does not exist`);
+    if (block === undefined) {
+      fail(`block ${index} does not exist`);
+    }
 
     return block;
   }
@@ -252,7 +266,9 @@ export class ContainerReader {
 
     // A store answers by hash, so a hit whose length disagrees with the head is
     // a collision or a corrupted entry - fetch rather than decode it.
-    if (cached?.byteLength === block.storedLength) return cached;
+    if (cached?.byteLength === block.storedLength) {
+      return cached;
+    }
 
     const fetched = await this._source.read(this.container.dataOffset + block.storedOffset, block.storedLength);
 
@@ -274,7 +290,9 @@ export class ContainerReader {
       const block = this._blockAt(index);
       const decoded = this._decoded.get(index);
 
-      if (decoded === undefined) fail(`${what} needs block ${index}, which was not read`);
+      if (decoded === undefined) {
+        fail(`${what} needs block ${index}, which was not read`);
+      }
 
       const from = Math.max(offset, block.offset);
       const to = Math.min(offset + length, block.offset + block.length);

@@ -34,6 +34,7 @@ export const LINT_PASSES: readonly LintPass[] = [
     globs: [
       'packages/exojs-*/src/**/*.{ts,tsx}',
       'packages/exojs-*/test/**/*.{ts,tsx}',
+      'packages/exojs-react/examples/**/*.{ts,tsx}',
       'packages/exojs-bench/competitors/*.ts',
       'packages/create-exo-app/src/**/*.ts',
       'packages/eslint-plugin-exojs/src/**/*.ts',

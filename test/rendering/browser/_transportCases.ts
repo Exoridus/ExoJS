@@ -430,7 +430,8 @@ export const transportCases = (): readonly Case[] => [
         const middleThrough = through[second!]![0]! / 255;
 
         for (let channel = 0; channel < 3; channel++) {
-          const composed = radiance[first!]![channel]! + nearThrough * (radiance[second!]![channel]! + middleThrough * radiance[third!]![channel]!);
+          const composed =
+            radiance[first!]![channel]! + nearThrough * (radiance[second!]![channel]! + middleThrough * radiance[third!]![channel]!);
 
           near(radiance[whole!]![channel]!, composed, 4);
         }

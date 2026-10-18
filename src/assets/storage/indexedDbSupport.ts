@@ -45,6 +45,7 @@ export const openIndexedDb = (
     // soon as that connection goes away. Nobody is waiting for the connection
     // by then, and an unclosed one blocks every future upgrade in its turn.
     let rejected = false;
+
     const failOpen = (error: AssetCacheError): void => {
       rejected = true;
       reject(error);
@@ -74,7 +75,12 @@ export const openIndexedDb = (
     request.addEventListener('success', () => (rejected ? request.result.close() : resolve(request.result)));
     request.addEventListener('error', () => failOpen(asCacheError(failure, request.error ?? undefined)));
     request.addEventListener('blocked', () =>
-      failOpen(new AssetCacheError({ ...failure, message: `Opening the database "${name}" is blocked by another connection holding an older version.` })),
+      failOpen(
+        new AssetCacheError({
+          ...failure,
+          message: `Opening the database "${name}" is blocked by another connection holding an older version.`,
+        }),
+      ),
     );
   });
 };

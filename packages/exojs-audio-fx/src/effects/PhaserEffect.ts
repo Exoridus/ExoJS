@@ -105,7 +105,10 @@ export class PhaserEffect extends AudioEffect {
    * not yet initialized.
    */
   public get inputNode(): AudioNode {
-    if (!this._setup) throw new Error('PhaserEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('PhaserEffect not yet initialized.');
+    }
+
     return this._setup.inputGain;
   }
 
@@ -114,7 +117,10 @@ export class PhaserEffect extends AudioEffect {
    * not yet initialized.
    */
   public get outputNode(): AudioNode {
-    if (!this._setup) throw new Error('PhaserEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('PhaserEffect not yet initialized.');
+    }
+
     return this._setup.outputGain;
   }
 
@@ -137,8 +143,10 @@ export class PhaserEffect extends AudioEffect {
   public get rateHz(): number {
     return this._rateHz;
   }
+
   public set rateHz(value: number) {
     this._rateHz = Math.max(0, Math.min(20, value));
+
     if (this._setup) {
       this._setup.lfoOscillator.frequency.setTargetAtTime(this._rateHz, this._setup.inputGain.context.currentTime, 0.01);
     }
@@ -152,13 +160,17 @@ export class PhaserEffect extends AudioEffect {
   public get baseFrequency(): number {
     return this._baseFrequency;
   }
+
   public set baseFrequency(value: number) {
     this._baseFrequency = Math.max(50, Math.min(5000, value));
+
     if (this._setup) {
       const ctx = this._setup.inputGain.context;
+
       for (const filter of this._setup.allpassFilters) {
         filter.frequency.setTargetAtTime(this._baseFrequency, ctx.currentTime, 0.01);
       }
+
       this._setup.lfoGain.gain.setTargetAtTime(this._depth * this._baseFrequency, ctx.currentTime, 0.01);
     }
   }
@@ -170,8 +182,10 @@ export class PhaserEffect extends AudioEffect {
   public get depth(): number {
     return this._depth;
   }
+
   public set depth(value: number) {
     this._depth = Math.max(0, Math.min(1, value));
+
     if (this._setup) {
       this._setup.lfoGain.gain.setTargetAtTime(this._depth * this._baseFrequency, this._setup.inputGain.context.currentTime, 0.01);
     }
@@ -184,8 +198,10 @@ export class PhaserEffect extends AudioEffect {
   public get feedback(): number {
     return this._feedback;
   }
+
   public set feedback(value: number) {
     this._feedback = Math.max(0, Math.min(0.9, value));
+
     if (this._setup) {
       this._setup.feedbackGain.gain.setTargetAtTime(this._feedback, this._setup.inputGain.context.currentTime, 0.01);
     }
@@ -198,8 +214,10 @@ export class PhaserEffect extends AudioEffect {
   public get wet(): number {
     return this._wet;
   }
+
   public set wet(value: number) {
     this._wet = Math.max(0, Math.min(1, value));
+
     if (this._setup) {
       const ctx = this._setup.wetGain.context;
       this._setup.wetGain.gain.setTargetAtTime(this._wet, ctx.currentTime, 0.01);
@@ -213,13 +231,16 @@ export class PhaserEffect extends AudioEffect {
 
   public override destroy(): void {
     this._teardown();
+
     if (this._setup) {
       this._setup.lfoOscillator.stop();
       this._setup.lfoOscillator.disconnect();
       this._setup.lfoGain.disconnect();
+
       for (const filter of this._setup.allpassFilters) {
         filter.disconnect();
       }
+
       this._setup.feedbackGain.disconnect();
       this._setup.feedbackDelay.disconnect();
       this._setup.dryGain.disconnect();
@@ -260,6 +281,7 @@ export class PhaserEffect extends AudioEffect {
 
     // Allpass filter cascade
     const allpassFilters: BiquadFilterNode[] = [];
+
     for (let i = 0; i < this._stages; i++) {
       const filter = ctx.createBiquadFilter();
       filter.type = 'allpass';
@@ -274,6 +296,7 @@ export class PhaserEffect extends AudioEffect {
 
     // LFO wiring: lfoOscillator → lfoGain → each allpass.frequency (AudioParam)
     lfoOscillator.connect(lfoGain);
+
     for (const filter of allpassFilters) {
       lfoGain.connect(filter.frequency as unknown as AudioNode);
     }
@@ -284,9 +307,11 @@ export class PhaserEffect extends AudioEffect {
 
     // Wet path: inputGain → allpass[0] → ... → allpass[N-1] → wetGain → outputGain
     inputGain.connect(allpassFilters[0]!);
+
     for (let i = 0; i < allpassFilters.length - 1; i++) {
       allpassFilters[i]!.connect(allpassFilters[i + 1]!);
     }
+
     allpassFilters[allpassFilters.length - 1]!.connect(wetGain);
     wetGain.connect(outputGain);
 

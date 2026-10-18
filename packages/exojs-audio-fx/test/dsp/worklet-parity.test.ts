@@ -32,7 +32,7 @@ interface ParityProc {
   _maxBpm: number;
   _hopSize: number;
   _sampleRate: number;
-  _candidates: { bpm: number; score: number; lag: number }[];
+  _candidates: Array<{ bpm: number; score: number; lag: number }>;
 }
 
 /** Reconstruct the worklet's flux ring buffer as a linear oldest-first array. */
@@ -42,9 +42,11 @@ const linearizeFlux = (proc: ParityProc): Float32Array => {
   const n = proc._fluxCount;
   const len = buf.length;
   const lin = new Float32Array(n);
+
   for (let t = 0; t < n; t++) {
     lin[t] = buf[(((wp - 1 - (n - 1 - t)) % len) + len) % len]!;
   }
+
   return lin;
 };
 
@@ -60,6 +62,7 @@ const driveAndCompare = (samples: Float32Array): void => {
   proc.port.postMessage = () => {};
 
   const blockSize = 128;
+
   for (let off = 0; off < samples.length; off += blockSize) {
     const end = Math.min(off + blockSize, samples.length);
     proc.process([[samples.subarray(off, end)]], [], {});
@@ -80,6 +83,7 @@ const driveAndCompare = (samples: Float32Array): void => {
   });
 
   expect(worklet.length).toBe(expected.length);
+
   for (let i = 0; i < expected.length; i++) {
     expect(worklet[i]!.lag).toBe(expected[i]!.lag);
     expect(worklet[i]!.bpm).toBeCloseTo(expected[i]!.bpm, 6);

@@ -36,9 +36,7 @@ fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
  * attach check does - which is the point: the refusal lands before the filter
  * asks the backend for anything at all.
  */
-const makeBackendStub = (backendType: RenderBackendType): RenderBackend => {
-  return { backendType } as unknown as RenderBackend;
-};
+const makeBackendStub = (backendType: RenderBackendType): RenderBackend => ({ backendType }) as unknown as RenderBackend;
 
 const passesOf = (filter: ShaderFilter): { glsl: unknown; wgsl: unknown } => {
   const internals = filter as unknown as Record<string, unknown>;

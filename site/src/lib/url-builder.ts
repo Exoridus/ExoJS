@@ -6,12 +6,30 @@ let _publicDir = '.';
 let _assetsDir = 'assets';
 let _examplesDir = 'examples';
 
-export const configureUrls = (config: { baseUrl: string; iframeUrl?: string; publicDir?: string; assetsDir?: string; examplesDir?: string }): void => {
+export const configureUrls = (config: {
+  baseUrl: string;
+  iframeUrl?: string;
+  publicDir?: string;
+  assetsDir?: string;
+  examplesDir?: string;
+}): void => {
   _baseUrl = config.baseUrl;
-  if (config.iframeUrl) _iframeUrl = config.iframeUrl;
-  if (config.publicDir) _publicDir = config.publicDir;
-  if (config.assetsDir) _assetsDir = config.assetsDir;
-  if (config.examplesDir) _examplesDir = config.examplesDir;
+
+  if (config.iframeUrl) {
+    _iframeUrl = config.iframeUrl;
+  }
+
+  if (config.publicDir) {
+    _publicDir = config.publicDir;
+  }
+
+  if (config.assetsDir) {
+    _assetsDir = config.assetsDir;
+  }
+
+  if (config.examplesDir) {
+    _examplesDir = config.examplesDir;
+  }
 };
 
 // Derive the site base URL (origin + base path) from the current location by
@@ -30,6 +48,7 @@ export const resolveSiteBaseUrl = (fallbackBase = '/'): string => {
   if (localeIndex >= 0) {
     const baseSegments = pathSegments.slice(0, localeIndex);
     const basePath = baseSegments.length > 0 ? `/${baseSegments.join('/')}/` : '/';
+
     return new URL(basePath, window.location.origin).toString();
   }
 
@@ -62,21 +81,13 @@ const buildUrl = (path: string, params?: UrlParams): string => {
   return url.toString();
 };
 
-export const buildIframeUrl = (params?: UrlParams): string => {
-  return buildUrl(_iframeUrl, params);
-};
+export const buildIframeUrl = (params?: UrlParams): string => buildUrl(_iframeUrl, params);
 
-export const buildPublicUrl = (path: string, params?: UrlParams): string => {
-  return buildUrl(`${_publicDir}/${path}`, params);
-};
+export const buildPublicUrl = (path: string, params?: UrlParams): string => buildUrl(`${_publicDir}/${path}`, params);
 
-export const buildAssetUrl = (path: string, params?: UrlParams): string => {
-  return buildUrl(`${_assetsDir}/${path}`, params);
-};
+export const buildAssetUrl = (path: string, params?: UrlParams): string => buildUrl(`${_assetsDir}/${path}`, params);
 
-export const buildExampleUrl = (path: string, params?: UrlParams): string => {
-  return buildUrl(`${_examplesDir}/${path}`, params);
-};
+export const buildExampleUrl = (path: string, params?: UrlParams): string => buildUrl(`${_examplesDir}/${path}`, params);
 
 // Resolves to the example source on raw.githubusercontent.com at the matching
 // release tag (e.g. v0.5.1). Used for non-current versions; the current

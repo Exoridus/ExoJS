@@ -28,14 +28,17 @@ const makePattern = (): HTMLCanvasElement => {
   canvas.width = 32;
   canvas.height = 32;
   const ctx = canvas.getContext('2d')!;
+
   for (let y = 0; y < 32; y++) {
     for (let x = 0; x < 32; x++) {
       ctx.fillStyle = (x + y) % 2 === 0 ? '#f9d66e' : '#284b7a';
       ctx.fillRect(x, y, 1, 1);
     }
   }
+
   ctx.fillStyle = '#ff627d';
   ctx.fillRect(9, 9, 14, 14);
+
   return canvas;
 };
 

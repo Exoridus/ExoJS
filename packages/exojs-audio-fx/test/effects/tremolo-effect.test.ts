@@ -516,7 +516,7 @@ describe('TremoloEffect', () => {
       ];
       vi.spyOn(ctx, 'createGain').mockImplementation(() => gainNodes[gainCallCount++] as unknown as GainNode);
 
-      const effect = new TremoloEffect({ wet: 1.0 });
+      const effect = new TremoloEffect({ wet: 1 });
       const dryGain = gainNodes[2]!;
       const wetGain = gainNodes[3]!;
 
@@ -574,6 +574,7 @@ describe('TremoloEffect', () => {
       for (const node of gainNodes) {
         expect(node.disconnect).toHaveBeenCalled();
       }
+
       expect(lfoOscillator.disconnect).toHaveBeenCalled();
     });
 
@@ -600,6 +601,7 @@ describe('TremoloEffect', () => {
       effect.destroy();
 
       expect(panner.disconnect).toHaveBeenCalled();
+
       for (const node of gainNodes) {
         expect(node.disconnect).toHaveBeenCalled();
       }

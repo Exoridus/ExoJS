@@ -165,7 +165,10 @@ export class GlyphSdf {
    * consistent height and a consistent baseline position within the tile.
    */
   private _ensureFontMetrics(): void {
-    if (this._metricsReady) return;
+    if (this._metricsReady) {
+      return;
+    }
+
     const ctx = this._ctx;
     applyCanvasTextState(ctx, this._textState);
     const m = ctx.measureText('HgjpqyÉÅ');
@@ -176,7 +179,10 @@ export class GlyphSdf {
       actualBoundingBoxDescent?: number;
     };
     this._fontAscent = Math.max(1, Math.ceil((m as M).fontBoundingBoxAscent ?? (m as M).actualBoundingBoxAscent ?? this._fontSize * 0.8));
-    this._fontDescent = Math.max(1, Math.ceil((m as M).fontBoundingBoxDescent ?? (m as M).actualBoundingBoxDescent ?? this._fontSize * 0.2));
+    this._fontDescent = Math.max(
+      1,
+      Math.ceil((m as M).fontBoundingBoxDescent ?? (m as M).actualBoundingBoxDescent ?? this._fontSize * 0.2),
+    );
     this._metricsReady = true;
   }
 
@@ -238,6 +244,7 @@ export class GlyphSdf {
       this._z = new Float64Array(maxDim + 1);
       this._v = new Int16Array(maxDim);
     }
+
     if (n > this._out.length) {
       this._out = new Uint8ClampedArray(n);
     }
@@ -251,6 +258,7 @@ export class GlyphSdf {
     for (let i = 0; i < n; i++) {
       // In-bounds: rgba holds n RGBA texels (4*n entries).
       const a = rgba[i * 4 + 3]! / 255; // alpha 0..1 from the R channel (white glyph)
+
       if (a === 1) {
         this._gridOuter[i] = 0;
         this._gridInner[i] = inf;
@@ -299,20 +307,40 @@ export class GlyphSdf {
 // 2D Euclidean Distance Transform (Felzenszwalb & Huttenlocher, TPAMI 2012).
 // Applied separably: one pass per column, then one pass per row + sqrt.
 
-const _edt2d = (data: Float64Array, width: number, height: number, f: Float64Array, d: Float64Array, v: Int16Array, z: Float64Array): void => {
+const _edt2d = (
+  data: Float64Array,
+  width: number,
+  height: number,
+  f: Float64Array,
+  d: Float64Array,
+  v: Int16Array,
+  z: Float64Array,
+): void => {
   // Vertical pass: transform along each column. All indices are in-bounds:
   // y*width+x < width*height <= data.length, and y/x < height/width <= f/d.length.
   for (let x = 0; x < width; x++) {
-    for (let y = 0; y < height; y++) f[y] = data[y * width + x]!;
+    for (let y = 0; y < height; y++) {
+      f[y] = data[y * width + x]!;
+    }
+
     _edt1d(f, d, v, z, height);
-    for (let y = 0; y < height; y++) data[y * width + x] = d[y]!;
+
+    for (let y = 0; y < height; y++) {
+      data[y * width + x] = d[y]!;
+    }
   }
 
   // Horizontal pass + sqrt: transform along each row, then take sqrt
   for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) f[x] = data[y * width + x]!;
+    for (let x = 0; x < width; x++) {
+      f[x] = data[y * width + x]!;
+    }
+
     _edt1d(f, d, v, z, width);
-    for (let x = 0; x < width; x++) data[y * width + x] = Math.sqrt(d[x]!);
+
+    for (let x = 0; x < width; x++) {
+      data[y * width + x] = Math.sqrt(d[x]!);
+    }
   }
 };
 
@@ -329,11 +357,16 @@ const _edt1d = (f: Float64Array, d: Float64Array, v: Int16Array, z: Float64Array
   for (let q = 1; q < n; q++) {
     // Find the parabola intersection s (break-point) for site q.
     let s: number;
+
     do {
       // k and q index within the valid envelope; v/f/z are sized >= n (+1 for z).
       const r = v[k]!;
       s = (f[q]! + q * q - f[r]! - r * r) / (2 * (q - r));
-      if (s > z[k]!) break;
+
+      if (s > z[k]!) {
+        break;
+      }
+
       k--;
     } while (k >= 0);
 
@@ -344,8 +377,12 @@ const _edt1d = (f: Float64Array, d: Float64Array, v: Int16Array, z: Float64Array
   }
 
   k = 0;
+
   for (let q = 0; q < n; q++) {
-    while (z[k + 1]! < q) k++;
+    while (z[k + 1]! < q) {
+      k++;
+    }
+
     const r = v[k]!;
     d[q] = (q - r) * (q - r) + f[r]!;
   }

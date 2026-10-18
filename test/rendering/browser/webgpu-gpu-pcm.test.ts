@@ -10,9 +10,12 @@ describe('WebGPU GPU stereo PCM', () => {
     async (format, ctx) => {
       if (!(await webGpuAvailable())) {
         ctx.skip('No WebGPU adapter available.');
+
         return;
       }
+
       const backend = await createWebGpuTestBackend(32);
+
       try {
         await verifyGpuPcm(new RenderingContext(backend), format);
       } finally {

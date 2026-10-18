@@ -91,6 +91,7 @@ const mulberry32 = (seed: number): (() => number) => {
     a = (a + 0x6d2b79f5) | 0;
     let t = Math.imul(a ^ (a >>> 15), 1 | a);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 };
@@ -122,7 +123,9 @@ const buildStressTree = (targetCount: number, seed: number): StressTree => {
   let remaining = targetCount - 1;
 
   const addLeafAt = (parent: Container): void => {
-    if (remaining <= 0) return;
+    if (remaining <= 0) {
+      return;
+    }
 
     const leaf = new Drawable();
 
@@ -168,8 +171,11 @@ const buildStressTree = (targetCount: number, seed: number): StressTree => {
 
   // Bushy portion (remaining budget): randomized width/depth tree.
   const maxBushyDepth = 8;
+
   const buildBushy = (parent: Container, depth: number): void => {
-    if (remaining <= 0) return;
+    if (remaining <= 0) {
+      return;
+    }
 
     const childCount = 2 + Math.floor(rng() * 6);
 
@@ -188,7 +194,9 @@ const buildStressTree = (targetCount: number, seed: number): StressTree => {
 
   buildBushy(root, 0);
 
-  while (remaining > 0) addLeafAt(root);
+  while (remaining > 0) {
+    addLeafAt(root);
+  }
 
   return { root, allNodes, leaves };
 };
@@ -283,7 +291,9 @@ const createStubRuntime = (): RenderBackend => {
       for (let i = startIndex; i < end; i++) {
         const entry = entries[i]!;
 
-        if (entry.kind !== RenderEntryKind.Draw) continue;
+        if (entry.kind !== RenderEntryKind.Draw) {
+          continue;
+        }
 
         const command = entry.command;
 
@@ -352,7 +362,9 @@ const instrument = (proto: any, method: string, phase: PhaseName): (() => void) 
 
       const parent = callStack[callStack.length - 1];
 
-      if (parent) parent.childTime += elapsed;
+      if (parent) {
+        parent.childTime += elapsed;
+      }
     }
   };
 
@@ -372,7 +384,9 @@ const installInstrumentation = (): (() => void) => {
   ];
 
   return () => {
-    for (const uninstall of uninstallers) uninstall();
+    for (const uninstall of uninstallers) {
+      uninstall();
+    }
   };
 };
 
@@ -381,15 +395,19 @@ const installInstrumentation = (): (() => void) => {
 // ---------------------------------------------------------------------------
 
 const sorted = (values: readonly number[]): number[] => [...values].sort((a, b) => a - b);
+
 const percentile = (values: readonly number[], p: number): number => {
   const s = sorted(values);
 
-  if (s.length === 0) return 0;
+  if (s.length === 0) {
+    return 0;
+  }
 
   const idx = Math.min(s.length - 1, Math.floor(p * s.length));
 
   return s[idx]!;
 };
+
 const median = (values: readonly number[]): number => percentile(values, 0.5);
 const p95 = (values: readonly number[]): number => percentile(values, 0.95);
 const round = (n: number, digits = 4): number => Number(n.toFixed(digits));
@@ -469,7 +487,9 @@ const runScenario = (targetNodeCount: number, mode: Mode): ScenarioReport => {
 
     const tm0 = performance.now();
 
-    if (mode === 'mixed') applyMutations(touched, frame);
+    if (mode === 'mixed') {
+      applyMutations(touched, frame);
+    }
 
     clean.mutate.push(performance.now() - tm0);
 
@@ -501,7 +521,9 @@ const runScenario = (targetNodeCount: number, mode: Mode): ScenarioReport => {
 
   // --- Warmup: JIT + settle dirty flags (static: fully clears after frame 1;
   // mixed: touched subset stays dirty every frame by construction). ---
-  for (let f = 0; f < WARMUP_FRAMES; f++) runOneFrame(f);
+  for (let f = 0; f < WARMUP_FRAMES; f++) {
+    runOneFrame(f);
+  }
 
   drawnSum = 0;
   culledSum = 0;
@@ -513,7 +535,9 @@ const runScenario = (targetNodeCount: number, mode: Mode): ScenarioReport => {
   clean.mutate.length = 0;
 
   // --- Pass A: clean timings, zero instrumentation overhead. ---
-  for (let f = 0; f < ITERATIONS; f++) runOneFrame(WARMUP_FRAMES + f);
+  for (let f = 0; f < ITERATIONS; f++) {
+    runOneFrame(WARMUP_FRAMES + f);
+  }
 
   // --- Pass B: instrumented timings (build() only needs re-measuring; we
   // still run optimize+play each iteration so pool/dirty state advances
@@ -523,7 +547,9 @@ const runScenario = (targetNodeCount: number, mode: Mode): ScenarioReport => {
   for (let f = 0; f < ITERATIONS; f++) {
     runtime.resetStats();
 
-    if (mode === 'mixed') applyMutations(touched, WARMUP_FRAMES + ITERATIONS + f);
+    if (mode === 'mixed') {
+      applyMutations(touched, WARMUP_FRAMES + ITERATIONS + f);
+    }
 
     resetPhaseTotals();
 
@@ -606,18 +632,24 @@ const printReport = (report: ScenarioReport): void => {
   console.log(`\n=== nodes=${report.nodeCount} (actual ${report.actualNodeCount}) mode=${report.mode} ===`);
   console.log(`  avg drawn=${report.avgDrawn}  avg culled=${report.avgCulled}`);
   console.log(`  --- Pass A (clean, reliable) ---`);
+
   if (report.mode === 'mixed') {
-    console.log(`  mutate (SceneNode.setPosition + eager subtree-dirty cascade, OUTSIDE collect): median=${fmtMs(mutateMed)}ms  p95=${fmtMs(mutateP95)}ms`);
+    console.log(
+      `  mutate (SceneNode.setPosition + eager subtree-dirty cascade, OUTSIDE collect): median=${fmtMs(mutateMed)}ms  p95=${fmtMs(mutateP95)}ms`,
+    );
   }
+
   console.log(`  build:            median=${fmtMs(buildMed)}ms  p95=${fmtMs(buildP95)}ms`);
   console.log(`  optimize:         median=${fmtMs(optMed)}ms  p95=${fmtMs(optP95)}ms`);
   console.log(`  play (total):     median=${fmtMs(playMed)}ms  p95=${fmtMs(playP95)}ms`);
   console.log(`    play/transform-write: median=${fmtMs(twMed)}ms  p95=${fmtMs(twP95)}ms`);
   console.log(`    play/other:           median=${fmtMs(playOtherMed)}ms  p95=${fmtMs(playOtherP95)}ms`);
   console.log(`  TOTAL (build+optimize+play): median=${fmtMs(totalMed)}ms`);
+
   if (report.mode === 'mixed') {
     console.log(`  TRUE FRAME TOTAL (mutate + build+optimize+play): median=${fmtMs(trueFrameMed)}ms`);
   }
+
   console.log(`  --- Pass B (instrumented, indicative sub-phases of build()) ---`);
   console.log(`  instrumented build total: median=${fmtMs(instrBuildMed)}ms  (inflated vs clean build; proportions only)`);
   console.log(`    traversal:       ${(travFrac * 100).toFixed(1)}% of instrumented build -> est. ${fmtMs(travAbs)}ms of clean build`);
@@ -650,7 +682,9 @@ const run = (): void => {
   console.log('consistent (exojs-vs-exojs across versions) but not cross-bench.');
   console.log('Never cite an absolute ms figure from this file as "engine perf".');
   console.log('=============================================================');
-  console.log(`iterations=${ITERATIONS} warmup=${WARMUP_FRAMES} mutatedFraction(mixed mode)=${MUTATED_FRACTION} noiseFloor=${NOISE_FLOOR_PCT}%`);
+  console.log(
+    `iterations=${ITERATIONS} warmup=${WARMUP_FRAMES} mutatedFraction(mixed mode)=${MUTATED_FRACTION} noiseFloor=${NOISE_FLOOR_PCT}%`,
+  );
 
   const reports: ScenarioReport[] = [];
 
@@ -660,7 +694,9 @@ const run = (): void => {
     }
   }
 
-  for (const report of reports) printReport(report);
+  for (const report of reports) {
+    printReport(report);
+  }
 
   console.log('\n=== Static-vs-mixed delta (build phase, clean median) ===');
 
@@ -687,7 +723,9 @@ const run = (): void => {
   // suffix: a reader skimming only the bottom of stdout still sees which
   // deltas are sub-floor and must not be quoted as real changes.
   if (subFloorDeltas.length > 0) {
-    console.log(`\n!!! NOISE ADVISORY: ${subFloorDeltas.length} delta(s) below the ${NOISE_FLOOR_PCT}% noise floor — do NOT quote these as real changes !!!`);
+    console.log(
+      `\n!!! NOISE ADVISORY: ${subFloorDeltas.length} delta(s) below the ${NOISE_FLOOR_PCT}% noise floor — do NOT quote these as real changes !!!`,
+    );
 
     for (const line of subFloorDeltas) {
       console.log(`  - ${line}`);

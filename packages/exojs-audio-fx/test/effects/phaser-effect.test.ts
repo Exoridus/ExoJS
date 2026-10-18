@@ -70,7 +70,9 @@ const wireAll = (ctx: AudioContext, stages = 4) => {
   const delaySpy = vi.spyOn(ctx, 'createDelay').mockReturnValue(feedbackDelay as unknown as DelayNode);
 
   let filterCallCount = 0;
-  const filterSpy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => allpassFilters[filterCallCount++] as unknown as BiquadFilterNode);
+  const filterSpy = vi
+    .spyOn(ctx, 'createBiquadFilter')
+    .mockImplementation(() => allpassFilters[filterCallCount++] as unknown as BiquadFilterNode);
 
   const oscillatorSpy = vi.spyOn(ctx, 'createOscillator').mockReturnValue(lfoOscillator as unknown as OscillatorNode);
 
@@ -144,14 +146,14 @@ describe('PhaserEffect', () => {
     it('accepts custom options', () => {
       const effect = new PhaserEffect({
         stages: 6,
-        rateHz: 1.0,
+        rateHz: 1,
         baseFrequency: 800,
         depth: 0.4,
         feedback: 0.5,
         wet: 0.7,
       });
       expect(effect.stages).toBe(6);
-      expect(effect.rateHz).toBe(1.0);
+      expect(effect.rateHz).toBe(1);
       expect(effect.baseFrequency).toBe(800);
       expect(effect.depth).toBe(0.4);
       expect(effect.feedback).toBe(0.5);
@@ -323,7 +325,7 @@ describe('PhaserEffect', () => {
     let feedbackGain: ReturnType<typeof makeGainNode>;
     let feedbackDelay: ReturnType<typeof makeDelayNode>;
     let lfoGain: ReturnType<typeof makeGainNode>;
-    let allpassFilters: ReturnType<typeof makeBiquadFilterNode>[];
+    let allpassFilters: Array<ReturnType<typeof makeBiquadFilterNode>>;
     let lfoOscillator: ReturnType<typeof makeOscillatorNode>;
 
     beforeEach(() => {
@@ -362,10 +364,12 @@ describe('PhaserEffect', () => {
 
     it('chains allpass stages in series', () => {
       const effect = new PhaserEffect();
+
       // Default 4 stages: allpass[0]→[1], allpass[1]→[2], allpass[2]→[3]
       for (let i = 0; i < allpassFilters.length - 1; i++) {
         expect(allpassFilters[i].connect).toHaveBeenCalledWith(allpassFilters[i + 1]);
       }
+
       effect.destroy();
     });
 
@@ -396,18 +400,22 @@ describe('PhaserEffect', () => {
 
     it('connects lfoGain to each allpass.frequency AudioParam', () => {
       const effect = new PhaserEffect();
+
       for (const filter of allpassFilters) {
         expect(lfoGain.connect).toHaveBeenCalledWith(filter.frequency);
       }
+
       expect(lfoGain.connect).toHaveBeenCalledTimes(allpassFilters.length);
       effect.destroy();
     });
 
     it('sets allpass filter type to allpass on each stage', () => {
       const effect = new PhaserEffect();
+
       for (const filter of allpassFilters) {
         expect(filter.type).toBe('allpass');
       }
+
       effect.destroy();
     });
 
@@ -450,9 +458,11 @@ describe('PhaserEffect', () => {
 
     it('sets initial allpass filter frequencies to baseFrequency', () => {
       const effect = new PhaserEffect({ baseFrequency: 500 });
+
       for (const filter of allpassFilters) {
         expect(filter.frequency.setValueAtTime).toHaveBeenCalledWith(500, expect.anything());
       }
+
       effect.destroy();
     });
   });
@@ -467,9 +477,9 @@ describe('PhaserEffect', () => {
       const { lfoOscillator } = wireAll(ctx);
 
       const effect = new PhaserEffect({ rateHz: 0.5 });
-      effect.rateHz = 2.0;
-      expect(effect.rateHz).toBe(2.0);
-      expect(lfoOscillator.frequency.setTargetAtTime).toHaveBeenCalledWith(2.0, expect.anything(), expect.anything());
+      effect.rateHz = 2;
+      expect(effect.rateHz).toBe(2);
+      expect(lfoOscillator.frequency.setTargetAtTime).toHaveBeenCalledWith(2, expect.anything(), expect.anything());
       effect.destroy();
     });
 
@@ -509,9 +519,11 @@ describe('PhaserEffect', () => {
       const effect = new PhaserEffect({ baseFrequency: 500 });
       effect.baseFrequency = 1000;
       expect(effect.baseFrequency).toBe(1000);
+
       for (const filter of allpassFilters) {
         expect(filter.frequency.setTargetAtTime).toHaveBeenCalledWith(1000, expect.anything(), expect.anything());
       }
+
       effect.destroy();
     });
 
@@ -702,6 +714,7 @@ describe('PhaserEffect', () => {
 
       const effect = new PhaserEffect();
       effect.destroy();
+
       for (const filter of allpassFilters) {
         expect(filter.disconnect).toHaveBeenCalled();
       }

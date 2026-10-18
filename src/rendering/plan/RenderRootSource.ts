@@ -288,17 +288,21 @@ export class RenderRootSource {
     }
 
     const liveEntries = this._liveEntryNodes;
-    const tolerable = this.dirtyIndex.readSince(this._changeCursor, DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect, (node, marked) => {
-      const changed = node as unknown as RenderNode;
+    const tolerable = this.dirtyIndex.readSince(
+      this._changeCursor,
+      DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect,
+      (node, marked) => {
+        const changed = node as unknown as RenderNode;
 
-      // A mark outside this subtree is another product's; only what lies on or
-      // below this root can invalidate its items.
-      if (changed !== root && !isUnder(changed, root)) {
-        return true;
-      }
+        // A mark outside this subtree is another product's; only what lies on or
+        // below this root can invalidate its items.
+        if (changed !== root && !isUnder(changed, root)) {
+          return true;
+        }
 
-      return changeBelongsToLiveEntry(changed, root, marked, candidate => liveEntries.has(candidate), destinationOpaque);
-    });
+        return changeBelongsToLiveEntry(changed, root, marked, candidate => liveEntries.has(candidate), destinationOpaque);
+      },
+    );
 
     if (!tolerable) {
       return false;

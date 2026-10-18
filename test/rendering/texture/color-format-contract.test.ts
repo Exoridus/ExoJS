@@ -1,7 +1,11 @@
 import { describe, expect, test } from 'vitest';
 
 import { CompressedTexture } from '#rendering/texture/CompressedTexture';
-import { compressedBlockLayout, compressedFormatPreference, CompressedTextureFormat as Compressed } from '#rendering/texture/CompressedTextureFormat';
+import {
+  compressedBlockLayout,
+  compressedFormatPreference,
+  CompressedTextureFormat as Compressed,
+} from '#rendering/texture/CompressedTextureFormat';
 import { resolveTextureFormat } from '#rendering/texture/textureFormatInfo';
 import type { ColorTextureFormat, TextureFormat } from '#rendering/types';
 import { TextureFormat as Format } from '#rendering/types';
@@ -43,7 +47,9 @@ describe('texture format contract', () => {
   test('a public CompressedTexture refuses an sRGB label over a UNORM block format', () => {
     const levels = [{ data: new Uint8Array(8), width: 4, height: 4 }];
 
-    expect(() => new CompressedTexture({ format: Compressed.Bc1RgbUnorm, levels, colorSpace: 'srgb' })).toThrow(/contradicts a compressed format/);
+    expect(() => new CompressedTexture({ format: Compressed.Bc1RgbUnorm, levels, colorSpace: 'srgb' })).toThrow(
+      /contradicts a compressed format/,
+    );
     expect(new CompressedTexture({ format: Compressed.Bc1RgbUnorm, levels, colorSpace: 'none' }).colorSpace).toBe('none');
   });
 

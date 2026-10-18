@@ -172,7 +172,9 @@ describe('SystemRegistry.destroy() — a throwing system cannot strand the rest'
     const registry = new SystemRegistry();
     const reported: string[] = [];
     const removeSink = logger.addSink(entry => {
-      if (entry.severity === LogSeverity.Error) reported.push(entry.message);
+      if (entry.severity === LogSeverity.Error) {
+        reported.push(entry.message);
+      }
     });
 
     registry.add({
@@ -253,5 +255,75 @@ describe('SystemRegistry frame-scoped mutations', () => {
     registry._endFrame();
 
     expect(registry.has(system)).toBe(false);
+  });
+});
+
+describe('SystemRegistry._halt', () => {
+  test('ends the pass in progress after the running system and keeps every later pass empty', () => {
+    const registry = new SystemRegistry();
+    const log: string[] = [];
+
+    registry.add({
+      update: (): void => {
+        log.push('first');
+        registry._halt();
+      },
+    });
+    registry.add(makeSystem(log, 'second'));
+
+    tick(registry);
+    tick(registry);
+
+    expect(log).toEqual(['first']);
+    expect(registry.size).toBe(2);
+  });
+});
+
+describe('SystemRegistry - one registry per system', () => {
+  const warnings = (run: () => void): string[] => {
+    const reported: string[] = [];
+    const removeSink = logger.addSink(entry => {
+      if (entry.severity === LogSeverity.Warning) {
+        reported.push(entry.message);
+      }
+    });
+
+    try {
+      run();
+    } finally {
+      removeSink();
+    }
+
+    return reported;
+  };
+
+  test('warns when a system enters a second registry that both run', () => {
+    const first = new SystemRegistry();
+    const second = new SystemRegistry();
+    const system = makeSystem([], 'shared');
+
+    const reported = warnings(() => {
+      first.add(system);
+      second.add(system);
+    });
+
+    expect(reported).toHaveLength(1);
+    expect(reported[0]).toMatch(/another system registry/);
+  });
+
+  test('stays quiet when a system is moved: removed from one registry, then added to another', () => {
+    const first = new SystemRegistry();
+    const second = new SystemRegistry();
+    const system = makeSystem([], 'moved');
+
+    const reported = warnings(() => {
+      first.add(system);
+      first._beginFrame();
+      first.remove(system);
+      second.add(system);
+      first._endFrame();
+    });
+
+    expect(reported).toEqual([]);
   });
 });

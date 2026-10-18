@@ -59,6 +59,7 @@ const createFakeSeamlessAdapter = (): SeamlessAdapter<unknown> & { states: WeakM
     createPlaceholder: vi.fn((): object => {
       const handle = {};
       states.set(handle, 'loading');
+
       return handle;
     }),
     stateOf: vi.fn((handle: object) => states.get(handle) ?? 'loading'),

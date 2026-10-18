@@ -1,5 +1,13 @@
 import type { LibraryProvenance } from '../shared/provenance';
-import { csvField, formatCount as count, formatMs as ms, mergeCellResults, mergeLibraries, readExistingReport, writeReportArtifacts } from '../shared/report';
+import {
+  csvField,
+  formatCount as count,
+  formatMs as ms,
+  mergeCellResults,
+  mergeLibraries,
+  readExistingReport,
+  writeReportArtifacts,
+} from '../shared/report';
 import type { PhysicsProvenance } from './driver';
 import type { PhysicsCellResult } from './PhysicsAdapter';
 
@@ -9,7 +17,8 @@ import type { PhysicsCellResult } from './PhysicsAdapter';
  * Not `0.0 us`: a clock whose step no probe could read is the absence of the
  * reading, and printing a zero there reads as the finest clock on record.
  */
-const formatClockResolution = (resolutionMs: number | null): string => (resolutionMs === null ? 'not observed' : `${(resolutionMs * 1000).toFixed(1)} us`);
+const formatClockResolution = (resolutionMs: number | null): string =>
+  resolutionMs === null ? 'not observed' : `${(resolutionMs * 1000).toFixed(1)} us`;
 
 /** Everything one physics run produces: the provenance stamp, arm versions, and per-cell results. */
 export interface PhysicsReportData {
@@ -62,7 +71,8 @@ const toRow = (result: PhysicsCellResult): string[] => {
   ];
 };
 
-const toCsv = (data: PhysicsReportData): string => [COLUMNS.join(','), ...data.results.map(result => toRow(result).map(csvField).join(','))].join('\n');
+const toCsv = (data: PhysicsReportData): string =>
+  [COLUMNS.join(','), ...data.results.map(result => toRow(result).map(csvField).join(','))].join('\n');
 
 /**
  * Human-readable Markdown: the arm versions and the browser/host provenance

@@ -1,6 +1,13 @@
 import { AssetDecodeError } from '#assets/AssetDecodeError';
 
-import { dfdSampleFloat, dfdSampleLinear, dfdSampleSigned, type Ktx2FormatProfile, ktx2FormatProfile, ktx2LevelAlignment } from './ktx2Profile';
+import {
+  dfdSampleFloat,
+  dfdSampleLinear,
+  dfdSampleSigned,
+  type Ktx2FormatProfile,
+  ktx2FormatProfile,
+  ktx2LevelAlignment,
+} from './ktx2Profile';
 
 const headerBytes = 80;
 const levelIndexEntryBytes = 24;
@@ -207,7 +214,10 @@ const validateDfdSamples = (
     const expected = profile === undefined ? 0 : profile.sampleQualifier & (dfdSampleSigned | dfdSampleFloat);
 
     if (dataType !== expected) {
-      fail(source, `DFD sample ${index} carries qualifier bits 0x${qualifiers.toString(16)}, which do not describe this vkFormat's data type.`);
+      fail(
+        source,
+        `DFD sample ${index} carries qualifier bits 0x${qualifiers.toString(16)}, which do not describe this vkFormat's data type.`,
+      );
     }
   }
 };
@@ -215,19 +225,35 @@ const validateDfdSamples = (
 const validateUniversalPlanes = (view: DataView, range: Ktx2DataRange, source: string, etc1s: boolean, hasAlpha: boolean): void => {
   for (let plane = 0; plane < 8; plane++) {
     let expected = 0;
-    if (plane === 0) expected = etc1s ? 8 : 16;
-    else if (plane === 1 && etc1s && hasAlpha) expected = 8;
+
+    if (plane === 0) {
+      expected = etc1s ? 8 : 16;
+    } else if (plane === 1 && etc1s && hasAlpha) {
+      expected = 8;
+    }
+
     // Supercompressed authors may leave the byte planes unspecified.
     const actual = view.getUint8(range.offset + 20 + plane);
-    if (actual !== 0 && actual !== expected) fail(source, 'universal DFD has inconsistent byte planes.');
+
+    if (actual !== 0 && actual !== expected) {
+      fail(source, 'universal DFD has inconsistent byte planes.');
+    }
   }
 };
 
-const validateUniversalSamples = (view: DataView, range: Ktx2DataRange, source: string, etc1s: boolean, sampleCount: number, channel: number): void => {
+const validateUniversalSamples = (
+  view: DataView,
+  range: Ktx2DataRange,
+  source: string,
+  etc1s: boolean,
+  sampleCount: number,
+  channel: number,
+): void => {
   for (let sample = 0; sample < sampleCount; sample++) {
     const offset = range.offset + 28 + sample * 16;
     const expectedChannel = sample === 0 ? channel : 15;
     const expectedBits = etc1s ? 63 : 127;
+
     if (
       view.getUint16(offset, true) !== sample * 64 ||
       view.getUint8(offset + 2) !== expectedBits ||
@@ -235,16 +261,27 @@ const validateUniversalSamples = (view: DataView, range: Ktx2DataRange, source: 
       view.getUint32(offset + 4, true) !== 0 ||
       view.getUint32(offset + 8, true) !== 0 ||
       view.getUint32(offset + 12, true) !== 0xffffffff
-    )
+    ) {
       fail(source, 'universal DFD has inconsistent sample fields.');
+    }
   }
 };
 
-const validateUniversalDfd = (view: DataView, range: Ktx2DataRange, source: string, model: number, blockSize: number): Ktx2DfdDescriptor => {
+const validateUniversalDfd = (
+  view: DataView,
+  range: Ktx2DataRange,
+  source: string,
+  model: number,
+  blockSize: number,
+): Ktx2DfdDescriptor => {
   const descriptor = validateDfdColorFields(view, range, source, model);
   const etc1s = model === 163;
   const sampleCount = (blockSize - 24) / 16;
-  if (sampleCount < 1 || sampleCount > (etc1s ? 2 : 1)) return fail(source, 'universal DFD must describe RGB or RGBA channels.');
+
+  if (sampleCount < 1 || sampleCount > (etc1s ? 2 : 1)) {
+    return fail(source, 'universal DFD must describe RGB or RGBA channels.');
+  }
+
   const channel = view.getUint8(range.offset + 31) & ~dfdSampleLinear;
   const hasAlpha = etc1s ? sampleCount === 2 : channel === 3;
 
@@ -259,7 +296,10 @@ const validateUniversalDfd = (view: DataView, range: Ktx2DataRange, source: stri
   validateUniversalPlanes(view, range, source, etc1s, hasAlpha);
   validateUniversalSamples(view, range, source, etc1s, sampleCount, channel);
 
-  if (!hasAlpha && descriptor.flags !== 0) fail(source, 'opaque universal DFD cannot declare premultiplied alpha.');
+  if (!hasAlpha && descriptor.flags !== 0) {
+    fail(source, 'opaque universal DFD cannot declare premultiplied alpha.');
+  }
+
   return { ...descriptor, hasAlpha };
 };
 
@@ -279,9 +319,11 @@ const validateDfd = (view: DataView, range: Ktx2DataRange, source: string, vkFor
   const profile = ktx2FormatProfile(vkFormat);
   const descriptorBlockSize = validateDfdBlockSize(view, range, source, totalSize);
   const model = view.getUint8(range.offset + 12);
+
   if (vkFormat === 0 && (model === 163 || model === 166)) {
     return validateUniversalDfd(view, range, source, model, descriptorBlockSize);
   }
+
   const descriptor = validateDfdColorFields(view, range, source, profile?.dfdModel ?? dfdModelRgbSda);
 
   validateDfdSinglePlane(view, range, source, profile);
@@ -386,18 +428,37 @@ const validateKeyValueData = (bytes: Uint8Array, range: Ktx2DataRange, source: s
 
 const validateEtc1sPayload = (view: DataView, sgd: Ktx2DataRange, source: string, descriptor: Ktx2Descriptor): void => {
   const { supercompressionScheme, levelCount, levels, dfd } = descriptor;
-  if (supercompressionScheme !== 1 || sgd.length < 20 + levelCount * 20) fail(source, 'ETC1S requires BasisLZ and complete SGD data.');
+
+  if (supercompressionScheme !== 1 || sgd.length < 20 + levelCount * 20) {
+    fail(source, 'ETC1S requires BasisLZ and complete SGD data.');
+  }
+
   let globalBytes = 20 + levelCount * 20;
-  for (const offset of [4, 8, 12, 16]) globalBytes += view.getUint32(sgd.offset + offset, true);
-  if (globalBytes !== sgd.length) fail(source, 'ETC1S SGD tables do not match the indexed range.');
+
+  for (const offset of [4, 8, 12, 16]) {
+    globalBytes += view.getUint32(sgd.offset + offset, true);
+  }
+
+  if (globalBytes !== sgd.length) {
+    fail(source, 'ETC1S SGD tables do not match the indexed range.');
+  }
+
   for (const [index, level] of levels.entries()) {
-    if (level.uncompressedByteLength !== 0) fail(source, 'BasisLZ level uncompressed byte length must be zero.');
+    if (level.uncompressedByteLength !== 0) {
+      fail(source, 'BasisLZ level uncompressed byte length must be zero.');
+    }
+
     const entry = sgd.offset + 20 + index * 20;
-    if (view.getUint32(entry, true) !== 0) fail(source, 'ETC1S video frames are unsupported.');
+
+    if (view.getUint32(entry, true) !== 0) {
+      fail(source, 'ETC1S video frames are unsupported.');
+    }
+
     const rgbOffset = view.getUint32(entry + 4, true),
       rgbLength = view.getUint32(entry + 8, true);
     const alphaOffset = view.getUint32(entry + 12, true),
       alphaLength = view.getUint32(entry + 16, true);
+
     if (
       rgbLength === 0 ||
       rgbOffset + rgbLength > level.length ||
@@ -412,31 +473,57 @@ const validateEtc1sPayload = (view: DataView, sgd: Ktx2DataRange, source: string
 
 const validateUniversalPayload = (view: DataView, sgd: Ktx2DataRange, source: string, descriptor: Ktx2Descriptor): void => {
   const { universal, declaredLevelCount, supercompressionScheme, levels, pixelWidth, pixelHeight } = descriptor;
-  if (universal === undefined) return;
-  if (declaredLevelCount === 0) fail(source, 'universal payload must carry authored mips.');
-  if (universal === 'etc1s') {
-    validateEtc1sPayload(view, sgd, source, descriptor);
+
+  if (universal === undefined) {
     return;
   }
-  if ((supercompressionScheme !== 0 && supercompressionScheme !== 2) || sgd.length > 0) fail(source, 'UASTC requires scheme 0 or Zstandard and no SGD.');
+
+  if (declaredLevelCount === 0) {
+    fail(source, 'universal payload must carry authored mips.');
+  }
+
+  if (universal === 'etc1s') {
+    validateEtc1sPayload(view, sgd, source, descriptor);
+
+    return;
+  }
+
+  if ((supercompressionScheme !== 0 && supercompressionScheme !== 2) || sgd.length > 0) {
+    fail(source, 'UASTC requires scheme 0 or Zstandard and no SGD.');
+  }
+
   for (const [index, level] of levels.entries()) {
     const width = Math.max(Math.floor(pixelWidth / 2 ** index), 1),
       height = Math.max(Math.floor(pixelHeight / 2 ** index), 1);
     const expected = Math.ceil(width / 4) * Math.ceil(height / 4) * 16;
-    if (!Number.isSafeInteger(expected) || level.uncompressedByteLength !== expected)
+
+    if (!Number.isSafeInteger(expected) || level.uncompressedByteLength !== expected) {
       fail(source, `UASTC level ${index} has inconsistent uncompressed byte length.`);
+    }
   }
 };
 
 const universalFormat = (vkFormat: number, model: number): Ktx2Descriptor['universal'] => {
-  if (vkFormat !== 0) return undefined;
-  if (model === 163) return 'etc1s';
-  if (model === 166) return 'uastc';
+  if (vkFormat !== 0) {
+    return undefined;
+  }
+
+  if (model === 163) {
+    return 'etc1s';
+  }
+
+  if (model === 166) {
+    return 'uastc';
+  }
+
   return undefined;
 };
 
 const levelAlignmentFor = (vkFormat: number, scheme: number): number => {
-  if (scheme !== 0) return 1;
+  if (scheme !== 0) {
+    return 1;
+  }
+
   return vkFormat === 0 ? 16 : ktx2LevelAlignment(vkFormat);
 };
 
@@ -474,7 +561,10 @@ export const parseKtx2Descriptor = (buffer: ArrayBuffer, source: string): Ktx2De
   const maximumLevels = Math.floor(Math.log2(Math.max(pixelWidth, pixelHeight))) + 1;
 
   if (levelCount > maximumLevels) {
-    return fail(source, `declares ${levelCount} levels for a ${pixelWidth}x${pixelHeight} texture, but at most ${maximumLevels} are possible.`);
+    return fail(
+      source,
+      `declares ${levelCount} levels for a ${pixelWidth}x${pixelHeight} texture, but at most ${maximumLevels} are possible.`,
+    );
   }
 
   const levelIndexBytes = levelCount * levelIndexEntryBytes;
@@ -571,5 +661,6 @@ export const parseKtx2Descriptor = (buffer: ArrayBuffer, source: string): Ktx2De
     dfd: dfdDescriptor,
   };
   validateUniversalPayload(view, sgd, source, descriptor);
+
   return descriptor;
 };

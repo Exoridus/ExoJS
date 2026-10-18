@@ -470,7 +470,9 @@ describe('WebGPU frame time comes from the hardware timestamp clock', () => {
     expect(timestampWritesSeen.slice(3, 5).every(entry => entry !== null)).toBe(true);
     // Every timed pass gets its OWN query pair: reusing an index inside one
     // submit is a validation error, and across submits it would overwrite.
-    const indices = timestampWritesSeen.filter((entry): entry is { begin: number; end: number } => entry !== null).flatMap(entry => [entry.begin, entry.end]);
+    const indices = timestampWritesSeen
+      .filter((entry): entry is { begin: number; end: number } => entry !== null)
+      .flatMap(entry => [entry.begin, entry.end]);
 
     expect(new Set(indices).size).toBe(indices.length);
   });

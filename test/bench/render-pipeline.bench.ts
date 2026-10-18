@@ -28,6 +28,7 @@ const PASS_COUNT = 20;
 describe('RenderPipeline orchestration overhead', { timeout: benchTimeoutMs }, () => {
   const passes = Array.from({ length: PASS_COUNT }, () => new NoopPass());
   const pipeline = new RenderPipeline();
+
   for (const pass of passes) {
     pipeline.addPass(pass);
   }

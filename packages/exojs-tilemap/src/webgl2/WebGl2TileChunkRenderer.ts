@@ -243,6 +243,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
 
     if (this._quadIndex === 0 || backend === null || instanceBuffer === null || vao === null) {
       this._resetBatchState();
+
       return;
     }
 
@@ -461,7 +462,16 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
 
     this._vao = new WebGl2VertexArrayObject(RenderingPrimitives.TriangleStrip)
       .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_quadBounds'), gl.FLOAT, false, instanceStrideBytes, 0, false, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_uvBounds'), gl.UNSIGNED_SHORT, true, instanceStrideBytes, 16, false, 1)
+      .addAttribute(
+        this._instanceBuffer,
+        this._shader.getAttribute('a_uvBounds'),
+        gl.UNSIGNED_SHORT,
+        true,
+        instanceStrideBytes,
+        16,
+        false,
+        1,
+      )
       .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, instanceStrideBytes, 24, false, 1)
       .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_tileWord'), gl.UNSIGNED_INT, false, instanceStrideBytes, 28, true, 1)
       .connect(this._createVaoRuntime(this._connection));
@@ -554,7 +564,14 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
             if (attribute.integer) {
               gl.vertexAttribIPointer(attribute.location, attribute.size, attribute.type, attribute.stride, attribute.start);
             } else {
-              gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+              gl.vertexAttribPointer(
+                attribute.location,
+                attribute.size,
+                attribute.type,
+                attribute.normalized,
+                attribute.stride,
+                attribute.start,
+              );
             }
 
             gl.enableVertexAttribArray(attribute.location);

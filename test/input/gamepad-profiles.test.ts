@@ -179,7 +179,9 @@ describe('GamepadDefinitions', () => {
 
   test('a bare-mapping resolve() result prefers the definition name, then descriptor.name, then descriptor.label', () => {
     const namedDescriptor = parseGamepadDescriptor(createGamepad('My Custom Pad'));
-    const withDefinitionName = resolveGamepadDefinition(namedDescriptor, [{ name: 'Def Name', resolve: () => createStandardGamepadMapping() }]);
+    const withDefinitionName = resolveGamepadDefinition(namedDescriptor, [
+      { name: 'Def Name', resolve: () => createStandardGamepadMapping() },
+    ]);
     expect(withDefinitionName.name).toBe('Def Name');
 
     const withDescriptorName = resolveGamepadDefinition(namedDescriptor, [{ resolve: () => createStandardGamepadMapping() }]);
@@ -192,14 +194,20 @@ describe('GamepadDefinitions', () => {
 
   test('a {mapping} resolve() result without a name prefers definition name, then descriptor.name, then descriptor.label', () => {
     const namedDescriptor = parseGamepadDescriptor(createGamepad('My Custom Pad'));
-    const withDefinitionName = resolveGamepadDefinition(namedDescriptor, [{ name: 'Def Name', resolve: () => ({ mapping: createStandardGamepadMapping() }) }]);
+    const withDefinitionName = resolveGamepadDefinition(namedDescriptor, [
+      { name: 'Def Name', resolve: () => ({ mapping: createStandardGamepadMapping() }) },
+    ]);
     expect(withDefinitionName.name).toBe('Def Name');
 
-    const withDescriptorName = resolveGamepadDefinition(namedDescriptor, [{ resolve: () => ({ mapping: createStandardGamepadMapping() }) }]);
+    const withDescriptorName = resolveGamepadDefinition(namedDescriptor, [
+      { resolve: () => ({ mapping: createStandardGamepadMapping() }) },
+    ]);
     expect(withDescriptorName.name).toBe('My Custom Pad');
 
     const unnamedDescriptor = parseGamepadDescriptor(createGamepad('Vendor: 054c Product: 0ce6'));
-    const withDescriptorLabel = resolveGamepadDefinition(unnamedDescriptor, [{ resolve: () => ({ mapping: createStandardGamepadMapping() }) }]);
+    const withDescriptorLabel = resolveGamepadDefinition(unnamedDescriptor, [
+      { resolve: () => ({ mapping: createStandardGamepadMapping() }) },
+    ]);
     expect(withDescriptorLabel.name).toBe(unnamedDescriptor.label);
   });
 });

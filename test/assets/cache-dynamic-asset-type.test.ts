@@ -69,9 +69,9 @@ class RawWorldAssetType extends AssetType<string, string, undefined, string> {
 const payload = '{"name":"level-1"}';
 
 const mockFetch = (): ReturnType<typeof vi.fn> => {
-  const fetchMock = vi.fn(async () => ({ ok: true, status: 200, statusText: 'OK', text: async () => payload }) as unknown as Response) as unknown as ReturnType<
-    typeof vi.fn
-  >;
+  const fetchMock = vi.fn(
+    async () => ({ ok: true, status: 200, statusText: 'OK', text: async () => payload }) as unknown as Response,
+  ) as unknown as ReturnType<typeof vi.fn>;
 
   global.fetch = fetchMock as unknown as typeof fetch;
 
@@ -164,7 +164,9 @@ describe('a runtime-installed asset type', () => {
     const version = worldType.layout.version;
 
     expect(store.records.get(serializeCacheRecordKey({ namespace: 'com.example.world', source, version, record: 'value' }))).toBe(payload);
-    expect(store.records.get(serializeCacheRecordKey({ namespace: 'com.example.world-raw', source, version, record: 'value' }))).toBe(payload);
+    expect(store.records.get(serializeCacheRecordKey({ namespace: 'com.example.world-raw', source, version, record: 'value' }))).toBe(
+      payload,
+    );
     expect(store.records.size).toBe(2);
 
     loader.destroy();

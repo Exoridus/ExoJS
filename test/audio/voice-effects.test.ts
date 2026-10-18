@@ -11,6 +11,7 @@ const makeBufferStub = (): AudioBuffer => ({ duration: 2 }) as AudioBuffer;
 const makeStubEffect = (): AudioEffect => {
   const inputNode = { connect: vi.fn(), disconnect: vi.fn() } as unknown as AudioNode;
   const outputNode = { connect: vi.fn(), disconnect: vi.fn() } as unknown as AudioNode;
+
   return { inputNode, outputNode, destroy: vi.fn(), ready: Promise.resolve(), _isWired: true } as unknown as AudioEffect;
 };
 
@@ -49,12 +50,21 @@ const captureVoiceOutput = (): { get node(): CapturedGain | null; restore: () =>
       captured = {
         connect: vi.fn(),
         disconnect: vi.fn(),
-        gain: { setTargetAtTime: vi.fn(), setValueAtTime: vi.fn(), cancelScheduledValues: vi.fn(), linearRampToValueAtTime: vi.fn(), value: 1 },
+        gain: {
+          setTargetAtTime: vi.fn(),
+          setValueAtTime: vi.fn(),
+          cancelScheduledValues: vi.fn(),
+          linearRampToValueAtTime: vi.fn(),
+          value: 1,
+        },
       };
+
       return captured as unknown as GainNode;
     }
+
     return original();
   });
+
   return {
     get node() {
       return captured;

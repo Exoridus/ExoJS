@@ -55,6 +55,7 @@ const anySignal = (first: AbortSignal, second: AbortSignal): AbortSignal => {
   }
 
   const controller = new AbortController();
+
   const follow = (source: AbortSignal): void => {
     if (source.aborted) {
       controller.abort(source.reason);
@@ -74,7 +75,8 @@ const anySignal = (first: AbortSignal, second: AbortSignal): AbortSignal => {
 };
 
 /** The shape an identity hook sees. Options are omitted entirely when the request carried none. */
-const toRequest = (source: string, options: unknown): AssetRequest<unknown> => (options === undefined || options === null ? { source } : { source, options });
+const toRequest = (source: string, options: unknown): AssetRequest<unknown> =>
+  options === undefined || options === null ? { source } : { source, options };
 
 /**
  * Turns a canonical request into a built resource: URL resolution, acquisition
@@ -345,7 +347,12 @@ export class AssetDecoder {
    * belonged to.
    */
   private _describeFailure(asset: CanonicalAsset, error: unknown): unknown {
-    if (isAbortError(error) || error instanceof AssetCacheMissError || error instanceof AssetCacheError || error instanceof AssetNetworkError) {
+    if (
+      isAbortError(error) ||
+      error instanceof AssetCacheMissError ||
+      error instanceof AssetCacheError ||
+      error instanceof AssetNetworkError
+    ) {
       return error;
     }
 
@@ -370,7 +377,12 @@ export class AssetDecoder {
    * acquisition.
    * @internal
    */
-  public async _dispatchFetch(asset: CanonicalAsset, options: unknown, signal: AbortSignal | undefined, scope: LoaderScope): Promise<unknown> {
+  public async _dispatchFetch(
+    asset: CanonicalAsset,
+    options: unknown,
+    signal: AbortSignal | undefined,
+    scope: LoaderScope,
+  ): Promise<unknown> {
     const installed = this._typeRegistry.getInstalled(asset.type);
 
     if (installed === undefined) {

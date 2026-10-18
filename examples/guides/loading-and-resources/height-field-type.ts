@@ -27,7 +27,5 @@ export class HeightFieldAssetType extends AssetType<string, HeightField> {
 
 export const heightFieldType = new HeightFieldAssetType();
 
-function parseHeightField(text: string): number[][] {
-  return text.split('\n').map(row => row.split(',').map(Number));
-}
+const parseHeightField = (text: string): number[][] => text.split('\n').map(row => row.split(',').map(Number));
 // #endregion guide:height-field-type

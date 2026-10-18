@@ -41,7 +41,9 @@ const coverTexture = (): Texture => {
 
   const context = source.getContext('2d');
 
-  if (context === null) throw new Error('A 2D context is required to build the probe fixture.');
+  if (context === null) {
+    throw new Error('A 2D context is required to build the probe fixture.');
+  }
 
   context.fillStyle = '#ffffff';
   context.fillRect(0, 0, PROBE_SIZE, PROBE_SIZE);
@@ -100,7 +102,9 @@ const runStarved = async (
     for (const mode of [PROBE_EXHAUSTED, PROBE_TRANSMITTANCE, PROBE_VISITED] as const) {
       filter.uniforms.uMode.set(mode);
 
-      if (!(await renderWebGpuOnce(ctx, backend, root, PROBE_CLEAR))) return null;
+      if (!(await renderWebGpuOnce(ctx, backend, root, PROBE_CLEAR))) {
+        return null;
+      }
 
       readings.push([...readWebGpuPixels(backend, PROBE_SIZE)(PROBE_SIZE / 2, PROBE_SIZE / 2)]);
     }
@@ -161,7 +165,9 @@ describe('the block level against the flat walk (WebGPU)', () => {
           filter.uniforms.uMaskBlocks.set(blocks[0]!, blocks[1]!);
           filter.uniforms.uMaskSuperblocks.set(blocks[0] === 0 ? 0 : mask.superblocks[0], blocks[1] === 0 ? 0 : mask.superblocks[1]);
 
-          if (!(await renderWebGpuOnce(ctx, backend, root, PROBE_CLEAR))) return;
+          if (!(await renderWebGpuOnce(ctx, backend, root, PROBE_CLEAR))) {
+            return;
+          }
 
           readings.push(readWebGpuPixels(backend, PROBE_SIZE)(PROBE_SIZE / 2, PROBE_SIZE / 2)[0]);
         }
@@ -185,7 +191,9 @@ describe('a walk with no budget left (WebGPU)', () => {
   test('the cell walk reports running out and blocks rather than reporting what it never read', async ctx => {
     const readings = await runStarved(ctx, undefined, [0.1, 0.2, 63.9, 63.7]);
 
-    if (readings === null) return;
+    if (readings === null) {
+      return;
+    }
 
     expect(readings[0]![0], 'ran out').toBe(255);
     expect(readings[1]![0], 'what got through').toBe(0);
@@ -195,7 +203,9 @@ describe('a walk with no budget left (WebGPU)', () => {
   test('the mask walk reports running out and blocks the stretch where it stopped', async ctx => {
     const readings = await runStarved(ctx, { texels: 64, world: new Rectangle(0, 0, 64, 64), blocked: [] }, [0.1, 32, 63.9, 32]);
 
-    if (readings === null) return;
+    if (readings === null) {
+      return;
+    }
 
     expect(readings[0]![0], 'ran out').toBe(255);
     expect(readings[1]![0], 'what got through').toBe(0);
@@ -267,12 +277,16 @@ describe('traceSegment holds its transport contracts (WebGPU)', () => {
           ] as const) {
             filter.uniforms.uMode.set(mode);
 
-            if (!(await renderWebGpuOnce(ctx, backend, root, PROBE_CLEAR))) return;
+            if (!(await renderWebGpuOnce(ctx, backend, root, PROBE_CLEAR))) {
+              return;
+            }
 
             into.push([...readWebGpuPixels(backend, PROBE_SIZE)(PROBE_SIZE / 2, PROBE_SIZE / 2)]);
           }
 
-          if (scenario.mask === undefined) continue;
+          if (scenario.mask === undefined) {
+            continue;
+          }
 
           filter.uniforms.uMaskSuperblocks.set(0, 0);
 
@@ -285,7 +299,9 @@ describe('traceSegment holds its transport contracts (WebGPU)', () => {
           ] as const) {
             filter.uniforms.uMode.set(mode);
 
-            if (!(await renderWebGpuOnce(ctx, backend, root, PROBE_CLEAR))) return;
+            if (!(await renderWebGpuOnce(ctx, backend, root, PROBE_CLEAR))) {
+              return;
+            }
 
             into.push([...readWebGpuPixels(backend, PROBE_SIZE)(PROBE_SIZE / 2, PROBE_SIZE / 2)]);
           }
@@ -303,7 +319,9 @@ describe('traceSegment holds its transport contracts (WebGPU)', () => {
           ] as const) {
             filter.uniforms.uMode.set(mode);
 
-            if (!(await renderWebGpuOnce(ctx, backend, root, PROBE_CLEAR))) return;
+            if (!(await renderWebGpuOnce(ctx, backend, root, PROBE_CLEAR))) {
+              return;
+            }
 
             into.push([...readWebGpuPixels(backend, PROBE_SIZE)(PROBE_SIZE / 2, PROBE_SIZE / 2)]);
           }

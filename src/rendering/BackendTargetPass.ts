@@ -86,7 +86,12 @@ export class BackendTargetPass implements BackendRenderPass {
    * constructing one per frame. A caller that configures a pass once still just
    * uses the constructor.
    */
-  public reconfigure(callback: (backend: RenderBackend) => void, target: RenderTarget | null, view: View | null, clearColor: Color | null): this {
+  public reconfigure(
+    callback: (backend: RenderBackend) => void,
+    target: RenderTarget | null,
+    view: View | null,
+    clearColor: Color | null,
+  ): this {
     this._callback = callback;
 
     return this.retarget(target, view, clearColor);

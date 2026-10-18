@@ -1,4 +1,4 @@
-import { FadeSceneTransition, GamepadButton, Keyboard, Scene, Sprite, type Voice } from '@codexo/exojs';
+import { FadeSceneTransition, GamepadButton, Keyboard, Scene, type Sprite, type Voice } from '@codexo/exojs';
 
 import { CinematicScene } from './cinematic-scene';
 

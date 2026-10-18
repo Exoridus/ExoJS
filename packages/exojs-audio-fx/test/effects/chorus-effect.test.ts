@@ -148,9 +148,7 @@ describe('ChorusEffect', () => {
       // ChorusEffect._setupNodes order: inputGain, outputGain, dryGain, wetGain, lfoGain
       let gainCallCount = 0;
       const gains = [inputGain, outputGain, dryGain, wetGain, lfoGain];
-      vi.spyOn(ctx, 'createGain').mockImplementation(() => {
-        return gains[gainCallCount++] as unknown as GainNode;
-      });
+      vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[gainCallCount++] as unknown as GainNode);
       vi.spyOn(ctx, 'createDelay').mockReturnValue(delayNode as unknown as DelayNode);
       vi.spyOn(ctx, 'createOscillator').mockReturnValue(lfoOscillator as unknown as OscillatorNode);
     });
@@ -234,9 +232,7 @@ describe('ChorusEffect', () => {
       let gainCallCount = 0;
       // ChorusEffect._setupNodes createGain order: inputGain, outputGain, dryGain, wetGain, lfoGain
       const gains = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), lfoGain];
-      vi.spyOn(ctx, 'createGain').mockImplementation(() => {
-        return gains[gainCallCount++] as unknown as GainNode;
-      });
+      vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[gainCallCount++] as unknown as GainNode);
 
       const filter = new ChorusEffect({ depthMs: 5 });
       filter.depthMs = 10;
@@ -345,9 +341,7 @@ describe('ChorusEffect', () => {
       const ctx = getAudioContext();
       let gainCallCount = 0;
       const gainNodes = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
-      vi.spyOn(ctx, 'createGain').mockImplementation(() => {
-        return gainNodes[gainCallCount++] as unknown as GainNode;
-      });
+      vi.spyOn(ctx, 'createGain').mockImplementation(() => gainNodes[gainCallCount++] as unknown as GainNode);
 
       const filter = new ChorusEffect({ wet: 0.5 });
       // ChorusEffect._setupNodes order: inputGain[0], outputGain[1], dryGain[2], wetGain[3], lfoGain[4]
@@ -399,9 +393,7 @@ describe('ChorusEffect', () => {
       const lfoOscillator = makeOscillatorNode(ctx);
 
       let gainCallCount = 0;
-      vi.spyOn(ctx, 'createGain').mockImplementation(() => {
-        return gainNodes[gainCallCount++] as unknown as GainNode;
-      });
+      vi.spyOn(ctx, 'createGain').mockImplementation(() => gainNodes[gainCallCount++] as unknown as GainNode);
       vi.spyOn(ctx, 'createDelay').mockReturnValue(delayNode as unknown as DelayNode);
       vi.spyOn(ctx, 'createOscillator').mockReturnValue(lfoOscillator as unknown as OscillatorNode);
 
@@ -411,6 +403,7 @@ describe('ChorusEffect', () => {
       for (const node of gainNodes) {
         expect(node.disconnect).toHaveBeenCalled();
       }
+
       expect(delayNode.disconnect).toHaveBeenCalled();
       expect(lfoOscillator.disconnect).toHaveBeenCalled();
     });

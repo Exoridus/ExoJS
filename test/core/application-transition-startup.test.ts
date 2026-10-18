@@ -82,6 +82,7 @@ describe('Application.start() with a real FadeSceneTransition', () => {
     const rafCallbacks: FrameRequestCallback[] = [];
     const rafSpy = vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation(cb => {
       rafCallbacks.push(cb);
+
       return rafCallbacks.length;
     });
 

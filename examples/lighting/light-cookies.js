@@ -109,16 +109,28 @@ class LightCookiesScene extends Scene {
     // with the lamp rather than staying on the floor the way a real window's
     // would. A pattern anchored to the world is a projection, and that is a
     // different feature.
-    this.window = this.lighting.add(new PointLight({ radius: 300, intensity: 2.4, softness: 0.05, color: new Color(255, 214, 160), cookie: windowCookie }));
+    this.window = this.lighting.add(
+      new PointLight({ radius: 300, intensity: 2.4, softness: 0.05, color: new Color(255, 214, 160), cookie: windowCookie }),
+    );
     this.window.setPosition(880, 240);
     // The same slot on a cone: the pattern turns with the light.
     this.canopy = this.lighting.add(
-      new SpotLight({ radius: 420, angle: 34, coneSoftness: 0.4, intensity: 2.2, softness: 0.05, color: new Color(186, 255, 198), cookie: canopyCookie }),
+      new SpotLight({
+        radius: 420,
+        angle: 34,
+        coneSoftness: 0.4,
+        intensity: 2.2,
+        softness: 0.05,
+        color: new Color(186, 255, 198),
+        cookie: canopyCookie,
+      }),
     );
     this.canopy.setPosition(960, 620);
     // No cookie, a different shape: falloff is measured from the segment, so
     // the pool is a capsule - which is what a tube of neon actually looks like.
-    this.tube = this.lighting.add(new LineLight({ length: 260, radius: 64, intensity: 2.6, softness: 0.05, color: new Color(120, 190, 255) }));
+    this.tube = this.lighting.add(
+      new LineLight({ length: 260, radius: 64, intensity: 2.6, softness: 0.05, color: new Color(120, 190, 255) }),
+    );
     this.tube.setPosition(300, 640);
     this.hud = mountControls({
       title: 'Light Cookies',

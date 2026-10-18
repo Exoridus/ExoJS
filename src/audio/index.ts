@@ -22,7 +22,18 @@ export { Envelope } from './Envelope';
 export type { HighpassFilterOptions, LowpassFilterOptions } from './filters';
 export { HighpassFilter, LowpassFilter } from './filters';
 export { InputVoice } from './InputVoice';
-export type { DistanceModel, Loopable, Pausable, Playable, PlayOptions, RatePitched, Seekable, Spatializable, SpatialPoint, Voice } from './Playable';
+export type {
+  DistanceModel,
+  Loopable,
+  Pausable,
+  Playable,
+  PlayOptions,
+  RatePitched,
+  Seekable,
+  Spatializable,
+  SpatialPoint,
+  Voice,
+} from './Playable';
 export type { AudioSpriteClip, SoundOptions, SoundPlayOptions } from './Sound';
 export { Sound, SoundPoolStrategy } from './Sound';
 export type { SpatialSmoothingSettings } from './spatialSmoothing';

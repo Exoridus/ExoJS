@@ -53,7 +53,10 @@ describe('probe matrix', () => {
 
     for (const cell of cells) {
       const previous = groups[groups.length - 1];
-      const isNewGroup = previous === undefined || cells[cells.indexOf(cell) - 1]?.scene !== cell.scene || cells[cells.indexOf(cell) - 1]?.mode !== cell.mode;
+      const isNewGroup =
+        previous === undefined ||
+        cells[cells.indexOf(cell) - 1]?.scene !== cell.scene ||
+        cells[cells.indexOf(cell) - 1]?.mode !== cell.mode;
 
       if (isNewGroup) {
         groups.push([cell.pixelRatio]);
@@ -99,8 +102,8 @@ describe('probe matrix', () => {
 });
 
 /** A backend stand-in that records the sizes it was asked to allocate. */
-const createFakeBackend = (): { acquireRenderTexture: (width: number, height: number) => unknown; calls: [number, number][] } => {
-  const calls: [number, number][] = [];
+const createFakeBackend = (): { acquireRenderTexture: (width: number, height: number) => unknown; calls: Array<[number, number]> } => {
+  const calls: Array<[number, number]> = [];
 
   return {
     calls,
@@ -113,8 +116,11 @@ const createFakeBackend = (): { acquireRenderTexture: (width: number, height: nu
 };
 
 /** A `cacheAsTexture` node stand-in with the same recording behaviour. */
-const createFakeCacheNode = (): { _renderPlanEnsureCacheTexture: (width: number, height: number) => unknown; calls: [number, number][] } => {
-  const calls: [number, number][] = [];
+const createFakeCacheNode = (): {
+  _renderPlanEnsureCacheTexture: (width: number, height: number) => unknown;
+  calls: Array<[number, number]>;
+} => {
+  const calls: Array<[number, number]> = [];
 
   return {
     calls,

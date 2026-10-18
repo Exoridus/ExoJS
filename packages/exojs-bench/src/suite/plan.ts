@@ -137,7 +137,9 @@ export const resolveSuitePlan = (options: {
   const extreme = options.extreme ?? false;
 
   if (extreme && options.suite !== 'full') {
-    throw new Error('--extreme is only valid with --suite=full: an extreme load is a development probe and is never part of a published reference comparison.');
+    throw new Error(
+      '--extreme is only valid with --suite=full: an extreme load is a development probe and is never part of a published reference comparison.',
+    );
   }
 
   const workloads: WorkloadSpec[] = [];

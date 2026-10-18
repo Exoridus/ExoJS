@@ -2,7 +2,14 @@ import { requestTimestampFeature } from '../../page/gpuFrameTimer';
 import type { ProbeCell, ProbeCellResult, ProbeMode, ProbeResult, ProbeSceneId } from '../matrix';
 import { buildProbeMatrix, PROBE_PIXEL_RATIOS, PROBE_SCENES, PROBE_SCHEMA_VERSION, serializeProbeResult } from '../matrix';
 import type { ProbeBackendRequest, StageSize, VisualPreview } from '../runner';
-import { DEFAULT_MEASURE_MS, measureTimerResolutionMs, runProbeCell, startVisualPreview, SUSTAINED_MEASURE_MS, WARMUP_FRAMES } from '../runner';
+import {
+  DEFAULT_MEASURE_MS,
+  measureTimerResolutionMs,
+  runProbeCell,
+  startVisualPreview,
+  SUSTAINED_MEASURE_MS,
+  WARMUP_FRAMES,
+} from '../runner';
 import { STAGE_SIZE } from '../scenes';
 
 /**
@@ -148,7 +155,9 @@ const formatMs = (value: number | null): string => (value === null ? '—' : val
 const describeTargets = (result: Pick<ProbeCellResult, 'internalTargets'>): string =>
   result.internalTargets.length === 0
     ? 'none'
-    : result.internalTargets.map(target => `${target.kind} ${target.width}×${target.height}${target.count > 1 ? ` ×${target.count}` : ''}`).join(', ');
+    : result.internalTargets
+        .map(target => `${target.kind} ${target.width}×${target.height}${target.count > 1 ? ` ×${target.count}` : ''}`)
+        .join(', ');
 
 const renderEnvironment = (): void => {
   environmentEl.textContent = [
@@ -281,7 +290,21 @@ const buildControls = (): void => {
   setPressed(stageButtons, stagePreset);
 };
 
-const HEADERS = ['scene', 'mode', 'dpr', 'text px', 'backing', 'main px', 'internal', 'int/main', 'cpu med', 'cpu p95', 'gpu med', 'raf med', 'frames'];
+const HEADERS = [
+  'scene',
+  'mode',
+  'dpr',
+  'text px',
+  'backing',
+  'main px',
+  'internal',
+  'int/main',
+  'cpu med',
+  'cpu p95',
+  'gpu med',
+  'raf med',
+  'frames',
+];
 
 const renderResults = (): void => {
   resultsTable.replaceChildren();
@@ -511,7 +534,8 @@ const probeEnvironmentOnce = async (): Promise<void> => {
         : 'none — the WebGPU device exposes no timestamp-query feature';
   } else {
     lastWebgpuTimestampQuery = null;
-    lastGpuTimerSource = 'EXT_disjoint_timer_query_webgl2 when the browser exposes it; otherwise none (gpuMs stays null — never derived from frame cadence)';
+    lastGpuTimerSource =
+      'EXT_disjoint_timer_query_webgl2 when the browser exposes it; otherwise none (gpuMs stays null — never derived from frame cadence)';
   }
 };
 

@@ -14,8 +14,8 @@
  *   - No false success: any failed step yields `ok === false`.
  *   - Dry-run: every npm mutation carries `--dry-run`.
  */
-import { PUBLISH_ORDER, type ReleaseManifest, type TarballRecord, verifyManifestArtifacts } from './manifest.ts';
 import type { CommandResult, CommandRunner } from './command-runner.ts';
+import { PUBLISH_ORDER, type ReleaseManifest, type TarballRecord, verifyManifestArtifacts } from './manifest.ts';
 
 export interface PublishOptions {
   /** Append `--dry-run` to every npm mutation. */
@@ -59,14 +59,22 @@ const orderedPackages = (manifest: ReleaseManifest): TarballRecord[] =>
 
 const isAlreadyPublished = (runner: CommandRunner, pkg: TarballRecord): boolean => {
   const result: CommandResult = runner.run({ command: 'npm', args: ['view', `${pkg.name}@${pkg.version}`, 'version'] });
+
   // `npm view` prints the version on stdout when it exists, errors otherwise.
   return result.code === 0 && result.stdout.trim() === pkg.version;
 };
 
 const publishTarball = (runner: CommandRunner, _pkg: TarballRecord, absoluteTarball: string, options: PublishOptions): CommandResult => {
   const args = ['publish', absoluteTarball, '--tag', options.distTag, '--access', 'public'];
-  if (options.provenance) args.push('--provenance');
-  if (options.dryRun) args.push('--dry-run');
+
+  if (options.provenance) {
+    args.push('--provenance');
+  }
+
+  if (options.dryRun) {
+    args.push('--dry-run');
+  }
+
   return runner.run({ command: 'npm', args });
 };
 
@@ -99,8 +107,10 @@ export const publishRelease = (
   // Re-hash the on-disk artifacts. Any drift means something rebuilt or
   // mutated the tarballs after `prepare` - refuse to publish.
   const drift = verifyManifestArtifacts(manifest, resolveArtifact);
+
   if (drift.length > 0) {
     report.abortReason = `artifact drift since prepare: ${drift.map(issue => `${issue.file} (${issue.reason})`).join(', ')}`;
+
     return report;
   }
 
@@ -120,15 +130,19 @@ export const publishRelease = (
     }
 
     const result = publishTarball(runner, pkg, resolveArtifact(pkg.file), options);
+
     if (result.code !== 0) {
       outcome.publish = 'failed';
       outcome.detail = (result.stderr || result.stdout).trim().split('\n').slice(-1)[0];
+
       // Stop the chain immediately - later packages are never attempted.
       return report;
     }
+
     outcome.publish = 'published';
   }
 
   report.ok = true;
+
   return report;
 };

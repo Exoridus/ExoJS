@@ -1,24 +1,25 @@
-import { type RenderingContext, Scene, Sprite } from '@codexo/exojs';
-import { PhysicsWorld } from '@codexo/exojs-physics';
+import { Color, Graphics, Scene, SystemOrder } from '@codexo/exojs';
+import { CircleShape, PhysicsWorld } from '@codexo/exojs-physics';
 
 class GameScene extends Scene {
-  private hero!: Sprite;
-  private world = new PhysicsWorld();
-
   // #region guide:frame-alpha
-  private heroPreviousX = 0;
+  override init(): void {
+    const world = new PhysicsWorld({
+      fixedDelta: this.app.fixedTimeStep,
+      gravity: { x: 0, y: 980 },
+      interpolation: true,
+      frameAlphaSource: () => this.app.frameAlpha,
+    });
+    const hero = new Graphics();
 
-  override fixedUpdate(): void {
-    this.heroPreviousX = this.hero.x;
-    this.world.step(1 / 60); // moves the body; the binding updates this.hero.x
-  }
+    this.systems.add(world, { order: SystemOrder.Physics });
+    hero.fillColor = Color.white;
+    hero.drawCircle(0, 0, 16);
+    this.addChild(hero);
 
-  override draw(context: RenderingContext): void {
-    const alpha = this.app.frameAlpha;
-    const renderX = this.heroPreviousX + (this.hero.x - this.heroPreviousX) * alpha;
-
-    this.hero.setPosition(renderX, this.hero.y);
-    context.render(this.root);
+    // The body stays the simulation state; each frame the world places the
+    // node between its last two fixed states by `app.frameAlpha`.
+    world.attach(hero, { type: 'dynamic', position: { x: 400, y: 100 }, shape: new CircleShape(16) });
   }
   // #endregion guide:frame-alpha
 }

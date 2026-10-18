@@ -59,12 +59,17 @@ const satisfiesNodeRange = (range: string, version: string): boolean | null => {
   const trimmed = range.trim();
   let comparator = '';
 
-  if (trimmed.startsWith('>=')) comparator = '>=';
-  else if (trimmed.startsWith('^')) comparator = '^';
+  if (trimmed.startsWith('>=')) {
+    comparator = '>=';
+  } else if (trimmed.startsWith('^')) {
+    comparator = '^';
+  }
 
   const major = trimmed.slice(comparator.length).split('.')[0] ?? '';
 
-  if (!DIGITS.test(major)) return null;
+  if (!DIGITS.test(major)) {
+    return null;
+  }
 
   const wanted = Number(major);
   const actual = Number(version.split('.')[0]);
@@ -84,18 +89,24 @@ const LOCKFILES = new Map<string, string>([
 const installedEnginePackages = (projectDir: string): Array<{ name: string; version: string }> => {
   const scopeDir = join(projectDir, 'node_modules', '@codexo');
 
-  if (!existsSync(scopeDir)) return [];
+  if (!existsSync(scopeDir)) {
+    return [];
+  }
 
   const found: Array<{ name: string; version: string }> = [];
 
   for (const entry of readdirSync(scopeDir)) {
     const name = `@codexo/${entry}`;
 
-    if (!entry.startsWith('exojs') || INDEPENDENT_PACKAGES.has(name)) continue;
+    if (!entry.startsWith('exojs') || INDEPENDENT_PACKAGES.has(name)) {
+      continue;
+    }
 
     const manifest = readJson<{ version?: string }>(join(scopeDir, entry, 'package.json'));
 
-    if (manifest?.version !== undefined) found.push({ name, version: manifest.version });
+    if (manifest?.version !== undefined) {
+      found.push({ name, version: manifest.version });
+    }
   }
 
   return found;
@@ -110,9 +121,17 @@ const browserslistQueries = (projectDir: string, manifest: ProjectManifest): str
 
   const declared = manifest.browserslist;
 
-  if (Array.isArray(declared)) return declared;
-  if (typeof declared === 'string') return [declared];
-  if (declared?.production) return declared.production;
+  if (Array.isArray(declared)) {
+    return declared;
+  }
+
+  if (typeof declared === 'string') {
+    return [declared];
+  }
+
+  if (declared?.production) {
+    return declared.production;
+  }
 
   return [];
 };
@@ -140,7 +159,9 @@ const buildChecks = (projectDir: string, manifest: ProjectManifest): Check[] => 
       return {
         ok: satisfied,
         detail: `v${actual} (@codexo/exojs asks for ${range})`,
-        fix: satisfied ? undefined : `install a Node matching ${range} - nvm use, fnm use or volta pin node@${range.replaceAll(/[^\d.]/g, '')}`,
+        fix: satisfied
+          ? undefined
+          : `install a Node matching ${range} - nvm use, fnm use or volta pin node@${range.replaceAll(/[^\d.]/g, '')}`,
       };
     },
   },
@@ -256,10 +277,13 @@ export const runDoctor = (argv: readonly string[]): number => {
   const manifest = readJson<ProjectManifest>(join(projectDir, 'package.json'));
 
   if (manifest === null) {
-    throw new CliError(`no readable package.json in "${projectDir}"`, { hint: 'Run `exo doctor` from an ExoJS project, or pass its directory.' });
+    throw new CliError(`no readable package.json in "${projectDir}"`, {
+      hint: 'Run `exo doctor` from an ExoJS project, or pass its directory.',
+    });
   }
 
-  const dependsOnEngine = manifest.dependencies?.['@codexo/exojs'] !== undefined || manifest.devDependencies?.['@codexo/exojs'] !== undefined;
+  const dependsOnEngine =
+    manifest.dependencies?.['@codexo/exojs'] !== undefined || manifest.devDependencies?.['@codexo/exojs'] !== undefined;
 
   if (!dependsOnEngine) {
     throw new CliError(`"${projectDir}" does not depend on @codexo/exojs`, {
@@ -278,8 +302,13 @@ export const runDoctor = (argv: readonly string[]): number => {
 
     console.log(`  ${mark}  ${check.name.padEnd(16)} ${outcome.detail}`);
 
-    if (outcome.fix !== undefined && !outcome.ok) console.log(`        fix: ${outcome.fix}`);
-    if (!outcome.ok && check.required) failed = true;
+    if (outcome.fix !== undefined && !outcome.ok) {
+      console.log(`        fix: ${outcome.fix}`);
+    }
+
+    if (!outcome.ok && check.required) {
+      failed = true;
+    }
   }
 
   console.log('');

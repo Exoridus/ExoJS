@@ -93,6 +93,7 @@ class RenderPipelineScene extends Scene {
       this.blurredRt.setSize(width, height);
       this.frame.resize(width, height);
     };
+
     app.onResize.add(handleResize);
     this.detachResize = () => app.onResize.remove(handleResize);
 

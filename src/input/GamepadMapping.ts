@@ -102,7 +102,10 @@ export class GamepadMapping {
       const seen = new Set<number>();
 
       for (const control of [...data.buttons, ...data.axes]) {
-        assert(!seen.has(control.channel), `GamepadMapping: two controls write to the same channel (${control.channel}); each channel may be declared once.`);
+        assert(
+          !seen.has(control.channel),
+          `GamepadMapping: two controls write to the same channel (${control.channel}); each channel may be declared once.`,
+        );
         seen.add(control.channel);
       }
     }

@@ -32,6 +32,7 @@ describe('example .js/.ts sync drift guard', () => {
       }
 
       const committed = fs.readFileSync(jsFile, 'utf8');
+
       if (normalizeNewlines(committed) !== normalizeNewlines(generated)) {
         drifted.push(`examples/${relJs.split(path.sep).join('/')}`);
       }

@@ -103,46 +103,54 @@ export interface T7Stats {
 
 // ── Internal helpers ───────────────────────────────────────────────────────────
 
-const extractBeatMessages = (msgs: WorkletMessage[]): BeatMessage[] => {
-  return msgs.filter((m): m is BeatMessage => m.type === 'beat');
-};
+const extractBeatMessages = (msgs: WorkletMessage[]): BeatMessage[] => msgs.filter((m): m is BeatMessage => m.type === 'beat');
 
-const extractStateMessages = (msgs: WorkletMessage[]): StateMessage[] => {
-  return msgs.filter((m): m is StateMessage => m.type === 'state');
-};
+const extractStateMessages = (msgs: WorkletMessage[]): StateMessage[] => msgs.filter((m): m is StateMessage => m.type === 'state');
 
 const resolveConstantBpm = (fixture: BeatFixture): number => {
   if (typeof fixture.bpm === 'function') {
     const dur = fixture.samples.length / 48000;
+
     return fixture.bpm(dur / 2); // evaluate at midpoint
   }
+
   return fixture.bpm;
 };
 
 const resolveBpmAt = (fixture: BeatFixture, timeSec: number): number => {
-  if (typeof fixture.bpm === 'function') return fixture.bpm(timeSec);
+  if (typeof fixture.bpm === 'function') {
+    return fixture.bpm(timeSec);
+  }
+
   return fixture.bpm;
 };
 
 /** Sorted percentile (index-based, no interpolation). */
 const percentile = (sorted: number[], pct: number): number => {
-  if (sorted.length === 0) return 0;
+  if (sorted.length === 0) {
+    return 0;
+  }
+
   const idx = Math.min(sorted.length - 1, Math.floor(pct * sorted.length));
+
   return sorted[idx];
 };
 
-const median = (sorted: number[]): number => {
-  return percentile(sorted, 0.5);
-};
+const median = (sorted: number[]): number => percentile(sorted, 0.5);
 
 const pearson = (xs: number[], ys: number[]): number => {
   const n = xs.length;
-  if (n < 2) return 0;
+
+  if (n < 2) {
+    return 0;
+  }
+
   const mx = xs.reduce((a, b) => a + b, 0) / n;
   const my = ys.reduce((a, b) => a + b, 0) / n;
   let num = 0,
     dxSq = 0,
     dySq = 0;
+
   for (let i = 0; i < n; i++) {
     const dx = xs[i] - mx;
     const dy = ys[i] - my;
@@ -150,7 +158,9 @@ const pearson = (xs: number[], ys: number[]): number => {
     dxSq += dx * dx;
     dySq += dy * dy;
   }
+
   const denom = Math.sqrt(dxSq * dySq);
+
   return denom === 0 ? 0 : num / denom;
 };
 
@@ -161,7 +171,11 @@ const pearson = (xs: number[], ys: number[]): number => {
  *   fpTimes - emitted beats with no GT match
  *   missTimes - GT onsets with no matched emitted beat
  */
-const greedyMatch = (emittedTimes: number[], gtTimes: number[], windowSec: number): { offsets: number[]; fpTimes: number[]; missTimes: number[] } => {
+const greedyMatch = (
+  emittedTimes: number[],
+  gtTimes: number[],
+  windowSec: number,
+): { offsets: number[]; fpTimes: number[]; missTimes: number[] } => {
   const sorted = [...emittedTimes].sort((a, b) => a - b);
   const gt = [...gtTimes].sort((a, b) => a - b);
   const usedGt = new Set<number>();
@@ -171,14 +185,20 @@ const greedyMatch = (emittedTimes: number[], gtTimes: number[], windowSec: numbe
   for (const et of sorted) {
     let bestIdx = -1;
     let bestDist = Infinity;
+
     for (let i = 0; i < gt.length; i++) {
-      if (usedGt.has(i)) continue;
+      if (usedGt.has(i)) {
+        continue;
+      }
+
       const dist = Math.abs(et - gt[i]);
+
       if (dist <= windowSec && dist < bestDist) {
         bestDist = dist;
         bestIdx = i;
       }
     }
+
     if (bestIdx >= 0) {
       offsets.push(bestDist);
       usedGt.add(bestIdx);
@@ -188,6 +208,7 @@ const greedyMatch = (emittedTimes: number[], gtTimes: number[], windowSec: numbe
   }
 
   const missTimes = gt.filter((_, i) => !usedGt.has(i));
+
   return { offsets, fpTimes, missTimes };
 };
 
@@ -220,6 +241,7 @@ export const computeMetrics = (
 
   const bpmErrors: number[] = [];
   const bpmErrorsSigned: number[] = [];
+
   for (const s of settledStates) {
     const trueBpm = resolveBpmAt(fixture, s._audioTimeSec);
     const err = s.tempo - trueBpm;
@@ -248,7 +270,11 @@ export const computeMetrics = (
 
     if (isLocked) {
       consecutiveCount++;
-      if (consecutiveCount === 1) firstInRunTime = s._audioTimeSec;
+
+      if (consecutiveCount === 1) {
+        firstInRunTime = s._audioTimeSec;
+      }
+
       if (consecutiveCount >= lockConsecutiveK) {
         lockTimeSec = firstInRunTime!;
         break;
@@ -291,6 +317,7 @@ export const computeMetrics = (
 
   const confValues: number[] = [];
   const correctFlags: number[] = [];
+
   for (const s of settledStates) {
     const trueBpm = resolveBpmAt(fixture, s._audioTimeSec);
     const correct = trueBpm > 0 && Math.abs(s.tempo - trueBpm) / trueBpm <= lockThresholdPct / 100 ? 1 : 0;
@@ -316,13 +343,25 @@ export const computeMetrics = (
   // these flags are a secondary diagnostic signal, not a primary pass/fail criterion.
   let halfOctaveCount = 0;
   let doubleOctaveCount = 0;
+
   for (const s of settledStates) {
     const trueBpm = resolveBpmAt(fixture, s._audioTimeSec);
-    if (trueBpm <= 0) continue;
+
+    if (trueBpm <= 0) {
+      continue;
+    }
+
     const ratio = s.tempo / trueBpm;
-    if (Math.abs(ratio - 0.5) < 0.1) halfOctaveCount++;
-    if (Math.abs(ratio - 2.0) < 0.2) doubleOctaveCount++;
+
+    if (Math.abs(ratio - 0.5) < 0.1) {
+      halfOctaveCount++;
+    }
+
+    if (Math.abs(ratio - 2) < 0.2) {
+      doubleOctaveCount++;
+    }
   }
+
   const majority = Math.ceil(settledStates.length / 2);
   const octaveError: OctaveError = {
     halfOctave: halfOctaveCount >= majority,
@@ -347,11 +386,13 @@ export const computeMetrics = (
   const lockedOffsetsMs = lockedMatch.offsets.map(o => o * 1000);
 
   let provLockedTransitions = 0;
+
   for (let i = 1; i < beatMsgs.length; i++) {
     if (beatMsgs[i - 1].status === 'provisional' && beatMsgs[i].status === 'locked') {
       provLockedTransitions++;
     }
   }
+
   const statusComplete = beatMsgs.every(b => b.status === 'provisional' || b.status === 'locked');
 
   const t7: T7Stats = {
@@ -383,9 +424,7 @@ export const computeMetrics = (
 
 // ── Formatting ─────────────────────────────────────────────────────────────────
 
-const fmt = (n: number, dec = 1): string => {
-  return n.toFixed(dec);
-};
+const fmt = (n: number, dec = 1): string => n.toFixed(dec);
 
 /**
  * Human-readable metric table for console output and snapshot comparison.
@@ -405,6 +444,7 @@ export const formatMetrics = (m: BeatMetrics): string => {
       `signed=${fmt(m.bpmError.signedMean, 2)} (${fmt(m.bpmError.signedPct, 2)}%) ` +
       `[n=${m.bpmError.sampleCount}]`,
   );
+
   if (m.bpmError.sampleCount > 0 && m.bpmError.meanAbs > m.trueBpmAtMid * 0.05) {
     fails.push(`BPM error > 5% (mean=${fmt(m.bpmError.meanAbs, 1)} BPM)`);
   }
@@ -421,9 +461,11 @@ export const formatMetrics = (m: BeatMetrics): string => {
       `matched=${m.beatOffset.matchedCount} FP=${m.fpMiss.fpCount} (${fmt(m.fpMiss.fpRatePerMin, 1)}/min) ` +
       `miss=${m.fpMiss.missCount} recall=${fmt(m.fpMiss.recall * 100, 1)}%`,
   );
+
   if (m.fpMiss.fpRatePerMin > 10) {
     fails.push(`FP rate > 10/min (${fmt(m.fpMiss.fpRatePerMin, 1)}/min)`);
   }
+
   if (m.fpMiss.recall < 0.5 && m.beatOffset.gtCount > 2) {
     fails.push(`low recall ${fmt(m.fpMiss.recall * 100, 1)}% (< 50%)`);
   }
@@ -431,6 +473,7 @@ export const formatMetrics = (m: BeatMetrics): string => {
   // Lock time
   const lockStr = m.lockTimeSec !== null ? `${fmt(m.lockTimeSec, 2)}s` : 'NEVER';
   lines.push(`  Lock time      : ${lockStr}`);
+
   if (m.lockTimeSec === null) {
     fails.push('never locked to correct tempo');
   }
@@ -443,8 +486,13 @@ export const formatMetrics = (m: BeatMetrics): string => {
   );
 
   // Octave error
-  const octStr = m.octaveError.halfOctave ? 'HALF-OCTAVE (locked at 0.5x)' : m.octaveError.doubleOctave ? 'DOUBLE-OCTAVE (locked at 2x)' : 'none';
+  const octStr = m.octaveError.halfOctave
+    ? 'HALF-OCTAVE (locked at 0.5x)'
+    : m.octaveError.doubleOctave
+      ? 'DOUBLE-OCTAVE (locked at 2x)'
+      : 'none';
   lines.push(`  Octave error   : ${octStr}`);
+
   if (m.octaveError.halfOctave || m.octaveError.doubleOctave) {
     fails.push(`octave error: ${octStr}`);
   }
@@ -486,7 +534,12 @@ export interface MirMetrics {
   tempo: { sampleCount: number; accuracy: number | null; octaveTolerantAccuracy: number | null };
 }
 
-const matchMirEvents = (beats: BeatMessage[], reference: number[], toleranceSec: number, contextStartSec: number): { beat: BeatMessage; time: number }[] => {
+const matchMirEvents = (
+  beats: BeatMessage[],
+  reference: number[],
+  toleranceSec: number,
+  contextStartSec: number,
+): Array<{ beat: BeatMessage; time: number }> => {
   const columns = reference.length + 1;
   const size = (beats.length + 1) * columns;
   const counts = new Uint32Array(size);
@@ -503,13 +556,16 @@ const matchMirEvents = (beats: BeatMessage[], reference: number[], toleranceSec:
       counts[cell] = counts[skipBeat];
       errors[cell] = errors[skipBeat];
       moves[cell] = 1;
+
       if (counts[skipReference] > counts[cell] || (counts[skipReference] === counts[cell] && errors[skipReference] < errors[cell])) {
         counts[cell] = counts[skipReference];
         errors[cell] = errors[skipReference];
         moves[cell] = 2;
       }
+
       const error = Math.abs(beats[i].audioTime - contextStartSec - reference[j]);
       const diagonal = cell + columns + 1;
+
       // Timestamp subtraction must not exclude an event exactly on the tolerance boundary.
       if (
         error <= toleranceSec + 1e-9 &&
@@ -522,15 +578,26 @@ const matchMirEvents = (beats: BeatMessage[], reference: number[], toleranceSec:
     }
   }
 
-  const matches: { beat: BeatMessage; time: number }[] = [];
+  const matches: Array<{ beat: BeatMessage; time: number }> = [];
   let i = 0;
   let j = 0;
+
   while (i < beats.length && j < reference.length) {
     const move = moves[i * columns + j];
-    if (move === 3) matches.push({ beat: beats[i], time: reference[j] });
-    if (move !== 2) i++;
-    if (move !== 1) j++;
+
+    if (move === 3) {
+      matches.push({ beat: beats[i], time: reference[j] });
+    }
+
+    if (move !== 2) {
+      i++;
+    }
+
+    if (move !== 1) {
+      j++;
+    }
   }
+
   return matches;
 };
 
@@ -549,6 +616,7 @@ export const computeMirMetrics = (
   const beats = extractBeatMessages(messages).sort((a, b) => a.audioTime - b.audioTime || a._audioTimeSec - b._audioTimeSec);
   const durationSec = fixture.samples.length / 48000;
   const blockMs = blockSize / 48;
+
   const score = (events: BeatMessage[]): MirEventMetrics => {
     const matches = matchMirEvents(events, reference, toleranceMs / 1000, contextStartSec);
     const signedErrors = matches.map(({ beat, time }) => (beat.audioTime - contextStartSec - time) * 1000);
@@ -556,6 +624,7 @@ export const computeMirMetrics = (
     const latencies = matches.map(({ beat, time }) => (beat._audioTimeSec - time) * 1000).sort((a, b) => a - b);
     const matchedCount = matches.length;
     const falsePositiveCount = events.length - matchedCount;
+
     return {
       emittedCount: events.length,
       referenceCount: reference.length,
@@ -584,14 +653,17 @@ export const computeMirMetrics = (
         : null,
     };
   };
+
   const states = extractStateMessages(messages).filter(state => resolveBpmAt(fixture, state._audioTimeSec) > 0);
   const accuracy = (ratios: number[]): number | null =>
     states.length
       ? states.filter(state => {
           const truth = resolveBpmAt(fixture, state._audioTimeSec);
+
           return ratios.some(ratio => Math.abs(state.tempo / (truth * ratio) - 1) <= 0.03);
         }).length / states.length
       : null;
+
   return {
     label: fixture.label,
     toleranceMs,

@@ -63,7 +63,7 @@ const createWorkingTargetHarness = (
     resolveRenderTarget() {
       events.push('resolve');
 
-      return undefined;
+      return;
     },
     execute(pass: BackendRenderPass) {
       // A double has no pass coordinator, so `BackendTargetPass` runs its legacy
@@ -106,6 +106,7 @@ const createWorkingTargetHarness = (
     },
     destroy: (): void => {},
   };
+
   // The scene, the systems and the transition are somebody else's contract;
   // here they are one recorded step between the redirect and the resolve.
   record['_drawSceneAndSystems'] = (): void => {
@@ -174,7 +175,16 @@ describe('working frame target', () => {
 
     harness.drawFrame();
 
-    expect(harness.events).toEqual(['target:offscreen', 'scene', 'target:root', 'resolve', 'target:offscreen', 'passes', 'target:root', 'present']);
+    expect(harness.events).toEqual([
+      'target:offscreen',
+      'scene',
+      'target:root',
+      'resolve',
+      'target:offscreen',
+      'passes',
+      'target:root',
+      'present',
+    ]);
   });
 
   test('multisamples the scene frame, not the filter pipeline it feeds', () => {
@@ -210,7 +220,7 @@ describe('working sample count negotiation', () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+    warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {

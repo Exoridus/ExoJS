@@ -1,4 +1,11 @@
-import type { AnyAssetConfig, AssetDefinitions, AssetTypeName, LeaflessAssetKind, OptionsForKind, ValueAssetKind } from './AssetDefinitions';
+import type {
+  AnyAssetConfig,
+  AssetDefinitions,
+  AssetTypeName,
+  LeaflessAssetKind,
+  OptionsForKind,
+  ValueAssetKind,
+} from './AssetDefinitions';
 import { _requestConfig } from './assetMeta';
 import type { AnyAssetType, AssetOptionsArgument } from './AssetType';
 
@@ -118,5 +125,8 @@ export const Asset = AssetImpl as unknown as AssetFacade;
 
 // Attach the runtime `type` static - the single POJO descriptor factory that
 // backs `Asset.type(...)`.
-(Asset as unknown as { type: (type: keyof AssetDefinitions, source: string, options?: object) => Asset<unknown> }).type = (type, source, options) =>
-  new AssetImpl(_requestConfig(type, source, options));
+(Asset as unknown as { type: (type: keyof AssetDefinitions, source: string, options?: object) => Asset<unknown> }).type = (
+  type,
+  source,
+  options,
+) => new AssetImpl(_requestConfig(type, source, options));

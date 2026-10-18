@@ -171,7 +171,9 @@ export const sweepCircleVsRectangle = (moving: CircleLike, deltaX: number, delta
     return { t: 0, x: cx, y: cy, normalX: 0, normalY: exitTop < exitBottom ? -1 : 1 };
   }
 
-  if (deltaX === 0 && deltaY === 0) return null;
+  if (deltaX === 0 && deltaY === 0) {
+    return null;
+  }
 
   let bestT = Infinity;
   let bestNx = 0;
@@ -189,27 +191,45 @@ export const sweepCircleVsRectangle = (moving: CircleLike, deltaX: number, delta
   // and land within the face's extent (not a corner arc region).
   if (deltaX !== 0) {
     const tL = (left - r - cx) / deltaX;
+
     if (tL >= 0 && tL <= 1) {
       const hy = cy + deltaY * tL;
-      if (hy >= top && hy <= bottom) tryHit(tL, -1, 0);
+
+      if (hy >= top && hy <= bottom) {
+        tryHit(tL, -1, 0);
+      }
     }
+
     const tR = (right + r - cx) / deltaX;
+
     if (tR >= 0 && tR <= 1) {
       const hy = cy + deltaY * tR;
-      if (hy >= top && hy <= bottom) tryHit(tR, 1, 0);
+
+      if (hy >= top && hy <= bottom) {
+        tryHit(tR, 1, 0);
+      }
     }
   }
 
   if (deltaY !== 0) {
     const tT = (top - r - cy) / deltaY;
+
     if (tT >= 0 && tT <= 1) {
       const hx = cx + deltaX * tT;
-      if (hx >= left && hx <= right) tryHit(tT, 0, -1);
+
+      if (hx >= left && hx <= right) {
+        tryHit(tT, 0, -1);
+      }
     }
+
     const tB = (bottom + r - cy) / deltaY;
+
     if (tB >= 0 && tB <= 1) {
       const hx = cx + deltaX * tB;
-      if (hx >= left && hx <= right) tryHit(tB, 0, 1);
+
+      if (hx >= left && hx <= right) {
+        tryHit(tB, 0, 1);
+      }
     }
   }
 
@@ -229,11 +249,15 @@ export const sweepCircleVsRectangle = (moving: CircleLike, deltaX: number, delta
     const c = cdx * cdx + cdy * cdy - r * r;
     const disc = b * b - 4 * a * c;
 
-    if (disc < 0) continue;
+    if (disc < 0) {
+      continue;
+    }
 
     const t = (-b - Math.sqrt(disc)) / (2 * a);
 
-    if (t < 0 || t > 1) continue;
+    if (t < 0 || t > 1) {
+      continue;
+    }
 
     const hitX = cx + deltaX * t;
     const hitY = cy + deltaY * t;
@@ -241,7 +265,9 @@ export const sweepCircleVsRectangle = (moving: CircleLike, deltaX: number, delta
     tryHit(t, (hitX - corX) / r, (hitY - corY) / r);
   }
 
-  if (bestT > 1) return null;
+  if (bestT > 1) {
+    return null;
+  }
 
   return { t: bestT, x: cx + deltaX * bestT, y: cy + deltaY * bestT, normalX: bestNx, normalY: bestNy };
 };
@@ -316,7 +342,12 @@ export const sweepCircleVsCircle = (moving: CircleLike, deltaX: number, deltaY: 
  * moving rectangle is computed once; targets whose AABB does not overlap the
  * swept AABB are skipped.
  */
-export const sweepRectangleAgainst = (moving: Rectangle, deltaX: number, deltaY: number, targets: readonly Rectangle[]): SweptHit | null => {
+export const sweepRectangleAgainst = (
+  moving: Rectangle,
+  deltaX: number,
+  deltaY: number,
+  targets: readonly Rectangle[],
+): SweptHit | null => {
   if (targets.length === 0) {
     return null;
   }

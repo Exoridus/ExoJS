@@ -102,7 +102,9 @@ const preferredColumn = (columns: readonly ComparisonColumn[]): number => {
   for (const key of PREFERRED_COLUMN_KEYS) {
     const index = columns.findIndex(column => column.key === key);
 
-    if (index !== -1) return index;
+    if (index !== -1) {
+      return index;
+    }
   }
 
   return 0;
@@ -219,7 +221,9 @@ const singleBlockTable = (
 export const physicsComparison = (document: BenchProfileDocument): ComparisonTable | null => {
   const section = document.physics?.section;
 
-  if (section === undefined) return null;
+  if (section === undefined) {
+    return null;
+  }
 
   const arms = orderArms(armsOfSection(section), arm => arm);
 
@@ -247,7 +251,9 @@ export const physicsComparison = (document: BenchProfileDocument): ComparisonTab
  * so the block compares CPU time only.
  */
 export const webgl1Comparison = (backend: ProfileBackend): ComparisonTable | null => {
-  if (backend.webgl1.length === 0) return null;
+  if (backend.webgl1.length === 0) {
+    return null;
+  }
 
   const arms = orderArms([...new Set(backend.webgl1.flatMap(row => row.cells.map(cell => cell.competitor)))], arm => arm);
 

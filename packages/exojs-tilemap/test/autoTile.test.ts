@@ -10,28 +10,25 @@ import { WangSet } from '../src/WangSet';
 
 // ── Test helpers ──────────────────────────────────────────────────────────
 
-const fakeTexture = (): Texture => {
-  return {
+const fakeTexture = (): Texture =>
+  ({
     destroyed: false,
     destroy: () => {},
     height: 512,
     label: 'test',
     uid: 0,
     width: 512,
-  } as unknown as Texture;
-};
+  }) as unknown as Texture;
 
-const fakeRegion = (): TextureRegion => {
-  return new TextureRegion(fakeTexture(), { height: 512, width: 512, x: 0, y: 0 });
-};
+const fakeRegion = (): TextureRegion => new TextureRegion(fakeTexture(), { height: 512, width: 512, x: 0, y: 0 });
 
 /**
  * Create a TileSet with 256 tiles (16×16 grid in a 512×512 atlas).
  * localTileIds 0-255 are all valid, which conveniently covers the full
  * blob bitmask range (0-255) when using an identity blobMap.
  */
-const makeTileset256 = (name = 'ts'): TileSet => {
-  return new TileSet({
+const makeTileset256 = (name = 'ts'): TileSet =>
+  new TileSet({
     columns: 16,
     name,
     tileCount: 256,
@@ -39,10 +36,9 @@ const makeTileset256 = (name = 'ts'): TileSet => {
     tileWidth: 32,
     texture: fakeRegion(),
   });
-};
 
-const makeLayer = (ts: TileSet, w = 3, h = 3): TileLayer => {
-  return new TileLayer({
+const makeLayer = (ts: TileSet, w = 3, h = 3): TileLayer =>
+  new TileLayer({
     height: h,
     id: 0,
     name: 'layer',
@@ -51,7 +47,6 @@ const makeLayer = (ts: TileSet, w = 3, h = 3): TileLayer => {
     tilesets: [ts],
     width: w,
   });
-};
 
 /**
  * A blobMap that maps every bitmask to itself (identity).
@@ -60,7 +55,11 @@ const makeLayer = (ts: TileSet, w = 3, h = 3): TileLayer => {
  */
 const identityBlobMap = (): Map<number, number> => {
   const m = new Map<number, number>();
-  for (let i = 0; i <= 255; i++) m.set(i, i);
+
+  for (let i = 0; i <= 255; i++) {
+    m.set(i, i);
+  }
+
   return m;
 };
 
@@ -129,11 +128,13 @@ describe('autoTile — blob mode corner dependency', () => {
     //   BR (1,1): tile 0, BUT bottom=false → BR bit suppressed → 0
     // mask = 16 only.
     const layer2 = makeLayer(ts, 3, 3);
+
     for (let ty2 = 0; ty2 < 3; ty2++) {
       for (let tx2 = 0; tx2 < 3; tx2++) {
         setTile(layer2, ts, tx2, ty2, 0);
       }
     }
+
     layer2.clearTileAt(0, 1); // punch a hole below (0,0)
 
     autoTile(layer2, wangSet, { wrapBorder: false });
@@ -179,6 +180,7 @@ describe('autoTile — matchFn scope restriction', () => {
         setTile(layer, ts, tx, ty, 0);
       }
     }
+
     setTile(layer, ts, 2, 2, 5); // not in the wang group
 
     // matchFn: only localTileId 0 is in the wang group.

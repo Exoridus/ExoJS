@@ -282,7 +282,9 @@ export abstract class Material<F extends UniformFields | undefined = undefined, 
    */
   public setUniform(name: MaterialRawUniformName<F, B>, value: UniformValue): this {
     if (this._blocks.length > 0) {
-      throw new Error('Material.setUniform is not available on a shader source that declares uniforms; write through `material.uniforms` instead.');
+      throw new Error(
+        'Material.setUniform is not available on a shader source that declares uniforms; write through `material.uniforms` instead.',
+      );
     }
 
     if (!Object.prototype.hasOwnProperty.call(this._uniformValues, name)) {
@@ -400,7 +402,12 @@ export abstract class Material<F extends UniformFields | undefined = undefined, 
 export type AnyMaterial = Material<UniformFields | undefined, UniformBlockRecord | undefined>;
 
 /** Write the caller's starting values into the freshly built blocks. */
-const applyInitialBlockValues = (blocks: readonly UniformBlockData[], implicit: boolean, uniforms: unknown, uniformBlocks: unknown): void => {
+const applyInitialBlockValues = (
+  blocks: readonly UniformBlockData[],
+  implicit: boolean,
+  uniforms: unknown,
+  uniformBlocks: unknown,
+): void => {
   if (implicit) {
     if (uniforms !== undefined) {
       blocks[0]!._setValues(uniforms as Record<string, unknown>);

@@ -42,9 +42,11 @@ export class VocoderEffect extends WorkletEffect {
 
   public constructor(options: VocoderEffectOptions) {
     super();
+
     if (!options.modulator) {
       throw new Error('VocoderEffect requires a modulator AudioBus.');
     }
+
     this._modulator = options.modulator;
     this._numBands = options.numBands ?? 16;
     this._minHz = options.minHz ?? 80;
@@ -57,9 +59,11 @@ export class VocoderEffect extends WorkletEffect {
   protected get _workletName(): string {
     return 'exojs-vocoder';
   }
+
   protected get _workletSource(): string {
     return vocoderWorkletSource;
   }
+
   protected override get _workletOptions(): AudioWorkletNodeOptions {
     return {
       numberOfInputs: 2,
@@ -78,7 +82,9 @@ export class VocoderEffect extends WorkletEffect {
 
   protected override _onWorkletReady(_audioContext: AudioContext): void {
     // Guard against partially-constructed instances (constructor threw after super()).
-    if (!this._modulator) return;
+    if (!this._modulator) {
+      return;
+    }
 
     this._setAudioParam('envelopeSmoothing', this._envelopeSmoothing);
 
@@ -89,6 +95,7 @@ export class VocoderEffect extends WorkletEffect {
   public get envelopeSmoothing(): number {
     return this._envelopeSmoothing;
   }
+
   public set envelopeSmoothing(value: number) {
     this._envelopeSmoothing = Math.max(0.0001, Math.min(0.1, value));
     this._setAudioParam('envelopeSmoothing', this._envelopeSmoothing);

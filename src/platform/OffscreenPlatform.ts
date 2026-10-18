@@ -328,11 +328,17 @@ export class OffscreenPlatform implements PlatformAdapter {
     this._cancelFrame?.(handle);
   }
 
-  public onSurfaceEvent<K extends keyof PlatformSurfaceEventMap>(type: K, listener: (event: PlatformSurfaceEventMap[K]) => void): PlatformSubscription {
+  public onSurfaceEvent<K extends keyof PlatformSurfaceEventMap>(
+    type: K,
+    listener: (event: PlatformSurfaceEventMap[K]) => void,
+  ): PlatformSubscription {
     return subscribe(this._surfaceListeners, type, listener);
   }
 
-  public onWindowEvent<K extends keyof PlatformWindowEventMap>(type: K, listener: (event: PlatformWindowEventMap[K]) => void): PlatformSubscription {
+  public onWindowEvent<K extends keyof PlatformWindowEventMap>(
+    type: K,
+    listener: (event: PlatformWindowEventMap[K]) => void,
+  ): PlatformSubscription {
     return subscribe(this._windowListeners, type, listener);
   }
 
@@ -358,9 +364,11 @@ export class OffscreenPlatform implements PlatformAdapter {
     }
 
     let suppressed = false;
+
     const suppress = (): void => {
       suppressed = true;
     };
+
     // The data arrives without the suppression calls, and the pipeline above
     // this seam calls them unconditionally. Binding them per dispatch is what
     // turns "the engine consumed this" into an answer the host can act on.

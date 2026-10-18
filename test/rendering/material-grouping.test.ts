@@ -199,6 +199,7 @@ const createRuntime = () => {
     },
     setRenderTarget(target) {
       currentTarget = target ?? root;
+
       return this;
     },
     pushScissorRect() {
@@ -224,10 +225,12 @@ const createRuntime = () => {
     },
     resetStats() {
       resetRenderStats(stats);
+
       return this;
     },
     execute(pass) {
       pass.execute(this);
+
       return this;
     },
     flush() {
@@ -256,7 +259,9 @@ const getMaterials = (plan: RenderPlan) =>
   plan.passes[0].root.entries.filter((e: any) => e.kind === RenderEntryKind.Draw).map((e: any) => (e.command as DrawCommand).material);
 
 const getGroupIndices = (plan: RenderPlan) =>
-  plan.passes[0].root.entries.filter((e: any) => e.kind === RenderEntryKind.Draw).map((e: any) => (e.command as DrawCommand).groupIndex ?? 0);
+  plan.passes[0].root.entries
+    .filter((e: any) => e.kind === RenderEntryKind.Draw)
+    .map((e: any) => (e.command as DrawCommand).groupIndex ?? 0);
 
 describe('material grouping', () => {
   test('different material draws do not coalesce', () => {
@@ -385,7 +390,10 @@ describe('material grouping', () => {
     const b = new BoxDrawable('b');
 
     const plan = createPlan({
-      entries: [createDrawEntry(a, { pipelineKey: 100, bindKey: 100, zIndex: 0 }), createDrawEntry(b, { pipelineKey: 100, bindKey: 100, zIndex: 10 })],
+      entries: [
+        createDrawEntry(a, { pipelineKey: 100, bindKey: 100, zIndex: 0 }),
+        createDrawEntry(b, { pipelineKey: 100, bindKey: 100, zIndex: 10 }),
+      ],
     });
 
     RenderPlanOptimizer.optimize(plan);

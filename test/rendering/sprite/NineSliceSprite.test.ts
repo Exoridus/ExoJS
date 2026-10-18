@@ -9,7 +9,7 @@ import { mutable } from '../../support/mutable';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const makeTexture = (w = 128, h = 64): Texture => ({ width: w, height: h, flipY: false, updateSource: () => undefined }) as unknown as Texture;
+const makeTexture = (w = 128, h = 64): Texture => ({ width: w, height: h, flipY: false, updateSource: () => {} }) as unknown as Texture;
 
 const makeRegion = (texture: Texture, x = 0, y = 0, width?: number, height?: number): TextureRegion =>
   new TextureRegion(texture, { x, y, width: width ?? texture.width, height: height ?? texture.height });
@@ -256,11 +256,13 @@ describe('NineSliceSprite — setter validation (size)', () => {
     const tex = makeTexture(64, 64);
     const sprite = new NineSliceSprite(tex, { slices: 10 });
     const prevWidth = sprite.width;
+
     try {
       sprite.width = NaN;
     } catch {
       /* expected */
     }
+
     expect(sprite.width).toBe(prevWidth);
     expect(getDirty(sprite)).toBe(true); // initial state is dirty
   });
@@ -296,11 +298,13 @@ describe('NineSliceSprite — setter validation (size)', () => {
     const sprite = new NineSliceSprite(tex, { slices: 10 });
     void sprite.quads;
     const prevDirty = getDirty(sprite);
+
     try {
       sprite.setSize(-1, 100);
     } catch {
       /* expected */
     }
+
     expect(getDirty(sprite)).toBe(prevDirty);
   });
 });
@@ -338,11 +342,13 @@ describe('NineSliceSprite — setter validation (slices)', () => {
     const tex = makeTexture(64, 64);
     const sprite = new NineSliceSprite(tex, { slices: 10 });
     const prevSlices = sprite.slices;
+
     try {
       sprite.setSlices({ left: -1, top: 5, right: 5, bottom: 5 });
     } catch {
       /* expected */
     }
+
     expect(sprite.slices).toEqual(prevSlices);
   });
 
@@ -350,22 +356,26 @@ describe('NineSliceSprite — setter validation (slices)', () => {
     const tex = makeTexture(64, 64);
     const sprite = new NineSliceSprite(tex, { slices: 10 });
     void sprite.quads;
+
     try {
       sprite.setSlices({ left: -1, top: 5, right: 5, bottom: 5 });
     } catch {
       /* expected */
     }
+
     expect(getDirty(sprite)).toBe(false);
   });
 
   test('valid constructor then invalid setSlices: prior slices preserved', () => {
     const tex = makeTexture(64, 64);
     const sprite = new NineSliceSprite(tex, { slices: { left: 8, top: 8, right: 8, bottom: 8 } });
+
     try {
       sprite.setSlices({ left: 40, top: 40, right: 30, bottom: 30 });
     } catch {
       /* expected */
     }
+
     const slices = sprite.slices;
     expect(slices.left).toBe(8);
     expect(slices.top).toBe(8);
@@ -395,11 +405,13 @@ describe('NineSliceSprite — setter validation (border)', () => {
     const tex = makeTexture(64, 64);
     const sprite = new NineSliceSprite(tex, { slices: 10 });
     const prevBorder = sprite.border;
+
     try {
       sprite.setBorder({ left: -1, top: 5, right: 5, bottom: 5 });
     } catch {
       /* expected */
     }
+
     expect(sprite.border).toEqual(prevBorder);
   });
 
@@ -636,11 +648,13 @@ describe('NineSliceSprite — geometry invalidation', () => {
     const tex = makeTexture(64, 64);
     const sprite = new NineSliceSprite(tex, { slices: 10 });
     void sprite.quads;
+
     try {
       sprite.setSize(-1, 100);
     } catch {
       /* expected */
     }
+
     expect(getDirty(sprite)).toBe(false);
   });
 
@@ -662,17 +676,23 @@ describe('NineSliceSprite — geometry invalidation', () => {
 describe('NineSliceSprite — mode validation', () => {
   test('rejects invalid edges mode in constructor', () => {
     const tex = makeTexture(64, 64);
-    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { edges: 'banana' as string } as NineSliceModes })).toThrow(/modes.edges must be/);
+    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { edges: 'banana' as string } as NineSliceModes })).toThrow(
+      /modes.edges must be/,
+    );
   });
 
   test('rejects invalid center mode in constructor', () => {
     const tex = makeTexture(64, 64);
-    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { center: 'tile' as string } as NineSliceModes })).toThrow(/modes.center must be/);
+    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { center: 'tile' as string } as NineSliceModes })).toThrow(
+      /modes.center must be/,
+    );
   });
 
   test('rejects invalid top override in constructor', () => {
     const tex = makeTexture(64, 64);
-    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { top: 'invalid' as string } as NineSliceModes })).toThrow(/modes.top must be/);
+    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { top: 'invalid' as string } as NineSliceModes })).toThrow(
+      /modes.top must be/,
+    );
   });
 
   test('rejects invalid right override in constructor', () => {
@@ -682,22 +702,30 @@ describe('NineSliceSprite — mode validation', () => {
 
   test('rejects invalid bottom override in constructor', () => {
     const tex = makeTexture(64, 64);
-    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { bottom: 42 as unknown as string } as NineSliceModes })).toThrow(/modes.bottom must be/);
+    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { bottom: 42 as unknown as string } as NineSliceModes })).toThrow(
+      /modes.bottom must be/,
+    );
   });
 
   test('rejects invalid left override in constructor', () => {
     const tex = makeTexture(64, 64);
-    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { left: 'undefined' as string } as NineSliceModes })).toThrow(/modes.left must be/);
+    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { left: 'undefined' as string } as NineSliceModes })).toThrow(
+      /modes.left must be/,
+    );
   });
 
   test('rejects invalid edgeFit in constructor', () => {
     const tex = makeTexture(64, 64);
-    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { edgeFit: 'stretch' as string } as NineSliceModes })).toThrow(/modes.edgeFit must be/);
+    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { edgeFit: 'stretch' as string } as NineSliceModes })).toThrow(
+      /modes.edgeFit must be/,
+    );
   });
 
   test('rejects invalid centerFit in constructor', () => {
     const tex = makeTexture(64, 64);
-    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { centerFit: 'squeeze' as string } as NineSliceModes })).toThrow(/modes.centerFit must be/);
+    expect(() => new NineSliceSprite(tex, { slices: 10, modes: { centerFit: 'squeeze' as string } as NineSliceModes })).toThrow(
+      /modes.centerFit must be/,
+    );
   });
 
   test('rejects invalid mode in setModes', () => {
@@ -716,11 +744,13 @@ describe('NineSliceSprite — mode validation', () => {
     const tex = makeTexture(64, 64);
     const sprite = new NineSliceSprite(tex, { slices: 10, modes: { edges: 'repeat' } });
     const prevModes = sprite.modes;
+
     try {
       sprite.setModes({ edges: 'bad' as string } as NineSliceModes);
     } catch {
       /* expected */
     }
+
     expect(sprite.modes).toBe(prevModes);
   });
 
@@ -728,11 +758,13 @@ describe('NineSliceSprite — mode validation', () => {
     const tex = makeTexture(64, 64);
     const sprite = new NineSliceSprite(tex, { slices: 10, modes: { edges: 'repeat' } });
     void sprite.quads;
+
     try {
       sprite.setModes({ edges: 'bad' as string } as NineSliceModes);
     } catch {
       /* expected */
     }
+
     expect(getDirty(sprite)).toBe(false);
   });
 

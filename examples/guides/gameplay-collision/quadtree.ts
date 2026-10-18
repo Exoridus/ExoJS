@@ -1,4 +1,4 @@
-import { Quadtree, Rectangle, Scene, Sprite } from '@codexo/exojs';
+import { Quadtree, Rectangle, Scene, type Sprite } from '@codexo/exojs';
 
 // The game's own hit reaction: the guide shows which pairs reach it, not what
 // it does with them.
@@ -21,6 +21,7 @@ class QuadtreeScene extends Scene {
 
     // Query nearby objects
     const nearby = tree.queryRect(player.getBounds());
+
     for (const item of nearby) {
       if (player.intersectsWith(item.payload)) {
         resolveCollision(player, item.payload);

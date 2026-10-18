@@ -43,7 +43,14 @@ const makeTexture = (): DataTexture<TextureFormat.Rgba8> => {
 };
 
 /** Paint a solid rectangle of texels into the CPU-side buffer, leaving the dirty flag alone. */
-const paintRect = (texture: DataTexture<TextureFormat.Rgba8>, x: number, y: number, width: number, height: number, color: readonly number[]): void => {
+const paintRect = (
+  texture: DataTexture<TextureFormat.Rgba8>,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  color: readonly number[],
+): void => {
   for (let row = y; row < y + height; row++) {
     for (let column = x; column < x + width; column++) {
       texture.buffer.set(color, (row * EDGE + column) * 4);

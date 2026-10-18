@@ -1,6 +1,6 @@
 import type { Application } from '#core/Application';
-import { SceneAvailability } from '#core/scene/SceneAvailability';
-import { SceneState } from '#core/scene/SceneState';
+import { SceneAvailability, sceneAvailabilityAllows } from '#core/scene/SceneAvailability';
+import { type SceneState } from '#core/scene/SceneState';
 import type { Destroyable } from '#core/types';
 import type { ActionMap, ActionRecord, AnyActionMap } from '#input/actions/ActionMap';
 import type { InputScope } from '#input/actions/InputScope';
@@ -21,20 +21,6 @@ export interface SceneActionMapOptions {
   /** Visible scene states in which this map may sample. Default: `'active'`. */
   readonly when?: SceneAvailability;
 }
-
-const gatedStates = new Set<SceneState>([SceneState.Preparing, SceneState.Ready, SceneState.Suspended, SceneState.Destroying, SceneState.Destroyed]);
-
-const whenPolicyAllows = (when: SceneAvailability, state: SceneState, paused: boolean): boolean => {
-  if (gatedStates.has(state)) {
-    return false;
-  }
-
-  if (when === SceneAvailability.Always) {
-    return true;
-  }
-
-  return when === SceneAvailability.Active ? !paused : paused;
-};
 
 type BindingKind = 'onStart' | 'onActive' | 'onStop' | 'onTrigger';
 
@@ -312,7 +298,7 @@ export class SceneInputs implements Destroyable {
    * apart, so neither inlines this check itself.
    */
   private _allowedNow(when: SceneAvailability): boolean {
-    return !this._suspended && !this._app.scenes._transitionGateOpen && whenPolicyAllows(when, this._getState(), this._getPaused());
+    return !this._suspended && !this._app.scenes._transitionGateOpen && sceneAvailabilityAllows(when, this._getState(), this._getPaused());
   }
 
   /**
@@ -350,7 +336,11 @@ export class SceneInputs implements Destroyable {
    * @param options - Binding options, including the `when` policy.
    * @returns The binding, so it can be polled or unbound.
    */
-  public onStart(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: SceneInputBindingOptions): InputBinding {
+  public onStart(
+    channel: InputChannel | readonly InputChannel[],
+    callback?: (value: number) => void,
+    options?: SceneInputBindingOptions,
+  ): InputBinding {
     return this._bind('onStart', channel, callback, options);
   }
 
@@ -379,7 +369,11 @@ export class SceneInputs implements Destroyable {
    * if (right.active) this.x += speed * delta;
    * ```
    */
-  public onActive(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: SceneInputBindingOptions): InputBinding {
+  public onActive(
+    channel: InputChannel | readonly InputChannel[],
+    callback?: (value: number) => void,
+    options?: SceneInputBindingOptions,
+  ): InputBinding {
     return this._bind('onActive', channel, callback, options);
   }
 
@@ -392,7 +386,11 @@ export class SceneInputs implements Destroyable {
    * @param options - Binding options, including the `when` policy.
    * @returns The binding, so it can be polled or unbound.
    */
-  public onStop(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: SceneInputBindingOptions): InputBinding {
+  public onStop(
+    channel: InputChannel | readonly InputChannel[],
+    callback?: (value: number) => void,
+    options?: SceneInputBindingOptions,
+  ): InputBinding {
     return this._bind('onStop', channel, callback, options);
   }
 
@@ -408,7 +406,11 @@ export class SceneInputs implements Destroyable {
    * @param options - Binding options, including the `when` policy.
    * @returns The binding, so it can be polled or unbound.
    */
-  public onTrigger(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: SceneInputBindingOptions): InputBinding {
+  public onTrigger(
+    channel: InputChannel | readonly InputChannel[],
+    callback?: (value: number) => void,
+    options?: SceneInputBindingOptions,
+  ): InputBinding {
     return this._bind('onTrigger', channel, callback, options);
   }
 
@@ -460,6 +462,29 @@ export class SceneInputs implements Destroyable {
     }
 
     this._base.resync(this, sample, masked);
+  }
+
+  /**
+   * Drop what every map the scene's pause state now excludes sampled for a
+   * fixed step that has not started. Called when the scene pauses or resumes:
+   * a pause and resume between two input frames would otherwise go unnoticed
+   * by the maps, which only check their availability when they are sampled,
+   * and a press from before the pause would reach the first step after it.
+   */
+  public _dropUnavailableTickInput(): void {
+    for (const map of this._base.maps) {
+      if (!map._isAvailable()) {
+        map._dropTickInput();
+      }
+    }
+
+    for (const level of this._scopeLevels.values()) {
+      for (const map of level.maps) {
+        if (!map._isAvailable()) {
+          map._dropTickInput();
+        }
+      }
+    }
   }
 
   /** Unbind every tracked binding. Called automatically when the owning scene ends permanently. */

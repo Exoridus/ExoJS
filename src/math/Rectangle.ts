@@ -230,7 +230,7 @@ export class Rectangle implements ShapeLike, ReadonlyRectangle {
 
   public getNormals(): Vector[] {
     if (this._normalsDirty || this._normals === null) {
-      this._updateNormals(this._normals || (this._normals = [new Vector(), new Vector(), new Vector(), new Vector()]));
+      this._updateNormals((this._normals ||= [new Vector(), new Vector(), new Vector(), new Vector()]));
 
       this._normalsDirty = false;
     }
@@ -244,7 +244,10 @@ export class Rectangle implements ShapeLike, ReadonlyRectangle {
     const projection3 = axis.dot(this.right, this.bottom);
     const projection4 = axis.dot(this.left, this.bottom);
 
-    return result.set(Math.min(projection1, projection2, projection3, projection4), Math.max(projection1, projection2, projection3, projection4));
+    return result.set(
+      Math.min(projection1, projection2, projection3, projection4),
+      Math.max(projection1, projection2, projection3, projection4),
+    );
   }
 
   /**
@@ -301,7 +304,9 @@ export class Rectangle implements ShapeLike, ReadonlyRectangle {
   public intersectsWith(target: Collidable): boolean {
     switch (target.collisionType) {
       case CollisionType.SceneNode:
-        return (target as SceneNode).isAlignedBox ? intersectionRectRect(this, (target as SceneNode).getBounds()) : intersectionSat(this, target);
+        return (target as SceneNode).isAlignedBox
+          ? intersectionRectRect(this, (target as SceneNode).getBounds())
+          : intersectionSat(this, target);
       case CollisionType.Rectangle:
         return intersectionRectRect(this, target as Rectangle);
       case CollisionType.Polygon:
@@ -322,7 +327,9 @@ export class Rectangle implements ShapeLike, ReadonlyRectangle {
   public collidesWith(target: Collidable): CollisionResponse | null {
     switch (target.collisionType) {
       case CollisionType.SceneNode:
-        return (target as SceneNode).isAlignedBox ? getCollisionRectangleRectangle(this, (target as SceneNode).getBounds()) : getCollisionSat(this, target);
+        return (target as SceneNode).isAlignedBox
+          ? getCollisionRectangleRectangle(this, (target as SceneNode).getBounds())
+          : getCollisionSat(this, target);
       case CollisionType.Rectangle:
         return getCollisionRectangleRectangle(this, target as Rectangle);
       case CollisionType.Polygon:

@@ -46,19 +46,19 @@ describe('GranularEffect', () => {
 
     it('uses default pitchMin of 1.0', () => {
       const filter = new GranularEffect();
-      expect(filter.pitchMin).toBe(1.0);
+      expect(filter.pitchMin).toBe(1);
       filter.destroy();
     });
 
     it('uses default pitchMax of 1.0', () => {
       const filter = new GranularEffect();
-      expect(filter.pitchMax).toBe(1.0);
+      expect(filter.pitchMax).toBe(1);
       filter.destroy();
     });
 
     it('uses default wet of 1.0', () => {
       const filter = new GranularEffect();
-      expect(filter.wet).toBe(1.0);
+      expect(filter.wet).toBe(1);
       filter.destroy();
     });
 
@@ -90,8 +90,13 @@ describe('GranularEffect', () => {
     it('after await filter.ready: workletNode has 1 input', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (
+        c: AudioContext,
+        name: string,
+        options: AudioWorkletNodeOptions,
+      ) {
         capturedOptions = options;
+
         return new OrigAWN(c, name, options);
       });
 
@@ -131,8 +136,13 @@ describe('GranularEffect', () => {
     it('processorOptions.bufferSeconds is forwarded to AudioWorkletNode', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (
+        c: AudioContext,
+        name: string,
+        options: AudioWorkletNodeOptions,
+      ) {
         capturedOptions = options;
+
         return new OrigAWN(c, name, options);
       });
 
@@ -145,8 +155,13 @@ describe('GranularEffect', () => {
     it('default bufferSeconds of 2 is forwarded', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (
+        c: AudioContext,
+        name: string,
+        options: AudioWorkletNodeOptions,
+      ) {
         capturedOptions = options;
+
         return new OrigAWN(c, name, options);
       });
 
@@ -159,8 +174,13 @@ describe('GranularEffect', () => {
     it('normalizeGain defaults to false and is forwarded', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (
+        c: AudioContext,
+        name: string,
+        options: AudioWorkletNodeOptions,
+      ) {
         capturedOptions = options;
+
         return new OrigAWN(c, name, options);
       });
 
@@ -173,8 +193,13 @@ describe('GranularEffect', () => {
     it('normalizeGain=true is forwarded to AudioWorkletNode', async () => {
       let capturedOptions: AudioWorkletNodeOptions | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
-      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, options: AudioWorkletNodeOptions) {
+      (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (
+        c: AudioContext,
+        name: string,
+        options: AudioWorkletNodeOptions,
+      ) {
         capturedOptions = options;
+
         return new OrigAWN(c, name, options);
       });
 
@@ -308,9 +333,9 @@ describe('GranularEffect', () => {
       const node = filter['_workletNode']!;
       const param = node.parameters.get('pitchMax') as unknown as { setTargetAtTime: MockInstance };
       param.setTargetAtTime.mockClear();
-      filter.pitchMax = 2.0;
-      expect(filter.pitchMax).toBe(2.0);
-      expect(param.setTargetAtTime).toHaveBeenCalledWith(2.0, expect.anything(), expect.anything());
+      filter.pitchMax = 2;
+      expect(filter.pitchMax).toBe(2);
+      expect(param.setTargetAtTime).toHaveBeenCalledWith(2, expect.anything(), expect.anything());
       filter.destroy();
     });
 

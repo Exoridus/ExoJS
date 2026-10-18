@@ -63,8 +63,11 @@ describe('resolveRevision', () => {
   afterEach(() => {
     // Restore any mutated env vars.
     for (const key of Object.keys(process.env)) {
-      if (!(key in originalEnv)) delete process.env[key];
+      if (!(key in originalEnv)) {
+        delete process.env[key];
+      }
     }
+
     for (const key of Object.keys(originalEnv)) {
       process.env[key] = originalEnv[key];
     }
@@ -109,6 +112,7 @@ describe('resolveRevision', () => {
         if (cmd === 'git' && args.join(' ') === 'rev-parse HEAD') {
           return ok('a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2');
         }
+
         return fail('unexpected command');
       },
     };
@@ -136,8 +140,11 @@ describe('isTreeDirty', () => {
 
   afterEach(() => {
     for (const key of Object.keys(process.env)) {
-      if (!(key in originalEnv)) delete process.env[key];
+      if (!(key in originalEnv)) {
+        delete process.env[key];
+      }
     }
+
     for (const key of Object.keys(originalEnv)) {
       process.env[key] = originalEnv[key];
     }
@@ -152,8 +159,14 @@ describe('isTreeDirty', () => {
 
     const runner: MiniRunner = {
       exec: (cmd, args) => {
-        if (cmd === 'git' && args.join(' ') === 'rev-parse HEAD') return ok('a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2');
-        if (cmd === 'git' && args.join(' ') === 'diff-index --quiet HEAD --') return ok();
+        if (cmd === 'git' && args.join(' ') === 'rev-parse HEAD') {
+          return ok('a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2');
+        }
+
+        if (cmd === 'git' && args.join(' ') === 'diff-index --quiet HEAD --') {
+          return ok();
+        }
+
         return fail('unexpected');
       },
     };
@@ -172,9 +185,14 @@ describe('isTreeDirty', () => {
       exec: (cmd, args) => {
         if (cmd === 'git' && args.join(' ') === 'rev-parse HEAD') {
           revCalled = true;
+
           return ok('a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2');
         }
-        if (cmd === 'git' && args.join(' ') === 'diff-index --quiet HEAD --') return fail('dirty');
+
+        if (cmd === 'git' && args.join(' ') === 'diff-index --quiet HEAD --') {
+          return fail('dirty');
+        }
+
         return fail('unexpected');
       },
     };
@@ -203,8 +221,11 @@ describe('resolveShortRevision', () => {
 
   afterEach(() => {
     for (const key of Object.keys(process.env)) {
-      if (!(key in originalEnv)) delete process.env[key];
+      if (!(key in originalEnv)) {
+        delete process.env[key];
+      }
     }
+
     for (const key of Object.keys(originalEnv)) {
       process.env[key] = originalEnv[key];
     }
@@ -219,8 +240,14 @@ describe('resolveShortRevision', () => {
 
     const runner: MiniRunner = {
       exec: (cmd, args) => {
-        if (cmd === 'git' && args.join(' ') === 'rev-parse HEAD') return ok('abcdef1234567890abcdef1234567890abcdef12');
-        if (cmd === 'git' && args.join(' ') === 'diff-index --quiet HEAD --') return ok();
+        if (cmd === 'git' && args.join(' ') === 'rev-parse HEAD') {
+          return ok('abcdef1234567890abcdef1234567890abcdef12');
+        }
+
+        if (cmd === 'git' && args.join(' ') === 'diff-index --quiet HEAD --') {
+          return ok();
+        }
+
         return fail('unexpected');
       },
     };
@@ -236,8 +263,14 @@ describe('resolveShortRevision', () => {
 
     const runner: MiniRunner = {
       exec: (cmd, args) => {
-        if (cmd === 'git' && args.join(' ') === 'rev-parse HEAD') return ok('abcdef1234567890');
-        if (cmd === 'git' && args.join(' ') === 'diff-index --quiet HEAD --') return fail('dirty');
+        if (cmd === 'git' && args.join(' ') === 'rev-parse HEAD') {
+          return ok('abcdef1234567890');
+        }
+
+        if (cmd === 'git' && args.join(' ') === 'diff-index --quiet HEAD --') {
+          return fail('dirty');
+        }
+
         return fail('unexpected');
       },
     };

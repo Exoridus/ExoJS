@@ -41,7 +41,8 @@ interface AllocCommands {
 
 const sink = commands as unknown as AllocCommands;
 
-const sumSelfSize = (node: SamplingProfileNode): number => node.selfSize + node.children.reduce((total, child) => total + sumSelfSize(child), 0);
+const sumSelfSize = (node: SamplingProfileNode): number =>
+  node.selfSize + node.children.reduce((total, child) => total + sumSelfSize(child), 0);
 
 interface CallsiteRow {
   readonly site: string;
@@ -129,7 +130,9 @@ test(`webgpu allocation cell — ${__EXOJS_ALLOC_ID__}`, async () => {
     const scene: WebGpuAllocScene = archetype!.build(harness);
     const flags = globalThis as unknown as Record<string, unknown>;
 
-    for (let i = 0; i < warmup; i++) renderOnce(harness, scene.root, scene.beforeFrame);
+    for (let i = 0; i < warmup; i++) {
+      renderOnce(harness, scene.root, scene.beforeFrame);
+    }
 
     const blockSize = 50;
     const a: number[] = [];
@@ -141,11 +144,15 @@ test(`webgpu allocation cell — ${__EXOJS_ALLOC_ID__}`, async () => {
       flags['__EXOJS_WEBGPU_SPIKE__'] = variant;
 
       // Re-warm a few frames after the switch so the block measures the variant, not the switch.
-      for (let f = 0; f < 10; f++) renderOnce(harness, scene.root, scene.beforeFrame);
+      for (let f = 0; f < 10; f++) {
+        renderOnce(harness, scene.root, scene.beforeFrame);
+      }
 
       const started = performance.now();
 
-      for (let f = 0; f < blockSize; f++) renderOnce(harness, scene.root, scene.beforeFrame);
+      for (let f = 0; f < blockSize; f++) {
+        renderOnce(harness, scene.root, scene.beforeFrame);
+      }
 
       (variant === 0 ? a : b).push(((performance.now() - started) * 1000) / blockSize);
     }
@@ -159,7 +166,15 @@ test(`webgpu allocation cell — ${__EXOJS_ALLOC_ID__}`, async () => {
       return Number(sorted[Math.floor(sorted.length / 2)]!.toFixed(1));
     };
 
-    await sink.emitAllocationRecord({ id: __EXOJS_ALLOC_ID__, mode: 'cpu-ab', blockSize, variant0Us: median(a), variant1Us: median(b), a, b });
+    await sink.emitAllocationRecord({
+      id: __EXOJS_ALLOC_ID__,
+      mode: 'cpu-ab',
+      blockSize,
+      variant0Us: median(a),
+      variant1Us: median(b),
+      a,
+      b,
+    });
 
     return;
   }
@@ -167,7 +182,9 @@ test(`webgpu allocation cell — ${__EXOJS_ALLOC_ID__}`, async () => {
   if (__EXOJS_ALLOC_MODE__ === 'cpu') {
     const scene: WebGpuAllocScene = archetype!.build(harness);
 
-    for (let i = 0; i < warmup; i++) renderOnce(harness, scene.root, scene.beforeFrame);
+    for (let i = 0; i < warmup; i++) {
+      renderOnce(harness, scene.root, scene.beforeFrame);
+    }
 
     // `performance.now()` is clamped to ~100 us in a browser, so a per-frame
     // reading quantises a 300 us frame to 0 or 100 and a percentile over those
@@ -180,7 +197,9 @@ test(`webgpu allocation cell — ${__EXOJS_ALLOC_ID__}`, async () => {
       const count = Math.min(blockSize, frames - i);
       const started = performance.now();
 
-      for (let f = 0; f < count; f++) renderOnce(harness, scene.root, scene.beforeFrame);
+      for (let f = 0; f < count; f++) {
+        renderOnce(harness, scene.root, scene.beforeFrame);
+      }
 
       blocks.push(((performance.now() - started) * 1000) / count);
     }
@@ -208,7 +227,9 @@ test(`webgpu allocation cell — ${__EXOJS_ALLOC_ID__}`, async () => {
   if (wantStructural) {
     const scene: WebGpuAllocScene = archetype!.build(harness);
 
-    for (let i = 0; i < warmup; i++) renderOnce(harness, scene.root, scene.beforeFrame);
+    for (let i = 0; i < warmup; i++) {
+      renderOnce(harness, scene.root, scene.beforeFrame);
+    }
 
     harness.resetCounters();
     renderOnce(harness, scene.root, scene.beforeFrame);
@@ -244,11 +265,15 @@ test(`webgpu allocation cell — ${__EXOJS_ALLOC_ID__}`, async () => {
   for (let repeat = 0; repeat < Math.max(1, __EXOJS_ALLOC_REPEATS__); repeat++) {
     const scene: WebGpuAllocScene = archetype!.build(harness);
 
-    for (let i = 0; i < warmup; i++) renderOnce(harness, scene.root, scene.beforeFrame);
+    for (let i = 0; i < warmup; i++) {
+      renderOnce(harness, scene.root, scene.beforeFrame);
+    }
 
     await sink.startHeapSampling(512);
 
-    for (let i = 0; i < frames; i++) renderOnce(harness, scene.root, scene.beforeFrame);
+    for (let i = 0; i < frames; i++) {
+      renderOnce(harness, scene.root, scene.beforeFrame);
+    }
 
     const head = await sink.stopHeapSampling();
 

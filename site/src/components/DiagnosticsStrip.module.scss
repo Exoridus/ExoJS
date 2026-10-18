@@ -95,7 +95,7 @@
   outline: none;
 }
 
-@media (max-width: 1119px) {
+@media (width <= 1119px) {
   .root[data-has-diagnostics='true'] {
     width: 100%;
     margin: 0 0 0.62rem;

@@ -29,11 +29,17 @@ const API_DIR = join(process.cwd(), 'site', 'src', 'content', 'api');
 
 const walkMdx = (dir: string): string[] => {
   const out: string[] = [];
+
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
-    if (statSync(full).isDirectory()) out.push(...walkMdx(full));
-    else if (full.endsWith('.mdx') || full.endsWith('.md')) out.push(full);
+
+    if (statSync(full).isDirectory()) {
+      out.push(...walkMdx(full));
+    } else if (full.endsWith('.mdx') || full.endsWith('.md')) {
+      out.push(full);
+    }
   }
+
   return out;
 };
 
@@ -42,14 +48,20 @@ const readFrontmatter = (file: string): { title: string; description: string } =
   const raw = readFileSync(file, 'utf8');
   const match = /^---\n([\s\S]*?)\n---/.exec(raw);
   const block = match?.[1] ?? '';
+
   const scalar = (key: string): string => {
     const line = new RegExp(`^${key}:\\s*(.+)$`, 'm').exec(block);
-    if (!line) return '';
+
+    if (!line) {
+      return '';
+    }
+
     return line[1]
       .trim()
       .replace(/^['"]|['"]$/g, '')
       .trim();
   };
+
   return { title: scalar('title'), description: scalar('description') };
 };
 
@@ -83,6 +95,7 @@ describe('guide structure ↔ content reconciliation', () => {
   it('gives every guide file a non-empty title and description', () => {
     const bad = guideFiles.filter(file => {
       const fm = readFrontmatter(file);
+
       return !fm.title || !fm.description;
     });
     expect(bad).toEqual([]);
@@ -118,7 +131,9 @@ describe('guide metadata', () => {
   });
 
   it('resolves every playground example to the catalog', () => {
-    const broken = GUIDE_CHAPTERS.flatMap(chapter => chapter.examples.filter(ref => !exampleExists(ref)).map(ref => `${chapter.path} → ${ref}`));
+    const broken = GUIDE_CHAPTERS.flatMap(chapter =>
+      chapter.examples.filter(ref => !exampleExists(ref)).map(ref => `${chapter.path} → ${ref}`),
+    );
     expect(broken).toEqual([]);
   });
 
@@ -151,18 +166,21 @@ describe('previous / next navigation', () => {
     const visited = new Set<string>();
     let cursor: string | null = GUIDE_CHAPTERS[0].path;
     let steps = 0;
+
     while (cursor && steps <= GUIDE_CHAPTERS.length) {
       expect(visited.has(cursor), `cycle at ${cursor}`).toBe(false);
       visited.add(cursor);
       cursor = getAdjacentChapters(cursor).next?.path ?? null;
       steps++;
     }
+
     expect(visited.size).toBe(GUIDE_CHAPTERS.length);
   });
 
   it('keeps previous and next consistent with each other', () => {
     for (const chapter of GUIDE_CHAPTERS) {
       const { next } = getAdjacentChapters(chapter.path);
+
       if (next) {
         expect(getAdjacentChapters(next.path).previous?.path).toBe(chapter.path);
       }

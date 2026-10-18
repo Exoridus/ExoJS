@@ -33,7 +33,9 @@ class RandomPitchPoolScene extends Scene {
     this.label = new Text('Hold Space to retrigger with a random pitch', { fillColor: Color.white, fontSize: 22, align: 'center' })
       .setAnchor(0.5, 0.5)
       .setPosition(width / 2, height * 0.3);
-    this.readout = new Text('', { fillColor: Color.white, fontSize: 18, align: 'center' }).setAnchor(0.5, 0.5).setPosition(width / 2, this.trackY + 80);
+    this.readout = new Text('', { fillColor: Color.white, fontSize: 18, align: 'center' })
+      .setAnchor(0.5, 0.5)
+      .setPosition(width / 2, this.trackY + 80);
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it. Holding Space becomes audible once
     // a pointer gesture has unlocked the AudioContext.
@@ -61,7 +63,9 @@ class RandomPitchPoolScene extends Scene {
     this.flash = Math.max(0, this.flash - delta * 4);
     // A Sound played before the AudioContext unlocks on the first gesture
     // is a no-op, so skip firing while audio is still locked.
-    if (!this.active || app.audio.locked) return;
+    if (!this.active || app.audio.locked) {
+      return;
+    }
     this.timer += delta;
     while (this.timer > FIRE_INTERVAL) {
       this.timer -= FIRE_INTERVAL;

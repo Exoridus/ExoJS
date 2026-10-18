@@ -26,7 +26,12 @@ export interface AssetDefinitions {
   texture: { resource: Texture; config: { source: string; mimeType?: string; textureOptions?: Partial<TextureOptions> } };
   sound: {
     resource: Sound;
-    config: { source: string; playbackOptions?: Partial<PlaybackOptions>; poolSize?: number; sprites?: Readonly<Record<string, AudioSpriteClip>> | string };
+    config: {
+      source: string;
+      playbackOptions?: Partial<PlaybackOptions>;
+      poolSize?: number;
+      sprites?: Readonly<Record<string, AudioSpriteClip>> | string;
+    };
   };
   music: {
     resource: AudioStream;

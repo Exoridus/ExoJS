@@ -188,6 +188,7 @@ export class Sprite extends Drawable {
     // nothing, and the sprite would surface at the texture's own size.
     if (this._textureFrame.width === 0) {
       this._pendingWidth = value;
+
       return;
     }
 
@@ -202,6 +203,7 @@ export class Sprite extends Drawable {
   public set height(value: number) {
     if (this._textureFrame.height === 0) {
       this._pendingHeight = value;
+
       return;
     }
 
@@ -365,8 +367,13 @@ export class Sprite extends Drawable {
 
       this.setTextureFrame(this._resetFrameScratch.set(0, 0, texture.width, texture.height), false);
 
-      if (width !== null) this.width = width;
-      if (height !== null) this.height = height;
+      if (width !== null) {
+        this.width = width;
+      }
+
+      if (height !== null) {
+        this.height = height;
+      }
     }
   }
 
@@ -400,11 +407,21 @@ export class Sprite extends Drawable {
     // setters hold what they cannot express yet, and a zero from this internal
     // path is the absence of a size, not a caller asking for one.
     if (resetSize) {
-      if (frame.width !== 0) this.width = frame.width;
-      if (frame.height !== 0) this.height = frame.height;
+      if (frame.width !== 0) {
+        this.width = frame.width;
+      }
+
+      if (frame.height !== 0) {
+        this.height = frame.height;
+      }
     } else {
-      if (width !== 0) this.width = width;
-      if (height !== 0) this.height = height;
+      if (width !== 0) {
+        this.width = width;
+      }
+
+      if (height !== 0) {
+        this.height = height;
+      }
     }
 
     // The local bounds changed size - re-derive the origin from the

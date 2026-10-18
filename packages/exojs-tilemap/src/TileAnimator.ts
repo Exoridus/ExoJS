@@ -91,14 +91,18 @@ export class TileAnimator {
     for (const cell of this._cells) {
       const t = this._elapsedMs % cell.totalMs;
       const frameIndex = frameIndexAt(cell.cumulative, t);
+
       if (frameIndex === cell.currentFrame) {
         continue;
       }
+
       cell.currentFrame = frameIndex;
       const frame = cell.frames[frameIndex];
+
       if (frame === undefined) {
         continue;
       }
+
       cell.layer.setTileAt(cell.tx, cell.ty, {
         tileset: cell.tileset,
         localTileId: frame.localTileId,
@@ -113,11 +117,14 @@ export class TileAnimator {
    */
   public reset(): void {
     this._elapsedMs = 0;
+
     for (const cell of this._cells) {
       const frame = cell.frames[0];
+
       if (frame === undefined) {
         continue;
       }
+
       cell.currentFrame = 0;
       cell.layer.setTileAt(cell.tx, cell.ty, {
         tileset: cell.tileset,
@@ -151,15 +158,18 @@ export class TileAnimator {
       if (layer.width === undefined || layer.height === undefined) {
         continue; // unbounded layers are not scanned in v1 — see class doc comment.
       }
+
       for (let ty = 0; ty < layer.height; ty++) {
         for (let tx = 0; tx < layer.width; tx++) {
           const tile = layer.getTileAt(tx, ty);
+
           if (!tile) {
             continue;
           }
 
           const def = tile.tileset.getTileDefinition(tile.localTileId);
           const frames = def?.animation;
+
           if (!frames || frames.length < 2) {
             continue;
           }
@@ -172,10 +182,12 @@ export class TileAnimator {
 
           const cumulative: number[] = [];
           let total = 0;
+
           for (const frame of frames) {
             total += Math.max(0, frame.duration);
             cumulative.push(total);
           }
+
           if (total <= 0) {
             continue;
           }
@@ -206,9 +218,11 @@ export class TileAnimator {
 const frameIndexAt = (cumulative: readonly number[], t: number): number => {
   for (let i = 0; i < cumulative.length; i++) {
     const end = cumulative[i];
+
     if (end !== undefined && t < end) {
       return i;
     }
   }
+
   return cumulative.length - 1;
 };

@@ -102,8 +102,12 @@ export class HTMLText extends Container {
   public get html(): string {
     return this._html;
   }
+
   public set html(v: string) {
-    if (this._html === v) return;
+    if (this._html === v) {
+      return;
+    }
+
     this._html = v;
     this._schedule();
   }
@@ -111,8 +115,12 @@ export class HTMLText extends Container {
   public get css(): string {
     return this._css;
   }
+
   public set css(v: string) {
-    if (this._css === v) return;
+    if (this._css === v) {
+      return;
+    }
+
     this._css = v;
     this._schedule();
   }
@@ -120,6 +128,7 @@ export class HTMLText extends Container {
   public override get width(): number {
     return this._width;
   }
+
   public override set width(v: number) {
     this.resize(v, this._height);
   }
@@ -127,6 +136,7 @@ export class HTMLText extends Container {
   public override get height(): number {
     return this._height;
   }
+
   public override set height(v: number) {
     this.resize(this._width, v);
   }
@@ -134,8 +144,12 @@ export class HTMLText extends Container {
   public get resolution(): number {
     return this._resolution;
   }
+
   public set resolution(v: number) {
-    if (this._resolution === v) return;
+    if (this._resolution === v) {
+      return;
+    }
+
     this._resolution = v;
     this._resizeCanvas();
     this._schedule();
@@ -174,16 +188,19 @@ export class HTMLText extends Container {
     }
 
     this._schedule();
+
     return this;
   }
 
   /** Remove a previously registered font and trigger a re-render. */
   public removeFont(family: string): this {
     const idx = this._fonts.findIndex(f => f.family === family);
+
     if (idx !== -1) {
       this._fonts.splice(idx, 1);
       this._schedule();
     }
+
     return this;
   }
 
@@ -195,12 +212,16 @@ export class HTMLText extends Container {
    * both at once - it triggers a single re-render instead of two.
    */
   public resize(width: number, height: number): this {
-    if (this._width === width && this._height === height) return this;
+    if (this._width === width && this._height === height) {
+      return this;
+    }
+
     this._width = width;
     this._height = height;
     this._resizeCanvas();
     this._rebuildMesh();
     this._schedule();
+
     return this;
   }
 
@@ -222,7 +243,9 @@ export class HTMLText extends Container {
   }
 
   private async _render(version: number): Promise<void> {
-    if (typeof Blob === 'undefined' || typeof Image === 'undefined') return; // SSR / Node.js
+    if (typeof Blob === 'undefined' || typeof Image === 'undefined') {
+      return;
+    } // SSR / Node.js
 
     // Blob URL avoids the size and encoding overhead of a data URI,
     // which matters when large base-64 fonts are inlined.
@@ -230,6 +253,7 @@ export class HTMLText extends Container {
     const url = URL.createObjectURL(blob);
 
     const img = new Image();
+
     try {
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve();
@@ -240,7 +264,9 @@ export class HTMLText extends Container {
       URL.revokeObjectURL(url);
     }
 
-    if (this._destroyed || version !== this._renderVersion) return;
+    if (this._destroyed || version !== this._renderVersion) {
+      return;
+    }
 
     const cw = Math.ceil(this._width * this._resolution);
     const ch = Math.ceil(this._height * this._resolution);
@@ -256,6 +282,7 @@ export class HTMLText extends Container {
     const fontFaceRules = this._fonts
       .map(({ family, dataUri }) => {
         const escaped = family.replaceAll('\\', '\\\\').replaceAll("'", "\\'");
+
         return `@font-face{font-family:'${escaped}';src:url('${dataUri}');}`;
       })
       .join('');
@@ -278,6 +305,7 @@ export class HTMLText extends Container {
   private _buildMesh(): Mesh {
     const w = this._width;
     const h = this._height;
+
     return new Mesh({
       vertices: new Float32Array([0, 0, w, 0, w, h, 0, h]),
       uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
@@ -306,10 +334,12 @@ export class HTMLText extends Container {
   private static _toBase64(buffer: ArrayBuffer): string {
     const bytes = new Uint8Array(buffer);
     let binary = '';
+
     for (let i = 0; i < bytes.length; i++) {
       // In-bounds: i < bytes.length.
       binary += String.fromCharCode(bytes[i]!);
     }
+
     return btoa(binary);
   }
 
@@ -320,7 +350,11 @@ export class HTMLText extends Container {
     if (typeof OffscreenCanvas !== 'undefined') {
       const canvas = new OffscreenCanvas(width, height);
       const ctx = canvas.getContext('2d')!;
-      if (!ctx) throw new Error('HTMLText: could not obtain 2D context.');
+
+      if (!ctx) {
+        throw new Error('HTMLText: could not obtain 2D context.');
+      }
+
       return [canvas, ctx];
     }
 
@@ -328,7 +362,11 @@ export class HTMLText extends Container {
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('HTMLText: could not obtain 2D context.');
+
+    if (!ctx) {
+      throw new Error('HTMLText: could not obtain 2D context.');
+    }
+
     return [canvas, ctx];
   }
 }

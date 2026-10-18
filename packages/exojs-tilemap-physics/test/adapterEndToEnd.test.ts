@@ -14,12 +14,13 @@ import { TileColliderStreamer } from '../src/TileColliderStreamer';
 
 const TILE = 16;
 
-const fakeTexture = (): Texture => ({ destroyed: false, destroy: () => {}, height: 64, label: 'test', uid: 0, width: 64 }) as unknown as Texture;
+const fakeTexture = (): Texture =>
+  ({ destroyed: false, destroy: () => {}, height: 64, label: 'test', uid: 0, width: 64 }) as unknown as Texture;
 
 const world = (): PhysicsWorld => new PhysicsWorld({ gravity: { x: 0, y: 0 } });
 
 /** A one-tile Tiled map whose single tile carries `objects` as its collision group. */
-const tiledLayer = (objects: readonly Record<string, unknown>[]): TileLayer => {
+const tiledLayer = (objects: ReadonlyArray<Record<string, unknown>>): TileLayer => {
   const tileset = new TiledTileset(
     {
       name: 'atlas',

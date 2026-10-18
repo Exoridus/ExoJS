@@ -14,13 +14,19 @@ import { makeTiledContext } from './type-context';
 
 const PKG_DIR = basename(process.cwd()) === 'exojs-tiled' ? process.cwd() : join(process.cwd(), 'packages', 'exojs-tiled');
 
-const rawObject = (overrides: Record<string, unknown>): Record<string, unknown> => {
-  return { id: 1, name: 'thing', x: 0, y: 0, width: 16, height: 16, rotation: 0, visible: true, ...overrides };
-};
+const rawObject = (overrides: Record<string, unknown>): Record<string, unknown> => ({
+  id: 1,
+  name: 'thing',
+  x: 0,
+  y: 0,
+  width: 16,
+  height: 16,
+  rotation: 0,
+  visible: true,
+  ...overrides,
+});
 
-const loadFixture = (name: string): unknown => {
-  return JSON.parse(readFileSync(join(PKG_DIR, 'test', 'fixtures', name), 'utf-8'));
-};
+const loadFixture = (name: string): unknown => JSON.parse(readFileSync(join(PKG_DIR, 'test', 'fixtures', name), 'utf-8'));
 
 const FIXTURES: Record<string, unknown> = {
   'orthogonal-rich.tmj': loadFixture('orthogonal-rich.tmj'),
@@ -32,45 +38,43 @@ const TEXTURE_SIZES: Record<string, { w: number; h: number }> = {
   'tiles-b.png': { w: 80, h: 20 },
 };
 
-const tiledMapFrom = async (document: unknown): Promise<TileMap> => {
-  const { loadSource } = makeTiledContext({ ...FIXTURES, 'inline.tmj': document }, TEXTURE_SIZES);
+const tiledMapFrom = async (document: unknown, extra: Record<string, unknown> = {}): Promise<TileMap> => {
+  const { loadSource } = makeTiledContext({ ...FIXTURES, ...extra, 'inline.tmj': document }, TEXTURE_SIZES);
 
   return (await loadSource('inline.tmj')).toTileMap();
 };
 
-const documentWith = (object: Record<string, unknown>): Record<string, unknown> => {
-  return {
-    type: 'map',
-    version: '1.10',
-    tiledversion: '1.10.2',
-    orientation: 'orthogonal',
-    renderorder: 'right-down',
-    infinite: false,
-    width: 2,
-    height: 2,
-    tilewidth: 16,
-    tileheight: 16,
-    nextlayerid: 2,
-    nextobjectid: 2,
-    tilesets: [],
-    layers: [
-      {
-        id: 1,
-        name: 'Entities',
-        type: 'objectgroup',
-        visible: true,
-        opacity: 1,
-        x: 0,
-        y: 0,
-        draworder: 'index',
-        objects: [object],
-      },
-    ],
-  };
-};
+const documentWith = (object: Record<string, unknown>): Record<string, unknown> => ({
+  type: 'map',
+  version: '1.10',
+  tiledversion: '1.10.2',
+  orientation: 'orthogonal',
+  renderorder: 'right-down',
+  infinite: false,
+  width: 2,
+  height: 2,
+  tilewidth: 16,
+  tileheight: 16,
+  nextlayerid: 2,
+  nextobjectid: 2,
+  tilesets: [],
+  layers: [
+    {
+      id: 1,
+      name: 'Entities',
+      type: 'objectgroup',
+      visible: true,
+      opacity: 1,
+      x: 0,
+      y: 0,
+      draworder: 'index',
+      objects: [object],
+    },
+  ],
+});
 
-const singleObjectMap = async (objectClass: string, name: string): Promise<TileMap> => {
-  return tiledMapFrom(
+const singleObjectMap = async (objectClass: string, name: string): Promise<TileMap> =>
+  tiledMapFrom(
     documentWith({
       id: 1,
       name,
@@ -83,7 +87,6 @@ const singleObjectMap = async (objectClass: string, name: string): Promise<TileM
       visible: true,
     }),
   );
-};
 
 const richMap = async (): Promise<TileMap> => {
   const { loadSource } = makeTiledContext(FIXTURES, TEXTURE_SIZES);
@@ -254,15 +257,16 @@ describe('Tiled objects as MapObjectDescriptors', () => {
         height: 16,
         rotation: 0,
         visible: true,
-        template: 'templates/chest.tx',
+        template: 'templates/chest.tj',
       }),
+      { 'templates/chest.tj': { type: 'template', object: { name: 'chest', type: 'Chest', width: 16, height: 16 } } },
     );
 
     const [descriptor] = [...mapObjectDescriptors(map)];
 
     // `template` has no place in the format-neutral model; the escape hatch is
     // what keeps it reachable.
-    expect((descriptor?.object.source as TiledObject).template).toBe('templates/chest.tx');
+    expect((descriptor?.object.source as TiledObject).template).toBe('templates/chest.tj');
   });
 
   it('dispatches several object kinds through one spawner', async () => {

@@ -1,0 +1,113 @@
+{
+  "title": "SequenceTickState",
+  "description": "What the current fixed step owns of a SequenceAction. See ButtonTickState for delivery.",
+  "symbol": "SequenceTickState",
+  "kind": "interface",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What the current fixed step owns of a SequenceAction. See ButtonTickState for delivery."
+      ],
+      "importLine": "import { SequenceTickState } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "step",
+          "signature": "step: number",
+          "signatureTokens": [
+            {
+              "text": "step",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Serial of the fixed step this view describes; 0 outside a fixed step."
+        },
+        {
+          "name": "triggerCount",
+          "signature": "triggerCount: number",
+          "signatureTokens": [
+            {
+              "text": "triggerCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Completions of the sequence delivered to this step."
+        },
+        {
+          "name": "triggered",
+          "signature": "triggered: boolean",
+          "signatureTokens": [
+            {
+              "text": "triggered",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true when at least one completion was delivered to this step."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/actions/TickLedger.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/TickLedger.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/actions/TickLedger.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/TickLedger.ts"
+}

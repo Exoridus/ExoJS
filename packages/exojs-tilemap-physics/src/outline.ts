@@ -41,7 +41,9 @@ const components = (cells: ReadonlySet<string>, coordinates: readonly number[]):
   for (let i = 0; i < coordinates.length; i += 2) {
     const startKey = key(coordinates[i]!, coordinates[i + 1]!);
 
-    if (!remaining.has(startKey)) continue;
+    if (!remaining.has(startKey)) {
+      continue;
+    }
 
     const component = new Set<string>();
     const stack = [coordinates[i]!, coordinates[i + 1]!];
@@ -58,7 +60,9 @@ const components = (cells: ReadonlySet<string>, coordinates: readonly number[]):
         const ny = y + STEP_Y[direction]!;
         const neighbour = key(nx, ny);
 
-        if (!remaining.has(neighbour)) continue;
+        if (!remaining.has(neighbour)) {
+          continue;
+        }
 
         remaining.delete(neighbour);
         component.add(neighbour);
@@ -96,10 +100,21 @@ const boundaryEdges = (component: ReadonlySet<string>): EdgeMap => {
     const x = Number(cell.slice(0, comma));
     const y = Number(cell.slice(comma + 1));
 
-    if (!component.has(key(x, y - 1))) add(x, y, 0);
-    if (!component.has(key(x + 1, y))) add(x + 1, y, 1);
-    if (!component.has(key(x, y + 1))) add(x + 1, y + 1, 2);
-    if (!component.has(key(x - 1, y))) add(x, y + 1, 3);
+    if (!component.has(key(x, y - 1))) {
+      add(x, y, 0);
+    }
+
+    if (!component.has(key(x + 1, y))) {
+      add(x + 1, y, 1);
+    }
+
+    if (!component.has(key(x, y + 1))) {
+      add(x + 1, y + 1, 2);
+    }
+
+    if (!component.has(key(x - 1, y))) {
+      add(x, y + 1, 3);
+    }
   }
 
   return edges;
@@ -183,7 +198,9 @@ export const traceCellOutlines = (coordinates: readonly number[]): PointLike[][]
 
     for (const [startVertex, startSlots] of edges) {
       for (let startDirection = 0; startDirection < 4; startDirection++) {
-        if (!startSlots[startDirection]) continue;
+        if (!startSlots[startDirection]) {
+          continue;
+        }
 
         const comma = startVertex.indexOf(',');
         const loop: number[] = [];
@@ -201,7 +218,9 @@ export const traceCellOutlines = (coordinates: readonly number[]): PointLike[][]
 
           const nextSlots = edges.get(key(x, y));
 
-          if (nextSlots === undefined) break;
+          if (nextSlots === undefined) {
+            break;
+          }
 
           let next = -1;
 
@@ -214,7 +233,9 @@ export const traceCellOutlines = (coordinates: readonly number[]): PointLike[][]
             }
           }
 
-          if (next === -1) break;
+          if (next === -1) {
+            break;
+          }
 
           direction = next;
         }

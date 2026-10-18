@@ -17,7 +17,10 @@ const fixture = (count = 32) => {
   const executeBundles = vi.fn();
   const activePass = { pass: { executeBundles }, stencilEnabled: false, depthWrites: false } as unknown as WebGpuActiveRenderPass;
   const owner = { instanceBuffer: {} as GPUBuffer };
-  const payloads = Array.from({ length: count }, (_, byteOffset) => ({ bundle: owner, byteOffset }) as unknown as WebGpuRetainedBatchPayload);
+  const payloads = Array.from(
+    { length: count },
+    (_, byteOffset) => ({ bundle: owner, byteOffset }) as unknown as WebGpuRetainedBatchPayload,
+  );
   const args = {
     device,
     activePass,
@@ -48,23 +51,32 @@ const fixture = (count = 32) => {
       args.instanceCount,
       args.group2,
     );
+
   const replay = (id: number, budget = 32): boolean[] => {
     frame.id = id;
     frame.remainingBuilds = budget;
     cache.beginFrame(frame);
+
     return payloads.map(draw);
   };
+
   return { cache, frame, draw, replay, args, payloads, owner, encoder, executeBundles };
 };
 
 const observe = (f: ReturnType<typeof fixture>): void => {
-  for (let id = 1; id <= 30; id++) expect(f.replay(id).every(native => !native)).toBe(true);
+  for (let id = 1; id <= 30; id++) {
+    expect(f.replay(id).every(native => !native)).toBe(true);
+  }
 };
 
 describe('WebGpuNativeRetainedReplay', () => {
   it('requires 32 batches and 30 complete prior stable frames', () => {
     const small = fixture(31);
-    for (let id = 1; id <= 40; id++) expect(small.replay(id).some(Boolean)).toBe(false);
+
+    for (let id = 1; id <= 40; id++) {
+      expect(small.replay(id).some(Boolean)).toBe(false);
+    }
+
     const f = fixture();
     observe(f);
     expect(f.replay(31).every(Boolean)).toBe(true);
@@ -106,36 +118,49 @@ describe('WebGpuNativeRetainedReplay', () => {
     expect(first.draw(first.payloads[0])).toBe(true);
   });
 
-  it.each(['device', 'pipeline', 'group0', 'group1', 'group2', 'indexBuffer', 'indexFormat', 'indexCount', 'instanceCount', 'colorFormat'] as const)(
-    'resets the whole group when %s changes within a frame',
-    key => {
-      const f = fixture();
-      observe(f);
-      expect(f.replay(31).every(Boolean)).toBe(true);
-      const replacements = {
-        device: { createRenderBundleEncoder: vi.fn() },
-        pipeline: {},
-        group0: {},
-        group1: {},
-        group2: {},
-        indexBuffer: {},
-        indexFormat: 'uint32',
-        indexCount: 12,
-        instanceCount: 4,
-        colorFormat: 'bgra8unorm',
-      };
-      Object.assign(f.args, { [key]: replacements[key] });
-      expect(f.draw()).toBe(false);
-      expect(f.draw(f.payloads[1])).toBe(false);
-    },
-  );
+  it.each([
+    'device',
+    'pipeline',
+    'group0',
+    'group1',
+    'group2',
+    'indexBuffer',
+    'indexFormat',
+    'indexCount',
+    'instanceCount',
+    'colorFormat',
+  ] as const)('resets the whole group when %s changes within a frame', key => {
+    const f = fixture();
+    observe(f);
+    expect(f.replay(31).every(Boolean)).toBe(true);
+    const replacements = {
+      device: { createRenderBundleEncoder: vi.fn() },
+      pipeline: {},
+      group0: {},
+      group1: {},
+      group2: {},
+      indexBuffer: {},
+      indexFormat: 'uint32',
+      indexCount: 12,
+      instanceCount: 4,
+      colorFormat: 'bgra8unorm',
+    };
+    Object.assign(f.args, { [key]: replacements[key] });
+    expect(f.draw()).toBe(false);
+    expect(f.draw(f.payloads[1])).toBe(false);
+  });
 
   it.each(['buffer', 'offset'] as const)('resets when the payload %s changes', field => {
     const f = fixture();
     observe(f);
     expect(f.replay(31).every(Boolean)).toBe(true);
-    if (field === 'buffer') f.owner.instanceBuffer = {} as GPUBuffer;
-    else Object.assign(f.payloads[0]!, { byteOffset: 128 });
+
+    if (field === 'buffer') {
+      f.owner.instanceBuffer = {} as GPUBuffer;
+    } else {
+      Object.assign(f.payloads[0]!, { byteOffset: 128 });
+    }
+
     expect(f.draw()).toBe(false);
     expect(f.draw(f.payloads[1])).toBe(false);
   });
@@ -160,10 +185,12 @@ describe('WebGpuNativeRetainedReplay', () => {
     const f = fixture();
     observe(f);
     f.replay(31);
+
     for (const id of [32, 33]) {
       f.cache.beginFrame({ id, remainingBuilds: 32 });
       f.cache.skipPass();
     }
+
     expect(f.replay(34, 0).every(Boolean)).toBe(true);
     f.cache.skipPass();
     f.args.group1 = {} as GPUBindGroup;
@@ -173,11 +200,16 @@ describe('WebGpuNativeRetainedReplay', () => {
 
   it('does not count incompatible frames toward promotion', () => {
     const f = fixture();
-    for (let id = 1; id <= 29; id++) f.replay(id);
+
+    for (let id = 1; id <= 29; id++) {
+      f.replay(id);
+    }
+
     for (const id of [30, 31]) {
       f.cache.beginFrame({ id, remainingBuilds: 32 });
       f.cache.skipPass();
     }
+
     expect(f.replay(32).some(Boolean)).toBe(false);
     expect(f.replay(33).every(Boolean)).toBe(true);
   });
@@ -186,12 +218,20 @@ describe('WebGpuNativeRetainedReplay', () => {
     const f = fixture();
     observe(f);
     expect(f.replay(32).some(Boolean)).toBe(false);
-    for (let id = 33; id <= 62; id++) f.replay(id);
+
+    for (let id = 33; id <= 62; id++) {
+      f.replay(id);
+    }
+
     expect(f.draw()).toBe(true);
     f.cache.beginFrame({ id: 63, remainingBuilds: 32 });
     f.draw();
     expect(f.replay(64).some(Boolean)).toBe(false);
-    for (let id = 65; id <= 94; id++) f.replay(id);
+
+    for (let id = 65; id <= 94; id++) {
+      f.replay(id);
+    }
+
     expect(f.draw()).toBe(true);
     f.cache.invalidate();
     expect(f.draw()).toBe(false);
@@ -207,9 +247,17 @@ describe('WebGpuNativeRetainedReplay', () => {
 
   it('counts each batch once when a frame repeats only one batch', () => {
     const f = fixture();
-    for (let id = 1; id <= 29; id++) f.replay(id);
+
+    for (let id = 1; id <= 29; id++) {
+      f.replay(id);
+    }
+
     f.cache.beginFrame({ id: 30, remainingBuilds: 32 });
-    for (let repeat = 0; repeat < 32; repeat++) expect(f.draw()).toBe(false);
+
+    for (let repeat = 0; repeat < 32; repeat++) {
+      expect(f.draw()).toBe(false);
+    }
+
     expect(f.replay(31).some(Boolean)).toBe(false);
     expect(f.args.device.createRenderBundleEncoder).not.toHaveBeenCalled();
   });

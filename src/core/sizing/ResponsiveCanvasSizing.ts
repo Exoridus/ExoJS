@@ -29,7 +29,12 @@ export interface ResponsiveCanvasSizingOptions {
  * agree exactly at `hostAspect === minAspect`, so the view never jumps as a host
  * crosses the boundary.
  */
-const computeResponsiveView = (hostWidth: number, hostHeight: number, baseHeight: number, minAspect: number): { width: number; height: number } => {
+const computeResponsiveView = (
+  hostWidth: number,
+  hostHeight: number,
+  baseHeight: number,
+  minAspect: number,
+): { width: number; height: number } => {
   const hostAspect = hostWidth / hostHeight;
 
   if (hostAspect >= minAspect) {

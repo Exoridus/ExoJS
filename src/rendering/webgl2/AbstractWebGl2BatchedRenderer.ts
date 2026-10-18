@@ -149,7 +149,11 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
   }
 
   public abstract override render(drawable: Drawable): void;
-  protected abstract createVao(gl: WebGL2RenderingContext, indexBuffer: WebGl2RenderBuffer, vertexBuffer: WebGl2RenderBuffer): WebGl2VertexArrayObject;
+  protected abstract createVao(
+    gl: WebGL2RenderingContext,
+    indexBuffer: WebGl2RenderBuffer,
+    vertexBuffer: WebGl2RenderBuffer,
+  ): WebGl2VertexArrayObject;
   protected abstract updateView(view: View): void;
 
   protected createConnection(gl: WebGL2RenderingContext): RendererConnection {
@@ -219,7 +223,14 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
             if (attribute.integer) {
               gl.vertexAttribIPointer(attribute.location, attribute.size, attribute.type, attribute.stride, attribute.start);
             } else {
-              gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+              gl.vertexAttribPointer(
+                attribute.location,
+                attribute.size,
+                attribute.type,
+                attribute.normalized,
+                attribute.stride,
+                attribute.start,
+              );
             }
 
             gl.enableVertexAttribArray(attribute.location);

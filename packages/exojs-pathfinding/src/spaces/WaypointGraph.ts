@@ -90,7 +90,9 @@ export class WaypointGraph<Payload = unknown> implements NavigationSpace<Payload
     this.alive[node] = true;
     this.adjacency[node] = [];
 
-    if (!hasPosition) this.positionlessCount++;
+    if (!hasPosition) {
+      this.positionlessCount++;
+    }
 
     this.currentRevision++;
 
@@ -105,9 +107,13 @@ export class WaypointGraph<Payload = unknown> implements NavigationSpace<Payload
    * node.
    */
   public removeNode(node: number): void {
-    if (this.alive[node] !== true) return;
+    if (this.alive[node] !== true) {
+      return;
+    }
 
-    if (this.positioned[node] === false) this.positionlessCount--;
+    if (this.positioned[node] === false) {
+      this.positionlessCount--;
+    }
 
     this.alive[node] = false;
     this.adjacency[node] = [];
@@ -117,7 +123,9 @@ export class WaypointGraph<Payload = unknown> implements NavigationSpace<Payload
       const edges = this.adjacency[index]!;
 
       for (let edge = edges.length - 1; edge >= 0; edge--) {
-        if (edges[edge]!.to === node) edges.splice(edge, 1);
+        if (edges[edge]!.to === node) {
+          edges.splice(edge, 1);
+        }
       }
     }
 
@@ -128,18 +136,28 @@ export class WaypointGraph<Payload = unknown> implements NavigationSpace<Payload
   public addEdge(from: number, to: number, options: WaypointEdgeOptions<Payload> = {}): void {
     const edges = this.adjacency[from];
 
-    if (edges === undefined || this.alive[to] !== true) return;
+    if (edges === undefined || this.alive[to] !== true) {
+      return;
+    }
 
     const length = this.length(from, to);
     const cost = options.cost ?? (length > 0 ? length : 1);
     const edge: Edge<Payload> = { to, cost, kind: options.kind ?? 'walk', data: options.data ?? null };
     const existing = edges.findIndex(candidate => candidate.to === to);
 
-    if (existing !== -1) edges[existing] = edge;
-    else edges.push(edge);
+    if (existing !== -1) {
+      edges[existing] = edge;
+    } else {
+      edges.push(edge);
+    }
 
-    if (edges.length > this.largestDegree) this.largestDegree = edges.length;
-    if (length > 0 && cost / length < this.distanceScale) this.distanceScale = cost / length;
+    if (edges.length > this.largestDegree) {
+      this.largestDegree = edges.length;
+    }
+
+    if (length > 0 && cost / length < this.distanceScale) {
+      this.distanceScale = cost / length;
+    }
 
     this.currentRevision++;
   }
@@ -153,11 +171,15 @@ export class WaypointGraph<Payload = unknown> implements NavigationSpace<Payload
   public removeEdge(from: number, to: number): void {
     const edges = this.adjacency[from];
 
-    if (edges === undefined) return;
+    if (edges === undefined) {
+      return;
+    }
 
     const index = edges.findIndex(candidate => candidate.to === to);
 
-    if (index === -1) return;
+    if (index === -1) {
+      return;
+    }
 
     edges.splice(index, 1);
     this.currentRevision++;
@@ -166,7 +188,9 @@ export class WaypointGraph<Payload = unknown> implements NavigationSpace<Payload
   public neighbors(node: number, _agentSize: number, outNodes: Int32Array, outCosts: Float64Array): number {
     const edges = this.adjacency[node];
 
-    if (edges === undefined) return 0;
+    if (edges === undefined) {
+      return 0;
+    }
 
     for (let index = 0; index < edges.length; index++) {
       const edge = edges[index]!;
@@ -179,7 +203,9 @@ export class WaypointGraph<Payload = unknown> implements NavigationSpace<Payload
   }
 
   public heuristic(node: number, goal: number): number {
-    if (this.positionlessCount > 0) return 0;
+    if (this.positionlessCount > 0) {
+      return 0;
+    }
 
     return this.length(node, goal) * this.distanceScale;
   }
@@ -197,13 +223,17 @@ export class WaypointGraph<Payload = unknown> implements NavigationSpace<Payload
     let bestDistance = Infinity;
 
     for (let node = 0; node < this.alive.length; node++) {
-      if (this.alive[node] !== true || this.positioned[node] !== true) continue;
+      if (this.alive[node] !== true || this.positioned[node] !== true) {
+        continue;
+      }
 
       const deltaX = this.positionsX[node]! - x;
       const deltaY = this.positionsY[node]! - y;
       const distance = deltaX * deltaX + deltaY * deltaY;
 
-      if (distance >= bestDistance) continue;
+      if (distance >= bestDistance) {
+        continue;
+      }
 
       bestDistance = distance;
       best = node;
@@ -219,19 +249,25 @@ export class WaypointGraph<Payload = unknown> implements NavigationSpace<Payload
   public describeEdge(from: number, to: number): PathEdge<Payload> | null {
     const edges = this.adjacency[from];
 
-    if (edges === undefined) return null;
+    if (edges === undefined) {
+      return null;
+    }
 
     for (let index = 0; index < edges.length; index++) {
       const edge = edges[index]!;
 
-      if (edge.to === to) return { from, to, kind: edge.kind, data: edge.data };
+      if (edge.to === to) {
+        return { from, to, kind: edge.kind, data: edge.data };
+      }
     }
 
     return null;
   }
 
   private length(from: number, to: number): number {
-    if (this.positioned[from] !== true || this.positioned[to] !== true) return 0;
+    if (this.positioned[from] !== true || this.positioned[to] !== true) {
+      return 0;
+    }
 
     return Math.hypot(this.positionsX[to]! - this.positionsX[from]!, this.positionsY[to]! - this.positionsY[from]!);
   }

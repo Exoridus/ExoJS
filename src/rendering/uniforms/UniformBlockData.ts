@@ -107,7 +107,9 @@ export class UniformBlockData<F extends UniformFields = UniformFields> {
    */
   public setPacked(source: ArrayBufferView): this {
     if (source.byteLength !== this._bytes.byteLength) {
-      throw new Error(`[ExoJS] Uniform block \`${this.layout.instance}\` holds ${this._bytes.byteLength} bytes; received ${source.byteLength}.`);
+      throw new Error(
+        `[ExoJS] Uniform block \`${this.layout.instance}\` holds ${this._bytes.byteLength} bytes; received ${source.byteLength}.`,
+      );
     }
 
     this._bytes.set(new Uint8Array(source.buffer, source.byteOffset, source.byteLength));

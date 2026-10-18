@@ -37,7 +37,9 @@ const _segmenters = new Map<string, Intl.Segmenter>();
  * repeat per line, let alone per frame.
  */
 const _segmenter = (granularity: Granularity, locale: string | undefined): Intl.Segmenter | null => {
-  if (!hasIntlSegmenter) return null;
+  if (!hasIntlSegmenter) {
+    return null;
+  }
 
   const key = `${granularity}:${locale ?? ''}`;
   let segmenter = _segmenters.get(key);
@@ -70,7 +72,9 @@ export const isTrivialText = (text: string): boolean => {
   for (let i = 0; i < text.length; i++) {
     const unit = text.charCodeAt(i);
 
-    if (unit !== TAB && (unit < SPACE || unit >= COMBINING_START)) return false;
+    if (unit !== TAB && (unit < SPACE || unit >= COMBINING_START)) {
+      return false;
+    }
   }
 
   return true;
@@ -96,7 +100,9 @@ const _isBreakingSpace = (code: number): boolean =>
 
 const _isBlankRun = (text: string): boolean => {
   for (let i = 0; i < text.length; i++) {
-    if (!_isBreakingSpace(text.charCodeAt(i))) return false;
+    if (!_isBreakingSpace(text.charCodeAt(i))) {
+      return false;
+    }
   }
 
   return text.length > 0;
@@ -111,7 +117,9 @@ const _codePointStarts = (text: string): number[] => {
   for (let i = 0; i < text.length; i++) {
     starts.push(i);
 
-    if (_isHighSurrogate(text.charCodeAt(i)) && i + 1 < text.length) i++;
+    if (_isHighSurrogate(text.charCodeAt(i)) && i + 1 < text.length) {
+      i++;
+    }
   }
 
   return starts;
@@ -126,14 +134,18 @@ export const graphemeStarts = (text: string, locale?: string): number[] => {
   if (isTrivialText(text)) {
     const starts: number[] = new Array<number>(text.length);
 
-    for (let i = 0; i < text.length; i++) starts[i] = i;
+    for (let i = 0; i < text.length; i++) {
+      starts[i] = i;
+    }
 
     return starts;
   }
 
   const segmenter = _segmenter('grapheme', locale);
 
-  if (segmenter === null) return _codePointStarts(text);
+  if (segmenter === null) {
+    return _codePointStarts(text);
+  }
 
   const starts: number[] = [];
 
@@ -152,7 +164,9 @@ export const graphemes = (text: string, locale?: string): string[] => {
   if (isTrivialText(text)) {
     const result: string[] = new Array<string>(text.length);
 
-    for (let i = 0; i < text.length; i++) result[i] = text[i]!;
+    for (let i = 0; i < text.length; i++) {
+      result[i] = text[i]!;
+    }
 
     return result;
   }
@@ -176,15 +190,21 @@ export const graphemes = (text: string, locale?: string): string[] => {
 
 /** How many grapheme clusters `text` holds. */
 export const graphemeCount = (text: string, locale?: string): number => {
-  if (isTrivialText(text)) return text.length;
+  if (isTrivialText(text)) {
+    return text.length;
+  }
 
   const segmenter = _segmenter('grapheme', locale);
 
-  if (segmenter === null) return _codePointStarts(text).length;
+  if (segmenter === null) {
+    return _codePointStarts(text).length;
+  }
 
   let count = 0;
 
-  for (const _segment of segmenter.segment(text)) count++;
+  for (const _segment of segmenter.segment(text)) {
+    count++;
+  }
 
   return count;
 };
@@ -212,7 +232,9 @@ export interface WordSegment {
 export const wordSegments = (text: string, locale?: string): WordSegment[] => {
   const segments: WordSegment[] = [];
 
-  if (text.length === 0) return segments;
+  if (text.length === 0) {
+    return segments;
+  }
 
   const segmenter = _segmenter('word', locale);
 
@@ -305,14 +327,22 @@ const _blankRuns = (text: string): TextRun[] => {
  * one it does not, which is what makes `whiteSpace: 'pre'` keep its columns.
  */
 export const textRuns = (text: string, locale?: string): TextRun[] => {
-  if (text.length === 0) return [];
-  if (isTrivialText(text)) return _blankRuns(text);
+  if (text.length === 0) {
+    return [];
+  }
+
+  if (isTrivialText(text)) {
+    return _blankRuns(text);
+  }
 
   const runs: TextRun[] = [];
   let pending: { start: number; end: number; whitespace: boolean } | null = null;
 
   const flush = (): void => {
-    if (pending !== null) runs.push(pending);
+    if (pending !== null) {
+      runs.push(pending);
+    }
+
     pending = null;
   };
 
@@ -330,7 +360,9 @@ export const textRuns = (text: string, locale?: string): TextRun[] => {
       pending = { start: segment.start, end: segment.end, whitespace };
     }
 
-    if (standalone) flush();
+    if (standalone) {
+      flush();
+    }
   }
 
   flush();

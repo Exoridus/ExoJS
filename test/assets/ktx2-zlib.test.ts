@@ -41,7 +41,10 @@ const deflate = async (data: Uint8Array<ArrayBuffer>): Promise<Uint8Array> => {
   for (;;) {
     const { done, value } = await reader.read();
 
-    if (done) break;
+    if (done) {
+      break;
+    }
+
     chunks.push(value);
   }
 

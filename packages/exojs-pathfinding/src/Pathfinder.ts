@@ -33,7 +33,12 @@ export class Pathfinder {
    * is set; `budget-exceeded` always carries the best partial path found, which
    * is a real, traversable prefix and not a guess at the rest.
    */
-  public findPath<Payload>(space: NavigationSpace<Payload>, start: number, goal: number, options: FindPathOptions = {}): PathResult<Payload> {
+  public findPath<Payload>(
+    space: NavigationSpace<Payload>,
+    start: number,
+    goal: number,
+    options: FindPathOptions = {},
+  ): PathResult<Payload> {
     const agentSize = options.agentSize ?? 1;
     const budget = options.maxExpandedNodes ?? 0;
     const snapToNearest = options.snapToNearest === true;
@@ -135,7 +140,16 @@ export class Pathfinder {
 
     this.state.reserve(space.nodeCapacity, space.maxDegree);
 
-    const expandedNodes = runFlood(this.state, space, origin, options.agentSize ?? 1, options.maxCost ?? Infinity, options.maxExpandedNodes ?? 0, nodes, costs);
+    const expandedNodes = runFlood(
+      this.state,
+      space,
+      origin,
+      options.agentSize ?? 1,
+      options.maxCost ?? Infinity,
+      options.maxExpandedNodes ?? 0,
+      nodes,
+      costs,
+    );
 
     return { nodes, costs, revision: space.revision, expandedNodes };
   }
@@ -143,7 +157,9 @@ export class Pathfinder {
   private resolve(space: NavigationSpace, x: number, y: number, snap: boolean): number {
     const node = space.pointToNode(x, y);
 
-    if (node >= 0 || !snap || space.nearestNode === undefined) return node;
+    if (node >= 0 || !snap || space.nearestNode === undefined) {
+      return node;
+    }
 
     return space.nearestNode(x, y);
   }
@@ -166,8 +182,11 @@ export class Pathfinder {
     out.push(reversed[reversed.length - 1]!);
 
     for (let index = reversed.length - 2; index >= 0; index--) {
-      if (expansion === null) out.push(reversed[index]!);
-      else expansion.expand(reversed[index + 1]!, reversed[index]!, out);
+      if (expansion === null) {
+        out.push(reversed[index]!);
+      } else {
+        expansion.expand(reversed[index + 1]!, reversed[index]!, out);
+      }
     }
   }
 
@@ -185,14 +204,18 @@ export class Pathfinder {
   }
 
   private toEdges<Payload>(space: NavigationSpace<Payload>, nodes: readonly number[]): ReadonlyArray<PathEdge<Payload>> {
-    if (space.describeEdge === undefined) return EMPTY_EDGES;
+    if (space.describeEdge === undefined) {
+      return EMPTY_EDGES;
+    }
 
     const edges: Array<PathEdge<Payload>> = [];
 
     for (let index = 1; index < nodes.length; index++) {
       const edge = space.describeEdge(nodes[index - 1]!, nodes[index]!);
 
-      if (edge !== null) edges.push(edge);
+      if (edge !== null) {
+        edges.push(edge);
+      }
     }
 
     return edges;

@@ -114,8 +114,14 @@ export class Polygon implements ShapeLike {
     }
 
     if (diff > 0) {
-      for (const point of this._points.splice(newLen)) point.destroy();
-      for (const point of this._edges.splice(newLen)) point.destroy();
+      for (const point of this._points.splice(newLen)) {
+        point.destroy();
+      }
+
+      for (const point of this._edges.splice(newLen)) {
+        point.destroy();
+      }
+
       // Trim the cached normals array if it exists and is longer than newLen.
       if (this._cachedNormals !== null && this._cachedNormals.length > newLen) {
         const removed = this._cachedNormals.splice(newLen);
@@ -243,8 +249,13 @@ export class Polygon implements ShapeLike {
       const vertex = points[i]!;
       const projection = nx * vertex.x + ny * vertex.y;
 
-      if (projection < min) min = projection;
-      if (projection > max) max = projection;
+      if (projection < min) {
+        min = projection;
+      }
+
+      if (projection > max) {
+        max = projection;
+      }
     }
 
     return result.set(min + offset, max + offset);

@@ -7,6 +7,7 @@ import { materializeAssetTypes } from '#extensions/materialize';
 const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
+
   return loader;
 };
 
@@ -14,7 +15,8 @@ const originalFetch = global.fetch;
 
 const mockFetchImage = (): void => {
   global.fetch = vi.fn(
-    async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => new ArrayBuffer(8) }) as unknown as Response,
+    async (): Promise<Response> =>
+      ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => new ArrayBuffer(8) }) as unknown as Response,
   );
 };
 

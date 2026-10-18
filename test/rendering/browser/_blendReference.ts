@@ -49,19 +49,25 @@ const blendChannel = (mode: BlendModes, cb: number, cs: number): number => {
       if (cb <= 0) {
         return 0;
       }
+
       return cs >= 1 ? 1 : Math.min(1, cb / (1 - cs));
     case BlendModes.ColorBurn:
       if (cb >= 1) {
         return 1;
       }
+
       return cs <= 0 ? 0 : 1 - Math.min(1, (1 - cb) / cs);
+
     case BlendModes.SoftLight: {
       if (cs <= 0.5) {
         return cb - (1 - 2 * cs) * cb * (1 - cb);
       }
+
       const d = cb <= 0.25 ? ((16 * cb - 12) * cb + 4) * cb : Math.sqrt(cb);
+
       return cb + (2 * cs - 1) * (d - cb);
     }
+
     case BlendModes.Difference:
       return Math.abs(cb - cs);
     case BlendModes.Exclusion:

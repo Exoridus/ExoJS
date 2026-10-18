@@ -1,5 +1,16 @@
 // Auto-generated from mesh-typed-uniforms.ts - edit the .ts source, not this file.
-import { Application, Color, FixedResolutionCanvasSizing, Matrix, Mesh, MeshMaterial, Scene, Shader, UniformStruct, UniformType } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Matrix,
+  Mesh,
+  MeshMaterial,
+  Scene,
+  Shader,
+  UniformStruct,
+  UniformType,
+} from '@codexo/exojs';
 const UV_GRID = assets.technical.filtering.uvGrid256;
 const SIZE = 420;
 // Uniforms declared here are numeric: `time`, `warp` and `uvTransform` reach

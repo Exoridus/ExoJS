@@ -153,17 +153,17 @@ const makeDevice = ({ feature = true }: { feature?: boolean } = {}) => {
 
         return view.buffer;
       },
-      unmap: () => undefined,
-      destroy: () => undefined,
+      unmap: () => {},
+      destroy: () => {},
     }) as unknown as GPUBuffer;
 
   const device = {
     features: { has: (name: string) => feature && name === 'timestamp-query' },
-    createQuerySet: () => ({ destroy: () => undefined }),
+    createQuerySet: () => ({ destroy: () => {} }),
     createBuffer: makeBuffer,
     createCommandEncoder: () => ({
-      resolveQuerySet: () => undefined,
-      copyBufferToBuffer: () => undefined,
+      resolveQuerySet: () => {},
+      copyBufferToBuffer: () => {},
       finish: () => ({}),
     }),
     queue: {
@@ -191,13 +191,17 @@ describe('WebGpuGpuTimer', () => {
 
       Object.defineProperty(globalThis, name, { configurable: true, value });
       restore.push(() =>
-        previous ? Object.defineProperty(globalThis, name, previous) : Object.defineProperty(globalThis, name, { configurable: true, value: undefined }),
+        previous
+          ? Object.defineProperty(globalThis, name, previous)
+          : Object.defineProperty(globalThis, name, { configurable: true, value: undefined }),
       );
     }
   });
 
   afterEach(() => {
-    for (const undo of restore.splice(0)) undo();
+    for (const undo of restore.splice(0)) {
+      undo();
+    }
   });
 
   test('returns null when the device carries no timestamp-query feature', () => {

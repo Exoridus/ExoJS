@@ -1,4 +1,14 @@
-import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, SystemOrder } from '@codexo/exojs';
+import {
+  Application,
+  Asset,
+  Color,
+  Container,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  type RenderingContext,
+  Scene,
+  SystemOrder,
+} from '@codexo/exojs';
 import { CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 import { tiledExtension } from '@codexo/exojs-tiled';
 import { type TileMap, TileMapNode } from '@codexo/exojs-tilemap';
@@ -13,7 +23,7 @@ class IsometricScene extends Scene {
   private readonly worldRoot = new Container();
   private readonly selection = new Graphics();
   private readonly actor = new Graphics();
-  private readonly world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+  private world!: PhysicsWorld;
   private body!: PhysicsBody;
   private binding!: TilePhysicsBinding;
   private target = { x: 99, y: 99 };
@@ -24,6 +34,7 @@ class IsometricScene extends Scene {
   }
 
   override init(): void {
+    this.world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, fixedDelta: this.app.fixedTimeStep });
     this.worldRoot.setPosition(origin.x, origin.y).setScale(scale);
     this.worldRoot.addChild(new TileMapNode(this.map));
     const gameplay = this.map.getObjectLayer('Gameplay')!;
@@ -32,13 +43,22 @@ class IsometricScene extends Scene {
     outlines.lineColor = new Color(72, 226, 218, 0.7);
     outlines.lineWidth = 2;
     outlines.fillColor = new Color(72, 226, 218, 0.07);
+
     for (const object of gameplay.objects) {
       const display = gameplay.getDisplayObject(object);
-      if (display.kind === 'polygon') outlines.drawPolygon(display.points.flatMap(point => [display.x + point.x, display.y + point.y]));
+
+      if (display.kind === 'polygon') {
+        outlines.drawPolygon(display.points.flatMap(point => [display.x + point.x, display.y + point.y]));
+      }
     }
+
     const spawn = gameplay.objects.find(object => object.name === 'Spawn')!;
     this.body = this.world.add(
-      new PhysicsBody({ position: { x: spawn.x, y: spawn.y }, fixedRotation: true, colliders: [{ shape: new CircleShape(12), friction: 0 }] }),
+      new PhysicsBody({
+        position: { x: spawn.x, y: spawn.y },
+        fixedRotation: true,
+        colliders: [{ shape: new CircleShape(12), friction: 0 }],
+      }),
     );
     this.actor.fillColor = new Color(255, 211, 89);
     this.actor.lineColor = new Color(56, 43, 29);
@@ -74,9 +94,15 @@ class IsometricScene extends Scene {
     const x = (pointer.x - origin.x) / scale;
     const y = (pointer.y - origin.y) / scale;
     const { tx, ty } = this.map.pixelToTile(x, y);
-    if (tx < 0 || ty < 0 || tx >= 10 || ty >= 10) return;
+
+    if (tx < 0 || ty < 0 || tx >= 10 || ty >= 10) {
+      return;
+    }
+
     const projection = this.map.projection;
     this.target = { x: (tx + 0.5) * projection.logicalTileWidth, y: (ty + 0.5) * projection.logicalTileHeight };
+    // The actor falls asleep once it stops at a target, and writing its velocity does not wake it.
+    this.body.wake();
     this.selection.clear();
     this.selection.fillColor = new Color(255, 234, 126, 0.25);
     this.selection.lineColor = new Color(255, 234, 126);
@@ -89,6 +115,7 @@ class IsometricScene extends Scene {
         [tx, ty + 1],
       ].flatMap(([cx, cy]) => {
         const point = projection.tileToPixel(cx!, cy!);
+
         return [point.x, point.y];
       }),
     );

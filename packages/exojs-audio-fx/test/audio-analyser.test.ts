@@ -10,13 +10,13 @@ import { AudioAnalyser } from '../src/AudioAnalyser';
 
 const makeAudioNode = (): AudioNode => {
   const ctx = getAudioContext();
+
   return ctx.createGain() as unknown as AudioNode;
 };
 
-const makeMediaStream = (): MediaStream => {
+const makeMediaStream = (): MediaStream =>
   // Must have getTracks for duck-type detection in AudioAnalyser
-  return { getTracks: () => [] } as unknown as MediaStream;
-};
+  ({ getTracks: () => [] }) as unknown as MediaStream;
 
 /**
  * Runs `run` against a fresh copy of the `@codexo/exojs` module registry (via
@@ -37,7 +37,11 @@ const makeMediaStream = (): MediaStream => {
  * in registration order.
  */
 const withSuspendedContext = async <T>(
-  run: (mod: { fresh: typeof import('@codexo/exojs'); FreshAudioAnalyser: typeof AudioAnalyser; flipToReady: () => void }) => T | Promise<T>,
+  run: (mod: {
+    fresh: typeof import('@codexo/exojs');
+    FreshAudioAnalyser: typeof AudioAnalyser;
+    flipToReady: () => void;
+  }) => T | Promise<T>,
 ): Promise<T> => {
   const OriginalAudioContext = globalThis.AudioContext;
   class SuspendedMockAudioContext extends (OriginalAudioContext as unknown as new () => AudioContext) {
@@ -47,15 +51,18 @@ const withSuspendedContext = async <T>(
     }
   }
   Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: SuspendedMockAudioContext });
+
   try {
     vi.resetModules();
     const fresh = await import('@codexo/exojs');
     const { AudioAnalyser: FreshAudioAnalyser } = await import('../src/AudioAnalyser');
+
     const flipToReady = (): void => {
       const ctx = fresh.getAudioContext();
       (ctx as unknown as { state: AudioContextState }).state = 'running';
       fresh.getAudioContext(); // re-trigger monitoring — dispatches ready to every pending handler
     };
+
     return await run({ fresh, FreshAudioAnalyser, flipToReady });
   } finally {
     Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: OriginalAudioContext });
@@ -180,6 +187,7 @@ describe('AudioAnalyser', () => {
     it('taps the bus output node', () => {
       const bus = new AudioBus('tap-bus');
       const outputNode = bus.getOutputNode();
+
       if (outputNode) {
         const connectSpy = vi.spyOn(outputNode, 'connect');
         const a = new AudioAnalyser();
@@ -187,6 +195,7 @@ describe('AudioAnalyser', () => {
         expect(connectSpy).toHaveBeenCalled();
         a.destroy();
       }
+
       bus.destroy();
     });
   });
@@ -615,10 +624,11 @@ describe('AudioAnalyser', () => {
       await withSuspendedContext(({ fresh, FreshAudioAnalyser, flipToReady }) => {
         const a = new FreshAudioAnalyser();
         const ctx = fresh.getAudioContext();
-        const createdNodes: { connect: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> }[] = [];
+        const createdNodes: Array<{ connect: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> }> = [];
         vi.spyOn(ctx, 'createMediaStreamSource').mockImplementation(() => {
           const node = { connect: vi.fn(), disconnect: vi.fn() };
           createdNodes.push(node);
+
           return node as unknown as MediaStreamAudioSourceNode;
         });
         const stream = { getTracks: () => [] } as unknown as MediaStream;
@@ -658,6 +668,7 @@ describe('AudioAnalyser', () => {
       let capturedCallback: (() => void) | undefined;
       vi.spyOn(bus, 'onceSetup').mockImplementation(cb => {
         capturedCallback = cb;
+
         return () => {};
       });
 

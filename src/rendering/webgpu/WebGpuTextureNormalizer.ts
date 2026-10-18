@@ -142,10 +142,20 @@ export class WebGpuTextureNormalizer {
    * default: `premultipliedAlpha: false` says the bytes are STRAIGHT, so the pass
    * - not the copy - is what associates them.
    */
-  public normalizeImageSource(destination: GPUTexture, format: GPUTextureFormat, width: number, height: number, source: GPUCopyExternalImageSource): void {
+  public normalizeImageSource(
+    destination: GPUTexture,
+    format: GPUTextureFormat,
+    width: number,
+    height: number,
+    source: GPUCopyExternalImageSource,
+  ): void {
     const staging = this._ensureStaging(format, width, height, true);
 
-    this._device.queue.copyExternalImageToTexture({ source, flipY: false }, { texture: staging.texture, premultipliedAlpha: false }, { width, height });
+    this._device.queue.copyExternalImageToTexture(
+      { source, flipY: false },
+      { texture: staging.texture, premultipliedAlpha: false },
+      { width, height },
+    );
 
     const encoder = this._device.createCommandEncoder({ label: 'backend:color-normalize-encoder' });
 
@@ -163,7 +173,13 @@ export class WebGpuTextureNormalizer {
    * source never reaches here, because {@link WebGpuBackend} only asks for a pass
    * for content it has resolved as colour.
    */
-  public normalizeStagedBytes(destination: GPUTexture, format: GPUTextureFormat, width: number, height: number, data: Uint8ClampedArray | Uint8Array): void {
+  public normalizeStagedBytes(
+    destination: GPUTexture,
+    format: GPUTextureFormat,
+    width: number,
+    height: number,
+    data: Uint8ClampedArray | Uint8Array,
+  ): void {
     const staging = this._ensureStaging(format, width, height, true);
 
     this._device.queue.writeTexture(
@@ -204,7 +220,13 @@ export class WebGpuTextureNormalizer {
     this.reset();
   }
 
-  private _recordPass(encoder: GPUCommandEncoder, staging: NormalizeStaging, destination: GPUTexture, format: GPUTextureFormat, level: PassLevel): void {
+  private _recordPass(
+    encoder: GPUCommandEncoder,
+    staging: NormalizeStaging,
+    destination: GPUTexture,
+    format: GPUTextureFormat,
+    level: PassLevel,
+  ): void {
     const resources = this._getResources(format);
     const bindGroup = this._device.createBindGroup({
       label: 'backend:color-normalize-bind-group',

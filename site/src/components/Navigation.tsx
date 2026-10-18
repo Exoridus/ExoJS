@@ -19,7 +19,14 @@ export interface NavigationProps {
   onSelectExample(path: string): void;
 }
 
-export const Navigation = ({ activeExample, examples, loaded, loadError, onSelectExample, selectedVersion }: NavigationProps): JSX.Element => {
+export const Navigation = ({
+  activeExample,
+  examples,
+  loaded,
+  loadError,
+  onSelectExample,
+  selectedVersion,
+}: NavigationProps): JSX.Element => {
   const listRef = useRef<HTMLElement | null>(null);
   const allExamples = useMemo(() => Array.from(examples.values()).flat(), [examples]);
   const categories = useMemo(() => buildPlaygroundNavModel(allExamples), [allExamples]);
@@ -27,11 +34,19 @@ export const Navigation = ({ activeExample, examples, loaded, loadError, onSelec
   useEffect(() => {
     const list = listRef.current;
     const active = list?.querySelector('[aria-current="page"]');
-    if (!list || !active) return;
+
+    if (!list || !active) {
+      return;
+    }
+
     const listBounds = list.getBoundingClientRect();
     const activeBounds = active.getBoundingClientRect();
-    if (activeBounds.top < listBounds.top + 36) list.scrollTop -= listBounds.top + 36 - activeBounds.top;
-    else if (activeBounds.bottom > listBounds.bottom) list.scrollTop += activeBounds.bottom - listBounds.bottom;
+
+    if (activeBounds.top < listBounds.top + 36) {
+      list.scrollTop -= listBounds.top + 36 - activeBounds.top;
+    } else if (activeBounds.bottom > listBounds.bottom) {
+      list.scrollTop += activeBounds.bottom - listBounds.bottom;
+    }
   }, [activeExample?.path, loaded]);
 
   return (
@@ -42,10 +57,12 @@ export const Navigation = ({ activeExample, examples, loaded, loadError, onSelec
           loaded &&
           categories.map(category => {
             const unavailableCount = category.examples.filter(example => !getExampleAvailability(example).available).length;
+
             return (
               <NavigationSection key={category.slug} headline={category.title} unavailableCount={unavailableCount}>
                 {category.examples.map(example => {
                   const availability = getExampleAvailability(example);
+
                   return (
                     <NavigationLink
                       key={example.path}

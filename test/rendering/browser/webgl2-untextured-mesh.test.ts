@@ -248,9 +248,11 @@ describe('WebGL2 untextured mesh rendering', () => {
     try {
       useEncodedFrameTarget(backend);
       backend.clear(Color.black);
+
       for (const mesh of meshes) {
         mesh.render(backend);
       }
+
       backend.flush();
 
       for (const { x, y, tint } of cells) {
@@ -260,6 +262,7 @@ describe('WebGL2 untextured mesh rendering', () => {
       for (const mesh of meshes) {
         mesh.destroy();
       }
+
       backend.destroy();
     }
   });

@@ -12,9 +12,32 @@ const document = {
   tilewidth: 64,
   tileheight: 32,
   infinite: false,
-  tilesets: [{ firstgid: 1, name: 'tiles', tilewidth: 64, tileheight: 96, tilecount: 1, columns: 1, image: 'tiles.png', imagewidth: 64, imageheight: 96 }],
+  tilesets: [
+    {
+      firstgid: 1,
+      name: 'tiles',
+      tilewidth: 64,
+      tileheight: 96,
+      tilecount: 1,
+      columns: 1,
+      image: 'tiles.png',
+      imagewidth: 64,
+      imageheight: 96,
+    },
+  ],
   layers: [
-    { id: 1, name: 'ground', type: 'tilelayer', x: 0, y: 0, visible: true, opacity: 1, width: 3, height: 4, data: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+    {
+      id: 1,
+      name: 'ground',
+      type: 'tilelayer',
+      x: 0,
+      y: 0,
+      visible: true,
+      opacity: 1,
+      width: 3,
+      height: 4,
+      data: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    },
     {
       id: 2,
       name: 'objects',
@@ -119,7 +142,11 @@ describe('Tiled isometric conversion', () => {
     const layer = map.objectLayers[0]!;
     const display = layer.getDisplayObject(layer.objects[1]!);
     expect(display.kind).toBe('polygon');
-    if (display.kind !== 'polygon') throw new Error('Expected polygon');
+
+    if (display.kind !== 'polygon') {
+      throw new Error('Expected polygon');
+    }
+
     expect(display.points[1]!.x).toBeCloseTo(-16);
     expect(display.points[1]!.y).toBeCloseTo(32);
   });

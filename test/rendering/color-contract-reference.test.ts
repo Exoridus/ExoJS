@@ -1,4 +1,12 @@
-import { decodeSrgb, displayOutput, encodeSrgb, formatBytesPerPixel, premultiply, sourceOver, textureBytes } from './color-contract-reference';
+import {
+  decodeSrgb,
+  displayOutput,
+  encodeSrgb,
+  formatBytesPerPixel,
+  premultiply,
+  sourceOver,
+  textureBytes,
+} from './color-contract-reference';
 
 describe('color contract reference', () => {
   test.each([
@@ -54,7 +62,9 @@ describe('color contract reference', () => {
   });
 
   test('applies exposure in linear light before output encoding', () => {
-    expect(displayOutput([0.25, 0.25, 0.25], 1, { exposureStops: 1 })).toEqual([0.7353569830524495, 0.7353569830524495, 0.7353569830524495, 1]);
+    expect(displayOutput([0.25, 0.25, 0.25], 1, { exposureStops: 1 })).toEqual([
+      0.7353569830524495, 0.7353569830524495, 0.7353569830524495, 1,
+    ]);
   });
 
   test.each([

@@ -100,7 +100,10 @@ export class AutoWahEffect extends AudioEffect {
    * not yet initialized.
    */
   public get inputNode(): AudioNode {
-    if (!this._setup) throw new Error('AutoWahEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('AutoWahEffect not yet initialized.');
+    }
+
     return this._setup.inputGain;
   }
 
@@ -109,7 +112,10 @@ export class AutoWahEffect extends AudioEffect {
    * not yet initialized.
    */
   public get outputNode(): AudioNode {
-    if (!this._setup) throw new Error('AutoWahEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('AutoWahEffect not yet initialized.');
+    }
+
     return this._setup.outputGain;
   }
 
@@ -127,6 +133,7 @@ export class AutoWahEffect extends AudioEffect {
 
   public set baseFrequency(value: number) {
     this._baseFrequency = Math.max(50, Math.min(2000, value));
+
     if (this._setup) {
       this._setup.wahFilter.frequency.setTargetAtTime(this._baseFrequency, this._setup.wahFilter.context.currentTime, 0.01);
     }
@@ -143,6 +150,7 @@ export class AutoWahEffect extends AudioEffect {
 
   public set sensitivity(value: number) {
     this._sensitivity = Math.max(0, Math.min(6000, value));
+
     if (this._setup) {
       this._setup.sensitivityGain.gain.setTargetAtTime(this._sensitivity, this._setup.sensitivityGain.context.currentTime, 0.01);
     }
@@ -158,6 +166,7 @@ export class AutoWahEffect extends AudioEffect {
 
   public set q(value: number) {
     this._q = Math.max(0.1, Math.min(20, value));
+
     if (this._setup) {
       this._setup.wahFilter.Q.setTargetAtTime(this._q, this._setup.wahFilter.context.currentTime, 0.01);
     }
@@ -174,8 +183,13 @@ export class AutoWahEffect extends AudioEffect {
 
   public set responseMs(value: number) {
     this._responseMs = Math.max(1, Math.min(500, value));
+
     if (this._setup) {
-      this._setup.smoothingLowpass.frequency.setTargetAtTime(this._smoothingCutoff(), this._setup.smoothingLowpass.context.currentTime, 0.01);
+      this._setup.smoothingLowpass.frequency.setTargetAtTime(
+        this._smoothingCutoff(),
+        this._setup.smoothingLowpass.context.currentTime,
+        0.01,
+      );
     }
   }
 
@@ -189,6 +203,7 @@ export class AutoWahEffect extends AudioEffect {
 
   public set wet(value: number) {
     this._wet = Math.max(0, Math.min(1, value));
+
     if (this._setup) {
       const ctx = this._setup.wetGain.context;
       this._setup.wetGain.gain.setTargetAtTime(this._wet, ctx.currentTime, 0.01);
@@ -202,6 +217,7 @@ export class AutoWahEffect extends AudioEffect {
 
   public override destroy(): void {
     this._teardown();
+
     if (this._setup) {
       this._setup.inputGain.disconnect();
       this._setup.dryGain.disconnect();
@@ -231,10 +247,12 @@ export class AutoWahEffect extends AudioEffect {
   private static _makeRectifierCurve(): Float32Array<ArrayBuffer> {
     const n = 256;
     const curve = new Float32Array(n);
+
     for (let i = 0; i < n; i++) {
       const x = (i * 2) / (n - 1) - 1; // maps index to -1..1
       curve[i] = Math.abs(x);
     }
+
     return curve;
   }
 

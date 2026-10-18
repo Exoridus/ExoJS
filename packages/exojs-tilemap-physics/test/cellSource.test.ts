@@ -21,7 +21,7 @@ const countingSource = (claimed: ReadonlyMap<string, string>): { source: TileCel
   };
 };
 
-const cellMap = (entries: readonly (readonly [number, number, string])[]): Map<string, string> =>
+const cellMap = (entries: ReadonlyArray<readonly [number, number, string]>): Map<string, string> =>
   new Map(entries.map(([tx, ty, type]) => [`${tx},${ty}`, type]));
 
 describe('TileColliderStreamer — cell source', () => {

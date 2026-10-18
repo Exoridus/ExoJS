@@ -31,8 +31,10 @@ const setupSourceSpy = (): { sources: unknown[]; restore: () => void } => {
       buffer: null,
     };
     sources.push(node);
+
     return node as unknown as AudioBufferSourceNode;
   });
+
   return { sources, restore: (): void => spy.mockRestore() };
 };
 
@@ -43,6 +45,7 @@ const collectWarnings = (): { warnings: string[]; restore: () => void } => {
       warnings.push(entry.message);
     }
   });
+
   return { warnings, restore: remove };
 };
 
@@ -81,6 +84,7 @@ describe('playback while the AudioContext is locked', () => {
     const sound = new Sound(makeBuffer(2));
 
     setContextState('suspended');
+
     for (let i = 0; i < 5; i++) {
       system.play(sound);
     }
@@ -139,6 +143,7 @@ describe('playback while the AudioContext is locked', () => {
     const second = new AudioSystem();
     const sound = new Sound(makeBuffer(2));
     const blocked: AudioSystem[] = [];
+
     const collect = (system: AudioSystem): void => {
       blocked.push(system);
     };

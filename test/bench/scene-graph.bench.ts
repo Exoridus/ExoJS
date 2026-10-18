@@ -8,6 +8,7 @@ const makeDrawable = (x = 0, y = 0, size = 16): Drawable => {
   const d = new Drawable();
   d.setLocalBounds(0, 0, size, size);
   d.setPosition(x, y);
+
   return d;
 };
 
@@ -19,12 +20,15 @@ describe('scene-graph', { timeout: benchTimeoutMs }, () => {
       for (let a = 0; a < 10; a++) {
         const lvl1 = new Container();
         root.addChild(lvl1);
+
         for (let b = 0; b < 10; b++) {
           const lvl2 = new Container();
           lvl1.addChild(lvl2);
+
           for (let c = 0; c < 10; c++) {
             const lvl3 = new Container();
             lvl2.addChild(lvl3);
+
             for (let d = 0; d < 10; d++) {
               lvl3.addChild(makeDrawable(d * 20, c * 20));
             }
@@ -52,7 +56,10 @@ describe('scene-graph', { timeout: benchTimeoutMs }, () => {
       }
 
       for (let i = 0; i < 100; i++) {
-        if (i % 10 === 0) root.setPosition(i % 50, 0);
+        if (i % 10 === 0) {
+          root.setPosition(i % 50, 0);
+        }
+
         for (let j = 0; j < 100; j++) {
           nodes[(i * 97 + j * 31) % nodes.length].getBounds();
         }
@@ -82,6 +89,7 @@ describe('scene-graph', { timeout: benchTimeoutMs }, () => {
         for (let i = 0; i < count; i++) {
           toMove.push(srcChildren[i] as Drawable);
         }
+
         for (const child of toMove) {
           dest.addChild(child);
         }

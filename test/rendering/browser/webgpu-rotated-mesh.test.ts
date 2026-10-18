@@ -103,7 +103,8 @@ const coloredQuad = (x0: number, y0: number, x1: number, y1: number, rgba: RgbaT
 // whole surface, top-left origin.
 const screenView = (): View => new View(canvasSize / 2, canvasSize / 2, canvasSize, canvasSize);
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // Run `draw` through the real flush path inside a validation error scope.
 // Returns false when the device dropped mid-test (the caller should bail).

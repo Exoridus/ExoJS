@@ -68,9 +68,7 @@ class NoteAssetType extends AssetType<string, string[]> {
   }
 }
 
-const extensionFor = (...assets: AnyAssetType[]): Extension => {
-  return { id: 'com.example.test', assets };
-};
+const extensionFor = (...assets: AnyAssetType[]): Extension => ({ id: 'com.example.test', assets });
 
 /** A loader with `types` installed, exactly as an Application would install them. */
 const createLoader = (types: readonly AnyAssetType[]): Loader => {
@@ -277,6 +275,7 @@ describe('AssetType factory boundary', () => {
         return {
           create: (data, context) => {
             captured = context;
+
             return Promise.resolve(new World(data, 'probe'));
           },
         };
@@ -299,7 +298,16 @@ describe('AssetType factory boundary', () => {
   test('the factory context exposes no fetch, cache store or cache policy', async () => {
     const context = await captureContext();
 
-    expect(Object.keys(context).sort()).toEqual(['dependencies', 'locator', 'options', 'resourceKey', 'signal', 'source', 'sourceKey', 'textureFormats']);
+    expect(Object.keys(context).sort()).toEqual([
+      'dependencies',
+      'locator',
+      'options',
+      'resourceKey',
+      'signal',
+      'source',
+      'sourceKey',
+      'textureFormats',
+    ]);
 
     for (const reachable of ['fetch', 'fetchText', 'fetchJson', 'fetchArrayBuffer', 'cache', 'stores', 'cacheStrategy', 'loader']) {
       expect(reachable in context).toBe(false);
@@ -338,6 +346,7 @@ describe('AssetType factory boundary', () => {
         return {
           create: async (data, context) => {
             dependency = await context.dependencies.load(new NoteAssetType().asset('page.note'));
+
             return new World(data, 'parent');
           },
         };
@@ -383,7 +392,7 @@ describe('AssetSourceCodec', () => {
     const worldType = new WorldAssetType();
     const loader = createLoader([worldType]);
 
-    loader.onError.add(() => undefined);
+    loader.onError.add(() => {});
 
     await expect(loader.load(worldType.asset('broken.world'))).rejects.toThrow(/Failed to load "broken\.world"/);
   });
@@ -406,16 +415,18 @@ describe('AssetSourceCodec', () => {
   });
 
   test('an aborted load rejects as a cancellation, not as a decode failure', async () => {
-    vi.stubGlobal('fetch', (_url: string, init?: RequestInit) => {
-      return new Promise((_resolve, reject) => {
-        init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
-      });
-    });
+    vi.stubGlobal(
+      'fetch',
+      (_url: string, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+        }),
+    );
 
     const worldType = new WorldAssetType();
     const loader = createLoader([worldType]);
 
-    loader.onError.add(() => undefined);
+    loader.onError.add(() => {});
 
     const queue = loader.load(worldType.asset('slow.world'));
     const settled = queue.then(
@@ -462,10 +473,12 @@ describe('AssetType source-variant storage', () => {
       public override readonly codec: AssetSourceCodec<string> = {
         fromResponse: (response, context) => {
           seen.push(context.locator);
+
           return response.text();
         },
         fromBytes: (bytes, context) => {
           seen.push(context.locator);
+
           return Promise.resolve(new TextDecoder().decode(bytes));
         },
         decode: stored => Promise.resolve(stored),

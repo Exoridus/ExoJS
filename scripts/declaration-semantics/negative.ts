@@ -8,7 +8,7 @@
  */
 import { Application, Asset, Assets, Container, type DecodedImage, fontType, type Loader, musicType, type Scene } from '@codexo/exojs';
 
-import { Armor, DataScene, Health, LocalizedAssetType, MetaAssetType, Spin } from './fixtures';
+import { type Armor, DataScene, Health, LocalizedAssetType, MetaAssetType, Spin } from './fixtures';
 
 const app = new Application({ scenes: { DataScene } });
 

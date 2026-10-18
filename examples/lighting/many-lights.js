@@ -1,5 +1,16 @@
 // Auto-generated from many-lights.ts - edit the .ts source, not this file.
-import { Application, Color, Container, DataTexture, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture, TextureFormat } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  Container,
+  DataTexture,
+  FixedResolutionCanvasSizing,
+  ScaleModes,
+  Scene,
+  Sprite,
+  Texture,
+  TextureFormat,
+} from '@codexo/exojs';
 import { ForwardLighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // The FORWARD renderer under load: the light list is a data texture, not a

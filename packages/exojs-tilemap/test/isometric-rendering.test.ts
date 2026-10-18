@@ -58,6 +58,7 @@ describe('isometric rendering', () => {
       {
         getChunk: (cx, cy) => {
           requested.push(`${cx},${cy}`);
+
           return null;
         },
       },
@@ -72,8 +73,21 @@ describe('isometric rendering', () => {
   it('shares the snap origin across odd-sized projected chunks', () => {
     const p = new TileProjection({ orientation: 'isometric', tileWidth: 63, tileHeight: 31 });
     const ts = tileset('odd');
-    const layer = new TileLayer({ id: 1, name: 'odd', tileWidth: 63, tileHeight: 31, chunkWidth: 1, chunkHeight: 1, tilesets: [ts], projection: p });
-    for (let x = 0; x < 3; x++) layer.setTileAt(x, 0, { tileset: ts, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
+    const layer = new TileLayer({
+      id: 1,
+      name: 'odd',
+      tileWidth: 63,
+      tileHeight: 31,
+      chunkWidth: 1,
+      chunkHeight: 1,
+      tilesets: [ts],
+      projection: p,
+    });
+
+    for (let x = 0; x < 3; x++) {
+      layer.setTileAt(x, 0, { tileset: ts, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
+    }
+
     const node = new TileLayerNode(layer);
     expect(node.chunkNodes.map(chunk => [chunk.x, chunk.y])).toEqual([
       [0, 0],
@@ -94,10 +108,15 @@ describe('isometric rendering', () => {
       [0, 1, 0],
       [0, 0, 0],
     ];
-    for (const [tx, ty, index] of cells) layer.setTileAt(tx!, ty!, { tileset: layer.tilesets[index!]!, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
+
+    for (const [tx, ty, index] of cells) {
+      layer.setTileAt(tx!, ty!, { tileset: layer.tilesets[index!]!, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
+    }
+
     const node = new TileLayerNode(layer);
     const drawn = node.children.flatMap(child => {
       const chunk = node.chunkNodes.find(candidate => candidate === child)!;
+
       return chunk.pages.flatMap(page => page.quads.map(q => [q.x0 + chunk.x, q.y0 + chunk.y, page.tileset.name]));
     });
     expect(drawn).toEqual([
@@ -111,16 +130,20 @@ describe('isometric rendering', () => {
     const bounds = node.getLocalBounds();
     expect(bounds.top).toBeLessThanOrEqual(-64);
     expect(bounds.left).toBeLessThanOrEqual(-96);
+
     for (const chunk of node.chunkNodes) {
       const bounds = chunk.getLocalBounds();
-      for (const page of chunk.pages)
+
+      for (const page of chunk.pages) {
         for (const q of page.quads) {
           expect(bounds.left).toBeLessThanOrEqual(q.x0);
           expect(bounds.top).toBeLessThanOrEqual(q.y0);
           expect(bounds.right).toBeGreaterThanOrEqual(q.x1);
           expect(bounds.bottom).toBeGreaterThanOrEqual(q.y1);
         }
+      }
     }
+
     node.destroy();
   });
 
@@ -133,6 +156,7 @@ describe('isometric rendering', () => {
       {
         getChunk: (cx, cy) => {
           requested.push(`${cx},${cy}`);
+
           return null;
         },
       },
@@ -141,11 +165,14 @@ describe('isometric rendering', () => {
     );
     streamer.update();
     const bounds = view.getBounds();
-    for (const x of [bounds.left, bounds.right])
+
+    for (const x of [bounds.left, bounds.right]) {
       for (const y of [bounds.top, bounds.bottom]) {
         const tile = layer.pixelToTile(x, y);
         expect(requested).toContain(`${Math.floor(tile.tx / 2)},${Math.floor(tile.ty / 2)}`);
       }
+    }
+
     streamer.destroy();
   });
 
@@ -167,6 +194,7 @@ describe('isometric rendering', () => {
       {
         getChunk: (cx, cy) => {
           requested.push(`${cx},${cy}`);
+
           return null;
         },
       },

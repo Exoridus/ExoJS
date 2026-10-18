@@ -247,7 +247,15 @@ export interface RenderBackend {
    * caller-facing wrapper and the way application code should reach this.
    * @advanced
    */
-  createPixelReadback(source: RenderTexture, x: number, y: number, width: number, height: number, slots: number, dataType?: 'uint8'): PixelReadback;
+  createPixelReadback(
+    source: RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    slots: number,
+    dataType?: 'uint8',
+  ): PixelReadback;
   createPixelReadback(
     source: RenderTexture,
     x: number,
@@ -314,7 +322,15 @@ export interface RenderBackend {
    * `(x, y, width, height)` in world-space. Used internally by the
    * non-Rectangle `MaskSource` paths on `RenderNode.mask`.
    */
-  composeWithAlphaMask(content: RenderTexture, mask: Texture | RenderTexture, x: number, y: number, width: number, height: number, blendMode: BlendModes): this;
+  composeWithAlphaMask(
+    content: RenderTexture,
+    mask: Texture | RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    blendMode: BlendModes,
+  ): this;
 
   /**
    * Composite `source` over the active render target under an advanced
@@ -340,7 +356,13 @@ export interface RenderBackend {
    * supplied material must be instancing-compatible (default mesh material, or a
    * custom shader declaring `a_nodeIndex` + `u_transforms`).
    */
-  drawInstanced(mesh: Mesh, transforms: readonly Matrix[], tints: readonly Color[], count: number, instances?: InstanceDataView | null): this;
+  drawInstanced(
+    mesh: Mesh,
+    transforms: readonly Matrix[],
+    tints: readonly Color[],
+    count: number,
+    instances?: InstanceDataView | null,
+  ): this;
 
   execute(pass: BackendRenderPass): this;
   flush(): this;

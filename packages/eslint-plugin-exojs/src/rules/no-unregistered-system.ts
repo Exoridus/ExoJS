@@ -36,9 +36,17 @@ export interface NoUnregisteredSystemOptions {
 
 /** Trailing name of `x`, `a.x` or `a.b.x`, or `undefined` for anything computed. */
 const tailName = (node: Node): string | undefined => {
-  if (node.type === 'Identifier') return node.name;
-  if (node.type === 'MemberExpression' && !node.computed && node.property.type === 'Identifier') return node.property.name;
-  if (node.type === 'ThisExpression') return 'this';
+  if (node.type === 'Identifier') {
+    return node.name;
+  }
+
+  if (node.type === 'MemberExpression' && !node.computed && node.property.type === 'Identifier') {
+    return node.property.name;
+  }
+
+  if (node.type === 'ThisExpression') {
+    return 'this';
+  }
 
   return undefined;
 };
@@ -84,7 +92,9 @@ export const noUnregisteredSystem: Rule.RuleModule = {
 
       // `system.foo`, `system.foo()`, `system.update()`.
       if (parent.type === 'MemberExpression' && parent.object === identifier) {
-        if (parent.computed || parent.property.type !== 'Identifier') return 'local';
+        if (parent.computed || parent.property.type !== 'Identifier') {
+          return 'local';
+        }
 
         const isCall = parent.parent.type === 'CallExpression' && parent.parent.callee === parent;
 
@@ -117,9 +127,17 @@ export const noUnregisteredSystem: Rule.RuleModule = {
 
     return {
       VariableDeclarator(node) {
-        if (node.id.type !== 'Identifier' || node.init?.type !== 'NewExpression') return;
-        if (node.init.callee.type !== 'Identifier' || !pattern.test(node.init.callee.name)) return;
-        if (isExported(node)) return;
+        if (node.id.type !== 'Identifier' || node.init?.type !== 'NewExpression') {
+          return;
+        }
+
+        if (node.init.callee.type !== 'Identifier' || !pattern.test(node.init.callee.name)) {
+          return;
+        }
+
+        if (isExported(node)) {
+          return;
+        }
 
         candidates.push(node);
       },
@@ -130,13 +148,17 @@ export const noUnregisteredSystem: Rule.RuleModule = {
         for (const declarator of candidates) {
           const [variable] = sourceCode.getDeclaredVariables(declarator);
 
-          if (variable === undefined) continue;
+          if (variable === undefined) {
+            continue;
+          }
 
           let usage: Usage = 'local';
 
           for (const reference of variable.references) {
             // The declaration's own initialiser write.
-            if (reference.init) continue;
+            if (reference.init) {
+              continue;
+            }
 
             const classification = classify(reference.identifier as Identifier & Rule.NodeParentExtension);
 
@@ -144,10 +166,14 @@ export const noUnregisteredSystem: Rule.RuleModule = {
               usage = classification;
             }
 
-            if (usage === 'registered') break;
+            if (usage === 'registered') {
+              break;
+            }
           }
 
-          if (usage !== 'local') continue;
+          if (usage !== 'local') {
+            continue;
+          }
 
           const init = declarator.init as { callee: Identifier };
 

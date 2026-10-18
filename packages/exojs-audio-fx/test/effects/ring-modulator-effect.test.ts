@@ -181,9 +181,7 @@ describe('RingModulatorEffect', () => {
       // _setupNodes createGain order: inputGain[0], outputGain[1], dryGain[2], wetGain[3], ringGain[4]
       let gainCallCount = 0;
       const gains = [inputGain, outputGain, dryGain, wetGain, ringGain];
-      vi.spyOn(ctx, 'createGain').mockImplementation(() => {
-        return gains[gainCallCount++] as unknown as GainNode;
-      });
+      vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[gainCallCount++] as unknown as GainNode);
       vi.spyOn(ctx, 'createOscillator').mockReturnValue(carrierOsc as unknown as OscillatorNode);
     });
 
@@ -339,9 +337,7 @@ describe('RingModulatorEffect', () => {
         makeGainNode(ctx), // wetGain [3]
         makeGainNode(ctx), // ringGain [4]
       ];
-      vi.spyOn(ctx, 'createGain').mockImplementation(() => {
-        return gainNodes[gainCallCount++] as unknown as GainNode;
-      });
+      vi.spyOn(ctx, 'createGain').mockImplementation(() => gainNodes[gainCallCount++] as unknown as GainNode);
 
       const effect = new RingModulatorEffect({ wet: 0.5 });
       const dryGain = gainNodes[2]!;
@@ -394,9 +390,7 @@ describe('RingModulatorEffect', () => {
       const ctx = getAudioContext();
       const gainNodes = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       let gainCallCount = 0;
-      vi.spyOn(ctx, 'createGain').mockImplementation(() => {
-        return gainNodes[gainCallCount++] as unknown as GainNode;
-      });
+      vi.spyOn(ctx, 'createGain').mockImplementation(() => gainNodes[gainCallCount++] as unknown as GainNode);
 
       const effect = new RingModulatorEffect();
       effect.destroy();

@@ -8,6 +8,7 @@ import { Texture } from '#rendering/texture/Texture';
 const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
+
   return loader;
 };
 

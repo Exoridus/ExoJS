@@ -8,7 +8,7 @@ import {
   type RenderingContext,
   Scene,
   type Seconds,
-  Sprite,
+  type Sprite,
   Spritesheet,
   type SpritesheetData,
   TextureRegion,
@@ -37,15 +37,16 @@ const MOVE_SPEED = 420;
 
 // Deterministic integer-lattice hash → [0, 1). Any change here changes every
 // world; the worker copy in the worker example must stay byte-identical.
-function hash2D(seed: number, x: number, y: number): number {
+const hash2D = (seed: number, x: number, y: number): number => {
   let h = (seed ^ Math.imul(x, 0x27d4eb2d) ^ Math.imul(y, 0x165667b1)) | 0;
   h = Math.imul(h ^ (h >>> 15), 0x85ebca6b);
   h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
   h ^= h >>> 16;
-  return (h >>> 0) / 4294967296;
-}
 
-function valueNoise(seed: number, x: number, y: number): number {
+  return (h >>> 0) / 4294967296;
+};
+
+const valueNoise = (seed: number, x: number, y: number): number => {
   const x0 = Math.floor(x);
   const y0 = Math.floor(y);
   const fx = x - x0;
@@ -58,21 +59,24 @@ function valueNoise(seed: number, x: number, y: number): number {
   const n11 = hash2D(seed, x0 + 1, y0 + 1);
   const nx0 = n00 + (n10 - n00) * sx;
   const nx1 = n01 + (n11 - n01) * sx;
+
   return nx0 + (nx1 - nx0) * sy;
-}
+};
 
 // 4 octaves, persistence 0.5, lacunarity 2 → result in ~[0, 0.94).
-function fbm(seed: number, x: number, y: number): number {
+const fbm = (seed: number, x: number, y: number): number => {
   let value = 0;
   let amplitude = 0.5;
   let frequency = 1;
+
   for (let octave = 0; octave < 4; octave++) {
     value += amplitude * valueNoise(seed + octave, x * frequency, y * frequency);
     amplitude *= 0.5;
     frequency *= 2;
   }
+
   return value;
-}
+};
 
 // Biome mapping (elevation-style bands; localTileId values are solid
 // full-square terrain-center tiles read off mapPack_tilesheet.png - 17
@@ -84,14 +88,29 @@ const TILE_GRASS = 23; // green center     (row 1, col 6)
 const TILE_ROCK = 28; // gray center      (row 1, col 11)
 const TILE_SNOW = 86; // white center     (row 5, col 1)
 
-function biomeTileId(value: number): number {
-  if (value < 0.34) return TILE_DEEP_WATER;
-  if (value < 0.42) return TILE_WATER;
-  if (value < 0.5) return TILE_SAND;
-  if (value < 0.68) return TILE_GRASS;
-  if (value < 0.8) return TILE_ROCK;
+const biomeTileId = (value: number): number => {
+  if (value < 0.34) {
+    return TILE_DEEP_WATER;
+  }
+
+  if (value < 0.42) {
+    return TILE_WATER;
+  }
+
+  if (value < 0.5) {
+    return TILE_SAND;
+  }
+
+  if (value < 0.68) {
+    return TILE_GRASS;
+  }
+
+  if (value < 0.8) {
+    return TILE_ROCK;
+  }
+
   return TILE_SNOW;
-}
+};
 
 class InfiniteTerrainScene extends Scene {
   private camera!: View;
@@ -121,7 +140,13 @@ class InfiniteTerrainScene extends Scene {
     // No width/height: the layer (and map) are unbounded - chunks exist
     // only where something writes them.
     this.terrain = new TileLayer({ id: 1, name: 'terrain', tileWidth: TILE, tileHeight: TILE, tilesets: [this.tileset] });
-    const map = new TileMap({ name: 'infinite-world', tileWidth: TILE, tileHeight: TILE, tilesets: [this.tileset], layers: [this.terrain] });
+    const map = new TileMap({
+      name: 'infinite-world',
+      tileWidth: TILE,
+      tileHeight: TILE,
+      tilesets: [this.tileset],
+      layers: [this.terrain],
+    });
     this.mapView = map.createView({ bands: { terrain: ['terrain'] } });
 
     const characters = new Spritesheet(
@@ -167,19 +192,27 @@ class InfiniteTerrainScene extends Scene {
   private setupInput(): void {
     this.inputs.onActive(Keyboard.A, () => (this.moveX = -1));
     this.inputs.onStop(Keyboard.A, () => {
-      if (this.moveX < 0) this.moveX = 0;
+      if (this.moveX < 0) {
+        this.moveX = 0;
+      }
     });
     this.inputs.onActive(Keyboard.D, () => (this.moveX = 1));
     this.inputs.onStop(Keyboard.D, () => {
-      if (this.moveX > 0) this.moveX = 0;
+      if (this.moveX > 0) {
+        this.moveX = 0;
+      }
     });
     this.inputs.onActive(Keyboard.W, () => (this.moveY = -1));
     this.inputs.onStop(Keyboard.W, () => {
-      if (this.moveY < 0) this.moveY = 0;
+      if (this.moveY < 0) {
+        this.moveY = 0;
+      }
     });
     this.inputs.onActive(Keyboard.S, () => (this.moveY = 1));
     this.inputs.onStop(Keyboard.S, () => {
-      if (this.moveY > 0) this.moveY = 0;
+      if (this.moveY > 0) {
+        this.moveY = 0;
+      }
     });
   }
 
@@ -212,6 +245,7 @@ class InfiniteTerrainScene extends Scene {
 
     this.streamer.update();
     this.hudTimer += delta;
+
     if (this.hudTimer >= 0.25) {
       this.hudTimer = 0;
       const tx = Math.floor(this.explorer.x / TILE);

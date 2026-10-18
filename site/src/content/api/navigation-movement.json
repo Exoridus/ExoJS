@@ -1,0 +1,213 @@
+{
+  "title": "NavigationMovement",
+  "description": "What a NavigationAgentComponent needs from whatever moves its actor: an agent decides where to go next, its movement decides how the motion happens - through a physics world, by writing a node position, or anything else. While navigating, an agent calls move once in every fixed step it runs in, and stop once when it stops steering: on arrival, when the destination turns out unreachable, on NavigationAgentComponent.stop and when it is disabled. A step without a call means there is nothing to ask for. Directions are in the navigation space's coordinates, the same space an agent reads its position in. A movement working in another space - a projected display, say - converts at its own boundary. `KinematicMovementComponent` from `@codexo/exojs-physics` satisfies this contract as it is.",
+  "symbol": "NavigationMovement",
+  "kind": "interface",
+  "subsystem": "pathfinding",
+  "importPath": "@codexo/exojs-pathfinding",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What a NavigationAgentComponent needs from whatever moves its actor: an agent decides where to go next, its movement decides how the motion happens - through a physics world, by writing a node position, or anything else.",
+        "While navigating, an agent calls move once in every fixed step it runs in, and stop once when it stops steering: on arrival, when the destination turns out unreachable, on NavigationAgentComponent.stop and when it is disabled. A step without a call means there is nothing to ask for.",
+        "Directions are in the navigation space's coordinates, the same space an agent reads its position in. A movement working in another space - a projected display, say - converts at its own boundary.",
+        "`KinematicMovementComponent` from `@codexo/exojs-physics` satisfies this contract as it is."
+      ],
+      "importLine": "import { NavigationMovement } from '@codexo/exojs-pathfinding'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "move",
+          "signature": "move(direction: Readonly<PointLike>, distance: number, step: Seconds): void",
+          "signatureTokens": [
+            {
+              "text": "move",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "direction",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "distance",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "step",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "direction",
+              "type": "Readonly<PointLike>",
+              "optional": false
+            },
+            {
+              "name": "distance",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "step",
+              "type": "Seconds",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Requests motion for the fixed step step that is being processed, along direction - a unit vector from an agent - and over no more than distance in total until the next request. An agent passes the distance to its destination on the last stretch and Infinity before it, so a movement that keeps applying a request for longer than one step - such as a physics world stepped several times per call - still stops on the destination. Called from an agent's fixed update, so the motion can still be applied within the same step."
+        },
+        {
+          "name": "stop",
+          "signature": "stop(): void",
+          "signatureTokens": [
+            {
+              "text": "stop",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Ends the motion: the actor should come to rest."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "maxSpeed",
+          "signature": "maxSpeed: number",
+          "signatureTokens": [
+            {
+              "text": "maxSpeed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Distance per second that a direction of length 1 covers. An agent reads it to tell how far one step reaches, which decides when it turns toward the next waypoint and how much progress to expect."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-pathfinding/src/navigation/NavigationMovement.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/navigation/NavigationMovement.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-pathfinding/src/navigation/NavigationMovement.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/navigation/NavigationMovement.ts"
+}

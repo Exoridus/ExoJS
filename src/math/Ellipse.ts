@@ -178,7 +178,10 @@ export class Ellipse implements ShapeLike {
 
   public equals({ x, y, rx, ry }: Partial<Ellipse> = {}): boolean {
     return (
-      (x === undefined || this.x === x) && (y === undefined || this.y === y) && (rx === undefined || this.rx === rx) && (ry === undefined || this.ry === ry)
+      (x === undefined || this.x === x) &&
+      (y === undefined || this.y === y) &&
+      (rx === undefined || this.rx === rx) &&
+      (ry === undefined || this.ry === ry)
     );
   }
 

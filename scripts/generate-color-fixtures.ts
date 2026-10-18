@@ -18,8 +18,8 @@
  *
  * Run with no arguments to write every fixture and its manifest.
  */
-import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { deflateSync } from 'node:zlib';
@@ -382,6 +382,7 @@ const alphaTexel = (x: number): readonly [number, number, number, number] => {
 const premultipliedTexel = (x: number): readonly [number, number, number, number] => {
   const straight = alphaTexel(x);
   const alpha = straight[3] / 255;
+
   const encode = (value: number): number => {
     const linear = (value / 255) * alpha;
 
@@ -560,10 +561,12 @@ const astcVoidExtentBlock = ([r, g, b, a]: ConstantColor): Uint8Array => {
   // bits[11:0]: the void-extent signature `111111100` in [8:0], the LDR
   // dynamic-range flag 0 in bit 9, and both reserved bits set in [11:10].
   view.setUint16(0, 0x0ffe, true);
+
   // bits[63:12]: all void-extent coordinates, which makes the extent ignored.
   for (let byte = 2; byte < 8; byte++) {
     block[byte] = 0xff;
   }
+
   // bits[127:64]: R, G, B then A, each a little-endian UNORM16.
   const components = [r, g, b, a];
 
@@ -635,12 +638,17 @@ const singleSample = (bitLength: number, channelId: number, qualifiers = 0): rea
   { bitOffset: 0, bitLength, channelId, qualifiers, ...signedRange(qualifiers) },
 ];
 /** Two cosited samples, the second at bit 64 for a 16-byte block. */
-const twoSamples = (firstChannelId: number, secondChannelId: number, qualifiers = 0, firstQualifiers = qualifiers): readonly DfdSample[] => [
+const twoSamples = (
+  firstChannelId: number,
+  secondChannelId: number,
+  qualifiers = 0,
+  firstQualifiers = qualifiers,
+): readonly DfdSample[] => [
   { bitOffset: 0, bitLength: 64, channelId: firstChannelId, qualifiers: firstQualifiers, ...signedRange(firstQualifiers) },
   { bitOffset: 64, bitLength: 64, channelId: secondChannelId, qualifiers, ...signedRange(qualifiers) },
 ];
 
-const ASTC_BLOCK_SIZES: readonly (readonly [number, number])[] = [
+const ASTC_BLOCK_SIZES: ReadonlyArray<readonly [number, number]> = [
   [4, 4],
   [5, 4],
   [5, 5],
@@ -967,14 +975,14 @@ interface ManifestEntry {
   readonly blockWidth?: number;
   readonly blockHeight?: number;
   readonly bytesPerBlock?: number;
-  readonly levels: readonly {
+  readonly levels: ReadonlyArray<{
     readonly level: number;
     readonly width: number;
     readonly height: number;
     readonly byteLength: number;
     /** The colour each block must decode to, in raster order. */
     readonly blockColors?: readonly string[];
-  }[];
+  }>;
   readonly provenance: string;
   readonly note: string;
 }
@@ -1014,7 +1022,9 @@ const buildManifest = (): ManifestEntry[] => {
       supercompression: spec.supercompression ?? 0,
       transferFunction: spec.transferFunction,
       alphaFlags: spec.alphaFlags,
-      ...(spec.bytesPerBlock === undefined ? {} : { blockWidth: spec.blockWidth, blockHeight: spec.blockHeight, bytesPerBlock: spec.bytesPerBlock }),
+      ...(spec.bytesPerBlock === undefined
+        ? {}
+        : { blockWidth: spec.blockWidth, blockHeight: spec.blockHeight, bytesPerBlock: spec.bytesPerBlock }),
       // Derived here from the container layout, never from the engine's table.
       levels: spec.levels.map((level, index) => ({
         level: index,

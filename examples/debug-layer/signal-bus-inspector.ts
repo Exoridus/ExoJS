@@ -1,4 +1,14 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Seconds, Signal, Text } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  Signal,
+  Text,
+} from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 interface Channel {
@@ -33,7 +43,9 @@ class SignalBusInspectorScene extends Scene {
     this.channels[2]!.signal.add(this.listenerA);
 
     this.gfx = new Graphics();
-    this.labels = this.channels.map((channel, i) => new Text('', { fillColor: Color.white, fontSize: 20 }).setPosition(220, 220 + i * 70).setAnchor(0, 0.5));
+    this.labels = this.channels.map((channel, i) =>
+      new Text('', { fillColor: Color.white, fontSize: 20 }).setPosition(220, 220 + i * 70).setAnchor(0, 0.5),
+    );
 
     this.hud = mountControls({
       title: 'Signal Bus Inspector',
@@ -56,8 +68,12 @@ class SignalBusInspectorScene extends Scene {
       const spawn = this.channels[0]!.signal;
 
       this.spawnHasListenerB = !this.spawnHasListenerB;
-      if (this.spawnHasListenerB) spawn.add(this.listenerB);
-      else spawn.remove(this.listenerB);
+
+      if (this.spawnHasListenerB) {
+        spawn.add(this.listenerB);
+      } else {
+        spawn.remove(this.listenerB);
+      }
     });
   }
 
@@ -75,7 +91,11 @@ class SignalBusInspectorScene extends Scene {
       const y = 220 + i * 70;
       const lit = 0.35 + channel.flash * 0.65;
 
-      this.gfx.fillColor = new Color(Math.floor(channel.color.r * lit), Math.floor(channel.color.g * lit), Math.floor(channel.color.b * lit));
+      this.gfx.fillColor = new Color(
+        Math.floor(channel.color.r * lit),
+        Math.floor(channel.color.g * lit),
+        Math.floor(channel.color.b * lit),
+      );
       this.gfx.drawRoundedRectangle(40, y - 24, 150, 48, 10);
       this.labels[i]!.text = `${channel.name}: ${channel.signal.count} listener${channel.signal.count === 1 ? '' : 's'}`;
     }

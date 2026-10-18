@@ -41,6 +41,7 @@ const buildProcessorClass = (): VocoderProcessorConstructor => {
   (globalThis as Record<string, unknown>)['AudioWorkletProcessor'] = class {
     port = { postMessage: (): void => undefined, onmessage: null as ((event: { data: unknown }) => void) | null };
   };
+
   (globalThis as Record<string, unknown>)['registerProcessor'] = (_name: string, cls: VocoderProcessorConstructor): void => {
     klass = cls;
   };
@@ -52,7 +53,10 @@ const buildProcessorClass = (): VocoderProcessorConstructor => {
   delete (globalThis as Record<string, unknown>)['AudioWorkletProcessor'];
   delete (globalThis as Record<string, unknown>)['registerProcessor'];
 
-  if (!klass) throw new Error('registerProcessor was not called — worklet source malformed');
+  if (!klass) {
+    throw new Error('registerProcessor was not called — worklet source malformed');
+  }
+
   return klass;
 };
 
@@ -62,24 +66,29 @@ const makeSawtooth = (freq: number, amplitude: number, n: number): Float32Array 
   const buf = new Float32Array(n);
   let phase = 0;
   const inc = freq / SAMPLE_RATE;
+
   for (let i = 0; i < n; i++) {
     buf[i] = amplitude * (2 * phase - 1);
-    phase = (phase + inc) % 1.0;
+    phase = (phase + inc) % 1;
   }
+
   return buf;
 };
 
 const makeSine = (freq: number, amplitude: number, n: number): Float32Array => {
   const buf = new Float32Array(n);
+
   for (let i = 0; i < n; i++) {
     buf[i] = amplitude * Math.sin((2 * Math.PI * freq * i) / SAMPLE_RATE);
   }
+
   return buf;
 };
 
 /** Voice-like signal: three formants at 700/1200/2500 Hz, AM-modulated at 4 Hz. */
 const makeVoiceLike = (n: number): Float32Array => {
   const buf = new Float32Array(n);
+
   for (let i = 0; i < n; i++) {
     const am = 0.5 + 0.5 * Math.sin((2 * Math.PI * 4 * i) / SAMPLE_RATE);
     buf[i] =
@@ -88,6 +97,7 @@ const makeVoiceLike = (n: number): Float32Array => {
         0.3 * Math.sin((2 * Math.PI * 1200 * i) / SAMPLE_RATE) +
         0.2 * Math.sin((2 * Math.PI * 2500 * i) / SAMPLE_RATE));
   }
+
   return buf;
 };
 
@@ -96,22 +106,29 @@ const magnitudeAt = (buf: Float32Array, freq: number): number => {
   let re = 0,
     im = 0;
   const omega = (2 * Math.PI * freq) / SAMPLE_RATE;
+
   for (let i = 0; i < buf.length; i++) {
     re += buf[i] * Math.cos(omega * i);
     im -= buf[i] * Math.sin(omega * i);
   }
+
   return (2 * Math.sqrt(re * re + im * im)) / buf.length;
 };
 
 const rms = (buf: Float32Array): number => {
   let sum = 0;
-  for (const v of buf) sum += v * v;
+
+  for (const v of buf) {
+    sum += v * v;
+  }
+
   return Math.sqrt(sum / buf.length);
 };
 
 const runVocoder = (proc: VocoderProcessorLike, carrier: Float32Array, modulator: Float32Array, envSmoothing: number): Float32Array => {
   const n = carrier.length;
   const out = new Float32Array(n);
+
   for (let off = 0; off < n; off += BLOCK) {
     const len = Math.min(BLOCK, n - off);
     const cB = carrier.subarray(off, off + len);
@@ -120,6 +137,7 @@ const runVocoder = (proc: VocoderProcessorLike, carrier: Float32Array, modulator
     proc.process([[cB], [mB]], [[oB]], { envelopeSmoothing: [envSmoothing] });
     out.set(oB, off);
   }
+
   return out;
 };
 
@@ -140,7 +158,7 @@ describe('VocoderProcessor DSP', () => {
   // ── 1. Silence without modulator ──────────────────────────────────────────
   it('outputs silence when modulator is absent', () => {
     const proc = new Processor({ processorOptions: { numBands: NUM_BANDS, minHz: 80, maxHz: 8000, bandQ: 4 } });
-    const carrier = makeSawtooth(110, 1.0, MEASURE);
+    const carrier = makeSawtooth(110, 1, MEASURE);
     const silence = new Float32Array(MEASURE); // no modulator
     const out = runVocoder(proc, carrier, silence, 0.005);
     // All envelopes are zero → bandSum = 0 → output = 0
@@ -153,7 +171,7 @@ describe('VocoderProcessor DSP', () => {
   // of the carrier RMS.  Before the fix the shortfall was -23.8 dB.
   it('output RMS is within 6 dB of carrier RMS after 2 s warmup (broadband)', () => {
     const proc = new Processor({ processorOptions: { numBands: NUM_BANDS, minHz: 80, maxHz: 8000, bandQ: 4 } });
-    const carrier = makeSawtooth(110, 1.0, TOTAL);
+    const carrier = makeSawtooth(110, 1, TOTAL);
     const modulator = makeVoiceLike(TOTAL);
     const out = runVocoder(proc, carrier, modulator, 0.005);
 
@@ -163,7 +181,7 @@ describe('VocoderProcessor DSP', () => {
 
     // Allow 6 dB tolerance on either side.
     expect(ratio).toBeGreaterThan(0.5); // > -6 dB
-    expect(ratio).toBeLessThan(2.0); // < +6 dB
+    expect(ratio).toBeLessThan(2); // < +6 dB
   });
 
   // ── 3. Spectral shaping: formants from modulator appear in output ──────────
@@ -179,11 +197,15 @@ describe('VocoderProcessor DSP', () => {
 
     const buildMod = (freq: number): Float32Array => {
       const buf = new Float32Array(TOTAL);
-      for (let i = 0; i < TOTAL; i++) buf[i] = Math.sin((2 * Math.PI * freq * i) / SAMPLE_RATE);
+
+      for (let i = 0; i < TOTAL; i++) {
+        buf[i] = Math.sin((2 * Math.PI * freq * i) / SAMPLE_RATE);
+      }
+
       return buf;
     };
 
-    const carrier = makeSawtooth(CARRIER_FREQ, 1.0, TOTAL);
+    const carrier = makeSawtooth(CARRIER_FREQ, 1, TOTAL);
     const modLow = buildMod(FORMANT_LOW);
     const modHigh = buildMod(FORMANT_HIGH);
 
@@ -217,8 +239,8 @@ describe('VocoderProcessor DSP', () => {
   it('sine at band center produces non-trivial output (not silent, not clipping hard)', () => {
     const BAND_CENTER = 686; // band 7 center frequency
     const proc = new Processor({ processorOptions: { numBands: NUM_BANDS, minHz: 80, maxHz: 8000, bandQ: 4 } });
-    const carrier = makeSine(BAND_CENTER, 1.0, TOTAL);
-    const modulator = makeSine(BAND_CENTER, 1.0, TOTAL);
+    const carrier = makeSine(BAND_CENTER, 1, TOTAL);
+    const modulator = makeSine(BAND_CENTER, 1, TOTAL);
     const out = runVocoder(proc, carrier, modulator, 0.005);
 
     const rmsO = rms(out.subarray(WARMUP));
@@ -233,7 +255,7 @@ describe('VocoderProcessor DSP', () => {
   // vocoder produces 2× the bandSum level of an 8-band vocoder (32/8 = 4 dB
   // louder for the same input).
   it('processorOptions.numBands affects output level (more bands = higher output)', () => {
-    const carrier = makeSawtooth(110, 1.0, TOTAL);
+    const carrier = makeSawtooth(110, 1, TOTAL);
     const modulator = makeVoiceLike(TOTAL);
 
     const proc8 = new Processor({ processorOptions: { numBands: 8, minHz: 80, maxHz: 8000, bandQ: 4 } });

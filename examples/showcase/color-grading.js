@@ -2,7 +2,7 @@
 import { Application, Color, FixedResolutionCanvasSizing, Keyboard, LutFilter, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const LUT_SIZE = 17;
-function buildLut3D(transform) {
+const buildLut3D = transform => {
   const width = LUT_SIZE * LUT_SIZE;
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -25,7 +25,7 @@ function buildLut3D(transform) {
   }
   ctx.putImageData(image, 0, 0);
   return canvas;
-}
+};
 // The five named graded looks from the catalog, followed by an explicit pass-
 // through baseline so a viewer can compare each grade against the ungraded
 // source. The baseline is labelled "Identity (off)" so it is never mistaken for
@@ -35,7 +35,7 @@ const LOOKS = [
     name: 'Sepia',
     transform: (r, g, b) => {
       const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-      return [Math.min(1, lum * 1.2), Math.min(1, lum * 1.0), Math.min(1, lum * 0.6)];
+      return [Math.min(1, lum * 1.2), Math.min(1, lum * 1), Math.min(1, lum * 0.6)];
     },
   },
   {

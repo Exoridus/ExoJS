@@ -62,16 +62,22 @@ export const noAsyncRenderHook: Rule.RuleModule = {
     const check = (member: FunctionMember & Rule.NodeParentExtension): void => {
       const fn = memberFunction(member);
 
-      if (!fn?.async) return;
+      if (!fn?.async) {
+        return;
+      }
 
       const owner = owningClass(member);
       const base = owner === undefined ? undefined : superClassName(owner);
 
-      if (base === undefined || !Object.hasOwn(hooks, base)) return;
+      if (base === undefined || !Object.hasOwn(hooks, base)) {
+        return;
+      }
 
       const name = staticKeyName(member.key, member.computed);
 
-      if (name === undefined || !hooks[base]!.includes(name)) return;
+      if (name === undefined || !hooks[base]!.includes(name)) {
+        return;
+      }
 
       context.report({ node: member.key, messageId: 'asyncRenderHook', data: { name, base } });
     };
@@ -79,13 +85,17 @@ export const noAsyncRenderHook: Rule.RuleModule = {
     return {
       // `class Pass extends RenderPass { async execute(context) {} }`
       MethodDefinition(node) {
-        if (node.kind !== 'method' || node.static) return;
+        if (node.kind !== 'method' || node.static) {
+          return;
+        }
 
         check(node);
       },
       // `class Pass extends RenderPass { execute = async (context) => {}; }`
       PropertyDefinition(node) {
-        if (node.static) return;
+        if (node.static) {
+          return;
+        }
 
         check(node);
       },

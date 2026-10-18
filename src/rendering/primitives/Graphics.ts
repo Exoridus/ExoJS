@@ -1,6 +1,15 @@
 import { Color } from '#core/Color';
 import type { MeshGeometryData } from '#math/geometry';
-import { buildCircle, buildEllipse, buildLine, buildPath, buildPolygon, buildRectangle, buildRoundedRectangle, buildStar } from '#math/geometry';
+import {
+  buildCircle,
+  buildEllipse,
+  buildLine,
+  buildPath,
+  buildPolygon,
+  buildRectangle,
+  buildRoundedRectangle,
+  buildStar,
+} from '#math/geometry';
 import { bezierCurveTo, clamp, quadraticCurveTo, TAU } from '#math/utils';
 import { Vector } from '#math/Vector';
 import { Container } from '#rendering/Container';
@@ -584,10 +593,21 @@ const computeBoundsUvs = (vertices: Float32Array): Float32Array => {
     const x = vertices[i]!;
     const y = vertices[i + 1]!;
 
-    if (x < minX) minX = x;
-    if (x > maxX) maxX = x;
-    if (y < minY) minY = y;
-    if (y > maxY) maxY = y;
+    if (x < minX) {
+      minX = x;
+    }
+
+    if (x > maxX) {
+      maxX = x;
+    }
+
+    if (y < minY) {
+      minY = y;
+    }
+
+    if (y > maxY) {
+      maxY = y;
+    }
   }
 
   const spanX = maxX - minX;

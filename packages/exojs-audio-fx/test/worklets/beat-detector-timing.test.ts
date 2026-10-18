@@ -7,8 +7,8 @@
 import { clicktrack, grooveOffset } from '../fixtures/beat-fixtures';
 import { type BeatMessage, runDetector, SAMPLE_RATE, type StateMessage } from '../harness/beat-sandbox';
 
-const beats = (messages: readonly { type: string }[]): BeatMessage[] => messages.filter((m): m is BeatMessage => m.type === 'beat');
-const states = (messages: readonly { type: string }[]): StateMessage[] => messages.filter((m): m is StateMessage => m.type === 'state');
+const beats = (messages: ReadonlyArray<{ type: string }>): BeatMessage[] => messages.filter((m): m is BeatMessage => m.type === 'beat');
+const states = (messages: ReadonlyArray<{ type: string }>): StateMessage[] => messages.filter((m): m is StateMessage => m.type === 'state');
 
 describe('beat-detector worklet timestamps', () => {
   test("are on the context clock, not on the processor's own sample count", () => {
@@ -60,6 +60,7 @@ describe('beat-detector worklet timestamps', () => {
     const state = locked.at(-1)!;
 
     expect(state.nextBeatTime).toBeGreaterThan(state.analysisTime - 60 / state.tempo);
+
     for (const upcoming of state.lookahead) {
       expect(upcoming.audioTime).toBeGreaterThan(3);
     }
@@ -67,7 +68,7 @@ describe('beat-detector worklet timestamps', () => {
 });
 
 describe('beat-detector worklet phase confidence', () => {
-  const settled = (messages: readonly { type: string }[]): StateMessage[] => states(messages).filter(state => state.tempo > 0);
+  const settled = (messages: ReadonlyArray<{ type: string }>): StateMessage[] => states(messages).filter(state => state.tempo > 0);
 
   test('stays in range and reads zero before the grid locks', () => {
     const { messages } = runDetector(clicktrack(120, 12).samples);
@@ -76,7 +77,10 @@ describe('beat-detector worklet phase confidence', () => {
     for (const state of captured) {
       expect(state.phaseConfidence).toBeGreaterThanOrEqual(0);
       expect(state.phaseConfidence).toBeLessThanOrEqual(1);
-      if (state.tempo === 0) expect(state.phaseConfidence).toBe(0);
+
+      if (state.tempo === 0) {
+        expect(state.phaseConfidence).toBe(0);
+      }
     }
 
     expect(settled(messages).length).toBeGreaterThan(0);

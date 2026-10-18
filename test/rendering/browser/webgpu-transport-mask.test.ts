@@ -128,10 +128,15 @@ describe('the transport walk over what a frame built (WebGPU)', () => {
           [bindings.blocks, PROBE_EXHAUSTED],
         ] as const) {
           filter.uniforms.uMaskBlocks.set(blocks[0]!, blocks[1]!);
-          filter.uniforms.uMaskSuperblocks.set(blocks[0] === 0 ? 0 : bindings.superblocks[0], blocks[1] === 0 ? 0 : bindings.superblocks[1]);
+          filter.uniforms.uMaskSuperblocks.set(
+            blocks[0] === 0 ? 0 : bindings.superblocks[0],
+            blocks[1] === 0 ? 0 : bindings.superblocks[1],
+          );
           filter.uniforms.uMode.set(mode);
 
-          if (!(await renderWebGpuOnce(ctx, host.backend, root, PROBE_CLEAR))) return;
+          if (!(await renderWebGpuOnce(ctx, host.backend, root, PROBE_CLEAR))) {
+            return;
+          }
 
           readings.push([...readWebGpuPixels(host.backend, canvasSize)(canvasSize / 2, canvasSize / 2)]);
         }

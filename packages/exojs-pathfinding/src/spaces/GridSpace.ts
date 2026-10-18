@@ -107,9 +107,17 @@ export class GridSpace implements NavigationSpace {
 
         costs[row * width + column] = value;
 
-        if (value === 0) continue;
-        if (value !== 1) weighted++;
-        if (value < minCost) minCost = value;
+        if (value === 0) {
+          continue;
+        }
+
+        if (value !== 1) {
+          weighted++;
+        }
+
+        if (value < minCost) {
+          minCost = value;
+        }
       }
     }
 
@@ -140,7 +148,9 @@ export class GridSpace implements NavigationSpace {
     const column = x - this.originX;
     const row = y - this.originY;
 
-    if (column < 0 || row < 0 || column >= this.width || row >= this.height) return -1;
+    if (column < 0 || row < 0 || column >= this.width || row >= this.height) {
+      return -1;
+    }
 
     return row * this.width + column;
   }
@@ -173,19 +183,31 @@ export class GridSpace implements NavigationSpace {
   public setCost(x: number, y: number, cost: number): void {
     const node = this.nodeAt(x, y);
 
-    if (node < 0) return;
+    if (node < 0) {
+      return;
+    }
 
     const value = Number.isFinite(cost) && cost > 0 ? cost : 0;
     const previous = this.costs[node]!;
 
-    if (value === previous) return;
+    if (value === previous) {
+      return;
+    }
 
-    if (previous > 0 && previous !== 1) this.weightedCells--;
-    if (value > 0 && value !== 1) this.weightedCells++;
+    if (previous > 0 && previous !== 1) {
+      this.weightedCells--;
+    }
+
+    if (value > 0 && value !== 1) {
+      this.weightedCells++;
+    }
+
     // Only lowered costs tighten the bound. A raised cost leaves it looser than
     // it could be, which keeps the heuristic admissible - the direction that
     // matters - without rescanning the whole window on every edit.
-    if (value > 0 && value < this.minCost) this.minCost = value;
+    if (value > 0 && value < this.minCost) {
+      this.minCost = value;
+    }
 
     this.costs[node] = value;
     this.clearance = null;
@@ -200,7 +222,9 @@ export class GridSpace implements NavigationSpace {
   public clearanceAt(x: number, y: number): number {
     const node = this.nodeAt(x, y);
 
-    if (node < 0) return 0;
+    if (node < 0) {
+      return 0;
+    }
 
     return this.ensureClearance()[node]!;
   }
@@ -221,18 +245,30 @@ export class GridSpace implements NavigationSpace {
       const nextColumn = column + stepX;
       const nextRow = row + stepY;
 
-      if (nextColumn < 0 || nextRow < 0 || nextColumn >= width || nextRow >= height) continue;
+      if (nextColumn < 0 || nextRow < 0 || nextColumn >= width || nextRow >= height) {
+        continue;
+      }
 
       const next = nextRow * width + nextColumn;
       const cost = costs[next]!;
 
-      if (cost <= 0) continue;
-      if (clearance !== null && clearance[next]! < agentSize) continue;
+      if (cost <= 0) {
+        continue;
+      }
+
+      if (clearance !== null && clearance[next]! < agentSize) {
+        continue;
+      }
 
       if (direction < 4) {
         outCosts[count] = cost;
       } else {
-        if (guardCorners && (!this.fits(column + stepX, row, agentSize, clearance) || !this.fits(column, row + stepY, agentSize, clearance))) continue;
+        if (
+          guardCorners &&
+          (!this.fits(column + stepX, row, agentSize, clearance) || !this.fits(column, row + stepY, agentSize, clearance))
+        ) {
+          continue;
+        }
 
         outCosts[count] = cost * SQRT2;
       }
@@ -249,7 +285,9 @@ export class GridSpace implements NavigationSpace {
     const deltaX = Math.abs((node % width) - (goal % width));
     const deltaY = Math.abs(((node / width) | 0) - ((goal / width) | 0));
 
-    if (this.diagonals === 'never') return (deltaX + deltaY) * this.minCost;
+    if (this.diagonals === 'never') {
+      return (deltaX + deltaY) * this.minCost;
+    }
 
     // Octile distance, scaled by the cheapest walkable cell so that a weighted
     // grid cannot make the estimate exceed the true remaining cost.
@@ -259,7 +297,10 @@ export class GridSpace implements NavigationSpace {
   public nodeToPoint(node: number, out: Vector): void {
     const { width, cellSize } = this;
 
-    out.set((this.originX + (node % width) + 0.5) * cellSize + this.cellOriginX, (this.originY + ((node / width) | 0) + 0.5) * cellSize + this.cellOriginY);
+    out.set(
+      (this.originX + (node % width) + 0.5) * cellSize + this.cellOriginX,
+      (this.originY + ((node / width) | 0) + 0.5) * cellSize + this.cellOriginY,
+    );
   }
 
   public pointToNode(x: number, y: number): number {
@@ -280,7 +321,9 @@ export class GridSpace implements NavigationSpace {
     // Jump-point search derives its pruning rules from a uniform-cost grid with
     // a single-cell agent: weights make the symmetric alternatives it discards
     // no longer equivalent, and clearance changes which of them are legal.
-    if (this.weightedCells > 0 || agentSize > 1 || this.diagonals !== 'no-corner-cutting') return null;
+    if (this.weightedCells > 0 || agentSize > 1 || this.diagonals !== 'no-corner-cutting') {
+      return null;
+    }
 
     this.jumpExpansion ??= new GridJumpExpansion(this.costs, this.width, this.height);
 
@@ -299,7 +342,9 @@ export class GridSpace implements NavigationSpace {
   public smoothPath(nodes: readonly number[], agentSize: number): number[] {
     const last = nodes.length - 1;
 
-    if (last < 2) return [...nodes];
+    if (last < 2) {
+      return [...nodes];
+    }
 
     const { costs } = this;
     const out: number[] = [nodes[0]!];
@@ -313,7 +358,9 @@ export class GridSpace implements NavigationSpace {
       for (let index = anchor + 2; index <= last; index++) {
         budget = Math.max(budget, costs[nodes[index]!]!);
 
-        if (!this.lineOfSight(nodes[anchor]!, nodes[index]!, agentSize, budget)) break;
+        if (!this.lineOfSight(nodes[anchor]!, nodes[index]!, agentSize, budget)) {
+          break;
+        }
 
         best = index;
       }
@@ -328,11 +375,15 @@ export class GridSpace implements NavigationSpace {
   private fits(column: number, row: number, agentSize: number, clearance: Uint16Array | null): boolean {
     const { width, height } = this;
 
-    if (column < 0 || row < 0 || column >= width || row >= height) return false;
+    if (column < 0 || row < 0 || column >= width || row >= height) {
+      return false;
+    }
 
     const index = row * width + column;
 
-    if (this.costs[index]! <= 0) return false;
+    if (this.costs[index]! <= 0) {
+      return false;
+    }
 
     return clearance === null || clearance[index]! >= agentSize;
   }
@@ -371,7 +422,12 @@ export class GridSpace implements NavigationSpace {
         row += stepY;
         nextY += deltaY;
       } else {
-        if (guardCorners && (!this.fits(column + stepX, row, agentSize, clearance) || !this.fits(column, row + stepY, agentSize, clearance))) return false;
+        if (
+          guardCorners &&
+          (!this.fits(column + stepX, row, agentSize, clearance) || !this.fits(column, row + stepY, agentSize, clearance))
+        ) {
+          return false;
+        }
 
         column += stepX;
         row += stepY;
@@ -379,8 +435,13 @@ export class GridSpace implements NavigationSpace {
         nextY += deltaY;
       }
 
-      if (!this.fits(column, row, agentSize, clearance)) return false;
-      if (costs[row * width + column]! > budget) return false;
+      if (!this.fits(column, row, agentSize, clearance)) {
+        return false;
+      }
+
+      if (costs[row * width + column]! > budget) {
+        return false;
+      }
     }
 
     return true;
@@ -394,7 +455,9 @@ export class GridSpace implements NavigationSpace {
   private ensureClearance(): Uint16Array {
     const cached = this.clearance;
 
-    if (cached !== null) return cached;
+    if (cached !== null) {
+      return cached;
+    }
 
     const { width, height, costs } = this;
     const clearance = new Uint16Array(costs.length);
@@ -403,7 +466,9 @@ export class GridSpace implements NavigationSpace {
       for (let column = width - 1; column >= 0; column--) {
         const index = row * width + column;
 
-        if (costs[index]! <= 0) continue;
+        if (costs[index]! <= 0) {
+          continue;
+        }
 
         if (column === width - 1 || row === height - 1) {
           clearance[index] = 1;

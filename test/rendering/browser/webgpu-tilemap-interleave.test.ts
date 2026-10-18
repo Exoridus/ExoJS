@@ -46,7 +46,8 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   return backend;
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const renderScene = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<boolean> => {
   const device = getBackendDevice(backend);
@@ -101,7 +102,15 @@ const makeInterleaveScene = () => {
   const roof = new TileLayer({ id: 2, name: 'roof', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tsBlue] });
   roof.setTileAt(0, 0, { tileset: tsBlue, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
 
-  const map = new TileMap({ name: 'm', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tsRed, tsBlue], layers: [ground, roof] });
+  const map = new TileMap({
+    name: 'm',
+    width: 1,
+    height: 1,
+    tileWidth: 16,
+    tileHeight: 16,
+    tilesets: [tsRed, tsBlue],
+    layers: [ground, roof],
+  });
   const view = map.createView({ bands: { ground: ['ground'], roof: ['roof'] } });
 
   const actor = new TileMapNode(singleTileMap(green));

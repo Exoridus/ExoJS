@@ -1,5 +1,23 @@
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, TextureRegion } from '@codexo/exojs';
-import { refreshCell, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileSet, WangSet } from '@codexo/exojs-tilemap';
+import {
+  Application,
+  Asset,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  type RenderingContext,
+  Scene,
+  TextureRegion,
+} from '@codexo/exojs';
+import {
+  refreshCell,
+  TILE_TRANSFORM_IDENTITY,
+  TileLayer,
+  TileMap,
+  tilemapExtension,
+  TileMapNode,
+  TileSet,
+  WangSet,
+} from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const TILE = 64;
@@ -13,30 +31,39 @@ const grassVariant = (mask: number): number => {
   const right = (mask & 2) !== 0;
   const bottom = (mask & 4) !== 0;
   const left = (mask & 8) !== 0;
+
   if (!top && !left) {
     return 5;
   }
+
   if (!top && !right) {
     return 7;
   }
+
   if (!bottom && !left) {
     return 39;
   }
+
   if (!bottom && !right) {
     return 41;
   }
+
   if (!top) {
     return 6;
   }
+
   if (!right) {
     return 24;
   }
+
   if (!bottom) {
     return 40;
   }
+
   if (!left) {
     return 22;
   }
+
   return GRASS;
 };
 
@@ -65,27 +92,48 @@ class AutoTiledRoomScene extends Scene {
       tileCount: 204,
       columns: 17,
     });
-    this.layer = new TileLayer({ id: 1, name: 'grass', width: WIDTH, height: HEIGHT, tileWidth: TILE, tileHeight: TILE, tilesets: [this.tileset] });
+    this.layer = new TileLayer({
+      id: 1,
+      name: 'grass',
+      width: WIDTH,
+      height: HEIGHT,
+      tileWidth: TILE,
+      tileHeight: TILE,
+      tilesets: [this.tileset],
+    });
+
     for (let y = 3; y < 8; y++) {
       for (let x = 4; x < 12; x++) {
         this.layer.setTileAt(x, y, { tileset: this.tileset, localTileId: GRASS, transform: TILE_TRANSFORM_IDENTITY });
       }
     }
+
     for (let y = 3; y < 8; y++) {
       for (let x = 4; x < 12; x++) {
         refreshCell(this.layer, x, y, this.wang, { wrapBorder: false });
       }
     }
+
     this.node = new TileMapNode(
-      new TileMap({ name: 'painted-room', width: WIDTH, height: HEIGHT, tileWidth: TILE, tileHeight: TILE, tilesets: [this.tileset], layers: [this.layer] }),
+      new TileMap({
+        name: 'painted-room',
+        width: WIDTH,
+        height: HEIGHT,
+        tileWidth: TILE,
+        tileHeight: TILE,
+        tilesets: [this.tileset],
+        layers: [this.layer],
+      }),
     );
     this.node.position.set(OFFSET_X, 0);
 
     this.grid.lineWidth = 1;
     this.grid.lineColor = new Color(72, 89, 99, 0.35);
+
     for (let x = 0; x <= WIDTH; x++) {
       this.grid.drawLine(OFFSET_X + x * TILE, 0, OFFSET_X + x * TILE, HEIGHT * TILE);
     }
+
     for (let y = 0; y <= HEIGHT; y++) {
       this.grid.drawLine(OFFSET_X, y * TILE, OFFSET_X + WIDTH * TILE, y * TILE);
     }
@@ -113,14 +161,17 @@ class AutoTiledRoomScene extends Scene {
   private readonly paint = (pointer: { x: number; y: number }): void => {
     const x = Math.floor((pointer.x - OFFSET_X) / TILE);
     const y = Math.floor(pointer.y / TILE);
+
     if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) {
       return;
     }
+
     if (this.erase) {
       this.layer.clearTileAt(x, y);
     } else {
       this.layer.setTileAt(x, y, { tileset: this.tileset, localTileId: GRASS, transform: TILE_TRANSFORM_IDENTITY });
     }
+
     refreshCell(this.layer, x, y, this.wang, { wrapBorder: false });
     this.hud.setStatus(`${this.erase ? 'Erased' : 'Painted'} (${x}, ${y}); local Wang neighbors updated.`);
   };

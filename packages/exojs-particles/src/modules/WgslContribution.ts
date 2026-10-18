@@ -1,4 +1,9 @@
-import type { ParticleShaderContribution, ParticleTextureBinding, ParticleUniformField, ParticleUniformPrimitive } from './ParticleShaderContribution';
+import type {
+  ParticleShaderContribution,
+  ParticleTextureBinding,
+  ParticleUniformField,
+  ParticleUniformPrimitive,
+} from './ParticleShaderContribution';
 
 /** Compatibility names for the backend-neutral shader resource schema. */
 export type WgslPrimitive = ParticleUniformPrimitive;

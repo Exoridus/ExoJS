@@ -81,7 +81,12 @@ const deserializeEntry = (entry: unknown): VectorBinding => {
 };
 
 /** Combine a directly signed source with an opposing button pair, strongest deflection winning. */
-const evaluateAxis = (buffer: Float32Array, direct: readonly number[], negative: readonly number[], positive: readonly number[]): number => {
+const evaluateAxis = (
+  buffer: Float32Array,
+  direct: readonly number[],
+  negative: readonly number[],
+  positive: readonly number[],
+): number => {
   const axis = sampleStrongest(buffer, direct);
   const composite = Math.abs(sampleStrongest(buffer, positive)) - Math.abs(sampleStrongest(buffer, negative));
 

@@ -82,7 +82,8 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
 // On the software (SwiftShader) adapter used in CI the WebGPU device can be
 // dropped mid-test ("Instance dropped in popErrorScope"). Treat that as a
 // device-lost skip rather than a failure.
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // Render a scene through the real plan path inside a validation error scope.
 // Returns false when the device dropped mid-test (the caller should bail).

@@ -1,5 +1,17 @@
 // Auto-generated from fireworks.ts - edit the .ts source, not this file.
-import { Application, BlendModes, Color, FixedResolutionCanvasSizing, Random, Scene, Size, Sprite, Time, Timer, Vector } from '@codexo/exojs';
+import {
+  Application,
+  BlendModes,
+  Color,
+  FixedResolutionCanvasSizing,
+  Random,
+  Scene,
+  Size,
+  Sprite,
+  Time,
+  Timer,
+  Vector,
+} from '@codexo/exojs';
 import {
   AlphaFadeOverLifetime,
   ApplyForce,

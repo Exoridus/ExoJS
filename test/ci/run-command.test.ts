@@ -14,7 +14,11 @@ const runNode = async (script: string, output: 'compact' | 'silent' | 'normal' =
     args: ['-e', script],
     output,
   });
-  if (result.logPath) createdLogs.push(result.logPath);
+
+  if (result.logPath) {
+    createdLogs.push(result.logPath);
+  }
+
   return result;
 };
 
@@ -28,8 +32,10 @@ const capture = async <T>(block: () => Promise<T>): Promise<{ result: T; stdout:
   const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
   const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
   const announced = (spy: MockInstance): string => spy.mock.calls.map(([chunk]) => String(chunk)).join('');
+
   try {
     const result = await block();
+
     return { result, stdout: announced(stdout), stderr: announced(stderr) };
   } finally {
     stdout.mockRestore();
@@ -38,7 +44,9 @@ const capture = async <T>(block: () => Promise<T>): Promise<{ result: T; stdout:
 };
 
 afterEach(() => {
-  for (const path of createdLogs.splice(0)) rmSync(path, { force: true });
+  for (const path of createdLogs.splice(0)) {
+    rmSync(path, { force: true });
+  }
 });
 
 describe('runCommand', () => {
@@ -52,7 +60,10 @@ describe('runCommand', () => {
 
   it('keeps the final unterminated line and limits the failure tail', async () => {
     const { result, stdout, stderr } = await capture(() =>
-      runNode("for (let i = 0; i < 125; i++) process.stdout.write(`line-${i}\\n`); process.stdout.write('last-line'); process.exitCode = 2;", 'compact'),
+      runNode(
+        "for (let i = 0; i < 125; i++) process.stdout.write(`line-${i}\\n`); process.stdout.write('last-line'); process.exitCode = 2;",
+        'compact',
+      ),
     );
 
     const log = readFileSync(result.logPath!, 'utf8');

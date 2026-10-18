@@ -1,20 +1,17 @@
 import type { Application } from '#core/Application';
 import type { Coroutine, CoroutineBody, CoroutineOptions } from '#core/CoroutineSystem';
-import { SceneAvailability } from '#core/scene/SceneAvailability';
-import { SceneState } from '#core/scene/SceneState';
+import { SceneAvailability, sceneAvailabilityAllows } from '#core/scene/SceneAvailability';
+import type { SceneState } from '#core/scene/SceneState';
 import type { Destroyable } from '#core/types';
 
 /** Options accepted by every `SceneCoroutines` tracking method. */
 export interface SceneCoroutineOptions extends CoroutineOptions {
   /**
    * Availability relative to {@link SceneDirector.pause}/{@link SceneDirector.resume}.
-   * `'always'` (default) ignores scene pause entirely. `'active'` freezes the
-   * moment the scene pauses and resumes when it resumes. `'paused'` is the
-   * mirror image: advances only while the scene is paused.
-   *
-   * Applied only at the scene's pause/resume transitions, not re-checked at
-   * creation time - an item created while the scene is already paused starts
-   * advancing immediately and is only corrected at the next pause/resume cycle.
+   * `'always'` (default) ignores scene pause entirely. `'active'` advances
+   * only while the scene runs, `'paused'` only while it is paused. The policy
+   * holds from the moment the coroutine is queued or added, not only from the
+   * next pause or resume.
    */
   when?: SceneAvailability;
 }
@@ -38,14 +35,11 @@ export interface SceneCoroutineOptions extends CoroutineOptions {
  */
 export class SceneCoroutines implements Destroyable {
   private readonly _coroutines = new Map<Coroutine<unknown, unknown>, SceneAvailability>();
-  private readonly _cold = new Set<Coroutine<unknown, unknown>>();
-  private _suspended: Set<Coroutine<unknown, unknown>> | null = null;
-  private _frozen: Set<Coroutine<unknown, unknown>> | null = null;
-  private _thawed: Set<Coroutine<unknown, unknown>> | null = null;
 
   public constructor(
     private readonly _app: Application,
     private readonly _getState: () => SceneState,
+    private readonly _getPaused: () => boolean = () => false,
   ) {}
 
   /** Coroutines this scene still owns, settled ones excluded. */
@@ -53,7 +47,9 @@ export class SceneCoroutines implements Destroyable {
     let count = 0;
 
     for (const coroutine of this._coroutines.keys()) {
-      if (!coroutine.settled) count++;
+      if (!coroutine.settled) {
+        count++;
+      }
     }
 
     return count;
@@ -85,89 +81,19 @@ export class SceneCoroutines implements Destroyable {
   }
 
   /**
-   * Hold every tracked coroutine that is still running, recording exactly that
-   * set so {@link SceneCoroutines.restore} can release it again. Reserved for
-   * retention suspension.
+   * Hold or release every tracked coroutine according to the scope's current
+   * state and pause flag. Called on every scope transition that can change
+   * what a policy allows.
    * @internal
    */
-  public suspend(): void {
-    this._suspended = this._holdAll();
-  }
-
-  /**
-   * Called by `SceneScope` whenever this scope becomes `Active`: releases
-   * exactly the set {@link SceneCoroutines.suspend} held, plus everything
-   * queued while the scope was dormant.
-   * @internal
-   */
-  public restore(): void {
-    if (this._suspended !== null) {
-      this._release(this._suspended);
-      this._suspended = null;
-    }
-
-    this._release(this._cold);
-    this._cold.clear();
-  }
-
-  /**
-   * Alias for {@link SceneCoroutines.restore}, used by `SceneScope.activate()`
-   * for the fresh-activation edge - kept as a distinctly-named entry point so
-   * call sites read naturally regardless of which transition triggered them.
-   * @internal
-   */
-  public activate(): void {
-    this.restore();
-  }
-
-  /**
-   * Apply the `when` pause policy: `'active'` coroutines still advancing are
-   * frozen, `'paused'` ones currently frozen are woken early. Called by
-   * {@link SceneScope.pause}.
-   * @internal
-   */
-  public pause(): void {
-    const frozen = new Set<Coroutine<unknown, unknown>>();
-    const thawed = new Set<Coroutine<unknown, unknown>>();
-
+  public _sync(): void {
     for (const [coroutine, when] of this._coroutines) {
       if (coroutine.settled) {
+        this._coroutines.delete(coroutine);
         continue;
       }
 
-      if (when === SceneAvailability.Active && !coroutine._suspended) {
-        coroutine._suspended = true;
-        frozen.add(coroutine);
-      } else if (when === SceneAvailability.Paused && coroutine._suspended) {
-        coroutine._suspended = false;
-        thawed.add(coroutine);
-      }
-    }
-
-    this._frozen = frozen;
-    this._thawed = thawed;
-  }
-
-  /**
-   * Undo {@link SceneCoroutines.pause}: releases everything it froze and
-   * re-freezes everything it woke early, each only if still in the state this
-   * facade left it in. Called by {@link SceneScope.resume}.
-   * @internal
-   */
-  public resume(): void {
-    if (this._frozen !== null) {
-      this._release(this._frozen);
-      this._frozen = null;
-    }
-
-    if (this._thawed !== null) {
-      for (const coroutine of this._thawed) {
-        if (!coroutine.settled && !coroutine._suspended) {
-          coroutine._suspended = true;
-        }
-      }
-
-      this._thawed = null;
+      coroutine._suspended = !sceneAvailabilityAllows(when, this._getState(), this._getPaused());
     }
   }
 
@@ -177,39 +103,15 @@ export class SceneCoroutines implements Destroyable {
     }
 
     this._coroutines.clear();
-    this._cold.clear();
-    this._suspended = null;
-    this._frozen = null;
-    this._thawed = null;
   }
 
   private _track(coroutine: Coroutine<unknown, unknown>, options: SceneCoroutineOptions): void {
-    this._coroutines.set(coroutine, options.when ?? SceneAvailability.Always);
+    const when = options.when ?? SceneAvailability.Always;
 
-    if (this._getState() !== SceneState.Active && !coroutine.settled) {
-      coroutine._suspended = true;
-      this._cold.add(coroutine);
-    }
-  }
+    this._coroutines.set(coroutine, when);
 
-  private _holdAll(): Set<Coroutine<unknown, unknown>> {
-    const held = new Set<Coroutine<unknown, unknown>>();
-
-    for (const coroutine of this._coroutines.keys()) {
-      if (!coroutine.settled && !coroutine._suspended) {
-        coroutine._suspended = true;
-        held.add(coroutine);
-      }
-    }
-
-    return held;
-  }
-
-  private _release(coroutines: Iterable<Coroutine<unknown, unknown>>): void {
-    for (const coroutine of coroutines) {
-      if (!coroutine.settled) {
-        coroutine._suspended = false;
-      }
+    if (!coroutine.settled) {
+      coroutine._suspended = !sceneAvailabilityAllows(when, this._getState(), this._getPaused());
     }
   }
 }

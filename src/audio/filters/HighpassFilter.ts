@@ -27,6 +27,7 @@ export class HighpassFilter extends AudioEffect {
     super();
     this._frequency = options.frequency ?? 1000;
     this._resonance = options.resonance ?? 1;
+
     if (isAudioContextReady()) {
       this._setup(getAudioContext());
     } else {
@@ -35,12 +36,18 @@ export class HighpassFilter extends AudioEffect {
   }
 
   public get inputNode(): AudioNode {
-    if (!this._node) throw new Error('HighpassFilter not yet initialized.');
+    if (!this._node) {
+      throw new Error('HighpassFilter not yet initialized.');
+    }
+
     return this._node;
   }
 
   public get outputNode(): AudioNode {
-    if (!this._node) throw new Error('HighpassFilter not yet initialized.');
+    if (!this._node) {
+      throw new Error('HighpassFilter not yet initialized.');
+    }
+
     return this._node;
   }
 
@@ -51,6 +58,7 @@ export class HighpassFilter extends AudioEffect {
 
   public set frequency(value: number) {
     this._frequency = Math.max(20, Math.min(20000, value));
+
     if (this._node) {
       this._node.frequency.setTargetAtTime(this._frequency, this._node.context.currentTime, 0.01);
     }
@@ -63,6 +71,7 @@ export class HighpassFilter extends AudioEffect {
 
   public set resonance(value: number) {
     this._resonance = Math.max(0.0001, value);
+
     if (this._node) {
       this._node.Q.setTargetAtTime(this._resonance, this._node.context.currentTime, 0.01);
     }

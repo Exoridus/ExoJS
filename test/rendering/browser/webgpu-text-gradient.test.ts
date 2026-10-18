@@ -47,7 +47,9 @@ const rowRedShares = (frame: ArrayLike<number>): ReadonlyArray<{ y: number; shar
       }
     }
 
-    if (bestTotal >= 160) rows.push({ y, share: bestShare });
+    if (bestTotal >= 160) {
+      rows.push({ y, share: bestShare });
+    }
   }
 
   return rows;
@@ -76,7 +78,9 @@ describe('WebGPU: the text gradient runs from its first stop at the top', () => 
     root.addChild(text);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root))) {
+        return;
+      }
 
       const rows = rowRedShares(readWebGpuFrame(backend, canvasSize));
       const ink = text.getLocalBounds();

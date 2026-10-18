@@ -46,7 +46,13 @@ describe('GPU resource accounting (RenderStats)', () => {
         // fields may already be non-zero because the core renderers allocate +
         // upload their GPU buffers at connect time (before the first frame);
         // resetStats() then zeroes them (asserted in the reset-policy test).
-        for (const value of [stats.gpuMemoryBytes, stats.textureUploadBytes, stats.bufferUploadBytes, stats.downloadBytes, stats.downloadCount]) {
+        for (const value of [
+          stats.gpuMemoryBytes,
+          stats.textureUploadBytes,
+          stats.bufferUploadBytes,
+          stats.downloadBytes,
+          stats.downloadCount,
+        ]) {
           expect(typeof value).toBe('number');
           expect(Number.isFinite(value)).toBe(true);
           expect(value).toBeGreaterThanOrEqual(0);
@@ -81,7 +87,10 @@ describe('GPU resource accounting (RenderStats)', () => {
         const baseline = warmAndReadVram(harness, baselineTex);
 
         const textureCount = 4;
-        const textures = Array.from({ length: textureCount }, () => new DataTexture({ width: size, height: size, format: TextureFormat.Rgba8 }));
+        const textures = Array.from(
+          { length: textureCount },
+          () => new DataTexture({ width: size, height: size, format: TextureFormat.Rgba8 }),
+        );
 
         measureSteadyFrame(harness, buildSpriteScene({ count: textureCount, textures, assign: 'distinct' }).root);
 

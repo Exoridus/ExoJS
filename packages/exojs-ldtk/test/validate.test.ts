@@ -12,7 +12,13 @@ const RAW_MINIMAL = {
     tilesets: [{ uid: 1, identifier: 'Atlas', relPath: 'tiles.png', tileGridSize: 16, pxWid: 64, pxHei: 64, spacing: 0, padding: 0 }],
     layers: [
       { uid: 101, identifier: 'Tiles', type: 'Tiles', gridSize: 16, tilesetDefUid: 1 },
-      { uid: 102, identifier: 'Walls', type: 'IntGrid', gridSize: 16, intGridValues: [{ value: 1, identifier: 'solid', color: '#ff0000' }] },
+      {
+        uid: 102,
+        identifier: 'Walls',
+        type: 'IntGrid',
+        gridSize: 16,
+        intGridValues: [{ value: 1, identifier: 'solid', color: '#ff0000' }],
+      },
     ],
   },
   levels: [
@@ -51,6 +57,7 @@ const RAW_MINIMAL = {
 const withRoot = (mutate: (root: Record<string, any>) => void): unknown => {
   const clone = JSON.parse(JSON.stringify(RAW_MINIMAL)) as Record<string, any>;
   mutate(clone);
+
   return clone;
 };
 
@@ -354,7 +361,9 @@ describe('validateLdtkData — field instance __value shapes', () => {
   });
 
   it('rejects a Point whose value is not an object', () => {
-    expect(() => validateLdtkData(withField({ __identifier: 'spawn', __type: 'Point', __value: 5 }), SOURCE)).toThrow(/fieldInstances\[0\]\.__value/);
+    expect(() => validateLdtkData(withField({ __identifier: 'spawn', __type: 'Point', __value: 5 }), SOURCE)).toThrow(
+      /fieldInstances\[0\]\.__value/,
+    );
   });
 
   it('rejects a Point carrying x/y instead of cx/cy', () => {
@@ -377,20 +386,23 @@ describe('validateLdtkData — field instance __value shapes', () => {
 
   it('rejects an EntityRef missing one of its iids', () => {
     expect(() =>
-      validateLdtkData(withField({ __identifier: 'target', __type: 'EntityRef', __value: { entityIid: 'a', layerIid: 'b', levelIid: 'c' } }), SOURCE),
+      validateLdtkData(
+        withField({ __identifier: 'target', __type: 'EntityRef', __value: { entityIid: 'a', layerIid: 'b', levelIid: 'c' } }),
+        SOURCE,
+      ),
     ).toThrow(/fieldInstances\[0\]\.__value\.worldIid/);
   });
 
   it('rejects a Tile with a non-numeric rect', () => {
-    expect(() => validateLdtkData(withField({ __identifier: 'icon', __type: 'Tile', __value: { tilesetUid: 1, x: 0, y: 0, w: '16', h: 16 } }), SOURCE)).toThrow(
-      /fieldInstances\[0\]\.__value\.w/,
-    );
+    expect(() =>
+      validateLdtkData(withField({ __identifier: 'icon', __type: 'Tile', __value: { tilesetUid: 1, x: 0, y: 0, w: '16', h: 16 } }), SOURCE),
+    ).toThrow(/fieldInstances\[0\]\.__value\.w/);
   });
 
   it('validates every element of an Array<T> field and points at the bad index', () => {
-    expect(() => validateLdtkData(withField({ __identifier: 'waypoints', __type: 'Array<Point>', __value: [{ cx: 0, cy: 0 }, { cx: 1 }] }), SOURCE)).toThrow(
-      /fieldInstances\[0\]\.__value\[1\]\.cy/,
-    );
+    expect(() =>
+      validateLdtkData(withField({ __identifier: 'waypoints', __type: 'Array<Point>', __value: [{ cx: 0, cy: 0 }, { cx: 1 }] }), SOURCE),
+    ).toThrow(/fieldInstances\[0\]\.__value\[1\]\.cy/);
   });
 
   it.each(['LocalEnum.HeroKind', 'ExternEnum.Faction'] as const)('accepts a string value on a %s field', __type => {
@@ -404,13 +416,15 @@ describe('validateLdtkData — field instance __value shapes', () => {
   });
 
   it('points at the bad index of an Array<LocalEnum.T> field', () => {
-    expect(() => validateLdtkData(withField({ __identifier: 'resistances', __type: 'Array<LocalEnum.Element>', __value: ['Fire', 7] }), SOURCE)).toThrow(
-      /fieldInstances\[0\]\.__value\[1\].*expected a string/,
-    );
+    expect(() =>
+      validateLdtkData(withField({ __identifier: 'resistances', __type: 'Array<LocalEnum.Element>', __value: ['Fire', 7] }), SOURCE),
+    ).toThrow(/fieldInstances\[0\]\.__value\[1\].*expected a string/);
   });
 
   it('leaves a field type this package does not model unchecked', () => {
-    expect(() => validateLdtkData(withField({ __identifier: 'future', __type: 'SomeFutureType', __value: { anything: true } }), SOURCE)).not.toThrow();
+    expect(() =>
+      validateLdtkData(withField({ __identifier: 'future', __type: 'SomeFutureType', __value: { anything: true } }), SOURCE),
+    ).not.toThrow();
   });
 
   it('rejects a world entry that is not an object', () => {

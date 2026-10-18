@@ -33,7 +33,7 @@ const makePendingTexture = (): { texture: Texture; finishLoad: () => void } => {
     ready: own(false),
     destroyed: own(false),
     loaded: own(loaded),
-    updateSource: own(() => undefined),
+    updateSource: own(() => {}),
     addDestroyListener: own(() => texture),
     removeDestroyListener: own(() => texture),
     version: { get: () => version, configurable: true },
@@ -69,19 +69,23 @@ describe('a drawable whose geometry follows its texture invalidates when a defer
 
   test('NineSliceSprite', async () => {
     await expect(
-      announcesLoad(texture => new NineSliceSprite(texture, { slices: 4, width: 100, height: 100 }) as unknown as { _contentRevision: number }),
+      announcesLoad(
+        texture => new NineSliceSprite(texture, { slices: 4, width: 100, height: 100 }) as unknown as { _contentRevision: number },
+      ),
     ).resolves.toBe(true);
   });
 
   test('RepeatingSprite over a bare texture', async () => {
-    await expect(announcesLoad(texture => new RepeatingSprite(texture, { width: 100, height: 100 }) as unknown as { _contentRevision: number })).resolves.toBe(
-      true,
-    );
+    await expect(
+      announcesLoad(texture => new RepeatingSprite(texture, { width: 100, height: 100 }) as unknown as { _contentRevision: number }),
+    ).resolves.toBe(true);
   });
 
   test('RepeatingSprite over a whole-texture region', async () => {
     await expect(
-      announcesLoad(texture => new RepeatingSprite(new TextureRegion(texture), { width: 100, height: 100 }) as unknown as { _contentRevision: number }),
+      announcesLoad(
+        texture => new RepeatingSprite(new TextureRegion(texture), { width: 100, height: 100 }) as unknown as { _contentRevision: number },
+      ),
     ).resolves.toBe(true);
   });
 

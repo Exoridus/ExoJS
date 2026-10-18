@@ -27,7 +27,9 @@ const solidCanvas = (r, g, b, size = 4) => {
   canvas.width = size;
   canvas.height = size;
   const context = canvas.getContext('2d');
-  if (context === null) throw new Error('2D canvas context unavailable.');
+  if (context === null) {
+    throw new Error('2D canvas context unavailable.');
+  }
   context.fillStyle = `rgb(${r}, ${g}, ${b})`;
   context.fillRect(0, 0, size, size);
   return canvas;
@@ -39,7 +41,9 @@ const edgeCanvas = () => {
   canvas.width = 16;
   canvas.height = 16;
   const context = canvas.getContext('2d');
-  if (context === null) throw new Error('2D canvas context unavailable.');
+  if (context === null) {
+    throw new Error('2D canvas context unavailable.');
+  }
   context.fillStyle = 'rgb(255, 40, 40)';
   context.fillRect(2, 2, 6, 12);
   return canvas;
@@ -80,7 +84,9 @@ class ColorPipelineScene extends Scene {
   }
   container(...children) {
     const container = new Container();
-    for (const child of children) container.addChild(child);
+    for (const child of children) {
+      container.addChild(child);
+    }
     this.nodes.push(container);
     return container;
   }
@@ -193,7 +199,9 @@ class ColorPipelineScene extends Scene {
     const shownSrgb = await rendering.readImageData(srgb);
     this.readbackReadout[0].text = `Rgba8:  raw ${rawNumeric.data[0]}  display ${shownNumeric.data[0]}`;
     this.readbackReadout[1].text = `Rgba8Srgb:  raw ${rawSrgb.data[0]}  display ${shownSrgb.data[0]}`;
-    if (this.hdrSupported) await this.readHdr();
+    if (this.hdrSupported) {
+      await this.readHdr();
+    }
   }
   async readHdr() {
     const rendering = this.app.rendering;
@@ -213,27 +221,37 @@ class ColorPipelineScene extends Scene {
   update() {
     this.frame++;
     // The paint frame must have finished before the GPU read that depends on it.
-    if (this.painted && this.frame === 4) void this.readbacks();
+    if (this.painted && this.frame === 4) {
+      void this.readbacks();
+    }
   }
   draw(context) {
     if (!this.painted) {
       context.renderTo(this.numericPaint, { target: this.numericTarget, clear: Color.black });
       context.renderTo(this.srgbPaint, { target: this.srgbTarget, clear: Color.black });
-      if (this.hdrTarget !== null) context.renderTo(this.hdrPaint, { target: this.hdrTarget, clear: Color.black });
+      if (this.hdrTarget !== null) {
+        context.renderTo(this.hdrPaint, { target: this.hdrTarget, clear: Color.black });
+      }
       this.painted = true;
       this.frame = 0;
     }
     for (const node of this.nodes) {
-      if (node !== this.numericPaint && node !== this.srgbPaint && node !== this.hdrPaint) context.render(node);
+      if (node !== this.numericPaint && node !== this.srgbPaint && node !== this.hdrPaint) {
+        context.render(node);
+      }
     }
-    for (const label of this.labels) context.render(label);
+    for (const label of this.labels) {
+      context.render(label);
+    }
   }
   destroy() {
     this.hud?.dispose();
     this.numericTarget?.destroy();
     this.srgbTarget?.destroy();
     this.hdrTarget?.destroy();
-    for (const texture of this.textures) texture.destroy();
+    for (const texture of this.textures) {
+      texture.destroy();
+    }
     super.destroy();
   }
 }

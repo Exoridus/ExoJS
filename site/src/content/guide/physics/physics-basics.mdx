@@ -28,9 +28,11 @@ Do not also call `world.step()` from `update` or `fixedUpdate` in this setup. A 
 
 ## Choose one clock
 
-For an ordinary ExoJS scene, register the world as a scene system with `SystemOrder.Physics`. The host supplies its fixed-step phase. Use scene updates for gameplay decisions and let the system update the simulated state.
+For an ordinary ExoJS scene, register the world as a scene system with `SystemOrder.Physics` and build it with `fixedDelta: this.app.fixedTimeStep`. The world then steps exactly once per application fixed step, after the scene's `fixedUpdate` and its behaviours, so a command they issue in a step is applied by that step. A registered world simulates its own `fixedDelta` on every host step, so the two must agree: a world whose `fixedDelta` differs from the host step throws on its first step, before anything moves, instead of running too fast or too slow. Read discrete input for such commands through an action's `tick` view, which hands each press to exactly one fixed step.
 
-An independently hosted world can instead be driven manually with `world.step(frameDeltaSeconds)`. That API owns an accumulator and advances its configured fixed steps. It is useful outside a scene or when a host deliberately manages the world itself. Do not combine manual stepping with automatic system registration.
+A world can instead be driven manually with `world.step(frameDeltaSeconds)`. That API owns an accumulator and advances its configured fixed steps, at any rate, up to its `maxSubSteps` per call. It is useful outside a scene or when a host deliberately manages the world itself. Do not combine manual stepping with system registration, and register a world with one registry only; development builds report either mix.
+
+A world registered in `app.systems` instead of the scene's is an advanced setup with different scheduling: it steps before any scene code in each fixed step, so a scene command reaches it one step later, and it keeps stepping while the scene is paused.
 
 A constant timestep controls integration intervals; it does not guarantee cross-machine lockstep or rollback determinism. Long stalls, catch-up limits, input timing, and floating-point behavior still matter. Test the actual simulation and record its inputs when reproducibility matters.
 
@@ -50,7 +52,7 @@ Keep the visual node's origin aligned with the collider's intended origin. The e
 
 ## Bodies as components
 
-`PhysicsBodyComponent` ties a body's place in the world to its node. The body joins the world when the node becomes active in a scene and leaves it, keeping its position, velocity and colliders, whenever the component is disabled, the node is removed or reparented, or the scene is retained. It comes back on the next activation. Destroying the node destroys the body, so a removed enemy no longer leaves an invisible collider behind. Pausing the scene changes nothing here: a world registered as the scene's system stops stepping with it, while a world owned elsewhere keeps running.
+`PhysicsBodyComponent` ties a body's place in the world to its node. The body joins the world when the node becomes active in a scene and leaves it, keeping its position, velocity and colliders, whenever the component is disabled, the node is removed from its scene, or the scene is retained. Moving the node to another parent of the same scene is not a disable: the body stays in the world. After a disable it comes back on the next activation. Destroying the node destroys the body, so a removed enemy no longer leaves an invisible collider behind. Pausing the scene changes nothing here: a world registered as the scene's system stops stepping with it, while a world owned elsewhere keeps running.
 
 <SourceSnippet source="examples/guides/physics-basics/body-component.ts" region="body-component" language="ts" title="Bodies owned by their nodes" />
 
@@ -68,7 +70,7 @@ The normal workflow is to use `bind` or `attach` instead of copying transforms y
 
 ## Smooth presentation without changing simulation
 
-Physics runs at fixed intervals, while rendering can happen between them. The world supports interpolation of bound-node presentation. Its alpha must come from the clock that actually drives that world: a manually accumulated world and a host-fixed-step world do not necessarily have the same remainder.
+Physics runs at fixed intervals, while rendering can happen between them. The world supports interpolation of bound-node presentation. Its alpha must come from the clock that actually drives that world: a manually stepped world uses its own accumulator by default, while a registered world needs the host's, `frameAlphaSource: () => this.app.frameAlpha`. Without one, a registered world presents its latest step unsmoothed and development builds warn.
 
 Use the world's interpolation configuration and frame-alpha source described in the [`PhysicsWorld` reference](/ExoJS/en/api/physics-world/). Interpolation blends previous and current simulated state for display; it does not create additional collision steps. Teleports should use the body's transform API so presentation history does not drag the object through an unintended path.
 

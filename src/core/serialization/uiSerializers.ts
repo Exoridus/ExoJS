@@ -50,15 +50,22 @@ const labelSerializer: NodeSerializer<Label> = {
     const out: Record<string, unknown> = { text: node.text };
     const style = serializeStyleOptions(node.textStyleOverrides);
 
-    if (style !== undefined) out.style = style;
-    if (!node.enabled) out.enabled = false;
+    if (style !== undefined) {
+      out.style = style;
+    }
+
+    if (!node.enabled) {
+      out.enabled = false;
+    }
 
     return out;
   },
   read(data) {
     const label = new Label(typeof data.text === 'string' ? data.text : '', deserializeStyleOptions(data.style));
 
-    if (data.enabled === false) label.enabled = false;
+    if (data.enabled === false) {
+      label.enabled = false;
+    }
 
     return label;
   },
@@ -75,10 +82,15 @@ const panelSerializer: NodeSerializer<Panel> = {
       ...serializeFill(fill),
     };
 
-    if (!node.enabled) out.enabled = false;
+    if (!node.enabled) {
+      out.enabled = false;
+    }
 
     const userChildren = node.children.filter(child => child !== node.backgroundNode);
-    if (userChildren.length > 0) out.children = userChildren.map(child => ctx.writeNode(child));
+
+    if (userChildren.length > 0) {
+      out.children = userChildren.map(child => ctx.writeNode(child));
+    }
 
     return out;
   },
@@ -94,13 +106,19 @@ const panelSerializer: NodeSerializer<Panel> = {
       }),
     );
 
-    if (data.enabled === false) panel.enabled = false;
+    if (data.enabled === false) {
+      panel.enabled = false;
+    }
 
     const children = data.children;
+
     if (Array.isArray(children)) {
       for (const child of children) {
         const childNode = asSerializedNode(child);
-        if (childNode !== null) panel.addChild(ctx.readNode(childNode) as RenderNode);
+
+        if (childNode !== null) {
+          panel.addChild(ctx.readNode(childNode) as RenderNode);
+        }
       }
     }
 
@@ -125,10 +143,17 @@ const buttonSerializer: NodeSerializer<Button> = {
 
     const style = node.textStyleOverrides;
 
-    if (style?.fillColor !== undefined) out.textColor = colorToArray(style.fillColor);
-    if (style?.fontSize !== undefined) out.fontSize = style.fontSize;
+    if (style?.fillColor !== undefined) {
+      out.textColor = colorToArray(style.fillColor);
+    }
 
-    if (!node.enabled) out.enabled = false;
+    if (style?.fontSize !== undefined) {
+      out.fontSize = style.fontSize;
+    }
+
+    if (!node.enabled) {
+      out.enabled = false;
+    }
 
     return out;
   },
@@ -148,7 +173,9 @@ const buttonSerializer: NodeSerializer<Button> = {
       }),
     );
 
-    if (data.enabled === false) button.enabled = false;
+    if (data.enabled === false) {
+      button.enabled = false;
+    }
 
     return button;
   },
@@ -171,7 +198,9 @@ const progressBarSerializer: NodeSerializer<ProgressBar> = {
       ...(node.fillMode !== 'clip' && { fillMode: node.fillMode }),
     };
 
-    if (!node.enabled) out.enabled = false;
+    if (!node.enabled) {
+      out.enabled = false;
+    }
 
     return out;
   },
@@ -188,7 +217,9 @@ const progressBarSerializer: NodeSerializer<ProgressBar> = {
       }),
     );
 
-    if (data.enabled === false) bar.enabled = false;
+    if (data.enabled === false) {
+      bar.enabled = false;
+    }
 
     return bar;
   },
@@ -208,11 +239,15 @@ const scrollContainerSerializer: NodeSerializer<ScrollContainer> = {
       scrollY: node.scrollY,
     };
 
-    if (!node.enabled) out.enabled = false;
+    if (!node.enabled) {
+      out.enabled = false;
+    }
 
     // `content` is an internal child the constructor rebuilds; its children are
     // the user's, so they round-trip one level flatter than the live tree.
-    if (node.content.children.length > 0) out.children = node.content.children.map(child => ctx.writeNode(child));
+    if (node.content.children.length > 0) {
+      out.children = node.content.children.map(child => ctx.writeNode(child));
+    }
 
     return out;
   },
@@ -225,13 +260,19 @@ const scrollContainerSerializer: NodeSerializer<ScrollContainer> = {
       }),
     );
 
-    if (data.enabled === false) scroll.enabled = false;
+    if (data.enabled === false) {
+      scroll.enabled = false;
+    }
 
     const children = data.children;
+
     if (Array.isArray(children)) {
       for (const child of children) {
         const childNode = asSerializedNode(child);
-        if (childNode !== null) scroll.content.addChild(ctx.readNode(childNode) as RenderNode);
+
+        if (childNode !== null) {
+          scroll.content.addChild(ctx.readNode(childNode) as RenderNode);
+        }
       }
     }
 
@@ -253,8 +294,13 @@ const stackSerializer: NodeSerializer<Stack> = {
       padding: node.padding,
     };
 
-    if (!node.enabled) out.enabled = false;
-    if (node.children.length > 0) out.children = node.children.map(child => ctx.writeNode(child));
+    if (!node.enabled) {
+      out.enabled = false;
+    }
+
+    if (node.children.length > 0) {
+      out.children = node.children.map(child => ctx.writeNode(child));
+    }
 
     return out;
   },
@@ -267,13 +313,19 @@ const stackSerializer: NodeSerializer<Stack> = {
       }),
     );
 
-    if (data.enabled === false) stack.enabled = false;
+    if (data.enabled === false) {
+      stack.enabled = false;
+    }
 
     const children = data.children;
+
     if (Array.isArray(children)) {
       for (const child of children) {
         const childNode = asSerializedNode(child);
-        if (childNode !== null) stack.addChild(ctx.readNode(childNode) as RenderNode);
+
+        if (childNode !== null) {
+          stack.addChild(ctx.readNode(childNode) as RenderNode);
+        }
       }
 
       stack.layout();
@@ -293,7 +345,9 @@ const dockContainerSerializer: NodeSerializer<DockContainer> = {
   write(node, ctx) {
     const out: Record<string, unknown> = { width: node.uiWidth, height: node.uiHeight };
 
-    if (!node.enabled) out.enabled = false;
+    if (!node.enabled) {
+      out.enabled = false;
+    }
 
     if (node.children.length > 0) {
       out.children = node.children.map(child => ctx.writeNode(child));
@@ -308,7 +362,9 @@ const dockContainerSerializer: NodeSerializer<DockContainer> = {
   read(data, ctx) {
     const dock = new DockContainer(compact({ width: num(data.width), height: num(data.height) }));
 
-    if (data.enabled === false) dock.enabled = false;
+    if (data.enabled === false) {
+      dock.enabled = false;
+    }
 
     const children = data.children;
     const regions = Array.isArray(data.regions) ? data.regions : [];
@@ -342,7 +398,10 @@ const uiRootSerializer: NodeSerializer<UIRoot> = {
     if (Array.isArray(children)) {
       for (const child of children) {
         const childNode = asSerializedNode(child);
-        if (childNode !== null) root.addChild(ctx.readNode(childNode) as RenderNode);
+
+        if (childNode !== null) {
+          root.addChild(ctx.readNode(childNode) as RenderNode);
+        }
       }
     }
 

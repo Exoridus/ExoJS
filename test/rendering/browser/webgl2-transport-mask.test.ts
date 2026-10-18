@@ -126,7 +126,10 @@ describe('the transport walk over what a frame built (WebGL2)', () => {
           [bindings.blocks, PROBE_EXHAUSTED],
         ] as const) {
           filter.uniforms.uMaskBlocks.set(blocks[0]!, blocks[1]!);
-          filter.uniforms.uMaskSuperblocks.set(blocks[0] === 0 ? 0 : bindings.superblocks[0], blocks[1] === 0 ? 0 : bindings.superblocks[1]);
+          filter.uniforms.uMaskSuperblocks.set(
+            blocks[0] === 0 ? 0 : bindings.superblocks[0],
+            blocks[1] === 0 ? 0 : bindings.superblocks[1],
+          );
           filter.uniforms.uMode.set(mode);
           renderWebGl2Once(host.backend, root, PROBE_CLEAR);
           readings.push([...readWebGl2Pixel(host.backend, canvasSize / 2, canvasSize / 2)]);

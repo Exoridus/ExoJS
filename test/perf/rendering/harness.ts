@@ -119,7 +119,10 @@ export const createWebGl2Harness = (options: HarnessOptions = {}): WebGl2Harness
   const backend = new WebGl2Backend(app as unknown as ConstructorParameters<typeof WebGl2Backend>[0]);
 
   if (options.coreRenderers !== false) {
-    wireCoreRenderers(backend, options.spriteRendererBatchSize === undefined ? {} : { spriteRendererBatchSize: options.spriteRendererBatchSize });
+    wireCoreRenderers(
+      backend,
+      options.spriteRendererBatchSize === undefined ? {} : { spriteRendererBatchSize: options.spriteRendererBatchSize },
+    );
   }
 
   return {
@@ -203,10 +206,12 @@ export const measureCrossCallFrame = (harness: WebGl2Harness, nodes: readonly Re
     backend.clear();
 
     const view = backend.view;
+
     for (const node of nodes) {
       backend.setView(view);
       playRenderTree(node, backend);
     }
+
     backend.flush();
 
     const stats = backend.stats;

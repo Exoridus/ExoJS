@@ -89,12 +89,11 @@ const makeBmFontData = (): BmFontData => {
     [72, { x: 0, y: 0, width: 8, height: 12, xOffset: 0, yOffset: 2, xAdvance: 10, page: 0 }], // H
     [105, { x: 8, y: 0, width: 4, height: 12, xOffset: 0, yOffset: 2, xAdvance: 6, page: 0 }], // i
   ]);
+
   return { pages: ['font_0.png'], chars, kernings: new Map(), lineHeight: 16, base: 12 };
 };
 
-const makeBmFont = (): BmFont => {
-  return new BmFont(makeBmFontData(), [{ width: 64, height: 64 } as unknown as Texture]);
-};
+const makeBmFont = (): BmFont => new BmFont(makeBmFontData(), [{ width: 64, height: 64 } as unknown as Texture]);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -225,8 +224,13 @@ describe('shared text node-data packer', () => {
       expect(ink.height).toBeGreaterThan(0);
 
       // Nothing outside [base, base + 40) is touched.
-      for (let i = 0; i < base; i++) expect(target[i]).toBe(0);
-      for (let i = base + textNodeDataFloats; i < target.length; i++) expect(target[i]).toBe(0);
+      for (let i = 0; i < base; i++) {
+        expect(target[i]).toBe(0);
+      }
+
+      for (let i = base + textNodeDataFloats; i < target.length; i++) {
+        expect(target[i]).toBe(0);
+      }
     });
 
     test('no outline, shadow or gradient produces the disabled sentinels', () => {

@@ -115,7 +115,7 @@ const instrument = (binding: RendererBinding): BindingInstrumentation => {
       const renderer = binding.create(backend) as MaybeDestroyable | undefined;
 
       if (renderer === undefined) {
-        return undefined;
+        return;
       }
 
       const connect = renderer.connect.bind(renderer);
@@ -402,7 +402,9 @@ export const runRendererConformance = (binding: RendererBinding, options: Render
     const targets = binding.targets;
 
     expect(targets.length, 'a RendererBinding must declare at least one target').toBeGreaterThan(0);
-    expect(new Set(targets).size, 'a RendererBinding must not declare the same target twice - the registry rejects it').toBe(targets.length);
+    expect(new Set(targets).size, 'a RendererBinding must not declare the same target twice - the registry rejects it').toBe(
+      targets.length,
+    );
   });
 
   test('answers a fresh WebGL2 renderer per backend, never a shared instance', () => {
@@ -441,24 +443,29 @@ export const runRendererConformance = (binding: RendererBinding, options: Render
       return;
     }
 
-    expect(renderer.backendType, 'a binding must answer undefined, throw, or answer a WebGPU renderer for a WebGPU backend - never the WebGL2 one').toBe(
-      RenderBackendType.WebGpu,
-    );
+    expect(
+      renderer.backendType,
+      'a binding must answer undefined, throw, or answer a WebGPU renderer for a WebGPU backend - never the WebGL2 one',
+    ).toBe(RenderBackendType.WebGpu);
   });
 
   test('materialising the binding resolves every target to the one renderer, connected once', () => {
     withRun(binding, options, run => {
       for (const drawable of run.drawables) {
-        expect(run.backend.rendererRegistry.resolve(drawable), `${drawable.constructor.name} must resolve to the renderer its binding created`).toBe(
-          run.renderer,
-        );
+        expect(
+          run.backend.rendererRegistry.resolve(drawable),
+          `${drawable.constructor.name} must resolve to the renderer its binding created`,
+        ).toBe(run.renderer);
       }
 
       expect(run.state.connectCalls, 'a binding connects its renderer exactly once, however many targets it declares').toBe(1);
 
       run.backend.rendererRegistry.disconnect();
 
-      expect(run.state.disconnectCalls, 'the registry deduplicates by instance, so a multi-target binding disconnects its renderer exactly once').toBe(1);
+      expect(
+        run.state.disconnectCalls,
+        'the registry deduplicates by instance, so a multi-target binding disconnects its renderer exactly once',
+      ).toBe(1);
     });
   });
 
@@ -514,7 +521,10 @@ export const runRendererConformance = (binding: RendererBinding, options: Render
         return;
       }
 
-      expect(harness.recorder.drawCalls, 'render()/flush() before connect() must throw or draw nothing - never issue GL work against no backend').toBe(0);
+      expect(
+        harness.recorder.drawCalls,
+        'render()/flush() before connect() must throw or draw nothing - never issue GL work against no backend',
+      ).toBe(0);
     } finally {
       harness.destroy();
     }
@@ -534,7 +544,10 @@ export const runRendererConformance = (binding: RendererBinding, options: Render
         return;
       }
 
-      expect(() => destroy.call(renderer), 'destroy() after disconnect must release the rest, not fail on already released state').not.toThrow();
+      expect(
+        () => destroy.call(renderer),
+        'destroy() after disconnect must release the rest, not fail on already released state',
+      ).not.toThrow();
       expect(() => destroy.call(renderer), 'destroy() must be idempotent - release once and null the handles').not.toThrow();
     } finally {
       harness.destroy();
@@ -545,10 +558,14 @@ export const runRendererConformance = (binding: RendererBinding, options: Render
     withRun(binding, options, run => {
       drawFrame(run.harness, run.drawables);
 
-      expect(run.harness.recorder.drawCalls, 'rendering every sample drawable and flushing must issue at least one GPU draw').toBeGreaterThan(0);
-      expect(run.backend.stats.drawCalls, 'a renderer owns its stats increments: stats.drawCalls must match the draws it actually issued').toBe(
+      expect(
         run.harness.recorder.drawCalls,
-      );
+        'rendering every sample drawable and flushing must issue at least one GPU draw',
+      ).toBeGreaterThan(0);
+      expect(
+        run.backend.stats.drawCalls,
+        'a renderer owns its stats increments: stats.drawCalls must match the draws it actually issued',
+      ).toBe(run.harness.recorder.drawCalls);
       expect(run.backend.stats.submittedNodes, 'every submitted drawable must reach the renderer').toBe(run.drawables.length);
     });
   });
@@ -698,9 +715,10 @@ export const runRendererConformance = (binding: RendererBinding, options: Render
       renderer.connect(harness.backend);
       renderer.disconnect();
 
-      expect(harness.backend.stats.gpuMemoryBytes, 'the GPU byte accountant must return to its pre-connect total once the renderer disconnected').toBe(
-        beforeConnect,
-      );
+      expect(
+        harness.backend.stats.gpuMemoryBytes,
+        'the GPU byte accountant must return to its pre-connect total once the renderer disconnected',
+      ).toBe(beforeConnect);
     } finally {
       harness.destroy();
     }
@@ -730,7 +748,10 @@ export const runRendererConformance = (binding: RendererBinding, options: Render
       // Buffers and vertex arrays only at this point: disconnect is reversible,
       // so a renderer may legitimately hold its compiled program until destroy().
       const stillHeld = acquired.filter(
-        event => (event.op === 'create:buffer' || event.op === 'create:vertexArray') && event.handle !== null && !deletedByDisconnect.has(event.handle),
+        event =>
+          (event.op === 'create:buffer' || event.op === 'create:vertexArray') &&
+          event.handle !== null &&
+          !deletedByDisconnect.has(event.handle),
       );
 
       expect(
@@ -785,6 +806,7 @@ export const runRendererConformance = (binding: RendererBinding, options: Render
       const renderer = run.renderer as RetainedBatchCapableRenderer;
       const scene = options.retainedScene?.(run.backend);
       const recordable = run.drawables.filter(drawable => renderer.admitsRetainedRecording?.(drawable) !== false);
+
       const submit = (): void => {
         if (scene !== undefined) {
           scene.render(run.backend);
@@ -798,7 +820,10 @@ export const runRendererConformance = (binding: RendererBinding, options: Render
       };
 
       if (scene === undefined) {
-        expect(recordable.length, 'a renderer declaring supportsRetainedBatches must admit at least one of its own sample drawables').toBeGreaterThan(0);
+        expect(
+          recordable.length,
+          'a renderer declaring supportsRetainedBatches must admit at least one of its own sample drawables',
+        ).toBeGreaterThan(0);
       }
 
       // Warm the renderer first: the capture window records flushes, and a

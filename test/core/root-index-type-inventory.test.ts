@@ -25,6 +25,7 @@ describe('root index type-level export inventory', () => {
     const indexPath = path.join(rootDir, 'src', 'index.ts');
 
     const configResult = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
+
     if (configResult.error) {
       throw new Error(`Failed to read tsconfig.json: ${ts.flattenDiagnosticMessageText(configResult.error.messageText, '\n')}`);
     }
@@ -49,6 +50,7 @@ describe('root index type-level export inventory', () => {
     }
 
     const moduleSymbol = checker.getSymbolAtLocation(sourceFile);
+
     if (!moduleSymbol) {
       throw new Error('TypeScript checker returned no module symbol for src/index.ts.');
     }
@@ -62,6 +64,7 @@ describe('root index type-level export inventory', () => {
         // Resolve export aliases so we classify the underlying declaration,
         // not the re-export wrapper created by export *.
         const resolved = sym.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(sym) : sym;
+
         return `${sym.getName()}: ${classifySymbol(resolved)}`;
       })
       .sort();
@@ -72,16 +75,36 @@ describe('root index type-level export inventory', () => {
 
 const classifySymbol = (sym: ts.Symbol): string => {
   const f = sym.flags;
+
   // Class covers both abstract and concrete classes; both produce runtime values.
-  if (f & ts.SymbolFlags.Class) return 'class';
+  if (f & ts.SymbolFlags.Class) {
+    return 'class';
+  }
+
   // Regular enums compile to runtime objects; const enums are fully erased.
-  if (f & ts.SymbolFlags.RegularEnum) return 'enum';
-  if (f & ts.SymbolFlags.ConstEnum) return 'const enum';
-  if (f & ts.SymbolFlags.Interface) return 'interface';
-  if (f & ts.SymbolFlags.TypeAlias) return 'type alias';
-  if (f & ts.SymbolFlags.Function) return 'function';
+  if (f & ts.SymbolFlags.RegularEnum) {
+    return 'enum';
+  }
+
+  if (f & ts.SymbolFlags.ConstEnum) {
+    return 'const enum';
+  }
+
+  if (f & ts.SymbolFlags.Interface) {
+    return 'interface';
+  }
+
+  if (f & ts.SymbolFlags.TypeAlias) {
+    return 'type alias';
+  }
+
+  if (f & ts.SymbolFlags.Function) {
+    return 'function';
+  }
+
   if (f & ts.SymbolFlags.BlockScopedVariable || f & ts.SymbolFlags.FunctionScopedVariable) {
     return 'variable';
   }
+
   return 'unknown';
 };

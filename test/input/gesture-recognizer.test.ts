@@ -503,7 +503,10 @@ describe('GestureRecognizer — three or more touches', () => {
     const { recognizer, events } = createHarness();
     const pointers = triangle(10);
 
-    for (const pointer of pointers) recognizer.onPointerDown(asPointer(pointer));
+    for (const pointer of pointers) {
+      recognizer.onPointerDown(asPointer(pointer));
+    }
+
     recognizer.onPointerMove(asPointer(pointers[0]!), distanceThreshold); // baseline: spread = 2 * 10
 
     for (const pointer of pointers) {
@@ -526,7 +529,10 @@ describe('GestureRecognizer — three or more touches', () => {
     const { recognizer, events } = createHarness();
     const pointers = triangle(50);
 
-    for (const pointer of pointers) recognizer.onPointerDown(asPointer(pointer));
+    for (const pointer of pointers) {
+      recognizer.onPointerDown(asPointer(pointer));
+    }
+
     recognizer.onPointerMove(asPointer(pointers[0]!), distanceThreshold);
 
     rotateAround(pointers, 90);
@@ -545,7 +551,10 @@ describe('GestureRecognizer — three or more touches', () => {
     const pB = { id: 2, x: 10, y: 0, type: 'touch' };
     const pC = { id: 3, x: 0, y: 10, type: 'touch' };
 
-    for (const pointer of [pA, pB, pC]) recognizer.onPointerDown(asPointer(pointer));
+    for (const pointer of [pA, pB, pC]) {
+      recognizer.onPointerDown(asPointer(pointer));
+    }
+
     recognizer.onPointerMove(asPointer(pC), distanceThreshold);
 
     // Only the third finger moves; the other two are perfectly still.
@@ -565,7 +574,10 @@ describe('GestureRecognizer — three or more touches', () => {
     const pB = { id: 2, x: 50, y: 0, type: 'touch' };
     const pCentre = { id: 3, x: 0, y: 0, type: 'touch' };
 
-    for (const pointer of [pA, pB, pCentre]) recognizer.onPointerDown(asPointer(pointer));
+    for (const pointer of [pA, pB, pCentre]) {
+      recognizer.onPointerDown(asPointer(pointer));
+    }
+
     recognizer.onPointerMove(asPointer(pA), distanceThreshold);
 
     rotateAround([pA, pB], 90);

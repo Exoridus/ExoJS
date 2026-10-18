@@ -20,7 +20,8 @@ describe('Granular worklet — real Web Audio', () => {
       inputFreq: 440,
       durationSeconds: 2,
     });
-    return rms(tail(out, 1.0));
+
+    return rms(tail(out, 1));
   };
 
   it('renders non-trivial granular output', async () => {

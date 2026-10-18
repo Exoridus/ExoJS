@@ -62,11 +62,15 @@ export const stripShaderSource = (source: string): string => {
           line += ' ';
           i++;
         }
+
         continue;
       }
 
       if (rawLine[i] === '/' && rawLine[i + 1] === '/') {
-        if (EXO_DIRECTIVE.test(rawLine.slice(i))) line += rawLine.slice(i);
+        if (EXO_DIRECTIVE.test(rawLine.slice(i))) {
+          line += rawLine.slice(i);
+        }
+
         break;
       }
 
@@ -81,7 +85,9 @@ export const stripShaderSource = (source: string): string => {
 
     const collapsed = line.replaceAll(/[ \t]+/g, ' ').trim();
 
-    if (collapsed !== '') out.push(collapsed);
+    if (collapsed !== '') {
+      out.push(collapsed);
+    }
   }
 
   return out.join('\n');

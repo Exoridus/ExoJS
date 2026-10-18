@@ -82,11 +82,13 @@ export class WebGpuNativeRetainedReplay {
 
     if (frame === null || vertexBuffer === null) {
       this.invalidate();
+
       return false;
     }
 
     if (activePass.stencilEnabled || activePass.depthWrites) {
       this.skipPass();
+
       return false;
     }
 
@@ -114,7 +116,10 @@ export class WebGpuNativeRetainedReplay {
     if (entry === undefined) {
       // The first observed frame establishes the complete batch set. Later additions
       // invalidate that set so partial or changing replays never accumulate age.
-      if (this._observationFrame !== -1 && this._observationFrame !== this._lastFrame) this.invalidate();
+      if (this._observationFrame !== -1 && this._observationFrame !== this._lastFrame) {
+        this.invalidate();
+      }
+
       this._observationFrame = this._lastFrame;
       entry = {
         device,
@@ -134,6 +139,7 @@ export class WebGpuNativeRetainedReplay {
       };
       this._entries.set(payload, entry);
       this._seenCount++;
+
       return false;
     }
 
@@ -142,17 +148,26 @@ export class WebGpuNativeRetainedReplay {
       this._seenCount++;
     }
 
-    if (this._stableFrames < 30 || this._entries.size < 32) return false;
+    if (this._stableFrames < 30 || this._entries.size < 32) {
+      return false;
+    }
 
     if (entry.bundles === null) {
-      if (frame.remainingBuilds <= 0) return false;
+      if (frame.remainingBuilds <= 0) {
+        return false;
+      }
+
       frame.remainingBuilds--;
 
       const encoder = device.createRenderBundleEncoder({ colorFormats: [colorFormat] });
       encoder.setPipeline(pipeline);
       encoder.setBindGroup(0, group0);
       encoder.setBindGroup(1, group1);
-      if (group2 !== null) encoder.setBindGroup(2, group2);
+
+      if (group2 !== null) {
+        encoder.setBindGroup(2, group2);
+      }
+
       encoder.setVertexBuffer(0, vertexBuffer, payload.byteOffset);
       encoder.setIndexBuffer(indexBuffer, indexFormat);
       encoder.drawIndexed(indexCount, instanceCount);
@@ -160,6 +175,7 @@ export class WebGpuNativeRetainedReplay {
     }
 
     activePass.pass.executeBundles(entry.bundles);
+
     return true;
   }
 }

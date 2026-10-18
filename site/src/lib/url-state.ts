@@ -26,25 +26,37 @@ export const readUrlState = (): UrlState => {
   const url = new URL(window.location.href);
   const queryVersion = url.searchParams.get('version');
   const queryExample = url.searchParams.get('example');
+
   if (queryVersion || queryExample) {
     const version = queryVersion && queryVersion.length > 0 ? queryVersion : null;
     let example: string | null = null;
+
     if (queryExample && queryExample.length > 0) {
       example = queryExample.endsWith('.js') ? queryExample : `${queryExample}.js`;
     }
+
     return { version, example };
   }
 
   const hash = window.location.hash; // '#/0.4.0/rendering/display-text'
-  if (!hash || hash === '#') return { version: null, example: null };
+
+  if (!hash || hash === '#') {
+    return { version: null, example: null };
+  }
 
   // Fragment must start with '#/'
-  if (!hash.startsWith('#/')) return { version: null, example: null };
+  if (!hash.startsWith('#/')) {
+    return { version: null, example: null };
+  }
 
   const fragment = hash.slice(2); // '0.4.0/rendering/display-text'
-  if (!fragment) return { version: null, example: null };
+
+  if (!fragment) {
+    return { version: null, example: null };
+  }
 
   const slashIdx = fragment.indexOf('/');
+
   if (slashIdx === -1) {
     // Only a version, no example part.
     return { version: fragment || null, example: null };
@@ -53,11 +65,17 @@ export const readUrlState = (): UrlState => {
   const version = fragment.slice(0, slashIdx);
   const slug = fragment.slice(slashIdx + 1); // 'rendering/display-text'
 
-  if (!version) return { version: null, example: null };
-  if (!slug) return { version, example: null };
+  if (!version) {
+    return { version: null, example: null };
+  }
+
+  if (!slug) {
+    return { version, example: null };
+  }
 
   // Restore the .js extension that catalog paths carry.
   const example = slug.endsWith('.js') ? slug : `${slug}.js`;
+
   return { version, example };
 };
 
@@ -75,6 +93,7 @@ export const writeUrlState = (state: Partial<UrlState>, options: WriteUrlOptions
   url.hash = _buildFragment(version, example);
 
   const target = url.toString();
+
   if (options.replace) {
     window.history.replaceState(null, '', target);
   } else {
@@ -85,8 +104,12 @@ export const writeUrlState = (state: Partial<UrlState>, options: WriteUrlOptions
 // Build a shareable href for a navigation link.
 // Returns  #/<version>/<slug>  (no .js suffix, no %2F encoding).
 export const buildExampleHref = (examplePath: string, versionId: string | null): string => {
-  if (!versionId) return '#';
+  if (!versionId) {
+    return '#';
+  }
+
   const slug = examplePath.replace(/\.js$/, '');
+
   return `#/${versionId}/${slug}`;
 };
 
@@ -112,7 +135,11 @@ export const storeSelectedVersion = (versionId: string): void => {
 // Build the fragment string (without the leading '#').
 // An empty string means "no hash" (URL ends without #).
 const _buildFragment = (version: string | null, example: string | null): string => {
-  if (!version) return '';
+  if (!version) {
+    return '';
+  }
+
   const slug = example ? example.replace(/\.js$/, '') : null;
+
   return slug ? `/${version}/${slug}` : `/${version}`;
 };

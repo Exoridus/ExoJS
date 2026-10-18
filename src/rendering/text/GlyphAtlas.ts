@@ -80,6 +80,7 @@ class ShelfPacker {
       if (shelf.height >= height && shelf.cursorX + width <= this._width) {
         const x = shelf.cursorX;
         shelf.cursorX += width;
+
         return { x, y: shelf.y };
       }
     }
@@ -92,6 +93,7 @@ class ShelfPacker {
     }
 
     this._shelves.push({ y: bottomY, height, cursorX: width });
+
     return { x: 0, y: bottomY };
   }
 
@@ -108,7 +110,11 @@ const makeCtx = (width: number, height: number): { canvas: HTMLCanvasElement | O
   if (typeof OffscreenCanvas !== 'undefined') {
     const canvas = new OffscreenCanvas(width, height);
     const ctx = canvas.getContext('2d')!;
-    if (!ctx) throw new Error('GlyphAtlas: could not obtain OffscreenCanvas 2D context.');
+
+    if (!ctx) {
+      throw new Error('GlyphAtlas: could not obtain OffscreenCanvas 2D context.');
+    }
+
     return { canvas, ctx };
   }
 
@@ -116,7 +122,11 @@ const makeCtx = (width: number, height: number): { canvas: HTMLCanvasElement | O
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('GlyphAtlas: could not obtain canvas 2D context.');
+
+  if (!ctx) {
+    throw new Error('GlyphAtlas: could not obtain canvas 2D context.');
+  }
+
   return { canvas, ctx };
 };
 
@@ -227,14 +237,17 @@ export class AtlasPage {
   public measureGlyph(char: string, state: CanvasTextState): TextMetrics {
     if (this._ctx !== null) {
       applyCanvasTextState(this._ctx, state);
+
       return this._ctx.measureText(char);
     }
+
     // SDF pages own no drawing context, so measuring needs a scratch one. Kept
     // for the page's lifetime rather than created per call: this runs once per
     // uncached glyph, and a fresh canvas per measurement is a whole allocation
     // (plus a context) for one `measureText`.
     const ctx = (this._measureCtx ??= makeCtx(1, 1).ctx);
     applyCanvasTextState(ctx, state);
+
     return ctx.measureText(char);
   }
 
@@ -242,9 +255,11 @@ export class AtlasPage {
   public rasterize(char: string, slotX: number, slotY: number, ascent: number, bbLeft: number, state: CanvasTextState): void {
     const ctx = this._ctx!;
     applyCanvasTextState(ctx, state);
+
     if (!this._colorGlyphs) {
       (ctx as CanvasRenderingContext2D).fillStyle = '#ffffff';
     }
+
     ctx.fillText(char, slotX + glyphPadding + bbLeft, slotY + glyphPadding + ascent);
   }
 
@@ -287,6 +302,7 @@ export class AtlasPage {
 
   public reset(): void {
     this._packer.reset();
+
     if (this._sdfBuffer !== null && this._sdfTexture !== null) {
       this._sdfBuffer.fill(0);
       this._sdfTexture.commit();
@@ -372,7 +388,14 @@ export class GlyphAtlas implements GlyphProvider {
   /** Solid block for decoration quads, claimed on first use and dropped by {@link clear}. */
   private _solidTexel: SolidTexel | null = null;
 
-  public constructor(font: FontVariantKey, pageSize = 1024, mode: AtlasMode = 'sdf', sdfRadius = SDF_RADIUS, pixelRatio = 1, metrics?: GlyphMetrics) {
+  public constructor(
+    font: FontVariantKey,
+    pageSize = 1024,
+    mode: AtlasMode = 'sdf',
+    sdfRadius = SDF_RADIUS,
+    pixelRatio = 1,
+    metrics?: GlyphMetrics,
+  ) {
     this._font = font;
     this._pageSize = pageSize;
     this._mode = mode;
@@ -424,7 +447,11 @@ export class GlyphAtlas implements GlyphProvider {
   public getGlyph(char: string, size: number): GlyphInfo {
     const key: GlyphKey = `${char}:${size}`;
     const cached = this._cache.get(key);
-    if (cached !== undefined) return cached;
+
+    if (cached !== undefined) {
+      return cached;
+    }
+
     return this._mode === 'sdf' ? this._rasterizeSdf(char, size, key) : this._rasterizeCanvas(char, size, key);
   }
 
@@ -447,6 +474,7 @@ export class GlyphAtlas implements GlyphProvider {
     // Reset with the pages: the block's slot is about to be handed back to the
     // packer, and a stale UV would point at whatever glyph lands there next.
     this._solidTexel = null;
+
     // Pages are reset in place, not discarded: a fresh page would own a new
     // DataTexture/Texture (and GPU resource) while the old one leaks, and
     // reuse needs nothing a fresh page would have had anyway - `reset()`
@@ -454,6 +482,7 @@ export class GlyphAtlas implements GlyphProvider {
     for (const page of this._pages) {
       page.reset();
     }
+
     this.onCleared.dispatch();
   }
 
@@ -463,7 +492,11 @@ export class GlyphAtlas implements GlyphProvider {
     const index = this._pages.length;
     const page = new AtlasPage(index, this._pageSize, this._pageSize, this._mode);
     this._pages.push(page);
-    if (index > 0) this.onPageAdded.dispatch(index);
+
+    if (index > 0) {
+      this.onPageAdded.dispatch(index);
+    }
+
     return page;
   }
 
@@ -478,6 +511,7 @@ export class GlyphAtlas implements GlyphProvider {
 
   private _getSdf(rasterFontSize: number): GlyphSdf {
     let instance = this._sdfInstances.get(rasterFontSize);
+
     if (instance === undefined) {
       instance = new GlyphSdf({
         fontSize: rasterFontSize,
@@ -491,6 +525,7 @@ export class GlyphAtlas implements GlyphProvider {
       });
       this._sdfInstances.set(rasterFontSize, instance);
     }
+
     return instance;
   }
 
@@ -527,6 +562,7 @@ export class GlyphAtlas implements GlyphProvider {
     };
 
     this._cache.set(key, info);
+
     return info;
   }
 
@@ -546,10 +582,14 @@ export class GlyphAtlas implements GlyphProvider {
     const metrics = this._pages[0]!.measureGlyph(char, state);
 
     const ascent = Math.ceil(
-      (metrics as TextMetrics & { fontBoundingBoxAscent?: number }).fontBoundingBoxAscent ?? metrics.actualBoundingBoxAscent ?? rasterSize * 0.8,
+      (metrics as TextMetrics & { fontBoundingBoxAscent?: number }).fontBoundingBoxAscent ??
+        metrics.actualBoundingBoxAscent ??
+        rasterSize * 0.8,
     );
     const descent = Math.ceil(
-      (metrics as TextMetrics & { fontBoundingBoxDescent?: number }).fontBoundingBoxDescent ?? metrics.actualBoundingBoxDescent ?? rasterSize * 0.2,
+      (metrics as TextMetrics & { fontBoundingBoxDescent?: number }).fontBoundingBoxDescent ??
+        metrics.actualBoundingBoxDescent ??
+        rasterSize * 0.2,
     );
     const bbLeft = metrics.actualBoundingBoxLeft ?? 0;
     const bbRight = metrics.actualBoundingBoxRight ?? 0;
@@ -582,13 +622,17 @@ export class GlyphAtlas implements GlyphProvider {
     };
 
     this._cache.set(key, info);
+
     return info;
   }
 
   private _allocateSlot(w: number, h: number, char: string, size: number): { page: AtlasPage; slot: { x: number; y: number } } {
     for (const page of this._pages) {
       const slot = page.insert(w, h);
-      if (slot !== null) return { page, slot };
+
+      if (slot !== null) {
+        return { page, slot };
+      }
     }
 
     const newPage = this._addPage();

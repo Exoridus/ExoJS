@@ -61,4 +61,5 @@ export class SharedAbort {
  * recognized as a cancellation rather than reported as a load failure.
  * @internal
  */
-export const isAbortError = (error: unknown): boolean => typeof error === 'object' && error !== null && (error as { name?: unknown }).name === 'AbortError';
+export const isAbortError = (error: unknown): boolean =>
+  typeof error === 'object' && error !== null && (error as { name?: unknown }).name === 'AbortError';

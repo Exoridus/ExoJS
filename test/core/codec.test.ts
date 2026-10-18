@@ -14,18 +14,26 @@ const compress = async (bytes: Uint8Array, format: 'gzip' | 'deflate'): Promise<
   const reader = source.pipeThrough(new CompressionStream(format)).getReader();
   const chunks: Uint8Array[] = [];
   let total = 0;
+
   for (;;) {
     const { done, value } = await reader.read();
-    if (done) break;
+
+    if (done) {
+      break;
+    }
+
     chunks.push(value);
     total += value.length;
   }
+
   const out = new Uint8Array(total);
   let offset = 0;
+
   for (const chunk of chunks) {
     out.set(chunk, offset);
     offset += chunk.length;
   }
+
   return out;
 };
 
@@ -43,7 +51,11 @@ describe('Codec.decodeBase64', () => {
   it('round-trips arbitrary bytes via btoa', () => {
     const bytes = new Uint8Array([0, 1, 2, 253, 254, 255]);
     let binary = '';
-    for (const b of bytes) binary += String.fromCharCode(b);
+
+    for (const b of bytes) {
+      binary += String.fromCharCode(b);
+    }
+
     const b64 = btoa(binary);
     expect([...Codec.decodeBase64(b64)]).toEqual([...bytes]);
   });

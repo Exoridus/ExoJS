@@ -60,6 +60,7 @@ class AssetCatalogsScene extends Scene {
   private frameCount = 0;
   private loadError = '';
   private night = false;
+
   override async load(): Promise<void> {
     this.hud = mountControls({
       title: 'Asset Catalogs',

@@ -22,15 +22,17 @@ Register scene classes in `ApplicationOptions.scenes` and await `app.start(YourS
 | Constructor and field initializers | Local state and objects that do not need the application or scene services. |
 | `async load(data)` | Await the resources and other prerequisites required for activation. |
 | `init(data)` | Synchronous setup using the attached scene services and loaded resources. |
-| `fixedUpdate(delta)` | Fixed-step simulation, when the scene owns that simulation loop. |
-| `update(delta)` | Variable-step state changes, input-dependent movement, and visual updates. |
-| `draw(context)` | Submit existing state for rendering. |
+| `fixedUpdate(delta)` | Gameplay on the fixed clock: movement and commands a physics world or other fixed-step system consumes. Read held actions as values and presses through `action.tick`. |
+| `update(delta)` | Variable-rate work: camera, animation, UI state and other presentation. |
+| `draw(context)` | Only when the scene needs control over rendering. The default renders the scene's root. |
 | `async unload()` | Await scene-specific shutdown work after a successfully activated scene ends permanently. |
 | `destroy()` | Synchronous cleanup of objects or external subscriptions owned by your code. |
 
 `this.app`, `this.loader`, `this.inputs`, `this.systems`, and the other scene-bound services are unavailable during construction. They are available after attachment, including in `load`, `init`, and teardown hooks. A scene's activation-data type is the first `Scene` generic; the same activation data reaches `load` and `init`.
 
 `load` and `unload` are awaitable. `init`, the frame hooks, and `destroy` must remain synchronous. Returning a promise from a synchronous hook does not turn it into another loading phase.
+
+Override only the hooks a scene needs. A scene that adds its nodes in `init` and registers its systems needs no `fixedUpdate`, `update` or `draw` at all.
 
 ## Load before using required resources
 
@@ -60,11 +62,13 @@ Keep loading, object construction, and event binding out of `draw`. Repeating th
 
 Both update hooks receive **seconds**. `fixedUpdate` runs zero or more times before the variable update as the accumulated time permits. The default step is `1 / 60` second; `ApplicationOptions.fixedTimeStep` changes it. Catch-up is bounded, so a long stall is not a promise that every elapsed simulation step will eventually execute.
 
-A constant timestep makes simulation timing consistent; it does not by itself guarantee deterministic results across machines, inputs, or physics implementations. For an automatically registered physics system, let that system step its world. Do not also call `world.step()` from `fixedUpdate`.
+A constant timestep makes simulation timing consistent; it does not by itself guarantee deterministic results across machines, inputs, or physics implementations. For a physics world registered in `this.systems`, let that system step its world, built with `fixedDelta: this.app.fixedTimeStep`. Do not also call `world.step()` from `fixedUpdate`.
 
-`app.frameAlpha` exposes the fractional remainder between fixed steps. The scene graph does not interpolate automatically. Keep previous and current simulation state and interpolate the rendered representation when you need smooth presentation between steps:
+`app.frameAlpha` exposes the fractional remainder between fixed steps. The scene graph does not interpolate automatically. A physics world does it for its bound nodes when it interpolates and reads the host's fraction; the bodies remain the simulation state:
 
 <SourceSnippet source="examples/guides/scenes-and-lifecycle/frame-alpha.ts" region="frame-alpha" language="ts" title="Interpolate presentation, not simulation state" />
+
+For simulation state of your own, keep its previous and current fixed-step values and blend only the rendered representation by `app.frameAlpha` in `update`.
 
 ## Navigate, pause, or retain?
 
@@ -81,7 +85,7 @@ Await navigation when subsequent work depends on its result, and handle a reject
 
 Ordinary pause stops scene updates and scene systems while allowing the scene to draw. Scene-bound services also have availability policies. In particular, `this.tweens` is **scene-owned**, but its default `when: 'always'` continues during ordinary pause. Choose an active-only policy for gameplay motion and an always or paused policy deliberately for a pause interface.
 
-Tween availability is applied at pause/resume transitions rather than being re-evaluated when a tween is created. Do not assume that creating an active-only tween after the scene is already paused immediately freezes it. Retention suspension is a separate boundary: it suspends scene-bound activity until restoration.
+A policy applies from the moment a tween, animation, sound or coroutine starts: an active-only tween started while the scene is paused waits for resume, and a paused-only one started during play waits for the next pause. The scene's availability is kept apart from your own playback calls, so a tween you pause yourself stays paused when the scene resumes, and one you resume yourself during a pause still waits for the scene. Retention suspension is a separate boundary: it suspends scene-bound activity until restoration.
 
 ## Ownership and teardown
 
@@ -90,6 +94,10 @@ The engine cleans up the scene graph, UI, and scene-bound services independently
 Use `this.track(resource)` for a `Destroyable` your scene creates outside those automatically owned facilities. Tracked resources are destroyed in reverse registration order. External DOM listeners, timers, observers, and resources acquired directly at application scope still need an explicit ownership decision.
 
 Do not make `unload` the only place that releases partially initialized work: it is not the successful-shutdown hook of a scene that never completed activation. Register ownership when acquiring resources, and use `lifecycleSignal` for cancellable asynchronous work. Scene teardown aborts that signal before unloading. An unrelated promise that ignores cancellation can still finish later; it must not then mutate a scene that has ended.
+
+A navigation or preload cancelled while `load` is still pending aborts the same signal. Once `load` settles, such a scene is torn down without running `init` or `unload`; its `destroy` still runs, and so does the cleanup of everything it registered with its scene services.
+
+`app.destroy()` aborts the signal of every scene the application owns at once, including retained and preloaded ones, and waits a bounded grace period for their teardown. An `unload` that never settles does not keep the engine alive: the application is released without it and [`app.destroyOutcome`](/ExoJS/en/guide/runtime/application/#shutting-down) reports the shutdown as `forced`. Resolve pending teardown work when `lifecycleSignal` aborts rather than relying on that deadline.
 
 When a helper owns a shorter-lived scope, destroy the helper before its parent scene ends. Create child scopes only while their parent is live. [Loading and resources](/ExoJS/en/guide/assets/loading-and-resources/) covers independent claims and nested lifetimes.
 

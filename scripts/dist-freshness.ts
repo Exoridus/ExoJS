@@ -45,14 +45,18 @@ export const collectBuildUnits = (): BuildUnit[] => {
   ];
 
   for (const entry of readdirSync(join(repoRoot, 'packages'), { withFileTypes: true })) {
-    if (!entry.isDirectory() || !entry.name.startsWith('exojs-') || TOOLING_PACKAGES.has(entry.name)) continue;
+    if (!entry.isDirectory() || !entry.name.startsWith('exojs-') || TOOLING_PACKAGES.has(entry.name)) {
+      continue;
+    }
 
     const dir = join(repoRoot, 'packages', entry.name);
     const sourceDir = join(dir, 'src');
     const distDir = join(dir, 'dist');
 
     // Only packages built through the shared library pipeline carry a stamp.
-    if (!existsSync(sourceDir) || !existsSync(join(dir, 'tsconfig.build.json'))) continue;
+    if (!existsSync(sourceDir) || !existsSync(join(dir, 'tsconfig.build.json'))) {
+      continue;
+    }
 
     units.push({ name: `@codexo/${entry.name}`, sourceDir, distDir, built: existsSync(join(distDir, 'esm', 'index.js')) });
   }

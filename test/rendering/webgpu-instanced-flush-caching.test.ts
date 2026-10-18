@@ -150,7 +150,10 @@ describe('WebGPU RepeatingSprite flush hot-path caching', () => {
   // a TextureRegion source resolves to the geometry (CPU repeat-quads) strategy.
   const makeShaderSprite = (texture: Texture): RepeatingSprite => new RepeatingSprite(texture, { width: 48, height: 48 });
   const makeGeoSprite = (texture: Texture): RepeatingSprite =>
-    new RepeatingSprite(new TextureRegion(texture, { x: 0, y: 0, width: texture.width, height: texture.height }), { width: 48, height: 48 });
+    new RepeatingSprite(new TextureRegion(texture, { x: 0, y: 0, width: texture.width, height: texture.height }), {
+      width: 48,
+      height: 48,
+    });
 
   for (const [name, make, textureBindGroupLabel] of [
     ['shader', makeShaderSprite, 'repeating-sprite:texture-bind-group:shader'],

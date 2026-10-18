@@ -199,7 +199,15 @@ export class PackedSourceItems {
    * the receiving store packs them when it is first asked to.
    */
   public pushFrom(source: PackedSourceItems, index: number, seq: number, zIndex: number): number {
-    return this.push(source.drawables[index]!, seq, zIndex, source._minX[index]!, source._minY[index]!, source._maxX[index]!, source._maxY[index]!);
+    return this.push(
+      source.drawables[index]!,
+      seq,
+      zIndex,
+      source._minX[index]!,
+      source._minY[index]!,
+      source._maxX[index]!,
+      source._maxY[index]!,
+    );
   }
 
   public truncate(length: number): void {

@@ -11,29 +11,27 @@ import { tileToChunkCoord } from '../src/types';
 
 // ── helpers ────────────────────────────────────────────────────────────
 
-const fakeTexture = (): Texture => {
-  return {
+const fakeTexture = (): Texture =>
+  ({
     width: 512,
     height: 512,
     uid: 0,
     label: 'test',
     destroy: vi.fn(),
     destroyed: false,
-  } as unknown as Texture;
-};
+  }) as unknown as Texture;
 
-const makeTileset = (): TileSet => {
-  return new TileSet({
+const makeTileset = (): TileSet =>
+  new TileSet({
     name: 'tiles',
     texture: new TextureRegion(fakeTexture(), { x: 0, y: 0, width: 512, height: 512 }),
     tileWidth: 32,
     tileHeight: 32,
     tileCount: 16,
   });
-};
 
-const makeUnboundedLayer = (tileset: TileSet, chunkSize = 4, tileSize = 16): TileLayer => {
-  return new TileLayer({
+const makeUnboundedLayer = (tileset: TileSet, chunkSize = 4, tileSize = 16): TileLayer =>
+  new TileLayer({
     id: 0,
     name: 'l',
     tileWidth: tileSize,
@@ -42,18 +40,15 @@ const makeUnboundedLayer = (tileset: TileSet, chunkSize = 4, tileSize = 16): Til
     chunkWidth: chunkSize,
     chunkHeight: chunkSize,
   });
-};
 
 /** Always returns a valid (all-empty-tile) payload for any coordinate. */
-const makeAlwaysAvailableSource = (chunkSize = 4): ChunkSource => {
-  return {
-    getChunk: (): ChunkPayload => ({
-      width: chunkSize,
-      height: chunkSize,
-      tiles: new Uint32Array(chunkSize * chunkSize),
-    }),
-  };
-};
+const makeAlwaysAvailableSource = (chunkSize = 4): ChunkSource => ({
+  getChunk: (): ChunkPayload => ({
+    width: chunkSize,
+    height: chunkSize,
+    tiles: new Uint32Array(chunkSize * chunkSize),
+  }),
+});
 
 /** Computes the expected wanted chunk range using the same public helpers ChunkStreamer uses internally. */
 const expectedCoreRange = (layer: TileLayer, view: View): { minCx: number; minCy: number; maxCx: number; maxCy: number } => {
@@ -62,6 +57,7 @@ const expectedCoreRange = (layer: TileLayer, view: View): { minCx: number; minCy
   const bottomRightTile = layer.pixelToTile(bounds.right, bounds.bottom);
   const topLeftChunk = tileToChunkCoord(topLeftTile.tx, topLeftTile.ty, layer.chunkWidth, layer.chunkHeight);
   const bottomRightChunk = tileToChunkCoord(bottomRightTile.tx, bottomRightTile.ty, layer.chunkWidth, layer.chunkHeight);
+
   return { minCx: topLeftChunk.cx, minCy: topLeftChunk.cy, maxCx: bottomRightChunk.cx, maxCy: bottomRightChunk.cy };
 };
 
@@ -72,7 +68,9 @@ describe('ChunkStreamer construction', () => {
     const tileset = makeTileset();
     const layer = makeUnboundedLayer(tileset);
     const view = new View(0, 0, 64, 64);
-    expect(() => new ChunkStreamer(layer, makeAlwaysAvailableSource(), view, { loadRadius: 3, unloadRadius: 1 })).toThrow(/unloadRadius.*loadRadius/);
+    expect(() => new ChunkStreamer(layer, makeAlwaysAvailableSource(), view, { loadRadius: 3, unloadRadius: 1 })).toThrow(
+      /unloadRadius.*loadRadius/,
+    );
   });
 
   it('accepts unloadRadius === loadRadius', () => {
@@ -93,11 +91,13 @@ describe('ChunkStreamer.update() — sync provider, load range', () => {
     streamer.update();
 
     const core = expectedCoreRange(layer, view);
+
     for (let cy = core.minCy - 1; cy <= core.maxCy + 1; cy++) {
       for (let cx = core.minCx - 1; cx <= core.maxCx + 1; cx++) {
         expect(layer.getChunk(cx, cy), `expected (${cx},${cy}) loaded`).toBeDefined();
       }
     }
+
     expect(layer.getChunk(core.minCx - 2, core.minCy - 2)).toBeUndefined();
     expect(layer.getChunk(core.maxCx + 2, core.maxCy + 2)).toBeUndefined();
   });
@@ -134,6 +134,7 @@ describe('ChunkStreamer.update() — sync provider, load range', () => {
     streamer.update();
 
     const range = layer.chunkRange()!;
+
     for (const chunk of layer.loadedChunks()) {
       expect(chunk.cx).toBeGreaterThanOrEqual(range.minCx);
       expect(chunk.cx).toBeLessThanOrEqual(range.maxCx);
@@ -216,6 +217,7 @@ describe('ChunkStreamer.update() — load budget', () => {
     const totalWanted = (core.maxCx - core.minCx + 1 + 2) * (core.maxCy - core.minCy + 1 + 2); // + 2*loadRadius default(1)
 
     let ticks = 0;
+
     while (streamer.residentCount < totalWanted && ticks < 50) {
       streamer.update();
       ticks++;
@@ -296,7 +298,11 @@ describe('ChunkStreamer.update() — async provider', () => {
     const source: ChunkSource = {
       getChunk: async () => {
         calls++;
-        if (calls === 1) throw new Error('boom');
+
+        if (calls === 1) {
+          throw new Error('boom');
+        }
+
         return { width: 4, height: 4, tiles: new Uint32Array(16) };
       },
     };

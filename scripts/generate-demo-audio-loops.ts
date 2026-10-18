@@ -57,9 +57,11 @@ const writeWav = (samples: Float32Array): Buffer => {
   buf.write('data', o);
   o += 4;
   buf.writeUInt32LE(dataSize, o);
+
   for (let i = 0; i < samples.length; i++) {
     buf.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round(samples[i] * 32767))), 44 + i * 2);
   }
+
   return buf;
 };
 
@@ -82,6 +84,7 @@ const envelope = (i: number, totalSamples: number, fadeS = 0.04): number => {
   const fadeSamples = Math.round(SAMPLE_RATE * fadeS);
   const fadeIn = Math.min(1, i / fadeSamples);
   const fadeOut = Math.min(1, (totalSamples - 1 - i) / fadeSamples);
+
   return fadeIn * fadeOut;
 };
 
@@ -98,15 +101,21 @@ interface ChordLoopSpec {
 const generateChordLoop = ({ freqs, durationS, tremoloHz, tremoloDepth, masterVolume = 0.35 }: ChordLoopSpec): Float32Array => {
   const n = Math.round(SAMPLE_RATE * durationS);
   const samples = new Float32Array(n);
+
   for (let i = 0; i < n; i++) {
     const t = i / SAMPLE_RATE;
     let v = 0;
-    for (const f of freqs) v += osc(f, t);
+
+    for (const f of freqs) {
+      v += osc(f, t);
+    }
+
     v /= freqs.length;
     // Tremolo: (1 - depth) + depth * (0.5 + 0.5*sin(...)) keeps amplitude always positive
     const tremolo = 1 - tremoloDepth + tremoloDepth * (0.5 + 0.5 * Math.sin(TWO_PI * tremoloHz * t));
     samples[i] = v * tremolo * masterVolume * envelope(i, n);
   }
+
   return samples;
 };
 
@@ -118,7 +127,7 @@ const LOOPS = [
   {
     name: 'demo-loop-a',
     // G major: G4 B4 D5 - bright, upper register
-    freqs: [392.0, 493.88, 587.33],
+    freqs: [392, 493.88, 587.33],
     durationS: 5,
     tremoloHz: 3.5, // faster pulse → energetic
     tremoloDepth: 0.55,
@@ -127,7 +136,7 @@ const LOOPS = [
   {
     name: 'demo-loop-b',
     // D minor: D3 F3 A3 - darker, lower register
-    freqs: [146.83, 174.61, 220.0],
+    freqs: [146.83, 174.61, 220],
     durationS: 6,
     tremoloHz: 1.2, // slow pulse → calm
     tremoloDepth: 0.45,
@@ -136,9 +145,9 @@ const LOOPS = [
   {
     name: 'demo-loop-main',
     // C major: C3 E3 G3 - neutral, mid-range
-    freqs: [130.81, 164.81, 196.0],
+    freqs: [130.81, 164.81, 196],
     durationS: 5,
-    tremoloHz: 2.0, // moderate pulse → background-friendly
+    tremoloHz: 2, // moderate pulse → background-friendly
     tremoloDepth: 0.35,
     masterVolume: 0.36,
   },

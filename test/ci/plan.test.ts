@@ -178,3 +178,47 @@ describe('the matrix entries carry what the setup action needs', () => {
     expect(plan.test.every(entry => !entry.dist)).toBe(true);
   });
 });
+
+describe('the external tarball consumer', () => {
+  const EXTERNAL_CONSUMER = 'pnpm verify:external-consumers';
+
+  /** The required verify entries whose command runs the external consumer, and how. */
+  const consumerRuns = (plan: CiPlan): Array<{ id: string; dist: boolean; segment: string }> =>
+    plan.verify.flatMap(entry =>
+      entry.run
+        .split(' && ')
+        .filter(segment => segment.includes(EXTERNAL_CONSUMER))
+        .map(segment => ({ id: entry.id, dist: entry.dist, segment })),
+    );
+
+  it.each([
+    ['a Core runtime source', 'src/core/Application.ts'],
+    ['the Core root barrel', 'src/index.ts'],
+    ['a documented Core subpath entry', 'src/renderer-sdk.ts'],
+    ['a public rendering barrel', 'src/rendering/public.ts'],
+    ['a physics runtime source', 'packages/exojs-physics/src/PhysicsWorld.ts'],
+    ['the physics barrel', 'packages/exojs-physics/src/index.ts'],
+    ['a tilemap runtime source', 'packages/exojs-tilemap/src/TileLayerNode.ts'],
+    ['the tilemap public barrel', 'packages/exojs-tilemap/src/public.ts'],
+  ])('installs the packed packages for %s change, on a pull request and on a push', (_label, file) => {
+    for (const plan of [pullRequest([file]), push([file])]) {
+      // The package lane fails on the consumer's own exit code: a plain command
+      // in its `&&` chain, run against the build job's dist.
+      expect(consumerRuns(plan)).toEqual([{ id: 'package', dist: true, segment: EXTERNAL_CONSUMER }]);
+    }
+  });
+
+  it('runs on every event that validates everything', () => {
+    expect(consumerRuns(planCi({ eventName: 'workflow_dispatch', changedFiles: [], refName: 'next' }))).toHaveLength(1);
+    expect(consumerRuns(push([]))).toHaveLength(1);
+  });
+
+  it.each([
+    ['a contributor document', 'CONTRIBUTING.md'],
+    ['a package README', 'packages/exojs-tilemap/README.md'],
+    ['a guide page', 'site/src/content/guide/assets/tiled-maps.mdx'],
+  ])('stays off for %s change', (_label, file) => {
+    expect(consumerRuns(pullRequest([file]))).toEqual([]);
+    expect(consumerRuns(push([file]))).toEqual([]);
+  });
+});

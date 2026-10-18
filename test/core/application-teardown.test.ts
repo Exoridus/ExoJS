@@ -247,7 +247,9 @@ describe('Application.destroy() scene-teardown grace period', () => {
 
     expect(settled).toBe(true);
     expect(backendDestroy).toHaveBeenCalledTimes(1);
-    expect(onError).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('gave up waiting for scene teardown') as string }));
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: expect.stringContaining('gave up waiting for scene teardown') as string }),
+    );
   });
 
   test('an ordinary teardown does not wait out the grace period', async () => {

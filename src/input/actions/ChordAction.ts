@@ -121,6 +121,7 @@ export class ChordAction<const Binding extends ChordBinding = ChordBinding> exte
 
     if (steps.length !== 1) {
       const patternText = typeof binding === 'string' ? ` ("${binding}")` : '';
+
       throw new Error(
         `ChordAction: a chord binding${patternText} must resolve to exactly one simultaneous step, not ${steps.length}. Use SequenceAction for '>' patterns.`,
       );

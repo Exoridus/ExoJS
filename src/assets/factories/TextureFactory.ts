@@ -75,6 +75,7 @@ export class TextureFactory implements AssetFactory<ArrayBuffer, Texture, Textur
       context.textureFormats,
       (buffer, descriptor, target, signal) => {
         this._basis ??= new BasisKtx2Runtime();
+
         return this._basis.transcode(buffer, descriptor, target, signal);
       },
       context.signal,

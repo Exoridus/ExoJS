@@ -11,6 +11,7 @@ import security from 'eslint-plugin-security';
 import globals from 'globals';
 
 import { typeAwareCorrectnessRules } from './correctness.js';
+import { authoringStyleConfig } from './style.js';
 
 /**
  * Source policy for an official extension package: the engine rule set, minus
@@ -24,6 +25,7 @@ import { typeAwareCorrectnessRules } from './correctness.js';
  */
 export function extensionSourceConfig({ files, tsconfigRootDir }) {
   return [
+    ...authoringStyleConfig({ files, typeAware: true }),
     {
       files,
       languageOptions: {
@@ -39,10 +41,6 @@ export function extensionSourceConfig({ files, tsconfigRootDir }) {
         },
       },
       rules: {
-        // Import management
-        'simple-import-sort/imports': 'error',
-        'simple-import-sort/exports': 'error',
-        'unused-imports/no-unused-imports': 'error',
         'unused-imports/no-unused-vars': [
           'warn',
           {
@@ -56,7 +54,6 @@ export function extensionSourceConfig({ files, tsconfigRootDir }) {
 
         // Core ESLint
         complexity: ['error', 20],
-        curly: 'error',
         'default-case-last': 'error',
         eqeqeq: ['error', 'always', { null: 'ignore' }],
         'guard-for-in': 'error',
@@ -90,15 +87,11 @@ export function extensionSourceConfig({ files, tsconfigRootDir }) {
         'no-useless-assignment': 'error',
         'no-useless-escape': 'error',
         'no-useless-return': 'error',
-        'object-shorthand': 'error',
-        'prefer-object-spread': 'error',
-        'prefer-template': 'error',
         radix: 'error',
         'no-shadow': 'off',
         'dot-notation': 'off',
 
         // TypeScript correctness
-        '@typescript-eslint/array-type': ['error', { default: 'array-simple' }],
         '@typescript-eslint/ban-ts-comment': [
           'error',
           {
@@ -116,7 +109,6 @@ export function extensionSourceConfig({ files, tsconfigRootDir }) {
             objectLiteralTypeAssertions: 'never',
           },
         ],
-        '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports', disallowTypeAnnotations: false, fixStyle: 'inline-type-imports' }],
         '@typescript-eslint/default-param-last': 'error',
         '@typescript-eslint/explicit-function-return-type': [
           'error',
@@ -292,8 +284,6 @@ export function extensionSourceConfig({ files, tsconfigRootDir }) {
         'unicorn/error-message': 'error',
         'unicorn/no-instanceof-builtins': 'error',
         'unicorn/no-typeof-undefined': 'error',
-        'unicorn/no-useless-undefined': 'error',
-        'unicorn/no-zero-fractions': 'error',
         'unicorn/prefer-array-find': 'error',
         'unicorn/prefer-array-some': 'error',
         'unicorn/prefer-default-parameters': 'error',

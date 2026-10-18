@@ -60,7 +60,8 @@ export const meshBoundaryLoops = (
 };
 
 /** Index of the vertex a triangle corner refers to. */
-const vertexAt = (indices: Uint16Array | Uint32Array | readonly number[] | null, corner: number): number => (indices === null ? corner : indices[corner]!);
+const vertexAt = (indices: Uint16Array | Uint32Array | readonly number[] | null, corner: number): number =>
+  indices === null ? corner : indices[corner]!;
 
 interface Corners {
   /** Welded id of the vertex at `index`. */

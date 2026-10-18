@@ -1,5 +1,16 @@
 // Auto-generated from texture-sampling.ts - edit the .ts source, not this file.
-import { Application, Color, FixedResolutionCanvasSizing, Keyboard, PixelSnapMode, ScaleModes, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Keyboard,
+  PixelSnapMode,
+  ScaleModes,
+  Scene,
+  Sprite,
+  Text,
+  Texture,
+} from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // Colour textures are stored as sRGB and filtered in linear light, so the mips
 // of the checker average to the correct mid-grey rather than a darkened one.

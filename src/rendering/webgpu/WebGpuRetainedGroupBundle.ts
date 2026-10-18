@@ -300,7 +300,13 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
       this._mirrorTransformRows.byteOffset,
       rowCount * retainedTransformSlotBytes,
     );
-    device.queue.writeBuffer(this._tintBuffer, 0, this._mirrorTintRows.buffer, this._mirrorTintRows.byteOffset, rowCount * retainedTintSlotBytes);
+    device.queue.writeBuffer(
+      this._tintBuffer,
+      0,
+      this._mirrorTintRows.buffer,
+      this._mirrorTintRows.byteOffset,
+      rowCount * retainedTintSlotBytes,
+    );
   }
 
   /**
@@ -392,6 +398,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
 
     if (cached !== undefined && cached[slot] !== null) {
       this._bindGroup = cached[slot];
+
       return this._bindGroup;
     }
 
@@ -416,6 +423,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
     });
 
     cached[slot] = this._bindGroup;
+
     return this._bindGroup;
   }
 
@@ -427,6 +435,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
    */
   public invalidateDeviceState(destroyBuffers: boolean): void {
     this.nativeReplay.invalidate();
+
     if (destroyBuffers) {
       this._instanceBuffer?.destroy();
       this._transformBuffer?.destroy();

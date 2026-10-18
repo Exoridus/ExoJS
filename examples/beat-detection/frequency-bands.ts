@@ -1,4 +1,14 @@
-import { Application, Asset, AudioStream, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
+import {
+  Application,
+  Asset,
+  type AudioStream,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  type RenderingContext,
+  Scene,
+  Text,
+} from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -46,6 +56,7 @@ class FrequencyBandsScene extends Scene {
     const binCount = this.analyser.frequencyBinCount;
     const minBin = 1;
     const maxBin = binCount;
+
     for (let i = 0; i <= BAND_COUNT; i++) {
       const t = i / BAND_COUNT;
       this.bandEdges.push(Math.round(minBin * Math.pow(maxBin / minBin, t)));
@@ -57,6 +68,7 @@ class FrequencyBandsScene extends Scene {
     const gap = 16;
     const slotWidth = (width - gap) / BAND_COUNT;
     const barWidth = slotWidth - gap;
+
     for (let i = 0; i < BAND_COUNT; i++) {
       const label = new Text(BAND_LABELS[i], { fillColor: new Color(190, 198, 214), fontSize: 14 });
       label.setAnchor(0.5, 0);
@@ -89,6 +101,7 @@ class FrequencyBandsScene extends Scene {
       const end = Math.max(start + 1, this.bandEdges[band + 1]);
 
       let sum = 0;
+
       for (let bin = start; bin < end; bin++) {
         sum += spectrum[bin];
       }

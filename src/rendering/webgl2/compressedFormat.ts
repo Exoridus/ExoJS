@@ -64,7 +64,10 @@ const enum Gl {
 }
 
 /** Extension name each format family needs, and the internal format per member. */
-const families: ReadonlyArray<{ readonly extension: string; readonly formats: Readonly<Partial<Record<CompressedTextureFormat, number>>> }> = [
+const families: ReadonlyArray<{
+  readonly extension: string;
+  readonly formats: Readonly<Partial<Record<CompressedTextureFormat, number>>>;
+}> = [
   {
     extension: 'WEBGL_compressed_texture_s3tc',
     formats: {

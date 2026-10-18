@@ -16,6 +16,7 @@ const createAudioBufferStub = (): AudioBuffer => ({ duration: 2 }) as AudioBuffe
 const createAudioElementStub = (): HTMLAudioElement => {
   const el = document.createElement('audio');
   Object.defineProperty(el, 'duration', { configurable: true, value: 5 });
+
   return el;
 };
 
@@ -26,6 +27,7 @@ const createVideoElementStub = (): HTMLVideoElement => {
   Object.defineProperty(el, 'playbackRate', { configurable: true, writable: true, value: 1 });
   Object.defineProperty(el, 'loop', { configurable: true, writable: true, value: false });
   Object.defineProperty(el, 'muted', { configurable: true, writable: true, value: false });
+
   return el;
 };
 
@@ -57,8 +59,10 @@ const spyOnGainConnect = (): ConnectSpy => {
   const spy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
     if (firstCall) {
       firstCall = false;
+
       return gainNode as unknown as GainNode;
     }
+
     return original();
   });
 

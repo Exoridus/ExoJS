@@ -43,8 +43,10 @@ const setupBiquadSpy = (): { nodes: MockBiquad[]; restore: () => void } => {
       context: ctx,
     };
     nodes.push(node);
+
     return node as unknown as BiquadFilterNode;
   });
+
   return { nodes, restore: () => spy.mockRestore() };
 };
 

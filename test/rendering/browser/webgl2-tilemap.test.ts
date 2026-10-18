@@ -12,10 +12,11 @@
  * Run via:  pnpm test:browser:webgl2
  */
 
-import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileLayerNode, TileMap, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 import type { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
@@ -25,9 +26,11 @@ import { readWebGl2Pixel } from './_backendSetup';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 import {
   createQuadrantTexture,
+  createSolidRectTexture,
   createSolidTexture,
   isometricOverlapMap,
   makeTileset,
+  orthogonalOverhangLayer,
   singleTileMap,
   wireTilemapRenderers,
   wireViaTiledExtension,
@@ -141,6 +144,7 @@ describe('WebGL2 tilemap — tile orientation', () => {
       [read(1, 0), read(1, 1)],
     ];
     node.destroy();
+
     return result;
   };
 
@@ -162,13 +166,20 @@ describe('WebGL2 tilemap — tile orientation', () => {
               for (const cy of [0, 1]) {
                 let su = cx;
                 let sv = cy;
+
                 if (diagonal) {
                   const t = su;
                   su = sv;
                   sv = t;
                 }
-                if (flipX) su = 1 - su;
-                if (flipY) sv = 1 - sv;
+
+                if (flipX) {
+                  su = 1 - su;
+                }
+
+                if (flipY) {
+                  sv = 1 - sv;
+                }
 
                 expectPixelNear(measured[cx][cy], identity[su][sv]);
               }
@@ -191,10 +202,22 @@ describe('WebGL2 tilemap — chunk boundary', () => {
     const texture = createSolidTexture('#ff0000');
     const tileset = makeTileset(texture);
     // chunkWidth 2 → cells (0,1) and (2,3) live in different chunks.
-    const layer = new TileLayer({ id: 1, name: 'l', width: 4, height: 1, tileWidth: 16, tileHeight: 16, chunkWidth: 2, chunkHeight: 2, tilesets: [tileset] });
+    const layer = new TileLayer({
+      id: 1,
+      name: 'l',
+      width: 4,
+      height: 1,
+      tileWidth: 16,
+      tileHeight: 16,
+      chunkWidth: 2,
+      chunkHeight: 2,
+      tilesets: [tileset],
+    });
+
     for (let tx = 0; tx < 4; tx++) {
       layer.setTileAt(tx, 0, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
     }
+
     const map = new TileMap({ name: 'm', width: 4, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset], layers: [layer] });
     const node = new TileMapNode(map);
 
@@ -222,10 +245,22 @@ describe('WebGL2 tilemap — chunk culling', () => {
     const texture = createSolidTexture('#ff0000');
     const tileset = makeTileset(texture);
     // 8 tiles wide, chunkWidth 2 → 4 chunks at screen x 0,32,64,96.
-    const layer = new TileLayer({ id: 1, name: 'l', width: 8, height: 1, tileWidth: 16, tileHeight: 16, chunkWidth: 2, chunkHeight: 2, tilesets: [tileset] });
+    const layer = new TileLayer({
+      id: 1,
+      name: 'l',
+      width: 8,
+      height: 1,
+      tileWidth: 16,
+      tileHeight: 16,
+      chunkWidth: 2,
+      chunkHeight: 2,
+      tilesets: [tileset],
+    });
+
     for (let tx = 0; tx < 8; tx++) {
       layer.setTileAt(tx, 0, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
     }
+
     const map = new TileMap({ name: 'm', width: 8, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset], layers: [layer] });
     const node = new TileMapNode(map);
 
@@ -259,7 +294,16 @@ describe('WebGL2 tilemap — layer opacity', () => {
     const backend = await createBackend();
     const texture = createSolidTexture('#ffffff');
     const tileset = makeTileset(texture);
-    const layer = new TileLayer({ id: 1, name: 'l', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset], opacity: 0.5 });
+    const layer = new TileLayer({
+      id: 1,
+      name: 'l',
+      width: 1,
+      height: 1,
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      opacity: 0.5,
+    });
     layer.setTileAt(0, 0, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
     const map = new TileMap({ name: 'm', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset], layers: [layer] });
     const node = new TileMapNode(map);
@@ -285,7 +329,16 @@ describe('WebGL2 tilemap — layer opacity', () => {
     const backend = await createBackend();
     const texture = createSolidTexture('#ff0000');
     const tileset = makeTileset(texture);
-    const layer = new TileLayer({ id: 1, name: 'l', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset], visible: false });
+    const layer = new TileLayer({
+      id: 1,
+      name: 'l',
+      width: 1,
+      height: 1,
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      visible: false,
+    });
     layer.setTileAt(0, 0, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
     const map = new TileMap({ name: 'm', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset], layers: [layer] });
     const node = new TileMapNode(map);
@@ -375,8 +428,10 @@ describe('webgl2 isometric tilemap', () => {
     const texture = createSolidTexture('rgba(255, 0, 0, 0.5)');
     const map = isometricOverlapMap(texture, texture);
     const node = new TileMapNode(map);
+
     try {
       node.y = 16;
+
       for (let frame = 0; frame < 3; frame++) {
         render(backend, node);
         expectPixelNear(readWebGl2Pixel(backend, 30, 33), [239, 0, 0, 255]);
@@ -396,6 +451,7 @@ describe('webgl2 isometric tilemap', () => {
     const blue = createSolidTexture('#0000ff');
     const map = isometricOverlapMap(red, blue);
     const node = new TileMapNode(map);
+
     try {
       node.y = 16;
       render(backend, node);
@@ -418,6 +474,44 @@ describe('webgl2 isometric tilemap', () => {
       map.destroy();
       red.destroy();
       blue.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+describe('webgl2 orthogonal tilemap', () => {
+  test('draws overhanging artwork over neighbouring chunks like Tiled, whatever the load order, and keeps it when its cells are culled', async () => {
+    const backend = await createBackend();
+    const blue = createSolidTexture('#0000ff');
+    const red = createSolidRectTexture('#ff0000', 16, 48);
+    const green = createSolidRectTexture('#00ff00', 32, 32);
+    const { layer, streamIn } = orthogonalOverhangLayer(blue, red, green);
+    const node = new TileLayerNode(layer);
+    const root = new Container();
+
+    root.addChild(node);
+
+    try {
+      streamIn();
+      render(backend, root);
+
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 24), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 8), [0, 0, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 56, 8), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 40), [0, 0, 0, 255]);
+
+      // The tree's cell is now below the canvas; only its overhang is in view.
+      root.y = 32;
+      render(backend, root);
+
+      expectPixelNear(readWebGl2Pixel(backend, 8, 40), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 56), [255, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      blue.destroy();
+      red.destroy();
+      green.destroy();
       backend.destroy();
     }
   });

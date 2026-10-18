@@ -306,12 +306,13 @@ describe('per-scope load progress', () => {
     const errors: string[] = [];
 
     global.fetch = vi.fn(
-      async (): Promise<Response> => ({ ok: false, status: 404, statusText: 'Not Found', arrayBuffer: async () => new ArrayBuffer(0) }) as unknown as Response,
+      async (): Promise<Response> =>
+        ({ ok: false, status: 404, statusText: 'Not Found', arrayBuffer: async () => new ArrayBuffer(0) }) as unknown as Response,
     ) as unknown as typeof fetch;
 
     scope.onLoadError.add(key => errors.push(key));
 
-    await scope.load(Asset.type('texture', 'gone.png')).catch(() => undefined);
+    await scope.load(Asset.type('texture', 'gone.png')).catch(() => {});
 
     expect(errors).toEqual(['gone.png']);
   });

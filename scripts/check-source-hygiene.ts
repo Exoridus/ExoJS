@@ -214,7 +214,9 @@ interface Violation {
 }
 
 const commentKind = (text: string): CommentKind => {
-  if (text.startsWith('/**')) return 'jsdoc';
+  if (text.startsWith('/**')) {
+    return 'jsdoc';
+  }
 
   return text.startsWith('/*') ? 'block-comment' : 'line-comment';
 };
@@ -228,13 +230,12 @@ const fail: Abort = message => {
   process.exit(1);
 };
 
-const git = (args: readonly string[]): string => {
-  return execFileSync('git', ['-c', 'core.quotepath=off', ...args], {
+const git = (args: readonly string[]): string =>
+  execFileSync('git', ['-c', 'core.quotepath=off', ...args], {
     cwd: REPO_ROOT,
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
   });
-};
 
 const tryGit = (args: readonly string[]): string => {
   try {
@@ -255,19 +256,17 @@ const gitLines = (args: readonly string[]): string[] => {
   }
 };
 
-const toRepoPath = (absolutePath: string): string => {
-  return relative(REPO_ROOT, absolutePath).split(sep).join('/');
-};
+const toRepoPath = (absolutePath: string): string => relative(REPO_ROOT, absolutePath).split(sep).join('/');
 
 const isScannable = (repoPath: string): boolean => {
-  if (!SCANNABLE_EXTENSIONS.some(extension => repoPath.endsWith(extension))) return false;
+  if (!SCANNABLE_EXTENSIONS.some(extension => repoPath.endsWith(extension))) {
+    return false;
+  }
 
   return !repoPath.split('/').some(segment => segment.startsWith('.') || SKIPPED_SEGMENTS.has(segment));
 };
 
-const isGenerated = (source: string): boolean => {
-  return GENERATED_BANNER.test(source.split('\n', GENERATED_BANNER_LINES).join('\n'));
-};
+const isGenerated = (source: string): boolean => GENERATED_BANNER.test(source.split('\n', GENERATED_BANNER_LINES).join('\n'));
 
 /**
  * Every comment range in the file, found by walking all tokens and reading
@@ -283,13 +282,17 @@ const collectComments = (sourceFile: ts.SourceFile, source: string): ts.CommentR
     const children = node.getChildren(sourceFile);
 
     if (children.length > 0) {
-      for (const child of children) visit(child);
+      for (const child of children) {
+        visit(child);
+      }
 
       return;
     }
 
     for (const range of ts.getLeadingCommentRanges(source, node.getFullStart()) ?? []) {
-      if (seen.has(range.pos)) continue;
+      if (seen.has(range.pos)) {
+        continue;
+      }
 
       seen.add(range.pos);
       comments.push(range);
@@ -313,7 +316,9 @@ interface LineRange {
  * JSDoc block in scope when a single sentence inside it is rewritten.
  */
 const isInScope = (sourceFile: ts.SourceFile, comment: ts.CommentRange, ranges: readonly LineRange[] | null): boolean => {
-  if (ranges === null) return true;
+  if (ranges === null) {
+    return true;
+  }
 
   const first = sourceFile.getLineAndCharacterOfPosition(comment.pos).line + 1;
   const last = sourceFile.getLineAndCharacterOfPosition(Math.max(comment.pos, comment.end - 1)).line + 1;
@@ -341,8 +346,13 @@ const dedupe = (matches: readonly Match[]): Match[] => {
   const seenSpans = new Set<string>();
 
   for (const match of ordered) {
-    if (seenSpans.has(`${match.start}:${match.end}`)) continue;
-    if (kept.some(other => other.rule === match.rule && other.start <= match.start && other.end >= match.end)) continue;
+    if (seenSpans.has(`${match.start}:${match.end}`)) {
+      continue;
+    }
+
+    if (kept.some(other => other.rule === match.rule && other.start <= match.start && other.end >= match.end)) {
+      continue;
+    }
 
     seenSpans.add(`${match.start}:${match.end}`);
     kept.push(match);
@@ -364,13 +374,17 @@ const summarize = (text: string): string => {
 const scanFile = (repoPath: string, absolutePath: string, ranges: readonly LineRange[] | null): Violation[] => {
   const source = readFileSync(absolutePath, 'utf8');
 
-  if (isGenerated(source)) return [];
+  if (isGenerated(source)) {
+    return [];
+  }
 
   const sourceFile = ts.createSourceFile(absolutePath, source, ts.ScriptTarget.Latest, true);
   const violations: Violation[] = [];
 
   for (const comment of collectComments(sourceFile, source)) {
-    if (!isInScope(sourceFile, comment, ranges)) continue;
+    if (!isInScope(sourceFile, comment, ranges)) {
+      continue;
+    }
 
     const text = source.slice(comment.pos, comment.end);
     const matches: Match[] = [];
@@ -378,7 +392,9 @@ const scanFile = (repoPath: string, absolutePath: string, ranges: readonly LineR
     for (const rule of RULES) {
       for (const pattern of rule.patterns) {
         for (const match of text.matchAll(pattern)) {
-          if (rule.allow?.(match[0], text)) continue;
+          if (rule.allow?.(match[0], text)) {
+            continue;
+          }
 
           matches.push({ rule: rule.name, start: match.index, end: match.index + match[0].length, text: match[0] });
         }
@@ -409,7 +425,7 @@ const scanFile = (repoPath: string, absolutePath: string, ranges: readonly LineR
  * of them is the correct notation for anything, which is what separates them
  * from the mathematical and diagram characters the policy leaves alone.
  */
-const SAFE_PUNCTUATION: readonly (readonly [RegExp, string])[] = [
+const SAFE_PUNCTUATION: ReadonlyArray<readonly [RegExp, string]> = [
   [/[–—]/g, '-'],
   [/•/g, '-'],
   [/…/g, '...'],
@@ -425,7 +441,9 @@ const SAFE_PUNCTUATION: readonly (readonly [RegExp, string])[] = [
 const fixFile = (absolutePath: string, ranges: readonly LineRange[] | null): number => {
   const source = readFileSync(absolutePath, 'utf8');
 
-  if (isGenerated(source)) return 0;
+  if (isGenerated(source)) {
+    return 0;
+  }
 
   const sourceFile = ts.createSourceFile(absolutePath, source, ts.ScriptTarget.Latest, true);
   const comments = collectComments(sourceFile, source).sort((a, b) => a.pos - b.pos);
@@ -435,7 +453,9 @@ const fixFile = (absolutePath: string, ranges: readonly LineRange[] | null): num
   let fixed = 0;
 
   for (const comment of comments) {
-    if (!isInScope(sourceFile, comment, ranges)) continue;
+    if (!isInScope(sourceFile, comment, ranges)) {
+      continue;
+    }
 
     const text = source.slice(comment.pos, comment.end);
 
@@ -447,14 +467,18 @@ const fixFile = (absolutePath: string, ranges: readonly LineRange[] | null): num
       replaced = replaced.replaceAll(pattern, ascii);
     }
 
-    if (hits === 0) continue;
+    if (hits === 0) {
+      continue;
+    }
 
     result += source.slice(cursor, comment.pos) + replaced;
     cursor = comment.end;
     fixed += hits;
   }
 
-  if (fixed === 0) return 0;
+  if (fixed === 0) {
+    return 0;
+  }
 
   writeFileSync(absolutePath, result + source.slice(cursor), 'utf8');
 
@@ -467,13 +491,9 @@ interface Scope {
   readonly files: Map<string, LineRange[] | null>;
 }
 
-const unique = (paths: readonly string[]): string[] => {
-  return [...new Set(paths)].sort((a, b) => a.localeCompare(b));
-};
+const unique = (paths: readonly string[]): string[] => [...new Set(paths)].sort((a, b) => a.localeCompare(b));
 
-const wholeFiles = (paths: readonly string[]): Map<string, LineRange[] | null> => {
-  return new Map(unique(paths).map(path => [path, null]));
-};
+const wholeFiles = (paths: readonly string[]): Map<string, LineRange[] | null> => new Map(unique(paths).map(path => [path, null]));
 
 /**
  * New-side line ranges per file from a zero-context diff.
@@ -501,12 +521,16 @@ const parseChangedRanges = (diff: string): Map<string, LineRange[]> => {
 
       const hunk = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(line);
 
-      if (!hunk || current === null) continue;
+      if (!hunk || current === null) {
+        continue;
+      }
 
       const start = Number(hunk[1]);
       const count = hunk[2] === undefined ? 1 : Number(hunk[2]);
 
-      if (count === 0) continue;
+      if (count === 0) {
+        continue;
+      }
 
       const existing = ranges.get(current) ?? [];
 
@@ -522,13 +546,17 @@ const parseChangedRanges = (diff: string): Map<string, LineRange[]> => {
 const defaultBaseRef = (): string => {
   const symbolic = gitLines(['symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD'])[0];
 
-  if (symbolic) return symbolic.replace('refs/remotes/', '');
+  if (symbolic) {
+    return symbolic.replace('refs/remotes/', '');
+  }
 
   // `next` first: it is the dev-line default going forward, so a checkout
   // without a resolvable `origin/HEAD` (e.g. a shallow CI clone) should still
   // prefer it over the release branch `main`.
   for (const candidate of ['origin/next', 'next', 'origin/main', 'main', 'origin/master', 'master']) {
-    if (gitLines(['rev-parse', '--verify', '--quiet', candidate]).length > 0) return candidate;
+    if (gitLines(['rev-parse', '--verify', '--quiet', candidate]).length > 0) {
+      return candidate;
+    }
   }
 
   return 'HEAD';
@@ -560,19 +588,15 @@ const changedScope = (baseRef: string): Scope => {
   };
 };
 
-const allScope = (): Scope => {
-  return {
-    description: 'the whole tree, every comment (reporting mode)',
-    files: wholeFiles([...gitLines(['ls-files']), ...gitLines(['ls-files', '--others', '--exclude-standard'])]),
-  };
-};
+const allScope = (): Scope => ({
+  description: 'the whole tree, every comment (reporting mode)',
+  files: wholeFiles([...gitLines(['ls-files']), ...gitLines(['ls-files', '--others', '--exclude-standard'])]),
+});
 
-const explicitScope = (paths: readonly string[]): Scope => {
-  return {
-    description: `${paths.length} explicitly named path(s), every comment`,
-    files: wholeFiles(paths.map(path => toRepoPath(resolve(REPO_ROOT, path)))),
-  };
-};
+const explicitScope = (paths: readonly string[]): Scope => ({
+  description: `${paths.length} explicitly named path(s), every comment`,
+  files: wholeFiles(paths.map(path => toRepoPath(resolve(REPO_ROOT, path)))),
+});
 
 const parseArguments = (
   argv: readonly string[],
@@ -602,11 +626,16 @@ const parseArguments = (
       base = argv[index + 1];
       index += 1;
 
-      if (base === undefined) fail('lint:source-hygiene: --base needs a git ref.');
+      if (base === undefined) {
+        fail('lint:source-hygiene: --base needs a git ref.');
+      }
     } else if (argument.startsWith('--base=')) {
       base = argument.slice('--base='.length);
     } else if (argument.startsWith('-')) {
-      fail(`lint:source-hygiene: unknown option '${argument}'. ` + 'Usage: check-source-hygiene [--all] [--base <ref>] [--json] [--fix-safe] [paths...]');
+      fail(
+        `lint:source-hygiene: unknown option '${argument}'. ` +
+          'Usage: check-source-hygiene [--all] [--base <ref>] [--json] [--fix-safe] [paths...]',
+      );
     } else {
       paths.push(argument);
     }
@@ -617,8 +646,13 @@ const parseArguments = (
 
 const { all, base, fixSafe, json, paths } = parseArguments(process.argv.slice(2));
 
-if (all && paths.length > 0) fail('lint:source-hygiene: --all and explicit paths are mutually exclusive.');
-if (fixSafe && json) fail('lint:source-hygiene: --fix-safe and --json are mutually exclusive.');
+if (all && paths.length > 0) {
+  fail('lint:source-hygiene: --all and explicit paths are mutually exclusive.');
+}
+
+if (fixSafe && json) {
+  fail('lint:source-hygiene: --fix-safe and --json are mutually exclusive.');
+}
 
 const scope = paths.length > 0 ? explicitScope(paths) : all ? allScope() : changedScope(base ?? defaultBaseRef());
 
@@ -629,12 +663,19 @@ let dashesFixed = 0;
 let filesFixed = 0;
 
 for (const [repoPath, ranges] of [...scope.files].sort(([a], [b]) => a.localeCompare(b))) {
-  if (!isScannable(repoPath)) continue;
+  if (!isScannable(repoPath)) {
+    continue;
+  }
 
   const absolutePath = resolve(REPO_ROOT, repoPath);
 
-  if (absolutePath === SELF_PATH) continue;
-  if (!existsSync(absolutePath) || !statSync(absolutePath).isFile()) continue;
+  if (absolutePath === SELF_PATH) {
+    continue;
+  }
+
+  if (!existsSync(absolutePath) || !statSync(absolutePath).isFile()) {
+    continue;
+  }
 
   scanned.push(repoPath);
 

@@ -236,7 +236,11 @@ export class ProgressBar extends Widget {
 }
 
 /** Turn a background input into a descriptor, routing a colour to `applyFill` instead. */
-const normalizeBackground = (background: UIBackgroundInput, options: UIBackgroundOptions, applyFill: (patch: UIFillPatch) => void): UIBackground | null => {
+const normalizeBackground = (
+  background: UIBackgroundInput,
+  options: UIBackgroundOptions,
+  applyFill: (patch: UIFillPatch) => void,
+): UIBackground | null => {
   if (background instanceof Color) {
     applyFill({ color: background });
 
@@ -250,8 +254,13 @@ const normalizeBackground = (background: UIBackgroundInput, options: UIBackgroun
 const fillPatchFrom = (color: Color | undefined, cornerRadius: number | undefined): UIFillPatch | null => {
   const patch: { -readonly [Key in keyof UIFillPatch]: UIFillPatch[Key] } = {};
 
-  if (color !== undefined) patch.color = color.clone();
-  if (cornerRadius !== undefined) patch.cornerRadius = cornerRadius;
+  if (color !== undefined) {
+    patch.color = color.clone();
+  }
+
+  if (cornerRadius !== undefined) {
+    patch.cornerRadius = cornerRadius;
+  }
 
   return Object.keys(patch).length > 0 ? patch : null;
 };

@@ -144,13 +144,15 @@ if (UPDATE_BASELINE) {
 
   const total = Object.values(actual).reduce((sum, count) => sum + count, 0);
 
-  console.log(`typecheck:test: baseline written to ${BASELINE_REL} — ${total} error(s) across ${Object.keys(actual).length} file(s). Commit it.`);
+  console.log(
+    `typecheck:test: baseline written to ${BASELINE_REL} — ${total} error(s) across ${Object.keys(actual).length} file(s). Commit it.`,
+  );
   process.exit(0);
 }
 
 const baseline = readBaseline();
-const regressions: { file: string; baseline: number; actual: number }[] = [];
-const improvements: { file: string; baseline: number; actual: number }[] = [];
+const regressions: Array<{ file: string; baseline: number; actual: number }> = [];
+const improvements: Array<{ file: string; baseline: number; actual: number }> = [];
 
 for (const [file, count] of Object.entries(actual)) {
   const budget = baseline.files[file] ?? 0;

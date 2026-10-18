@@ -16,7 +16,17 @@ import { Texture } from '#rendering/texture/Texture';
 import { cascadeUniforms } from '../../../packages/exojs-lighting/src/backends/radianceField';
 import { transportCascadeShader } from '../../../packages/exojs-lighting/src/backends/transportShaders';
 import { createWebGpuTestBackend, readWebGpuPixels, renderWebGpuOnce } from './_backendSetup';
-import { COARSE_LEVEL, MERGE_CELL, MERGE_PROBES, MERGE_RANGE, MERGE_SPACING, MERGE_TILE, MERGE_WORLD, type MergeCase, mergeCases } from './_cascadeMergeCases';
+import {
+  COARSE_LEVEL,
+  MERGE_CELL,
+  MERGE_PROBES,
+  MERGE_RANGE,
+  MERGE_SPACING,
+  MERGE_TILE,
+  MERGE_WORLD,
+  type MergeCase,
+  mergeCases,
+} from './_cascadeMergeCases';
 import { probeMask, probeTables } from './_transportProbe';
 
 const size = MERGE_PROBES * MERGE_TILE;
@@ -91,7 +101,10 @@ const runCase = async (ctx: { skip: (reason: string) => void }, scenario: MergeC
 
       sprite.filters = [filter];
       root.addChild(sprite);
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       readings.push(readTexel(backend, scenario.probe[0], scenario.probe[1], scenario.direction));
       root.removeChild(sprite);

@@ -153,20 +153,21 @@ describe('Loader.cacheSource', () => {
     const loader = createLoader(store);
     const controller = new AbortController();
 
-    global.fetch = vi.fn((_url: string, init?: RequestInit) => {
-      return new Promise<Response>((_resolve, reject) => {
-        const signal = init?.signal;
-        const fail = (): void => reject(new DOMException('Aborted.', 'AbortError'));
+    global.fetch = vi.fn(
+      (_url: string, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          const signal = init?.signal;
+          const fail = (): void => reject(new DOMException('Aborted.', 'AbortError'));
 
-        // The acquisition awaits the cache read before it fetches, so the abort
-        // may already have happened by the time this runs.
-        if (signal?.aborted === true) {
-          fail();
-        } else {
-          signal?.addEventListener('abort', fail);
-        }
-      });
-    }) as unknown as typeof fetch;
+          // The acquisition awaits the cache read before it fetches, so the abort
+          // may already have happened by the time this runs.
+          if (signal?.aborted === true) {
+            fail();
+          } else {
+            signal?.addEventListener('abort', fail);
+          }
+        }),
+    ) as unknown as typeof fetch;
 
     const pending = loader.cacheSource(Asset.type('text', 'notes.txt'), { signal: controller.signal });
 

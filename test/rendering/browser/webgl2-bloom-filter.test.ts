@@ -31,7 +31,10 @@ const withScene = async (filters: readonly Filter[], read: (pixel: (x: number, y
     root.destroy();
     texture.destroy();
     backend.destroy();
-    for (const filter of filters) filter.destroy();
+
+    for (const filter of filters) {
+      filter.destroy();
+    }
   }
 };
 
@@ -59,7 +62,11 @@ const withBackdrop = async (read: (pixel: (x: number, y: number) => RgbaTuple) =
     read((x, y) => readWebGl2Pixel(backend, x, y));
   } finally {
     root.destroy();
-    for (const texture of textures) texture.destroy();
+
+    for (const texture of textures) {
+      texture.destroy();
+    }
+
     backend.destroy();
     filter.destroy();
   }

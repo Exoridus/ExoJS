@@ -192,7 +192,12 @@ export class RenderPlanPlayer {
     this._playScope(scope, backend, hooks, this._createPlaybackContext());
   }
 
-  private static _playScope(scope: RenderScope, backend: RenderBackend, hooks: RenderPlanPlaybackHooks, context: RenderPlanPlaybackContext): void {
+  private static _playScope(
+    scope: RenderScope,
+    backend: RenderBackend,
+    hooks: RenderPlanPlaybackHooks,
+    context: RenderPlanPlaybackContext,
+  ): void {
     if (scope.kind === RenderEntryKind.Barrier) {
       RenderEffectExecutor.play(scope, backend, context.playChildScope ?? this._createChildScopeCallback(backend, hooks, context));
 
@@ -202,7 +207,12 @@ export class RenderPlanPlayer {
     this._playGroup(scope, backend, hooks, context);
   }
 
-  private static _playGroup(scope: GroupScope, backend: RenderBackend, hooks: RenderPlanPlaybackHooks, context: RenderPlanPlaybackContext): void {
+  private static _playGroup(
+    scope: GroupScope,
+    backend: RenderBackend,
+    hooks: RenderPlanPlaybackHooks,
+    context: RenderPlanPlaybackContext,
+  ): void {
     // Retained instruction splice: the collect switch left
     // this scope EMPTY and attached the recorded batch list - replay it in
     // O(batches) instead of walking entries. Truthy check: pooled scopes
@@ -254,6 +264,7 @@ export class RenderPlanPlayer {
       this._playGroupEntries(scope, backend, hooks, context);
     } catch (error) {
       failed = true;
+
       throw error;
     } finally {
       // The backend flushes its pending batch INTO the captures here (the
@@ -306,7 +317,12 @@ export class RenderPlanPlayer {
     }
   }
 
-  private static _playGroupEntries(scope: GroupScope, backend: RenderBackend, hooks: RenderPlanPlaybackHooks, context: RenderPlanPlaybackContext): void {
+  private static _playGroupEntries(
+    scope: GroupScope,
+    backend: RenderBackend,
+    hooks: RenderPlanPlaybackHooks,
+    context: RenderPlanPlaybackContext,
+  ): void {
     const entries = scope.entries;
 
     // Phase 1 - populate the CPU transform buffer for all groups in this scope
@@ -446,7 +462,11 @@ export class RenderPlanPlayer {
         }
 
         try {
-          RenderEffectExecutor.play(entry.scope, backend, context.playChildScope ?? this._createChildScopeCallback(backend, hooks, context));
+          RenderEffectExecutor.play(
+            entry.scope,
+            backend,
+            context.playChildScope ?? this._createChildScopeCallback(backend, hooks, context),
+          );
         } finally {
           if (suspended !== null) {
             context.activeGroupTransform = suspended;
@@ -468,7 +488,11 @@ export class RenderPlanPlayer {
    * is appended to the active recorders verbatim - same descriptors, same
    * buffers.
    */
-  private static _replayRetainedInstructions(set: RetainedInstructionSet, hooks: RenderPlanPlaybackHooks, context: RenderPlanPlaybackContext): void {
+  private static _replayRetainedInstructions(
+    set: RetainedInstructionSet,
+    hooks: RenderPlanPlaybackHooks,
+    context: RenderPlanPlaybackContext,
+  ): void {
     const instructions = set.instructions;
     const capturing = context.captureTargets.length > 0;
     // Restore stack for Enter/LeaveGroup markers (balanced by construction -

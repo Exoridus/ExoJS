@@ -1,4 +1,14 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, Sprite, Tween } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  Keyboard,
+  type RenderingContext,
+  Scene,
+  Sprite,
+  type Tween,
+} from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 class InteractiveTweensScene extends Scene {

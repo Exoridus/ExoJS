@@ -83,7 +83,10 @@ export abstract class AbstractText extends Drawable {
   }
 
   public set text(v: string) {
-    if (this._text === v) return;
+    if (this._text === v) {
+      return;
+    }
+
     this._text = v;
     this._markDirty('layout');
   }
@@ -177,13 +180,17 @@ export abstract class AbstractText extends Drawable {
    * its own, so manual calls are rarely needed.
    */
   public syncDirty(): void {
-    if (this.destroyed) return;
+    if (this.destroyed) {
+      return;
+    }
 
     // Consumed BEFORE the pass runs, so the re-entrant read inside
     // `_updateOrigin()` below sees a settled node instead of recursing.
     const hint = this._consumePendingHint();
 
-    if (hint === null || hint === 'tint') return;
+    if (hint === null || hint === 'tint') {
+      return;
+    }
 
     const result = this._runLayout(hint);
 
@@ -245,8 +252,13 @@ export abstract class AbstractText extends Drawable {
 
     this._pendingHint = null;
 
-    if (own === null) return style;
-    if (style === null) return own;
+    if (own === null) {
+      return style;
+    }
+
+    if (style === null) {
+      return own;
+    }
 
     return mergeHint(own, style);
   }

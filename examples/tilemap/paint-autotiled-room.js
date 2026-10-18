@@ -1,6 +1,15 @@
 // Auto-generated from paint-autotiled-room.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, TextureRegion } from '@codexo/exojs';
-import { refreshCell, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileSet, WangSet } from '@codexo/exojs-tilemap';
+import {
+  refreshCell,
+  TILE_TRANSFORM_IDENTITY,
+  TileLayer,
+  TileMap,
+  tilemapExtension,
+  TileMapNode,
+  TileSet,
+  WangSet,
+} from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const TILE = 64;
 const WIDTH = 16;
@@ -62,7 +71,15 @@ class AutoTiledRoomScene extends Scene {
       tileCount: 204,
       columns: 17,
     });
-    this.layer = new TileLayer({ id: 1, name: 'grass', width: WIDTH, height: HEIGHT, tileWidth: TILE, tileHeight: TILE, tilesets: [this.tileset] });
+    this.layer = new TileLayer({
+      id: 1,
+      name: 'grass',
+      width: WIDTH,
+      height: HEIGHT,
+      tileWidth: TILE,
+      tileHeight: TILE,
+      tilesets: [this.tileset],
+    });
     for (let y = 3; y < 8; y++) {
       for (let x = 4; x < 12; x++) {
         this.layer.setTileAt(x, y, { tileset: this.tileset, localTileId: GRASS, transform: TILE_TRANSFORM_IDENTITY });
@@ -74,7 +91,15 @@ class AutoTiledRoomScene extends Scene {
       }
     }
     this.node = new TileMapNode(
-      new TileMap({ name: 'painted-room', width: WIDTH, height: HEIGHT, tileWidth: TILE, tileHeight: TILE, tilesets: [this.tileset], layers: [this.layer] }),
+      new TileMap({
+        name: 'painted-room',
+        width: WIDTH,
+        height: HEIGHT,
+        tileWidth: TILE,
+        tileHeight: TILE,
+        tilesets: [this.tileset],
+        layers: [this.layer],
+      }),
     );
     this.node.position.set(OFFSET_X, 0);
     this.grid.lineWidth = 1;

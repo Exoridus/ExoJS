@@ -8,7 +8,7 @@ import {
   Scene,
   Sprite,
   Text,
-  Texture,
+  type Texture,
 } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
@@ -21,10 +21,13 @@ const makeRamp = (): HTMLCanvasElement => {
   canvas.width = RAMP_SIZE;
   canvas.height = 1;
   const context = canvas.getContext('2d');
+
   if (!context) {
     throw new Error('2D canvas context unavailable.');
   }
+
   const image = context.createImageData(RAMP_SIZE, 1);
+
   for (let i = 0; i < RAMP_SIZE; i++) {
     const phase = (i / RAMP_SIZE) * Math.PI * 2;
     const offset = i * 4;
@@ -33,7 +36,9 @@ const makeRamp = (): HTMLCanvasElement => {
     image.data[offset + 2] = Math.round(127 + 127 * Math.sin(phase + (Math.PI * 4) / 3));
     image.data[offset + 3] = 255;
   }
+
   context.putImageData(image, 0, 0);
+
   return canvas;
 };
 
@@ -43,11 +48,14 @@ const makeCoolLut = (): HTMLCanvasElement => {
   canvas.width = width;
   canvas.height = LUT_SIZE;
   const context = canvas.getContext('2d');
+
   if (!context) {
     throw new Error('2D canvas context unavailable.');
   }
+
   const image = context.createImageData(width, LUT_SIZE);
   const max = LUT_SIZE - 1;
+
   for (let b = 0; b < LUT_SIZE; b++) {
     for (let g = 0; g < LUT_SIZE; g++) {
       for (let r = 0; r < LUT_SIZE; r++) {
@@ -59,7 +67,9 @@ const makeCoolLut = (): HTMLCanvasElement => {
       }
     }
   }
+
   context.putImageData(image, 0, 0);
+
   return canvas;
 };
 
@@ -86,8 +96,12 @@ class ColorTransformsScene extends Scene {
       .setAnchor(0.5)
       .setScale(3)
       .setPosition(width * 0.72, height / 2);
-    this.referenceLabel = new Text('ORIGINAL', { fontSize: 22, fillColor: Color.white }).setAnchor(0.5).setPosition(width * 0.28, height * 0.72);
-    this.processedLabel = new Text('TRANSFORMED', { fontSize: 22, fillColor: Color.white }).setAnchor(0.5).setPosition(width * 0.72, height * 0.72);
+    this.referenceLabel = new Text('ORIGINAL', { fontSize: 22, fillColor: Color.white })
+      .setAnchor(0.5)
+      .setPosition(width * 0.28, height * 0.72);
+    this.processedLabel = new Text('TRANSFORMED', { fontSize: 22, fillColor: Color.white })
+      .setAnchor(0.5)
+      .setPosition(width * 0.72, height * 0.72);
     // Grading is display-referred: the matrix and both lookups run on encoded
     // sRGB values, which is what the numbers below were written against, and
     // the result returns to linear premultiplied colour. `'linear-srgb'` would
@@ -126,6 +140,7 @@ class ColorTransformsScene extends Scene {
     } else {
       this.processed.filters = [];
     }
+
     this.hud.setStatus(MODES[index] ?? MODES[4]);
   }
 

@@ -171,7 +171,7 @@ describe('synchronous hook contract', () => {
     test('a synchronous init() is unaffected', async () => {
       const scope = new SceneScope(createAppStub(), new Scene());
 
-      await expect(scope.prepare(undefined)).resolves.toBeUndefined();
+      await expect(scope.prepare(undefined)).resolves.toBe(true);
     });
   });
 
@@ -291,7 +291,9 @@ describe('synchronous hook contract', () => {
 
       registry.add(new AsyncFixedSystem() as never);
 
-      expect(() => registry._fixedUpdate(Time.toSeconds(Time.milliseconds(16)))).toThrow(/AsyncFixedSystem\.fixedUpdate\(\) returned a Promise/);
+      expect(() => registry._fixedUpdate(Time.toSeconds(Time.milliseconds(16)))).toThrow(
+        /AsyncFixedSystem\.fixedUpdate\(\) returned a Promise/,
+      );
     });
 
     test('an async draw() phase throws', () => {
@@ -349,7 +351,7 @@ describe('synchronous hook contract', () => {
 
       const scope = new SceneScope(createAppStub(), new AsyncLoadScene());
 
-      await expect(scope.prepare(undefined)).resolves.toBeUndefined();
+      await expect(scope.prepare(undefined)).resolves.toBe(true);
       expect(events).toEqual(['load:start', 'load:end', 'init']);
     });
 

@@ -63,7 +63,9 @@ export const ldtkToTileMap = (data: LdtkData, options?: LdtkToTileMapOptions): L
   const source = options?.source ?? '';
   const tilesets = options?.tilesets ?? new Map<number, TileSet>();
 
-  const levels = getLdtkLevelEntries(data).map((entry, levelIndex) => convertLevel(entry.level, entry.worldIid, levelIndex, data, tilesets));
+  const levels = getLdtkLevelEntries(data).map((entry, levelIndex) =>
+    convertLevel(entry.level, entry.worldIid, levelIndex, data, tilesets),
+  );
 
   return new LdtkMap(source, data, levels);
 };
@@ -85,7 +87,13 @@ export const ldtkLevelToTileMap = (
   tilesets: ReadonlyMap<number, TileSet>,
 ): TileMap => convertLevel(level, worldIid, levelIndex, data, tilesets);
 
-const convertLevel = (level: LdtkLevel, worldIid: string | undefined, levelIndex: number, data: LdtkData, tilesets: ReadonlyMap<number, TileSet>): TileMap => {
+const convertLevel = (
+  level: LdtkLevel,
+  worldIid: string | undefined,
+  levelIndex: number,
+  data: LdtkData,
+  tilesets: ReadonlyMap<number, TileSet>,
+): TileMap => {
   // Derive map-level tile size from the first non-entity layer, or fall back.
   const gridSize = pickLevelGridSize(level, data.defaultGridSize ?? 16);
   const mapWidth = Math.max(1, Math.ceil(level.pxWid / gridSize));
@@ -131,9 +139,14 @@ const convertLevel = (level: LdtkLevel, worldIid: string | undefined, levelIndex
     tilesets: runtimeTilesets,
     layers: runtimeLayers,
     objectLayers: runtimeObjectLayers,
+    backgroundColor: parseLdtkColor(level.__bgColor ?? level.bgColor ?? data.defaultLevelBgColor),
     properties: buildLdtkLevelProperties(level, worldIid),
   });
 };
+
+/** A `#rrggbb` LDtk colour as `0xRRGGBB`, or `null` when absent or malformed. */
+const parseLdtkColor = (color: string | null | undefined): number | null =>
+  color !== null && color !== undefined && /^#[\da-f]{6}$/i.test(color) ? Number.parseInt(color.slice(1), 16) : null;
 
 /**
  * The property bag a level contributes to its runtime representation - user
@@ -165,10 +178,15 @@ const convertTilesOrAutoLayer = (
   const rLayer = makeTileLayer(layerInst, layerId, runtimeTilesets, parallax);
   const tiles = layerInst.__type === 'Tiles' ? (layerInst.gridTiles ?? []) : (layerInst.autoLayerTiles ?? []);
   const tsUid = layerInst.__tilesetDefUid;
+
   if (tsUid !== undefined && tsUid !== null) {
     const rts = tilesets.get(tsUid);
-    if (rts) populateTileLayer(rLayer, tiles, rts, layerInst.__gridSize);
+
+    if (rts) {
+      populateTileLayer(rLayer, tiles, rts, layerInst.__gridSize);
+    }
   }
+
   return rLayer;
 };
 
@@ -188,10 +206,15 @@ const convertIntGridLayer = (
   // data-only layer properties (see buildIntGridProperties).
   const autoTiles = layerInst.autoLayerTiles ?? [];
   const tsUid = layerInst.__tilesetDefUid;
+
   if (autoTiles.length > 0 && tsUid !== undefined && tsUid !== null) {
     const rts = tilesets.get(tsUid);
-    if (rts) populateTileLayer(rLayer, autoTiles, rts, layerInst.__gridSize);
+
+    if (rts) {
+      populateTileLayer(rLayer, autoTiles, rts, layerInst.__gridSize);
+    }
   }
+
   return rLayer;
 };
 
@@ -204,6 +227,7 @@ const convertEntitiesLayer = (
   parallax: LdtkLayerParallax,
 ): ObjectLayer => {
   const objects = convertEntityLayer(layerInst, layerInst.__gridSize, levelIndex, entityCounter);
+
   return new ObjectLayer({
     id: layerId,
     name: layerInst.__identifier,
@@ -249,10 +273,16 @@ const populateTileLayer = (layer: TileLayer, tiles: readonly LdtkTileData[], til
   for (const tile of tiles) {
     const tx = Math.floor(tile.px[0] / gridSize);
     const ty = Math.floor(tile.px[1] / gridSize);
-    if (!layer.inBounds(tx, ty)) continue;
+
+    if (!layer.inBounds(tx, ty)) {
+      continue;
+    }
 
     const localTileId = tile.t;
-    if (localTileId < 0 || localTileId >= tileset.tileCount) continue;
+
+    if (localTileId < 0 || localTileId >= tileset.tileCount) {
+      continue;
+    }
 
     const f = tile.f;
     layer.setTileAt(tx, ty, {
@@ -299,7 +329,10 @@ export const ldtkIntGridValuesProperty = 'ldtkIntGridValues';
  */
 const buildIntGridProperties = (layerInst: LdtkLayerInstance, data: LdtkData): TileProperties | undefined => {
   const csv = layerInst.intGridCsv;
-  if (!csv || csv.length === 0) return undefined;
+
+  if (!csv || csv.length === 0) {
+    return undefined;
+  }
 
   const layerDef = data.defs.layers.find(def => def.uid === layerInst.layerDefUid);
   const values = layerDef?.intGridValues ?? [];
@@ -335,17 +368,24 @@ const intGridCache = new WeakMap<TileLayer, ParsedIntGridData>();
  */
 const getParsedIntGridData = (layer: TileLayer): ParsedIntGridData | undefined => {
   const cached = intGridCache.get(layer);
-  if (cached) return cached;
+
+  if (cached) {
+    return cached;
+  }
 
   const csvRaw = layer.properties[ldtkIntGridCsvProperty];
   const valuesRaw = layer.properties[ldtkIntGridValuesProperty];
-  if (typeof csvRaw !== 'string' || typeof valuesRaw !== 'string') return undefined;
+
+  if (typeof csvRaw !== 'string' || typeof valuesRaw !== 'string') {
+    return undefined;
+  }
 
   const parsed: ParsedIntGridData = {
     csv: JSON.parse(csvRaw) as readonly number[],
     values: JSON.parse(valuesRaw) as readonly LdtkIntGridValueDef[],
   };
   intGridCache.set(layer, parsed);
+
   return parsed;
 };
 
@@ -368,13 +408,21 @@ export const getLdtkIntGridValueAt = (layer: TileLayer, x: number, y: number): L
   // is inherently a bounded-grid concept - LDtk itself only ever produces
   // bounded layers today, but `layer` is typed generically, so guard here
   // rather than let `layer.width` narrow away from `number | undefined`.
-  if (!layer.inBounds(x, y) || layer.width === undefined) return undefined;
+  if (!layer.inBounds(x, y) || layer.width === undefined) {
+    return undefined;
+  }
 
   const parsed = getParsedIntGridData(layer);
-  if (!parsed) return undefined;
+
+  if (!parsed) {
+    return undefined;
+  }
 
   const raw = parsed.csv[y * layer.width + x];
-  if (raw === undefined || raw === 0) return undefined;
+
+  if (raw === undefined || raw === 0) {
+    return undefined;
+  }
 
   return parsed.values.find(v => v.value === raw);
 };
@@ -404,7 +452,9 @@ export const createLdtkIntGridCellSource = (layer: TileLayer): TileCellSource | 
 
   // The flat IntGrid CSV is indexed by row stride, which an unbounded layer
   // has no value for; LDtk never produces one, but `layer` is typed generically.
-  if (!parsed || width === undefined) return undefined;
+  if (!parsed || width === undefined) {
+    return undefined;
+  }
 
   const identifiers = new Map<number, string>();
 
@@ -413,11 +463,15 @@ export const createLdtkIntGridCellSource = (layer: TileLayer): TileCellSource | 
   }
 
   return (tx, ty) => {
-    if (!layer.inBounds(tx, ty)) return null;
+    if (!layer.inBounds(tx, ty)) {
+      return null;
+    }
 
     const raw = parsed.csv[ty * width + tx];
 
-    if (raw === undefined || raw === 0) return null;
+    if (raw === undefined || raw === 0) {
+      return null;
+    }
 
     return identifiers.get(raw) ?? String(raw);
   };
@@ -431,7 +485,11 @@ const convertEntityLayer = (layerInst: LdtkLayerInstance, _gridSize: number, lev
 
   for (let i = 0; i < instances.length; i++) {
     const entity = instances[i];
-    if (entity === undefined) continue;
+
+    if (entity === undefined) {
+      continue;
+    }
+
     // Build a deterministic numeric id: (levelIndex * 1_000_000) + counter.
     const id = levelIndex * 1_000_000 + baseCounter + i;
     objects.push(convertEntity(entity, id));
@@ -445,6 +503,7 @@ const convertEntity = (entity: LdtkEntityInstance, id: number): TileMapObject =>
   // corner - undo the pivot offset to recover the corner TileMapObject expects.
   const x = entity.px[0] - entity.width * entity.__pivot[0];
   const y = entity.px[1] - entity.height * entity.__pivot[1];
+
   return {
     kind: 'rectangle',
     id,
@@ -460,9 +519,22 @@ const convertEntity = (entity: LdtkEntityInstance, id: number): TileMapObject =>
     height: entity.height,
     rotation: 0,
     visible: true,
-    properties: convertFieldInstances(entity.fieldInstances),
+    properties: buildLdtkEntityProperties(entity),
     source: entity,
   };
+};
+
+/**
+ * An entity's property bag: its fields, then `ldtkTags` - the tags of its
+ * definition - when it has any, so spawn code can dispatch on a tag such as
+ * `Enemy` without reading the raw entity. Like the level keys, the reserved
+ * key wins over a same-named field.
+ */
+const buildLdtkEntityProperties = (entity: LdtkEntityInstance): TileProperties => {
+  const properties = convertFieldInstances(entity.fieldInstances);
+  const tags = entity.__tags ?? [];
+
+  return tags.length === 0 ? properties : { ...properties, ldtkTags: [...tags] };
 };
 
 /**
@@ -476,14 +548,20 @@ const convertEntity = (entity: LdtkEntityInstance, id: number): TileMapObject =>
  * than a present-but-null value.
  */
 const convertFieldInstances = (fields: readonly LdtkFieldInstance[]): TileProperties => {
-  if (fields.length === 0) return Object.freeze({});
+  if (fields.length === 0) {
+    return Object.freeze({});
+  }
+
   const out: Record<string, TilePropertyValue> = {};
+
   for (const field of fields) {
     const value = convertField(field);
+
     if (value !== undefined) {
       out[field.__identifier] = value;
     }
   }
+
   return Object.freeze(out);
 };
 
@@ -524,19 +602,28 @@ const convertField = (field: LdtkFieldInstance): TilePropertyValue | undefined =
   }
 
   if (isLdtkArrayField(field)) {
-    if (field.__value === null) return undefined;
+    if (field.__value === null) {
+      return undefined;
+    }
+
     const elementType = field.__type.slice('Array<'.length, -1);
     const elements: TilePropertyValue[] = [];
+
     for (const raw of field.__value) {
       const converted = mapLdtkFieldValue(elementType, raw);
-      if (converted !== undefined) elements.push(converted);
+
+      if (converted !== undefined) {
+        elements.push(converted);
+      }
     }
+
     return Object.freeze(elements);
   }
 
   // Exhaustiveness check: if LDtk ever adds a new field type, `field` will
   // fail to narrow to `never` here and tsc will error.
   field satisfies never;
+
   throw new Error(`convertFieldInstances: unrecognised LDtk field type "${(field as LdtkFieldInstance).__type}".`);
 };
 
@@ -550,7 +637,9 @@ const convertField = (field: LdtkFieldInstance): TilePropertyValue | undefined =
  * unsupported field type is never mistaken for an absent or empty one.
  */
 const mapLdtkFieldValue = (typeName: string, value: unknown): TilePropertyValue | undefined => {
-  if (value === null || value === undefined) return undefined;
+  if (value === null || value === undefined) {
+    return undefined;
+  }
 
   // An enum entry is its identifier; the enum's own name is only in the type.
   if (isLdtkFieldEnumType(typeName)) {
@@ -570,11 +659,13 @@ const mapLdtkFieldValue = (typeName: string, value: unknown): TilePropertyValue 
 
     case 'Point': {
       const v = value as { cx: number; cy: number };
+
       return { kind: TilePropertyKind.Point, cx: v.cx, cy: v.cy };
     }
 
     case 'EntityRef': {
       const v = value as { entityIid: string; layerIid: string; levelIid: string; worldIid: string };
+
       return {
         kind: TilePropertyKind.ObjectRef,
         id: v.entityIid,
@@ -586,6 +677,7 @@ const mapLdtkFieldValue = (typeName: string, value: unknown): TilePropertyValue 
 
     case 'Tile': {
       const v = value as { tilesetUid: number; x: number; y: number; w: number; h: number };
+
       return { kind: TilePropertyKind.TileRef, tilesetUid: v.tilesetUid, x: v.x, y: v.y, w: v.w, h: v.h };
     }
 
@@ -598,11 +690,13 @@ const mapLdtkFieldValue = (typeName: string, value: unknown): TilePropertyValue 
 
 const pickLevelGridSize = (level: LdtkLevel, fallback: number): number => {
   const instances = level.layerInstances ?? [];
+
   for (const layer of instances) {
     if (layer.__type !== 'Entities' && layer.__gridSize > 0) {
       return layer.__gridSize;
     }
   }
+
   return fallback;
 };
 

@@ -162,6 +162,7 @@ const extraSamples: readonly Sample[] = [
       harness.view.reset(scene.pixelWidth / 2, scene.pixelHeight / 2, scene.pixelWidth, scene.pixelHeight);
 
       let frame = 0;
+
       const beforeFrame = (): void => {
         frame++;
         harness.view.setCenter(scene.pixelWidth / 2 + (frame % 8) * 16, scene.pixelHeight / 2);
@@ -296,7 +297,9 @@ for (const sample of [...catalogSamples, ...extraSamples]) {
   const seconds = (performance.now() - started) / 1000;
 
   results.push({ id: sample.id, ...alloc, seconds });
-  console.log(`${sample.id.padEnd(38)} ${(alloc.bytesPerFrame / 1024).toFixed(2).padStart(10)} KB/frame  ${seconds.toFixed(1).padStart(6)}s`);
+  console.log(
+    `${sample.id.padEnd(38)} ${(alloc.bytesPerFrame / 1024).toFixed(2).padStart(10)} KB/frame  ${seconds.toFixed(1).padStart(6)}s`,
+  );
 
   scene.teardown?.();
   harness.destroy();

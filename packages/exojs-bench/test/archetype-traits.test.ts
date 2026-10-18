@@ -19,7 +19,7 @@ describe('text archetypes', () => {
   test('the static and dynamic rows differ in exactly one field', () => {
     const staticText = byId['text-static'];
     const dynamicText = byId['text-dynamic'];
-    const differing = (Object.keys({ ...staticText, ...dynamicText }) as (keyof ArchetypeSpec)[]).filter(
+    const differing = (Object.keys({ ...staticText, ...dynamicText }) as Array<keyof ArchetypeSpec>).filter(
       key => key !== 'id' && staticText[key] !== dynamicText[key],
     );
 
@@ -88,7 +88,11 @@ describe('lifecycle-churn', () => {
 
 describe('render-target archetypes', () => {
   test('the filter rows sweep chain depth 1 / 2 / 4', () => {
-    expect([filterChainDepth(byId['filter-chain-1']), filterChainDepth(byId['filter-chain-2']), filterChainDepth(byId['filter-chain-4'])]).toEqual([1, 2, 4]);
+    expect([
+      filterChainDepth(byId['filter-chain-1']),
+      filterChainDepth(byId['filter-chain-2']),
+      filterChainDepth(byId['filter-chain-4']),
+    ]).toEqual([1, 2, 4]);
   });
 
   test('the filter rows are otherwise identical, so the step between them is one target pass', () => {

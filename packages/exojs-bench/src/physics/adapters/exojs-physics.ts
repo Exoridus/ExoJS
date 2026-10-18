@@ -1,6 +1,12 @@
 import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld, RevoluteJoint } from '@codexo/exojs-physics';
 
-import type { PhysicsAdapter, PhysicsArchetypeSpec, PhysicsBodySpread, PhysicsSleepCensus, PhysicsStructuralCounters } from '../PhysicsAdapter';
+import type {
+  PhysicsAdapter,
+  PhysicsArchetypeSpec,
+  PhysicsBodySpread,
+  PhysicsSleepCensus,
+  PhysicsStructuralCounters,
+} from '../PhysicsAdapter';
 import type { PerStepWork } from './perStepWork';
 import { createPerStepWork } from './perStepWork';
 import type { BodyDesc } from './scene';
@@ -69,7 +75,12 @@ export const createExoJsPhysicsAdapter = (): PhysicsAdapter => {
         // jointed links do not also collide, and an arm must not depend on that
         // happening to be its library's default.
         w.addJoint(
-          new RevoluteJoint({ bodyA: bodies[joint.bodyA]!, bodyB: bodies[joint.bodyB]!, anchor: { x: joint.x, y: joint.y }, collideConnected: false }),
+          new RevoluteJoint({
+            bodyA: bodies[joint.bodyA]!,
+            bodyB: bodies[joint.bodyB]!,
+            anchor: { x: joint.x, y: joint.y },
+            collideConnected: false,
+          }),
         );
       }
 

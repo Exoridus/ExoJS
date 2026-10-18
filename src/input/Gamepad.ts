@@ -12,6 +12,24 @@ import type { InputBindingOptions, InputChannel } from './InputBinding';
 import { InputBinding } from './InputBinding';
 import { ChannelOffset, ChannelSize } from './types';
 
+type ListenerErrorSink = (error: unknown) => void;
+
+/** Kinds of the control notifications a sample leaves for {@link Gamepad._publish}. */
+const enum PendingControl {
+  ButtonDown = 0,
+  ButtonUp = 1,
+  Axis = 2,
+}
+
+/** Dispatch a slot-lifecycle signal; with `onError`, a throwing listener neither stops the others nor the caller. */
+const emitLifecycle = (signal: Signal, onError: ListenerErrorSink | undefined): void => {
+  if (onError === undefined) {
+    signal.dispatch();
+  } else {
+    signal.dispatchIsolated(onError);
+  }
+};
+
 /** Identity metadata for a connected gamepad. Populated from a {@link ResolvedGamepadDefinition}. */
 export interface GamepadInfo {
   name: string;
@@ -79,6 +97,15 @@ export class Gamepad {
   private _mapping: GamepadMapping | null = null;
   private _info: GamepadInfo | null = null;
   private _browserGamepad: BrowserGamepad | null = null;
+  /**
+   * Control transitions the last {@link _sample} found, as parallel entries
+   * waiting for {@link _publish}. Written by index against
+   * {@link _pendingLength} so the storage is reused frame after frame.
+   */
+  private readonly _pendingKinds: PendingControl[] = [];
+  private readonly _pendingControls: Array<GamepadButton | GamepadAxis> = [];
+  private readonly _pendingValues: number[] = [];
+  private _pendingLength = 0;
 
   public constructor(slot: 0 | 1 | 2 | 3, channels: Float32Array) {
     this._slot = slot;
@@ -208,9 +235,17 @@ export class Gamepad {
    * @param options - Binding options.
    * @returns The binding, so it can be polled or unbound.
    */
-  public onStart(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding {
+  public onStart(
+    channel: InputChannel | readonly InputChannel[],
+    callback?: (value: number) => void,
+    options?: InputBindingOptions,
+  ): InputBinding {
     const binding = this._createBinding(channel, options);
-    if (callback) binding.onStart.add(callback);
+
+    if (callback) {
+      binding.onStart.add(callback);
+    }
+
     return binding;
   }
 
@@ -228,9 +263,17 @@ export class Gamepad {
    * @param options - Binding options.
    * @returns The binding, so it can be polled or unbound.
    */
-  public onActive(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding {
+  public onActive(
+    channel: InputChannel | readonly InputChannel[],
+    callback?: (value: number) => void,
+    options?: InputBindingOptions,
+  ): InputBinding {
     const binding = this._createBinding(channel, options);
-    if (callback) binding.onActive.add(callback);
+
+    if (callback) {
+      binding.onActive.add(callback);
+    }
+
     return binding;
   }
 
@@ -242,9 +285,17 @@ export class Gamepad {
    * @param options - Binding options.
    * @returns The binding, so it can be polled or unbound.
    */
-  public onStop(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding {
+  public onStop(
+    channel: InputChannel | readonly InputChannel[],
+    callback?: (value: number) => void,
+    options?: InputBindingOptions,
+  ): InputBinding {
     const binding = this._createBinding(channel, options);
-    if (callback) binding.onStop.add(callback);
+
+    if (callback) {
+      binding.onStop.add(callback);
+    }
+
     return binding;
   }
 
@@ -257,9 +308,17 @@ export class Gamepad {
    * @param options - Binding options.
    * @returns The binding, so it can be polled or unbound.
    */
-  public onTrigger(channel: InputChannel | readonly InputChannel[], callback?: (value: number) => void, options?: InputBindingOptions): InputBinding {
+  public onTrigger(
+    channel: InputChannel | readonly InputChannel[],
+    callback?: (value: number) => void,
+    options?: InputBindingOptions,
+  ): InputBinding {
     const binding = this._createBinding(channel, options);
-    if (callback) binding.onTrigger.add(callback);
+
+    if (callback) {
+      binding.onTrigger.add(callback);
+    }
+
     return binding;
   }
 
@@ -269,7 +328,7 @@ export class Gamepad {
    *
    * @internal
    */
-  public _bind(gamepad: BrowserGamepad, definition: ResolvedGamepadDefinition): void {
+  public _bind(gamepad: BrowserGamepad, definition: ResolvedGamepadDefinition, onError?: ListenerErrorSink): void {
     this._browserGamepad = gamepad;
     this._mapping = definition.mapping;
     this._info = {
@@ -279,7 +338,7 @@ export class Gamepad {
       productId: definition.descriptor.productId,
       productKey: definition.descriptor.productKey,
     };
-    this.onConnect.dispatch();
+    emitLifecycle(this.onConnect, onError);
   }
 
   /**
@@ -300,7 +359,7 @@ export class Gamepad {
    *
    * @internal
    */
-  public _unbind(): void {
+  public _unbind(onError?: ListenerErrorSink): void {
     if (this._browserGamepad === null) {
       return;
     }
@@ -309,7 +368,7 @@ export class Gamepad {
     this._browserGamepad = null;
     this._mapping = null;
     this._info = null;
-    this.onDisconnect.dispatch();
+    emitLifecycle(this.onDisconnect, onError);
   }
 
   /**
@@ -340,8 +399,8 @@ export class Gamepad {
    *
    * @internal
    */
-  public _dispatchDisconnect(): void {
-    this.onDisconnect.dispatch();
+  public _dispatchDisconnect(onError?: ListenerErrorSink): void {
+    emitLifecycle(this.onDisconnect, onError);
   }
 
   /**
@@ -368,24 +427,93 @@ export class Gamepad {
   }
 
   /**
-   * Sample the browser gamepad's current state and write transformed values
-   * into the shared channel buffer, dispatching transition events when
-   * channel activity crosses thresholds. Called once per frame by the
-   * engine's input loop. No-op when disconnected.
+   * Sample the browser gamepad's current state and dispatch the resulting
+   * notifications - a {@link _sample} immediately followed by its
+   * {@link _publish}, with listener exceptions propagating.
    *
    * @internal
    */
   public update(): void {
-    if (this._browserGamepad === null || this._mapping === null) {
-      this._updateBindings();
-      return;
+    this._sample();
+    this._publish();
+  }
+
+  /**
+   * Write the browser gamepad's current, transformed values into the shared
+   * channel buffer and advance this slot's bindings, without notifying
+   * anyone: every button and axis transition is held for {@link _publish}.
+   * Bindings advance even while disconnected, so a release caused by the
+   * disconnect still reaches them.
+   *
+   * @internal
+   */
+  public _sample(): void {
+    // Notifications a skipped publish left behind belong to a frame that is
+    // over; delivering them now would replay it.
+    this._pendingLength = 0;
+
+    if (this._browserGamepad !== null && this._mapping !== null) {
+      this._sampleControls(this._browserGamepad, this._mapping);
     }
 
-    const channels = this._channels;
-    const { buttons: rawButtons, axes: rawAxes } = this._browserGamepad;
+    for (const binding of this._bindings) {
+      binding._sample(this._channels);
+    }
+  }
 
-    for (const button of this._mapping.buttons) {
+  /**
+   * Deliver what the last {@link _sample} found: button and axis transitions
+   * in mapping order, then this slot's bindings. With `onError`, every
+   * listener runs even when an earlier one throws, and each exception goes to
+   * `onError` instead of propagating. Either way nothing is delivered twice.
+   *
+   * @internal
+   */
+  public _publish(onError?: ListenerErrorSink): void {
+    const length = this._pendingLength;
+
+    // Spent before the first listener runs, so one that throws (without
+    // `onError`) cannot leave the rest to be delivered by a later publish.
+    this._pendingLength = 0;
+
+    for (let i = 0; i < length; i++) {
+      const kind = this._pendingKinds[i]!;
+      const value = this._pendingValues[i]!;
+
+      if (kind === PendingControl.Axis) {
+        const axis = this._pendingControls[i] as GamepadAxis;
+
+        if (onError === undefined) {
+          this.onAxisChange.dispatch(axis, value);
+        } else {
+          this.onAxisChange.dispatchIsolated(onError, axis, value);
+        }
+
+        continue;
+      }
+
+      const button = this._pendingControls[i] as GamepadButton;
+      const signal = kind === PendingControl.ButtonDown ? this.onButtonDown : this.onButtonUp;
+
+      if (onError === undefined) {
+        signal.dispatch(button, value);
+      } else {
+        signal.dispatchIsolated(onError, button, value);
+      }
+    }
+
+    for (const binding of this._bindings) {
+      binding._publish(onError);
+    }
+  }
+
+  private _sampleControls(browserGamepad: BrowserGamepad, mapping: GamepadMapping): void {
+    const channels = this._channels;
+    const { buttons: rawButtons, axes: rawAxes } = browserGamepad;
+
+    for (const button of mapping.buttons) {
       const rawButton = rawButtons[button.index];
+
       if (rawButton === undefined) {
         continue;
       }
@@ -401,14 +529,15 @@ export class Gamepad {
       channels[offset] = value;
 
       if (previous === 0 && value !== 0) {
-        this.onButtonDown.dispatch(button, value);
+        this._queue(PendingControl.ButtonDown, button, value);
       } else if (previous !== 0 && value === 0) {
-        this.onButtonUp.dispatch(button, value);
+        this._queue(PendingControl.ButtonUp, button, value);
       }
     }
 
-    for (const axis of this._mapping.axes) {
+    for (const axis of mapping.axes) {
       const rawAxis = rawAxes[axis.index];
+
       if (rawAxis === undefined) {
         continue;
       }
@@ -426,10 +555,16 @@ export class Gamepad {
       }
 
       channels[offset] = value;
-      this.onAxisChange.dispatch(axis, value);
+      this._queue(PendingControl.Axis, axis, value);
     }
+  }
 
-    this._updateBindings();
+  private _queue(kind: PendingControl, control: GamepadButton | GamepadAxis, value: number): void {
+    const index = this._pendingLength++;
+
+    this._pendingKinds[index] = kind;
+    this._pendingControls[index] = control;
+    this._pendingValues[index] = value;
   }
 
   /**
@@ -501,6 +636,7 @@ export class Gamepad {
     const resolved = list.map(c => this._resolveGamepadChannel(c));
     const binding = new InputBinding(resolved, options, this._detacher);
     this._bindings.add(binding);
+
     return binding;
   }
 
@@ -513,11 +649,5 @@ export class Gamepad {
     }
 
     return this._resolveOffset(channel as GamepadButtonChannel | GamepadAxisChannel);
-  }
-
-  private _updateBindings(): void {
-    for (const binding of this._bindings) {
-      binding.update(this._channels);
-    }
   }
 }

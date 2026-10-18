@@ -55,7 +55,8 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   return backend;
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const renderScene = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<boolean> => {
   const device = getBackendDevice(backend);
@@ -124,15 +125,24 @@ describe('WebGPU control: cacheAsTexture + Text correctness', () => {
     scene.cached.cacheAsTexture = true;
 
     try {
-      if (!(await renderScene(ctx, backend, scene.root))) return;
+      if (!(await renderScene(ctx, backend, scene.root))) {
+        return;
+      }
+
       expectContract(backend);
 
-      if (!(await renderScene(ctx, backend, scene.root))) return;
+      if (!(await renderScene(ctx, backend, scene.root))) {
+        return;
+      }
+
       expectContract(backend);
 
       scene.cached.invalidateCache();
 
-      if (!(await renderScene(ctx, backend, scene.root))) return;
+      if (!(await renderScene(ctx, backend, scene.root))) {
+        return;
+      }
+
       expectContract(backend);
     } finally {
       scene.root.destroy();
@@ -145,10 +155,16 @@ describe('WebGPU control: cacheAsTexture + Text correctness', () => {
     const scene = buildScene();
 
     try {
-      if (!(await renderScene(ctx, backend, scene.root))) return;
+      if (!(await renderScene(ctx, backend, scene.root))) {
+        return;
+      }
+
       expectContract(backend);
 
-      if (!(await renderScene(ctx, backend, scene.root))) return;
+      if (!(await renderScene(ctx, backend, scene.root))) {
+        return;
+      }
+
       expectContract(backend);
     } finally {
       scene.root.destroy();

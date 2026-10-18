@@ -64,6 +64,7 @@ const makeFilter = (name: string): FakeFilter => {
       return name;
     }
   }
+
   return { constructor: NamedFilter as any };
 };
 
@@ -89,12 +90,22 @@ const makeNode = (
     className?: string;
   } = {},
 ): FakeNode => {
-  const { visible = true, filters = [], mask = null, cacheAsTexture = false, width = 100, height = 50, children = [], className = 'Sprite' } = opts;
+  const {
+    visible = true,
+    filters = [],
+    mask = null,
+    cacheAsTexture = false,
+    width = 100,
+    height = 50,
+    children = [],
+    className = 'Sprite',
+  } = opts;
   class NamedClass {
     public static get name(): string {
       return className;
     }
   }
+
   return {
     visible,
     filters,
@@ -327,7 +338,9 @@ describe('RenderPassInspectorLayer — pipeline inspection', () => {
   test('the panel HUD lists pipeline rows alongside filter-chain entries, dimming disabled passes', () => {
     const root = makeNode({ filters: [makeFilter('Blur')] });
     const layer = new RenderPassInspectorLayer(makeApp(root));
-    const pipeline = new RenderPipeline().addPass(new TestPass({ label: 'world' })).addPass(new TestPass({ label: 'units', enabled: false }));
+    const pipeline = new RenderPipeline()
+      .addPass(new TestPass({ label: 'world' }))
+      .addPass(new TestPass({ label: 'units', enabled: false }));
 
     layer.setPipeline(pipeline);
     layer.update(makeTime());

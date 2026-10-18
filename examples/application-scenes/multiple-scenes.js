@@ -7,7 +7,8 @@ const record = event => {
     history.shift();
   }
 };
-const makeReadout = width => new Text('', { fillColor: Color.white, fontSize: 19, align: 'center' }).setAnchor(0.5, 0).setPosition(width / 2, 390);
+const makeReadout = width =>
+  new Text('', { fillColor: Color.white, fontSize: 19, align: 'center' }).setAnchor(0.5, 0).setPosition(width / 2, 390);
 const makeBackground = (width, height, color) => {
   const background = new Graphics();
   background.fillColor = color;

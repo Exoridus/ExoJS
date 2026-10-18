@@ -13,9 +13,14 @@ const scriptHref = `${baseUrl}examples/debug-layer/asset-browser.js`;
 const previewHref = `${baseUrl}preview.html`;
 ---
 
-<Layout title="Asset Browser — ExoJS Tools" description="Inspect the asset catalog and preview textures, sprites, audio, fonts, SVG, video, and input prompts.">
+<Layout
+  title="Asset Browser — ExoJS Tools"
+  description="Inspect the asset catalog and preview textures, sprites, audio, fonts, SVG, video, and input prompts."
+>
   <main class="tool-page">
-    <nav aria-label="Breadcrumb"><a href={playgroundHref}>Playground</a> / Tools</nav>
+    <nav aria-label="Breadcrumb">
+      <a href={playgroundHref}>Playground</a> / Tools
+    </nav>
     <div class="tool-heading">
       <div>
         <p class="eyebrow">Tools</p>
@@ -42,7 +47,9 @@ const previewHref = `${baseUrl}preview.html`;
   if (frame && error) {
     try {
       const response = await fetch(frame.dataset.script ?? '');
-      if (!response.ok) throw new Error(`Could not load the asset browser (${response.status}).`);
+      if (!response.ok) {
+        throw new Error(`Could not load the asset browser (${response.status}).`);
+      }
       const source = await response.text();
       const sourceKey = `exojs-tool-${crypto.randomUUID()}`;
       sessionStorage.setItem(sourceKey, source);
@@ -57,13 +64,64 @@ const previewHref = `${baseUrl}preview.html`;
 </script>
 
 <style>
-  .tool-page { max-width: 1480px; margin: 0 auto; padding: 1.5rem clamp(1rem, 3vw, 2.5rem) 3rem; }
-  nav { color: var(--fg-muted); font-size: 0.85rem; }
-  .tool-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin: 1.25rem 0; }
-  .tool-heading h1 { margin: 0.2rem 0; }
-  .tool-heading p { margin: 0; color: var(--fg-muted); }
-  .eyebrow { color: var(--accent) !important; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-  .tool-error { color: var(--color-error, #c44); }
-  iframe { display: block; width: 100%; min-height: min(72vw, 750px); border: 1px solid var(--line-soft); border-radius: 12px; background: #121722; }
-  @media (max-width: 600px) { .tool-heading { align-items: start; flex-direction: column; } iframe { min-height: 65vh; } }
+  .tool-page {
+    max-width: 1480px;
+    margin: 0 auto;
+    padding: 1.5rem clamp(1rem, 3vw, 2.5rem) 3rem;
+  }
+
+  nav {
+    color: var(--fg-muted);
+    font-size: 0.85rem;
+  }
+
+  .tool-heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 1.25rem 0;
+  }
+
+  .tool-heading h1 {
+    margin: 0.2rem 0;
+  }
+
+  .tool-heading p {
+    margin: 0;
+    color: var(--fg-muted);
+  }
+
+  .eyebrow {
+    /* stylelint-disable-next-line declaration-no-important -- outranks the text colour the docs layout sets on paragraphs */
+    color: var(--accent) !important;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .tool-error {
+    color: var(--color-error, #c44);
+  }
+
+  iframe {
+    display: block;
+    width: 100%;
+    min-height: min(72vw, 750px);
+    border: 1px solid var(--line-soft);
+    border-radius: 12px;
+    background: #121722;
+  }
+
+  @media (width <= 600px) {
+    .tool-heading {
+      align-items: start;
+      flex-direction: column;
+    }
+
+    iframe {
+      min-height: 65vh;
+    }
+  }
 </style>

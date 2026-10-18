@@ -15,7 +15,16 @@ import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { makeTestApp, makeTestCanvas, readWebGl2Pixel } from './_backendSetup';
-import { ABOVE, BELOW, BOUNCE_SIZE, type BounceHost, type BounceOptions, createBounceHost, createBounceScene, UNDER_MOVED } from './_bounceScene';
+import {
+  ABOVE,
+  BELOW,
+  BOUNCE_SIZE,
+  type BounceHost,
+  type BounceOptions,
+  createBounceHost,
+  createBounceScene,
+  UNDER_MOVED,
+} from './_bounceScene';
 import { wireCoreRenderers } from './_coreRenderers';
 
 const host = async (): Promise<BounceHost> => {

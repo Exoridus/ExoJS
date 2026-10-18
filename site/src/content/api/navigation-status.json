@@ -1,0 +1,97 @@
+{
+  "title": "NavigationStatus",
+  "description": "Where a NavigationAgentComponent stands. - `idle` - no destination; the state before the first command and after NavigationAgentComponent.stop. - `navigating` - following a route, including a partial one that a search budget cut short. - `arrived` - within `arrivalDistance` of the destination. A followed target that moves away puts it back to `navigating`. - `unreachable` - no route leads to the destination, the search budget is too small to get past its own node, or it has reached the closest point a `snapToNearest` search could offer. - `blocked` - a route exists, but the movement made no progress along it even after a fresh search. `unreachable` and `blocked` are retried on their own when the space's revision changes or a followed target moves to another node; `blocked` is also retried after four repath intervals, since what stopped the actor - such as another actor - may have moved on without any revision changing.",
+  "symbol": "NavigationStatus",
+  "kind": "type",
+  "subsystem": "pathfinding",
+  "importPath": "@codexo/exojs-pathfinding",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Where a NavigationAgentComponent stands.",
+        "- `idle` - no destination; the state before the first command and after NavigationAgentComponent.stop. - `navigating` - following a route, including a partial one that a search budget cut short. - `arrived` - within `arrivalDistance` of the destination. A followed target that moves away puts it back to `navigating`. - `unreachable` - no route leads to the destination, the search budget is too small to get past its own node, or it has reached the closest point a `snapToNearest` search could offer. - `blocked` - a route exists, but the movement made no progress along it even after a fresh search.",
+        "`unreachable` and `blocked` are retried on their own when the space's revision changes or a followed target moves to another node; `blocked` is also retried after four repath intervals, since what stopped the actor - such as another actor - may have moved on without any revision changing."
+      ],
+      "importLine": "import { NavigationStatus } from '@codexo/exojs-pathfinding'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "NavigationStatus",
+          "signature": "\"arrived\" | \"blocked\" | \"idle\" | \"navigating\" | \"unreachable\"",
+          "signatureTokens": [
+            {
+              "text": "\"arrived\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"blocked\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"idle\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"navigating\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"unreachable\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-pathfinding/src/navigation/NavigationAgentComponent.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/navigation/NavigationAgentComponent.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-pathfinding/src/navigation/NavigationAgentComponent.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/navigation/NavigationAgentComponent.ts"
+}

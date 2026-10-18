@@ -2,7 +2,14 @@ import { describe, test } from 'vitest';
 
 import { createWebGpuTestBackend, readWebGpuPixels, renderWebGpuOnce } from './_backendSetup';
 import { BLUR_SCENE_SIZE, blurScene, CLEAR } from './_blurFilterFixture';
-import { BEFORE_SQUARE, constantDisplacementMap, DISPLACED_SQUARE, displacement, MIRRORED_SQUARE, VACATED_SQUARE } from './_displacementFixture';
+import {
+  BEFORE_SQUARE,
+  constantDisplacementMap,
+  DISPLACED_SQUARE,
+  displacement,
+  MIRRORED_SQUARE,
+  VACATED_SQUARE,
+} from './_displacementFixture';
 import { expectPixelNear } from './_pixels';
 
 describe('DisplacementFilter (WebGPU)', () => {
@@ -13,7 +20,9 @@ describe('DisplacementFilter (WebGPU)', () => {
     const { root, texture } = blurScene([filter]);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root, CLEAR))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, CLEAR))) {
+        return;
+      }
 
       const pixel = readWebGpuPixels(backend, BLUR_SCENE_SIZE);
 
@@ -37,7 +46,9 @@ describe('DisplacementFilter (WebGPU)', () => {
     const { root, texture } = blurScene([filter]);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root, CLEAR))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, CLEAR))) {
+        return;
+      }
 
       const pixel = readWebGpuPixels(backend, BLUR_SCENE_SIZE);
 

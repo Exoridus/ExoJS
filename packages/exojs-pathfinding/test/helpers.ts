@@ -22,8 +22,13 @@ export const createRandom = (seed: number): (() => number) => {
 export const parseCosts = (rows: readonly string[]): number[][] =>
   rows.map(row =>
     [...row].map(cell => {
-      if (cell === '#') return 0;
-      if (cell === '.') return 1;
+      if (cell === '#') {
+        return 0;
+      }
+
+      if (cell === '.') {
+        return 1;
+      }
 
       return Number.parseInt(cell, 10);
     }),
@@ -41,7 +46,14 @@ const SQRT2 = Math.SQRT2;
  * Plain Dijkstra over the same movement rules, written independently of the
  * package so that "A* is optimal" is checked against something other than A*.
  */
-export const referenceCost = (costs: readonly number[][], startX: number, startY: number, goalX: number, goalY: number, diagonals: DiagonalPolicy): number => {
+export const referenceCost = (
+  costs: readonly number[][],
+  startX: number,
+  startY: number,
+  goalX: number,
+  goalY: number,
+  diagonals: DiagonalPolicy,
+): number => {
   const height = costs.length;
   const width = costs[0]!.length;
   const best = costs.map(row => row.map(() => Infinity));
@@ -56,7 +68,9 @@ export const referenceCost = (costs: readonly number[][], startX: number, startY
 
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        if (settled[y]![x] === true || best[y]![x]! >= bestCost) continue;
+        if (settled[y]![x] === true || best[y]![x]! >= bestCost) {
+          continue;
+        }
 
         bestCost = best[y]![x]!;
         bestX = x;
@@ -64,34 +78,48 @@ export const referenceCost = (costs: readonly number[][], startX: number, startY
       }
     }
 
-    if (bestX < 0) break;
+    if (bestX < 0) {
+      break;
+    }
 
     settled[bestY]![bestX] = true;
 
     for (let stepY = -1; stepY <= 1; stepY++) {
       for (let stepX = -1; stepX <= 1; stepX++) {
-        if (stepX === 0 && stepY === 0) continue;
+        if (stepX === 0 && stepY === 0) {
+          continue;
+        }
 
         const diagonal = stepX !== 0 && stepY !== 0;
 
-        if (diagonal && diagonals === 'never') continue;
+        if (diagonal && diagonals === 'never') {
+          continue;
+        }
 
         const x = bestX + stepX;
         const y = bestY + stepY;
 
-        if (x < 0 || y < 0 || x >= width || y >= height) continue;
+        if (x < 0 || y < 0 || x >= width || y >= height) {
+          continue;
+        }
 
         const cellCost = costs[y]![x]!;
 
-        if (cellCost <= 0) continue;
+        if (cellCost <= 0) {
+          continue;
+        }
 
         if (diagonal && diagonals === 'no-corner-cutting') {
-          if ((costs[bestY]![x] ?? 0) <= 0 || (costs[y]![bestX] ?? 0) <= 0) continue;
+          if ((costs[bestY]![x] ?? 0) <= 0 || (costs[y]![bestX] ?? 0) <= 0) {
+            continue;
+          }
         }
 
         const candidate = bestCost + cellCost * (diagonal ? SQRT2 : 1);
 
-        if (candidate < best[y]![x]!) best[y]![x] = candidate;
+        if (candidate < best[y]![x]!) {
+          best[y]![x] = candidate;
+        }
       }
     }
   }
@@ -114,8 +142,13 @@ export const walkCost = (grid: GridSpace, nodes: readonly number[], diagonals: D
     const stepX = toX - fromX;
     const stepY = toY - fromY;
 
-    if (Math.abs(stepX) > 1 || Math.abs(stepY) > 1) throw new Error(`Non-contiguous step ${fromX},${fromY} -> ${toX},${toY}.`);
-    if (!grid.isWalkable(toX, toY)) throw new Error(`Step into blocked cell ${toX},${toY}.`);
+    if (Math.abs(stepX) > 1 || Math.abs(stepY) > 1) {
+      throw new Error(`Non-contiguous step ${fromX},${fromY} -> ${toX},${toY}.`);
+    }
+
+    if (!grid.isWalkable(toX, toY)) {
+      throw new Error(`Step into blocked cell ${toX},${toY}.`);
+    }
 
     const diagonal = stepX !== 0 && stepY !== 0;
 

@@ -37,7 +37,11 @@ const createSandbox = (channels = 1, capacityFrames = 8) => {
     ProcessorClass = ctor;
   });
   eval(pcmStreamWorkletSource);
-  if (!ProcessorClass) throw new Error('PCM processor was not registered');
+
+  if (!ProcessorClass) {
+    throw new Error('PCM processor was not registered');
+  }
+
   const processor = new ProcessorClass({ processorOptions: { channels, capacityFrames } });
 
   return {
@@ -52,6 +56,7 @@ const createSandbox = (channels = 1, capacityFrames = 8) => {
       const alive = processor.process([], [output]);
       frame = atFrame + frames;
       vi.stubGlobal('currentFrame', frame);
+
       return { alive, output: output.map(channel => Array.from(channel)) };
     },
   };
@@ -199,7 +204,11 @@ describe('PcmStreamProcessor', () => {
     sandbox.send({ type: 'start', time: 0 });
     expect(sandbox.render(3).output).toEqual([[0, 0, 0]]);
     expect(sandbox.messages.at(-1)).toMatchObject({ underrunFrames: 3, underruns: 1 });
-    if (queuedFrames > 0) sandbox.send({ type: 'write', data: new Float32Array([1, 2]) });
+
+    if (queuedFrames > 0) {
+      sandbox.send({ type: 'write', data: new Float32Array([1, 2]) });
+    }
+
     sandbox.send({ type: 'clear' });
     sandbox.send({ type: 'ack' });
     expect(sandbox.render(2).output).toEqual([[0, 0]]);

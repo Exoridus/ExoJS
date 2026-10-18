@@ -64,8 +64,8 @@ const fixedGlyphInfo: GlyphInfo = {
   advance: 10,
   ascent: 13,
   page: 0,
-  uvLeft: 0.0,
-  uvTop: 0.0,
+  uvLeft: 0,
+  uvTop: 0,
   uvRight: 0.01,
   uvBottom: 0.02,
   xBearing: PADDING_BEARING,
@@ -85,7 +85,7 @@ const mockPage = {
     flipY: false,
     addDestroyListener: () => mockPage.texture,
     removeDestroyListener: () => mockPage.texture,
-    destroy: () => undefined,
+    destroy: () => {},
   },
   index: 0,
   mode: 'sdf' as const,
@@ -576,6 +576,7 @@ describe('Text — FontFace-first', () => {
   class MockFontFace {
     family: string;
     load = vi.fn().mockResolvedValue(undefined);
+
     constructor(family: string) {
       this.family = family;
     }
@@ -605,9 +606,7 @@ describe('Text — FontFace-first', () => {
     (globalThis as Record<string, unknown>).FontFace = origFontFace;
   });
 
-  const makeFace = (family = 'TestFont'): FontFace => {
-    return new MockFontFace(family) as unknown as FontFace;
-  };
+  const makeFace = (family = 'TestFont'): FontFace => new MockFontFace(family) as unknown as FontFace;
 
   test('font option registers face with document.fonts', async () => {
     const face = makeFace();

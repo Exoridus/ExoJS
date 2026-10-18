@@ -1,6 +1,6 @@
 {
   "title": "System",
-  "description": "A per-frame unit of simulation or rendering, owned by a SystemRegistry (`app.systems` or `scene.systems`). A system is a class instance or plain object that implements at least one of SystemMethods.fixedUpdate, SystemMethods.update, or SystemMethods.draw - it participates only in the phases it defines. ```ts app.systems.add({ update(delta: Seconds) { simulation.update(delta); }, draw(context: RenderingContext) { context.render(stage); }, }); ``` `destroy()` is optional: the registry calls it, if present, exactly once when the system is still registered at registry destruction.",
+  "description": "A per-frame unit of simulation or rendering, owned by a SystemRegistry (`app.systems` or `scene.systems`). A system is a class instance or plain object that implements at least one of SystemMethods.fixedUpdate, SystemMethods.update, or SystemMethods.draw - it participates only in the phases it defines. ```ts app.systems.add({ update(delta: Seconds) { simulation.update(delta); }, draw(context: RenderingContext) { context.render(stage); }, }); ``` `destroy()` is optional: the registry calls it, if present, exactly once when the system is still registered at registry destruction. During `Application.destroy()` that happens after scene teardown, the extension disposers and the application's Loader, so a system's `destroy()` must not reach for loaded assets; release them from the scene or extension that loaded them.",
   "symbol": "System",
   "kind": "type",
   "subsystem": "core",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A per-frame unit of simulation or rendering, owned by a SystemRegistry (`app.systems` or `scene.systems`). A system is a class instance or plain object that implements at least one of SystemMethods.fixedUpdate, SystemMethods.update, or SystemMethods.draw - it participates only in the phases it defines.",
         "```ts app.systems.add({ update(delta: Seconds) { simulation.update(delta); }, draw(context: RenderingContext) { context.render(stage); }, }); ```",
-        "`destroy()` is optional: the registry calls it, if present, exactly once when the system is still registered at registry destruction."
+        "`destroy()` is optional: the registry calls it, if present, exactly once when the system is still registered at registry destruction. During `Application.destroy()` that happens after scene teardown, the extension disposers and the application's Loader, so a system's `destroy()` must not reach for loaded assets; release them from the scene or extension that loaded them."
       ],
       "importLine": "import { System } from '@codexo/exojs'",
       "sourceLink": null

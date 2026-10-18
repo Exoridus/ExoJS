@@ -174,7 +174,10 @@ describe('default target route - colour surfaces are named, arbitrary ones are n
 
   test('an HDR working request the backend cannot honour fails before the first frame', () => {
     const base = createRenderBackendDouble();
-    const withoutFloat: RenderBackend = { ...base, supportsColorFormat: format => format !== TextureFormat.Rgba16F && base.supportsColorFormat(format) };
+    const withoutFloat: RenderBackend = {
+      ...base,
+      supportsColorFormat: format => format !== TextureFormat.Rgba16F && base.supportsColorFormat(format),
+    };
 
     expect(() => validateWorkingColorFormatSupport(withoutFloat, 'hdr')).toThrow(/Rgba16F/);
     expect(() => validateWorkingColorFormatSupport(withoutFloat, 'sdr')).not.toThrow();

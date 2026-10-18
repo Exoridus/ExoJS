@@ -5,7 +5,8 @@ import type { SceneNode } from './SceneNode';
 import { hookOwnerName, requireSynchronousHook } from './syncHooks';
 import type { Synchronous } from './types';
 
-const hookRemedy = 'Component hooks run synchronously and are never awaited; start asynchronous work from them and keep its handle instead.';
+const hookRemedy =
+  'Component hooks run synchronously and are never awaited; start asynchronous work from them and keep its handle instead.';
 
 /** The thenable guard every component hook result passes through. @internal */
 export const requireSynchronousComponentHook = (component: object, hook: string, result: unknown): void => {
@@ -37,7 +38,9 @@ export interface ComponentHost<H> {
  * contravariant function member, so the check also holds for consumers that
  * compile without `strictFunctionTypes`.
  */
-export type ComponentHostCheck<H, C extends Component> = H extends C[typeof componentHost] ? unknown : ComponentHost<C[typeof componentHost]>;
+export type ComponentHostCheck<H, C extends Component> = H extends C[typeof componentHost]
+  ? unknown
+  : ComponentHost<C[typeof componentHost]>;
 
 /** Errors raised by teardown steps that must not stop the steps after them. */
 const rethrowFirst = (errors: readonly unknown[]): void => {
@@ -105,10 +108,13 @@ export abstract class Component<N extends SceneNode = SceneNode> {
   public _joinStamp = 0;
   /** Whether a frame dispatch list may call this component this frame. @internal */
   public _ticking = false;
-  /** Whether an entry for this component sits in the runtime's update list. @internal */
-  public _inUpdateList = false;
-  /** Whether an entry for this component sits in the runtime's fixed-update list. @internal */
-  public _inFixedList = false;
+  /**
+   * The runtime whose update list holds this component's entry. The entry may be stale, left behind
+   * while that runtime's frame is open, so the owner is not necessarily {@link _runtime}. @internal
+   */
+  public _updateListOwner: ComponentRuntime | null = null;
+  /** Like {@link _updateListOwner}, for the fixed-update list. @internal */
+  public _fixedListOwner: ComponentRuntime | null = null;
 
   /**
    * The node this component is attached to.
@@ -242,6 +248,7 @@ export abstract class Component<N extends SceneNode = SceneNode> {
     } catch (error) {
       this._node = null;
       rollback();
+
       throw error;
     }
   }
@@ -260,6 +267,7 @@ export abstract class Component<N extends SceneNode = SceneNode> {
       requireSynchronousComponentHook(this, 'onEnable', this.onEnable());
     } catch (error) {
       this._active = false;
+
       throw error;
     }
   }

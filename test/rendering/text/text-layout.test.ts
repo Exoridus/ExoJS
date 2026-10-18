@@ -40,23 +40,21 @@ const makeAtlas = (advance = 10, width = 8, height = 16): GlyphAtlas => {
 // Fake GlyphProvider - fixed advance per char, no atlas/canvas involved.
 // ---------------------------------------------------------------------------
 
-const makeProvider = (advance = 10): GlyphProvider => {
-  return {
-    getGlyph: (_char: string, fontSize: number): GlyphInfo => ({
-      x: 0,
-      y: 0,
-      width: advance,
-      height: fontSize,
-      advance,
-      ascent: fontSize,
-      page: 0,
-      uvLeft: 0,
-      uvTop: 0,
-      uvRight: 1,
-      uvBottom: 1,
-    }),
-  };
-};
+const makeProvider = (advance = 10): GlyphProvider => ({
+  getGlyph: (_char: string, fontSize: number): GlyphInfo => ({
+    x: 0,
+    y: 0,
+    width: advance,
+    height: fontSize,
+    advance,
+    ascent: fontSize,
+    page: 0,
+    uvLeft: 0,
+    uvTop: 0,
+    uvRight: 1,
+    uvBottom: 1,
+  }),
+});
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -100,6 +98,7 @@ describe('layoutText', () => {
     expect(placements[1].y).toBe(0);
 
     const expectedY = fontSize * lineHeight;
+
     for (let i = 2; i < 7; i++) {
       expect(placements[i].y).toBeCloseTo(expectedY);
     }
@@ -223,6 +222,7 @@ describe('layoutText', () => {
     // Without a wrap width every glyph stays on line 0 and x increases
     // monotonically - the canonical "no wrap" behaviour.
     let prevX = -1;
+
     for (const placement of placements) {
       expect(placement.y).toBe(0);
       expect(placement.x).toBeGreaterThan(prevX);
@@ -408,9 +408,7 @@ describe('layoutText vertical overflow', () => {
   // fontSize 16 * lineHeight 1.2 = 19.2px per line, so maxHeight 40 fits two.
   const twoLineMaxHeight = 40;
 
-  const overflowStyle = (): TextStyle => {
-    return new TextStyle({ fontSize: 16, lineHeight: 1.2, align: 'left' });
-  };
+  const overflowStyle = (): TextStyle => new TextStyle({ fontSize: 16, lineHeight: 1.2, align: 'left' });
 
   test('maxHeight without overflow keeps every line visible', () => {
     const placements = layoutText('A\nB\nC', overflowStyle(), { maxHeight: twoLineMaxHeight }, makeAtlas()).placements;
@@ -428,7 +426,12 @@ describe('layoutText vertical overflow', () => {
   });
 
   test('overflow "ellipsis" clips and appends an ellipsis to the last visible line', () => {
-    const placements = layoutText('A\nB\nC', overflowStyle(), { maxHeight: twoLineMaxHeight, overflow: 'ellipsis' }, makeAtlas()).placements;
+    const placements = layoutText(
+      'A\nB\nC',
+      overflowStyle(),
+      { maxHeight: twoLineMaxHeight, overflow: 'ellipsis' },
+      makeAtlas(),
+    ).placements;
 
     // 'A' on line 0, then 'B' + the ellipsis glyph on line 1.
     expect(placements).toHaveLength(3);
@@ -452,10 +455,19 @@ describe('layoutText vertical overflow', () => {
   test('overflow "ellipsis" drops trailing characters so the line still fits maxWidth', () => {
     // advance 10, maxWidth 30 → three glyph slots. 'ABC' already fills them,
     // so the ellipsis has to displace a character rather than overflow.
-    const placements = layoutText('ABC\nD', overflowStyle(), { maxWidth: 30, maxHeight: 19.2, overflow: 'ellipsis' }, makeAtlas()).placements;
+    const placements = layoutText(
+      'ABC\nD',
+      overflowStyle(),
+      { maxWidth: 30, maxHeight: 19.2, overflow: 'ellipsis' },
+      makeAtlas(),
+    ).placements;
 
     expect(placements).toHaveLength(3);
-    for (const p of placements) expect(p.y).toBe(0);
+
+    for (const p of placements) {
+      expect(p.y).toBe(0);
+    }
+
     expect(placements[2].x).toBe(20);
   });
 });
@@ -514,7 +526,12 @@ describe('layoutText ellipsis marker', () => {
   test('a multi-cluster marker is measured cluster by cluster', () => {
     // advance 10, maxWidth 50 → five slots. '...' claims three of them, so only
     // two source characters survive.
-    const { lines } = layoutText('ABCDEFG', markerStyle(), { maxWidth: 50, maxLines: 1, overflow: 'ellipsis', ellipsis: '...' }, makeAtlas());
+    const { lines } = layoutText(
+      'ABCDEFG',
+      markerStyle(),
+      { maxWidth: 50, maxLines: 1, overflow: 'ellipsis', ellipsis: '...' },
+      makeAtlas(),
+    );
 
     expect(lines[0].count).toBe(5);
     expect(lines[0].sourceEnd).toBe(2);
@@ -529,14 +546,24 @@ describe('layoutText ellipsis marker', () => {
   test('marks a capped line that overflows maxWidth even when no line was dropped', () => {
     // One unbreakable word: nothing to wrap and nothing to drop, so only the
     // width check can reach it.
-    const { placements } = layoutText('ABCDEFG', markerStyle(), { maxWidth: 50, maxLines: 1, overflow: 'ellipsis', ellipsis: '*' }, makeAtlas());
+    const { placements } = layoutText(
+      'ABCDEFG',
+      markerStyle(),
+      { maxWidth: 50, maxLines: 1, overflow: 'ellipsis', ellipsis: '*' },
+      makeAtlas(),
+    );
 
     expect(placements).toHaveLength(5);
     expect(placements.at(-1)!.sourceStart).toBe(4);
   });
 
   test('the marker stands for nothing in the source', () => {
-    const { placements } = layoutText('ABCD\nE', markerStyle(), { maxWidth: 30, maxLines: 1, overflow: 'ellipsis', ellipsis: '*' }, makeAtlas());
+    const { placements } = layoutText(
+      'ABCD\nE',
+      markerStyle(),
+      { maxWidth: 30, maxLines: 1, overflow: 'ellipsis', ellipsis: '*' },
+      makeAtlas(),
+    );
     const marker = placements.at(-1)!;
 
     expect(marker.sourceStart).toBe(marker.sourceEnd);
@@ -549,26 +576,25 @@ describe('layoutText ellipsis marker', () => {
 
 describe('layoutText direction', () => {
   /** Provider whose per-character advance doubles as an identity marker. */
-  const makeCharProvider = (advances: Record<string, number>): GlyphProvider => {
-    return {
-      getGlyph: (char: string, fontSize: number): GlyphInfo => {
-        const advance = advances[char] ?? 10;
-        return {
-          x: 0,
-          y: 0,
-          width: advance,
-          height: fontSize,
-          advance,
-          ascent: fontSize,
-          page: 0,
-          uvLeft: 0,
-          uvTop: 0,
-          uvRight: 1,
-          uvBottom: 1,
-        };
-      },
-    };
-  };
+  const makeCharProvider = (advances: Record<string, number>): GlyphProvider => ({
+    getGlyph: (char: string, fontSize: number): GlyphInfo => {
+      const advance = advances[char] ?? 10;
+
+      return {
+        x: 0,
+        y: 0,
+        width: advance,
+        height: fontSize,
+        advance,
+        ascent: fontSize,
+        page: 0,
+        uvLeft: 0,
+        uvTop: 0,
+        uvRight: 1,
+        uvBottom: 1,
+      };
+    },
+  });
 
   test('direction "ltr" places glyphs in logical order', () => {
     const provider = makeCharProvider({ A: 10, B: 20 });
@@ -711,25 +737,23 @@ describe('layoutText ink', () => {
    * and hands back negative bearings to pull the padded tile back around the
    * cursor. The ink therefore starts left of and above the layout origin.
    */
-  const makePaddedProvider = (buffer: number, advance = 10, glyph = 8): GlyphProvider => {
-    return {
-      getGlyph: (): GlyphInfo => ({
-        x: 0,
-        y: 0,
-        width: glyph + 2 * buffer,
-        height: glyph + 2 * buffer,
-        advance,
-        ascent: glyph,
-        page: 0,
-        uvLeft: 0,
-        uvTop: 0,
-        uvRight: 1,
-        uvBottom: 1,
-        xBearing: -buffer,
-        yBearing: -buffer,
-      }),
-    };
-  };
+  const makePaddedProvider = (buffer: number, advance = 10, glyph = 8): GlyphProvider => ({
+    getGlyph: (): GlyphInfo => ({
+      x: 0,
+      y: 0,
+      width: glyph + 2 * buffer,
+      height: glyph + 2 * buffer,
+      advance,
+      ascent: glyph,
+      page: 0,
+      uvLeft: 0,
+      uvTop: 0,
+      uvRight: 1,
+      uvBottom: 1,
+      xBearing: -buffer,
+      yBearing: -buffer,
+    }),
+  });
 
   test('ink starts in the negative when the provider pads its glyphs', () => {
     const buffer = 3;
@@ -780,24 +804,22 @@ describe('layoutText ink', () => {
 // ---------------------------------------------------------------------------
 
 describe('buildTextPageQuads', () => {
-  const makePlacement = (overrides: Partial<GlyphPlacement> = {}): GlyphPlacement => {
-    return {
-      x: 0,
-      y: 0,
-      width: 8,
-      height: 12,
-      penX: 0,
-      penAdvance: 8,
-      sourceStart: 0,
-      sourceEnd: 1,
-      page: 0,
-      uvLeft: 0,
-      uvTop: 0,
-      uvRight: 1,
-      uvBottom: 1,
-      ...overrides,
-    };
-  };
+  const makePlacement = (overrides: Partial<GlyphPlacement> = {}): GlyphPlacement => ({
+    x: 0,
+    y: 0,
+    width: 8,
+    height: 12,
+    penX: 0,
+    penAdvance: 8,
+    sourceStart: 0,
+    sourceEnd: 1,
+    page: 0,
+    uvLeft: 0,
+    uvTop: 0,
+    uvRight: 1,
+    uvBottom: 1,
+    ...overrides,
+  });
 
   test('empty placement array yields no page-quad batches', () => {
     expect(buildTextPageQuads([])).toEqual([]);
@@ -1060,7 +1082,8 @@ describe('layoutText decorations', () => {
     getSolidTexel: () => solid,
   });
 
-  const rulesOf = (result: ReturnType<typeof layoutText>): GlyphPlacement[] => result.placements.filter(placement => placement.decoration === true);
+  const rulesOf = (result: ReturnType<typeof layoutText>): GlyphPlacement[] =>
+    result.placements.filter(placement => placement.decoration === true);
 
   test('places no rule unless one is asked for', () => {
     const style = new TextStyle({ fontSize: 16 });
@@ -1129,7 +1152,9 @@ describe('layoutText decorations', () => {
   test('decorationOffset pushes both rules down together', () => {
     const provider = decoratingProvider();
     const plain = rulesOf(layoutText('Hi', new TextStyle({ fontSize: 16, underline: true, strikethrough: true }), {}, provider));
-    const shifted = rulesOf(layoutText('Hi', new TextStyle({ fontSize: 16, underline: true, strikethrough: true, decorationOffset: 5 }), {}, provider));
+    const shifted = rulesOf(
+      layoutText('Hi', new TextStyle({ fontSize: 16, underline: true, strikethrough: true, decorationOffset: 5 }), {}, provider),
+    );
 
     expect(shifted.map(rule => rule.y)).toEqual(plain.map(rule => rule.y + 5));
   });
@@ -1220,7 +1245,19 @@ describe('layoutText textTransform', () => {
         getGlyph: (char: string, fontSize: number): GlyphInfo => {
           units.push(char);
 
-          return { x: 0, y: 0, width: 10, height: fontSize, advance: 10, ascent: fontSize, page: 0, uvLeft: 0, uvTop: 0, uvRight: 1, uvBottom: 1 };
+          return {
+            x: 0,
+            y: 0,
+            width: 10,
+            height: fontSize,
+            advance: 10,
+            ascent: fontSize,
+            page: 0,
+            uvLeft: 0,
+            uvTop: 0,
+            uvRight: 1,
+            uvBottom: 1,
+          };
         },
       },
     };

@@ -1,26 +1,26 @@
 ---
-import type { Capability } from '../lib/examples-catalog';
-import { GuideExamplePreview } from './GuideExamplePreview';
-import { getExamplesForChapter } from '../lib/examples-catalog';
 import { getExampleExecutionSource, getExampleSource } from '../lib/example-sources';
+import type { Capability } from '../lib/examples-catalog';
+import { getExamplesForChapter } from '../lib/examples-catalog';
+import { GuideExamplePreview } from './GuideExamplePreview';
 
 interface Props {
-    chapter: string;
-    slug: string;
+  chapter: string;
+  slug: string;
 }
 
 const CAPABILITY_LABELS: Record<Capability, string> = {
-    webgl2: 'WebGL2',
-    webgpu: 'WebGPU',
-    pointer: 'Pointer',
-    keyboard: 'Keyboard',
-    gamepad: 'Gamepad',
-    touch: 'Touch',
-    audio: 'Audio',
-    fullscreen: 'Fullscreen',
-    vibration: 'Vibration',
-    offscreenCanvas: 'OffscreenCanvas',
-    webWorkers: 'Workers',
+  webgl2: 'WebGL2',
+  webgpu: 'WebGPU',
+  pointer: 'Pointer',
+  keyboard: 'Keyboard',
+  gamepad: 'Gamepad',
+  touch: 'Touch',
+  audio: 'Audio',
+  fullscreen: 'Fullscreen',
+  vibration: 'Vibration',
+  offscreenCanvas: 'OffscreenCanvas',
+  webWorkers: 'Workers',
 };
 
 const { chapter, slug } = Astro.props;
@@ -35,150 +35,154 @@ const locale = Astro.currentLocale === 'de' ? 'de' : 'en';
 ---
 
 <section class="example-preview">
-    <header class="embed-head">
-        <span class="title">{exampleTitle}</span>
-        {capabilities.length > 0 && (
-            <span class="badges" aria-label="Required browser capabilities">
-                {capabilities.map(cap => (
-                    <span class="cap" title={`Required: ${cap}`}>
-                        {CAPABILITY_LABELS[cap]}
-                    </span>
-                ))}
-            </span>
-        )}
-        <span class="actions">
-            <a class="action action--primary" href={`${import.meta.env.BASE_URL}${locale}/playground/?example=${chapter}/${slug}`}>Open in Playground</a>
-            <a class="action action--quiet" href={sourceHref}>View source</a>
-        </span>
-    </header>
-    <div class="embed-body">
-        <div class="embed-preview">
-            <GuideExamplePreview
-                client:visible
-                chapter={chapter}
-                slug={slug}
-                title={exampleTitle}
-                sourceCode={executionSource}
-                capabilities={capabilities}
-            />
-        </div>
-        <div class="embed-source">
-            <pre><code>{displaySource}</code></pre>
-        </div>
+  <header class="embed-head">
+    <span class="title">{exampleTitle}</span>
+    {capabilities.length > 0 && (
+      <span class="badges" aria-label="Required browser capabilities">
+        {capabilities.map(cap => (
+          <span class="cap" title={`Required: ${cap}`}>
+            {CAPABILITY_LABELS[cap]}
+          </span>
+        ))}
+      </span>
+    )}
+    <span class="actions">
+      <a class="action action--primary" href={`${import.meta.env.BASE_URL}${locale}/playground/?example=${chapter}/${slug}`}>
+        Open in Playground
+      </a>
+      <a class="action action--quiet" href={sourceHref}>
+        View source
+      </a>
+    </span>
+  </header>
+  <div class="embed-body">
+    <div class="embed-preview">
+      <GuideExamplePreview
+        client:visible
+        chapter={chapter}
+        slug={slug}
+        title={exampleTitle}
+        sourceCode={executionSource}
+        capabilities={capabilities}
+      />
     </div>
+    <div class="embed-source">
+      <pre><code>{displaySource}</code></pre>
+    </div>
+  </div>
 </section>
 
 <style>
-    .example-preview {
-        margin: var(--s-5) 0;
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-4);
-        overflow: hidden;
-        background: var(--bg-elevated);
-    }
+  .example-preview {
+    margin: var(--s-5) 0;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-4);
+    overflow: hidden;
+    background: var(--bg-elevated);
+  }
 
-    .embed-head {
-        display: flex;
-        align-items: center;
-        gap: var(--s-2);
-        padding: 10px var(--s-4);
-        border-bottom: 1px solid var(--line-soft);
-        font-size: 12.5px;
-    }
+  .embed-head {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    padding: 10px var(--s-4);
+    border-bottom: 1px solid var(--line-soft);
+    font-size: 12.5px;
+  }
 
-    .embed-head .title {
-        font-weight: 600;
-    }
+  .embed-head .title {
+    font-weight: 600;
+  }
 
-    .embed-head .badges {
-        display: inline-flex;
-        gap: 4px;
-        flex-wrap: wrap;
-        margin-left: var(--s-2);
-    }
+  .embed-head .badges {
+    display: inline-flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-left: var(--s-2);
+  }
 
-    .embed-head .actions {
-        margin-left: auto;
-        display: inline-flex;
-        gap: 6px;
-    }
+  .embed-head .actions {
+    margin-left: auto;
+    display: inline-flex;
+    gap: 6px;
+  }
 
-    .embed-head .cap {
-        display: inline-flex;
-        align-items: center;
-        border-radius: var(--r-pill);
-        border: 1px solid var(--line-soft);
-        background: var(--bg-canvas);
-        color: var(--fg-muted);
-        padding: 2px 8px;
-        font-family: var(--f-mono);
-        font-size: 11px;
-    }
+  .embed-head .cap {
+    display: inline-flex;
+    align-items: center;
+    border-radius: var(--r-pill);
+    border: 1px solid var(--line-soft);
+    background: var(--bg-canvas);
+    color: var(--fg-muted);
+    padding: 2px 8px;
+    font-family: var(--f-mono);
+    font-size: 11px;
+  }
 
-    .embed-head .action {
-        display: inline-flex;
-        align-items: center;
-        border-radius: var(--r-2);
-        text-decoration: none;
-        font-size: 11.5px;
-        padding: 5px 9px;
-        border: 1px solid var(--line-soft);
-        color: var(--fg-muted);
-        background: var(--bg-canvas);
-    }
+  .embed-head .action {
+    display: inline-flex;
+    align-items: center;
+    border-radius: var(--r-2);
+    text-decoration: none;
+    font-size: 11.5px;
+    padding: 5px 9px;
+    border: 1px solid var(--line-soft);
+    color: var(--fg-muted);
+    background: var(--bg-canvas);
+  }
 
-    .embed-head .action--primary {
-        border-color: var(--accent-line);
-        background: var(--accent-soft);
-        color: var(--fg);
-    }
+  .embed-head .action--primary {
+    border-color: var(--accent-line);
+    background: var(--accent-soft);
+    color: var(--fg);
+  }
 
-    .embed-head .action:hover {
-        color: var(--fg);
-    }
+  .embed-head .action:hover {
+    color: var(--fg);
+  }
 
+  .embed-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 200px;
+  }
+
+  .embed-preview {
+    min-height: 200px;
+    background: var(--bg-code);
+  }
+
+  .embed-source {
+    border-left: 1px solid var(--line-soft);
+    background: var(--bg-code);
+    max-height: 260px;
+    overflow: auto;
+  }
+
+  .embed-source pre {
+    margin: 0;
+    padding: 12px 14px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: oklch(92% 0.02 245);
+    font-family: var(--f-mono);
+    font-size: 12px;
+    line-height: 1.65;
+  }
+
+  .embed-source code {
+    white-space: pre;
+  }
+
+  @media (width <= 760px) {
     .embed-body {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        min-height: 200px;
-    }
-
-    .embed-preview {
-        min-height: 200px;
-        background: var(--bg-code);
+      grid-template-columns: 1fr;
     }
 
     .embed-source {
-        border-left: 1px solid var(--line-soft);
-        background: var(--bg-code);
-        max-height: 260px;
-        overflow: auto;
+      border-left: 0;
+      border-top: 1px solid var(--line-soft);
     }
-
-    .embed-source pre {
-        margin: 0;
-        padding: 12px 14px;
-        border: 0;
-        border-radius: 0;
-        background: transparent;
-        color: oklch(92% 0.02 245);
-        font-family: var(--f-mono);
-        font-size: 12px;
-        line-height: 1.65;
-    }
-
-    .embed-source code {
-        white-space: pre;
-    }
-
-    @media (max-width: 760px) {
-        .embed-body {
-            grid-template-columns: 1fr;
-        }
-
-        .embed-source {
-            border-left: 0;
-            border-top: 1px solid var(--line-soft);
-        }
-    }
+  }
 </style>

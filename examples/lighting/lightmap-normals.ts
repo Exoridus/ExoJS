@@ -10,7 +10,7 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { AlphaNormals, Lighting, LightmapLighting, type NormalSource, PointLight } from '@codexo/exojs-lighting';
+import { AlphaNormals, type Lighting, LightmapLighting, type NormalSource, PointLight } from '@codexo/exojs-lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // The lightmap renderer multiplies a frame that was already drawn, so by the
@@ -34,10 +34,13 @@ const canvasTexture = (width: number, height: number, paint: (context: CanvasRen
   canvas.width = width;
   canvas.height = height;
   const context = canvas.getContext('2d');
+
   if (context === null) {
     throw new Error('2D canvas context unavailable.');
   }
+
   paint(context);
+
   return new Texture(canvas, { scaleMode: ScaleModes.Linear, generateMipMap: false });
 };
 
@@ -54,7 +57,14 @@ const floorTexture = canvasTexture(64, 64, context => {
 // an edge that turns away from the light.
 const cobbleSize = 96;
 const cobbleTexture = canvasTexture(cobbleSize, cobbleSize, context => {
-  const gradient = context.createRadialGradient(cobbleSize / 2, cobbleSize / 2, cobbleSize * 0.12, cobbleSize / 2, cobbleSize / 2, cobbleSize * 0.48);
+  const gradient = context.createRadialGradient(
+    cobbleSize / 2,
+    cobbleSize / 2,
+    cobbleSize * 0.12,
+    cobbleSize / 2,
+    cobbleSize / 2,
+    cobbleSize * 0.48,
+  );
 
   gradient.addColorStop(0, 'rgba(198, 190, 176, 1)');
   gradient.addColorStop(0.72, 'rgba(176, 168, 154, 1)');
@@ -164,7 +174,9 @@ class LightmapNormalsScene extends Scene {
 
   override draw(context: RenderingContext): void {
     context.render(this.world);
-    this.hud.setStatus(`${this.lighting.activeSurfaceCount} lit surfaces - ${this.lighting.quality} renderer - draw calls ${context.stats.drawCalls}`);
+    this.hud.setStatus(
+      `${this.lighting.activeSurfaceCount} lit surfaces - ${this.lighting.quality} renderer - draw calls ${context.stats.drawCalls}`,
+    );
   }
 }
 

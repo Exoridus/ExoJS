@@ -40,6 +40,7 @@ const createHarness = (): ColorHarness => {
       const source = sixth as { width: number; height: number };
 
       allocations.push({ internalFormat: internalFormat as number, width: source.width, height: source.height, data: null });
+
       return;
     }
 
@@ -48,8 +49,14 @@ const createHarness = (): ColorHarness => {
     void sixth;
     void seventh;
     void eighth;
-    allocations.push({ internalFormat: internalFormat as number, width: fourth as number, height: fifth as number, data: ninth as ArrayBufferView | null });
+    allocations.push({
+      internalFormat: internalFormat as number,
+      width: fourth as number,
+      height: fifth as number,
+      data: ninth as ArrayBufferView | null,
+    });
   };
+
   mutable['pixelStorei'] = (pname: number, value: number | boolean): void => {
     pixelStores.push([pname, value]);
   };

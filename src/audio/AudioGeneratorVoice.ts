@@ -46,13 +46,13 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
   private _detune: number;
   private _playbackRate = 1;
   /**
-   * `true` between {@link AudioGeneratorVoice.pause} and
-   * {@link AudioGeneratorVoice.resume}. While set there is NO live oscillator:
-   * `_oscillator` still points at the retired node so the field can stay
-   * non-nullable, but nothing may be scheduled on it and nothing may start a
-   * replacement until `resume()`.
+   * `true` while the voice is actually silent - paused by its caller or held
+   * by its owner (see {@link BaseVoice._setHeld}). While set there is NO live
+   * oscillator: `_oscillator` still points at the retired node so the field
+   * can stay non-nullable, but nothing may be scheduled on it and nothing may
+   * start a replacement until playback resumes.
    */
-  private _paused = false;
+  private _halted = false;
   /**
    * `true` once a stop is in flight - an envelope release or a timed fade -
    * and the voice is only waiting to be finished. Such a voice can no longer be
@@ -98,9 +98,10 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
 
   public set frequency(value: number) {
     this._frequency = value;
+
     // Paused: no live oscillator to ramp. `_startOscillator` reads the field, so
     // the value resume starts from is this one, not the one the pause froze.
-    if (!this._ended && !this._paused) {
+    if (!this._ended && !this._halted) {
       this._oscillator.frequency.setTargetAtTime(value, this._audioContext.currentTime, 0.01);
     }
   }
@@ -111,7 +112,8 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
 
   public set type(value: OscillatorType) {
     this._type = value;
-    if (!this._ended && !this._paused) {
+
+    if (!this._ended && !this._halted) {
       this._oscillator.type = value;
     }
   }
@@ -138,7 +140,8 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
 
   public set detune(value: number) {
     this._detune = value;
-    if (!this._ended && !this._paused) {
+
+    if (!this._ended && !this._halted) {
       this._oscillator.detune.setTargetAtTime(value, this._audioContext.currentTime, 0.01);
     }
   }
@@ -165,7 +168,61 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
    * left to finish it.
    */
   public pause(): void {
-    if (this._ended || this._paused) return;
+    if (this._ended) {
+      return;
+    }
+
+    this._halt();
+
+    // A voice that was already over ends instead of pausing.
+    if (!this._ended) {
+      this._pauseRequested = true;
+    }
+  }
+
+  /**
+   * Resume where {@link AudioGeneratorVoice.pause} froze the note. While the
+   * voice's owner holds it (a paused scene), the note resumes once the hold
+   * is released.
+   */
+  public resume(): void {
+    if (this._ended) {
+      return;
+    }
+
+    this._pauseRequested = false;
+
+    if (!this._held) {
+      this._unhalt();
+    }
+  }
+
+  public get paused(): boolean {
+    return this._pauseRequested;
+  }
+
+  /**
+   * Whether the voice is actually silent - paused by its caller or held by
+   * its owner. What pool eviction protects, since a held voice is as idle as
+   * a paused one.
+   * @internal
+   */
+  public get _isHalted(): boolean {
+    return this._halted;
+  }
+
+  protected override _applyHold(): void {
+    if (this._held) {
+      this._halt();
+    } else if (!this._pauseRequested) {
+      this._unhalt();
+    }
+  }
+
+  private _halt(): void {
+    if (this._ended || this._halted) {
+      return;
+    }
 
     if (this._stopping) {
       this._finish();
@@ -184,23 +241,25 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
       this._envelope.hold(this._envelopeGain.gain, now);
     }
 
-    this._paused = true;
+    this._halted = true;
     this._retireOscillator();
   }
 
   /**
-   * Start a fresh oscillator and pick the envelope up where
-   * {@link AudioGeneratorVoice.pause} froze it. The replacement is built from
+   * Start a fresh oscillator and pick the envelope up where the last halt
+   * froze it. The replacement is built from
    * the voice's current `type`/`frequency`/`detune`, so a retune applied while
    * paused takes effect here rather than being reverted to the value at pause
    * time.
    */
-  public resume(): void {
-    if (this._ended || !this._paused) return;
+  private _unhalt(): void {
+    if (this._ended || !this._halted) {
+      return;
+    }
 
     const now = this._audioContext.currentTime;
 
-    this._paused = false;
+    this._halted = false;
 
     if (this._envelope) {
       this._envelope.trigger(this._envelopeGain.gain, now, this._envelopeElapsed);
@@ -210,27 +269,27 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
     this._oscillator = this._startOscillator();
   }
 
-  public get paused(): boolean {
-    return this._paused;
-  }
-
   // -------------------------------------------------------------------------
   // Stop (envelope-aware)
   // -------------------------------------------------------------------------
 
   public override stop(fade?: Seconds): void {
-    if (this._ended) return;
+    if (this._ended) {
+      return;
+    }
 
     // Paused: there is no live oscillator to release or fade out, so both timed
     // paths would only keep an inaudible voice alive for their own duration.
-    if (this._paused) {
+    if (this._halted) {
       this._finish();
+
       return;
     }
 
     if (fade !== undefined && fade > 0) {
       this._stopping = true;
       super.stop(fade);
+
       return;
     }
 
@@ -239,11 +298,13 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
       this._stopping = true;
       this._envelope.releaseAt(this._envelopeGain.gain, now);
       const stopAt = now + this._envelope.release;
+
       try {
         this._oscillator.stop(stopAt);
       } catch {
         // already stopped
       }
+
       // _finish runs on the oscillator's onended at stopAt.
       return;
     }
@@ -279,11 +340,13 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
    */
   private _retireOscillator(): void {
     this._oscillator.onended = null;
+
     try {
       this._oscillator.stop(0);
     } catch {
       // already stopped
     }
+
     this._oscillator.disconnect();
   }
 

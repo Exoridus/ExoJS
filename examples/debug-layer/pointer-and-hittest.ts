@@ -11,6 +11,7 @@ class PointerAndHittestScene extends Scene {
     const { width, height } = app;
 
     this.sprites = [];
+
     for (let i = 0; i < 3; i++) {
       const sprite = new Sprite(this.loader.get('image/ship-a.png'))
         .setAnchor(0.5)
@@ -25,6 +26,7 @@ class PointerAndHittestScene extends Scene {
       this.root.addChild(sprite);
       this.sprites.push(sprite);
     }
+
     this.hud = mountControls({
       title: 'Interaction Inspector',
       controls: [

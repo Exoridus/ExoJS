@@ -45,6 +45,7 @@ const readPkg = (relPath: string): Pkg => {
     peerDependencies?: Record<string, string>;
     repository?: unknown;
   };
+
   return { name: raw.name, version: raw.version, peer: raw.peerDependencies?.['@codexo/exojs'], repository: raw.repository };
 };
 
@@ -60,6 +61,7 @@ const extensions = EXTENSION_PACKAGES.map(p => readPkg(`${p.dir}/package.json`))
 
 // 1. Lockstep version.
 const versions = new Set(official.map(p => p.version));
+
 if (versions.size !== 1) {
   problems.push(`Lockstep version mismatch: ${official.map(p => `${p.name}@${p.version}`).join(', ')}`);
 } else {
@@ -127,7 +129,8 @@ const requireInWorkflow = (needle: string, label: string): void => {
 // the root build for a package that has no root build - and the check could not
 // see the difference, because the Core line it looked for is a substring of
 // nothing but was already present for Core.
-const buildLineFor = (pkg: { readonly dir: string; readonly name: string }): string => (pkg.dir === '.' ? 'pnpm build' : `pnpm --filter ${pkg.name} build`);
+const buildLineFor = (pkg: { readonly dir: string; readonly name: string }): string =>
+  pkg.dir === '.' ? 'pnpm build' : `pnpm --filter ${pkg.name} build`;
 
 // Looping over the SoT means a new package's build line is enforced in
 // release.yml automatically.
@@ -148,6 +151,7 @@ requireInWorkflow('pnpm release:publish --execute', 'publish runs the build-once
 const prepareJob = /\n {2}prepare:\n/.test(workflow);
 const publishJob = /\n {2}publish:\n/.test(workflow);
 const publishNeedsPrepare = /publish:[\s\S]*?needs:\s*prepare/.test(workflow);
+
 if (prepareJob && publishJob && publishNeedsPrepare) {
   ok.push('two-stage pipeline: publish needs prepare');
 } else {
@@ -156,6 +160,7 @@ if (prepareJob && publishJob && publishNeedsPrepare) {
 
 // The publish job must not rebuild the runtime packages.
 const publishSection = workflow.slice(workflow.indexOf('\n  publish:'));
+
 if (/run:\s*pnpm build\b/.test(publishSection)) {
   problems.push('publish job must not run `pnpm build` — it consumes build-once artifacts.');
 } else {
@@ -164,6 +169,7 @@ if (/run:\s*pnpm build\b/.test(publishSection)) {
 
 // 7. Canonical publish order = the LOCKSTEP_PACKAGES order (Core first), enforced in code.
 const expectedOrder = LOCKSTEP_PACKAGES.map(p => p.name);
+
 if (PUBLISH_ORDER.length === expectedOrder.length && PUBLISH_ORDER.every((name, i) => name === expectedOrder[i])) {
   ok.push(`PUBLISH_ORDER matches LOCKSTEP_PACKAGES order (${expectedOrder.join(' → ')})`);
 } else {
@@ -175,13 +181,16 @@ if (PUBLISH_ORDER.length === expectedOrder.length && PUBLISH_ORDER.every((name, 
 // be packed, and therefore never published.
 const packed = officialPackages(rootDir);
 const packedNames = packed.map(p => p.name);
+
 if (packedNames.length === PUBLISH_ORDER.length && packedNames.every((name, i) => name === PUBLISH_ORDER[i])) {
   ok.push('officialPackages() packs exactly the PUBLISH_ORDER set, in order');
 } else {
   problems.push(`officialPackages() must pack ${PUBLISH_ORDER.join(' → ')}, got ${packedNames.join(' → ')}`);
 }
+
 for (const pkg of packed) {
   const manifestName = (JSON.parse(readFileSync(resolve(pkg.dir, 'package.json'), 'utf8')) as { name: string }).name;
+
   if (manifestName !== pkg.name) {
     problems.push(`officialPackages() maps ${pkg.name} to a directory whose package.json is "${manifestName}" (${pkg.dir}).`);
   }
@@ -190,9 +199,16 @@ for (const pkg of packed) {
 // --- Report ---
 if (problems.length > 0) {
   process.stderr.write('verify-release-matrix: FAILED\n');
-  for (const p of problems) process.stderr.write(`  ✗ ${p}\n`);
+
+  for (const p of problems) {
+    process.stderr.write(`  ✗ ${p}\n`);
+  }
+
   process.exit(1);
 }
 
 process.stdout.write(`verify-release-matrix: OK (v${version})\n`);
-for (const line of ok) process.stdout.write(`  ✓ ${line}\n`);
+
+for (const line of ok) {
+  process.stdout.write(`  ✓ ${line}\n`);
+}

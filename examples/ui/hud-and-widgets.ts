@@ -1,4 +1,15 @@
-import { Application, Button, Color, FixedResolutionCanvasSizing, Label, Panel, ProgressBar, Scene, type Seconds, Stack } from '@codexo/exojs';
+import {
+  Application,
+  Button,
+  Color,
+  FixedResolutionCanvasSizing,
+  Label,
+  Panel,
+  ProgressBar,
+  Scene,
+  type Seconds,
+  Stack,
+} from '@codexo/exojs';
 
 /**
  * UI-Core showcase: a screen-fixed HUD and interactive widgets live on

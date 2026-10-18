@@ -84,7 +84,12 @@ export const resolveBarrierResolution = (
  * on a DPR-3 phone" into a hard render error for a scene that renders fine
  * today.
  */
-export const clampResolutionToTextureSize = (resolution: number, logicalWidth: number, logicalHeight: number, maxTextureSize: number): number => {
+export const clampResolutionToTextureSize = (
+  resolution: number,
+  logicalWidth: number,
+  logicalHeight: number,
+  maxTextureSize: number,
+): number => {
   if (maxTextureSize <= 0) {
     return resolution;
   }

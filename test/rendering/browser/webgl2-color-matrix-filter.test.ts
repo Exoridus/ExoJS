@@ -18,7 +18,11 @@ import { createWebGl2TestBackend, readWebGl2Pixel, renderWebGl2Encoded } from '.
 import { CLEAR, MATRIX_SCENE_SIZE, matrixScene, matrixSubtreeScene, SAMPLE, SECOND_SAMPLE } from './_colorMatrixFixture';
 import { expectPixelNear, type RgbaTuple } from './_pixels';
 
-const render = async (css: string, filters: readonly Filter[], read: (pixel: (x: number, y: number) => RgbaTuple) => void): Promise<void> => {
+const render = async (
+  css: string,
+  filters: readonly Filter[],
+  read: (pixel: (x: number, y: number) => RgbaTuple) => void,
+): Promise<void> => {
   const backend = await createWebGl2TestBackend(MATRIX_SCENE_SIZE);
   const { root, textures } = matrixScene(css, filters);
 
@@ -27,7 +31,11 @@ const render = async (css: string, filters: readonly Filter[], read: (pixel: (x:
     read((x, y) => readWebGl2Pixel(backend, x, y));
   } finally {
     root.destroy();
-    for (const texture of textures) texture.destroy();
+
+    for (const texture of textures) {
+      texture.destroy();
+    }
+
     backend.destroy();
   }
 };
@@ -104,7 +112,11 @@ describe('ColorMatrixFilter grading (WebGL2)', () => {
       expectPixelNear(readWebGl2Pixel(backend, SECOND_SAMPLE, SECOND_SAMPLE), [red, red, red, 255], 3);
     } finally {
       root.destroy();
-      for (const texture of textures) texture.destroy();
+
+      for (const texture of textures) {
+        texture.destroy();
+      }
+
       backend.destroy();
     }
   });
@@ -126,7 +138,11 @@ describe('ColorMatrixFilter grading (WebGL2)', () => {
       expectPixelNear(readWebGl2Pixel(backend, SAMPLE, SAMPLE), [0, 255, 0, 255]);
     } finally {
       root.destroy();
-      for (const texture of textures) texture.destroy();
+
+      for (const texture of textures) {
+        texture.destroy();
+      }
+
       backend.destroy();
     }
   });

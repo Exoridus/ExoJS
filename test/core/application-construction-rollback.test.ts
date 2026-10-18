@@ -174,7 +174,9 @@ describe('Application construction rollback', () => {
     recordDestroy(TweenSystem.prototype, 'tweens');
     recordDestroy(AudioSystem.prototype, 'audio');
 
-    expect(() => new Application({ backend: { type: 'webgl2' }, extensions: [throwingInstallExtension(new Error('boom'))] })).toThrow('boom');
+    expect(() => new Application({ backend: { type: 'webgl2' }, extensions: [throwingInstallExtension(new Error('boom'))] })).toThrow(
+      'boom',
+    );
 
     expect(destroyOrder).toEqual([
       // App-level registry first: extension systems are the last thing built
@@ -288,7 +290,9 @@ describe('Application construction rollback', () => {
   test('an injected platform adapter is left alive, but its visibility subscription is released', () => {
     const platform = createRecordingPlatform();
 
-    expect(() => new Application({ backend: { type: 'webgl2' }, platform, extensions: [throwingInstallExtension(new Error('boom'))] })).toThrow('boom');
+    expect(
+      () => new Application({ backend: { type: 'webgl2' }, platform, extensions: [throwingInstallExtension(new Error('boom'))] }),
+    ).toThrow('boom');
 
     // Not ours to destroy - the caller injected it and may still be using it.
     expect(platform.calls).not.toContain('destroy');
@@ -320,7 +324,10 @@ describe('Application construction rollback', () => {
     recordDestroy(SceneDirector.prototype, 'scenes');
     recordDestroy(SystemRegistry.prototype, 'systems');
 
-    const app = new Application({ backend: { type: 'webgl2' }, extensions: [{ id: 'ok', install: created => void created.systems.add({ update: vi.fn() }) }] });
+    const app = new Application({
+      backend: { type: 'webgl2' },
+      extensions: [{ id: 'ok', install: created => void created.systems.add({ update: vi.fn() }) }],
+    });
 
     expect(destroyOrder).toEqual([]);
 

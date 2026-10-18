@@ -54,7 +54,10 @@ const specKey = (spec: object): string => JSON.stringify(Object.fromEntries(Obje
  * the old value in place under the new stamp, and the `results.md` table does
  * not flag it. Delete `results.json` before a run that must stand on its own.
  */
-export const mergeCellResults = <TResult extends BaseCellResult<object>>(existing: readonly TResult[], incoming: readonly TResult[]): TResult[] => {
+export const mergeCellResults = <TResult extends BaseCellResult<object>>(
+  existing: readonly TResult[],
+  incoming: readonly TResult[],
+): TResult[] => {
   const merged = [...existing];
   const indexByKey = new Map(existing.map((result, index) => [specKey(result.spec), index]));
 

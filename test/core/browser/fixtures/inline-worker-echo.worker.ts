@@ -12,11 +12,13 @@ self.onmessage = (event: MessageEvent<EchoRequest>): void => {
 
   if (request.kind === 'double') {
     self.postMessage({ kind: 'double', value: double(request.value) });
+
     return;
   }
 
   if (request.kind === 'name') {
     self.postMessage({ kind: 'name', value: self.name });
+
     return;
   }
 

@@ -72,7 +72,7 @@ describe('OffscreenPlatform', () => {
     const platform = new OffscreenPlatform(createSurface());
 
     platform.onSurfaceEvent('pointerdown', event => event.preventDefault());
-    platform.onSurfaceEvent('pointermove', () => undefined);
+    platform.onSurfaceEvent('pointermove', () => {});
 
     expect(platform.emitSurfaceEvent('pointerdown', createPointerEvent(1))).toBe(true);
     expect(platform.emitSurfaceEvent('pointermove', createPointerEvent(1))).toBe(false);
@@ -169,7 +169,7 @@ describe('OffscreenPlatform', () => {
     // The adapter binds the realm's schedulers at construction, so it has to be
     // built after the spies are in place to route through them.
     const platform = new OffscreenPlatform(createSurface());
-    const handle = platform.requestFrame(() => undefined);
+    const handle = platform.requestFrame(() => {});
 
     platform.cancelFrame(handle);
 

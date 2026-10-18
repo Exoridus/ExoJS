@@ -25,11 +25,18 @@ class PcmStreamScene extends Scene {
       label: 'Start',
       onClick: () => {
         const stream = this.stream;
-        if (!stream || stream.state !== 'ready') return;
+
+        if (!stream || stream.state !== 'ready') {
+          return;
+        }
+
         void getAudioContext()
           .resume()
           .then(() => {
-            if (this.stream !== stream || stream.state !== 'ready') return;
+            if (this.stream !== stream || stream.state !== 'ready') {
+              return;
+            }
+
             this.fillQueue();
             stream.start(getAudioContext().currentTime + 0.02);
             this.hud.setStatus('Playing 220 Hz left / 330 Hz right through the music bus.');
@@ -59,32 +66,52 @@ class PcmStreamScene extends Scene {
     stream.onError.add(error => this.hud.setStatus(error.message));
     void stream.ready
       .then(() => {
-        if (this.stream === stream) this.hud.setStatus('Ready. Press Start to unlock audio and begin.');
+        if (this.stream === stream) {
+          this.hud.setStatus('Ready. Press Start to unlock audio and begin.');
+        }
       })
       .catch(error => {
-        if (this.stream === stream && stream.state !== 'destroyed') this.hud.setStatus(String(error));
+        if (this.stream === stream && stream.state !== 'destroyed') {
+          this.hud.setStatus(String(error));
+        }
       });
   }
 
   private fillQueue(): void {
     const stream = this.stream;
-    if (!stream || !this.producing || stream.clearing || (stream.state !== 'ready' && stream.state !== 'running')) return;
+
+    if (!stream || !this.producing || stream.clearing || (stream.state !== 'ready' && stream.state !== 'running')) {
+      return;
+    }
+
     const targetFrames = Math.ceil(stream.sampleRate * 0.06);
+
     while (stream.bufferedFrames < targetFrames) {
       for (let frame = 0; frame < this.left.length; frame++) {
         const time = (this.cursor + frame) / stream.sampleRate;
         this.left[frame] = Math.sin(2 * Math.PI * 220 * time) * 0.12;
         this.right[frame] = Math.sin(2 * Math.PI * 330 * time) * 0.12;
       }
-      if (!stream.enqueuePlanar(this.channels)) break;
+
+      if (!stream.enqueuePlanar(this.channels)) {
+        break;
+      }
+
       this.cursor += this.left.length;
     }
   }
 
   override update(): void {
-    if (this.stream?.state === 'running') this.fillQueue();
+    if (this.stream?.state === 'running') {
+      this.fillQueue();
+    }
+
     const stream = this.stream;
-    if (!stream) return;
+
+    if (!stream) {
+      return;
+    }
+
     this.label.text = [
       `State: ${stream.state}  |  ${stream.sampleRate} Hz stereo`,
       `Queued: ${stream.bufferedFrames} / ${stream.capacityFrames} frames (${(stream.bufferedSeconds * 1000).toFixed(1)} ms)`,

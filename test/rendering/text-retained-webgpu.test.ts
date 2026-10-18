@@ -132,7 +132,13 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     finish: () => ({ label: 'command-buffer' }) as unknown as GPUCommandBuffer,
   };
   const queue = {
-    writeBuffer: (buffer: LabeledBuffer, bufferOffset: number, data: ArrayBuffer | ArrayBufferView, dataOffset?: number, size?: number): void => {
+    writeBuffer: (
+      buffer: LabeledBuffer,
+      bufferOffset: number,
+      data: ArrayBuffer | ArrayBufferView,
+      dataOffset?: number,
+      size?: number,
+    ): void => {
       writes.push({ label: buffer.label, bufferOffset, bytes: captureWriteBytes(data, dataOffset, size) });
     },
     submit: (): void => {

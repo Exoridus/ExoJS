@@ -33,7 +33,9 @@ const FENCE_RE = /^(?<indent>[ \t]*)```(?<lang>[a-zA-Z]+)?(?<meta>[^\n]*)?\n(?<b
  * malformed block.
  */
 const dedent = (body: string, indent: string): string => {
-  if (indent === '') return body;
+  if (indent === '') {
+    return body;
+  }
 
   return body
     .split('\n')

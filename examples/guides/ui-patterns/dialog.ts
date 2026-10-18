@@ -33,7 +33,9 @@ class DialogScene extends Scene {
   }
 
   override update(delta: Seconds): void {
-    if (this.done) return;
+    if (this.done) {
+      return;
+    }
 
     this.timer += delta;
     const line = this.lines[this.lineIndex];
@@ -61,6 +63,7 @@ class DialogScene extends Scene {
         // Skip reveal - show full line
         this.chars = line.length;
         this.done = true;
+
         return;
       }
 

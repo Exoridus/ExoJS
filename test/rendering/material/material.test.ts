@@ -258,7 +258,9 @@ describe('Material base', () => {
   });
 
   test('fixes binding names and kinds at construction while keeping values live', () => {
-    const material = new MeshMaterial(createMaterialOptions({ uniforms: { u_time: 0, u_pattern: new Texture() }, textures: { u_noise: new Texture() } }));
+    const material = new MeshMaterial(
+      createMaterialOptions({ uniforms: { u_time: 0, u_pattern: new Texture() }, textures: { u_noise: new Texture() } }),
+    );
 
     expect(() => material.setUniform('u_missing', 1)).toThrow(/fixed binding schema/);
     expect(() => material.setTexture('u_missing', new Texture())).toThrow(/fixed binding schema/);
@@ -273,9 +275,9 @@ describe('Material base', () => {
   });
 
   test('rejects duplicate names across uniform and texture binding maps', () => {
-    expect(() => new MeshMaterial(createMaterialOptions({ uniforms: { u_pattern: new Texture() }, textures: { u_pattern: new Texture() } }))).toThrow(
-      /declared in both/,
-    );
+    expect(
+      () => new MeshMaterial(createMaterialOptions({ uniforms: { u_pattern: new Texture() }, textures: { u_pattern: new Texture() } })),
+    ).toThrow(/declared in both/);
   });
 
   test('destroy invokes dispose callbacks once', () => {

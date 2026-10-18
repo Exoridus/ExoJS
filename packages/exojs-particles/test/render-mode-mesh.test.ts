@@ -74,7 +74,14 @@ describe('MeshParticles', () => {
     const mode = new MeshParticles({ geometry: makeTriangle() });
 
     expect(mode.dataLayout.stride).toBe(40);
-    expect(mode.dataLayout.attributes.map(attribute => attribute.name)).toEqual(['a_position', 'a_scale', 'a_rotation', 'a_color', 'a_uvMin', 'a_uvMax']);
+    expect(mode.dataLayout.attributes.map(attribute => attribute.name)).toEqual([
+      'a_position',
+      'a_scale',
+      'a_rotation',
+      'a_color',
+      'a_uvMin',
+      'a_uvMax',
+    ]);
   });
 
   it('builds one 40-byte instance per live particle', () => {

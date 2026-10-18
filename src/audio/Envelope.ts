@@ -138,7 +138,9 @@ export class Envelope {
   private _valueAt(gainParam: AudioParam, time: number): number {
     const triggeredAt = this._triggeredAt.get(gainParam);
 
-    if (triggeredAt === undefined) return gainParam.value;
+    if (triggeredAt === undefined) {
+      return gainParam.value;
+    }
 
     return this._valueSince(triggeredAt, time);
   }
@@ -148,9 +150,17 @@ export class Envelope {
     const attackEnd = triggeredAt + this.attack;
     const decayEnd = attackEnd + this.decay;
 
-    if (time >= decayEnd) return this.sustainLevel;
-    if (time >= attackEnd) return 1 + (this.sustainLevel - 1) * ((time - attackEnd) / (decayEnd - attackEnd));
-    if (time <= triggeredAt) return 0;
+    if (time >= decayEnd) {
+      return this.sustainLevel;
+    }
+
+    if (time >= attackEnd) {
+      return 1 + (this.sustainLevel - 1) * ((time - attackEnd) / (decayEnd - attackEnd));
+    }
+
+    if (time <= triggeredAt) {
+      return 0;
+    }
 
     return (time - triggeredAt) / (attackEnd - triggeredAt);
   }

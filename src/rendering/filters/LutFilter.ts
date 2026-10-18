@@ -107,7 +107,11 @@ export const lut3dShaderSource = createFilterShader({
  */
 export class LutFilter extends Filter {
   /** Sampler defaults every generated or imported LUT texture uses. */
-  private static readonly _lutSamplerOptions = { scaleMode: ScaleModes.Linear, wrapMode: WrapModes.ClampToEdge, generateMipMap: false } as const;
+  private static readonly _lutSamplerOptions = {
+    scaleMode: ScaleModes.Linear,
+    wrapMode: WrapModes.ClampToEdge,
+    generateMipMap: false,
+  } as const;
 
   /**
    * Build a 1D identity LUT (`N×1` texture with a smooth grayscale gradient).
@@ -244,6 +248,7 @@ export class LutFilter extends Filter {
 
     this._lut = lut;
     this._shaderFilter._setTexture('uLut', lut);
+
     return this;
   }
 

@@ -57,7 +57,9 @@ class VocoderProcessor extends DisposableProcessor {
 
   public constructor(options?: unknown) {
     super();
-    const opts = (options as { processorOptions?: { numBands?: number; minHz?: number; maxHz?: number; bandQ?: number } } | undefined)?.processorOptions ?? {};
+    const opts =
+      (options as { processorOptions?: { numBands?: number; minHz?: number; maxHz?: number; bandQ?: number } } | undefined)
+        ?.processorOptions ?? {};
     const bandCount = opts.numBands ?? 16;
     const minHz = opts.minHz ?? 80;
     const maxHz = opts.maxHz ?? 8000;
@@ -93,8 +95,14 @@ class VocoderProcessor extends DisposableProcessor {
 
     for (let i = 0; i < length; i++) {
       let modulatorSample = 0;
-      for (let ch = 0; ch < modulatorChannels; ch++) modulatorSample += modulator![ch]![i]!;
-      if (modulatorChannels > 1) modulatorSample /= modulatorChannels;
+
+      for (let ch = 0; ch < modulatorChannels; ch++) {
+        modulatorSample += modulator![ch]![i]!;
+      }
+
+      if (modulatorChannels > 1) {
+        modulatorSample /= modulatorChannels;
+      }
 
       for (let b = 0; b < this._bands.length; b++) {
         const modBand = this._processBiquad(this._modulatorStates[b]!, this._bands[b]!, modulatorSample);
@@ -113,26 +121,40 @@ class VocoderProcessor extends DisposableProcessor {
     state.x1 = x;
     state.y2 = state.y1;
     state.y1 = y;
+
     return y;
   }
 
   public override process(inputs: Float32Array[][], outputs: Float32Array[][], parameters: Record<string, Float32Array>): boolean {
-    if (this._destroyed) return false;
+    if (this._destroyed) {
+      return false;
+    }
+
     const carrier = inputs[0];
     const modulator = inputs[1];
     const output = outputs[0];
-    if (!carrier || !output || output.length === 0) return true;
+
+    if (!carrier || !output || output.length === 0) {
+      return true;
+    }
+
     const channels = Math.min(carrier.length, output.length);
+
     if (channels === 0) {
       // The modulator envelope keeps following the modulator while no carrier
       // is connected, so a returning carrier is shaped by the modulator as it
       // is now, not by an envelope frozen when the carrier left.
       this._activeChannels = 0;
       this._trackModulator(modulator, output[0]!.length, parameters['envelopeSmoothing']![0]!);
+
       return true;
     }
+
     // Grown on a channel-count increase only, never per block.
-    while (this._carrierStates.length < channels) this._carrierStates.push(this._createStates());
+    while (this._carrierStates.length < channels) {
+      this._carrierStates.push(this._createStates());
+    }
+
     // A channel that reappears after the input narrowed (stereo, then mono,
     // then stereo again) starts silent: replaying the history it had in its
     // previous activation would leak stale audio onto that side.
@@ -144,8 +166,12 @@ class VocoderProcessor extends DisposableProcessor {
         state.y2 = 0;
       }
     }
+
     this._activeChannels = channels;
-    if (this._bandSums.length < channels) this._bandSums = new Float64Array(channels);
+
+    if (this._bandSums.length < channels) {
+      this._bandSums = new Float64Array(channels);
+    }
 
     const envSmoothing = parameters['envelopeSmoothing']![0]!;
     const bandCount = this._bands.length;
@@ -156,10 +182,17 @@ class VocoderProcessor extends DisposableProcessor {
     for (let i = 0; i < length; i++) {
       // Modulator analysis is mono: the envelope describes one voice, not a side.
       let modulatorSample = 0;
-      for (let ch = 0; ch < modulatorChannels; ch++) modulatorSample += modulator![ch]![i]!;
-      if (modulatorChannels > 1) modulatorSample /= modulatorChannels;
+
+      for (let ch = 0; ch < modulatorChannels; ch++) {
+        modulatorSample += modulator![ch]![i]!;
+      }
+
+      if (modulatorChannels > 1) {
+        modulatorSample /= modulatorChannels;
+      }
 
       bandSums.fill(0);
+
       for (let b = 0; b < bandCount; b++) {
         const coef = this._bands[b]!;
 
@@ -179,12 +212,17 @@ class VocoderProcessor extends DisposableProcessor {
       // split across N bands, so the raw product (carBand × envelope) is
       // O(1/N) of the carrier amplitude. Scaling by N restores unity gain
       // for typical broadband carrier + voice modulator inputs.
-      for (let ch = 0; ch < channels; ch++) output[ch]![i] = bandSums[ch]! * bandCount;
+      for (let ch = 0; ch < channels; ch++) {
+        output[ch]![i] = bandSums[ch]! * bandCount;
+      }
     }
 
     // The output layout is fixed, so a mono carrier is spread onto the
     // remaining output channels the way a mono signal is upmixed anyway.
-    for (let ch = channels; ch < output.length; ch++) output[ch]!.set(output[channels - 1]!);
+    for (let ch = channels; ch < output.length; ch++) {
+      output[ch]!.set(output[channels - 1]!);
+    }
+
     return true;
   }
 }

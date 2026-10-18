@@ -28,13 +28,17 @@ export class AudioTap {
   }
 
   public set source(value: AudioTapSource) {
-    if (value === this._source) return;
+    if (value === this._source) {
+      return;
+    }
 
     this._disconnect();
     this._cancelDeferred();
     this._source = value;
 
-    if (value === null) return;
+    if (value === null) {
+      return;
+    }
 
     if (isAudioContextReady()) {
       this._cancelPendingSetup();
@@ -72,7 +76,9 @@ export class AudioTap {
   }
 
   private _connect(source: AudioTapSource, context: AudioContext): void {
-    if (!this._target) return;
+    if (!this._target) {
+      return;
+    }
 
     const tap = this._resolve(source, context);
 
@@ -87,32 +93,40 @@ export class AudioTap {
   }
 
   private _resolve(source: AudioTapSource, context: AudioContext): AudioNode | null {
-    if (source === null) return null;
+    if (source === null) {
+      return null;
+    }
 
     // MediaStream - duck-typed via getTracks, since jsdom has no MediaStream.
     const asStream = source as Partial<{ getTracks: unknown }>;
+
     if (typeof asStream.getTracks === 'function') {
       if (this._streamSource) {
         this._streamSource.disconnect();
         this._streamSource = null;
       }
+
       const streamSource = context.createMediaStreamSource(source as MediaStream);
       this._streamSource = streamSource;
+
       return streamSource;
     }
 
     // AudioBus - checked before the raw-node case, since a bus also looks node-like.
     const asBus = source as Partial<{ getOutputNode: () => AudioNode | null }>;
+
     if (typeof asBus.getOutputNode === 'function') {
       return asBus.getOutputNode();
     }
 
     const asVoice = source as Partial<{ output: AudioNode }>;
+
     if ('output' in asVoice && asVoice.output) {
       return asVoice.output;
     }
 
     const asNode = source as Partial<{ connect: unknown; disconnect: unknown }>;
+
     if (typeof asNode.connect === 'function' && typeof asNode.disconnect === 'function') {
       return source as unknown as AudioNode;
     }
@@ -125,10 +139,12 @@ export class AudioTap {
 
     const retry = (): void => {
       this._cancelDeferred();
+
       if (this._source === source && this._target && isAudioContextReady()) {
         this._connect(source, getAudioContext());
       }
     };
+
     const asBus = source as Partial<{ onceSetup: (callback: () => void) => () => void }>;
 
     if (typeof asBus.onceSetup === 'function') {
@@ -160,6 +176,7 @@ export class AudioTap {
         // Already disconnected.
       }
     }
+
     this._tapNode = null;
 
     if (this._streamSource) {

@@ -71,7 +71,9 @@ const recordingStore = (): ContainerBlockStore & { readonly held: Map<string, Ui
     get: async hash => {
       const bytes = held.get(hash);
 
-      if (bytes !== undefined) hits.push(hash);
+      if (bytes !== undefined) {
+        hits.push(hash);
+      }
 
       return bytes === undefined ? undefined : new Uint8Array(bytes.slice().buffer);
     },
@@ -165,7 +167,7 @@ describe('ContainerReader degradation', () => {
   test('a server that ignores ranges leaves the reader on the whole file, and says so in development', async () => {
     const container = encodeContainer(threeBlockInputs(), { blockSize: 1024 });
     const { requests } = serve(container, { ranges: false });
-    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const reader = await ContainerReader.open('/pack.exoa');
 
     expect(reader.ranged).toBe(false);
@@ -182,7 +184,7 @@ describe('ContainerReader degradation', () => {
   test('a content-encoded response is refused for range use, and says so in development', async () => {
     const container = encodeContainer(threeBlockInputs(), { blockSize: 1024 });
     const { requests } = serve(container, { contentEncoding: 'gzip' });
-    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const reader = await ContainerReader.open('/pack.exoa');
 
     // Offsets would address the encoded stream, so the reader must not trust them.
@@ -252,7 +254,7 @@ describe('ContainerReader block store', () => {
     serve(container);
 
     const reader = await ContainerReader.open('/pack.exoa', {
-      store: { get: async () => undefined, put: async () => undefined },
+      store: { get: async () => {}, put: async () => {} },
     });
 
     expect(new Uint8Array(await reader.readEntry(reader.entry('b.bin')!))).toEqual(threeBlockInputs()[1]!.bytes);

@@ -70,9 +70,7 @@ describe('ReverbEffect', () => {
 
       const gains = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       let gainCallCount = 0;
-      const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
-        return gains[gainCallCount++] as unknown as GainNode;
-      });
+      const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[gainCallCount++] as unknown as GainNode);
       const convolverSpy = vi.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
       const bufferSpy = vi.spyOn(ctx, 'createBuffer');
 
@@ -92,9 +90,7 @@ describe('ReverbEffect', () => {
 
       const gains = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       let gainCallCount = 0;
-      const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
-        return gains[gainCallCount++] as unknown as GainNode;
-      });
+      const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[gainCallCount++] as unknown as GainNode);
       const convolverSpy = vi.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
       const bufferSpy = vi.spyOn(ctx, 'createBuffer');
 
@@ -120,9 +116,7 @@ describe('ReverbEffect', () => {
 
       const gains = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       let gainCallCount = 0;
-      const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
-        return gains[gainCallCount++] as unknown as GainNode;
-      });
+      const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[gainCallCount++] as unknown as GainNode);
       const convolverSpy = vi.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
       const bufferSpy = vi.spyOn(ctx, 'createBuffer');
 
@@ -218,6 +212,7 @@ describe('ReverbEffect', () => {
       let i = 0;
       const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[i++] as unknown as GainNode);
       const convolverSpy = vi.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
+
       return { gains, dryGain: gains[2], wetGain: gains[3], gainSpy, convolverSpy };
     };
 
@@ -261,16 +256,16 @@ describe('ReverbEffect', () => {
       convolver.context = ctx as unknown as AudioContext;
       const gains = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       let gainCallCount = 0;
-      const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
-        return gains[gainCallCount++] as unknown as GainNode;
-      });
+      const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[gainCallCount++] as unknown as GainNode);
       const convolverSpy = vi.spyOn(ctx, 'createConvolver').mockReturnValue(convolver as unknown as ConvolverNode);
       const filter = new ReverbEffect();
       filter.destroy();
       expect(convolver.disconnect).toHaveBeenCalled();
+
       for (const gain of gains) {
         expect(gain.disconnect).toHaveBeenCalled();
       }
+
       gainSpy.mockRestore();
       convolverSpy.mockRestore();
     });

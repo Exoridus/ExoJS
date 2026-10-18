@@ -49,12 +49,15 @@ const setupPannerSpy = (): { panners: MockPanner[]; restore: () => void } => {
       orientationZ: makeParam(),
     };
     panners.push(node);
+
     return node as unknown as PannerNode;
   });
+
   return { panners, restore: (): void => spy.mockRestore() };
 };
 
-const getGlobalListener = (): Record<string, MockParam> => (getAudioContext() as unknown as { listener: Record<string, MockParam> }).listener;
+const getGlobalListener = (): Record<string, MockParam> =>
+  (getAudioContext() as unknown as { listener: Record<string, MockParam> }).listener;
 
 // `ctx.listener` belongs to the process-wide AudioContext, so two
 // Applications used to write their own absolute world position into the same

@@ -11,8 +11,10 @@ const MODELS = [
 const REF_DISTANCE = 60;
 const MAX_DISTANCE = 460;
 const ROLLOFF = 1;
-function attenuation(model, d) {
-  if (d <= REF_DISTANCE) return 1;
+const attenuation = (model, d) => {
+  if (d <= REF_DISTANCE) {
+    return 1;
+  }
   if (model === 'linear') {
     return Math.max(0, 1 - ROLLOFF * ((d - REF_DISTANCE) / (MAX_DISTANCE - REF_DISTANCE)));
   }
@@ -20,7 +22,7 @@ function attenuation(model, d) {
     return REF_DISTANCE / (REF_DISTANCE + ROLLOFF * (d - REF_DISTANCE));
   }
   return Math.pow(d / REF_DISTANCE, -ROLLOFF);
-}
+};
 class FalloffCurvesScene extends Scene {
   listener;
   sources;
@@ -118,7 +120,9 @@ class FalloffCurvesScene extends Scene {
       this.labels[i].text = `${model}\nvol ${v.toFixed(2)}`;
     }
     context.render(this.graphics);
-    for (const label of this.labels) context.render(label);
+    for (const label of this.labels) {
+      context.render(label);
+    }
     if (app.audio.locked) {
       context.render(this.tapPrompt);
     }

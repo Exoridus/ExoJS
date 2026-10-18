@@ -92,7 +92,10 @@ for (const block of blocks) {
   const exported = Object.keys(module).filter(name => name !== 'default');
 
   if (block.names === null) {
-    for (const name of exported) bundled.add(module[name]);
+    for (const name of exported) {
+      bundled.add(module[name]);
+    }
+
     continue;
   }
 
@@ -109,9 +112,13 @@ for (const block of blocks) {
     // A binding already in the bundle under the same identity is a deliberate
     // de-duplication, not an omission: tiled and ldtk re-export tilemap's
     // runtime classes, and the bundle must carry each of those exactly once.
-    if (bundled.has(value)) continue;
+    if (bundled.has(value)) {
+      continue;
+    }
 
-    if (Object.hasOwn(INTENTIONAL_OMISSIONS, name)) continue;
+    if (Object.hasOwn(INTENTIONAL_OMISSIONS, name)) {
+      continue;
+    }
 
     failures.push(`${block.specifier}: '${name}' is a public value export but the full-bundle entry omits it`);
   }
@@ -131,7 +138,9 @@ if (missingBuilds.length > 0) {
 if (failures.length > 0) {
   console.error('Full-bundle entry is out of sync with the packages it bundles:\n');
 
-  for (const failure of failures) console.error(`  - ${failure}`);
+  for (const failure of failures) {
+    console.error(`  - ${failure}`);
+  }
 
   console.error(
     `\nAdd each symbol to scripts/exo-full.entry.ts, or record it in INTENTIONAL_OMISSIONS ` +

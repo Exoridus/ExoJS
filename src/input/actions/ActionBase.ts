@@ -27,7 +27,9 @@ export const channelFromToken = (token: string): InputChannel => {
   const channel = inputChannelFromToken(token);
 
   if (channel === null) {
-    throw new InputBindingError(`Input binding: "${token}" is not a known input token. Bindings saved by a newer build cannot be applied to this one.`);
+    throw new InputBindingError(
+      `Input binding: "${token}" is not a known input token. Bindings saved by a newer build cannot be applied to this one.`,
+    );
   }
 
   return channel;
@@ -55,7 +57,8 @@ export const channelsFromTokens = (tokens: unknown, what: string): readonly Inpu
  * displayed by the control it names, never by the runtime pad slot the owning
  * map happens to sit on.
  */
-export const tokensFromChannels = (channels: readonly number[]): readonly InputToken[] => channels.map(channel => inputToken(slotZeroGamepadChannel(channel)));
+export const tokensFromChannels = (channels: readonly number[]): readonly InputToken[] =>
+  channels.map(channel => inputToken(slotZeroGamepadChannel(channel)));
 
 /**
  * Shared contract of every action kind.
@@ -153,4 +156,13 @@ export abstract class ActionBase<Binding> {
 
   /** Clear all state, as if no source had ever been touched. @internal */
   public abstract _reset(): void;
+
+  /**
+   * Forget occurrences sampled for a fixed step that has not started yet.
+   * Kept apart from {@link _reset}, which a rebind or a scope change also
+   * runs, because what was already sampled stays owned across those.
+   *
+   * @internal
+   */
+  public _dropTickInput(): void {}
 }

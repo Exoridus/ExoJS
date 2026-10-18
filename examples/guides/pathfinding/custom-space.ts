@@ -1,7 +1,7 @@
 import type { Vector } from '@codexo/exojs';
 import type { NavigationSpace } from '@codexo/exojs-pathfinding';
 
-declare const rooms: readonly { x: number; y: number; exits: readonly number[]; travelTime: number }[];
+declare const rooms: ReadonlyArray<{ x: number; y: number; exits: readonly number[]; travelTime: number }>;
 
 // #region guide:custom-space
 /** A room graph: one node per room, cost in seconds of travel. */

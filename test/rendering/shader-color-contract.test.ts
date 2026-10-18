@@ -20,7 +20,11 @@ import { DataTexture } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { TextureFormat } from '#rendering/types';
-import { buildPersistentSpriteShaderSource, buildSpriteShaderSource, spriteBatchTextureSlotTiers } from '#rendering/webgpu/WebGpuSpriteRenderer';
+import {
+  buildPersistentSpriteShaderSource,
+  buildSpriteShaderSource,
+  spriteBatchTextureSlotTiers,
+} from '#rendering/webgpu/WebGpuSpriteRenderer';
 
 // `?raw` reads the shipped file directly, so these assertions hold even where a
 // project's shader plugin blanks shader imports (see shader-source-structure).
@@ -32,7 +36,11 @@ const shaderFiles = import.meta.glob(['/src/rendering/shaders/*.{frag,wgsl}', '/
 
 const source = (suffix: string): string => {
   const match = Object.entries(shaderFiles).find(([path]) => path.endsWith(suffix));
-  if (!match) throw new Error(`no shader source found for ${suffix}`);
+
+  if (!match) {
+    throw new Error(`no shader source found for ${suffix}`);
+  }
+
   return match[1];
 };
 
@@ -42,7 +50,10 @@ const SHARED_HELPERS = ['srgbToLinear', 'linearToSrgb', 'associateSampledColor',
 /** Every WGSL stage that samples a sprite base texture, as the backends compose it. */
 const wgslStages = (): ReadonlyArray<readonly [string, string]> => [
   ...spriteBatchTextureSlotTiers.map((tier): readonly [string, string] => [`sprite (${tier} slots)`, buildSpriteShaderSource(tier)]),
-  ...spriteBatchTextureSlotTiers.map((tier): readonly [string, string] => [`persistent sprite (${tier} slots)`, buildPersistentSpriteShaderSource(tier)]),
+  ...spriteBatchTextureSlotTiers.map((tier): readonly [string, string] => [
+    `persistent sprite (${tier} slots)`,
+    buildPersistentSpriteShaderSource(tier),
+  ]),
   ['custom material', spriteMaterialPrologueWgsl],
 ];
 
@@ -52,6 +63,7 @@ const code = (source: string): string =>
     .split('\n')
     .map(line => {
       const marker = line.indexOf('//');
+
       return marker === -1 ? line : line.slice(0, marker);
     })
     .join('\n');
@@ -99,6 +111,7 @@ describe('shared colour shader contract', () => {
       expect(colorShaderSourcesWgsl, `WGSL lost ${constant}`).toContain(constant);
       expect(colorShaderSourcesGlsl, `GLSL lost ${constant}`).toContain(constant);
     }
+
     expect(colorShaderSourcesWgsl).toContain('1.0 / 2.4');
     expect(colorShaderSourcesGlsl).toContain('1.0 / 2.4');
   });
@@ -134,6 +147,7 @@ describe('alpha association has one application point', () => {
     for (const [name, composed] of wgslStages()) {
       expect(composed, `${name} does not compose the shared colour helpers`).toContain(colorShaderSourcesWgsl);
     }
+
     expect(spriteMaterialPrologueGlsl).toContain(colorShaderSourcesGlsl);
   });
 
@@ -155,6 +169,7 @@ describe('alpha association has one application point', () => {
       expect(unexpected, `${name} multiplies colour by alpha outside the shared helper`).toEqual([]);
       expect(composed, `${name} lost its association call`).toContain('associateSampledColor(');
     }
+
     const glslAssociations = ownGlslCode(spriteMaterialPrologueGlsl).match(COLOR_BY_ALPHA) ?? [];
     expect(glslAssociations, 'the GLSL prologue associates outside the shared helper').toEqual([]);
   });
@@ -177,6 +192,7 @@ describe('alpha association has one application point', () => {
       const unexpected = decodeCalls.filter(call => call !== AUTHORED_TINT_DECODE);
       expect(unexpected, `${name} decodes something other than the authored tint`).toEqual([]);
     }
+
     expect(ownGlslCode(spriteMaterialPrologueGlsl)).not.toContain('srgbToLinear(');
   });
 });

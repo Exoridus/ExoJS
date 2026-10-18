@@ -16,7 +16,11 @@ const displacementUniforms = { uScale: UniformType.Vec4, uOffset: UniformType.Ve
  * The displacement source pair, built once and shared by every instance.
  * @internal
  */
-export const displacementShader = createFilterShader({ glsl: { fragment: glslFragment }, wgsl: wgslFragment, uniforms: displacementUniforms });
+export const displacementShader = createFilterShader({
+  glsl: { fragment: glslFragment },
+  wgsl: wgslFragment,
+  uniforms: displacementUniforms,
+});
 
 /** Construction-time options for a {@link DisplacementFilter}. */
 export interface DisplacementFilterOptions {

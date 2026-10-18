@@ -56,7 +56,9 @@ if (report.stale.length === 0) {
 
 console.error('check-dist-fresh: dist is older than its sources; the step you are about to run would use a stale build.\n');
 
-for (const line of report.stale) console.error(`  - ${line}`);
+for (const line of report.stale) {
+  console.error(`  - ${line}`);
+}
 
 console.error(`\nRebuild with: ${REBUILD_COMMAND}`);
 process.exit(1);

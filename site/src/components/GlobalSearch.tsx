@@ -26,6 +26,7 @@ let pagefindModule: Promise<PagefindModule | null> | null = null;
 
 const loadPagefind = (baseUrl: string): Promise<PagefindModule | null> => {
   pagefindModule ??= import(/* @vite-ignore */ `${baseUrl}pagefind/pagefind.js`).then(module => module as PagefindModule).catch(() => null);
+
   return pagefindModule;
 };
 
@@ -33,15 +34,30 @@ const loadPagefind = (baseUrl: string): Promise<PagefindModule | null> => {
 // usually already carry the site base path (`/ExoJS/en/guide/...`). Only
 // prefix when it is genuinely missing.
 const toHref = (baseUrl: string, url: string): string => {
-  if (url.startsWith(baseUrl)) return url;
-  if (url.startsWith('/')) return `${baseUrl.replace(/\/$/, '')}${url}`;
+  if (url.startsWith(baseUrl)) {
+    return url;
+  }
+
+  if (url.startsWith('/')) {
+    return `${baseUrl.replace(/\/$/, '')}${url}`;
+  }
+
   return url;
 };
 
 const groupForUrl = (url: string): string => {
-  if (url.includes('/guide/')) return 'Guide';
-  if (url.includes('/api/')) return 'API';
-  if (url.includes('/playground/')) return 'Playground';
+  if (url.includes('/guide/')) {
+    return 'Guide';
+  }
+
+  if (url.includes('/api/')) {
+    return 'API';
+  }
+
+  if (url.includes('/playground/')) {
+    return 'Playground';
+  }
+
   return 'Site';
 };
 
@@ -69,7 +85,9 @@ const DEBOUNCE_MS = 140;
 const NO_HITS: ReadonlyArray<SearchHit> = [];
 const NO_RESULT: SearchResult = { query: '', hits: NO_HITS, status: 'done' };
 
-const useGlobalSearch = (baseUrl: string): { query: string; setQuery: (value: string) => void; hits: ReadonlyArray<SearchHit>; status: SearchStatus } => {
+const useGlobalSearch = (
+  baseUrl: string,
+): { query: string; setQuery: (value: string) => void; hits: ReadonlyArray<SearchHit>; status: SearchStatus } => {
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<SearchResult>(NO_RESULT);
   const requestIdRef = useRef(0);
@@ -80,6 +98,7 @@ const useGlobalSearch = (baseUrl: string): { query: string; setQuery: (value: st
       // Invalidate any in-flight search; the derived status below already
       // reads 'idle' for an empty query, so there is nothing to reset.
       requestIdRef.current += 1;
+
       return;
     }
 
@@ -87,15 +106,29 @@ const useGlobalSearch = (baseUrl: string): { query: string; setQuery: (value: st
     const timer = window.setTimeout(() => {
       void (async () => {
         const pagefind = await loadPagefind(baseUrl);
-        if (id !== requestIdRef.current) return;
-        if (!pagefind) {
-          setResult({ query: trimmed, hits: NO_HITS, status: 'unavailable' });
+
+        if (id !== requestIdRef.current) {
           return;
         }
+
+        if (!pagefind) {
+          setResult({ query: trimmed, hits: NO_HITS, status: 'unavailable' });
+
+          return;
+        }
+
         const response = await pagefind.search(trimmed);
-        if (id !== requestIdRef.current) return;
+
+        if (id !== requestIdRef.current) {
+          return;
+        }
+
         const data = await Promise.all(response.results.slice(0, MAX_HITS).map(entry => entry.data()));
-        if (id !== requestIdRef.current) return;
+
+        if (id !== requestIdRef.current) {
+          return;
+        }
+
         setResult({
           query: trimmed,
           hits: data.map(entry => ({
@@ -108,6 +141,7 @@ const useGlobalSearch = (baseUrl: string): { query: string; setQuery: (value: st
         });
       })();
     }, DEBOUNCE_MS);
+
     return () => window.clearTimeout(timer);
   }, [trimmed, baseUrl]);
 
@@ -115,7 +149,10 @@ const useGlobalSearch = (baseUrl: string): { query: string; setQuery: (value: st
   // the last settled result was computed for - no state writes in the effect.
   const settled = result.query === trimmed;
   let status: SearchStatus = 'idle';
-  if (trimmed) status = settled ? result.status : 'searching';
+
+  if (trimmed) {
+    status = settled ? result.status : 'searching';
+  }
 
   return { query, setQuery, hits: settled ? result.hits : NO_HITS, status };
 };
@@ -137,9 +174,14 @@ const decodeEntities = (text: string): string =>
     if (body.startsWith('#')) {
       const hex = body[1] === 'x' || body[1] === 'X';
       const code = Number.parseInt(hex ? body.slice(2) : body.slice(1), hex ? 16 : 10);
-      if (!Number.isInteger(code) || code < 0 || code > 0x10_ff_ff) return entity;
+
+      if (!Number.isInteger(code) || code < 0 || code > 0x10_ff_ff) {
+        return entity;
+      }
+
       return String.fromCodePoint(code);
     }
+
     return NAMED_ENTITIES[body] ?? entity;
   });
 
@@ -156,12 +198,19 @@ const renderExcerpt = (excerpt: string): ReactNode[] => {
 
   for (const match of excerpt.matchAll(MARK_PATTERN)) {
     const start = match.index ?? 0;
-    if (start > cursor) nodes.push(decodeEntities(excerpt.slice(cursor, start)));
+
+    if (start > cursor) {
+      nodes.push(decodeEntities(excerpt.slice(cursor, start)));
+    }
+
     nodes.push(<mark key={start}>{decodeEntities(match[1] ?? '')}</mark>);
     cursor = start + match[0].length;
   }
 
-  if (cursor < excerpt.length) nodes.push(decodeEntities(excerpt.slice(cursor)));
+  if (cursor < excerpt.length) {
+    nodes.push(decodeEntities(excerpt.slice(cursor)));
+  }
+
   return nodes;
 };
 
@@ -185,10 +234,14 @@ export const GlobalSearchPanel = ({ baseUrl, onNavigate }: GlobalSearchPanelProp
   }
 
   const moveActive = (delta: number): void => {
-    if (hits.length === 0) return;
+    if (hits.length === 0) {
+      return;
+    }
+
     setActiveIndex(current => {
       const next = (current + delta + hits.length) % hits.length;
       listRef.current?.children[next]?.scrollIntoView({ block: 'nearest' });
+
       return next;
     });
   };
@@ -202,6 +255,7 @@ export const GlobalSearchPanel = ({ baseUrl, onNavigate }: GlobalSearchPanelProp
       moveActive(-1);
     } else if (event.key === 'Enter') {
       const hit = hits[activeIndex];
+
       if (hit) {
         onNavigate?.();
         window.location.assign(hit.href);
@@ -232,7 +286,9 @@ export const GlobalSearchPanel = ({ baseUrl, onNavigate }: GlobalSearchPanelProp
         />
       </div>
       {status === 'unavailable' && (
-        <p className={css(styles, 'status')}>The search index is generated at build time — run a full build to enable search in this environment.</p>
+        <p className={css(styles, 'status')}>
+          The search index is generated at build time — run a full build to enable search in this environment.
+        </p>
       )}
       {status === 'done' && hits.length === 0 && <p className={css(styles, 'status')}>No results for “{query.trim()}”.</p>}
       {hits.length > 0 && (
@@ -279,15 +335,26 @@ export const GlobalSearch = ({ baseUrl }: GlobalSearchProps): JSX.Element => {
         setOpen(current => !current);
       }
     };
+
     window.addEventListener('keydown', onKey);
+
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   useEffect(() => {
     const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
+
+    if (!dialog) {
+      return;
+    }
+
+    if (open && !dialog.open) {
+      dialog.showModal();
+    }
+
+    if (!open && dialog.open) {
+      dialog.close();
+    }
   }, [open]);
 
   return (
@@ -308,7 +375,9 @@ export const GlobalSearch = ({ baseUrl }: GlobalSearchProps): JSX.Element => {
         onClick={event => {
           // Native <dialog>: a click on the backdrop targets the dialog
           // element itself; clicks inside land on children.
-          if (event.target === dialogRef.current) setOpen(false);
+          if (event.target === dialogRef.current) {
+            setOpen(false);
+          }
         }}
       >
         {open && <GlobalSearchPanel baseUrl={baseUrl} onNavigate={() => setOpen(false)} />}

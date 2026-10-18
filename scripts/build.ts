@@ -20,17 +20,16 @@
  * pipeline did. The dev build and watch mode skip it: it is the slowest job of
  * the set and nothing in the inner loop reads it.
  */
-import { dirname, relative as relativePath, resolve as resolvePath } from 'node:path';
 import { cpSync, mkdirSync } from 'node:fs';
+import { dirname, relative as relativePath, resolve as resolvePath } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { codecovRollupPlugin } from '@codecov/rollup-plugin';
-import { build as buildWorker } from 'esbuild';
 import { createShaderPlugin, createWorkletPlugin } from '@codexo/exojs-build';
 import { createBuildDefinesFromRepo } from '@codexo/exojs-config/build-defines';
-import { rolldown, watch, type OutputOptions, type Plugin, type PreRenderedChunk, type RolldownOptions } from 'rolldown';
-
 import { runTypeScriptCompiler } from '@codexo/exojs-config/typescript/compiler';
+import { build as buildWorker } from 'esbuild';
+import { type OutputOptions, type Plugin, type PreRenderedChunk, rolldown, type RolldownOptions, watch } from 'rolldown';
 
 import { writeSourceStamp } from './source-hash.ts';
 
@@ -61,6 +60,7 @@ const extensionSourcePlugin: Plugin = {
   name: 'extension-source',
   resolveId(id: string) {
     const match = /^@codexo\/exojs-([^/]+)$/.exec(id);
+
     return match ? resolvePath(rootDir, 'packages', `exojs-${match[1]}`, 'src', 'index.ts') : null;
   },
 };
@@ -70,9 +70,14 @@ const extensionSourcePlugin: Plugin = {
 // site) warn about missing source files on every module. Re-anchor every
 // `src/...` source to its real location relative to its map file.
 const ESCAPED_SOURCE = /^(?:\.\.[\\/])+(src[\\/].*)$/;
+
 const sourcemapPathTransform = (relativeSourcePath: string, sourcemapPath: string): string => {
   const match = ESCAPED_SOURCE.exec(relativeSourcePath);
-  if (!match) return relativeSourcePath;
+
+  if (!match) {
+    return relativeSourcePath;
+  }
+
   return relativePath(dirname(sourcemapPath), resolvePath(rootDir, match[1])).replaceAll('\\', '/');
 };
 
@@ -84,33 +89,38 @@ const sourcemapPathTransform = (relativeSourcePath: string, sourcemapPath: strin
 // `facadeModuleId` restores that for the shader files; every other module
 // keeps the default `[name]`.
 const SHADER_EXTENSION = /\.(?:vert|frag|wgsl)$/;
+
 const preservedModuleNaming = (info: PreRenderedChunk): string => {
   const id = info.facadeModuleId;
+
   if (id && SHADER_EXTENSION.test(id)) {
     return `${relativePath(resolvePath(rootDir, 'src'), id).replaceAll('\\', '/')}.js`;
   }
+
   return '[name].js';
 };
 
 // Codecov Bundle Analysis: uploads per-bundle module stats when a token is
 // present (CI passes CODECOV_TOKEN via secrets: inherit). A plain local
 // `pnpm build` has no token and stays fully offline.
-const codecovBundlePlugin = (bundleName: string): Plugin[] => {
+const codecovBundlePlugin = (bundleName: string): Plugin[] =>
   // `codecovRollupPlugin` returns a Rollup plugin array. Rolldown accepts them
   // at runtime, but the two `Plugin` types are nominally distinct, so the shape
   // has to be restated rather than narrowed.
-  return process.env.CODECOV_TOKEN
-    ? (codecovRollupPlugin({ enableBundleAnalysis: true, bundleName, uploadToken: process.env.CODECOV_TOKEN, telemetry: false }) as unknown as Plugin[])
+  process.env.CODECOV_TOKEN
+    ? (codecovRollupPlugin({
+        enableBundleAnalysis: true,
+        bundleName,
+        uploadToken: process.env.CODECOV_TOKEN,
+        telemetry: false,
+      }) as unknown as Plugin[])
     : [];
-};
 
 // WebGl2Shader text (`.vert`/`.frag`/`.wgsl`) ships verbatim inside the bundle -
 // minification never descends into a string literal - so the outputs that
 // minify get the comment-stripped variant and the readable ones keep the
 // source as authored.
-const shaderAndWorkletPlugins = (minify: boolean): Plugin[] => {
-  return [createShaderPlugin({ minify }), createWorkletPlugin({ minify })];
-};
+const shaderAndWorkletPlugins = (minify: boolean): Plugin[] => [createShaderPlugin({ minify }), createWorkletPlugin({ minify })];
 
 // No `pure_funcs`-equivalent config needed here: once `__DEV__` is replaced by
 // `false`, Rolldown's own dead-code elimination already removes calls to the
@@ -129,8 +139,12 @@ const shared = {
 const basisWorkerUrls = (scriptTag = false): Plugin => ({
   name: 'basis-worker-url',
   transform(code, id) {
-    if (!/\/BasisKtx2Runtime\.(?:ts|js)$/.test(id.replaceAll('\\', '/'))) return null;
+    if (!/\/BasisKtx2Runtime\.(?:ts|js)$/.test(id.replaceAll('\\', '/'))) {
+      return null;
+    }
+
     const result = code.replace('basis/ktx2.worker.ts', 'basis/ktx2.worker.js');
+
     return {
       code: scriptTag
         ? `const basisBundleUrl = typeof document === 'undefined' ? undefined : (document.currentScript?.src ?? document.baseURI);\n${result.replace('import.meta.url', 'basisBundleUrl')}`
@@ -160,98 +174,92 @@ const emitBasisRuntime = async (): Promise<void> => {
     external: ['fs'],
     logOverride: { 'commonjs-variable-in-esm': 'silent' },
   });
+
   for (const target of targets) {
     const destination = resolvePath(rootDir, target);
     mkdirSync(destination, { recursive: true });
     cpSync(resolvePath(source, 'basis_transcoder.wasm'), resolvePath(destination, 'basis_transcoder.wasm'));
     cpSync(resolvePath(source, 'LICENSE'), resolvePath(destination, 'LICENSE'));
-    if (target !== targets[0]) cpSync(resolvePath(rootDir, targets[0], 'ktx2.worker.js'), resolvePath(destination, 'ktx2.worker.js'));
+
+    if (target !== targets[0]) {
+      cpSync(resolvePath(rootDir, targets[0], 'ktx2.worker.js'), resolvePath(destination, 'ktx2.worker.js'));
+    }
   }
 };
 
-const bundled = (minify: boolean): RolldownOptions => {
-  return {
-    ...shared,
-    input: 'src/index.ts',
-    plugins: [basisWorkerUrls(), ...shaderAndWorkletPlugins(minify), ...codecovBundlePlugin('exo-esm')],
-    output: { file: 'dist/exo.esm.js', format: 'es', sourcemap: true, minify },
-  };
-};
+const bundled = (minify: boolean): RolldownOptions => ({
+  ...shared,
+  input: 'src/index.ts',
+  plugins: [basisWorkerUrls(), ...shaderAndWorkletPlugins(minify), ...codecovBundlePlugin('exo-esm')],
+  output: { file: 'dist/exo.esm.js', format: 'es', sourcemap: true, minify },
+});
 
-const debugBundled = (minify: boolean): RolldownOptions => {
-  return {
-    ...shared,
-    input: 'src/debug/index.ts',
-    // All `#` imports are core dependencies - mark them external so the debug
-    // bundle contains only debug code and imports from @codexo/exojs at
-    // runtime. (Intra-debug imports are same-directory `./` and stay bundled.)
-    external: (id: string) => id.startsWith('#'),
-    plugins: shaderAndWorkletPlugins(minify),
-    output: {
-      file: 'dist/exo.debug.esm.js',
-      format: 'es',
-      sourcemap: true,
-      minify,
-      // Remap all `#` external IDs to the package name in the output.
-      paths: (id: string) => (id.startsWith('#') ? '@codexo/exojs' : id),
-    },
-  };
-};
+const debugBundled = (minify: boolean): RolldownOptions => ({
+  ...shared,
+  input: 'src/debug/index.ts',
+  // All `#` imports are core dependencies - mark them external so the debug
+  // bundle contains only debug code and imports from @codexo/exojs at
+  // runtime. (Intra-debug imports are same-directory `./` and stay bundled.)
+  external: (id: string) => id.startsWith('#'),
+  plugins: shaderAndWorkletPlugins(minify),
+  output: {
+    file: 'dist/exo.debug.esm.js',
+    format: 'es',
+    sourcemap: true,
+    minify,
+    // Remap all `#` external IDs to the package name in the output.
+    paths: (id: string) => (id.startsWith('#') ? '@codexo/exojs' : id),
+  },
+});
 
-const modules = (): RolldownOptions => {
-  return {
-    ...shared,
-    // `src/extensions/index.ts` is deliberately absent: it exports nothing but
-    // types, so bundling it produced an empty chunk. Its declaration still comes
-    // from the separate `tsc --emitDeclarationOnly` pass, which is all the
-    // `./extensions` subpath resolves to.
-    input: ['src/index.ts', 'src/debug/index.ts', 'src/renderer-sdk.ts'],
-    resolve: { conditionNames: sourceConditions, mainFields: ['module', 'browser', 'main'] },
-    plugins: [basisWorkerUrls(), ...shaderAndWorkletPlugins(false), ...codecovBundlePlugin('exo-esm-modules')],
-    output: {
-      dir: 'dist/esm',
-      format: 'es',
-      sourcemap: true,
-      preserveModules: true,
-      preserveModulesRoot: 'src',
-      entryFileNames: preservedModuleNaming,
-      chunkFileNames: preservedModuleNaming,
-      sourcemapPathTransform,
-      // Rolldown's own default is 'dce-only', not off - left implicit here it
-      // would silently remove the (verified side-effect-free) assert/
-      // assertDefined callsites from this tree too. Explicit `false` to match
-      // this tree's actual intent: intentionally unoptimized, so consumers do
-      // their own tree-shaking against predictable, unmodified-beyond-
-      // transpilation source.
-      minify: false,
-    },
-  };
-};
+const modules = (): RolldownOptions => ({
+  ...shared,
+  // `src/extensions/index.ts` is deliberately absent: it exports nothing but
+  // types, so bundling it produced an empty chunk. Its declaration still comes
+  // from the separate `tsc --emitDeclarationOnly` pass, which is all the
+  // `./extensions` subpath resolves to.
+  input: ['src/index.ts', 'src/debug/index.ts', 'src/renderer-sdk.ts'],
+  resolve: { conditionNames: sourceConditions, mainFields: ['module', 'browser', 'main'] },
+  plugins: [basisWorkerUrls(), ...shaderAndWorkletPlugins(false), ...codecovBundlePlugin('exo-esm-modules')],
+  output: {
+    dir: 'dist/esm',
+    format: 'es',
+    sourcemap: true,
+    preserveModules: true,
+    preserveModulesRoot: 'src',
+    entryFileNames: preservedModuleNaming,
+    chunkFileNames: preservedModuleNaming,
+    sourcemapPathTransform,
+    // Rolldown's own default is 'dce-only', not off - left implicit here it
+    // would silently remove the (verified side-effect-free) assert/
+    // assertDefined callsites from this tree too. Explicit `false` to match
+    // this tree's actual intent: intentionally unoptimized, so consumers do
+    // their own tree-shaking against predictable, unmodified-beyond-
+    // transpilation source.
+    minify: false,
+  },
+});
 
-const iife = (minify: boolean): RolldownOptions => {
-  return {
-    ...shared,
-    input: 'src/index.ts',
-    plugins: [basisWorkerUrls(true), ...shaderAndWorkletPlugins(minify), ...codecovBundlePlugin(minify ? 'exo-iife-min' : 'exo-iife')],
-    output: { file: minify ? 'dist/exo.iife.min.js' : 'dist/exo.iife.js', format: 'iife', name: 'Exo', sourcemap: true, minify },
-  };
-};
+const iife = (minify: boolean): RolldownOptions => ({
+  ...shared,
+  input: 'src/index.ts',
+  plugins: [basisWorkerUrls(true), ...shaderAndWorkletPlugins(minify), ...codecovBundlePlugin(minify ? 'exo-iife-min' : 'exo-iife')],
+  output: { file: minify ? 'dist/exo.iife.min.js' : 'dist/exo.iife.js', format: 'iife', name: 'Exo', sourcemap: true, minify },
+});
 
-const fullBundle = (minify: boolean): RolldownOptions => {
-  return {
-    cwd: rootDir,
-    input: 'scripts/exo-full.entry.ts',
-    transform: { define: defines },
-    resolve: { conditionNames: fullSourceConditions, mainFields: ['browser', 'module', 'main'] },
-    plugins: [
-      extensionSourcePlugin,
-      basisWorkerUrls(true),
-      ...shaderAndWorkletPlugins(minify),
-      ...codecovBundlePlugin(minify ? 'exo-full-iife-min' : 'exo-full-iife'),
-    ],
-    output: { file: minify ? 'dist/exo.full.iife.min.js' : 'dist/exo.full.iife.js', format: 'iife', name: 'Exo', sourcemap: true, minify },
-  };
-};
+const fullBundle = (minify: boolean): RolldownOptions => ({
+  cwd: rootDir,
+  input: 'scripts/exo-full.entry.ts',
+  transform: { define: defines },
+  resolve: { conditionNames: fullSourceConditions, mainFields: ['browser', 'module', 'main'] },
+  plugins: [
+    extensionSourcePlugin,
+    basisWorkerUrls(true),
+    ...shaderAndWorkletPlugins(minify),
+    ...codecovBundlePlugin(minify ? 'exo-full-iife-min' : 'exo-full-iife'),
+  ],
+  output: { file: minify ? 'dist/exo.full.iife.min.js' : 'dist/exo.full.iife.js', format: 'iife', name: 'Exo', sourcemap: true, minify },
+});
 
 const runJob = async (options: RolldownOptions): Promise<void> => {
   const bundle = await rolldown(options);
@@ -261,9 +269,21 @@ const runJob = async (options: RolldownOptions): Promise<void> => {
 
 const emitDeclarations = async (): Promise<void> => {
   const { status } = runTypeScriptCompiler(
-    ['-p', 'tsconfig.json', '--emitDeclarationOnly', '--outDir', 'dist/esm', '--declarationDir', 'dist/esm', '--inlineSources', '--incremental', 'false'],
+    [
+      '-p',
+      'tsconfig.json',
+      '--emitDeclarationOnly',
+      '--outDir',
+      'dist/esm',
+      '--declarationDir',
+      'dist/esm',
+      '--inlineSources',
+      '--incremental',
+      'false',
+    ],
     { cwd: rootDir },
   );
+
   if (status !== 0) {
     throw new Error(`declaration emit failed (tsc exit ${status})`);
   }
@@ -274,9 +294,17 @@ if (watchMode) {
   const jobs = [bundled(false), debugBundled(false), modules(), iife(false)];
   const watcher = watch(jobs as never);
   watcher.on('event', event => {
-    if (event.code === 'BUNDLE_END') void event.result.close();
-    if (event.code === 'ERROR') console.error(event.error);
-    if (event.code === 'END') console.log('rebuilt');
+    if (event.code === 'BUNDLE_END') {
+      void event.result.close();
+    }
+
+    if (event.code === 'ERROR') {
+      console.error(event.error);
+    }
+
+    if (event.code === 'END') {
+      console.log('rebuilt');
+    }
   });
 } else {
   const jobs =
@@ -287,6 +315,7 @@ if (watchMode) {
   for (const job of jobs) {
     await runJob(job);
   }
+
   await emitDeclarations();
   await emitBasisRuntime();
   writeSourceStamp(resolvePath(rootDir, 'src'), resolvePath(rootDir, 'dist'));

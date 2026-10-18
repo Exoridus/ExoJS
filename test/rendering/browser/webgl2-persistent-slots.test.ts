@@ -453,6 +453,7 @@ describe('WebGL2 persistent-indexed selection', () => {
       // The live root moves every frame and never settles; the slot root is
       // drawn after it and must paint over it.
       let frameIndex = 0;
+
       const frame = (): void => {
         layer.setPosition((frameIndex++ % 2) * 0.5, 0);
         backend.resetStats();

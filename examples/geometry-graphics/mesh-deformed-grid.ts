@@ -14,6 +14,7 @@ const buildGrid = (): { vertices: Float32Array; uvs: Float32Array; indices: Uint
 
   let v = 0;
   let u = 0;
+
   for (let r = 0; r <= ROWS; r++) {
     for (let c = 0; c <= COLS; c++) {
       vertices[v++] = -half + c * stepX;
@@ -24,6 +25,7 @@ const buildGrid = (): { vertices: Float32Array; uvs: Float32Array; indices: Uint
   }
 
   let i = 0;
+
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       const tl = r * (COLS + 1) + c;

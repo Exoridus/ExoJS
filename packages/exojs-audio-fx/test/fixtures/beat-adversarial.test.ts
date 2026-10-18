@@ -5,6 +5,7 @@ describe('adversarial beat fixtures', () => {
     const first = adversarialFixtures();
     const second = adversarialFixtures();
     expect(first.map(f => f.label)).toEqual(second.map(f => f.label));
+
     for (let i = 0; i < first.length; i++) {
       expect(Buffer.from(first[i].samples.buffer).equals(Buffer.from(second[i].samples.buffer))).toBe(true);
       expect(first[i].beatTimesSec).toEqual(second[i].beatTimesSec);
@@ -20,6 +21,7 @@ describe('adversarial beat fixtures', () => {
     expect(delayed.beatTimesSec[0]).toBe(1.137);
     expect(delayed.samples.subarray(0, Math.round(1.137 * SAMPLE_RATE)).every(value => value === 0)).toBe(true);
     expect(quiet.beatTimesSec).toEqual(delayed.beatTimesSec);
+
     for (let i = 0; i < quiet.samples.length; i++) {
       if (delayed.samples[i] !== 0) {
         expect(quiet.samples[i] / delayed.samples[i]).toBeCloseTo(0.01, 6);
@@ -33,6 +35,7 @@ describe('adversarial beat fixtures', () => {
     const gap = fixtures.find(f => f.label === 'missing-beats')!;
     expect(gap.beatTimesSec.some(time => time >= 4 && time < 6)).toBe(false);
     expect(gap.samples.subarray(4 * SAMPLE_RATE, 6 * SAMPLE_RATE).every(value => value === 0)).toBe(true);
+
     for (const label of ['silence', 'sustained-tone', 'seeded-noise']) {
       const control = fixtures.find(f => f.label === label)!;
       expect(control.beatTimesSec).toEqual([]);

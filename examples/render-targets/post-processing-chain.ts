@@ -56,9 +56,17 @@ class PostProcessingChainScene extends Scene {
     this.time += delta;
     this.scene.clear();
     this.scene.fillColor = new Color(80, 130, 255);
-    this.scene.drawCircle(width / 2 + Math.cos(this.time * 1.6) * (width * 0.32), height / 2 + Math.sin(this.time * 1.8) * (height * 0.32), 78);
+    this.scene.drawCircle(
+      width / 2 + Math.cos(this.time * 1.6) * (width * 0.32),
+      height / 2 + Math.sin(this.time * 1.8) * (height * 0.32),
+      78,
+    );
     this.scene.fillColor = new Color(255, 170, 90);
-    this.scene.drawCircle(width / 2 + Math.cos(this.time * 1.2 + 1) * (width * 0.3), height / 2 + Math.sin(this.time * 1.3 + 0.7) * (height * 0.34), 54);
+    this.scene.drawCircle(
+      width / 2 + Math.cos(this.time * 1.2 + 1) * (width * 0.3),
+      height / 2 + Math.sin(this.time * 1.3 + 0.7) * (height * 0.34),
+      54,
+    );
   }
 
   override draw(context: RenderingContext): void {

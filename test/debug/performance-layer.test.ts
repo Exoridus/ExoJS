@@ -96,7 +96,8 @@ const makeApp = (opts: { root?: FakeNode | null; gpuTiming?: boolean } = {}) =>
   }) as unknown as import('#core/Application').Application;
 
 /** The fake backend behind an app built by {@link makeApp}. */
-const backendOf = (app: import('#core/Application').Application): ReturnType<typeof makeBackend> => app.backend as unknown as ReturnType<typeof makeBackend>;
+const backendOf = (app: import('#core/Application').Application): ReturnType<typeof makeBackend> =>
+  app.backend as unknown as ReturnType<typeof makeBackend>;
 
 const time = (ms: number): Seconds => Time.toSeconds(Time.milliseconds(ms));
 
@@ -353,7 +354,9 @@ describe('PerformanceLayer', () => {
       expect(int._textBudget?.style.fillColor.equals(inBudgetColor!)).toBe(false);
 
       // Push the 40ms sample out of the 120-entry ring.
-      for (let i = 0; i < 120; i++) layer.update(time(10));
+      for (let i = 0; i < 120; i++) {
+        layer.update(time(10));
+      }
 
       expect(int._textFrame?.style.fillColor.equals(inBudgetColor!)).toBe(true);
       expect(int._textBudget?.style.fillColor.equals(inBudgetColor!)).toBe(true);

@@ -134,7 +134,8 @@ const coloredQuad = (x0: number, y0: number, x1: number, y1: number, rgba: RgbaT
   });
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // Render a scene through the real plan path inside a validation error scope.
 // Returns false when the device dropped mid-test (the caller should bail).

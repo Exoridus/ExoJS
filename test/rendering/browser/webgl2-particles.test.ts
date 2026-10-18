@@ -25,7 +25,13 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
-import { MeshParticles, particlesExtension, ParticleSystem, RibbonParticles, TrailParticles } from '../../../packages/exojs-particles/src/index';
+import {
+  MeshParticles,
+  particlesExtension,
+  ParticleSystem,
+  RibbonParticles,
+  TrailParticles,
+} from '../../../packages/exojs-particles/src/index';
 import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';

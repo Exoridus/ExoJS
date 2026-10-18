@@ -310,7 +310,7 @@
             }
           ],
           "returnType": "Synchronous",
-          "description": "Fixed-timestep logic hook. Called zero or more times per frame with a constant delta (Application.fixedTimeStep) before Scene.update, so physics and deterministic gameplay advance at a frame-rate-independent rate. Put physicsWorld.step(delta) and movement here; leave camera, UI and purely visual work in Scene.update. Default is a no-op. Override in subclass. Must be synchronous - see Scene.update."
+          "description": "Fixed-timestep logic hook. Called zero or more times per frame with a constant delta (Application.fixedTimeStep) before Scene.update, so deterministic gameplay advances at a frame-rate-independent rate. Put movement and other simulation commands here; a physics world registered in Scene.systems steps right after this hook and the scene's behaviours in the same fixed step, so it applies what they issued. Leave camera, UI and purely visual work in Scene.update. Default is a no-op. Override in subclass. Must be synchronous - see Scene.update."
         },
         {
           "name": "init",
@@ -369,7 +369,7 @@
             }
           ],
           "returnType": "Synchronous",
-          "description": "Optional synchronous setup hook. Runs once per activation, after the Promise returned by Scene.load has fulfilled and before the scene becomes active: register scene systems, connect stable scene objects, bind input, register interaction roots, start scene audio. Override in subclass. Must be synchronous: async init() is a compile error (see Synchronous) and, for callers the type system cannot reach, a thrown lifecycle error that fails activation in **every** build. Put asynchronous setup in Scene.load, which the engine awaits before init() runs."
+          "description": "Optional synchronous setup hook. Runs once per activation, after the Promise returned by Scene.load has fulfilled and before the scene becomes active: register scene systems, connect stable scene objects, bind input, register interaction roots, start scene audio. Override in subclass. Not called when Scene.lifecycleSignal has been aborted by the time load() completes - the navigation preparing the scene was aborted or failed before its commit (the application stopped or was destroyed, a transition ended early), or the preload preparing it was discarded. Such a scene never becomes active: Scene.destroy runs and Scene.unload does not. Must be synchronous: async init() is a compile error (see Synchronous) and, for callers the type system cannot reach, a thrown lifecycle error that fails activation in **every** build. Put asynchronous setup in Scene.load, which the engine awaits before init() runs."
         },
         {
           "name": "load",
@@ -962,7 +962,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Aborted the moment this scene's permanent teardown begins - before Scene.unload is called, and also on the paths where unload() never runs at all (a failed activation, a preload cancelled before it was ever consumed, Application.destroy). Pass it to anything that takes an AbortSignal - fetch() above all - so work started in Scene.load stops when the scene goes away instead of resolving into a torn-down scene. The abort reason is the standard AbortError DOMException, so a fetch() given this signal rejects exactly as it would for any other abort. This is what keeps teardown bounded: Application.destroy() waits a fixed grace period for scene teardown and then proceeds without it. A scene whose asynchronous work watches this signal settles well inside that window; one that ignores it can be abandoned mid-teardown."
+          "description": "Aborted the moment this scene's permanent teardown begins - before Scene.unload is called, and also on the paths where unload() never runs at all (a failed activation, a preload cancelled before it was ever consumed). Application.destroy aborts it for every scene the application owns as soon as it is called, even for a scene whose own teardown has to wait behind another scene's; a retained scene a restore() in flight is handing back follows once that navigation settles. Pass it to anything that takes an AbortSignal - fetch() above all - so work started in Scene.load stops when the scene goes away instead of resolving into a torn-down scene. The abort reason is the standard AbortError DOMException, so a fetch() given this signal rejects exactly as it would for any other abort. This is what keeps teardown bounded: Application.destroy() waits a fixed grace period for scene teardown and then proceeds without it. A scene whose asynchronous work watches this signal settles well inside that window; one that ignores it can be abandoned mid-teardown, which Application.destroyOutcome then reports as forced."
         },
         {
           "name": "loader",

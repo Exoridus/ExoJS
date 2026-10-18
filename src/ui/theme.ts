@@ -183,7 +183,9 @@ export interface UIFillPatch {
  *
  * @internal
  */
-export const backgroundOptionsFrom = (options: { [Key in keyof UIBackgroundOptions]?: UIBackgroundOptions[Key] | undefined }): UIBackgroundOptions => ({
+export const backgroundOptionsFrom = (options: {
+  [Key in keyof UIBackgroundOptions]?: UIBackgroundOptions[Key] | undefined;
+}): UIBackgroundOptions => ({
   ...(options.slices !== undefined && { slices: options.slices }),
   ...(options.border !== undefined && { border: options.border }),
   ...(options.modes !== undefined && { modes: options.modes }),
@@ -214,7 +216,12 @@ export const createUIBackground = (source: Texture | TextureRegion | UIBackgroun
   return {
     kind: 'nineSlice',
     texture: source,
-    slices: options.slices ?? { left: thirdOf(source.width), top: thirdOf(source.height), right: thirdOf(source.width), bottom: thirdOf(source.height) },
+    slices: options.slices ?? {
+      left: thirdOf(source.width),
+      top: thirdOf(source.height),
+      right: thirdOf(source.width),
+      bottom: thirdOf(source.height),
+    },
     ...(options.border !== undefined && { border: options.border }),
     ...(options.modes !== undefined && { modes: options.modes }),
   };
@@ -232,7 +239,11 @@ const fill = (color: Color, cornerRadius: number, borderColor: Color = new Color
   cornerRadius,
 });
 
-const skin = (background: UIBackground, text: TextStyleOptions = {}, insets: UIInsets = zeroInsets): UISkin => ({ background, text, insets });
+const skin = (background: UIBackground, text: TextStyleOptions = {}, insets: UIInsets = zeroInsets): UISkin => ({
+  background,
+  text,
+  insets,
+});
 
 const buttonText: TextStyleOptions = { fillColor: new Color(255, 255, 255, 1), fontSize: 16, align: 'center' };
 
@@ -319,9 +330,24 @@ export const defaultUITheme: UITheme = {
     disabled: skin(fill(new Color(255, 255, 255, 0), 4), disabledText),
   },
   textFieldSurface: {
-    normal: skin(fill(new Color(255, 255, 255, 0.08), 6, new Color(255, 255, 255, 0.18), 1), controlText, { left: 8, top: 6, right: 8, bottom: 6 }),
-    disabled: skin(fill(new Color(255, 255, 255, 0.04), 6, new Color(255, 255, 255, 0.08), 1), disabledText, { left: 8, top: 6, right: 8, bottom: 6 }),
-    focused: skin(fill(new Color(255, 255, 255, 0.1), 6, new Color(120, 180, 255, 1), 1), controlText, { left: 8, top: 6, right: 8, bottom: 6 }),
+    normal: skin(fill(new Color(255, 255, 255, 0.08), 6, new Color(255, 255, 255, 0.18), 1), controlText, {
+      left: 8,
+      top: 6,
+      right: 8,
+      bottom: 6,
+    }),
+    disabled: skin(fill(new Color(255, 255, 255, 0.04), 6, new Color(255, 255, 255, 0.08), 1), disabledText, {
+      left: 8,
+      top: 6,
+      right: 8,
+      bottom: 6,
+    }),
+    focused: skin(fill(new Color(255, 255, 255, 0.1), 6, new Color(120, 180, 255, 1), 1), controlText, {
+      left: 8,
+      top: 6,
+      right: 8,
+      bottom: 6,
+    }),
   },
   placeholder: {
     normal: skin(noBackground, { fillColor: new Color(255, 255, 255, 0.35), fontSize: 16 }),

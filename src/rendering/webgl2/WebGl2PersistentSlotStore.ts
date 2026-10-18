@@ -74,7 +74,12 @@ const initialSlotCapacity = 1024;
 export interface PersistentSlotCapableRenderer {
   readonly _supportsPersistentSlots?: boolean;
   _acquirePersistentSlotStore(source: RenderRootSource, backend: WebGl2Backend): WebGl2PersistentSlotStore | null;
-  _rekeyPersistentSlotStore(store: WebGl2PersistentSlotStore, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean;
+  _rekeyPersistentSlotStore(
+    store: WebGl2PersistentSlotStore,
+    source: RenderRootSource,
+    carried: Int32Array,
+    previousHandleCount: number,
+  ): boolean;
   _writePersistentSlotRows(store: WebGl2PersistentSlotStore, source: RenderRootSource, entered: Int32Array, count: number): void;
   _drawPersistentSlots(store: WebGl2PersistentSlotStore, order: Uint32Array, offset: number, count: number, backend: WebGl2Backend): void;
 }
@@ -386,10 +391,11 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
     if (this._orderBuffer === null) {
       // Only the constructor still needs a narrowed view - it sizes the initial
       // store from what it is handed and takes no element count.
-      this._orderBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._order.subarray(0, uploadCount), BufferUsage.DynamicDraw).connect(
-        createRuntime(gl),
-        this._accountant ?? undefined,
-      );
+      this._orderBuffer = new WebGl2RenderBuffer(
+        BufferTypes.ArrayBuffer,
+        this._order.subarray(0, uploadCount),
+        BufferUsage.DynamicDraw,
+      ).connect(createRuntime(gl), this._accountant ?? undefined);
     } else {
       this._orderBuffer.upload(this._order, 0, uploadCount);
     }

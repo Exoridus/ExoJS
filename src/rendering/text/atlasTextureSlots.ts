@@ -65,4 +65,5 @@ export const textAtlasPrologueGlsl = `${colorShaderSourcesGlsl}
 ${buildSpriteMaterialSlotGlsl(textAtlasTextureSlots, 'highp')}`;
 
 /** Inject the Text slot table into a shipped Text fragment shader. @internal */
-export const composeTextAtlasFragmentGlsl = (fragment: string): string => composeSpriteMaterialFragmentGlsl(fragment, textAtlasPrologueGlsl);
+export const composeTextAtlasFragmentGlsl = (fragment: string): string =>
+  composeSpriteMaterialFragmentGlsl(fragment, textAtlasPrologueGlsl);

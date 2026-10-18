@@ -399,7 +399,9 @@ describe('the cascade chain against an analytic reference', () => {
       // would produce is many times either term.
       const tolerated = 1.5 * here.radius + 0.05 * mean;
 
-      expect(Math.abs(here.product - previous.product), `step at r=${here.radius} of ${tolerated.toFixed(0)} in: ${shown}`).toBeLessThan(tolerated);
+      expect(Math.abs(here.product - previous.product), `step at r=${here.radius} of ${tolerated.toFixed(0)} in: ${shown}`).toBeLessThan(
+        tolerated,
+      );
     }
 
     // Around one circle the tolerance is the quantisation, not a fraction:
@@ -597,15 +599,18 @@ describe('the shadow filter as the fragment crosses a bin', () => {
     }
   };
 
-  test.each([{ softness: 0.35 }, { softness: 1 }])('the penumbra has no step at a bin boundary at softness $softness', async ({ softness }) => {
-    const profile = await denseProfile(softness);
-    const range = Math.max(...profile) - Math.min(...profile);
+  test.each([{ softness: 0.35 }, { softness: 1 }])(
+    'the penumbra has no step at a bin boundary at softness $softness',
+    async ({ softness }) => {
+      const profile = await denseProfile(softness);
+      const range = Math.max(...profile) - Math.min(...profile);
 
-    // There is an edge to measure at all.
-    expect(range).toBeGreaterThan(30);
-    // And it crosses several bins without a jump.
-    expect(largestStep(profile), `softness ${softness}: ${profile.join(' ')}`).toBeLessThan(0.1);
-  });
+      // There is an edge to measure at all.
+      expect(range).toBeGreaterThan(30);
+      // And it crosses several bins without a jump.
+      expect(largestStep(profile), `softness ${softness}: ${profile.join(' ')}`).toBeLessThan(0.1);
+    },
+  );
 });
 
 describe('two spots that overlap', () => {

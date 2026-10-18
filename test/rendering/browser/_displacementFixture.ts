@@ -49,7 +49,9 @@ export const constantDisplacementMap = (size = 4): Texture => {
 
   const context = source.getContext('2d');
 
-  if (context === null) throw new Error('A 2D context is required to build displacement fixtures.');
+  if (context === null) {
+    throw new Error('A 2D context is required to build displacement fixtures.');
+  }
 
   const image = context.createImageData(size, size);
 

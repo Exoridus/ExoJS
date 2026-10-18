@@ -173,6 +173,14 @@ const removeRegistration = (list: SystemRegistration[], registration: SystemRegi
 };
 
 /**
+ * Development builds only: the registry each system last entered, so a system
+ * entering a second registry while the first still runs it is reported. Both
+ * keys and values are weak so a detached system cannot retain its old registry.
+ * Diagnostic only - it decides nothing about dispatch or ownership.
+ */
+const devLastRegistry: WeakMap<System, WeakRef<SystemRegistry>> | null = __DEV__ ? new WeakMap() : null;
+
+/**
  * Phase-dispatching registry of {@link System}s, shared by `Scene` (as
  * `scene.systems`) and `Application` (as `app.systems`). Each system
  * participates only in the scheduler phases it implements
@@ -215,6 +223,7 @@ export class SystemRegistry implements Destroyable {
   private _sequence = 0;
   private _activeCount = 0;
   private _frameActive = false;
+  private _halted = false;
   private _preFrameDirty = false;
   private _fixedDirty = false;
   private _updateDirty = false;
@@ -228,8 +237,9 @@ export class SystemRegistry implements Destroyable {
 
   /**
    * Register `system`, returning it unchanged for fluent capture
-   * (`const world = app.systems.add(new PhysicsWorld())`). Adding the same
-   * object twice is a no-op. See the class docs for buffering timing.
+   * (`const world = app.systems.add(new PhysicsWorld({ fixedDelta: app.fixedTimeStep }))`).
+   * Adding the same object twice is a no-op. See the class docs for buffering
+   * timing.
    *
    * Takes ownership: the registry calls `system.destroy?.()` when it is
    * removed by the registry's own {@link SystemRegistry.destroy}, in reverse
@@ -344,16 +354,44 @@ export class SystemRegistry implements Destroyable {
       return;
     }
 
-    for (const mutation of this._pending) {
-      if (isPendingAdd(mutation)) {
-        this._pendingAdds.delete(mutation.system);
-        this._insert(mutation.system, mutation.options);
-      } else {
-        this._finalizeRemoval(mutation.registration);
+    // Taken off the queue before anything is applied: an onAdd/onRemove
+    // listener that throws must neither leave the rest of the frame's
+    // mutations unapplied nor have the next boundary apply them a second time.
+    const pending = this._pending.splice(0);
+    let failed = false;
+    let failure: unknown;
+
+    for (const mutation of pending) {
+      try {
+        if (isPendingAdd(mutation)) {
+          this._pendingAdds.delete(mutation.system);
+          this._insert(mutation.system, mutation.options);
+        } else {
+          this._finalizeRemoval(mutation.registration);
+        }
+      } catch (error) {
+        if (!failed) {
+          failed = true;
+          failure = error;
+        }
       }
     }
 
-    this._pending.length = 0;
+    if (failed) {
+      throw failure;
+    }
+  }
+
+  /**
+   * Stop dispatching for good: the phase pass in progress ends after the
+   * system currently running, and no later pass calls any system. Used by an
+   * owner whose participation ends mid-frame, so the systems after the one
+   * that ended it do not run against it. Registration and teardown are
+   * unaffected.
+   * @internal
+   */
+  public _halt(): void {
+    this._halted = true;
   }
 
   /**
@@ -388,10 +426,16 @@ export class SystemRegistry implements Destroyable {
     }
 
     for (const registration of this._preFrameList) {
+      if (this._halted) {
+        return;
+      }
+
       if (registration.active) {
         const result = registration.system.preFrame!(delta) as unknown;
 
-        if (result !== undefined) requireSynchronousPhase(result, registration.system, 'preFrame');
+        if (result !== undefined) {
+          requireSynchronousPhase(result, registration.system, 'preFrame');
+        }
       }
     }
   }
@@ -408,10 +452,16 @@ export class SystemRegistry implements Destroyable {
     }
 
     for (const registration of this._fixedList) {
+      if (this._halted) {
+        return;
+      }
+
       if (registration.active) {
         const result = registration.system.fixedUpdate!(step) as unknown;
 
-        if (result !== undefined) requireSynchronousPhase(result, registration.system, 'fixedUpdate');
+        if (result !== undefined) {
+          requireSynchronousPhase(result, registration.system, 'fixedUpdate');
+        }
       }
     }
   }
@@ -428,10 +478,16 @@ export class SystemRegistry implements Destroyable {
     }
 
     for (const registration of this._updateList) {
+      if (this._halted) {
+        return;
+      }
+
       if (registration.active) {
         const result = registration.system.update!(delta) as unknown;
 
-        if (result !== undefined) requireSynchronousPhase(result, registration.system, 'update');
+        if (result !== undefined) {
+          requireSynchronousPhase(result, registration.system, 'update');
+        }
       }
     }
   }
@@ -448,10 +504,16 @@ export class SystemRegistry implements Destroyable {
     }
 
     for (const registration of this._drawList) {
+      if (this._halted) {
+        return;
+      }
+
       if (registration.active) {
         const result = registration.system.draw!(context) as unknown;
 
-        if (result !== undefined) requireSynchronousPhase(result, registration.system, 'draw');
+        if (result !== undefined) {
+          requireSynchronousPhase(result, registration.system, 'draw');
+        }
       }
     }
   }
@@ -468,10 +530,16 @@ export class SystemRegistry implements Destroyable {
     }
 
     for (const registration of this._postFrameList) {
+      if (this._halted) {
+        return;
+      }
+
       if (registration.active) {
         const result = registration.system.postFrame!(delta, budget) as unknown;
 
-        if (result !== undefined) requireSynchronousPhase(result, registration.system, 'postFrame');
+        if (result !== undefined) {
+          requireSynchronousPhase(result, registration.system, 'postFrame');
+        }
       }
     }
   }
@@ -496,6 +564,20 @@ export class SystemRegistry implements Destroyable {
    * closes.
    */
   public destroy(): void {
+    this._destroy(error => {
+      logger.error('SystemRegistry.destroy(): a system threw while being destroyed.', {
+        source: 'SystemRegistry',
+        ...(error instanceof Error && { error }),
+      });
+    });
+  }
+
+  /**
+   * @internal {@link SystemRegistry.destroy}, handing each system's failure
+   * to `onFailure` instead of logging it - for an owner that reports teardown
+   * failures through its own error pipeline.
+   */
+  public _destroy(onFailure: (error: unknown) => void): void {
     const remaining = [...this._registrations.values()].filter(registration => registration.active).sort((a, b) => b.sequence - a.sequence);
     const failures: unknown[] = [];
 
@@ -520,7 +602,7 @@ export class SystemRegistry implements Destroyable {
     this.onRemove.destroy();
 
     for (const error of failures) {
-      logger.error('SystemRegistry.destroy(): a system threw while being destroyed.', { source: 'SystemRegistry', ...(error instanceof Error && { error }) });
+      onFailure(error);
     }
   }
 
@@ -533,6 +615,19 @@ export class SystemRegistry implements Destroyable {
       after: options?.after ?? [],
       active: true,
     };
+
+    if (__DEV__) {
+      const previous = devLastRegistry!.get(system)?.deref();
+
+      if (previous !== undefined && previous !== this && previous.has(system)) {
+        logger.warn(
+          'SystemRegistry.add(): this system is already registered with another system registry. Both dispatch the phases it takes part in, so a phase both include runs twice per frame or fixed step, and both destroy it. Register it with one registry; `remove()` it from the other first to move it.',
+          { source: 'SystemRegistry' },
+        );
+      }
+
+      devLastRegistry!.set(system, new WeakRef(this));
+    }
 
     this._registrations.set(system, registration);
     this._activeCount++;

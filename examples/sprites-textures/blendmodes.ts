@@ -21,7 +21,7 @@ const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
 // subtracting arithmetically).
 //
 // Every public blend mode, in enum order, paired with a display name.
-const BLEND_MODES: { mode: BlendModes; name: string }[] = [
+const BLEND_MODES: Array<{ mode: BlendModes; name: string }> = [
   { mode: BlendModes.Normal, name: 'Normal' },
   { mode: BlendModes.Additive, name: 'Additive' },
   { mode: BlendModes.Subtract, name: 'Subtract' },

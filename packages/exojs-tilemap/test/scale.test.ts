@@ -8,24 +8,22 @@ import { TileMap } from '../src/TileMap';
 import { TileSet } from '../src/TileSet';
 import { TILE_TRANSFORM_IDENTITY } from '../src/types';
 
-const fakeRegion = (tw = 2048, th = 2048): TextureRegion => {
-  return new TextureRegion({ width: tw, height: th, uid: 0, label: 'test', destroy: () => {}, destroyed: false } as unknown as Texture, {
+const fakeRegion = (tw = 2048, th = 2048): TextureRegion =>
+  new TextureRegion({ width: tw, height: th, uid: 0, label: 'test', destroy: () => {}, destroyed: false } as unknown as Texture, {
     x: 0,
     y: 0,
     width: tw,
     height: th,
   });
-};
 
-const makeTileset = (name: string, tileCount = 256): TileSet => {
-  return new TileSet({
+const makeTileset = (name: string, tileCount = 256): TileSet =>
+  new TileSet({
     name,
     texture: fakeRegion(),
     tileWidth: 32,
     tileHeight: 32,
     tileCount,
   });
-};
 
 describe('scale / storage', () => {
   it('constructs 512×512 tile map without per-tile objects', () => {
@@ -75,6 +73,7 @@ describe('scale / storage', () => {
     });
 
     const ref = { tileset: ts, localTileId: 1, transform: TILE_TRANSFORM_IDENTITY };
+
     for (let y = 0; y < 32; y++) {
       for (let x = 0; x < 32; x++) {
         layer.setTileAt(x, y, ref);
@@ -100,6 +99,7 @@ describe('scale / storage', () => {
     });
 
     const ref = { tileset: ts, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY };
+
     for (let cy = 0; cy < 16; cy++) {
       for (let cx = 0; cx < 16; cx++) {
         layer.setTileAt(cx * 32, cy * 32, ref);
@@ -135,6 +135,7 @@ describe('scale / storage', () => {
     });
 
     const ref = { tileset: ts, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY };
+
     for (let i = 0; i < 128; i++) {
       layer.setTileAt(i, i, ref);
     }

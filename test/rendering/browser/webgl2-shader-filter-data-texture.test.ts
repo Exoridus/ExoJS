@@ -56,7 +56,9 @@ const whiteTexture = (): Texture => {
 
   const context = source.getContext('2d');
 
-  if (context === null) throw new Error('A 2D context is required to build the fixture.');
+  if (context === null) {
+    throw new Error('A 2D context is required to build the fixture.');
+  }
 
   context.fillStyle = '#ffffff';
   context.fillRect(0, 0, SIZE, SIZE);

@@ -177,7 +177,8 @@ const rejectValue = (path: string, expected: string, value: unknown): never => {
  * object carrying a `length`: `Vector.length` is its magnitude, so a duck-typed
  * check would read a vector's components as `undefined`.
  */
-const isComponentList = (value: unknown): value is ArrayLike<number> => Array.isArray(value) || (ArrayBuffer.isView(value) && !(value instanceof DataView));
+const isComponentList = (value: unknown): value is ArrayLike<number> =>
+  Array.isArray(value) || (ArrayBuffer.isView(value) && !(value instanceof DataView));
 
 abstract class UniformAccessorBase implements UniformWritable {
   protected readonly _sink: UniformRevisionSink;
@@ -359,6 +360,7 @@ class Vector3Accessor extends VectorAccessor implements UniformVector3 {
     if (writeComponent(this._view, this._index + 1, y)) {
       changed = true;
     }
+
     if (writeComponent(this._view, this._index + 2, z)) {
       changed = true;
     }
@@ -436,9 +438,11 @@ class Vector4Accessor extends VectorAccessor implements UniformVector4 {
     if (writeComponent(this._view, this._index + 1, y)) {
       changed = true;
     }
+
     if (writeComponent(this._view, this._index + 2, z)) {
       changed = true;
     }
+
     if (writeComponent(this._view, this._index + 3, w)) {
       changed = true;
     }
@@ -485,21 +489,54 @@ class Matrix3Accessor extends UniformAccessorBase implements UniformMatrix3 {
   }
 
   /** Arguments are the nine components in column-major order. */
-  private _writeColumns(m0: number, m1: number, m2: number, m3: number, m4: number, m5: number, m6: number, m7: number, m8: number): boolean {
+  private _writeColumns(
+    m0: number,
+    m1: number,
+    m2: number,
+    m3: number,
+    m4: number,
+    m5: number,
+    m6: number,
+    m7: number,
+    m8: number,
+  ): boolean {
     const view = this._view;
     const base = this._index;
     // Each column occupies its own 16-byte slot, so the third column starts at
     // float index 8 and the last component sits at index 10, not 8.
     let changed = writeComponent(view, base, m0);
 
-    if (writeComponent(view, base + 1, m1)) changed = true;
-    if (writeComponent(view, base + 2, m2)) changed = true;
-    if (writeComponent(view, base + 4, m3)) changed = true;
-    if (writeComponent(view, base + 5, m4)) changed = true;
-    if (writeComponent(view, base + 6, m5)) changed = true;
-    if (writeComponent(view, base + 8, m6)) changed = true;
-    if (writeComponent(view, base + 9, m7)) changed = true;
-    if (writeComponent(view, base + 10, m8)) changed = true;
+    if (writeComponent(view, base + 1, m1)) {
+      changed = true;
+    }
+
+    if (writeComponent(view, base + 2, m2)) {
+      changed = true;
+    }
+
+    if (writeComponent(view, base + 4, m3)) {
+      changed = true;
+    }
+
+    if (writeComponent(view, base + 5, m4)) {
+      changed = true;
+    }
+
+    if (writeComponent(view, base + 6, m5)) {
+      changed = true;
+    }
+
+    if (writeComponent(view, base + 8, m6)) {
+      changed = true;
+    }
+
+    if (writeComponent(view, base + 9, m7)) {
+      changed = true;
+    }
+
+    if (writeComponent(view, base + 10, m8)) {
+      changed = true;
+    }
 
     return changed;
   }
@@ -631,7 +668,9 @@ class StructAccessor extends UniformAccessorBase {
 
       if (member === undefined) {
         if (__DEV__) {
-          throw new Error(`[ExoJS] Uniform \`${this._path}\` has no field \`${name}\`. Declared fields: ${[...this._members.keys()].join(', ')}.`);
+          throw new Error(
+            `[ExoJS] Uniform \`${this._path}\` has no field \`${name}\`. Declared fields: ${[...this._members.keys()].join(', ')}.`,
+          );
         }
 
         continue;
@@ -648,7 +687,13 @@ class StructAccessor extends UniformAccessorBase {
 
 const componentIndex = (byteOffset: number): number => byteOffset / 4;
 
-const createLeafAccessor = (type: UniformType, sink: UniformRevisionSink, path: string, views: UniformBufferViews, index: number): UniformWritable => {
+const createLeafAccessor = (
+  type: UniformType,
+  sink: UniformRevisionSink,
+  path: string,
+  views: UniformBufferViews,
+  index: number,
+): UniformWritable => {
   switch (type) {
     case UniformType.Float:
       return new ScalarAccessor(sink, path, views.f32, index);
@@ -722,7 +767,11 @@ export const createUniformFieldAccessors = (
 };
 
 /** Write a named value record into `accessors`; reports whether bytes changed. @internal */
-export const writeUniformValues = (accessors: ReadonlyMap<string, UniformWritable>, values: Record<string, unknown>, path: string): boolean => {
+export const writeUniformValues = (
+  accessors: ReadonlyMap<string, UniformWritable>,
+  values: Record<string, unknown>,
+  path: string,
+): boolean => {
   let changed = false;
 
   for (const name of Object.keys(values)) {
@@ -730,7 +779,9 @@ export const writeUniformValues = (accessors: ReadonlyMap<string, UniformWritabl
 
     if (accessor === undefined) {
       if (__DEV__) {
-        throw new Error(`[ExoJS] Uniform block \`${path}\` has no field \`${name}\`. Declared fields: ${[...accessors.keys()].join(', ')}.`);
+        throw new Error(
+          `[ExoJS] Uniform block \`${path}\` has no field \`${name}\`. Declared fields: ${[...accessors.keys()].join(', ')}.`,
+        );
       }
 
       continue;

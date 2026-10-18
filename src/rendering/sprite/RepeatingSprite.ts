@@ -130,6 +130,7 @@ export class RepeatingSprite extends Drawable {
 
   public set modeX(value: RepeatMode) {
     validateMode(value, 'modeX');
+
     if (this._modeX !== value) {
       this._modeX = value;
       this._geometryDirty = true;
@@ -144,6 +145,7 @@ export class RepeatingSprite extends Drawable {
 
   public set modeY(value: RepeatMode) {
     validateMode(value, 'modeY');
+
     if (this._modeY !== value) {
       this._modeY = value;
       this._geometryDirty = true;
@@ -158,6 +160,7 @@ export class RepeatingSprite extends Drawable {
 
   public set fitX(value: RepeatFit) {
     validateFit(value, 'fitX');
+
     if (this._fitX !== value) {
       this._fitX = value;
       this._geometryDirty = true;
@@ -172,6 +175,7 @@ export class RepeatingSprite extends Drawable {
 
   public set fitY(value: RepeatFit) {
     validateFit(value, 'fitY');
+
     if (this._fitY !== value) {
       this._fitY = value;
       this._geometryDirty = true;
@@ -285,6 +289,7 @@ export class RepeatingSprite extends Drawable {
     if (this.resolvedStrategy === 'geometry' && (this._geometryDirty || this._region.texture.version !== this._builtTextureVersion)) {
       this._rebuildGeometry();
     }
+
     return this._quads;
   }
 

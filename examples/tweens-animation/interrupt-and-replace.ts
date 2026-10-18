@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, Tween } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, type Tween } from '@codexo/exojs';
 
 class InterruptAndReplaceScene extends Scene {
   private sprite!: Sprite;
@@ -13,6 +13,7 @@ class InterruptAndReplaceScene extends Scene {
       if (this.moveTween !== null) {
         this.moveTween.stop();
       }
+
       this.moveTween = app.tweens.create(this.sprite.position).to({ x: pointer.x, y: pointer.y }, 0.35).start();
     });
   }

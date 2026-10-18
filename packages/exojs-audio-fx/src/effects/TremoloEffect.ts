@@ -97,7 +97,10 @@ export class TremoloEffect extends AudioEffect {
    * The node where audio enters this effect. Throws if the audio context is not yet initialized.
    */
   public get inputNode(): AudioNode {
-    if (!this._setup) throw new Error('TremoloEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('TremoloEffect not yet initialized.');
+    }
+
     return this._setup.inputGain;
   }
 
@@ -105,7 +108,10 @@ export class TremoloEffect extends AudioEffect {
    * The node where audio exits this effect. Throws if the audio context is not yet initialized.
    */
   public get outputNode(): AudioNode {
-    if (!this._setup) throw new Error('TremoloEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('TremoloEffect not yet initialized.');
+    }
+
     return this._setup.outputGain;
   }
 
@@ -119,6 +125,7 @@ export class TremoloEffect extends AudioEffect {
 
   public set rateHz(value: number) {
     this._rateHz = Math.max(0, Math.min(20, value));
+
     if (this._setup) {
       this._setup.lfoOscillator.frequency.setTargetAtTime(this._rateHz, this._setup.inputGain.context.currentTime, 0.01);
     }
@@ -135,10 +142,12 @@ export class TremoloEffect extends AudioEffect {
 
   public set depth(value: number) {
     this._depth = Math.max(0, Math.min(1, value));
+
     if (this._setup) {
       const t = this._setup.inputGain.context.currentTime;
       this._setup.lfoGain.gain.setTargetAtTime(this._depth / 2, t, 0.01);
       this._setup.tremoloGain.gain.setTargetAtTime(1 - this._depth / 2, t, 0.01);
+
       if (this._setup.panGain) {
         this._setup.panGain.gain.setTargetAtTime(this._depth, t, 0.01);
       }
@@ -163,6 +172,7 @@ export class TremoloEffect extends AudioEffect {
 
   public set wet(value: number) {
     this._wet = Math.max(0, Math.min(1, value));
+
     if (this._setup) {
       const ctx = this._setup.wetGain.context;
       this._setup.wetGain.gain.setTargetAtTime(this._wet, ctx.currentTime, 0.01);
@@ -172,13 +182,21 @@ export class TremoloEffect extends AudioEffect {
 
   public override destroy(): void {
     this._teardown();
+
     if (this._setup) {
       this._setup.lfoOscillator.stop();
       this._setup.lfoOscillator.disconnect();
       this._setup.lfoGain.disconnect();
       this._setup.tremoloGain.disconnect();
-      if (this._setup.panner) this._setup.panner.disconnect();
-      if (this._setup.panGain) this._setup.panGain.disconnect();
+
+      if (this._setup.panner) {
+        this._setup.panner.disconnect();
+      }
+
+      if (this._setup.panGain) {
+        this._setup.panGain.disconnect();
+      }
+
       this._setup.dryGain.disconnect();
       this._setup.wetGain.disconnect();
       this._setup.inputGain.disconnect();

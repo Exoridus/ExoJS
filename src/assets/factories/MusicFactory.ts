@@ -2,7 +2,13 @@ import type { AssetFactory, AssetFactoryContext } from '#assets/AssetFactory';
 import { AudioStream } from '#audio/AudioStream';
 import type { PlaybackOptions } from '#core/types';
 
-import { attachMediaSource, detachMediaElement, type MediaAssetOptions, type MediaAssetSource, type MediaLoadMessages } from './mediaSource';
+import {
+  attachMediaSource,
+  detachMediaElement,
+  type MediaAssetOptions,
+  type MediaAssetSource,
+  type MediaLoadMessages,
+} from './mediaSource';
 import { ObjectUrlPool } from './ObjectUrlPool';
 
 const MESSAGES: MediaLoadMessages = {

@@ -19,8 +19,12 @@ import { css, cx } from './react-utils';
 const ServerEditorCodeFallback: FunctionComponent<EditorCodeProps> = () => null;
 
 const EditorCode = lazy<FunctionComponent<EditorCodeProps>>(async () => {
-  if (typeof window === 'undefined') return { default: ServerEditorCodeFallback };
+  if (typeof window === 'undefined') {
+    return { default: ServerEditorCodeFallback };
+  }
+
   const mod = await import('./EditorCode');
+
   return { default: mod.EditorCode };
 });
 
@@ -100,7 +104,11 @@ export const Editor = ({
   useEffect(() => {
     const path = activeExample?.path ?? null;
     const loadKey = path && selectedVersionId ? `${selectedVersionId}::${path}` : null;
-    if (loadKey === loadKeyRef.current) return;
+
+    if (loadKey === loadKeyRef.current) {
+      return;
+    }
+
     loadKeyRef.current = loadKey;
 
     // Reset the editor for the newly-selected example before loading its source
@@ -118,9 +126,12 @@ export const Editor = ({
     setViewMode('source');
     /* eslint-enable @eslint-react/set-state-in-effect */
 
-    if (!activeExample || !selectedVersionId) return;
+    if (!activeExample || !selectedVersionId) {
+      return;
+    }
 
     let cancelled = false;
+
     const load = async (): Promise<void> => {
       try {
         if (activeExample.language === 'typescript') {
@@ -129,22 +140,34 @@ export const Editor = ({
             loadExampleSource(selectedVersionId, tsPath),
             loadExampleSource(selectedVersionId, activeExample.path),
           ]);
-          if (cancelled) return;
+
+          if (cancelled) {
+            return;
+          }
+
           setSourceCode(tsSource);
           setOriginalSourceCode(tsSource);
           setExecutionCode(jsSource);
           setOriginalExecutionCode(jsSource);
+
           return;
         }
 
         const nextSource = await loadExampleSource(selectedVersionId, activeExample.path);
-        if (cancelled) return;
+
+        if (cancelled) {
+          return;
+        }
+
         setSourceCode(nextSource);
         setOriginalSourceCode(nextSource);
         setExecutionCode(null);
         setOriginalExecutionCode(null);
       } catch (error) {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
+
         setSourceLoadError({
           summary: 'Failed to load example source',
           details: error instanceof Error ? error.message : String(error),
@@ -153,6 +176,7 @@ export const Editor = ({
     };
 
     void load();
+
     return () => {
       cancelled = true;
     };
@@ -167,23 +191,32 @@ export const Editor = ({
 
   useEffect(() => {
     const stored = window.localStorage.getItem(LAYOUT_STORAGE_KEY);
+
     // Applying a stored preference is the canonical "sync with external
     // store on mount" effect.
-    // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
-    if (stored === 'split' || stored === 'stacked') setLayout(stored);
+    if (stored === 'split' || stored === 'stacked') {
+      // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
+      setLayout(stored);
+    }
+
     const storedOrder = window.localStorage.getItem(ORDER_STORAGE_KEY);
-    // eslint-disable-next-line @eslint-react/set-state-in-effect
-    if (storedOrder === 'preview-first' || storedOrder === 'editor-first') setOrder(storedOrder);
+
+    if (storedOrder === 'preview-first' || storedOrder === 'editor-first') {
+      // eslint-disable-next-line @eslint-react/set-state-in-effect
+      setOrder(storedOrder);
+    }
   }, []);
 
   const swapOrder = (): void => {
     setOrder(current => {
       const next: EditorOrder = current === 'preview-first' ? 'editor-first' : 'preview-first';
+
       try {
         window.localStorage.setItem(ORDER_STORAGE_KEY, next);
       } catch {
         // localStorage disabled - the swap still works for the session.
       }
+
       return next;
     });
   };
@@ -191,11 +224,13 @@ export const Editor = ({
   const toggleLayout = (): void => {
     setLayout(current => {
       const next: EditorLayout = current === 'split' ? 'stacked' : 'split';
+
       try {
         window.localStorage.setItem(LAYOUT_STORAGE_KEY, next);
       } catch {
         // localStorage disabled - the toggle still works for the session.
       }
+
       return next;
     });
   };
@@ -206,9 +241,17 @@ export const Editor = ({
 
   const syncExpandedWidth = useCallback((): void => {
     const frame = previewFrameRef.current;
-    if (!frame) return;
+
+    if (!frame) {
+      return;
+    }
+
     frame.style.removeProperty('margin-right');
-    if (!expandedActive) return;
+
+    if (!expandedActive) {
+      return;
+    }
+
     const rect = frame.getBoundingClientRect();
     const gap = 16;
     const extend = Math.max(0, window.innerWidth - rect.right - gap);
@@ -218,6 +261,7 @@ export const Editor = ({
   useEffect(() => {
     syncExpandedWidth();
     window.addEventListener('resize', syncExpandedWidth);
+
     return () => window.removeEventListener('resize', syncExpandedWidth);
   }, [syncExpandedWidth]);
 
@@ -227,7 +271,10 @@ export const Editor = ({
   };
 
   const onResetCode = (_event: ResetCodeEvent): void => {
-    if (originalSourceCode === null) return;
+    if (originalSourceCode === null) {
+      return;
+    }
+
     setPreviewErrors([]);
     setSourceCode(originalSourceCode);
     setExecutionCode(originalExecutionCode);
@@ -283,7 +330,9 @@ export const Editor = ({
   // and the swap in the header of the card on the right; stacked, the preview
   // is the top card and nothing swaps.
   const previewLeads = layout === 'stacked' || order === 'preview-first';
-  const sidebarToggle = showSidebarToggle ? <SidebarToggle open={sidebarOpen} toggleRef={sidebarToggleRef} onToggle={onToggleSidebar} /> : null;
+  const sidebarToggle = showSidebarToggle ? (
+    <SidebarToggle open={sidebarOpen} toggleRef={sidebarToggleRef} onToggle={onToggleSidebar} />
+  ) : null;
   const swapButton = layout === 'split' ? <SwapButton onSwap={swapOrder} /> : null;
 
   return (
@@ -327,7 +376,9 @@ export const Editor = ({
                 <line x1="12" y1="9" x2="12" y2="14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                 <circle cx="12" cy="17.5" r="0.8" fill="currentColor" />
               </svg>
-              <p className={css(styles, 'unavailable-message')}>{availability.reason ?? 'This example is not available in the current browser.'}</p>
+              <p className={css(styles, 'unavailable-message')}>
+                {availability.reason ?? 'This example is not available in the current browser.'}
+              </p>
             </div>
           )}
         </div>
@@ -382,15 +433,22 @@ export const Editor = ({
 };
 
 const getDisplayPath = (example: Example | null): string | null => {
-  if (!example) return null;
+  if (!example) {
+    return null;
+  }
+
   if (example.language === 'typescript') {
     return example.path.replace(/\.js$/, '.ts');
   }
+
   return example.path;
 };
 
 const renderErrors = (errors: PreviewErrorEntry[]): JSX.Element | null => {
-  if (errors.length === 0) return null;
+  if (errors.length === 0) {
+    return null;
+  }
+
   return (
     <details className={css(styles, 'error-panel')}>
       <summary className={css(styles, 'error-summary')}>

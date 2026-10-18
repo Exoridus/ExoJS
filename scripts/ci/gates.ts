@@ -25,10 +25,10 @@
  * `dist/esm/index.d.ts`, so it can only run in a job that has the built dist.
  * That is why it cannot simply join the ungated typecheck job.
  */
-import { GATE_GROUP_NAMES, GATE_GROUPS, type GateGroup } from './gate-groups.ts';
-import { changedFilesBetween, selectLocalPolicy } from './local-policy.ts';
 import { readOutputOptions } from '../lib/output.ts';
 import { runCommand } from '../lib/run-command.ts';
+import { GATE_GROUP_NAMES, GATE_GROUPS, type GateGroup } from './gate-groups.ts';
+import { changedFilesBetween, selectLocalPolicy } from './local-policy.ts';
 
 const groupNames = GATE_GROUP_NAMES;
 const outputOptions = readOutputOptions(process.argv.slice(2));
@@ -47,8 +47,10 @@ if (requested !== 'all' && requested !== 'affected' && !groupNames.includes(requ
 const selected = requested === 'all' || requested === 'affected' ? groupNames : [requested as GateGroup];
 let scripts: readonly string[] = selected.flatMap(group => GATE_GROUPS[group]);
 let packageTypechecks: readonly string[] = [];
+
 if (requested === 'affected') {
   const [base, head] = outputOptions.argv.slice(1);
+
   try {
     const policy = selectLocalPolicy(base && head ? changedFilesBetween(base, head) : []);
     scripts = policy.gates;
@@ -83,16 +85,27 @@ const main = async (): Promise<void> => {
       if (outputOptions.mode === 'normal' || outputOptions.mode === 'verbose') {
         console.error(`\nGate failed: pnpm ${script} (exit code ${result.status})`);
       }
+
       process.exit(result.status);
     }
   }
 
   for (const name of packageTypechecks) {
-    const result = await runCommand({ label: `gates-typecheck-${name}`, command: 'pnpm', args: ['--filter', name, 'typecheck'], output: outputOptions.mode });
-    if (result.status !== 0) process.exit(result.status);
+    const result = await runCommand({
+      label: `gates-typecheck-${name}`,
+      command: 'pnpm',
+      args: ['--filter', name, 'typecheck'],
+      output: outputOptions.mode,
+    });
+
+    if (result.status !== 0) {
+      process.exit(result.status);
+    }
   }
 
-  if (outputOptions.mode !== 'silent') console.log(`\nAll ${scripts.length + packageTypechecks.length} gate(s) passed.`);
+  if (outputOptions.mode !== 'silent') {
+    console.log(`\nAll ${scripts.length + packageTypechecks.length} gate(s) passed.`);
+  }
 };
 
 await main();

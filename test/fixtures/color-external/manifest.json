@@ -1,6 +1,11 @@
 {
   "$comment": "Written by scripts/generate-external-ktx2-fixtures.ts. Do not edit by hand.",
-  "tool": { "name": "KTX-Software ktx", "version": "ktx version: v4.4.2", "license": "Apache-2.0", "source": "https://github.com/KhronosGroup/KTX-Software" },
+  "tool": {
+    "name": "KTX-Software ktx",
+    "version": "ktx version: v4.4.2",
+    "license": "Apache-2.0",
+    "source": "https://github.com/KhronosGroup/KTX-Software"
+  },
   "source": {
     "file": "source.png",
     "sha256": "b65ca8f788058e1c3694e2c080d717f0562d2a04331e60f3a08f6e4669c6325b",

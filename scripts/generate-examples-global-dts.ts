@@ -37,17 +37,21 @@ const renderType = (value: unknown, depth: number): string => {
     // are plain paths with no quotes to escape.
     return `'${value.replace(/'/g, "\\'")}'`;
   }
+
   if (typeof value === 'number' || typeof value === 'boolean') {
     return String(value);
   }
+
   if (value && typeof value === 'object') {
     const innerPad = INDENT.repeat(depth + 1);
     const closePad = INDENT.repeat(depth);
     const lines = Object.entries(value as Record<string, unknown>).map(
       ([key, child]) => `${innerPad}readonly ${renderKey(key)}: ${renderType(child, depth + 1)};`,
     );
+
     return `{\n${lines.join('\n')}\n${closePad}}`;
   }
+
   // The catalog only contains strings, numbers, and nested objects.
   return 'never';
 };
@@ -113,6 +117,7 @@ export const writeAssetsGlobalDts = async (): Promise<boolean> => {
   const target = assetsGlobalDtsPath();
 
   let current: string;
+
   try {
     current = readFileSync(target, 'utf8');
   } catch {
@@ -124,6 +129,7 @@ export const writeAssetsGlobalDts = async (): Promise<boolean> => {
   }
 
   writeFileSync(target, next, 'utf8');
+
   return true;
 };
 

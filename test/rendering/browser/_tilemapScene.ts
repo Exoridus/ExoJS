@@ -70,15 +70,14 @@ export const createQuadrantTexture = (): Texture => {
 };
 
 /** A single 16×16 tile tileset over a texture (`tileCount` covering the grid). */
-export const makeTileset = (texture: Texture, name = 'tiles', tileCount = 1): TileSet => {
-  return new TileSet({
+export const makeTileset = (texture: Texture, name = 'tiles', tileCount = 1): TileSet =>
+  new TileSet({
     name,
     texture: new TextureRegion(texture, { x: 0, y: 0, width: texture.width, height: texture.height }),
     tileWidth: 16,
     tileHeight: 16,
     tileCount,
   });
-};
 
 /** Build a 1×1 map containing a single tile with the given orientation. */
 export const singleTileMap = (texture: Texture, transform: TileTransform = TILE_TRANSFORM_IDENTITY): TileMap => {
@@ -94,10 +93,95 @@ export const singleTileMap = (texture: Texture, transform: TileTransform = TILE_
 export const isometricOverlapMap = (red: Texture, blue: Texture): TileMap => {
   const tilesets = [makeTileset(red, 'red'), makeTileset(blue, 'blue')];
   const projection = new TileProjection({ orientation: 'isometric', tileWidth: 16, tileHeight: 8, originX: 32 });
-  const layer = new TileLayer({ id: 1, name: 'iso', width: 4, height: 4, tileWidth: 16, tileHeight: 8, chunkWidth: 2, chunkHeight: 2, tilesets, projection });
-  for (let y = 3; y >= 0; y--)
+  const layer = new TileLayer({
+    id: 1,
+    name: 'iso',
+    width: 4,
+    height: 4,
+    tileWidth: 16,
+    tileHeight: 8,
+    chunkWidth: 2,
+    chunkHeight: 2,
+    tilesets,
+    projection,
+  });
+
+  for (let y = 3; y >= 0; y--) {
     for (let x = 3; x >= 0; x--) {
       layer.setTileAt(x, y, { tileset: tilesets[(x + y) % 2]!, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
     }
+  }
+
   return new TileMap({ width: 4, height: 4, tileWidth: 16, tileHeight: 8, tilesets, layers: [layer], projection });
+};
+
+/** A `width`×`height` solid-colour texture. */
+export const createSolidRectTexture = (color: string, width: number, height: number): Texture => {
+  const canvas = document.createElement('canvas');
+
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext('2d')!;
+
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, width, height);
+
+  return new Texture(canvas);
+};
+
+/**
+ * Opaque artwork overhanging orthogonal chunk borders (chunks one cell wide, two
+ * cells tall), installed nearest-first rather than in draw order: a 16x48 tree in
+ * the top row of chunk (0, 1) rising through chunk (0, 0), and a 32x32 crate in
+ * row 1 of chunk (2, 0) reaching over row 0 of chunk (3, 0). Tiled draws both
+ * overhangs on top of the ground they cover.
+ */
+export const orthogonalOverhangLayer = (ground: Texture, tree: Texture, crate: Texture): { layer: TileLayer; streamIn: () => void } => {
+  const groundSet = makeTileset(ground, 'ground');
+  const props = new TileSet({
+    name: 'props',
+    tileWidth: 32,
+    tileHeight: 48,
+    tileImages: [
+      new TextureRegion(tree, { x: 0, y: 0, width: tree.width, height: tree.height }),
+      new TextureRegion(crate, { x: 0, y: 0, width: crate.width, height: crate.height }),
+    ],
+  });
+  const options = { id: 1, name: 'overhang', tileWidth: 16, tileHeight: 16, chunkWidth: 1, chunkHeight: 2, tilesets: [groundSet, props] };
+  const authored = new TileLayer(options);
+  const layer = new TileLayer(options);
+  const place = (tx: number, ty: number, tileset: TileSet, localTileId: number): void =>
+    authored.setTileAt(tx, ty, { tileset, localTileId, transform: TILE_TRANSFORM_IDENTITY });
+
+  place(0, 0, groundSet, 0);
+  place(0, 1, groundSet, 0);
+  place(1, 0, groundSet, 0);
+  place(3, 0, groundSet, 0);
+  place(0, 2, props, 0);
+  place(2, 1, props, 1);
+
+  // Installed after the node exists, as a chunk streamer would.
+  const streamIn = (): void => {
+    for (const [cx, cy] of [
+      [0, 1],
+      [3, 0],
+      [2, 0],
+      [1, 0],
+      [0, 0],
+    ] as const) {
+      const chunk = authored.getChunk(cx, cy)!;
+      const tiles = new Uint32Array(chunk.width * chunk.height);
+
+      for (let ly = 0; ly < chunk.height; ly++) {
+        for (let lx = 0; lx < chunk.width; lx++) {
+          tiles[ly * chunk.width + lx] = chunk.getRawAt(lx, ly);
+        }
+      }
+
+      layer._adoptChunk(cx, cy, { width: chunk.width, height: chunk.height, tiles });
+    }
+  };
+
+  return { layer, streamIn };
 };

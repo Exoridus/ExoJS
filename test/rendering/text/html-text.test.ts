@@ -29,14 +29,13 @@ import { stubCanvas2dContext } from '../../support/canvas-2d-context-stub';
 // Canvas 2D context mock (adds clearRect on top of the shared stub)
 // ---------------------------------------------------------------------------
 
-const makeFullContext2d = (): CanvasRenderingContext2D => {
-  return {
+const makeFullContext2d = (): CanvasRenderingContext2D =>
+  ({
     fillStyle: '',
     fillRect: vi.fn(),
     drawImage: vi.fn(),
     clearRect: vi.fn(),
-  } as unknown as CanvasRenderingContext2D;
-};
+  }) as unknown as CanvasRenderingContext2D;
 
 let getContextSpy: MockInstance;
 

@@ -30,6 +30,7 @@ const makeTexture = (): Texture => {
   const canvas = document.createElement('canvas');
   canvas.width = 16;
   canvas.height = 16;
+
   return new Texture(canvas);
 };
 
@@ -111,6 +112,7 @@ describe('Distribution', () => {
 
   test('Range stays within bounds', () => {
     const r = new Range(10, 20);
+
     for (let i = 0; i < 50; i++) {
       const v = r.sample();
       expect(v).toBeGreaterThanOrEqual(10);

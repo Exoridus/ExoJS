@@ -36,7 +36,11 @@ const DEFAULT_HOST = 'http://localhost:4321';
 const here = dirname(fileURLToPath(import.meta.url));
 const outDir = resolve(here, '..', '..', '.workspace', 'tmp', 'check-example');
 
-type Step = { kind: 'wait'; ms: number } | { kind: 'click' | 'rclick'; fx: number; fy: number } | { kind: 'key'; key: string } | { kind: 'shot'; name: string };
+type Step =
+  | { kind: 'wait'; ms: number }
+  | { kind: 'click' | 'rclick'; fx: number; fy: number }
+  | { kind: 'key'; key: string }
+  | { kind: 'shot'; name: string };
 
 const parseStep = (raw: string): Step => {
   const separator = raw.indexOf(':');
@@ -49,6 +53,7 @@ const parseStep = (raw: string): Step => {
     case 'click':
     case 'rclick': {
       const [fx, fy] = arg.split(',').map(Number);
+
       return { kind, fx: fx ?? 0.5, fy: fy ?? 0.5 };
     }
     case 'key':
@@ -78,6 +83,7 @@ const main = async (): Promise<void> => {
   if (!example) {
     console.error('Usage: pnpm check-example <chapter/slug> [step ...]');
     process.exitCode = 2;
+
     return;
   }
 
@@ -91,12 +97,16 @@ const main = async (): Promise<void> => {
   const consoleLines: string[] = [];
 
   page.on('console', message => {
-    if (message.type() === 'error') consoleLines.push(`[console] ${message.text()}`);
+    if (message.type() === 'error') {
+      consoleLines.push(`[console] ${message.text()}`);
+    }
   });
   page.on('pageerror', error => consoleLines.push(`[pageerror] ${String(error)}`));
 
   try {
-    await page.goto(`${host}${SITE_BASE}/en/playground/?version=current&example=${encodeURIComponent(example)}`, { waitUntil: 'networkidle' });
+    await page.goto(`${host}${SITE_BASE}/en/playground/?version=current&example=${encodeURIComponent(example)}`, {
+      waitUntil: 'networkidle',
+    });
 
     const frame = await findPreviewFrame(page.frames());
     const canvas = await frame.waitForSelector('canvas', { timeout: 15_000 });
@@ -113,7 +123,11 @@ const main = async (): Promise<void> => {
           break;
         case 'click':
         case 'rclick':
-          await page.mouse.click(box.x + box.width * step.fx, box.y + box.height * step.fy, step.kind === 'rclick' ? { button: 'right' } : {});
+          await page.mouse.click(
+            box.x + box.width * step.fx,
+            box.y + box.height * step.fy,
+            step.kind === 'rclick' ? { button: 'right' } : {},
+          );
           break;
         case 'key':
           await page.keyboard.press(step.key);

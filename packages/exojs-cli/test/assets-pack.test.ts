@@ -44,7 +44,9 @@ const loaderReading = (container: ArrayBuffer): Loader => {
   const loader = new Loader({ basePath: '/' });
 
   loader._installAssetTypes(coreAssetTypes);
-  global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => container }) as unknown as Response);
+  global.fetch = vi.fn(
+    async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => container }) as unknown as Response,
+  );
 
   return loader;
 };
@@ -108,7 +110,9 @@ describe('exo assets pack round trip', () => {
     // so the writer must keep the plain bytes rather than wrap them twice.
     const random = new Uint8Array(2048);
 
-    for (let i = 0; i < random.length; i++) random[i] = Math.floor(Math.random() * 256);
+    for (let i = 0; i < random.length; i++) {
+      random[i] = Math.floor(Math.random() * 256);
+    }
 
     write('noise.bin', random);
 
@@ -124,7 +128,8 @@ describe('exo assets pack round trip', () => {
   });
 
   test('a packed KTX2 texture keeps its bytes and its DFD transfer and alpha meaning, whatever the file is called', async () => {
-    const fixture = (name: string): Uint8Array => new Uint8Array(readFileSync(fileURLToPath(new URL(`../../../test/fixtures/color/${name}`, import.meta.url))));
+    const fixture = (name: string): Uint8Array =>
+      new Uint8Array(readFileSync(fileURLToPath(new URL(`../../../test/fixtures/color/${name}`, import.meta.url))));
     const srgbStraight = fixture('alpha-straight-srgb.ktx2');
     const linear = fixture('rgba8-linear.ktx2');
 
@@ -230,8 +235,8 @@ describe('exo assets pack failures', () => {
 });
 
 interface ContainerHead {
-  readonly entries: Record<string, unknown>[];
-  readonly blocks: Record<string, unknown>[];
+  readonly entries: Array<Record<string, unknown>>;
+  readonly blocks: Array<Record<string, unknown>>;
 }
 
 /** The JSON head of a written container, read straight out of the file the CLI produced. */

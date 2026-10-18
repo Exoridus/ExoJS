@@ -132,7 +132,10 @@ export class RenderTexturePool {
   }
 
   private _evictToCapacity(): void {
-    while (this._textures.length > 0 && (this._textures.length > MAX_POOLED_RENDER_TEXTURES || this._bytes > MAX_POOLED_RENDER_TEXTURE_BYTES)) {
+    while (
+      this._textures.length > 0 &&
+      (this._textures.length > MAX_POOLED_RENDER_TEXTURES || this._bytes > MAX_POOLED_RENDER_TEXTURE_BYTES)
+    ) {
       // Non-empty per the loop guard.
       const evicted = this._textures.shift()!;
 

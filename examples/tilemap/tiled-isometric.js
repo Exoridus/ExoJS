@@ -12,7 +12,7 @@ class IsometricScene extends Scene {
   worldRoot = new Container();
   selection = new Graphics();
   actor = new Graphics();
-  world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+  world;
   body;
   binding;
   target = { x: 99, y: 99 };
@@ -21,6 +21,7 @@ class IsometricScene extends Scene {
     this.map = await this.loader.load(Asset.type('tileMap', assets.demo.isometricLandscape));
   }
   init() {
+    this.world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, fixedDelta: this.app.fixedTimeStep });
     this.worldRoot.setPosition(origin.x, origin.y).setScale(scale);
     this.worldRoot.addChild(new TileMapNode(this.map));
     const gameplay = this.map.getObjectLayer('Gameplay');
@@ -31,11 +32,17 @@ class IsometricScene extends Scene {
     outlines.fillColor = new Color(72, 226, 218, 0.07);
     for (const object of gameplay.objects) {
       const display = gameplay.getDisplayObject(object);
-      if (display.kind === 'polygon') outlines.drawPolygon(display.points.flatMap(point => [display.x + point.x, display.y + point.y]));
+      if (display.kind === 'polygon') {
+        outlines.drawPolygon(display.points.flatMap(point => [display.x + point.x, display.y + point.y]));
+      }
     }
     const spawn = gameplay.objects.find(object => object.name === 'Spawn');
     this.body = this.world.add(
-      new PhysicsBody({ position: { x: spawn.x, y: spawn.y }, fixedRotation: true, colliders: [{ shape: new CircleShape(12), friction: 0 }] }),
+      new PhysicsBody({
+        position: { x: spawn.x, y: spawn.y },
+        fixedRotation: true,
+        colliders: [{ shape: new CircleShape(12), friction: 0 }],
+      }),
     );
     this.actor.fillColor = new Color(255, 211, 89);
     this.actor.lineColor = new Color(56, 43, 29);
@@ -70,9 +77,13 @@ class IsometricScene extends Scene {
     const x = (pointer.x - origin.x) / scale;
     const y = (pointer.y - origin.y) / scale;
     const { tx, ty } = this.map.pixelToTile(x, y);
-    if (tx < 0 || ty < 0 || tx >= 10 || ty >= 10) return;
+    if (tx < 0 || ty < 0 || tx >= 10 || ty >= 10) {
+      return;
+    }
     const projection = this.map.projection;
     this.target = { x: (tx + 0.5) * projection.logicalTileWidth, y: (ty + 0.5) * projection.logicalTileHeight };
+    // The actor falls asleep once it stops at a target, and writing its velocity does not wake it.
+    this.body.wake();
     this.selection.clear();
     this.selection.fillColor = new Color(255, 234, 126, 0.25);
     this.selection.lineColor = new Color(255, 234, 126);

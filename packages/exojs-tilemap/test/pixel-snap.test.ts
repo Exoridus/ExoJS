@@ -19,14 +19,16 @@ const asTileLayerNode = (node: ImageLayerNode | TileLayerNode): TileLayerNode =>
   if (!(node instanceof TileLayerNode)) {
     throw new Error('expected a TileLayerNode');
   }
+
   return node;
 };
+
 import { TILE_TRANSFORM_IDENTITY } from '../src/types';
 
 // ── helpers (conventions shared with nodes.test.ts / view.test.ts) ─────
 
-const fakeTexture = (width = 512, height = 512): Texture => {
-  return {
+const fakeTexture = (width = 512, height = 512): Texture =>
+  ({
     width,
     height,
     flipY: false,
@@ -34,18 +36,16 @@ const fakeTexture = (width = 512, height = 512): Texture => {
     label: 'test',
     destroy: vi.fn(),
     destroyed: false,
-  } as unknown as Texture;
-};
+  }) as unknown as Texture;
 
-const makeTileset = (name = 'tiles'): TileSet => {
-  return new TileSet({
+const makeTileset = (name = 'tiles'): TileSet =>
+  new TileSet({
     name,
     texture: new TextureRegion(fakeTexture(), { x: 0, y: 0, width: 512, height: 512 }),
     tileWidth: 32,
     tileHeight: 32,
     tileCount: 16,
   });
-};
 
 interface BoundaryLayerOpts {
   readonly id?: number;
@@ -82,9 +82,8 @@ const makeBoundaryLayer = (tileset: TileSet, opts: BoundaryLayerOpts = {}): Tile
 };
 
 /** An empty 4×4 layer - constructible, but produces zero chunk nodes. */
-const makeEmptyLayer = (tileset: TileSet, id = 1, name = 'empty'): TileLayer => {
-  return new TileLayer({ id, name, width: 4, height: 4, tileWidth: 32, tileHeight: 32, tilesets: [tileset] });
-};
+const makeEmptyLayer = (tileset: TileSet, id = 1, name = 'empty'): TileLayer =>
+  new TileLayer({ id, name, width: 4, height: 4, tileWidth: 32, tileHeight: 32, tilesets: [tileset] });
 
 /** A 40×8 map with two boundary-spanning layers: background (1), ground (2). */
 const makeBoundaryMap = (): { map: TileMap; tileset: TileSet } => {
@@ -98,13 +97,12 @@ const makeBoundaryMap = (): { map: TileMap; tileset: TileSet } => {
     tilesets: [tileset],
     layers: [makeBoundaryLayer(tileset, { id: 1, name: 'background' }), makeBoundaryLayer(tileset, { id: 2, name: 'ground' })],
   });
+
   return { map, tileset };
 };
 
 /** The pixel-snap mode of every chunk drawable, in build order. */
-const chunkModes = (node: TileLayerNode): PixelSnapMode[] => {
-  return node.chunkNodes.map(chunk => chunk.pixelSnapMode);
-};
+const chunkModes = (node: TileLayerNode): PixelSnapMode[] => node.chunkNodes.map(chunk => chunk.pixelSnapMode);
 
 // ═══════════════════════════════════════════════════════════════════════
 // Defaults
@@ -125,6 +123,7 @@ describe('pixelSnapMode defaults', () => {
 
     expect(node.pixelSnapMode).toBe(PixelSnapMode.Geometry);
     expect(node.layerNodes).toHaveLength(2);
+
     for (const layerNode of node.layerNodes) {
       expect(layerNode.pixelSnapMode).toBe(PixelSnapMode.Geometry);
       expect(chunkModes(asTileLayerNode(layerNode))).toEqual([PixelSnapMode.Geometry, PixelSnapMode.Geometry]);
@@ -137,6 +136,7 @@ describe('pixelSnapMode defaults', () => {
 
     expect(view.pixelSnapMode).toBe(PixelSnapMode.Geometry);
     expect(view.layers).toHaveLength(2);
+
     for (const layerNode of view.layers) {
       expect(layerNode.pixelSnapMode).toBe(PixelSnapMode.Geometry);
       expect(chunkModes(asTileLayerNode(layerNode))).toEqual([PixelSnapMode.Geometry, PixelSnapMode.Geometry]);
@@ -251,6 +251,7 @@ describe('TileMapNode.pixelSnapMode', () => {
       node.pixelSnapMode = mode;
 
       expect(node.pixelSnapMode).toBe(mode);
+
       for (const layerNode of node.layerNodes) {
         expect(layerNode.pixelSnapMode).toBe(mode);
         expect(chunkModes(asTileLayerNode(layerNode))).toEqual([mode, mode]);
@@ -268,6 +269,7 @@ describe('TileMapNode.pixelSnapMode', () => {
       node.pixelSnapMode = 99 as PixelSnapMode;
     }).toThrow(/pixelSnapMode/);
     expect(node.pixelSnapMode).toBe(PixelSnapMode.Position);
+
     for (const layerNode of node.layerNodes) {
       expect(layerNode.pixelSnapMode).toBe(PixelSnapMode.Position);
       expect(chunkModes(asTileLayerNode(layerNode))).toEqual([PixelSnapMode.Position, PixelSnapMode.Position]);
@@ -311,6 +313,7 @@ describe('TileMapNode.pixelSnapMode', () => {
     node.refreshLayers();
 
     expect(node.layerNodes).toHaveLength(3);
+
     for (const layerNode of node.layerNodes) {
       expect(layerNode.pixelSnapMode).toBe(PixelSnapMode.Geometry);
       expect(chunkModes(asTileLayerNode(layerNode))).toEqual([PixelSnapMode.Geometry, PixelSnapMode.Geometry]);
@@ -332,12 +335,14 @@ describe('TileMapView.pixelSnapMode', () => {
 
     expect(view.pixelSnapMode).toBe(PixelSnapMode.Geometry);
     expect(view.layers).toHaveLength(2);
+
     for (const layerNode of view.layers) {
       expect(layerNode.pixelSnapMode).toBe(PixelSnapMode.Geometry);
       expect(chunkModes(asTileLayerNode(layerNode))).toEqual([PixelSnapMode.Geometry, PixelSnapMode.Geometry]);
     }
 
     view.pixelSnapMode = PixelSnapMode.Position;
+
     for (const layerNode of view.layers) {
       expect(chunkModes(asTileLayerNode(layerNode))).toEqual([PixelSnapMode.Position, PixelSnapMode.Position]);
     }
@@ -353,6 +358,7 @@ describe('TileMapView.pixelSnapMode', () => {
       view.pixelSnapMode = 99 as PixelSnapMode;
     }).toThrow(/pixelSnapMode/);
     expect(view.pixelSnapMode).toBe(PixelSnapMode.Geometry);
+
     for (const layerNode of view.layers) {
       expect(layerNode.pixelSnapMode).toBe(PixelSnapMode.Geometry);
       expect(chunkModes(asTileLayerNode(layerNode))).toEqual([PixelSnapMode.Geometry, PixelSnapMode.Geometry]);
@@ -401,6 +407,7 @@ describe('TileMapView.pixelSnapMode', () => {
     expect(view.getLayerNodeById(1)).toBe(existing); // identity retained
     expect(added.pixelSnapMode).toBe(PixelSnapMode.Geometry);
     expect(chunkModes(added)).toEqual([PixelSnapMode.Geometry, PixelSnapMode.Geometry]);
+
     for (const layerNode of view.layers) {
       expect(layerNode.pixelSnapMode).toBe(PixelSnapMode.Geometry);
     }

@@ -43,7 +43,11 @@ import { mipmapWgsl } from '#rendering/webgpu/WebGpuBackend';
 import { compositorShaderSource as maskCompositorWgsl } from '#rendering/webgpu/WebGpuMaskCompositor';
 import { instancedMeshShaderSource, meshShaderSource } from '#rendering/webgpu/WebGpuMeshRenderer';
 import { scalableSpriteShaderSource } from '#rendering/webgpu/WebGpuScalableSpriteRenderer';
-import { buildPersistentSpriteShaderSource, buildSpriteShaderSource, spriteBatchTextureSlotTiers } from '#rendering/webgpu/WebGpuSpriteRenderer';
+import {
+  buildPersistentSpriteShaderSource,
+  buildSpriteShaderSource,
+  spriteBatchTextureSlotTiers,
+} from '#rendering/webgpu/WebGpuSpriteRenderer';
 import { stencilWriteShaderSource } from '#rendering/webgpu/WebGpuStencilClipper';
 import { textShaderSource } from '#rendering/webgpu/WebGpuTextRenderer';
 
@@ -55,7 +59,10 @@ const shaders: ReadonlyArray<readonly [name: string, source: string]> = [
   ['WebGpuMeshRenderer (default)', meshShaderSource],
   ['WebGpuMeshRenderer (instanced)', instancedMeshShaderSource],
   ['WebGpuScalableSpriteRenderer (combined)', scalableSpriteShaderSource],
-  ...spriteBatchTextureSlotTiers.map((tier): readonly [string, string] => [`WebGpuSpriteRenderer (${tier} texture slots)`, buildSpriteShaderSource(tier)]),
+  ...spriteBatchTextureSlotTiers.map((tier): readonly [string, string] => [
+    `WebGpuSpriteRenderer (${tier} texture slots)`,
+    buildSpriteShaderSource(tier),
+  ]),
   ...spriteBatchTextureSlotTiers.map((tier): readonly [string, string] => [
     `WebGpuSpriteRenderer persistent-indexed (${tier} texture slots)`,
     buildPersistentSpriteShaderSource(tier),
@@ -92,7 +99,9 @@ const validate = (name: string, source: string): NagaResult | null => {
   if (result.error) {
     const missing = (result.error as NodeJS.ErrnoException).code === 'ENOENT';
 
-    if (missing && !nagaRequired) return null;
+    if (missing && !nagaRequired) {
+      return null;
+    }
 
     throw new Error(
       `Could not run the Naga validator (\`${nagaBinary}\`): ${result.error.message}\n` +

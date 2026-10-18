@@ -66,7 +66,9 @@ const cellHasInk = (frame: ArrayLike<number>, index: number): boolean => {
     for (let x = x0; x < x0 + cellWidth; x++) {
       const offset = (y * width + x) * 4;
 
-      if (frame[offset]! + frame[offset + 1]! + frame[offset + 2]! > 80) return true;
+      if (frame[offset]! + frame[offset + 1]! + frame[offset + 2]! > 80) {
+        return true;
+      }
     }
   }
 

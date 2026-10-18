@@ -1926,8 +1926,8 @@ describe('InteractionSystem — getCapturedNodes', () => {
   test('returns the dragged node while a drag is active', () => {
     const { app, scene, signals, canvas } = createApp();
 
-    Object.defineProperty(canvas, 'setPointerCapture', { value: () => undefined, writable: true, configurable: true });
-    Object.defineProperty(canvas, 'releasePointerCapture', { value: () => undefined, writable: true, configurable: true });
+    Object.defineProperty(canvas, 'setPointerCapture', { value: () => {}, writable: true, configurable: true });
+    Object.defineProperty(canvas, 'releasePointerCapture', { value: () => {}, writable: true, configurable: true });
 
     const im = new InteractionSystem(app);
 
@@ -2087,8 +2087,8 @@ describe('InteractionSystem — UI layer', () => {
   test('dragging a node inside the UI layer resolves coordinates in UI space (_isUINode traversal)', () => {
     const { app, scene, signals, canvas } = createApp();
 
-    Object.defineProperty(canvas, 'setPointerCapture', { value: () => undefined, writable: true, configurable: true });
-    Object.defineProperty(canvas, 'releasePointerCapture', { value: () => undefined, writable: true, configurable: true });
+    Object.defineProperty(canvas, 'setPointerCapture', { value: () => {}, writable: true, configurable: true });
+    Object.defineProperty(canvas, 'releasePointerCapture', { value: () => {}, writable: true, configurable: true });
 
     const im = new InteractionSystem(app);
 
@@ -2120,8 +2120,8 @@ describe('InteractionSystem — UI layer', () => {
   test('_isUINode returns false while dragging a world node, even when a UI root is also attached', () => {
     const { app, scene, signals, canvas } = createApp();
 
-    Object.defineProperty(canvas, 'setPointerCapture', { value: () => undefined, writable: true, configurable: true });
-    Object.defineProperty(canvas, 'releasePointerCapture', { value: () => undefined, writable: true, configurable: true });
+    Object.defineProperty(canvas, 'setPointerCapture', { value: () => {}, writable: true, configurable: true });
+    Object.defineProperty(canvas, 'releasePointerCapture', { value: () => {}, writable: true, configurable: true });
 
     const im = new InteractionSystem(app);
 

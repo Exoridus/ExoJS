@@ -231,7 +231,10 @@ describe('Gamepad', () => {
 
   test('stopVibration resets the actuator when supported', () => {
     const reset = vi.fn();
-    const native = { ...createNativeGamepad('rumble-reset'), vibrationActuator: { playEffect: vi.fn(), reset } } as unknown as BrowserGamepad;
+    const native = {
+      ...createNativeGamepad('rumble-reset'),
+      vibrationActuator: { playEffect: vi.fn(), reset },
+    } as unknown as BrowserGamepad;
     const pad = new Gamepad(0, new Float32Array(ChannelSize.Container));
 
     pad._bind(native, buildDefinition());

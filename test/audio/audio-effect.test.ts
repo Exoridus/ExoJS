@@ -25,7 +25,10 @@ const defineMinimalEffect = (Base: typeof AudioEffect) =>
     }
 
     public get inputNode(): AudioNode {
-      if (!this.node) throw new Error('MinimalEffect not yet initialized.');
+      if (!this.node) {
+        throw new Error('MinimalEffect not yet initialized.');
+      }
+
       return this.node;
     }
 

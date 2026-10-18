@@ -50,6 +50,7 @@ const createBackend = async (): Promise<WebGl2Backend> => {
   const backend = new WebGl2Backend(app);
   await backend.initialize();
   wireCoreRenderers(backend, app.options.rendering);
+
   return backend;
 };
 
@@ -57,6 +58,7 @@ const readPixel = (backend: WebGl2Backend, x: number, y: number): RGBATuple => {
   const pixel = new Uint8Array(4);
   const gl = backend.context;
   gl.readPixels(Math.floor(x), backend.renderTarget.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+
   return [pixel[0], pixel[1], pixel[2], pixel[3]];
 };
 
@@ -67,6 +69,7 @@ const readPixelsFromTarget = (backend: WebGl2Backend, target: RenderTarget, x: n
   const gl = backend.context;
   gl.readPixels(Math.floor(x), target.height - Math.floor(y) - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
   backend.setRenderTarget(previousTarget);
+
   return [pixel[0], pixel[1], pixel[2], pixel[3]];
 };
 
@@ -75,9 +78,14 @@ const createSolidTexture = (color: string, width = 16, height = 16): Texture => 
   source.width = width;
   source.height = height;
   const context = source.getContext('2d');
-  if (!context) throw new Error('2D context is required to create test textures.');
+
+  if (!context) {
+    throw new Error('2D context is required to create test textures.');
+  }
+
   context.fillStyle = color;
   context.fillRect(0, 0, width, height);
+
   return new Texture(source);
 };
 
@@ -266,12 +274,17 @@ describe('RenderTo WebGL2 browser', () => {
       }
 
       let redCount = 0;
+
       for (let y = 0; y < 32; y += 4) {
         for (let x = 0; x < 32; x += 4) {
           const p = readPixelsFromTarget(backend, cacheTexture, x, y);
-          if (p[0] > 200 && p[1] < 50) redCount++;
+
+          if (p[0] > 200 && p[1] < 50) {
+            redCount++;
+          }
         }
       }
+
       expect(redCount).toBeGreaterThanOrEqual(8);
       expect(backend.stats.drawCalls).toBeGreaterThanOrEqual(1);
     } finally {
@@ -305,6 +318,7 @@ describe('RenderTo WebGL2 browser', () => {
     try {
       backend.clear(Color.black);
       hooked._beginDrawPlan(1);
+
       try {
         backend.execute(
           new BackendTargetPass(
@@ -328,15 +342,21 @@ describe('RenderTo WebGL2 browser', () => {
       } finally {
         hooked._endDrawPlan();
       }
+
       backend.flush();
 
       let redCount = 0;
+
       for (let y = 0; y < 16; y += 2) {
         for (let x = 0; x < 16; x += 2) {
           const p = readPixelsFromTarget(backend, cacheTexture, x, y);
-          if (p[0] > 200 && p[1] < 50) redCount++;
+
+          if (p[0] > 200 && p[1] < 50) {
+            redCount++;
+          }
         }
       }
+
       expect(redCount).toBeGreaterThanOrEqual(48);
 
       const rootPixel = readPixel(backend, 20, 20);
@@ -370,12 +390,17 @@ describe('RenderTo WebGL2 browser', () => {
       );
 
       let redCount = 0;
+
       for (let y = 0; y < 16; y += 2) {
         for (let x = 0; x < 16; x += 2) {
           const p = readPixelsFromTarget(backend, cacheTexture, x, y);
-          if (p[0] > 200 && p[1] < 50) redCount++;
+
+          if (p[0] > 200 && p[1] < 50) {
+            redCount++;
+          }
         }
       }
+
       expect(redCount).toBeGreaterThanOrEqual(48);
       expect(backend.stats.drawCalls).toBeGreaterThanOrEqual(1);
     } finally {
@@ -443,7 +468,7 @@ describe('RenderTo WebGL2 browser', () => {
 
       // Pass 2: no clearColor → the coordinator loads (preserves) the target.
       // The empty callback draws nothing, so the red from pass 1 must survive.
-      backend.execute(new BackendTargetPass(() => undefined, { target, view: target.view }));
+      backend.execute(new BackendTargetPass(() => {}, { target, view: target.view }));
       backend.flush();
 
       for (const [x, y] of samples) {
@@ -656,6 +681,7 @@ describe('RenderTo WebGL2 browser', () => {
         // a clear error rather than yielding an incomplete framebuffer.
         expect(() => backend.setRenderTarget(target)).toThrow(/EXT_color_buffer_float/);
         target.destroy();
+
         return;
       }
 
@@ -698,9 +724,9 @@ describe('RenderTo WebGL2 browser', () => {
       gl.readPixels(size / 2, size / 2, 1, 1, gl.RGBA, gl.FLOAT, out);
 
       expect(out[0]).toBeCloseTo(2.5, 3);
-      expect(out[1]).toBeCloseTo(-1.0, 3);
+      expect(out[1]).toBeCloseTo(-1, 3);
       expect(out[2]).toBeCloseTo(0.5, 3);
-      expect(out[3]).toBeCloseTo(3.0, 3);
+      expect(out[3]).toBeCloseTo(3, 3);
 
       backend.setRenderTarget(backend.renderTarget);
       target.destroy();

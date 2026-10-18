@@ -100,7 +100,15 @@ export class WebGl2BackdropBlendCompositor {
    * and draws the blended source over the untouched backdrop with normal
    * premultiplied source-over.
    */
-  public compose(backend: WebGl2Backend, source: Texture | RenderTexture, x: number, y: number, width: number, height: number, blendMode: BlendModes): void {
+  public compose(
+    backend: WebGl2Backend,
+    source: Texture | RenderTexture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    blendMode: BlendModes,
+  ): void {
     if (this._connection === null) {
       throw new Error('WebGl2BackdropBlendCompositor: not connected.');
     }
@@ -258,7 +266,14 @@ export class WebGl2BackdropBlendCompositor {
               lastBuffer = attribute.buffer;
             }
 
-            gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+            gl.vertexAttribPointer(
+              attribute.location,
+              attribute.size,
+              attribute.type,
+              attribute.normalized,
+              attribute.stride,
+              attribute.start,
+            );
             gl.enableVertexAttribArray(attribute.location);
           }
 

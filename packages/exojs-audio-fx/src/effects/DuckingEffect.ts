@@ -30,9 +30,11 @@ export class DuckingEffect extends WorkletEffect {
 
   public constructor(options: DuckingEffectOptions) {
     super();
+
     if (!options.sidechain) {
       throw new Error('DuckingEffect requires a sidechain AudioBus.');
     }
+
     this._sidechain = options.sidechain;
     this._threshold = options.threshold ?? -20;
     this._ratio = options.ratio ?? 4;
@@ -54,7 +56,9 @@ export class DuckingEffect extends WorkletEffect {
 
   protected override _onWorkletReady(audioContext: AudioContext): void {
     // Guard against partially-constructed instances (constructor threw after super()).
-    if (!this._sidechain) return;
+    if (!this._sidechain) {
+      return;
+    }
 
     // Apply current parameter values
     this._setAudioParam('threshold', this._threshold);
@@ -68,6 +72,7 @@ export class DuckingEffect extends WorkletEffect {
   /** Convert ms time-constant to one-pole filter coefficient at given sample rate. */
   private _msToCoeff(ms: number, sampleRate: number): number {
     const tau = ms * 0.001 * sampleRate;
+
     return 1 - Math.exp(-1 / Math.max(1, tau));
   }
 
@@ -75,6 +80,7 @@ export class DuckingEffect extends WorkletEffect {
   public get threshold(): number {
     return this._threshold;
   }
+
   public set threshold(value: number) {
     this._threshold = Math.max(-100, Math.min(0, value));
     this._setAudioParam('threshold', this._threshold);
@@ -84,6 +90,7 @@ export class DuckingEffect extends WorkletEffect {
   public get ratio(): number {
     return this._ratio;
   }
+
   public set ratio(value: number) {
     this._ratio = Math.max(1, Math.min(20, value));
     this._setAudioParam('ratio', this._ratio);
@@ -93,8 +100,10 @@ export class DuckingEffect extends WorkletEffect {
   public get attackMs(): number {
     return this._attackMs;
   }
+
   public set attackMs(value: number) {
     this._attackMs = Math.max(0.001, value);
+
     if (this._workletNode) {
       this._setAudioParam('attack', this._msToCoeff(this._attackMs, this._workletNode.context.sampleRate));
     }
@@ -104,8 +113,10 @@ export class DuckingEffect extends WorkletEffect {
   public get releaseMs(): number {
     return this._releaseMs;
   }
+
   public set releaseMs(value: number) {
     this._releaseMs = Math.max(0.001, value);
+
     if (this._workletNode) {
       this._setAudioParam('release', this._msToCoeff(this._releaseMs, this._workletNode.context.sampleRate));
     }

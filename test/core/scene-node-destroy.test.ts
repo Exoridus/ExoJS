@@ -31,7 +31,9 @@ describe('SceneNode.destroy() idempotence', () => {
     const filterDestroy = vi.fn();
 
     node.filters = [
-      { destroy: filterDestroy, _attachOwner: (): void => {}, _detachOwner: (): void => {} } as unknown as NonNullable<typeof node.filters>[number],
+      { destroy: filterDestroy, _attachOwner: (): void => {}, _detachOwner: (): void => {} } as unknown as NonNullable<
+        typeof node.filters
+      >[number],
     ];
 
     node.destroy();

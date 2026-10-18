@@ -127,7 +127,9 @@ const keyOf = (row: EvidenceRow): string => `${row.browser}|${row.backend}|${row
 
 /** The artifact on disk, or an empty one when it is absent or unreadable. */
 const readExisting = (target: string): EvidenceDocument => {
-  if (!existsSync(target)) return { stamps: {}, rows: [] };
+  if (!existsSync(target)) {
+    return { stamps: {}, rows: [] };
+  }
 
   try {
     const parsed = JSON.parse(readFileSync(target, 'utf8')) as Partial<EvidenceDocument>;

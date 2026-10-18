@@ -5,7 +5,14 @@ import { dirname, resolve } from 'node:path';
 import { runMatrix } from './rendering/driver';
 import type { Backend, CellResult } from './rendering/EngineAdapter';
 import type { TimingBaseline } from './rendering/timingGate';
-import { compareToTimingBaseline, formatTimingOutcome, isTimingFailure, recordTimingBaseline, TIMING_FLOOR_MS, TIMING_THRESHOLD } from './rendering/timingGate';
+import {
+  compareToTimingBaseline,
+  formatTimingOutcome,
+  isTimingFailure,
+  recordTimingBaseline,
+  TIMING_FLOOR_MS,
+  TIMING_THRESHOLD,
+} from './rendering/timingGate';
 import { parseArgs } from './shared/args';
 
 /**
@@ -67,7 +74,9 @@ const main = async (): Promise<void> => {
   const software = outcome.provenance.filter(entry => entry.software).map(entry => entry.adapter);
 
   if (software.length > 0) {
-    throw new Error(`Refusing to use software-rasterizer timings (${software.join(', ')}). Fix the launch flags or run on a machine with a real GPU.`);
+    throw new Error(
+      `Refusing to use software-rasterizer timings (${software.join(', ')}). Fix the launch flags or run on a machine with a real GPU.`,
+    );
   }
 
   if (update) {

@@ -135,8 +135,8 @@ export class RendererRegistry<Runtime extends RenderBackend> {
     if (!renderer) {
       throw new Error(
         `No renderer registered for ${drawable.constructor.name}. ` +
-          'If it comes from an ExoJS extension, import that package before creating the Application, ' +
-          'or pass the extension via ApplicationOptions.extensions.',
+          'If it comes from an ExoJS extension, pass that extension in ApplicationOptions.extensions; ' +
+          'importing the package does not install it.',
       );
     }
 

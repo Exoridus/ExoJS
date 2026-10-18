@@ -8,6 +8,7 @@ const makeMarker = (object: MapObjectDescriptor, color: Color): Graphics => {
   marker.position.set(object.x, object.y);
   marker.fillColor = color;
   marker.drawRoundedRectangle(0, 0, object.width, object.height, 10);
+
   return marker;
 };
 
@@ -33,8 +34,10 @@ class EditorObjectsScene extends Scene {
       const label = new Text(object.name.replace('-', ' '), { fillColor: Color.white, fontSize: 20 });
       label.setAnchor(0.5).setPosition(object.x + object.width / 2, object.y - 18);
       this.labels.push(label);
+
       return makeMarker(object, color);
     };
+
     const spawner = new MapObjectSpawner<void, Graphics>({
       Switch: object => spawn(object, new Color(255, 190, 65)),
       Door: object => spawn(object, new Color(225, 78, 83)),
@@ -54,35 +57,44 @@ class EditorObjectsScene extends Scene {
   private readonly onTap = (pointer: { x: number; y: number }): void => {
     const switchObject = this.objects.get('Switch');
     const gemObject = this.objects.get('Collectible');
+
     if (switchObject && contains(switchObject, pointer.x, pointer.y)) {
       this.doorOpen = !this.doorOpen;
       const doorObject = this.objects.get('Door');
       const door = doorObject && this.spawns.get(doorObject.id);
+
       if (door && doorObject) {
         door.clear();
         door.fillColor = this.doorOpen ? new Color(54, 167, 119, 0.35) : new Color(225, 78, 83);
         door.drawRoundedRectangle(0, 0, doorObject.width, doorObject.height, 10);
       }
+
       this.hud.setStatus(this.doorOpen ? 'Door open. Click the gem.' : 'Door closed. Click the switch to reopen it.');
     } else if (gemObject && contains(gemObject, pointer.x, pointer.y) && !this.collected) {
       if (!this.doorOpen) {
         this.hud.setStatus('The door blocks the gem. Click the switch first.');
+
         return;
       }
+
       this.collected = true;
       const gem = this.spawns.get(gemObject.id);
+
       if (gem) {
         gem.visible = false;
       }
+
       this.hud.setStatus(`Gem collected. Its runtime object came from authored map id ${gemObject.id}.`);
     }
   };
 
   override draw(context: RenderingContext): void {
     context.render(this.mapNode);
+
     for (const object of this.spawns.objects) {
       context.render(object);
     }
+
     for (const label of this.labels) {
       context.render(label);
     }

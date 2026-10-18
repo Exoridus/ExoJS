@@ -2,13 +2,13 @@ import {
   Application,
   Asset,
   AudioBus,
-  AudioStream,
+  type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
   type RenderingContext,
   Scene,
-  Sound,
+  type Sound,
   Text,
 } from '@codexo/exojs';
 import { AudioAnalyser, DuckingEffect } from '@codexo/exojs-audio-fx';
@@ -93,6 +93,7 @@ class DuckingScene extends Scene {
       if (app.audio.locked) {
         return;
       }
+
       app.audio.play(this.voice, { bus: this.voiceBus });
       this.hud.setStatus('Voice playing — music ducked');
     });

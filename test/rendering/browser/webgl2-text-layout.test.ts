@@ -52,6 +52,7 @@ const createBackend = async (width: number, height: number): Promise<WebGl2Backe
   const backend = new WebGl2Backend(app);
   await backend.initialize();
   wireCoreRenderers(backend, app.options.rendering);
+
   return backend;
 };
 
@@ -77,6 +78,7 @@ interface GlyphQuad {
  */
 const glyphQuads = (text: Text): GlyphQuad[] => {
   const quads: GlyphQuad[] = [];
+
   for (const batch of text.pageQuads) {
     for (let i = 0; i < batch.quadCount; i++) {
       const v = i * 8;
@@ -85,6 +87,7 @@ const glyphQuads = (text: Text): GlyphQuad[] => {
       quads.push({ x, y, width: batch.vertices[v + 4] - x, height: batch.vertices[v + 5] - y });
     }
   }
+
   return quads;
 };
 
@@ -92,11 +95,13 @@ const glyphQuads = (text: Text): GlyphQuad[] => {
 const distinctBands = (values: number[], tolerance = 4): number[] => {
   const sorted = [...values].sort((a, b) => a - b);
   const bands: number[] = [];
+
   for (const value of sorted) {
     if (bands.length === 0 || value - bands[bands.length - 1] > tolerance) {
       bands.push(value);
     }
   }
+
   return bands;
 };
 

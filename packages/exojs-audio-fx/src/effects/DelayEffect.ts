@@ -38,12 +38,18 @@ export class DelayEffect extends AudioEffect {
   }
 
   public get inputNode(): AudioNode {
-    if (!this._setup) throw new Error('DelayEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('DelayEffect not yet initialized.');
+    }
+
     return this._setup.inputGain;
   }
 
   public get outputNode(): AudioNode {
-    if (!this._setup) throw new Error('DelayEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('DelayEffect not yet initialized.');
+    }
+
     return this._setup.outputGain;
   }
 
@@ -54,6 +60,7 @@ export class DelayEffect extends AudioEffect {
 
   public set delaySeconds(value: number) {
     this._delaySeconds = Math.max(0, Math.min(5, value));
+
     if (this._setup) {
       this._setup.delayNode.delayTime.setTargetAtTime(this._delaySeconds, this._setup.delayNode.context.currentTime, 0.01);
     }
@@ -66,6 +73,7 @@ export class DelayEffect extends AudioEffect {
 
   public set feedback(value: number) {
     this._feedback = Math.max(0, Math.min(0.95, value));
+
     if (this._setup) {
       this._setup.feedbackGain.gain.setTargetAtTime(this._feedback, this._setup.feedbackGain.context.currentTime, 0.01);
     }
@@ -78,6 +86,7 @@ export class DelayEffect extends AudioEffect {
 
   public set wet(value: number) {
     this._wet = Math.max(0, Math.min(1, value));
+
     if (this._setup) {
       const ctx = this._setup.wetGain.context;
       this._setup.wetGain.gain.setTargetAtTime(this._wet, ctx.currentTime, 0.01);
@@ -87,6 +96,7 @@ export class DelayEffect extends AudioEffect {
 
   public override destroy(): void {
     this._teardown();
+
     if (this._setup) {
       this._setup.inputGain.disconnect();
       this._setup.delayNode.disconnect();

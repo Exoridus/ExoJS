@@ -84,12 +84,15 @@ export class PcmStreamSource {
 
   public constructor(options: PcmStreamSourceOptions) {
     const capacity = options.capacityFrames ?? 8192;
+
     if (options.channels !== 1 && options.channels !== 2) {
       throw new RangeError('PcmStreamSource requires one or two channels.');
     }
+
     if (!Number.isInteger(capacity) || capacity < 1 || capacity > 1048576) {
       throw new RangeError('PcmStreamSource capacityFrames must be an integer from 1 to 1048576.');
     }
+
     this.channels = options.channels;
     this.capacityFrames = capacity;
     this._context = getAudioContext();
@@ -104,6 +107,7 @@ export class PcmStreamSource {
     });
     this.bus = options.bus ?? null;
     this._context.addEventListener?.('statechange', this._onContextState);
+
     if (this._context.state === 'closed') {
       this._onContextState();
     } else {
@@ -171,20 +175,35 @@ export class PcmStreamSource {
 
   /** Reroute to a bus input, or disconnect that route with `null`. Does not take ownership of the bus or its effects. */
   public set bus(bus: AudioBus | null) {
-    if (this._terminal || bus === this._bus) return;
+    if (this._terminal || bus === this._bus) {
+      return;
+    }
+
     this._disconnectBus();
     this._bus = bus;
-    if (!bus) return;
+
+    if (!bus) {
+      return;
+    }
+
     const connect = (): void => {
-      if (this._terminal || this._bus !== bus) return;
+      if (this._terminal || this._bus !== bus) {
+        return;
+      }
+
       const input = bus.getInputNode();
+
       if (input) {
         this.output.connect(input);
         this._busNode = input;
       }
     };
-    if (bus.getInputNode()) connect();
-    else this._cancelBusSetup = bus.onceSetup(connect);
+
+    if (bus.getInputNode()) {
+      connect();
+    } else {
+      this._cancelBusSetup = bus.onceSetup(connect);
+    }
   }
 
   /**
@@ -193,10 +212,17 @@ export class PcmStreamSource {
    * the next available quantum. Returns false unless ready and not yet started.
    */
   public start(time = this._context.currentTime): boolean {
-    if (this._state !== 'ready') return false;
-    if (!Number.isFinite(time) || time < 0) throw new RangeError('PcmStreamSource start time must be finite and nonnegative.');
+    if (this._state !== 'ready') {
+      return false;
+    }
+
+    if (!Number.isFinite(time) || time < 0) {
+      throw new RangeError('PcmStreamSource start time must be finite and nonnegative.');
+    }
+
     this._node!.port.postMessage({ type: 'start', time });
     this._state = 'running';
+
     return true;
   }
 
@@ -207,32 +233,73 @@ export class PcmStreamSource {
    * without sending a message. Invalid layout or nonfinite samples throw.
    */
   public enqueuePlanar(channels: readonly Float32Array[]): boolean {
-    if (!this._writable) return false;
-    if (channels.length !== this.channels) throw new RangeError('PCM channel count does not match the source.');
-    const frames = channels[0]!.length;
-    for (const channel of channels) {
-      if (!(channel instanceof Float32Array) || channel.length !== frames) throw new RangeError('PCM channels must be equal-length Float32Arrays.');
+    if (!this._writable) {
+      return false;
     }
-    if (!this._admit(frames)) return false;
-    for (const channel of channels) this._validateSamples(channel);
-    if (frames === 0) return true;
+
+    if (channels.length !== this.channels) {
+      throw new RangeError('PCM channel count does not match the source.');
+    }
+
+    const frames = channels[0]!.length;
+
+    for (const channel of channels) {
+      if (!(channel instanceof Float32Array) || channel.length !== frames) {
+        throw new RangeError('PCM channels must be equal-length Float32Arrays.');
+      }
+    }
+
+    if (!this._admit(frames)) {
+      return false;
+    }
+
+    for (const channel of channels) {
+      this._validateSamples(channel);
+    }
+
+    if (frames === 0) {
+      return true;
+    }
+
     const packed = new Float32Array(frames * this.channels);
-    for (let channel = 0; channel < this.channels; channel++) packed.set(channels[channel]!, channel * frames);
+
+    for (let channel = 0; channel < this.channels; channel++) {
+      packed.set(channels[channel]!, channel * frames);
+    }
+
     return this._submit(packed, frames);
   }
 
   /** Copy interleaved frames (L,R,L,R for stereo). Same acceptance and ownership contract as {@link enqueuePlanar}. */
   public enqueueInterleaved(data: Float32Array): boolean {
-    if (!this._writable) return false;
-    if (!(data instanceof Float32Array) || data.length % this.channels !== 0) throw new RangeError('PCM must contain whole Float32 frames.');
-    const frames = data.length / this.channels;
-    if (!this._admit(frames)) return false;
-    this._validateSamples(data);
-    if (frames === 0) return true;
-    const packed = new Float32Array(data.length);
-    for (let channel = 0; channel < this.channels; channel++) {
-      for (let frame = 0; frame < frames; frame++) packed[channel * frames + frame] = data[frame * this.channels + channel]!;
+    if (!this._writable) {
+      return false;
     }
+
+    if (!(data instanceof Float32Array) || data.length % this.channels !== 0) {
+      throw new RangeError('PCM must contain whole Float32 frames.');
+    }
+
+    const frames = data.length / this.channels;
+
+    if (!this._admit(frames)) {
+      return false;
+    }
+
+    this._validateSamples(data);
+
+    if (frames === 0) {
+      return true;
+    }
+
+    const packed = new Float32Array(data.length);
+
+    for (let channel = 0; channel < this.channels; channel++) {
+      for (let frame = 0; frame < frames; frame++) {
+        packed[channel * frames + frame] = data[frame * this.channels + channel]!;
+      }
+    }
+
     return this._submit(packed, frames);
   }
 
@@ -242,7 +309,10 @@ export class PcmStreamSource {
    * new writes until acknowledged. No-op while loading or after close.
    */
   public clear(): void {
-    if (!this._writable) return;
+    if (!this._writable) {
+      return;
+    }
+
     this._node!.port.postMessage({ type: 'clear' });
     this._clearing = true;
   }
@@ -254,14 +324,20 @@ export class PcmStreamSource {
    * immediate cancellation while suspended. Idempotent and terminal.
    */
   public close(): void {
-    if (this._terminal || this._state === 'closing') return;
+    if (this._terminal || this._state === 'closing') {
+      return;
+    }
+
     this._state = 'closing';
     this._node?.port.postMessage({ type: 'close' });
   }
 
   /** Stop immediately, discard pending PCM, detach routes and release the port. Idempotent; never destroys the bus or shared context. */
   public destroy(): void {
-    if (this._state === 'destroyed') return;
+    if (this._state === 'destroyed') {
+      return;
+    }
+
     this._state = 'destroyed';
     this._rejectReady(new DOMException('PcmStreamSource was destroyed during loading.', 'AbortError'));
     this._dispose(true);
@@ -278,15 +354,21 @@ export class PcmStreamSource {
   }
 
   private _admit(frames: number): boolean {
-    if (frames <= this.capacityFrames - this.bufferedFrames) return true;
+    if (frames <= this.capacityFrames - this.bufferedFrames) {
+      return true;
+    }
+
     this._overflowCount++;
     this._droppedFrames += frames;
+
     return false;
   }
 
   private _validateSamples(data: Float32Array): void {
     for (const sample of data) {
-      if (!Number.isFinite(sample)) throw new RangeError('PCM samples must be finite.');
+      if (!Number.isFinite(sample)) {
+        throw new RangeError('PCM samples must be finite.');
+      }
     }
   }
 
@@ -294,13 +376,18 @@ export class PcmStreamSource {
     this._node!.port.postMessage({ type: 'write', data }, [data.buffer]);
     this._submittedFrames += frames;
     this._highWaterFrames = Math.max(this._highWaterFrames, this.bufferedFrames);
+
     return true;
   }
 
   private async _load(): Promise<void> {
     try {
       await registerAudioWorkletProcessor(this._context, 'exojs-pcm-stream', pcmStreamWorkletSource);
-      if (this._terminal) return;
+
+      if (this._terminal) {
+        return;
+      }
+
       const node = new AudioWorkletNode(this._context, 'exojs-pcm-stream', {
         numberOfInputs: 0,
         numberOfOutputs: 1,
@@ -311,22 +398,39 @@ export class PcmStreamSource {
       node.port.onmessage = (event: MessageEvent<PcmStatus>): void => this._receive(event.data);
       node.onprocessorerror = (): void => this._fail(new Error('PcmStreamSource: the audio processor failed.'));
       node.connect(this.output);
-      if (this._state === 'closing') node.port.postMessage({ type: 'close' });
-      else this._state = 'ready';
+
+      if (this._state === 'closing') {
+        node.port.postMessage({ type: 'close' });
+      } else {
+        this._state = 'ready';
+      }
+
       this._resolveReady();
     } catch (error) {
-      if (!this._terminal) this._fail(error instanceof Error ? error : new Error(String(error)));
+      if (!this._terminal) {
+        this._fail(error instanceof Error ? error : new Error(String(error)));
+      }
     }
   }
 
   private _receive(status: PcmStatus): void {
-    if (this._terminal) return;
+    if (this._terminal) {
+      return;
+    }
+
     this._releasedFrames = status.releasedFrames;
     this._playedFrames = status.playedFrames;
     this._underrunFrames = status.underrunFrames;
     this._underruns = status.underruns;
-    if (status.type === 'status') this._node!.port.postMessage({ type: 'ack' });
-    if (status.type === 'cleared') this._clearing = false;
+
+    if (status.type === 'status') {
+      this._node!.port.postMessage({ type: 'ack' });
+    }
+
+    if (status.type === 'cleared') {
+      this._clearing = false;
+    }
+
     if (status.type === 'ended') {
       this._state = 'closed';
       this._dispose(false);
@@ -335,7 +439,10 @@ export class PcmStreamSource {
   }
 
   private _fail(error: Error): void {
-    if (this._terminal) return;
+    if (this._terminal) {
+      return;
+    }
+
     this._state = 'failed';
     this._rejectReady(error);
     this._dispose(true);
@@ -345,21 +452,30 @@ export class PcmStreamSource {
   private _disconnectBus(): void {
     this._cancelBusSetup?.();
     this._cancelBusSetup = null;
-    if (this._busNode) this.output.disconnect(this._busNode);
+
+    if (this._busNode) {
+      this.output.disconnect(this._busNode);
+    }
+
     this._busNode = null;
   }
 
   private _dispose(terminate: boolean): void {
     this._context.removeEventListener?.('statechange', this._onContextState);
     this._disconnectBus();
+
     if (this._node) {
-      if (terminate) this._node.port.postMessage({ type: 'destroy' });
+      if (terminate) {
+        this._node.port.postMessage({ type: 'destroy' });
+      }
+
       this._node.port.onmessage = null;
       this._node.onprocessorerror = null;
       this._node.disconnect();
       this._node.port.close();
       this._node = null;
     }
+
     this.output.disconnect();
     this._releasedFrames = this._submittedFrames;
     this._clearing = false;

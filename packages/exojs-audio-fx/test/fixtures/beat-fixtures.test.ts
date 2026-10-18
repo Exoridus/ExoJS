@@ -29,18 +29,29 @@ const ONE_SAMPLE_SEC = 1 / SAMPLE_RATE;
 
 const peakAmplitude = (buf: Float32Array): number => {
   let peak = 0;
+
   for (const v of buf) {
     const abs = Math.abs(v);
-    if (abs > peak) peak = abs;
+
+    if (abs > peak) {
+      peak = abs;
+    }
   }
+
   return peak;
 };
 
 const arraysEqual = (a: Float32Array, b: Float32Array): boolean => {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false;
+  if (a.length !== b.length) {
+    return false;
   }
+
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) {
+      return false;
+    }
+  }
+
   return true;
 };
 
@@ -62,6 +73,7 @@ describe('clicktrack fixtures', () => {
 
       it('consecutive beat spacing within < 1 sample of 60/bpm', () => {
         const times = fixture.beatTimesSec;
+
         for (let i = 1; i < times.length; i++) {
           const spacing = times[i] - times[i - 1];
           expect(Math.abs(spacing - ibi)).toBeLessThan(ONE_SAMPLE_SEC);
@@ -234,6 +246,7 @@ describe('swing fixture', () => {
 
   it('main beat spacing is exactly 60/120 = 0.5s', () => {
     const ibi = 60 / 120;
+
     for (let i = 1; i < f.beatTimesSec.length; i++) {
       expect(Math.abs(f.beatTimesSec[i] - f.beatTimesSec[i - 1] - ibi)).toBeLessThan(ONE_SAMPLE_SEC);
     }
@@ -266,6 +279,7 @@ describe('grooveOffset fixture', () => {
   it('beat times stay within ±jitterMs of the grid', () => {
     const ibi = 60 / 120;
     const jitterSec = 10 * 0.001;
+
     for (let i = 0; i < f.beatTimesSec.length; i++) {
       const grid = i * ibi;
       expect(Math.abs(f.beatTimesSec[i] - grid)).toBeLessThanOrEqual(jitterSec + ONE_SAMPLE_SEC);
@@ -304,6 +318,7 @@ describe('djMix fixture', () => {
 
   it('consecutive beat spacing within < 1 sample of 60/180', () => {
     const times = f.beatTimesSec;
+
     for (let i = 1; i < times.length; i++) {
       const spacing = times[i] - times[i - 1];
       expect(Math.abs(spacing - ibi)).toBeLessThan(ONE_SAMPLE_SEC);
@@ -361,6 +376,7 @@ describe('tempoDrift fixture', () => {
   it('beat spacings stay within [60/150, 60/128] seconds', () => {
     const minIbi = 60 / 150;
     const maxIbi = 60 / 128;
+
     for (let i = 1; i < f.beatTimesSec.length; i++) {
       const spacing = f.beatTimesSec[i] - f.beatTimesSec[i - 1];
       expect(spacing).toBeGreaterThanOrEqual(minIbi - ONE_SAMPLE_SEC);
@@ -394,6 +410,7 @@ describe('djMixDrift fixture', () => {
 
   it('bpm stays within [baseBpm - driftBpm, baseBpm + driftBpm]', () => {
     const bpmFn = f.bpm as (t: number) => number;
+
     for (let t = 0; t <= 30; t += 0.5) {
       expect(bpmFn(t)).toBeGreaterThanOrEqual(175 - 1e-9);
       expect(bpmFn(t)).toBeLessThanOrEqual(185 + 1e-9);
@@ -438,6 +455,7 @@ describe('softOnset fixture', () => {
 
   it('consecutive beat spacing within < 1 sample of 60/90', () => {
     const times = f.beatTimesSec;
+
     for (let i = 1; i < times.length; i++) {
       const spacing = times[i] - times[i - 1];
       expect(Math.abs(spacing - ibi)).toBeLessThan(ONE_SAMPLE_SEC);

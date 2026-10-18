@@ -85,7 +85,10 @@ describe('the CHANGELOG gate', () => {
   it('compares a commit on main against main, where the release rewrote the file', () => {
     // The gate fix that follows a bump: it touches no CHANGELOG, but every
     // commit on main differs from `next` in that file.
-    const { git, upstreams } = fakeGit({ subject: 'build(ci): fix a gate after the bump', changedAgainst: { 'origin/next': ['CHANGELOG.md'] } });
+    const { git, upstreams } = fakeGit({
+      subject: 'build(ci): fix a gate after the bump',
+      changedAgainst: { 'origin/next': ['CHANGELOG.md'] },
+    });
     const result = checkChangelogUntouched({ git, branch: 'main' });
 
     expect(upstreams).toEqual(['origin/main']);

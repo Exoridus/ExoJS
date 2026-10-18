@@ -44,8 +44,12 @@ class VocoderScene extends Scene {
     // voice actually reaching the speakers, not the dry carrier.
     this.level = new AudioAnalyser({ source: app.audio.sound, smoothingTimeConstant: 0.6 });
     this.gfx = new Graphics();
-    this.phraseLabel = new Text('', { fillColor: Color.white, fontSize: 28, align: 'center' }).setAnchor(0.5, 0.5).setPosition(width / 2, height / 2 - 130);
-    this.hintLabel = new Text('', { fillColor: new Color(150, 162, 186), fontSize: 18 }).setAnchor(0.5, 0.5).setPosition(width / 2, height / 2 + 130);
+    this.phraseLabel = new Text('', { fillColor: Color.white, fontSize: 28, align: 'center' })
+      .setAnchor(0.5, 0.5)
+      .setPosition(width / 2, height / 2 - 130);
+    this.hintLabel = new Text('', { fillColor: new Color(150, 162, 186), fontSize: 18 })
+      .setAnchor(0.5, 0.5)
+      .setPosition(width / 2, height / 2 + 130);
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it and the queued carrier starts.
     this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })

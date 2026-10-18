@@ -269,7 +269,9 @@ describe('persistent slots: a live entry cuts the order stream', () => {
 
     driveToSourceTier(root, harness.backend);
 
-    for (const store of harness.stores) store.segments.length = 0;
+    for (const store of harness.stores) {
+      store.segments.length = 0;
+    }
 
     const events = frameEvents(harness, root);
 
@@ -371,11 +373,21 @@ describe('persistent slots: a live entry cuts the order stream', () => {
 
     driveToSourceTier(root, harness.backend);
 
-    for (const store of harness.stores) store.segments.length = 0;
+    for (const store of harness.stores) {
+      store.segments.length = 0;
+    }
 
     const events = frameEvents(harness, root);
 
-    expect(events).toEqual(['scissor:0,0,400,300', ...ids('x', 2), 'popScissor', ...ids('a', 3), 'scissor:0,0,500,300', ...ids('y', 2), 'popScissor']);
+    expect(events).toEqual([
+      'scissor:0,0,400,300',
+      ...ids('x', 2),
+      'popScissor',
+      ...ids('a', 3),
+      'scissor:0,0,500,300',
+      ...ids('y', 2),
+      'popScissor',
+    ]);
     expect(harness.stores[0]!.segments).toEqual([[0, 3]]);
 
     root.destroy();
@@ -401,11 +413,22 @@ describe('persistent slots: a live entry cuts the order stream', () => {
     addLeaves(root, 'b', 2, 300);
     driveToSourceTier(root, harness.backend);
 
-    for (const store of harness.stores) store.segments.length = 0;
+    for (const store of harness.stores) {
+      store.segments.length = 0;
+    }
 
     const events = frameEvents(harness, root);
 
-    expect(events).toEqual([...ids('a', 2), 'scissor:0,0,400,300', 'm0', 'popScissor', 'scissor:0,0,400,300', 'n0', 'popScissor', ...ids('b', 2)]);
+    expect(events).toEqual([
+      ...ids('a', 2),
+      'scissor:0,0,400,300',
+      'm0',
+      'popScissor',
+      'scissor:0,0,400,300',
+      'n0',
+      'popScissor',
+      ...ids('b', 2),
+    ]);
     expect(harness.stores[0]!.segments).toEqual([
       [0, 2],
       [2, 2],
@@ -430,7 +453,9 @@ describe('persistent slots: a live entry cuts the order stream', () => {
     addLeaves(root, 'b', 3, 300);
     driveToSourceTier(root, harness.backend);
 
-    for (const store of harness.stores) store.segments.length = 0;
+    for (const store of harness.stores) {
+      store.segments.length = 0;
+    }
 
     const events = frameEvents(harness, root);
 
@@ -476,7 +501,9 @@ describe('persistent slots: a live entry cuts the order stream', () => {
       playFrame(root, harness.backend);
     }
 
-    for (const store of harness.stores) store.segments.length = 0;
+    for (const store of harness.stores) {
+      store.segments.length = 0;
+    }
 
     const events = frameEvents(harness, root);
 
@@ -526,11 +553,23 @@ describe('persistent slots: a live entry cuts the order stream', () => {
     addLeaves(root, 'b', 1, 300);
     driveToSourceTier(root, harness.backend);
 
-    for (const store of harness.stores) store.segments.length = 0;
+    for (const store of harness.stores) {
+      store.segments.length = 0;
+    }
 
     const events = frameEvents(harness, root);
 
-    expect(events).toEqual([...ids('a', 2), 'g0', 'scissor:0,0,400,300', 'x0', 'popScissor', 'scissor:0,0,500,300', 'm0', 'popScissor', 'b0']);
+    expect(events).toEqual([
+      ...ids('a', 2),
+      'g0',
+      'scissor:0,0,400,300',
+      'x0',
+      'popScissor',
+      'scissor:0,0,500,300',
+      'm0',
+      'popScissor',
+      'b0',
+    ]);
     expect(harness.stores[0]!.segments).toEqual([
       [0, 3],
       [3, 1],
@@ -573,7 +612,9 @@ describe('persistent slots: a live entry cuts the order stream', () => {
     addLeaves(root, 'a', 5, 100);
     driveToSourceTier(root, harness.backend);
 
-    for (const store of harness.stores) store.segments.length = 0;
+    for (const store of harness.stores) {
+      store.segments.length = 0;
+    }
 
     const events = frameEvents(harness, root);
 

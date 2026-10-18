@@ -28,6 +28,7 @@ export class TilePhysicsBinding {
 
   private _sync(x: number, y: number): void {
     const p = this.projection;
+
     if (p.orientation === 'isometric') {
       this.node.setPosition(p.originX + ((x - y) * p.tileWidth) / (2 * p.tileHeight), p.originY + (x + y) / 2);
     } else {

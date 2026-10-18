@@ -32,7 +32,10 @@ const RATIOS = [1, 2, 3] as const;
 const FONT_SIZES = [9, 11, 16, 24] as const;
 
 /** Raster texel extent of a glyph's atlas slot, recovered from its UV rectangle. */
-const rasterTile = (info: { uvLeft: number; uvRight: number; uvTop: number; uvBottom: number }, pageSize = 1024): { width: number; height: number } => ({
+const rasterTile = (
+  info: { uvLeft: number; uvRight: number; uvTop: number; uvBottom: number },
+  pageSize = 1024,
+): { width: number; height: number } => ({
   width: Math.round((info.uvRight - info.uvLeft) * pageSize),
   height: Math.round((info.uvBottom - info.uvTop) * pageSize),
 });
@@ -99,7 +102,9 @@ describe('SDF rasterization at a pixel ratio', () => {
     const pool = new GlyphAtlasPool();
 
     for (const fontSize of FONT_SIZES) {
-      const advances = RATIOS.map(ratio => pool.getAtlas({ family: FAMILY, fontWeight: '400' }, 'sdf', 8, ratio).getGlyph('M', fontSize).advance);
+      const advances = RATIOS.map(
+        ratio => pool.getAtlas({ family: FAMILY, fontWeight: '400' }, 'sdf', 8, ratio).getGlyph('M', fontSize).advance,
+      );
 
       expect(new Set(advances).size, `font size ${fontSize}: ${advances.join(', ')}`).toBe(1);
     }
@@ -134,11 +139,15 @@ describe('the SDF atlas is sampled as a continuous field', () => {
       const row = scanline(frame, y);
       const covered = row.findIndex(value => value > 247);
 
-      if (covered <= 0 || !row.slice(0, covered).some(value => value < 8)) continue;
+      if (covered <= 0 || !row.slice(0, covered).some(value => value < 8)) {
+        continue;
+      }
 
       let start = covered;
 
-      while (start > 0 && row[start - 1]! >= 8) start--;
+      while (start > 0 && row[start - 1]! >= 8) {
+        start--;
+      }
 
       profiles.push(row.slice(Math.max(0, start - 1), covered + 1));
     }
@@ -158,7 +167,8 @@ describe('the SDF atlas is sampled as a continuous field', () => {
    * running backwards within one edge is what a collapsed or scrambled field
    * looks like.
    */
-  const isMonotoneEdgeProfile = (profile: number[]): boolean => profile.every((value, index) => index === 0 || value >= profile[index - 1]!);
+  const isMonotoneEdgeProfile = (profile: number[]): boolean =>
+    profile.every((value, index) => index === 0 || value >= profile[index - 1]!);
 
   const describeProfiles = (profiles: number[][], levels: number[]): string =>
     `${profiles.length} rows, levels [${levels.join(', ')}], first rows ${profiles
@@ -471,7 +481,9 @@ describe('style lengths stated in logical pixels', () => {
   const rightmostInk = (frame: Uint8Array): number | null => {
     for (let x = size - 1; x >= 0; x--) {
       for (let y = 0; y < size; y++) {
-        if (frame[(y * size + x) * 4]! > 40) return x;
+        if (frame[(y * size + x) * 4]! > 40) {
+          return x;
+        }
       }
     }
 

@@ -16,7 +16,9 @@ class NoopSession implements SceneTransitionSession {
   public destroyCallCount = 0;
 
   public update(_delta: Seconds): void {}
+
   public render(_context: RenderingContext, _frame: SceneTransitionFrame): void {}
+
   public destroy(): void {
     this.destroyCallCount++;
   }

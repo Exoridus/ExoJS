@@ -25,7 +25,8 @@ import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { makeTextures } from './fixtures';
 import { createWebGl2Harness, measureFrame } from './harness';
 
-const transformBufferOf = (backend: WebGl2Backend): TransformBuffer => (backend as unknown as { _transformBuffer: TransformBuffer })._transformBuffer;
+const transformBufferOf = (backend: WebGl2Backend): TransformBuffer =>
+  (backend as unknown as { _transformBuffer: TransformBuffer })._transformBuffer;
 
 describe('WebGL2 raw transform rows (GPU position snap seam flip)', () => {
   it('a position-snapped sprite uploads its RAW fractional translation with the snap flag set', () => {

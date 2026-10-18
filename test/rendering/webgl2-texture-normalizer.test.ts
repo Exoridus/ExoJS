@@ -29,9 +29,17 @@ const createFakeGl = () => {
     DEPTH_TEST: 3,
     CULL_FACE: 4,
     getParameter: (parameter: string): unknown => {
-      if (parameter === 'ACTIVE_TEXTURE') return activeUnit;
-      if (parameter === 'TEXTURE_BINDING_2D') return bindings.get(activeUnit) ?? null;
-      if (parameter === 'VIEWPORT') return new Int32Array(4);
+      if (parameter === 'ACTIVE_TEXTURE') {
+        return activeUnit;
+      }
+
+      if (parameter === 'TEXTURE_BINDING_2D') {
+        return bindings.get(activeUnit) ?? null;
+      }
+
+      if (parameter === 'VIEWPORT') {
+        return new Int32Array(4);
+      }
 
       return null;
     },
@@ -54,7 +62,10 @@ const createFakeGl = () => {
     texImage2D: (...args: readonly unknown[]) => {
       const texture = bindings.get(activeUnit) ?? null;
 
-      if (texture !== null) texture.allocations += 1;
+      if (texture !== null) {
+        texture.allocations += 1;
+      }
+
       void args;
     },
     texSubImage2D: () => {
@@ -74,15 +85,15 @@ const createFakeGl = () => {
 
   // Every remaining GL entry point is a no-op.
   const proxy = new Proxy(gl, {
-    get: (target, property: string) => (property in target ? target[property] : () => undefined),
+    get: (target, property: string) => (property in target ? target[property] : () => {}),
   }) as unknown as WebGL2RenderingContext;
 
   return { gl: proxy, bindings, uploads, textures, deleted };
 };
 
 const noopHost: WebGl2ColorNormalizationHost = {
-  releaseForColorNormalization: () => undefined,
-  restoreAfterColorNormalization: () => undefined,
+  releaseForColorNormalization: () => {},
+  restoreAfterColorNormalization: () => {},
 };
 
 const createTarget = (width: number, height: number, level = 0) => ({

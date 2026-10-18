@@ -96,10 +96,13 @@ const createDeserializeContext = (loader: Loader | null, version: number, regist
       const resource = loader._peekResource(type, source, options) as T | null;
 
       if (resource === null) {
-        logger.warn(`An asset referenced by a node was not pre-loaded into the Loader before deserialize (e.g. "${source}"); it resolves to null.`, {
-          source: 'serialize',
-          once: 'serialize:missing-asset',
-        });
+        logger.warn(
+          `An asset referenced by a node was not pre-loaded into the Loader before deserialize (e.g. "${source}"); it resolves to null.`,
+          {
+            source: 'serialize',
+            once: 'serialize:missing-asset',
+          },
+        );
       }
 
       return resource;
@@ -110,7 +113,9 @@ const createDeserializeContext = (loader: Loader | null, version: number, regist
 };
 
 /** The `(source, options)` request a stored reference names, or `null` for anything that is not one. */
-const readAssetReference = (reference: unknown): { readonly source: string; readonly options?: Readonly<Record<string, unknown>> } | null => {
+const readAssetReference = (
+  reference: unknown,
+): { readonly source: string; readonly options?: Readonly<Record<string, unknown>> } | null => {
   if (typeof reference === 'string') {
     return { source: reference };
   }
@@ -246,7 +251,10 @@ export const deserializeInto = (
   if (Array.isArray(children)) {
     for (const child of children) {
       const childNode = asSerializedNode(child);
-      if (childNode !== null) container.addChild(ctx.readNode(childNode) as RenderNode);
+
+      if (childNode !== null) {
+        container.addChild(ctx.readNode(childNode) as RenderNode);
+      }
     }
   }
 };

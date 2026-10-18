@@ -17,12 +17,15 @@ const bytesToGids = (bytes: Uint8Array, source: string, path: string): number[] 
   if (bytes.length % 4 !== 0) {
     throw new TiledFormatError(source, path, `decoded tile data length ${bytes.length} is not a multiple of 4`);
   }
+
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const count = bytes.length / 4;
   const gids = new Array<number>(count);
+
   for (let i = 0; i < count; i++) {
     gids[i] = view.getUint32(i * 4, true); // Tiled writes little-endian.
   }
+
   return gids;
 };
 
@@ -35,7 +38,11 @@ const decodeBase64Gids = async (data: string, compression: unknown, source: stri
   } else if (compression === 'zlib') {
     bytes = await Codec.decompress(bytes, 'deflate');
   } else if (compression === 'zstd') {
-    throw new TiledFormatError(source, path, 'zstd-compressed tile data is not supported (no native decoder; re-export with gzip/zlib or uncompressed)');
+    throw new TiledFormatError(
+      source,
+      path,
+      'zstd-compressed tile data is not supported (no native decoder; re-export with gzip/zlib or uncompressed)',
+    );
   } else if (compression !== undefined && compression !== '') {
     throw new TiledFormatError(source, path, `unsupported tile layer compression ${JSON.stringify(compression)}`);
   }
@@ -56,8 +63,12 @@ const decodeTileLayer = async (layer: Record<string, unknown>, source: string, p
   if (Array.isArray(layer.chunks)) {
     await Promise.all(
       (layer.chunks as unknown[]).map(async (chunk, i) => {
-        if (typeof chunk !== 'object' || chunk === null) return;
+        if (typeof chunk !== 'object' || chunk === null) {
+          return;
+        }
+
         const c = chunk as Record<string, unknown>;
+
         if (typeof c.data === 'string') {
           c.data = await decodeBase64Gids(c.data, layer.compression, source, `${path}.chunks[${i}].data`);
         }
@@ -76,11 +87,16 @@ const decodeLayers = async (layers: unknown, source: string, path: string): Prom
   if (!Array.isArray(layers)) {
     return;
   }
+
   await Promise.all(
     (layers as unknown[]).map(async (layer, i) => {
-      if (typeof layer !== 'object' || layer === null) return;
+      if (typeof layer !== 'object' || layer === null) {
+        return;
+      }
+
       const l = layer as Record<string, unknown>;
       const layerPath = `${path}[${i}]`;
+
       if (l.type === 'tilelayer') {
         await decodeTileLayer(l, source, layerPath);
       } else if (l.type === 'group') {
@@ -102,5 +118,6 @@ export const decodeTiledLayerData = async (raw: unknown, source: string): Promis
   if (typeof raw === 'object' && raw !== null) {
     await decodeLayers((raw as Record<string, unknown>).layers, source, 'layers');
   }
+
   return raw;
 };

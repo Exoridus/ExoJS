@@ -89,6 +89,7 @@ const createGlSpyHarness = (): GlSpyHarness => {
   mutable['drawElements'] = (_mode: number, count: number, indexType: number): void => {
     draws.push({ kind: 'draw', count, indexType });
   };
+
   mutable['drawElementsInstanced'] = (_mode: number, count: number, indexType: number): void => {
     draws.push({ kind: 'instanced', count, indexType });
   };

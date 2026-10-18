@@ -42,7 +42,8 @@ const makeApp = (stats: AssetStats = emptyStats) => {
 const time = (ms: number): Seconds => Time.toSeconds(Time.milliseconds(ms));
 
 /** Peek at the layer's private text nodes for panel-content assertions. */
-const internals = (layer: AssetCacheLayer): { _header: Text | null; _lines: Text[]; _root: unknown } => layer as unknown as ReturnType<typeof internals>;
+const internals = (layer: AssetCacheLayer): { _header: Text | null; _lines: Text[]; _root: unknown } =>
+  layer as unknown as ReturnType<typeof internals>;
 
 /** Every non-blank line the panel currently shows. */
 const visibleLines = (layer: AssetCacheLayer): string[] =>
@@ -76,10 +77,16 @@ describe('AssetCacheLayer', () => {
     layer.update(time(16));
 
     // 20 frames of 16ms is 320ms - still inside the interval.
-    for (let frame = 0; frame < 20; frame++) layer.update(time(16));
+    for (let frame = 0; frame < 20; frame++) {
+      layer.update(time(16));
+    }
+
     expect(loaderStats).toHaveBeenCalledTimes(1);
 
-    for (let frame = 0; frame < 20; frame++) layer.update(time(16));
+    for (let frame = 0; frame < 20; frame++) {
+      layer.update(time(16));
+    }
+
     expect(loaderStats).toHaveBeenCalledTimes(2);
   });
 
@@ -100,11 +107,24 @@ describe('AssetCacheLayer', () => {
     layer.update(time(16));
 
     expect(internals(layer)._header?.text).toBe('Assets: 3 ready  1.00 MB');
-    expect(visibleLines(layer)).toEqual(['pending 2   failed 1', 'texture      2  1.00 MB', 'json         1  0 B', 'Largest:', '  texture:/hero.png  1.00 MB']);
+    expect(visibleLines(layer)).toEqual([
+      'pending 2   failed 1',
+      'texture      2  1.00 MB',
+      'json         1  0 B',
+      'Largest:',
+      '  texture:/hero.png  1.00 MB',
+    ]);
   });
 
   test('the largest section is omitted when nothing resident could be sized', () => {
-    const { app } = makeApp({ ready: 1, pending: 0, failed: 0, bytes: 0, byType: [{ type: 'json', ready: 1, pending: 0, failed: 0, bytes: 0 }], largest: [] });
+    const { app } = makeApp({
+      ready: 1,
+      pending: 0,
+      failed: 0,
+      bytes: 0,
+      byType: [{ type: 'json', ready: 1, pending: 0, failed: 0, bytes: 0 }],
+      largest: [],
+    });
     const layer = new AssetCacheLayer(app);
 
     layer.update(time(16));

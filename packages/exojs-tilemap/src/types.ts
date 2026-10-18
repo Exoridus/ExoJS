@@ -64,7 +64,15 @@ export interface TilePropertyTileRef {
  * @advanced
  */
 export type TilePropertyValue =
-  null | boolean | number | string | TilePropertyPoint | TilePropertyObjectRef | TilePropertyTileRef | readonly TilePropertyValue[] | TileProperties;
+  | null
+  | boolean
+  | number
+  | string
+  | TilePropertyPoint
+  | TilePropertyObjectRef
+  | TilePropertyTileRef
+  | readonly TilePropertyValue[]
+  | TileProperties;
 
 /**
  * An immutable, flat key-value bag of generic tile properties.
@@ -116,9 +124,19 @@ export const TILE_TRANSFORM_IDENTITY: Readonly<TileTransform> = Object.freeze({
  */
 export const tileTransformLabel = (t: TileTransform): string => {
   const parts: string[] = [];
-  if (t.diagonal) parts.push('diag');
-  if (t.flipX) parts.push('flipX');
-  if (t.flipY) parts.push('flipY');
+
+  if (t.diagonal) {
+    parts.push('diag');
+  }
+
+  if (t.flipX) {
+    parts.push('flipX');
+  }
+
+  if (t.flipY) {
+    parts.push('flipY');
+  }
+
   return parts.length === 0 ? 'identity' : parts.join('+');
 };
 
@@ -181,17 +199,32 @@ export const packTile = (tilesetIndex: number, localTileId: number, transform: T
   if (tilesetIndex < 0 || tilesetIndex > MAX_TILESET_INDEX) {
     throw new Error(`Tileset index ${tilesetIndex} exceeds maximum ${MAX_TILESET_INDEX}.`);
   }
+
   if (localTileId < 0 || localTileId > MAX_LOCAL_TILE_ID) {
     throw new Error(`Local tile ID ${localTileId} exceeds maximum ${MAX_LOCAL_TILE_ID}.`);
   }
+
   let bits = 0;
-  if (transform.flipX) bits |= TRANSFORM_FLIP_X;
-  if (transform.flipY) bits |= TRANSFORM_FLIP_Y;
-  if (transform.diagonal) bits |= TRANSFORM_DIAGONAL;
+
+  if (transform.flipX) {
+    bits |= TRANSFORM_FLIP_X;
+  }
+
+  if (transform.flipY) {
+    bits |= TRANSFORM_FLIP_Y;
+  }
+
+  if (transform.diagonal) {
+    bits |= TRANSFORM_DIAGONAL;
+  }
+
   // +1 so 0 means "empty" not "tile 0 without transform"
   const storedId = localTileId + 1;
+
   return (
-    (storedId & PACKED_LOCAL_MASK) | ((tilesetIndex << PACKED_TILESET_SHIFT) & PACKED_TILESET_MASK) | ((bits << PACKED_TRANSFORM_SHIFT) & PACKED_TRANSFORM_MASK)
+    (storedId & PACKED_LOCAL_MASK) |
+    ((tilesetIndex << PACKED_TILESET_SHIFT) & PACKED_TILESET_MASK) |
+    ((bits << PACKED_TRANSFORM_SHIFT) & PACKED_TRANSFORM_MASK)
   );
 };
 
@@ -207,12 +240,16 @@ export const unpackTile = (
   localTileId: number;
   transform: TileTransform;
 } | null => {
-  if (packed === 0) return null;
+  if (packed === 0) {
+    return null;
+  }
+
   const storedId = packed & PACKED_LOCAL_MASK;
   // Undo the +1 offset applied during packTile.
   const localTileId = storedId - 1;
   const tilesetIndex = (packed & PACKED_TILESET_MASK) >>> PACKED_TILESET_SHIFT;
   const rawTransform = (packed & PACKED_TRANSFORM_MASK) >>> PACKED_TRANSFORM_SHIFT;
+
   return {
     tilesetIndex,
     localTileId,
@@ -309,6 +346,7 @@ export const validatePositiveInteger = (value: number, label: string): void => {
   if (!Number.isFinite(value) || !Number.isInteger(value) || value <= 0) {
     throw new Error(`${label} must be a positive integer (got ${value}).`);
   }
+
   if (value > Number.MAX_SAFE_INTEGER) {
     throw new Error(`${label} exceeds safe integer range (got ${value}).`);
   }
@@ -342,11 +380,17 @@ export const validateInteger = (value: number, label: string): void => {
  * @param fieldPrefix Used as the field-name prefix passed to {@link validatePositiveInteger} (e.g. `"layer"` for `"layer.width"`).
  * @throws If exactly one of `width`/`height` is provided, or either is not a positive integer.
  */
-export const validatePairedDimensions = (width: number | undefined, height: number | undefined, entityName: string, fieldPrefix: string): void => {
+export const validatePairedDimensions = (
+  width: number | undefined,
+  height: number | undefined,
+  entityName: string,
+  fieldPrefix: string,
+): void => {
   if (width !== undefined || height !== undefined) {
     if (width === undefined || height === undefined) {
       throw new Error(`${entityName} width and height must both be provided (bounded) or both omitted (unbounded).`);
     }
+
     validatePositiveInteger(width, `${fieldPrefix}.width`);
     validatePositiveInteger(height, `${fieldPrefix}.height`);
   }

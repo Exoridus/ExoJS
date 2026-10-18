@@ -9,7 +9,8 @@ import type { BaseCellResult } from '../shared/result';
  * ExoJS user cares about when deciding stay-native vs. attach an adapter -
  * resting-contact solving, wide broad-phase + many active contacts, and a mix.
  */
-export type PhysicsArchetypeId = 'box-stack' | 'many-dynamic' | 'mixed-static-dynamic' | 'raycast' | 'body-churn' | 'joints' | 'settling-pile';
+export type PhysicsArchetypeId =
+  'box-stack' | 'many-dynamic' | 'mixed-static-dynamic' | 'raycast' | 'body-churn' | 'joints' | 'settling-pile';
 
 /**
  * Body layout an archetype simulates, independent of what its per-step work is.

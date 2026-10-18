@@ -19,6 +19,7 @@ class TestableFadeSceneTransition extends FadeSceneTransition {
   public callEnter(context: SceneTransitionPhaseContext): void {
     this.enter(context, this._testState);
   }
+
   public callExit(context: SceneTransitionPhaseContext): void {
     this.exit(context, this._testState);
   }

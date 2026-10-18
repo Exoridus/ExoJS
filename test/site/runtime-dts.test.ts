@@ -16,9 +16,9 @@ describe('examples/shared/runtime.d.ts', () => {
   });
 
   it('declares the helper kit the examples import', () => {
-    expect(committed).toContain('export declare function mountControls(');
-    expect(committed).toContain('export declare function mountControlPanel(');
-    expect(committed).toContain('export declare function getExampleMeta(');
+    expect(committed).toContain('export declare const mountControls:');
+    expect(committed).toContain('export declare const mountControlPanel:');
+    expect(committed).toContain('export declare const getExampleMeta:');
   });
 
   it('keeps the playground globals the runner injects', () => {

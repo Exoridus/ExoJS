@@ -29,13 +29,19 @@ const withScene = async (
   const { root, texture } = blurScene(filters);
 
   try {
-    if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) return;
+    if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) {
+      return;
+    }
+
     read(readWebGpuPixels(backend, BLUR_SCENE_SIZE));
   } finally {
     root.destroy();
     texture.destroy();
     backend.destroy();
-    for (const filter of filters) filter.destroy();
+
+    for (const filter of filters) {
+      filter.destroy();
+    }
   }
 };
 
@@ -48,7 +54,10 @@ const withPlateau = async (
   const { root, texture, filter } = plateauScene(levels);
 
   try {
-    if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) return;
+    if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) {
+      return;
+    }
+
     read(readWebGpuPixels(backend, BLUR_SCENE_SIZE));
   } finally {
     root.destroy();
@@ -58,16 +67,26 @@ const withPlateau = async (
   }
 };
 
-const withBackdrop = async (ctx: { skip: (reason: string) => void }, read: (pixel: (x: number, y: number) => RgbaTuple) => void): Promise<void> => {
+const withBackdrop = async (
+  ctx: { skip: (reason: string) => void },
+  read: (pixel: (x: number, y: number) => RgbaTuple) => void,
+): Promise<void> => {
   const backend = await createWebGpuTestBackend(BLUR_SCENE_SIZE);
   const { root, textures, filter } = backdropScene();
 
   try {
-    if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) return;
+    if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) {
+      return;
+    }
+
     read(readWebGpuPixels(backend, BLUR_SCENE_SIZE));
   } finally {
     root.destroy();
-    for (const texture of textures) texture.destroy();
+
+    for (const texture of textures) {
+      texture.destroy();
+    }
+
     backend.destroy();
     filter.destroy();
   }

@@ -214,7 +214,9 @@ const cutBlocks = (placed: readonly PlacedEntry[], blockSize: number): Array<{ o
     length += span;
   }
 
-  if (length > 0) runs.push({ offset, length });
+  if (length > 0) {
+    runs.push({ offset, length });
+  }
 
   return runs;
 };
@@ -295,6 +297,7 @@ export const encodeContainer = (inputs: readonly ContainerInput[], options: Enco
   bytes.set(headBytes, CONTAINER_HEADER_SIZE);
 
   let cursor = dataOffset;
+
   for (const slice of stored) {
     bytes.set(slice, cursor);
     cursor += slice.byteLength;

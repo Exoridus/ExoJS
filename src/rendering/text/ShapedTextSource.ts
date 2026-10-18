@@ -11,13 +11,19 @@ type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 const makeMeasureCtx = (): Ctx2D => {
   if (typeof OffscreenCanvas !== 'undefined') {
     const ctx = new OffscreenCanvas(1, 1).getContext('2d');
-    if (!ctx) throw new Error('ShapedTextSource: could not obtain OffscreenCanvas 2D context.');
+
+    if (!ctx) {
+      throw new Error('ShapedTextSource: could not obtain OffscreenCanvas 2D context.');
+    }
 
     return ctx;
   }
 
   const ctx = document.createElement('canvas').getContext('2d');
-  if (!ctx) throw new Error('ShapedTextSource: could not obtain canvas 2D context.');
+
+  if (!ctx) {
+    throw new Error('ShapedTextSource: could not obtain canvas 2D context.');
+  }
 
   return ctx;
 };
@@ -119,7 +125,9 @@ export class ShapedTextSource implements LineShaper {
    * are the ones the node still displays; everything else is released.
    */
   public beginLayout(): void {
-    if (this._repackPending) this._repack();
+    if (this._repackPending) {
+      this._repack();
+    }
 
     this._generation++;
   }
@@ -244,10 +252,14 @@ export class ShapedTextSource implements LineShaper {
     const metrics = ctx.measureText(line);
 
     const ascent = Math.ceil(
-      (metrics as TextMetrics & { fontBoundingBoxAscent?: number }).fontBoundingBoxAscent ?? metrics.actualBoundingBoxAscent ?? rasterSize * 0.8,
+      (metrics as TextMetrics & { fontBoundingBoxAscent?: number }).fontBoundingBoxAscent ??
+        metrics.actualBoundingBoxAscent ??
+        rasterSize * 0.8,
     );
     const descent = Math.ceil(
-      (metrics as TextMetrics & { fontBoundingBoxDescent?: number }).fontBoundingBoxDescent ?? metrics.actualBoundingBoxDescent ?? rasterSize * 0.2,
+      (metrics as TextMetrics & { fontBoundingBoxDescent?: number }).fontBoundingBoxDescent ??
+        metrics.actualBoundingBoxDescent ??
+        rasterSize * 0.2,
     );
     const bbLeft = Math.max(0, Math.ceil(metrics.actualBoundingBoxLeft ?? 0));
     const bbRight = Math.max(0, Math.ceil(metrics.actualBoundingBoxRight ?? metrics.width));
@@ -286,7 +298,9 @@ export class ShapedTextSource implements LineShaper {
     for (const page of this._pages) {
       const slot = page.insert(w, h);
 
-      if (slot !== null) return { page, slot };
+      if (slot !== null) {
+        return { page, slot };
+      }
     }
 
     // A page is sized to hold the line that overflowed the previous ones, so a

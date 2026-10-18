@@ -246,7 +246,9 @@ const budgetBytesFor = (id: string): number => {
   const baselineKb = BASELINE_KB[id];
 
   if (baselineKb === undefined || baselineKb <= 0) {
-    throw new Error(`no allocation baseline recorded for archetype '${id}' — re-measure with EXOJS_ALLOC_MEASURE=1 and add it to BASELINE_KB`);
+    throw new Error(
+      `no allocation baseline recorded for archetype '${id}' — re-measure with EXOJS_ALLOC_MEASURE=1 and add it to BASELINE_KB`,
+    );
   }
 
   return (baselineKb < NOISE_FLOOR_KB ? baselineKb + FIXED_HEADROOM_KB : baselineKb * TOLERANCE_LARGE) * 1024;

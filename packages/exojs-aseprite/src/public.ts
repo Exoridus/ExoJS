@@ -10,9 +10,11 @@ export type {
   AsepriteHashData,
   AsepriteLayer,
   AsepriteMeta,
+  AsepritePoint,
   AsepriteRect,
   AsepriteSize,
   AsepriteSlice,
+  AsepriteSliceFrame,
   AsepriteSliceKey,
 } from './AsepriteData';
 export { isAsepriteArrayData } from './AsepriteData';

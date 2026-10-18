@@ -25,7 +25,9 @@ const solidTexture = (color: string, edge: number): Texture => {
 
   const ctx = source.getContext('2d');
 
-  if (ctx === null) throw new Error('A 2D context is required to build the fixture.');
+  if (ctx === null) {
+    throw new Error('A 2D context is required to build the fixture.');
+  }
 
   ctx.fillStyle = color;
   ctx.fillRect(0, 0, edge, edge);

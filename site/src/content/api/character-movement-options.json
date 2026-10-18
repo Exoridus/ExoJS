@@ -1,0 +1,187 @@
+{
+  "title": "CharacterMovementOptions",
+  "description": "Construction options for CharacterMovementComponent.",
+  "symbol": "CharacterMovementOptions",
+  "kind": "interface",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for CharacterMovementComponent."
+      ],
+      "importLine": "import { CharacterMovementOptions } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "gravity",
+          "signature": "gravity?: number",
+          "signatureTokens": [
+            {
+              "text": "gravity",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Downward acceleration along -up in world units per second squared. Defaults to the world's gravity projected onto -up when the component is constructed, or 0 when that points up."
+        },
+        {
+          "name": "maxFallSpeed",
+          "signature": "maxFallSpeed?: number",
+          "signatureTokens": [
+            {
+              "text": "maxFallSpeed",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fastest the character falls along -up, in world units per second. Default Infinity."
+        },
+        {
+          "name": "maxSlopeAngle",
+          "signature": "maxSlopeAngle?: number",
+          "signatureTokens": [
+            {
+              "text": "maxSlopeAngle",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Steepest surface, in radians from up, the character stands on. In [0, π/2). Default π/4."
+        },
+        {
+          "name": "maxStepHeight",
+          "signature": "maxStepHeight?: number",
+          "signatureTokens": [
+            {
+              "text": "maxStepHeight",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Tallest obstacle the character steps onto while walking, in world units. Default 0."
+        },
+        {
+          "name": "up",
+          "signature": "up?: Readonly<PointLike>",
+          "signatureTokens": [
+            {
+              "text": "up",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Direction the character stands up along, in simulation space; normalized. Default (0, -1)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/CharacterMovementComponent.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/CharacterMovementComponent.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/CharacterMovementComponent.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/CharacterMovementComponent.ts"
+}

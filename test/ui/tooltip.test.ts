@@ -191,7 +191,7 @@ describe('Tooltip show/hide scheduling', () => {
     dispatchOver(target);
     tick(onFrame, 0.1);
     dispatchOut(target);
-    tick(onFrame, 1.0);
+    tick(onFrame, 1);
 
     expect(root.children.length).toBe(1); // only target — tooltip node never appeared
 
@@ -286,7 +286,7 @@ describe('Tooltip pause-aware scheduling (ME-59: time base)', () => {
     tick(onFrame, 0.1); // half the delay elapsed
 
     scene.paused = true;
-    tick(onFrame, 5.0); // would easily clear the delay if it were still counting
+    tick(onFrame, 5); // would easily clear the delay if it were still counting
 
     expect(root.children.length).toBe(1); // still not shown — frozen while paused
 
@@ -312,7 +312,7 @@ describe('Tooltip pause-aware scheduling (ME-59: time base)', () => {
 
     dispatchOver(target);
     scene.paused = true;
-    tick(onFrame, 1.0); // far past the delay, but paused throughout
+    tick(onFrame, 1); // far past the delay, but paused throughout
 
     expect(root.children.length).toBe(1);
 
@@ -483,7 +483,7 @@ describe('Tooltip.destroy()', () => {
 
     // Further hover after destroy is inert - the listener was removed.
     dispatchOver(target);
-    tick(onFrame, 1.0);
+    tick(onFrame, 1);
     expect(root.children.length).toBe(1);
   });
 

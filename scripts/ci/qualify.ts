@@ -20,10 +20,10 @@ import { appendFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } f
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { atLeastOutputMode, readOutputOptions, type EffectiveOutputMode } from '../lib/output.ts';
+import { atLeastOutputMode, type EffectiveOutputMode, readOutputOptions } from '../lib/output.ts';
 import { runCommand } from '../lib/run-command.ts';
-import { BROWSER_PROFILE_IDS, type BrowserProfileId } from './browser-profiles.ts';
 import { probeBrowser } from './browser-probe.ts';
+import { BROWSER_PROFILE_IDS, type BrowserProfileId } from './browser-profiles.ts';
 import {
   describeRow,
   formatProbe,
@@ -53,14 +53,18 @@ export type ParsedArguments = { readonly report: true } | { readonly report: fal
 const value = (argv: readonly string[], index: number, flag: string): string => {
   const next = argv[index + 1];
 
-  if (next === undefined || next.startsWith('--')) throw new Error(`${flag} requires a value.`);
+  if (next === undefined || next.startsWith('--')) {
+    throw new Error(`${flag} requires a value.`);
+  }
 
   return next;
 };
 
 /** Strict parsing: a mistyped flag must not silently run a row under a different policy. */
 export const parseQualifyArguments = (argv: readonly string[]): ParsedArguments => {
-  if (argv.length === 1 && argv[0] === '--report') return { report: true };
+  if (argv.length === 1 && argv[0] === '--report') {
+    return { report: true };
+  }
 
   const separator = argv.indexOf('--');
   const flags = separator === -1 ? argv : argv.slice(0, separator);
@@ -76,25 +80,46 @@ export const parseQualifyArguments = (argv: readonly string[]): ParsedArguments 
     const flag = flags[i]!;
     const next = value(flags, i, flag);
 
-    if (flag === '--row') row = next;
-    else if (flag === '--policy') {
-      if (next !== 'required' && next !== 'informational') throw new Error(`--policy must be 'required' or 'informational', got '${next}'.`);
+    if (flag === '--row') {
+      row = next;
+    } else if (flag === '--policy') {
+      if (next !== 'required' && next !== 'informational') {
+        throw new Error(`--policy must be 'required' or 'informational', got '${next}'.`);
+      }
+
       policy = next;
     } else if (flag === '--preflight') {
-      if (!(BROWSER_PROFILE_IDS as readonly string[]).includes(next))
+      if (!(BROWSER_PROFILE_IDS as readonly string[]).includes(next)) {
         throw new Error(`Unknown --preflight profile '${next}'. Expected: ${BROWSER_PROFILE_IDS.join(', ')}.`);
+      }
+
       preflight = next as BrowserProfileId;
-    } else if (flag === '--requires') requires = next.split(',').filter(Boolean);
-    else if (flag === '--timeout') {
+    } else if (flag === '--requires') {
+      requires = next.split(',').filter(Boolean);
+    } else if (flag === '--timeout') {
       timeoutMinutes = Number(next);
-      if (!Number.isFinite(timeoutMinutes) || timeoutMinutes <= 0) throw new Error(`--timeout must be a positive number of minutes, got '${next}'.`);
-    } else if (flag === '--after') after = next;
-    else throw new Error(`Unknown option '${flag}'.`);
+
+      if (!Number.isFinite(timeoutMinutes) || timeoutMinutes <= 0) {
+        throw new Error(`--timeout must be a positive number of minutes, got '${next}'.`);
+      }
+    } else if (flag === '--after') {
+      after = next;
+    } else {
+      throw new Error(`Unknown option '${flag}'.`);
+    }
   }
 
-  if (row === undefined) throw new Error('--row is required.');
-  if (command.length === 0) throw new Error('A command is required after `--`.');
-  if (requires.length > 0 && preflight === undefined) throw new Error('--requires needs --preflight.');
+  if (row === undefined) {
+    throw new Error('--row is required.');
+  }
+
+  if (command.length === 0) {
+    throw new Error('A command is required after `--`.');
+  }
+
+  if (requires.length > 0 && preflight === undefined) {
+    throw new Error('--requires needs --preflight.');
+  }
 
   return {
     report: false,
@@ -144,7 +169,10 @@ const announce = (row: QualificationRow): void => {
 
   const summary = process.env['GITHUB_STEP_SUMMARY'];
 
-  if (summary) appendFileSync(summary, `- **${row.row}** (${row.policy}) - ${text}\n`);
+  if (summary) {
+    appendFileSync(summary, `- **${row.row}** (${row.policy}) - ${text}\n`);
+  }
+
   if (process.env['GITHUB_ACTIONS'] === 'true' && row.status !== 'PASS') {
     const level = row.policy === 'required' && row.status === 'FAIL' ? 'error' : 'warning';
 
@@ -155,13 +183,23 @@ const announce = (row: QualificationRow): void => {
 export const printReport = (rows: readonly QualificationRow[]): number => {
   const latest = latestRows(rows);
 
-  if (latest.length === 0) process.stdout.write('No qualification rows recorded.\n');
-  for (const row of latest) process.stdout.write(`${row.row.padEnd(34)} ${describeRow(row)}\n`);
+  if (latest.length === 0) {
+    process.stdout.write('No qualification rows recorded.\n');
+  }
+
+  for (const row of latest) {
+    process.stdout.write(`${row.row.padEnd(34)} ${describeRow(row)}\n`);
+  }
 
   return latest.some(row => row.policy === 'required' && row.status === 'FAIL') ? 1 : 0;
 };
 
-const verdictRow = (options: QualifyOptions, verdict: RowVerdict, durationMs: number, extra: Partial<QualificationRow> = {}): QualificationRow => ({
+const verdictRow = (
+  options: QualifyOptions,
+  verdict: RowVerdict,
+  durationMs: number,
+  extra: Partial<QualificationRow> = {},
+): QualificationRow => ({
   row: options.row,
   policy: options.policy,
   status: verdict.status,
@@ -188,10 +226,16 @@ export const qualify = async (options: QualifyOptions, context: QualifyContext =
 
   if (options.after !== undefined) {
     const parent = latestRows(readRows(recordDirectory)).find(row => row.row === options.after);
-    const unavailable = parent !== undefined && (parent.status === 'UNSUPPORTED HOST' || (parent.status === 'FAIL' && parent.failure !== 'test'));
+    const unavailable =
+      parent !== undefined && (parent.status === 'UNSUPPORTED HOST' || (parent.status === 'FAIL' && parent.failure !== 'test'));
 
     if (unavailable) {
-      const verdict: RowVerdict = { status: 'NOT RUN', detail: `parent capability unavailable (${options.after})`, proceed: false, exitCode: 0 };
+      const verdict: RowVerdict = {
+        status: 'NOT RUN',
+        detail: `parent capability unavailable (${options.after})`,
+        proceed: false,
+        exitCode: 0,
+      };
 
       const row = verdictRow(options, verdict, Date.now() - started);
 
@@ -207,9 +251,13 @@ export const qualify = async (options: QualifyOptions, context: QualifyContext =
 
     const probe = await probeBrowser(options.preflight);
 
-    if (isProbeFailure(probe)) process.stdout.write(`Probe failed: ${probe.error}\n`);
-    else {
-      for (const line of formatProbe(probe)) process.stdout.write(`  ${line}\n`);
+    if (isProbeFailure(probe)) {
+      process.stdout.write(`Probe failed: ${probe.error}\n`);
+    } else {
+      for (const line of formatProbe(probe)) {
+        process.stdout.write(`  ${line}\n`);
+      }
+
       browser = probe.browser;
       info = probe.info;
     }

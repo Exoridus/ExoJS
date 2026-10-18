@@ -1,5 +1,14 @@
 // Auto-generated from custom-fragment-shader.ts - edit the .ts source, not this file.
-import { Application, Color, createFilterShader, FixedResolutionCanvasSizing, Scene, ShaderFilter, Sprite, UniformType } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  createFilterShader,
+  FixedResolutionCanvasSizing,
+  Scene,
+  ShaderFilter,
+  Sprite,
+  UniformType,
+} from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const UV_GRID = assets.technical.filtering.uvGrid256;
 // The filter input is linear, premultiplied colour, and the fragment returns
@@ -40,7 +49,11 @@ const wgsl = `
     let uv = vUv + normalize(delta + vec2<f32>(0.001)) * ripple * falloff * 0.045;
     return textureSample(uTexture, uSampler, uv);
 }`;
-const warpShader = createFilterShader({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: UniformType.Float, uPointer: UniformType.Vec2 } });
+const warpShader = createFilterShader({
+  glsl: { fragment: glsl },
+  wgsl,
+  uniforms: { uTime: UniformType.Float, uPointer: UniformType.Vec2 },
+});
 class CustomFragmentShaderScene extends Scene {
   time = 0;
   filter;

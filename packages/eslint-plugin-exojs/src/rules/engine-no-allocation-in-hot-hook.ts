@@ -57,12 +57,19 @@ export interface EngineNoAllocationInHotHookOptions {
 
 /** The `Namespace.member` or `.method` name a call expression invokes, if it has one. */
 const calleeName = (node: Node): string | undefined => {
-  if (node.type !== 'CallExpression' || node.callee.type === 'Super') return undefined;
+  if (node.type !== 'CallExpression' || node.callee.type === 'Super') {
+    return undefined;
+  }
 
   const callee = node.callee;
 
-  if (callee.type === 'Identifier') return callee.name;
-  if (callee.type !== 'MemberExpression' || callee.computed || callee.property.type !== 'Identifier') return undefined;
+  if (callee.type === 'Identifier') {
+    return callee.name;
+  }
+
+  if (callee.type !== 'MemberExpression' || callee.computed || callee.property.type !== 'Identifier') {
+    return undefined;
+  }
 
   const member = callee.property.name;
 
@@ -95,7 +102,9 @@ export const engineNoAllocationInHotHook: Rule.RuleModule = {
     const methods = new Set(options.methods ?? []);
     const allocatingCalls = new Set(options.allocatingCalls ?? DEFAULT_ALLOCATING_CALLS);
 
-    if (methods.size === 0) return {};
+    if (methods.size === 0) {
+      return {};
+    }
 
     /** What kind of allocation `node` is, phrased for the message, or `undefined`. */
     const allocationKind = (node: Node): string | undefined => {
@@ -120,11 +129,15 @@ export const engineNoAllocationInHotHook: Rule.RuleModule = {
     const check = (member: FunctionMember): void => {
       const hook = staticKeyName(member.key, member.computed);
 
-      if (hook === undefined || !methods.has(hook)) return;
+      if (hook === undefined || !methods.has(hook)) {
+        return;
+      }
 
       const fn = memberFunction(member);
 
-      if (fn === undefined) return;
+      if (fn === undefined) {
+        return;
+      }
 
       for (const node of walk(fn.body)) {
         const what = allocationKind(node);
@@ -137,7 +150,9 @@ export const engineNoAllocationInHotHook: Rule.RuleModule = {
 
     return {
       MethodDefinition(node) {
-        if (node.kind !== 'method') return;
+        if (node.kind !== 'method') {
+          return;
+        }
 
         check(node);
       },

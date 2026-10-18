@@ -79,15 +79,28 @@ app.start(MultiTextureStressScene).catch(() => {
   app.element?.remove();
   void app.destroy();
 });
-function createTextureInfos() {
-  return [
-    createTextureInfo('#10213a', '#ffd166', '#fff3c4', 'circle', [Color.white, new Color(0xffd700), new Color(0xf0e68c), new Color(0xffa500)]),
-    createTextureInfo('#1f1632', '#ff6b9a', '#ffd3ea', 'diamond', [Color.white, new Color(0xff69b4), new Color(0xee82ee), new Color(0xdda0dd)]),
-    createTextureInfo('#0d2b26', '#4ade80', '#d9ffe9', 'star', [Color.white, new Color(0x00fa9a), new Color(0x32cd32), new Color(0x7fffd4)]),
-    createTextureInfo('#112744', '#7dd3fc', '#e7f9ff', 'triangle', [Color.white, new Color(0x87ceeb), new Color(0x00bfff), new Color(0x6495ed)]),
-  ];
-}
-function createTextureInfo(background, accent, detail, shape, palette) {
+const createTextureInfos = () => [
+  createTextureInfo('#10213a', '#ffd166', '#fff3c4', 'circle', [
+    Color.white,
+    new Color(0xffd700),
+    new Color(0xf0e68c),
+    new Color(0xffa500),
+  ]),
+  createTextureInfo('#1f1632', '#ff6b9a', '#ffd3ea', 'diamond', [
+    Color.white,
+    new Color(0xff69b4),
+    new Color(0xee82ee),
+    new Color(0xdda0dd),
+  ]),
+  createTextureInfo('#0d2b26', '#4ade80', '#d9ffe9', 'star', [Color.white, new Color(0x00fa9a), new Color(0x32cd32), new Color(0x7fffd4)]),
+  createTextureInfo('#112744', '#7dd3fc', '#e7f9ff', 'triangle', [
+    Color.white,
+    new Color(0x87ceeb),
+    new Color(0x00bfff),
+    new Color(0x6495ed),
+  ]),
+];
+const createTextureInfo = (background, accent, detail, shape, palette) => {
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
   canvas.width = 128;
@@ -99,8 +112,8 @@ function createTextureInfo(background, accent, detail, shape, palette) {
     frames: [new Rectangle(0, 0, 64, 64), new Rectangle(64, 0, 64, 64)],
     palette,
   };
-}
-function drawAtlasCell(context, x, background, accent, detail, shape, mirrored) {
+};
+const drawAtlasCell = (context, x, background, accent, detail, shape, mirrored) => {
   context.fillStyle = background;
   context.fillRect(x, 0, 64, 64);
   context.fillStyle = 'rgba(255, 255, 255, 0.07)';
@@ -144,4 +157,4 @@ function drawAtlasCell(context, x, background, accent, detail, shape, mirrored) 
   context.beginPath();
   context.arc(x + (mirrored ? 24 : 40), mirrored ? 24 : 42, mirrored ? 6 : 8, 0, Math.PI * 2);
   context.fill();
-}
+};

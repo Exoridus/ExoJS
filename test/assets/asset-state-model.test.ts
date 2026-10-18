@@ -81,6 +81,7 @@ const stubAdapter: SeamlessAdapter<StubHandle> = {
   createPlaceholder(): StubHandle {
     const handle = new StubHandle();
     handle._loadState.begin();
+
     return handle;
   },
   begin(handle) {
@@ -150,8 +151,10 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
   const ch2 = new Map<string, Ch2Model>(L_KEYS.map(k => [k, { pending: false, stored: false }]));
 
   let seed = 20260726;
+
   const random = (): number => {
     seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+
     return seed / 0x7fffffff;
   };
 
@@ -159,14 +162,19 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
 
   const pickClaimedPair = (): { key: string; scopeIdx: number } | null => {
     const candidates: Array<{ key: string; scopeIdx: number }> = [];
+
     for (const [key, model] of ch1) {
-      for (const scopeIdx of model.claims) candidates.push({ key, scopeIdx });
+      for (const scopeIdx of model.claims) {
+        candidates.push({ key, scopeIdx });
+      }
     }
+
     return candidates.length === 0 ? null : candidates[Math.floor(random() * candidates.length)]!;
   };
 
   const pickPendingKey = (pool: readonly string[]): string | null => {
     const candidates = pool.filter(k => pending.has(k));
+
     return candidates.length === 0 ? null : candidates[Math.floor(random() * candidates.length)]!;
   };
 
@@ -196,6 +204,7 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
       case 1: {
         // Release one currently-held (key, scope) claim.
         const pick = pickClaimedPair();
+
         if (pick !== null) {
           const model = ch1.get(pick.key)!;
           const wasReady = model.ready;
@@ -210,12 +219,14 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
             expect(model.handle!.loadState).toBe('loading');
           }
         }
+
         break;
       }
 
       case 2: {
         // Settle a pending "r" fetch successfully.
         const key = pickPendingKey(R_KEYS);
+
         if (key !== null) {
           const model = ch1.get(key)!;
           const entry = pending.get(key)!;
@@ -239,12 +250,14 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
             expect(model.handle!.loadState).toBe('loading'); // freed on arrival
           }
         }
+
         break;
       }
 
       case 3: {
         // Settle a pending "r" fetch as a failure.
         const key = pickPendingKey(R_KEYS);
+
         if (key !== null) {
           const model = ch1.get(key)!;
           const entry = pending.get(key)!;
@@ -256,6 +269,7 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
           model.ready = false;
           expect(model.handle!.loadState).toBe('failed');
         }
+
         break;
       }
 
@@ -272,13 +286,18 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
         });
 
         expect(fetchCount - before).toBe(expectNewFetch ? 1 : 0);
-        if (expectNewFetch) model.pending = true;
+
+        if (expectNewFetch) {
+          model.pending = true;
+        }
+
         break;
       }
 
       case 5: {
         // Settle a pending "l" fetch successfully - must land in the store.
         const key = pickPendingKey(L_KEYS);
+
         if (key !== null) {
           const model = ch2.get(key)!;
           const entry = pending.get(key)!;
@@ -290,12 +309,14 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
           model.pending = false;
           model.stored = true;
         }
+
         break;
       }
 
       case 6: {
         // Settle a pending "l" fetch as a failure - must heal on the next load().
         const key = pickPendingKey(L_KEYS);
+
         if (key !== null) {
           const model = ch2.get(key)!;
           const entry = pending.get(key)!;
@@ -306,6 +327,7 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
 
           model.pending = false; // stored stays false — the next load() (case 4) must re-fetch
         }
+
         break;
       }
 
@@ -317,11 +339,13 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
     // history that led here.
     for (const key of R_KEYS) {
       const model = ch1.get(key)!;
+
       if (model.handle !== null) {
         const stored = loader._peekResource(StubHandle, key);
         expect(stored !== null).toBe(model.ready); // claimed while resident <=> resident; never evicted while held
       }
     }
+
     for (const key of L_KEYS) {
       const model = ch2.get(key)!;
       const stored = loader._peekResource(StubHandle, key);

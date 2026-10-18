@@ -139,6 +139,7 @@ describe('StyleChangeHint merging', () => {
   const freshStyle = (): TextStyle => {
     const style = new TextStyle();
     style.consumeDirty();
+
     return style;
   };
 
@@ -207,6 +208,7 @@ describe('setters', () => {
   const freshStyle = (): TextStyle => {
     const style = new TextStyle();
     style.consumeDirty();
+
     return style;
   };
 
@@ -219,6 +221,7 @@ describe('setters', () => {
   test('fontFamily: accepts a FontFace instance and extracts its family', () => {
     class MockFontFace {
       family: string;
+
       constructor(family: string) {
         this.family = family;
       }
@@ -482,7 +485,13 @@ describe('font (derived CSS string)', () => {
   });
 
   test('small caps sit between the style and the weight, as the CSS shorthand requires', () => {
-    const style = new TextStyle({ fontFamily: 'Georgia', fontSize: 24, fontStyle: 'italic', fontVariant: 'small-caps', fontWeight: 'bold' });
+    const style = new TextStyle({
+      fontFamily: 'Georgia',
+      fontSize: 24,
+      fontStyle: 'italic',
+      fontVariant: 'small-caps',
+      fontWeight: 'bold',
+    });
     expect(style.font).toBe('italic small-caps bold 24px Georgia');
   });
 });

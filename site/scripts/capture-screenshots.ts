@@ -1,7 +1,8 @@
 import { mkdir, writeFile } from 'node:fs/promises';
-import { parseArgs } from 'node:util';
 import { resolve } from 'node:path';
-import { chromium, type BrowserContext, type Page } from 'playwright';
+import { parseArgs } from 'node:util';
+
+import { type BrowserContext, chromium, type Page } from 'playwright';
 
 type Theme = 'dark' | 'light';
 
@@ -50,39 +51,54 @@ const DEFAULT_STABLE_DELAY_MS = 300;
 const DEFAULT_NAVIGATION_TIMEOUT_MS = 45_000;
 const DEFAULT_BASE_URL = 'http://localhost:4321/ExoJS/';
 
-const sleep = (ms: number): Promise<void> => {
-  return new Promise(resolveSleep => setTimeout(resolveSleep, ms));
-};
+const sleep = (ms: number): Promise<void> => new Promise(resolveSleep => setTimeout(resolveSleep, ms));
 
 const normalizeRoute = (route: string): string => {
   const trimmed = route.trim();
-  if (!trimmed) return '/';
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+
+  if (!trimmed) {
+    return '/';
+  }
+
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+
   return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
 };
 
 const routeToFileSlug = (route: string): string => {
   const normalized = normalizeRoute(route);
-  if (normalized === '/' || normalized === '') return 'root';
+
+  if (normalized === '/' || normalized === '') {
+    return 'root';
+  }
 
   const [pathPart, queryPart] = normalized.split('?');
   const cleanedPath = pathPart
     .replace(/^\/+|\/+$/g, '')
     .replace(/\//g, '__')
     .replace(/[^a-zA-Z0-9_-]/g, '-');
-  if (!queryPart) return cleanedPath || 'root';
+
+  if (!queryPart) {
+    return cleanedPath || 'root';
+  }
+
   const cleanedQuery = queryPart.replace(/[^a-zA-Z0-9_-]/g, '-');
+
   return `${cleanedPath || 'root'}__q_${cleanedQuery}`;
 };
 
 const parseViewport = (value: string, index: number): ViewportSpec => {
   const match = /^(\d+)x(\d+)$/i.exec(value.trim());
+
   if (!match) {
     throw new Error(`Invalid viewport "${value}". Use WIDTHxHEIGHT, e.g. 1440x1000.`);
   }
 
   const width = Number.parseInt(match[1], 10);
   const height = Number.parseInt(match[2], 10);
+
   if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
     throw new Error(`Invalid viewport "${value}". Width and height must be positive integers.`);
   }
@@ -103,22 +119,30 @@ const toLabelOrTimestamp = (label?: string): string => {
 };
 
 const parseThemes = (rawValue: string | undefined): Theme[] => {
-  if (!rawValue) return DEFAULT_THEMES;
+  if (!rawValue) {
+    return DEFAULT_THEMES;
+  }
+
   const values = rawValue
     .split(',')
     .map(value => value.trim().toLowerCase())
     .filter(Boolean);
 
   const themes: Theme[] = [];
+
   for (const value of values) {
     if (value === 'dark' || value === 'light') {
       themes.push(value);
       continue;
     }
+
     throw new Error(`Unsupported theme "${value}". Supported values: dark, light.`);
   }
 
-  if (themes.length === 0) return DEFAULT_THEMES;
+  if (themes.length === 0) {
+    return DEFAULT_THEMES;
+  }
+
   return Array.from(new Set(themes));
 };
 
@@ -129,11 +153,16 @@ const waitForServer = async (baseUrl: string, timeoutMs: number): Promise<void> 
   while (Date.now() < deadline) {
     try {
       const response = await fetch(baseUrl, { method: 'GET' });
-      if (response.ok || response.status < 500) return;
+
+      if (response.ok || response.status < 500) {
+        return;
+      }
+
       lastError = `HTTP ${response.status}`;
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
     }
+
     await sleep(500);
   }
 
@@ -172,11 +201,18 @@ const waitForVisualReady = async (page: Page, delayMs: number): Promise<void> =>
   }
 };
 
-const captureRoutePanels = async (page: Page, outputDir: string, filePrefix: string, maxPanelHeight: number, viewport: ViewportSpec): Promise<string[]> => {
+const captureRoutePanels = async (
+  page: Page,
+  outputDir: string,
+  filePrefix: string,
+  maxPanelHeight: number,
+  viewport: ViewportSpec,
+): Promise<string[]> => {
   const readDimensions = async () =>
     page.evaluate(() => {
       const doc = document.documentElement;
       const body = document.body;
+
       return {
         width: Math.max(doc.scrollWidth, doc.clientWidth, body?.scrollWidth ?? 0),
         height: Math.max(doc.scrollHeight, doc.clientHeight, body?.scrollHeight ?? 0),
@@ -191,6 +227,7 @@ const captureRoutePanels = async (page: Page, outputDir: string, filePrefix: str
   if (contentHeight <= maxPanelHeight) {
     const outputFile = resolve(outputDir, `${filePrefix}.png`);
     await page.screenshot({ path: outputFile, fullPage: true });
+
     return [outputFile];
   }
 
@@ -198,6 +235,7 @@ const captureRoutePanels = async (page: Page, outputDir: string, filePrefix: str
   const originalViewport = page.viewportSize();
 
   const capturePanelHeight = Math.max(1, Math.min(maxPanelHeight, Math.ceil(contentHeight)));
+
   if (!originalViewport || originalViewport.width !== clipWidth || originalViewport.height !== capturePanelHeight) {
     await page.setViewportSize({ width: clipWidth, height: capturePanelHeight });
     await sleep(50);
@@ -239,8 +277,13 @@ const captureRoutePanels = async (page: Page, outputDir: string, filePrefix: str
 
 const buildTaskUrl = (baseUrl: string, route: string): string => {
   const normalizedRoute = normalizeRoute(route);
-  if (normalizedRoute.startsWith('http://') || normalizedRoute.startsWith('https://')) return normalizedRoute;
+
+  if (normalizedRoute.startsWith('http://') || normalizedRoute.startsWith('https://')) {
+    return normalizedRoute;
+  }
+
   const routeWithoutLeadingSlash = normalizedRoute.replace(/^\/+/, '');
+
   return new URL(routeWithoutLeadingSlash, baseUrl).toString();
 };
 
@@ -307,15 +350,22 @@ Options:
   --delay-ms      Extra stabilization delay after load (default: 300)
   --timeout-ms    Navigation timeout and server wait timeout (default: 45000)
 `);
+
     return;
   }
 
   const baseUrl = (parsed.values['base-url'] ?? DEFAULT_BASE_URL).replace(/\/+$/, '/');
   const label = toLabelOrTimestamp(parsed.values.label);
   const concurrency = Math.max(1, Number.parseInt(parsed.values.concurrency ?? String(DEFAULT_CONCURRENCY), 10) || DEFAULT_CONCURRENCY);
-  const maxHeight = Math.max(256, Number.parseInt(parsed.values['max-height'] ?? String(DEFAULT_MAX_PANEL_HEIGHT), 10) || DEFAULT_MAX_PANEL_HEIGHT);
+  const maxHeight = Math.max(
+    256,
+    Number.parseInt(parsed.values['max-height'] ?? String(DEFAULT_MAX_PANEL_HEIGHT), 10) || DEFAULT_MAX_PANEL_HEIGHT,
+  );
   const delayMs = Math.max(0, Number.parseInt(parsed.values['delay-ms'] ?? String(DEFAULT_STABLE_DELAY_MS), 10) || DEFAULT_STABLE_DELAY_MS);
-  const timeoutMs = Math.max(5_000, Number.parseInt(parsed.values['timeout-ms'] ?? String(DEFAULT_NAVIGATION_TIMEOUT_MS), 10) || DEFAULT_NAVIGATION_TIMEOUT_MS);
+  const timeoutMs = Math.max(
+    5_000,
+    Number.parseInt(parsed.values['timeout-ms'] ?? String(DEFAULT_NAVIGATION_TIMEOUT_MS), 10) || DEFAULT_NAVIGATION_TIMEOUT_MS,
+  );
   const expandDisclosures = parsed.values.expand === true;
 
   const routesFromList = parsed.values.routes
@@ -336,6 +386,7 @@ Options:
       .map(value => value.trim())
       .filter(Boolean) ?? (parsed.values.viewport ? [parsed.values.viewport] : [`${DEFAULT_VIEWPORT.width}x${DEFAULT_VIEWPORT.height}`]);
   const viewports = rawViewports.map((value, index) => parseViewport(value, index));
+
   if (parsed.values.mobile) {
     viewports.push({ key: 'mobile', width: 390, height: 844 });
   }
@@ -345,12 +396,15 @@ Options:
 
   console.log(`[screenshots] Output: ${outputDir}`);
   console.log(`[screenshots] Base URL: ${baseUrl}`);
-  console.log(`[screenshots] Routes: ${routes.length}, themes: ${themes.join(', ')}, viewports: ${viewports.map(v => `${v.width}x${v.height}`).join(', ')}`);
+  console.log(
+    `[screenshots] Routes: ${routes.length}, themes: ${themes.join(', ')}, viewports: ${viewports.map(v => `${v.width}x${v.height}`).join(', ')}`,
+  );
   console.log(`[screenshots] Concurrency: ${concurrency}, max panel height: ${maxHeight}`);
 
   await waitForServer(baseUrl, timeoutMs);
 
   const tasks: Task[] = [];
+
   for (const viewport of viewports) {
     for (const theme of themes) {
       for (const route of routes) {
@@ -364,6 +418,7 @@ Options:
 
   const getContext = async (theme: Theme, viewport: ViewportSpec): Promise<BrowserContext> => {
     const key = `${theme}_${viewport.width}x${viewport.height}`;
+
     if (!contextCache.has(key)) {
       contextCache.set(
         key,
@@ -379,14 +434,17 @@ Options:
               } catch {
                 // Ignore storage errors in restricted environments.
               }
+
               document.documentElement.setAttribute('data-theme', resolvedTheme);
             },
             { resolvedTheme: theme },
           );
+
           return context;
         })(),
       );
     }
+
     return contextCache.get(key)!;
   };
 
@@ -399,7 +457,10 @@ Options:
     while (true) {
       const taskIndex = cursor;
       cursor += 1;
-      if (taskIndex >= tasks.length) return;
+
+      if (taskIndex >= tasks.length) {
+        return;
+      }
 
       const task = tasks[taskIndex];
       const startedAt = Date.now();
@@ -412,12 +473,15 @@ Options:
         try {
           await page.emulateMedia({ reducedMotion: 'reduce' });
           const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
+
           if (!response) {
             throw new Error(`Navigation produced no response for ${url}.`);
           }
+
           if (response.status() >= 400) {
             throw new Error(`Navigation failed for ${url} with HTTP ${response.status()}.`);
           }
+
           await page.waitForLoadState('networkidle', { timeout: timeoutMs }).catch(() => undefined);
           await applyStabilization(page);
 
@@ -455,6 +519,7 @@ Options:
     const context = await pendingContext;
     await context.close();
   }
+
   await browser.close();
 
   const report = {

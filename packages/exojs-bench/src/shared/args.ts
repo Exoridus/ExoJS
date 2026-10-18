@@ -5,13 +5,19 @@
  * own flags are parsed by one code path. Each domain interprets and validates
  * the flags it understands.
  */
-const parseEntries = (argv: readonly string[]): Array<[string, string]> => {
+const scan = (argv: readonly string[]): { entries: Array<[string, string]>; unclaimed: string[] } => {
   const args: Array<[string, string]> = [];
+  const unclaimed: string[] = [];
 
   for (let i = 0; i < argv.length; i++) {
     const token = argv[i];
 
-    if (token?.startsWith('--') !== true) {
+    if (token === undefined) {
+      continue;
+    }
+
+    if (!token.startsWith('--')) {
+      unclaimed.push(token);
       continue;
     }
 
@@ -32,8 +38,10 @@ const parseEntries = (argv: readonly string[]): Array<[string, string]> => {
     }
   }
 
-  return args;
+  return { entries: args, unclaimed };
 };
+
+const parseEntries = (argv: readonly string[]): Array<[string, string]> => scan(argv).entries;
 
 /** Parsed flags, last occurrence winning - the behaviour a single-valued flag wants. */
 export const parseArgs = (argv: readonly string[]): Map<string, string> => new Map(parseEntries(argv));
@@ -49,3 +57,12 @@ export const parseArgList = (argv: readonly string[], key: string): string[] =>
   parseEntries(argv)
     .filter(([name]) => name === key)
     .map(([, value]) => value);
+
+/**
+ * Tokens that are neither a flag nor the value of the flag before them.
+ *
+ * A flag takes at most one separate value, so `--rendering a.json b.json`
+ * leaves `b.json` unclaimed. A command that accepts no positional arguments
+ * should reject these rather than ignore them.
+ */
+export const unclaimedArgs = (argv: readonly string[]): string[] => scan(argv).unclaimed;

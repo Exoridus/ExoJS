@@ -71,7 +71,9 @@ describe('Gradient.toTexture() writes linear premultiplied samples', () => {
       { offset: 0, color: Color.red },
       { offset: 1, color: Color.blue },
     ]);
-    const texture = gradient.toTexture(2, 1, { textureOptions: { colorSpace: 'linear-srgb', alphaMode: 'straight', premultiplyAlpha: true } });
+    const texture = gradient.toTexture(2, 1, {
+      textureOptions: { colorSpace: 'linear-srgb', alphaMode: 'straight', premultiplyAlpha: true },
+    });
 
     expect(texture.colorSpace).toBe('none');
     expect(texture.alphaMode).toBe('premultiplied');

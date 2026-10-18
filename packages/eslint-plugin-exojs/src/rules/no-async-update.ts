@@ -63,13 +63,23 @@ export const noAsyncUpdate: Rule.RuleModule = {
   },
   create(context) {
     const check = (key: Expression | PrivateIdentifier, computed: boolean, value: Node | null | undefined): void => {
-      if (value === undefined || value === null) return;
-      if (value.type !== 'FunctionExpression' && value.type !== 'ArrowFunctionExpression') return;
-      if (!value.async) return;
+      if (value === undefined || value === null) {
+        return;
+      }
+
+      if (value.type !== 'FunctionExpression' && value.type !== 'ArrowFunctionExpression') {
+        return;
+      }
+
+      if (!value.async) {
+        return;
+      }
 
       const name = staticKeyName(key, computed);
 
-      if (name === undefined || !SYNCHRONOUS_HOOK_NAMES.has(name)) return;
+      if (name === undefined || !SYNCHRONOUS_HOOK_NAMES.has(name)) {
+        return;
+      }
 
       context.report({ node: key, messageId: 'asyncHook', data: { name } });
     };
@@ -77,7 +87,9 @@ export const noAsyncUpdate: Rule.RuleModule = {
     return {
       // `class X { async update() {} }`
       MethodDefinition(node) {
-        if (node.kind !== 'method') return;
+        if (node.kind !== 'method') {
+          return;
+        }
 
         check(node.key, node.computed, node.value);
       },

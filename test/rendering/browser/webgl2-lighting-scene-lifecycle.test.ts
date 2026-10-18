@@ -103,7 +103,9 @@ describe('WebGL2 scene-bound lighting', () => {
       expect.soft(app.framePasses.size, `${label}: passes in the frame slot`).toBe(passes);
 
       for (let i = 0; i < 4; i++) {
-        expect.soft(Math.abs(pixel[i]! - expected[i]!), `${label}: channel ${i} of [${pixel.join(', ')}]`).toBeLessThanOrEqual(PIXEL_TOLERANCE);
+        expect
+          .soft(Math.abs(pixel[i]! - expected[i]!), `${label}: channel ${i} of [${pixel.join(', ')}]`)
+          .toBeLessThanOrEqual(PIXEL_TOLERANCE);
       }
     };
 

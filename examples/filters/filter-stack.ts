@@ -78,9 +78,17 @@ class FilterStackScene extends Scene {
   private rebuild(): void {
     const filters = [];
 
-    if (this.active.blur) filters.push(this.blur);
-    if (this.active.tint) filters.push(this.tint);
-    if (this.active.custom) filters.push(this.custom);
+    if (this.active.blur) {
+      filters.push(this.blur);
+    }
+
+    if (this.active.tint) {
+      filters.push(this.tint);
+    }
+
+    if (this.active.custom) {
+      filters.push(this.custom);
+    }
 
     this.sprite.filters = filters;
     this.hud?.setStatus(this.statusText());

@@ -73,11 +73,17 @@ const withGpu = async (gpu: GPU, run: () => Promise<void>): Promise<void> => {
   try {
     await run();
   } finally {
-    if (previousGpu) Object.defineProperty(navigator, 'gpu', previousGpu);
-    else Object.defineProperty(navigator, 'gpu', { configurable: true, value: undefined });
+    if (previousGpu) {
+      Object.defineProperty(navigator, 'gpu', previousGpu);
+    } else {
+      Object.defineProperty(navigator, 'gpu', { configurable: true, value: undefined });
+    }
 
-    if (previousTextureUsage) Object.defineProperty(globalThis, 'GPUTextureUsage', previousTextureUsage);
-    else Object.defineProperty(globalThis, 'GPUTextureUsage', { configurable: true, value: undefined });
+    if (previousTextureUsage) {
+      Object.defineProperty(globalThis, 'GPUTextureUsage', previousTextureUsage);
+    } else {
+      Object.defineProperty(globalThis, 'GPUTextureUsage', { configurable: true, value: undefined });
+    }
   }
 };
 

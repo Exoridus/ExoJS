@@ -53,6 +53,7 @@ const createHarness = (extensions: readonly string[]): CompressedHarness => {
   const mutable = context as unknown as Record<string, unknown>;
 
   mutable['getExtension'] = (name: string): object | null => (supported.has(name) ? {} : null);
+
   mutable['compressedTexImage2D'] = (
     _target: number,
     level: number,
@@ -211,7 +212,10 @@ describe('WebGl2Backend compressed upload', () => {
     harness.backend.bindTexture(bc3, 0);
     harness.backend.bindTexture(etc2, 1);
 
-    expect(harness.uploads.map(({ internalFormat }) => internalFormat)).toEqual([GL_COMPRESSED_RGBA_S3TC_DXT5, GL_COMPRESSED_RGBA8_ETC2_EAC]);
+    expect(harness.uploads.map(({ internalFormat }) => internalFormat)).toEqual([
+      GL_COMPRESSED_RGBA_S3TC_DXT5,
+      GL_COMPRESSED_RGBA8_ETC2_EAC,
+    ]);
 
     bc3.destroy();
     etc2.destroy();
@@ -272,6 +276,7 @@ describe('WebGl2Backend compressed upload', () => {
 
     const format = CompressedTextureFormat.Bc7RgbaUnorm;
     const texture = new CompressedTexture({ format, levels: chain(format, 8, 8, 1) });
+
     const bind = (): void => {
       harness?.backend.bindTexture(texture, 0);
     };

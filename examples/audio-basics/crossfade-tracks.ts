@@ -1,7 +1,7 @@
 import {
   Application,
   Asset,
-  AudioStream,
+  type AudioStream,
   Color,
   crossFade,
   FixedResolutionCanvasSizing,
@@ -69,7 +69,9 @@ class CrossfadeTracksScene extends Scene {
     this.labelB = new Text('Track B', { fillColor: Color.white, fontSize: 22, align: 'center' })
       .setAnchor(0.5, 0.5)
       .setPosition(this.meterBX + METER_W / 2, height * 0.26);
-    this.nowPlaying = new Text('', { fillColor: Color.white, fontSize: 20, align: 'center' }).setAnchor(0.5, 0.5).setPosition(width / 2, height * 0.15);
+    this.nowPlaying = new Text('', { fillColor: Color.white, fontSize: 20, align: 'center' })
+      .setAnchor(0.5, 0.5)
+      .setPosition(width / 2, height * 0.15);
 
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it and the queued music starts.
@@ -99,14 +101,17 @@ class CrossfadeTracksScene extends Scene {
     if (this.app.audio.locked || this.fadeElapsed < this.fadeDuration || target === this.mix) {
       return;
     }
+
     this.fadeFrom = this.mix;
     this.fadeTo = target;
     this.fadeElapsed = 0;
+
     if (target === 1) {
       void crossFade(this.trackAVoice, this.trackBVoice, Time.seconds(this.fadeDuration), { toVolume: PEAK, stopAfter: false });
     } else {
       void crossFade(this.trackBVoice, this.trackAVoice, Time.seconds(this.fadeDuration), { toVolume: PEAK, stopAfter: false });
     }
+
     this.hud.setStatus(`Crossfading to Track ${target === 1 ? 'B' : 'A'}…`);
   }
 
@@ -114,8 +119,10 @@ class CrossfadeTracksScene extends Scene {
     if (this.fadeElapsed >= this.fadeDuration) {
       return;
     }
+
     this.fadeElapsed = Math.min(this.fadeDuration, this.fadeElapsed + delta);
     this.mix = this.fadeFrom + (this.fadeTo - this.fadeFrom) * (this.fadeElapsed / this.fadeDuration);
+
     if (this.fadeElapsed === this.fadeDuration) {
       this.hud.setStatus(`Track ${this.fadeTo === 1 ? 'B' : 'A'} active.`);
     }

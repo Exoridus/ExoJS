@@ -15,25 +15,22 @@ import { LdtkFormatError } from '../src/validate';
 const PKG_DIR = basename(process.cwd()) === 'exojs-ldtk' ? process.cwd() : join(process.cwd(), 'packages', 'exojs-ldtk');
 const FIXTURES_DIR = join(PKG_DIR, 'test', 'fixtures');
 
-const loadFixture = (name: string): unknown => {
-  return JSON.parse(readFileSync(join(FIXTURES_DIR, name), 'utf-8'));
-};
+const loadFixture = (name: string): unknown => JSON.parse(readFileSync(join(FIXTURES_DIR, name), 'utf-8'));
 
 // ── Mock context factory ────────────────────────────────────────────────────────
 
 // A texture large enough that any fixture's atlas region fits inside it.
 // TextureRegion validates against the *underlying* texture's intrinsic size, so
 // a default-constructed (0x0) Texture would be rejected during tileset assembly.
-const fakeTexture = (): Texture => {
-  return {
+const fakeTexture = (): Texture =>
+  ({
     width: 4096,
     height: 4096,
     uid: 0,
     label: 'test',
     destroy: () => {},
     destroyed: false,
-  } as unknown as Texture;
-};
+  }) as unknown as Texture;
 
 /**
  * A dependency scope that answers a `texture` request with a blank atlas and a
@@ -43,7 +40,10 @@ const fakeTexture = (): Texture => {
 const makeContext = (fixtures: Record<string, unknown>) => {
   const textureLoad = vi.fn((_asset: unknown): Texture => fakeTexture());
   const jsonLoad = vi.fn(async (source: string): Promise<unknown> => {
-    if (Object.hasOwn(fixtures, source)) return fixtures[source];
+    if (Object.hasOwn(fixtures, source)) {
+      return fixtures[source];
+    }
+
     throw new Error(`load-ldtk-map.test: no fixture registered for source "${source}"`);
   });
 
@@ -70,9 +70,7 @@ const ABS_SOURCE = 'https://example.com/maps/world.ldtk';
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('loadLdtkMap — happy path (absolute source)', () => {
-  const context = () => {
-    return makeContext({ [ABS_SOURCE]: loadFixture('world.ldtk') });
-  };
+  const context = () => makeContext({ [ABS_SOURCE]: loadFixture('world.ldtk') });
 
   it('returns an LdtkMap with one TileMap per level', async () => {
     const map = await loadLdtkMap(context().contextFor(ABS_SOURCE));
@@ -121,9 +119,7 @@ describe('loadLdtkMap — happy path (absolute source)', () => {
 describe('loadLdtkMap — multi-world (worlds[] present)', () => {
   const MULTI_WORLD_SOURCE = 'https://example.com/maps/multi-world.ldtk';
 
-  const context = () => {
-    return makeContext({ [MULTI_WORLD_SOURCE]: loadFixture('multi-world.ldtk') });
-  };
+  const context = () => makeContext({ [MULTI_WORLD_SOURCE]: loadFixture('multi-world.ldtk') });
 
   it('flattens every world into map.levels, in world order', async () => {
     const map = await loadLdtkMap(context().contextFor(MULTI_WORLD_SOURCE));
@@ -249,12 +245,11 @@ describe('loadLdtkMap — multi-world with an external (.ldtkl) level', () => {
     ],
   };
 
-  const context = () => {
-    return makeContext({
+  const context = () =>
+    makeContext({
       [MULTI_SOURCE]: rootFixture,
       [EXTERNAL_URL]: externalFixture,
     });
-  };
 
   it('fetches the external .ldtkl file for the level nested inside a world', async () => {
     const { contextFor, jsonLoad } = context();
@@ -347,12 +342,11 @@ describe('loadLdtkMap — external levels (.ldtkl)', () => {
     ],
   };
 
-  const context = () => {
-    return makeContext({
+  const context = () =>
+    makeContext({
       [ABS_SOURCE]: rootFixture,
       [EXTERNAL_URL]: externalFixture,
     });
-  };
 
   it('fetches the external .ldtkl file for a level with null layerInstances', async () => {
     const { contextFor, jsonLoad } = context();
@@ -418,12 +412,11 @@ describe('loadLdtkMap — external level omits fieldInstances entirely', () => {
     layerInstances: [],
   };
 
-  const context = () => {
-    return makeContext({
+  const context = () =>
+    makeContext({
       [ABS_SOURCE]: rootFixture,
       [EXTERNAL_URL]: externalFixture,
     });
-  };
 
   it("falls back to the root level's fieldInstances when the external payload has none", async () => {
     const map = await loadLdtkMap(context().contextFor(ABS_SOURCE));
@@ -630,7 +623,9 @@ describe('loadLdtkMap — structural validation', () => {
     const broken = JSON.parse(JSON.stringify(loadFixture('world.ldtk'))) as any;
     broken.levels[0].layerInstances[0].gridTiles[0].t = 'first';
     const { contextFor } = makeContext({ [ABS_SOURCE]: broken });
-    await expect(loadLdtkMap(contextFor(ABS_SOURCE))).rejects.toThrow(/world\.ldtk" at levels\[0\]\.layerInstances\[0\]\.gridTiles\[0\]\.t/);
+    await expect(loadLdtkMap(contextFor(ABS_SOURCE))).rejects.toThrow(
+      /world\.ldtk" at levels\[0\]\.layerInstances\[0\]\.gridTiles\[0\]\.t/,
+    );
   });
 
   it('does not fetch tileset images for a document that fails validation', async () => {

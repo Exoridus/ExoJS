@@ -79,10 +79,12 @@ const setupBackend = async (alphaMode: CanvasAlphaMode = 'opaque'): Promise<WebG
 
 // On the software (SwiftShader) adapter the WebGPU device can drop mid-test;
 // treat that as an unavailable-adapter skip rather than a failure.
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // A full-canvas quad in pixel space with UVs spanning the whole texture.
-const fullQuadVertices = (): Float32Array => new Float32Array([0, 0, canvasSize, 0, canvasSize, canvasSize, 0, 0, canvasSize, canvasSize, 0, canvasSize]);
+const fullQuadVertices = (): Float32Array =>
+  new Float32Array([0, 0, canvasSize, 0, canvasSize, canvasSize, 0, 0, canvasSize, canvasSize, 0, canvasSize]);
 const fullQuadUvs = (): Float32Array => new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]);
 
 // GPU-side row alignment: copyTextureToBuffer requires bytesPerRow to be a
@@ -112,7 +114,11 @@ const readGpuCanvas = async (backend: WebGpuBackend): Promise<(x: number, y: num
 
   const encoder = device.createCommandEncoder({ label: 'webgpu-backdrop-blend-test-readback-copy' });
 
-  encoder.copyTextureToBuffer({ texture }, { buffer: readbackBuffer, bytesPerRow, rowsPerImage: canvasSize }, { width: canvasSize, height: canvasSize });
+  encoder.copyTextureToBuffer(
+    { texture },
+    { buffer: readbackBuffer, bytesPerRow, rowsPerImage: canvasSize },
+    { width: canvasSize, height: canvasSize },
+  );
   device.queue.submit([encoder.finish()]);
 
   await readbackBuffer.mapAsync(GPUMapMode.READ);
@@ -140,9 +146,10 @@ const readGpuCanvas = async (backend: WebGpuBackend): Promise<(x: number, y: num
 
 const expectRgbNear = (actual: RgbaTuple, expected: readonly [number, number, number], tolerance = 4): void => {
   for (let index = 0; index < 3; index++) {
-    expect(Math.abs(actual[index] - expected[index]), `channel ${index}: got [${actual.join(', ')}] expected rgb [${expected.join(', ')}]`).toBeLessThanOrEqual(
-      tolerance,
-    );
+    expect(
+      Math.abs(actual[index] - expected[index]),
+      `channel ${index}: got [${actual.join(', ')}] expected rgb [${expected.join(', ')}]`,
+    ).toBeLessThanOrEqual(tolerance);
   }
 };
 

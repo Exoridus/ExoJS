@@ -5,6 +5,7 @@ import { ActionBase, channelsFromTokens, tokensFromChannels } from './ActionBase
 import { InputBindingError } from './InputBindingError';
 import { type InputSequence, type NormalizedStep, normalizeSequence, type ValidatedSequenceBinding } from './pattern';
 import type { SerializedActionBinding } from './serialization';
+import { type SequenceTickState, SequenceTickView, TickLedger } from './TickLedger';
 import type { ActionOptions, ActionSample } from './types';
 
 /**
@@ -98,6 +99,16 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
   private _startedAt: number | null = null;
   private _lastStepAt: number | null = null;
   private _triggered = false;
+  private _completions = 0;
+  private readonly _ticks = new TickLedger();
+
+  /**
+   * What the current fixed step owns of this sequence: its completions,
+   * counted and delivered to exactly one fixed step. Read it from fixed-step
+   * code instead of {@link triggered}, which describes the frame. See
+   * {@link SequenceTickState}.
+   */
+  public readonly tick: SequenceTickState = new SequenceTickView(this._ticks);
 
   /**
    * @throws {Error} If the pattern is empty, a string pattern contains an
@@ -174,6 +185,7 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
   /** @internal */
   public override _update(sample: ActionSample): void {
     this._triggered = false;
+    this._completions = 0;
 
     if (!this._seeded) {
       this._seeded = true;
@@ -191,16 +203,25 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
 
       for (const event of batch.channels) {
         const index = this._channels.indexOf(event.channel);
-        if (index === -1) continue;
+
+        if (index === -1) {
+          continue;
+        }
 
         const wasActive = Math.abs(this._values[index] ?? 0) > this._threshold;
         this._values[index] = event.value;
         const active = Math.abs(event.value) > this._threshold;
-        if (!wasActive && active) entered.push(event.channel);
+
+        if (!wasActive && active) {
+          entered.push(event.channel);
+        }
+
         touched = true;
       }
 
-      if (!touched) continue;
+      if (!touched) {
+        continue;
+      }
 
       const expected = this._stepChannels[this._step] ?? [];
       const hasUnexpectedEntry = entered.some(channel => !expected.includes(channel));
@@ -223,7 +244,10 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
         const first = this._stepChannels[0] ?? [];
         const batchBelongsToFirst = entered.every(channel => first.includes(channel));
         const firstAfter = this._isStepActive(0);
-        if (batchBelongsToFirst && !firstBefore && firstAfter) this._acceptStep(now);
+
+        if (batchBelongsToFirst && !firstBefore && firstAfter) {
+          this._acceptStep(now);
+        }
       }
     }
 
@@ -233,6 +257,7 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
     // timestamp in - `maxGap`/`timeout` would be enforced on the next event
     // rather than when they actually elapse.
     this._expire(sample.timestamp);
+    this._ticks.record(sample.clock, this._completions, 0);
   }
 
   /** Clear all state, as if no source had ever been touched. @internal */
@@ -243,6 +268,11 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
     this._resetProgress();
   }
 
+  /** @internal */
+  public override _dropTickInput(): void {
+    this._ticks.drop();
+  }
+
   private _acceptStep(now: number): void {
     this._startedAt ??= now;
     this._lastStepAt = now;
@@ -250,12 +280,16 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
 
     if (this._step === this._steps.length) {
       this._triggered = true;
+      this._completions++;
       this._resetProgress();
     }
   }
 
   private _expire(now: number): void {
-    if ((this._lastStepAt !== null && now - this._lastStepAt > this._maxGap) || (this._startedAt !== null && now - this._startedAt > this._timeout)) {
+    if (
+      (this._lastStepAt !== null && now - this._lastStepAt > this._maxGap) ||
+      (this._startedAt !== null && now - this._startedAt > this._timeout)
+    ) {
       this._resetProgress();
     }
   }
@@ -269,11 +303,15 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
   /** A step is active if ANY ONE of its alternatives has every one of its own channels active - `'|'`'s OR-of-AND semantics. */
   private _isStepActive(index: number): boolean {
     const step = this._steps[index];
-    if (step === undefined) return false;
+
+    if (step === undefined) {
+      return false;
+    }
 
     return step.some(alternative =>
       alternative.every(channel => {
         const valueIndex = this._channels.indexOf(channel);
+
         return valueIndex !== -1 && Math.abs(this._values[valueIndex] ?? 0) > this._threshold;
       }),
     );
@@ -283,12 +321,17 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
     const touched = new Set<number>();
 
     for (const batch of sample.batches) {
-      for (const event of batch.channels) touched.add(event.channel);
+      for (const event of batch.channels) {
+        touched.add(event.channel);
+      }
     }
 
     for (let i = 0; i < this._channels.length; i++) {
       const channel = this._channels[i]!;
-      if (!touched.has(channel)) this._values[i] = sample.values[channel] ?? 0;
+
+      if (!touched.has(channel)) {
+        this._values[i] = sample.values[channel] ?? 0;
+      }
     }
   }
 }

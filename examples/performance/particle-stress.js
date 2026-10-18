@@ -173,7 +173,7 @@ app.start(ParticleStressScene).catch(() => {
   app.element?.remove();
   void app.destroy();
 });
-function createParticleTexture() {
+const createParticleTexture = () => {
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
   canvas.width = 56;
@@ -187,4 +187,4 @@ function createParticleTexture() {
   context.fillStyle = gradient;
   context.fillRect(0, 0, canvas.width, canvas.height);
   return new Texture(canvas);
-}
+};

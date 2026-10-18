@@ -4,23 +4,23 @@ const baseUrl = import.meta.env.BASE_URL;
 
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>ExoJS</title>
-        <script is:inline define:vars={{ baseUrl }}>
-            (() => {
-                const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
-                const stored = localStorage.getItem('exo-language');
-                const browser = navigator.languages?.[0] ?? navigator.language ?? 'en';
-                const browserLocale = browser.toLowerCase().startsWith('de') ? 'de' : 'en';
-                const locale = stored === 'de' || stored === 'en' ? stored : browserLocale;
-                window.location.replace(`${normalizedBase}${locale}/`);
-            })();
-        </script>
-        <noscript>
-            <meta http-equiv="refresh" content={`0;url=${baseUrl}en/`} />
-        </noscript>
-    </head>
-    <body></body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ExoJS</title>
+    <script is:inline define:vars={{ baseUrl }}>
+      (() => {
+        const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+        const stored = localStorage.getItem('exo-language');
+        const browser = navigator.languages?.[0] ?? navigator.language ?? 'en';
+        const browserLocale = browser.toLowerCase().startsWith('de') ? 'de' : 'en';
+        const locale = stored === 'de' || stored === 'en' ? stored : browserLocale;
+        window.location.replace(`${normalizedBase}${locale}/`);
+      })();
+    </script>
+    <noscript>
+      <meta http-equiv="refresh" content={`0;url=${baseUrl}en/`} />
+    </noscript>
+  </head>
+  <body></body>
 </html>

@@ -35,7 +35,14 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { ApplyForce, MeshParticles, particlesExtension, ParticleSystem, RibbonParticles, TrailParticles } from '../../../packages/exojs-particles/src/index';
+import {
+  ApplyForce,
+  MeshParticles,
+  particlesExtension,
+  ParticleSystem,
+  RibbonParticles,
+  TrailParticles,
+} from '../../../packages/exojs-particles/src/index';
 import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
@@ -127,7 +134,8 @@ const createTriangleMesh = (): Geometry =>
     stride: 16,
   });
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const renderScene = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<boolean> => {
   const device = getBackendDevice(backend);

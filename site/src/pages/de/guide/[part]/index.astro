@@ -2,9 +2,7 @@
 import GuidePartRedirect from '../../../../components/pages/GuidePartRedirect.astro';
 import { GUIDE_PARTS } from '../../../../lib/guide-structure';
 
-export function getStaticPaths() {
-    return GUIDE_PARTS.map(part => ({ params: { part: part.slug } }));
-}
+export const getStaticPaths = () => GUIDE_PARTS.map(part => ({ params: { part: part.slug } }));
 
 const partSlug = (Astro.params as Record<string, string | undefined>).part ?? '';
 ---

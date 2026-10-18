@@ -16,8 +16,25 @@ import {
   TEXT_FONT_SIZE,
 } from '../sceneAssets';
 import type { TilemapExtent } from '../tilemap';
-import { isTilemap, isTilemapEditing, TILE_SIZE, tileIdAt, tilemapCameraAt, tilemapCameraFrameFor, tilemapEditsAt, tilemapExtent } from '../tilemap';
-import { hasFullViewportLeaves, isChurning, isTextArchetype, isTextUpdating, leafAlpha, pointerQueriesPerFrame, textForLeaf } from '../traits';
+import {
+  isTilemap,
+  isTilemapEditing,
+  TILE_SIZE,
+  tileIdAt,
+  tilemapCameraAt,
+  tilemapCameraFrameFor,
+  tilemapEditsAt,
+  tilemapExtent,
+} from '../tilemap';
+import {
+  hasFullViewportLeaves,
+  isChurning,
+  isTextArchetype,
+  isTextUpdating,
+  leafAlpha,
+  pointerQueriesPerFrame,
+  textForLeaf,
+} from '../traits';
 import { GRID_MARGIN, gridLayout, gridPosition, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '../world';
 
 /**
@@ -490,7 +507,8 @@ export const createPhaserAdapter = (): EngineAdapter => {
       }
 
       /** Resting grid position of leaf `index`, from the shared layout helpers. */
-      const leafPosition = (index: number): { x: number; y: number } => (overdraw ? { x: 0, y: 0 } : gridPosition(index, layout, GRID_MARGIN));
+      const leafPosition = (index: number): { x: number; y: number } =>
+        overdraw ? { x: 0, y: 0 } : gridPosition(index, layout, GRID_MARGIN);
 
       /** Build (but do not parent) the leaf at global index `index`; reused by the churn mutation. */
       const makeLeaf = (index: number): Phaser.GameObjects.Sprite | Phaser.GameObjects.BitmapText => {

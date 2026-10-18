@@ -4,13 +4,19 @@ import type { BmFontChar, BmFontData } from '#rendering/text/BmFont';
 
 const intVal = (line: string, key: string): number => {
   const match = new RegExp(`\\b${key}=(-?\\d+)`).exec(line);
+
   return match?.[1] !== undefined ? parseInt(match[1], 10) : 0;
 };
 
 const strVal = (line: string, key: string): string => {
   const match = new RegExp(`\\b${key}="([^"]*)"`).exec(line);
-  if (match?.[1] !== undefined) return match[1];
+
+  if (match?.[1] !== undefined) {
+    return match[1];
+  }
+
   const bare = new RegExp(`\\b${key}=(\\S+)`).exec(line);
+
   return bare?.[1] ?? '';
 };
 
@@ -29,7 +35,10 @@ export const parseBmFontText = (text: string): BmFontData => {
 
   for (const raw of lines) {
     const line = raw.trim();
-    if (line.length === 0) continue;
+
+    if (line.length === 0) {
+      continue;
+    }
 
     const tag = line.split(/\s/)[0] ?? '';
 
@@ -39,12 +48,14 @@ export const parseBmFontText = (text: string): BmFontData => {
         base = intVal(line, 'base');
         break;
       }
+
       case 'page': {
         const id = intVal(line, 'id');
         const file = strVal(line, 'file');
         pages[id] = file;
         break;
       }
+
       case 'char': {
         const id = intVal(line, 'id');
         chars.set(id, {
@@ -59,6 +70,7 @@ export const parseBmFontText = (text: string): BmFontData => {
         });
         break;
       }
+
       case 'kerning': {
         const first = intVal(line, 'first');
         const second = intVal(line, 'second');
@@ -66,6 +78,7 @@ export const parseBmFontText = (text: string): BmFontData => {
         kernings.set(`${first},${second}`, amount);
         break;
       }
+
       default:
         break;
     }

@@ -14,7 +14,7 @@ import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
 
 // Minimal fake texture (no GPU): enough for the visual-source mutators below.
-const makeTexture = (w = 64, h = 64): Texture => ({ width: w, height: h, flipY: false, updateSource: () => undefined }) as unknown as Texture;
+const makeTexture = (w = 64, h = 64): Texture => ({ width: w, height: h, flipY: false, updateSource: () => {} }) as unknown as Texture;
 
 // Mirror the existing NoopFilter in test/rendering/render-plan.test.ts exactly
 // (check its constructor/apply signature there before finalizing this class).
@@ -33,14 +33,24 @@ interface MutatorCase {
   readonly mutate: (node: RenderNode) => void;
 }
 
-const drawableCase = (name: string, expects: DirtyKind, mutate: (node: Drawable) => void, create: () => Drawable = () => new Drawable()): MutatorCase => ({
+const drawableCase = (
+  name: string,
+  expects: DirtyKind,
+  mutate: (node: Drawable) => void,
+  create: () => Drawable = () => new Drawable(),
+): MutatorCase => ({
   name,
   expects,
   create,
   mutate: node => mutate(node as Drawable),
 });
 
-const containerCase = (name: string, expects: DirtyKind, mutate: (node: Container) => void, create: () => Container = () => new Container()): MutatorCase => ({
+const containerCase = (
+  name: string,
+  expects: DirtyKind,
+  mutate: (node: Container) => void,
+  create: () => Container = () => new Container(),
+): MutatorCase => ({
   name,
   expects,
   create,

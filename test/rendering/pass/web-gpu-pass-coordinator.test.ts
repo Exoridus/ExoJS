@@ -41,18 +41,20 @@ const createMockBackend = (
     clearColor.copy(color);
   });
   const clear = vi.fn((color?: Color) => {
-    if (color) clearColor.copy(color);
+    if (color) {
+      clearColor.copy(color);
+    }
   });
-  const flush = vi.fn(() => undefined);
-  const pushScissorRect = vi.fn((_bounds: Rectangle) => undefined);
-  const popScissorRect = vi.fn(() => undefined);
+  const flush = vi.fn(() => {});
+  const pushScissorRect = vi.fn((_bounds: Rectangle) => {});
+  const popScissorRect = vi.fn(() => {});
   const targetHasContent = vi.fn((target: RenderTarget) => contentTargets.has(target));
 
   const passEncoder = { end: vi.fn(), setScissorRect: vi.fn(), setStencilReference: vi.fn(), setViewport: vi.fn() };
   const beginRenderPass = vi.fn(() => passEncoder);
   const encoder = { beginRenderPass, finish: vi.fn(() => ({}) as GPUCommandBuffer) };
   const createCommandEncoder = vi.fn(() => encoder);
-  const submit = vi.fn((_commandBuffer: GPUCommandBuffer) => undefined);
+  const submit = vi.fn((_commandBuffer: GPUCommandBuffer) => {});
   const createColorAttachment = vi.fn(() => ({}) as GPURenderPassColorAttachment);
   const getScissorRect = vi.fn(() => options.scissorRect ?? null);
   const getAttachmentPixelSize = vi.fn((target: RenderTarget) => ({ width: target.width, height: target.height }));

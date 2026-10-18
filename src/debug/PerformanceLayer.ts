@@ -49,7 +49,8 @@ const budgetLineColor = new Color(255, 96, 96, 0.4);
  * GPU results resolve a frame or more after the frame they describe, so the row
  * is labelled `last` rather than presented as this frame's cost.
  */
-const formatGpuFrameTime = (gpuFrameTimeMs: number | null): string => (gpuFrameTimeMs === null ? 'pending' : `${gpuFrameTimeMs.toFixed(2)}ms last`);
+const formatGpuFrameTime = (gpuFrameTimeMs: number | null): string =>
+  gpuFrameTimeMs === null ? 'pending' : `${gpuFrameTimeMs.toFixed(2)}ms last`;
 
 /** Recursively count nodes under a RenderNode. */
 const countNodes = (node: RenderNode): number => {

@@ -10,7 +10,15 @@
 // `pnpm typecheck:type-tests` compiles this file under all three lanes, so
 // every assertion below must hold identically in all of them.
 
-import type { AssetFactory, CacheContext, CacheLayout, CacheLayoutContext, CachePolicy, CacheReadResult, CacheStore } from '../../src/index';
+import type {
+  AssetFactory,
+  CacheContext,
+  CacheLayout,
+  CacheLayoutContext,
+  CachePolicy,
+  CacheReadResult,
+  CacheStore,
+} from '../../src/index';
 import { CacheFirstPolicy, MemoryCacheStore, SingleEntryLayout } from '../../src/index';
 
 // --- A policy sees three operations and two identities, and nothing else. ----

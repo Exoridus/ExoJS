@@ -65,7 +65,7 @@ class PointerToWorldScene extends Scene {
     this.elapsed += delta;
     // Slow figure-eight pan plus a gentle zoom breath.
     const centerX = width / 2 + Math.sin(this.elapsed * 0.5) * 220;
-    const centerY = height / 2 + Math.sin(this.elapsed * 1.0) * 140;
+    const centerY = height / 2 + Math.sin(this.elapsed * 1) * 140;
     this.view.setCenter(centerX, centerY);
     this.view.setZoom(this.userZoom * (1 + Math.sin(this.elapsed * 0.35) * 0.25));
     // Live world coordinate under the cursor - recomputed every frame because

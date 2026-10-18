@@ -1,16 +1,16 @@
 {
   "title": "TileProjection",
-  "description": "Converts between grid vertices, display pixels and unprojected logical pixels. Isometric logical cells are squares of side `tileHeight`; orthogonal logical coordinates are display coordinates before the origin translation.",
+  "description": "Converts between grid vertices, display pixels and unprojected logical pixels. Isometric logical cells are squares of side `tileHeight`; orthogonal logical coordinates are display coordinates before the origin translation. Staggered and hexagonal grids follow Tiled's layout. Their logical space is display space before the origin translation, as for orthogonal grids, but their cells are not rectangles in it: code that treats logical cells as squares (tile collision, grid navigation) rejects these grids.",
   "symbol": "TileProjection",
   "kind": "class",
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "stable",
-  "memberCount": 15,
+  "memberCount": 19,
   "counts": {
     "constructors": 1,
     "methods": 7,
-    "properties": 7,
+    "properties": 11,
     "events": 0
   },
   "sections": [
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Converts between grid vertices, display pixels and unprojected logical pixels. Isometric logical cells are squares of side `tileHeight`; orthogonal logical coordinates are display coordinates before the origin translation."
+        "Converts between grid vertices, display pixels and unprojected logical pixels. Isometric logical cells are squares of side `tileHeight`; orthogonal logical coordinates are display coordinates before the origin translation.",
+        "Staggered and hexagonal grids follow Tiled's layout. Their logical space is display space before the origin translation, as for orthogonal grids, but their cells are not rectangles in it: code that treats logical cells as squares (tile collision, grid navigation) rejects these grids."
       ],
       "importLine": "import { TileProjection } from '@codexo/exojs-tilemap'",
       "sourceLink": null
@@ -556,7 +557,7 @@
             }
           ],
           "returnType": "{ tx: number; ty: number }",
-          "description": "Picks the half-open cell containing a display point; negative cells are valid."
+          "description": "Picks the cell containing a display point; negative cells are valid. Cells are half-open on rectangular grids; on staggered and hexagonal grids a point on a shared edge goes to the cell Tiled picks there."
         },
         {
           "name": "projectObject",
@@ -703,7 +704,7 @@
             }
           ],
           "returnType": "{ x: number; y: number }",
-          "description": "Maps a grid vertex, including fractional coordinates, to display pixels."
+          "description": "Maps a grid vertex, including fractional coordinates, to display pixels. On staggered and hexagonal grids an integer cell maps to the top-left of its bounding box, and fractions move linearly by one row or column step."
         },
         {
           "name": "unprojectObject",
@@ -762,8 +763,29 @@
       "title": "Properties",
       "members": [
         {
+          "name": "hexSideLength",
+          "signature": "hexSideLength: number",
+          "signatureTokens": [
+            {
+              "text": "hexSideLength",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Hexagonal grids: length of the straight sides along the stagger axis. 0 for every other orientation."
+        },
+        {
           "name": "orientation",
-          "signature": "orientation: \"isometric\" | \"orthogonal\"",
+          "signature": "orientation: TileOrientation",
           "signatureTokens": [
             {
               "text": "orientation",
@@ -774,16 +796,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"isometric\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"orthogonal\"",
-              "kind": "keyword"
+              "text": "TileOrientation",
+              "kind": "type"
             }
           ],
           "params": [],
@@ -831,6 +845,64 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "staggerAxis",
+          "signature": "staggerAxis: \"x\" | \"y\"",
+          "signatureTokens": [
+            {
+              "text": "staggerAxis",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"x\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"y\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Staggered and hexagonal grids: the shifted axis. 'y' for the other orientations, where it has no effect."
+        },
+        {
+          "name": "staggerIndex",
+          "signature": "staggerIndex: \"even\" | \"odd\"",
+          "signatureTokens": [
+            {
+              "text": "staggerIndex",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"even\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"odd\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Staggered and hexagonal grids: which rows or columns are shifted. 'odd' for the other orientations, where it has no effect."
         },
         {
           "name": "tileHeight",
@@ -915,6 +987,27 @@
           "params": [],
           "returnType": null,
           "description": "Width of a cell in the unprojected simulation space."
+        },
+        {
+          "name": "staggered",
+          "signature": "staggered: boolean",
+          "signatureTokens": [
+            {
+              "text": "staggered",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true for staggered and hexagonal grids, whose rows (or columns) are offset by half a cell."
         }
       ],
       "paragraphs": [],

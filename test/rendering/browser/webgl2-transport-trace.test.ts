@@ -42,7 +42,9 @@ const coverTexture = (): Texture => {
 
   const context = source.getContext('2d');
 
-  if (context === null) throw new Error('A 2D context is required to build the probe fixture.');
+  if (context === null) {
+    throw new Error('A 2D context is required to build the probe fixture.');
+  }
 
   context.fillStyle = '#ffffff';
   context.fillRect(0, 0, PROBE_SIZE, PROBE_SIZE);
@@ -116,7 +118,9 @@ const runCase = async (scenario: Case): Promise<void> => {
         into.push([...readWebGl2Pixel(backend, PROBE_SIZE / 2, PROBE_SIZE / 2)]);
       }
 
-      if (scenario.mask === undefined) continue;
+      if (scenario.mask === undefined) {
+        continue;
+      }
 
       filter.uniforms.uMaskSuperblocks.set(0, 0);
 

@@ -33,7 +33,9 @@ class SoundPoolScene extends Scene {
     this.label = new Text('Hold Space to fire faster than voices finish', { fillColor: Color.white, fontSize: 22, align: 'center' })
       .setAnchor(0.5, 0.5)
       .setPosition(width / 2, height * 0.22);
-    this.readout = new Text('', { fillColor: Color.white, fontSize: 20, align: 'center' }).setAnchor(0.5, 0.5).setPosition(width / 2, height * 0.32);
+    this.readout = new Text('', { fillColor: Color.white, fontSize: 20, align: 'center' })
+      .setAnchor(0.5, 0.5)
+      .setPosition(width / 2, height * 0.32);
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it. Holding Space becomes audible once
     // a pointer gesture has unlocked the AudioContext.

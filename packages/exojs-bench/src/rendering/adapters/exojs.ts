@@ -37,7 +37,16 @@ import { Widget } from '#ui/Widget';
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import { BLUR_TAPS_PER_SIDE } from '../archetypes';
 import type { ArchetypeSpec, Backend, EngineAdapter, LayoutDigestReport } from '../EngineAdapter';
-import { isLit, LIT_LIGHT_RADIUS, LIT_OCCLUDER_BOXES, LIT_SPRITE_COUNT, LIT_SPRITE_SIZE, litLightAt, litOccluderBox, litSpriteAt } from '../lighting';
+import {
+  isLit,
+  LIT_LIGHT_RADIUS,
+  LIT_OCCLUDER_BOXES,
+  LIT_SPRITE_COUNT,
+  LIT_SPRITE_SIZE,
+  litLightAt,
+  litOccluderBox,
+  litSpriteAt,
+} from '../lighting';
 import {
   isParticleLifecycle,
   isParticles,
@@ -49,7 +58,13 @@ import {
   particleSeedAt,
 } from '../particles';
 import { isPickingScene, PICK_RECT_SIZE, pickPointAt, pickRectAt } from '../picking';
-import { createBlurSourceCanvas, createDistinctTextureCanvas, createParticleCanvas, createTileAtlasCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
+import {
+  createBlurSourceCanvas,
+  createDistinctTextureCanvas,
+  createParticleCanvas,
+  createTileAtlasCanvas,
+  TEXT_FONT_SIZE,
+} from '../sceneAssets';
 import type { TilemapExtent } from '../tilemap';
 import {
   isTilemap,
@@ -650,6 +665,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       // setting it to the size would draw a quad four times too large.
       particle.scale.set(1, 1);
       particle.color = PARTICLE_TINT;
+
       if (particleLifetime === null) {
         // The draw-only scene never advances, so its particles must not expire:
         // a finite life would shrink the pool over a long cell for no reason the

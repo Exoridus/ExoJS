@@ -1,4 +1,15 @@
-import { ActionMap, AxisAction, ButtonAction, GamepadAxis, GamepadButton, Keyboard, PointerButton, Scene, type Vector, VectorAction } from '@codexo/exojs';
+import {
+  ActionMap,
+  AxisAction,
+  ButtonAction,
+  GamepadAxis,
+  GamepadButton,
+  Keyboard,
+  PointerButton,
+  Scene,
+  type Vector,
+  VectorAction,
+} from '@codexo/exojs';
 
 // #region guide:action-map
 class GameScene extends Scene {

@@ -1,5 +1,15 @@
 // Auto-generated from effect-chains.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, HighpassFilter, LowpassFilter, Scene, Text } from '@codexo/exojs';
+import {
+  Application,
+  Asset,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  HighpassFilter,
+  LowpassFilter,
+  Scene,
+  Text,
+} from '@codexo/exojs';
 import { AudioAnalyser, BitCrusherEffect, ChorusEffect, DistortionEffect, PingPongDelayEffect, ReverbEffect } from '@codexo/exojs-audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const CHAINS = [
@@ -61,7 +71,9 @@ class EffectChainsScene extends Scene {
     const audio = this.app.audio;
     this.analyser = new AudioAnalyser({ source: audio.master, fftSize: 2048, smoothingTimeConstant: 0.75 });
     this.title = new Text('', { fillColor: Color.white, fontSize: 30, align: 'center' }).setAnchor(0.5).setPosition(640, 170);
-    this.stageLabels = Array.from({ length: 3 }, () => new Text('', { fillColor: Color.white, fontSize: 22, align: 'center' }).setAnchor(0.5));
+    this.stageLabels = Array.from({ length: 3 }, () =>
+      new Text('', { fillColor: Color.white, fontSize: 22, align: 'center' }).setAnchor(0.5),
+    );
     this.hud = mountControls({
       title: 'Audio Effect Rack',
       status: 'Choose a chain and compare it with dry output.',

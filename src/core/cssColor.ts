@@ -9,7 +9,9 @@ const RGB_FUNCTION = /^rgba?\((.+)\)$/i;
 const splitComponents = (args: string): string[] => args.split(/[\s,/]+/).filter(part => part.length > 0);
 
 const parseAlpha = (raw: string | undefined): number => {
-  if (raw === undefined) return 1;
+  if (raw === undefined) {
+    return 1;
+  }
 
   const value = Number.parseFloat(raw);
 
@@ -27,11 +29,15 @@ export interface CssColorChannels {
 const parseRgbFunction = (serialized: string): CssColorChannels | null => {
   const match = RGB_FUNCTION.exec(serialized.trim());
 
-  if (match === null) return null;
+  if (match === null) {
+    return null;
+  }
 
   const components = splitComponents(match[1]!);
 
-  if (components.length < 3 || components.length > 4) return null;
+  if (components.length < 3 || components.length > 4) {
+    return null;
+  }
 
   const [r, g, b] = components;
   const channels = { r: Number.parseFloat(r!), g: Number.parseFloat(g!), b: Number.parseFloat(b!), a: parseAlpha(components[3]) };
@@ -47,7 +53,9 @@ let probe: HTMLElement | null = null;
 
 const getProbe = (): HTMLElement => {
   if (typeof document === 'undefined') {
-    throw new Error('Color: fromCss needs the runtime CSS parser, which is only reachable from a document - there is none here (a worker, or a non-DOM host).');
+    throw new Error(
+      'Color: fromCss needs the runtime CSS parser, which is only reachable from a document - there is none here (a worker, or a non-DOM host).',
+    );
   }
 
   if (probe === null) {
@@ -100,11 +108,15 @@ export const resolveCssColor = (value: string): CssColorChannels => {
 
   const direct = parseRgbFunction(specified);
 
-  if (direct !== null) return direct;
+  if (direct !== null) {
+    return direct;
+  }
 
   const computed = parseRgbFunction(resolveComputed(element));
 
-  if (computed !== null) return computed;
+  if (computed !== null) {
+    return computed;
+  }
 
   throw new Error(`Color: the runtime accepts "${value}" but resolves it outside sRGB; convert it to a hex, rgb() or hsl() value first.`);
 };

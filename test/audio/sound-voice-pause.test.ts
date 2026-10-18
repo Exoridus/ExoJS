@@ -54,8 +54,10 @@ const setupSourceSpy = (): { sources: MockBufferSource[]; restore: () => void } 
       buffer: null,
     };
     sources.push(node);
+
     return node as unknown as AudioBufferSourceNode;
   });
+
   return { sources, restore: (): void => spy.mockRestore() };
 };
 
@@ -74,13 +76,16 @@ const setupPannerSpy = (): { panners: PannerNode[]; restore: () => void } => {
       orientationZ: makeParam(),
     } as unknown as PannerNode;
     panners.push(node);
+
     return node;
   });
+
   return { panners, restore: (): void => spy.mockRestore() };
 };
 
 /** A voice over the sprite window [2, 3] of a 10s buffer. */
-const playClipVoice = (system: AudioSystem, sound: Sound): SoundVoice & Pausable => system.play(sound.sprite('hit')) as SoundVoice & Pausable;
+const playClipVoice = (system: AudioSystem, sound: Sound): SoundVoice & Pausable =>
+  system.play(sound.sprite('hit')) as SoundVoice & Pausable;
 
 describe('SoundVoice — Pausable', () => {
   beforeEach(() => setCurrentTime(0));

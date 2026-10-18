@@ -10,6 +10,7 @@ import { CHECKED_README_PATHS, effectiveLanes, selectAreas } from '../../scripts
 /** Areas + concrete lanes for a set of changed files. */
 const decide = (...files: readonly string[]) => {
   const areas = selectAreas(files);
+
   return { areas, lanes: effectiveLanes(areas) };
 };
 
@@ -82,8 +83,18 @@ describe('CI lane selection — engine/site areas', () => {
   });
 
   it('package LICENSE / CHANGELOG changes are docs/site, NOT engine', () => {
-    expect(selectAreas(['packages/exojs-tiled/LICENSE'])).toMatchObject({ engine: false, site: true, audioFx: false, tilemapWorker: false });
-    expect(selectAreas(['packages/exojs-particles/CHANGELOG.md'])).toMatchObject({ engine: false, site: true, audioFx: false, tilemapWorker: false });
+    expect(selectAreas(['packages/exojs-tiled/LICENSE'])).toMatchObject({
+      engine: false,
+      site: true,
+      audioFx: false,
+      tilemapWorker: false,
+    });
+    expect(selectAreas(['packages/exojs-particles/CHANGELOG.md'])).toMatchObject({
+      engine: false,
+      site: true,
+      audioFx: false,
+      tilemapWorker: false,
+    });
   });
 
   it('the ROOT changelog gates the engine lane (release version-coherence tests read it)', () => {
@@ -436,17 +447,18 @@ describe('CI lane selection - prose outside the documentation folders', () => {
     expect(decide('packages/create-exo-app/templates/top-down/src/main.ts').lanes.createExoAppVerify).toBe(true);
   });
 
-  it.each(['packages/exojs-particles/src/ParticleSystem.ts', 'packages/exojs-particles/src/gpu/ParticleGlState.ts', 'packages/exojs-particles/package.json'])(
-    'a particles-only change runs the structural gate: %s',
-    file => {
-      // The `particles-*` archetypes measure the particle package's renderers, so
-      // a change confined to it alters the counters `gate:bench:structural` guards.
-      // Without this, the WebGL2 particle simulation's move to transform feedback
-      // took `particles-lifecycle` from 1/0/1 to 6/12/10 and the gate could not
-      // have noticed.
-      expect(decide(file).lanes.benchStructural).toBe(true);
-    },
-  );
+  it.each([
+    'packages/exojs-particles/src/ParticleSystem.ts',
+    'packages/exojs-particles/src/gpu/ParticleGlState.ts',
+    'packages/exojs-particles/package.json',
+  ])('a particles-only change runs the structural gate: %s', file => {
+    // The `particles-*` archetypes measure the particle package's renderers, so
+    // a change confined to it alters the counters `gate:bench:structural` guards.
+    // Without this, the WebGL2 particle simulation's move to transform feedback
+    // took `particles-lifecycle` from 1/0/1 to 6/12/10 and the gate could not
+    // have noticed.
+    expect(decide(file).lanes.benchStructural).toBe(true);
+  });
 
   it('prose in the particle package is still prose', () => {
     // The gate follows the code that decides the counters, and the rule that
@@ -541,7 +553,68 @@ describe('CI lane selection — site data gates the unit lane', () => {
         browserWebgl2: false,
       });
     }
+
     expect(decide('packages/exojs-tilemap/README.md').lanes.unit).toBe(false);
+  });
+
+  it('a top-down or platformer template change runs the unit lane that plays the starter, alongside its own verify lane', () => {
+    for (const file of [
+      'packages/create-exo-app/templates/top-down/src/actor.ts',
+      'packages/create-exo-app/templates/top-down/public/assets/town-square.tmj',
+      'packages/create-exo-app/templates/platformer/src/objects/Player.ts',
+    ]) {
+      const { areas, lanes } = decide(file);
+      expect({ file, siteData: areas.siteData, engine: areas.engine, unit: lanes.unit, verify: lanes.createExoAppVerify }).toEqual({
+        file,
+        siteData: true,
+        engine: false,
+        unit: true,
+        verify: true,
+      });
+    }
+
+    expect(decide('packages/create-exo-app/templates/minimal/src/main.ts').lanes.unit).toBe(false);
+  });
+
+  it("the top-down starter's authored map runs the WebGL2 lane that renders it, and nothing else of engine", () => {
+    for (const file of [
+      'packages/create-exo-app/templates/top-down/public/assets/town-square.tmj',
+      'packages/create-exo-app/templates/top-down/public/assets/map-pack.png',
+    ]) {
+      const { areas, lanes } = decide(file);
+      expect({
+        file,
+        engine: areas.engine,
+        webgl2: lanes.browserWebgl2,
+        webgpu: lanes.browserWebgpu,
+        firefox: lanes.browserFirefox,
+        coverage: lanes.coverage,
+        packageVerify: lanes.packageVerify,
+        unit: lanes.unit,
+      }).toEqual({ file, engine: false, webgl2: true, webgpu: false, firefox: false, coverage: false, packageVerify: false, unit: true });
+    }
+  });
+
+  it('template code and other templates stay out of the WebGL2 lane', () => {
+    expect(decide('packages/create-exo-app/templates/top-down/src/scenes/TopDownScene.ts').lanes).toMatchObject({
+      unit: true,
+      browserWebgl2: false,
+    });
+    expect(decide('packages/create-exo-app/templates/platformer/public/assets/platformer-tiles.png').lanes).toMatchObject({
+      unit: true,
+      browserWebgl2: false,
+      createExoAppVerify: true,
+    });
+    expect(decide('packages/create-exo-app/templates/minimal/src/scenes/MainScene.ts').lanes).toMatchObject({
+      unit: false,
+      browserWebgl2: false,
+      createExoAppVerify: true,
+    });
+    expect(decide('packages/create-exo-app/templates/top-down/README.md').lanes).toMatchObject({
+      unit: false,
+      browserWebgl2: false,
+      createExoAppVerify: false,
+    });
   });
 
   it('site pages and components stay out of the area: no suite reads them', () => {

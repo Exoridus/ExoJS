@@ -48,7 +48,9 @@ export const runSearch = (
   while (heap.size > 0) {
     const node = heap.pop();
 
-    if (closed[node] === 1) continue;
+    if (closed[node] === 1) {
+      continue;
+    }
 
     closed[node] = 1;
     expandedNodes++;
@@ -79,11 +81,15 @@ export const runSearch = (
 
       state.touch(next);
 
-      if (closed[next] === 1) continue;
+      if (closed[next] === 1) {
+        continue;
+      }
 
       const tentative = nodeCost + neighborCosts[i]!;
 
-      if (tentative >= gScore[next]!) continue;
+      if (tentative >= gScore[next]!) {
+        continue;
+      }
 
       gScore[next] = tentative;
       parent[next] = node;
@@ -122,18 +128,24 @@ export const runFlood = (
   while (heap.size > 0) {
     const node = heap.pop();
 
-    if (closed[node] === 1) continue;
+    if (closed[node] === 1) {
+      continue;
+    }
 
     const cost = gScore[node]!;
 
-    if (cost > maxCost) break;
+    if (cost > maxCost) {
+      break;
+    }
 
     closed[node] = 1;
     expandedNodes++;
     outNodes.push(node);
     outCosts.push(cost);
 
-    if (maxExpandedNodes > 0 && expandedNodes >= maxExpandedNodes) break;
+    if (maxExpandedNodes > 0 && expandedNodes >= maxExpandedNodes) {
+      break;
+    }
 
     const count = space.neighbors(node, agentSize, neighborNodes, neighborCosts);
 
@@ -142,11 +154,15 @@ export const runFlood = (
 
       state.touch(next);
 
-      if (closed[next] === 1) continue;
+      if (closed[next] === 1) {
+        continue;
+      }
 
       const tentative = cost + neighborCosts[i]!;
 
-      if (tentative >= gScore[next]! || tentative > maxCost) continue;
+      if (tentative >= gScore[next]! || tentative > maxCost) {
+        continue;
+      }
 
       gScore[next] = tentative;
       heap.push(next, tentative);

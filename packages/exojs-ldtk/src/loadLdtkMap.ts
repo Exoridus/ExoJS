@@ -1,6 +1,6 @@
 import type { AssetFactoryContext } from '@codexo/exojs';
 import { Asset, logger, TextureRegion } from '@codexo/exojs';
-import { TileSet } from '@codexo/exojs-tilemap';
+import { type TileDefinition, TileSet } from '@codexo/exojs-tilemap';
 
 import type { LdtkData, LdtkLevel, LdtkTilesetDef } from './LdtkData';
 import { getLdtkLevelEntries } from './ldtkLevelEntries';
@@ -66,7 +66,7 @@ export const loadLdtkTileset = async (def: LdtkTilesetDef, ldtkSource: string, c
     height: def.pxHei,
   });
 
-  return new TileSet({
+  const tileset = new TileSet({
     name: def.identifier,
     texture: region,
     tileWidth: tileSize,
@@ -76,6 +76,58 @@ export const loadLdtkTileset = async (def: LdtkTilesetDef, ldtkSource: string, c
     spacing,
     margin,
   });
+  const definitions = buildLdtkTileDefinitions(def, tileCount);
+
+  if (definitions.length > 0) {
+    tileset.setDefinitions(definitions);
+  }
+
+  return tileset;
+};
+
+/**
+ * Per-tile metadata authored in the LDtk tileset editor, as tile properties:
+ * `ldtkCustomData` holds a tile's custom text and `ldtkEnumTags` the enum
+ * values tagged on it. Ids outside the atlas are skipped.
+ * @internal
+ */
+export const buildLdtkTileDefinitions = (def: LdtkTilesetDef, tileCount: number): TileDefinition[] => {
+  const properties = new Map<number, { ldtkCustomData?: string; ldtkEnumTags?: string[] }>();
+
+  const entry = (tileId: number): { ldtkCustomData?: string; ldtkEnumTags?: string[] } | undefined => {
+    if (tileId >= tileCount) {
+      return undefined;
+    }
+
+    let bag = properties.get(tileId);
+
+    if (bag === undefined) {
+      bag = {};
+      properties.set(tileId, bag);
+    }
+
+    return bag;
+  };
+
+  for (const { tileId, data } of def.customData ?? []) {
+    const bag = entry(tileId);
+
+    if (bag !== undefined) {
+      bag.ldtkCustomData = data;
+    }
+  }
+
+  for (const { enumValueId, tileIds } of def.enumTags ?? []) {
+    for (const tileId of tileIds) {
+      const bag = entry(tileId);
+
+      if (bag !== undefined) {
+        bag.ldtkEnumTags = [...(bag.ldtkEnumTags ?? []), enumValueId];
+      }
+    }
+  }
+
+  return [...properties].map(([localTileId, bag]) => ({ localTileId, properties: bag }));
 };
 
 // ── External level loading ───────────────────────────────────────────────────
@@ -94,7 +146,12 @@ export const loadLdtkTileset = async (def: LdtkTilesetDef, ldtkSource: string, c
  */
 const loadExternalLevel = async (level: LdtkLevel, ldtkSource: string, context: AssetFactoryContext): Promise<LdtkLevel> => {
   // Already-inlined level, or no external file to fetch: return as-is.
-  if (level.layerInstances !== null || level.externalRelPath === undefined || level.externalRelPath === null || level.externalRelPath === '') {
+  if (
+    level.layerInstances !== null ||
+    level.externalRelPath === undefined ||
+    level.externalRelPath === null ||
+    level.externalRelPath === ''
+  ) {
     return level;
   }
 
@@ -130,8 +187,10 @@ const withResolvedLevels = (data: LdtkData, resolvedLevels: readonly LdtkLevel[]
     const worlds = data.worlds.map(world => {
       const levels = resolvedLevels.slice(cursor, cursor + world.levels.length);
       cursor += world.levels.length;
+
       return { ...world, levels };
     });
+
     return { ...data, worlds };
   }
 
@@ -169,6 +228,7 @@ export const loadLdtkMap = async (context: AssetFactoryContext): Promise<LdtkMap
     Promise.all(
       data.defs.tilesets.map(async def => {
         const ts = await loadLdtkTileset(def, source, context);
+
         return [def.uid, ts] as const;
       }),
     ),
@@ -176,8 +236,11 @@ export const loadLdtkMap = async (context: AssetFactoryContext): Promise<LdtkMap
   ]);
 
   const tilesets = new Map<number, TileSet>();
+
   for (const [uid, ts] of tilesetEntries) {
-    if (ts !== null) tilesets.set(uid, ts);
+    if (ts !== null) {
+      tilesets.set(uid, ts);
+    }
   }
 
   return ldtkToTileMap(withResolvedLevels(data, resolvedLevels), { source, tilesets });

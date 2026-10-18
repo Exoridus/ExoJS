@@ -36,7 +36,8 @@ const glslMemberDeclaration = (member: UniformMemberLayout, indent: string): str
   }
 
   const element = node.element;
-  const elementType = element.kind === 'leaf' ? `${glslPrecision} ${uniformTypeGlsl[element.type]}` : (element as UniformStructLayout).typeName;
+  const elementType =
+    element.kind === 'leaf' ? `${glslPrecision} ${uniformTypeGlsl[element.type]}` : (element as UniformStructLayout).typeName;
 
   return `${indent}${elementType} ${name}[${node.length}];`;
 };
@@ -148,7 +149,8 @@ export const generateWgslUniformDeclarations = (schema: UniformSchemaLayout, gro
 /** A line that may precede a generated declaration without moving it out of place. */
 const isGlslPreambleDirective = (line: string): boolean => line.startsWith('#version') || line.startsWith('#extension');
 
-const isWgslPreambleDirective = (line: string): boolean => line.startsWith('enable') || line.startsWith('requires') || line.startsWith('diagnostic');
+const isWgslPreambleDirective = (line: string): boolean =>
+  line.startsWith('enable') || line.startsWith('requires') || line.startsWith('diagnostic');
 
 /**
  * Insert `declarations` after the source's leading directive run.
@@ -182,7 +184,9 @@ const insertAfterPreamble = (source: string, declarations: string, isDirective: 
 };
 
 /** @internal */
-export const withGlslUniformDeclarations = (source: string, declarations: string): string => insertAfterPreamble(source, declarations, isGlslPreambleDirective);
+export const withGlslUniformDeclarations = (source: string, declarations: string): string =>
+  insertAfterPreamble(source, declarations, isGlslPreambleDirective);
 
 /** @internal */
-export const withWgslUniformDeclarations = (source: string, declarations: string): string => insertAfterPreamble(source, declarations, isWgslPreambleDirective);
+export const withWgslUniformDeclarations = (source: string, declarations: string): string =>
+  insertAfterPreamble(source, declarations, isWgslPreambleDirective);

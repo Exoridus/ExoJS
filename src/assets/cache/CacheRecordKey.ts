@@ -26,7 +26,8 @@ export interface CacheRecordKey {
  * Escape the field separator and the escape character itself, so no
  * combination of namespace and record name can spell another key.
  */
-const escape = (value: string): string => (value.includes('%') || value.includes('|') ? value.replaceAll('%', '%25').replaceAll('|', '%7C') : value);
+const escape = (value: string): string =>
+  value.includes('%') || value.includes('|') ? value.replaceAll('%', '%25').replaceAll('|', '%7C') : value;
 
 /**
  * The string a {@link CacheStore} persists a record under.
@@ -41,7 +42,8 @@ const escape = (value: string): string => (value.includes('%') || value.includes
  * is what lets a store clear a namespace without an index.
  * @advanced
  */
-export const serializeCacheRecordKey = (key: CacheRecordKey): string => `${escape(key.namespace)}|${key.version}|${escape(key.record)}|${key.source}`;
+export const serializeCacheRecordKey = (key: CacheRecordKey): string =>
+  `${escape(key.namespace)}|${key.version}|${escape(key.record)}|${key.source}`;
 
 /**
  * The key prefix every record of `namespace` shares.

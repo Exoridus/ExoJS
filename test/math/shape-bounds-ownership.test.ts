@@ -11,7 +11,11 @@ import { Vector } from '#math/Vector';
 // implementations disagreed -- Rectangle cloned, Circle/Polygon allocated, and
 // Vector handed out the global `Rectangle.temp`, so whether a returned box
 // survived the next call depended on which shape you happened to ask.
-const shapes: ReadonlyArray<{ readonly name: string; readonly make: () => ShapeLike; readonly expected: readonly [number, number, number, number] }> = [
+const shapes: ReadonlyArray<{
+  readonly name: string;
+  readonly make: () => ShapeLike;
+  readonly expected: readonly [number, number, number, number];
+}> = [
   { name: 'Rectangle', make: () => new Rectangle(2, 3, 10, 20), expected: [2, 3, 10, 20] },
   { name: 'Circle', make: () => new Circle(10, 10, 4), expected: [6, 6, 8, 8] },
   { name: 'Ellipse', make: () => new Ellipse(10, 10, 4, 2), expected: [6, 8, 8, 4] },

@@ -9,48 +9,44 @@ import { createLdtkIntGridCellSource, getLdtkIntGridValueAt, ldtkToTileMap } fro
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const fakeTexture = (): Texture => {
-  return {
+const fakeTexture = (): Texture =>
+  ({
     width: 512,
     height: 512,
     uid: 0,
     label: 'test',
     destroy: () => {},
     destroyed: false,
-  } as unknown as Texture;
-};
+  }) as unknown as Texture;
 
-const makeTileset = (name = 'Atlas', tileCount = 4): TileSet => {
-  return new TileSet({
+const makeTileset = (name = 'Atlas', tileCount = 4): TileSet =>
+  new TileSet({
     name,
     texture: new TextureRegion(fakeTexture(), { x: 0, y: 0, width: 512, height: 512 }),
     tileWidth: 16,
     tileHeight: 16,
     tileCount,
   });
-};
 
 /** Build a single-level document containing exactly one layer instance. */
-const docWithLayer = (layer: LdtkLayerInstance, level: Partial<LdtkLevel> = {}): LdtkData => {
-  return {
-    jsonVersion: '1.5.3',
-    defaultGridSize: 16,
-    defs: { tilesets: [], layers: [] },
-    levels: [
-      {
-        identifier: 'L',
-        uid: 1,
-        iid: 'iid-1',
-        worldX: 0,
-        worldY: 0,
-        pxWid: 64,
-        pxHei: 16,
-        layerInstances: [layer],
-        ...level,
-      },
-    ],
-  };
-};
+const docWithLayer = (layer: LdtkLayerInstance, level: Partial<LdtkLevel> = {}): LdtkData => ({
+  jsonVersion: '1.5.3',
+  defaultGridSize: 16,
+  defs: { tilesets: [], layers: [] },
+  levels: [
+    {
+      identifier: 'L',
+      uid: 1,
+      iid: 'iid-1',
+      worldX: 0,
+      worldY: 0,
+      pxWid: 64,
+      pxHei: 16,
+      layerInstances: [layer],
+      ...level,
+    },
+  ],
+});
 
 /**
  * Convert a document with one Entities layer holding exactly one entity with
@@ -81,6 +77,7 @@ const convertSingleField = (field: LdtkFieldInstance): TileProperties => {
       },
     ],
   });
+
   return ldtkToTileMap(data).levels[0]!.objectLayers[0]!.objects[0]!.properties;
 };
 
@@ -128,9 +125,7 @@ describe('ldtkToTileMap — tile population with a tileset', () => {
     autoLayerTiles: [],
   });
 
-  const convert = () => {
-    return ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) });
-  };
+  const convert = () => ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) });
 
   it('places one tile per gridTiles entry', () => {
     const layer = convert().levels[0]!.layers[0]!;
@@ -160,6 +155,7 @@ describe('ldtkToTileMap — tile population with a tileset', () => {
 
   it('never sets the diagonal transform (LDtk has no anti-diagonal flip)', () => {
     const layer = convert().levels[0]!.layers[0]!;
+
     for (let tx = 0; tx < 4; tx++) {
       expect(layer.getTileAt(tx, 0)!.transform.diagonal).toBe(false);
     }
@@ -480,6 +476,7 @@ describe('ldtkToTileMap — IntGrid value exposure', () => {
     const layer = ldtkToTileMap(withDefs).levels[0]!.layers[0]!;
 
     const parseSpy = vi.spyOn(JSON, 'parse');
+
     try {
       // Repeated lookups across the whole layer, several times over - a
       // naive implementation would re-parse both JSON-encoded properties on
@@ -1156,10 +1153,13 @@ describe('ldtkToTileMap — Array field conversion', () => {
 });
 
 describe('ldtkToTileMap — null-valued scalar fields (all scalar types)', () => {
-  it.each(['Int', 'Float', 'Bool', 'String', 'Multilines', 'Color', 'FilePath', 'Enum'] as const)('omits a null-valued %s field', __type => {
-    const props = convertSingleField({ __identifier: 'x', __type, __value: null });
-    expect('x' in props).toBe(false);
-  });
+  it.each(['Int', 'Float', 'Bool', 'String', 'Multilines', 'Color', 'FilePath', 'Enum'] as const)(
+    'omits a null-valued %s field',
+    __type => {
+      const props = convertSingleField({ __identifier: 'x', __type, __value: null });
+      expect('x' in props).toBe(false);
+    },
+  );
 });
 
 describe('ldtkToTileMap — ObjectLayer metadata', () => {
@@ -1256,19 +1256,17 @@ describe('ldtkToTileMap — entity id assignment across layers and levels', () =
 
 // ── Local builders for the multi-level id fixtures ──────────────────────────────
 
-const makeEntity = (identifier: string): LdtkEntityInstance => {
-  return {
-    __identifier: identifier,
-    __type: identifier,
-    px: [0, 0],
-    width: 16,
-    height: 16,
-    __pivot: [0, 0],
-    iid: `iid-${identifier}`,
-    defUid: 0,
-    fieldInstances: [],
-  };
-};
+const makeEntity = (identifier: string): LdtkEntityInstance => ({
+  __identifier: identifier,
+  __type: identifier,
+  px: [0, 0],
+  width: 16,
+  height: 16,
+  __pivot: [0, 0],
+  iid: `iid-${identifier}`,
+  defUid: 0,
+  fieldInstances: [],
+});
 
 // ── Coverage-closing edge cases ─────────────────────────────────────────────
 
@@ -1536,31 +1534,29 @@ describe('ldtkToTileMap — enum field conversion', () => {
   });
 });
 
-const makeEntityLevel = (identifier: string, uid: number): LdtkLevel => {
-  return {
-    identifier,
-    uid,
-    iid: `iid-${uid}`,
-    worldX: 0,
-    worldY: 0,
-    pxWid: 64,
-    pxHei: 16,
-    layerInstances: [
-      {
-        __identifier: 'Entities',
-        __type: 'Entities',
-        __cWid: 4,
-        __cHei: 1,
-        __gridSize: 16,
-        layerDefUid: 130,
-        levelId: uid,
-        visible: true,
-        iid: `ent-${uid}`,
-        entityInstances: [makeEntity('E')],
-      },
-    ],
-  };
-};
+const makeEntityLevel = (identifier: string, uid: number): LdtkLevel => ({
+  identifier,
+  uid,
+  iid: `iid-${uid}`,
+  worldX: 0,
+  worldY: 0,
+  pxWid: 64,
+  pxHei: 16,
+  layerInstances: [
+    {
+      __identifier: 'Entities',
+      __type: 'Entities',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 130,
+      levelId: uid,
+      visible: true,
+      iid: `ent-${uid}`,
+      entityInstances: [makeEntity('E')],
+    },
+  ],
+});
 
 describe('createLdtkIntGridCellSource', () => {
   const collisionDoc = (csv: readonly number[], width: number, height: number): LdtkData => {

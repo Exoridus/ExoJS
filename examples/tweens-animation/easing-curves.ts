@@ -1,8 +1,19 @@
-import { Application, Color, Ease, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, type Seconds, Sprite } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  Ease,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  Keyboard,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  Sprite,
+} from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 // Every built-in Ease function, in source order.
-const EASINGS: [string, (t: number) => number][] = [
+const EASINGS: Array<[string, (t: number) => number]> = [
   ['linear', Ease.linear],
   ['quadIn', Ease.quadIn],
   ['quadOut', Ease.quadOut],
@@ -106,6 +117,7 @@ class EasingCurvesScene extends Scene {
 
     g.lineWidth = 4;
     g.lineColor = new Color(90, 210, 255);
+
     for (let sample = 1; sample <= SAMPLES; sample++) {
       const previous = (sample - 1) / SAMPLES;
       const current = sample / SAMPLES;

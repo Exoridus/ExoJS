@@ -319,7 +319,8 @@ describe('ordered channel event log', () => {
     readonly channels: readonly RawChannelEvent[];
   }
 
-  const frameBatches = (system: InputSystem): RawChannelEventBatch[] => (system as unknown as { frameBatches: RawChannelEventBatch[] }).frameBatches;
+  const frameBatches = (system: InputSystem): RawChannelEventBatch[] =>
+    (system as unknown as { frameBatches: RawChannelEventBatch[] }).frameBatches;
   const forSpace = (system: InputSystem): number[] =>
     frameBatches(system)
       .flatMap(batch => batch.channels)
@@ -454,7 +455,10 @@ describe('pointer dispatch order', () => {
 });
 
 describe('context menu policy', () => {
-  const createManager = (input?: { allowNativeContextMenu?: boolean; allowTextSelection?: boolean }): { im: InputSystem; canvas: HTMLCanvasElement } => {
+  const createManager = (input?: {
+    allowNativeContextMenu?: boolean;
+    allowTextSelection?: boolean;
+  }): { im: InputSystem; canvas: HTMLCanvasElement } => {
     const c = createCanvas();
     const app = {
       canvas: c,

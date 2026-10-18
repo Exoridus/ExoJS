@@ -18,6 +18,7 @@ export const readStartLevel = async (scope: LoaderScope): Promise<string> => {
   const loaded = await scope.load(SharedAssets);
 
   console.log(SharedAssets.settings.value.startLevel);
+
   return loaded.settings.startLevel;
 };
 // #endregion guide:catalog-result

@@ -132,12 +132,16 @@ export class DebugOverlay {
   }
 
   private _onFrame(delta: Seconds): void {
-    if (!this.visible) return;
+    if (!this.visible) {
+      return;
+    }
 
     const layers = Object.values(this.layers) as DebugLayer[];
     const visibleLayers = layers.filter(l => l.visible);
 
-    if (visibleLayers.length === 0) return;
+    if (visibleLayers.length === 0) {
+      return;
+    }
 
     const backend = this._app.backend;
     const sceneView = backend.view; // capture scene's current view

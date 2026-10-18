@@ -21,7 +21,9 @@ const segmentsAreClear = (grid: GridSpace, nodes: readonly number[]): boolean =>
       const x = Math.floor(fromX + (toX - fromX) * t);
       const y = Math.floor(fromY + (toY - fromY) * t);
 
-      if (!grid.isWalkable(x, y)) return false;
+      if (!grid.isWalkable(x, y)) {
+        return false;
+      }
     }
   }
 
@@ -77,13 +79,17 @@ describe('GridSpace.smoothPath', () => {
     for (let trial = 0; trial < 25; trial++) {
       const size = 20;
       const grid = GridSpace.from(size, size, (x, y) => {
-        if ((x === 0 && y === 0) || (x === size - 1 && y === size - 1)) return 1;
+        if ((x === 0 && y === 0) || (x === size - 1 && y === size - 1)) {
+          return 1;
+        }
 
         return random() < 0.2 ? 0 : 1;
       });
       const result = pathfinder.findPath(grid, grid.nodeAt(0, 0), grid.nodeAt(size - 1, size - 1), { smooth: true });
 
-      if (result.status !== 'found') continue;
+      if (result.status !== 'found') {
+        continue;
+      }
 
       expect(segmentsAreClear(grid, result.nodes)).toBe(true);
       expect(result.nodes[0]).toBe(grid.nodeAt(0, 0));

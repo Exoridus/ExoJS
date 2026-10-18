@@ -62,12 +62,18 @@ export class ChorusEffect extends AudioEffect {
   }
 
   public get inputNode(): AudioNode {
-    if (!this._nodes) throw new Error('ChorusEffect not yet initialized.');
+    if (!this._nodes) {
+      throw new Error('ChorusEffect not yet initialized.');
+    }
+
     return this._nodes.inputGain;
   }
 
   public get outputNode(): AudioNode {
-    if (!this._nodes) throw new Error('ChorusEffect not yet initialized.');
+    if (!this._nodes) {
+      throw new Error('ChorusEffect not yet initialized.');
+    }
+
     return this._nodes.outputGain;
   }
 
@@ -82,8 +88,10 @@ export class ChorusEffect extends AudioEffect {
   public get delayMs(): number {
     return this._delayMs;
   }
+
   public set delayMs(value: number) {
     this._delayMs = Math.max(this._depthMs, Math.min(MAX_DELAY_MS, value));
+
     if (this._nodes) {
       this._nodes.delayNode.delayTime.setTargetAtTime(this._delayMs / 1000, this._nodes.delayNode.context.currentTime, 0.01);
     }
@@ -97,8 +105,10 @@ export class ChorusEffect extends AudioEffect {
   public get depthMs(): number {
     return this._depthMs;
   }
+
   public set depthMs(value: number) {
     this._depthMs = Math.max(0, Math.min(this._delayMs, value));
+
     if (this._nodes) {
       this._nodes.lfoGain.gain.setTargetAtTime(this._depthMs / 1000, this._nodes.lfoGain.context.currentTime, 0.01);
     }
@@ -108,8 +118,10 @@ export class ChorusEffect extends AudioEffect {
   public get rateHz(): number {
     return this._rateHz;
   }
+
   public set rateHz(value: number) {
     this._rateHz = Math.max(0, value);
+
     if (this._nodes) {
       this._nodes.lfoOscillator.frequency.setTargetAtTime(this._rateHz, this._nodes.inputGain.context.currentTime, 0.01);
     }
@@ -119,8 +131,10 @@ export class ChorusEffect extends AudioEffect {
   public get wet(): number {
     return this._wet;
   }
+
   public set wet(value: number) {
     this._wet = Math.max(0, Math.min(1, value));
+
     if (this._nodes) {
       const ctx = this._nodes.wetGain.context;
       this._nodes.wetGain.gain.setTargetAtTime(this._wet, ctx.currentTime, 0.01);
@@ -134,6 +148,7 @@ export class ChorusEffect extends AudioEffect {
 
   public override destroy(): void {
     this._teardown();
+
     if (this._nodes) {
       this._nodes.lfoOscillator.stop();
       this._nodes.lfoOscillator.disconnect();

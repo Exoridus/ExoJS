@@ -81,7 +81,9 @@ const quadCount = (text: Text): number => text.pageQuads.reduce((total, batch) =
 const measureCtx = (font: string, direction: CanvasDirection): CanvasRenderingContext2D => {
   const ctx = document.createElement('canvas').getContext('2d');
 
-  if (!ctx) throw new Error('2D context required.');
+  if (!ctx) {
+    throw new Error('2D context required.');
+  }
 
   ctx.font = font;
   ctx.textBaseline = 'alphabetic';

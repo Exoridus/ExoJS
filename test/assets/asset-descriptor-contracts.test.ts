@@ -17,6 +17,7 @@ const createCoreLoader = (): Loader => {
 
 class CustomType extends AssetType<unknown, { hp: number }, { mode?: string }> {
   public readonly id = 'com.example.custom';
+
   public createFactory() {
     return { create: async () => ({ hp: 1 }) };
   }
@@ -99,7 +100,7 @@ describe('required options', () => {
     );
 
     const queue = (loader.load as (path: string) => PromiseLike<unknown>)('fonts/Inter.woff2');
-    void Promise.resolve(queue).catch(() => undefined);
+    void Promise.resolve(queue).catch(() => {});
 
     expect(canonicalize).toHaveBeenCalledWith(expect.anything(), 'fonts/Inter.woff2', { family: 'Inter' });
   });

@@ -28,7 +28,9 @@ const createCoreLoader = (): Loader => {
 
 /** A fetch stub whose single `arrayBuffer()` body is `container`. */
 const mockContainerFetch = (container: ArrayBuffer): ReturnType<typeof vi.fn> => {
-  const spy = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => container }) as unknown as Response);
+  const spy = vi.fn(
+    async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => container }) as unknown as Response,
+  );
   global.fetch = spy;
 
   return spy;
@@ -147,7 +149,9 @@ describe('asset container format', () => {
     // so the writer keeps the plain bytes rather than wrap them twice.
     const random = new Uint8Array(4096);
 
-    for (let i = 0; i < random.length; i++) random[i] = Math.floor(Math.random() * 256);
+    for (let i = 0; i < random.length; i++) {
+      random[i] = Math.floor(Math.random() * 256);
+    }
 
     const container = encodeContainer([{ source: 'noise.bin', type: 'binary', bytes: random }]);
     const { blocks } = parseContainer(container);
@@ -288,6 +292,7 @@ describe('asset container format', () => {
     for (let i = 0; i < CONTAINER_MAGIC.length; i++) {
       bytes[i] = CONTAINER_MAGIC.charCodeAt(i);
     }
+
     view.setUint32(4, CONTAINER_VERSION, true);
     view.setUint32(12, headBytes.byteLength, true);
     view.setUint32(16, dataOffset, true);
@@ -303,7 +308,10 @@ describe('asset container format', () => {
 
   /** A head whose single block describes `storedBytes` of block area, which is zeroed rather than valid. */
   const headWithBlock = (entries: unknown[], block: Record<string, unknown>, storedBytes = 0): ArrayBuffer =>
-    encodeRawHead({ entries, blocks: [{ offset: 0, length: 0, storedOffset: 0, storedLength: 0, codec: 'none', hash: HASH_A, ...block }] }, storedBytes);
+    encodeRawHead(
+      { entries, blocks: [{ offset: 0, length: 0, storedOffset: 0, storedLength: 0, codec: 'none', hash: HASH_A, ...block }] },
+      storedBytes,
+    );
 
   test('rejects a head region that is not valid JSON', () => {
     expect(() => parseContainer(encodeRawHeadBuffer(utf8('{not valid json')))).toThrow(/head is not valid JSON/);
@@ -372,7 +380,9 @@ describe('asset container format', () => {
 
     expect(() => parseContainer(encodeRawHead(head))).toThrow(/invalid "length"/);
     expect(() => parseContainer(headWithBlock([], { length: 8.5, storedLength: 8.5 }))).toThrow(/invalid "length"/);
-    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 'a', type: 'text', offset: 0.5, length: 0 }], blocks: [] }))).toThrow(/invalid "offset"/);
+    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 'a', type: 'text', offset: 0.5, length: 0 }], blocks: [] }))).toThrow(
+      /invalid "offset"/,
+    );
   });
 
   test('rejects an entry that is not an object', () => {
@@ -380,19 +390,27 @@ describe('asset container format', () => {
   });
 
   test('rejects an entry with a non-string source', () => {
-    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 42, type: 'text', offset: 0, length: 0 }], blocks: [] }))).toThrow(/non-string "source"/);
+    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 42, type: 'text', offset: 0, length: 0 }], blocks: [] }))).toThrow(
+      /non-string "source"/,
+    );
   });
 
   test('rejects an entry with a non-string type', () => {
-    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 'a', type: 42, offset: 0, length: 0 }], blocks: [] }))).toThrow(/non-string "type"/);
+    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 'a', type: 42, offset: 0, length: 0 }], blocks: [] }))).toThrow(
+      /non-string "type"/,
+    );
   });
 
   test('rejects an entry with an invalid (negative) offset', () => {
-    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 'a', type: 'text', offset: -8, length: 0 }], blocks: [] }))).toThrow(/invalid "offset"/);
+    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 'a', type: 'text', offset: -8, length: 0 }], blocks: [] }))).toThrow(
+      /invalid "offset"/,
+    );
   });
 
   test('rejects an entry with an invalid (non-numeric) length', () => {
-    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 'a', type: 'text', offset: 0, length: 'x' }], blocks: [] }))).toThrow(/invalid "length"/);
+    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 'a', type: 'text', offset: 0, length: 'x' }], blocks: [] }))).toThrow(
+      /invalid "length"/,
+    );
   });
 
   test('rejects an entry that does not start on an alignment boundary', () => {
@@ -640,7 +658,7 @@ describe('Loader.loadContainer', () => {
 
     const loader = createCoreLoader();
 
-    loader.onError.add(() => undefined);
+    loader.onError.add(() => {});
 
     await expect(loader.loadContainer('pack.exoa')).rejects.toThrow();
 

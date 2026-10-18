@@ -23,30 +23,26 @@ import {
 
 // ── helpers ────────────────────────────────────────────────────────────
 
-const fakeTexture = (): Texture => {
-  return {
+const fakeTexture = (): Texture =>
+  ({
     width: 512,
     height: 512,
     uid: 0,
     label: 'test',
     destroy: () => {},
     destroyed: false,
-  } as unknown as Texture;
-};
+  }) as unknown as Texture;
 
-const fakeRegion = (tw = 512, th = 512): TextureRegion => {
-  return new TextureRegion(fakeTexture(), { x: 0, y: 0, width: tw, height: th });
-};
+const fakeRegion = (tw = 512, th = 512): TextureRegion => new TextureRegion(fakeTexture(), { x: 0, y: 0, width: tw, height: th });
 
-const makeTileset = (name: string, tileCount = 16, tw = 32, th = 32): TileSet => {
-  return new TileSet({
+const makeTileset = (name: string, tileCount = 16, tw = 32, th = 32): TileSet =>
+  new TileSet({
     name,
     texture: fakeRegion(512, 512),
     tileWidth: tw,
     tileHeight: th,
     tileCount,
   });
-};
 
 // ═══════════════════════════════════════════════════════════════════════
 // Tile identity & packing
@@ -1008,9 +1004,11 @@ describe('TileLayer', () => {
       chunkHeight: 2,
     });
     const events: ChunkStructuralEvent[] = [];
+
     const listener = (e: ChunkStructuralEvent): void => {
       events.push(e);
     };
+
     layer._addStructuralListener(listener);
     layer._adoptChunk(0, 0, { width: 2, height: 2, tiles: new Uint32Array(4) });
     layer._removeStructuralListener(listener);
@@ -1625,11 +1623,13 @@ describe('TileLayer', () => {
     });
     const ts2 = makeTileset('other', 16);
     const rev = layer.revision;
+
     try {
       layer.setTileAt(0, 0, { tileset: ts2, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
     } catch {
       /* expected */
     }
+
     expect(layer.revision).toBe(rev);
   });
 
@@ -2120,7 +2120,9 @@ describe('TileMap', () => {
     });
     map.destroy();
     expect(() => map.addTileset(ts)).toThrow();
-    expect(() => map.addLayer(new TileLayer({ id: 0, name: 'l', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] }))).toThrow();
+    expect(() =>
+      map.addLayer(new TileLayer({ id: 0, name: 'l', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] })),
+    ).toThrow();
   });
 
   it('destroys layers on destroy', () => {

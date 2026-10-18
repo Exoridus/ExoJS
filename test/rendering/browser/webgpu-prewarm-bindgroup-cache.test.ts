@@ -63,7 +63,8 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   return backend;
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 /** Render one node through the real flush path inside a validation error scope. */
 const renderNode = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, node: RenderNode): Promise<boolean> => {

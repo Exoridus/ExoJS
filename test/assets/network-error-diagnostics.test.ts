@@ -32,7 +32,7 @@ const acquire = (policy: CachePolicy, url: string): Promise<string> => {
     layout: SingleEntryLayout.version<string>(1),
     network: unrestrictedNetwork,
     fetch: async () => (await fetchAsset(url, {})).text(),
-    report: () => undefined,
+    report: () => {},
   };
 
   return cache.resolve(acquisition);
@@ -53,7 +53,9 @@ describe.each(policies)('%s network failures', (_name, makePolicy) => {
   });
 
   test('an error status rejects with an AssetNetworkError carrying url and status', async () => {
-    global.fetch = vi.fn(async () => ({ ok: false, status: 404, statusText: 'Not Found' }) as unknown as Response) as unknown as typeof fetch;
+    global.fetch = vi.fn(
+      async () => ({ ok: false, status: 404, statusText: 'Not Found' }) as unknown as Response,
+    ) as unknown as typeof fetch;
 
     const error = await acquire(makePolicy(), 'https://example.com/missing.json').catch((reason: unknown) => reason);
 

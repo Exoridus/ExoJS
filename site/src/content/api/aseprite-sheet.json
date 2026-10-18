@@ -1,16 +1,16 @@
 {
   "title": "AsepriteSheet",
-  "description": "Parsed representation of an Aseprite JSON sprite sheet export. `AsepriteSheet.parse(data, texture)` converts the raw JSON document into: - A Spritesheet whose frames correspond to the Aseprite frame array (keyed by zero-based index string: `\"0\"`, `\"1\"`, ...). - A `clips` map of AnimatedSpriteClipDefinition entries built from `meta.frameTags`, one per named tag. - The `slices` and `layers` metadata maps, carried through verbatim. Call createAnimatedSprite to obtain a ready-to-use AnimatedSprite with all clips pre-registered.",
+  "description": "Parsed representation of an Aseprite JSON sprite sheet export. `AsepriteSheet.parse(data, texture)` converts the raw JSON document into: - A Spritesheet whose frames correspond to the Aseprite frame array (keyed by zero-based index string: `\"0\"`, `\"1\"`, ...). - A `clips` map of AnimatedSpriteClipDefinition entries built from `meta.frameTags`, one per named tag. - The `slices`, `layers` and `tags` metadata maps, carried through verbatim, and getSlice to read a slice on a given frame. Call createAnimatedSprite to obtain a ready-to-use AnimatedSprite with all clips pre-registered.",
   "symbol": "AsepriteSheet",
   "kind": "class",
   "subsystem": "aseprite",
   "importPath": "@codexo/exojs-aseprite",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 10,
   "counts": {
     "constructors": 0,
-    "methods": 3,
-    "properties": 4,
+    "methods": 4,
+    "properties": 6,
     "events": 0
   },
   "sections": [
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Parsed representation of an Aseprite JSON sprite sheet export.",
-        "`AsepriteSheet.parse(data, texture)` converts the raw JSON document into: - A Spritesheet whose frames correspond to the Aseprite frame array (keyed by zero-based index string: `\"0\"`, `\"1\"`, ...). - A `clips` map of AnimatedSpriteClipDefinition entries built from `meta.frameTags`, one per named tag. - The `slices` and `layers` metadata maps, carried through verbatim.",
+        "`AsepriteSheet.parse(data, texture)` converts the raw JSON document into: - A Spritesheet whose frames correspond to the Aseprite frame array (keyed by zero-based index string: `\"0\"`, `\"1\"`, ...). - A `clips` map of AnimatedSpriteClipDefinition entries built from `meta.frameTags`, one per named tag. - The `slices`, `layers` and `tags` metadata maps, carried through verbatim, and getSlice to read a slice on a given frame.",
         "Call createAnimatedSprite to obtain a ready-to-use AnimatedSprite with all clips pre-registered."
       ],
       "importLine": "import { AsepriteSheet } from '@codexo/exojs-aseprite'",
@@ -87,6 +87,82 @@
           "params": [],
           "returnType": "void",
           "description": "Destroy the underlying Spritesheet and release its frame resources."
+        },
+        {
+          "name": "getSlice",
+          "signature": "getSlice(name: string, frameIndex: number): AsepriteSliceFrame | null",
+          "signatureTokens": [
+            {
+              "text": "getSlice",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "frameIndex",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AsepriteSliceFrame",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "frameIndex",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "AsepriteSliceFrame | null",
+          "description": "The shape slice name has on sheet frame frameIndex: its most recent key at or before that frame, with the slice's colour and user data. null when the sheet has no such slice or the slice starts later. Rectangles and points are in pixels of the untrimmed sprite canvas - the space a sprite from createAnimatedSprite lays its frames out in, before its origin is subtracted - so they line up with trimmed frames too. The pivot and nine-slice centre stay relative to the bounds, as authored."
         },
         {
           "name": "parse",
@@ -165,6 +241,59 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "clipFrameIndices",
+          "signature": "clipFrameIndices: ReadonlyMap<string, readonly number[]>",
+          "signatureTokens": [
+            {
+              "text": "clipFrameIndices",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "For every clip in clips, the sheet frame index of each of its frames, in play order: the index an AnimatedSprite's currentFrame selects. Use it to look up per-frame metadata such as getSlice for the frame being shown."
+        },
         {
           "name": "clips",
           "signature": "clips: ReadonlyMap<string, AnimatedSpriteClipDefinition>",
@@ -286,7 +415,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Named slices from the Aseprite meta.slices metadata, keyed by slice name. Slices describe editor-defined regions - hitboxes, nine-patch borders, UI anchor points - that aren't part of the frame/animation data itself. Each AsepriteSlice carries one AsepriteSliceKey per frame at which its bounds change; consumers resolve the applicable key for a given frame index themselves."
+          "description": "Named slices from the Aseprite meta.slices metadata, keyed by slice name. Slices describe editor-defined regions - hitboxes, nine-patch borders, UI anchor points - that aren't part of the frame/animation data itself. Each AsepriteSlice carries one AsepriteSliceKey per frame at which its bounds change; getSlice resolves the key in effect on a given frame."
         },
         {
           "name": "spritesheet",
@@ -308,6 +437,47 @@
           "params": [],
           "returnType": null,
           "description": "The underlying Spritesheet whose frames are keyed by index string."
+        },
+        {
+          "name": "tags",
+          "signature": "tags: ReadonlyMap<string, AsepriteFrameTag>",
+          "signatureTokens": [
+            {
+              "text": "tags",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AsepriteFrameTag",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Frame tags from the Aseprite meta.frameTags metadata, keyed by tag name, with the editor colour and user data that clips do not carry. Empty when the export has no tags."
         }
       ],
       "paragraphs": [],

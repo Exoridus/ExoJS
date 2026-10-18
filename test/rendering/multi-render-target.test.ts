@@ -144,6 +144,7 @@ const createGlHarness = (): GlHarness => {
   mutable['framebufferTexture2D'] = (_target: number, attachment: number, _texTarget: number, handle: unknown): void => {
     attachments.push({ slot: attachment - colorAttachment0, handle });
   };
+
   mutable['drawBuffers'] = (buffers: number[]): void => {
     drawBufferLists.push([...buffers]);
   };

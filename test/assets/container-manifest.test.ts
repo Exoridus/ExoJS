@@ -116,7 +116,9 @@ const recordingStore = (): ContainerBlockStore & { readonly held: Map<string, Ui
     get: async hash => {
       const bytes = held.get(hash);
 
-      if (bytes !== undefined) hits.push(hash);
+      if (bytes !== undefined) {
+        hits.push(hash);
+      }
 
       return bytes === undefined ? undefined : new Uint8Array(bytes.slice().buffer);
     },

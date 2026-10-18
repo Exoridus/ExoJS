@@ -72,6 +72,7 @@ const spyOnBusCreation = (): BusSpy => {
   let gainCallCount = 0;
   const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
     gainCallCount++;
+
     return (gainCallCount % 2 === 1 ? inputNode : outputNode) as unknown as GainNode;
   });
   const pannerSpy = vi.spyOn(ctx, 'createStereoPanner').mockReturnValue(panNode as unknown as StereoPannerNode);

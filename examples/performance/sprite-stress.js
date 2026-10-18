@@ -12,8 +12,20 @@ class SpriteStressScene extends Scene {
     this.sprites = [];
     this.spriteLayer = new Container();
     this.spriteLayer.setPosition(width / 2, height / 2);
-    const frameChoices = [new Rectangle(0, 0, 64, 64), new Rectangle(64, 0, 64, 64), new Rectangle(0, 64, 64, 64), new Rectangle(64, 64, 64, 64)];
-    const tintPalette = [Color.white, new Color(0x87ceeb), new Color(0xffd700), new Color(0xff69b4), new Color(0x00fa9a), new Color(0xffa500)];
+    const frameChoices = [
+      new Rectangle(0, 0, 64, 64),
+      new Rectangle(64, 0, 64, 64),
+      new Rectangle(0, 64, 64, 64),
+      new Rectangle(64, 64, 64, 64),
+    ];
+    const tintPalette = [
+      Color.white,
+      new Color(0x87ceeb),
+      new Color(0xffd700),
+      new Color(0xff69b4),
+      new Color(0x00fa9a),
+      new Color(0xffa500),
+    ];
     let index = 0;
     for (let row = 0; row < GRID_ROWS; row++) {
       for (let column = 0; column < GRID_COLUMNS; column++) {
@@ -78,7 +90,7 @@ app.start(SpriteStressScene).catch(() => {
   app.element?.remove();
   void app.destroy();
 });
-function createAtlasTexture() {
+const createAtlasTexture = () => {
   const atlasCanvas = document.createElement('canvas');
   const context = atlasCanvas.getContext('2d');
   atlasCanvas.width = 128;
@@ -88,8 +100,8 @@ function createAtlasTexture() {
   drawAtlasCell(context, 0, 64, '#112b21', '#4ade80', 'star');
   drawAtlasCell(context, 64, 64, '#23163c', '#7dd3fc', 'triangle');
   return new Texture(atlasCanvas);
-}
-function drawAtlasCell(context, x, y, background, accent, shape) {
+};
+const drawAtlasCell = (context, x, y, background, accent, shape) => {
   context.fillStyle = background;
   context.fillRect(x, y, 64, 64);
   context.fillStyle = 'rgba(255, 255, 255, 0.08)';
@@ -127,4 +139,4 @@ function drawAtlasCell(context, x, y, background, accent, shape) {
     context.closePath();
   }
   context.fill();
-}
+};

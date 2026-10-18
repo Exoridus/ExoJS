@@ -25,6 +25,7 @@ const MAP_SIZE = 256;
 
 const createRippleMap = (): Texture => {
   const data = new Uint8Array(MAP_SIZE * MAP_SIZE * 4);
+
   for (let y = 0; y < MAP_SIZE; y++) {
     for (let x = 0; x < MAP_SIZE; x++) {
       const offset = (y * MAP_SIZE + x) * 4;
@@ -35,6 +36,7 @@ const createRippleMap = (): Texture => {
       data[offset + 3] = 255;
     }
   }
+
   // The red and green channels are a direction in [-1, 1], so they are numeric
   // data, not colour: a DataTexture is never colour-managed.
   return new DataTexture({
@@ -61,6 +63,7 @@ class WaterMirrorScene extends Scene {
     if (y < this.app.height / 2) {
       return;
     }
+
     this.dragging = true;
     this.setRippleStrength(x);
   };

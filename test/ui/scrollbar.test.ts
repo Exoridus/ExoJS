@@ -57,7 +57,8 @@ const makeStage = (): { stage: Stage } & PointerSignals => {
   return { stage: { interaction, focus, app }, ...signals };
 };
 
-const pointerDownAt = (x: number, y: number, id = 1): InteractionEvent => ({ x, y, pointer: { id }, stopPropagation: vi.fn() }) as unknown as InteractionEvent;
+const pointerDownAt = (x: number, y: number, id = 1): InteractionEvent =>
+  ({ x, y, pointer: { id }, stopPropagation: vi.fn() }) as unknown as InteractionEvent;
 
 const fakePointer = { id: 1 } as Pointer;
 

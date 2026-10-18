@@ -36,6 +36,7 @@ export interface LaneAreas {
   guides: boolean;
   siteData: boolean;
   createExoApp: boolean;
+  authoredMapFixture: boolean;
 }
 
 /** The concrete CI lanes those areas enable. */
@@ -115,24 +116,54 @@ const isEnginePath = (file: string): boolean => {
   // CHANGELOG, so a changelog-only PR must still run the unit lane (a docs-only
   // changelog edit once skipped it and the mismatch only failed on main). It is
   // the one doc file that gates code, so it is read before the doc exemption.
-  if (file === 'CHANGELOG.md') return true;
-  if (isDocPath(file)) return false;
+  if (file === 'CHANGELOG.md') {
+    return true;
+  }
+
+  if (isDocPath(file)) {
+    return false;
+  }
+
   // Core engine source, in-repo tests (incl. the browser/perf suites that import
   // package source through the vitest aliases), and repo automation scripts.
-  if (file.startsWith('src/')) return true;
-  if (file.startsWith('test/')) return true;
-  if (file.startsWith('scripts/')) return true;
+  if (file.startsWith('src/')) {
+    return true;
+  }
+
+  if (file.startsWith('test/')) {
+    return true;
+  }
+
+  if (file.startsWith('scripts/')) {
+    return true;
+  }
+
   // A workflow change can alter any lane, so revalidate everything.
-  if (file.startsWith('.github/workflows/')) return true;
+  if (file.startsWith('.github/workflows/')) {
+    return true;
+  }
+
   // Shared root build / test / type configuration.
-  if (file === 'vitest.config.ts') return true;
-  if (file.startsWith('tsconfig.') && file.endsWith('.json')) return true;
+  if (file === 'vitest.config.ts') {
+    return true;
+  }
+
+  if (file.startsWith('tsconfig.') && file.endsWith('.json')) {
+    return true;
+  }
+
   // Root manifest + lockfile + workspace topology all affect the whole build.
-  if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') return true;
+  if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') {
+    return true;
+  }
+
   // Runtime-package CODE (source, tests, build config, manifest).
   for (const pkg of RUNTIME_PACKAGES) {
-    if (file.startsWith(`packages/${pkg}/`)) return true;
+    if (file.startsWith(`packages/${pkg}/`)) {
+      return true;
+    }
   }
+
   return false;
 };
 
@@ -146,12 +177,30 @@ const isEnginePath = (file: string): boolean => {
  * in the engine does NOT drag in the browser-audio lane.
  */
 const isAudioFxPath = (file: string): boolean => {
-  if (isDocPath(file)) return false;
-  if (file.startsWith('.github/workflows/')) return true;
-  if (file === 'vitest.config.ts') return true;
-  if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') return true;
-  if (file.startsWith('packages/exojs-config/')) return true;
-  if (file.startsWith('packages/exojs-audio-fx/')) return true;
+  if (isDocPath(file)) {
+    return false;
+  }
+
+  if (file.startsWith('.github/workflows/')) {
+    return true;
+  }
+
+  if (file === 'vitest.config.ts') {
+    return true;
+  }
+
+  if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') {
+    return true;
+  }
+
+  if (file.startsWith('packages/exojs-config/')) {
+    return true;
+  }
+
+  if (file.startsWith('packages/exojs-audio-fx/')) {
+    return true;
+  }
+
   return false;
 };
 
@@ -162,12 +211,30 @@ const isAudioFxPath = (file: string): boolean => {
  * same reasoning as isAudioFxPath: expensive relative to its blast radius.
  */
 const isTilemapWorkerPath = (file: string): boolean => {
-  if (isDocPath(file)) return false;
-  if (file.startsWith('.github/workflows/')) return true;
-  if (file === 'vitest.config.ts') return true;
-  if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') return true;
-  if (file.startsWith('packages/exojs-config/')) return true;
-  if (file.startsWith('packages/exojs-tilemap/')) return true;
+  if (isDocPath(file)) {
+    return false;
+  }
+
+  if (file.startsWith('.github/workflows/')) {
+    return true;
+  }
+
+  if (file === 'vitest.config.ts') {
+    return true;
+  }
+
+  if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') {
+    return true;
+  }
+
+  if (file.startsWith('packages/exojs-config/')) {
+    return true;
+  }
+
+  if (file.startsWith('packages/exojs-tilemap/')) {
+    return true;
+  }
+
   return false;
 };
 
@@ -193,22 +260,55 @@ const isTilemapWorkerPath = (file: string): boolean => {
  * run an example to notice.
  */
 const isExampleCatalogPath = (file: string): boolean => {
-  if (isDocPath(file)) return false;
-  if (file.startsWith('.github/workflows/')) return true;
-  if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') return true;
+  if (isDocPath(file)) {
+    return false;
+  }
+
+  if (file.startsWith('.github/workflows/')) {
+    return true;
+  }
+
+  if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') {
+    return true;
+  }
+
   // The catalog sources, their generated `.js` twins, the example assets, and
   // `examples.json` - the manifest the harness iterates.
-  if (file.startsWith('examples/')) return true;
+  if (file.startsWith('examples/')) {
+    return true;
+  }
+
   // Engine and extension runtime code: what the examples actually execute.
-  if (file.startsWith('src/')) return true;
-  if (file.startsWith('packages/')) return true;
+  if (file.startsWith('src/')) {
+    return true;
+  }
+
+  if (file.startsWith('packages/')) {
+    return true;
+  }
+
   // The harness, the playground route it drives, the page the preview iframe
   // loads, and the generator that copies the catalog into the served site.
-  if (file === 'site/scripts/smoke-examples.ts') return true;
-  if (file === 'site/scripts/sync-examples-static.ts') return true;
-  if (file === 'site/public/preview.html') return true;
-  if (file.startsWith('site/src/components/')) return true;
-  if (file.startsWith('site/src/pages/')) return true;
+  if (file === 'site/scripts/smoke-examples.ts') {
+    return true;
+  }
+
+  if (file === 'site/scripts/sync-examples-static.ts') {
+    return true;
+  }
+
+  if (file === 'site/public/preview.html') {
+    return true;
+  }
+
+  if (file.startsWith('site/src/components/')) {
+    return true;
+  }
+
+  if (file.startsWith('site/src/pages/')) {
+    return true;
+  }
+
   return false;
 };
 
@@ -219,12 +319,30 @@ const isExampleCatalogPath = (file: string): boolean => {
  * or example builds.
  */
 const isSitePath = (file: string): boolean => {
-  if (file.startsWith('site/')) return true;
-  if (file.startsWith('examples/')) return true;
-  if (file.startsWith('packages/')) return true;
-  if (file.startsWith('.github/workflows/')) return true;
-  if (file === 'tsconfig.guides.json' || file === 'tsconfig.examples.json') return true;
-  if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') return true;
+  if (file.startsWith('site/')) {
+    return true;
+  }
+
+  if (file.startsWith('examples/')) {
+    return true;
+  }
+
+  if (file.startsWith('packages/')) {
+    return true;
+  }
+
+  if (file.startsWith('.github/workflows/')) {
+    return true;
+  }
+
+  if (file === 'tsconfig.guides.json' || file === 'tsconfig.examples.json') {
+    return true;
+  }
+
+  if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') {
+    return true;
+  }
+
   return false;
 };
 
@@ -241,21 +359,47 @@ const isSitePath = (file: string): boolean => {
  * move a draw-call count, and the gate costs a browser run.
  */
 const isBenchStructuralPath = (file: string): boolean => {
-  if (isDocPath(file)) return false;
-  if (file.startsWith('src/rendering/')) return true;
-  if (file.startsWith('packages/exojs-bench/src/')) return true;
-  if (file.startsWith('packages/exojs-bench/test/')) return true;
-  if (file.startsWith('packages/exojs-bench/baselines/')) return true;
-  if (file === 'packages/exojs-bench/package.json') return true;
+  if (isDocPath(file)) {
+    return false;
+  }
+
+  if (file.startsWith('src/rendering/')) {
+    return true;
+  }
+
+  if (file.startsWith('packages/exojs-bench/src/')) {
+    return true;
+  }
+
+  if (file.startsWith('packages/exojs-bench/test/')) {
+    return true;
+  }
+
+  if (file.startsWith('packages/exojs-bench/baselines/')) {
+    return true;
+  }
+
+  if (file === 'packages/exojs-bench/package.json') {
+    return true;
+  }
+
   // The particle package owns the renderers the `particles-*` archetypes
   // measure. Without it here, a particles-only change alters exactly the
   // counters this gate guards and never runs the gate that would notice: the
   // WebGL2 particle simulation moved to a transform-feedback one, the
   // `particles-lifecycle` cell moved from 1/0/1 to 6/12/10, and the gate stayed
   // green on the merge because nothing in that PR selected this lane.
-  if (file.startsWith('packages/exojs-particles/src/')) return true;
-  if (file === 'packages/exojs-particles/package.json') return true;
-  if (file.startsWith('.github/workflows/')) return true;
+  if (file.startsWith('packages/exojs-particles/src/')) {
+    return true;
+  }
+
+  if (file === 'packages/exojs-particles/package.json') {
+    return true;
+  }
+
+  if (file.startsWith('.github/workflows/')) {
+    return true;
+  }
 
   return false;
 };
@@ -275,9 +419,16 @@ const isGuidesPath = (file: string): boolean => file.startsWith('site/src/conten
  */
 export const CHECKED_README_PATHS: readonly string[] = [
   'README.md',
-  ...['exojs-physics', 'exojs-particles', 'exojs-lighting', 'exojs-tiled', 'exojs-ldtk', 'exojs-aseprite', 'exojs-audio-fx', 'exojs-pathfinding'].map(
-    name => `packages/${name}/README.md`,
-  ),
+  ...[
+    'exojs-physics',
+    'exojs-particles',
+    'exojs-lighting',
+    'exojs-tiled',
+    'exojs-ldtk',
+    'exojs-aseprite',
+    'exojs-audio-fx',
+    'exojs-pathfinding',
+  ].map(name => `packages/${name}/README.md`),
 ];
 
 /**
@@ -304,6 +455,14 @@ export const CHECKED_README_PATHS: readonly string[] = [
  *                                        profile-only commit reaches no other
  *                                        area that runs a test.
  *
+ *   - `packages/create-exo-app/templates/top-down/`, `.../platformer/`
+ *                                        the starters that
+ *                                        `test/templates/*-consumer` suites
+ *                                        play end to end. The create-exo-app
+ *                                        area only scaffolds and builds them, so a
+ *                                        template-only change would otherwise
+ *                                        never run the suite that plays it.
+ *
  *   - `CHECKED_README_PATHS`             the READMEs whose complete examples
  *                                        `test/site/readme-examples` typechecks.
  *                                        Read before the prose exemption, or a
@@ -315,13 +474,42 @@ export const CHECKED_README_PATHS: readonly string[] = [
  * them, and the site build already gates on the wider `site` area.
  */
 const isSiteDataPath = (file: string): boolean => {
-  if (CHECKED_README_PATHS.includes(file)) return true;
-  if (isDocPath(file)) return false;
-  if (file.startsWith('site/src/lib/')) return true;
-  if (file.startsWith('examples/')) return true;
-  if (file.startsWith('packages/exojs-bench/results/')) return true;
+  if (CHECKED_README_PATHS.includes(file)) {
+    return true;
+  }
+
+  if (isDocPath(file)) {
+    return false;
+  }
+
+  if (file.startsWith('site/src/lib/')) {
+    return true;
+  }
+
+  if (file.startsWith('examples/')) {
+    return true;
+  }
+
+  if (file.startsWith('packages/exojs-bench/results/')) {
+    return true;
+  }
+
+  if (/^packages\/create-exo-app\/templates\/(?:top-down|platformer)\//.test(file)) {
+    return true;
+  }
+
   return false;
 };
+
+/**
+ * Authored-map fixture area: the top-down starter's map and atlas. A real
+ * WebGL2 test loads and renders exactly these files, but it runs in the WebGL2
+ * browser lane, which otherwise follows `engine` only; the unit lane's consumer
+ * suite (see `isSiteDataPath`) proves the map imports and plays, not that it
+ * draws. Gates that one browser lane and nothing else of `engine`.
+ */
+const isAuthoredMapFixturePath = (file: string): boolean =>
+  !isDocPath(file) && file.startsWith('packages/create-exo-app/templates/top-down/public/assets/');
 
 /**
  * create-exo-app area: the scaffolding CLI is a standalone package with no
@@ -329,10 +517,22 @@ const isSiteDataPath = (file: string): boolean => {
  * and outside `engine`. Gates its own verify script instead.
  */
 const isCreateExoAppPath = (file: string): boolean => {
-  if (isDocPath(file)) return false;
-  if (file.startsWith('.github/workflows/')) return true;
-  if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') return true;
-  if (file.startsWith('packages/create-exo-app/')) return true;
+  if (isDocPath(file)) {
+    return false;
+  }
+
+  if (file.startsWith('.github/workflows/')) {
+    return true;
+  }
+
+  if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') {
+    return true;
+  }
+
+  if (file.startsWith('packages/create-exo-app/')) {
+    return true;
+  }
+
   return false;
 };
 
@@ -341,11 +541,26 @@ const isCreateExoAppPath = (file: string): boolean => {
  * release dry run, which builds and packs everything a release would.
  */
 const isReleasePath = (file: string): boolean => {
-  if (isDocPath(file)) return false;
-  if (file.startsWith('scripts/release/')) return true;
-  if (file === 'package.json' || file === 'pnpm-lock.yaml') return true;
-  if (/^packages\/[^/]+\/package\.json$/.test(file)) return true;
-  if (file === '.github/workflows/release.yml') return true;
+  if (isDocPath(file)) {
+    return false;
+  }
+
+  if (file.startsWith('scripts/release/')) {
+    return true;
+  }
+
+  if (file === 'package.json' || file === 'pnpm-lock.yaml') {
+    return true;
+  }
+
+  if (/^packages\/[^/]+\/package\.json$/.test(file)) {
+    return true;
+  }
+
+  if (file === '.github/workflows/release.yml') {
+    return true;
+  }
+
   return false;
 };
 
@@ -360,23 +575,90 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
   let guides = false;
   let siteData = false;
   let createExoApp = false;
+  let authoredMapFixture = false;
+
   for (const raw of changedFiles) {
     // Normalise Windows separators and trim stray whitespace/blank entries.
     const file = String(raw).replace(/\\/g, '/').trim();
-    if (file === '') continue;
-    if (!engine && isEnginePath(file)) engine = true;
-    if (!site && isSitePath(file)) site = true;
-    if (!audioFx && isAudioFxPath(file)) audioFx = true;
-    if (!tilemapWorker && isTilemapWorkerPath(file)) tilemapWorker = true;
-    if (!exampleCatalog && isExampleCatalogPath(file)) exampleCatalog = true;
-    if (!benchStructural && isBenchStructuralPath(file)) benchStructural = true;
-    if (!release && isReleasePath(file)) release = true;
-    if (!guides && isGuidesPath(file)) guides = true;
-    if (!siteData && isSiteDataPath(file)) siteData = true;
-    if (!createExoApp && isCreateExoAppPath(file)) createExoApp = true;
-    if (engine && site && audioFx && tilemapWorker && exampleCatalog && benchStructural && release && guides && siteData && createExoApp) break;
+
+    if (file === '') {
+      continue;
+    }
+
+    if (!engine && isEnginePath(file)) {
+      engine = true;
+    }
+
+    if (!site && isSitePath(file)) {
+      site = true;
+    }
+
+    if (!audioFx && isAudioFxPath(file)) {
+      audioFx = true;
+    }
+
+    if (!tilemapWorker && isTilemapWorkerPath(file)) {
+      tilemapWorker = true;
+    }
+
+    if (!exampleCatalog && isExampleCatalogPath(file)) {
+      exampleCatalog = true;
+    }
+
+    if (!benchStructural && isBenchStructuralPath(file)) {
+      benchStructural = true;
+    }
+
+    if (!release && isReleasePath(file)) {
+      release = true;
+    }
+
+    if (!guides && isGuidesPath(file)) {
+      guides = true;
+    }
+
+    if (!siteData && isSiteDataPath(file)) {
+      siteData = true;
+    }
+
+    if (!createExoApp && isCreateExoAppPath(file)) {
+      createExoApp = true;
+    }
+
+    if (!authoredMapFixture && isAuthoredMapFixturePath(file)) {
+      authoredMapFixture = true;
+    }
+
+    if (
+      engine &&
+      site &&
+      audioFx &&
+      tilemapWorker &&
+      exampleCatalog &&
+      benchStructural &&
+      release &&
+      guides &&
+      siteData &&
+      createExoApp &&
+      authoredMapFixture
+    ) {
+      break;
+    }
   }
-  return { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural, release, guides, siteData, createExoApp };
+
+  return {
+    engine,
+    site,
+    audioFx,
+    tilemapWorker,
+    exampleCatalog,
+    benchStructural,
+    release,
+    guides,
+    siteData,
+    createExoApp,
+    authoredMapFixture,
+  };
 };
 
 /**
@@ -396,17 +678,32 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
  *   - the unit lane also gates on `guides` (guide content under
  *     `site/src/content/**`, which the `test/site/guide-*` suites validate) and
  *     on `siteData` (the sources the remaining `test/site/**` suites read);
+ *   - the WebGL2 browser lane also gates on `authoredMapFixture` (the
+ *     starter's authored map, which a WebGL2 test renders);
  *   - create-exo-app-verify gates on `createExoApp`, independent of `engine`
  *     (the scaffolder has no engine or browser impact of its own).
  */
 export const effectiveLanes = (areas: LaneAreas): EffectiveLanes => {
-  const { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural, release, guides, siteData, createExoApp } = areas;
+  const {
+    engine,
+    site,
+    audioFx,
+    tilemapWorker,
+    exampleCatalog,
+    benchStructural,
+    release,
+    guides,
+    siteData,
+    createExoApp,
+    authoredMapFixture,
+  } = areas;
+
   return {
     typecheck: true,
     lint: true,
     unit: engine || guides || siteData,
     coverage: engine,
-    browserWebgl2: engine,
+    browserWebgl2: engine || authoredMapFixture,
     browserWebgpu: engine,
     browserFirefox: engine,
     browserAudio: audioFx,

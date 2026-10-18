@@ -282,7 +282,13 @@ export class RetainedContainer extends Container {
     // mask's rect moved - which the capture holds nothing about.
     if (
       this._fragment.isClean(this._contentRevision, this._structureRevision, builder.backend) ||
-      this._fragment.reconcileLiveEntryChanges(this._contentRevision, this._structureRevision, builder.backend, this, builder._destinationOpaque())
+      this._fragment.reconcileLiveEntryChanges(
+        this._contentRevision,
+        this._structureRevision,
+        builder.backend,
+        this,
+        builder._destinationOpaque(),
+      )
     ) {
       // A content/structure-clean frame may still carry transform-only
       // descendant moves, since an own-transform move no longer content-

@@ -1,0 +1,965 @@
+{
+  "title": "CharacterMovementComponent",
+  "description": "Moves a character over surfaces: walking along the ground, falling under gravity, launching into the air, climbing walkable slopes and small steps, staying on the ground over small dips, and riding moving platforms. It composes over a KinematicMovementComponent, which stays the only thing that moves the body; while the character is enabled it issues the movement's commands and `KinematicMovementComponent.move` throws. Call move with the walking input for the coming step and launch to throw the character into the air. Whether a jump is allowed - only from the ground, a second time in the air, shortly after leaving a ledge - is the game's decision: grounded and the other contact state are there to make it, and `launch` works anywhere. Every fixed step the world runs, the character integrates gravity, walks along the surface it stands on at the movement's `maxSpeed`, and casts the result through the movement's collide-and-slide. A `PhysicsWorld.step` call that runs several fixed steps integrates each of them and applies the same walking input to all of them, like a movement command. Contact state - which surface supports the character, which walls and ceilings the last step ran into - describes the end of the latest completed step, so a `fixedUpdate` reading it before the world steps sees the pose the character is in. A surface supports the character when it lies within the walkable angle of up and touches the body's underside. Sensors, and colliders the body's filters exclude, never support it. One-way platforms are open `ChainShape`s, which block only from the side their normal points to: the character jumps through one from below and lands on it from above. Dropping through one is a game rule; clear the platform's category from the character collider's filter mask until the character is below it. Standing on a moving body carries the character with the body's velocity at the character's position, including its rotation, but the character itself never rotates. Leaving the support keeps that velocity, and launching from it adds it to the launch. A support moved by teleporting carries nothing.",
+  "symbol": "CharacterMovementComponent",
+  "kind": "class",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 30,
+  "counts": {
+    "constructors": 1,
+    "methods": 8,
+    "properties": 21,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Moves a character over surfaces: walking along the ground, falling under gravity, launching into the air, climbing walkable slopes and small steps, staying on the ground over small dips, and riding moving platforms. It composes over a KinematicMovementComponent, which stays the only thing that moves the body; while the character is enabled it issues the movement's commands and `KinematicMovementComponent.move` throws.",
+        "Call move with the walking input for the coming step and launch to throw the character into the air. Whether a jump is allowed - only from the ground, a second time in the air, shortly after leaving a ledge - is the game's decision: grounded and the other contact state are there to make it, and `launch` works anywhere.",
+        "Every fixed step the world runs, the character integrates gravity, walks along the surface it stands on at the movement's `maxSpeed`, and casts the result through the movement's collide-and-slide. A `PhysicsWorld.step` call that runs several fixed steps integrates each of them and applies the same walking input to all of them, like a movement command. Contact state - which surface supports the character, which walls and ceilings the last step ran into - describes the end of the latest completed step, so a `fixedUpdate` reading it before the world steps sees the pose the character is in.",
+        "A surface supports the character when it lies within the walkable angle of up and touches the body's underside. Sensors, and colliders the body's filters exclude, never support it. One-way platforms are open `ChainShape`s, which block only from the side their normal points to: the character jumps through one from below and lands on it from above. Dropping through one is a game rule; clear the platform's category from the character collider's filter mask until the character is below it.",
+        "Standing on a moving body carries the character with the body's velocity at the character's position, including its rotation, but the character itself never rotates. Leaving the support keeps that velocity, and launching from it adds it to the launch. A support moved by teleporting carries nothing."
+      ],
+      "importLine": "import { CharacterMovementComponent } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(movement: KinematicMovementComponent, options: CharacterMovementOptions): CharacterMovementComponent",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "movement",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "KinematicMovementComponent",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CharacterMovementOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CharacterMovementComponent",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "movement",
+              "type": "KinematicMovementComponent",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "CharacterMovementOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "CharacterMovementComponent",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "End the component for good: disable it if active, detach it from its node if attached, then run onDestroy. Idempotent. Destroying a node destroys every component still attached to it. Every step runs even when a hook throws; the first error is rethrown afterwards."
+        },
+        {
+          "name": "launch",
+          "signature": "launch(velocity: Readonly<PointLike>): void",
+          "signatureTokens": [
+            {
+              "text": "launch",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "velocity",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "velocity",
+              "type": "Readonly<PointLike>",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Replaces the character's airborne velocity with velocity, in world units per second, at the start of the next fixed step, and lets it leave the ground. Launching from a moving support adds the support's velocity. Gravity then acts on it until the character lands, hits a ceiling or wall that absorbs it, or is launched again. Walking input adds on top and is not part of it. Applies once, however many fixed steps the next advance runs, and works whether or not the character is grounded. Launching with zero velocity cancels the airborne velocity."
+        },
+        {
+          "name": "move",
+          "signature": "move(input: number): void",
+          "signatureTokens": [
+            {
+              "text": "move",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "input",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "input",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Walks along the ground during the world's next advance, at the movement's maxSpeed times input: positive towards the right of up (+x for the default up), negative towards the left. input is clamped to [-1, 1]. In the air the same input steers sideways. Like a movement command it lasts until the world has advanced once, so issue it every fixed step; the last call before the world advances wins."
+        },
+        {
+          "name": "onAttach",
+          "signature": "onAttach(): Synchronous",
+          "signatureTokens": [
+            {
+              "text": "onAttach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Synchronous",
+          "description": "Called after the component was attached to node. The node may not be in any scene yet."
+        },
+        {
+          "name": "onDestroy",
+          "signature": "onDestroy(): Synchronous",
+          "signatureTokens": [
+            {
+              "text": "onDestroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Synchronous",
+          "description": "Called once, at the end of destroy."
+        },
+        {
+          "name": "onDetach",
+          "signature": "onDetach(): Synchronous",
+          "signatureTokens": [
+            {
+              "text": "onDetach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Synchronous",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Synchronous",
+          "description": "Called after the component was removed from its node; node is no longer readable."
+        },
+        {
+          "name": "onDisable",
+          "signature": "onDisable(): void",
+          "signatureTokens": [
+            {
+              "text": "onDisable",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Called when the component stops being active."
+        },
+        {
+          "name": "onEnable",
+          "signature": "onEnable(): void",
+          "signatureTokens": [
+            {
+              "text": "onEnable",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Called when the component becomes active. Release in onDisable what this acquires."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "[componentHost]",
+          "signature": "[componentHost]: SceneNode",
+          "signatureTokens": [
+            {
+              "text": "[componentHost]",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Type-only carrier of the accepted host type, read by ComponentHostCheck. Never present at runtime."
+        },
+        {
+          "name": "movement",
+          "signature": "movement: KinematicMovementComponent",
+          "signatureTokens": [
+            {
+              "text": "movement",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "KinematicMovementComponent",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The movement this component drives."
+        },
+        {
+          "name": "active",
+          "signature": "active: boolean",
+          "signatureTokens": [
+            {
+              "text": "active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the component is enabled in an active scene right now: between its onEnable and onDisable. Stays true while the scene is paused."
+        },
+        {
+          "name": "attached",
+          "signature": "attached: boolean",
+          "signatureTokens": [
+            {
+              "text": "attached",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the component is attached to a node."
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether destroy has run. A destroyed component cannot be attached again."
+        },
+        {
+          "name": "enabled",
+          "signature": "enabled: boolean",
+          "signatureTokens": [
+            {
+              "text": "enabled",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The component's own switch. true by default. Turning it off disables an active component (and stops a BehaviorComponent's frame hooks) without detaching it: it stays on its node and in Scene.query results. Turning it back on enables it again once its node is in an active scene - during a frame, from the next frame on."
+        },
+        {
+          "name": "gravity",
+          "signature": "gravity: number",
+          "signatureTokens": [
+            {
+              "text": "gravity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "groundBody",
+          "signature": "groundBody: PhysicsBody | null",
+          "signatureTokens": [
+            {
+              "text": "groundBody",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The body the character stands on, or null when not grounded."
+        },
+        {
+          "name": "groundCollider",
+          "signature": "groundCollider: Collider | null",
+          "signatureTokens": [
+            {
+              "text": "groundCollider",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The collider the character stands on; a chain is reported as the chain. null when not grounded."
+        },
+        {
+          "name": "grounded",
+          "signature": "grounded: boolean",
+          "signatureTokens": [
+            {
+              "text": "grounded",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true when a walkable surface supported the character at the end of the latest step and the character was not moving away from it."
+        },
+        {
+          "name": "groundNormal",
+          "signature": "groundNormal: Readonly<Vector>",
+          "signatureTokens": [
+            {
+              "text": "groundNormal",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Unit normal of the supporting surface, pointing away from it; zero when not grounded."
+        },
+        {
+          "name": "maxFallSpeed",
+          "signature": "maxFallSpeed: number",
+          "signatureTokens": [
+            {
+              "text": "maxFallSpeed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "maxSlopeAngle",
+          "signature": "maxSlopeAngle: number",
+          "signatureTokens": [
+            {
+              "text": "maxSlopeAngle",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "maxStepHeight",
+          "signature": "maxStepHeight: number",
+          "signatureTokens": [
+            {
+              "text": "maxStepHeight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "node",
+          "signature": "node: N",
+          "signatureTokens": [
+            {
+              "text": "node",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "N",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node this component is attached to."
+        },
+        {
+          "name": "onCeiling",
+          "signature": "onCeiling: boolean",
+          "signatureTokens": [
+            {
+              "text": "onCeiling",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true when the latest step ran into a surface facing down within the walkable angle."
+        },
+        {
+          "name": "onWall",
+          "signature": "onWall: boolean",
+          "signatureTokens": [
+            {
+              "text": "onWall",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true when the latest step ran into a surface too steep to stand on that is not a ceiling."
+        },
+        {
+          "name": "scene",
+          "signature": "scene: Scene<void, Application<object>> | null",
+          "signatureTokens": [
+            {
+              "text": "scene",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scene",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The scene whose root or UI layer the component's node belongs to, or null while it belongs to none. A retained scene still counts."
+        },
+        {
+          "name": "up",
+          "signature": "up: Readonly<Vector>",
+          "signatureTokens": [
+            {
+              "text": "up",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Unit direction the character stands up along. Assigning normalizes the value and re-evaluates the support at the next step."
+        },
+        {
+          "name": "velocity",
+          "signature": "velocity: Readonly<Vector>",
+          "signatureTokens": [
+            {
+              "text": "velocity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Velocity the latest step actually moved the character at, in world units per second: walking, falling and being carried, after collisions. Zero before the first step."
+        },
+        {
+          "name": "wallNormal",
+          "signature": "wallNormal: Readonly<Vector>",
+          "signatureTokens": [
+            {
+              "text": "wallNormal",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Normal of the wall the latest step ran into, pointing away from it; zero when not onWall."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/CharacterMovementComponent.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/CharacterMovementComponent.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/CharacterMovementComponent.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/CharacterMovementComponent.ts"
+}

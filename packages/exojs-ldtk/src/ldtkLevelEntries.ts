@@ -29,11 +29,13 @@ export interface LdtkLevelEntry {
 export const getLdtkLevelEntries = (data: LdtkData): readonly LdtkLevelEntry[] => {
   if (data.worlds && data.worlds.length > 0) {
     const entries: LdtkLevelEntry[] = [];
+
     for (const world of data.worlds) {
       for (const level of world.levels) {
         entries.push({ level, worldIid: world.iid });
       }
     }
+
     return entries;
   }
 

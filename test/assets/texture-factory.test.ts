@@ -26,7 +26,11 @@ class CapturingImage extends RealImage {
 
 const lastImage = (): HTMLImageElement => {
   const image = capturedImages.at(-1);
-  if (!image) throw new Error('No Image instance was created by the factory under test.');
+
+  if (!image) {
+    throw new Error('No Image instance was created by the factory under test.');
+  }
+
   return image;
 };
 
@@ -178,7 +182,9 @@ describe('TextureFactory', () => {
     test('create() rejects numeric requests instead of using the color-managed image fallback', async () => {
       const factory = new TextureFactory();
 
-      await expect(factory.create(PNG_HEADER, factoryContext({ textureOptions: { colorSpace: 'none' } }))).rejects.toThrow('Texture.fromPixels() or KTX2');
+      await expect(factory.create(PNG_HEADER, factoryContext({ textureOptions: { colorSpace: 'none' } }))).rejects.toThrow(
+        'Texture.fromPixels() or KTX2',
+      );
       expect(capturedImages).toHaveLength(0);
     });
   });

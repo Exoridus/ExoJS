@@ -33,9 +33,13 @@ import { particlesExtension, ParticleSystem } from '../../packages/exojs-particl
  */
 const defaultContext2dStub = (): unknown => ({
   fillStyle: '',
-  fillRect: () => undefined,
-  drawImage: () => undefined,
-  getImageData: (_x: number, _y: number, width: number, height: number) => ({ data: new Uint8ClampedArray(width * height * 4), width, height }),
+  fillRect: () => {},
+  drawImage: () => {},
+  getImageData: (_x: number, _y: number, width: number, height: number) => ({
+    data: new Uint8ClampedArray(width * height * 4),
+    width,
+    height,
+  }),
 });
 
 interface MockWebGpuEnvironment {
@@ -157,6 +161,7 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   const lostPromise = new Promise<GPUDeviceLostInfo>(resolve => {
     _resolveLost = resolve;
   });
+
   const simulateDeviceLost = (info: Partial<GPUDeviceLostInfo> = {}): void => {
     _resolveLost?.({
       reason: 'unknown' as GPUDeviceLostReason,
@@ -164,6 +169,7 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
       ...info,
     } as GPUDeviceLostInfo);
   };
+
   // Mirrors the platform contract: destroying a device resolves its `lost`
   // promise with reason `'destroyed'`, which is what distinguishes an
   // intentional teardown from a driver-side loss.
@@ -1244,7 +1250,8 @@ describe('WebGpuBackend', () => {
 
       expect(
         environment.createTexture.mock.calls.some(
-          ([descriptor]) => descriptor.mipLevelCount === 5 && (descriptor.usage & GPUTextureUsage.RENDER_ATTACHMENT) === GPUTextureUsage.RENDER_ATTACHMENT,
+          ([descriptor]) =>
+            descriptor.mipLevelCount === 5 && (descriptor.usage & GPUTextureUsage.RENDER_ATTACHMENT) === GPUTextureUsage.RENDER_ATTACHMENT,
         ),
       ).toBe(true);
       expect(

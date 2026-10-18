@@ -139,7 +139,15 @@ export type { LayoutOptions } from '#rendering/text/LayoutOptions';
 export type { LineShaper, ShapingMode } from '#rendering/text/shaping';
 export type { TextOptions } from '#rendering/text/Text';
 export { Text } from '#rendering/text/Text';
-export type { FontFamily, FontRegistry, FontWeight, ResolvedTextGradient, StyleChangeHint, TextGradient, TextStyleOptions } from '#rendering/text/TextStyle';
+export type {
+  FontFamily,
+  FontRegistry,
+  FontWeight,
+  ResolvedTextGradient,
+  StyleChangeHint,
+  TextGradient,
+  TextStyleOptions,
+} from '#rendering/text/TextStyle';
 export { textGradientMaxStops, TextStyle } from '#rendering/text/TextStyle';
 export type {
   FontStyle,

@@ -220,7 +220,14 @@ export class WebGl2OutputPass {
               lastBuffer = buf;
             }
 
-            gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+            gl.vertexAttribPointer(
+              attribute.location,
+              attribute.size,
+              attribute.type,
+              attribute.normalized,
+              attribute.stride,
+              attribute.start,
+            );
             gl.enableVertexAttribArray(attribute.location);
           }
 

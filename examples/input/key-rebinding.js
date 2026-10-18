@@ -1,13 +1,22 @@
 // Auto-generated from key-rebinding.ts - edit the .ts source, not this file.
-import { ActionMap, Application, BindingProfile, ButtonAction, Color, FixedResolutionCanvasSizing, Graphics, inputToken, Keyboard, Scene } from '@codexo/exojs';
+import {
+  ActionMap,
+  Application,
+  BindingProfile,
+  ButtonAction,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  inputToken,
+  Keyboard,
+  Scene,
+} from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // A binding is persisted as a stable lowercase token ("keyboard.space"), never
 // as an enum number: tokens survive an engine upgrade, a different browser, and
 // a controller plugged into another port. This turns one back into something a
 // player can read on screen.
-const keyName = token => {
-  return token?.replace(/^keyboard\./, '').replaceAll('-', ' ') ?? 'unbound';
-};
+const keyName = token => token?.replace(/^keyboard\./, '').replaceAll('-', ' ') ?? 'unbound';
 // A BindingProfile stores only what the player CHANGED, so writing the whole
 // thing to localStorage still leaves every action the game gains later at its
 // own default.

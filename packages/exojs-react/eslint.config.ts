@@ -12,9 +12,9 @@ import { languageBaselineConfig, nodeToolingConfig } from '@codexo/exojs-config/
 import { extensionSourceConfig } from '@codexo/exojs-config/eslint/extension';
 import { packageTestConfig } from '@codexo/exojs-config/eslint/package-test';
 import { reactConfig, reactImperativeBindingConfig } from '@codexo/exojs-config/eslint/react';
+import { prettierCompatConfig } from '@codexo/exojs-config/eslint/style';
 import { vitestConfig } from '@codexo/exojs-config/eslint/vitest';
 import { defineConfig } from 'eslint/config';
-import prettier from 'eslint-config-prettier';
 
 const SOURCE = ['src/**/*.{ts,tsx}'];
 const EXAMPLES = ['examples/**/*.{ts,tsx}'];
@@ -91,6 +91,7 @@ export default defineConfig([
   ...packageTestConfig({ files: TESTS }),
   ...vitestConfig({ files: TESTS }),
 
-  // Prettier compatibility: keep this last
-  prettier,
+  // Prettier compatibility: keep this last. It also re-enables `curly`,
+  // which Prettier compatibility would otherwise leave off.
+  ...prettierCompatConfig({ files: [...SOURCE, ...EXAMPLES, ...TESTS, '*.config.ts'] }),
 ]);

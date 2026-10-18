@@ -44,28 +44,38 @@ const readComponent = (view: DataView, type: AttributeType, offset: number, norm
   switch (type) {
     case 'f32':
       return view.getFloat32(offset, true);
+
     case 'u8': {
       const value = view.getUint8(offset);
+
       return normalized ? value / 255 : value;
     }
+
     case 'u16': {
       const value = view.getUint16(offset, true);
+
       return normalized ? value / 65535 : value;
     }
+
     case 'u32': {
       const value = view.getUint32(offset, true);
+
       return normalized ? value / 4294967295 : value;
     }
+
     case 'i32': {
       const value = view.getInt32(offset, true);
+
       return normalized ? Math.max(value / 2147483647, -1) : value;
     }
+
     default:
       return 0;
   }
 };
 
-const cloneAttributes = (attributes: readonly GeometryAttribute[]): readonly GeometryAttribute[] => attributes.map(attribute => ({ ...attribute }));
+const cloneAttributes = (attributes: readonly GeometryAttribute[]): readonly GeometryAttribute[] =>
+  attributes.map(attribute => ({ ...attribute }));
 
 const resolvePositionAttribute = (attributes: readonly GeometryAttribute[]): GeometryAttribute => {
   const directMatch = attributes.find(attribute => positionAttributeNames.has(attribute.name));
@@ -137,14 +147,17 @@ export class Geometry {
       if (typeof attribute.name !== 'string' || attribute.name.length === 0) {
         throw new Error('Geometry attribute name must be a non-empty string.');
       }
+
       if (names.has(attribute.name)) {
         throw new Error(`Geometry attribute "${attribute.name}" is declared more than once.`);
       }
+
       names.add(attribute.name);
 
       if (!Number.isInteger(attribute.size) || attribute.size === 0 || attribute.size > 4) {
         throw new Error(`Geometry attribute "${attribute.name}" size must be an integer in [1..4] (got ${attribute.size}).`);
       }
+
       if (!Number.isInteger(attribute.offset) || attribute.offset < 0) {
         throw new Error(`Geometry attribute "${attribute.name}" offset must be a non-negative integer (got ${attribute.offset}).`);
       }
@@ -237,6 +250,7 @@ export class Geometry {
     if (vertexCount === 0) {
       this._localBounds.set(0, 0, 0, 0);
       this._localBoundsDirty = false;
+
       return this;
     }
 
@@ -257,10 +271,21 @@ export class Geometry {
       const x = readComponent(view, this._positionAttribute.type, start, this._positionAttribute.normalized);
       const y = readComponent(view, this._positionAttribute.type, start + componentByteSize, this._positionAttribute.normalized);
 
-      if (x < minX) minX = x;
-      if (x > maxX) maxX = x;
-      if (y < minY) minY = y;
-      if (y > maxY) maxY = y;
+      if (x < minX) {
+        minX = x;
+      }
+
+      if (x > maxX) {
+        maxX = x;
+      }
+
+      if (y < minY) {
+        minY = y;
+      }
+
+      if (y > maxY) {
+        maxY = y;
+      }
     }
 
     this._localBounds.set(minX, minY, maxX - minX, maxY - minY);

@@ -65,7 +65,10 @@ describe('Loader.stats', () => {
   });
 
   test('counts resident assets and their estimated bytes per type', async () => {
-    const loader = makeLoader([payloadType('bytes', () => new ArrayBuffer(1024)), payloadType('pixels', () => ({ width: 64, height: 64 }))]);
+    const loader = makeLoader([
+      payloadType('bytes', () => new ArrayBuffer(1024)),
+      payloadType('pixels', () => ({ width: 64, height: 64 })),
+    ]);
 
     await loader.load(new Asset({ type: 'bytes', source: 'a.dat' }));
     await loader.load(new Asset({ type: 'bytes', source: 'b.dat' }));

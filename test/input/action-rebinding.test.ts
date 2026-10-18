@@ -164,7 +164,10 @@ describe('binding serialization', () => {
 
   test('serializes to lowercase tokens and never to a gamepad slot', () => {
     const driver = createDriver();
-    const map = new ActionMap({ jump: new ButtonAction([Keyboard.Space, GamepadButton.South]) }, { gamepad: new Gamepad(2, driver.sample.values) });
+    const map = new ActionMap(
+      { jump: new ButtonAction([Keyboard.Space, GamepadButton.South]) },
+      { gamepad: new Gamepad(2, driver.sample.values) },
+    );
 
     const json = JSON.stringify(map.serializeBindings());
 
@@ -213,18 +216,24 @@ describe('binding serialization', () => {
 
     expect(() => BindingProfile.fromJSON(null)).toThrow(InputBindingError);
     expect(() => BindingProfile.fromJSON({ version: 2, overrides: {} })).toThrow(InputBindingError);
-    expect(() => map.applyProfile(new BindingProfile().set('jump', { kind: 'button', binding: ['keyboard.hyperspace'] }))).toThrow(InputBindingError);
-    expect(() => map.applyProfile(new BindingProfile().set('jump', { kind: 'axis', binding: [{ direct: 'gamepad.axis.left-stick-x' }] }))).toThrow(
+    expect(() => map.applyProfile(new BindingProfile().set('jump', { kind: 'button', binding: ['keyboard.hyperspace'] }))).toThrow(
       InputBindingError,
     );
-    expect(() => map.applyProfile(new BindingProfile().set('crouch', { kind: 'button', binding: ['keyboard.key-c'] }))).toThrow(InputBindingError);
+    expect(() =>
+      map.applyProfile(new BindingProfile().set('jump', { kind: 'axis', binding: [{ direct: 'gamepad.axis.left-stick-x' }] })),
+    ).toThrow(InputBindingError);
+    expect(() => map.applyProfile(new BindingProfile().set('crouch', { kind: 'button', binding: ['keyboard.key-c'] }))).toThrow(
+      InputBindingError,
+    );
   });
 
   test('leaves a programmer error a plain Error, so a catch around a profile load does not swallow it', () => {
     const shared = new ButtonAction(Keyboard.Space);
     const map = new ActionMap({ jump: shared });
 
-    expect(() => (map as unknown as { rebind(name: string, binding: unknown): void }).rebind('nope', Keyboard.J)).not.toThrow(InputBindingError);
+    expect(() => (map as unknown as { rebind(name: string, binding: unknown): void }).rebind('nope', Keyboard.J)).not.toThrow(
+      InputBindingError,
+    );
     expect(() => new ActionMap({ other: shared })).not.toThrow(InputBindingError);
   });
 });
@@ -243,7 +252,9 @@ describe('defaults versus overrides', () => {
   });
 
   test('an action a stored profile never mentioned keeps the default a later build gave it', () => {
-    const saved = BindingProfile.fromJSON(JSON.parse(JSON.stringify(new BindingProfile().set('jump', { kind: 'button', binding: ['keyboard.key-j'] }))));
+    const saved = BindingProfile.fromJSON(
+      JSON.parse(JSON.stringify(new BindingProfile().set('jump', { kind: 'button', binding: ['keyboard.key-j'] }))),
+    );
 
     // The build that reads the save has grown a second action with its own
     // default. A full-snapshot profile would have frozen it at "unbound".
@@ -300,7 +311,9 @@ describe('defaults versus overrides', () => {
     const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
 
     expect(() => map.rebind('jump' as never, Keyboard.J)).not.toThrow();
-    expect(() => (map as unknown as { rebind(name: string, binding: unknown): void }).rebind('nope', Keyboard.J)).toThrow(/no action named/);
+    expect(() => (map as unknown as { rebind(name: string, binding: unknown): void }).rebind('nope', Keyboard.J)).toThrow(
+      /no action named/,
+    );
   });
 });
 
@@ -407,7 +420,9 @@ describe('conflict detection', () => {
 
     map.rebind('fire', GamepadButton.South);
 
-    expect(map.conflicts()).toEqual([{ token: 'gamepad.button.south', channel: resolveGamepadSlotChannel(GamepadButton.South, 2), actions: ['jump', 'fire'] }]);
+    expect(map.conflicts()).toEqual([
+      { token: 'gamepad.button.south', channel: resolveGamepadSlotChannel(GamepadButton.South, 2), actions: ['jump', 'fire'] },
+    ]);
   });
 
   test('composite and chord members take part in conflict detection', () => {

@@ -332,7 +332,12 @@ const extractAttributes = (gl: WebGL2RenderingContext, program: WebGLProgram, sh
   }
 };
 
-const extractUniforms = (gl: WebGL2RenderingContext, program: WebGLProgram, shader: WebGl2Shader, managedUniforms: ManagedUniform[]): void => {
+const extractUniforms = (
+  gl: WebGL2RenderingContext,
+  program: WebGLProgram,
+  shader: WebGl2Shader,
+  managedUniforms: ManagedUniform[],
+): void => {
   const activeCount = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
   const activeIndices = new Uint8Array(activeCount).map((_, index) => index);
   const blocks = gl.getActiveUniforms(program, activeIndices, gl.UNIFORM_BLOCK_INDEX) as number[];
@@ -397,7 +402,12 @@ interface SchemaBlockBinding {
  * index and is skipped: allocating for it would cost a buffer per material for
  * bytes the program cannot address.
  */
-const bindSchemaBlocks = (gl: WebGL2RenderingContext, program: WebGLProgram, blocks: readonly UniformBlockData[], bindings: SchemaBlockBinding[]): void => {
+const bindSchemaBlocks = (
+  gl: WebGL2RenderingContext,
+  program: WebGLProgram,
+  blocks: readonly UniformBlockData[],
+  bindings: SchemaBlockBinding[],
+): void => {
   for (const [point, data] of blocks.entries()) {
     const index = gl.getUniformBlockIndex(program, data.layout.typeName);
 

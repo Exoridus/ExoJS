@@ -4,7 +4,11 @@ import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
 import type { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
-import { type RetainedBatchInstruction, RetainedInstructionKind, type RetainedInstructionSet } from '#rendering/plan/RetainedInstructionSet';
+import {
+  type RetainedBatchInstruction,
+  RetainedInstructionKind,
+  type RetainedInstructionSet,
+} from '#rendering/plan/RetainedInstructionSet';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats } from '#rendering/RenderStats';
@@ -179,7 +183,8 @@ const playFrame = (root: Container, backend: RenderBackend): void => {
 
 const rootSetOf = (root: Container): RetainedInstructionSet | null => root._retainedRootRepresentation().fragment.instructions;
 
-const fragmentOf = (group: RetainedContainer): RetainedGroupFragment => (group as unknown as { _fragment: RetainedGroupFragment })._fragment;
+const fragmentOf = (group: RetainedContainer): RetainedGroupFragment =>
+  (group as unknown as { _fragment: RetainedGroupFragment })._fragment;
 
 /** A view whose world rect is `[0,0,800x600]`, matching the test render target. */
 const defaultView = (): View => new View(400, 300, 800, 600);

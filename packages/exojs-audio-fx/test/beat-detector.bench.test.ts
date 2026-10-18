@@ -36,6 +36,7 @@ const SNAPSHOT_PATH = resolve(__dirname, '__snapshots__/beat-baseline.json');
 
 const measureFixture = (fixture: BeatFixture): BeatMetrics => {
   const { messages } = runDetector(fixture.samples);
+
   return computeMetrics(messages, fixture);
 };
 
@@ -45,26 +46,34 @@ const measureFixture = (fixture: BeatFixture): BeatMetrics => {
  */
 const classifyFailures = (m: BeatMetrics, fixture: BeatFixture): string[] => {
   const fails: string[] = [];
+
   if (m.lockTimeSec === null) {
     fails.push('never-locked');
   }
+
   if (m.octaveError.halfOctave) {
     fails.push('octave-half');
   }
+
   if (m.octaveError.doubleOctave) {
     fails.push('octave-double');
   }
+
   if (m.fpMiss.fpRatePerMin > 15) {
     fails.push(`fp-rate-high:${m.fpMiss.fpRatePerMin.toFixed(1)}/min`);
   }
+
   if (m.fpMiss.recall < 0.4 && m.beatOffset.gtCount > 2) {
     fails.push(`low-recall:${(m.fpMiss.recall * 100).toFixed(0)}%`);
   }
+
   // For ramp: check if BPM error is very large (> 10% = significant tracking lag)
   const isRamp = typeof fixture.bpm === 'function';
+
   if (isRamp && m.bpmError.meanAbs > m.trueBpmAtMid * 0.1) {
     fails.push(`ramp-lag:bpm-err=${m.bpmError.meanAbs.toFixed(1)}`);
   }
+
   return fails;
 };
 
@@ -179,6 +188,7 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
     it(`${label}: lock time < fixture duration (if locked)`, () => {
       const entry = allMetrics.get(label)!;
       const fixtureDurationSec = fixture.samples.length / SAMPLE_RATE;
+
       if (entry.lockTimeSec !== null) {
         expect(entry.lockTimeSec).toBeLessThan(fixtureDurationSec);
       }
@@ -190,6 +200,7 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
 
   it('prints baseline metric table', () => {
     console.log('\n====== BeatDetector Stage-1 Baseline ======\n');
+
     for (const fixture of FIXTURES) {
       const entry = allMetrics.get(fixture.label)!;
       console.log(entry.formatted);
@@ -198,12 +209,15 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
 
     // Stage-2 target list: fixtures the CURRENT detector fails
     const failingFixtures = FIXTURES.filter(f => (allMetrics.get(f.label)?.failures.length ?? 0) > 0);
+
     if (failingFixtures.length > 0) {
       console.log('====== Stage-2 TARGET LIST (current failures) ======');
+
       for (const f of failingFixtures) {
         const entry = allMetrics.get(f.label)!;
         console.log(`  FAIL  ${f.label}: ${entry.failures.join(', ')}`);
       }
+
       console.log('');
     } else {
       console.log('All fixtures PASS (no Stage-2 targets identified yet)\n');
@@ -220,7 +234,14 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
 
   // The six tempos that USED to lock to a sub-harmonic (or never lock) must now lock to
   // the true fundamental within 3%, with no octave error.
-  for (const label of ['clicktrack_120bpm', 'clicktrack_128bpm', 'clicktrack_140bpm', 'clicktrack_180bpm', 'clicktrack_220bpm', 'clicktrack_250bpm']) {
+  for (const label of [
+    'clicktrack_120bpm',
+    'clicktrack_128bpm',
+    'clicktrack_140bpm',
+    'clicktrack_180bpm',
+    'clicktrack_220bpm',
+    'clicktrack_250bpm',
+  ]) {
     it(`${label} locks to fundamental ≤3%, no octave error`, () => {
       const e = allMetrics.get(label)!;
       expect(e.octaveHalf).toBe(false);
@@ -231,7 +252,13 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
   }
 
   // Musical / drifting fixtures: no octave error, ≤5%.
-  for (const label of ['doubleTime_128bpm', 'swing_120bpm_67pct', 'grooveOffset_120bpm_10ms', 'breakDrop_128bpm', 'tempoRamp_120_to_135bpm']) {
+  for (const label of [
+    'doubleTime_128bpm',
+    'swing_120bpm_67pct',
+    'grooveOffset_120bpm_10ms',
+    'breakDrop_128bpm',
+    'tempoRamp_120_to_135bpm',
+  ]) {
     it(`${label} no octave error, BPM error ≤5%`, () => {
       const e = allMetrics.get(label)!;
       expect(e.octaveHalf).toBe(false);
@@ -514,8 +541,13 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
   // `generatedAt` and leaves the tree permanently dirty.
 
   afterAll(() => {
-    if (allMetrics.size === 0) return;
-    if (!process.env.UPDATE_BASELINE) return;
+    if (allMetrics.size === 0) {
+      return;
+    }
+
+    if (!process.env.UPDATE_BASELINE) {
+      return;
+    }
 
     const snapshot = {
       generatedAt: new Date().toISOString(),
@@ -529,7 +561,7 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
 
     try {
       mkdirSync(dirname(SNAPSHOT_PATH), { recursive: true });
-      writeFileSync(SNAPSHOT_PATH, JSON.stringify(snapshot, null, 2) + '\n');
+      writeFileSync(SNAPSHOT_PATH, `${JSON.stringify(snapshot, null, 2)}\n`);
     } catch (err) {
       console.warn('Could not write baseline snapshot:', err);
     }

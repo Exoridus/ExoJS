@@ -32,7 +32,9 @@ const decoderOf = (loader: Loader): AssetDecoder => (loader as unknown as { _dec
 
 /** Drive one acquisition through the real cache path of `loader`. */
 const fetchThrough = (loader: Loader, source: string): Promise<string> =>
-  decoderOf(loader)._acquire(source, 'text', SingleEntryLayout.version<string>(1), canonicalizeSource('', source), async response => response.text());
+  decoderOf(loader)._acquire(source, 'text', SingleEntryLayout.version<string>(1), canonicalizeSource('', source), async response =>
+    response.text(),
+  );
 
 describe('Loader.onCacheError routing', () => {
   const originalFetch = global.fetch;

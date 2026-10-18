@@ -32,7 +32,8 @@ export const BODY_SIZE = 16;
 export const PERTURB_SPEED = 400;
 
 /** A box (full width/height) or circle collider shape, engine-neutral. */
-export type ShapeDesc = { readonly kind: 'box'; readonly width: number; readonly height: number } | { readonly kind: 'circle'; readonly radius: number };
+export type ShapeDesc =
+  { readonly kind: 'box'; readonly width: number; readonly height: number } | { readonly kind: 'circle'; readonly radius: number };
 
 /** One body in the neutral scene: its role, centre position, shape and material. */
 export interface BodyDesc {
@@ -373,7 +374,12 @@ const sceneExtent = (shape: PhysicsSceneShape, bodyCount: number): { width: numb
  * the origin by an irrational fraction of the height, so the sweep never falls
  * into a short repeating cycle.
  */
-export const rayForStep = (index: number, total: number, step: number, extent: { readonly width: number; readonly height: number }): RayDesc => {
+export const rayForStep = (
+  index: number,
+  total: number,
+  step: number,
+  extent: { readonly width: number; readonly height: number },
+): RayDesc => {
   const count = Math.max(1, total);
   const originY = extent.height * (((index / count + step * GOLDEN_STEP) % 1) + 0);
   // Fan across the full height of the far edge, so the sweep covers the extent

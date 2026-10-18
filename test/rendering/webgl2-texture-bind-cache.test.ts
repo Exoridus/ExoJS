@@ -53,6 +53,7 @@ const createBindHarness = (): BindHarness => {
     activeUnit = unit - context.TEXTURE0;
     originalActiveTexture(unit);
   };
+
   mutable['bindTexture'] = (target: number, handle: unknown): void => {
     binds.push({ unit: activeUnit, handle });
     originalBindTexture(target, handle);

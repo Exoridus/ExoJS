@@ -98,8 +98,16 @@ export const emptyTextLayout = (): TextLayoutResult => ({
  * {@link TextLayoutResult} for why the advance and the ink are different
  * numbers. Text that places no glyph yields zeroes for both.
  */
-export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutOptions, provider: GlyphProvider, shaper?: LineShaper): TextLayoutResult => {
-  if (text.length === 0) return emptyTextLayout();
+export const layoutText = (
+  text: string,
+  style: TextLayoutStyle,
+  layout: LayoutOptions,
+  provider: GlyphProvider,
+  shaper?: LineShaper,
+): TextLayoutResult => {
+  if (text.length === 0) {
+    return emptyTextLayout();
+  }
 
   const { fontSize, lineHeight, leading, align } = style;
   const textTransform = style.textTransform ?? 'none';
@@ -130,7 +138,8 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
   const cased = _applyTextTransform(text, textTransform, locale);
   const { text: preprocessed, sourceMap: whiteSpaceMap } = _applyWhiteSpace(cased.text, whiteSpace);
   const sourceMap = _composeSourceMaps(whiteSpaceMap, cased.sourceMap);
-  const toSource = (index: number): number => (sourceMap === null ? Math.min(index, text.length) : sourceMap[Math.min(index, sourceMap.length - 1)]!);
+  const toSource = (index: number): number =>
+    sourceMap === null ? Math.min(index, text.length) : sourceMap[Math.min(index, sourceMap.length - 1)]!;
 
   // Split into hard lines then optionally word-wrap each.
   const allLines: LayoutLine[] = [];
@@ -159,7 +168,9 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
   const lineCap = _resolveLineCap(layout.maxLines, maxHeight, overflow, computedLineHeight);
   const dropped = lineCap !== null && allLines.length > lineCap;
 
-  if (dropped) allLines.length = lineCap;
+  if (dropped) {
+    allLines.length = lineCap;
+  }
 
   if (lineCap !== null && overflow === 'ellipsis' && allLines.length > 0) {
     const lastIndex = allLines.length - 1;
@@ -170,7 +181,8 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
     // for the marker to cover, and dropping no line at all is how it presents.
     const tooWide =
       maxWidth !== undefined &&
-      (shaped ? shaper.measureLine(last.text, fontSize) : _lineAdvance(last.text, fontSize, provider, letterSpacing, locale, tabWidth)) > maxWidth;
+      (shaped ? shaper.measureLine(last.text, fontSize) : _lineAdvance(last.text, fontSize, provider, letterSpacing, locale, tabWidth)) >
+        maxWidth;
 
     if (dropped || tooWide) {
       const ellipsis = layout.ellipsis ?? defaultEllipsis;
@@ -205,7 +217,15 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
       if (body.length > 0) {
         const info = shaper.shapeLine(body, fontSize);
 
-        placements.push({ info, advance: info.advance, x: 0, y: lineY, cluster: body, sourceStart: lineSourceStart, sourceEnd: lineSourceEnd });
+        placements.push({
+          info,
+          advance: info.advance,
+          x: 0,
+          y: lineY,
+          cluster: body,
+          sourceStart: lineSourceStart,
+          sourceEnd: lineSourceEnd,
+        });
         cursorX = info.advance;
         wordCount = 1;
       }
@@ -262,7 +282,11 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
     }
 
     const lineWidth = cursorX;
-    if (lineWidth > maxLineWidth) maxLineWidth = lineWidth;
+
+    if (lineWidth > maxLineWidth) {
+      maxLineWidth = lineWidth;
+    }
+
     linePlacements.push({ placements, width: lineWidth, wordCount, sourceStart: lineSourceStart, sourceEnd: lineSourceEnd });
   }
 
@@ -283,10 +307,21 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
   const place = (placement: GlyphPlacement): void => {
     result.push(placement);
 
-    if (placement.x < inkMinX) inkMinX = placement.x;
-    if (placement.y < inkMinY) inkMinY = placement.y;
-    if (placement.x + placement.width > inkMaxX) inkMaxX = placement.x + placement.width;
-    if (placement.y + placement.height > inkMaxY) inkMaxY = placement.y + placement.height;
+    if (placement.x < inkMinX) {
+      inkMinX = placement.x;
+    }
+
+    if (placement.y < inkMinY) {
+      inkMinY = placement.y;
+    }
+
+    if (placement.x + placement.width > inkMaxX) {
+      inkMaxX = placement.x + placement.width;
+    }
+
+    if (placement.y + placement.height > inkMaxY) {
+      inkMaxY = placement.y + placement.height;
+    }
   };
 
   for (let li = 0; li < linePlacements.length; li++) {
@@ -391,10 +426,17 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
       for (const line of lines) {
         // An empty line has nothing to underline; a rule there would draw a
         // stray dash where the reader sees only a blank.
-        if (line.count === 0) continue;
+        if (line.count === 0) {
+          continue;
+        }
 
-        if (style.underline === true) place(_decorationQuad(solid, line, line.y + rules.underlineTop, rules.thickness));
-        if (style.strikethrough === true) place(_decorationQuad(solid, line, line.y + rules.strikeTop, rules.thickness));
+        if (style.underline === true) {
+          place(_decorationQuad(solid, line, line.y + rules.underlineTop, rules.thickness));
+        }
+
+        if (style.strikethrough === true) {
+          place(_decorationQuad(solid, line, line.y + rules.strikeTop, rules.thickness));
+        }
       }
     }
   }
@@ -425,10 +467,18 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
  */
 export const buildTextPageQuads = (placements: readonly GlyphPlacement[]): TextPageQuads[] => {
   const byPage = new Map<number, GlyphPlacement[]>();
+
   for (const p of placements) {
-    if (p.width <= 0 || p.height <= 0) continue; // skip invisible/whitespace quads
+    if (p.width <= 0 || p.height <= 0) {
+      continue;
+    } // skip invisible/whitespace quads
+
     let arr = byPage.get(p.page);
-    if (arr === undefined) byPage.set(p.page, (arr = []));
+
+    if (arr === undefined) {
+      byPage.set(p.page, (arr = []));
+    }
+
     arr.push(p);
   }
 
@@ -611,7 +661,9 @@ const _tabWidthResolver = (tabSize: number | undefined, fontSize: number, provid
  * because a step of zero would stack every following glyph on one spot.
  */
 const _tabAdvance = (cursorX: number, tabWidth: number, glyphAdvance: number): number => {
-  if (!(tabWidth > 0)) return glyphAdvance;
+  if (!(tabWidth > 0)) {
+    return glyphAdvance;
+  }
 
   const step = tabWidth - (cursorX % tabWidth);
 
@@ -631,7 +683,9 @@ const _lineAdvance = (
 
 /** Advance width of a run of grapheme clusters, without the gap after the last one. */
 const _measureClusters = (clusters: readonly string[], fontSize: number, provider: GlyphProvider, letterSpacing: number): number => {
-  if (clusters.length === 0) return 0;
+  if (clusters.length === 0) {
+    return 0;
+  }
 
   let width = 0;
 
@@ -658,7 +712,9 @@ const _ellipsize = (
   letterSpacing: number,
   locale: string | undefined,
 ): TruncatedLine => {
-  if (maxWidth === undefined) return { text: line + ellipsis, contentLength: line.length };
+  if (maxWidth === undefined) {
+    return { text: line + ellipsis, contentLength: line.length };
+  }
 
   const clusters = graphemes(line, locale);
   // The marker is laid out cluster by cluster like any other text, so it has to
@@ -688,7 +744,9 @@ const _ellipsizeShaped = (
   maxWidth: number | undefined,
   locale: string | undefined,
 ): TruncatedLine => {
-  if (maxWidth === undefined) return { text: line + ellipsis, contentLength: line.length };
+  if (maxWidth === undefined) {
+    return { text: line + ellipsis, contentLength: line.length };
+  }
 
   const clusters = graphemes(line, locale);
 
@@ -717,7 +775,9 @@ const _wrapShapedLine = (
   breakWords: boolean,
   locale: string | undefined,
 ): LineRange[] => {
-  if (line.length === 0) return [{ start: 0, end: 0 }];
+  if (line.length === 0) {
+    return [{ start: 0, end: 0 }];
+  }
 
   const ranges: LineRange[] = [];
   let start = -1;
@@ -727,13 +787,18 @@ const _wrapShapedLine = (
 
   for (const run of textRuns(line, locale)) {
     if (run.whitespace) {
-      if (gapStart === -1) gapStart = run.start;
+      if (gapStart === -1) {
+        gapStart = run.start;
+      }
+
       gapEnd = run.end;
       continue;
     }
 
     if (breakWords && shaper.measureLine(line.slice(run.start, run.end), fontSize) > maxWidth) {
-      if (start !== -1) ranges.push({ start, end });
+      if (start !== -1) {
+        ranges.push({ start, end });
+      }
 
       gapStart = -1;
       gapEnd = -1;
@@ -786,8 +851,13 @@ const _wrapShapedLine = (
  * line that is nothing but blanks keeps them too.
  */
 const _finalRange = (line: string, start: number, end: number, gapStart: number, gapEnd: number): LineRange => {
-  if (start !== -1) return { start, end: gapEnd === -1 ? end : gapEnd };
-  if (gapStart !== -1) return { start: gapStart, end: gapEnd };
+  if (start !== -1) {
+    return { start, end: gapEnd === -1 ? end : gapEnd };
+  }
+
+  if (gapStart !== -1) {
+    return { start: gapStart, end: gapEnd };
+  }
 
   return { start: line.length, end: line.length };
 };
@@ -833,8 +903,13 @@ interface PreprocessedText {
  * common case - neither pass changed anything - allocating nothing.
  */
 const _composeSourceMaps = (outer: Int32Array | null, inner: Int32Array | null): Int32Array | null => {
-  if (outer === null) return inner;
-  if (inner === null) return outer;
+  if (outer === null) {
+    return inner;
+  }
+
+  if (inner === null) {
+    return outer;
+  }
 
   const composed = new Int32Array(outer.length);
   const last = inner.length - 1;
@@ -847,7 +922,8 @@ const _composeSourceMaps = (outer: Int32Array | null, inner: Int32Array | null):
 };
 
 /** Uppercase `text` under `locale`, or locale-independently when there is none. */
-const _upper = (text: string, locale: string | undefined): string => (locale === undefined ? text.toUpperCase() : text.toLocaleUpperCase(locale));
+const _upper = (text: string, locale: string | undefined): string =>
+  locale === undefined ? text.toUpperCase() : text.toLocaleUpperCase(locale);
 
 /**
  * Apply the `textTransform` case mapping, recording where each produced unit
@@ -860,7 +936,9 @@ const _upper = (text: string, locale: string | undefined): string => (locale ===
  * returns the input and no map, which is the whole cost of the default.
  */
 const _applyTextTransform = (text: string, transform: TextTransform, locale: string | undefined): PreprocessedText => {
-  if (transform === 'none' || text.length === 0) return { text, sourceMap: null };
+  if (transform === 'none' || text.length === 0) {
+    return { text, sourceMap: null };
+  }
 
   const starts = graphemeStarts(text, locale);
   // Only the cluster that opens a word is touched by `capitalize`, and word
@@ -886,14 +964,20 @@ const _applyTextTransform = (text: string, transform: TextTransform, locale: str
       mapped = locale === undefined ? cluster.toLowerCase() : cluster.toLocaleLowerCase(locale);
     }
 
-    if (mapped !== cluster) changed = true;
+    if (mapped !== cluster) {
+      changed = true;
+    }
 
-    for (let k = 0; k < mapped.length; k++) map.push(from);
+    for (let k = 0; k < mapped.length; k++) {
+      map.push(from);
+    }
 
     out += mapped;
   }
 
-  if (!changed) return { text, sourceMap: null };
+  if (!changed) {
+    return { text, sourceMap: null };
+  }
 
   map.push(text.length);
 
@@ -905,7 +989,9 @@ const _wordStartOffsets = (text: string, locale: string | undefined): Set<number
   const offsets = new Set<number>();
 
   for (const segment of wordSegments(text, locale)) {
-    if (segment.wordLike) offsets.add(segment.start);
+    if (segment.wordLike) {
+      offsets.add(segment.start);
+    }
   }
 
   return offsets;
@@ -919,10 +1005,14 @@ const _needsWhiteSpaceRewrite = (text: string, collapseBreaks: boolean): boolean
     const char = text[i]!;
 
     // A tab always becomes a space, so its mere presence is a rewrite.
-    if (char === '\t') return true;
+    if (char === '\t') {
+      return true;
+    }
 
     if (char === '\n') {
-      if (collapseBreaks) return true;
+      if (collapseBreaks) {
+        return true;
+      }
 
       previousBlank = false;
       continue;
@@ -930,7 +1020,9 @@ const _needsWhiteSpaceRewrite = (text: string, collapseBreaks: boolean): boolean
 
     const blank = char === ' ';
 
-    if (blank && previousBlank) return true;
+    if (blank && previousBlank) {
+      return true;
+    }
 
     previousBlank = blank;
   }
@@ -945,13 +1037,17 @@ const _needsWhiteSpaceRewrite = (text: string, collapseBreaks: boolean): boolean
  * blanks the layout removed.
  */
 const _applyWhiteSpace = (text: string, mode: 'normal' | 'pre' | 'pre-line'): PreprocessedText => {
-  if (mode === 'pre') return { text, sourceMap: null };
+  if (mode === 'pre') {
+    return { text, sourceMap: null };
+  }
 
   const collapseBreaks = mode === 'normal';
 
   // Most strings a layout sees carry nothing to collapse, and for those the
   // rewrite and the map it would need are pure cost - one scan decides.
-  if (!_needsWhiteSpaceRewrite(text, collapseBreaks)) return { text, sourceMap: null };
+  if (!_needsWhiteSpaceRewrite(text, collapseBreaks)) {
+    return { text, sourceMap: null };
+  }
 
   let out = '';
   const map: number[] = [];
@@ -969,7 +1065,9 @@ const _applyWhiteSpace = (text: string, mode: 'normal' | 'pre' | 'pre-line'): Pr
     }
 
     if (char === ' ' || char === '\t' || char === '\n') {
-      if (pendingBlank) continue;
+      if (pendingBlank) {
+        continue;
+      }
 
       out += ' ';
       map.push(i);
@@ -1048,7 +1146,9 @@ const _wrapLine = (
   locale: string | undefined,
   tabWidth: () => number,
 ): LineRange[] => {
-  if (line.length === 0) return [{ start: 0, end: 0 }];
+  if (line.length === 0) {
+    return [{ start: 0, end: 0 }];
+  }
 
   const ranges: LineRange[] = [];
   let start = -1;
@@ -1062,7 +1162,10 @@ const _wrapLine = (
     const text = line.slice(run.start, run.end);
 
     if (run.whitespace) {
-      if (gapStart === -1) gapStart = run.start;
+      if (gapStart === -1) {
+        gapStart = run.start;
+      }
+
       gapEnd = run.end;
       gapAdvance += _cursorAdvance(text, fontSize, provider, letterSpacing, locale, tabWidth, currentAdvance + gapAdvance);
       continue;
@@ -1071,7 +1174,9 @@ const _wrapLine = (
     const wordAdvance = _cursorAdvance(text, fontSize, provider, letterSpacing, locale, tabWidth, currentAdvance + gapAdvance);
 
     if (breakWords && wordAdvance - letterSpacing > maxWidth) {
-      if (start !== -1) ranges.push({ start, end });
+      if (start !== -1) {
+        ranges.push({ start, end });
+      }
 
       gapStart = -1;
       gapEnd = -1;

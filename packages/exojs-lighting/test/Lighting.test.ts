@@ -30,7 +30,8 @@ import { RadianceLighting } from '../src/RadianceLighting';
 const channels = 4;
 
 /** The packed texture the forward renderer publishes into. */
-const textureOf = (lighting: Lighting): (typeof ForwardBackend.prototype)['lightTexture'] => (lighting.backend as ForwardBackend).lightTexture;
+const textureOf = (lighting: Lighting): (typeof ForwardBackend.prototype)['lightTexture'] =>
+  (lighting.backend as ForwardBackend).lightTexture;
 
 /**
  * Enough of an application for a renderer that never draws here: a frame slot,

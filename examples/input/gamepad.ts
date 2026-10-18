@@ -34,8 +34,8 @@ const BUTTONS = [
 
 class GamepadScene extends Scene {
   private pad!: Gamepad;
-  private axes: { name: string; binding: ReturnType<Gamepad['onActive']> }[] = [];
-  private buttons: { name: string; binding: ReturnType<Gamepad['onActive']> }[] = [];
+  private axes: Array<{ name: string; binding: ReturnType<Gamepad['onActive']> }> = [];
+  private buttons: Array<{ name: string; binding: ReturnType<Gamepad['onActive']> }> = [];
   private status!: Text;
   private axisText!: Text;
   private buttonText!: Text;
@@ -82,6 +82,7 @@ class GamepadScene extends Scene {
     for (const entry of [...this.axes, ...this.buttons]) {
       entry.binding.unbind();
     }
+
     this.hud?.dispose();
     this.status?.destroy();
     this.axisText?.destroy();

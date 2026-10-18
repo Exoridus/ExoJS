@@ -13,7 +13,15 @@ import { Texture } from '#rendering/texture/Texture';
 import { TextureFormat } from '#rendering/types';
 
 import { makeTileset, wireTilemapRenderers } from './_tilemapScene';
-import { type ColorProbeHarness, drawInto, expectBytes, type OpenColorProbeHarness, srgbDecode, srgbEncode, toByte } from './color-probe-fixtures';
+import {
+  type ColorProbeHarness,
+  drawInto,
+  expectBytes,
+  type OpenColorProbeHarness,
+  srgbDecode,
+  srgbEncode,
+  toByte,
+} from './color-probe-fixtures';
 
 const grayCanvasTexture = (gray: number, options?: ConstructorParameters<typeof Texture>[1]): Texture => {
   const canvas = document.createElement('canvas');
@@ -35,7 +43,9 @@ const tileNode = (texture: Texture, opacity: number): TileMapNode => {
 
   layer.setTileAt(0, 0, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
 
-  return new TileMapNode(new TileMap({ name: 'm', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset], layers: [layer] }));
+  return new TileMapNode(
+    new TileMap({ name: 'm', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset], layers: [layer] }),
+  );
 };
 
 export const defineColorTilemapProbes = (title: string, open: OpenColorProbeHarness): void => {

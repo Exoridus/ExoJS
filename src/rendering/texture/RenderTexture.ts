@@ -72,7 +72,9 @@ export class RenderTexture extends RenderTarget {
     // texture requires OES_texture_float_linear, which is not guaranteed. Rgba8Srgb
     // is exactly as filterable as Rgba8, so it keeps the linear default. An
     // explicit `scaleMode` in `options` still overrides this.
-    const defaults: TextureOptions = isFloatFormat ? { ...RenderTexture.defaultOptions, scaleMode: ScaleModes.Nearest } : RenderTexture.defaultOptions;
+    const defaults: TextureOptions = isFloatFormat
+      ? { ...RenderTexture.defaultOptions, scaleMode: ScaleModes.Nearest }
+      : RenderTexture.defaultOptions;
 
     const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = {
       ...defaults,
@@ -207,6 +209,7 @@ export class RenderTexture extends RenderTarget {
 
   public setSize(width: number, height: number): this {
     assert(width > 0 && height > 0, `RenderTexture.setSize() dimensions must be positive (got ${width}×${height})`);
+
     if (!this._size.equals({ width, height })) {
       this._size.set(width, height);
       // Both halves of the default view. `resize` only restates its EXTENT; the

@@ -1,0 +1,113 @@
+{
+  "title": "TileNavigationProjection",
+  "description": "The cell grid geometry of a TileNavigationSource, in the shape a tilemap projection describes it.",
+  "symbol": "TileNavigationProjection",
+  "kind": "interface",
+  "subsystem": "pathfinding",
+  "importPath": "@codexo/exojs-pathfinding",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The cell grid geometry of a TileNavigationSource, in the shape a tilemap projection describes it."
+      ],
+      "importLine": "import { TileNavigationProjection } from '@codexo/exojs-pathfinding'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "logicalTileHeight",
+          "signature": "logicalTileHeight: number",
+          "signatureTokens": [
+            {
+              "text": "logicalTileHeight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Height of one cell in logical (unprojected) space."
+        },
+        {
+          "name": "logicalTileWidth",
+          "signature": "logicalTileWidth: number",
+          "signatureTokens": [
+            {
+              "text": "logicalTileWidth",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Width of one cell in logical (unprojected) space."
+        },
+        {
+          "name": "orientation",
+          "signature": "orientation: string",
+          "signatureTokens": [
+            {
+              "text": "orientation",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Only 'orthogonal' and 'isometric' grids are accepted."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-pathfinding/src/tilemap/TileNavigationSpace.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/tilemap/TileNavigationSpace.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-pathfinding/src/tilemap/TileNavigationSpace.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/tilemap/TileNavigationSpace.ts"
+}

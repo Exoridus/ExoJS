@@ -104,7 +104,9 @@ const matchesMp4Video = (arrayBuffer: ArrayBuffer): boolean => {
 
 /** The four-character brand starting at `offset`, or `''` when it is out of range. */
 const brandAt = (header: Uint8Array, offset: number): string =>
-  offset + 4 > header.length ? '' : String.fromCharCode(header[offset] ?? 0, header[offset + 1] ?? 0, header[offset + 2] ?? 0, header[offset + 3] ?? 0);
+  offset + 4 > header.length
+    ? ''
+    : String.fromCharCode(header[offset] ?? 0, header[offset + 1] ?? 0, header[offset + 2] ?? 0, header[offset + 3] ?? 0);
 
 const isAvifBrand = (brand: string): boolean => brand === 'avif' || brand === 'avis';
 

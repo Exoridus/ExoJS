@@ -7,11 +7,13 @@ const ORBIT_X = 420;
 const ORBIT_Y = 220;
 const REF_DISTANCE = 50;
 const MAX_DISTANCE = 520;
-function linearAttenuation(distance) {
-  if (distance <= REF_DISTANCE) return 1;
+const linearAttenuation = distance => {
+  if (distance <= REF_DISTANCE) {
+    return 1;
+  }
   const t = (distance - REF_DISTANCE) / (MAX_DISTANCE - REF_DISTANCE);
   return Math.max(0, 1 - t);
-}
+};
 class MovingSourceScene extends Scene {
   sound;
   voice = null;
@@ -71,7 +73,9 @@ class MovingSourceScene extends Scene {
     this.angle += delta * 1.1;
     this.source.x = this.listener.x + Math.cos(this.angle) * ORBIT_X;
     this.source.y = this.listener.y + Math.sin(this.angle) * ORBIT_Y;
-    if (this.voice) this.voice.position = this.source;
+    if (this.voice) {
+      this.voice.position = this.source;
+    }
   }
   draw(context) {
     const app = this.app;

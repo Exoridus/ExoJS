@@ -16,7 +16,16 @@ import { View } from '#rendering/View';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { makeTestApp, makeTestCanvas, readWebGpuPixels } from './_backendSetup';
-import { ABOVE, BELOW, BOUNCE_SIZE, type BounceHost, type BounceOptions, createBounceHost, createBounceScene, UNDER_MOVED } from './_bounceScene';
+import {
+  ABOVE,
+  BELOW,
+  BOUNCE_SIZE,
+  type BounceHost,
+  type BounceOptions,
+  createBounceHost,
+  createBounceScene,
+  UNDER_MOVED,
+} from './_bounceScene';
 import { wireCoreRenderers } from './_coreRenderers';
 
 const host = async (): Promise<BounceHost> => {

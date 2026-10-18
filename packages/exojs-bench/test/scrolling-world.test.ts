@@ -1,7 +1,16 @@
 import { ARCHETYPES, buildMatrix } from '../src/rendering/archetypes';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../src/rendering/EngineAdapter';
 import { isTilemap } from '../src/rendering/tilemap';
-import { cameraCenterAt, GRID_MARGIN, isScrolling, SPRITE_SIZE, VIEWPORT_HEIGHT, VIEWPORT_WIDTH, visibleLeafCount, worldExtent } from '../src/rendering/world';
+import {
+  cameraCenterAt,
+  GRID_MARGIN,
+  isScrolling,
+  SPRITE_SIZE,
+  VIEWPORT_HEIGHT,
+  VIEWPORT_WIDTH,
+  visibleLeafCount,
+  worldExtent,
+} from '../src/rendering/world';
 
 const scrollingWorld = ARCHETYPES.find(archetype => archetype.id === 'scrolling-world')!;
 

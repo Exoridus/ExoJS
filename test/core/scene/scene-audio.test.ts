@@ -6,6 +6,7 @@ import { Envelope } from '#audio/Envelope';
 import type { Loopable, Pausable, Playable, RatePitched, Seekable, Voice } from '#audio/Playable';
 import { Sound } from '#audio/Sound';
 import type { Application } from '#core/Application';
+import { logger } from '#core/Logger';
 import { SceneAudio } from '#core/scene/SceneAudio';
 import { SceneAvailability } from '#core/scene/SceneAvailability';
 import { SceneState } from '#core/scene/SceneState';
@@ -45,6 +46,44 @@ const createAppStub = (playResult: Voice): Application =>
 
 const fakePlayable = {} as unknown as Playable;
 
+/**
+ * Scope state the real-voice specs drive by hand: each transition flips the
+ * state or pause flag and lets the facility re-apply its holds, exactly as
+ * SceneScope does.
+ */
+const scopeControl = () => {
+  let state: SceneState = SceneState.Active;
+  let paused = false;
+
+  return {
+    getState: (): SceneState => state,
+    getPaused: (): boolean => paused,
+    suspend: (audio: SceneAudio): void => {
+      state = SceneState.Suspended;
+      audio._sync();
+    },
+    restore: (audio: SceneAudio): void => {
+      state = SceneState.Active;
+      audio._sync();
+    },
+    pause: (audio: SceneAudio): void => {
+      paused = true;
+      audio._sync();
+    },
+    resume: (audio: SceneAudio): void => {
+      paused = false;
+      audio._sync();
+    },
+  };
+};
+
+/** Whether a real voice is actually silent - a scene hold included - rather than paused by its caller. */
+const silent = (voice: Voice): boolean => {
+  const real = (voice as unknown as { _real?: Voice | null })._real ?? voice;
+
+  return (real as unknown as { _halted?: boolean; paused: boolean })._halted ?? (real as unknown as { paused: boolean }).paused;
+};
+
 describe('SceneAudio', () => {
   test('play() delegates to app.audio.play and tracks the returned Voice', () => {
     const voice = makeVoice();
@@ -80,122 +119,127 @@ describe('SceneAudio', () => {
     expect(voiceB.stop).toHaveBeenCalledTimes(1);
   });
 
-  describe('suspend()/restore()', () => {
-    test('pauses currently-playing Pausable voices and restores exactly that set', () => {
-      const playing = makePausableVoice();
-      const alreadyPaused = makePausableVoice({ paused: true });
-      const ended = makePausableVoice({ ended: true });
-      const app = createAppStub(playing);
-      const audio = new SceneAudio(app, () => SceneState.Active);
+  describe('holds', () => {
+    interface HoldableVoice extends Voice, Pausable {
+      _setHeld: ReturnType<typeof vi.fn>;
+    }
 
-      audio.add(playing);
-      audio.add(alreadyPaused);
-      audio.add(ended);
+    const makeHoldableVoice = (overrides: Partial<Voice & Pausable> = {}): HoldableVoice =>
+      ({
+        ...makePausableVoice(overrides),
+        _setHeld: vi.fn(),
+      }) as unknown as HoldableVoice;
 
-      audio.suspend();
+    const lastHold = (voice: HoldableVoice): boolean | undefined => voice._setHeld.mock.lastCall?.[0] as boolean | undefined;
 
-      expect(playing.pause).toHaveBeenCalledTimes(1);
-      expect(alreadyPaused.pause).not.toHaveBeenCalled(); // already paused — not part of the suspended set
-      expect(ended.pause).not.toHaveBeenCalled(); // ended — nothing to pause
+    const fixture = (): { audio: SceneAudio; setState(state: SceneState): void; setPaused(paused: boolean): void } => {
+      let state: SceneState = SceneState.Active;
+      let paused = false;
 
-      audio.restore();
+      return {
+        audio: new SceneAudio(
+          createAppStub(makeVoice()),
+          () => state,
+          () => paused,
+        ),
+        setState: next => {
+          state = next;
+        },
+        setPaused: next => {
+          paused = next;
+        },
+      };
+    };
 
-      expect(playing.resume).toHaveBeenCalledTimes(1);
-      expect(alreadyPaused.resume).not.toHaveBeenCalled(); // was never suspended by us
-      expect(ended.resume).not.toHaveBeenCalled();
+    test.each([
+      [SceneAvailability.Always, false, false],
+      [SceneAvailability.Always, true, false],
+      [SceneAvailability.Active, false, false],
+      [SceneAvailability.Active, true, true],
+      [SceneAvailability.Paused, false, true],
+      [SceneAvailability.Paused, true, false],
+    ] as const)("'%s' with the scene paused=%s is held: %s, from the moment it is tracked", (when, paused, held) => {
+      const { audio, setPaused } = fixture();
+      const voice = makeHoldableVoice();
+
+      setPaused(paused);
+      audio.add(voice, { when });
+
+      expect(lastHold(voice)).toBe(held);
     });
 
-    test('leaves a non-Pausable voice playing (suspended "where supported")', () => {
-      const nonPausable = makeVoice(); // no pause()/resume()
-      const app = createAppStub(nonPausable);
-      const audio = new SceneAudio(app, () => SceneState.Active);
+    test('_sync() re-applies every policy after a pause flip and never pauses or resumes a voice itself', () => {
+      const { audio, setPaused } = fixture();
+      const active = makeHoldableVoice();
+      const paused = makeHoldableVoice();
 
-      audio.add(nonPausable);
+      audio.add(active, { when: SceneAvailability.Active });
+      audio.add(paused, { when: SceneAvailability.Paused });
+      setPaused(true);
+      audio._sync();
 
-      expect(() => audio.suspend()).not.toThrow();
-      expect(() => audio.restore()).not.toThrow();
+      expect(lastHold(active)).toBe(true);
+      expect(lastHold(paused)).toBe(false);
+      expect(active.pause).not.toHaveBeenCalled();
+      expect(paused.resume).not.toHaveBeenCalled();
     });
 
-    test('restore() without a prior suspend() is a no-op', () => {
-      const voice = makePausableVoice();
-      const app = createAppStub(voice);
-      const audio = new SceneAudio(app, () => SceneState.Active);
+    test.each([SceneState.Suspended, SceneState.Destroying] as const)(
+      'every voice is held while the scope is %s, always included',
+      state => {
+        const { audio, setState } = fixture();
+        const voice = makeHoldableVoice();
 
-      audio.add(voice);
+        audio.add(voice);
+        setState(state);
+        audio._sync();
 
-      expect(() => audio.restore()).not.toThrow();
-      expect(voice.resume).not.toHaveBeenCalled();
-    });
-  });
+        expect(lastHold(voice)).toBe(true);
+      },
+    );
 
-  describe('pause()/resume() — when policy', () => {
-    test('when:"active" voice is frozen on pause() and resumed on resume()', () => {
-      const voice = makePausableVoice();
-      const app = createAppStub(voice);
-      const audio = new SceneAudio(app, () => SceneState.Active);
+    test('_sync() drops voices that have ended', () => {
+      const { audio } = fixture();
+      const voice = makeHoldableVoice();
 
       audio.add(voice, { when: SceneAvailability.Active });
+      mutable(voice).ended = true;
+      voice._setHeld.mockClear();
+      audio._sync();
 
-      audio.pause();
-      expect(voice.pause).toHaveBeenCalledTimes(1);
-
-      audio.resume();
-      expect(voice.resume).toHaveBeenCalledTimes(1);
+      expect(voice._setHeld).not.toHaveBeenCalled();
+      expect((audio as unknown as { _tracked: Map<Voice, unknown> })._tracked.has(voice)).toBe(false);
     });
 
-    test('when:"paused" voice (already sitting paused) is woken on pause() and re-frozen on resume()', () => {
-      const voice = makePausableVoice({ paused: true });
-      const app = createAppStub(voice);
-      const audio = new SceneAudio(app, () => SceneState.Active);
+    test('a pausable voice the scene cannot hold warns that it will not follow the policy', () => {
+      const { audio } = fixture();
+      const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
 
-      audio.add(voice, { when: SceneAvailability.Paused });
+      audio.add(makePausableVoice(), { when: SceneAvailability.Active });
 
-      audio.pause();
-      expect(voice.resume).toHaveBeenCalledTimes(1);
-
-      audio.resume();
-      expect(voice.pause).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalledTimes(1);
     });
 
-    test('when:"always" (default) voice is never touched by pause()/resume()', () => {
-      const voice = makePausableVoice();
-      const app = createAppStub(voice);
-      const audio = new SceneAudio(app, () => SceneState.Active);
+    test('add() drops voices that have ended since they were tracked', () => {
+      const { audio } = fixture();
+      const finished = makeHoldableVoice();
 
-      audio.add(voice);
+      audio.add(finished);
+      mutable(finished).ended = true;
+      audio.add(makeHoldableVoice());
 
-      audio.pause();
-      audio.resume();
-
-      expect(voice.pause).not.toHaveBeenCalled();
-      expect(voice.resume).not.toHaveBeenCalled();
+      expect((audio as unknown as { _tracked: Map<Voice, unknown> })._tracked.has(finished)).toBe(false);
     });
 
-    test('a non-Pausable voice with when:"active" is left alone, no error', () => {
-      const voice = makeVoice(); // no pause()/resume()
-      const app = createAppStub(voice);
-      const audio = new SceneAudio(app, () => SceneState.Active);
+    test('a voice that cannot pause is left playing, without error', () => {
+      const { audio, setPaused } = fixture();
+      const voice = makeVoice();
 
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
       audio.add(voice, { when: SceneAvailability.Active });
+      setPaused(true);
 
-      expect(() => audio.pause()).not.toThrow();
-      expect(() => audio.resume()).not.toThrow();
-    });
-
-    test('resume() does not resume a when:"active" voice the caller resumed manually in between', () => {
-      const voice = makePausableVoice();
-      const app = createAppStub(voice);
-      const audio = new SceneAudio(app, () => SceneState.Active);
-
-      audio.add(voice, { when: SceneAvailability.Active });
-
-      audio.pause(); // freezes it, records it
-      voice.resume(); // caller manually resumes it themselves before the scene resumes
-      (voice.resume as ReturnType<typeof vi.fn>).mockClear();
-
-      audio.resume(); // should NOT re-touch it — it's no longer paused
-
-      expect(voice.resume).not.toHaveBeenCalled();
+      expect(() => audio._sync()).not.toThrow();
     });
   });
 });
@@ -334,32 +378,47 @@ describe('SceneAudio — Preparing gate', () => {
     expect(app.audio.play).not.toHaveBeenCalled();
   });
 
-  test('_flushPending() swaps the tracked PendingVoice for its real voice, so suspend() can pause it', () => {
-    const real = makePausableVoice({ onEnd: new Signal() });
+  test('_flushPending() swaps the tracked PendingVoice for its real voice, which _sync() then holds', () => {
+    const real = { ...makePausableVoice({ onEnd: new Signal() }), _setHeld: vi.fn() } as unknown as Voice & {
+      _setHeld: ReturnType<typeof vi.fn>;
+    };
     const app = createAppStub(real);
-    const audio = new SceneAudio(app, () => SceneState.Preparing);
+    let state: SceneState = SceneState.Preparing;
+    const audio = new SceneAudio(app, () => state);
 
     audio.play(fakePlayable);
     audio._flushPending();
-    audio.suspend();
+    state = SceneState.Suspended;
+    audio._sync();
 
-    expect(real.pause).toHaveBeenCalledTimes(1);
+    expect(real._setHeld).toHaveBeenLastCalledWith(true);
   });
 
   test('_flushPending() carries the `when` policy from the PendingVoice to the real voice', () => {
-    const real = makePausableVoice({ onEnd: new Signal() });
+    const real = { ...makePausableVoice({ onEnd: new Signal() }), _setHeld: vi.fn() } as unknown as Voice & {
+      _setHeld: ReturnType<typeof vi.fn>;
+    };
     const app = createAppStub(real);
-    const audio = new SceneAudio(app, () => SceneState.Preparing);
+    let state: SceneState = SceneState.Preparing;
+    let paused = false;
+    const audio = new SceneAudio(
+      app,
+      () => state,
+      () => paused,
+    );
 
     audio.play(fakePlayable, { when: SceneAvailability.Active });
     audio._flushPending();
+    state = SceneState.Active;
+    audio._sync();
 
-    // If the `when` policy were lost during the flush swap, pause() would
-    // never touch the real voice - asserting it does proves the policy
-    // survived the PendingVoice -> real Voice swap.
-    audio.pause();
+    expect(real._setHeld).toHaveBeenLastCalledWith(false);
 
-    expect(real.pause).toHaveBeenCalledTimes(1);
+    // A lost policy would read as 'always' and leave the voice released.
+    paused = true;
+    audio._sync();
+
+    expect(real._setHeld).toHaveBeenLastCalledWith(true);
   });
 });
 
@@ -420,26 +479,32 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
   // `Sound` ambience kept playing through scene.pause()/suspend(). These two
   // drive a real AudioSystem and a real Sound.
   describe('with a real Sound voice', () => {
+    let scope = scopeControl();
+
+    beforeEach(() => {
+      scope = scopeControl();
+    });
+
     const makeRealSetup = (): { app: Application; sound: Sound; audio: SceneAudio } => {
       const system = new AudioSystem();
       const sound = new Sound({ duration: 10 } as AudioBuffer);
       const app = { audio: system } as unknown as Application;
 
-      return { app, sound, audio: new SceneAudio(app, () => SceneState.Active) };
+      return { app, sound, audio: new SceneAudio(app, scope.getState, scope.getPaused) };
     };
 
     test('suspend()/restore() pause and resume a Sound voice', () => {
       const { app, sound, audio } = makeRealSetup();
       const voice = audio.play(sound, { loop: true }) as Voice & Pausable;
 
-      expect(voice.paused).toBe(false);
+      expect(silent(voice)).toBe(false);
 
-      audio.suspend();
-      expect(voice.paused).toBe(true);
+      scope.suspend(audio);
+      expect(silent(voice)).toBe(true);
       expect(voice.ended).toBe(false);
 
-      audio.restore();
-      expect(voice.paused).toBe(false);
+      scope.restore(audio);
+      expect(silent(voice)).toBe(false);
 
       voice.stop();
       sound.destroy();
@@ -456,12 +521,12 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
       const system = new AudioSystem();
       const sound = new Sound({ duration: 10 } as AudioBuffer, { poolSize: 2 });
       const app = { audio: system } as unknown as Application;
-      const audio = new SceneAudio(app, () => SceneState.Active);
+      const audio = new SceneAudio(app, scope.getState, scope.getPaused);
 
       const ambience = audio.play(sound, { loop: true }) as Voice & Pausable;
 
-      audio.suspend();
-      expect(ambience.paused).toBe(true);
+      scope.suspend(audio);
+      expect(silent(ambience)).toBe(true);
 
       for (let i = 0; i < 4; i++) {
         system.play(sound);
@@ -469,8 +534,8 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
 
       expect(ambience.ended).toBe(false);
 
-      audio.restore();
-      expect(ambience.paused).toBe(false);
+      scope.restore(audio);
+      expect(silent(ambience)).toBe(false);
       expect(ambience.ended).toBe(false);
 
       ambience.stop();
@@ -482,11 +547,11 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
       const { app, sound, audio } = makeRealSetup();
       const voice = audio.play(sound, { loop: true, when: SceneAvailability.Active }) as Voice & Pausable;
 
-      audio.pause();
-      expect(voice.paused).toBe(true);
+      scope.pause(audio);
+      expect(silent(voice)).toBe(true);
 
-      audio.resume();
-      expect(voice.paused).toBe(false);
+      scope.resume(audio);
+      expect(silent(voice)).toBe(false);
 
       voice.stop();
       sound.destroy();
@@ -498,26 +563,32 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
   // never implemented `Pausable`, so a held synth note kept sounding straight
   // through scene.pause()/suspend().
   describe('with a real AudioGenerator voice', () => {
+    let scope = scopeControl();
+
+    beforeEach(() => {
+      scope = scopeControl();
+    });
+
     const makeRealSetup = (envelope: Envelope | null = null): { app: Application; generator: AudioGenerator; audio: SceneAudio } => {
       const system = new AudioSystem();
       const generator = new AudioGenerator({ frequency: 440, envelope });
       const app = { audio: system } as unknown as Application;
 
-      return { app, generator, audio: new SceneAudio(app, () => SceneState.Active) };
+      return { app, generator, audio: new SceneAudio(app, scope.getState, scope.getPaused) };
     };
 
     test('suspend()/restore() pause and resume a generator voice', () => {
       const { app, generator, audio } = makeRealSetup();
       const voice = audio.play(generator) as Voice & Pausable;
 
-      expect(voice.paused).toBe(false);
+      expect(silent(voice)).toBe(false);
 
-      audio.suspend();
-      expect(voice.paused).toBe(true);
+      scope.suspend(audio);
+      expect(silent(voice)).toBe(true);
       expect(voice.ended).toBe(false);
 
-      audio.restore();
-      expect(voice.paused).toBe(false);
+      scope.restore(audio);
+      expect(silent(voice)).toBe(false);
       expect(voice.ended).toBe(false);
 
       voice.stop();
@@ -529,11 +600,11 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
       const { app, generator, audio } = makeRealSetup(new Envelope({ attack: Time.seconds(0.01), decay: Time.seconds(0.05) }));
       const voice = audio.play(generator, { when: SceneAvailability.Active }) as Voice & Pausable;
 
-      audio.pause();
-      expect(voice.paused).toBe(true);
+      scope.pause(audio);
+      expect(silent(voice)).toBe(true);
 
-      audio.resume();
-      expect(voice.paused).toBe(false);
+      scope.resume(audio);
+      expect(silent(voice)).toBe(false);
       expect(voice.ended).toBe(false);
 
       voice.stop();
@@ -545,8 +616,8 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
       const { app, generator, audio } = makeRealSetup();
       const voice = audio.play(generator) as Voice & Pausable;
 
-      audio.suspend();
-      expect(voice.paused).toBe(true);
+      scope.suspend(audio);
+      expect(silent(voice)).toBe(true);
 
       audio.destroy();
 
@@ -592,11 +663,13 @@ describe('SceneAudio — deferred voice surface', () => {
     Object.defineProperty(el, 'paused', { configurable: true, writable: true, value: true });
     vi.spyOn(el, 'play').mockImplementation(function (this: HTMLAudioElement) {
       mutable(this).paused = false;
+
       return Promise.resolve();
     });
     vi.spyOn(el, 'pause').mockImplementation(function (this: HTMLAudioElement) {
       mutable(this).paused = true;
     });
+
     return el;
   };
 
@@ -754,16 +827,17 @@ describe('SceneAudio — deferred voice surface', () => {
     test('a flushed deferred voice is part of the retention set', () => {
       const { system, app } = createRealApp();
       const sound = new Sound({ duration: 10 } as AudioBuffer);
-      const audio = new SceneAudio(app, () => SceneState.Preparing);
+      const scope = scopeControl();
+      const audio = new SceneAudio(app, scope.getState, scope.getPaused);
 
       const voice = asFull(audio.play(sound));
 
       audio._flushPending();
-      audio.suspend();
-      expect(voice.paused).toBe(true);
+      scope.suspend(audio);
+      expect(silent(voice)).toBe(true);
 
-      audio.restore();
-      expect(voice.paused).toBe(false);
+      scope.restore(audio);
+      expect(silent(voice)).toBe(false);
 
       voice.stop();
       sound.destroy();
@@ -959,6 +1033,247 @@ describe('SceneAudio — deferred voice surface', () => {
       expect(el.play).toHaveBeenCalledTimes(1);
 
       stream.destroy();
+      system.destroy();
+    });
+  });
+});
+
+// One voice whose stop throws - a broken custom voice, or an engine voice whose
+// caller's `onEnd` listener throws - must not leave the voices after it playing
+// past the end of their scene.
+describe('SceneAudio — teardown failure isolation', () => {
+  const throwingVoice = (error: Error): Voice =>
+    makeVoice({
+      stop: vi.fn(() => {
+        throw error;
+      }),
+    });
+
+  test.each([
+    ['first', 0],
+    ['middle', 1],
+    ['last', 2],
+  ])('a throwing %s voice does not keep the others from being stopped', (_label, index) => {
+    const failure = new Error('stop threw');
+    const voices = [makeVoice(), makeVoice(), makeVoice()];
+
+    voices[index] = throwingVoice(failure);
+
+    const onFailure = vi.fn();
+    const audio = new SceneAudio(createAppStub(makeVoice()), () => SceneState.Active);
+
+    for (const voice of voices) {
+      audio.add(voice);
+    }
+
+    audio._destroy(onFailure);
+
+    for (const voice of voices) {
+      expect(voice.stop).toHaveBeenCalledTimes(1);
+    }
+
+    expect(onFailure.mock.calls).toEqual([[failure]]);
+  });
+
+  test('every failure is handed over, in tracking order, and the healthy voices after them are still stopped', () => {
+    const first = new Error('first');
+    const second = new Error('second');
+    const healthyA = makeVoice();
+    const healthyB = makeVoice();
+    const onFailure = vi.fn();
+    const audio = new SceneAudio(createAppStub(makeVoice()), () => SceneState.Active);
+
+    audio.add(throwingVoice(first));
+    audio.add(healthyA);
+    audio.add(throwingVoice(second));
+    audio.add(healthyB);
+
+    audio._destroy(onFailure);
+
+    expect(healthyA.stop).toHaveBeenCalledTimes(1);
+    expect(healthyB.stop).toHaveBeenCalledTimes(1);
+    expect(onFailure.mock.calls).toEqual([[first], [second]]);
+  });
+
+  test('destroy() completes the teardown and logs each failure instead of throwing', () => {
+    const error = vi.spyOn(logger, 'error').mockImplementation(() => {});
+    const failure = new Error('stop threw');
+    const healthy = makeVoice();
+    const audio = new SceneAudio(createAppStub(makeVoice()), () => SceneState.Active);
+
+    audio.add(throwingVoice(failure));
+    audio.add(healthy);
+
+    expect(() => audio.destroy()).not.toThrow();
+    expect(healthy.stop).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(error.mock.calls[0]?.[1]).toMatchObject({ source: 'SceneAudio', error: failure });
+
+    error.mockRestore();
+  });
+
+  test('a voice whose stop threw is released, not reported as stopped, and never retried', () => {
+    const broken = throwingVoice(new Error('stop threw'));
+    const healthy = makeVoice();
+    const onFailure = vi.fn();
+    const audio = new SceneAudio(createAppStub(makeVoice()), () => SceneState.Active);
+
+    audio.add(broken);
+    audio.add(healthy);
+    audio._destroy(onFailure);
+    audio._destroy(onFailure);
+    audio._destroy(onFailure);
+
+    expect(broken.ended).toBe(false);
+    expect(broken.stop).toHaveBeenCalledTimes(1);
+    expect(healthy.stop).toHaveBeenCalledTimes(1);
+    expect(onFailure).toHaveBeenCalledTimes(1);
+  });
+
+  test('a deferred voice is cancelled even when a voice tracked before it throws', () => {
+    let state: SceneState = SceneState.Active;
+    const app = createAppStub(makeVoice());
+    const audio = new SceneAudio(app, () => state);
+
+    audio.add(throwingVoice(new Error('stop threw')));
+    state = SceneState.Suspended;
+
+    const pending = audio.play(fakePlayable);
+
+    state = SceneState.Destroying;
+    audio._destroy(() => {});
+
+    expect(pending.ended).toBe(true);
+
+    state = SceneState.Active;
+    audio._flushPending();
+
+    expect(app.audio.play).not.toHaveBeenCalled();
+  });
+
+  test('a failed teardown leaves no pause or retention bookkeeping behind', () => {
+    let state: SceneState = SceneState.Active;
+    const healthy = { ...makePausableVoice(), _setHeld: vi.fn() };
+    const broken = { ...makePausableVoice(), _setHeld: vi.fn(), stop: throwingVoice(new Error('stop threw')).stop };
+    const audio = new SceneAudio(createAppStub(makeVoice()), () => state);
+
+    audio.add(broken as unknown as Voice, { when: SceneAvailability.Active });
+    audio.add(healthy as unknown as Voice, { when: SceneAvailability.Active });
+    audio._destroy(() => {});
+    broken._setHeld.mockClear();
+    healthy._setHeld.mockClear();
+
+    state = SceneState.Suspended;
+    audio._sync();
+
+    expect(broken._setHeld).not.toHaveBeenCalled();
+    expect(healthy._setHeld).not.toHaveBeenCalled();
+  });
+
+  test('a voice an end callback starts during teardown is stopped too', () => {
+    const audio = new SceneAudio(createAppStub(makeVoice()), () => SceneState.Active);
+    const late = makeVoice();
+    const first = makeVoice({
+      stop: vi.fn(() => {
+        audio.add(late);
+
+        throw new Error('stop threw');
+      }),
+    });
+
+    audio.add(first);
+    audio.add(makeVoice());
+    audio._destroy(() => {});
+
+    expect(late.stop).toHaveBeenCalledTimes(1);
+  });
+
+  test('an end callback that stops another tracked voice does not skip any voice', () => {
+    const audio = new SceneAudio(createAppStub(makeVoice()), () => SceneState.Active);
+    const third = makeVoice();
+    const second = makeVoice();
+    const first = makeVoice({
+      stop: vi.fn(() => {
+        second.stop();
+
+        throw new Error('stop threw');
+      }),
+    });
+
+    audio.add(first);
+    audio.add(second);
+    audio.add(third);
+    audio._destroy(() => {});
+
+    expect(third.stop).toHaveBeenCalledTimes(1);
+  });
+
+  test('a successful teardown stops every voice and reports nothing', () => {
+    const onFailure = vi.fn();
+    const voices = [makeVoice(), makeVoice()];
+    const audio = new SceneAudio(createAppStub(makeVoice()), () => SceneState.Active);
+
+    for (const voice of voices) {
+      audio.add(voice);
+    }
+
+    audio._destroy(onFailure);
+
+    expect(onFailure).not.toHaveBeenCalled();
+
+    for (const voice of voices) {
+      expect(voice.stop).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  describe('with real engine voices', () => {
+    test("a throwing caller onEnd listener does not keep the scene's other voices playing", () => {
+      const system = new AudioSystem();
+      const sound = new Sound({ duration: 10 } as AudioBuffer);
+      const audio = new SceneAudio({ audio: system } as unknown as Application, () => SceneState.Active);
+      const failure = new Error('onEnd listener threw');
+      const onFailure = vi.fn();
+
+      const first = audio.play(sound, { loop: true });
+      const second = audio.play(sound, { loop: true });
+      const third = audio.play(sound, { loop: true });
+
+      first.onEnd.add(() => {
+        throw failure;
+      });
+
+      audio._destroy(onFailure);
+
+      expect(first.ended).toBe(true);
+      expect(second.ended).toBe(true);
+      expect(third.ended).toBe(true);
+      expect(onFailure.mock.calls).toEqual([[failure]]);
+
+      sound.destroy();
+      system.destroy();
+    });
+
+    test('a deferred voice whose onEnd listener throws does not keep a later deferred voice from being cancelled', () => {
+      const system = new AudioSystem();
+      const sound = new Sound({ duration: 10 } as AudioBuffer);
+      const audio = new SceneAudio({ audio: system } as unknown as Application, () => SceneState.Preparing);
+      const failure = new Error('onEnd listener threw');
+      const onFailure = vi.fn();
+
+      const first = audio.play(sound);
+      const second = audio.play(sound);
+
+      first.onEnd.add(() => {
+        throw failure;
+      });
+
+      audio._destroy(onFailure);
+
+      expect(first.ended).toBe(true);
+      expect(second.ended).toBe(true);
+      expect(onFailure.mock.calls).toEqual([[failure]]);
+
+      sound.destroy();
       system.destroy();
     });
   });

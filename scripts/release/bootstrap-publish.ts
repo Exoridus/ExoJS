@@ -128,7 +128,12 @@ const versionOnRegistry = (runner: CommandRunner, name: string, version: string)
  * injected runner; `repoRoot` is only used to derive the package's working
  * directory.
  */
-export const bootstrapPublish = (packageName: string, options: BootstrapOptions, runner: CommandRunner, repoRoot: string): BootstrapReport => {
+export const bootstrapPublish = (
+  packageName: string,
+  options: BootstrapOptions,
+  runner: CommandRunner,
+  repoRoot: string,
+): BootstrapReport => {
   const report: BootstrapReport = { ok: false, dryRun: options.dryRun };
   const target = bootstrapTargets().find(candidate => candidate.name === packageName);
 

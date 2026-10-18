@@ -144,7 +144,11 @@ describe('backdrop-aware compositor artistic blend reference (D4)', () => {
         // shortcut wrong - see the coverage contract in
         // `blend-color-contract.test.ts`, which holds the installed factor
         // pairs against this formula and finds Screen's exact at every alpha.
-        expect([opaqueResult.r, opaqueResult.g, opaqueResult.b]).not.toEqual([translucentResult.r, translucentResult.g, translucentResult.b]);
+        expect([opaqueResult.r, opaqueResult.g, opaqueResult.b]).not.toEqual([
+          translucentResult.r,
+          translucentResult.g,
+          translucentResult.b,
+        ]);
       }
     });
 
@@ -335,15 +339,18 @@ describe('backdrop blend routing by destination coverage', () => {
     },
   );
 
-  test.each(ADVANCED_BLEND_MODES.filter(mode => mode >= BlendModes.Darken))('%s is composited against the backdrop over an opaque destination too', mode => {
-    const { backend, composited } = createRuntime(opaqueCanvas());
-    const root = new Container();
+  test.each(ADVANCED_BLEND_MODES.filter(mode => mode >= BlendModes.Darken))(
+    '%s is composited against the backdrop over an opaque destination too',
+    mode => {
+      const { backend, composited } = createRuntime(opaqueCanvas());
+      const root = new Container();
 
-    root.addChild(new BlendBox(mode));
-    render(root, backend);
+      root.addChild(new BlendBox(mode));
+      render(root, backend);
 
-    expect(composited).toEqual([mode]);
-  });
+      expect(composited).toEqual([mode]);
+    },
+  );
 
   test('Multiply inside a barrier is composited against the backdrop even when the canvas is opaque', () => {
     // A barrier renders its content into an intermediate colour target, so the
@@ -375,7 +382,9 @@ describe('backdrop blend routing by destination coverage', () => {
     // The composite a backdrop blend produces is a world-space one, so a child
     // that needs it cannot stay under the group's matrix.
     expect(backdropCompositedNodes(opaque, createRuntime(opaqueCanvas()).backend), 'opaque destination').toEqual([]);
-    expect(backdropCompositedNodes(fractional, createRuntime(new RenderTexture(64, 64)).backend), 'fractional destination').toEqual([onFractional]);
+    expect(backdropCompositedNodes(fractional, createRuntime(new RenderTexture(64, 64)).backend), 'fractional destination').toEqual([
+      onFractional,
+    ]);
   });
 
   test('the same subtree routes by the destination it is collected into', () => {
@@ -400,13 +409,18 @@ describe('backdrop blend routing by destination coverage', () => {
     expect(intoTexture.composited, 'offscreen target').toEqual([BlendModes.Multiply]);
   });
 
-  test.each([BlendModes.Normal, BlendModes.Additive, BlendModes.Subtract, BlendModes.Multiply, BlendModes.Screen, BlendModes.Darken, BlendModes.Luminosity])(
-    'blendModeNeedsBackdrop(%s) follows the destination guarantee',
-    mode => {
-      const isAdvanced = mode >= BlendModes.Darken;
+  test.each([
+    BlendModes.Normal,
+    BlendModes.Additive,
+    BlendModes.Subtract,
+    BlendModes.Multiply,
+    BlendModes.Screen,
+    BlendModes.Darken,
+    BlendModes.Luminosity,
+  ])('blendModeNeedsBackdrop(%s) follows the destination guarantee', mode => {
+    const isAdvanced = mode >= BlendModes.Darken;
 
-      expect(blendModeNeedsBackdrop(mode, true), 'opaque destination').toBe(isAdvanced);
-      expect(blendModeNeedsBackdrop(mode, false), 'fractional destination').toBe(isAdvanced || mode === BlendModes.Multiply);
-    },
-  );
+    expect(blendModeNeedsBackdrop(mode, true), 'opaque destination').toBe(isAdvanced);
+    expect(blendModeNeedsBackdrop(mode, false), 'fractional destination').toBe(isAdvanced || mode === BlendModes.Multiply);
+  });
 });

@@ -13,7 +13,9 @@ describe('ShaderFilter keeps its input in place inside an expanded effect domain
       const { root, texture } = blurScene([filter]);
 
       try {
-        if (!(await renderWebGpuOnce(ctx, backend, root, CLEAR))) return;
+        if (!(await renderWebGpuOnce(ctx, backend, root, CLEAR))) {
+          return;
+        }
 
         const pixel = readWebGpuPixels(backend, BLUR_SCENE_SIZE);
 
@@ -35,7 +37,9 @@ describe('ShaderFilter keeps its input in place inside an expanded effect domain
     const { root, texture } = blurScene([filter]);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root, CLEAR))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, CLEAR))) {
+        return;
+      }
 
       const pixel = readWebGpuPixels(backend, BLUR_SCENE_SIZE);
 

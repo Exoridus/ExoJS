@@ -75,6 +75,7 @@ export class PitchShiftEffect extends WorkletEffect {
   public get pitch(): number {
     return this._pitch;
   }
+
   public set pitch(value: number) {
     this._pitch = Math.max(0.25, Math.min(4, value));
     this._setAudioParam('pitch', this._pitch);

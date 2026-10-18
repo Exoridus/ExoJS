@@ -1,6 +1,12 @@
 import type * as Nape from '@newkrok/nape-js';
 
-import type { PhysicsAdapter, PhysicsArchetypeSpec, PhysicsBodySpread, PhysicsSleepCensus, PhysicsStructuralCounters } from '../PhysicsAdapter';
+import type {
+  PhysicsAdapter,
+  PhysicsArchetypeSpec,
+  PhysicsBodySpread,
+  PhysicsSleepCensus,
+  PhysicsStructuralCounters,
+} from '../PhysicsAdapter';
 import type { PerStepWork } from './perStepWork';
 import { createPerStepWork } from './perStepWork';
 import type { BodyDesc } from './scene';

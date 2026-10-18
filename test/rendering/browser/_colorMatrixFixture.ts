@@ -33,7 +33,9 @@ export const flatTexture = (css: string): Texture => {
 
   const context = source.getContext('2d');
 
-  if (context === null) throw new Error('A 2D context is required to build colour-matrix fixtures.');
+  if (context === null) {
+    throw new Error('A 2D context is required to build colour-matrix fixtures.');
+  }
 
   context.clearRect(0, 0, 16, 16);
   context.fillStyle = css;
@@ -51,7 +53,9 @@ export const matrixScene = (css: string, filters: readonly Filter[]): { root: Co
 
   sprite.setPosition(SPRITE_ORIGIN, SPRITE_ORIGIN);
 
-  for (const filter of filters) filtered.addFilter(filter);
+  for (const filter of filters) {
+    filtered.addFilter(filter);
+  }
 
   filtered.addChild(sprite);
   root.addChild(filtered);
@@ -71,7 +75,9 @@ export const matrixSubtreeScene = (first: string, second: string, filters: reado
   a.setPosition(SPRITE_ORIGIN, SPRITE_ORIGIN);
   b.setPosition(SECOND_ORIGIN, SECOND_ORIGIN);
 
-  for (const filter of filters) filtered.addFilter(filter);
+  for (const filter of filters) {
+    filtered.addFilter(filter);
+  }
 
   filtered.addChild(a);
   filtered.addChild(b);

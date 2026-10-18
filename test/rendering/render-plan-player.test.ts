@@ -82,7 +82,12 @@ const createPlaybackSpy = (): PlaybackSpy => {
       entries: readonly ScopeEntry[],
       startIndex: number,
       count: number,
-      context: { groupInstructionCount: number; firstPassInstructionIndex: number; lastPassInstructionIndex: number; passGroupIndex: number },
+      context: {
+        groupInstructionCount: number;
+        firstPassInstructionIndex: number;
+        lastPassInstructionIndex: number;
+        passGroupIndex: number;
+      },
     ) {
       const ids = groupIds(entries, startIndex, count);
       const upload = `${ids}:${context.groupInstructionCount}:${context.firstPassInstructionIndex}:${context.lastPassInstructionIndex}:${context.passGroupIndex}`;
@@ -170,14 +175,28 @@ describe('render plan player', () => {
   test('undefined groupIndex draws remain singleton groups', () => {
     const a = new BoxDrawable('a');
     const b = new BoxDrawable('b');
-    const root = createGroupScopeDouble([drawEntry(createDrawCommand(a, 0, undefined, 1)), drawEntry(createDrawCommand(b, 1, undefined, 1))]);
+    const root = createGroupScopeDouble([
+      drawEntry(createDrawCommand(a, 0, undefined, 1)),
+      drawEntry(createDrawCommand(b, 1, undefined, 1)),
+    ]);
     const spy = createPlaybackSpy();
 
     RenderPlanPlayer.playScope(root, spy.backend);
 
     // Both groups have no nested sub-scopes between them: Phase 1 uploads both
     // before any draws, so uploads appear before begin events.
-    expect(spy.events).toEqual(['upload:a:1:0:0:0', 'upload:b:1:1:1:1', 'begin:a', 'prepare:a', 'draw:a', 'end:a', 'begin:b', 'prepare:b', 'draw:b', 'end:b']);
+    expect(spy.events).toEqual([
+      'upload:a:1:0:0:0',
+      'upload:b:1:1:1:1',
+      'begin:a',
+      'prepare:a',
+      'draw:a',
+      'end:a',
+      'begin:b',
+      'prepare:b',
+      'draw:b',
+      'end:b',
+    ]);
     expect(spy.slots).toEqual(['a:0:0', 'b:0:1']);
     expect(spy.uploads).toEqual(['a:1:0:0:0', 'b:1:1:1:1']);
   });

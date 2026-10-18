@@ -228,7 +228,12 @@ export class WebGpuShaderFilterPass {
     gpu.passCoordinator.endPass();
   }
 
-  private _createPipeline(device: GPUDevice, module: GPUShaderModule, layout: GPUPipelineLayout, targetFormat: GPUTextureFormat): GPURenderPipeline {
+  private _createPipeline(
+    device: GPUDevice,
+    module: GPUShaderModule,
+    layout: GPUPipelineLayout,
+    targetFormat: GPUTextureFormat,
+  ): GPURenderPipeline {
     return device.createRenderPipeline({
       layout,
       vertex: {
@@ -263,7 +268,10 @@ export class WebGpuShaderFilterPass {
       const format = backend.getTextureFormat(output);
 
       if (!this._connection.pipelines.has(format)) {
-        this._connection.pipelines.set(format, this._createPipeline(this._connection.device, this._connection.module, this._connection.pipelineLayout, format));
+        this._connection.pipelines.set(
+          format,
+          this._createPipeline(this._connection.device, this._connection.module, this._connection.pipelineLayout, format),
+        );
       }
 
       return;
@@ -318,7 +326,9 @@ export class WebGpuShaderFilterPass {
     // `output` will actually have, producing a permanent color-target format
     // mismatch that WebGPU validation silently rejects on every draw.
     const targetFormat = backend.getTextureFormat(output);
-    const pipelines = new Map<GPUTextureFormat, GPURenderPipeline>([[targetFormat, this._createPipeline(device, module, pipelineLayout, targetFormat)]]);
+    const pipelines = new Map<GPUTextureFormat, GPURenderPipeline>([
+      [targetFormat, this._createPipeline(device, module, pipelineLayout, targetFormat)],
+    ]);
 
     // ---- Vertex buffer (fullscreen quad, static) ----
     const vertexBuffer = device.createBuffer({

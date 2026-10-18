@@ -45,6 +45,7 @@ textureType.asset('hero.png');
 
 class NoOptionsType extends AssetType<unknown, { hp: number }> {
   public readonly id = 'com.example.no-options';
+
   public createFactory() {
     return { create: async () => ({ hp: 1 }) };
   }
@@ -52,6 +53,7 @@ class NoOptionsType extends AssetType<unknown, { hp: number }> {
 
 class OptionalType extends AssetType<unknown, { hp: number }, { locale?: string }> {
   public readonly id = 'com.example.optional';
+
   public createFactory() {
     return { create: async () => ({ hp: 1 }) };
   }
@@ -59,6 +61,7 @@ class OptionalType extends AssetType<unknown, { hp: number }, { locale?: string 
 
 class RequiredType extends AssetType<unknown, { hp: number }, { locale: string }> {
   public readonly id = 'com.example.required';
+
   public createFactory() {
     return { create: async () => ({ hp: 1 }) };
   }
@@ -66,6 +69,7 @@ class RequiredType extends AssetType<unknown, { hp: number }, { locale: string }
 
 class UnionType extends AssetType<unknown, { hp: number }, { mode: 'a' } | { mode?: 'b'; extra?: number }> {
   public readonly id = 'com.example.union';
+
   public createFactory() {
     return { create: async () => ({ hp: 1 }) };
   }
@@ -87,6 +91,7 @@ new UnionType().asset('a.dat', { mode: 'a' });
 
 class SourceOptionType extends AssetType<unknown, { hp: number }, { source?: string; mode?: string }> {
   public readonly id = 'com.example.source-option';
+
   public createFactory() {
     return { create: async () => ({ hp: 1 }) };
   }
@@ -102,6 +107,7 @@ Asset.type('texture', 'hero.png', { type: 'json' });
 
 class MetaType extends AssetType<unknown, { hp: number }> {
   public readonly id = 'com.example.meta';
+
   public createFactory() {
     return { create: async () => ({ hp: 1 }) };
   }
@@ -161,7 +167,10 @@ declare const decoded: DecodedImage;
 // @ts-expect-error an ImageBitmap has no naturalWidth: narrow first
 void decoded.naturalWidth;
 void decoded.width;
-if (decoded instanceof HTMLImageElement) void decoded.naturalWidth;
+
+if (decoded instanceof HTMLImageElement) {
+  void decoded.naturalWidth;
+}
 
 // --- Fragment before query -------------------------------------------------
 

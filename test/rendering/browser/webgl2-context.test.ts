@@ -21,6 +21,7 @@ describe('WebGL2 context availability', () => {
     expect(gl).not.toBeNull();
 
     const ext = gl!.getExtension('WEBGL_debug_renderer_info');
+
     if (ext) {
       const renderer = gl!.getParameter(ext.UNMASKED_RENDERER_WEBGL) as string;
       expect(typeof renderer).toBe('string');

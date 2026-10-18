@@ -99,7 +99,9 @@ const createWhiteTexture = (size = 4): Texture => {
 const transformTextureSize = (backend: WebGl2Backend): { width: number; height: number } => {
   const texture = (backend as unknown as { _transformTexture: { width: number; height: number } | null })._transformTexture;
 
-  if (texture === null) throw new Error('The transform texture must exist after a frame that drew shared-transform nodes.');
+  if (texture === null) {
+    throw new Error('The transform texture must exist after a frame that drew shared-transform nodes.');
+  }
 
   return { width: texture.width, height: texture.height };
 };

@@ -1,0 +1,110 @@
+---
+title: 'Character movement'
+description: 'Move a platformer character over slopes, steps, one-way and moving platforms with CharacterMovementComponent, and keep jump rules such as a double jump in game code.'
+---
+
+import Callout from '../../../components/Callout.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
+import TryIt from '../../../components/TryIt.astro';
+
+# Character movement
+
+A platformer character is a kinematic body that should behave as if it had weight: it stands on the ground, walks up gentle slopes and over small steps, falls when there is nothing below it, and rides whatever it stands on. [`CharacterMovementComponent`](/ExoJS/en/api/character-movement-component/) in `@codexo/exojs-physics` provides that physical behaviour. What the character is _allowed_ to do — when it may jump, how often, whether it can drop through a platform — stays in your game code.
+
+## Three layers, one authority
+
+A character is built from three components on the same node, each with one job:
+
+<SourceSnippet
+  source="examples/guides/character-movement/character-movement.ts"
+  region="layers"
+  language="ts"
+  title="examples/guides/character-movement/character-movement.ts"
+/>
+
+- [`PhysicsBodyComponent`](/ExoJS/en/api/physics-body-component/) owns the body: its position, its colliders and its place in the world. It is the only transform authority.
+- [`KinematicMovementComponent`](/ExoJS/en/api/kinematic-movement-component/) is the motor. It casts the body along a requested motion, stops at obstacles, slides along them and hands the result to the world as velocity. It knows nothing about ground or gravity and works as well for a top-down hero, a ship or a navigation agent.
+- `CharacterMovementComponent` decides each step's motion relative to an `up` direction — walking along the ground, falling, stepping, snapping, riding — and executes it through the motor. It never writes the body's transform itself.
+
+While the character is enabled it is the motor's only source of commands: `movement.move()` throws, so two pieces of code can never steer one body against each other. Disable the character and the motor accepts direct commands again. The order you add the components in does not matter.
+
+## Walking and launching
+
+`move(input)` walks along the ground at the motor's `maxSpeed` times `input`, positive towards the right of `up`. Like a motor command it lasts for one advance of the world, so issue it every fixed step. `launch(velocity)` throws the character into the air:
+
+<SourceSnippet
+  source="examples/guides/character-movement/character-movement.ts"
+  region="controls"
+  language="ts"
+  title="examples/guides/character-movement/character-movement.ts"
+/>
+
+Read presses from fixed-step code through an action's `tick` view, as `jump.tick.pressed` does here. It hands each press to exactly one fixed step: a frame that runs no step keeps the press for the next one, a frame that runs several delivers it to the first, and a press a pause interrupted never fires after resume. The frame API, `jump.pressed`, is `true` in every fixed step of the frame it happened in, or in none — see [Fixed steps and the tick view](/ExoJS/en/guide/input/keyboard-and-actions/#fixed-steps-and-the-tick-view).
+
+Walking speed and airborne velocity are separate. A launch is not capped by `maxSpeed`, and walking input keeps steering sideways in the air. Gravity integrates once per fixed step, so a world advanced by a manual `PhysicsWorld.step` call that runs several fixed steps falls exactly as far as one stepped by the scene; a launch applies once, to the first of them.
+
+<Callout type="tip" title="Read state in fixedUpdate">
+`grounded`, `groundNormal`, `groundBody`, `onWall`, `wallNormal`, `onCeiling` and `velocity` describe the end of the latest completed physics step. A behaviour's `fixedUpdate` runs right before the world steps, so it sees the pose the character is actually in — not the one from a step earlier. `velocity` is what the character actually moved at, after collisions and including a platform carrying it.
+</Callout>
+
+## Surfaces
+
+A surface supports the character when its normal lies within `maxSlopeAngle` (radians) of `up`. Everything else is a wall or a ceiling. On the ground, the character:
+
+- **walks along slopes** within the limit at full speed, and treats steeper ones as walls instead of sliding up them. Off the ground, gravity slides it down a steep face.
+- **steps onto obstacles** up to `maxStepHeight`, measured against the actual collision geometry. The step is tried only where a wall stopped the walk, and only if there is headroom above it and a walkable top to land on.
+- **stays on the ground** over small dips, slope crests and steps down, by following the surface down by up to the step height plus what the slope limit allows for one step. Leaving a ledge, a launch, or ground further down than that makes it fall instead — there is no attraction to surfaces it is not walking along.
+
+Sensors never support a character, and neither does anything its collision filter excludes. If the supporting body is removed or destroyed, the character stops counting as grounded at once and falls from the next step.
+
+## One-way platforms
+
+An open [`ChainShape`](/ExoJS/en/api/chain-shape/) collides only from the side its normal points to, which is exactly a one-way platform: the character jumps through it from below and lands on it from above. Dropping through it is a game decision, made with the collision filter:
+
+<SourceSnippet
+  source="examples/guides/character-movement/character-movement.ts"
+  region="one-way"
+  language="ts"
+  title="examples/guides/character-movement/character-movement.ts"
+/>
+
+<Callout type="info" title="Contact modifiers do not apply">
+A world's `contactModifier` adjusts contacts the solver resolves between dynamic bodies. Kinematic movement does not go through the solver, so a contact modifier cannot make a platform one-way for a character; use a chain.
+</Callout>
+
+## Moving platforms
+
+A character standing on a moving body is carried with the body's velocity at the character's position, rotation included. Move platforms by velocity — a kinematic body with its velocity set each fixed step, or one driven by its own `KinematicMovementComponent` — rather than by teleporting it with `setTransform`, which carries nothing:
+
+<SourceSnippet
+  source="examples/guides/character-movement/character-movement.ts"
+  region="moving-platform"
+  language="ts"
+  title="examples/guides/character-movement/character-movement.ts"
+/>
+
+The carry is resolved against everything but the platform itself, so a wall or ceiling stops the character while the platform moves on. Walking off the platform keeps its velocity, and launching from it adds its velocity to the launch.
+
+## Jump rules belong to the game
+
+The component has no jump counter, no coyote time, no jump buffering and no wall-jump policy. `launch` works whether or not the character is grounded — the decision is yours, made from the state it reports. A double jump is a few lines:
+
+<SourceSnippet
+  source="examples/guides/character-movement/character-movement.ts"
+  region="double-jump"
+  language="ts"
+  title="examples/guides/character-movement/character-movement.ts"
+/>
+
+Coyote time is the same pattern: remember the last fixed step on which `grounded` was true and allow a ground jump for a few steps after it. A wall jump reads `onWall` and launches along `wallNormal`.
+
+## Limits
+
+- The character translates; it never rotates, even on a rotating platform.
+- A character standing on another character may be carried with that character's velocity from the previous step: both resolve in the same phase, in the order they were enabled.
+- It does not push dynamic bodies, and dynamic bodies do not push it — they block its casts like any collider.
+- A platform that moves into a character from the side, or squeezes it against a ceiling, is not resolved: kinematic bodies do not push each other.
+- Rounded shapes ride over steps lower than `radius × (1 − cos(maxSlopeAngle))` even with `maxStepHeight` at `0`, as a ball would roll over them.
+- A `NavigationAgentComponent` drives a `KinematicMovementComponent` directly and cannot steer one that a character drives. A route through a `WaypointGraph` may contain edges whose `kind` is `'jump'`; finding such a route does not make it executable — turning those edges into launches is game code.
+
+<TryIt examples={['physics/character-movement']} api={['character-movement-component', 'character-movement-options', 'kinematic-movement-component', 'physics-body-component', 'chain-shape']} />

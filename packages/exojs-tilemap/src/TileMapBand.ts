@@ -180,6 +180,7 @@ export class TileMapBand extends Container {
     if (this._destroyed) {
       return;
     }
+
     this._destroyed = true;
 
     this.parent?.removeChild(this);

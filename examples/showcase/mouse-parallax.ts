@@ -24,10 +24,13 @@ class MouseParallaxScene extends Scene {
       const layer = new Container();
       const shape = new Graphics();
       shape.fillColor = colors[i];
+
       for (let n = 0; n < columns; n++) {
         shape.drawCircle(stepX * 0.5 + n * stepX, height * 0.28 + (n % 3) * (height * 0.22), 28 + i * 8);
       }
+
       layer.addChild(shape);
+
       return layer;
     });
 

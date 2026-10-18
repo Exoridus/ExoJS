@@ -187,7 +187,12 @@ const table = (data: Float32Array, width: number, height: number): DataTexture<T
   });
 
 /** Build this scene's tables. `segments` holds `(x1, y1, x2, y2)` quadruples. */
-export const probeTables = (segments: readonly number[], lights: readonly Light[], region = PROBE_REGION, cell = PROBE_CELL): ProbeTables => {
+export const probeTables = (
+  segments: readonly number[],
+  lights: readonly Light[],
+  region = PROBE_REGION,
+  cell = PROBE_CELL,
+): ProbeTables => {
   const geometry = new TransportGeometry();
 
   geometry.build(Float32Array.from(segments), segments.length / 4, lights, region, cell);
@@ -271,7 +276,9 @@ const coarseLevel = (data: Uint8Array, size: number): { readonly data: Uint8Arra
 
       for (let y = by * MASK_COARSE - 1; y <= by * MASK_COARSE + MASK_COARSE; y++) {
         for (let x = bx * MASK_COARSE - 1; x <= bx * MASK_COARSE + MASK_COARSE; x++) {
-          if (x < 0 || y < 0 || x >= size || y >= size) continue;
+          if (x < 0 || y < 0 || x >= size || y >= size) {
+            continue;
+          }
 
           most = Math.max(most, data[(y * size + x) * 4 + 3]!);
         }
@@ -328,7 +335,12 @@ export const probeMask = (spec?: MaskSpec, rowsDown = false): ProbeMask => {
   const superReduced = superLevel(reduced.data, reduced.size);
   const texture = new DataTexture({ width: size, height: size, format: TextureFormat.Rgba8, data });
   const coarse = new DataTexture({ width: reduced.size, height: reduced.size, format: TextureFormat.Rgba8, data: reduced.data });
-  const superTexture = new DataTexture({ width: superReduced.size, height: superReduced.size, format: TextureFormat.Rgba8, data: superReduced.data });
+  const superTexture = new DataTexture({
+    width: superReduced.size,
+    height: superReduced.size,
+    format: TextureFormat.Rgba8,
+    data: superReduced.data,
+  });
   const world = spec?.world ?? PROBE_REGION;
   const rows = rowsDown ? -1 : 1;
   // World to clip over the region, which is what the chunk turns into a texel.

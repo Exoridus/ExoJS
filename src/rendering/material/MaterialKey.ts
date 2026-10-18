@@ -190,7 +190,12 @@ export const forcesBatchFlush = (prev: MaterialKey, next: MaterialKey): boolean 
  *
  * @internal
  */
-export const materialKeyForcesFlush = (prevPipelineKey: number, prevBindKey: number, prevOwnMaterial: boolean, next: MaterialKey): boolean =>
+export const materialKeyForcesFlush = (
+  prevPipelineKey: number,
+  prevBindKey: number,
+  prevOwnMaterial: boolean,
+  next: MaterialKey,
+): boolean =>
   prevPipelineKey !== next.pipelineKey || prevOwnMaterial !== next.ownMaterial || (next.ownMaterial && prevBindKey !== next.bindKey);
 
 interface TextureCarrier {

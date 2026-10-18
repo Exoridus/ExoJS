@@ -82,10 +82,25 @@ export class SceneScope<Data = unknown> {
       () => this._state,
       () => this._paused,
     );
-    this.tweens = new SceneTweens(app, () => this._state);
-    this.coroutines = new SceneCoroutines(app, () => this._state);
-    this.audio = new SceneAudio(app, () => this._state);
-    this.animations = new SceneAnimations();
+    this.tweens = new SceneTweens(
+      app,
+      () => this._state,
+      () => this._paused,
+    );
+    this.coroutines = new SceneCoroutines(
+      app,
+      () => this._state,
+      () => this._paused,
+    );
+    this.audio = new SceneAudio(
+      app,
+      () => this._state,
+      () => this._paused,
+    );
+    this.animations = new SceneAnimations(
+      () => this._state,
+      () => this._paused,
+    );
 
     scene._attach(app, this);
 
@@ -109,7 +124,6 @@ export class SceneScope<Data = unknown> {
     const runtime = new ComponentRuntime({
       scene: this.scene as Scene,
       isLive: () => this._state === SceneState.Active,
-      isTicking: () => this._state === SceneState.Active && !this._paused,
       reportError: error => this._reportError(error),
     });
 
@@ -147,9 +161,23 @@ export class SceneScope<Data = unknown> {
    * has been disposed. Throws the original `load()`/`init()` error, or a
    * lifecycle error when `init()` returns a thenable - in every build, not
    * only in development (it must be synchronous).
+   *
+   * Resolves `false` without running `init()` when {@link Scene.lifecycleSignal}
+   * has been aborted by the time `load()` completes: the preparation was
+   * cancelled, the scope never reaches `Ready`, and the caller owns its
+   * {@link SceneScope.destroyFailedActivation}. A `load()` that rejects keeps
+   * its own error even then.
    */
-  public async prepare(data: Data): Promise<void> {
+  public async prepare(data: Data): Promise<boolean> {
     await this.scene.load(data);
+
+    // Cancellation cannot interrupt a load() that ignores the signal, but it
+    // has to stop here: init() is where a scene starts audio, binds input and
+    // registers with application-wide facilities, none of which a scene that
+    // will never activate may do.
+    if (this.scene.lifecycleSignal.aborted) {
+      return false;
+    }
 
     const result = this.scene.init(data) as unknown;
 
@@ -165,6 +193,8 @@ export class SceneScope<Data = unknown> {
 
     this._state = SceneState.Ready;
     this._onStateChange(previous, this._state);
+
+    return true;
   }
 
   /**
@@ -188,8 +218,9 @@ export class SceneScope<Data = unknown> {
     });
     this._guard(errors, () => this.interaction.resume());
     this._guard(errors, () => this.tweens.activate());
-    this._guard(errors, () => this.coroutines.activate());
+    this._guard(errors, () => this.coroutines._sync());
     this._guard(errors, () => this.audio._flushPending());
+    this._guard(errors, () => this.audio._sync());
     this._guard(errors, () => this._components?.setLive(true));
     this._guard(errors, () => this.scene.onActivate.dispatchIsolated(error => this._reportError(error)));
 
@@ -199,10 +230,9 @@ export class SceneScope<Data = unknown> {
   }
 
   /**
-   * Pause this scope: freezes `fixedUpdate`/`update` while `Active`, applies
-   * the `when` pause policy to tweens/audio/animations (see
-   * {@link SceneTweens.pause}/{@link SceneAudio.pause}/
-   * {@link SceneAnimations.pause}), and dispatches {@link Scene.onPause}. Every
+   * Pause this scope: freezes `fixedUpdate`/`update` while `Active`, brings
+   * held audio in line with the `when` policies (tweens and animations read
+   * the flag live), and dispatches {@link Scene.onPause}. Every
    * stage is individually guarded and a throwing listener is reported through
    * the application error pipeline rather than thrown, so the pause policy is
    * never left half-applied. Returns whether the flag actually changed.
@@ -216,10 +246,9 @@ export class SceneScope<Data = unknown> {
 
     const errors: unknown[] = [];
 
-    this._guard(errors, () => this.tweens.pause());
-    this._guard(errors, () => this.coroutines.pause());
-    this._guard(errors, () => this.audio.pause());
-    this._guard(errors, () => this.animations.pause());
+    this._guard(errors, () => this.inputs._dropUnavailableTickInput());
+    this._guard(errors, () => this.coroutines._sync());
+    this._guard(errors, () => this.audio._sync());
     this._guard(errors, () => this.interaction.resume());
     this._guard(errors, () => this.scene.onPause.dispatchIsolated(error => this._reportError(error)));
 
@@ -230,8 +259,7 @@ export class SceneScope<Data = unknown> {
 
   /**
    * Resume this scope: undoes {@link SceneScope.pause} - including the
-   * tweens/audio/animations `when` policy (see {@link SceneTweens.resume}/
-   * {@link SceneAudio.resume}/{@link SceneAnimations.resume}) - and dispatches
+   * `when` policies - and dispatches
    * {@link Scene.onResume}. Same error-guarding contract as
    * {@link SceneScope.pause}. Returns whether the flag actually changed.
    */
@@ -244,10 +272,9 @@ export class SceneScope<Data = unknown> {
 
     const errors: unknown[] = [];
 
-    this._guard(errors, () => this.tweens.resume());
-    this._guard(errors, () => this.coroutines.resume());
-    this._guard(errors, () => this.audio.resume());
-    this._guard(errors, () => this.animations.resume());
+    this._guard(errors, () => this.inputs._dropUnavailableTickInput());
+    this._guard(errors, () => this.coroutines._sync());
+    this._guard(errors, () => this.audio._sync());
     this._guard(errors, () => this.interaction.resume());
     this._guard(errors, () => this.scene.onResume.dispatchIsolated(error => this._reportError(error)));
 
@@ -288,10 +315,8 @@ export class SceneScope<Data = unknown> {
         this._detachAutoRoots();
       }
     });
-    this._guard(errors, () => this.tweens.suspend());
-    this._guard(errors, () => this.coroutines.suspend());
-    this._guard(errors, () => this.audio.suspend());
-    this._guard(errors, () => this.animations.suspend());
+    this._guard(errors, () => this.coroutines._sync());
+    this._guard(errors, () => this.audio._sync());
     this._guard(errors, () => this.scene.onSuspend.dispatchIsolated(error => this._reportError(error)));
 
     this._reportErrors(errors);
@@ -324,11 +349,9 @@ export class SceneScope<Data = unknown> {
         this._attachAutoRoots();
       }
     });
-    this._guard(errors, () => this.tweens.restore());
-    this._guard(errors, () => this.coroutines.restore());
-    this._guard(errors, () => this.audio.restore());
-    this._guard(errors, () => this.animations.restore());
+    this._guard(errors, () => this.coroutines._sync());
     this._guard(errors, () => this.audio._flushPending());
+    this._guard(errors, () => this.audio._sync());
     this._guard(errors, () => this._components?.setLive(true));
     this._guard(errors, () => this.scene.onActivate.dispatchIsolated(error => this._reportError(error)));
 
@@ -350,19 +373,39 @@ export class SceneScope<Data = unknown> {
     this.systems._preFrame(delta);
   }
 
+  /**
+   * Run one fixed step on the scene hook, its behaviours, then its systems,
+   * gated to `Active` and unpaused. The gate is taken once per step: a pause
+   * requested inside the step lets the step finish on all three, so a
+   * command issued in it is never left waiting for a world step that only
+   * runs after resume. Ending the scope inside the step lets the callback
+   * that ended it return and skips every callback still ahead - the rest of
+   * the behaviour or system pass included.
+   */
   public fixedUpdate(step: Seconds): void {
     if (this._state !== SceneState.Active || this._paused) {
       return;
     }
 
-    if (__DEV__) Perf.mark(fixedUpdateStartMark);
-    const result = this.scene.fixedUpdate(step) as unknown;
-    if (__DEV__) Perf.measure(fixedUpdateMeasure, fixedUpdateStartMark);
+    if (__DEV__) {
+      Perf.mark(fixedUpdateStartMark);
+    }
 
-    if (result !== undefined) this._requireSynchronousFrameHook(result, 'fixedUpdate');
+    const result = this.scene.fixedUpdate(step) as unknown;
+
+    if (__DEV__) {
+      Perf.measure(fixedUpdateMeasure, fixedUpdateStartMark);
+    }
+
+    if (result !== undefined) {
+      this._requireSynchronousFrameHook(result, 'fixedUpdate');
+    }
 
     this._components?.fixedUpdate(step);
-    this.systems._fixedUpdate(step);
+
+    if (this._state === SceneState.Active) {
+      this.systems._fixedUpdate(step);
+    }
 
     if (__DEV__) {
       Perf.clearMarks(fixedUpdateStartMark);
@@ -371,23 +414,35 @@ export class SceneScope<Data = unknown> {
   }
 
   /**
-   * Forward one frame's update to the scene and its systems, gated to
-   * `Active` and unpaused. Throws in every build if `Scene.update` returns a
-   * thenable - the hook must be synchronous.
+   * Forward one frame's update to the scene, its behaviours and its systems,
+   * gated to `Active` and unpaused with the same once-per-phase gate as
+   * {@link SceneScope.fixedUpdate}. Throws in every build if `Scene.update`
+   * returns a thenable - the hook must be synchronous.
    */
   public update(delta: Seconds): void {
     if (this._state !== SceneState.Active || this._paused) {
       return;
     }
 
-    if (__DEV__) Perf.mark(updateStartMark);
-    const result = this.scene.update(delta) as unknown;
-    if (__DEV__) Perf.measure(updateMeasure, updateStartMark);
+    if (__DEV__) {
+      Perf.mark(updateStartMark);
+    }
 
-    if (result !== undefined) this._requireSynchronousFrameHook(result, 'update');
+    const result = this.scene.update(delta) as unknown;
+
+    if (__DEV__) {
+      Perf.measure(updateMeasure, updateStartMark);
+    }
+
+    if (result !== undefined) {
+      this._requireSynchronousFrameHook(result, 'update');
+    }
 
     this._components?.update(delta);
-    this.systems._update(delta);
+
+    if (this._state === SceneState.Active) {
+      this.systems._update(delta);
+    }
 
     if (__DEV__) {
       Perf.clearMarks(updateStartMark);
@@ -406,14 +461,24 @@ export class SceneScope<Data = unknown> {
       return;
     }
 
-    if (__DEV__) Perf.mark(drawStartMark);
+    if (__DEV__) {
+      Perf.mark(drawStartMark);
+    }
+
     const result = this.scene.draw(context) as unknown;
-    if (__DEV__) Perf.measure(drawMeasure, drawStartMark);
 
-    if (result !== undefined) this._requireSynchronousFrameHook(result, 'draw');
+    if (__DEV__) {
+      Perf.measure(drawMeasure, drawStartMark);
+    }
 
-    this.systems._draw(context);
-    this.scene._peekUI()?._render(context);
+    if (result !== undefined) {
+      this._requireSynchronousFrameHook(result, 'draw');
+    }
+
+    if (this._state === SceneState.Active) {
+      this.systems._draw(context);
+      this.scene._peekUI()?._render(context);
+    }
 
     if (__DEV__) {
       Perf.clearMarks(drawStartMark);
@@ -443,9 +508,11 @@ export class SceneScope<Data = unknown> {
 
   /** @internal Closes the window {@link SceneScope._beginFrame} opened and applies what it buffered. */
   public _endFrame(): void {
-    this._inFrame = false;
-    this.systems._endFrame();
-    this._components?.endFrame();
+    try {
+      this.systems._endFrame();
+    } finally {
+      this._closeComponentFrame();
+    }
   }
 
   /**
@@ -471,10 +538,10 @@ export class SceneScope<Data = unknown> {
 
     const errors: unknown[] = [];
 
-    this._guard(errors, () => this.systems.destroy());
+    this._guard(errors, () => this.systems._destroy(error => errors.push(error)));
     this._guard(errors, () => this.tweens.destroy());
     this._guard(errors, () => this.coroutines.destroy());
-    this._guard(errors, () => this.audio.destroy());
+    this._guard(errors, () => this.audio._destroy(error => errors.push(error)));
     this._guard(errors, () => this.animations.destroy());
     this._guard(errors, () => this.inputs.destroy());
     this._guard(errors, () => this.interaction.destroy());
@@ -511,6 +578,9 @@ export class SceneScope<Data = unknown> {
     const previous = this._state;
 
     this._state = SceneState.Destroying;
+    // A stop from inside a system pass ends this scope's part in the frame
+    // at once: the systems after the one that stopped it do not run.
+    this.systems._halt();
     this._onStateChange(previous, this._state);
 
     const errors: unknown[] = [];
@@ -524,10 +594,10 @@ export class SceneScope<Data = unknown> {
       await this._guardAsync(errors, () => this.scene.unload());
     }
 
-    this._guard(errors, () => this.systems.destroy());
+    this._guard(errors, () => this.systems._destroy(error => errors.push(error)));
     this._guard(errors, () => this.tweens.destroy());
     this._guard(errors, () => this.coroutines.destroy());
-    this._guard(errors, () => this.audio.destroy());
+    this._guard(errors, () => this.audio._destroy(error => errors.push(error)));
     this._guard(errors, () => this.animations.destroy());
     this._guard(errors, () => this.inputs.destroy());
     this._guard(errors, () => this.interaction.destroy());
@@ -544,9 +614,9 @@ export class SceneScope<Data = unknown> {
   }
 
   /**
-   * A scope that stops being the active one mid-frame never receives that
-   * frame's {@link SceneScope._endFrame} - the director forwards it to the
-   * scope active by then - so it applies what its runtime buffered itself.
+   * Close the component half of the frame window at most once: from
+   * {@link SceneScope._endFrame}, or earlier from {@link SceneScope.suspend}
+   * when the scope is retained while its window is still open.
    */
   private _closeComponentFrame(): void {
     if (this._inFrame) {
@@ -634,7 +704,16 @@ export class SceneScope<Data = unknown> {
     const normalized = error instanceof Error ? error : new Error(String(error));
 
     logger.error('A SceneScope lifecycle stage failed.', { source: 'SceneScope', error: normalized });
-    this._app.onError.dispatch(normalized);
+    this._app._teardownFailures?.push(normalized);
+    // Isolated: a throwing listener must not escape a teardown documented
+    // never to throw, hide the remaining failures from the other listeners, or
+    // replace the activation error a failed prepare() rethrows.
+    this._app.onError.dispatchIsolated(listenerError => {
+      logger.error('An Application.onError listener threw while a scene lifecycle failure was reported.', {
+        source: 'SceneScope',
+        ...(listenerError instanceof Error && { error: listenerError }),
+      });
+    }, normalized);
   }
 
   private _reportErrors(errors: unknown[]): void {

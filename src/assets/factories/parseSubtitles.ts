@@ -73,7 +73,9 @@ const applyCueSettings = (cue: VTTCue, settings: string): void => {
         if (value === 'rl' || value === 'lr' || value === '') {
           cue.vertical = value;
         }
+
         break;
+
       case 'line': {
         if (value === 'auto') {
           cue.line = 'auto';
@@ -89,8 +91,10 @@ const applyCueSettings = (cue: VTTCue, settings: string): void => {
             cue.lineAlign = alignPart as VTTCue['lineAlign'];
           }
         }
+
         break;
       }
+
       case 'position': {
         const [posPart = '', alignPart] = value.split(',');
         const num = parseFloat(posPart);
@@ -102,20 +106,25 @@ const applyCueSettings = (cue: VTTCue, settings: string): void => {
         if (alignPart !== undefined && validPositionAlignValues.has(alignPart)) {
           cue.positionAlign = alignPart as VTTCue['positionAlign'];
         }
+
         break;
       }
+
       case 'size': {
         const num = parseFloat(value);
 
         if (!Number.isNaN(num)) {
           cue.size = num;
         }
+
         break;
       }
+
       case 'align':
         if (validAlignValues.has(value)) {
           cue.align = value as VTTCue['align'];
         }
+
         break;
     }
   }
@@ -149,9 +158,11 @@ const parseVtt = (source: string): VTTCue[] => {
 
       while (i < lines.length) {
         const textLine = lines[i];
+
         if (textLine === undefined || textLine.trim() === '') {
           break;
         }
+
         textLines.push(textLine);
         i++;
       }
@@ -193,7 +204,9 @@ const parseSrt = (source: string): VTTCue[] => {
   for (const block of blocks) {
     const lines = block.trim().split('\n');
 
-    if (lines.length < 2) continue;
+    if (lines.length < 2) {
+      continue;
+    }
 
     const timingIndex = /^\d+$/.test((lines[0] ?? '').trim()) ? 1 : 0;
 
@@ -202,7 +215,9 @@ const parseSrt = (source: string): VTTCue[] => {
     // A missing line and a line without the arrow are both 'not a timing
     // line', which is what the optional chain says.
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!timingLine?.includes('-->')) continue;
+    if (!timingLine?.includes('-->')) {
+      continue;
+    }
 
     const arrowIndex = timingLine.indexOf('-->');
     const start = parseSrtTimestamp(timingLine.slice(0, arrowIndex));
@@ -220,7 +235,8 @@ const parseSrt = (source: string): VTTCue[] => {
  * reads as WebVTT, which is the format a served subtitle track defaults to.
  * @internal
  */
-export const subtitleFormatOf = (locator: string): SubtitleFormat => ((locator.split('?')[0] ?? locator).toLowerCase().endsWith('.srt') ? 'srt' : 'vtt');
+export const subtitleFormatOf = (locator: string): SubtitleFormat =>
+  (locator.split('?')[0] ?? locator).toLowerCase().endsWith('.srt') ? 'srt' : 'vtt';
 
 /**
  * Parses WebVTT or SubRip text into an ordered array of `VTTCue`s.

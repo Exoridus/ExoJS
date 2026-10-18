@@ -27,7 +27,9 @@ export { emptySnapshot as EMPTY_SNAPSHOT };
  * @internal
  */
 export const freezeExtension = (ext: Extension): void => {
-  if (!__DEV__) return;
+  if (!__DEV__) {
+    return;
+  }
 
   Object.freeze(ext);
 
@@ -105,11 +107,14 @@ export const buildSnapshot = (input: readonly Extension[]): ExtensionSnapshot =>
     }
 
     // (2) Already fully processed - diamond / shared dependency.
-    if (visited.has(ext)) return;
+    if (visited.has(ext)) {
+      return;
+    }
 
     // (3) Back-edge in current DFS stack - cycle.
     if (visiting.has(ext)) {
       const cyclePath = [...stack.slice(stack.indexOf(ext)), ext].map(e => e.id).join(' → ');
+
       throw new Error(`Extension dependency cycle detected: ${cyclePath}`);
     }
 
@@ -134,7 +139,9 @@ export const buildSnapshot = (input: readonly Extension[]): ExtensionSnapshot =>
     }
   };
 
-  for (const ext of input) visit(ext);
+  for (const ext of input) {
+    visit(ext);
+  }
 
   // Flatten in topological (post-order) order - deps before dependents.
   const renderers: RendererBinding[] = [];

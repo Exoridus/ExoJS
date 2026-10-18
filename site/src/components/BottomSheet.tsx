@@ -33,16 +33,22 @@ export const BottomSheet = ({ children, open, title, opener, onOpenChange }: Bot
   const mounted = useClientValue(inBrowser, false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
 
     if (scrollLockCount === 0) {
       previousBodyOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
     }
+
     scrollLockCount += 1;
 
-    const inertTargets = Array.from(document.querySelectorAll('.app-shell__main')).filter((element): element is HTMLElement => element instanceof HTMLElement);
+    const inertTargets = Array.from(document.querySelectorAll('.app-shell__main')).filter(
+      (element): element is HTMLElement => element instanceof HTMLElement,
+    );
     const previousAriaHidden = inertTargets.map(element => element.getAttribute('aria-hidden'));
+
     for (const target of inertTargets) {
       target.setAttribute('aria-hidden', 'true');
       (target as HTMLElement & { inert?: boolean }).inert = true;
@@ -57,13 +63,19 @@ export const BottomSheet = ({ children, open, title, opener, onOpenChange }: Bot
       if (event.key === 'Escape') {
         event.preventDefault();
         onOpenChange(false);
+
         return;
       }
 
-      if (event.key !== 'Tab') return;
+      if (event.key !== 'Tab') {
+        return;
+      }
+
       const focusables = getFocusable(sheetRef.current);
+
       if (focusables.length === 0) {
         event.preventDefault();
+
         return;
       }
 
@@ -74,6 +86,7 @@ export const BottomSheet = ({ children, open, title, opener, onOpenChange }: Bot
       if (event.shiftKey && active === first) {
         event.preventDefault();
         last.focus();
+
         return;
       }
 
@@ -92,11 +105,16 @@ export const BottomSheet = ({ children, open, title, opener, onOpenChange }: Bot
       inertTargets.forEach((target, index) => {
         (target as HTMLElement & { inert?: boolean }).inert = false;
         const ariaHidden = previousAriaHidden[index];
-        if (ariaHidden === null) target.removeAttribute('aria-hidden');
-        else target.setAttribute('aria-hidden', ariaHidden);
+
+        if (ariaHidden === null) {
+          target.removeAttribute('aria-hidden');
+        } else {
+          target.setAttribute('aria-hidden', ariaHidden);
+        }
       });
 
       scrollLockCount = Math.max(0, scrollLockCount - 1);
+
       if (scrollLockCount === 0) {
         document.body.style.overflow = previousBodyOverflow;
       }
@@ -105,7 +123,9 @@ export const BottomSheet = ({ children, open, title, opener, onOpenChange }: Bot
     };
   }, [onOpenChange, open, opener]);
 
-  if (!mounted) return <></>;
+  if (!mounted) {
+    return <></>;
+  }
 
   // Portaled to <body> so sticky ancestors cannot clip the full-screen sheet.
   return createPortal(
@@ -131,7 +151,10 @@ export const BottomSheet = ({ children, open, title, opener, onOpenChange }: Bot
 };
 
 const getFocusable = (root: HTMLElement | null): HTMLElement[] => {
-  if (!root) return [];
+  if (!root) {
+    return [];
+  }
+
   return Array.from(root.querySelectorAll(FOCUSABLE_SELECTOR)).filter(
     (node): node is HTMLElement => node instanceof HTMLElement && !node.hasAttribute('hidden') && !node.hasAttribute('inert'),
   );

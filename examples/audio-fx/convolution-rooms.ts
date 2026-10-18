@@ -1,4 +1,14 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Seconds, type Sound, Text } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  type Sound,
+  Text,
+} from '@codexo/exojs';
 import { ConvolutionEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -44,18 +54,23 @@ const character = (ms: number): string => {
   if (ms < 10) {
     return 'colouration only';
   }
+
   if (ms < 40) {
     return 'tight box';
   }
+
   if (ms < 120) {
     return 'narrow shaft';
   }
+
   if (ms < 250) {
     return 'small room';
   }
+
   if (ms < 400) {
     return 'chamber';
   }
+
   return 'cavern';
 };
 
@@ -144,6 +159,7 @@ class ConvolutionRoomsScene extends Scene {
       for (const pad of this.pads) {
         if (pointer.x >= pad.x && pointer.x <= pad.x + pad.w && pointer.y >= pad.y && pointer.y <= pad.y + pad.h) {
           this.strike(pad);
+
           return;
         }
       }

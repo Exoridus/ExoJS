@@ -99,6 +99,7 @@ describe('Application.start() — scene-less and constructor overloads', () => {
       public override load(data: Readonly<Data>): void {
         seenInLoad = data;
       }
+
       public override init(data: Readonly<Data>): void {
         seenInInit = data;
       }
@@ -166,6 +167,7 @@ describe('Application.start() — scene-less and constructor overloads', () => {
       public override load(): void {
         if (failNextLoad) {
           failNextLoad = false;
+
           throw new Error('load failed');
         }
       }

@@ -76,7 +76,8 @@ export const compareMedians = (exojsMs: number, competitorMs: number): Verdict =
  * Two runs of one cell never produce the same ratio, so agreement between runs
  * can only be asked of the rung. This is the unit an aggregation compares.
  */
-export type VerdictRung = 'not-comparable' | 'level' | 'exojs-leads' | 'exojs-leads-clearly' | 'competitor-leads' | 'competitor-leads-clearly';
+export type VerdictRung =
+  'not-comparable' | 'level' | 'exojs-leads' | 'exojs-leads-clearly' | 'competitor-leads' | 'competitor-leads-clearly';
 
 /** The rung `verdict` sits on. */
 export const verdictRung = (verdict: Verdict): VerdictRung => {
@@ -101,4 +102,10 @@ export const verdictRung = (verdict: Verdict): VerdictRung => {
  * range - the disagreement is a finding about the measurement, not a row to
  * hide.
  */
-export const UNSTABLE_VERDICT: Verdict = { side: 'neither', ratio: Number.NaN, factor: Number.NaN, label: 'unstable across runs', structural: false };
+export const UNSTABLE_VERDICT: Verdict = {
+  side: 'neither',
+  ratio: Number.NaN,
+  factor: Number.NaN,
+  label: 'unstable across runs',
+  structural: false,
+};

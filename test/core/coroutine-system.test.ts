@@ -86,6 +86,7 @@ describe('CoroutineSystem', () => {
   test('stops once the slice is spent, leaving the rest for the next frame', () => {
     const system = zeroSliceSystem();
     const order: string[] = [];
+
     const tagged = function* (tag: string): Generator<void, void> {
       for (let i = 0; i < 4; i++) {
         order.push(tag);
@@ -105,6 +106,7 @@ describe('CoroutineSystem', () => {
   test('rotates the lead across frames, so the budget is shared over time', () => {
     const system = zeroSliceSystem();
     const order: string[] = [];
+
     const tagged = function* (tag: string): Generator<void, void> {
       for (let i = 0; i < 4; i++) {
         order.push(tag);
@@ -126,6 +128,7 @@ describe('CoroutineSystem', () => {
   test('descends through the priorities within a frame when budget is left', () => {
     const system = new CoroutineSystem({ budget: seconds(1) });
     const order: string[] = [];
+
     const tagged = function* (tag: string): Generator<void, void> {
       for (let i = 0; i < 4; i++) {
         order.push(tag);
@@ -146,6 +149,7 @@ describe('CoroutineSystem', () => {
   test('a spent slice stops the pass before the lower priorities are reached', () => {
     const system = zeroSliceSystem();
     const order: string[] = [];
+
     const tagged = function* (tag: string): Generator<void, void> {
       for (let i = 0; i < 4; i++) {
         order.push(tag);
@@ -164,6 +168,7 @@ describe('CoroutineSystem', () => {
   test('a promoted coroutine leads the next frame', () => {
     const system = zeroSliceSystem();
     const order: string[] = [];
+
     const tagged = function* (tag: string): Generator<void, void> {
       for (let i = 0; i < 4; i++) {
         order.push(tag);
@@ -295,11 +300,14 @@ describe('CoroutineSystem', () => {
     const system = new CoroutineSystem({ budget: seconds(1) });
     const failing = system.queue(function* (): Generator<void, void> {
       yield;
+
       throw new Error('boom');
     });
     const other = system.queue(countTo(3));
 
-    for (let i = 0; i < 4; i++) frame(system);
+    for (let i = 0; i < 4; i++) {
+      frame(system);
+    }
 
     expect(failing.status).toBe('failed');
     expect(failing.error).toBeInstanceOf(Error);

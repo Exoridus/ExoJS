@@ -107,7 +107,8 @@ export const INDEPENDENT_PACKAGES = [
   {
     name: '@codexo/eslint-plugin-exojs',
     dir: 'packages/eslint-plugin-exojs',
-    reason: 'lint tooling; a consumer keeps one version in devDependencies across engine upgrades and its rules read source text, not engine API',
+    reason:
+      'lint tooling; a consumer keeps one version in devDependencies across engine upgrades and its rules read source text, not engine API',
   },
 ] as const satisfies readonly IndependentPackage[];
 

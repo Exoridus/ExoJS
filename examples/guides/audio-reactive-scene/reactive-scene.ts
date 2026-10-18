@@ -1,4 +1,15 @@
-import { Application, Asset, AudioStream, RenderingContext, Scene, type Seconds, Texture, Time, Vector, View } from '@codexo/exojs';
+import {
+  Application,
+  Asset,
+  type AudioStream,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  type Texture,
+  Time,
+  Vector,
+  View,
+} from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem } from '@codexo/exojs-particles';
 
@@ -15,7 +26,10 @@ class AudioReactiveScene extends Scene {
   private view!: View;
 
   async load() {
-    const [music, particleTexture] = await Promise.all([this.loader.load(Asset.type('music', 'audio/track.ogg')), this.loader.load('image/particle.png')]);
+    const [music, particleTexture] = await Promise.all([
+      this.loader.load(Asset.type('music', 'audio/track.ogg')),
+      this.loader.load('image/particle.png'),
+    ]);
     this.music = music;
     this.particleTexture = particleTexture;
   }

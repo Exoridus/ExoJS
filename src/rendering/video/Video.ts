@@ -223,13 +223,19 @@ export class Video extends Sprite {
   }
 
   public set bus(bus: AudioBus | null) {
-    if (this._bus === bus) return;
+    if (this._bus === bus) {
+      return;
+    }
+
     if (this._audioSetup) {
       this._audioSetup.gainNode.disconnect();
     }
+
     this._bus = bus;
+
     if (this._audioSetup) {
       const inputNode = bus?.getInputNode() ?? null;
+
       if (inputNode) {
         this._audioSetup.gainNode.connect(inputNode);
       } else {
@@ -492,6 +498,7 @@ export class Video extends Sprite {
     gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 0.01);
 
     const inputNode = this.bus?.getInputNode() ?? null;
+
     if (inputNode) {
       gainNode.connect(inputNode);
     } else {

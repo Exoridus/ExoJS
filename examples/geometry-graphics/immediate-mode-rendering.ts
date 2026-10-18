@@ -1,4 +1,14 @@
-import { Application, Color, FixedResolutionCanvasSizing, Geometry, Matrix, RenderBatch, type RenderingContext, Scene, type Seconds } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Geometry,
+  Matrix,
+  RenderBatch,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+} from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Number of instances drawn in the batched field. The whole field is one
@@ -103,9 +113,17 @@ class ImmediateModeScene extends Scene {
     const centerY = height / 2;
 
     // --- Procedural gears: each drawn with its own drawGeometry call. ---
-    const gearPalette = [new Color(0xffd700), new Color(0x87ceeb), new Color(0xff69b4), new Color(0x00fa9a), new Color(0xffa500), new Color(0x9370db)];
+    const gearPalette = [
+      new Color(0xffd700),
+      new Color(0x87ceeb),
+      new Color(0xff69b4),
+      new Color(0x00fa9a),
+      new Color(0xffa500),
+      new Color(0x9370db),
+    ];
 
     this.gears = [];
+
     for (let i = 0; i < GEAR_COUNT; i++) {
       const tint = gearPalette[i % gearPalette.length];
       const ringAngle = (i / GEAR_COUNT) * Math.PI * 2;
@@ -129,6 +147,7 @@ class ImmediateModeScene extends Scene {
     const sparkPalette = [new Color(0x87ceeb), new Color(0x7fffd4), new Color(0xffd700), new Color(0xff69b4), Color.white];
 
     this.sparks = [];
+
     for (let i = 0; i < FIELD_COUNT; i++) {
       const tint = sparkPalette[i % sparkPalette.length];
 
@@ -177,6 +196,7 @@ class ImmediateModeScene extends Scene {
     //    toggled off, draw each instance with its own drawGeometry to show
     //    the draw-call cost the batch collapses.
     this.sparkBatch.clear();
+
     for (const spark of this.sparks) {
       const angle = spark.angle + time * spark.speed;
       const radius = spark.radius + Math.sin(time * 1.3 + spark.wobble) * 14;

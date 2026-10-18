@@ -1,4 +1,4 @@
-import { type ParticleSystem, SpawnModule, SpawnOnDeath } from '@codexo/exojs-particles';
+import { type ParticleSystem, type SpawnModule, SpawnOnDeath } from '@codexo/exojs-particles';
 
 declare const system: ParticleSystem;
 declare const childSystem: ParticleSystem;

@@ -73,16 +73,28 @@ const CONTINUES_ARGUMENTS = /[(,[{]$/;
 const lineIsCandidate = (line: string, previous: string | undefined): boolean => {
   const trimmed = line.trim();
 
-  if (trimmed === '' || trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return false;
-  if (HANDLED_PREFIX.test(trimmed)) return false;
+  if (trimmed === '' || trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) {
+    return false;
+  }
+
+  if (HANDLED_PREFIX.test(trimmed)) {
+    return false;
+  }
 
   // `.then`/`.catch` on the same line means the caller already answered for the
   // rejection, whatever it did with the value.
-  if (trimmed.includes('.then(') || trimmed.includes('.catch(')) return false;
+  if (trimmed.includes('.then(') || trimmed.includes('.catch(')) {
+    return false;
+  }
 
   // An argument, not a statement: `foo(\n  bar.baz(x),\n)`.
-  if (trimmed.endsWith(',')) return false;
-  if (previous !== undefined && CONTINUES_ARGUMENTS.test(previous.trim())) return false;
+  if (trimmed.endsWith(',')) {
+    return false;
+  }
+
+  if (previous !== undefined && CONTINUES_ARGUMENTS.test(previous.trim())) {
+    return false;
+  }
 
   return STATEMENT_CALL.test(trimmed);
 };
@@ -100,11 +112,16 @@ export const findFootgunCandidates = (text: string): FootgunCandidate[] => {
     const lineStart = offset;
     offset += line.length + 1;
 
-    if (!lineIsCandidate(line, index > 0 ? lines[index - 1] : undefined)) continue;
+    if (!lineIsCandidate(line, lines[index - 1])) {
+      continue;
+    }
 
     const trimmed = line.trim();
     const match = STATEMENT_CALL.exec(trimmed);
-    if (!match) continue;
+
+    if (!match) {
+      continue;
+    }
 
     const callee = match[1];
     const indent = line.length - line.trimStart().length;
@@ -136,21 +153,30 @@ export const findFootgunCandidates = (text: string): FootgunCandidate[] => {
  */
 export const returnsPromise = (info: QuickInfoResponse | undefined | null): boolean => {
   const parts = info?.displayParts;
-  if (!parts || parts.length === 0) return false;
+
+  if (!parts || parts.length === 0) {
+    return false;
+  }
 
   let depth = 0;
   let seenReturn = false;
 
   for (const part of parts) {
     if (part.kind === 'punctuation') {
-      if (part.text === '(') depth += 1;
-      else if (part.text === ')') depth -= 1;
-      // The return type of the outermost signature starts at its `:` - a `:`
-      // inside the parameter list belongs to a parameter.
-      else if (part.text === ':' && depth === 0) seenReturn = true;
+      if (part.text === '(') {
+        depth += 1;
+      } else if (part.text === ')') {
+        depth -= 1;
+      } else if (part.text === ':' && depth === 0) {
+        // The return type of the outermost signature starts at its `:` - a `:`
+        // inside the parameter list belongs to a parameter.
+        seenReturn = true;
+      }
     }
 
-    if (seenReturn && part.text === 'Promise') return true;
+    if (seenReturn && part.text === 'Promise') {
+      return true;
+    }
   }
 
   return false;

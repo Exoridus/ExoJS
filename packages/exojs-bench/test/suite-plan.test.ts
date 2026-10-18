@@ -10,12 +10,15 @@ import type { PlanDomain } from '../src/suite/plan';
 import { cellKey, parseSuite, resolveSuitePlan } from '../src/suite/plan';
 
 const RENDERING_LADDERS = new Map<string, readonly number[]>(ARCHETYPES.map(archetype => [archetype.id as string, archetype.nodeCounts]));
-const PHYSICS_LADDERS = new Map<string, readonly number[]>(PHYSICS_ARCHETYPES.map(archetype => [archetype.id as string, archetype.bodyCounts]));
+const PHYSICS_LADDERS = new Map<string, readonly number[]>(
+  PHYSICS_ARCHETYPES.map(archetype => [archetype.id as string, archetype.bodyCounts]),
+);
 
 const planFor = (suite: 'reference' | 'full', domain: PlanDomain, extreme = false): ReturnType<typeof resolveSuitePlan> =>
   resolveSuitePlan({ suite, domain, extreme, ladders: domain === 'rendering' ? RENDERING_LADDERS : PHYSICS_LADDERS });
 
-const scenarioIds = (plan: ReturnType<typeof resolveSuitePlan>): Set<string> => new Set(plan.workloads.map(workload => workload.scenarioId));
+const scenarioIds = (plan: ReturnType<typeof resolveSuitePlan>): Set<string> =>
+  new Set(plan.workloads.map(workload => workload.scenarioId));
 
 /**
  * ExoJS-internal probes: archetypes the published catalog deliberately omits
@@ -33,14 +36,16 @@ const INTERNAL_PROBES = [
 ];
 
 describe('published workload catalog', () => {
-  const catalogs: readonly (readonly [string, readonly ScenarioLoads[]])[] = [
+  const catalogs: ReadonlyArray<readonly [string, readonly ScenarioLoads[]]> = [
     ['rendering', RENDERING_SCENARIOS],
     ['physics', PHYSICS_SCENARIOS],
   ];
 
   for (const [domain, scenarios] of catalogs) {
     it(`${domain}: every scenario names exactly one headline load, and it is part of the reference plan`, () => {
-      const offenders = scenarios.filter(scenario => scenario.loads.filter(load => load.primary === true).length !== 1 || !primaryLoadOf(scenario).reference);
+      const offenders = scenarios.filter(
+        scenario => scenario.loads.filter(load => load.primary === true).length !== 1 || !primaryLoadOf(scenario).reference,
+      );
 
       expect(offenders.map(scenario => scenario.scenarioId)).toStrictEqual([]);
     });
@@ -99,9 +104,11 @@ describe('suite resolution', () => {
     for (const scenario of RENDERING_SCENARIOS) {
       const headline = primaryLoadOf(scenario);
 
-      expect(plan.workloads.some(workload => workload.scenarioId === scenario.scenarioId && workload.loadId === headline.loadId && workload.primary)).toBe(
-        true,
-      );
+      expect(
+        plan.workloads.some(
+          workload => workload.scenarioId === scenario.scenarioId && workload.loadId === headline.loadId && workload.primary,
+        ),
+      ).toBe(true);
     }
   });
 
@@ -182,7 +189,14 @@ describe('plan identity', () => {
   });
 
   it('cell keys separate backend, arm configuration and load', () => {
-    const base = { domain: 'rendering' as const, engine: 'exojs', config: 'current', backend: 'webgl2', scenarioId: 'static-heavy', loadId: '10k' };
+    const base = {
+      domain: 'rendering' as const,
+      engine: 'exojs',
+      config: 'current',
+      backend: 'webgl2',
+      scenarioId: 'static-heavy',
+      loadId: '10k',
+    };
 
     expect(cellKey(base)).toBe(cellKey({ ...base }));
     expect(cellKey(base)).not.toBe(cellKey({ ...base, backend: 'webgpu' }));

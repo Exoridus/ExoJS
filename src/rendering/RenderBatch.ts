@@ -257,7 +257,9 @@ export class RenderBatch {
 
       if (typeof value === 'number') {
         if (binding.componentCount !== 1) {
-          throw new Error(`RenderBatch instance attribute '${binding.name}' expects ${binding.componentCount} components (got a single number).`);
+          throw new Error(
+            `RenderBatch instance attribute '${binding.name}' expects ${binding.componentCount} components (got a single number).`,
+          );
         }
 
         this._instanceData[target] = value;
@@ -265,7 +267,9 @@ export class RenderBatch {
       }
 
       if (value.length !== binding.componentCount) {
-        throw new Error(`RenderBatch instance attribute '${binding.name}' expects ${binding.componentCount} components (got ${value.length}).`);
+        throw new Error(
+          `RenderBatch instance attribute '${binding.name}' expects ${binding.componentCount} components (got ${value.length}).`,
+        );
       }
 
       for (let i = 0; i < binding.componentCount; i++) {

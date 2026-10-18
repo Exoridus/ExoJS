@@ -165,6 +165,7 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
     if (!Number.isInteger(width) || width <= 0) {
       throw new Error(`DataTexture width must be a positive integer (got ${width}).`);
     }
+
     if (!Number.isInteger(height) || height <= 0) {
       throw new Error(`DataTexture height must be a positive integer (got ${height}).`);
     }
@@ -179,25 +180,36 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
       buffer = isFloatFormat(format) ? new Float32Array(expectedBytes / 4) : new Uint8Array(expectedBytes);
     } else if (data instanceof ArrayBuffer) {
       if (data.byteLength !== expectedBytes) {
-        throw new Error(`DataTexture data byteLength ${data.byteLength} does not match ${width}x${height} ${format} (${expectedBytes} bytes expected).`);
+        throw new Error(
+          `DataTexture data byteLength ${data.byteLength} does not match ${width}x${height} ${format} (${expectedBytes} bytes expected).`,
+        );
       }
+
       buffer = isFloatFormat(format) ? new Float32Array(data) : new Uint8Array(data);
     } else if (data instanceof Uint8Array) {
       if (isFloatFormat(format)) {
         throw new Error(`DataTexture format '${format}' requires a Float32Array, got Uint8Array.`);
       }
+
       if (data.byteLength !== expectedBytes) {
-        throw new Error(`DataTexture Uint8Array length ${data.length} does not match ${width}x${height} ${format} (${expectedBytes} expected).`);
+        throw new Error(
+          `DataTexture Uint8Array length ${data.length} does not match ${width}x${height} ${format} (${expectedBytes} expected).`,
+        );
       }
+
       buffer = data;
     } else {
       // Float32Array
       if (!isFloatFormat(format)) {
         throw new Error(`DataTexture format '${format}' requires a Uint8Array, got Float32Array.`);
       }
+
       if (data.byteLength !== expectedBytes) {
-        throw new Error(`DataTexture Float32Array byteLength ${data.byteLength} does not match ${width}x${height} ${format} (${expectedBytes} expected).`);
+        throw new Error(
+          `DataTexture Float32Array byteLength ${data.byteLength} does not match ${width}x${height} ${format} (${expectedBytes} expected).`,
+        );
       }
+
       buffer = data;
     }
 
@@ -265,9 +277,11 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
     if (!Number.isInteger(x) || !Number.isInteger(y) || !Number.isInteger(width) || !Number.isInteger(height)) {
       throw new Error(`DataTexture commitRect requires integer coordinates (got ${x}, ${y}, ${width}, ${height}).`);
     }
+
     if (width <= 0 || height <= 0) {
       throw new Error(`DataTexture commitRect requires positive width and height (got ${width}, ${height}).`);
     }
+
     if (x < 0 || y < 0 || x + width > this.width || y + height > this.height) {
       throw new Error(`DataTexture commitRect (${x}, ${y}, ${width}, ${height}) is out of bounds for ${this.width}x${this.height}.`);
     }

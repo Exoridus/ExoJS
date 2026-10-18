@@ -79,7 +79,8 @@ const createSolidTexture = (color: string, size = 16): Texture => {
   return new Texture(source);
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 // Render a frame through the real plan path inside a validation error scope.
 // Returns false when the device dropped mid-test (the caller should bail).
@@ -111,7 +112,12 @@ const renderScene = async (ctx: { skip: (reason: string) => void }, backend: Web
   return true;
 };
 
-const hexToRgba = (hex: string): RgbaTuple => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16), 255];
+const hexToRgba = (hex: string): RgbaTuple => [
+  parseInt(hex.slice(1, 3), 16),
+  parseInt(hex.slice(3, 5), 16),
+  parseInt(hex.slice(5, 7), 16),
+  255,
+];
 
 interface FragmentCarrier {
   _fragment: RetainedGroupFragment;

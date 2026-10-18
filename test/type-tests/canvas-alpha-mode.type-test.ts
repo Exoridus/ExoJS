@@ -41,4 +41,15 @@ const keptAttributes: RenderingApplicationOptions = {
   },
 };
 
-export { keptAttributes, legacyAlpha, legacyPremultiplied, legacyStencil, looseMode, mode, opaque, premultiplied, unsupportedMode, withOutput };
+export {
+  keptAttributes,
+  legacyAlpha,
+  legacyPremultiplied,
+  legacyStencil,
+  looseMode,
+  mode,
+  opaque,
+  premultiplied,
+  unsupportedMode,
+  withOutput,
+};

@@ -69,7 +69,13 @@ export class WebGl2PixelReadback<T extends PixelDataType = PixelDataType> implem
     this._scratchRow = createPixelArray(_width * 4, _dataType);
 
     for (let i = 0; i < slots; i++) {
-      this._slots.push({ buffer: null, sync: null, polled: false, state: SlotState.Free, data: createPixelArray(_width * _height * 4, _dataType) });
+      this._slots.push({
+        buffer: null,
+        sync: null,
+        polled: false,
+        state: SlotState.Free,
+        data: createPixelArray(_width * _height * 4, _dataType),
+      });
     }
   }
 

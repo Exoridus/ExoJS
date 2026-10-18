@@ -395,7 +395,13 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
    * different bytes, so neither pays for the other's upload.
    */
   public patchTintRow(localRow: number, bytes: Uint8Array): void {
-    if (this._tintTexture === null || this._tintBytes === null || this._transformLayout === null || localRow < 0 || localRow >= this._transformRowCount) {
+    if (
+      this._tintTexture === null ||
+      this._tintBytes === null ||
+      this._transformLayout === null ||
+      localRow < 0 ||
+      localRow >= this._transformRowCount
+    ) {
       return;
     }
 
@@ -609,7 +615,14 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
             if (attribute.integer) {
               gl.vertexAttribIPointer(attribute.location, attribute.size, attribute.type, attribute.stride, attribute.start);
             } else {
-              gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+              gl.vertexAttribPointer(
+                attribute.location,
+                attribute.size,
+                attribute.type,
+                attribute.normalized,
+                attribute.stride,
+                attribute.start,
+              );
             }
 
             gl.enableVertexAttribArray(attribute.location);

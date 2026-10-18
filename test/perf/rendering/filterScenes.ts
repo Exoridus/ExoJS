@@ -129,7 +129,8 @@ export const FILTER_ARCHETYPES: readonly AllocationArchetype[] = [
   // ── BARRIER + TARGET: an alpha mask composites, never calls a filter ─────
   {
     id: 'filter/mask 100',
-    rationale: 'Alpha-mask barrier: two acquired targets and a composite per node, with no Filter.apply. Isolates target cost from filter cost.',
+    rationale:
+      'Alpha-mask barrier: two acquired targets and a composite per node, with no Filter.apply. Isolates target cost from filter cost.',
     warmup: WARMUP,
     build: () => {
       const [texture] = makeTextures(1);
@@ -195,7 +196,8 @@ export const FILTER_ARCHETYPES: readonly AllocationArchetype[] = [
   },
   {
     id: 'filter/blur-wide 100',
-    rationale: 'A wider BlurFilter — the same two passes and draws, twice the taps. If cost tracks fragments rather than draws, this row says so.',
+    rationale:
+      'A wider BlurFilter — the same two passes and draws, twice the taps. If cost tracks fragments rather than draws, this row says so.',
     warmup: WARMUP,
     build: () =>
       buildDecoratedSprites(100, sprite => {
@@ -225,7 +227,8 @@ export const FILTER_ARCHETYPES: readonly AllocationArchetype[] = [
   // argued: the structural counters here must not move.
   {
     id: 'filter/color 100 margin',
-    rationale: 'Filtered nodes inside the capture cull margin but outside the view — the case where a composite draw is collected but not visible.',
+    rationale:
+      'Filtered nodes inside the capture cull margin but outside the view — the case where a composite draw is collected but not visible.',
     warmup: WARMUP,
     build: () => {
       const [texture] = makeTextures(1);
@@ -262,7 +265,8 @@ export const FILTER_ARCHETYPES: readonly AllocationArchetype[] = [
   },
   {
     id: 'filter/container-cached 1000',
-    rationale: 'The same subtree with cacheAsTexture. After the bake the filter pass should not run per frame at all — verifies that it does not.',
+    rationale:
+      'The same subtree with cacheAsTexture. After the bake the filter pass should not run per frame at all — verifies that it does not.',
     warmup: WARMUP,
     build: () => buildFilteredContainer(1000, [new ColorMatrixFilter()], true),
   },

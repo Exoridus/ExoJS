@@ -215,7 +215,14 @@ export class WebGl2MaskCompositor {
               lastBuffer = attribute.buffer;
             }
 
-            gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.start);
+            gl.vertexAttribPointer(
+              attribute.location,
+              attribute.size,
+              attribute.type,
+              attribute.normalized,
+              attribute.stride,
+              attribute.start,
+            );
             gl.enableVertexAttribArray(attribute.location);
           }
 

@@ -211,6 +211,7 @@ export class RenderingContext implements DrawContext {
         view.update(ms);
       }
     }
+
     for (const view of this._renderedViews) {
       if (view !== this._view && !this._trackedViews.has(view)) {
         view.update(ms);
@@ -397,7 +398,10 @@ export class RenderingContext implements DrawContext {
    * without normalization or clamping. Half-float values are expanded to
    * float32. Mismatches throw.
    */
-  public readPixels(source: RenderTexture, options: ReadPixelsOptions<'float32'> & { dataType: 'float32' }): Promise<PixelData<Float32Array>>;
+  public readPixels(
+    source: RenderTexture,
+    options: ReadPixelsOptions<'float32'> & { dataType: 'float32' },
+  ): Promise<PixelData<Float32Array>>;
   public readPixels(source: RenderTexture, options?: ReadPixelsOptions): Promise<PixelData>;
   public readPixels(source: RenderTexture, options: ReadPixelsOptions<PixelDataType>): Promise<PixelData<PixelArray>>;
   public async readPixels(source: RenderTexture, options: ReadPixelsOptions<PixelDataType> = {}): Promise<PixelData<PixelArray>> {
@@ -481,7 +485,8 @@ export class RenderingContext implements DrawContext {
    * transform would otherwise compress but not erase.
    */
   private async _rejectOrphanedEmission(source: RenderTexture, x: number, y: number, width: number, height: number): Promise<void> {
-    const dataType: PixelDataType = source.format === TextureFormat.Rgba16F || source.format === TextureFormat.Rgba32F ? 'float32' : 'uint8';
+    const dataType: PixelDataType =
+      source.format === TextureFormat.Rgba16F || source.format === TextureFormat.Rgba32F ? 'float32' : 'uint8';
     const raw = await this._backend.readPixels(source, x, y, width, height, dataType);
 
     for (let i = 0; i < raw.length; i += 4) {
@@ -511,7 +516,10 @@ export class RenderingContext implements DrawContext {
    * a reader is created for a purpose rather than kept around just in case.
    * Formats and regions are checked as for {@link readPixels}.
    */
-  public createPixelReader(source: RenderTexture, options: PixelReaderOptions<'float32'> & { dataType: 'float32' }): PixelReader<Float32Array>;
+  public createPixelReader(
+    source: RenderTexture,
+    options: PixelReaderOptions<'float32'> & { dataType: 'float32' },
+  ): PixelReader<Float32Array>;
   public createPixelReader(source: RenderTexture, options?: PixelReaderOptions): PixelReader;
   public createPixelReader(source: RenderTexture, options: PixelReaderOptions<PixelDataType>): PixelReader<PixelArray>;
   public createPixelReader(source: RenderTexture, options: PixelReaderOptions<PixelDataType> = {}): PixelReader<PixelArray> {

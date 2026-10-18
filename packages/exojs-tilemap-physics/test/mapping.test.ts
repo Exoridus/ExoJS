@@ -121,7 +121,11 @@ describe('kind to shape', () => {
   });
 
   it('builds nothing for points, tile objects and text objects', () => {
-    const { built } = build([shape({ kind: ObjectKind.Point, width: 0, height: 0 }), shape({ kind: ObjectKind.Tile }), shape({ kind: ObjectKind.Text })]);
+    const { built } = build([
+      shape({ kind: ObjectKind.Point, width: 0, height: 0 }),
+      shape({ kind: ObjectKind.Tile }),
+      shape({ kind: ObjectKind.Text }),
+    ]);
 
     expect(built).toEqual([]);
   });

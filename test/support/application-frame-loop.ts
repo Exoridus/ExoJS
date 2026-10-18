@@ -14,7 +14,8 @@ import { type Seconds, seconds } from '#core/units';
  * routing that through one module keeps the reach-in in a single place instead
  * of spreading string-keyed field access across a dozen spec files.
  */
-const schedulerOf = (app: Application): Record<string, unknown> => (app as unknown as Record<string, unknown>)['_scheduler'] as Record<string, unknown>;
+const schedulerOf = (app: Application): Record<string, unknown> =>
+  (app as unknown as Record<string, unknown>)['_scheduler'] as Record<string, unknown>;
 
 /** Whether the frame loop considers itself live. */
 export const isFrameLoopActive = (app: Application): boolean => schedulerOf(app)['_active'] as boolean;

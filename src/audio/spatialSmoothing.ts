@@ -137,7 +137,9 @@ export class SmoothedAudioParam {
     // Reject NaN/±Infinity outright - never scheduled on the live AudioParam
     // (a real browser throws on `setTargetAtTime(NaN, ...)`) and never recorded
     // as `_last`, so an invalid tick can't poison every subsequent write.
-    if (!Number.isFinite(value)) return;
+    if (!Number.isFinite(value)) {
+      return;
+    }
 
     if (this._hasWritten && Math.abs(value - this._last) < POSITION_EPSILON) {
       return;
@@ -208,11 +210,13 @@ export const deriveVelocity = (sample: VelocitySample, x: number, y: number, now
     sample.y = 0;
     sample.lastPosition = { x, y };
     sample.lastTime = now;
+
     return;
   }
 
   const dx = x - sample.lastPosition.x;
   const dy = y - sample.lastPosition.y;
+
   if (Math.hypot(dx, dy) < POSITION_EPSILON) {
     if (now > sample.lastTime) {
       sample.x = 0;
@@ -225,6 +229,7 @@ export const deriveVelocity = (sample: VelocitySample, x: number, y: number, now
       sample.lastPosition.y = y;
       sample.lastTime = now;
     }
+
     return;
   }
 

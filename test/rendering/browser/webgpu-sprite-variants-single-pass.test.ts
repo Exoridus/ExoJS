@@ -69,7 +69,8 @@ const createSolidTexture = (color: string, size = 8): Texture => {
   return new Texture(source);
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 const renderGuarded = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, body: () => void): Promise<boolean> => {
   const device = getBackendDevice(backend);
@@ -140,6 +141,7 @@ const verifyIdentityGroupKeepsSinglePass = async (
   trailing.height = 8;
 
   const identityGroup = new Matrix();
+
   const render = (): void => {
     backend.resetStats();
     backend.clear(Color.black);
@@ -186,7 +188,10 @@ const verifyIdentityGroupKeepsSinglePass = async (
 
 describe('WebGPU sprite variants — group content keeps a single pass', () => {
   test('NineSliceSprite ignores identity-only group id changes', async ctx => {
-    await verifyIdentityGroupKeepsSinglePass(ctx, texture => new NineSliceSprite(texture, { slices: 2, border: 2, width: spriteSize, height: spriteSize }));
+    await verifyIdentityGroupKeepsSinglePass(
+      ctx,
+      texture => new NineSliceSprite(texture, { slices: 2, border: 2, width: spriteSize, height: spriteSize }),
+    );
   });
 
   test('RepeatingSprite ignores identity-only group id changes', async ctx => {

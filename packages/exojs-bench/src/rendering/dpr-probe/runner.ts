@@ -176,6 +176,7 @@ const captureLooseErrors = (sink: string[]): (() => void) => {
   const onError = (event: ErrorEvent): void => {
     sink.push(`uncaught: ${event.message}`);
   };
+
   const onRejection = (event: PromiseRejectionEvent): void => {
     const reason: unknown = event.reason;
 
@@ -230,9 +231,11 @@ export const runProbeCell = async (options: RunProbeCellOptions): Promise<ProbeC
 
   let booted: ProbeApplication | null = null;
   let scene: ProbeScene | null = null;
+
   let restore: RestoreInstrumentation = (): void => {
     /* nothing instrumented yet */
   };
+
   const stopErrorCapture = captureLooseErrors(errors);
 
   try {
@@ -411,7 +414,9 @@ export const startVisualPreview = async (options: {
     ...(options.textPixelRatio !== undefined && { textPixelRatio: options.textPixelRatio }),
   });
   const recorder = createTargetRecorder();
-  const restores: RestoreInstrumentation[] = [instrumentAcquireRenderTexture(booted.app.backend as unknown as RenderTextureAcquirer, recorder)];
+  const restores: RestoreInstrumentation[] = [
+    instrumentAcquireRenderTexture(booted.app.backend as unknown as RenderTextureAcquirer, recorder),
+  ];
 
   for (const node of scene.cacheNodes) {
     restores.push(instrumentCacheTexture(node, recorder));

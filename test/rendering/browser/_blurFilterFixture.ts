@@ -43,7 +43,9 @@ export const whiteSquareTexture = (size = SQUARE_EXTENT): Texture => {
 
   const context = source.getContext('2d');
 
-  if (context === null) throw new Error('A 2D context is required to build blur fixtures.');
+  if (context === null) {
+    throw new Error('A 2D context is required to build blur fixtures.');
+  }
 
   context.fillStyle = '#ffffff';
   context.fillRect(0, 0, size, size);
@@ -60,7 +62,9 @@ export const blurScene = (filters: readonly Filter[], origin = SQUARE_ORIGIN): {
 
   sprite.setPosition(origin, origin);
 
-  for (const filter of filters) filtered.addFilter(filter);
+  for (const filter of filters) {
+    filtered.addFilter(filter);
+  }
 
   filtered.addChild(sprite);
   root.addChild(filtered);

@@ -39,20 +39,39 @@ export const decodeRecordedPcm = (bytes: Buffer): Float32Array => {
   ) {
     throw new Error('Expected canonical 48 kHz mono signed-16 PCM WAV');
   }
+
   const samples = new Float32Array((bytes.length - 44) / 2);
-  for (let i = 0; i < samples.length; i++) samples[i] = bytes.readInt16LE(44 + i * 2) / 32768;
+
+  for (let i = 0; i < samples.length; i++) {
+    samples[i] = bytes.readInt16LE(44 + i * 2) / 32768;
+  }
+
   return samples;
 };
 
 const validateAnnotation = (annotation: MusicAnnotation, durationSec: number): void => {
-  if (annotation.status !== 'reviewed' && annotation.status !== 'unreviewed') throw new Error('Unknown annotation status');
+  if (annotation.status !== 'reviewed' && annotation.status !== 'unreviewed') {
+    throw new Error('Unknown annotation status');
+  }
+
   const times = annotation.status === 'reviewed' ? annotation.beatTimesSec : annotation.candidateBeatTimesSec;
-  if (!Array.isArray(times) || times.some((time, i) => !Number.isFinite(time) || time < 0 || time >= durationSec || (i > 0 && time <= times[i - 1]))) {
+
+  if (
+    !Array.isArray(times) ||
+    times.some((time, i) => !Number.isFinite(time) || time < 0 || time >= durationSec || (i > 0 && time <= times[i - 1]))
+  ) {
     throw new Error('Beat times must be finite, increasing and within the excerpt');
   }
-  if (!annotation.notes?.trim()) throw new Error('Annotation method or review notes required');
+
+  if (!annotation.notes?.trim()) {
+    throw new Error('Annotation method or review notes required');
+  }
+
   if (annotation.status === 'reviewed') {
-    if (!annotation.reviewedBy?.trim()) throw new Error('Reviewer required');
+    if (!annotation.reviewedBy?.trim()) {
+      throw new Error('Reviewer required');
+    }
+
     if (annotation.kind === 'beats' ? times.length < 2 : annotation.kind !== 'no-pulse' || times.length !== 0) {
       throw new Error('Reviewed beats require at least two timestamps; reviewed no-pulse requires none');
     }
@@ -63,13 +82,23 @@ export const loadRecordedMusic = (): RecordedMusic[] => {
   if (manifest.schemaVersion !== 1 || manifest.sampleRate !== 48000 || manifest.channels !== 1 || manifest.bitsPerSample !== 16) {
     throw new Error('Unsupported recorded music corpus');
   }
+
   return manifest.fixtures.map(entry => {
     const bytes = readFileSync(resolve(corpusDirectory, entry.file));
-    if (createHash('sha256').update(bytes).digest('hex') !== entry.sha256) throw new Error(`Music checksum mismatch: ${entry.id}`);
+
+    if (createHash('sha256').update(bytes).digest('hex') !== entry.sha256) {
+      throw new Error(`Music checksum mismatch: ${entry.id}`);
+    }
+
     const samples = decodeRecordedPcm(bytes);
-    if (samples.length !== entry.durationSec * 48000) throw new Error(`Music duration mismatch: ${entry.id}`);
+
+    if (samples.length !== entry.durationSec * 48000) {
+      throw new Error(`Music duration mismatch: ${entry.id}`);
+    }
+
     const annotation = entry.annotation as MusicAnnotation;
     validateAnnotation(annotation, entry.durationSec);
+
     return { label: entry.id, samples, annotation };
   });
 };
@@ -91,13 +120,19 @@ export const evaluateRecordedMusic = (messages: WorkletMessage[], fixture: Recor
     medianEstimatedTempo: tempos.length ? tempos[Math.floor(tempos.length / 2)] : null,
     meanConfidence: states.length ? states.reduce((sum, state) => sum + state.confidence, 0) / states.length : null,
   };
-  if (annotation.status === 'unreviewed') return { label, annotationStatus: annotation.status, observed, quality: null };
+
+  if (annotation.status === 'unreviewed') {
+    return { label, annotationStatus: annotation.status, observed, quality: null };
+  }
 
   const times = annotation.beatTimesSec;
+
   const bpm = (time: number): number => {
     const next = times.findIndex(beatTime => beatTime > time);
+
     return next > 0 ? 60 / (times[next] - times[next - 1]) : 0;
   };
+
   return {
     label,
     annotationStatus: annotation.status,

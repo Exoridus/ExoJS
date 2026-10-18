@@ -16,15 +16,19 @@ vi.mock('#rendering/RendererRegistry', () => ({
     registerRenderer() {
       return this;
     }
+
     connect() {
       return this;
     }
+
     disconnect() {
       return this;
     }
+
     destroy() {
       return this;
     }
+
     render() {
       return this;
     }

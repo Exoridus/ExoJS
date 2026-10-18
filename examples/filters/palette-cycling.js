@@ -6,7 +6,7 @@ const RAMP_SIZE = 256;
 // One sine curve per channel, each a third of a cycle out of phase. A 1D LUT
 // grades every channel through its OWN curve, so shifting all three by the same
 // offset each frame sweeps the sprite through the colour wheel.
-function buildRampCanvas(offset) {
+const buildRampCanvas = offset => {
   const canvas = document.createElement('canvas');
   canvas.width = RAMP_SIZE;
   canvas.height = 1;
@@ -25,7 +25,7 @@ function buildRampCanvas(offset) {
   }
   ctx.putImageData(image, 0, 0);
   return canvas;
-}
+};
 class ColourRampCyclingScene extends Scene {
   ramp;
   filter;

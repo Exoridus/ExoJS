@@ -1,4 +1,13 @@
-import { CallbackRenderPass, Color, RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+import {
+  CallbackRenderPass,
+  Color,
+  type RenderingContext,
+  RenderNodePass,
+  RenderPipeline,
+  RenderTexture,
+  Scene,
+  Sprite,
+} from '@codexo/exojs';
 
 // #region guide:trail-pipeline
 class TrailScene extends Scene {

@@ -25,7 +25,10 @@ import { Material } from './Material';
  * `colorSpace: 'none'` on construction, not a shader-side workaround.
  * @advanced
  */
-export class SpriteMaterial<F extends UniformFields | undefined = undefined, B extends UniformBlockRecord | undefined = undefined> extends Material<F, B> {
+export class SpriteMaterial<
+  F extends UniformFields | undefined = undefined,
+  B extends UniformBlockRecord | undefined = undefined,
+> extends Material<F, B> {
   public readonly target = 'sprite';
 
   public constructor(options: MaterialOptions<F, B>) {

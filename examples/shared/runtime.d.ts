@@ -106,20 +106,20 @@ export interface MountControlPanelOptions {
     title?: string;
     corner?: OverlayCorner;
 }
-export declare function getExampleMeta(): ExampleRuntimeMeta;
-export declare function supportsWebGpu(): boolean;
-export declare function createInfoElement(maxWidth?: string): HTMLElement;
-export declare function showInfo(element: HTMLElement, title: string, detail: string, isError?: boolean): void;
-export declare function formatErrorMessage(error: unknown): string;
+export declare const getExampleMeta: () => ExampleRuntimeMeta;
+export declare const supportsWebGpu: () => boolean;
+export declare const createInfoElement: (maxWidth?: string) => HTMLElement;
+export declare const showInfo: (element: HTMLElement, title: string, detail: string, isError?: boolean) => void;
+export declare const formatErrorMessage: (error: unknown) => string;
 /**
  * Mount a non-blocking on-screen panel with a title, a controls legend, an
  * optional live status line, and an optional hint. Returns a handle to update
  * the status/controls and to remove the panel.
  */
-export declare function mountControls(options?: MountControlsOptions): ControlsHandle;
+export declare const mountControls: (options?: MountControlsOptions) => ControlsHandle;
 /**
  * Mount a predictable DOM control panel over the canvas - sliders, toggles,
  * cycles, and buttons - so interactive examples expose their parameters in a
  * consistent, discoverable way instead of hand-rolling canvas hit-tests.
  */
-export declare function mountControlPanel(options?: MountControlPanelOptions): ControlPanelHandle;
+export declare const mountControlPanel: (options?: MountControlPanelOptions) => ControlPanelHandle;

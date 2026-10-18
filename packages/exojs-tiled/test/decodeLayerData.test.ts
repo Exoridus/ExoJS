@@ -9,12 +9,17 @@ const gidsToBytes = (gids: readonly number[]): Uint8Array => {
   const buffer = new ArrayBuffer(gids.length * 4);
   const view = new DataView(buffer);
   gids.forEach((g, i) => view.setUint32(i * 4, g, true)); // little-endian
+
   return new Uint8Array(buffer);
 };
 
 const bytesToBase64 = (bytes: Uint8Array): string => {
   let binary = '';
-  for (const b of bytes) binary += String.fromCharCode(b);
+
+  for (const b of bytes) {
+    binary += String.fromCharCode(b);
+  }
+
   return btoa(binary);
 };
 
@@ -28,24 +33,30 @@ const compress = async (bytes: Uint8Array, format: 'gzip' | 'deflate'): Promise<
   const reader = source.pipeThrough(new CompressionStream(format)).getReader();
   const chunks: Uint8Array[] = [];
   let total = 0;
+
   for (;;) {
     const { done, value } = await reader.read();
-    if (done) break;
+
+    if (done) {
+      break;
+    }
+
     chunks.push(value);
     total += value.length;
   }
+
   const out = new Uint8Array(total);
   let offset = 0;
+
   for (const chunk of chunks) {
     out.set(chunk, offset);
     offset += chunk.length;
   }
+
   return out;
 };
 
-const makeRawMap = (layer: Record<string, unknown>): Record<string, unknown> => {
-  return { type: 'map', layers: [layer] };
-};
+const makeRawMap = (layer: Record<string, unknown>): Record<string, unknown> => ({ type: 'map', layers: [layer] });
 
 const GIDS = [1, 2, 3, 0, 5, 8, 0, 1];
 
@@ -55,7 +66,7 @@ describe('decodeTiledLayerData', () => {
   it('leaves CSV (plain array) data untouched', async () => {
     const raw = makeRawMap({ type: 'tilelayer', data: [...GIDS] });
     await decodeTiledLayerData(raw, 'test.tmj');
-    expect((raw.layers as Record<string, unknown>[])[0].data).toEqual(GIDS);
+    expect((raw.layers as Array<Record<string, unknown>>)[0].data).toEqual(GIDS);
   });
 
   it('decodes uncompressed base64 to a GID array and drops the markers', async () => {
@@ -65,7 +76,7 @@ describe('decodeTiledLayerData', () => {
       data: bytesToBase64(gidsToBytes(GIDS)),
     });
     await decodeTiledLayerData(raw, 'test.tmj');
-    const layer = (raw.layers as Record<string, unknown>[])[0];
+    const layer = (raw.layers as Array<Record<string, unknown>>)[0];
     expect(layer.data).toEqual(GIDS);
     expect(layer.encoding).toBeUndefined();
     expect(layer.compression).toBeUndefined();
@@ -79,7 +90,7 @@ describe('decodeTiledLayerData', () => {
       data: bytesToBase64(await compress(gidsToBytes(GIDS), 'gzip')),
     });
     await decodeTiledLayerData(raw, 'test.tmj');
-    expect((raw.layers as Record<string, unknown>[])[0].data).toEqual(GIDS);
+    expect((raw.layers as Array<Record<string, unknown>>)[0].data).toEqual(GIDS);
   });
 
   it('decodes base64 + zlib (deflate)', async () => {
@@ -90,7 +101,7 @@ describe('decodeTiledLayerData', () => {
       data: bytesToBase64(await compress(gidsToBytes(GIDS), 'deflate')),
     });
     await decodeTiledLayerData(raw, 'test.tmj');
-    expect((raw.layers as Record<string, unknown>[])[0].data).toEqual(GIDS);
+    expect((raw.layers as Array<Record<string, unknown>>)[0].data).toEqual(GIDS);
   });
 
   it('decodes base64 chunk data (infinite-map shape)', async () => {
@@ -100,7 +111,7 @@ describe('decodeTiledLayerData', () => {
       chunks: [{ x: 0, y: 0, width: 4, height: 2, data: bytesToBase64(gidsToBytes(GIDS)) }],
     });
     await decodeTiledLayerData(raw, 'test.tmj');
-    const chunk = ((raw.layers as Record<string, unknown>[])[0].chunks as Record<string, unknown>[])[0];
+    const chunk = ((raw.layers as Array<Record<string, unknown>>)[0].chunks as Array<Record<string, unknown>>)[0];
     expect(chunk.data).toEqual(GIDS);
   });
 
@@ -110,7 +121,7 @@ describe('decodeTiledLayerData', () => {
       layers: [{ type: 'tilelayer', encoding: 'base64', data: bytesToBase64(gidsToBytes(GIDS)) }],
     });
     await decodeTiledLayerData(raw, 'test.tmj');
-    const inner = ((raw.layers as Record<string, unknown>[])[0].layers as Record<string, unknown>[])[0];
+    const inner = ((raw.layers as Array<Record<string, unknown>>)[0].layers as Array<Record<string, unknown>>)[0];
     expect(inner.data).toEqual(GIDS);
   });
 
@@ -152,7 +163,7 @@ describe('decodeTiledLayerData', () => {
       chunks: [null, { x: 0, y: 0, width: 4, height: 2, data: bytesToBase64(gidsToBytes(GIDS)) }],
     });
     await decodeTiledLayerData(raw, 'test.tmj');
-    const layer = (raw.layers as Record<string, unknown>[])[0];
+    const layer = (raw.layers as Array<Record<string, unknown>>)[0];
     const chunks = layer.chunks as unknown[];
     expect(chunks[0]).toBeNull();
     expect((chunks[1] as Record<string, unknown>).data).toEqual(GIDS);
@@ -165,8 +176,8 @@ describe('decodeTiledLayerData', () => {
       chunks: [{ x: 0, y: 0, width: 1, height: 1 }], // no "data" field
     });
     await decodeTiledLayerData(raw, 'test.tmj');
-    const layer = (raw.layers as Record<string, unknown>[])[0];
-    const chunk = (layer.chunks as Record<string, unknown>[])[0];
+    const layer = (raw.layers as Array<Record<string, unknown>>)[0];
+    const chunk = (layer.chunks as Array<Record<string, unknown>>)[0];
     expect(chunk.data).toBeUndefined();
   });
 

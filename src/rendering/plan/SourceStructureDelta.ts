@@ -19,7 +19,13 @@ import type { RetainedRootRepresentation } from './RetainedRootRepresentation';
 export interface SourceDeltaHost {
   readonly backend: RenderBackend;
   _discoverSourceScope(node: RenderNode): SourceScope | null;
-  _rederiveSourceScope(node: RenderNode, previous: SourceScope, cursor: number, epoch: number, targets: SourceDeltaTargets): SourceScope | null;
+  _rederiveSourceScope(
+    node: RenderNode,
+    previous: SourceScope,
+    cursor: number,
+    epoch: number,
+    targets: SourceDeltaTargets,
+  ): SourceScope | null;
   /** Whether the target the walk's content is played into is guaranteed fully covered. */
   _destinationOpaque(): boolean;
 }
@@ -264,7 +270,13 @@ export class SourceStructureDelta implements SourceDeltaTargets {
    * at all, and the placement keys the parent derived when it recorded the
    * entry.
    */
-  private _rediscover(host: SourceDeltaHost, target: SourceScope, root: RenderNode, source: RenderRootSource, epoch: number): SourceScope | null {
+  private _rediscover(
+    host: SourceDeltaHost,
+    target: SourceScope,
+    root: RenderNode,
+    source: RenderRootSource,
+    epoch: number,
+  ): SourceScope | null {
     const node = sourceScopeNode(target, root);
 
     if (node === root) {
@@ -296,7 +308,13 @@ export class SourceStructureDelta implements SourceDeltaTargets {
    * one on the container as a matter of course, and nothing a container records
    * about its children lives in its own content.
    */
-  private _rederiveOrDiscover(host: SourceDeltaHost, node: RenderNode, target: SourceScope, source: RenderRootSource, epoch: number): SourceScope | null {
+  private _rederiveOrDiscover(
+    host: SourceDeltaHost,
+    node: RenderNode,
+    target: SourceScope,
+    source: RenderRootSource,
+    epoch: number,
+  ): SourceScope | null {
     const cursor = source.changeCursor;
 
     if (node._transformMarkSequence > cursor || node._tintMarkSequence > cursor) {
@@ -339,7 +357,10 @@ export class SourceStructureDelta implements SourceDeltaTargets {
 
     const backend = host.backend as RenderBackend & PersistentSlotBackend;
 
-    if (!sourceShapeAllowsPersistentSlots(source) || backend._rekeyPersistentSlots?.(bundle, source, carried, previousHandleCount) !== true) {
+    if (
+      !sourceShapeAllowsPersistentSlots(source) ||
+      backend._rekeyPersistentSlots?.(bundle, source, carried, previousHandleCount) !== true
+    ) {
       representation.releasePersistentSlots();
     }
   }

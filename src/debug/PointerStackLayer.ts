@@ -72,11 +72,13 @@ export class PointerStackLayer extends DebugLayer {
     // Update text nodes.
     for (let i = 0; i < this._lines.length; i++) {
       const lineNode = this._lines[i];
+
       if (lineNode === undefined) {
         continue;
       }
 
       const line = lines[i];
+
       if (line !== undefined) {
         lineNode.text = line;
         lineNode.visible = true;

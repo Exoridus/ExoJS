@@ -26,37 +26,49 @@ class CameraViewScene extends Scene {
       this.moveX = -1;
     });
     this.inputs.onStop(Keyboard.A, () => {
-      if (this.moveX < 0) this.moveX = 0;
+      if (this.moveX < 0) {
+        this.moveX = 0;
+      }
     });
     this.inputs.onActive(Keyboard.D, () => {
       this.moveX = 1;
     });
     this.inputs.onStop(Keyboard.D, () => {
-      if (this.moveX > 0) this.moveX = 0;
+      if (this.moveX > 0) {
+        this.moveX = 0;
+      }
     });
     this.inputs.onActive(Keyboard.W, () => {
       this.moveY = -1;
     });
     this.inputs.onStop(Keyboard.W, () => {
-      if (this.moveY < 0) this.moveY = 0;
+      if (this.moveY < 0) {
+        this.moveY = 0;
+      }
     });
     this.inputs.onActive(Keyboard.S, () => {
       this.moveY = 1;
     });
     this.inputs.onStop(Keyboard.S, () => {
-      if (this.moveY > 0) this.moveY = 0;
+      if (this.moveY > 0) {
+        this.moveY = 0;
+      }
     });
     this.inputs.onActive(Keyboard.Q, () => {
       this.zoom = 1;
     });
     this.inputs.onStop(Keyboard.Q, () => {
-      if (this.zoom > 0) this.zoom = 0;
+      if (this.zoom > 0) {
+        this.zoom = 0;
+      }
     });
     this.inputs.onActive(Keyboard.E, () => {
       this.zoom = -1;
     });
     this.inputs.onStop(Keyboard.E, () => {
-      if (this.zoom < 0) this.zoom = 0;
+      if (this.zoom < 0) {
+        this.zoom = 0;
+      }
     });
   }
   update(delta) {

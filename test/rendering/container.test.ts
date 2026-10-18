@@ -85,8 +85,10 @@ describe('Container', () => {
     const container = new Container();
     const pool = Array.from({ length: 8 }, () => new DummyDrawable());
     let seed = 42;
+
     const random = (): number => {
       seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+
       return seed / 0x7fffffff;
     };
 
@@ -95,6 +97,7 @@ describe('Container', () => {
 
       if (action === 0 || container.children.length === 0) {
         const child = pool[Math.floor(random() * pool.length)]!;
+
         if (child.parent !== container) {
           container.addChild(child);
         }
@@ -258,7 +261,11 @@ describe('Container children view', () => {
       _notifyBoundsInvalidated() {},
       _notifyTransformGroupMoved() {},
     };
-    const stubInput = { onKeyDown: { add() {}, remove() {} }, onKeyUp: { add() {}, remove() {} }, onAnyGamepadButtonDown: { add() {}, remove() {} } };
+    const stubInput = {
+      onKeyDown: { add() {}, remove() {} },
+      onKeyUp: { add() {}, remove() {} },
+      onAnyGamepadButtonDown: { add() {}, remove() {} },
+    };
     const focusApp = { input: stubInput } as unknown as Application;
     const focus = new FocusController(focusApp);
     const stage: Stage = { interaction: noopInteraction, focus };
@@ -354,6 +361,7 @@ describe('Container paint-order cache', () => {
     for (const sibling of siblings) {
       container.addChild(sibling);
     }
+
     siblings[10]!.zIndex = 7; // force the mixed-z sorted branch
 
     const sortSpy = vi.spyOn(Array.prototype, 'sort');
@@ -524,7 +532,7 @@ describe('Container geometry accessors', () => {
     // Doubling the CURRENT width must double the rendered size. Dividing the
     // target by an already-scaled measurement instead squares the factor, so
     // this second round trip is where the quadratic relationship shows up.
-    container.width = container.width * 2;
+    container.width *= 2;
 
     expect(container.width).toBe(400);
     expect(container.getBounds().width).toBe(400);
@@ -783,7 +791,11 @@ describe('SceneNode.destroy() detaches the node from its parent', () => {
     const child = new DummyDrawable();
     const removed: RenderNode[] = [];
     const focus = new FocusController({
-      input: { onKeyDown: { add() {}, remove() {} }, onKeyUp: { add() {}, remove() {} }, onAnyGamepadButtonDown: { add() {}, remove() {} } },
+      input: {
+        onKeyDown: { add() {}, remove() {} },
+        onKeyUp: { add() {}, remove() {} },
+        onAnyGamepadButtonDown: { add() {}, remove() {} },
+      },
     } as unknown as Application);
     const interaction = {
       _notifyNodeAdded() {},

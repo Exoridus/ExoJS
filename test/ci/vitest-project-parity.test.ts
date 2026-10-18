@@ -40,14 +40,18 @@ const matchesPattern = (pattern: string, name: string): boolean => {
   const negated = pattern.startsWith('!');
   const body = negated ? pattern.slice(1) : pattern;
   const regexp = new RegExp(`^${body.split('*').map(escapeRegExp).join('.*')}$`, 'i');
+
   return negated ? !regexp.test(name) : regexp.test(name);
 };
 
 const escapeRegExp = (text: string): string => text.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 
+/** `scripts/run-tests.ts` passes its arguments to `vitest run`, so it selects projects the same way. */
+const runsVitest = (command: string): boolean => command.startsWith('vitest ') || command.startsWith('tsx scripts/run-tests.ts ');
+
 const scriptsRunning = (project: string): string[] =>
   Object.entries(packageJson.scripts)
-    .filter(([, command]) => command.startsWith('vitest ') && projectPatterns(command).some(pattern => matchesPattern(pattern, project)))
+    .filter(([, command]) => runsVitest(command) && projectPatterns(command).some(pattern => matchesPattern(pattern, project)))
     .map(([name]) => name);
 
 /** Scripts reachable from a lane, following one level of `pnpm <script>` delegation (`test:coverage` -> `test`). */
@@ -64,6 +68,7 @@ describe('every vitest project is actually run', () => {
 
   it('keeps the serial measurements out of the parallel `test` script', () => {
     const selected = projectPatterns(packageJson.scripts['test']!);
+
     for (const project of ['physics-perf', 'rendering-alloc']) {
       expect(selected.some(pattern => matchesPattern(pattern, project))).toBe(false);
     }

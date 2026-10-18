@@ -118,6 +118,7 @@ describe('WebGL2 group uniform — content caching', () => {
       return sprite;
     });
     const identityGroup = new Matrix();
+
     const render = (): void => {
       backend.resetStats();
       backend.clear(Color.black);
@@ -129,6 +130,7 @@ describe('WebGL2 group uniform — content caching', () => {
       variants[2]!.render(backend);
       backend.flush();
     };
+
     const matrixUpload = vi.spyOn(backend.context, 'uniformMatrix3fv');
 
     try {
@@ -165,6 +167,7 @@ describe('WebGL2 group uniform — content caching', () => {
       return node;
     });
     const identityGroup = new Matrix();
+
     const render = (): void => {
       backend.resetStats();
       backend.clear(Color.black);
@@ -176,6 +179,7 @@ describe('WebGL2 group uniform — content caching', () => {
       nodes[2]!.render(backend);
       backend.flush();
     };
+
     const matrixUpload = vi.spyOn(backend.context, 'uniformMatrix3fv');
 
     try {
@@ -218,6 +222,7 @@ describe('WebGL2 group uniform — content caching', () => {
       group.render(backend);
       backend.flush();
     };
+
     const matrixUpload = vi.spyOn(backend.context, 'uniformMatrix3fv');
 
     try {

@@ -279,7 +279,9 @@ export class TileMapView {
     }
 
     if (matches.length > 1) {
-      throw new Error(`TileMapView image layer name "${name}" is ambiguous ` + `(${matches.length} image layers share it); reference it by id instead.`);
+      throw new Error(
+        `TileMapView image layer name "${name}" is ambiguous ` + `(${matches.length} image layers share it); reference it by id instead.`,
+      );
     }
 
     return this._imageLayerNodeById.get(matches[0]!.id);
@@ -480,7 +482,9 @@ export class TileMapView {
       const existing = this._nodeFor(layer);
 
       if (existing && this._nodeBand.has(existing)) {
-        throw new Error(`TileMapView layer ${layer.id} is assigned to multiple bands ` + `("${this._nodeBand.get(existing)!.name}" and "${name}").`);
+        throw new Error(
+          `TileMapView layer ${layer.id} is assigned to multiple bands ` + `("${this._nodeBand.get(existing)!.name}" and "${name}").`,
+        );
       }
 
       members.add(layer);
@@ -544,7 +548,8 @@ export class TileMapView {
 
     if (matches.length > 1) {
       throw new Error(
-        `TileMapView band "${bandName}": layer name "${selector}" is ambiguous ` + `(${matches.length} layers share it); reference it by id instead.`,
+        `TileMapView band "${bandName}": layer name "${selector}" is ambiguous ` +
+          `(${matches.length} layers share it); reference it by id instead.`,
       );
     }
 
@@ -589,7 +594,8 @@ export class TileMapView {
         }
       } else if (selector === layer.name) {
         const sameName =
-          this._map.layers.filter(other => other.name === selector).length + this._map.imageLayers.filter(other => other.name === selector).length;
+          this._map.layers.filter(other => other.name === selector).length +
+          this._map.imageLayers.filter(other => other.name === selector).length;
 
         if (sameName === 1) {
           return true;

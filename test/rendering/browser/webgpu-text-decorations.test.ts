@@ -36,7 +36,10 @@ const widestRun = (frame: ArrayLike<number>, y: number): number => {
     const lit = frame[i]! + frame[i + 1]! + frame[i + 2]! > 240;
 
     run = lit ? run + 1 : 0;
-    if (run > best) best = run;
+
+    if (run > best) {
+      best = run;
+    }
   }
 
   return best;
@@ -49,7 +52,9 @@ const widestRunBelow = (frame: ArrayLike<number>, from: number): { y: number; wi
   for (let y = from; y < canvasSize; y++) {
     const width = widestRun(frame, y);
 
-    if (width > best.width) best = { y, width };
+    if (width > best.width) {
+      best = { y, width };
+    }
   }
 
   return best;
@@ -71,7 +76,9 @@ describe('WebGPU: text decorations', () => {
     try {
       root.addChild(plain);
 
-      if (!(await renderWebGpuOnce(ctx, backend, root))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root))) {
+        return;
+      }
 
       // 'n' has no descender, so below the baseline the only lit pixels are
       // the antialiased feet of its stems - a few pixels wide at most.
@@ -103,14 +110,18 @@ describe('WebGPU: text decorations', () => {
     root.addChild(text);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root))) {
+        return;
+      }
 
       const frame = readWebGpuFrame(backend, canvasSize);
       const baselineRow = Math.round(textY + fontSize * 0.85);
       let struck = -1;
 
       for (let y = textY; y < baselineRow; y++) {
-        if (widestRun(frame, y) > text.textBounds.width * 0.8) struck = y;
+        if (widestRun(frame, y) > text.textBounds.width * 0.8) {
+          struck = y;
+        }
       }
 
       expect(struck).toBeGreaterThan(textY);
@@ -133,7 +144,9 @@ describe('WebGPU: text decorations', () => {
     root.addChild(text);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root))) {
+        return;
+      }
 
       const frame = readWebGpuFrame(backend, canvasSize);
       const baselineRow = Math.round(textY + fontSize * 0.85);
@@ -155,7 +168,9 @@ describe('WebGPU: text decorations', () => {
         for (let x = 0; x < canvasSize; x++) {
           const i = (y * canvasSize + x) * 4;
 
-          if (frame[i]! > 200 && frame[i + 1]! > 200 && frame[i + 2]! > 200) whiteGlyphPixels++;
+          if (frame[i]! > 200 && frame[i + 1]! > 200 && frame[i + 2]! > 200) {
+            whiteGlyphPixels++;
+          }
         }
       }
 

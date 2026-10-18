@@ -11,7 +11,9 @@ describe('WebGpuShaderFilterPass connection', () => {
   const disposers: Array<() => void> = [];
 
   afterEach(() => {
-    while (disposers.length > 0) disposers.pop()!();
+    while (disposers.length > 0) {
+      disposers.pop()!();
+    }
   });
 
   const open = async (): Promise<{ environment: MockWebGpuEnvironment; backend: WebGpuBackend }> => {

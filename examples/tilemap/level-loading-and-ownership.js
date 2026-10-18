@@ -7,8 +7,24 @@ const ROOM_SIZE = { x: 0, y: 0, width: 1280, height: 768 };
 const world = new MapWorld({
   name: 'Two Rooms',
   levels: [
-    { id: 'harbor', name: 'Harbor', index: 0, bounds: ROOM_SIZE, external: true, neighbours: [{ id: 'workshop', side: MapLevelSide.East }], properties: {} },
-    { id: 'workshop', name: 'Workshop', index: 1, bounds: ROOM_SIZE, external: true, neighbours: [{ id: 'harbor', side: MapLevelSide.West }], properties: {} },
+    {
+      id: 'harbor',
+      name: 'Harbor',
+      index: 0,
+      bounds: ROOM_SIZE,
+      external: true,
+      neighbours: [{ id: 'workshop', side: MapLevelSide.East }],
+      properties: {},
+    },
+    {
+      id: 'workshop',
+      name: 'Workshop',
+      index: 1,
+      bounds: ROOM_SIZE,
+      external: true,
+      neighbours: [{ id: 'harbor', side: MapLevelSide.West }],
+      properties: {},
+    },
   ],
 });
 const roomPath = {

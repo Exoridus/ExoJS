@@ -66,9 +66,13 @@ interface AttwAnalysis {
  */
 export const interpretAttwJson = (stdout: string): { ok: boolean; detail?: string } => {
   const start = stdout.indexOf('{');
-  if (start === -1) return { ok: false, detail: 'no attw json on stdout' };
+
+  if (start === -1) {
+    return { ok: false, detail: 'no attw json on stdout' };
+  }
 
   let analysis: AttwAnalysis | undefined;
+
   try {
     analysis = (JSON.parse(stdout.slice(start)) as { analysis?: AttwAnalysis }).analysis;
   } catch {
@@ -76,18 +80,24 @@ export const interpretAttwJson = (stdout: string): { ok: boolean; detail?: strin
   }
 
   const entrypoints = analysis?.entrypoints ? Object.values(analysis.entrypoints) : [];
-  if (entrypoints.length === 0) return { ok: false, detail: 'no entrypoints analyzed' };
+
+  if (entrypoints.length === 0) {
+    return { ok: false, detail: 'no entrypoints analyzed' };
+  }
 
   const unresolved = entrypoints.filter(e => e?.resolutions?.bundler?.resolution == null).length;
   const problems = Array.isArray(analysis?.problems) ? analysis.problems : [];
   const bundlerProblem = problems.find(p => p?.resolutionKind === 'bundler' || p?.resolutionOption === 'bundler');
 
-  if (unresolved === 0 && !bundlerProblem) return { ok: true };
+  if (unresolved === 0 && !bundlerProblem) {
+    return { ok: true };
+  }
 
   const reasons = [
     unresolved > 0 ? `${unresolved} entrypoint(s) with no bundler resolution` : '',
     bundlerProblem ? `bundler problem: ${bundlerProblem.kind ?? 'unknown'}` : '',
   ].filter(Boolean);
+
   return { ok: false, detail: reasons.join('; ') };
 };
 
@@ -120,6 +130,7 @@ const diagnoseTarball = (runner: CommandRunner, tarball: string, raw: string): v
   // is exactly the class of divergence this dump exists to surface. Tar always
   // reports forward slashes, so the comparison has to normalise the host's.
   let entries: string[] = [];
+
   try {
     entries = execFileSync('tar', ['-tzf', tarball], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
       .split('\n')
@@ -128,28 +139,44 @@ const diagnoseTarball = (runner: CommandRunner, tarball: string, raw: string): v
   } catch (error) {
     say(`listing failed: ${String(error)}`);
   }
+
   say(`entries: ${entries.length}`);
-  for (const wanted of ['package/package.json', 'package/dist/scaffold.d.ts', 'package/dist/scaffold.js', 'package/dist/index.d.ts', 'package/dist/index.js']) {
+
+  for (const wanted of [
+    'package/package.json',
+    'package/dist/scaffold.d.ts',
+    'package/dist/scaffold.js',
+    'package/dist/index.d.ts',
+    'package/dist/index.js',
+  ]) {
     say(`  ${entries.includes(wanted) ? 'present' : 'ABSENT '} ${wanted}`);
   }
+
   const distEntries = entries.filter(e => e.startsWith('package/dist/'));
   say(`  package/dist/**: ${distEntries.length ? distEntries.join(' ') : '(none)'}`);
 
   // attw's own view, not this module's summary of it. The raw payload is kept
   // because a red check is exactly when the unfiltered answer is worth having.
   const start = raw.indexOf('{');
+
   if (start >= 0) {
     try {
       const analysis = (JSON.parse(raw.slice(start)) as { analysis?: AttwAnalysis }).analysis;
       const entrypoints = Object.entries(analysis?.entrypoints ?? {});
-      if (entrypoints.length === 0) say('entrypoints: (none reported)');
+
+      if (entrypoints.length === 0) {
+        say('entrypoints: (none reported)');
+      }
+
       for (const [entrypoint, value] of entrypoints) {
         const resolutions = (value as AttwEntrypoint | undefined)?.resolutions ?? {};
         say(`entrypoint ${entrypoint}:`);
+
         for (const [kind, resolution] of Object.entries(resolutions)) {
           say(`  ${kind}: ${resolution?.resolution?.fileName ?? '(unresolved)'}`);
         }
       }
+
       say(`problems: ${JSON.stringify(analysis?.problems ?? [])}`);
     } catch (error) {
       say(`unparseable attw json: ${String(error)}`);
@@ -167,6 +194,7 @@ const diagnoseTarball = (runner: CommandRunner, tarball: string, raw: string): v
   // are the problem.
   try {
     const staging = mkdtempSync(join(tmpdir(), 'exo-attw-'));
+
     try {
       execFileSync('tar', ['-xzf', tarball, '-C', staging], { stdio: 'ignore' });
       const unpacked = join(staging, 'package');
@@ -179,6 +207,7 @@ const diagnoseTarball = (runner: CommandRunner, tarball: string, raw: string): v
         args: ['pack', '--pack-destination', staging, '--config.ignore-scripts=true', '--silent'],
         cwd: unpacked,
       });
+
       if (pack.code !== 0) {
         say(`unpacked repack failed: ${(pack.stderr || pack.stdout || '').trim().split('\n').slice(-2).join(' | ')}`);
       } else {
@@ -199,6 +228,7 @@ const runAndCapture = (runner: CommandRunner, target: string): string => {
     command: 'pnpm',
     args: ['dlx', `@arethetypeswrong/cli@${ATTW_VERSION}`, target, '--ignore-rules', ...IGNORED_RULES, '--format', 'json'],
   });
+
   return result.stdout || result.stderr || '';
 };
 
@@ -210,7 +240,10 @@ export const checkTarballTypes = (runner: CommandRunner, tarball: string): AttwR
 
   const raw = result.stdout || result.stderr || '';
   const interpreted = interpretAttwJson(raw);
-  if (!interpreted.ok) diagnoseTarball(runner, tarball, raw);
+
+  if (!interpreted.ok) {
+    diagnoseTarball(runner, tarball, raw);
+  }
 
   return {
     tarball,
@@ -221,5 +254,6 @@ export const checkTarballTypes = (runner: CommandRunner, tarball: string): AttwR
 
 export const checkAllTarballTypes = (runner: CommandRunner, tarballs: string[]): { ok: boolean; results: AttwResult[] } => {
   const results = tarballs.map(t => checkTarballTypes(runner, t));
+
   return { ok: results.every(r => r.ok), results };
 };

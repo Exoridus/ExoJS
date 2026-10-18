@@ -55,7 +55,8 @@ export type LdtkFieldEnumType = `LocalEnum.${string}` | `ExternEnum.${string}`;
  * Whether a raw LDtk `__type` names an enum. Applies to an `Array<T>` element
  * type as well - LDtk spells a list of enum values `Array<LocalEnum.Name>`.
  */
-export const isLdtkFieldEnumType = (typeName: string): typeName is LdtkFieldEnumType => typeName.startsWith('LocalEnum.') || typeName.startsWith('ExternEnum.');
+export const isLdtkFieldEnumType = (typeName: string): typeName is LdtkFieldEnumType =>
+  typeName.startsWith('LocalEnum.') || typeName.startsWith('ExternEnum.');
 
 /**
  * Raw `__value` shape for a `Point`-typed field. Structurally identical to
@@ -149,6 +150,16 @@ export interface LdtkEntityInstance {
   readonly iid: string;
   /** UID of the entity definition this instance was created from. */
   readonly defUid: number;
+  /** Tags of the entity definition, in editor order. */
+  readonly __tags?: readonly string[];
+  /** The tile the editor draws for this entity, as a rectangle in its tileset, or `null` when it has none. */
+  readonly __tile?: LdtkFieldTileValue | null;
+  /** World-space X of the entity's anchor ({@link px}) in pixels; `null` in worlds without a free or grid layout. */
+  readonly __worldX?: number | null;
+  /** World-space Y of the entity's anchor ({@link px}) in pixels; `null` in worlds without a free or grid layout. */
+  readonly __worldY?: number | null;
+  /** The entity's colour in the editor, `#rrggbb`. */
+  readonly __smartColor?: string;
 }
 
 // ── Layer instances ───────────────────────────────────────────────────────────
@@ -233,7 +244,10 @@ export interface LdtkLevel {
   readonly pxWid: number;
   /** Level height in pixels. */
   readonly pxHei: number;
-  readonly bgColor?: string;
+  /** The level's own background colour, `#rrggbb`; `null` when it uses the project default. */
+  readonly bgColor?: string | null;
+  /** The background colour in effect, own or project default, `#rrggbb`. */
+  readonly __bgColor?: string;
   /**
    * Layer instances in this level (top-to-bottom render order).
    * `null` when the level is stored in a separate `.ldtkl` file and has not
@@ -306,6 +320,22 @@ export interface LdtkTilesetDef {
   readonly spacing?: number;
   /** Pixel padding (margin) around the atlas edges. */
   readonly padding?: number;
+  /** Free text attached to single tiles in the editor. */
+  readonly customData?: readonly LdtkTileCustomData[];
+  /** Enum values tagged on tiles in the editor, each with the ids of the tiles it marks. */
+  readonly enumTags?: readonly LdtkTileEnumTag[];
+}
+
+/** Text attached to one tile of an LDtk tileset. */
+export interface LdtkTileCustomData {
+  readonly tileId: number;
+  readonly data: string;
+}
+
+/** One enum value tagged on tiles of an LDtk tileset. */
+export interface LdtkTileEnumTag {
+  readonly enumValueId: string;
+  readonly tileIds: readonly number[];
 }
 
 /** An IntGrid value definition (maps a raw int to a named, coloured entry). */
@@ -361,7 +391,10 @@ export interface LdtkData {
   readonly worldGridWidth?: number;
   readonly worldGridHeight?: number;
   readonly defaultGridSize?: number;
+  /** Background colour of the editor workspace, `#rrggbb`; not a level colour. */
   readonly bgColor?: string;
+  /** Background colour of levels that set none themselves, `#rrggbb`. */
+  readonly defaultLevelBgColor?: string;
   readonly defs: LdtkDefs;
   /**
    * Levels not organised into worlds. Always populated for pre-multi-world

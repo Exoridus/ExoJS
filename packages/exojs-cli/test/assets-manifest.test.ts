@@ -19,9 +19,11 @@ const write = (name: string, contents: string | Uint8Array): string => {
 
 const description = (value: unknown, file = 'pack.json'): string => write(file, JSON.stringify(value));
 
-const readManifest = (name = 'assets.json'): Record<string, unknown> => JSON.parse(readFileSync(join(workDir, name), 'utf8')) as Record<string, unknown>;
+const readManifest = (name = 'assets.json'): Record<string, unknown> =>
+  JSON.parse(readFileSync(join(workDir, name), 'utf8')) as Record<string, unknown>;
 
-const packs = (name?: string): Record<string, Record<string, unknown>> => readManifest(name).packs as Record<string, Record<string, unknown>>;
+const packs = (name?: string): Record<string, Record<string, unknown>> =>
+  readManifest(name).packs as Record<string, Record<string, unknown>>;
 
 const sha256 = (bytes: Uint8Array): string => createHash('sha256').update(bytes).digest('hex');
 
@@ -98,10 +100,18 @@ describe('exo assets pack --manifest', () => {
     const manifest = join(workDir, 'assets.json');
 
     expect(
-      runAssetsPack([description({ output: 'ui.exoa', assets: [{ source: 'a.json', type: 'json', file: 'a.json' }] }, 'ui.json'), '--manifest', manifest]),
+      runAssetsPack([
+        description({ output: 'ui.exoa', assets: [{ source: 'a.json', type: 'json', file: 'a.json' }] }, 'ui.json'),
+        '--manifest',
+        manifest,
+      ]),
     ).toBe(0);
     expect(
-      runAssetsPack([description({ output: 'boot.exoa', assets: [{ source: 'b.json', type: 'json', file: 'b.json' }] }, 'boot.json'), '--manifest', manifest]),
+      runAssetsPack([
+        description({ output: 'boot.exoa', assets: [{ source: 'b.json', type: 'json', file: 'b.json' }] }, 'boot.json'),
+        '--manifest',
+        manifest,
+      ]),
     ).toBe(0);
 
     expect(Object.keys(packs())).toEqual(['boot', 'ui']);
@@ -277,6 +287,8 @@ describe('exo assets pack --manifest failures', () => {
   test('a manifest option with no value says so', () => {
     write('a.json', '{"a":1}');
 
-    expect(() => runAssetsPack([description({ output: 'out.exoa', assets: [] }), '--manifest'])).toThrow(/option "--manifest" expects a value/);
+    expect(() => runAssetsPack([description({ output: 'out.exoa', assets: [] }), '--manifest'])).toThrow(
+      /option "--manifest" expects a value/,
+    );
   });
 });

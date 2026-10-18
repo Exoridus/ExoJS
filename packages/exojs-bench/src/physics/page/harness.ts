@@ -196,7 +196,10 @@ const resolveArms = async (): Promise<Map<string, ResolvedArm>> => {
         throw new Error(`the arm identifies itself as ${armKey(adapter.engine, adapter.config)}, but the matrix knows it as ${key}`);
       }
 
-      arms.set(key, { adapter, report: { engine: factory.engine, config: factory.config, library: factory.library, available: true, reason: '' } });
+      arms.set(key, {
+        adapter,
+        report: { engine: factory.engine, config: factory.config, library: factory.library, available: true, reason: '' },
+      });
     } catch (error) {
       const reason = sanitizeReason(error instanceof Error ? error.message : String(error), factory.library);
 

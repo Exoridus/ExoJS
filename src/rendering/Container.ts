@@ -67,15 +67,23 @@ export class Container extends RenderNode {
 
   /** Cached renderer-compatible child order. @internal */
   public _childrenInPaintOrder(): readonly RenderNode[] {
-    if (this._paintChildrenView !== null) return this._paintChildrenView;
+    if (this._paintChildrenView !== null) {
+      return this._paintChildrenView;
+    }
+
     const children = this.children;
     const first = children[0];
-    if (first === undefined) return (this._paintChildrenView = children);
+
+    if (first === undefined) {
+      return (this._paintChildrenView = children);
+    }
+
     for (let i = 1; i < children.length; i++) {
       if (children[i]!.zIndex !== first.zIndex) {
         return (this._paintChildrenView = Object.freeze([...children].sort((a, b) => a.zIndex - b.zIndex)));
       }
     }
+
     return (this._paintChildrenView = children);
   }
 
@@ -250,8 +258,22 @@ export class Container extends RenderNode {
       return this._reorderChild(child, index);
     }
 
+    // Resolved before the unlink: afterwards the child no longer reaches the scene it is leaving.
+    let preserved: ComponentRuntime | null = null;
+
     if (child.parent) {
-      child.parent.removeChild(child);
+      if (child._componentNodes > 0) {
+        const source = child.parent._componentRuntime(false);
+
+        preserved = source !== null && source === this._componentRuntime(false) ? source : null;
+      }
+
+      // A plain removal still goes through the public method, so a subclass that overrides it keeps seeing reparents.
+      if (preserved === null) {
+        child.parent.removeChild(child);
+      } else {
+        child.parent._detachChild(child, preserved);
+      }
     }
 
     const insertAt = this._resolveInsertIndex(index);
@@ -269,7 +291,7 @@ export class Container extends RenderNode {
     this._stage?.interaction._notifyNodeAdded(child);
 
     if (child._componentNodes > 0) {
-      this._adoptComponents(child);
+      this._adoptComponents(child, preserved);
     }
 
     this._onChildListChanged();
@@ -338,10 +360,13 @@ export class Container extends RenderNode {
 
       this._childIndexView = map;
     }
+
     const index = this._childIndexView.get(child);
+
     if (index === undefined) {
       throw new Error('Drawable is not a child of the container.');
     }
+
     return index;
   }
 
@@ -372,16 +397,31 @@ export class Container extends RenderNode {
 
   /** Remove `child` from this container. No-op if not present. */
   public removeChild(child: RenderNode): this {
-    const index = this._childList.indexOf(child);
-
-    if (index !== -1) {
-      this.removeChildAt(index);
-    }
+    this._detachChild(child, null);
 
     return this;
   }
 
   public removeChildAt(index: number): this {
+    this._detachChildAt(index, null);
+
+    return this;
+  }
+
+  /**
+   * Remove `child` as the first half of a move into another container of the
+   * component runtime `keep`: its components stay members of that runtime
+   * instead of being disabled and re-enabled around the move.
+   */
+  private _detachChild(child: RenderNode, keep: ComponentRuntime | null): void {
+    const index = this._childList.indexOf(child);
+
+    if (index !== -1) {
+      this._detachChildAt(index, keep);
+    }
+  }
+
+  private _detachChildAt(index: number, keep: ComponentRuntime | null): void {
     const child = this._childList[index];
 
     removeArrayItems(this._childList, index, 1);
@@ -403,15 +443,13 @@ export class Container extends RenderNode {
       child._setStage(null);
 
       if (child._componentNodes > 0) {
-        this._releaseComponents(child, componentRuntime);
+        this._releaseComponents(child, componentRuntime === keep ? null : componentRuntime);
       }
     }
 
     this.invalidateCache();
     this._markStructureDirty();
     this._onChildListChanged();
-
-    return this;
   }
 
   /**
@@ -503,10 +541,22 @@ export class Container extends RenderNode {
     }
   }
 
-  /** A child subtree carrying components joined this container's tree. */
-  private _adoptComponents(child: RenderNode): void {
+  /**
+   * A child subtree carrying components joined this container's tree. `preserved`
+   * is the runtime the subtree kept its membership in across the move; it is
+   * released here only if this container no longer reaches it, which a hook
+   * that ran during the unlink can cause.
+   */
+  private _adoptComponents(child: RenderNode, preserved: ComponentRuntime | null): void {
     this._adjustComponentNodes(child._componentNodes);
-    this._componentRuntime(true)?.attachSubtree(child);
+
+    const runtime = this._componentRuntime(true);
+
+    runtime?.attachSubtree(child);
+
+    if (preserved !== null && preserved !== runtime) {
+      preserved.detachSubtree(child);
+    }
   }
 
   /**
@@ -575,7 +625,9 @@ export class Container extends RenderNode {
     // unlinks the node, and the removal stamps this container structure-dirty,
     // so a destroyed direct child always fails the key check above rather than
     // being replayed from a stale slot.
-    if (this._retainedPlan?.isClean(this._contentRevision, this._structureRevision, this._transformRevision, viewUpdateId, builder.backend)) {
+    if (
+      this._retainedPlan?.isClean(this._contentRevision, this._structureRevision, this._transformRevision, viewUpdateId, builder.backend)
+    ) {
       this._replayRetainedChildren(builder);
 
       return;

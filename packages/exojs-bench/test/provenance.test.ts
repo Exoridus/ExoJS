@@ -80,7 +80,10 @@ describe('parsePlatformDeclaration', () => {
     expect(parsePlatformDeclaration(undefined)).toBeUndefined();
   });
 
-  test.each(['macos', 'true', '10.0.26200', '0', '100', '27-preview', '27 beta', ''])('refuses %s, which is not a plausible major version', raw => {
-    expect(() => parsePlatformDeclaration(raw)).toThrow(/major version/);
-  });
+  test.each(['macos', 'true', '10.0.26200', '0', '100', '27-preview', '27 beta', ''])(
+    'refuses %s, which is not a plausible major version',
+    raw => {
+      expect(() => parsePlatformDeclaration(raw)).toThrow(/major version/);
+    },
+  );
 });

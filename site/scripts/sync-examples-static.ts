@@ -2,12 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { renderAssetsGlobalDts } from '../../scripts/generate-examples-global-dts.ts';
-import { renderRuntimeDts } from '../../scripts/generate-examples-runtime-dts.ts';
-import { transpileTypescriptExamples } from '../../scripts/transpile-examples.ts';
 import { assets } from '../../examples/assets/assets.js';
 import { rawAssets } from '../../examples/assets/catalog.js';
 import { resolveAssetCatalog } from '../../examples/assets/resolver.js';
+import { renderAssetsGlobalDts } from '../../scripts/generate-examples-global-dts.ts';
+import { renderRuntimeDts } from '../../scripts/generate-examples-runtime-dts.ts';
+import { transpileTypescriptExamples } from '../../scripts/transpile-examples.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -72,21 +72,28 @@ const collapseImportLists = (dir: string): void => {
       continue;
     }
 
-    if (!entry.name.endsWith('.ts') || entry.name.endsWith('.d.ts')) continue;
+    if (!entry.name.endsWith('.ts') || entry.name.endsWith('.d.ts')) {
+      continue;
+    }
 
     const source = fs.readFileSync(fullPath, 'utf8');
-    const joined = source.replace(/^(import(?: type)? \{)\n([\s\S]*?)\n\} from ('[^']+';)$/gm, (_match, head: string, specifiers: string, from: string) => {
-      const names = specifiers
-        .split('\n')
-        .map(line => line.trim())
-        .filter(Boolean)
-        .join(' ')
-        .replace(/,$/, '');
+    const joined = source.replace(
+      /^(import(?: type)? \{)\n([\s\S]*?)\n\} from ('[^']+';)$/gm,
+      (_match, head: string, specifiers: string, from: string) => {
+        const names = specifiers
+          .split('\n')
+          .map(line => line.trim())
+          .filter(Boolean)
+          .join(' ')
+          .replace(/,$/, '');
 
-      return `${head} ${names} } from ${from}`;
-    });
+        return `${head} ${names} } from ${from}`;
+      },
+    );
 
-    if (joined !== source) fs.writeFileSync(fullPath, joined, 'utf8');
+    if (joined !== source) {
+      fs.writeFileSync(fullPath, joined, 'utf8');
+    }
   }
 };
 
@@ -99,6 +106,7 @@ const run = async (): Promise<void> => {
   // Transpile TypeScript examples to JavaScript before copying so the
   // generated .js files are included in the public/examples snapshot.
   const transpiled = await transpileTypescriptExamples(sourceExamplesDir);
+
   if (transpiled > 0) {
     console.log(`[examples:sync] Transpiled ${transpiled} TypeScript example(s) to JavaScript`);
   }

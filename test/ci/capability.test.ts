@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest';
 
 import { parseProbeReport } from '../../scripts/ci/browser-probe.ts';
 import { browserProfile } from '../../scripts/ci/browser-profiles.ts';
-import { describeRow, judgePreflight, judgeRun, latestRows, type ProbeFailure, type ProbeReport, type QualificationRow } from '../../scripts/ci/capability.ts';
+import {
+  describeRow,
+  judgePreflight,
+  judgeRun,
+  latestRows,
+  type ProbeFailure,
+  type ProbeReport,
+  type QualificationRow,
+} from '../../scripts/ci/capability.ts';
 import { parseQualifyArguments } from '../../scripts/ci/qualify.ts';
 
 /**
@@ -13,7 +21,9 @@ import { parseQualifyArguments } from '../../scripts/ci/qualify.ts';
 
 const report = (capabilities: Record<string, boolean>): ProbeReport => ({
   browser: 'TestBrowser/1',
-  capabilities: Object.fromEntries(Object.entries(capabilities).map(([name, ok]) => [name, { ok, detail: ok ? 'present' : `${name} missing` }])),
+  capabilities: Object.fromEntries(
+    Object.entries(capabilities).map(([name, ok]) => [name, { ok, detail: ok ? 'present' : `${name} missing` }]),
+  ),
   info: {},
 });
 
@@ -53,8 +63,16 @@ describe('judgePreflight', () => {
   it('separates a probe that could not run from a host that lacks a capability', () => {
     const failure: ProbeFailure = { error: 'browser launch exceeded 90000 ms' };
 
-    expect(judgePreflight(failure, ['webgpu-device'], 'required')).toMatchObject({ status: 'FAIL', failure: 'infrastructure', exitCode: 1 });
-    expect(judgePreflight(failure, ['webgpu-device'], 'informational')).toMatchObject({ status: 'FAIL', failure: 'infrastructure', exitCode: 0 });
+    expect(judgePreflight(failure, ['webgpu-device'], 'required')).toMatchObject({
+      status: 'FAIL',
+      failure: 'infrastructure',
+      exitCode: 1,
+    });
+    expect(judgePreflight(failure, ['webgpu-device'], 'informational')).toMatchObject({
+      status: 'FAIL',
+      failure: 'infrastructure',
+      exitCode: 0,
+    });
   });
 });
 
@@ -74,7 +92,10 @@ describe('judgeRun', () => {
   });
 
   it('does not call a run green when the cleanup of its processes failed', () => {
-    expect(judgeRun({ status: 0, cleanupError: 'descendant survived' }, 'required')).toMatchObject({ status: 'FAIL', failure: 'infrastructure' });
+    expect(judgeRun({ status: 0, cleanupError: 'descendant survived' }, 'required')).toMatchObject({
+      status: 'FAIL',
+      failure: 'infrastructure',
+    });
   });
 });
 
@@ -104,14 +125,21 @@ describe('recorded rows', () => {
 
 describe('parseProbeReport', () => {
   it('accepts a well-formed report', () => {
-    const parsed = parseProbeReport({ browser: 'X', capabilities: { webgl2: { ok: true, detail: 'WebGL 2.0' } }, info: { renderer: 'llvmpipe' } });
+    const parsed = parseProbeReport({
+      browser: 'X',
+      capabilities: { webgl2: { ok: true, detail: 'WebGL 2.0' } },
+      info: { renderer: 'llvmpipe' },
+    });
 
     expect(parsed).toEqual({ browser: 'X', capabilities: { webgl2: { ok: true, detail: 'WebGL 2.0' } }, info: { renderer: 'llvmpipe' } });
   });
 
-  it.each([[null], ['text'], [{}], [{ browser: 'X', capabilities: { webgl2: { ok: 'yes', detail: '' } } }]])('rejects a malformed report: %j', raw => {
-    expect(parseProbeReport(raw)).toHaveProperty('error');
-  });
+  it.each([[null], ['text'], [{}], [{ browser: 'X', capabilities: { webgl2: { ok: 'yes', detail: '' } } }]])(
+    'rejects a malformed report: %j',
+    raw => {
+      expect(parseProbeReport(raw)).toHaveProperty('error');
+    },
+  );
 });
 
 describe('parseQualifyArguments', () => {

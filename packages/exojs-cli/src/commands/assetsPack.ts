@@ -160,7 +160,10 @@ const writeContainer = (path: string, container: ArrayBuffer, shown: string): vo
   try {
     writeFileSync(path, new Uint8Array(container));
   } catch (error: unknown) {
-    throw new CliError(`cannot write "${shown}"`, { hint: 'Create the output directory first; the packer does not create it.', cause: error });
+    throw new CliError(`cannot write "${shown}"`, {
+      hint: 'Create the output directory first; the packer does not create it.',
+      cause: error,
+    });
   }
 };
 

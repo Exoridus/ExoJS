@@ -90,14 +90,21 @@ export const validateCompressedPayload = ({ format, levels }: CompressedTextureP
   const maxMipLevelCount = Math.floor(Math.log2(Math.max(base.width, base.height))) + 1;
 
   if (levels.length > maxMipLevelCount) {
-    throw new Error(`A ${format} payload has ${levels.length} mip levels, but ${base.width}x${base.height} permits at most ${maxMipLevelCount}.`);
+    throw new Error(
+      `A ${format} payload has ${levels.length} mip levels, but ${base.width}x${base.height} permits at most ${maxMipLevelCount}.`,
+    );
   }
 
   for (const [index, level] of levels.entries()) {
     const expectedWidth = Math.max(Math.floor(base.width / 2 ** index), 1);
     const expectedHeight = Math.max(Math.floor(base.height / 2 ** index), 1);
 
-    if (!Number.isSafeInteger(level.width) || !Number.isSafeInteger(level.height) || level.width !== expectedWidth || level.height !== expectedHeight) {
+    if (
+      !Number.isSafeInteger(level.width) ||
+      !Number.isSafeInteger(level.height) ||
+      level.width !== expectedWidth ||
+      level.height !== expectedHeight
+    ) {
       throw new Error(
         `Compressed mip level ${index} of a ${format} payload must be ${expectedWidth}x${expectedHeight}, but is ${level.width}x${level.height}.`,
       );

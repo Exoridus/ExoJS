@@ -46,8 +46,10 @@ const setupSourceSpy = (): { sources: MockSource[]; restore: () => void } => {
       buffer: null,
     };
     sources.push(node);
+
     return node as unknown as AudioBufferSourceNode;
   });
+
   return { sources, restore: () => spy.mockRestore() };
 };
 

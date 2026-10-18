@@ -56,7 +56,9 @@ const measurement = (medianMs: number | null, p95Ms: number | null, overFrameBud
 const outcome = (cell: AggregatedCell): string => {
   const value = measurement(cell.competitorMs, cell.competitorP95Ms, cell.competitorOverFrameBudget, cell.aggregate.competitor);
 
-  return cell.aggregate.stable ? `${value} - ${cell.verdict.label}` : `${value} - ${cell.verdict.label}: ${cell.aggregate.rungs.join(', ')}`;
+  return cell.aggregate.stable
+    ? `${value} - ${cell.verdict.label}`
+    : `${value} - ${cell.verdict.label}: ${cell.aggregate.rungs.join(', ')}`;
 };
 
 /** One Markdown table row, padded only by the pipes - readers get the alignment from the renderer. */
@@ -163,7 +165,9 @@ const renderingProvenance = (input: RenderingInput): string[] => {
 
   if (input.runs.flat().some(entry => entry.software)) {
     lines.push('');
-    lines.push('> **These timings ran on a software rasterizer and are not reportable.** Every number below describes the host CPU, not a GPU.');
+    lines.push(
+      '> **These timings ran on a software rasterizer and are not reportable.** Every number below describes the host CPU, not a GPU.',
+    );
   }
 
   lines.push('');
@@ -192,7 +196,12 @@ const renderRenderingBlocks = (input: RenderingInput): string[] => {
       '',
     );
 
-    const columns = ['archetype', 'exojs (median / p95 CPU)', ...backend.competitors.map(competitor => `${competitor} (median / p95 CPU)`), 'mechanism'];
+    const columns = [
+      'archetype',
+      'exojs (median / p95 CPU)',
+      ...backend.competitors.map(competitor => `${competitor} (median / p95 CPU)`),
+      'mechanism',
+    ];
 
     for (const section of backend.sections) {
       lines.push(`### ${section.title}`, '');

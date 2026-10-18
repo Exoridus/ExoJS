@@ -73,6 +73,7 @@ const createAudioElementStub = (): HTMLAudioElement => {
   Object.defineProperty(el, 'loop', { configurable: true, writable: true, value: false });
   Object.defineProperty(el, 'playbackRate', { configurable: true, writable: true, value: 1 });
   Object.defineProperty(el, 'paused', { configurable: true, writable: true, value: true });
+
   return el;
 };
 
@@ -387,7 +388,7 @@ describe('AudioSystem', () => {
   test('destroy() completes the teardown even when a voice throws while stopping', () => {
     const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
 
     // Registered first so the throw happens before the healthy voice is reached.
     const broken = {

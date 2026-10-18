@@ -1,5 +1,5 @@
 import { type RenderingContext, Scene, type Seconds } from '@codexo/exojs';
-import { ParticleSystem } from '@codexo/exojs-particles';
+import { type ParticleSystem } from '@codexo/exojs-particles';
 
 // #region guide:particle-scene
 class ParticleScene extends Scene {

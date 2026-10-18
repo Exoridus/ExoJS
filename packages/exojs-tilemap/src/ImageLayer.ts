@@ -102,9 +102,11 @@ export class ImageLayer {
     this.parallaxX = options.parallaxX ?? 1;
     this.parallaxY = options.parallaxY ?? 1;
     this.parallaxScale = options.parallaxScale ?? 1;
+
     if (!Number.isFinite(this.parallaxScale) || this.parallaxScale <= 0) {
       throw new Error('ImageLayer parallaxScale must be a positive finite number.');
     }
+
     this.tintColor = options.tintColor ?? null;
     this.repeatX = options.repeatX ?? false;
     this.repeatY = options.repeatY ?? false;

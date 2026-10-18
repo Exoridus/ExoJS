@@ -1,6 +1,6 @@
 {
   "title": "InputBinding",
-  "description": "One subscription to one or more input channels. Tracks active state, fires the onStart / onActive / onStop / onTrigger Signals each frame, and registers itself with whichever owner created it (typically an InputSystem, Gamepad, or scene-bound proxy). Construct via the owner's `onStart` / `onActive` / `onStop` / `onTrigger` factory methods rather than `new InputBinding(...)` directly - the returned binding is caller-owned from that point on. Lifecycle: a binding lives until unbind is called, the owner disposes it, or - for scene-bound bindings - the scene unloads.",
+  "description": "One subscription to one or more input channels. Tracks active state, fires the onStart / onActive / onStop / onTrigger Signals each frame, and registers itself with whichever owner created it (typically an InputSystem, Gamepad, or scene-bound proxy). Construct via the owner's `onStart` / `onActive` / `onStop` / `onTrigger` factory methods rather than `new InputBinding(...)` directly - the returned binding is caller-owned from that point on. Its Signals fire once the owner has advanced every binding and action map for the frame, so a callback reads all of them - this binding's own value and active included - at the frame's final state. The callback argument carries the value of the one transition it reports. Lifecycle: a binding lives until unbind is called, the owner disposes it, or - for scene-bound bindings - the scene unloads.",
   "symbol": "InputBinding",
   "kind": "class",
   "subsystem": "input",
@@ -21,6 +21,7 @@
       "paragraphs": [
         "One subscription to one or more input channels. Tracks active state, fires the onStart / onActive / onStop / onTrigger Signals each frame, and registers itself with whichever owner created it (typically an InputSystem, Gamepad, or scene-bound proxy).",
         "Construct via the owner's `onStart` / `onActive` / `onStop` / `onTrigger` factory methods rather than `new InputBinding(...)` directly - the returned binding is caller-owned from that point on.",
+        "Its Signals fire once the owner has advanced every binding and action map for the frame, so a callback reads all of them - this binding's own value and active included - at the frame's final state. The callback argument carries the value of the one transition it reports.",
         "Lifecycle: a binding lives until unbind is called, the owner disposes it, or - for scene-bound bindings - the scene unloads."
       ],
       "importLine": "import { InputBinding } from '@codexo/exojs'",

@@ -21,19 +21,18 @@ import { type CacheStoreDouble, createCacheStoreDouble, createRecordingPolicy } 
 
 const sourceKey = 'url:https://assets.test/level.world';
 
-const acquisition = (overrides: Partial<CacheAcquisition<string>> = {}): CacheAcquisition<string> => {
-  return {
-    namespace: 'com.example.world',
-    sourceKey,
-    layout: SingleEntryLayout.version<string>(1),
-    network: unrestrictedNetwork,
-    fetch: () => Promise.resolve('from-network'),
-    report: () => undefined,
-    ...overrides,
-  };
-};
+const acquisition = (overrides: Partial<CacheAcquisition<string>> = {}): CacheAcquisition<string> => ({
+  namespace: 'com.example.world',
+  sourceKey,
+  layout: SingleEntryLayout.version<string>(1),
+  network: unrestrictedNetwork,
+  fetch: () => Promise.resolve('from-network'),
+  report: () => {},
+  ...overrides,
+});
 
-const recordKeyOf = (namespace: string, version = 1): string => serializeCacheRecordKey({ namespace, source: sourceKey, version, record: 'value' });
+const recordKeyOf = (namespace: string, version = 1): string =>
+  serializeCacheRecordKey({ namespace, source: sourceKey, version, record: 'value' });
 
 describe('route selection', () => {
   test('a store passed on its own becomes one cache-first route', async () => {
@@ -271,9 +270,9 @@ describe('record identity', () => {
 
     await cache.resolve(acquisition({ fetch: () => Promise.resolve('v1-representation') }));
 
-    await expect(cache.resolve(acquisition({ layout: SingleEntryLayout.version<string>(2), fetch: () => Promise.resolve('v2-representation') }))).resolves.toBe(
-      'v2-representation',
-    );
+    await expect(
+      cache.resolve(acquisition({ layout: SingleEntryLayout.version<string>(2), fetch: () => Promise.resolve('v2-representation') })),
+    ).resolves.toBe('v2-representation');
 
     expect(store.records.get(recordKeyOf('com.example.world', 1))).toBe('v1-representation');
     expect(store.records.get(recordKeyOf('com.example.world', 2))).toBe('v2-representation');

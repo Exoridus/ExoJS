@@ -15,6 +15,7 @@ export abstract class DisposableProcessor extends AudioWorkletProcessor {
 
   public constructor(options?: unknown) {
     super(options);
+
     this.port.onmessage = event => {
       if ((event.data as { type?: unknown } | null)?.type === 'destroy') {
         this._destroyed = true;

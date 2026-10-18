@@ -292,7 +292,9 @@ describe('verify-bench-results', () => {
   it('rejects an edited measurement', () => {
     const document = validProfile();
     const signed: Record<string, unknown> = { ...document, signature: { algorithm: 'sha256', value: computeProfileSignature(document) } };
-    const rendering = signed['rendering'] as { backends: Array<{ sections: Array<{ rows: Array<{ cells: Array<{ competitorMs: number }> }> }> }> };
+    const rendering = signed['rendering'] as {
+      backends: Array<{ sections: Array<{ rows: Array<{ cells: Array<{ competitorMs: number }> }> }> }>;
+    };
 
     rendering.backends[0]!.sections[0]!.rows[0]!.cells[0]!.competitorMs = 5;
 

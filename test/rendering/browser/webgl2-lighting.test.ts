@@ -58,7 +58,9 @@ const createAlbedo = (): Texture => {
 
   const context = source.getContext('2d');
 
-  if (!context) throw new Error('2D context is required to create test textures.');
+  if (!context) {
+    throw new Error('2D context is required to create test textures.');
+  }
 
   context.fillStyle = '#ffffff';
   context.fillRect(0, 0, 4, 4);
@@ -79,7 +81,9 @@ const createFlatNormalMap = (): Texture => {
 
   const context = source.getContext('2d');
 
-  if (!context) throw new Error('2D context is required to create test textures.');
+  if (!context) {
+    throw new Error('2D context is required to create test textures.');
+  }
 
   context.fillStyle = 'rgb(128, 128, 255)';
   context.fillRect(0, 0, 4, 4);

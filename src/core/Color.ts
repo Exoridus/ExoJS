@@ -235,7 +235,12 @@ export class Color implements Cloneable<Color> {
   }
 
   public equals({ r, g, b, a }: Partial<Color> = {}): boolean {
-    return (r === undefined || this.r === r) && (g === undefined || this.g === g) && (b === undefined || this.b === b) && (a === undefined || this.a === a);
+    return (
+      (r === undefined || this.r === r) &&
+      (g === undefined || this.g === g) &&
+      (b === undefined || this.b === b) &&
+      (a === undefined || this.a === a)
+    );
   }
 
   /**

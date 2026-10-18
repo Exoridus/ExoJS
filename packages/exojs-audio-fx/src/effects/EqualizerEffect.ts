@@ -44,12 +44,18 @@ export class EqualizerEffect extends AudioEffect {
   }
 
   public get inputNode(): AudioNode {
-    if (!this._setup) throw new Error('EqualizerEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('EqualizerEffect not yet initialized.');
+    }
+
     return this._setup.lowShelf;
   }
 
   public get outputNode(): AudioNode {
-    if (!this._setup) throw new Error('EqualizerEffect not yet initialized.');
+    if (!this._setup) {
+      throw new Error('EqualizerEffect not yet initialized.');
+    }
+
     return this._setup.highShelf;
   }
 
@@ -60,6 +66,7 @@ export class EqualizerEffect extends AudioEffect {
 
   public set low(value: number) {
     this._low = Math.max(-40, Math.min(40, value));
+
     if (this._setup) {
       this._setup.lowShelf.gain.setTargetAtTime(this._low, this._setup.lowShelf.context.currentTime, 0.01);
     }
@@ -72,6 +79,7 @@ export class EqualizerEffect extends AudioEffect {
 
   public set mid(value: number) {
     this._mid = Math.max(-40, Math.min(40, value));
+
     if (this._setup) {
       this._setup.peaking.gain.setTargetAtTime(this._mid, this._setup.peaking.context.currentTime, 0.01);
     }
@@ -84,6 +92,7 @@ export class EqualizerEffect extends AudioEffect {
 
   public set high(value: number) {
     this._high = Math.max(-40, Math.min(40, value));
+
     if (this._setup) {
       this._setup.highShelf.gain.setTargetAtTime(this._high, this._setup.highShelf.context.currentTime, 0.01);
     }
@@ -96,6 +105,7 @@ export class EqualizerEffect extends AudioEffect {
 
   public set lowFrequency(value: number) {
     this._lowFrequency = Math.max(0, value);
+
     if (this._setup) {
       this._setup.lowShelf.frequency.setTargetAtTime(this._lowFrequency, this._setup.lowShelf.context.currentTime, 0.01);
     }
@@ -108,6 +118,7 @@ export class EqualizerEffect extends AudioEffect {
 
   public set midFrequency(value: number) {
     this._midFrequency = Math.max(0, value);
+
     if (this._setup) {
       this._setup.peaking.frequency.setTargetAtTime(this._midFrequency, this._setup.peaking.context.currentTime, 0.01);
     }
@@ -120,6 +131,7 @@ export class EqualizerEffect extends AudioEffect {
 
   public set highFrequency(value: number) {
     this._highFrequency = Math.max(0, value);
+
     if (this._setup) {
       this._setup.highShelf.frequency.setTargetAtTime(this._highFrequency, this._setup.highShelf.context.currentTime, 0.01);
     }
@@ -127,6 +139,7 @@ export class EqualizerEffect extends AudioEffect {
 
   public override destroy(): void {
     this._teardown();
+
     if (this._setup) {
       this._setup.lowShelf.disconnect();
       this._setup.peaking.disconnect();

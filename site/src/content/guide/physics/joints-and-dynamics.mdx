@@ -8,7 +8,7 @@ import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # Joints, sleeping & CCD
 
-This chapter builds on [Physics basics](/ExoJS/en/guide/physics/physics-basics/) — a [`PhysicsWorld`](/ExoJS/en/api/physics-world/) stepped from `Scene.fixedUpdate`, with static and dynamic bodies. Here we connect those bodies with **joints**, let bodies at rest **sleep**, and stop fast bodies from **tunnelling** with continuous collision.
+This chapter builds on [Physics basics](/ExoJS/en/guide/physics/physics-basics/) — a [`PhysicsWorld`](/ExoJS/en/api/physics-world/) registered as a scene system, which the application's fixed step drives, with static and dynamic bodies. Here we connect those bodies with **joints**, let bodies at rest **sleep**, and stop fast bodies from **tunnelling** with continuous collision.
 
 ## Joints
 
@@ -190,7 +190,7 @@ The modifier never sees sensor overlaps — a sensor produces no contact to solv
 
 ## What the solver is built for
 
-ExoJS Physics ships **one** solver configuration, tuned for plausible, stable, cheap game physics. It is not a scientific integrator, and it does not grow a quality switch: the advanced options you already met — `subStepCount`, `contactHertz`, `dampingRatio`, `fixedDelta`, `enableSleeping`, `isBullet` — are the whole tuning surface.
+ExoJS Physics ships **one** solver configuration, tuned for plausible, stable, cheap game physics. It is not a scientific integrator, and it does not grow a quality switch: the advanced options you already met — `subStepCount`, `contactHertz`, `dampingRatio`, `fixedDelta`, `enableSleeping`, `isBullet` — are the whole tuning surface. A world registered as a system takes its `fixedDelta` from the host, `app.fixedTimeStep`, rather than tuning it on its own.
 
 That default has a shape worth knowing, because it decides whether a scene will look right or merely finite:
 

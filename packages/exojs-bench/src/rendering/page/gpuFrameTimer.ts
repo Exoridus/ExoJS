@@ -240,7 +240,10 @@ export const requestTimestampFeature = (): void => {
       features.add('timestamp-query');
     }
 
-    return (original as (this: GPUAdapter, d: GPUDeviceDescriptor) => unknown).call(this, { ...descriptor, requiredFeatures: [...features] });
+    return (original as (this: GPUAdapter, d: GPUDeviceDescriptor) => unknown).call(this, {
+      ...descriptor,
+      requiredFeatures: [...features],
+    });
   };
 };
 
@@ -296,9 +299,15 @@ const createTimestampSource = (
   let exhausted = false;
 
   const deviceRecord = device as unknown as Record<string, unknown>;
-  const createEncoder = deviceRecord['createCommandEncoder'] as (this: GPUDevice, descriptor?: GPUCommandEncoderDescriptor) => GPUCommandEncoder;
+  const createEncoder = deviceRecord['createCommandEncoder'] as (
+    this: GPUDevice,
+    descriptor?: GPUCommandEncoderDescriptor,
+  ) => GPUCommandEncoder;
 
-  deviceRecord['createCommandEncoder'] = function createCommandEncoder(this: GPUDevice, descriptor?: GPUCommandEncoderDescriptor): GPUCommandEncoder {
+  deviceRecord['createCommandEncoder'] = function createCommandEncoder(
+    this: GPUDevice,
+    descriptor?: GPUCommandEncoderDescriptor,
+  ): GPUCommandEncoder {
     const encoder = createEncoder.call(this, descriptor);
     const encoderRecord = encoder as unknown as Record<string, unknown>;
     const beginPass = encoderRecord['beginRenderPass'] as (this: GPUCommandEncoder, d: GPURenderPassDescriptor) => GPURenderPassEncoder;
@@ -309,7 +318,10 @@ const createTimestampSource = (
     // into warmup/teardown passes and overwrite query values already recorded.
     // The wrapper therefore always writes the member - the injected pair inside
     // the window, `undefined` outside it.
-    encoderRecord['beginRenderPass'] = function beginRenderPass(this: GPUCommandEncoder, descriptorArg: GPURenderPassDescriptor): GPURenderPassEncoder {
+    encoderRecord['beginRenderPass'] = function beginRenderPass(
+      this: GPUCommandEncoder,
+      descriptorArg: GPURenderPassDescriptor,
+    ): GPURenderPassEncoder {
       // Written through an index signature: under `exactOptionalPropertyTypes`
       // the generated WebGPU types reject assigning `undefined` to the member,
       // which is exactly what clearing it requires.

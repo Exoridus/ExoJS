@@ -198,6 +198,7 @@ export class Shader<const F extends UniformFields | undefined = undefined, const
       if (options.glsl.vertex !== undefined && (typeof options.glsl.vertex !== 'string' || options.glsl.vertex.length === 0)) {
         throw new Error('Shader.glsl.vertex must be a non-empty string when provided.');
       }
+
       if (typeof options.glsl.fragment !== 'string' || options.glsl.fragment.length === 0) {
         throw new Error('Shader.glsl.fragment must be a non-empty string.');
       }
@@ -319,10 +320,15 @@ export class Shader<const F extends UniformFields | undefined = undefined, const
     const onlyInWgsl: string[] = [];
 
     for (const name of glslNames) {
-      if (!wgslNames.has(name)) onlyInGlsl.push(name);
+      if (!wgslNames.has(name)) {
+        onlyInGlsl.push(name);
+      }
     }
+
     for (const name of wgslNames) {
-      if (!glslNames.has(name)) onlyInWgsl.push(name);
+      if (!glslNames.has(name)) {
+        onlyInWgsl.push(name);
+      }
     }
 
     return { onlyInGlsl, onlyInWgsl };
@@ -371,18 +377,23 @@ const stripComments = (source: string): string => source.replaceAll(/\/\*[\s\S]*
 
 const parseGlslUniforms = (vertex: string, fragment: string): Record<string, string> => {
   const result: Record<string, string> = {};
+
   for (const source of [vertex, fragment]) {
     const stripped = stripComments(source);
     glslUniformPattern.lastIndex = 0;
     let match: RegExpExecArray | null;
+
     while ((match = glslUniformPattern.exec(stripped)) !== null) {
       const [, type, name] = match;
+
       if (type === undefined || name === undefined) {
         continue;
       }
+
       result[name] = type;
     }
   }
+
   return result;
 };
 
@@ -396,11 +407,14 @@ const parseWgslUniforms = (source: string): Record<string, string> => {
   // We extract the name and the (trimmed) type expression.
   wgslUserUniformPattern.lastIndex = 0;
   let match: RegExpExecArray | null;
+
   while ((match = wgslUserUniformPattern.exec(stripped)) !== null) {
     const [, name, type] = match;
+
     if (name === undefined || type === undefined) {
       continue;
     }
+
     result[name] = type.trim();
   }
 

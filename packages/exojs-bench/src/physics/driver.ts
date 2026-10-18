@@ -4,7 +4,14 @@ import { fileURLToPath } from 'node:url';
 import type { Browser } from 'playwright';
 import { chromium, webkit } from 'playwright';
 
-import type { BaseProvenance, HostInfo, LibraryProvenance, PlatformDeclaration, PrereleaseStamp, RenderingBrowser } from '../shared/provenance';
+import type {
+  BaseProvenance,
+  HostInfo,
+  LibraryProvenance,
+  PlatformDeclaration,
+  PrereleaseStamp,
+  RenderingBrowser,
+} from '../shared/provenance';
 import {
   classifyPrerelease,
   declaredPrereleaseOf,
@@ -180,7 +187,11 @@ export const startViteServer = async (version: string): Promise<ViteDevServer> =
  * instead of letting it reject - except a determinism divergence, which the page
  * reports as its own outcome kind and which fails the run.
  */
-const runCellInPage = async (page: import('playwright').Page, spec: PhysicsCellSpec, resolutionMs: number | null): Promise<PhysicsCellResult> => {
+const runCellInPage = async (
+  page: import('playwright').Page,
+  spec: PhysicsCellSpec,
+  resolutionMs: number | null,
+): Promise<PhysicsCellResult> => {
   let outcome;
 
   try {
@@ -292,6 +303,7 @@ export const runPhysicsMatrix = async (
 
   if (baseUrl === undefined) {
     await server.close();
+
     throw new Error('The physics harness server started without a local URL to drive.');
   }
 
@@ -310,7 +322,8 @@ export const runPhysicsMatrix = async (
     const allCells = buildPhysicsMatrix(arms);
     const planned = options.plan ? applyPhysicsPlan(allCells, options.plan) : allCells;
     const filtered = options.filter ? applyFilter(planned, options.filter) : planned;
-    const cells = options.timedStepsOverride === undefined ? filtered : filtered.map(cell => ({ ...cell, timedSteps: options.timedStepsOverride! }));
+    const cells =
+      options.timedStepsOverride === undefined ? filtered : filtered.map(cell => ({ ...cell, timedSteps: options.timedStepsOverride! }));
 
     if (cells.length === 0) {
       throw new Error('The physics matrix is empty: no arm/archetype/body-count matched the requested filter.');
@@ -357,7 +370,10 @@ export const runPhysicsMatrix = async (
     // Disclosures and arm versions only for the arms this browser could build,
     // in matrix order: a run never claims a version for an arm it did not run.
     const measuredArms = arms.filter(arm => arm.available);
-    const libraries = readLibraryProvenance([NATIVE_PHYSICS_PACKAGE, ...measuredArms.map(arm => arm.library).filter(name => name !== NATIVE_PHYSICS_PACKAGE)]);
+    const libraries = readLibraryProvenance([
+      NATIVE_PHYSICS_PACKAGE,
+      ...measuredArms.map(arm => arm.library).filter(name => name !== NATIVE_PHYSICS_PACKAGE),
+    ]);
     const armCaveats = [...new Set(measuredArms.map(arm => arm.engine))]
       .map(engine => ARM_DISCLOSURES[engine])
       .filter((caveat): caveat is string => caveat !== undefined);

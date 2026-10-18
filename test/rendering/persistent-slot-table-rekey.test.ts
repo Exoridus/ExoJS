@@ -3,7 +3,11 @@ import { vi } from 'vitest';
 import { Container } from '#rendering/Container';
 import { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import { createSourceScope, type SourceScope } from '#rendering/plan/renderSourceItem';
-import { fillPersistentSpriteSlotTable, type PersistentSpriteSlotStore, rekeyPersistentSpriteSlotTable } from '#rendering/sprite/persistentSlots';
+import {
+  fillPersistentSpriteSlotTable,
+  type PersistentSpriteSlotStore,
+  rekeyPersistentSpriteSlotTable,
+} from '#rendering/sprite/persistentSlots';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';

@@ -23,7 +23,8 @@ afterEach(() => rmSync(tree, { recursive: true, force: true }));
 
 describe('vendor tree', () => {
   it('ships exactly the single-file bundles the npm tarball ships', () => {
-    const files = (JSON.parse(readFileSync(resolve(import.meta.dirname!, '..', '..', 'package.json'), 'utf8')) as { files: string[] }).files;
+    const files = (JSON.parse(readFileSync(resolve(import.meta.dirname!, '..', '..', 'package.json'), 'utf8')) as { files: string[] })
+      .files;
     const bundles = files.filter(f => f.startsWith('dist/') && !f.endsWith('/')).map(f => f.slice('dist/'.length));
 
     expect([...CORE_BUNDLE_FILES].sort()).toEqual([...bundles].sort());

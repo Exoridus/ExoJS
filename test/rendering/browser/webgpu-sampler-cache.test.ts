@@ -57,14 +57,18 @@ describe('WebGPU sampler cache', () => {
     root.addChild(sprite);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       const afterWarmup = created;
 
       for (let i = 0; i < 4; i++) {
         texture.updateSource();
 
-        if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+        if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+          return;
+        }
       }
 
       expect(created).toBe(afterWarmup);
@@ -97,7 +101,9 @@ describe('WebGPU sampler cache', () => {
     root.addChild(first);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       // Backend-internal samplers (mipmap generation, compositors) are created
       // during warmup and are not what this asserts. What follows is: a second
@@ -106,7 +112,9 @@ describe('WebGPU sampler cache', () => {
 
       root.addChild(second);
 
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       expect(created).toBe(withFirstOnly);
     } finally {
@@ -131,7 +139,9 @@ describe('WebGPU sampler cache', () => {
     root.addChild(sprite);
 
     try {
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       queue.copyExternalImageToTexture = ((...args: Parameters<GPUQueue['copyExternalImageToTexture']>) => {
         uploads++;
@@ -141,7 +151,9 @@ describe('WebGPU sampler cache', () => {
 
       texture.scaleMode = ScaleModes.Nearest;
 
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       expect(uploads).toBe(0);
 
@@ -150,7 +162,9 @@ describe('WebGPU sampler cache', () => {
       // simply never firing.
       texture.updateSource();
 
-      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
 
       expect(uploads).toBeGreaterThan(0);
     } finally {

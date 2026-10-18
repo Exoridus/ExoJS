@@ -9,11 +9,15 @@
  * improvement cannot pay for another's regression.
  */
 
-import { diffPartialBaseline, formatBaselineFailure, isBaselineClean, mergePartialBaseline, type PartialBaseline } from '../../scripts/guide-partial-baseline';
+import {
+  diffPartialBaseline,
+  formatBaselineFailure,
+  isBaselineClean,
+  mergePartialBaseline,
+  type PartialBaseline,
+} from '../../scripts/guide-partial-baseline';
 
-const baselineOf = (files: Record<string, number>): PartialBaseline => {
-  return { note: 'test', files };
-};
+const baselineOf = (files: Record<string, number>): PartialBaseline => ({ note: 'test', files });
 
 describe('diffPartialBaseline', () => {
   test('matching counts are clean', () => {
@@ -86,7 +90,9 @@ describe('diffPartialBaseline', () => {
   test('out-of-scope files are neither compared nor reported', () => {
     // A folder-filtered run never visits `other/`, so its absence from the
     // observed counts must not be read as "went to zero".
-    const diff = diffPartialBaseline(baselineOf({ 'assets/a.mdx': 2, 'other/b.mdx': 5 }), new Map([['assets/a.mdx', 2]]), file => file.startsWith('assets/'));
+    const diff = diffPartialBaseline(baselineOf({ 'assets/a.mdx': 2, 'other/b.mdx': 5 }), new Map([['assets/a.mdx', 2]]), file =>
+      file.startsWith('assets/'),
+    );
 
     expect(isBaselineClean(diff)).toBe(true);
   });
@@ -120,7 +126,9 @@ describe('mergePartialBaseline', () => {
   });
 
   test('preserves entries for files the run did not visit', () => {
-    const next = mergePartialBaseline(baselineOf({ 'assets/a.mdx': 3, 'other/b.mdx': 5 }), new Map([['assets/a.mdx', 1]]), file => file.startsWith('assets/'));
+    const next = mergePartialBaseline(baselineOf({ 'assets/a.mdx': 3, 'other/b.mdx': 5 }), new Map([['assets/a.mdx', 1]]), file =>
+      file.startsWith('assets/'),
+    );
 
     expect(next.files).toEqual({ 'assets/a.mdx': 1, 'other/b.mdx': 5 });
   });

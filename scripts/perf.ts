@@ -41,7 +41,11 @@ export const PERF_RUNS = {
   interaction: { summary: 'interaction benchmark', module: 'test/perf/interaction-benchmark.ts' },
   'collect-phase': { summary: 'collect phase benchmark', module: 'test/perf/collect-phase-benchmark.ts' },
   profile: { summary: 'profile benchmark', module: 'test/perf/profile-benchmark.ts' },
-  'profile:gc': { summary: 'profile benchmark with forced GC for exact memory deltas', module: 'test/perf/profile-benchmark.ts', nodeFlags: ['--expose-gc'] },
+  'profile:gc': {
+    summary: 'profile benchmark with forced GC for exact memory deltas',
+    module: 'test/perf/profile-benchmark.ts',
+    nodeFlags: ['--expose-gc'],
+  },
   smoke: {
     summary: 'every in-process benchmark once, for its exit code (the `sync` gate)',
     runs: ['rendering', 'audio', 'collision', 'scene-graph', 'interaction', 'collect-phase', 'profile'],
@@ -73,7 +77,10 @@ export const PERF_RUNS = {
     nodeFlags: CELL_NODE_FLAGS,
   },
 
-  'webgpu:alloc': { summary: 'WebGPU allocation per scene, one browser per cell', command: 'tsx test/perf/webgpu/run-webgpu-allocation.ts' },
+  'webgpu:alloc': {
+    summary: 'WebGPU allocation per scene, one browser per cell',
+    command: 'tsx test/perf/webgpu/run-webgpu-allocation.ts',
+  },
   'webgpu:timer': { summary: 'WebGPU frame timer methodology probe', command: 'pnpm --filter @codexo/exojs-bench timer' },
 } as const satisfies Record<string, PerfRun>;
 
@@ -84,6 +91,7 @@ const runNames = Object.keys(PERF_RUNS) as PerfRunName[];
 const printUsage = (): void => {
   const width = Math.max(...runNames.map(name => name.length));
   console.log('Usage: pnpm perf <name> [args...]\n');
+
   for (const name of runNames) {
     console.log(`  ${name.padEnd(width)}  ${PERF_RUNS[name].summary}`);
   }
@@ -96,13 +104,18 @@ const execute = (name: PerfRunName, args: readonly string[]): number => {
     for (const child of run.runs) {
       console.log(`\n=== pnpm perf ${child} ===\n`);
       const status = execute(child as PerfRunName, args);
-      if (status !== 0) return status;
+
+      if (status !== 0) {
+        return status;
+      }
     }
+
     return 0;
   }
 
   if (run.module) {
     const result = spawnSync(process.execPath, [...(run.nodeFlags ?? []), ...SOURCE_NODE_FLAGS, run.module, ...args], { stdio: 'inherit' });
+
     return result.status ?? 1;
   }
 
@@ -110,6 +123,7 @@ const execute = (name: PerfRunName, args: readonly string[]): number => {
   // are re-quoted because the shell splits the joined line again.
   const quoted = args.map(arg => (/\s/.test(arg) ? JSON.stringify(arg) : arg));
   const result = spawnSync([run.command, ...quoted].join(' '), { stdio: 'inherit', shell: true });
+
   return result.status ?? 1;
 };
 
@@ -130,9 +144,11 @@ const main = (): void => {
   }
 
   const status = execute(requested as PerfRunName, args);
+
   if (status !== 0) {
     console.error(`\nperf ${requested} failed (exit code ${status}).`);
   }
+
   process.exit(status);
 };
 

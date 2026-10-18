@@ -44,6 +44,7 @@ self.onmessage = (event: MessageEvent<IncomingMessage>): void => {
     seed = message.seed;
     featureSize = message.featureSize;
     extraCost = message.extraCost;
+
     return;
   }
 
@@ -51,19 +52,23 @@ self.onmessage = (event: MessageEvent<IncomingMessage>): void => {
 
   try {
     const values = new Float64Array(chunkWidth * chunkHeight);
+
     for (let localTy = 0; localTy < chunkHeight; localTy++) {
       for (let localTx = 0; localTx < chunkWidth; localTx++) {
         const tx = cx * chunkWidth + localTx;
         const ty = cy * chunkHeight + localTy;
         let value = fbm(seed, tx / featureSize, ty / featureSize);
+
         // Burns deterministic CPU to simulate an expensive sampler -
         // the recomputed value is discarded except for the last pass.
         for (let i = 0; i < extraCost; i++) {
           value = fbm(seed, tx / featureSize, ty / featureSize);
         }
+
         values[localTy * chunkWidth + localTx] = value;
       }
     }
+
     // Exactly one reply per request, transferring the buffer for a
     // zero-copy handoff back to the main thread.
     self.postMessage({ requestId, values }, [values.buffer]);

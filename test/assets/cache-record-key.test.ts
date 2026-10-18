@@ -26,7 +26,9 @@ describe('serializeCacheRecordKey', () => {
   test('separates two asset types over one source key', () => {
     const source = 'url:https://assets.test/shared.json';
 
-    expect(serializeCacheRecordKey(key({ namespace: 'type.a', source }))).not.toBe(serializeCacheRecordKey(key({ namespace: 'type.b', source })));
+    expect(serializeCacheRecordKey(key({ namespace: 'type.a', source }))).not.toBe(
+      serializeCacheRecordKey(key({ namespace: 'type.b', source })),
+    );
   });
 
   test('separates two layout versions of one type and source', () => {
@@ -68,6 +70,8 @@ describe('serializeCacheRecordKey', () => {
   });
 
   test('a namespace prefix does not match a different namespace that starts with the same text', () => {
-    expect(serializeCacheRecordKey(key({ namespace: 'com.example.worldly' })).startsWith(cacheNamespacePrefix('com.example.world'))).toBe(false);
+    expect(serializeCacheRecordKey(key({ namespace: 'com.example.worldly' })).startsWith(cacheNamespacePrefix('com.example.world'))).toBe(
+      false,
+    );
   });
 });

@@ -54,7 +54,9 @@ export interface RowVerdict {
 export const isProbeFailure = (value: ProbeReport | ProbeFailure): value is ProbeFailure => 'error' in value;
 
 const missingCapabilities = (report: ProbeReport, requires: readonly string[]): string[] =>
-  requires.filter(name => report.capabilities[name]?.ok !== true).map(name => `${name}: ${report.capabilities[name]?.detail ?? 'not probed'}`);
+  requires
+    .filter(name => report.capabilities[name]?.ok !== true)
+    .map(name => `${name}: ${report.capabilities[name]?.detail ?? 'not probed'}`);
 
 /**
  * Decides, before anything is launched, whether the row's suite may run.
@@ -78,7 +80,9 @@ export const judgePreflight = (result: ProbeReport | ProbeFailure, requires: rea
 
   const missing = missingCapabilities(result, requires);
 
-  if (missing.length === 0) return { status: 'PASS', detail: `capabilities present: ${requires.join(', ') || 'none required'}`, proceed: true, exitCode: 0 };
+  if (missing.length === 0) {
+    return { status: 'PASS', detail: `capabilities present: ${requires.join(', ') || 'none required'}`, proceed: true, exitCode: 0 };
+  }
 
   return blocking
     ? { status: 'FAIL', failure: 'capability', detail: `required capability missing - ${missing.join('; ')}`, proceed: false, exitCode: 1 }
@@ -99,10 +103,21 @@ export interface RunOutcome {
 export const judgeRun = (outcome: RunOutcome, policy: RowPolicy): RowVerdict => {
   const exit = (code: number): number => (policy === 'required' ? code : 0);
 
-  if (outcome.timedOut)
-    return { status: 'FAIL', failure: 'timeout', detail: 'outer deadline reached; the owned process tree was stopped', proceed: false, exitCode: exit(124) };
-  if (outcome.aborted) return { status: 'FAIL', failure: 'infrastructure', detail: 'interrupted', proceed: false, exitCode: outcome.status || 130 };
-  if (outcome.cleanupError !== undefined)
+  if (outcome.timedOut) {
+    return {
+      status: 'FAIL',
+      failure: 'timeout',
+      detail: 'outer deadline reached; the owned process tree was stopped',
+      proceed: false,
+      exitCode: exit(124),
+    };
+  }
+
+  if (outcome.aborted) {
+    return { status: 'FAIL', failure: 'infrastructure', detail: 'interrupted', proceed: false, exitCode: outcome.status || 130 };
+  }
+
+  if (outcome.cleanupError !== undefined) {
     return {
       status: 'FAIL',
       failure: 'infrastructure',
@@ -110,8 +125,17 @@ export const judgeRun = (outcome: RunOutcome, policy: RowPolicy): RowVerdict => 
       proceed: false,
       exitCode: exit(outcome.status || 1),
     };
-  if (outcome.status !== 0)
-    return { status: 'FAIL', failure: 'test', detail: `suite failed with exit ${outcome.status}`, proceed: false, exitCode: exit(outcome.status) };
+  }
+
+  if (outcome.status !== 0) {
+    return {
+      status: 'FAIL',
+      failure: 'test',
+      detail: `suite failed with exit ${outcome.status}`,
+      proceed: false,
+      exitCode: exit(outcome.status),
+    };
+  }
 
   return { status: 'PASS', detail: 'suite passed', proceed: false, exitCode: 0 };
 };
@@ -132,7 +156,10 @@ export interface QualificationRow {
 
 /** `PASS`, `UNSUPPORTED HOST: <reason>`, `FAIL (timeout): <reason>` - the form both logs and the step summary print. */
 export const describeRow = (row: Pick<QualificationRow, 'status' | 'failure' | 'detail'>): string => {
-  if (row.status === 'PASS') return 'PASS';
+  if (row.status === 'PASS') {
+    return 'PASS';
+  }
+
   const label = row.status === 'FAIL' && row.failure ? `FAIL (${row.failure})` : row.status;
 
   return `${label}: ${row.detail}`;
@@ -152,7 +179,9 @@ export const latestRows = (rows: readonly QualificationRow[]): QualificationRow[
   for (const row of rows) {
     const existing = byName.get(row.row);
 
-    if (existing === undefined || existing.finishedAt <= row.finishedAt) byName.set(row.row, row);
+    if (existing === undefined || existing.finishedAt <= row.finishedAt) {
+      byName.set(row.row, row);
+    }
   }
 
   return [...byName.values()].sort((a, b) => a.row.localeCompare(b.row));

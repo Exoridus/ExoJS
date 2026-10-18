@@ -34,9 +34,11 @@ const initialCost = (x: number, y: number): number => {
   if (x === 0 || y === 0 || x === COLUMNS - 1 || y === ROWS - 1) {
     return 0;
   }
+
   if (x % 8 === 4 && y % 3 !== 1) {
     return 0;
   }
+
   if (x % 4 === 2 && y % 6 === 3) {
     return 0;
   }
@@ -178,12 +180,19 @@ class GridNavigationScene extends Scene {
 
     // Replanning starts from the cell the walker currently stands in, not from
     // the previous path's start: it is usually somewhere between two cells.
-    this.result = this.pathfinder.findPathBetween(this.grid, this.agent.x, this.agent.y, (this.goal.x + 0.5) * CELL, (this.goal.y + 0.5) * CELL, {
-      smooth: this.smooth,
-      pruning: this.pruning,
-      agentSize: this.agentSize,
-      snapToNearest: true,
-    });
+    this.result = this.pathfinder.findPathBetween(
+      this.grid,
+      this.agent.x,
+      this.agent.y,
+      (this.goal.x + 0.5) * CELL,
+      (this.goal.y + 0.5) * CELL,
+      {
+        smooth: this.smooth,
+        pruning: this.pruning,
+        agentSize: this.agentSize,
+        snapToNearest: true,
+      },
+    );
     this.waypoint = 0;
 
     const { status, cost, nodes, expandedNodes } = this.result;

@@ -156,7 +156,10 @@ new SequenceAction('A>Ctrl+Sv|B');
 
 // The rejection message names the offending token and quotes the pattern.
 type _UnknownTokenMessage = Expect<
-  Equal<ValidatedChordBinding<'Ctrl+Sv'>, 'ChordAction: unknown keyboard token "Sv" in pattern "Ctrl+Sv". Use a Keyboard enum name or pass numeric channels.'>
+  Equal<
+    ValidatedChordBinding<'Ctrl+Sv'>,
+    'ChordAction: unknown keyboard token "Sv" in pattern "Ctrl+Sv". Use a Keyboard enum name or pass numeric channels.'
+  >
 >;
 
 // ---------------------------------------------------------------------------
@@ -191,8 +194,12 @@ new SequenceAction('A> >B');
 new SequenceAction('A>B>');
 
 // An empty token is worded per position, like the runtime message.
-type _EmptyChordTokenMessage = Expect<Equal<ValidatedChordBinding<'A+'>, 'ChordAction: the chord of pattern "A+" contains an empty token.'>>;
-type _EmptySequenceTokenMessage = Expect<Equal<ValidatedSequenceBinding<'A>B+'>, 'SequenceAction: step 2 of pattern "A>B+" contains an empty token.'>>;
+type _EmptyChordTokenMessage = Expect<
+  Equal<ValidatedChordBinding<'A+'>, 'ChordAction: the chord of pattern "A+" contains an empty token.'>
+>;
+type _EmptySequenceTokenMessage = Expect<
+  Equal<ValidatedSequenceBinding<'A>B+'>, 'SequenceAction: step 2 of pattern "A>B+" contains an empty token.'>
+>;
 type _EmptyAlternativeMessage = Expect<
   Equal<ValidatedSequenceBinding<'A>B|'>, 'SequenceAction: alternative 2 of step 2 of pattern "A>B|" is empty — remove the stray \'|\'.'>
 >;
@@ -216,7 +223,9 @@ new SequenceAction('A>Ctrl+Control|B');
 void new SequenceAction('A>A');
 void new ChordAction('Ctrl+S|Ctrl+K');
 
-type _RepeatedChannelMessage = Expect<Equal<ValidatedChordBinding<'Ctrl+Control'>, 'ChordAction: the chord contains the same channel more than once.'>>;
+type _RepeatedChannelMessage = Expect<
+  Equal<ValidatedChordBinding<'Ctrl+Control'>, 'ChordAction: the chord contains the same channel more than once.'>
+>;
 
 // ---------------------------------------------------------------------------
 // Rejected string literals - ChordAction forbids '>'
@@ -237,7 +246,10 @@ type _ChordRejectsStepsMessage = Expect<
 // An unknown token is reported before the step count, matching the order the
 // runtime reaches the two checks.
 type _ChordReportsTokenFirst = Expect<
-  Equal<ValidatedChordBinding<'A>Sv'>, 'ChordAction: unknown keyboard token "Sv" in pattern "A>Sv". Use a Keyboard enum name or pass numeric channels.'>
+  Equal<
+    ValidatedChordBinding<'A>Sv'>,
+    'ChordAction: unknown keyboard token "Sv" in pattern "A>Sv". Use a Keyboard enum name or pass numeric channels.'
+  >
 >;
 
 // ---------------------------------------------------------------------------

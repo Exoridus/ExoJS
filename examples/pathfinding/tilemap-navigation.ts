@@ -1,50 +1,66 @@
 import {
+  ActionMap,
   Application,
   Asset,
+  BehaviorComponent,
   Color,
   Container,
   FixedResolutionCanvasSizing,
   Graphics,
+  Keyboard,
   type RenderingContext,
   Scene,
-  type Seconds,
+  SystemOrder,
   TextureRegion,
+  Vector,
+  VectorAction,
 } from '@codexo/exojs';
-import { GridSpace, Pathfinder, type PathResult } from '@codexo/exojs-pathfinding';
-import { type ResolvedTile, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, type TileMapView, TileSet } from '@codexo/exojs-tilemap';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { NavigationAgentComponent, type NavigationStatus, TileNavigationSpace, WaypointGraph } from '@codexo/exojs-pathfinding';
+import { CircleShape, KinematicMovementComponent, type PhysicsBody, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs-physics';
+import {
+  type ResolvedTile,
+  TILE_TRANSFORM_IDENTITY,
+  TileLayer,
+  TileMap,
+  tilemapExtension,
+  type TileMapView,
+  TileSet,
+} from '@codexo/exojs-tilemap';
+import { TileColliderStreamer } from '@codexo/exojs-tilemap-physics';
+import { mountControls } from '@examples/runtime';
 
-// Pathfinding over a tilemap without a package dependency in either direction.
+// Navigation, movement and collision over one tile map, with no package
+// depending on another:
 //
-// @codexo/exojs-pathfinding knows nothing about tilemaps: the entire bridge is
-// the cost callback `GridSpace.from` takes, which the game answers out of
-// whatever its map layer actually stores. Here that is the placed tile id; a
-// Tiled- or LDtk-authored map would instead read the tile's collision data:
+// - TileNavigationSpace turns the ground layer into a navigation space through
+//   a cost callback, and keeps itself in step with tile edits.
+// - TileColliderStreamer builds the physical walls from the same layer.
+// - KinematicMovementComponent moves a body without passing through them. The
+//   player drives one straight from input; each hunter's
+//   NavigationAgentComponent drives another.
+// - The patrol agent navigates a hand-placed WaypointGraph instead, to show
+//   that agents do not care what kind of space they search.
 //
-//   const definition = tile.tileset.getTileDefinition(tile.localTileId);
-//   return definition?.collision === undefined ? 1 : 0;
-//
-// Editing the map keeps the two in step through `setCost`, which bumps the
-// grid's revision so anything following an older path can notice.
+// Positions are logical: this map is orthogonal and unscaled, so the logical
+// space, the physics world and the screen happen to coincide.
 
-// The map-pack tilesheet is a 64px grid, and a tile is drawn at its own
-// source size - a smaller cell would overlap its neighbour rather than
-// scale the art down, so the arena is laid out in 64px cells.
 const TILE = 64;
 const COLUMNS = 20;
 const ROWS = 11;
 // Seamless terrain-centre tiles from mapPack_tilesheet.png (17 columns,
-// localTileId = row * 17 + column). The block corners and edges that sit
-// around them are meant for terrain borders, not for filling an area.
+// localTileId = row * 17 + column).
 const FLOOR_TILE = 23; // grass centre
 const WALL_TILE = 28; // stone centre
 const ROUGH_TILE = 91; // dirt centre
 const ROUGH_COST = 5;
-const AGENT_SPEED = 220;
+
+const PLAYER_RADIUS = 18;
+const HUNTER_RADIUS = 16;
 
 const PATH_COLOR = new Color(120, 240, 190);
-const GOAL_COLOR = new Color(255, 150, 90);
-const AGENT_COLOR = new Color(255, 255, 255);
+const PATROL_COLOR = new Color(120, 170, 255);
+const PLAYER_COLOR = new Color(255, 255, 255);
+const HUNTER_COLOR = new Color(255, 150, 90);
 
 const isBorder = (x: number, y: number): boolean => x === 0 || y === 0 || x === COLUMNS - 1 || y === ROWS - 1;
 
@@ -53,6 +69,7 @@ const tileAt = (x: number, y: number): number => {
   if (isBorder(x, y) || (x % 6 === 3 && y % 4 !== 2)) {
     return WALL_TILE;
   }
+
   if (y >= 4 && y <= 5 && x > 1 && x < COLUMNS - 2) {
     return ROUGH_TILE;
   }
@@ -60,30 +77,76 @@ const tileAt = (x: number, y: number): number => {
   return FLOOR_TILE;
 };
 
-/** The one place the two packages meet: a tile turns into a traversal cost. */
+/**
+ * The traversal policy: solid tiles block, rough ground is slow. Navigation
+ * cost and physical collision are separate decisions - here the wall tile's
+ * collision shape answers both, while rough ground only affects routing.
+ */
 const walkCost = (tile: ResolvedTile | null): number => {
-  if (tile === null || tile.localTileId === WALL_TILE) {
+  if (tile === null) {
+    return 0;
+  }
+
+  const definition = tile.tileset.getTileDefinition(tile.localTileId);
+
+  if (definition?.collision) {
     return 0;
   }
 
   return tile.localTileId === ROUGH_TILE ? ROUGH_COST : 1;
 };
 
+/** Gameplay input, applied as a movement command every fixed step. */
+class PlayerControl extends BehaviorComponent {
+  public constructor(
+    private readonly movement: KinematicMovementComponent,
+    private readonly direction: VectorAction,
+  ) {
+    super();
+  }
+
+  public override fixedUpdate(): void {
+    this.movement.move(this.direction.value);
+  }
+}
+
+/** A kinematic circle with collision-aware movement, ready for a controller. */
+const spawnMover = (scene: Scene, world: PhysicsWorld, x: number, y: number, radius: number, maxSpeed: number) => {
+  const node = new Container();
+
+  node.setPosition(x, y);
+
+  const physics = node.addComponent(
+    new PhysicsBodyComponent(world, { type: 'kinematic', colliders: [{ shape: new CircleShape(radius) }] }),
+  );
+  const movement = node.addComponent(new KinematicMovementComponent(physics, { maxSpeed }));
+
+  scene.addChild(node);
+
+  return { node, body: physics.body, movement };
+};
+
 class TilemapNavigationScene extends Scene {
-  private readonly pathfinder = new Pathfinder();
   private layer!: TileLayer;
-  private grid!: GridSpace;
   private mapView!: TileMapView;
   private worldRoot!: Container;
-  private overlay = new Graphics();
-  private result: PathResult | null = null;
-  private goal = { x: COLUMNS - 4, y: ROWS - 4 };
-  private agent = { x: 1.5 * TILE, y: 1.5 * TILE };
-  private waypoint = 0;
-  private avoidRough = true;
-  private editing = false;
+  private world!: PhysicsWorld;
+  private colliders!: TileColliderStreamer;
+  private navigation!: TileNavigationSpace<ResolvedTile>;
+  private player!: PhysicsBody;
+  private hunters: Array<{ body: PhysicsBody; agent: NavigationAgentComponent }> = [];
+  private patrol!: { body: PhysicsBody; agent: NavigationAgentComponent };
+  private readonly patrolGraph = new WaypointGraph();
+  private readonly patrolStops: Vector[] = [];
+  private patrolStop = 0;
+  private readonly overlay = new Graphics();
+  private readonly controls = new ActionMap({
+    move: new VectorAction([
+      { up: Keyboard.W, down: Keyboard.S, left: Keyboard.A, right: Keyboard.D },
+      { up: Keyboard.Up, down: Keyboard.Down, left: Keyboard.Left, right: Keyboard.Right },
+    ]),
+  });
   private hud!: ReturnType<typeof mountControls>;
-  private panel!: ReturnType<typeof mountControlPanel>;
 
   override async load(): Promise<void> {
     const texture = await this.loader.load(Asset.type('texture', assets.demo.tilesets.map.image));
@@ -96,7 +159,38 @@ class TilemapNavigationScene extends Scene {
       columns: 17,
     });
 
-    this.layer = new TileLayer({ id: 1, name: 'ground', width: COLUMNS, height: ROWS, tileWidth: TILE, tileHeight: TILE, tilesets: [tileset] });
+    // The stone tile carries a whole-cell collision shape, which is what both
+    // the collider bridge and the navigation cost read.
+    tileset.setDefinitions([
+      {
+        localTileId: WALL_TILE,
+        collision: [
+          {
+            id: 1,
+            name: '',
+            type: 'solid',
+            visible: true,
+            properties: {},
+            kind: 'rectangle',
+            x: 0,
+            y: 0,
+            width: TILE,
+            height: TILE,
+            rotation: 0,
+          },
+        ],
+      },
+    ]);
+
+    this.layer = new TileLayer({
+      id: 1,
+      name: 'ground',
+      width: COLUMNS,
+      height: ROWS,
+      tileWidth: TILE,
+      tileHeight: TILE,
+      tilesets: [tileset],
+    });
 
     for (let y = 0; y < ROWS; y++) {
       for (let x = 0; x < COLUMNS; x++) {
@@ -104,157 +198,182 @@ class TilemapNavigationScene extends Scene {
       }
     }
 
-    const map = new TileMap({ name: 'arena', width: COLUMNS, height: ROWS, tileWidth: TILE, tileHeight: TILE, tilesets: [tileset], layers: [this.layer] });
+    const map = new TileMap({
+      name: 'arena',
+      width: COLUMNS,
+      height: ROWS,
+      tileWidth: TILE,
+      tileHeight: TILE,
+      tilesets: [tileset],
+      layers: [this.layer],
+    });
 
     this.mapView = map.createView({ bands: { ground: ['ground'] } });
     this.worldRoot = new Container();
     this.worldRoot.addChild(this.mapView.band('ground'));
+  }
 
-    this.buildGrid();
+  override init(): void {
+    this.world = new PhysicsWorld({ fixedDelta: this.app.fixedTimeStep });
+    this.systems.add(this.world, { order: SystemOrder.Physics });
+    this.colliders = new TileColliderStreamer(this.world, this.layer);
+    this.colliders.sync();
+    this.navigation = new TileNavigationSpace(this.layer, { cost: walkCost });
+    this.inputs.attach(this.controls);
+
+    const player = spawnMover(this, this.world, 1.5 * TILE, 8.5 * TILE, PLAYER_RADIUS, 260);
+
+    player.node.addComponent(new PlayerControl(player.movement, this.controls.move));
+    this.player = player.body;
+
+    for (const [column, row] of [
+      [17, 1],
+      [17, 9],
+      [10, 9],
+    ] as const) {
+      const hunter = spawnMover(this, this.world, (column + 0.5) * TILE, (row + 0.5) * TILE, HUNTER_RADIUS, 170);
+      const agent = hunter.node.addComponent(
+        new NavigationAgentComponent({
+          space: this.navigation,
+          movement: hunter.movement,
+          position: hunter.body,
+          search: { smooth: true, snapToNearest: true },
+          // The two bodies cannot overlap, so "there" means touching distance.
+          arrivalDistance: PLAYER_RADIUS + HUNTER_RADIUS + 4,
+        }),
+      );
+
+      agent.follow(this.player);
+      this.hunters.push({ body: hunter.body, agent });
+    }
+
+    // Rows 2 and 6 and columns 1 and 18 are clear of pillars, so straight
+    // links between these four stops stay walkable - until a wall is placed.
+    for (const [column, row] of [
+      [1.5, 2.5],
+      [18.5, 2.5],
+      [18.5, 6.5],
+      [1.5, 6.5],
+    ] as const) {
+      this.patrolStops.push(new Vector(column * TILE, row * TILE));
+    }
+
+    const stops = this.patrolStops.map(stop => this.patrolGraph.addNode(stop.x, stop.y));
+
+    stops.forEach((stop, index) => this.patrolGraph.connect(stop, stops[(index + 1) % stops.length]!));
+
+    const patroller = spawnMover(this, this.world, 1.5 * TILE, 2.5 * TILE, HUNTER_RADIUS, 140);
+
+    this.patrol = {
+      body: patroller.body,
+      agent: patroller.node.addComponent(
+        new NavigationAgentComponent({ space: this.patrolGraph, movement: patroller.movement, position: patroller.body }),
+      ),
+    };
+    this.patrol.agent.onStatusChange.add(this.onPatrolStatus);
+    this.advancePatrol();
 
     this.app.input.onPointerTap.add(this.onTap);
-
     this.hud = mountControls({
       title: 'Tilemap Navigation',
       controls: [
-        { keys: 'Click', action: 'send the agent to a tile' },
-        { keys: 'Edit walls + Click', action: 'open or close the selected tile' },
+        { keys: 'WASD / Arrows', action: 'move the player' },
+        { keys: 'Click', action: 'open or close a tile' },
       ],
       status: '',
-      hint: 'The grid is built from a cost callback over the tile layer — the pathfinding package never sees the tilemap.',
+      hint: 'Hunters re-route when you move to another tile or edit the map; the blue patroller follows a waypoint graph.',
     });
-
-    this.panel = mountControlPanel({ title: 'Navigation' });
-
-    this.panel.addToggle({
-      label: 'Rough ground costs more',
-      value: true,
-      onChange: value => {
-        this.avoidRough = value;
-        this.buildGrid();
-        this.replan();
-      },
-    });
-    this.panel.addToggle({
-      label: 'Edit walls',
-      value: false,
-      onChange: value => {
-        this.editing = value;
-      },
-    });
-
-    this.replan();
   }
 
-  override update(delta: Seconds): void {
-    const points = this.result?.points ?? [];
+  override update(): void {
+    // Rebuilds only the collider blocks whose tiles changed; the navigation
+    // space synchronises itself when the agents read it.
+    this.colliders.sync();
 
-    if (this.waypoint >= points.length) {
-      return;
-    }
+    const statuses = this.hunters.map(({ agent }) => agent.status).join(', ');
 
-    let travel = AGENT_SPEED * delta;
-
-    while (travel > 0 && this.waypoint < points.length) {
-      const target = points[this.waypoint]!;
-      const distance = Math.hypot(target.x - this.agent.x, target.y - this.agent.y);
-
-      if (distance <= travel) {
-        this.agent.x = target.x;
-        this.agent.y = target.y;
-        travel -= distance;
-        this.waypoint++;
-        continue;
-      }
-
-      this.agent.x += ((target.x - this.agent.x) / distance) * travel;
-      this.agent.y += ((target.y - this.agent.y) / distance) * travel;
-      travel = 0;
-    }
+    this.hud.setStatus(`hunters: ${statuses} · patrol: ${this.patrol.agent.status} · navigation revision ${this.navigation.revision}`);
   }
 
   override draw(context: RenderingContext): void {
-    this.overlay.clear();
+    const overlay = this.overlay;
 
-    const points = this.result?.points ?? [];
+    overlay.clear();
+    overlay.lineWidth = 2;
+    overlay.lineColor = PATROL_COLOR;
 
-    if (points.length > 1) {
-      this.overlay.lineWidth = 3;
-      this.overlay.lineColor = PATH_COLOR;
+    this.patrolStops.forEach((stop, index) => {
+      const next = this.patrolStops[(index + 1) % this.patrolStops.length]!;
 
-      for (let index = 1; index < points.length; index++) {
-        this.overlay.drawLine(points[index - 1]!.x, points[index - 1]!.y, points[index]!.x, points[index]!.y);
+      overlay.drawLine(stop.x, stop.y, next.x, next.y);
+    });
+
+    overlay.lineWidth = 3;
+    overlay.lineColor = PATH_COLOR;
+
+    for (const { body, agent } of this.hunters) {
+      const points = agent.path?.points ?? [];
+
+      if (agent.status === 'navigating' && points.length > agent.waypointIndex) {
+        let fromX = body.x;
+        let fromY = body.y;
+
+        for (let index = agent.waypointIndex; index < points.length; index++) {
+          overlay.drawLine(fromX, fromY, points[index]!.x, points[index]!.y);
+          fromX = points[index]!.x;
+          fromY = points[index]!.y;
+        }
       }
     }
 
-    this.overlay.fillColor = GOAL_COLOR;
-    this.overlay.drawCircle((this.goal.x + 0.5) * TILE, (this.goal.y + 0.5) * TILE, 7);
-    this.overlay.fillColor = AGENT_COLOR;
-    this.overlay.drawCircle(this.agent.x, this.agent.y, 7);
+    overlay.fillColor = HUNTER_COLOR;
+
+    for (const { body } of this.hunters) {
+      overlay.drawCircle(body.x, body.y, HUNTER_RADIUS);
+    }
+
+    overlay.fillColor = PATROL_COLOR;
+    overlay.drawCircle(this.patrol.body.x, this.patrol.body.y, HUNTER_RADIUS);
+    overlay.fillColor = PLAYER_COLOR;
+    overlay.drawCircle(this.player.x, this.player.y, PLAYER_RADIUS);
 
     context.render(this.worldRoot);
-    context.render(this.overlay);
+    context.render(overlay);
   }
 
-  /**
-   * Rebuilds the whole window from the layer. A streamed world would size the
-   * window to the loaded region instead and keep it in step with `setCost`.
-   */
-  private buildGrid(): void {
-    this.grid = GridSpace.from(
-      COLUMNS,
-      ROWS,
-      (x, y) => {
-        const cost = walkCost(this.layer.getTileAt(x, y));
+  private readonly onPatrolStatus = (status: NavigationStatus): void => {
+    if (status === 'arrived') {
+      this.advancePatrol();
+    }
+  };
 
-        return this.avoidRough ? cost : Math.min(cost, 1);
-      },
-      { cellSize: TILE },
-    );
+  private advancePatrol(): void {
+    const stop = this.patrolStop;
+
+    this.patrolStop = (stop + 1) % this.patrolStops.length;
+    this.patrol.agent.moveTo(this.patrolStops[stop]!);
   }
 
   private readonly onTap = (pointer: { x: number; y: number }): void => {
     const x = Math.floor(pointer.x / TILE);
     const y = Math.floor(pointer.y / TILE);
-    if (x < 0 || x >= COLUMNS || y < 0 || y >= ROWS) {
+
+    if (x < 0 || x >= COLUMNS || y < 0 || y >= ROWS || isBorder(x, y)) {
       return;
     }
 
-    if (this.editing) {
-      if (isBorder(x, y)) {
-        return;
-      }
-      const tile = this.layer.getTileAt(x, y);
-      const blocked = tile?.localTileId === WALL_TILE;
-      const tileset = this.layer.tilesets[0]!;
-      this.layer.setTileAt(x, y, { tileset, localTileId: blocked ? FLOOR_TILE : WALL_TILE, transform: TILE_TRANSFORM_IDENTITY });
-      this.grid.setCost(x, y, blocked ? 1 : 0);
-    } else {
-      if (this.grid.nodeAt(x, y) < 0) {
-        return;
-      }
-      this.goal = { x, y };
-    }
-    this.replan();
+    const tileset = this.layer.tilesets[0]!;
+    const blocked = this.layer.getTileAt(x, y)?.localTileId === WALL_TILE;
+    const opened = tileAt(x, y) === WALL_TILE ? FLOOR_TILE : tileAt(x, y);
+
+    // One edit, two consumers: the navigation space resamples the cell on its
+    // next read and the collider bridge rebuilds its block on the next sync.
+    this.layer.setTileAt(x, y, { tileset, localTileId: blocked ? opened : WALL_TILE, transform: TILE_TRANSFORM_IDENTITY });
   };
-
-  private replan(): void {
-    this.result = this.pathfinder.findPathBetween(this.grid, this.agent.x, this.agent.y, (this.goal.x + 0.5) * TILE, (this.goal.y + 0.5) * TILE, {
-      smooth: true,
-      snapToNearest: true,
-    });
-    this.waypoint = 0;
-
-    const { status, cost, expandedNodes } = this.result;
-
-    this.hud.setStatus(
-      `${status} · cost ${cost.toFixed(1)} · ${expandedNodes} nodes expanded · grid revision ${this.grid.revision} · ${this.grid.uniformCost ? 'jump-point' : 'weighted A*'}`,
-    );
-  }
 
   override destroy(): void {
     this.app.input.onPointerTap.remove(this.onTap);
-    this.panel?.dispose();
+    this.colliders?.destroy();
     this.hud?.dispose();
     this.worldRoot?.destroy();
     this.overlay.destroy();

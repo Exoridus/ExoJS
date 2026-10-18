@@ -148,15 +148,14 @@ char id=90   x=70   y=57   width=13  height=18  xoffset=0  yoffset=9   xadvance=
 // ---------------------------------------------------------------------------
 
 /** A dependency scope that records what the font asked for and hands back a blank texture. */
-const recordingScope = (requested: string[]): AssetDependencyScope => {
-  return {
+const recordingScope = (requested: string[]): AssetDependencyScope =>
+  ({
     load: vi.fn(async (asset: unknown) => {
       requested.push((asset as { _config: { source: string } })._config.source);
 
       return new Texture(null);
     }),
-  } as unknown as AssetDependencyScope;
-};
+  }) as unknown as AssetDependencyScope;
 
 describe('bmFontType', () => {
   test('decodes the descriptor text into parsed font data', async () => {
@@ -171,7 +170,9 @@ describe('bmFontType', () => {
     const dependencies = recordingScope(requested);
     const fontData = await bmFontType.codec!.decode(MINIMAL_FNT, { locator: 'url:https://example.com/fonts/ui.fnt' });
 
-    const font = await bmFontType.createFactory().create(fontData, factoryContext(undefined, { source: 'https://example.com/fonts/ui.fnt', dependencies }));
+    const font = await bmFontType
+      .createFactory()
+      .create(fontData, factoryContext(undefined, { source: 'https://example.com/fonts/ui.fnt', dependencies }));
 
     expect(requested).toEqual(['https://example.com/fonts/test.png']);
     expect(font.textures).toHaveLength(1);
@@ -183,7 +184,9 @@ describe('bmFontType', () => {
     const dependencies = recordingScope(requested);
     const fontData = await bmFontType.codec!.decode(MINIMAL_FNT, { locator: 'url:https://example.com/assets/fonts/ui.fnt' });
 
-    await bmFontType.createFactory().create(fontData, factoryContext(undefined, { source: 'https://example.com/assets/fonts/ui.fnt', dependencies }));
+    await bmFontType
+      .createFactory()
+      .create(fontData, factoryContext(undefined, { source: 'https://example.com/assets/fonts/ui.fnt', dependencies }));
 
     expect(requested).toEqual(['https://example.com/assets/fonts/test.png']);
   });
@@ -199,7 +202,9 @@ chars count=0
     const dependencies = recordingScope(requested);
     const fontData = await bmFontType.codec!.decode(multiPage, { locator: 'url:https://example.com/ui.fnt' });
 
-    const font = await bmFontType.createFactory().create(fontData, factoryContext(undefined, { source: 'https://example.com/ui.fnt', dependencies }));
+    const font = await bmFontType
+      .createFactory()
+      .create(fontData, factoryContext(undefined, { source: 'https://example.com/ui.fnt', dependencies }));
 
     expect(requested).toEqual(['https://example.com/atlas_0.png', 'https://example.com/atlas_1.png']);
     expect(font.textures).toHaveLength(2);

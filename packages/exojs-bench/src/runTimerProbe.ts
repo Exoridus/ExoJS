@@ -79,9 +79,14 @@ interface CellRun {
 }
 
 const cellKey = (spec: TimerProbeSpec): string =>
-  [spec.backend, `${spec.nodeCount}n`, spec.config, spec.mode, spec.drainAfterWarmup ? 'drained' : 'undrained', spec.timestampQueries ? 'ts' : 'no-ts'].join(
-    ' ',
-  );
+  [
+    spec.backend,
+    `${spec.nodeCount}n`,
+    spec.config,
+    spec.mode,
+    spec.drainAfterWarmup ? 'drained' : 'undrained',
+    spec.timestampQueries ? 'ts' : 'no-ts',
+  ].join(' ');
 
 const median = (values: readonly number[]): number => {
   const sorted = [...values].sort((a, b) => a - b);
@@ -205,7 +210,9 @@ const buildSpecs = (): TimerProbeSpec[] => {
 
 const runCell = async (spec: TimerProbeSpec, baseUrl: string): Promise<{ result: TimerProbeResult; adapter: string }> => {
   const flags =
-    spec.backend === 'webgpu' ? [...WEBGPU_LAUNCH_FLAGS, ...(spec.timestampQueries && !args.includes('--quantized') ? TIMESTAMP_FLAGS : [])] : LAUNCH_FLAGS;
+    spec.backend === 'webgpu'
+      ? [...WEBGPU_LAUNCH_FLAGS, ...(spec.timestampQueries && !args.includes('--quantized') ? TIMESTAMP_FLAGS : [])]
+      : LAUNCH_FLAGS;
   const browser = await chromium.launch({ channel: 'chromium', headless: true, args: [...flags] });
 
   try {
@@ -283,14 +290,19 @@ const formatSummary = (runs: readonly CellRun[]): string => {
         '',
       );
 
-      lines.push('| frame | rafAt | rafΔ | cpuMs | submitAt | doneAt | A raw | B busy | dep | D hwPass | hwSpan | passes | entered | wbMiB |');
+      lines.push(
+        '| frame | rafAt | rafΔ | cpuMs | submitAt | doneAt | A raw | B busy | dep | D hwPass | hwSpan | passes | entered | wbMiB |',
+      );
       lines.push('| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | :-: | ---: | ---: | ---: | ---: | ---: |');
 
       let previousDone: number | null = null;
 
       for (const frame of run.result.frames) {
         const raw = frame.doneAtMs === null ? null : frame.doneAtMs - frame.submitAtMs;
-        const busy = frame.doneAtMs === null ? null : frame.doneAtMs - (previousDone === null ? frame.submitAtMs : Math.max(frame.submitAtMs, previousDone));
+        const busy =
+          frame.doneAtMs === null
+            ? null
+            : frame.doneAtMs - (previousDone === null ? frame.submitAtMs : Math.max(frame.submitAtMs, previousDone));
         const dependent = previousDone !== null && frame.submitAtMs < previousDone;
 
         lines.push(
@@ -311,9 +323,15 @@ const formatSummary = (runs: readonly CellRun[]): string => {
 
     if (controls !== null) {
       lines.push('### Controls', '');
-      lines.push(`- \`performance.now()\` min non-zero delta: ${controls.nowMinDeltaMs.toFixed(4)} ms; crossOriginIsolated=${controls.crossOriginIsolated}`);
-      lines.push(`- clock delta histogram (ms, count): ${controls.nowDeltaHistogram.map(([delta, count]) => `${delta}×${count}`).join(' ')}`);
-      lines.push(`- microtask latency: median ${median(controls.microtaskMs).toFixed(4)} ms, max ${max(controls.microtaskMs).toFixed(4)} ms`);
+      lines.push(
+        `- \`performance.now()\` min non-zero delta: ${controls.nowMinDeltaMs.toFixed(4)} ms; crossOriginIsolated=${controls.crossOriginIsolated}`,
+      );
+      lines.push(
+        `- clock delta histogram (ms, count): ${controls.nowDeltaHistogram.map(([delta, count]) => `${delta}×${count}`).join(' ')}`,
+      );
+      lines.push(
+        `- microtask latency: median ${median(controls.microtaskMs).toFixed(4)} ms, max ${max(controls.microtaskMs).toFixed(4)} ms`,
+      );
       lines.push(
         `- idle-queue onSubmittedWorkDone: median ${median(controls.idleQueueMs).toFixed(3)} ms, p95 ${percentile(controls.idleQueueMs, 95).toFixed(3)} ms, max ${max(controls.idleQueueMs).toFixed(3)} ms`,
       );
@@ -336,6 +354,7 @@ const main = async (): Promise<void> => {
 
   if (baseUrl === undefined) {
     await server.close();
+
     throw new Error('The Vite dev server reported no local URL.');
   }
 

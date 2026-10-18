@@ -22,7 +22,11 @@ import { Container } from '#rendering/Container';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
-import { baseSpriteBatchTextureSlots, maxSpriteBatchTextureSlots, resolveSpriteBatchTextureSlots } from '#rendering/webgpu/WebGpuSpriteRenderer';
+import {
+  baseSpriteBatchTextureSlots,
+  maxSpriteBatchTextureSlots,
+  resolveSpriteBatchTextureSlots,
+} from '#rendering/webgpu/WebGpuSpriteRenderer';
 
 import { drawWebGpuEncoded, readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
@@ -60,13 +64,19 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
 // distinct entries differ by at least 0x55 in some channel, far above the
 // probe tolerance. Covers up to maxSpriteBatchTextureSlots + 1 = 33 entries.
 const channelLevels = ['00', '55', 'aa', 'ff'] as const;
+
 const paletteColor = (index: number): string => {
   const combo = index + 1; // +1 skips black (the clear colour)
 
   return `#${channelLevels[combo % 4]!}${channelLevels[Math.floor(combo / 4) % 4]!}${channelLevels[Math.floor(combo / 16) % 4]!}`;
 };
 
-const hexToRgba = (hex: string): RgbaTuple => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16), 255];
+const hexToRgba = (hex: string): RgbaTuple => [
+  parseInt(hex.slice(1, 3), 16),
+  parseInt(hex.slice(3, 5), 16),
+  parseInt(hex.slice(5, 7), 16),
+  255,
+];
 
 const createSolidTexture = (color: string, size = 8): Texture => {
   const source = document.createElement('canvas');
@@ -105,7 +115,8 @@ const renderRoot = (backend: WebGpuBackend, root: Container): void => {
   backend.flush();
 };
 
-const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
+const isDeviceLoss = (error: unknown): boolean =>
+  error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
 
 /** Render `body`, skipping the test on a software-adapter device loss. */
 const renderChecked = (ctx: { skip: (reason: string) => void }, body: () => void): boolean => {
@@ -175,6 +186,7 @@ describe('WebGPU sprite batcher texture-slot capacity (real device)', () => {
       }
 
       const readFull = readWebGpuPixels(backend, canvasSize);
+
       const probe = (read: (x: number, y: number) => RgbaTuple, index: number): void => {
         expectPixelNear(
           read((index % gridColumns) * gridCell + gridCell / 2, Math.floor(index / gridColumns) * gridCell + gridCell / 2),

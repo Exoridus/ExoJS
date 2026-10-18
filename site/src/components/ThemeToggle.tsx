@@ -10,12 +10,11 @@ type Theme = 'dark' | 'light';
 const subscribeTheme = (onChange: () => void): (() => void) => {
   const observer = new MutationObserver(onChange);
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
   return () => observer.disconnect();
 };
 
-const getThemeSnapshot = (): Theme => {
-  return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
-};
+const getThemeSnapshot = (): Theme => (document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark');
 
 export const ThemeToggle = (): JSX.Element => {
   // The DOM `data-theme` is the source of truth (set pre-hydration by the AppShell
@@ -38,7 +37,12 @@ export const ThemeToggle = (): JSX.Element => {
         onClick={() => chooseTheme('dark')}
       >
         <svg viewBox="0 0 20 20" width="20" height="20" fill="none" aria-hidden="true">
-          <path d="M17.5 10.66A7.5 7.5 0 1 1 9.34 2.5a5.83 5.83 0 0 0 8.16 8.16z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+          <path
+            d="M17.5 10.66A7.5 7.5 0 1 1 9.34 2.5a5.83 5.83 0 0 0 8.16 8.16z"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinejoin="round"
+          />
         </svg>
       </button>
       <button

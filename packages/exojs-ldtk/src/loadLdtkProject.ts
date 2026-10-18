@@ -23,12 +23,16 @@ export const loadLdtkProject = async (context: AssetFactoryContext): Promise<Ldt
   const source = context.source;
   const data = validateLdtkData(await context.dependencies.load(Asset.type('json', source)), source);
 
-  const tilesetEntries = await Promise.all(data.defs.tilesets.map(async def => [def.uid, await loadLdtkTileset(def, source, context)] as const));
+  const tilesetEntries = await Promise.all(
+    data.defs.tilesets.map(async def => [def.uid, await loadLdtkTileset(def, source, context)] as const),
+  );
 
   const tilesets = new Map<number, TileSet>();
 
   for (const [uid, tileset] of tilesetEntries) {
-    if (tileset !== null) tilesets.set(uid, tileset);
+    if (tileset !== null) {
+      tilesets.set(uid, tileset);
+    }
   }
 
   return new LdtkProject(source, data, tilesets);

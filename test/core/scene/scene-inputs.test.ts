@@ -26,6 +26,7 @@ const createEmptySample = (): ActionSample => ({
  * `values`, to detect its threshold-crossing edges in true order.
  */
 let nextSequence = 1;
+
 const setChannel = (sample: ActionSample, channel: number, value: number): void => {
   sample.values[channel] = value;
   const sequence = nextSequence++;
@@ -86,6 +87,7 @@ const createAppStub = (): AppStubResult => {
         const b = makeStubBinding();
         b.onStart.add(callback);
         bindings.push(b);
+
         return b as unknown as InputBinding;
       }),
       onActive: vi.fn(() => makeStubBinding() as unknown as InputBinding),
@@ -122,7 +124,7 @@ describe('SceneInputs construction', () => {
       () => false,
     );
 
-    inputs.onTrigger(Keyboard.Space, () => undefined);
+    inputs.onTrigger(Keyboard.Space, () => {});
 
     expect(app.input.onStart).toHaveBeenCalledTimes(1);
     expect(app.input.onActive).not.toHaveBeenCalled();
@@ -372,8 +374,8 @@ describe('SceneInputs — destroy()', () => {
       () => false,
     );
 
-    inputs.onStart(Keyboard.Space, () => undefined);
-    inputs.onTrigger(Keyboard.Space, () => undefined);
+    inputs.onStart(Keyboard.Space, () => {});
+    inputs.onTrigger(Keyboard.Space, () => {});
 
     inputs.destroy();
 
@@ -383,7 +385,12 @@ describe('SceneInputs — destroy()', () => {
 });
 
 describe('SceneInputs action maps', () => {
-  const createMapStub = (): { app: Application; frame: (sample: ActionSample) => void; resyncSample: ActionSample; inputs: SceneInputs } => {
+  const createMapStub = (): {
+    app: Application;
+    frame: (sample: ActionSample) => void;
+    resyncSample: ActionSample;
+    inputs: SceneInputs;
+  } => {
     const hosts = new Set<ActionScopeHost>();
     // The sample `SceneInputs.resume` re-seeds its maps from - zeroed by
     // default, so a test that only cares about registration need not know

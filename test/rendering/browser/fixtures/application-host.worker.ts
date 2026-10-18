@@ -52,7 +52,9 @@ const red = (edge: number): OffscreenCanvas => {
   const canvas = new OffscreenCanvas(edge, edge);
   const context = canvas.getContext('2d');
 
-  if (context === null) throw new Error('No 2D context in this worker.');
+  if (context === null) {
+    throw new Error('No 2D context in this worker.');
+  }
 
   context.fillStyle = '#ff0000';
   context.fillRect(0, 0, edge, edge);

@@ -1,4 +1,14 @@
-import { Application, BlurFilter, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Seconds, ShaderFilter } from '@codexo/exojs';
+import {
+  Application,
+  BlurFilter,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  ShaderFilter,
+} from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Threshold pass: render solid cyan where the (blurred) red field is dense
@@ -24,7 +34,7 @@ const wgsl = `@group(0) @binding(1) var uTexture: texture_2d<f32>;
 
 class MetaballsScene extends Scene {
   private balls!: Graphics;
-  private points!: { a: number; r: number }[];
+  private points!: Array<{ a: number; r: number }>;
   private blur!: BlurFilter;
   private threshold!: ShaderFilter;
   private handle!: Graphics;
@@ -86,7 +96,11 @@ class MetaballsScene extends Scene {
   private setOrder(order: 'field' | 'soft' | 'raw'): void {
     this.balls.filters = order === 'field' ? [this.blur, this.threshold] : order === 'soft' ? [this.threshold, this.blur] : [];
     this.hud?.setStatus(
-      order === 'field' ? 'Blur → Threshold: merged shapes' : order === 'soft' ? 'Threshold → Blur: soft circles' : 'No filters: source circles',
+      order === 'field'
+        ? 'Blur → Threshold: merged shapes'
+        : order === 'soft'
+          ? 'Threshold → Blur: soft circles'
+          : 'No filters: source circles',
     );
   }
 
@@ -105,6 +119,7 @@ class MetaballsScene extends Scene {
     for (const point of this.points) {
       this.balls.drawCircle(width / 2 + Math.cos(point.a) * point.r * 1.6, height / 2 + Math.sin(point.a * 1.4) * point.r * 0.8, 44);
     }
+
     this.balls.drawCircle(this.dragPoint.x, this.dragPoint.y, 44);
 
     this.handle.clear();

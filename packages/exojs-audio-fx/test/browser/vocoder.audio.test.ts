@@ -45,6 +45,7 @@ const renderVocoder = async (opts: VocoderRenderOptions): Promise<Float32Array> 
   modulator.start();
 
   const rendered = await ctx.startRendering();
+
   return rendered.getChannelData(0).slice();
 };
 
@@ -52,10 +53,12 @@ const magnitudeAt = (buf: Float32Array, freq: number): number => {
   let re = 0;
   let im = 0;
   const omega = (2 * Math.PI * freq) / SAMPLE_RATE;
+
   for (let i = 0; i < buf.length; i++) {
     re += buf[i] * Math.cos(omega * i);
     im -= buf[i] * Math.sin(omega * i);
   }
+
   return Math.sqrt(re * re + im * im) / buf.length;
 };
 
@@ -69,14 +72,14 @@ describe('Vocoder worklet — real Web Audio', () => {
     });
     // after 2 s the band envelopes have converged; -20 dBFS is the floor below
     // which the vocoder would be effectively inaudible.
-    expect(rms(tail(out, 2.0))).toBeGreaterThan(0.05);
+    expect(rms(tail(out, 2))).toBeGreaterThan(0.05);
   });
 
   it('spectral envelope follows the modulator formant', async () => {
     // Sawtooth at 110 Hz has harmonics at 660 and 2200 Hz; a 660 Hz modulator
     // should boost the 660 Hz region relative to a 2200 Hz modulator.
-    const low = tail(await renderVocoder({ carrierType: 'sawtooth', carrierFreq: 110, modFreq: 660, durationSeconds: 3 }), 2.0);
-    const high = tail(await renderVocoder({ carrierType: 'sawtooth', carrierFreq: 110, modFreq: 2200, durationSeconds: 3 }), 2.0);
+    const low = tail(await renderVocoder({ carrierType: 'sawtooth', carrierFreq: 110, modFreq: 660, durationSeconds: 3 }), 2);
+    const high = tail(await renderVocoder({ carrierType: 'sawtooth', carrierFreq: 110, modFreq: 2200, durationSeconds: 3 }), 2);
 
     const lowRatio = magnitudeAt(low, 660) / (magnitudeAt(low, 2200) + 1e-9);
     const highRatio = magnitudeAt(high, 660) / (magnitudeAt(high, 2200) + 1e-9);

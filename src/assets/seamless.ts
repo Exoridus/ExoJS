@@ -92,9 +92,12 @@ export const textureSeamlessAdapter: SeamlessAdapter<Texture> = {
     handle._copyPayloadFrom(donor);
 
     if (expected !== undefined && (handle.width !== expected.width || handle.height !== expected.height)) {
-      logger.warn(`Texture pre-size (${expected.width}×${expected.height}) does not match the loaded payload (${handle.width}×${handle.height}).`, {
-        source: 'Loader',
-      });
+      logger.warn(
+        `Texture pre-size (${expected.width}×${expected.height}) does not match the loaded payload (${handle.width}×${handle.height}).`,
+        {
+          source: 'Loader',
+        },
+      );
     }
 
     handle._loadState.settle(handle);
@@ -136,6 +139,7 @@ export const soundSeamlessAdapter: SeamlessAdapter<Sound> = {
   createPlaceholder(): Sound {
     const handle = new Sound(null);
     handle._loadState.begin();
+
     return handle;
   },
 
@@ -147,6 +151,7 @@ export const soundSeamlessAdapter: SeamlessAdapter<Sound> = {
     if (donor.audioBuffer === null) {
       throw new Error('soundSeamlessAdapter.fill: donor has no decoded buffer.');
     }
+
     handle._setBuffer(donor.audioBuffer);
     handle._loadState.settle(handle);
   },

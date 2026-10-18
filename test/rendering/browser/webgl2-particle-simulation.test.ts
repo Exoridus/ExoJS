@@ -28,7 +28,13 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
-import { AlphaFadeOverLifetime, Curve, particlesExtension, ParticleSystem, QuadParticles } from '../../../packages/exojs-particles/src/index';
+import {
+  AlphaFadeOverLifetime,
+  Curve,
+  particlesExtension,
+  ParticleSystem,
+  QuadParticles,
+} from '../../../packages/exojs-particles/src/index';
 import { wireCoreRenderers } from './_coreRenderers';
 
 const canvasSize = 64;
@@ -130,6 +136,7 @@ const tallyTransformFeedback = (backend: WebGl2Backend, body: () => void): Simul
     const original = target[name];
 
     originals.push([name, original]);
+
     target[name] = function counted(this: unknown, ...args: unknown[]): unknown {
       tally[field]++;
 

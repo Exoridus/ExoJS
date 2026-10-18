@@ -40,8 +40,8 @@ if (typeof MouseEvent !== 'undefined' && typeof globalThis.PointerEvent === 'und
 
 const mockContext2d = {
   fillStyle: '',
-  fillRect: () => undefined,
-  drawImage: () => undefined,
+  fillRect: () => {},
+  drawImage: () => {},
   // The WebGPU backend reads canvas-sourced textures back through
   // `getImageData` (see its Safari canvas-upload workaround), so a stub without
   // it turns every such upload into a TypeError rather than a test failure that
@@ -165,19 +165,20 @@ class MockAudioContext {
         arr.fill(-60);
       }),
     };
+
     return node as unknown as AnalyserNode;
   }
 
   public createGain(): GainNode {
     return {
-      connect: () => undefined,
-      disconnect: () => undefined,
+      connect: () => {},
+      disconnect: () => {},
       context: this,
       gain: {
-        setTargetAtTime: () => undefined,
-        cancelScheduledValues: () => undefined,
-        setValueAtTime: () => undefined,
-        linearRampToValueAtTime: () => undefined,
+        setTargetAtTime: () => {},
+        cancelScheduledValues: () => {},
+        setValueAtTime: () => {},
+        linearRampToValueAtTime: () => {},
         value: 1,
       },
     } as unknown as GainNode;
@@ -185,10 +186,10 @@ class MockAudioContext {
 
   public createStereoPanner(): StereoPannerNode {
     return {
-      connect: () => undefined,
-      disconnect: () => undefined,
+      connect: () => {},
+      disconnect: () => {},
       pan: {
-        setTargetAtTime: () => undefined,
+        setTargetAtTime: () => {},
         value: 0,
       },
     } as unknown as StereoPannerNode;
@@ -212,8 +213,8 @@ class MockAudioContext {
 
   public createMediaElementSource(): MediaElementAudioSourceNode {
     return {
-      connect: () => undefined,
-      disconnect: () => undefined,
+      connect: () => {},
+      disconnect: () => {},
     } as unknown as MediaElementAudioSourceNode;
   }
 
@@ -226,10 +227,10 @@ class MockAudioContext {
 
   public createBufferSource(): AudioBufferSourceNode {
     return {
-      connect: () => undefined,
-      disconnect: () => undefined,
-      start: () => undefined,
-      stop: () => undefined,
+      connect: () => {},
+      disconnect: () => {},
+      start: () => {},
+      stop: () => {},
       playbackRate: makeMockAudioParam(),
       detune: makeMockAudioParam(),
       loop: false,
@@ -242,10 +243,10 @@ class MockAudioContext {
 
   public createOscillator(): OscillatorNode {
     return {
-      connect: () => undefined,
-      disconnect: () => undefined,
-      start: () => undefined,
-      stop: () => undefined,
+      connect: () => {},
+      disconnect: () => {},
+      start: () => {},
+      stop: () => {},
       type: 'sine' as OscillatorType,
       frequency: makeMockAudioParam(),
       detune: makeMockAudioParam(),
@@ -255,28 +256,28 @@ class MockAudioContext {
 
   public createBiquadFilter(): BiquadFilterNode {
     return {
-      connect: () => undefined,
-      disconnect: () => undefined,
+      connect: () => {},
+      disconnect: () => {},
       type: 'lowpass' as BiquadFilterType,
       context: this,
       frequency: {
-        setValueAtTime: () => undefined,
-        setTargetAtTime: () => undefined,
+        setValueAtTime: () => {},
+        setTargetAtTime: () => {},
         value: 350,
       },
       Q: {
-        setValueAtTime: () => undefined,
-        setTargetAtTime: () => undefined,
+        setValueAtTime: () => {},
+        setTargetAtTime: () => {},
         value: 1,
       },
       gain: {
-        setValueAtTime: () => undefined,
-        setTargetAtTime: () => undefined,
+        setValueAtTime: () => {},
+        setTargetAtTime: () => {},
         value: 0,
       },
       detune: {
-        setValueAtTime: () => undefined,
-        setTargetAtTime: () => undefined,
+        setValueAtTime: () => {},
+        setTargetAtTime: () => {},
         value: 0,
       },
     } as unknown as BiquadFilterNode;
@@ -284,32 +285,32 @@ class MockAudioContext {
 
   public createDynamicsCompressor(): DynamicsCompressorNode {
     return {
-      connect: () => undefined,
-      disconnect: () => undefined,
+      connect: () => {},
+      disconnect: () => {},
       context: this,
       threshold: {
-        setValueAtTime: () => undefined,
-        setTargetAtTime: () => undefined,
+        setValueAtTime: () => {},
+        setTargetAtTime: () => {},
         value: -24,
       },
       knee: {
-        setValueAtTime: () => undefined,
-        setTargetAtTime: () => undefined,
+        setValueAtTime: () => {},
+        setTargetAtTime: () => {},
         value: 30,
       },
       ratio: {
-        setValueAtTime: () => undefined,
-        setTargetAtTime: () => undefined,
+        setValueAtTime: () => {},
+        setTargetAtTime: () => {},
         value: 12,
       },
       attack: {
-        setValueAtTime: () => undefined,
-        setTargetAtTime: () => undefined,
+        setValueAtTime: () => {},
+        setTargetAtTime: () => {},
         value: 0.003,
       },
       release: {
-        setValueAtTime: () => undefined,
-        setTargetAtTime: () => undefined,
+        setValueAtTime: () => {},
+        setTargetAtTime: () => {},
         value: 0.25,
       },
       reduction: 0,
@@ -324,11 +325,12 @@ class MockAudioContext {
       setValueAtTime(v: number) {
         this.value = v;
       },
-      setTargetAtTime: () => undefined,
+      setTargetAtTime: () => {},
     };
+
     return {
-      connect: () => undefined,
-      disconnect: () => undefined,
+      connect: () => {},
+      disconnect: () => {},
       context: this,
       delayTime,
     } as unknown as DelayNode;
@@ -336,8 +338,8 @@ class MockAudioContext {
 
   public createWaveShaper(): WaveShaperNode {
     return {
-      connect: () => undefined,
-      disconnect: () => undefined,
+      connect: () => {},
+      disconnect: () => {},
       context: this,
       curve: null as Float32Array | null,
       oversample: 'none' as OverSampleType,
@@ -346,24 +348,24 @@ class MockAudioContext {
 
   public createChannelMerger(_numberOfInputs?: number): ChannelMergerNode {
     return {
-      connect: () => undefined,
-      disconnect: () => undefined,
+      connect: () => {},
+      disconnect: () => {},
       context: this,
     } as unknown as ChannelMergerNode;
   }
 
   public createChannelSplitter(_numberOfOutputs?: number): ChannelSplitterNode {
     return {
-      connect: () => undefined,
-      disconnect: () => undefined,
+      connect: () => {},
+      disconnect: () => {},
       context: this,
     } as unknown as ChannelSplitterNode;
   }
 
   public createConvolver(): ConvolverNode {
     return {
-      connect: () => undefined,
-      disconnect: () => undefined,
+      connect: () => {},
+      disconnect: () => {},
       context: this,
       buffer: null,
       normalize: true,
@@ -372,9 +374,11 @@ class MockAudioContext {
 
   public createBuffer(numberOfChannels: number, length: number, _sampleRate: number): AudioBuffer {
     const channels: Float32Array[] = [];
+
     for (let i = 0; i < numberOfChannels; i++) {
       channels.push(new Float32Array(length));
     }
+
     return {
       numberOfChannels,
       length,
@@ -450,9 +454,11 @@ Object.defineProperty(globalThis, 'AudioWorkletNode', {
       this.disconnect = vi.fn();
       this.context = context;
       this.parameters = new Map<string, AudioParam>();
+
       for (const name of WORKLET_PARAM_NAMES) {
         this.parameters.set(name, makeMockAudioParam());
       }
+
       this.port = {
         postMessage: vi.fn(),
         onmessage: null,
@@ -500,6 +506,7 @@ if (typeof URL.createObjectURL === 'undefined') {
     value: vi.fn().mockReturnValue('blob:mock-url'),
   });
 }
+
 if (typeof URL.revokeObjectURL === 'undefined') {
   Object.defineProperty(URL, 'revokeObjectURL', {
     configurable: true,

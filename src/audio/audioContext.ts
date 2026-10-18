@@ -289,4 +289,5 @@ export const getOfflineAudioContext = (): OfflineAudioContext => getOrCreateOffl
  * running (live) context - decoding may fail with a browser-level error rather
  * than an ExoJS-shaped error in those environments.
  */
-export const decodeAudioData = async (arrayBuffer: ArrayBuffer): Promise<AudioBuffer> => getOrCreateOfflineAudioContext().decodeAudioData(arrayBuffer);
+export const decodeAudioData = async (arrayBuffer: ArrayBuffer): Promise<AudioBuffer> =>
+  getOrCreateOfflineAudioContext().decodeAudioData(arrayBuffer);

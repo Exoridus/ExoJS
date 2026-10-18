@@ -1,4 +1,13 @@
-import { Application, Color, DropShadowFilter, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Seconds, Sprite } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  DropShadowFilter,
+  FixedResolutionCanvasSizing,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  Sprite,
+} from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const SHIP = assets.demo.textures.shipA;

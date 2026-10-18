@@ -7,40 +7,34 @@ import { LdtkMap } from '../src/LdtkMap';
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
 /** Build a bare LDtk level record with only the fields LdtkMap reads. */
-const makeLevel = (identifier: string, uid: number): LdtkLevel => {
-  return {
-    identifier,
-    uid,
-    iid: `iid-${uid}`,
-    worldX: 0,
-    worldY: 0,
-    pxWid: 16,
-    pxHei: 16,
-    layerInstances: [],
-  };
-};
+const makeLevel = (identifier: string, uid: number): LdtkLevel => ({
+  identifier,
+  uid,
+  iid: `iid-${uid}`,
+  worldX: 0,
+  worldY: 0,
+  pxWid: 16,
+  pxHei: 16,
+  layerInstances: [],
+});
 
 /** Build LdtkData carrying the given level identifiers (in order). */
-const makeData = (identifiers: readonly string[]): LdtkData => {
-  return {
-    jsonVersion: '1.5.3',
-    defaultGridSize: 16,
-    defs: { tilesets: [], layers: [] },
-    levels: identifiers.map((id, i) => makeLevel(id, i + 1)),
-  };
-};
+const makeData = (identifiers: readonly string[]): LdtkData => ({
+  jsonVersion: '1.5.3',
+  defaultGridSize: 16,
+  defs: { tilesets: [], layers: [] },
+  levels: identifiers.map((id, i) => makeLevel(id, i + 1)),
+});
 
 /** Build a bare LDtk world record carrying the given level identifiers. */
-const makeWorld = (worldIid: string, identifiers: readonly string[], uidStart: number): LdtkWorldData => {
-  return {
-    identifier: worldIid,
-    iid: worldIid,
-    worldGridWidth: 256,
-    worldGridHeight: 256,
-    worldLayout: 'Free',
-    levels: identifiers.map((id, i) => makeLevel(id, uidStart + i)),
-  };
-};
+const makeWorld = (worldIid: string, identifiers: readonly string[], uidStart: number): LdtkWorldData => ({
+  identifier: worldIid,
+  iid: worldIid,
+  worldGridWidth: 256,
+  worldGridHeight: 256,
+  worldLayout: 'Free',
+  levels: identifiers.map((id, i) => makeLevel(id, uidStart + i)),
+});
 
 /**
  * Build multi-world LdtkData: root `levels` stays empty (per the LDtk spec's
@@ -49,10 +43,12 @@ const makeWorld = (worldIid: string, identifiers: readonly string[], uidStart: n
 const makeMultiWorldData = (worlds: ReadonlyMap<string, readonly string[]>): LdtkData => {
   let uidCursor = 1;
   const worldEntries: LdtkWorldData[] = [];
+
   for (const [worldIid, identifiers] of worlds) {
     worldEntries.push(makeWorld(worldIid, identifiers, uidCursor));
     uidCursor += identifiers.length;
   }
+
   return {
     jsonVersion: '1.5.3',
     defaultGridSize: 16,
@@ -67,11 +63,10 @@ const makeMultiWorldData = (worlds: ReadonlyMap<string, readonly string[]>): Ldt
  * `destroy()` on its levels and otherwise stores the references opaquely, so a
  * spy object is sufficient and keeps the unit isolated from TileMap internals.
  */
-const makeFakeTileMap = (): TileMap & { destroy: ReturnType<typeof vi.fn> } => {
-  return { destroy: vi.fn() } as unknown as TileMap & {
+const makeFakeTileMap = (): TileMap & { destroy: ReturnType<typeof vi.fn> } =>
+  ({ destroy: vi.fn() }) as unknown as TileMap & {
     destroy: ReturnType<typeof vi.fn>;
   };
-};
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 

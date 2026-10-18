@@ -6,11 +6,11 @@
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "stable",
-  "memberCount": 5,
+  "memberCount": 8,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 5,
+    "properties": 8,
     "events": 0
   },
   "sections": [
@@ -29,8 +29,33 @@
       "title": "Properties",
       "members": [
         {
+          "name": "hexSideLength",
+          "signature": "hexSideLength?: number",
+          "signatureTokens": [
+            {
+              "text": "hexSideLength",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Hexagonal grids: length in pixels of the straight sides along the stagger axis. Defaults to 0."
+        },
+        {
           "name": "orientation",
-          "signature": "orientation?: \"isometric\" | \"orthogonal\"",
+          "signature": "orientation?: TileOrientation",
           "signatureTokens": [
             {
               "text": "orientation",
@@ -45,21 +70,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"isometric\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"orthogonal\"",
-              "kind": "keyword"
+              "text": "TileOrientation",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Orthogonal is the default. Isometric cells are diamonds with the given pixel dimensions."
+          "description": "Orthogonal is the default."
         },
         {
           "name": "originX",
@@ -110,6 +127,72 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "staggerAxis",
+          "signature": "staggerAxis?: \"x\" | \"y\"",
+          "signatureTokens": [
+            {
+              "text": "staggerAxis",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"x\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"y\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Staggered and hexagonal grids: the axis whose every other row ('y') or column ('x') is shifted. Defaults to 'y'."
+        },
+        {
+          "name": "staggerIndex",
+          "signature": "staggerIndex?: \"even\" | \"odd\"",
+          "signatureTokens": [
+            {
+              "text": "staggerIndex",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"even\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"odd\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Staggered and hexagonal grids: whether the odd or the even rows (or columns) are shifted. Defaults to 'odd'."
         },
         {
           "name": "tileHeight",

@@ -12,6 +12,7 @@ const createCoreLoader = (options?: LoaderOptions): Loader => {
   const loader = new Loader(options);
   const owner = loader.createScope({ name: 'owner' });
   materializeAssetTypes(loader, coreAssetTypes);
+
   return loader;
 };
 

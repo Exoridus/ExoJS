@@ -86,7 +86,9 @@ export interface AggregatedPhysics {
 const EXAMPLE_LIMIT = 3;
 
 const examples = (values: readonly string[]): string =>
-  values.length <= EXAMPLE_LIMIT ? values.join(', ') : `${values.slice(0, EXAMPLE_LIMIT).join(', ')}, and ${String(values.length - EXAMPLE_LIMIT)} more`;
+  values.length <= EXAMPLE_LIMIT
+    ? values.join(', ')
+    : `${values.slice(0, EXAMPLE_LIMIT).join(', ')}, and ${String(values.length - EXAMPLE_LIMIT)} more`;
 
 /**
  * Reject the first pair of runs that describe different measurements.
@@ -198,7 +200,9 @@ const renderingMachine = (stamps: readonly Provenance[]): string => {
   const gpu = stamps.map(stamp => normalizeGpuAdapter(stamp.adapter)).find(isIdentifyingPart) ?? 'unidentified-gpu';
   const first = stamps[0];
 
-  return [gpu, platformIdentity(first?.os ?? '', first?.platformVersion, first?.prerelease), first?.browser ?? 'unknown-browser'].join(' / ');
+  return [gpu, platformIdentity(first?.os ?? '', first?.platformVersion, first?.prerelease), first?.browser ?? 'unknown-browser'].join(
+    ' / ',
+  );
 };
 
 /**
@@ -208,9 +212,12 @@ const renderingMachine = (stamps: readonly Provenance[]): string => {
  * pooled into one.
  */
 const physicsMachine = (stamp: PhysicsProvenance): string =>
-  [normalizeCpuModel(stamp.host.cpu), platformIdentity(stamp.host.os, stamp.host.platformVersion, stamp.prerelease), stamp.host.arch, stamp.browser].join(
-    ' / ',
-  );
+  [
+    normalizeCpuModel(stamp.host.cpu),
+    platformIdentity(stamp.host.os, stamp.host.platformVersion, stamp.prerelease),
+    stamp.host.arch,
+    stamp.browser,
+  ].join(' / ');
 
 /** Reject runs measured against different trees: their timings describe different code. */
 const requireSameEngineVersion = (perRun: ReadonlyArray<readonly string[]>, domain: string): void => {
@@ -422,7 +429,8 @@ const renderingCellKey = (spec: ReportData['results'][number]['spec']): string =
 const physicsCellKey = (spec: PhysicsReportData['results'][number]['spec']): string =>
   `${spec.engine}|${spec.config}|${spec.archetype}|${String(spec.bodyCount)}`;
 
-const armKeys = (libraries: readonly LibraryProvenance[]): readonly string[] => libraries.map(library => `${library.name}@${library.version}`);
+const armKeys = (libraries: readonly LibraryProvenance[]): readonly string[] =>
+  libraries.map(library => `${library.name}@${library.version}`);
 
 /**
  * Pool several rendering runs into the comparison a profile publishes.
@@ -454,7 +462,9 @@ export const aggregateRenderingRuns = (runs: readonly ReportData[]): AggregatedR
   );
 
   const perRun = runs.map(run => buildRenderingComparison(run.results));
-  const backends = [...groupBy(perRun.flat(), block => block.backend).values()].map(group => aggregateBackend(group, runs.length, 'rendering'));
+  const backends = [...groupBy(perRun.flat(), block => block.backend).values()].map(group =>
+    aggregateBackend(group, runs.length, 'rendering'),
+  );
 
   return { runs: runs.map(run => run.provenance), libraries: runs[0]!.libraries, backends };
 };

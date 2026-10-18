@@ -9,7 +9,7 @@ import {
   type Seconds,
   Sprite,
   Text,
-  Texture,
+  type Texture,
 } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
@@ -30,6 +30,7 @@ class RenderToTextureScene extends Scene {
   override init(): void {
     this.texture = this.loader.get(assets.demo.textures.shipA);
     this.source = new Container();
+
     for (let i = 0; i < 25; i++) {
       const ship = new Sprite(this.texture)
         .setAnchor(0.5)
@@ -38,6 +39,7 @@ class RenderToTextureScene extends Scene {
       this.source.addChild(ship);
       this.ships.push(ship);
     }
+
     this.liveTarget = new RenderTexture(320, 240);
     this.live = new Sprite(this.liveTarget).setPosition(170, 220);
     this.target = new RenderTexture(320, 240);
@@ -59,6 +61,7 @@ class RenderToTextureScene extends Scene {
 
   override update(delta: Seconds): void {
     this.time += delta;
+
     for (let i = 0; i < this.ships.length; i++) {
       this.ships[i].setRotation(this.time * (20 + (i % 5) * 12));
     }
@@ -66,6 +69,7 @@ class RenderToTextureScene extends Scene {
 
   override draw(context: RenderingContext): void {
     context.renderTo(this.source, { target: this.liveTarget, clear: Color.black });
+
     if (this.captureRequested && this.texture.ready) {
       context.renderTo(this.source, { target: this.target, clear: Color.black });
       this.captureRequested = false;
@@ -74,8 +78,10 @@ class RenderToTextureScene extends Scene {
     } else if (this.texture.state === 'failed') {
       this.hud.setStatus('The source texture failed to load.');
     }
+
     context.render(this.live);
     context.render(this.snapshot);
+
     for (const label of this.labels) {
       context.render(label);
     }

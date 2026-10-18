@@ -28,8 +28,12 @@ class TweenFromArrayScene extends Scene {
     let prev = null;
     for (let i = 1; i < this.waypoints.length; i++) {
       const next = app.tweens.create(this.sprite.position).to(this.waypoints[i], 0.35).easing(Ease.sineInOut);
-      if (first === null) first = next;
-      if (prev !== null) prev.chain(next);
+      if (first === null) {
+        first = next;
+      }
+      if (prev !== null) {
+        prev.chain(next);
+      }
       prev = next;
     }
     prev.onComplete(() => {

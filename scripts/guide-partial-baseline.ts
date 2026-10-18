@@ -51,13 +51,9 @@ export interface BaselineDiff {
 }
 
 /** True when the diff is clean and the gate should pass. */
-export const isBaselineClean = (diff: BaselineDiff): boolean => {
-  return diff.regressions.length === 0 && diff.improvements.length === 0;
-};
+export const isBaselineClean = (diff: BaselineDiff): boolean => diff.regressions.length === 0 && diff.improvements.length === 0;
 
-const byFile = (a: BaselineDelta, b: BaselineDelta): number => {
-  return a.file.localeCompare(b.file);
-};
+const byFile = (a: BaselineDelta, b: BaselineDelta): number => a.file.localeCompare(b.file);
 
 /**
  * Compares the counts observed in this run against the recorded budget.
@@ -82,7 +78,9 @@ export const diffPartialBaseline = (
   const files = new Set<string>([...Object.keys(baseline.files), ...actual.keys()]);
 
   for (const file of files) {
-    if (!inScope(file)) continue;
+    if (!inScope(file)) {
+      continue;
+    }
 
     const recorded = baseline.files[file] ?? 0;
     const observed = actual.get(file) ?? 0;
@@ -110,15 +108,22 @@ export const mergePartialBaseline = (
   const merged: Record<string, number> = {};
 
   for (const [file, count] of Object.entries(baseline.files)) {
-    if (!inScope(file) && count > 0) merged[file] = count;
+    if (!inScope(file) && count > 0) {
+      merged[file] = count;
+    }
   }
 
   for (const [file, count] of actual) {
-    if (inScope(file) && count > 0) merged[file] = count;
+    if (inScope(file) && count > 0) {
+      merged[file] = count;
+    }
   }
 
   const files: Record<string, number> = {};
-  for (const file of Object.keys(merged).sort()) files[file] = merged[file];
+
+  for (const file of Object.keys(merged).sort()) {
+    files[file] = merged[file];
+  }
 
   return { note: baseline.note, files };
 };

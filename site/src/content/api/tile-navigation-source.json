@@ -1,0 +1,466 @@
+{
+  "title": "TileNavigationSource",
+  "description": "Tile data a TileNavigationSpace can navigate: a `TileLayer` from `@codexo/exojs-tilemap` matches it as it is, and so does any other grid that can answer what sits in a cell and when anything changed. Cell coordinates are integers; navigation coordinates are the logical space a cell `(x, y)` covers `[x, x + 1) * logicalTileWidth` of, shifted by logicalOffset - the same space tilemap physics colliders live in.",
+  "symbol": "TileNavigationSource",
+  "kind": "interface",
+  "subsystem": "pathfinding",
+  "importPath": "@codexo/exojs-pathfinding",
+  "tier": "stable",
+  "memberCount": 12,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 10,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Tile data a TileNavigationSpace can navigate: a `TileLayer` from `@codexo/exojs-tilemap` matches it as it is, and so does any other grid that can answer what sits in a cell and when anything changed.",
+        "Cell coordinates are integers; navigation coordinates are the logical space a cell `(x, y)` covers `[x, x + 1) * logicalTileWidth` of, shifted by logicalOffset - the same space tilemap physics colliders live in."
+      ],
+      "importLine": "import { TileNavigationSource } from '@codexo/exojs-pathfinding'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "getChunk",
+          "signature": "getChunk?(cx: number, cy: number): TileNavigationChunk | undefined",
+          "signatureTokens": [
+            {
+              "text": "getChunk",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "cx",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "cy",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileNavigationChunk",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "cx",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "cy",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "TileNavigationChunk | undefined",
+          "description": "The chunk at chunk coordinates, or undefined while it is not loaded."
+        },
+        {
+          "name": "getTileAt",
+          "signature": "getTileAt(x: number, y: number): Tile | null",
+          "signatureTokens": [
+            {
+              "text": "getTileAt",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Tile",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Tile | null",
+          "description": "The tile in a cell, or null for an empty or unloaded cell."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "chunkHeight",
+          "signature": "chunkHeight?: number",
+          "signatureTokens": [
+            {
+              "text": "chunkHeight",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "chunkWidth",
+          "signature": "chunkWidth?: number",
+          "signatureTokens": [
+            {
+              "text": "chunkWidth",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Chunk width in cells. With chunkHeight and getChunk, enables per-chunk updates."
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed?: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When true, the source can no longer be read."
+        },
+        {
+          "name": "height",
+          "signature": "height?: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Cell rows, or undefined for an unbounded source."
+        },
+        {
+          "name": "logicalOffset",
+          "signature": "logicalOffset?: Readonly<PointLike>",
+          "signatureTokens": [
+            {
+              "text": "logicalOffset",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Logical position of cell (0, 0)'s corner. Read once, at construction. Defaults to the origin."
+        },
+        {
+          "name": "projection",
+          "signature": "projection?: TileNavigationProjection",
+          "signatureTokens": [
+            {
+              "text": "projection",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileNavigationProjection",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Grid geometry. Without one the source is an orthogonal grid of tileWidth by tileHeight."
+        },
+        {
+          "name": "revision",
+          "signature": "revision: number",
+          "signatureTokens": [
+            {
+              "text": "revision",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Must increment whenever any cell changes, including chunks being loaded or evicted."
+        },
+        {
+          "name": "tileHeight",
+          "signature": "tileHeight: number",
+          "signatureTokens": [
+            {
+              "text": "tileHeight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Cell height; the logical cell size when there is no projection."
+        },
+        {
+          "name": "tileWidth",
+          "signature": "tileWidth: number",
+          "signatureTokens": [
+            {
+              "text": "tileWidth",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Cell width; the logical cell size when there is no projection."
+        },
+        {
+          "name": "width",
+          "signature": "width?: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Cell columns, or undefined for an unbounded source."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-pathfinding/src/tilemap/TileNavigationSpace.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/tilemap/TileNavigationSpace.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-pathfinding/src/tilemap/TileNavigationSpace.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/tilemap/TileNavigationSpace.ts"
+}

@@ -13,8 +13,13 @@ const repoRoot = '/repo';
 const respondNewPackage =
   (packed = 'create-exo-app-0.1.0.tgz') =>
   (invocation: CommandInvocation): CommandResult => {
-    if (invocation.command === 'npm' && invocation.args[0] === 'view') return fail('E404 Not found');
-    if (invocation.command === 'npm' && invocation.args[0] === 'pack') return ok(`npm notice\n${packed}\n`);
+    if (invocation.command === 'npm' && invocation.args[0] === 'view') {
+      return fail('E404 Not found');
+    }
+
+    if (invocation.command === 'npm' && invocation.args[0] === 'pack') {
+      return ok(`npm notice\n${packed}\n`);
+    }
 
     return ok();
   };
@@ -102,8 +107,13 @@ describe('bootstrapPublish', () => {
 
   it('stops at the failing step and publishes nothing', () => {
     const buildFails = createRecordingRunner(invocation => {
-      if (invocation.command === 'npm' && invocation.args[0] === 'view') return fail('E404');
-      if (invocation.command === 'pnpm') return fail('tsc exited 2');
+      if (invocation.command === 'npm' && invocation.args[0] === 'view') {
+        return fail('E404');
+      }
+
+      if (invocation.command === 'pnpm') {
+        return fail('tsc exited 2');
+      }
 
       return ok();
     });
@@ -117,8 +127,13 @@ describe('bootstrapPublish', () => {
 
   it('reports a pack that produced no tarball rather than publishing something unnamed', () => {
     const runner = createRecordingRunner(invocation => {
-      if (invocation.command === 'npm' && invocation.args[0] === 'view') return fail('E404');
-      if (invocation.command === 'npm' && invocation.args[0] === 'pack') return ok('npm notice nothing here\n');
+      if (invocation.command === 'npm' && invocation.args[0] === 'view') {
+        return fail('E404');
+      }
+
+      if (invocation.command === 'npm' && invocation.args[0] === 'pack') {
+        return ok('npm notice nothing here\n');
+      }
 
       return ok();
     });
@@ -166,14 +181,18 @@ describe('bootstrapPublish - release mode, for the packages off the lockstep lin
 
         // `npm view <name> name` echoes the full name; the registry check
         // compares it exactly.
-        if (!query.includes('@', 1)) return ok('@codexo/eslint-plugin-exojs\n');
+        if (!query.includes('@', 1)) {
+          return ok('@codexo/eslint-plugin-exojs\n');
+        }
 
         const version = query.split('@').at(-1) ?? '';
 
         return published.includes(version) ? ok(`${version}\n`) : fail('E404');
       }
 
-      if (invocation.command === 'npm' && invocation.args[0] === 'pack') return ok('codexo-eslint-plugin-exojs-0.1.0.tgz\n');
+      if (invocation.command === 'npm' && invocation.args[0] === 'pack') {
+        return ok('codexo-eslint-plugin-exojs-0.1.0.tgz\n');
+      }
 
       return ok();
     };
