@@ -1,4 +1,4 @@
-import { Container, Drawable, type SceneNode } from '@codexo/exojs';
+import { Container, Drawable, type SceneNode, Time } from '@codexo/exojs';
 import { describe, expect, it } from 'vitest';
 
 import { createAabb, expandAabb } from '../src/Aabb';
@@ -752,7 +752,7 @@ describe('PhysicsWorld.fixedUpdate()', () => {
     );
 
     worldA.step(1 / 60);
-    worldB.fixedUpdate({ seconds: 1 / 60 } as never);
+    worldB.fixedUpdate(Time.seconds(1 / 60));
 
     expect(bodyB.y).toBeCloseTo(bodyA.y, 10);
     expect(bodyB.linearVelocityY).toBeCloseTo(bodyA.linearVelocityY, 10);
@@ -771,7 +771,7 @@ describe('PhysicsWorld.fixedUpdate()', () => {
 
     for (let i = 0; i < 5; i++) {
       worldA.step(1 / 60);
-      worldB.fixedUpdate({ seconds: 1 / 60 } as never);
+      worldB.fixedUpdate(Time.seconds(1 / 60));
     }
 
     expect(bodyB.y).toBeCloseTo(bodyA.y, 8);
@@ -794,7 +794,7 @@ describe('PhysicsWorld.fixedUpdate()', () => {
     void box;
 
     for (let i = 0; i < 60; i++) {
-      world.fixedUpdate({ seconds: 1 / 60 } as never);
+      world.fixedUpdate(Time.seconds(1 / 60));
     }
 
     expect(events).toContain('start');

@@ -159,7 +159,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fixed timestep in seconds. Default 1 / 60."
+          "description": "Fixed timestep in seconds. Default 1 / 60. A world registered as a system steps once per host fixed step and must use the host's duration - pass app.fixedTimeStep. A mismatch throws on the first step; see PhysicsWorld.fixedUpdate."
         },
         {
           "name": "frameAlphaSource",
@@ -192,7 +192,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Where interpolated bindings read their blend factor, in [0, 1). Defaults to this world's own accumulator - correct when the world is driven with PhysicsWorld.step, which is what advances it. A world driven as a System goes through PhysicsWorld.fixedUpdate and bypasses that accumulator entirely, so the host owns the fraction: pass () => app.frameAlpha."
+          "description": "Where interpolated bindings read their blend factor, in [0, 1). Defaults to this world's own accumulator - correct when the world is driven with PhysicsWorld.step, which is what advances it. A world registered as a system is stepped by its host and has no fraction of its own: pass the host's, () => app.frameAlpha. Without one, a hosted world presents the latest step unsmoothed and development builds warn."
         },
         {
           "name": "gravity",
@@ -254,7 +254,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Place bound nodes between the last two fixed states instead of snapping them to the latest one, which smooths motion when the fixed rate is below the frame rate. Default false. The blend factor comes from frameAlphaSource; a world driven as a System has to supply one."
+          "description": "Place bound nodes between the last two fixed states instead of snapping them to the latest one, which smooths motion when the fixed rate is below the frame rate. Default false. The blend factor comes from frameAlphaSource; a world registered as a system has to supply one."
         },
         {
           "name": "maxSubSteps",

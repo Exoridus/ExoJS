@@ -278,3 +278,52 @@ describe('SystemRegistry._halt', () => {
     expect(registry.size).toBe(2);
   });
 });
+
+describe('SystemRegistry - one registry per system', () => {
+  const warnings = (run: () => void): string[] => {
+    const reported: string[] = [];
+    const removeSink = logger.addSink(entry => {
+      if (entry.severity === LogSeverity.Warning) {
+        reported.push(entry.message);
+      }
+    });
+
+    try {
+      run();
+    } finally {
+      removeSink();
+    }
+
+    return reported;
+  };
+
+  test('warns when a system enters a second registry that both run', () => {
+    const first = new SystemRegistry();
+    const second = new SystemRegistry();
+    const system = makeSystem([], 'shared');
+
+    const reported = warnings(() => {
+      first.add(system);
+      second.add(system);
+    });
+
+    expect(reported).toHaveLength(1);
+    expect(reported[0]).toMatch(/another system registry/);
+  });
+
+  test('stays quiet when a system is moved: removed from one registry, then added to another', () => {
+    const first = new SystemRegistry();
+    const second = new SystemRegistry();
+    const system = makeSystem([], 'moved');
+
+    const reported = warnings(() => {
+      first.add(system);
+      first._beginFrame();
+      first.remove(system);
+      second.add(system);
+      first._endFrame();
+    });
+
+    expect(reported).toEqual([]);
+  });
+});
