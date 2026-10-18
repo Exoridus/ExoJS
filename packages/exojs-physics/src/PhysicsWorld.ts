@@ -844,10 +844,13 @@ export class PhysicsWorld implements BodyOwner {
 
       for (let step = 0; step < steps; step++) {
         this._stepOnce(h, subStepCount, gravityX, gravityY, contactHertz, dampingRatio, hasJoints, hasBullets);
+
+        // Commands span this entire advance. Its final callbacks issue commands
+        // for the next advance, after the current commands have expired.
+        this._stepEpoch += step === steps - 1 ? 1 : 0;
+
         this._dispatchEvents();
       }
-
-      this._stepEpoch++;
     }
 
     // `step` is called once per rendered frame, so presenting here is already
@@ -885,8 +888,8 @@ export class PhysicsWorld implements BodyOwner {
       this._hasBullets(),
     );
 
-    this._dispatchEvents();
     this._stepEpoch++;
+    this._dispatchEvents();
 
     // Interpolated presentation is a per-FRAME job and moves to `update`; this
     // phase can run several times per frame, and the blend factor is only final

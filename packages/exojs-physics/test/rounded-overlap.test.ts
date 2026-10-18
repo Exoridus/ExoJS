@@ -30,6 +30,21 @@ const upright = (): CapsuleShape => new CapsuleShape(0, -12, 0, 12, 8);
 describe('rounded overlap near corners', () => {
   const manifold = new Manifold();
 
+  it.each(['capsule', 'segment'] as const)('decides collinear capsule/%s overlap by the gap between spine endpoints', kind => {
+    const world = new PhysicsWorld();
+    const a = colliderAt(world, new CapsuleShape(-10, 0, 10, 0, 2), { x: 0, y: 0 });
+    const shape = kind === 'capsule' ? new CapsuleShape(-10, 0, 10, 0, 3) : new SegmentShape(-10, 0, 10, 0);
+    const b = colliderAt(world, shape, { x: 0, y: 0 });
+    const radius = kind === 'capsule' ? 5 : 2;
+
+    for (const gap of [radius + 0.01, radius - 0.01, -1]) {
+      move(world, b, { x: 20 + gap, y: 0 });
+
+      expect(testOverlap(a, b), `gap ${gap}`).toBe(gap < radius);
+      expect(testOverlap(b, a), `reversed gap ${gap}`).toBe(gap < radius);
+    }
+  });
+
   it('does not report a capsule beside a box corner it does not reach', () => {
     const world = new PhysicsWorld();
 

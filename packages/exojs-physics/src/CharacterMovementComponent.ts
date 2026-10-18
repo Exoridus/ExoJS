@@ -365,7 +365,7 @@ export class CharacterMovementComponent extends Component {
     const upY = this._up.y;
     const world = this.movement.physics.world;
 
-    if (!this._probed) {
+    if (!this._probed || this.movement.body._teleported) {
       this._probe();
     }
 
