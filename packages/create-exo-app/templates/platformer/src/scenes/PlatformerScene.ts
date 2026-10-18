@@ -9,6 +9,7 @@ import {
   Label,
   Rectangle,
   Scene,
+  Sprite,
   Spritesheet,
   SystemOrder,
   View,
@@ -182,7 +183,7 @@ export class PlatformerScene extends Scene {
       // solver sees a single flat surface. A body per tile would give the player
       // a seam to catch on at every tile boundary.
       for (let i = 0; i < run.length; i++) {
-        const tile = this._tiles.getFrameSprite(this._tileName(run, i)).setAnchor(0.5);
+        const tile = new Sprite(this._tiles.texture).setTextureFrame(this._tiles.getFrame(this._tileName(run, i))).setAnchor(0.5);
 
         tile.width = TILE;
         tile.height = TILE;
