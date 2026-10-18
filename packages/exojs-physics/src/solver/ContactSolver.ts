@@ -466,8 +466,26 @@ export class ContactSolver {
     const ny = constraint.ny;
     const a1 = n(constraint.record.normalImpulse, 0);
     const a2 = n(constraint.record.normalImpulse, 1);
-    const vn1 = normalVelocity(bodyA, bodyB, n(constraint.rotAx, 0), n(constraint.rotAy, 0), n(constraint.rotBx, 0), n(constraint.rotBy, 0), nx, ny);
-    const vn2 = normalVelocity(bodyA, bodyB, n(constraint.rotAx, 1), n(constraint.rotAy, 1), n(constraint.rotBx, 1), n(constraint.rotBy, 1), nx, ny);
+    const vn1 = normalVelocity(
+      bodyA,
+      bodyB,
+      n(constraint.rotAx, 0),
+      n(constraint.rotAy, 0),
+      n(constraint.rotBx, 0),
+      n(constraint.rotBy, 0),
+      nx,
+      ny,
+    );
+    const vn2 = normalVelocity(
+      bodyA,
+      bodyB,
+      n(constraint.rotAx, 1),
+      n(constraint.rotAy, 1),
+      n(constraint.rotBx, 1),
+      n(constraint.rotBy, 1),
+      nx,
+      ny,
+    );
 
     // Residual at the current impulse: b = (vn − bias) − K·a.
     const bx = vn1 - n(constraint.velocityBias, 0) - (constraint.k11 * a1 + constraint.k12 * a2);
@@ -510,8 +528,10 @@ export class ContactSolver {
     const d2 = x2 - a2;
     const jx = (d1 + d2) * nx;
     const jy = (d1 + d2) * ny;
-    const torqueA = (n(constraint.rotAx, 0) * ny - n(constraint.rotAy, 0) * nx) * d1 + (n(constraint.rotAx, 1) * ny - n(constraint.rotAy, 1) * nx) * d2;
-    const torqueB = (n(constraint.rotBx, 0) * ny - n(constraint.rotBy, 0) * nx) * d1 + (n(constraint.rotBx, 1) * ny - n(constraint.rotBy, 1) * nx) * d2;
+    const torqueA =
+      (n(constraint.rotAx, 0) * ny - n(constraint.rotAy, 0) * nx) * d1 + (n(constraint.rotAx, 1) * ny - n(constraint.rotAy, 1) * nx) * d2;
+    const torqueB =
+      (n(constraint.rotBx, 0) * ny - n(constraint.rotBy, 0) * nx) * d1 + (n(constraint.rotBx, 1) * ny - n(constraint.rotBy, 1) * nx) * d2;
 
     bodyA.linearVelocityX -= jx * bodyA.invMass;
     bodyA.linearVelocityY -= jy * bodyA.invMass;
@@ -569,7 +589,16 @@ const currentSeparation = (constraint: ContactConstraint, i: number): number => 
 };
 
 /** Relative normal velocity at a contact point: `dot(vB + ωB×rB − vA − ωA×rA, n)`. */
-const normalVelocity = (bodyA: PhysicsBody, bodyB: PhysicsBody, rAx: number, rAy: number, rBx: number, rBy: number, nx: number, ny: number): number => {
+const normalVelocity = (
+  bodyA: PhysicsBody,
+  bodyB: PhysicsBody,
+  rAx: number,
+  rAy: number,
+  rBx: number,
+  rBy: number,
+  nx: number,
+  ny: number,
+): number => {
   const dvx = bodyB.linearVelocityX - bodyB.angularVelocity * rBy - (bodyA.linearVelocityX - bodyA.angularVelocity * rAy);
   const dvy = bodyB.linearVelocityY + bodyB.angularVelocity * rBx - (bodyA.linearVelocityY + bodyA.angularVelocity * rAx);
 
@@ -577,7 +606,16 @@ const normalVelocity = (bodyA: PhysicsBody, bodyB: PhysicsBody, rAx: number, rAy
 };
 
 /** Apply impulse `(jx, jy)` to B and its negation to A about their contact arms. */
-const applyImpulse = (bodyA: PhysicsBody, bodyB: PhysicsBody, rAx: number, rAy: number, rBx: number, rBy: number, jx: number, jy: number): void => {
+const applyImpulse = (
+  bodyA: PhysicsBody,
+  bodyB: PhysicsBody,
+  rAx: number,
+  rAy: number,
+  rBx: number,
+  rBy: number,
+  jx: number,
+  jy: number,
+): void => {
   bodyA.linearVelocityX -= jx * bodyA.invMass;
   bodyA.linearVelocityY -= jy * bodyA.invMass;
   bodyA.angularVelocity -= (rAx * jy - rAy * jx) * bodyA.invInertia;

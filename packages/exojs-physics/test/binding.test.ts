@@ -38,7 +38,9 @@ const fakeNode = (skewX = 0, skewY = 0): FakeNode => ({
 describe('SceneNode binding', () => {
   it('writes the body position onto the node on bind and after each step', () => {
     const world = new PhysicsWorld();
-    const body = world.add(new PhysicsBody({ type: 'kinematic', position: { x: 10, y: 20 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
+    const body = world.add(
+      new PhysicsBody({ type: 'kinematic', position: { x: 10, y: 20 }, colliders: [{ shape: new BoxShape(10, 10) }] }),
+    );
     const node = fakeNode();
 
     world.bind(body, node as unknown as SceneNode);
@@ -53,7 +55,9 @@ describe('SceneNode binding', () => {
 
   it('writes the body rotation as the counter-rotating degrees a SceneNode expects', () => {
     const world = new PhysicsWorld();
-    const body = world.add(new PhysicsBody({ type: 'kinematic', position: { x: 0, y: 0 }, angle: Math.PI / 2, colliders: [{ shape: new BoxShape(10, 10) }] }));
+    const body = world.add(
+      new PhysicsBody({ type: 'kinematic', position: { x: 0, y: 0 }, angle: Math.PI / 2, colliders: [{ shape: new BoxShape(10, 10) }] }),
+    );
     const node = fakeNode();
 
     world.bind(body, node as unknown as SceneNode);
@@ -69,7 +73,9 @@ describe('SceneNode binding', () => {
   it("renders the bound node where the body's colliders are", () => {
     const world = new PhysicsWorld();
     const angle = Math.PI / 6;
-    const body = world.add(new PhysicsBody({ type: 'kinematic', position: { x: 50, y: 20 }, angle, colliders: [{ shape: new BoxShape(10, 10) }] }));
+    const body = world.add(
+      new PhysicsBody({ type: 'kinematic', position: { x: 50, y: 20 }, angle, colliders: [{ shape: new BoxShape(10, 10) }] }),
+    );
     const node = new Drawable();
 
     world.bind(body, node);
@@ -105,7 +111,8 @@ describe('SceneNode binding', () => {
 });
 
 describe('SceneNode binding: world-space-rooted guard (F16)', () => {
-  const makeBody = (): PhysicsBody => new PhysicsBody({ type: 'kinematic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] });
+  const makeBody = (): PhysicsBody =>
+    new PhysicsBody({ type: 'kinematic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] });
 
   it('warns in dev when an ancestor carries a non-identity transform', () => {
     const registry = new BindingRegistry();

@@ -249,7 +249,8 @@ export class WheelJoint extends Joint {
     // Suspension spring along the axis (soft).
     const cdotAxis = this._axisVelocity();
     const springImpulse =
-      -this._axialMass * this._springMassScale * (cdotAxis + this._springBiasRate * this._translation) - this._springImpulseScale * this._springImpulse;
+      -this._axialMass * this._springMassScale * (cdotAxis + this._springBiasRate * this._translation) -
+      this._springImpulseScale * this._springImpulse;
 
     this._springImpulse += springImpulse;
     this._applyAxial(springImpulse);

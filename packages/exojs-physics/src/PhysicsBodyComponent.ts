@@ -8,9 +8,11 @@ import type { PhysicsWorld } from './PhysicsWorld';
  * Gives a scene node a {@link PhysicsBody} whose world membership follows the
  * component's lifecycle. While the component is active the body is in
  * {@link world} and drives the node. Whenever the component is disabled -
- * switched off, its node removed or reparented, its scene retained or ended -
+ * switched off, its node removed from its scene, its scene retained or ended -
  * the body leaves the world with its state kept, and the next activation puts
- * the same body back. Destroying the component, or its node, destroys the
+ * the same body back. Moving the node to another parent of the same scene is
+ * not a disable: the body stays in the world, keeps its contacts and state,
+ * and keeps driving the node. Destroying the component, or its node, destroys the
  * body. Pausing the scene changes nothing here: a world registered as that
  * scene's system stops stepping with it, a world owned elsewhere keeps going.
  *
@@ -18,7 +20,8 @@ import type { PhysicsWorld } from './PhysicsWorld';
  * the node enters a scene. Unless `options.position` or `options.angle` is
  * given, the first activation places the body at the node's current world
  * position or rotation. The node must be world-space-rooted, as for
- * {@link PhysicsWorld.bind}.
+ * {@link PhysicsWorld.bind}; the body keeps writing world coordinates to the
+ * node, so moving it under a transformed parent is not corrected.
  *
  * The world is never inferred: a node moved into a scene that steps another
  * world keeps this component's body in the world it was given. A
@@ -59,7 +62,10 @@ export class PhysicsBodyComponent extends Component {
     // body is the transform authority, and the node merely shows where it is.
     // A failed attempt leaves the flags set, so the retry reads the node anew.
     if (this._adoptNodePosition || this._adoptNodeAngle) {
-      body.setTransform(this._adoptNodePosition ? nodeWorldPosition(node) : body.position, this._adoptNodeAngle ? nodeWorldAngle(node) : body.angle);
+      body.setTransform(
+        this._adoptNodePosition ? nodeWorldPosition(node) : body.position,
+        this._adoptNodeAngle ? nodeWorldAngle(node) : body.angle,
+      );
     }
 
     this.world.add(body);
@@ -70,6 +76,7 @@ export class PhysicsBodyComponent extends Component {
       // A failed enable leaves the component inactive; the body must not keep
       // simulating behind it.
       this.world.remove(body);
+
       throw error;
     }
 

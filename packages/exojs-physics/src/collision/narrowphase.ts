@@ -1,11 +1,12 @@
 import type { PointLike } from '@codexo/exojs';
 
+import { ChainEdgeShape } from '../shapes/ChainEdgeShape';
 import { chainEdgeAdmits } from './chainAdjacency';
 import type { CollisionProxy } from './CollisionProxy';
 import type { PairTable } from './dispatch';
 import { needsFlip, symmetricEntry, symmetricTable } from './dispatch';
 import type { Manifold } from './Manifold';
-import { closestPointOnSegment, pointSegmentDistanceSquared } from './segments';
+import { closestPointOnSegment, pointSegmentDistanceSquared, segmentSegmentDistanceSquared } from './segments';
 
 const eps = 1e-9;
 
@@ -63,7 +64,9 @@ export const collide = (a: CollisionProxy, b: CollisionProxy, manifold: Manifold
 // ring with a radius, which is exactly why it shares the polygon routines: the
 // ring supplies `count` and `worldVertices`/`worldNormals`, the radius rounds
 // the result off.
-const radiusOf = (collider: CollisionProxy): number => (collider.shape.type === 'circle' || collider.shape.type === 'capsule' ? collider.shape.radius : 0);
+const radiusOf = (collider: CollisionProxy): number =>
+  collider.shape.type === 'circle' || collider.shape.type === 'capsule' ? collider.shape.radius : 0;
+
 const countOf = (collider: CollisionProxy): number => {
   switch (collider.shape.type) {
     case 'polygon':
@@ -400,7 +403,8 @@ const copyClip = (from: ClipVertex, to: ClipVertex): void => {
   to.id = from.id;
 };
 
-const encodeId = (flip: boolean, refEdge: number, incidentId: number): number => (flip ? 1 << 20 : 0) | ((refEdge & 0xff) << 12) | (incidentId & 0xfff);
+const encodeId = (flip: boolean, refEdge: number, incidentId: number): number =>
+  (flip ? 1 << 20 : 0) | ((refEdge & 0xff) << 12) | (incidentId & 0xfff);
 
 /**
  * Convex ring vs convex ring: SAT reference face + Sutherland-Hodgman clip, with
@@ -477,18 +481,17 @@ const collideRoundedPolygons: CollidePair = (a, b, manifold, callerFlip) => {
   const posSide = tx * v2x + ty * v2y;
 
   const clipped1 = _clipped1Scratch;
+  const flipNormal = refSwapped !== callerFlip;
 
   if (clipSegment(-tx, -ty, negSide, incident, clipped1, encodeId(refSwapped, refEdge, 0xffe)) < 2) {
-    return false;
+    return collideCoreEnds(v1x, v1y, v2x, v2y, ref, incident, inc, totalRadius, flipNormal, encodeId(refSwapped, refEdge, 0xffd), manifold);
   }
 
   const clipped2 = _clipped2Scratch;
 
   if (clipSegment(tx, ty, posSide, clipped1, clipped2, encodeId(refSwapped, refEdge, 0xfff)) < 2) {
-    return false;
+    return collideCoreEnds(v1x, v1y, v2x, v2y, ref, incident, inc, totalRadius, flipNormal, encodeId(refSwapped, refEdge, 0xffd), manifold);
   }
-
-  const flipNormal = refSwapped !== callerFlip;
 
   manifold.normalX = flipNormal ? -refNx : refNx;
   manifold.normalY = flipNormal ? -refNy : refNy;
@@ -518,14 +521,117 @@ const collideRoundedPolygons: CollidePair = (a, b, manifold, callerFlip) => {
     }
   }
 
+  if (cp === 0) {
+    // Both clipped points lie beyond the rounded reference face, yet the
+    // incident face's core end can still be within reach of a reference corner.
+    return collideCoreEnds(v1x, v1y, v2x, v2y, ref, incident, inc, totalRadius, flipNormal, encodeId(refSwapped, refEdge, 0xffd), manifold);
+  }
+
   manifold.pointCount = cp;
 
-  return cp > 0;
+  return true;
 };
+
+const _coreRef: PointLike = { x: 0, y: 0 };
+const _coreInc: PointLike = { x: 0, y: 0 };
+
+/**
+ * Contact between the rounded outlines of a reference edge and an incident
+ * face whose cores lie beyond each other's ends, where clipping leaves no
+ * point: a capsule's cap resting on a polygon's corner or a chain vertex. The
+ * face-normal SAT still counts such a pair as touching, but the contact is
+ * between the two closest core points, along the line joining them. Without
+ * it a rounded body passing over a corner loses its contact there.
+ *
+ * A chain vertex only has such a corner where the chain turns away from the
+ * body. At a straight or inward join the neighbouring edge's face already
+ * holds the contact, and a second one from the vertex would tilt it.
+ */
+const collideCoreEnds = (
+  v1x: number,
+  v1y: number,
+  v2x: number,
+  v2y: number,
+  ref: CollisionProxy,
+  incident: readonly [ClipVertex, ClipVertex],
+  inc: CollisionProxy,
+  totalRadius: number,
+  flipNormal: boolean,
+  id: number,
+  manifold: Manifold,
+): boolean => {
+  const i0 = incident[0];
+  const i1 = incident[1];
+  const distanceSquared = segmentSegmentDistanceSquared(v1x, v1y, v2x, v2y, i0.x, i0.y, i1.x, i1.y, _coreRef, _coreInc);
+
+  // Cores that touch or cross have no direction between them; clipping owns those.
+  if (distanceSquared >= totalRadius * totalRadius || distanceSquared < 1e-12) {
+    return false;
+  }
+
+  if (!isCornerOf(ref, _coreRef) || !isCornerOf(inc, _coreInc)) {
+    return false;
+  }
+
+  const distance = Math.sqrt(distanceSquared);
+  const nx = (_coreInc.x - _coreRef.x) / distance;
+  const ny = (_coreInc.y - _coreRef.y) / distance;
+  const incidentRadius = radiusOf(inc);
+  const point = manifold.points[0];
+
+  manifold.normalX = flipNormal ? -nx : nx;
+  manifold.normalY = flipNormal ? -ny : ny;
+  point.x = _coreInc.x - nx * incidentRadius;
+  point.y = _coreInc.y - ny * incidentRadius;
+  point.penetration = totalRadius - distance;
+  point.id = id;
+  manifold.pointCount = 1;
+
+  return true;
+};
+
+/** Squared distance below which a closest point counts as a segment's endpoint. */
+const endpointEpsilonSquared = 1e-12;
+
+/**
+ * `false` when `point` is the end of a chain edge whose neighbour continues the
+ * surface straight or turns towards the body there; `true` for any other point
+ * and any other shape.
+ */
+const isCornerOf = (proxy: CollisionProxy, point: Readonly<PointLike>): boolean => {
+  const shape = proxy.shape;
+
+  if (!(shape instanceof ChainEdgeShape)) {
+    return true;
+  }
+
+  const vertices = proxy.worldVertices;
+  const startX = point.x - vertices[0]!;
+  const startY = point.y - vertices[1]!;
+
+  if (startX * startX + startY * startY <= endpointEpsilonSquared) {
+    return !shape.hasPrevious || shape.previousSin < -convexTurn;
+  }
+
+  const endX = point.x - vertices[2]!;
+  const endY = point.y - vertices[3]!;
+
+  if (endX * endX + endY * endY <= endpointEpsilonSquared) {
+    return !shape.hasNext || shape.nextSin > convexTurn;
+  }
+
+  return true;
+};
+
+/** Smallest turn, as the sine between neighbouring edge normals, that makes a chain vertex a corner. */
+const convexTurn = 1e-6;
 
 /**
  * Boolean overlap test (no manifold) used by sensors and shape-overlap queries.
- * Exact for the circle/circle, circle/polygon and polygon/polygon pairs.
+ * Exact for every supported pair and in agreement with {@link collide}, except
+ * that it ignores chain one-sidedness: a shape behind a chain edge overlaps it.
+ * As in {@link collide}, exact tangency counts as overlap for pairs involving a
+ * circle and not for the others.
  */
 export const testOverlap = (a: CollisionProxy, b: CollisionProxy): boolean => {
   const ta = a.shape.type;
@@ -549,10 +655,67 @@ const circlesOverlap: OverlapPair = (a, b) => {
   return dx * dx + dy * dy <= rsum * rsum;
 };
 
+/**
+ * The face axes alone are exact only for radius-free operands. Once a radius
+ * rounds a core, the separating direction in a vertex region is the line
+ * between the two closest core points, which no face axis covers, so cores
+ * that are apart are decided by their true distance instead.
+ */
 const roundedPolygonsOverlap: OverlapPair = (a, b) => {
   const totalRadius = radiusOf(a) + radiusOf(b);
+  const separation = Math.max(findMaxSeparation(a, b, _sepA).separation, findMaxSeparation(b, a, _sepB).separation);
 
-  return findMaxSeparation(a, b, _sepA).separation < totalRadius && findMaxSeparation(b, a, _sepB).separation < totalRadius;
+  if (separation >= totalRadius) {
+    return false;
+  }
+
+  // Overlapping cores, or cores whose gap a face axis already measures exactly.
+  if (separation <= 0 || totalRadius === 0) {
+    return true;
+  }
+
+  return coreDistanceSquared(a, b) < totalRadius * totalRadius;
+};
+
+/**
+ * Squared distance between two convex cores that do not overlap: the closest
+ * pair always lies on some pair of edges. A two-vertex ring is one segment
+ * traversed both ways, so it contributes a single edge.
+ */
+const coreDistanceSquared = (a: CollisionProxy, b: CollisionProxy): number => {
+  const av = a.worldVertices;
+  const bv = b.worldVertices;
+  const ac = countOf(a);
+  const bc = countOf(b);
+  const aEdges = ac === 2 ? 1 : ac;
+  const bEdges = bc === 2 ? 1 : bc;
+  let best = Infinity;
+
+  for (let i = 0; i < aEdges; i++) {
+    const i2 = (i + 1) % ac;
+
+    for (let j = 0; j < bEdges; j++) {
+      const j2 = (j + 1) % bc;
+      const distanceSquared = segmentSegmentDistanceSquared(
+        av[i * 2]!,
+        av[i * 2 + 1]!,
+        av[i2 * 2]!,
+        av[i2 * 2 + 1]!,
+        bv[j * 2]!,
+        bv[j * 2 + 1]!,
+        bv[j2 * 2]!,
+        bv[j2 * 2 + 1]!,
+        _coreRef,
+        _coreInc,
+      );
+
+      if (distanceSquared < best) {
+        best = distanceSquared;
+      }
+    }
+  }
+
+  return best;
 };
 
 /**
@@ -611,7 +774,9 @@ const circleSpineOverlap: OverlapPair = (circle, spineShape) => {
   const centre = circle.worldCenter;
   const radiusSum = radiusOf(circle) + radiusOf(spineShape);
 
-  return pointSegmentDistanceSquared(centre.x, centre.y, spine[0]!, spine[1]!, spine[2]!, spine[3]!, _segmentScratch) <= radiusSum * radiusSum;
+  return (
+    pointSegmentDistanceSquared(centre.x, centre.y, spine[0]!, spine[1]!, spine[2]!, spine[3]!, _segmentScratch) <= radiusSum * radiusSum
+  );
 };
 
 const circlePolygonOverlap: OverlapPair = (circle, polygon) => {

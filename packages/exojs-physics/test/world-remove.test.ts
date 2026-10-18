@@ -106,7 +106,9 @@ describe('PhysicsWorld.remove', () => {
 
   it('wakes bodies resting on it, and a re-added sleeper wakes and falls', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
-    const platform = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 320 }, colliders: [{ shape: new BoxShape(1200, 40) }] }));
+    const platform = world.add(
+      new PhysicsBody({ type: 'static', position: { x: 0, y: 320 }, colliders: [{ shape: new BoxShape(1200, 40) }] }),
+    );
     const box = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 282 }, colliders: [{ shape: new BoxShape(32, 32) }] }));
 
     advance(world, 2);

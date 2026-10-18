@@ -157,7 +157,14 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
   }
 
   /** Colliders whose AABB the ray could cross within `maxDistance`, via the tree's own ray-cast prune. */
-  public rayCast(originX: number, originY: number, dirX: number, dirY: number, maxDistance: number, callback: (collider: Collider) => void): void {
+  public rayCast(
+    originX: number,
+    originY: number,
+    dirX: number,
+    dirY: number,
+    maxDistance: number,
+    callback: (collider: Collider) => void,
+  ): void {
     this._tree.rayCast(originX, originY, dirX, dirY, maxDistance, callback);
   }
 
@@ -185,7 +192,13 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
     // reuse, not concurrent dual-ownership) must not carry a stale non-`-1`
     // proxy from this instance forward. `query` with infinite bounds visits
     // every leaf currently in the tree, allocation-free.
-    this._tree.query(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, this._resetTreeProxy);
+    this._tree.query(
+      Number.NEGATIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+      Number.POSITIVE_INFINITY,
+      Number.POSITIVE_INFINITY,
+      this._resetTreeProxy,
+    );
     this._tree.destroy();
     this._pairs.clear();
     this._emitStale = true;

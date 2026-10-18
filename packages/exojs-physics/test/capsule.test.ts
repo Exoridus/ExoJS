@@ -206,6 +206,33 @@ describe('capsule narrow phase', () => {
     expect(testOverlap(a, b)).toBe(false);
   });
 
+  it('touches a box corner its cap overlaps beyond the face', () => {
+    const world = new PhysicsWorld();
+    // Top face at y = 90, right edge at x = 100: the corner is (100, 90).
+    const box = colliderAt(world, new BoxShape(200, 20), { x: 0, y: 100 });
+    // Cap centre 4 right of the corner and 6.8 above it: 7.89 from it, inside the radius.
+    const capsule = colliderAt(world, new CapsuleShape(0, -12, 0, 12, 8), { x: 104, y: 90 - 6.8 - 12 });
+
+    expect(collide(box, capsule, manifold)).toBe(true);
+    expect(manifold.pointCount).toBe(1);
+
+    const distance = Math.hypot(4, 6.8);
+
+    expect(manifold.normalX).toBeCloseTo(4 / distance, 9);
+    expect(manifold.normalY).toBeCloseTo(-6.8 / distance, 9);
+    expect(manifold.points[0].penetration).toBeCloseTo(8 - distance, 9);
+    // On the capsule's surface, the penetration depth away from the corner.
+    expect(Math.hypot(manifold.points[0].x - 100, manifold.points[0].y - 90)).toBeCloseTo(8 - distance, 9);
+
+    expect(collide(capsule, box, manifold)).toBe(true);
+    expect(manifold.normalX).toBeCloseTo(-4 / distance, 9);
+
+    // Just out of reach of the corner, though inside both faces' reach.
+    capsule.body.setTransform({ x: 104, y: 90 - 6.95 - 12 }, 0);
+    world.step(0);
+    expect(collide(box, capsule, manifold)).toBe(false);
+  });
+
   it('leaves polygon against polygon exactly as it was', () => {
     const world = new PhysicsWorld();
     const floor = colliderAt(world, new BoxShape(200, 20), { x: 0, y: 100 });
@@ -240,7 +267,9 @@ describe('capsule in a world', () => {
 
     // Released just above its resting height, the way the sleeping suite drops
     // its boxes. A long fall is a different question - see the note below.
-    const body = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 288 }, colliders: [{ shape: new CapsuleShape(-15, 0, 15, 0, 8) }] }));
+    const body = world.add(
+      new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 288 }, colliders: [{ shape: new CapsuleShape(-15, 0, 15, 0, 8) }] }),
+    );
 
     for (let frame = 0; frame < 180; frame++) {
       world.step(DT);

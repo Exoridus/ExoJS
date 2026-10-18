@@ -84,7 +84,9 @@ describe('end events when a collider leaves the world', () => {
     world.add(new PhysicsBody({ type: 'static', colliders: [{ shape: chain }] }));
 
     // Straddles the vertex at x = -50, so it touches two edge proxies.
-    const box = world.add(new PhysicsBody({ type: 'kinematic', position: { x: -50, y: -4 }, colliders: [{ shape: new BoxShape(20, 10) }] }));
+    const box = world.add(
+      new PhysicsBody({ type: 'kinematic', position: { x: -50, y: -4 }, colliders: [{ shape: new BoxShape(20, 10) }] }),
+    );
     const starts: CollisionEvent[] = [];
     const ends: CollisionEvent[] = [];
 
@@ -152,8 +154,12 @@ describe('end events when a collider leaves the world', () => {
 
     colliderAt(world, new BoxShape(100, 10), { x: 0, y: 0 });
 
-    const earlier = world.add(new PhysicsBody({ type: 'kinematic', position: { x: -20, y: -8 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
-    const later = world.add(new PhysicsBody({ type: 'kinematic', position: { x: 20, y: -8 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
+    const earlier = world.add(
+      new PhysicsBody({ type: 'kinematic', position: { x: -20, y: -8 }, colliders: [{ shape: new BoxShape(10, 10) }] }),
+    );
+    const later = world.add(
+      new PhysicsBody({ type: 'kinematic', position: { x: 20, y: -8 }, colliders: [{ shape: new BoxShape(10, 10) }] }),
+    );
     const ends: CollisionEvent[] = [];
 
     world.step(DT);
@@ -199,7 +205,9 @@ describe('end events when a collider leaves the world', () => {
 
     colliderAt(world, new BoxShape(100, 10), { x: 0, y: 0 }, 0, 'static', { isSensor: true });
 
-    const box = world.add(new PhysicsBody({ type: 'kinematic', position: { x: 0, y: -8 }, colliders: [{ shape: new BoxShape(10, 10), isSensor: true }] }));
+    const box = world.add(
+      new PhysicsBody({ type: 'kinematic', position: { x: 0, y: -8 }, colliders: [{ shape: new BoxShape(10, 10), isSensor: true }] }),
+    );
     const enters: SensorEvent[] = [];
     const exits: SensorEvent[] = [];
 

@@ -36,7 +36,8 @@ export interface PhysicsDebugDrawOptions {
 const segments = 24;
 
 /** `Color` channels are bytes, so a colour written as unit-range fractions has to be scaled to them. */
-const unitColor = (r: number, g: number, b: number, a: number): Color => new Color(Math.round(r * 255), Math.round(g * 255), Math.round(b * 255), a);
+const unitColor = (r: number, g: number, b: number, a: number): Color =>
+  new Color(Math.round(r * 255), Math.round(g * 255), Math.round(b * 255), a);
 
 const colorStatic = unitColor(0.3, 0.9, 0.4, 0.9);
 const colorKinematic = unitColor(0.4, 0.7, 1, 0.9);

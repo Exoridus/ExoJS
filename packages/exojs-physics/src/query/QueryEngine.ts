@@ -4,13 +4,15 @@ import { aabbContainsPoint, aabbOverlap, createAabb } from '../Aabb';
 import type { Collider } from '../Collider';
 import { authoredCollider } from '../Collider';
 import type { CollisionProxy } from '../collision/CollisionProxy';
-import { testOverlap } from '../collision/narrowphase';
+import { Manifold } from '../collision/Manifold';
+import { collide, testOverlap } from '../collision/narrowphase';
 import { closestPointOnSegment, pointSegmentDistanceSquared } from '../collision/segments';
+import { type SweepHit, sweepProxies } from '../collision/sweep';
 import { applyRotation, applyTransform, createTransform } from '../math';
 import type { PhysicsBody } from '../PhysicsBody';
 import type { AnyShape } from '../shapes/AnyShape';
 import type { ChainShape } from '../shapes/ChainShape';
-import { resolveFilter, shouldCollide } from '../types';
+import { type CollisionFilter, defaultFilter, resolveFilter, shouldCollide } from '../types';
 import type { SpatialIndex } from './SpatialIndex';
 
 /** Reused sink for the closest-point primitives; queries run sequentially. */
@@ -34,6 +36,101 @@ export interface RayHit {
   distance: number;
 }
 
+/** Options for {@link PhysicsWorld.shapeCast}. */
+export interface ShapeCastOptions {
+  /** Rotation of the cast shape in radians. It stays fixed for the whole motion. Default `0`. */
+  readonly angle?: number | undefined;
+  /** Which colliders the cast can hit, matched like a collider's own filter. Omitting it hits everything. */
+  readonly filter?: QueryFilter | undefined;
+  /** Let sensor colliders stop the cast. Default `false`: sensors never block motion. */
+  readonly includeSensors?: boolean | undefined;
+  /**
+   * Bodies and colliders the cast passes through - typically the body whose
+   * shape is being cast. A body excludes every collider it holds.
+   */
+  readonly exclude?: ReadonlyArray<PhysicsBody | Collider> | undefined;
+}
+
+/**
+ * The first obstacle a {@link PhysicsWorld.shapeCast} meets. Pass one as `out`
+ * to reuse it across casts.
+ */
+export interface ShapeCastHit {
+  /** The blocking collider; a chain is reported as the chain, never as one of its edges. */
+  collider: Collider;
+  body: PhysicsBody;
+  /** Fraction of the displacement travelled before contact, in `[0, 1]`. */
+  fraction: number;
+  /** Distance travelled before contact: `fraction` times the displacement's length. */
+  distance: number;
+  /** Unit surface normal at the contact, pointing from the obstacle back toward the cast shape. */
+  normal: { x: number; y: number };
+  /**
+   * `true` when the shape already overlapped or touched the collider at its start
+   * position. `fraction` and `distance` are then `0`, `normal` is the direction
+   * that separates the shape from the collider, and {@link penetration} says
+   * how deep the overlap is (`0` for a touch).
+   */
+  initialOverlap: boolean;
+  /** Overlap depth at the start position; `0` unless {@link initialOverlap}. */
+  penetration: number;
+}
+
+/** A proxy whose geometry a cast rewrites in place, so casting allocates nothing. */
+interface CastProxy {
+  shape: SolverShape;
+  worldCenter: PointLike;
+  worldVertices: number[];
+  worldNormals: number[];
+}
+
+/**
+ * Earliest blocking contact of a cast, written by {@link QueryEngine._castProxy}.
+ * @internal
+ */
+export interface CastState {
+  target: Collider | null;
+  fraction: number;
+  normalX: number;
+  normalY: number;
+  initialOverlap: boolean;
+  penetration: number;
+}
+
+/**
+ * Receives the contacts {@link QueryEngine._visitContacts} finds.
+ * @internal
+ */
+export interface ContactVisitor {
+  _visitContact(target: Collider, normalX: number, normalY: number, penetration: number): void;
+}
+
+/** @internal */
+export const createCastState = (): CastState => ({
+  target: null,
+  fraction: 0,
+  normalX: 0,
+  normalY: 0,
+  initialOverlap: false,
+  penetration: 0,
+});
+
+const noCastOptions: ShapeCastOptions = Object.freeze({});
+
+/**
+ * How far along the motion a cast looks for a contact its start pose only
+ * touches. Far below any tolerance the solver uses, far above the rounding of
+ * world coordinates.
+ */
+const touchProbe = 1e-6;
+
+const createCastProxy = (): CastProxy => ({
+  shape: null as unknown as SolverShape,
+  worldCenter: { x: 0, y: 0 },
+  worldVertices: [],
+  worldNormals: [],
+});
+
 /**
  * Spatial queries over the world's live collider set. The engine holds a
  * reference to the world's collider array (kept world-synchronised on every
@@ -55,6 +152,17 @@ export class QueryEngine {
   /** Chains already reported by the running `forEachAabbHit`, so one chain is one callback. */
   private readonly _scratchSeenForEach: Collider[] = [];
   private readonly _scratchAabb: AabbLike = createAabb();
+  private readonly _castStart: CastProxy = createCastProxy();
+  private readonly _castEnd: CastProxy = createCastProxy();
+  private readonly _castBounds: AabbLike = createAabb();
+  private readonly _castShifted: CastProxy = createCastProxy();
+  private readonly _castNudged: CastProxy = createCastProxy();
+  private readonly _castShiftedBounds: AabbLike = createAabb();
+  private readonly _castCandidates: Collider[] = [];
+  private readonly _castSweep: SweepHit = { t: 0, normalX: 0, normalY: 0 };
+  private readonly _castManifold = new Manifold();
+  private readonly _castFilter: CollisionFilter = { ...defaultFilter };
+  private readonly _castState: CastState = createCastState();
 
   public constructor(colliders: readonly Collider[], spatialIndex?: SpatialIndex) {
     this._colliders = colliders;
@@ -180,6 +288,7 @@ export class QueryEngine {
     const resolved = filter ? resolveFilter(filter) : null;
 
     let best: RayHit | null = null;
+
     const consider = (collider: Collider): void => {
       const authored = authoredCollider(collider);
 
@@ -208,7 +317,13 @@ export class QueryEngine {
   }
 
   /** All collider hits along the ray, sorted by distance. Writes into `out` (cleared first) when given. */
-  public rayCastAll(origin: Readonly<PointLike>, direction: Readonly<PointLike>, filter?: QueryFilter, out?: RayHit[], maxDistance = Infinity): RayHit[] {
+  public rayCastAll(
+    origin: Readonly<PointLike>,
+    direction: Readonly<PointLike>,
+    filter?: QueryFilter,
+    out?: RayHit[],
+    maxDistance = Infinity,
+  ): RayHit[] {
     const length = Math.hypot(direction.x, direction.y);
 
     if (length < 1e-9) {
@@ -220,6 +335,7 @@ export class QueryEngine {
     const resolved = filter ? resolveFilter(filter) : null;
     const result = out ?? [];
     result.length = 0;
+
     const consider = (collider: Collider): void => {
       const authored = authoredCollider(collider);
 
@@ -284,6 +400,269 @@ export class QueryEngine {
 
     return out;
   }
+
+  /**
+   * First collider `shape` meets when translated by `displacement` from
+   * `position`, or `null` when the motion is free. See {@link PhysicsWorld.shapeCast}.
+   */
+  public shapeCast(
+    shape: AnyShape,
+    position: Readonly<PointLike>,
+    displacement: Readonly<PointLike>,
+    options: ShapeCastOptions = noCastOptions,
+    out?: ShapeCastHit,
+  ): ShapeCastHit | null {
+    if (shape.type === 'segment' || shape.type === 'chain') {
+      throw new TypeError(
+        `PhysicsWorld.shapeCast: a ${shape.type} encloses no area and cannot be cast; cast a circle, capsule or polygon.`,
+      );
+    }
+
+    const dx = displacement.x;
+    const dy = displacement.y;
+
+    if (!Number.isFinite(position.x) || !Number.isFinite(position.y) || !Number.isFinite(dx) || !Number.isFinite(dy)) {
+      throw new RangeError('PhysicsWorld.shapeCast: position and displacement must be finite.');
+    }
+
+    const start = this._castStart;
+
+    fillProxy(shape, position.x, position.y, options.angle ?? 0, start);
+
+    let filter: CollisionFilter | null = null;
+
+    if (options.filter !== undefined) {
+      filter = this._castFilter;
+      filter.category = options.filter.category ?? defaultFilter.category;
+      filter.mask = options.filter.mask ?? defaultFilter.mask;
+      filter.group = options.filter.group ?? defaultFilter.group;
+    }
+
+    this._syncIndex();
+
+    const state = this._castState;
+    const bounds = proxyAabb(shape, start, this._scratchAabb);
+
+    if (!this._castProxy(start, bounds, dx, dy, filter, options.includeSensors === true, null, options.exclude ?? null, state)) {
+      return null;
+    }
+
+    const target = state.target!;
+    const hit = out ?? {
+      collider: target,
+      body: target.body,
+      fraction: 0,
+      distance: 0,
+      normal: { x: 0, y: 0 },
+      initialOverlap: false,
+      penetration: 0,
+    };
+
+    hit.collider = target;
+    hit.body = target.body;
+    hit.fraction = state.fraction;
+    hit.distance = state.fraction * Math.hypot(dx, dy);
+    hit.normal.x = state.normalX;
+    hit.normal.y = state.normalY;
+    hit.initialOverlap = state.initialOverlap;
+    hit.penetration = state.penetration;
+
+    return hit;
+  }
+
+  /** @internal - bring the spatial index up to date with moved colliders before a run of {@link _castProxy} calls. */
+  public _syncIndex(): void {
+    this._spatialIndex?.sync(this._colliders);
+  }
+
+  /**
+   * @internal - {@link _castProxy} for one of a body's own colliders, displaced
+   * by `(offsetX, offsetY)` from where it currently sits and filtered by its own
+   * collision filter. Sensors never block it, and neither does anything in
+   * `exclude`.
+   */
+  public _castCollider(
+    collider: Collider,
+    offsetX: number,
+    offsetY: number,
+    dx: number,
+    dy: number,
+    excludeBody: PhysicsBody,
+    state: CastState,
+    exclude: ReadonlyArray<PhysicsBody | Collider> | null = null,
+  ): boolean {
+    const aabb = collider.aabb;
+    const bounds = this._castShiftedBounds;
+
+    bounds.minX = aabb.minX + offsetX;
+    bounds.minY = aabb.minY + offsetY;
+    bounds.maxX = aabb.maxX + offsetX;
+    bounds.maxY = aabb.maxY + offsetY;
+
+    let start: CollisionProxy = collider;
+
+    if (offsetX !== 0 || offsetY !== 0) {
+      translateProxy(collider, offsetX, offsetY, this._castShifted);
+      start = this._castShifted;
+    }
+
+    return this._castProxy(start, bounds, dx, dy, collider.filter, false, excludeBody, exclude, state);
+  }
+
+  /**
+   * @internal - reports every collider that one of a body's own colliders,
+   * displaced by `(offsetX, offsetY)`, overlaps or touches, under the same
+   * rules as {@link _castCollider}. The normal passed to the visitor points
+   * from the touched collider back towards the displaced one. Does not sync
+   * the spatial index.
+   */
+  public _visitContacts(collider: Collider, offsetX: number, offsetY: number, excludeBody: PhysicsBody, visitor: ContactVisitor): void {
+    const aabb = collider.aabb;
+    const bounds = this._castShiftedBounds;
+
+    bounds.minX = aabb.minX + offsetX;
+    bounds.minY = aabb.minY + offsetY;
+    bounds.maxX = aabb.maxX + offsetX;
+    bounds.maxY = aabb.maxY + offsetY;
+
+    let start: CollisionProxy = collider;
+
+    if (offsetX !== 0 || offsetY !== 0) {
+      translateProxy(collider, offsetX, offsetY, this._castShifted);
+      start = this._castShifted;
+    }
+
+    const manifold = this._castManifold;
+    const candidates = this._spatialIndex === undefined ? this._colliders : this._spatialIndex.queryAabb(bounds, this._castCandidates);
+
+    for (const candidate of candidates) {
+      const target = authoredCollider(candidate);
+
+      if (
+        !aabbOverlap(bounds, candidate.aabb) ||
+        castIgnores(target, collider.filter, false, excludeBody, null) ||
+        !collide(start, candidate, manifold)
+      ) {
+        continue;
+      }
+
+      visitor._visitContact(target, -manifold.normalX, -manifold.normalY, deepestPenetration(manifold));
+    }
+  }
+
+  /**
+   * @internal - casts one proxy, given at its start pose with `bounds` as its
+   * start AABB, along `(dx, dy)` and writes the earliest blocking contact into
+   * `state`. Returns whether anything blocks. Does not sync the spatial index:
+   * a caller casting several proxies against unchanged geometry calls
+   * {@link _syncIndex} once first.
+   *
+   * `filter` is matched against each target's filter with the collision rule;
+   * `null` matches everything. A target the proxy starts out overlapping
+   * blocks only a motion that does not lead out of it, and blocks it at once,
+   * so a shape touching a wall can still slide along it or move away.
+   */
+  public _castProxy(
+    start: CollisionProxy,
+    bounds: Readonly<AabbLike>,
+    dx: number,
+    dy: number,
+    filter: CollisionFilter | null,
+    includeSensors: boolean,
+    excludeBody: PhysicsBody | null,
+    exclude: ReadonlyArray<PhysicsBody | Collider> | null,
+    state: CastState,
+  ): boolean {
+    const swept = this._castBounds;
+
+    swept.minX = dx < 0 ? bounds.minX + dx : bounds.minX;
+    swept.maxX = dx > 0 ? bounds.maxX + dx : bounds.maxX;
+    swept.minY = dy < 0 ? bounds.minY + dy : bounds.minY;
+    swept.maxY = dy > 0 ? bounds.maxY + dy : bounds.maxY;
+
+    const moving = dx !== 0 || dy !== 0;
+    const end = this._castEnd;
+    const sweep = this._castSweep;
+
+    const length = Math.hypot(dx, dy);
+    const nudged = this._castNudged;
+
+    if (moving) {
+      translateProxy(start, dx, dy, end);
+      translateProxy(start, (dx / length) * touchProbe, (dy / length) * touchProbe, nudged);
+    }
+
+    state.target = null;
+    state.fraction = Infinity;
+    state.normalX = 0;
+    state.normalY = 0;
+    state.initialOverlap = false;
+    state.penetration = 0;
+
+    const candidates = this._spatialIndex === undefined ? this._colliders : this._spatialIndex.queryAabb(swept, this._castCandidates);
+
+    for (const candidate of candidates) {
+      const target = authoredCollider(candidate);
+
+      if (!aabbOverlap(swept, candidate.aabb) || castIgnores(target, filter, includeSensors, excludeBody, exclude)) {
+        continue;
+      }
+
+      if (aabbOverlap(bounds, candidate.aabb) && this._startContact(start, nudged, candidate, target, moving, dx, dy, state)) {
+        continue;
+      }
+
+      if (moving && state.fraction > 0 && sweepProxies(end, dx, dy, candidate, sweep) && sweep.t < state.fraction) {
+        state.target = target;
+        state.fraction = sweep.t;
+        state.normalX = sweep.normalX;
+        state.normalY = sweep.normalY;
+      }
+    }
+
+    return state.target !== null;
+  }
+
+  /**
+   * Decides a candidate the cast starts out overlapping or touching: records
+   * it when the motion does not lead out of it and returns `true`, so the
+   * sweep skips it either way. Returns `false` for a candidate the start pose
+   * is clear of.
+   */
+  private _startContact(
+    start: CollisionProxy,
+    nudged: CollisionProxy,
+    candidate: Collider,
+    target: Collider,
+    moving: boolean,
+    dx: number,
+    dy: number,
+    state: CastState,
+  ): boolean {
+    const manifold = this._castManifold;
+    let penetration = 0;
+
+    if (collide(start, candidate, manifold)) {
+      penetration = deepestPenetration(manifold);
+    } else if (!moving || !collide(nudged, candidate, manifold)) {
+      // Exactly touching is neither an overlap to the narrow phase nor an
+      // entry to the sweep, so a shape resting flush against a wall would pass
+      // through it. A contact that appears a hair further along the motion is
+      // that touch.
+      return false;
+    }
+
+    // The manifold normal points from the cast shape into the target, so its
+    // negation is the direction that leads out of the contact.
+    const normalX = -manifold.normalX;
+    const normalY = -manifold.normalY;
+
+    if (!moving || dx * normalX + dy * normalY < 0) {
+      recordOverlap(state, target, penetration, normalX, normalY);
+    }
+
+    return true;
+  }
 }
 
 /** Read a flat vertex/normal buffer in-bounds: callers index within 0..count-1. */
@@ -319,7 +698,10 @@ const pointInCollider = (collider: Collider, px: number, py: number): boolean =>
   if (collider.shape.type === 'capsule') {
     const spine = collider.worldVertices;
 
-    return pointSegmentDistanceSquared(px, py, spine[0]!, spine[1]!, spine[2]!, spine[3]!, _pointScratch) <= collider.shape.radius * collider.shape.radius;
+    return (
+      pointSegmentDistanceSquared(px, py, spine[0]!, spine[1]!, spine[2]!, spine[3]!, _pointScratch) <=
+      collider.shape.radius * collider.shape.radius
+    );
   }
 
   const verts = collider.worldVertices;
@@ -409,7 +791,15 @@ const rayCastSegment = (collider: Collider, ox: number, oy: number, dx: number, 
  * a fixed 40 bisections put the result far below the engine's contact slop. The
  * cost is a query-path concern only - the solver never runs this.
  */
-const rayCastCapsule = (collider: Collider, radius: number, ox: number, oy: number, dx: number, dy: number, maxDistance: number): RayHit | null => {
+const rayCastCapsule = (
+  collider: Collider,
+  radius: number,
+  ox: number,
+  oy: number,
+  dx: number,
+  dy: number,
+  maxDistance: number,
+): RayHit | null => {
   const spine = collider.worldVertices;
   const ax = spine[0]!;
   const ay = spine[1]!;
@@ -713,4 +1103,94 @@ const proxyAabb = (shape: SolverShape, proxy: CollisionProxy, out: AabbLike): Aa
   out.maxY = maxY + radius;
 
   return out;
+};
+
+/** Writes a solver shape placed at `(x, y)` with `angle` into a reusable cast proxy. */
+const fillProxy = (shape: SolverShape, x: number, y: number, angle: number, out: CastProxy): void => {
+  const vertices = out.worldVertices;
+  const normals = out.worldNormals;
+
+  out.shape = shape;
+  out.worldCenter.x = x;
+  out.worldCenter.y = y;
+
+  if (shape.type === 'circle') {
+    vertices.length = 0;
+    normals.length = 0;
+
+    return;
+  }
+
+  const count = shape.type === 'polygon' ? shape.count : 2;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+
+  vertices.length = count * 2;
+  normals.length = count * 2;
+
+  for (let i = 0; i < count * 2; i += 2) {
+    const vx = shape.vertices[i]!;
+    const vy = shape.vertices[i + 1]!;
+    const nx = shape.normals[i]!;
+    const ny = shape.normals[i + 1]!;
+
+    vertices[i] = x + cos * vx - sin * vy;
+    vertices[i + 1] = y + sin * vx + cos * vy;
+    normals[i] = cos * nx - sin * ny;
+    normals[i + 1] = sin * nx + cos * ny;
+  }
+};
+
+/** Writes `source` translated by `(dx, dy)` into a reusable cast proxy; normals are translation-invariant. */
+const translateProxy = (source: CollisionProxy, dx: number, dy: number, out: CastProxy): void => {
+  const from = source.worldVertices;
+  const fromNormals = source.worldNormals;
+  const vertices = out.worldVertices;
+  const normals = out.worldNormals;
+
+  out.shape = source.shape as SolverShape;
+  out.worldCenter.x = source.worldCenter.x + dx;
+  out.worldCenter.y = source.worldCenter.y + dy;
+  vertices.length = from.length;
+  normals.length = from.length;
+
+  for (let i = 0; i < from.length; i += 2) {
+    vertices[i] = from[i]! + dx;
+    vertices[i + 1] = from[i + 1]! + dy;
+    normals[i] = fromNormals[i]!;
+    normals[i + 1] = fromNormals[i + 1]!;
+  }
+};
+
+/** `true` when a shape cast passes through `target` under the cast's own rules. */
+const castIgnores = (
+  target: Collider,
+  filter: CollisionFilter | null,
+  includeSensors: boolean,
+  excludeBody: PhysicsBody | null,
+  exclude: ReadonlyArray<PhysicsBody | Collider> | null,
+): boolean =>
+  (!includeSensors && target.isSensor) ||
+  target.body === excludeBody ||
+  (filter !== null && !shouldCollide(filter, target.filter)) ||
+  (exclude !== null && (exclude.includes(target) || exclude.includes(target.body)));
+
+const deepestPenetration = (manifold: Manifold): number => {
+  const first = manifold.points[0].penetration;
+
+  return manifold.pointCount > 1 ? Math.max(first, manifold.points[1].penetration) : first;
+};
+
+/** Keeps the deepest starting overlap a cast has met so far. */
+const recordOverlap = (state: CastState, target: Collider, penetration: number, normalX: number, normalY: number): void => {
+  if (state.initialOverlap && penetration <= state.penetration) {
+    return;
+  }
+
+  state.target = target;
+  state.fraction = 0;
+  state.normalX = normalX;
+  state.normalY = normalY;
+  state.initialOverlap = true;
+  state.penetration = penetration;
 };

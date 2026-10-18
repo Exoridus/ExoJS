@@ -113,7 +113,9 @@ const normalize = (vertices: ReadonlyArray<Readonly<PointLike>>): number[] => {
   dropCollinear(points);
 
   if (points.length < 6) {
-    throw new RangeError(`decomposeToConvexParts: needs at least 3 distinct, non-collinear vertices, received ${points.length / 2} after cleanup.`);
+    throw new RangeError(
+      `decomposeToConvexParts: needs at least 3 distinct, non-collinear vertices, received ${points.length / 2} after cleanup.`,
+    );
   }
 
   if (Math.abs(signedArea(points)) <= weldEpsilon) {
@@ -391,7 +393,8 @@ const sequence = (count: number): number[] => {
   return out;
 };
 
-const toPoints = (points: number[], cycle: number[]): PointLike[] => cycle.map(index => ({ x: points[index * 2]!, y: points[index * 2 + 1]! }));
+const toPoints = (points: number[], cycle: number[]): PointLike[] =>
+  cycle.map(index => ({ x: points[index * 2]!, y: points[index * 2 + 1]! }));
 
 /** Shoelace signed area of an index cycle over `points`. */
 const cycleArea = (points: number[], cycle: number[]): number => {

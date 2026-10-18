@@ -35,7 +35,13 @@ const advance = (world: PhysicsWorld, seconds: number): void => {
 
 /** A wide static floor whose top surface sits at `topY`. */
 const addFloor = (world: PhysicsWorld, topY: number, friction = 0.5, halfWidth = 600): void => {
-  world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: topY + 20 }, colliders: [{ shape: new BoxShape(halfWidth * 2, 40), friction }] }));
+  world.add(
+    new PhysicsBody({
+      type: 'static',
+      position: { x: 0, y: topY + 20 },
+      colliders: [{ shape: new BoxShape(halfWidth * 2, 40), friction }],
+    }),
+  );
 };
 
 /** A dynamic box of `width`×`height` centred at `(x, y)`. */
@@ -46,18 +52,22 @@ const addBox = (
   width: number,
   height = width,
   options: { friction?: number; restitution?: number; density?: number; fixedRotation?: boolean } = {},
-): PhysicsBody => {
-  return world.add(
+): PhysicsBody =>
+  world.add(
     new PhysicsBody({
       type: 'dynamic',
       position: { x, y },
       ...(options.fixedRotation === undefined ? {} : { fixedRotation: options.fixedRotation }),
       colliders: [
-        { shape: new BoxShape(width, height), density: options.density ?? 1, friction: options.friction ?? 0.5, restitution: options.restitution ?? 0 },
+        {
+          shape: new BoxShape(width, height),
+          density: options.density ?? 1,
+          friction: options.friction ?? 0.5,
+          restitution: options.restitution ?? 0,
+        },
       ],
     }),
   );
-};
 
 const speed = (body: PhysicsBody): number => Math.hypot(body.linearVelocityX, body.linearVelocityY);
 
@@ -495,7 +505,11 @@ describe('kinematic interaction', () => {
     const platformTop = 300;
 
     const platform = world.add(
-      new PhysicsBody({ type: 'kinematic', position: { x: 0, y: platformTop + 20 }, colliders: [{ shape: new BoxShape(200, 40), friction: 0.9 }] }),
+      new PhysicsBody({
+        type: 'kinematic',
+        position: { x: 0, y: platformTop + 20 },
+        colliders: [{ shape: new BoxShape(200, 40), friction: 0.9 }],
+      }),
     );
     platform.linearVelocityX = 100;
 
@@ -517,7 +531,11 @@ describe('kinematic interaction', () => {
     const platformTop = 300;
 
     const platform = world.add(
-      new PhysicsBody({ type: 'kinematic', position: { x: 0, y: platformTop + 20 }, colliders: [{ shape: new BoxShape(200, 40), friction: 0.5 }] }),
+      new PhysicsBody({
+        type: 'kinematic',
+        position: { x: 0, y: platformTop + 20 },
+        colliders: [{ shape: new BoxShape(200, 40), friction: 0.5 }],
+      }),
     );
 
     for (let i = 0; i < 4; i++) {

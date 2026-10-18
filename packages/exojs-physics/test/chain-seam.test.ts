@@ -54,7 +54,9 @@ const slideAcross = (shape: AnyShape, chain: ChainShape, startX = -120, steps = 
 
   world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 100 }, colliders: [{ shape: chain, friction: 0 }] }));
 
-  const body = world.add(new PhysicsBody({ type: 'dynamic', position: { x: startX, y: 60 }, colliders: [{ shape, density: 1, friction: 0 }] }));
+  const body = world.add(
+    new PhysicsBody({ type: 'dynamic', position: { x: startX, y: 60 }, colliders: [{ shape, density: 1, friction: 0 }] }),
+  );
 
   for (let i = 0; i < 90; i++) {
     world.step(DT);
@@ -93,9 +95,10 @@ const shapes = [
 
 describe('a collinear chain seam', () => {
   it.each(shapes)('carries a $kind across at constant velocity', ({ shape }) => {
-    const trace = slideAcross(shape(), flatFloor());
+    // 25 steps cross both interior vertices and stop before the floor's free
+    // end at x = 150, where a rounded body rightly tips over the corner.
+    const trace = slideAcross(shape(), flatFloor(), -120, 25);
 
-    // Both interior vertices are crossed within these 40 steps.
     expect(trace.x).toBeGreaterThan(50);
     expect(trace.maxUpward).toBeLessThan(5);
     expect(trace.maxSpin).toBeLessThan(0.5);
