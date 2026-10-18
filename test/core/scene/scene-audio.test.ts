@@ -1037,3 +1037,244 @@ describe('SceneAudio — deferred voice surface', () => {
     });
   });
 });
+
+// One voice whose stop throws - a broken custom voice, or an engine voice whose
+// caller's `onEnd` listener throws - must not leave the voices after it playing
+// past the end of their scene.
+describe('SceneAudio — teardown failure isolation', () => {
+  const throwingVoice = (error: Error): Voice =>
+    makeVoice({
+      stop: vi.fn(() => {
+        throw error;
+      }),
+    });
+
+  test.each([
+    ['first', 0],
+    ['middle', 1],
+    ['last', 2],
+  ])('a throwing %s voice does not keep the others from being stopped', (_label, index) => {
+    const failure = new Error('stop threw');
+    const voices = [makeVoice(), makeVoice(), makeVoice()];
+
+    voices[index] = throwingVoice(failure);
+
+    const onFailure = vi.fn();
+    const audio = new SceneAudio(createAppStub(makeVoice()), () => SceneState.Active);
+
+    for (const voice of voices) {
+      audio.add(voice);
+    }
+
+    audio._destroy(onFailure);
+
+    for (const voice of voices) {
+      expect(voice.stop).toHaveBeenCalledTimes(1);
+    }
+
+    expect(onFailure.mock.calls).toEqual([[failure]]);
+  });
+
+  test('every failure is handed over, in tracking order, and the healthy voices after them are still stopped', () => {
+    const first = new Error('first');
+    const second = new Error('second');
+    const healthyA = makeVoice();
+    const healthyB = makeVoice();
+    const onFailure = vi.fn();
+    const audio = new SceneAudio(createAppStub(makeVoice()), () => SceneState.Active);
+
+    audio.add(throwingVoice(first));
+    audio.add(healthyA);
+    audio.add(throwingVoice(second));
+    audio.add(healthyB);
+
+    audio._destroy(onFailure);
+
+    expect(healthyA.stop).toHaveBeenCalledTimes(1);
+    expect(healthyB.stop).toHaveBeenCalledTimes(1);
+    expect(onFailure.mock.calls).toEqual([[first], [second]]);
+  });
+
+  test('destroy() completes the teardown and logs each failure instead of throwing', () => {
+    const error = vi.spyOn(logger, 'error').mockImplementation(() => {});
+    const failure = new Error('stop threw');
+    const healthy = makeVoice();
+    const audio = new SceneAudio(createAppStub(makeVoice()), () => SceneState.Active);
+
+    audio.add(throwingVoice(failure));
+    audio.add(healthy);
+
+    expect(() => audio.destroy()).not.toThrow();
+    expect(healthy.stop).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(error.mock.calls[0]?.[1]).toMatchObject({ source: 'SceneAudio', error: failure });
+
+    error.mockRestore();
+  });
+
+  test('a voice whose stop threw is released, not reported as stopped, and never retried', () => {
+    const broken = throwingVoice(new Error('stop threw'));
+    const healthy = makeVoice();
+    const onFailure = vi.fn();
+    const audio = new SceneAudio(createAppStub(makeVoice()), () => SceneState.Active);
+
+    audio.add(broken);
+    audio.add(healthy);
+    audio._destroy(onFailure);
+    audio._destroy(onFailure);
+    audio._destroy(onFailure);
+
+    expect(broken.ended).toBe(false);
+    expect(broken.stop).toHaveBeenCalledTimes(1);
+    expect(healthy.stop).toHaveBeenCalledTimes(1);
+    expect(onFailure).toHaveBeenCalledTimes(1);
+  });
+
+  test('a deferred voice is cancelled even when a voice tracked before it throws', () => {
+    let state: SceneState = SceneState.Active;
+    const app = createAppStub(makeVoice());
+    const audio = new SceneAudio(app, () => state);
+
+    audio.add(throwingVoice(new Error('stop threw')));
+    state = SceneState.Suspended;
+
+    const pending = audio.play(fakePlayable);
+
+    state = SceneState.Destroying;
+    audio._destroy(() => {});
+
+    expect(pending.ended).toBe(true);
+
+    state = SceneState.Active;
+    audio._flushPending();
+
+    expect(app.audio.play).not.toHaveBeenCalled();
+  });
+
+  test('a failed teardown leaves no pause or retention bookkeeping behind', () => {
+    let state: SceneState = SceneState.Active;
+    const healthy = { ...makePausableVoice(), _setHeld: vi.fn() };
+    const broken = { ...makePausableVoice(), _setHeld: vi.fn(), stop: throwingVoice(new Error('stop threw')).stop };
+    const audio = new SceneAudio(createAppStub(makeVoice()), () => state);
+
+    audio.add(broken as unknown as Voice, { when: SceneAvailability.Active });
+    audio.add(healthy as unknown as Voice, { when: SceneAvailability.Active });
+    audio._destroy(() => {});
+    broken._setHeld.mockClear();
+    healthy._setHeld.mockClear();
+
+    state = SceneState.Suspended;
+    audio._sync();
+
+    expect(broken._setHeld).not.toHaveBeenCalled();
+    expect(healthy._setHeld).not.toHaveBeenCalled();
+  });
+
+  test('a voice an end callback starts during teardown is stopped too', () => {
+    const audio = new SceneAudio(createAppStub(makeVoice()), () => SceneState.Active);
+    const late = makeVoice();
+    const first = makeVoice({
+      stop: vi.fn(() => {
+        audio.add(late);
+
+        throw new Error('stop threw');
+      }),
+    });
+
+    audio.add(first);
+    audio.add(makeVoice());
+    audio._destroy(() => {});
+
+    expect(late.stop).toHaveBeenCalledTimes(1);
+  });
+
+  test('an end callback that stops another tracked voice does not skip any voice', () => {
+    const audio = new SceneAudio(createAppStub(makeVoice()), () => SceneState.Active);
+    const third = makeVoice();
+    const second = makeVoice();
+    const first = makeVoice({
+      stop: vi.fn(() => {
+        second.stop();
+
+        throw new Error('stop threw');
+      }),
+    });
+
+    audio.add(first);
+    audio.add(second);
+    audio.add(third);
+    audio._destroy(() => {});
+
+    expect(third.stop).toHaveBeenCalledTimes(1);
+  });
+
+  test('a successful teardown stops every voice and reports nothing', () => {
+    const onFailure = vi.fn();
+    const voices = [makeVoice(), makeVoice()];
+    const audio = new SceneAudio(createAppStub(makeVoice()), () => SceneState.Active);
+
+    for (const voice of voices) {
+      audio.add(voice);
+    }
+
+    audio._destroy(onFailure);
+
+    expect(onFailure).not.toHaveBeenCalled();
+
+    for (const voice of voices) {
+      expect(voice.stop).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  describe('with real engine voices', () => {
+    test("a throwing caller onEnd listener does not keep the scene's other voices playing", () => {
+      const system = new AudioSystem();
+      const sound = new Sound({ duration: 10 } as AudioBuffer);
+      const audio = new SceneAudio({ audio: system } as unknown as Application, () => SceneState.Active);
+      const failure = new Error('onEnd listener threw');
+      const onFailure = vi.fn();
+
+      const first = audio.play(sound, { loop: true });
+      const second = audio.play(sound, { loop: true });
+      const third = audio.play(sound, { loop: true });
+
+      first.onEnd.add(() => {
+        throw failure;
+      });
+
+      audio._destroy(onFailure);
+
+      expect(first.ended).toBe(true);
+      expect(second.ended).toBe(true);
+      expect(third.ended).toBe(true);
+      expect(onFailure.mock.calls).toEqual([[failure]]);
+
+      sound.destroy();
+      system.destroy();
+    });
+
+    test('a deferred voice whose onEnd listener throws does not keep a later deferred voice from being cancelled', () => {
+      const system = new AudioSystem();
+      const sound = new Sound({ duration: 10 } as AudioBuffer);
+      const audio = new SceneAudio({ audio: system } as unknown as Application, () => SceneState.Preparing);
+      const failure = new Error('onEnd listener threw');
+      const onFailure = vi.fn();
+
+      const first = audio.play(sound);
+      const second = audio.play(sound);
+
+      first.onEnd.add(() => {
+        throw failure;
+      });
+
+      audio._destroy(onFailure);
+
+      expect(first.ended).toBe(true);
+      expect(second.ended).toBe(true);
+      expect(onFailure.mock.calls).toEqual([[failure]]);
+
+      sound.destroy();
+      system.destroy();
+    });
+  });
+});

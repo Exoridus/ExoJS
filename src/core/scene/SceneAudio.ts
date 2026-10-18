@@ -1031,12 +1031,47 @@ export class SceneAudio implements Destroyable {
     }
   }
 
+  /**
+   * Stops every tracked voice, deferred ones included, and releases the
+   * tracking. A voice whose `stop()` throws - its own implementation, or a
+   * caller's `onEnd` listener it dispatches - is logged and released rather
+   * than retried, and the remaining voices are still stopped. Calling it again
+   * is a no-op.
+   */
   public destroy(): void {
+    this._destroy(error => {
+      logger.error('SceneAudio.destroy(): a voice threw while being stopped.', {
+        source: 'SceneAudio',
+        ...(error instanceof Error && { error }),
+      });
+    });
+  }
+
+  /**
+   * @internal {@link SceneAudio.destroy}, handing each voice's failure to
+   * `onFailure` instead of logging it - for an owner that reports teardown
+   * failures through its own error pipeline.
+   */
+  public _destroy(onFailure: (error: unknown) => void): void {
+    const failures: unknown[] = [];
+
+    // Drained rather than iterated over a snapshot: an `onEnd` handler may
+    // track another voice, which a Map iterator still visits, and removing each
+    // entry before stopping it releases a voice whose stop throws exactly once.
     for (const voice of this._tracked.keys()) {
-      voice.stop();
+      this._tracked.delete(voice);
+
+      try {
+        voice.stop();
+      } catch (error) {
+        failures.push(error);
+      }
     }
 
-    this._tracked.clear();
     this._pending.clear();
+
+    for (const error of failures) {
+      onFailure(error);
+    }
   }
 }
