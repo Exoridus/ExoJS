@@ -1,4 +1,4 @@
-export { Application, ApplicationState } from './Application';
+export { Application, type ApplicationDestroyOutcome, type ApplicationDestroyStatus, ApplicationState } from './Application';
 export { BehaviorComponent } from './BehaviorComponent';
 export type { BuildInfo } from './BuildInfo';
 export { buildInfo } from './BuildInfo';

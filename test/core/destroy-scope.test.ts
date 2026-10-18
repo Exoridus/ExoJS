@@ -113,6 +113,22 @@ describe('DestroyScope', () => {
     expect(a.destroyed).toBe(true);
     expect(c.destroyed).toBe(true);
   });
+
+  test('_destroyCollectingFailures hands the failures back instead of throwing, so an owner can report them in any build', () => {
+    const scope = new DestroyScope();
+    const log: string[] = [];
+
+    scope.track(new Tracker('a', log, true));
+    scope.track(new Tracker('b', log));
+
+    const failure = scope._destroyCollectingFailures();
+
+    expect(failure).toBeInstanceOf(AggregateError);
+    expect(failure?.errors).toHaveLength(1);
+    expect(log).toEqual(['b', 'a']);
+    expect(scope.destroyed).toBe(true);
+    expect(scope._destroyCollectingFailures()).toBeNull();
+  });
 });
 
 describe('Scene — ownership via track()', () => {

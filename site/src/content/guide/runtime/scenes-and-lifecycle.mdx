@@ -97,6 +97,8 @@ Do not make `unload` the only place that releases partially initialized work: it
 
 A navigation or preload cancelled while `load` is still pending aborts the same signal. Once `load` settles, such a scene is torn down without running `init` or `unload`; its `destroy` still runs, and so does the cleanup of everything it registered with its scene services.
 
+`app.destroy()` aborts the signal of every scene the application owns at once, including retained and preloaded ones, and waits a bounded grace period for their teardown. An `unload` that never settles does not keep the engine alive: the application is released without it and [`app.destroyOutcome`](/ExoJS/en/guide/runtime/application/#shutting-down) reports the shutdown as `forced`. Resolve pending teardown work when `lifecycleSignal` aborts rather than relying on that deadline.
+
 When a helper owns a shorter-lived scope, destroy the helper before its parent scene ends. Create child scopes only while their parent is live. [Loading and resources](/ExoJS/en/guide/assets/loading-and-resources/) covers independent claims and nested lifetimes.
 
 ## Check the boundary first
