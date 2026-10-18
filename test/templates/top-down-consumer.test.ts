@@ -869,11 +869,9 @@ describe('top-down starter: scene lifecycle', () => {
     expect(game.app.scenes.currentScene).toBeNull();
     expect(game.app.input.onPointerTap.count).toBe(listeners);
 
-    // Whatever init() built for the abandoned scene went down with it.
-    for (const scene of init.mock.contexts as TiledMapScene[]) {
-      expect(scene.colliders.bodyCount).toBe(0);
-      expect(scene.world.bodies).toHaveLength(0);
-    }
+    // A scene whose preparation was cancelled never initializes, so it never
+    // built a world, colliders or listeners to leave behind.
+    expect(init).not.toHaveBeenCalled();
 
     expect(game.errors).toEqual([]);
   });

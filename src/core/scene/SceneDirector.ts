@@ -6,6 +6,7 @@ import type { Seconds } from '#core/units';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 
+import { prepareSceneScope } from './prepareSceneScope';
 import { Scene } from './Scene';
 import { SceneTransitionLifecycleError } from './sceneErrors';
 import {
@@ -19,7 +20,7 @@ import {
 } from './sceneErrors';
 import { SceneNavigationTransaction } from './SceneNavigationTransaction';
 import { SceneScope } from './SceneScope';
-import type { SceneState } from './SceneState';
+import { SceneState } from './SceneState';
 import type {
   SceneTransition,
   SceneTransitionContext,
@@ -403,13 +404,14 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         const scene = claimedEntry !== null ? (claimedEntry.scope.scene as Scene) : new resolvedTarget();
 
         // Published only for the duration of the prepare `await`, and only
-        // from inside `commitSwitch`: from here on this scope is committed or
-        // discarded by the race guard below, never handed back to
+        // from inside `commitSwitch`: from here on this scope is committed,
+        // cancelled before init(), or discarded by the race guard below, never
+        // handed back to
         // `_preloaded`, so aborting its lifecycle can never strand a scope
         // that goes on to live.
         this._preparingScene = scene;
 
-        let newScope: SceneScope;
+        let newScope: SceneScope | null;
 
         try {
           newScope = claimedEntry !== null ? await this._awaitClaimedPreload(claimedEntry) : await this._prepareScene(scene, data);
@@ -417,6 +419,18 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
           if (this._preparingScene === scene) {
             this._preparingScene = null;
           }
+        }
+
+        // Cancelled before init() and already torn down. The abort that
+        // cancelled it has already rejected a transitioned navigation through
+        // its session, as for the race guard below; a direct navigation, or a
+        // session somehow still waiting on this commit, rejects here.
+        if (newScope === null) {
+          if (sessionAtStart === null || this._activeSession === sessionAtStart) {
+            throw new SceneNavigationAbortedError();
+          }
+
+          return;
         }
 
         // Concurrency guard, combining TWO checks - neither subsumes the
@@ -515,15 +529,32 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
             claimedEntry.status = 'ready';
             this._preloaded.set(resolvedTarget, claimedEntry);
           } else {
-            void this._disposeScene(claimedEntry.scope, { dispatchStopScene: false }).catch((disposeError: unknown) => {
-              const normalized = disposeError instanceof Error ? disposeError : new Error(String(disposeError));
+            // The claimed preload may still be inside load(): cancel it like
+            // any other discarded preload and tear it down once its
+            // preparation settles, never concurrently with it. Tracked, so
+            // a `_dispose()` already under way waits for it.
+            const entry = claimedEntry;
 
-              logger.error('SceneDirector.change() failed to dispose an aborted claimed preload that could not be restored.', {
-                source: 'SceneDirector',
-                error: normalized,
-              });
-              this._app.onError.dispatch(normalized);
-            });
+            this._beginPreloadCancellation(entry);
+            void this._trackTeardown(
+              entry.ready
+                .then(
+                  () => this._disposeScene(entry.scope, { dispatchStopScene: false }),
+                  () => {
+                    // prepare() failed - _runPreloadPrepare() already ran the
+                    // failed-preparation cleanup.
+                  },
+                )
+                .catch((disposeError: unknown) => {
+                  const normalized = disposeError instanceof Error ? disposeError : new Error(String(disposeError));
+
+                  logger.error('SceneDirector.change() failed to dispose an aborted claimed preload that could not be restored.', {
+                    source: 'SceneDirector',
+                    error: normalized,
+                  });
+                  this._app.onError.dispatch(normalized);
+                }),
+            );
           }
         }
 
@@ -807,6 +838,10 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * settles) and starts a fresh one with the new data - the newest call's
    * data always wins, never silently ignored.
    *
+   * A preparation discarded while its `load()` is still pending - by
+   * {@link SceneDirector.unload}, a superseding call, or application teardown -
+   * never runs `init()`, and the returned Promise still fulfils.
+   *
    * Rejects with {@link UnregisteredSceneError} (dev builds) when `target` is
    * not present in `ApplicationOptions.scenes`; with
    * {@link SceneNavigationAbortedError} once the application is being
@@ -981,9 +1016,11 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       return true;
     }
 
-    // prepare() succeeded - the scope genuinely reached Ready. Normal
-    // permanent teardown, WITH unload() ("Ready-scope
-    // cleanup"), but WITHOUT dispatching onStopScene (never activated).
+    // prepare() settled. A scope that reached Ready gets the normal permanent
+    // teardown, WITH unload() ("Ready-scope cleanup"), but WITHOUT
+    // dispatching onStopScene (never activated). A preparation the
+    // cancellation above caught before init() is already torn down, and
+    // disposing it again is a no-op.
     if (this._preloaded.get(target) === entry) {
       this._preloaded.delete(target);
     }
@@ -1347,9 +1384,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
     // Aborting a navigation invalidates its generation and aborts the
     // incoming scene's `lifecycleSignal`; its `load()` may still be inside an
-    // await that ignores the signal, and the race guard that catches the stale
-    // generation afterwards goes on to run that scope's `init()`, `unload()`
-    // and `destroy()`. Waiting for the whole run to settle is what keeps that
+    // await that ignores the signal, and once it settles the cancelled
+    // preparation still runs that scope's failed-activation cleanup and
+    // `destroy()`. Waiting for the whole run to settle is what keeps that
     // teardown from executing against a Loader, rendering context, audio
     // system and backend this disposal has already released. The rejection is
     // not this disposal's to observe - it belongs to whoever started the
@@ -1420,7 +1457,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       try {
         await entry.ready;
       } catch {
-        // prepare() failed - _runPreloadPrepare()'s own catch already ran
+        // prepare() failed - _prepareScene() already ran
         // the failed-preparation cleanup. Nothing further to do.
         continue;
       }
@@ -1551,6 +1588,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * failed-activation cleanup - engine-managed registrations
    * destroyed, loader claims released, `scene.destroy()` invoked, but
    * `unload()` is never called - and rethrows the original error unchanged.
+   * A preparation cancelled before `load()` fulfilled gets the same cleanup
+   * and resolves `null`: it is not an error of its own, and each caller
+   * settles it the way its own cancellation contract says.
    */
   private async _prepareScene<Data>(
     scene: Scene<Data>,
@@ -1558,16 +1598,8 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     scope = new SceneScope<Data>(this._app, scene, (previous, next) =>
       this.onStateChange.dispatchIsolated(error => this._reportLifecycleError(error), previous, next, scene as Scene),
     ),
-  ): Promise<SceneScope<Data>> {
-    try {
-      await scope.prepare(data);
-
-      return scope;
-    } catch (error) {
-      scope.destroyFailedActivation();
-
-      throw error;
-    }
+  ): Promise<SceneScope<Data> | null> {
+    return prepareSceneScope(scope, data);
   }
 
   /**
@@ -1577,7 +1609,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * reaches the commit boundary almost immediately since there's nothing
    * left to await). If `ready` rejects, the preload's own preparation
    * failure already ran the ordinary failed-preparation cleanup
-   * (`_runPreloadPrepare`'s catch, see above) - nothing further to restore
+   * (`_prepareScene`'s failure path) - nothing further to restore
    * here, this call simply propagates the same rejection `change()` would
    * have produced for a fresh `prepare()` failure.
    */
@@ -1596,10 +1628,12 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     entry.scope.scene._abortLifecycle();
   }
 
-  private async _awaitClaimedPreload(entry: PreloadEntry): Promise<SceneScope> {
+  private async _awaitClaimedPreload(entry: PreloadEntry): Promise<SceneScope | null> {
     await entry.ready;
 
-    return entry.scope;
+    // A claimed preload whose preparation was cancelled has already been torn
+    // down; `ready` fulfils for it all the same.
+    return entry.scope.state === SceneState.Ready ? entry.scope : null;
   }
 
   /**
@@ -1608,32 +1642,35 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * `cancelling` - in that case `unload()` itself owns the final teardown;
    * this method leaves it alone), or removes it from `_preloaded` and
    * rethrows on failure (ordinary failed-preparation cleanup - no `unload()`).
+   * A preparation cancelled before `load()` fulfilled is removed the same way
+   * but fulfils: `preload()` callers are not told about a discard they did not
+   * ask for, and every canceller only waits for `ready` to settle.
    */
   private async _runPreloadPrepare(target: AnySceneConstructor, entry: PreloadEntry, scene: Scene, data: unknown): Promise<void> {
+    let prepared = false;
+
     try {
-      await this._prepareScene(scene, data, entry.scope);
-    } catch (error) {
-      if (this._preloaded.get(target) === entry) {
+      prepared = (await this._prepareScene(scene, data, entry.scope)) !== null;
+    } finally {
+      if (!prepared && this._preloaded.get(target) === entry) {
         this._preloaded.delete(target);
       }
-
-      throw error;
     }
 
-    if (entry.status === 'cancelling') {
-      return;
+    if (prepared && entry.status !== 'cancelling') {
+      entry.status = 'ready';
     }
-
-    entry.status = 'ready';
   }
 
   /**
    * Discard a `_preloaded` entry that a newer `preload()`/`change()` call
    * superseded (mismatched data). Never destroys the scope while its own
    * `prepare()` is still in flight - waits for `ready` to settle first, then
-   * tears it down through the normal "Ready-scope cleanup" path (`unload()`
-   * runs, `onStopScene` does not). A failed `prepare()`
-   * already cleaned itself up via `_runPreloadPrepare`'s own catch above -
+   * tears a scope that reached Ready down through the normal "Ready-scope
+   * cleanup" path (`unload()` runs, `onStopScene` does not). One still inside
+   * `load()` when discarded is cancelled before `init()` and already torn
+   * down by its own preparation. A failed `prepare()`
+   * already cleaned itself up via `_prepareScene`'s failure path -
    * nothing further to do in that case.
    */
   private _discardStalePreload(entry: PreloadEntry): void {
@@ -1951,7 +1988,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * a session commonly reports `done` from inside `_updateTransition()`,
    * which runs BEFORE this frame's `draw()`/`_renderTransition()`.
    *
-   * Steps, in order: null the session/environment/action/settle handles and
+   * Steps, in order: on a failed outcome, abort the lifecycle of the scene
+   * the session's commit is still preparing (so it never runs `init()`),
+   * null the session/environment/action/settle handles and
    * release the render resources, decrement the input gate (exactly once per
    * session lifecycle - the increment lives in `_runTransitionedAction`),
    * destroy the session exactly once, report any failure (both the
@@ -1971,6 +2010,13 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
     if (session === null || settle === null) {
       return;
+    }
+
+    // A session that ends without a commit - aborted, failed, or done too
+    // early - takes its navigation with it, so a scene still inside load()
+    // for that commit will never activate and must not run init() either.
+    if (!outcome.ok) {
+      this._preparingScene?._abortLifecycle();
     }
 
     // Clear all session state synchronously, up front - before destroy() and

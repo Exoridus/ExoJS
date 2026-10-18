@@ -283,6 +283,10 @@ describe('Application.destroy() scene-teardown grace period', () => {
         }
       }
 
+      public override init(): void {
+        events.push('init');
+      }
+
       public override unload(): void {
         events.push('unload');
       }
@@ -315,7 +319,7 @@ describe('Application.destroy() scene-teardown grace period', () => {
       await Promise.all([prepared, unloaded, destroyed]);
     }
 
-    expect(events).toEqual(fails ? ['destroy'] : ['unload', 'destroy']);
+    expect(events).toEqual(['destroy']);
 
     for (const resource of resources) {
       expect(resource).toHaveBeenCalledTimes(1);
