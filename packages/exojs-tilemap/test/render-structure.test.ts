@@ -17,8 +17,8 @@ const region = (width: number, height: number): TextureRegion =>
 
 const atlas = (): TileSet => new TileSet({ name: 'atlas', texture: region(64, 32), tileWidth: 32, tileHeight: 32, tileCount: 2 });
 
-const collection = (): TileSet =>
-  new TileSet({ name: 'props', tileWidth: 32, tileHeight: 32, tileImages: [region(32, 32), region(32, 32)] });
+const collection = (width = 32, height = 32): TileSet =>
+  new TileSet({ name: 'props', tileWidth: width, tileHeight: height, tileImages: [region(width, height), region(width, height)] });
 
 const SIZE = 8;
 const CHUNK = 4;
@@ -58,14 +58,21 @@ describe('tile render structure', () => {
     node.destroy();
   });
 
-  it('draws an image collection with one page per change of image in draw order', () => {
+  it('batches in-cell collection images per image, and draws overhanging ones with one page per change of image', () => {
     const checkerboard = new TileLayerNode(filledLayer(collection()));
 
-    // Every neighbouring cell switches image, except across a row break: with an
-    // even chunk width the last cell of a row matches the first of the next, so
-    // a chunk draws CHUNK * CHUNK - (CHUNK - 1) pages.
-    expect(pageCount(checkerboard)).toBe(CHUNKS * (CHUNK * CHUNK - (CHUNK - 1)));
+    // Images that stay in their cells overlap nothing, so each image is one page per chunk.
+    expect(pageCount(checkerboard)).toBe(CHUNKS * 2);
     checkerboard.destroy();
+
+    const tall = new TileLayerNode(filledLayer(collection(32, 64)));
+
+    // Every image overhangs its cell, so cell order holds: every neighbouring
+    // cell switches image, except across a row break - with an even chunk width
+    // the last cell of a row matches the first of the next, so a chunk draws
+    // CHUNK * CHUNK - (CHUNK - 1) pages.
+    expect(pageCount(tall)).toBe(CHUNKS * (CHUNK * CHUNK - (CHUNK - 1)));
+    tall.destroy();
 
     const props = collection();
     const uniform = new TileLayer({

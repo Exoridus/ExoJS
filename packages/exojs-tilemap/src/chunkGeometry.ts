@@ -33,10 +33,10 @@ export interface TileQuad {
 }
 
 /**
- * Geometry sharing one texture. Orthogonal chunks of atlas tiles group tiles
- * by texture, followed by consecutive runs of the tiles whose overlaps need
- * cell order; isometric chunks, and chunks holding image-collection tiles, keep
- * consecutive runs to preserve draw order.
+ * Geometry sharing one texture. Orthogonal chunks group tiles by texture,
+ * followed by consecutive runs of the tiles whose overlaps need cell order;
+ * isometric, staggered and hexagonal chunks keep consecutive runs to preserve
+ * draw order.
  * @internal
  */
 export interface ChunkPage {
@@ -123,14 +123,24 @@ const pageQuads = (
   return page.quads as TileQuad[];
 };
 
-/** Atlas pages in the layer's tileset order, so overlapping tiles keep a stable stacking. */
-const atlasPages = (tilesets: readonly TileSet[], buckets: ReadonlyMap<Texture, ChunkPage>): ChunkPage[] => {
+/**
+ * Batched pages: atlases in the layer's tileset order, then collection images in
+ * the order they were first drawn. Batched tiles never overlap one another, so
+ * the order only keeps the page list stable.
+ */
+const batchedPages = (tilesets: readonly TileSet[], buckets: ReadonlyMap<Texture, ChunkPage>): ChunkPage[] => {
   const pages: ChunkPage[] = [];
 
   for (const tileset of tilesets) {
     const page = tileset.texture === null ? undefined : buckets.get(tileset.texture.texture);
 
     if (page !== undefined && page.quads.length > 0 && !pages.includes(page)) {
+      pages.push(page);
+    }
+  }
+
+  for (const page of buckets.values()) {
+    if (page.quads.length > 0 && !pages.includes(page)) {
       pages.push(page);
     }
   }
@@ -226,14 +236,7 @@ export const needsRowOrder = (tilesets: readonly TileSet[], cellWidth: number, c
 };
 
 /**
- * Collection images differ in size and usually overhang their cells, so they
- * must be drawn in cell order like Tiled does; bucketing them by texture would
- * restack every overlap.
- */
-const hasImageCollection = (tilesets: readonly TileSet[]): boolean => tilesets.some(tileset => tileset.tileImages !== null);
-
-/**
- * Decides, cell by cell in draw order, which atlas tiles of an orthogonal chunk
+ * Decides, cell by cell in draw order, which tiles of an orthogonal chunk
  * must keep their cell order: a tile overhanging its cell, and a tile under an
  * overhang drawn before it. Every other tile overlaps nothing drawn before it in
  * the chunk, so it can batch by texture ahead of them. Pixel rects are relative
@@ -372,7 +375,7 @@ export const buildChunkPages = (
   const runs: ChunkPage[] = [];
   const isometric = projection?.orientation === 'isometric';
   const staggered = projection?.staggered === true;
-  const ordered = isometric || staggered || hasImageCollection(tilesets);
+  const ordered = isometric || staggered;
   const keepsCellOrder = ordered ? null : cellOrderTracker(chunk.width, chunk.height, tileWidth, tileHeight);
   const cells = cellOrder(chunk.width, chunk.height, projection, band, firstTileX, firstTileY);
   // Artwork bottom-aligns on the cell box, which staggered and hexagonal grids round to even pixels.
@@ -435,5 +438,5 @@ export const buildChunkPages = (
     bucket.push({ x0, y0, x1, y1, u0, v0, u1, v1, orient: orientCode(decoded.transform) });
   }
 
-  return ordered ? runs : [...atlasPages(tilesets, buckets), ...runs];
+  return ordered ? runs : [...batchedPages(tilesets, buckets), ...runs];
 };

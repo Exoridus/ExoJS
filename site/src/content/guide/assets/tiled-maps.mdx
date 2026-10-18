@@ -349,7 +349,7 @@ Physics and navigation stay with rectangular cells. Tile collision, `TileCollide
 
 A tileset made of one image per tile converts to a runtime `TileSet` whose `tileImages` holds each tile's own texture region; `getTileTexture(id)` returns it for either kind of tileset. Every image keeps its own size and is drawn bottom-left aligned in its cell, so larger images extend up and to the right, and tiles removed in the editor leave their ids empty. Tiled 1.9 sub-rectangles of a shared image are honoured.
 
-Tiles of an atlas batch into one draw per chunk. A collection costs one draw each time the image changes in a chunk's draw order, which the renderer keeps in cell order so overlapping images stack as in Tiled. Prefer an atlas for dense layers and a collection for scattered props.
+Tiles that stay inside their cells batch into one draw per texture and chunk: an atlas costs one draw, a collection one per image. Artwork that overhangs its cell, and the tiles drawn over it, keep cell order so overlapping images stack as in Tiled, and each change of texture in that order costs another draw. Prefer an atlas for dense layers and a collection for scattered props.
 
 ## Object templates
 
