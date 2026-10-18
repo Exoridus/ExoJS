@@ -65,6 +65,76 @@ const setup = async (position: PointLike = { x: 0, y: 0 }, maxSpeed = 120) => {
 };
 
 describe('KinematicMovementComponent', () => {
+  it.each(['collision', 'sensor'] as const)('consumes a move from a %s callback in the next hosted step', async kind => {
+    const { world, movement, body, frame } = await setup();
+
+    colliderAt(world, new BoxShape(10, 10), { x: 1000, y: 0 }, 0, 'static', { isSensor: kind === 'sensor' });
+    colliderAt(world, new BoxShape(10, 10), { x: 1008, y: 0 }, 0, 'kinematic');
+
+    let calls = 0;
+
+    const callback = (): void => {
+      calls++;
+      movement.move({ x: 0, y: 1 });
+    };
+
+    if (kind === 'sensor') {
+      world.onSensorEnter.add(callback);
+    } else {
+      world.onCollisionStart.add(callback);
+    }
+
+    frame();
+    expect(calls).toBe(1);
+    expect(body.y).toBe(0);
+    frame();
+    expect(body.y).toBeCloseTo(2, 9);
+    frame();
+    expect(body.y).toBeCloseTo(2, 9);
+  });
+
+  it.each([
+    ['collision', 1],
+    ['collision', 3],
+    ['sensor', 1],
+    ['sensor', 3],
+  ] as const)('consumes a %s callback move from fixed step %i of a manual advance', (kind, triggerStep) => {
+    const world = new PhysicsWorld();
+    const physics = new Container().addComponent(
+      new PhysicsBodyComponent(world, { type: 'kinematic', colliders: [{ shape: new CircleShape(10) }] }),
+    );
+    const movement = new KinematicMovementComponent(physics, { maxSpeed: 60 });
+
+    world.add(physics.body);
+    world._addStepController(movement);
+    colliderAt(world, new BoxShape(10, 10), { x: 1000, y: 0 }, 0, 'static', { isSensor: kind === 'sensor' });
+
+    const trigger = colliderAt(world, new BoxShape(10, 10), { x: triggerStep === 1 ? 1008 : 1013, y: 0 }, 0, 'kinematic');
+
+    trigger.body.linearVelocityX = -120;
+
+    let calls = 0;
+
+    const callback = (): void => {
+      calls++;
+      movement.move({ x: 0, y: 1 });
+    };
+
+    if (kind === 'sensor') {
+      world.onSensorEnter.add(callback);
+    } else {
+      world.onCollisionStart.add(callback);
+    }
+
+    world.step(3 / 60 + 1e-9);
+    expect(calls).toBe(1);
+    expect(physics.body.y).toBeCloseTo(triggerStep === 1 ? 2 : 0, 9);
+    world.step(3 / 60);
+    expect(physics.body.y).toBeCloseTo(triggerStep === 1 ? 2 : 3, 9);
+    world.step(1 / 60);
+    expect(physics.body.y).toBeCloseTo(triggerStep === 1 ? 2 : 3, 9);
+  });
+
   it('moves at maxSpeed through the simulation, not by teleporting', async () => {
     const { node, movement, body, frame } = await setup();
     const steer = node.addComponent(new Steer(movement));

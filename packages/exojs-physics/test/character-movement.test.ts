@@ -199,6 +199,44 @@ describe('CharacterMovementComponent', () => {
   });
 
   describe('ground and contacts', () => {
+    it.each([0, 2])('reprobes after a teleport away from a platform with angular velocity %i', async angularVelocity => {
+      const { world, spawn, frame } = await setup();
+      const platform = colliderAt(world, new BoxShape(200, 20), { x: 0, y: FLOOR + 10 }, 0, 'kinematic');
+      const { character, body } = spawn();
+
+      frame();
+      expect(character.groundCollider).toBe(platform);
+
+      platform.body.linearVelocityX = 90;
+      platform.body.angularVelocity = angularVelocity;
+      body.setTransform({ x: 1000, y: 0 });
+      frame();
+
+      expect(character.grounded).toBe(false);
+      expect(character.groundCollider).toBeNull();
+      expect(body.x).toBeCloseTo(1000, 9);
+      expect(body.linearVelocityX).toBeCloseTo(0, 9);
+      expect(body.linearVelocityY).toBeCloseTo(1600 * DT, 9);
+    });
+
+    it('uses the new support when teleported directly onto another platform', async () => {
+      const { world, spawn, frame } = await setup();
+      const oldPlatform = colliderAt(world, new BoxShape(200, 20), { x: 0, y: FLOOR + 10 }, 0, 'kinematic');
+      const newPlatform = colliderAt(world, new BoxShape(200, 20), { x: 1000, y: FLOOR + 10 }, 0, 'kinematic');
+      const { character, body } = spawn();
+
+      frame();
+      expect(character.groundCollider).toBe(oldPlatform);
+
+      oldPlatform.body.linearVelocityX = 90;
+      newPlatform.body.linearVelocityX = -60;
+      body.setTransform({ x: 1000, y: REST_Y - 0.05 });
+      frame();
+
+      expect(character.groundCollider).toBe(newPlatform);
+      expect(body.x).toBeCloseTo(999, 6);
+    });
+
     it('stands still on flat ground without drifting', async () => {
       const { spawn, floor, frame } = await setup();
       const ground = floor();

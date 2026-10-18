@@ -8,7 +8,6 @@ import { Manifold } from '../collision/Manifold';
 import { collide, testOverlap } from '../collision/narrowphase';
 import { closestPointOnSegment, pointSegmentDistanceSquared } from '../collision/segments';
 import { type SweepHit, sweepProxies } from '../collision/sweep';
-import { applyRotation, applyTransform, createTransform } from '../math';
 import type { PhysicsBody } from '../PhysicsBody';
 import type { AnyShape } from '../shapes/AnyShape';
 import type { ChainShape } from '../shapes/ChainShape';
@@ -491,22 +490,9 @@ export class QueryEngine {
     state: CastState,
     exclude: ReadonlyArray<PhysicsBody | Collider> | null = null,
   ): boolean {
-    const aabb = collider.aabb;
-    const bounds = this._castShiftedBounds;
+    const start = this._prepareShiftedCollider(collider, offsetX, offsetY);
 
-    bounds.minX = aabb.minX + offsetX;
-    bounds.minY = aabb.minY + offsetY;
-    bounds.maxX = aabb.maxX + offsetX;
-    bounds.maxY = aabb.maxY + offsetY;
-
-    let start: CollisionProxy = collider;
-
-    if (offsetX !== 0 || offsetY !== 0) {
-      translateProxy(collider, offsetX, offsetY, this._castShifted);
-      start = this._castShifted;
-    }
-
-    return this._castProxy(start, bounds, dx, dy, collider.filter, false, excludeBody, exclude, state);
+    return this._castProxy(start, this._castShiftedBounds, dx, dy, collider.filter, false, excludeBody, exclude, state);
   }
 
   /**
@@ -517,21 +503,8 @@ export class QueryEngine {
    * the spatial index.
    */
   public _visitContacts(collider: Collider, offsetX: number, offsetY: number, excludeBody: PhysicsBody, visitor: ContactVisitor): void {
-    const aabb = collider.aabb;
+    const start = this._prepareShiftedCollider(collider, offsetX, offsetY);
     const bounds = this._castShiftedBounds;
-
-    bounds.minX = aabb.minX + offsetX;
-    bounds.minY = aabb.minY + offsetY;
-    bounds.maxX = aabb.maxX + offsetX;
-    bounds.maxY = aabb.maxY + offsetY;
-
-    let start: CollisionProxy = collider;
-
-    if (offsetX !== 0 || offsetY !== 0) {
-      translateProxy(collider, offsetX, offsetY, this._castShifted);
-      start = this._castShifted;
-    }
-
     const manifold = this._castManifold;
     const candidates = this._spatialIndex === undefined ? this._colliders : this._spatialIndex.queryAabb(bounds, this._castCandidates);
 
@@ -548,6 +521,24 @@ export class QueryEngine {
 
       visitor._visitContact(target, -manifold.normalX, -manifold.normalY, deepestPenetration(manifold));
     }
+  }
+
+  private _prepareShiftedCollider(collider: Collider, offsetX: number, offsetY: number): CollisionProxy {
+    const aabb = collider.aabb;
+    const bounds = this._castShiftedBounds;
+
+    bounds.minX = aabb.minX + offsetX;
+    bounds.minY = aabb.minY + offsetY;
+    bounds.maxX = aabb.maxX + offsetX;
+    bounds.maxY = aabb.maxY + offsetY;
+
+    if (offsetX === 0 && offsetY === 0) {
+      return collider;
+    }
+
+    translateProxy(collider, offsetX, offsetY, this._castShifted);
+
+    return this._castShifted;
   }
 
   /**
@@ -1046,24 +1037,11 @@ const alreadyReported = (candidate: Collider, authored: Collider, reported: read
 
 /** Build a throwaway collision proxy for a shape placed at `(x, y)` with `angle`. */
 const makeProxy = (shape: SolverShape, x: number, y: number, angle: number): CollisionProxy => {
-  if (shape.type === 'circle') {
-    return { shape, worldCenter: { x, y }, worldVertices: [], worldNormals: [] };
-  }
+  const proxy = createCastProxy();
 
-  const count = shape.type === 'polygon' ? shape.count : 2;
-  const transform = createTransform(x, y, angle);
-  const worldVertices: number[] = [];
-  const worldNormals: number[] = [];
-  const out: PointLike = { x: 0, y: 0 };
+  fillProxy(shape, x, y, angle, proxy);
 
-  for (let i = 0; i < count; i++) {
-    applyTransform(transform, shape.vertices[i * 2]!, shape.vertices[i * 2 + 1]!, out);
-    worldVertices.push(out.x, out.y);
-    applyRotation(transform, shape.normals[i * 2]!, shape.normals[i * 2 + 1]!, out);
-    worldNormals.push(out.x, out.y);
-  }
-
-  return { shape, worldCenter: { x, y }, worldVertices, worldNormals };
+  return proxy;
 };
 
 /** Compute the world AABB of an already-built collision proxy (reuses its cached vertices/centre - no extra transform work). */

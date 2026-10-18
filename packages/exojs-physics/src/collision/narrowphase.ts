@@ -669,8 +669,9 @@ const roundedPolygonsOverlap: OverlapPair = (a, b) => {
     return false;
   }
 
-  // Overlapping cores, or cores whose gap a face axis already measures exactly.
-  if (separation <= 0 || totalRadius === 0) {
+  // Two spines have no face axis along their length, so even separated
+  // collinear spines have zero separation on every face axis.
+  if ((separation <= 0 && (countOf(a) > 2 || countOf(b) > 2)) || totalRadius === 0) {
     return true;
   }
 
