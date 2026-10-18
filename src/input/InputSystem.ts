@@ -201,6 +201,7 @@ export class InputSystem {
    */
   private readonly actionSample: ActionSample;
   private _actionFrameId = 0;
+
   /**
    * How many live owners bind each captured keyboard channel. A refcount
    * rather than a set because one key can be bound by several bindings and
@@ -411,6 +412,7 @@ export class InputSystem {
       batches: this.frameBatches,
       frameId: 0,
       timestamp: 0,
+      clock: app._inputTickClock,
     };
     this.gestureRecognizer = new GestureRecognizer(pointerDistanceThreshold, event => this.journal.push(event));
 

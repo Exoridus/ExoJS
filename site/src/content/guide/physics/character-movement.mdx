@@ -39,6 +39,8 @@ While the character is enabled it is the motor's only source of commands: `movem
   title="examples/guides/character-movement/character-movement.ts"
 />
 
+Read presses from fixed-step code through an action's `tick` view, as `jump.tick.pressed` does here. It hands each press to exactly one fixed step: a frame that runs no step keeps the press for the next one, a frame that runs several delivers it to the first, and a press a pause interrupted never fires after resume. The frame API, `jump.pressed`, is `true` in every fixed step of the frame it happened in, or in none — see [Fixed steps and the tick view](/ExoJS/en/guide/input/keyboard-and-actions/#fixed-steps-and-the-tick-view).
+
 Walking speed and airborne velocity are separate. A launch is not capped by `maxSpeed`, and walking input keeps steering sideways in the air. Gravity integrates once per fixed step, so a world advanced by a manual `PhysicsWorld.step` call that runs several fixed steps falls exactly as far as one stepped by the scene; a launch applies once, to the first of them.
 
 <Callout type="tip" title="Read state in fixedUpdate">

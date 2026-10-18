@@ -464,6 +464,29 @@ export class SceneInputs implements Destroyable {
     this._base.resync(this, sample, masked);
   }
 
+  /**
+   * Drop what every map the scene's pause state now excludes sampled for a
+   * fixed step that has not started. Called when the scene pauses or resumes:
+   * a pause and resume between two input frames would otherwise go unnoticed
+   * by the maps, which only check their availability when they are sampled,
+   * and a press from before the pause would reach the first step after it.
+   */
+  public _dropUnavailableTickInput(): void {
+    for (const map of this._base.maps) {
+      if (!map._isAvailable()) {
+        map._dropTickInput();
+      }
+    }
+
+    for (const level of this._scopeLevels.values()) {
+      for (const map of level.maps) {
+        if (!map._isAvailable()) {
+          map._dropTickInput();
+        }
+      }
+    }
+  }
+
   /** Unbind every tracked binding. Called automatically when the owning scene ends permanently. */
   public destroy(): void {
     for (const binding of this._bindings) {

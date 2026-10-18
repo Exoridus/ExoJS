@@ -230,6 +230,7 @@ export class SceneScope<Data = unknown> {
 
     const errors: unknown[] = [];
 
+    this._guard(errors, () => this.inputs._dropUnavailableTickInput());
     this._guard(errors, () => this.coroutines._sync());
     this._guard(errors, () => this.audio._sync());
     this._guard(errors, () => this.interaction.resume());
@@ -255,6 +256,7 @@ export class SceneScope<Data = unknown> {
 
     const errors: unknown[] = [];
 
+    this._guard(errors, () => this.inputs._dropUnavailableTickInput());
     this._guard(errors, () => this.coroutines._sync());
     this._guard(errors, () => this.audio._sync());
     this._guard(errors, () => this.interaction.resume());

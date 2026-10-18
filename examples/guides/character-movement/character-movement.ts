@@ -40,25 +40,13 @@ const character = hero.addComponent(
 
 // #region guide:controls
 class PlayerControls extends BehaviorComponent {
-  private jumpQueued = false;
-
-  // A press is a per-frame event, but a frame runs zero, one or several fixed
-  // steps. Latch it here and consume it in the next fixed step.
-  public override update(): void {
-    if (jump.pressed) {
-      this.jumpQueued = true;
-    }
-  }
-
+  // `jump.tick` hands each press to exactly one fixed step, however many steps
+  // a frame runs - `jump.pressed` describes the frame instead.
   public override fixedUpdate(): void {
     character.move(walk.value);
 
-    if (this.jumpQueued) {
-      this.jumpQueued = false;
-
-      if (character.grounded) {
-        character.launch({ x: 0, y: -520 });
-      }
+    if (jump.tick.pressed && character.grounded) {
+      character.launch({ x: 0, y: -520 });
     }
   }
 }
@@ -70,24 +58,15 @@ hero.addComponent(new PlayerControls());
 /** One extra jump in the air, refilled on landing: the game's rule, not the engine's. */
 class DoubleJump extends BehaviorComponent {
   private airJumps = 1;
-  private jumpQueued = false;
-
-  public override update(): void {
-    if (jump.pressed) {
-      this.jumpQueued = true;
-    }
-  }
 
   public override fixedUpdate(): void {
     if (character.grounded) {
       this.airJumps = 1;
     }
 
-    if (!this.jumpQueued) {
+    if (!jump.tick.pressed) {
       return;
     }
-
-    this.jumpQueued = false;
 
     if (character.grounded) {
       character.launch({ x: 0, y: -520 });
