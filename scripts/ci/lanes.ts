@@ -368,6 +368,7 @@ const ALL_AREAS: LaneAreas = {
   guides: true,
   siteData: true,
   createExoApp: true,
+  authoredMapFixture: true,
 };
 
 const toEntry = (lane: Lane, coverage: boolean): MatrixEntry => ({

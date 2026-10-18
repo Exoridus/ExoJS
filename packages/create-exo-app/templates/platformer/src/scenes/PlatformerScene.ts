@@ -1,5 +1,18 @@
 import type { RenderingContext, Seconds, SpritesheetData } from '@codexo/exojs';
-import { Asset, Container, Keyboard, Label, Rectangle, Scene, Spritesheet, SystemOrder, View } from '@codexo/exojs';
+import {
+  ActionMap,
+  Asset,
+  AxisAction,
+  ButtonAction,
+  Container,
+  Keyboard,
+  Label,
+  Rectangle,
+  Scene,
+  Spritesheet,
+  SystemOrder,
+  View,
+} from '@codexo/exojs';
 import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 
 import { Player } from '../objects/Player';
@@ -69,19 +82,30 @@ const findMarker = (level: readonly string[], marker: string): { x: number; y: n
 };
 
 export class PlatformerScene extends Scene {
-  private readonly _world = new PhysicsWorld({ gravity: { x: 0, y: 2400 } });
+  /** The ActionMap the scene reads: a horizontal axis to run, a button to jump. */
+  public readonly controls = new ActionMap({
+    move: new AxisAction([
+      { negative: Keyboard.A, positive: Keyboard.D },
+      { negative: Keyboard.Left, positive: Keyboard.Right },
+    ]),
+    jump: new ButtonAction([Keyboard.Space, Keyboard.W, Keyboard.Up]),
+  });
+
   private readonly _level = new Container();
-  private readonly _held = { left: false, right: false, jump: false };
+  private _world!: PhysicsWorld;
   private _camera!: View;
   private _player!: Player;
   private _status!: Label;
   private _spawn = { x: 0, y: 0 };
   private _goal = { x: 0, y: 0 };
-  private _jumpPressed = false;
   private _tiles!: Spritesheet;
   private _characters!: Spritesheet;
   private _tileData!: SpritesheetData;
   private _characterData!: SpritesheetData;
+
+  public get player(): Player {
+    return this._player;
+  }
 
   public override async load(): Promise<void> {
     this._tileData = (await this.loader.load(Asset.type('json', 'platformer-tiles.json'))) as SpritesheetData;
@@ -96,8 +120,10 @@ export class PlatformerScene extends Scene {
     this._characters = new Spritesheet(this.loader.get('platformer-characters.png'), this._characterData);
 
     // Registering the world as a system hands it to the engine's fixed-timestep
-    // scheduler. Nothing here calls `step()`; after every fixed step the world
-    // writes each body's transform onto the node bound to it.
+    // scheduler, which steps it right after this scene's own fixedUpdate(). A
+    // hosted world has to step at the host's rate, so it takes the application's
+    // fixed step rather than its own default. Nothing here calls `step()`.
+    this._world = new PhysicsWorld({ gravity: { x: 0, y: 2400 }, fixedDelta: this.app.fixedTimeStep });
     this.systems.add(this._world, { order: SystemOrder.Physics });
 
     this._spawn = findMarker(LEVEL, 'S');
@@ -114,24 +140,24 @@ export class PlatformerScene extends Scene {
     this._camera.follow(this._player.sprite, { lerp: 0.12 });
     this._camera.setBounds(new Rectangle(0, 0, LEVEL[0]!.length * TILE, LEVEL.length * TILE));
 
-    this._bindInput();
+    this.inputs.attach(this.controls);
 
     this._status = new Label('Arrows or A/D to move, Space to jump.', { fontSize: 18 });
     this._status.anchorIn(this.ui, 'top-left', 24, 20);
     this.ui.addChild(this._status);
   }
 
-  public override update(delta: Seconds): void {
-    this._player.update(delta, {
-      left: this._held.left,
-      right: this._held.right,
-      jumpHeld: this._held.jump,
-      jumpPressed: this._jumpPressed,
+  // Gameplay runs on the fixed step, the clock the world steps on: velocity the
+  // player writes here is what the world integrates right after, once per step,
+  // however often the display refreshes. Held controls are read as values; the
+  // jump press through the action's `tick` view, which hands each press to
+  // exactly one step even when a frame runs none or several.
+  public override fixedUpdate(step: Seconds): void {
+    this._player.fixedUpdate(step, {
+      move: this.controls.move.value,
+      jumpHeld: this.controls.jump.active,
+      jumpPressed: this.controls.jump.tick.pressed,
     });
-
-    // The press is an edge, not a state: consuming it here is what keeps one
-    // key-down from arming a jump on every following frame.
-    this._jumpPressed = false;
 
     const reached = Math.hypot(this._player.body.x - this._goal.x, this._player.body.y - this._goal.y) < TILE;
     const fell = this._player.body.y > LEVEL.length * TILE + 400;
@@ -204,34 +230,5 @@ export class PlatformerScene extends Scene {
     flag.height = TILE;
     flag.setPosition(this._goal.x, this._goal.y);
     this._level.addChild(flag);
-  }
-
-  private _bindInput(): void {
-    const bindHold = (key: Keyboard, set: (down: boolean) => void): void => {
-      this.inputs.onActive(key, () => set(true));
-      this.inputs.onStop(key, () => set(false));
-    };
-
-    for (const key of [Keyboard.A, Keyboard.Left]) {
-      bindHold(key, down => {
-        this._held.left = down;
-      });
-    }
-
-    for (const key of [Keyboard.D, Keyboard.Right]) {
-      bindHold(key, down => {
-        this._held.right = down;
-      });
-    }
-
-    for (const key of [Keyboard.Space, Keyboard.W, Keyboard.Up]) {
-      bindHold(key, down => {
-        this._held.jump = down;
-
-        if (down) {
-          this._jumpPressed = true;
-        }
-      });
-    }
   }
 }

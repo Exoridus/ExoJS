@@ -180,7 +180,7 @@ class TilemapNavigationScene extends Scene {
     this.worldRoot.addChild(this.mapView.band('ground'));
   }
   init() {
-    this.world = new PhysicsWorld();
+    this.world = new PhysicsWorld({ fixedDelta: this.app.fixedTimeStep });
     this.systems.add(this.world, { order: SystemOrder.Physics });
     this.colliders = new TileColliderStreamer(this.world, this.layer);
     this.colliders.sync();

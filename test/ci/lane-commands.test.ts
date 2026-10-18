@@ -29,6 +29,7 @@ const allLaneKeys = Object.keys(
     guides: true,
     siteData: true,
     createExoApp: true,
+    authoredMapFixture: true,
   }),
 );
 

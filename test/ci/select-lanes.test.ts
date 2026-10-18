@@ -557,10 +557,11 @@ describe('CI lane selection — site data gates the unit lane', () => {
     expect(decide('packages/exojs-tilemap/README.md').lanes.unit).toBe(false);
   });
 
-  it('a top-down template change runs the unit lane that plays the starter, alongside its own verify lane', () => {
+  it('a top-down or platformer template change runs the unit lane that plays the starter, alongside its own verify lane', () => {
     for (const file of [
       'packages/create-exo-app/templates/top-down/src/actor.ts',
       'packages/create-exo-app/templates/top-down/public/assets/town-square.tmj',
+      'packages/create-exo-app/templates/platformer/src/objects/Player.ts',
     ]) {
       const { areas, lanes } = decide(file);
       expect({ file, siteData: areas.siteData, engine: areas.engine, unit: lanes.unit, verify: lanes.createExoAppVerify }).toEqual({
@@ -573,6 +574,47 @@ describe('CI lane selection — site data gates the unit lane', () => {
     }
 
     expect(decide('packages/create-exo-app/templates/minimal/src/main.ts').lanes.unit).toBe(false);
+  });
+
+  it("the top-down starter's authored map runs the WebGL2 lane that renders it, and nothing else of engine", () => {
+    for (const file of [
+      'packages/create-exo-app/templates/top-down/public/assets/town-square.tmj',
+      'packages/create-exo-app/templates/top-down/public/assets/map-pack.png',
+    ]) {
+      const { areas, lanes } = decide(file);
+      expect({
+        file,
+        engine: areas.engine,
+        webgl2: lanes.browserWebgl2,
+        webgpu: lanes.browserWebgpu,
+        firefox: lanes.browserFirefox,
+        coverage: lanes.coverage,
+        packageVerify: lanes.packageVerify,
+        unit: lanes.unit,
+      }).toEqual({ file, engine: false, webgl2: true, webgpu: false, firefox: false, coverage: false, packageVerify: false, unit: true });
+    }
+  });
+
+  it('template code and other templates stay out of the WebGL2 lane', () => {
+    expect(decide('packages/create-exo-app/templates/top-down/src/scenes/TopDownScene.ts').lanes).toMatchObject({
+      unit: true,
+      browserWebgl2: false,
+    });
+    expect(decide('packages/create-exo-app/templates/platformer/public/assets/platformer-tiles.png').lanes).toMatchObject({
+      unit: true,
+      browserWebgl2: false,
+      createExoAppVerify: true,
+    });
+    expect(decide('packages/create-exo-app/templates/minimal/src/scenes/MainScene.ts').lanes).toMatchObject({
+      unit: false,
+      browserWebgl2: false,
+      createExoAppVerify: true,
+    });
+    expect(decide('packages/create-exo-app/templates/top-down/README.md').lanes).toMatchObject({
+      unit: false,
+      browserWebgl2: false,
+      createExoAppVerify: false,
+    });
   });
 
   it('site pages and components stay out of the area: no suite reads them', () => {

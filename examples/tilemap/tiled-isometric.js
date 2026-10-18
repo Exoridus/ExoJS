@@ -12,7 +12,7 @@ class IsometricScene extends Scene {
   worldRoot = new Container();
   selection = new Graphics();
   actor = new Graphics();
-  world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+  world;
   body;
   binding;
   target = { x: 99, y: 99 };
@@ -21,6 +21,7 @@ class IsometricScene extends Scene {
     this.map = await this.loader.load(Asset.type('tileMap', assets.demo.isometricLandscape));
   }
   init() {
+    this.world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, fixedDelta: this.app.fixedTimeStep });
     this.worldRoot.setPosition(origin.x, origin.y).setScale(scale);
     this.worldRoot.addChild(new TileMapNode(this.map));
     const gameplay = this.map.getObjectLayer('Gameplay');

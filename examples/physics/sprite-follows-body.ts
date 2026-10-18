@@ -38,7 +38,7 @@ class SpriteFollowsBodyScene extends Scene {
     const { width, height } = app;
 
     // Gravity in px/s², +Y down - matches the engine's screen space.
-    this.world = new PhysicsWorld({ gravity: { x: 0, y: 1400 } });
+    this.world = new PhysicsWorld({ gravity: { x: 0, y: 1400 }, fixedDelta: app.fixedTimeStep });
     this.systems.add(this.world, { order: SystemOrder.Physics });
 
     const characters = new Spritesheet(this.loader.get(assets.demo.spritesheets.platformerCharacters.image), this.spritesheetData);

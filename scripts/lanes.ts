@@ -53,6 +53,7 @@ const ALL_AREAS: LaneAreas = {
   guides: true,
   siteData: true,
   createExoApp: true,
+  authoredMapFixture: true,
 };
 
 const main = async (): Promise<void> => {

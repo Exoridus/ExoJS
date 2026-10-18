@@ -223,17 +223,25 @@ for (const shape of definition?.collision ?? []) {
 To go straight to colliders, `@codexo/exojs-tilemap-physics` builds and streams static bodies from that geometry:
 
 ```ts
+import { Scene, SystemOrder } from '@codexo/exojs';
 import { PhysicsWorld } from '@codexo/exojs-physics';
 import type { TileLayer } from '@codexo/exojs-tilemap';
 import { TileColliderStreamer } from '@codexo/exojs-tilemap-physics';
 
 declare const ground: TileLayer;
 
-const world = new PhysicsWorld({ gravity: { x: 0, y: 1600 } });
-const colliders = new TileColliderStreamer(world, ground);
+export class LevelScene extends Scene {
+  public override init(): void {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 1600 }, fixedDelta: this.app.fixedTimeStep });
+    const colliders = new TileColliderStreamer(world, ground);
 
-// Tick this from your update loop.
-colliders.sync();
+    this.systems.add(world, { order: SystemOrder.Physics });
+    // Synced before each frame's fixed steps, so the world never steps over a
+    // chunk whose colliders are missing; registered after the world, so it is
+    // destroyed first and removes its bodies while the world still exists.
+    this.systems.add({ preFrame: () => colliders.sync(), destroy: () => colliders.destroy() });
+  }
+}
 ```
 
 It owns one static body per resident chunk and keeps them in step with the layer, so a streamed map gains and loses collision along with its chunks. See [Physics basics](/ExoJS/en/guide/physics/physics-basics/) for the mapping table and the two region modes.
