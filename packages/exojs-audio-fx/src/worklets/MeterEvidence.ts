@@ -7,11 +7,10 @@ export class MeterEvidence {
   public evidenceThroughSample = 0;
   public validUntilSample = 0;
 
-  private readonly _sampleRate: number;
   private readonly _indices = new Float64Array(32);
   private readonly _samples = new Float64Array(32);
   private readonly _onsetIds = new Float64Array(32);
-  private readonly _energies = new Float64Array(32);
+  private readonly _energies = new Float64Array(32).fill(NaN);
   private _count = 0;
   private _position = 0;
   private _index = -1;
@@ -19,11 +18,6 @@ export class MeterEvidence {
   private _period = 0;
   private _offset = 0;
   private _dirty = false;
-
-  public constructor(sampleRate: number) {
-    this._sampleRate = sampleRate;
-    this._energies.fill(NaN);
-  }
 
   public reset(): void {
     this.cyclePulses = 0;
@@ -85,7 +79,7 @@ export class MeterEvidence {
     }
 
     if (this._dirty) {
-      this._fit(sample);
+      this._fit(sample, window);
       this._dirty = false;
     }
 
@@ -94,7 +88,7 @@ export class MeterEvidence {
     return previousCycle !== this.cyclePulses || previousOffset !== this._offset;
   }
 
-  private _fit(sample: number): void {
+  private _fit(sample: number, window: number): void {
     let sum = 0;
     let squares = 0;
     let count = 0;
@@ -169,7 +163,8 @@ export class MeterEvidence {
       }
     }
 
-    const expiry = latestSupport + Math.min(2 * this._period, this._sampleRate);
+    // Cover one missing pulse and the finalization window of the next attack.
+    const expiry = latestSupport + 2 * this._period + window;
 
     if (bestScore >= 0.5 && bestScore - secondModelScore >= 0.15 && expiry > sample) {
       this.cyclePulses = bestCycle;

@@ -34,6 +34,7 @@ export interface BeatMessage {
   beatPhase: number;
   energy: number;
   isDownbeat: boolean;
+  meterKnown?: boolean;
   beatInBar: number;
   /** Trust level: early reactive beat vs settled, trustworthy beat. */
   status: 'provisional' | 'locked';

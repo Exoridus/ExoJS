@@ -18,7 +18,6 @@ describe('finalized onset accent', () => {
 });
 
 describe('compact meter evidence', () => {
-  const sampleRate = 48_000;
   const period = 24_000;
   const window = 2048;
 
@@ -40,7 +39,7 @@ describe('compact meter evidence', () => {
   it.each([3, 4] as const)('recovers every starting phase of a %i-pulse cycle without a gain bias', cycle => {
     for (let offset = 0; offset < cycle; offset++) {
       for (const gain of [0.0001, 1, 100]) {
-        const meter = new MeterEvidence(sampleRate);
+        const meter = new MeterEvidence();
         const ring = new OnsetEvidenceRing();
 
         for (let i = 0; i < 48; i++) {
@@ -55,7 +54,7 @@ describe('compact meter evidence', () => {
 
   it('abstains on equal accents, missing observations and a two-pulse alias', () => {
     for (const pattern of [[1], [9, 1]]) {
-      const meter = new MeterEvidence(sampleRate);
+      const meter = new MeterEvidence();
       const ring = new OnsetEvidenceRing();
 
       for (let i = 0; i < 64; i++) {
@@ -67,7 +66,7 @@ describe('compact meter evidence', () => {
   });
 
   it('does not infer phase from an unfinished attack and expires without evidence', () => {
-    const meter = new MeterEvidence(sampleRate);
+    const meter = new MeterEvidence();
     const ring = new OnsetEvidenceRing();
 
     for (let i = 0; i < 24; i++) {
@@ -88,7 +87,7 @@ describe('compact meter evidence', () => {
   });
 
   it('reacquires after a four-to-three switch without retaining a stale phase', () => {
-    const meter = new MeterEvidence(sampleRate);
+    const meter = new MeterEvidence();
     const ring = new OnsetEvidenceRing();
 
     for (let i = 0; i < 48; i++) {
@@ -106,7 +105,7 @@ describe('compact meter evidence', () => {
   });
 
   it('retains cycle alignment through missing onsets and skipped grid pulses', () => {
-    const meter = new MeterEvidence(sampleRate);
+    const meter = new MeterEvidence();
     const ring = new OnsetEvidenceRing();
 
     for (let i = 0; i < 64; i++) {
@@ -119,8 +118,8 @@ describe('compact meter evidence', () => {
     expect(meter.phasePulses).toBe(3);
   });
 
-  it('reacquires after validity expires between slow pulses without discarding the cycle history', () => {
-    const meter = new MeterEvidence(sampleRate);
+  it('keeps slow-cycle phase through the next pulse and expires after the finalization deadline', () => {
+    const meter = new MeterEvidence();
     const ring = new OnsetEvidenceRing();
     const slowPeriod = 57_600;
 
@@ -129,7 +128,7 @@ describe('compact meter evidence', () => {
       meter.update(sample - 512, ring, window);
 
       if (i > 15) {
-        expect(meter.cyclePulses).toBe(0);
+        expect(meter.cyclePulses).toBe(3);
       }
 
       ring.push(sample, 1, 8);
@@ -141,10 +140,14 @@ describe('compact meter evidence', () => {
 
     expect(meter.cyclePulses).toBe(3);
     expect(meter.phasePulses).toBe(2);
+    meter.update(25 * slowPeriod + window - 1, ring, window);
+    expect(meter.cyclePulses).toBe(3);
+    meter.update(25 * slowPeriod + window, ring, window);
+    expect(meter.cyclePulses).toBe(0);
   });
 
   it('does not turn random accent noise into a confident cycle', () => {
-    const meter = new MeterEvidence(sampleRate);
+    const meter = new MeterEvidence();
     const ring = new OnsetEvidenceRing();
     let seed = 0x7351;
     let known = 0;

@@ -347,7 +347,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
     this._ibiIdx = 0;
 
     this._legacyBars = new LegacyBarTracker(this._enableTsDetection);
-    this._meter = new MeterEvidence(this._sampleRate);
+    this._meter = new MeterEvidence();
 
     // Confidence
     this._confidence = 0;
@@ -1307,8 +1307,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
     const beatInterval = 60 / this._bestBpm;
     const barPos = this._barPosition;
     const barLen = this._barLength;
-    this._predictionValidUntilSample =
-      this._lastOnsetSample >= 0 ? this._lastOnsetSample + Math.min(2 * this._ibiSamples, this._sampleRate) : 0;
+    this._predictionValidUntilSample = this._lastOnsetSample >= 0 ? this._lastOnsetSample + 2 * this._ibiSamples + this._fftSize : 0;
 
     for (let i = 0; i < 8; i++) {
       const t = lastBeatTime + (i + 1) * beatInterval;
