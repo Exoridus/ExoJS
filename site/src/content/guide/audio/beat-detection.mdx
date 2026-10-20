@@ -45,6 +45,8 @@ const detector = new BeatDetector({ source: voice });
 
 The detector runs its own FFT inside the worklet processor. No `AudioAnalyser` is required — `BeatDetector` handles frequency analysis internally. The `fftSize` option (default 2048) and `hopSize` (default 512) control the worklet's internal analysis window.
 
+Assigning a different source, including `null`, clears rhythm history and pending predictions immediately. Assigning the same source again preserves continuity. Call `detector.reset()` after a seek or another playback discontinuity on the same source. The detector cannot infer a track seek, voice pause or EOF from an arbitrary bus. Missing input or a gap in the context-frame stream resets analysis; recorded silence instead remains valid audio and lets predictions expire. `barNumber` remains a lifetime counter across resets.
+
 ## Tempo and confidence
 
 Two read-only getters give you the detector's current tempo estimate:
@@ -153,6 +155,10 @@ detector.lookahead          // readonly array of upcoming beats
 
 These are pure derivations from the detector's most recent worklet state update — no allocation, no event dispatch.
 
+Predictions additionally check the current audio-context time. `predictionValidUntil` reports when a retained schedule must be discarded, or 0 when unavailable. Without renewed onset support, this is at most two tracked beat periods or one second, whichever is shorter. After expiry, `lookahead` returns an empty array and `nextBeatTime` / `nextDownbeatTime` return 0. The next-time getters skip past entries; a retained `lookahead` array can still contain them. Later extrapolated times are conditional on the rhythm continuing. `onBeatPredicted` announces each received revision at most once, skips expired schedules, and does not coalesce distinct revisions queued for delivery.
+
+`minSettlingMs` bounds the first beat's posting time, rounded up to an analysis hop. A beat posted after warm-up can carry an earlier onset timestamp. `BeatInfo.energy` is raw novelty from the hop that emitted the beat, rather than a normalized score or necessarily the matched onset's energy. `gridStability` is a legacy alias of `confidence`.
+
 <Callout type="info" title="Trust tempo and confidence only once locked">
 Beats arrive `'provisional'` first — low-latency and ideal for snappy visual reactivity — then promote to `'locked'` once the grid settles, and `tempo`/`confidence` read 0 until that point. Gate anything that needs a dependable BPM — a sequencer, a UI readout — on `info.status === 'locked'`.
 </Callout>
@@ -169,7 +175,7 @@ const detector = new BeatDetector({
 });
 ```
 
-`barPosition` (1-based) tells you which beat you're on within the current bar. `barLength` reports the detected bar length. Together they let you build sequencers, rhythm-game logic, and procedural music controllers that follow the music's structure.
+`barPosition` (1-based) and `barLength` describe the detector's heuristic bar model. Automatic three-/four-pulse discrimination and bar phase are not independently qualified on a representative music corpus. A locked beat grid does not establish a correct downbeat or a notated denominator. Use an independently authored timeline when gameplay or a sequencer requires authoritative bars.
 
 ## Worklet processor
 

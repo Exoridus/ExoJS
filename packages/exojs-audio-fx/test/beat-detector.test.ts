@@ -28,7 +28,7 @@ const simulateMessage = (detector: BeatDetector, data: unknown): void => {
   const node = getMockWorkletNode(detector);
 
   if (node?.port.onmessage) {
-    node.port.onmessage({ data });
+    node.port.onmessage({ data: { predictionValidUntil: getAudioContext().currentTime + 10, ...(data as Record<string, unknown>) } });
   }
 };
 

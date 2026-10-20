@@ -44,6 +44,12 @@ Effects, analyser nodes, detectors, and playing voices have distinct lifetimes. 
 
 Beat detection estimates tempo and phase. Polling windows such as `justBeat` are not one-shot events, and asynchronous messages are not hard real-time delivery. A rhythm-game scoring timeline needs an explicit authoritative timing design. Analysis values are not a calibrated acoustic loudness measurement.
 
+Assigning a different `BeatDetector.source` clears analysis history and pending predictions. Call `detector.reset()` after a seek or another playback discontinuity on the same source; reassigning that same source preserves continuity. Disconnected inputs and gaps in the context-frame stream also reset analysis. Recorded silence is processed as audio and expires predictions without assuming a source change.
+
+`predictionValidUntil` is the audio-context time at which a retained prediction schedule must be discarded, or 0 when unavailable. Without renewed onset support, validity lasts at most two tracked beat periods or one second, whichever is shorter. `lookahead` becomes empty after expiry, and unavailable `nextBeatTime` and `nextDownbeatTime` return 0. Later times in the eight-beat extrapolation remain conditional; retaining an array does not extend its validity. `onBeatPredicted` announces each received revision at most once and does not coalesce queued revisions.
+
+Automatic 3/4 versus 4/4 labels and downbeats remain heuristic. A locked tempo does not prove the bar phase, notated denominator or reliable meter recognition on arbitrary music. `gridStability` is a legacy alias of `confidence`. `BeatInfo.energy` retains raw novelty from the emission hop, which can differ from the matched onset's hop.
+
 ## Documentation
 
 [Audio basics](https://exoridus.github.io/ExoJS/en/guide/audio/audio-basics/) · [Effects and routing](https://exoridus.github.io/ExoJS/en/guide/audio/audio-effects/) · [Beat detection](https://exoridus.github.io/ExoJS/en/guide/audio/beat-detection/) · [Audio-reactive visuals](https://exoridus.github.io/ExoJS/en/guide/audio/audio-reactive-visualization/) · [AudioAnalyser API](https://exoridus.github.io/ExoJS/en/api/audio-analyser/)

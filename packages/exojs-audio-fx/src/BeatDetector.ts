@@ -110,7 +110,7 @@ export interface BeatInfo {
   confidence: number;
   /** Phase within beat (0 = start). */
   beatPhase: number;
-  /** Novelty/onset strength at the beat. */
+  /** Raw spectral novelty of the emission hop, which may follow the matched onset. */
   energy: number;
   /** Is this beat the first in a bar? */
   isDownbeat: boolean;
@@ -120,9 +120,8 @@ export interface BeatInfo {
    * Detection trust level:
    * - `'provisional'` - an early, low-latency beat emitted before the tempo grid
    *   is fully settled. Good for visual reactivity (a "blink"); may be revised.
-   * - `'locked'` - the tempo grid is settled and trustworthy. Safe for
-   *   sync-critical use. Each stable segment yields exactly one provisional→locked
-   *   transition.
+   * - `'locked'` - the tempo grid passed the detector's settling heuristic.
+   *   This does not establish meter accuracy or calibrated confidence.
    */
   status: 'provisional' | 'locked';
 }
@@ -194,11 +193,9 @@ export class BeatDetector {
   /**
    * Dispatched with the first entry of each new {@link lookahead} schedule.
    *
-   * The detector computes a schedule once per tracked beat, so a listener hears
-   * about every upcoming beat once, not on every state update. A newer schedule
-   * supersedes the times an earlier one predicted for the same beats, and one
-   * replaced before the main thread received it is skipped. Nothing is
-   * dispatched while the detector coasts through silence.
+   * Each revision is announced at most once; queued revisions are not coalesced.
+   * An expired schedule or one without a future entry produces no notice.
+   * A newer revision supersedes earlier predictions for the same beats.
    */
   public readonly onBeatPredicted = new Signal<[UpcomingBeat]>();
 
@@ -211,6 +208,7 @@ export class BeatDetector {
   private readonly _tap = new AudioTap();
   private readonly _ready = new ReadyGate('The beat detector was destroyed before it became ready.');
   private _destroyed = false;
+  private _epoch = 0;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {
     onAudioContextReady.remove(this._onAudioContextReady);
     this._setup(ctx);
@@ -235,6 +233,8 @@ export class BeatDetector {
   private _nextDownbeatTime = 0;
   private _lookahead: readonly UpcomingBeat[] = Object.freeze([]);
   private _lookaheadRevision = 0;
+  private _predictionValidUntil = 0;
+  private readonly _emptyLookahead: readonly UpcomingBeat[] = Object.freeze([]);
 
   /**
    * Half-life in seconds for the {@link pulse} envelope. Mutable; default 0.15.
@@ -293,6 +293,11 @@ export class BeatDetector {
   }
 
   public set source(value: BeatDetectorSource) {
+    if (this._destroyed || value === this._tap.source) {
+      return;
+    }
+
+    this.reset();
     this._tap.source = value;
   }
 
@@ -322,8 +327,15 @@ export class BeatDetector {
     return this._beatPhase;
   }
 
+  /** Next predicted future beat on the audio-context clock, or 0 without a valid prediction. */
   public get nextBeatTime(): number {
-    return this._nextBeatTime;
+    if (this._nextBeatTime <= 0 || !this._predictionsValid()) {
+      return 0;
+    }
+
+    const now = getAudioContext().currentTime;
+
+    return this._nextBeatTime > now ? this._nextBeatTime : (this._lookahead.find(beat => beat.audioTime > now)?.audioTime ?? 0);
   }
 
   public get confidence(): number {
@@ -345,6 +357,7 @@ export class BeatDetector {
     return this._phaseConfidence;
   }
 
+  /** Legacy alias of confidence, not an independent measure of phase stability. */
   public get gridStability(): number {
     return this._gridStability;
   }
@@ -408,17 +421,36 @@ export class BeatDetector {
     return this._timeSignature;
   }
 
+  /** Next predicted future bar start on the audio-context clock, or 0 when unavailable. */
   public get nextDownbeatTime(): number {
-    return this._nextDownbeatTime;
+    if (this._nextDownbeatTime <= 0 || !this._predictionsValid()) {
+      return 0;
+    }
+
+    const now = getAudioContext().currentTime;
+
+    return this._nextDownbeatTime > now
+      ? this._nextDownbeatTime
+      : (this._lookahead.find(beat => beat.isDownbeat && beat.audioTime > now)?.audioTime ?? 0);
+  }
+
+  /**
+   * Audio-context time when the current prediction schedule must be discarded.
+   * Returns 0 without a current schedule. Later extrapolated beat times remain
+   * conditional on the rhythm continuing; this is not a delivery deadline.
+   */
+  public get predictionValidUntil(): number {
+    return this._predictionsValid() ? this._predictionValidUntil : 0;
   }
 
   /**
    * The next eight beats, extrapolated from the last tracked beat at the current
-   * tempo and numbered from the bar position that follows it. Predictions, not
-   * analysed audio: a tempo change or break is not anticipated.
+   * tempo and numbered from the bar position that follows it. Entries may have
+   * passed since delivery. Predictions are conditional on the rhythm continuing;
+   * a tempo change or break is not anticipated. Empty after prediction expiry.
    */
   public get lookahead(): readonly UpcomingBeat[] {
-    return this._lookahead;
+    return this._predictionsValid() ? this._lookahead : this._emptyLookahead;
   }
 
   // -----------------------------------------------------------------------
@@ -456,12 +488,12 @@ export class BeatDetector {
    * each bar (e.g. brighter flash on "1" vs "2,3,4").
    */
   public get barPulse(): number {
-    if (this._tempo === 0 || this._barLength === 0) {
+    if (this._tempo === 0 || this._barLength === 0 || this.nextDownbeatTime === 0) {
       return 0;
     }
 
     const secondsPerBeat = 60 / this._tempo;
-    const lastDownbeat = this._nextDownbeatTime - this._barLength * secondsPerBeat;
+    const lastDownbeat = this.nextDownbeatTime - this._barLength * secondsPerBeat;
     const elapsed = Math.max(0, getAudioContext().currentTime - lastDownbeat);
 
     return Math.pow(0.5, elapsed / this.barPulseHalfLife);
@@ -496,14 +528,39 @@ export class BeatDetector {
   // Lifecycle
   // -----------------------------------------------------------------------
 
+  /**
+   * Discards rhythm history and pending predictions. Call after a seek, loop
+   * discontinuity or explicit playback interruption on the same source.
+   * Assigning a different source resets automatically.
+   */
+  public reset(): void {
+    if (this._destroyed) {
+      return;
+    }
+
+    this._epoch++;
+    this._clearState();
+    this._workletNode?.port.postMessage({ type: 'reset', epoch: this._epoch });
+  }
+
   public destroy(): void {
+    if (this._destroyed) {
+      return;
+    }
+
     onAudioContextReady.remove(this._onAudioContextReady);
 
     this._destroyed = true;
+    this._clearState();
     this._tap.destroy();
     // Disconnecting alone leaves the processor rendering every quantum until
     // the AudioContext closes; the message lets it return false and be released.
     this._workletNode?.port.postMessage({ type: 'destroy' });
+
+    if (this._workletNode) {
+      this._workletNode.port.onmessage = null;
+    }
+
     this._workletNode?.disconnect();
     this._workletNode = null;
     this._ready.abort();
@@ -533,6 +590,7 @@ export class BeatDetector {
           numberOfInputs: 1,
           numberOfOutputs: 0,
           processorOptions: {
+            epoch: this._epoch,
             fftSize: opts.fftSize,
             hopSize: opts.hopSize,
             minBpm: opts.minBpm,
@@ -566,9 +624,19 @@ export class BeatDetector {
 
   private _onWorkletMessage(event: MessageEvent): void {
     const message = event.data as Record<string, unknown>;
+    const epoch = (message.epoch as number | undefined) ?? 0;
+
+    if (this._destroyed || epoch !== this._epoch) {
+      return;
+    }
 
     switch (message.type) {
+      case 'reset':
+        this._clearState();
+        break;
+
       case 'state':
+        this._predictionValidUntil = (message.predictionValidUntil as number) ?? 0;
         this._analysisTime = (message.analysisTime as number) ?? 0;
         this._analysisLatency = Math.max(0, (this._workletNode?.context.currentTime ?? this._analysisTime) - this._analysisTime);
         this._tempo = (message.tempo as number) ?? 0;
@@ -591,9 +659,13 @@ export class BeatDetector {
           const revision = (message.lookaheadRevision as number) ?? 0;
           this._lookahead = Object.freeze(lookahead);
 
-          if (revision !== this._lookaheadRevision && lookahead.length > 0) {
+          if (revision !== this._lookaheadRevision) {
             this._lookaheadRevision = revision;
-            this.onBeatPredicted.dispatch(lookahead[0]!);
+            const upcoming = this._predictionsValid() ? lookahead.find(beat => beat.audioTime > getAudioContext().currentTime) : undefined;
+
+            if (upcoming) {
+              this.onBeatPredicted.dispatch(upcoming);
+            }
           }
         }
 
@@ -612,7 +684,7 @@ export class BeatDetector {
         };
         this.onBeat.dispatch(bi);
 
-        if (bi.isDownbeat) {
+        if (bi.isDownbeat && !this._destroyed && epoch === this._epoch) {
           this.onDownbeat.dispatch(bi);
         }
 
@@ -634,6 +706,32 @@ export class BeatDetector {
         break;
       }
     }
+  }
+
+  private _clearState(): void {
+    this._predictionValidUntil = 0;
+    this._tempo = 0;
+    this._beatPhase = 0;
+    this._nextBeatTime = 0;
+    this._nextDownbeatTime = 0;
+    this._confidence = 0;
+    this._phaseConfidence = 0;
+    this._gridStability = 0;
+    this._analysisTime = 0;
+    this._analysisLatency = 0;
+    this._tempoCandidates = [];
+    this._rms = 0;
+    this._onsetStrength = 0;
+    this._bandEnergy = { low: 0, mid: 0, high: 0 };
+    this._barPosition = 1;
+    this._barLength = 4;
+    this._timeSignature = { numerator: 4, denominator: 4 };
+    this._lookahead = [];
+    this._lookaheadRevision = 0;
+  }
+
+  private _predictionsValid(): boolean {
+    return !this._destroyed && this._predictionValidUntil > 0 && this._predictionValidUntil > getAudioContext().currentTime;
   }
 
   // -----------------------------------------------------------------------

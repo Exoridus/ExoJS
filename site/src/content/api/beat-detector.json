@@ -6,11 +6,11 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs-audio-fx",
   "tier": "stable",
-  "memberCount": 34,
+  "memberCount": 36,
   "counts": {
     "constructors": 1,
-    "methods": 2,
-    "properties": 26,
+    "methods": 3,
+    "properties": 27,
     "events": 5
   },
   "sections": [
@@ -118,6 +118,35 @@
           "params": [],
           "returnType": "void",
           "description": ""
+        },
+        {
+          "name": "reset",
+          "signature": "reset(): void",
+          "signatureTokens": [
+            {
+              "text": "reset",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Discards rhythm history and pending predictions. Call after a seek, loop discontinuity or explicit playback interruption on the same source. Assigning a different source resets automatically."
         },
         {
           "name": "subdivisionPhase",
@@ -425,7 +454,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Legacy alias of confidence, not an independent measure of phase stability."
         },
         {
           "name": "justBeat",
@@ -479,7 +508,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The next eight beats, extrapolated from the last tracked beat at the current tempo and numbered from the bar position that follows it. Predictions, not analysed audio: a tempo change or break is not anticipated."
+          "description": "The next eight beats, extrapolated from the last tracked beat at the current tempo and numbered from the bar position that follows it. Entries may have passed since delivery. Predictions are conditional on the rhythm continuing; a tempo change or break is not anticipated. Empty after prediction expiry."
         },
         {
           "name": "nextBeatTime",
@@ -500,7 +529,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Next predicted future beat on the audio-context clock, or 0 without a valid prediction."
         },
         {
           "name": "nextDownbeatTime",
@@ -521,7 +550,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Next predicted future bar start on the audio-context clock, or 0 when unavailable."
         },
         {
           "name": "onsetStrength",
@@ -564,6 +593,27 @@
           "params": [],
           "returnType": null,
           "description": "How well recent onsets support the beat grid's phase, 0 to 1, or 0 before the grid locks. Distinct from confidence, which reports how sure the detector is of the tempo. A metronomic loop at a wrong-by-an-octave tempo reads high confidence and high phase confidence; a rubato passage at a known tempo reads high confidence and low phase confidence. Gate anything that must land exactly on the beat - a scored hit, a quantised trigger - on this rather than on confidence."
+        },
+        {
+          "name": "predictionValidUntil",
+          "signature": "predictionValidUntil: number",
+          "signatureTokens": [
+            {
+              "text": "predictionValidUntil",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Audio-context time when the current prediction schedule must be discarded. Returns 0 without a current schedule. Later extrapolated beat times remain conditional on the rhythm continuing; this is not a delivery deadline."
         },
         {
           "name": "pulse",
@@ -887,7 +937,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Dispatched with the first entry of each new lookahead schedule. The detector computes a schedule once per tracked beat, so a listener hears about every upcoming beat once, not on every state update. A newer schedule supersedes the times an earlier one predicted for the same beats, and one replaced before the main thread received it is skipped. Nothing is dispatched while the detector coasts through silence."
+          "description": "Dispatched with the first entry of each new lookahead schedule. Each revision is announced at most once; queued revisions are not coalesced. An expired schedule or one without a future entry produces no notice. A newer revision supersedes earlier predictions for the same beats."
         },
         {
           "name": "onDownbeat",
