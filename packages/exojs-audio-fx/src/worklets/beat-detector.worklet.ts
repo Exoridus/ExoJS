@@ -37,9 +37,11 @@ import {
   type TempoCandidateResult,
   tempoPrior,
 } from '../dsp/tempogram';
+import type { ManualMeter, MeterEstimate } from '../meterTypes';
 import { captureBeatEvidence, createBeatEvidence, resetBeatEvidence } from './beatEvidence';
 import { DisposableProcessor } from './disposable-processor';
 import { LegacyBarTracker } from './LegacyBarTracker';
+import { createMeterEstimate } from './meterEstimateView';
 import { MeterEvidence } from './MeterEvidence';
 import { OnsetEvidenceRing } from './OnsetEvidenceRing';
 
@@ -69,6 +71,8 @@ interface BeatDetectorProcessorOptions {
   fastTempoWindowSec?: number;
   stableTempoWindowSec?: number;
   enableTimeSignatureDetection?: boolean;
+  manualMeter?: ManualMeter | null;
+  stopped?: boolean;
   acfIntervalHops?: number;
 }
 
@@ -167,6 +171,8 @@ class BeatDetectorProcessor extends DisposableProcessor {
   private readonly _fastTempoWindowSec: number;
   private readonly _stableTempoWindowSec: number;
   private readonly _enableTsDetection: boolean;
+  private _manualMeter: ManualMeter | null;
+  private _stopped: boolean;
 
   private readonly _real: Float32Array;
   private readonly _imag: Float32Array;
@@ -178,6 +184,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
 
   private readonly _melBandFilters: readonly MelBand[];
   private readonly _melOut: Float32Array;
+  private readonly _meterBands = new Float64Array(3);
   private readonly _fluxWindow: Float32Array;
   private readonly _linFlux: Float32Array;
   private _fluxWritePos: number;
@@ -243,6 +250,9 @@ class BeatDetectorProcessor extends DisposableProcessor {
   // revision, not a comparison of its times, tells a new schedule from a repeat.
   private _lookaheadRevision: number;
   private _predictionValidUntilSample = 0;
+  private _predictionGeneratedAtSample = 0;
+  private _predictionPeriodSamples = 0;
+  private _predictionStatus: 'provisional' | 'locked' = 'provisional';
 
   private _rms: number;
   private _onsetStrength: number;
@@ -284,6 +294,9 @@ class BeatDetectorProcessor extends DisposableProcessor {
     this._fastTempoWindowSec = opts.fastTempoWindowSec || 2.5;
     this._stableTempoWindowSec = opts.stableTempoWindowSec || 8;
     this._enableTsDetection = opts.enableTimeSignatureDetection !== false;
+    this._manualMeter = opts.manualMeter ?? null;
+    this._stopped = opts.stopped ?? false;
+    this._conventionPhase = this._manualMeter?.phasePulses ?? 0;
 
     const numBins = this._fftSize >> 1;
     this._real = new Float32Array(this._fftSize);
@@ -355,7 +368,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
     this._frameOffset = 0;
 
     // State snapshot cadence (~20 Hz)
-    const STATE_INTERVAL_HOPS = Math.round(this._sampleRate / this._hopSize / 20);
+    const STATE_INTERVAL_HOPS = Math.ceil(this._sampleRate / this._hopSize / 20);
     this._stateInterval = Math.max(1, STATE_INTERVAL_HOPS);
     this._hopsSinceState = 0;
 
@@ -404,9 +417,15 @@ class BeatDetectorProcessor extends DisposableProcessor {
     const disposeMessage = this.port.onmessage;
 
     this.port.onmessage = event => {
-      const message = event.data as { type?: string; epoch?: number };
+      const message = event.data as { type?: string; epoch?: number; manualMeter?: ManualMeter | null; stopped?: boolean };
 
       if (message.type === 'reset' && typeof message.epoch === 'number' && message.epoch > this._epoch) {
+        this._stopped = message.stopped ?? false;
+
+        if ('manualMeter' in message) {
+          this._manualMeter = message.manualMeter ?? null;
+        }
+
         this._resetAnalysis(message.epoch);
       } else if (message.type === 'destroy') {
         disposeMessage?.call(this.port, event);
@@ -417,6 +436,10 @@ class BeatDetectorProcessor extends DisposableProcessor {
   public override process(inputs: Float32Array[][], _outputs: Float32Array[][], _parameters: Record<string, Float32Array>): boolean {
     if (this._destroyed) {
       return false;
+    }
+
+    if (this._stopped) {
+      return true;
     }
 
     const input = inputs[0];
@@ -500,7 +523,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
     this._legacyBars.reset();
     this._meter.reset();
     this._barPosition = 1;
-    this._conventionPhase = 0;
+    this._conventionPhase = this._manualMeter?.phasePulses ?? 0;
     this._confidence = 0;
     this._beatConfidence = 0;
     this._phaseConfidence = 0;
@@ -510,6 +533,9 @@ class BeatDetectorProcessor extends DisposableProcessor {
     this._beatsSinceAuthLock = 0;
     this._lookahead = [];
     this._predictionValidUntilSample = 0;
+    this._predictionGeneratedAtSample = 0;
+    this._predictionPeriodSamples = 0;
+    this._predictionStatus = 'provisional';
     this._rms = 0;
     this._onsetStrength = 0;
     this._onsetWin.fill(0);
@@ -565,6 +591,10 @@ class BeatDetectorProcessor extends DisposableProcessor {
     const K = this._prevMelFrames.length;
     let flux = 0;
 
+    if (this._automaticMeter) {
+      this._meterBands.fill(0);
+    }
+
     for (let b = 0; b < this._melBands; b++) {
       let localMax = -Infinity;
 
@@ -580,6 +610,11 @@ class BeatDetectorProcessor extends DisposableProcessor {
 
       if (diff > 0) {
         flux += diff;
+
+        if (this._automaticMeter) {
+          const band = b < this._lowBandEnd ? 0 : Number(b >= this._midBandEnd) + 1;
+          this._meterBands[band] = this._meterBands[band]! + diff;
+        }
       }
     }
 
@@ -603,10 +638,13 @@ class BeatDetectorProcessor extends DisposableProcessor {
     // Adaptive onset normalization + peak-picking. Runs every hop (independent
     // of the ACF/tempo path, which still consumes the raw _fluxWindow above).
     this._detectOnset(flux);
-    this._onsets.observePower(this._sampleCount, this._rms * this._rms, this._fftSize);
 
-    if (this._enableTsDetection && this._meter.update(this._sampleCount, this._onsets, this._fftSize) && this._lastBeatSample >= 0) {
-      this._barPosition = this._meter.cyclePulses > 0 ? this._meter.phasePulses + 1 : this._legacyBars.barPosition;
+    if (this._automaticMeter) {
+      this._onsets.observePower(this._sampleCount, this._rms * this._rms, this._fftSize, this._meterBands);
+    }
+
+    if (this._automaticMeter && this._meter.update(this._sampleCount, this._onsets, this._fftSize) && this._lastBeatSample >= 0) {
+      this._barPosition = this._meter.phasePulses !== null ? this._meter.phasePulses + 1 : this._legacyBars.barPosition;
       this._updateLookahead(this._lastBeatContextTime);
     }
 
@@ -886,7 +924,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
       this._driftHops = 0; // restart the streak; the next step must re-confirm
 
       if (Math.abs(this._bestBpm - oldBpm) / oldBpm > 0.05) {
-        this.port.postMessage({ type: 'tempoChange', newTempo: this._bestBpm, oldTempo: oldBpm });
+        this.port.postMessage({ type: 'tempoChange', epoch: this._epoch, newTempo: this._bestBpm, oldTempo: oldBpm });
       }
     }
   }
@@ -1033,7 +1071,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
     this._ibiHistory[this._ibiIdx] = this._ibiSamples;
     this._ibiIdx = (this._ibiIdx + 1) & 3;
 
-    if (this._enableTsDetection) {
+    if (this._automaticMeter) {
       this._meter.addBeat(beatSample, this._ibiSamples, this._matchedOnset.id);
       this._meter.update(this._sampleCount, this._onsets, this._fftSize);
     }
@@ -1061,7 +1099,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
     }
 
     const status = this._locked ? 'locked' : 'provisional';
-    const meterKnown = !this._enableTsDetection || this._meter.cyclePulses > 0;
+    const meterKnown = this._meterKnown;
     const isDownbeat = meterKnown && this._barPosition === 1;
 
     if (isDownbeat) {
@@ -1082,6 +1120,9 @@ class BeatDetectorProcessor extends DisposableProcessor {
       confidence: this._confidence,
       beatPhase: 0,
       energy: flux,
+      beatConfidence: this._beatConfidence,
+      onsetEnergy: evidence.rawFlux,
+      onsetAudioTime: evidence.onsetSample !== null ? this._contextTimeAt(evidence.onsetSample) : null,
       isDownbeat,
       meterKnown,
       beatInBar: this._barPosition,
@@ -1226,11 +1267,11 @@ class BeatDetectorProcessor extends DisposableProcessor {
   private _updateBarPosition(flux: number): void {
     this._legacyBars.update(this._computeBeatLikelihood(flux));
 
-    if (!this._enableTsDetection) {
+    if (!this._automaticMeter) {
       this._barPosition = this._conventionPhase + 1;
       this._conventionPhase = (this._conventionPhase + 1) % this._barLength;
     } else {
-      this._barPosition = this._meter.cyclePulses > 0 ? this._meter.phasePulses + 1 : this._legacyBars.barPosition;
+      this._barPosition = this._meter.phasePulses !== null ? this._meter.phasePulses + 1 : this._legacyBars.barPosition;
     }
   }
 
@@ -1294,7 +1335,41 @@ class BeatDetectorProcessor extends DisposableProcessor {
     this._confidence = Math.max(0, Math.min(1, c));
   }
 
-  private get _barLength(): 3 | 4 {
+  private get _automaticMeter(): boolean {
+    return this._enableTsDetection && this._manualMeter === null;
+  }
+
+  private get _meterKnown(): boolean {
+    if (this._manualMeter) {
+      return this._manualMeter.phasePulses != null;
+    }
+
+    return !this._enableTsDetection || (this._meter.cyclePulses > 0 && this._meter.phasePulses !== null);
+  }
+
+  private _meterView(settled: boolean, analysisTime: number): MeterEstimate {
+    return createMeterEstimate({
+      meter: this._meter,
+      manualMeter: this._manualMeter,
+      automatic: this._automaticMeter,
+      settled,
+      analysisTime,
+      meterKnown: this._meterKnown,
+      cyclePulses: this._barLength,
+      phasePulses: this._barPosition - 1,
+      periodSeconds: this._ibiSamples / this._sampleRate,
+      sampleRate: this._sampleRate,
+      sample: this._sampleCount,
+      predictionValidUntilSample: this._predictionValidUntilSample,
+      hasBeat: this._lastBeatSample >= 0,
+    });
+  }
+
+  private get _barLength(): number {
+    if (this._manualMeter) {
+      return this._manualMeter.cyclePulses;
+    }
+
     if (this._enableTsDetection && this._meter.cyclePulses !== 0) {
       return this._meter.cyclePulses;
     }
@@ -1308,6 +1383,9 @@ class BeatDetectorProcessor extends DisposableProcessor {
     const barPos = this._barPosition;
     const barLen = this._barLength;
     this._predictionValidUntilSample = this._lastOnsetSample >= 0 ? this._lastOnsetSample + 2 * this._ibiSamples + this._fftSize : 0;
+    this._predictionGeneratedAtSample = this._sampleCount;
+    this._predictionPeriodSamples = beatInterval * this._sampleRate;
+    this._predictionStatus = this._locked ? 'locked' : 'provisional';
 
     for (let i = 0; i < 8; i++) {
       const t = lastBeatTime + (i + 1) * beatInterval;
@@ -1316,8 +1394,8 @@ class BeatDetectorProcessor extends DisposableProcessor {
       lookahead.push({
         audioTime: t,
         tempo: this._bestBpm,
-        isDownbeat: (!this._enableTsDetection || this._meter.cyclePulses > 0) && bp === 1,
-        meterKnown: !this._enableTsDetection || this._meter.cyclePulses > 0,
+        isDownbeat: this._meterKnown && bp === 1,
+        meterKnown: this._meterKnown,
         beatInBar: bp,
       });
     }
@@ -1389,6 +1467,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
       tempo: settled ? this._bestBpm : 0,
       beatPhase,
       confidence: settled ? this._confidence : 0,
+      beatConfidence: valid ? this._beatConfidence : 0,
       phaseConfidence: settled ? this._phaseConfidence : 0,
       gridStability: settled ? this._confidence : 0,
       tempoCandidates: settled ? this._candidates.map(c => ({ bpm: c.bpm, score: c.score })) : [],
@@ -1397,25 +1476,15 @@ class BeatDetectorProcessor extends DisposableProcessor {
       bandEnergy: be,
       barPosition: this._barPosition,
       barLength: this._barLength,
-      timeSignature: { numerator: this._barLength, denominator: 4 },
-      meterEstimate:
-        settled && (!this._enableTsDetection || this._meter.cyclePulses > 0)
-          ? {
-              cyclePulses: this._barLength,
-              phasePulses: this._barPosition - 1,
-              score: this._enableTsDetection ? this._meter.score : 1,
-              origin: this._enableTsDetection ? 'estimated' : 'convention',
-              evidenceThroughAudioTime: analysisTime,
-              validUntilAudioTime: this._contextTimeAt(
-                this._enableTsDetection
-                  ? Math.min(this._predictionValidUntilSample, this._meter.validUntilSample)
-                  : this._predictionValidUntilSample,
-              ),
-            }
-          : null,
+      timeSignature: { numerator: this._barLength, denominator: this._manualMeter?.denominator ?? 4 },
+      meterEstimate: this._meterView(settled, analysisTime),
       lookahead: valid ? this._lookahead : [],
       lookaheadRevision: this._lookaheadRevision,
       predictionValidUntil: valid ? this._contextTimeAt(this._predictionValidUntilSample) : 0,
+      predictionGeneratedAtAudioTime: this._contextTimeAt(this._predictionGeneratedAtSample),
+      predictionEvidenceThroughAudioTime: this._contextTimeAt(this._predictionGeneratedAtSample),
+      predictionPulsePeriodSeconds: this._predictionPeriodSamples / this._sampleRate,
+      predictionStatus: this._predictionStatus,
       nextBeatTime: settled ? nextBeatTime : 0,
       nextDownbeatTime: settled ? nextDownbeatTime : 0,
     });

@@ -4,18 +4,10 @@
 
 export type { AudioAnalyserOptions, AudioAnalyserSource, SpectrumMappingOptions } from './AudioAnalyser';
 export { AudioAnalyser } from './AudioAnalyser';
-export type {
-  BandEnergy,
-  BarInfo,
-  BeatDetectorOptions,
-  BeatDetectorSource,
-  BeatInfo,
-  MeterEstimate,
-  TempoCandidate,
-  TimeSignature,
-  UpcomingBeat,
-} from './BeatDetector';
+export type { BeatAnalysisDiscontinuity } from './BeatAnalysisDiscontinuity';
+export type { BandEnergy, BarInfo, BeatDetectorOptions, BeatDetectorSource, BeatInfo, TempoCandidate, TimeSignature } from './BeatDetector';
 export { BeatDetector } from './BeatDetector';
+export type { BeatSchedule, UpcomingBeat } from './beatScheduleTypes';
 export { AutoWahEffect, type AutoWahEffectOptions } from './effects/AutoWahEffect';
 export { BitCrusherEffect, type BitCrusherEffectOptions } from './effects/BitCrusherEffect';
 export { ChorusEffect, type ChorusEffectOptions } from './effects/ChorusEffect';
@@ -35,4 +27,5 @@ export { ReverbEffect, type ReverbEffectOptions } from './effects/ReverbEffect';
 export { RingModulatorEffect, type RingModulatorEffectOptions } from './effects/RingModulatorEffect';
 export { TremoloEffect, type TremoloEffectOptions } from './effects/TremoloEffect';
 export { VocoderEffect, type VocoderEffectOptions } from './effects/VocoderEffect';
+export type { ManualMeter, MeterCandidate, MeterEstimate, MeterEstimateReason, MeterModel } from './meterTypes';
 export { PcmStreamSource, type PcmStreamSourceOptions, type PcmStreamState } from './PcmStreamSource';

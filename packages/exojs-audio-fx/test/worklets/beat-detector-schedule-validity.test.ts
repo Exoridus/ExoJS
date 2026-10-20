@@ -2,6 +2,32 @@ import { clicktrack, SAMPLE_RATE } from '../fixtures/beat-fixtures';
 import { runDetector } from '../harness/beat-sandbox';
 
 describe('beat processor prediction validity', () => {
+  it('timestamps evidence and trust at forecast generation rather than state delivery', () => {
+    const { messages } = runDetector(new Float32Array(0), {
+      processorOptions: { enableTimeSignatureDetection: false },
+      prepare: value => {
+        value['_bestBpm'] = 120;
+        value['_ibiSamples'] = 24_010;
+        value['_lastBeatSample'] = 48_000;
+        value['_lastBeatContextTime'] = 1;
+        value['_lastOnsetSample'] = 48_000;
+        value['_sampleCount'] = 48_000;
+        (value['_updateLookahead'] as (time: number) => void).call(value, 1);
+        value['_sampleCount'] = 72_000;
+        value['_locked'] = true;
+        (value['_sendStateMessage'] as () => void).call(value);
+      },
+    });
+    expect(messages[0]).toMatchObject({
+      analysisTime: 1.5,
+      predictionGeneratedAtAudioTime: 1,
+      predictionEvidenceThroughAudioTime: 1,
+      predictionPulsePeriodSeconds: 0.5,
+      predictionStatus: 'provisional',
+      lookaheadRevision: 1,
+    });
+  });
+
   it('expires predictions and current confidence during a long recorded silence', () => {
     const audio = new Float32Array(12 * SAMPLE_RATE);
     audio.set(clicktrack(120, 6).samples);

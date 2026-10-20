@@ -1,3 +1,4 @@
+import type { MeterEstimate } from '../../src/meterTypes';
 import { type BarStartMessage, type BeatMessage, runDetector, type StateMessage } from '../harness/beat-sandbox';
 
 const accents = (bpm: number, cycle: number, offset = 0.173, seconds = 24, gain = 1, carrier = 1400): Float32Array => {
@@ -15,7 +16,7 @@ const accents = (bpm: number, cycle: number, offset = 0.173, seconds = 24, gain 
 };
 
 interface MeterState extends StateMessage {
-  meterEstimate: { cyclePulses: number; phasePulses: number; origin: string } | null;
+  meterEstimate: MeterEstimate;
 }
 
 describe('automatic meter from full audio', () => {
@@ -63,7 +64,9 @@ describe('automatic meter from full audio', () => {
 
     const silent = messages.filter((message): message is MeterState => message.type === 'state' && message.analysisTime > 36);
     expect(silent.length).toBeGreaterThan(0);
-    expect(silent.every(state => state.meterEstimate === null && state.nextDownbeatTime === 0 && state.lookahead.length === 0)).toBe(true);
+    expect(
+      silent.every(state => state.meterEstimate.selected === null && state.nextDownbeatTime === 0 && state.lookahead.length === 0),
+    ).toBe(true);
     expect(messages.some(message => message.type === 'barStart' && message.audioTime > 36)).toBe(false);
   });
 
@@ -83,7 +86,7 @@ describe('automatic meter from full audio', () => {
     ({ bpm, cycle }) => {
       const { messages } = runDetector(accents(bpm, cycle));
       const states = messages.filter((message): message is MeterState => message.type === 'state');
-      expect(states.at(-1)!.meterEstimate).toMatchObject({ cyclePulses: cycle, origin: 'estimated' });
+      expect(states.at(-1)!.meterEstimate).toMatchObject({ selected: { cyclePulses: cycle }, origin: 'estimated' });
       const downbeats = messages.filter(
         (message): message is BeatMessage => message.type === 'beat' && message.isDownbeat && message.audioTime > 10,
       );
@@ -109,7 +112,7 @@ describe('automatic meter from full audio', () => {
     expect(beats.length).toBeGreaterThan(20);
     expect(beats.every(beat => !beat.isDownbeat)).toBe(true);
     const states = messages.filter((message): message is MeterState => message.type === 'state');
-    expect(states.at(-1)!.meterEstimate).toBeNull();
+    expect(states.at(-1)!.meterEstimate.selected).toBeNull();
     expect(states.at(-1)!.nextDownbeatTime).toBe(0);
     expect(messages.some(message => message.type === 'barStart')).toBe(false);
   });
@@ -117,7 +120,7 @@ describe('automatic meter from full audio', () => {
   it.each([3, 4])('recognizes a quiet %i-pulse control with another attack spectrum', cycle => {
     const { messages } = runDetector(accents(120, cycle, 0, 24, 0.02, 440));
     const states = messages.filter((message): message is MeterState => message.type === 'state');
-    expect(states.at(-1)!.meterEstimate).toMatchObject({ cyclePulses: cycle });
+    expect(states.at(-1)!.meterEstimate).toMatchObject({ selected: { cyclePulses: cycle } });
   });
 
   it.each([
@@ -132,10 +135,10 @@ describe('automatic meter from full audio', () => {
     expect(
       states
         .filter(state => state.analysisTime > 18 && state.analysisTime < 22)
-        .every(state => state.meterEstimate?.cyclePulses === before),
+        .every(state => state.meterEstimate.selected?.cyclePulses === before),
     ).toBe(true);
     const after = states.filter(state => state.analysisTime > 24 + 32 * 0.5 + 0.2);
     expect(after.length).toBeGreaterThan(0);
-    expect(after.every(state => state.meterEstimate?.cyclePulses === afterCycle)).toBe(true);
+    expect(after.every(state => state.meterEstimate.selected?.cyclePulses === afterCycle)).toBe(true);
   });
 });

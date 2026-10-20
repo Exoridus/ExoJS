@@ -147,11 +147,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-audio-fx/src/BeatDetector.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/BeatDetector.ts"
+        "label": "packages/exojs-audio-fx/src/beatScheduleTypes.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/beatScheduleTypes.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-audio-fx/src/BeatDetector.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/BeatDetector.ts"
+  "sourcePath": "packages/exojs-audio-fx/src/beatScheduleTypes.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/beatScheduleTypes.ts"
 }

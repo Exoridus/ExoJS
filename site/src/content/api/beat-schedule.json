@@ -1,0 +1,351 @@
+{
+  "title": "BeatSchedule",
+  "description": "",
+  "symbol": "BeatSchedule",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 11,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 11,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [],
+      "importLine": "import { BeatSchedule } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "beats",
+          "signature": "beats: readonly Readonly<UpcomingBeat>[]",
+          "signatureTokens": [
+            {
+              "text": "beats",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UpcomingBeat",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Retained revision entries can include times that have since passed."
+        },
+        {
+          "name": "epoch",
+          "signature": "epoch: number",
+          "signatureTokens": [
+            {
+              "text": "epoch",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "evidenceThroughAudioTime",
+          "signature": "evidenceThroughAudioTime: number",
+          "signatureTokens": [
+            {
+              "text": "evidenceThroughAudioTime",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "End of the audio consumed by this forecast revision."
+        },
+        {
+          "name": "generatedAtAudioTime",
+          "signature": "generatedAtAudioTime: number",
+          "signatureTokens": [
+            {
+              "text": "generatedAtAudioTime",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Time this forecast revision was generated, not when it reached the caller."
+        },
+        {
+          "name": "horizonAudioTime",
+          "signature": "horizonAudioTime: number",
+          "signatureTokens": [
+            {
+              "text": "horizonAudioTime",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Last conditional target; this does not extend validity."
+        },
+        {
+          "name": "nextBeat",
+          "signature": "nextBeat: Readonly<UpcomingBeat> | null",
+          "signatureTokens": [
+            {
+              "text": "nextBeat",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UpcomingBeat",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "nextDownbeat",
+          "signature": "nextDownbeat: Readonly<UpcomingBeat> | null",
+          "signatureTokens": [
+            {
+              "text": "nextDownbeat",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UpcomingBeat",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Null without valid anchored meter or a future boundary within the horizon."
+        },
+        {
+          "name": "pulsePeriodSeconds",
+          "signature": "pulsePeriodSeconds: number",
+          "signatureTokens": [
+            {
+              "text": "pulsePeriodSeconds",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Period used to extrapolate this forecast, not a notated note value."
+        },
+        {
+          "name": "revision",
+          "signature": "revision: number",
+          "signatureTokens": [
+            {
+              "text": "revision",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "status",
+          "signature": "status: \"locked\" | \"provisional\"",
+          "signatureTokens": [
+            {
+              "text": "status",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"locked\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"provisional\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "validUntilAudioTime",
+          "signature": "validUntilAudioTime: number",
+          "signatureTokens": [
+            {
+              "text": "validUntilAudioTime",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Discard the forecast at this context time without renewed evidence."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/beatScheduleTypes.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/beatScheduleTypes.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/beatScheduleTypes.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/beatScheduleTypes.ts"
+}

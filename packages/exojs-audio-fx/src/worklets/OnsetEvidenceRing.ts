@@ -8,6 +8,7 @@ export class OnsetEvidenceRing {
   private readonly _strengths = new Float32Array(16);
   private readonly _ids = new Float64Array(16);
   private readonly _powers = new Float64Array(16);
+  private readonly _bands = new Float64Array(48).fill(NaN);
   private _position = 0;
   private _id = 0;
 
@@ -17,14 +18,22 @@ export class OnsetEvidenceRing {
     this._strengths[this._position] = strength;
     this._ids[this._position] = ++this._id;
     this._powers[this._position] = 0;
+    this._bands.fill(NaN, this._position * 3, this._position * 3 + 3);
     this._position = (this._position + 1) % this._samples.length;
     this.count = Math.min(this.count + 1, this._samples.length);
   }
 
-  public observePower(sample: number, power: number, window: number): void {
+  public observePower(sample: number, power: number, window: number, bands?: Float64Array): void {
     for (let i = 0; i < this.count; i++) {
       if (sample >= this._samples[i]! && sample - this._samples[i]! <= window) {
         this._powers[i] = Math.max(this._powers[i]!, power);
+
+        if (bands) {
+          for (let band = 0; band < 3; band++) {
+            const index = i * 3 + band;
+            this._bands[index] = Math.max(Number.isFinite(this._bands[index]!) ? this._bands[index]! : 0, bands[band]!);
+          }
+        }
       }
     }
   }
@@ -37,6 +46,22 @@ export class OnsetEvidenceRing {
     }
 
     return null;
+  }
+
+  public accentFeatures(id: number, sample: number, window: number, into: Float64Array): boolean {
+    for (let i = 0; i < this.count; i++) {
+      if (this._ids[i] === id && sample - this._samples[i]! >= window) {
+        into[0] = this._powers[i]!;
+
+        for (let band = 0; band < 3; band++) {
+          into[band + 1] = this._bands[i * 3 + band]!;
+        }
+
+        return true;
+      }
+    }
+
+    return false;
   }
 
   public nearest(target: number, window: number): number {

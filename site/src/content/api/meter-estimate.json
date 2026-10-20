@@ -6,11 +6,11 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs-audio-fx",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 7,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 6,
+    "properties": 7,
     "events": 0
   },
   "sections": [
@@ -27,11 +27,11 @@
       "title": "Properties",
       "members": [
         {
-          "name": "cyclePulses",
-          "signature": "cyclePulses: 3 | 4",
+          "name": "alternatives",
+          "signature": "alternatives: readonly MeterCandidate[]",
           "signatureTokens": [
             {
-              "text": "cyclePulses",
+              "text": "alternatives",
               "kind": "name"
             },
             {
@@ -39,21 +39,25 @@
               "kind": "punctuation"
             },
             {
-              "text": "3",
+              "text": "readonly",
               "kind": "keyword"
             },
             {
-              "text": " | ",
+              "text": " ",
               "kind": "punctuation"
             },
             {
-              "text": "4",
-              "kind": "keyword"
+              "text": "MeterCandidate",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Pulses of the detector's tempo grid per cycle, not a notated time signature."
+          "description": "At most two distinct cycle models, ordered by score."
         },
         {
           "name": "evidenceThroughAudioTime",
@@ -78,7 +82,7 @@
         },
         {
           "name": "origin",
-          "signature": "origin: \"convention\" | \"estimated\"",
+          "signature": "origin: \"convention\" | \"estimated\" | \"manual\"",
           "signatureTokens": [
             {
               "text": "origin",
@@ -99,18 +103,26 @@
             {
               "text": "\"estimated\"",
               "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"manual\"",
+              "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "A fixed counting convention is distinct from an audio-derived estimate."
+          "description": ""
         },
         {
-          "name": "phasePulses",
-          "signature": "phasePulses: number",
+          "name": "reason",
+          "signature": "reason: MeterEstimateReason",
           "signatureTokens": [
             {
-              "text": "phasePulses",
+              "text": "reason",
               "kind": "name"
             },
             {
@@ -118,13 +130,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "MeterEstimateReason",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Zero-based phase of the most recently tracked beat."
+          "description": ""
         },
         {
           "name": "score",
@@ -145,7 +157,36 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Uncalibrated strength of the selected cycle model, not a probability."
+          "description": "Uncalibrated strength of the leading model, not a probability."
+        },
+        {
+          "name": "selected",
+          "signature": "selected: MeterModel | null",
+          "signatureTokens": [
+            {
+              "text": "selected",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MeterModel",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
         },
         {
           "name": "validUntilAudioTime",
@@ -166,7 +207,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Audio-context time at which the estimate must be discarded without renewed support."
+          "description": "Audio-context time at which this view loses support without new evidence."
         }
       ],
       "paragraphs": [],
@@ -180,11 +221,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-audio-fx/src/BeatDetector.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/BeatDetector.ts"
+        "label": "packages/exojs-audio-fx/src/meterTypes.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/meterTypes.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-audio-fx/src/BeatDetector.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/BeatDetector.ts"
+  "sourcePath": "packages/exojs-audio-fx/src/meterTypes.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/meterTypes.ts"
 }

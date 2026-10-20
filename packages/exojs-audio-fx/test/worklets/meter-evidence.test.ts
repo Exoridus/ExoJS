@@ -41,13 +41,25 @@ describe('compact meter evidence', () => {
       for (const gain of [0.0001, 1, 100]) {
         const meter = new MeterEvidence();
         const ring = new OnsetEvidenceRing();
+        let firstCorrect = -1;
+        let stableRun = 0;
 
         for (let i = 0; i < 48; i++) {
           feed(meter, ring, i, gain * ((i + offset) % cycle === 0 ? 9 : 1));
+          const correct = meter.cyclePulses === cycle && meter.phasePulses === (i + offset) % cycle;
+
+          if (correct && firstCorrect < 0) {
+            firstCorrect = i;
+          }
+
+          stableRun = correct ? stableRun + 1 : 0;
         }
 
         expect(meter.cyclePulses).toBe(cycle);
         expect(meter.phasePulses).toBe((47 + offset) % cycle);
+        expect(firstCorrect).toBeGreaterThanOrEqual(0);
+        expect(firstCorrect).toBeLessThan(4 * cycle);
+        expect(stableRun).toBeGreaterThanOrEqual(2 * cycle);
       }
     }
   });
@@ -118,6 +130,24 @@ describe('compact meter evidence', () => {
     expect(meter.phasePulses).toBe(3);
   });
 
+  it.each([3, 4])('handles structured missing positions without invalid scores for a %i-pulse input', cycle => {
+    const meter = new MeterEvidence();
+    const ring = new OnsetEvidenceRing();
+
+    for (let i = 0; i < 64; i++) {
+      feed(meter, ring, i, i % 2 === 0 ? (i % cycle === 0 ? 9 : 1) : null);
+    }
+
+    expect([...meter.candidateScores].every(Number.isFinite)).toBe(true);
+    expect(meter.candidateScores[1]).toBe(0);
+    // All three positions have support; the four-position model has two unseen positions.
+    expect(meter.cyclePulses).toBe(cycle === 3 ? 3 : 0);
+
+    if (cycle === 3) {
+      expect(meter.phasePulses).toBe(0);
+    }
+  });
+
   it('keeps slow-cycle phase through the next pulse and expires after the finalization deadline', () => {
     const meter = new MeterEvidence();
     const ring = new OnsetEvidenceRing();
@@ -159,5 +189,45 @@ describe('compact meter evidence', () => {
     }
 
     expect(known / 200).toBeLessThanOrEqual(0.05);
+  });
+
+  it('recognizes a repeating cycle without inventing an anchor between equally strong positions', () => {
+    const meter = new MeterEvidence();
+    const ring = new OnsetEvidenceRing();
+
+    for (let i = 0; i < 48; i++) {
+      feed(meter, ring, i, i % 3 === 2 ? 1 : 9);
+    }
+
+    expect(meter.cyclePulses).toBe(3);
+    expect(meter.phasePulses).toBeNull();
+    expect(meter.reason).toBe('ambiguousPhase');
+    expect(meter.candidateScores[0]).toBeGreaterThan(0.5);
+  });
+
+  it('uses aligned band attacks when total power is uniform and never substitutes a later onset', () => {
+    const meter = new MeterEvidence();
+    const ring = new OnsetEvidenceRing();
+    const bands = new Float64Array(3);
+    const observed = new Float64Array(4);
+
+    for (let i = 0; i < 48; i++) {
+      const sample = i * period;
+      bands.set(i % 4 === 0 ? [9, 1, 1] : [1, 1, 1]);
+      ring.push(sample, 1, 8);
+      ring.nearest(sample, 1);
+      const id = ring.selected.id;
+      ring.observePower(sample + 512, 1, window, bands);
+      expect(ring.accentFeatures(id, sample + 512, window, observed)).toBe(false);
+      meter.addBeat(sample, period, id);
+      meter.update(sample + window, ring, window);
+      expect(ring.accentFeatures(id, sample + window, window, observed)).toBe(true);
+      expect([...observed]).toEqual([1, ...bands]);
+    }
+
+    expect(meter.cyclePulses).toBe(4);
+    expect(meter.phasePulses).toBe(3);
+    ring.reset();
+    expect(ring.accentFeatures(48, 50 * period, window, observed)).toBe(false);
   });
 });

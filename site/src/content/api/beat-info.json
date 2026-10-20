@@ -6,11 +6,11 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs-audio-fx",
   "tier": "stable",
-  "memberCount": 9,
+  "memberCount": 12,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 9,
+    "properties": 12,
     "events": 0
   },
   "sections": [
@@ -46,6 +46,31 @@
           "params": [],
           "returnType": null,
           "description": "audioContext.currentTime when the beat occurred."
+        },
+        {
+          "name": "beatConfidence",
+          "signature": "beatConfidence?: number",
+          "signatureTokens": [
+            {
+              "text": "beatConfidence",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Pulse confidence without the meter factor, 0..1 and uncalibrated."
         },
         {
           "name": "beatInBar",
@@ -108,7 +133,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Confidence 0..1."
+          "description": "Legacy combined confidence, 0..1; not a calibrated probability."
         },
         {
           "name": "energy",
@@ -176,6 +201,72 @@
           "params": [],
           "returnType": null,
           "description": "True when the cycle and its phase are available; false leaves beatInBar as display counting only."
+        },
+        {
+          "name": "onsetAudioTime",
+          "signature": "onsetAudioTime?: null | number",
+          "signatureTokens": [
+            {
+              "text": "onsetAudioTime",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Matched onset time on the audio-context clock, or null without a match."
+        },
+        {
+          "name": "onsetEnergy",
+          "signature": "onsetEnergy?: null | number",
+          "signatureTokens": [
+            {
+              "text": "onsetEnergy",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Matched onset novelty, or null when this beat has no associated onset."
         },
         {
           "name": "status",

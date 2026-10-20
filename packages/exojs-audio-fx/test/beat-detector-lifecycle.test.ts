@@ -30,7 +30,7 @@ describe('beat detector analysis lifetime', () => {
     await detector.ready;
     const beat = vi.fn();
     detector.onBeat.add(beat);
-    send(detector, { type: 'state', epoch: 0, tempo: 120, confidence: 0.9 });
+    send(detector, { type: 'state', epoch: 0, tempo: 120, confidence: 0.9, predictionValidUntil: getAudioContext().currentTime + 1 });
     expect(detector.tempo).toBe(120);
 
     detector.source = getAudioContext().createGain();
@@ -41,7 +41,12 @@ describe('beat detector analysis lifetime', () => {
     send(detector, { type: 'beat', epoch: 0, audioTime: 0 });
     expect(detector.tempo).toBe(0);
     expect(beat).not.toHaveBeenCalled();
-    expect(nodeOf(detector).port.postMessage).toHaveBeenCalledWith({ type: 'reset', epoch: epochOf(detector) });
+    expect(nodeOf(detector).port.postMessage).toHaveBeenCalledWith({
+      type: 'reset',
+      epoch: epochOf(detector),
+      manualMeter: null,
+      stopped: false,
+    });
     detector.destroy();
   });
 
@@ -81,6 +86,40 @@ describe('beat detector analysis lifetime', () => {
     detector.onDownbeat.add(downbeat);
     send(detector, { type: 'beat', epoch: 0, isDownbeat: true });
     expect(downbeat).not.toHaveBeenCalled();
+    detector.destroy();
+  });
+
+  it.each(['eof', 'explicitPause'] as const)('stops current-epoch events after %s until resumed', async reason => {
+    const detector = new BeatDetector({ manualMeter: { cyclePulses: 3, phasePulses: 0 } });
+    await detector.ready;
+    const beat = vi.fn();
+    detector.onBeat.add(beat);
+    detector.notifyDiscontinuity(reason);
+    expect(nodeOf(detector).port.postMessage).toHaveBeenLastCalledWith({
+      type: 'reset',
+      epoch: 1,
+      manualMeter: detector.manualMeter,
+      stopped: true,
+    });
+    send(detector, { type: 'beat', epoch: 1, isDownbeat: true });
+    expect(beat).not.toHaveBeenCalled();
+    detector.manualMeter = { cyclePulses: 4, phasePulses: 0 };
+    expect(nodeOf(detector).port.postMessage).toHaveBeenLastCalledWith({
+      type: 'reset',
+      epoch: 2,
+      manualMeter: detector.manualMeter,
+      stopped: true,
+    });
+    detector.notifyDiscontinuity('resume');
+    expect(nodeOf(detector).port.postMessage).toHaveBeenLastCalledWith({
+      type: 'reset',
+      epoch: 3,
+      manualMeter: detector.manualMeter,
+      stopped: false,
+    });
+    send(detector, { type: 'beat', epoch: 3, audioTime: 10, tempo: 120 });
+    expect(beat).toHaveBeenCalledTimes(1);
+    expect(detector.manualMeter?.cyclePulses).toBe(4);
     detector.destroy();
   });
 });

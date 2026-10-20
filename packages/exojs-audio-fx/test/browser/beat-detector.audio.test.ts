@@ -12,7 +12,7 @@ interface DetectorMessage {
   lookahead: unknown[];
   nextBeatTime: number;
   nextDownbeatTime: number;
-  meterEstimate: { cyclePulses: number } | null;
+  meterEstimate: { selected: { cyclePulses: number } | null };
 }
 
 describe('beat detector in real Web Audio', () => {
@@ -93,9 +93,9 @@ describe('beat detector in real Web Audio', () => {
       expect(active.length).toBeGreaterThan(0);
 
       if (cycle === 1) {
-        expect(active.every(message => message.meterEstimate === null)).toBe(true);
+        expect(active.every(message => message.meterEstimate.selected === null)).toBe(true);
       } else {
-        expect(active.every(message => message.meterEstimate?.cyclePulses === cycle)).toBe(true);
+        expect(active.every(message => message.meterEstimate.selected?.cyclePulses === cycle)).toBe(true);
       }
 
       if (bpm === 50) {
@@ -116,7 +116,13 @@ describe('beat detector in real Web Audio', () => {
       expect(silent.length).toBeGreaterThan(0);
 
       for (const message of silent) {
-        expect(message).toMatchObject({ confidence: 0, lookahead: [], nextBeatTime: 0, nextDownbeatTime: 0, meterEstimate: null });
+        expect(message).toMatchObject({
+          confidence: 0,
+          lookahead: [],
+          nextBeatTime: 0,
+          nextDownbeatTime: 0,
+          meterEstimate: { selected: null },
+        });
       }
     } finally {
       node.port.postMessage({ type: 'destroy' });

@@ -9,6 +9,8 @@ export interface BeatEvidence {
   rawFlux: number | null;
   normalizedStrength: number | null;
   beatConfidence: number;
+  kind: 'matched' | 'freeRun';
+  phaseResidualSamples: number | null;
 }
 
 export interface OnsetEvidence {
@@ -32,6 +34,8 @@ export const captureBeatEvidence = (
   evidence.emittedAtSample = emittedAtSample;
   evidence.periodSamples = periodSamples;
   evidence.onsetId = onset.id;
+  evidence.kind = onset.id > 0 ? 'matched' : 'freeRun';
+  evidence.phaseResidualSamples = onset.id > 0 ? onset.sample - gridSample : null;
   evidence.onsetSample = onset.id > 0 ? onset.sample : null;
   evidence.rawFlux = onset.id > 0 ? onset.rawFlux : null;
   evidence.normalizedStrength = onset.id > 0 ? onset.strength : null;
@@ -48,6 +52,8 @@ export const createBeatEvidence = (): BeatEvidence => ({
   rawFlux: null,
   normalizedStrength: null,
   beatConfidence: 0,
+  kind: 'freeRun',
+  phaseResidualSamples: null,
 });
 
 export const resetBeatEvidence = (evidence: BeatEvidence, epoch: number): void => {
@@ -60,4 +66,6 @@ export const resetBeatEvidence = (evidence: BeatEvidence, epoch: number): void =
   evidence.rawFlux = null;
   evidence.normalizedStrength = null;
   evidence.beatConfidence = 0;
+  evidence.kind = 'freeRun';
+  evidence.phaseResidualSamples = null;
 };

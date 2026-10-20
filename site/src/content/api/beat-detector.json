@@ -6,11 +6,11 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs-audio-fx",
   "tier": "stable",
-  "memberCount": 38,
+  "memberCount": 42,
   "counts": {
     "constructors": 1,
-    "methods": 3,
-    "properties": 29,
+    "methods": 4,
+    "properties": 32,
     "events": 5
   },
   "sections": [
@@ -118,6 +118,53 @@
           "params": [],
           "returnType": "void",
           "description": ""
+        },
+        {
+          "name": "notifyDiscontinuity",
+          "signature": "notifyDiscontinuity(reason: BeatAnalysisDiscontinuity): void",
+          "signatureTokens": [
+            {
+              "text": "notifyDiscontinuity",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "reason",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BeatAnalysisDiscontinuity",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "reason",
+              "type": "BeatAnalysisDiscontinuity",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Discards current rhythm evidence immediately. EOF and explicit pause stop analysis until resume, reset or a source identity change. Loops reset phase. Manual configuration persists; the next epoch establishes a new anchor."
         },
         {
           "name": "reset",
@@ -394,6 +441,27 @@
           "description": "Like pulse but resets on downbeats and decays per barPulseHalfLife. Useful for emphasizing the first beat of each bar (e.g. brighter flash on \"1\" vs \"2,3,4\")."
         },
         {
+          "name": "beatConfidence",
+          "signature": "beatConfidence: number",
+          "signatureTokens": [
+            {
+              "text": "beatConfidence",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Pulse-grid confidence without the legacy meter factor, 0..1, or 0 without current support. Available during provisional tracking and uncalibrated; it does not change the legacy lock threshold or establish meter accuracy."
+        },
+        {
           "name": "beatPhase",
           "signature": "beatPhase: number",
           "signatureTokens": [
@@ -511,11 +579,11 @@
           "description": "The next eight beats, extrapolated from the last tracked beat at the current tempo and numbered from the bar position that follows it. Entries may have passed since delivery. Predictions are conditional on the rhythm continuing; a tempo change or break is not anticipated. Empty after prediction expiry. Unknown or expired meter clears downbeat flags while retaining beat times."
         },
         {
-          "name": "meterEstimate",
-          "signature": "meterEstimate: MeterEstimate | null",
+          "name": "manualMeter",
+          "signature": "manualMeter: ManualMeter | null",
           "signatureTokens": [
             {
-              "text": "meterEstimate",
+              "text": "manualMeter",
               "kind": "name"
             },
             {
@@ -523,7 +591,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "MeterEstimate",
+              "text": "ManualMeter",
               "kind": "type"
             },
             {
@@ -537,7 +605,28 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Current pulse cycle and phase, or null when evidence is ambiguous, expired or still acquiring. The denominator of a notated signature is not inferred."
+          "description": ""
+        },
+        {
+          "name": "meterEstimate",
+          "signature": "meterEstimate: MeterEstimate",
+          "signatureTokens": [
+            {
+              "text": "meterEstimate",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MeterEstimate",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Immutable interpretation view, including reasons and competing models while abstaining. A null selected model means no cycle; a null selected phase means no downbeat anchor. The notated denominator is never inferred."
         },
         {
           "name": "meterKnown",
@@ -642,7 +731,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "How well recent onsets support the beat grid's phase, 0 to 1, or 0 before the grid locks. Distinct from confidence, which reports how sure the detector is of the tempo. A metronomic loop at a wrong-by-an-octave tempo reads high confidence and high phase confidence; a rubato passage at a known tempo reads high confidence and low phase confidence. Gate anything that must land exactly on the beat - a scored hit, a quantised trigger - on this rather than on confidence."
+          "description": "Current onset support for the tracked phase, 0..1 and uncalibrated."
         },
         {
           "name": "predictionValidUntil",
@@ -739,6 +828,35 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "schedule",
+          "signature": "schedule: BeatSchedule | null",
+          "signatureTokens": [
+            {
+              "text": "schedule",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BeatSchedule",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Current immutable conditional forecast, or null after expiry/reset. Future entries are checked at access time."
         },
         {
           "name": "secondsSinceLastBeat",
@@ -855,7 +973,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Legacy display convention with denominator 4, which is not inferred from audio."
+          "description": "Legacy display counting; the denominator is manual or defaults to the convention 4."
         }
       ],
       "paragraphs": [],

@@ -34,8 +34,14 @@ const simulateMessage = (detector: BeatDetector, data: unknown): void => {
       data: {
         predictionValidUntil: now + 10,
         meterEstimate: {
-          cyclePulses: message.barLength ?? 4,
-          phasePulses: ((message.barPosition as number) ?? 1) - 1,
+          selected: {
+            cyclePulses: message.barLength ?? 4,
+            phasePulses: ((message.barPosition as number) ?? 1) - 1,
+            pulsePeriodSeconds: 0.5,
+            denominator: null,
+          },
+          alternatives: [],
+          reason: 'available',
           score: 1,
           origin: 'convention',
           evidenceThroughAudioTime: message.analysisTime ?? now,
@@ -1326,4 +1332,4 @@ describe('BeatDetector', () => {
 });
 
 // Import for the type in the test above
-import type { UpcomingBeat } from '../src/BeatDetector';
+import type { UpcomingBeat } from '../src/beatScheduleTypes';

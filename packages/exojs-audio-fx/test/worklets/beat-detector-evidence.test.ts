@@ -2,7 +2,8 @@ import { runDetector } from '../harness/beat-sandbox';
 
 describe('beat detector matched onset evidence', () => {
   it('retains the selected onset raw flux and normalized strength after another hop', () => {
-    runDetector(new Float32Array(0), {
+    let matchedSample = 0;
+    const { messages } = runDetector(new Float32Array(0), {
       prepare: processor => {
         const detect = processor['_detectOnset'] as (flux: number) => void;
         const nearest = processor['_nearestOnset'] as (sample: number, window: number) => number;
@@ -18,6 +19,7 @@ describe('beat detector matched onset evidence', () => {
         detect.call(processor, 0);
 
         const sample = nearest.call(processor, 800, 512);
+        matchedSample = sample;
         expect(sample).toBeGreaterThan(512);
         const evidence = processor['_matchedOnset'] as { sample: number; rawFlux: number; strength: number; id: number };
         expect(evidence).toMatchObject({ sample, rawFlux: 7, id: 1 });
@@ -28,14 +30,29 @@ describe('beat detector matched onset evidence', () => {
         processor['_bestBpm'] = 120;
         processor['_ibiSamples'] = 24_000;
         (processor['_emitBeat'] as (sample: number, flux: number) => void).call(processor, sample, 0);
-        expect(processor['_beatEvidence']).toMatchObject({ onsetId: 1, onsetSample: sample, rawFlux: 7 });
+        expect(processor['_beatEvidence']).toMatchObject({
+          onsetId: 1,
+          onsetSample: sample,
+          rawFlux: 7,
+          kind: 'matched',
+          phaseResidualSamples: 0,
+        });
 
         nearest.call(processor, 20_000, 100);
         expect(evidence.id).toBe(0);
         (processor['_emitBeat'] as (sample: number, flux: number) => void).call(processor, 24_000, 0);
-        expect(processor['_beatEvidence']).toMatchObject({ onsetId: 0, rawFlux: null, onsetSample: null });
+        expect(processor['_beatEvidence']).toMatchObject({
+          onsetId: 0,
+          rawFlux: null,
+          onsetSample: null,
+          kind: 'freeRun',
+          phaseResidualSamples: null,
+        });
       },
     });
+    const beats = messages.filter(message => message.type === 'beat');
+    expect(beats[0]).toMatchObject({ energy: 0, onsetEnergy: 7, onsetAudioTime: matchedSample / 48_000 });
+    expect(beats[1]).toMatchObject({ onsetEnergy: null, onsetAudioTime: null });
   });
 
   it('preserves bootstrap identity and sample precision across ring wrap', () => {
