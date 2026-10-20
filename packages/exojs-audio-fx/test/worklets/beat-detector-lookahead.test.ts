@@ -53,14 +53,17 @@ const statesBetweenBeats = (messages: readonly WorkletMessage[]): Array<{ state:
   return pairs;
 };
 
-// Meter detection does not switch the synthetic fixtures to 3/4 on its own, so
-// the 3/4 run pins the processor's meter with detection off.
+// A fixed meter isolates scheduling from acquisition and later phase revisions.
 const pinTripleMeter = (processor: Record<string, unknown>): void => {
   processor['_activeTs'] = '3/4';
 };
 
 describe.each([
-  { meter: '4/4', barLength: 4, run: () => runDetector(accentedClicktrack(120, 4, 20)) },
+  {
+    meter: '4/4',
+    barLength: 4,
+    run: () => runDetector(accentedClicktrack(120, 4, 20), { processorOptions: { enableTimeSignatureDetection: false } }),
+  },
   {
     meter: '3/4',
     barLength: 3,

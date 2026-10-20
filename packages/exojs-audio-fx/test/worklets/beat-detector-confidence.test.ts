@@ -14,7 +14,7 @@ describe('beat detector pulse confidence', () => {
         const pulse = value['_beatConfidence'];
         const legacy = value['_confidence'];
         expect(pulse).toBeTypeOf('number');
-        (value['_posterior4'] as Float32Array).set([1, 0, 0, 0]);
+        (value['_legacyBars'] as { posterior4: Float32Array }).posterior4.set([1, 0, 0, 0]);
         update.call(value);
         expect(value['_beatConfidence']).toBe(pulse);
         expect(value['_confidence']).not.toBe(legacy);

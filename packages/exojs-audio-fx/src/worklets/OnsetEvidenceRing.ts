@@ -7,6 +7,7 @@ export class OnsetEvidenceRing {
   private readonly _flux = new Float64Array(16);
   private readonly _strengths = new Float32Array(16);
   private readonly _ids = new Float64Array(16);
+  private readonly _powers = new Float64Array(16);
   private _position = 0;
   private _id = 0;
 
@@ -15,8 +16,27 @@ export class OnsetEvidenceRing {
     this._flux[this._position] = rawFlux;
     this._strengths[this._position] = strength;
     this._ids[this._position] = ++this._id;
+    this._powers[this._position] = 0;
     this._position = (this._position + 1) % this._samples.length;
     this.count = Math.min(this.count + 1, this._samples.length);
+  }
+
+  public observePower(sample: number, power: number, window: number): void {
+    for (let i = 0; i < this.count; i++) {
+      if (sample >= this._samples[i]! && sample - this._samples[i]! <= window) {
+        this._powers[i] = Math.max(this._powers[i]!, power);
+      }
+    }
+  }
+
+  public accent(id: number, sample: number, window: number): number | null {
+    for (let i = 0; i < this.count; i++) {
+      if (this._ids[i] === id && sample - this._samples[i]! >= window) {
+        return this._powers[i]!;
+      }
+    }
+
+    return null;
   }
 
   public nearest(target: number, window: number): number {

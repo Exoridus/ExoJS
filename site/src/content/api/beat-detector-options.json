@@ -124,7 +124,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When true (default), the worklet runs parallel 3/4 and 4/4 posteriors and switches active time signature via hysteresis. Set false to lock to 4/4."
+          "description": "When true (default), estimates three- or four-pulse accent cycles and leaves ambiguous meter unknown. Set false for a fixed four-beat counting convention."
         },
         {
           "name": "fastTempoWindowSec",

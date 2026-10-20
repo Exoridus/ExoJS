@@ -28,7 +28,22 @@ const simulateMessage = (detector: BeatDetector, data: unknown): void => {
   const node = getMockWorkletNode(detector);
 
   if (node?.port.onmessage) {
-    node.port.onmessage({ data: { predictionValidUntil: getAudioContext().currentTime + 10, ...(data as Record<string, unknown>) } });
+    const message = data as Record<string, unknown>;
+    const now = getAudioContext().currentTime;
+    node.port.onmessage({
+      data: {
+        predictionValidUntil: now + 10,
+        meterEstimate: {
+          cyclePulses: message.barLength ?? 4,
+          phasePulses: ((message.barPosition as number) ?? 1) - 1,
+          score: 1,
+          origin: 'convention',
+          evidenceThroughAudioTime: message.analysisTime ?? now,
+          validUntilAudioTime: now + 10,
+        },
+        ...message,
+      },
+    });
   }
 };
 

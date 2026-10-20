@@ -6,11 +6,11 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs-audio-fx",
   "tier": "stable",
-  "memberCount": 4,
+  "memberCount": 5,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 4,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -75,6 +75,31 @@
             {
               "text": "isDownbeat",
               "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "meterKnown",
+          "signature": "meterKnown?: boolean",
+          "signatureTokens": [
+            {
+              "text": "meterKnown",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",

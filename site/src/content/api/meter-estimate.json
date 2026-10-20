@@ -1,0 +1,190 @@
+{
+  "title": "MeterEstimate",
+  "description": "",
+  "symbol": "MeterEstimate",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [],
+      "importLine": "import { MeterEstimate } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "cyclePulses",
+          "signature": "cyclePulses: 3 | 4",
+          "signatureTokens": [
+            {
+              "text": "cyclePulses",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "3",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "4",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Pulses of the detector's tempo grid per cycle, not a notated time signature."
+        },
+        {
+          "name": "evidenceThroughAudioTime",
+          "signature": "evidenceThroughAudioTime: number",
+          "signatureTokens": [
+            {
+              "text": "evidenceThroughAudioTime",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Audio-context time through which observations were processed."
+        },
+        {
+          "name": "origin",
+          "signature": "origin: \"convention\" | \"estimated\"",
+          "signatureTokens": [
+            {
+              "text": "origin",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"convention\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"estimated\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "A fixed counting convention is distinct from an audio-derived estimate."
+        },
+        {
+          "name": "phasePulses",
+          "signature": "phasePulses: number",
+          "signatureTokens": [
+            {
+              "text": "phasePulses",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Zero-based phase of the most recently tracked beat."
+        },
+        {
+          "name": "score",
+          "signature": "score: number",
+          "signatureTokens": [
+            {
+              "text": "score",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Uncalibrated strength of the selected cycle model, not a probability."
+        },
+        {
+          "name": "validUntilAudioTime",
+          "signature": "validUntilAudioTime: number",
+          "signatureTokens": [
+            {
+              "text": "validUntilAudioTime",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Audio-context time at which the estimate must be discarded without renewed support."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/BeatDetector.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/BeatDetector.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/BeatDetector.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/BeatDetector.ts"
+}

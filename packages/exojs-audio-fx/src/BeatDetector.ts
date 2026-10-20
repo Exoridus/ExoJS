@@ -74,8 +74,8 @@ export interface BeatDetectorOptions {
   /** Number of mel filterbank bands. Default 24. */
   melBands?: number;
   /**
-   * When true (default), the worklet runs parallel 3/4 and 4/4 posteriors and
-   * switches active time signature via hysteresis. Set false to lock to 4/4.
+   * When true (default), estimates three- or four-pulse accent cycles and leaves
+   * ambiguous meter unknown. Set false for a fixed four-beat counting convention.
    */
   enableTimeSignatureDetection?: boolean;
   /**
@@ -114,6 +114,8 @@ export interface BeatInfo {
   energy: number;
   /** Is this beat the first in a bar? */
   isDownbeat: boolean;
+  /** True when the cycle and its phase are available; false leaves beatInBar as display counting only. */
+  meterKnown?: boolean;
   /** Beat position within the bar (1..N). */
   beatInBar: number;
   /**
@@ -131,6 +133,22 @@ export interface UpcomingBeat {
   tempo: number;
   isDownbeat: boolean;
   beatInBar: number;
+  meterKnown?: boolean;
+}
+
+export interface MeterEstimate {
+  /** Pulses of the detector's tempo grid per cycle, not a notated time signature. */
+  readonly cyclePulses: 3 | 4;
+  /** Zero-based phase of the most recently tracked beat. */
+  readonly phasePulses: number;
+  /** Uncalibrated strength of the selected cycle model, not a probability. */
+  readonly score: number;
+  /** A fixed counting convention is distinct from an audio-derived estimate. */
+  readonly origin: 'estimated' | 'convention';
+  /** Audio-context time through which observations were processed. */
+  readonly evidenceThroughAudioTime: number;
+  /** Audio-context time at which the estimate must be discarded without renewed support. */
+  readonly validUntilAudioTime: number;
 }
 
 export interface BarInfo {
@@ -163,7 +181,7 @@ const workletName = 'exojs-beat-detector';
 /**
  * Real-time tempo + beat tracker. Splits work between the audio-rendering
  * thread (an AudioWorklet that runs onset detection, tempogram analysis,
- * and parallel 3/4 and 4/4 posterior estimation) and the main thread (this
+ * and three-/four-pulse accent-cycle estimation) and the main thread (this
  * class - receives beats, fires Signals, handles configuration and source
  * routing).
  *
@@ -181,7 +199,8 @@ const workletName = 'exojs-beat-detector';
  * then promote to `status: 'locked'` once the tempo grid is trustworthy - a
  * single {@link BeatDetector.onBeat} signal carries both via {@link BeatInfo.status}.
  * Set `emitProvisionalBeats: false` to receive only locked beats. Time-signature
- * detection (3/4 vs 4/4) is on by default; lock to 4/4 by setting
+ * detection is on by default; ambiguous meter leaves beats available without
+ * downbeats. Use a fixed four-beat convention with
  * `enableTimeSignatureDetection: false`.
  */
 export class BeatDetector {
@@ -191,7 +210,7 @@ export class BeatDetector {
   public readonly onDownbeat = new Signal<[BeatInfo]>();
   public readonly onBarStart = new Signal<[BarInfo]>();
   /**
-   * Dispatched with the first entry of each new {@link lookahead} schedule.
+   * Dispatched with the first future entry of each new {@link lookahead} schedule.
    *
    * Each revision is announced at most once; queued revisions are not coalesced.
    * An expired schedule or one without a future entry produces no notice.
@@ -232,8 +251,10 @@ export class BeatDetector {
   private _timeSignature: TimeSignature = { numerator: 4, denominator: 4 };
   private _nextDownbeatTime = 0;
   private _lookahead: readonly UpcomingBeat[] = Object.freeze([]);
+  private _beatOnlyLookahead: readonly UpcomingBeat[] = Object.freeze([]);
   private _lookaheadRevision = 0;
   private _predictionValidUntil = 0;
+  private _meterEstimate: MeterEstimate | null = null;
   private readonly _emptyLookahead: readonly UpcomingBeat[] = Object.freeze([]);
 
   /**
@@ -409,21 +430,38 @@ export class BeatDetector {
   // Stage 2 state accessors
   // -----------------------------------------------------------------------
 
+  /** Display counting only while {@link meterKnown} is false. */
   public get barPosition(): number {
     return this._barPosition;
   }
 
+  /** Display cycle length; use {@link meterEstimate} for an available estimate. */
   public get barLength(): number {
     return this._barLength;
   }
 
+  /** Legacy display convention with denominator 4, which is not inferred from audio. */
   public get timeSignature(): TimeSignature {
     return this._timeSignature;
   }
 
+  /**
+   * Current pulse cycle and phase, or null when evidence is ambiguous, expired
+   * or still acquiring. The denominator of a notated signature is not inferred.
+   */
+  public get meterEstimate(): MeterEstimate | null {
+    return this._predictionsValid() && this._meterEstimate && this._meterEstimate.validUntilAudioTime > getAudioContext().currentTime
+      ? this._meterEstimate
+      : null;
+  }
+
+  public get meterKnown(): boolean {
+    return this.meterEstimate !== null;
+  }
+
   /** Next predicted future bar start on the audio-context clock, or 0 when unavailable. */
   public get nextDownbeatTime(): number {
-    if (this._nextDownbeatTime <= 0 || !this._predictionsValid()) {
+    if (this._nextDownbeatTime <= 0 || !this.meterKnown) {
       return 0;
     }
 
@@ -448,9 +486,14 @@ export class BeatDetector {
    * tempo and numbered from the bar position that follows it. Entries may have
    * passed since delivery. Predictions are conditional on the rhythm continuing;
    * a tempo change or break is not anticipated. Empty after prediction expiry.
+   * Unknown or expired meter clears downbeat flags while retaining beat times.
    */
   public get lookahead(): readonly UpcomingBeat[] {
-    return this._predictionsValid() ? this._lookahead : this._emptyLookahead;
+    if (!this._predictionsValid()) {
+      return this._emptyLookahead;
+    }
+
+    return this.meterKnown ? this._lookahead : this._beatOnlyLookahead;
   }
 
   // -----------------------------------------------------------------------
@@ -637,6 +680,7 @@ export class BeatDetector {
 
       case 'state':
         this._predictionValidUntil = (message.predictionValidUntil as number) ?? 0;
+        this._meterEstimate = message.meterEstimate ? Object.freeze(message.meterEstimate as MeterEstimate) : null;
         this._analysisTime = (message.analysisTime as number) ?? 0;
         this._analysisLatency = Math.max(0, (this._workletNode?.context.currentTime ?? this._analysisTime) - this._analysisTime);
         this._tempo = (message.tempo as number) ?? 0;
@@ -658,10 +702,11 @@ export class BeatDetector {
           const lookahead = (message.lookahead as UpcomingBeat[]) ?? [];
           const revision = (message.lookaheadRevision as number) ?? 0;
           this._lookahead = Object.freeze(lookahead);
+          this._beatOnlyLookahead = Object.freeze(lookahead.map(beat => ({ ...beat, isDownbeat: false, meterKnown: false })));
 
           if (revision !== this._lookaheadRevision) {
             this._lookaheadRevision = revision;
-            const upcoming = this._predictionsValid() ? lookahead.find(beat => beat.audioTime > getAudioContext().currentTime) : undefined;
+            const upcoming = this.lookahead.find(beat => beat.audioTime > getAudioContext().currentTime);
 
             if (upcoming) {
               this.onBeatPredicted.dispatch(upcoming);
@@ -678,6 +723,7 @@ export class BeatDetector {
           confidence: message.confidence as number,
           beatPhase: message.beatPhase as number,
           energy: message.energy as number,
+          meterKnown: (message.meterKnown as boolean | undefined) ?? false,
           isDownbeat: message.isDownbeat as boolean,
           beatInBar: message.beatInBar as number,
           status: (message.status as 'provisional' | 'locked' | undefined) ?? 'locked',
@@ -709,6 +755,7 @@ export class BeatDetector {
   }
 
   private _clearState(): void {
+    this._meterEstimate = null;
     this._predictionValidUntil = 0;
     this._tempo = 0;
     this._beatPhase = 0;
@@ -727,6 +774,7 @@ export class BeatDetector {
     this._barLength = 4;
     this._timeSignature = { numerator: 4, denominator: 4 };
     this._lookahead = [];
+    this._beatOnlyLookahead = [];
     this._lookaheadRevision = 0;
   }
 

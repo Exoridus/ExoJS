@@ -39,6 +39,8 @@ import {
 } from '../dsp/tempogram';
 import { captureBeatEvidence, createBeatEvidence, resetBeatEvidence } from './beatEvidence';
 import { DisposableProcessor } from './disposable-processor';
+import { LegacyBarTracker } from './LegacyBarTracker';
+import { MeterEvidence } from './MeterEvidence';
 import { OnsetEvidenceRing } from './OnsetEvidenceRing';
 
 interface UpcomingBeatInline {
@@ -46,6 +48,7 @@ interface UpcomingBeatInline {
   tempo: number;
   isDownbeat: boolean;
   beatInBar: number;
+  meterKnown: boolean;
 }
 
 interface BandEnergyInline {
@@ -206,15 +209,11 @@ class BeatDetectorProcessor extends DisposableProcessor {
   private readonly _ibiHistory: Float32Array;
   private _ibiIdx: number;
 
-  private readonly _posterior4: Float32Array;
-  private readonly _posterior3: Float32Array;
-  private _ts4Confidence: number;
-  private _ts3Confidence: number;
-  private _activeTs: '4/4' | '3/4';
-  private _sustainCounter: number;
-  private _barPosition: number;
-  private _barNumber: number;
-  private _beatsSinceStart: number;
+  private readonly _legacyBars: LegacyBarTracker;
+  private readonly _meter: MeterEvidence;
+  private _barPosition = 1;
+  private _conventionPhase = 0;
+  private _barNumber = 0;
 
   private _confidence: number;
   private _beatConfidence = 0;
@@ -347,16 +346,8 @@ class BeatDetectorProcessor extends DisposableProcessor {
     this._ibiHistory = new Float32Array(4); // last 4 inter-beat intervals
     this._ibiIdx = 0;
 
-    // Bar position state - parallel posteriors for 4/4 and 3/4
-    this._posterior4 = new Float32Array([0.25, 0.25, 0.25, 0.25]);
-    this._posterior3 = new Float32Array([1 / 3, 1 / 3, 1 / 3]);
-    this._ts4Confidence = 0.5;
-    this._ts3Confidence = 0.5;
-    this._activeTs = '4/4';
-    this._sustainCounter = 0;
-    this._barPosition = 1; // 1-indexed
-    this._barNumber = 0;
-    this._beatsSinceStart = 0;
+    this._legacyBars = new LegacyBarTracker(this._enableTsDetection);
+    this._meter = new MeterEvidence(this._sampleRate);
 
     // Confidence
     this._confidence = 0;
@@ -506,14 +497,10 @@ class BeatDetectorProcessor extends DisposableProcessor {
     this._ibiSamples = 0;
     this._ibiHistory.fill(0);
     this._ibiIdx = 0;
-    this._posterior4.fill(0.25);
-    this._posterior3.fill(1 / 3);
-    this._ts4Confidence = 0.5;
-    this._ts3Confidence = 0.5;
-    this._activeTs = '4/4';
-    this._sustainCounter = 0;
+    this._legacyBars.reset();
+    this._meter.reset();
     this._barPosition = 1;
-    this._beatsSinceStart = 0;
+    this._conventionPhase = 0;
     this._confidence = 0;
     this._beatConfidence = 0;
     this._phaseConfidence = 0;
@@ -616,6 +603,12 @@ class BeatDetectorProcessor extends DisposableProcessor {
     // Adaptive onset normalization + peak-picking. Runs every hop (independent
     // of the ACF/tempo path, which still consumes the raw _fluxWindow above).
     this._detectOnset(flux);
+    this._onsets.observePower(this._sampleCount, this._rms * this._rms, this._fftSize);
+
+    if (this._enableTsDetection && this._meter.update(this._sampleCount, this._onsets, this._fftSize) && this._lastBeatSample >= 0) {
+      this._barPosition = this._meter.cyclePulses > 0 ? this._meter.phasePulses + 1 : this._legacyBars.barPosition;
+      this._updateLookahead(this._lastBeatContextTime);
+    }
 
     // Tempogram: compute ACF periodically. The warm-up gate is lowered from a full slowest-
     // tempo period (_maxLag+1, ~1.2 s at minBpm) to _minEmitHops (~0.4 s) so a fast/core tempo
@@ -1040,7 +1033,11 @@ class BeatDetectorProcessor extends DisposableProcessor {
     this._ibiHistory[this._ibiIdx] = this._ibiSamples;
     this._ibiIdx = (this._ibiIdx + 1) & 3;
 
-    this._beatsSinceStart++;
+    if (this._enableTsDetection) {
+      this._meter.addBeat(beatSample, this._ibiSamples, this._matchedOnset.id);
+      this._meter.update(this._sampleCount, this._onsets, this._fftSize);
+    }
+
     this._updateBarPosition(flux);
     this._updateConfidence();
     this._updateLookahead(beatTime);
@@ -1064,6 +1061,12 @@ class BeatDetectorProcessor extends DisposableProcessor {
     }
 
     const status = this._locked ? 'locked' : 'provisional';
+    const meterKnown = !this._enableTsDetection || this._meter.cyclePulses > 0;
+    const isDownbeat = meterKnown && this._barPosition === 1;
+
+    if (isDownbeat) {
+      this._barNumber++;
+    }
 
     // Provisional gating: when emitProvisionalBeats is false, suppress the message until the
     // beat is locked (grid bookkeeping above already ran). Locked beats always post.
@@ -1071,7 +1074,6 @@ class BeatDetectorProcessor extends DisposableProcessor {
       return;
     }
 
-    const isDownbeat = this._barPosition === 1;
     this.port.postMessage({
       type: 'beat',
       epoch: this._epoch,
@@ -1081,6 +1083,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
       beatPhase: 0,
       energy: flux,
       isDownbeat,
+      meterKnown,
       beatInBar: this._barPosition,
       status,
     });
@@ -1221,125 +1224,22 @@ class BeatDetectorProcessor extends DisposableProcessor {
   }
 
   private _updateBarPosition(flux: number): void {
-    const likelihood = this._computeBeatLikelihood(flux);
+    this._legacyBars.update(this._computeBeatLikelihood(flux));
 
-    // --- 4/4 posterior ---
-    const p4 = this._posterior4;
-    const s4 = new Float32Array(4);
-    s4[0] = p4[3]!;
-    s4[1] = p4[0]!;
-    s4[2] = p4[1]!;
-    s4[3] = p4[2]!;
-    let sum4 = 0;
-
-    for (let i = 0; i < 4; i++) {
-      p4[i] = s4[i]! * (likelihood + (i === 0 ? 0.3 : 0));
-      sum4 += p4[i]!;
-    }
-
-    if (sum4 > 0) {
-      for (let i = 0; i < 4; i++) {
-        p4[i]! /= sum4;
-      }
-    }
-
-    // --- 3/4 posterior ---
-    const p3 = this._posterior3;
-    const s3 = new Float32Array(3);
-    s3[0] = p3[2]!;
-    s3[1] = p3[0]!;
-    s3[2] = p3[1]!;
-    let sum3 = 0;
-
-    for (let i = 0; i < 3; i++) {
-      p3[i] = s3[i]! * (likelihood + (i === 0 ? 0.3 : 0));
-      sum3 += p3[i]!;
-    }
-
-    if (sum3 > 0) {
-      for (let i = 0; i < 3; i++) {
-        p3[i]! /= sum3;
-      }
-    }
-
-    // --- Update TS confidences (EMA) ---
-    let max4 = 0;
-
-    for (let i = 0; i < 4; i++) {
-      if (p4[i]! > max4) {
-        max4 = p4[i]!;
-      }
-    }
-
-    let max3 = 0;
-
-    for (let i = 0; i < 3; i++) {
-      if (p3[i]! > max3) {
-        max3 = p3[i]!;
-      }
-    }
-
-    const alpha = 0.1;
-    this._ts4Confidence = (1 - alpha) * this._ts4Confidence + alpha * max4;
-    this._ts3Confidence = (1 - alpha) * this._ts3Confidence + alpha * max3;
-
-    // --- Hysteresis switching ---
-    if (this._enableTsDetection && this._beatsSinceStart > 8) {
-      const minSwitchMargin = 1.4;
-      const minSustainBeats = 12; // ~4 bars * 3 beats
-      const threeFavored = this._ts3Confidence > this._ts4Confidence * minSwitchMargin;
-      const fourFavored = this._ts4Confidence > this._ts3Confidence * minSwitchMargin;
-
-      if (this._activeTs === '4/4' && threeFavored) {
-        this._sustainCounter++;
-
-        if (this._sustainCounter >= minSustainBeats) {
-          this._activeTs = '3/4';
-          this._sustainCounter = 0;
-        }
-      } else if (this._activeTs === '3/4' && fourFavored) {
-        this._sustainCounter++;
-
-        if (this._sustainCounter >= minSustainBeats + 4) {
-          // 16 beats for 4/4
-          this._activeTs = '4/4';
-          this._sustainCounter = 0;
-        }
-      } else {
-        this._sustainCounter = 0;
-      }
-    }
-
-    // --- Determine bar position from active TS ---
-    const barLen = this._activeTs === '3/4' ? 3 : 4;
-    const posterior = this._activeTs === '3/4' ? p3 : p4;
-
-    if (this._beatsSinceStart >= barLen) {
-      let maxP = -1;
-      let maxI = 0;
-
-      for (let i = 0; i < barLen; i++) {
-        if (posterior[i]! > maxP) {
-          maxP = posterior[i]!;
-          maxI = i;
-        }
-      }
-
-      const newPos = maxI + 1; // 1-indexed
-
-      if (newPos === 1 && this._barPosition !== 1) {
-        this._barNumber++;
-      }
-
-      this._barPosition = newPos;
+    if (!this._enableTsDetection) {
+      this._barPosition = this._conventionPhase + 1;
+      this._conventionPhase = (this._conventionPhase + 1) % this._barLength;
     } else {
-      // Just advance sequentially
-      this._barPosition = (this._barPosition % barLen) + 1;
-
-      if (this._barPosition === 1) {
-        this._barNumber++;
-      }
+      this._barPosition = this._meter.cyclePulses > 0 ? this._meter.phasePulses + 1 : this._legacyBars.barPosition;
     }
+  }
+
+  private get _activeTs(): '3/4' | '4/4' {
+    return this._legacyBars.activeTs;
+  }
+
+  private set _activeTs(value: '3/4' | '4/4') {
+    this._legacyBars.activeTs = value;
   }
 
   private _updateConfidence(): void {
@@ -1376,7 +1276,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
     const phaseConsistency = ibiMean > 0 ? Math.max(0, 1 - ibiVar / (ibiMean * ibiMean)) : 0;
 
     // Bar consistency (use the active posterior)
-    const activePosterior = this._activeTs === '3/4' ? this._posterior3 : this._posterior4;
+    const activePosterior = this._activeTs === '3/4' ? this._legacyBars.posterior3 : this._legacyBars.posterior4;
     const activeLen = this._activeTs === '3/4' ? 3 : 4;
     let maxP = 0;
 
@@ -1394,11 +1294,19 @@ class BeatDetectorProcessor extends DisposableProcessor {
     this._confidence = Math.max(0, Math.min(1, c));
   }
 
+  private get _barLength(): 3 | 4 {
+    if (this._enableTsDetection && this._meter.cyclePulses !== 0) {
+      return this._meter.cyclePulses;
+    }
+
+    return this._activeTs === '3/4' ? 3 : 4;
+  }
+
   private _updateLookahead(lastBeatTime: number): void {
     const lookahead: UpcomingBeatInline[] = [];
     const beatInterval = 60 / this._bestBpm;
     const barPos = this._barPosition;
-    const barLen = this._activeTs === '3/4' ? 3 : 4;
+    const barLen = this._barLength;
     this._predictionValidUntilSample =
       this._lastOnsetSample >= 0 ? this._lastOnsetSample + Math.min(2 * this._ibiSamples, this._sampleRate) : 0;
 
@@ -1409,7 +1317,8 @@ class BeatDetectorProcessor extends DisposableProcessor {
       lookahead.push({
         audioTime: t,
         tempo: this._bestBpm,
-        isDownbeat: bp === 1,
+        isDownbeat: (!this._enableTsDetection || this._meter.cyclePulses > 0) && bp === 1,
+        meterKnown: !this._enableTsDetection || this._meter.cyclePulses > 0,
         beatInBar: bp,
       });
     }
@@ -1488,8 +1397,23 @@ class BeatDetectorProcessor extends DisposableProcessor {
       onsetStrength: this._onsetStrength,
       bandEnergy: be,
       barPosition: this._barPosition,
-      barLength: this._activeTs === '3/4' ? 3 : 4,
-      timeSignature: this._activeTs === '3/4' ? { numerator: 3, denominator: 4 } : { numerator: 4, denominator: 4 },
+      barLength: this._barLength,
+      timeSignature: { numerator: this._barLength, denominator: 4 },
+      meterEstimate:
+        settled && (!this._enableTsDetection || this._meter.cyclePulses > 0)
+          ? {
+              cyclePulses: this._barLength,
+              phasePulses: this._barPosition - 1,
+              score: this._enableTsDetection ? this._meter.score : 1,
+              origin: this._enableTsDetection ? 'estimated' : 'convention',
+              evidenceThroughAudioTime: analysisTime,
+              validUntilAudioTime: this._contextTimeAt(
+                this._enableTsDetection
+                  ? Math.min(this._predictionValidUntilSample, this._meter.validUntilSample)
+                  : this._predictionValidUntilSample,
+              ),
+            }
+          : null,
       lookahead: valid ? this._lookahead : [],
       lookaheadRevision: this._lookaheadRevision,
       predictionValidUntil: valid ? this._contextTimeAt(this._predictionValidUntilSample) : 0,

@@ -6,11 +6,11 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs-audio-fx",
   "tier": "stable",
-  "memberCount": 8,
+  "memberCount": 9,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 8,
+    "properties": 9,
     "events": 0
   },
   "sections": [
@@ -151,6 +151,31 @@
           "params": [],
           "returnType": null,
           "description": "Is this beat the first in a bar?"
+        },
+        {
+          "name": "meterKnown",
+          "signature": "meterKnown?: boolean",
+          "signatureTokens": [
+            {
+              "text": "meterKnown",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "True when the cycle and its phase are available; false leaves beatInBar as display counting only."
         },
         {
           "name": "status",

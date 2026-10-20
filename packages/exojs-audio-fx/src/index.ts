@@ -10,6 +10,7 @@ export type {
   BeatDetectorOptions,
   BeatDetectorSource,
   BeatInfo,
+  MeterEstimate,
   TempoCandidate,
   TimeSignature,
   UpcomingBeat,

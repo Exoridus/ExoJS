@@ -78,7 +78,7 @@ Four signals fire at discrete moments in the music:
 
 | Signal | Fires when | Payload |
 |--------|------------|---------|
-| `onBeat` | A beat occurs | `BeatInfo` — audio time, tempo, confidence, energy, isDownbeat, beatInBar, status (`'provisional'` \| `'locked'`) |
+| `onBeat` | A beat occurs | `BeatInfo` — audio time, tempo, confidence, energy, isDownbeat, meterKnown, beatInBar, status (`'provisional'` \| `'locked'`) |
 | `onDownbeat` | The first beat of a bar | Same `BeatInfo` |
 | `onBarStart` | A new bar begins | `BarInfo` — audio time, tempo, confidence, barNumber |
 | `onTempoChange` | Tempo estimate changes | `(newBpm, oldBpm)` |
@@ -125,7 +125,7 @@ declare const detector: BeatDetector;
 detector.onBeat.add(info => {
     if (info.isDownbeat) {
         // big effect on beat 1
-    } else if (info.beatInBar === 3) {
+    } else if (info.meterKnown && info.beatInBar === 3) {
         // secondary emphasis on beat 3
     }
 });
@@ -143,9 +143,11 @@ declare const detector: BeatDetector;
 detector.tempo              // BPM, or 0 before lock
 detector.confidence         // 0..1 locking quality
 detector.beatPhase          // 0..1 phase within current beat
-detector.barPosition        // 1..N beat within current bar
+detector.barPosition        // display counting; check meterKnown for bar phase
 detector.barLength          // beats per bar (default 4)
-detector.timeSignature      // { numerator, denominator }
+detector.timeSignature      // legacy display convention, denominator 4
+detector.meterEstimate      // nullable pulse-cycle estimate
+detector.meterKnown         // current cycle and phase available
 detector.rms                // 0..1 overall RMS energy
 detector.onsetStrength      // 0..1 onset novelty at current frame
 detector.bandEnergy         // { low, mid, high } band energies
@@ -165,7 +167,11 @@ Beats arrive `'provisional'` first — low-latency and ideal for snappy visual r
 
 ## Bar and time-signature tracking
 
-The detector attempts 4/4 vs. 3/4 time-signature detection when `enableTimeSignatureDetection` is `true` (the default). Set it `false` in the constructor to lock to 4/4:
+With `enableTimeSignatureDetection: true` (the default), the detector compares three- and four-pulse accent cycles on the same matched onset observations, using finalized attack power. Meter stays unknown until enough observations favor a cycle and phase over the alternatives. Beats continue during acquisition and ambiguity, with `meterKnown: false` and `isDownbeat: false`; no automatic `onDownbeat` or `onBarStart` events fire then.
+
+`meterEstimate` is either null or a view with `cyclePulses`, zero-based `phasePulses`, uncalibrated `score`, `origin`, `evidenceThroughAudioTime` and `validUntilAudioTime`. The times use the audio-context clock. A current estimate can expire before the beat schedule: `nextDownbeatTime` and `barPulse` then return 0 and `lookahead` keeps beat times while clearing its downbeat flags. Finalized evidence may revise a schedule without a new beat; handle every new `onBeatPredicted` revision.
+
+Set detection `false` for an explicit four-beat counting convention, anchored to the first tracked beat rather than an inferred musical bar. Its estimate has `origin: 'convention'` and score 1, which describes the chosen rule rather than certainty about the music:
 
 ```ts
 import { BeatDetector } from '@codexo/exojs-audio-fx';
@@ -175,7 +181,9 @@ const detector = new BeatDetector({
 });
 ```
 
-`barPosition` (1-based) and `barLength` describe the detector's heuristic bar model. Automatic three-/four-pulse discrimination and bar phase are not independently qualified on a representative music corpus. A locked beat grid does not establish a correct downbeat or a notated denominator. Use an independently authored timeline when gameplay or a sequencer requires authoritative bars.
+`barPosition` (1-based), `barLength` and `timeSignature` remain legacy display values even while `meterEstimate` is null; check `meterKnown` before treating them as bar information. `cyclePulses` counts the detector's tempo-grid pulses, not notated beats, and the legacy denominator 4 is a display convention. Automatic discrimination and phase are not independently qualified on a representative music corpus. A locked beat grid does not establish a correct downbeat. Use an independently authored timeline when gameplay or a sequencer requires authoritative bars.
+
+When migrating existing callers, allow missing automatic bar events during acquisition or ambiguity. Use `onBeat` for continuous beat-level visuals and gate bar-dependent behavior on `meterKnown`; callers intentionally counting every four beats can select the fixed convention above.
 
 ## Worklet processor
 
@@ -204,7 +212,7 @@ const detector = new BeatDetector({
     minSettlingMs: 400,                    // warm-up before the first (provisional) beat
     emitProvisionalBeats: true,            // emit early provisional beats for visual reactivity
     melBands: 24,                          // mel filterbank bands
-    enableTimeSignatureDetection: true,    // auto-detect 3/4 vs 4/4
+    enableTimeSignatureDetection: true,    // estimate a three-/four-pulse cycle, otherwise unknown
     source: application.audio.music,       // initial source: bus or Voice (optional)
 });
 ```
