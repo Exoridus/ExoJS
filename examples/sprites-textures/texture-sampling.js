@@ -84,6 +84,7 @@ class TextureSamplingScene extends Scene {
   };
   zoomControl;
   snapControl;
+  motionControl;
   init() {
     const pixelArt = makePixelArt();
     const zonePlate = makeZonePlate();
@@ -137,11 +138,15 @@ class TextureSamplingScene extends Scene {
       },
     });
     this.snapControl = this.panel.addToggle({ label: 'Pixel snap', value: this.snap, onChange: value => this.setSnap(value) });
-    this.panel.addToggle({ label: 'Motion', value: this.moving, onChange: value => (this.moving = value) });
+    this.motionControl = this.panel.addToggle({ label: 'Motion', value: this.moving, onChange: value => this.setMoving(value) });
     this.inputs.onTrigger(Keyboard.P, () => this.setSnap(!this.snap));
-    this.inputs.onTrigger(Keyboard.Space, () => (this.moving = !this.moving));
+    this.inputs.onTrigger(Keyboard.Space, () => this.setMoving(!this.moving));
     this.app.input.onMouseWheel.add(this.onWheel);
     this.updateHud();
+  }
+  setMoving(moving) {
+    this.moving = moving;
+    this.motionControl.set(moving);
   }
   setSnap(snap) {
     this.snap = snap;
