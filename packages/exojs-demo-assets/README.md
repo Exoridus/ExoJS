@@ -13,21 +13,47 @@ npm install @codexo/exojs @codexo/exojs-demo-assets
 ## Usage
 
 ```ts
-import { Application } from '@codexo/exojs';
+import { Application, type RenderingContext, Scene, Sprite, type Video } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
-class Game extends Application {
-  protected async prepare() {
-    // Claim and start loading one texture; get() returns a handle that fills in.
-    const ship = this.loader.get(assets.ship);
+class DemoScene extends Scene {
+  private video!: Video;
+  private ship!: Sprite;
 
-    // Await resources that must be ready before use, like video or fonts.
-    const video = await this.loader.load(assets.videoHighRes);
+  override async load(): Promise<void> {
+    // Video, music and fonts have no placeholder handle: await them in load().
+    this.video = await this.loader.load(assets.videoHighRes);
+  }
+
+  override init(): void {
+    // Textures and sounds can be claimed synchronously: get() returns a handle
+    // that fills in when the file arrives.
+    this.ship = new Sprite(this.loader.get(assets.ship)).setPosition(64, 64);
+    this.video.applyOptions({ loop: true, muted: true });
+    this.video.play();
+  }
+
+  override draw(context: RenderingContext): void {
+    context.render(this.video);
+    context.render(this.ship);
   }
 }
+
+const app = new Application({ scenes: { DemoScene }, canvas: { mount: document.body } });
+
+await app.start(DemoScene);
 ```
 
 Reading a property such as `assets.ship` only returns its descriptor. Textures and sounds support `loader.get()` and `await loader.load()`; video, music, fonts, bitmap fonts and SVG images have no synchronous handle and load with `await loader.load()`. The catalog object is frozen and reusable across scenes and applications; claims and payload sharing belong to each loader.
+
+## Bundlers
+
+Each descriptor in `demoAssets` is a literal `new URL('../media/<file>', import.meta.url)`, which Vite and other bundlers that understand the pattern follow. Two consequences matter for a production build:
+
+- The descriptors live in one object, so importing `demoAssets` makes the bundler emit every standard file (about 19 MB), not only the ones the code loads. That suits a demo or prototype; a shipped game should load its own media or copy just what it needs.
+- Tiled maps, LDtk projects and bitmap fonts reference sibling files by relative path. A bundler that renames files with content hashes, or inlines small ones as `data:` URLs, breaks those references. Serve these formats through the copy command and `createDemoAssets` below.
+
+The Vite dev server serves the media straight from the installed package, relative references included.
 
 ## Hosting the media elsewhere
 
@@ -52,10 +78,12 @@ It copies exactly the standard-profile files listed in `manifest.json` to their 
 The standard profile ships in this package (160 files, under 20 MB). The extended HDR10 video candidate does not: it is delivered as a separate archive (`exojs-demo-assets-extended-<version>.zip`) and served from a location you choose.
 
 ```ts
+import type { Scene, Video } from '@codexo/exojs';
 import { createExtendedDemoAssets } from '@codexo/exojs-demo-assets/extended';
 
 const extended = createExtendedDemoAssets('https://media.example.com/exojs-demo-extended/');
-const hdr = await this.loader.load(extended.videoHdr10);
+
+export const loadHdrClip = async (scene: Scene): Promise<Video> => await scene.loader.load(extended.videoHdr10);
 ```
 
 The `videoHdr10` clip carries BT.2020/PQ metadata; whether it is shown as HDR depends on the browser, the display and the rendering path.

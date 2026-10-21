@@ -444,6 +444,7 @@ export const CHECKED_README_PATHS: readonly string[] = [
     'exojs-aseprite',
     'exojs-audio-fx',
     'exojs-pathfinding',
+    'exojs-demo-assets',
   ].map(name => `packages/${name}/README.md`),
 ];
 
@@ -459,9 +460,8 @@ export const CHECKED_README_PATHS: readonly string[] = [
  *                                        URL state, the example catalog, source
  *                                        snippets, footgun diagnostics).
  *   - `examples/`                        the catalog sources and their generated
- *                                        twins, which `examples-sync`,
- *                                        `runtime-dts` and `assets-global-dts`
- *                                        read directly.
+ *                                        twins, which `examples-sync` and
+ *                                        `runtime-dts` read directly.
  *   - `packages/exojs-bench/results/`    the committed profiles, which
  *                                        `site/src/lib/bench-profiles` globs and
  *                                        three suites validate. The bench
