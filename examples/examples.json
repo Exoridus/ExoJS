@@ -304,7 +304,7 @@
       "path": "sprites-textures/texture-sampling.js",
       "language": "typescript",
       "title": "Texture Sampling and Pixel Snapping",
-      "description": "Compare nearest, linear and mipmapped sampling against a fixed reference while zooming and toggling render-only pixel snapping.",
+      "description": "Compare nearest, linear and mipmapped sampling side by side on a magnified and a minified texture, and toggle render-only pixel snapping.",
       "backend": "core",
       "tags": ["sprite", "texture", "sampling", "pixel-snap"],
       "capabilities": ["keyboard", "pointer"],
