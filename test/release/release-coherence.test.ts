@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { INDEPENDENT_PACKAGES } from '../../scripts/release/lockstep-packages.ts';
+
 const repoRoot = resolve(fileURLToPath(import.meta.url), '..', '..', '..');
 
 interface Manifest {
@@ -27,6 +29,9 @@ const peerRange = `${releaseVersion.split('.').slice(0, 2).join('.')}.x`;
 
 // A lockstep extension is any package under packages/ that peers on the core.
 // Discovered from disk so new extension packages are covered automatically.
+// Independent packages (build tooling, content) also declare the engine peer
+// but move on their own version line, so the release matrix excludes them.
+const independentNames = new Set(INDEPENDENT_PACKAGES.map(pkg => pkg.name));
 const packagesDir = resolve(repoRoot, 'packages');
 const lockstepExtensions = readdirSync(packagesDir)
   .map(dir => {
@@ -36,7 +41,10 @@ const lockstepExtensions = readdirSync(packagesDir)
       return null;
     }
   })
-  .filter((manifest): manifest is Manifest => manifest?.peerDependencies?.['@codexo/exojs'] !== undefined);
+  .filter(
+    (manifest): manifest is Manifest =>
+      manifest?.peerDependencies?.['@codexo/exojs'] !== undefined && manifest.name !== undefined && !independentNames.has(manifest.name),
+  );
 
 describe('release coherence', () => {
   it('CHANGELOG opens with a concrete, dated release section', () => {
