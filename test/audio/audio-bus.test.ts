@@ -183,6 +183,29 @@ describe('AudioBus', () => {
     expect(bus.pan).toBe(0.5);
   });
 
+  test('a new bus starts at its volume instead of ramping down from unity', () => {
+    const spy = spyOnBusCreation();
+
+    const bus = new AudioBus('initial-volume-test', { volume: 0.4 });
+
+    expect(spy.outputNode.gain.setValueAtTime).toHaveBeenCalledWith(0.4, expect.any(Number));
+    expect(spy.outputNode.gain.setTargetAtTime).not.toHaveBeenCalled();
+
+    spy.restore();
+    bus.destroy();
+  });
+
+  test('a bus created muted starts silent', () => {
+    const spy = spyOnBusCreation();
+
+    const bus = new AudioBus('initial-muted-test', { volume: 0.4, muted: true });
+
+    expect(spy.outputNode.gain.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
+
+    spy.restore();
+    bus.destroy();
+  });
+
   // 5. Muted zeroes the gain via setTargetAtTime
   test('setting muted=true calls setTargetAtTime(0) on outputNode', () => {
     const spy = spyOnBusCreation();
@@ -709,7 +732,7 @@ describe('AudioBus', () => {
     vi.resetModules();
     const fakeSignal = new Signal<[AudioContext]>();
 
-    const makeFakeGain = () => ({ connect: vi.fn(), disconnect: vi.fn(), gain: { setTargetAtTime: vi.fn() } });
+    const makeFakeGain = () => ({ connect: vi.fn(), disconnect: vi.fn(), gain: { setTargetAtTime: vi.fn(), setValueAtTime: vi.fn() } });
     const fakeCtx = {
       currentTime: 0,
       destination: {},
@@ -746,7 +769,7 @@ describe('AudioBus', () => {
     vi.resetModules();
     const fakeSignal = new Signal<[AudioContext]>();
 
-    const makeFakeGain = () => ({ connect: vi.fn(), disconnect: vi.fn(), gain: { setTargetAtTime: vi.fn() } });
+    const makeFakeGain = () => ({ connect: vi.fn(), disconnect: vi.fn(), gain: { setTargetAtTime: vi.fn(), setValueAtTime: vi.fn() } });
     const fakeCtx = {
       currentTime: 0,
       destination: {},
@@ -787,7 +810,7 @@ describe('AudioBus', () => {
     vi.resetModules();
     const fakeSignal = new Signal<[AudioContext]>();
 
-    const makeFakeGain = () => ({ connect: vi.fn(), disconnect: vi.fn(), gain: { setTargetAtTime: vi.fn() } });
+    const makeFakeGain = () => ({ connect: vi.fn(), disconnect: vi.fn(), gain: { setTargetAtTime: vi.fn(), setValueAtTime: vi.fn() } });
     const fakeCtx = {
       currentTime: 0,
       destination: {},

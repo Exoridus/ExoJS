@@ -332,7 +332,10 @@ export class AudioBus {
     const outputNode = audioContext.createGain();
 
     // Internal chain: input → [effects...] → pan → output
-    outputNode.gain.setTargetAtTime(this._muted ? 0 : this._volume, audioContext.currentTime, 0.01);
+    // Set, not ramped: the node is new and nothing flows through it yet. A
+    // ramp from the GainNode default of unity would play the first sound
+    // after the unlock gesture at full level until it settled.
+    outputNode.gain.setValueAtTime(this._muted ? 0 : this._volume, audioContext.currentTime);
     panNode.pan.setTargetAtTime(this._pan, audioContext.currentTime, 0.01);
 
     this._setup = { audioContext, inputNode, outputNode, panNode };

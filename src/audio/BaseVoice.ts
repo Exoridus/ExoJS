@@ -133,7 +133,11 @@ export abstract class BaseVoice implements Voice {
     this._volume = clamp(init.volume, 0, 1);
     this._spatialConfig = { ...defaultSpatialConfig };
 
-    this._output.gain.setTargetAtTime(this._volume, this._audioContext.currentTime, 0.01);
+    // Set, not ramped: a fresh GainNode starts at unity, and the source has not
+    // started yet, so there is nothing to click. A ramp from unity would let a
+    // one-shot's first milliseconds - usually its loudest transient - through
+    // at full level before the requested volume took hold.
+    this._output.gain.setValueAtTime(this._volume, this._audioContext.currentTime);
 
     if (init.autoConnect !== false) {
       this._connectOutput();

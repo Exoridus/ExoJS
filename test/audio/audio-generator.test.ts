@@ -485,7 +485,7 @@ describe('AudioGenerator', () => {
 
     system.play(gen, { muted: true, volume: 0.8 });
 
-    expect(spy.gains[0].gain.setTargetAtTime).toHaveBeenCalledWith(0, expect.any(Number), expect.any(Number));
+    expect(spy.gains[0].gain.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
 
     spy.restore();
     gen.destroy();
@@ -498,7 +498,7 @@ describe('AudioGenerator', () => {
 
     system.play(gen, { volume: 0.3 });
 
-    expect(spy.gains[0].gain.setTargetAtTime).toHaveBeenCalledWith(0.3, expect.any(Number), expect.any(Number));
+    expect(spy.gains[0].gain.setValueAtTime).toHaveBeenCalledWith(0.3, expect.any(Number));
 
     spy.restore();
     gen.destroy();
@@ -511,7 +511,7 @@ describe('AudioGenerator', () => {
 
     system.play(gen);
 
-    expect(spy.gains[0].gain.setTargetAtTime).toHaveBeenCalledWith(0, expect.any(Number), expect.any(Number));
+    expect(spy.gains[0].gain.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
 
     spy.restore();
     gen.destroy();
