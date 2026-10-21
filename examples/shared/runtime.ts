@@ -313,6 +313,57 @@ export const mountControls = (options: MountControlsOptions = {}): ControlsHandl
   };
 };
 
+/** Per-pointer record of which button started each press, in press order. */
+export interface PressButtonTracker {
+  /**
+   * Button of the oldest press by `pointerId` not yet taken: 0 for the main
+   * button, touch contact or pen contact, 1 auxiliary, 2 secondary. 0 when
+   * nothing is recorded, so an unknown press is treated as a main press.
+   */
+  take(pointerId: number): number;
+  dispose(): void;
+}
+
+/**
+ * Records `PointerEvent.button` for every press on `canvas` at the moment it
+ * happens. Engine pointer signals are delivered at the next frame, when
+ * `Pointer.buttons` already reads the live state, so a press released before
+ * delivery cannot be told apart from a main press there; `take` hands the
+ * recorded button back to the signal handler in the order the presses occurred.
+ */
+export const trackPressButtons = (canvas: HTMLCanvasElement): PressButtonTracker => {
+  const queues = new Map<number, number[]>();
+  const root = canvas.ownerDocument;
+
+  const onDown = (event: Event): void => {
+    if (event.target !== canvas) {
+      return;
+    }
+
+    const { pointerId, button } = event as PointerEvent;
+    const queue = queues.get(pointerId);
+
+    if (queue) {
+      queue.push(button);
+    } else {
+      queues.set(pointerId, [button]);
+    }
+  };
+
+  // The engine listens on the canvas in the capture phase and stops immediate
+  // propagation of the presses it handles, so a listener on the canvas itself
+  // never sees them; the document's capture phase runs before it.
+  root.addEventListener('pointerdown', onDown, { capture: true });
+
+  return {
+    take: pointerId => queues.get(pointerId)?.shift() ?? 0,
+    dispose: () => {
+      root.removeEventListener('pointerdown', onDown, { capture: true });
+      queues.clear();
+    },
+  };
+};
+
 const CONTROL_CLASS = 'exo-example-control';
 
 // Hover, pressed and keyboard-focus states need pseudo-classes, which inline

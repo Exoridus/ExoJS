@@ -11,7 +11,7 @@ import {
   Text,
 } from '@codexo/exojs';
 import { ConvolutionEffect } from '@codexo/exojs-audio-fx';
-import { type ControlBinding, mountControlPanel, mountControls } from '@examples/runtime';
+import { type ControlBinding, mountControlPanel, mountControls, type PressButtonTracker, trackPressButtons } from '@examples/runtime';
 
 // Every impulse response in the AK-SROOMS set, shortest tail first. The
 // duration is what actually decides the character: a few milliseconds only
@@ -110,6 +110,7 @@ class ConvolutionRoomsScene extends Scene {
   private tapPrompt!: Text;
   private hud!: ReturnType<typeof mountControls>;
   private panel!: ReturnType<typeof mountControlPanel>;
+  private pressButtons: PressButtonTracker | null = null;
   private roomControl!: ControlBinding<number>;
 
   override init(): void {
@@ -154,6 +155,10 @@ class ConvolutionRoomsScene extends Scene {
 
     this.root.addChild(this.gfx, this.label, this.detail, this.tapPrompt, ...materialLabels);
 
+    if (this.app.canvas instanceof HTMLCanvasElement) {
+      this.pressButtons = trackPressButtons(this.app.canvas);
+    }
+
     this.app.input.onPointerDown.add(this.onPointerDown);
     this.app.input.onContextMenu.add(this.onContextMenu);
 
@@ -179,10 +184,11 @@ class ConvolutionRoomsScene extends Scene {
 
   // Application input outlives the scene, so both handlers are removed in destroy().
   private readonly onPointerDown = (pointer: Pointer, x: number, y: number): void => {
-    // Presses are delivered at the next frame while `buttons` is live, so a
-    // quick click may already read as released. Only a held right button is
-    // skipped; right-click switches rooms instead.
-    if (pointer.buttons & 2) {
+    // Presses are delivered at the next frame, when `pointer.buttons` already
+    // reads the live state, so a right click released before then looks like a
+    // main click. The button recorded at press time decides: right-click
+    // switches rooms instead of striking.
+    if ((this.pressButtons?.take(pointer.id) ?? 0) !== 0) {
       return;
     }
 
@@ -258,6 +264,7 @@ class ConvolutionRoomsScene extends Scene {
   override destroy(): void {
     this.app.input.onPointerDown.remove(this.onPointerDown);
     this.app.input.onContextMenu.remove(this.onContextMenu);
+    this.pressButtons?.dispose();
     this.app.audio.sound.removeEffect(this.convolution);
     this.convolution.destroy();
     this.panel.dispose();

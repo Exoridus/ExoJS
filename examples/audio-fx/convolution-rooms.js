@@ -1,7 +1,7 @@
 // Auto-generated from convolution-rooms.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
 import { ConvolutionEffect } from '@codexo/exojs-audio-fx';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { mountControlPanel, mountControls, trackPressButtons } from '@examples/runtime';
 // Every impulse response in the AK-SROOMS set, shortest tail first. The
 // duration is what actually decides the character: a few milliseconds only
 // colours the sound, ~30-150 ms reads as a cupboard or a shaft, and past
@@ -79,6 +79,7 @@ class ConvolutionRoomsScene extends Scene {
   tapPrompt;
   hud;
   panel;
+  pressButtons = null;
   roomControl;
   init() {
     const { width, height } = this.app;
@@ -114,6 +115,9 @@ class ConvolutionRoomsScene extends Scene {
       new Text(pad.label, { fillColor: Color.white, fontSize: 20 }).setAnchor(0.5, 0.5).setPosition(pad.x + pad.w / 2, pad.y + pad.h + 26),
     );
     this.root.addChild(this.gfx, this.label, this.detail, this.tapPrompt, ...materialLabels);
+    if (this.app.canvas instanceof HTMLCanvasElement) {
+      this.pressButtons = trackPressButtons(this.app.canvas);
+    }
     this.app.input.onPointerDown.add(this.onPointerDown);
     this.app.input.onContextMenu.add(this.onContextMenu);
     this.hud = mountControls({
@@ -135,10 +139,11 @@ class ConvolutionRoomsScene extends Scene {
   }
   // Application input outlives the scene, so both handlers are removed in destroy().
   onPointerDown = (pointer, x, y) => {
-    // Presses are delivered at the next frame while `buttons` is live, so a
-    // quick click may already read as released. Only a held right button is
-    // skipped; right-click switches rooms instead.
-    if (pointer.buttons & 2) {
+    // Presses are delivered at the next frame, when `pointer.buttons` already
+    // reads the live state, so a right click released before then looks like a
+    // main click. The button recorded at press time decides: right-click
+    // switches rooms instead of striking.
+    if ((this.pressButtons?.take(pointer.id) ?? 0) !== 0) {
       return;
     }
     for (const pad of this.pads) {
@@ -198,6 +203,7 @@ class ConvolutionRoomsScene extends Scene {
   destroy() {
     this.app.input.onPointerDown.remove(this.onPointerDown);
     this.app.input.onContextMenu.remove(this.onContextMenu);
+    this.pressButtons?.dispose();
     this.app.audio.sound.removeEffect(this.convolution);
     this.convolution.destroy();
     this.panel.dispose();
