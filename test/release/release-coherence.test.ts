@@ -31,7 +31,7 @@ const peerRange = `${releaseVersion.split('.').slice(0, 2).join('.')}.x`;
 // Discovered from disk so new extension packages are covered automatically.
 // Independent packages (build tooling, content) also declare the engine peer
 // but move on their own version line, so the release matrix excludes them.
-const independentNames = new Set(INDEPENDENT_PACKAGES.map(pkg => pkg.name));
+const independentNames = new Set<string>(INDEPENDENT_PACKAGES.map(pkg => pkg.name));
 const packagesDir = resolve(repoRoot, 'packages');
 const lockstepExtensions = readdirSync(packagesDir)
   .map(dir => {
