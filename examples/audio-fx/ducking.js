@@ -71,7 +71,7 @@ class DuckingScene extends Scene {
       if (app.audio.locked) {
         return;
       }
-      app.audio.play(this.voice, { bus: this.voiceBus });
+      app.audio.play(this.voice, { bus: this.voiceBus, volume: 0.4 });
       this.hud.setStatus('Voice playing — music ducked');
     });
     // Core defers playback until the AudioContext unlocks on the first

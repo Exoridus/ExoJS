@@ -34,7 +34,7 @@ class ReverbAndDelayScene extends Scene {
       label: 'Play impact',
       onClick: () => {
         if (!audio.locked) {
-          audio.play(this.sound, { bus: audio.sound });
+          audio.play(this.sound, { bus: audio.sound, volume: 0.4 });
         }
       },
     });

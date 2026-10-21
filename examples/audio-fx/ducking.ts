@@ -94,7 +94,7 @@ class DuckingScene extends Scene {
         return;
       }
 
-      app.audio.play(this.voice, { bus: this.voiceBus });
+      app.audio.play(this.voice, { bus: this.voiceBus, volume: 0.4 });
       this.hud.setStatus('Voice playing — music ducked');
     });
 

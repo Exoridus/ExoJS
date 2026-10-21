@@ -16,6 +16,7 @@ const CHAINS = [
   {
     name: 'Telephone',
     note: 'Band-limit the sound before adding saturation.',
+    trim: 0.14,
     stages: [
       { name: 'Highpass', create: () => new HighpassFilter({ frequency: 800 }) },
       { name: 'Lowpass', create: () => new LowpassFilter({ frequency: 2500 }) },
@@ -25,6 +26,7 @@ const CHAINS = [
   {
     name: 'Underwater',
     note: 'Remove highs, then add a slow chorus and room tail.',
+    trim: 2,
     stages: [
       { name: 'Lowpass', create: () => new LowpassFilter({ frequency: 420, resonance: 2 }) },
       { name: 'Chorus', create: () => new ChorusEffect({ delayMs: 25, depthMs: 8, rateHz: 0.6, wet: 0.6 }) },
@@ -34,6 +36,7 @@ const CHAINS = [
   {
     name: 'Arcade',
     note: 'Quantize the samples, then warm the edges with distortion.',
+    trim: 0.35,
     stages: [
       { name: 'BitCrusher', create: () => new BitCrusherEffect({ bits: 5, frequencyReduction: 0.35 }) },
       { name: 'Distortion', create: () => new DistortionEffect({ drive: 0.25, wet: 0.6 }) },
@@ -42,6 +45,7 @@ const CHAINS = [
   {
     name: 'Space Echo',
     note: 'Stereo repeats follow a short room reflection.',
+    trim: 0.35,
     stages: [
       { name: 'Reverb', create: () => new ReverbEffect({ decay: 1.5, wet: 0.25 }) },
       { name: 'PingPongDelay', create: () => new PingPongDelayEffect({ delayTime: 0.32, feedback: 0.5, wet: 0.45 }) },
@@ -93,7 +97,7 @@ class EffectChainsScene extends Scene {
       label: 'Play impact',
       onClick: () => {
         if (!audio.locked) {
-          audio.play(this.impact);
+          audio.play(this.impact, { volume: 0.4 });
         }
       },
     });
@@ -126,6 +130,7 @@ class EffectChainsScene extends Scene {
       }
     });
     this.hud.setHint(chain.note);
+    master.volume = this.bypass ? 1 : chain.trim;
     if (this.bypass) {
       this.hud.setStatus(`${chain.name} bypassed; dry signal.`);
       return;
@@ -178,6 +183,7 @@ class EffectChainsScene extends Scene {
       effect.destroy();
     }
     this.active = [];
+    this.app.audio.master.volume = 1;
     this.analyser?.destroy();
     this.panel?.dispose();
     this.hud?.dispose();
