@@ -1,25 +1,31 @@
 // Auto-generated from hello-world.ts - edit the .ts source, not this file.
-import { Application, Color, FixedResolutionCanvasSizing, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, Sprite, Text } from '@codexo/exojs';
 // #region guide:first-scene
 class HelloWorldScene extends Scene {
   sprite;
+  hint;
   playing = true;
   init() {
     const app = this.app;
     const { width, height } = app;
     this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
     this.sprite.setAnchor(0.5);
+    this.sprite.setScale(1.5);
     this.sprite.setPosition(width / 2, height / 2);
     this.sprite.interactive = true;
     this.sprite.onPointerTap.add(() => {
       this.playing = !this.playing;
       this.sprite.setTint(this.playing ? Color.white : new Color(150, 170, 190));
+      this.hint.text = this.playing ? 'Click the ship to pause it' : 'Paused - click the ship to resume';
     });
-    this.root.addChild(this.sprite);
+    this.hint = new Text('Click the ship to pause it', { fillColor: new Color(170, 188, 225), fontSize: 22 });
+    this.hint.setAnchor(0.5, 0.5);
+    this.hint.setPosition(width / 2, height - 90);
+    this.root.addChild(this.sprite, this.hint);
   }
   update(delta) {
     if (this.playing) {
-      this.sprite.rotate(delta * 120);
+      this.sprite.rotate(delta * 90);
     }
   }
 }
@@ -32,7 +38,7 @@ const app = new Application({
     mount: document.body,
     sizing: new FixedResolutionCanvasSizing(),
   },
-  clearColor: Color.black,
+  clearColor: new Color(12, 16, 30),
   loader: {
     basePath: 'assets/',
   },
