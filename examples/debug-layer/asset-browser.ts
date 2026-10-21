@@ -50,6 +50,7 @@ class AssetBrowserScene extends Scene {
   private readonly items = new Map<DemoAssetKey, HTMLButtonElement>();
 
   private selected: DemoAssetKey = KEYS[0]!;
+  private listed: DemoAssetCategory | null = null;
   private backdrop = 0;
   private request = 0;
   private drawables: Array<Sprite | Text | BitmapText | Graphics | Video> = [];
@@ -92,6 +93,7 @@ class AssetBrowserScene extends Scene {
   }
 
   private renderList(category: DemoAssetCategory): void {
+    this.listed = category;
     this.category.value = category;
     this.items.clear();
     this.entries.replaceChildren(
@@ -131,7 +133,7 @@ class AssetBrowserScene extends Scene {
   private async select(key: DemoAssetKey): Promise<void> {
     const category = demoAssetCategories[key];
 
-    if (this.category.value !== category || this.items.size === 0) {
+    if (this.listed !== category) {
       this.renderList(category);
     }
 

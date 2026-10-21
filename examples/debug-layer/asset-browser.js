@@ -37,6 +37,7 @@ class AssetBrowserScene extends Scene {
   info = document.createElement('p');
   items = new Map();
   selected = KEYS[0];
+  listed = null;
   backdrop = 0;
   request = 0;
   drawables = [];
@@ -76,6 +77,7 @@ class AssetBrowserScene extends Scene {
     document.body.append(this.list);
   }
   renderList(category) {
+    this.listed = category;
     this.category.value = category;
     this.items.clear();
     this.entries.replaceChildren(
@@ -109,7 +111,7 @@ class AssetBrowserScene extends Scene {
   }
   async select(key) {
     const category = demoAssetCategories[key];
-    if (this.category.value !== category || this.items.size === 0) {
+    if (this.listed !== category) {
       this.renderList(category);
     }
     this.selected = key;
