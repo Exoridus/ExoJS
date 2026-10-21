@@ -8,11 +8,10 @@ import {
   Scene,
   type Seconds,
   Sprite,
-  Text,
   Texture,
 } from '@codexo/exojs';
 import { AlphaNormals, type Lighting, LightmapLighting, type NormalSource, PointLight } from '@codexo/exojs/lighting';
-import { demoPanel, slider, toggle } from '@examples/runtime';
+import { demoPanel, mountControls, slider, toggle } from '@examples/runtime';
 
 // The lightmap renderer multiplies a frame that was already drawn, so by the
 // time the light field is composited there is no surface normal anywhere. A
@@ -81,7 +80,6 @@ class LightmapNormalsScene extends Scene {
   private world!: Container;
   private lighting!: Lighting;
   private normals!: NormalSource;
-  private labels: Text[] = [];
   private torch!: PointLight;
   private lantern!: PointLight;
   private elapsed = 0;
@@ -127,10 +125,10 @@ class LightmapNormalsScene extends Scene {
     this.torch = this.lighting.add(new PointLight({ radius: 480, intensity: 2.4, height: 34, color: new Color(255, 190, 130) }));
     this.lantern = this.lighting.add(new PointLight({ radius: 360, intensity: 1.8, height: 90, color: new Color(150, 200, 255) }));
 
-    this.labels = [
-      new Text('With normals', { fontSize: 20, fillColor: Color.white }).setAnchor(0.5).setPosition(width * 0.25, 40),
-      new Text('Without normals', { fontSize: 20, fillColor: Color.white }).setAnchor(0.5).setPosition(width * 0.75, 40),
-    ];
+    // DOM labels: canvas text would sit under the lightmap and go dark with
+    // the floor.
+    mountControls({ status: 'Left half: with normals', corner: 'top-left' });
+    mountControls({ status: 'Right half: without normals', corner: 'bottom-right' });
 
     demoPanel({
       corner: 'top-right',
@@ -157,10 +155,6 @@ class LightmapNormalsScene extends Scene {
 
   override draw(context: RenderingContext): void {
     context.render(this.world);
-
-    for (const label of this.labels) {
-      context.render(label);
-    }
   }
 }
 

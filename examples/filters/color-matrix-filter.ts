@@ -110,7 +110,10 @@ class ColorTransformsScene extends Scene {
       [ramp, art].forEach((texture, row) => {
         const sprite = new Sprite(texture).setAnchor(0.5).setPosition(x, height / 2 + (row - 0.5) * (TILE + 24));
 
-        sprite.setScale(TILE / Math.max(texture.width, texture.height));
+        // The colour ramp is a short strip; stretching it to a square tile
+        // keeps every hue large enough to compare.
+        sprite.width = TILE;
+        sprite.height = texture === ramp ? TILE * 0.6 : (TILE * texture.height) / texture.width;
         sprite.filters = filter ? [filter] : [];
         this.sprites.push(sprite);
       });

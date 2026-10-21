@@ -130,7 +130,7 @@ class FireworksScene extends Scene {
       position: new Constant(this.burstPosition),
       // A narrow speed band puts the sparks on one expanding shell.
       velocity: ConeDirection.omni(200, 320),
-      scale: new Constant(new Vector(0.1, 0.1)),
+      scale: new Constant(new Vector(0.2, 0.2)),
       tint: new Constant(fireworkColors[0]),
     });
     const sparks = createLayer(star, this.sparkBurst, { capacity: 4096 });
@@ -139,8 +139,8 @@ class FireworksScene extends Scene {
     sparks.addUpdateModule(
       new ScaleOverLifetime(
         new Curve([
-          { t: 0, v: 0.12 },
-          { t: 1, v: 0.04 },
+          { t: 0, v: 0.2 },
+          { t: 1, v: 0.06 },
         ]),
       ),
     );
@@ -160,7 +160,7 @@ class FireworksScene extends Scene {
       lifetime: new Range(2.2, 3.2),
       position: new Constant(this.burstPosition),
       velocity: ConeDirection.omni(15, 80),
-      scale: new Constant(new Vector(0.06, 0.06)),
+      scale: new Constant(new Vector(0.1, 0.1)),
       tint: new Constant(new Color(255, 214, 150)),
     });
     const embers = createLayer(star, this.emberBurst, { capacity: 1024 });

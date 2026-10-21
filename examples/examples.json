@@ -613,7 +613,7 @@
       "path": "sprites-textures/video-drawable.js",
       "language": "typescript",
       "title": "Video Drawable",
-      "description": "Stream a video element as a live GPU texture, composite a sprite over it, and switch between clips at runtime.",
+      "description": "A video streams as a live GPU texture with a sprite composited over it. Choose the demo loop, the 4K 24 fps clip or the 1080p 60 fps clip with 1-3 or the panel; click to pause. All clips are SDR.",
       "backend": "core",
       "tags": ["sprite", "rendering"],
       "capabilities": ["pointer", "keyboard"],

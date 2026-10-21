@@ -36,11 +36,11 @@ class FrameAnimationScene extends Scene {
       const x = (this.app.width * (index + 0.5)) / CHARACTERS.length;
       const sprite = new AnimatedSprite(texture, clips)
         .setAnchor(0.5)
-        .setScale(3)
+        .setScale(1.6)
         .setPosition(x, this.app.height / 2);
       const label = new Text(character, { fillColor: Color.white, fontSize: 22, align: 'center' })
         .setAnchor(0.5, 0)
-        .setPosition(x, this.app.height / 2 + 90);
+        .setPosition(x, this.app.height / 2 + 130);
 
       this.addChild(sprite);
       this.addChild(label);
