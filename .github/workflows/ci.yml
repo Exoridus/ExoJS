@@ -254,9 +254,12 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: dist
+          # The demo-assets build copies its standard media into media/, which
+          # the package exports and packs; the verify jobs pack from this tree.
           path: |
             dist/
             packages/*/dist/
+            packages/exojs-demo-assets/media/
           retention-days: 1
           if-no-files-found: error
 
