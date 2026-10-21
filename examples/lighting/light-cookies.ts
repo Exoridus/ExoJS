@@ -12,7 +12,7 @@ import {
   WrapModes,
 } from '@codexo/exojs';
 import { AlphaOccluder, type Lighting, LightmapLighting, LineLight, PointLight, SpotLight, SunLight } from '@codexo/exojs/lighting';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { type DemoPanel, demoPanel, slider, type SliderSpec, toggle, type ToggleSpec } from '@examples/runtime';
 
 // Four light shapes, one scene, and the shape of the light doing the work that
 // a texture would otherwise have to do.
@@ -100,7 +100,7 @@ class LightCookiesScene extends Scene {
   private canopy!: SpotLight;
   private tube!: LineLight;
   private elapsed = 0;
-  private hud!: ReturnType<typeof mountControls>;
+  private panel!: DemoPanel<{ time: SliderSpec; sun: SliderSpec; cookies: ToggleSpec }>;
 
   override init(): void {
     const { width, height } = this.app;
@@ -169,42 +169,19 @@ class LightCookiesScene extends Scene {
     );
     this.tube.setPosition(300, 640);
 
-    this.hud = mountControls({
+    this.panel = demoPanel({
       title: 'Light Cookies',
-      hint: 'Every pattern here is one texture on ONE light, carried by that light - it turns and scales with the lamp rather than being projected onto the world. Watch the window drift: its bars travel with the lamp instead of staying put on the floor, which is exactly the difference between a cookie and a world projection.',
-      status: '',
-    });
-
-    const panel = mountControlPanel({ title: 'Lights', corner: 'top-right' });
-
-    panel.addSlider({
-      label: 'Time of day',
-      min: -60,
-      max: 60,
-      step: 1,
-      value: this.sun.rotation,
-      onChange: value => {
-        this.sun.rotation = value;
+      corner: 'top-right',
+      controls: {
+        time: slider('Time of day', { min: -60, max: 60, value: this.sun.rotation, step: 1, format: value => `${value}` }),
+        sun: slider('Sun intensity', { min: 0, max: 1.2, value: this.sun.intensity, step: 0.05, format: value => value.toFixed(2) }),
+        cookies: toggle('Cookies', true),
       },
-    });
-
-    panel.addSlider({
-      label: 'Sun',
-      min: 0,
-      max: 1.2,
-      step: 0.05,
-      value: this.sun.intensity,
-      onChange: value => {
-        this.sun.intensity = value;
-      },
-    });
-
-    panel.addToggle({
-      label: 'Cookies',
-      value: true,
-      onChange: value => {
-        this.window.cookie = value ? windowCookie : null;
-        this.canopy.cookie = value ? canopyCookie : null;
+      onChange: (_key, _value, values) => {
+        this.sun.rotation = values.time;
+        this.sun.intensity = values.sun;
+        this.window.cookie = values.cookies ? windowCookie : null;
+        this.canopy.cookie = values.cookies ? canopyCookie : null;
       },
     });
   }
@@ -223,7 +200,12 @@ class LightCookiesScene extends Scene {
 
   override draw(context: RenderingContext): void {
     context.render(this.world);
-    this.hud.setStatus(`${this.lighting.activeLightCount} lights - draw calls ${context.stats.drawCalls}`);
+    this.panel.status(`${this.lighting.activeLightCount} lights - draw calls ${context.stats.drawCalls}`);
+  }
+
+  override destroy(): void {
+    this.panel.dispose();
+    super.destroy();
   }
 }
 

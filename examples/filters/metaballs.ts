@@ -9,7 +9,7 @@ import {
   type Seconds,
   ShaderFilter,
 } from '@codexo/exojs';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { choice, type ChoiceSpec, type DemoPanel, demoPanel, slider, type SliderSpec } from '@examples/runtime';
 
 // Threshold pass: render solid cyan where the (blurred) red field is dense
 // enough, with a smooth edge. The blur in front of this builds the scalar field
@@ -32,6 +32,8 @@ const wgsl = `@group(0) @binding(1) var uTexture: texture_2d<f32>;
   return vec4<f32>(vec3<f32>(0.2, 0.9, 1.0) * shape, shape);
 }`;
 
+const PASSES = ['Blur then threshold', 'Threshold then blur', 'No filters'] as const;
+
 class MetaballsScene extends Scene {
   private balls!: Graphics;
   private points!: Array<{ a: number; r: number }>;
@@ -40,7 +42,7 @@ class MetaballsScene extends Scene {
   private handle!: Graphics;
   private dragPoint = { x: 0, y: 0 };
   private dragging = false;
-  private hud!: ReturnType<typeof mountControls>;
+  private panel!: DemoPanel<{ passes: ChoiceSpec<(typeof PASSES)[number]>; blur: SliderSpec }>;
   private readonly onPointerDown = (_pointer: unknown, x: number, y: number): void => {
     this.dragging = Math.hypot(x - this.dragPoint.x, y - this.dragPoint.y) < 58;
   };
@@ -62,46 +64,22 @@ class MetaballsScene extends Scene {
     this.blur = new BlurFilter({ strength: 6 });
     this.threshold = new ShaderFilter({ glsl: { fragment: glsl }, wgsl });
 
-    this.setOrder('field');
-
-    this.hud = mountControls({
-      title: 'Metaballs and Filter Order',
-      controls: [{ keys: 'Drag ring', action: 'move a blob into the others' }],
-      status: 'Blur → Threshold: merged shapes',
-      hint: 'Blur then threshold merges nearby circles. Reverse the filters or bypass them to compare the result.',
-    });
-    const panel = mountControlPanel({ title: 'Filter order' });
-    panel.addCycle({
-      label: 'Passes',
-      options: ['Blur → Threshold', 'Threshold → Blur', 'No filters'],
-      index: 0,
-      onChange: index => this.setOrder((['field', 'soft', 'raw'] as const)[index]),
-    });
-    panel.addSlider({
-      label: 'Blur strength',
-      min: 1,
-      max: 12,
-      step: 0.25,
-      value: 6,
-      onChange: value => {
-        this.blur.strength = value;
+    this.panel = demoPanel({
+      title: 'Filter order',
+      controls: {
+        passes: choice('Passes', PASSES),
+        blur: slider('Blur strength', { min: 1, max: 12, value: 6, step: 0.25, format: value => value.toFixed(2) }),
+      },
+      onChange: (_key, _value, values) => {
+        this.blur.strength = values.blur;
+        this.balls.filters =
+          values.passes === PASSES[0] ? [this.blur, this.threshold] : values.passes === PASSES[1] ? [this.threshold, this.blur] : [];
       },
     });
     this.app.input.onPointerDown.add(this.onPointerDown);
     this.app.input.onPointerMove.add(this.onPointerMove);
     this.app.input.onPointerUp.add(this.onPointerEnd);
     this.app.input.onPointerCancel.add(this.onPointerEnd);
-  }
-
-  private setOrder(order: 'field' | 'soft' | 'raw'): void {
-    this.balls.filters = order === 'field' ? [this.blur, this.threshold] : order === 'soft' ? [this.threshold, this.blur] : [];
-    this.hud?.setStatus(
-      order === 'field'
-        ? 'Blur → Threshold: merged shapes'
-        : order === 'soft'
-          ? 'Threshold → Blur: soft circles'
-          : 'No filters: source circles',
-    );
   }
 
   override update(delta: Seconds): void {
@@ -138,7 +116,7 @@ class MetaballsScene extends Scene {
     this.app.input.onPointerMove.remove(this.onPointerMove);
     this.app.input.onPointerUp.remove(this.onPointerEnd);
     this.app.input.onPointerCancel.remove(this.onPointerEnd);
-    this.hud.dispose();
+    this.panel.dispose();
     super.destroy();
   }
 }

@@ -64,16 +64,7 @@ class AssetCatalogsScene extends Scene {
   private night = false;
 
   override async load(): Promise<void> {
-    this.hud = mountControls({
-      title: 'Asset Catalogs',
-      controls: [
-        { keys: 'N', action: 'swap the ground texture for the derived night catalog' },
-        { keys: 'G', action: 'load a ground texture by a computed path' },
-        { keys: 'M', action: 'play the streamed theme (a non-leaf asset)' },
-      ],
-      status: 'Loading the shared and day catalogs...',
-      hint: 'Catalog handles expose their queue and cache state while loading.',
-    });
+    this.hud = mountControls({ status: 'Loading the shared and day catalogs...' });
     // #region guide:queue-progress
     // Every `load(...)` call returns a LoadingQueue. It is `PromiseLike`, so
     // it can be awaited directly, and it reports the progress of this one

@@ -28,15 +28,7 @@ class PointerAndHittestScene extends Scene {
       this.sprites.push(sprite);
     }
 
-    this.hud = mountControls({
-      title: 'Interaction Inspector',
-      controls: [
-        { keys: 'Drag', action: 'move an overlapping sprite' },
-        { keys: '1 / 2 / 3', action: 'bring that sprite to the front' },
-      ],
-      status: 'Front: 3 (blue)',
-      hint: 'The overlays show pointer targets, hit tests, and scene-graph bounds.',
-    });
+    this.hud = mountControls({ title: 'Interaction Inspector', status: 'Front: 3 (blue)' });
     this.inputs.onTrigger(Keyboard.One, () => this.setFront(0));
     this.inputs.onTrigger(Keyboard.Two, () => this.setFront(1));
     this.inputs.onTrigger(Keyboard.Three, () => this.setFront(2));
@@ -47,6 +39,11 @@ class PointerAndHittestScene extends Scene {
       sprite.zIndex = i === index ? 3 : i;
     });
     this.hud.setStatus(`Front: ${index + 1} (${['red', 'green', 'blue'][index]})`);
+  }
+
+  override destroy(): void {
+    this.hud.dispose();
+    super.destroy();
   }
 }
 

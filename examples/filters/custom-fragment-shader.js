@@ -10,7 +10,6 @@ import {
   UniformType,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControls } from '@examples/runtime';
 const UV_GRID = assets.uvGrid256;
 // The filter input is linear, premultiplied colour, and the fragment returns
 // colour in that same representation, so a shader that only moves samples
@@ -59,7 +58,6 @@ class CustomFragmentShaderScene extends Scene {
   time = 0;
   filter;
   sprite;
-  hud;
   init() {
     const app = this.app;
     const { width, height } = app;
@@ -69,12 +67,6 @@ class CustomFragmentShaderScene extends Scene {
       .setScale(4)
       .setPosition(width / 2, height / 2);
     this.sprite.filters = [this.filter];
-    this.hud = mountControls({
-      title: 'Write a Fragment Filter',
-      controls: [{ keys: 'Move pointer', action: 'place the ripple on the UV grid' }],
-      status: 'A moving ripple distorts the UV grid around the pointer.',
-      hint: 'The typed uniform schema generates matching GLSL and WGSL blocks for time and pointer position.',
-    });
     this.filter.uniforms.uPointer.set(0.5, 0.5);
     app.input.onPointerMove.add(this.onMove);
   }
@@ -94,7 +86,6 @@ class CustomFragmentShaderScene extends Scene {
   }
   destroy() {
     this.app.input.onPointerMove.remove(this.onMove);
-    this.hud?.dispose();
     this.sprite?.destroy();
     super.destroy();
   }

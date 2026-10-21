@@ -12,7 +12,7 @@ import {
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
-// Acceleration magnitude shared by both force modules (units / s²). Only the
+// Acceleration magnitude shared by both force modules (units per second squared). Only the
 // active mode's module carries this strength; the inactive one is held at 0.
 const forceStrength = 700;
 
@@ -52,32 +52,26 @@ class CursorAttractorParticlesScene extends Scene {
     this.system.addUpdateModule(this.repeller);
     this.system.addUpdateModule(new AlphaFadeOverLifetime());
 
-    app.input.onPointerMove.add(pointer => {
-      const localX = pointer.x - this.system.position.x;
-      const localY = pointer.y - this.system.position.y;
-
-      this.attractor.x = localX;
-      this.attractor.y = localY;
-      this.repeller.x = localX;
-      this.repeller.y = localY;
-    });
-
-    this.hud = mountControls({
-      title: 'Cursor Attractor Particles',
-      controls: [
-        { keys: 'Move', action: 'steer the force field' },
-        { keys: 'Toggle', action: 'switch attract / repel' },
-      ],
-      status: 'Mode: Attract',
-      hint: 'Move the cursor over the canvas to drag the particle field around.',
-    });
-
-    app.input.onPointerDown.add(() => {
-      this.setMode(this.mode === 'attract' ? 'repel' : 'attract');
-    });
+    this.hud = mountControls({ title: 'Cursor Attractor Particles', status: 'Mode: Attract' });
+    app.input.onPointerMove.add(this.onPointerMove);
+    app.input.onPointerDown.add(this.onPointerDown);
 
     this.setMode('attract');
   }
+
+  private readonly onPointerMove = (pointer: { x: number; y: number }): void => {
+    const localX = pointer.x - this.system.position.x;
+    const localY = pointer.y - this.system.position.y;
+
+    this.attractor.x = localX;
+    this.attractor.y = localY;
+    this.repeller.x = localX;
+    this.repeller.y = localY;
+  };
+
+  private readonly onPointerDown = (): void => {
+    this.setMode(this.mode === 'attract' ? 'repel' : 'attract');
+  };
 
   private setMode(mode: 'attract' | 'repel'): void {
     this.mode = mode;
@@ -95,6 +89,13 @@ class CursorAttractorParticlesScene extends Scene {
 
   override draw(context: RenderingContext): void {
     context.render(this.system);
+  }
+
+  override destroy(): void {
+    this.app.input.onPointerMove.remove(this.onPointerMove);
+    this.app.input.onPointerDown.remove(this.onPointerDown);
+    this.hud.dispose();
+    super.destroy();
   }
 }
 

@@ -11,7 +11,7 @@ import {
   Texture,
 } from '@codexo/exojs';
 import { AlphaOccluder, type Lighting, LightmapLighting, PointLight, SpotLight } from '@codexo/exojs/lighting';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { type DemoPanel, demoPanel, slider, type SliderSpec, toggle, type ToggleSpec } from '@examples/runtime';
 
 // Nothing here models a shadow. Each wall registers the outline it already
 // has - its own rectangle, or, for the pillar, the silhouette traced out of
@@ -76,7 +76,7 @@ class ShadowCastersScene extends Scene {
   private beam!: SpotLight;
   private turntable!: Sprite;
   private elapsed = 0;
-  private hud!: ReturnType<typeof mountControls>;
+  private panel!: DemoPanel<{ softness: SliderSpec; occluders: ToggleSpec }>;
 
   override init(): void {
     const { width, height } = this.app;
@@ -120,31 +120,17 @@ class ShadowCastersScene extends Scene {
     );
     this.beam.setPosition(120, 660);
 
-    this.hud = mountControls({
+    this.panel = demoPanel({
       title: 'Shadow Casters',
-      hint: 'No object declares that it casts a shadow, and nothing here authors an outline: every caster is one line handing the lighting system the sprite it already draws.',
-      status: '',
-    });
-
-    const panel = mountControlPanel({ title: 'Shadows', corner: 'top-right' });
-
-    panel.addSlider({
-      label: 'Softness',
-      min: 0,
-      max: 1,
-      step: 0.05,
-      value: this.torch.softness,
-      onChange: value => {
-        this.torch.softness = value;
-        this.beam.softness = value;
+      corner: 'top-right',
+      controls: {
+        softness: slider('Softness', { min: 0, max: 1, value: this.torch.softness, step: 0.05, format: value => value.toFixed(2) }),
+        occluders: toggle('Show occluders', false),
       },
-    });
-
-    panel.addToggle({
-      label: 'Show occluders',
-      value: false,
-      onChange: value => {
-        this.lighting.debug = value ? 'occluders' : null;
+      onChange: (_key, _value, values) => {
+        this.torch.softness = values.softness;
+        this.beam.softness = values.softness;
+        this.lighting.debug = values.occluders ? 'occluders' : null;
       },
     });
   }
@@ -163,7 +149,12 @@ class ShadowCastersScene extends Scene {
 
   override draw(context: RenderingContext): void {
     context.render(this.world);
-    this.hud.setStatus(`${this.lighting.activeLightCount} lights - draw calls ${context.stats.drawCalls}`);
+    this.panel.status(`${this.lighting.activeLightCount} lights - draw calls ${context.stats.drawCalls}`);
+  }
+
+  override destroy(): void {
+    this.panel.dispose();
+    super.destroy();
   }
 }
 

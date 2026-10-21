@@ -14,7 +14,6 @@ import {
   Sprite,
   View,
 } from '@codexo/exojs';
-import { mountControls } from '@examples/runtime';
 
 const WORLD_WIDTH = 3200;
 const WORLD_HEIGHT = 1800;
@@ -69,7 +68,6 @@ class MiniMapScene extends Scene {
   private mapCamera!: View;
   private mapTexture!: RenderTexture;
   private pipeline!: RenderPipeline;
-  private hud!: ReturnType<typeof mountControls>;
   private time = 0;
 
   override init(): void {
@@ -104,12 +102,6 @@ class MiniMapScene extends Scene {
       .addPass(new RenderNodePass(this.world, { target: this.mapTexture, view: this.mapCamera, clear: Color.black }))
       .addPass(new RenderNodePass(this.world, { view: this.camera, clear: Color.black }))
       .addPass(new RenderNodePass(this.overlay));
-
-    this.hud = mountControls({
-      title: 'Minimap',
-      status: 'The player wanders a world larger than the screen.',
-      hint: 'Both views follow the same player through the same container; the minimap camera only frames a wider area into a small texture.',
-    });
   }
 
   override update(delta: Seconds): void {
@@ -139,7 +131,6 @@ class MiniMapScene extends Scene {
     this.world.destroy();
     this.overlay.destroy();
     this.mask.destroy();
-    this.hud.dispose();
     super.destroy();
   }
 }

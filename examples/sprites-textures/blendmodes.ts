@@ -4,6 +4,7 @@ import {
   BlendModes,
   Color,
   FixedResolutionCanvasSizing,
+  Keyboard,
   type RenderingContext,
   ScaleModes,
   Scene,
@@ -11,7 +12,7 @@ import {
   Sprite,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControls } from '@examples/runtime';
+import { choice, demoPanel } from '@examples/runtime';
 
 const ALPHA_RINGS = assets.alphaGradientRings;
 
@@ -48,9 +49,7 @@ class BlendmodesScene extends Scene {
   private background!: Sprite;
   private left!: Sprite;
   private right!: Sprite;
-  private index = 0;
   private ticker = 0;
-  private hud!: ReturnType<typeof mountControls>;
 
   override async load(): Promise<void> {
     const app = this.app;
@@ -79,28 +78,25 @@ class BlendmodesScene extends Scene {
     this.right.setScale(5);
     this.right.setTint(new Color(255, 96, 200));
 
-    this.hud = mountControls({
-      title: 'Blend Modes',
-      controls: [{ keys: 'Click', action: 'next blend mode' }],
+    // Clicks, arrow keys and the panel buttons all move the same value.
+    const panel = demoPanel({
+      controls: {
+        mode: choice(
+          'Blend mode',
+          BLEND_MODES.map(entry => entry.name),
+        ),
+      },
+      onChange: (_key, name) => {
+        const { mode } = BLEND_MODES.find(entry => entry.name === name)!;
+
+        this.left.setBlendMode(mode);
+        this.right.setBlendMode(mode);
+      },
     });
 
-    app.input.onPointerDown.add(() => this.setIndex((this.index + 1) % BLEND_MODES.length));
-
-    // Apply the initial mode (Normal) without skipping it.
-    this.applyBlendMode();
-  }
-
-  private setIndex(index: number): void {
-    this.index = ((index % BLEND_MODES.length) + BLEND_MODES.length) % BLEND_MODES.length;
-    this.applyBlendMode();
-  }
-
-  private applyBlendMode(): void {
-    const { mode, name } = BLEND_MODES[this.index];
-
-    this.left.setBlendMode(mode);
-    this.right.setBlendMode(mode);
-    this.hud.setStatus(`${name}  (${this.index + 1}/${BLEND_MODES.length})`);
+    app.input.onPointerDown.add(() => panel.step('mode', 1));
+    this.inputs.onTrigger(Keyboard.Right, () => panel.step('mode', 1));
+    this.inputs.onTrigger(Keyboard.Left, () => panel.step('mode', -1));
   }
 
   override update(delta: Seconds): void {

@@ -29,7 +29,6 @@ import {
   VectorRange,
 } from '@codexo/exojs/particles';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControls } from '@examples/runtime';
 const random = new Random(2026);
 const autoLaunchInterval = Time.seconds(1.6);
 // Upward launch speed range (px/s, negative = up). Higher = higher apex.
@@ -69,8 +68,6 @@ class FireworksScene extends Scene {
   autoLaunchTimer;
   rocketTexture;
   rockets = [];
-  launchCount = 0;
-  hud;
   init() {
     const app = this.app;
     const { width, height } = app;
@@ -166,12 +163,6 @@ class FireworksScene extends Scene {
     app.input.onPointerDown.add(this.onPointerDown);
     // Ambient fallback: keep the sky alive even without clicks.
     this.autoLaunchTimer = new Timer(autoLaunchInterval, true);
-    this.hud = mountControls({
-      title: 'Fireworks',
-      controls: [{ keys: 'Click', action: 'launch a rocket' }],
-      status: 'Launched: 0 · in flight: 0',
-      hint: 'Three layers per burst: a short flash, sparks that brake and fall, and slow embers that linger.',
-    });
     this.launchRocket(width * 0.5);
   }
   // Application input outlives the scene, so the handler is removed in destroy().
@@ -189,8 +180,6 @@ class FireworksScene extends Scene {
       color,
       trail: [],
     });
-    this.launchCount++;
-    this.updateStatus();
   }
   detonate(rocket) {
     this.burstPosition.set(rocket.position.x, rocket.position.y);
@@ -201,9 +190,6 @@ class FireworksScene extends Scene {
     this.flashBurst.reset();
     this.sparkBurst.reset();
     this.emberBurst.reset();
-  }
-  updateStatus() {
-    this.hud.setStatus(`Launched: ${this.launchCount} · in flight: ${this.rockets.length}`);
   }
   update(delta) {
     if (this.autoLaunchTimer.expired) {
@@ -225,7 +211,6 @@ class FireworksScene extends Scene {
         this.detonate(rocket);
         rocket.sprite.destroy();
         this.rockets.splice(i, 1);
-        this.updateStatus();
       }
     }
   }
@@ -251,7 +236,6 @@ class FireworksScene extends Scene {
   }
   destroy() {
     this.app.input.onPointerDown.remove(this.onPointerDown);
-    this.hud.dispose();
     this.trails.destroy();
     for (const rocket of this.rockets) {
       rocket.sprite.destroy();

@@ -16,7 +16,7 @@ import {
   VectorRange,
 } from '@codexo/exojs/particles';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { demoPanel, slider } from '@examples/runtime';
 class BonfireScene extends Scene {
   // Back to front: smoke behind the flames, embers in front.
   smoke;
@@ -34,7 +34,6 @@ class BonfireScene extends Scene {
   fireX = 0;
   fireY = 0;
   panel;
-  hud;
   init() {
     const app = this.app;
     const { width, height } = app;
@@ -171,37 +170,23 @@ class BonfireScene extends Scene {
       this.winds.push(wind);
       this.systems.add(system);
     }
-    this.hud = mountControls({
+    this.panel = demoPanel({
       title: 'Campfire',
-      status: 'Four particle layers: smoke, flames, a hot core and embers.',
-      hint: 'Each layer has its own texture, lifetime, size and colour curve. Wind pushes all of them.',
-    });
-    this.panel = mountControlPanel({ title: 'Fire controls' });
-    this.panel.addSlider({
-      label: 'Intensity',
-      min: 0.3,
-      max: 1.6,
-      step: 0.05,
-      value: 1,
-      onChange: value => {
-        this.intensity = value;
-        this.flameRate.value = 42 * value;
-        this.coreRate.value = 28 * value;
-        this.emberRate.value = 5 * value * value;
+      controls: {
+        intensity: slider('Intensity', { min: 0.3, max: 1.6, value: 1, step: 0.05, format: value => value.toFixed(2) }),
+        wind: slider('Wind', { min: -180, max: 180, value: 0, step: 5, format: value => `${value}` }),
       },
-    });
-    this.panel.addSlider({
-      label: 'Wind',
-      min: -180,
-      max: 180,
-      step: 5,
-      value: 0,
-      onChange: value => {
+      onChange: (_key, _value, values) => {
+        const { intensity, wind } = values;
+        this.intensity = intensity;
+        this.flameRate.value = 42 * intensity;
+        this.coreRate.value = 28 * intensity;
+        this.emberRate.value = 5 * intensity * intensity;
         // Light particles drift further than the dense flame body.
-        this.winds[0].accelerationX = value * 0.8;
-        this.winds[1].accelerationX = value * 0.5;
-        this.winds[2].accelerationX = value * 0.3;
-        this.winds[3].accelerationX = value;
+        this.winds[0].accelerationX = wind * 0.8;
+        this.winds[1].accelerationX = wind * 0.5;
+        this.winds[2].accelerationX = wind * 0.3;
+        this.winds[3].accelerationX = wind;
       },
     });
   }
@@ -238,7 +223,6 @@ class BonfireScene extends Scene {
   }
   destroy() {
     this.panel?.dispose();
-    this.hud?.dispose();
     this.ground.destroy();
     this.glow.destroy();
     super.destroy();

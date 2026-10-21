@@ -32,7 +32,6 @@ import {
   VectorRange,
 } from '@codexo/exojs/particles';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControls } from '@examples/runtime';
 
 const random = new Random(2026);
 const autoLaunchInterval = Time.seconds(1.6);
@@ -86,8 +85,6 @@ class FireworksScene extends Scene {
   private autoLaunchTimer!: Timer;
   private rocketTexture!: Texture;
   private rockets: Rocket[] = [];
-  private launchCount = 0;
-  private hud!: ReturnType<typeof mountControls>;
 
   override init(): void {
     const app = this.app;
@@ -193,13 +190,6 @@ class FireworksScene extends Scene {
     // Ambient fallback: keep the sky alive even without clicks.
     this.autoLaunchTimer = new Timer(autoLaunchInterval, true);
 
-    this.hud = mountControls({
-      title: 'Fireworks',
-      controls: [{ keys: 'Click', action: 'launch a rocket' }],
-      status: 'Launched: 0 · in flight: 0',
-      hint: 'Three layers per burst: a short flash, sparks that brake and fall, and slow embers that linger.',
-    });
-
     this.launchRocket(width * 0.5);
   }
 
@@ -223,9 +213,6 @@ class FireworksScene extends Scene {
       color,
       trail: [],
     });
-
-    this.launchCount++;
-    this.updateStatus();
   }
 
   private detonate(rocket: Rocket): void {
@@ -237,10 +224,6 @@ class FireworksScene extends Scene {
     this.flashBurst.reset();
     this.sparkBurst.reset();
     this.emberBurst.reset();
-  }
-
-  private updateStatus(): void {
-    this.hud.setStatus(`Launched: ${this.launchCount} · in flight: ${this.rockets.length}`);
   }
 
   override update(delta: Seconds): void {
@@ -267,7 +250,6 @@ class FireworksScene extends Scene {
         this.detonate(rocket);
         rocket.sprite.destroy();
         this.rockets.splice(i, 1);
-        this.updateStatus();
       }
     }
   }
@@ -302,7 +284,6 @@ class FireworksScene extends Scene {
 
   override destroy(): void {
     this.app.input.onPointerDown.remove(this.onPointerDown);
-    this.hud.dispose();
     this.trails.destroy();
 
     for (const rocket of this.rockets) {

@@ -1,7 +1,7 @@
 // Auto-generated from blendmodes.ts - edit the .ts source, not this file.
-import { Application, Asset, BlendModes, Color, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite } from '@codexo/exojs';
+import { Application, Asset, BlendModes, Color, FixedResolutionCanvasSizing, Keyboard, ScaleModes, Scene, Sprite } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControls } from '@examples/runtime';
+import { choice, demoPanel } from '@examples/runtime';
 const ALPHA_RINGS = assets.alphaGradientRings;
 // Blending runs in linear light on premultiplied colour, so a mode reads
 // brighter and less muddy than the same equation on encoded values would. The
@@ -35,9 +35,7 @@ class BlendmodesScene extends Scene {
   background;
   left;
   right;
-  index = 0;
   ticker = 0;
-  hud;
   async load() {
     const app = this.app;
     const { width, height } = app;
@@ -60,23 +58,23 @@ class BlendmodesScene extends Scene {
     this.right.setAnchor(0.5, 0.5);
     this.right.setScale(5);
     this.right.setTint(new Color(255, 96, 200));
-    this.hud = mountControls({
-      title: 'Blend Modes',
-      controls: [{ keys: 'Click', action: 'next blend mode' }],
+    // Clicks, arrow keys and the panel buttons all move the same value.
+    const panel = demoPanel({
+      controls: {
+        mode: choice(
+          'Blend mode',
+          BLEND_MODES.map(entry => entry.name),
+        ),
+      },
+      onChange: (_key, name) => {
+        const { mode } = BLEND_MODES.find(entry => entry.name === name);
+        this.left.setBlendMode(mode);
+        this.right.setBlendMode(mode);
+      },
     });
-    app.input.onPointerDown.add(() => this.setIndex((this.index + 1) % BLEND_MODES.length));
-    // Apply the initial mode (Normal) without skipping it.
-    this.applyBlendMode();
-  }
-  setIndex(index) {
-    this.index = ((index % BLEND_MODES.length) + BLEND_MODES.length) % BLEND_MODES.length;
-    this.applyBlendMode();
-  }
-  applyBlendMode() {
-    const { mode, name } = BLEND_MODES[this.index];
-    this.left.setBlendMode(mode);
-    this.right.setBlendMode(mode);
-    this.hud.setStatus(`${name}  (${this.index + 1}/${BLEND_MODES.length})`);
+    app.input.onPointerDown.add(() => panel.step('mode', 1));
+    this.inputs.onTrigger(Keyboard.Right, () => panel.step('mode', 1));
+    this.inputs.onTrigger(Keyboard.Left, () => panel.step('mode', -1));
   }
   update(delta) {
     const app = this.app;

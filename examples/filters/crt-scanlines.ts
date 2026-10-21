@@ -11,7 +11,7 @@ import {
   Text,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { type DemoPanel, demoPanel, slider, type SliderSpec, toggle, type ToggleSpec } from '@examples/runtime';
 
 const glsl = `#version 300 es
 precision highp float;
@@ -62,10 +62,7 @@ fn hash(point: vec2<f32>) -> f32 {
 class RetroDisplayScene extends Scene {
   private stage!: Container;
   private filter!: ShaderFilter;
-  private hud!: ReturnType<typeof mountControls>;
-  private enabled = true;
-  private amount = 0.8;
-  private split = 0.006;
+  private panel!: DemoPanel<{ crt: ToggleSpec; strength: SliderSpec; split: SliderSpec }>;
   private time = 0;
 
   override init(): void {
@@ -78,52 +75,26 @@ class RetroDisplayScene extends Scene {
 
     this.stage = new Container();
     this.stage.addChild(background, title);
-    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0, uAmount: this.amount, uSplit: this.split } });
+    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0, uAmount: 0.8, uSplit: 0.006 } });
     this.stage.filters = [this.filter];
 
-    this.hud = mountControls({
+    this.panel = demoPanel({
       title: 'Retro Display',
-      status: this.statusText(),
-      hint: 'One display filter combines barrel distortion, scanlines, animated grain, vignette, and RGB separation. Bypass it to compare the clean scene.',
-    });
-    const panel = mountControlPanel({ title: 'Display' });
-    panel.addToggle({
-      label: 'CRT',
-      value: true,
-      onChange: enabled => {
-        this.enabled = enabled;
-        this.stage.filters = enabled ? [this.filter] : [];
-        this.hud.setStatus(this.statusText());
+      controls: {
+        crt: toggle('CRT', true),
+        strength: slider('Effect strength', { min: 0, max: 1, value: 0.8, step: 0.05, format: value => `${Math.round(value * 100)}%` }),
+        split: slider('RGB separation', { min: 0, max: 0.02, value: 0.006, step: 0.001, format: value => value.toFixed(3) }),
+      },
+      onChange: (key, _value, values) => {
+        if (key === 'crt') {
+          this.stage.filters = values.crt ? [this.filter] : [];
+        } else if (key === 'strength') {
+          this.filter.setUniform('uAmount', values.strength);
+        } else if (key === 'split') {
+          this.filter.setUniform('uSplit', values.split);
+        }
       },
     });
-    panel.addSlider({
-      label: 'Effect strength',
-      min: 0,
-      max: 1,
-      step: 0.05,
-      value: this.amount,
-      onChange: value => {
-        this.amount = value;
-        this.filter.setUniform('uAmount', value);
-        this.hud.setStatus(this.statusText());
-      },
-    });
-    panel.addSlider({
-      label: 'RGB separation',
-      min: 0,
-      max: 0.02,
-      step: 0.001,
-      value: this.split,
-      onChange: value => {
-        this.split = value;
-        this.filter.setUniform('uSplit', value);
-        this.hud.setStatus(this.statusText());
-      },
-    });
-  }
-
-  private statusText(): string {
-    return this.enabled ? `CRT ${Math.round(this.amount * 100)}% · RGB split ${this.split.toFixed(3)}` : 'CRT off · clean scene';
   }
 
   override update(delta: Seconds): void {
@@ -136,7 +107,7 @@ class RetroDisplayScene extends Scene {
   }
 
   override destroy(): void {
-    this.hud.dispose();
+    this.panel.dispose();
     this.filter.destroy();
     super.destroy();
   }

@@ -12,7 +12,6 @@ import {
   type Texture,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControls } from '@examples/runtime';
 
 class RenderToTextureScene extends Scene {
   private source!: Container;
@@ -24,8 +23,6 @@ class RenderToTextureScene extends Scene {
   private snapshot!: Sprite;
   private labels!: Text[];
   private captureRequested = true;
-  private captures = 0;
-  private hud!: ReturnType<typeof mountControls>;
   private time = 0;
 
   override init(): void {
@@ -49,16 +46,12 @@ class RenderToTextureScene extends Scene {
       new Text('Live source', { fillColor: Color.white, fontSize: 32 }).setPosition(170, 160),
       new Text('Frozen snapshot', { fillColor: Color.white, fontSize: 32 }).setPosition(790, 160),
     ];
-    this.hud = mountControls({
-      title: 'Capture a Texture',
-      controls: [{ keys: 'Click', action: 'capture the current source frame' }],
-      status: 'Waiting for the source texture...',
-      hint: 'The left group keeps moving while the right texture stays frozen until the next click.',
-    });
-    this.app.input.onPointerTap.add(() => {
-      this.captureRequested = true;
-    });
+    this.app.input.onPointerTap.add(this.onTap);
   }
+
+  private readonly onTap = (): void => {
+    this.captureRequested = true;
+  };
 
   override update(delta: Seconds): void {
     this.time += delta;
@@ -74,10 +67,6 @@ class RenderToTextureScene extends Scene {
     if (this.captureRequested && this.texture.ready) {
       context.renderTo(this.source, { target: this.target, clear: Color.black });
       this.captureRequested = false;
-      this.captures++;
-      this.hud.setStatus(`Captures: ${this.captures}`);
-    } else if (this.texture.state === 'failed') {
-      this.hud.setStatus('The source texture failed to load.');
     }
 
     context.render(this.live);
@@ -89,6 +78,7 @@ class RenderToTextureScene extends Scene {
   }
 
   override destroy(): void {
+    this.app.input.onPointerTap.remove(this.onTap);
     this.liveTarget.destroy();
     this.target.destroy();
     super.destroy();

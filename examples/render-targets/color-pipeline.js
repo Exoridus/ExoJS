@@ -58,7 +58,7 @@ class ColorPipelineScene extends Scene {
   nodes = [];
   textures = [];
   labels = [];
-  hud;
+  hud = null;
   numericTarget = null;
   srgbTarget = null;
   hdrTarget = null;
@@ -174,21 +174,17 @@ class ColorPipelineScene extends Scene {
       this.label('RGBA16F are not all supported here.', c2, r1 + 113);
       this.label('The SDR panels are unaffected.', c2, r1 + 150);
     }
-    this.hud = mountControls({
-      title: 'Colour Pipeline',
-      corner: 'top-left',
-      controls: this.hdrSupported ? [{ keys: 'Space', action: 'HDR panel: clamp or Reinhard' }] : [],
-      status: this.hdrSupported ? `HDR panel: ${TONE_MAPPINGS[this.toneIndex]}` : 'HDR panel unavailable',
-      hint: 'Colour blends in linear light and is encoded once at output; data stays numeric.',
-    });
     if (this.hdrSupported) {
-      this.inputs.onTrigger(Keyboard.Space, () => {
-        this.toneIndex = (this.toneIndex + 1) % TONE_MAPPINGS.length;
-        this.hud.setStatus(`HDR panel: ${TONE_MAPPINGS[this.toneIndex]}`);
-        void this.readHdr();
-      });
+      this.hud = mountControls({ title: 'Colour Pipeline', corner: 'top-left', status: `HDR panel: ${TONE_MAPPINGS[this.toneIndex]}` });
+      this.inputs.onTrigger(Keyboard.Space, this.cycleTone);
+      this.app.input.onPointerTap.add(this.cycleTone);
     }
   }
+  cycleTone = () => {
+    this.toneIndex = (this.toneIndex + 1) % TONE_MAPPINGS.length;
+    this.hud?.setStatus(`HDR panel: ${TONE_MAPPINGS[this.toneIndex]}`);
+    void this.readHdr();
+  };
   async readbacks() {
     const rendering = this.app.rendering;
     const numeric = this.numericTarget;
@@ -245,6 +241,7 @@ class ColorPipelineScene extends Scene {
     }
   }
   destroy() {
+    this.app.input.onPointerTap.remove(this.cycleTone);
     this.hud?.dispose();
     this.numericTarget?.destroy();
     this.srgbTarget?.destroy();

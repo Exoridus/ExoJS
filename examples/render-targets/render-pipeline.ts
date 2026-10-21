@@ -6,6 +6,7 @@ import {
   Container,
   FixedResolutionCanvasSizing,
   Graphics,
+  Keyboard,
   type RenderingContext,
   RenderNodePass,
   RenderPipeline,
@@ -15,7 +16,7 @@ import {
   Sprite,
   TextureFormat,
 } from '@codexo/exojs';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { mountControls } from '@examples/runtime';
 
 // A composable frame, configured once: the world renders off-screen, a blur step turns it into its
 // blurred version, a composite step draws that to the screen, and a nested UI pipeline overlays a HUD.
@@ -78,7 +79,7 @@ class RenderPipelineScene extends Scene {
       )
       .addPass(new RenderNodePass(this.hud, { view: screenView, label: 'hud' }));
 
-    // world → off-screen → blur → composite → UI overlay. A RenderPipeline is itself a RenderPass,
+    // world, off-screen, blur, composite, UI overlay. A RenderPipeline is itself a RenderPass,
     // so `ui` nests directly.
     this.frame = new RenderPipeline({ label: 'frame' })
       .addPass(new RenderNodePass(this.world, { target: this.sceneRt, clear: Color.black, label: 'world' }))
@@ -97,21 +98,18 @@ class RenderPipelineScene extends Scene {
     app.onResize.add(handleResize);
     this.detachResize = () => app.onResize.remove(handleResize);
 
-    this.controls = mountControls({
-      title: 'Composable Render Pipeline',
-      status: 'Blur: on',
-      hint: 'Named world, blur, composite, custom callback, and HUD passes run in order. Disable blur to bypass to the current unblurred frame.',
-    });
-    mountControlPanel({ title: 'Passes' }).addToggle({
-      label: 'Blur',
-      value: true,
-      onChange: enabled => {
-        this.blurPass.enabled = enabled;
-        this.composite.setTexture(enabled ? this.blurredRt : this.sceneRt);
-        this.controls.setStatus(`Blur: ${enabled ? 'on' : 'off'}`);
-      },
-    });
+    this.controls = mountControls({ title: 'Composable Render Pipeline', status: 'Blur: on' });
+    this.inputs.onTrigger(Keyboard.Space, this.toggleBlur);
+    app.input.onPointerTap.add(this.toggleBlur);
   }
+
+  private readonly toggleBlur = (): void => {
+    const enabled = !this.blurPass.enabled;
+
+    this.blurPass.enabled = enabled;
+    this.composite.setTexture(enabled ? this.blurredRt : this.sceneRt);
+    this.controls.setStatus(`Blur: ${enabled ? 'on' : 'off'}`);
+  };
 
   override update(delta: Seconds): void {
     const app = this.app;
@@ -133,6 +131,7 @@ class RenderPipelineScene extends Scene {
 
   override destroy(): void {
     this.detachResize?.();
+    this.app.input.onPointerTap.remove(this.toggleBlur);
     // Cascades destroy() to every pass; the pipeline never destroys caller-owned nodes or targets.
     this.frame.destroy();
     this.sceneRt.destroy();
