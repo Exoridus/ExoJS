@@ -14,29 +14,13 @@
 // The DSP this file drives - FFT, mel filterbank, tempogram - lives in `../dsp/`
 // and is imported, not copied. What stays here is the real-time orchestration
 // around it: preallocated scratch buffers, ring-buffer bookkeeping, and the PLL
-// beat tracker. The audio thread cannot allocate, so this file calls the
-// out-parameter primitives (`computeAcfInto`) rather than the allocating
-// convenience wrappers built on them.
+// beat tracker. Candidate scoring reuses buffers through the out-parameter
+// primitives (`computeAcfInto`); message publication has separate snapshot
+// lifetimes.
 
 import { fft } from '../dsp/fft';
 import { buildMelFilterbank, computeMelBands, type MelBand } from '../dsp/mel';
-import {
-  acfAtLag,
-  acfExtendedMinLag,
-  candidateEdgeTolerance,
-  combPenaltyDouble,
-  combPenaltyTriple,
-  combWeightFundamental,
-  combWeightHalf,
-  combWeightThird,
-  computeAcfInto,
-  defaultPriorMu,
-  defaultPriorSigma,
-  isOctaveRelated,
-  parabolicPeakOffset,
-  type TempoCandidateResult,
-  tempoPrior,
-} from '../dsp/tempogram';
+import { acfExtendedMinLag, computeAcfInto, isOctaveRelated, type TempoCandidateResult } from '../dsp/tempogram';
 import type { ManualMeter, MeterEstimate } from '../meterTypes';
 import { captureBeatEvidence, createBeatEvidence, resetBeatEvidence } from './beatEvidence';
 import { DisposableProcessor } from './disposable-processor';
@@ -44,6 +28,7 @@ import { LegacyBarTracker } from './LegacyBarTracker';
 import { createMeterEstimate } from './meterEstimateView';
 import { MeterEvidence } from './MeterEvidence';
 import { OnsetEvidenceRing } from './OnsetEvidenceRing';
+import { TempoCandidateScorer } from './TempoCandidateScorer';
 
 interface UpcomingBeatInline {
   audioTime: number;
@@ -204,7 +189,10 @@ class BeatDetectorProcessor extends DisposableProcessor {
 
   private _bestBpm: number;
   private _bestScore: number;
-  private _candidates: TempoCandidateResult[];
+  private readonly _candidates: TempoCandidateResult[];
+  private _candidateCount: number;
+  private readonly _fastCandidates: TempoCandidateResult[];
+  private readonly _candidateScorer: TempoCandidateScorer;
   private _firstLockSample: number;
 
   private _driftBpm: number;
@@ -344,7 +332,10 @@ class BeatDetectorProcessor extends DisposableProcessor {
     // Tempo state
     this._bestBpm = 0;
     this._bestScore = 0;
-    this._candidates = [];
+    this._candidates = Array.from({ length: 3 }, () => ({ bpm: 0, score: 0, lag: 0 }));
+    this._candidateCount = 0;
+    this._fastCandidates = Array.from({ length: 3 }, () => ({ bpm: 0, score: 0, lag: 0 }));
+    this._candidateScorer = new TempoCandidateScorer(this._sampleRate, this._hopSize, this._minBpm, this._maxBpm);
     this._firstLockSample = -1; // sample index of first lock (for hysteresis grace window)
 
     // Drift-tracking state. The fast window must point at a different, non-octave tempo
@@ -511,7 +502,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
     this._fullWindowAttempted = false;
     this._bestBpm = 0;
     this._bestScore = 0;
-    this._candidates = [];
+    this._candidateCount = 0;
     this._firstLockSample = -1;
     this._driftBpm = 0;
     this._driftHops = 0;
@@ -691,19 +682,15 @@ class BeatDetectorProcessor extends DisposableProcessor {
   // Score tempo candidates over the most-recent spanHops of the flux ring (capped at the
   // available count). Mirrors src/dsp/tempogram.computeTempoCandidates over that span: ACF →
   // positive peaks (parabola-refined interior, raw endpoints) → comb − super-harmonic penalty
-  // × tempo prior → top-3 sorted by score. The STABLE span (whole ring) is the parity-checked
-  // candidate set. Shares the _linFlux / _acf scratch buffers, so the caller must consume the
-  // returned array before the next call.
-  private _scoreSpan(spanHops: number): TempoCandidateResult[] {
+  // × tempo prior → top-3 sorted by score. Stable and fast results need separate storage:
+  // both must remain available after the shared ACF scratch is overwritten.
+  private _scoreSpan(spanHops: number, into: TempoCandidateResult[]): number {
     const buf = this._fluxWindow;
     const wp = this._fluxWritePos;
     const len = buf.length;
     const n = spanHops < this._fluxCount ? spanHops : this._fluxCount;
     const minLag = this._acfMinLag; // extended ACF base (see constructor)
     const maxLag = this._maxLag;
-    const numLags = maxLag - minLag + 1;
-    const loBpm = this._minBpm * (1 - candidateEdgeTolerance);
-    const hiBpm = this._maxBpm * (1 + candidateEdgeTolerance);
 
     // Linearise the most-recent n hops of the flux ring (oldest first) into a scratch array
     // so the ACF operates on the same layout src/dsp/tempogram.computeAcf expects.
@@ -717,80 +704,17 @@ class BeatDetectorProcessor extends DisposableProcessor {
     const acf = this._acf;
     computeAcfInto(lin, n, minLag, maxLag, acf);
 
-    // Raw positive peaks (interior + endpoints) - mirrors findTempoPeaks.
-    const peaks: TempoCandidateResult[] = [];
-    const lastIdx = numLags - 1;
-
-    if (numLags > 1 && acf[0]! > acf[1]! && acf[0]! > 0) {
-      peaks.push({ bpm: (60 * this._sampleRate) / (minLag * this._hopSize), score: acf[0]!, lag: minLag });
-    }
-
-    for (let i = 1; i < lastIdx; i++) {
-      if (acf[i]! > acf[i - 1]! && acf[i]! > acf[i + 1]! && acf[i]! > 0) {
-        const lagI = minLag + i + parabolicPeakOffset(acf[i - 1]!, acf[i]!, acf[i + 1]!);
-        peaks.push({ bpm: (60 * this._sampleRate) / (lagI * this._hopSize), score: acf[i]!, lag: lagI });
-      }
-    }
-
-    if (numLags > 1 && acf[lastIdx]! > acf[lastIdx - 1]! && acf[lastIdx]! > 0) {
-      const lagL = minLag + lastIdx;
-      peaks.push({ bpm: (60 * this._sampleRate) / (lagL * this._hopSize), score: acf[lastIdx]!, lag: lagL });
-    }
-
-    peaks.sort((a, b) => b.score - a.score);
-
-    // Filter to BPM range (with edge tolerance) - mirrors computeTempoCandidates filter.
-    const inRange: TempoCandidateResult[] = [];
-
-    for (let pf = 0; pf < peaks.length; pf++) {
-      if (peaks[pf]!.bpm >= loBpm && peaks[pf]!.bpm <= hiBpm) {
-        inRange.push(peaks[pf]!);
-      }
-    }
-
-    // Comb (own sub-multiples) − super-harmonic penalty, × tempo prior.
-    // Mirrors scoreTempoHypotheses. The penalty is what defeats the octave-down bias.
-    // The penalty is SUBDIVISION-AWARE: a super-harmonic kf only demotes f when kf is
-    // itself a plausible beat (kf <= maxBpm). Energy above maxBpm is a subdivision (hats
-    // on 8ths over a 180 kick), not a competing fundamental, so it must not demote f.
-    const superHi = hiBpm;
-    const scored: TempoCandidateResult[] = [];
-
-    for (let q = 0; q < inRange.length; q++) {
-      const lag = inRange[q]!.lag;
-      const aF = acfAtLag(acf, minLag, lag);
-      const aHalf = acfAtLag(acf, minLag, lag * 2);
-      const aThird = acfAtLag(acf, minLag, lag * 3);
-      const aDouble = acfAtLag(acf, minLag, lag / 2);
-      const aTriple = acfAtLag(acf, minLag, lag / 3);
-      const support = combWeightFundamental * aF + combWeightHalf * aHalf + combWeightThird * aThird;
-      const penDbl = inRange[q]!.bpm * 2 <= superHi ? combPenaltyDouble * aDouble : 0;
-      const penTrip = inRange[q]!.bpm * 3 <= superHi ? combPenaltyTriple * aTriple : 0;
-      let comb = support - penDbl - penTrip;
-
-      if (comb < 0) {
-        comb = 0;
-      }
-
-      const w = tempoPrior(inRange[q]!.bpm, defaultPriorMu, defaultPriorSigma);
-      scored.push({ bpm: inRange[q]!.bpm, score: comb * w, lag });
-    }
-
-    scored.sort((a, b) => b.score - a.score);
-
-    return scored.slice(0, 3);
+    return this._candidateScorer.scoreInto(acf, minLag, into);
   }
 
   private _computeACFAndCandidates(): void {
     // Dual ACF windows over the SAME flux ring. The long STABLE span holds the grid (and
     // is the parity-checked candidate set the state message reports); the short FAST span
     // detects a genuine tempo change quickly. Both feed the octave-aware hysteresis below.
-    const stable = this._scoreSpan(this._stableWindowHops);
-    const fast = this._scoreSpan(this._fastWindowHops);
+    this._candidateCount = this._scoreSpan(this._stableWindowHops, this._candidates);
+    const fastCount = this._scoreSpan(this._fastWindowHops, this._fastCandidates);
 
-    this._candidates = stable;
-
-    if (this._candidates.length === 0) {
+    if (this._candidateCount === 0) {
       return;
     }
 
@@ -834,7 +758,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
       // Fresh score of the currently-tracked tempo from this frame.
       let currentScore = 0;
 
-      for (let c = 0; c < this._candidates.length; c++) {
+      for (let c = 0; c < this._candidateCount; c++) {
         if (Math.abs(this._candidates[c]!.bpm / this._bestBpm - 1) < 0.03 && this._candidates[c]!.score > currentScore) {
           currentScore = this._candidates[c]!.score;
         }
@@ -874,7 +798,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
       }
 
       // --- Fast-window drift adaptation: follows a genuine, sustained DJ drift. ---
-      this._trackDrift(fast);
+      this._trackDrift(this._fastCandidates, fastCount);
     }
 
     this._updateConfidence();
@@ -886,8 +810,8 @@ class BeatDetectorProcessor extends DisposableProcessor {
   // consecutive ACF hops, the grid follows it. Octave-scale and hard-jump disagreements are
   // left to the stable hysteresis above (it carries the octave guards); single noisy hops are
   // filtered out by the persistence streak - so a static tempo is never made nervous.
-  private _trackDrift(fast: TempoCandidateResult[]): void {
-    if (fast.length === 0) {
+  private _trackDrift(fast: TempoCandidateResult[], count = fast.length): void {
+    if (count === 0) {
       this._driftHops = 0;
       this._driftBpm = 0;
 
@@ -1284,7 +1208,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
   }
 
   private _updateConfidence(): void {
-    if (this._candidates.length === 0) {
+    if (this._candidateCount === 0) {
       this._confidence = 0;
       this._beatConfidence = 0;
       this._phaseConfidence = 0;
@@ -1293,9 +1217,9 @@ class BeatDetectorProcessor extends DisposableProcessor {
     }
 
     // Peak contrast
-    const top1 = this._candidates[0] ? this._candidates[0].score : 0;
-    const top2 = this._candidates[1] ? this._candidates[1].score : top1;
-    const top3 = this._candidates[2] ? this._candidates[2].score : top2;
+    const top1 = this._candidates[0]!.score;
+    const top2 = this._candidateCount > 1 ? this._candidates[1]!.score : top1;
+    const top3 = this._candidateCount > 2 ? this._candidates[2]!.score : top2;
     const peakContrast = top2 + top3 > 0 ? top1 / ((top2 + top3) / 2) : 1;
 
     // Phase consistency from IBI variance
@@ -1459,6 +1383,13 @@ class BeatDetectorProcessor extends DisposableProcessor {
     }
 
     const be = this._computeBandEnergy();
+    const tempoCandidates = new Array<{ bpm: number; score: number }>(settled ? this._candidateCount : 0);
+
+    if (settled) {
+      for (let i = 0; i < this._candidateCount; i++) {
+        tempoCandidates[i] = { bpm: this._candidates[i]!.bpm, score: this._candidates[i]!.score };
+      }
+    }
 
     this.port.postMessage({
       type: 'state',
@@ -1470,7 +1401,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
       beatConfidence: valid ? this._beatConfidence : 0,
       phaseConfidence: settled ? this._phaseConfidence : 0,
       gridStability: settled ? this._confidence : 0,
-      tempoCandidates: settled ? this._candidates.map(c => ({ bpm: c.bpm, score: c.score })) : [],
+      tempoCandidates,
       rms: this._rms,
       onsetStrength: this._onsetStrength,
       bandEnergy: be,

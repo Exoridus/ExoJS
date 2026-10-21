@@ -8,6 +8,7 @@ describe('beat detector pulse confidence', () => {
           { bpm: 120, score: 0.5 },
           { bpm: 90, score: 0.25 },
         ];
+        value['_candidateCount'] = 2;
         (value['_ibiHistory'] as Float32Array).fill(24_000);
         const update = value['_updateConfidence'] as () => void;
         update.call(value);
