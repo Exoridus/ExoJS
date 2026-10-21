@@ -46,16 +46,10 @@ export interface ExampleRuntimeMeta {
   status?: string;
 }
 
-export interface ExampleRuntime {
-  assets: Record<string, unknown>;
-  assetUrl?: (path: string) => string;
-}
-
 declare global {
   interface Window {
     __EXAMPLE_META__?: ExampleRuntimeMeta | null;
     __EXAMPLE_PREVIEW_AUTOPLAY__?: (() => void | Promise<void>) | null;
-    // `assets` is declared (typed) in assets-global.d.ts.
   }
 
   // Declared on the global scope as well as on `Window`: the runner injects the
@@ -97,6 +91,8 @@ export interface ControlPanelHandle {
     max?: number;
     step?: number;
     value?: number;
+    /** Readout text for a value; two decimals when omitted. */
+    format?: (value: number) => string;
     onChange?: (value: number) => void;
   }): ControlBinding<number>;
   addToggle(options: { label: string; value?: boolean; onChange?: (value: boolean) => void }): ControlBinding<boolean>;
@@ -443,7 +439,7 @@ export const mountControlPanel = (options: MountControlPanelOptions = {}): Contr
   return {
     element: panel,
 
-    addSlider({ label, min = 0, max = 1, step = 0.01, value = min, onChange }) {
+    addSlider({ label, min = 0, max = 1, step = 0.01, value = min, format = v => v.toFixed(2), onChange }) {
       const row = createControlRowContainer();
       const input = document.createElement('input');
       const readout = document.createElement('span');
@@ -466,7 +462,7 @@ export const mountControlPanel = (options: MountControlPanelOptions = {}): Contr
       });
 
       const render = (v: number) => {
-        readout.textContent = Number(v).toFixed(2);
+        readout.textContent = format(Number(v));
       };
 
       render(value);
@@ -619,4 +615,205 @@ export const mountControlPanel = (options: MountControlPanelOptions = {}): Contr
       panel.remove();
     },
   };
+};
+
+// ---------------------------------------------------------------------------
+// Declarative demo panel
+//
+// One state object drives both the visible controls and any keyboard or pointer
+// shortcut an example adds: shortcuts call `panel.set()`/`panel.step()`, the
+// controls re-render from the same value, and `onChange` applies it to the scene
+// in exactly one place.
+// ---------------------------------------------------------------------------
+
+/** A numeric range control. */
+export interface SliderSpec {
+  readonly kind: 'slider';
+  readonly label: string;
+  readonly min: number;
+  readonly max: number;
+  readonly step: number;
+  readonly value: number;
+  readonly format?: (value: number) => string;
+}
+
+/** An on/off control. */
+export interface ToggleSpec {
+  readonly kind: 'toggle';
+  readonly label: string;
+  readonly value: boolean;
+}
+
+/** One of a fixed list of named options; shows the name and its position, e.g. `Screen (5/18)`. */
+export interface ChoiceSpec<T extends string = string> {
+  readonly kind: 'choice';
+  readonly label: string;
+  readonly options: readonly T[];
+  readonly value: T;
+}
+
+export type DemoControlSpec = SliderSpec | ToggleSpec | ChoiceSpec;
+
+/** The value type a control spec holds. */
+export type DemoControlValue<S> = S extends SliderSpec
+  ? number
+  : S extends ToggleSpec
+    ? boolean
+    : S extends ChoiceSpec<infer T>
+      ? T
+      : never;
+
+export type DemoPanelValues<C extends Record<string, DemoControlSpec>> = { -readonly [K in keyof C]: DemoControlValue<C[K]> };
+
+export const slider = (
+  label: string,
+  options: { min: number; max: number; value: number; step?: number; format?: (value: number) => string },
+): SliderSpec => ({ kind: 'slider', step: (options.max - options.min) / 100, ...options, label });
+
+export const toggle = (label: string, value = false): ToggleSpec => ({ kind: 'toggle', label, value });
+
+export const choice = <const T extends string>(label: string, options: readonly T[], value: T = options[0]!): ChoiceSpec<T> => ({
+  kind: 'choice',
+  label,
+  options,
+  value,
+});
+
+export interface DemoPanelOptions<C extends Record<string, DemoControlSpec>> {
+  title?: string;
+  corner?: OverlayCorner;
+  controls: C;
+  /** Buttons below the controls, in order. */
+  actions?: Record<string, () => void>;
+  /**
+   * Applies a changed value to the scene. Called once with every key on mount,
+   * then for each change from a control or from `set`/`step`.
+   */
+  onChange?: <K extends keyof C>(key: K, value: DemoControlValue<C[K]>, values: Readonly<DemoPanelValues<C>>) => void;
+}
+
+/** Handle returned by {@link demoPanel}. */
+export interface DemoPanel<C extends Record<string, DemoControlSpec>> {
+  readonly element: HTMLElement;
+  /** Current values; read-only, change them through `set` or `step`. */
+  readonly values: Readonly<DemoPanelValues<C>>;
+  set<K extends keyof C>(key: K, value: DemoControlValue<C[K]>): void;
+  /** Moves a choice by `delta` options (wrapping), a slider by `delta` steps (clamped), or flips a toggle. */
+  step(key: keyof C, delta?: number): void;
+  /** A short status line under the controls; an empty string hides it. */
+  status(text: string): void;
+  dispose(): void;
+}
+
+/**
+ * Mounts a small control panel from a declarative control list and keeps one
+ * value per control. Keyboard shortcuts should call `set`/`step` so the panel
+ * and the shortcut never disagree.
+ */
+export const demoPanel = <const C extends Record<string, DemoControlSpec>>(options: DemoPanelOptions<C>): DemoPanel<C> => {
+  const panel = mountControlPanel({ title: options.title, corner: options.corner });
+  const values = {} as DemoPanelValues<C>;
+  const renderers = new Map<keyof C, ControlBinding<never>>();
+  const keys = Object.keys(options.controls) as Array<keyof C>;
+  const statusEl = document.createElement('div');
+
+  const commit = <K extends keyof C>(key: K, value: DemoControlValue<C[K]>, fromControl: boolean): void => {
+    values[key] = value as DemoPanelValues<C>[K];
+
+    if (!fromControl) {
+      renderers.get(key)?.set(value as never);
+    }
+
+    options.onChange?.(key, value, values);
+  };
+
+  for (const key of keys) {
+    const spec = options.controls[key]!;
+
+    switch (spec.kind) {
+      case 'slider': {
+        values[key] = spec.value as DemoPanelValues<C>[typeof key];
+        renderers.set(
+          key,
+          panel.addSlider({
+            label: spec.label,
+            min: spec.min,
+            max: spec.max,
+            step: spec.step,
+            value: spec.value,
+            format: spec.format,
+            onChange: value => commit(key, value as DemoControlValue<C[typeof key]>, true),
+          }) as ControlBinding<never>,
+        );
+        break;
+      }
+      case 'toggle': {
+        values[key] = spec.value as DemoPanelValues<C>[typeof key];
+        renderers.set(
+          key,
+          panel.addToggle({
+            label: spec.label,
+            value: spec.value,
+            onChange: value => commit(key, value as DemoControlValue<C[typeof key]>, true),
+          }) as ControlBinding<never>,
+        );
+        break;
+      }
+      case 'choice': {
+        const labelled = spec.options.map((name, index) => `${name} (${index + 1}/${spec.options.length})`);
+        const binding = panel.addCycle({
+          label: spec.label,
+          options: labelled,
+          index: Math.max(0, spec.options.indexOf(spec.value)),
+          onChange: index => commit(key, spec.options[index] as DemoControlValue<C[typeof key]>, true),
+        });
+
+        values[key] = spec.value as DemoPanelValues<C>[typeof key];
+        renderers.set(key, { set: (value: never) => binding.set(spec.options.indexOf(value)) });
+        break;
+      }
+    }
+  }
+
+  for (const [label, run] of Object.entries(options.actions ?? {})) {
+    panel.addButton({ label, onClick: run });
+  }
+
+  Object.assign(statusEl.style, { marginTop: '6px', font: `600 12px ${FONT_STACK}`, color: '#9fd0ff' });
+  statusEl.setAttribute('aria-live', 'polite');
+  statusEl.hidden = true;
+  panel.element.append(statusEl);
+
+  const handle: DemoPanel<C> = {
+    element: panel.element,
+    values,
+    set: (key, value) => commit(key, value, false),
+    step(key, delta = 1) {
+      const spec = options.controls[key]!;
+
+      if (spec.kind === 'toggle') {
+        commit(key, !values[key] as DemoControlValue<C[typeof key]>, false);
+      } else if (spec.kind === 'choice') {
+        const count = spec.options.length;
+        const index = spec.options.indexOf(values[key] as string);
+
+        commit(key, spec.options[(((index + delta) % count) + count) % count] as DemoControlValue<C[typeof key]>, false);
+      } else {
+        const next = Math.min(spec.max, Math.max(spec.min, (values[key] as number) + delta * spec.step));
+
+        commit(key, next as DemoControlValue<C[typeof key]>, false);
+      }
+    },
+    status(text) {
+      statusEl.textContent = text;
+      statusEl.hidden = text === '';
+    },
+    dispose: () => panel.dispose(),
+  };
+
+  for (const key of keys) {
+    options.onChange?.(key, values[key], values);
+  }
+
+  return handle;
 };

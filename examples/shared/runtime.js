@@ -240,7 +240,7 @@ export const mountControlPanel = (options = {}) => {
   panel.addEventListener('pointerdown', stop);
   return {
     element: panel,
-    addSlider({ label, min = 0, max = 1, step = 0.01, value = min, onChange }) {
+    addSlider({ label, min = 0, max = 1, step = 0.01, value = min, format = v => v.toFixed(2), onChange }) {
       const row = createControlRowContainer();
       const input = document.createElement('input');
       const readout = document.createElement('span');
@@ -260,7 +260,7 @@ export const mountControlPanel = (options = {}) => {
         font: `600 12px ${FONT_STACK}`,
       });
       const render = v => {
-        readout.textContent = Number(v).toFixed(2);
+        readout.textContent = format(Number(v));
       };
       render(value);
       input.addEventListener('input', () => {
@@ -386,4 +386,110 @@ export const mountControlPanel = (options = {}) => {
       panel.remove();
     },
   };
+};
+export const slider = (label, options) => ({ kind: 'slider', step: (options.max - options.min) / 100, ...options, label });
+export const toggle = (label, value = false) => ({ kind: 'toggle', label, value });
+export const choice = (label, options, value = options[0]) => ({
+  kind: 'choice',
+  label,
+  options,
+  value,
+});
+/**
+ * Mounts a small control panel from a declarative control list and keeps one
+ * value per control. Keyboard shortcuts should call `set`/`step` so the panel
+ * and the shortcut never disagree.
+ */
+export const demoPanel = options => {
+  const panel = mountControlPanel({ title: options.title, corner: options.corner });
+  const values = {};
+  const renderers = new Map();
+  const keys = Object.keys(options.controls);
+  const statusEl = document.createElement('div');
+  const commit = (key, value, fromControl) => {
+    values[key] = value;
+    if (!fromControl) {
+      renderers.get(key)?.set(value);
+    }
+    options.onChange?.(key, value, values);
+  };
+  for (const key of keys) {
+    const spec = options.controls[key];
+    switch (spec.kind) {
+      case 'slider': {
+        values[key] = spec.value;
+        renderers.set(
+          key,
+          panel.addSlider({
+            label: spec.label,
+            min: spec.min,
+            max: spec.max,
+            step: spec.step,
+            value: spec.value,
+            format: spec.format,
+            onChange: value => commit(key, value, true),
+          }),
+        );
+        break;
+      }
+      case 'toggle': {
+        values[key] = spec.value;
+        renderers.set(
+          key,
+          panel.addToggle({
+            label: spec.label,
+            value: spec.value,
+            onChange: value => commit(key, value, true),
+          }),
+        );
+        break;
+      }
+      case 'choice': {
+        const labelled = spec.options.map((name, index) => `${name} (${index + 1}/${spec.options.length})`);
+        const binding = panel.addCycle({
+          label: spec.label,
+          options: labelled,
+          index: Math.max(0, spec.options.indexOf(spec.value)),
+          onChange: index => commit(key, spec.options[index], true),
+        });
+        values[key] = spec.value;
+        renderers.set(key, { set: value => binding.set(spec.options.indexOf(value)) });
+        break;
+      }
+    }
+  }
+  for (const [label, run] of Object.entries(options.actions ?? {})) {
+    panel.addButton({ label, onClick: run });
+  }
+  Object.assign(statusEl.style, { marginTop: '6px', font: `600 12px ${FONT_STACK}`, color: '#9fd0ff' });
+  statusEl.setAttribute('aria-live', 'polite');
+  statusEl.hidden = true;
+  panel.element.append(statusEl);
+  const handle = {
+    element: panel.element,
+    values,
+    set: (key, value) => commit(key, value, false),
+    step(key, delta = 1) {
+      const spec = options.controls[key];
+      if (spec.kind === 'toggle') {
+        commit(key, !values[key], false);
+      } else if (spec.kind === 'choice') {
+        const count = spec.options.length;
+        const index = spec.options.indexOf(values[key]);
+        commit(key, spec.options[(((index + delta) % count) + count) % count], false);
+      } else {
+        const next = Math.min(spec.max, Math.max(spec.min, values[key] + delta * spec.step));
+        commit(key, next, false);
+      }
+    },
+    status(text) {
+      statusEl.textContent = text;
+      statusEl.hidden = text === '';
+    },
+    dispose: () => panel.dispose(),
+  };
+  for (const key of keys) {
+    options.onChange?.(key, values[key], values);
+  }
+  return handle;
 };
