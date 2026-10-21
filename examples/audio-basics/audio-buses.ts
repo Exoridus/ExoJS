@@ -69,7 +69,7 @@ class AudioBusesScene extends Scene {
     this.panel.addButton({
       label: 'Play sound effect',
       onClick: () => {
-        audio.play(this.sfx, { bus: audio.sound });
+        audio.play(this.sfx, { bus: audio.sound, volume: 0.5 });
       },
     });
 

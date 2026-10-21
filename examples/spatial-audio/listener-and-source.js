@@ -1,14 +1,18 @@
 // Auto-generated from listener-and-source.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Sound, Text } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Spatial parameters tuned to the canvas so attenuation is visible across the
-// wide 1280px canvas. These mirror the Web Audio `linear` model (see
+// wide 1280px canvas. These mirror the Web Audio distance models (see
 // DistanceModel in src/audio/Sound.ts) so the on-screen readout matches what
 // you hear.
 const REF_DISTANCE = 50;
 const MAX_DISTANCE = 560;
 const ROLLOFF = 1;
 const SOURCE_RADIUS = 24;
+// Measured so the pulses still leave headroom with the source on top of the
+// listener, where no falloff applies.
+const SOURCE_VOLUME = 0.6;
+const MODELS = ['linear', 'inverse', 'exponential'];
 const attenuation = (model, distance) => {
   if (distance <= REF_DISTANCE) {
     return 1;
@@ -21,6 +25,28 @@ const attenuation = (model, distance) => {
   }
   return Math.pow(distance / REF_DISTANCE, -ROLLOFF);
 };
+// A one-second loop of four short noise bursts, the first one accented. Noise
+// covers the whole spectrum, which is what the ear uses to place a sound; a
+// mixed music track smears direction and distance across its own panning and
+// dynamics. Mono, so every bit of left/right difference comes from the panner.
+const createPulseLoop = () => {
+  const sampleRate = 48000;
+  const buffer = new AudioBuffer({ length: sampleRate, sampleRate, numberOfChannels: 1 });
+  const data = buffer.getChannelData(0);
+  let seed = 1;
+  let previous = 0;
+  for (let i = 0; i < data.length; i++) {
+    const t = (i % (sampleRate / 4)) / sampleRate;
+    const accent = i < sampleRate / 4 ? 1 : 0.55;
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    const noise = seed / 2 ** 31 - 1;
+    // First-order high-pass keeps the burst crisp instead of boomy.
+    const crisp = noise - previous * 0.6;
+    previous = noise;
+    data[i] = crisp * accent * Math.min(1, t / 0.002) * Math.exp(-t / 0.03) * 0.8;
+  }
+  return buffer;
+};
 class ListenerAndSourceScene extends Scene {
   sound;
   voice = null;
@@ -28,26 +54,24 @@ class ListenerAndSourceScene extends Scene {
   dragging = false;
   listener;
   graphics;
-  label;
+  readout;
   tapPrompt;
   hud;
+  panel;
   mode = 'drag';
   model = 'linear';
+  playing = true;
   angle = 0;
-  async load() {
+  init() {
     const app = this.app;
     const { width, height } = app;
-    // A continuous music loop, not a one-shot: spatialization is only
-    // audible while there is sustained signal to pan/attenuate. The derived
-    // Sound below reads .audioBuffer synchronously, so await load() instead
-    // of the deferred get() (whose placeholder audioBuffer is null until fill).
-    const source = await this.loader.load(Asset.type('sound', 'audio/demo-loop-main.ogg'));
-    this.sound = new Sound(source.audioBuffer);
+    this.sound = new Sound(createPulseLoop());
     this.listener = { x: width / 2, y: height / 2 };
     app.audio.listener.target = this.listener;
     this.graphics = new Graphics();
-    this.label = new Text('', { fillColor: Color.white, fontSize: 17 });
-    this.label.setPosition(20, 20);
+    this.readout = new Text('', { fillColor: new Color(220, 228, 245), fontSize: 18, align: 'center' })
+      .setAnchor(0.5, 0)
+      .setPosition(width / 2, 18);
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it and the loop starts.
     this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })
@@ -55,78 +79,86 @@ class ListenerAndSourceScene extends Scene {
       .setPosition(width / 2, height - 48);
     this.hud = mountControls({
       title: 'Spatial Audio',
-      controls: [{ keys: 'Drag', action: 'move the red source in drag mode' }],
+      controls: [{ keys: 'Drag', action: 'move the source in drag mode' }],
       status: 'Click or press any key to start…',
-      hint: 'Move the source or let it orbit, then compare distance models with the live volume readout.',
+      hint: 'Best with headphones. Left/right follows the direction to the source; loudness follows the falloff model.',
     });
-    const panel = mountControlPanel({ title: 'Source and falloff' });
-    panel.addButton({
-      label: 'Drag source',
-      onClick: () => {
-        this.mode = 'drag';
-        this.dragging = false;
-      },
-    });
-    panel.addButton({
-      label: 'Orbit source',
-      onClick: () => {
-        this.mode = 'orbit';
+    this.panel = mountControlPanel({ title: 'Source and falloff' });
+    this.panel.addCycle({
+      label: 'Movement',
+      options: ['Drag', 'Orbit'],
+      onChange: index => {
+        this.mode = index === 0 ? 'drag' : 'orbit';
         this.dragging = false;
         this.angle = Math.atan2((this.source.y - this.listener.y) / 160, (this.source.x - this.listener.x) / 220);
       },
     });
-    for (const model of ['linear', 'inverse', 'exponential']) {
-      panel.addButton({
-        label: model,
-        onClick: () => {
-          this.model = model;
-          if (this.voice) {
-            this.voice.distanceModel = model;
-          }
-        },
-      });
-    }
+    this.panel.addCycle({
+      label: 'Falloff',
+      options: [...MODELS],
+      onChange: index => {
+        this.model = MODELS[index];
+        if (this.voice) {
+          this.voice.distanceModel = this.model;
+        }
+      },
+    });
+    this.panel.addToggle({
+      label: 'Sound',
+      value: true,
+      onChange: value => {
+        this.playing = value;
+        if (this.voice) {
+          this.voice.volume = value ? SOURCE_VOLUME : 0;
+        }
+      },
+    });
     this.source.x = width / 2 + 220;
     this.source.y = height / 2;
-    app.input.onPointerDown.add(pointer => {
-      const dx = pointer.x - this.source.x;
-      const dy = pointer.y - this.source.y;
-      // Generous grab radius so the source is easy to pick up.
-      if (this.mode === 'drag' && dx * dx + dy * dy < SOURCE_RADIUS * SOURCE_RADIUS * 4) {
-        this.dragging = true;
-      }
-    });
-    app.input.onPointerMove.add(pointer => {
-      if (!this.dragging) {
-        return;
-      }
-      this.source.x = pointer.x;
-      this.source.y = pointer.y;
-      if (this.voice) {
-        this.voice.position = this.source;
-      }
-    });
-    app.input.onPointerUp.add(() => {
-      this.dragging = false;
-    });
+    app.input.onPointerDown.add(this.onPointerDown);
+    app.input.onPointerMove.add(this.onPointerMove);
+    app.input.onPointerUp.add(this.onPointerUp);
     // A Sound played while audio is still locked is a no-op: a suspended
     // AudioContext's clock stands still, so nothing can be scheduled
     // honestly. Start the loop from the unlock gesture instead. Subscribing
     // is safe even if audio unlocked earlier - onUnlock replays.
     // play() returns the narrow Voice interface; Sound voices are spatializable.
-    app.audio.onUnlock.add(() => {
-      this.voice = app.audio.play(this.sound, {
-        loop: true,
-        volume: 1,
-        position: this.source,
-        distanceModel: this.model,
-        refDistance: REF_DISTANCE,
-        maxDistance: MAX_DISTANCE,
-        rolloffFactor: ROLLOFF,
-      });
-      this.hud.setStatus('Drag the red source to move it');
-    });
+    app.audio.onUnlock.add(this.start);
   }
+  // Application input outlives the scene, so these handlers are removed in destroy().
+  onPointerDown = (_pointer, x, y) => {
+    const dx = x - this.source.x;
+    const dy = y - this.source.y;
+    // Generous grab radius so the source is easy to pick up.
+    if (this.mode === 'drag' && dx * dx + dy * dy < SOURCE_RADIUS * SOURCE_RADIUS * 4) {
+      this.dragging = true;
+    }
+  };
+  onPointerMove = (_pointer, x, y) => {
+    if (!this.dragging) {
+      return;
+    }
+    this.source.x = x;
+    this.source.y = y;
+    if (this.voice) {
+      this.voice.position = this.source;
+    }
+  };
+  onPointerUp = () => {
+    this.dragging = false;
+  };
+  start = () => {
+    this.voice ??= this.app.audio.play(this.sound, {
+      loop: true,
+      volume: this.playing ? SOURCE_VOLUME : 0,
+      position: this.source,
+      distanceModel: this.model,
+      refDistance: REF_DISTANCE,
+      maxDistance: MAX_DISTANCE,
+      rolloffFactor: ROLLOFF,
+    });
+    this.hud.setStatus(this.mode === 'drag' ? 'Drag the source around the listener' : 'The source orbits the listener');
+  };
   update(delta) {
     if (this.mode !== 'orbit') {
       return;
@@ -140,37 +172,58 @@ class ListenerAndSourceScene extends Scene {
   }
   draw(context) {
     const app = this.app;
-    const source = this.source;
-    const dx = source.x - this.listener.x;
-    const dy = source.y - this.listener.y;
+    const { source, listener } = this;
+    const dx = source.x - listener.x;
+    const dy = source.y - listener.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const volume = attenuation(this.model, dist);
     // Equalpower pans by direction, not by horizontal offset: a source on the
     // listener's horizontal line is hard left/right, one straight above or below it is centred.
     const pan = dist > 0 ? Math.asin(dx / dist) / (Math.PI / 2) : 0;
-    const panText = pan < -0.05 ? `L ${Math.abs(pan).toFixed(2)}` : pan > 0.05 ? `R ${pan.toFixed(2)}` : 'center';
-    this.label.text = `${this.mode} · ${this.model} · distance ${dist.toFixed(0)} px · volume ${(volume * 100).toFixed(0)}% · pan ${panText}`;
-    this.graphics.clear();
-    // Reference + max distance rings around the listener.
-    this.graphics.fillColor = new Color(50, 60, 60);
-    this.graphics.drawCircle(this.listener.x, this.listener.y, MAX_DISTANCE);
-    this.graphics.fillColor = new Color(0, 0, 0);
-    this.graphics.drawCircle(this.listener.x, this.listener.y, MAX_DISTANCE - 2);
-    // Listener.
-    this.graphics.fillColor = new Color(120, 255, 160);
-    this.graphics.drawCircle(this.listener.x, this.listener.y, 14);
-    // Source - brightness tracks attenuation so volume reads visually too.
-    const glow = Math.floor(80 + volume * 175);
-    this.graphics.fillColor = new Color(glow, Math.floor(80 + volume * 60), Math.floor(80 + volume * 60));
-    this.graphics.drawCircle(source.x, source.y, SOURCE_RADIUS);
-    context.render(this.graphics);
-    context.render(this.label);
+    const panText = pan < -0.05 ? `left ${Math.abs(pan).toFixed(2)}` : pan > 0.05 ? `right ${pan.toFixed(2)}` : 'centre';
+    this.readout.text = `${this.model} falloff  ·  distance ${dist.toFixed(0)} px  ·  gain ${(volume * 100).toFixed(0)}%  ·  pan ${panText}`;
+    const g = this.graphics.clear();
+    // Reference and maximum distance rings around the listener.
+    g.lineWidth = 2;
+    g.lineColor = new Color(70, 90, 110);
+    g.fillColor = new Color(0, 0, 0, 0);
+    g.drawCircle(listener.x, listener.y, MAX_DISTANCE);
+    g.lineColor = new Color(110, 140, 160);
+    g.drawCircle(listener.x, listener.y, REF_DISTANCE);
+    // Line of sight, brighter the louder the source arrives.
+    g.lineColor = new Color(255, 180, 120, 0.15 + volume * 0.6);
+    g.drawLine(listener.x, listener.y, source.x, source.y);
+    g.lineWidth = 0;
+    // Listener: a head facing the top of the screen, with left/right ears that
+    // light up with the pan.
+    g.fillColor = new Color(120, 255, 160);
+    g.drawCircle(listener.x, listener.y, 14);
+    g.fillColor = new Color(80, 180, 255, 0.35 + Math.max(0, -pan) * 0.65);
+    g.drawCircle(listener.x - 18, listener.y, 6);
+    g.fillColor = new Color(80, 180, 255, 0.35 + Math.max(0, pan) * 0.65);
+    g.drawCircle(listener.x + 18, listener.y, 6);
+    g.fillColor = new Color(120, 255, 160);
+    g.drawPolygon([listener.x - 6, listener.y - 12, listener.x, listener.y - 22, listener.x + 6, listener.y - 12]);
+    // Source: halo and brightness track the attenuation, so volume reads visually too.
+    g.fillColor = new Color(255, 120, 90, 0.12 + volume * 0.2);
+    g.drawCircle(source.x, source.y, SOURCE_RADIUS + 10 + volume * 14);
+    g.fillColor = new Color(Math.floor(110 + volume * 145), Math.floor(80 + volume * 60), Math.floor(70 + volume * 40));
+    g.drawCircle(source.x, source.y, SOURCE_RADIUS);
+    context.render(g);
+    context.render(this.readout);
     if (app.audio.locked) {
       context.render(this.tapPrompt);
     }
   }
   destroy() {
+    const input = this.app.input;
+    input.onPointerDown.remove(this.onPointerDown);
+    input.onPointerMove.remove(this.onPointerMove);
+    input.onPointerUp.remove(this.onPointerUp);
+    this.app.audio.onUnlock.remove(this.start);
     this.voice?.stop();
+    this.panel.dispose();
+    this.hud.dispose();
     super.destroy();
   }
 }
@@ -182,7 +235,7 @@ const app = new Application({
     mount: document.body,
     sizing: new FixedResolutionCanvasSizing(),
   },
-  clearColor: Color.black,
+  clearColor: new Color(8, 10, 16),
   loader: {
     basePath: 'assets/',
   },

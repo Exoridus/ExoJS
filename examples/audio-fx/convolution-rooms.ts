@@ -3,6 +3,7 @@ import {
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
+  type Pointer,
   type RenderingContext,
   Scene,
   type Seconds,
@@ -10,7 +11,7 @@ import {
   Text,
 } from '@codexo/exojs';
 import { ConvolutionEffect } from '@codexo/exojs-audio-fx';
-import { mountControls } from '@examples/runtime';
+import { type ControlBinding, mountControlPanel, mountControls, type PressButtonTracker, trackPressButtons } from '@examples/runtime';
 
 // Every impulse response in the AK-SROOMS set, shortest tail first. The
 // duration is what actually decides the character: a few milliseconds only
@@ -108,6 +109,9 @@ class ConvolutionRoomsScene extends Scene {
   private detail!: Text;
   private tapPrompt!: Text;
   private hud!: ReturnType<typeof mountControls>;
+  private panel!: ReturnType<typeof mountControlPanel>;
+  private pressButtons: PressButtonTracker | null = null;
+  private roomControl!: ControlBinding<number>;
 
   override init(): void {
     const { width, height } = this.app;
@@ -151,37 +155,58 @@ class ConvolutionRoomsScene extends Scene {
 
     this.root.addChild(this.gfx, this.label, this.detail, this.tapPrompt, ...materialLabels);
 
-    this.app.input.onPointerDown.add(pointer => {
-      if (!(pointer.buttons & 1)) {
-        return;
-      }
+    if (this.app.canvas instanceof HTMLCanvasElement) {
+      this.pressButtons = trackPressButtons(this.app.canvas);
+    }
 
-      for (const pad of this.pads) {
-        if (pointer.x >= pad.x && pointer.x <= pad.x + pad.w && pointer.y >= pad.y && pointer.y <= pad.y + pad.h) {
-          this.strike(pad);
-
-          return;
-        }
-      }
-    });
-    this.app.input.onContextMenu.add(() => this.select(this.index + 1));
+    this.app.input.onPointerDown.add(this.onPointerDown);
+    this.app.input.onContextMenu.add(this.onContextMenu);
 
     this.hud = mountControls({
       title: 'Convolution rooms',
       controls: [
         { keys: 'Click', action: 'strike a pad, panned to its position' },
-        { keys: 'Right-click', action: 'next room' },
+        { keys: 'Right-click', action: 'next room (or use the panel)' },
       ],
       status: 'Click or press any key to start…',
       hint: 'Same four materials every time — only the room around them changes.',
     });
 
+    this.panel = mountControlPanel({ title: 'Room' });
+    this.roomControl = this.panel.addCycle({
+      label: 'Impulse',
+      options: ROOMS.map((room, i) => `${i + 1} · ${room.ms} ms`),
+      onChange: index => this.select(index),
+    });
+
     this.select(0);
   }
+
+  // Application input outlives the scene, so both handlers are removed in destroy().
+  private readonly onPointerDown = (pointer: Pointer, x: number, y: number): void => {
+    // Presses are delivered at the next frame, when `pointer.buttons` already
+    // reads the live state, so a right click released before then looks like a
+    // main click. The button recorded at press time decides: right-click
+    // switches rooms instead of striking.
+    if ((this.pressButtons?.take(pointer.id) ?? 0) !== 0) {
+      return;
+    }
+
+    for (const pad of this.pads) {
+      if (x >= pad.x && x <= pad.x + pad.w && y >= pad.y && y <= pad.y + pad.h) {
+        this.strike(pad);
+
+        return;
+      }
+    }
+  };
+
+  private readonly onContextMenu = (): void => this.select(this.index + 1);
 
   /** Swap the impulse response. The handle heals in place, so the effect picks it up once decoded. */
   private select(next: number): void {
     this.index = (next + ROOMS.length) % ROOMS.length;
+    this.roomControl.set(this.index);
 
     const room = ROOMS[this.index]!;
     const ir = this.loader.get(`audio/ir/${room.file}.wav`);
@@ -234,6 +259,17 @@ class ConvolutionRoomsScene extends Scene {
     }
 
     context.render(this.root);
+  }
+
+  override destroy(): void {
+    this.app.input.onPointerDown.remove(this.onPointerDown);
+    this.app.input.onContextMenu.remove(this.onContextMenu);
+    this.pressButtons?.dispose();
+    this.app.audio.sound.removeEffect(this.convolution);
+    this.convolution.destroy();
+    this.panel.dispose();
+    this.hud.dispose();
+    super.destroy();
   }
 }
 

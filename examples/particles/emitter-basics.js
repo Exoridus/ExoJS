@@ -24,12 +24,12 @@ class EmitterBasicsScene extends Scene {
     this.systems.add(this.system);
     this.system.setPosition(width / 2, height - 80);
     // Rate, lifetime, and a cone-shaped velocity spread: a fountain that
-    // shoots upward (-π/2) with a ±36° spread and 70-180 px/s speed.
+    // shoots upward (-π/2) with a ±36° spread and 280-460 px/s speed.
     this.system.addSpawnModule(
       new RateSpawn({
         rate: new Constant(180),
         lifetime: new Range(0.6, 1.4),
-        velocity: new ConeDirection(-Math.PI / 2, Math.PI / 5, 70, 180),
+        velocity: new ConeDirection(-Math.PI / 2, Math.PI / 5, 280, 460),
       }),
     );
     // Gravity pulls the fountain back down.
@@ -40,8 +40,8 @@ class EmitterBasicsScene extends Scene {
     this.system.addUpdateModule(
       new ScaleOverLifetime(
         new Curve([
-          { t: 0, v: 0.15 },
-          { t: 0.2, v: 0.55 },
+          { t: 0, v: 0.04 },
+          { t: 0.2, v: 0.09 },
           { t: 1, v: 0 },
         ]),
       ),

@@ -1,8 +1,9 @@
-import { Application, Color, FixedResolutionCanvasSizing, Scene, type Seconds, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, type Seconds, Sprite, Text } from '@codexo/exojs';
 
 // #region guide:first-scene
 class HelloWorldScene extends Scene {
   private sprite!: Sprite;
+  private hint!: Text;
   private playing = true;
 
   override init(): void {
@@ -11,18 +12,25 @@ class HelloWorldScene extends Scene {
 
     this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
     this.sprite.setAnchor(0.5);
+    this.sprite.setScale(1.5);
     this.sprite.setPosition(width / 2, height / 2);
     this.sprite.interactive = true;
     this.sprite.onPointerTap.add(() => {
       this.playing = !this.playing;
       this.sprite.setTint(this.playing ? Color.white : new Color(150, 170, 190));
+      this.hint.text = this.playing ? 'Click the ship to pause it' : 'Paused - click the ship to resume';
     });
-    this.root.addChild(this.sprite);
+
+    this.hint = new Text('Click the ship to pause it', { fillColor: new Color(170, 188, 225), fontSize: 22 });
+    this.hint.setAnchor(0.5, 0.5);
+    this.hint.setPosition(width / 2, height - 90);
+
+    this.root.addChild(this.sprite, this.hint);
   }
 
   override update(delta: Seconds): void {
     if (this.playing) {
-      this.sprite.rotate(delta * 120);
+      this.sprite.rotate(delta * 90);
     }
   }
 }
@@ -36,7 +44,7 @@ const app = new Application({
     mount: document.body,
     sizing: new FixedResolutionCanvasSizing(),
   },
-  clearColor: Color.black,
+  clearColor: new Color(12, 16, 30),
   loader: {
     basePath: 'assets/',
   },

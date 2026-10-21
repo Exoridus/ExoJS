@@ -3,6 +3,7 @@ import {
   BlendModes,
   Color,
   FixedResolutionCanvasSizing,
+  Graphics,
   Random,
   type RenderingContext,
   Scene,
@@ -21,32 +22,31 @@ import {
   ConeDirection,
   Constant,
   Curve,
+  Drag,
   particlesExtension,
   ParticleSystem,
+  type ParticleSystemOptions,
   Range,
+  ScaleOverLifetime,
+  Turbulence,
+  VectorRange,
 } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
 
-const random = new Random();
-const autoLaunchInterval = Time.seconds(2.2);
-const tailDuration = 2.5;
-const particlesPerExplosion = 375;
+const random = new Random(2026);
+const autoLaunchInterval = Time.seconds(1.6);
 // Upward launch speed range (px/s, negative = up). Higher = higher apex.
-const launchSpeedMin = 360;
-const launchSpeedMax = 460;
-// Gravity applied to rockets (px/s²). Matches the burst gravity so the shower
-// drifts down at the same rate the rocket decelerated rising.
-const rocketGravity = 200;
+const launchSpeedMin = 420;
+const launchSpeedMax = 560;
+const rocketGravity = 260;
+const trailLength = 10;
 const fireworkColors = [
-  new Color(100, 255, 135),
-  new Color(175, 255, 135),
-  new Color(85, 190, 255),
-  new Color(255, 145, 255),
-  new Color(100, 100, 255),
-  new Color(140, 250, 190),
-  new Color(255, 135, 135),
-  new Color(240, 255, 135),
-  new Color(245, 215, 80),
+  new Color(255, 120, 110),
+  new Color(255, 200, 90),
+  new Color(120, 220, 255),
+  new Color(160, 255, 150),
+  new Color(255, 140, 230),
+  new Color(190, 160, 255),
 ];
 
 /** A rising firework shell. Detonates once its upward motion turns over (apex). */
@@ -55,13 +55,33 @@ interface Rocket {
   position: Vector;
   velocityY: number;
   color: Color;
+  trail: number[];
 }
+
+/**
+ * One layer of the explosion: its own texture, motion and fade. Every layer
+ * bursts from the same point, so the effect reads as a single event while each
+ * layer keeps a separate role.
+ */
+const createLayer = (texture: Texture, burst: BurstSpawn, options: ParticleSystemOptions): ParticleSystem => {
+  const system = new ParticleSystem(texture, options);
+
+  system.setBlendMode(BlendModes.Additive);
+  system.addSpawnModule(burst);
+
+  return system;
+};
 
 class FireworksScene extends Scene {
   private canvasSize!: Size;
-  private explosions!: ParticleSystem;
-  private burstPosition!: Vector;
-  private burst!: BurstSpawn;
+  // A burst schedule also fires once when its system starts; park the burst
+  // point off-screen until the first rocket detonates.
+  private burstPosition = new Vector(-1000, -1000);
+  private flashBurst!: BurstSpawn;
+  private sparkBurst!: BurstSpawn;
+  private emberBurst!: BurstSpawn;
+  private layers: ParticleSystem[] = [];
+  private trails = new Graphics();
   private autoLaunchTimer!: Timer;
   private rocketTexture!: Texture;
   private rockets: Rocket[] = [];
@@ -71,39 +91,103 @@ class FireworksScene extends Scene {
   override init(): void {
     const app = this.app;
     const { width, height } = app;
+    const star = this.loader.get(assets.demo.textures.particleStar);
+    const light = this.loader.get(assets.demo.textures.particleLight);
 
     this.canvasSize = new Size(width, height);
-    this.rocketTexture = this.loader.get(assets.demo.textures.particleStar);
+    this.rocketTexture = star;
 
-    // Single explosion system shared by every detonation. We reposition and
-    // re-tint a single BurstSpawn, then reset() it to fire one burst.
-    this.explosions = new ParticleSystem(this.rocketTexture, { capacity: 16384 });
-    this.systems.add(this.explosions);
-    this.explosions.setBlendMode(BlendModes.Additive);
-
-    this.burstPosition = new Vector(0, 0);
-    this.burst = new BurstSpawn({
-      schedule: [{ time: 0, count: particlesPerExplosion }],
-      lifetime: new Range(tailDuration * 0.7, tailDuration),
+    // 1. Flash: one large, very short-lived glow that sells the detonation.
+    this.flashBurst = new BurstSpawn({
+      schedule: [{ time: 0, count: 1 }],
+      lifetime: new Constant(0.22),
       position: new Constant(this.burstPosition),
-      velocity: ConeDirection.omni(20, 70),
-      scale: new Constant(new Vector(0.95, 0.95)),
-      tint: new Constant(fireworkColors[0]),
+      velocity: new VectorRange(0, 0, 0, 0),
+      scale: new Constant(new Vector(0.55, 0.55)),
+      tint: new Constant(Color.white),
     });
-
-    this.explosions.addSpawnModule(this.burst);
-    this.explosions.addUpdateModule(new ApplyForce(0, 30));
-    this.explosions.addUpdateModule(
+    const flash = createLayer(light, this.flashBurst, { capacity: 32 });
+    // ScaleOverLifetime sets the absolute scale, so the curve is in texture scale units.
+    flash.addUpdateModule(
+      new ScaleOverLifetime(
+        new Curve([
+          { t: 0, v: 0.3 },
+          { t: 1, v: 0.75 },
+        ]),
+      ),
+    );
+    flash.addUpdateModule(
       new AlphaFadeOverLifetime(
         new Curve([
-          { t: 0, v: 1 },
+          { t: 0, v: 0.9 },
           { t: 1, v: 0 },
         ]),
       ),
     );
 
+    // 2. Sparks: fast glints that brake against the air and fall.
+    this.sparkBurst = new BurstSpawn({
+      schedule: [{ time: 0, count: 180 }],
+      lifetime: new Range(1.1, 1.8),
+      position: new Constant(this.burstPosition),
+      // A narrow speed band puts the sparks on one expanding shell.
+      velocity: ConeDirection.omni(200, 320),
+      scale: new Constant(new Vector(0.1, 0.1)),
+      tint: new Constant(fireworkColors[0]),
+    });
+    const sparks = createLayer(star, this.sparkBurst, { capacity: 4096 });
+    sparks.addUpdateModule(new Drag(1.3));
+    sparks.addUpdateModule(new ApplyForce(0, 70));
+    sparks.addUpdateModule(
+      new ScaleOverLifetime(
+        new Curve([
+          { t: 0, v: 0.12 },
+          { t: 1, v: 0.04 },
+        ]),
+      ),
+    );
+    sparks.addUpdateModule(
+      new AlphaFadeOverLifetime(
+        new Curve([
+          { t: 0, v: 1 },
+          { t: 0.55, v: 0.85 },
+          { t: 1, v: 0 },
+        ]),
+      ),
+    );
+
+    // 3. Afterglow: a few slow, warm embers that linger after the sparks are gone.
+    this.emberBurst = new BurstSpawn({
+      schedule: [{ time: 0, count: 40 }],
+      lifetime: new Range(2.2, 3.2),
+      position: new Constant(this.burstPosition),
+      velocity: ConeDirection.omni(15, 80),
+      scale: new Constant(new Vector(0.06, 0.06)),
+      tint: new Constant(new Color(255, 214, 150)),
+    });
+    const embers = createLayer(star, this.emberBurst, { capacity: 1024 });
+    embers.addUpdateModule(new Drag(0.9));
+    embers.addUpdateModule(new ApplyForce(0, 28));
+    embers.addUpdateModule(new Turbulence(18, 0.02, 0.6));
+    embers.addUpdateModule(
+      new AlphaFadeOverLifetime(
+        new Curve([
+          { t: 0, v: 0 },
+          { t: 0.15, v: 0.9 },
+          { t: 1, v: 0 },
+        ]),
+      ),
+    );
+
+    // Drawn back to front: embers under sparks under the flash.
+    this.layers = [embers, sparks, flash];
+
+    for (const layer of this.layers) {
+      this.systems.add(layer);
+    }
+
     // Click anywhere to launch a rocket from the bottom at that x.
-    app.input.onPointerDown.add(pointer => this.launchRocket(pointer.x));
+    app.input.onPointerDown.add(this.onPointerDown);
 
     // Ambient fallback: keep the sky alive even without clicks.
     this.autoLaunchTimer = new Timer(autoLaunchInterval, true);
@@ -112,17 +196,22 @@ class FireworksScene extends Scene {
       title: 'Fireworks',
       controls: [{ keys: 'Click', action: 'launch a rocket' }],
       status: 'Launched: 0 · in flight: 0',
-      hint: 'Each rocket rises and bursts at its apex. Rockets also auto-launch every couple of seconds.',
+      hint: 'Three layers per burst: a short flash, sparks that brake and fall, and slow embers that linger.',
     });
+
+    this.launchRocket(width * 0.5);
   }
 
+  // Application input outlives the scene, so the handler is removed in destroy().
+  private readonly onPointerDown = (_pointer: unknown, x: number): void => this.launchRocket(x);
+
   private launchRocket(x: number): void {
-    const color = fireworkColors[(random.next(0, fireworkColors.length - 1) + 0.5) | 0];
+    const color = fireworkColors[Math.floor(random.next(0, fireworkColors.length)) % fireworkColors.length];
     const sprite = new Sprite(this.rocketTexture);
 
-    sprite.setAnchor(0.5).setBlendMode(BlendModes.Additive).setTint(color).setScale(0.7);
+    sprite.setAnchor(0.5).setBlendMode(BlendModes.Additive).setTint(color).setScale(0.09);
 
-    const position = new Vector(x, this.canvasSize.height);
+    const position = new Vector(x, this.canvasSize.height + 10);
 
     sprite.setPosition(position.x, position.y);
 
@@ -131,6 +220,7 @@ class FireworksScene extends Scene {
       position,
       velocityY: -random.next(launchSpeedMin, launchSpeedMax),
       color,
+      trail: [],
     });
 
     this.launchCount++;
@@ -139,8 +229,13 @@ class FireworksScene extends Scene {
 
   private detonate(rocket: Rocket): void {
     this.burstPosition.set(rocket.position.x, rocket.position.y);
-    this.burst.config.tint = new Constant(rocket.color);
-    this.burst.reset();
+    this.sparkBurst.config.tint = new Constant(rocket.color);
+    this.flashBurst.config.tint = new Constant(
+      new Color(Math.round(128 + rocket.color.r / 2), Math.round(128 + rocket.color.g / 2), Math.round(128 + rocket.color.b / 2)),
+    );
+    this.flashBurst.reset();
+    this.sparkBurst.reset();
+    this.emberBurst.reset();
   }
 
   private updateStatus(): void {
@@ -148,10 +243,8 @@ class FireworksScene extends Scene {
   }
 
   override update(delta: Seconds): void {
-    const dt = delta;
-
     if (this.autoLaunchTimer.expired) {
-      this.launchRocket(random.next(80, this.canvasSize.width - 80));
+      this.launchRocket(random.next(120, this.canvasSize.width - 120));
       this.autoLaunchTimer.restart();
     }
 
@@ -160,11 +253,16 @@ class FireworksScene extends Scene {
     for (let i = this.rockets.length - 1; i >= 0; i--) {
       const rocket = this.rockets[i];
 
-      rocket.velocityY += rocketGravity * dt;
-      rocket.position.y += rocket.velocityY * dt;
+      rocket.velocityY += rocketGravity * delta;
+      rocket.position.y += rocket.velocityY * delta;
       rocket.sprite.setPosition(rocket.position.x, rocket.position.y);
+      rocket.trail.push(rocket.position.x, rocket.position.y);
 
-      if (rocket.velocityY >= 0 || rocket.position.y <= 0) {
+      if (rocket.trail.length > trailLength * 2) {
+        rocket.trail.splice(0, 2);
+      }
+
+      if (rocket.velocityY >= 0 || rocket.position.y <= 40) {
         this.detonate(rocket);
         rocket.sprite.destroy();
         this.rockets.splice(i, 1);
@@ -174,11 +272,43 @@ class FireworksScene extends Scene {
   }
 
   override draw(context: RenderingContext): void {
-    context.render(this.explosions);
+    // Each rocket leaves a short fading streak; older segments are fainter.
+    const trails = this.trails.clear();
+
+    trails.lineWidth = 2;
+
+    for (const rocket of this.rockets) {
+      const points = rocket.trail.length / 2;
+
+      for (let i = 1; i < points; i++) {
+        const alpha = (i / points) * 0.7;
+
+        trails.lineColor = new Color(rocket.color.r, rocket.color.g, rocket.color.b, alpha);
+        trails.drawLine(rocket.trail[(i - 1) * 2], rocket.trail[(i - 1) * 2 + 1], rocket.trail[i * 2], rocket.trail[i * 2 + 1]);
+      }
+    }
+
+    context.render(trails);
+
+    for (const layer of this.layers) {
+      context.render(layer);
+    }
 
     for (const rocket of this.rockets) {
       context.render(rocket.sprite);
     }
+  }
+
+  override destroy(): void {
+    this.app.input.onPointerDown.remove(this.onPointerDown);
+    this.hud.dispose();
+    this.trails.destroy();
+
+    for (const rocket of this.rockets) {
+      rocket.sprite.destroy();
+    }
+
+    super.destroy();
   }
 }
 
@@ -190,7 +320,7 @@ const app = new Application({
     mount: document.body,
     sizing: new FixedResolutionCanvasSizing(),
   },
-  clearColor: Color.black,
+  clearColor: new Color(4, 6, 14),
   extensions: [particlesExtension],
 });
 

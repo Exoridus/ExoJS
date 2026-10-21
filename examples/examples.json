@@ -304,7 +304,7 @@
       "path": "sprites-textures/texture-sampling.js",
       "language": "typescript",
       "title": "Texture Sampling and Pixel Snapping",
-      "description": "Compare nearest, linear and mipmapped sampling against a fixed reference while zooming and toggling render-only pixel snapping.",
+      "description": "Compare nearest, linear and mipmapped sampling side by side on a magnified and a minified texture, and toggle render-only pixel snapping.",
       "backend": "core",
       "tags": ["sprite", "texture", "sampling", "pixel-snap"],
       "capabilities": ["keyboard", "pointer"],
@@ -912,6 +912,17 @@
       "tags": ["audio", "fx", "chain", "spectrum", "analyser"],
       "capabilities": ["pointer", "audio"],
       "level": "intermediate"
+    },
+    {
+      "slug": "signal-graph",
+      "path": "audio-fx/signal-graph.js",
+      "language": "typescript",
+      "title": "Audio Signal Graph",
+      "description": "See the real routing from sources through bus effects to the master output, edit effect parameters, bypass stages and watch each bus level.",
+      "backend": "core",
+      "tags": ["audio", "bus", "effects", "graphics"],
+      "capabilities": ["pointer", "audio"],
+      "level": "advanced"
     },
     {
       "slug": "vocoder",

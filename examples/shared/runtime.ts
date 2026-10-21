@@ -313,6 +313,81 @@ export const mountControls = (options: MountControlsOptions = {}): ControlsHandl
   };
 };
 
+/** Per-pointer record of which button started each press, in press order. */
+export interface PressButtonTracker {
+  /**
+   * Button of the oldest press by `pointerId` not yet taken: 0 for the main
+   * button, touch contact or pen contact, 1 auxiliary, 2 secondary. 0 when
+   * nothing is recorded, so an unknown press is treated as a main press.
+   */
+  take(pointerId: number): number;
+  dispose(): void;
+}
+
+/**
+ * Records `PointerEvent.button` for every press on `canvas` at the moment it
+ * happens. Engine pointer signals are delivered at the next frame, when
+ * `Pointer.buttons` already reads the live state, so a press released before
+ * delivery cannot be told apart from a main press there; `take` hands the
+ * recorded button back to the signal handler in the order the presses occurred.
+ */
+export const trackPressButtons = (canvas: HTMLCanvasElement): PressButtonTracker => {
+  const queues = new Map<number, number[]>();
+  const root = canvas.ownerDocument;
+
+  const onDown = (event: Event): void => {
+    if (event.target !== canvas) {
+      return;
+    }
+
+    const { pointerId, button } = event as PointerEvent;
+    const queue = queues.get(pointerId);
+
+    if (queue) {
+      queue.push(button);
+    } else {
+      queues.set(pointerId, [button]);
+    }
+  };
+
+  // The engine listens on the canvas in the capture phase and stops immediate
+  // propagation of the presses it handles, so a listener on the canvas itself
+  // never sees them; the document's capture phase runs before it.
+  root.addEventListener('pointerdown', onDown, { capture: true });
+
+  return {
+    take: pointerId => queues.get(pointerId)?.shift() ?? 0,
+    dispose: () => {
+      root.removeEventListener('pointerdown', onDown, { capture: true });
+      queues.clear();
+    },
+  };
+};
+
+const CONTROL_CLASS = 'exo-example-control';
+
+// Hover, pressed and keyboard-focus states need pseudo-classes, which inline
+// styles cannot express, so one shared rule set is injected on first use.
+const ensureControlStyles = (): void => {
+  if (document.getElementById(`${CONTROL_CLASS}-styles`)) {
+    return;
+  }
+
+  const style = document.createElement('style');
+
+  style.id = `${CONTROL_CLASS}-styles`;
+  style.textContent = `
+.${CONTROL_CLASS} { transition: filter 120ms ease; }
+.${CONTROL_CLASS}:hover { filter: brightness(1.3); }
+.${CONTROL_CLASS}:active { filter: brightness(1.55); }
+.${CONTROL_CLASS}:focus-visible { outline: 2px solid #9fd0ff; outline-offset: 2px; }
+.${CONTROL_CLASS}:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
+input[type='range'].${CONTROL_CLASS} { accent-color: #7fb8ff; }
+@media (prefers-reduced-motion: reduce) { .${CONTROL_CLASS} { transition: none; } }
+`;
+  document.head.append(style);
+};
+
 const createControlRowContainer = (): HTMLElement => {
   const row = document.createElement('div');
 
@@ -341,8 +416,15 @@ export const mountControlPanel = (options: MountControlPanelOptions = {}): Contr
 
   const panel = createPanel(corner);
 
+  ensureControlStyles();
   panel.style.pointerEvents = 'auto';
   panel.style.minWidth = '230px';
+
+  panel.setAttribute('role', 'group');
+
+  if (title) {
+    panel.setAttribute('aria-label', title);
+  }
 
   if (title) {
     const titleEl = document.createElement('strong');
@@ -367,6 +449,8 @@ export const mountControlPanel = (options: MountControlPanelOptions = {}): Contr
       const readout = document.createElement('span');
 
       input.type = 'range';
+      input.className = CONTROL_CLASS;
+      input.setAttribute('aria-label', label);
       input.min = String(min);
       input.max = String(max);
       input.step = String(step);
@@ -410,6 +494,9 @@ export const mountControlPanel = (options: MountControlPanelOptions = {}): Contr
 
       let state = value;
 
+      button.type = 'button';
+      button.className = CONTROL_CLASS;
+      button.setAttribute('aria-label', label);
       Object.assign(button.style, {
         flex: '1 1 auto',
         padding: '5px 10px',
@@ -423,6 +510,7 @@ export const mountControlPanel = (options: MountControlPanelOptions = {}): Contr
 
       const render = () => {
         button.textContent = state ? 'On' : 'Off';
+        button.setAttribute('aria-pressed', String(state));
         button.style.background = state ? 'rgba(120, 220, 160, 0.22)' : 'rgba(154, 193, 255, 0.12)';
       };
 
@@ -453,6 +541,8 @@ export const mountControlPanel = (options: MountControlPanelOptions = {}): Contr
       let current = index;
 
       for (const button of [prev, next]) {
+        button.type = 'button';
+        button.className = CONTROL_CLASS;
         Object.assign(button.style, {
           flex: '0 0 auto',
           width: '26px',
@@ -468,6 +558,9 @@ export const mountControlPanel = (options: MountControlPanelOptions = {}): Contr
 
       prev.textContent = '‹';
       next.textContent = '›';
+      prev.setAttribute('aria-label', `Previous ${label}`);
+      next.setAttribute('aria-label', `Next ${label}`);
+      readout.setAttribute('aria-live', 'polite');
 
       Object.assign(readout.style, { flex: '1 1 auto', textAlign: 'center', color: '#9fd0ff', font: `600 12px ${FONT_STACK}` });
 
@@ -499,6 +592,8 @@ export const mountControlPanel = (options: MountControlPanelOptions = {}): Contr
     addButton({ label, onClick }) {
       const button = document.createElement('button');
 
+      button.type = 'button';
+      button.className = CONTROL_CLASS;
       button.textContent = label;
 
       Object.assign(button.style, {

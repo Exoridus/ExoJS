@@ -10,6 +10,7 @@ const PHRASES = [
   { key: 'objective', label: 'Objective achieved', asset: assets.demo.voice.objectiveAchieved },
 ];
 class VocoderScene extends Scene {
+  sidechainBus;
   modulatorBus;
   vocoder;
   level;
@@ -29,8 +30,12 @@ class VocoderScene extends Scene {
     const app = this.app;
     const { width, height } = app;
     // The spoken voice is the modulator: route every phrase onto its own bus
-    // so the vocoder can read its spectral envelope.
-    this.modulatorBus = new AudioBus('modulator');
+    // so the vocoder can read its spectral envelope. The vocoder taps that
+    // bus's output, so parenting it to a muted bus keeps the dry voice out of
+    // the mix without starving the effect.
+    this.sidechainBus = new AudioBus('vocoder-sidechain', { muted: true });
+    app.audio.registerBus(this.sidechainBus);
+    this.modulatorBus = new AudioBus('modulator', { parent: this.sidechainBus });
     app.audio.registerBus(this.modulatorBus);
     for (const phrase of PHRASES) {
       // phrase.asset is a widened `string` (not a path literal), so the
@@ -40,6 +45,9 @@ class VocoderScene extends Scene {
     }
     this.vocoder = new VocoderEffect({ modulator: this.modulatorBus, numBands: 16, wet: 1 });
     app.audio.sound.addEffect(this.vocoder);
+    // The voice samples are mastered close to full scale, dry or vocoded;
+    // the sound bus leaves headroom for both.
+    app.audio.sound.volume = 0.4;
     // Measured downstream of the vocoder, so the pulse tracks the robot
     // voice actually reaching the speakers, not the dry carrier.
     this.level = new AudioAnalyser({ source: app.audio.sound, smoothingTimeConstant: 0.6 });
@@ -77,7 +85,7 @@ class VocoderScene extends Scene {
         this.processed = value;
         this.vocoder.wet = value ? 1 : 0;
         if (this.carrierVoice) {
-          this.carrierVoice.volume = value ? 0.45 : 0;
+          this.carrierVoice.volume = value ? 0.4 : 0;
         }
         this.hud.setStatus(value ? 'Processed voice: phrase drives the carrier.' : 'Dry voice: phrase plays directly.');
       },
@@ -95,7 +103,7 @@ class VocoderScene extends Scene {
   startCarrier = () => {
     this.carrierVoice ??= this.app.audio.play(new AudioGenerator({ frequency: 110, type: 'sawtooth' }), {
       bus: this.app.audio.sound,
-      volume: this.processed ? 0.45 : 0,
+      volume: this.processed ? 0.4 : 0,
     });
     if (this.pendingPhrase) {
       this.pendingPhrase = false;
@@ -140,9 +148,11 @@ class VocoderScene extends Scene {
     this.app.audio.onUnlock.remove(this.startCarrier);
     this.carrierVoice?.stop();
     this.app.audio.sound.removeEffect(this.vocoder);
+    this.app.audio.sound.volume = 1;
     this.vocoder?.destroy();
     this.level?.destroy();
     this.app.audio.unregisterBus(this.modulatorBus);
+    this.app.audio.unregisterBus(this.sidechainBus);
     this.panel?.dispose();
     this.hud?.dispose();
     this.tapPrompt?.destroy();

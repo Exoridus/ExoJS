@@ -28,6 +28,11 @@
  *   ... --headed                   # force headed mode for any browser
  *   ... --color-scheme dark        # emulate dark-mode OS preference
  *   ... --shots <dir>              # write one PNG per example, pass or fail
+ *   ... --shot-times 2,5,10        # with --shots: also capture each example at these
+ *                                  # seconds after its canvas mounted (monotonic clock);
+ *                                  # <name>.captures.json records the observed times and
+ *                                  # any missing capture. Review evidence only, never
+ *                                  # part of the verdict
  *
  * Chromium (default): new headless, WebGPU via Dawn (SwiftShader backend).
  *   WebGPU adapter is available without --use-angle=swiftshader, which would
@@ -48,7 +53,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import { availableParallelism } from 'node:os';
-import { dirname, extname, join, resolve } from 'node:path';
+import { basename, dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
@@ -762,6 +767,7 @@ const runExample = async (
   timeoutMs: number,
   attempt: 'first' | 'retry' = 'first',
   shotDir: string | null = null,
+  shotTimes: readonly number[] = [],
 ): Promise<Result> => {
   const capabilities = entry.capabilities ?? [];
   const result: Result = {
@@ -836,6 +842,7 @@ const runExample = async (
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
 
     const previewFrame = await waitForPreviewCanvas(page, timeoutMs);
+    const mountedAt = performance.now();
 
     // Let async load()/init() settle so deferred rejections surface too. Keep
     // observing during that window: transient examples may intentionally draw
@@ -935,10 +942,68 @@ const runExample = async (
         .boundingBox()
         .catch(() => null);
       const shot = box ? await page.screenshot({ clip: box }).catch(() => null) : null;
+      const shotBase = join(shotDir, entry.path.replaceAll('/', '__').replace(/\.js$/, ''));
 
       if (shot) {
         await mkdir(shotDir, { recursive: true });
-        await writeFile(join(shotDir, `${entry.path.replaceAll('/', '__').replace(/\.js$/, '')}.png`), shot);
+        await writeFile(`${shotBase}.png`, shot);
+      }
+
+      // Timed captures show how an example develops - a first frame cannot tell
+      // a settled effect from one that never started. Monotonic wall clock, not
+      // simulation frames: a loaded host captures fewer frames per second, and
+      // the settle checks above can run past an early request. The sidecar
+      // records when each capture was actually taken so file names are never
+      // read as exact times. Evidence for review, not part of the verdict: a
+      // page that dies during the extra wait ends the series, and the sidecar
+      // lists what is missing.
+      if (box && previewFrame && shotTimes.length > 0) {
+        const captures: Array<{
+          requestedSeconds: number;
+          observedSeconds: number | null;
+          latenessSeconds: number | null;
+          file: string | null;
+          error?: string;
+        }> = [];
+
+        for (const seconds of shotTimes) {
+          const file = `${shotBase}@${String(seconds)}s.png`;
+
+          try {
+            const remaining = mountedAt + seconds * 1000 - performance.now();
+
+            if (remaining > 0) {
+              await page.waitForTimeout(remaining);
+            }
+
+            const timed = await page.screenshot({ clip: box });
+            const observedSeconds = (performance.now() - mountedAt) / 1000;
+
+            await mkdir(shotDir, { recursive: true });
+            await writeFile(file, timed);
+            captures.push({
+              requestedSeconds: seconds,
+              observedSeconds: Number(observedSeconds.toFixed(3)),
+              latenessSeconds: Number(Math.max(0, observedSeconds - seconds).toFixed(3)),
+              file: basename(file),
+            });
+          } catch (error) {
+            captures.push({
+              requestedSeconds: seconds,
+              observedSeconds: null,
+              latenessSeconds: null,
+              file: null,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
+
+        await mkdir(shotDir, { recursive: true });
+        await writeFile(
+          `${shotBase}.captures.json`,
+          `${JSON.stringify({ example: entry.path, complete: captures.every(capture => capture.file !== null), captures }, null, 2)}
+`,
+        );
       }
     }
   } catch (error) {
@@ -1006,6 +1071,7 @@ const main = async (): Promise<void> => {
       headed: { type: 'boolean' }, // force headed (any browser)
       'color-scheme': { type: 'string' }, // 'light' (default) | 'dark'
       shots: { type: 'string' }, // directory to write one capture per example into
+      'shot-times': { type: 'string' }, // comma-separated seconds after mount for extra captures
     },
     allowPositionals: false,
   });
@@ -1059,6 +1125,11 @@ const main = async (): Promise<void> => {
   const requestedConcurrency = Math.max(1, Number.parseInt(values.concurrency ?? '', 10) || defaultConcurrency);
   const timeoutMs = Math.max(4000, Number.parseInt(values['timeout-ms'] ?? '15000', 10) || 15000);
   const shotDir = values.shots === undefined ? null : resolve(repoRoot, values.shots);
+  const shotTimes = (values['shot-times'] ?? '')
+    .split(',')
+    .map(value => Number.parseFloat(value))
+    .filter(value => Number.isFinite(value) && value > 0)
+    .sort((a, b) => a - b);
 
   const { port, server } = await startServer(distDir);
   const baseUrl = `http://127.0.0.1:${port}`;
@@ -1123,7 +1194,7 @@ const main = async (): Promise<void> => {
         }
 
         const entry = entries[index];
-        const result = await runExample(pool, baseUrl, entry, index, graphics, timeoutMs, 'first', shotDir);
+        const result = await runExample(pool, baseUrl, entry, index, graphics, timeoutMs, 'first', shotDir, shotTimes);
         results[index] = result;
 
         const tag = result.status.toUpperCase().padEnd(7);
