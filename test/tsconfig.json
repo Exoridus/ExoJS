@@ -63,6 +63,8 @@
       "@codexo/exojs/extensions": ["../src/extensions/index.ts"],
       "@codexo/exojs/renderer-sdk": ["../src/renderer-sdk.ts"],
       "@codexo/exojs/debug": ["../src/debug/index.ts"],
+      "@codexo/exojs-demo-assets": ["../packages/exojs-demo-assets/src/index.ts"],
+      "@codexo/exojs-demo-assets/extended": ["../packages/exojs-demo-assets/src/extended.ts"],
       "@codexo/exojs/particles": ["../packages/exojs-particles/src/index.ts"],
       "@codexo/exojs/tilemap": ["../packages/exojs-tilemap/src/index.ts"],
       "@codexo/exojs-tiled": ["../packages/exojs-tiled/src/index.ts"],

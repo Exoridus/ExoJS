@@ -7,6 +7,8 @@
       "@codexo/exojs/extensions": ["../../../src/extensions/index.ts"],
       "@codexo/exojs/renderer-sdk": ["../../../src/renderer-sdk.ts"],
       "@codexo/exojs/debug": ["../../../src/debug/index.ts"],
+      "@codexo/exojs-demo-assets": ["../../exojs-demo-assets/src/index.ts"],
+      "@codexo/exojs-demo-assets/extended": ["../../exojs-demo-assets/src/extended.ts"],
       "@codexo/exojs/tilemap": ["../../exojs-tilemap/src/index.ts"],
       "@codexo/exojs/particles": ["../../exojs-particles/src/index.ts"],
       "@codexo/exojs/audio-fx": ["../../exojs-audio-fx/src/index.ts"],

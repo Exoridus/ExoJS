@@ -17,6 +17,7 @@ packages:
   - packages/exojs-cli
   - packages/create-exo-app
   - packages/eslint-plugin-exojs
+  - packages/exojs-demo-assets
   # Generated forwarders for the retired runtime package names; see
   # scripts/release/legacy-shims.ts.
   - packages/legacy/*

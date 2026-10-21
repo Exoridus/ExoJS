@@ -22,6 +22,16 @@ const aliasConfig = [
   { find: '@codexo/exojs/extensions', replacement: fileURLToPath(new URL('./src/extensions/index.ts', import.meta.url)) },
   { find: '@codexo/exojs/renderer-sdk', replacement: fileURLToPath(new URL('./src/renderer-sdk.ts', import.meta.url)) },
   { find: '@codexo/exojs/debug', replacement: fileURLToPath(new URL('./src/debug/index.ts', import.meta.url)) },
+  // The demo-assets package is data plus factories; alias it to source like the
+  // other content packages. The subpath must come before the root alias.
+  {
+    find: '@codexo/exojs-demo-assets/extended',
+    replacement: fileURLToPath(new URL('./packages/exojs-demo-assets/src/extended.ts', import.meta.url)),
+  },
+  {
+    find: '@codexo/exojs-demo-assets',
+    replacement: fileURLToPath(new URL('./packages/exojs-demo-assets/src/index.ts', import.meta.url)),
+  },
   // The runtime-module subpaths map to the module sources; the build compiles
   // the same sources into `dist/esm/<subpath>/`, which this lane never builds.
   { find: '@codexo/exojs/particles', replacement: fileURLToPath(new URL('./packages/exojs-particles/src/index.ts', import.meta.url)) },
@@ -313,6 +323,10 @@ export default defineConfig({
           // of which jsdom has; browser-core-chromium runs this suite.
           'test/core/browser/**/*.test.ts',
         ],
+      }),
+      createJsdomTestProject({
+        name: 'exojs-demo-assets',
+        include: ['packages/exojs-demo-assets/test/**/*.test.ts'],
       }),
       createJsdomTestProject({
         name: 'exojs-particles',

@@ -2,6 +2,9 @@
 node_modules
 dist/*
 packages/*/dist
+# Assembled from examples/assets by the demo-assets build and archive scripts.
+packages/exojs-demo-assets/media/
+packages/exojs-demo-assets/archives/
 coverage
 __screenshots__
 npm-debug.log*

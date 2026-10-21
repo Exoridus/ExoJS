@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "_comment": "Type-checks this package's own test/** and scripts/**. The loosened flags live in the shared package-test profile.",
+  "extends": ["./tsconfig.json", "@codexo/exojs-config/typescript/package-test.json"],
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "@codexo/exojs": ["../../src/index.ts"],
+      "@codexo/exojs-demo-assets": ["./src/index.ts"],
+      "@codexo/exojs-demo-assets/extended": ["./src/extended.ts"]
+    }
+  },
+  "include": ["test/**/*", "scripts/**/*", "../../src/typings.d.ts"],
+  "exclude": ["dist", "node_modules"]
+}

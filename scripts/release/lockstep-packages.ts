@@ -274,6 +274,12 @@ export const INDEPENDENT_PACKAGES = [
     reason:
       'lint tooling; a consumer keeps one version in devDependencies across engine upgrades and its rules read source text, not engine API',
   },
+  {
+    name: '@codexo/exojs-demo-assets',
+    dir: 'packages/exojs-demo-assets',
+    role: 'content',
+    reason: 'optional demo media; content versions move independently of engine patches, and the descriptors only use public Core APIs',
+  },
 ] as const satisfies readonly IndependentPackage[];
 
 /**

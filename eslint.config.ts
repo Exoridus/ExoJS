@@ -1077,6 +1077,11 @@ export default defineConfig([
       'scripts/**/*.mjs',
       'packages/exojs-bench/competitors/*.ts',
       'packages/create-exo-app/bin/*.js',
+      // The demo-assets generators and archive/copy tooling are Node scripts
+      // that belong to no package TypeScript program (the package tsconfigs
+      // cover src/** only), so typed rules have nothing to serve for them.
+      'packages/exojs-demo-assets/scripts/*.ts',
+      'packages/exojs-demo-assets/bin/*.js',
     ],
   }),
 
