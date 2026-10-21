@@ -914,6 +914,17 @@
       "level": "intermediate"
     },
     {
+      "slug": "signal-graph",
+      "path": "audio-fx/signal-graph.js",
+      "language": "typescript",
+      "title": "Audio Signal Graph",
+      "description": "See the real routing from sources through bus effects to the master output, edit effect parameters, bypass stages and watch each bus level.",
+      "backend": "core",
+      "tags": ["audio", "bus", "effects", "graphics"],
+      "capabilities": ["pointer", "audio"],
+      "level": "advanced"
+    },
+    {
       "slug": "vocoder",
       "path": "audio-fx/vocoder.js",
       "language": "typescript",
