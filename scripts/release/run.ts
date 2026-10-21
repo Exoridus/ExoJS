@@ -8,6 +8,7 @@
  *   tsx scripts/release/run.ts publish   [--execute] [--no-check-existing]
  *   tsx scripts/release/run.ts bootstrap <package> [--execute] [--skip-build]
  *   tsx scripts/release/run.ts publish-independent <package> [--execute] [--skip-build]
+ *   tsx scripts/release/run.ts registry-plan [--version X.Y.Z]
  *
  * `prepare` builds (optionally), freezes the exact source revision (failing on
  * a dirty tree or unknown revision), packs one tarball per lockstep package WITHOUT
@@ -22,6 +23,12 @@
  * `publish-independent` publishes a further version of a package that is off
  * the engine's lockstep line, which no coordinated release ever touches. Both
  * stand outside the build-once pipeline and touch one package each.
+ *
+ * `registry-plan` prints and records (`.release/registry-plan.{json,txt}`) the
+ * ordered registry actions of the release of `--version` (default: the current
+ * Core version), including which legacy shims it publishes and deprecates and
+ * why the others are not republished. It is a dry run only: it reads the
+ * working tree and release tags and has no execute mode.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -34,10 +41,12 @@ import { bootstrapPublish, bootstrapTargets } from './bootstrap-publish.ts';
 import { createExecRunner } from './command-runner.ts';
 import { verifyExternalConsumers } from './external-consumers.ts';
 import { assembleFullReleaseTree, compressTree, treeBytes } from './full-zip.ts';
-import { LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
+import { shimReleaseStatus } from './legacy-shims.ts';
+import { LEGACY_SHIMS, LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
 import { type ReleaseManifest, renderChecksums, serializeManifest } from './manifest.ts';
 import { prepareRelease } from './prepare.ts';
 import { defaultPublishOptions, publishRelease } from './publish.ts';
+import { buildRegistryPlan, RegistryPlanError, renderRegistryPlan, writeRegistryPlan } from './registry-plan.ts';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const releaseDir = resolve(repoRoot, '.release');
@@ -183,7 +192,12 @@ const doPrepare = (): void => {
     // `react`/`react-dom` peers cannot be resolved in an offline throwaway
     // project. attw still type-checks every packed tarball (react included).
     // Literal union from `as const` again - the manifest supplies plain strings.
-    const smokeNames: ReadonlySet<string> = new Set(LOCKSTEP_PACKAGES.filter(p => p.inOfflineSmoke).map(p => p.name));
+    // The legacy shims a release packs are smoke-tested with it: they peer on Core
+    // alone, so they install offline next to the Core tarball.
+    const smokeNames: ReadonlySet<string> = new Set([
+      ...LOCKSTEP_PACKAGES.filter(p => p.inOfflineSmoke).map(p => p.name),
+      ...LEGACY_SHIMS.map(p => p.name),
+    ]);
     const smokeTarballs = manifest.packages.filter(p => smokeNames.has(p.name)).map(p => resolve(stagingDir, p.file));
     const consumers = verifyExternalConsumers(smokeTarballs);
 
@@ -330,6 +344,36 @@ const doSinglePackage = (mode: 'bootstrap' | 'release'): void => {
   log(`  Next: ${report.followUp ?? ''}`);
 };
 
+const doRegistryPlan = (): void => {
+  const versionIndex = argv.indexOf('--version');
+  const core = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8')) as { name: string; version: string };
+  const releaseVersion = versionIndex === -1 ? core.version : (argv[versionIndex + 1] ?? '');
+
+  try {
+    // Every lockstep package is planned at the release version: before the cut
+    // that is what the cut will set, after it what the manifests carry.
+    const plan = buildRegistryPlan({
+      releaseVersion,
+      distTag: defaultPublishOptions(releaseVersion).distTag,
+      core: { name: core.name, version: releaseVersion },
+      lockstep: LOCKSTEP_PACKAGES.filter(pkg => pkg.dir !== '.').map(pkg => ({ name: pkg.name, version: releaseVersion })),
+      shims: LEGACY_SHIMS.map(shim => shimReleaseStatus(repoRoot, shim, releaseVersion)),
+    });
+    const written = writeRegistryPlan(plan, releaseDir);
+
+    log(`
+${renderRegistryPlan(plan)}`);
+    log(`  written: ${written.json}`);
+    log(`           ${written.text}`);
+  } catch (error) {
+    if (error instanceof RegistryPlanError) {
+      die(`registry plan refused: ${error.message}`);
+    }
+
+    throw error;
+  }
+};
+
 const command = argv[0];
 
 switch (command) {
@@ -348,6 +392,9 @@ switch (command) {
   case 'publish-independent':
     doSinglePackage('release');
     break;
+  case 'registry-plan':
+    doRegistryPlan();
+    break;
   default:
-    die(`Unknown command "${command ?? ''}". Use: prepare | full-zip | publish | bootstrap | publish-independent.`);
+    die(`Unknown command "${command ?? ''}". Use: prepare | full-zip | publish | bootstrap | publish-independent | registry-plan.`);
 }

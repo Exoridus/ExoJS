@@ -224,6 +224,13 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
         policy.smoke = true;
         policy.needsDist = true;
       }
+    } else if (file.startsWith('packages/legacy/')) {
+      // Generated forwarders: the generator check and the release tests that
+      // install them next to the Core tarball are what can notice a change.
+      siteOnlyUnits = false;
+      add('legacy-shims:check', 'format:check');
+      projects.add('exojs');
+      policy.needsDist = true;
     } else if (file.startsWith('packages/')) {
       siteOnlyUnits = false;
       const packageDirectory = file.split('/')[1]!;

@@ -196,6 +196,62 @@ export function verifyCliPackage(dir, opts) {
 }
 
 /**
+ * Verify a legacy shim: a published package that keeps a retired name
+ * importable by forwarding to Core subpaths.
+ *
+ * A shim must not be able to carry a second implementation or reach a consumer
+ * with anything but Core: it ships its forwarder files and nothing else,
+ * depends on nothing, peers on `@codexo/exojs` alone and runs no lifecycle
+ * script. Every file it ships is a statement of the form
+ * `export ... from '@codexo/exojs/<subpath>'`.
+ * @param {string} dir
+ * @param {{ name: string, targets: readonly string[] }} opts the Core specifiers the shim may forward to
+ * @returns {PolicyResult}
+ */
+export function verifyLegacyShimPackage(dir, opts) {
+  const pkg = read(dir);
+  /** @type {PolicyCheck[]} */
+  const checks = [];
+  /** @type {(name: string, cond: unknown, detail?: string) => number} */
+  const ok = (name, cond, detail) => checks.push({ name, ok: Boolean(cond), detail });
+  /** @type {string[]} */
+  const files = Array.isArray(pkg.files) ? pkg.files : [];
+  const code = files.filter(file => /\.(?:js|d\.ts)$/.test(file));
+  const forwarder = /^export (?:\*|\{[^}]+\}) from '([^']+)';$/;
+
+  ok('name matches', pkg.name === opts.name, `${pkg.name} vs ${opts.name}`);
+  ok('type: module', pkg.type === 'module');
+  ok('not private', pkg.private !== true);
+  ok('has version', typeof pkg.version === 'string');
+  ok('has repository field', pkg.repository != null);
+  ok('publishConfig public', pkg.publishConfig?.access === 'public');
+  ok('library sideEffects: false', pkg.sideEffects === false);
+  ok('exports "." entry', pkg.exports?.['.']?.types && pkg.exports['.'].import);
+  ok('exports ./package.json', pkg.exports?.['./package.json'] === './package.json');
+  ok('ships LICENSE and README', files.includes('LICENSE') && files.includes('README.md'));
+  ok('LICENSE file present', existsSync(join(dir, 'LICENSE')));
+  ok('README present', existsSync(join(dir, 'README.md')));
+  ok('ships forwarders only', files.length === code.length + 2, files.join(', '));
+  ok('peer @codexo/exojs only', JSON.stringify(Object.keys(pkg.peerDependencies ?? {})) === '["@codexo/exojs"]');
+  ok('no dependencies', !pkg.dependencies && !pkg.optionalDependencies && !pkg.bundleDependencies && !pkg.bundledDependencies);
+  ok('no lifecycle scripts', !pkg.scripts || Object.keys(pkg.scripts).length === 0);
+  ok('no imports map', pkg.imports === undefined);
+
+  for (const file of code) {
+    const path = join(dir, file);
+    const lines = existsSync(path) ? readFileSync(path, 'utf8').trim().split('\n') : [];
+    const targets = lines.map(line => forwarder.exec(line)?.[1]);
+    ok(
+      `${file} only forwards to Core`,
+      lines.length > 0 && targets.every(target => target !== undefined && opts.targets.includes(target)),
+      targets.join(', '),
+    );
+  }
+
+  return { ok: checks.every(c => c.ok), checks };
+}
+
+/**
  * Verify the private shared-config package.
  * @param {string} dir
  * @returns {PolicyResult}

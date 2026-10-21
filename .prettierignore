@@ -17,6 +17,9 @@ site/public/**
 # Generated API reference; the generator owns its shape and a sync gate pins it.
 site/src/content/api/**
 
+# Generated legacy shim packages; `legacy-shims:check` pins them to the generator.
+packages/legacy/**
+
 # The changelog is a historical record with its own gate (`lint:changelog`); its
 # embedded code samples keep the width they were written at.
 CHANGELOG.md

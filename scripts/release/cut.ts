@@ -18,6 +18,9 @@
  *   2. Bumps `version` in all six lockstep package.json files.
  *   2. Updates every official peer range - the core and any sibling extension -
  *      to `"MAJOR.MINOR.x"` in the extension packages.
+ *   2. Sets a legacy shim to VERSION only when the cut opens the shim's line or
+ *      its forwarders changed since the version it is on (`planShimCut`); an
+ *      unchanged shim keeps its version and is not republished.
  *   3. Runs `pnpm verify:lockstep` and `pnpm verify:release-matrix` as a gate.
  *   4. Stages the six package.json files and commits.
  *   5. Creates an annotated git tag `vVERSION`.
@@ -36,7 +39,8 @@ import { fileURLToPath } from 'node:url';
 
 import { CHANGELOG_PATH, dateChangelogFile, hasCuttableChangelog, UNRELEASED_HEADING } from './changelog.ts';
 import { generateChangelog } from './generate-changelog.ts';
-import { isEngineExtension, LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
+import { lineOf, planShimCut, shimForwarderChanged } from './legacy-shims.ts';
+import { isEngineExtension, LEGACY_SHIMS, LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
 import {
   EVIDENCE_PATH,
   type EvidenceDocument,
@@ -247,6 +251,36 @@ const bumpPackages = (version: string): boolean => {
   return anyChanged;
 };
 
+/** Applies `planShimCut` to every legacy shim and returns the manifests it rewrote. */
+const cutShims = (version: string): string[] => {
+  const written: string[] = [];
+
+  for (const shim of LEGACY_SHIMS) {
+    const absDir = resolve(repoRoot, shim.dir);
+    const pkg = readPackageJson(absDir);
+    const currentVersion = String(pkg['version']);
+    const decision = planShimCut({
+      line: shim.line,
+      currentVersion,
+      releaseVersion: version,
+      forwarderChanged: lineOf(currentVersion) === shim.line && shimForwarderChanged(repoRoot, shim.dir, currentVersion),
+    });
+
+    if (decision.action === 'keep') {
+      log(`  ${shim.name} stays at ${currentVersion} (${decision.reason})`);
+      continue;
+    }
+
+    pkg['version'] = decision.version;
+    pkg['peerDependencies'] = { ...(pkg['peerDependencies'] as Record<string, string>), '@codexo/exojs': decision.peerRange };
+    writePackageJson(absDir, pkg);
+    written.push(`${shim.dir}/package.json`);
+    log(`  set ${shim.name} → ${decision.version} (${decision.reason})`);
+  }
+
+  return written;
+};
+
 // ── Main ───────────────────────────────────────────────────────────────────
 
 const version = parseVersionArg(process.argv.slice(2));
@@ -291,7 +325,11 @@ writeEvidence(repoRoot, stampRelease(evidence, version));
 log(`  ✓ ${EVIDENCE_PATH} now claims ${version}`);
 
 log('\n→ bumping lockstep packages…');
-const bumped = bumpPackages(version);
+const bumpedLockstep = bumpPackages(version);
+
+log('\n→ legacy shims…');
+const shimManifests = cutShims(version);
+const bumped = bumpedLockstep || shimManifests.length > 0;
 
 if (bumped) {
   log('\n→ verifying lockstep + release-matrix…');
@@ -304,7 +342,7 @@ if (bumped) {
   }
 
   log('\n→ committing version bump…');
-  const packageJsonPaths = LOCKSTEP_DIRS.map(({ dir }) => resolve(dir, 'package.json')).join(' ');
+  const packageJsonPaths = [...LOCKSTEP_DIRS.map(({ dir }) => resolve(dir, 'package.json')), ...shimManifests].join(' ');
   run(`git add ${packageJsonPaths} ${EVIDENCE_PATH} ${CHANGELOG_PATH}`);
   run(`git commit -m "chore(release): bump to ${version}"`);
   log(`  ✓ committed`);

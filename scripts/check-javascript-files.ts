@@ -51,6 +51,11 @@ const EXEMPTIONS: readonly Exemption[] = [
     reason: 'the playground catalog: `.ts` sources plus the `.js` twins the transpiler emits and `examples:sync:check` keeps in step',
   },
   {
+    path: 'packages/legacy/',
+    reason:
+      'the published forwarders of the retired runtime package names, loaded as-is from an installed package; generated from the release matrix and pinned by `legacy-shims:check`',
+  },
+  {
     path: 'packages/exojs-config/',
     reason:
       'shared presets that ESLint, Prettier, Vitest and Rolldown load at runtime, typed through JSDoc under `checkJs` (see tsconfig.scripts.json)',

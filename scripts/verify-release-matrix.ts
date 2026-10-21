@@ -18,6 +18,9 @@
  *     and `officialPackages()` (what `release:prepare` actually packs) covers it exactly.
  *  8. Every runtime module is a private source package that Core exports as
  *     `@codexo/exojs/<subpath>`, and is neither built nor published on its own.
+ *  9. Every legacy shim keeps its module's retired name, peers on Core alone
+ *     and forwards only to Core exports; `release:prepare` packs a shim only in
+ *     the release that set its version.
  *
  * Read-only: safe to run in dry-run/CI. Exits non-zero on any inconsistency.
  *
@@ -27,7 +30,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { EXTENSION_PACKAGES, INDEPENDENT_PACKAGES, LOCKSTEP_PACKAGES, RUNTIME_MODULES } from './release/lockstep-packages.ts';
+import { isShimDue } from './release/legacy-shims.ts';
+import { EXTENSION_PACKAGES, INDEPENDENT_PACKAGES, LEGACY_SHIMS, LOCKSTEP_PACKAGES, RUNTIME_MODULES } from './release/lockstep-packages.ts';
 import { PUBLISH_ORDER } from './release/manifest.ts';
 import { officialPackages } from './release/prepare.ts';
 
@@ -169,25 +173,32 @@ if (/run:\s*pnpm build\b/.test(publishSection)) {
   ok.push('publish job does not rebuild the runtime packages');
 }
 
-// 7. Canonical publish order = the LOCKSTEP_PACKAGES order (Core first), enforced in code.
-const expectedOrder = LOCKSTEP_PACKAGES.map(p => p.name);
+// 7. Canonical publish order = the LOCKSTEP_PACKAGES order (Core first), then
+// the legacy shims, enforced in code.
+const expectedOrder = [...LOCKSTEP_PACKAGES.map(p => p.name), ...LEGACY_SHIMS.map(p => p.name)];
 
 if (PUBLISH_ORDER.length === expectedOrder.length && PUBLISH_ORDER.every((name, i) => name === expectedOrder[i])) {
-  ok.push(`PUBLISH_ORDER matches LOCKSTEP_PACKAGES order (${expectedOrder.join(' → ')})`);
+  ok.push(`PUBLISH_ORDER matches LOCKSTEP_PACKAGES then LEGACY_SHIMS (${expectedOrder.join(' → ')})`);
 } else {
-  problems.push(`PUBLISH_ORDER must equal LOCKSTEP_PACKAGES order ${expectedOrder.join(' → ')}, got ${PUBLISH_ORDER.join(' → ')}`);
+  problems.push(`PUBLISH_ORDER must equal ${expectedOrder.join(' → ')}, got ${PUBLISH_ORDER.join(' → ')}`);
 }
 
-// 7b. What `release:prepare` actually packs (officialPackages) must cover the
-// canonical PUBLISH_ORDER exactly - a package missing here would silently never
-// be packed, and therefore never published.
+// 7b. What `release:prepare` actually packs (officialPackages) must be every
+// lockstep package plus exactly the legacy shims this release sets, in
+// PUBLISH_ORDER - a package missing here would silently never be packed, and
+// therefore never published; an unchanged shim packed here would be
+// republished on every Core patch.
 const packed = officialPackages(rootDir);
 const packedNames = packed.map(p => p.name);
+const dueShims: readonly string[] = LEGACY_SHIMS.filter(shim => isShimDue(shim, readPkg(`${shim.dir}/package.json`).version, version)).map(
+  shim => shim.name,
+);
+const expectedPacked = PUBLISH_ORDER.filter(name => LOCKSTEP_PACKAGES.some(p => p.name === name) || dueShims.includes(name));
 
-if (packedNames.length === PUBLISH_ORDER.length && packedNames.every((name, i) => name === PUBLISH_ORDER[i])) {
-  ok.push('officialPackages() packs exactly the PUBLISH_ORDER set, in order');
+if (packedNames.length === expectedPacked.length && packedNames.every((name, i) => name === expectedPacked[i])) {
+  ok.push(`officialPackages() packs the lockstep set plus ${dueShims.length} due legacy shim(s), in PUBLISH_ORDER`);
 } else {
-  problems.push(`officialPackages() must pack ${PUBLISH_ORDER.join(' → ')}, got ${packedNames.join(' → ')}`);
+  problems.push(`officialPackages() must pack ${expectedPacked.join(' → ')}, got ${packedNames.join(' → ')}`);
 }
 
 for (const pkg of packed) {
@@ -217,8 +228,10 @@ for (const module of RUNTIME_MODULES) {
     manifest.exports === undefined ? undefined : 'must not declare exports of its own',
     manifest.scripts?.['build'] === undefined ? undefined : 'must not have a build script (Core builds it)',
     coreExports[`./${module.subpath}`] === undefined ? `is missing from the Core exports as "./${module.subpath}"` : undefined,
-    (PUBLISH_ORDER as readonly string[]).includes(module.name) || (PUBLISH_ORDER as readonly string[]).includes(module.legacyName)
-      ? 'must not be in PUBLISH_ORDER'
+    (PUBLISH_ORDER as readonly string[]).includes(module.name) ? 'must not be in PUBLISH_ORDER' : undefined,
+    // The retired name is published again, but only as the forwarder.
+    (PUBLISH_ORDER as readonly string[]).includes(module.legacyName) && !LEGACY_SHIMS.some(shim => shim.name === module.legacyName)
+      ? `is published as ${module.legacyName} without a legacy shim`
       : undefined,
     workflow.includes(`--filter ${module.name} build`) || workflow.includes(`--filter ${module.legacyName} build`)
       ? 'must not be built on its own in release.yml'
@@ -229,6 +242,35 @@ for (const module of RUNTIME_MODULES) {
     ok.push(`${label} ships only as @codexo/exojs/${module.subpath}`);
   } else {
     problems.push(...issues.map(issue => `${label} (${module.dir}) ${issue}`));
+  }
+}
+
+// 9. Legacy shims: one per runtime module under its retired name, built by no
+// workflow step, peering on Core alone, and forwarding only to Core exports.
+for (const shim of LEGACY_SHIMS) {
+  const module = RUNTIME_MODULES.find(candidate => candidate.subpath === shim.subpath);
+  const manifest = JSON.parse(readFileSync(resolve(rootDir, shim.dir, 'package.json'), 'utf8')) as {
+    name: string;
+    peerDependencies?: Record<string, string>;
+    scripts?: Record<string, string>;
+  };
+  const issues = [
+    module?.legacyName === shim.name ? undefined : 'does not carry the retired name of its runtime module',
+    manifest.name === shim.name ? undefined : `is named "${manifest.name}"`,
+    JSON.stringify(Object.keys(manifest.peerDependencies ?? {})) === '["@codexo/exojs"]' ? undefined : 'must peer on @codexo/exojs alone',
+    manifest.scripts === undefined ? undefined : 'must not have scripts',
+    workflow.includes(`--filter ${shim.name} build`) ? 'must not be built in release.yml' : undefined,
+    ...shim.entries.map(entry =>
+      coreExports[`./${entry.target.slice('@codexo/exojs/'.length)}`] === undefined
+        ? `forwards ${entry.entry} to ${entry.target}, which Core does not export`
+        : undefined,
+    ),
+  ].filter((issue): issue is string => issue !== undefined);
+
+  if (issues.length === 0) {
+    ok.push(`legacy shim ${shim.name} forwards to ${shim.entries.map(entry => entry.target).join(', ')}`);
+  } else {
+    problems.push(...issues.map(issue => `legacy shim ${shim.name} (${shim.dir}) ${issue}`));
   }
 }
 

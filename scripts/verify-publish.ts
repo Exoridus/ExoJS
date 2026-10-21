@@ -2,12 +2,12 @@ import { resolve } from 'node:path';
 
 import { readOutputOptions } from './lib/output.ts';
 import { createExecRunner } from './release/command-runner.ts';
-import { INDEPENDENT_PACKAGES, LOCKSTEP_PACKAGES } from './release/lockstep-packages.ts';
+import { INDEPENDENT_PACKAGES, LEGACY_SHIMS, LOCKSTEP_PACKAGES } from './release/lockstep-packages.ts';
 
 const PUBLINT = 'publint@0.3.21';
 
 const rootDir = resolve(import.meta.dirname, '..');
-const packages = [...LOCKSTEP_PACKAGES, ...INDEPENDENT_PACKAGES];
+const packages = [...LOCKSTEP_PACKAGES, ...INDEPENDENT_PACKAGES, ...LEGACY_SHIMS];
 const { mode } = readOutputOptions(process.argv.slice(2));
 const logDirectory = resolve(rootDir, '.workspace/logs');
 const runner = createExecRunner({ logDirectory });

@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { INDEPENDENT_PACKAGES, LOCKSTEP_PACKAGES } from '../../scripts/release/lockstep-packages';
+import { INDEPENDENT_PACKAGES, LEGACY_SHIMS, LOCKSTEP_PACKAGES } from '../../scripts/release/lockstep-packages';
 
-const published = LOCKSTEP_PACKAGES.length + INDEPENDENT_PACKAGES.length;
+const published = LOCKSTEP_PACKAGES.length + INDEPENDENT_PACKAGES.length + LEGACY_SHIMS.length;
 // Two checks per published package: `pnpm pack --dry-run` and publint.
 const checks = published * 2;
 

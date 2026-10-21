@@ -215,6 +215,8 @@
     "assets:compact": "tsx scripts/compact-example-assets.ts --write",
     "assets:compact:check": "tsx scripts/compact-example-assets.ts",
     "examples:sync:check": "tsx scripts/check-examples-sync.ts",
+    "legacy-shims:generate": "tsx scripts/release/legacy-shims.ts",
+    "legacy-shims:check": "tsx scripts/release/legacy-shims.ts --check",
     "full-bundle:exports:check": "tsx scripts/check-dist-fresh.ts && node scripts/check-full-bundle-exports.ts",
     "sync:example-capabilities": "tsx ./scripts/sync-example-capabilities.ts",
     "site:build": "tsx scripts/check-dist-fresh.ts && pnpm --filter @codexo/exojs-examples build",
@@ -237,6 +239,7 @@
     "release:publish": "tsx ./scripts/release/run.ts publish",
     "release:publish-independent": "tsx ./scripts/release/run.ts publish-independent",
     "release:bootstrap": "tsx ./scripts/release/run.ts bootstrap",
+    "release:registry-plan": "tsx ./scripts/release/run.ts registry-plan",
     "release:notes": "tsx ./scripts/generate-release-notes.ts",
     "release:changelog": "tsx ./scripts/release/generate-changelog.ts"
   },

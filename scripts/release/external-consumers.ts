@@ -20,12 +20,16 @@
  *     and mask a defect that only affects a consumer whose program never
  *     reaches it.
  *
+ *   - Legacy shims, when installed: every retired package name forwards the
+ *     very bindings of its Core entry, imports with no side effect, and
+ *     type-checks under both resolutions.
+ *
  * Every TypeScript check is `strict`, with `skipLibCheck: false` and no
  * `paths`: the shipped declarations have to stand on their own.
  *
- * Fully offline: the runtime modules ship inside the Core tarball and the
- * adapters only peer on Core, so `npm install --offline` of the set resolves
- * with no registry access.
+ * Fully offline: the runtime modules ship inside the Core tarball, and the
+ * adapters and shims only peer on Core, so `npm install --offline` of the set
+ * resolves with no registry access.
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -34,7 +38,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { LOCKSTEP_PACKAGES, RUNTIME_MODULES } from './lockstep-packages.ts';
+import { LEGACY_SHIMS, type LegacyShim, LOCKSTEP_PACKAGES, RUNTIME_MODULES } from './lockstep-packages.ts';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -300,6 +304,199 @@ if (failed.length > 0) {
 console.log('NODE_OK ' + checks.length);
 `;
 
+/** One import of a legacy shim and the Core entry it stands for. */
+interface ShimRoute {
+  readonly from: string;
+  readonly target: string;
+  /** The forwarded names, or `null` when the shim forwards the target's whole surface. */
+  readonly names: readonly string[] | null;
+}
+
+const shimRoutes = (shims: readonly LegacyShim[]): ShimRoute[] =>
+  shims.flatMap(shim =>
+    shim.entries.map(entry => ({
+      from: entry.entry === '.' ? shim.name : `${shim.name}/${entry.entry.slice(2)}`,
+      target: entry.target,
+      names: entry.names === undefined ? null : [...entry.names.values],
+    })),
+  );
+
+/**
+ * A Node program that proves each legacy shim forwards rather than copies: per
+ * entry, the shim exports exactly the target's value names and each is the very
+ * same object; `PhysicsDebugDraw` is one class through the retired entry, the
+ * Core debug entry and the physics module's own file; and every module loaded
+ * from an `@codexo` package comes from the one installed Core or from a shim,
+ * with Core's `Application` loaded once.
+ */
+export const legacyShimIdentityProbe = (shims: readonly LegacyShim[]): string => `import { registerHooks } from 'node:module';
+
+const loads = [];
+registerHooks({
+  load(url, context, nextLoad) {
+    loads.push(url);
+    return nextLoad(url, context);
+  },
+});
+
+const routes = ${JSON.stringify(shimRoutes(shims))};
+const shimNames = ${JSON.stringify(shims.map(shim => shim.name))};
+const problems = [];
+let compared = 0;
+
+for (const route of routes) {
+  const legacy = await import(route.from);
+  const modern = await import(route.target);
+  const expected = [...(route.names ?? Object.keys(modern))].sort();
+  const actual = Object.keys(legacy).sort();
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    problems.push(route.from + ' exports ' + actual.length + ' names, ' + route.target + ' ' + expected.length);
+  }
+  for (const name of expected) {
+    compared += 1;
+    if (legacy[name] !== modern[name]) problems.push(route.from + ' ' + name + ' is not the ' + route.target + ' binding');
+  }
+}
+
+const draws = [
+  (await import('@codexo/exojs/debug')).PhysicsDebugDraw,
+  (await import('@codexo/exojs-physics/debug')).PhysicsDebugDraw,
+  (await import(new URL('./node_modules/@codexo/exojs/dist/esm/physics/debug/index.js', import.meta.url).href)).PhysicsDebugDraw,
+];
+if (typeof draws[0] !== 'function' || draws.some(draw => draw !== draws[0])) problems.push('PhysicsDebugDraw differs across its three entries');
+
+const coreRoot = new URL('./node_modules/@codexo/exojs/', import.meta.url).href;
+const shimRoots = shimNames.map(name => new URL('./node_modules/' + name + '/', import.meta.url).href);
+const packaged = loads.filter(url => url.startsWith('file:') && url.includes('/node_modules/'));
+const foreign = packaged.filter(url => !url.startsWith(coreRoot) && !shimRoots.some(root => url.startsWith(root)));
+if (foreign.length > 0) problems.push('modules from outside Core and the shims: ' + foreign.join(', '));
+const applications = packaged.filter(url => url.endsWith('/dist/esm/core/Application.js')).length;
+if (applications !== 1) problems.push('Core Application loaded ' + applications + ' times');
+
+if (problems.length > 0) {
+  console.log('SHIM_IDENTITY_BAD ' + JSON.stringify(problems));
+  process.exit(1);
+}
+console.log('SHIM_IDENTITY_OK ' + JSON.stringify({ routes: routes.length, compared }));
+`;
+
+/**
+ * A Node program that imports `specifiers` with timers, animation frames, DOM,
+ * audio, workers, channels and the global symbol registry instrumented, and
+ * fails if any of them is touched or a global appears.
+ */
+export const importSideEffectProbe = (specifiers: readonly string[]): string => `const specifiers = ${JSON.stringify(specifiers)};
+const calls = [];
+const record = name => () => { calls.push(name); return 0; };
+for (const name of ['setTimeout', 'setInterval', 'setImmediate', 'queueMicrotask', 'requestAnimationFrame', 'requestIdleCallback']) {
+  globalThis[name] = record(name);
+}
+for (const name of ['AudioContext', 'OfflineAudioContext', 'AudioWorkletNode', 'Worker', 'MessageChannel', 'BroadcastChannel']) {
+  globalThis[name] = class { constructor() { calls.push(name); } };
+}
+globalThis.document = new Proxy({}, { get: (_target, key) => { calls.push('document.' + String(key)); return undefined; } });
+globalThis.window = new Proxy({}, { get: (_target, key) => { calls.push('window.' + String(key)); return undefined; } });
+const symbolFor = Symbol.for;
+Symbol.for = key => { if (key !== 'Symbol.dispose') calls.push('Symbol.for ' + key); return symbolFor(key); };
+const before = new Set(Reflect.ownKeys(globalThis));
+for (const specifier of specifiers) await import(specifier);
+const added = Reflect.ownKeys(globalThis).filter(key => !before.has(key)).map(String);
+if (calls.length > 0 || added.length > 0) {
+  console.log('SIDE_EFFECTS ' + JSON.stringify({ calls, added }));
+  process.exit(1);
+}
+console.log('NO_SIDE_EFFECTS ' + specifiers.length);
+`;
+
+/** A public type-only export of each runtime module, so a consumer program proves the shims forward types as well as values. */
+const SHIM_TYPE_PROBES: Readonly<Record<string, string>> = {
+  tilemap: 'TileOrientation',
+  particles: 'ParticlesBuildInfo',
+  'audio-fx': 'AutoWahEffectOptions',
+  physics: 'CharacterMovementOptions',
+  'tilemap-physics': 'TileColliderOptions',
+  lighting: 'LightingOptions',
+  pathfinding: 'NavigationAgentOptions',
+};
+
+/**
+ * A strict consumer program importing every legacy shim entry by its retired
+ * name: each shim's value surface must be the type of its Core entry's, and a
+ * type-only export must arrive as the identical type.
+ */
+export const legacyShimConsumerSource = (shims: readonly LegacyShim[]): string => {
+  const lines = ['type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;', ''];
+
+  shims.forEach((shim, index) => {
+    const typeName = SHIM_TYPE_PROBES[shim.subpath];
+
+    lines.push(`import * as legacy${index} from '${shim.name}';`, `import * as modern${index} from '@codexo/exojs/${shim.subpath}';`);
+    lines.push(`export const values${index}: Equal<typeof legacy${index}, typeof modern${index}> = true;`);
+
+    if (typeName !== undefined) {
+      lines.push(
+        `import type { ${typeName} as LegacyType${index} } from '${shim.name}';`,
+        `export const types${index}: Equal<LegacyType${index}, modern${index}.${typeName}> = true;`,
+      );
+    }
+
+    lines.push('');
+  });
+
+  lines.push(
+    "import { PhysicsDebugDraw as LegacyDraw, type PhysicsDebugDrawOptions as LegacyDrawOptions } from '@codexo/exojs-physics/debug';",
+    "import { PhysicsDebugDraw, type DebugLayer, type PhysicsDebugDrawOptions } from '@codexo/exojs/debug';",
+    'export const drawClass: Equal<typeof LegacyDraw, typeof PhysicsDebugDraw> = true;',
+    'export const drawOptions: Equal<LegacyDrawOptions, PhysicsDebugDrawOptions> = true;',
+    'export const drawLayer: DebugLayer = null as unknown as LegacyDraw;',
+    '',
+  );
+
+  return lines.join('\n');
+};
+
+/** The legacy shims among the installed packages of a consumer project. */
+const installedShims = (consumerDir: string): LegacyShim[] =>
+  LEGACY_SHIMS.filter(shim => existsSync(join(consumerDir, 'node_modules', ...shim.name.split('/'), 'package.json')));
+
+/** Every check of the legacy shims installed in `consumerDir`, or none when no shim is installed. */
+export const legacyShimChecks = (consumerDir: string): ConsumerCheck[] => {
+  const shims = installedShims(consumerDir);
+
+  if (shims.length === 0) {
+    return [];
+  }
+
+  const specifiers = shimRoutes(shims).map(route => route.from);
+  const source = legacyShimConsumerSource(shims);
+
+  return [
+    runNodeCheck(
+      consumerDir,
+      `legacy shims forward the Core bindings (${shims.length} shims)`,
+      'shim-identity.mjs',
+      legacyShimIdentityProbe(shims),
+      'SHIM_IDENTITY_OK',
+    ),
+    runNodeCheck(
+      consumerDir,
+      'legacy shims import without side effects',
+      'shim-side-effects.mjs',
+      importSideEffectProbe(specifiers),
+      'NO_SIDE_EFFECTS',
+    ),
+    ...(['bundler', 'nodenext'] as const).map(resolution =>
+      typecheckConsumer(
+        consumerDir,
+        `TypeScript ${resolution} type-check of the legacy shim names`,
+        `consumer-shims-${resolution}`,
+        source,
+        resolution,
+      ),
+    ),
+  ];
+};
+
 /**
  * Runs the external-consumer checks against the packed tarball paths. Returns
  * one {@link ConsumerCheck} per audience; `ok` overall is the conjunction.
@@ -332,6 +529,8 @@ export const verifyExternalConsumers = (tarballs: string[]): { ok: boolean; cons
       }
     }
 
+    checks.push(...legacyShimChecks(consumerDir));
+
     return { ok: checks.every(c => c.ok), consumerDir, checks };
   } finally {
     rmSync(consumerDir, { recursive: true, force: true });
@@ -343,11 +542,13 @@ if (import.meta.url.startsWith('file:') && fileURLToPath(import.meta.url) === re
   const staging = mkdtempSync(join(tmpdir(), 'exo-cons-pack-'));
   // Offline-smoke subset (excludes @codexo/exojs-react - its react peers are not
   // resolvable offline). Derived from the single source of truth.
-  const smokePackages = LOCKSTEP_PACKAGES.filter(p => p.inOfflineSmoke);
+  // The legacy shims are packed whatever their version: whether a release
+  // publishes them is a release decision, whether they forward correctly is not.
+  const smokeDirs = [...LOCKSTEP_PACKAGES.filter(p => p.inOfflineSmoke), ...LEGACY_SHIMS].map(p => p.dir);
   let tarballs: string[];
 
   try {
-    tarballs = smokePackages.map(p => packPackage(p.dir === '.' ? repoRoot : resolve(repoRoot, p.dir), staging));
+    tarballs = smokeDirs.map(dir => packPackage(dir === '.' ? repoRoot : resolve(repoRoot, dir), staging));
   } catch (error) {
     process.stderr.write(`${(error as Error).message}\n`);
     process.exit(1);

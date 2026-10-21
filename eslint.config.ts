@@ -58,6 +58,9 @@ export default defineConfig([
       'coverage/**',
       '**/*.min.*',
       'examples/**/*.js',
+      // Generated forwarder packages, pinned to their generator by
+      // `legacy-shims:check`; no TypeScript program owns them.
+      'packages/legacy/**',
       // Transient fixture directories a suite writes into a scanned tree and
       // removes again. They exist only while that suite runs, so a lint pass
       // that overlaps it would otherwise report files nobody authored.

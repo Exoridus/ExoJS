@@ -1,0 +1,45 @@
+{
+  "name": "@codexo/exojs-physics",
+  "version": "0.19.1",
+  "description": "Compatibility shim that forwards to @codexo/exojs/physics. Since ExoJS v0.20, import from @codexo/exojs/physics.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Exoridus/ExoJS.git",
+    "directory": "packages/legacy/exojs-physics"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    },
+    "./debug": {
+      "types": "./debug.d.ts",
+      "import": "./debug.js",
+      "default": "./debug.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "debug.js",
+    "debug.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "peerDependencies": {
+    "@codexo/exojs": "0.19.x"
+  },
+  "devDependencies": {
+    "@codexo/exojs": "workspace:*"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

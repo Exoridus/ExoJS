@@ -87,3 +87,17 @@ pnpm release:publish-independent create-exo-app --execute    # publishes with --
 ```
 
 The command refuses a lockstep package (the coordinated release owns those), is a no-op for a version already on the registry, and points at `release:bootstrap` when the name does not exist yet. The very first publish of one of these names goes through `release:bootstrap` like any other new package, followed by its Trusted Publisher config on npmjs.com.
+
+## Legacy shims
+
+The seven runtime packages that moved into Core as subpaths in v0.20 (`@codexo/exojs-tilemap`, `-particles`, `-audio-fx`, `-physics`, `-tilemap-physics`, `-lighting`, `-pathfinding`) keep their npm names as forwarders under `packages/legacy/`. Each file of those packages is generated from `LEGACY_SHIMS` in `scripts/release/lockstep-packages.ts` by `pnpm legacy-shims:generate`, and `pnpm legacy-shims:check` (in the `sync` gate group) fails when one drifts. Every binding a shim exports is the object its Core subpath exports, and its only peer is `@codexo/exojs` on the 0.20 line.
+
+A shim is not republished on every release. `release:cut` sets a shim to the release version only when the cut opens the 0.20 line or the shim's forwarders differ from the ones tagged under its current version; otherwise the shim keeps its version, and `release:prepare` neither packs nor publishes it. No cut moves a shim onto another line.
+
+The registry steps of a release, including the deprecation of exactly the shim versions it publishes, are printed by a dry run that never touches the registry:
+
+```bash
+pnpm release:registry-plan --version 0.20.0   # writes .release/registry-plan.{json,txt}
+```
+
+The plan refuses ranges, wildcards, tags, releases before the 0.20 line and shim versions off it, and it has no unpublish action. `release:publish` does not deprecate anything; the deprecations in the plan are a separate, explicitly authorised step after the published versions passed their consumer checks.

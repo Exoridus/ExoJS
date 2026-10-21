@@ -557,6 +557,11 @@ const isReleasePath = (file: string): boolean => {
     return true;
   }
 
+  // The legacy shims are packed as they are committed; every file is release content.
+  if (file.startsWith('packages/legacy/')) {
+    return true;
+  }
+
   if (file === '.github/workflows/release.yml') {
     return true;
   }

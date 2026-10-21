@@ -402,6 +402,48 @@ importers:
         specifier: workspace:*
         version: link:../exojs-tiled
 
+  packages/legacy/exojs-audio-fx:
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/legacy/exojs-lighting:
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/legacy/exojs-particles:
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/legacy/exojs-pathfinding:
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/legacy/exojs-physics:
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/legacy/exojs-tilemap:
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/legacy/exojs-tilemap-physics:
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../../..
+
   site:
     dependencies:
       '@astrojs/mdx':

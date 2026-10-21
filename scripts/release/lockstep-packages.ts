@@ -36,6 +36,8 @@
  * - `tooling`: build, lint, project and scaffolding tools.
  * - `content`: optional data packages with no engine code of their own.
  * - `legacy-shim`: a forwarding package that keeps a retired name importable.
+ *   Not part of the supported product set: it is versioned and published only
+ *   when its forwarders change (`releasesWithEveryCut`).
  */
 export type PackageRole = 'core' | 'runtime-module' | 'adapter' | 'tooling' | 'content' | 'legacy-shim';
 
@@ -159,6 +161,78 @@ export const RUNTIME_MODULES = [
   },
 ] as const satisfies readonly RuntimeModule[];
 
+/** The npm names the runtime modules were published under before they moved into Core. */
+export type LegacyShimName = (typeof RUNTIME_MODULES)[number]['legacyName'];
+
+/**
+ * The one release line the legacy shims serve. Their Core peer is this line's
+ * `.x` range: a later Core line is not promised to keep the forwarded surface,
+ * so the shims are never moved onto it.
+ */
+export const LEGACY_SHIM_LINE = '0.20';
+
+/** One export of a legacy shim package. */
+export interface LegacyShimEntry {
+  /** Export key in the shim manifest (`.` or `./<name>`). */
+  readonly entry: string;
+  /** The Core specifier whose bindings the entry forwards. */
+  readonly target: string;
+  /**
+   * The bindings forwarded, where the target is wider than the retired entry it
+   * replaces. Absent: the target's whole surface is forwarded.
+   */
+  readonly names?: { readonly values: readonly string[]; readonly types: readonly string[] };
+}
+
+/**
+ * A retired runtime package name kept importable on {@link LEGACY_SHIM_LINE}.
+ * The package holds forwarders only - every binding is the object the Core
+ * subpath exports - and peers on Core alone.
+ */
+export interface LegacyShim {
+  readonly name: LegacyShimName;
+  /** Package directory relative to the repo root. */
+  readonly dir: string;
+  readonly role: 'legacy-shim';
+  /** The Core subpath that replaced the package. */
+  readonly subpath: string;
+  readonly line: string;
+  readonly entries: readonly LegacyShimEntry[];
+}
+
+/** Entries a retired package had beyond its root, keyed by runtime module subpath. */
+const LEGACY_EXTRA_ENTRIES: Readonly<Record<string, readonly LegacyShimEntry[]>> = {
+  physics: [
+    {
+      entry: './debug',
+      target: '@codexo/exojs/debug',
+      names: { values: ['PhysicsDebugDraw'], types: ['PhysicsDebugDrawOptions'] },
+    },
+  ],
+};
+
+export const LEGACY_SHIMS: readonly LegacyShim[] = RUNTIME_MODULES.map(module => ({
+  name: module.legacyName,
+  // Below `packages/legacy/` rather than beside the module sources: the source
+  // directories keep the old names, and every discovery that walks the direct
+  // children of `packages/` treats what it finds as an active product.
+  dir: `packages/legacy/${module.legacyName.slice('@codexo/'.length)}`,
+  role: 'legacy-shim',
+  subpath: module.subpath,
+  line: LEGACY_SHIM_LINE,
+  entries: [{ entry: '.', target: `@codexo/exojs/${module.subpath}` }, ...(LEGACY_EXTRA_ENTRIES[module.subpath] ?? [])],
+}));
+
+/**
+ * Whether a coordinated release gives the package a new version every time.
+ * A legacy shim's files name Core subpaths rather than a Core version, so an
+ * unchanged shim keeps serving every Core patch on its line: it gets a new
+ * version only when the forwarders it publishes change (see
+ * `legacy-shims.ts#planShimCut`), and is published only in the release that
+ * sets that version.
+ */
+export const releasesWithEveryCut = (pkg: { readonly role: PackageRole }): boolean => pkg.role !== 'legacy-shim';
+
 /**
  * Published packages that are deliberately NOT on the engine's lockstep version
  * line, with the reason each one is off it.
@@ -216,8 +290,8 @@ const TOOLING_PACKAGE_NAMES = new Set<string>(['@codexo/exojs-build', '@codexo/e
 
 export const TOOLING_PACKAGES = INDEPENDENT_PACKAGES.filter(p => TOOLING_PACKAGE_NAMES.has(p.name));
 
-/** Union of the official package names (literal type, preserved for `OfficialPackageName`). */
-export type OfficialPackageName = (typeof LOCKSTEP_PACKAGES)[number]['name'];
+/** Union of the names a coordinated release can publish (literal type). */
+export type OfficialPackageName = (typeof LOCKSTEP_PACKAGES)[number]['name'] | LegacyShimName;
 
 /** The engine-extension subset: published libraries that declare the engine as a peer. */
 export const EXTENSION_PACKAGES = LOCKSTEP_PACKAGES.filter(isEngineExtension);
@@ -231,4 +305,5 @@ export const RELEASE_MATRIX: ReadonlyArray<{ readonly name: string; readonly dir
   ...LOCKSTEP_PACKAGES,
   ...RUNTIME_MODULES,
   ...INDEPENDENT_PACKAGES,
+  ...LEGACY_SHIMS,
 ];
