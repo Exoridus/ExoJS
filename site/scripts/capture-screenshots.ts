@@ -4,6 +4,8 @@ import { parseArgs } from 'node:util';
 
 import { type BrowserContext, chromium, type Page } from 'playwright';
 
+import { resolveSiteChannel } from '../../scripts/pages/site-channel.ts';
+
 type Theme = 'dark' | 'light';
 
 interface ViewportSpec {
@@ -49,7 +51,7 @@ const DEFAULT_MAX_PANEL_HEIGHT = 1568;
 const DEFAULT_CONCURRENCY = 3;
 const DEFAULT_STABLE_DELAY_MS = 300;
 const DEFAULT_NAVIGATION_TIMEOUT_MS = 45_000;
-const DEFAULT_BASE_URL = 'http://localhost:4321/ExoJS/';
+const DEFAULT_BASE_URL = `http://localhost:4321${resolveSiteChannel(process.env).basePath}`;
 
 const sleep = (ms: number): Promise<void> => new Promise(resolveSleep => setTimeout(resolveSleep, ms));
 
@@ -336,7 +338,7 @@ pnpm screenshots
 pnpm screenshots -- --base-url http://localhost:4321 --label desktop-pass
 
 Options:
-  --base-url      Preview URL (default: http://localhost:4321/ExoJS/)
+  --base-url      Preview URL (default: http://localhost:4321 plus the channel base, /ExoJS/ unless EXOJS_SITE_CHANNEL says otherwise)
   --label         Output folder label (default: ISO timestamp)
   --routes        Comma-separated route list
   --route         Additional route (repeatable)

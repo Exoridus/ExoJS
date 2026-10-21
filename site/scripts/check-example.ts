@@ -28,9 +28,11 @@ import { fileURLToPath } from 'node:url';
 
 import { chromium, type Frame } from 'playwright';
 
-// Matches `astro.config.ts`'s `base` - every URL in the served page carries
-// it, dev server included.
-const SITE_BASE = '/ExoJS';
+import { resolveSiteChannel } from '../../scripts/pages/site-channel.ts';
+
+// The base `astro.config.ts` resolves from the same environment - every URL in
+// the served page carries it, dev server included.
+const SITE_BASE = resolveSiteChannel(process.env).basePath.replace(/\/$/, '');
 const DEFAULT_HOST = 'http://localhost:4321';
 
 const here = dirname(fileURLToPath(import.meta.url));

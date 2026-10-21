@@ -1,4 +1,5 @@
 ---
+import ChannelHead from '../../../../components/ChannelHead.astro';
 import PlaygroundExamplePage from '../../../../components/pages/PlaygroundExamplePage.astro';
 import { EXAMPLE_ALIASES, EXAMPLE_TOOL_RELOCATIONS, resolveExampleToolRelocation } from '../../../../lib/example-aliases';
 import { getAllExamples } from '../../../../lib/examples-catalog';
@@ -17,6 +18,7 @@ const toolHref = relocation === null ? null : `${import.meta.env.BASE_URL}de/${r
 {toolHref !== null ? (
   <html lang="de">
     <head>
+      <ChannelHead />
       <meta http-equiv="refresh" content={`0;url=${toolHref}`} />
       <link rel="canonical" href={toolHref} />
     </head>

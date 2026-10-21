@@ -29,3 +29,15 @@ declare module '*?worker' {
   const WorkerConstructor: new () => Worker;
   export default WorkerConstructor;
 }
+
+/** The site build identity the Astro config resolved; see `site/scripts/write-site-build.ts`. */
+declare const __EXOJS_SITE_BUILD__: {
+  readonly channel: 'stable' | 'next';
+  readonly basePath: string;
+  readonly sourceSha: string;
+  readonly packageVersion: string;
+  readonly assetProfile: string;
+  readonly createdAt: string;
+  readonly localTest: boolean;
+  readonly counterpartBase: string | null;
+};
