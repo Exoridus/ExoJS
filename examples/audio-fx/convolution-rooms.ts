@@ -10,7 +10,7 @@ import {
   Text,
 } from '@codexo/exojs';
 import { ConvolutionEffect } from '@codexo/exojs-audio-fx';
-import { mountControls } from '@examples/runtime';
+import { type ControlBinding, mountControlPanel, mountControls } from '@examples/runtime';
 
 // Every impulse response in the AK-SROOMS set, shortest tail first. The
 // duration is what actually decides the character: a few milliseconds only
@@ -108,6 +108,8 @@ class ConvolutionRoomsScene extends Scene {
   private detail!: Text;
   private tapPrompt!: Text;
   private hud!: ReturnType<typeof mountControls>;
+  private panel!: ReturnType<typeof mountControlPanel>;
+  private roomControl!: ControlBinding<number>;
 
   override init(): void {
     const { width, height } = this.app;
@@ -170,10 +172,17 @@ class ConvolutionRoomsScene extends Scene {
       title: 'Convolution rooms',
       controls: [
         { keys: 'Click', action: 'strike a pad, panned to its position' },
-        { keys: 'Right-click', action: 'next room' },
+        { keys: 'Right-click', action: 'next room (or use the panel)' },
       ],
       status: 'Click or press any key to start…',
       hint: 'Same four materials every time — only the room around them changes.',
+    });
+
+    this.panel = mountControlPanel({ title: 'Room' });
+    this.roomControl = this.panel.addCycle({
+      label: 'Impulse',
+      options: ROOMS.map((room, i) => `${i + 1} · ${room.ms} ms`),
+      onChange: index => this.select(index),
     });
 
     this.select(0);
@@ -182,6 +191,7 @@ class ConvolutionRoomsScene extends Scene {
   /** Swap the impulse response. The handle heals in place, so the effect picks it up once decoded. */
   private select(next: number): void {
     this.index = (next + ROOMS.length) % ROOMS.length;
+    this.roomControl.set(this.index);
 
     const room = ROOMS[this.index]!;
     const ir = this.loader.get(`audio/ir/${room.file}.wav`);
@@ -234,6 +244,14 @@ class ConvolutionRoomsScene extends Scene {
     }
 
     context.render(this.root);
+  }
+
+  override destroy(): void {
+    this.app.audio.sound.removeEffect(this.convolution);
+    this.convolution.destroy();
+    this.panel.dispose();
+    this.hud.dispose();
+    super.destroy();
   }
 }
 

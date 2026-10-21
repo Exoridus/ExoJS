@@ -1,7 +1,7 @@
 // Auto-generated from convolution-rooms.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
 import { ConvolutionEffect } from '@codexo/exojs-audio-fx';
-import { mountControls } from '@examples/runtime';
+import { mountControlPanel, mountControls } from '@examples/runtime';
 // Every impulse response in the AK-SROOMS set, shortest tail first. The
 // duration is what actually decides the character: a few milliseconds only
 // colours the sound, ~30-150 ms reads as a cupboard or a shaft, and past
@@ -78,6 +78,8 @@ class ConvolutionRoomsScene extends Scene {
   detail;
   tapPrompt;
   hud;
+  panel;
+  roomControl;
   init() {
     const { width, height } = this.app;
     this.listener = { x: width / 2, y: height / 2 };
@@ -128,16 +130,23 @@ class ConvolutionRoomsScene extends Scene {
       title: 'Convolution rooms',
       controls: [
         { keys: 'Click', action: 'strike a pad, panned to its position' },
-        { keys: 'Right-click', action: 'next room' },
+        { keys: 'Right-click', action: 'next room (or use the panel)' },
       ],
       status: 'Click or press any key to start…',
       hint: 'Same four materials every time — only the room around them changes.',
+    });
+    this.panel = mountControlPanel({ title: 'Room' });
+    this.roomControl = this.panel.addCycle({
+      label: 'Impulse',
+      options: ROOMS.map((room, i) => `${i + 1} · ${room.ms} ms`),
+      onChange: index => this.select(index),
     });
     this.select(0);
   }
   /** Swap the impulse response. The handle heals in place, so the effect picks it up once decoded. */
   select(next) {
     this.index = (next + ROOMS.length) % ROOMS.length;
+    this.roomControl.set(this.index);
     const room = ROOMS[this.index];
     const ir = this.loader.get(`audio/ir/${room.file}.wav`);
     this.label.text = `${this.index + 1} / ${ROOMS.length} — ${character(room.ms)}`;
@@ -179,6 +188,13 @@ class ConvolutionRoomsScene extends Scene {
       this.gfx.drawRoundedRectangle(pad.x, pad.y, pad.w, pad.h, 16);
     }
     context.render(this.root);
+  }
+  destroy() {
+    this.app.audio.sound.removeEffect(this.convolution);
+    this.convolution.destroy();
+    this.panel.dispose();
+    this.hud.dispose();
+    super.destroy();
   }
 }
 const application = new Application({
