@@ -63,7 +63,7 @@ Core's declarations resolve under `"moduleResolution": "bundler"` and under `nod
 
 ## What did not change
 
-Core's root entry, `Assets`, `Sprite`, the KTX2/Basis worker and WASM integration, the scene and loader semantics, and the serialized values all keep their behavior. The visual quality of the examples is unchanged in this migration; the example-asset catalog moves to the optional `@codexo/exojs-demo-assets` package, whose descriptors load through the existing `loader.get()` / `await loader.load()` contract.
+Core's root entry, `Assets`, `Sprite`, the KTX2/Basis worker and WASM integration, the scene and loader semantics, and the serialized values all keep their behavior. The playground examples no longer read an injected `assets` global: they import their media from the optional `@codexo/exojs-demo-assets` package, whose descriptors load through the existing `loader.get()` / `await loader.load()` contract, so an example copied out of the playground runs wherever that package is installed.
 
 ## Where to go next
 
