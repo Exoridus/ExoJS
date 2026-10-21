@@ -704,7 +704,9 @@
       "bytes": 11037,
       "sha256": "a64d887a1131afedb2eb7965fa58e0715581dc22925f6c6f10b4e50608a937a2",
       "provenance": "kenney-blocks-bitmap-font",
-      "transitive": ["demo/fonts/kenney-blocks-32.png"]
+      "transitive": [
+        "demo/fonts/kenney-blocks-32.png"
+      ]
     },
     {
       "key": "fontKenneyBlocksPng",
@@ -900,7 +902,9 @@
           "$path": "demo/sound-sprites/ui/ui.json"
         }
       },
-      "transitive": ["demo/sound-sprites/ui/ui.json"]
+      "transitive": [
+        "demo/sound-sprites/ui/ui.json"
+      ]
     },
     {
       "key": "impactsSoundSprite",
@@ -916,7 +920,9 @@
           "$path": "demo/sound-sprites/impacts/impacts.json"
         }
       },
-      "transitive": ["demo/sound-sprites/impacts/impacts.json"]
+      "transitive": [
+        "demo/sound-sprites/impacts/impacts.json"
+      ]
     },
     {
       "key": "digitalSoundSprite",
@@ -932,7 +938,9 @@
           "$path": "demo/sound-sprites/digital/digital.json"
         }
       },
-      "transitive": ["demo/sound-sprites/digital/digital.json"]
+      "transitive": [
+        "demo/sound-sprites/digital/digital.json"
+      ]
     },
     {
       "key": "musicLoopMain",
@@ -1361,7 +1369,9 @@
       "bytes": 10563,
       "sha256": "d12efc58f2e42ac225e9de39c984995c2e7d8406d78eb32701a6a0c74798fd46",
       "provenance": "exojs",
-      "transitive": ["demo/vendor/kenney/map-pack/Tilesheet/mapPack_tilesheet.png"]
+      "transitive": [
+        "demo/vendor/kenney/map-pack/Tilesheet/mapPack_tilesheet.png"
+      ]
     },
     {
       "key": "harborPlazaMap",
@@ -1372,7 +1382,9 @@
       "bytes": 2727,
       "sha256": "debe27d58dfe5f0f4b0f28eb59121fc8aa23a14a5a3d8765a7e9c5ee6ee8a7a9",
       "provenance": "exojs",
-      "transitive": ["demo/vendor/kenney/map-pack/Tilesheet/mapPack_tilesheet.png"]
+      "transitive": [
+        "demo/vendor/kenney/map-pack/Tilesheet/mapPack_tilesheet.png"
+      ]
     },
     {
       "key": "harborWorldProject",
@@ -1383,7 +1395,9 @@
       "bytes": 9490,
       "sha256": "4afe2b04a432762751c5e51a6848daebdb9b46333f2d620910a4b29300d008f5",
       "provenance": "exojs",
-      "transitive": ["demo/vendor/kenney/map-pack/Tilesheet/mapPack_tilesheet.png"]
+      "transitive": [
+        "demo/vendor/kenney/map-pack/Tilesheet/mapPack_tilesheet.png"
+      ]
     },
     {
       "key": "ownershipWorkshopMap",
@@ -1394,7 +1408,9 @@
       "bytes": 1380,
       "sha256": "7f5a0f5fd9bd8733ade9f5b78523345481265a3d4d2ec020a8041c52cd9fac39",
       "provenance": "exojs",
-      "transitive": ["demo/vendor/kenney/map-pack/Tilesheet/mapPack_tilesheet.png"]
+      "transitive": [
+        "demo/vendor/kenney/map-pack/Tilesheet/mapPack_tilesheet.png"
+      ]
     },
     {
       "key": "physicsRoomMap",
@@ -1405,7 +1421,9 @@
       "bytes": 1927,
       "sha256": "3f9d2391baa9120edc9dea63e7797102c0fc0a026b621a9852a8bd98cc6a3b67",
       "provenance": "exojs",
-      "transitive": ["demo/vendor/kenney/map-pack/Tilesheet/mapPack_tilesheet.png"]
+      "transitive": [
+        "demo/vendor/kenney/map-pack/Tilesheet/mapPack_tilesheet.png"
+      ]
     },
     {
       "key": "videoDemoLoop",

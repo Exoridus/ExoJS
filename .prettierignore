@@ -9,6 +9,13 @@ examples/assets/**
 examples/shared/assets-global.d.ts
 examples/shared/runtime.d.ts
 
+# Generated demo catalog sources and manifest; scripts/generate.ts owns their
+# exact shape and a drift test pins it.
+packages/exojs-demo-assets/src/catalog.generated.ts
+packages/exojs-demo-assets/src/standard.generated.ts
+packages/exojs-demo-assets/manifest.json
+packages/exojs-demo-assets/THIRD_PARTY_NOTICES.md
+
 # Astro's generated cache, and the vendored bundles plus copied example catalog
 # the site serves - none of it authored here.
 site/.astro/**

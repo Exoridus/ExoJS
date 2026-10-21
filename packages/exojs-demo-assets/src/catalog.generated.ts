@@ -294,22 +294,7 @@ export interface DemoAssetDefinitions {
 export type DemoAssetKey = keyof DemoAssetDefinitions;
 
 /** The browsing category a demo asset is listed under. */
-export type DemoAssetCategory =
-  | 'textures'
-  | 'technical'
-  | 'backgrounds'
-  | 'spritesheets'
-  | 'inputPrompts'
-  | 'icons'
-  | 'cursors'
-  | 'fonts'
-  | 'sound'
-  | 'soundSprites'
-  | 'music'
-  | 'voice'
-  | 'impulseResponses'
-  | 'maps'
-  | 'video';
+export type DemoAssetCategory = 'textures' | 'technical' | 'backgrounds' | 'spritesheets' | 'inputPrompts' | 'icons' | 'cursors' | 'fonts' | 'sound' | 'soundSprites' | 'music' | 'voice' | 'impulseResponses' | 'maps' | 'video';
 
 /** The category of every standard demo asset, for browsers and filters. Static data; reading it loads nothing. */
 export const demoAssetCategories: Readonly<Record<DemoAssetKey, DemoAssetCategory>> = Object.freeze({
@@ -543,12 +528,8 @@ export const buildDemoAssets = (url: (path: string) => string): DemoAssetDefinit
     soundPowerUp: Asset.type('sound', url('demo/sound/power-up.ogg')),
     soundLaser: Asset.type('sound', url('demo/sound/laser.ogg')),
     uiSoundSprite: Asset.type('sound', url('demo/sound-sprites/ui/ui.ogg'), { sprites: url('demo/sound-sprites/ui/ui.json') }),
-    impactsSoundSprite: Asset.type('sound', url('demo/sound-sprites/impacts/impacts.ogg'), {
-      sprites: url('demo/sound-sprites/impacts/impacts.json'),
-    }),
-    digitalSoundSprite: Asset.type('sound', url('demo/sound-sprites/digital/digital.ogg'), {
-      sprites: url('demo/sound-sprites/digital/digital.json'),
-    }),
+    impactsSoundSprite: Asset.type('sound', url('demo/sound-sprites/impacts/impacts.ogg'), { sprites: url('demo/sound-sprites/impacts/impacts.json') }),
+    digitalSoundSprite: Asset.type('sound', url('demo/sound-sprites/digital/digital.ogg'), { sprites: url('demo/sound-sprites/digital/digital.json') }),
     musicLoopMain: Asset.type('music', url('demo/music/demo-loop-main.ogg')),
     musicLoopA: Asset.type('music', url('demo/music/demo-loop-a.ogg')),
     musicLoopB: Asset.type('music', url('demo/music/demo-loop-b.ogg')),
