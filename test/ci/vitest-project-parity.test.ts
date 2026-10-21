@@ -54,8 +54,13 @@ const scriptsRunning = (project: string): string[] =>
     .filter(([, command]) => runsVitest(command) && projectPatterns(command).some(pattern => matchesPattern(pattern, project)))
     .map(([name]) => name);
 
-/** Scripts reachable from a lane, following one level of `pnpm <script>` delegation (`test:coverage` -> `test`). */
-const laneText = LANES.map(lane => [lane.run, lane.ciRun ?? '', lane.coverageRun ?? ''].join(' ')).join(' ');
+/**
+ * Scripts reachable from a lane or from the CI build job (which runs the
+ * projects that need the built dist), following one level of `pnpm <script>`
+ * delegation (`test:coverage` -> `test`).
+ */
+const buildJob = /^ {2}build:\n[\s\S]*?(?=^ {2}\w)/m.exec(readFileSync(resolve(repoRoot, '.github/workflows/ci.yml'), 'utf8'))?.[0] ?? '';
+const laneText = [...LANES.map(lane => [lane.run, lane.ciRun ?? '', lane.coverageRun ?? ''].join(' ')), buildJob].join(' ');
 const reachesLane = (script: string): boolean =>
   laneText.includes(`pnpm ${script}`) ||
   Object.entries(packageJson.scripts).some(([name, command]) => command.startsWith(`pnpm ${script} `) && laneText.includes(`pnpm ${name}`));

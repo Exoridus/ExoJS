@@ -5,8 +5,9 @@ name: CI
 # runs locally. A lane is added there, never here.
 #
 #   plan ─┬─► gates (matrix)
-#         ├─► test (matrix) ─► skip-budget
-#         └─► build ─┬─► verify (matrix)
+#         ├─► test (matrix) ──┬─► skip-budget
+#         └─► build ─┬────────┘
+#                    ├─► verify (matrix)
 #                    └─► site ─► smoke
 #                                       all ─► verdict   (the required check)
 #
@@ -202,8 +203,8 @@ jobs:
   # One budget over every lane's report: a test that moves from one lane to
   # another must not change the count.
   skip-budget:
-    needs: [plan, test]
-    if: ${{ !cancelled() && needs.plan.outputs.skipBudget == 'true' && needs.test.result == 'success' }}
+    needs: [plan, test, build]
+    if: ${{ !cancelled() && needs.plan.outputs.skipBudget == 'true' && needs.test.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -243,10 +244,19 @@ jobs:
           EXOJS_REQUIRE_PRODUCTION_BUILD: '1'
         run: pnpm test:production-stripping
 
-      - name: Verify the packed Core and its runtime subpaths against the built dist
+      - name: Verify the packed Core, its runtime subpaths and the legacy shims against the built dist
         env:
           EXOJS_REQUIRE_PRODUCTION_BUILD: '1'
-        run: pnpm test:hybrid-runtime
+        run: pnpm test:release-dist --reporter=minimal --reporter=junit --outputFile.junit=./test-results/build.junit.xml
+
+      - name: Keep the JUnit report for the skip budget
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: junit-build
+          path: test-results/*.junit.xml
+          retention-days: 1
+          if-no-files-found: ignore
 
       - name: Verify the built ESM tree through a browser import map
         run: pnpm test:esm-importmap

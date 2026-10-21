@@ -41,7 +41,7 @@ export const GATE_GROUPS = {
   // in seconds here rather than after the site typecheck. The site job already
   // builds dist, so the check is a fast verification, and the hybrid-runtime
   // export completeness of the built tree is covered by the CI build job's
-  // `test:hybrid-runtime`.
+  // `test:release-dist`.
   site: ['dist:check', 'typecheck:site', 'typecheck:site-scripts'],
 } as const satisfies Record<string, readonly string[]>;
 

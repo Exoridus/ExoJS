@@ -1,25 +1,17 @@
 /**
  * The seven retired runtime package names stay importable on the 0.20 line as
- * forwarders: installed next to the Core tarball, each shim hands out the very
- * bindings of its Core entry, adds no second Core and no side effect, and
- * type-checks under both TypeScript resolutions. The shim files are generated
- * from the release matrix and carry nothing but forwarders.
+ * forwarders. The shim files are generated from the release matrix and carry
+ * nothing but forwarders; their behaviour against the packed Core is covered by
+ * `legacy-shims-tarball.test.ts`.
  */
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import {
-  importSideEffectProbe,
-  legacyShimConsumerSource,
-  legacyShimIdentityProbe,
-  runNodeCheck,
-  typecheckConsumer,
-} from '../../scripts/release/external-consumers';
 import { isShimDue, planShimCut, shimPeerRange, syncLegacyShims } from '../../scripts/release/legacy-shims';
 import { LEGACY_SHIM_LINE, LEGACY_SHIMS, releasesWithEveryCut, RUNTIME_MODULES } from '../../scripts/release/lockstep-packages';
-import { type InstalledConsumer, installHybridConsumer, repoRoot, runsAgainstBuild } from '../support/hybrid-runtime-package';
+import { repoRoot } from '../support/hybrid-runtime-package';
 
 interface ShimManifest {
   name: string;
@@ -121,60 +113,4 @@ describe('legacy shims: the release cut', () => {
     expect(isShimDue({ line: '0.20' }, '0.20.0', '0.20.1')).toBe(false);
     expect(isShimDue({ line: '0.20' }, '0.19.1', '0.19.1')).toBe(false);
   });
-});
-
-describe.runIf(runsAgainstBuild(['dist/esm/index.js']))('legacy shims: installed next to the Core tarball', () => {
-  let consumer: InstalledConsumer;
-
-  beforeAll(() => {
-    consumer = installHybridConsumer(LEGACY_SHIMS.map(shim => shim.dir));
-  }, 240_000);
-
-  afterAll(() => consumer?.dispose());
-
-  it('forwards every binding of every entry, PhysicsDebugDraw included, from one Core', () => {
-    const check = runNodeCheck(
-      consumer.dir,
-      'shim identity',
-      'shim-identity.mjs',
-      legacyShimIdentityProbe(LEGACY_SHIMS),
-      'SHIM_IDENTITY_OK',
-    );
-
-    expect(check.detail ?? 'ok').toBe('ok');
-    expect(check.ok).toBe(true);
-  });
-
-  it('creates no DOM access, timer, audio context, worker, registry entry or global on import', () => {
-    const specifiers = LEGACY_SHIMS.flatMap(shim =>
-      shim.entries.map(entry => (entry.entry === '.' ? shim.name : `${shim.name}/${entry.entry.slice(2)}`)),
-    );
-    const check = runNodeCheck(
-      consumer.dir,
-      'shim side effects',
-      'shim-side-effects.mjs',
-      importSideEffectProbe(specifiers),
-      'NO_SIDE_EFFECTS',
-    );
-
-    expect(check.detail ?? 'ok').toBe('ok');
-    expect(check.ok).toBe(true);
-  });
-
-  it.each(['bundler', 'nodenext'] as const)(
-    'type-checks a strict %s consumer of the retired names without paths or skipLibCheck',
-    resolution => {
-      const check = typecheckConsumer(
-        consumer.dir,
-        'shim types',
-        `shims-${resolution}`,
-        legacyShimConsumerSource(LEGACY_SHIMS),
-        resolution,
-      );
-
-      expect(check.detail ?? 'ok').toBe('ok');
-      expect(check.ok).toBe(true);
-    },
-    120_000,
-  );
 });

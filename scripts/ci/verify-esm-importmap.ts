@@ -15,7 +15,7 @@
  * This is the browser half of the hybrid-runtime contract the node tests
  * (test/release/hybrid-runtime-*.test.ts) check through bundling and Node ESM.
  * It needs `pnpm build` to have run; the CI build job runs it right after
- * `test:hybrid-runtime`.
+ * `test:release-dist`.
  */
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';

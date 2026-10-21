@@ -166,6 +166,12 @@ const webgpuMediaTests = ['test/rendering/browser/webgpu-*video*.test.ts'];
 const webgpuCoreTests = ['test/rendering/browser/webgpu-*.test.ts', 'test/rendering/parity/**/*.test.ts'];
 const webgpuCoreExclude = [...configDefaults.exclude, ...webgpuMediaTests];
 
+const releaseDistTests = [
+  'test/release/hybrid-runtime-exports.test.ts',
+  'test/release/hybrid-runtime-identity.test.ts',
+  'test/release/legacy-shims-tarball.test.ts',
+];
+
 // Specs that can take a Firefox process down or wedge it on Windows, so they run
 // in a browser of their own with a short deadline and cannot cost the whole Core
 // run: the device-churn regression (96 create/destroy cycles) crashes the GPU
@@ -322,7 +328,16 @@ export default defineConfig({
           // `InlineWorker` needs a real Worker and a real object URL, neither
           // of which jsdom has; browser-core-chromium runs this suite.
           'test/core/browser/**/*.test.ts',
+          ...releaseDistTests,
         ],
+      }),
+      // Packs and installs the built Core, so it runs in the CI build job right
+      // after `pnpm build`, where `EXOJS_REQUIRE_PRODUCTION_BUILD=1` turns a
+      // missing dist into a failure. Inside the parallel suite these files
+      // could only skip, and a skip verifies nothing.
+      createJsdomTestProject({
+        name: 'release-dist',
+        include: releaseDistTests,
       }),
       createJsdomTestProject({
         name: 'exojs-demo-assets',
