@@ -1,16 +1,16 @@
 {
   "title": "BeatDetector",
-  "description": "Real-time tempo + beat tracker. Splits work between the audio-rendering thread (an AudioWorklet that runs onset detection, tempogram analysis, and parallel 3/4 and 4/4 posterior estimation) and the main thread (this class - receives beats, fires Signals, handles configuration and source routing). Accepts a wide range of BeatDetectorSources - a bus, an individual Voice, a raw MediaStream, or any AudioNode - and exposes a Signal for each notable event: - BeatDetector.onBeat - every detected beat - BeatDetector.onDownbeat - first beat of each bar - BeatDetector.onBarStart - bar boundary - BeatDetector.onTempoChange - when the tracked BPM changes - BeatDetector.onBeatPredicted - look-ahead schedule notice Early beats arrive with low latency tagged `status: 'provisional'` (after a short `minSettlingMs` warm-up, default 400 ms) for snappy visual reactivity, then promote to `status: 'locked'` once the tempo grid is trustworthy - a single BeatDetector.onBeat signal carries both via BeatInfo.status. Set `emitProvisionalBeats: false` to receive only locked beats. Time-signature detection (3/4 vs 4/4) is on by default; lock to 4/4 by setting `enableTimeSignatureDetection: false`.",
+  "description": "Real-time tempo + beat tracker. Splits work between the audio-rendering thread (an AudioWorklet that runs onset detection, tempogram analysis, and three-/four-pulse accent-cycle estimation) and the main thread (this class - receives beats, fires Signals, handles configuration and source routing). Accepts a wide range of BeatDetectorSources - a bus, an individual Voice, a raw MediaStream, or any AudioNode - and exposes a Signal for each notable event: - BeatDetector.onBeat - every detected beat - BeatDetector.onDownbeat - first beat of each bar - BeatDetector.onBarStart - bar boundary - BeatDetector.onTempoChange - when the tracked BPM changes - BeatDetector.onBeatPredicted - look-ahead schedule notice Early beats arrive with low latency tagged `status: 'provisional'` (after a short `minSettlingMs` warm-up, default 400 ms) for snappy visual reactivity, then promote to `status: 'locked'` once the tempo grid is trustworthy - a single BeatDetector.onBeat signal carries both via BeatInfo.status. Set `emitProvisionalBeats: false` to receive only locked beats. Time-signature detection is on by default; ambiguous meter leaves beats available without downbeats. Use a fixed four-beat convention with `enableTimeSignatureDetection: false`.",
   "symbol": "BeatDetector",
   "kind": "class",
   "subsystem": "audio",
   "importPath": "@codexo/exojs-audio-fx",
   "tier": "stable",
-  "memberCount": 34,
+  "memberCount": 42,
   "counts": {
     "constructors": 1,
-    "methods": 2,
-    "properties": 26,
+    "methods": 4,
+    "properties": 32,
     "events": 5
   },
   "sections": [
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Real-time tempo + beat tracker. Splits work between the audio-rendering thread (an AudioWorklet that runs onset detection, tempogram analysis, and parallel 3/4 and 4/4 posterior estimation) and the main thread (this class - receives beats, fires Signals, handles configuration and source routing).",
+        "Real-time tempo + beat tracker. Splits work between the audio-rendering thread (an AudioWorklet that runs onset detection, tempogram analysis, and three-/four-pulse accent-cycle estimation) and the main thread (this class - receives beats, fires Signals, handles configuration and source routing).",
         "Accepts a wide range of BeatDetectorSources - a bus, an individual Voice, a raw MediaStream, or any AudioNode - and exposes a Signal for each notable event: - BeatDetector.onBeat - every detected beat - BeatDetector.onDownbeat - first beat of each bar - BeatDetector.onBarStart - bar boundary - BeatDetector.onTempoChange - when the tracked BPM changes - BeatDetector.onBeatPredicted - look-ahead schedule notice",
-        "Early beats arrive with low latency tagged `status: 'provisional'` (after a short `minSettlingMs` warm-up, default 400 ms) for snappy visual reactivity, then promote to `status: 'locked'` once the tempo grid is trustworthy - a single BeatDetector.onBeat signal carries both via BeatInfo.status. Set `emitProvisionalBeats: false` to receive only locked beats. Time-signature detection (3/4 vs 4/4) is on by default; lock to 4/4 by setting `enableTimeSignatureDetection: false`."
+        "Early beats arrive with low latency tagged `status: 'provisional'` (after a short `minSettlingMs` warm-up, default 400 ms) for snappy visual reactivity, then promote to `status: 'locked'` once the tempo grid is trustworthy - a single BeatDetector.onBeat signal carries both via BeatInfo.status. Set `emitProvisionalBeats: false` to receive only locked beats. Time-signature detection is on by default; ambiguous meter leaves beats available without downbeats. Use a fixed four-beat convention with `enableTimeSignatureDetection: false`."
       ],
       "importLine": "import { BeatDetector } from '@codexo/exojs-audio-fx'",
       "sourceLink": null
@@ -118,6 +118,82 @@
           "params": [],
           "returnType": "void",
           "description": ""
+        },
+        {
+          "name": "notifyDiscontinuity",
+          "signature": "notifyDiscontinuity(reason: BeatAnalysisDiscontinuity): void",
+          "signatureTokens": [
+            {
+              "text": "notifyDiscontinuity",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "reason",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BeatAnalysisDiscontinuity",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "reason",
+              "type": "BeatAnalysisDiscontinuity",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Discards current rhythm evidence immediately. EOF and explicit pause stop analysis until resume, reset or a source identity change. Loops reset phase. Manual configuration persists; the next epoch establishes a new anchor."
+        },
+        {
+          "name": "reset",
+          "signature": "reset(): void",
+          "signatureTokens": [
+            {
+              "text": "reset",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Discards rhythm history and pending predictions. Call after a seek, loop discontinuity or explicit playback interruption on the same source. Assigning a different source resets automatically."
         },
         {
           "name": "subdivisionPhase",
@@ -320,7 +396,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Display cycle length; use meterEstimate for an available estimate."
         },
         {
           "name": "barPosition",
@@ -341,7 +417,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Display counting only while meterKnown is false."
         },
         {
           "name": "barPulse",
@@ -363,6 +439,27 @@
           "params": [],
           "returnType": null,
           "description": "Like pulse but resets on downbeats and decays per barPulseHalfLife. Useful for emphasizing the first beat of each bar (e.g. brighter flash on \"1\" vs \"2,3,4\")."
+        },
+        {
+          "name": "beatConfidence",
+          "signature": "beatConfidence: number",
+          "signatureTokens": [
+            {
+              "text": "beatConfidence",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Pulse-grid confidence without the legacy meter factor, 0..1, or 0 without current support. Available during provisional tracking and uncalibrated; it does not change the legacy lock threshold or establish meter accuracy."
         },
         {
           "name": "beatPhase",
@@ -425,7 +522,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Legacy alias of confidence, not an independent measure of phase stability."
         },
         {
           "name": "justBeat",
@@ -479,7 +576,78 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The next eight beats, extrapolated from the last tracked beat at the current tempo and numbered from the bar position that follows it. Predictions, not analysed audio: a tempo change or break is not anticipated."
+          "description": "The next eight beats, extrapolated from the last tracked beat at the current tempo and numbered from the bar position that follows it. Entries may have passed since delivery. Predictions are conditional on the rhythm continuing; a tempo change or break is not anticipated. Empty after prediction expiry. Unknown or expired meter clears downbeat flags while retaining beat times."
+        },
+        {
+          "name": "manualMeter",
+          "signature": "manualMeter: ManualMeter | null",
+          "signatureTokens": [
+            {
+              "text": "manualMeter",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ManualMeter",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "meterEstimate",
+          "signature": "meterEstimate: MeterEstimate",
+          "signatureTokens": [
+            {
+              "text": "meterEstimate",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MeterEstimate",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Immutable interpretation view, including reasons and competing models while abstaining. A null selected model means no cycle; a null selected phase means no downbeat anchor. The notated denominator is never inferred."
+        },
+        {
+          "name": "meterKnown",
+          "signature": "meterKnown: boolean",
+          "signatureTokens": [
+            {
+              "text": "meterKnown",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
         },
         {
           "name": "nextBeatTime",
@@ -500,7 +668,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Next predicted future beat on the audio-context clock, or 0 without a valid prediction."
         },
         {
           "name": "nextDownbeatTime",
@@ -521,7 +689,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Next predicted future bar start on the audio-context clock, or 0 when unavailable."
         },
         {
           "name": "onsetStrength",
@@ -563,7 +731,28 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "How well recent onsets support the beat grid's phase, 0 to 1, or 0 before the grid locks. Distinct from confidence, which reports how sure the detector is of the tempo. A metronomic loop at a wrong-by-an-octave tempo reads high confidence and high phase confidence; a rubato passage at a known tempo reads high confidence and low phase confidence. Gate anything that must land exactly on the beat - a scored hit, a quantised trigger - on this rather than on confidence."
+          "description": "Current onset support for the tracked phase, 0..1 and uncalibrated."
+        },
+        {
+          "name": "predictionValidUntil",
+          "signature": "predictionValidUntil: number",
+          "signatureTokens": [
+            {
+              "text": "predictionValidUntil",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Audio-context time when the current prediction schedule must be discarded. Returns 0 without a current schedule. Later extrapolated beat times remain conditional on the rhythm continuing; this is not a delivery deadline."
         },
         {
           "name": "pulse",
@@ -639,6 +828,35 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "schedule",
+          "signature": "schedule: BeatSchedule | null",
+          "signatureTokens": [
+            {
+              "text": "schedule",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BeatSchedule",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Current immutable conditional forecast, or null after expiry/reset. Future entries are checked at access time."
         },
         {
           "name": "secondsSinceLastBeat",
@@ -755,7 +973,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Legacy display counting; the denominator is manual or defaults to the convention 4."
         }
       ],
       "paragraphs": [],
@@ -887,7 +1105,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Dispatched with the first entry of each new lookahead schedule. The detector computes a schedule once per tracked beat, so a listener hears about every upcoming beat once, not on every state update. A newer schedule supersedes the times an earlier one predicted for the same beats, and one replaced before the main thread received it is skipped. Nothing is dispatched while the detector coasts through silence."
+          "description": "Dispatched with the first future entry of each new lookahead schedule. Each revision is announced at most once; queued revisions are not coalesced. An expired schedule or one without a future entry produces no notice. A newer revision supersedes earlier predictions for the same beats."
         },
         {
           "name": "onDownbeat",

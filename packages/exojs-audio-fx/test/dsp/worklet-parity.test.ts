@@ -33,6 +33,7 @@ interface ParityProc {
   _hopSize: number;
   _sampleRate: number;
   _candidates: Array<{ bpm: number; score: number; lag: number }>;
+  _candidateCount: number;
 }
 
 /** Reconstruct the worklet's flux ring buffer as a linear oldest-first array. */
@@ -82,7 +83,7 @@ const driveAndCompare = (samples: Float32Array): void => {
     maxBpm: proc._maxBpm,
   });
 
-  expect(worklet.length).toBe(expected.length);
+  expect(proc._candidateCount).toBe(expected.length);
 
   for (let i = 0; i < expected.length; i++) {
     expect(worklet[i]!.lag).toBe(expected[i]!.lag);

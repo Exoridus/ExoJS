@@ -28,7 +28,28 @@ const simulateMessage = (detector: BeatDetector, data: unknown): void => {
   const node = getMockWorkletNode(detector);
 
   if (node?.port.onmessage) {
-    node.port.onmessage({ data });
+    const message = data as Record<string, unknown>;
+    const now = getAudioContext().currentTime;
+    node.port.onmessage({
+      data: {
+        predictionValidUntil: now + 10,
+        meterEstimate: {
+          selected: {
+            cyclePulses: message.barLength ?? 4,
+            phasePulses: ((message.barPosition as number) ?? 1) - 1,
+            pulsePeriodSeconds: 0.5,
+            denominator: null,
+          },
+          alternatives: [],
+          reason: 'available',
+          score: 1,
+          origin: 'convention',
+          evidenceThroughAudioTime: message.analysisTime ?? now,
+          validUntilAudioTime: now + 10,
+        },
+        ...message,
+      },
+    });
   }
 };
 
@@ -1311,4 +1332,4 @@ describe('BeatDetector', () => {
 });
 
 // Import for the type in the test above
-import type { UpcomingBeat } from '../src/BeatDetector';
+import type { UpcomingBeat } from '../src/beatScheduleTypes';

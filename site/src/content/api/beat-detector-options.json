@@ -6,11 +6,11 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs-audio-fx",
   "tier": "stable",
-  "memberCount": 15,
+  "memberCount": 16,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 15,
+    "properties": 16,
     "events": 0
   },
   "sections": [
@@ -124,7 +124,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When true (default), the worklet runs parallel 3/4 and 4/4 posteriors and switches active time signature via hysteresis. Set false to lock to 4/4."
+          "description": "When true (default), estimates three- or four-pulse accent cycles and leaves ambiguous meter unknown. Set false for a fixed four-beat counting convention."
         },
         {
           "name": "fastTempoWindowSec",
@@ -225,6 +225,39 @@
           "params": [],
           "returnType": null,
           "description": "Time window in seconds for BeatDetector.justBeat. Default 0.03 - true for the visual frame(s) within 30ms of a beat onset."
+        },
+        {
+          "name": "manualMeter",
+          "signature": "manualMeter?: ManualMeter | null",
+          "signatureTokens": [
+            {
+              "text": "manualMeter",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ManualMeter",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Overrides automatic meter with explicit counting context; changing it resets analysis."
         },
         {
           "name": "maxBpm",

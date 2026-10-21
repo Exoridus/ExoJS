@@ -34,6 +34,7 @@ export interface BeatMessage {
   beatPhase: number;
   energy: number;
   isDownbeat: boolean;
+  meterKnown?: boolean;
   beatInBar: number;
   /** Trust level: early reactive beat vs settled, trustworthy beat. */
   status: 'provisional' | 'locked';
@@ -179,10 +180,11 @@ export const runDetector = (
     processorOptions?: Record<string, unknown>;
     blockSize?: number;
     startFrame?: number;
+    sampleRate?: number;
     prepare?: (processor: Record<string, unknown>) => void;
   } = {},
 ): { messages: WorkletMessage[] } => {
-  const { blockSize = 128, processorOptions = {}, startFrame = 0, prepare } = options;
+  const { blockSize = 128, processorOptions = {}, startFrame = 0, sampleRate: rate = SAMPLE_RATE, prepare } = options;
 
   // Build (or reuse cached) processor class
   if (!_processorCtor) {
@@ -195,7 +197,7 @@ export const runDetector = (
   const g = globalThis as Record<string, unknown>;
   const prevSR = g['sampleRate'];
   const prevCF = g['currentFrame'];
-  g['sampleRate'] = SAMPLE_RATE;
+  g['sampleRate'] = rate;
   g['currentFrame'] = startFrame;
 
   const messages: WorkletMessage[] = [];
@@ -214,7 +216,7 @@ export const runDetector = (
   const n = samples.length;
 
   for (let off = 0; off < n; off += blockSize) {
-    blockStartSec = off / SAMPLE_RATE;
+    blockStartSec = off / rate;
     g['currentFrame'] = startFrame + off;
     const end = Math.min(off + blockSize, n);
     proc.process([[samples.subarray(off, end)]], [], {});
