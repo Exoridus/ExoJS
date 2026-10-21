@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { INDEPENDENT_PACKAGES, LOCKSTEP_PACKAGES } from '../../scripts/release/lockstep-packages';
+
+const published = LOCKSTEP_PACKAGES.length + INDEPENDENT_PACKAGES.length;
+// Two checks per published package: `pnpm pack --dry-run` and publint.
+const checks = published * 2;
+
 const state = vi.hoisted(() => ({
   run: vi.fn(),
   create: vi.fn(),
@@ -36,7 +42,7 @@ describe('publish verification output', () => {
   it.each(['normal', 'compact'])('summarizes successful packages in %s mode and still runs every check', async mode => {
     const { log, stdout, stderr } = setup();
     await load(mode);
-    expect(state.run).toHaveBeenCalledTimes(32);
+    expect(state.run).toHaveBeenCalledTimes(checks);
     expect(state.run.mock.calls[0]?.[0]).toMatchObject({ command: 'pnpm', args: ['pack', '--dry-run'] });
     expect(state.run.mock.calls[1]?.[0]).toMatchObject({ command: 'pnpm', args: ['dlx', 'publint@0.3.21', '--strict', '.'] });
     expect(log.mock.calls.flat().join('\n')).toContain('@codexo/exojs: pack OK, publint OK');
@@ -47,7 +53,7 @@ describe('publish verification output', () => {
   it('keeps silent successes silent', async () => {
     const { log, stdout, stderr } = setup();
     await load('silent');
-    expect(state.run).toHaveBeenCalledTimes(32);
+    expect(state.run).toHaveBeenCalledTimes(checks);
     expect(log).not.toHaveBeenCalled();
     expect(stdout).not.toHaveBeenCalled();
     expect(stderr).not.toHaveBeenCalled();
@@ -75,9 +81,9 @@ describe('publish verification output', () => {
       throw new Error('exit 1');
     });
     await expect(load('silent')).rejects.toThrow('exit 1');
-    expect(state.run).toHaveBeenCalledTimes(failingCheck === 0 ? 31 : 32);
+    expect(state.run).toHaveBeenCalledTimes(failingCheck === 0 ? checks - 1 : checks);
     expect(stdout).toHaveBeenCalledWith(failingCheck === 0 ? 'full pack diagnostic\n' : 'full publint diagnostic\n');
     expect(stderr).toHaveBeenCalledWith(failingCheck === 0 ? 'pack error\n' : 'publint error\n');
-    expect(error.mock.calls.flat().join('\n')).toContain('1 of 16 published package(s) failed.');
+    expect(error.mock.calls.flat().join('\n')).toContain(`1 of ${published} published package(s) failed.`);
   });
 });

@@ -58,16 +58,17 @@ describe('release coherence', () => {
     });
   }
 
-  // exojs-tiled and exojs-ldtk both render tiles via exojs-tilemap's runtime
-  // classes, but consumers only get one copy of those classes if the host app
-  // supplies exojs-tilemap itself - hence a peerDependency (not a runtime
-  // `dependencies` entry) backed by a workspace:* devDependency for local dev/test.
+  // exojs-tiled and exojs-ldtk render tiles through the tilemap runtime, which
+  // ships inside Core as `@codexo/exojs/tilemap`. Their Core peer is therefore
+  // the only engine dependency they may declare: a dependency on the retired
+  // tilemap package would install a second, separate tilemap implementation.
   for (const consumer of ['exojs-tiled', 'exojs-ldtk']) {
-    it(`@codexo/${consumer} declares @codexo/exojs-tilemap as a peerDependency`, () => {
+    it(`@codexo/${consumer} reaches the tilemap runtime through its Core peer only`, () => {
       const manifest = readManifest(resolve(packagesDir, consumer, 'package.json'));
-      expect(manifest.peerDependencies?.['@codexo/exojs-tilemap']).toBeDefined();
-      expect(manifest.devDependencies?.['@codexo/exojs-tilemap']).toBe('workspace:*');
-      expect(manifest.dependencies?.['@codexo/exojs-tilemap']).toBeUndefined();
+      const declared = Object.keys({ ...manifest.dependencies, ...manifest.devDependencies, ...manifest.peerDependencies });
+
+      expect(manifest.peerDependencies?.['@codexo/exojs']).toBeDefined();
+      expect(declared.filter(name => name.startsWith('@codexo/exojs-') && name !== '@codexo/exojs-config')).toEqual([]);
     });
   }
 });

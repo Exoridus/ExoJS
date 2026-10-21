@@ -16,6 +16,8 @@
  *     and never rebuilds.
  *  7. PUBLISH_ORDER equals the canonical `LOCKSTEP_PACKAGES` order (Core first),
  *     and `officialPackages()` (what `release:prepare` actually packs) covers it exactly.
+ *  8. Every runtime module is a private source package that Core exports as
+ *     `@codexo/exojs/<subpath>`, and is neither built nor published on its own.
  *
  * Read-only: safe to run in dry-run/CI. Exits non-zero on any inconsistency.
  *
@@ -25,7 +27,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { EXTENSION_PACKAGES, INDEPENDENT_PACKAGES, LOCKSTEP_PACKAGES } from './release/lockstep-packages.ts';
+import { EXTENSION_PACKAGES, INDEPENDENT_PACKAGES, LOCKSTEP_PACKAGES, RUNTIME_MODULES } from './release/lockstep-packages.ts';
 import { PUBLISH_ORDER } from './release/manifest.ts';
 import { officialPackages } from './release/prepare.ts';
 
@@ -193,6 +195,40 @@ for (const pkg of packed) {
 
   if (manifestName !== pkg.name) {
     problems.push(`officialPackages() maps ${pkg.name} to a directory whose package.json is "${manifestName}" (${pkg.dir}).`);
+  }
+}
+
+// 8. Runtime modules ship inside the Core tarball and nowhere else: each is a
+// private source package, exported by Core under its subpath, and neither built
+// nor published on its own.
+const coreExports = (JSON.parse(readFileSync(resolve(rootDir, 'package.json'), 'utf8')) as { exports: Record<string, unknown> }).exports;
+
+for (const module of RUNTIME_MODULES) {
+  const manifest = JSON.parse(readFileSync(resolve(rootDir, module.dir, 'package.json'), 'utf8')) as {
+    name: string;
+    private?: boolean;
+    exports?: unknown;
+    scripts?: Record<string, string>;
+  };
+  const label = `runtime module ${module.subpath}`;
+  const issues = [
+    manifest.name === module.name ? undefined : `is named "${manifest.name}", expected "${module.name}"`,
+    manifest.private === true ? undefined : 'must be private',
+    manifest.exports === undefined ? undefined : 'must not declare exports of its own',
+    manifest.scripts?.['build'] === undefined ? undefined : 'must not have a build script (Core builds it)',
+    coreExports[`./${module.subpath}`] === undefined ? `is missing from the Core exports as "./${module.subpath}"` : undefined,
+    (PUBLISH_ORDER as readonly string[]).includes(module.name) || (PUBLISH_ORDER as readonly string[]).includes(module.legacyName)
+      ? 'must not be in PUBLISH_ORDER'
+      : undefined,
+    workflow.includes(`--filter ${module.name} build`) || workflow.includes(`--filter ${module.legacyName} build`)
+      ? 'must not be built on its own in release.yml'
+      : undefined,
+  ].filter((issue): issue is string => issue !== undefined);
+
+  if (issues.length === 0) {
+    ok.push(`${label} ships only as @codexo/exojs/${module.subpath}`);
+  } else {
+    problems.push(...issues.map(issue => `${label} (${module.dir}) ${issue}`));
   }
 }
 

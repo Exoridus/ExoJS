@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { verifyCliPackage, verifyConfigPackage, verifyRuntimePackage, verifyToolingPackage } from '@codexo/exojs-config/package-policy';
 
-import { LOCKSTEP_PACKAGES, TOOLING_PACKAGES } from './release/lockstep-packages.ts';
+import { isEngineExtension, LOCKSTEP_PACKAGES, TOOLING_PACKAGES } from './release/lockstep-packages.ts';
 
 // The verifier is plain JavaScript (see `scripts/untyped-config-modules.d.ts`),
 // so its result shape is named here - this script reads nothing else from it.
@@ -25,7 +25,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const targets = LOCKSTEP_PACKAGES.map(p => ({
   dir: p.dir === '.' ? root : resolve(root, p.dir),
   name: p.name,
-  isExtension: p.isExtension,
+  isExtension: isEngineExtension(p),
   profile: 'profile' in p ? p.profile : ('runtime' as const),
 }));
 

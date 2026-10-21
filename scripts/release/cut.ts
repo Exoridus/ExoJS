@@ -36,7 +36,7 @@ import { fileURLToPath } from 'node:url';
 
 import { CHANGELOG_PATH, dateChangelogFile, hasCuttableChangelog, UNRELEASED_HEADING } from './changelog.ts';
 import { generateChangelog } from './generate-changelog.ts';
-import { LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
+import { isEngineExtension, LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
 import {
   EVIDENCE_PATH,
   type EvidenceDocument,
@@ -54,7 +54,7 @@ const LOCKSTEP_DIRS: Array<{ name: string; dir: string }> = LOCKSTEP_PACKAGES.ma
 // `LOCKSTEP_PACKAGES` is `as const`, so mapping its names yields a literal
 // union and `Set.has` would accept only those literals - but the caller tests
 // names read back from a package manifest, which are plain strings.
-const EXTENSION_NAMES: ReadonlySet<string> = new Set(LOCKSTEP_PACKAGES.filter(p => p.isExtension).map(p => p.name));
+const EXTENSION_NAMES: ReadonlySet<string> = new Set(LOCKSTEP_PACKAGES.filter(isEngineExtension).map(p => p.name));
 const LOCKSTEP_NAMES: ReadonlySet<string> = new Set(LOCKSTEP_PACKAGES.map(p => p.name));
 
 const log = (msg: string): void => {

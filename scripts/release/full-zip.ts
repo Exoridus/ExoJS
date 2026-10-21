@@ -19,7 +19,7 @@ import { basename, dirname, join, relative, resolve } from 'node:path';
 import { ModuleKind, ScriptTarget, transpileModule } from 'typescript';
 
 import type { CommandRunner } from './command-runner.ts';
-import { LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
+import { isEngineExtension, LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
 import { type ReleaseManifest, renderChecksums, serializeManifest, sha256File } from './manifest.ts';
 
 export interface AssembleOptions {
@@ -249,7 +249,7 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
   // something they run once to write a project. It has no `dist/esm` to vendor,
   // and requiring one would fail the release on a shape it never had.
   for (const pkg of LOCKSTEP_PACKAGES) {
-    if (!pkg.isExtension && pkg.dir !== '.') {
+    if (!isEngineExtension(pkg) && pkg.dir !== '.') {
       continue;
     }
 
@@ -263,7 +263,7 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
     const vendorDir = join(treeDir, 'vendor', vendorDirFor(pkg.name));
     cpSync(from, join(vendorDir, 'esm'), { recursive: true });
 
-    if (pkg.isExtension) {
+    if (isEngineExtension(pkg)) {
       continue;
     }
 

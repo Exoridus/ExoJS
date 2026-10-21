@@ -134,7 +134,7 @@ describe('publishRelease — partial failure stops the chain', () => {
       return ok();
     });
 
-  it('Core fails → Particles/Tilemap/Tiled never attempted, ok=false', () => {
+  it('Core fails → the adapters are never attempted, ok=false', () => {
     const runner = failOn('@codexo/exojs');
     const report = publishRelease(manifest, liveOptions(), runner, resolveArtifact);
 
@@ -148,8 +148,8 @@ describe('publishRelease — partial failure stops the chain', () => {
     expect(publishCalls(runner.invocations)).toHaveLength(1);
   });
 
-  it('Particles fails → Core published, Tilemap/Tiled never attempted, ok=false', () => {
-    const runner = failOn('@codexo/exojs-particles');
+  it('Tiled fails → Core published, Aseprite/LDtk never attempted, ok=false', () => {
+    const runner = failOn('@codexo/exojs-tiled');
     const report = publishRelease(manifest, liveOptions(), runner, resolveArtifact);
 
     expect(report.ok).toBe(false);
@@ -160,12 +160,12 @@ describe('publishRelease — partial failure stops the chain', () => {
     expect(distTagCalls(runner.invocations)).toHaveLength(0);
   });
 
-  it('Tiled fails → Core+Particles+Tilemap published but chain stops, ok=false', () => {
-    const runner = failOn('@codexo/exojs-tiled');
+  it('LDtk fails → Core+Tiled+Aseprite published but chain stops, ok=false', () => {
+    const runner = failOn('@codexo/exojs-ldtk');
     const report = publishRelease(manifest, liveOptions(), runner, resolveArtifact);
 
     expect(report.ok).toBe(false);
-    // Tiled is index 3 (Core, Particles, Tilemap published; Tiled fails; rest never attempted).
+    // LDtk is index 3 (Core, Tiled, Aseprite published; LDtk fails; rest never attempted).
     const expected = PUBLISH_ORDER.map((_, i) => (i < 3 ? 'published' : i === 3 ? 'failed' : 'not-attempted'));
     expect(report.packages.map(p => p.publish)).toEqual(expected);
     expect(distTagCalls(runner.invocations)).toHaveLength(0);

@@ -43,6 +43,8 @@ export interface LocalPolicy {
 
 interface PackageManifest {
   name: string;
+  /** Directory under `packages/`, which is also the package's Vitest project name. */
+  directory: string;
   scripts?: Record<string, string>;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
@@ -54,14 +56,59 @@ const packages = (): PackageManifest[] =>
     .filter(entry => entry.isDirectory())
     .flatMap(entry => {
       try {
-        return [JSON.parse(readFileSync(resolve('packages', entry.name, 'package.json'), 'utf8')) as PackageManifest];
+        const manifest = JSON.parse(readFileSync(resolve('packages', entry.name, 'package.json'), 'utf8')) as Omit<
+          PackageManifest,
+          'directory'
+        >;
+
+        return [{ ...manifest, directory: entry.name }];
       } catch {
         return [];
       }
     });
 
+const RUNTIME_MODULE_PREFIX = '@codexo/exojs-module-';
+
+const listSources = (dir: string): string[] =>
+  existsSync(dir)
+    ? readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+        const path = resolve(dir, entry.name);
+
+        if (entry.isDirectory()) {
+          return listSources(path);
+        }
+
+        return /\.tsx?$/.test(entry.name) ? [path] : [];
+      })
+    : [];
+
+/**
+ * The Core subpaths of runtime modules a package imports. A runtime module is
+ * reached through `@codexo/exojs/<subpath>` rather than through a dependency
+ * declaration, so the manifest alone cannot say who depends on it.
+ */
+const importedModuleSubpaths = (manifest: PackageManifest, subpaths: readonly string[]): string[] => {
+  const text = ['src', 'test']
+    .flatMap(dir => listSources(resolve('packages', manifest.directory, dir)))
+    .map(file => readFileSync(file, 'utf8'));
+
+  return subpaths.filter(subpath => text.some(source => source.includes(`'@codexo/exojs/${subpath}'`)));
+};
+
 const affectedPackages = (name: string): PackageManifest[] => {
   const manifests = packages();
+  const subpaths = manifests
+    .filter(manifest => manifest.name.startsWith(RUNTIME_MODULE_PREFIX))
+    .map(manifest => manifest.name.slice(RUNTIME_MODULE_PREFIX.length));
+  const edges = new Map(
+    manifests.map(manifest => [
+      manifest.name,
+      [
+        ...Object.keys({ ...manifest.dependencies, ...manifest.devDependencies, ...manifest.peerDependencies }),
+        ...importedModuleSubpaths(manifest, subpaths).map(subpath => `${RUNTIME_MODULE_PREFIX}${subpath}`),
+      ],
+    ]),
+  );
   const selected = new Set([name]);
   let changed = true;
 
@@ -73,9 +120,7 @@ const affectedPackages = (name: string): PackageManifest[] => {
         continue;
       }
 
-      const dependencies = { ...manifest.dependencies, ...manifest.devDependencies, ...manifest.peerDependencies };
-
-      if (Object.keys(dependencies).some(dependency => selected.has(dependency))) {
+      if ((edges.get(manifest.name) ?? []).some(dependency => selected.has(dependency))) {
         selected.add(manifest.name);
         changed = true;
       }
@@ -86,7 +131,7 @@ const affectedPackages = (name: string): PackageManifest[] => {
 };
 
 const hasUnitProject = (manifest: PackageManifest): boolean =>
-  manifest.name.startsWith('@codexo/exojs-') && existsSync(resolve('packages', manifest.name.slice('@codexo/'.length), 'test'));
+  manifest.directory.startsWith('exojs-') && existsSync(resolve('packages', manifest.directory, 'test'));
 
 const isGlobal = (file: string): boolean =>
   file === 'package.json' ||
@@ -157,7 +202,7 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
 
         for (const manifest of packages()) {
           if (hasUnitProject(manifest)) {
-            projects.add(manifest.name.slice('@codexo/'.length));
+            projects.add(manifest.directory);
           }
         }
       }
@@ -199,7 +244,7 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
         }
 
         if (hasUnitProject(affected)) {
-          projects.add(affected.name.slice('@codexo/'.length));
+          projects.add(affected.directory);
         }
       }
 
