@@ -32,7 +32,7 @@ class CursorAttractorParticlesScene extends Scene {
         lifetime: new Constant(2.6),
         position: new Constant(new Vector(0, 0)),
         velocity: new ConeDirection(0, Math.PI, 10, 100),
-        scale: new Constant(new Vector(0.18, 0.18)),
+        scale: new Constant(new Vector(0.05, 0.05)),
       }),
     );
     // Both force fields target the same cursor point. We swap behaviour by

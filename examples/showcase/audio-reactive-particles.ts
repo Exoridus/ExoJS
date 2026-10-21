@@ -59,7 +59,7 @@ class AudioReactiveParticlesScene extends Scene {
       lifetime: new Constant(0.9),
       position: new Constant(new Vector(0, 0)),
       velocity: this.cone,
-      scale: new Constant(new Vector(0.22, 0.22)),
+      scale: new Constant(new Vector(0.06, 0.06)),
       tint: new Constant(colors[0]),
     });
     this.ps.addSpawnModule(this.spawn);
