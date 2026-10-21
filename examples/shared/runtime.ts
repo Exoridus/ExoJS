@@ -313,6 +313,30 @@ export const mountControls = (options: MountControlsOptions = {}): ControlsHandl
   };
 };
 
+const CONTROL_CLASS = 'exo-example-control';
+
+// Hover, pressed and keyboard-focus states need pseudo-classes, which inline
+// styles cannot express, so one shared rule set is injected on first use.
+const ensureControlStyles = (): void => {
+  if (document.getElementById(`${CONTROL_CLASS}-styles`)) {
+    return;
+  }
+
+  const style = document.createElement('style');
+
+  style.id = `${CONTROL_CLASS}-styles`;
+  style.textContent = `
+.${CONTROL_CLASS} { transition: filter 120ms ease; }
+.${CONTROL_CLASS}:hover { filter: brightness(1.3); }
+.${CONTROL_CLASS}:active { filter: brightness(1.55); }
+.${CONTROL_CLASS}:focus-visible { outline: 2px solid #9fd0ff; outline-offset: 2px; }
+.${CONTROL_CLASS}:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
+input[type='range'].${CONTROL_CLASS} { accent-color: #7fb8ff; }
+@media (prefers-reduced-motion: reduce) { .${CONTROL_CLASS} { transition: none; } }
+`;
+  document.head.append(style);
+};
+
 const createControlRowContainer = (): HTMLElement => {
   const row = document.createElement('div');
 
@@ -341,8 +365,15 @@ export const mountControlPanel = (options: MountControlPanelOptions = {}): Contr
 
   const panel = createPanel(corner);
 
+  ensureControlStyles();
   panel.style.pointerEvents = 'auto';
   panel.style.minWidth = '230px';
+
+  panel.setAttribute('role', 'group');
+
+  if (title) {
+    panel.setAttribute('aria-label', title);
+  }
 
   if (title) {
     const titleEl = document.createElement('strong');
@@ -367,6 +398,8 @@ export const mountControlPanel = (options: MountControlPanelOptions = {}): Contr
       const readout = document.createElement('span');
 
       input.type = 'range';
+      input.className = CONTROL_CLASS;
+      input.setAttribute('aria-label', label);
       input.min = String(min);
       input.max = String(max);
       input.step = String(step);
@@ -410,6 +443,9 @@ export const mountControlPanel = (options: MountControlPanelOptions = {}): Contr
 
       let state = value;
 
+      button.type = 'button';
+      button.className = CONTROL_CLASS;
+      button.setAttribute('aria-label', label);
       Object.assign(button.style, {
         flex: '1 1 auto',
         padding: '5px 10px',
@@ -423,6 +459,7 @@ export const mountControlPanel = (options: MountControlPanelOptions = {}): Contr
 
       const render = () => {
         button.textContent = state ? 'On' : 'Off';
+        button.setAttribute('aria-pressed', String(state));
         button.style.background = state ? 'rgba(120, 220, 160, 0.22)' : 'rgba(154, 193, 255, 0.12)';
       };
 
@@ -453,6 +490,8 @@ export const mountControlPanel = (options: MountControlPanelOptions = {}): Contr
       let current = index;
 
       for (const button of [prev, next]) {
+        button.type = 'button';
+        button.className = CONTROL_CLASS;
         Object.assign(button.style, {
           flex: '0 0 auto',
           width: '26px',
@@ -468,6 +507,9 @@ export const mountControlPanel = (options: MountControlPanelOptions = {}): Contr
 
       prev.textContent = '‹';
       next.textContent = '›';
+      prev.setAttribute('aria-label', `Previous ${label}`);
+      next.setAttribute('aria-label', `Next ${label}`);
+      readout.setAttribute('aria-live', 'polite');
 
       Object.assign(readout.style, { flex: '1 1 auto', textAlign: 'center', color: '#9fd0ff', font: `600 12px ${FONT_STACK}` });
 
@@ -499,6 +541,8 @@ export const mountControlPanel = (options: MountControlPanelOptions = {}): Contr
     addButton({ label, onClick }) {
       const button = document.createElement('button');
 
+      button.type = 'button';
+      button.className = CONTROL_CLASS;
       button.textContent = label;
 
       Object.assign(button.style, {
