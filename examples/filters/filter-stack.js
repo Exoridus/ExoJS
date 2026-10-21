@@ -1,7 +1,8 @@
 // Auto-generated from filter-stack.ts - edit the .ts source, not this file.
 import { Application, BlurFilter, Color, ColorMatrixFilter, FixedResolutionCanvasSizing, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
-const PRIMARY_RAMP = assets.technical.color.primaryRamp;
+const PRIMARY_RAMP = assets.primaryRamp;
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; in vec2 vUv; out vec4 fragColor;
 void main(){ vec4 c=texture(uTexture,vUv); fragColor=vec4(c.rgb*vec3(1.0,0.9,1.2),c.a);} `;

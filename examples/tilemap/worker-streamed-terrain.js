@@ -1,7 +1,6 @@
 // Auto-generated from worker-streamed-terrain.ts - edit the .ts source, not this file.
 import {
   Application,
-  Asset,
   Color,
   Container,
   FixedResolutionCanvasSizing,
@@ -21,6 +20,7 @@ import {
   tilemapExtension,
   TileSet,
 } from '@codexo/exojs/tilemap';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 import { fbm } from '@examples/terrain-noise';
 const terrainWorkerSource =
@@ -81,7 +81,7 @@ class WorkerStreamedTerrainScene extends Scene {
   streamingMs = 0;
   hud;
   async load() {
-    const tilesTexture = await this.loader.load(Asset.type('texture', assets.demo.tilesets.map.image));
+    const tilesTexture = await this.loader.load(assets.mapPackTilesheet);
     this.tileset = new TileSet({
       name: 'biomes',
       texture: new TextureRegion(tilesTexture, { x: 0, y: 0, width: tilesTexture.width, height: tilesTexture.height }),
@@ -102,8 +102,8 @@ class WorkerStreamedTerrainScene extends Scene {
     });
     this.mapView = map.createView({ bands: { terrain: ['terrain'] } });
     const characters = new Spritesheet(
-      await this.loader.load(Asset.type('texture', assets.demo.spritesheets.platformerCharacters.image)),
-      await this.loader.load(Asset.type('json', assets.demo.spritesheets.platformerCharacters.data)),
+      await this.loader.load(assets.platformerCharactersImage),
+      await this.loader.load(assets.platformerCharactersAtlas),
     );
     this.explorer = characters.getFrameSprite('character_green_front').setAnchor(0.5);
     this.explorer.setPosition(0, 0);

@@ -1,4 +1,5 @@
 import { Application, Asset, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class WebFontsScene extends Scene {
   private default!: Text;
@@ -6,7 +7,7 @@ class WebFontsScene extends Scene {
 
   override async load(): Promise<void> {
     const app = this.app;
-    await this.loader.load(Asset.type('font', 'font/Kenney Future.ttf', { family: 'Kenney Future' }));
+    await this.loader.load(Asset.type('font', assets.fontKenneyFuture.source, { family: 'Kenney Future' }));
 
     const { width, height } = app;
 
@@ -33,9 +34,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(WebFontsScene);

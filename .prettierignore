@@ -6,7 +6,6 @@ coverage
 examples/assets/**
 
 # Generated Monaco type shims; their exact shape is pinned by a drift test.
-examples/shared/assets-global.d.ts
 examples/shared/runtime.d.ts
 
 # Generated demo catalog sources and manifest; scripts/generate.ts owns their

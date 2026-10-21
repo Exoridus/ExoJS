@@ -1,13 +1,5 @@
-import {
-  Application,
-  Asset,
-  BitmapText,
-  type BmFont,
-  Color,
-  FixedResolutionCanvasSizing,
-  type RenderingContext,
-  Scene,
-} from '@codexo/exojs';
+import { Application, BitmapText, type BmFont, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class BitmapTextBasicScene extends Scene {
   private font!: BmFont;
@@ -19,7 +11,7 @@ class BitmapTextBasicScene extends Scene {
 
   override async load(): Promise<void> {
     const app = this.app;
-    this.font = await this.loader.load(Asset.type('bmFont', assets.demo.fonts.kenneyBlocksFnt));
+    this.font = await this.loader.load(assets.fontKenneyBlocksFnt);
 
     const font = this.font;
     const { width, height } = app;

@@ -2,7 +2,6 @@
 import {
   ActionMap,
   Application,
-  Asset,
   BehaviorComponent,
   Color,
   Container,
@@ -19,6 +18,7 @@ import { NavigationAgentComponent, TileNavigationSpace, WaypointGraph } from '@c
 import { CircleShape, KinematicMovementComponent, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs/physics';
 import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileSet } from '@codexo/exojs/tilemap';
 import { TileColliderStreamer } from '@codexo/exojs/tilemap-physics';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 // Navigation, movement and collision over one tile map, with no package
 // depending on another:
@@ -121,7 +121,7 @@ class TilemapNavigationScene extends Scene {
   });
   hud;
   async load() {
-    const texture = await this.loader.load(Asset.type('texture', assets.demo.tilesets.map.image));
+    const texture = await this.loader.load(assets.mapPackTilesheet);
     const tileset = new TileSet({
       name: 'map',
       texture: new TextureRegion(texture, { x: 0, y: 0, width: texture.width, height: texture.height }),

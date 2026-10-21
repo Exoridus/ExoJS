@@ -1,6 +1,7 @@
 // Auto-generated from ducking.ts - edit the .ts source, not this file.
-import { Application, Asset, AudioBus, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, AudioBus, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser, DuckingEffect } from '@codexo/exojs/audio-fx';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 class DuckingScene extends Scene {
   music;
@@ -31,12 +32,12 @@ class DuckingScene extends Scene {
     this.musicBarY = height * 0.42;
     this.voiceBarY = height * 0.55;
     // AudioStream has no seamless adapter - await it explicitly.
-    const music = await this.loader.load(Asset.type('music', assets.demo.audio.musicLoop));
+    const music = await this.loader.load(assets.musicLoopMain);
     this.music = music;
     // Path-only get() infers Sound from the .ogg extension - sidesteps a
     // compile-time overload ambiguity between Sound and the Json token form
     // when passing the Sound token explicitly.
-    this.voice = this.loader.get(assets.demo.voice.congratulations);
+    this.voice = this.loader.get(assets.voiceCongratulations);
     // Route the voice-over onto its own bus so it can drive the sidechain.
     this.voiceBus = new AudioBus('voice-over', { parent: app.audio.master });
     app.audio.registerBus(this.voiceBus);

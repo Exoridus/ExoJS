@@ -10,9 +10,10 @@ import {
   type Seconds,
   Sprite,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
-const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
+const ALPHA_RINGS = assets.alphaGradientRings;
 
 // Blending runs in linear light on premultiplied colour, so a mode reads
 // brighter and less muddy than the same equation on encoded values would. The
@@ -51,23 +52,14 @@ class BlendmodesScene extends Scene {
   private ticker = 0;
   private hud!: ReturnType<typeof mountControls>;
 
-  // Note: passing `options` as a 3rd argument to `loader.get(...)` or
-  // `loader.load(Asset.type('texture', ...))` alongside a non-Json type currently mis-resolves
-  // the overload (falls through to the `Json` generic and types the result as
-  // `unknown`) - see the flagged deviation in the migration report. `load()`
-  // is awaited here purely to seed the fetch with `scaleMode: Nearest`; its
-  // return value is intentionally unused. The subsequent 2-argument `get()`
-  // calls for the same sources are unaffected and stay seamless.
   override async load(): Promise<void> {
     const app = this.app;
     const { width, height } = app;
 
+    // Nearest sampling keeps the ring edges and the ship's pixels crisp at 5x.
     const textureOptions = { scaleMode: ScaleModes.Nearest };
-    await this.loader.load(Asset.type('texture', ALPHA_RINGS, { textureOptions }));
-    await this.loader.load(Asset.type('texture', assets.demo.textures.shipA, { textureOptions }));
-
-    const backgroundTexture = this.loader.get(ALPHA_RINGS);
-    const shipTexture = this.loader.get(assets.demo.textures.shipA);
+    const backgroundTexture = await this.loader.load(Asset.type('texture', ALPHA_RINGS.source, { textureOptions }));
+    const shipTexture = await this.loader.load(Asset.type('texture', assets.ship.source, { textureOptions }));
 
     this.background = new Sprite(backgroundTexture);
     this.background.setPosition(width / 2, height / 2);

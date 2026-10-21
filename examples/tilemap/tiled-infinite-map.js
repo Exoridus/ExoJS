@@ -1,6 +1,7 @@
 // Auto-generated from tiled-infinite-map.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Keyboard, Scene, View } from '@codexo/exojs';
 import { ChunkStreamer, TileMapNode } from '@codexo/exojs/tilemap';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { tiledExtension } from '@codexo/exojs-tiled';
 import { mountControls } from '@examples/runtime';
 // A hand-authored Tiled `.tmj` infinite map, streamed the same way the
@@ -29,7 +30,7 @@ class TiledInfiniteMapScene extends Scene {
   hudTimer = 0;
   hud;
   async load() {
-    const source = await this.loader.load(Asset.type('tiledSource', 'json/maps/drift-fields.tmj'));
+    const source = await this.loader.load(Asset.type('tiledSource', assets.driftFieldsMap.source));
     const runtimeMap = source.toTileMap();
     this.mapNode = new TileMapNode(runtimeMap);
     const ground = runtimeMap.getTileLayer('Ground');
@@ -116,8 +117,5 @@ const app = new Application({
   // tiledExtension depends on tilemapExtension, so registering it alone is
   // enough for both loading (.tmj) and rendering (TileMapNode).
   extensions: [tiledExtension],
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(TiledInfiniteMapScene);

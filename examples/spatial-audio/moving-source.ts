@@ -1,5 +1,6 @@
 import type { RenderingContext, Spatializable, Voice } from '@codexo/exojs';
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, type Seconds, Sound, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 // Orbit + attenuation tuned to the wide canvas so the readout reflects what you
@@ -38,7 +39,7 @@ class MovingSourceScene extends Scene {
     // audible while there is sustained signal to pan/attenuate. The derived
     // Sound below reads .audioBuffer synchronously, so await load() instead
     // of the deferred get() (whose placeholder audioBuffer is null until fill).
-    const source = await this.loader.load(Asset.type('sound', 'audio/demo-loop-main.ogg'));
+    const source = await this.loader.load(Asset.type('sound', assets.musicLoopMain.source));
     this.sound = new Sound(source.audioBuffer);
     this.listener = { x: width / 2, y: height / 2 };
     app.audio.listener.target = this.listener;
@@ -140,9 +141,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(MovingSourceScene);

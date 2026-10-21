@@ -1,6 +1,7 @@
 // Auto-generated from level-loading-and-ownership.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Text } from '@codexo/exojs';
 import { MapLevelSide, MapWorld, MapWorldRuntime } from '@codexo/exojs/tilemap';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const ROOM_SIZE = { x: 0, y: 0, width: 1280, height: 768 };
@@ -28,8 +29,8 @@ const world = new MapWorld({
   ],
 });
 const roomPath = {
-  harbor: 'json/maps/harbor-plaza.tmj',
-  workshop: 'json/maps/ownership-workshop.tmj',
+  harbor: assets.harborPlazaMap.source,
+  workshop: assets.ownershipWorkshopMap.source,
 };
 const waitForTransition = signal =>
   new Promise((resolve, reject) => {
@@ -170,6 +171,5 @@ const app = new Application({
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(28, 36, 46),
   extensions: [tiledExtension],
-  loader: { basePath: 'assets/' },
 });
 await app.start(LevelOwnershipScene);

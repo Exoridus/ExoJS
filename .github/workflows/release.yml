@@ -95,6 +95,8 @@ jobs:
           pnpm --filter @codexo/exojs-ldtk build
           pnpm --filter @codexo/exojs-react build
           pnpm --filter create-exo-app build
+          # Not a lockstep package, but the site serves its catalog and media.
+          pnpm --filter @codexo/exojs-demo-assets build
           pnpm site:build
 
       - name: Verify the Stable site candidate

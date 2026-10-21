@@ -10,6 +10,7 @@ import {
   Range,
   RateSpawn,
 } from '@codexo/exojs/particles';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Illustrative loads for the two GPU backends; measure on target hardware.
 const budgets = {
@@ -30,7 +31,7 @@ class GpuParticlesScene extends Scene {
     const { capacity, rate } = isWebGpu ? budgets.webgpu : budgets.webgl2;
     this.capacity = capacity;
     this.spawnRate = new Constant(rate);
-    this.system = new ParticleSystem(this.loader.get('image/particle-light.png'), { capacity });
+    this.system = new ParticleSystem(this.loader.get(assets.particleLight), { capacity });
     this.systems.add(this.system);
     this.system.setPosition(width / 2, height - 80);
     this.system.addSpawnModule(
@@ -81,9 +82,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
   extensions: [particlesExtension],
 });
 await app.start(GpuParticlesScene);

@@ -1,6 +1,7 @@
 // Auto-generated from custom-wgsl-module.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Scene, Vector } from '@codexo/exojs';
 import { Constant, particlesExtension, ParticleSystem, RateSpawn, UpdateModule } from '@codexo/exojs/particles';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 /** Adds horizontal sway after integration, using the same operation on every backend. */
 class SwayModule extends UpdateModule {
@@ -45,7 +46,7 @@ class CustomWgslModuleScene extends Scene {
   init() {
     const app = this.app;
     const { width, height } = app;
-    this.system = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 26000 });
+    this.system = new ParticleSystem(this.loader.get(assets.particleLight), { capacity: 26000 });
     this.systems.add(this.system);
     this.system.setPosition(width / 2, height - 60);
     this.system.addSpawnModule(

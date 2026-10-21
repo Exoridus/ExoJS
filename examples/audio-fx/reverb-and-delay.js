@@ -1,6 +1,7 @@
 // Auto-generated from reverb-and-delay.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Scene, Text } from '@codexo/exojs';
 import { DelayEffect, ReverbEffect } from '@codexo/exojs/audio-fx';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 class ReverbAndDelayScene extends Scene {
   sound;
@@ -15,7 +16,7 @@ class ReverbAndDelayScene extends Scene {
   delayWet = 0.12;
   init() {
     const audio = this.app.audio;
-    this.sound = this.loader.get('audio/impact-light.ogg');
+    this.sound = this.loader.get(assets.soundImpactLight);
     this.reverb = new ReverbEffect({ wet: 0.3, decay: 1.3 });
     this.delay = new DelayEffect({ wet: 0.12, delaySeconds: 0.18, feedback: 0.2 });
     audio.sound.addEffect(this.reverb);
@@ -81,6 +82,5 @@ const app = new Application({
   scenes: { ReverbAndDelayScene },
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: Color.black,
-  loader: { basePath: 'assets/' },
 });
 await app.start(ReverbAndDelayScene);

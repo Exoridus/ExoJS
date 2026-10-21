@@ -11,6 +11,7 @@ import {
   SceneAvailability,
   Sprite,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 const PAUSE_BLUR_STRENGTH = 3;
 const PAUSE_FADE_SECONDS = 0.35;
@@ -26,7 +27,7 @@ class GameScene extends Scene {
   init() {
     const app = this.app;
     const { width, height } = app;
-    this.sprite = new Sprite(this.loader.get('image/ship-a.png'))
+    this.sprite = new Sprite(this.loader.get(assets.ship))
       .setAnchor(0.5)
       .setScale(2)
       .setPosition(width * 0.72, height / 2);
@@ -90,8 +91,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(20, 24, 34),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 void app.start(GameScene);

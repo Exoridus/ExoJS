@@ -13,6 +13,7 @@ import {
   type Texture,
   View,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 class SplitScreenScene extends Scene {
@@ -43,7 +44,7 @@ class SplitScreenScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    this.texture = this.loader.get('image/ship-a.png');
+    this.texture = this.loader.get(assets.ship);
 
     this.leftView = new View(0, 0, width / 2, height).setViewport(0, 0, 0.5, 1);
     this.rightView = new View(0, 0, width / 2, height).setViewport(0.5, 0, 0.5, 1);
@@ -184,9 +185,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(SplitScreenScene);

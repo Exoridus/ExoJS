@@ -30,7 +30,7 @@ const identity: SiteBuildIdentity = {
   basePath: '/ExoJS/next/',
   sourceSha: SHA,
   packageVersion: '0.19.1',
-  assetProfile: 'full',
+  assetProfile: 'standard',
   createdAt: '2026-10-21T12:00:00.000Z',
   localTest: false,
 };

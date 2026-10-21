@@ -10,7 +10,7 @@
  * That file used to be hand-written alongside a hand-written `runtime.js`, which
  * left the editor's view of the helper kit free to drift from the helper kit.
  * Emitting it from the implementation removes the second copy; a drift test
- * pins the committed output the same way `assets-global.d.ts` is pinned.
+ * pins the committed output.
  */
 import path from 'node:path';
 

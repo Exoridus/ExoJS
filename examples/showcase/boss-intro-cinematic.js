@@ -1,5 +1,6 @@
 // Auto-generated from boss-intro-cinematic.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Sprite, Text, Time, View } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Sprite, Text, Time, View } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 const titleText = 'VOID EMPEROR';
 class BossIntroCinematicScene extends Scene {
@@ -30,7 +31,7 @@ class BossIntroCinematicScene extends Scene {
     this.title = new Text('', { fillColor: Color.white, fontSize: 56, fontWeight: 'bold' });
     this.title.setPosition(width * 0.12, height * 0.2);
     this.titleState = { count: 0 };
-    this.boss = new Sprite(this.loader.get(assets.demo.textures.shipA))
+    this.boss = new Sprite(this.loader.get(assets.ship))
       .setAnchor(0.5)
       .setScale(0.4)
       .setPosition(width * 0.62, height / 2)
@@ -38,7 +39,7 @@ class BossIntroCinematicScene extends Scene {
     // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
     // is loaded directly through `Asset.type('music', ...)` and awaited rather
     // than fetched synchronously via `get()`.
-    this.music = await this.loader.load(Asset.type('music', assets.demo.music.loopMain));
+    this.music = await this.loader.load(assets.musicLoopMain);
     this.hud = mountControls({
       title: 'Boss Intro Cinematic',
       controls: [{ keys: ['R', 'Click'], action: 'replay sequence' }],

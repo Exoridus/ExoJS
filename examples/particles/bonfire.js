@@ -15,6 +15,7 @@ import {
   Turbulence,
   VectorRange,
 } from '@codexo/exojs/particles';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 class BonfireScene extends Scene {
   // Back to front: smoke behind the flames, embers in front.
@@ -37,15 +38,15 @@ class BonfireScene extends Scene {
   init() {
     const app = this.app;
     const { width, height } = app;
-    const flame = this.loader.get(assets.demo.textures.particleFlame);
-    const smoke = this.loader.get(assets.demo.textures.particleSmoke);
-    const star = this.loader.get(assets.demo.textures.particleStar);
+    const flame = this.loader.get(assets.particleFlame);
+    const smoke = this.loader.get(assets.particleSmoke);
+    const star = this.loader.get(assets.particleStar);
     this.fireX = width / 2;
     this.fireY = height * 0.74;
     this.drawGround(width, height);
     // Firelight on the ground: the soft light texture squashed into an
     // ellipse, so it has no hard edge.
-    this.glow = new Sprite(this.loader.get(assets.demo.textures.particleLight))
+    this.glow = new Sprite(this.loader.get(assets.particleLight))
       .setAnchor(0.5)
       .setBlendMode(BlendModes.Additive)
       .setPosition(this.fireX, this.fireY + 30);

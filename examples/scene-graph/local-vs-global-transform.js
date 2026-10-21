@@ -1,5 +1,6 @@
 // Auto-generated from local-vs-global-transform.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, Scene, Sprite, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 class LocalVsGlobalTransformScene extends Scene {
   parent;
   localSprite;
@@ -9,7 +10,7 @@ class LocalVsGlobalTransformScene extends Scene {
   init() {
     const app = this.app;
     const { width, height } = app;
-    const texture = this.loader.get('image/ship-a.png');
+    const texture = this.loader.get(assets.ship);
     this.parent = new Container().setPosition(width / 4, height / 2);
     this.localSprite = new Sprite(texture)
       .setAnchor(0.5)
@@ -46,8 +47,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(LocalVsGlobalTransformScene);

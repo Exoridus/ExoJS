@@ -96,8 +96,6 @@ interface MonacoTypeScriptApi {
   ScriptTarget: { ES2020: number; ESNext: number };
 }
 
-type AssetManifest = Record<string, string[]>;
-
 declare global {
   interface Window {
     MonacoEnvironment?: { getWorker(workerId: string, label: string): Worker };
@@ -109,7 +107,6 @@ const MONACO_FONT_FAMILY = '"JetBrains Mono", Consolas, "SFMono-Regular", Menlo,
 const SHARED_LIB_FILES = [
   { path: 'examples/shared/runtime.d.ts', virtualPath: 'file:///node_modules/@examples/runtime/index.d.ts' },
   { path: 'examples/shared/editor-support.d.ts', virtualPath: 'file:///node_modules/@examples/editor-support/index.d.ts' },
-  { path: 'examples/shared/assets-global.d.ts', virtualPath: 'file:///node_modules/@examples/assets-global/index.d.ts' },
   // Shared example module, imported by name from examples rather than declared:
   // without it every importer reports ts2307 for `@examples/terrain-noise`.
   { path: 'examples/shared/terrain-noise.ts', virtualPath: 'file:///node_modules/@examples/terrain-noise/index.ts' },
@@ -124,7 +121,6 @@ const SHARED_LIB_FILES = [
 
 const typingsCache = new Map<string, Promise<ReadonlyArray<ExtraLib>>>();
 let monacoConfiguredPromise: Promise<void> | null = null;
-let assetCompletionProviderRegistered = false;
 
 loader.config({ monaco });
 
@@ -828,6 +824,7 @@ const getTypingsForVersion = (versionId: string): Promise<ReadonlyArray<ExtraLib
 const EXTENSION_PACKAGES: ReadonlyArray<{ baseUrl: string; packageName: string }> = [
   { baseUrl: 'vendor/exojs-tiled/', packageName: '@codexo/exojs-tiled' },
   { baseUrl: 'vendor/exojs-ldtk/', packageName: '@codexo/exojs-ldtk' },
+  { baseUrl: 'vendor/exojs-demo-assets/', packageName: '@codexo/exojs-demo-assets' },
 ];
 
 const loadTypingsForVersion = async (versionId: string): Promise<ReadonlyArray<ExtraLib>> => {
@@ -1016,160 +1013,6 @@ const configureLanguageDefaults = (): void => {
   tsApi.typescriptDefaults.setCompilerOptions(tsCompilerOptions);
   tsApi.javascriptDefaults.setDiagnosticsOptions(diagnosticsOptions);
   tsApi.typescriptDefaults.setDiagnosticsOptions(diagnosticsOptions);
-
-  if (!assetCompletionProviderRegistered) {
-    assetCompletionProviderRegistered = true;
-    void registerAssetCompletionProvider();
-  }
-};
-
-const registerAssetCompletionProvider = async (): Promise<void> => {
-  let manifest: AssetManifest;
-
-  try {
-    const response = await fetch(buildPublicUrl('assets/assets.json'), { cache: 'no-cache' });
-
-    if (!response.ok) {
-      return;
-    }
-
-    manifest = (await response.json()) as AssetManifest;
-  } catch {
-    return;
-  }
-
-  monaco.languages.registerCompletionItemProvider('javascript', {
-    triggerCharacters: ["'", '"'],
-    provideCompletionItems: (model, position) => provideAssetCompletions(model, position, manifest),
-  });
-  monaco.languages.registerCompletionItemProvider('typescript', {
-    triggerCharacters: ["'", '"'],
-    provideCompletionItems: (model, position) => provideAssetCompletions(model, position, manifest),
-  });
-};
-
-const resolveAssetPaths = (tokenName: string, manifest: AssetManifest): string[] => {
-  let category: string | null = null;
-
-  switch (tokenName) {
-    case 'Texture':
-    case 'HTMLImageElement':
-      category = 'image';
-      break;
-    case 'FontFace':
-      category = 'font';
-      break;
-    case 'AudioStream':
-    case 'Sound':
-      category = 'audio';
-      break;
-    case 'Json':
-      category = 'json';
-      break;
-    case 'SvgAsset':
-      category = 'svg';
-      break;
-    case 'Video':
-      category = 'video';
-      break;
-  }
-
-  if (!category) {
-    return [];
-  }
-
-  return (manifest[category] ?? []).map(file => `${category}/${file}`);
-};
-
-const provideAssetCompletions = (
-  model: monaco.editor.ITextModel,
-  position: monaco.Position,
-  manifest: AssetManifest,
-): monaco.languages.CompletionList | null => {
-  const lineContent = model.getLineContent(position.lineNumber);
-  const column = position.column - 1;
-  let quoteChar = '';
-  let quoteStart = -1;
-
-  for (let index = column - 1; index >= 0; index -= 1) {
-    const character = lineContent[index];
-
-    if (character === '"' || character === "'") {
-      quoteChar = character;
-      quoteStart = index;
-      break;
-    }
-
-    if (character === '{' || character === '}' || character === ';') {
-      break;
-    }
-  }
-
-  if (quoteStart === -1) {
-    return null;
-  }
-
-  let cursor = quoteStart - 1;
-
-  while (cursor >= 0 && (lineContent[cursor] === ' ' || lineContent[cursor] === '\t')) {
-    cursor -= 1;
-  }
-
-  if (cursor < 0 || lineContent[cursor] !== ':') {
-    return null;
-  }
-
-  let quoteEnd = lineContent.length;
-
-  for (let index = column; index < lineContent.length; index += 1) {
-    if (lineContent[index] === quoteChar) {
-      quoteEnd = index;
-      break;
-    }
-  }
-
-  const startLine = Math.max(1, position.lineNumber - 30);
-  const textBefore = model.getValueInRange({
-    startLineNumber: startLine,
-    startColumn: 1,
-    endLineNumber: position.lineNumber,
-    endColumn: position.column,
-  });
-
-  const loaderLoadExpression = /loader\.load\(\s*([A-Z][A-Za-z]*)\s*,/g;
-  let lastMatch: RegExpExecArray | null = null;
-  let match: RegExpExecArray | null;
-
-  while ((match = loaderLoadExpression.exec(textBefore)) !== null) {
-    lastMatch = match;
-  }
-
-  if (!lastMatch) {
-    return null;
-  }
-
-  const paths = resolveAssetPaths(lastMatch[1], manifest);
-
-  if (paths.length === 0) {
-    return null;
-  }
-
-  const range: monaco.IRange = {
-    startLineNumber: position.lineNumber,
-    startColumn: quoteStart + 2,
-    endLineNumber: position.lineNumber,
-    endColumn: quoteEnd + 1,
-  };
-
-  return {
-    suggestions: paths.map(path => ({
-      label: path,
-      kind: monaco.languages.CompletionItemKind.File,
-      insertText: path,
-      range,
-    })),
-    incomplete: false,
-  };
 };
 
 const fetchTextFile = async (url: string): Promise<string> => {

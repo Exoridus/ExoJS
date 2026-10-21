@@ -1,7 +1,6 @@
 import {
   AnimatedSprite,
   Application,
-  Asset,
   Color,
   FixedResolutionCanvasSizing,
   Keyboard,
@@ -9,6 +8,7 @@ import {
   Spritesheet,
   type SpritesheetData,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 const CHARACTERS = ['beige', 'green', 'pink', 'purple', 'yellow'] as const;
@@ -21,8 +21,8 @@ class FrameAnimationScene extends Scene {
   private playing = true;
 
   override async load(): Promise<void> {
-    const texture = this.loader.get('image/platformer-characters.png');
-    const data = (await this.loader.load(Asset.type('json', 'json/platformer-characters.json'))) as SpritesheetData;
+    const texture = this.loader.get(assets.platformerCharactersImage);
+    const data = (await this.loader.load(assets.platformerCharactersAtlas)) as SpritesheetData;
     const sheet = new Spritesheet(texture, data);
     const clips = Object.fromEntries(
       CHARACTERS.map(character => [
@@ -92,7 +92,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: { basePath: 'assets/' },
 });
 
 await app.start(FrameAnimationScene);

@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   AudioBus,
   AudioGenerator,
   Color,
@@ -13,14 +12,15 @@ import {
   type Voice,
 } from '@codexo/exojs';
 import { AudioAnalyser, VocoderEffect } from '@codexo/exojs/audio-fx';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Spoken phrases (Kenney Voiceover Pack, CC0) - a voice modulator is what makes
 // a vocoder recognisable as the classic "robot voice" effect.
-const PHRASES: Array<{ key: string; label: string; asset: string }> = [
-  { key: 'congrats', label: 'Congratulations', asset: assets.demo.voice.congratulations },
-  { key: 'mission', label: 'Mission complete', asset: assets.demo.voice.missionComplete },
-  { key: 'objective', label: 'Objective achieved', asset: assets.demo.voice.objectiveAchieved },
+const PHRASES = [
+  { key: 'congrats', label: 'Congratulations', asset: assets.voiceCongratulations },
+  { key: 'mission', label: 'Mission complete', asset: assets.voiceMissionComplete },
+  { key: 'objective', label: 'Objective achieved', asset: assets.voiceObjectiveAchieved },
 ];
 
 class VocoderScene extends Scene {
@@ -55,10 +55,7 @@ class VocoderScene extends Scene {
     app.audio.registerBus(this.modulatorBus);
 
     for (const phrase of PHRASES) {
-      // phrase.asset is a widened `string` (not a path literal), so the
-      // path-only get() overload can't infer Sound from the extension -
-      // use the explicit Sound token form.
-      this.phrases.set(phrase.key, this.loader.get(Asset.type('sound', phrase.asset)));
+      this.phrases.set(phrase.key, this.loader.get(phrase.asset));
     }
 
     this.vocoder = new VocoderEffect({ modulator: this.modulatorBus, numBands: 16, wet: 1 });

@@ -1,6 +1,7 @@
 // Auto-generated from mesh-textured-quad.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Mesh, Scene, Text } from '@codexo/exojs';
-const UV_GRID = assets.technical.filtering.uvGrid256;
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+const UV_GRID = assets.uvGrid256;
 const HALF = 160;
 class MeshVerticesScene extends Scene {
   triangle;

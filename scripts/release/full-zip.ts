@@ -6,8 +6,12 @@
  *   npm/      every lockstep tarball (Core + extensions)
  *   vendor/   every lockstep package's ESM tree, plus Core's single-file
  *             ESM bundles (exo.esm.js, exo.debug.esm.js)
- *   examples/ src/** (TS), js/** (transpiled), assets/**, examples.json
- *   site/     the built static site (itself servable; references ./vendor + ./examples)
+ *   examples/ src/** (TS), js/** (transpiled), examples.json
+ *   site/     the built static site (itself servable; references ./vendor + ./examples).
+ *             The examples load their media through @codexo/exojs-demo-assets,
+ *             which the site serves with its standard media under
+ *             vendor/exojs-demo-assets/; the authoring media under
+ *             examples/assets/ are not shipped.
  *   README.md CHANGELOG.md LICENSE release-manifest.json checksums.sha256
  *
  * `assembleFullReleaseTree` is the testable core (pure fs assembly + a
@@ -186,7 +190,8 @@ const assembleExamples = (rootDir: string, examplesOut: string): void => {
   for (const file of walk(examplesSrc)) {
     const rel = relative(examplesSrc, file).split('\\').join('/');
 
-    // assets/ and shared/ are copied wholesale below; skip here.
+    // assets/ is the authoring source of the demo-assets package, not shipped
+    // media; shared/ ships with the site's examples snapshot.
     if (rel.startsWith('assets/') || rel.startsWith('shared/')) {
       continue;
     }
@@ -202,8 +207,6 @@ const assembleExamples = (rootDir: string, examplesOut: string): void => {
     }
   }
 
-  // assets/** verbatim (catalog + binaries), and examples.json.
-  cpSync(resolve(examplesSrc, 'assets'), join(examplesOut, 'assets'), { recursive: true });
   cpSync(resolve(examplesSrc, 'examples.json'), join(examplesOut, 'examples.json'));
 };
 
@@ -267,7 +270,7 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
     }
   }
 
-  // examples/ - src/** (TS), js/** (transpiled), assets/**, examples.json.
+  // examples/ - src/** (TS), js/** (transpiled), examples.json.
   assembleExamples(options.rootDir, join(treeDir, 'examples'));
 
   // site/ - the full built static site, plus the server that makes it usable.

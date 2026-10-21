@@ -1,11 +1,12 @@
 // Auto-generated from loading-screen.ts - edit the .ts source, not this file.
-import { Application, Asset, Assets, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Sprite, Text } from '@codexo/exojs';
+import { Application, Assets, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Sprite, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 const GameAssets = Assets.from({
-  ship: 'image/ship-a.png',
-  grid: 'image/uv-grid-256.png',
-  ramp: 'image/hue-ramp.png',
-  click: Asset.type('sound', 'audio/ui-click.ogg'),
+  ship: assets.ship,
+  grid: assets.uvGrid256,
+  ramp: assets.hueRamp,
+  click: assets.soundUiClick,
 });
 /**
  * One progress bar for everything the loader is doing, then a hand-over to the
@@ -170,8 +171,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(BootScene);

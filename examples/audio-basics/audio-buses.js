@@ -1,5 +1,6 @@
 // Auto-generated from audio-buses.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 class AudioBusesScene extends Scene {
   music;
@@ -9,8 +10,8 @@ class AudioBusesScene extends Scene {
   panel;
   hud;
   async load() {
-    this.music = await this.loader.load(Asset.type('music', assets.demo.audio.musicLoop));
-    this.sfx = this.loader.get(assets.demo.audio.uiClick);
+    this.music = await this.loader.load(assets.musicLoopMain);
+    this.sfx = this.loader.get(assets.soundUiClick);
   }
   init() {
     const audio = this.app.audio;

@@ -1,6 +1,7 @@
 // Auto-generated from editor-objects-gameplay.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
 import { MapObjectSpawner } from '@codexo/exojs/tilemap';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
 import { mountControls } from '@examples/runtime';
 const makeMarker = (object, color) => {
@@ -20,7 +21,7 @@ class EditorObjectsScene extends Scene {
   doorOpen = false;
   collected = false;
   async load() {
-    const source = await this.loader.load(Asset.type('tiledSource', 'json/maps/harbor-plaza.tmj'));
+    const source = await this.loader.load(Asset.type('tiledSource', assets.harborPlazaMap.source));
     const map = source.toTileMap();
     this.mapNode = new TileMapNode(map);
     const spawn = (object, color) => {
@@ -93,6 +94,5 @@ const app = new Application({
   canvas: { width: 1280, height: 768, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(28, 36, 46),
   extensions: [tiledExtension],
-  loader: { basePath: 'assets/' },
 });
 await app.start(EditorObjectsScene);

@@ -1,5 +1,6 @@
 // Auto-generated from damage-flash.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Scene, Signal, Sprite } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 class DamageFlashScene extends Scene {
   hit;
@@ -11,7 +12,7 @@ class DamageFlashScene extends Scene {
     const app = this.app;
     const { width, height } = app;
     this.hit = new Signal();
-    this.ship = new Sprite(this.loader.get('image/ship-a.png'))
+    this.ship = new Sprite(this.loader.get(assets.ship))
       .setAnchor(0.5)
       .setScale(2.2)
       .setPosition(width / 2, height / 2);
@@ -51,8 +52,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(DamageFlashScene);

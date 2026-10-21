@@ -9,7 +9,6 @@ import {
   useState,
 } from 'react';
 
-import { assets } from '../lib/asset-catalog';
 import type { Capability } from '../lib/examples-catalog';
 import { detectRuntimeSupport, getMissingCapabilities } from '../lib/runtime-support';
 import type { Example, PreviewErrorEntry, UrlParams } from '../lib/types';
@@ -237,7 +236,6 @@ export const EditorPreview = ({
 
     if (iframeWindow) {
       iframeWindow.__EXAMPLE_META__ = exampleRef.current;
-      iframeWindow.assets = assets;
       installPreviewErrorHandlers(iframeWindow, iframeBody, syncPreviewErrors);
     }
 

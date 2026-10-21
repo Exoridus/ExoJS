@@ -1,6 +1,7 @@
 // Auto-generated from pointer-and-hittest.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Keyboard, Scene, Sprite } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 class PointerAndHittestScene extends Scene {
   sprites;
@@ -10,7 +11,7 @@ class PointerAndHittestScene extends Scene {
     const { width, height } = app;
     this.sprites = [];
     for (let i = 0; i < 3; i++) {
-      const sprite = new Sprite(this.loader.get('image/ship-a.png'))
+      const sprite = new Sprite(this.loader.get(assets.ship))
         .setAnchor(0.5)
         .setScale(2.4)
         .setPosition(width / 2 - 45 + i * 45, height / 2);
@@ -52,9 +53,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 const debug = new DebugOverlay(app);
 debug.layers.boundingBoxes.visible = true;

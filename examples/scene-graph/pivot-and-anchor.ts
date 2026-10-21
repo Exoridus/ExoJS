@@ -9,6 +9,7 @@ import {
   Sprite,
   Text,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const modes = [
@@ -28,7 +29,7 @@ class PivotAndAnchorScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setPosition(width / 2, height / 2);
+    this.sprite = new Sprite(this.loader.get(assets.ship)).setPosition(width / 2, height / 2);
     this.pivotMarker = new Graphics();
     this.label = new Text('', { fillColor: Color.white, fontSize: 18 });
     this.label.setPosition(20, 20);
@@ -89,9 +90,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(PivotAndAnchorScene);

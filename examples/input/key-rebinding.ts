@@ -166,9 +166,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(10, 12, 20),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(KeyRebindingScene);

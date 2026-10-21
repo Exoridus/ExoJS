@@ -1,5 +1,6 @@
 // Auto-generated from multi-view-split-screen.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, GamepadAxis, Graphics, Keyboard, Scene, Sprite, Text, View } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 class SplitScreenScene extends Scene {
   texture;
@@ -27,7 +28,7 @@ class SplitScreenScene extends Scene {
   init() {
     const app = this.app;
     const { width, height } = app;
-    this.texture = this.loader.get('image/ship-a.png');
+    this.texture = this.loader.get(assets.ship);
     this.leftView = new View(0, 0, width / 2, height).setViewport(0, 0, 0.5, 1);
     this.rightView = new View(0, 0, width / 2, height).setViewport(0.5, 0, 0.5, 1);
     this.divider = new Graphics();
@@ -155,8 +156,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(SplitScreenScene);

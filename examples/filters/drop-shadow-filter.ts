@@ -8,9 +8,10 @@ import {
   type Seconds,
   Sprite,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
-const SHIP = assets.demo.textures.shipA;
+const SHIP = assets.ship;
 
 class DropShadowFilterScene extends Scene {
   private shadow!: DropShadowFilter;
@@ -121,9 +122,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(30, 34, 44),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(DropShadowFilterScene);

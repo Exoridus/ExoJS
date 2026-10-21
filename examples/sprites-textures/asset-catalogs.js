@@ -1,13 +1,15 @@
 // Auto-generated from asset-catalogs.ts - edit the .ts source, not this file.
 import { Application, Asset, Assets, Color, FixedResolutionCanvasSizing, Keyboard, Scene, Sprite, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 // #region guide:catalog-declare
-// A catalog is a named, typed group of assets. A bare path infers its type from
-// the file extension; anything else takes an explicit `Asset.type(...)`.
+// A catalog is a named, typed group of assets. Its entries are descriptors -
+// here from the demo catalog; in your own project usually a bare path, whose
+// file extension infers the type, or an explicit `Asset.type(...)`.
 const SharedAssets = Assets.from({
-  logo: 'image/uv-grid-256.png',
-  click: Asset.type('sound', 'audio/ui-click.ogg'),
-  atlas: Asset.type('json', 'json/buttons.json'),
+  logo: assets.uvGrid256,
+  click: assets.soundUiClick,
+  atlas: assets.platformerCharactersAtlas,
 });
 // #endregion guide:catalog-declare
 // #region guide:catalog-compose
@@ -15,8 +17,8 @@ const SharedAssets = Assets.from({
 // its inputs' handles instead of copying them, so `LevelAssets.logo` is the very
 // same Texture object as `SharedAssets.logo`.
 const LevelLocalAssets = Assets.from({
-  ship: 'image/ship-a.png',
-  ground: 'image/hue-ramp.png',
+  ship: assets.ship,
+  ground: assets.hueRamp,
 });
 const LevelAssets = Assets.compose(SharedAssets, LevelLocalAssets);
 // #endregion guide:catalog-compose
@@ -25,8 +27,8 @@ const LevelAssets = Assets.compose(SharedAssets, LevelLocalAssets);
 // ones are added. The base is never mutated - `LevelLocalAssets.ground` keeps
 // pointing at its own texture.
 const NightAssets = Assets.extend(LevelLocalAssets, {
-  ground: 'image/particle-light.png', // deliberate override
-  star: 'image/buttons.png', // new key
+  ground: assets.particleLight, // deliberate override
+  star: assets.particleStar, // new key
 });
 // #endregion guide:catalog-extend
 class AssetCatalogsScene extends Scene {
@@ -73,7 +75,7 @@ class AssetCatalogsScene extends Scene {
     // Non-leaf types (`music`, `video`, `bmFont`, `font`, ...) have no
     // bare-path form and no placeholder to hand back, even for a literal
     // path - they are always loaded by reference and awaited.
-    this.theme = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
+    this.theme = await this.loader.load(assets.musicLoopMain);
     // #endregion guide:non-leaf-load
     // #region guide:catalog-failure
     // Awaiting a catalog rejects if any leaf fails. Every leaf still carries
@@ -117,16 +119,16 @@ class AssetCatalogsScene extends Scene {
       app.audio.play(this.theme, { volume: 0.5 });
     });
     this.inputs.onTrigger(Keyboard.G, () => {
-      void this.useVariant('hue-ramp');
+      void this.useVariant(assets.hueRamp.source);
     });
   }
   // #region guide:dynamic-path
   /** Replaces the ground texture with a variant chosen at runtime. */
-  async useVariant(variant) {
+  async useVariant(url) {
     const app = this.app;
-    // The path is computed rather than a literal, so its type cannot be
-    // inferred from the extension - name it with `Asset.type(...)`.
-    const texture = await app.loader.load(Asset.type('texture', `image/${variant}.png`));
+    // A URL chosen at runtime has no literal file extension to infer the type
+    // from - name it with `Asset.type(...)`.
+    const texture = await app.loader.load(Asset.type('texture', url));
     this.ground.setTexture(texture);
   }
   // #endregion guide:dynamic-path
@@ -154,8 +156,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(AssetCatalogsScene);

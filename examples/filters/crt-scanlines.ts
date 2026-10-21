@@ -10,6 +10,7 @@ import {
   Sprite,
   Text,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const glsl = `#version 300 es
@@ -69,7 +70,7 @@ class RetroDisplayScene extends Scene {
 
   override init(): void {
     const { width, height } = this.app;
-    const background = new Sprite(this.loader.get(assets.technical.filtering.uvGrid256)).setAnchor(0.5).setPosition(width / 2, height / 2);
+    const background = new Sprite(this.loader.get(assets.uvGrid256)).setAnchor(0.5).setPosition(width / 2, height / 2);
     background.width = width;
     background.height = height;
     const title = new Text('SIGNAL LOST', { fillColor: Color.white, fontSize: 96, outlineColor: Color.black, outlineWidth: 4 });

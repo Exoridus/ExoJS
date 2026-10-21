@@ -1,5 +1,6 @@
 // Auto-generated from random-pitch-pool.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 const DETUNE_RANGE = 200; // ± cents
 const FIRE_INTERVAL = 0.08;
@@ -27,7 +28,7 @@ class RandomPitchPoolScene extends Scene {
     // Path-only get() infers Sound from the .ogg extension - sidesteps a
     // compile-time overload ambiguity between Sound and the Json token form
     // when passing the Sound token explicitly.
-    this.sound = this.loader.get(assets.demo.audio.impactLight);
+    this.sound = this.loader.get(assets.soundImpactLight);
     this.sound.poolSize = 20;
     this.graphics = new Graphics();
     this.label = new Text('Hold Space to retrigger with a random pitch', { fillColor: Color.white, fontSize: 22, align: 'center' })

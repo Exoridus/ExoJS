@@ -19,6 +19,7 @@ import {
   TextureFormat,
   WrapModes,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 const MAP_SIZE = 256;
@@ -81,7 +82,7 @@ class WaterMirrorScene extends Scene {
     const half = height / 2;
     this.target = new RenderTexture(width, half);
     this.map = createRippleMap();
-    this.source = new Sprite(this.loader.get('image/ship-a.png'))
+    this.source = new Sprite(this.loader.get(assets.ship))
       .setAnchor(0.5)
       .setPosition(width / 2, half / 2)
       .setScale(5);
@@ -164,7 +165,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: { basePath: 'assets/' },
 });
 
 await app.start(WaterMirrorScene);

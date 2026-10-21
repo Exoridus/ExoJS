@@ -1,5 +1,6 @@
 // Auto-generated from sound-pool.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 const POOL_SIZE = 12;
 const FIRE_INTERVAL = 0.04;
@@ -27,7 +28,7 @@ class SoundPoolScene extends Scene {
     // Path-only get() infers Sound from the .ogg extension - sidesteps a
     // compile-time overload ambiguity between Sound and the Json token form
     // when passing the Sound token explicitly.
-    this.sound = this.loader.get(assets.demo.audio.impactHeavy);
+    this.sound = this.loader.get(assets.soundImpactHeavy);
     this.sound.poolSize = POOL_SIZE;
     this.graphics = new Graphics();
     this.label = new Text('Hold Space to fire faster than voices finish', { fillColor: Color.white, fontSize: 22, align: 'center' })

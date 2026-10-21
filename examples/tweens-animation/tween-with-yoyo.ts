@@ -1,4 +1,5 @@
 import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class TweenWithYoyoScene extends Scene {
   private sprite!: Sprite;
@@ -7,7 +8,7 @@ class TweenWithYoyoScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
+    this.sprite = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setPosition(width / 2, height / 2);
     app.tweens.create(this.sprite.scale).to({ x: 1.5, y: 1.5 }, 0.8).yoyo(true).repeat(-1).start();
     app.tweens.create(this.sprite).to({ rotation: 20 }, 0.8).yoyo(true).repeat(-1).start();
   }
@@ -26,9 +27,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(TweenWithYoyoScene);

@@ -9,9 +9,10 @@ import {
   Sprite,
   type Texture,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
-const PRIMARY_RAMP = assets.technical.color.primaryRamp;
+const PRIMARY_RAMP = assets.primaryRamp;
 
 const RAMP_SIZE = 256;
 

@@ -1,9 +1,10 @@
 // Auto-generated from typographic-styling.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 class TextStylesScene extends Scene {
   labels = [];
   async load() {
-    await this.loader.load(Asset.type('font', 'font/Kenney Future.ttf', { family: 'Kenney Future' }));
+    await this.loader.load(Asset.type('font', assets.fontKenneyFuture.source, { family: 'Kenney Future' }));
   }
   init() {
     const { width } = this.app;
@@ -60,6 +61,5 @@ const app = new Application({
   scenes: { TextStylesScene },
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(18, 22, 34),
-  loader: { basePath: 'assets/' },
 });
 await app.start(TextStylesScene);

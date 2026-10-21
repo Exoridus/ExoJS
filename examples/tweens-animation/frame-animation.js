@@ -1,5 +1,6 @@
 // Auto-generated from frame-animation.ts - edit the .ts source, not this file.
-import { AnimatedSprite, Application, Asset, Color, FixedResolutionCanvasSizing, Keyboard, Scene, Spritesheet } from '@codexo/exojs';
+import { AnimatedSprite, Application, Color, FixedResolutionCanvasSizing, Keyboard, Scene, Spritesheet } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 const CHARACTERS = ['beige', 'green', 'pink', 'purple', 'yellow'];
 const WALK_FPS = 8;
@@ -9,8 +10,8 @@ class FrameAnimationScene extends Scene {
   characterIndex = 0;
   playing = true;
   async load() {
-    const texture = this.loader.get('image/platformer-characters.png');
-    const data = await this.loader.load(Asset.type('json', 'json/platformer-characters.json'));
+    const texture = this.loader.get(assets.platformerCharactersImage);
+    const data = await this.loader.load(assets.platformerCharactersAtlas);
     const sheet = new Spritesheet(texture, data);
     const clips = Object.fromEntries(
       CHARACTERS.map(character => [
@@ -71,6 +72,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: { basePath: 'assets/' },
 });
 await app.start(FrameAnimationScene);

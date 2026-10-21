@@ -44,7 +44,7 @@ describe('scanForbiddenContent', () => {
     write('vendor/exojs/esm/index.js', "export * from './core/index.js';\n");
     write('vendor/exojs/esm/index.d.ts', 'export declare const x: number;\n');
     write('examples/js/sprites/basic.js', "import { Application } from '@codexo/exojs';\n");
-    write('examples/src/sprites/basic.ts', "import { Application } from '@codexo/exojs';\nconst p = assets.demo.textures.shipA;\n");
+    write('examples/src/sprites/basic.ts', "import { Application } from '@codexo/exojs';\nconst p = assets.ship;\n");
     write('examples/examples.json', '{"sprites":[]}');
     expect(scanForbiddenContent(tree)).toEqual([]);
   });
@@ -81,7 +81,7 @@ describe('scanForbiddenContent', () => {
   });
 
   it('allows .ts under examples/src (lesson sources are not runtime entrypoints)', () => {
-    write('examples/src/a/b.ts', 'const p = assets.demo.audio.musicLoop;\nexport {};\n');
+    write('examples/src/a/b.ts', 'const p = assets.musicLoopMain;\nexport {};\n');
     expect(scanForbiddenContent(tree)).toEqual([]);
   });
 });

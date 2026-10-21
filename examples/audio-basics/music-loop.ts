@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
@@ -14,6 +13,7 @@ import {
   Text,
   type Voice,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 class MusicLoopScene extends Scene {
@@ -39,7 +39,7 @@ class MusicLoopScene extends Scene {
     // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
     // is loaded directly through `Asset.type('music', ...)` and awaited rather
     // than adopted from an `Assets.from` catalog leaf.
-    this.music = await this.loader.load(Asset.type('music', assets.demo.audio.musicLoop));
+    this.music = await this.loader.load(assets.musicLoopMain);
 
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically - play() returns the Voice now,

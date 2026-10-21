@@ -1,6 +1,7 @@
 // Auto-generated from vinyl-record.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs/audio-fx';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 class VinylRecordScene extends Scene {
   music;
@@ -18,7 +19,7 @@ class VinylRecordScene extends Scene {
     // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
     // is loaded directly through `Asset.type('music', ...)` and awaited rather
     // than fetched synchronously via `get()`.
-    this.music = await this.loader.load(Asset.type('music', assets.demo.audio.musicLoop));
+    this.music = await this.loader.load(assets.musicLoopMain);
     this.analyser = new AudioAnalyser({ fftSize: 1024, source: app.audio.music });
     this.disc = new Graphics();
     this.bars = new Graphics();

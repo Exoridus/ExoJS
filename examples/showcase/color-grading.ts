@@ -9,6 +9,7 @@ import {
   Sprite,
   type Texture,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 const LUT_SIZE = 17;
@@ -83,7 +84,7 @@ const LOOKS = [
   { name: 'Identity (off)', transform: (r: number, g: number, b: number): [number, number, number] => [r, g, b] },
 ];
 
-const PRIMARY_RAMP = assets.technical.color.primaryRamp;
+const PRIMARY_RAMP = assets.primaryRamp;
 
 class ColorGradingScene extends Scene {
   private luts!: Texture[];

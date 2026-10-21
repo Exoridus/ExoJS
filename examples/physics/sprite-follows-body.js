@@ -1,17 +1,7 @@
 // Auto-generated from sprite-follows-body.ts - edit the .ts source, not this file.
-import {
-  Application,
-  Asset,
-  Color,
-  FixedResolutionCanvasSizing,
-  Keyboard,
-  Scene,
-  Sprite,
-  Spritesheet,
-  SystemOrder,
-  Vector,
-} from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Keyboard, Scene, Sprite, Spritesheet, SystemOrder, Vector } from '@codexo/exojs';
 import { BoxShape, MouseJoint, PhysicsWorld } from '@codexo/exojs/physics';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 class SpriteFollowsBodyScene extends Scene {
   world;
@@ -24,7 +14,7 @@ class SpriteFollowsBodyScene extends Scene {
   hud;
   spritesheetData;
   async load() {
-    this.spritesheetData = await this.loader.load(Asset.type('json', assets.demo.spritesheets.platformerCharacters.data));
+    this.spritesheetData = await this.loader.load(assets.platformerCharactersAtlas);
   }
   init() {
     const app = this.app;
@@ -32,14 +22,14 @@ class SpriteFollowsBodyScene extends Scene {
     // Gravity in px/s², +Y down - matches the engine's screen space.
     this.world = new PhysicsWorld({ gravity: { x: 0, y: 1400 }, fixedDelta: app.fixedTimeStep });
     this.systems.add(this.world, { order: SystemOrder.Physics });
-    const characters = new Spritesheet(this.loader.get(assets.demo.spritesheets.platformerCharacters.image), this.spritesheetData);
+    const characters = new Spritesheet(this.loader.get(assets.platformerCharactersImage), this.spritesheetData);
     this.floorY = height - 80;
     // ── Static floor ──────────────────────────────────────────────────
     // A wide static body. `world.attach` binds it to the floor sprite, so
     // the sprite is positioned from the body (no manual placement needed).
     const floorWidth = width - 120;
     const floorHeight = 48;
-    this.floor = new Sprite(this.loader.get(assets.demo.textures.pixelWhite)).setAnchor(0.5);
+    this.floor = new Sprite(this.loader.get(assets.pixelWhite)).setAnchor(0.5);
     this.floor.width = floorWidth;
     this.floor.height = floorHeight;
     this.floor.tint = new Color(70, 92, 120);

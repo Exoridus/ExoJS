@@ -9,6 +9,7 @@ import {
   Sprite,
   type Tween,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 const WAYPOINTS = [
@@ -35,7 +36,7 @@ class TweenSequencesScene extends Scene {
       this.path.drawLine(points[i].x, points[i].y, next.x, next.y);
     }
 
-    this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(points[0].x, points[0].y);
+    this.sprite = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setPosition(points[0].x, points[0].y);
     this.hud = mountControls({
       title: 'Tween Sequences',
       status: 'Leg 1 / 4',
@@ -77,7 +78,6 @@ const app = new Application({
   scenes: { TweenSequencesScene },
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: Color.black,
-  loader: { basePath: 'assets/' },
 });
 
 await app.start(TweenSequencesScene);

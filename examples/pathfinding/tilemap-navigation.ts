@@ -1,7 +1,6 @@
 import {
   ActionMap,
   Application,
-  Asset,
   BehaviorComponent,
   Color,
   Container,
@@ -27,6 +26,7 @@ import {
   TileSet,
 } from '@codexo/exojs/tilemap';
 import { TileColliderStreamer } from '@codexo/exojs/tilemap-physics';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 // Navigation, movement and collision over one tile map, with no package
@@ -149,7 +149,7 @@ class TilemapNavigationScene extends Scene {
   private hud!: ReturnType<typeof mountControls>;
 
   override async load(): Promise<void> {
-    const texture = await this.loader.load(Asset.type('texture', assets.demo.tilesets.map.image));
+    const texture = await this.loader.load(assets.mapPackTilesheet);
     const tileset = new TileSet({
       name: 'map',
       texture: new TextureRegion(texture, { x: 0, y: 0, width: texture.width, height: texture.height }),

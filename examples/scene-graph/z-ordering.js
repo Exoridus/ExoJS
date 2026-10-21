@@ -1,5 +1,6 @@
 // Auto-generated from z-ordering.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, Keyboard, Scene, Sprite, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 class ZOrderingScene extends Scene {
   group;
   label;
@@ -7,7 +8,7 @@ class ZOrderingScene extends Scene {
   init() {
     const app = this.app;
     const { width, height } = app;
-    const texture = this.loader.get('image/ship-a.png');
+    const texture = this.loader.get(assets.ship);
     this.group = new Container();
     this.label = new Text('Press 1, 2, 3 — front: 3 (blue)', { fillColor: Color.white, fontSize: 18 });
     this.label.setPosition(18, 18);
@@ -48,8 +49,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(ZOrderingScene);

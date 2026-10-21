@@ -11,7 +11,8 @@ import {
   UniformStruct,
   UniformType,
 } from '@codexo/exojs';
-const UV_GRID = assets.technical.filtering.uvGrid256;
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+const UV_GRID = assets.uvGrid256;
 const SIZE = 420;
 // Uniforms declared here are numeric: `time`, `warp` and `uvTransform` reach
 // the shader exactly as written, with no colour conversion. Colour comes from

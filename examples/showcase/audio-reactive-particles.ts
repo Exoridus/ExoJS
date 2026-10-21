@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
@@ -13,6 +12,7 @@ import {
 } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs/audio-fx';
 import { AlphaFadeOverLifetime, ConeDirection, Constant, particlesExtension, ParticleSystem, RateSpawn } from '@codexo/exojs/particles';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 const colors = [new Color(255, 120, 140), new Color(120, 220, 255), new Color(130, 255, 170), new Color(255, 220, 120)];
@@ -36,7 +36,7 @@ class AudioReactiveParticlesScene extends Scene {
     // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
     // is loaded directly through `Asset.type('music', ...)` and awaited rather
     // than fetched synchronously via `get()`.
-    this.music = await this.loader.load(Asset.type('music', assets.demo.audio.musicLoop));
+    this.music = await this.loader.load(assets.musicLoopMain);
 
     // Two parallel taps of the same track: the analyser gives per-band
     // energy (drives emission), the detector gives beats (recolours).
@@ -44,7 +44,7 @@ class AudioReactiveParticlesScene extends Scene {
     this.detector = new BeatDetector();
     this.detector.source = app.audio.music;
 
-    this.ps = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 6000 });
+    this.ps = new ParticleSystem(this.loader.get(assets.particleLight), { capacity: 6000 });
     this.systems.add(this.ps);
     this.ps.setPosition(width / 2, height / 2);
 

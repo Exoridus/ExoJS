@@ -1,5 +1,6 @@
 // Auto-generated from infinite-grid.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Keyboard, Scene, ShaderFilter, Sprite, View } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 const glsl = `#version 300 es
 precision mediump float;
 uniform vec2 uCenter;
@@ -50,7 +51,7 @@ class InfiniteGridScene extends Scene {
     const app = this.app;
     const { width, height } = app;
     this.view = new View(0, 0, width, height);
-    this.sprite = new Sprite(this.loader.get('image/uv-grid-256.png'));
+    this.sprite = new Sprite(this.loader.get(assets.uvGrid256));
     this.sprite.width = width;
     this.sprite.height = height;
     this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uCenter: [0, 0], uViewSize: [width, height] } });
@@ -123,8 +124,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(InfiniteGridScene);

@@ -17,10 +17,11 @@ export const SITE_BUILD_FILE = 'site-build.json';
 export const SITE_BUILD_SCHEMA_VERSION = 1;
 
 /**
- * What the build ships of the example asset tree. The site currently ships
- * every asset the catalog sync copies; a narrower profile gets its own name.
+ * Which demo media profile the build ships. `standard` is the
+ * `@codexo/exojs-demo-assets` standard profile served under
+ * `vendor/exojs-demo-assets/media/`; the extended media are not part of a site.
  */
-export const SITE_ASSET_PROFILES = ['full'] as const;
+export const SITE_ASSET_PROFILES = ['standard'] as const;
 
 export type SiteAssetProfile = (typeof SITE_ASSET_PROFILES)[number];
 

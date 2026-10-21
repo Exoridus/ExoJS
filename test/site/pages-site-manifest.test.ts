@@ -37,7 +37,7 @@ const identity: SiteBuildIdentity = {
   basePath: '/ExoJS/next/',
   sourceSha: 'a'.repeat(40),
   packageVersion: '0.19.1',
-  assetProfile: 'full',
+  assetProfile: 'standard',
   createdAt: '2026-10-21T12:00:00.000Z',
   localTest: false,
 };
@@ -127,7 +127,7 @@ describe('createSiteBuildManifest', () => {
     expect(() => createSiteBuildManifest(tree, { ...identity, packageVersion: '0.20' })).toThrow(/packageVersion/);
     expect(() => createSiteBuildManifest(tree, { ...identity, basePath: '/ExoJS/' })).toThrow(/basePath/);
     expect(() => createSiteBuildManifest(tree, { ...identity, createdAt: 'yesterday' })).toThrow(/createdAt/);
-    expect(() => createSiteBuildManifest(tree, { ...identity, assetProfile: 'tiny' as 'full' })).toThrow(/assetProfile/);
+    expect(() => createSiteBuildManifest(tree, { ...identity, assetProfile: 'tiny' as 'standard' })).toThrow(/assetProfile/);
   });
 
   it('keeps a local test base and flags it, so the publisher can refuse it', () => {

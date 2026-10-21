@@ -36,7 +36,7 @@ const identity = (channel: 'stable' | 'next', seed: string): SiteBuildIdentity =
   basePath: channel === 'stable' ? '/ExoJS/' : '/ExoJS/next/',
   sourceSha: sha(seed),
   packageVersion: channel === 'stable' ? '0.19.1' : '0.19.1',
-  assetProfile: 'full',
+  assetProfile: 'standard',
   createdAt: '2026-10-21T12:00:00.000Z',
   localTest: false,
 });

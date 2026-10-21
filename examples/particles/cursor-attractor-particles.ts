@@ -9,6 +9,7 @@ import {
   RateSpawn,
   RepelFromPoint,
 } from '@codexo/exojs/particles';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 // Acceleration magnitude shared by both force modules (units / s²). Only the
@@ -26,7 +27,7 @@ class CursorAttractorParticlesScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    this.system = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 32000 });
+    this.system = new ParticleSystem(this.loader.get(assets.particleLight), { capacity: 32000 });
     this.systems.add(this.system);
     this.system.setPosition(width / 2, height / 2);
 

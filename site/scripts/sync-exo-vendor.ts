@@ -414,6 +414,53 @@ const syncBundlerClientTypes = (): void => {
   console.log('[vendor:sync] Copied @codexo/exojs-build client declarations -> vendor/exojs-build/client.d.ts');
 };
 
+/**
+ * Serves `@codexo/exojs-demo-assets` the way a consumer installs it: the
+ * compiled catalog under `esm/` and the standard media under `media/`, so each
+ * descriptor's `new URL('../media/...', import.meta.url)` resolves to a file
+ * the site actually ships. Only the standard profile is copied; the extended
+ * media are not part of the site.
+ */
+const syncDemoAssets = (): void => {
+  const packageRoot = path.resolve(projectRoot, '..', 'packages', 'exojs-demo-assets');
+  const distDir = path.resolve(packageRoot, 'dist');
+  const mediaDir = path.resolve(packageRoot, 'media');
+
+  for (const required of [distDir, mediaDir]) {
+    if (!fs.existsSync(required)) {
+      throw new Error(
+        `[vendor:sync] @codexo/exojs-demo-assets is not built: ${required} is missing. ` +
+          'Build it first: pnpm --filter @codexo/exojs-demo-assets build',
+      );
+    }
+  }
+
+  const vendorDir = path.resolve(projectRoot, 'public', 'vendor', 'exojs-demo-assets');
+  fs.rmSync(vendorDir, { recursive: true, force: true });
+  fs.mkdirSync(vendorDir, { recursive: true });
+  fs.cpSync(distDir, path.resolve(vendorDir, 'esm'), { recursive: true });
+  fs.cpSync(mediaDir, path.resolve(vendorDir, 'media'), { recursive: true });
+
+  const dtsFiles = collectDeclarationFiles(distDir);
+  fs.writeFileSync(path.resolve(vendorDir, 'esm-typings.json'), `${JSON.stringify(dtsFiles, null, 2)}\n`, 'utf8');
+
+  const packageJson = JSON.parse(fs.readFileSync(path.resolve(packageRoot, 'package.json'), 'utf8')) as { version: string };
+  const registry: MonacoRegistry = {
+    packageJson: JSON.stringify({ name: '@codexo/exojs-demo-assets', version: packageJson.version, types: './dist/esm/index.d.ts' }),
+    subpathShims: [
+      {
+        virtualPath: 'file:///node_modules/@codexo/exojs-demo-assets/extended.d.ts',
+        content: "export * from './dist/esm/extended';\n",
+      },
+    ],
+  };
+  fs.writeFileSync(path.resolve(vendorDir, 'monaco-registry.json'), `${JSON.stringify(registry, null, 2)}\n`, 'utf8');
+
+  console.log(
+    `[vendor:sync] Copied @codexo/exojs-demo-assets (${dtsFiles.length} declarations, standard media) -> vendor/exojs-demo-assets/`,
+  );
+};
+
 const syncVendor = (): void => {
   ensureSourcePackage();
   syncWebGpuTypes();
@@ -504,6 +551,8 @@ const syncVendor = (): void => {
       `[vendor:sync] Copied @codexo/${pkgName} ESM (${files.length} files, ${dtsFiles.length} declarations, ${rewritten} '#'-rewritten) -> vendor/${pkgName}/`,
     );
   }
+
+  syncDemoAssets();
 };
 
 syncVendor();

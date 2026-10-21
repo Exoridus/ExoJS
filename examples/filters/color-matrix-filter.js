@@ -1,5 +1,6 @@
 // Auto-generated from color-matrix-filter.ts - edit the .ts source, not this file.
 import { Application, Color, ColorMatrixFilter, FixedResolutionCanvasSizing, LutFilter, Scene, Sprite, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const RAMP_SIZE = 256;
 const LUT_SIZE = 17;
@@ -62,7 +63,7 @@ class ColorTransformsScene extends Scene {
   hud;
   init() {
     const { width, height } = this.app;
-    const image = this.loader.get(assets.technical.color.primaryRamp);
+    const image = this.loader.get(assets.primaryRamp);
     this.reference = new Sprite(image)
       .setAnchor(0.5)
       .setScale(3)

@@ -142,13 +142,15 @@ Prettier owns the mechanical layout: indentation, quotes, semicolons, commas, wr
 
 ## Examples and assets
 
-Example authors use the injected, typed `assets` global directly — no import:
+Examples load their media through the optional content package `@codexo/exojs-demo-assets`, imported like any other dependency:
 
 ```ts
-assets.demo.textures.bunny;
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+
+const ship = this.loader.get(assets.ship);
 ```
 
-The global is installed only inside the controlled example runtimes (Playground, Example/Guide preview, Asset Browser, smoke harness, Full Release harness). It is not part of the engine public API. The canonical catalog is `examples/assets/assets.ts`; `pnpm --filter @codexo/exojs-examples examples:sync` regenerates the `.js` sources and the runtime catalog.
+Each property is a passive descriptor; reading it fetches nothing, and the scene's loader claims and loads it. There is no injected global, so an example copied out of the Playground runs anywhere the package is installed. The media under `examples/assets/` are the authoring source of that package: `packages/exojs-demo-assets/catalog.json` lists what ships, and its generator derives the typed catalog, the manifest, the notices and the packed `media/` tree. The site serves the package beside the engine (`vendor/exojs-demo-assets/`), not the `examples/assets/` tree. `pnpm --filter @codexo/exojs-examples examples:sync` regenerates the `.js` sources.
 
 JSON asset data under `examples/assets/` is committed compact, including Tiled maps/tilesets/templates (`.tmj`, `.tsj`, `.tj`, `.world`) and LDtk documents (`.ldtk`, `.ldtkl`). Run `pnpm assets:compact` after exporting or editing these files. `pnpm assets:compact:check` enforces this in the sync gates. Prettier ignores the asset directory; do not pretty-print large tile arrays. The example catalog `examples/examples.json` remains ordinary repository metadata.
 
@@ -160,7 +162,7 @@ Treat the `.js` as build output that happens to be versioned. It is not linted a
 
 One file is not quite that: `examples/tilemap/worker-streamed-terrain.js` is the only example whose generation is not a plain transpile. Its `?worker` import is inlined at generation time, so the emitted file carries code its source does not, and it stays in `tsconfig.examples.json` for that reason.
 
-`examples/shared/` holds one more generated artifact of a different kind. `runtime.d.ts` is emitted from `runtime.ts` during the same sync, because the Playground editor resolves `@examples/runtime` through a declaration file it fetches from the served snapshot rather than through the implementation. Like `assets-global.d.ts` it is Prettier-ignored and pinned by a drift test rather than by `examples:sync:check`.
+`examples/shared/` holds one more generated artifact of a different kind. `runtime.d.ts` is emitted from `runtime.ts` during the same sync, because the Playground editor resolves `@examples/runtime` through a declaration file it fetches from the served snapshot rather than through the implementation. It is Prettier-ignored and pinned by a drift test rather than by `examples:sync:check`.
 
 ### Guide sources
 

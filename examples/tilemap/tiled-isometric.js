@@ -3,6 +3,7 @@ import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, Grap
 import { CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
 import { TileMapNode } from '@codexo/exojs/tilemap';
 import { buildObjectLayerColliders, TilePhysicsBinding } from '@codexo/exojs/tilemap-physics';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { tiledExtension } from '@codexo/exojs-tiled';
 import { mountControls } from '@examples/runtime';
 const scale = 0.72;
@@ -18,7 +19,7 @@ class IsometricScene extends Scene {
   target = { x: 99, y: 99 };
   hud;
   async load() {
-    this.map = await this.loader.load(Asset.type('tileMap', assets.demo.isometricLandscape));
+    this.map = await this.loader.load(Asset.type('tileMap', assets.isometricLandscape.source));
   }
   init() {
     this.world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, fixedDelta: this.app.fixedTimeStep });
@@ -117,6 +118,5 @@ const app = new Application({
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(30, 43, 57),
   extensions: [tiledExtension],
-  loader: { basePath: 'assets/' },
 });
 await app.start(IsometricScene);

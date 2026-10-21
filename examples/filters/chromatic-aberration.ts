@@ -1,8 +1,9 @@
 import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // A dense checkerboard makes the per-channel RGB split read clearly along edges.
-const CHECKER = assets.technical.filtering.checker256;
+const CHECKER = assets.checker256;
 
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; uniform float uOffset; in vec2 vUv; out vec4 fragColor;

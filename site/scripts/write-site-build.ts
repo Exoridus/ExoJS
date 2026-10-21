@@ -57,7 +57,7 @@ export const resolveSiteBuild = (env: Env): SiteBuildInfo => {
     basePath: channel.basePath,
     sourceSha: resolveSourceSha(env),
     packageVersion: rootPackage.version ?? '',
-    assetProfile: 'full',
+    assetProfile: 'standard',
     createdAt: env['EXOJS_SITE_BUILD_TIME'] || new Date().toISOString(),
     localTest: channel.localTest,
   };

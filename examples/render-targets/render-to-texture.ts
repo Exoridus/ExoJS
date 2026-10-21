@@ -11,6 +11,7 @@ import {
   Text,
   type Texture,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 class RenderToTextureScene extends Scene {
@@ -28,7 +29,7 @@ class RenderToTextureScene extends Scene {
   private time = 0;
 
   override init(): void {
-    this.texture = this.loader.get(assets.demo.textures.shipA);
+    this.texture = this.loader.get(assets.ship);
     this.source = new Container();
 
     for (let i = 0; i < 25; i++) {

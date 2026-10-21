@@ -179,22 +179,10 @@ if (example) {
   } else {
     const source = readFileSync(srcFile, 'utf8');
     await page.evaluate(
-      async ({ exampleSource, meta }) => {
-        const host = window as typeof window & { __EXAMPLE_META__?: unknown; assets?: Record<string, unknown> };
+      ({ exampleSource, meta }) => {
+        const host = window as typeof window & { __EXAMPLE_META__?: unknown };
 
         host.__EXAMPLE_META__ = meta;
-
-        try {
-          // Built by the site at run time, so it must not be resolved statically:
-          // a non-literal specifier keeps the type checker out of the browser's
-          // module graph.
-          const catalogUrl = './assets/catalog.js';
-          const c = (await import(catalogUrl)) as { assets?: Record<string, unknown> };
-
-          host.assets = c.assets ?? {};
-        } catch {
-          host.assets = {};
-        }
 
         const s = document.createElement('script');
         s.type = 'module';

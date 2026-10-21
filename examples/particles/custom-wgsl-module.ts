@@ -9,6 +9,7 @@ import {
   UpdateModule,
   type WgslContribution,
 } from '@codexo/exojs/particles';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 /** Adds horizontal sway after integration, using the same operation on every backend. */
@@ -63,7 +64,7 @@ class CustomWgslModuleScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    this.system = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 26000 });
+    this.system = new ParticleSystem(this.loader.get(assets.particleLight), { capacity: 26000 });
     this.systems.add(this.system);
     this.system.setPosition(width / 2, height - 60);
     this.system.addSpawnModule(

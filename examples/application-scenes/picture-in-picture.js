@@ -1,5 +1,6 @@
 // Auto-generated from picture-in-picture.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Sprite, View } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 class PictureInPictureScene extends Scene {
   mainView;
   pipView;
@@ -9,7 +10,7 @@ class PictureInPictureScene extends Scene {
   init() {
     const app = this.app;
     const { width, height } = app;
-    this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
+    this.sprite = new Sprite(this.loader.get(assets.ship));
     this.mainView = new View(0, 0, width, height);
     this.pipView = new View(0, 0, width * 0.3, height * 0.3).setViewport(0.68, 0.04, 0.28, 0.28);
     // Zoom < 1 zooms OUT (a larger visible world area maps into the same
@@ -44,8 +45,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(PictureInPictureScene);

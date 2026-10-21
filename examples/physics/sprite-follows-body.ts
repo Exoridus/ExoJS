@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   Color,
   FixedResolutionCanvasSizing,
   Keyboard,
@@ -14,6 +13,7 @@ import {
   Vector,
 } from '@codexo/exojs';
 import { BoxShape, MouseJoint, type PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 class SpriteFollowsBodyScene extends Scene {
@@ -28,9 +28,7 @@ class SpriteFollowsBodyScene extends Scene {
   private spritesheetData!: SpritesheetData;
 
   override async load(): Promise<void> {
-    this.spritesheetData = (await this.loader.load(
-      Asset.type('json', assets.demo.spritesheets.platformerCharacters.data),
-    )) as SpritesheetData;
+    this.spritesheetData = (await this.loader.load(assets.platformerCharactersAtlas)) as SpritesheetData;
   }
 
   override init(): void {
@@ -41,7 +39,7 @@ class SpriteFollowsBodyScene extends Scene {
     this.world = new PhysicsWorld({ gravity: { x: 0, y: 1400 }, fixedDelta: app.fixedTimeStep });
     this.systems.add(this.world, { order: SystemOrder.Physics });
 
-    const characters = new Spritesheet(this.loader.get(assets.demo.spritesheets.platformerCharacters.image), this.spritesheetData);
+    const characters = new Spritesheet(this.loader.get(assets.platformerCharactersImage), this.spritesheetData);
 
     this.floorY = height - 80;
 
@@ -51,7 +49,7 @@ class SpriteFollowsBodyScene extends Scene {
     const floorWidth = width - 120;
     const floorHeight = 48;
 
-    this.floor = new Sprite(this.loader.get(assets.demo.textures.pixelWhite)).setAnchor(0.5);
+    this.floor = new Sprite(this.loader.get(assets.pixelWhite)).setAnchor(0.5);
     this.floor.width = floorWidth;
     this.floor.height = floorHeight;
     this.floor.tint = new Color(70, 92, 120);

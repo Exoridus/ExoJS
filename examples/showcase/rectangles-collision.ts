@@ -8,6 +8,7 @@ import {
   Sprite,
   type Texture,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 const CLEAR_TINT = new Color(120, 200, 255);
@@ -22,7 +23,7 @@ class RectanglesCollisionScene extends Scene {
   override init(): void {
     const app = this.app;
     const { width, height } = app;
-    const texture = this.loader.get('image/hue-ramp.png');
+    const texture = this.loader.get(assets.hueRamp);
 
     // Two axis-aligned rectangles (no rotation) so collision is a true AABB
     // test. Explicit width/height drive the sprite scale; anchor 0.5 keeps the
@@ -101,9 +102,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(18, 22, 30),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(RectanglesCollisionScene);

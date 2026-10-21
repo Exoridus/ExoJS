@@ -277,9 +277,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(8, 10, 16),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(ListenerAndSourceScene);

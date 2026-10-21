@@ -1,6 +1,7 @@
 // Auto-generated from signal-graph.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser, CompressorEffect, EqualizerEffect, LimiterEffect, ReverbEffect } from '@codexo/exojs/audio-fx';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const NODE_W = 180;
 const NODE_H = 86;
@@ -46,8 +47,8 @@ class SignalGraphScene extends Scene {
   panel = null;
   hud;
   async load() {
-    this.music = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
-    this.impact = this.loader.get('audio/impact-light.ogg');
+    this.music = await this.loader.load(assets.musicLoopMain);
+    this.impact = this.loader.get(assets.soundImpactLight);
   }
   init() {
     const audio = this.app.audio;
@@ -352,6 +353,5 @@ const app = new Application({
   scenes: { SignalGraphScene },
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(10, 12, 20),
-  loader: { basePath: 'assets/' },
 });
 await app.start(SignalGraphScene);

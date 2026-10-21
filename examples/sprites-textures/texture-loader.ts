@@ -9,6 +9,7 @@ import {
   Text,
   type Texture,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class TextureLoaderScene extends Scene {
   private sprites!: Sprite[];
@@ -26,7 +27,7 @@ class TextureLoaderScene extends Scene {
 
     // Seamless get() returns placeholder handles immediately; each pops in
     // (loadState → 'ready') as its fetch completes, polled in update().
-    this.textures = [this.loader.get('image/ship-a.png'), this.loader.get('image/hue-ramp.png'), this.loader.get('image/uv-grid-256.png')];
+    this.textures = [this.loader.get(assets.ship), this.loader.get(assets.hueRamp), this.loader.get(assets.uvGrid256)];
 
     // Spread the three textures evenly across the width, one per third.
     this.sprites = this.textures.map((texture, index) => {
@@ -78,9 +79,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(TextureLoaderScene);

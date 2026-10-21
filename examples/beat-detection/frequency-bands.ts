@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
@@ -10,6 +9,7 @@ import {
   Text,
 } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs/audio-fx';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 // Eight perceptual frequency bands spanning the audible range, from the lowest
@@ -45,7 +45,7 @@ class FrequencyBandsScene extends Scene {
   override async load(): Promise<void> {
     const app = this.app;
     // AudioStream has no seamless adapter - await it explicitly.
-    const track = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
+    const track = await this.loader.load(assets.musicLoopMain);
     this.music = track;
 
     this.analyser = new AudioAnalyser({ fftSize: 2048, smoothingTimeConstant: 0.75 });
@@ -155,9 +155,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(14, 16, 22),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(FrequencyBandsScene);

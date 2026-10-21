@@ -1,4 +1,5 @@
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sprite } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 // Everything the pointer pipeline reports, surfaced at once:
@@ -25,7 +26,7 @@ class MouseAndPointerScene extends Scene {
     this.pointer = { x: width / 2, y: height / 2 };
     this.previous = { x: width / 2, y: height / 2 };
 
-    this.ship = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
+    this.ship = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setPosition(width / 2, height / 2);
     this.ship.interactive = true;
     this.ship.draggable = true;
     this.root.addChild(this.ship);
@@ -96,9 +97,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(10, 12, 20),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(MouseAndPointerScene);

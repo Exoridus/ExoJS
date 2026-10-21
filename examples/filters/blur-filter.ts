@@ -9,9 +9,10 @@ import {
   Sprite,
   Text,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
-const SHIP = assets.demo.textures.shipA;
+const SHIP = assets.ship;
 
 class BlurAndShadowScene extends Scene {
   private reference!: Sprite;

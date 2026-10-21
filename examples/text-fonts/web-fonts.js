@@ -1,11 +1,12 @@
 // Auto-generated from web-fonts.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 class WebFontsScene extends Scene {
   default;
   loaded;
   async load() {
     const app = this.app;
-    await this.loader.load(Asset.type('font', 'font/Kenney Future.ttf', { family: 'Kenney Future' }));
+    await this.loader.load(Asset.type('font', assets.fontKenneyFuture.source, { family: 'Kenney Future' }));
     const { width, height } = app;
     this.default = new Text('Default Font', { fillColor: Color.white, fontSize: 52, align: 'center' });
     this.default.setAnchor(0.5, 0.5);
@@ -28,8 +29,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(WebFontsScene);

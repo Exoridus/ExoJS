@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
@@ -14,6 +13,7 @@ import {
   type Voice,
 } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs/audio-fx';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 const BAND_LABELS = ['Sub', 'Bass', 'Low mid', 'Mid', 'High mid', 'Presence', 'Treble', 'Air'];
@@ -40,7 +40,7 @@ class AudioVisualisationScene extends Scene {
     // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
     // is loaded directly through `Asset.type('music', ...)` and awaited rather
     // than fetched synchronously via `get()`.
-    this.music = await this.loader.load(Asset.type('music', assets.demo.audio.musicLoop));
+    this.music = await this.loader.load(assets.musicLoopMain);
 
     // One analyser tap for spectrum/waveform, one beat detector for the
     // beat-pulse ring. Both read the music bus the stream plays through,

@@ -1,6 +1,7 @@
 // Auto-generated from screen-shake-on-explosion.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Scene, Sprite, Time, Vector, View } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem } from '@codexo/exojs/particles';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 class ScreenShakeOnExplosionScene extends Scene {
   view;
@@ -15,7 +16,7 @@ class ScreenShakeOnExplosionScene extends Scene {
     const app = this.app;
     const { width, height } = app;
     this.view = new View(width / 2, height / 2, width, height);
-    this.ship = new Sprite(this.loader.get('image/ship-a.png'))
+    this.ship = new Sprite(this.loader.get(assets.ship))
       .setAnchor(0.5)
       .setScale(2.2)
       .setPosition(width / 2, height / 2);
@@ -24,7 +25,7 @@ class ScreenShakeOnExplosionScene extends Scene {
       controls: [{ keys: 'Click', action: 'flash the ship, burst particles, and shake the camera' }],
       status: 'Hits: 0',
     });
-    this.ps = new ParticleSystem(this.loader.get('image/particle-light.png'), { capacity: 5000 });
+    this.ps = new ParticleSystem(this.loader.get(assets.particleLight), { capacity: 5000 });
     this.systems.add(this.ps);
     this.ps.setPosition(width / 2, height / 2);
     this.burstPos = new Vector(0, 0);
@@ -64,9 +65,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
   extensions: [particlesExtension],
 });
 await app.start(ScreenShakeOnExplosionScene);

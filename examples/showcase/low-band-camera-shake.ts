@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
@@ -13,6 +12,7 @@ import {
   type Voice,
 } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs/audio-fx';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 class LowBandCameraShakeScene extends Scene {
@@ -31,10 +31,10 @@ class LowBandCameraShakeScene extends Scene {
     // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
     // is loaded directly through `Asset.type('music', ...)` and awaited rather
     // than fetched synchronously via `get()`.
-    this.music = await this.loader.load(Asset.type('music', assets.demo.audio.musicLoop));
+    this.music = await this.loader.load(assets.musicLoopMain);
     this.analyser = new AudioAnalyser({ fftSize: 1024, source: app.audio.music });
     this.view = new View(width / 2, height / 2, width, height);
-    this.sprite = new Sprite(this.loader.get(assets.demo.textures.shipA))
+    this.sprite = new Sprite(this.loader.get(assets.ship))
       .setAnchor(0.5)
       .setScale(3)
       .setPosition(width / 2, height / 2);

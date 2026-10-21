@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   type AudioBus,
   type AudioEffect,
   type AudioStream,
@@ -15,6 +14,7 @@ import {
   type Voice,
 } from '@codexo/exojs';
 import { AudioAnalyser, CompressorEffect, EqualizerEffect, LimiterEffect, ReverbEffect } from '@codexo/exojs/audio-fx';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 type NodeKind = 'source' | 'effect' | 'bus' | 'output';
@@ -98,8 +98,8 @@ class SignalGraphScene extends Scene {
   private hud!: ReturnType<typeof mountControls>;
 
   override async load(): Promise<void> {
-    this.music = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
-    this.impact = this.loader.get('audio/impact-light.ogg');
+    this.music = await this.loader.load(assets.musicLoopMain);
+    this.impact = this.loader.get(assets.soundImpactLight);
   }
 
   override init(): void {
@@ -465,7 +465,6 @@ const app = new Application({
   scenes: { SignalGraphScene },
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(10, 12, 20),
-  loader: { basePath: 'assets/' },
 });
 
 await app.start(SignalGraphScene);

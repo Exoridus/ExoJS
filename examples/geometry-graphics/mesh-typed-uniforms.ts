@@ -12,8 +12,9 @@ import {
   UniformStruct,
   UniformType,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
-const UV_GRID = assets.technical.filtering.uvGrid256;
+const UV_GRID = assets.uvGrid256;
 const SIZE = 420;
 
 // Uniforms declared here are numeric: `time`, `warp` and `uvTransform` reach

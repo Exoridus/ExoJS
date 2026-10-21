@@ -8,11 +8,12 @@ import {
   ShaderFilter,
   Sprite,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // A detailed full-frame texture so grain + vignette read as a screen-wide post
 // effect rather than decorating one small sprite.
-const UV_GRID = assets.technical.filtering.uvGrid256;
+const UV_GRID = assets.uvGrid256;
 
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; uniform float uTime; uniform float uIntensity; in vec2 vUv; out vec4 fragColor;

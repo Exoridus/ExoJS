@@ -9,6 +9,7 @@ import {
   Sprite,
   View,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class PictureInPictureScene extends Scene {
   private mainView!: View;
@@ -21,7 +22,7 @@ class PictureInPictureScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
+    this.sprite = new Sprite(this.loader.get(assets.ship));
 
     this.mainView = new View(0, 0, width, height);
     this.pipView = new View(0, 0, width * 0.3, height * 0.3).setViewport(0.68, 0.04, 0.28, 0.28);
@@ -64,9 +65,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(PictureInPictureScene);

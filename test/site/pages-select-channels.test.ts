@@ -64,7 +64,7 @@ const entryFor = (source: CandidateRun, channel: 'stable' | 'next'): ChannelEntr
     basePath: channel === 'stable' ? '/ExoJS/' : '/ExoJS/next/',
     sourceSha: source.run.headSha,
     packageVersion: '0.19.1',
-    assetProfile: 'full',
+    assetProfile: 'standard',
     createdAt: '2026-10-20T10:00:00.000Z',
     contentHash: `${channel === 'stable' ? 'a' : 'b'}${source.run.headSha.slice(0, 1)}`.repeat(32),
     fileCount: 10,

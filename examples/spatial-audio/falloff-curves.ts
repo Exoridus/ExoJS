@@ -1,4 +1,5 @@
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sound, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 type FalloffModel = 'linear' | 'inverse' | 'exponential';
@@ -67,7 +68,7 @@ class FalloffCurvesScene extends Scene {
     // Each derived Sound below reads .audioBuffer synchronously, so the
     // shared source must be fully decoded first - await load() instead of
     // the deferred get() (whose placeholder audioBuffer is null until fill).
-    const source = await this.loader.load(Asset.type('sound', 'audio/impact-light.ogg'));
+    const source = await this.loader.load(assets.soundImpactLight);
     this.sounds = this.sources.map(() => new Sound(source.audioBuffer));
 
     this.graphics = new Graphics();
@@ -178,9 +179,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(FalloffCurvesScene);

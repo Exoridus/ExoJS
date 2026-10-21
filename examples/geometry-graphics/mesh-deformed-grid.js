@@ -1,5 +1,6 @@
 // Auto-generated from mesh-deformed-grid.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Mesh, Scene } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 const COLS = 16;
 const ROWS = 16;
 const SIZE = 460;
@@ -37,7 +38,7 @@ const buildGrid = () => {
   }
   return { vertices, uvs, indices };
 };
-const UV_GRID = assets.technical.filtering.uvGrid256;
+const UV_GRID = assets.uvGrid256;
 class MeshDeformedGridScene extends Scene {
   restVertices;
   mesh;

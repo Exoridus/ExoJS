@@ -1,5 +1,6 @@
 // Auto-generated from crossfade-tracks.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, crossFade, FixedResolutionCanvasSizing, Graphics, Scene, Text, Time } from '@codexo/exojs';
+import { Application, Color, crossFade, FixedResolutionCanvasSizing, Graphics, Scene, Text, Time } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const PEAK = 0.7;
 const COLOR_A = new Color(120, 200, 255);
@@ -38,10 +39,7 @@ class CrossfadeTracksScene extends Scene {
     // AudioStream is a non-leaf resource kind (no seamless placeholder), so each
     // track is loaded directly through `Asset.type('music', ...)` and awaited. Both
     // tracks loop; the crossfade only swaps which one is audible.
-    [this.trackA, this.trackB] = await Promise.all([
-      this.loader.load(Asset.type('music', assets.demo.audio.musicA)),
-      this.loader.load(Asset.type('music', assets.demo.audio.musicB)),
-    ]);
+    [this.trackA, this.trackB] = await Promise.all([this.loader.load(assets.musicLoopA), this.loader.load(assets.musicLoopB)]);
     this.graphics = new Graphics();
     this.labelA = new Text('Track A', { fillColor: Color.white, fontSize: 22, align: 'center' })
       .setAnchor(0.5, 0.5)

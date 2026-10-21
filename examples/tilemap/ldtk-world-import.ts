@@ -10,6 +10,7 @@ import {
   Text,
 } from '@codexo/exojs';
 import { TileMapNode } from '@codexo/exojs/tilemap';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { getLdtkIntGridValueAt, ldtkExtension, type LdtkMap } from '@codexo/exojs-ldtk';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
@@ -29,7 +30,7 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 //     `TileMapObject` shape a Tiled object layer produces, with entity
 //     fields (`Int`, `String`, ...) carried as `properties`.
 //
-// harbor-world.ldtk (examples/assets/json/maps/) defines two levels sharing
+// harbor-world.ldtk (`assets.harborWorldProject`) defines two levels sharing
 // one tileset: "Level_Harbor" and "Level_Lighthouse", each with a Ground
 // tile layer, a Walls IntGrid layer (Wall / Water), and an Entities layer.
 
@@ -48,14 +49,9 @@ class LdtkWorldImportScene extends Scene {
   private showIntGrid = true;
 
   override async load(): Promise<void> {
-    // The .ldtk source must be an absolute URL: @codexo/exojs-ldtk resolves
-    // tileset relPaths with `new URL(relPath, source)`, which throws for a
-    // relative `source` (unlike the Tiled adapter's relative-base-aware
-    // resolver). Resolve against the page URL until the adapter handles
-    // relative bases itself.
-    const worldUrl = new URL('assets/json/maps/harbor-world.ldtk', window.location.href).href;
-
-    this.world = await this.loader.load(Asset.type('ldtkMap', worldUrl));
+    // The LDtk adapter resolves tileset paths with `new URL(relPath, source)`,
+    // so the world needs an absolute source; the demo catalog's URLs are.
+    this.world = await this.loader.load(Asset.type('ldtkMap', assets.harborWorldProject.source));
 
     this.hud = mountControls({
       title: 'LDtk World Import',

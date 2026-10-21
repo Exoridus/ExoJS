@@ -32,8 +32,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(24, 28, 42),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(StrokeAndShadowScene);

@@ -1,5 +1,6 @@
 // Auto-generated from render-to-texture.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, RenderTexture, Scene, Sprite, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 class RenderToTextureScene extends Scene {
   source;
@@ -15,7 +16,7 @@ class RenderToTextureScene extends Scene {
   hud;
   time = 0;
   init() {
-    this.texture = this.loader.get(assets.demo.textures.shipA);
+    this.texture = this.loader.get(assets.ship);
     this.source = new Container();
     for (let i = 0; i < 25; i++) {
       const ship = new Sprite(this.texture)

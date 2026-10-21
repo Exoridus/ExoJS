@@ -1,5 +1,6 @@
 // Auto-generated from easing-curves.ts - edit the .ts source, not this file.
 import { Application, Color, Ease, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Sprite } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 // Every built-in Ease function, in source order.
 const EASINGS = [
@@ -47,7 +48,7 @@ class EasingCurvesScene extends Scene {
   direction = 1;
   onTap = pointer => this.select(pointer.x < this.app.width / 2 ? -1 : 1);
   init() {
-    this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(2);
+    this.sprite = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setScale(2);
     this.inputs.onTrigger(Keyboard.Left, () => this.select(-1));
     this.inputs.onTrigger(Keyboard.Right, () => this.select(1));
     this.app.input.onPointerTap.add(this.onTap);
@@ -120,6 +121,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(18, 21, 30),
-  loader: { basePath: 'assets/' },
 });
 await app.start(EasingCurvesScene);

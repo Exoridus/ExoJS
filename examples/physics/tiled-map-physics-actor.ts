@@ -17,6 +17,7 @@ import { PhysicsDebugDraw } from '@codexo/exojs/debug';
 import { BoxShape, type PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
 import type { TileMap } from '@codexo/exojs/tilemap';
 import { buildObjectLayerColliders } from '@codexo/exojs/tilemap-physics';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
@@ -36,9 +37,9 @@ class TiledMapPhysicsActorScene extends Scene {
 
   override async load(): Promise<void> {
     const [map, charactersTexture, spritesheetData] = await Promise.all([
-      this.loader.load(Asset.type('tileMap', 'json/maps/physics-room.tmj')),
-      this.loader.load(Asset.type('texture', assets.demo.spritesheets.platformerCharacters.image)),
-      this.loader.load(Asset.type('json', assets.demo.spritesheets.platformerCharacters.data)),
+      this.loader.load(Asset.type('tileMap', assets.physicsRoomMap.source)),
+      this.loader.load(assets.platformerCharactersImage),
+      this.loader.load(assets.platformerCharactersAtlas),
     ]);
     this.map = map;
     this.charactersTexture = charactersTexture;
@@ -127,7 +128,6 @@ const app = new Application({
   canvas: { width: 1280, height: 704, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(38, 46, 66),
   extensions: [tiledExtension],
-  loader: { basePath: 'assets/' },
 });
 
 await app.start(TiledMapPhysicsActorScene);

@@ -1,6 +1,7 @@
 // Auto-generated from performance-overlay.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, Keyboard, Scene, Sprite, Time } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 // The HUD counts every frame longer than this budget, paints those rows red,
 // and plots the budget as the guide line halfway up the sparkline.
 const budgets = [Time.seconds(1 / 60), Time.seconds(1 / 30), Time.seconds(1 / 144)];
@@ -17,7 +18,7 @@ class PerformanceOverlayScene extends Scene {
     // instead emit one draw call per sprite and tank the frame rate.
     this.layer = new Container();
     this.sprites = Array.from({ length: 1600 }, () => {
-      const sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(0.25);
+      const sprite = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setScale(0.25);
       sprite.setPosition(Math.random() * width, Math.random() * height);
       this.layer.addChild(sprite);
       return {
@@ -63,9 +64,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 const debug = new DebugOverlay(app);
 debug.layers.performance.visible = true;

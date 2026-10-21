@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
@@ -10,6 +9,7 @@ import {
   Text,
   type Voice,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 class AudioBusesScene extends Scene {
@@ -21,8 +21,8 @@ class AudioBusesScene extends Scene {
   private hud!: ReturnType<typeof mountControls>;
 
   override async load(): Promise<void> {
-    this.music = await this.loader.load(Asset.type('music', assets.demo.audio.musicLoop));
-    this.sfx = this.loader.get(assets.demo.audio.uiClick);
+    this.music = await this.loader.load(assets.musicLoopMain);
+    this.sfx = this.loader.get(assets.soundUiClick);
   }
 
   override init(): void {

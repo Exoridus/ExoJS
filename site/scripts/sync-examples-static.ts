@@ -2,10 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { assets } from '../../examples/assets/assets.js';
-import { rawAssets } from '../../examples/assets/catalog.js';
-import { resolveAssetCatalog } from '../../examples/assets/resolver.js';
-import { renderAssetsGlobalDts } from '../../scripts/generate-examples-global-dts.ts';
 import { renderRuntimeDts } from '../../scripts/generate-examples-runtime-dts.ts';
 import { transpileTypescriptExamples } from '../../scripts/transpile-examples.ts';
 
@@ -15,14 +11,12 @@ const projectRoot = path.resolve(__dirname, '..');
 const repositoryRoot = path.resolve(projectRoot, '..');
 
 const sourceExamplesDir = path.resolve(repositoryRoot, 'examples');
-const sourceAssetsDir = path.resolve(sourceExamplesDir, 'assets');
-const sourceCatalogDemoDir = path.resolve(sourceExamplesDir, 'assets', 'demo');
-const sourceCatalogTechnicalDir = path.resolve(sourceExamplesDir, 'assets', 'technical');
 
 const targetExamplesDir = path.resolve(projectRoot, 'public', 'examples');
-const targetAssetsDir = path.resolve(projectRoot, 'public', 'assets');
-const targetCatalogDemoDir = path.resolve(targetAssetsDir, 'demo');
-const targetCatalogTechnicalDir = path.resolve(targetAssetsDir, 'technical');
+// Earlier syncs served the whole examples/assets tree here. The examples now
+// load their media through @codexo/exojs-demo-assets (vendor/exojs-demo-assets),
+// so a stale copy is removed rather than shipped.
+const staleAssetsDir = path.resolve(projectRoot, 'public', 'assets');
 
 const ensureSource = (dirPath: string): void => {
   if (!fs.existsSync(dirPath)) {
@@ -35,23 +29,19 @@ const resetDir = (dirPath: string): void => {
   fs.mkdirSync(path.dirname(dirPath), { recursive: true });
 };
 
-const copyRecursive = (sourceDir: string, targetDir: string): void => {
-  fs.cpSync(sourceDir, targetDir, { recursive: true, force: true });
-};
-
 /**
  * The guide sources under `examples/guides/` are read at build time by
- * `SourceSnippet`, straight from the repository. Nothing loads them over HTTP,
- * so they are left out of the served snapshot rather than shipped as dead
- * weight next to the runnable examples.
+ * `SourceSnippet`, straight from the repository, and the media under
+ * `examples/assets/` are the authoring source of the demo-assets package.
+ * Nothing loads either over HTTP, so both are left out of the served snapshot.
  */
 const copyExamples = (sourceDir: string, targetDir: string): void => {
-  const guidesDir = path.resolve(sourceDir, 'guides');
+  const skipped = new Set([path.resolve(sourceDir, 'guides'), path.resolve(sourceDir, 'assets')]);
 
   fs.cpSync(sourceDir, targetDir, {
     recursive: true,
     force: true,
-    filter: source => source !== guidesDir,
+    filter: source => !skipped.has(source),
   });
 };
 
@@ -99,9 +89,6 @@ const collapseImportLists = (dir: string): void => {
 
 const run = async (): Promise<void> => {
   ensureSource(sourceExamplesDir);
-  ensureSource(sourceAssetsDir);
-  ensureSource(sourceCatalogDemoDir);
-  ensureSource(sourceCatalogTechnicalDir);
 
   // Transpile TypeScript examples to JavaScript before copying so the
   // generated .js files are included in the public/examples snapshot.
@@ -110,14 +97,6 @@ const run = async (): Promise<void> => {
   if (transpiled > 0) {
     console.log(`[examples:sync] Transpiled ${transpiled} TypeScript example(s) to JavaScript`);
   }
-
-  // Regenerate the self-contained typed `assets` global declaration from the
-  // canonical catalog so the Monaco editor (and typecheck:examples) get
-  // hierarchical autocomplete + exact literal types with no `@assets` import.
-  // Drift between this and the committed file is guarded by a unit test.
-  const globalDtsPath = path.resolve(sourceExamplesDir, 'shared', 'assets-global.d.ts');
-  fs.writeFileSync(globalDtsPath, renderAssetsGlobalDts(assets as unknown as Record<string, unknown>), 'utf8');
-  console.log(`[examples:sync] Generated ${globalDtsPath}`);
 
   // The Playground editor resolves `@examples/runtime` through a declaration
   // file it fetches from the served snapshot, so the shared helper kit needs one
@@ -128,41 +107,12 @@ const run = async (): Promise<void> => {
   console.log(`[examples:sync] Generated ${runtimeDtsPath}`);
 
   resetDir(targetExamplesDir);
-  resetDir(targetAssetsDir);
+  fs.rmSync(staleAssetsDir, { recursive: true, force: true });
 
   copyExamples(sourceExamplesDir, targetExamplesDir);
   collapseImportLists(targetExamplesDir);
-  copyRecursive(sourceAssetsDir, targetAssetsDir);
-  copyRecursive(sourceCatalogDemoDir, targetCatalogDemoDir);
-  copyRecursive(sourceCatalogTechnicalDir, targetCatalogTechnicalDir);
-
-  // Keep runtime serving deterministic: examples/assets is canonical source,
-  // but the playground runtime expects /assets/* URLs.
-  fs.rmSync(path.resolve(targetExamplesDir, 'assets'), { recursive: true, force: true });
-
-  // Generate assets/catalog.js - the resolved runtime catalog imported by the
-  // controlled example runtimes to populate the `assets` global. Paths are
-  // resolved relative to preview.html (i.e. 'assets/demo/...', 'assets/technical/...')
-  // so no basePath is needed in loaders.
-  const resolved = resolveAssetCatalog(rawAssets, 'assets/');
-  const resolvedAssets = resolveAssetCatalog(assets as unknown as Record<string, unknown>, 'assets/');
-  const catalogLines = [
-    '// Auto-generated by examples:sync — do not edit.',
-    '',
-    // Primary hierarchical export - used by all current examples.
-    `export const assets = ${JSON.stringify(resolvedAssets, null, 4)};`,
-    '',
-    // Legacy flat category exports - kept for Asset Browser introspection.
-    ...Object.entries(resolved).map(([key, value]) => `export const ${key} = ${JSON.stringify(value, null, 4)};`),
-    '',
-  ];
-  fs.writeFileSync(path.resolve(targetAssetsDir, 'catalog.js'), catalogLines.join('\n'), 'utf8');
 
   console.log(`[examples:sync] Copied ${sourceExamplesDir} -> ${targetExamplesDir}`);
-  console.log(`[examples:sync] Copied ${sourceAssetsDir} -> ${targetAssetsDir}`);
-  console.log(`[examples:sync] Copied ${sourceCatalogDemoDir} -> ${targetCatalogDemoDir}`);
-  console.log(`[examples:sync] Copied ${sourceCatalogTechnicalDir} -> ${targetCatalogTechnicalDir}`);
-  console.log(`[examples:sync] Generated ${path.resolve(targetAssetsDir, 'catalog.js')}`);
 };
 
 void run();

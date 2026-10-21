@@ -12,6 +12,7 @@ import {
   Sprite,
   VectorAction,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 const PULSE_COLOR = new Color(255, 190, 90);
 class ActionMappingScene extends Scene {
@@ -32,7 +33,7 @@ class ActionMappingScene extends Scene {
   hud;
   init() {
     const { width, height } = this.app;
-    this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
+    this.sprite = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setPosition(width / 2, height / 2);
     this.inputs.attach(this.actions);
     this.hud = mountControls({
       title: 'Input Actions',
@@ -75,8 +76,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(10, 12, 20),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(ActionMappingScene);

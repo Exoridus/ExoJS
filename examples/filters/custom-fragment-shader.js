@@ -9,8 +9,9 @@ import {
   Sprite,
   UniformType,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
-const UV_GRID = assets.technical.filtering.uvGrid256;
+const UV_GRID = assets.uvGrid256;
 // The filter input is linear, premultiplied colour, and the fragment returns
 // colour in that same representation, so a shader that only moves samples
 // (as this one does) needs no colour conversion. Only the numeric inputs - the

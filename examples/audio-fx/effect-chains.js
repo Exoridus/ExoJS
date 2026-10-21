@@ -1,16 +1,7 @@
 // Auto-generated from effect-chains.ts - edit the .ts source, not this file.
-import {
-  Application,
-  Asset,
-  Color,
-  FixedResolutionCanvasSizing,
-  Graphics,
-  HighpassFilter,
-  LowpassFilter,
-  Scene,
-  Text,
-} from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, HighpassFilter, LowpassFilter, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser, BitCrusherEffect, ChorusEffect, DistortionEffect, PingPongDelayEffect, ReverbEffect } from '@codexo/exojs/audio-fx';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const CHAINS = [
   {
@@ -68,8 +59,8 @@ class EffectChainsScene extends Scene {
   panel;
   hud;
   async load() {
-    this.music = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
-    this.impact = this.loader.get('audio/impact-light.ogg');
+    this.music = await this.loader.load(assets.musicLoopMain);
+    this.impact = this.loader.get(assets.soundImpactLight);
   }
   init() {
     const audio = this.app.audio;
@@ -199,6 +190,5 @@ const app = new Application({
   scenes: { EffectChainsScene },
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: Color.black,
-  loader: { basePath: 'assets/' },
 });
 await app.start(EffectChainsScene);

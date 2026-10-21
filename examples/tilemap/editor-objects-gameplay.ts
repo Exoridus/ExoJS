@@ -1,5 +1,6 @@
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
 import { type MapObjectDescriptor, MapObjectSpawner, type MapSpawnSession } from '@codexo/exojs/tilemap';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
 import { mountControls } from '@examples/runtime';
 
@@ -25,7 +26,7 @@ class EditorObjectsScene extends Scene {
   private collected = false;
 
   override async load(): Promise<void> {
-    const source = await this.loader.load(Asset.type('tiledSource', 'json/maps/harbor-plaza.tmj'));
+    const source = await this.loader.load(Asset.type('tiledSource', assets.harborPlazaMap.source));
     const map = source.toTileMap();
     this.mapNode = new TileMapNode(map);
 
@@ -115,7 +116,6 @@ const app = new Application({
   canvas: { width: 1280, height: 768, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(28, 36, 46),
   extensions: [tiledExtension],
-  loader: { basePath: 'assets/' },
 });
 
 await app.start(EditorObjectsScene);

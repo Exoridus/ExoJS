@@ -1,5 +1,6 @@
 // Auto-generated from crt-scanlines.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, Scene, ShaderFilter, Sprite, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const glsl = `#version 300 es
 precision highp float;
@@ -55,7 +56,7 @@ class RetroDisplayScene extends Scene {
   time = 0;
   init() {
     const { width, height } = this.app;
-    const background = new Sprite(this.loader.get(assets.technical.filtering.uvGrid256)).setAnchor(0.5).setPosition(width / 2, height / 2);
+    const background = new Sprite(this.loader.get(assets.uvGrid256)).setAnchor(0.5).setPosition(width / 2, height / 2);
     background.width = width;
     background.height = height;
     const title = new Text('SIGNAL LOST', { fillColor: Color.white, fontSize: 96, outlineColor: Color.black, outlineWidth: 4 });

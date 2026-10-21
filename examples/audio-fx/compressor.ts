@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
@@ -11,6 +10,7 @@ import {
   type Voice,
 } from '@codexo/exojs';
 import { CompressorEffect } from '@codexo/exojs/audio-fx';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 class CompressorScene extends Scene {
@@ -24,7 +24,7 @@ class CompressorScene extends Scene {
   private bypass = false;
 
   override async load(): Promise<void> {
-    this.music = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
+    this.music = await this.loader.load(assets.musicLoopMain);
   }
 
   override init(): void {
@@ -121,7 +121,6 @@ const app = new Application({
   scenes: { CompressorScene },
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: Color.black,
-  loader: { basePath: 'assets/' },
 });
 
 await app.start(CompressorScene);

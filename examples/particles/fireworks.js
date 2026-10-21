@@ -28,6 +28,7 @@ import {
   Turbulence,
   VectorRange,
 } from '@codexo/exojs/particles';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 const random = new Random(2026);
 const autoLaunchInterval = Time.seconds(1.6);
@@ -73,8 +74,8 @@ class FireworksScene extends Scene {
   init() {
     const app = this.app;
     const { width, height } = app;
-    const star = this.loader.get(assets.demo.textures.particleStar);
-    const light = this.loader.get(assets.demo.textures.particleLight);
+    const star = this.loader.get(assets.particleStar);
+    const light = this.loader.get(assets.particleLight);
     this.canvasSize = new Size(width, height);
     this.rocketTexture = star;
     // 1. Flash: one large, very short-lived glow that sells the detonation.

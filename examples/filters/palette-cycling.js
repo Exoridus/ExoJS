@@ -1,7 +1,8 @@
 // Auto-generated from palette-cycling.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, LutFilter, Scene, Sprite } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
-const PRIMARY_RAMP = assets.technical.color.primaryRamp;
+const PRIMARY_RAMP = assets.primaryRamp;
 const RAMP_SIZE = 256;
 // One sine curve per channel, each a third of a cycle out of phase. A 1D LUT
 // grades every channel through its OWN curve, so shifting all three by the same

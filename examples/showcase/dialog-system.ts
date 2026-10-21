@@ -8,6 +8,7 @@ import {
   type Sound,
   Text,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 interface DialogLine {
@@ -51,7 +52,7 @@ class DialogSystemScene extends Scene {
     this.choicePrompt = new Text('', { fillColor: new Color(150, 220, 255), fontSize: 20 });
     this.choicePrompt.setPosition(textX, height * 0.78);
 
-    this.beep = this.loader.get(assets.demo.sound.uiConfirm);
+    this.beep = this.loader.get(assets.soundUiConfirm);
 
     this.hud = mountControls({
       title: 'Dialogue and Choices',

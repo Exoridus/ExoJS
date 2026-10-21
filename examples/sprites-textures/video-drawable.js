@@ -1,5 +1,6 @@
 // Auto-generated from video-drawable.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Keyboard, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Keyboard, Scene, Sprite } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 // Every video in the asset catalog, switchable at runtime with the number
 // keys. Only the first entry is fetched up front - the others lazy-load on
@@ -9,9 +10,9 @@ import { mountControls } from '@examples/runtime';
 // in the browser's own display encoding and sampled as sRGB colour; the engine
 // makes no HDR-video promise, so no HDR clip is offered.
 const VIDEOS = [
-  { name: 'demoLoop', label: 'Demo loop (webm)', url: assets.demo.video.demoLoop },
-  { name: 'highRes', label: 'High-res (mp4)', url: assets.demo.video.highRes },
-  { name: 'highFps', label: 'High-fps (webm)', url: assets.demo.video.highFps },
+  { name: 'demoLoop', label: 'Demo loop (webm)', asset: assets.videoDemoLoop },
+  { name: 'highRes', label: 'High-res (mp4)', asset: assets.videoHighRes },
+  { name: 'highFps', label: 'High-fps (webm)', asset: assets.videoHighFps },
 ];
 class VideoDrawableScene extends Scene {
   video;
@@ -24,16 +25,15 @@ class VideoDrawableScene extends Scene {
   async load() {
     const app = this.app;
     const { width, height } = app;
-    // Video is a non-leaf resource kind (no seamless placeholder, unlike
-    // Texture/Sound), so it is loaded directly through `Asset.type('video', ...)`
-    // and awaited rather than fetched synchronously via `get()`.
-    this.video = await this.loader.load(Asset.type('video', VIDEOS[0].url));
+    // Video has no placeholder handle (unlike Texture and Sound), so it is
+    // awaited with `load()` rather than claimed synchronously with `get()`.
+    this.video = await this.loader.load(VIDEOS[0].asset);
     this.loadedVideos.add(VIDEOS[0].name);
     this.configureVideo();
     // A sprite composited on top of the live video texture - the same scene
     // graph draws video frames and regular sprites side by side. Texture IS
     // seamless, so it is fetched directly by source with no preload step.
-    this.overlay = new Sprite(this.loader.get(assets.demo.textures.shipA));
+    this.overlay = new Sprite(this.loader.get(assets.ship));
     this.overlay.setAnchor(0.5);
     this.overlay.setScale(3);
     this.overlay.setPosition(width / 2, height / 2);
@@ -76,7 +76,7 @@ class VideoDrawableScene extends Scene {
     this.switching = true;
     this.hud.setStatus(`Loading — ${entry.label}…`);
     try {
-      const loaded = await this.loader.load(Asset.type('video', entry.url));
+      const loaded = await this.loader.load(entry.asset);
       this.loadedVideos.add(entry.name);
       this.video.pause();
       this.videoIdx = idx;

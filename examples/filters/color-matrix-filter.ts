@@ -10,6 +10,7 @@ import {
   Text,
   type Texture,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const RAMP_SIZE = 256;
@@ -87,7 +88,7 @@ class ColorTransformsScene extends Scene {
 
   override init(): void {
     const { width, height } = this.app;
-    const image = this.loader.get(assets.technical.color.primaryRamp);
+    const image = this.loader.get(assets.primaryRamp);
     this.reference = new Sprite(image)
       .setAnchor(0.5)
       .setScale(3)

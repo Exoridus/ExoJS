@@ -10,6 +10,7 @@ import {
   View,
 } from '@codexo/exojs';
 import { ChunkStreamer, TileMapNode } from '@codexo/exojs/tilemap';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { tiledExtension } from '@codexo/exojs-tiled';
 import { mountControls } from '@examples/runtime';
 
@@ -42,7 +43,7 @@ class TiledInfiniteMapScene extends Scene {
   private hud!: ReturnType<typeof mountControls>;
 
   override async load(): Promise<void> {
-    const source = await this.loader.load(Asset.type('tiledSource', 'json/maps/drift-fields.tmj'));
+    const source = await this.loader.load(Asset.type('tiledSource', assets.driftFieldsMap.source));
     const runtimeMap = source.toTileMap();
 
     this.mapNode = new TileMapNode(runtimeMap);
@@ -147,9 +148,6 @@ const app = new Application({
   // tiledExtension depends on tilemapExtension, so registering it alone is
   // enough for both loading (.tmj) and rendering (TileMapNode).
   extensions: [tiledExtension],
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(TiledInfiniteMapScene);

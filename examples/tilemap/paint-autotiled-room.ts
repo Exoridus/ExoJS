@@ -1,13 +1,4 @@
-import {
-  Application,
-  Asset,
-  Color,
-  FixedResolutionCanvasSizing,
-  Graphics,
-  type RenderingContext,
-  Scene,
-  TextureRegion,
-} from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, TextureRegion } from '@codexo/exojs';
 import {
   refreshCell,
   TILE_TRANSFORM_IDENTITY,
@@ -18,6 +9,7 @@ import {
   TileSet,
   WangSet,
 } from '@codexo/exojs/tilemap';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const TILE = 64;
@@ -83,7 +75,7 @@ class AutoTiledRoomScene extends Scene {
   private painting = false;
 
   override async load(): Promise<void> {
-    const texture = await this.loader.load(Asset.type('texture', assets.demo.tilesets.map.image));
+    const texture = await this.loader.load(assets.mapPackTilesheet);
     this.tileset = new TileSet({
       name: 'map-pack',
       texture: new TextureRegion(texture, { x: 0, y: 0, width: texture.width, height: texture.height }),
@@ -211,7 +203,6 @@ const app = new Application({
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(32, 44, 50),
   extensions: [tilemapExtension],
-  loader: { basePath: 'assets/' },
 });
 
 await app.start(AutoTiledRoomScene);

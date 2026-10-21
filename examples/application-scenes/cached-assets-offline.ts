@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   AssetCache,
   AssetCacheMissError,
   Color,
@@ -12,6 +11,7 @@ import {
   Scene,
   Text,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const cache = new AssetCache({
@@ -19,8 +19,8 @@ const cache = new AssetCache({
   policy: new ConnectivityPolicyResolver(),
 });
 
-const warmAsset = Asset.type('json', assets.demo.inputPrompts.generic.data);
-const coldAsset = Asset.type('json', assets.demo.inputPrompts.keyboardMouse.data);
+const warmAsset = assets.genericInputPromptsAtlas;
+const coldAsset = assets.keyboardMouseInputPromptsAtlas;
 
 class CachedAssetsScene extends Scene {
   private readonly backdrop = new Graphics();
@@ -157,7 +157,7 @@ const app = new Application({
   scenes: { CachedAssetsScene },
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(12, 20, 32),
-  loader: { basePath: 'assets/', cache },
+  loader: { cache },
 });
 
 await app.start(CachedAssetsScene);
