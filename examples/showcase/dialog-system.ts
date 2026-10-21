@@ -1,5 +1,6 @@
 import {
   Application,
+  Button,
   Color,
   FixedResolutionCanvasSizing,
   type RenderingContext,
@@ -9,7 +10,6 @@ import {
   Text,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel, mountControls } from '@examples/runtime';
 
 interface DialogLine {
   speaker: string;
@@ -29,13 +29,13 @@ class DialogSystemScene extends Scene {
   private box!: Text;
   private choicePrompt!: Text;
   private beep!: Sound;
-  private hud!: ReturnType<typeof mountControls>;
-  private panel!: ReturnType<typeof mountControlPanel>;
+  private replyButtons: Button[] = [];
   private lineIndex = 0;
   private chars = 0;
   private timer = 0;
   private done = false;
   private awaitingChoice = false;
+  private restartPending = false;
 
   override init(): void {
     const app = this.app;
@@ -54,20 +54,15 @@ class DialogSystemScene extends Scene {
 
     this.beep = this.loader.get(assets.soundUiConfirm);
 
-    this.hud = mountControls({
-      title: 'Dialogue and Choices',
-      controls: [{ keys: 'Click', action: 'advance / reveal' }],
-      hint: 'Click anywhere to skip the typewriter, then click again to continue.',
+    this.replyButtons = choices.map((reply, index) => {
+      const button = new Button({ label: reply, width: 220, height: 48 });
+
+      button.anchorIn(this.ui, 'top-left', textX + index * 240, height * 0.78);
+      button.onClick.add(() => this.choose(reply));
+      this.ui.addChild(button);
+
+      return button;
     });
-
-    // Choice buttons live in a predictable DOM panel so they never compete
-    // with the canvas pointer for "advance" taps. They stay hidden until the
-    // final line finishes typing.
-    this.panel = mountControlPanel({ title: 'Your reply', corner: 'bottom-left' });
-
-    for (const choice of choices) {
-      this.panel.addButton({ label: choice, onClick: () => this.choose(choice) });
-    }
 
     this.setChoicesVisible(false);
 
@@ -110,21 +105,29 @@ class DialogSystemScene extends Scene {
     const app = this.app;
     app.audio.play(this.beep, { playbackRate: 1.2, volume: 0.3 });
     this.choicePrompt.text = `You chose: ${choice}`;
-    this.hud.setStatus(`Reply: ${choice}`);
-    this.awaitingChoice = false;
     this.setChoicesVisible(false);
-    // Loop back to the top so the demo can be replayed without a reload.
-    this.lineIndex = 0;
-    this.startLine();
+    // The tap that pressed the button must not also advance the restarted
+    // dialogue, so the loop back to the top waits for the next update.
+    this.restartPending = true;
   }
 
   private setChoicesVisible(visible: boolean): void {
-    this.panel.element.style.display = visible ? '' : 'none';
+    for (const button of this.replyButtons) {
+      button.visible = visible;
+    }
+
     this.choicePrompt.visible = !visible && this.choicePrompt.text.length > 0;
   }
 
   override update(delta: Seconds): void {
     const app = this.app;
+
+    if (this.restartPending) {
+      this.restartPending = false;
+      this.awaitingChoice = false;
+      this.lineIndex = 0;
+      this.startLine();
+    }
 
     if (!this.done && !this.awaitingChoice) {
       this.timer += delta;

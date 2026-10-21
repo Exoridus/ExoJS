@@ -1,7 +1,6 @@
 // Auto-generated from loading-screen.ts - edit the .ts source, not this file.
 import { Application, Assets, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Sprite, Text } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControls } from '@examples/runtime';
 const GameAssets = Assets.from({
   ship: assets.ship,
   grid: assets.uvGrid256,
@@ -134,7 +133,6 @@ class BootScene extends Scene {
 class PlayScene extends Scene {
   ship;
   label;
-  hud;
   init() {
     const app = this.app;
     const { width, height } = app;
@@ -147,19 +145,10 @@ class PlayScene extends Scene {
     this.inputs.onTrigger(Keyboard.Space, () => {
       void app.scenes.change(BootScene);
     });
-    this.hud = mountControls({
-      title: 'Loading Progress and Retry',
-      controls: [{ keys: 'Space', action: 'return to the boot scene' }],
-      hint: 'The boot scene follows real loader signals, retries failures, and enters the game after a successful batch.',
-    });
   }
   draw(context) {
     context.render(this.ship);
     context.render(this.label);
-  }
-  destroy() {
-    this.hud.dispose();
-    super.destroy();
   }
 }
 const app = new Application({

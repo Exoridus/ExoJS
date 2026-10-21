@@ -133,14 +133,7 @@ class GamepadSpaceshipScene extends Scene {
     })
       .setAnchor(0.5, 0.5)
       .setPosition(width / 2, height - 40);
-    this.hud = mountControls({
-      title: 'Fly a Spaceship',
-      controls: [
-        { keys: 'WASD / Arrows / Left stick', action: 'steer and thrust' },
-        { keys: 'Space / Right trigger', action: 'fire' },
-      ],
-      status: 'Score: 0',
-    });
+    this.hud = mountControls({ status: 'Score: 0' });
   }
   startEngine = () => {
     this.engine ??= this.app.audio.play(new AudioGenerator({ type: 'sawtooth', frequency: 55 }), { bus: this.engineBus, volume: 0 });

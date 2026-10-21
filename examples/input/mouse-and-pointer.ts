@@ -47,16 +47,7 @@ class MouseAndPointerScene extends Scene {
       this.clicks++;
     });
 
-    this.hud = mountControls({
-      title: 'Mouse and Pointer',
-      controls: [
-        { keys: 'Move', action: 'track position + delta' },
-        { keys: 'Click', action: 'count taps' },
-        { keys: 'Drag', action: 'move the ship sprite' },
-      ],
-      status: '',
-      hint: 'Drag the ship to move it; the crosshair follows the cursor.',
-    });
+    this.hud = mountControls();
   }
 
   private buttonLabel(): string {

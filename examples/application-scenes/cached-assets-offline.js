@@ -12,7 +12,7 @@ import {
   Text,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { demoPanel, toggle } from '@examples/runtime';
 const cache = new AssetCache({
   stores: new IndexedDbStore('exojs-playground-offline-demo'),
   policy: new ConnectivityPolicyResolver(),
@@ -22,10 +22,8 @@ const coldAsset = assets.keyboardMouseInputPromptsAtlas;
 class CachedAssetsScene extends Scene {
   backdrop = new Graphics();
   title = new Text('Offline Asset Lab', { fillColor: Color.white, fontSize: 44 });
-  mode = new Text('Network allowed', { fillColor: new Color(106, 229, 171), fontSize: 28 });
   warmState = new Text('Generic prompts: not warmed', { fillColor: Color.white, fontSize: 25 });
-  result = new Text('Choose an action in the panel.', { fillColor: Color.white, fontSize: 25 });
-  hud;
+  result = new Text('Warm the cache, then request sources online and offline.', { fillColor: Color.white, fontSize: 25 });
   panel;
   busy = false;
   init() {
@@ -35,48 +33,29 @@ class CachedAssetsScene extends Scene {
     this.backdrop.lineColor = new Color(94, 127, 158);
     this.backdrop.drawRoundedRectangle(150, 130, 980, 450, 24);
     this.title.position.set(215, 195);
-    this.mode.position.set(215, 285);
-    this.warmState.position.set(215, 380);
-    this.result.position.set(215, 465);
-    this.hud = mountControls({
-      title: 'Cached Assets Offline',
-      controls: [{ keys: 'Panel', action: 'warm, request, clear, and change network policy' }],
-      status: 'Online policy. Warm the first JSON source, then switch offline.',
-      hint: 'Offline mode changes loader policy; it does not disable your browser connection.',
-    });
-    this.panel = mountControlPanel({ title: 'Cache actions' });
-    this.panel.addButton({
-      label: 'Warm generic prompts',
-      onClick: () => {
-        void this.run('Warm', () => this.app.loader.cacheSource(warmAsset));
+    this.warmState.position.set(215, 300);
+    this.result.position.set(215, 385);
+    this.panel = demoPanel({
+      title: 'Cache actions',
+      controls: { offline: toggle('Offline policy', false) },
+      actions: {
+        'Warm generic prompts': () => {
+          void this.run('Warm', () => this.app.loader.cacheSource(warmAsset));
+        },
+        'Request warmed source': () => {
+          void this.request(warmAsset, 'Generic prompts');
+        },
+        'Request unwarmed source': () => {
+          void this.request(coldAsset, 'Keyboard prompts');
+        },
+        'Clear demo cache': () => {
+          void this.run('Clear', () => cache.clear());
+        },
       },
-    });
-    this.panel.addToggle({
-      label: 'Offline policy',
-      value: false,
-      onChange: offline => {
-        this.app.connectivity.mode = offline ? 'offline' : 'online';
-        this.mode.text = offline ? 'Cache only: network forbidden' : 'Network allowed';
-        this.mode.style.fillColor = offline ? new Color(255, 186, 95) : new Color(106, 229, 171);
-        this.hud.setStatus(offline ? 'Offline policy: requests must be in the cache.' : 'Online policy: requests may use the network.');
-      },
-    });
-    this.panel.addButton({
-      label: 'Request warmed source',
-      onClick: () => {
-        void this.request(warmAsset, 'Generic prompts');
-      },
-    });
-    this.panel.addButton({
-      label: 'Request unwarmed source',
-      onClick: () => {
-        void this.request(coldAsset, 'Keyboard prompts');
-      },
-    });
-    this.panel.addButton({
-      label: 'Clear demo cache',
-      onClick: () => {
-        void this.run('Clear', () => cache.clear());
+      onChange: (key, value) => {
+        if (key === 'offline') {
+          this.app.connectivity.mode = value ? 'offline' : 'online';
+        }
       },
     });
   }
@@ -94,7 +73,6 @@ class CachedAssetsScene extends Scene {
     } catch (error) {
       this.result.text = `${action} failed: ${error instanceof Error ? error.message : String(error)}`;
     } finally {
-      this.hud.setStatus(this.result.text);
       this.busy = false;
     }
   }
@@ -115,24 +93,20 @@ class CachedAssetsScene extends Scene {
           : `${name}: ${error instanceof Error ? error.message : String(error)}`;
     } finally {
       scope.destroy();
-      this.hud.setStatus(this.result.text);
       this.busy = false;
     }
   }
   draw(context) {
     context.render(this.backdrop);
     context.render(this.title);
-    context.render(this.mode);
     context.render(this.warmState);
     context.render(this.result);
   }
   destroy() {
     this.app.connectivity.mode = 'auto';
-    this.hud?.dispose();
     this.panel?.dispose();
     this.backdrop.destroy();
     this.title.destroy();
-    this.mode.destroy();
     this.warmState.destroy();
     this.result.destroy();
     cache.destroy();

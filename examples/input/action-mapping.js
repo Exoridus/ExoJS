@@ -35,15 +35,7 @@ class ActionMappingScene extends Scene {
     const { width, height } = this.app;
     this.sprite = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setPosition(width / 2, height / 2);
     this.inputs.attach(this.actions);
-    this.hud = mountControls({
-      title: 'Input Actions',
-      controls: [
-        { keys: 'WASD / Arrows / Left stick', action: 'move' },
-        { keys: 'Space / South button', action: 'pulse' },
-      ],
-      status: '',
-      hint: 'Keyboard and controller feed the same move and pulse actions.',
-    });
+    this.hud = mountControls();
   }
   update(delta) {
     const { x, y } = this.actions.move.value;

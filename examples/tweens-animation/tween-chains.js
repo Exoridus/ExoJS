@@ -23,11 +23,7 @@ class TweenSequencesScene extends Scene {
       this.path.drawLine(points[i].x, points[i].y, next.x, next.y);
     }
     this.sprite = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setPosition(points[0].x, points[0].y);
-    this.hud = mountControls({
-      title: 'Tween Sequences',
-      status: 'Leg 1 / 4',
-      hint: 'Four tweens are chained once, then the final completion restarts the sequence.',
-    });
+    this.hud = mountControls({ status: 'Leg 1 / 4' });
     this.steps = points
       .slice(1)
       .concat(points[0])

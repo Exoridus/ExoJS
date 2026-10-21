@@ -1,6 +1,5 @@
 // Auto-generated from gamepad.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, GamepadAxis, GamepadButton, Graphics, Scene, Text } from '@codexo/exojs';
-import { mountControls } from '@examples/runtime';
 const AXES = [
   { name: 'Left X', channel: GamepadAxis.LeftStickX },
   { name: 'Left Y', channel: GamepadAxis.LeftStickY },
@@ -27,7 +26,6 @@ class GamepadScene extends Scene {
   axisText;
   buttonText;
   graphics = new Graphics();
-  hud;
   init() {
     this.pad = this.app.input.getGamepad(0);
     this.axes = AXES.map(({ name, channel }) => ({ name, binding: this.pad.onActive(channel) }));
@@ -35,11 +33,6 @@ class GamepadScene extends Scene {
     this.status = new Text('', { fillColor: Color.white, fontSize: 23 }).setPosition(260, 130);
     this.axisText = new Text('', { fillColor: new Color(125, 215, 255), fontSize: 23 }).setPosition(270, 450);
     this.buttonText = new Text('', { fillColor: new Color(255, 195, 125), fontSize: 21 }).setPosition(800, 240);
-    this.hud = mountControls({
-      title: 'Controller Inspector',
-      status: 'Slot 1 is waiting for a controller.',
-      hint: 'Axes and button values update live; disconnected state stays visible.',
-    });
   }
   update() {
     this.status.text = this.pad.connected
@@ -65,7 +58,6 @@ class GamepadScene extends Scene {
     for (const entry of [...this.axes, ...this.buttons]) {
       entry.binding.unbind();
     }
-    this.hud?.dispose();
     this.status?.destroy();
     this.axisText?.destroy();
     this.buttonText?.destroy();

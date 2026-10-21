@@ -24,14 +24,7 @@ class InteractiveTweensScene extends Scene {
     const { width, height } = this.app;
     this.sprite = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setPosition(width / 2, height / 2);
     this.target = new Graphics();
-    this.hud = mountControls({
-      title: 'Interactive Tweens',
-      controls: [
-        { keys: 'Click', action: 'move to target; click again to interrupt' },
-        { keys: 'Space', action: 'toggle round trip' },
-      ],
-      hint: 'A new tween starts from the current position. Round trip uses repeat(1) with yoyo().',
-    });
+    this.hud = mountControls();
     this.updateHud('Ready');
     this.app.input.onPointerDown.add(this.onPointerDown);
     this.inputs.onTrigger(Keyboard.Space, () => {

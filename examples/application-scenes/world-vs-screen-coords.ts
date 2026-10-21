@@ -11,14 +11,12 @@ import {
   Text,
   View,
 } from '@codexo/exojs';
-import { mountControls } from '@examples/runtime';
 
 class CameraNavigationScene extends Scene {
   private view!: View;
   private grid!: Graphics;
   private markers!: Graphics;
   private readout!: Text;
-  private hud!: ReturnType<typeof mountControls>;
   private up!: InputBinding;
   private down!: InputBinding;
   private left!: InputBinding;
@@ -65,15 +63,6 @@ class CameraNavigationScene extends Scene {
     this.app.input.onPointerMove.add(this.onPointerMove);
     this.app.input.onPointerTap.add(this.onPointerTap);
     this.app.input.onMouseWheel.add(this.onMouseWheel);
-    this.hud = mountControls({
-      title: 'Camera Navigation',
-      controls: [
-        { keys: 'WASD / arrows', action: 'pan' },
-        { keys: 'Wheel', action: 'zoom' },
-        { keys: 'Move / click', action: 'inspect / mark world point' },
-      ],
-      hint: 'Markers use world coordinates; the readout stays fixed on screen.',
-    });
   }
 
   override update(delta: Seconds): void {
@@ -94,7 +83,6 @@ class CameraNavigationScene extends Scene {
     this.app.input.onPointerMove.remove(this.onPointerMove);
     this.app.input.onPointerTap.remove(this.onPointerTap);
     this.app.input.onMouseWheel.remove(this.onMouseWheel);
-    this.hud.dispose();
     super.destroy();
   }
 }

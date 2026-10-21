@@ -41,12 +41,7 @@ class RectanglesCollisionScene extends Scene {
 
     this.overlap = new Graphics();
 
-    this.hud = mountControls({
-      title: 'Rectangles Collision',
-      controls: [{ keys: 'Drag', action: 'move a rectangle' }],
-      status: 'No overlap',
-      hint: 'Drag either rectangle over the other — the AABB overlap region lights up.',
-    });
+    this.hud = mountControls({ status: 'No overlap' });
   }
 
   private makeBox(texture: Texture, w: number, h: number): Sprite {

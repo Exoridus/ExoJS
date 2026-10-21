@@ -51,16 +51,7 @@ class KeyboardScene extends Scene {
       this.position.y = height / 2;
     });
 
-    this.hud = mountControls({
-      title: 'Keyboard',
-      controls: [
-        { keys: ['W', 'A', 'S', 'D'], action: 'move (per-frame polling)' },
-        { keys: ['↑', '↓', '←', '→'], action: 'move (same bindings)' },
-        { keys: 'Esc', action: 'recentre (on-event)' },
-      ],
-      status: 'Held: none',
-      hint: 'Click the canvas first so it has keyboard focus.',
-    });
+    this.hud = mountControls({ status: 'Held: none' });
   }
 
   override update(delta: Seconds): void {

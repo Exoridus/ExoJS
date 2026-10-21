@@ -41,12 +41,7 @@ class GameScene extends Scene {
     this.pauseLabel.anchorIn(this.ui, 'center');
     this.pauseLabel.visible = false;
     this.ui.addChild(this.pauseLabel);
-    this.hud = mountControls({
-      title: 'Pause Menu',
-      controls: [{ keys: 'Esc / Click', action: 'pause / resume' }],
-      status: 'Running',
-      hint: 'Scene updates stop while paused; the application tween still fades in the blur.',
-    });
+    this.hud = mountControls({ status: 'Running' });
     this.inputs.onTrigger(Keyboard.Escape, () => this.togglePause(), { when: SceneAvailability.Always });
     app.input.onPointerDown.add(this.onPointerDown);
   }

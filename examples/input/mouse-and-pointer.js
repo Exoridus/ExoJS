@@ -42,16 +42,7 @@ class MouseAndPointerScene extends Scene {
     app.input.onPointerTap.add(() => {
       this.clicks++;
     });
-    this.hud = mountControls({
-      title: 'Mouse and Pointer',
-      controls: [
-        { keys: 'Move', action: 'track position + delta' },
-        { keys: 'Click', action: 'count taps' },
-        { keys: 'Drag', action: 'move the ship sprite' },
-      ],
-      status: '',
-      hint: 'Drag the ship to move it; the crosshair follows the cursor.',
-    });
+    this.hud = mountControls();
   }
   buttonLabel() {
     const held = [this.buttons & 1 && 'Left', this.buttons & 2 && 'Right', this.buttons & 4 && 'Middle'].filter(Boolean);

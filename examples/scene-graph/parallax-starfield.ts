@@ -1,5 +1,4 @@
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene } from '@codexo/exojs';
-import { mountControls } from '@examples/runtime';
 
 const speeds = [0.15, 0.35, 0.6];
 const counts = [120, 80, 48];
@@ -8,7 +7,6 @@ const colors = [new Color(120, 140, 200), new Color(170, 190, 255), new Color(25
 class ParallaxStarfieldScene extends Scene {
   private layers!: Graphics[];
   private pointer = { x: 0, y: 0 };
-  private hud!: ReturnType<typeof mountControls>;
   private readonly onPointerMove = (pointer: { x: number; y: number }): void => {
     this.pointer.x = pointer.x;
     this.pointer.y = pointer.y;
@@ -35,11 +33,6 @@ class ParallaxStarfieldScene extends Scene {
       return g;
     });
 
-    this.hud = mountControls({
-      title: 'Parallax Layers',
-      controls: [{ keys: 'Move pointer', action: 'shift the three depth layers' }],
-      hint: 'Near stars travel farther than distant stars for the same pointer movement.',
-    });
     app.input.onPointerMove.add(this.onPointerMove);
   }
 
@@ -57,7 +50,6 @@ class ParallaxStarfieldScene extends Scene {
 
   override destroy(): void {
     this.app.input.onPointerMove.remove(this.onPointerMove);
-    this.hud.dispose();
     super.destroy();
   }
 }

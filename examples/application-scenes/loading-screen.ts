@@ -11,7 +11,6 @@ import {
   Text,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControls } from '@examples/runtime';
 
 const GameAssets = Assets.from({
   ship: assets.ship,
@@ -170,7 +169,6 @@ class BootScene extends Scene {
 class PlayScene extends Scene {
   private ship!: Sprite;
   private label!: Text;
-  private hud!: ReturnType<typeof mountControls>;
 
   override init(): void {
     const app = this.app;
@@ -188,22 +186,11 @@ class PlayScene extends Scene {
     this.inputs.onTrigger(Keyboard.Space, () => {
       void app.scenes.change(BootScene);
     });
-
-    this.hud = mountControls({
-      title: 'Loading Progress and Retry',
-      controls: [{ keys: 'Space', action: 'return to the boot scene' }],
-      hint: 'The boot scene follows real loader signals, retries failures, and enters the game after a successful batch.',
-    });
   }
 
   override draw(context: RenderingContext): void {
     context.render(this.ship);
     context.render(this.label);
-  }
-
-  override destroy(): void {
-    this.hud.dispose();
-    super.destroy();
   }
 }
 

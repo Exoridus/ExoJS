@@ -63,12 +63,7 @@ class MultitouchScene extends Scene {
       this.refreshHud();
     });
 
-    this.hud = mountControls({
-      title: 'Multitouch',
-      controls: [{ keys: 'Touch', action: 'each finger draws a circle' }],
-      status: 'Active touches: 0 / 10',
-      hint: 'Touchscreen required — use multiple fingers (mouse gives one point).',
-    });
+    this.hud = mountControls({ status: 'Active touches: 0 / 10' });
   }
 
   private refreshHud(): void {
