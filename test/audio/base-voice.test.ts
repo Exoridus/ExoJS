@@ -282,6 +282,38 @@ describe('BaseVoice — post-ended no-ops', () => {
   });
 });
 
+describe('BaseVoice - initial volume', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  test.each([0, 0.05, 0.25, 1])('a voice played at volume %s starts there instead of ramping down from unity', volume => {
+    const system = new AudioSystem(); // before capture, so bus gains are not captured
+    const out = captureVoiceOutput();
+    const sound = new Sound(createAudioBufferStub());
+
+    system.play(sound, { volume });
+
+    expect(out.node!.gain.setValueAtTime).toHaveBeenCalledWith(volume, expect.any(Number));
+    expect(out.node!.gain.setTargetAtTime).not.toHaveBeenCalled();
+
+    out.restore();
+  });
+
+  test('a later volume change still ramps rather than jumping', () => {
+    const system = new AudioSystem();
+    const out = captureVoiceOutput();
+    const sound = new Sound(createAudioBufferStub());
+    const voice = system.play(sound, { volume: 0.5 });
+
+    out.node!.gain.setValueAtTime.mockClear();
+    voice.volume = 0.1;
+
+    expect(out.node!.gain.setTargetAtTime).toHaveBeenCalledWith(0.1, expect.any(Number), 0.01);
+    expect(out.node!.gain.setValueAtTime).not.toHaveBeenCalled();
+
+    out.restore();
+  });
+});
+
 describe('BaseVoice — fade()', () => {
   afterEach(() => vi.restoreAllMocks());
 
