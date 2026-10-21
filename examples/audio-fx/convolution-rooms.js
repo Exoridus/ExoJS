@@ -1,8 +1,8 @@
 // Auto-generated from convolution-rooms.ts - edit the .ts source, not this file.
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
 import { ConvolutionEffect } from '@codexo/exojs/audio-fx';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel, mountControls, trackPressButtons } from '@examples/runtime';
+import { choice, demoPanel, trackPressButtons } from '@examples/runtime';
 // Every impulse response in the AK-SROOMS set, shortest tail first. The
 // duration is what actually decides the character: a few milliseconds only
 // colours the sound, ~30-150 ms reads as a cupboard or a shaft, and past
@@ -39,6 +39,7 @@ const ROOMS = [
   { file: 'AK-SROOMS_017', ir: assets.impulseRoom017, ms: 550 },
   { file: 'AK-SROOMS_016', ir: assets.impulseRoom016, ms: 593 },
 ];
+const ROOM_LABELS = ROOMS.map(room => `${room.ms} ms (IR ${room.file.slice(-3)})`);
 /** Rough label for a tail length - the same intuition a level designer works with. */
 const character = ms => {
   if (ms < 10) {
@@ -78,10 +79,8 @@ class ConvolutionRoomsScene extends Scene {
   label;
   detail;
   tapPrompt;
-  hud;
   panel;
   pressButtons = null;
-  roomControl;
   init() {
     const { width, height } = this.app;
     this.listener = { x: width / 2, y: height / 2 };
@@ -120,30 +119,19 @@ class ConvolutionRoomsScene extends Scene {
       this.pressButtons = trackPressButtons(this.app.canvas);
     }
     this.app.input.onPointerDown.add(this.onPointerDown);
-    this.app.input.onContextMenu.add(this.onContextMenu);
-    this.hud = mountControls({
-      title: 'Convolution rooms',
-      controls: [
-        { keys: 'Click', action: 'strike a pad, panned to its position' },
-        { keys: 'Right-click', action: 'next room (or use the panel)' },
-      ],
-      status: 'Click or press any key to start…',
-      hint: 'Same four materials every time — only the room around them changes.',
+    this.panel = demoPanel({
+      controls: { room: choice('Room', ROOM_LABELS) },
+      onChange: (_key, value) => this.select(ROOM_LABELS.indexOf(value)),
     });
-    this.panel = mountControlPanel({ title: 'Room' });
-    this.roomControl = this.panel.addCycle({
-      label: 'Impulse',
-      options: ROOMS.map((room, i) => `${i + 1} · ${room.ms} ms`),
-      onChange: index => this.select(index),
-    });
-    this.select(0);
+    this.inputs.onTrigger(Keyboard.Right, () => this.panel.step('room', 1));
+    this.inputs.onTrigger(Keyboard.Left, () => this.panel.step('room', -1));
   }
-  // Application input outlives the scene, so both handlers are removed in destroy().
+  // Application input outlives the scene, so the handler is removed in destroy().
   onPointerDown = (pointer, x, y) => {
     // Presses are delivered at the next frame, when `pointer.buttons` already
     // reads the live state, so a right click released before then looks like a
-    // main click. The button recorded at press time decides: right-click
-    // switches rooms instead of striking.
+    // main click. The button recorded at press time decides: only the main
+    // button strikes.
     if ((this.pressButtons?.take(pointer.id) ?? 0) !== 0) {
       return;
     }
@@ -154,15 +142,13 @@ class ConvolutionRoomsScene extends Scene {
       }
     }
   };
-  onContextMenu = () => this.select(this.index + 1);
   /** Swap the impulse response. The handle heals in place, so the effect picks it up once decoded. */
   select(next) {
-    this.index = (next + ROOMS.length) % ROOMS.length;
-    this.roomControl.set(this.index);
+    this.index = next;
     const room = ROOMS[this.index];
     const ir = this.loader.get(room.ir);
-    this.label.text = `${this.index + 1} / ${ROOMS.length} — ${character(room.ms)}`;
-    this.detail.text = `${room.file} · ${room.ms} ms tail`;
+    this.label.text = `${this.index + 1} / ${ROOMS.length}: ${character(room.ms)}`;
+    this.detail.text = `${room.file}, ${room.ms} ms tail`;
     // `.loaded` resolves immediately for an already-decoded handle; the
     // effect stays on the previous IR until the new one is ready.
     void ir.loaded.then(() => {
@@ -189,7 +175,6 @@ class ConvolutionRoomsScene extends Scene {
       pad.flash = Math.max(0, pad.flash - time * 3);
     }
     this.tapPrompt.visible = this.app.audio.locked;
-    this.hud.setStatus(this.app.audio.locked ? 'Click or press any key to start…' : `Room ${this.index + 1} of ${ROOMS.length}`);
   }
   draw(context) {
     this.gfx.clear();
@@ -203,12 +188,10 @@ class ConvolutionRoomsScene extends Scene {
   }
   destroy() {
     this.app.input.onPointerDown.remove(this.onPointerDown);
-    this.app.input.onContextMenu.remove(this.onContextMenu);
     this.pressButtons?.dispose();
     this.app.audio.sound.removeEffect(this.convolution);
     this.convolution.destroy();
     this.panel.dispose();
-    this.hud.dispose();
     super.destroy();
   }
 }

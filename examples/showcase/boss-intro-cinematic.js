@@ -1,7 +1,6 @@
 // Auto-generated from boss-intro-cinematic.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Sprite, Text, Time, View } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControls } from '@examples/runtime';
 const titleText = 'VOID EMPEROR';
 class BossIntroCinematicScene extends Scene {
   view;
@@ -13,7 +12,7 @@ class BossIntroCinematicScene extends Scene {
   boss;
   music;
   musicVoice;
-  hud;
+  finished = false;
   tapPrompt;
   width = 0;
   height = 0;
@@ -36,16 +35,8 @@ class BossIntroCinematicScene extends Scene {
       .setScale(0.4)
       .setPosition(width * 0.62, height / 2)
       .setTint(new Color(255, 130, 130));
-    // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
-    // is loaded directly through `Asset.type('music', ...)` and awaited rather
-    // than fetched synchronously via `get()`.
+    // Music has no placeholder handle, so it is awaited with `load()`.
     this.music = await this.loader.load(assets.musicLoopMain);
-    this.hud = mountControls({
-      title: 'Boss Intro Cinematic',
-      controls: [{ keys: ['R', 'Click'], action: 'replay sequence' }],
-      status: 'Playing…',
-      hint: 'Push-in, letterbox bars, a typewriter title reveal, and a screen shake punched on the reveal beat.',
-    });
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it and the sting + cinematic start.
     this.tapPrompt = new Text('Click or press any key to start the cinematic', { fillColor: Color.white, fontSize: 22, align: 'center' })
@@ -70,7 +61,6 @@ class BossIntroCinematicScene extends Scene {
       this.musicVoice.resume();
     }
     this.playSequence();
-    this.hud.setStatus('Replaying…');
   };
   playSequence = () => {
     const { width, height } = this;
@@ -83,6 +73,7 @@ class BossIntroCinematicScene extends Scene {
     this.barSize.v = 0;
     this.titleState.count = 0;
     this.title.text = '';
+    this.finished = false;
     this.boss.setScale(0.4);
     // Letterbox bars slam in.
     this.sequenceTweens.push(this.tweens.create(this.barSize).to({ v: 84 }, 0.6).start());
@@ -107,10 +98,13 @@ class BossIntroCinematicScene extends Scene {
         .onUpdate(() => {
           this.title.text = titleText.slice(0, this.titleState.count | 0);
         })
+        .onComplete(() => {
+          this.finished = true;
+        })
         .start(),
     );
     // Music swells up under the reveal.
-    this.sequenceTweens.push(this.tweens.create(this.musicVoice).to({ volume: 0.85 }, 2).start());
+    this.sequenceTweens.push(this.tweens.create(this.musicVoice).to({ volume: 0.6 }, 2).start());
   };
   draw(context) {
     const app = this.app;
@@ -127,7 +121,10 @@ class BossIntroCinematicScene extends Scene {
     this.bars.drawRectangle(0, 0, width, this.barSize.v);
     this.bars.drawRectangle(0, height - this.barSize.v, width, this.barSize.v);
     context.render(this.bars, { view: context.screenView });
-    if (app.audio.locked) {
+    // The replay hint appears only once the sequence has played out, so it
+    // never competes with the cinematic itself.
+    if (app.audio.locked || this.finished) {
+      this.tapPrompt.text = app.audio.locked ? 'Click or press any key to start the cinematic' : 'Press R or click to replay';
       context.render(this.tapPrompt, { view: context.screenView });
     }
   }
@@ -138,7 +135,6 @@ class BossIntroCinematicScene extends Scene {
     this.app.audio.onUnlock.remove(this.playSequence);
     this.app.input.onPointerDown.remove(this.replay);
     this.musicVoice?.stop();
-    this.hud?.dispose();
     super.destroy();
   }
 }

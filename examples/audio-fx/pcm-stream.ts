@@ -1,6 +1,6 @@
 import { Application, Color, FixedResolutionCanvasSizing, getAudioContext, type RenderingContext, Scene, Text } from '@codexo/exojs';
 import { PcmStreamSource } from '@codexo/exojs/audio-fx';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { type DemoPanel, demoPanel, toggle, type ToggleSpec } from '@examples/runtime';
 
 class PcmStreamScene extends Scene {
   private stream: PcmStreamSource | null = null;
@@ -8,71 +8,57 @@ class PcmStreamScene extends Scene {
   private readonly right = new Float32Array(512);
   private readonly channels = [this.left, this.right];
   private cursor = 0;
-  private producing = true;
   private label!: Text;
-  private panel!: ReturnType<typeof mountControlPanel>;
-  private hud!: ReturnType<typeof mountControls>;
+  private prompt!: Text;
+  private panel!: DemoPanel<{ producing: ToggleSpec }>;
 
   override init(): void {
     this.label = new Text('', { fillColor: Color.white, fontSize: 26 }).setPosition(170, 190);
-    this.hud = mountControls({
-      title: 'Streaming stereo PCM',
-      status: 'Loading audio. Press Start when ready.',
-      hint: 'Pause the producer to hear starvation. Clear empties the queue; Drain finishes it.',
-    });
-    this.panel = mountControlPanel({ title: 'PCM producer' });
-    this.panel.addButton({
-      label: 'Start',
-      onClick: () => {
-        const stream = this.stream;
-
-        if (!stream || stream.state !== 'ready') {
-          return;
-        }
-
-        void getAudioContext()
-          .resume()
-          .then(() => {
-            if (this.stream !== stream || stream.state !== 'ready') {
-              return;
-            }
-
-            this.fillQueue();
-            stream.start(getAudioContext().currentTime + 0.02);
-            this.hud.setStatus('Playing 220 Hz left / 330 Hz right through the music bus.');
-          })
-          .catch(error => this.hud.setStatus(String(error)));
+    this.prompt = new Text('Click or press any key to start the stream', { fillColor: Color.white, fontSize: 22, align: 'center' })
+      .setAnchor(0.5)
+      .setPosition(this.app.width / 2, this.app.height - 48);
+    this.panel = demoPanel({
+      title: 'PCM producer',
+      controls: { producing: toggle('Produce PCM', true) },
+      actions: {
+        'Clear queue': () => this.stream?.clear(),
+        Drain: () => this.stream?.close(),
+        'New stream': () => this.createStream(),
       },
     });
-    this.panel.addToggle({
-      label: 'Produce PCM',
-      value: true,
-      onChange: value => {
-        this.producing = value;
-      },
-    });
-    this.panel.addButton({ label: 'Clear queue', onClick: () => this.stream?.clear() });
-    this.panel.addButton({ label: 'Drain', onClick: () => this.stream?.close() });
-    this.panel.addButton({ label: 'New stream', onClick: () => this.createStream() });
+    // onUnlock replays when audio is already unlocked, so a warm context starts immediately.
+    this.app.audio.onUnlock.add(this.start);
     this.createStream();
   }
 
+  private readonly start = (): void => {
+    const stream = this.stream;
+
+    if (!stream || stream.state !== 'ready' || this.app.audio.locked) {
+      return;
+    }
+
+    this.fillQueue();
+    stream.start(getAudioContext().currentTime + 0.02);
+  };
+
   private createStream(): void {
+    this.panel.status('');
     this.stream?.destroy();
     this.cursor = 0;
     const stream = new PcmStreamSource({ channels: 2, capacityFrames: 8192, bus: this.app.audio.music });
     this.stream = stream;
-    stream.onEnd.add(() => this.hud.setStatus('Drained. Create a new stream to play again.'));
-    stream.onError.add(error => this.hud.setStatus(error.message));
+    stream.onEnd.add(() => this.panel.status('Drained. Create a new stream to play again.'));
+    stream.onError.add(error => this.panel.status(error.message));
     void stream.ready
       .then(() => {
         if (this.stream === stream) {
-          this.hud.setStatus('Ready. Press Start to unlock audio and begin.');
+          this.start();
         }
       })
       .catch(error => {
         if (this.stream === stream && stream.state !== 'destroyed') {
-          this.hud.setStatus(String(error));
+          this.panel.status(String(error));
         }
       });
   }
@@ -80,7 +66,7 @@ class PcmStreamScene extends Scene {
   private fillQueue(): void {
     const stream = this.stream;
 
-    if (!stream || !this.producing || stream.clearing || (stream.state !== 'ready' && stream.state !== 'running')) {
+    if (!stream || !this.panel.values.producing || stream.clearing || (stream.state !== 'ready' && stream.state !== 'running')) {
       return;
     }
 
@@ -113,7 +99,7 @@ class PcmStreamScene extends Scene {
     }
 
     this.label.text = [
-      `State: ${stream.state}  |  ${stream.sampleRate} Hz stereo`,
+      `State: ${stream.state}  |  220 Hz left / 330 Hz right  |  ${stream.sampleRate} Hz stereo`,
       `Queued: ${stream.bufferedFrames} / ${stream.capacityFrames} frames (${(stream.bufferedSeconds * 1000).toFixed(1)} ms)`,
       `Played: ${stream.playedFrames} frames`,
       `Accepted: ${stream.enqueuedFrames} frames  |  Queue peak: ${stream.highWaterFrames} frames`,
@@ -124,14 +110,19 @@ class PcmStreamScene extends Scene {
 
   override draw(context: RenderingContext): void {
     context.render(this.label);
+
+    if (this.app.audio.locked) {
+      context.render(this.prompt);
+    }
   }
 
   override destroy(): void {
     this.stream?.destroy();
     this.stream = null;
+    this.app.audio.onUnlock.remove(this.start);
     this.panel?.dispose();
-    this.hud?.dispose();
     this.label?.destroy();
+    this.prompt?.destroy();
     super.destroy();
   }
 }

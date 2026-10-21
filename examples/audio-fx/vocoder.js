@@ -2,9 +2,9 @@
 import { Application, AudioBus, AudioGenerator, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser, VocoderEffect } from '@codexo/exojs/audio-fx';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel, mountControls } from '@examples/runtime';
-// Spoken phrases (Kenney Voiceover Pack, CC0) - a voice modulator is what makes
-// a vocoder recognisable as the classic "robot voice" effect.
+import { choice, demoPanel, toggle } from '@examples/runtime';
+// A spoken voice as modulator is what makes a vocoder recognisable as the
+// classic "robot voice" effect.
 const PHRASES = [
   { key: 'congrats', label: 'Congratulations', asset: assets.voiceCongratulations },
   { key: 'mission', label: 'Mission complete', asset: assets.voiceMissionComplete },
@@ -16,16 +16,12 @@ class VocoderScene extends Scene {
   vocoder;
   level;
   phrases = new Map();
-  phraseIndex = 0;
   pulse = 0;
   gfx;
   phraseLabel;
-  hintLabel;
   tapPrompt;
-  hud;
   panel;
   carrierVoice = null;
-  processed = true;
   pendingPhrase = false;
   init() {
     const app = this.app;
@@ -53,81 +49,66 @@ class VocoderScene extends Scene {
     this.phraseLabel = new Text('', { fillColor: Color.white, fontSize: 28, align: 'center' })
       .setAnchor(0.5, 0.5)
       .setPosition(width / 2, height / 2 - 130);
-    this.hintLabel = new Text('', { fillColor: new Color(150, 162, 186), fontSize: 18 })
-      .setAnchor(0.5, 0.5)
-      .setPosition(width / 2, height / 2 + 130);
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it and the queued carrier starts.
     this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })
       .setAnchor(0.5, 0.5)
       .setPosition(width / 2, height - 48);
-    this.hud = mountControls({
-      title: 'Vocoder',
-      controls: [{ keys: 'Phrase pads', action: 'play a voice sample' }],
-      hint: 'A spoken voice modulates a sustained saw carrier — the classic robot-voice effect.',
-    });
-    this.panel = mountControlPanel({ title: 'Voice phrases' });
-    PHRASES.forEach((phrase, index) =>
-      this.panel.addButton({
-        label: phrase.label,
-        onClick: () => {
-          this.selectPhrase(index);
+    this.panel = demoPanel({
+      title: 'Voice',
+      controls: {
+        phrase: choice(
+          'Phrase',
+          PHRASES.map(phrase => phrase.label),
+        ),
+        processed: toggle('Processed', true),
+      },
+      actions: { 'Speak phrase': () => this.speak() },
+      onChange: (key, _value, values) => {
+        if (key === 'processed') {
+          this.vocoder.wet = values.processed ? 1 : 0;
+          if (this.carrierVoice) {
+            this.carrierVoice.volume = values.processed ? 0.4 : 0;
+          }
+        } else if (this.panel) {
+          // The mount-time call arrives before the panel handle exists and must stay silent.
           this.speak();
-        },
-      }),
-    );
-    this.panel.addToggle({
-      label: 'Processed',
-      value: true,
-      onChange: value => {
-        this.processed = value;
-        this.vocoder.wet = value ? 1 : 0;
-        if (this.carrierVoice) {
-          this.carrierVoice.volume = value ? 0.4 : 0;
         }
-        this.hud.setStatus(value ? 'Processed voice: phrase drives the carrier.' : 'Dry voice: phrase plays directly.');
       },
     });
-    this.root.addChild(this.gfx, this.phraseLabel, this.hintLabel);
+    this.root.addChild(this.gfx, this.phraseLabel);
     // The carrier is a sustained saw tone shaped by the voice envelope.
     // An oscillator played while audio is still locked is a no-op - it is
     // ephemeral and cannot be deferred - so start it from the unlock
     // gesture. Subscribing is safe even if audio unlocked earlier:
     // onUnlock replays.
     app.audio.onUnlock.add(this.startCarrier);
-    this.hud.setStatus('Choose a phrase; compare processed and dry voice.');
-    this.selectPhrase(0);
   }
   startCarrier = () => {
     this.carrierVoice ??= this.app.audio.play(new AudioGenerator({ frequency: 110, type: 'sawtooth' }), {
       bus: this.app.audio.sound,
-      volume: this.processed ? 0.4 : 0,
+      volume: this.panel.values.processed ? 0.4 : 0,
     });
     if (this.pendingPhrase) {
       this.pendingPhrase = false;
       this.speak();
     }
   };
-  selectPhrase(next) {
-    this.phraseIndex = (next + PHRASES.length) % PHRASES.length;
-    this.hintLabel.text = `${this.phraseIndex + 1} / ${PHRASES.length} — "${PHRASES[this.phraseIndex].label}"`;
-  }
   speak() {
     const app = this.app;
     // The pointer gesture also unlocks the AudioContext; speaking while
     // still locked would be silent, so wait until audio is ready.
     if (app.audio.locked) {
       this.pendingPhrase = true;
-      this.hud.setStatus('Unlocking audio; the selected phrase will play when ready.');
       return;
     }
-    const phrase = PHRASES[this.phraseIndex];
+    const { phrase: label, processed } = this.panel.values;
+    const phrase = PHRASES.find(candidate => candidate.label === label);
     const sound = this.phrases.get(phrase.key);
     if (sound) {
-      app.audio.play(sound, { bus: this.processed ? this.modulatorBus : app.audio.sound });
+      app.audio.play(sound, { bus: processed ? this.modulatorBus : app.audio.sound });
     }
-    this.hud.setStatus(`${this.processed ? 'Processed' : 'Dry'}: "${phrase.label}"`);
-    this.phraseLabel.text = `"${phrase.label}"`;
+    this.phraseLabel.text = `"${phrase.label}"${processed ? '' : ' (dry)'}`;
   }
   draw(context) {
     const app = this.app;
@@ -152,7 +133,6 @@ class VocoderScene extends Scene {
     this.app.audio.unregisterBus(this.modulatorBus);
     this.app.audio.unregisterBus(this.sidechainBus);
     this.panel?.dispose();
-    this.hud?.dispose();
     this.tapPrompt?.destroy();
     super.destroy();
   }

@@ -15,7 +15,7 @@ import {
 } from '@codexo/exojs';
 import { AudioAnalyser, CompressorEffect, EqualizerEffect, LimiterEffect, ReverbEffect } from '@codexo/exojs/audio-fx';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { mountControlPanel } from '@examples/runtime';
 
 type NodeKind = 'source' | 'effect' | 'bus' | 'output';
 type Lane = 'music' | 'sound' | 'master';
@@ -95,7 +95,7 @@ class SignalGraphScene extends Scene {
 
   private graph = new Graphics();
   private panel: ReturnType<typeof mountControlPanel> | null = null;
-  private hud!: ReturnType<typeof mountControls>;
+  private hint!: Text;
 
   override async load(): Promise<void> {
     this.music = await this.loader.load(assets.musicLoopMain);
@@ -159,13 +159,9 @@ class SignalGraphScene extends Scene {
     this.analysers.set('sound', new AudioAnalyser({ source: audio.sound, fftSize: 1024 }));
     this.analysers.set('master', new AudioAnalyser({ source: audio.master, fftSize: 1024 }));
 
-    this.hud = mountControls({
-      title: 'Audio Signal Graph',
-      controls: [{ keys: 'Click a node', action: 'edit its parameters' }],
-      status: 'Click or press any key to start audio…',
-      hint: 'Every box is a real source, effect or bus; every wire is a real connection. Meters show each bus output.',
-      corner: 'top-right',
-    });
+    this.hint = new Text('', { fillColor: Color.white, fontSize: 20, align: 'center' })
+      .setAnchor(0.5)
+      .setPosition(this.app.width / 2, this.app.height - 48);
 
     this.app.input.onPointerDown.add(this.onPointerDown);
 
@@ -344,19 +340,13 @@ class SignalGraphScene extends Scene {
           n.status.text = n.enabled ? 'active' : 'bypassed';
       }
     }
-
-    this.hud.setStatus(
-      this.app.audio.locked
-        ? 'Click or press any key to start audio…'
-        : `Music bus ${fmt(this.levels.music)} · SFX bus ${fmt(this.levels.sound)}`,
-    );
   }
 
   override draw(context: RenderingContext): void {
     const g = this.graph.clear();
     const byId = (id: string): GraphNode => this.nodes.find(n => n.id === id)!;
 
-    // Wires: a cubic Bézier from the right edge of one node to the left edge of
+    // Wires: a cubic Bezier from the right edge of one node to the left edge of
     // the next, brighter and thicker the louder the bus it carries.
     for (const edge of this.edges) {
       const a = byId(edge.from);
@@ -431,6 +421,8 @@ class SignalGraphScene extends Scene {
 
     context.render(g);
     super.draw(context);
+    this.hint.text = this.app.audio.locked ? 'Click or press any key to start audio' : 'Click a node to edit its parameters';
+    context.render(this.hint);
   }
 
   override destroy(): void {
@@ -455,7 +447,7 @@ class SignalGraphScene extends Scene {
 
     audio.master.volume = 1;
     this.panel?.dispose();
-    this.hud.dispose();
+    this.hint?.destroy();
     this.graph.destroy();
     super.destroy();
   }

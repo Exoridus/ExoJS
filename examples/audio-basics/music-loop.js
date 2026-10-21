@@ -1,7 +1,7 @@
 // Auto-generated from music-loop.ts - edit the .ts source, not this file.
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { demoPanel, slider, toggle } from '@examples/runtime';
 class MusicLoopScene extends Scene {
   music;
   musicVoice;
@@ -10,23 +10,19 @@ class MusicLoopScene extends Scene {
   tapPrompt;
   // Progress bar geometry, canvas-relative, computed in init().
   bar = { x: 0, y: 0, w: 0, h: 28 };
-  hud;
-  panel;
   async load() {
     const app = this.app;
     const { width, height } = app;
     // Wide progress bar centred horizontally on the 16:9 canvas.
     this.bar = { x: width * 0.15, y: height * 0.5, w: width * 0.7, h: 28 };
     // A single streaming track - the browser's media pipeline loops it
-    // seamlessly when `loop` is on, so no duplicate/silent track is needed.
-    // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
-    // is loaded directly through `Asset.type('music', ...)` and awaited rather
-    // than adopted from an `Assets.from` catalog leaf.
+    // seamlessly when `loop` is on. Music has no placeholder handle, so it is
+    // awaited with `load()` rather than claimed with `get()`.
     this.music = await this.loader.load(assets.musicLoopMain);
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically - play() returns the Voice now,
     // and all live control (volume, rate, loop, seek) lives on it.
-    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.7, playbackRate: 1 });
+    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.5, playbackRate: 1 });
     this.graphics = new Graphics();
     this.status = new Text('', { fillColor: Color.white, fontSize: 18 }).setPosition(this.bar.x, this.bar.y - 36);
     // Shown while the browser still blocks audio (`app.audio.locked`); the
@@ -34,51 +30,41 @@ class MusicLoopScene extends Scene {
     this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })
       .setAnchor(0.5, 0.5)
       .setPosition(width / 2, height - 48);
-    this.hud = mountControls({
-      title: 'Music Loop',
-      controls: [{ keys: 'Panel', action: 'adjust volume, playback rate, and looping' }],
-      status: 'Click or press any key to start the track…',
-      hint: 'The bar shows playback position. With Loop off, the track plays once and stops; turn Loop on to repeat seamlessly.',
-    });
     // Real, engine-backed controls over the live music Voice.
-    this.panel = mountControlPanel({ title: 'Music', corner: 'bottom-left' });
-    this.panel.addSlider({
-      label: 'Volume',
-      min: 0,
-      max: 1,
-      step: 0.01,
-      value: this.musicVoice.volume,
-      onChange: value => (this.musicVoice.volume = value),
-    });
-    this.panel.addSlider({
-      label: 'Playback rate',
-      min: 0.5,
-      max: 2,
-      step: 0.05,
-      value: this.musicVoice.playbackRate,
-      onChange: value => (this.musicVoice.playbackRate = value),
-    });
-    this.panel.addToggle({
-      label: 'Loop',
-      value: this.musicVoice.loop,
-      onChange: on => {
-        this.musicVoice.loop = on;
-        // Re-running off the end: if the track already finished while
-        // loop was off, re-enabling and playing restarts it.
-        if (on && this.musicVoice.paused) {
-          this.musicVoice.seek(0);
-          this.musicVoice.resume();
+    const voice = this.musicVoice;
+    const togglePause = () => {
+      if (voice.paused || voice.ended) {
+        voice.resume();
+      } else {
+        voice.pause();
+      }
+    };
+    demoPanel({
+      title: 'Music',
+      controls: {
+        volume: slider('Volume', { min: 0, max: 1, step: 0.01, value: voice.volume }),
+        rate: slider('Playback rate', { min: 0.5, max: 2, step: 0.05, value: voice.playbackRate, format: v => `${Math.round(v * 100)}%` }),
+        loop: toggle('Loop', voice.loop),
+      },
+      actions: {
+        'Pause / resume': togglePause,
+        Restart: () => {
+          voice.seek(0);
+          voice.resume();
+        },
+      },
+      onChange: (key, _value, values) => {
+        voice.volume = values.volume;
+        voice.playbackRate = values.rate;
+        voice.loop = values.loop;
+        // Re-enabling the loop after the track ran off its end restarts it.
+        if (key === 'loop' && values.loop && voice.ended) {
+          voice.seek(0);
+          voice.resume();
         }
       },
     });
-    this.panel.addButton({
-      label: 'Restart',
-      onClick: () => {
-        this.musicVoice.seek(0);
-        this.musicVoice.resume();
-      },
-    });
-    this.hud.setStatus('Playing — use the panel to mix.');
+    this.inputs.onTrigger(Keyboard.Space, togglePause);
   }
   draw(context) {
     const app = this.app;

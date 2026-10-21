@@ -2,18 +2,19 @@
 import { Application, Color, FixedResolutionCanvasSizing, Scene, Text } from '@codexo/exojs';
 import { DelayEffect, ReverbEffect } from '@codexo/exojs/audio-fx';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { choice, demoPanel, toggle } from '@examples/runtime';
+const PRESETS = {
+  'Small room': { reverbWet: 0.3, decay: 1.3, delayWet: 0.12, delaySeconds: 0.18, feedback: 0.2 },
+  'Large hall': { reverbWet: 0.55, decay: 5, delayWet: 0.18, delaySeconds: 0.32, feedback: 0.3 },
+  Echo: { reverbWet: 0.12, decay: 1.5, delayWet: 0.55, delaySeconds: 0.48, feedback: 0.55 },
+};
 class ReverbAndDelayScene extends Scene {
   sound;
   reverb;
   delay;
   label;
+  prompt;
   panel;
-  hud;
-  preset = 'Small room';
-  bypass = false;
-  reverbWet = 0.3;
-  delayWet = 0.12;
   init() {
     const audio = this.app.audio;
     this.sound = this.loader.get(assets.soundImpactLight);
@@ -23,58 +24,45 @@ class ReverbAndDelayScene extends Scene {
     audio.sound.addEffect(this.delay);
     this.label = new Text('Sound -> Reverb -> Delay -> Sound bus', { fillColor: Color.white, fontSize: 25 });
     this.label.setPosition(365, 250);
-    this.hud = mountControls({
-      title: 'Reverb and Delay',
-      status: 'Small room: play the impact, then compare presets and bypass.',
-      hint: 'The dry/wet path stays audible as the room and echo change.',
-    });
-    this.panel = mountControlPanel({ title: 'Space and echoes' });
-    this.panel.addButton({
-      label: 'Play impact',
-      onClick: () => {
-        if (!audio.locked) {
-          audio.play(this.sound, { bus: audio.sound, volume: 0.4 });
-        }
+    this.prompt = new Text('Click or press any key to enable audio', { fillColor: Color.white, fontSize: 22 });
+    this.prompt.setPosition(415, 330);
+    this.panel = demoPanel({
+      title: 'Space and echoes',
+      controls: {
+        preset: choice('Preset', Object.keys(PRESETS)),
+        bypass: toggle('Bypass', false),
       },
-    });
-    this.panel.addButton({ label: 'Small room', onClick: () => this.setPreset('Small room', 0.3, 1.3, 0.12, 0.18, 0.2) });
-    this.panel.addButton({ label: 'Large hall', onClick: () => this.setPreset('Large hall', 0.55, 5, 0.18, 0.32, 0.3) });
-    this.panel.addButton({ label: 'Echo', onClick: () => this.setPreset('Echo', 0.12, 1.5, 0.55, 0.48, 0.55) });
-    this.panel.addToggle({
-      label: 'Bypass',
-      value: false,
-      onChange: value => {
-        this.bypass = value;
-        this.applyWet();
+      actions: {
+        'Play impact': () => {
+          if (!audio.locked) {
+            audio.play(this.sound, { bus: audio.sound, volume: 0.4 });
+          }
+        },
       },
+      onChange: (_key, _value, values) => this.applyPreset(PRESETS[values.preset], values.bypass),
     });
   }
-  setPreset(name, reverbWet, decay, delayWet, delaySeconds, feedback) {
-    this.preset = name;
-    this.reverb.decay = decay;
-    this.delay.delaySeconds = delaySeconds;
-    this.delay.feedback = feedback;
-    this.reverbWet = reverbWet;
-    this.delayWet = delayWet;
-    this.applyWet();
-  }
-  applyWet() {
-    this.reverb.wet = this.bypass ? 0 : this.reverbWet;
-    this.delay.wet = this.bypass ? 0 : this.delayWet;
-    this.hud.setStatus(
-      `${this.preset}${this.bypass ? ' (bypassed)' : ''}: reverb ${this.reverb.wet.toFixed(2)}, delay ${this.delay.wet.toFixed(2)}.`,
-    );
+  applyPreset(preset, bypass) {
+    this.reverb.decay = preset.decay;
+    this.delay.delaySeconds = preset.delaySeconds;
+    this.delay.feedback = preset.feedback;
+    this.reverb.wet = bypass ? 0 : preset.reverbWet;
+    this.delay.wet = bypass ? 0 : preset.delayWet;
+    this.panel?.status(bypass ? 'Bypassed: dry impact' : `Reverb ${this.reverb.wet.toFixed(2)}, delay ${this.delay.wet.toFixed(2)}`);
   }
   draw(context) {
     context.render(this.label);
+    if (this.app.audio.locked) {
+      context.render(this.prompt);
+    }
   }
   destroy() {
     this.app.audio.sound.removeEffect(this.delay).removeEffect(this.reverb);
     this.delay?.destroy();
     this.reverb?.destroy();
     this.panel?.dispose();
-    this.hud?.dispose();
     this.label?.destroy();
+    this.prompt?.destroy();
     super.destroy();
   }
 }

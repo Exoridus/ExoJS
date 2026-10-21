@@ -3,17 +3,15 @@ import { Application, Color, FixedResolutionCanvasSizing, Scene, Sprite, Text, V
 import { BeatDetector } from '@codexo/exojs/audio-fx';
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem } from '@codexo/exojs/particles';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+/** Scale added to the sprite on each detected beat, decaying back to 1. */
+const PULSE = 0.28;
 class BeatSyncPulseScene extends Scene {
   music;
   detector;
   sprite;
   pulse = 0;
-  intensity = 0.28;
-  beats = 0;
   particles;
   burst;
-  hud;
   tapPrompt;
   tempoReadout;
   async load() {
@@ -23,10 +21,6 @@ class BeatSyncPulseScene extends Scene {
     const track = await this.loader.load(assets.musicLoopMain);
     this.music = track;
     this.sprite = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setPosition(width / 2, height / 2);
-    this.hud = mountControls({
-      title: 'Beat and Tempo',
-      hint: 'A detected beat pulses the sprite and particles. The tempo estimate and confidence update continuously.',
-    });
     this.tempoReadout = new Text('Listening for tempo...', { fillColor: Color.white, fontSize: 27, align: 'center' })
       .setAnchor(0.5, 0.5)
       .setPosition(width / 2, height * 0.18);
@@ -47,27 +41,15 @@ class BeatSyncPulseScene extends Scene {
     this.tapPrompt = new Text('Click or press any key to start the music', { fillColor: Color.white, fontSize: 22, align: 'center' })
       .setAnchor(0.5, 0.5)
       .setPosition(width / 2, height - 64);
-    mountControlPanel({ title: 'Tuning' }).addSlider({
-      label: 'Pulse intensity',
-      min: 0.1,
-      max: 0.5,
-      step: 0.01,
-      value: this.intensity,
-      onChange: value => {
-        this.intensity = value;
-      },
-    });
     this.detector = new BeatDetector();
     this.detector.source = app.audio.music;
     this.detector.onBeat.add(() => {
-      this.pulse = this.intensity;
+      this.pulse = PULSE;
       this.burst.reset();
-      this.beats += 1;
-      this.hud.setStatus(`Beats detected: ${this.beats}`);
     });
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically.
-    app.audio.play(this.music, { loop: true, volume: 0.8 });
+    app.audio.play(this.music, { loop: true, volume: 0.6 });
   }
   update(delta) {
     this.pulse = Math.max(0, this.pulse - delta * 1.2);

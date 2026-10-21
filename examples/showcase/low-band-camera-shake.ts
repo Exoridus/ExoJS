@@ -54,7 +54,7 @@ class LowBandCameraShakeScene extends Scene {
 
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically - play() returns the Voice now.
-    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 });
+    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.6 });
   }
 
   override update(): void {

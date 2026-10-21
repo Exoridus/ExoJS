@@ -3,7 +3,6 @@ import { Application, Color, FixedResolutionCanvasSizing, Scene, Text, Vector } 
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs/audio-fx';
 import { AlphaFadeOverLifetime, ConeDirection, Constant, particlesExtension, ParticleSystem, RateSpawn } from '@codexo/exojs/particles';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControls } from '@examples/runtime';
 const colors = [new Color(255, 120, 140), new Color(120, 220, 255), new Color(130, 255, 170), new Color(255, 220, 120)];
 class AudioReactiveParticlesScene extends Scene {
   music;
@@ -14,7 +13,6 @@ class AudioReactiveParticlesScene extends Scene {
   spawn;
   rate;
   cone;
-  hud;
   tapPrompt;
   async load() {
     const app = this.app;
@@ -51,12 +49,6 @@ class AudioReactiveParticlesScene extends Scene {
     this.detector.onBeat.add(() => {
       this.spawn.config.tint = new Constant(colors[(Math.random() * colors.length) | 0]);
     });
-    this.hud = mountControls({
-      title: 'Audio Reactive Particles',
-      controls: [{ keys: 'Audio', action: 'bass → density · treble → spread' }],
-      status: 'Listening…',
-      hint: 'Density follows low-band energy; spread follows high-band energy. Silence = still.',
-    });
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it and the queued music starts.
     this.tapPrompt = new Text('Click or press any key to start the music', { fillColor: Color.white, fontSize: 22, align: 'center' })
@@ -64,21 +56,18 @@ class AudioReactiveParticlesScene extends Scene {
       .setPosition(width / 2, height - 64);
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically - play() returns the Voice now.
-    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 });
+    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.6 });
   }
   update(_delta) {
     // Low band (bass) drives how MANY particles spawn this second.
     const low = this.analyser.getBandEnergy(20, 180);
     // High band (treble) drives how WIDE the velocity cone fans out.
     const high = this.analyser.getBandEnergy(2000, 16000);
-    // bass → density: 0 in silence, up to ~1200 particles/s on heavy bass.
+    // Bass drives density: 0 in silence, up to ~1200 particles/s on heavy bass.
     this.rate.value = low * low * 1200;
-    // treble → spread: a tight slow core grows into a fast wide burst.
+    // Treble drives spread: a tight slow core grows into a fast wide burst.
     this.cone.minSpeed = 40 + high * 120;
     this.cone.maxSpeed = 90 + high * 360;
-    if (this.musicVoice) {
-      this.hud.setStatus(`bass ${(low * 100) | 0}%  treble ${(high * 100) | 0}%`);
-    }
   }
   draw(context) {
     const app = this.app;

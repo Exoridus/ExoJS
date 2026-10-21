@@ -1,7 +1,7 @@
 // Auto-generated from crossfade-tracks.ts - edit the .ts source, not this file.
 import { Application, Color, crossFade, FixedResolutionCanvasSizing, Graphics, Scene, Text, Time } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { choice, demoPanel } from '@examples/runtime';
 const PEAK = 0.7;
 const COLOR_A = new Color(120, 200, 255);
 const COLOR_B = new Color(255, 160, 120);
@@ -26,7 +26,6 @@ class CrossfadeTracksScene extends Scene {
   meterAX = 0;
   meterBX = 0;
   meterBaseY = 0;
-  hud;
   panel;
   async load() {
     const app = this.app;
@@ -55,26 +54,28 @@ class CrossfadeTracksScene extends Scene {
     this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })
       .setAnchor(0.5, 0.5)
       .setPosition(width / 2, height - 48);
-    this.hud = mountControls({
-      title: 'Crossfade Tracks',
-      controls: [{ keys: 'Choose A or B', action: 'crossfade between looping tracks (2s)' }],
-      status: 'Click or press any key to start…',
-      hint: 'The meter follows the same two-second interval scheduled for the voice gains.',
-    });
-    this.panel = mountControlPanel({ title: 'Select track' });
-    this.panel.addButton({ label: 'Track A', onClick: () => this.selectTrack(0) });
-    this.panel.addButton({ label: 'Track B', onClick: () => this.selectTrack(1) });
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically - start both loops (B silent) so
     // crossFade only has to ramp gains rather than start playback mid-fade.
     this.trackAVoice = app.audio.play(this.trackA, { loop: true, volume: PEAK });
     this.trackBVoice = app.audio.play(this.trackB, { loop: true, volume: 0 });
-    this.hud.setStatus('Track A active - choose a track to crossfade.');
+    this.panel = demoPanel({
+      title: 'Crossfade',
+      corner: 'bottom-left',
+      controls: { track: choice('Track', ['Track A', 'Track B']) },
+      onChange: (_key, value) => this.selectTrack(value === 'Track B' ? 1 : 0),
+    });
   }
   selectTrack(target) {
-    if (this.app.audio.locked || this.fadeElapsed < this.fadeDuration || target === this.mix) {
+    if (target === this.fadeTo) {
       return;
     }
+    if (this.app.audio.locked) {
+      this.panel.set('track', this.fadeTo === 1 ? 'Track B' : 'Track A');
+      return;
+    }
+    // A new choice mid-fade restarts from the current mix; crossFade ramps the
+    // voice gains from where they are, so the meter and the audio stay together.
     this.fadeFrom = this.mix;
     this.fadeTo = target;
     this.fadeElapsed = 0;
@@ -83,7 +84,6 @@ class CrossfadeTracksScene extends Scene {
     } else {
       void crossFade(this.trackBVoice, this.trackAVoice, Time.seconds(this.fadeDuration), { toVolume: PEAK, stopAfter: false });
     }
-    this.hud.setStatus(`Crossfading to Track ${target === 1 ? 'B' : 'A'}…`);
   }
   update(delta) {
     if (this.fadeElapsed >= this.fadeDuration) {
@@ -91,9 +91,6 @@ class CrossfadeTracksScene extends Scene {
     }
     this.fadeElapsed = Math.min(this.fadeDuration, this.fadeElapsed + delta);
     this.mix = this.fadeFrom + (this.fadeTo - this.fadeFrom) * (this.fadeElapsed / this.fadeDuration);
-    if (this.fadeElapsed === this.fadeDuration) {
-      this.hud.setStatus(`Track ${this.fadeTo === 1 ? 'B' : 'A'} active.`);
-    }
   }
   drawMeter(x, level, active, color) {
     const height = METER_H;
@@ -137,7 +134,6 @@ class CrossfadeTracksScene extends Scene {
     this.trackAVoice?.stop();
     this.trackBVoice?.stop();
     this.panel?.dispose();
-    this.hud?.dispose();
     this.graphics?.destroy();
     this.labelA?.destroy();
     this.labelB?.destroy();

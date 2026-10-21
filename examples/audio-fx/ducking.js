@@ -2,7 +2,6 @@
 import { Application, AudioBus, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser, DuckingEffect } from '@codexo/exojs/audio-fx';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControls } from '@examples/runtime';
 class DuckingScene extends Scene {
   music;
   voice;
@@ -22,7 +21,14 @@ class DuckingScene extends Scene {
   barW = 0;
   musicBarY = 0;
   voiceBarY = 0;
-  hud;
+  clickPrompt;
+  playVoice = () => {
+    // The pointer gesture also unlocks the AudioContext; firing while
+    // still locked would be silent, so wait until audio is ready.
+    if (!this.app.audio.locked) {
+      this.app.audio.play(this.voice, { bus: this.voiceBus, volume: 0.4 });
+    }
+  };
   async load() {
     const app = this.app;
     const { width, height } = app;
@@ -57,28 +63,16 @@ class DuckingScene extends Scene {
     this.voiceLabel.setPosition(this.barX, this.voiceBarY - 26);
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it and the queued music starts.
-    this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })
+    this.tapPrompt = new Text('Click or press any key to start the music', { fillColor: Color.white, fontSize: 22, align: 'center' })
       .setAnchor(0.5, 0.5)
       .setPosition(width / 2, height - 48);
-    this.hud = mountControls({
-      title: 'Ducking',
-      controls: [{ keys: 'Click', action: 'play the voice-over' }],
-      status: 'Click or press any key to start…',
-      hint: 'When the voice plays, the music meter ducks down while the voice meter spikes.',
-    });
-    app.input.onPointerTap.add(() => {
-      // The pointer gesture also unlocks the AudioContext; firing while
-      // still locked would be silent, so wait until audio is ready.
-      if (app.audio.locked) {
-        return;
-      }
-      app.audio.play(this.voice, { bus: this.voiceBus, volume: 0.4 });
-      this.hud.setStatus('Voice playing — music ducked');
-    });
+    this.clickPrompt = new Text('Click to play the voice-over', { fillColor: Color.white, fontSize: 22, align: 'center' })
+      .setAnchor(0.5, 0.5)
+      .setPosition(width / 2, height - 48);
+    app.input.onPointerTap.add(this.playVoice);
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically.
-    app.audio.play(this.music, { loop: true, volume: 0.7 });
-    this.hud.setStatus('Music playing — click to duck it');
+    app.audio.play(this.music, { loop: true, volume: 0.5 });
   }
   bar(label, name, y, level, color) {
     this.gfx.fillColor = new Color(70, 70, 70);
@@ -101,9 +95,16 @@ class DuckingScene extends Scene {
     context.render(this.gfx);
     context.render(this.musicLabel);
     context.render(this.voiceLabel);
-    if (app.audio.locked) {
-      context.render(this.tapPrompt);
-    }
+    context.render(app.audio.locked ? this.tapPrompt : this.clickPrompt);
+  }
+  destroy() {
+    this.app.input.onPointerTap.remove(this.playVoice);
+    this.gfx?.destroy();
+    this.musicLabel?.destroy();
+    this.voiceLabel?.destroy();
+    this.tapPrompt?.destroy();
+    this.clickPrompt?.destroy();
+    super.destroy();
   }
 }
 const app = new Application({

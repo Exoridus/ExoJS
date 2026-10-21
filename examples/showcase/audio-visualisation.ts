@@ -14,7 +14,6 @@ import {
 } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs/audio-fx';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControls } from '@examples/runtime';
 
 const BAND_LABELS = ['Sub', 'Bass', 'Low mid', 'Mid', 'High mid', 'Presence', 'Treble', 'Air'];
 
@@ -29,7 +28,6 @@ class AudioVisualisationScene extends Scene {
   private progressStyle = 'rgba(255, 255, 255, 0.1)';
   private texture!: Texture;
   private screen!: Sprite;
-  private hud!: ReturnType<typeof mountControls>;
   private tapPrompt!: Text;
   private bandEdges: number[] = [];
 
@@ -75,13 +73,6 @@ class AudioVisualisationScene extends Scene {
     this.texture = new Texture(this.canvas);
     this.screen = new Sprite(this.texture);
 
-    this.hud = mountControls({
-      title: 'Spectrum and Waveform',
-      controls: [{ keys: 'Click', action: 'play / pause' }],
-      status: 'Playing…',
-      hint: 'Live spectrum, waveform, eight frequency bands, and a beat pulse from the music bus.',
-    });
-
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it and the queued music starts.
     this.tapPrompt = new Text('Click or press any key to start the music', { fillColor: Color.white, fontSize: 22, align: 'center' })
@@ -100,13 +91,11 @@ class AudioVisualisationScene extends Scene {
       } else {
         this.musicVoice.pause();
       }
-
-      this.hud.setStatus(this.musicVoice.paused ? 'Paused' : 'Playing…');
     });
 
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically - play() returns the Voice now.
-    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 }) as Voice & Pausable & Seekable;
+    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.6 }) as Voice & Pausable & Seekable;
   }
 
   override draw(context: RenderingContext): void {
@@ -191,7 +180,8 @@ class AudioVisualisationScene extends Scene {
 
     context.render(this.screen);
 
-    if (app.audio.locked) {
+    if (app.audio.locked || this.musicVoice.paused) {
+      this.tapPrompt.text = app.audio.locked ? 'Click or press any key to start the music' : 'Paused - click to resume';
       context.render(this.tapPrompt);
     }
   }
