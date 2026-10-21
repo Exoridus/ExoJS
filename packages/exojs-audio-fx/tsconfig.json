@@ -1,13 +1,7 @@
 {
-  "extends": "@codexo/exojs-config/typescript/extension.json",
+  "extends": ["@codexo/exojs-config/typescript/extension.json", "@codexo/exojs-config/typescript/workspace-paths.json"],
   "compilerOptions": {
-    "customConditions": ["@codexo/exojs-source"],
-    "paths": {
-      "@codexo/exojs": ["../../src/index.ts"],
-      "@codexo/exojs/extensions": ["../../src/extensions/index.ts"],
-      "@codexo/exojs/renderer-sdk": ["../../src/renderer-sdk.ts"],
-      "@codexo/exojs/debug": ["../../src/debug/index.ts"]
-    }
+    "customConditions": ["@codexo/exojs-source"]
   },
   "include": ["src/**/*", "src/typings.d.ts", "../../src/typings.d.ts"],
   // The `*.worklet.ts` sources typecheck against the AudioWorkletGlobalScope

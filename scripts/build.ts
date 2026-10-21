@@ -1,11 +1,14 @@
 /**
  * Builds the core package: `exo.esm.js`, `exo.debug.esm.js`, the preserveModules
- * `dist/esm` tree (with declarations), `exo.iife.js`, and (production only)
+ * `dist/esm` tree (with declarations) including every runtime module under
+ * `dist/esm/<subpath>/`, `exo.iife.js`, and (production only)
  * `exo.iife.min.js`, `exo.full.iife.js` and `exo.full.iife.min.js`.
  *
  * Bundling runs on Rolldown; declarations are a separate `tsc
- * --emitDeclarationOnly` pass over `dist/esm`, since Rolldown has no
- * declaration emitter. `EXOJS_ENV=development` selects the dev build
+ * --emitDeclarationOnly` pass, since Rolldown has no declaration emitter. Core
+ * and the runtime modules are emitted from ONE program: the `./debug` entry
+ * re-exports the physics draw layer, whose declarations in turn name Core's
+ * debug types, so neither half can be emitted against the other's output. `EXOJS_ENV=development` selects the dev build
  * (`pnpm build:dev`); `--watch` runs Rolldown's watch mode instead of a single
  * build (`pnpm build:watch`) and skips declarations - they are not part of the
  * inner dev loop this mode serves, and `pnpm typecheck` already covers type
@@ -20,18 +23,32 @@
  * pipeline did. The dev build and watch mode skip it: it is the slowest job of
  * the set and nothing in the inner loop reads it.
  */
-import { cpSync, mkdirSync } from 'node:fs';
-import { dirname, relative as relativePath, resolve as resolvePath } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { cpSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative as relativePath, resolve as resolvePath } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { codecovRollupPlugin } from '@codecov/rollup-plugin';
 import { createShaderPlugin, createWorkletPlugin } from '@codexo/exojs-build';
 import { createBuildDefinesFromRepo } from '@codexo/exojs-config/build-defines';
+import { createRuntimeModuleBuildOptions, createShippedExternalsPlugin, type RuntimeModule } from '@codexo/exojs-config/rolldown';
 import { runTypeScriptCompiler } from '@codexo/exojs-config/typescript/compiler';
 import { build as buildWorker } from 'esbuild';
 import { type OutputOptions, type Plugin, type PreRenderedChunk, rolldown, type RolldownOptions, watch } from 'rolldown';
+import ts from 'typescript';
 
-import { writeSourceStamp } from './source-hash.ts';
+import { rewriteModuleSpecifiers } from './lib/module-specifiers.ts';
+import {
+  createShippedLayout,
+  moduleOfShipped,
+  moduleOfSource,
+  relativeSpecifier,
+  resolveCoreExport,
+  resolvePackageImportSource,
+  shippedPathForSource,
+  SOURCE_CONDITIONS,
+} from './lib/shipped-specifiers.ts';
+import { RUNTIME_MODULES } from './release/lockstep-packages.ts';
+import { coreSourceRoots, writeSourceStamp } from './source-hash.ts';
 
 const rootDir = resolvePath(dirname(fileURLToPath(import.meta.url)), '..');
 const watchMode = process.argv.includes('--watch');
@@ -40,7 +57,10 @@ const watchMode = process.argv.includes('--watch');
 // still honored as a fallback for anything that invokes this script directly
 // with the env var set (matching the previous `rollup -c` convention).
 const buildMode = process.argv.includes('--dev') || process.env.EXOJS_ENV === 'development' ? 'development' : 'production';
+// One version for the whole tarball: runtime modules ship inside Core, so their
+// `__VERSION__` is Core's, not whatever their private source manifest says.
 const defines = createBuildDefinesFromRepo({ mode: buildMode, packageDir: rootDir });
+const layout = createShippedLayout(rootDir);
 
 // Activates the package-private `@codexo/exojs-source` condition in package.json#imports
 // so `#*` resolves to ./src/*.ts at build time. preserveModules then rewrites the
@@ -56,9 +76,19 @@ const fullSourceConditions = ['@codexo/exojs-source', '@codexo/exojs-particles-s
 // Resolves @codexo/exojs-<name> -> packages/exojs-<name>/src/index.ts so the
 // full IIFE bundle can be built entirely from TypeScript source without
 // requiring the extension packages to be pre-built.
+//
+// The runtime-module subpaths resolve to their sources too rather than to the
+// built `dist/esm/<subpath>` tree: the minified bundle then minifies their
+// inlined worklet and shader text like the rest of the bundle.
 const extensionSourcePlugin: Plugin = {
   name: 'extension-source',
   resolveId(id: string) {
+    const module = RUNTIME_MODULES.find(candidate => id === `@codexo/exojs/${candidate.subpath}`);
+
+    if (module) {
+      return resolvePath(rootDir, module.dir, 'src', 'index.ts');
+    }
+
     const match = /^@codexo\/exojs-([^/]+)$/.exec(id);
 
     return match ? resolvePath(rootDir, 'packages', `exojs-${match[1]}`, 'src', 'index.ts') : null;
@@ -194,9 +224,13 @@ const bundled = (minify: boolean): RolldownOptions => ({
   output: { file: 'dist/exo.esm.js', format: 'es', sourcemap: true, minify },
 });
 
+// The single-file family (`exo.esm.js` + `exo.debug.esm.js`) carries Core only;
+// the runtime modules ship in the `dist/esm` tree alone. The debug bundle is
+// therefore built from the Core debug layers, without the physics draw layer the
+// `./debug` entry adds.
 const debugBundled = (minify: boolean): RolldownOptions => ({
   ...shared,
-  input: 'src/debug/index.ts',
+  input: 'src/debug/core.ts',
   // All `#` imports are core dependencies - mark them external so the debug
   // bundle contains only debug code and imports from @codexo/exojs at
   // runtime. (Intra-debug imports are same-directory `./` and stay bundled.)
@@ -212,6 +246,26 @@ const debugBundled = (minify: boolean): RolldownOptions => ({
   },
 });
 
+// A Core source that reaches into a runtime module (the `./debug` entry's
+// physics re-export) must not pull the module's sources into the Core tree: the
+// module is built separately into its own subtree, and a second copy here would
+// be a second instance. The import is emitted as a relative path to the file
+// the module build writes.
+const runtimeModuleBoundary = createShippedExternalsPlugin({
+  sourceRoot: layout.coreSourceRoot,
+  outDir: layout.distEsm,
+  resolveExternal: (source, importer) => {
+    if (!source.startsWith('#') || importer === undefined || moduleOfSource(layout, importer) !== undefined) {
+      return;
+    }
+
+    const target = resolvePackageImportSource(rootDir, source);
+    const shipped = target === undefined || moduleOfSource(layout, target) === undefined ? undefined : shippedPathForSource(layout, target);
+
+    return shipped === undefined ? undefined : `${shipped}.js`;
+  },
+});
+
 const modules = (): RolldownOptions => ({
   ...shared,
   // `src/extensions/index.ts` is deliberately absent: it exports nothing but
@@ -220,7 +274,7 @@ const modules = (): RolldownOptions => ({
   // `./extensions` subpath resolves to.
   input: ['src/index.ts', 'src/debug/index.ts', 'src/renderer-sdk.ts'],
   resolve: { conditionNames: sourceConditions, mainFields: ['module', 'browser', 'main'] },
-  plugins: [basisWorkerUrls(), ...shaderAndWorkletPlugins(false), ...codecovBundlePlugin('exo-esm-modules')],
+  plugins: [runtimeModuleBoundary, basisWorkerUrls(), ...shaderAndWorkletPlugins(false), ...codecovBundlePlugin('exo-esm-modules')],
   output: {
     dir: 'dist/esm',
     format: 'es',
@@ -261,37 +315,233 @@ const fullBundle = (minify: boolean): RolldownOptions => ({
   output: { file: minify ? 'dist/exo.full.iife.min.js' : 'dist/exo.full.iife.js', format: 'iife', name: 'Exo', sourcemap: true, minify },
 });
 
+// Everything a runtime module imports from outside itself is a Core specifier:
+// Core, a Core subpath, or a sibling module. Each is emitted as a relative path
+// to the file the Core manifest exports for it, so the module joins the one
+// Core instance instead of naming a package. Anything else under `@codexo/` -
+// a retired package name in particular - fails the build: resolving it through
+// `node_modules` would bundle a second copy.
+const resolveRuntimeModuleExternal = (specifier: string, importer: string | undefined): string | undefined => {
+  if (!specifier.startsWith('@codexo/')) {
+    return undefined;
+  }
+
+  const target = resolveCoreExport(layout, specifier, 'js');
+
+  if (target === undefined) {
+    throw new Error(
+      `${importer ?? 'a runtime module'} imports "${specifier}"; runtime modules may only import @codexo/exojs and its subpaths.`,
+    );
+  }
+
+  return target;
+};
+
+const assertNoSubpathCollision = (): void => {
+  const coreDirectories = new Set(
+    readdirSync(layout.coreSourceRoot, { withFileTypes: true })
+      .filter(entry => entry.isDirectory())
+      .map(entry => entry.name),
+  );
+
+  for (const module of RUNTIME_MODULES) {
+    if (coreDirectories.has(module.subpath)) {
+      throw new Error(`Runtime module subpath "${module.subpath}" collides with the Core source directory src/${module.subpath}.`);
+    }
+  }
+};
+
+const runtimeModuleJobs = async (): Promise<RolldownOptions[]> => {
+  assertNoSubpathCollision();
+
+  return Promise.all(
+    RUNTIME_MODULES.map(async module => {
+      const config = resolvePath(rootDir, module.dir, 'rolldown.config.ts');
+      const { default: descriptor } = (await import(pathToFileURL(config).href)) as { default: Readonly<RuntimeModule> };
+
+      return createRuntimeModuleBuildOptions(descriptor, {
+        outDir: resolvePath(rootDir, 'dist', 'esm', module.subpath),
+        defines,
+        bundleName: `exo-esm-${module.subpath}`,
+        resolveExternal: resolveRuntimeModuleExternal,
+      });
+    }),
+  );
+};
+
 const runJob = async (options: RolldownOptions): Promise<void> => {
   const bundle = await rolldown(options);
   await bundle.write(options.output as OutputOptions);
   await bundle.close();
 };
 
-const emitDeclarations = async (): Promise<void> => {
-  const { status } = runTypeScriptCompiler(
-    [
-      '-p',
-      'tsconfig.json',
-      '--emitDeclarationOnly',
-      '--outDir',
-      'dist/esm',
-      '--declarationDir',
-      'dist/esm',
-      '--inlineSources',
-      '--incremental',
-      'false',
-    ],
-    { cwd: rootDir },
+const DECLARATION_STAGING = resolvePath(rootDir, 'dist', '.declarations');
+
+/** The files a package's own `tsconfig.json` type-checks, so the composed emit sees exactly what each package does. */
+const programFiles = (configPath: string): string[] => {
+  const parsed = ts.getParsedCommandLineOfConfigFile(
+    configPath,
+    {},
+    {
+      ...ts.sys,
+      onUnRecoverableConfigFileDiagnostic: diagnostic => {
+        throw new Error(`cannot read ${configPath}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, ' ')}`);
+      },
+    },
   );
 
-  if (status !== 0) {
-    throw new Error(`declaration emit failed (tsc exit ${status})`);
+  if (parsed === undefined || parsed.errors.length > 0) {
+    const reason = parsed?.errors.map(error => ts.flattenDiagnosticMessageText(error.messageText, '\n')).join('; ') ?? 'unreadable';
+
+    throw new Error(`cannot read ${configPath}: ${reason}`);
+  }
+
+  return parsed.fileNames;
+};
+
+const listFiles = (dir: string): string[] =>
+  readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+    const path = join(dir, entry.name);
+
+    return entry.isDirectory() ? listFiles(path) : [path];
+  });
+
+/**
+ * Where an emitted declaration (or declaration map) ships: Core sources under
+ * `dist/esm/`, a runtime module's sources under `dist/esm/<subpath>/`.
+ */
+const shippedDeclarationPath = (stagingOut: string, emitted: string): string => {
+  const source = resolvePath(rootDir, relativePath(stagingOut, emitted));
+  const match = /\.d\.ts(\.map)?$/.exec(source);
+  const shipped = match === null ? undefined : shippedPathForSource(layout, `${source.slice(0, match.index)}.ts`);
+
+  if (match === null || shipped === undefined) {
+    throw new Error(`declaration emit produced ${emitted}, which belongs to no shipped source tree`);
+  }
+
+  return `${shipped}.d.ts${match[1] ?? ''}`;
+};
+
+/**
+ * The specifier a shipped declaration has to use instead of `specifier`, or
+ * `undefined` to keep it. A runtime module's declarations name Core, its
+ * subpaths and sibling modules through relative paths to the exported files,
+ * and their own `#` imports through the module's place in the Core tree, so no
+ * consumer needs the source repository's resolution to read them. Core's own
+ * `#` imports keep resolving through the Core `imports` map, except where they
+ * point into a runtime module.
+ *
+ * Every extensionless relative specifier gains the explicit `.js` (or
+ * `/index.js`) of the declaration it names. The emitter keeps specifiers as
+ * written, and Node's own resolution (`NodeNext`) rejects a relative ESM import
+ * without an extension, so without this a NodeNext consumer could not read any
+ * shipped declaration.
+ */
+const shippedDeclarationSpecifier = (file: string, specifier: string, shipped: ReadonlySet<string>): string | undefined => {
+  const module = moduleOfShipped(layout, file);
+
+  if (specifier.startsWith('./') || specifier.startsWith('../')) {
+    const base = resolvePath(dirname(file), specifier);
+
+    if (shipped.has(`${base}.d.ts`)) {
+      return `${specifier}.js`;
+    }
+
+    return shipped.has(join(base, 'index.d.ts')) ? `${specifier}/index.js` : undefined;
+  }
+
+  const toDeclarationSpecifier = (target: string): string => relativeSpecifier(file, target).replace(/\.d\.ts$/, '.js');
+
+  if (specifier.startsWith('#')) {
+    const source = resolvePackageImportSource(module?.packageDir ?? rootDir, specifier);
+    const shipped = source === undefined ? undefined : shippedPathForSource(layout, source);
+
+    if (source === undefined || shipped === undefined) {
+      throw new Error(`${file}: cannot resolve "${specifier}" to a shipped source`);
+    }
+
+    return module === undefined && moduleOfSource(layout, source) === undefined ? undefined : toDeclarationSpecifier(`${shipped}.d.ts`);
+  }
+
+  if (module !== undefined && specifier.startsWith('@codexo/')) {
+    const target = resolveCoreExport(layout, specifier, 'types');
+
+    if (target === undefined) {
+      throw new Error(`${file}: runtime module declarations may only name @codexo/exojs and its subpaths, found "${specifier}"`);
+    }
+
+    return toDeclarationSpecifier(target);
+  }
+
+  return undefined;
+};
+
+/** Re-anchors a moved declaration map's `sources` to the source files they named before the move. */
+const relocateDeclarationMap = (from: string, to: string): string => {
+  const map = JSON.parse(readFileSync(from, 'utf8')) as { sources: string[] };
+  map.sources = map.sources.map(source => relativePath(dirname(to), resolvePath(dirname(from), source)).replaceAll('\\', '/'));
+
+  return JSON.stringify(map);
+};
+
+const emitDeclarations = async (): Promise<void> => {
+  const stagingOut = join(DECLARATION_STAGING, 'out');
+  const configs = [
+    resolvePath(rootDir, 'tsconfig.json'),
+    ...RUNTIME_MODULES.map(module => resolvePath(rootDir, module.dir, 'tsconfig.json')),
+  ];
+  const files = [...new Set(configs.flatMap(programFiles))];
+  const configPath = join(DECLARATION_STAGING, 'tsconfig.json');
+
+  rmSync(DECLARATION_STAGING, { recursive: true, force: true });
+  mkdirSync(DECLARATION_STAGING, { recursive: true });
+  writeFileSync(
+    configPath,
+    JSON.stringify(
+      {
+        extends: resolvePath(rootDir, 'tsconfig.json'),
+        compilerOptions: { rootDir, outDir: stagingOut, declarationDir: stagingOut, customConditions: SOURCE_CONDITIONS },
+        files,
+        include: [],
+      },
+      null,
+      2,
+    ),
+  );
+
+  try {
+    const { status } = runTypeScriptCompiler(['-p', configPath, '--emitDeclarationOnly', '--inlineSources', '--incremental', 'false'], {
+      cwd: rootDir,
+    });
+
+    if (status !== 0) {
+      throw new Error(`declaration emit failed (tsc exit ${status})`);
+    }
+
+    const emitted = listFiles(stagingOut).map(file => ({ file, target: shippedDeclarationPath(stagingOut, file) }));
+    const shipped = new Set(emitted.map(entry => entry.target).filter(target => target.endsWith('.d.ts')));
+
+    for (const { file, target } of emitted) {
+      mkdirSync(dirname(target), { recursive: true });
+
+      if (target.endsWith('.map')) {
+        writeFileSync(target, relocateDeclarationMap(file, target));
+      } else {
+        const text = readFileSync(file, 'utf8');
+        writeFileSync(
+          target,
+          rewriteModuleSpecifiers(target, text, specifier => shippedDeclarationSpecifier(target, specifier, shipped)),
+        );
+      }
+    }
+  } finally {
+    rmSync(DECLARATION_STAGING, { recursive: true, force: true });
   }
 };
 
 if (watchMode) {
   await emitBasisRuntime();
-  const jobs = [bundled(false), debugBundled(false), modules(), iife(false)];
+  const jobs = [bundled(false), debugBundled(false), modules(), ...(await runtimeModuleJobs()), iife(false)];
   const watcher = watch(jobs as never);
   watcher.on('event', event => {
     if (event.code === 'BUNDLE_END') {
@@ -307,10 +557,12 @@ if (watchMode) {
     }
   });
 } else {
+  // The runtime modules come after the Core tree they import.
+  const moduleJobs = await runtimeModuleJobs();
   const jobs =
     buildMode === 'production'
-      ? [bundled(true), debugBundled(true), modules(), iife(false), iife(true), fullBundle(false), fullBundle(true)]
-      : [bundled(true), debugBundled(true), modules(), iife(false)];
+      ? [bundled(true), debugBundled(true), modules(), ...moduleJobs, iife(false), iife(true), fullBundle(false), fullBundle(true)]
+      : [bundled(true), debugBundled(true), modules(), ...moduleJobs, iife(false)];
 
   for (const job of jobs) {
     await runJob(job);
@@ -318,5 +570,5 @@ if (watchMode) {
 
   await emitDeclarations();
   await emitBasisRuntime();
-  writeSourceStamp(resolvePath(rootDir, 'src'), resolvePath(rootDir, 'dist'));
+  writeSourceStamp(coreSourceRoots(rootDir), resolvePath(rootDir, 'dist'));
 }

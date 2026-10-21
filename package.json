@@ -68,9 +68,49 @@
       "import": "./dist/esm/debug/index.js",
       "default": "./dist/esm/debug/index.js"
     },
+    "./tilemap": {
+      "types": "./dist/esm/tilemap/index.d.ts",
+      "import": "./dist/esm/tilemap/index.js",
+      "default": "./dist/esm/tilemap/index.js"
+    },
+    "./particles": {
+      "types": "./dist/esm/particles/index.d.ts",
+      "import": "./dist/esm/particles/index.js",
+      "default": "./dist/esm/particles/index.js"
+    },
+    "./audio-fx": {
+      "types": "./dist/esm/audio-fx/index.d.ts",
+      "import": "./dist/esm/audio-fx/index.js",
+      "default": "./dist/esm/audio-fx/index.js"
+    },
+    "./physics": {
+      "types": "./dist/esm/physics/index.d.ts",
+      "import": "./dist/esm/physics/index.js",
+      "default": "./dist/esm/physics/index.js"
+    },
+    "./tilemap-physics": {
+      "types": "./dist/esm/tilemap-physics/index.d.ts",
+      "import": "./dist/esm/tilemap-physics/index.js",
+      "default": "./dist/esm/tilemap-physics/index.js"
+    },
+    "./lighting": {
+      "types": "./dist/esm/lighting/index.d.ts",
+      "import": "./dist/esm/lighting/index.js",
+      "default": "./dist/esm/lighting/index.js"
+    },
+    "./pathfinding": {
+      "types": "./dist/esm/pathfinding/index.d.ts",
+      "import": "./dist/esm/pathfinding/index.js",
+      "default": "./dist/esm/pathfinding/index.js"
+    },
     "./package.json": "./package.json"
   },
   "imports": {
+    "#physics-debug": {
+      "@codexo/exojs-source": "./packages/exojs-physics/src/debug/index.ts",
+      "types": "./dist/esm/physics/debug/index.d.ts",
+      "default": "./dist/esm/physics/debug/index.js"
+    },
     "#*.vert": "./src/*.vert",
     "#*.frag": "./src/*.frag",
     "#*.wgsl": "./src/*.wgsl",
@@ -133,6 +173,7 @@
     "test:alloc": "vitest run --project=rendering-alloc",
     "test:physics-perf": "vitest run --project=physics-perf",
     "test:production-stripping": "vitest run --project=exojs test/build-defines/production-stripping.test.ts",
+    "test:hybrid-runtime": "vitest run --project=exojs test/release/hybrid-runtime-exports.test.ts test/release/hybrid-runtime-identity.test.ts",
     "test:skips": "pnpm test --reporter=default --reporter=junit --outputFile.junit=./test-results/unit.junit.xml && tsx scripts/check-skipped-tests.ts",
     "test:skips:check": "tsx scripts/check-skipped-tests.ts",
     "test:skips:update-baseline": "tsx scripts/check-skipped-tests.ts --update-baseline",
@@ -174,7 +215,7 @@
     "assets:compact": "tsx scripts/compact-example-assets.ts --write",
     "assets:compact:check": "tsx scripts/compact-example-assets.ts",
     "examples:sync:check": "tsx scripts/check-examples-sync.ts",
-    "full-bundle:exports:check": "tsx scripts/check-dist-fresh.ts && tsx scripts/check-full-bundle-exports.ts",
+    "full-bundle:exports:check": "tsx scripts/check-dist-fresh.ts && node scripts/check-full-bundle-exports.ts",
     "sync:example-capabilities": "tsx ./scripts/sync-example-capabilities.ts",
     "site:build": "tsx scripts/check-dist-fresh.ts && pnpm --filter @codexo/exojs-examples build",
     "size": "size-limit",
@@ -228,32 +269,35 @@
       "gzip": true
     },
     {
-      "name": "@codexo/exojs-lighting",
-      "path": "packages/exojs-lighting/dist/esm/index.js",
+      "name": "@codexo/exojs/lighting",
+      "path": "dist/esm/lighting/index.js",
       "limit": "34 KB",
       "gzip": true,
       "ignore": [
-        "@codexo/exojs"
+        "../index.js",
+        "../../index.js"
       ]
     },
     {
-      "name": "@codexo/exojs-lighting (lightmap, no cascades)",
-      "path": "packages/exojs-lighting/dist/esm/index.js",
+      "name": "@codexo/exojs/lighting (lightmap, no cascades)",
+      "path": "dist/esm/lighting/index.js",
       "import": "{ LightmapLighting, PointLight, SpotLight, PolygonOccluder }",
       "limit": "14 KB",
       "gzip": true,
       "ignore": [
-        "@codexo/exojs"
+        "../index.js",
+        "../../index.js"
       ]
     },
     {
-      "name": "@codexo/exojs-lighting (forward, no occluder tracing)",
-      "path": "packages/exojs-lighting/dist/esm/index.js",
+      "name": "@codexo/exojs/lighting (forward, no occluder tracing)",
+      "path": "dist/esm/lighting/index.js",
       "import": "{ ForwardLighting, PointLight, SpotLight, LitMaterial, NormalMap }",
       "limit": "5 KB",
       "gzip": true,
       "ignore": [
-        "@codexo/exojs"
+        "../index.js",
+        "../../index.js"
       ]
     },
     {

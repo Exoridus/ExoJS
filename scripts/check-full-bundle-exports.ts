@@ -18,7 +18,9 @@
  * has teeth exactly where the risk is: the hand-written lists.
  *
  * The comparison runs against the built `dist/esm` barrels, so `pnpm build`
- * must have produced them.
+ * must have produced them. It runs under plain `node` rather than `tsx`: tsx
+ * applies the root tsconfig `paths`, which point `@codexo/exojs` at the
+ * sources, and the adapters' built barrels must reach the built Core instead.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -66,10 +68,16 @@ const parseEntry = (source: string): EntryBlock[] => {
   return blocks.sort((a, b) => (a as EntryBlock & { index: number }).index - (b as EntryBlock & { index: number }).index);
 };
 
-/** Absolute path of a workspace package's built ESM barrel, or `null`. */
+/** Absolute path of a Core entry's or an adapter's built ESM barrel, or `null`. */
 const barrelPath = (specifier: string): string | null => {
-  const directory = specifier === '@codexo/exojs' ? ROOT : join(ROOT, 'packages', specifier.replace('@codexo/', ''));
-  const barrel = join(directory, 'dist', 'esm', 'index.js');
+  const coreSubpath = /^@codexo\/exojs\/([a-z-]+)$/.exec(specifier)?.[1];
+  let barrel = join(ROOT, 'packages', specifier.replace('@codexo/', ''), 'dist', 'esm', 'index.js');
+
+  if (specifier === '@codexo/exojs') {
+    barrel = join(ROOT, 'dist', 'esm', 'index.js');
+  } else if (coreSubpath !== undefined) {
+    barrel = join(ROOT, 'dist', 'esm', coreSubpath, 'index.js');
+  }
 
   return existsSync(barrel) ? barrel : null;
 };

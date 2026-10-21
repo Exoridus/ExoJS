@@ -241,6 +241,11 @@ jobs:
           EXOJS_REQUIRE_PRODUCTION_BUILD: '1'
         run: pnpm test:production-stripping
 
+      - name: Verify the packed Core and its runtime subpaths against the built dist
+        env:
+          EXOJS_REQUIRE_PRODUCTION_BUILD: '1'
+        run: pnpm test:hybrid-runtime
+
       - uses: actions/upload-artifact@v7
         with:
           name: dist

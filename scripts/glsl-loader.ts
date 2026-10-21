@@ -10,8 +10,8 @@
  *     file as its source text exported as `default` (exactly like the
  *     vitest/rollup transforms).
  *
- *  2. **Workspace package specifiers.** `@codexo/exojs` and the extension packages
- *     (`@codexo/exojs-tilemap` etc.) do NOT expose a `@codexo/exojs-source` export
+ *  2. **Workspace package specifiers.** `@codexo/exojs`, its subpaths and the adapter packages
+ *     (`@codexo/exojs-tiled` etc.) do NOT expose a `@codexo/exojs-source` export
  *     condition, so `--conditions=@codexo/exojs-source` cannot redirect them to `src`;
  *     the vitest config aliases them explicitly, and so do we. Their package-
  *     internal `#*` imports still resolve to `src` via the `@codexo/exojs-source`
@@ -38,11 +38,14 @@ const packageAliases = new Map([
   ['@codexo/exojs/renderer-sdk', 'src/renderer-sdk.ts'],
   ['@codexo/exojs/debug', 'src/debug/index.ts'],
   ['@codexo/exojs', 'src/index.ts'],
-  ['@codexo/exojs-tilemap', 'packages/exojs-tilemap/src/index.ts'],
+  ['@codexo/exojs/tilemap', 'packages/exojs-tilemap/src/index.ts'],
   ['@codexo/exojs-tiled', 'packages/exojs-tiled/src/index.ts'],
-  ['@codexo/exojs-physics', 'packages/exojs-physics/src/index.ts'],
-  ['@codexo/exojs-particles', 'packages/exojs-particles/src/index.ts'],
-  ['@codexo/exojs-audio-fx', 'packages/exojs-audio-fx/src/index.ts'],
+  ['@codexo/exojs/physics', 'packages/exojs-physics/src/index.ts'],
+  ['@codexo/exojs/particles', 'packages/exojs-particles/src/index.ts'],
+  ['@codexo/exojs/audio-fx', 'packages/exojs-audio-fx/src/index.ts'],
+  ['@codexo/exojs/tilemap-physics', 'packages/exojs-tilemap-physics/src/index.ts'],
+  ['@codexo/exojs/lighting', 'packages/exojs-lighting/src/index.ts'],
+  ['@codexo/exojs/pathfinding', 'packages/exojs-pathfinding/src/index.ts'],
 ]);
 
 const SHADER_EXTENSIONS = ['.vert', '.frag', '.wgsl'];
