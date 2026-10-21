@@ -9,8 +9,8 @@ import {
   type Seconds,
   View,
 } from '@codexo/exojs';
+import { ChunkStreamer, TileMapNode } from '@codexo/exojs/tilemap';
 import { tiledExtension } from '@codexo/exojs-tiled';
-import { ChunkStreamer, TileMapNode } from '@codexo/exojs-tilemap';
 import { mountControls } from '@examples/runtime';
 
 // A hand-authored Tiled `.tmj` infinite map, streamed the same way the

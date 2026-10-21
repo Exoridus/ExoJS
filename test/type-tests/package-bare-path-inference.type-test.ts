@@ -15,10 +15,10 @@ import '@codexo/exojs-ldtk';
 import '@codexo/exojs-tiled';
 
 import { Asset, type AssetRef, Assets, type KindByPath, type Loader, type LoadingQueue, type Texture } from '@codexo/exojs';
+import type { TileMap } from '@codexo/exojs/tilemap';
 import type { AsepriteSheet } from '@codexo/exojs-aseprite';
 import type { LdtkMap } from '@codexo/exojs-ldtk';
 import type { TiledMap } from '@codexo/exojs-tiled';
-import type { TileMap } from '@codexo/exojs-tilemap';
 
 import type { CatalogValueLeaf } from './helpers/catalog-leaf';
 

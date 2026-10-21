@@ -24,7 +24,7 @@ import {
   ScaleOverLifetime,
   Turbulence,
   VectorRange,
-} from '@codexo/exojs-particles';
+} from '@codexo/exojs/particles';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 class BonfireScene extends Scene {

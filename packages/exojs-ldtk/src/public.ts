@@ -91,7 +91,7 @@ export type {
   TileSetOptions,
   TileTransform,
   UnknownMapObjectPolicy,
-} from '@codexo/exojs-tilemap';
+} from '@codexo/exojs/tilemap';
 export {
   MapLevelRuntime,
   MapLevelSide,
@@ -111,7 +111,7 @@ export {
   TileMapView,
   TilePropertyKind,
   TileSet,
-} from '@codexo/exojs-tilemap';
+} from '@codexo/exojs/tilemap';
 
 // ── Module augmentation - typed load calls ────────────────────────────────────
 import type { LdtkMap } from './LdtkMap';

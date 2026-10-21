@@ -15,10 +15,10 @@ import {
   Vector,
   VectorAction,
 } from '@codexo/exojs';
-import { NavigationAgentComponent, TileNavigationSpace, WaypointGraph } from '@codexo/exojs-pathfinding';
-import { CircleShape, KinematicMovementComponent, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs-physics';
-import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileSet } from '@codexo/exojs-tilemap';
-import { TileColliderStreamer } from '@codexo/exojs-tilemap-physics';
+import { NavigationAgentComponent, TileNavigationSpace, WaypointGraph } from '@codexo/exojs/pathfinding';
+import { CircleShape, KinematicMovementComponent, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs/physics';
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileSet } from '@codexo/exojs/tilemap';
+import { TileColliderStreamer } from '@codexo/exojs/tilemap-physics';
 import { mountControls } from '@examples/runtime';
 // Navigation, movement and collision over one tile map, with no package
 // depending on another:

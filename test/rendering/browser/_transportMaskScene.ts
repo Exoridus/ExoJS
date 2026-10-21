@@ -11,7 +11,7 @@
  * the mask at all, and that an outline reaches the tables instead of the mask.
  */
 
-import { AlphaOccluder, type Lighting, PolygonOccluder, RadianceLighting } from '@codexo/exojs-lighting';
+import { AlphaOccluder, type Lighting, PolygonOccluder, RadianceLighting } from '@codexo/exojs/lighting';
 import { expect } from 'vitest';
 
 import type { Application } from '#core/Application';

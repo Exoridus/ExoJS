@@ -4,7 +4,7 @@
   "symbol": "WorkerSampledChunkSourceOptions",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 3,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Options for createWorkerSampledChunkSource."
       ],
-      "importLine": "import { WorkerSampledChunkSourceOptions } from '@codexo/exojs-tilemap'",
+      "importLine": "import { WorkerSampledChunkSourceOptions } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

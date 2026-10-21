@@ -1,6 +1,6 @@
 import type { AssetFactoryContext } from '@codexo/exojs';
 import { Asset } from '@codexo/exojs';
-import type { TileSet } from '@codexo/exojs-tilemap';
+import type { TileSet } from '@codexo/exojs/tilemap';
 
 import { LdtkProject } from './LdtkProject';
 import { loadLdtkTileset } from './loadLdtkMap';

@@ -1,5 +1,5 @@
-import type { CollisionFilter } from '@codexo/exojs-physics';
-import type { TileMapObject } from '@codexo/exojs-tilemap';
+import type { CollisionFilter } from '@codexo/exojs/physics';
+import type { TileMapObject } from '@codexo/exojs/tilemap';
 
 /**
  * How a run of solid whole-cell tiles is turned into colliders.

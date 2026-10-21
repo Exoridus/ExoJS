@@ -9,10 +9,10 @@ import {
   Scene,
   SystemOrder,
 } from '@codexo/exojs';
-import { CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+import { CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
+import { type TileMap, TileMapNode } from '@codexo/exojs/tilemap';
+import { buildObjectLayerColliders, TilePhysicsBinding } from '@codexo/exojs/tilemap-physics';
 import { tiledExtension } from '@codexo/exojs-tiled';
-import { type TileMap, TileMapNode } from '@codexo/exojs-tilemap';
-import { buildObjectLayerColliders, TilePhysicsBinding } from '@codexo/exojs-tilemap-physics';
 import { mountControls } from '@examples/runtime';
 
 const scale = 0.72;

@@ -1,6 +1,6 @@
 // Auto-generated from signal-graph.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
-import { AudioAnalyser, CompressorEffect, EqualizerEffect, LimiterEffect, ReverbEffect } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser, CompressorEffect, EqualizerEffect, LimiterEffect, ReverbEffect } from '@codexo/exojs/audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const NODE_W = 180;
 const NODE_H = 86;

@@ -10,7 +10,7 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { AlphaOccluder, LightmapLighting, PointLight, PolygonOccluder, RadianceLighting } from '@codexo/exojs-lighting';
+import { AlphaOccluder, LightmapLighting, PointLight, PolygonOccluder, RadianceLighting } from '@codexo/exojs/lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Two rooms, one doorway, one lamp - and a switch between the renderer that
 // draws a light and the one that transports it.

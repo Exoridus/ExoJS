@@ -12,7 +12,7 @@ import {
   View,
   type Voice,
 } from '@codexo/exojs';
-import { AudioAnalyser } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser } from '@codexo/exojs/audio-fx';
 import { mountControls } from '@examples/runtime';
 
 class LowBandCameraShakeScene extends Scene {

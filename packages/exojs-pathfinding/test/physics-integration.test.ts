@@ -18,8 +18,8 @@ import {
   PhysicsBody,
   PhysicsBodyComponent,
   PhysicsWorld,
-} from '@codexo/exojs-physics';
-import { type ResolvedTile, TILE_TRANSFORM_IDENTITY, TileLayer, TileSet } from '@codexo/exojs-tilemap';
+} from '@codexo/exojs/physics';
+import { type ResolvedTile, TILE_TRANSFORM_IDENTITY, TileLayer, TileSet } from '@codexo/exojs/tilemap';
 import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import { NavigationAgentComponent } from '../src/navigation/NavigationAgentComponent';

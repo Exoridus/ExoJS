@@ -1,6 +1,6 @@
 // Auto-generated from vinyl-record.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
-import { AudioAnalyser } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser } from '@codexo/exojs/audio-fx';
 import { mountControls } from '@examples/runtime';
 class VinylRecordScene extends Scene {
   music;

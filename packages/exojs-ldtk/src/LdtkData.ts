@@ -8,7 +8,7 @@
  * @see https://ldtk.io/json/
  */
 
-import type { TilePropertyPoint, TilePropertyTileRef } from '@codexo/exojs-tilemap';
+import type { TilePropertyPoint, TilePropertyTileRef } from '@codexo/exojs/tilemap';
 
 // ── Tile data ─────────────────────────────────────────────────────────────────
 

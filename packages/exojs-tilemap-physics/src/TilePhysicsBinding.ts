@@ -1,6 +1,6 @@
 import type { SceneNode } from '@codexo/exojs';
-import type { PhysicsBody } from '@codexo/exojs-physics';
-import type { TileProjection } from '@codexo/exojs-tilemap';
+import type { PhysicsBody } from '@codexo/exojs/physics';
+import type { TileProjection } from '@codexo/exojs/tilemap';
 
 /**
  * Explicit presentation of a logical physics body through a tile projection.

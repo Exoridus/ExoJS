@@ -4,7 +4,7 @@
   "symbol": "MapObjectSpawner",
   "kind": "class",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 4,
   "counts": {
@@ -24,7 +24,7 @@
         "ExoJS owns the mechanism: identity, ordering, cancellation, rollback and lifetime. The game owns the policy: which object becomes what, and what those objects need - dependencies travel through `Context`, not through any service locator in the engine.",
         "A spawn is **atomic**: if any factory fails, everything already created is destroyed in reverse order and no session is produced."
       ],
-      "importLine": "import { MapObjectSpawner } from '@codexo/exojs-tilemap'",
+      "importLine": "import { MapObjectSpawner } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

@@ -13,11 +13,11 @@ import {
   type Texture,
   Vector,
 } from '@codexo/exojs';
-import { BoxShape, type PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
-import { PhysicsDebugDraw } from '@codexo/exojs-physics/debug';
+import { PhysicsDebugDraw } from '@codexo/exojs/debug';
+import { BoxShape, type PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
+import type { TileMap } from '@codexo/exojs/tilemap';
+import { buildObjectLayerColliders } from '@codexo/exojs/tilemap-physics';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
-import type { TileMap } from '@codexo/exojs-tilemap';
-import { buildObjectLayerColliders } from '@codexo/exojs-tilemap-physics';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 class TiledMapPhysicsActorScene extends Scene {

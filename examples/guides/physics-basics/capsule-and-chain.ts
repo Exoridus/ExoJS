@@ -1,4 +1,4 @@
-import { CapsuleShape, ChainShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+import { CapsuleShape, ChainShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
 
 // #region guide:capsule-and-chain
 const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });

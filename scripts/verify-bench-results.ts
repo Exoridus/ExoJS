@@ -39,8 +39,12 @@ const RESULTS_DIR = join(REPO_ROOT, 'packages', 'exojs-bench', 'results');
 /** Version an arm carries when its manifest could not be resolved during the run. */
 const NOT_INSTALLED = 'not-installed';
 
-/** Packages released in lockstep with the engine, whose arm version must equal the profile's. */
-const LOCKSTEP_ARMS = new Set(['@codexo/exojs', '@codexo/exojs-physics']);
+/**
+ * Packages released in lockstep with the engine, whose arm version must equal the
+ * profile's. Physics is measured as the `@codexo/exojs/physics` subpath of Core;
+ * profiles recorded before it moved into Core name the retired package.
+ */
+const LOCKSTEP_ARMS = new Set(['@codexo/exojs', '@codexo/exojs/physics', '@codexo/exojs-physics']);
 
 /**
  * Separate harness runs a published profile must pool.

@@ -1,5 +1,5 @@
-import { GridSpace } from '@codexo/exojs-pathfinding';
-import type { ResolvedTile, TileLayer } from '@codexo/exojs-tilemap';
+import { GridSpace } from '@codexo/exojs/pathfinding';
+import type { ResolvedTile, TileLayer } from '@codexo/exojs/tilemap';
 
 declare const ground: TileLayer;
 declare const loaded: { x: number; y: number; width: number; height: number };

@@ -1,4 +1,4 @@
-import { type CollisionFilter, defaultFilter } from '@codexo/exojs-physics';
+import { type CollisionFilter, defaultFilter } from '@codexo/exojs/physics';
 
 import type { ColliderDefaults, TileColliderContext } from './types';
 

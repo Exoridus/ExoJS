@@ -1,4 +1,4 @@
-import { BoxShape, MouseJoint, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+import { BoxShape, MouseJoint, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
 
 // #region guide:mouse-joint
 const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });

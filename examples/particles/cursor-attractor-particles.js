@@ -9,7 +9,7 @@ import {
   ParticleSystem,
   RateSpawn,
   RepelFromPoint,
-} from '@codexo/exojs-particles';
+} from '@codexo/exojs/particles';
 import { mountControls } from '@examples/runtime';
 // Acceleration magnitude shared by both force modules (units / s²). Only the
 // active mode's module carries this strength; the inactive one is held at 0.

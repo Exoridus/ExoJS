@@ -4,7 +4,7 @@
   "symbol": "TilePropertyTileRef",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 6,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A reference into a tileset region (e.g. an LDtk `Tile`-typed field)."
       ],
-      "importLine": "import { TilePropertyTileRef } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TilePropertyTileRef } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

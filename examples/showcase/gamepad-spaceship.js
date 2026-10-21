@@ -33,7 +33,7 @@ import {
   ParticleSystem,
   Range,
   ScaleOverLifetime,
-} from '@codexo/exojs-particles';
+} from '@codexo/exojs/particles';
 import { mountControls } from '@examples/runtime';
 const random = new Random(7);
 class GamepadSpaceshipScene extends Scene {

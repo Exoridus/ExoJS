@@ -1,5 +1,5 @@
 import type { Vector } from '@codexo/exojs';
-import type { NavigationSpace } from '@codexo/exojs-pathfinding';
+import type { NavigationSpace } from '@codexo/exojs/pathfinding';
 
 declare const rooms: ReadonlyArray<{ x: number; y: number; exits: readonly number[]; travelTime: number }>;
 

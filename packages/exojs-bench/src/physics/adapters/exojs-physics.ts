@@ -1,4 +1,4 @@
-import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld, RevoluteJoint } from '@codexo/exojs-physics';
+import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld, RevoluteJoint } from '@codexo/exojs/physics';
 
 import type {
   PhysicsAdapter,

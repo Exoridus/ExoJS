@@ -822,19 +822,12 @@ const getTypingsForVersion = (versionId: string): Promise<ReadonlyArray<ExtraLib
 };
 
 // Extension packages whose declarations the editor registers alongside core, so
-// examples that import `@codexo/exojs-particles` & co. type-check instead of
+// examples that import `@codexo/exojs-tiled` & co. type-check instead of
 // reporting ts2307 "Cannot find module". These always load from the current
 // vendored copy (extension typings are not vendored per historical version).
 const EXTENSION_PACKAGES: ReadonlyArray<{ baseUrl: string; packageName: string }> = [
-  { baseUrl: 'vendor/exojs-particles/', packageName: '@codexo/exojs-particles' },
-  { baseUrl: 'vendor/exojs-audio-fx/', packageName: '@codexo/exojs-audio-fx' },
-  { baseUrl: 'vendor/exojs-tilemap/', packageName: '@codexo/exojs-tilemap' },
   { baseUrl: 'vendor/exojs-tiled/', packageName: '@codexo/exojs-tiled' },
   { baseUrl: 'vendor/exojs-ldtk/', packageName: '@codexo/exojs-ldtk' },
-  { baseUrl: 'vendor/exojs-physics/', packageName: '@codexo/exojs-physics' },
-  { baseUrl: 'vendor/exojs-tilemap-physics/', packageName: '@codexo/exojs-tilemap-physics' },
-  { baseUrl: 'vendor/exojs-lighting/', packageName: '@codexo/exojs-lighting' },
-  { baseUrl: 'vendor/exojs-pathfinding/', packageName: '@codexo/exojs-pathfinding' },
 ];
 
 const loadTypingsForVersion = async (versionId: string): Promise<ReadonlyArray<ExtraLib>> => {

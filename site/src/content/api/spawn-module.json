@@ -4,7 +4,7 @@
   "symbol": "SpawnModule",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -25,7 +25,7 @@
         "A writer belongs to the emission that produced it: the next `emit()` rebinds it, so fill it before emitting again.",
         "Spawn modules run before integration each frame. Multiple modules can be registered on one system and execute in registration order."
       ],
-      "importLine": "import { SpawnModule } from '@codexo/exojs-particles'",
+      "importLine": "import { SpawnModule } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

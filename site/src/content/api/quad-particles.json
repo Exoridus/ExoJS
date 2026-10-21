@@ -4,7 +4,7 @@
   "symbol": "QuadParticles",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 13,
   "counts": {
@@ -23,7 +23,7 @@
         "build fills the shared 40-byte per-instance layout described by instanceAttributes. UVs are baked per-particle so the system can carry an atlas of frames - `system.frames` declares the rectangles and each particle's `textureIndex` selects one, resolved to UVs once per particle per frame; no per-instance shader-side indexing needed.",
         "GPU-eligible: the system's compute pipeline emits exactly that layout into its instance buffer, so a system running on the GPU path can bind that buffer directly and skip build entirely."
       ],
-      "importLine": "import { QuadParticles } from '@codexo/exojs-particles'",
+      "importLine": "import { QuadParticles } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

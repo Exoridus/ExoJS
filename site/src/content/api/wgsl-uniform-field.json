@@ -4,7 +4,7 @@
   "symbol": "WgslUniformField",
   "kind": "type",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 0,
   "counts": {
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [],
-      "importLine": "import { WgslUniformField } from '@codexo/exojs-particles'",
+      "importLine": "import { WgslUniformField } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

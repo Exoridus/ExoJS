@@ -4,7 +4,7 @@
   "symbol": "MeshParticles",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 14,
   "counts": {
@@ -26,7 +26,7 @@
         "**Atlas frames still work.** The mesh's own UVs are treated exactly like the quad's 0..1 corners: the shader mixes them across the particle's resolved frame (`uv = mix(uvMin, uvMax, meshUV)`), so `system.frames` plus a per-particle `textureIndex` selects a frame the same way. A geometry with **no texcoord attribute** therefore carries UV `(0, 0)` on every vertex and the mix degenerates to `uvMin` - the whole mesh samples the single texel at the frame's top-left corner, which on the default 1×1 white texture is exactly \"untextured, tinted by the particle's `color`\".",
         "**Sizing is the mesh's own.** Unlike the quad, which derives its footprint from the texture frame, a mesh particle's footprint is whatever its vertex positions say, in system-local units, multiplied by the per-particle `scaleX`/`scaleY`. The texture only supplies colour."
       ],
-      "importLine": "import { MeshParticles } from '@codexo/exojs-particles'",
+      "importLine": "import { MeshParticles } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

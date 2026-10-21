@@ -11,7 +11,7 @@ import {
   SystemOrder,
   Vector,
 } from '@codexo/exojs';
-import { BoxShape, MouseJoint, PhysicsWorld } from '@codexo/exojs-physics';
+import { BoxShape, MouseJoint, PhysicsWorld } from '@codexo/exojs/physics';
 import { mountControls } from '@examples/runtime';
 class SpriteFollowsBodyScene extends Scene {
   world;

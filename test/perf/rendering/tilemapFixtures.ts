@@ -6,7 +6,7 @@
  *
  * @internal Test/perf-only.
  */
-import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileSet } from '@codexo/exojs/tilemap';
 
 import { materializeRendererBindings } from '#extensions/materialize';
 import type { RenderBackend } from '#rendering/RenderBackend';

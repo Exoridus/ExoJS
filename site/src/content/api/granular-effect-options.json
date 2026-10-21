@@ -4,7 +4,7 @@
   "symbol": "GranularEffectOptions",
   "kind": "interface",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 8,
   "counts": {
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [],
-      "importLine": "import { GranularEffectOptions } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { GranularEffectOptions } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

@@ -4,7 +4,7 @@
   "symbol": "ParticleSystemOptions",
   "kind": "interface",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 4,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Options for ParticleSystem's constructor - orthogonal config that's independent of the texture source. Texture / frames / spritesheet live in positional arguments to enforce mutual exclusivity at the type level (you can't pass both a texture and a spritesheet by accident)."
       ],
-      "importLine": "import { ParticleSystemOptions } from '@codexo/exojs-particles'",
+      "importLine": "import { ParticleSystemOptions } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

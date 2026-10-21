@@ -4,7 +4,7 @@
   "symbol": "ChunkPayload",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 3,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A chunk payload ready to install into a import('./TileLayer').TileLayer via import('./TileLayer').TileLayer._adoptChunk - the same shape import('./TileChunk').TileChunk's constructor accepts as its `source` parameter, named and exported so provider authors have a type to import instead of matching an inline shape."
       ],
-      "importLine": "import { ChunkPayload } from '@codexo/exojs-tilemap'",
+      "importLine": "import { ChunkPayload } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

@@ -4,7 +4,7 @@
   "symbol": "ObjectKind",
   "kind": "type",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 0,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Geometry discriminant for a TileMapObject."
       ],
-      "importLine": "import { ObjectKind } from '@codexo/exojs-tilemap'",
+      "importLine": "import { ObjectKind } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

@@ -11,7 +11,7 @@ When a drawable lands between device pixels — a camera at a fractional offset,
 
 ```ts
 import { type NineSliceSprite, PixelSnapMode, type Sprite } from '@codexo/exojs';
-import type { TileMapNode } from '@codexo/exojs-tilemap';
+import type { TileMapNode } from '@codexo/exojs/tilemap';
 
 declare const sprite: Sprite;
 declare const panel: NineSliceSprite;
@@ -77,7 +77,7 @@ Both modes are resolved in the vertex shaders against the composed device grid, 
 
 ```ts
 import { PixelSnapMode } from '@codexo/exojs';
-import { TileLayerNode, TileMap, TileMapNode, TileMapView } from '@codexo/exojs-tilemap';
+import { TileLayerNode, TileMap, TileMapNode, TileMapView } from '@codexo/exojs/tilemap';
 
 declare const map: TileMap;
 

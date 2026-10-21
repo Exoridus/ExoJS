@@ -9,7 +9,7 @@ import {
   ParticleSystem,
   Range,
   RateSpawn,
-} from '@codexo/exojs-particles';
+} from '@codexo/exojs/particles';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Illustrative loads for the two GPU backends; measure on target hardware.
 const budgets = {

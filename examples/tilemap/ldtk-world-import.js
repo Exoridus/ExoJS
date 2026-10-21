@@ -1,7 +1,7 @@
 // Auto-generated from ldtk-world-import.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
+import { TileMapNode } from '@codexo/exojs/tilemap';
 import { getLdtkIntGridValueAt, ldtkExtension } from '@codexo/exojs-ldtk';
-import { TileMapNode } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Loading an LDtk world (`.ldtk`) through @codexo/exojs-ldtk.
 //

@@ -4,7 +4,7 @@
   "symbol": "ParticleUniformPrimitive",
   "kind": "type",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 0,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Scalar/vector wire types shared by shader backends. Names retain WGSL spelling; GLSL maps them to its corresponding types."
       ],
-      "importLine": "import { ParticleUniformPrimitive } from '@codexo/exojs-particles'",
+      "importLine": "import { ParticleUniformPrimitive } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

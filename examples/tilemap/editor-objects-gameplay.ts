@@ -1,6 +1,6 @@
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
+import { type MapObjectDescriptor, MapObjectSpawner, type MapSpawnSession } from '@codexo/exojs/tilemap';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
-import { type MapObjectDescriptor, MapObjectSpawner, type MapSpawnSession } from '@codexo/exojs-tilemap';
 import { mountControls } from '@examples/runtime';
 
 const makeMarker = (object: MapObjectDescriptor, color: Color): Graphics => {

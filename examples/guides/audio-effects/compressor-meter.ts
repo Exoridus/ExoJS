@@ -1,5 +1,5 @@
 import { Graphics, Scene, type Seconds } from '@codexo/exojs';
-import { CompressorEffect } from '@codexo/exojs-audio-fx';
+import { CompressorEffect } from '@codexo/exojs/audio-fx';
 
 class MeterScene extends Scene {
   private compressor = new CompressorEffect();

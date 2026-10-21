@@ -4,7 +4,7 @@
   "symbol": "PcmStreamSource",
   "kind": "class",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 26,
   "counts": {
@@ -24,7 +24,7 @@
         "Input arrays are copied synchronously and never detached. The private copy is transferred without requiring cross-origin isolation. Values must be finite; nominal full scale is -1..1, with no clipping or normalization here. Resampling, producer timestamps and audiovisual lookahead belong to callers.",
         "Own and destroy the source separately from its bus, for example with a scene DestroyScope. Destroying an AudioSystem or bus does not destroy this source."
       ],
-      "importLine": "import { PcmStreamSource } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { PcmStreamSource } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

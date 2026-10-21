@@ -1,6 +1,6 @@
 // Auto-generated from tempo-tracking.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
-import { BeatDetector } from '@codexo/exojs-audio-fx';
+import { BeatDetector } from '@codexo/exojs/audio-fx';
 import { mountControls } from '@examples/runtime';
 class TempoTrackingScene extends Scene {
   music;

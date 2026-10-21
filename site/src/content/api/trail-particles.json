@@ -4,7 +4,7 @@
   "symbol": "TrailParticles",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 14,
   "counts": {
@@ -27,7 +27,7 @@
         "**One instance per system.** The history is per-particle state carried across frames and addressed by simulation slot, so two systems sharing one instance would overwrite each other's trails.",
         "**The strips are built on the CPU**, so this mode is not GPU-eligible and a system using it stays on the CPU simulation path (observable through `ParticleSystem.gpuMode`). That is also what lets the history survive a death: CPU-mode slots are dense and compaction copies survivors forward stably, which is what build re-aligns the history rows against. It identifies a particle by its age and its lifetime, so an update module that rewrites a live particle's lifetime restarts that particle's trail."
       ],
-      "importLine": "import { TrailParticles } from '@codexo/exojs-particles'",
+      "importLine": "import { TrailParticles } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

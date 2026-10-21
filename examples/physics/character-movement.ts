@@ -13,6 +13,7 @@ import {
   Scene,
   SystemOrder,
 } from '@codexo/exojs';
+import { PhysicsDebugDraw } from '@codexo/exojs/debug';
 import {
   BoxShape,
   CapsuleShape,
@@ -24,8 +25,7 @@ import {
   PhysicsBodyComponent,
   PhysicsWorld,
   PolygonShape,
-} from '@codexo/exojs-physics';
-import { PhysicsDebugDraw } from '@codexo/exojs-physics/debug';
+} from '@codexo/exojs/physics';
 import { mountControls } from '@examples/runtime';
 
 // A platformer character on CharacterMovementComponent: it walks along the

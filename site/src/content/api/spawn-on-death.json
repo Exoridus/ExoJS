@@ -4,7 +4,7 @@
   "symbol": "SpawnOnDeath",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 6,
   "counts": {
@@ -23,7 +23,7 @@
         "The child module receives a synthesized `dt` of 0 - it must spawn immediately rather than rely on rate accumulation. BurstSpawn works naturally; RateSpawn is the wrong fit here.",
         "Position is the only field taken from the dying particle - child distributions decide everything else, and their sampled positions are treated as offsets from the death position. To keep child particles riding the parent's velocity, configure the child's velocity distribution to match, or read ParticleDeathContext.velocityX in a custom death module - see that type's docs for how it can be one frame stale on the GPU backend."
       ],
-      "importLine": "import { SpawnOnDeath } from '@codexo/exojs-particles'",
+      "importLine": "import { SpawnOnDeath } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

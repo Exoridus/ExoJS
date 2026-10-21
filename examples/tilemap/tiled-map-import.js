@@ -1,7 +1,7 @@
 // Auto-generated from tiled-map-import.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
+import { ObjectKind } from '@codexo/exojs/tilemap';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
-import { ObjectKind } from '@codexo/exojs-tilemap';
 import { mountControls } from '@examples/runtime';
 const contains = (object, x, y) => {
   if (object.kind === ObjectKind.Point) {

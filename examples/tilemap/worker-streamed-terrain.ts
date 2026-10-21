@@ -25,7 +25,7 @@ import {
   tilemapExtension,
   type TileMapView,
   TileSet,
-} from '@codexo/exojs-tilemap';
+} from '@codexo/exojs/tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 import { fbm } from '@examples/terrain-noise';
 

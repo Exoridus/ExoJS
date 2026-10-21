@@ -1,5 +1,5 @@
 import { Asset, type LoaderScope } from '@codexo/exojs';
-import { MapWorld, MapWorldRuntime } from '@codexo/exojs-tilemap';
+import { MapWorld, MapWorldRuntime } from '@codexo/exojs/tilemap';
 
 // #region guide:tiled-world
 export const createTiledWorld = (scope: LoaderScope): MapWorldRuntime => {

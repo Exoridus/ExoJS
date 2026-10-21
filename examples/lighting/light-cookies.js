@@ -1,6 +1,6 @@
 // Auto-generated from light-cookies.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture, WrapModes } from '@codexo/exojs';
-import { AlphaOccluder, LightmapLighting, LineLight, PointLight, SpotLight, SunLight } from '@codexo/exojs-lighting';
+import { AlphaOccluder, LightmapLighting, LineLight, PointLight, SpotLight, SunLight } from '@codexo/exojs/lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Four light shapes, one scene, and the shape of the light doing the work that
 // a texture would otherwise have to do.

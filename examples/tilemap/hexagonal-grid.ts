@@ -19,7 +19,7 @@ import {
   TileProjection,
   type TileProjectionOptions,
   TileSet,
-} from '@codexo/exojs-tilemap';
+} from '@codexo/exojs/tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Staggered and hexagonal grids plus a collection-of-images tileset, all

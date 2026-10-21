@@ -4,7 +4,7 @@
   "symbol": "ParticleBufferLayout",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 7,
   "counts": {
@@ -24,7 +24,7 @@
         "What is checked here is the subset that protects a real GPU binding: a positive stride, at least one attribute, unique names, and ranges that neither overlap each other nor reach past the stride.",
         "A layout is a description rather than a resource: it owns no GPU handle and needs no disposal."
       ],
-      "importLine": "import { ParticleBufferLayout } from '@codexo/exojs-particles'",
+      "importLine": "import { ParticleBufferLayout } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

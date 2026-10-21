@@ -1,5 +1,5 @@
 import { Asset, TextureRegion } from '@codexo/exojs';
-import { ObjectKind, ObjectLayer, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, type TileMapObject, TileSet } from '@codexo/exojs-tilemap';
+import { ObjectKind, ObjectLayer, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, type TileMapObject, TileSet } from '@codexo/exojs/tilemap';
 
 import { cellAt, COLUMNS, DOOR_TILE, findMarker, FLOOR_TILE, ROWS, TILE, WALL_TILE } from '../level';
 import { TopDownScene } from './TopDownScene';

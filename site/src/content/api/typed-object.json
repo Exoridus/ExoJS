@@ -4,7 +4,7 @@
   "symbol": "TypedObject",
   "kind": "type",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 0,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A TileMapObject whose `properties` are narrowed to the schema shape declared for the object `type` `T` in schema `S`."
       ],
-      "importLine": "import { TypedObject } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TypedObject } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

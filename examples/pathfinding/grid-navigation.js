@@ -1,6 +1,6 @@
 // Auto-generated from grid-navigation.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene } from '@codexo/exojs';
-import { GridSpace, Pathfinder } from '@codexo/exojs-pathfinding';
+import { GridSpace, Pathfinder } from '@codexo/exojs/pathfinding';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Click-to-move over a weighted grid. Everything here is plain data: a GridSpace
 // of costs and a Pathfinder, neither of which is a scene node, neither of which

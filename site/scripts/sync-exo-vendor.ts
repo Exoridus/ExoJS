@@ -448,24 +448,15 @@ const syncVendor = (): void => {
 
   console.log(`[vendor:sync] Copied ExoJS ESM runtime + declarations from ${sourceDistDir} -> ${flatTargetDir}`);
 
-  // Sync extension packages. Each gets the same Monaco-resolvable treatment as
+  // Sync the adapter packages; the runtime modules ship inside the Core tree
+  // copied above. Each adapter gets the same Monaco-resolvable treatment as
   // core: copy the ESM tree, rewrite '#'-subpath imports to relative paths
   // (Monaco can't resolve '#'), emit an `esm-typings.json` manifest, and emit a
   // `monaco-registry.json` (virtual package.json + subpath shims for e.g.
   // `/debug`). Without this the playground's TypeScript worker
-  // can't resolve `@codexo/exojs-particles` & co. and every extension example
+  // can't resolve `@codexo/exojs-tiled` & co. and every adapter example
   // shows a ts2307 "Cannot find module" error.
-  const extensionPackages = [
-    'exojs-particles',
-    'exojs-audio-fx',
-    'exojs-tilemap',
-    'exojs-tiled',
-    'exojs-ldtk',
-    'exojs-physics',
-    'exojs-tilemap-physics',
-    'exojs-lighting',
-    'exojs-pathfinding',
-  ] as const;
+  const extensionPackages = ['exojs-tiled', 'exojs-ldtk'] as const;
 
   for (const pkgName of extensionPackages) {
     let pkgRoot: string;
@@ -486,7 +477,7 @@ const syncVendor = (): void => {
       // "Cannot find module '@codexo/exojs-...'" - and nobody saw the warning.
       throw new Error(
         `[vendor:sync] Extension package @codexo/${pkgName} dist not found at ${pkgDist}. ` +
-          `Build the extension packages first: pnpm --filter "@codexo/exojs-*" build`,
+          `Build the adapter packages first: pnpm --filter "./packages/*" build`,
       );
     }
 

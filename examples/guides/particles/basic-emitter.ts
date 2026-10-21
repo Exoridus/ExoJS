@@ -9,7 +9,7 @@ import {
   ParticleSystem,
   RateSpawn,
   ScaleOverLifetime,
-} from '@codexo/exojs-particles';
+} from '@codexo/exojs/particles';
 
 class FountainScene extends Scene {
   private particles!: ParticleSystem;

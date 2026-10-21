@@ -4,7 +4,7 @@
   "symbol": "MapWorldRuntime",
   "kind": "class",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 12,
   "counts": {
@@ -24,7 +24,7 @@
         "Scope layout - the runtime owns everything below its own scope and nothing above it:",
         "```text scene.loader (given to the runtime, never destroyed by it) └─ world (the runtime's own scope) ├─ level:forest └─ level:cave ```"
       ],
-      "importLine": "import { MapWorldRuntime } from '@codexo/exojs-tilemap'",
+      "importLine": "import { MapWorldRuntime } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

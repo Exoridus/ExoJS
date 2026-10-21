@@ -1,5 +1,5 @@
 import { Asset, Texture } from '@codexo/exojs';
-import { TileMap } from '@codexo/exojs-tilemap';
+import { TileMap } from '@codexo/exojs/tilemap';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { tileMapType } from '../src/tileMapType';

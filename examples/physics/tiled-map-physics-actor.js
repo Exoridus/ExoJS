@@ -1,9 +1,9 @@
 // Auto-generated from tiled-map-physics-actor.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Spritesheet, SystemOrder, Vector } from '@codexo/exojs';
-import { BoxShape, PhysicsWorld } from '@codexo/exojs-physics';
-import { PhysicsDebugDraw } from '@codexo/exojs-physics/debug';
+import { PhysicsDebugDraw } from '@codexo/exojs/debug';
+import { BoxShape, PhysicsWorld } from '@codexo/exojs/physics';
+import { buildObjectLayerColliders } from '@codexo/exojs/tilemap-physics';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
-import { buildObjectLayerColliders } from '@codexo/exojs-tilemap-physics';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 class TiledMapPhysicsActorScene extends Scene {
   world;

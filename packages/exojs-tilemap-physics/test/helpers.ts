@@ -8,7 +8,7 @@ import {
   type TileMapObject,
   TileSet,
   type TileTransform,
-} from '@codexo/exojs-tilemap';
+} from '@codexo/exojs/tilemap';
 
 export const TILE = 16;
 

@@ -9,7 +9,7 @@ import {
   TileMapNode,
   TileSet,
   WangSet,
-} from '@codexo/exojs-tilemap';
+} from '@codexo/exojs/tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const TILE = 64;
 const WIDTH = 16;

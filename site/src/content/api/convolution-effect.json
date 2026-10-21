@@ -4,7 +4,7 @@
   "symbol": "ConvolutionEffect",
   "kind": "class",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 11,
   "counts": {
@@ -23,7 +23,7 @@
         "Pass the IR as an `AudioBuffer` (typically decoded via `AudioContext.decodeAudioData`) or as a `Sound` (its `audioBuffer` is used). Omitting the IR leaves `convolver.buffer` as `null`, making the wet path silent and the effect act as a passthrough until setImpulse is called - safe to add to a bus before an IR is available.",
         "Node graph: ``` input(GainNode) → dryGain → output(GainNode) input → convolver → wetGain → output ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet × gain`."
       ],
-      "importLine": "import { ConvolutionEffect } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { ConvolutionEffect } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

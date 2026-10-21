@@ -17,7 +17,7 @@ import {
   RadianceLighting,
   SpotLight,
   SunLight,
-} from '@codexo/exojs-lighting';
+} from '@codexo/exojs/lighting';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';

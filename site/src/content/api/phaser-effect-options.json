@@ -4,7 +4,7 @@
   "symbol": "PhaserEffectOptions",
   "kind": "interface",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 6,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Construction options for PhaserEffect."
       ],
-      "importLine": "import { PhaserEffectOptions } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { PhaserEffectOptions } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

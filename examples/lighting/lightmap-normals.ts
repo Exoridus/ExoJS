@@ -10,7 +10,7 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { AlphaNormals, type Lighting, LightmapLighting, type NormalSource, PointLight } from '@codexo/exojs-lighting';
+import { AlphaNormals, type Lighting, LightmapLighting, type NormalSource, PointLight } from '@codexo/exojs/lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // The lightmap renderer multiplies a frame that was already drawn, so by the

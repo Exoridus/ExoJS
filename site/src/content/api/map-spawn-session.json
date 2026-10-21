@@ -4,7 +4,7 @@
   "symbol": "MapSpawnSession",
   "kind": "class",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 5,
   "counts": {
@@ -23,7 +23,7 @@
         "A session is handed out by import('./MapObjectSpawner').MapObjectSpawner.spawn and owns every result in it. Destroying the session destroys them all; nothing else has to be tracked, and nothing scans the scene to find them again.",
         "A session is not reusable - destroy it and spawn again."
       ],
-      "importLine": "import { MapSpawnSession } from '@codexo/exojs-tilemap'",
+      "importLine": "import { MapSpawnSession } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

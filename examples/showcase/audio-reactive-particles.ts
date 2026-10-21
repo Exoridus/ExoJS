@@ -11,8 +11,8 @@ import {
   Vector,
   type Voice,
 } from '@codexo/exojs';
-import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
-import { AlphaFadeOverLifetime, ConeDirection, Constant, particlesExtension, ParticleSystem, RateSpawn } from '@codexo/exojs-particles';
+import { AudioAnalyser, BeatDetector } from '@codexo/exojs/audio-fx';
+import { AlphaFadeOverLifetime, ConeDirection, Constant, particlesExtension, ParticleSystem, RateSpawn } from '@codexo/exojs/particles';
 import { mountControls } from '@examples/runtime';
 
 const colors = [new Color(255, 120, 140), new Color(120, 220, 255), new Color(130, 255, 170), new Color(255, 220, 120)];

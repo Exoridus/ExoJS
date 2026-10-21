@@ -11,7 +11,7 @@ import {
   type Sound,
   Text,
 } from '@codexo/exojs';
-import { AudioAnalyser, DuckingEffect } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser, DuckingEffect } from '@codexo/exojs/audio-fx';
 import { mountControls } from '@examples/runtime';
 
 class DuckingScene extends Scene {

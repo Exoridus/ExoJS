@@ -1,7 +1,7 @@
 import { BehaviorComponent, type Container, type PointLike, type Seconds, type VectorAction } from '@codexo/exojs';
-import { NavigationAgentComponent, type NavigationMovement, TileNavigationSpace, WaypointGraph } from '@codexo/exojs-pathfinding';
-import { CircleShape, KinematicMovementComponent, PhysicsBodyComponent, type PhysicsWorld } from '@codexo/exojs-physics';
-import type { ResolvedTile, TileLayer } from '@codexo/exojs-tilemap';
+import { NavigationAgentComponent, type NavigationMovement, TileNavigationSpace, WaypointGraph } from '@codexo/exojs/pathfinding';
+import { CircleShape, KinematicMovementComponent, PhysicsBodyComponent, type PhysicsWorld } from '@codexo/exojs/physics';
+import type { ResolvedTile, TileLayer } from '@codexo/exojs/tilemap';
 
 declare const world: PhysicsWorld;
 declare const ground: TileLayer;

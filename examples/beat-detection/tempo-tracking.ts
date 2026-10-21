@@ -10,7 +10,7 @@ import {
   type Seconds,
   Text,
 } from '@codexo/exojs';
-import { BeatDetector } from '@codexo/exojs-audio-fx';
+import { BeatDetector } from '@codexo/exojs/audio-fx';
 import { mountControls } from '@examples/runtime';
 
 class TempoTrackingScene extends Scene {

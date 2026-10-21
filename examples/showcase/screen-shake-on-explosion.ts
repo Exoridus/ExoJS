@@ -1,5 +1,5 @@
 import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, Time, Vector, View } from '@codexo/exojs';
-import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem } from '@codexo/exojs-particles';
+import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem } from '@codexo/exojs/particles';
 import { mountControls } from '@examples/runtime';
 
 class ScreenShakeOnExplosionScene extends Scene {

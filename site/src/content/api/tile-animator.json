@@ -4,7 +4,7 @@
   "symbol": "TileAnimator",
   "kind": "class",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 7,
   "counts": {
@@ -26,7 +26,7 @@
         "```ts const animator = new TileAnimator(map.layers); scene.systems.add({ update: (t) => animator.update(t.deltaSeconds) }); ```",
         "The animator references - but never owns - the layers and their tilesets; destroy only drops its own cell registry."
       ],
-      "importLine": "import { TileAnimator } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileAnimator } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

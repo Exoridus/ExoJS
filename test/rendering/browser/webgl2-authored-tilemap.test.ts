@@ -7,8 +7,8 @@
  * Run via:  pnpm test:browser:webgl
  */
 
+import { type TileMap, TileMapNode } from '@codexo/exojs/tilemap';
 import { tiledExtension } from '@codexo/exojs-tiled';
-import { type TileMap, TileMapNode } from '@codexo/exojs-tilemap';
 
 import { Asset } from '#assets/Asset';
 import { Loader } from '#assets/Loader';

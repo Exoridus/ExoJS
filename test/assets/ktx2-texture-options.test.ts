@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { NormalMap } from '@codexo/exojs-lighting';
+import { NormalMap } from '@codexo/exojs/lighting';
 import { describe, expect, test } from 'vitest';
 
 import { type TextureAssetOptions, TextureFactory } from '#assets/factories/TextureFactory';

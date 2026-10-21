@@ -76,21 +76,21 @@ interface ExtensionPackage {
 
 const EXTENSION_PACKAGES: readonly ExtensionPackage[] = [
   {
-    importPath: '@codexo/exojs-particles',
+    importPath: '@codexo/exojs/particles',
     subsystem: 'particles',
     entryPoint: 'packages/exojs-particles/src/index.ts',
     tsconfig: 'packages/exojs-particles/tsconfig.json',
     sourceMarker: 'packages/exojs-particles/src/',
   },
   {
-    importPath: '@codexo/exojs-audio-fx',
+    importPath: '@codexo/exojs/audio-fx',
     subsystem: 'audio',
     entryPoint: 'packages/exojs-audio-fx/src/index.ts',
     tsconfig: 'packages/exojs-audio-fx/tsconfig.json',
     sourceMarker: 'packages/exojs-audio-fx/src/',
   },
   {
-    importPath: '@codexo/exojs-tilemap',
+    importPath: '@codexo/exojs/tilemap',
     subsystem: 'tilemap',
     entryPoint: 'packages/exojs-tilemap/src/index.ts',
     tsconfig: 'packages/exojs-tilemap/tsconfig.json',
@@ -104,7 +104,7 @@ const EXTENSION_PACKAGES: readonly ExtensionPackage[] = [
     sourceMarker: 'packages/exojs-tiled/src/',
   },
   {
-    importPath: '@codexo/exojs-physics',
+    importPath: '@codexo/exojs/physics',
     subsystem: 'physics',
     entryPoint: 'packages/exojs-physics/src/index.ts',
     tsconfig: 'packages/exojs-physics/tsconfig.json',
@@ -118,21 +118,21 @@ const EXTENSION_PACKAGES: readonly ExtensionPackage[] = [
     sourceMarker: 'packages/exojs-aseprite/src/',
   },
   {
-    importPath: '@codexo/exojs-tilemap-physics',
+    importPath: '@codexo/exojs/tilemap-physics',
     subsystem: 'tilemap-physics',
     entryPoint: 'packages/exojs-tilemap-physics/src/index.ts',
     tsconfig: 'packages/exojs-tilemap-physics/tsconfig.json',
     sourceMarker: 'packages/exojs-tilemap-physics/src/',
   },
   {
-    importPath: '@codexo/exojs-lighting',
+    importPath: '@codexo/exojs/lighting',
     subsystem: 'lighting',
     entryPoint: 'packages/exojs-lighting/src/index.ts',
     tsconfig: 'packages/exojs-lighting/tsconfig.json',
     sourceMarker: 'packages/exojs-lighting/src/',
   },
   {
-    importPath: '@codexo/exojs-pathfinding',
+    importPath: '@codexo/exojs/pathfinding',
     subsystem: 'pathfinding',
     entryPoint: 'packages/exojs-pathfinding/src/index.ts',
     tsconfig: 'packages/exojs-pathfinding/tsconfig.json',

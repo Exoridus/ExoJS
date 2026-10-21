@@ -102,7 +102,7 @@ Two Tiled property types aren't plain scalars and convert to structured values i
 - **`object`-typed properties** — a reference to another Tiled object by numeric id — convert to a `TilePropertyObjectRef`: `{ kind: 'objectRef', id }`. Resolve it by matching `id` against another object's `id` in the same map:
 
   ```js no-check -- reading a custom property needs the object narrowing the block leaves out for brevity
-  import { TilePropertyKind } from '@codexo/exojs-tilemap';
+  import { TilePropertyKind } from '@codexo/exojs/tilemap';
 
   const door = spawnLayer.objects.find(object => object.name === 'Door');
   const target = door.properties.linkedSwitch;
@@ -127,7 +127,7 @@ Before this conversion existed, `object`- and `class`-typed properties were indi
 An object placed with Tiled's *insert tile* tool converts to a `TileObject` — `kind` is `'tile'` and `tile` carries the resolved `ResolvedTile` (tileset, local tile id, flip flags):
 
 ```ts
-import { ObjectKind } from '@codexo/exojs-tilemap';
+import { ObjectKind } from '@codexo/exojs/tilemap';
 
 const tileMap = map.toTileMap();
 const [propLayer] = tileMap.objectLayers;
@@ -160,7 +160,7 @@ The two helpers behind this are exported for when you work with the parsed sourc
 An object drawn with Tiled's text tool converts to a `TextObject` — a `TileMapObject` whose `kind` is `'text'` and whose `text` field carries the styled content:
 
 ```ts
-import { ObjectKind } from '@codexo/exojs-tilemap';
+import { ObjectKind } from '@codexo/exojs/tilemap';
 
 const tileMap = map.toTileMap();
 const [captionLayer] = tileMap.objectLayers;
@@ -224,9 +224,9 @@ To go straight to colliders, `@codexo/exojs-tilemap-physics` builds and streams 
 
 ```ts
 import { Scene, SystemOrder } from '@codexo/exojs';
-import { PhysicsWorld } from '@codexo/exojs-physics';
-import type { TileLayer } from '@codexo/exojs-tilemap';
-import { TileColliderStreamer } from '@codexo/exojs-tilemap-physics';
+import { PhysicsWorld } from '@codexo/exojs/physics';
+import type { TileLayer } from '@codexo/exojs/tilemap';
+import { TileColliderStreamer } from '@codexo/exojs/tilemap-physics';
 
 declare const ground: TileLayer;
 
@@ -270,7 +270,7 @@ Wang sets — Tiled's terrain/auto-tile definitions — parse onto `TiledTileset
 Tiled's tile editor lets you give a tile an animation: a sequence of frames, each showing a different local tile ID for a set duration. `toTileMap()` carries these frames into `TileDefinition.animation`; `@codexo/exojs-tilemap` ships `TileAnimator` to drive them at runtime, RPG-Maker style — advancing every animated cell across one or more layers on a shared clock:
 
 ```ts
-import { TileAnimator } from '@codexo/exojs-tilemap';
+import { TileAnimator } from '@codexo/exojs/tilemap';
 
 const tileMap = map.toTileMap();
 const animator = new TileAnimator(tileMap.layers);

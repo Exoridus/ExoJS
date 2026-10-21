@@ -4,7 +4,7 @@
   "symbol": "DistanceJoint",
   "kind": "class",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 10,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Holds the anchor points on two bodies at a target length along their connecting axis. With `hertz === 0` it is rigid; with `hertz > 0` it behaves as a damped spring. Solved as a soft constraint in the sub-step loop, warm- started across frames."
       ],
-      "importLine": "import { DistanceJoint } from '@codexo/exojs-physics'",
+      "importLine": "import { DistanceJoint } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

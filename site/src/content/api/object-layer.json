@@ -4,7 +4,7 @@
   "symbol": "ObjectLayer",
   "kind": "class",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 24,
   "counts": {
@@ -23,7 +23,7 @@
         "The presentation fields the source format attaches to a layer - visible, opacity, offsetX/offsetY, parallaxX/parallaxY, parallaxScale, and tintColor - are carried through in full, with any enclosing group layers' contribution already folded in, so an object layer describes the same placement and shading its neighbouring tile and image layers do. Nothing here acts on them: code that draws these objects itself is what applies them.",
         "Query with query (untyped, fully back-compatible) or, when an ObjectSchema type argument `S` is supplied, with the typed accessors byType, byKind, and where - these narrow `properties` to the developer-declared shape. The schema is **opt-in**: the default type parameter reproduces the original untyped behaviour, so `new ObjectLayer(options)` and `map.getObjectLayer('x')` are unchanged."
       ],
-      "importLine": "import { ObjectLayer } from '@codexo/exojs-tilemap'",
+      "importLine": "import { ObjectLayer } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

@@ -1,7 +1,7 @@
 import { Container, type PointLike, Vector } from '@codexo/exojs';
-import { NavigationAgentComponent, type TileNavigationSpace } from '@codexo/exojs-pathfinding';
-import { CircleShape, KinematicMovementComponent, type PhysicsBody, PhysicsBodyComponent, type PhysicsWorld } from '@codexo/exojs-physics';
-import type { ResolvedTile } from '@codexo/exojs-tilemap';
+import { NavigationAgentComponent, type TileNavigationSpace } from '@codexo/exojs/pathfinding';
+import { CircleShape, KinematicMovementComponent, type PhysicsBody, PhysicsBodyComponent, type PhysicsWorld } from '@codexo/exojs/physics';
+import type { ResolvedTile } from '@codexo/exojs/tilemap';
 
 export interface ActorOptions {
   /** Where the actor's centre starts, in world pixels. */

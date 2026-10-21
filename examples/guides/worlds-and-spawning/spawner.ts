@@ -1,5 +1,5 @@
 import { Container } from '@codexo/exojs';
-import { MapObjectSpawner } from '@codexo/exojs-tilemap';
+import { MapObjectSpawner } from '@codexo/exojs/tilemap';
 
 // #region guide:object-spawner
 class Enemy extends Container {}

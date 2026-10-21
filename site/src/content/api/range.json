@@ -4,7 +4,7 @@
   "symbol": "Range",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 4,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Uniform random number in `[min, max]`. Each `sample()` returns a fresh roll; the bounds are inclusive on both ends (modulo the rounding bias inherent to `Math.random()`)."
       ],
-      "importLine": "import { Range } from '@codexo/exojs-particles'",
+      "importLine": "import { Range } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

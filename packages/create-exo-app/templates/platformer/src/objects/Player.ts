@@ -1,7 +1,7 @@
 import type { Seconds, Spritesheet } from '@codexo/exojs';
 import { type Sprite } from '@codexo/exojs';
-import type { PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
-import { BoxShape } from '@codexo/exojs-physics';
+import type { PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
+import { BoxShape } from '@codexo/exojs/physics';
 
 const WIDTH = 56;
 const HEIGHT = 84;

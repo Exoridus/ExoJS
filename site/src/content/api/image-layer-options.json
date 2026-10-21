@@ -4,7 +4,7 @@
   "symbol": "ImageLayerOptions",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 16,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Construction options for an ImageLayer."
       ],
-      "importLine": "import { ImageLayerOptions } from '@codexo/exojs-tilemap'",
+      "importLine": "import { ImageLayerOptions } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

@@ -10,7 +10,7 @@ import {
   Scene,
   Text,
 } from '@codexo/exojs';
-import { AudioAnalyser, BitCrusherEffect, ChorusEffect, DistortionEffect, PingPongDelayEffect, ReverbEffect } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser, BitCrusherEffect, ChorusEffect, DistortionEffect, PingPongDelayEffect, ReverbEffect } from '@codexo/exojs/audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const CHAINS = [
   {

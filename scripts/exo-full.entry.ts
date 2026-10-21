@@ -9,10 +9,10 @@
 export * from '@codexo/exojs';
 
 // ── Particles ──────────────────────────────────────────────────────────────────
-export * from '@codexo/exojs-particles';
+export * from '@codexo/exojs/particles';
 
 // ── Audio FX ──────────────────────────────────────────────────────────────────
-export * from '@codexo/exojs-audio-fx';
+export * from '@codexo/exojs/audio-fx';
 
 // ── Tilemap (base) - value exports only. The package's object-layer
 // `TextStyle` interface collides with core's runtime `TextStyle` class, while
@@ -55,10 +55,10 @@ export {
   tileToLocalInChunk,
   unpackTile,
   WangSet,
-} from '@codexo/exojs-tilemap';
+} from '@codexo/exojs/tilemap';
 
 // ── Physics ────────────────────────────────────────────────────────────────────
-export * from '@codexo/exojs-physics';
+export * from '@codexo/exojs/physics';
 
 // ── Aseprite ──────────────────────────────────────────────────────────────────
 export * from '@codexo/exojs-aseprite';
@@ -116,10 +116,10 @@ export {
 } from '@codexo/exojs-ldtk';
 
 // ── Lighting ───────────────────────────────────────────────────────────────
-export * from '@codexo/exojs-lighting';
+export * from '@codexo/exojs/lighting';
 
 // ── Pathfinding ────────────────────────────────────────────────────────────
-export * from '@codexo/exojs-pathfinding';
+export * from '@codexo/exojs/pathfinding';
 
 // ── Tilemap physics bridge ────────────────────────────────────────────────────
-export { buildObjectLayerColliders, TileColliderStreamer, TilePhysicsBinding } from '@codexo/exojs-tilemap-physics';
+export { buildObjectLayerColliders, TileColliderStreamer, TilePhysicsBinding } from '@codexo/exojs/tilemap-physics';

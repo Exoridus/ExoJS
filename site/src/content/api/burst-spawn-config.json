@@ -4,7 +4,7 @@
   "symbol": "BurstSpawnConfig",
   "kind": "interface",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 10,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Spawn configuration for BurstSpawn: the burst schedule plus the shared per-property fields."
       ],
-      "importLine": "import { BurstSpawnConfig } from '@codexo/exojs-particles'",
+      "importLine": "import { BurstSpawnConfig } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

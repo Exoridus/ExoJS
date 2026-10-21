@@ -1,6 +1,6 @@
 import { Application, Asset, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Text } from '@codexo/exojs';
+import { MapLevelSide, MapWorld, MapWorldRuntime } from '@codexo/exojs/tilemap';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
-import { MapLevelSide, MapWorld, MapWorldRuntime } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const ROOM_SIZE = { x: 0, y: 0, width: 1280, height: 768 };

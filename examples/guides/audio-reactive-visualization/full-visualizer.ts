@@ -1,6 +1,6 @@
 import type { RenderingContext, Seconds } from '@codexo/exojs';
 import { Application, Asset, type AudioStream, Color, Graphics, Scene } from '@codexo/exojs';
-import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser, BeatDetector } from '@codexo/exojs/audio-fx';
 
 // #region guide:full-visualizer
 

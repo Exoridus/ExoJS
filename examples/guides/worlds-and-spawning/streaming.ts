@@ -1,4 +1,4 @@
-import type { MapBounds, MapWorld, MapWorldRuntime } from '@codexo/exojs-tilemap';
+import type { MapBounds, MapWorld, MapWorldRuntime } from '@codexo/exojs/tilemap';
 
 // #region guide:level-streaming
 export const updateStreaming = (runtime: MapWorldRuntime, world: MapWorld, cameraBounds: MapBounds): void => {

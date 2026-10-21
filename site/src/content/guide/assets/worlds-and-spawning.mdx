@@ -29,7 +29,7 @@ A [`MapWorld`](/ExoJS/en/api/map-world/) is metadata about *where* levels are â€
 
 ```ts
 import { Asset, type LoaderScope } from '@codexo/exojs';
-import type { MapBounds, MapWorld } from '@codexo/exojs-tilemap';
+import type { MapBounds, MapWorld } from '@codexo/exojs/tilemap';
 
 export async function readWorld(scope: LoaderScope, cameraBounds: MapBounds): Promise<MapWorld> {
     const project = await scope.load(Asset.type('ldtkProject', 'https://example.com/world.ldtk'));
@@ -148,7 +148,7 @@ Pass it to a level load, or spawn from a `TileMap` directly:
 
 ```ts
 import type { Container } from '@codexo/exojs';
-import type { MapObjectSpawner, MapWorldRuntime } from '@codexo/exojs-tilemap';
+import type { MapObjectSpawner, MapWorldRuntime } from '@codexo/exojs/tilemap';
 
 interface GameContext {
     difficulty: number;
@@ -172,7 +172,7 @@ export async function loadForest(
 A factory receives a `MapObjectDescriptor` â€” the same shape for Tiled and for LDtk:
 
 ```ts
-import type { MapObjectDescriptor } from '@codexo/exojs-tilemap';
+import type { MapObjectDescriptor } from '@codexo/exojs/tilemap';
 
 export function describe(object: MapObjectDescriptor): void {
     object.id;          // stable id: LDtk entity iid, or the Tiled object id as a string

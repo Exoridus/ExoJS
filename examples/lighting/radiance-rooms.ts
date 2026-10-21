@@ -19,7 +19,7 @@ import {
   PointLight,
   PolygonOccluder,
   RadianceLighting,
-} from '@codexo/exojs-lighting';
+} from '@codexo/exojs/lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Two rooms, one doorway, one lamp - and a switch between the renderer that

@@ -43,7 +43,7 @@ npm install @codexo/exojs @codexo/exojs-tilemap
 
 ```ts
 import { Application, Scene, type Texture, TextureRegion } from '@codexo/exojs';
-import { TileLayer, TileMap, TileMapNode, TileSet, tilemapExtension, TILE_TRANSFORM_IDENTITY } from '@codexo/exojs-tilemap';
+import { TileLayer, TileMap, TileMapNode, TileSet, tilemapExtension, TILE_TRANSFORM_IDENTITY } from '@codexo/exojs/tilemap';
 
 class WorldScene extends Scene {
   private atlas: Texture | null = null;

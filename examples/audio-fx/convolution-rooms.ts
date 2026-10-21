@@ -10,7 +10,7 @@ import {
   type Sound,
   Text,
 } from '@codexo/exojs';
-import { ConvolutionEffect } from '@codexo/exojs-audio-fx';
+import { ConvolutionEffect } from '@codexo/exojs/audio-fx';
 import { type ControlBinding, mountControlPanel, mountControls, type PressButtonTracker, trackPressButtons } from '@examples/runtime';
 
 // Every impulse response in the AK-SROOMS set, shortest tail first. The

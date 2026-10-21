@@ -4,7 +4,7 @@
   "symbol": "PhysicsBuildInfo",
   "kind": "interface",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -22,7 +22,7 @@
         "Immutable compile-time build metadata for `@codexo/exojs-physics`.",
         "`development` mirrors the `__DEV__` compile-time constant and is statically replaced before tree shaking. `version` is the exact `package.json` version of the Physics package at build time. `revision` is the short source-control revision (appended with `-dirty` when uncommitted changes are present) or `\"unknown\"` when no revision information is available."
       ],
-      "importLine": "import { PhysicsBuildInfo } from '@codexo/exojs-physics'",
+      "importLine": "import { PhysicsBuildInfo } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

@@ -4,7 +4,7 @@
   "symbol": "AtlasTileSetOptions",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 11,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Options for a TileSet cut from one atlas texture as a uniform grid."
       ],
-      "importLine": "import { AtlasTileSetOptions } from '@codexo/exojs-tilemap'",
+      "importLine": "import { AtlasTileSetOptions } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

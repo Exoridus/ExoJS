@@ -19,7 +19,7 @@ import {
   TileMap,
   tilemapExtension,
   TileSet,
-} from '@codexo/exojs-tilemap';
+} from '@codexo/exojs/tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // An infinite, procedurally generated world: the TileLayer has NO width/height
 // (unbounded), and a ChunkStreamer keeps only the chunks near the camera

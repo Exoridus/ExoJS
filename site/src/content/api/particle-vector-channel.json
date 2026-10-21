@@ -4,7 +4,7 @@
   "symbol": "ParticleVectorChannel",
   "kind": "interface",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 2,
   "counts": {
@@ -22,7 +22,7 @@
         "A two-component particle channel, one array per component.",
         "The arrays are the simulation's own storage rather than a copy: writing `position.x[i]` moves particle `i`. Their length is the system's capacity, so only indices below ParticleBatch.count carry meaning."
       ],
-      "importLine": "import { ParticleVectorChannel } from '@codexo/exojs-particles'",
+      "importLine": "import { ParticleVectorChannel } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

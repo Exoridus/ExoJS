@@ -48,8 +48,8 @@ export const API_SUBSYSTEM_META: Record<ApiSubsystem, { label: string; descripti
     description: 'Playback, analysis, spatialization, and effect chains.',
   },
   particles: {
-    label: 'Particles (official extension)',
-    description: 'The @codexo/exojs-particles package: particle systems, modules, distributions, and GPU-backed simulation.',
+    label: 'Particles (Core subpath)',
+    description: 'The @codexo/exojs/particles subpath: particle systems, modules, distributions, and GPU-backed simulation.',
   },
   animation: {
     label: 'Animation',
@@ -72,16 +72,16 @@ export const API_SUBSYSTEM_META: Record<ApiSubsystem, { label: string; descripti
     description: 'The extension system: renderer/asset/serializer bindings and the extension registry.',
   },
   tilemap: {
-    label: 'Tilemap (official extension)',
-    description: 'The @codexo/exojs-tilemap package: generic tilemap runtime, chunks, layers, and views.',
+    label: 'Tilemap (Core subpath)',
+    description: 'The @codexo/exojs/tilemap subpath: generic tilemap runtime, chunks, layers, and views.',
   },
   tiled: {
     label: 'Tiled (official extension)',
     description: 'The @codexo/exojs-tiled package: load Tiled (.tmj) tilemaps through the loader.',
   },
   physics: {
-    label: 'Physics (official extension)',
-    description: 'The @codexo/exojs-physics package: rigid bodies, colliders, joints, sleeping, CCD, queries, and the TGS-Soft solver.',
+    label: 'Physics (Core subpath)',
+    description: 'The @codexo/exojs/physics subpath: rigid bodies, colliders, joints, sleeping, CCD, queries, and the TGS-Soft solver.',
   },
   aseprite: {
     label: 'Aseprite (official extension)',
@@ -92,16 +92,16 @@ export const API_SUBSYSTEM_META: Record<ApiSubsystem, { label: string; descripti
     description: 'The @codexo/exojs-ldtk package: load LDtk levels and layers through the loader.',
   },
   'tilemap-physics': {
-    label: 'Tilemap physics (official extension)',
-    description: 'The @codexo/exojs-tilemap-physics package: static physics colliders built and streamed from tilemap collision geometry.',
+    label: 'Tilemap physics (Core subpath)',
+    description: 'The @codexo/exojs/tilemap-physics subpath: static physics colliders built and streamed from tilemap collision geometry.',
   },
   lighting: {
-    label: 'Lighting (official extension)',
-    description: 'The @codexo/exojs-lighting package: forward normal-mapped point lighting for sprites, in one batch and one pass.',
+    label: 'Lighting (Core subpath)',
+    description: 'The @codexo/exojs/lighting subpath: forward normal-mapped point lighting for sprites, in one batch and one pass.',
   },
   pathfinding: {
-    label: 'Pathfinding (official extension)',
-    description: 'The @codexo/exojs-pathfinding package: deterministic A* and jump-point search over weighted grids and waypoint graphs.',
+    label: 'Pathfinding (Core subpath)',
+    description: 'The @codexo/exojs/pathfinding subpath: deterministic A* and jump-point search over weighted grids and waypoint graphs.',
   },
 };
 

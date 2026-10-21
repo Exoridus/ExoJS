@@ -1,6 +1,6 @@
 // Auto-generated from audio-visualisation.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Sprite, Text, Texture } from '@codexo/exojs';
-import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser, BeatDetector } from '@codexo/exojs/audio-fx';
 import { mountControls } from '@examples/runtime';
 const BAND_LABELS = ['Sub', 'Bass', 'Low mid', 'Mid', 'High mid', 'Presence', 'Treble', 'Air'];
 class AudioVisualisationScene extends Scene {

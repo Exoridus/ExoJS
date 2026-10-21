@@ -4,7 +4,7 @@
   "symbol": "WheelJoint",
   "kind": "class",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 13,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A wheel attached to a chassis: free to **spin** (no rotation lock) and sprung along a **suspension axis** (a soft spring), but locked **laterally** (it cannot slide perpendicular to the axis). Optionally driven by a rotation motor and/or bounded by a suspension-travel limit. Used for vehicles. Solved in the sub-step loop, warm-started."
       ],
-      "importLine": "import { WheelJoint } from '@codexo/exojs-physics'",
+      "importLine": "import { WheelJoint } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

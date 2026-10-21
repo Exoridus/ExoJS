@@ -4,7 +4,7 @@
   "symbol": "CharacterMovementComponent",
   "kind": "class",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 30,
   "counts": {
@@ -25,7 +25,7 @@
         "A surface supports the character when it lies within the walkable angle of up and touches the body's underside. Sensors, and colliders the body's filters exclude, never support it. One-way platforms are open `ChainShape`s, which block only from the side their normal points to: the character jumps through one from below and lands on it from above. Dropping through one is a game rule; clear the platform's category from the character collider's filter mask until the character is below it.",
         "Standing on a moving body carries the character with the body's velocity at the character's position, including its rotation, but the character itself never rotates. Leaving the support keeps that velocity, and launching from it adds it to the launch. A support moved by teleporting carries nothing."
       ],
-      "importLine": "import { CharacterMovementComponent } from '@codexo/exojs-physics'",
+      "importLine": "import { CharacterMovementComponent } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

@@ -4,7 +4,7 @@
   "symbol": "LimiterEffect",
   "kind": "class",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 13,
   "counts": {
@@ -24,7 +24,7 @@
         "The compressor `ratio` and `knee` default to the hardest values (20 and 0 respectively) but remain configurable, unlike a truly fixed limiter, because callers occasionally want a softer, more compressor-like limiting curve (lower ratio) or a gentler transition into limiting (larger knee) without switching to CompressorEffect and losing the dry/wet mix. The effect also exposes a dry/wet mix for API consistency and parallel processing workflows, though a fully-wet signal (`wet = 1`) is the typical configuration.",
         "Node graph: ``` input(GainNode) → dryGain → output(GainNode) input → compressor → wetGain → output ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`."
       ],
-      "importLine": "import { LimiterEffect } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { LimiterEffect } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

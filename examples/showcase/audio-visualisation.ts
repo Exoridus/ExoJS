@@ -13,7 +13,7 @@ import {
   Texture,
   type Voice,
 } from '@codexo/exojs';
-import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser, BeatDetector } from '@codexo/exojs/audio-fx';
 import { mountControls } from '@examples/runtime';
 
 const BAND_LABELS = ['Sub', 'Bass', 'Low mid', 'Mid', 'High mid', 'Presence', 'Treble', 'Air'];

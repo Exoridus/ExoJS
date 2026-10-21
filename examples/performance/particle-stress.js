@@ -12,7 +12,7 @@ import {
   ScaleOverLifetime,
   UpdateModule,
   VectorRange,
-} from '@codexo/exojs-particles';
+} from '@codexo/exojs/particles';
 class TintCycle extends UpdateModule {
   palette;
   next = 0;

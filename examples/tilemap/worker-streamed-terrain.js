@@ -20,7 +20,7 @@ import {
   TileMap,
   tilemapExtension,
   TileSet,
-} from '@codexo/exojs-tilemap';
+} from '@codexo/exojs/tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 import { fbm } from '@examples/terrain-noise';
 const terrainWorkerSource =

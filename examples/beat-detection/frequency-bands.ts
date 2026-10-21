@@ -9,7 +9,7 @@ import {
   Scene,
   Text,
 } from '@codexo/exojs';
-import { AudioAnalyser } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser } from '@codexo/exojs/audio-fx';
 import { mountControls } from '@examples/runtime';
 
 // Eight perceptual frequency bands spanning the audible range, from the lowest

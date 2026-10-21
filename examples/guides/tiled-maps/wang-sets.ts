@@ -1,6 +1,6 @@
 import { Asset, Scene } from '@codexo/exojs';
+import { autoTile, refreshCell } from '@codexo/exojs/tilemap';
 import { tiledWangSetToWangSet } from '@codexo/exojs-tiled';
-import { autoTile, refreshCell } from '@codexo/exojs-tilemap';
 
 class WangSetScene extends Scene {
   public override async load(): Promise<void> {

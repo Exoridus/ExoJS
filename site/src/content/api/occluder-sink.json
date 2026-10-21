@@ -4,7 +4,7 @@
   "symbol": "OccluderSink",
   "kind": "interface",
   "subsystem": "lighting",
-  "importPath": "@codexo/exojs-lighting",
+  "importPath": "@codexo/exojs/lighting",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -22,7 +22,7 @@
         "Where an OccluderSource writes what blocks light.",
         "The main channel is line segments in world space: an occluder has no thickness, no interior and no material, and what a shadow needs to know about a wall is where its edges are. A source whose silhouette is really a picture may offer the drawable itself instead - see addDrawable."
       ],
-      "importLine": "import { OccluderSink } from '@codexo/exojs-lighting'",
+      "importLine": "import { OccluderSink } from '@codexo/exojs/lighting'",
       "sourceLink": null
     },
     {

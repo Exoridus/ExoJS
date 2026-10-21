@@ -1,6 +1,6 @@
 // Auto-generated from screen-shake-on-explosion.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Scene, Sprite, Time, Vector, View } from '@codexo/exojs';
-import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem } from '@codexo/exojs-particles';
+import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem } from '@codexo/exojs/particles';
 import { mountControls } from '@examples/runtime';
 class ScreenShakeOnExplosionScene extends Scene {
   view;

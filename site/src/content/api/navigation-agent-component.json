@@ -4,7 +4,7 @@
   "symbol": "NavigationAgentComponent",
   "kind": "class",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 29,
   "counts": {
@@ -24,7 +24,7 @@
         "It steers in its fixed update, which a scene runs before its systems, so a movement backed by a physics world registered as a scene system receives each step's command before that world steps. Nothing is searched every step: a route is planned on a new command and replanned only when it went stale - the space's revision changed, a followed target moved to another node, a budget-limited partial route ran out, or the actor made no progress - and automatic replans are at most one per NavigationAgentOptions.repathInterval.",
         "Disabling the component stops the movement and keeps the command; enabling it again plans a fresh route to it. Pausing the scene pauses it."
       ],
-      "importLine": "import { NavigationAgentComponent } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { NavigationAgentComponent } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {

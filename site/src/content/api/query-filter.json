@@ -4,7 +4,7 @@
   "symbol": "QueryFilter",
   "kind": "type",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 0,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A category/mask/group filter applied to a query. Omitting it matches everything."
       ],
-      "importLine": "import { QueryFilter } from '@codexo/exojs-physics'",
+      "importLine": "import { QueryFilter } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

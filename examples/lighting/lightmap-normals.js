@@ -1,6 +1,6 @@
 // Auto-generated from lightmap-normals.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture } from '@codexo/exojs';
-import { AlphaNormals, LightmapLighting, PointLight } from '@codexo/exojs-lighting';
+import { AlphaNormals, LightmapLighting, PointLight } from '@codexo/exojs/lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // The lightmap renderer multiplies a frame that was already drawn, so by the
 // time the light field is composited there is no surface normal anywhere. A

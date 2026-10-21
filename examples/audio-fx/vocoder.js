@@ -1,6 +1,6 @@
 // Auto-generated from vocoder.ts - edit the .ts source, not this file.
 import { Application, Asset, AudioBus, AudioGenerator, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
-import { AudioAnalyser, VocoderEffect } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser, VocoderEffect } from '@codexo/exojs/audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Spoken phrases (Kenney Voiceover Pack, CC0) - a voice modulator is what makes
 // a vocoder recognisable as the classic "robot voice" effect.

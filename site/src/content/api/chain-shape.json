@@ -4,7 +4,7 @@
   "symbol": "ChainShape",
   "kind": "class",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 8,
   "counts": {
@@ -25,7 +25,7 @@
         "It has no interior, so Shape.massProperties is `null` and a `dynamic` body needs at least one mass-bearing collider alongside it. A `static` or `kinematic` body carries a chain on its own.",
         "Collinear vertices are kept. A straight run is authoring data, and dropping it would move the adjacency of the neighbouring edges."
       ],
-      "importLine": "import { ChainShape } from '@codexo/exojs-physics'",
+      "importLine": "import { ChainShape } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

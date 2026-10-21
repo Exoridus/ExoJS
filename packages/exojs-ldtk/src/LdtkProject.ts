@@ -1,7 +1,7 @@
 import type { LoaderScope } from '@codexo/exojs';
 import { Asset } from '@codexo/exojs';
-import type { MapLevelLoadContext, MapWorld, TileMap, TileSet } from '@codexo/exojs-tilemap';
-import { MapWorldRuntime } from '@codexo/exojs-tilemap';
+import type { MapLevelLoadContext, MapWorld, TileMap, TileSet } from '@codexo/exojs/tilemap';
+import { MapWorldRuntime } from '@codexo/exojs/tilemap';
 
 import type { LdtkData, LdtkLevel } from './LdtkData';
 import type { LdtkLevelEntry } from './ldtkLevelEntries';

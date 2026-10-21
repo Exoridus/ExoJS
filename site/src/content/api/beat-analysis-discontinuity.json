@@ -4,7 +4,7 @@
   "symbol": "BeatAnalysisDiscontinuity",
   "kind": "type",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 0,
   "counts": {
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [],
-      "importLine": "import { BeatAnalysisDiscontinuity } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { BeatAnalysisDiscontinuity } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

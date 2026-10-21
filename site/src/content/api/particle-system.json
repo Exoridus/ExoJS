@@ -4,7 +4,7 @@
   "symbol": "ParticleSystem",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 120,
   "counts": {
@@ -26,7 +26,7 @@
         "**Per-frame order in update (CPU mode):** 1. Run every spawn module. 2. Integrate position from velocity, rotation from rotationSpeed, advance `elapsed`. 3. Run every update module on the live range. 4. Compact: scan `[0, liveCount)` forward, fire death modules on expired slots, copy survivors down. `liveCount` shrinks to the survivor count.",
         "**GPU update order:** spawn and upload initial values, advance CPU expiry clocks, mark terminal slots, then integrate and apply modules on the GPU. Terminal snapshots include that step's module results. Death callbacks are asynchronous and bounded; see ParticleDeathContext. Clearing or destroying the system cancels pending callbacks."
       ],
-      "importLine": "import { ParticleSystem } from '@codexo/exojs-particles'",
+      "importLine": "import { ParticleSystem } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

@@ -11,7 +11,7 @@ import {
   Texture,
   TextureFormat,
 } from '@codexo/exojs';
-import { ForwardLighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
+import { ForwardLighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs/lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // The FORWARD renderer under load: the light list is a data texture, not a
 // uniform array, so the light count is a shader loop bound rather than a

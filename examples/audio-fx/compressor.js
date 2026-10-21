@@ -1,6 +1,6 @@
 // Auto-generated from compressor.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
-import { CompressorEffect } from '@codexo/exojs-audio-fx';
+import { CompressorEffect } from '@codexo/exojs/audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 class CompressorScene extends Scene {
   music;

@@ -1,5 +1,5 @@
 import { View } from '@codexo/exojs';
-import { ChunkStreamer, createSampledChunkSource, TileLayer } from '@codexo/exojs-tilemap';
+import { ChunkStreamer, createSampledChunkSource, TileLayer } from '@codexo/exojs/tilemap';
 
 // #region guide:chunk-streaming
 const terrain = new TileLayer({ id: 1, name: 'terrain', tileWidth: 64, tileHeight: 64, tilesets: [] });

@@ -75,26 +75,27 @@
                 var tilemapPhysicsEntry;
                 var lightingEntry;
                 var pathfindingEntry;
+                var cdnBase;
                 if (!safeVersion || safeVersion === 'current') {
                     exoEntry = './vendor/exojs/esm/index.js?no-cache=' + noCache;
                     exoDebugEntry = './vendor/exojs/esm/debug/index.js?no-cache=' + noCache;
                     exoExtensionsEntry = './vendor/exojs/esm/extensions/index.js?no-cache=' + noCache;
                     exoRenderingEntry = './vendor/exojs/esm/rendering.js?no-cache=' + noCache;
                     exoRendererSdkEntry = './vendor/exojs/esm/renderer-sdk.js?no-cache=' + noCache;
-                    particlesEntry = './vendor/exojs-particles/esm/index.js?no-cache=' + noCache;
-                    audioFxEntry = './vendor/exojs-audio-fx/esm/index.js?no-cache=' + noCache;
+                    particlesEntry = './vendor/exojs/esm/particles/index.js?no-cache=' + noCache;
+                    audioFxEntry = './vendor/exojs/esm/audio-fx/index.js?no-cache=' + noCache;
                     tiledEntry = './vendor/exojs-tiled/esm/index.js?no-cache=' + noCache;
-                    tilemapEntry = './vendor/exojs-tilemap/esm/index.js?no-cache=' + noCache;
+                    tilemapEntry = './vendor/exojs/esm/tilemap/index.js?no-cache=' + noCache;
                     ldtkEntry = './vendor/exojs-ldtk/esm/index.js?no-cache=' + noCache;
-                    physicsEntry = './vendor/exojs-physics/esm/index.js?no-cache=' + noCache;
-                    physicsDebugEntry = './vendor/exojs-physics/esm/debug/index.js?no-cache=' + noCache;
-                    tilemapPhysicsEntry = './vendor/exojs-tilemap-physics/esm/index.js?no-cache=' + noCache;
-                    lightingEntry = './vendor/exojs-lighting/esm/index.js?no-cache=' + noCache;
-                    pathfindingEntry = './vendor/exojs-pathfinding/esm/index.js?no-cache=' + noCache;
+                    physicsEntry = './vendor/exojs/esm/physics/index.js?no-cache=' + noCache;
+                    physicsDebugEntry = exoDebugEntry;
+                    tilemapPhysicsEntry = './vendor/exojs/esm/tilemap-physics/index.js?no-cache=' + noCache;
+                    lightingEntry = './vendor/exojs/esm/lighting/index.js?no-cache=' + noCache;
+                    pathfindingEntry = './vendor/exojs/esm/pathfinding/index.js?no-cache=' + noCache;
                 } else {
                     // jsDelivr serves immutable npm tarballs — the version pin
                     // alone is enough, no cache-buster needed.
-                    var cdnBase = 'https://cdn.jsdelivr.net/npm/@codexo/';
+                    cdnBase = 'https://cdn.jsdelivr.net/npm/@codexo/';
                     exoEntry = cdnBase + 'exojs@' + safeVersion + '/dist/esm/index.js';
                     exoDebugEntry = cdnBase + 'exojs@' + safeVersion + '/dist/esm/debug/index.js';
                     exoExtensionsEntry = cdnBase + 'exojs@' + safeVersion + '/dist/esm/extensions/index.js';
@@ -112,6 +113,15 @@
                     pathfindingEntry = cdnBase + 'exojs-pathfinding@' + safeVersion + '/dist/esm/index.js';
                 }
 
+                // From v0.20 the runtime modules are Core subpaths. A snapshot
+                // from before that imports the retired package names, which
+                // resolve to those packages on the CDN; the current build maps
+                // both spellings to the same Core file, so either imports one
+                // instance.
+                var currentBuild = !safeVersion || safeVersion === 'current';
+                var subpathEntry = function (subpath, retiredEntry) {
+                    return currentBuild ? retiredEntry : cdnBase + 'exojs@' + safeVersion + '/dist/esm/' + subpath + '/index.js';
+                };
                 var importMap = {
                     imports: {
                         '@codexo/exojs': exoEntry,
@@ -119,6 +129,13 @@
                         '@codexo/exojs/extensions': exoExtensionsEntry,
                         '@codexo/exojs/rendering': exoRenderingEntry,
                         '@codexo/exojs/renderer-sdk': exoRendererSdkEntry,
+                        '@codexo/exojs/particles': subpathEntry('particles', particlesEntry),
+                        '@codexo/exojs/audio-fx': subpathEntry('audio-fx', audioFxEntry),
+                        '@codexo/exojs/tilemap': subpathEntry('tilemap', tilemapEntry),
+                        '@codexo/exojs/physics': subpathEntry('physics', physicsEntry),
+                        '@codexo/exojs/tilemap-physics': subpathEntry('tilemap-physics', tilemapPhysicsEntry),
+                        '@codexo/exojs/lighting': subpathEntry('lighting', lightingEntry),
+                        '@codexo/exojs/pathfinding': subpathEntry('pathfinding', pathfindingEntry),
                         '@codexo/exojs-particles': particlesEntry,
                         '@codexo/exojs-audio-fx': audioFxEntry,
                         '@codexo/exojs-tiled': tiledEntry,

@@ -4,7 +4,7 @@
   "symbol": "TileLayerNode",
   "kind": "class",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 104,
   "counts": {
@@ -25,7 +25,7 @@
         "The node references - but never owns - the TileLayer: destroying it frees its chunk nodes and their cached geometry but leaves the layer, map, and Loader-owned textures intact.",
         "Structural changes made via `_adoptChunk`/`_evictChunk` (chunk streaming) are picked up incrementally as they happen, without a full rebuild. TileLayerNode.refresh remains available for callers that mutate chunk structure by other means (e.g. a bulk edit that bypasses `_adoptChunk`/`_evictChunk`) and need a full resync. In-place tile edits to existing chunks are picked up automatically via chunk revisions."
       ],
-      "importLine": "import { TileLayerNode } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileLayerNode } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

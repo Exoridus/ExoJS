@@ -4,7 +4,7 @@
   "symbol": "TileSetBaseOptions",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 6,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Options shared by both kinds of TileSet."
       ],
-      "importLine": "import { TileSetBaseOptions } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileSetBaseOptions } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

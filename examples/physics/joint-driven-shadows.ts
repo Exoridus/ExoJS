@@ -8,8 +8,8 @@ import {
   type Seconds,
   SystemOrder,
 } from '@codexo/exojs';
-import { LightmapLighting, PhysicsOccluder, PointLight } from '@codexo/exojs-lighting';
-import { BoxShape, CircleShape, type PhysicsBody, PhysicsWorld, RevoluteJoint } from '@codexo/exojs-physics';
+import { LightmapLighting, PhysicsOccluder, PointLight } from '@codexo/exojs/lighting';
+import { BoxShape, CircleShape, type PhysicsBody, PhysicsWorld, RevoluteJoint } from '@codexo/exojs/physics';
 import { mountControls } from '@examples/runtime';
 
 const toDegrees = (radians: number): number => Math.round((Math.atan2(Math.sin(radians), Math.cos(radians)) * 180) / Math.PI);

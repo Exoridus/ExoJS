@@ -3,7 +3,7 @@ import { basename, join } from 'node:path';
 
 import type { AssetFactoryContext } from '@codexo/exojs';
 import { Texture } from '@codexo/exojs';
-import type { TileMap } from '@codexo/exojs-tilemap';
+import type { TileMap } from '@codexo/exojs/tilemap';
 import { vi } from 'vitest';
 
 import type { TiledMap } from '../src/TiledMap';

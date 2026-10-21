@@ -4,7 +4,7 @@
   "symbol": "WgslPrimitive",
   "kind": "type",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 0,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Compatibility names for the backend-neutral shader resource schema."
       ],
-      "importLine": "import { WgslPrimitive } from '@codexo/exojs-particles'",
+      "importLine": "import { WgslPrimitive } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

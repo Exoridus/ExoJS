@@ -4,7 +4,7 @@
   "symbol": "VectorRange",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 6,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Uniform random vector with each axis sampled independently in its own `[min, max]` range. Each `sample()` writes into the provided `out` Vector (or an internal scratch instance when `out` is omitted)."
       ],
-      "importLine": "import { VectorRange } from '@codexo/exojs-particles'",
+      "importLine": "import { VectorRange } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

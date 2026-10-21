@@ -1,7 +1,7 @@
 // Auto-generated from joint-driven-shadows.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, SystemOrder } from '@codexo/exojs';
-import { LightmapLighting, PhysicsOccluder, PointLight } from '@codexo/exojs-lighting';
-import { BoxShape, CircleShape, PhysicsWorld, RevoluteJoint } from '@codexo/exojs-physics';
+import { LightmapLighting, PhysicsOccluder, PointLight } from '@codexo/exojs/lighting';
+import { BoxShape, CircleShape, PhysicsWorld, RevoluteJoint } from '@codexo/exojs/physics';
 import { mountControls } from '@examples/runtime';
 const toDegrees = radians => Math.round((Math.atan2(Math.sin(radians), Math.cos(radians)) * 180) / Math.PI);
 const makeBar = (width, color) => {

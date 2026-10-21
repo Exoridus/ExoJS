@@ -1,6 +1,6 @@
 // Auto-generated from convolution-rooms.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
-import { ConvolutionEffect } from '@codexo/exojs-audio-fx';
+import { ConvolutionEffect } from '@codexo/exojs/audio-fx';
 import { mountControlPanel, mountControls, trackPressButtons } from '@examples/runtime';
 // Every impulse response in the AK-SROOMS set, shortest tail first. The
 // duration is what actually decides the character: a few milliseconds only

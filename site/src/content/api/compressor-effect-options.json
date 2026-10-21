@@ -4,7 +4,7 @@
   "symbol": "CompressorEffectOptions",
   "kind": "interface",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 5,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Construction options for CompressorEffect. All values are clamped to their valid ranges on assignment."
       ],
-      "importLine": "import { CompressorEffectOptions } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { CompressorEffectOptions } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

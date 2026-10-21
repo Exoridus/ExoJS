@@ -4,7 +4,7 @@
   "symbol": "ManualMeter",
   "kind": "interface",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Manual counting context; phase anchors at the first tracked beat after reset."
       ],
-      "importLine": "import { ManualMeter } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { ManualMeter } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

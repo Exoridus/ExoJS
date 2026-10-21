@@ -4,7 +4,7 @@
   "symbol": "ParticleBufferLayoutOptions",
   "kind": "interface",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 5,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Construction options for ParticleBufferLayout."
       ],
-      "importLine": "import { ParticleBufferLayoutOptions } from '@codexo/exojs-particles'",
+      "importLine": "import { ParticleBufferLayoutOptions } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

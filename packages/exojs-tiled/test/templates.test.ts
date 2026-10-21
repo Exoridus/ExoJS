@@ -1,4 +1,4 @@
-import { ObjectKind } from '@codexo/exojs-tilemap';
+import { ObjectKind } from '@codexo/exojs/tilemap';
 import { describe, expect, it } from 'vitest';
 
 import { TILED_FLIPPED_HORIZONTALLY_FLAG } from '../src/gid';

@@ -1,5 +1,5 @@
 import { Scene, type Seconds } from '@codexo/exojs';
-import { AudioAnalyser } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser } from '@codexo/exojs/audio-fx';
 
 class BandScene extends Scene {
   private analyser = new AudioAnalyser({ fftSize: 1024 });

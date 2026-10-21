@@ -4,7 +4,7 @@
   "symbol": "TileNavigationSource",
   "kind": "interface",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 12,
   "counts": {
@@ -22,7 +22,7 @@
         "Tile data a TileNavigationSpace can navigate: a `TileLayer` from `@codexo/exojs-tilemap` matches it as it is, and so does any other grid that can answer what sits in a cell and when anything changed.",
         "Cell coordinates are integers; navigation coordinates are the logical space a cell `(x, y)` covers `[x, x + 1) * logicalTileWidth` of, shifted by logicalOffset - the same space tilemap physics colliders live in."
       ],
-      "importLine": "import { TileNavigationSource } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { TileNavigationSource } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {

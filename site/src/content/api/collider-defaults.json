@@ -4,7 +4,7 @@
   "symbol": "ColliderDefaults",
   "kind": "interface",
   "subsystem": "tilemap-physics",
-  "importPath": "@codexo/exojs-tilemap-physics",
+  "importPath": "@codexo/exojs/tilemap-physics",
   "tier": "stable",
   "memberCount": 6,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Collider settings shared by every generated collider unless overridden."
       ],
-      "importLine": "import { ColliderDefaults } from '@codexo/exojs-tilemap-physics'",
+      "importLine": "import { ColliderDefaults } from '@codexo/exojs/tilemap-physics'",
       "sourceLink": null
     },
     {

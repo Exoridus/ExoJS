@@ -4,7 +4,7 @@
   "symbol": "MapLevelRuntime",
   "kind": "class",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 7,
   "counts": {
@@ -22,7 +22,7 @@
         "One loaded level and everything that load produced.",
         "Created by MapWorldRuntime.loadLevel; destroying it unloads the level. There is nothing else to release afterwards - the map, the spawned objects and the level's asset claims all end here."
       ],
-      "importLine": "import { MapLevelRuntime } from '@codexo/exojs-tilemap'",
+      "importLine": "import { MapLevelRuntime } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

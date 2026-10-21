@@ -4,7 +4,7 @@
   "symbol": "SampledChunkSourceOptions",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 2,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Options for createSampledChunkSource."
       ],
-      "importLine": "import { SampledChunkSourceOptions } from '@codexo/exojs-tilemap'",
+      "importLine": "import { SampledChunkSourceOptions } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

@@ -4,7 +4,7 @@
   "symbol": "ResolvedTile",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 3,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A fully resolved, format-independent tile reference returned by queries. Materialised on-demand from the packed storage; never stored as a per-cell heap object."
       ],
-      "importLine": "import { ResolvedTile } from '@codexo/exojs-tilemap'",
+      "importLine": "import { ResolvedTile } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

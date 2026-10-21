@@ -9,8 +9,8 @@ import {
   Scene,
   Text,
 } from '@codexo/exojs';
+import { TileMapNode } from '@codexo/exojs/tilemap';
 import { getLdtkIntGridValueAt, ldtkExtension, type LdtkMap } from '@codexo/exojs-ldtk';
-import { TileMapNode } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Loading an LDtk world (`.ldtk`) through @codexo/exojs-ldtk.
@@ -115,7 +115,7 @@ class LdtkWorldImportScene extends Scene {
   }
 
   /** Tint every IntGrid cell using its LDtk-authored name + colour (Wall / Water). */
-  private buildIntGridOverlay(level: import('@codexo/exojs-tilemap').TileMap): Graphics {
+  private buildIntGridOverlay(level: import('@codexo/exojs/tilemap').TileMap): Graphics {
     const overlay = new Graphics();
     const walls = level.layers.find(layer => layer.name === 'Walls');
 
@@ -142,7 +142,7 @@ class LdtkWorldImportScene extends Scene {
   }
 
   /** One small label per entity, naming it and its first custom field. */
-  private buildEntityLabels(level: import('@codexo/exojs-tilemap').TileMap): Container {
+  private buildEntityLabels(level: import('@codexo/exojs/tilemap').TileMap): Container {
     const labels = new Container();
     const entities = level.getObjectLayer('Entities');
 

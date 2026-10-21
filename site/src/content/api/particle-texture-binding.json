@@ -4,7 +4,7 @@
   "symbol": "ParticleTextureBinding",
   "kind": "interface",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 2,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A 256-sample lookup table. Float curves contain 256 values; RGBA tables contain 1024 bytes."
       ],
-      "importLine": "import { ParticleTextureBinding } from '@codexo/exojs-particles'",
+      "importLine": "import { ParticleTextureBinding } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

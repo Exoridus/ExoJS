@@ -12,7 +12,7 @@ import {
   ScaleOverLifetime,
   UpdateModule,
   VectorRange,
-} from '@codexo/exojs-particles';
+} from '@codexo/exojs/particles';
 
 /** One emitter's tuning, as `buildSystem` reads it. */
 interface EmitterConfig {

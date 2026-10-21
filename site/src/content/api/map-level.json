@@ -4,7 +4,7 @@
   "symbol": "MapLevel",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 7,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Immutable metadata for one level of a MapWorld - everything needed to decide whether to load it, without loading it."
       ],
-      "importLine": "import { MapLevel } from '@codexo/exojs-tilemap'",
+      "importLine": "import { MapLevel } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

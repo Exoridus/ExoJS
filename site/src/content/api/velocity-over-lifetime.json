@@ -4,7 +4,7 @@
   "symbol": "VelocityOverLifetime",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 9,
   "counts": {
@@ -22,7 +22,7 @@
         "Multiplies velocity by the ratio between a curve sampled at the current lifetime ratio and at `(elapsed - dt) / lifetime`. The previous sample is clamped to at least `1e-6`, keeping zero crossings finite; negative previous samples use the same lower bound. All backends use the same stateless ratio, so particle compaction and slot reuse cannot inherit another particle's state.",
         "Uses a 256-sample float lookup table with linear interpolation on CPU, WebGL2 and WebGPU. Features narrower than one lookup interval are approximated."
       ],
-      "importLine": "import { VelocityOverLifetime } from '@codexo/exojs-particles'",
+      "importLine": "import { VelocityOverLifetime } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

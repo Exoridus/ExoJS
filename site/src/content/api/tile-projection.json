@@ -4,7 +4,7 @@
   "symbol": "TileProjection",
   "kind": "class",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 19,
   "counts": {
@@ -22,7 +22,7 @@
         "Converts between grid vertices, display pixels and unprojected logical pixels. Isometric logical cells are squares of side `tileHeight`; orthogonal logical coordinates are display coordinates before the origin translation.",
         "Staggered and hexagonal grids follow Tiled's layout. Their logical space is display space before the origin translation, as for orthogonal grids, but their cells are not rectangles in it: code that treats logical cells as squares (tile collision, grid navigation) rejects these grids."
       ],
-      "importLine": "import { TileProjection } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileProjection } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

@@ -4,7 +4,7 @@
   "symbol": "MapObjectDescriptor",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 11,
   "counts": {
@@ -22,7 +22,7 @@
         "A format-neutral view of one map object, as handed to a import('./MapObjectSpawner').MapObjectFactory.",
         "The descriptor is what game code writes against: it resolves the two things that differ between authoring formats - stable identity and the dispatch key - and pairs the object with the layer it came from. The parsed object itself stays reachable through object, and the untouched source record through TileMapObject.source."
       ],
-      "importLine": "import { MapObjectDescriptor } from '@codexo/exojs-tilemap'",
+      "importLine": "import { MapObjectDescriptor } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

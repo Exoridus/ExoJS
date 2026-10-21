@@ -11,7 +11,7 @@ import {
   Range,
   RateSpawn,
   ScaleOverLifetime,
-} from '@codexo/exojs-particles';
+} from '@codexo/exojs/particles';
 import { mountControls } from '@examples/runtime';
 
 class EmitterBasicsScene extends Scene {

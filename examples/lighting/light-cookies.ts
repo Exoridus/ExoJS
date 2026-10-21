@@ -11,7 +11,7 @@ import {
   Texture,
   WrapModes,
 } from '@codexo/exojs';
-import { AlphaOccluder, type Lighting, LightmapLighting, LineLight, PointLight, SpotLight, SunLight } from '@codexo/exojs-lighting';
+import { AlphaOccluder, type Lighting, LightmapLighting, LineLight, PointLight, SpotLight, SunLight } from '@codexo/exojs/lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Four light shapes, one scene, and the shape of the light doing the work that

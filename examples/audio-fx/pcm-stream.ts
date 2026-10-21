@@ -1,5 +1,5 @@
 import { Application, Color, FixedResolutionCanvasSizing, getAudioContext, type RenderingContext, Scene, Text } from '@codexo/exojs';
-import { PcmStreamSource } from '@codexo/exojs-audio-fx';
+import { PcmStreamSource } from '@codexo/exojs/audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 class PcmStreamScene extends Scene {

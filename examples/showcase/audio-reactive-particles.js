@@ -1,7 +1,7 @@
 // Auto-generated from audio-reactive-particles.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Text, Vector } from '@codexo/exojs';
-import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
-import { AlphaFadeOverLifetime, ConeDirection, Constant, particlesExtension, ParticleSystem, RateSpawn } from '@codexo/exojs-particles';
+import { AudioAnalyser, BeatDetector } from '@codexo/exojs/audio-fx';
+import { AlphaFadeOverLifetime, ConeDirection, Constant, particlesExtension, ParticleSystem, RateSpawn } from '@codexo/exojs/particles';
 import { mountControls } from '@examples/runtime';
 const colors = [new Color(255, 120, 140), new Color(120, 220, 255), new Color(130, 255, 170), new Color(255, 220, 120)];
 class AudioReactiveParticlesScene extends Scene {

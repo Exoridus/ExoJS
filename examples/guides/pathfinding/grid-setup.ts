@@ -1,4 +1,4 @@
-import { GridSpace } from '@codexo/exojs-pathfinding';
+import { GridSpace } from '@codexo/exojs/pathfinding';
 
 declare const isWall: (x: number, y: number) => boolean;
 declare const isMud: (x: number, y: number) => boolean;

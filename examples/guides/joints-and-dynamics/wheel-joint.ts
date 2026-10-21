@@ -1,4 +1,4 @@
-import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld, WheelJoint } from '@codexo/exojs-physics';
+import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld, WheelJoint } from '@codexo/exojs/physics';
 
 // #region guide:wheel-joint
 const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });

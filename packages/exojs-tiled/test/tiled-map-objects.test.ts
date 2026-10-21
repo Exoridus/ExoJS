@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
 import type { Destroyable } from '@codexo/exojs';
-import type { TileMap } from '@codexo/exojs-tilemap';
-import { mapObjectDescriptors, MapObjectSpawner } from '@codexo/exojs-tilemap';
+import type { TileMap } from '@codexo/exojs/tilemap';
+import { mapObjectDescriptors, MapObjectSpawner } from '@codexo/exojs/tilemap';
 import { describe, expect, it } from 'vitest';
 
 import { TiledObject } from '../src/TiledObject';

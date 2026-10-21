@@ -1,4 +1,4 @@
-import { WangSet } from '@codexo/exojs-tilemap';
+import { WangSet } from '@codexo/exojs/tilemap';
 
 import type { TiledWangSetData } from './data';
 

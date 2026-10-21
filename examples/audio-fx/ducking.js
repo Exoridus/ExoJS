@@ -1,6 +1,6 @@
 // Auto-generated from ducking.ts - edit the .ts source, not this file.
 import { Application, Asset, AudioBus, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
-import { AudioAnalyser, DuckingEffect } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser, DuckingEffect } from '@codexo/exojs/audio-fx';
 import { mountControls } from '@examples/runtime';
 class DuckingScene extends Scene {
   music;

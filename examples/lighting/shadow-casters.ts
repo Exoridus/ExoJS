@@ -10,7 +10,7 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { AlphaOccluder, type Lighting, LightmapLighting, PointLight, SpotLight } from '@codexo/exojs-lighting';
+import { AlphaOccluder, type Lighting, LightmapLighting, PointLight, SpotLight } from '@codexo/exojs/lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Nothing here models a shadow. Each wall registers the outline it already

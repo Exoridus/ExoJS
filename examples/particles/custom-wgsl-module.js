@@ -1,6 +1,6 @@
 // Auto-generated from custom-wgsl-module.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Scene, Vector } from '@codexo/exojs';
-import { Constant, particlesExtension, ParticleSystem, RateSpawn, UpdateModule } from '@codexo/exojs-particles';
+import { Constant, particlesExtension, ParticleSystem, RateSpawn, UpdateModule } from '@codexo/exojs/particles';
 import { mountControls } from '@examples/runtime';
 /** Adds horizontal sway after integration, using the same operation on every backend. */
 class SwayModule extends UpdateModule {

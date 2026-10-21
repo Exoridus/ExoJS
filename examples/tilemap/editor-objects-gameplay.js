@@ -1,7 +1,7 @@
 // Auto-generated from editor-objects-gameplay.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
+import { MapObjectSpawner } from '@codexo/exojs/tilemap';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
-import { MapObjectSpawner } from '@codexo/exojs-tilemap';
 import { mountControls } from '@examples/runtime';
 const makeMarker = (object, color) => {
   const marker = new Graphics();

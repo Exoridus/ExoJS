@@ -8,7 +8,7 @@ import {
   RateSpawn,
   UpdateModule,
   type WgslContribution,
-} from '@codexo/exojs-particles';
+} from '@codexo/exojs/particles';
 import { mountControls } from '@examples/runtime';
 
 /** Adds horizontal sway after integration, using the same operation on every backend. */

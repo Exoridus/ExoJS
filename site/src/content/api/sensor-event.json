@@ -4,7 +4,7 @@
   "symbol": "SensorEvent",
   "kind": "interface",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 2,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Immutable per-dispatch snapshot for a sensor overlap. `sensor` is the sensor-flagged collider; `other` is the collider that entered/left it. When both colliders are sensors, the lower-id collider is reported as `sensor`."
       ],
-      "importLine": "import { SensorEvent } from '@codexo/exojs-physics'",
+      "importLine": "import { SensorEvent } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

@@ -1,6 +1,6 @@
 // Auto-generated from frequency-bands.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
-import { AudioAnalyser } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser } from '@codexo/exojs/audio-fx';
 import { mountControls } from '@examples/runtime';
 // Eight perceptual frequency bands spanning the audible range, from the lowest
 // rumble to the airy top end. The FFT bins are linearly spaced over 0..nyquist,

@@ -1,4 +1,4 @@
-import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TileMapNode, TileSet } from '@codexo/exojs/tilemap';
 import { describe, expect, test, vi } from 'vitest';
 
 import { Color } from '#core/Color';

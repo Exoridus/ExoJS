@@ -11,8 +11,8 @@ import type {
   TileProperties,
   TilePropertyValue,
   TileTransform,
-} from '@codexo/exojs-tilemap';
-import { ImageLayer, ObjectLayer, packTile, TileLayer, TileMap, TileProjection, TilePropertyKind, TileSet } from '@codexo/exojs-tilemap';
+} from '@codexo/exojs/tilemap';
+import { ImageLayer, ObjectLayer, packTile, TileLayer, TileMap, TileProjection, TilePropertyKind, TileSet } from '@codexo/exojs/tilemap';
 
 import type {
   TiledChunkData,

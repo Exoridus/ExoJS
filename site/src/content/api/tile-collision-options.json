@@ -4,7 +4,7 @@
   "symbol": "TileCollisionOptions",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 4,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Options for buildTileCollisionGeometry."
       ],
-      "importLine": "import { TileCollisionOptions } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileCollisionOptions } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

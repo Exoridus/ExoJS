@@ -4,7 +4,7 @@
   "symbol": "TileMapNode",
   "kind": "class",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 107,
   "counts": {
@@ -24,7 +24,7 @@
         "The node references - but never owns - the TileMap: destroying the node frees its layer/chunk nodes and their cached GPU geometry, while the `TileMap` data and Loader-owned textures survive (free them via `TileMap.destroy()` / `Loader.destroy()` respectively).",
         "Layers added to or removed from the map after construction are reflected only after TileMapNode.refreshLayers."
       ],
-      "importLine": "import { TileMapNode } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileMapNode } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

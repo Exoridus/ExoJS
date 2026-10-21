@@ -1,5 +1,5 @@
 import { Scene, type Seconds } from '@codexo/exojs';
-import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
 
 // #region guide:physics-scene
 class GameScene extends Scene {

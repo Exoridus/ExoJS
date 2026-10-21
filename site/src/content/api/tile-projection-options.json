@@ -4,7 +4,7 @@
   "symbol": "TileProjectionOptions",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 8,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Immutable grid geometry shared by a map and its independently usable layers."
       ],
-      "importLine": "import { TileProjectionOptions } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileProjectionOptions } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

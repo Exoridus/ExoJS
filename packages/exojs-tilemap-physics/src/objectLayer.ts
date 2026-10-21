@@ -1,5 +1,5 @@
-import { PhysicsBody, type PhysicsWorld } from '@codexo/exojs-physics';
-import type { ObjectLayer, TileMapObject } from '@codexo/exojs-tilemap';
+import { PhysicsBody, type PhysicsWorld } from '@codexo/exojs/physics';
+import type { ObjectLayer, TileMapObject } from '@codexo/exojs/tilemap';
 
 import { collidersForGeometry, objectLabel } from './buildColliders';
 import { resolveDefaults, resolveMaterial } from './material';

@@ -1,5 +1,5 @@
 import { View } from '@codexo/exojs';
-import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
 import {
   type ChunkPayload,
   type ChunkSource,
@@ -9,7 +9,7 @@ import {
   TileLayer,
   type TileOrientation,
   TileProjection,
-} from '@codexo/exojs-tilemap';
+} from '@codexo/exojs/tilemap';
 import { describe, expect, it, vi } from 'vitest';
 
 import { TileColliderStreamer } from '../src/TileColliderStreamer';

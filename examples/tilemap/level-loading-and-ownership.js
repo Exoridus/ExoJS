@@ -1,7 +1,7 @@
 // Auto-generated from level-loading-and-ownership.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Text } from '@codexo/exojs';
+import { MapLevelSide, MapWorld, MapWorldRuntime } from '@codexo/exojs/tilemap';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
-import { MapLevelSide, MapWorld, MapWorldRuntime } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const ROOM_SIZE = { x: 0, y: 0, width: 1280, height: 768 };
 const world = new MapWorld({

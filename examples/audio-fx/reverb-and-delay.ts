@@ -1,5 +1,5 @@
 import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Sound, Text } from '@codexo/exojs';
-import { DelayEffect, ReverbEffect } from '@codexo/exojs-audio-fx';
+import { DelayEffect, ReverbEffect } from '@codexo/exojs/audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 class ReverbAndDelayScene extends Scene {

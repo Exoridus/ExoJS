@@ -4,7 +4,7 @@
   "symbol": "BoxArea",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 7,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Random point inside an axis-aligned box. With `mode: 'edge'` the result lies on the perimeter (uniform along all four edges combined); with `mode: 'volume'` (default) it's uniformly distributed across the area."
       ],
-      "importLine": "import { BoxArea } from '@codexo/exojs-particles'",
+      "importLine": "import { BoxArea } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

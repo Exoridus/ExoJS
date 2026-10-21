@@ -1,5 +1,5 @@
 import { Scene } from '@codexo/exojs';
-import { BeatDetector } from '@codexo/exojs-audio-fx';
+import { BeatDetector } from '@codexo/exojs/audio-fx';
 
 // #region guide:beat-reactive
 class BeatReactiveScene extends Scene {

@@ -4,7 +4,7 @@
   "symbol": "PhaserEffect",
   "kind": "class",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 13,
   "counts": {
@@ -24,7 +24,7 @@
         "Node graph: ``` inputGain ┬── dryGain ───────────────────────────────────────┐ │ ├── outputGain └── allpass[0] ─► ... ─► allpass[N-1] ── wetGain ───┘ ▲ │ └── feedbackDelay ◄── feedbackGain ◄─────────┘",
         "lfoOscillator ── lfoGain (depth × baseFrequency Hz) ──► each allpass.frequency ``` Note: `feedbackDelay` is a DelayNode with `delayTime = 0`. Even at zero delay the node itself breaks the zero-latency cycle, which spec-compliant browsers (Chrome, Edge, Safari) would otherwise mute entirely. Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `feedbackGain.gain = feedback`; `lfoGain.gain = depth × baseFrequency`."
       ],
-      "importLine": "import { PhaserEffect } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { PhaserEffect } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

@@ -102,7 +102,7 @@ const ARM_FACTORIES: ReadonlyArray<{
   {
     engine: 'exojs-physics',
     config: 'native',
-    library: '@codexo/exojs-physics',
+    library: '@codexo/exojs/physics',
     create: async (): Promise<PhysicsAdapter> => {
       const module = await import('../adapters/exojs-physics');
 

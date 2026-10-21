@@ -1,6 +1,6 @@
 // Auto-generated from hexagonal-grid.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, Scene, Texture, TextureRegion } from '@codexo/exojs';
-import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileProjection, TileSet } from '@codexo/exojs-tilemap';
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileProjection, TileSet } from '@codexo/exojs/tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Staggered and hexagonal grids plus a collection-of-images tileset, all
 // built in code - no map file and no image assets.

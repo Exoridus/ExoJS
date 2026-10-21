@@ -1,5 +1,5 @@
-import { ChainShape, PhysicsWorld } from '@codexo/exojs-physics';
-import type { TileCellSource } from '@codexo/exojs-tilemap';
+import { ChainShape, PhysicsWorld } from '@codexo/exojs/physics';
+import type { TileCellSource } from '@codexo/exojs/tilemap';
 import { describe, expect, it, vi } from 'vitest';
 
 import { TileColliderStreamer } from '../src/TileColliderStreamer';

@@ -1,5 +1,5 @@
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Seconds } from '@codexo/exojs';
-import { type DiagonalPolicy, GridSpace, Pathfinder, type PathResult } from '@codexo/exojs-pathfinding';
+import { type DiagonalPolicy, GridSpace, Pathfinder, type PathResult } from '@codexo/exojs/pathfinding';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Click-to-move over a weighted grid. Everything here is plain data: a GridSpace

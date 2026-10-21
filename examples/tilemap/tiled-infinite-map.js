@@ -1,7 +1,7 @@
 // Auto-generated from tiled-infinite-map.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Keyboard, Scene, View } from '@codexo/exojs';
+import { ChunkStreamer, TileMapNode } from '@codexo/exojs/tilemap';
 import { tiledExtension } from '@codexo/exojs-tiled';
-import { ChunkStreamer, TileMapNode } from '@codexo/exojs-tilemap';
 import { mountControls } from '@examples/runtime';
 // A hand-authored Tiled `.tmj` infinite map, streamed the same way the
 // procedural-terrain examples stream generated worlds: TiledMap.toTileMap()

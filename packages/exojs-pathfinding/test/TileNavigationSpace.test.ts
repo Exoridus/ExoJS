@@ -1,5 +1,5 @@
 import { logger, type Texture, TextureRegion, Vector } from '@codexo/exojs';
-import { packTile, type ResolvedTile, TILE_TRANSFORM_IDENTITY, TileLayer, TileProjection, TileSet } from '@codexo/exojs-tilemap';
+import { packTile, type ResolvedTile, TILE_TRANSFORM_IDENTITY, TileLayer, TileProjection, TileSet } from '@codexo/exojs/tilemap';
 import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import { Pathfinder } from '../src/Pathfinder';

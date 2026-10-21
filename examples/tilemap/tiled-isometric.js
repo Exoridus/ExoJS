@@ -1,9 +1,9 @@
 // Auto-generated from tiled-isometric.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, Graphics, Scene, SystemOrder } from '@codexo/exojs';
-import { CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+import { CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
+import { TileMapNode } from '@codexo/exojs/tilemap';
+import { buildObjectLayerColliders, TilePhysicsBinding } from '@codexo/exojs/tilemap-physics';
 import { tiledExtension } from '@codexo/exojs-tiled';
-import { TileMapNode } from '@codexo/exojs-tilemap';
-import { buildObjectLayerColliders, TilePhysicsBinding } from '@codexo/exojs-tilemap-physics';
 import { mountControls } from '@examples/runtime';
 const scale = 0.72;
 const origin = { x: 165, y: 115 };

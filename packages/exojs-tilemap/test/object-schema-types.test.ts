@@ -13,8 +13,8 @@
  * (un-schematised) form preserves the original untyped behaviour.
  */
 
-import type { PolygonObject, TileMapObject, TileProperties } from '@codexo/exojs-tilemap';
-import { ObjectKind, ObjectLayer, TileMap } from '@codexo/exojs-tilemap';
+import type { PolygonObject, TileMapObject, TileProperties } from '@codexo/exojs/tilemap';
+import { ObjectKind, ObjectLayer, TileMap } from '@codexo/exojs/tilemap';
 import { describe, expectTypeOf, it } from 'vitest';
 
 const EntityType = { Spawn: 'spawn', Trigger: 'trigger', Pickup: 'pickup' } as const;
@@ -40,7 +40,7 @@ describe('ObjectKind value object', () => {
   });
 
   it('TileMapObjectKind remains a structural alias of ObjectKind', () => {
-    expectTypeOf<import('@codexo/exojs-tilemap').TileMapObjectKind>().toEqualTypeOf<ObjectKind>();
+    expectTypeOf<import('@codexo/exojs/tilemap').TileMapObjectKind>().toEqualTypeOf<ObjectKind>();
   });
 });
 

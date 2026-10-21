@@ -4,7 +4,7 @@
   "symbol": "Curve",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 2,
   "counts": {
@@ -22,7 +22,7 @@
         "Piecewise-linear keyframe curve sampled by lifetime ratio `t` in `[0, 1]`.",
         "Keyframes are stored sorted by `t` and clamped at the endpoints - sampling outside the keyframe range returns the nearest endpoint value. The implementation tracks the last accessed segment so monotonically advancing `t` (the typical case for per-particle lifetime sampling) costs O(1) amortized per call instead of O(log n)."
       ],
-      "importLine": "import { Curve } from '@codexo/exojs-particles'",
+      "importLine": "import { Curve } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

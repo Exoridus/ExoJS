@@ -15,7 +15,7 @@ import {
   TextureFormat,
   UniformType,
 } from '@codexo/exojs';
-import { PcmStreamSource } from '@codexo/exojs-audio-fx';
+import { PcmStreamSource } from '@codexo/exojs/audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const blockFrames = 1024;

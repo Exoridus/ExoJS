@@ -1,5 +1,5 @@
 import { Texture } from '@codexo/exojs';
-import { ObjectKind } from '@codexo/exojs-tilemap';
+import { ObjectKind } from '@codexo/exojs/tilemap';
 import { describe, expect, it } from 'vitest';
 
 import type { TiledTilesetData } from '../src/data';

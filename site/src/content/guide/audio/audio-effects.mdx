@@ -17,7 +17,7 @@ A bus's filter chain is `inputNode → [filter₁ → filter₂ → ...] → pan
 
 ```ts
 import type { Application } from '@codexo/exojs';
-import { CompressorEffect, DelayEffect, ReverbEffect } from '@codexo/exojs-audio-fx';
+import { CompressorEffect, DelayEffect, ReverbEffect } from '@codexo/exojs/audio-fx';
 
 declare const application: Application;
 
@@ -34,7 +34,7 @@ Remove a filter to take it out of the chain without destroying it:
 
 ```ts
 import type { Application } from '@codexo/exojs';
-import { ReverbEffect } from '@codexo/exojs-audio-fx';
+import { ReverbEffect } from '@codexo/exojs/audio-fx';
 
 declare const application: Application;
 declare const reverb: ReverbEffect;
@@ -58,7 +58,7 @@ A dynamics compressor that clamps the dynamic range of audio passing through it.
 
 ```ts
 import type { Application } from '@codexo/exojs';
-import { CompressorEffect } from '@codexo/exojs-audio-fx';
+import { CompressorEffect } from '@codexo/exojs/audio-fx';
 
 declare const application: Application;
 
@@ -87,7 +87,7 @@ All properties are live get/set. The `compressor.reduction` getter returns the c
 `ReverbEffect` simulates acoustic space by convolving audio through a procedurally-generated impulse response:
 
 ```ts
-import { ReverbEffect } from '@codexo/exojs-audio-fx';
+import { ReverbEffect } from '@codexo/exojs/audio-fx';
 
 const reverb = new ReverbEffect({
     durationSeconds: 2,   // IR length — longer = bigger space
@@ -103,7 +103,7 @@ Changing `durationSeconds` or `decay` on a live `ReverbEffect` rebuilds its impu
 `DelayEffect` creates an echo with configurable feedback:
 
 ```ts
-import { DelayEffect } from '@codexo/exojs-audio-fx';
+import { DelayEffect } from '@codexo/exojs/audio-fx';
 
 const delay = new DelayEffect({
     delaySeconds: 0.3,    // echo interval
@@ -120,7 +120,7 @@ A sidechain compressor — when the sidechain bus exceeds a threshold, the main 
 
 ```ts
 import { type Application, AudioBus } from '@codexo/exojs';
-import { DuckingEffect } from '@codexo/exojs-audio-fx';
+import { DuckingEffect } from '@codexo/exojs/audio-fx';
 
 declare const application: Application;
 
@@ -146,7 +146,7 @@ Several filters cover tone shaping and modulation effects:
 
 ```ts
 import { HighpassFilter, LowpassFilter } from '@codexo/exojs';
-import { ChorusEffect, EqualizerEffect } from '@codexo/exojs-audio-fx';
+import { ChorusEffect, EqualizerEffect } from '@codexo/exojs/audio-fx';
 
 // Three-band equalizer — low shelf, peaking mid, high shelf
 const eq = new EqualizerEffect({ low: 3, mid: -2, high: 4 });
@@ -171,7 +171,7 @@ Soft-clip saturation through a tanh-based `WaveShaperNode` curve, followed by a 
 
 ```ts
 import type { Application } from '@codexo/exojs';
-import { DistortionEffect } from '@codexo/exojs-audio-fx';
+import { DistortionEffect } from '@codexo/exojs/audio-fx';
 
 declare const application: Application;
 
@@ -185,7 +185,7 @@ Sweeps a cascade of allpass filters with a sine LFO, producing moving notches in
 
 ```ts
 import type { Application } from '@codexo/exojs';
-import { PhaserEffect } from '@codexo/exojs-audio-fx';
+import { PhaserEffect } from '@codexo/exojs/audio-fx';
 
 declare const application: Application;
 
@@ -199,7 +199,7 @@ A short (0.5–20 ms) LFO-modulated delay with a feedback loop, producing the cl
 
 ```ts
 import type { Application } from '@codexo/exojs';
-import { FlangerEffect } from '@codexo/exojs-audio-fx';
+import { FlangerEffect } from '@codexo/exojs/audio-fx';
 
 declare const application: Application;
 
@@ -213,7 +213,7 @@ Amplitude-modulates the signal with a sine LFO for classic volume pulsing: the g
 
 ```ts
 import type { Application } from '@codexo/exojs';
-import { TremoloEffect } from '@codexo/exojs-audio-fx';
+import { TremoloEffect } from '@codexo/exojs/audio-fx';
 
 declare const application: Application;
 
@@ -227,7 +227,7 @@ Multiplies the input by a carrier oscillator, producing sum/difference sidebands
 
 ```ts
 import type { Application } from '@codexo/exojs';
-import { RingModulatorEffect } from '@codexo/exojs-audio-fx';
+import { RingModulatorEffect } from '@codexo/exojs/audio-fx';
 
 declare const application: Application;
 
@@ -241,7 +241,7 @@ An envelope-driven wah: a rectifier and smoothing filter track input loudness an
 
 ```ts
 import type { Application } from '@codexo/exojs';
-import { AutoWahEffect } from '@codexo/exojs-audio-fx';
+import { AutoWahEffect } from '@codexo/exojs/audio-fx';
 
 declare const application: Application;
 
@@ -257,7 +257,7 @@ A stereo delay whose taps cross-feed between channels, bouncing echoes hard-left
 
 ```ts
 import type { Application } from '@codexo/exojs';
-import { PingPongDelayEffect } from '@codexo/exojs-audio-fx';
+import { PingPongDelayEffect } from '@codexo/exojs/audio-fx';
 
 declare const application: Application;
 
@@ -271,7 +271,7 @@ A limiter-style compressor — a `DynamicsCompressorNode` at its highest ratio w
 
 ```ts
 import type { Application } from '@codexo/exojs';
-import { LimiterEffect } from '@codexo/exojs-audio-fx';
+import { LimiterEffect } from '@codexo/exojs/audio-fx';
 
 declare const application: Application;
 
@@ -287,7 +287,7 @@ An impulse response is just an audio file, so it loads like any other sound — 
 
 ```ts
 import { type Application, Sound } from '@codexo/exojs';
-import { ConvolutionEffect } from '@codexo/exojs-audio-fx';
+import { ConvolutionEffect } from '@codexo/exojs/audio-fx';
 
 declare const application: Application;
 declare const hall: Sound;
@@ -309,7 +309,7 @@ A `WorkletEffect` loads its processor asynchronously — the bus rewires itself 
 </Callout>
 
 ```ts no-check -- effect-constructor tour; modulatorBus is the caller's own bus
-import { BitCrusherEffect, GranularEffect, PitchShiftEffect, VocoderEffect } from '@codexo/exojs-audio-fx';
+import { BitCrusherEffect, GranularEffect, PitchShiftEffect, VocoderEffect } from '@codexo/exojs/audio-fx';
 
 // Granular pitch shifting (0.25x to 4x)
 const shifter = new PitchShiftEffect({ pitch: 1.2, wet: 1.0 });
@@ -332,7 +332,7 @@ Bus-level filters affect everything on that bus. Create isolated chains for spec
 
 ```ts
 import { type Application, AudioBus, LowpassFilter, Sound } from '@codexo/exojs';
-import { ReverbEffect } from '@codexo/exojs-audio-fx';
+import { ReverbEffect } from '@codexo/exojs/audio-fx';
 
 declare const application: Application;
 declare const wind: Sound;

@@ -4,7 +4,7 @@
   "symbol": "ParticleBatch",
   "kind": "interface",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 10,
   "counts": {
@@ -23,7 +23,7 @@
         "This is the bulk surface an UpdateModule and a ParticleRenderMode operate on. Channels are named for what they mean; how they are packed - one array per component today, something else tomorrow - is the simulation's business and may change. A loop reads the channel it needs once and then indexes plain typed arrays, so naming costs nothing per particle.",
         "Indices `[0, count)` are the range worth visiting. A batch can contain dead slots, so a loop that must not touch them checks isAlive; a purely arithmetic pass over dead slots is harmless and can skip the check."
       ],
-      "importLine": "import { ParticleBatch } from '@codexo/exojs-particles'",
+      "importLine": "import { ParticleBatch } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

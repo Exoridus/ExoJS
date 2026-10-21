@@ -10,7 +10,7 @@ import {
   Text,
   type Voice,
 } from '@codexo/exojs';
-import { CompressorEffect } from '@codexo/exojs-audio-fx';
+import { CompressorEffect } from '@codexo/exojs/audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 class CompressorScene extends Scene {

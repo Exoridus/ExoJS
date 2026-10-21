@@ -1,5 +1,5 @@
 import { View } from '@codexo/exojs';
-import { ChunkStreamer, ImageLayer, TileLayer, TileMap, TileSet } from '@codexo/exojs-tilemap';
+import { ChunkStreamer, ImageLayer, TileLayer, TileMap, TileSet } from '@codexo/exojs/tilemap';
 import { describe, expect, it } from 'vitest';
 
 import { TiledGroupLayer, TiledImageLayer, TiledObjectLayer, TiledTileLayer } from '../src/TiledLayer';
@@ -421,7 +421,7 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
     expect(payload!.width).toBe(32);
     expect(payload!.height).toBe(32);
 
-    const { unpackTile } = await import('@codexo/exojs-tilemap');
+    const { unpackTile } = await import('@codexo/exojs/tilemap');
     // (0,0): left on-disk chunk, gid 1 -> localTileId 0.
     expect(unpackTile(payload!.tiles[0 * 32 + 0])).toMatchObject({ localTileId: 0 });
     // (16,0): right on-disk chunk, gid 2 -> localTileId 1.
@@ -440,7 +440,7 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
     const source = map.getChunkSource(1)!;
 
     const payload = await source.getChunk(0, 0);
-    const { unpackTile } = await import('@codexo/exojs-tilemap');
+    const { unpackTile } = await import('@codexo/exojs/tilemap');
     expect(unpackTile(payload!.tiles[0])).toMatchObject({ localTileId: 0, transform: { flipX: true, flipY: false, diagonal: false } });
   });
 

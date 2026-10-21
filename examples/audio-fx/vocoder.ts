@@ -12,7 +12,7 @@ import {
   Text,
   type Voice,
 } from '@codexo/exojs';
-import { AudioAnalyser, VocoderEffect } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser, VocoderEffect } from '@codexo/exojs/audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Spoken phrases (Kenney Voiceover Pack, CC0) - a voice modulator is what makes

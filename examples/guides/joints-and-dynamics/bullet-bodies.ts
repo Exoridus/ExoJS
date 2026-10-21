@@ -1,4 +1,4 @@
-import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
 
 // #region guide:bullet-bodies
 const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });

@@ -4,7 +4,7 @@
   "symbol": "TileProperties",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 0,
   "counts": {
@@ -22,7 +22,7 @@
         "An immutable, flat key-value bag of generic tile properties. Adapters copy and freeze source properties; the runtime never retains a caller-owned mutable object.",
         "Declared as an interface (not a `Record<...>` type alias) so it can mutually recurse with TilePropertyValue - a nested-bag member of that union - without TypeScript's \"circularly references itself\" alias restriction; structurally it behaves exactly like `Readonly<Record<string, TilePropertyValue>>`."
       ],
-      "importLine": "import { TileProperties } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileProperties } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

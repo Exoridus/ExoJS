@@ -30,7 +30,7 @@ import {
   ScaleOverLifetime,
   Turbulence,
   VectorRange,
-} from '@codexo/exojs-particles';
+} from '@codexo/exojs/particles';
 import { mountControls } from '@examples/runtime';
 
 const random = new Random(2026);

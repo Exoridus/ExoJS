@@ -12,7 +12,7 @@ import {
   Texture,
   TextureFormat,
 } from '@codexo/exojs';
-import { ForwardLighting, type Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
+import { ForwardLighting, type Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs/lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // The FORWARD renderer under load: the light list is a data texture, not a

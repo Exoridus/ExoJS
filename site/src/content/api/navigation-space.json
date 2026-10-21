@@ -4,7 +4,7 @@
   "symbol": "NavigationSpace",
   "kind": "interface",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 11,
   "counts": {
@@ -22,7 +22,7 @@
         "The search core's view of a world: integer node ids, a neighbour relation and a heuristic. GridSpace and WaypointGraph implement it, and so can application code - a space needs no scene node, no renderer and no asset.",
         "Implementations must be deterministic: the same query on an unmutated space has to produce the same neighbours in the same order, or paths stop being reproducible across runs and machines."
       ],
-      "importLine": "import { NavigationSpace } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { NavigationSpace } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {

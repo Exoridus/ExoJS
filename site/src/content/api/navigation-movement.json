@@ -4,7 +4,7 @@
   "symbol": "NavigationMovement",
   "kind": "interface",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -24,7 +24,7 @@
         "Directions are in the navigation space's coordinates, the same space an agent reads its position in. A movement working in another space - a projected display, say - converts at its own boundary.",
         "`KinematicMovementComponent` from `@codexo/exojs-physics` satisfies this contract as it is."
       ],
-      "importLine": "import { NavigationMovement } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { NavigationMovement } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {

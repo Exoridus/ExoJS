@@ -4,7 +4,7 @@
   "symbol": "BeatDetector",
   "kind": "class",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 42,
   "counts": {
@@ -23,7 +23,7 @@
         "Accepts a wide range of BeatDetectorSources - a bus, an individual Voice, a raw MediaStream, or any AudioNode - and exposes a Signal for each notable event: - BeatDetector.onBeat - every detected beat - BeatDetector.onDownbeat - first beat of each bar - BeatDetector.onBarStart - bar boundary - BeatDetector.onTempoChange - when the tracked BPM changes - BeatDetector.onBeatPredicted - look-ahead schedule notice",
         "Early beats arrive with low latency tagged `status: 'provisional'` (after a short `minSettlingMs` warm-up, default 400 ms) for snappy visual reactivity, then promote to `status: 'locked'` once the tempo grid is trustworthy - a single BeatDetector.onBeat signal carries both via BeatInfo.status. Set `emitProvisionalBeats: false` to receive only locked beats. Time-signature detection is on by default; ambiguous meter leaves beats available without downbeats. Use a fixed four-beat convention with `enableTimeSignatureDetection: false`."
       ],
-      "importLine": "import { BeatDetector } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { BeatDetector } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

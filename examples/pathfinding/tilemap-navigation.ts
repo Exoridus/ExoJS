@@ -15,8 +15,8 @@ import {
   Vector,
   VectorAction,
 } from '@codexo/exojs';
-import { NavigationAgentComponent, type NavigationStatus, TileNavigationSpace, WaypointGraph } from '@codexo/exojs-pathfinding';
-import { CircleShape, KinematicMovementComponent, type PhysicsBody, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs-physics';
+import { NavigationAgentComponent, type NavigationStatus, TileNavigationSpace, WaypointGraph } from '@codexo/exojs/pathfinding';
+import { CircleShape, KinematicMovementComponent, type PhysicsBody, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs/physics';
 import {
   type ResolvedTile,
   TILE_TRANSFORM_IDENTITY,
@@ -25,8 +25,8 @@ import {
   tilemapExtension,
   type TileMapView,
   TileSet,
-} from '@codexo/exojs-tilemap';
-import { TileColliderStreamer } from '@codexo/exojs-tilemap-physics';
+} from '@codexo/exojs/tilemap';
+import { TileColliderStreamer } from '@codexo/exojs/tilemap-physics';
 import { mountControls } from '@examples/runtime';
 
 // Navigation, movement and collision over one tile map, with no package

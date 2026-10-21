@@ -1,6 +1,6 @@
 // #region guide:spectrum-scene
 import { Color, Graphics, Scene } from '@codexo/exojs';
-import { AudioAnalyser } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser } from '@codexo/exojs/audio-fx';
 
 export class SpectrumScene extends Scene {
   private analyser!: AudioAnalyser;

@@ -6,7 +6,7 @@
  * per chunk cost one page (draw) each. Cached chunk geometry means a camera pan
  * rebuilds nothing, and a single tile edit rebuilds exactly one chunk.
  */
-import { TileSet } from '@codexo/exojs-tilemap';
+import { TileSet } from '@codexo/exojs/tilemap';
 import { describe, expect, it } from 'vitest';
 
 import { Texture } from '#rendering/texture/Texture';

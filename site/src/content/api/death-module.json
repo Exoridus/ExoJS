@@ -4,7 +4,7 @@
   "symbol": "DeathModule",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -27,7 +27,7 @@
         "Implementation pattern:",
         "```ts onDeath(system, death) { this._childSystem.burstAt(death.x, death.y, 8); } ```"
       ],
-      "importLine": "import { DeathModule } from '@codexo/exojs-particles'",
+      "importLine": "import { DeathModule } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

@@ -16,7 +16,7 @@ This helper expects an initialized application with audio already playing on its
 
 ```ts
 import type { Application } from '@codexo/exojs';
-import { AudioAnalyser } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser } from '@codexo/exojs/audio-fx';
 
 export const inspectMusic = (app: Application): { read: () => Uint8Array; destroy: () => void } => {
   const analyser = new AudioAnalyser({ source: app.audio.music, fftSize: 1024 });

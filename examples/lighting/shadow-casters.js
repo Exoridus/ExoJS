@@ -1,6 +1,6 @@
 // Auto-generated from shadow-casters.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture } from '@codexo/exojs';
-import { AlphaOccluder, LightmapLighting, PointLight, SpotLight } from '@codexo/exojs-lighting';
+import { AlphaOccluder, LightmapLighting, PointLight, SpotLight } from '@codexo/exojs/lighting';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Nothing here models a shadow. Each wall registers the outline it already
 // has - its own rectangle, or, for the pillar, the silhouette traced out of

@@ -28,7 +28,7 @@ import type { PhysicsArmReport, PhysicsClockReport } from './page/contract';
 import type { PhysicsCellResult, PhysicsCellSpec } from './PhysicsAdapter';
 
 /** npm package name of the native physics arm, resolved for version provenance. */
-const NATIVE_PHYSICS_PACKAGE = '@codexo/exojs-physics';
+const NATIVE_PHYSICS_PACKAGE = '@codexo/exojs/physics';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PAGE_DIR = resolve(HERE, 'page');

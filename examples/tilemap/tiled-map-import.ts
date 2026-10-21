@@ -1,6 +1,6 @@
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
+import { ObjectKind, type TileMapObject } from '@codexo/exojs/tilemap';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
-import { ObjectKind, type TileMapObject } from '@codexo/exojs-tilemap';
 import { mountControls } from '@examples/runtime';
 
 const contains = (object: TileMapObject, x: number, y: number): boolean => {

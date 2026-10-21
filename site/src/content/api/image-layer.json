@@ -4,7 +4,7 @@
   "symbol": "ImageLayer",
   "kind": "class",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 18,
   "counts": {
@@ -22,7 +22,7 @@
         "A data-only image layer: a single image (texture + resolved URL) placed as a background or foreground layer. The layer itself holds no scene-graph state - it is rendered by an import('./ImageLayerNode').ImageLayerNode, which import('./TileMapNode').TileMapNode and import('./TileMapView').TileMapView generate and interleave with tile layers by the map's combined document order (import('./TileMap').TileMap.renderableLayers).",
         "Parallax, opacity, tint, offset, and repeat flags are carried from the source Tiled map."
       ],
-      "importLine": "import { ImageLayer } from '@codexo/exojs-tilemap'",
+      "importLine": "import { ImageLayer } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

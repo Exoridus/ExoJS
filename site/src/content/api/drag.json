@@ -4,7 +4,7 @@
   "symbol": "Drag",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 9,
   "counts": {
@@ -23,7 +23,7 @@
         "`drag = 0` is no damping; `drag = 1` halves velocity in ~1 second; higher values slow particles faster. Negative values accelerate (don't do that unless you mean it).",
         "GPU-eligible."
       ],
-      "importLine": "import { Drag } from '@codexo/exojs-particles'",
+      "importLine": "import { Drag } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

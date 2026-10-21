@@ -14,7 +14,7 @@ import {
   Text,
   type Voice,
 } from '@codexo/exojs';
-import { AudioAnalyser, CompressorEffect, EqualizerEffect, LimiterEffect, ReverbEffect } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser, CompressorEffect, EqualizerEffect, LimiterEffect, ReverbEffect } from '@codexo/exojs/audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 type NodeKind = 'source' | 'effect' | 'bus' | 'output';
