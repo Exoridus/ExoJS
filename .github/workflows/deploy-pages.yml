@@ -1,83 +1,125 @@
 name: Deploy Pages
 
-# Deploys the site EXACTLY as CI built and validated it — this workflow builds
-# no source code. CI's `site` job (and a release's `prepare` job) runs the site
-# gates and `site:build` and uploads `site/dist/**` as `site-dist-<sha>`; here
-# that same artifact is downloaded from the run that triggered this one and
-# handed to Pages unchanged.
+# The one publisher of the project site. GitHub Pages serves a single tree, so
+# every deployment carries both channels: Stable at /ExoJS/ and Next at
+# /ExoJS/next/, each exactly as a green CI push to main or next (or a stable
+# Release) built and smoked it. This workflow builds no site code.
 #
-# The defect this prevents: the workflow used to check the sources out and
-# rebuild the library and the site itself, so what went live was a second build
-# that no gate had ever seen. A green CI run said nothing about the deployed
-# bytes.
+# The triggering run is only a wake-up call. On every start the publisher
+# re-decides BOTH channels from GitHub's own metadata (scripts/pages/
+# select-channels.ts): each channel gets the newest qualified candidate on its
+# branch's current history, or keeps what is already published. A queued or
+# re-run event can therefore neither roll a channel back nor drop the other
+# channel's update, and a green run without a site candidate changes nothing.
 #
-# Fail-closed by construction: there is no `workflow_dispatch` path, because a
-# manual run has no triggering run to read the artifact from. If the artifact is
-# missing or belongs to a different commit, the download step fails and nothing
-# is deployed. To re-deploy, re-run the CI workflow for the commit.
+# Trust: only successful same-repository push runs of CI (main/next) and
+# stable Release tags qualify; a pull request, a fork or a manual dispatch
+# never does. Candidates are downloaded by the trusted scripts of the
+# default-branch checkout below, never executed, and checked against the
+# digest GitHub reports, their own site-build.json and the archive rules
+# before anything is composed. Any doubt deploys nothing and leaves the live
+# site as it is.
+#
+# A deployment also keeps its composed tree (the Pages artifact) and its
+# channels.json for 90 days, so a channel whose candidate expired can be
+# carried over unchanged from the last published snapshot.
 
 on:
   workflow_run:
     workflows: ['Release', 'CI']
     types: [completed]
 
-permissions:
-  contents: read
-  # Reading an artifact from ANOTHER workflow run needs `actions: read` plus an
-  # explicit token on the download step.
-  actions: read
-  pages: write
-  id-token: write
+permissions: {}
 
+# One queue for the whole site, and a running deployment is never cancelled.
+# Ordering does not rest on this: each run re-decides both channels when it
+# starts.
 concurrency:
-  group: pages-${{ github.event.workflow_run.head_sha }}
-  cancel-in-progress: true
+  group: pages-combined
+  cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Deploy to GitHub Pages
+  compose:
+    name: Compose Stable and Next
     if: >-
       ${{
         github.event_name == 'workflow_run' &&
         github.event.workflow_run.conclusion == 'success' &&
-        (
-          github.event.workflow_run.name == 'Release' ||
-          (
-            github.event.workflow_run.name == 'CI' &&
-            github.event.workflow_run.event == 'push' &&
-            github.event.workflow_run.head_branch == 'main'
-          )
-        )
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.repository.full_name == github.repository &&
+        github.event.workflow_run.head_repository.full_name == github.repository
       }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      # Listing runs and reading artifacts of other workflow runs.
+      actions: read
+    outputs:
+      deploy: ${{ steps.select.outputs.deploy }}
+    steps:
+      # The publisher's own scripts, from the default branch - never from a
+      # candidate. Dependency-free TypeScript that node strips: no install.
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.nvmrc
+            /scripts/pages/
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+
+      - name: Select both channels
+        id: select
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: node scripts/pages/select-channels.ts --out "$RUNNER_TEMP/selection.json"
+
+      - name: Fetch, verify and compose the channels
+        if: steps.select.outputs.deploy == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          node scripts/pages/compose-site.ts
+          --selection "$RUNNER_TEMP/selection.json"
+          --work "$RUNNER_TEMP/channels"
+          --out "$RUNNER_TEMP/site"
+          --channels-out "$RUNNER_TEMP/channels-record"
+
+      - name: Package for Pages
+        if: steps.select.outputs.deploy == 'true'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ${{ runner.temp }}/site
+          retention-days: 90
+
+      - name: Keep the deployed pairing
+        if: steps.select.outputs.deploy == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: pages-channels-${{ github.run_id }}
+          path: ${{ runner.temp }}/channels-record/channels.json
+          retention-days: 90
+          if-no-files-found: error
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: compose
+    if: needs.compose.outputs.deploy == 'true'
+    runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      # `run-id` pins the download to the exact run that triggered this one, and
-      # the commit in the artifact name pins it to that run's commit — an older
-      # or unrelated build cannot be picked up. A missing artifact fails here.
-      - name: Download validated site artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: site-dist-${{ github.event.workflow_run.head_sha }}
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ github.token }}
-          path: site-dist
-
-      - name: Verify the artifact carries a built site
-        run: |
-          test -f site-dist/index.html || {
-            echo "::error::site-dist-${{ github.event.workflow_run.head_sha }} has no index.html — refusing to deploy."
-            exit 1
-          }
-
-      - name: Package for Pages
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: site-dist
-
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v5

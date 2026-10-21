@@ -112,6 +112,36 @@ describe('plan for a push with a resolved diff', () => {
   });
 });
 
+describe('plan for a push that publishes a site channel', () => {
+  // A green push to main or next is what the Pages publisher deploys from, so
+  // every change that can alter the served bytes has to produce a candidate,
+  // and that candidate has to have been smoked at its real base path.
+  it.each(['main', 'next'])('builds and smokes a candidate for a guide-only change on %s, sampled', refName => {
+    const plan = push(['site/src/content/guide/audio/audio-basics.mdx'], refName);
+    expect(plan).toMatchObject({ build: true, site: true, smoke: true, smokeSample: true });
+  });
+
+  it('builds a candidate when the tooling that builds the vendored dist or the manifest changes', () => {
+    for (const file of [
+      'scripts/build.ts',
+      'scripts/build-extension.ts',
+      'scripts/pages/site-manifest.ts',
+      'scripts/check-dist-fresh.ts',
+    ]) {
+      expect(push([file]), `${file}`).toMatchObject({ site: true, smoke: true });
+    }
+  });
+
+  it('smokes the whole catalog when the catalog itself changed', () => {
+    expect(push(['examples/sprites/basic.ts'])).toMatchObject({ smoke: true, smokeSample: false });
+  });
+
+  it('does not smoke a guide-only change of a pull request or another branch', () => {
+    expect(pullRequest(['site/src/content/guide/audio/audio-basics.mdx'])).toMatchObject({ site: true, smoke: false });
+    expect(push(['site/src/content/guide/audio/audio-basics.mdx'], 'release/0.15.x')).toMatchObject({ site: true, smoke: false });
+  });
+});
+
 describe('plan for events that always validate everything', () => {
   it('ignores a changed-file list on a manual dispatch', () => {
     const plan = planCi({ eventName: 'workflow_dispatch', changedFiles: ['README.md'], refName: 'next' });
