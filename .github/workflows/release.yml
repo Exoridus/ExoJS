@@ -84,6 +84,8 @@ jobs:
       - name: Build core (with its runtime modules), adapters and the site
         env:
           EXOJS_PACKAGE_PATH: ..
+          # A release tag sits on main: its site is the Stable channel.
+          EXOJS_SITE_CHANNEL: stable
         # One line per package: verify:release-matrix checks each against the
         # lockstep list, so a package added without a build line fails there.
         run: |
@@ -95,12 +97,18 @@ jobs:
           pnpm --filter create-exo-app build
           pnpm site:build
 
-      # Deploy Pages ships the site of a successful release from this artifact.
+      - name: Verify the Stable site candidate
+        env:
+          RELEASE_SHA: ${{ needs.trust.outputs.sha }}
+        run: node scripts/pages/channel-artifact.ts verify --dir site/dist --channel stable --sha "$RELEASE_SHA"
+
+      # Deploy Pages may ship the Stable site of a successful release from this
+      # artifact, and falls back to it when the CI candidate has expired.
       - uses: actions/upload-artifact@v7
         with:
-          name: site-dist-${{ needs.trust.outputs.sha }}
+          name: site-stable-${{ needs.trust.outputs.sha }}-${{ github.run_attempt }}
           path: site/dist/
-          retention-days: 1
+          retention-days: 90
           if-no-files-found: error
 
       # The site build regenerates tracked content with platform-dependent

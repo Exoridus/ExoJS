@@ -8,7 +8,10 @@
 // stripped on write and restored on read.  Slashes in the example path are
 // preserved as-is - no `%2F` encoding.
 
-const VERSION_STORAGE_KEY = 'exojs-examples:selected-version';
+import { channelStorageKey } from './site-build-info';
+
+// Scoped per channel: "current" means a different build on Stable and on Next.
+const VERSION_STORAGE_KEY = channelStorageKey('examples:selected-version');
 
 export interface UrlState {
   version: string | null;

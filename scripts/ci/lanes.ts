@@ -357,6 +357,9 @@ export interface PlanInput {
 
 const COVERAGE_BRANCHES = new Set(['main', 'next']);
 
+/** Branches whose pushes publish a site channel; see `scripts/pages/site-channel.ts`. */
+const CHANNEL_BRANCHES = new Set(['main', 'next']);
+
 const ALL_AREAS: LaneAreas = {
   engine: true,
   site: true,
@@ -404,6 +407,10 @@ export const planCi = ({ eventName, changedFiles, refName }: PlanInput): CiPlan 
   // The smoke drives the site job's artifact, so a catalog change builds the
   // site even when nothing under site/ changed.
   const site = areas.site || areas.exampleCatalog;
+  // A push to a channel branch uploads the tree the Pages publisher deploys, so
+  // that tree is always smoked at its real base before the run can turn green;
+  // one example per category suffices when the catalog itself is unchanged.
+  const candidate = eventName === 'push' && CHANNEL_BRANCHES.has(refName) && site;
 
   return {
     areas,
@@ -415,8 +422,8 @@ export const planCi = ({ eventName, changedFiles, refName }: PlanInput): CiPlan 
     // changed.
     build: areas.engine || areas.createExoApp || site,
     site,
-    smoke: areas.exampleCatalog,
-    smokeSample: isPullRequest,
+    smoke: areas.exampleCatalog || candidate,
+    smokeSample: isPullRequest || !areas.exampleCatalog,
     skipBudget: effective.unit,
     coverage,
   };

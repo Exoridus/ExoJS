@@ -176,6 +176,20 @@ describe('CI lane selection — engine/site areas', () => {
     expect(lanes.lint).toBe(true);
   });
 
+  it('treats the site manifest and the dist build tooling as site changes', () => {
+    for (const file of [
+      'scripts/pages/compose-site.ts',
+      'scripts/build.ts',
+      'scripts/build-extension.ts',
+      'scripts/check-dist-fresh.ts',
+      'scripts/dist-freshness.ts',
+    ]) {
+      expect(selectAreas([file]).site, `${file}`).toBe(true);
+    }
+
+    expect(selectAreas(['scripts/ci/gates.ts']).site).toBe(false);
+  });
+
   it('handles Windows backslash separators and blank/whitespace entries', () => {
     expect(selectAreas(['packages\\exojs-tilemap\\src\\TileMap.ts', '', '   '])).toMatchObject({
       engine: true,

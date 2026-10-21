@@ -313,6 +313,18 @@ const isExampleCatalogPath = (file: string): boolean => {
 };
 
 /**
+ * Root tooling the site build runs or vendors the output of: the dist builders
+ * whose bundles the site serves, the freshness check `site:build` starts
+ * with, and the channel contract and manifest writer under `scripts/pages/`.
+ */
+const SITE_BUILD_TOOLING = new Set([
+  'scripts/build.ts',
+  'scripts/build-extension.ts',
+  'scripts/check-dist-fresh.ts',
+  'scripts/dist-freshness.ts',
+]);
+
+/**
  * Site area: anything that can change the generated examples site / API docs.
  * Gates the site-build lane. Mirrors (and intentionally keeps) the prior `site`
  * filter: every `packages/**` change - docs included - can affect generated docs
@@ -320,6 +332,10 @@ const isExampleCatalogPath = (file: string): boolean => {
  */
 const isSitePath = (file: string): boolean => {
   if (file.startsWith('site/')) {
+    return true;
+  }
+
+  if (file.startsWith('scripts/pages/') || SITE_BUILD_TOOLING.has(file)) {
     return true;
   }
 

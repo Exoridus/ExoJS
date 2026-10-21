@@ -59,6 +59,8 @@ import { parseArgs } from 'node:util';
 
 import { type Browser, type BrowserContext, chromium, firefox, type Frame, type Page } from 'playwright';
 
+import { readSiteBuildManifest } from '../../scripts/pages/site-manifest.ts';
+
 const here = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(here, '..'); // site/
 const repoRoot = resolve(projectRoot, '..'); // repo root
@@ -68,10 +70,13 @@ const reportPath = resolve(repoRoot, '.workspace', 'reports', 'example-smoke.md'
 const artifactDir = resolve(repoRoot, '.workspace', 'reports', 'example-smoke-artifacts');
 
 /**
- * The site's configured base path. Every URL in the built HTML carries it, so
- * the throwaway server strips it and the playground URLs re-add it.
+ * The base path the tree in `dist` was built for, without its trailing slash,
+ * read from the tree's own `site-build.json` so the smoke drives exactly the
+ * channel and base that will be published. Every URL in the built HTML
+ * carries it; the server answers nothing outside it, so a URL that escapes
+ * the base fails the run instead of resolving by accident.
  */
-const SITE_BASE = '/ExoJS';
+let SITE_BASE = '';
 
 /**
  * Examples that legitimately paint nothing, so a uniform canvas is their
@@ -292,9 +297,14 @@ const startServer = (root: string): Promise<{ port: number; server: Server }> =>
 
     // The site is built with a configured `base`, so every URL the emitted
     // HTML references carries that prefix while `dist` itself is flat.
-    if (urlPath.startsWith(SITE_BASE)) {
-      urlPath = urlPath.slice(SITE_BASE.length) || '/';
+    if (urlPath !== SITE_BASE && !urlPath.startsWith(`${SITE_BASE}/`)) {
+      res.writeHead(404);
+      res.end('Outside the site base');
+
+      return;
     }
+
+    urlPath = urlPath.slice(SITE_BASE.length) || '/';
 
     if (!resolve(join(root, urlPath)).startsWith(root)) {
       res.writeHead(403);
@@ -660,7 +670,7 @@ const probeGraphics = async (browser: Browser, baseUrl: string, forceWebGl2: boo
       await page.addInitScript(withholdWebGpu);
     }
 
-    await page.goto(`${baseUrl}/preview.html`, { waitUntil: 'domcontentloaded', timeout: 10_000 });
+    await page.goto(`${baseUrl}${SITE_BASE}/preview.html`, { waitUntil: 'domcontentloaded', timeout: 10_000 });
 
     return await page.evaluate(async () => {
       const webgpu = await (async () => {
@@ -1082,6 +1092,10 @@ const main = async (): Promise<void> => {
 
     return;
   }
+
+  const build = readSiteBuildManifest(distDir);
+  SITE_BASE = build.basePath.replace(/\/$/, '');
+  console.log(`[smoke] Serving the ${build.channel} tree of ${build.sourceSha.slice(0, 12)} at ${build.basePath}`);
 
   const browserName = values.browser === 'firefox' ? 'firefox' : 'chromium';
   // Withholding `navigator.gpu` rather than passing a backend preference: the
