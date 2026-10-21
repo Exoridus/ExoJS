@@ -3,6 +3,7 @@ import {
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
+  type Pointer,
   type RenderingContext,
   Scene,
   type Seconds,
@@ -153,20 +154,8 @@ class ConvolutionRoomsScene extends Scene {
 
     this.root.addChild(this.gfx, this.label, this.detail, this.tapPrompt, ...materialLabels);
 
-    this.app.input.onPointerDown.add(pointer => {
-      if (!(pointer.buttons & 1)) {
-        return;
-      }
-
-      for (const pad of this.pads) {
-        if (pointer.x >= pad.x && pointer.x <= pad.x + pad.w && pointer.y >= pad.y && pointer.y <= pad.y + pad.h) {
-          this.strike(pad);
-
-          return;
-        }
-      }
-    });
-    this.app.input.onContextMenu.add(() => this.select(this.index + 1));
+    this.app.input.onPointerDown.add(this.onPointerDown);
+    this.app.input.onContextMenu.add(this.onContextMenu);
 
     this.hud = mountControls({
       title: 'Convolution rooms',
@@ -187,6 +176,26 @@ class ConvolutionRoomsScene extends Scene {
 
     this.select(0);
   }
+
+  // Application input outlives the scene, so both handlers are removed in destroy().
+  private readonly onPointerDown = (pointer: Pointer, x: number, y: number): void => {
+    // Presses are delivered at the next frame while `buttons` is live, so a
+    // quick click may already read as released. Only a held right button is
+    // skipped; right-click switches rooms instead.
+    if (pointer.buttons & 2) {
+      return;
+    }
+
+    for (const pad of this.pads) {
+      if (x >= pad.x && x <= pad.x + pad.w && y >= pad.y && y <= pad.y + pad.h) {
+        this.strike(pad);
+
+        return;
+      }
+    }
+  };
+
+  private readonly onContextMenu = (): void => this.select(this.index + 1);
 
   /** Swap the impulse response. The handle heals in place, so the effect picks it up once decoded. */
   private select(next: number): void {
@@ -247,6 +256,8 @@ class ConvolutionRoomsScene extends Scene {
   }
 
   override destroy(): void {
+    this.app.input.onPointerDown.remove(this.onPointerDown);
+    this.app.input.onContextMenu.remove(this.onContextMenu);
     this.app.audio.sound.removeEffect(this.convolution);
     this.convolution.destroy();
     this.panel.dispose();
