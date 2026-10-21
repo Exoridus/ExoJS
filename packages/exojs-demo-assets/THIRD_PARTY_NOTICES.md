@@ -14,6 +14,7 @@ Files:
 
 - `audio/impactBell_heavy_000.ogg`
 - `audio/impactGlass_heavy_000.ogg`
+- `audio/impactMetal_heavy_000.ogg`
 - `audio/impactWood_heavy_000.ogg`
 - `demo/sound/impact-heavy.ogg`
 - `demo/sound/impact-light.ogg`
@@ -173,6 +174,7 @@ Files:
 - `demo/svg/reset.svg`
 - `demo/svg/rune-mark.svg`
 - `demo/svg/sparkle.svg`
+- `demo/textures/ship-a.png`
 - `demo/video/demo-loop.webm`
 - `json/maps/drift-fields.tmj`
 - `json/maps/harbor-plaza.tmj`
@@ -327,16 +329,6 @@ Files:
 - `demo/textures/prototype-grid.png`
 - `demo/textures/prototype-light-01.png`
 - `demo/vendor/kenney/prototype-textures/License.txt`
-
-## Kenney Simple Space
-
-- Author: Kenney (kenney.nl)
-- License: CC0-1.0 (https://creativecommons.org/publicdomain/zero/1.0/)
-- Source: https://kenney.nl/assets/simple-space
-
-Files:
-
-- `demo/textures/ship-a.png`
 
 ## Kenney Isometric Tiles Landscape
 

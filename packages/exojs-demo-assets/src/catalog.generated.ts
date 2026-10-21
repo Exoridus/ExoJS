@@ -12,7 +12,7 @@ import { Asset } from '@codexo/exojs';
  * SVG images have no synchronous handle and load with `await loader.load()`.
  */
 export interface DemoAssetDefinitions {
-  /** `demo/textures/ship-a.png` (4 kB). Kenney Simple Space, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `demo/textures/ship-a.png` (4 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
   readonly ship: ResourceAsset<Texture>;
   /** `demo/textures/particle-flame.png` (54 kB). Kenney Particle Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly particleFlame: ResourceAsset<Texture>;
@@ -174,6 +174,8 @@ export interface DemoAssetDefinitions {
   readonly soundImpactGlassHeavy: ResourceAsset<Sound>;
   /** `audio/impactWood_heavy_000.ogg` (6 kB). Kenney Impact Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly soundImpactWoodHeavy: ResourceAsset<Sound>;
+  /** `audio/impactMetal_heavy_000.ogg` (6 kB). Kenney Impact Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  readonly soundImpactMetalHeavy: ResourceAsset<Sound>;
   /** `demo/sound/jump.ogg` (6 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly soundJump: ResourceAsset<Sound>;
   /** `demo/sound/coin.ogg` (6 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
@@ -379,6 +381,7 @@ export const demoAssetCategories: Readonly<Record<DemoAssetKey, DemoAssetCategor
   soundImpactBellHeavy: 'sound',
   soundImpactGlassHeavy: 'sound',
   soundImpactWoodHeavy: 'sound',
+  soundImpactMetalHeavy: 'sound',
   soundJump: 'sound',
   soundCoin: 'sound',
   soundHurt: 'sound',
@@ -522,6 +525,7 @@ export const buildDemoAssets = (url: (path: string) => string): DemoAssetDefinit
     soundImpactBellHeavy: Asset.type('sound', url('audio/impactBell_heavy_000.ogg')),
     soundImpactGlassHeavy: Asset.type('sound', url('audio/impactGlass_heavy_000.ogg')),
     soundImpactWoodHeavy: Asset.type('sound', url('audio/impactWood_heavy_000.ogg')),
+    soundImpactMetalHeavy: Asset.type('sound', url('audio/impactMetal_heavy_000.ogg')),
     soundJump: Asset.type('sound', url('demo/sound/jump.ogg')),
     soundCoin: Asset.type('sound', url('demo/sound/coin.ogg')),
     soundHurt: Asset.type('sound', url('demo/sound/hurt.ogg')),

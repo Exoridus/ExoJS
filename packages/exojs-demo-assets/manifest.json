@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "profiles": {
     "standard": {
-      "files": 160,
-      "bytes": 18866140
+      "files": 161,
+      "bytes": 18872250
     },
     "extended": {
       "files": 1,
@@ -21,7 +21,7 @@
       "path": "demo/textures/ship-a.png",
       "bytes": 3601,
       "sha256": "d12532d8d6b36fe9d739475317dcc74f0d621810635766af3bda5d4fd5868c94",
-      "provenance": "kenney-simple-space"
+      "provenance": "exojs"
     },
     {
       "key": "particleFlame",
@@ -839,6 +839,16 @@
       "provenance": "kenney-impact-sounds"
     },
     {
+      "key": "soundImpactMetalHeavy",
+      "type": "sound",
+      "category": "sound",
+      "profile": "standard",
+      "path": "audio/impactMetal_heavy_000.ogg",
+      "bytes": 6110,
+      "sha256": "e07045693e4a2b3d165c424e3dab4c781d9ff8880a386880ac89a51315d7f831",
+      "provenance": "kenney-impact-sounds"
+    },
+    {
       "key": "soundJump",
       "type": "sound",
       "category": "sound",
@@ -1569,6 +1579,15 @@
       "profile": "standard",
       "provenance": "kenney-impact-sounds",
       "upstream": "demo/vendor/kenney/impact-sounds/Audio/impactGlass_heavy_000.ogg"
+    },
+    {
+      "path": "audio/impactMetal_heavy_000.ogg",
+      "bytes": 6110,
+      "sha256": "e07045693e4a2b3d165c424e3dab4c781d9ff8880a386880ac89a51315d7f831",
+      "role": "entry",
+      "profile": "standard",
+      "provenance": "kenney-impact-sounds",
+      "upstream": "demo/vendor/kenney/impact-sounds/Audio/impactMetal_heavy_000.ogg"
     },
     {
       "path": "audio/impactWood_heavy_000.ogg",
@@ -2550,7 +2569,7 @@
       "sha256": "d12532d8d6b36fe9d739475317dcc74f0d621810635766af3bda5d4fd5868c94",
       "role": "entry",
       "profile": "standard",
-      "provenance": "kenney-simple-space"
+      "provenance": "exojs"
     },
     {
       "path": "demo/vendor/kenney/background-elements-remastered/License.txt",
@@ -3007,13 +3026,6 @@
       "license": "CC0-1.0",
       "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "source": "https://kenney.nl/assets/particle-pack"
-    },
-    "kenney-simple-space": {
-      "title": "Kenney Simple Space",
-      "author": "Kenney (kenney.nl)",
-      "license": "CC0-1.0",
-      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "source": "https://kenney.nl/assets/simple-space"
     },
     "kenney-input-prompts": {
       "title": "Kenney Input Prompts",

@@ -102,6 +102,7 @@ export const demoAssets: DemoAssetDefinitions = Object.freeze({
   soundImpactBellHeavy: Asset.type('sound', new URL('../media/audio/impactBell_heavy_000.ogg', import.meta.url).href),
   soundImpactGlassHeavy: Asset.type('sound', new URL('../media/audio/impactGlass_heavy_000.ogg', import.meta.url).href),
   soundImpactWoodHeavy: Asset.type('sound', new URL('../media/audio/impactWood_heavy_000.ogg', import.meta.url).href),
+  soundImpactMetalHeavy: Asset.type('sound', new URL('../media/audio/impactMetal_heavy_000.ogg', import.meta.url).href),
   soundJump: Asset.type('sound', new URL('../media/demo/sound/jump.ogg', import.meta.url).href),
   soundCoin: Asset.type('sound', new URL('../media/demo/sound/coin.ogg', import.meta.url).href),
   soundHurt: Asset.type('sound', new URL('../media/demo/sound/hurt.ogg', import.meta.url).href),

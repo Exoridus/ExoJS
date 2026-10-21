@@ -120,13 +120,6 @@
       "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "source": "https://kenney.nl/assets/particle-pack"
     },
-    "kenney-simple-space": {
-      "title": "Kenney Simple Space",
-      "author": "Kenney (kenney.nl)",
-      "license": "CC0-1.0",
-      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "source": "https://kenney.nl/assets/simple-space"
-    },
     "kenney-input-prompts": {
       "title": "Kenney Input Prompts",
       "author": "Kenney (kenney.nl)",
@@ -277,7 +270,7 @@
     }
   },
   "entries": [
-    { "key": "ship", "type": "texture", "path": "demo/textures/ship-a.png", "category": "textures", "provenance": "kenney-simple-space" },
+    { "key": "ship", "type": "texture", "path": "demo/textures/ship-a.png", "category": "textures", "provenance": "exojs" },
     {
       "key": "particleFlame",
       "type": "texture",
@@ -744,6 +737,13 @@
       "key": "soundImpactWoodHeavy",
       "type": "sound",
       "path": "audio/impactWood_heavy_000.ogg",
+      "category": "sound",
+      "provenance": "kenney-impact-sounds"
+    },
+    {
+      "key": "soundImpactMetalHeavy",
+      "type": "sound",
+      "path": "audio/impactMetal_heavy_000.ogg",
       "category": "sound",
       "provenance": "kenney-impact-sounds"
     },
