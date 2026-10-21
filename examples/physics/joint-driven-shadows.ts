@@ -1,18 +1,6 @@
-import {
-  Application,
-  Color,
-  FixedResolutionCanvasSizing,
-  Graphics,
-  type RenderingContext,
-  Scene,
-  type Seconds,
-  SystemOrder,
-} from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, SystemOrder } from '@codexo/exojs';
 import { LightmapLighting, PhysicsOccluder, PointLight } from '@codexo/exojs/lighting';
 import { BoxShape, CircleShape, type PhysicsBody, PhysicsWorld, RevoluteJoint } from '@codexo/exojs/physics';
-import { mountControls } from '@examples/runtime';
-
-const toDegrees = (radians: number): number => Math.round((Math.atan2(Math.sin(radians), Math.cos(radians)) * 180) / Math.PI);
 
 const makeBar = (width: number, color: Color): Graphics => {
   const bar = new Graphics();
@@ -35,8 +23,6 @@ class JointShadowsScene extends Scene {
   private hinge!: RevoluteJoint;
   private dragging = false;
   private targetAngle = 0;
-  private hud!: ReturnType<typeof mountControls>;
-  private statusClock = 0;
 
   override init(): void {
     this.backdrop.fillColor = new Color(27, 39, 56);
@@ -84,12 +70,6 @@ class JointShadowsScene extends Scene {
       }),
     );
 
-    this.hud = mountControls({
-      title: 'Joint-Driven Shadows',
-      controls: [{ keys: 'Drag', action: 'pull the hinged arm through the light' }],
-      status: 'The collider casts a shadow as its revolute joint moves.',
-      hint: 'PhysicsOccluder includes dynamic bodies here; its static-only default would omit the moving arm.',
-    });
     this.app.input.onPointerDown.add(this.onDown);
     this.app.input.onPointerMove.add(this.onMove);
     this.app.input.onPointerUp.add(this.onEnd);
@@ -105,7 +85,6 @@ class JointShadowsScene extends Scene {
     this.dragging = true;
     this.hinge.enableMotor = true;
     this.onMove(pointer);
-    this.hud.setStatus('Dragging the arm; its physics collider drives the changing shadow.');
   };
   private readonly onMove = (pointer: { x: number; y: number }): void => {
     if (!this.dragging) {
@@ -114,7 +93,6 @@ class JointShadowsScene extends Scene {
 
     this.targetAngle = Math.atan2(pointer.y - 220, pointer.x - 650);
     this.endBody.wake();
-    this.hud.setStatus(`Aim ${toDegrees(this.targetAngle)} degrees; arm ${toDegrees(this.endBody.angle)} degrees.`);
   };
   private readonly onEnd = (): void => {
     if (!this.dragging) {
@@ -124,10 +102,9 @@ class JointShadowsScene extends Scene {
     this.dragging = false;
     this.hinge.enableMotor = false;
     this.hinge.motorSpeed = 0;
-    this.hud.setStatus('Released. The hinged arm settles under gravity.');
   };
 
-  override update(delta: Seconds): void {
+  override update(): void {
     if (this.dragging) {
       // The body angle accumulates whole turns while atan2 stays within +-pi:
       // steer by the shortest signed difference, not the raw one.
@@ -136,19 +113,6 @@ class JointShadowsScene extends Scene {
 
       this.hinge.motorSpeed = Math.max(-6, Math.min(6, error * 10));
     }
-
-    this.statusClock += delta;
-
-    if (this.statusClock < 0.25) {
-      return;
-    }
-
-    this.statusClock = 0;
-    this.hud.setStatus(
-      this.dragging
-        ? `Aim ${toDegrees(this.targetAngle)} degrees; arm ${toDegrees(this.endBody.angle)} degrees.`
-        : `Arm at (${this.endBody.x.toFixed(0)}, ${this.endBody.y.toFixed(0)}). Drag it to change its shadow.`,
-    );
   }
 
   override draw(context: RenderingContext): void {
@@ -163,7 +127,6 @@ class JointShadowsScene extends Scene {
     this.app.input.onPointerMove.remove(this.onMove);
     this.app.input.onPointerUp.remove(this.onEnd);
     this.app.input.onPointerCancel.remove(this.onEnd);
-    this.hud?.dispose();
     this.backdrop.destroy();
     this.anchor.destroy();
     this.arm.destroy();

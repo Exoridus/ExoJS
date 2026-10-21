@@ -82,12 +82,7 @@ class IsometricScene extends Scene {
       },
       { order: SystemOrder.Physics - 1 },
     );
-    this.hud = mountControls({
-      title: 'Isometric Landscape',
-      controls: [{ keys: 'Click', action: 'pick a diamond and move toward it' }],
-      status: 'Cross the canal through the central bridge. Cyan outlines show solid banks.',
-      hint: 'Kenney Isometric Tiles Landscape (CC0). The actor collides in logical space; its position is projected onto the map.',
-    });
+    this.hud = mountControls();
     this.app.input.onPointerTap.add(this.onTap);
   }
 
@@ -120,7 +115,7 @@ class IsometricScene extends Scene {
         return [point.x, point.y];
       }),
     );
-    this.hud.setStatus(`Cell (${tx}, ${ty}) - logical target (${this.target.x}, ${this.target.y}). Click the bridge to pass the banks.`);
+    this.hud.setStatus(`Cell (${tx}, ${ty}) - logical target (${this.target.x}, ${this.target.y})`);
   };
 
   override draw(context: RenderingContext): void {

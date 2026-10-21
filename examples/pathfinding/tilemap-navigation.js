@@ -230,22 +230,14 @@ class TilemapNavigationScene extends Scene {
     this.patrol.agent.onStatusChange.add(this.onPatrolStatus);
     this.advancePatrol();
     this.app.input.onPointerTap.add(this.onTap);
-    this.hud = mountControls({
-      title: 'Tilemap Navigation',
-      controls: [
-        { keys: 'WASD / Arrows', action: 'move the player' },
-        { keys: 'Click', action: 'open or close a tile' },
-      ],
-      status: '',
-      hint: 'Hunters re-route when you move to another tile or edit the map; the blue patroller follows a waypoint graph.',
-    });
+    this.hud = mountControls();
   }
   update() {
     // Rebuilds only the collider blocks whose tiles changed; the navigation
     // space synchronises itself when the agents read it.
     this.colliders.sync();
     const statuses = this.hunters.map(({ agent }) => agent.status).join(', ');
-    this.hud.setStatus(`hunters: ${statuses} · patrol: ${this.patrol.agent.status} · navigation revision ${this.navigation.revision}`);
+    this.hud.setStatus(`hunters: ${statuses} · patrol: ${this.patrol.agent.status}`);
   }
   draw(context) {
     const overlay = this.overlay;

@@ -71,12 +71,7 @@ class KinematicMovementScene extends Scene {
     hero.addComponent(new Steering(this.movement, this.controls.move));
     this.addChild(hero);
     this.debug = new PhysicsDebugDraw(this.app, this.world, { drawShapes: true });
-    this.hud = mountControls({
-      title: 'Kinematic Movement',
-      controls: [{ keys: 'WASD / Arrows', action: 'move' }],
-      status: '',
-      hint: 'Push into a wall at an angle to slide along it; drive into a corner of the room to stop there.',
-    });
+    this.hud = mountControls();
   }
   update() {
     const { blocked, contactNormal } = this.movement;

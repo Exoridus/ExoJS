@@ -1,7 +1,7 @@
 // Auto-generated from hexagonal-grid.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, Scene, Texture, TextureRegion } from '@codexo/exojs';
 import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileProjection, TileSet } from '@codexo/exojs/tilemap';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { choice, demoPanel } from '@examples/runtime';
 // Staggered and hexagonal grids plus a collection-of-images tileset, all
 // built in code - no map file and no image assets.
 //
@@ -73,33 +73,24 @@ const paintTile = (projection, fill, edge, tree) => {
 class HexagonalGridScene extends Scene {
   worldRoot = new Container();
   highlight = new Graphics();
-  layoutIndex = 0;
   map;
   node;
   textures = [];
-  hud;
+  panel;
   init() {
-    this.hud = mountControls({
-      title: 'Hexagonal & Staggered Grids',
-      controls: [
-        { keys: 'Pointer', action: 'pick the cell under it' },
-        { keys: 'panel', action: 'switch the grid layout' },
-      ],
-      status: 'Move the pointer over the map.',
-      hint: 'Each tile is its own canvas texture in an image-collection TileSet; trees overhang the row above, as in Tiled.',
+    this.panel = demoPanel({
+      title: 'Grid',
+      controls: {
+        layout: choice(
+          'Layout',
+          layouts.map(layout => layout.name),
+        ),
+      },
+      onChange: (_key, name) => this.build(layouts.findIndex(layout => layout.name === name)),
     });
-    const panel = mountControlPanel({ title: 'Grid' });
-    panel.addCycle({
-      label: 'Layout',
-      options: layouts.map(layout => layout.name),
-      index: 0,
-      onChange: index => this.build(index),
-    });
-    this.build(0);
     this.app.input.onPointerMove.add(this.onPointerMove);
   }
   build(index) {
-    this.layoutIndex = index;
     this.node?.destroy();
     this.map?.destroy();
     for (const texture of this.textures) {
@@ -162,7 +153,7 @@ class HexagonalGridScene extends Scene {
     const { tx, ty } = this.map.pixelToTile(pointer.x - this.worldRoot.x, pointer.y - this.worldRoot.y);
     this.highlight.clear();
     if (tx < 0 || ty < 0 || tx >= COLUMNS || ty >= ROWS) {
-      this.hud.setStatus(`Outside the map - nearest cell (${tx}, ${ty}).`);
+      this.panel.status(`Outside the map - nearest cell (${tx}, ${ty}).`);
       return;
     }
     const corner = projection.tileToPixel(tx, ty);
@@ -173,14 +164,14 @@ class HexagonalGridScene extends Scene {
     this.highlight.drawPolygon(outline.map((value, i) => value + (i % 2 === 0 ? corner.x : corner.y)));
     const tile = this.map.getTileAt(1, tx, ty);
     const terrain = tile?.localTileId === TREE ? 'tree' : (['grass', 'water', 'sand'][tile?.localTileId ?? 0] ?? 'grass');
-    this.hud.setStatus(`${layouts[this.layoutIndex].name}: cell (${tx}, ${ty}) - ${terrain}`);
+    this.panel.status(`Cell (${tx}, ${ty}) - ${terrain}`);
   };
   draw(context) {
     context.render(this.worldRoot);
   }
   destroy() {
     this.app.input.onPointerMove.remove(this.onPointerMove);
-    this.hud?.dispose();
+    this.panel?.dispose();
     this.worldRoot.destroy();
     this.map?.destroy();
     for (const texture of this.textures) {

@@ -35,7 +35,7 @@ class SpriteFollowsBodyScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    // Gravity in px/s², +Y down - matches the engine's screen space.
+    // Gravity in px/s^2, +Y down - matches the engine's screen space.
     this.world = new PhysicsWorld({ gravity: { x: 0, y: 1400 }, fixedDelta: app.fixedTimeStep });
     this.systems.add(this.world, { order: SystemOrder.Physics });
 
@@ -43,7 +43,7 @@ class SpriteFollowsBodyScene extends Scene {
 
     this.floorY = height - 80;
 
-    // ── Static floor ──────────────────────────────────────────────────
+    // Static floor.
     // A wide static body. `world.attach` binds it to the floor sprite, so
     // the sprite is positioned from the body (no manual placement needed).
     const floorWidth = width - 120;
@@ -60,7 +60,7 @@ class SpriteFollowsBodyScene extends Scene {
       shape: new BoxShape(floorWidth, floorHeight),
     });
 
-    // ── Dynamic actor ─────────────────────────────────────────────────
+    // Dynamic actor.
     // A dynamic body dropped from above. Its collider is a box sized to the
     // character art; `world.attach` binds the sprite, so it falls, lands and
     // tracks the body (position + rotation) every fixed step.
@@ -73,15 +73,7 @@ class SpriteFollowsBodyScene extends Scene {
       restitution: 0.15,
     });
 
-    this.hud = mountControls({
-      title: 'Drag and Throw Physics',
-      controls: [
-        { keys: 'Drag', action: 'pull and throw the actor' },
-        { keys: 'R', action: 'reset the actor' },
-      ],
-      status: 'Dropping…',
-      hint: 'world.attach binds the sprite to a body. MouseJoint pulls the body, and the sprite follows the simulated transform.',
-    });
+    this.hud = mountControls({ status: 'Dropping...' });
     app.input.onPointerDown.add(this.onDown);
     app.input.onPointerMove.add(this.onMove);
     app.input.onPointerUp.add(this.onEnd);

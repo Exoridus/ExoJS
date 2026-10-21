@@ -26,7 +26,7 @@ import {
   TileSet,
 } from '@codexo/exojs/tilemap';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { choice, demoPanel, slider } from '@examples/runtime';
 import { fbm } from '@examples/terrain-noise';
 
 import terrainWorkerSource from './worker-streamed-terrain.worker.ts?worker';
@@ -94,7 +94,7 @@ class WorkerStreamedTerrainScene extends Scene {
   private hudTimer = 0;
   private frameIntervalMs = 0;
   private streamingMs = 0;
-  private hud!: ReturnType<typeof mountControls>;
+  private panel!: ReturnType<typeof demoPanel>;
 
   override async load(): Promise<void> {
     const tilesTexture = await this.loader.load(assets.mapPackTilesheet);
@@ -226,40 +226,34 @@ class WorkerStreamedTerrainScene extends Scene {
   }
 
   private setupHud(): void {
-    this.hud = mountControls({
-      title: 'Streamed Terrain',
-      controls: [
-        { keys: 'WASD', action: 'fly across the endless world' },
-        { keys: 'panel', action: 'change seed, provider, and sample cost' },
-      ],
-      status: '',
-      hint: 'Both providers generate the same unbounded world from the current seed. Raise sample cost, then switch to worker to compare frame time while moving.',
-    });
-    const panel = mountControlPanel({ title: 'Provider' });
-    panel.addCycle({
-      label: 'Provider',
-      options: ['sync', 'worker'],
-      index: 0,
-      onChange: (_, mode) => {
-        this.providerMode = mode as 'worker' | 'sync';
-        this.rebuildStreamer();
+    this.panel = demoPanel({
+      title: 'Provider',
+      controls: {
+        provider: choice('Provider', ['sync', 'worker']),
+        cost: slider('Sample cost', { min: 0, max: 500, value: 0, step: 50, format: value => `${value}` }),
       },
-    });
-    panel.addSlider({
-      label: 'Sample cost',
-      min: 0,
-      max: 500,
-      step: 50,
-      value: 0,
-      onChange: value => {
-        this.extraCost = value;
-        this.rebuildStreamer();
+      actions: {
+        'New seed': () => {
+          this.seed = (Math.random() * 0x7fffffff) | 0;
+          this.rebuildStreamer();
+        },
       },
-    });
-    panel.addButton({
-      label: 'New seed',
-      onClick: () => {
-        this.seed = (Math.random() * 0x7fffffff) | 0;
+      onChange: (key, value) => {
+        // The initial values match the fields, so mounting does not rebuild.
+        if (key === 'provider') {
+          if (value === this.providerMode) {
+            return;
+          }
+
+          this.providerMode = value as 'worker' | 'sync';
+        } else {
+          if (value === this.extraCost) {
+            return;
+          }
+
+          this.extraCost = value as number;
+        }
+
         this.rebuildStreamer();
       },
     });
@@ -295,7 +289,7 @@ class WorkerStreamedTerrainScene extends Scene {
       const ty = Math.floor(this.explorer.y / TILE);
 
       this.hudTimer = 0;
-      this.hud.setStatus(
+      this.panel.status(
         `${this.providerMode} · ${this.frameIntervalMs.toFixed(1)} ms between frames · ${this.streamingMs.toFixed(1)} ms streaming on the main thread · ${this.streamer.residentCount} chunks · tile ${tx}, ${ty} · seed ${this.seed} · cost ${this.extraCost}`,
       );
     }
@@ -306,6 +300,7 @@ class WorkerStreamedTerrainScene extends Scene {
   }
 
   override destroy(): void {
+    this.panel?.dispose();
     this.streamer?.destroy();
     this.workerSourceHandle?.destroy();
     this.workerSourceHandle = null;

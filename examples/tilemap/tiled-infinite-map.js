@@ -82,12 +82,7 @@ class TiledInfiniteMapScene extends Scene {
     });
   }
   setupHud() {
-    this.hud = mountControls({
-      title: 'Tiled Infinite Map Streaming',
-      controls: [{ keys: 'WASD', action: 'fly the free camera across the streamed map' }],
-      status: '',
-      hint: '"Ground" and "Props" each stream through their own ChunkStreamer, sourced from TiledMap.getChunkSource(layer.id) — Tiled\'s on-disk 16x16 chunks are re-sliced onto the runtime chunk grid on demand, one requested chunk at a time.',
-    });
+    this.hud = mountControls();
   }
   update(delta) {
     if (this.moveX !== 0 || this.moveY !== 0) {

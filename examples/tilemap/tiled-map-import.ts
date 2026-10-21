@@ -39,12 +39,7 @@ class TiledMapImportScene extends Scene {
     }
 
     this.redrawZones();
-    this.hud = mountControls({
-      title: 'Load a Tiled Map',
-      controls: [{ keys: 'Click', action: 'inspect an authored object' }],
-      status: `Loaded Harbor Plaza: ${this.zones.length} objects in the Zones layer.`,
-      hint: 'The common tileMap asset type imports the .tmj and TileMapNode renders it. Object inspection is optional.',
-    });
+    this.hud = mountControls({ status: `Loaded Harbor Plaza: ${this.zones.length} objects in the Zones layer.` });
     this.app.input.onPointerTap.add(this.onTap);
   }
 
@@ -60,7 +55,7 @@ class TiledMapImportScene extends Scene {
     this.hud.setStatus(
       selected
         ? `${selected.name} (${selected.type || selected.kind})${properties ? ` - ${properties}` : ''}`
-        : 'Click a highlighted zone to inspect its authored data.',
+        : `Loaded Harbor Plaza: ${this.zones.length} objects in the Zones layer.`,
     );
   };
 

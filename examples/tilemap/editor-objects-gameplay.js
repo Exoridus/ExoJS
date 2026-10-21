@@ -37,12 +37,7 @@ class EditorObjectsScene extends Scene {
       Collectible: object => spawn(object, new Color(75, 225, 241)),
     });
     this.spawns = await spawner.spawn(map, undefined);
-    this.hud = mountControls({
-      title: 'Editor Objects Become Gameplay',
-      controls: [{ keys: 'Click', action: 'toggle the switch, then collect the gem' }],
-      status: 'The authored switch controls the door. Open it to collect the gem.',
-      hint: 'The three colored objects come from the Tiled object layer. MapObjectSpawner creates their runtime counterparts.',
-    });
+    this.hud = mountControls({ status: 'The authored switch controls the door. Open it to collect the gem.' });
     this.app.input.onPointerTap.add(this.onTap);
   }
   onTap = pointer => {

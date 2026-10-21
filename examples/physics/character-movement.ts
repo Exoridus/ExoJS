@@ -161,16 +161,7 @@ class CharacterMovementScene extends Scene {
     this.addChild(hero);
 
     this.debug = new PhysicsDebugDraw(this.app, this.world, { drawShapes: true });
-    this.hud = mountControls({
-      title: 'Character Movement',
-      controls: [
-        { keys: 'A / D', action: 'walk' },
-        { keys: 'Space / W', action: 'jump (once more in the air)' },
-        { keys: 'S', action: 'drop through the one-way platform' },
-      ],
-      status: '',
-      hint: 'Climb the 30° slope and the low step; the steep face and the tall block stop a walk. Ride the moving platforms.',
-    });
+    this.hud = mountControls();
   }
 
   override update(): void {
@@ -245,7 +236,7 @@ class CharacterMovementScene extends Scene {
       level.addCollider({ shape: new BoxShape(width, height), offset: { x, y } });
     }
 
-    // A walkable 30° ramp up to a plateau, and a 60° face down the other side.
+    // A walkable 30 degree ramp up to a plateau, and a 60 degree face down the other side.
     const rampRise = Math.tan(Math.PI / 6) * 180;
     const faceRun = rampRise / Math.tan(Math.PI / 3);
 

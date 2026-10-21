@@ -5,14 +5,13 @@ import { BoxShape, PhysicsWorld } from '@codexo/exojs/physics';
 import { buildObjectLayerColliders } from '@codexo/exojs/tilemap-physics';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { demoPanel, toggle } from '@examples/runtime';
 class TiledMapPhysicsActorScene extends Scene {
   world;
   mapNode;
   actor;
   actorBody;
   debug;
-  hud;
   panel;
   showOutlines = false;
   settled = 0;
@@ -37,7 +36,7 @@ class TiledMapPhysicsActorScene extends Scene {
     if (!collision) {
       throw new Error('physics-room.tmj needs a Collision object layer.');
     }
-    const colliders = buildObjectLayerColliders(this.world, collision, { friction: 0.7, restitution: 0.05 });
+    buildObjectLayerColliders(this.world, collision, { friction: 0.7, restitution: 0.05 });
     const characters = new Spritesheet(this.charactersTexture, this.spritesheetData);
     this.actor = characters.getFrameSprite('character_green_front').setAnchor(0.5);
     this.actorBody = this.world.attach(this.actor, {
@@ -49,17 +48,10 @@ class TiledMapPhysicsActorScene extends Scene {
     });
     this.actorBody.applyImpulse(2600, 0);
     this.debug = new PhysicsDebugDraw(this.app, this.world, { drawShapes: true, drawCenters: true });
-    this.hud = mountControls({
-      title: 'Tiled Collision Map',
-      controls: [{ keys: 'Panel', action: 'toggle authored collision outlines' }],
-      status: `${colliders.length} static colliders from the loaded Tiled map`,
-      hint: 'buildObjectLayerColliders() turns rectangles placed in the .tmj Collision layer into static physics bodies.',
-    });
-    this.panel = mountControlPanel({ title: 'Collision' });
-    this.panel.addToggle({
-      label: 'Show outlines',
-      value: false,
-      onChange: value => {
+    this.panel = demoPanel({
+      title: 'Collision',
+      controls: { outlines: toggle('Show outlines', false) },
+      onChange: (_key, value) => {
         this.showOutlines = value;
       },
     });
@@ -86,7 +78,6 @@ class TiledMapPhysicsActorScene extends Scene {
     }
   }
   destroy() {
-    this.hud?.dispose();
     this.panel?.dispose();
     this.debug?.destroy();
     this.mapNode?.destroy();
