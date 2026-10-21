@@ -1,7 +1,6 @@
 {
   // Static type-check for the consumer-facing code the repository ships as
-  // copy-paste material: the playground example catalog and the opt-in
-  // all-in-one IIFE entry.
+  // copy-paste material: the playground example catalog.
   //
   // The runtime example smoke (site/scripts/smoke-examples.ts) only catches
   // crashes and missing canvases - stale TextStyle keys like `fill`, `stroke`,
@@ -22,13 +21,9 @@
   // `Scene.tweens` / `Scene.loader` getters, which throw the same way when
   // accessed before the scene is attached).
   //
-  // Scope: the full example catalog plus `scripts/exo-full.entry.ts`. Every
-  // authored `.ts` under `examples/` is type-checked against the engine source
-  // types, so stale TextStyle keys are caught catalog-wide. The full-bundle entry is the
-  // same kind of program - a named re-export surface resolved against every
-  // extension package's source - and the production build only compiles it when
-  // EXOJS_FULL_BUNDLE=1, so without it here a stale named export is visible only
-  // in the CI build lane. `examples/shared/runtime.ts` supplies the shared
+  // Scope: the full example catalog. Every authored `.ts` under `examples/` is
+  // type-checked against the engine source types, so stale TextStyle keys are
+  // caught catalog-wide. `examples/shared/runtime.ts` supplies the shared
   // helper kit and the playground-only globals (`window.assets`,
   // `__EXAMPLE_META__`).
   //
@@ -78,6 +73,6 @@
       "@examples/terrain-noise": ["./examples/shared/terrain-noise.ts"]
     }
   },
-  "include": ["examples/**/*.ts", "examples/tilemap/worker-streamed-terrain.js", "scripts/exo-full.entry.ts", "src/typings.d.ts"],
+  "include": ["examples/**/*.ts", "examples/tilemap/worker-streamed-terrain.js", "src/typings.d.ts"],
   "exclude": ["examples/shared/editor-support.d.ts", "examples/**/*.worker.ts"]
 }

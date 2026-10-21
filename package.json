@@ -18,14 +18,6 @@
     "dist/exo.esm.js.map",
     "dist/exo.debug.esm.js",
     "dist/exo.debug.esm.js.map",
-    "dist/exo.iife.js",
-    "dist/exo.iife.js.map",
-    "dist/exo.iife.min.js",
-    "dist/exo.iife.min.js.map",
-    "dist/exo.full.iife.js",
-    "dist/exo.full.iife.js.map",
-    "dist/exo.full.iife.min.js",
-    "dist/exo.full.iife.min.js.map",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"
@@ -174,6 +166,7 @@
     "test:physics-perf": "vitest run --project=physics-perf",
     "test:production-stripping": "vitest run --project=exojs test/build-defines/production-stripping.test.ts",
     "test:hybrid-runtime": "vitest run --project=exojs test/release/hybrid-runtime-exports.test.ts test/release/hybrid-runtime-identity.test.ts",
+    "test:esm-importmap": "tsx scripts/ci/verify-esm-importmap.ts",
     "test:skips": "pnpm test --reporter=default --reporter=junit --outputFile.junit=./test-results/unit.junit.xml && tsx scripts/check-skipped-tests.ts",
     "test:skips:check": "tsx scripts/check-skipped-tests.ts",
     "test:skips:update-baseline": "tsx scripts/check-skipped-tests.ts --update-baseline",
@@ -217,7 +210,7 @@
     "examples:sync:check": "tsx scripts/check-examples-sync.ts",
     "legacy-shims:generate": "tsx scripts/release/legacy-shims.ts",
     "legacy-shims:check": "tsx scripts/release/legacy-shims.ts --check",
-    "full-bundle:exports:check": "tsx scripts/check-dist-fresh.ts && node scripts/check-full-bundle-exports.ts",
+    "dist:check": "tsx scripts/check-dist-fresh.ts",
     "sync:example-capabilities": "tsx ./scripts/sync-example-capabilities.ts",
     "site:build": "tsx scripts/check-dist-fresh.ts && pnpm --filter @codexo/exojs-examples build",
     "size": "size-limit",
@@ -259,16 +252,6 @@
     {
       "path": "dist/exo.esm.js",
       "limit": "700 KB",
-      "gzip": true
-    },
-    {
-      "path": "dist/exo.iife.min.js",
-      "limit": "367 KB",
-      "gzip": true
-    },
-    {
-      "path": "dist/exo.full.iife.min.js",
-      "limit": "647 KB",
       "gzip": true
     },
     {

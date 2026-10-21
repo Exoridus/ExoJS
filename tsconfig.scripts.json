@@ -51,9 +51,6 @@
     "noUncheckedIndexedAccess": false,
     "exactOptionalPropertyTypes": false
   },
-  // `exo-full.entry.ts` is a bundler entry, not a Node program: it re-exports
-  // every extension package and is type-checked by `tsconfig.examples.json`
-  // against their sources.
   // `competitors/link.ts` is bench SETUP rather than bench code: it imports only
   // `node:` built-ins and runs before the competitor install exists, so it
   // belongs to this always-checked tooling program rather than to the bench
@@ -69,7 +66,6 @@
     "packages/exojs-bench/competitors/*.ts"
   ],
   "exclude": [
-    "scripts/exo-full.entry.ts",
     // Consumer programs for `verify:declaration-semantics`, not repository code.
     // They are compiled against the *built* declarations as an external package
     // would, in a throwaway workspace, and the contracts they assert are about

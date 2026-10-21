@@ -87,6 +87,17 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         examples: ['getting-started/resize-and-dpr'],
         apiLinks: ['application'],
       },
+      {
+        path: 'getting-started/migration-v020',
+        level: 'intermediate',
+        learningGoals: [
+          'Replace the retired runtime package names with Core subpaths',
+          'Move script-tag consumers from the removed IIFE bundles to module scripts with an import map',
+        ],
+        prerequisites: ['getting-started/setup'],
+        examples: [],
+        apiLinks: ['application', 'loader'],
+      },
     ],
   },
   {

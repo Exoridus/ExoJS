@@ -120,16 +120,9 @@ For a bundler-based application:
 npm install --save-exact @codexo/exojs
 ```
 
-The package provides ESM and TypeScript declarations. TypeScript projects resolve the declarations with `"moduleResolution": "bundler"`; `node16` and `nodenext` resolution are not supported. The package also includes script-tag bundles:
+The package provides ESM and TypeScript declarations. TypeScript projects resolve the declarations with `"moduleResolution": "bundler"` or `node16`/`nodenext`; no consumer `paths` mapping or `skipLibCheck` is needed. Since v0.20 the distribution is ESM-only; the prebuilt IIFE script-tag bundles of earlier lines (`exo.iife.js`, `exo.full.iife.js`) are gone. A script-tag consumer uses a module script with an import map against `dist/esm`; see the [v0.20 migration guide](https://exoridus.github.io/ExoJS/en/guide/getting-started/migration-v020/).
 
-| Bundle                  | Contents                                                                                             |
-| ----------------------- | ---------------------------------------------------------------------------------------------------- |
-| `dist/exo.iife.js`      | Core runtime on the `Exo` global                                                                     |
-| `dist/exo.full.iife.js` | Core plus the official runtime extensions except React and tilemap physics, on the same `Exo` global |
-
-Minified variants are provided alongside them. Use one Core instance per application; do not load both bundles into the same page.
-
-The [Full Release ZIP](https://github.com/Exoridus/ExoJS/releases/latest/download/exojs-full.zip) includes a built runtime, examples, and documentation. See [Deployment](https://exoridus.github.io/ExoJS/en/guide/shipping/deployment/) for static hosting and script-tag setup.
+The [Full Release ZIP](https://github.com/Exoridus/ExoJS/releases/latest/download/exojs-full.zip) includes a built runtime, examples, and documentation. See [Deployment](https://exoridus.github.io/ExoJS/en/guide/shipping/deployment/) for static hosting and module-script setup.
 
 ## Performance evidence
 

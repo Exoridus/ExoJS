@@ -5,7 +5,7 @@
  *
  *   npm/      every lockstep tarball (Core + extensions)
  *   vendor/   every lockstep package's ESM tree, plus Core's single-file
- *             bundles (exo.esm.js, the IIFE pair, the full IIFE pair)
+ *             ESM bundles (exo.esm.js, exo.debug.esm.js)
  *   examples/ src/** (TS), js/** (transpiled), assets/**, examples.json
  *   site/     the built static site (itself servable; references ./vendor + ./examples)
  *   README.md CHANGELOG.md LICENSE release-manifest.json checksums.sha256
@@ -40,20 +40,7 @@ export interface AssembleOptions {
  * mirrors the bundle entries of the root `package.json#files`; the test suite
  * pins the two together.
  */
-export const CORE_BUNDLE_FILES = [
-  'exo.esm.js',
-  'exo.esm.js.map',
-  'exo.debug.esm.js',
-  'exo.debug.esm.js.map',
-  'exo.iife.js',
-  'exo.iife.js.map',
-  'exo.iife.min.js',
-  'exo.iife.min.js.map',
-  'exo.full.iife.js',
-  'exo.full.iife.js.map',
-  'exo.full.iife.min.js',
-  'exo.full.iife.min.js.map',
-] as const;
+export const CORE_BUNDLE_FILES = ['exo.esm.js', 'exo.esm.js.map', 'exo.debug.esm.js', 'exo.debug.esm.js.map'] as const;
 
 /** `vendor/<dir>` for a lockstep package: the npm name without its scope. */
 export const vendorDirFor = (packageName: string): string => packageName.replace(/^@codexo\//, '');

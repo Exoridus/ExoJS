@@ -1,27 +1,22 @@
 /**
- * Builds the core package: `exo.esm.js`, `exo.debug.esm.js`, the preserveModules
- * `dist/esm` tree (with declarations) including every runtime module under
- * `dist/esm/<subpath>/`, `exo.iife.js`, and (production only)
- * `exo.iife.min.js`, `exo.full.iife.js` and `exo.full.iife.min.js`.
+ * Builds the core package: `exo.esm.js`, `exo.debug.esm.js`, and the
+ * preserveModules `dist/esm` tree (with declarations) including every runtime
+ * module under `dist/esm/<subpath>/`.
  *
  * Bundling runs on Rolldown; declarations are a separate `tsc
  * --emitDeclarationOnly` pass, since Rolldown has no declaration emitter. Core
  * and the runtime modules are emitted from ONE program: the `./debug` entry
  * re-exports the physics draw layer, whose declarations in turn name Core's
- * debug types, so neither half can be emitted against the other's output. `EXOJS_ENV=development` selects the dev build
- * (`pnpm build:dev`); `--watch` runs Rolldown's watch mode instead of a single
- * build (`pnpm build:watch`) and skips declarations - they are not part of the
- * inner dev loop this mode serves, and `pnpm typecheck` already covers type
- * correctness.
+ * debug types, so neither half can be emitted against the other's output.
+ * `EXOJS_ENV=development` selects the dev build (`pnpm build:dev`); `--watch`
+ * runs Rolldown's watch mode instead of a single build (`pnpm build:watch`)
+ * and skips declarations - they are not part of the inner dev loop this mode
+ * serves, and `pnpm typecheck` already covers type correctness.
  *
- * The production build also emits the all-in-one IIFE bundle (`exo.full.iife.js`
- * and its minified twin: core + every extension package except react, whose
- * peer cannot ship in a script-tag bundle), transpiling TypeScript source
- * across multiple rootDirs (src/ and each extension package's src/) -
- * Rolldown's built-in transpiler has no single-Program rootDir constraint, so
- * this needs no separate esbuild-based path the way the previous Rollup
- * pipeline did. The dev build and watch mode skip it: it is the slowest job of
- * the set and nothing in the inner loop reads it.
+ * The v0.20 distribution is ESM-only: the four prebuilt IIFE global bundles
+ * (`exo.iife.js`/`exo.full.iife.js` and their minified twins) were removed with
+ * v0.20. A script-tag consumer uses a module script with an import map against
+ * `dist/esm` (see the migration guide).
  */
 import { cpSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative as relativePath, resolve as resolvePath } from 'node:path';
@@ -67,33 +62,6 @@ const layout = createShippedLayout(rootDir);
 // resolved paths to relative specifiers in the emitted ESM tree. The trailing
 // standard conditions keep normal dependency resolution intact.
 const sourceConditions = ['@codexo/exojs-source', 'browser', 'module', 'import', 'default'];
-
-// Full-bundle source conditions: includes per-package source conditions for
-// the extension packages that use `#` subpath imports internally (e.g.
-// exojs-particles).
-const fullSourceConditions = ['@codexo/exojs-source', '@codexo/exojs-particles-source', 'browser', 'module', 'import', 'default'];
-
-// Resolves @codexo/exojs-<name> -> packages/exojs-<name>/src/index.ts so the
-// full IIFE bundle can be built entirely from TypeScript source without
-// requiring the extension packages to be pre-built.
-//
-// The runtime-module subpaths resolve to their sources too rather than to the
-// built `dist/esm/<subpath>` tree: the minified bundle then minifies their
-// inlined worklet and shader text like the rest of the bundle.
-const extensionSourcePlugin: Plugin = {
-  name: 'extension-source',
-  resolveId(id: string) {
-    const module = RUNTIME_MODULES.find(candidate => id === `@codexo/exojs/${candidate.subpath}`);
-
-    if (module) {
-      return resolvePath(rootDir, module.dir, 'src', 'index.ts');
-    }
-
-    const match = /^@codexo\/exojs-([^/]+)$/.exec(id);
-
-    return match ? resolvePath(rootDir, 'packages', `exojs-${match[1]}`, 'src', 'index.ts') : null;
-  },
-};
 
 // The preserveModules tree emits `sources` one directory level too high
 // (`../../../../src/...` escapes the repo), so consumers (e.g. Vite serving the
@@ -166,25 +134,24 @@ const shared = {
   resolve: { conditionNames: sourceConditions, mainFields: ['browser', 'module', 'main'] },
 };
 
-const basisWorkerUrls = (scriptTag = false): Plugin => ({
+const basisWorkerUrls = (): Plugin => ({
   name: 'basis-worker-url',
   transform(code, id) {
     if (!/\/BasisKtx2Runtime\.(?:ts|js)$/.test(id.replaceAll('\\', '/'))) {
       return null;
     }
 
-    const result = code.replace('basis/ktx2.worker.ts', 'basis/ktx2.worker.js');
-
     return {
-      code: scriptTag
-        ? `const basisBundleUrl = typeof document === 'undefined' ? undefined : (document.currentScript?.src ?? document.baseURI);\n${result.replace('import.meta.url', 'basisBundleUrl')}`
-        : result,
+      // `import.meta.url` is correct for every v0.20 ESM consumer, including
+      // module scripts; the former script-tag variant that derived the URL
+      // from `document.currentScript` left with the IIFE bundles.
+      code: code.replace('basis/ktx2.worker.ts', 'basis/ktx2.worker.js'),
       map: {
         version: 3,
         sources: [id],
         sourcesContent: [code],
         names: [],
-        mappings: `${scriptTag ? ';' : ''}AAAA${';AACA'.repeat(code.split('\n').length - 1)}`,
+        mappings: `AAAA${';AACA'.repeat(code.split('\n').length - 1)}`,
       },
     };
   },
@@ -292,27 +259,6 @@ const modules = (): RolldownOptions => ({
     // transpilation source.
     minify: false,
   },
-});
-
-const iife = (minify: boolean): RolldownOptions => ({
-  ...shared,
-  input: 'src/index.ts',
-  plugins: [basisWorkerUrls(true), ...shaderAndWorkletPlugins(minify), ...codecovBundlePlugin(minify ? 'exo-iife-min' : 'exo-iife')],
-  output: { file: minify ? 'dist/exo.iife.min.js' : 'dist/exo.iife.js', format: 'iife', name: 'Exo', sourcemap: true, minify },
-});
-
-const fullBundle = (minify: boolean): RolldownOptions => ({
-  cwd: rootDir,
-  input: 'scripts/exo-full.entry.ts',
-  transform: { define: defines },
-  resolve: { conditionNames: fullSourceConditions, mainFields: ['browser', 'module', 'main'] },
-  plugins: [
-    extensionSourcePlugin,
-    basisWorkerUrls(true),
-    ...shaderAndWorkletPlugins(minify),
-    ...codecovBundlePlugin(minify ? 'exo-full-iife-min' : 'exo-full-iife'),
-  ],
-  output: { file: minify ? 'dist/exo.full.iife.min.js' : 'dist/exo.full.iife.js', format: 'iife', name: 'Exo', sourcemap: true, minify },
 });
 
 // Everything a runtime module imports from outside itself is a Core specifier:
@@ -541,7 +487,7 @@ const emitDeclarations = async (): Promise<void> => {
 
 if (watchMode) {
   await emitBasisRuntime();
-  const jobs = [bundled(false), debugBundled(false), modules(), ...(await runtimeModuleJobs()), iife(false)];
+  const jobs = [bundled(false), debugBundled(false), modules(), ...(await runtimeModuleJobs())];
   const watcher = watch(jobs as never);
   watcher.on('event', event => {
     if (event.code === 'BUNDLE_END') {
@@ -559,10 +505,7 @@ if (watchMode) {
 } else {
   // The runtime modules come after the Core tree they import.
   const moduleJobs = await runtimeModuleJobs();
-  const jobs =
-    buildMode === 'production'
-      ? [bundled(true), debugBundled(true), modules(), ...moduleJobs, iife(false), iife(true), fullBundle(false), fullBundle(true)]
-      : [bundled(true), debugBundled(true), modules(), ...moduleJobs, iife(false)];
+  const jobs = [bundled(true), debugBundled(true), modules(), ...moduleJobs];
 
   for (const job of jobs) {
     await runJob(job);

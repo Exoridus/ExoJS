@@ -197,7 +197,7 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
       projects.add('exojs');
 
       if (/^src\/(index\.ts|renderer-sdk\.ts|extensions\/)/.test(file) || file.endsWith('/index.ts')) {
-        add('typecheck:packages', 'full-bundle:exports:check');
+        add('typecheck:packages', 'dist:check');
         policy.needsDist = true;
 
         for (const manifest of packages()) {

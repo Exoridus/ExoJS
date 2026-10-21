@@ -1,0 +1,70 @@
+---
+title: 'Migrating to ExoJS v0.20'
+description: 'Move runtime imports to Core subpaths, replace script-tag bundles with module scripts, and understand the legacy compatibility shims.'
+---
+
+# Migrating to ExoJS v0.20
+
+ExoJS v0.20 folds the seven runtime packages into Core subpaths, consolidates the debug entry, and ships ESM only. This page is the breaking-change reference for that migration. Nothing here removes the older releases: published 0.19.x packages and the v0.19 script-tag bundles keep working for applications that pin them.
+
+## Runtime imports move to Core subpaths
+
+The seven runtime packages are no longer installed or published on their own. Import the same symbols from a Core subpath:
+
+| Before (0.19.x)                    | After (v0.20)                   |
+| ---------------------------------- | ------------------------------- |
+| `@codexo/exojs-tilemap`            | `@codexo/exojs/tilemap`         |
+| `@codexo/exojs-particles`          | `@codexo/exojs/particles`       |
+| `@codexo/exojs-audio-fx`           | `@codexo/exojs/audio-fx`        |
+| `@codexo/exojs-physics`            | `@codexo/exojs/physics`         |
+| `@codexo/exojs-tilemap-physics`    | `@codexo/exojs/tilemap-physics` |
+| `@codexo/exojs-lighting`           | `@codexo/exojs/lighting`        |
+| `@codexo/exojs/pathfinding`        | `@codexo/exojs/pathfinding`     |
+| `@codexo/exojs-physics/debug`      | `@codexo/exojs/debug`           |
+
+`@codexo/exojs/debug` is the one debug entry. It exports the existing debug layers plus `PhysicsDebugDraw` and `PhysicsDebugDrawOptions`; the former `@codexo/exojs-physics/debug` entry now forwards to it through the legacy shim. The adapters `@codexo/exojs-tiled`, `@codexo/exojs-ldtk`, `@codexo/exojs-aseprite` and `@codexo/exojs-react` stay separate packages, now consuming the Core tilemap subpath and declaring a `0.20.x` Core peer.
+
+Remove the seven retired package names from your `package.json` dependencies and install the matching `@codexo/exojs` version. Then move the import specifiers. An AST-based codemod in the repository does exactly this without touching prose, URLs or strings:
+
+```sh
+npx tsx scripts/codemods/migrate-v020-imports.ts src/
+npx tsx scripts/codemods/migrate-v020-imports.ts --check src/
+```
+
+It rewrites import/export declarations, `import()`, `require()`, `declare module` names and test-runner mocks in TypeScript, JavaScript, Markdown and MDX files. Deep imports of a retired package with no v0.20 equivalent are reported for a manual decision rather than rewritten. Package manifests are left alone.
+
+## Script tags: IIFE bundles are gone
+
+v0.20 ships no `exo.iife.js` / `exo.full.iife.js` and no `Exo` global. A page that used a classic script tag moves to a module script with an import map over the ESM tree:
+
+```html
+<script type="importmap">
+  {
+    "imports": {
+      "@codexo/exojs": "./vendor/exojs/esm/index.js",
+      "@codexo/exojs/physics": "./vendor/exojs/esm/physics/index.js"
+    }
+  }
+</script>
+<script type="module">
+  import { Application, Scene } from '@codexo/exojs';
+</script>
+```
+
+Import maps require module scripts and a JavaScript MIME type for every file they resolve. The Full Release ZIP's `vendor/exojs/esm/` tree (or the npm package's `dist/esm/`) is what to serve. Keep the map, engine, debug module and optional packages version-aligned, and do not mix a bundled Core with a second Core instance loaded from the module tree.
+
+## Legacy compatibility shims for the 0.20 line
+
+For the 0.20 line, thin ESM/TypeScript shim packages keep the seven retired names importable: they re-export the exact objects from the new subpaths, carry no second implementation, and declare a `0.20.x` Core peer. They exist so an application can move its imports without a flag day; feature work happens only on the subpaths. The shims are not republished for unchanged Core patches, and the planned deprecation (with the per-package notice that v0.20 imports come from `@codexo/exojs/<subpath>`) has been prepared but not executed.
+
+## TypeScript resolution
+
+Core's declarations resolve under `"moduleResolution": "bundler"` and under `node16`/`nodenext`; every shipped declaration names its imports with explicit `.js` specifiers. No consumer `paths` mapping or `skipLibCheck` is needed.
+
+## What did not change
+
+Core's root entry, `Assets`, `Sprite`, the KTX2/Basis worker and WASM integration, the scene and loader semantics, and the serialized values all keep their behavior. The visual quality of the examples is unchanged in this migration; the example-asset catalog moves to the optional `@codexo/exojs-demo-assets` package, whose descriptors load through the existing `loader.get()` / `await loader.load()` contract.
+
+## Where to go next
+
+For static hosting and import-map specifics see [Deployment](/ExoJS/en/guide/shipping/deployment/). For the asset catalog see its package README and the [Assets](/ExoJS/en/guide/assets/) guide.
