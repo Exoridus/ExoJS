@@ -350,6 +350,39 @@ describe('View — coordinate conversion under zoom', () => {
     expectPoint(view.worldToScreen(300, 225), 200, 150);
   });
 
+  test('zoom() scales a directly written size and keeps the design space', () => {
+    const view = new View(400, 300, 800, 600);
+
+    view.size.set(400, 300);
+    view.zoom(0.5);
+
+    expect(view.width).toBeCloseTo(200);
+    expectPoint(view.screenToWorld(0, 0), 300, 225);
+  });
+
+  test('View.from maps the design space of its size at the requested zoom', () => {
+    const view = View.from({ center: { x: 400, y: 300 }, size: { width: 800, height: 600 }, zoom: 2 });
+
+    expectPoint(view.screenToWorld(200, 150), 300, 225);
+  });
+
+  test('a view constructed without a size maps over the size written later', () => {
+    const view = new View(400, 300, 0, 0);
+
+    view.size.set(800, 600);
+
+    expectPoint(view.screenToWorld(0, 0), 0, 0);
+    expectPoint(view.worldToScreen(800, 600), 800, 600);
+  });
+
+  test('4-arg screenToWorld returns a finite point for a zero-extent viewport', () => {
+    const view = new View(400, 300, 800, 600).setViewport(0, 0, 0, 0);
+    const world = view.screenToWorld(10, 10, 800, 600);
+
+    expect(Number.isFinite(world.x)).toBe(true);
+    expect(Number.isFinite(world.y)).toBe(true);
+  });
+
   test('resize() replaces the design space and resets zoom', () => {
     const view = new View(400, 300, 800, 600);
 

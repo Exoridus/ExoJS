@@ -2,16 +2,17 @@ import { View } from '#rendering/View';
 
 /**
  * The world-space AABB of the four viewport corners, mapped through the view's
- * own `screenToWorld`. This is by definition the area the camera renders, so
- * the cull bounds must cover exactly it - whatever rotation, zoom or centre is
- * in play, and independent of how the projection composes them.
+ * own `screenToWorld` over a unit surface. This is by definition the area the
+ * camera renders, so the cull bounds must cover exactly it - whatever rotation,
+ * zoom or centre is in play, and independent of how the projection composes
+ * them.
  */
 const visibleAreaFromCorners = (view: View): { left: number; top: number; right: number; bottom: number } => {
   const corners = [
-    view.screenToWorld(0, 0),
-    view.screenToWorld(view.width, 0),
-    view.screenToWorld(view.width, view.height),
-    view.screenToWorld(0, view.height),
+    view.screenToWorld(0, 0, 1, 1),
+    view.screenToWorld(1, 0, 1, 1),
+    view.screenToWorld(1, 1, 1, 1),
+    view.screenToWorld(0, 1, 1, 1),
   ];
   const xs = corners.map(corner => corner.x);
   const ys = corners.map(corner => corner.y);

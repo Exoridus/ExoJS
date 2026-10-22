@@ -283,7 +283,10 @@ export class View {
    * factor of `0.5` halves the visible area, like doubling {@link zoomLevel}.
    */
   public zoom(factor: number): this {
-    return this.setZoom(this._zoomLevel / factor);
+    this._zoomLevel = Math.max(0.0001, this._zoomLevel / factor);
+    this._size.set(this._size.width * factor, this._size.height * factor);
+
+    return this;
   }
 
   /**
@@ -535,6 +538,10 @@ export class View {
     } else {
       const vw = this._viewport.width * canvasWidth;
       const vh = this._viewport.height * canvasHeight;
+
+      if (vw === 0 || vh === 0) {
+        return { x: 0, y: 0 };
+      }
 
       clipX = ((screenX - this._viewport.x * canvasWidth) / vw) * 2 - 1;
       clipY = 1 - ((screenY - this._viewport.y * canvasHeight) / vh) * 2;
