@@ -220,12 +220,16 @@ class AssetBrowserScene extends Scene {
     this.panel?.dispose();
     this.panel = null;
     this.zoomTarget = null;
-    this.preview?.dispose();
-    this.preview = null;
-    // Destroying the scope cancels a load that is still running and releases
-    // this selection's claims; assets another scope holds stay resident.
-    this.scope?.destroy();
-    this.scope = null;
+    this.backdrop = new Color(32, 37, 50);
+    try {
+      this.preview?.dispose();
+    } finally {
+      this.preview = null;
+      // Destroying the scope cancels a load that is still running and releases
+      // this selection's claims; assets another scope holds stay resident.
+      this.scope?.destroy();
+      this.scope = null;
+    }
   }
   mountPanel(preview) {
     const host = options => {
@@ -741,7 +745,6 @@ const openTexture = async ({ scene, item, scope }) => {
       if (svg) {
         texture.destroy();
       }
-      scene.setBackdrop(new Color(32, 37, 50));
     },
   };
 };
@@ -1176,9 +1179,8 @@ const openVideo = async ({ scene, item, scope, manifest, isCurrent }) => {
   let pendingStart = null;
   let panel = null;
   let syncing = false;
+  let mounted = false;
   let since = 0;
-  video.applyOptions({ loop: state.loop, muted: state.muted });
-  video.pause();
   const play = () => {
     if (pendingStart || video.playing) {
       return;
@@ -1268,6 +1270,9 @@ const openVideo = async ({ scene, item, scope, manifest, isCurrent }) => {
         },
       });
       panel = handle;
+      mounted = true;
+      video.applyOptions({ loop: state.loop, muted: state.muted });
+      video.pause();
       scene.bindZoom(handle);
       handle.status('Press Play to start.');
     },
@@ -1285,9 +1290,11 @@ const openVideo = async ({ scene, item, scope, manifest, isCurrent }) => {
     dispose() {
       cancelStart();
       panel = null;
-      // The video itself belongs to the scope; pausing here keeps it silent
-      // even while another scope still holds it.
-      video.pause();
+      // The video belongs to the scope and may be shared with a newer preview
+      // of the same asset, so only a preview that was mounted pauses it.
+      if (mounted) {
+        video.pause();
+      }
     },
   };
 };
@@ -1365,7 +1372,6 @@ const openFont = async ({ scene, item, scope }) => {
       for (const line of lines) {
         line.destroy();
       }
-      scene.setBackdrop(new Color(32, 37, 50));
     },
   };
   const layout = () => {
