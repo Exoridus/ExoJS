@@ -24,6 +24,7 @@ import {
   View,
   type Voice,
 } from '@codexo/exojs';
+import { AudioAnalyser } from '@codexo/exojs/audio-fx';
 import { ObjectKind, type TileMap, TileMapNode } from '@codexo/exojs/tilemap';
 import { demoAssetCategories, type DemoAssetCategory, type DemoAssetKey, demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { ldtkExtension } from '@codexo/exojs-ldtk';
@@ -1278,26 +1279,37 @@ const openAudio = async ({ scene, item, scope, isCurrent }: PreviewContext): Pro
   let status: ((text: string) => void) | null = null;
   let reported = '';
   const waveform = new Graphics();
-  const caption = new Text(music ? 'Streamed music has no decoded buffer to draw' : '', {
-    fontSize: 18,
-    fillColor: new Color(138, 160, 196),
-  });
+  const playhead = new Graphics();
+  const live = new Graphics();
+  const analyser = new AudioAnalyser();
+  const bright = new Color(127, 184, 255);
+  const dim = new Color(127, 184, 255, 0.25);
+  const muted = new Color(138, 160, 196);
   const buffer = music ? null : (playable as Sound).audioBuffer;
   const channels = buffer?.numberOfChannels ?? 0;
   const channelNames = channels === 2 ? ['L', 'R'] : Array.from({ length: channels }, (_, channel) => String(channel + 1));
   const wave = { width: PREVIEW.width - 80, height: channels > 1 ? 300 : 220, gap: 16, left: PREVIEW.x + 40 };
-  const lane = {
-    height: (wave.height - wave.gap * Math.max(0, channels - 1)) / Math.max(1, channels),
-    top: PREVIEW_CENTER.y - wave.height / 2,
-  };
-  const laneLabels =
-    channels > 1
-      ? channelNames.map((name, channel) =>
-          new Text(name, { fontSize: 14, fontFamily: MONO, fillColor: new Color(138, 160, 196) })
-            .setAnchor(1, 0.5)
-            .setPosition(wave.left - 10, lane.top + channel * (lane.height + wave.gap) + lane.height / 2),
-        )
-      : [];
+  // A sound keeps its overview on top and the live signal in a strip below;
+  // streamed music has no overview, so the live signal takes the middle.
+  const scopeHeight = buffer ? 100 : 220;
+  const top = buffer ? PREVIEW_CENTER.y - (wave.height + 48 + scopeHeight) / 2 : PREVIEW_CENTER.y - scopeHeight / 2;
+  const lane = { height: (wave.height - wave.gap * Math.max(0, channels - 1)) / Math.max(1, channels), top };
+  const strip = { top: buffer ? top + wave.height + 48 : top, height: scopeHeight };
+  const label = (text: string, y: number): Text =>
+    new Text(text, { fontSize: 14, fontFamily: MONO, fillColor: muted }).setAnchor(1, 0.5).setPosition(wave.left - 10, y);
+  const labels = [
+    ...(channels > 1
+      ? channelNames.map((name, channel) => label(name, lane.top + channel * (lane.height + wave.gap) + lane.height / 2))
+      : []),
+    ...(buffer
+      ? [
+          new Text('Live signal', { fontSize: 14, fontFamily: MONO, fillColor: muted })
+            .setAnchor(0, 1)
+            .setPosition(wave.left, strip.top - 8),
+        ]
+      : []),
+  ];
+  const caption = new Text(music ? 'Press Play to see the live signal' : '', { fontSize: 18, fillColor: muted });
 
   // A decoded sound draws one lane per channel: a min/max bar per column, with
   // the selected sprite clip highlighted across all lanes.
@@ -1325,9 +1337,9 @@ const openAudio = async ({ scene, item, scope, isCurrent }: PreviewContext): Pro
       const middle = lane.top + channel * (lane.height + wave.gap) + lane.height / 2;
       const scale = lane.height / 2;
 
-      waveform.fillColor = new Color(127, 184, 255, 0.25);
+      waveform.fillColor = dim;
       waveform.drawRectangle(wave.left, middle - 0.5, wave.width, 1);
-      waveform.fillColor = new Color(127, 184, 255);
+      waveform.fillColor = bright;
 
       for (let column = 0; column < wave.width; column += 2) {
         const from = Math.floor((column / wave.width) * samples.length);
@@ -1345,8 +1357,55 @@ const openAudio = async ({ scene, item, scope, isCurrent }: PreviewContext): Pro
     }
   };
 
-  caption.setAnchor(0.5).setPosition(PREVIEW_CENTER.x, PREVIEW_CENTER.y);
+  // The analyser's window is the last few milliseconds the voice produced,
+  // down-mixed to one channel - an oscilloscope, not a second overview.
+  const drawLive = (signal: Float32Array | null): void => {
+    const middle = strip.top + strip.height / 2;
+    const scale = strip.height / 2;
+
+    live.clear();
+    live.fillColor = dim;
+    live.drawRectangle(wave.left, middle - 0.5, wave.width, 1);
+
+    if (!signal) {
+      return;
+    }
+
+    live.fillColor = bright;
+
+    for (let column = 0; column < wave.width; column += 2) {
+      const from = Math.floor((column / wave.width) * signal.length);
+      const to = Math.max(from + 1, Math.floor(((column + 2) / wave.width) * signal.length));
+      let low = 0;
+      let high = 0;
+
+      for (let index = from; index < to; index += 1) {
+        low = Math.min(low, signal[index]!);
+        high = Math.max(high, signal[index]!);
+      }
+
+      live.drawRectangle(wave.left + column, middle - high * scale, 1.5, Math.max(1, (high - low) * scale));
+    }
+  };
+
+  const drawPlayhead = (): void => {
+    playhead.clear();
+
+    if (!buffer || !voice || voice.ended || !('time' in voice)) {
+      return;
+    }
+
+    // A sprite voice reports its time from the start of its clip.
+    const offset = table && state.clip ? (table[state.clip]?.start ?? 0) : 0;
+    const x = wave.left + ((offset + (voice as Voice & { time: number }).time) / buffer.duration) * wave.width;
+
+    playhead.fillColor = Color.white;
+    playhead.drawRectangle(x - 0.75, lane.top, 1.5, wave.height);
+  };
+
+  caption.setAnchor(0.5).setPosition(PREVIEW_CENTER.x, strip.top + strip.height + 40);
   drawWaveform();
+  drawLive(null);
 
   const target = (): Sound | AudioStream => (clips.length > 0 ? (playable as Sound).sprite(state.clip) : playable);
   const pausable = (candidate: Voice | null): (Voice & { paused: boolean; pause(): void; resume(): void }) | null =>
@@ -1378,6 +1437,7 @@ const openAudio = async ({ scene, item, scope, isCurrent }: PreviewContext): Pro
       }
 
       voice = audio.play(target(), { volume: state.volume, loop: state.loop });
+      analyser.source = voice;
       console.log(`Playing ${item.name}${clips.length > 0 ? ` / ${state.clip}` : ''}`);
     };
 
@@ -1396,11 +1456,12 @@ const openAudio = async ({ scene, item, scope, isCurrent }: PreviewContext): Pro
 
     voice?.stop();
     voice = null;
+    analyser.source = null;
   };
 
   return {
     world: [],
-    overlay: [waveform, caption, ...laneLabels],
+    overlay: [waveform, playhead, live, caption, ...labels],
     bounds: null,
     facts: [
       ['Kind', music ? 'Music, streamed from an audio element' : 'Sound, decoded into memory'],
@@ -1464,14 +1525,23 @@ const openAudio = async ({ scene, item, scope, isCurrent }: PreviewContext): Pro
         reported = text;
         status?.(text);
       }
+
+      const playing = text === 'Playing' || text === 'Paused';
+
+      caption.visible = !playing;
+      drawLive(playing ? analyser.getWaveformFloat() : null);
+      drawPlayhead();
     },
     snippet: () => audioSnippet(item, { ...state, music, clip: clips.length > 0 ? state.clip : null }),
     dispose() {
       stop();
       status = null;
+      analyser.destroy();
       waveform.destroy();
+      playhead.destroy();
+      live.destroy();
       caption.destroy();
-      laneLabels.forEach(label => label.destroy());
+      labels.forEach(text => text.destroy());
     },
   };
 };
