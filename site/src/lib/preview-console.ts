@@ -169,11 +169,16 @@ export class PreviewConsole {
     return generation;
   }
 
-  /** Restores the console of the attached window, if any, and stops accepting its writes. */
+  /**
+   * Restores the console of the attached window, if any, stops accepting its
+   * writes and drops its record, so nothing of it shows while the next preview
+   * loads.
+   */
   public detach(): void {
     this._detachBridge?.();
     this._detachBridge = null;
     this._generation += 1;
+    this._resetRecord();
     this._changed(true);
   }
 
@@ -243,7 +248,11 @@ export class PreviewConsole {
         break;
       }
 
-      if (entry.severity === 'error' && (entry.text === text || entry.text.endsWith(`: ${text}`) || entry.text.endsWith(` ${text}`))) {
+      if (
+        entry.kind === 'console' &&
+        entry.severity === 'error' &&
+        (entry.text === text || entry.text.endsWith(`: ${text}`) || entry.text.endsWith(` ${text}`))
+      ) {
         entry.kind = 'exception';
         entry.details = fullDetails ?? entry.details;
         this._changed(true);

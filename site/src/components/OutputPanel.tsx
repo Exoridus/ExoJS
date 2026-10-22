@@ -105,6 +105,13 @@ export const OutputPanel = ({ output, systemErrors }: OutputPanelProps): JSX.Ele
     });
   };
 
+  // Clearing also clears the failure that may have opened the panel; the
+  // visitor is looking at it, so it stays open.
+  const clear = (): void => {
+    setOpenChoice(true);
+    output.clear();
+  };
+
   const copyAll = (): void => {
     const text = [
       ...systemErrors.map(error => `[error] ${error.summary}${error.details ? `\n${error.details}` : ''}`),
@@ -169,7 +176,7 @@ export const OutputPanel = ({ output, systemErrors }: OutputPanelProps): JSX.Ele
             >
               {copied ? 'Copied' : 'Copy'}
             </button>
-            <button type="button" className={css(styles, 'action')} onClick={() => output.clear()} disabled={snapshot.entries.length === 0}>
+            <button type="button" className={css(styles, 'action')} onClick={clear} disabled={snapshot.entries.length === 0}>
               Clear
             </button>
           </div>

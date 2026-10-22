@@ -280,6 +280,31 @@ describe('preview console record', () => {
     expect(snapshot.counts.error).toBe(2);
   });
 
+  it('never folds a second uncaught error into the first', () => {
+    const output = new PreviewConsole();
+    const generation = output.begin();
+
+    output.writeException(generation, 'boom', null, 0);
+    output.writeException(generation, 'boom', null, 10);
+
+    expect(output.getSnapshot().entries).toHaveLength(2);
+  });
+
+  it('drops the record of a detached preview, failures included', () => {
+    const output = new PreviewConsole();
+    const generation = output.begin();
+
+    output.write(generation, 'log', ['before the reload'], 0);
+    output.writeException(generation, 'boom', null, 5);
+    output.detach();
+
+    const snapshot = output.getSnapshot();
+
+    expect(snapshot.entries).toEqual([]);
+    expect(snapshot.exceptions).toBe(0);
+    expect(snapshot.counts.error).toBe(0);
+  });
+
   it('keeps console.error and a later unrelated exception apart', () => {
     const output = new PreviewConsole();
     const generation = output.begin();
