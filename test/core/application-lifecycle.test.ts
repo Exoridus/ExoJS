@@ -1256,7 +1256,7 @@ describe('Application lifecycle / getters / sizing', () => {
   // -------------------------------------------------------------------------
 
   describe('screenToWorld()', () => {
-    test('delegates to rendering.view.screenToWorld with the same args and return value', async () => {
+    test('delegates to rendering.view.screenToWorld over the logical surface', async () => {
       const { Application } = await loadHarness();
       const app = new Application({ backend: { type: 'webgl2' } });
       const fakePoint = { x: 42, y: 24 };
@@ -1264,8 +1264,39 @@ describe('Application lifecycle / getters / sizing', () => {
 
       const result = app.screenToWorld(10, 20);
 
-      expect(spy).toHaveBeenCalledWith(10, 20);
+      expect(spy).toHaveBeenCalledWith(10, 20, app.width, app.height);
       expect(result).toBe(fakePoint);
+    });
+
+    test('maps a design point through a zoomed active camera', async () => {
+      const { Application } = await loadHarness();
+      const { View } = await import('#rendering/View');
+      const app = new Application({ backend: { type: 'webgl2' } });
+      const view = new View(300, 200, app.width, app.height).setZoom(2);
+
+      app.rendering.view = view;
+
+      const centre = app.screenToWorld(app.width / 2, app.height / 2);
+      const quarter = app.screenToWorld(app.width / 4, app.height / 4);
+
+      expect(centre.x).toBeCloseTo(view.center.x, 2);
+      expect(centre.y).toBeCloseTo(view.center.y, 2);
+      expect(quarter.x).toBeCloseTo(view.center.x - app.width / 8, 2);
+      expect(quarter.y).toBeCloseTo(view.center.y - app.height / 8, 2);
+    });
+
+    test('maps a design point through a split-screen active camera', async () => {
+      const { Application } = await loadHarness();
+      const { View } = await import('#rendering/View');
+      const app = new Application({ backend: { type: 'webgl2' } });
+      const view = new View(1000, 0, app.width / 2, app.height).setViewport(0.5, 0, 0.5, 1);
+
+      app.rendering.view = view;
+
+      const centre = app.screenToWorld(app.width * 0.75, app.height / 2);
+
+      expect(centre.x).toBeCloseTo(1000, 2);
+      expect(centre.y).toBeCloseTo(0, 2);
     });
   });
 

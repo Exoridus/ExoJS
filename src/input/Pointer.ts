@@ -115,7 +115,7 @@ export enum PointerState {
  *
  * Coordinates are stored in the application's logical space - `app.width` /
  * `app.height` units (`0..app.width` × `0..app.height`), matching node
- * positions, the 2-argument {@link View.screenToWorld}, and the active camera.
+ * positions and {@link Application.screenToWorld}.
  * The CSS-pixel event coordinates are mapped through the canvas's display rect,
  * so the value is independent of {@link Application.pixelRatio}, of the render
  * resolution, and of however the canvas is scaled for display: a click at its

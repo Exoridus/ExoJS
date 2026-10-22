@@ -247,7 +247,16 @@ export class RenderingContext implements DrawContext {
    * Preserves the camera's center and zoom; only the visible area size changes.
    */
   public resize(width: number, height: number): void {
+    const zoom = this._view.zoomLevel;
+
+    // `View.resize` resets zoom along with the design space; reapply it so a
+    // zoomed camera keeps its apparent scale across canvas resizes.
     this._view.resize(width, height);
+
+    if (zoom !== 1) {
+      this._view.setZoom(zoom);
+    }
+
     this._screenView.resize(width, height);
     this._screenView.setCenter(width / 2, height / 2);
   }

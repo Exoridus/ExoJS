@@ -278,8 +278,13 @@ export class View {
     return this;
   }
 
+  /**
+   * Multiply the visible area by `factor` relative to the current zoom. A
+   * factor of `0.5` halves the visible area, like doubling {@link zoomLevel}.
+   */
   public zoom(factor: number): this {
-    this.resize(this._size.width * factor, this._size.height * factor);
+    this._zoomLevel = Math.max(0.0001, this._zoomLevel / factor);
+    this._size.set(this._size.width * factor, this._size.height * factor);
 
     return this;
   }
@@ -492,27 +497,32 @@ export class View {
   /**
    * Convert a logical/design-space pixel coordinate to a world-space position.
    *
-   * The 2-argument form treats `(x, y)` as coordinates in the view's own
-   * design space (`0..view.width` × `0..view.height`) - the same space as
-   * {@link Pointer.x}/{@link Pointer.y} and node positions - and applies only
-   * the inverse camera transform. The viewport rectangle is intentionally
-   * ignored, because design-space input already lives inside the camera's
-   * projection - the mapping from the surface to logical pixels happened
-   * upstream. At the default centered camera this is the identity.
+   * The 2-argument form treats `(x, y)` as coordinates in the view's design
+   * space: the unzoomed size given to the constructor, {@link resize} or
+   * {@link reset}. Zooming, or writing {@link size} directly, changes how much
+   * world the view shows but not this space, so a full-surface view sized to
+   * the canvas keeps accepting {@link Pointer.x}/{@link Pointer.y} unchanged
+   * at every zoom level. The viewport rectangle is ignored; for a view that
+   * covers only part of the surface (split screen) or whose design size
+   * differs from the canvas, use the 4-argument form with the surface size.
+   * At the default centered camera this is the identity.
    *
-   * @param x - X coordinate in design/logical pixels (`0..view.width`).
-   * @param y - Y coordinate in design/logical pixels (`0..view.height`).
+   * @param x - X coordinate in design pixels.
+   * @param y - Y coordinate in design pixels.
    */
   public screenToWorld(x: number, y: number): PointLike;
   /**
-   * Convert a raw canvas backing-store pixel coordinate to a world-space
-   * position. Accounts for the view's viewport rectangle, so it works
-   * correctly in multi-view / split-screen and letterboxed setups.
+   * Convert a coordinate on the render surface to a world-space position.
+   * Accounts for the view's viewport rectangle, so it works correctly in
+   * multi-view / split-screen and letterboxed setups. The coordinate and the
+   * surface size only need to share a unit: pass `app.width`/`app.height` for
+   * pointer coordinates, or `app.canvas.width`/`app.canvas.height` for
+   * backing-store pixels.
    *
-   * @param screenX      - X pixel relative to the canvas top-left corner.
-   * @param screenY      - Y pixel relative to the canvas top-left corner.
-   * @param canvasWidth  - Canvas backing-store width in pixels (`app.canvas.width`).
-   * @param canvasHeight - Canvas backing-store height in pixels (`app.canvas.height`).
+   * @param screenX      - X coordinate relative to the surface top-left corner.
+   * @param screenY      - Y coordinate relative to the surface top-left corner.
+   * @param canvasWidth  - Surface width in the unit of `screenX`.
+   * @param canvasHeight - Surface height in the unit of `screenY`.
    */
   public screenToWorld(screenX: number, screenY: number, canvasWidth: number, canvasHeight: number): PointLike;
   public screenToWorld(screenX: number, screenY: number, canvasWidth?: number, canvasHeight?: number): PointLike {
@@ -520,14 +530,18 @@ export class View {
     let clipY: number;
 
     if (canvasWidth === undefined || canvasHeight === undefined) {
-      const w = this.width || 1;
-      const h = this.height || 1;
+      const w = this._designWidth();
+      const h = this._designHeight();
 
       clipX = (screenX / w) * 2 - 1;
       clipY = 1 - (screenY / h) * 2;
     } else {
       const vw = this._viewport.width * canvasWidth;
       const vh = this._viewport.height * canvasHeight;
+
+      if (vw === 0 || vh === 0) {
+        return { x: 0, y: 0 };
+      }
 
       clipX = ((screenX - this._viewport.x * canvasWidth) / vw) * 2 - 1;
       clipY = 1 - ((screenY - this._viewport.y * canvasHeight) / vh) * 2;
@@ -555,23 +569,23 @@ export class View {
   }
 
   /**
-   * Convert a world-space position to logical/design-space pixel coordinates
-   * (`0..view.width` × `0..view.height`). Inverse of the 2-argument
-   * {@link screenToWorld}; the viewport is ignored. At the default centered
-   * camera this is the identity.
+   * Convert a world-space position to design-space pixel coordinates. Inverse
+   * of the 2-argument {@link screenToWorld}, with the same design space; the
+   * viewport is ignored. At the default centered camera this is the identity.
    *
    * @param worldX - World X coordinate.
    * @param worldY - World Y coordinate.
    */
   public worldToScreen(worldX: number, worldY: number): PointLike;
   /**
-   * Convert a world-space position to raw canvas backing-store pixel
-   * coordinates. Accounts for the view's viewport rectangle.
+   * Convert a world-space position to a coordinate on the render surface.
+   * Inverse of the 4-argument {@link screenToWorld}; accounts for the view's
+   * viewport rectangle, and the result is in the unit of the surface size.
    *
    * @param worldX       - World X coordinate.
    * @param worldY       - World Y coordinate.
-   * @param canvasWidth  - Canvas backing-store width in pixels (`app.canvas.width`).
-   * @param canvasHeight - Canvas backing-store height in pixels (`app.canvas.height`).
+   * @param canvasWidth  - Surface width, e.g. `app.width` or `app.canvas.width`.
+   * @param canvasHeight - Surface height, e.g. `app.height` or `app.canvas.height`.
    */
   public worldToScreen(worldX: number, worldY: number, canvasWidth: number, canvasHeight: number): PointLike;
   public worldToScreen(worldX: number, worldY: number, canvasWidth?: number, canvasHeight?: number): PointLike {
@@ -581,8 +595,8 @@ export class View {
 
     if (canvasWidth === undefined || canvasHeight === undefined) {
       return {
-        x: ((clipX + 1) / 2) * this.width,
-        y: ((1 - clipY) / 2) * this.height,
+        x: ((clipX + 1) / 2) * this._designWidth(),
+        y: ((1 - clipY) / 2) * this._designHeight(),
       };
     }
 
@@ -677,6 +691,16 @@ export class View {
     this._inverseTransform.destroy();
     this._bounds.destroy();
     this._flags.destroy();
+  }
+
+  // A view constructed with a zero size and sized later only through `size`
+  // has no design space of its own; its visible area is the closest stand-in.
+  private _designWidth(): number {
+    return this._zoomBaseWidth || this.width || 1;
+  }
+
+  private _designHeight(): number {
+    return this._zoomBaseHeight || this.height || 1;
   }
 
   private _setDirty(): void {

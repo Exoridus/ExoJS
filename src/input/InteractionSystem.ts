@@ -1633,7 +1633,7 @@ export class InteractionSystem {
     const uiRoot = this._app.scenes.currentScene?._peekUI() ?? null;
 
     if (uiRoot !== null) {
-      const ui = this._app.rendering.screenView.screenToWorld(x, y);
+      const ui = this._designToLayerSpace(x, y, true);
       const uiHit = this._hitTestNode(uiRoot, ui.x, ui.y);
 
       if (uiHit !== null) {
@@ -1641,7 +1641,7 @@ export class InteractionSystem {
       }
     }
 
-    const world = this._app.rendering.view.screenToWorld(x, y);
+    const world = this._designToLayerSpace(x, y, false);
 
     return { node: this._hitTest(world.x, world.y), x: world.x, y: world.y };
   }
@@ -1665,7 +1665,9 @@ export class InteractionSystem {
   private _designToLayerSpace(x: number, y: number, ui: boolean): PointLike {
     const view = ui ? this._app.rendering.screenView : this._app.rendering.view;
 
-    return view.screenToWorld(x, y);
+    // Map over the logical surface rather than the view's own design space:
+    // the active camera may cover only part of the canvas (split screen).
+    return view.screenToWorld(x, y, this._app.width, this._app.height);
   }
 
   /** Whether `node` lives inside the active scene's UI layer. */
