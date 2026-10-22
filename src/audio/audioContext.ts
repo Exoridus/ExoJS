@@ -7,7 +7,12 @@ interface AudioContextEventTarget {
   addEventListener?: (type: string, listener: () => void) => void;
 }
 
-const interactionEvents = ['mousedown', 'touchstart', 'touchend', 'keydown'] as const;
+// `pointerdown` and `pointerup` are activation-triggering in their own right.
+// They matter because the input system cancels `pointerdown` on the canvas,
+// which suppresses the compatibility `mousedown` a mouse click would otherwise
+// produce, and stops its propagation there: the listeners therefore run in the
+// capture phase, before any element on the path can stop the event.
+const interactionEvents = ['pointerdown', 'pointerup', 'mousedown', 'touchstart', 'touchend', 'keydown'] as const;
 
 /**
  * Sample rate used for the decoding {@link OfflineAudioContext} when no live
@@ -72,7 +77,7 @@ const removeInteractionListeners = (): void => {
   }
 
   for (const eventName of interactionEvents) {
-    document.removeEventListener(eventName, onUserInteraction, false);
+    document.removeEventListener(eventName, onUserInteraction, true);
   }
 
   interactionListenersAdded = false;
@@ -129,7 +134,7 @@ const addInteractionListeners = (): void => {
   }
 
   for (const eventName of interactionEvents) {
-    document.addEventListener(eventName, onUserInteraction, false);
+    document.addEventListener(eventName, onUserInteraction, true);
   }
 
   interactionListenersAdded = true;
@@ -219,8 +224,9 @@ class AudioContextReadySignal extends Signal<[AudioContext]> {
 /**
  * Signal that dispatches once the global `AudioContext` enters the `running`
  * state. Handles browser autoplay-policy by listening for user-interaction
- * events (`mousedown`, `touchstart`, `touchend`) and resuming a suspended
- * context automatically.
+ * events (pointer press and release, `mousedown`, `touchstart`, `touchend`,
+ * `keydown`) in the capture phase and resuming a suspended context
+ * automatically.
  *
  * Dispatches once per run of the context: on the first unlock, and again on
  * every later locked-to-running edge, so an object constructed while the

@@ -39,7 +39,7 @@ A `Sound` is a data descriptor that holds a decoded buffer; each `app.audio.play
 
 ## AudioContext auto-unlock
 
-Browsers require a user gesture before Web Audio starts. ExoJS handles this automatically: the `AudioContext` is created on first use and resumed (un-suspended) on the first `mousedown`, `touchstart`, or `touchend` event observed on `document`.
+Browsers require a user gesture before Web Audio starts. ExoJS handles this automatically: the `AudioContext` is created on first use and resumed (un-suspended) on the first pointer press or release, `mousedown`, `touchstart`, `touchend` or `keydown` observed on `document`. The listeners run in the capture phase, so a click on the application's canvas unlocks audio even though the input system consumes the press there.
 
 `app.audio.play(asset, ...)` always returns a `Voice` immediately, even while audio is still locked — but what that voice does depends on the asset:
 
