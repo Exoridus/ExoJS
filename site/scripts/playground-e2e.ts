@@ -35,7 +35,7 @@ import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
-import { type Browser, chromium, type Frame, type Page } from 'playwright';
+import { type Browser, chromium, firefox, type Frame, type Page } from 'playwright';
 import ts from 'typescript';
 
 import { readSiteBuildManifest } from '../../scripts/pages/site-manifest.ts';
@@ -52,6 +52,7 @@ const { values: options } = parseArgs({
     only: { type: 'string' },
     shots: { type: 'string' },
     headed: { type: 'boolean', default: false },
+    browser: { type: 'string', default: 'chromium' },
   },
 });
 
@@ -190,7 +191,11 @@ const openPlayground = async (
   example: string,
   viewport = { width: 1600, height: 1000 },
 ): Promise<Session> => {
-  const context = await browser.newContext({ viewport, permissions: ['clipboard-read', 'clipboard-write'] });
+  const context = await browser.newContext({
+    viewport,
+    hasTouch: example === 'input/multitouch',
+    ...(options.browser === 'chromium' ? { permissions: ['clipboard-read', 'clipboard-write'] } : {}),
+  });
   const page = await context.newPage();
   const session: Session = { page, console: [], pageErrors: [] };
 
@@ -232,6 +237,7 @@ const setOutputOpen = async (page: Page, open: boolean): Promise<void> => {
 
 /** Replaces the editor's source and reloads the preview, the way a visitor runs their own code. */
 const runSource = async (page: Page, source: string): Promise<void> => {
+  const previousUrl = (await previewFrame(page)).url();
   await waitFor(
     () =>
       page.evaluate('Boolean(window.monaco && window.monaco.editor.getEditors()[0] && window.monaco.editor.getEditors()[0].getModel())'),
@@ -245,6 +251,11 @@ const runSource = async (page: Page, source: string): Promise<void> => {
     })()`,
   );
   await page.locator('button[aria-label="Reload preview"]').click();
+  await waitFor(
+    async () => (await previewFrame(page)).url(),
+    url => url !== previousUrl,
+    'the reloaded iframe generation',
+  );
 };
 
 const box = async (page: Page, selector: string): Promise<{ x: number; y: number; width: number; height: number }> => {
@@ -891,18 +902,402 @@ const typecheckSnippets = async (snippets: string[]): Promise<void> => {
   });
 };
 
+const exampleLifecycleChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  const examples = [
+    'input/mouse-and-pointer',
+    'input/key-rebinding',
+    'input/multitouch',
+    'showcase/dialog-system',
+    'sprites-textures/blendmodes',
+    'showcase/screen-shake-on-explosion',
+    'sprites-textures/video-drawable',
+    'audio-basics/play-sound',
+    'audio-basics/sound-pool',
+    'showcase/audio-visualisation',
+    'pathfinding/grid-navigation',
+    'audio-fx/ducking',
+    'text-fonts/typographic-styling',
+  ];
+
+  for (const example of examples) {
+    await check(`acceptance lifecycle: ${example}`, async () => {
+      const session = await openPlayground(browser, origin, base, example);
+      const { page, pageErrors } = session;
+      let phase = 'compile and start';
+
+      try {
+        const source = await readFile(resolve(repoRoot, 'examples', `${example}.ts`), 'utf8');
+        await runSource(page, `${source}\n(globalThis as any).__acceptanceApp = app;`);
+        const frame = await previewFrame(page);
+        await frame.waitForFunction('globalThis.__acceptanceApp?.state === "running"');
+        const counts = () =>
+          frame.evaluate(`Object.fromEntries(
+          ['onPointerMove', 'onPointerDown', 'onPointerUp', 'onPointerTap', 'onPointerCancel', 'onKeyDown']
+            .map(key => [key, globalThis.__acceptanceApp.input[key].count]))`);
+        const baseline = JSON.stringify(await counts());
+        const panels = await frame.locator('body > aside').count();
+
+        if (
+          [
+            'input/mouse-and-pointer',
+            'input/key-rebinding',
+            'input/multitouch',
+            'sprites-textures/blendmodes',
+            'sprites-textures/video-drawable',
+            'pathfinding/grid-navigation',
+          ].includes(example)
+        ) {
+          assert(panels > 0, `${example}: expected controls were absent`);
+        }
+
+        for (let cycle = 0; cycle < 2; cycle++) {
+          phase = `restart ${cycle + 1}`;
+          await frame.evaluate(`(() => {
+            const app = globalThis.__acceptanceApp;
+            globalThis.__acceptanceScene = app.scenes.currentScene.constructor;
+            app.stop();
+          })()`);
+          await frame.waitForFunction('globalThis.__acceptanceApp.scenes.currentScene === null');
+          await frame.evaluate('globalThis.__acceptanceApp.start(globalThis.__acceptanceScene)');
+          assert(JSON.stringify(await counts()) === baseline, `${example}: input listeners grew after restart ${cycle + 1}`);
+          assert((await frame.locator('body > aside').count()) === panels, `${example}: controls grew after restart`);
+          const unlock = frame.getByRole('button', { name: 'Enable sound', exact: true });
+
+          if (await unlock.isVisible()) {
+            const bounds = await unlock.boundingBox();
+            assert(bounds, 'audio unlock has no bounds');
+            await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+          }
+
+          await frame
+            .locator('canvas')
+            .first()
+            .click({ position: { x: 100, y: 100 } });
+          await page.keyboard.press('ArrowRight');
+
+          if (example === 'input/multitouch') {
+            await frame
+              .locator('canvas')
+              .first()
+              .tap({ position: { x: 100, y: 100 } });
+          }
+
+          await frame.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+          assert(pageErrors.length === 0, pageErrors.join('\n'));
+        }
+
+        if (options.shots) {
+          await mkdir(options.shots, { recursive: true });
+          await frame.locator('body').screenshot({ path: resolve(options.shots, `${example.replaceAll('/', '-')}-restarted.png`) });
+        }
+      } catch (error) {
+        const frame = await previewFrame(page);
+        const diagnostics = await frame.evaluate(
+          `({url:location.href,body:document.body.innerText,app:globalThis.__acceptanceApp?.state,source:[...document.scripts].at(-1)?.textContent?.slice(-300)})`,
+        );
+
+        throw new Error(
+          `${phase}: ${String(error)}; browser errors: ${JSON.stringify(pageErrors)}; console: ${JSON.stringify(session.console.filter(message => message.type === 'error').slice(-4))}; preview: ${JSON.stringify(diagnostics)}`,
+          { cause: error },
+        );
+      } finally {
+        await page.context().close();
+      }
+    });
+  }
+};
+
+const workerChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await check('acceptance worker terrain: initial, unchanged reload, edited reload and new tab', async () => {
+    const { page, pageErrors } = await openPlayground(browser, origin, base, 'tilemap/worker-streamed-terrain');
+    page.setDefaultTimeout(15_000);
+
+    const verifyTerrain = async (frame: Frame): Promise<void> => {
+      await frame.getByRole('button', { name: 'Next Provider', exact: true }).click();
+      await waitFor(
+        () => frame.locator('body').innerText(),
+        text => /worker .* [1-9]\d* chunks/.test(text),
+        'worker-generated terrain',
+      );
+      await frame.getByRole('button', { name: 'Previous Provider', exact: true }).click();
+      await waitFor(
+        () => frame.locator('body').innerText(),
+        text => /sync .* [1-9]\d* chunks/.test(text),
+        'sync terrain',
+      );
+    };
+
+    try {
+      await verifyTerrain(await previewFrame(page));
+      const previousUrl = (await previewFrame(page)).url();
+      await page.getByRole('button', { name: 'Reload preview', exact: true }).click();
+      await waitFor(
+        async () => (await previewFrame(page)).url(),
+        url => url !== previousUrl,
+        'worker reload generation',
+      );
+      await verifyTerrain(await previewFrame(page));
+      const source = await readFile(resolve(repoRoot, 'examples/tilemap/worker-streamed-terrain.ts'), 'utf8');
+
+      for (let cycle = 0; cycle < 2; cycle++) {
+        await runSource(page, `${source}\ndocument.body.dataset.editedTerrain = '${cycle}';`);
+        const frame = await previewFrame(page);
+        await frame.waitForFunction(value => document.body.dataset.editedTerrain === value, String(cycle));
+        await verifyTerrain(frame);
+        const popupPromise = page.waitForEvent('popup');
+        await page.getByRole('button', { name: 'Open in new tab', exact: true }).click();
+        const popup = await popupPromise;
+        popup.on('pageerror', error => pageErrors.push(error.message));
+        await popup.waitForFunction(value => document.body.dataset.editedTerrain === value, String(cycle));
+        assert(await popup.evaluate(() => window.opener === null && document.referrer === ''), 'new tab exposes its opener or referrer');
+        assert(
+          await popup.evaluate(() => sessionStorage.getItem(new URLSearchParams(location.search).get('source-key')!) === null),
+          'new tab retained consumed source',
+        );
+        await verifyTerrain(popup.mainFrame());
+        await popup.close();
+        const editedUrl = frame.url();
+        await page.getByRole('button', { name: 'Reload preview', exact: true }).click();
+        await waitFor(
+          async () => (await previewFrame(page)).url(),
+          url => url !== editedUrl,
+          'edited worker reload generation',
+        );
+        const reloaded = await previewFrame(page);
+        await reloaded.waitForFunction(value => document.body.dataset.editedTerrain === value, String(cycle));
+        await verifyTerrain(reloaded);
+      }
+
+      assert(pageErrors.length === 0, pageErrors.join('\n'));
+    } finally {
+      await page.context().close();
+    }
+  });
+};
+
+const newTabChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await check('acceptance new tab: repeated edited TypeScript and unchanged reload', async () => {
+    const { page, pageErrors } = await openPlayground(browser, origin, base, 'getting-started/hello-world');
+
+    try {
+      const source = await readFile(resolve(repoRoot, 'examples/getting-started/hello-world.ts'), 'utf8');
+
+      for (let cycle = 0; cycle < 2; cycle++) {
+        await runSource(page, `${source}\ndocument.body.dataset.editedExample = '${cycle}';`);
+        const frame = await previewFrame(page);
+        await frame.waitForFunction(value => document.body.dataset.editedExample === value, String(cycle));
+        const previousUrl = frame.url();
+        await page.getByRole('button', { name: 'Reload preview', exact: true }).click();
+        await waitFor(
+          async () => (await previewFrame(page)).url(),
+          url => url !== previousUrl,
+          'unchanged edited reload',
+        );
+        await (await previewFrame(page)).waitForFunction(value => document.body.dataset.editedExample === value, String(cycle));
+        const popupPromise = page.waitForEvent('popup');
+        await page.getByRole('button', { name: 'Open in new tab', exact: true }).click();
+        const popup = await popupPromise;
+        popup.on('pageerror', error => pageErrors.push(error.message));
+        await popup.waitForFunction(
+          value => document.body.dataset.editedExample === value && document.querySelector('canvas'),
+          String(cycle),
+        );
+        assert(await popup.evaluate(() => window.opener === null && document.referrer === ''), 'new tab exposes opener/referrer');
+        assert(
+          await popup.evaluate(() => sessionStorage.getItem(new URLSearchParams(location.search).get('source-key')!) === null),
+          'source key retained',
+        );
+        await popup.close();
+      }
+
+      assert(pageErrors.length === 0, pageErrors.join('\n'));
+    } finally {
+      await page.context().close();
+    }
+  });
+};
+
+const maskChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await check('acceptance mask: circular region is visible', async () => {
+    const { page } = await openPlayground(browser, origin, base, 'scene-graph/masks');
+
+    try {
+      const frame = await previewFrame(page);
+      const canvas = frame.locator('canvas').first();
+      await canvas.waitFor({ state: 'visible' });
+      // Wait for the asynchronous texture, then sample the actual composited canvas capture.
+      await waitFor(
+        async () => {
+          const png = await canvas.screenshot();
+
+          return page.evaluate(async data => {
+            const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${data}`)).blob());
+            const surface = new OffscreenCanvas(bitmap.width, bitmap.height);
+            const context = surface.getContext('2d')!;
+            context.drawImage(bitmap, 0, 0);
+            const pixels = context.getImageData(
+              Math.floor(bitmap.width * 0.69),
+              Math.floor(bitmap.height * 0.38),
+              Math.floor(bitmap.width * 0.12),
+              Math.floor(bitmap.height * 0.24),
+            ).data;
+            bitmap.close();
+            let visible = 0;
+
+            for (let i = 0; i < pixels.length; i += 4) {
+              if (pixels[i]! + pixels[i + 1]! + pixels[i + 2]! > 30) {
+                visible++;
+              }
+            }
+
+            return visible;
+          }, png.toString('base64'));
+        },
+        visible => visible > 100,
+        'the circular masked image',
+      );
+
+      if (options.shots) {
+        await mkdir(options.shots, { recursive: true });
+        await canvas.screenshot({ path: resolve(options.shots, 'mask-circular-region.png') });
+      }
+    } finally {
+      await page.context().close();
+    }
+  });
+};
+
+const audioBusChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await check('acceptance audio bus: idle mute and rapid gain replacement', async () => {
+    const { page } = await openPlayground(browser, origin, base, 'audio-basics/audio-buses');
+
+    try {
+      const frame = await previewFrame(page);
+      await frame.locator('canvas').first().click();
+      const peaks = await frame.evaluate<{
+        audible: number;
+        idleMuted: number;
+        restored: number;
+        muted: number;
+        unmuted: number;
+        continuousMuted: number;
+        continuousRestored: number;
+        nonzero: number;
+        interruptedFade: number;
+        maxStep: number;
+        windows: Array<{ peak: number; step: number; samples: number }>;
+      }>(`(async () => {
+        const { AudioBus, getAudioContext } = await import('@codexo/exojs');
+        const context = getAudioContext();
+        await context.resume();
+        const bus = new AudioBus('idle-regression');
+        const processor = 'class Meter extends AudioWorkletProcessor { constructor() { super(); this.window = null; this.port.onmessage = e => { this.window = e.data; this.peak = 0; this.samples = 0; this.step = 0; this.previous = []; }; } process(inputs) { if (this.window) { const [start, end, transition] = this.window; for (let i = 0; i < 128; i++) { const time = currentTime + i / sampleRate; if (time >= start && time < end) { this.samples++; for (const channel of inputs[0]) this.peak = Math.max(this.peak, Math.abs(channel[i])); } if (time >= transition && time < end) { for (let channel = 0; channel < inputs[0].length; channel++) { const value = inputs[0][channel][i]; if (this.previous[channel] !== undefined) this.step = Math.max(this.step, Math.abs(value - this.previous[channel])); this.previous[channel] = value; } } } if (currentTime + 128 / sampleRate >= end) { this.port.postMessage({peak:this.peak,samples:this.samples,step:this.step}); this.window = null; } } return true; } } registerProcessor("acceptance-meter", Meter);';
+        const url = URL.createObjectURL(new Blob([processor], {type: 'text/javascript'}));
+        await context.audioWorklet.addModule(url);
+        URL.revokeObjectURL(url);
+        const meter = new AudioWorkletNode(context, 'acceptance-meter');
+        bus.getOutputNode().connect(meter);
+        meter.connect(context.destination);
+        const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+        let maxStep = 0;
+        const windows = [];
+        const probe = async (change = null) => {
+          const source = context.createBufferSource();
+          const buffer = context.createBuffer(1, context.sampleRate * 0.3, context.sampleRate);
+          // Fill before assignment so the source acquires initialized PCM.
+          buffer.getChannelData(0).fill(0.1);
+          source.buffer = buffer;
+          source.connect(bus.getInputNode());
+          const start = context.currentTime + 0.1;
+          const measured = new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('PCM window timed out: ' + context.state)), 5000);
+            meter.port.onmessage = event => { clearTimeout(timeout); resolve(event.data); };
+          });
+          const windowStart = change ? start + 0.15 : start - 0.01;
+          meter.port.postMessage([windowStart, start + 0.25, start + 0.03]);
+          source.start(start);
+          if (change) {
+            while (context.currentTime < start + 0.05) await sleep(5);
+            await change();
+          }
+          const {peak, samples, step} = await measured;
+          windows.push({peak, samples, step});
+          maxStep = Math.max(maxStep, step);
+          if (samples < context.sampleRate * 0.09) throw new Error('Incomplete PCM window');
+          source.stop(); source.disconnect();
+          await sleep(500);
+          return peak;
+        };
+        try {
+          const audible = await probe();
+          bus.volume = 0;
+          await sleep(500);
+          const idleMuted = await probe();
+          bus.volume = 1; bus.volume = 0; bus.volume = 0.5;
+          await sleep(100);
+          const restored = await probe();
+          bus.muted = true;
+          await sleep(100);
+          const muted = await probe();
+          bus.muted = false;
+          await sleep(100);
+          const unmuted = await probe();
+          const continuousMuted = await probe(() => { bus.volume = 0; });
+          const continuousRestored = await probe(async () => {
+            bus.volume = 1; await sleep(5); bus.volume = 0; await sleep(5); bus.volume = 0.5;
+          });
+          const nonzero = await probe(async () => {
+            bus.volume = 0.8; await sleep(5); bus.volume = 0.3;
+          });
+          const interruptedFade = await probe(async () => {
+            bus.volume = 1; await sleep(5); bus.fadeOut(0.05, { stopAfter: false });
+          });
+          return { audible, idleMuted, restored, muted, unmuted, continuousMuted, continuousRestored, nonzero, interruptedFade, maxStep, windows };
+        } finally { bus.destroy(); meter.disconnect(); meter.port.close(); }
+      })()`);
+      assert(peaks.audible > 0.07 && peaks.audible < 0.072, `missing calibration signal: ${JSON.stringify(peaks)}`);
+      assert(peaks.maxStep < 0.001, `gain transition discontinuity: ${JSON.stringify(peaks)}`);
+      assert(
+        Math.abs(peaks.continuousRestored / peaks.audible - 0.5) < 0.01,
+        `active reversal ended at wrong gain: ${JSON.stringify(peaks)}`,
+      );
+      assert(
+        peaks.idleMuted === 0 && peaks.muted === 0 && peaks.continuousMuted === 0 && peaks.interruptedFade === 0,
+        `muted bus leaked samples: ${JSON.stringify(peaks)}`,
+      );
+      assert(
+        Math.abs(peaks.restored / peaks.audible - 0.5) < 0.01 &&
+          Math.abs(peaks.unmuted / peaks.audible - 0.5) < 0.01 &&
+          Math.abs(peaks.nonzero / peaks.audible - 0.3) < 0.01,
+        `replacement gain incorrect: ${JSON.stringify(peaks)}`,
+      );
+      console.log(`[e2e] PCM ${options.browser}: ${JSON.stringify(peaks)}`);
+    } finally {
+      await page.context().close();
+    }
+  });
+};
+
 const main = async (): Promise<void> => {
   const build = readSiteBuildManifest(distDir);
   const base = build.basePath.replace(/\/$/, '');
   const { server, origin } = await startServer(distDir, base);
-  const browser = await chromium.launch({
-    headless: !options.headed,
-    // Audio stays locked until a real gesture, as it does for a visitor.
-    ignoreDefaultArgs: ['--autoplay-policy=no-user-gesture-required'],
-    args: ['--autoplay-policy=user-gesture-required', '--enable-webgl', '--ignore-gpu-blocklist'],
-  });
+  assert(['chromium', 'firefox'].includes(options.browser!), 'Unsupported browser');
+  const browser = await (options.browser === 'firefox'
+    ? firefox.launch({ headless: !options.headed, firefoxUserPrefs: { 'dom.webgpu.enabled': true } })
+    : chromium.launch({
+        headless: !options.headed,
+        // Audio stays locked until a real gesture, as it does for a visitor.
+        ignoreDefaultArgs: ['--autoplay-policy=no-user-gesture-required'],
+        args: ['--autoplay-policy=user-gesture-required', '--enable-webgl', '--ignore-gpu-blocklist'],
+      }));
 
   try {
+    await maskChecks(browser, origin, base);
+    await audioBusChecks(browser, origin, base);
+    await workerChecks(browser, origin, base);
+    await newTabChecks(browser, origin, base);
+    await exampleLifecycleChecks(browser, origin, base);
     await consoleChecks(browser, origin, base);
     await typecheckSnippets(await assetChecks(browser, origin, base));
   } finally {
