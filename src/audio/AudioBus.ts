@@ -499,7 +499,20 @@ export class AudioBus {
     }
 
     const target = this._muted ? 0 : this._volume;
-    this._setup.outputNode.gain.setTargetAtTime(target, this._setup.audioContext.currentTime, 0.01);
+    const gain = this._setup.outputNode.gain;
+    const now = this._setup.audioContext.currentTime;
+    const held = gain.value;
+
+    if (typeof gain.cancelAndHoldAtTime === 'function') {
+      gain.cancelAndHoldAtTime(now);
+    } else {
+      gain.cancelScheduledValues(now);
+    }
+
+    // Holding a settled value may leave no event anchoring the next ramp at now.
+    gain.setValueAtTime(held, now);
+    // A finite endpoint settles idle buses; an unbounded target can resume at stale gain.
+    gain.linearRampToValueAtTime(target, now + 0.02);
   }
 
   private _clearScheduledStop(): void {
