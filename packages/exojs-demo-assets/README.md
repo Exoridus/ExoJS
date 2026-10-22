@@ -50,10 +50,12 @@ Reading a property such as `assets.ship` only returns its descriptor. Textures a
 
 Each descriptor in `demoAssets` is a literal `new URL('../media/<file>', import.meta.url)`, which Vite and other bundlers that understand the pattern follow. Two consequences matter for a production build:
 
-- The descriptors live in one object, so importing `demoAssets` makes the bundler emit every standard file (about 19 MB), not only the ones the code loads. That suits a demo or prototype; a shipped game should load its own media or copy just what it needs.
+- The descriptors live in one module, so any import from the package root, `createDemoAssets` included, makes the bundler emit every standard file (about 19 MB, under hashed names), not only the ones the code loads. A bundler transforms each `new URL(...)` before it removes unused exports. That suits a demo or prototype; a shipped game should load its own media or copy just what it needs.
 - Tiled maps, LDtk projects and bitmap fonts reference sibling files by relative path. A bundler that renames files with content hashes, or inlines small ones as `data:` URLs, breaks those references. Serve these formats through the copy command and `createDemoAssets` below.
 
 The Vite dev server serves the media straight from the installed package, relative references included.
+
+The Tiled and LDtk entries are typed as JSON descriptors. Load them as maps through the installed extension's loader type, for example `Asset.type('tileMap', assets.harborPlazaMap.source)` with `@codexo/exojs-tiled` or `Asset.type('ldtkMap', assets.harborWorldProject.source)` with `@codexo/exojs-ldtk`; that is what resolves and fetches their tileset images.
 
 ## Hosting the media elsewhere
 
@@ -71,7 +73,7 @@ const assets = createDemoAssets(new URL('./demo-media/', import.meta.url));
 npx exojs-demo-assets-copy ./public/demo-media --clean
 ```
 
-It copies exactly the standard-profile files listed in `manifest.json` to their manifest paths and verifies each file against its SHA-256.
+It copies exactly the standard-profile files listed in `manifest.json` to their manifest paths and verifies each file against its SHA-256. Served from that directory, the relative references inside maps, LDtk projects and bitmap fonts resolve unchanged. A bundled production build still emits the hashed catalog files described above next to the copy.
 
 ## Extended media
 
