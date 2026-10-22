@@ -1,0 +1,265 @@
+.root {
+  width: min(100%, 1160px);
+  margin: 0 auto 0.62rem;
+  border: 1px solid oklch(30% 0.014 245);
+  border-radius: var(--r-2);
+  background: oklch(18% 0.012 245);
+  color: var(--fg-muted);
+  font-size: 0.69rem;
+  line-height: 1.35;
+  overflow: hidden;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 30px;
+  padding: 0 0.4rem 0 0;
+}
+
+.toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 30px;
+  padding: 0 0.56rem;
+  border: 0;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.toggle:hover,
+.toggle:focus-visible {
+  background: var(--accent-soft);
+  outline: none;
+}
+
+.chevron {
+  transition: transform 120ms ease;
+}
+
+.root[data-open='true'] .chevron {
+  transform: rotate(90deg);
+}
+
+.title {
+  font-weight: 600;
+}
+
+.badge,
+.quiet-count {
+  font-family: var(--f-mono);
+  font-size: 0.66rem;
+}
+
+.badge {
+  padding: 1px 6px;
+  border-radius: var(--r-pill);
+}
+
+.badge--error {
+  background: oklch(76% 0.15 27 / 0.18);
+  color: oklch(82% 0.12 27);
+}
+
+.badge--warn {
+  background: oklch(74% 0.13 62 / 0.16);
+  color: oklch(84% 0.11 70);
+}
+
+.quiet-count {
+  color: var(--fg-faint);
+}
+
+.latest {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--f-mono);
+  font-size: 0.66rem;
+  color: var(--fg-faint);
+}
+
+.tools {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  padding: 0.25rem 0;
+}
+
+.filters {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.filter,
+.action {
+  appearance: none;
+  min-height: 22px;
+  padding: 0 0.5rem;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-1);
+  background: transparent;
+  color: var(--fg-faint);
+  font: inherit;
+  font-size: 0.66rem;
+  cursor: pointer;
+}
+
+.filter[aria-pressed='true'] {
+  border-color: var(--accent-line, var(--line));
+  background: var(--accent-soft);
+  color: var(--fg);
+}
+
+.filter:focus-visible,
+.action:focus-visible,
+.list:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.action:hover:not(:disabled) {
+  color: var(--fg);
+}
+
+.action:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.list {
+  max-height: clamp(120px, 28vh, 260px);
+  margin: 0;
+  padding: 0.2rem 0;
+  border-top: 1px solid oklch(30% 0.014 245);
+  list-style: none;
+  overflow: auto;
+  overscroll-behavior: contain;
+  font-family: var(--f-mono);
+  font-size: 0.68rem;
+}
+
+.entry {
+  display: grid;
+  grid-template-columns: 3.6rem 0.35rem minmax(0, 1fr);
+  gap: 0.45rem;
+  padding: 0.18rem 0.56rem;
+  border-left: 2px solid transparent;
+  color: var(--fg);
+}
+
+.entry + .entry {
+  border-top: 1px solid oklch(26% 0.012 245);
+}
+
+.entry[data-severity='debug'] {
+  color: var(--fg-faint);
+}
+
+.entry[data-severity='info'] {
+  color: oklch(84% 0.06 235);
+}
+
+.entry[data-severity='warn'] {
+  border-left-color: oklch(74% 0.13 62 / 0.8);
+  background: oklch(74% 0.13 62 / 0.07);
+  color: oklch(88% 0.08 75);
+}
+
+.entry[data-severity='error'] {
+  border-left-color: oklch(76% 0.15 27 / 0.85);
+  background: oklch(76% 0.15 27 / 0.08);
+  color: oklch(86% 0.09 27);
+}
+
+.time {
+  color: var(--fg-faint);
+  text-align: right;
+}
+
+.severity {
+  width: 6px;
+  height: 6px;
+  margin-top: 0.38rem;
+  border-radius: 999px;
+  background: currentcolor;
+  opacity: 0.6;
+}
+
+.body {
+  min-width: 0;
+}
+
+.kind {
+  margin-right: 0.4rem;
+  padding: 0 4px;
+  border-radius: var(--r-1);
+  background: oklch(76% 0.15 27 / 0.22);
+  font-weight: 600;
+}
+
+.text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.repeat {
+  margin-left: 0.4rem;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  background: var(--accent-soft);
+  color: var(--fg-muted);
+}
+
+.details {
+  margin-top: 0.15rem;
+  color: var(--fg-muted);
+}
+
+.details summary {
+  cursor: pointer;
+  color: var(--fg-faint);
+}
+
+.details pre {
+  margin: 0.2rem 0 0.1rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+}
+
+.notice {
+  padding: 0.3rem 0.56rem;
+  color: var(--fg-faint);
+  font-family: var(--f-sans, inherit);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (width <= 1119px) {
+  .root {
+    width: 100%;
+    margin: 0 0 0.62rem;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+  }
+}

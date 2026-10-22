@@ -1,6 +1,7 @@
 import { type FunctionComponent, lazy, type Ref, Suspense, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 import { loadExampleSource } from '../lib/example-store';
+import { PreviewConsole } from '../lib/preview-console';
 import { getExampleAvailability } from '../lib/runtime-support';
 import type { Example, PreviewErrorEntry } from '../lib/types';
 import { type DiagnosticJumpEvent, DiagnosticsStrip } from './DiagnosticsStrip';
@@ -8,6 +9,7 @@ import styles from './Editor.module.scss';
 import type { EditorCodeHandle, EditorCodeProps, EditorCursorEvent, EditorDiagnostic, ResetCodeEvent, UpdateCodeEvent } from './EditorCode';
 import { type CanvasSizeEvent, EditorPreview, type EditorPreviewHandle } from './EditorPreview';
 import { EditorStatusBar } from './EditorStatusBar';
+import { OutputPanel } from './OutputPanel';
 import { SidebarToggle, SwapButton } from './PlaygroundButtons';
 import { PreviewToolbar } from './PreviewToolbar';
 import { css, cx } from './react-utils';
@@ -67,7 +69,7 @@ export const Editor = ({
   const [executionCode, setExecutionCode] = useState<string | null>(null);
   const [originalExecutionCode, setOriginalExecutionCode] = useState<string | null>(null);
   const [sourceLoadError, setSourceLoadError] = useState<PreviewErrorEntry | null>(null);
-  const [previewErrors, setPreviewErrors] = useState<PreviewErrorEntry[]>([]);
+  const [output] = useState(() => new PreviewConsole());
   const [canvasWidth, setCanvasWidth] = useState(0);
   const [canvasHeight, setCanvasHeight] = useState(0);
   const [previewZoom, setPreviewZoom] = useState(1);
@@ -121,7 +123,6 @@ export const Editor = ({
     setExecutionCode(null);
     setOriginalExecutionCode(null);
     setSourceLoadError(null);
-    setPreviewErrors([]);
     setDiagnostics([]);
     setViewMode('source');
     /* eslint-enable @eslint-react/set-state-in-effect */
@@ -181,6 +182,8 @@ export const Editor = ({
       cancelled = true;
     };
   }, [activeExample, selectedVersionId]);
+
+  useEffect(() => () => output.dispose(), [output]);
 
   // Runs once the first client render has matched the server's output, which is
   // the point from which the editor can differ from it safely.
@@ -275,7 +278,6 @@ export const Editor = ({
       return;
     }
 
-    setPreviewErrors([]);
     setSourceCode(originalSourceCode);
     setExecutionCode(originalExecutionCode);
   };
@@ -299,7 +301,6 @@ export const Editor = ({
   const combinedErrors = [
     ...(catalogLoadError ? [{ summary: 'Failed to load examples catalog', details: catalogLoadError }] : []),
     ...(sourceLoadError ? [sourceLoadError] : []),
-    ...previewErrors,
   ];
 
   if (!activeExample && combinedErrors.length > 0) {
@@ -365,7 +366,7 @@ export const Editor = ({
               sourceCode={executionCode ?? sourceCode}
               exampleMeta={activeExample}
               selectedVersionId={selectedVersionId}
-              onPreviewErrors={setPreviewErrors}
+              output={output}
               onCanvasSize={onCanvasSize}
             />
           </div>
@@ -386,7 +387,9 @@ export const Editor = ({
       <div className={css(styles, 'diagnostics-slot')}>
         <DiagnosticsStrip diagnostics={diagnostics} onDiagnosticJump={onDiagnosticJump} />
       </div>
-      <div className={css(styles, 'errors-slot')}>{renderErrors(combinedErrors)}</div>
+      <div className={css(styles, 'output-slot')}>
+        <OutputPanel output={output} systemErrors={combinedErrors} />
+      </div>
       <section className={css(styles, 'editor-frame')} aria-label="Source editor">
         {/*
           Held back until after hydration. The lazy loader resolves to an empty
