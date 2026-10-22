@@ -70,6 +70,8 @@ export const Editor = ({
   const [originalExecutionCode, setOriginalExecutionCode] = useState<string | null>(null);
   const [sourceLoadError, setSourceLoadError] = useState<PreviewErrorEntry | null>(null);
   const [output] = useState(() => new PreviewConsole());
+  // Counts explicit runs, so running unchanged code still restarts the preview.
+  const [runId, setRunId] = useState(0);
   const [canvasWidth, setCanvasWidth] = useState(0);
   const [canvasHeight, setCanvasHeight] = useState(0);
   const [previewZoom, setPreviewZoom] = useState(1);
@@ -269,6 +271,7 @@ export const Editor = ({
   }, [syncExpandedWidth]);
 
   const onUpdateCode = (event: UpdateCodeEvent): void => {
+    setRunId(id => id + 1);
     setSourceCode(event.code);
     setExecutionCode(event.executionCode ?? null);
   };
@@ -364,6 +367,7 @@ export const Editor = ({
             <EditorPreview
               ref={previewRef}
               sourceCode={executionCode ?? sourceCode}
+              runId={runId}
               exampleMeta={activeExample}
               selectedVersionId={selectedVersionId}
               output={output}

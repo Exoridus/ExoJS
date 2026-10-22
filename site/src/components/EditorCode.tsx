@@ -990,6 +990,9 @@ const configureLanguageDefaults = (): void => {
   // the Playground surfaces the same errors CI would.
   const tsCompilerOptions = {
     ...sharedCompilerOptions,
+    // The preview runs what the worker emits for the edited model; with
+    // `noEmit` the emit output is empty and an edit never reaches the preview.
+    noEmit: false,
     strict: true,
   };
   // JS mode is a deliberate low-friction path for writing/pasting plain JS with

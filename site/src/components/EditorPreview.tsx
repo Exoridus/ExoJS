@@ -56,6 +56,8 @@ export interface EditorPreviewProps {
    * starts a new generation of it; without one, errors only blank the preview.
    */
   output?: PreviewConsole;
+  /** Changing it restarts the preview even when `sourceCode` is unchanged. */
+  runId?: number;
   onCanvasSize?(event: CanvasSizeEvent): void;
 }
 
@@ -64,6 +66,7 @@ export const EditorPreview = ({
   onCanvasSize,
   output,
   ref,
+  runId = 0,
   selectedVersionId,
   sourceCode,
 }: EditorPreviewProps): JSX.Element => {
@@ -107,7 +110,7 @@ export const EditorPreview = ({
     rootRef.current?.style.setProperty('--canvas-h', `${STAGE_HEIGHT}px`);
     rootRef.current?.style.setProperty('--preview-zoom', String(zoom));
     onCanvasSize?.({ width: 0, height: 0, zoom: 1 });
-  }, [onCanvasSize, sourceCode]);
+  }, [onCanvasSize, sourceCode, runId]);
 
   useEffect(() => {
     const recalculateZoom = (): void => {
