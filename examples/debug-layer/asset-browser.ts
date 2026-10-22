@@ -1283,9 +1283,24 @@ const openAudio = async ({ scene, item, scope, isCurrent }: PreviewContext): Pro
     fillColor: new Color(138, 160, 196),
   });
   const buffer = music ? null : (playable as Sound).audioBuffer;
+  const channels = buffer?.numberOfChannels ?? 0;
+  const channelNames = channels === 2 ? ['L', 'R'] : Array.from({ length: channels }, (_, channel) => String(channel + 1));
+  const wave = { width: PREVIEW.width - 80, height: channels > 1 ? 300 : 220, gap: 16, left: PREVIEW.x + 40 };
+  const lane = {
+    height: (wave.height - wave.gap * Math.max(0, channels - 1)) / Math.max(1, channels),
+    top: PREVIEW_CENTER.y - wave.height / 2,
+  };
+  const laneLabels =
+    channels > 1
+      ? channelNames.map((name, channel) =>
+          new Text(name, { fontSize: 14, fontFamily: MONO, fillColor: new Color(138, 160, 196) })
+            .setAnchor(1, 0.5)
+            .setPosition(wave.left - 10, lane.top + channel * (lane.height + wave.gap) + lane.height / 2),
+        )
+      : [];
 
-  // A decoded sound draws its waveform: one min/max bar per column of the
-  // first channel, with the selected sprite clip highlighted.
+  // A decoded sound draws one lane per channel: a min/max bar per column, with
+  // the selected sprite clip highlighted across all lanes.
   const drawWaveform = (): void => {
     waveform.clear();
 
@@ -1293,37 +1308,40 @@ const openAudio = async ({ scene, item, scope, isCurrent }: PreviewContext): Pro
       return;
     }
 
-    const samples = buffer.getChannelData(0);
-    const width = PREVIEW.width - 80;
-    const height = 220;
-    const left = PREVIEW.x + 40;
-    const middle = PREVIEW_CENTER.y;
     const clip = table && state.clip ? table[state.clip] : undefined;
 
     if (clip) {
       waveform.fillColor = new Color(127, 184, 255, 0.16);
       waveform.drawRectangle(
-        left + (clip.start / buffer.duration) * width,
-        middle - height / 2,
-        ((clip.end - clip.start) / buffer.duration) * width,
-        height,
+        wave.left + (clip.start / buffer.duration) * wave.width,
+        lane.top,
+        ((clip.end - clip.start) / buffer.duration) * wave.width,
+        wave.height,
       );
     }
 
-    waveform.fillColor = new Color(127, 184, 255);
+    for (let channel = 0; channel < channels; channel += 1) {
+      const samples = buffer.getChannelData(channel);
+      const middle = lane.top + channel * (lane.height + wave.gap) + lane.height / 2;
+      const scale = lane.height / 2;
 
-    for (let column = 0; column < width; column += 2) {
-      const from = Math.floor((column / width) * samples.length);
-      const to = Math.max(from + 1, Math.floor(((column + 2) / width) * samples.length));
-      let low = 0;
-      let high = 0;
+      waveform.fillColor = new Color(127, 184, 255, 0.25);
+      waveform.drawRectangle(wave.left, middle - 0.5, wave.width, 1);
+      waveform.fillColor = new Color(127, 184, 255);
 
-      for (let index = from; index < to; index += 1) {
-        low = Math.min(low, samples[index]!);
-        high = Math.max(high, samples[index]!);
+      for (let column = 0; column < wave.width; column += 2) {
+        const from = Math.floor((column / wave.width) * samples.length);
+        const to = Math.max(from + 1, Math.floor(((column + 2) / wave.width) * samples.length));
+        let low = 0;
+        let high = 0;
+
+        for (let index = from; index < to; index += 1) {
+          low = Math.min(low, samples[index]!);
+          high = Math.max(high, samples[index]!);
+        }
+
+        waveform.drawRectangle(wave.left + column, middle - high * scale, 1.5, Math.max(1, (high - low) * scale));
       }
-
-      waveform.drawRectangle(left + column, middle - high * (height / 2), 1.5, Math.max(1, (high - low) * (height / 2)));
     }
   };
 
@@ -1382,11 +1400,12 @@ const openAudio = async ({ scene, item, scope, isCurrent }: PreviewContext): Pro
 
   return {
     world: [],
-    overlay: [waveform, caption],
+    overlay: [waveform, caption, ...laneLabels],
     bounds: null,
     facts: [
       ['Kind', music ? 'Music, streamed from an audio element' : 'Sound, decoded into memory'],
       ['Duration', formatSeconds(playable.duration)],
+      ...(buffer ? [['Channels', channels === 1 ? 'Mono' : channels === 2 ? 'Stereo' : String(channels)] as const] : []),
       ...(clips.length > 0 ? [['Clips', clips.join(', ')] as const] : []),
     ],
     mount(host) {
@@ -1452,6 +1471,7 @@ const openAudio = async ({ scene, item, scope, isCurrent }: PreviewContext): Pro
       status = null;
       waveform.destroy();
       caption.destroy();
+      laneLabels.forEach(label => label.destroy());
     },
   };
 };
