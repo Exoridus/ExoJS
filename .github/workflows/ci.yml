@@ -272,6 +272,10 @@ jobs:
     if: ${{ !cancelled() && needs.plan.outputs.site == 'true' && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      # A re-run of failed jobs keeps this job's earlier attempt, so the smoke
+      # and the publisher find the candidate by this name, not by recomputing it.
+      candidate: site-stable-${{ github.sha }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
@@ -287,6 +291,16 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: pnpm site:build
 
+      # This branch publishes the Stable channel at /ExoJS/. Its site build
+      # writes no site-build.json, so the finished tree is recorded here.
+      - name: Record the Stable site identity
+        run: node scripts/pages/stamp-stable-site.ts --dir site/dist --sha "$GITHUB_SHA"
+
+      # The tree must match its own site-build.json, carry this commit, channel
+      # and base, contain no links or special files and fit the site budget.
+      - name: Verify the site candidate
+        run: node scripts/pages/channel-artifact.ts verify --dir site/dist --channel stable --sha "$GITHUB_SHA"
+
       - name: Upload tooling logs on failure
         if: ${{ failure() }}
         uses: actions/upload-artifact@v7
@@ -297,12 +311,14 @@ jobs:
           include-hidden-files: true
           if-no-files-found: warn
 
-      # Deploy Pages ships exactly this artifact; it builds nothing itself.
+      # Deploy Pages ships exactly this artifact; it builds nothing itself. A
+      # push to main is a publishable Stable candidate and is kept for 90 days,
+      # so the publisher never depends on a short-lived download.
       - uses: actions/upload-artifact@v7
         with:
-          name: site-dist-${{ github.sha }}
+          name: site-stable-${{ github.sha }}-${{ github.run_attempt }}
           path: site/dist/
-          retention-days: 1
+          retention-days: ${{ github.event_name == 'push' && 90 || 1 }}
           if-no-files-found: error
 
   # Every catalog example through the real playground route, against the site
@@ -323,7 +339,7 @@ jobs:
           browser: chromium
       - uses: actions/download-artifact@v8
         with:
-          name: site-dist-${{ github.sha }}
+          name: ${{ needs.site.outputs.candidate }}
           path: site/dist
 
       - run: pnpm test:examples:smoke --renderer webgl2 ${{ needs.plan.outputs.smokeSample == 'true' && '--sample' || '' }}
