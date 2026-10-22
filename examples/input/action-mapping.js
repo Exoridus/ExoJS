@@ -30,6 +30,7 @@ class ActionMappingScene extends Scene {
     pulse: new ButtonAction([Keyboard.Space, GamepadButton.South]),
   });
   pulseRemaining = 0;
+  direction = 'none';
   hud;
   init() {
     const { width, height } = this.app;
@@ -44,8 +45,16 @@ class ActionMappingScene extends Scene {
       Math.max(24, Math.min(width - 24, this.sprite.x + x * 260 * delta)),
       Math.max(24, Math.min(height - 24, this.sprite.y + y * 260 * delta)),
     );
+    // Logged on transitions only - the Output panel shows which binding the
+    // action map resolved, whether keyboard or gamepad produced it.
+    const direction = [y < -0.5 && 'up', y > 0.5 && 'down', x < -0.5 && 'left', x > 0.5 && 'right'].filter(Boolean).join('-') || 'none';
+    if (direction !== this.direction) {
+      this.direction = direction;
+      console.log(`Action: move ${direction}`);
+    }
     if (this.actions.pulse.pressed) {
       this.pulseRemaining = 0.35;
+      console.info('Action: pulse');
     }
     this.pulseRemaining = Math.max(0, this.pulseRemaining - delta);
     this.sprite.setTint(this.pulseRemaining > 0 ? PULSE_COLOR : Color.white);

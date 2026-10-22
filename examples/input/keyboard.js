@@ -11,6 +11,11 @@ import { mountControls } from '@examples/runtime';
 //
 // Both WASD and the arrow keys drive the same square via a single binding per
 // direction (each binding watches two channels at once).
+//
+// The Output panel under the preview shows the transitions: every key press
+// from `app.input.onKeyDown`, the recentre action, and changes in the held
+// set - logged when they happen, never once per frame.
+const keyName = channel => Keyboard[channel] ?? `Channel ${channel}`;
 class KeyboardScene extends Scene {
   square;
   position = { x: 400, y: 300 };
@@ -19,6 +24,8 @@ class KeyboardScene extends Scene {
   left;
   right;
   hud;
+  held = 'none';
+  onKeyDown = channel => console.log(`KeyDown: ${keyName(channel)}`);
   init() {
     const app = this.app;
     const { width, height } = app;
@@ -35,7 +42,9 @@ class KeyboardScene extends Scene {
     this.inputs.onStart(Keyboard.Escape, () => {
       this.position.x = width / 2;
       this.position.y = height / 2;
+      console.info('Action: Recentre');
     });
+    app.input.onKeyDown.add(this.onKeyDown);
     this.hud = mountControls({ status: 'Held: none' });
   }
   update(delta) {
@@ -49,13 +58,23 @@ class KeyboardScene extends Scene {
     const held = [this.up.active && 'Up', this.down.active && 'Down', this.left.active && 'Left', this.right.active && 'Right'].filter(
       Boolean,
     );
-    this.hud.setStatus(`Held: ${held.length ? held.join(' + ') : 'none'}`);
+    const label = held.length ? held.join(' + ') : 'none';
+    if (label !== this.held) {
+      this.held = label;
+      this.hud.setStatus(`Held: ${label}`);
+      console.log(`Held: ${label}`);
+    }
   }
   draw(context) {
     this.square.clear();
     this.square.fillColor = new Color(120, 200, 255);
     this.square.drawRectangle(this.position.x - 20, this.position.y - 20, 40, 40);
     context.render(this.square);
+  }
+  destroy() {
+    this.app.input.onKeyDown.remove(this.onKeyDown);
+    this.hud.dispose();
+    super.destroy();
   }
 }
 const app = new Application({

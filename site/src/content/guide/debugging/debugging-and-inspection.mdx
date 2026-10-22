@@ -78,6 +78,8 @@ Keep logging at the boundary that can add meaningful context: which scene, asset
 
 A logger sink is an external subscription. Retain and call its unsubscribe function when its owner ends. Do not log private save data, access tokens, or full user documents merely to identify a decoding failure.
 
+In the playground, the Output panel under the preview shows what the running example writes with `console.log`, `info`, `debug`, `warn` and `error`, together with uncaught errors and unhandled promise rejections. It records the console of the preview page itself; workers and audio worklets have consoles of their own, and their messages stay in the browser's developer tools. The panel keeps the most recent messages of the current run and drops a burst it cannot keep up with, counting what it dropped, while the developer tools still receive every message.
+
 ## Turn the observation into a regression test
 
 Once the failure is understood, capture the smallest useful contract: a resource releases when its scope ends, a scene navigation rejects cleanly, an interaction scope traps focus, or a render tree contains the intended filter. A structural assertion catches structural drift; a visual or GPU claim still needs the corresponding rendering evidence.

@@ -21,6 +21,12 @@ import { mountControls } from '@examples/runtime';
 //
 // Both WASD and the arrow keys drive the same square via a single binding per
 // direction (each binding watches two channels at once).
+//
+// The Output panel under the preview shows the transitions: every key press
+// from `app.input.onKeyDown`, the recentre action, and changes in the held
+// set - logged when they happen, never once per frame.
+const keyName = (channel: number): string => Keyboard[channel as Keyboard] ?? `Channel ${channel}`;
+
 class KeyboardScene extends Scene {
   private square!: Graphics;
   private position = { x: 400, y: 300 };
@@ -29,6 +35,8 @@ class KeyboardScene extends Scene {
   private left!: InputBinding;
   private right!: InputBinding;
   private hud!: ReturnType<typeof mountControls>;
+  private held = 'none';
+  private readonly onKeyDown = (channel: number): void => console.log(`KeyDown: ${keyName(channel)}`);
 
   override init(): void {
     const app = this.app;
@@ -49,8 +57,10 @@ class KeyboardScene extends Scene {
     this.inputs.onStart(Keyboard.Escape, () => {
       this.position.x = width / 2;
       this.position.y = height / 2;
+      console.info('Action: Recentre');
     });
 
+    app.input.onKeyDown.add(this.onKeyDown);
     this.hud = mountControls({ status: 'Held: none' });
   }
 
@@ -68,7 +78,13 @@ class KeyboardScene extends Scene {
       Boolean,
     );
 
-    this.hud.setStatus(`Held: ${held.length ? held.join(' + ') : 'none'}`);
+    const label = held.length ? held.join(' + ') : 'none';
+
+    if (label !== this.held) {
+      this.held = label;
+      this.hud.setStatus(`Held: ${label}`);
+      console.log(`Held: ${label}`);
+    }
   }
 
   override draw(context: RenderingContext): void {
@@ -76,6 +92,12 @@ class KeyboardScene extends Scene {
     this.square.fillColor = new Color(120, 200, 255);
     this.square.drawRectangle(this.position.x - 20, this.position.y - 20, 40, 40);
     context.render(this.square);
+  }
+
+  override destroy(): void {
+    this.app.input.onKeyDown.remove(this.onKeyDown);
+    this.hud.dispose();
+    super.destroy();
   }
 }
 

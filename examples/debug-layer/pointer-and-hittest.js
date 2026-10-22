@@ -3,6 +3,7 @@ import { Application, Color, FixedResolutionCanvasSizing, Keyboard, Scene, Sprit
 import { DebugOverlay } from '@codexo/exojs/debug';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
+const NAMES = ['red', 'green', 'blue'];
 class PointerAndHittestScene extends Scene {
   sprites;
   hud;
@@ -19,6 +20,10 @@ class PointerAndHittestScene extends Scene {
       sprite.interactive = true;
       sprite.draggable = true;
       sprite.setTint([new Color(255, 130, 130), new Color(130, 255, 170), new Color(140, 190, 255)][i]);
+      // A press lands on the topmost interactive node under the pointer; the
+      // Output panel names which one the hit test picked.
+      sprite.onPointerTap.add(event => console.log(`Hit: ship ${i + 1} (${NAMES[i]}) at ${Math.round(event.x)}, ${Math.round(event.y)}`));
+      sprite.onDragEnd.add(() => console.log(`Dropped ship ${i + 1} (${NAMES[i]}) at ${Math.round(sprite.x)}, ${Math.round(sprite.y)}`));
       // The hitTest layer (and the interaction system itself) walk the
       // scene graph, so interactive nodes must live under scene.root.
       this.root.addChild(sprite);
@@ -33,7 +38,8 @@ class PointerAndHittestScene extends Scene {
     this.sprites.forEach((sprite, i) => {
       sprite.zIndex = i === index ? 3 : i;
     });
-    this.hud.setStatus(`Front: ${index + 1} (${['red', 'green', 'blue'][index]})`);
+    this.hud.setStatus(`Front: ${index + 1} (${NAMES[index]})`);
+    console.info(`Front: ship ${index + 1} (${NAMES[index]})`);
   }
   destroy() {
     this.hud.dispose();
