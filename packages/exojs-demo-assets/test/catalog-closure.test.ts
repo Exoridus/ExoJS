@@ -55,6 +55,34 @@ describe('blocked sources: unrecorded-provenance files stay unpublished', () => 
   });
 });
 
+describe('sound sprite sidecars: the format the sound loader reads', () => {
+  const sidecars = catalog.entries.flatMap(entry =>
+    Object.entries(entry.options ?? {}).flatMap(([option, value]) =>
+      option === 'sprites' && typeof value === 'object' ? [[entry.key, value.$path] as const] : [],
+    ),
+  );
+
+  test('the catalog has sound sprite sidecars to check', () => {
+    expect(sidecars.length).toBeGreaterThan(0);
+  });
+
+  test.each(sidecars)('%s: %s maps each clip name to finite start and end seconds', (_key, path) => {
+    const sheet: unknown = JSON.parse(readFileSync(resolve(catalog.sourceRoot, path), 'utf8'));
+
+    expect(sheet).toBeTypeOf('object');
+    expect(Array.isArray(sheet)).toBe(false);
+    expect(Object.keys(sheet as object).length).toBeGreaterThan(0);
+
+    for (const clip of Object.values(sheet as Record<string, unknown>)) {
+      const { start, end } = clip as { start?: unknown; end?: unknown };
+
+      expect(Number.isFinite(start)).toBe(true);
+      expect(Number.isFinite(end)).toBe(true);
+      expect(end as number).toBeGreaterThan(start as number);
+    }
+  });
+});
+
 describe('generated artifacts: no drift against the authored catalog', () => {
   test.each(Object.entries(renderAll(catalog)))('%s', (path, rendered) => {
     expect(readFileSync(resolve(packageRoot, path), 'utf8')).toBe(rendered);

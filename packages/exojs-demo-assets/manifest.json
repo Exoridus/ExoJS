@@ -5,7 +5,7 @@
   "profiles": {
     "standard": {
       "files": 161,
-      "bytes": 18872250
+      "bytes": 18872156
     },
     "extended": {
       "files": 1,
@@ -2113,8 +2113,8 @@
     },
     {
       "path": "demo/sound-sprites/digital/digital.json",
-      "bytes": 97,
-      "sha256": "c5ba4e7fa232a4a04765a0e5fbf6aaccc7b8f45c9dd5408589d7d3090f81deeb",
+      "bytes": 74,
+      "sha256": "e82af9cea24f50732d85a4c7f0cff29bbdda271b07b7c186c45ec05144b4b2dd",
       "role": "transitive",
       "profile": "standard",
       "provenance": "kenney-sound-sprites"
@@ -2129,8 +2129,8 @@
     },
     {
       "path": "demo/sound-sprites/impacts/impacts.json",
-      "bytes": 155,
-      "sha256": "2ca95882681c3714c7eeeb2d25b6baa88621edcc4c7cd0b2c17e641250e4d8ca",
+      "bytes": 127,
+      "sha256": "6f2d118a17bb09032faa6659361b33d761abe5b9fe3369f02cd6bcc024dae1b3",
       "role": "transitive",
       "profile": "standard",
       "provenance": "kenney-sound-sprites"
@@ -2145,8 +2145,8 @@
     },
     {
       "path": "demo/sound-sprites/ui/ui.json",
-      "bytes": 271,
-      "sha256": "e21f5a7cbfc7492606feb9aa6217aecfa62df7135ce5c00bd78da5a8116a886c",
+      "bytes": 228,
+      "sha256": "7538dc55342ccd02079c828be15bd7de468ab7093a5ae4e61acc15f89368b86c",
       "role": "transitive",
       "profile": "standard",
       "provenance": "kenney-sound-sprites"
