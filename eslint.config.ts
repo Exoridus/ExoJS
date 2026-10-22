@@ -1249,7 +1249,9 @@ export default defineConfig([
         },
       ],
       eqeqeq: ['error', 'always', { null: 'ignore' }],
-      'no-console': 'error',
+      // The playground shows a preview's console in its Output panel, so a
+      // log line is one of the ways an example explains what just happened.
+      'no-console': 'off',
       // The sync-init() rule (see the engine-source block) is deliberately NOT
       // enabled here yet: most of the catalog still uses the pre-v0.17
       // async `init(loader)` hook and is migrated in the dedicated examples
