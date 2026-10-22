@@ -188,6 +188,7 @@
     "test:parity:firefox": "tsx ./scripts/run-parity.ts --project=browser-webgpu-firefox test/rendering/parity",
     "test:parity:safari": "tsx ./scripts/run-parity.ts --project=browser-parity-safari",
     "test:examples:smoke": "pnpm --filter @codexo/exojs-examples examples:smoke",
+    "test:playground:e2e": "pnpm --filter @codexo/exojs-examples playground:e2e",
     "gates": "tsx ./scripts/ci/gates.ts",
     "lanes": "tsx ./scripts/lanes.ts",
     "qualify": "tsx ./scripts/ci/qualify.ts",

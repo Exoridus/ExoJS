@@ -16,7 +16,7 @@ const SMOKE_LANE: Lane = {
   id: 'smoke',
   stage: 'verify',
   when: 'exampleSmoke',
-  run: 'pnpm site:build && pnpm test:examples:smoke --sample',
+  run: 'pnpm site:build && pnpm test:examples:smoke --sample && pnpm test:playground:e2e',
   local: 'browser',
 };
 const eligible = (lane: Lane): boolean => lane.stage !== 'verify' && !lane.ciOnly;

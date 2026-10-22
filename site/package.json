@@ -20,6 +20,7 @@
     "check-ts": "astro check && exo-tsc --noEmit --pretty",
     "check-ts:scripts": "exo-tsc --noEmit --pretty -p tsconfig.scripts.json",
     "examples:smoke": "tsx scripts/smoke-examples.ts",
+    "playground:e2e": "tsx scripts/playground-e2e.ts",
     "check-example": "tsx scripts/check-example.ts",
     "brand:optimize": "tsx scripts/optimize-brand-assets.ts",
     "screenshots": "tsx scripts/capture-screenshots.ts",

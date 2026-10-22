@@ -375,6 +375,13 @@ jobs:
 
       - run: pnpm test:examples:smoke --renderer webgl2 ${{ needs.plan.outputs.smokeSample == 'true' && '--sample' || '' }}
 
+      # The playground shell around the examples: console capture across the
+      # preview iframe and the Output panel's layouts, and the Asset Browser's
+      # previews, cancelled loads and generated snippets. Runs after a failed
+      # smoke too, so one run reports both.
+      - run: pnpm test:playground:e2e
+        if: ${{ !cancelled() }}
+
       - name: Keep the smoke report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
