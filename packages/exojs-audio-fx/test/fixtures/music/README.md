@@ -62,7 +62,7 @@ Initial observed values for these exact excerpts, with production defaults:
 | DescendGameplay |                 7 |          128 |             0.403 |               274.86 |
 | Vampire's Piano |                 3 |           68 |             0.851 |               143.81 |
 | 2 (jazz)        |                 4 |           39 |             0.563 |                88.37 |
-| Cave Theme      |                 4 |           43 |             0.723 |               175.59 |
+| Cave Theme      |                 4 |           43 |             0.723 |               185.79 |
 
 These are observations, not correct reference tempos or latency measurements against ground truth. The accepted DescendGameplay reference is near half the detector's tempo estimate, exposing a doubled-tempo interpretation. ChillMenu phase and Cave Theme pulse selection remain unresolved. Thirteen excerpts do not establish genre-wide generalization, vocal robustness, live-drum timing, or calibrated confidence.
 
