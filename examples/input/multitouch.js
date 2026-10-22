@@ -16,39 +16,42 @@ const colors = [
   new Color(255, 130, 200),
 ];
 class MultitouchScene extends Scene {
+  onPointerDown = pointer => {
+    if (this.pointers.size >= MAX_TOUCHES || this.pointers.has(pointer.id)) {
+      return;
+    }
+    this.pointers.set(pointer.id, { id: pointer.id, x: pointer.x, y: pointer.y });
+    this.refreshHud();
+  };
+  onPointerMove = pointer => {
+    const touch = this.pointers.get(pointer.id);
+    if (touch) {
+      touch.x = pointer.x;
+      touch.y = pointer.y;
+    }
+  };
+  onPointerUp = pointer => {
+    this.pointers.delete(pointer.id);
+    this.refreshHud();
+  };
+  onPointerCancel = pointer => {
+    this.pointers.delete(pointer.id);
+    this.refreshHud();
+  };
   graphics;
   labels = [];
   pointers = new Map();
   hud;
   init() {
-    const app = this.app;
     this.graphics = new Graphics();
     // Reusable label pool - one Text per possible touch, repositioned each frame.
     for (let i = 0; i < MAX_TOUCHES; i++) {
       this.labels.push(new Text('', { fillColor: Color.white, fontSize: 16 }).setAnchor(0.5));
     }
-    app.input.onPointerDown.add(pointer => {
-      if (this.pointers.size >= MAX_TOUCHES || this.pointers.has(pointer.id)) {
-        return;
-      }
-      this.pointers.set(pointer.id, { id: pointer.id, x: pointer.x, y: pointer.y });
-      this.refreshHud();
-    });
-    app.input.onPointerMove.add(pointer => {
-      const touch = this.pointers.get(pointer.id);
-      if (touch) {
-        touch.x = pointer.x;
-        touch.y = pointer.y;
-      }
-    });
-    app.input.onPointerUp.add(pointer => {
-      this.pointers.delete(pointer.id);
-      this.refreshHud();
-    });
-    app.input.onPointerCancel.add(pointer => {
-      this.pointers.delete(pointer.id);
-      this.refreshHud();
-    });
+    this.app.input.onPointerDown.add(this.onPointerDown);
+    this.app.input.onPointerMove.add(this.onPointerMove);
+    this.app.input.onPointerUp.add(this.onPointerUp);
+    this.app.input.onPointerCancel.add(this.onPointerCancel);
     this.hud = mountControls({ status: 'Active touches: 0 / 10' });
   }
   refreshHud() {
@@ -71,6 +74,18 @@ class MultitouchScene extends Scene {
     for (let i = 0; i < this.pointers.size; i++) {
       context.render(this.labels[i]);
     }
+  }
+  destroy() {
+    this.app.input.onPointerDown.remove(this.onPointerDown);
+    this.app.input.onPointerMove.remove(this.onPointerMove);
+    this.app.input.onPointerUp.remove(this.onPointerUp);
+    this.app.input.onPointerCancel.remove(this.onPointerCancel);
+    for (const label of this.labels) {
+      label.destroy();
+    }
+    this.graphics?.destroy();
+    this.hud?.dispose();
+    super.destroy();
   }
 }
 const app = new Application({

@@ -8,6 +8,9 @@ const lines = [
 ];
 const choices = ['Hold formation', 'Burn the gates'];
 class DialogSystemScene extends Scene {
+  onPointerTap = () => {
+    this.advance();
+  };
   namePlate;
   box;
   choicePrompt;
@@ -38,7 +41,7 @@ class DialogSystemScene extends Scene {
       return button;
     });
     this.setChoicesVisible(false);
-    app.input.onPointerTap.add(() => this.advance());
+    this.app.input.onPointerTap.add(this.onPointerTap);
   }
   advance() {
     if (this.awaitingChoice) {
@@ -105,6 +108,13 @@ class DialogSystemScene extends Scene {
     if (this.choicePrompt.visible) {
       context.render(this.choicePrompt);
     }
+  }
+  destroy() {
+    this.app.input.onPointerTap.remove(this.onPointerTap);
+    this.namePlate?.destroy();
+    this.box?.destroy();
+    this.choicePrompt?.destroy();
+    super.destroy();
   }
 }
 const app = new Application({

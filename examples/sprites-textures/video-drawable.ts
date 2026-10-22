@@ -26,6 +26,16 @@ const VIDEOS = [
 ];
 
 class VideoDrawableScene extends Scene {
+  private readonly onPointerTap = (): void => {
+    this.panel.step('paused');
+  };
+  private readonly onKeyDown = (channel: number): void => {
+    const idx = [Keyboard.One, Keyboard.Two, Keyboard.Three].indexOf(channel);
+
+    if (idx !== -1) {
+      this.panel.set('video', VIDEOS[idx]!.label);
+    }
+  };
   private video!: Video;
   private overlay!: Sprite;
   private elapsed = 0;
@@ -78,14 +88,8 @@ class VideoDrawableScene extends Scene {
       },
     });
 
-    app.input.onPointerTap.add(() => this.panel.step('paused'));
-    app.input.onKeyDown.add(channel => {
-      const idx = [Keyboard.One, Keyboard.Two, Keyboard.Three].indexOf(channel);
-
-      if (idx !== -1) {
-        this.panel.set('video', VIDEOS[idx]!.label);
-      }
-    });
+    this.app.input.onPointerTap.add(this.onPointerTap);
+    this.app.input.onKeyDown.add(this.onKeyDown);
   }
 
   /** Sizing + playback options shared by every video the example swaps in. */
@@ -110,6 +114,11 @@ class VideoDrawableScene extends Scene {
 
     try {
       const loaded = await this.loader.load(entry.asset);
+
+      if (this.lifecycleSignal.aborted) {
+        return;
+      }
+
       this.loadedVideos.add(entry.name);
       this.video.pause();
       this.videoIdx = idx;
@@ -119,6 +128,10 @@ class VideoDrawableScene extends Scene {
       this.video.play();
       this.panel.status('');
     } catch {
+      if (this.lifecycleSignal.aborted) {
+        return;
+      }
+
       this.panel.status(`Failed to load ${entry.label}.`);
       this.panel.set('video', VIDEOS[this.videoIdx]!.label);
     } finally {
@@ -150,6 +163,15 @@ class VideoDrawableScene extends Scene {
   override draw(context: RenderingContext): void {
     context.render(this.video);
     context.render(this.overlay);
+  }
+
+  override destroy(): void {
+    this.app.input.onPointerTap.remove(this.onPointerTap);
+    this.app.input.onKeyDown.remove(this.onKeyDown);
+    this.overlay?.destroy();
+    this.panel?.dispose();
+    this.video?.pause();
+    super.destroy();
   }
 }
 

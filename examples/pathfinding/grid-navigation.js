@@ -38,6 +38,9 @@ const initialCost = (x, y) => {
   return 1;
 };
 class GridNavigationScene extends Scene {
+  onPointerTap = pointer => {
+    this.applyPaint(pointer.x, pointer.y);
+  };
   grid = GridSpace.from(COLUMNS, ROWS, initialCost, { cellSize: CELL });
   pathfinder = new Pathfinder();
   terrain = new Graphics();
@@ -53,7 +56,7 @@ class GridNavigationScene extends Scene {
   diagonals = 'no-corner-cutting';
   panel;
   init() {
-    this.app.input.onPointerTap.add(pointer => this.applyPaint(pointer.x, pointer.y));
+    this.app.input.onPointerTap.add(this.onPointerTap);
     this.panel = demoPanel({
       title: 'Pathfinding',
       controls: {
@@ -173,6 +176,9 @@ class GridNavigationScene extends Scene {
     );
   }
   destroy() {
+    this.app.input.onPointerTap.remove(this.onPointerTap);
+    this.terrain.destroy();
+    this.overlay.destroy();
     this.panel?.dispose();
     super.destroy();
   }

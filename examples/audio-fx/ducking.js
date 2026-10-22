@@ -26,7 +26,7 @@ class DuckingScene extends Scene {
     // The pointer gesture also unlocks the AudioContext; firing while
     // still locked would be silent, so wait until audio is ready.
     if (!this.app.audio.locked) {
-      this.app.audio.play(this.voice, { bus: this.voiceBus, volume: 0.4 });
+      this.audio.play(this.voice, { bus: this.voiceBus, volume: 0.4 });
     }
   };
   async load() {
@@ -72,7 +72,7 @@ class DuckingScene extends Scene {
     app.input.onPointerTap.add(this.playVoice);
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically.
-    app.audio.play(this.music, { loop: true, volume: 0.5 });
+    this.audio.play(this.music, { loop: true, volume: 0.5 });
   }
   bar(label, name, y, level, color) {
     this.gfx.fillColor = new Color(70, 70, 70);
@@ -99,6 +99,16 @@ class DuckingScene extends Scene {
   }
   destroy() {
     this.app.input.onPointerTap.remove(this.playVoice);
+    this.musicLevel?.destroy();
+    this.voiceLevel?.destroy();
+    if (this.ducking) {
+      this.app.audio.music.removeEffect(this.ducking);
+      this.ducking.destroy();
+    }
+    if (this.voiceBus) {
+      this.app.audio.unregisterBus(this.voiceBus);
+      this.voiceBus.destroy();
+    }
     this.gfx?.destroy();
     this.musicLabel?.destroy();
     this.voiceLabel?.destroy();

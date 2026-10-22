@@ -9,6 +9,20 @@ import { mountControls } from '@examples/runtime';
 //   - a click counter (onPointerTap fires on a press+release without a drag)
 //   - a draggable sprite (the engine's built-in drag on an interactive node)
 class MouseAndPointerScene extends Scene {
+  onPointerMove = pointer => {
+    this.pointer.x = pointer.x;
+    this.pointer.y = pointer.y;
+    this.buttons = pointer.buttons;
+  };
+  onPointerDown = pointer => {
+    this.buttons = pointer.buttons;
+  };
+  onPointerUp = pointer => {
+    this.buttons = pointer.buttons;
+  };
+  onPointerTap = () => {
+    this.clicks++;
+  };
   ship;
   crosshair;
   pointer = { x: 400, y: 300 };
@@ -28,20 +42,10 @@ class MouseAndPointerScene extends Scene {
     this.ship.draggable = true;
     this.root.addChild(this.ship);
     this.crosshair = new Graphics();
-    app.input.onPointerMove.add(pointer => {
-      this.pointer.x = pointer.x;
-      this.pointer.y = pointer.y;
-      this.buttons = pointer.buttons;
-    });
-    app.input.onPointerDown.add(pointer => {
-      this.buttons = pointer.buttons;
-    });
-    app.input.onPointerUp.add(pointer => {
-      this.buttons = pointer.buttons;
-    });
-    app.input.onPointerTap.add(() => {
-      this.clicks++;
-    });
+    this.app.input.onPointerMove.add(this.onPointerMove);
+    this.app.input.onPointerDown.add(this.onPointerDown);
+    this.app.input.onPointerUp.add(this.onPointerUp);
+    this.app.input.onPointerTap.add(this.onPointerTap);
     this.hud = mountControls();
   }
   buttonLabel() {
@@ -65,6 +69,15 @@ class MouseAndPointerScene extends Scene {
     this.crosshair.drawLine(this.pointer.x - 12, this.pointer.y, this.pointer.x + 12, this.pointer.y);
     this.crosshair.drawLine(this.pointer.x, this.pointer.y - 12, this.pointer.x, this.pointer.y + 12);
     context.render(this.crosshair);
+  }
+  destroy() {
+    this.app.input.onPointerMove.remove(this.onPointerMove);
+    this.app.input.onPointerDown.remove(this.onPointerDown);
+    this.app.input.onPointerUp.remove(this.onPointerUp);
+    this.app.input.onPointerTap.remove(this.onPointerTap);
+    this.crosshair?.destroy();
+    this.hud?.dispose();
+    super.destroy();
   }
 }
 const app = new Application({
