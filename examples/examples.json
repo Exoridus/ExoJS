@@ -120,6 +120,17 @@
       "backend": "core",
       "tags": ["assets", "cache", "offline", "indexeddb"],
       "level": "advanced"
+    },
+    {
+      "slug": "asset-browser",
+      "path": "debug-layer/asset-browser.js",
+      "language": "typescript",
+      "title": "Asset Browser",
+      "description": "Browse every standard demo asset by type and preview it with ExoJS: zoom and filter textures, animate spritesheet frames, pan rendered tile maps, play audio and video, and try fonts. Each preview loads into its own loader scope, and the Code button copies a snippet that reproduces the current settings.",
+      "backend": "core",
+      "tags": ["assets", "loader", "scopes", "spritesheet", "audio", "video", "tool"],
+      "capabilities": ["pointer"],
+      "level": "intermediate"
     }
   ],
   "input-ui": [

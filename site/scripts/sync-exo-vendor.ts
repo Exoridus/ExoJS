@@ -418,8 +418,9 @@ const syncBundlerClientTypes = (): void => {
  * Serves `@codexo/exojs-demo-assets` the way a consumer installs it: the
  * compiled catalog under `esm/` and the standard media under `media/`, so each
  * descriptor's `new URL('../media/...', import.meta.url)` resolves to a file
- * the site actually ships. Only the standard profile is copied; the extended
- * media are not part of the site.
+ * the site actually ships, plus the package's `manifest.json`. Only the
+ * standard profile's media are copied; the extended media are not part of the
+ * site.
  */
 const syncDemoAssets = (): void => {
   const packageRoot = path.resolve(projectRoot, '..', 'packages', 'exojs-demo-assets');
@@ -440,6 +441,10 @@ const syncDemoAssets = (): void => {
   fs.mkdirSync(vendorDir, { recursive: true });
   fs.cpSync(distDir, path.resolve(vendorDir, 'esm'), { recursive: true });
   fs.cpSync(mediaDir, path.resolve(vendorDir, 'media'), { recursive: true });
+  // The package exports its manifest (sizes, hashes, media metadata) as
+  // `@codexo/exojs-demo-assets/manifest.json`; the preview's import map
+  // resolves that specifier here.
+  fs.copyFileSync(path.resolve(packageRoot, 'manifest.json'), path.resolve(vendorDir, 'manifest.json'));
 
   const dtsFiles = collectDeclarationFiles(distDir);
   fs.writeFileSync(path.resolve(vendorDir, 'esm-typings.json'), `${JSON.stringify(dtsFiles, null, 2)}\n`, 'utf8');

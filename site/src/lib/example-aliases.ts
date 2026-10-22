@@ -1,5 +1,3 @@
-import { isCurrentVersion } from './versions';
-
 export const EXAMPLE_ALIASES: Readonly<Record<string, string>> = {
   'getting-started/game-loop.js': 'getting-started/hello-world.js',
   'sprites-textures/spritesheet-frames.js': 'tweens-animation/frame-animation.js',
@@ -59,26 +57,3 @@ export const EXAMPLE_ALIASES: Readonly<Record<string, string>> = {
 };
 
 export const resolveExampleAlias = (path: string): string => EXAMPLE_ALIASES[path] ?? path;
-
-/**
- * Former examples that now live on a site tool page, keyed by catalog path.
- * Values are relative to a locale root (`<base>/<locale>/`). These are not
- * example aliases: a relocated path has no example to fall back to in the
- * current catalog.
- */
-export const EXAMPLE_TOOL_RELOCATIONS: Readonly<Record<string, string>> = {
-  'debug-layer/asset-browser.js': 'tools/asset-browser/',
-};
-
-/**
- * The tool page a playground request should leave for, or `null` to open it as
- * an example. Only the current version relocates: a historical version still
- * ships the example at its original path.
- */
-export const resolveExampleToolRelocation = (versionId: string, path: string | null): string | null => {
-  if (path === null || !isCurrentVersion(versionId)) {
-    return null;
-  }
-
-  return EXAMPLE_TOOL_RELOCATIONS[path] ?? null;
-};
