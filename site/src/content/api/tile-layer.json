@@ -4,7 +4,7 @@
   "symbol": "TileLayer",
   "kind": "class",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 42,
   "counts": {
@@ -24,7 +24,7 @@
         "**Mutation must go through the layer's public APIs only.** `setTileAt` / `clearTileAt` validate coordinates, tileset references, and increment revision counters only when the stored value actually changes. Direct chunk mutation is not supported - the layer owns chunk storage and exposes only a ReadonlyTileChunk view.",
         "The layer is NOT a SceneNode - that integration lives in import('./TileLayerNode').TileLayerNode."
       ],
-      "importLine": "import { TileLayer } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileLayer } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

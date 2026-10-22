@@ -1,13 +1,4 @@
-import {
-  Application,
-  Asset,
-  Color,
-  FixedResolutionCanvasSizing,
-  Graphics,
-  type RenderingContext,
-  Scene,
-  TextureRegion,
-} from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, TextureRegion } from '@codexo/exojs';
 import {
   refreshCell,
   TILE_TRANSFORM_IDENTITY,
@@ -17,8 +8,9 @@ import {
   TileMapNode,
   TileSet,
   WangSet,
-} from '@codexo/exojs-tilemap';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+} from '@codexo/exojs/tilemap';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { demoPanel, toggle } from '@examples/runtime';
 
 const TILE = 64;
 const WIDTH = 16;
@@ -72,8 +64,7 @@ class AutoTiledRoomScene extends Scene {
   private tileset!: TileSet;
   private node!: TileMapNode;
   private readonly grid = new Graphics();
-  private hud!: ReturnType<typeof mountControls>;
-  private panel!: ReturnType<typeof mountControlPanel>;
+  private panel!: ReturnType<typeof demoPanel>;
   private readonly wang = new WangSet({
     tilesetIndex: 0,
     type: 'edge',
@@ -83,7 +74,7 @@ class AutoTiledRoomScene extends Scene {
   private painting = false;
 
   override async load(): Promise<void> {
-    const texture = await this.loader.load(Asset.type('texture', assets.demo.tilesets.map.image));
+    const texture = await this.loader.load(assets.mapPackTilesheet);
     this.tileset = new TileSet({
       name: 'map-pack',
       texture: new TextureRegion(texture, { x: 0, y: 0, width: texture.width, height: texture.height }),
@@ -138,17 +129,10 @@ class AutoTiledRoomScene extends Scene {
       this.grid.drawLine(OFFSET_X, y * TILE, OFFSET_X + WIDTH * TILE, y * TILE);
     }
 
-    this.hud = mountControls({
-      title: 'Paint an Autotiled Room',
-      controls: [{ keys: 'Drag', action: 'paint or erase grass' }],
-      status: 'Paint grass. Each edit refreshes only the cell and its neighbors.',
-      hint: 'WangSet maps four-neighbor masks to tile variants in the existing map atlas.',
-    });
-    this.panel = mountControlPanel({ title: 'Brush' });
-    this.panel.addToggle({
-      label: 'Erase',
-      value: false,
-      onChange: value => {
+    this.panel = demoPanel({
+      title: 'Brush',
+      controls: { erase: toggle('Erase', false) },
+      onChange: (_key, value) => {
         this.erase = value;
       },
     });
@@ -173,7 +157,6 @@ class AutoTiledRoomScene extends Scene {
     }
 
     refreshCell(this.layer, x, y, this.wang, { wrapBorder: false });
-    this.hud.setStatus(`${this.erase ? 'Erased' : 'Painted'} (${x}, ${y}); local Wang neighbors updated.`);
   };
   private readonly onDown = (pointer: { x: number; y: number }): void => {
     this.painting = true;
@@ -198,7 +181,6 @@ class AutoTiledRoomScene extends Scene {
     this.app.input.onPointerMove.remove(this.onMove);
     this.app.input.onPointerUp.remove(this.onEnd);
     this.app.input.onPointerCancel.remove(this.onEnd);
-    this.hud?.dispose();
     this.panel?.dispose();
     this.grid.destroy();
     this.node?.destroy();
@@ -211,7 +193,6 @@ const app = new Application({
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(32, 44, 50),
   extensions: [tilemapExtension],
-  loader: { basePath: 'assets/' },
 });
 
 await app.start(AutoTiledRoomScene);

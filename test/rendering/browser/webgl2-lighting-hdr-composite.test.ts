@@ -6,7 +6,7 @@
  *
  * Run via:  pnpm test:browser:webgl
  */
-import { type Lighting, LightmapLighting, PointLight } from '@codexo/exojs-lighting';
+import { type Lighting, LightmapLighting, PointLight } from '@codexo/exojs/lighting';
 import { expect, test } from 'vitest';
 
 import type { Application } from '#core/Application';

@@ -9,7 +9,7 @@ import {
   Scene,
   type Seconds,
 } from '@codexo/exojs';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { demoPanel, slider } from '@examples/runtime';
 
 /**
  * Six discs of rising luminance on a dark backdrop. Only the ones above the
@@ -40,8 +40,6 @@ class BloomFilterScene extends Scene {
   private discs!: Graphics;
   private beam!: Graphics;
   private elapsed = 0;
-  private hud!: ReturnType<typeof mountControls>;
-  private panel!: ReturnType<typeof mountControlPanel>;
 
   override init(): void {
     const { width, height } = this.app;
@@ -64,77 +62,22 @@ class BloomFilterScene extends Scene {
       this.discs.drawCircle(spacing * (index + 1), height * 0.38, DISC_RADIUS);
     }
 
-    this.hud = mountControls({
-      title: 'Bloom Filter',
-      controls: [
-        { keys: 'Threshold', action: 'linear luminance to glow (1 = white)' },
-        { keys: 'Intensity', action: 'how much of the extracted highlight is added back' },
-        { keys: 'Strength', action: 'how far the glow spreads, in logical units' },
-        { keys: 'Levels', action: 'halvings before the blur - wider and cheaper, or tighter' },
-      ],
-      status: this.statusText(),
-      hint: 'The discs get brighter from left to right. Raise Threshold and watch the glow retreat along the row.',
-    });
-
-    this.panel = mountControlPanel({ title: 'Bloom' });
-    this.panel.addSlider({
-      label: 'Threshold',
-      min: 0,
-      max: 1,
-      step: 0.05,
-      value: this.bloom.threshold,
-      onChange: value => {
-        this.bloom.threshold = value;
-        this.refresh();
+    demoPanel({
+      title: 'Bloom',
+      controls: {
+        threshold: slider('Threshold', { min: 0, max: 1, step: 0.05, value: this.bloom.threshold }),
+        intensity: slider('Intensity', { min: 0, max: 4, step: 0.1, value: this.bloom.intensity }),
+        strength: slider('Strength', { min: 0, max: 32, step: 1, value: this.bloom.strength, format: v => v.toFixed(0) }),
+        levels: slider('Levels', { min: 1, max: 5, step: 1, value: this.bloom.levels, format: v => v.toFixed(0) }),
       },
-    });
-    this.panel.addSlider({
-      label: 'Intensity',
-      min: 0,
-      max: 4,
-      step: 0.1,
-      value: this.bloom.intensity,
-      onChange: value => {
-        this.bloom.intensity = value;
-        this.refresh();
-      },
-    });
-    this.panel.addSlider({
-      label: 'Strength',
-      min: 0,
-      max: 32,
-      step: 1,
-      value: this.bloom.strength,
-      onChange: value => {
-        this.bloom.strength = value;
-        this.refresh();
-      },
-    });
-    this.panel.addSlider({
-      label: 'Levels',
-      min: 1,
-      max: 5,
-      step: 1,
-      value: this.bloom.levels,
-      onChange: value => {
-        this.bloom.levels = value;
-        this.refresh();
+      onChange: (key, value) => {
+        this.bloom[key] = value;
       },
     });
   }
 
   override update(delta: Seconds): void {
     this.elapsed += delta;
-  }
-
-  private statusText(): string {
-    const { threshold, intensity, strength, levels } = this.bloom;
-
-    return `threshold ${threshold.toFixed(2)} · intensity ${intensity.toFixed(1)} · strength ${strength.toFixed(0)} · levels ${levels}`;
-  }
-
-  private refresh(): void {
-    this.hud.setStatus(this.statusText());
   }
 
   override draw(context: RenderingContext): void {

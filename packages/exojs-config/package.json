@@ -28,7 +28,8 @@
     "./typescript/extension.json": "./typescript/extension.json",
     "./typescript/test.json": "./typescript/test.json",
     "./typescript/package-test.json": "./typescript/package-test.json",
-    "./typescript/worker.json": "./typescript/worker.json"
+    "./typescript/worker.json": "./typescript/worker.json",
+    "./typescript/workspace-paths.json": "./typescript/workspace-paths.json"
   },
   "dependencies": {
     "@codecov/rollup-plugin": "^2.0.1",

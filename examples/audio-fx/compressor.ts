@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
@@ -10,8 +9,9 @@ import {
   Text,
   type Voice,
 } from '@codexo/exojs';
-import { CompressorEffect } from '@codexo/exojs-audio-fx';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { CompressorEffect } from '@codexo/exojs/audio-fx';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { choice, demoPanel, slider, toggle } from '@examples/runtime';
 
 class CompressorScene extends Scene {
   private music!: AudioStream;
@@ -19,12 +19,10 @@ class CompressorScene extends Scene {
   private compressor!: CompressorEffect;
   private meter = new Graphics();
   private label!: Text;
-  private panel!: ReturnType<typeof mountControlPanel>;
-  private hud!: ReturnType<typeof mountControls>;
   private bypass = false;
 
   override async load(): Promise<void> {
-    this.music = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
+    this.music = await this.loader.load(assets.musicLoopMain);
   }
 
   override init(): void {
@@ -35,58 +33,37 @@ class CompressorScene extends Scene {
     this.label = new Text('', { fillColor: Color.white, fontSize: 24 });
     this.label.setPosition(380, 280);
 
-    this.hud = mountControls({
+    // The loud input is hot enough to push the peaks well over the threshold
+    // without being louder than the rest of the catalog, and it ramps rather
+    // than jumps so switching never spikes.
+    demoPanel({
       title: 'Compression',
-      status: 'Quiet source. Choose Loud to push peaks over the threshold.',
-      hint: 'The red meter reads CompressorEffect.reduction from the active audio node.',
-    });
-    this.panel = mountControlPanel({ title: 'Compression' });
-    this.panel.addButton({ label: 'Quiet input', onClick: () => this.setInput(0.15) });
-    this.panel.addButton({ label: 'Loud input', onClick: () => this.setInput(1) });
-    this.panel.addToggle({
-      label: 'Bypass',
-      value: false,
-      onChange: value => {
-        if (value === this.bypass) {
-          return;
+      controls: {
+        input: choice('Input', ['Quiet', 'Loud']),
+        bypass: toggle('Bypass'),
+        threshold: slider('Threshold (dB)', { min: -50, max: -5, step: 1, value: -30, format: v => v.toFixed(0) }),
+        ratio: slider('Ratio', { min: 1, max: 12, step: 0.5, value: 6, format: v => `${v.toFixed(1)}:1` }),
+      },
+      onChange: (key, _value, values) => {
+        if (key === 'input') {
+          this.tweens
+            .create(this.voice)
+            .to({ volume: values.input === 'Loud' ? 0.6 : 0.15 }, 0.4)
+            .start();
+        } else if (key === 'bypass' && values.bypass !== this.bypass) {
+          this.bypass = values.bypass;
+
+          if (this.bypass) {
+            audio.music.removeEffect(this.compressor);
+          } else {
+            audio.music.addEffect(this.compressor);
+          }
         }
 
-        this.bypass = value;
-
-        if (value) {
-          audio.music.removeEffect(this.compressor);
-        } else {
-          audio.music.addEffect(this.compressor);
-        }
-
-        this.hud.setStatus(value ? 'Compressor bypassed.' : 'Compressor active. Compare Quiet and Loud input.');
+        this.compressor.threshold = values.threshold;
+        this.compressor.ratio = values.ratio;
       },
     });
-    this.panel.addSlider({
-      label: 'Threshold (dB)',
-      min: -50,
-      max: -5,
-      step: 1,
-      value: -30,
-      onChange: value => {
-        this.compressor.threshold = value;
-      },
-    });
-    this.panel.addSlider({
-      label: 'Ratio',
-      min: 1,
-      max: 12,
-      step: 0.5,
-      value: 6,
-      onChange: value => {
-        this.compressor.ratio = value;
-      },
-    });
-  }
-
-  private setInput(volume: number): void {
-    this.voice.volume = volume;
-    this.hud.setStatus(`${volume === 1 ? 'Loud' : 'Quiet'} input; compressor ${this.bypass ? 'bypassed' : 'active'}.`);
   }
 
   override draw(context: RenderingContext): void {
@@ -109,8 +86,6 @@ class CompressorScene extends Scene {
     }
 
     this.compressor?.destroy();
-    this.panel?.dispose();
-    this.hud?.dispose();
     this.meter.destroy();
     this.label?.destroy();
     super.destroy();
@@ -121,7 +96,6 @@ const app = new Application({
   scenes: { CompressorScene },
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: Color.black,
-  loader: { basePath: 'assets/' },
 });
 
 await app.start(CompressorScene);

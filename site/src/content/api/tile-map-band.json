@@ -4,7 +4,7 @@
   "symbol": "TileMapBand",
   "kind": "class",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 104,
   "counts": {
@@ -27,7 +27,7 @@
         "Bounds are the union of the band's layer-node bounds (an empty band collapses to a degenerate rect at the band's transformed origin).",
         "Bands are created by TileMapView; construct them through TileMapView rather than directly."
       ],
-      "importLine": "import { TileMapBand } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileMapBand } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

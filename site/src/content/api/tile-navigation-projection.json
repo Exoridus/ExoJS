@@ -4,7 +4,7 @@
   "symbol": "TileNavigationProjection",
   "kind": "interface",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "The cell grid geometry of a TileNavigationSource, in the shape a tilemap projection describes it."
       ],
-      "importLine": "import { TileNavigationProjection } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { TileNavigationProjection } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {

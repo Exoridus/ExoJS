@@ -1,4 +1,4 @@
-import { PhysicsWorld } from '@codexo/exojs-physics';
+import { PhysicsWorld } from '@codexo/exojs/physics';
 
 // #region guide:contact-modifier
 const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });

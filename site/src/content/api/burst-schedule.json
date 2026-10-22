@@ -4,7 +4,7 @@
   "symbol": "BurstSchedule",
   "kind": "interface",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 2,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Burst trigger schedule. The module fires at `time` seconds (since registration), spawning `count` particles in one frame."
       ],
-      "importLine": "import { BurstSchedule } from '@codexo/exojs-particles'",
+      "importLine": "import { BurstSchedule } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

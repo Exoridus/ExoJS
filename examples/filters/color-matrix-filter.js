@@ -1,9 +1,8 @@
 // Auto-generated from color-matrix-filter.ts - edit the .ts source, not this file.
 import { Application, Color, ColorMatrixFilter, FixedResolutionCanvasSizing, LutFilter, Scene, Sprite, Text } from '@codexo/exojs';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 const RAMP_SIZE = 256;
 const LUT_SIZE = 17;
-const MODES = ['Matrix: grayscale', 'Matrix: sepia', '1D ramp: channel curves', '3D LUT: cool grade', 'Bypass'];
 const makeRamp = () => {
   const canvas = document.createElement('canvas');
   canvas.width = RAMP_SIZE;
@@ -49,87 +48,56 @@ const makeCoolLut = () => {
   context.putImageData(image, 0, 0);
   return canvas;
 };
+const TILE = 220;
 class ColorTransformsScene extends Scene {
-  reference;
-  processed;
-  referenceLabel;
-  processedLabel;
-  matrix;
-  ramp;
-  rampFilter;
-  cube;
-  cubeFilter;
-  hud;
-  init() {
+  sprites = [];
+  labels = [];
+  owned = [];
+  async load() {
+    const [ramp, art] = await Promise.all([this.loader.load(assets.primaryRamp), this.loader.load(assets.backgroundForest)]);
     const { width, height } = this.app;
-    const image = this.loader.get(assets.technical.color.primaryRamp);
-    this.reference = new Sprite(image)
-      .setAnchor(0.5)
-      .setScale(3)
-      .setPosition(width * 0.28, height / 2);
-    this.processed = new Sprite(image)
-      .setAnchor(0.5)
-      .setScale(3)
-      .setPosition(width * 0.72, height / 2);
-    this.referenceLabel = new Text('ORIGINAL', { fontSize: 22, fillColor: Color.white })
-      .setAnchor(0.5)
-      .setPosition(width * 0.28, height * 0.72);
-    this.processedLabel = new Text('TRANSFORMED', { fontSize: 22, fillColor: Color.white })
-      .setAnchor(0.5)
-      .setPosition(width * 0.72, height * 0.72);
-    // Grading is display-referred: the matrix and both lookups run on encoded
+    // Grading is display-referred: the matrices and both lookups run on encoded
     // sRGB values, which is what the numbers below were written against, and
     // the result returns to linear premultiplied colour. `'linear-srgb'` would
     // apply the same numbers to linear light instead. The LUT images are
-    // numeric tables (`fromImage` never decodes them), and a neutral matrix or
-    // identity table leaves colour and alpha untouched.
-    this.matrix = new ColorMatrixFilter(undefined, { colorSpace: 'srgb' });
-    this.ramp = LutFilter.fromImage(makeRamp());
-    this.rampFilter = new LutFilter({ mode: 'rgb1d', colorSpace: 'srgb' }).setLut(this.ramp);
-    this.cube = LutFilter.fromImage(makeCoolLut());
-    this.cubeFilter = new LutFilter({ mode: '3d', size: LUT_SIZE, colorSpace: 'srgb' }).setLut(this.cube);
-    this.hud = mountControls({
-      title: 'Color Transforms',
-      status: 'Matrix: grayscale',
-      hint: 'The left image is unchanged. Compare a channel-mixing matrix, independent per-channel curves, and a 3D color lookup on the same right-hand image.',
+    // numeric tables (`fromImage` never decodes them).
+    const curves = LutFilter.fromImage(makeRamp());
+    const cube = LutFilter.fromImage(makeCoolLut());
+    const columns = [
+      { label: 'Original', filter: null },
+      { label: 'Matrix: grayscale', filter: new ColorMatrixFilter(undefined, { colorSpace: 'srgb' }).grayscale() },
+      { label: 'Matrix: sepia', filter: new ColorMatrixFilter(undefined, { colorSpace: 'srgb' }).sepia() },
+      { label: '1D ramp: curves', filter: new LutFilter({ mode: 'rgb1d', colorSpace: 'srgb' }).setLut(curves) },
+      { label: '3D LUT: cool grade', filter: new LutFilter({ mode: '3d', size: LUT_SIZE, colorSpace: 'srgb' }).setLut(cube) },
+    ];
+    const step = width / columns.length;
+    this.owned.push(curves, cube);
+    columns.forEach(({ label, filter }, index) => {
+      const x = step * (index + 0.5);
+      if (filter) {
+        this.owned.push(filter);
+      }
+      [ramp, art].forEach((texture, row) => {
+        const sprite = new Sprite(texture).setAnchor(0.5).setPosition(x, height / 2 + (row - 0.5) * (TILE + 24));
+        // The colour ramp is a short strip; stretching it to a square tile
+        // keeps every hue large enough to compare.
+        sprite.width = TILE;
+        sprite.height = texture === ramp ? TILE * 0.6 : (TILE * texture.height) / texture.width;
+        sprite.filters = filter ? [filter] : [];
+        this.sprites.push(sprite);
+      });
+      this.labels.push(new Text(label, { fontSize: 17, fillColor: Color.white }).setAnchor(0.5).setPosition(x, 60));
     });
-    mountControlPanel({ title: 'Transform' }).addCycle({
-      label: 'Method',
-      options: [...MODES],
-      index: 0,
-      onChange: index => this.setMode(index),
-    });
-    this.setMode(0);
-  }
-  setMode(index) {
-    if (index === 0) {
-      this.processed.filters = [this.matrix.reset().grayscale()];
-    } else if (index === 1) {
-      this.processed.filters = [this.matrix.reset().sepia()];
-    } else if (index === 2) {
-      this.processed.filters = [this.rampFilter];
-    } else if (index === 3) {
-      this.processed.filters = [this.cubeFilter];
-    } else {
-      this.processed.filters = [];
-    }
-    this.hud.setStatus(MODES[index] ?? MODES[4]);
   }
   draw(context) {
-    context.render(this.reference);
-    context.render(this.processed);
-    context.render(this.referenceLabel);
-    context.render(this.processedLabel);
+    for (const drawable of [...this.sprites, ...this.labels]) {
+      context.render(drawable);
+    }
   }
   destroy() {
-    this.hud.dispose();
-    this.matrix.destroy();
-    this.rampFilter.destroy();
-    this.cubeFilter.destroy();
-    this.ramp.destroy();
-    this.cube.destroy();
-    this.referenceLabel.destroy();
-    this.processedLabel.destroy();
+    for (const resource of this.owned) {
+      resource.destroy();
+    }
     super.destroy();
   }
 }

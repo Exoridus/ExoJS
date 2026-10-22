@@ -1,4 +1,4 @@
-import type { TileMap } from '@codexo/exojs-tilemap';
+import type { TileMap } from '@codexo/exojs/tilemap';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { LdtkData, LdtkLevel, LdtkWorldData } from '../src/LdtkData';

@@ -17,10 +17,10 @@ import {
   VectorAction,
   View,
 } from '@codexo/exojs';
-import { type NavigationStatus, TileNavigationSpace } from '@codexo/exojs-pathfinding';
-import { BoxShape, PhysicsWorld } from '@codexo/exojs-physics';
-import { type ResolvedTile, type TileLayer, type TileMap, TileMapNode } from '@codexo/exojs-tilemap';
-import { TileColliderStreamer } from '@codexo/exojs-tilemap-physics';
+import { type NavigationStatus, TileNavigationSpace } from '@codexo/exojs/pathfinding';
+import { BoxShape, PhysicsWorld } from '@codexo/exojs/physics';
+import { type ResolvedTile, type TileLayer, type TileMap, TileMapNode } from '@codexo/exojs/tilemap';
+import { TileColliderStreamer } from '@codexo/exojs/tilemap-physics';
 
 import { type Actor, type ActorOptions, spawnActor } from '../actor';
 

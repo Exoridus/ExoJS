@@ -1,5 +1,5 @@
 import type { Extension } from '@codexo/exojs/extensions';
-import { tilemapExtension } from '@codexo/exojs-tilemap';
+import { tilemapExtension } from '@codexo/exojs/tilemap';
 
 import { tiledSourceType } from './tiledSourceType';
 import { tileMapType } from './tileMapType';

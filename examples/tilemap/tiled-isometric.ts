@@ -9,10 +9,11 @@ import {
   Scene,
   SystemOrder,
 } from '@codexo/exojs';
-import { CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+import { CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
+import { type TileMap, TileMapNode } from '@codexo/exojs/tilemap';
+import { buildObjectLayerColliders, TilePhysicsBinding } from '@codexo/exojs/tilemap-physics';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { tiledExtension } from '@codexo/exojs-tiled';
-import { type TileMap, TileMapNode } from '@codexo/exojs-tilemap';
-import { buildObjectLayerColliders, TilePhysicsBinding } from '@codexo/exojs-tilemap-physics';
 import { mountControls } from '@examples/runtime';
 
 const scale = 0.72;
@@ -30,7 +31,7 @@ class IsometricScene extends Scene {
   private hud!: ReturnType<typeof mountControls>;
 
   override async load(): Promise<void> {
-    this.map = await this.loader.load(Asset.type('tileMap', assets.demo.isometricLandscape));
+    this.map = await this.loader.load(Asset.type('tileMap', assets.isometricLandscape.source));
   }
 
   override init(): void {
@@ -81,12 +82,7 @@ class IsometricScene extends Scene {
       },
       { order: SystemOrder.Physics - 1 },
     );
-    this.hud = mountControls({
-      title: 'Isometric Landscape',
-      controls: [{ keys: 'Click', action: 'pick a diamond and move toward it' }],
-      status: 'Cross the canal through the central bridge. Cyan outlines show solid banks.',
-      hint: 'Kenney Isometric Tiles Landscape (CC0). The actor collides in logical space; its position is projected onto the map.',
-    });
+    this.hud = mountControls();
     this.app.input.onPointerTap.add(this.onTap);
   }
 
@@ -119,7 +115,7 @@ class IsometricScene extends Scene {
         return [point.x, point.y];
       }),
     );
-    this.hud.setStatus(`Cell (${tx}, ${ty}) - logical target (${this.target.x}, ${this.target.y}). Click the bridge to pass the banks.`);
+    this.hud.setStatus(`Cell (${tx}, ${ty}) - logical target (${this.target.x}, ${this.target.y})`);
   };
 
   override draw(context: RenderingContext): void {
@@ -140,7 +136,6 @@ const app = new Application({
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(30, 43, 57),
   extensions: [tiledExtension],
-  loader: { basePath: 'assets/' },
 });
 
 await app.start(IsometricScene);

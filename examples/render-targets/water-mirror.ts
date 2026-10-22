@@ -19,7 +19,7 @@ import {
   TextureFormat,
   WrapModes,
 } from '@codexo/exojs';
-import { mountControls } from '@examples/runtime';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 const MAP_SIZE = 256;
 
@@ -57,7 +57,6 @@ class WaterMirrorScene extends Scene {
   private tint!: ColorMatrixFilter;
   private waterline!: Graphics;
   private pipeline!: RenderPipeline;
-  private hud!: ReturnType<typeof mountControls>;
   private dragging = false;
   private readonly onPointerDown = (_pointer: unknown, x: number, y: number): void => {
     if (y < this.app.height / 2) {
@@ -81,7 +80,7 @@ class WaterMirrorScene extends Scene {
     const half = height / 2;
     this.target = new RenderTexture(width, half);
     this.map = createRippleMap();
-    this.source = new Sprite(this.loader.get('image/ship-a.png'))
+    this.source = new Sprite(this.loader.get(assets.ship))
       .setAnchor(0.5)
       .setPosition(width / 2, half / 2)
       .setScale(5);
@@ -108,12 +107,6 @@ class WaterMirrorScene extends Scene {
       .addPass(new RenderNodePass(this.source, { clear: new Color(18, 24, 36) }))
       .addPass(new RenderNodePass(this.mirror));
 
-    this.hud = mountControls({
-      title: 'Water Reflection and Distortion',
-      controls: [{ keys: 'Drag on water', action: 'change ripple strength' }],
-      status: 'Ripple strength: 24',
-      hint: 'The upper scene is captured into a RenderTexture, flipped, then displaced by a scrolling direction map. Drag across the reflection to change its strength.',
-    });
     this.app.input.onPointerDown.add(this.onPointerDown);
     this.app.input.onPointerMove.add(this.onPointerMove);
     this.app.input.onPointerUp.add(this.onPointerEnd);
@@ -123,7 +116,6 @@ class WaterMirrorScene extends Scene {
   private setRippleStrength(x: number): void {
     const strength = Math.round(Math.max(0, Math.min(1, x / this.app.width)) * 60);
     this.ripple.setScale(strength);
-    this.hud.setStatus(`Ripple strength: ${strength}`);
   }
 
   override update(delta: Seconds): void {
@@ -145,7 +137,6 @@ class WaterMirrorScene extends Scene {
     this.app.input.onPointerMove.remove(this.onPointerMove);
     this.app.input.onPointerUp.remove(this.onPointerEnd);
     this.app.input.onPointerCancel.remove(this.onPointerEnd);
-    this.hud.dispose();
     this.pipeline.destroy();
     this.target.destroy();
     this.ripple.destroy();
@@ -164,7 +155,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: { basePath: 'assets/' },
 });
 
 await app.start(WaterMirrorScene);

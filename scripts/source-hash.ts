@@ -9,7 +9,9 @@
 
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative, resolve } from 'node:path';
+
+import { RUNTIME_MODULES } from './release/lockstep-packages.ts';
 
 // No leading dot: the CI build artifact skips hidden files, and a stamp that
 // never reaches the consuming job would fail every dist-consuming lane.
@@ -33,12 +35,27 @@ const listFiles = (dir: string, out: string[]): string[] => {
   return out;
 };
 
-/** Hash every file under `sourceDir`, by relative path and content, in a stable order. */
-export const hashSourceTree = (sourceDir: string): string => {
+/**
+ * The source trees the Core `dist/` is built from: Core's own `src/` and the
+ * `src/` of every runtime module compiled into it.
+ */
+export const coreSourceRoots = (repoRoot: string): readonly string[] => [
+  resolve(repoRoot, 'src'),
+  ...RUNTIME_MODULES.map(module => resolve(repoRoot, module.dir, 'src')),
+];
+
+/**
+ * Hash every file under `sourceDirs`, by relative path and content, in a stable
+ * order. Paths are relative to the single directory, or to the repository root
+ * when several trees are hashed together.
+ */
+export const hashSourceTree = (sourceDirs: string | readonly string[]): string => {
+  const dirs = typeof sourceDirs === 'string' ? [sourceDirs] : sourceDirs;
+  const base = dirs.length === 1 ? dirs[0]! : resolve(dirs[0]!, '..');
   const hash = createHash('sha1');
 
-  for (const file of listFiles(sourceDir, []).sort()) {
-    hash.update(relative(sourceDir, file).replaceAll('\\', '/'));
+  for (const file of dirs.flatMap(dir => listFiles(dir, [])).sort()) {
+    hash.update(relative(base, file).replaceAll('\\', '/'));
     hash.update('\0');
     hash.update(readFileSync(file));
     hash.update('\0');
@@ -47,9 +64,9 @@ export const hashSourceTree = (sourceDir: string): string => {
   return hash.digest('hex');
 };
 
-/** Record the hash of `sourceDir` in `distDir`, to be read back by {@link readSourceStamp}. */
-export const writeSourceStamp = (sourceDir: string, distDir: string): void => {
-  const stamp: SourceStamp = { sourceHash: hashSourceTree(sourceDir) };
+/** Record the hash of `sourceDirs` in `distDir`, to be read back by {@link readSourceStamp}. */
+export const writeSourceStamp = (sourceDirs: string | readonly string[], distDir: string): void => {
+  const stamp: SourceStamp = { sourceHash: hashSourceTree(sourceDirs) };
 
   writeFileSync(join(distDir, SOURCE_STAMP_FILE), `${JSON.stringify(stamp, null, 2)}\n`);
 };

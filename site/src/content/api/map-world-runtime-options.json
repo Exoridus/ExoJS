@@ -4,7 +4,7 @@
   "symbol": "MapWorldRuntimeOptions",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 4,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Options for MapWorldRuntime."
       ],
-      "importLine": "import { MapWorldRuntimeOptions } from '@codexo/exojs-tilemap'",
+      "importLine": "import { MapWorldRuntimeOptions } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

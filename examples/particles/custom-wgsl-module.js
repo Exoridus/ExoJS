@@ -1,6 +1,7 @@
 // Auto-generated from custom-wgsl-module.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Scene, Vector } from '@codexo/exojs';
-import { Constant, particlesExtension, ParticleSystem, RateSpawn, UpdateModule } from '@codexo/exojs-particles';
+import { Constant, particlesExtension, ParticleSystem, RateSpawn, UpdateModule } from '@codexo/exojs/particles';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 /** Adds horizontal sway after integration, using the same operation on every backend. */
 class SwayModule extends UpdateModule {
@@ -45,7 +46,7 @@ class CustomWgslModuleScene extends Scene {
   init() {
     const app = this.app;
     const { width, height } = app;
-    this.system = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 26000 });
+    this.system = new ParticleSystem(this.loader.get(assets.particleLight), { capacity: 26000 });
     this.systems.add(this.system);
     this.system.setPosition(width / 2, height - 60);
     this.system.addSpawnModule(
@@ -57,14 +58,9 @@ class CustomWgslModuleScene extends Scene {
       }),
     );
     this.system.addUpdateModule(new SwayModule(250, 8));
-    this.hud = mountControls({
-      title: 'Custom Particle Module',
-      controls: [{ keys: 'Auto', action: 'CPU / WebGL2 transform feedback / WebGPU compute' }],
-      // GPU vs CPU routing is decided on the first update() once the
-      // backend is known - show "detecting" until then.
-      status: 'Compute path: detecting…',
-      hint: 'SwayModule provides apply(), glsl() and wgsl() with shared uniforms. Inspect the selected simulation path below.',
-    });
+    // The simulation path (CPU, WebGL2 transform feedback or WebGPU compute)
+    // is chosen on the first update, once the backend is known.
+    this.hud = mountControls({ status: 'Simulation: detecting...' });
   }
   update(_delta) {
     this.hud.setStatus(`Simulation: ${this.system.simulationBackend}`);

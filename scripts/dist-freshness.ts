@@ -13,13 +13,14 @@ import { existsSync, readdirSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { hashSourceTree, readSourceStamp } from './source-hash.ts';
+import { coreSourceRoots, hashSourceTree, readSourceStamp } from './source-hash.ts';
 
 export const repoRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
 
 export interface BuildUnit {
   readonly name: string;
-  readonly sourceDir: string;
+  /** The source trees the unit's dist is built from. */
+  readonly sourceDirs: readonly string[];
   readonly distDir: string;
   /** Whether the dist directory holds an emitted entry point. */
   readonly built: boolean;
@@ -38,7 +39,7 @@ export const collectBuildUnits = (): BuildUnit[] => {
   const units: BuildUnit[] = [
     {
       name: '@codexo/exojs',
-      sourceDir: join(repoRoot, 'src'),
+      sourceDirs: coreSourceRoots(repoRoot),
       distDir: join(repoRoot, 'dist'),
       built: existsSync(join(repoRoot, 'dist', 'esm', 'index.js')),
     },
@@ -58,7 +59,7 @@ export const collectBuildUnits = (): BuildUnit[] => {
       continue;
     }
 
-    units.push({ name: `@codexo/${entry.name}`, sourceDir, distDir, built: existsSync(join(distDir, 'esm', 'index.js')) });
+    units.push({ name: `@codexo/${entry.name}`, sourceDirs: [sourceDir], distDir, built: existsSync(join(distDir, 'esm', 'index.js')) });
   }
 
   return units;
@@ -86,8 +87,9 @@ export const checkFreshness = (units: readonly BuildUnit[] = collectBuildUnits()
 
     if (recorded === null) {
       stale.push(`${unit.name}: ${relative(repoRoot, unit.distDir)} carries no source stamp (built before stamps existed, or not at all)`);
-    } else if (recorded !== hashSourceTree(unit.sourceDir)) {
-      stale.push(`${unit.name}: ${relative(repoRoot, unit.sourceDir)} changed since ${relative(repoRoot, unit.distDir)} was built`);
+    } else if (recorded !== hashSourceTree(unit.sourceDirs)) {
+      const sources = unit.sourceDirs.map(dir => relative(repoRoot, dir).replaceAll('\\', '/')).join(', ');
+      stale.push(`${unit.name}: ${sources} changed since ${relative(repoRoot, unit.distDir)} was built`);
     }
   }
 

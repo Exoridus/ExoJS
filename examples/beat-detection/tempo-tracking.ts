@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
@@ -10,7 +9,8 @@ import {
   type Seconds,
   Text,
 } from '@codexo/exojs';
-import { BeatDetector } from '@codexo/exojs-audio-fx';
+import { BeatDetector } from '@codexo/exojs/audio-fx';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 class TempoTrackingScene extends Scene {
@@ -33,7 +33,7 @@ class TempoTrackingScene extends Scene {
     const marginX = width * 0.08;
 
     // AudioStream has no seamless adapter - await it explicitly.
-    const track = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
+    const track = await this.loader.load(assets.musicLoopMain);
     this.music = track;
 
     this.detector = new BeatDetector();
@@ -64,7 +64,7 @@ class TempoTrackingScene extends Scene {
 
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically.
-    app.audio.play(this.music, { loop: true, volume: 0.8 });
+    app.audio.play(this.music, { loop: true, volume: 0.6 });
   }
 
   override update(delta: Seconds): void {
@@ -127,9 +127,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(14, 16, 22),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(TempoTrackingScene);

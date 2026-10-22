@@ -1,5 +1,5 @@
 import { Color, Graphics, Scene, SystemOrder } from '@codexo/exojs';
-import { CircleShape, PhysicsWorld } from '@codexo/exojs-physics';
+import { CircleShape, PhysicsWorld } from '@codexo/exojs/physics';
 
 class GameScene extends Scene {
   // #region guide:frame-alpha

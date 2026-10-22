@@ -47,8 +47,18 @@ const EXEMPTIONS: readonly Exemption[] = [
       'npm/pnpm link this executable before builds; Node cannot strip TypeScript inside installed node_modules, and tsconfig.scripts.json checks it',
   },
   {
+    path: 'packages/exojs-demo-assets/bin/copy-media.js',
+    reason:
+      'the media-copy command npm/pnpm link into a host project; Node cannot strip TypeScript inside installed node_modules, and tsconfig.scripts.json checks it',
+  },
+  {
     path: 'examples/',
     reason: 'the playground catalog: `.ts` sources plus the `.js` twins the transpiler emits and `examples:sync:check` keeps in step',
+  },
+  {
+    path: 'packages/legacy/',
+    reason:
+      'the published forwarders of the retired runtime package names, loaded as-is from an installed package; generated from the release matrix and pinned by `legacy-shims:check`',
   },
   {
     path: 'packages/exojs-config/',

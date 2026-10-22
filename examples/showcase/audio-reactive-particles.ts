@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
@@ -11,9 +10,9 @@ import {
   Vector,
   type Voice,
 } from '@codexo/exojs';
-import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
-import { AlphaFadeOverLifetime, ConeDirection, Constant, particlesExtension, ParticleSystem, RateSpawn } from '@codexo/exojs-particles';
-import { mountControls } from '@examples/runtime';
+import { AudioAnalyser, BeatDetector } from '@codexo/exojs/audio-fx';
+import { AlphaFadeOverLifetime, ConeDirection, Constant, particlesExtension, ParticleSystem, RateSpawn } from '@codexo/exojs/particles';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 const colors = [new Color(255, 120, 140), new Color(120, 220, 255), new Color(130, 255, 170), new Color(255, 220, 120)];
 
@@ -26,7 +25,6 @@ class AudioReactiveParticlesScene extends Scene {
   private spawn!: RateSpawn;
   private rate!: Constant<number>;
   private cone!: ConeDirection;
-  private hud!: ReturnType<typeof mountControls>;
   private tapPrompt!: Text;
 
   override async load(): Promise<void> {
@@ -36,7 +34,7 @@ class AudioReactiveParticlesScene extends Scene {
     // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
     // is loaded directly through `Asset.type('music', ...)` and awaited rather
     // than fetched synchronously via `get()`.
-    this.music = await this.loader.load(Asset.type('music', assets.demo.audio.musicLoop));
+    this.music = await this.loader.load(assets.musicLoopMain);
 
     // Two parallel taps of the same track: the analyser gives per-band
     // energy (drives emission), the detector gives beats (recolours).
@@ -44,7 +42,7 @@ class AudioReactiveParticlesScene extends Scene {
     this.detector = new BeatDetector();
     this.detector.source = app.audio.music;
 
-    this.ps = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 6000 });
+    this.ps = new ParticleSystem(this.loader.get(assets.particleLight), { capacity: 6000 });
     this.systems.add(this.ps);
     this.ps.setPosition(width / 2, height / 2);
 
@@ -70,13 +68,6 @@ class AudioReactiveParticlesScene extends Scene {
       this.spawn.config.tint = new Constant(colors[(Math.random() * colors.length) | 0]);
     });
 
-    this.hud = mountControls({
-      title: 'Audio Reactive Particles',
-      controls: [{ keys: 'Audio', action: 'bass → density · treble → spread' }],
-      status: 'Listening…',
-      hint: 'Density follows low-band energy; spread follows high-band energy. Silence = still.',
-    });
-
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it and the queued music starts.
     this.tapPrompt = new Text('Click or press any key to start the music', { fillColor: Color.white, fontSize: 22, align: 'center' })
@@ -85,7 +76,7 @@ class AudioReactiveParticlesScene extends Scene {
 
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically - play() returns the Voice now.
-    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 });
+    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.6 });
   }
 
   override update(_delta: Seconds): void {
@@ -94,16 +85,12 @@ class AudioReactiveParticlesScene extends Scene {
     // High band (treble) drives how WIDE the velocity cone fans out.
     const high = this.analyser.getBandEnergy(2000, 16000);
 
-    // bass → density: 0 in silence, up to ~1200 particles/s on heavy bass.
+    // Bass drives density: 0 in silence, up to ~1200 particles/s on heavy bass.
     this.rate.value = low * low * 1200;
 
-    // treble → spread: a tight slow core grows into a fast wide burst.
+    // Treble drives spread: a tight slow core grows into a fast wide burst.
     this.cone.minSpeed = 40 + high * 120;
     this.cone.maxSpeed = 90 + high * 360;
-
-    if (this.musicVoice) {
-      this.hud.setStatus(`bass ${(low * 100) | 0}%  treble ${(high * 100) | 0}%`);
-    }
   }
 
   override draw(context: RenderingContext): void {

@@ -2,7 +2,7 @@
 // this package's asset type. Without it the augmentation is not in the program.
 import '../src/index';
 
-import { TileMap, tilemapExtension } from '@codexo/exojs-tilemap';
+import { TileMap, tilemapExtension } from '@codexo/exojs/tilemap';
 import { describe, expect, it } from 'vitest';
 
 import { buildSnapshot } from '../../../src/extensions/snapshot';

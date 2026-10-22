@@ -4,7 +4,7 @@
   "symbol": "TileOrientation",
   "kind": "type",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 0,
   "counts": {
@@ -22,7 +22,7 @@
         "How cells are laid out.",
         "- `orthogonal`: rectangles in rows and columns. - `isometric`: diamonds along two diagonal axes. - `staggered`: diamonds in rows and columns, every other row (or column) shifted by half a cell. - `hexagonal`: hexagons laid out like `staggered`, with straight sides of TileProjectionOptions.hexSideLength along the stagger axis."
       ],
-      "importLine": "import { TileOrientation } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileOrientation } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

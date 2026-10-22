@@ -12,8 +12,8 @@ import {
   SystemOrder,
   VectorAction,
 } from '@codexo/exojs';
-import { BoxShape, CircleShape, KinematicMovementComponent, PhysicsBody, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs-physics';
-import { PhysicsDebugDraw } from '@codexo/exojs-physics/debug';
+import { PhysicsDebugDraw } from '@codexo/exojs/debug';
+import { BoxShape, CircleShape, KinematicMovementComponent, PhysicsBody, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs/physics';
 import { mountControls } from '@examples/runtime';
 
 // Collision-aware movement for a kinematic body, driven straight from input.
@@ -83,12 +83,7 @@ class KinematicMovementScene extends Scene {
     this.addChild(hero);
 
     this.debug = new PhysicsDebugDraw(this.app, this.world, { drawShapes: true });
-    this.hud = mountControls({
-      title: 'Kinematic Movement',
-      controls: [{ keys: 'WASD / Arrows', action: 'move' }],
-      status: '',
-      hint: 'Push into a wall at an angle to slide along it; drive into a corner of the room to stop there.',
-    });
+    this.hud = mountControls();
   }
 
   override update(): void {

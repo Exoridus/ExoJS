@@ -10,8 +10,8 @@ import {
   Vector,
   View,
 } from '@codexo/exojs';
-import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
-import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem } from '@codexo/exojs-particles';
+import { AudioAnalyser, BeatDetector } from '@codexo/exojs/audio-fx';
+import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem } from '@codexo/exojs/particles';
 
 // #region guide:reactive-scene
 const app = new Application({ extensions: [particlesExtension] });

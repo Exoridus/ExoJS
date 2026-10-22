@@ -12,19 +12,18 @@ import {
   Range,
   RateSpawn,
   ScaleOverLifetime,
-} from '@codexo/exojs-particles';
-import { mountControls } from '@examples/runtime';
+} from '@codexo/exojs/particles';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 class EmitterBasicsScene extends Scene {
   system;
-  hud;
   init() {
     const app = this.app;
     const { width, height } = app;
-    this.system = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 4000 });
+    this.system = new ParticleSystem(this.loader.get(assets.particleLight), { capacity: 4000 });
     this.systems.add(this.system);
     this.system.setPosition(width / 2, height - 80);
     // Rate, lifetime, and a cone-shaped velocity spread: a fountain that
-    // shoots upward (-π/2) with a ±36° spread and 280-460 px/s speed.
+    // shoots upward (-pi/2) with a +/-36 degree spread and 280-460 px/s speed.
     this.system.addSpawnModule(
       new RateSpawn({
         rate: new Constant(180),
@@ -46,7 +45,7 @@ class EmitterBasicsScene extends Scene {
         ]),
       ),
     );
-    // Colour gradient over lifetime: white-hot core → orange → deep red, then
+    // Colour gradient over lifetime: white-hot core, then orange, then deep red, then
     // fading to transparent so particles dissolve at the end of their life.
     this.system.addUpdateModule(
       new ColorOverLifetime(
@@ -58,12 +57,6 @@ class EmitterBasicsScene extends Scene {
         ]),
       ),
     );
-    this.hud = mountControls({
-      title: 'Emitter Basics',
-      controls: [{ keys: 'Auto', action: 'continuous fountain emission' }],
-      status: 'Rate 180/s · lifetime 0.6–1.4s · gravity',
-      hint: 'RateSpawn drives emission; ScaleOverLifetime sizes and ColorOverLifetime tints each particle as it ages.',
-    });
   }
   draw(context) {
     context.render(this.system);

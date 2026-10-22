@@ -1,7 +1,7 @@
 // Auto-generated from audio-visualisation.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Sprite, Text, Texture } from '@codexo/exojs';
-import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
-import { mountControls } from '@examples/runtime';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { AudioAnalyser, BeatDetector } from '@codexo/exojs/audio-fx';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 const BAND_LABELS = ['Sub', 'Bass', 'Low mid', 'Mid', 'High mid', 'Presence', 'Treble', 'Air'];
 class AudioVisualisationScene extends Scene {
   music;
@@ -14,7 +14,6 @@ class AudioVisualisationScene extends Scene {
   progressStyle = 'rgba(255, 255, 255, 0.1)';
   texture;
   screen;
-  hud;
   tapPrompt;
   bandEdges = [];
   async load() {
@@ -23,7 +22,7 @@ class AudioVisualisationScene extends Scene {
     // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
     // is loaded directly through `Asset.type('music', ...)` and awaited rather
     // than fetched synchronously via `get()`.
-    this.music = await this.loader.load(Asset.type('music', assets.demo.audio.musicLoop));
+    this.music = await this.loader.load(assets.musicLoopMain);
     // One analyser tap for spectrum/waveform, one beat detector for the
     // beat-pulse ring. Both read the music bus the stream plays through,
     // without altering playback.
@@ -50,12 +49,6 @@ class AudioVisualisationScene extends Scene {
     this.gradientStyle.addColorStop(1, '#f70');
     this.texture = new Texture(this.canvas);
     this.screen = new Sprite(this.texture);
-    this.hud = mountControls({
-      title: 'Spectrum and Waveform',
-      controls: [{ keys: 'Click', action: 'play / pause' }],
-      status: 'Playing…',
-      hint: 'Live spectrum, waveform, eight frequency bands, and a beat pulse from the music bus.',
-    });
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it and the queued music starts.
     this.tapPrompt = new Text('Click or press any key to start the music', { fillColor: Color.white, fontSize: 22, align: 'center' })
@@ -72,11 +65,10 @@ class AudioVisualisationScene extends Scene {
       } else {
         this.musicVoice.pause();
       }
-      this.hud.setStatus(this.musicVoice.paused ? 'Paused' : 'Playing…');
     });
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically - play() returns the Voice now.
-    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 });
+    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.6 });
   }
   draw(context) {
     const app = this.app;
@@ -144,7 +136,8 @@ class AudioVisualisationScene extends Scene {
     }
     this.screen.updateTexture();
     context.render(this.screen);
-    if (app.audio.locked) {
+    if (app.audio.locked || this.musicVoice.paused) {
+      this.tapPrompt.text = app.audio.locked ? 'Click or press any key to start the music' : 'Paused - click to resume';
       context.render(this.tapPrompt);
     }
   }

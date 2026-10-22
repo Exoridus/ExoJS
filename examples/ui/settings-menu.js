@@ -82,15 +82,20 @@ class SettingsMenuScene extends Scene {
       this.settings.volume = value;
       this.apply();
     });
+    // Discrete choices are logged to the Output panel; the volume slider is
+    // not, since it reports every step of a drag.
     this.motion.onChange.add(value => {
       this.settings.motion = value;
       this.apply();
+      console.log(`Setting: reduced motion ${value ? 'on' : 'off'}`);
     });
     this.theme.onChange.add(value => {
       this.settings.theme = value;
       this.apply();
+      console.log(`Setting: theme ${value}`);
     });
     reset.onClick.add(() => {
+      console.info('Setting: reset to defaults');
       this.volume.value = defaults.volume;
       this.motion.checked = defaults.motion;
       this.theme.selectedIndex = 0;

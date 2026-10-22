@@ -4,7 +4,7 @@
   "symbol": "ObjectPoint",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 2,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A point in object-layer space (pixels, relative to the object)."
       ],
-      "importLine": "import { ObjectPoint } from '@codexo/exojs-tilemap'",
+      "importLine": "import { ObjectPoint } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

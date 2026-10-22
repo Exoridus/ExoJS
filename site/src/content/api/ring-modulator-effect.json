@@ -4,7 +4,7 @@
   "symbol": "RingModulatorEffect",
   "kind": "class",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 10,
   "counts": {
@@ -24,7 +24,7 @@
         "Node graph: ``` input(GainNode) ┬── dryGain ──────────────────────────┐ │ ├── output(GainNode) └── ringGain ── wetGain ────────────────┘",
         "carrierOsc ── ringGain.gain (AudioParam, base = 0) ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `ringGain.gain` base = 0 (carrier provides the ±1 modulation)."
       ],
-      "importLine": "import { RingModulatorEffect } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { RingModulatorEffect } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

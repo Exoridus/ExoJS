@@ -4,7 +4,7 @@
   "symbol": "AutoWahEffect",
   "kind": "class",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 12,
   "counts": {
@@ -26,7 +26,7 @@
         "Envelope (control) path - parallel off inputGain, sums into wahFilter.frequency: inputGain → rectifier(WaveShaper,|x|) → smoothingLowpass(BiquadFilter,lowpass) → sensitivityGain → wahFilter.frequency (AudioParam) ```",
         "Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`."
       ],
-      "importLine": "import { AutoWahEffect } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { AutoWahEffect } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

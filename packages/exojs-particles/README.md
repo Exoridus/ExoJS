@@ -14,7 +14,7 @@ Core is a peer dependency. Add `particlesExtension` to the application that rend
 
 ```ts
 import { Application, Color, type RenderingContext, Scene } from '@codexo/exojs';
-import { ConeDirection, Constant, particlesExtension, ParticleSystem, RateSpawn } from '@codexo/exojs-particles';
+import { ConeDirection, Constant, particlesExtension, ParticleSystem, RateSpawn } from '@codexo/exojs/particles';
 
 class ParticleScene extends Scene {
   private particles!: ParticleSystem;

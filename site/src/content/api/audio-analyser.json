@@ -4,7 +4,7 @@
   "symbol": "AudioAnalyser",
   "kind": "class",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 19,
   "counts": {
@@ -22,7 +22,7 @@
         "Lightweight visualisation analyser backed by a Web Audio AnalyserNode.",
         "Accepts any of: AudioBus, Voice, MediaStream, AudioNode, or null. The tap is a parallel branch - it does not affect the source's main routing. Tap a bus for a whole submix, or an individual Voice (its `output` node) for a single playing instance."
       ],
-      "importLine": "import { AudioAnalyser } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { AudioAnalyser } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

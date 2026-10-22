@@ -11,7 +11,7 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { type DemoPanel, demoPanel, toggle, type ToggleSpec } from '@examples/runtime';
 
 // A decor field far larger than the viewport: thousands of sprites that are
 // authored ONCE and never mutated again - the exact shape the retained tier is
@@ -82,28 +82,21 @@ class RetainedContainerScene extends Scene {
   // is legible instead of flickering frame to frame.
   private smoothedFrameMs = 0;
 
-  private hud!: ReturnType<typeof mountControls>;
-  private panel!: ReturnType<typeof mountControlPanel>;
+  private panel!: DemoPanel<{ retained: ToggleSpec }>;
 
   override init(): void {
     this.atlas = createAtlasTexture();
     this.field = this.buildField(this.retained);
 
-    this.hud = mountControls({
-      title: 'Retained Container',
-      controls: [
-        { keys: ['Retained tier'], action: 'the whole static field replays as O(batches) — no per-child walk' },
-        { keys: ['Plain container'], action: 'every child is walked and re-collected each frame' },
-      ],
-      hint: 'The field only ever moves as a whole. Toggle the tier and watch the frame-time readout.',
-    });
+    this.panel = demoPanel({
+      title: 'Render tier',
+      controls: { retained: toggle('Retained tier', this.retained) },
+      onChange: (_key, retained) => {
+        if (retained === this.retained) {
+          return;
+        }
 
-    this.panel = mountControlPanel({ title: 'Render tier' });
-    this.panel.addToggle({
-      label: 'Retained tier',
-      value: this.retained,
-      onChange: value => {
-        this.retained = value;
+        this.retained = retained;
         // Rebuild the field into the other container type. Destroying the
         // OLD group is safe: it owns no child that outlives it, so the
         // whole subtree is torn down together (see the in-place-destroy
@@ -139,10 +132,8 @@ class RetainedContainerScene extends Scene {
     // machines; on a fast desktop with a few thousand sprites it can be small.
     this.smoothedFrameMs += (context.stats.frameTimeMs - this.smoothedFrameMs) * 0.1;
 
-    const tier = this.retained ? 'RetainedContainer' : 'plain Container';
-    this.hud.setStatus(
-      `${tier} · ${FIELD_COUNT} static sprites · submitted: ${context.stats.submittedNodes} · ` +
-        `drawCalls: ${context.stats.drawCalls} · frame: ${this.smoothedFrameMs.toFixed(2)} ms`,
+    this.panel.status(
+      `${FIELD_COUNT} sprites, ${context.stats.submittedNodes} nodes submitted, ${this.smoothedFrameMs.toFixed(2)} ms per frame`,
     );
   }
 
@@ -184,7 +175,6 @@ class RetainedContainerScene extends Scene {
   }
 
   override destroy(): void {
-    this.hud?.dispose();
     this.panel?.dispose();
     this.field?.destroy();
     this.atlas?.destroy();

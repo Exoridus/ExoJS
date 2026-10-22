@@ -1,7 +1,8 @@
 // Auto-generated from tiled-infinite-map.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Keyboard, Scene, View } from '@codexo/exojs';
+import { ChunkStreamer, TileMapNode } from '@codexo/exojs/tilemap';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { tiledExtension } from '@codexo/exojs-tiled';
-import { ChunkStreamer, TileMapNode } from '@codexo/exojs-tilemap';
 import { mountControls } from '@examples/runtime';
 // A hand-authored Tiled `.tmj` infinite map, streamed the same way the
 // procedural-terrain examples stream generated worlds: TiledMap.toTileMap()
@@ -29,7 +30,7 @@ class TiledInfiniteMapScene extends Scene {
   hudTimer = 0;
   hud;
   async load() {
-    const source = await this.loader.load(Asset.type('tiledSource', 'json/maps/drift-fields.tmj'));
+    const source = await this.loader.load(Asset.type('tiledSource', assets.driftFieldsMap.source));
     const runtimeMap = source.toTileMap();
     this.mapNode = new TileMapNode(runtimeMap);
     const ground = runtimeMap.getTileLayer('Ground');
@@ -81,12 +82,7 @@ class TiledInfiniteMapScene extends Scene {
     });
   }
   setupHud() {
-    this.hud = mountControls({
-      title: 'Tiled Infinite Map Streaming',
-      controls: [{ keys: 'WASD', action: 'fly the free camera across the streamed map' }],
-      status: '',
-      hint: '"Ground" and "Props" each stream through their own ChunkStreamer, sourced from TiledMap.getChunkSource(layer.id) — Tiled\'s on-disk 16x16 chunks are re-sliced onto the runtime chunk grid on demand, one requested chunk at a time.',
-    });
+    this.hud = mountControls();
   }
   update(delta) {
     if (this.moveX !== 0 || this.moveY !== 0) {
@@ -116,8 +112,5 @@ const app = new Application({
   // tiledExtension depends on tilemapExtension, so registering it alone is
   // enough for both loading (.tmj) and rendering (TileMapNode).
   extensions: [tiledExtension],
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(TiledInfiniteMapScene);

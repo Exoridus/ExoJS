@@ -4,7 +4,7 @@
   "symbol": "ChunkRange",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 4,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "The inclusive range of chunk coordinates that intersect a bounded TileLayer. `null` for an unbounded layer (no range limit)."
       ],
-      "importLine": "import { ChunkRange } from '@codexo/exojs-tilemap'",
+      "importLine": "import { ChunkRange } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

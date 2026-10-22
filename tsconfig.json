@@ -1,8 +1,6 @@
 {
-  "extends": "@codexo/exojs-config/typescript/library.json",
+  "extends": ["@codexo/exojs-config/typescript/library.json", "@codexo/exojs-config/typescript/workspace-paths.json"],
   "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src",
     "customConditions": ["@codexo/exojs-source"]
   },
   "include": ["src/**/*", "src/typings.d.ts"],

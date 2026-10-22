@@ -1,6 +1,7 @@
 // Auto-generated from video-drawable.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Keyboard, Scene, Sprite } from '@codexo/exojs';
-import { mountControls } from '@examples/runtime';
+import { Application, Color, FixedResolutionCanvasSizing, Keyboard, Scene, Sprite } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { choice, demoPanel, toggle } from '@examples/runtime';
 // Every video in the asset catalog, switchable at runtime with the number
 // keys. Only the first entry is fetched up front - the others lazy-load on
 // first selection so startup stays fast.
@@ -9,54 +10,63 @@ import { mountControls } from '@examples/runtime';
 // in the browser's own display encoding and sampled as sRGB colour; the engine
 // makes no HDR-video promise, so no HDR clip is offered.
 const VIDEOS = [
-  { name: 'demoLoop', label: 'Demo loop (webm)', url: assets.demo.video.demoLoop },
-  { name: 'highRes', label: 'High-res (mp4)', url: assets.demo.video.highRes },
-  { name: 'highFps', label: 'High-fps (webm)', url: assets.demo.video.highFps },
+  { name: 'demoLoop', label: 'Demo loop (webm)', asset: assets.videoDemoLoop },
+  { name: 'highRes', label: '4K, 24 fps (mp4)', asset: assets.videoHighRes },
+  { name: 'highFps', label: '1080p, 60 fps (webm)', asset: assets.videoHighFps },
 ];
 class VideoDrawableScene extends Scene {
   video;
   overlay;
   elapsed = 0;
-  hud;
+  panel;
   videoIdx = 0;
   loadedVideos = new Set();
   switching = false;
   async load() {
     const app = this.app;
     const { width, height } = app;
-    // Video is a non-leaf resource kind (no seamless placeholder, unlike
-    // Texture/Sound), so it is loaded directly through `Asset.type('video', ...)`
-    // and awaited rather than fetched synchronously via `get()`.
-    this.video = await this.loader.load(Asset.type('video', VIDEOS[0].url));
+    // Video has no placeholder handle (unlike Texture and Sound), so it is
+    // awaited with `load()` rather than claimed synchronously with `get()`.
+    this.video = await this.loader.load(VIDEOS[0].asset);
     this.loadedVideos.add(VIDEOS[0].name);
     this.configureVideo();
     // A sprite composited on top of the live video texture - the same scene
     // graph draws video frames and regular sprites side by side. Texture IS
     // seamless, so it is fetched directly by source with no preload step.
-    this.overlay = new Sprite(this.loader.get(assets.demo.textures.shipA));
+    this.overlay = new Sprite(this.loader.get(assets.ship));
     this.overlay.setAnchor(0.5);
     this.overlay.setScale(3);
     this.overlay.setPosition(width / 2, height / 2);
-    this.hud = mountControls({
-      title: 'Video Drawable',
-      controls: [
-        { keys: 'Tap', action: 'play / pause' },
-        { keys: '1–3', action: 'switch video' },
-      ],
-      status: `Playing — ${VIDEOS[0].label}`,
-      hint: 'The video streams as a live GPU texture with a sprite composited over it.',
+    this.video.play();
+    // Clicks and the number keys move the same panel state.
+    this.panel = demoPanel({
+      title: 'Video',
+      controls: {
+        video: choice(
+          'Clip',
+          VIDEOS.map(entry => entry.label),
+        ),
+        paused: toggle('Paused'),
+      },
+      onChange: (key, _value, values) => {
+        if (key === 'paused') {
+          if (values.paused) {
+            this.video.pause();
+          } else {
+            this.video.play();
+          }
+        } else {
+          void this.switchVideo(VIDEOS.findIndex(entry => entry.label === values.video));
+        }
+      },
     });
-    app.input.onPointerTap.add(() => {
-      this.video.toggle();
-      this.hud.setStatus(this.video.playing ? `Playing — ${VIDEOS[this.videoIdx].label}` : 'Paused');
-    });
+    app.input.onPointerTap.add(() => this.panel.step('paused'));
     app.input.onKeyDown.add(channel => {
       const idx = [Keyboard.One, Keyboard.Two, Keyboard.Three].indexOf(channel);
       if (idx !== -1) {
-        void this.switchVideo(idx);
+        this.panel.set('video', VIDEOS[idx].label);
       }
     });
-    this.video.play();
   }
   /** Sizing + playback options shared by every video the example swaps in. */
   configureVideo() {
@@ -74,20 +84,27 @@ class VideoDrawableScene extends Scene {
     }
     const entry = VIDEOS[idx];
     this.switching = true;
-    this.hud.setStatus(`Loading — ${entry.label}…`);
+    this.panel.status(`Loading ${entry.label}...`);
     try {
-      const loaded = await this.loader.load(Asset.type('video', entry.url));
+      const loaded = await this.loader.load(entry.asset);
       this.loadedVideos.add(entry.name);
       this.video.pause();
       this.videoIdx = idx;
       this.video = loaded;
       this.configureVideo();
+      this.panel.set('paused', false);
       this.video.play();
-      this.hud.setStatus(`Playing — ${entry.label}`);
+      this.panel.status('');
     } catch {
-      this.hud.setStatus(`Failed to load — ${entry.label}`);
+      this.panel.status(`Failed to load ${entry.label}.`);
+      this.panel.set('video', VIDEOS[this.videoIdx].label);
     } finally {
       this.switching = false;
+    }
+    // A choice made while this one was loading is honoured once it is done.
+    const wanted = VIDEOS.findIndex(candidate => candidate.label === this.panel.values.video);
+    if (wanted !== this.videoIdx) {
+      void this.switchVideo(wanted);
     }
   }
   update(delta) {

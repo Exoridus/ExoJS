@@ -277,6 +277,32 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
     expect(removedEvents).toContain('keydown');
   });
 
+  it('unlocks on a mouse press the canvas consumes before it reaches the document', async () => {
+    Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: UnlockableAudioContext });
+    Object.defineProperty(globalThis, 'OfflineAudioContext', { configurable: true, value: class {} });
+
+    const { getAudioContext } = await import('#audio/audioContext');
+    const ctx = getAudioContext();
+    const canvas = document.createElement('canvas');
+
+    // What the input system does with a press on its surface: cancel it, so no
+    // compatibility `mousedown` follows, and stop it from propagating further.
+    canvas.addEventListener('pointerdown', event => {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    });
+    document.body.append(canvas);
+
+    try {
+      canvas.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
+      await Promise.resolve();
+
+      expect(ctx.state).toBe('running');
+    } finally {
+      canvas.remove();
+    }
+  });
+
   it('a second interaction event arriving synchronously after the first sees the context already running', async () => {
     // Deliberately no addEventListener/statechange support here: unlike
     // UnlockableAudioContext, resume() must NOT synchronously cascade into

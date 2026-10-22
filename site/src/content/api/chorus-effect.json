@@ -4,7 +4,7 @@
   "symbol": "ChorusEffect",
   "kind": "class",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 11,
   "counts": {
@@ -24,7 +24,7 @@
         "Node graph: ``` inputGain ┬── dryGain ────────────────┐ │ ├── outputGain └── delayNode ── wetGain ────┘",
         "lfoOscillator ── lfoGain (depth) ── delayNode.delayTime ```"
       ],
-      "importLine": "import { ChorusEffect } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { ChorusEffect } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

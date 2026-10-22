@@ -4,7 +4,7 @@
   "symbol": "ContactPoint",
   "kind": "interface",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A single contact point on a CollisionEvent. World space."
       ],
-      "importLine": "import { ContactPoint } from '@codexo/exojs-physics'",
+      "importLine": "import { ContactPoint } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

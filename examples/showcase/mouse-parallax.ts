@@ -67,9 +67,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(18, 22, 34),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(MouseParallaxScene);

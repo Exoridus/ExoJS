@@ -4,7 +4,7 @@
   "symbol": "GridSpace",
   "kind": "class",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 28,
   "counts": {
@@ -24,7 +24,7 @@
         "Cost `0` blocks a cell, `1` is ordinary ground and larger values are terrain an agent will route around when it is cheaper to do so. Diagonal steps cost their length, so the metric stays consistent with the octile heuristic.",
         "The space carries no scene node and no rendering: it is data plus a neighbour relation, and it is built and mutated entirely by the application."
       ],
-      "importLine": "import { GridSpace } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { GridSpace } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {

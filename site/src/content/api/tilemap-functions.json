@@ -1,10 +1,10 @@
 {
   "title": "Tilemap Functions",
-  "description": "Free functions and constants exported from @codexo/exojs-tilemap.",
+  "description": "Free functions and constants exported from @codexo/exojs/tilemap.",
   "symbol": "Tilemap Functions",
   "kind": "namespace",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 13,
   "counts": {
@@ -19,7 +19,7 @@
       "title": "Overview",
       "members": [],
       "paragraphs": [
-        "Free functions and constants exported from @codexo/exojs-tilemap. Import any of them directly, for example `import { autoTile } from '@codexo/exojs-tilemap'`."
+        "Free functions and constants exported from @codexo/exojs/tilemap. Import any of them directly, for example `import { autoTile } from '@codexo/exojs/tilemap'`."
       ],
       "importLine": null,
       "sourceLink": null

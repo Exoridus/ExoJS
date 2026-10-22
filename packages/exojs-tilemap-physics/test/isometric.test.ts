@@ -1,5 +1,5 @@
 import { Container, type Texture, TextureRegion } from '@codexo/exojs';
-import { PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+import { PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
 import {
   buildTileCollisionGeometry,
   ObjectLayer,
@@ -7,7 +7,7 @@ import {
   TileLayer,
   TileProjection,
   TileSet,
-} from '@codexo/exojs-tilemap';
+} from '@codexo/exojs/tilemap';
 import { describe, expect, it } from 'vitest';
 
 import { buildObjectLayerColliders } from '../src/objectLayer';

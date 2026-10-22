@@ -58,6 +58,9 @@ export default defineConfig([
       'coverage/**',
       '**/*.min.*',
       'examples/**/*.js',
+      // Generated forwarder packages, pinned to their generator by
+      // `legacy-shims:check`; no TypeScript program owns them.
+      'packages/legacy/**',
       // Transient fixture directories a suite writes into a scanned tree and
       // removes again. They exist only while that suite runs, so a lint pass
       // that overlaps it would otherwise report files nobody authored.
@@ -1074,6 +1077,11 @@ export default defineConfig([
       'scripts/**/*.mjs',
       'packages/exojs-bench/competitors/*.ts',
       'packages/create-exo-app/bin/*.js',
+      // The demo-assets generators and archive/copy tooling are Node scripts
+      // that belong to no package TypeScript program (the package tsconfigs
+      // cover src/** only), so typed rules have nothing to serve for them.
+      'packages/exojs-demo-assets/scripts/*.ts',
+      'packages/exojs-demo-assets/bin/*.js',
     ],
   }),
 
@@ -1226,8 +1234,6 @@ export default defineConfig([
       globals: {
         ...globals.browser,
         ...globals.es2024,
-        // Injected typed asset catalog (see examples/shared/assets-global.d.ts).
-        assets: 'readonly',
       },
     },
     rules: {
@@ -1243,7 +1249,9 @@ export default defineConfig([
         },
       ],
       eqeqeq: ['error', 'always', { null: 'ignore' }],
-      'no-console': 'error',
+      // The playground shows a preview's console in its Output panel, so a
+      // log line is one of the ways an example explains what just happened.
+      'no-console': 'off',
       // The sync-init() rule (see the engine-source block) is deliberately NOT
       // enabled here yet: most of the catalog still uses the pre-v0.17
       // async `init(loader)` hook and is migrated in the dedicated examples
@@ -1289,8 +1297,6 @@ export default defineConfig([
       globals: {
         ...globals.browser,
         ...globals.es2024,
-        // Injected typed asset catalog (see examples/shared/assets-global.d.ts).
-        assets: 'readonly',
       },
     },
     rules: {

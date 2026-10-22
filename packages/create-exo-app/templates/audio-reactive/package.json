@@ -11,8 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@codexo/exojs": "lockstep",
-    "@codexo/exojs-audio-fx": "lockstep"
+    "@codexo/exojs": "lockstep"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

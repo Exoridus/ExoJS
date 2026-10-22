@@ -4,7 +4,7 @@
   "symbol": "TileCellSource",
   "kind": "type",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 0,
   "counts": {
@@ -23,7 +23,7 @@
         "Returns the class/type string for the cell, or `null` when the cell carries no collision. The string is opaque: it is the merge key for adjacent cells and reaches the consumer unchanged, exactly like the `type` of a tile collision object.",
         "A source is sampled while geometry is being built and is expected to answer identically for as long as the geometry is used. Changing what it returns does not invalidate geometry that was already built; rebuild instead."
       ],
-      "importLine": "import { TileCellSource } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileCellSource } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

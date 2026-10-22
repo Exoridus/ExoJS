@@ -4,7 +4,7 @@
   "symbol": "TileNavigationSpaceOptions",
   "kind": "interface",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Construction options for TileNavigationSpace."
       ],
-      "importLine": "import { TileNavigationSpaceOptions } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { TileNavigationSpaceOptions } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {

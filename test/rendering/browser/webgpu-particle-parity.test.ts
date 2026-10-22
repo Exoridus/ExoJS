@@ -1,5 +1,5 @@
 import { Rectangle, Texture, Time } from '@codexo/exojs';
-import { DeathModule, type ParticleDeathContext, particlesExtension, ParticleSystem } from '@codexo/exojs-particles';
+import { DeathModule, type ParticleDeathContext, particlesExtension, ParticleSystem } from '@codexo/exojs/particles';
 
 import { materializeRendererBindings } from '#extensions/materialize';
 import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';

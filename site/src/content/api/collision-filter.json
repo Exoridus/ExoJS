@@ -4,7 +4,7 @@
   "symbol": "CollisionFilter",
   "kind": "interface",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Per-collider collision filter. A pair is considered for collision only when each collider's mask includes the other's category. A non-zero group overrides category/mask: identical positive groups always collide, identical negative groups never do."
       ],
-      "importLine": "import { CollisionFilter } from '@codexo/exojs-physics'",
+      "importLine": "import { CollisionFilter } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

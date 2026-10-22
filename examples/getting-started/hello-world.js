@@ -1,5 +1,6 @@
 // Auto-generated from hello-world.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Scene, Sprite, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 // #region guide:first-scene
 class HelloWorldScene extends Scene {
   sprite;
@@ -8,7 +9,7 @@ class HelloWorldScene extends Scene {
   init() {
     const app = this.app;
     const { width, height } = app;
-    this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
+    this.sprite = new Sprite(this.loader.get(assets.ship));
     this.sprite.setAnchor(0.5);
     this.sprite.setScale(1.5);
     this.sprite.setPosition(width / 2, height / 2);
@@ -39,8 +40,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(12, 16, 30),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(HelloWorldScene);

@@ -1,5 +1,6 @@
 // Auto-generated from rectangles-collision.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Sprite } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 const CLEAR_TINT = new Color(120, 200, 255);
 const OVERLAP_TINT = new Color(255, 90, 90);
@@ -11,7 +12,7 @@ class RectanglesCollisionScene extends Scene {
   init() {
     const app = this.app;
     const { width, height } = app;
-    const texture = this.loader.get('image/hue-ramp.png');
+    const texture = this.loader.get(assets.hueRamp);
     // Two axis-aligned rectangles (no rotation) so collision is a true AABB
     // test. Explicit width/height drive the sprite scale; anchor 0.5 keeps the
     // drag offset and the bounds centred on the pointer-grabbed point.
@@ -24,12 +25,7 @@ class RectanglesCollisionScene extends Scene {
     this.addChild(this.boxA);
     this.addChild(this.boxB);
     this.overlap = new Graphics();
-    this.hud = mountControls({
-      title: 'Rectangles Collision',
-      controls: [{ keys: 'Drag', action: 'move a rectangle' }],
-      status: 'No overlap',
-      hint: 'Drag either rectangle over the other — the AABB overlap region lights up.',
-    });
+    this.hud = mountControls({ status: 'No overlap' });
   }
   makeBox(texture, w, h) {
     const box = new Sprite(texture).setAnchor(0.5);
@@ -76,8 +72,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(18, 22, 30),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(RectanglesCollisionScene);

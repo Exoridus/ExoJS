@@ -1,5 +1,5 @@
-import type { MapLevel, MapLevelNeighbour } from '@codexo/exojs-tilemap';
-import { MapLevelSide, MapWorld } from '@codexo/exojs-tilemap';
+import type { MapLevel, MapLevelNeighbour } from '@codexo/exojs/tilemap';
+import { MapLevelSide, MapWorld } from '@codexo/exojs/tilemap';
 
 import type { LdtkData, LdtkLevel } from './LdtkData';
 import { getLdtkLevelEntries } from './ldtkLevelEntries';

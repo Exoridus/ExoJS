@@ -1,5 +1,5 @@
 import { Color, Scene, Sprite } from '@codexo/exojs';
-import { BeatDetector } from '@codexo/exojs-audio-fx';
+import { BeatDetector } from '@codexo/exojs/audio-fx';
 
 class BeatVisualScene extends Scene {
   private detector = new BeatDetector();

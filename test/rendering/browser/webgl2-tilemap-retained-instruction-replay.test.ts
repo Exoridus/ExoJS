@@ -18,7 +18,7 @@
  * Run via:  pnpm test:browser:webgl
  */
 
-import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TileMapNode, TileSet } from '@codexo/exojs/tilemap';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';

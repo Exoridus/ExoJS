@@ -4,7 +4,7 @@
   "symbol": "DuckingEffectOptions",
   "kind": "interface",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 5,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Construction options for DuckingEffect. `sidechain` is required."
       ],
-      "importLine": "import { DuckingEffectOptions } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { DuckingEffectOptions } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

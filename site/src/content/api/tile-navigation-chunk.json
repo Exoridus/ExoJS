@@ -4,7 +4,7 @@
   "symbol": "TileNavigationChunk",
   "kind": "interface",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 1,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "The part of a tile chunk TileNavigationSpace reads: whether it changed."
       ],
-      "importLine": "import { TileNavigationChunk } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { TileNavigationChunk } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {

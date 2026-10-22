@@ -9,10 +9,16 @@ import codecovAstroPlugin from '@codecov/astro-plugin';
 import { defineConfig } from 'astro/config';
 
 import { isGeneratedAstroDirective } from './scripts/astro-warning-policy';
+import { installSiteBaseLinks } from './scripts/site-base-links';
+import { resolveSiteBuild, writeProvisionalSiteBuild } from './scripts/write-site-build';
 import { SHIKI_THEMES } from './src/lib/shiki-theme';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// The channel contract decides the base of every URL the build emits, so it is
+// resolved and validated here, once, before anything renders.
+const siteBuild = resolveSiteBuild(process.env);
 
 // Codecov Bundle Analysis for the site bundle - upload only when the token is
 // present (CI); local builds stay offline. Placed after all other integrations
@@ -29,9 +35,20 @@ const codecovIntegrations = process.env.CODECOV_TOKEN
   : [];
 
 export default defineConfig({
-  integrations: [react(), mdx(), ...codecovIntegrations],
+  integrations: [
+    react(),
+    mdx(),
+    {
+      name: 'exojs-site-build',
+      hooks: {
+        'astro:config:setup': ({ config }) => installSiteBaseLinks(config.markdown.processor, siteBuild.basePath),
+        'astro:build:done': ({ dir }) => writeProvisionalSiteBuild(fileURLToPath(dir), siteBuild),
+      },
+    },
+    ...codecovIntegrations,
+  ],
   output: 'static',
-  base: '/ExoJS/',
+  base: siteBuild.basePath,
   i18n: {
     locales: ['en', 'de'],
     defaultLocale: 'en',
@@ -50,6 +67,9 @@ export default defineConfig({
     assets: '_astro',
   },
   vite: {
+    define: {
+      __EXOJS_SITE_BUILD__: JSON.stringify(siteBuild),
+    },
     resolve: {
       alias: {
         '~examples': path.resolve(__dirname, '../examples'),

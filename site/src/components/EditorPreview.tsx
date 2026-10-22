@@ -9,8 +9,8 @@ import {
   useState,
 } from 'react';
 
-import { assets } from '../lib/asset-catalog';
 import type { Capability } from '../lib/examples-catalog';
+import type { ConsoleWindow, PreviewConsole } from '../lib/preview-console';
 import { detectRuntimeSupport, getMissingCapabilities } from '../lib/runtime-support';
 import type { Example, PreviewErrorEntry, UrlParams } from '../lib/types';
 import { buildIframeUrl } from '../lib/url-builder';
@@ -51,15 +51,22 @@ export interface EditorPreviewProps {
   ref?: Ref<EditorPreviewHandle>;
   selectedVersionId: string;
   sourceCode: string | null;
+  /**
+   * Receives the preview's console output and uncaught errors. Each iframe load
+   * starts a new generation of it; without one, errors only blank the preview.
+   */
+  output?: PreviewConsole;
+  /** Changing it restarts the preview even when `sourceCode` is unchanged. */
+  runId?: number;
   onCanvasSize?(event: CanvasSizeEvent): void;
-  onPreviewErrors?(errors: PreviewErrorEntry[]): void;
 }
 
 export const EditorPreview = ({
   exampleMeta,
   onCanvasSize,
-  onPreviewErrors,
+  output,
   ref,
+  runId = 0,
   selectedVersionId,
   sourceCode,
 }: EditorPreviewProps): JSX.Element => {
@@ -69,6 +76,7 @@ export const EditorPreview = ({
   const sourceRef = useRef<string | null>(sourceCode);
   const exampleRef = useRef<Example | null>(exampleMeta);
   const versionRef = useRef(selectedVersionId);
+  const outputRef = useRef<PreviewConsole | undefined>(output);
   const canvasMutationObserverRef = useRef<MutationObserver | null>(null);
   const canvasAttributeObserverRef = useRef<MutationObserver | null>(null);
   const currentCanvasRef = useRef({ width: 0, height: 0, zoom: 1, resolutionWidth: 0, resolutionHeight: 0 });
@@ -81,12 +89,16 @@ export const EditorPreview = ({
     sourceRef.current = sourceCode;
     exampleRef.current = exampleMeta;
     versionRef.current = selectedVersionId;
+    outputRef.current = output;
   });
 
   useEffect(() => {
     // Bump the iframe cache-buster to force a reload when the source changes.
     // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect -- reload preview on source change
     setUpdateId(value => value + 1);
+    // The outgoing document can still log until the new one loads; its
+    // messages must not reach the record the next load starts.
+    outputRef.current?.detach();
     disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
     currentCanvasRef.current = { width: 0, height: 0, zoom: 1, resolutionWidth: 0, resolutionHeight: 0 };
     // Before the example reports its canvas, the frame already takes the
@@ -98,7 +110,7 @@ export const EditorPreview = ({
     rootRef.current?.style.setProperty('--canvas-h', `${STAGE_HEIGHT}px`);
     rootRef.current?.style.setProperty('--preview-zoom', String(zoom));
     onCanvasSize?.({ width: 0, height: 0, zoom: 1 });
-  }, [onCanvasSize, sourceCode]);
+  }, [onCanvasSize, sourceCode, runId]);
 
   useEffect(() => {
     const recalculateZoom = (): void => {
@@ -133,6 +145,7 @@ export const EditorPreview = ({
       window.removeEventListener('resize', recalculateZoom);
       window.removeEventListener('keydown', preventScroll);
       disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
+      outputRef.current?.detach();
     };
   }, [onCanvasSize]);
 
@@ -157,10 +170,6 @@ export const EditorPreview = ({
     }),
     [],
   );
-
-  const syncPreviewErrors = (errors: PreviewErrorEntry[]): void => {
-    onPreviewErrors?.(errors.filter(error => Boolean(error.summary)));
-  };
 
   const applyCanvasSize = (width: number, height: number, resolutionWidth: number, resolutionHeight: number): void => {
     if (!width || !height) {
@@ -233,16 +242,21 @@ export const EditorPreview = ({
     }
 
     const iframeWindow = iframe.contentWindow;
-    syncPreviewErrors([]);
 
     if (iframeWindow) {
+      const sink = outputRef.current;
+      // Attached before the example's module is appended, so its first
+      // top-level log is already captured.
+      const generation = sink?.attach(iframeWindow as ConsoleWindow) ?? 0;
+
       iframeWindow.__EXAMPLE_META__ = exampleRef.current;
-      iframeWindow.assets = assets;
-      installPreviewErrorHandlers(iframeWindow, iframeBody, syncPreviewErrors);
+      installPreviewErrorHandlers(iframeWindow, iframeBody, error => {
+        sink?.writeException(generation, error.summary, error.details ?? null);
+      });
     }
 
     iframeBody.tabIndex = -1;
-    void executePreviewSource(iframeBody, source, exampleRef.current, syncPreviewErrors);
+    void executePreviewSource(iframeBody, source, exampleRef.current);
     watchForCanvas(iframeBody);
     focusPreviewSurface(iframe);
   };
@@ -261,9 +275,11 @@ export const EditorPreview = ({
         ref={iframeRef}
         className={css(styles, 'preview')}
         onLoad={onLoadIframe}
-        onError={() =>
-          syncPreviewErrors([{ summary: 'The preview iframe failed to load.', details: 'The preview iframe failed to load.' }])
-        }
+        onError={() => {
+          const sink = outputRef.current;
+
+          sink?.writeException(sink.generation, 'The preview iframe failed to load.', null);
+        }}
         onPointerDown={() => focusPreviewSurface(iframeRef.current)}
         onKeyDown={(event: ReactKeyboardEvent<HTMLIFrameElement>) => {
           if (event.key === 'Enter') {
@@ -327,7 +343,7 @@ const focusPreviewSurface = (iframe: HTMLIFrameElement | null): void => {
 const installPreviewErrorHandlers = (
   iframeWindow: Window,
   iframeBody: HTMLBodyElement,
-  syncPreviewErrors: (errors: PreviewErrorEntry[]) => void,
+  reportError: (error: PreviewErrorEntry) => void,
 ): void => {
   iframeWindow.__EXAMPLE_PREVIEW_ERROR_RENDERED__ = false;
 
@@ -340,7 +356,7 @@ const installPreviewErrorHandlers = (
       return true;
     }
 
-    syncPreviewErrors([previewError]);
+    reportError(previewError);
     renderExecutionError(iframeBody);
 
     return true;
@@ -357,17 +373,12 @@ const installPreviewErrorHandlers = (
     }
 
     event.preventDefault();
-    syncPreviewErrors([previewError]);
+    reportError(previewError);
     renderExecutionError(iframeBody);
   };
 };
 
-const executePreviewSource = async (
-  iframeBody: HTMLBodyElement,
-  sourceCode: string,
-  exampleMeta: Example | null,
-  _syncPreviewErrors: (errors: PreviewErrorEntry[]) => void,
-): Promise<void> => {
+const executePreviewSource = async (iframeBody: HTMLBodyElement, sourceCode: string, exampleMeta: Example | null): Promise<void> => {
   const required = exampleMeta?.capabilities ?? [];
 
   if (required.length > 0) {

@@ -13,12 +13,13 @@ import {
   type Texture,
   Vector,
 } from '@codexo/exojs';
-import { BoxShape, type PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
-import { PhysicsDebugDraw } from '@codexo/exojs-physics/debug';
+import { PhysicsDebugDraw } from '@codexo/exojs/debug';
+import { BoxShape, type PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
+import type { TileMap } from '@codexo/exojs/tilemap';
+import { buildObjectLayerColliders } from '@codexo/exojs/tilemap-physics';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
-import type { TileMap } from '@codexo/exojs-tilemap';
-import { buildObjectLayerColliders } from '@codexo/exojs-tilemap-physics';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { demoPanel, toggle } from '@examples/runtime';
 
 class TiledMapPhysicsActorScene extends Scene {
   private world!: PhysicsWorld;
@@ -26,8 +27,7 @@ class TiledMapPhysicsActorScene extends Scene {
   private actor!: Sprite;
   private actorBody!: PhysicsBody;
   private debug!: PhysicsDebugDraw;
-  private hud!: ReturnType<typeof mountControls>;
-  private panel!: ReturnType<typeof mountControlPanel>;
+  private panel!: ReturnType<typeof demoPanel>;
   private showOutlines = false;
   private settled = 0;
   private map!: TileMap;
@@ -36,9 +36,9 @@ class TiledMapPhysicsActorScene extends Scene {
 
   override async load(): Promise<void> {
     const [map, charactersTexture, spritesheetData] = await Promise.all([
-      this.loader.load(Asset.type('tileMap', 'json/maps/physics-room.tmj')),
-      this.loader.load(Asset.type('texture', assets.demo.spritesheets.platformerCharacters.image)),
-      this.loader.load(Asset.type('json', assets.demo.spritesheets.platformerCharacters.data)),
+      this.loader.load(Asset.type('tileMap', assets.physicsRoomMap.source)),
+      this.loader.load(assets.platformerCharactersImage),
+      this.loader.load(assets.platformerCharactersAtlas),
     ]);
     this.map = map;
     this.charactersTexture = charactersTexture;
@@ -56,7 +56,7 @@ class TiledMapPhysicsActorScene extends Scene {
       throw new Error('physics-room.tmj needs a Collision object layer.');
     }
 
-    const colliders = buildObjectLayerColliders(this.world, collision, { friction: 0.7, restitution: 0.05 });
+    buildObjectLayerColliders(this.world, collision, { friction: 0.7, restitution: 0.05 });
 
     const characters = new Spritesheet(this.charactersTexture, this.spritesheetData);
     this.actor = characters.getFrameSprite('character_green_front').setAnchor(0.5);
@@ -70,17 +70,10 @@ class TiledMapPhysicsActorScene extends Scene {
     this.actorBody.applyImpulse(2600, 0);
 
     this.debug = new PhysicsDebugDraw(this.app, this.world, { drawShapes: true, drawCenters: true });
-    this.hud = mountControls({
-      title: 'Tiled Collision Map',
-      controls: [{ keys: 'Panel', action: 'toggle authored collision outlines' }],
-      status: `${colliders.length} static colliders from the loaded Tiled map`,
-      hint: 'buildObjectLayerColliders() turns rectangles placed in the .tmj Collision layer into static physics bodies.',
-    });
-    this.panel = mountControlPanel({ title: 'Collision' });
-    this.panel.addToggle({
-      label: 'Show outlines',
-      value: false,
-      onChange: value => {
+    this.panel = demoPanel({
+      title: 'Collision',
+      controls: { outlines: toggle('Show outlines', false) },
+      onChange: (_key, value) => {
         this.showOutlines = value;
       },
     });
@@ -113,7 +106,6 @@ class TiledMapPhysicsActorScene extends Scene {
   }
 
   override destroy(): void {
-    this.hud?.dispose();
     this.panel?.dispose();
     this.debug?.destroy();
     this.mapNode?.destroy();
@@ -127,7 +119,6 @@ const app = new Application({
   canvas: { width: 1280, height: 704, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(38, 46, 66),
   extensions: [tiledExtension],
-  loader: { basePath: 'assets/' },
 });
 
 await app.start(TiledMapPhysicsActorScene);

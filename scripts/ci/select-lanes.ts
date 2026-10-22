@@ -313,6 +313,18 @@ const isExampleCatalogPath = (file: string): boolean => {
 };
 
 /**
+ * Root tooling the site build runs or vendors the output of: the dist builders
+ * whose bundles the site serves, the freshness check `site:build` starts
+ * with, and the channel contract and manifest writer under `scripts/pages/`.
+ */
+const SITE_BUILD_TOOLING = new Set([
+  'scripts/build.ts',
+  'scripts/build-extension.ts',
+  'scripts/check-dist-fresh.ts',
+  'scripts/dist-freshness.ts',
+]);
+
+/**
  * Site area: anything that can change the generated examples site / API docs.
  * Gates the site-build lane. Mirrors (and intentionally keeps) the prior `site`
  * filter: every `packages/**` change - docs included - can affect generated docs
@@ -320,6 +332,10 @@ const isExampleCatalogPath = (file: string): boolean => {
  */
 const isSitePath = (file: string): boolean => {
   if (file.startsWith('site/')) {
+    return true;
+  }
+
+  if (file.startsWith('scripts/pages/') || SITE_BUILD_TOOLING.has(file)) {
     return true;
   }
 
@@ -428,6 +444,7 @@ export const CHECKED_README_PATHS: readonly string[] = [
     'exojs-aseprite',
     'exojs-audio-fx',
     'exojs-pathfinding',
+    'exojs-demo-assets',
   ].map(name => `packages/${name}/README.md`),
 ];
 
@@ -443,9 +460,8 @@ export const CHECKED_README_PATHS: readonly string[] = [
  *                                        URL state, the example catalog, source
  *                                        snippets, footgun diagnostics).
  *   - `examples/`                        the catalog sources and their generated
- *                                        twins, which `examples-sync`,
- *                                        `runtime-dts` and `assets-global-dts`
- *                                        read directly.
+ *                                        twins, which `examples-sync` and
+ *                                        `runtime-dts` read directly.
  *   - `packages/exojs-bench/results/`    the committed profiles, which
  *                                        `site/src/lib/bench-profiles` globs and
  *                                        three suites validate. The bench
@@ -554,6 +570,11 @@ const isReleasePath = (file: string): boolean => {
   }
 
   if (/^packages\/[^/]+\/package\.json$/.test(file)) {
+    return true;
+  }
+
+  // The legacy shims are packed as they are committed; every file is release content.
+  if (file.startsWith('packages/legacy/')) {
     return true;
   }
 

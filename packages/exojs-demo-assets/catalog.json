@@ -1,0 +1,1097 @@
+{
+  "$comment": "Authored source of the demo catalog. Every other list (definitions, default instance, manifest, notices, packed media) is generated from this file by scripts/generate.ts. Paths are relative to examples/assets/.",
+  "sourceRoot": "../../examples/assets",
+  "provenance": {
+    "exojs": {
+      "title": "ExoJS original work",
+      "author": "ExoJS contributors",
+      "license": "MIT",
+      "licenseUrl": "https://opensource.org/license/mit",
+      "source": "https://github.com/Exoridus/ExoJS"
+    },
+    "kenney-background-elements-remastered": {
+      "title": "Kenney Background Elements Remastered",
+      "author": "Kenney (kenney.nl)",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets/background-elements-remastered",
+      "licenseFile": "demo/vendor/kenney/background-elements-remastered/License.txt"
+    },
+    "kenney-cursor-pack": {
+      "title": "Kenney Cursor Pack",
+      "author": "Kenney (kenney.nl)",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets/cursor-pack",
+      "licenseFile": "demo/vendor/kenney/cursor-pack/License.txt"
+    },
+    "kenney-development-essentials": {
+      "title": "Kenney Development Essentials",
+      "author": "Kenney (kenney.nl)",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets/development-essentials",
+      "licenseFile": "demo/vendor/kenney/development-essentials/License.txt"
+    },
+    "kenney-digital-audio": {
+      "title": "Kenney Digital Audio",
+      "author": "Kenney (kenney.nl)",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets/digital-audio",
+      "licenseFile": "demo/vendor/kenney/digital-audio/License.txt"
+    },
+    "kenney-impact-sounds": {
+      "title": "Kenney Impact Sounds",
+      "author": "Kenney (kenney.nl)",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets/impact-sounds",
+      "licenseFile": "demo/vendor/kenney/impact-sounds/License.txt"
+    },
+    "kenney-interface-sounds": {
+      "title": "Kenney Interface Sounds",
+      "author": "Kenney (kenney.nl)",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets/interface-sounds",
+      "licenseFile": "demo/vendor/kenney/interface-sounds/License.txt"
+    },
+    "kenney-isometric-tiles-landscape": {
+      "title": "Kenney Isometric Tiles Landscape",
+      "author": "Kenney (kenney.nl)",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets/isometric-tiles-landscape",
+      "licenseFile": "demo/vendor/kenney/isometric-tiles-landscape/License.txt"
+    },
+    "kenney-fonts": {
+      "title": "Kenney Fonts",
+      "author": "Kenney (kenney.nl)",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets/kenney-fonts",
+      "licenseFile": "demo/vendor/kenney/kenney-fonts/License.txt"
+    },
+    "kenney-map-pack": {
+      "title": "Kenney Map Pack",
+      "author": "Kenney (kenney.nl)",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets/map-pack",
+      "licenseFile": "demo/vendor/kenney/map-pack/License.txt"
+    },
+    "kenney-music-jingles": {
+      "title": "Kenney Music Jingles",
+      "author": "Kenney (kenney.nl)",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets/music-jingles",
+      "licenseFile": "demo/vendor/kenney/music-jingles/License.txt"
+    },
+    "kenney-new-platformer-pack": {
+      "title": "Kenney New Platformer Pack",
+      "author": "Kenney (kenney.nl)",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets/new-platformer-pack",
+      "licenseFile": "demo/vendor/kenney/new-platformer-pack/License.txt"
+    },
+    "kenney-prototype-textures": {
+      "title": "Kenney Prototype Textures",
+      "author": "Kenney (kenney.nl)",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets/prototype-textures",
+      "licenseFile": "demo/vendor/kenney/prototype-textures/License.txt"
+    },
+    "kenney-ui-pack": {
+      "title": "Kenney UI Pack",
+      "author": "Kenney (kenney.nl)",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets/ui-pack",
+      "licenseFile": "demo/vendor/kenney/ui-pack/License.txt"
+    },
+    "kenney-particle-pack": {
+      "title": "Kenney Particle Pack",
+      "author": "Kenney (kenney.nl)",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets/particle-pack"
+    },
+    "kenney-input-prompts": {
+      "title": "Kenney Input Prompts",
+      "author": "Kenney (kenney.nl)",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets/input-prompts",
+      "note": "Packed into one atlas per device family; the atlas JSON is authored for ExoJS."
+    },
+    "kenney-voiceover-pack": {
+      "title": "Kenney Voiceover Pack",
+      "author": "Kenney (kenney.nl)",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets/voiceover-pack"
+    },
+    "kenney-sound-sprites": {
+      "title": "Sound sprites assembled from Kenney Interface Sounds, UI Pack, Impact Sounds and Digital Audio",
+      "author": "Kenney (kenney.nl); assembled for ExoJS",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets",
+      "note": "Concatenated with a 100 ms gap between clips; the sprite JSON is authored for ExoJS."
+    },
+    "kenney-spritesheet-conversion": {
+      "title": "Kenney spritesheets converted to ExoJS atlas JSON",
+      "author": "Kenney (kenney.nl); converted for ExoJS",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets",
+      "note": "Converted from the packs' TexturePacker XML. The `meta.image` field is not used to locate the image; load the matching image descriptor."
+    },
+    "kenney-blocks-bitmap-font": {
+      "title": "Kenney Blocks bitmap font (32 px)",
+      "author": "Kenney (kenney.nl); rasterized for ExoJS",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source": "https://kenney.nl/assets/kenney-fonts",
+      "licenseFile": "demo/vendor/kenney/kenney-fonts/License.txt",
+      "note": "Generated from Kenney Blocks.ttf."
+    },
+    "blender-glass-half": {
+      "title": "Glass Half",
+      "author": "Blender Foundation; directed by Beorn Leonard",
+      "license": "CC-BY-3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "source": "https://studio.blender.org/films/glass-half/",
+      "attribution": "(CC) Blender Foundation | studio.blender.org",
+      "note": "12.19 s excerpt cut by stream copy (no re-encode) from the 3840x2160 encode."
+    },
+    "blender-big-buck-bunny": {
+      "title": "Big Buck Bunny, Sunflower version (60 fps)",
+      "author": "Blender Foundation 2008; 60 fps re-render Janus Bager Kristensen 2013",
+      "license": "CC-BY-3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "source": "https://peach.blender.org/",
+      "attribution": "(c) copyright 2008, Blender Foundation / www.bigbuckbunny.org",
+      "note": "12.14 s excerpt cut by stream copy (no re-encode); title, artist and licence are also embedded in the file's metadata."
+    },
+    "blender-singularity": {
+      "title": "Singularity",
+      "author": "Blender Foundation; directed by Andy Goralczyk (2026)",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "source": "https://studio.blender.org/films/singularity/",
+      "attribution": "(CC) Blender Foundation | studio.blender.org",
+      "note": "8.02 s excerpt cut by stream copy (no re-encode) from the HDR10 AV1 encode."
+    },
+    "adventure-kid-ak-srooms": {
+      "title": "Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses",
+      "author": "Adventure Kid / Kristoffer Ekstrand",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "source": "https://www.adventurekid.se/akrt/free-reverb-impulse-responses/",
+      "attribution": "AK-SROOMS by Adventure Kid (Kristoffer Ekstrand), CC BY 4.0",
+      "note": "Unmodified; AK-SROOMS__018.wav renamed to AK-SROOMS_018.wav. AK-SROOMS_004.wav and AK-SROOMS_005.wav are byte-identical in the upstream set."
+    }
+  },
+  "media": {
+    "demo/video/clips/high-res.mp4": {
+      "container": "mp4",
+      "video": {
+        "codec": "h264",
+        "profile": "High",
+        "width": 3840,
+        "height": 2160,
+        "frameRate": "24/1",
+        "pixelFormat": "yuv420p",
+        "bitDepth": 8,
+        "colorRange": "tv",
+        "colorPrimaries": "bt709",
+        "colorTransfer": "bt709",
+        "colorMatrix": "bt709"
+      },
+      "audio": { "codec": "aac", "sampleRate": 48000, "channels": 2 },
+      "durationSeconds": 12.188313,
+      "dynamicRange": "SDR"
+    },
+    "demo/video/clips/high-fps.webm": {
+      "container": "webm",
+      "video": {
+        "codec": "vp9",
+        "profile": "Profile 0",
+        "width": 1920,
+        "height": 1080,
+        "frameRate": "60/1",
+        "pixelFormat": "yuv420p",
+        "bitDepth": 8,
+        "colorRange": "tv",
+        "colorPrimaries": null,
+        "colorTransfer": null,
+        "colorMatrix": null
+      },
+      "audio": { "codec": "opus", "sampleRate": 48000, "channels": 2 },
+      "durationSeconds": 12.141,
+      "dynamicRange": "SDR (colour primaries, transfer and matrix are not tagged in the stream)"
+    },
+    "demo/video/clips/hdr10.webm": {
+      "container": "webm",
+      "video": {
+        "codec": "av1",
+        "profile": "Main",
+        "width": 3840,
+        "height": 1608,
+        "frameRate": "24/1",
+        "pixelFormat": "yuv420p10le",
+        "bitDepth": 10,
+        "colorRange": "tv",
+        "colorPrimaries": "bt2020",
+        "colorTransfer": "smpte2084",
+        "colorMatrix": "bt2020nc",
+        "masteringDisplay": {
+          "redX": "17/25",
+          "redY": "8/25",
+          "greenX": "828/3125",
+          "greenY": "69/100",
+          "blueX": "3/20",
+          "blueY": "3/50",
+          "whitePointX": "3127/10000",
+          "whitePointY": "329/1000",
+          "minLuminance": "1/100",
+          "maxLuminance": "1000/1"
+        },
+        "contentLightLevel": { "maxContent": 1000, "maxAverage": 300 }
+      },
+      "audio": { "codec": "opus", "sampleRate": 48000, "channels": 2 },
+      "durationSeconds": 8.018,
+      "dynamicRange": "HDR10 metadata (PQ, BT.2020); display output is not verified by this metadata"
+    }
+  },
+  "entries": [
+    { "key": "ship", "type": "texture", "path": "demo/textures/ship-a.png", "category": "textures", "provenance": "exojs" },
+    {
+      "key": "particleFlame",
+      "type": "texture",
+      "path": "demo/textures/particle-flame.png",
+      "category": "textures",
+      "provenance": "kenney-particle-pack"
+    },
+    {
+      "key": "particleSmoke",
+      "type": "texture",
+      "path": "demo/textures/particle-smoke.png",
+      "category": "textures",
+      "provenance": "kenney-particle-pack"
+    },
+    {
+      "key": "particleStar",
+      "type": "texture",
+      "path": "demo/textures/particle-star.png",
+      "category": "textures",
+      "provenance": "kenney-particle-pack"
+    },
+    {
+      "key": "particleSpark",
+      "type": "texture",
+      "path": "demo/textures/particle-spark.png",
+      "category": "textures",
+      "provenance": "kenney-particle-pack"
+    },
+    {
+      "key": "particleLight",
+      "type": "texture",
+      "path": "demo/textures/particle-light.png",
+      "category": "textures",
+      "provenance": "kenney-particle-pack"
+    },
+    {
+      "key": "pixelWhite",
+      "type": "texture",
+      "path": "demo/textures/pixel-white.png",
+      "category": "textures",
+      "provenance": "kenney-development-essentials"
+    },
+    {
+      "key": "pixelBlack",
+      "type": "texture",
+      "path": "demo/textures/pixel-black.png",
+      "category": "textures",
+      "provenance": "kenney-development-essentials"
+    },
+    {
+      "key": "pixelTransparent",
+      "type": "texture",
+      "path": "demo/textures/pixel-transparent.png",
+      "category": "textures",
+      "provenance": "kenney-development-essentials"
+    },
+    {
+      "key": "checkerboardTransparent",
+      "type": "texture",
+      "path": "demo/textures/checkerboard-transparent.png",
+      "category": "textures",
+      "provenance": "kenney-development-essentials"
+    },
+    {
+      "key": "kenneyUv",
+      "type": "texture",
+      "path": "demo/textures/kenney-uv.png",
+      "category": "textures",
+      "provenance": "kenney-development-essentials"
+    },
+    {
+      "key": "prototypeDark01",
+      "type": "texture",
+      "path": "demo/textures/prototype-dark-01.png",
+      "category": "textures",
+      "provenance": "kenney-prototype-textures"
+    },
+    {
+      "key": "prototypeLight01",
+      "type": "texture",
+      "path": "demo/textures/prototype-light-01.png",
+      "category": "textures",
+      "provenance": "kenney-prototype-textures"
+    },
+    {
+      "key": "prototypeGrid",
+      "type": "texture",
+      "path": "demo/textures/prototype-grid.png",
+      "category": "textures",
+      "provenance": "kenney-prototype-textures"
+    },
+
+    {
+      "key": "alphaEdgeStraight",
+      "type": "texture",
+      "path": "technical/alpha/alpha-edge-straight.png",
+      "category": "technical",
+      "provenance": "exojs"
+    },
+    {
+      "key": "alphaGradientRings",
+      "type": "texture",
+      "path": "technical/alpha/alpha-gradient-rings.png",
+      "category": "technical",
+      "provenance": "exojs"
+    },
+    {
+      "key": "checker256",
+      "type": "texture",
+      "path": "technical/filtering/checker-256.png",
+      "category": "technical",
+      "provenance": "exojs"
+    },
+    {
+      "key": "pixelGrid128",
+      "type": "texture",
+      "path": "technical/filtering/pixel-grid-128.png",
+      "category": "technical",
+      "provenance": "exojs"
+    },
+    {
+      "key": "uvGrid256",
+      "type": "texture",
+      "path": "technical/filtering/uv-grid-256.png",
+      "category": "technical",
+      "provenance": "exojs"
+    },
+    { "key": "srgbRamp", "type": "texture", "path": "technical/color/srgb-ramp.png", "category": "technical", "provenance": "exojs" },
+    { "key": "hueRamp", "type": "texture", "path": "technical/color/hue-ramp.png", "category": "technical", "provenance": "exojs" },
+    { "key": "primaryRamp", "type": "texture", "path": "technical/color/primary-ramp.png", "category": "technical", "provenance": "exojs" },
+
+    {
+      "key": "backgroundPlatformerClouds",
+      "type": "texture",
+      "path": "demo/backgrounds/platformer-clouds.png",
+      "category": "backgrounds",
+      "provenance": "kenney-new-platformer-pack"
+    },
+    {
+      "key": "backgroundPlatformerHills",
+      "type": "texture",
+      "path": "demo/backgrounds/platformer-hills.png",
+      "category": "backgrounds",
+      "provenance": "kenney-new-platformer-pack"
+    },
+    {
+      "key": "backgroundCastles",
+      "type": "texture",
+      "path": "demo/backgrounds/castles.png",
+      "category": "backgrounds",
+      "provenance": "kenney-background-elements-remastered"
+    },
+    {
+      "key": "backgroundForest",
+      "type": "texture",
+      "path": "demo/backgrounds/forest.png",
+      "category": "backgrounds",
+      "provenance": "kenney-background-elements-remastered"
+    },
+
+    {
+      "key": "platformerBackgroundsImage",
+      "type": "texture",
+      "path": "demo/spritesheets/kenney/platformer-backgrounds.png",
+      "category": "spritesheets",
+      "provenance": "kenney-new-platformer-pack"
+    },
+    {
+      "key": "platformerBackgroundsAtlas",
+      "type": "json",
+      "valueType": "SpritesheetData",
+      "path": "demo/spritesheets/kenney/platformer-backgrounds.json",
+      "category": "spritesheets",
+      "provenance": "kenney-spritesheet-conversion"
+    },
+    {
+      "key": "platformerCharactersImage",
+      "type": "texture",
+      "path": "demo/spritesheets/kenney/platformer-characters.png",
+      "category": "spritesheets",
+      "provenance": "kenney-new-platformer-pack"
+    },
+    {
+      "key": "platformerCharactersAtlas",
+      "type": "json",
+      "valueType": "SpritesheetData",
+      "path": "demo/spritesheets/kenney/platformer-characters.json",
+      "category": "spritesheets",
+      "provenance": "kenney-spritesheet-conversion"
+    },
+    {
+      "key": "platformerEnemiesImage",
+      "type": "texture",
+      "path": "demo/spritesheets/kenney/platformer-enemies.png",
+      "category": "spritesheets",
+      "provenance": "kenney-new-platformer-pack"
+    },
+    {
+      "key": "platformerEnemiesAtlas",
+      "type": "json",
+      "valueType": "SpritesheetData",
+      "path": "demo/spritesheets/kenney/platformer-enemies.json",
+      "category": "spritesheets",
+      "provenance": "kenney-spritesheet-conversion"
+    },
+    {
+      "key": "platformerTilesImage",
+      "type": "texture",
+      "path": "demo/spritesheets/kenney/platformer-tiles.png",
+      "category": "spritesheets",
+      "provenance": "kenney-new-platformer-pack"
+    },
+    {
+      "key": "platformerTilesAtlas",
+      "type": "json",
+      "valueType": "SpritesheetData",
+      "path": "demo/spritesheets/kenney/platformer-tiles.json",
+      "category": "spritesheets",
+      "provenance": "kenney-spritesheet-conversion"
+    },
+    {
+      "key": "backgroundElementsImage",
+      "type": "texture",
+      "path": "demo/spritesheets/kenney/background-elements.png",
+      "category": "spritesheets",
+      "provenance": "kenney-background-elements-remastered"
+    },
+    {
+      "key": "backgroundElementsAtlas",
+      "type": "json",
+      "valueType": "SpritesheetData",
+      "path": "demo/spritesheets/kenney/background-elements.json",
+      "category": "spritesheets",
+      "provenance": "kenney-spritesheet-conversion"
+    },
+    {
+      "key": "mapPackImage",
+      "type": "texture",
+      "path": "demo/spritesheets/kenney/map-pack.png",
+      "category": "spritesheets",
+      "provenance": "kenney-map-pack"
+    },
+    {
+      "key": "mapPackAtlas",
+      "type": "json",
+      "valueType": "SpritesheetData",
+      "path": "demo/spritesheets/kenney/map-pack.json",
+      "category": "spritesheets",
+      "provenance": "kenney-spritesheet-conversion"
+    },
+    {
+      "key": "mapPackTilesheet",
+      "type": "texture",
+      "path": "demo/vendor/kenney/map-pack/Tilesheet/mapPack_tilesheet.png",
+      "category": "spritesheets",
+      "provenance": "kenney-map-pack"
+    },
+
+    {
+      "key": "genericInputPromptsImage",
+      "type": "texture",
+      "path": "demo/input-prompts/generic.png",
+      "category": "inputPrompts",
+      "provenance": "kenney-input-prompts"
+    },
+    {
+      "key": "genericInputPromptsAtlas",
+      "type": "json",
+      "valueType": "SpritesheetData",
+      "path": "demo/input-prompts/generic.json",
+      "category": "inputPrompts",
+      "provenance": "kenney-input-prompts"
+    },
+    {
+      "key": "keyboardMouseInputPromptsImage",
+      "type": "texture",
+      "path": "demo/input-prompts/keyboard-mouse.png",
+      "category": "inputPrompts",
+      "provenance": "kenney-input-prompts"
+    },
+    {
+      "key": "keyboardMouseInputPromptsAtlas",
+      "type": "json",
+      "valueType": "SpritesheetData",
+      "path": "demo/input-prompts/keyboard-mouse.json",
+      "category": "inputPrompts",
+      "provenance": "kenney-input-prompts"
+    },
+    {
+      "key": "nintendoSwitchInputPromptsImage",
+      "type": "texture",
+      "path": "demo/input-prompts/nintendo-switch.png",
+      "category": "inputPrompts",
+      "provenance": "kenney-input-prompts"
+    },
+    {
+      "key": "nintendoSwitchInputPromptsAtlas",
+      "type": "json",
+      "valueType": "SpritesheetData",
+      "path": "demo/input-prompts/nintendo-switch.json",
+      "category": "inputPrompts",
+      "provenance": "kenney-input-prompts"
+    },
+    {
+      "key": "playstationSeriesInputPromptsImage",
+      "type": "texture",
+      "path": "demo/input-prompts/playstation-series.png",
+      "category": "inputPrompts",
+      "provenance": "kenney-input-prompts"
+    },
+    {
+      "key": "playstationSeriesInputPromptsAtlas",
+      "type": "json",
+      "valueType": "SpritesheetData",
+      "path": "demo/input-prompts/playstation-series.json",
+      "category": "inputPrompts",
+      "provenance": "kenney-input-prompts"
+    },
+    {
+      "key": "xboxSeriesInputPromptsImage",
+      "type": "texture",
+      "path": "demo/input-prompts/xbox-series.png",
+      "category": "inputPrompts",
+      "provenance": "kenney-input-prompts"
+    },
+    {
+      "key": "xboxSeriesInputPromptsAtlas",
+      "type": "json",
+      "valueType": "SpritesheetData",
+      "path": "demo/input-prompts/xbox-series.json",
+      "category": "inputPrompts",
+      "provenance": "kenney-input-prompts"
+    },
+
+    { "key": "iconPlay", "type": "svg", "path": "demo/svg/play.svg", "category": "icons", "provenance": "exojs" },
+    { "key": "iconPause", "type": "svg", "path": "demo/svg/pause.svg", "category": "icons", "provenance": "exojs" },
+    { "key": "iconReset", "type": "svg", "path": "demo/svg/reset.svg", "category": "icons", "provenance": "exojs" },
+    { "key": "iconArrowRight", "type": "svg", "path": "demo/svg/arrow-right.svg", "category": "icons", "provenance": "exojs" },
+    { "key": "iconSparkle", "type": "svg", "path": "demo/svg/sparkle.svg", "category": "icons", "provenance": "exojs" },
+    { "key": "iconAudioWave", "type": "svg", "path": "demo/svg/audio-wave.svg", "category": "icons", "provenance": "exojs" },
+    { "key": "iconImagePlaceholder", "type": "svg", "path": "demo/svg/image-placeholder.svg", "category": "icons", "provenance": "exojs" },
+    { "key": "iconRuneMark", "type": "svg", "path": "demo/svg/rune-mark.svg", "category": "icons", "provenance": "exojs" },
+    { "key": "exoWordmark", "type": "svg", "path": "svg/exo-wordmark.svg", "category": "icons", "provenance": "exojs" },
+
+    { "key": "cursorArrow", "type": "svg", "path": "demo/cursors/arrow.svg", "category": "cursors", "provenance": "kenney-cursor-pack" },
+    {
+      "key": "cursorPointer",
+      "type": "svg",
+      "path": "demo/cursors/pointer.svg",
+      "category": "cursors",
+      "provenance": "kenney-cursor-pack"
+    },
+    { "key": "cursorHand", "type": "svg", "path": "demo/cursors/hand.svg", "category": "cursors", "provenance": "kenney-cursor-pack" },
+    { "key": "cursorBusy", "type": "svg", "path": "demo/cursors/busy.svg", "category": "cursors", "provenance": "kenney-cursor-pack" },
+    { "key": "cursorCross", "type": "svg", "path": "demo/cursors/cross.svg", "category": "cursors", "provenance": "kenney-cursor-pack" },
+
+    {
+      "key": "fontKenneyFuture",
+      "type": "font",
+      "path": "demo/fonts/Kenney Future.ttf",
+      "options": { "family": "Kenney Future" },
+      "category": "fonts",
+      "provenance": "kenney-fonts"
+    },
+    {
+      "key": "fontKenneyPixel",
+      "type": "font",
+      "path": "demo/fonts/Kenney Pixel.ttf",
+      "options": { "family": "Kenney Pixel" },
+      "category": "fonts",
+      "provenance": "kenney-fonts"
+    },
+    {
+      "key": "fontKenneyMini",
+      "type": "font",
+      "path": "demo/fonts/Kenney Mini.ttf",
+      "options": { "family": "Kenney Mini" },
+      "category": "fonts",
+      "provenance": "kenney-fonts"
+    },
+    {
+      "key": "fontKenneyMiniSquareMono",
+      "type": "font",
+      "path": "demo/fonts/Kenney Mini Square Mono.ttf",
+      "options": { "family": "Kenney Mini Square Mono" },
+      "category": "fonts",
+      "provenance": "kenney-fonts"
+    },
+    {
+      "key": "fontKenneyBlocksFnt",
+      "type": "bmFont",
+      "path": "demo/fonts/kenney-blocks-32.fnt",
+      "category": "fonts",
+      "provenance": "kenney-blocks-bitmap-font"
+    },
+    {
+      "key": "fontKenneyBlocksPng",
+      "type": "texture",
+      "path": "demo/fonts/kenney-blocks-32.png",
+      "category": "fonts",
+      "provenance": "kenney-blocks-bitmap-font"
+    },
+
+    {
+      "key": "soundUiClick",
+      "type": "sound",
+      "path": "demo/sound/ui-click.ogg",
+      "category": "sound",
+      "provenance": "kenney-interface-sounds"
+    },
+    {
+      "key": "soundUiConfirm",
+      "type": "sound",
+      "path": "demo/sound/ui-confirm.ogg",
+      "category": "sound",
+      "provenance": "kenney-interface-sounds"
+    },
+    {
+      "key": "soundUiBong",
+      "type": "sound",
+      "path": "demo/sound/ui-bong.ogg",
+      "category": "sound",
+      "provenance": "kenney-interface-sounds"
+    },
+    { "key": "soundBack", "type": "sound", "path": "demo/sound/back.ogg", "category": "sound", "provenance": "kenney-interface-sounds" },
+    { "key": "soundClickAlt", "type": "sound", "path": "demo/sound/click-alt.ogg", "category": "sound", "provenance": "kenney-ui-pack" },
+    { "key": "soundSwitch", "type": "sound", "path": "demo/sound/switch.ogg", "category": "sound", "provenance": "kenney-ui-pack" },
+    {
+      "key": "soundImpactLight",
+      "type": "sound",
+      "path": "demo/sound/impact-light.ogg",
+      "category": "sound",
+      "provenance": "kenney-impact-sounds"
+    },
+    {
+      "key": "soundImpactHeavy",
+      "type": "sound",
+      "path": "demo/sound/impact-heavy.ogg",
+      "category": "sound",
+      "provenance": "kenney-impact-sounds"
+    },
+    {
+      "key": "soundImpactWood",
+      "type": "sound",
+      "path": "demo/sound/impact-wood.ogg",
+      "category": "sound",
+      "provenance": "kenney-impact-sounds"
+    },
+    {
+      "key": "soundImpactBellHeavy",
+      "type": "sound",
+      "path": "audio/impactBell_heavy_000.ogg",
+      "category": "sound",
+      "provenance": "kenney-impact-sounds"
+    },
+    {
+      "key": "soundImpactGlassHeavy",
+      "type": "sound",
+      "path": "audio/impactGlass_heavy_000.ogg",
+      "category": "sound",
+      "provenance": "kenney-impact-sounds"
+    },
+    {
+      "key": "soundImpactWoodHeavy",
+      "type": "sound",
+      "path": "audio/impactWood_heavy_000.ogg",
+      "category": "sound",
+      "provenance": "kenney-impact-sounds"
+    },
+    {
+      "key": "soundImpactMetalHeavy",
+      "type": "sound",
+      "path": "audio/impactMetal_heavy_000.ogg",
+      "category": "sound",
+      "provenance": "kenney-impact-sounds"
+    },
+    { "key": "soundJump", "type": "sound", "path": "demo/sound/jump.ogg", "category": "sound", "provenance": "kenney-new-platformer-pack" },
+    { "key": "soundCoin", "type": "sound", "path": "demo/sound/coin.ogg", "category": "sound", "provenance": "kenney-new-platformer-pack" },
+    { "key": "soundHurt", "type": "sound", "path": "demo/sound/hurt.ogg", "category": "sound", "provenance": "kenney-new-platformer-pack" },
+    {
+      "key": "soundPowerUp",
+      "type": "sound",
+      "path": "demo/sound/power-up.ogg",
+      "category": "sound",
+      "provenance": "kenney-digital-audio"
+    },
+    { "key": "soundLaser", "type": "sound", "path": "demo/sound/laser.ogg", "category": "sound", "provenance": "kenney-digital-audio" },
+
+    {
+      "key": "uiSoundSprite",
+      "type": "sound",
+      "path": "demo/sound-sprites/ui/ui.ogg",
+      "options": { "sprites": { "$path": "demo/sound-sprites/ui/ui.json" } },
+      "category": "soundSprites",
+      "provenance": "kenney-sound-sprites"
+    },
+    {
+      "key": "impactsSoundSprite",
+      "type": "sound",
+      "path": "demo/sound-sprites/impacts/impacts.ogg",
+      "options": { "sprites": { "$path": "demo/sound-sprites/impacts/impacts.json" } },
+      "category": "soundSprites",
+      "provenance": "kenney-sound-sprites"
+    },
+    {
+      "key": "digitalSoundSprite",
+      "type": "sound",
+      "path": "demo/sound-sprites/digital/digital.ogg",
+      "options": { "sprites": { "$path": "demo/sound-sprites/digital/digital.json" } },
+      "category": "soundSprites",
+      "provenance": "kenney-sound-sprites"
+    },
+
+    { "key": "musicLoopMain", "type": "music", "path": "demo/music/demo-loop-main.ogg", "category": "music", "provenance": "exojs" },
+    { "key": "musicLoopA", "type": "music", "path": "demo/music/demo-loop-a.ogg", "category": "music", "provenance": "exojs" },
+    { "key": "musicLoopB", "type": "music", "path": "demo/music/demo-loop-b.ogg", "category": "music", "provenance": "exojs" },
+    {
+      "key": "musicJingleSuccess",
+      "type": "music",
+      "path": "demo/music/jingle-success.ogg",
+      "category": "music",
+      "provenance": "kenney-music-jingles"
+    },
+    {
+      "key": "musicJingleFailure",
+      "type": "music",
+      "path": "demo/music/jingle-failure.ogg",
+      "category": "music",
+      "provenance": "kenney-music-jingles"
+    },
+    {
+      "key": "musicJingleRetroA",
+      "type": "music",
+      "path": "demo/music/jingle-retro-a.ogg",
+      "category": "music",
+      "provenance": "kenney-music-jingles"
+    },
+    {
+      "key": "musicJingleRetroB",
+      "type": "music",
+      "path": "demo/music/jingle-retro-b.ogg",
+      "category": "music",
+      "provenance": "kenney-music-jingles"
+    },
+
+    {
+      "key": "voiceCongratulations",
+      "type": "sound",
+      "path": "demo/voice/congratulations.ogg",
+      "category": "voice",
+      "provenance": "kenney-voiceover-pack"
+    },
+    {
+      "key": "voiceMissionComplete",
+      "type": "sound",
+      "path": "demo/voice/mission-complete.ogg",
+      "category": "voice",
+      "provenance": "kenney-voiceover-pack"
+    },
+    {
+      "key": "voiceObjectiveAchieved",
+      "type": "sound",
+      "path": "demo/voice/objective-achieved.ogg",
+      "category": "voice",
+      "provenance": "kenney-voiceover-pack"
+    },
+
+    {
+      "key": "impulseRoom001",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_001.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom002",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_002.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom003",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_003.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom004",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_004.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom005",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_005.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom006",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_006.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom007",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_007.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom008",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_008.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom009",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_009.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom010",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_010.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom011",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_011.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom012",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_012.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom013",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_013.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom014",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_014.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom015",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_015.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom016",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_016.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom017",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_017.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom018",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_018.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom019",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_019.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom020",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_020.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom021",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_021.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom022",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_022.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom023",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_023.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom024",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_024.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom025",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_025.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom026",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_026.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom027",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_027.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom028",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_028.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom029",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_029.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+    {
+      "key": "impulseRoom030",
+      "type": "sound",
+      "path": "audio/ir/AK-SROOMS_030.wav",
+      "category": "impulseResponses",
+      "provenance": "adventure-kid-ak-srooms"
+    },
+
+    { "key": "isometricLandscape", "type": "json", "path": "json/maps/isometric-landscape.tmj", "category": "maps", "provenance": "exojs" },
+    { "key": "driftFieldsMap", "type": "json", "path": "json/maps/drift-fields.tmj", "category": "maps", "provenance": "exojs" },
+    { "key": "harborPlazaMap", "type": "json", "path": "json/maps/harbor-plaza.tmj", "category": "maps", "provenance": "exojs" },
+    { "key": "harborWorldProject", "type": "json", "path": "json/maps/harbor-world.ldtk", "category": "maps", "provenance": "exojs" },
+    {
+      "key": "ownershipWorkshopMap",
+      "type": "json",
+      "path": "json/maps/ownership-workshop.tmj",
+      "category": "maps",
+      "provenance": "exojs"
+    },
+    { "key": "physicsRoomMap", "type": "json", "path": "json/maps/physics-room.tmj", "category": "maps", "provenance": "exojs" },
+
+    { "key": "videoDemoLoop", "type": "video", "path": "demo/video/demo-loop.webm", "category": "video", "provenance": "exojs" },
+    {
+      "key": "videoHighRes",
+      "type": "video",
+      "path": "demo/video/clips/high-res.mp4",
+      "category": "video",
+      "provenance": "blender-glass-half"
+    },
+    {
+      "key": "videoHighFps",
+      "type": "video",
+      "path": "demo/video/clips/high-fps.webm",
+      "category": "video",
+      "provenance": "blender-big-buck-bunny"
+    },
+
+    {
+      "key": "videoHdr10",
+      "type": "video",
+      "path": "demo/video/clips/hdr10.webm",
+      "category": "video",
+      "provenance": "blender-singularity",
+      "profile": "extended"
+    }
+  ],
+  "blocked": [
+    {
+      "path": "demo/sprites/buttons.png",
+      "reason": "Origin not recorded: the file predates the repository's asset provenance and matches no vendor pack."
+    },
+    { "path": "demo/sprites/buttons.json", "reason": "Atlas for the blocked demo/sprites/buttons.png." }
+  ]
+}

@@ -4,7 +4,7 @@
   "symbol": "TileAnimationFrame",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 2,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "One frame of a tile animation: which local tile to show, and for how long. Mirrors Tiled's per-tile animation frame model."
       ],
-      "importLine": "import { TileAnimationFrame } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileAnimationFrame } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

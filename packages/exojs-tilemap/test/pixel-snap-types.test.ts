@@ -9,7 +9,7 @@
  */
 
 import { type Drawable, type NineSliceSprite, PixelSnapMode, type Sprite } from '@codexo/exojs';
-import type { TileLayerNode, TileMapNode, TileMapView } from '@codexo/exojs-tilemap';
+import type { TileLayerNode, TileMapNode, TileMapView } from '@codexo/exojs/tilemap';
 import { describe, expectTypeOf, it } from 'vitest';
 
 describe('PixelSnapMode type contracts', () => {

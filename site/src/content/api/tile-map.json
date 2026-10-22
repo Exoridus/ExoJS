@@ -4,7 +4,7 @@
   "symbol": "TileMap",
   "kind": "class",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 44,
   "counts": {
@@ -24,7 +24,7 @@
         "The map does NOT own tileset textures (those are Loader-owned) and does NOT own SceneNode children - see import('./TileMapNode').TileMapNode, which owns those.",
         "Multiple tilesets are supported: each cell stores a packed tileset index and local tile ID, so different tilesets may have different tile dimensions."
       ],
-      "importLine": "import { TileMap } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileMap } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

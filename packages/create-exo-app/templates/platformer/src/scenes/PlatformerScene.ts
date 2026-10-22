@@ -14,7 +14,7 @@ import {
   SystemOrder,
   View,
 } from '@codexo/exojs';
-import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
 
 import { Player } from '../objects/Player';
 

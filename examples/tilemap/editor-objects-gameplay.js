@@ -1,7 +1,8 @@
 // Auto-generated from editor-objects-gameplay.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
+import { MapObjectSpawner } from '@codexo/exojs/tilemap';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
-import { MapObjectSpawner } from '@codexo/exojs-tilemap';
 import { mountControls } from '@examples/runtime';
 const makeMarker = (object, color) => {
   const marker = new Graphics();
@@ -20,7 +21,7 @@ class EditorObjectsScene extends Scene {
   doorOpen = false;
   collected = false;
   async load() {
-    const source = await this.loader.load(Asset.type('tiledSource', 'json/maps/harbor-plaza.tmj'));
+    const source = await this.loader.load(Asset.type('tiledSource', assets.harborPlazaMap.source));
     const map = source.toTileMap();
     this.mapNode = new TileMapNode(map);
     const spawn = (object, color) => {
@@ -36,12 +37,7 @@ class EditorObjectsScene extends Scene {
       Collectible: object => spawn(object, new Color(75, 225, 241)),
     });
     this.spawns = await spawner.spawn(map, undefined);
-    this.hud = mountControls({
-      title: 'Editor Objects Become Gameplay',
-      controls: [{ keys: 'Click', action: 'toggle the switch, then collect the gem' }],
-      status: 'The authored switch controls the door. Open it to collect the gem.',
-      hint: 'The three colored objects come from the Tiled object layer. MapObjectSpawner creates their runtime counterparts.',
-    });
+    this.hud = mountControls({ status: 'The authored switch controls the door. Open it to collect the gem.' });
     this.app.input.onPointerTap.add(this.onTap);
   }
   onTap = pointer => {
@@ -93,6 +89,5 @@ const app = new Application({
   canvas: { width: 1280, height: 768, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(28, 36, 46),
   extensions: [tiledExtension],
-  loader: { basePath: 'assets/' },
 });
 await app.start(EditorObjectsScene);

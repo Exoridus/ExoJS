@@ -9,8 +9,9 @@ import {
   type Seconds,
   Sprite,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
-const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
+const ALPHA_RINGS = assets.alphaGradientRings;
 
 class MasksScene extends Scene {
   private rectSprite!: Sprite;

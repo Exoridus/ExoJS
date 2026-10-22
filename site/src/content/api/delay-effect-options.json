@@ -4,7 +4,7 @@
   "symbol": "DelayEffectOptions",
   "kind": "interface",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Construction options for DelayEffect."
       ],
-      "importLine": "import { DelayEffectOptions } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { DelayEffectOptions } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

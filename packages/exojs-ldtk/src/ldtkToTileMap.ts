@@ -1,5 +1,5 @@
-import type { TileCellSource, TileMapObject, TileProperties, TilePropertyValue, TileSet } from '@codexo/exojs-tilemap';
-import { ObjectLayer, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TilePropertyKind } from '@codexo/exojs-tilemap';
+import type { TileCellSource, TileMapObject, TileProperties, TilePropertyValue, TileSet } from '@codexo/exojs/tilemap';
+import { ObjectLayer, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TilePropertyKind } from '@codexo/exojs/tilemap';
 
 import type {
   LdtkData,

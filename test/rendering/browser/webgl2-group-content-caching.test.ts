@@ -9,7 +9,7 @@
  * Run via:  pnpm test:browser:webgl
  */
 
-import { TileMapNode } from '@codexo/exojs-tilemap';
+import { TileMapNode } from '@codexo/exojs/tilemap';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';

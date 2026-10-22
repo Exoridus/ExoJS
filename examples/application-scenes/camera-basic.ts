@@ -8,6 +8,7 @@ import {
   type Seconds,
   Sprite,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class CameraBasicScene extends Scene {
   private bunny!: Sprite;
@@ -19,7 +20,7 @@ class CameraBasicScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    this.bunny = new Sprite(this.loader.get('image/ship-a.png'));
+    this.bunny = new Sprite(this.loader.get(assets.ship));
     this.bunny.setAnchor(0.5).setPosition(width / 2, height / 2);
 
     this.grid = new Graphics();
@@ -79,9 +80,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(CameraBasicScene);

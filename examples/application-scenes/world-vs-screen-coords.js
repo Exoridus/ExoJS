@@ -1,12 +1,10 @@
 // Auto-generated from world-vs-screen-coords.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Text, View } from '@codexo/exojs';
-import { mountControls } from '@examples/runtime';
 class CameraNavigationScene extends Scene {
   view;
   grid;
   markers;
   readout;
-  hud;
   up;
   down;
   left;
@@ -48,15 +46,6 @@ class CameraNavigationScene extends Scene {
     this.app.input.onPointerMove.add(this.onPointerMove);
     this.app.input.onPointerTap.add(this.onPointerTap);
     this.app.input.onMouseWheel.add(this.onMouseWheel);
-    this.hud = mountControls({
-      title: 'Camera Navigation',
-      controls: [
-        { keys: 'WASD / arrows', action: 'pan' },
-        { keys: 'Wheel', action: 'zoom' },
-        { keys: 'Move / click', action: 'inspect / mark world point' },
-      ],
-      hint: 'Markers use world coordinates; the readout stays fixed on screen.',
-    });
   }
   update(delta) {
     const x = (this.right.active ? 1 : 0) - (this.left.active ? 1 : 0);
@@ -74,7 +63,6 @@ class CameraNavigationScene extends Scene {
     this.app.input.onPointerMove.remove(this.onPointerMove);
     this.app.input.onPointerTap.remove(this.onPointerTap);
     this.app.input.onMouseWheel.remove(this.onMouseWheel);
-    this.hud.dispose();
     super.destroy();
   }
 }
@@ -87,6 +75,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(10, 12, 20),
-  loader: { basePath: 'assets/' },
 });
 await app.start(CameraNavigationScene);

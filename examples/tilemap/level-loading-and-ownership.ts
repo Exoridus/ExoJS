@@ -1,7 +1,8 @@
 import { Application, Asset, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Text } from '@codexo/exojs';
+import { MapLevelSide, MapWorld, MapWorldRuntime } from '@codexo/exojs/tilemap';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
-import { MapLevelSide, MapWorld, MapWorldRuntime } from '@codexo/exojs-tilemap';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { demoPanel } from '@examples/runtime';
 
 const ROOM_SIZE = { x: 0, y: 0, width: 1280, height: 768 };
 const world = new MapWorld({
@@ -29,8 +30,8 @@ const world = new MapWorld({
 });
 
 const roomPath: Record<string, string> = {
-  harbor: 'json/maps/harbor-plaza.tmj',
-  workshop: 'json/maps/ownership-workshop.tmj',
+  harbor: assets.harborPlazaMap.source,
+  workshop: assets.ownershipWorkshopMap.source,
 };
 
 const waitForTransition = (signal: AbortSignal): Promise<void> =>
@@ -59,8 +60,7 @@ class LevelOwnershipScene extends Scene {
   private activeId: string | null = null;
   private pending: { readonly id: string } | null = null;
   private readonly roomLabel = new Text('No room loaded', { fillColor: new Color(31, 49, 54), fontSize: 34 });
-  private hud!: ReturnType<typeof mountControls>;
-  private panel!: ReturnType<typeof mountControlPanel>;
+  private panel!: ReturnType<typeof demoPanel>;
 
   override init(): void {
     this.roomLabel.position.set(470, 80);
@@ -73,27 +73,20 @@ class LevelOwnershipScene extends Scene {
         return scope.load(Asset.type('tileMap', roomPath[level.id]!));
       },
     });
-    this.hud = mountControls({
-      title: 'Level Loading and Asset Ownership',
-      controls: [{ keys: 'Panel', action: 'load a room, cancel a pending load, or unload it' }],
-      status: 'Each room gets a child loader scope. Both maps reference the same atlas.',
-      hint: 'A short delay makes cancellation observable; the map and its asset scope remain owned by MapWorldRuntime.',
-    });
-    this.panel = mountControlPanel({ title: 'Rooms' });
-    this.panel.addButton({
-      label: 'Enter Harbor',
-      onClick: () => {
-        void this.enter('harbor');
+    this.panel = demoPanel({
+      title: 'Rooms',
+      controls: {},
+      actions: {
+        'Enter Harbor': () => {
+          void this.enter('harbor');
+        },
+        'Enter Workshop': () => {
+          void this.enter('workshop');
+        },
+        'Cancel pending': () => this.cancelPending(),
+        'Unload room': () => this.unloadActive(),
       },
     });
-    this.panel.addButton({
-      label: 'Enter Workshop',
-      onClick: () => {
-        void this.enter('workshop');
-      },
-    });
-    this.panel.addButton({ label: 'Cancel pending', onClick: () => this.cancelPending() });
-    this.panel.addButton({ label: 'Unload room', onClick: () => this.unloadActive() });
     void this.enter('harbor');
   }
 
@@ -109,7 +102,8 @@ class LevelOwnershipScene extends Scene {
     const request = { id };
 
     this.pending = request;
-    this.hud.setStatus(`Loading ${world.getLevel(id)?.name}... ${this.describeResidency()}`);
+    this.roomLabel.text = `Loading ${world.getLevel(id)?.name}...`;
+    this.panel.status(this.describeResidency());
 
     try {
       const level = await this.runtime.loadLevel(id);
@@ -131,10 +125,10 @@ class LevelOwnershipScene extends Scene {
         this.runtime.unloadLevel(previousId);
       }
 
-      this.hud.setStatus(`${level.level.name} ready. ${this.describeResidency()}`);
+      this.panel.status(this.describeResidency());
     } catch (error) {
       if (this.pending === request) {
-        this.hud.setStatus(error instanceof Error ? error.message : String(error));
+        this.panel.status(error instanceof Error ? error.message : String(error));
       }
     } finally {
       if (this.pending === request) {
@@ -152,7 +146,8 @@ class LevelOwnershipScene extends Scene {
 
     this.pending = null;
     this.runtime.unloadLevel(id);
-    this.hud.setStatus(`${world.getLevel(id)?.name} cancelled. ${this.describeResidency()}`);
+    this.roomLabel.text = this.activeId ? `${world.getLevel(this.activeId)?.name} loaded` : 'No room loaded';
+    this.panel.status(this.describeResidency());
   }
 
   private unloadActive(): void {
@@ -166,7 +161,7 @@ class LevelOwnershipScene extends Scene {
     this.activeId = null;
     this.runtime.unloadLevel(id);
     this.roomLabel.text = 'No room loaded';
-    this.hud.setStatus(`${world.getLevel(id)?.name} unloaded. ${this.describeResidency()}`);
+    this.panel.status(this.describeResidency());
   }
 
   private describeResidency(): string {
@@ -188,7 +183,6 @@ class LevelOwnershipScene extends Scene {
     this.node?.destroy();
     this.runtime?.destroy();
     this.roomLabel.destroy();
-    this.hud?.dispose();
     this.panel?.dispose();
     super.destroy();
   }
@@ -199,7 +193,6 @@ const app = new Application({
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(28, 36, 46),
   extensions: [tiledExtension],
-  loader: { basePath: 'assets/' },
 });
 
 await app.start(LevelOwnershipScene);

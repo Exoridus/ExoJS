@@ -4,7 +4,7 @@
   "symbol": "CircleArea",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 6,
   "counts": {
@@ -22,7 +22,7 @@
         "Random point on or inside a circle of radius `radius`, centred at `(centerX, centerY)`. With `mode: 'edge'` the result lies exactly on the circumference; with `mode: 'volume'` (default) it lies anywhere in the disk, with uniform area density (sqrt-of-random-radius distribution).",
         "Use as a spawn-position distribution for circular emitters."
       ],
-      "importLine": "import { CircleArea } from '@codexo/exojs-particles'",
+      "importLine": "import { CircleArea } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

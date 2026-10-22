@@ -1,8 +1,9 @@
 // Auto-generated from ldtk-world-import.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
+import { TileMapNode } from '@codexo/exojs/tilemap';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { getLdtkIntGridValueAt, ldtkExtension } from '@codexo/exojs-ldtk';
-import { TileMapNode } from '@codexo/exojs-tilemap';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { choice, demoPanel, toggle } from '@examples/runtime';
 // Loading an LDtk world (`.ldtk`) through @codexo/exojs-ldtk.
 //
 //   - `loader.load(Asset.type('ldtkMap', url))` fetches the world, loads every referenced
@@ -19,7 +20,7 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 //     `TileMapObject` shape a Tiled object layer produces, with entity
 //     fields (`Int`, `String`, ...) carried as `properties`.
 //
-// harbor-world.ldtk (examples/assets/json/maps/) defines two levels sharing
+// harbor-world.ldtk (`assets.harborWorldProject`) defines two levels sharing
 // one tileset: "Level_Harbor" and "Level_Lighthouse", each with a Ground
 // tile layer, a Walls IntGrid layer (Wall / Water), and an Entities layer.
 /** Parse an LDtk `"#rrggbb"` colour string into an engine `Color` with the given alpha. */
@@ -30,60 +31,44 @@ const hexToColor = (hex, alpha) => {
 class LdtkWorldImportScene extends Scene {
   world;
   content = new Container();
-  hud;
   panel;
-  showIntGrid = true;
+  summary = '';
   async load() {
-    // The .ldtk source must be an absolute URL: @codexo/exojs-ldtk resolves
-    // tileset relPaths with `new URL(relPath, source)`, which throws for a
-    // relative `source` (unlike the Tiled adapter's relative-base-aware
-    // resolver). Resolve against the page URL until the adapter handles
-    // relative bases itself.
-    const worldUrl = new URL('assets/json/maps/harbor-world.ldtk', window.location.href).href;
-    this.world = await this.loader.load(Asset.type('ldtkMap', worldUrl));
-    this.hud = mountControls({
-      title: 'LDtk World Import',
-      controls: [{ keys: 'panel', action: 'switch level / toggle the IntGrid overlay' }],
-      status: `${this.world.levels.length} levels loaded`,
-      hint: 'Coloured squares come from getLdtkIntGridValueAt() — the raw Walls IntGrid cell values, resolved to their LDtk-authored name + colour.',
-    });
-    this.panel = mountControlPanel({ title: 'LDtk' });
-    this.panel.addCycle({
-      label: 'Level',
-      options: this.world.levels.map(level => level.name),
-      index: 0,
-      onChange: index => this.showLevel(index),
-    });
-    this.panel.addToggle({
-      label: 'IntGrid overlay',
-      value: true,
-      onChange: on => {
-        this.showIntGrid = on;
-        this.showLevel(this.currentLevelIndex);
+    // The LDtk adapter resolves tileset paths with `new URL(relPath, source)`,
+    // so the world needs an absolute source; the demo catalog's URLs are.
+    this.world = await this.loader.load(Asset.type('ldtkMap', assets.harborWorldProject.source));
+    this.panel = demoPanel({
+      title: 'LDtk',
+      controls: {
+        level: choice(
+          'Level',
+          this.world.levels.map(level => level.name),
+        ),
+        intGrid: toggle('IntGrid overlay', true),
       },
+      onChange: (_key, _value, values) => this.showLevel(values.level, values.intGrid),
     });
-    this.showLevel(0);
+    this.panel.status(this.summary);
   }
-  currentLevelIndex = 0;
-  showLevel(index) {
-    this.currentLevelIndex = index;
+  showLevel(name, showIntGrid) {
     // The level view owns these nodes; detaching alone would leave each
     // TileLayerNode subscribed to its (loader-owned) layer.
     for (const child of [...this.content.children]) {
       child.destroy();
     }
-    const level = this.world.levels[index];
+    const level = this.world.levels.find(candidate => candidate.name === name);
     if (!level) {
       return;
     }
     const mapNode = new TileMapNode(level);
     this.content.addChild(mapNode);
-    if (this.showIntGrid) {
+    if (showIntGrid) {
       this.content.addChild(this.buildIntGridOverlay(level));
     }
     this.content.addChild(this.buildEntityLabels(level));
     const entities = level.getObjectLayer('Entities');
-    this.hud.setStatus(`${level.name}: ${entities?.objects.length ?? 0} entities, ${level.width}x${level.height} tiles`);
+    this.summary = `${level.name}: ${entities?.objects.length ?? 0} entities, ${level.width}x${level.height} tiles`;
+    this.panel?.status(this.summary);
   }
   /** Tint every IntGrid cell using its LDtk-authored name + colour (Wall / Water). */
   buildIntGridOverlay(level) {
@@ -125,7 +110,6 @@ class LdtkWorldImportScene extends Scene {
   }
   destroy() {
     this.content.destroy();
-    this.hud?.dispose();
     this.panel?.dispose();
     super.destroy();
   }

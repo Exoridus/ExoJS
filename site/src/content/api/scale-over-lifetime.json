@@ -4,7 +4,7 @@
   "symbol": "ScaleOverLifetime",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 9,
   "counts": {
@@ -23,7 +23,7 @@
         "Common patterns: shrink-to-zero (start at 1, end at 0), pulse (sine-like curve up to peak then down), slow-grow (linear ramp).",
         "CPU, WebGL2 and WebGPU use the same 256-sample lookup table with explicit linear interpolation. Narrow keyframe features are approximated."
       ],
-      "importLine": "import { ScaleOverLifetime } from '@codexo/exojs-particles'",
+      "importLine": "import { ScaleOverLifetime } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

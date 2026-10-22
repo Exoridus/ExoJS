@@ -4,7 +4,7 @@
   "symbol": "PitchShiftEffect",
   "kind": "class",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 12,
   "counts": {
@@ -24,7 +24,7 @@
         "Latency: ~one frame + search ≈ 30ms at the default 1024-sample grain (at 48kHz). Not suitable for live monitoring; fine for games / playback.",
         "Use cases: - Sound variation: random ±200 cent pitch on each footstep / bullet - Voice effects: chipmunk (1.5x) or demon (0.7x) for game NPCs - Detune layering: stack 0.99x and 1.01x for thick chorused sound"
       ],
-      "importLine": "import { PitchShiftEffect } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { PitchShiftEffect } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

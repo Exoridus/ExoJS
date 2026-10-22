@@ -163,7 +163,7 @@
     grid-template:
       'preview editor' auto
       'diag editor' auto
-      'errors editor' auto
+      'output editor' auto
       '. editor' 1fr / minmax(0, 1fr) minmax(0, 1fr);
     gap: 0.75rem;
     align-items: start;
@@ -173,7 +173,7 @@
     grid-template-areas:
       'editor preview'
       'editor diag'
-      'editor errors'
+      'editor output'
       'editor .';
   }
 
@@ -209,11 +209,13 @@
     grid-area: diag;
   }
 
-  .root[data-layout='split'] .errors-slot {
-    grid-area: errors;
+  .root[data-layout='split'] .output-slot {
+    grid-area: output;
+    min-width: 0;
   }
 
-  .root[data-layout='split'] .error-panel {
+  .root[data-layout='split'] .error-panel,
+  .root[data-layout='split'] .output-slot > * {
     margin: 0;
   }
 }

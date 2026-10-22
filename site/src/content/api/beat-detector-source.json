@@ -4,7 +4,7 @@
   "symbol": "BeatDetectorSource",
   "kind": "type",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 0,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "What to analyse: a bus or voice (the usual case), a `MediaStream` such as a microphone, or `null` for none yet. A raw `AudioNode` is Web Audio interop for graphs built outside the engine."
       ],
-      "importLine": "import { BeatDetectorSource } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { BeatDetectorSource } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

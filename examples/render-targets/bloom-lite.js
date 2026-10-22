@@ -12,6 +12,7 @@ import {
   Scene,
   Sprite,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 class BloomLiteScene extends Scene {
   baseRt;
   glowRt;
@@ -28,7 +29,7 @@ class BloomLiteScene extends Scene {
     this.baseRt = new RenderTexture(width, height);
     this.glowRt = new RenderTexture(width, height);
     this.blurredRt = new RenderTexture(width, height);
-    this.bunny = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(1.9);
+    this.bunny = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setScale(1.9);
     this.baseSprite = new Sprite(this.baseRt);
     this.glowSprite = new Sprite(this.blurredRt).setTint(new Color(255, 255, 255, 0.8)).setBlendMode(BlendModes.Additive);
     this.blur = new BlurFilter({ strength: 5 });
@@ -88,8 +89,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(BloomLiteScene);

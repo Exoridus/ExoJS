@@ -4,7 +4,7 @@
   "symbol": "TileSetOptions",
   "kind": "type",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 0,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Options for constructing a TileSet: an atlas grid or an image collection."
       ],
-      "importLine": "import { TileSetOptions } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileSetOptions } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

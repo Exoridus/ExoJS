@@ -1,4 +1,4 @@
-import { PhysicsWorld } from '@codexo/exojs-physics';
+import { PhysicsWorld } from '@codexo/exojs/physics';
 
 // #region guide:solver-tuning
 const world = new PhysicsWorld({

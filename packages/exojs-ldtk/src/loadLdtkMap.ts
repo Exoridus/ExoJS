@@ -1,6 +1,6 @@
 import type { AssetFactoryContext } from '@codexo/exojs';
 import { Asset, logger, TextureRegion } from '@codexo/exojs';
-import { type TileDefinition, TileSet } from '@codexo/exojs-tilemap';
+import { type TileDefinition, TileSet } from '@codexo/exojs/tilemap';
 
 import type { LdtkData, LdtkLevel, LdtkTilesetDef } from './LdtkData';
 import { getLdtkLevelEntries } from './ldtkLevelEntries';

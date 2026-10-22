@@ -191,18 +191,6 @@ importers:
       '@codexo/exojs-config':
         specifier: workspace:*
         version: link:../exojs-config
-      '@codexo/exojs-lighting':
-        specifier: workspace:*
-        version: link:../exojs-lighting
-      '@codexo/exojs-particles':
-        specifier: workspace:*
-        version: link:../exojs-particles
-      '@codexo/exojs-physics':
-        specifier: workspace:*
-        version: link:../exojs-physics
-      '@codexo/exojs-tilemap':
-        specifier: workspace:*
-        version: link:../exojs-tilemap
       '@types/node':
         specifier: ^26.6.2
         version: 26.6.2
@@ -305,6 +293,15 @@ importers:
         specifier: ~8.70.1
         version: 8.70.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
 
+  packages/exojs-demo-assets:
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../..
+      '@codexo/exojs-config':
+        specifier: workspace:*
+        version: link:../exojs-config
+
   packages/exojs-ldtk:
     devDependencies:
       '@codexo/exojs':
@@ -313,9 +310,6 @@ importers:
       '@codexo/exojs-config':
         specifier: workspace:*
         version: link:../exojs-config
-      '@codexo/exojs-tilemap':
-        specifier: workspace:*
-        version: link:../exojs-tilemap
 
   packages/exojs-lighting:
     devDependencies:
@@ -343,12 +337,6 @@ importers:
       '@codexo/exojs-config':
         specifier: workspace:*
         version: link:../exojs-config
-      '@codexo/exojs-physics':
-        specifier: workspace:*
-        version: link:../exojs-physics
-      '@codexo/exojs-tilemap':
-        specifier: workspace:*
-        version: link:../exojs-tilemap
 
   packages/exojs-physics:
     devDependencies:
@@ -398,9 +386,6 @@ importers:
       '@codexo/exojs-config':
         specifier: workspace:*
         version: link:../exojs-config
-      '@codexo/exojs-tilemap':
-        specifier: workspace:*
-        version: link:../exojs-tilemap
 
   packages/exojs-tilemap:
     devDependencies:
@@ -422,15 +407,51 @@ importers:
       '@codexo/exojs-ldtk':
         specifier: workspace:*
         version: link:../exojs-ldtk
-      '@codexo/exojs-physics':
-        specifier: workspace:*
-        version: link:../exojs-physics
       '@codexo/exojs-tiled':
         specifier: workspace:*
         version: link:../exojs-tiled
-      '@codexo/exojs-tilemap':
+
+  packages/legacy/exojs-audio-fx:
+    devDependencies:
+      '@codexo/exojs':
         specifier: workspace:*
-        version: link:../exojs-tilemap
+        version: link:../../..
+
+  packages/legacy/exojs-lighting:
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/legacy/exojs-particles:
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/legacy/exojs-pathfinding:
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/legacy/exojs-physics:
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/legacy/exojs-tilemap:
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/legacy/exojs-tilemap-physics:
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../../..
 
   site:
     dependencies:

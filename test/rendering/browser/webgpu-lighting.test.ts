@@ -7,7 +7,7 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import { ForwardLighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
+import { ForwardLighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs/lighting';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';

@@ -10,7 +10,7 @@
  * Run via:  pnpm test:browser:webgl
  */
 
-import { LightmapLighting } from '@codexo/exojs-lighting';
+import { LightmapLighting } from '@codexo/exojs/lighting';
 
 import { Application } from '#core/Application';
 import { Color } from '#core/Color';

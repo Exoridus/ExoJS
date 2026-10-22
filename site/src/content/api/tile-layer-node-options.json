@@ -4,7 +4,7 @@
   "symbol": "TileLayerNodeOptions",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 1,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Options for a TileLayerNode. All optional; reserved for forward compatibility."
       ],
-      "importLine": "import { TileLayerNodeOptions } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileLayerNodeOptions } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

@@ -4,7 +4,7 @@
   "symbol": "ParticleWriter",
   "kind": "interface",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 8,
   "counts": {
@@ -23,7 +23,7 @@
         "Every field starts at its default - zero position, velocity, rotation and rotation speed, unit scale, opaque white, frame 0, lifetime 1 - so a spawner writes only what it varies.",
         "The writer is a cursor onto the emitting system, not a particle object: it is reused by the next ParticleEmitter.emit call and must not be kept. Read what you need before emitting again."
       ],
-      "importLine": "import { ParticleWriter } from '@codexo/exojs-particles'",
+      "importLine": "import { ParticleWriter } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

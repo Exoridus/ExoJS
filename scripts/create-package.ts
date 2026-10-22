@@ -450,7 +450,7 @@ const wired: string[] = [];
 
 // 1. scripts/release/lockstep-packages.ts - append a LockstepPackage entry.
 {
-  const entry = `  { name: '${pkgName}', dir: '${pkgDirRel}', isExtension: true, inOfflineSmoke: ${inOfflineSmoke} },`;
+  const entry = `  { name: '${pkgName}', dir: '${pkgDirRel}', role: 'adapter', inOfflineSmoke: ${inOfflineSmoke} },`;
   const updated = insertBefore(lockstepSrc, '] as const satisfies readonly LockstepPackage[];', [entry]);
   writeFileSync(lockstepPath, updated, 'utf8');
   wired.push('scripts/release/lockstep-packages.ts (LOCKSTEP_PACKAGES)');

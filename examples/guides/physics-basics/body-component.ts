@@ -1,5 +1,5 @@
 import { Color, Graphics, Scene, SystemOrder } from '@codexo/exojs';
-import { BoxShape, CircleShape, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs-physics';
+import { BoxShape, CircleShape, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs/physics';
 
 // #region guide:body-component
 class ArenaScene extends Scene {

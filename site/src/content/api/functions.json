@@ -3974,7 +3974,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Signal that dispatches once the global AudioContext enters the running state. Handles browser autoplay-policy by listening for user-interaction events (mousedown, touchstart, touchend) and resuming a suspended context automatically. Dispatches once per run of the context: on the first unlock, and again on every later locked-to-running edge, so an object constructed while the context sits suspended (an iOS audio-session interruption, a bfcache restore, ...) still gets its setup callback. Handlers subscribed while the context is already running do not receive a dispatch for that run - check isAudioContextReady first and set up directly when it returns true, then subscribe only for the locked case and unsubscribe on the first dispatch."
+          "description": "Signal that dispatches once the global AudioContext enters the running state. Handles browser autoplay-policy by listening for user-interaction events (pointer press and release, mousedown, touchstart, touchend, keydown) in the capture phase and resuming a suspended context automatically. Dispatches once per run of the context: on the first unlock, and again on every later locked-to-running edge, so an object constructed while the context sits suspended (an iOS audio-session interruption, a bfcache restore, ...) still gets its setup callback. Handlers subscribed while the context is already running do not receive a dispatch for that run - check isAudioContextReady first and set up directly when it returns true, then subscribe only for the locked case and unsubscribe on the first dispatch."
         },
         {
           "name": "onAudioPlaybackBlocked",

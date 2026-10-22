@@ -12,15 +12,17 @@ import {
   Text,
   type Texture,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 // #region guide:catalog-declare
-// A catalog is a named, typed group of assets. A bare path infers its type from
-// the file extension; anything else takes an explicit `Asset.type(...)`.
+// A catalog is a named, typed group of assets. Its entries are descriptors -
+// here from the demo catalog; in your own project usually a bare path, whose
+// file extension infers the type, or an explicit `Asset.type(...)`.
 const SharedAssets = Assets.from({
-  logo: 'image/uv-grid-256.png',
-  click: Asset.type('sound', 'audio/ui-click.ogg'),
-  atlas: Asset.type<{ frames: Record<string, unknown> }>('json', 'json/buttons.json'),
+  logo: assets.uvGrid256,
+  click: assets.soundUiClick,
+  atlas: assets.platformerCharactersAtlas,
 });
 // #endregion guide:catalog-declare
 
@@ -29,8 +31,8 @@ const SharedAssets = Assets.from({
 // its inputs' handles instead of copying them, so `LevelAssets.logo` is the very
 // same Texture object as `SharedAssets.logo`.
 const LevelLocalAssets = Assets.from({
-  ship: 'image/ship-a.png',
-  ground: 'image/hue-ramp.png',
+  ship: assets.ship,
+  ground: assets.hueRamp,
 });
 
 const LevelAssets = Assets.compose(SharedAssets, LevelLocalAssets);
@@ -41,8 +43,8 @@ const LevelAssets = Assets.compose(SharedAssets, LevelLocalAssets);
 // ones are added. The base is never mutated - `LevelLocalAssets.ground` keeps
 // pointing at its own texture.
 const NightAssets = Assets.extend(LevelLocalAssets, {
-  ground: 'image/particle-light.png', // deliberate override
-  star: 'image/buttons.png', // new key
+  ground: assets.particleLight, // deliberate override
+  star: assets.particleStar, // new key
 });
 // #endregion guide:catalog-extend
 
@@ -62,16 +64,7 @@ class AssetCatalogsScene extends Scene {
   private night = false;
 
   override async load(): Promise<void> {
-    this.hud = mountControls({
-      title: 'Asset Catalogs',
-      controls: [
-        { keys: 'N', action: 'swap the ground texture for the derived night catalog' },
-        { keys: 'G', action: 'load a ground texture by a computed path' },
-        { keys: 'M', action: 'play the streamed theme (a non-leaf asset)' },
-      ],
-      status: 'Loading the shared and day catalogs...',
-      hint: 'Catalog handles expose their queue and cache state while loading.',
-    });
+    this.hud = mountControls({ status: 'Loading the shared and day catalogs...' });
     // #region guide:queue-progress
     // Every `load(...)` call returns a LoadingQueue. It is `PromiseLike`, so
     // it can be awaited directly, and it reports the progress of this one
@@ -97,7 +90,7 @@ class AssetCatalogsScene extends Scene {
     // Non-leaf types (`music`, `video`, `bmFont`, `font`, ...) have no
     // bare-path form and no placeholder to hand back, even for a literal
     // path - they are always loaded by reference and awaited.
-    this.theme = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
+    this.theme = await this.loader.load(assets.musicLoopMain);
     // #endregion guide:non-leaf-load
 
     // #region guide:catalog-failure
@@ -150,18 +143,18 @@ class AssetCatalogsScene extends Scene {
     });
 
     this.inputs.onTrigger(Keyboard.G, () => {
-      void this.useVariant('hue-ramp');
+      void this.useVariant(assets.hueRamp.source);
     });
   }
 
   // #region guide:dynamic-path
   /** Replaces the ground texture with a variant chosen at runtime. */
-  private async useVariant(variant: string): Promise<void> {
+  private async useVariant(url: string): Promise<void> {
     const app = this.app;
 
-    // The path is computed rather than a literal, so its type cannot be
-    // inferred from the extension - name it with `Asset.type(...)`.
-    const texture = await app.loader.load(Asset.type('texture', `image/${variant}.png`));
+    // A URL chosen at runtime has no literal file extension to infer the type
+    // from - name it with `Asset.type(...)`.
+    const texture = await app.loader.load(Asset.type('texture', url));
 
     this.ground.setTexture(texture);
   }
@@ -194,9 +187,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(AssetCatalogsScene);

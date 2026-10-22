@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
@@ -16,7 +15,7 @@ import {
   View,
   type Voice,
 } from '@codexo/exojs';
-import { mountControls } from '@examples/runtime';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 const titleText = 'VOID EMPEROR';
 
@@ -30,7 +29,7 @@ class BossIntroCinematicScene extends Scene {
   private boss!: Sprite;
   private music!: AudioStream;
   private musicVoice!: Voice & Seekable & Pausable;
-  private hud!: ReturnType<typeof mountControls>;
+  private finished = false;
   private tapPrompt!: Text;
   private width = 0;
   private height = 0;
@@ -50,22 +49,13 @@ class BossIntroCinematicScene extends Scene {
     this.title = new Text('', { fillColor: Color.white, fontSize: 56, fontWeight: 'bold' });
     this.title.setPosition(width * 0.12, height * 0.2);
     this.titleState = { count: 0 };
-    this.boss = new Sprite(this.loader.get(assets.demo.textures.shipA))
+    this.boss = new Sprite(this.loader.get(assets.ship))
       .setAnchor(0.5)
       .setScale(0.4)
       .setPosition(width * 0.62, height / 2)
       .setTint(new Color(255, 130, 130));
-    // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
-    // is loaded directly through `Asset.type('music', ...)` and awaited rather
-    // than fetched synchronously via `get()`.
-    this.music = await this.loader.load(Asset.type('music', assets.demo.music.loopMain));
-
-    this.hud = mountControls({
-      title: 'Boss Intro Cinematic',
-      controls: [{ keys: ['R', 'Click'], action: 'replay sequence' }],
-      status: 'Playing…',
-      hint: 'Push-in, letterbox bars, a typewriter title reveal, and a screen shake punched on the reveal beat.',
-    });
+    // Music has no placeholder handle, so it is awaited with `load()`.
+    this.music = await this.loader.load(assets.musicLoopMain);
 
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it and the sting + cinematic start.
@@ -98,7 +88,6 @@ class BossIntroCinematicScene extends Scene {
     }
 
     this.playSequence();
-    this.hud.setStatus('Replaying…');
   };
 
   private readonly playSequence = (): void => {
@@ -114,6 +103,7 @@ class BossIntroCinematicScene extends Scene {
     this.barSize.v = 0;
     this.titleState.count = 0;
     this.title.text = '';
+    this.finished = false;
     this.boss.setScale(0.4);
 
     // Letterbox bars slam in.
@@ -139,10 +129,13 @@ class BossIntroCinematicScene extends Scene {
         .onUpdate(() => {
           this.title.text = titleText.slice(0, this.titleState.count | 0);
         })
+        .onComplete(() => {
+          this.finished = true;
+        })
         .start(),
     );
     // Music swells up under the reveal.
-    this.sequenceTweens.push(this.tweens.create(this.musicVoice).to({ volume: 0.85 }, 2).start());
+    this.sequenceTweens.push(this.tweens.create(this.musicVoice).to({ volume: 0.6 }, 2).start());
   };
 
   override draw(context: RenderingContext): void {
@@ -162,7 +155,10 @@ class BossIntroCinematicScene extends Scene {
     this.bars.drawRectangle(0, height - this.barSize.v, width, this.barSize.v);
     context.render(this.bars, { view: context.screenView });
 
-    if (app.audio.locked) {
+    // The replay hint appears only once the sequence has played out, so it
+    // never competes with the cinematic itself.
+    if (app.audio.locked || this.finished) {
+      this.tapPrompt.text = app.audio.locked ? 'Click or press any key to start the cinematic' : 'Press R or click to replay';
       context.render(this.tapPrompt, { view: context.screenView });
     }
   }
@@ -175,7 +171,6 @@ class BossIntroCinematicScene extends Scene {
     this.app.audio.onUnlock.remove(this.playSequence);
     this.app.input.onPointerDown.remove(this.replay);
     this.musicVoice?.stop();
-    this.hud?.dispose();
     super.destroy();
   }
 }

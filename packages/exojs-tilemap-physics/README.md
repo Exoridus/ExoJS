@@ -19,8 +19,8 @@ npm install @codexo/exojs @codexo/exojs-tilemap @codexo/exojs-physics @codexo/ex
 Only orthogonal and isometric layers have the rectangular logical cells required by tile collision. Constructing a `TileColliderStreamer` for a staggered or hexagonal layer throws immediately, before creating physics bodies; these grids require colliders built separately.
 
 ```ts
-import { PhysicsWorld } from '@codexo/exojs-physics';
-import { TileColliderStreamer } from '@codexo/exojs-tilemap-physics';
+import { PhysicsWorld } from '@codexo/exojs/physics';
+import { TileColliderStreamer } from '@codexo/exojs/tilemap-physics';
 
 const world = new PhysicsWorld({ gravity: { x: 0, y: 1600 } });
 const colliders = new TileColliderStreamer(world, groundLayer);
@@ -59,7 +59,7 @@ The source is sampled while a partition is built and is expected to answer ident
 An object layer is static data with no residency, so it gets a one-shot build:
 
 ```ts
-import { buildObjectLayerColliders } from '@codexo/exojs-tilemap-physics';
+import { buildObjectLayerColliders } from '@codexo/exojs/tilemap-physics';
 
 const built = buildObjectLayerColliders(world, triggersLayer, {
   isSensor: true,

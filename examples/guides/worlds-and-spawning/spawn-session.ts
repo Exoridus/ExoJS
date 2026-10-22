@@ -1,5 +1,5 @@
 import type { Container } from '@codexo/exojs';
-import type { MapSpawnSession } from '@codexo/exojs-tilemap';
+import type { MapSpawnSession } from '@codexo/exojs/tilemap';
 
 // #region guide:spawn-session
 export const restore = (session: MapSpawnSession<Container>, saved: Map<string, boolean>): void => {

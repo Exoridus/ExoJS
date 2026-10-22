@@ -4,7 +4,7 @@
   "symbol": "ConeDirection",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 7,
   "counts": {
@@ -23,7 +23,7 @@
         "The cone is centred on `directionAngle` (in radians, 0 = +X, π/2 = +Y for screen-down coordinates) and spans `±halfAngle` radians around it. Speed is sampled uniformly in `[minSpeed, maxSpeed]`.",
         "Use for emission cones, explosions, fountain spread - anywhere the direction has a preferred axis with bounded variance."
       ],
-      "importLine": "import { ConeDirection } from '@codexo/exojs-particles'",
+      "importLine": "import { ConeDirection } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

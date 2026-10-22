@@ -4,7 +4,7 @@
  * A tileset texture is ordinary color content: it decodes on sample, layer
  * opacity is applied once as coverage, and the write encodes once.
  */
-import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TileMapNode } from '@codexo/exojs-tilemap';
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TileMapNode } from '@codexo/exojs/tilemap';
 import { describe, onTestFinished, test } from 'vitest';
 
 import { Color } from '#core/Color';

@@ -22,26 +22,34 @@ const aliasConfig = [
   { find: '@codexo/exojs/extensions', replacement: fileURLToPath(new URL('./src/extensions/index.ts', import.meta.url)) },
   { find: '@codexo/exojs/renderer-sdk', replacement: fileURLToPath(new URL('./src/renderer-sdk.ts', import.meta.url)) },
   { find: '@codexo/exojs/debug', replacement: fileURLToPath(new URL('./src/debug/index.ts', import.meta.url)) },
+  // The demo-assets package is data plus factories; alias it to source like the
+  // other content packages. The subpath must come before the root alias.
+  {
+    find: '@codexo/exojs-demo-assets/extended',
+    replacement: fileURLToPath(new URL('./packages/exojs-demo-assets/src/extended.ts', import.meta.url)),
+  },
+  {
+    find: '@codexo/exojs-demo-assets',
+    replacement: fileURLToPath(new URL('./packages/exojs-demo-assets/src/index.ts', import.meta.url)),
+  },
+  // The runtime-module subpaths map to the module sources; the build compiles
+  // the same sources into `dist/esm/<subpath>/`, which this lane never builds.
+  { find: '@codexo/exojs/particles', replacement: fileURLToPath(new URL('./packages/exojs-particles/src/index.ts', import.meta.url)) },
+  { find: '@codexo/exojs/audio-fx', replacement: fileURLToPath(new URL('./packages/exojs-audio-fx/src/index.ts', import.meta.url)) },
+  {
+    find: '@codexo/exojs/tilemap-physics',
+    replacement: fileURLToPath(new URL('./packages/exojs-tilemap-physics/src/index.ts', import.meta.url)),
+  },
+  { find: '@codexo/exojs/tilemap', replacement: fileURLToPath(new URL('./packages/exojs-tilemap/src/index.ts', import.meta.url)) },
+  { find: '@codexo/exojs/physics', replacement: fileURLToPath(new URL('./packages/exojs-physics/src/index.ts', import.meta.url)) },
+  { find: '@codexo/exojs/lighting', replacement: fileURLToPath(new URL('./packages/exojs-lighting/src/index.ts', import.meta.url)) },
+  { find: '@codexo/exojs/pathfinding', replacement: fileURLToPath(new URL('./packages/exojs-pathfinding/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs', replacement: fileURLToPath(new URL('./src/index.ts', import.meta.url)) },
-  // @codexo/exojs-tiled depends on @codexo/exojs-tilemap; neither package
-  // exports a `@codexo/exojs-source` condition, so alias to source for in-repo tests.
-  // @codexo/exojs-physics is aliased too so the example physics↔tilemap bridge
-  // recipe (examples/shared/physics-tilemap.ts) can be unit-tested in-repo.
-  // @codexo/exojs-particles and @codexo/exojs-tilemap are aliased for the same
-  // reason: the benchmark's extension arms import them, and this lane runs
-  // without building the packages, so their `dist` entries resolve to nothing.
-  { find: '@codexo/exojs-particles', replacement: fileURLToPath(new URL('./packages/exojs-particles/src/index.ts', import.meta.url)) },
-  { find: '@codexo/exojs-tilemap', replacement: fileURLToPath(new URL('./packages/exojs-tilemap/src/index.ts', import.meta.url)) },
+  // The adapters publish no `@codexo/exojs-source` condition, so they are
+  // aliased to source for in-repo tests too.
   { find: '@codexo/exojs-tiled', replacement: fileURLToPath(new URL('./packages/exojs-tiled/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-aseprite', replacement: fileURLToPath(new URL('./packages/exojs-aseprite/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-ldtk', replacement: fileURLToPath(new URL('./packages/exojs-ldtk/src/index.ts', import.meta.url)) },
-  { find: '@codexo/exojs-physics', replacement: fileURLToPath(new URL('./packages/exojs-physics/src/index.ts', import.meta.url)) },
-  {
-    find: '@codexo/exojs-tilemap-physics',
-    replacement: fileURLToPath(new URL('./packages/exojs-tilemap-physics/src/index.ts', import.meta.url)),
-  },
-  { find: '@codexo/exojs-lighting', replacement: fileURLToPath(new URL('./packages/exojs-lighting/src/index.ts', import.meta.url)) },
-  { find: '@codexo/exojs-pathfinding', replacement: fileURLToPath(new URL('./packages/exojs-pathfinding/src/index.ts', import.meta.url)) },
   // The CLI's `exo create` calls the scaffolder's library entry, whose package
   // resolves to built output. The unit lane runs without building the packages,
   // so an in-repo test would resolve nothing at all without this.
@@ -63,7 +71,7 @@ const EXTENSION_SOURCE_ROOTS = [
  *
  * A blanket alias cannot do this: each extension package carries its own `#*`
  * map pointing at its own `src`, so `#distributions/Curve` imported from inside
- * `@codexo/exojs-particles` would be sent into the engine tree, where no such
+ * the particles module would be sent into the engine tree, where no such
  * module exists. Declining for those importers leaves the specifier to Vite's
  * normal `imports` resolution, which `srcConditions` already steers to the
  * package's own sources.
@@ -157,6 +165,12 @@ const firefoxCiHeaded = process.env['EXOJS_FIREFOX_CI_HEADED'] === '1';
 const webgpuMediaTests = ['test/rendering/browser/webgpu-*video*.test.ts'];
 const webgpuCoreTests = ['test/rendering/browser/webgpu-*.test.ts', 'test/rendering/parity/**/*.test.ts'];
 const webgpuCoreExclude = [...configDefaults.exclude, ...webgpuMediaTests];
+
+const releaseDistTests = [
+  'test/release/hybrid-runtime-exports.test.ts',
+  'test/release/hybrid-runtime-identity.test.ts',
+  'test/release/legacy-shims-tarball.test.ts',
+];
 
 // Specs that can take a Firefox process down or wedge it on Windows, so they run
 // in a browser of their own with a short deadline and cannot cost the whole Core
@@ -314,7 +328,20 @@ export default defineConfig({
           // `InlineWorker` needs a real Worker and a real object URL, neither
           // of which jsdom has; browser-core-chromium runs this suite.
           'test/core/browser/**/*.test.ts',
+          ...releaseDistTests,
         ],
+      }),
+      // Packs and installs the built Core, so it runs in the CI build job right
+      // after `pnpm build`, where `EXOJS_REQUIRE_PRODUCTION_BUILD=1` turns a
+      // missing dist into a failure. Inside the parallel suite these files
+      // could only skip, and a skip verifies nothing.
+      createJsdomTestProject({
+        name: 'release-dist',
+        include: releaseDistTests,
+      }),
+      createJsdomTestProject({
+        name: 'exojs-demo-assets',
+        include: ['packages/exojs-demo-assets/test/**/*.test.ts'],
       }),
       createJsdomTestProject({
         name: 'exojs-particles',

@@ -1,1094 +1,1664 @@
 // Auto-generated from asset-browser.ts - edit the .ts source, not this file.
-import { Asset, FixedResolutionCanvasSizing } from '@codexo/exojs';
-import { Application, Color, Graphics, Scene, Sprite, Spritesheet, Text, Texture } from '@codexo/exojs';
-// Dynamic category accessor: maps a category key to the correct sub-object
-// in the hierarchical assets catalog. Technical assets live under
-// assets.technical; everything else is under assets.demo.
-const getCategoryData = catKey => {
-  if (catKey === 'technical') {
-    return assets.technical;
+import {
+  AnimatedSprite,
+  Application,
+  Asset,
+  BitmapText,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  ScaleModes,
+  Scene,
+  Sprite,
+  Spritesheet,
+  Text,
+  Texture,
+  View,
+} from '@codexo/exojs';
+import { AudioAnalyser } from '@codexo/exojs/audio-fx';
+import { ObjectKind, TileMapNode } from '@codexo/exojs/tilemap';
+import { demoAssetCategories, demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { ldtkExtension } from '@codexo/exojs-ldtk';
+import { tiledExtension } from '@codexo/exojs-tiled';
+import { choice, demoPanel, slider, toggle } from '@examples/runtime';
+// An asset browser for the standard demo catalog. It is an ordinary scene:
+//
+//   - The list is derived from `demoAssets` and `demoAssetCategories`; nothing
+//     is fetched until an entry is selected.
+//   - Every selection loads into a child `LoaderScope` of the scene. Selecting
+//     something else destroys that scope, which cancels a load still in flight
+//     and frees what it held - unless another scope holds the same asset.
+//   - Each selection carries a generation number. A load that settles after a
+//     newer selection is discarded before it can show, play or log anything.
+//   - Nothing plays on selection. Play goes through `app.audio.onUnlock`, which
+//     waits for the browser's autoplay gesture and is cancelled on switch.
+//   - "Code" turns the current preview settings into a complete scene.
+const STAGE = { width: 1280, height: 720 };
+const SIDEBAR_WIDTH = 272;
+const INSPECTOR_WIDTH = 332;
+const PREVIEW = { x: SIDEBAR_WIDTH, y: 0, width: STAGE.width - SIDEBAR_WIDTH - INSPECTOR_WIDTH, height: STAGE.height };
+const PREVIEW_CENTER = { x: PREVIEW.x + PREVIEW.width / 2, y: PREVIEW.height / 2 };
+const FONT = '"Segoe UI", system-ui, sans-serif';
+const MONO = '"JetBrains Mono", ui-monospace, monospace';
+const MANIFEST_URL = import.meta.resolve('@codexo/exojs-demo-assets/manifest.json');
+const GROUP_OF = {
+  textures: 'Textures',
+  technical: 'Textures',
+  backgrounds: 'Textures',
+  icons: 'Textures',
+  cursors: 'Textures',
+  spritesheets: 'Spritesheets',
+  inputPrompts: 'Spritesheets',
+  maps: 'Maps',
+  sound: 'Audio',
+  soundSprites: 'Audio',
+  music: 'Audio',
+  voice: 'Audio',
+  impulseResponses: 'Audio',
+  video: 'Video',
+  fonts: 'Fonts',
+};
+const GROUP_ORDER = ['Textures', 'Spritesheets', 'Maps', 'Audio', 'Video', 'Fonts', 'Data'];
+const GROUP_GLYPH = {
+  texture: 'IMG',
+  svg: 'SVG',
+  spritesheet: 'ATL',
+  tiled: 'MAP',
+  ldtk: 'MAP',
+  sound: 'SND',
+  music: 'MUS',
+  video: 'VID',
+  font: 'TTF',
+  bmFont: 'FNT',
+  data: '{ }',
+};
+const humanize = key => {
+  const words = key
+    .replace(/^(sound|music|font)(?=[A-Z])/, '')
+    .replace(/([a-z])([A-Z0-9])/g, '$1 $2')
+    .toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+};
+const kindOf = key => {
+  const descriptor = assets[key];
+  switch (descriptor.type) {
+    case 'texture':
+    case 'svg':
+    case 'sound':
+    case 'music':
+    case 'video':
+    case 'font':
+    case 'bmFont':
+      return descriptor.type;
+    case 'json':
+      if (demoAssetCategories[key] !== 'maps') {
+        return 'data';
+      }
+      return descriptor.source.endsWith('.ldtk') ? 'ldtk' : 'tiled';
+    default:
+      return 'data';
   }
-  return assets.demo[catKey] ?? {};
 };
-const W = 1280;
-const H = 720;
-const TOOLBAR_H = 110;
-const SIDEBAR_W = 220;
-const ITEM_H = 36;
-const LIST_Y = TOOLBAR_H + 4;
-const PREVIEW_X = SIDEBAR_W;
-const PREVIEW_Y = TOOLBAR_H;
-const PREVIEW_W = W - SIDEBAR_W;
-const PREVIEW_H = H - TOOLBAR_H;
-const CAT_BTN_W = 82;
-const CAT_BTN_H = 38;
-const CAT_BTN_Y1 = 6;
-const CAT_BTN_Y2 = 58;
-const CAT_BTN_X0 = 6;
-const BG_BTN_SIZE = 26;
-const BG_BTN_Y = 16;
-const BG_BTN_X0 = W - 3 * (BG_BTN_SIZE + 5) - 6;
-const CATEGORIES_ROW1 = [
-  { id: 'textures', label: 'IMG', catKey: 'textures' },
-  { id: 'sprites', label: 'SPR', catKey: 'sprites' },
-  { id: 'audio', label: 'AUD', catKey: 'audio' },
-  { id: 'svg', label: 'SVG', catKey: 'svg' },
-  { id: 'fonts', label: 'FNT', catKey: 'fonts' },
-  { id: 'video', label: 'VID', catKey: 'video' },
-  { id: 'inputPrompts', label: 'INP', catKey: 'inputPrompts' },
-  { id: 'technical', label: 'TECH', catKey: 'technical' },
-];
-const CATEGORIES_ROW2 = [
-  { id: 'sound', label: 'SND', catKey: 'sound' },
-  { id: 'music', label: 'MUS', catKey: 'music' },
-  { id: 'soundSprites', label: 'SDS', catKey: 'soundSprites' },
-  { id: 'spritesheets', label: 'SSH', catKey: 'spritesheets' },
-  { id: 'tilesets', label: 'TLS', catKey: 'tilesets' },
-  { id: 'backgrounds', label: 'BGS', catKey: 'backgrounds' },
-  { id: 'cursors', label: 'CSR', catKey: 'cursors' },
-  { id: 'vendor', label: 'VND', catKey: 'vendor' },
-];
-const CATEGORIES = [...CATEGORIES_ROW1, ...CATEGORIES_ROW2];
-const TECH_PURPOSE = {
-  alpha: 'alpha / premultiplied / halo checks',
-  filtering: 'nearest / linear / sampler checks',
-  color: 'ramp / gamma / color-shift checks',
+/** An atlas JSON and its image are separate descriptors named `<name>Atlas` and `<name>Image`; the browser lists them as one spritesheet. */
+const buildItems = () => {
+  const items = [];
+  for (const key of Object.keys(demoAssetCategories)) {
+    const base = key.replace(/(Atlas|Image)$/, '');
+    const image = `${base}Image`;
+    const atlas = `${base}Atlas`;
+    if (base !== key && image in assets && atlas in assets) {
+      if (key === image) {
+        items.push({ id: base, name: humanize(base), group: 'Spritesheets', kind: 'spritesheet', key: image, atlasKey: atlas });
+      }
+      continue;
+    }
+    const kind = kindOf(key);
+    items.push({ id: key, name: humanize(key), group: kind === 'data' ? 'Data' : GROUP_OF[demoAssetCategories[key]], kind, key });
+  }
+  return items;
 };
-const BG_OPTIONS = [
-  { label: 'W', r: 255, g: 255, b: 255 },
-  { label: 'G', r: 45, g: 50, b: 65 },
-  { label: 'K', r: 0, g: 0, b: 0 },
-];
-const C = {
-  bg: new Color(26, 28, 38),
-  toolbar: new Color(30, 34, 46),
-  panel: new Color(32, 36, 48),
-  active: new Color(58, 120, 218),
-  hover: new Color(44, 50, 66),
-  border: new Color(52, 58, 76),
-  infoBar: new Color(18, 22, 32),
-  btnDark: new Color(44, 52, 72),
-  btnGreen: new Color(55, 150, 75),
-  white: new Color(255, 255, 255),
-  dim: new Color(140, 150, 170),
-  dimDark: new Color(90, 98, 120),
-  accent: new Color(100, 180, 255),
-  black: new Color(0, 0, 0),
-};
+const ITEMS = buildItems();
+const GROUPS = GROUP_ORDER.filter(group => ITEMS.some(item => item.group === group));
+const fileName = source => decodeURIComponent(source.slice(source.lastIndexOf('/') + 1));
+const formatBytes = bytes =>
+  bytes < 1024 ? `${bytes} B` : bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+const formatSeconds = value => (Number.isFinite(value) ? `${value.toFixed(2)} s` : 'unknown');
+const isAbort = error => error instanceof DOMException && error.name === 'AbortError';
 class AssetBrowserScene extends Scene {
-  cat = 'textures';
-  key = null;
-  bgIdx = 1;
-  scrollOff = 0;
-  hoverIdx = null;
-  audioMusics = new Map();
-  soundMusics = new Map();
-  musicMusics = new Map();
-  soundSpriteAudio = new Map();
-  // Single-asset preview playback: one Voice at a time, tied to `previewKey`.
-  previewVoice = null;
-  previewKey = null;
-  frameIdx = 0;
-  frameTimer = 0;
-  animPlaying = true;
-  texSprites = new Map();
-  sprSheets = new Map();
-  sshSheets = new Map();
-  svgSprites = new Map();
-  inpSheets = new Map();
-  fontFamilies = new Map();
-  techSprites = new Map();
-  bgSprites = new Map();
-  cursorSprites = new Map();
-  tilesetSprites = new Map();
-  soundSpriteData = new Map();
-  vendorData = new Map();
-  animG = null;
-  audioG = null;
-  copyBtnBg = null;
-  fontSampleTexts = new Map();
-  gToolbar = new Graphics();
-  gSidebar = new Graphics();
-  gPreview = new Graphics();
-  gInfoBar = new Graphics();
-  catBtnTexts = CATEGORIES.map(() => new Text('', { fillColor: C.white, fontSize: 11, fontWeight: 'bold' }));
-  bgBtnTexts = BG_OPTIONS.map(() => new Text('', { fillColor: C.dim, fontSize: 11, fontWeight: 'bold' }));
-  txtKey = new Text('', { fillColor: C.white, fontSize: 12, fontWeight: 'bold' });
-  txtPath = new Text('', { fillColor: C.dim, fontSize: 11 });
-  txtType = new Text('', { fillColor: C.accent, fontSize: 10, fontWeight: 'bold' });
-  txtCopy = new Text('COPY KEY', { fillColor: C.white, fontSize: 10 });
-  itemTexts = Array.from({ length: 22 }, () => new Text('', { fillColor: C.white, fontSize: 13 }));
-  techHeaderTexts = new Map([
-    ['alpha', new Text('ALPHA', { fillColor: C.accent, fontSize: 10, fontWeight: 'bold' })],
-    ['filtering', new Text('FILTERING', { fillColor: C.accent, fontSize: 10, fontWeight: 'bold' })],
-    ['color', new Text('COLOR', { fillColor: C.accent, fontSize: 10, fontWeight: 'bold' })],
-  ]);
-  txtTechPurpose = new Text('', { fillColor: C.dim, fontSize: 11 });
-  txtNoAssets = new Text('globalThis.assets is not available.\nRun this example in the ExoJS playground.', {
-    fillColor: C.dim,
-    fontSize: 16,
-  });
-  txtEmptyCat = new Text('(empty)', { fillColor: C.dimDark, fontSize: 13 });
-  txtNoSel = new Text('Select an asset from the list.', { fillColor: C.dimDark, fontSize: 14 });
-  txtLoading = new Text('Loading assets…', { fillColor: C.dim, fontSize: 14 });
-  txtMeta = new Text('', { fillColor: C.white, fontSize: 13, maxWidth: PREVIEW_W - 80 });
-  txtAudioIcon = new Text('', { fillColor: C.white, fontSize: 28 });
-  txtAnimPlay = new Text('', { fillColor: C.white, fontSize: 12 });
-  txtAnimFrame = new Text('', { fillColor: C.dim, fontSize: 11 });
-  // Lazy per-category loading: only the initial category is fetched up
-  // front; every other one loads on first visit (see ensureCategory), so
-  // the browser becomes interactive quickly instead of downloading the
-  // whole catalog before the first frame.
-  assetLoader;
-  loadedCats = new Set();
-  loadingCats = new Set();
+  sidebar = document.createElement('nav');
+  search = document.createElement('input');
+  tabs = document.createElement('div');
+  list = document.createElement('ul');
+  inspector = document.createElement('aside');
+  heading = document.createElement('h2');
+  facts = document.createElement('dl');
+  panelSlot = document.createElement('div');
+  resident = document.createElement('details');
+  codePanel = document.createElement('section');
+  codeTitle = document.createElement('strong');
+  code = document.createElement('pre');
+  buttons = new Map();
+  view = new View(STAGE.width / 2, STAGE.height / 2, STAGE.width, STAGE.height);
+  frame = new Graphics();
+  message = new Text('', { fontSize: 22, fillColor: new Color(200, 214, 236), align: 'center' });
+  backdrop = new Color(32, 37, 50);
+  group = GROUPS[0];
+  selected = null;
+  generation = 0;
+  scope = null;
+  preview = null;
+  panel = null;
+  manifest = new Map();
+  drag = null;
+  zoomTarget = null;
+  destroyed = false;
   async load() {
-    const app = this.app;
-    this.assetLoader = this.loader;
-    await this.ensureCategory(this.cat);
-    app.input.onPointerTap.add(p => this.onTap(p.x, p.y));
-    app.input.onPointerMove.add(p => this.onMove(p.x, p.y));
-    app.input.onMouseWheel.add((_deltaX, deltaY) => this.onWheel(deltaY));
-    this.selectFirstInCategory();
-  }
-  /** Load a category's assets (and build its preview objects) exactly once. */
-  async ensureCategory(catId) {
-    if (this.loadedCats.has(catId) || this.loadingCats.has(catId)) {
-      return;
-    }
-    this.loadingCats.add(catId);
+    // The package's manifest carries byte sizes and media metadata. It is
+    // optional here: without it the inspector only shows what loading tells.
     try {
-      await this.loadCategory(catId);
-      this.loadedCats.add(catId);
+      const manifest = await this.loader.load(Asset.type('json', MANIFEST_URL));
+      this.manifest = new Map(manifest.entries.map(entry => [entry.key, entry]));
+    } catch (error) {
+      console.warn('The demo asset manifest is unavailable; sizes and media details are hidden.', error);
+    }
+  }
+  init() {
+    this.mountSidebar();
+    this.mountInspector();
+    this.mountCodePanel();
+    this.message.setAnchor(0.5).setPosition(PREVIEW_CENTER.x, PREVIEW_CENTER.y);
+    this.app.input.onPointerDown.add(this.onPointerDown);
+    this.app.input.onPointerMove.add(this.onPointerMove);
+    this.app.input.onPointerUp.add(this.onPointerUp);
+    this.app.input.onMouseWheel.add(this.onWheel);
+    this.showGroup(this.group);
+    void this.select(ITEMS.find(item => item.group === this.group));
+  }
+  // --- Selection ------------------------------------------------------------
+  async select(item) {
+    const generation = ++this.generation;
+    this.closePreview();
+    this.selected = item;
+    this.markSelection();
+    this.renderFacts(item, []);
+    this.message.text = 'Loading...';
+    const scope = this.loader.createScope({ name: `preview:${item.id}` });
+    const started = performance.now();
+    this.scope = scope;
+    const context = {
+      scene: this,
+      item,
+      scope,
+      manifest: this.manifest.get(item.key),
+      isCurrent: () => generation === this.generation && !this.destroyed,
+    };
+    try {
+      const preview = await openPreview(context);
+      // A newer selection destroyed this scope already; what the preview built
+      // is dropped without ever being shown.
+      if (!context.isCurrent()) {
+        preview.dispose();
+        return;
+      }
+      this.preview = preview;
+      this.message.text = '';
+      this.renderFacts(item, preview.facts);
+      this.mountPanel(preview);
+      this.fit();
+      this.renderResident();
+      console.info(`Loaded ${item.name} (${item.kind}) in ${Math.round(performance.now() - started)} ms`);
+    } catch (error) {
+      if (!context.isCurrent() || isAbort(error)) {
+        return;
+      }
+      this.message.text = `Could not load ${item.name}`;
+      this.renderResident();
+      console.error(`Failed to load ${item.name}:`, error);
+    }
+  }
+  closePreview() {
+    this.hideCode();
+    this.panel?.dispose();
+    this.panel = null;
+    this.zoomTarget = null;
+    this.backdrop = new Color(32, 37, 50);
+    try {
+      this.preview?.dispose();
     } finally {
-      this.loadingCats.delete(catId);
+      this.preview = null;
+      // Destroying the scope cancels a load that is still running and releases
+      // this selection's claims; assets another scope holds stay resident.
+      this.scope?.destroy();
+      this.scope = null;
     }
   }
-  async loadCategory(catId) {
-    const loader = this.assetLoader;
-    // Every category below fetches its assets by real (dynamic, non-literal)
-    // path via `Asset.type(type, path)` + `load()` - the old alias-keyed batch-record form
-    // (`load(Type, { alias: path })` + `get(Type, alias)`) is gone; there is no
-    // alias indirection to reconstruct, so each item is loaded directly and its
-    // resolved handle/value is stored under the catalog's own key.
-    switch (catId) {
-      case 'textures': {
-        await Promise.all(
-          Object.entries(assets.demo.textures ?? {}).map(async ([k, url]) => {
-            const s = new Sprite(await loader.load(Asset.type('texture', url)));
-            s.setAnchor(0.5);
-            this.texSprites.set(k, s);
-          }),
-        );
-        break;
+  mountPanel(preview) {
+    const host = options => {
+      const panel = demoPanel({ ...options, corner: 'top-right' });
+      Object.assign(panel.element.style, {
+        position: 'static',
+        maxWidth: 'none',
+        minWidth: '0',
+        padding: '10px',
+        boxShadow: 'none',
+        margin: '0',
+      });
+      // The shared panel is sized for a canvas corner; in this column the
+      // sliders give way so every readout stays visible.
+      for (const input of panel.element.querySelectorAll('input')) {
+        input.style.minWidth = '0';
       }
-      case 'sprites': {
-        await Promise.all(
-          Object.entries(assets.demo.sprites ?? {}).map(async ([k, entry]) => {
-            const [tex, data] = await Promise.all([
-              loader.load(Asset.type('texture', entry.image)),
-              loader.load(Asset.type('json', entry.data)),
-            ]);
-            const ss = new Spritesheet(tex, data);
-            this.sprSheets.set(k, ss);
-            for (const s of ss.sprites.values()) {
-              s.setAnchor(0.5);
-            }
-          }),
-        );
-        break;
-      }
-      case 'spritesheets': {
-        await Promise.all(
-          Object.entries(assets.demo.spritesheets ?? {}).map(async ([k, entry]) => {
-            const [tex, data] = await Promise.all([
-              loader.load(Asset.type('texture', entry.image)),
-              loader.load(Asset.type('json', entry.data)),
-            ]);
-            const ss = new Spritesheet(tex, data);
-            this.sshSheets.set(k, ss);
-            for (const s of ss.sprites.values()) {
-              s.setAnchor(0.5);
-            }
-          }),
-        );
-        break;
-      }
-      case 'svg': {
-        await Promise.all(
-          Object.entries(assets.demo.svg ?? {}).map(async ([k, url]) => {
-            const s = new Sprite(new Texture(await loader.load(Asset.type('svg', url))));
-            s.setAnchor(0.5);
-            this.svgSprites.set(k, s);
-          }),
-        );
-        break;
-      }
-      case 'inputPrompts': {
-        await Promise.all(
-          Object.entries(assets.demo.inputPrompts ?? {}).map(async ([k, entry]) => {
-            const [tex, data] = await Promise.all([
-              loader.load(Asset.type('texture', entry.image)),
-              loader.load(Asset.type('json', entry.data)),
-            ]);
-            const ss = new Spritesheet(tex, data);
-            this.inpSheets.set(k, ss);
-            for (const s of ss.sprites.values()) {
-              s.setAnchor(0.5);
-            }
-          }),
-        );
-        break;
-      }
-      case 'audio': {
-        await Promise.all(
-          Object.entries(assets.demo.audio ?? {}).map(async ([k, url]) => {
-            this.audioMusics.set(k, await loader.load(Asset.type('music', url)));
-          }),
-        );
-        break;
-      }
-      case 'sound': {
-        await Promise.all(
-          Object.entries(assets.demo.sound ?? {}).map(async ([k, url]) => {
-            this.soundMusics.set(k, await loader.load(Asset.type('music', url)));
-          }),
-        );
-        break;
-      }
-      case 'music': {
-        await Promise.all(
-          Object.entries(assets.demo.music ?? {}).map(async ([k, url]) => {
-            this.musicMusics.set(k, await loader.load(Asset.type('music', url)));
-          }),
-        );
-        break;
-      }
-      case 'soundSprites': {
-        await Promise.all(
-          Object.entries(assets.demo.soundSprites ?? {}).map(async ([k, entry]) => {
-            const [audio, data] = await Promise.all([
-              loader.load(Asset.type('music', entry.audio)),
-              loader.load(Asset.type('json', entry.data)),
-            ]);
-            this.soundSpriteAudio.set(k, audio);
-            this.soundSpriteData.set(k, data);
-          }),
-        );
-        break;
-      }
-      case 'fonts': {
-        await Promise.all(
-          Object.entries(assets.demo.fonts ?? {}).map(async ([k, url]) => {
-            // The fonts category mixes vector fonts (.ttf/.otf) with
-            // bitmap-font sidecars (.fnt/.png) that FontFace cannot
-            // parse. Load only the vector entries - the bitmap ones
-            // fall back to a path readout.
-            if (!/\.(ttf|otf|woff2?)$/i.test(url)) {
-              return;
-            }
-            const family = `assetbrowser_${k}`;
-            await loader.load(Asset.type('font', url, { family }));
-            this.fontFamilies.set(k, family);
-          }),
-        );
-        break;
-      }
-      case 'technical': {
-        await Promise.all(
-          Object.entries(assets.technical ?? {}).flatMap(([subcat, items]) =>
-            Object.entries(items).map(async ([k, u]) => {
-              const s = new Sprite(await loader.load(Asset.type('texture', u)));
-              s.setAnchor(0.5);
-              this.techSprites.set(`${subcat}.${k}`, s);
-            }),
-          ),
-        );
-        break;
-      }
-      case 'backgrounds': {
-        await Promise.all(
-          Object.entries(assets.demo.backgrounds ?? {}).map(async ([k, url]) => {
-            const s = new Sprite(await loader.load(Asset.type('texture', url)));
-            s.setAnchor(0.5);
-            this.bgSprites.set(k, s);
-          }),
-        );
-        break;
-      }
-      case 'cursors': {
-        await Promise.all(
-          Object.entries(assets.demo.cursors ?? {}).map(async ([k, url]) => {
-            const s = new Sprite(new Texture(await loader.load(Asset.type('svg', url))));
-            s.setAnchor(0.5);
-            this.cursorSprites.set(k, s);
-          }),
-        );
-        break;
-      }
-      case 'tilesets': {
-        await Promise.all(
-          Object.entries(assets.demo.tilesets ?? {}).map(async ([k, entry]) => {
-            const s = new Sprite(await loader.load(Asset.type('texture', entry.image)));
-            s.setAnchor(0.5);
-            this.tilesetSprites.set(k, s);
-          }),
-        );
-        break;
-      }
-      case 'vendor': {
-        await Promise.all(
-          Object.entries(assets.demo.vendor ?? {}).map(async ([k, url]) => {
-            this.vendorData.set(k, await loader.load(Asset.type('json', url)));
-          }),
-        );
-        break;
-      }
-      default:
-        // 'video' previews only show the asset URL - nothing to load.
-        break;
-    }
+      this.panelSlot.replaceChildren(panel.element);
+      this.panel = panel;
+      return panel;
+    };
+    preview.mount(host);
   }
-  techFlatKeys() {
-    const out = [];
-    for (const subcat of ['alpha', 'filtering', 'color']) {
-      const items = assets.technical[subcat];
-      if (!items) {
-        continue;
-      }
-      out.push(subcat);
-      for (const k of Object.keys(items)) {
-        out.push(`${subcat}.${k}`);
-      }
-    }
-    return out;
+  /** The camera always zooms through the panel's Zoom control when a preview has one. */
+  bindZoom(target) {
+    this.zoomTarget = target;
   }
-  keys() {
-    if (this.cat === 'technical') {
-      return this.techFlatKeys();
-    }
-    const cat = CATEGORIES.find(c => c.id === this.cat);
-    const obj = getCategoryData(cat?.catKey ?? '');
-    return obj ? Object.keys(obj) : [];
+  setZoom(zoom) {
+    const center = this.view.center;
+    // Zoom about the preview's centre, which is offset from the canvas centre.
+    const focusX = center.x + (PREVIEW_CENTER.x - STAGE.width / 2) / this.view.zoomLevel;
+    const focusY = center.y + (PREVIEW_CENTER.y - STAGE.height / 2) / this.view.zoomLevel;
+    this.view.setZoom(zoom);
+    this.lookAt(focusX, focusY);
   }
-  assetPath() {
-    if (!this.key) {
-      return '';
-    }
-    if (this.cat === 'technical') {
-      if (!this.key.includes('.')) {
-        return '';
-      }
-      const [subcat, itemKey] = this.key.split('.');
-      return assets.technical[subcat]?.[itemKey] ?? '';
-    }
-    const cat = CATEGORIES.find(c => c.id === this.cat);
-    const v = getCategoryData(cat?.catKey ?? '')[this.key];
-    if (typeof v === 'string') {
-      return v;
-    }
-    const record = v;
-    if (typeof record?.image === 'string') {
-      return record.image;
-    }
-    if (typeof record?.audio === 'string') {
-      return record.audio;
-    }
-    return '';
+  /** Puts world point (x, y) at the centre of the preview area. */
+  lookAt(x, y) {
+    const zoom = this.view.zoomLevel;
+    this.view.setCenter(x - (PREVIEW_CENTER.x - STAGE.width / 2) / zoom, y - (PREVIEW_CENTER.y - STAGE.height / 2) / zoom);
   }
-  assetExpression() {
-    const category = this.cat === 'technical' ? 'technical' : `demo.${this.cat}`;
-    return `assets.${category}.${this.key}`;
-  }
-  typeLabel() {
-    return this.assetPath().split('.').pop()?.toUpperCase() ?? '';
-  }
-  selectFirstInCategory() {
-    const keys = this.keys();
-    this.key = this.cat === 'technical' ? (keys.find(k => k.includes('.')) ?? null) : (keys[0] ?? null);
-    this.scrollOff = 0;
-    this.resetPreviewState();
-  }
-  resetPreviewState() {
-    this.stopAllAudio();
-    this.frameIdx = 0;
-    this.frameTimer = 0;
-    this.animPlaying = true;
-  }
-  stopAllAudio() {
-    if (this.previewVoice) {
-      this.previewVoice.stop();
-      this.previewVoice = null;
-      this.previewKey = null;
-    }
-  }
-  /** True when the selected key's preview voice is live and not paused. */
-  previewIsPlaying() {
-    return this.previewVoice !== null && !this.previewVoice.ended && !this.previewVoice.paused && this.previewKey === this.key;
-  }
-  currentPlayingMap() {
-    if (this.cat === 'audio') {
-      return this.audioMusics;
-    }
-    if (this.cat === 'sound') {
-      return this.soundMusics;
-    }
-    if (this.cat === 'music') {
-      return this.musicMusics;
-    }
-    if (this.cat === 'soundSprites') {
-      return this.soundSpriteAudio;
-    }
-    return null;
-  }
-  toggleAudio() {
-    const app = this.app;
-    if (!this.key) {
+  fit() {
+    const bounds = this.preview?.bounds;
+    if (!bounds) {
+      this.view.setZoom(1);
+      this.lookAt(0, 0);
       return;
     }
-    const map = this.currentPlayingMap();
-    if (!map) {
+    const zoom = Math.min(8, (PREVIEW.width * 0.9) / bounds.width, (PREVIEW.height * 0.82) / bounds.height);
+    this.view.setZoom(zoom);
+    this.lookAt(bounds.width / 2, bounds.height / 2);
+    this.zoomTarget?.set('zoom', zoom);
+  }
+  setBackdrop(color) {
+    this.backdrop = color;
+  }
+  // --- Pointer: drag pans, wheel zooms, tap hits ----------------------------
+  onPointerDown = (_pointer, x, y) => {
+    if (x >= PREVIEW.x && x <= PREVIEW.x + PREVIEW.width) {
+      this.drag = { x, y, moved: false };
+    }
+  };
+  onPointerMove = (_pointer, x, y) => {
+    if (!this.drag || !this.preview?.bounds) {
       return;
     }
-    const stream = map.get(this.key);
-    if (!stream) {
+    const dx = x - this.drag.x;
+    const dy = y - this.drag.y;
+    if (this.drag.moved || Math.hypot(dx, dy) > 4) {
+      const zoom = this.view.zoomLevel;
+      this.view.setCenter(this.view.center.x - dx / zoom, this.view.center.y - dy / zoom);
+      this.drag = { x, y, moved: true };
+    }
+  };
+  onPointerUp = (_pointer, x, y) => {
+    const drag = this.drag;
+    this.drag = null;
+    if (drag && !drag.moved && this.preview?.tap) {
+      // The four-argument form maps through the viewport at any zoom level;
+      // the stage's design size stands in for the canvas size.
+      const point = this.view.screenToWorld(x, y, STAGE.width, STAGE.height);
+      this.preview.tap(point.x, point.y);
+    }
+  };
+  onWheel = (_deltaX, deltaY) => {
+    if (!this.preview?.bounds) {
       return;
     }
-    if (this.previewKey === this.key && this.previewVoice && !this.previewVoice.ended) {
-      // Same asset selected: pause / resume the live voice.
-      if (this.previewVoice.paused) {
-        this.previewVoice.resume();
-      } else {
-        this.previewVoice.pause();
-      }
+    const zoom = Math.min(32, Math.max(0.05, this.view.zoomLevel * Math.exp(-deltaY * 0.0015)));
+    if (this.zoomTarget) {
+      this.zoomTarget.set('zoom', zoom);
     } else {
-      // New asset: stop the previous preview and start this one.
-      this.previewVoice?.stop();
-      this.previewVoice = app.audio.play(stream);
-      this.previewKey = this.key;
+      this.setZoom(zoom);
     }
-  }
-  currentFrameKeys() {
-    if (this.cat === 'sprites') {
-      return [...(this.sprSheets.get(this.key ?? '')?.sprites.keys() ?? [])];
-    }
-    if (this.cat === 'spritesheets') {
-      return [...(this.sshSheets.get(this.key ?? '')?.sprites.keys() ?? [])];
-    }
-    if (this.cat === 'inputPrompts') {
-      return [...(this.inpSheets.get(this.key ?? '')?.sprites.keys() ?? [])];
-    }
-    return [];
-  }
-  maxScroll() {
-    const visibleItems = Math.floor((H - LIST_Y) / ITEM_H);
-    return Math.max(0, this.keys().length - visibleItems);
-  }
-  isAudioLikeCategory() {
-    return this.cat === 'audio' || this.cat === 'sound' || this.cat === 'music' || this.cat === 'soundSprites';
-  }
-  onTap(x, y) {
-    for (let i = 0; i < CATEGORIES_ROW1.length; i++) {
-      const bx = CAT_BTN_X0 + i * (CAT_BTN_W + 4);
-      if (x >= bx && x < bx + CAT_BTN_W && y >= CAT_BTN_Y1 && y < CAT_BTN_Y1 + CAT_BTN_H) {
-        if (this.cat !== CATEGORIES_ROW1[i].id) {
-          this.cat = CATEGORIES_ROW1[i].id;
-          this.selectFirstInCategory();
-          void this.ensureCategory(this.cat);
-        }
-        return;
-      }
-    }
-    for (let i = 0; i < CATEGORIES_ROW2.length; i++) {
-      const bx = CAT_BTN_X0 + i * (CAT_BTN_W + 4);
-      if (x >= bx && x < bx + CAT_BTN_W && y >= CAT_BTN_Y2 && y < CAT_BTN_Y2 + CAT_BTN_H) {
-        if (this.cat !== CATEGORIES_ROW2[i].id) {
-          this.cat = CATEGORIES_ROW2[i].id;
-          this.selectFirstInCategory();
-          void this.ensureCategory(this.cat);
-        }
-        return;
-      }
-    }
-    for (let i = 0; i < BG_OPTIONS.length; i++) {
-      const bx = BG_BTN_X0 + i * (BG_BTN_SIZE + 5);
-      if (x >= bx && x < bx + BG_BTN_SIZE && y >= BG_BTN_Y && y < BG_BTN_Y + BG_BTN_SIZE) {
-        this.bgIdx = i;
-        return;
-      }
-    }
-    if (x >= 0 && x < SIDEBAR_W && y >= TOOLBAR_H) {
-      const keys = this.keys();
-      const idx = Math.floor((y - LIST_Y) / ITEM_H) + this.scrollOff;
-      if (idx >= 0 && idx < keys.length) {
-        const newKey = keys[idx];
-        const isHeader = this.cat === 'technical' && !newKey.includes('.');
-        if (!isHeader && newKey !== this.key) {
-          this.key = newKey;
-          this.resetPreviewState();
-        }
-      }
-      return;
-    }
-    if (this.key && x >= PREVIEW_X + PREVIEW_W - 84 && x < PREVIEW_X + PREVIEW_W - 10 && y >= PREVIEW_Y + 8 && y < PREVIEW_Y + 8 + 26) {
-      navigator.clipboard?.writeText(this.assetExpression()).catch(() => undefined);
-      return;
-    }
-    if (this.isAudioLikeCategory() && this.key) {
-      const bx = PREVIEW_X + (PREVIEW_W - 100) / 2;
-      const by = PREVIEW_Y + PREVIEW_H / 2 - 30;
-      if (x >= bx && x < bx + 100 && y >= by && y < by + 56) {
-        this.toggleAudio();
-        return;
-      }
-    }
-    if ((this.cat === 'sprites' || this.cat === 'spritesheets' || this.cat === 'inputPrompts') && this.key) {
-      const bx = PREVIEW_X + 16;
-      const by = H - 48;
-      if (x >= bx && x < bx + 90 && y >= by && y < by + 30) {
-        this.animPlaying = !this.animPlaying;
-        return;
-      }
-    }
-  }
-  onMove(x, y) {
-    this.hoverIdx = null;
-    if (x >= 0 && x < SIDEBAR_W && y >= TOOLBAR_H) {
-      const keys = this.keys();
-      const idx = Math.floor((y - LIST_Y) / ITEM_H) + this.scrollOff;
-      if (idx >= 0 && idx < keys.length) {
-        const isHeader = this.cat === 'technical' && !keys[idx].includes('.');
-        if (!isHeader) {
-          this.hoverIdx = idx;
-        }
-      }
-    }
-  }
-  onWheel(dy) {
-    const maxScroll = this.maxScroll();
-    const delta = dy > 0 ? 1 : -1;
-    this.scrollOff = Math.max(0, Math.min(maxScroll, this.scrollOff + delta));
-  }
+  };
+  // --- Frame ----------------------------------------------------------------
   update(delta) {
-    if (!this.animPlaying) {
-      return;
-    }
-    if (this.cat !== 'sprites' && this.cat !== 'spritesheets' && this.cat !== 'inputPrompts') {
-      return;
-    }
-    const frames = this.currentFrameKeys();
-    if (!frames.length) {
-      return;
-    }
-    this.frameTimer += delta;
-    if (this.frameTimer >= 0.07) {
-      this.frameTimer = 0;
-      this.frameIdx = (this.frameIdx + 1) % frames.length;
-    }
+    this.preview?.update?.(delta);
   }
   draw(context) {
-    this.drawPreviewBg(context);
-    this.drawPreviewContent(context);
-    this.drawSidebar(context);
-    this.drawToolbar(context);
-  }
-  drawNoAssets(context) {
-    const g = this.gPreview;
-    g.clear();
-    g.fillColor = C.panel;
-    g.drawRectangle(0, 0, W, H);
-    context.render(g);
-    context.render(this.txtNoAssets);
-  }
-  drawToolbar(context) {
-    const g = this.gToolbar;
-    g.clear();
-    g.fillColor = C.toolbar;
-    g.drawRectangle(0, 0, W, TOOLBAR_H);
-    g.lineWidth = 1;
-    g.lineColor = C.border;
-    g.drawLine(0, TOOLBAR_H - 1, W, TOOLBAR_H - 1);
-    g.drawLine(0, CAT_BTN_Y2 - 4, W, CAT_BTN_Y2 - 4);
-    for (let i = 0; i < CATEGORIES_ROW1.length; i++) {
-      const bx = CAT_BTN_X0 + i * (CAT_BTN_W + 4);
-      g.fillColor = this.cat === CATEGORIES_ROW1[i].id ? C.active : C.btnDark;
-      g.lineWidth = 0;
-      g.drawRectangle(bx, CAT_BTN_Y1, CAT_BTN_W, CAT_BTN_H);
+    context.clear(this.backdrop);
+    for (const node of this.preview?.world ?? []) {
+      context.render(node, { view: this.view });
     }
-    for (let i = 0; i < CATEGORIES_ROW2.length; i++) {
-      const bx = CAT_BTN_X0 + i * (CAT_BTN_W + 4);
-      g.fillColor = this.cat === CATEGORIES_ROW2[i].id ? C.active : C.btnDark;
-      g.lineWidth = 0;
-      g.drawRectangle(bx, CAT_BTN_Y2, CAT_BTN_W, CAT_BTN_H);
+    for (const node of this.preview?.overlay ?? []) {
+      context.render(node, { view: context.screenView });
     }
-    for (let i = 0; i < BG_OPTIONS.length; i++) {
-      const { r, g: gv, b } = BG_OPTIONS[i];
-      const bx = BG_BTN_X0 + i * (BG_BTN_SIZE + 5);
-      g.fillColor = new Color(r, gv, b);
-      g.lineWidth = this.bgIdx === i ? 2 : 1;
-      g.lineColor = this.bgIdx === i ? C.accent : C.border;
-      g.drawRectangle(bx, BG_BTN_Y, BG_BTN_SIZE, BG_BTN_SIZE);
-    }
-    context.render(g);
-    for (let i = 0; i < CATEGORIES_ROW1.length; i++) {
-      const bx = CAT_BTN_X0 + i * (CAT_BTN_W + 4);
-      const t = this.catBtnTexts[i];
-      t.text = CATEGORIES_ROW1[i].label;
-      t.setPosition(bx + (CAT_BTN_W - 22) / 2, CAT_BTN_Y1 + 12);
-      context.render(t);
-    }
-    for (let i = 0; i < CATEGORIES_ROW2.length; i++) {
-      const bx = CAT_BTN_X0 + i * (CAT_BTN_W + 4);
-      const t = this.catBtnTexts[CATEGORIES_ROW1.length + i];
-      t.text = CATEGORIES_ROW2[i].label;
-      t.setPosition(bx + (CAT_BTN_W - 22) / 2, CAT_BTN_Y2 + 12);
-      context.render(t);
-    }
-    for (let i = 0; i < BG_OPTIONS.length; i++) {
-      const bx = BG_BTN_X0 + i * (BG_BTN_SIZE + 5);
-      const t = this.bgBtnTexts[i];
-      t.text = BG_OPTIONS[i].label;
-      t.style.fillColor = i === 1 ? C.white : C.dim;
-      t.setPosition(bx + 7, BG_BTN_Y + 7);
-      context.render(t);
+    if (this.message.text) {
+      context.render(this.message, { view: context.screenView });
     }
   }
-  drawSidebar(context) {
-    const g = this.gSidebar;
-    g.clear();
-    g.fillColor = C.panel;
-    g.drawRectangle(0, TOOLBAR_H, SIDEBAR_W, H - TOOLBAR_H);
-    g.lineWidth = 1;
-    g.lineColor = C.border;
-    g.drawLine(SIDEBAR_W, TOOLBAR_H, SIDEBAR_W, H);
-    const keys = this.keys();
-    for (let i = 0; i < keys.length; i++) {
-      const iy = LIST_Y + (i - this.scrollOff) * ITEM_H;
-      if (iy + ITEM_H <= TOOLBAR_H || iy >= H) {
-        continue;
-      }
-      const isHeader = this.cat === 'technical' && !keys[i].includes('.');
-      const isSelected = !isHeader && keys[i] === this.key;
-      const isHover = !isHeader && this.hoverIdx === i && !isSelected;
-      if (isHeader) {
-        g.fillColor = C.infoBar;
-        g.lineWidth = 0;
-        g.drawRectangle(0, iy, SIDEBAR_W - 1, ITEM_H);
-      } else if (isSelected) {
-        g.fillColor = C.active;
-        g.lineWidth = 0;
-        g.drawRectangle(0, iy, SIDEBAR_W - 1, ITEM_H);
-      } else if (isHover) {
-        g.fillColor = C.hover;
-        g.lineWidth = 0;
-        g.drawRectangle(0, iy, SIDEBAR_W - 1, ITEM_H);
-      }
-    }
-    context.render(g);
-    for (let i = 0; i < keys.length && i - this.scrollOff < this.itemTexts.length; i++) {
-      const iy = LIST_Y + (i - this.scrollOff) * ITEM_H;
-      if (iy + ITEM_H <= TOOLBAR_H || iy >= H) {
-        continue;
-      }
-      if (this.cat === 'technical' && !keys[i].includes('.')) {
-        const ht = this.techHeaderTexts.get(keys[i]);
-        if (ht) {
-          ht.setPosition(10, iy + 12);
-          context.render(ht);
+  destroy() {
+    this.destroyed = true;
+    this.generation += 1;
+    this.closePreview();
+    this.app.input.onPointerDown.remove(this.onPointerDown);
+    this.app.input.onPointerMove.remove(this.onPointerMove);
+    this.app.input.onPointerUp.remove(this.onPointerUp);
+    this.app.input.onMouseWheel.remove(this.onWheel);
+    this.sidebar.remove();
+    this.inspector.remove();
+    this.codePanel.remove();
+    this.frame.destroy();
+    this.message.destroy();
+    this.view.destroy();
+    super.destroy();
+  }
+  // --- Sidebar --------------------------------------------------------------
+  mountSidebar() {
+    Object.assign(this.sidebar.style, {
+      position: 'fixed',
+      inset: `0 auto 0 0`,
+      width: `${SIDEBAR_WIDTH}px`,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '10px',
+      padding: '14px 12px',
+      boxSizing: 'border-box',
+      background: '#0b1019',
+      borderRight: '1px solid rgba(154, 193, 255, 0.18)',
+      color: '#f3f7ff',
+      font: `15px ${FONT}`,
+      zIndex: '5',
+    });
+    this.sidebar.setAttribute('aria-label', 'Demo assets');
+    this.search.type = 'search';
+    this.search.placeholder = `Search ${ITEMS.length} assets`;
+    this.search.setAttribute('aria-label', 'Search assets');
+    Object.assign(this.search.style, {
+      padding: '8px 10px',
+      border: '1px solid rgba(154, 193, 255, 0.32)',
+      borderRadius: '8px',
+      background: 'rgba(154, 193, 255, 0.08)',
+      color: 'inherit',
+      font: 'inherit',
+    });
+    this.search.addEventListener('input', () => this.renderList());
+    Object.assign(this.tabs.style, { display: 'flex', flexWrap: 'wrap', gap: '5px' });
+    this.tabs.setAttribute('role', 'group');
+    this.tabs.setAttribute('aria-label', 'Asset types');
+    for (const group of GROUPS) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = `${group} ${ITEMS.filter(item => item.group === group).length}`;
+      button.dataset.group = group;
+      Object.assign(button.style, chipStyle(false));
+      button.addEventListener('click', () => {
+        this.showGroup(group);
+        const first = this.visibleItems()[0];
+        if (first && first.group !== this.selected?.group) {
+          void this.select(first);
         }
-        continue;
-      }
-      const t = this.itemTexts[i - this.scrollOff];
-      if (!t) {
-        continue;
-      }
-      t.text = this.cat === 'technical' ? (keys[i].split('.')[1] ?? keys[i]) : keys[i];
-      t.style.fillColor = keys[i] === this.key ? C.white : C.dim;
-      t.setPosition(this.cat === 'technical' ? 18 : 10, iy + 10);
-      context.render(t);
+      });
+      this.tabs.append(button);
     }
-    if (keys.length === 0) {
-      this.txtEmptyCat.setPosition(60, LIST_Y + 14);
-      context.render(this.txtEmptyCat);
-    }
-  }
-  drawPreviewBg(context) {
-    const { r, g, b } = BG_OPTIONS[this.bgIdx];
-    const bg = this.gPreview;
-    bg.clear();
-    bg.fillColor = new Color(r, g, b);
-    bg.drawRectangle(PREVIEW_X, PREVIEW_Y, PREVIEW_W, PREVIEW_H);
-    context.render(bg);
-  }
-  drawPreviewContent(context) {
-    if (!this.key) {
-      this.txtNoSel.setPosition(PREVIEW_X + PREVIEW_W / 2 - 130, H / 2 - 10);
-      context.render(this.txtNoSel);
-      this.drawInfoBar(context);
-      return;
-    }
-    // Category still fetching (lazy-load): keep the sidebar interactive
-    // and show a placeholder instead of an empty preview.
-    if (!this.loadedCats.has(this.cat)) {
-      this.txtLoading.setPosition(PREVIEW_X + PREVIEW_W / 2 - 70, H / 2 - 10);
-      context.render(this.txtLoading);
-      this.drawInfoBar(context);
-      return;
-    }
-    switch (this.cat) {
-      case 'textures':
-        this.drawTexPreview(context);
-        break;
-      case 'sprites':
-        this.drawSprPreview(context);
-        break;
-      case 'spritesheets':
-        this.drawSshPreview(context);
-        break;
-      case 'svg':
-        this.drawSvgPreview(context);
-        break;
-      case 'audio':
-        this.drawAudioPreview(context, this.audioMusics);
-        break;
-      case 'sound':
-        this.drawAudioPreview(context, this.soundMusics);
-        break;
-      case 'music':
-        this.drawAudioPreview(context, this.musicMusics);
-        break;
-      case 'soundSprites':
-        this.drawSoundSpritePreview(context);
-        break;
-      case 'fonts':
-        this.drawFontPreview(context);
-        break;
-      case 'video':
-        this.drawVideoPreview(context);
-        break;
-      case 'inputPrompts':
-        this.drawInpPreview(context);
-        break;
-      case 'technical':
-        this.drawTechPreview(context);
-        break;
-      case 'backgrounds':
-        this.drawBgPreview(context);
-        break;
-      case 'cursors':
-        this.drawCursorPreview(context);
-        break;
-      case 'tilesets':
-        this.drawTilesetPreview(context);
-        break;
-      case 'vendor':
-        this.drawVendorPreview(context);
-        break;
-    }
-    this.drawInfoBar(context);
-  }
-  drawInfoBar(context) {
-    const g = this.gInfoBar;
-    g.clear();
-    g.fillColor = C.infoBar;
-    g.drawRectangle(PREVIEW_X, PREVIEW_Y, PREVIEW_W, 44);
-    g.lineWidth = 1;
-    g.lineColor = C.border;
-    g.drawLine(PREVIEW_X, PREVIEW_Y + 44, W, PREVIEW_Y + 44);
-    context.render(g);
-    if (!this.key) {
-      return;
-    }
-    this.txtKey.text = this.assetExpression();
-    this.txtKey.setPosition(PREVIEW_X + 10, PREVIEW_Y + 5);
-    context.render(this.txtKey);
-    this.txtPath.text = this.assetPath();
-    this.txtPath.setPosition(PREVIEW_X + 10, PREVIEW_Y + 24);
-    context.render(this.txtPath);
-    const ext = this.typeLabel();
-    if (ext) {
-      this.txtType.text = ext;
-      this.txtType.setPosition(PREVIEW_X + PREVIEW_W - 160, PREVIEW_Y + 15);
-      context.render(this.txtType);
-    }
-    if (!this.copyBtnBg) {
-      this.copyBtnBg = new Graphics();
-    }
-    const copyX = PREVIEW_X + PREVIEW_W - 84;
-    const copyY = PREVIEW_Y + 9;
-    this.copyBtnBg.clear();
-    this.copyBtnBg.fillColor = C.btnDark;
-    this.copyBtnBg.lineWidth = 1;
-    this.copyBtnBg.lineColor = C.border;
-    this.copyBtnBg.drawRectangle(copyX, copyY, 72, 26);
-    context.render(this.copyBtnBg);
-    this.txtCopy.setPosition(copyX + 10, copyY + 7);
-    context.render(this.txtCopy);
-  }
-  previewCenter() {
-    return {
-      cx: PREVIEW_X + PREVIEW_W / 2,
-      cy: PREVIEW_Y + 44 + (PREVIEW_H - 44) / 2,
-      maxW: PREVIEW_W - 80,
-      maxH: PREVIEW_H - 80,
-    };
-  }
-  fitSprite(sprite, maxW, maxH, cx, cy) {
-    const tex = sprite.texture;
-    if (!tex) {
-      return;
-    }
-    const tw = tex.width || 128;
-    const th = tex.height || 128;
-    const scale = Math.min(maxW / tw, maxH / th, 3);
-    sprite.setScale(scale);
-    sprite.setPosition(cx, cy);
-  }
-  drawTexPreview(context) {
-    const sprite = this.texSprites.get(this.key ?? '');
-    if (!sprite) {
-      return;
-    }
-    const { cx, cy, maxW, maxH } = this.previewCenter();
-    this.fitSprite(sprite, maxW, maxH, cx, cy);
-    context.render(sprite);
-  }
-  drawSprPreview(context) {
-    const ss = this.sprSheets.get(this.key ?? '');
-    if (!ss) {
-      return;
-    }
-    const frames = [...ss.sprites.keys()];
-    if (!frames.length) {
-      return;
-    }
-    const sprite = ss.getFrameSprite(frames[this.frameIdx % frames.length]);
-    sprite.setAnchor(0.5);
-    const { cx, cy, maxW, maxH } = this.previewCenter();
-    this.fitSprite(sprite, maxW, maxH - 50, cx, cy);
-    context.render(sprite);
-    this.drawAnimControls(context, frames.length);
-  }
-  drawSshPreview(context) {
-    const ss = this.sshSheets.get(this.key ?? '');
-    if (!ss) {
-      return;
-    }
-    const frames = [...ss.sprites.keys()];
-    if (!frames.length) {
-      return;
-    }
-    const sprite = ss.getFrameSprite(frames[this.frameIdx % frames.length]);
-    sprite.setAnchor(0.5);
-    const { cx, cy, maxW, maxH } = this.previewCenter();
-    this.fitSprite(sprite, maxW, maxH - 50, cx, cy);
-    context.render(sprite);
-    this.drawAnimControls(context, frames.length);
-  }
-  drawInpPreview(context) {
-    const ss = this.inpSheets.get(this.key ?? '');
-    if (ss) {
-      const frames = [...ss.sprites.keys()];
-      if (frames.length > 0) {
-        const sprite = ss.getFrameSprite(frames[this.frameIdx % frames.length]);
-        sprite.setAnchor(0.5);
-        const { cx, cy, maxW, maxH } = this.previewCenter();
-        this.fitSprite(sprite, maxW, maxH - 50, cx, cy);
-        context.render(sprite);
-        this.drawAnimControls(context, frames.length);
+    Object.assign(this.list.style, { flex: '1 1 auto', overflowY: 'auto', listStyle: 'none', margin: '0', padding: '0' });
+    this.list.setAttribute('aria-label', 'Assets');
+    this.list.addEventListener('keydown', event => {
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') {
         return;
       }
-    }
+      event.preventDefault();
+      const visible = this.visibleItems();
+      const index = visible.findIndex(item => item === this.selected);
+      const next = visible[(index + (event.key === 'ArrowDown' ? 1 : -1) + visible.length) % visible.length];
+      if (next) {
+        void this.select(next);
+        this.buttons.get(next.id)?.focus();
+      }
+    });
+    this.sidebar.append(this.search, this.tabs, this.list);
+    document.body.append(this.sidebar);
   }
-  drawSvgPreview(context) {
-    const sprite = this.svgSprites.get(this.key ?? '');
-    if (!sprite) {
-      return;
+  showGroup(group) {
+    this.group = group;
+    this.search.value = '';
+    for (const button of this.tabs.querySelectorAll('button')) {
+      Object.assign(button.style, chipStyle(button.dataset.group === group));
+      button.setAttribute('aria-pressed', String(button.dataset.group === group));
     }
-    const { cx, cy, maxW, maxH } = this.previewCenter();
-    this.fitSprite(sprite, maxW, maxH, cx, cy);
-    context.render(sprite);
+    this.renderList();
   }
-  drawAudioPreview(context, musicMap) {
-    if (!this.audioG) {
-      this.audioG = new Graphics();
-    }
-    const music = musicMap.get(this.key ?? '');
-    const isPlaying = music ? this.previewIsPlaying() : false;
-    const g = this.audioG;
-    const { cx, cy } = this.previewCenter();
-    const bx = cx - 50;
-    const by = cy - 28;
-    g.clear();
-    g.fillColor = isPlaying ? C.btnGreen : C.btnDark;
-    g.lineWidth = 1;
-    g.lineColor = C.border;
-    g.drawRectangle(bx, by, 100, 56);
-    context.render(g);
-    this.txtAudioIcon.text = isPlaying ? '⏸' : '▶';
-    this.txtAudioIcon.setPosition(bx + (isPlaying ? 30 : 34), by + 10);
-    context.render(this.txtAudioIcon);
-    this.txtMeta.text = this.typeLabel();
-    this.txtMeta.setPosition(cx - 15, by + 68);
-    context.render(this.txtMeta);
+  visibleItems() {
+    const query = this.search.value.trim().toLowerCase();
+    return query
+      ? ITEMS.filter(item => item.name.toLowerCase().includes(query) || item.key.toLowerCase().includes(query))
+      : ITEMS.filter(item => item.group === this.group);
   }
-  drawSoundSpritePreview(context) {
-    if (!this.audioG) {
-      this.audioG = new Graphics();
-    }
-    const music = this.soundSpriteAudio.get(this.key ?? '');
-    const data = this.soundSpriteData.get(this.key ?? '');
-    const isPlaying = music ? this.previewIsPlaying() : false;
-    const sprites = data?.sprites ?? {};
-    const g = this.audioG;
-    const { cx } = this.previewCenter();
-    const bx = cx - 50;
-    const by = PREVIEW_Y + 56;
-    g.clear();
-    g.fillColor = isPlaying ? C.btnGreen : C.btnDark;
-    g.lineWidth = 1;
-    g.lineColor = C.border;
-    g.drawRectangle(bx, by, 100, 44);
-    context.render(g);
-    this.txtAudioIcon.text = isPlaying ? '⏸' : '▶';
-    this.txtAudioIcon.setPosition(bx + (isPlaying ? 30 : 34), by + 6);
-    context.render(this.txtAudioIcon);
-    let y = by + 64;
-    for (const [name, info] of Object.entries(sprites)) {
-      this.txtMeta.text = `${name}  start:${info.start.toFixed(3)}s  dur:${info.duration.toFixed(3)}s`;
-      this.txtMeta.setPosition(PREVIEW_X + 30, y);
-      context.render(this.txtMeta);
-      y += 20;
-      if (y > H - 20) {
-        break;
+  renderList() {
+    const searching = this.search.value.trim() !== '';
+    this.buttons.clear();
+    this.list.replaceChildren(
+      ...this.visibleItems().map(item => {
+        const row = document.createElement('li');
+        const button = document.createElement('button');
+        const glyph = document.createElement('span');
+        const label = document.createElement('span');
+        button.type = 'button';
+        button.dataset.asset = item.id;
+        glyph.textContent = GROUP_GLYPH[item.kind];
+        glyph.setAttribute('aria-hidden', 'true');
+        Object.assign(glyph.style, { flex: '0 0 34px', font: `600 10px ${MONO}`, color: '#7fb8ff', textAlign: 'center' });
+        label.textContent = searching ? `${item.name} - ${item.group}` : item.name;
+        Object.assign(label.style, { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' });
+        Object.assign(button.style, {
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          width: '100%',
+          minHeight: '34px',
+          padding: '4px 6px',
+          textAlign: 'left',
+          border: '0',
+          borderRadius: '7px',
+          background: 'transparent',
+          color: 'inherit',
+          font: 'inherit',
+          cursor: 'pointer',
+        });
+        button.append(glyph, label);
+        button.addEventListener('click', () => void this.select(item));
+        this.buttons.set(item.id, button);
+        row.append(button);
+        return row;
+      }),
+    );
+    this.markSelection();
+  }
+  markSelection() {
+    for (const [id, button] of this.buttons) {
+      const current = id === this.selected?.id;
+      button.style.background = current ? 'rgba(127, 184, 255, 0.26)' : 'transparent';
+      button.setAttribute('aria-current', String(current));
+      if (current) {
+        button.scrollIntoView({ block: 'nearest' });
       }
     }
   }
-  drawFontPreview(context) {
-    const family = this.fontFamilies.get(this.key ?? '');
-    if (!family) {
-      this.txtMeta.text = `Font: ${this.key}\n${this.assetPath()}`;
-      this.txtMeta.setPosition(PREVIEW_X + 40, PREVIEW_Y + 80);
-      context.render(this.txtMeta);
-      return;
-    }
-    let t = this.fontSampleTexts.get(this.key ?? '');
-    if (!t) {
-      t = new Text('AaBbCc 123 !?', { fontFamily: family, fontSize: 48, fillColor: C.white });
-      this.fontSampleTexts.set(this.key ?? '', t);
-    }
-    t.style.fillColor = this.bgIdx === 0 ? C.black : C.white;
-    t.setPosition(PREVIEW_X + 40, PREVIEW_Y + 120);
-    context.render(t);
-    let t2 = this.fontSampleTexts.get(`${this.key}_sm`);
-    if (!t2) {
-      t2 = new Text('The quick brown fox jumps over the lazy dog', { fontFamily: family, fontSize: 20, fillColor: C.dim });
-      this.fontSampleTexts.set(`${this.key}_sm`, t2);
-    }
-    t2.style.fillColor = this.bgIdx === 0 ? C.dimDark : C.dim;
-    t2.setPosition(PREVIEW_X + 40, PREVIEW_Y + 190);
-    context.render(t2);
+  // --- Inspector ------------------------------------------------------------
+  mountInspector() {
+    Object.assign(this.inspector.style, {
+      position: 'fixed',
+      inset: `0 0 0 auto`,
+      width: `${INSPECTOR_WIDTH}px`,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '10px',
+      padding: '14px',
+      boxSizing: 'border-box',
+      overflowY: 'auto',
+      background: '#0b1019',
+      borderLeft: '1px solid rgba(154, 193, 255, 0.18)',
+      color: '#dce8ff',
+      font: `14px ${FONT}`,
+      zIndex: '5',
+    });
+    this.inspector.setAttribute('aria-label', 'Selected asset');
+    Object.assign(this.heading.style, { margin: '0', fontSize: '19px', color: '#ffffff' });
+    Object.assign(this.facts.style, { display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '3px 10px', margin: '0', fontSize: '13px' });
+    Object.assign(this.resident.style, { marginTop: 'auto', fontSize: '12px', color: '#8aa0c4' });
+    this.inspector.append(this.heading, this.facts, this.panelSlot, this.resident);
+    document.body.append(this.inspector);
   }
-  drawVideoPreview(context) {
-    this.txtMeta.text = `VIDEO\n\nKey: assets.video.${this.key}\nURL: ${this.assetPath()}\n\nOpen the URL in your browser to preview.`;
-    this.txtMeta.setPosition(PREVIEW_X + 40, PREVIEW_Y + 80);
-    context.render(this.txtMeta);
-  }
-  drawTechPreview(context) {
-    if (!this.key?.includes('.')) {
-      return;
-    }
-    const sprite = this.techSprites.get(this.key);
-    if (!sprite) {
-      return;
-    }
-    const { cx, cy, maxW, maxH } = this.previewCenter();
-    this.fitSprite(sprite, maxW, maxH - 28, cx, cy - 14);
-    context.render(sprite);
-    const subcat = this.key.split('.')[0];
-    const purpose = TECH_PURPOSE[subcat] ?? '';
-    if (purpose) {
-      this.txtTechPurpose.text = purpose;
-      this.txtTechPurpose.setPosition(PREVIEW_X + 16, PREVIEW_Y + PREVIEW_H - 22);
-      context.render(this.txtTechPurpose);
-    }
-  }
-  drawBgPreview(context) {
-    const sprite = this.bgSprites.get(this.key ?? '');
-    if (!sprite) {
-      return;
-    }
-    const { cx, cy, maxW, maxH } = this.previewCenter();
-    this.fitSprite(sprite, maxW, maxH, cx, cy);
-    context.render(sprite);
-  }
-  drawCursorPreview(context) {
-    const sprite = this.cursorSprites.get(this.key ?? '');
-    if (!sprite) {
-      return;
-    }
-    const { cx, cy, maxW, maxH } = this.previewCenter();
-    this.fitSprite(sprite, Math.min(maxW, 256), Math.min(maxH, 256), cx, cy);
-    context.render(sprite);
-  }
-  drawTilesetPreview(context) {
-    const sprite = this.tilesetSprites.get(this.key ?? '');
-    if (!sprite) {
-      return;
-    }
-    const entry = assets.demo.tilesets[this.key ?? ''];
-    const { cx, cy, maxW, maxH } = this.previewCenter();
-    this.fitSprite(sprite, maxW, maxH - 30, cx, cy - 15);
-    context.render(sprite);
-    if (entry?.tileWidth && entry?.tileHeight) {
-      this.txtMeta.text = `tile: ${entry.tileWidth}×${entry.tileHeight}px`;
-      this.txtMeta.setPosition(PREVIEW_X + 16, PREVIEW_Y + PREVIEW_H - 22);
-      context.render(this.txtMeta);
-    }
-  }
-  drawVendorPreview(context) {
-    const data = this.vendorData.get(this.key ?? '');
-    if (!data) {
-      this.txtMeta.text = `Loading: ${this.assetPath()}`;
-      this.txtMeta.setPosition(PREVIEW_X + 30, PREVIEW_Y + 80);
-      context.render(this.txtMeta);
-      return;
-    }
-    const packs = data.packs ?? [];
-    const lines = [
-      `License: ${data.license ?? 'Unknown'}`,
-      `Packs: ${packs.length}`,
-      '',
-      ...packs.slice(0, 14).map(p => `  ${p.slug}  (${Object.values(p.fileCountByExtension ?? {}).reduce((a, b) => a + b, 0)} files)`),
+  renderFacts(item, facts) {
+    const manifest = this.manifest.get(item.key);
+    const rows = [
+      ['Asset', `assets.${item.key}`],
+      ['File', fileName(assets[item.key].source)],
+      ...(manifest ? [['Size', formatBytes(manifest.bytes + (item.atlasKey ? (this.manifest.get(item.atlasKey)?.bytes ?? 0) : 0))]] : []),
+      ...facts,
     ];
-    this.txtMeta.text = lines.join('\n');
-    this.txtMeta.setPosition(PREVIEW_X + 30, PREVIEW_Y + 60);
-    context.render(this.txtMeta);
+    this.heading.textContent = item.name;
+    this.facts.replaceChildren(
+      ...rows.flatMap(([term, value]) => {
+        const dt = document.createElement('dt');
+        const dd = document.createElement('dd');
+        dt.textContent = term;
+        dd.textContent = value;
+        dt.style.color = '#8aa0c4';
+        Object.assign(dd.style, { margin: '0', overflowWrap: 'anywhere', color: '#f3f7ff' });
+        return [dt, dd];
+      }),
+    );
   }
-  drawAnimControls(context, frameCount) {
-    if (!this.animG) {
-      this.animG = new Graphics();
+  /** Lists what the loader holds right now: the manifest plus the current selection, never an earlier one. */
+  renderResident() {
+    const rows = this.app.loader.inspect();
+    const summary = document.createElement('summary');
+    const list = document.createElement('ul');
+    summary.textContent = `Loader holds ${rows.length} asset${rows.length === 1 ? '' : 's'}`;
+    summary.style.cursor = 'pointer';
+    Object.assign(list.style, { margin: '6px 0 0', paddingLeft: '16px', font: `11px ${MONO}` });
+    list.append(
+      ...rows.map(row => {
+        const entry = document.createElement('li');
+        entry.textContent = `${fileName(row.locator)} (${row.state})`;
+        return entry;
+      }),
+    );
+    this.resident.dataset.residentCount = String(rows.length);
+    this.resident.replaceChildren(summary, list);
+  }
+  // --- Code and data panel --------------------------------------------------
+  mountCodePanel() {
+    const header = document.createElement('div');
+    const copy = document.createElement('button');
+    const close = document.createElement('button');
+    Object.assign(this.codePanel.style, {
+      position: 'fixed',
+      left: `${PREVIEW.x + 12}px`,
+      width: `${PREVIEW.width - 24}px`,
+      bottom: '12px',
+      maxHeight: '420px',
+      display: 'none',
+      flexDirection: 'column',
+      borderRadius: '10px',
+      border: '1px solid rgba(154, 193, 255, 0.3)',
+      background: 'rgba(8, 12, 20, 0.96)',
+      color: '#f3f7ff',
+      font: `14px ${FONT}`,
+      zIndex: '6',
+    });
+    this.codePanel.setAttribute('aria-label', 'Code');
+    Object.assign(header.style, { display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px' });
+    this.codeTitle.style.flex = '1 1 auto';
+    for (const [button, label] of [
+      [copy, 'Copy'],
+      [close, 'Close'],
+    ]) {
+      button.type = 'button';
+      button.textContent = label;
+      Object.assign(button.style, chipStyle(false));
     }
-    const g = this.animG;
-    const bx = PREVIEW_X + 16;
-    const by = H - 48;
-    g.clear();
-    g.fillColor = this.animPlaying ? C.active : C.btnDark;
-    g.lineWidth = 1;
-    g.lineColor = C.border;
-    g.drawRectangle(bx, by, 88, 30);
-    context.render(g);
-    this.txtAnimPlay.text = this.animPlaying ? '⏸ PAUSE' : '▶ PLAY';
-    this.txtAnimPlay.setPosition(bx + 14, by + 8);
-    context.render(this.txtAnimPlay);
-    this.txtAnimFrame.text = `${(this.frameIdx % frameCount) + 1} / ${frameCount}`;
-    this.txtAnimFrame.setPosition(PREVIEW_X + 112, by + 10);
-    context.render(this.txtAnimFrame);
+    copy.addEventListener('click', () => {
+      void navigator.clipboard.writeText(this.code.textContent ?? '').then(
+        () => {
+          copy.textContent = 'Copied';
+          console.log(`Copied the ${this.codeTitle.textContent ?? 'code'} to the clipboard`);
+        },
+        error => console.warn('The clipboard refused the copy:', error),
+      );
+    });
+    copy.addEventListener('blur', () => (copy.textContent = 'Copy'));
+    close.addEventListener('click', () => this.hideCode());
+    Object.assign(this.code.style, {
+      margin: '0',
+      padding: '0 12px 12px',
+      overflow: 'auto',
+      font: `13px/1.45 ${MONO}`,
+      whiteSpace: 'pre',
+      color: '#dce8ff',
+    });
+    this.code.tabIndex = 0;
+    header.append(this.codeTitle, copy, close);
+    this.codePanel.append(header, this.code);
+    document.body.append(this.codePanel);
+  }
+  showCode() {
+    if (this.preview) {
+      this.openCodePanel('Code', this.preview.snippet());
+    }
+  }
+  async showData() {
+    const preview = this.preview;
+    const generation = this.generation;
+    if (!preview?.data) {
+      return;
+    }
+    this.openCodePanel('Data', 'Loading...');
+    try {
+      const data = await preview.data();
+      if (generation !== this.generation) {
+        return;
+      }
+      const text = JSON.stringify(data, null, 2);
+      const limit = 60_000;
+      this.openCodePanel('Data', text.length > limit ? `${text.slice(0, limit)}\n... ${text.length - limit} more characters` : text);
+    } catch (error) {
+      if (generation === this.generation && !isAbort(error)) {
+        this.openCodePanel('Data', `Could not load the data: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+  }
+  openCodePanel(title, text) {
+    this.codeTitle.textContent = title;
+    this.code.textContent = text;
+    this.codePanel.style.display = 'flex';
+  }
+  hideCode() {
+    this.codePanel.style.display = 'none';
   }
 }
+const chipStyle = active => ({
+  padding: '4px 9px',
+  border: `1px solid ${active ? 'rgba(127, 184, 255, 0.7)' : 'rgba(154, 193, 255, 0.28)'}`,
+  borderRadius: '999px',
+  background: active ? 'rgba(127, 184, 255, 0.24)' : 'transparent',
+  color: active ? '#ffffff' : '#c4d2ec',
+  font: `600 12px ${FONT}`,
+  cursor: 'pointer',
+});
+// --- Previews ---------------------------------------------------------------
+const openPreview = context => {
+  switch (context.item.kind) {
+    case 'texture':
+    case 'svg':
+      return openTexture(context);
+    case 'spritesheet':
+      return openSpritesheet(context);
+    case 'tiled':
+    case 'ldtk':
+      return openMap(context);
+    case 'sound':
+    case 'music':
+      return openAudio(context);
+    case 'video':
+      return openVideo(context);
+    case 'font':
+    case 'bmFont':
+      return openFont(context);
+    case 'data':
+      return openData(context);
+  }
+};
+const BACKDROPS = { Checker: null, Dark: new Color(32, 37, 50), Light: new Color(236, 239, 244), Black: new Color(0, 0, 0) };
+const BACKDROP_NAMES = Object.keys(BACKDROPS);
+/** A transparency checkerboard behind a `width` x `height` image. */
+const checkerboard = (width, height) => {
+  const graphics = new Graphics();
+  const cell = Math.max(4, Math.round(Math.max(width, height) / 32));
+  graphics.fillColor = new Color(58, 64, 78);
+  graphics.drawRectangle(0, 0, width, height);
+  graphics.fillColor = new Color(86, 93, 110);
+  for (let y = 0; y < height; y += cell) {
+    for (let x = (y / cell) % 2 === 0 ? 0 : cell; x < width; x += cell * 2) {
+      graphics.drawRectangle(x, y, Math.min(cell, width - x), Math.min(cell, height - y));
+    }
+  }
+  return graphics;
+};
+const zoomSlider = (value = 1) => slider('Zoom', { min: 0.05, max: 16, step: 0.05, value, format: zoom => `${Math.round(zoom * 100)}%` });
+const openTexture = async ({ scene, item, scope }) => {
+  const descriptor = assets[item.key];
+  const svg = descriptor.type === 'svg';
+  // An SVG loads as an image element; a texture over it is this preview's to destroy.
+  const texture = svg ? new Texture(await scope.load(descriptor)) : await scope.load(descriptor);
+  const sprite = new Sprite(texture);
+  const backdrop = checkerboard(texture.width, texture.height);
+  const state = { zoom: 1, nearest: false, backdrop: 'Checker' };
+  return {
+    world: [backdrop, sprite],
+    overlay: [],
+    bounds: { width: texture.width, height: texture.height },
+    facts: [
+      ['Pixels', `${texture.width} x ${texture.height}`],
+      ['Format', svg ? 'SVG, rasterized at its intrinsic size' : (fileName(descriptor.source).split('.').pop() ?? '').toUpperCase()],
+    ],
+    mount(host) {
+      const panel = host({
+        title: 'Texture',
+        controls: {
+          zoom: zoomSlider(),
+          filtering: choice('Filtering', ['Linear', 'Nearest']),
+          backdrop: choice('Backdrop', BACKDROP_NAMES),
+        },
+        actions: { Fit: () => scene.fit(), '100%': () => panel.set('zoom', 1), Code: () => scene.showCode() },
+        onChange(key, _value, values) {
+          state.zoom = values.zoom;
+          state.nearest = values.filtering === 'Nearest';
+          state.backdrop = values.backdrop;
+          if (key === 'zoom') {
+            scene.setZoom(values.zoom);
+          } else if (key === 'filtering') {
+            // Sampling is per texture handle; this preview's scope owns this one.
+            texture.scaleMode = state.nearest ? ScaleModes.Nearest : ScaleModes.Linear;
+          } else if (key === 'backdrop') {
+            backdrop.visible = values.backdrop === 'Checker';
+            scene.setBackdrop(BACKDROPS[values.backdrop] ?? new Color(32, 37, 50));
+          }
+        },
+      });
+      scene.bindZoom(panel);
+    },
+    snippet: () =>
+      textureSnippet(item, {
+        zoom: state.zoom,
+        nearest: state.nearest,
+        width: texture.width,
+        height: texture.height,
+      }),
+    dispose() {
+      sprite.destroy();
+      backdrop.destroy();
+      if (svg) {
+        texture.destroy();
+      }
+    },
+  };
+};
+const openSpritesheet = async ({ scene, item, scope }) => {
+  const [texture, data] = await Promise.all([scope.load(assets[item.key]), scope.load(assets[item.atlasKey])]);
+  const sheet = new Spritesheet(texture, data);
+  const names = [...sheet.frames.keys()];
+  const animations = [...sheet.animations.keys()];
+  const atlas = new Sprite(texture);
+  const backdrop = checkerboard(texture.width, texture.height);
+  const outlines = new Graphics();
+  const strip = new Graphics();
+  const frameLabel = new Text('', { fontSize: 15, fillColor: new Color(200, 214, 236) });
+  const animationLabel = new Text('', { fontSize: 15, fillColor: new Color(200, 214, 236) });
+  const animated = new AnimatedSprite(texture).setAnchor(0.5);
+  const selectedSprite = new Sprite(texture).setAnchor(0.5);
+  const STRIP_Y = PREVIEW.height - 208;
+  const boxWidth = (PREVIEW.width - 36) / 2;
+  const frameBox = { x: PREVIEW.x + 12, y: STRIP_Y, width: boxWidth, height: 196 };
+  const animationBox = { x: frameBox.x + boxWidth + 12, y: STRIP_Y, width: boxWidth, height: 196 };
+  const state = {
+    animation: animations.length > 0 ? animations[0] : 'Frame range',
+    first: 0,
+    last: Math.min(names.length - 1, 1),
+    selected: 0,
+    fps: 8,
+    loop: true,
+    scale: 1,
+    bounds: true,
+  };
+  const clipFrames = () =>
+    state.animation === 'Frame range'
+      ? names.slice(Math.min(state.first, state.last), Math.max(state.first, state.last) + 1)
+      : [...sheet.getAnimationFrameNames(state.animation)];
+  const fitInBox = (sprite, rect, box, scale) => {
+    // The two-line label takes the top 44 px of the box.
+    const room = box.height - 52;
+    sprite.setScale(Math.min(scale, room / rect.height)).setPosition(box.x + box.width / 2, box.y + 44 + (box.height - 44) / 2);
+  };
+  const redraw = () => {
+    const range = new Set(clipFrames());
+    outlines.clear();
+    if (state.bounds) {
+      for (const [name, rect] of sheet.frames) {
+        const selected = names.indexOf(name) === state.selected;
+        outlines.lineWidth = selected ? 3 : 1;
+        outlines.lineColor = selected
+          ? new Color(255, 214, 102)
+          : range.has(name)
+            ? new Color(127, 220, 160, 0.95)
+            : new Color(127, 184, 255, 0.55);
+        outlines.drawRectangle(rect.x, rect.y, rect.width, rect.height);
+      }
+    }
+    const selectedName = names[state.selected];
+    const selectedRect = sheet.getFrame(selectedName);
+    selectedSprite.setTextureFrame(selectedRect);
+    fitInBox(selectedSprite, selectedRect, frameBox, 4);
+    frameLabel.text = `Frame ${state.selected + 1}/${names.length}
+${selectedName}, ${selectedRect.width} x ${selectedRect.height}`;
+    const frames = clipFrames().map(name => sheet.getFrame(name));
+    animated.setClips({ preview: { frames, fps: state.fps, repeat: state.loop ? -1 : 1 } }).play('preview', { restart: true });
+    fitInBox(animated, frames[0], animationBox, state.scale);
+    animationLabel.text = `Animation: ${state.animation === 'Frame range' ? `frames ${Math.min(state.first, state.last) + 1}-${Math.max(state.first, state.last) + 1}` : state.animation}
+${frames.length} frames, ${state.fps} fps${state.loop ? ', loop' : ''}`;
+  };
+  strip.fillColor = new Color(11, 16, 25, 0.94);
+  strip.drawRectangle(PREVIEW.x, STRIP_Y - 12, PREVIEW.width, PREVIEW.height - STRIP_Y + 12);
+  strip.fillColor = new Color(24, 30, 44);
+  for (const box of [frameBox, animationBox]) {
+    strip.drawRectangle(box.x, box.y, box.width, box.height);
+  }
+  frameLabel.setPosition(frameBox.x + 10, frameBox.y + 6);
+  animationLabel.setPosition(animationBox.x + 10, animationBox.y + 6);
+  redraw();
+  return {
+    world: [backdrop, atlas, outlines],
+    overlay: [strip, selectedSprite, animated, frameLabel, animationLabel],
+    // Fit the atlas into the area above the frame strip.
+    bounds: { width: texture.width, height: texture.height * (PREVIEW.height / (STRIP_Y - 24)) },
+    facts: [
+      ['Atlas', `${texture.width} x ${texture.height} px`],
+      ['Frames', String(names.length)],
+      ['Animations', animations.length > 0 ? animations.join(', ') : 'none in the atlas data - pick a frame range'],
+    ],
+    mount(host) {
+      const last = Math.max(0, names.length - 1);
+      const frameName = index => `#${Math.round(index) + 1}`;
+      const controls = {
+        zoom: zoomSlider(),
+        animation: choice('Animation', ['Frame range', ...animations], state.animation),
+        first: slider('First frame', { min: 0, max: last, step: 1, value: state.first, format: frameName }),
+        last: slider('Last frame', { min: 0, max: last, step: 1, value: state.last, format: frameName }),
+        fps: slider('FPS', { min: 1, max: 30, step: 1, value: state.fps, format: fps => `${fps}` }),
+        loop: toggle('Loop', state.loop),
+        scale: slider('Scale', { min: 0.25, max: 6, step: 0.25, value: state.scale, format: scale => `${scale}x` }),
+        bounds: toggle('Frame bounds', state.bounds),
+      };
+      const handle = host({
+        title: 'Spritesheet',
+        controls,
+        actions: {
+          'Range from selected': () => handle.set('first', state.selected),
+          'Range to selected': () => handle.set('last', state.selected),
+          Fit: () => scene.fit(),
+          Code: () => scene.showCode(),
+          Data: () => void scene.showData(),
+        },
+        onChange(key, _value, values) {
+          if (key === 'zoom') {
+            scene.setZoom(values.zoom);
+            return;
+          }
+          Object.assign(state, {
+            animation: values.animation,
+            first: values.first,
+            last: values.last,
+            fps: values.fps,
+            loop: values.loop,
+            scale: values.scale,
+            bounds: values.bounds,
+          });
+          redraw();
+        },
+      });
+      scene.bindZoom(handle);
+      handle.status('Click a frame in the atlas to select it.');
+    },
+    update(delta) {
+      animated.update(delta);
+    },
+    tap(x, y) {
+      const index = names.findIndex(name => sheet.getFrame(name).contains(x, y));
+      if (index >= 0) {
+        state.selected = index;
+        redraw();
+        console.log(`Frame ${index + 1}: ${names[index]}`);
+      }
+    },
+    snippet: () => spritesheetSnippet(item, { ...state, frames: clipFrames() }),
+    data: () => Promise.resolve(data),
+    dispose() {
+      animated.destroy();
+      selectedSprite.destroy();
+      atlas.destroy();
+      backdrop.destroy();
+      outlines.destroy();
+      strip.destroy();
+      frameLabel.destroy();
+      animationLabel.destroy();
+      sheet.destroy();
+    },
+  };
+};
+const openMap = async ({ scene, item, scope }) => {
+  const source = assets[item.key].source;
+  const ldtk = item.kind === 'ldtk';
+  // Tileset images resolve relative to the map file, which is why the map
+  // loads from the catalog's absolute URL through the format's own type.
+  const world = ldtk ? await scope.load(Asset.type('ldtkMap', source)) : null;
+  const levels = world ? world.levels : [await scope.load(Asset.type('tileMap', source))];
+  const state = { level: 0, objects: true, zoom: 1, layers: new Map() };
+  const objects = new Graphics();
+  let node = null;
+  const preview = {
+    world: [],
+    overlay: [],
+    bounds: null,
+    facts: [],
+    mount(host) {
+      const map = levels[state.level];
+      const layerControls = Object.fromEntries(
+        map.renderableLayers.map(layer => [`layer:${layer.name}`, toggle(`Layer ${layer.name}`, true)]),
+      );
+      const panel = host({
+        title: ldtk ? 'LDtk world' : 'Tiled map',
+        controls: {
+          zoom: zoomSlider(),
+          ...(levels.length > 1
+            ? {
+                level: choice(
+                  'Level',
+                  levels.map(level => level.name),
+                ),
+              }
+            : {}),
+          objects: toggle('Object shapes', state.objects),
+          ...layerControls,
+        },
+        actions: { Fit: () => scene.fit(), Code: () => scene.showCode(), Data: () => void scene.showData() },
+        onChange(key, value) {
+          if (key === 'zoom') {
+            state.zoom = value;
+            scene.setZoom(value);
+          } else if (key === 'level') {
+            state.level = Math.max(
+              0,
+              levels.findIndex(level => level.name === value),
+            );
+            build();
+            scene.fit();
+          } else if (key === 'objects') {
+            state.objects = value;
+            objects.visible = state.objects;
+          } else if (String(key).startsWith('layer:')) {
+            const name = String(key).slice('layer:'.length);
+            const layerNode = node?.getLayerNode(name);
+            state.layers.set(name, value);
+            if (layerNode) {
+              layerNode.visible = value;
+            }
+          }
+        },
+      });
+      scene.bindZoom(panel);
+    },
+    snippet: () => mapSnippet(item, { level: levels[state.level].name, zoom: state.zoom, ldtk }),
+    data: async () => scope.load(assets[item.key]),
+    dispose() {
+      node?.destroy();
+      objects.destroy();
+    },
+  };
+  const build = () => {
+    const map = levels[state.level];
+    node?.destroy();
+    node = new TileMapNode(map);
+    objects.clear();
+    objects.lineWidth = 2;
+    objects.lineColor = new Color(255, 191, 82, 0.9);
+    objects.fillColor = new Color(255, 191, 82, 0.16);
+    let count = 0;
+    for (const layer of map.objectLayers) {
+      for (const object of layer.objects) {
+        count += 1;
+        if (object.kind === ObjectKind.Point) {
+          objects.drawCircle(object.x, object.y, 6);
+        } else if (object.kind === ObjectKind.Ellipse) {
+          objects.drawEllipse(object.x + object.width / 2, object.y + object.height / 2, object.width / 2, object.height / 2);
+        } else {
+          objects.drawRectangle(object.x, object.y, object.width, object.height);
+        }
+      }
+    }
+    objects.visible = state.objects;
+    preview.world.splice(0, preview.world.length, node, objects);
+    Object.assign(preview, {
+      bounds: { width: map.pixelWidth ?? (map.width ?? 0) * map.tileWidth, height: map.pixelHeight ?? (map.height ?? 0) * map.tileHeight },
+      facts: [
+        ['Format', ldtk ? 'LDtk world' : 'Tiled map'],
+        ...(levels.length > 1 ? [['Levels', levels.map(level => level.name).join(', ')]] : []),
+        ['Tiles', `${map.width ?? 'unbounded'} x ${map.height ?? 'unbounded'} at ${map.tileWidth} x ${map.tileHeight} px`],
+        ['Layers', map.renderableLayers.map(layer => layer.name).join(', ') || 'none'],
+        ['Objects', String(count)],
+      ],
+    });
+  };
+  build();
+  return preview;
+};
+const openAudio = async ({ scene, item, scope, isCurrent }) => {
+  const descriptor = assets[item.key];
+  const music = descriptor.type === 'music';
+  // A sound sprite ships its clip table as JSON next to the audio file.
+  const spriteTable = demoAssetCategories[item.key] === 'soundSprites' ? descriptor.source.replace(/\.[a-z0-9]+$/, '.json') : null;
+  const [playable, table] = await Promise.all([
+    music ? scope.load(descriptor) : scope.load(descriptor),
+    spriteTable ? scope.load(Asset.type('json', spriteTable)) : Promise.resolve(null),
+  ]);
+  const clips = table ? Object.keys(table) : [];
+  const audio = scene.app.audio;
+  const state = { clip: clips[0] ?? '', volume: 0.8, loop: false };
+  let voice = null;
+  let pendingStart = null;
+  let status = null;
+  let reported = '';
+  const waveform = new Graphics();
+  const playhead = new Graphics();
+  const live = new Graphics();
+  const analyser = new AudioAnalyser();
+  const bright = new Color(127, 184, 255);
+  const dim = new Color(127, 184, 255, 0.25);
+  const muted = new Color(138, 160, 196);
+  const buffer = music ? null : playable.audioBuffer;
+  const channels = buffer?.numberOfChannels ?? 0;
+  const channelNames = channels === 2 ? ['L', 'R'] : Array.from({ length: channels }, (_, channel) => String(channel + 1));
+  const wave = { width: PREVIEW.width - 80, height: channels > 1 ? 300 : 220, gap: 16, left: PREVIEW.x + 40 };
+  // A sound keeps its overview on top and the live signal in a strip below;
+  // streamed music has no overview, so the live signal takes the middle.
+  const scopeHeight = buffer ? 100 : 220;
+  const top = buffer ? PREVIEW_CENTER.y - (wave.height + 48 + scopeHeight) / 2 : PREVIEW_CENTER.y - scopeHeight / 2;
+  const lane = { height: (wave.height - wave.gap * Math.max(0, channels - 1)) / Math.max(1, channels), top };
+  const strip = { top: buffer ? top + wave.height + 48 : top, height: scopeHeight };
+  const label = (text, y) =>
+    new Text(text, { fontSize: 14, fontFamily: MONO, fillColor: muted }).setAnchor(1, 0.5).setPosition(wave.left - 10, y);
+  const labels = [
+    ...(channels > 1
+      ? channelNames.map((name, channel) => label(name, lane.top + channel * (lane.height + wave.gap) + lane.height / 2))
+      : []),
+    ...(buffer
+      ? [
+          new Text('Live signal', { fontSize: 14, fontFamily: MONO, fillColor: muted })
+            .setAnchor(0, 1)
+            .setPosition(wave.left, strip.top - 8),
+        ]
+      : []),
+  ];
+  const caption = new Text(music ? 'Press Play to see the live signal' : '', { fontSize: 18, fillColor: muted });
+  // A decoded sound draws one lane per channel: a min/max bar per column, with
+  // the selected sprite clip highlighted across all lanes.
+  const drawWaveform = () => {
+    waveform.clear();
+    if (!buffer) {
+      return;
+    }
+    const clip = table && state.clip ? table[state.clip] : undefined;
+    if (clip) {
+      waveform.fillColor = new Color(127, 184, 255, 0.16);
+      waveform.drawRectangle(
+        wave.left + (clip.start / buffer.duration) * wave.width,
+        lane.top,
+        ((clip.end - clip.start) / buffer.duration) * wave.width,
+        wave.height,
+      );
+    }
+    for (let channel = 0; channel < channels; channel += 1) {
+      const samples = buffer.getChannelData(channel);
+      const middle = lane.top + channel * (lane.height + wave.gap) + lane.height / 2;
+      const scale = lane.height / 2;
+      waveform.fillColor = dim;
+      waveform.drawRectangle(wave.left, middle - 0.5, wave.width, 1);
+      waveform.fillColor = bright;
+      for (let column = 0; column < wave.width; column += 2) {
+        const from = Math.floor((column / wave.width) * samples.length);
+        const to = Math.max(from + 1, Math.floor(((column + 2) / wave.width) * samples.length));
+        let low = 0;
+        let high = 0;
+        for (let index = from; index < to; index += 1) {
+          low = Math.min(low, samples[index]);
+          high = Math.max(high, samples[index]);
+        }
+        waveform.drawRectangle(wave.left + column, middle - high * scale, 1.5, Math.max(1, (high - low) * scale));
+      }
+    }
+  };
+  // The analyser's window is the last few milliseconds the voice produced,
+  // down-mixed to one channel - an oscilloscope, not a second overview.
+  const drawLive = signal => {
+    const middle = strip.top + strip.height / 2;
+    const scale = strip.height / 2;
+    live.clear();
+    live.fillColor = dim;
+    live.drawRectangle(wave.left, middle - 0.5, wave.width, 1);
+    if (!signal) {
+      return;
+    }
+    live.fillColor = bright;
+    for (let column = 0; column < wave.width; column += 2) {
+      const from = Math.floor((column / wave.width) * signal.length);
+      const to = Math.max(from + 1, Math.floor(((column + 2) / wave.width) * signal.length));
+      let low = 0;
+      let high = 0;
+      for (let index = from; index < to; index += 1) {
+        low = Math.min(low, signal[index]);
+        high = Math.max(high, signal[index]);
+      }
+      live.drawRectangle(wave.left + column, middle - high * scale, 1.5, Math.max(1, (high - low) * scale));
+    }
+  };
+  const drawPlayhead = () => {
+    playhead.clear();
+    if (!buffer || !voice || voice.ended || !('time' in voice)) {
+      return;
+    }
+    // A sprite voice reports its time from the start of its clip.
+    const offset = table && state.clip ? (table[state.clip]?.start ?? 0) : 0;
+    const x = wave.left + ((offset + voice.time) / buffer.duration) * wave.width;
+    playhead.fillColor = Color.white;
+    playhead.drawRectangle(x - 0.75, lane.top, 1.5, wave.height);
+  };
+  caption.setAnchor(0.5).setPosition(PREVIEW_CENTER.x, strip.top + strip.height + 40);
+  drawWaveform();
+  drawLive(null);
+  const target = () => (clips.length > 0 ? playable.sprite(state.clip) : playable);
+  const pausable = candidate => (candidate && 'pause' in candidate && 'resume' in candidate ? candidate : null);
+  const play = () => {
+    const current = pausable(voice);
+    if (current && !current.ended && current.paused) {
+      current.resume();
+      return;
+    }
+    if (pendingStart || (voice && !voice.ended)) {
+      return;
+    }
+    // Runs once audio is usable - at once when it already is, after the
+    // visitor's first gesture otherwise. Removed again by Stop and on switch,
+    // so a start that is still waiting never plays for another selection.
+    pendingStart = () => {
+      pendingStart = null;
+      if (!isCurrent()) {
+        return;
+      }
+      voice = audio.play(target(), { volume: state.volume, loop: state.loop });
+      analyser.source = voice;
+      console.log(`Playing ${item.name}${clips.length > 0 ? ` / ${state.clip}` : ''}`);
+    };
+    audio.onUnlock.add(pendingStart);
+    if (audio.locked) {
+      status?.('Waiting for the browser to allow audio...');
+    }
+  };
+  const stop = () => {
+    if (pendingStart) {
+      audio.onUnlock.remove(pendingStart);
+      pendingStart = null;
+    }
+    voice?.stop();
+    voice = null;
+    analyser.source = null;
+  };
+  return {
+    world: [],
+    overlay: [waveform, playhead, live, caption, ...labels],
+    bounds: null,
+    facts: [
+      ['Kind', music ? 'Music, streamed from an audio element' : 'Sound, decoded into memory'],
+      ['Duration', formatSeconds(playable.duration)],
+      ...(buffer ? [['Channels', channels === 1 ? 'Mono' : channels === 2 ? 'Stereo' : String(channels)]] : []),
+      ...(clips.length > 0 ? [['Clips', clips.join(', ')]] : []),
+    ],
+    mount(host) {
+      const panel = host({
+        title: music ? 'Music' : 'Sound',
+        controls: {
+          ...(clips.length > 0 ? { clip: choice('Clip', clips) } : {}),
+          volume: slider('Volume', { min: 0, max: 1, step: 0.05, value: state.volume, format: volume => `${Math.round(volume * 100)}%` }),
+          loop: toggle('Loop', state.loop),
+        },
+        actions: {
+          Play: play,
+          Pause: () => {
+            const current = pausable(voice);
+            if (current && !current.ended) {
+              current.pause();
+            }
+          },
+          Stop: stop,
+          Code: () => scene.showCode(),
+        },
+        onChange(key, value) {
+          if (key === 'clip') {
+            state.clip = value;
+            stop();
+            drawWaveform();
+          } else if (key === 'volume') {
+            state.volume = value;
+            if (voice) {
+              voice.volume = state.volume;
+            }
+          } else if (key === 'loop') {
+            state.loop = value;
+          }
+        },
+      });
+      status = text => panel.status(text);
+      panel.status('Press Play to listen.');
+    },
+    update() {
+      const current = pausable(voice);
+      const text = pendingStart
+        ? audio.locked
+          ? 'Waiting for the browser to allow audio...'
+          : 'Starting...'
+        : !voice || voice.ended
+          ? 'Stopped'
+          : current?.paused
+            ? 'Paused'
+            : 'Playing';
+      if (text !== reported) {
+        reported = text;
+        status?.(text);
+      }
+      const playing = text === 'Playing' || text === 'Paused';
+      caption.visible = !playing;
+      drawLive(playing ? analyser.getWaveformFloat() : null);
+      drawPlayhead();
+    },
+    snippet: () => audioSnippet(item, { ...state, music, clip: clips.length > 0 ? state.clip : null }),
+    dispose() {
+      stop();
+      status = null;
+      analyser.destroy();
+      waveform.destroy();
+      playhead.destroy();
+      live.destroy();
+      caption.destroy();
+      labels.forEach(text => text.destroy());
+    },
+  };
+};
+const openVideo = async ({ scene, item, scope, manifest, isCurrent }) => {
+  const video = await scope.load(assets[item.key]);
+  const element = video.videoElement;
+  const meta = manifest?.media;
+  const audio = scene.app.audio;
+  const state = { muted: true, loop: true, rate: '1x', zoom: 1 };
+  let pendingStart = null;
+  let panel = null;
+  let syncing = false;
+  let mounted = false;
+  let since = 0;
+  const play = () => {
+    if (pendingStart || video.playing) {
+      return;
+    }
+    // A muted video may start at once; one with sound waits for the gesture.
+    if (video.muted) {
+      video.play();
+      console.log(`Playing ${item.name}`);
+      return;
+    }
+    pendingStart = () => {
+      pendingStart = null;
+      if (isCurrent()) {
+        video.play();
+        console.log(`Playing ${item.name} with sound`);
+      }
+    };
+    audio.onUnlock.add(pendingStart);
+  };
+  const cancelStart = () => {
+    if (pendingStart) {
+      audio.onUnlock.remove(pendingStart);
+      pendingStart = null;
+    }
+  };
+  const frameRate = meta?.video?.frameRate?.split('/').map(Number);
+  return {
+    world: [video],
+    overlay: [],
+    bounds: { width: video.width, height: video.height },
+    facts: [
+      ['Resolution', `${element.videoWidth} x ${element.videoHeight}`],
+      ['Duration', formatSeconds(video.duration)],
+      ...(meta?.container ? [['Container', meta.container]] : []),
+      ...(meta?.video?.codec ? [['Video', [meta.video.codec, meta.video.profile].filter(Boolean).join(' ')]] : []),
+      ...(frameRate && frameRate.length === 2
+        ? [['Frame rate', `${(frameRate[0] / frameRate[1]).toFixed(2).replace(/\.00$/, '')} fps`]]
+        : []),
+      ...(meta?.video?.pixelFormat
+        ? [['Pixels', `${meta.video.pixelFormat}${meta.video.bitDepth ? `, ${meta.video.bitDepth}-bit` : ''}`]]
+        : []),
+      ...(meta?.audio?.codec ? [['Audio', `${meta.audio.codec}, ${meta.audio.channels ?? '?'} ch`]] : [['Audio', 'none']]),
+      // The file's dynamic range is metadata; the preview renders it through
+      // the regular canvas pipeline either way.
+      ...(meta?.dynamicRange ? [['Dynamic range', `${meta.dynamicRange} (file metadata)`]] : []),
+    ],
+    mount(host) {
+      const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 1;
+      const handle = host({
+        title: 'Video',
+        controls: {
+          zoom: zoomSlider(),
+          position: slider('Position', { min: 0, max: duration, step: duration / 200, value: 0, format: formatSeconds }),
+          muted: toggle('Muted', state.muted),
+          loop: toggle('Loop', state.loop),
+          rate: choice('Speed', ['0.5x', '1x', '2x'], state.rate),
+        },
+        actions: {
+          Play: play,
+          Pause: () => {
+            cancelStart();
+            video.pause();
+          },
+          Stop: () => {
+            cancelStart();
+            video.stop();
+          },
+          Fit: () => scene.fit(),
+          Code: () => scene.showCode(),
+        },
+        onChange(key, value) {
+          if (key === 'zoom') {
+            state.zoom = value;
+            scene.setZoom(value);
+          } else if (key === 'position' && !syncing) {
+            video.currentTime = value;
+          } else if (key === 'muted') {
+            state.muted = value;
+            video.muted = state.muted;
+          } else if (key === 'loop') {
+            state.loop = value;
+            video.loop = state.loop;
+          } else if (key === 'rate') {
+            state.rate = value;
+            video.playbackRate = Number.parseFloat(state.rate);
+          }
+        },
+      });
+      panel = handle;
+      mounted = true;
+      video.applyOptions({ loop: state.loop, muted: state.muted });
+      video.pause();
+      scene.bindZoom(handle);
+      handle.status('Press Play to start.');
+    },
+    update(delta) {
+      since += delta;
+      if (panel && since >= 0.25) {
+        since = 0;
+        syncing = true;
+        panel.set('position', video.currentTime);
+        syncing = false;
+        panel.status(pendingStart ? 'Waiting for the browser to allow audio...' : video.playing ? 'Playing' : 'Paused');
+      }
+    },
+    snippet: () => videoSnippet(item, state),
+    dispose() {
+      cancelStart();
+      panel = null;
+      // The video belongs to the scope and may be shared with a newer preview
+      // of the same asset, so only a preview that was mounted pauses it.
+      if (mounted) {
+        video.pause();
+      }
+    },
+  };
+};
+const measureContext = document.createElement('canvas').getContext('2d');
+const measureWidth = (text, font) => {
+  if (!measureContext) {
+    return text.length * 0.6 * Number.parseFloat(font);
+  }
+  measureContext.font = font;
+  return measureContext.measureText(text).width;
+};
+const SAMPLE_TEXT = 'The quick brown fox jumps over the lazy dog';
+const openFont = async ({ scene, item, scope }) => {
+  const descriptor = assets[item.key];
+  const bitmap = descriptor.type === 'bmFont';
+  const font = bitmap ? await scope.load(descriptor) : null;
+  const face = bitmap ? null : await scope.load(descriptor);
+  const family = face ? face.family.replaceAll('"', '') : '';
+  const state = { text: SAMPLE_TEXT, size: 40, color: 'White' };
+  const colors = { White: Color.white, Gold: new Color(255, 214, 102), Ink: new Color(28, 32, 44) };
+  const lines = [];
+  const preview = {
+    world: [],
+    overlay: [],
+    bounds: null,
+    facts: bitmap
+      ? [['Kind', 'Bitmap font (.fnt with page textures)']]
+      : [
+          ['Family', family],
+          ['Kind', 'Font face, registered with the document'],
+        ],
+    mount(host) {
+      const panel = host({
+        title: 'Font',
+        controls: {
+          size: slider('Size', { min: 10, max: 120, step: 2, value: state.size, format: size => `${size}px` }),
+          color: choice('Colour', ['White', 'Gold', 'Ink']),
+        },
+        actions: { Code: () => scene.showCode() },
+        onChange(key, value) {
+          if (key === 'size') {
+            state.size = value;
+          } else {
+            state.color = value;
+            scene.setBackdrop(state.color === 'Ink' ? new Color(236, 239, 244) : new Color(32, 37, 50));
+          }
+          layout();
+        },
+      });
+      const input = document.createElement('textarea');
+      input.value = state.text;
+      input.rows = 2;
+      input.setAttribute('aria-label', 'Preview text');
+      Object.assign(input.style, {
+        width: '100%',
+        boxSizing: 'border-box',
+        marginTop: '8px',
+        padding: '6px 8px',
+        borderRadius: '8px',
+        border: '1px solid rgba(154, 193, 255, 0.32)',
+        background: 'rgba(154, 193, 255, 0.08)',
+        color: 'inherit',
+        font: `13px ${FONT}`,
+        resize: 'vertical',
+      });
+      input.addEventListener('input', () => {
+        state.text = input.value;
+        layout();
+      });
+      input.addEventListener('change', () => console.log(`Preview text: "${input.value}"`));
+      panel.element.append(input);
+    },
+    snippet: () => fontSnippet(item, { ...state, bitmap }),
+    dispose() {
+      for (const line of lines) {
+        line.destroy();
+      }
+    },
+  };
+  const layout = () => {
+    for (const line of lines.splice(0)) {
+      line.destroy();
+    }
+    const sizes = [state.size, Math.round(state.size * 0.6), Math.round(state.size * 0.4)];
+    let y = 60;
+    for (const size of sizes) {
+      const line = font
+        ? new BitmapText(state.text, font).setScale(size / 32)
+        : new Text(state.text, { fontFamily: family, fontSize: size, fillColor: colors[state.color], maxWidth: PREVIEW.width - 64 });
+      // Text lays out lazily, so the number of wrapped lines is measured with
+      // the same font on a scratch 2D context rather than read back.
+      const wrapped = font ? 1 : Math.ceil(measureWidth(state.text, `${size}px "${family}"`) / (PREVIEW.width - 64)) + 0.2;
+      line.setPosition(PREVIEW.x + 32, y);
+      lines.push(line);
+      y += wrapped * size * 1.3 + 28;
+    }
+    preview.overlay.splice(0, preview.overlay.length, ...lines);
+  };
+  layout();
+  return preview;
+};
+const openData = async ({ scene, item, scope }) => {
+  const data = await scope.load(assets[item.key]);
+  return {
+    world: [],
+    overlay: [],
+    bounds: null,
+    facts: [['Kind', 'JSON document']],
+    mount(host) {
+      host({ title: 'Data', controls: {}, actions: { Data: () => void scene.showData(), Code: () => scene.showCode() } });
+      void scene.showData();
+    },
+    snippet: () => dataSnippet(item),
+    data: () => Promise.resolve(data),
+    dispose() {
+      // Nothing to release beyond the scope.
+    },
+  };
+};
+// --- Snippets ---------------------------------------------------------------
+//
+// Each snippet is a complete module: imports, one scene and the application,
+// using only public ExoJS APIs and the demo catalog.
+const round = (value, digits = 2) => Number(value.toFixed(digits));
+const program = (
+  imports,
+  body,
+  options = {},
+) => `${[...imports, "import { demoAssets as assets } from '@codexo/exojs-demo-assets';"].sort().join('\n')}
+
+class PreviewScene extends Scene {
+${body}
+}
+
+const app = new Application({
+  scenes: { PreviewScene },
+  canvas: { width: 1280, height: 720, mount: document.body },${options.extensions ? `\n  extensions: [${options.extensions}],` : ''}
+});
+
+await app.start(PreviewScene);
+`;
+const textureSnippet = (item, state) => {
+  const svg = assets[item.key].type === 'svg';
+  const scale = round(state.zoom);
+  const names = [
+    'Application',
+    'Scene',
+    'Sprite',
+    ...(svg ? ['Texture'] : []),
+    ...(state.nearest ? (svg ? ['ScaleModes'] : ['Asset', 'ScaleModes']) : []),
+  ].sort();
+  const load = svg
+    ? `    // An SVG loads as an image; the texture over it is yours to destroy.
+    const image = await this.loader.load(assets.${item.key});
+    const texture = new Texture(image${state.nearest ? ', { scaleMode: ScaleModes.Nearest }' : ''});`
+    : state.nearest
+      ? `    // Sampling is part of the texture handle, chosen when it is loaded.
+    const texture = await this.loader.load(
+      Asset.type('texture', assets.${item.key}.source, { textureOptions: { scaleMode: ScaleModes.Nearest } }),
+    );`
+      : `    const texture = await this.loader.load(assets.${item.key});`;
+  return program(
+    [`import { ${names.join(', ')} } from '@codexo/exojs';`],
+    `  override async load(): Promise<void> {
+${load}
+    const sprite = new Sprite(texture).setAnchor(0.5).setScale(${scale}).setPosition(640, 360);
+
+    this.addChild(sprite);
+  }`,
+  );
+};
+const spritesheetSnippet = (item, state) => {
+  const named = state.animation !== 'Frame range';
+  const frames = named
+    ? `sheet.getAnimationFrameNames(${JSON.stringify(state.animation)}).map(name => sheet.getFrame(name))`
+    : `[${state.frames.map(name => JSON.stringify(name)).join(', ')}].map(name => sheet.getFrame(name))`;
+  return program(
+    ["import { AnimatedSprite, Application, Scene, Spritesheet } from '@codexo/exojs';"],
+    `  override async load(): Promise<void> {
+    const [texture, data] = await Promise.all([this.loader.load(assets.${item.key}), this.loader.load(assets.${item.atlasKey})]);
+    const sheet = new Spritesheet(texture, data);
+    const sprite = new AnimatedSprite(texture, {
+      preview: { frames: ${frames}, fps: ${state.fps}, repeat: ${state.loop ? -1 : 1} },
+    });
+
+    sprite.setAnchor(0.5).setScale(${round(state.scale)}).setPosition(640, 360);
+    this.addChild(sprite);
+    sprite.play('preview');
+  }`,
+  );
+};
+const mapSnippet = (item, state) =>
+  state.ldtk
+    ? program(
+        [
+          "import { Application, Asset, Scene } from '@codexo/exojs';",
+          "import { TileMapNode } from '@codexo/exojs/tilemap';",
+          "import { ldtkExtension } from '@codexo/exojs-ldtk';",
+        ],
+        `  override async load(): Promise<void> {
+    // Tileset paths resolve against the world's URL, so load it from the catalog's absolute source.
+    const world = await this.loader.load(Asset.type('ldtkMap', assets.${item.key}.source));
+    const level = world.getLevelByName(${JSON.stringify(state.level)}) ?? world.levels[0]!;
+
+    this.addChild(new TileMapNode(level).setScale(${round(state.zoom)}));
+  }`,
+        { extensions: 'ldtkExtension' },
+      )
+    : program(
+        [
+          "import { Application, Asset, Scene } from '@codexo/exojs';",
+          "import { TileMapNode } from '@codexo/exojs/tilemap';",
+          "import { tiledExtension } from '@codexo/exojs-tiled';",
+        ],
+        `  override async load(): Promise<void> {
+    // Tileset images resolve against the map's URL, so load it from the catalog's absolute source.
+    const map = await this.loader.load(Asset.type('tileMap', assets.${item.key}.source));
+
+    this.addChild(new TileMapNode(map).setScale(${round(state.zoom)}));
+  }`,
+        { extensions: 'tiledExtension' },
+      );
+const audioSnippet = (item, state) =>
+  program(
+    ["import { Application, Scene } from '@codexo/exojs';"],
+    `  override async load(): Promise<void> {
+    const ${state.music ? 'music' : 'sound'} = await this.loader.load(assets.${item.key});
+
+    // Browsers keep audio locked until the first click or key press;
+    // onUnlock runs the handler as soon as playback is allowed.
+    this.app.audio.onUnlock.add(() => {
+      this.app.audio.play(${state.music ? 'music' : state.clip ? `sound.sprite(${JSON.stringify(state.clip)})` : 'sound'}, { volume: ${round(state.volume)}, loop: ${state.loop} });
+    });
+  }`,
+  );
+const videoSnippet = (item, state) =>
+  program(
+    ["import { Application, Scene } from '@codexo/exojs';"],
+    `  override async load(): Promise<void> {
+    const video = await this.loader.load(assets.${item.key});
+
+    video.applyOptions({ loop: ${state.loop}, muted: ${state.muted}, playbackRate: ${Number.parseFloat(state.rate)} });
+    video.setAnchor(0.5).setScale(${round(state.zoom)}).setPosition(640, 360);
+    this.addChild(video);
+${
+  state.muted
+    ? '    // A muted video may start without a user gesture.\n    video.play();'
+    : '    // With sound, playback waits for the gesture that unlocks audio.\n    this.app.audio.onUnlock.add(() => video.play());'
+}
+  }`,
+  );
+const fontSnippet = (item, state) =>
+  state.bitmap
+    ? program(
+        ["import { Application, BitmapText, Scene } from '@codexo/exojs';"],
+        `  override async load(): Promise<void> {
+    const font = await this.loader.load(assets.${item.key});
+
+    this.addChild(new BitmapText(${JSON.stringify(state.text)}, font).setScale(${round(state.size / 32)}).setPosition(40, 60));
+  }`,
+      )
+    : program(
+        ["import { Application, Color, Scene, Text } from '@codexo/exojs';"],
+        `  override async load(): Promise<void> {
+    // Loading a font registers its face with the document.
+    const face = await this.loader.load(assets.${item.key});
+    const text = new Text(${JSON.stringify(state.text)}, {
+      fontFamily: face.family.replaceAll('"', ''),
+      fontSize: ${state.size},
+      fillColor: Color.white,
+    });
+
+    this.addChild(text.setPosition(40, 60));
+  }`,
+      );
+const dataSnippet = item =>
+  program(
+    ["import { Application, Scene } from '@codexo/exojs';"],
+    `  override async load(): Promise<void> {
+    const data = await this.loader.load(assets.${item.key});
+
+    console.log(Object.keys(data as object));
+  }`,
+  );
 const app = new Application({
   scenes: { AssetBrowserScene },
-  canvas: { width: W, height: H, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
-  clearColor: C.bg,
+  canvas: { width: STAGE.width, height: STAGE.height, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  clearColor: new Color(32, 37, 50),
+  extensions: [tiledExtension, ldtkExtension],
 });
 await app.start(AssetBrowserScene);

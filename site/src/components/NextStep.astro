@@ -13,13 +13,17 @@
  *   </NextStep>
  */
 
+import { rewriteSiteHref } from '../lib/site-links';
+
 interface Props {
   href: string;
   label: string;
   eyebrow?: string;
 }
 
-const { href, label, eyebrow = 'Next' } = Astro.props;
+const { label, eyebrow = 'Next' } = Astro.props;
+// Guide sources write the link against the Stable base; see site-links.ts.
+const href = rewriteSiteHref(Astro.props.href, import.meta.env.BASE_URL);
 const hasBody = Astro.slots.has('default');
 ---
 

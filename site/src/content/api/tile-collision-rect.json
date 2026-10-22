@@ -4,7 +4,7 @@
   "symbol": "TileCollisionRect",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 5,
   "counts": {
@@ -22,7 +22,7 @@
         "An axis-aligned collision rectangle in logical tile-layer pixel space (+Y down), covering one or more whole tile cells.",
         "Rectangles are synthesized geometry, not source objects: a merged run has no single originating object, so it carries no object `id`/`name`/`properties` - only the `type` string shared by every shape merged into it. Anything that does not exactly cover whole cells stays a TileCollisionShape, which does keep its source object."
       ],
-      "importLine": "import { TileCollisionRect } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileCollisionRect } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

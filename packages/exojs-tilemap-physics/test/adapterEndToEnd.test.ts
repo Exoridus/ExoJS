@@ -1,9 +1,9 @@
 import { type Texture, TextureRegion } from '@codexo/exojs';
+import { ChainShape, PhysicsWorld, PolygonShape } from '@codexo/exojs/physics';
+import type { TileLayer } from '@codexo/exojs/tilemap';
 import type { LdtkData } from '@codexo/exojs-ldtk';
 import { createLdtkIntGridCellSource, ldtkToTileMap } from '@codexo/exojs-ldtk';
-import { ChainShape, PhysicsWorld, PolygonShape } from '@codexo/exojs-physics';
 import { TiledMap, TiledTileset } from '@codexo/exojs-tiled';
-import type { TileLayer } from '@codexo/exojs-tilemap';
 import { describe, expect, it } from 'vitest';
 
 import { TileColliderStreamer } from '../src/TileColliderStreamer';

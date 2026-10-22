@@ -65,9 +65,9 @@ describe('the typecheck group covers the type-level gates verify:quick knows abo
     expect(GATE_GROUPS.typecheck).toContain(script);
   });
 
-  it('type-checks the full-bundle entry as part of the example program', () => {
+  it('type-checks the example program against the workspace sources', () => {
     const examplesConfig = readFileSync(resolve(repoRoot, 'tsconfig.examples.json'), 'utf8');
-    expect(examplesConfig).toContain('"scripts/exo-full.entry.ts"');
+    expect(examplesConfig).toContain('"examples/**/*.ts"');
   });
 
   it('keeps `typecheck:site` out of the ungated typecheck group - it needs the built dist', () => {

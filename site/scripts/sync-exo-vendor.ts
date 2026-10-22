@@ -414,6 +414,58 @@ const syncBundlerClientTypes = (): void => {
   console.log('[vendor:sync] Copied @codexo/exojs-build client declarations -> vendor/exojs-build/client.d.ts');
 };
 
+/**
+ * Serves `@codexo/exojs-demo-assets` the way a consumer installs it: the
+ * compiled catalog under `esm/` and the standard media under `media/`, so each
+ * descriptor's `new URL('../media/...', import.meta.url)` resolves to a file
+ * the site actually ships, plus the package's `manifest.json`. Only the
+ * standard profile's media are copied; the extended media are not part of the
+ * site.
+ */
+const syncDemoAssets = (): void => {
+  const packageRoot = path.resolve(projectRoot, '..', 'packages', 'exojs-demo-assets');
+  const distDir = path.resolve(packageRoot, 'dist');
+  const mediaDir = path.resolve(packageRoot, 'media');
+
+  for (const required of [distDir, mediaDir]) {
+    if (!fs.existsSync(required)) {
+      throw new Error(
+        `[vendor:sync] @codexo/exojs-demo-assets is not built: ${required} is missing. ` +
+          'Build it first: pnpm --filter @codexo/exojs-demo-assets build',
+      );
+    }
+  }
+
+  const vendorDir = path.resolve(projectRoot, 'public', 'vendor', 'exojs-demo-assets');
+  fs.rmSync(vendorDir, { recursive: true, force: true });
+  fs.mkdirSync(vendorDir, { recursive: true });
+  fs.cpSync(distDir, path.resolve(vendorDir, 'esm'), { recursive: true });
+  fs.cpSync(mediaDir, path.resolve(vendorDir, 'media'), { recursive: true });
+  // The package exports its manifest (sizes, hashes, media metadata) as
+  // `@codexo/exojs-demo-assets/manifest.json`; the preview's import map
+  // resolves that specifier here.
+  fs.copyFileSync(path.resolve(packageRoot, 'manifest.json'), path.resolve(vendorDir, 'manifest.json'));
+
+  const dtsFiles = collectDeclarationFiles(distDir);
+  fs.writeFileSync(path.resolve(vendorDir, 'esm-typings.json'), `${JSON.stringify(dtsFiles, null, 2)}\n`, 'utf8');
+
+  const packageJson = JSON.parse(fs.readFileSync(path.resolve(packageRoot, 'package.json'), 'utf8')) as { version: string };
+  const registry: MonacoRegistry = {
+    packageJson: JSON.stringify({ name: '@codexo/exojs-demo-assets', version: packageJson.version, types: './dist/esm/index.d.ts' }),
+    subpathShims: [
+      {
+        virtualPath: 'file:///node_modules/@codexo/exojs-demo-assets/extended.d.ts',
+        content: "export * from './dist/esm/extended';\n",
+      },
+    ],
+  };
+  fs.writeFileSync(path.resolve(vendorDir, 'monaco-registry.json'), `${JSON.stringify(registry, null, 2)}\n`, 'utf8');
+
+  console.log(
+    `[vendor:sync] Copied @codexo/exojs-demo-assets (${dtsFiles.length} declarations, standard media) -> vendor/exojs-demo-assets/`,
+  );
+};
+
 const syncVendor = (): void => {
   ensureSourcePackage();
   syncWebGpuTypes();
@@ -448,24 +500,15 @@ const syncVendor = (): void => {
 
   console.log(`[vendor:sync] Copied ExoJS ESM runtime + declarations from ${sourceDistDir} -> ${flatTargetDir}`);
 
-  // Sync extension packages. Each gets the same Monaco-resolvable treatment as
+  // Sync the adapter packages; the runtime modules ship inside the Core tree
+  // copied above. Each adapter gets the same Monaco-resolvable treatment as
   // core: copy the ESM tree, rewrite '#'-subpath imports to relative paths
   // (Monaco can't resolve '#'), emit an `esm-typings.json` manifest, and emit a
   // `monaco-registry.json` (virtual package.json + subpath shims for e.g.
   // `/debug`). Without this the playground's TypeScript worker
-  // can't resolve `@codexo/exojs-particles` & co. and every extension example
+  // can't resolve `@codexo/exojs-tiled` & co. and every adapter example
   // shows a ts2307 "Cannot find module" error.
-  const extensionPackages = [
-    'exojs-particles',
-    'exojs-audio-fx',
-    'exojs-tilemap',
-    'exojs-tiled',
-    'exojs-ldtk',
-    'exojs-physics',
-    'exojs-tilemap-physics',
-    'exojs-lighting',
-    'exojs-pathfinding',
-  ] as const;
+  const extensionPackages = ['exojs-tiled', 'exojs-ldtk'] as const;
 
   for (const pkgName of extensionPackages) {
     let pkgRoot: string;
@@ -486,7 +529,7 @@ const syncVendor = (): void => {
       // "Cannot find module '@codexo/exojs-...'" - and nobody saw the warning.
       throw new Error(
         `[vendor:sync] Extension package @codexo/${pkgName} dist not found at ${pkgDist}. ` +
-          `Build the extension packages first: pnpm --filter "@codexo/exojs-*" build`,
+          `Build the adapter packages first: pnpm --filter "./packages/*" build`,
       );
     }
 
@@ -513,6 +556,8 @@ const syncVendor = (): void => {
       `[vendor:sync] Copied @codexo/${pkgName} ESM (${files.length} files, ${dtsFiles.length} declarations, ${rewritten} '#'-rewritten) -> vendor/${pkgName}/`,
     );
   }
+
+  syncDemoAssets();
 };
 
 syncVendor();

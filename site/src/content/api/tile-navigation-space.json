@@ -4,7 +4,7 @@
   "symbol": "TileNavigationSpace",
   "kind": "class",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 24,
   "counts": {
@@ -24,7 +24,7 @@
         "Routes, positions and agent coordinates are logical: for an isometric map that is the unprojected grid of `tileHeight`-sized squares, not the screen diamonds, matching the tilemap's physics colliders. Orthogonal maps need square tiles; non-square orthogonal tiles and other orientations are rejected, since the grid's distance metric would misprice them.",
         "The space holds no listener on its source and owns nothing but its cost grid, so dropping it is all the cleanup it needs. When its source is destroyed, the next synchronisation turns the space invalidated: every cell becomes blocked and the revision advances once, so routes in flight go stale and agents navigating it settle on `unreachable` and stop their movement. A warning is logged once; the space never reads the source again."
       ],
-      "importLine": "import { TileNavigationSpace } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { TileNavigationSpace } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {

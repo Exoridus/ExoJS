@@ -4,7 +4,7 @@
   "symbol": "Turbulence",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 11,
   "counts": {
@@ -24,7 +24,7 @@
         "Use cases: smoke turbulence, organic swirls, wind eddies, dust haze. Pair with Drag to keep particle velocities bounded.",
         "CPU and GPU use the same integer lattice hash, avoiding backend-specific transcendental approximations. Interpolation still has float rounding error."
       ],
-      "importLine": "import { Turbulence } from '@codexo/exojs-particles'",
+      "importLine": "import { Turbulence } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

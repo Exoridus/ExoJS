@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   AudioBus,
   type AudioStream,
   Color,
@@ -11,8 +10,8 @@ import {
   type Sound,
   Text,
 } from '@codexo/exojs';
-import { AudioAnalyser, DuckingEffect } from '@codexo/exojs-audio-fx';
-import { mountControls } from '@examples/runtime';
+import { AudioAnalyser, DuckingEffect } from '@codexo/exojs/audio-fx';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class DuckingScene extends Scene {
   private music!: AudioStream;
@@ -33,7 +32,14 @@ class DuckingScene extends Scene {
   private barW = 0;
   private musicBarY = 0;
   private voiceBarY = 0;
-  private hud!: ReturnType<typeof mountControls>;
+  private clickPrompt!: Text;
+  private readonly playVoice = (): void => {
+    // The pointer gesture also unlocks the AudioContext; firing while
+    // still locked would be silent, so wait until audio is ready.
+    if (!this.app.audio.locked) {
+      this.app.audio.play(this.voice, { bus: this.voiceBus, volume: 0.4 });
+    }
+  };
 
   override async load(): Promise<void> {
     const app = this.app;
@@ -46,12 +52,12 @@ class DuckingScene extends Scene {
     this.voiceBarY = height * 0.55;
 
     // AudioStream has no seamless adapter - await it explicitly.
-    const music = await this.loader.load(Asset.type('music', assets.demo.audio.musicLoop));
+    const music = await this.loader.load(assets.musicLoopMain);
     this.music = music;
     // Path-only get() infers Sound from the .ogg extension - sidesteps a
     // compile-time overload ambiguity between Sound and the Json token form
     // when passing the Sound token explicitly.
-    this.voice = this.loader.get(assets.demo.voice.congratulations);
+    this.voice = this.loader.get(assets.voiceCongratulations);
 
     // Route the voice-over onto its own bus so it can drive the sidechain.
     this.voiceBus = new AudioBus('voice-over', { parent: app.audio.master });
@@ -76,32 +82,19 @@ class DuckingScene extends Scene {
 
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it and the queued music starts.
-    this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })
+    this.tapPrompt = new Text('Click or press any key to start the music', { fillColor: Color.white, fontSize: 22, align: 'center' })
       .setAnchor(0.5, 0.5)
       .setPosition(width / 2, height - 48);
 
-    this.hud = mountControls({
-      title: 'Ducking',
-      controls: [{ keys: 'Click', action: 'play the voice-over' }],
-      status: 'Click or press any key to start…',
-      hint: 'When the voice plays, the music meter ducks down while the voice meter spikes.',
-    });
+    this.clickPrompt = new Text('Click to play the voice-over', { fillColor: Color.white, fontSize: 22, align: 'center' })
+      .setAnchor(0.5, 0.5)
+      .setPosition(width / 2, height - 48);
 
-    app.input.onPointerTap.add(() => {
-      // The pointer gesture also unlocks the AudioContext; firing while
-      // still locked would be silent, so wait until audio is ready.
-      if (app.audio.locked) {
-        return;
-      }
-
-      app.audio.play(this.voice, { bus: this.voiceBus, volume: 0.4 });
-      this.hud.setStatus('Voice playing — music ducked');
-    });
+    app.input.onPointerTap.add(this.playVoice);
 
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically.
-    app.audio.play(this.music, { loop: true, volume: 0.7 });
-    this.hud.setStatus('Music playing — click to duck it');
+    app.audio.play(this.music, { loop: true, volume: 0.5 });
   }
 
   private bar(label: Text, name: string, y: number, level: number, color: Color): void {
@@ -128,9 +121,17 @@ class DuckingScene extends Scene {
     context.render(this.musicLabel);
     context.render(this.voiceLabel);
 
-    if (app.audio.locked) {
-      context.render(this.tapPrompt);
-    }
+    context.render(app.audio.locked ? this.tapPrompt : this.clickPrompt);
+  }
+
+  override destroy(): void {
+    this.app.input.onPointerTap.remove(this.playVoice);
+    this.gfx?.destroy();
+    this.musicLabel?.destroy();
+    this.voiceLabel?.destroy();
+    this.tapPrompt?.destroy();
+    this.clickPrompt?.destroy();
+    super.destroy();
   }
 }
 

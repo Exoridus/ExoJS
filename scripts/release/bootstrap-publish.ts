@@ -32,7 +32,7 @@
  *   - No false success: any failed step yields `ok === false` and stops.
  */
 import type { CommandResult, CommandRunner } from './command-runner.ts';
-import { INDEPENDENT_PACKAGES, LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
+import { INDEPENDENT_PACKAGES, isEngineExtension, LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
 
 export interface BootstrapTarget {
   /** npm package name. */
@@ -45,7 +45,7 @@ export interface BootstrapTarget {
 
 /** Every package a bootstrap publish may target, from both release registries. */
 export const bootstrapTargets = (): readonly BootstrapTarget[] => [
-  ...LOCKSTEP_PACKAGES.filter(p => p.isExtension).map(p => ({ name: p.name, dir: p.dir, lockstep: true })),
+  ...LOCKSTEP_PACKAGES.filter(isEngineExtension).map(p => ({ name: p.name, dir: p.dir, lockstep: true })),
   ...INDEPENDENT_PACKAGES.map(p => ({ name: p.name, dir: p.dir, lockstep: false })),
 ];
 

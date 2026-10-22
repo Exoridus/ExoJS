@@ -12,11 +12,7 @@
   },
   "dependencies": {
     "@codexo/exojs": "lockstep",
-    "@codexo/exojs-pathfinding": "lockstep",
-    "@codexo/exojs-physics": "lockstep",
-    "@codexo/exojs-tiled": "lockstep",
-    "@codexo/exojs-tilemap": "lockstep",
-    "@codexo/exojs-tilemap-physics": "lockstep"
+    "@codexo/exojs-tiled": "lockstep"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

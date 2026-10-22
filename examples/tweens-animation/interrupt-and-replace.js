@@ -1,12 +1,13 @@
 // Auto-generated from interrupt-and-replace.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Scene, Sprite } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 class InterruptAndReplaceScene extends Scene {
   sprite;
   moveTween = null;
   init() {
     const app = this.app;
     const { width, height } = app;
-    this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
+    this.sprite = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setPosition(width / 2, height / 2);
     app.input.onPointerTap.add(pointer => {
       if (this.moveTween !== null) {
         this.moveTween.stop();
@@ -27,8 +28,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(InterruptAndReplaceScene);

@@ -105,7 +105,7 @@ level.properties.ldtkWorldIid; // string | undefined — set only for multi-worl
 Wrap a level's `TileMap` in a `TileMapNode` and add it to the scene. `TileMapNode` is the generic tilemap node from `@codexo/exojs-tilemap` (the package LDtk builds on):
 
 ```ts
-import { TileMapNode } from '@codexo/exojs-tilemap';
+import { TileMapNode } from '@codexo/exojs/tilemap';
 
 const level = world.getLevelByName('Level_0') ?? world.levels[0];
 scene.root.addChild(new TileMapNode(level));
@@ -126,7 +126,7 @@ for (const level of world.levels) {
 Every custom field an entity carries in the LDtk editor ends up as a property on that entity's `TileMapObject` (found on the entity layer's `ObjectLayer`). Scalar field types — Int, Float, Bool, String, Multilines, Color, FilePath, Enum — convert directly to their JS scalar. Three structured field types — **Point**, **EntityRef**, and **Tile** — convert into the tagged `TilePropertyValue` variants from `@codexo/exojs-tilemap`, discriminated by a `kind` string:
 
 ```ts
-import { TilePropertyKind } from '@codexo/exojs-tilemap';
+import { TilePropertyKind } from '@codexo/exojs/tilemap';
 
 const entities = level.getObjectLayer('Entities');
 const chest = entities?.objects.find((object) => object.type === 'Chest');

@@ -9,7 +9,7 @@ import {
   Scene,
   type Seconds,
 } from '@codexo/exojs';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { type DemoPanel, demoPanel, toggle, type ToggleSpec } from '@examples/runtime';
 
 // Number of instances drawn in the batched field. The whole field is one
 // instanced draw call no matter how large this is.
@@ -103,8 +103,7 @@ class ImmediateModeScene extends Scene {
   private elapsed = 0;
   private batched = true;
 
-  private hud!: ReturnType<typeof mountControls>;
-  private panel!: ReturnType<typeof mountControlPanel>;
+  private panel!: DemoPanel<{ batched: ToggleSpec }>;
 
   override init(): void {
     const app = this.app;
@@ -161,21 +160,11 @@ class ImmediateModeScene extends Scene {
       });
     }
 
-    this.hud = mountControls({
-      title: 'Immediate-Mode Rendering',
-      controls: [
-        { keys: ['Batched'], action: `${FIELD_COUNT} sparks via RenderBatch + drawBatch (1 draw call)` },
-        { keys: ['Per-shape'], action: 'each gear via drawGeometry (1 draw call each)' },
-      ],
-      hint: 'Toggle the spark field between one instanced draw and one-draw-per-spark to compare draw calls.',
-    });
-
-    this.panel = mountControlPanel({ title: 'Render path' });
-    this.panel.addToggle({
-      label: 'Batch sparks',
-      value: this.batched,
-      onChange: value => {
-        this.batched = value;
+    this.panel = demoPanel({
+      title: 'Render path',
+      controls: { batched: toggle('Batch sparks', this.batched) },
+      onChange: (_key, batched) => {
+        this.batched = batched;
       },
     });
   }
@@ -226,11 +215,9 @@ class ImmediateModeScene extends Scene {
       context.drawGeometry(gear.geometry, this.scratch, { tint: gear.tint });
     }
 
-    // drawCalls is the proof: batched → gears + 1, per-shape → gears + sparks.
-    const drawCalls = context.stats.drawCalls;
-    const path = this.batched ? 'RenderBatch (instanced)' : 'drawGeometry per spark';
-
-    this.hud.setStatus(`${path} · ${FIELD_COUNT} sparks · ${GEAR_COUNT} gears · drawCalls: ${drawCalls}`);
+    // The draw-call count is the proof: batched it is gears + 1, per shape it
+    // is gears + sparks.
+    this.panel.status(`${context.stats.drawCalls} draw calls`);
   }
 
   override destroy(): void {
@@ -238,7 +225,6 @@ class ImmediateModeScene extends Scene {
   }
 
   private dispose(): void {
-    this.hud?.dispose();
     this.panel?.dispose();
     this.sparkBatch?.destroy();
     this.sparkGeometry?.destroy();

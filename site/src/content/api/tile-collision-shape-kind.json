@@ -4,7 +4,7 @@
   "symbol": "TileCollisionShapeKind",
   "kind": "type",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 0,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "The geometry kinds a TileCollisionShape can carry. Tile (GID) and text objects describe no collision area and are never emitted, so they are excluded from the union."
       ],
-      "importLine": "import { TileCollisionShapeKind } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileCollisionShapeKind } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

@@ -1,7 +1,7 @@
 // Auto-generated from backend-comparison.ts - edit the .ts source, not this file.
 import { Application, Capabilities, Color, Container, FixedResolutionCanvasSizing, Keyboard, Scene, Sprite, Texture } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
-import { mountControls } from '@examples/runtime';
+import { choice, demoPanel, slider } from '@examples/runtime';
 const MAX_SPRITES = 2400;
 const COUNT_STEP = 400;
 let spriteCount = 800;
@@ -33,7 +33,7 @@ class BatchingScene extends Scene {
   layer;
   sprites = [];
   textures = [];
-  hud;
+  panel;
   init() {
     this.layer = new Container();
     this.addChild(this.layer);
@@ -47,41 +47,38 @@ class BatchingScene extends Scene {
       this.layer.addChild(sprite);
       this.sprites.push(sprite);
     }
-    this.hud = mountControls({
-      title: 'Sprite Batching Laboratory',
+    // Keys and panel share one state; changing the backend rebuilds the whole
+    // application, which mounts a fresh panel from the same module state.
+    this.panel = demoPanel({
+      title: 'Workload',
       corner: 'top-right',
-      controls: [
-        { keys: 'Up / Down', action: 'change visible sprite count' },
-        { keys: 'T', action: 'use one or four textures' },
-        { keys: 'B', action: 'switch WebGL2 / WebGPU' },
-      ],
-      hint: 'The seeded positions and motion stay the same across settings. The overlay reports this workload, not a general backend benchmark.',
+      controls: {
+        count: slider('Sprites', { min: COUNT_STEP, max: MAX_SPRITES, step: COUNT_STEP, value: spriteCount, format: v => v.toFixed(0) }),
+        textures: choice('Textures', ['1', '4'], textureCount === 1 ? '1' : '4'),
+        backend: choice('Backend', ['webgl2', 'webgpu'], backendType),
+      },
+      onChange: (_key, _value, values) => {
+        spriteCount = values.count;
+        textureCount = Number(values.textures);
+        this.sprites.forEach((sprite, index) => {
+          sprite.visible = index < spriteCount;
+          sprite.setTexture(this.textures[index % textureCount]);
+        });
+        if (values.backend === backendType) {
+          return;
+        }
+        if (values.backend === 'webgpu' && !webGpuAvailable) {
+          this.panel.set('backend', 'webgl2');
+          this.panel.status('No WebGPU adapter: staying on WebGL2.');
+          return;
+        }
+        void boot(values.backend).catch(showStartupError);
+      },
     });
-    this.updateHud();
-    this.inputs.onTrigger(Keyboard.Up, () => this.setCount(Math.min(MAX_SPRITES, spriteCount + COUNT_STEP)));
-    this.inputs.onTrigger(Keyboard.Down, () => this.setCount(Math.max(COUNT_STEP, spriteCount - COUNT_STEP)));
-    this.inputs.onTrigger(Keyboard.T, () => {
-      textureCount = textureCount === 1 ? 4 : 1;
-      this.sprites.forEach((sprite, index) => sprite.setTexture(this.textures[index % textureCount]));
-      this.updateHud();
-    });
-    this.inputs.onTrigger(Keyboard.B, () => {
-      if (!webGpuAvailable) {
-        this.hud.setStatus('WebGPU adapter unavailable; using WebGL2');
-        return;
-      }
-      void boot(backendType === 'webgpu' ? 'webgl2' : 'webgpu').catch(showStartupError);
-    });
-  }
-  setCount(next) {
-    spriteCount = next;
-    this.sprites.forEach((sprite, index) => {
-      sprite.visible = index < spriteCount;
-    });
-    this.updateHud();
-  }
-  updateHud() {
-    this.hud.setStatus(`${backendType} · ${spriteCount} sprites · ${textureCount} texture${textureCount === 1 ? '' : 's'}`);
+    this.inputs.onTrigger(Keyboard.Up, () => this.panel.step('count', 1));
+    this.inputs.onTrigger(Keyboard.Down, () => this.panel.step('count', -1));
+    this.inputs.onTrigger(Keyboard.T, () => this.panel.step('textures'));
+    this.inputs.onTrigger(Keyboard.B, () => this.panel.step('backend'));
   }
   update(_delta) {
     const time = this.app.activeSeconds;
@@ -98,7 +95,7 @@ class BatchingScene extends Scene {
     context.render(this.layer);
   }
   destroy() {
-    this.hud.dispose();
+    this.panel.dispose();
     super.destroy();
     this.textures.forEach(texture => texture.destroy());
   }

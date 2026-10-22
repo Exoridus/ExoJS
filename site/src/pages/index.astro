@@ -1,4 +1,6 @@
 ---
+import ChannelHead from '../components/ChannelHead.astro';
+
 const baseUrl = import.meta.env.BASE_URL;
 ---
 
@@ -7,6 +9,7 @@ const baseUrl = import.meta.env.BASE_URL;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <ChannelHead />
     <title>ExoJS</title>
     <script is:inline define:vars={{ baseUrl }}>
       (() => {

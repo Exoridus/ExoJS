@@ -1,6 +1,6 @@
 // #region guide:falling-box
 import { Application, Color, Graphics, Scene, SystemOrder } from '@codexo/exojs';
-import { BoxShape, PhysicsWorld } from '@codexo/exojs-physics';
+import { BoxShape, PhysicsWorld } from '@codexo/exojs/physics';
 
 class FallingBoxScene extends Scene {
   override init(): void {

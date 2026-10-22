@@ -2,13 +2,12 @@
  * Refuse to run a dist-consuming step against a stale build, or bring the
  * build up to date first.
  *
- * The site build and the full-bundle export check read `dist/` (Core) and
- * `packages/exojs-*\/dist/` (extensions) rather than the sources. After a
- * pull or a local edit those artifacts silently lag behind: the site bundles
- * an engine without the new export and the example smoke then reports a black
- * canvas with no error; the export check names a symbol the package "does not
- * export". Each of those wasted a diagnosis before this check existed. The
- * API docs generator is not gated: it converts from the sources.
+ * The site build reads `dist/` (Core) and `packages/exojs-*\/dist/`
+ * (extensions) rather than the sources. After a pull or a local edit those
+ * artifacts silently lag behind: the site bundles an engine without the new
+ * export and the example smoke then reports a black canvas with no error.
+ * Each of those wasted a diagnosis before this check existed. The API docs
+ * generator is not gated: it converts from the sources.
  *
  * Without `--rebuild`, a stale unit fails the step with the rebuild command
  * named; a package that was never built is left to the consuming step's own

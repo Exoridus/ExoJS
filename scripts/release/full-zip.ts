@@ -5,9 +5,13 @@
  *
  *   npm/      every lockstep tarball (Core + extensions)
  *   vendor/   every lockstep package's ESM tree, plus Core's single-file
- *             bundles (exo.esm.js, the IIFE pair, the full IIFE pair)
- *   examples/ src/** (TS), js/** (transpiled), assets/**, examples.json
- *   site/     the built static site (itself servable; references ./vendor + ./examples)
+ *             ESM bundles (exo.esm.js, exo.debug.esm.js)
+ *   examples/ src/** (TS), js/** (transpiled), examples.json
+ *   site/     the built static site (itself servable; references ./vendor + ./examples).
+ *             The examples load their media through @codexo/exojs-demo-assets,
+ *             which the site serves with its standard media under
+ *             vendor/exojs-demo-assets/; the authoring media under
+ *             examples/assets/ are not shipped.
  *   README.md CHANGELOG.md LICENSE release-manifest.json checksums.sha256
  *
  * `assembleFullReleaseTree` is the testable core (pure fs assembly + a
@@ -19,7 +23,7 @@ import { basename, dirname, join, relative, resolve } from 'node:path';
 import { ModuleKind, ScriptTarget, transpileModule } from 'typescript';
 
 import type { CommandRunner } from './command-runner.ts';
-import { LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
+import { isEngineExtension, LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
 import { type ReleaseManifest, renderChecksums, serializeManifest, sha256File } from './manifest.ts';
 
 export interface AssembleOptions {
@@ -40,20 +44,7 @@ export interface AssembleOptions {
  * mirrors the bundle entries of the root `package.json#files`; the test suite
  * pins the two together.
  */
-export const CORE_BUNDLE_FILES = [
-  'exo.esm.js',
-  'exo.esm.js.map',
-  'exo.debug.esm.js',
-  'exo.debug.esm.js.map',
-  'exo.iife.js',
-  'exo.iife.js.map',
-  'exo.iife.min.js',
-  'exo.iife.min.js.map',
-  'exo.full.iife.js',
-  'exo.full.iife.js.map',
-  'exo.full.iife.min.js',
-  'exo.full.iife.min.js.map',
-] as const;
+export const CORE_BUNDLE_FILES = ['exo.esm.js', 'exo.esm.js.map', 'exo.debug.esm.js', 'exo.debug.esm.js.map'] as const;
 
 /** `vendor/<dir>` for a lockstep package: the npm name without its scope. */
 export const vendorDirFor = (packageName: string): string => packageName.replace(/^@codexo\//, '');
@@ -199,7 +190,8 @@ const assembleExamples = (rootDir: string, examplesOut: string): void => {
   for (const file of walk(examplesSrc)) {
     const rel = relative(examplesSrc, file).split('\\').join('/');
 
-    // assets/ and shared/ are copied wholesale below; skip here.
+    // assets/ is the authoring source of the demo-assets package, not shipped
+    // media; shared/ ships with the site's examples snapshot.
     if (rel.startsWith('assets/') || rel.startsWith('shared/')) {
       continue;
     }
@@ -215,8 +207,6 @@ const assembleExamples = (rootDir: string, examplesOut: string): void => {
     }
   }
 
-  // assets/** verbatim (catalog + binaries), and examples.json.
-  cpSync(resolve(examplesSrc, 'assets'), join(examplesOut, 'assets'), { recursive: true });
   cpSync(resolve(examplesSrc, 'examples.json'), join(examplesOut, 'examples.json'));
 };
 
@@ -249,7 +239,7 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
   // something they run once to write a project. It has no `dist/esm` to vendor,
   // and requiring one would fail the release on a shape it never had.
   for (const pkg of LOCKSTEP_PACKAGES) {
-    if (!pkg.isExtension && pkg.dir !== '.') {
+    if (!isEngineExtension(pkg) && pkg.dir !== '.') {
       continue;
     }
 
@@ -263,7 +253,7 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
     const vendorDir = join(treeDir, 'vendor', vendorDirFor(pkg.name));
     cpSync(from, join(vendorDir, 'esm'), { recursive: true });
 
-    if (pkg.isExtension) {
+    if (isEngineExtension(pkg)) {
       continue;
     }
 
@@ -280,7 +270,7 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
     }
   }
 
-  // examples/ - src/** (TS), js/** (transpiled), assets/**, examples.json.
+  // examples/ - src/** (TS), js/** (transpiled), examples.json.
   assembleExamples(options.rootDir, join(treeDir, 'examples'));
 
   // site/ - the full built static site, plus the server that makes it usable.

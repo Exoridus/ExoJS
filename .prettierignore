@@ -6,8 +6,14 @@ coverage
 examples/assets/**
 
 # Generated Monaco type shims; their exact shape is pinned by a drift test.
-examples/shared/assets-global.d.ts
 examples/shared/runtime.d.ts
+
+# Generated demo catalog sources and manifest; scripts/generate.ts owns their
+# exact shape and a drift test pins it.
+packages/exojs-demo-assets/src/catalog.generated.ts
+packages/exojs-demo-assets/src/standard.generated.ts
+packages/exojs-demo-assets/manifest.json
+packages/exojs-demo-assets/THIRD_PARTY_NOTICES.md
 
 # Astro's generated cache, and the vendored bundles plus copied example catalog
 # the site serves - none of it authored here.
@@ -16,6 +22,9 @@ site/public/**
 
 # Generated API reference; the generator owns its shape and a sync gate pins it.
 site/src/content/api/**
+
+# Generated legacy shim packages; `legacy-shims:check` pins them to the generator.
+packages/legacy/**
 
 # The changelog is a historical record with its own gate (`lint:changelog`); its
 # embedded code samples keep the width they were written at.

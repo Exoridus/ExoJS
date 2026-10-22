@@ -4,7 +4,7 @@
   "symbol": "MapObjectFactories",
   "kind": "type",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 0,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Dispatch key to factory. Keys are matched against the spawner's `identify` result."
       ],
-      "importLine": "import { MapObjectFactories } from '@codexo/exojs-tilemap'",
+      "importLine": "import { MapObjectFactories } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

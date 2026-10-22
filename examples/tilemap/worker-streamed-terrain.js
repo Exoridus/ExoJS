@@ -1,7 +1,6 @@
 // Auto-generated from worker-streamed-terrain.ts - edit the .ts source, not this file.
 import {
   Application,
-  Asset,
   Color,
   Container,
   FixedResolutionCanvasSizing,
@@ -20,8 +19,9 @@ import {
   TileMap,
   tilemapExtension,
   TileSet,
-} from '@codexo/exojs-tilemap';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+} from '@codexo/exojs/tilemap';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { choice, demoPanel, slider } from '@examples/runtime';
 import { fbm } from '@examples/terrain-noise';
 const terrainWorkerSource =
   '"use strict";\n(() => {\n  // ../shared/terrain-noise.ts\n  var hash2D = (seed2, x, y) => {\n    let h = seed2 ^ Math.imul(x, 668265261) ^ Math.imul(y, 374761393) | 0;\n    h = Math.imul(h ^ h >>> 15, 2246822507);\n    h = Math.imul(h ^ h >>> 13, 3266489909);\n    h ^= h >>> 16;\n    return (h >>> 0) / 4294967296;\n  };\n  var valueNoise = (seed2, x, y) => {\n    const x0 = Math.floor(x);\n    const y0 = Math.floor(y);\n    const fx = x - x0;\n    const fy = y - y0;\n    const sx = fx * fx * (3 - 2 * fx);\n    const sy = fy * fy * (3 - 2 * fy);\n    const n00 = hash2D(seed2, x0, y0);\n    const n10 = hash2D(seed2, x0 + 1, y0);\n    const n01 = hash2D(seed2, x0, y0 + 1);\n    const n11 = hash2D(seed2, x0 + 1, y0 + 1);\n    const nx0 = n00 + (n10 - n00) * sx;\n    const nx1 = n01 + (n11 - n01) * sx;\n    return nx0 + (nx1 - nx0) * sy;\n  };\n  var fbm = (seed2, x, y) => {\n    let value = 0;\n    let amplitude = 0.5;\n    let frequency = 1;\n    for (let octave = 0; octave < 4; octave++) {\n      value += amplitude * valueNoise(seed2 + octave, x * frequency, y * frequency);\n      amplitude *= 0.5;\n      frequency *= 2;\n    }\n    return value;\n  };\n\n  // worker-streamed-terrain.worker.ts\n  var isInit = (message) => "type" in message && message.type === "terrain-init";\n  var seed = 0;\n  var featureSize = 1;\n  var extraCost = 0;\n  self.onmessage = (event) => {\n    const message = event.data;\n    if (isInit(message)) {\n      seed = message.seed;\n      featureSize = message.featureSize;\n      extraCost = message.extraCost;\n      return;\n    }\n    const { requestId, cx, cy, chunkWidth, chunkHeight } = message;\n    try {\n      const values = new Float64Array(chunkWidth * chunkHeight);\n      for (let localTy = 0; localTy < chunkHeight; localTy++) {\n        for (let localTx = 0; localTx < chunkWidth; localTx++) {\n          const tx = cx * chunkWidth + localTx;\n          const ty = cy * chunkHeight + localTy;\n          let value = fbm(seed, tx / featureSize, ty / featureSize);\n          for (let i = 0; i < extraCost; i++) {\n            value = fbm(seed, tx / featureSize, ty / featureSize);\n          }\n          values[localTy * chunkWidth + localTx] = value;\n        }\n      }\n      self.postMessage({ requestId, values }, [values.buffer]);\n    } catch (error) {\n      self.postMessage({ requestId, error: String(error) });\n    }\n  };\n})();\n';
@@ -79,9 +79,9 @@ class WorkerStreamedTerrainScene extends Scene {
   hudTimer = 0;
   frameIntervalMs = 0;
   streamingMs = 0;
-  hud;
+  panel;
   async load() {
-    const tilesTexture = await this.loader.load(Asset.type('texture', assets.demo.tilesets.map.image));
+    const tilesTexture = await this.loader.load(assets.mapPackTilesheet);
     this.tileset = new TileSet({
       name: 'biomes',
       texture: new TextureRegion(tilesTexture, { x: 0, y: 0, width: tilesTexture.width, height: tilesTexture.height }),
@@ -102,8 +102,8 @@ class WorkerStreamedTerrainScene extends Scene {
     });
     this.mapView = map.createView({ bands: { terrain: ['terrain'] } });
     const characters = new Spritesheet(
-      await this.loader.load(Asset.type('texture', assets.demo.spritesheets.platformerCharacters.image)),
-      await this.loader.load(Asset.type('json', assets.demo.spritesheets.platformerCharacters.data)),
+      await this.loader.load(assets.platformerCharactersImage),
+      await this.loader.load(assets.platformerCharactersAtlas),
     );
     this.explorer = characters.getFrameSprite('character_green_front').setAnchor(0.5);
     this.explorer.setPosition(0, 0);
@@ -194,40 +194,31 @@ class WorkerStreamedTerrainScene extends Scene {
     });
   }
   setupHud() {
-    this.hud = mountControls({
-      title: 'Streamed Terrain',
-      controls: [
-        { keys: 'WASD', action: 'fly across the endless world' },
-        { keys: 'panel', action: 'change seed, provider, and sample cost' },
-      ],
-      status: '',
-      hint: 'Both providers generate the same unbounded world from the current seed. Raise sample cost, then switch to worker to compare frame time while moving.',
-    });
-    const panel = mountControlPanel({ title: 'Provider' });
-    panel.addCycle({
-      label: 'Provider',
-      options: ['sync', 'worker'],
-      index: 0,
-      onChange: (_, mode) => {
-        this.providerMode = mode;
-        this.rebuildStreamer();
+    this.panel = demoPanel({
+      title: 'Provider',
+      controls: {
+        provider: choice('Provider', ['sync', 'worker']),
+        cost: slider('Sample cost', { min: 0, max: 500, value: 0, step: 50, format: value => `${value}` }),
       },
-    });
-    panel.addSlider({
-      label: 'Sample cost',
-      min: 0,
-      max: 500,
-      step: 50,
-      value: 0,
-      onChange: value => {
-        this.extraCost = value;
-        this.rebuildStreamer();
+      actions: {
+        'New seed': () => {
+          this.seed = (Math.random() * 0x7fffffff) | 0;
+          this.rebuildStreamer();
+        },
       },
-    });
-    panel.addButton({
-      label: 'New seed',
-      onClick: () => {
-        this.seed = (Math.random() * 0x7fffffff) | 0;
+      onChange: (key, value) => {
+        // The initial values match the fields, so mounting does not rebuild.
+        if (key === 'provider') {
+          if (value === this.providerMode) {
+            return;
+          }
+          this.providerMode = value;
+        } else {
+          if (value === this.extraCost) {
+            return;
+          }
+          this.extraCost = value;
+        }
         this.rebuildStreamer();
       },
     });
@@ -253,7 +244,7 @@ class WorkerStreamedTerrainScene extends Scene {
       const tx = Math.floor(this.explorer.x / TILE);
       const ty = Math.floor(this.explorer.y / TILE);
       this.hudTimer = 0;
-      this.hud.setStatus(
+      this.panel.status(
         `${this.providerMode} · ${this.frameIntervalMs.toFixed(1)} ms between frames · ${this.streamingMs.toFixed(1)} ms streaming on the main thread · ${this.streamer.residentCount} chunks · tile ${tx}, ${ty} · seed ${this.seed} · cost ${this.extraCost}`,
       );
     }
@@ -262,6 +253,7 @@ class WorkerStreamedTerrainScene extends Scene {
     context.render(this.worldRoot, { view: this.camera });
   }
   destroy() {
+    this.panel?.dispose();
     this.streamer?.destroy();
     this.workerSourceHandle?.destroy();
     this.workerSourceHandle = null;

@@ -1,8 +1,9 @@
 // Auto-generated from chromatic-aberration.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // A dense checkerboard makes the per-channel RGB split read clearly along edges.
-const CHECKER = assets.technical.filtering.checker256;
+const CHECKER = assets.checker256;
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; uniform float uOffset; in vec2 vUv; out vec4 fragColor;
 void main(){ vec2 o=vec2(uOffset,0.0); float r=texture(uTexture,vUv+o).r; float g=texture(uTexture,vUv).g; float b=texture(uTexture,vUv-o).b; float a=texture(uTexture,vUv).a; fragColor=vec4(r,g,b,a);} `;

@@ -4,7 +4,7 @@
   "symbol": "ParticleUniformField",
   "kind": "interface",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 2,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Ordered fields written by `UpdateModule.writeUniforms`. Scalars align to 4 bytes, vec2 to 8 and vec4 to 16."
       ],
-      "importLine": "import { ParticleUniformField } from '@codexo/exojs-particles'",
+      "importLine": "import { ParticleUniformField } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

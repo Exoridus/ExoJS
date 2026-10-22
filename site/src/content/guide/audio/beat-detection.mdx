@@ -19,7 +19,7 @@ The detector taps a live audio source — an `AudioBus`, a `Voice`, an `AudioNod
 
 ```ts
 import { type Application, AudioStream } from '@codexo/exojs';
-import { BeatDetector } from '@codexo/exojs-audio-fx';
+import { BeatDetector } from '@codexo/exojs/audio-fx';
 
 declare const application: Application;
 declare const track: AudioStream;
@@ -34,7 +34,7 @@ You can also pass the source as a constructor option, or point it at a single vo
 
 ```ts
 import { type Application, AudioStream } from '@codexo/exojs';
-import { BeatDetector } from '@codexo/exojs-audio-fx';
+import { BeatDetector } from '@codexo/exojs/audio-fx';
 
 declare const application: Application;
 declare const track: AudioStream;
@@ -61,7 +61,7 @@ Two read-only getters give you the detector's current tempo estimate:
 `tempo` returns 0 until the detector has enough data to lock onto a stable beat. `confidence` rises as the beat grid stabilises. The `onTempoChange` signal fires when the detector settles on a new tempo:
 
 ```ts
-import { BeatDetector } from '@codexo/exojs-audio-fx';
+import { BeatDetector } from '@codexo/exojs/audio-fx';
 
 declare const detector: BeatDetector;
 
@@ -86,7 +86,7 @@ Four signals fire at discrete moments in the music:
 Use `onBeat` for things that should happen on every beat — a sprite pulses, a particle burst fires, a UI element flashes:
 
 ```ts
-import { BeatDetector } from '@codexo/exojs-audio-fx';
+import { BeatDetector } from '@codexo/exojs/audio-fx';
 
 declare const detector: BeatDetector;
 declare const particleBurst: { reset(): void };
@@ -105,7 +105,7 @@ detector.onBeat.add(info => {
 Use `onDownbeat` for events that should only fire on the "one" — a brighter flash, a bar-level visual change, a camera shake:
 
 ```ts
-import { BeatDetector } from '@codexo/exojs-audio-fx';
+import { BeatDetector } from '@codexo/exojs/audio-fx';
 
 declare const detector: BeatDetector;
 const visualState = { barFlash: 0 };
@@ -118,7 +118,7 @@ detector.onDownbeat.add(info => {
 `BeatInfo` carries `isDownbeat` and `beatInBar` so you can use the general `onBeat` signal and filter inside the callback:
 
 ```ts
-import { BeatDetector } from '@codexo/exojs-audio-fx';
+import { BeatDetector } from '@codexo/exojs/audio-fx';
 
 declare const detector: BeatDetector;
 
@@ -136,7 +136,7 @@ detector.onBeat.add(info => {
 The detector exposes read-only state you can poll every frame:
 
 ```ts
-import { BeatDetector } from '@codexo/exojs-audio-fx';
+import { BeatDetector } from '@codexo/exojs/audio-fx';
 
 declare const detector: BeatDetector;
 
@@ -176,7 +176,7 @@ The times use the audio-context clock. A current interpretation can expire befor
 Set detection `false` for an explicit four-beat counting convention, anchored to the first tracked beat rather than an inferred musical bar. Its estimate has `origin: 'convention'` and score 1, which describes the chosen rule rather than certainty about the music:
 
 ```ts
-import { BeatDetector } from '@codexo/exojs-audio-fx';
+import { BeatDetector } from '@codexo/exojs/audio-fx';
 
 const detector = new BeatDetector({
     enableTimeSignatureDetection: false,
@@ -190,7 +190,7 @@ When migrating existing callers, allow missing automatic bar events during acqui
 Provide explicit context when the intended cycle is already known:
 
 ```ts
-import { BeatDetector } from '@codexo/exojs-audio-fx';
+import { BeatDetector } from '@codexo/exojs/audio-fx';
 
 declare const detector: BeatDetector;
 
@@ -216,7 +216,7 @@ Construction options with their defaults:
 
 ```ts
 import type { Application } from '@codexo/exojs';
-import { BeatDetector } from '@codexo/exojs-audio-fx';
+import { BeatDetector } from '@codexo/exojs/audio-fx';
 
 declare const application: Application;
 

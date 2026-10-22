@@ -1,7 +1,7 @@
 // Auto-generated from lightmap-normals.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture } from '@codexo/exojs';
-import { AlphaNormals, LightmapLighting, PointLight } from '@codexo/exojs-lighting';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { AlphaNormals, LightmapLighting, PointLight } from '@codexo/exojs/lighting';
+import { demoPanel, mountControls, slider, toggle } from '@examples/runtime';
 // The lightmap renderer multiplies a frame that was already drawn, so by the
 // time the light field is composited there is no surface normal anywhere. A
 // normal prepass puts one back: register a drawable and the renderer draws its
@@ -10,9 +10,10 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 //
 // Nothing is required of a drawable that is not registered - the attachment's
 // alpha is coverage, and where it is zero the light lands with no `N dot L`
-// term at all. That is what the "Normals" toggle below shows: without them
-// every fragment takes the light head-on, so the relief flattens and the
-// stones read slightly BRIGHTER rather than darker. Normals redistribute
+// term at all. The two halves of the floor show it side by side: the left
+// cobbles are registered, the right ones are not, so there every fragment takes
+// the light head-on, the relief flattens and the stones read slightly BRIGHTER
+// rather than darker. Normals redistribute
 // light across a surface; they never add any.
 //
 // Nobody authored a normal map here either. `AlphaNormals` reads the
@@ -59,12 +60,10 @@ const cobbleTexture = canvasTexture(cobbleSize, cobbleSize, context => {
 class LightmapNormalsScene extends Scene {
   world;
   lighting;
-  cobbles = [];
   normals;
   torch;
   lantern;
   elapsed = 0;
-  hud;
   init() {
     const { width, height } = this.app;
     this.world = new Container();
@@ -90,45 +89,29 @@ class LightmapNormalsScene extends Scene {
         // a stone lit from the left must stay lit from the left however it sits.
         cobble.rotation = (row * 9 + column * 23) % 360;
         this.world.addChild(cobble);
-        this.cobbles.push(this.lighting.normalsFrom(cobble, this.normals));
+        if (cobble.x < width / 2) {
+          this.lighting.normalsFrom(cobble, this.normals);
+        }
       }
     }
     this.torch = this.lighting.add(new PointLight({ radius: 480, intensity: 2.4, height: 34, color: new Color(255, 190, 130) }));
     this.lantern = this.lighting.add(new PointLight({ radius: 360, intensity: 1.8, height: 90, color: new Color(150, 200, 255) }));
-    this.hud = mountControls({
-      title: 'Normals under the lightmap renderer',
-      hint: 'Nobody authored a normal map: the cobbles are round because their own alpha says so. Switch the normals off and every fragment takes the light head-on - the relief flattens and the stones read a little brighter, because a surface normal moves light around rather than adding any.',
-      status: '',
-    });
-    const panel = mountControlPanel({ title: 'Surfaces', corner: 'top-right' });
-    panel.addToggle({
-      label: 'Normals',
-      value: true,
-      onChange: value => {
-        for (const cobble of this.cobbles) {
-          if (value) {
-            this.lighting.normalsFrom(cobble, this.normals);
-          } else {
-            this.lighting.stopNormals(cobble);
-          }
+    // DOM labels: canvas text would sit under the lightmap and go dark with
+    // the floor.
+    mountControls({ status: 'Left half: with normals', corner: 'top-left' });
+    mountControls({ status: 'Right half: without normals', corner: 'bottom-right' });
+    demoPanel({
+      corner: 'top-right',
+      controls: {
+        height: slider('Light height', { min: 8, max: 160, step: 2, value: this.torch.height, format: v => v.toFixed(0) }),
+        debug: toggle('Show normals'),
+      },
+      onChange: (key, value) => {
+        if (key === 'height') {
+          this.torch.height = value;
+        } else {
+          this.lighting.debug = value ? 'normals' : null;
         }
-      },
-    });
-    panel.addToggle({
-      label: 'Show normals',
-      value: false,
-      onChange: value => {
-        this.lighting.debug = value ? 'normals' : null;
-      },
-    });
-    panel.addSlider({
-      label: 'Light height',
-      min: 8,
-      max: 160,
-      step: 2,
-      value: this.torch.height,
-      onChange: value => {
-        this.torch.height = value;
       },
     });
   }
@@ -139,9 +122,6 @@ class LightmapNormalsScene extends Scene {
   }
   draw(context) {
     context.render(this.world);
-    this.hud.setStatus(
-      `${this.lighting.activeSurfaceCount} lit surfaces - ${this.lighting.quality} renderer - draw calls ${context.stats.drawCalls}`,
-    );
   }
 }
 const app = new Application({

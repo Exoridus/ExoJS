@@ -1,0 +1,98 @@
+---
+/**
+ * The Next channel's identity strip: channel, the real package version, the
+ * commit and the build time, plus the explicit switch to Stable. Stable
+ * renders nothing.
+ *
+ * The switch keeps the current route when Stable has it and otherwise lands
+ * on the Stable start page of the same locale.
+ */
+import { appInfo } from '../lib/app-info';
+import { siteBuild } from '../lib/site-build-info';
+
+interface Props {
+  locale: 'en' | 'de';
+}
+
+const { locale } = Astro.props;
+const shortSha = siteBuild.sourceSha.slice(0, 7);
+const builtAt = siteBuild.createdAt.replace('T', ' ').replace(/:\d{2}(?:\.\d+)?Z$/, ' UTC');
+const commitHref = appInfo.repositoryUrl ? `${appInfo.repositoryUrl}/commit/${siteBuild.sourceSha}` : null;
+const stableBase = siteBuild.counterpartBase;
+---
+
+{siteBuild.channel === 'next' && (
+  <aside class="channel-banner" aria-label="Site channel" data-channel-banner>
+    <strong class="channel-banner__name">Next</strong>
+    <span>unreleased preview of {siteBuild.packageVersion}</span>
+    {commitHref ? (
+      <a class="channel-banner__sha" href={commitHref} rel="noopener">
+        {shortSha}
+      </a>
+    ) : (
+      <code class="channel-banner__sha">{shortSha}</code>
+    )}
+    <time datetime={siteBuild.createdAt}>built {builtAt}</time>
+    {stableBase && (
+      <a
+        class="channel-banner__switch"
+        href={stableBase}
+        data-channel-switch
+        data-own-base={siteBuild.basePath}
+        data-target-base={stableBase}
+        data-fallback={`${stableBase}${locale}/`}
+      >
+        Switch to Stable
+      </a>
+    )}
+  </aside>
+)}
+
+<script>
+  const link = document.querySelector<HTMLAnchorElement>('[data-channel-switch]');
+
+  link?.addEventListener('click', event => {
+    const { ownBase = '', targetBase = '', fallback = '' } = link.dataset;
+
+    if (!window.location.pathname.startsWith(ownBase)) {
+      return;
+    }
+
+    event.preventDefault();
+    const target = `${targetBase}${window.location.pathname.slice(ownBase.length)}`;
+
+    void fetch(target, { method: 'HEAD' })
+      .then(response => (response.ok ? `${target}${window.location.search}${window.location.hash}` : fallback))
+      .catch(() => fallback)
+      .then(destination => window.location.assign(destination));
+  });
+</script>
+
+<style lang="scss">
+  .channel-banner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+    align-items: baseline;
+    padding: 0.35rem 1rem;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-panel);
+    color: var(--fg-muted);
+    font-size: 0.8125rem;
+  }
+
+  .channel-banner__name {
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .channel-banner__sha {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .channel-banner__switch {
+    margin-left: auto;
+    color: var(--fg);
+  }
+</style>

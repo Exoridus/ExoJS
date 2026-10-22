@@ -1,5 +1,5 @@
-import { BoxShape, ChainShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
-import type { TileLayer, TileSet } from '@codexo/exojs-tilemap';
+import { BoxShape, ChainShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
+import type { TileLayer, TileSet } from '@codexo/exojs/tilemap';
 import { describe, expect, it } from 'vitest';
 
 import type { TileColliderOptions } from '../src/TileColliderStreamer';

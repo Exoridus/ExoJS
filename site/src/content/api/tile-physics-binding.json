@@ -4,7 +4,7 @@
   "symbol": "TilePhysicsBinding",
   "kind": "class",
   "subsystem": "tilemap-physics",
-  "importPath": "@codexo/exojs-tilemap-physics",
+  "importPath": "@codexo/exojs/tilemap-physics",
   "tier": "stable",
   "memberCount": 6,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Explicit presentation of a logical physics body through a tile projection. Call after stepping the world, or use syncInterpolated with the fixed-step interpolation fraction. The node's parent must use map display coordinates. Owns neither body nor node; does not register with the world. Sprite rotation and scale remain application-owned because projection is not a rigid rotation."
       ],
-      "importLine": "import { TilePhysicsBinding } from '@codexo/exojs-tilemap-physics'",
+      "importLine": "import { TilePhysicsBinding } from '@codexo/exojs/tilemap-physics'",
       "sourceLink": null
     },
     {

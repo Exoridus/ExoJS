@@ -61,6 +61,9 @@ const buildProductionLogging = async (pureFuncs: string[]): Promise<string> => {
   });
 
   try {
+    // `iife` is the vm-harness vehicle (a plain function scope the sandbox
+    // binding can read), not a claim about the v0.20 distribution, which is
+    // ESM-only: this test verifies production define stripping.
     const { output } = await bundle.generate({ format: 'iife', name: 'logging' });
 
     return output[0]!.code;

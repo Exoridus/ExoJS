@@ -1,5 +1,6 @@
 // Auto-generated from tween-basics.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Sprite } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 class InteractiveTweensScene extends Scene {
   sprite;
@@ -10,16 +11,9 @@ class InteractiveTweensScene extends Scene {
   onPointerDown = (_pointer, x, y) => this.moveTo(x, y);
   init() {
     const { width, height } = this.app;
-    this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
+    this.sprite = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setPosition(width / 2, height / 2);
     this.target = new Graphics();
-    this.hud = mountControls({
-      title: 'Interactive Tweens',
-      controls: [
-        { keys: 'Click', action: 'move to target; click again to interrupt' },
-        { keys: 'Space', action: 'toggle round trip' },
-      ],
-      hint: 'A new tween starts from the current position. Round trip uses repeat(1) with yoyo().',
-    });
+    this.hud = mountControls();
     this.updateHud('Ready');
     this.app.input.onPointerDown.add(this.onPointerDown);
     this.inputs.onTrigger(Keyboard.Space, () => {
@@ -65,6 +59,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: { basePath: 'assets/' },
 });
 await app.start(InteractiveTweensScene);

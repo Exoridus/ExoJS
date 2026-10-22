@@ -4,7 +4,7 @@
   "symbol": "RotateOverLifetime",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 9,
   "counts": {
@@ -23,7 +23,7 @@
         "Units: degrees per second². Negative values decelerate spin.",
         "GPU-eligible."
       ],
-      "importLine": "import { RotateOverLifetime } from '@codexo/exojs-particles'",
+      "importLine": "import { RotateOverLifetime } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

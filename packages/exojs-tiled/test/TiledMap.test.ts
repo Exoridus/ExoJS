@@ -1,5 +1,5 @@
 import { Texture } from '@codexo/exojs';
-import { TileLayer, TileMap, TileSet } from '@codexo/exojs-tilemap';
+import { TileLayer, TileMap, TileSet } from '@codexo/exojs/tilemap';
 import { describe, expect, it, test } from 'vitest';
 
 import type { TiledChunkData, TiledLayerData, TiledMapData, TiledObjectData, TiledPropertyData } from '../src/data';

@@ -1,6 +1,6 @@
+import type { TileTransform } from '@codexo/exojs/tilemap';
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileProjection, TileSet } from '@codexo/exojs/tilemap';
 import { tiledExtension } from '@codexo/exojs-tiled';
-import type { TileTransform } from '@codexo/exojs-tilemap';
-import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileProjection, TileSet } from '@codexo/exojs-tilemap';
 
 import { materializeRendererBindings } from '#extensions/materialize';
 import { buildSnapshot } from '#extensions/snapshot';

@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   Color,
   Container,
   FixedResolutionCanvasSizing,
@@ -23,7 +22,8 @@ import {
   tilemapExtension,
   type TileMapView,
   TileSet,
-} from '@codexo/exojs-tilemap';
+} from '@codexo/exojs/tilemap';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // An infinite, procedurally generated world: the TileLayer has NO width/height
@@ -127,7 +127,7 @@ class InfiniteTerrainScene extends Scene {
   private hud!: ReturnType<typeof mountControls>;
 
   override async load(): Promise<void> {
-    const tilesTexture = await this.loader.load(Asset.type('texture', assets.demo.tilesets.map.image));
+    const tilesTexture = await this.loader.load(assets.mapPackTilesheet);
     this.tileset = new TileSet({
       name: 'biomes',
       texture: new TextureRegion(tilesTexture, { x: 0, y: 0, width: tilesTexture.width, height: tilesTexture.height }),
@@ -150,8 +150,8 @@ class InfiniteTerrainScene extends Scene {
     this.mapView = map.createView({ bands: { terrain: ['terrain'] } });
 
     const characters = new Spritesheet(
-      await this.loader.load(Asset.type('texture', assets.demo.spritesheets.platformerCharacters.image)),
-      (await this.loader.load(Asset.type('json', assets.demo.spritesheets.platformerCharacters.data))) as SpritesheetData,
+      await this.loader.load(assets.platformerCharactersImage),
+      (await this.loader.load(assets.platformerCharactersAtlas)) as SpritesheetData,
     );
 
     this.explorer = characters.getFrameSprite('character_green_front').setAnchor(0.5);

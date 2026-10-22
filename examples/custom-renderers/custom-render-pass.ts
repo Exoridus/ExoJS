@@ -11,6 +11,7 @@ import {
   type Seconds,
   Sprite,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class CustomRenderPassScene extends Scene {
   private back!: Sprite;
@@ -23,12 +24,12 @@ class CustomRenderPassScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    this.back = new Sprite(this.loader.get('image/ship-a.png'))
+    this.back = new Sprite(this.loader.get(assets.ship))
       .setAnchor(0.5)
       .setPosition(width / 2 - 200, height / 2)
       .setScale(2.2)
       .setTint(new Color(120, 170, 255));
-    this.front = new Sprite(this.loader.get('image/ship-a.png'))
+    this.front = new Sprite(this.loader.get(assets.ship))
       .setAnchor(0.5)
       .setPosition(width / 2 + 200, height / 2)
       .setScale(2.2)
@@ -74,9 +75,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(CustomRenderPassScene);

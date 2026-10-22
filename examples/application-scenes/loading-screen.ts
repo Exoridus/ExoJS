@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   Assets,
   Color,
   FixedResolutionCanvasSizing,
@@ -11,13 +10,13 @@ import {
   Sprite,
   Text,
 } from '@codexo/exojs';
-import { mountControls } from '@examples/runtime';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 const GameAssets = Assets.from({
-  ship: 'image/ship-a.png',
-  grid: 'image/uv-grid-256.png',
-  ramp: 'image/hue-ramp.png',
-  click: Asset.type('sound', 'audio/ui-click.ogg'),
+  ship: assets.ship,
+  grid: assets.uvGrid256,
+  ramp: assets.hueRamp,
+  click: assets.soundUiClick,
 });
 
 /**
@@ -170,7 +169,6 @@ class BootScene extends Scene {
 class PlayScene extends Scene {
   private ship!: Sprite;
   private label!: Text;
-  private hud!: ReturnType<typeof mountControls>;
 
   override init(): void {
     const app = this.app;
@@ -188,22 +186,11 @@ class PlayScene extends Scene {
     this.inputs.onTrigger(Keyboard.Space, () => {
       void app.scenes.change(BootScene);
     });
-
-    this.hud = mountControls({
-      title: 'Loading Progress and Retry',
-      controls: [{ keys: 'Space', action: 'return to the boot scene' }],
-      hint: 'The boot scene follows real loader signals, retries failures, and enters the game after a successful batch.',
-    });
   }
 
   override draw(context: RenderingContext): void {
     context.render(this.ship);
     context.render(this.label);
-  }
-
-  override destroy(): void {
-    this.hud.dispose();
-    super.destroy();
   }
 }
 
@@ -216,9 +203,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(BootScene);

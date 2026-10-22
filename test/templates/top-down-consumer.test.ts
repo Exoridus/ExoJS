@@ -14,9 +14,9 @@ import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
 import { Application, Scene, SceneNavigationAbortedError, Signal } from '@codexo/exojs';
-import { BoxShape, PhysicsBody } from '@codexo/exojs-physics';
+import { BoxShape, PhysicsBody } from '@codexo/exojs/physics';
+import { TileLayerNode } from '@codexo/exojs/tilemap';
 import { tiledExtension } from '@codexo/exojs-tiled';
-import { TileLayerNode } from '@codexo/exojs-tilemap';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type GlyphAtlasPool, resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';

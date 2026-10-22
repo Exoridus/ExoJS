@@ -1,6 +1,6 @@
 import { type Texture, TextureRegion } from '@codexo/exojs';
-import type { TileProperties } from '@codexo/exojs-tilemap';
-import { TileSet } from '@codexo/exojs-tilemap';
+import type { TileProperties } from '@codexo/exojs/tilemap';
+import { TileSet } from '@codexo/exojs/tilemap';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { LdtkData, LdtkEntityInstance, LdtkFieldInstance, LdtkLayerInstance, LdtkLevel } from '../src/LdtkData';

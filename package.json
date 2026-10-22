@@ -18,14 +18,6 @@
     "dist/exo.esm.js.map",
     "dist/exo.debug.esm.js",
     "dist/exo.debug.esm.js.map",
-    "dist/exo.iife.js",
-    "dist/exo.iife.js.map",
-    "dist/exo.iife.min.js",
-    "dist/exo.iife.min.js.map",
-    "dist/exo.full.iife.js",
-    "dist/exo.full.iife.js.map",
-    "dist/exo.full.iife.min.js",
-    "dist/exo.full.iife.min.js.map",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"
@@ -68,9 +60,49 @@
       "import": "./dist/esm/debug/index.js",
       "default": "./dist/esm/debug/index.js"
     },
+    "./tilemap": {
+      "types": "./dist/esm/tilemap/index.d.ts",
+      "import": "./dist/esm/tilemap/index.js",
+      "default": "./dist/esm/tilemap/index.js"
+    },
+    "./particles": {
+      "types": "./dist/esm/particles/index.d.ts",
+      "import": "./dist/esm/particles/index.js",
+      "default": "./dist/esm/particles/index.js"
+    },
+    "./audio-fx": {
+      "types": "./dist/esm/audio-fx/index.d.ts",
+      "import": "./dist/esm/audio-fx/index.js",
+      "default": "./dist/esm/audio-fx/index.js"
+    },
+    "./physics": {
+      "types": "./dist/esm/physics/index.d.ts",
+      "import": "./dist/esm/physics/index.js",
+      "default": "./dist/esm/physics/index.js"
+    },
+    "./tilemap-physics": {
+      "types": "./dist/esm/tilemap-physics/index.d.ts",
+      "import": "./dist/esm/tilemap-physics/index.js",
+      "default": "./dist/esm/tilemap-physics/index.js"
+    },
+    "./lighting": {
+      "types": "./dist/esm/lighting/index.d.ts",
+      "import": "./dist/esm/lighting/index.js",
+      "default": "./dist/esm/lighting/index.js"
+    },
+    "./pathfinding": {
+      "types": "./dist/esm/pathfinding/index.d.ts",
+      "import": "./dist/esm/pathfinding/index.js",
+      "default": "./dist/esm/pathfinding/index.js"
+    },
     "./package.json": "./package.json"
   },
   "imports": {
+    "#physics-debug": {
+      "@codexo/exojs-source": "./packages/exojs-physics/src/debug/index.ts",
+      "types": "./dist/esm/physics/debug/index.d.ts",
+      "default": "./dist/esm/physics/debug/index.js"
+    },
     "#*.vert": "./src/*.vert",
     "#*.frag": "./src/*.frag",
     "#*.wgsl": "./src/*.wgsl",
@@ -133,6 +165,8 @@
     "test:alloc": "vitest run --project=rendering-alloc",
     "test:physics-perf": "vitest run --project=physics-perf",
     "test:production-stripping": "vitest run --project=exojs test/build-defines/production-stripping.test.ts",
+    "test:release-dist": "vitest run --project=release-dist",
+    "test:esm-importmap": "tsx scripts/ci/verify-esm-importmap.ts",
     "test:skips": "pnpm test --reporter=default --reporter=junit --outputFile.junit=./test-results/unit.junit.xml && tsx scripts/check-skipped-tests.ts",
     "test:skips:check": "tsx scripts/check-skipped-tests.ts",
     "test:skips:update-baseline": "tsx scripts/check-skipped-tests.ts --update-baseline",
@@ -154,6 +188,7 @@
     "test:parity:firefox": "tsx ./scripts/run-parity.ts --project=browser-webgpu-firefox test/rendering/parity",
     "test:parity:safari": "tsx ./scripts/run-parity.ts --project=browser-parity-safari",
     "test:examples:smoke": "pnpm --filter @codexo/exojs-examples examples:smoke",
+    "test:playground:e2e": "pnpm --filter @codexo/exojs-examples playground:e2e",
     "gates": "tsx ./scripts/ci/gates.ts",
     "lanes": "tsx ./scripts/lanes.ts",
     "qualify": "tsx ./scripts/ci/qualify.ts",
@@ -174,7 +209,9 @@
     "assets:compact": "tsx scripts/compact-example-assets.ts --write",
     "assets:compact:check": "tsx scripts/compact-example-assets.ts",
     "examples:sync:check": "tsx scripts/check-examples-sync.ts",
-    "full-bundle:exports:check": "tsx scripts/check-dist-fresh.ts && tsx scripts/check-full-bundle-exports.ts",
+    "legacy-shims:generate": "tsx scripts/release/legacy-shims.ts",
+    "legacy-shims:check": "tsx scripts/release/legacy-shims.ts --check",
+    "dist:check": "tsx scripts/check-dist-fresh.ts",
     "sync:example-capabilities": "tsx ./scripts/sync-example-capabilities.ts",
     "site:build": "tsx scripts/check-dist-fresh.ts && pnpm --filter @codexo/exojs-examples build",
     "size": "size-limit",
@@ -196,6 +233,7 @@
     "release:publish": "tsx ./scripts/release/run.ts publish",
     "release:publish-independent": "tsx ./scripts/release/run.ts publish-independent",
     "release:bootstrap": "tsx ./scripts/release/run.ts bootstrap",
+    "release:registry-plan": "tsx ./scripts/release/run.ts registry-plan",
     "release:notes": "tsx ./scripts/generate-release-notes.ts",
     "release:changelog": "tsx ./scripts/release/generate-changelog.ts"
   },
@@ -218,42 +256,35 @@
       "gzip": true
     },
     {
-      "path": "dist/exo.iife.min.js",
-      "limit": "367 KB",
-      "gzip": true
-    },
-    {
-      "path": "dist/exo.full.iife.min.js",
-      "limit": "647 KB",
-      "gzip": true
-    },
-    {
-      "name": "@codexo/exojs-lighting",
-      "path": "packages/exojs-lighting/dist/esm/index.js",
+      "name": "@codexo/exojs/lighting",
+      "path": "dist/esm/lighting/index.js",
       "limit": "34 KB",
       "gzip": true,
       "ignore": [
-        "@codexo/exojs"
+        "../index.js",
+        "../../index.js"
       ]
     },
     {
-      "name": "@codexo/exojs-lighting (lightmap, no cascades)",
-      "path": "packages/exojs-lighting/dist/esm/index.js",
+      "name": "@codexo/exojs/lighting (lightmap, no cascades)",
+      "path": "dist/esm/lighting/index.js",
       "import": "{ LightmapLighting, PointLight, SpotLight, PolygonOccluder }",
       "limit": "14 KB",
       "gzip": true,
       "ignore": [
-        "@codexo/exojs"
+        "../index.js",
+        "../../index.js"
       ]
     },
     {
-      "name": "@codexo/exojs-lighting (forward, no occluder tracing)",
-      "path": "packages/exojs-lighting/dist/esm/index.js",
+      "name": "@codexo/exojs/lighting (forward, no occluder tracing)",
+      "path": "dist/esm/lighting/index.js",
       "import": "{ ForwardLighting, PointLight, SpotLight, LitMaterial, NormalMap }",
       "limit": "5 KB",
       "gzip": true,
       "ignore": [
-        "@codexo/exojs"
+        "../index.js",
+        "../../index.js"
       ]
     },
     {

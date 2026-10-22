@@ -31,9 +31,12 @@ describe('bootstrapTargets', () => {
   it('offers every extension and every independent package, and never Core', () => {
     const names = bootstrapTargets().map(target => target.name);
 
-    expect(names).toContain('@codexo/exojs-tilemap-physics');
+    expect(names).toContain('@codexo/exojs-tiled');
     expect(names).toContain('@codexo/exojs-build');
     expect(names).not.toContain('@codexo/exojs');
+    // Runtime modules ship inside the Core tarball, so no name of theirs,
+    // private or retired, is ever published on its own.
+    expect(names.filter(name => name.startsWith('@codexo/exojs-module-') || name === '@codexo/exojs-tilemap-physics')).toEqual([]);
     // The scaffolder is on the engine's lockstep line, so the coordinated
     // release owns it - bootstrap publish must not offer it.
     expect(names).not.toContain('create-exo-app');
@@ -42,7 +45,7 @@ describe('bootstrapTargets', () => {
   it('marks the lockstep line so a caller can tell the two version lines apart', () => {
     const targets = bootstrapTargets();
 
-    expect(targets.find(t => t.name === '@codexo/exojs-tilemap-physics')?.lockstep).toBe(true);
+    expect(targets.find(t => t.name === '@codexo/exojs-tiled')?.lockstep).toBe(true);
     expect(targets.find(t => t.name === '@codexo/exojs-build')?.lockstep).toBe(false);
   });
 });
@@ -87,8 +90,8 @@ describe('bootstrapPublish', () => {
   });
 
   it('refuses a name that is already on the registry and names the path to use instead', () => {
-    const runner = createRecordingRunner(invocation => (invocation.args[0] === 'view' ? ok('@codexo/exojs-tilemap-physics\n') : ok()));
-    const report = bootstrapPublish('@codexo/exojs-tilemap-physics', { dryRun: true, skipBuild: false }, runner, repoRoot);
+    const runner = createRecordingRunner(invocation => (invocation.args[0] === 'view' ? ok('@codexo/exojs-tiled\n') : ok()));
+    const report = bootstrapPublish('@codexo/exojs-tiled', { dryRun: true, skipBuild: false }, runner, repoRoot);
 
     expect(report.ok).toBe(false);
     expect(report.failedStep).toBe('registry-check');
@@ -215,8 +218,8 @@ describe('bootstrapPublish - release mode, for the packages off the lockstep lin
   });
 
   it('refuses a lockstep package, which the coordinated release owns', () => {
-    const runner = createRecordingRunner(invocation => (invocation.args[0] === 'view' ? ok('@codexo/exojs-tilemap-physics\n') : ok()));
-    const report = bootstrapPublish('@codexo/exojs-tilemap-physics', { dryRun: true, skipBuild: false, mode: 'release' }, runner, repoRoot);
+    const runner = createRecordingRunner(invocation => (invocation.args[0] === 'view' ? ok('@codexo/exojs-tiled\n') : ok()));
+    const report = bootstrapPublish('@codexo/exojs-tiled', { dryRun: true, skipBuild: false, mode: 'release' }, runner, repoRoot);
 
     expect(report.ok).toBe(false);
     expect(report.reason).toMatch(/coordinated release publishes it/);

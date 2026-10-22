@@ -70,7 +70,9 @@ import type { Extension } from '@codexo/exojs/extensions';
 
 Forbidden: `../x`, `@/x`, bare `core/x`, `@codexo/exojs/src/x`. ESLint enforces this.
 
-How it resolves: each package maps `#*` in its `package.json#imports` to a package-specific source condition (`./src/*.ts`) and to `./dist/esm/*` for consumers. tsc uses `customConditions`, Vitest uses `resolve`/`ssr.resolve.conditions`, and Rollup uses node-resolve `exportConditions` — all pointing `#` at source in-repo. The shipped `.d.ts` keep `#` verbatim and resolve through the package's own imports map, so there is no declaration alias-rewrite step.
+How it resolves: each package maps `#*` in its `package.json#imports` to a package-specific source condition (`./src/*.ts`) and, where the package ships its own tree, to `./dist/esm/*` for consumers. tsc uses `customConditions`, Vitest uses `resolve`/`ssr.resolve.conditions`, and Rolldown uses `resolve.conditionNames` — all pointing `#` at source in-repo. The public `@codexo/exojs` specifiers, including the runtime-module subpaths, map to their sources through `@codexo/exojs-config/typescript/workspace-paths.json` for tsc and through the Vitest aliases.
+
+Core's shipped `.d.ts` keep their own `#` imports verbatim and resolve through the Core imports map. The runtime modules are different: their sources live in `packages/exojs-<module>/` but ship inside the Core tarball under `dist/esm/<subpath>/`, so the build rewrites every specifier that leaves a module (`@codexo/exojs`, a Core subpath, a sibling module, the module's own `#` imports) to a relative path, in the emitted JavaScript and in the declarations alike. The declaration rewrite is AST-based (`scripts/lib/module-specifiers.ts`) and resolves each specifier the way an installed consumer would, through the Core `exports` map.
 
 ## File layout: one file, one primary symbol
 
@@ -106,8 +108,8 @@ An error class never hides inside the file of the class that throws it. A caller
 After one root `pnpm install`, every package builds, tests and packs on its own:
 
 ```bash
-pnpm --filter @codexo/exojs build        # or -particles / -tiled
-pnpm --filter @codexo/exojs-particles test
+pnpm --filter @codexo/exojs build        # Core, including its runtime modules
+pnpm --filter @codexo/exojs-module-particles test
 pnpm --filter @codexo/exojs-tiled pack
 # …or from the package directory:
 pnpm build && pnpm test && pnpm pack
@@ -140,13 +142,15 @@ Prettier owns the mechanical layout: indentation, quotes, semicolons, commas, wr
 
 ## Examples and assets
 
-Example authors use the injected, typed `assets` global directly — no import:
+Examples load their media through the optional content package `@codexo/exojs-demo-assets`, imported like any other dependency:
 
 ```ts
-assets.demo.textures.bunny;
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+
+const ship = this.loader.get(assets.ship);
 ```
 
-The global is installed only inside the controlled example runtimes (Playground, Example/Guide preview, Asset Browser, smoke harness, Full Release harness). It is not part of the engine public API. The canonical catalog is `examples/assets/assets.ts`; `pnpm --filter @codexo/exojs-examples examples:sync` regenerates the `.js` sources and the runtime catalog.
+Each property is a passive descriptor; reading it fetches nothing, and the scene's loader claims and loads it. There is no injected global, so an example copied out of the Playground runs anywhere the package is installed. The media under `examples/assets/` are the authoring source of that package: `packages/exojs-demo-assets/catalog.json` lists what ships, and its generator derives the typed catalog, the manifest, the notices and the packed `media/` tree. The site serves the package beside the engine (`vendor/exojs-demo-assets/`), not the `examples/assets/` tree. `pnpm --filter @codexo/exojs-examples examples:sync` regenerates the `.js` sources.
 
 JSON asset data under `examples/assets/` is committed compact, including Tiled maps/tilesets/templates (`.tmj`, `.tsj`, `.tj`, `.world`) and LDtk documents (`.ldtk`, `.ldtkl`). Run `pnpm assets:compact` after exporting or editing these files. `pnpm assets:compact:check` enforces this in the sync gates. Prettier ignores the asset directory; do not pretty-print large tile arrays. The example catalog `examples/examples.json` remains ordinary repository metadata.
 
@@ -158,7 +162,7 @@ Treat the `.js` as build output that happens to be versioned. It is not linted a
 
 One file is not quite that: `examples/tilemap/worker-streamed-terrain.js` is the only example whose generation is not a plain transpile. Its `?worker` import is inlined at generation time, so the emitted file carries code its source does not, and it stays in `tsconfig.examples.json` for that reason.
 
-`examples/shared/` holds one more generated artifact of a different kind. `runtime.d.ts` is emitted from `runtime.ts` during the same sync, because the Playground editor resolves `@examples/runtime` through a declaration file it fetches from the served snapshot rather than through the implementation. Like `assets-global.d.ts` it is Prettier-ignored and pinned by a drift test rather than by `examples:sync:check`.
+`examples/shared/` holds one more generated artifact of a different kind. `runtime.d.ts` is emitted from `runtime.ts` during the same sync, because the Playground editor resolves `@examples/runtime` through a declaration file it fetches from the served snapshot rather than through the implementation. It is Prettier-ignored and pinned by a drift test rather than by `examples:sync:check`.
 
 ### Guide sources
 
@@ -305,7 +309,8 @@ This policy governs new code and the sites a change already touches. The engine 
 
 ## Distribution
 
-- npm packages are **modular and self-contained**: `@codexo/exojs` ships Core only; `@codexo/exojs-particles` and `@codexo/exojs-tiled` ship only their own product. There is no Core `/full` export and no aggregator package.
+- npm packages are **modular and self-contained**: `@codexo/exojs` ships Core and, as opt-in subpaths, the runtime modules (`@codexo/exojs/tilemap`, `/particles`, `/audio-fx`, `/physics`, `/tilemap-physics`, `/lighting`, `/pathfinding`); the root entry never imports them. Adapters such as `@codexo/exojs-tiled` ship only their own product. There is no Core `/full` export and no aggregator package.
+- A runtime module's sources live in `packages/exojs-<module>/` as a private workspace package (`@codexo/exojs-module-<module>`) and are built only by the Core build, which emits them under `dist/esm/<subpath>/`. Every import a module makes of Core or of a sibling module lands on the same file the Core `exports` map names, so a consumer always has exactly one Core instance. The release roles live in `scripts/release/lockstep-packages.ts`.
 - Packages ship `.js` + `.d.ts` + source maps — **never raw `.ts` runtime entries**. The `exports` map is the public interface; the bundler profile is the supported type-resolution target (browser/bundler-first).
 - Extensions are side-effect-free at the root; pass their descriptor to `ApplicationOptions.extensions` to equip an app. There is no global registry.
 - The synchronized offline snapshot (npm tarballs + versioned ESM vendor trees + examples + built site) is the GitHub Full Release archive.

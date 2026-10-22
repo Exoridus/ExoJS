@@ -33,7 +33,8 @@ import {
   ParticleSystem,
   Range,
   ScaleOverLifetime,
-} from '@codexo/exojs-particles';
+} from '@codexo/exojs/particles';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 const random = new Random(7);
 class GamepadSpaceshipScene extends Scene {
@@ -75,7 +76,7 @@ class GamepadSpaceshipScene extends Scene {
       this.stars.fillColor = new Color(200, 215, 255, brightness);
       this.stars.drawCircle(random.next(0, width), random.next(0, height), random.next(0.6, 1.8));
     }
-    this.ship = new Sprite(this.loader.get(assets.demo.textures.shipA))
+    this.ship = new Sprite(this.loader.get(assets.ship))
       .setAnchor(0.5)
       .setScale(0.75)
       .setPosition(width / 2, height / 2);
@@ -91,7 +92,7 @@ class GamepadSpaceshipScene extends Scene {
     // already unlocked.
     app.audio.onUnlock.add(this.startEngine);
     this.fx = new Graphics();
-    this.particles = new ParticleSystem(this.loader.get(assets.demo.textures.particleSpark), { capacity: 4000 });
+    this.particles = new ParticleSystem(this.loader.get(assets.particleSpark), { capacity: 4000 });
     this.particles.setBlendMode(BlendModes.Additive);
     this.systems.add(this.particles);
     this.burst = new BurstSpawn({
@@ -132,14 +133,7 @@ class GamepadSpaceshipScene extends Scene {
     })
       .setAnchor(0.5, 0.5)
       .setPosition(width / 2, height - 40);
-    this.hud = mountControls({
-      title: 'Fly a Spaceship',
-      controls: [
-        { keys: 'WASD / Arrows / Left stick', action: 'steer and thrust' },
-        { keys: 'Space / Right trigger', action: 'fire' },
-      ],
-      status: 'Score: 0',
-    });
+    this.hud = mountControls({ status: 'Score: 0' });
   }
   startEngine = () => {
     this.engine ??= this.app.audio.play(new AudioGenerator({ type: 'sawtooth', frequency: 55 }), { bus: this.engineBus, volume: 0 });

@@ -4,7 +4,7 @@
   "symbol": "RingModulatorEffectOptions",
   "kind": "interface",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Construction options for RingModulatorEffect."
       ],
-      "importLine": "import { RingModulatorEffectOptions } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { RingModulatorEffectOptions } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

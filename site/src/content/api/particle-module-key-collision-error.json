@@ -4,7 +4,7 @@
   "symbol": "ParticleModuleKeyCollisionError",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 6,
   "counts": {
@@ -23,7 +23,7 @@
         "A key names exactly one struct and one member of the composite compute shader's uniform block, so two contributions under it cannot be told apart: both bodies would read the same uniforms and only one instance's values would ever reach the device. Give one of them a distinct key, or combine them into a single module.",
         "Only the WebGPU path builds that shader - the CPU path runs each module's `apply()` independently and is unaffected - which is why the same scene used to run on WebGL2 and die with a raw WGSL error on WebGPU."
       ],
-      "importLine": "import { ParticleModuleKeyCollisionError } from '@codexo/exojs-particles'",
+      "importLine": "import { ParticleModuleKeyCollisionError } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

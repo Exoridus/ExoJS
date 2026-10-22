@@ -7,12 +7,17 @@
  * them declares on another - the core or a sibling extension - must be
  * `<major>.<minor>.x`. A sibling peer left a minor behind resolves to nothing
  * once the line moves, which no install of the shipped package can satisfy.
+ *
+ * The legacy shims are off the per-release version but not off the line: each
+ * sits on the lockstep line until that line moves past the one it serves, is
+ * never ahead of Core, and peers on `<major>.<minor>.x` of its own version.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { EXTENSION_PACKAGES } from './release/lockstep-packages.ts';
+import { lineOf, shimPeerRange } from './release/legacy-shims.ts';
+import { EXTENSION_PACKAGES, LEGACY_SHIMS } from './release/lockstep-packages.ts';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -80,6 +85,47 @@ if (peerProblems.length > 0) {
   process.exit(1);
 }
 
+const compareVersions = (a: string, b: string): number => {
+  const left = a.split('.').map(Number);
+  const right = b.split('.').map(Number);
+
+  for (let i = 0; i < Math.max(left.length, right.length); i++) {
+    const difference = (left[i] ?? 0) - (right[i] ?? 0);
+
+    if (difference !== 0) {
+      return difference;
+    }
+  }
+
+  return 0;
+};
+
+const shimProblems: string[] = [];
+const coreLine = lineOf(corePkg.version);
+
+for (const shim of LEGACY_SHIMS) {
+  const pkg = readPackage(`${shim.dir}/package.json`);
+  const expectedLine = compareVersions(coreLine, shim.line) <= 0 ? coreLine : shim.line;
+
+  if (lineOf(pkg.version) !== expectedLine) {
+    shimProblems.push(`  ${pkg.name}: v${pkg.version} is not on the ${expectedLine} line`);
+  }
+
+  if (compareVersions(pkg.version, corePkg.version) > 0) {
+    shimProblems.push(`  ${pkg.name}: v${pkg.version} is ahead of Core v${corePkg.version}`);
+  }
+
+  if (JSON.stringify(pkg.peers) !== JSON.stringify({ '@codexo/exojs': shimPeerRange(pkg.version) })) {
+    shimProblems.push(`  ${pkg.name}: peers ${JSON.stringify(pkg.peers)}, expected only "@codexo/exojs": "${shimPeerRange(pkg.version)}"`);
+  }
+}
+
+if (shimProblems.length > 0) {
+  process.stderr.write('verify-lockstep: LEGACY SHIM VERSION MISMATCH:\n');
+  process.stderr.write(`${shimProblems.join('\n')}\n`);
+  process.exit(1);
+}
+
 process.stdout.write(
-  `verify-lockstep: all ${packages.length} packages at v${versions[0]}; every official peer range = "${expectedPeer}" ✓\n`,
+  `verify-lockstep: all ${packages.length} packages at v${versions[0]}; every official peer range = "${expectedPeer}"; ${LEGACY_SHIMS.length} legacy shims on their line ✓\n`,
 );

@@ -33,10 +33,6 @@ export interface ExampleRuntimeMeta {
     order?: number;
     status?: string;
 }
-export interface ExampleRuntime {
-    assets: Record<string, unknown>;
-    assetUrl?: (path: string) => string;
-}
 declare global {
     interface Window {
         __EXAMPLE_META__?: ExampleRuntimeMeta | null;
@@ -72,6 +68,8 @@ export interface ControlPanelHandle {
         max?: number;
         step?: number;
         value?: number;
+        /** Readout text for a value; two decimals when omitted. */
+        format?: (value: number) => string;
         onChange?: (value: number) => void;
     }): ControlBinding<number>;
     addToggle(options: {
@@ -141,3 +139,71 @@ export declare const trackPressButtons: (canvas: HTMLCanvasElement) => PressButt
  * consistent, discoverable way instead of hand-rolling canvas hit-tests.
  */
 export declare const mountControlPanel: (options?: MountControlPanelOptions) => ControlPanelHandle;
+/** A numeric range control. */
+export interface SliderSpec {
+    readonly kind: 'slider';
+    readonly label: string;
+    readonly min: number;
+    readonly max: number;
+    readonly step: number;
+    readonly value: number;
+    readonly format?: (value: number) => string;
+}
+/** An on/off control. */
+export interface ToggleSpec {
+    readonly kind: 'toggle';
+    readonly label: string;
+    readonly value: boolean;
+}
+/** One of a fixed list of named options; shows the name and its position, e.g. `Screen (5/18)`. */
+export interface ChoiceSpec<T extends string = string> {
+    readonly kind: 'choice';
+    readonly label: string;
+    readonly options: readonly T[];
+    readonly value: T;
+}
+export type DemoControlSpec = SliderSpec | ToggleSpec | ChoiceSpec;
+/** The value type a control spec holds. */
+export type DemoControlValue<S> = S extends SliderSpec ? number : S extends ToggleSpec ? boolean : S extends ChoiceSpec<infer T> ? T : never;
+export type DemoPanelValues<C extends Record<string, DemoControlSpec>> = {
+    -readonly [K in keyof C]: DemoControlValue<C[K]>;
+};
+export declare const slider: (label: string, options: {
+    min: number;
+    max: number;
+    value: number;
+    step?: number;
+    format?: (value: number) => string;
+}) => SliderSpec;
+export declare const toggle: (label: string, value?: boolean) => ToggleSpec;
+export declare const choice: <const T extends string>(label: string, options: readonly T[], value?: T) => ChoiceSpec<T>;
+export interface DemoPanelOptions<C extends Record<string, DemoControlSpec>> {
+    title?: string;
+    corner?: OverlayCorner;
+    controls: C;
+    /** Buttons below the controls, in order. */
+    actions?: Record<string, () => void>;
+    /**
+     * Applies a changed value to the scene. Called once with every key on mount,
+     * then for each change from a control or from `set`/`step`.
+     */
+    onChange?: <K extends keyof C>(key: K, value: DemoControlValue<C[K]>, values: Readonly<DemoPanelValues<C>>) => void;
+}
+/** Handle returned by {@link demoPanel}. */
+export interface DemoPanel<C extends Record<string, DemoControlSpec>> {
+    readonly element: HTMLElement;
+    /** Current values; read-only, change them through `set` or `step`. */
+    readonly values: Readonly<DemoPanelValues<C>>;
+    set<K extends keyof C>(key: K, value: DemoControlValue<C[K]>): void;
+    /** Moves a choice by `delta` options (wrapping), a slider by `delta` steps (clamped), or flips a toggle. */
+    step(key: keyof C, delta?: number): void;
+    /** A short status line under the controls; an empty string hides it. */
+    status(text: string): void;
+    dispose(): void;
+}
+/**
+ * Mounts a small control panel from a declarative control list and keeps one
+ * value per control. Keyboard shortcuts should call `set`/`step` so the panel
+ * and the shortcut never disagree.
+ */
+export declare const demoPanel: <const C extends Record<string, DemoControlSpec>>(options: DemoPanelOptions<C>) => DemoPanel<C>;

@@ -4,7 +4,7 @@
   "symbol": "WangSetOptions",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 4,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Options for constructing a WangSet."
       ],
-      "importLine": "import { WangSetOptions } from '@codexo/exojs-tilemap'",
+      "importLine": "import { WangSetOptions } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

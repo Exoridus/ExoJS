@@ -21,15 +21,8 @@ import { join } from 'node:path';
 /** Packages a template may depend on, mapped to the workspace directory that builds it. */
 const PACKAGE_SOURCES: Record<string, string> = {
   '@codexo/exojs': '.',
-  '@codexo/exojs-audio-fx': 'packages/exojs-audio-fx',
   '@codexo/exojs-aseprite': 'packages/exojs-aseprite',
   '@codexo/exojs-ldtk': 'packages/exojs-ldtk',
-  '@codexo/exojs-lighting': 'packages/exojs-lighting',
-  '@codexo/exojs-particles': 'packages/exojs-particles',
-  '@codexo/exojs-pathfinding': 'packages/exojs-pathfinding',
-  '@codexo/exojs-physics': 'packages/exojs-physics',
-  '@codexo/exojs-tilemap': 'packages/exojs-tilemap',
-  '@codexo/exojs-tilemap-physics': 'packages/exojs-tilemap-physics',
   '@codexo/exojs-tiled': 'packages/exojs-tiled',
 };
 

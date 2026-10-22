@@ -4,7 +4,7 @@
   "symbol": "MapLevelProvider",
   "kind": "type",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 0,
   "counts": {
@@ -23,7 +23,7 @@
         "Anything awaitable is accepted, so a provider can hand back a LoaderScope.load queue directly.",
         "The returned map becomes **owned by that level runtime**, which destroys it on unload. Return a map built for this load; handing back a shared map (an entry of an eagerly converted document, say) makes the runtime destroy an object other code still holds."
       ],
-      "importLine": "import { MapLevelProvider } from '@codexo/exojs-tilemap'",
+      "importLine": "import { MapLevelProvider } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

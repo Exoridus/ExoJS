@@ -1,5 +1,6 @@
 // Auto-generated from mouse-and-pointer.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Sprite } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 // Everything the pointer pipeline reports, surfaced at once:
 //   - live position (onPointerMove)
@@ -22,7 +23,7 @@ class MouseAndPointerScene extends Scene {
     const { width, height } = app;
     this.pointer = { x: width / 2, y: height / 2 };
     this.previous = { x: width / 2, y: height / 2 };
-    this.ship = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
+    this.ship = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setPosition(width / 2, height / 2);
     this.ship.interactive = true;
     this.ship.draggable = true;
     this.root.addChild(this.ship);
@@ -41,16 +42,7 @@ class MouseAndPointerScene extends Scene {
     app.input.onPointerTap.add(() => {
       this.clicks++;
     });
-    this.hud = mountControls({
-      title: 'Mouse and Pointer',
-      controls: [
-        { keys: 'Move', action: 'track position + delta' },
-        { keys: 'Click', action: 'count taps' },
-        { keys: 'Drag', action: 'move the ship sprite' },
-      ],
-      status: '',
-      hint: 'Drag the ship to move it; the crosshair follows the cursor.',
-    });
+    this.hud = mountControls();
   }
   buttonLabel() {
     const held = [this.buttons & 1 && 'Left', this.buttons & 2 && 'Right', this.buttons & 4 && 'Middle'].filter(Boolean);
@@ -84,8 +76,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(10, 12, 20),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(MouseAndPointerScene);

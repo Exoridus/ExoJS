@@ -13,7 +13,8 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 
 import type { CommandRunner } from './command-runner.ts';
-import { LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
+import { isShimDue } from './legacy-shims.ts';
+import { LEGACY_SHIMS, LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
 import {
   type OfficialPackageName,
   PUBLISH_ORDER,
@@ -44,9 +45,20 @@ const readVersion = (packageJsonPath: string): { name: string; version: string }
   return { name: pkg.name, version: pkg.version };
 };
 
-/** Resolves the lockstep official packages in canonical publish order (PUBLISH_ORDER). */
-export const officialPackages = (rootDir: string): OfficialPackage[] =>
-  LOCKSTEP_PACKAGES.map(p => ({ name: p.name, dir: p.dir === '.' ? rootDir : resolve(rootDir, p.dir) }));
+/**
+ * The packages a release packs, in PUBLISH_ORDER: every lockstep package, then
+ * the legacy shims whose version the cut set to this release. An unchanged shim
+ * stays on the version it was last published under and is left out.
+ */
+export const officialPackages = (rootDir: string): OfficialPackage[] => {
+  const release = readVersion(resolve(rootDir, 'package.json')).version;
+  const lockstep = LOCKSTEP_PACKAGES.map(p => ({ name: p.name, dir: p.dir === '.' ? rootDir : resolve(rootDir, p.dir) }));
+  const shims = LEGACY_SHIMS.map(shim => ({ name: shim.name, dir: resolve(rootDir, shim.dir), line: shim.line })).filter(shim =>
+    isShimDue(shim, readVersion(resolve(shim.dir, 'package.json')).version, release),
+  );
+
+  return [...lockstep, ...shims.map(({ name, dir }) => ({ name, dir }))];
+};
 
 /**
  * Asserts all official packages share one lockstep version and returns it.

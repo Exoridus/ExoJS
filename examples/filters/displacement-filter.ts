@@ -13,9 +13,10 @@ import {
   TextureFormat,
   WrapModes,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
-const SHIP = assets.demo.textures.shipA;
+const SHIP = assets.ship;
 const MAP_SIZE = 256;
 
 // The displacement map: red is the horizontal direction, green the vertical,
@@ -128,9 +129,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(18, 30, 46),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(DisplacementFilterScene);

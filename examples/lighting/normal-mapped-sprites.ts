@@ -12,7 +12,7 @@ import {
   Texture,
   TextureFormat,
 } from '@codexo/exojs';
-import { ForwardLighting, type Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
+import { ForwardLighting, type Lighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs/lighting';
 import { mountControls } from '@examples/runtime';
 
 // Forward normal mapping on plain sprites. A LitMaterial samples a

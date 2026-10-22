@@ -10,7 +10,7 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import { PointLight, PolygonOccluder, RadianceLighting } from '@codexo/exojs-lighting';
+import { PointLight, PolygonOccluder, RadianceLighting } from '@codexo/exojs/lighting';
 import { describe, expect, test } from 'vitest';
 
 import type { Application } from '#core/Application';

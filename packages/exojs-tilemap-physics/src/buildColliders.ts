@@ -1,12 +1,12 @@
 import { logger, type PointLike } from '@codexo/exojs';
-import { BoxShape, CapsuleShape, ChainShape, CircleShape, type ColliderOptions, toConvexPolygonShapes } from '@codexo/exojs-physics';
+import { BoxShape, CapsuleShape, ChainShape, CircleShape, type ColliderOptions, toConvexPolygonShapes } from '@codexo/exojs/physics';
 import {
   ObjectKind,
   type TileCollisionGeometry,
   type TileCollisionRect,
   type TileCollisionShape,
   type TileMapObject,
-} from '@codexo/exojs-tilemap';
+} from '@codexo/exojs/tilemap';
 
 import { materialKey, type ResolvedMaterial, resolveMaterial } from './material';
 import { traceCellOutlines } from './outline';

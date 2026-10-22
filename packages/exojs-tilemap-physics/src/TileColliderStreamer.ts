@@ -1,6 +1,6 @@
-import { PhysicsBody, type PhysicsWorld } from '@codexo/exojs-physics';
-import type { ReadonlyTileChunk, TileCellSource, TileLayer, TileMapObject } from '@codexo/exojs-tilemap';
-import { buildTileCollisionGeometry } from '@codexo/exojs-tilemap';
+import { PhysicsBody, type PhysicsWorld } from '@codexo/exojs/physics';
+import type { ReadonlyTileChunk, TileCellSource, TileLayer, TileMapObject } from '@codexo/exojs/tilemap';
+import { buildTileCollisionGeometry } from '@codexo/exojs/tilemap';
 
 import { buildTileColliders } from './buildColliders';
 import { resolveDefaults, type ResolvedMaterial } from './material';
@@ -66,7 +66,7 @@ const blockExtent = (chunkExtent: number, layerExtent: number | undefined, start
  *
  * The bridge owns every body it creates and nothing else. It observes the layer
  * through its public revision counters, so it works with any chunk source -
- * {@link import('@codexo/exojs-tilemap').ChunkStreamer}, a hand-rolled loader,
+ * {@link import('@codexo/exojs/tilemap').ChunkStreamer}, a hand-rolled loader,
  * or a fully resident bounded layer.
  *
  * Tick it from `preFrame`, before the frame's fixed steps run - not from

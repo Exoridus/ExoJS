@@ -1,5 +1,6 @@
 // Auto-generated from typewriter-text.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Scene, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 const message = 'ExoJS gives you explicit rendering control with a compact scene and asset workflow.';
 class TypewriterTextScene extends Scene {
   sound;
@@ -10,7 +11,7 @@ class TypewriterTextScene extends Scene {
   init() {
     const app = this.app;
     const { width, height } = app;
-    this.sound = this.loader.get('audio/ui-click.ogg');
+    this.sound = this.loader.get(assets.soundUiClick);
     this.text = new Text('', { fillColor: Color.white, fontSize: 40, lineHeight: 1.4, maxWidth: 900 });
     this.text.setAnchor(0, 0.5).setPosition(width * 0.12, height / 2);
     this.progress = { count: 0 };
@@ -53,8 +54,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(TypewriterTextScene);

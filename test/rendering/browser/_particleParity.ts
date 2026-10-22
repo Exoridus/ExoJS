@@ -16,7 +16,7 @@ import {
   Turbulence,
   type UpdateModule,
   VelocityOverLifetime,
-} from '@codexo/exojs-particles';
+} from '@codexo/exojs/particles';
 
 const curve = (): Curve =>
   new Curve([

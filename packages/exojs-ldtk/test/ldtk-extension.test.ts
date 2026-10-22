@@ -3,7 +3,7 @@
 import '../src/index';
 
 import type { AssetFactoryContext } from '@codexo/exojs';
-import { tilemapExtension } from '@codexo/exojs-tilemap';
+import { tilemapExtension } from '@codexo/exojs/tilemap';
 import { describe, expect, it, vi } from 'vitest';
 
 import { buildSnapshot } from '../../../src/extensions/snapshot';

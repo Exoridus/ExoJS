@@ -4,7 +4,7 @@
   "symbol": "ChainShapeOptions",
   "kind": "interface",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 1,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Construction options for a ChainShape."
       ],
-      "importLine": "import { ChainShapeOptions } from '@codexo/exojs-physics'",
+      "importLine": "import { ChainShapeOptions } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

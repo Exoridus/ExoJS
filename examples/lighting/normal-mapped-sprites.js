@@ -11,7 +11,7 @@ import {
   Texture,
   TextureFormat,
 } from '@codexo/exojs';
-import { ForwardLighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs-lighting';
+import { ForwardLighting, LitMaterial, NormalMap, PointLight } from '@codexo/exojs/lighting';
 import { mountControls } from '@examples/runtime';
 // Forward normal mapping on plain sprites. A LitMaterial samples a
 // tangent-space normal map next to the base texture and shades each fragment

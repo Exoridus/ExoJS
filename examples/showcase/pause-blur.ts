@@ -12,6 +12,7 @@ import {
   Sprite,
   type Tween,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 const PAUSE_BLUR_STRENGTH = 3;
@@ -31,7 +32,7 @@ class GameScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    this.sprite = new Sprite(this.loader.get('image/ship-a.png'))
+    this.sprite = new Sprite(this.loader.get(assets.ship))
       .setAnchor(0.5)
       .setScale(2)
       .setPosition(width * 0.72, height / 2);
@@ -48,12 +49,7 @@ class GameScene extends Scene {
     this.pauseLabel.visible = false;
     this.ui.addChild(this.pauseLabel);
 
-    this.hud = mountControls({
-      title: 'Pause Menu',
-      controls: [{ keys: 'Esc / Click', action: 'pause / resume' }],
-      status: 'Running',
-      hint: 'Scene updates stop while paused; the application tween still fades in the blur.',
-    });
+    this.hud = mountControls({ status: 'Running' });
 
     this.inputs.onTrigger(Keyboard.Escape, () => this.togglePause(), { when: SceneAvailability.Always });
     app.input.onPointerDown.add(this.onPointerDown);
@@ -106,9 +102,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(20, 24, 34),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 void app.start(GameScene);

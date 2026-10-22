@@ -4,7 +4,7 @@
   "symbol": "CompressorEffect",
   "kind": "class",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 13,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Dynamic-range compressor backed by a Web Audio `DynamicsCompressorNode`. Reduces the volume of loud signals above a threshold, evening out the perceived loudness of a mix. All parameter changes are applied with a short smoothing ramp so they are artifact-free during playback."
       ],
-      "importLine": "import { CompressorEffect } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { CompressorEffect } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

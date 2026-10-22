@@ -1,7 +1,8 @@
 // Auto-generated from drop-shadow-filter.ts - edit the .ts source, not this file.
 import { Application, Color, DropShadowFilter, FixedResolutionCanvasSizing, Scene, Sprite } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
-const SHIP = assets.demo.textures.shipA;
+const SHIP = assets.ship;
 class DropShadowFilterScene extends Scene {
   shadow;
   sprite;
@@ -101,8 +102,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(30, 34, 44),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(DropShadowFilterScene);

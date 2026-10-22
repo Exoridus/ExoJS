@@ -4,7 +4,7 @@
   "symbol": "ChunkStreamer",
   "kind": "class",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 4,
   "counts": {
@@ -25,7 +25,7 @@
         "Tick it from your update loop, like import('./TileAnimator').TileAnimator:",
         "```ts const streamer = new ChunkStreamer(layer, mySource, view); scene.systems.add({ update: () => streamer.update() }); ```"
       ],
-      "importLine": "import { ChunkStreamer } from '@codexo/exojs-tilemap'",
+      "importLine": "import { ChunkStreamer } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

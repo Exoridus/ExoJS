@@ -4,7 +4,7 @@
   "symbol": "ObjectSchema",
   "kind": "type",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 0,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A developer-declared mapping from object `type`/class strings to the property shape an object of that type is expected to carry. Supplied as the type parameter to ObjectLayer to unlock the typed accessors (ObjectLayer.byType, ObjectLayer.where)."
       ],
-      "importLine": "import { ObjectSchema } from '@codexo/exojs-tilemap'",
+      "importLine": "import { ObjectSchema } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

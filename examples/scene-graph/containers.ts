@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   Assets,
   Color,
   Container,
@@ -10,6 +9,7 @@ import {
   type Seconds,
   Sprite,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class ContainersScene extends Scene {
   private rainbow!: Sprite;
@@ -18,9 +18,7 @@ class ContainersScene extends Scene {
   override init(): void {
     const app = this.app;
     const { width, height } = app;
-    const { bunny, rainbow } = this.loader.get(
-      Assets.from({ bunny: Asset.type('texture', 'image/ship-a.png'), rainbow: Asset.type('texture', 'image/hue-ramp.png') }),
-    );
+    const { bunny, rainbow } = this.loader.get(Assets.from({ bunny: assets.ship, rainbow: assets.hueRamp }));
 
     this.rainbow = new Sprite(rainbow);
 
@@ -62,9 +60,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(ContainersScene);

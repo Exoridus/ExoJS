@@ -90,12 +90,7 @@ class KeyRebindingScene extends Scene {
       this.refreshHud();
     });
 
-    this.hud = mountControls({
-      title: 'Key Rebinding',
-      controls: this.hudControls(),
-      status: '',
-      hint: '',
-    });
+    this.hud = mountControls();
 
     this.refreshHud();
   }
@@ -104,17 +99,8 @@ class KeyRebindingScene extends Scene {
     return this.controls.jump.channels.map(inputToken)[0];
   }
 
-  private hudControls(): Array<{ keys: string; action: string }> {
-    return [
-      { keys: keyName(this.jumpToken()), action: 'jump' },
-      { keys: 'J', action: 'rebind jump' },
-    ];
-  }
-
   private refreshHud(): void {
-    this.hud.setControls(this.hudControls());
-    this.hud.setStatus(`Jump key: ${keyName(this.jumpToken())} (saved)`);
-    this.hud.setHint(this.rebindRequested ? 'Press any key to assign jump…' : 'Binding restored from localStorage on reload.');
+    this.hud.setStatus(this.rebindRequested ? 'Press any key to assign jump...' : `Jump: ${keyName(this.jumpToken())} (J to rebind)`);
   }
 
   override update(delta: Seconds): void {
@@ -166,9 +152,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(10, 12, 20),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(KeyRebindingScene);

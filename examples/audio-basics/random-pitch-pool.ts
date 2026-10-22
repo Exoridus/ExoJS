@@ -10,6 +10,7 @@ import {
   type Sound,
   Text,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 const DETUNE_RANGE = 200; // ± cents
@@ -42,7 +43,7 @@ class RandomPitchPoolScene extends Scene {
     // Path-only get() infers Sound from the .ogg extension - sidesteps a
     // compile-time overload ambiguity between Sound and the Json token form
     // when passing the Sound token explicitly.
-    this.sound = this.loader.get(assets.demo.audio.impactLight);
+    this.sound = this.loader.get(assets.soundImpactLight);
     this.sound.poolSize = 20;
 
     this.graphics = new Graphics();

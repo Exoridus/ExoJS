@@ -13,7 +13,7 @@ This is a directly used library. It has no application extension descriptor or g
 ## Find a route on a grid
 
 ```ts
-import { GridSpace, Pathfinder } from '@codexo/exojs-pathfinding';
+import { GridSpace, Pathfinder } from '@codexo/exojs/pathfinding';
 
 const grid = GridSpace.from(12, 8, (x, y) => (x === 5 && y !== 4 ? 0 : 1), {
   cellSize: 32,
@@ -34,7 +34,7 @@ Zero-cost cells are blocked; positive costs describe traversal weight. `findPath
 
 ```ts
 import { Container, type PointLike, type Seconds } from '@codexo/exojs';
-import { GridSpace, NavigationAgentComponent, type NavigationMovement } from '@codexo/exojs-pathfinding';
+import { GridSpace, NavigationAgentComponent, type NavigationMovement } from '@codexo/exojs/pathfinding';
 
 class NodeMovement implements NavigationMovement {
   public constructor(
@@ -67,8 +67,8 @@ agent.onStatusChange.add(status => console.log(status));
 `TileNavigationSpace` turns a tile layer into a navigation space with a cost callback and keeps itself in step with tile edits and chunk streaming, resampling only the chunks that changed. It reads the layer through a structural contract, so the package has no dependency on `@codexo/exojs-tilemap`.
 
 ```ts
-import { TileNavigationSpace } from '@codexo/exojs-pathfinding';
-import type { TileLayer } from '@codexo/exojs-tilemap';
+import { TileNavigationSpace } from '@codexo/exojs/pathfinding';
+import type { TileLayer } from '@codexo/exojs/tilemap';
 
 declare const ground: TileLayer;
 

@@ -13,6 +13,7 @@ import {
   Sprite,
   VectorAction,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 const PULSE_COLOR = new Color(255, 190, 90);
@@ -32,22 +33,15 @@ class ActionMappingScene extends Scene {
     pulse: new ButtonAction([Keyboard.Space, GamepadButton.South]),
   });
   private pulseRemaining = 0;
+  private direction = 'none';
   private hud!: ReturnType<typeof mountControls>;
 
   override init(): void {
     const { width, height } = this.app;
 
-    this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
+    this.sprite = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setPosition(width / 2, height / 2);
     this.inputs.attach(this.actions);
-    this.hud = mountControls({
-      title: 'Input Actions',
-      controls: [
-        { keys: 'WASD / Arrows / Left stick', action: 'move' },
-        { keys: 'Space / South button', action: 'pulse' },
-      ],
-      status: '',
-      hint: 'Keyboard and controller feed the same move and pulse actions.',
-    });
+    this.hud = mountControls();
   }
 
   override update(delta: Seconds): void {
@@ -59,8 +53,18 @@ class ActionMappingScene extends Scene {
       Math.max(24, Math.min(height - 24, this.sprite.y + y * 260 * delta)),
     );
 
+    // Logged on transitions only - the Output panel shows which binding the
+    // action map resolved, whether keyboard or gamepad produced it.
+    const direction = [y < -0.5 && 'up', y > 0.5 && 'down', x < -0.5 && 'left', x > 0.5 && 'right'].filter(Boolean).join('-') || 'none';
+
+    if (direction !== this.direction) {
+      this.direction = direction;
+      console.log(`Action: move ${direction}`);
+    }
+
     if (this.actions.pulse.pressed) {
       this.pulseRemaining = 0.35;
+      console.info('Action: pulse');
     }
 
     this.pulseRemaining = Math.max(0, this.pulseRemaining - delta);
@@ -87,9 +91,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(10, 12, 20),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(ActionMappingScene);

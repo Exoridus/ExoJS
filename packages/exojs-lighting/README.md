@@ -14,7 +14,7 @@ Core is the peer dependency. This package exposes directly constructed systems, 
 
 ```ts
 import { Color, Graphics, Scene } from '@codexo/exojs';
-import { LightmapLighting, PointLight } from '@codexo/exojs-lighting';
+import { LightmapLighting, PointLight } from '@codexo/exojs/lighting';
 
 export class LitScene extends Scene {
   override init(): void {

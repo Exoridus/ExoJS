@@ -4,7 +4,7 @@
   "symbol": "BodyOptions",
   "kind": "interface",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 9,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Construction options for a body."
       ],
-      "importLine": "import { BodyOptions } from '@codexo/exojs-physics'",
+      "importLine": "import { BodyOptions } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

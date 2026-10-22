@@ -1,5 +1,5 @@
 import { Asset, type Container, type LoaderScope } from '@codexo/exojs';
-import type { MapObjectSpawner } from '@codexo/exojs-tilemap';
+import type { MapObjectSpawner } from '@codexo/exojs/tilemap';
 
 // #region guide:tiled-spawn
 export const spawnTiledLevel = async (scope: LoaderScope, spawner: MapObjectSpawner<void, Container>): Promise<void> => {

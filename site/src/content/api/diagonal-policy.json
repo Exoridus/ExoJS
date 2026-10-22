@@ -4,7 +4,7 @@
   "symbol": "DiagonalPolicy",
   "kind": "type",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 0,
   "counts": {
@@ -22,7 +22,7 @@
         "How diagonal steps are allowed on a GridSpace.",
         "- `never` - four-connected movement only. - `no-corner-cutting` - a diagonal step needs both cells it passes between to be walkable, which is what stops an agent from clipping through the corner where two walls meet. - `always` - eight-connected movement with no such restriction."
       ],
-      "importLine": "import { DiagonalPolicy } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { DiagonalPolicy } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {

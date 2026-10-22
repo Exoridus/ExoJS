@@ -4,7 +4,7 @@
   "symbol": "SpectrumMappingOptions",
   "kind": "interface",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Mapping options for AudioAnalyser.getSpectrumMel and AudioAnalyser.getSpectrumLog."
       ],
-      "importLine": "import { SpectrumMappingOptions } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { SpectrumMappingOptions } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

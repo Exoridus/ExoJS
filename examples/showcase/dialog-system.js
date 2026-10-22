@@ -1,6 +1,6 @@
 // Auto-generated from dialog-system.ts - edit the .ts source, not this file.
-import { Application, Color, FixedResolutionCanvasSizing, Scene, Text } from '@codexo/exojs';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { Application, Button, Color, FixedResolutionCanvasSizing, Scene, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 const lines = [
   { speaker: 'Commander Vale', text: 'Commander, the anomaly has entered low orbit.' },
   { speaker: 'Commander Vale', text: 'All wings hold formation and await my signal.' },
@@ -12,13 +12,13 @@ class DialogSystemScene extends Scene {
   box;
   choicePrompt;
   beep;
-  hud;
-  panel;
+  replyButtons = [];
   lineIndex = 0;
   chars = 0;
   timer = 0;
   done = false;
   awaitingChoice = false;
+  restartPending = false;
   init() {
     const app = this.app;
     const { width, height } = app;
@@ -29,19 +29,14 @@ class DialogSystemScene extends Scene {
     this.box.setPosition(textX, height * 0.56);
     this.choicePrompt = new Text('', { fillColor: new Color(150, 220, 255), fontSize: 20 });
     this.choicePrompt.setPosition(textX, height * 0.78);
-    this.beep = this.loader.get(assets.demo.sound.uiConfirm);
-    this.hud = mountControls({
-      title: 'Dialogue and Choices',
-      controls: [{ keys: 'Click', action: 'advance / reveal' }],
-      hint: 'Click anywhere to skip the typewriter, then click again to continue.',
+    this.beep = this.loader.get(assets.soundUiConfirm);
+    this.replyButtons = choices.map((reply, index) => {
+      const button = new Button({ label: reply, width: 220, height: 48 });
+      button.anchorIn(this.ui, 'top-left', textX + index * 240, height * 0.78);
+      button.onClick.add(() => this.choose(reply));
+      this.ui.addChild(button);
+      return button;
     });
-    // Choice buttons live in a predictable DOM panel so they never compete
-    // with the canvas pointer for "advance" taps. They stay hidden until the
-    // final line finishes typing.
-    this.panel = mountControlPanel({ title: 'Your reply', corner: 'bottom-left' });
-    for (const choice of choices) {
-      this.panel.addButton({ label: choice, onClick: () => this.choose(choice) });
-    }
     this.setChoicesVisible(false);
     app.input.onPointerTap.add(() => this.advance());
   }
@@ -74,19 +69,25 @@ class DialogSystemScene extends Scene {
     const app = this.app;
     app.audio.play(this.beep, { playbackRate: 1.2, volume: 0.3 });
     this.choicePrompt.text = `You chose: ${choice}`;
-    this.hud.setStatus(`Reply: ${choice}`);
-    this.awaitingChoice = false;
     this.setChoicesVisible(false);
-    // Loop back to the top so the demo can be replayed without a reload.
-    this.lineIndex = 0;
-    this.startLine();
+    // The tap that pressed the button must not also advance the restarted
+    // dialogue, so the loop back to the top waits for the next update.
+    this.restartPending = true;
   }
   setChoicesVisible(visible) {
-    this.panel.element.style.display = visible ? '' : 'none';
+    for (const button of this.replyButtons) {
+      button.visible = visible;
+    }
     this.choicePrompt.visible = !visible && this.choicePrompt.text.length > 0;
   }
   update(delta) {
     const app = this.app;
+    if (this.restartPending) {
+      this.restartPending = false;
+      this.awaitingChoice = false;
+      this.lineIndex = 0;
+      this.startLine();
+    }
     if (!this.done && !this.awaitingChoice) {
       this.timer += delta;
       while (this.timer > 0.035 && this.chars < lines[this.lineIndex].text.length) {

@@ -4,7 +4,7 @@
   "symbol": "TileTransform",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -22,7 +22,7 @@
         "Describes the orientation of a placed tile independent of source-format flip-bit encodings. The eight legal combinations map to the eight distinct 90°-rotation-and-flip states of a rectangular texture quad.",
         "Applying the transform at geometry-build time (reordering UV corners) avoids per-tile runtime cost and per-frame matrix allocation."
       ],
-      "importLine": "import { TileTransform } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileTransform } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

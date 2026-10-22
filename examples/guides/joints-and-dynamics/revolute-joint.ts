@@ -1,4 +1,4 @@
-import { BoxShape, PhysicsBody, PhysicsWorld, RevoluteJoint } from '@codexo/exojs-physics';
+import { BoxShape, PhysicsBody, PhysicsWorld, RevoluteJoint } from '@codexo/exojs/physics';
 
 // #region guide:revolute-joint
 const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });

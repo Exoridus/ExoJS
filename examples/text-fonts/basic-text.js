@@ -1,11 +1,12 @@
 // Auto-generated from basic-text.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 class BasicTextScene extends Scene {
   elapsed = 0;
   text;
   async load() {
     const app = this.app;
-    await this.loader.load(Asset.type('font', 'font/Kenney Future.ttf', { family: 'Kenney Future' }));
+    await this.loader.load(Asset.type('font', assets.fontKenneyFuture.source, { family: 'Kenney Future' }));
     const { width, height } = app;
     this.text = new Text('Hello World!', {
       align: 'left',
@@ -36,8 +37,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(BasicTextScene);

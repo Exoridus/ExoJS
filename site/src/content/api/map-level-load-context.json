@@ -4,7 +4,7 @@
   "symbol": "MapLevelLoadContext",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "What a MapLevelProvider is given for one level load."
       ],
-      "importLine": "import { MapLevelLoadContext } from '@codexo/exojs-tilemap'",
+      "importLine": "import { MapLevelLoadContext } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

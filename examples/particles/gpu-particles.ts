@@ -8,8 +8,9 @@ import {
   ParticleSystem,
   Range,
   RateSpawn,
-} from '@codexo/exojs-particles';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+} from '@codexo/exojs/particles';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { type DemoPanel, demoPanel, slider, type SliderSpec } from '@examples/runtime';
 
 // Illustrative loads for the two GPU backends; measure on target hardware.
 const budgets = {
@@ -19,7 +20,7 @@ const budgets = {
 
 class GpuParticlesScene extends Scene {
   private system!: ParticleSystem;
-  private hud!: ReturnType<typeof mountControls>;
+  private panel!: DemoPanel<{ rate: SliderSpec }>;
   private capacity = 0;
   private spawnRate!: Constant<number>;
   private frameIntervalMs = 0;
@@ -33,7 +34,7 @@ class GpuParticlesScene extends Scene {
 
     this.capacity = capacity;
     this.spawnRate = new Constant(rate);
-    this.system = new ParticleSystem(this.loader.get('image/particle-light.png'), { capacity });
+    this.system = new ParticleSystem(this.loader.get(assets.particleLight), { capacity });
     this.systems.add(this.system);
     this.system.setPosition(width / 2, height - 80);
     this.system.addSpawnModule(
@@ -47,17 +48,18 @@ class GpuParticlesScene extends Scene {
     this.system.addUpdateModule(new ApplyForce(0, 320));
     this.system.addUpdateModule(new AlphaFadeOverLifetime());
 
-    this.hud = mountControls({
+    this.panel = demoPanel({
       title: 'Particle Capacity',
-      hint: 'Quad simulation uses WebGPU compute or WebGL2 transform feedback when eligible. Frame interval includes the whole application.',
-    });
-    mountControlPanel({ title: 'Load' }).addSlider({
-      label: 'Spawn / second',
-      min: 0,
-      max: rate,
-      step: isWebGpu ? 5000 : 250,
-      value: rate,
-      onChange: value => {
+      controls: {
+        rate: slider('Spawn / second', {
+          min: 0,
+          max: rate,
+          value: rate,
+          step: isWebGpu ? 5000 : 250,
+          format: value => value.toLocaleString(),
+        }),
+      },
+      onChange: (_key, value) => {
         this.spawnRate.value = value;
       },
     });
@@ -70,13 +72,18 @@ class GpuParticlesScene extends Scene {
     const { rawFrameDeltaMs } = this.app.backend.stats;
 
     this.frameIntervalMs = this.frameIntervalMs * 0.9 + rawFrameDeltaMs * 0.1;
-    this.hud.setStatus(
-      `${this.system.aliveCount.toLocaleString()} live / ${this.capacity.toLocaleString()} cap · ${this.spawnRate.value.toLocaleString()}/s · ${this.frameIntervalMs.toFixed(1)} ms between frames · ${backend}`,
+    this.panel.status(
+      `${this.system.aliveCount.toLocaleString()} live / ${this.capacity.toLocaleString()} cap, ${this.frameIntervalMs.toFixed(1)} ms between frames, ${backend}`,
     );
   }
 
   override draw(context: RenderingContext): void {
     context.render(this.system);
+  }
+
+  override destroy(): void {
+    this.panel.dispose();
+    super.destroy();
   }
 }
 
@@ -89,9 +96,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
   extensions: [particlesExtension],
 });
 

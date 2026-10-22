@@ -1,6 +1,7 @@
 // Auto-generated from masks.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, Rectangle, Scene, Sprite } from '@codexo/exojs';
-const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+const ALPHA_RINGS = assets.alphaGradientRings;
 class MasksScene extends Scene {
   rectSprite;
   rectMask;

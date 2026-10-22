@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   type AudioEffect,
   type AudioStream,
   Color,
@@ -14,8 +13,9 @@ import {
   Text,
   type Voice,
 } from '@codexo/exojs';
-import { AudioAnalyser, BitCrusherEffect, ChorusEffect, DistortionEffect, PingPongDelayEffect, ReverbEffect } from '@codexo/exojs-audio-fx';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { AudioAnalyser, BitCrusherEffect, ChorusEffect, DistortionEffect, PingPongDelayEffect, ReverbEffect } from '@codexo/exojs/audio-fx';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { choice, type ChoiceSpec, type DemoPanel, demoPanel, toggle, type ToggleSpec } from '@examples/runtime';
 
 interface Chain {
   name: string;
@@ -75,18 +75,17 @@ class EffectChainsScene extends Scene {
   private analyser!: AudioAnalyser;
   private readonly spectrum = new Uint8Array(16);
   private active: AudioEffect[] = [];
-  private selected = 0;
-  private bypass = false;
   private generation = 0;
   private rack = new Graphics();
   private title!: Text;
+  private note!: Text;
+  private prompt!: Text;
   private stageLabels: Text[] = [];
-  private panel!: ReturnType<typeof mountControlPanel>;
-  private hud!: ReturnType<typeof mountControls>;
+  private panel!: DemoPanel<{ chain: ChoiceSpec<string>; bypass: ToggleSpec }>;
 
   override async load(): Promise<void> {
-    this.music = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
-    this.impact = this.loader.get('audio/impact-light.ogg');
+    this.music = await this.loader.load(assets.musicLoopMain);
+    this.impact = this.loader.get(assets.soundImpactLight);
   }
 
   override init(): void {
@@ -96,39 +95,34 @@ class EffectChainsScene extends Scene {
     this.stageLabels = Array.from({ length: 3 }, () =>
       new Text('', { fillColor: Color.white, fontSize: 22, align: 'center' }).setAnchor(0.5),
     );
-    this.hud = mountControls({
-      title: 'Audio Effect Rack',
-      status: 'Choose a chain and compare it with dry output.',
-      hint: 'Effects run in the order shown on the rack.',
-    });
-    this.panel = mountControlPanel({ title: 'Effect rack' });
-    CHAINS.forEach((chain, index) => this.panel.addButton({ label: chain.name, onClick: () => this.select(index) }));
-    this.panel.addToggle({
-      label: 'Bypass',
-      value: false,
-      onChange: value => {
-        this.bypass = value;
-        this.rebuild();
+    this.note = new Text('', { fillColor: new Color(150, 162, 186), fontSize: 20, align: 'center' }).setAnchor(0.5).setPosition(640, 215);
+    this.prompt = new Text('Click or press any key to start the music', { fillColor: Color.white, fontSize: 22, align: 'center' })
+      .setAnchor(0.5)
+      .setPosition(640, 670);
+    this.panel = demoPanel({
+      title: 'Effect rack',
+      controls: {
+        chain: choice(
+          'Chain',
+          CHAINS.map(chain => chain.name),
+        ),
+        bypass: toggle('Bypass', false),
       },
-    });
-    this.panel.addButton({
-      label: 'Play impact',
-      onClick: () => {
-        if (!audio.locked) {
-          audio.play(this.impact, { volume: 0.4 });
+      actions: {
+        'Play impact': () => {
+          if (!audio.locked) {
+            audio.play(this.impact, { volume: 0.4 });
+          }
+        },
+      },
+      onChange: () => {
+        // The mount-time calls arrive before the panel handle exists; init() builds the first chain once.
+        if (this.panel) {
+          this.rebuild();
         }
       },
     });
-    this.musicVoice = audio.play(this.music, { loop: true, volume: 0.7 });
-    this.rebuild();
-  }
-
-  private select(index: number): void {
-    if (index === this.selected) {
-      return;
-    }
-
-    this.selected = index;
+    this.musicVoice = audio.play(this.music, { loop: true, volume: 0.5 });
     this.rebuild();
   }
 
@@ -142,8 +136,9 @@ class EffectChainsScene extends Scene {
     }
 
     this.active = [];
-    const chain = CHAINS[this.selected]!;
-    this.title.text = `${chain.name}: ${chain.stages.map(stage => stage.name).join(' -> ')}`;
+    const { chain: chainName, bypass } = this.panel.values;
+    const chain = CHAINS.find(candidate => candidate.name === chainName)!;
+    this.title.text = bypass ? `${chain.name} (bypassed)` : `${chain.name}: ${chain.stages.map(stage => stage.name).join(' -> ')}`;
     const slotWidth = 820 / chain.stages.length;
     this.stageLabels.forEach((label, index) => {
       label.visible = index < chain.stages.length;
@@ -153,12 +148,12 @@ class EffectChainsScene extends Scene {
         label.setPosition(225 + (index + 0.5) * slotWidth - 6, 305);
       }
     });
-    this.hud.setHint(chain.note);
+    this.note.text = chain.note;
 
-    master.volume = this.bypass ? 1 : chain.trim;
+    master.volume = bypass ? 1 : chain.trim;
 
-    if (this.bypass) {
-      this.hud.setStatus(`${chain.name} bypassed; dry signal.`);
+    if (bypass) {
+      this.panel.status('Dry signal');
 
       return;
     }
@@ -169,16 +164,16 @@ class EffectChainsScene extends Scene {
       this.active.push(effect);
     }
 
-    this.hud.setStatus(`${chain.name}: preparing ${this.active.length} effects...`);
+    this.panel.status('Preparing effects...');
     void Promise.all(this.active.map(effect => effect.ready)).then(
       () => {
         if (generation === this.generation) {
-          this.hud.setStatus(`${chain.name}: ${this.active.length} effects ready.`);
+          this.panel.status(`${this.active.length} effects ready`);
         }
       },
       error => {
         if (generation === this.generation) {
-          this.hud.setStatus(`${chain.name}: ${error instanceof Error ? error.message : String(error)}`);
+          this.panel.status(error instanceof Error ? error.message : String(error));
         }
       },
     );
@@ -187,10 +182,11 @@ class EffectChainsScene extends Scene {
   override draw(context: RenderingContext): void {
     this.analyser.getSpectrumLog(this.spectrum, { bands: this.spectrum.length, fMin: 40, fMax: 16000 });
     this.rack.clear();
-    const stages = CHAINS[this.selected]!.stages;
+    const { chain: chainName, bypass } = this.panel.values;
+    const stages = CHAINS.find(candidate => candidate.name === chainName)!.stages;
     const width = 820 / stages.length;
     stages.forEach((_, index) => {
-      this.rack.fillColor = this.bypass ? new Color(46, 49, 55) : new Color(53, 93, 121);
+      this.rack.fillColor = bypass ? new Color(46, 49, 55) : new Color(53, 93, 121);
       this.rack.drawRoundedRectangle(225 + index * width, 260, width - 12, 90, 12);
     });
 
@@ -201,11 +197,16 @@ class EffectChainsScene extends Scene {
 
     context.render(this.rack);
     context.render(this.title);
+    context.render(this.note);
 
     for (const label of this.stageLabels) {
       if (label.visible) {
         context.render(label);
       }
+    }
+
+    if (this.app.audio.locked) {
+      context.render(this.prompt);
     }
   }
 
@@ -222,9 +223,10 @@ class EffectChainsScene extends Scene {
     this.app.audio.master.volume = 1;
     this.analyser?.destroy();
     this.panel?.dispose();
-    this.hud?.dispose();
     this.rack.destroy();
     this.title?.destroy();
+    this.note?.destroy();
+    this.prompt?.destroy();
 
     for (const label of this.stageLabels) {
       label.destroy();
@@ -238,7 +240,6 @@ const app = new Application({
   scenes: { EffectChainsScene },
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: Color.black,
-  loader: { basePath: 'assets/' },
 });
 
 await app.start(EffectChainsScene);

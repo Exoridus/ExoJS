@@ -1,4 +1,4 @@
-import { Pathfinder, WaypointGraph } from '@codexo/exojs-pathfinding';
+import { Pathfinder, WaypointGraph } from '@codexo/exojs/pathfinding';
 
 declare const controller: { walkTo: (x: number, y: number) => void; jump: (impulse: number) => void };
 

@@ -10,6 +10,7 @@ import {
   Sprite,
   Text,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 const tints = [new Color(255, 140, 140), new Color(140, 255, 170), new Color(150, 180, 255), new Color(255, 230, 140)];
@@ -35,7 +36,7 @@ class MultiGamepadScene extends Scene {
     const { width, height } = app;
 
     this.players = app.input.gamepads.map((pad, index) => {
-      const sprite = new Sprite(this.loader.get('image/ship-a.png'))
+      const sprite = new Sprite(this.loader.get(assets.ship))
         .setAnchor(0.5)
         .setScale(0.6)
         .setPosition(width * (0.2 + index * 0.2), height / 2)
@@ -113,9 +114,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(10, 12, 20),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(MultiGamepadScene);

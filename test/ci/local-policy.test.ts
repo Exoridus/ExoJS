@@ -55,7 +55,7 @@ describe('local validation policy', () => {
 
   it('uses package dependencies and special browser contracts', () => {
     const pathfinding = selectLocalPolicy(['packages/exojs-pathfinding/src/Grid.ts']);
-    expect(pathfinding.packageTypechecks).toContain('@codexo/exojs-pathfinding');
+    expect(pathfinding.packageTypechecks).toContain('@codexo/exojs-module-pathfinding');
     expect(pathfinding.gates).toContain('lint');
     expect(pathfinding.unitProjects).toContain('exojs-pathfinding');
     expect(pathfinding.browser).toEqual([]);

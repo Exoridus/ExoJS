@@ -4,7 +4,7 @@
   "symbol": "TileSet",
   "kind": "class",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 20,
   "counts": {
@@ -23,7 +23,7 @@
         "Does **not** own its textures - the Loader or application code retains texture ownership. Tileset dimensions are validated at construction and frozen thereafter.",
         "Multiple tilesets are supported per TileMap; each carries its own tile dimensions, spacing, and optional per-tile metadata. Tiles that stay inside their cells batch into one draw per texture and chunk, so an atlas costs one draw where a collection costs one per image. Artwork that overhangs its cell, and the tiles drawn over it, keep cell order, and each change of texture in that order costs another draw, so prefer atlases for dense layers."
       ],
-      "importLine": "import { TileSet } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileSet } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

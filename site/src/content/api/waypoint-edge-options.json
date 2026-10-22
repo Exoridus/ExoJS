@@ -4,7 +4,7 @@
   "symbol": "WaypointEdgeOptions",
   "kind": "interface",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 3,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Options for WaypointGraph.addEdge and WaypointGraph.connect."
       ],
-      "importLine": "import { WaypointEdgeOptions } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { WaypointEdgeOptions } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {

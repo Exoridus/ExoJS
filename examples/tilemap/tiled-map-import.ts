@@ -1,6 +1,7 @@
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
+import { ObjectKind, type TileMapObject } from '@codexo/exojs/tilemap';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
-import { ObjectKind, type TileMapObject } from '@codexo/exojs-tilemap';
 import { mountControls } from '@examples/runtime';
 
 const contains = (object: TileMapObject, x: number, y: number): boolean => {
@@ -27,7 +28,7 @@ class TiledMapImportScene extends Scene {
   private hud!: ReturnType<typeof mountControls>;
 
   override async load(): Promise<void> {
-    const map = await this.loader.load(Asset.type('tileMap', 'json/maps/harbor-plaza.tmj'));
+    const map = await this.loader.load(Asset.type('tileMap', assets.harborPlazaMap.source));
     this.mapNode = new TileMapNode(map);
     this.zones = [...(map.getObjectLayer('Zones')?.objects ?? [])];
 
@@ -38,12 +39,7 @@ class TiledMapImportScene extends Scene {
     }
 
     this.redrawZones();
-    this.hud = mountControls({
-      title: 'Load a Tiled Map',
-      controls: [{ keys: 'Click', action: 'inspect an authored object' }],
-      status: `Loaded Harbor Plaza: ${this.zones.length} objects in the Zones layer.`,
-      hint: 'The common tileMap asset type imports the .tmj and TileMapNode renders it. Object inspection is optional.',
-    });
+    this.hud = mountControls({ status: `Loaded Harbor Plaza: ${this.zones.length} objects in the Zones layer.` });
     this.app.input.onPointerTap.add(this.onTap);
   }
 
@@ -59,7 +55,7 @@ class TiledMapImportScene extends Scene {
     this.hud.setStatus(
       selected
         ? `${selected.name} (${selected.type || selected.kind})${properties ? ` - ${properties}` : ''}`
-        : 'Click a highlighted zone to inspect its authored data.',
+        : `Loaded Harbor Plaza: ${this.zones.length} objects in the Zones layer.`,
     );
   };
 
@@ -106,7 +102,6 @@ const app = new Application({
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(28, 36, 46),
   extensions: [tiledExtension],
-  loader: { basePath: 'assets/' },
 });
 
 await app.start(TiledMapImportScene);

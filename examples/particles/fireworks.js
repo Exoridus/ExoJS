@@ -27,8 +27,8 @@ import {
   ScaleOverLifetime,
   Turbulence,
   VectorRange,
-} from '@codexo/exojs-particles';
-import { mountControls } from '@examples/runtime';
+} from '@codexo/exojs/particles';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 const random = new Random(2026);
 const autoLaunchInterval = Time.seconds(1.6);
 // Upward launch speed range (px/s, negative = up). Higher = higher apex.
@@ -68,13 +68,11 @@ class FireworksScene extends Scene {
   autoLaunchTimer;
   rocketTexture;
   rockets = [];
-  launchCount = 0;
-  hud;
   init() {
     const app = this.app;
     const { width, height } = app;
-    const star = this.loader.get(assets.demo.textures.particleStar);
-    const light = this.loader.get(assets.demo.textures.particleLight);
+    const star = this.loader.get(assets.particleStar);
+    const light = this.loader.get(assets.particleLight);
     this.canvasSize = new Size(width, height);
     this.rocketTexture = star;
     // 1. Flash: one large, very short-lived glow that sells the detonation.
@@ -111,7 +109,7 @@ class FireworksScene extends Scene {
       position: new Constant(this.burstPosition),
       // A narrow speed band puts the sparks on one expanding shell.
       velocity: ConeDirection.omni(200, 320),
-      scale: new Constant(new Vector(0.1, 0.1)),
+      scale: new Constant(new Vector(0.2, 0.2)),
       tint: new Constant(fireworkColors[0]),
     });
     const sparks = createLayer(star, this.sparkBurst, { capacity: 4096 });
@@ -120,8 +118,8 @@ class FireworksScene extends Scene {
     sparks.addUpdateModule(
       new ScaleOverLifetime(
         new Curve([
-          { t: 0, v: 0.12 },
-          { t: 1, v: 0.04 },
+          { t: 0, v: 0.2 },
+          { t: 1, v: 0.06 },
         ]),
       ),
     );
@@ -140,7 +138,7 @@ class FireworksScene extends Scene {
       lifetime: new Range(2.2, 3.2),
       position: new Constant(this.burstPosition),
       velocity: ConeDirection.omni(15, 80),
-      scale: new Constant(new Vector(0.06, 0.06)),
+      scale: new Constant(new Vector(0.1, 0.1)),
       tint: new Constant(new Color(255, 214, 150)),
     });
     const embers = createLayer(star, this.emberBurst, { capacity: 1024 });
@@ -165,12 +163,6 @@ class FireworksScene extends Scene {
     app.input.onPointerDown.add(this.onPointerDown);
     // Ambient fallback: keep the sky alive even without clicks.
     this.autoLaunchTimer = new Timer(autoLaunchInterval, true);
-    this.hud = mountControls({
-      title: 'Fireworks',
-      controls: [{ keys: 'Click', action: 'launch a rocket' }],
-      status: 'Launched: 0 · in flight: 0',
-      hint: 'Three layers per burst: a short flash, sparks that brake and fall, and slow embers that linger.',
-    });
     this.launchRocket(width * 0.5);
   }
   // Application input outlives the scene, so the handler is removed in destroy().
@@ -188,8 +180,6 @@ class FireworksScene extends Scene {
       color,
       trail: [],
     });
-    this.launchCount++;
-    this.updateStatus();
   }
   detonate(rocket) {
     this.burstPosition.set(rocket.position.x, rocket.position.y);
@@ -200,9 +190,6 @@ class FireworksScene extends Scene {
     this.flashBurst.reset();
     this.sparkBurst.reset();
     this.emberBurst.reset();
-  }
-  updateStatus() {
-    this.hud.setStatus(`Launched: ${this.launchCount} · in flight: ${this.rockets.length}`);
   }
   update(delta) {
     if (this.autoLaunchTimer.expired) {
@@ -224,7 +211,6 @@ class FireworksScene extends Scene {
         this.detonate(rocket);
         rocket.sprite.destroy();
         this.rockets.splice(i, 1);
-        this.updateStatus();
       }
     }
   }
@@ -250,7 +236,6 @@ class FireworksScene extends Scene {
   }
   destroy() {
     this.app.input.onPointerDown.remove(this.onPointerDown);
-    this.hud.dispose();
     this.trails.destroy();
     for (const rocket of this.rockets) {
       rocket.sprite.destroy();

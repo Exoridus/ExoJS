@@ -4,7 +4,7 @@
   "symbol": "SegmentShape",
   "kind": "class",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 7,
   "counts": {
@@ -24,7 +24,7 @@
         "A segment blocks from **both** sides. There is no inside for it to be outside of, and a one-sided segment would be a gameplay rule in a geometry costume: express that with the world's `contactModifier`, which decides per contact and per step whether it is solved.",
         "Being zero-thickness makes it the worst case for discrete detection - a body that crosses it entirely within one fixed step misses it. Continuous collision covers a fast body against a segment; a fast segment is not swept."
       ],
-      "importLine": "import { SegmentShape } from '@codexo/exojs-physics'",
+      "importLine": "import { SegmentShape } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

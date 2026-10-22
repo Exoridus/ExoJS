@@ -16,7 +16,7 @@ Core is a peer dependency. Keep the packages on a compatible release line.
 
 ```ts
 import { Scene, SystemOrder } from '@codexo/exojs';
-import { BoxShape, Collider, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+import { BoxShape, Collider, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
 
 export class GameScene extends Scene {
   override init(): void {
@@ -49,7 +49,7 @@ The scene registry drives and destroys this world: it steps once per application
 
 ```ts
 import { Graphics } from '@codexo/exojs';
-import { CircleShape, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs-physics';
+import { CircleShape, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs/physics';
 
 const world = new PhysicsWorld({ gravity: { x: 0, y: 980 } });
 const ball = new Graphics();
@@ -66,7 +66,7 @@ Component-managed bodies do not support joints yet. `world.remove(body)` takes a
 
 ```ts
 import { BehaviorComponent, Container, Scene, SystemOrder } from '@codexo/exojs';
-import { CircleShape, KinematicMovementComponent, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs-physics';
+import { CircleShape, KinematicMovementComponent, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs/physics';
 
 class Drift extends BehaviorComponent {
   public constructor(private readonly movement: KinematicMovementComponent) {
@@ -106,7 +106,7 @@ import {
   KinematicMovementComponent,
   PhysicsBodyComponent,
   PhysicsWorld,
-} from '@codexo/exojs-physics';
+} from '@codexo/exojs/physics';
 
 const controls = new ActionMap({
   walk: new AxisAction({ negative: Keyboard.A, positive: Keyboard.D }),

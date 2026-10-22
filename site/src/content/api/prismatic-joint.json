@@ -4,7 +4,7 @@
   "symbol": "PrismaticJoint",
   "kind": "class",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 11,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Constrains a body to **slide along a single axis** relative to another: the perpendicular translation and the relative rotation are locked (a 2×2 block); only translation along the axis is free, optionally driven by a motor and/or bounded by a translation limit. Solved in the sub-step loop, warm-started."
       ],
-      "importLine": "import { PrismaticJoint } from '@codexo/exojs-physics'",
+      "importLine": "import { PrismaticJoint } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

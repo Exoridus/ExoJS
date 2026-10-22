@@ -11,10 +11,15 @@
 import { createHash } from 'node:crypto';
 import { readFileSync, statSync } from 'node:fs';
 
-import { LOCKSTEP_PACKAGES, type OfficialPackageName } from './lockstep-packages.ts';
+import { LEGACY_SHIMS, LOCKSTEP_PACKAGES, type OfficialPackageName } from './lockstep-packages.ts';
 
-/** Lockstep publish order - Core first (peer of the extensions), then the extensions. */
-export const PUBLISH_ORDER: readonly OfficialPackageName[] = LOCKSTEP_PACKAGES.map(p => p.name);
+/**
+ * Publish order - Core first (peer of everything else), then the lockstep
+ * packages, then the legacy shims. A release publishes a shim only when it set
+ * the shim's version (see `officialPackages`), so most releases publish a
+ * prefix of this list.
+ */
+export const PUBLISH_ORDER: readonly OfficialPackageName[] = [...LOCKSTEP_PACKAGES.map(p => p.name), ...LEGACY_SHIMS.map(p => p.name)];
 
 export type { OfficialPackageName };
 

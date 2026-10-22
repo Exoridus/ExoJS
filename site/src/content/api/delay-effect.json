@@ -4,7 +4,7 @@
   "symbol": "DelayEffect",
   "kind": "class",
   "subsystem": "audio",
-  "importPath": "@codexo/exojs-audio-fx",
+  "importPath": "@codexo/exojs/audio-fx",
   "tier": "stable",
   "memberCount": 10,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Echo/delay effect using a Web Audio `DelayNode` with a feedback loop and dry/wet mix. The feedback path feeds the delayed signal back into itself, producing repeating echoes that decay naturally. Setting `feedback` near its maximum of 0.95 produces a long, prominent tail; lower values create a single slap-back echo."
       ],
-      "importLine": "import { DelayEffect } from '@codexo/exojs-audio-fx'",
+      "importLine": "import { DelayEffect } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
     {

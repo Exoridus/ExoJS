@@ -1,5 +1,5 @@
 import { Asset } from '@codexo/exojs';
-import type { TileMap } from '@codexo/exojs-tilemap';
+import type { TileMap } from '@codexo/exojs/tilemap';
 
 import { TopDownScene } from './TopDownScene';
 

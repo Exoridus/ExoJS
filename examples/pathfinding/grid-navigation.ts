@@ -1,6 +1,6 @@
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Seconds } from '@codexo/exojs';
-import { type DiagonalPolicy, GridSpace, Pathfinder, type PathResult } from '@codexo/exojs-pathfinding';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { type DiagonalPolicy, GridSpace, Pathfinder, type PathResult } from '@codexo/exojs/pathfinding';
+import { choice, demoPanel, toggle } from '@examples/runtime';
 
 // Click-to-move over a weighted grid. Everything here is plain data: a GridSpace
 // of costs and a Pathfinder, neither of which is a scene node, neither of which
@@ -60,43 +60,49 @@ class GridNavigationScene extends Scene {
   private pruning = true;
   private agentSize = 1;
   private diagonals: DiagonalPolicy = 'no-corner-cutting';
-  private hud!: ReturnType<typeof mountControls>;
+  private panel?: ReturnType<typeof demoPanel>;
 
   override init(): void {
     this.app.input.onPointerTap.add(pointer => this.applyPaint(pointer.x, pointer.y));
 
-    this.hud = mountControls({
-      title: 'Grid Navigation',
-      controls: [
-        { keys: 'Click', action: 'set the goal (or paint, see panel)' },
-        { keys: 'panel', action: 'pruning / smoothing / agent size' },
-      ],
-      status: '',
-      hint: 'Painting mud makes the grid non-uniform, which turns jump-point pruning off by itself — the expanded-node counter jumps.',
-    });
+    this.panel = demoPanel({
+      title: 'Pathfinding',
+      controls: {
+        paint: choice('Click paints', ['goal', 'wall', 'mud']),
+        pruning: toggle('Jump-point pruning', true),
+        smooth: toggle('Smooth path', false),
+        bigAgent: toggle('2x2 agent', false),
+        diagonals: choice('Diagonals', ['no-corner-cutting', 'never', 'always']),
+      },
+      onChange: (key, value) => {
+        switch (key) {
+          case 'paint':
+            this.paint = value as PaintMode;
 
-    const panel = mountControlPanel({ title: 'Pathfinding' });
+            return;
+          case 'pruning':
+            this.pruning = value as boolean;
+            break;
+          case 'smooth':
+            this.smooth = value as boolean;
+            break;
+          case 'bigAgent':
+            this.agentSize = value ? 2 : 1;
+            break;
+          case 'diagonals': {
+            // The diagonal policy is fixed at construction, so changing it
+            // rebuilds the window from the costs the current one holds.
+            const previous = this.grid;
 
-    panel.addCycle({
-      label: 'Click paints',
-      options: ['goal', 'wall', 'mud'],
-      index: 0,
-      onChange: (_index, value) => (this.paint = value as PaintMode),
-    });
-    panel.addToggle({ label: 'Jump-point pruning', value: true, onChange: value => this.replan(() => (this.pruning = value)) });
-    panel.addToggle({ label: 'Smooth path', value: false, onChange: value => this.replan(() => (this.smooth = value)) });
-    panel.addToggle({ label: '2x2 agent', value: false, onChange: value => this.replan(() => (this.agentSize = value ? 2 : 1)) });
-    panel.addCycle({
-      label: 'Diagonals',
-      options: ['no-corner-cutting', 'never', 'always'],
-      index: 0,
-      // The diagonal policy is fixed at construction, so changing it rebuilds
-      // the window from the costs the current one holds.
-      onChange: (_index, value) => {
-        const previous = this.grid;
+            this.grid = GridSpace.from(COLUMNS, ROWS, (x, y) => previous.costAt(x, y), {
+              cellSize: CELL,
+              diagonals: value as DiagonalPolicy,
+            });
+            this.diagonals = value as DiagonalPolicy;
+            break;
+          }
+        }
 
-        this.grid = GridSpace.from(COLUMNS, ROWS, (x, y) => previous.costAt(x, y), { cellSize: CELL, diagonals: value as DiagonalPolicy });
-        this.diagonals = value as DiagonalPolicy;
         this.replan();
       },
     });
@@ -198,9 +204,14 @@ class GridNavigationScene extends Scene {
     const { status, cost, nodes, expandedNodes } = this.result;
     const pruned = this.pruning && this.grid.pruning(this.agentSize) !== null;
 
-    this.hud.setStatus(
-      `${status} · cost ${cost.toFixed(1)} · ${nodes.length} waypoints · ${expandedNodes} nodes expanded · ${pruned ? 'jump-point' : 'plain A*'} · ${this.diagonals}`,
+    this.panel?.status(
+      `${status} · cost ${cost.toFixed(1)} · ${nodes.length} waypoints · ${expandedNodes} nodes expanded · ${pruned ? 'jump-point' : 'plain A*'}`,
     );
+  }
+
+  override destroy(): void {
+    this.panel?.dispose();
+    super.destroy();
   }
 
   private drawTerrain(): void {

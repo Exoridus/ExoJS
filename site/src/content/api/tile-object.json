@@ -4,7 +4,7 @@
   "symbol": "TileObject",
   "kind": "interface",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "stable",
   "memberCount": 15,
   "counts": {
@@ -23,7 +23,7 @@
         "`x`/`y` are the top-left corner of the bounding box, the same convention as every other object kind. Source formats that anchor a tile object elsewhere normalise to the corner on import: Tiled stores the position at the tileset's `objectalignment` point (bottom-left by default on an orthogonal map, bottom-centre on an isometric one) and rotates the tile image about that point, so a non-zero TileMapObjectBase.rotation on a tile object still pivots about the source anchor rather than about `(x, y)`. Isometric Tiled objects expose this anchor as `rotationOrigin`; `getDisplayObject` projects both the unrotated corner and this pivot.",
         "The owning tileset's drawing offset (Tiled `tileoffset`, reachable as `tile.tileset.offsetX`/`offsetY`) is likewise **not** folded into `x`/`y`. Object layers are data-only, so nothing in this package draws a tile object; code that does has to add that offset itself to match how a tile layer places the same tile."
       ],
-      "importLine": "import { TileObject } from '@codexo/exojs-tilemap'",
+      "importLine": "import { TileObject } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

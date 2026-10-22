@@ -4,7 +4,7 @@
   "symbol": "KinematicMovementComponent",
   "kind": "class",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 21,
   "counts": {
@@ -26,7 +26,7 @@
         "The component holds the body's movement while it is active: enabling a second movement for the same body throws. Disabling it zeroes the body's velocity. Positions and directions are in the world's simulation space.",
         "A `CharacterMovementComponent` composed over the movement takes over its commands while that character is enabled: move then throws, and the character is the body's only source of motion."
       ],
-      "importLine": "import { KinematicMovementComponent } from '@codexo/exojs-physics'",
+      "importLine": "import { KinematicMovementComponent } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

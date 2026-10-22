@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   Color,
   FixedResolutionCanvasSizing,
   Keyboard,
@@ -13,7 +12,8 @@ import {
   SystemOrder,
   Vector,
 } from '@codexo/exojs';
-import { BoxShape, MouseJoint, type PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+import { BoxShape, type CollisionEvent, MouseJoint, type PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 class SpriteFollowsBodyScene extends Scene {
@@ -22,47 +22,46 @@ class SpriteFollowsBodyScene extends Scene {
   private actorBody!: PhysicsBody;
   private dragJoint: MouseJoint | null = null;
   private floor!: Sprite;
+  private floorBody!: PhysicsBody;
   private floorY = 0;
   private settled = 0;
   private hud!: ReturnType<typeof mountControls>;
   private spritesheetData!: SpritesheetData;
 
   override async load(): Promise<void> {
-    this.spritesheetData = (await this.loader.load(
-      Asset.type('json', assets.demo.spritesheets.platformerCharacters.data),
-    )) as SpritesheetData;
+    this.spritesheetData = (await this.loader.load(assets.platformerCharactersAtlas)) as SpritesheetData;
   }
 
   override init(): void {
     const app = this.app;
     const { width, height } = app;
 
-    // Gravity in px/s², +Y down - matches the engine's screen space.
+    // Gravity in px/s^2, +Y down - matches the engine's screen space.
     this.world = new PhysicsWorld({ gravity: { x: 0, y: 1400 }, fixedDelta: app.fixedTimeStep });
     this.systems.add(this.world, { order: SystemOrder.Physics });
 
-    const characters = new Spritesheet(this.loader.get(assets.demo.spritesheets.platformerCharacters.image), this.spritesheetData);
+    const characters = new Spritesheet(this.loader.get(assets.platformerCharactersImage), this.spritesheetData);
 
     this.floorY = height - 80;
 
-    // ── Static floor ──────────────────────────────────────────────────
+    // Static floor.
     // A wide static body. `world.attach` binds it to the floor sprite, so
     // the sprite is positioned from the body (no manual placement needed).
     const floorWidth = width - 120;
     const floorHeight = 48;
 
-    this.floor = new Sprite(this.loader.get(assets.demo.textures.pixelWhite)).setAnchor(0.5);
+    this.floor = new Sprite(this.loader.get(assets.pixelWhite)).setAnchor(0.5);
     this.floor.width = floorWidth;
     this.floor.height = floorHeight;
     this.floor.tint = new Color(70, 92, 120);
 
-    this.world.attach(this.floor, {
+    const floorBody = this.world.attach(this.floor, {
       type: 'static',
       position: { x: width / 2, y: this.floorY },
       shape: new BoxShape(floorWidth, floorHeight),
     });
 
-    // ── Dynamic actor ─────────────────────────────────────────────────
+    // Dynamic actor.
     // A dynamic body dropped from above. Its collider is a box sized to the
     // character art; `world.attach` binds the sprite, so it falls, lands and
     // tracks the body (position + rotation) every fixed step.
@@ -75,15 +74,11 @@ class SpriteFollowsBodyScene extends Scene {
       restitution: 0.15,
     });
 
-    this.hud = mountControls({
-      title: 'Drag and Throw Physics',
-      controls: [
-        { keys: 'Drag', action: 'pull and throw the actor' },
-        { keys: 'R', action: 'reset the actor' },
-      ],
-      status: 'Dropping…',
-      hint: 'world.attach binds the sprite to a body. MouseJoint pulls the body, and the sprite follows the simulated transform.',
-    });
+    // Contact begins are rare events - one per landing - so each is logged to
+    // the Output panel with the speed the actor hit the floor at.
+    this.world.onCollisionStart.add(this.onContact);
+    this.floorBody = floorBody;
+    this.hud = mountControls({ status: 'Dropping...' });
     app.input.onPointerDown.add(this.onDown);
     app.input.onPointerMove.add(this.onMove);
     app.input.onPointerUp.add(this.onEnd);
@@ -91,12 +86,23 @@ class SpriteFollowsBodyScene extends Scene {
     this.inputs.onTrigger(Keyboard.R, this.resetActor);
   }
 
+  private readonly onContact = (event: CollisionEvent): void => {
+    const bodies = [event.bodyA, event.bodyB];
+
+    if (bodies.includes(this.actorBody) && bodies.includes(this.floorBody)) {
+      const speed = Math.hypot(this.actorBody.linearVelocityX, this.actorBody.linearVelocityY);
+
+      console.log(`Contact: actor landed on the floor at ${speed.toFixed(0)} px/s`);
+    }
+  };
+
   private readonly onDown = (pointer: { x: number; y: number }): void => {
     if (Math.abs(pointer.x - this.actorBody.x) > 42 || Math.abs(pointer.y - this.actorBody.y) > 55) {
       return;
     }
 
     this.onEnd();
+    console.log('Grabbed: MouseJoint attached to the actor');
     this.dragJoint = this.world.addJoint(
       new MouseJoint({ body: this.actorBody, target: pointer, hertz: 7, dampingRatio: 0.8, maxForce: 400_000 }),
     );
@@ -115,6 +121,7 @@ class SpriteFollowsBodyScene extends Scene {
 
     this.world.removeJoint(this.dragJoint);
     this.dragJoint = null;
+    console.log(`Released: thrown at ${Math.hypot(this.actorBody.linearVelocityX, this.actorBody.linearVelocityY).toFixed(0)} px/s`);
   };
 
   private readonly resetActor = (): void => {
@@ -158,6 +165,7 @@ class SpriteFollowsBodyScene extends Scene {
 
   override destroy(): void {
     this.onEnd();
+    this.world.onCollisionStart.remove(this.onContact);
     this.app.input.onPointerDown.remove(this.onDown);
     this.app.input.onPointerMove.remove(this.onMove);
     this.app.input.onPointerUp.remove(this.onEnd);

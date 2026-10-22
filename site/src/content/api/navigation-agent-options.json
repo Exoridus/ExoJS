@@ -4,7 +4,7 @@
   "symbol": "NavigationAgentOptions",
   "kind": "interface",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 7,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Construction options for NavigationAgentComponent."
       ],
-      "importLine": "import { NavigationAgentOptions } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { NavigationAgentOptions } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {

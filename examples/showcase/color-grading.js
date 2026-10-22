@@ -1,5 +1,6 @@
 // Auto-generated from color-grading.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Keyboard, LutFilter, Scene, Sprite } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 const LUT_SIZE = 17;
 const buildLut3D = transform => {
@@ -59,7 +60,7 @@ const LOOKS = [
   },
   { name: 'Identity (off)', transform: (r, g, b) => [r, g, b] },
 ];
-const PRIMARY_RAMP = assets.technical.color.primaryRamp;
+const PRIMARY_RAMP = assets.primaryRamp;
 class ColorGradingScene extends Scene {
   luts;
   filter;

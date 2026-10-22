@@ -4,7 +4,7 @@
   "symbol": "ImageLayerNode",
   "kind": "class",
   "subsystem": "tilemap",
-  "importPath": "@codexo/exojs-tilemap",
+  "importPath": "@codexo/exojs/tilemap",
   "tier": "advanced",
   "memberCount": 103,
   "counts": {
@@ -25,7 +25,7 @@
         "The node references - but never owns - the ImageLayer and its Loader-owned texture: destroy frees the wrapped sprite but leaves the layer and texture intact. Image-layer nodes are band-selectable exactly like tile-layer nodes: list the image layer in a import('./TileMapView').TileMapViewOptions.bands definition and the band stacks it by the map's combined document order, or parent an unbanded node into the scene directly wherever the image belongs in draw order.",
         "For a `repeatX`/`repeatY` node, bounds and hit-test queries reflect the coverage geometry computed by the last _collectContent call (since that geometry is recomputed per collect, not maintained incrementally), which is also why such a node force-disables `cullable`. A repeating or parallax node also re-sizes its wrapped sprite as the camera crosses period boundaries, which content-dirties an enclosing retained group the same way a streamed layer does - give it the same treatment (its own `RetainedContainer`, or none)."
       ],
-      "importLine": "import { ImageLayerNode } from '@codexo/exojs-tilemap'",
+      "importLine": "import { ImageLayerNode } from '@codexo/exojs/tilemap'",
       "sourceLink": null
     },
     {

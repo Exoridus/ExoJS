@@ -14,8 +14,8 @@
  * The gate reads EVERY JUnit report under `test-results/*.junit.xml` - not
  * just the unit lane - and compares the summed skips per suite file against
  * `skipped-tests-baseline.json`. Each CI test suite (unit, webgl, webgl-build,
- * webgl-assets, webgl-core, webgpu, webgpu-media, firefox, audio, tilemap)
- * writes its own JUnit file; a dedicated `skip-budget` CI job downloads all of
+ * webgl-assets, webgl-core, webgpu, webgpu-media, firefox, audio, tilemap,
+ * and the build job's `release-dist` project) writes its own JUnit file; a dedicated `skip-budget` CI job downloads all of
  * them into `test-results/` before running this script, so the budget is ONE
  * global number per suite file, not one per lane - a file's runtime skips in
  * the WebGPU lane and its static skips in the unit lane land in the same
@@ -48,7 +48,7 @@ const DEFAULT_REPORT_DIR = 'test-results';
 const DEFAULT_REPORT_GLOB = `${DEFAULT_REPORT_DIR}/*.junit.xml`;
 
 const BASELINE_NOTE =
-  "Per-file budget of skipped tests, measured as the SUM across every CI test lane (unit + webgl + webgl-build + webgl-assets + webgl-core + webgpu + webgpu-media + firefox + audio + tilemap), aggregated from each lane's own JUnit report — one global budget, not one per lane. Skipping more than the budget fails `pnpm test:skips`, and so does any skip in a file with no budget — a conditional test (including a runtime `ctx.skip(...)`) must be a reviewed entry, not a quiet default. Skipping fewer only prints a note, because the count depends on which lanes actually ran (a local partial run, or a local `dist/` that unskips the production-stripping checks). Run `pnpm test:skips:update-baseline` against a full set of lane reports to record a change.";
+  "Per-file budget of skipped tests, measured as the SUM across every CI test lane (unit + webgl + webgl-build + webgl-assets + webgl-core + webgpu + webgpu-media + firefox + audio + tilemap + the build job), aggregated from each lane's own JUnit report — one global budget, not one per lane. Skipping more than the budget fails `pnpm test:skips`, and so does any skip in a file with no budget — a conditional test (including a runtime `ctx.skip(...)`) must be a reviewed entry, not a quiet default. Skipping fewer only prints a note, because the count depends on which lanes actually ran (a local partial run, or a local `dist/` that unskips the production-stripping checks). Run `pnpm test:skips:update-baseline` against a full set of lane reports to record a change.";
 
 interface Baseline {
   note: string;

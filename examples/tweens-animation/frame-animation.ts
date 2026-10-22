@@ -1,28 +1,26 @@
 import {
   AnimatedSprite,
   Application,
-  Asset,
   Color,
   FixedResolutionCanvasSizing,
   Keyboard,
   Scene,
   Spritesheet,
   type SpritesheetData,
+  Text,
 } from '@codexo/exojs';
-import { mountControls } from '@examples/runtime';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 const CHARACTERS = ['beige', 'green', 'pink', 'purple', 'yellow'] as const;
 const WALK_FPS = 8;
 
 class FrameAnimationScene extends Scene {
-  private sprite!: AnimatedSprite;
-  private hud!: ReturnType<typeof mountControls>;
-  private characterIndex = 0;
+  private sprites: AnimatedSprite[] = [];
   private playing = true;
 
   override async load(): Promise<void> {
-    const texture = this.loader.get('image/platformer-characters.png');
-    const data = (await this.loader.load(Asset.type('json', 'json/platformer-characters.json'))) as SpritesheetData;
+    const texture = this.loader.get(assets.platformerCharactersImage);
+    const data = (await this.loader.load(assets.platformerCharactersAtlas)) as SpritesheetData;
     const sheet = new Spritesheet(texture, data);
     const clips = Object.fromEntries(
       CHARACTERS.map(character => [
@@ -34,52 +32,33 @@ class FrameAnimationScene extends Scene {
       ]),
     );
 
-    this.sprite = new AnimatedSprite(texture, clips)
-      .setAnchor(0.5)
-      .setScale(3)
-      .setPosition(this.app.width / 2, this.app.height / 2);
-    this.addChild(this.sprite);
-    this.sprite.onFrame.add((_clip, frame) => this.updateHud(frame));
+    CHARACTERS.forEach((character, index) => {
+      const x = (this.app.width * (index + 0.5)) / CHARACTERS.length;
+      const sprite = new AnimatedSprite(texture, clips)
+        .setAnchor(0.5)
+        .setScale(1.6)
+        .setPosition(x, this.app.height / 2);
+      const label = new Text(character, { fillColor: Color.white, fontSize: 22, align: 'center' })
+        .setAnchor(0.5, 0)
+        .setPosition(x, this.app.height / 2 + 130);
 
-    this.hud = mountControls({
-      title: 'Sprite Animation',
-      controls: [
-        { keys: 'Right', action: 'change character' },
-        { keys: 'Space', action: 'pause / resume' },
-      ],
-      hint: 'AnimatedSprite plays named clips from a spritesheet. The scene tree advances it automatically.',
+      this.addChild(sprite);
+      this.addChild(label);
+      sprite.play(character);
+      this.sprites.push(sprite);
     });
+
     this.inputs.onTrigger(Keyboard.Space, () => {
       this.playing = !this.playing;
 
-      if (this.playing) {
-        this.sprite.resume();
-      } else {
-        this.sprite.pause();
+      for (const sprite of this.sprites) {
+        if (this.playing) {
+          sprite.resume();
+        } else {
+          sprite.pause();
+        }
       }
-
-      this.updateHud(this.sprite.currentFrame);
     });
-    this.inputs.onTrigger(Keyboard.Right, () => this.selectCharacter());
-    this.sprite.play(CHARACTERS[0]);
-  }
-
-  private selectCharacter(): void {
-    this.characterIndex = (this.characterIndex + 1) % CHARACTERS.length;
-    this.sprite.play(CHARACTERS[this.characterIndex]);
-
-    if (!this.playing) {
-      this.sprite.pause();
-    }
-  }
-
-  private updateHud(frame: number): void {
-    this.hud.setStatus(`${CHARACTERS[this.characterIndex]} · frame ${frame + 1}/2 · ${this.playing ? 'playing' : 'paused'}`);
-  }
-
-  override destroy(): void {
-    this.hud.dispose();
-    super.destroy();
   }
 }
 
@@ -92,7 +71,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: { basePath: 'assets/' },
 });
 
 await app.start(FrameAnimationScene);

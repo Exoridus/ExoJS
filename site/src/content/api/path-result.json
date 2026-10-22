@@ -4,7 +4,7 @@
   "symbol": "PathResult",
   "kind": "interface",
   "subsystem": "pathfinding",
-  "importPath": "@codexo/exojs-pathfinding",
+  "importPath": "@codexo/exojs/pathfinding",
   "tier": "stable",
   "memberCount": 7,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Result of Pathfinder.findPath and Pathfinder.findPathBetween."
       ],
-      "importLine": "import { PathResult } from '@codexo/exojs-pathfinding'",
+      "importLine": "import { PathResult } from '@codexo/exojs/pathfinding'",
       "sourceLink": null
     },
     {

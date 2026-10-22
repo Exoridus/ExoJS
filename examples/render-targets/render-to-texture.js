@@ -1,6 +1,6 @@
 // Auto-generated from render-to-texture.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, RenderTexture, Scene, Sprite, Text } from '@codexo/exojs';
-import { mountControls } from '@examples/runtime';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 class RenderToTextureScene extends Scene {
   source;
   texture;
@@ -11,11 +11,9 @@ class RenderToTextureScene extends Scene {
   snapshot;
   labels;
   captureRequested = true;
-  captures = 0;
-  hud;
   time = 0;
   init() {
-    this.texture = this.loader.get(assets.demo.textures.shipA);
+    this.texture = this.loader.get(assets.ship);
     this.source = new Container();
     for (let i = 0; i < 25; i++) {
       const ship = new Sprite(this.texture)
@@ -33,16 +31,11 @@ class RenderToTextureScene extends Scene {
       new Text('Live source', { fillColor: Color.white, fontSize: 32 }).setPosition(170, 160),
       new Text('Frozen snapshot', { fillColor: Color.white, fontSize: 32 }).setPosition(790, 160),
     ];
-    this.hud = mountControls({
-      title: 'Capture a Texture',
-      controls: [{ keys: 'Click', action: 'capture the current source frame' }],
-      status: 'Waiting for the source texture...',
-      hint: 'The left group keeps moving while the right texture stays frozen until the next click.',
-    });
-    this.app.input.onPointerTap.add(() => {
-      this.captureRequested = true;
-    });
+    this.app.input.onPointerTap.add(this.onTap);
   }
+  onTap = () => {
+    this.captureRequested = true;
+  };
   update(delta) {
     this.time += delta;
     for (let i = 0; i < this.ships.length; i++) {
@@ -54,10 +47,6 @@ class RenderToTextureScene extends Scene {
     if (this.captureRequested && this.texture.ready) {
       context.renderTo(this.source, { target: this.target, clear: Color.black });
       this.captureRequested = false;
-      this.captures++;
-      this.hud.setStatus(`Captures: ${this.captures}`);
-    } else if (this.texture.state === 'failed') {
-      this.hud.setStatus('The source texture failed to load.');
     }
     context.render(this.live);
     context.render(this.snapshot);
@@ -66,6 +55,7 @@ class RenderToTextureScene extends Scene {
     }
   }
   destroy() {
+    this.app.input.onPointerTap.remove(this.onTap);
     this.liveTarget.destroy();
     this.target.destroy();
     super.destroy();

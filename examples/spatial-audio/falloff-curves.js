@@ -1,5 +1,6 @@
 // Auto-generated from falloff-curves.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Sound, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 // Horizontal placement (0..1 of canvas width) for each source; absolute pixel
 // positions are resolved against the canvas in init().
@@ -45,7 +46,7 @@ class FalloffCurvesScene extends Scene {
     // Each derived Sound below reads .audioBuffer synchronously, so the
     // shared source must be fully decoded first - await load() instead of
     // the deferred get() (whose placeholder audioBuffer is null until fill).
-    const source = await this.loader.load(Asset.type('sound', 'audio/impact-light.ogg'));
+    const source = await this.loader.load(assets.soundImpactLight);
     this.sounds = this.sources.map(() => new Sound(source.audioBuffer));
     this.graphics = new Graphics();
     this.labels = this.sources.map(({ model, x, y }) => {
@@ -137,8 +138,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(FalloffCurvesScene);

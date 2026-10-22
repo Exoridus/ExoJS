@@ -4,7 +4,7 @@
   "symbol": "ParticlesExtensionOptions",
   "kind": "interface",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 1,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Options for createParticlesExtension."
       ],
-      "importLine": "import { ParticlesExtensionOptions } from '@codexo/exojs-particles'",
+      "importLine": "import { ParticlesExtensionOptions } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

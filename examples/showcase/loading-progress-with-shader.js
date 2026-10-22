@@ -1,5 +1,6 @@
 // Auto-generated from loading-progress-with-shader.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Scene, ShaderFilter, Sprite, Text } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 const glsl = `#version 300 es
 precision mediump float; uniform float uProgress; in vec2 vUv; out vec4 fragColor;
 void main(){ vec2 p=vUv-0.5; float r=length(p); float a=atan(p.y,p.x); float t=(a+3.1415926)/(6.2831852);
@@ -26,7 +27,7 @@ class LoadingProgressWithShaderScene extends Scene {
     this.progress = { v: 0 };
     this.label = new Text('0%', { fillColor: Color.white, fontSize: 42, align: 'center' });
     this.label.setAnchor(0.5, 0.5).setPosition(width / 2, height / 2);
-    this.ring = new Sprite(this.loader.get('image/uv-grid-256.png'))
+    this.ring = new Sprite(this.loader.get(assets.uvGrid256))
       .setAnchor(0.5)
       .setScale(2.4)
       .setPosition(width / 2, height / 2);
@@ -53,8 +54,5 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(14, 18, 28),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 await app.start(LoadingProgressWithShaderScene);

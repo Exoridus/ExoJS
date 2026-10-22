@@ -4,7 +4,7 @@
   "symbol": "AnyShape",
   "kind": "type",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 0,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Discriminated union of the concrete shape kinds. Narrow via the literal `shape.type` discriminant (`'circle'` → CircleShape, `'capsule'` → CapsuleShape, `'polygon'` → PolygonShape) - no `as` casts needed. BoxShape is a PolygonShape subclass and carries `type: 'polygon'`."
       ],
-      "importLine": "import { AnyShape } from '@codexo/exojs-physics'",
+      "importLine": "import { AnyShape } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

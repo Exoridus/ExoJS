@@ -9,7 +9,7 @@ import {
   PhysicsBody,
   PhysicsBodyComponent,
   type PhysicsWorld,
-} from '@codexo/exojs-physics';
+} from '@codexo/exojs/physics';
 
 declare const world: PhysicsWorld;
 declare const scene: Scene;

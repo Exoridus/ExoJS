@@ -1,9 +1,10 @@
 // Auto-generated from tiled-isometric.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, Graphics, Scene, SystemOrder } from '@codexo/exojs';
-import { CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+import { CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
+import { TileMapNode } from '@codexo/exojs/tilemap';
+import { buildObjectLayerColliders, TilePhysicsBinding } from '@codexo/exojs/tilemap-physics';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { tiledExtension } from '@codexo/exojs-tiled';
-import { TileMapNode } from '@codexo/exojs-tilemap';
-import { buildObjectLayerColliders, TilePhysicsBinding } from '@codexo/exojs-tilemap-physics';
 import { mountControls } from '@examples/runtime';
 const scale = 0.72;
 const origin = { x: 165, y: 115 };
@@ -18,7 +19,7 @@ class IsometricScene extends Scene {
   target = { x: 99, y: 99 };
   hud;
   async load() {
-    this.map = await this.loader.load(Asset.type('tileMap', assets.demo.isometricLandscape));
+    this.map = await this.loader.load(Asset.type('tileMap', assets.isometricLandscape.source));
   }
   init() {
     this.world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, fixedDelta: this.app.fixedTimeStep });
@@ -65,12 +66,7 @@ class IsometricScene extends Scene {
       },
       { order: SystemOrder.Physics - 1 },
     );
-    this.hud = mountControls({
-      title: 'Isometric Landscape',
-      controls: [{ keys: 'Click', action: 'pick a diamond and move toward it' }],
-      status: 'Cross the canal through the central bridge. Cyan outlines show solid banks.',
-      hint: 'Kenney Isometric Tiles Landscape (CC0). The actor collides in logical space; its position is projected onto the map.',
-    });
+    this.hud = mountControls();
     this.app.input.onPointerTap.add(this.onTap);
   }
   onTap = pointer => {
@@ -99,7 +95,7 @@ class IsometricScene extends Scene {
         return [point.x, point.y];
       }),
     );
-    this.hud.setStatus(`Cell (${tx}, ${ty}) - logical target (${this.target.x}, ${this.target.y}). Click the bridge to pass the banks.`);
+    this.hud.setStatus(`Cell (${tx}, ${ty}) - logical target (${this.target.x}, ${this.target.y})`);
   };
   draw(context) {
     this.binding.sync();
@@ -117,6 +113,5 @@ const app = new Application({
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(30, 43, 57),
   extensions: [tiledExtension],
-  loader: { basePath: 'assets/' },
 });
 await app.start(IsometricScene);

@@ -12,11 +12,16 @@ import {
   TextureFormat,
   UniformType,
 } from '@codexo/exojs';
-import { PcmStreamSource } from '@codexo/exojs-audio-fx';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { PcmStreamSource } from '@codexo/exojs/audio-fx';
+import { choice, demoPanel, toggle } from '@examples/runtime';
 const blockFrames = 1024;
 const readbackSlots = 2;
 const capacityFrames = 8192;
+const FORMATS = {
+  'rgba8 (packed 16-bit)': TextureFormat.Rgba8,
+  rgba32f: TextureFormat.Rgba32F,
+  rgba16f: TextureFormat.Rgba16F,
+};
 const soundShader = createFilterShader({
   uniforms: { sampleOffset: UniformType.Int, sampleRate: UniformType.Float, packed: UniformType.Int },
   glsl: {
@@ -62,70 +67,56 @@ class GpuPcmStreamScene extends Scene {
   right = new Float32Array(blockFrames);
   channels = [this.left, this.right];
   pending = [];
-  format = TextureFormat.Rgba8;
   generatedFrames = 0;
   readbackMs = 0;
-  producing = true;
   starting = false;
   active = false;
   draining = false;
   label;
+  prompt;
   panel;
-  hud;
+  get format() {
+    return FORMATS[this.panel.values.format];
+  }
   init() {
     this.label = new Text('', { fillColor: Color.white, fontSize: 23 }).setPosition(145, 190);
-    this.hud = mountControls({
-      title: 'GPU stereo PCM',
-      status: 'Choose a format, then press Start to unlock audio.',
-      hint: '220 Hz left / 330 Hz right. Pause production to hear starvation. Format changes create a fresh stream.',
-    });
-    this.panel = mountControlPanel({ title: 'GPU producer' });
-    this.panel.addCycle({
-      label: 'Readback format',
-      options: ['rgba8 (packed 16-bit)', 'rgba32f', 'rgba16f'],
-      onChange: index => {
-        this.format = [TextureFormat.Rgba8, TextureFormat.Rgba32F, TextureFormat.Rgba16F][index];
-        this.createStream();
+    this.prompt = new Text('Click or press any key to start the stream', { fillColor: Color.white, fontSize: 22, align: 'center' })
+      .setAnchor(0.5)
+      .setPosition(this.app.width / 2, this.app.height - 48);
+    this.panel = demoPanel({
+      title: 'GPU producer',
+      controls: {
+        format: choice('Readback format', Object.keys(FORMATS)),
+        producing: toggle('Produce PCM', true),
       },
-    });
-    this.panel.addButton({
-      label: 'Start',
-      onClick: () => {
-        const stream = this.stream;
-        if (!stream || stream.state !== 'ready') {
-          return;
-        }
-        void getAudioContext()
-          .resume()
-          .then(() => {
-            if (this.stream !== stream || stream.state !== 'ready') {
-              return;
-            }
-            this.active = true;
-            this.starting = true;
-            this.hud.setStatus('Prebuffering GPU samples...');
-          })
-          .catch(error => this.fail(error));
+      actions: {
+        Drain: () => {
+          if (this.active) {
+            this.draining = true;
+          }
+        },
+        'New stream': () => this.createStream(),
       },
-    });
-    this.panel.addToggle({
-      label: 'Produce PCM',
-      value: true,
-      onChange: value => {
-        this.producing = value;
-      },
-    });
-    this.panel.addButton({
-      label: 'Drain',
-      onClick: () => {
-        if (this.active) {
-          this.draining = true;
+      onChange: key => {
+        // The mount-time calls arrive before the panel handle exists; init() creates the first stream once.
+        if (key === 'format' && this.panel) {
+          this.createStream();
         }
       },
     });
-    this.panel.addButton({ label: 'New stream', onClick: () => this.createStream() });
+    // onUnlock replays when audio is already unlocked, so a warm context starts immediately.
+    this.app.audio.onUnlock.add(this.start);
     this.createStream();
   }
+  start = () => {
+    const stream = this.stream;
+    if (!stream || stream.state !== 'ready' || this.active || this.app.audio.locked) {
+      return;
+    }
+    this.active = true;
+    this.starting = true;
+    this.panel.status('Prebuffering GPU samples...');
+  };
   releaseStream() {
     this.active = false;
     this.starting = false;
@@ -142,11 +133,12 @@ class GpuPcmStreamScene extends Scene {
   }
   createStream() {
     this.releaseStream();
+    this.panel.status('');
     this.generatedFrames = 0;
     this.readbackMs = 0;
     const context = this.app.rendering;
     if (!context.supportsReadbackFormat(this.format)) {
-      this.hud.setStatus(`${this.format} readback is unsupported. Choose another format.`);
+      this.panel.status(`${this.format} readback is unsupported. Choose another format.`);
       return;
     }
     try {
@@ -160,12 +152,12 @@ class GpuPcmStreamScene extends Scene {
       this.stream = stream;
       this.filter.uniforms.sampleRate.set(stream.sampleRate);
       this.filter.uniforms.packed.set(this.format === TextureFormat.Rgba8 ? 1 : 0);
-      stream.onEnd.add(() => this.hud.setStatus('Drained. Create a new stream to play again.'));
+      stream.onEnd.add(() => this.panel.status('Drained. Create a new stream to play again.'));
       stream.onError.add(error => this.fail(error));
       void stream.ready
         .then(() => {
           if (this.stream === stream) {
-            this.hud.setStatus('Ready. Press Start to unlock audio and prebuffer.');
+            this.start();
           }
         })
         .catch(error => {
@@ -179,7 +171,7 @@ class GpuPcmStreamScene extends Scene {
   }
   fail(error) {
     this.releaseStream();
-    this.hud.setStatus(String(error));
+    this.panel.status(String(error));
   }
   pump(context) {
     const stream = this.stream;
@@ -218,7 +210,7 @@ class GpuPcmStreamScene extends Scene {
     if (this.starting && (stream.bufferedFrames >= targetFrames || this.draining)) {
       stream.start(getAudioContext().currentTime + 0.02);
       this.starting = false;
-      this.hud.setStatus('Playing GPU stereo through the music bus.');
+      this.panel.status('');
     }
     if (this.draining) {
       if (this.pending.length === 0) {
@@ -227,7 +219,7 @@ class GpuPcmStreamScene extends Scene {
       }
       return;
     }
-    if (!this.producing) {
+    if (!this.panel.values.producing) {
       return;
     }
     // Reserve queue space for every pending read before rendering another block.
@@ -255,16 +247,20 @@ class GpuPcmStreamScene extends Scene {
       `PCM queue: ${stream?.bufferedFrames ?? 0} / ${capacityFrames} | Peak: ${stream?.highWaterFrames ?? 0} frames (${((stream?.bufferedSeconds ?? 0) * 1000).toFixed(1)} ms)`,
       `Readback: ${this.pending.length} / ${readbackSlots} slots | last observed wait: ${this.readbackMs.toFixed(1)} ms`,
       `Starvation: ${stream?.underruns ?? 0} episodes / ${stream?.underrunFrames ?? 0} silent frames`,
-      `Overflow: ${stream?.overflowCount ?? 0} blocks | ${this.producing ? 'Producer enabled' : 'Producer paused'}`,
+      `Overflow: ${stream?.overflowCount ?? 0} blocks | ${this.panel.values.producing ? 'Producer enabled' : 'Producer paused'}`,
     ].join('\n');
     context.render(this.label);
+    if (this.app.audio.locked) {
+      context.render(this.prompt);
+    }
   }
   destroy() {
     this.releaseStream();
     this.input.destroy();
+    this.app.audio.onUnlock.remove(this.start);
     this.panel?.dispose();
-    this.hud?.dispose();
     this.label?.destroy();
+    this.prompt?.destroy();
     super.destroy();
   }
 }

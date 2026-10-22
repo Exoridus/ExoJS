@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
 import type { AssetFactoryContext, Destroyable, LoaderScope, Texture } from '@codexo/exojs';
-import { MapLevelSide, mapObjectDescriptors, MapObjectSpawner, TileMap } from '@codexo/exojs-tilemap';
+import { MapLevelSide, mapObjectDescriptors, MapObjectSpawner, TileMap } from '@codexo/exojs/tilemap';
 import { describe, expect, it } from 'vitest';
 
 import type { LdtkData } from '../src/LdtkData';

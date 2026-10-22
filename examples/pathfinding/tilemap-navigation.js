@@ -2,7 +2,6 @@
 import {
   ActionMap,
   Application,
-  Asset,
   BehaviorComponent,
   Color,
   Container,
@@ -15,10 +14,11 @@ import {
   Vector,
   VectorAction,
 } from '@codexo/exojs';
-import { NavigationAgentComponent, TileNavigationSpace, WaypointGraph } from '@codexo/exojs-pathfinding';
-import { CircleShape, KinematicMovementComponent, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs-physics';
-import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileSet } from '@codexo/exojs-tilemap';
-import { TileColliderStreamer } from '@codexo/exojs-tilemap-physics';
+import { NavigationAgentComponent, TileNavigationSpace, WaypointGraph } from '@codexo/exojs/pathfinding';
+import { CircleShape, KinematicMovementComponent, PhysicsBodyComponent, PhysicsWorld } from '@codexo/exojs/physics';
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileSet } from '@codexo/exojs/tilemap';
+import { TileColliderStreamer } from '@codexo/exojs/tilemap-physics';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 // Navigation, movement and collision over one tile map, with no package
 // depending on another:
@@ -121,7 +121,7 @@ class TilemapNavigationScene extends Scene {
   });
   hud;
   async load() {
-    const texture = await this.loader.load(Asset.type('texture', assets.demo.tilesets.map.image));
+    const texture = await this.loader.load(assets.mapPackTilesheet);
     const tileset = new TileSet({
       name: 'map',
       texture: new TextureRegion(texture, { x: 0, y: 0, width: texture.width, height: texture.height }),
@@ -230,22 +230,14 @@ class TilemapNavigationScene extends Scene {
     this.patrol.agent.onStatusChange.add(this.onPatrolStatus);
     this.advancePatrol();
     this.app.input.onPointerTap.add(this.onTap);
-    this.hud = mountControls({
-      title: 'Tilemap Navigation',
-      controls: [
-        { keys: 'WASD / Arrows', action: 'move the player' },
-        { keys: 'Click', action: 'open or close a tile' },
-      ],
-      status: '',
-      hint: 'Hunters re-route when you move to another tile or edit the map; the blue patroller follows a waypoint graph.',
-    });
+    this.hud = mountControls();
   }
   update() {
     // Rebuilds only the collider blocks whose tiles changed; the navigation
     // space synchronises itself when the agents read it.
     this.colliders.sync();
     const statuses = this.hunters.map(({ agent }) => agent.status).join(', ');
-    this.hud.setStatus(`hunters: ${statuses} · patrol: ${this.patrol.agent.status} · navigation revision ${this.navigation.revision}`);
+    this.hud.setStatus(`hunters: ${statuses} · patrol: ${this.patrol.agent.status}`);
   }
   draw(context) {
     const overlay = this.overlay;

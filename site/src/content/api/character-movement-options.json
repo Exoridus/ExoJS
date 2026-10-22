@@ -4,7 +4,7 @@
   "symbol": "CharacterMovementOptions",
   "kind": "interface",
   "subsystem": "physics",
-  "importPath": "@codexo/exojs-physics",
+  "importPath": "@codexo/exojs/physics",
   "tier": "stable",
   "memberCount": 5,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Construction options for CharacterMovementComponent."
       ],
-      "importLine": "import { CharacterMovementOptions } from '@codexo/exojs-physics'",
+      "importLine": "import { CharacterMovementOptions } from '@codexo/exojs/physics'",
       "sourceLink": null
     },
     {

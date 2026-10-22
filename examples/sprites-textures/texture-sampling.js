@@ -11,7 +11,7 @@ import {
   Text,
   Texture,
 } from '@codexo/exojs';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { demoPanel, slider, toggle } from '@examples/runtime';
 // Colour textures are stored as sRGB and filtered in linear light, so the mips
 // of a checker average to the correct mid-grey rather than a darkened one.
 // Data textures (`colorSpace: 'none'`) filter their raw numeric values instead.
@@ -66,25 +66,21 @@ const makeZonePlate = () => {
   ctx.putImageData(image, 0, 0);
   return canvas;
 };
+const samplingControls = {
+  magnify: slider('Magnify', { min: 1, max: 8, value: 6, step: 0.1, format: value => `${value.toFixed(1)}x` }),
+  minify: slider('Minify', { min: 0.15, max: 0.7, value: 0.35, step: 0.01, format: value => `${value.toFixed(2)}x` }),
+  snap: toggle('Pixel snap', false),
+  motion: toggle('Motion', true),
+};
 class TextureSamplingScene extends Scene {
   textures = [];
   magnified = [];
   minified = [];
-  hud;
   panel;
-  zoom = 6;
-  minify = 0.35;
-  snap = false;
-  moving = true;
   elapsed = 0;
   onWheel = (_deltaX, deltaY) => {
-    this.zoom = Math.max(1, Math.min(8, this.zoom * Math.exp(-deltaY * 0.002)));
-    this.zoomControl.set(this.zoom);
-    this.updateHud();
+    this.panel.set('magnify', Math.max(1, Math.min(8, this.panel.values.magnify * Math.exp(-deltaY * 0.002))));
   };
-  zoomControl;
-  snapControl;
-  motionControl;
   init() {
     const pixelArt = makePixelArt();
     const zonePlate = makeZonePlate();
@@ -104,63 +100,25 @@ class TextureSamplingScene extends Scene {
           .setPosition(COLUMN_X[column], 46),
       );
     }
-    this.hud = mountControls({
-      title: 'Texture Sampling and Pixel Snapping',
-      controls: [
-        { keys: 'Wheel', action: 'magnify the top row' },
-        { keys: 'P', action: 'toggle pixel snapping' },
-        { keys: 'Space', action: 'pause the motion' },
-      ],
-      hint: 'Top row magnified, bottom row minified. Same texture, transform and time in every column; only the sampler differs.',
-      corner: 'top-right',
-    });
-    this.panel = mountControlPanel({ title: 'Sampling lab', corner: 'bottom-right' });
-    this.zoomControl = this.panel.addSlider({
-      label: 'Magnify',
-      min: 1,
-      max: 8,
-      step: 0.1,
-      value: this.zoom,
-      onChange: value => {
-        this.zoom = value;
-        this.updateHud();
+    this.panel = demoPanel({
+      title: 'Sampling lab',
+      corner: 'bottom-right',
+      controls: samplingControls,
+      onChange: (key, value) => {
+        if (key === 'snap') {
+          for (const sprite of this.magnified) {
+            sprite.pixelSnapMode = value ? PixelSnapMode.Geometry : PixelSnapMode.None;
+          }
+        }
       },
     });
-    this.panel.addSlider({
-      label: 'Minify',
-      min: 0.15,
-      max: 0.7,
-      step: 0.01,
-      value: this.minify,
-      onChange: value => {
-        this.minify = value;
-        this.updateHud();
-      },
-    });
-    this.snapControl = this.panel.addToggle({ label: 'Pixel snap', value: this.snap, onChange: value => this.setSnap(value) });
-    this.motionControl = this.panel.addToggle({ label: 'Motion', value: this.moving, onChange: value => this.setMoving(value) });
-    this.inputs.onTrigger(Keyboard.P, () => this.setSnap(!this.snap));
-    this.inputs.onTrigger(Keyboard.Space, () => this.setMoving(!this.moving));
+    this.inputs.onTrigger(Keyboard.P, () => this.panel.step('snap'));
+    this.inputs.onTrigger(Keyboard.Space, () => this.panel.step('motion'));
     this.app.input.onMouseWheel.add(this.onWheel);
-    this.updateHud();
-  }
-  setMoving(moving) {
-    this.moving = moving;
-    this.motionControl.set(moving);
-  }
-  setSnap(snap) {
-    this.snap = snap;
-    this.snapControl.set(snap);
-    for (const sprite of this.magnified) {
-      sprite.pixelSnapMode = snap ? PixelSnapMode.Geometry : PixelSnapMode.None;
-    }
-    this.updateHud();
-  }
-  updateHud() {
-    this.hud.setStatus(`Magnify ${this.zoom.toFixed(1)}x · minify ${this.minify.toFixed(2)}x · snap ${this.snap ? 'on' : 'off'}`);
   }
   update(delta) {
-    if (this.moving) {
+    const { magnify, minify, motion } = this.panel.values;
+    if (motion) {
       this.elapsed += delta;
     }
     // A slow sub-pixel drift shows snapping in the top row; a gentle scale
@@ -168,14 +126,13 @@ class TextureSamplingScene extends Scene {
     const drift = Math.sin(this.elapsed * 1.8) * 0.45;
     const pulse = 1 + Math.sin(this.elapsed * 0.7) * 0.12;
     for (let column = 0; column < MODES.length; column++) {
-      this.magnified[column].setPosition(COLUMN_X[column] + drift, MAGNIFIED_Y + drift).setScale(this.zoom);
-      this.minified[column].setPosition(COLUMN_X[column], MINIFIED_Y).setScale(this.minify * pulse);
+      this.magnified[column].setPosition(COLUMN_X[column] + drift, MAGNIFIED_Y + drift).setScale(magnify);
+      this.minified[column].setPosition(COLUMN_X[column], MINIFIED_Y).setScale(minify * pulse);
     }
   }
   destroy() {
     this.app.input.onMouseWheel.remove(this.onWheel);
     this.panel.dispose();
-    this.hud.dispose();
     super.destroy();
     for (const texture of this.textures) {
       texture.destroy();

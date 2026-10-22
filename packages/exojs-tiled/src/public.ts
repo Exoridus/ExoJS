@@ -57,7 +57,7 @@ export type {
   TileTransform,
   UnknownMapObjectPolicy,
   WangSetOptions,
-} from '@codexo/exojs-tilemap';
+} from '@codexo/exojs/tilemap';
 export {
   MapLevelRuntime,
   MapLevelSide,
@@ -79,7 +79,7 @@ export {
   TileMapView,
   TileSet,
   WangSet,
-} from '@codexo/exojs-tilemap';
+} from '@codexo/exojs/tilemap';
 
 // ── Raw Tiled JSON (TMJ/TSJ) types ──────────────────────────────────────────
 export type {
@@ -132,7 +132,7 @@ export { tiledWangSetToWangSet } from './wangSets';
 export { TiledFormatError } from './validate';
 
 // ── Module augmentation - typed load calls ───────────────────────────────────
-import type { TileMap } from '@codexo/exojs-tilemap';
+import type { TileMap } from '@codexo/exojs/tilemap';
 
 import type { TiledMap } from './TiledMap';
 

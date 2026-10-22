@@ -8,6 +8,7 @@ import {
   Sprite,
   type Texture,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
 const CLEAR_TINT = new Color(120, 200, 255);
@@ -22,7 +23,7 @@ class RectanglesCollisionScene extends Scene {
   override init(): void {
     const app = this.app;
     const { width, height } = app;
-    const texture = this.loader.get('image/hue-ramp.png');
+    const texture = this.loader.get(assets.hueRamp);
 
     // Two axis-aligned rectangles (no rotation) so collision is a true AABB
     // test. Explicit width/height drive the sprite scale; anchor 0.5 keeps the
@@ -40,12 +41,7 @@ class RectanglesCollisionScene extends Scene {
 
     this.overlap = new Graphics();
 
-    this.hud = mountControls({
-      title: 'Rectangles Collision',
-      controls: [{ keys: 'Drag', action: 'move a rectangle' }],
-      status: 'No overlap',
-      hint: 'Drag either rectangle over the other — the AABB overlap region lights up.',
-    });
+    this.hud = mountControls({ status: 'No overlap' });
   }
 
   private makeBox(texture: Texture, w: number, h: number): Sprite {
@@ -101,9 +97,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(18, 22, 30),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(RectanglesCollisionScene);

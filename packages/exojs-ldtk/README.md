@@ -13,7 +13,7 @@ Core and the tilemap runtime are peer dependencies. `ldtkExtension` depends on `
 ```ts
 import { Application, Scene } from '@codexo/exojs';
 import { ldtkExtension } from '@codexo/exojs-ldtk';
-import { TileMapNode } from '@codexo/exojs-tilemap';
+import { TileMapNode } from '@codexo/exojs/tilemap';
 
 class LevelScene extends Scene {
   override async load(): Promise<void> {

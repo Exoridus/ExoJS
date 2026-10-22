@@ -1,4 +1,5 @@
 import {
+  ActionMap,
   Application,
   Color,
   FixedResolutionCanvasSizing,
@@ -11,9 +12,10 @@ import {
   Sprite,
   Text,
   type Texture,
+  VectorAction,
   View,
 } from '@codexo/exojs';
-import { mountControls } from '@examples/runtime';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class SplitScreenScene extends Scene {
   private texture!: Texture;
@@ -24,26 +26,14 @@ class SplitScreenScene extends Scene {
   private labels!: Text[];
   private leftPlayer!: Sprite;
   private rightPlayer!: Sprite;
-  private move = {
-    a: 0,
-    d: 0,
-    w: 0,
-    s: 0,
-    left: 0,
-    right: 0,
-    up: 0,
-    down: 0,
-  };
-  private padMove = [
-    { x: 0, y: 0 },
-    { x: 0, y: 0 },
-  ];
+  private leftControls!: ActionMap<{ move: VectorAction }>;
+  private rightControls!: ActionMap<{ move: VectorAction }>;
 
   override init(): void {
     const app = this.app;
     const { width, height } = app;
 
-    this.texture = this.loader.get('image/ship-a.png');
+    this.texture = this.loader.get(assets.ship);
 
     this.leftView = new View(0, 0, width / 2, height).setViewport(0, 0, 0.5, 1);
     this.rightView = new View(0, 0, width / 2, height).setViewport(0.5, 0, 0.5, 1);
@@ -67,11 +57,6 @@ class SplitScreenScene extends Scene {
       new Text('P1 · WASD / Pad 1', { fillColor: new Color(120, 190, 255), fontSize: 24 }).setPosition(24, 160),
       new Text('P2 · Arrows / Pad 2', { fillColor: new Color(255, 180, 120), fontSize: 24 }).setPosition(width / 2 + 24, 160),
     ];
-    mountControls({
-      title: 'Local Split Screen',
-      hint: 'Move each player to see its camera follow independently. Controllers are optional.',
-    });
-
     this.leftPlayer = new Sprite(this.texture)
       .setAnchor(0.5)
       .setPosition(-160, 0)
@@ -81,81 +66,37 @@ class SplitScreenScene extends Scene {
       .setPosition(160, 0)
       .setTint(new Color(255, 180, 120));
 
-    this.inputs.onActive(Keyboard.A, () => {
-      this.move.a = 1;
-    });
-    this.inputs.onStop(Keyboard.A, () => {
-      this.move.a = 0;
-    });
-    this.inputs.onActive(Keyboard.D, () => {
-      this.move.d = 1;
-    });
-    this.inputs.onStop(Keyboard.D, () => {
-      this.move.d = 0;
-    });
-    this.inputs.onActive(Keyboard.W, () => {
-      this.move.w = 1;
-    });
-    this.inputs.onStop(Keyboard.W, () => {
-      this.move.w = 0;
-    });
-    this.inputs.onActive(Keyboard.S, () => {
-      this.move.s = 1;
-    });
-    this.inputs.onStop(Keyboard.S, () => {
-      this.move.s = 0;
-    });
-    this.inputs.onActive(Keyboard.Left, () => {
-      this.move.left = 1;
-    });
-    this.inputs.onStop(Keyboard.Left, () => {
-      this.move.left = 0;
-    });
-    this.inputs.onActive(Keyboard.Right, () => {
-      this.move.right = 1;
-    });
-    this.inputs.onStop(Keyboard.Right, () => {
-      this.move.right = 0;
-    });
-    this.inputs.onActive(Keyboard.Up, () => {
-      this.move.up = 1;
-    });
-    this.inputs.onStop(Keyboard.Up, () => {
-      this.move.up = 0;
-    });
-    this.inputs.onActive(Keyboard.Down, () => {
-      this.move.down = 1;
-    });
-    this.inputs.onStop(Keyboard.Down, () => {
-      this.move.down = 0;
-    });
-
-    for (let index = 0; index < 2; index++) {
-      const pad = app.input.gamepads[index];
-      const movement = this.padMove[index];
-      pad.onActive(GamepadAxis.LeftStickX, value => {
-        movement.x = value;
-      });
-      pad.onStop(GamepadAxis.LeftStickX, () => {
-        movement.x = 0;
-      });
-      pad.onActive(GamepadAxis.LeftStickY, value => {
-        movement.y = value;
-      });
-      pad.onStop(GamepadAxis.LeftStickY, () => {
-        movement.y = 0;
-      });
-    }
+    // One map per player: each binds its own keys and reads its own pad slot.
+    this.leftControls = new ActionMap(
+      {
+        move: new VectorAction([
+          { up: Keyboard.W, down: Keyboard.S, left: Keyboard.A, right: Keyboard.D },
+          { x: GamepadAxis.LeftStickX, y: GamepadAxis.LeftStickY },
+        ]),
+      },
+      { gamepad: app.input.gamepads[0] },
+    );
+    this.rightControls = new ActionMap(
+      {
+        move: new VectorAction([
+          { up: Keyboard.Up, down: Keyboard.Down, left: Keyboard.Left, right: Keyboard.Right },
+          { x: GamepadAxis.LeftStickX, y: GamepadAxis.LeftStickY },
+        ]),
+      },
+      { gamepad: app.input.gamepads[1] },
+    );
+    this.inputs.attach(this.leftControls);
+    this.inputs.attach(this.rightControls);
   }
 
   override update(delta: Seconds): void {
     const speed = 300 * delta;
 
-    this.leftPlayer.move((this.move.d - this.move.a + this.padMove[0].x) * speed, (this.move.s - this.move.w + this.padMove[0].y) * speed);
-    this.rightPlayer.move(
-      (this.move.right - this.move.left + this.padMove[1].x) * speed,
-      (this.move.down - this.move.up + this.padMove[1].y) * speed,
-    );
+    const left = this.leftControls.move.value;
+    const right = this.rightControls.move.value;
+
+    this.leftPlayer.move(left.x * speed, left.y * speed);
+    this.rightPlayer.move(right.x * speed, right.y * speed);
     this.leftView.setCenter(this.leftPlayer.position.x, this.leftPlayer.position.y);
     this.rightView.setCenter(this.rightPlayer.position.x, this.rightPlayer.position.y);
   }
@@ -184,9 +125,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(SplitScreenScene);

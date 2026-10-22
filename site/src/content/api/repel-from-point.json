@@ -4,7 +4,7 @@
   "symbol": "RepelFromPoint",
   "kind": "class",
   "subsystem": "particles",
-  "importPath": "@codexo/exojs-particles",
+  "importPath": "@codexo/exojs/particles",
   "tier": "stable",
   "memberCount": 12,
   "counts": {
@@ -23,7 +23,7 @@
         "Use cases: shockwaves, explosion blast, mouse-cursor repel field.",
         "GPU-eligible."
       ],
-      "importLine": "import { RepelFromPoint } from '@codexo/exojs-particles'",
+      "importLine": "import { RepelFromPoint } from '@codexo/exojs/particles'",
       "sourceLink": null
     },
     {

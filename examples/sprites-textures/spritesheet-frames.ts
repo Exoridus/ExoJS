@@ -1,6 +1,5 @@
 import {
   Application,
-  Asset,
   Color,
   FixedResolutionCanvasSizing,
   type RenderingContext,
@@ -9,6 +8,7 @@ import {
   Spritesheet,
   type SpritesheetData,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const CHARACTERS = ['beige', 'green', 'pink', 'purple', 'yellow'];
@@ -25,8 +25,8 @@ class SpritesheetFramesScene extends Scene {
   override async load(): Promise<void> {
     const app = this.app;
     const { width, height } = app;
-    const texture = this.loader.get('image/platformer-characters.png');
-    const data = (await this.loader.load(Asset.type('json', 'json/platformer-characters.json'))) as SpritesheetData;
+    const texture = this.loader.get(assets.platformerCharactersImage);
+    const data = (await this.loader.load(assets.platformerCharactersAtlas)) as SpritesheetData;
 
     this.spritesheet = new Spritesheet(texture, data);
 
@@ -99,9 +99,6 @@ const app = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: new Color(24, 28, 38),
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 await app.start(SpritesheetFramesScene);

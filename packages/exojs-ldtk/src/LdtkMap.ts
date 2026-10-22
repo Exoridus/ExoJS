@@ -1,4 +1,4 @@
-import type { MapWorld, TileMap } from '@codexo/exojs-tilemap';
+import type { MapWorld, TileMap } from '@codexo/exojs/tilemap';
 
 import type { LdtkData } from './LdtkData';
 import { getLdtkLevelEntries } from './ldtkLevelEntries';

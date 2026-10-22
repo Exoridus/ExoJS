@@ -3,6 +3,7 @@ import {
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
+  Keyboard,
   type Pointer,
   type RenderingContext,
   Scene,
@@ -10,45 +11,48 @@ import {
   type Sound,
   Text,
 } from '@codexo/exojs';
-import { ConvolutionEffect } from '@codexo/exojs-audio-fx';
-import { type ControlBinding, mountControlPanel, mountControls, type PressButtonTracker, trackPressButtons } from '@examples/runtime';
+import { ConvolutionEffect } from '@codexo/exojs/audio-fx';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { choice, type ChoiceSpec, type DemoPanel, demoPanel, type PressButtonTracker, trackPressButtons } from '@examples/runtime';
 
 // Every impulse response in the AK-SROOMS set, shortest tail first. The
 // duration is what actually decides the character: a few milliseconds only
 // colours the sound, ~30-150 ms reads as a cupboard or a shaft, and past
 // ~250 ms you start hearing a room you could walk around in.
 const ROOMS = [
-  { file: 'AK-SROOMS_014', ms: 1 },
-  { file: 'AK-SROOMS_013', ms: 2 },
-  { file: 'AK-SROOMS_023', ms: 3 },
-  { file: 'AK-SROOMS_012', ms: 6 },
-  { file: 'AK-SROOMS_011', ms: 11 },
-  { file: 'AK-SROOMS_022', ms: 15 },
-  { file: 'AK-SROOMS_002', ms: 20 },
-  { file: 'AK-SROOMS_003', ms: 20 },
-  { file: 'AK-SROOMS_010', ms: 28 },
-  { file: 'AK-SROOMS_021', ms: 33 },
-  { file: 'AK-SROOMS_009', ms: 48 },
-  { file: 'AK-SROOMS_019', ms: 51 },
-  { file: 'AK-SROOMS_020', ms: 95 },
-  { file: 'AK-SROOMS_006', ms: 133 },
-  { file: 'AK-SROOMS_018', ms: 156 },
-  { file: 'AK-SROOMS_015', ms: 235 },
-  { file: 'AK-SROOMS_001', ms: 236 },
-  { file: 'AK-SROOMS_024', ms: 226 },
-  { file: 'AK-SROOMS_026', ms: 226 },
-  { file: 'AK-SROOMS_027', ms: 226 },
-  { file: 'AK-SROOMS_025', ms: 229 },
-  { file: 'AK-SROOMS_030', ms: 267 },
-  { file: 'AK-SROOMS_004', ms: 307 },
-  { file: 'AK-SROOMS_005', ms: 307 },
-  { file: 'AK-SROOMS_029', ms: 308 },
-  { file: 'AK-SROOMS_007', ms: 350 },
-  { file: 'AK-SROOMS_008', ms: 350 },
-  { file: 'AK-SROOMS_028', ms: 353 },
-  { file: 'AK-SROOMS_017', ms: 550 },
-  { file: 'AK-SROOMS_016', ms: 593 },
+  { file: 'AK-SROOMS_014', ir: assets.impulseRoom014, ms: 1 },
+  { file: 'AK-SROOMS_013', ir: assets.impulseRoom013, ms: 2 },
+  { file: 'AK-SROOMS_023', ir: assets.impulseRoom023, ms: 3 },
+  { file: 'AK-SROOMS_012', ir: assets.impulseRoom012, ms: 6 },
+  { file: 'AK-SROOMS_011', ir: assets.impulseRoom011, ms: 11 },
+  { file: 'AK-SROOMS_022', ir: assets.impulseRoom022, ms: 15 },
+  { file: 'AK-SROOMS_002', ir: assets.impulseRoom002, ms: 20 },
+  { file: 'AK-SROOMS_003', ir: assets.impulseRoom003, ms: 20 },
+  { file: 'AK-SROOMS_010', ir: assets.impulseRoom010, ms: 28 },
+  { file: 'AK-SROOMS_021', ir: assets.impulseRoom021, ms: 33 },
+  { file: 'AK-SROOMS_009', ir: assets.impulseRoom009, ms: 48 },
+  { file: 'AK-SROOMS_019', ir: assets.impulseRoom019, ms: 51 },
+  { file: 'AK-SROOMS_020', ir: assets.impulseRoom020, ms: 95 },
+  { file: 'AK-SROOMS_006', ir: assets.impulseRoom006, ms: 133 },
+  { file: 'AK-SROOMS_018', ir: assets.impulseRoom018, ms: 156 },
+  { file: 'AK-SROOMS_015', ir: assets.impulseRoom015, ms: 235 },
+  { file: 'AK-SROOMS_001', ir: assets.impulseRoom001, ms: 236 },
+  { file: 'AK-SROOMS_024', ir: assets.impulseRoom024, ms: 226 },
+  { file: 'AK-SROOMS_026', ir: assets.impulseRoom026, ms: 226 },
+  { file: 'AK-SROOMS_027', ir: assets.impulseRoom027, ms: 226 },
+  { file: 'AK-SROOMS_025', ir: assets.impulseRoom025, ms: 229 },
+  { file: 'AK-SROOMS_030', ir: assets.impulseRoom030, ms: 267 },
+  { file: 'AK-SROOMS_004', ir: assets.impulseRoom004, ms: 307 },
+  { file: 'AK-SROOMS_005', ir: assets.impulseRoom005, ms: 307 },
+  { file: 'AK-SROOMS_029', ir: assets.impulseRoom029, ms: 308 },
+  { file: 'AK-SROOMS_007', ir: assets.impulseRoom007, ms: 350 },
+  { file: 'AK-SROOMS_008', ir: assets.impulseRoom008, ms: 350 },
+  { file: 'AK-SROOMS_028', ir: assets.impulseRoom028, ms: 353 },
+  { file: 'AK-SROOMS_017', ir: assets.impulseRoom017, ms: 550 },
+  { file: 'AK-SROOMS_016', ir: assets.impulseRoom016, ms: 593 },
 ] as const;
+
+const ROOM_LABELS = ROOMS.map(room => `${room.ms} ms (IR ${room.file.slice(-3)})`);
 
 /** Rough label for a tail length - the same intuition a level designer works with. */
 const character = (ms: number): string => {
@@ -79,10 +83,10 @@ const character = (ms: number): string => {
 // stereo position matches where it visually sits - the same left/right
 // spread the ear hears back through the room.
 const MATERIALS = [
-  { file: 'impactBell_heavy_000', label: 'Bell', color: new Color(210, 180, 100) },
-  { file: 'impactWood_heavy_000', label: 'Wood', color: new Color(160, 120, 80) },
-  { file: 'impactGlass_heavy_000', label: 'Glass', color: new Color(130, 210, 230) },
-  { file: 'impactMetal_heavy_000', label: 'Metal', color: new Color(160, 180, 200) },
+  { sound: assets.soundImpactBellHeavy, label: 'Bell', color: new Color(210, 180, 100) },
+  { sound: assets.soundImpactWoodHeavy, label: 'Wood', color: new Color(160, 120, 80) },
+  { sound: assets.soundImpactGlassHeavy, label: 'Glass', color: new Color(130, 210, 230) },
+  { sound: assets.soundImpactMetalHeavy, label: 'Metal', color: new Color(160, 180, 200) },
 ] as const;
 
 const REF_DISTANCE = 60;
@@ -108,10 +112,8 @@ class ConvolutionRoomsScene extends Scene {
   private label!: Text;
   private detail!: Text;
   private tapPrompt!: Text;
-  private hud!: ReturnType<typeof mountControls>;
-  private panel!: ReturnType<typeof mountControlPanel>;
+  private panel!: DemoPanel<{ room: ChoiceSpec }>;
   private pressButtons: PressButtonTracker | null = null;
-  private roomControl!: ControlBinding<number>;
 
   override init(): void {
     const { width, height } = this.app;
@@ -132,7 +134,7 @@ class ConvolutionRoomsScene extends Scene {
     const padY = height / 2 - padH / 2 + 20;
 
     this.pads = MATERIALS.map((material, i) => ({
-      sound: this.loader.get(`audio/${material.file}.ogg`),
+      sound: this.loader.get(material.sound),
       label: material.label,
       color: material.color,
       x: startX + i * (padW + gap),
@@ -160,34 +162,21 @@ class ConvolutionRoomsScene extends Scene {
     }
 
     this.app.input.onPointerDown.add(this.onPointerDown);
-    this.app.input.onContextMenu.add(this.onContextMenu);
 
-    this.hud = mountControls({
-      title: 'Convolution rooms',
-      controls: [
-        { keys: 'Click', action: 'strike a pad, panned to its position' },
-        { keys: 'Right-click', action: 'next room (or use the panel)' },
-      ],
-      status: 'Click or press any key to start…',
-      hint: 'Same four materials every time — only the room around them changes.',
+    this.panel = demoPanel({
+      controls: { room: choice('Room', ROOM_LABELS) },
+      onChange: (_key, value) => this.select(ROOM_LABELS.indexOf(value)),
     });
-
-    this.panel = mountControlPanel({ title: 'Room' });
-    this.roomControl = this.panel.addCycle({
-      label: 'Impulse',
-      options: ROOMS.map((room, i) => `${i + 1} · ${room.ms} ms`),
-      onChange: index => this.select(index),
-    });
-
-    this.select(0);
+    this.inputs.onTrigger(Keyboard.Right, () => this.panel.step('room', 1));
+    this.inputs.onTrigger(Keyboard.Left, () => this.panel.step('room', -1));
   }
 
-  // Application input outlives the scene, so both handlers are removed in destroy().
+  // Application input outlives the scene, so the handler is removed in destroy().
   private readonly onPointerDown = (pointer: Pointer, x: number, y: number): void => {
     // Presses are delivered at the next frame, when `pointer.buttons` already
     // reads the live state, so a right click released before then looks like a
-    // main click. The button recorded at press time decides: right-click
-    // switches rooms instead of striking.
+    // main click. The button recorded at press time decides: only the main
+    // button strikes.
     if ((this.pressButtons?.take(pointer.id) ?? 0) !== 0) {
       return;
     }
@@ -201,18 +190,15 @@ class ConvolutionRoomsScene extends Scene {
     }
   };
 
-  private readonly onContextMenu = (): void => this.select(this.index + 1);
-
   /** Swap the impulse response. The handle heals in place, so the effect picks it up once decoded. */
   private select(next: number): void {
-    this.index = (next + ROOMS.length) % ROOMS.length;
-    this.roomControl.set(this.index);
+    this.index = next;
 
     const room = ROOMS[this.index]!;
-    const ir = this.loader.get(`audio/ir/${room.file}.wav`);
+    const ir = this.loader.get(room.ir);
 
-    this.label.text = `${this.index + 1} / ${ROOMS.length} — ${character(room.ms)}`;
-    this.detail.text = `${room.file} · ${room.ms} ms tail`;
+    this.label.text = `${this.index + 1} / ${ROOMS.length}: ${character(room.ms)}`;
+    this.detail.text = `${room.file}, ${room.ms} ms tail`;
 
     // `.loaded` resolves immediately for an already-decoded handle; the
     // effect stays on the previous IR until the new one is ready.
@@ -244,7 +230,6 @@ class ConvolutionRoomsScene extends Scene {
     }
 
     this.tapPrompt.visible = this.app.audio.locked;
-    this.hud.setStatus(this.app.audio.locked ? 'Click or press any key to start…' : `Room ${this.index + 1} of ${ROOMS.length}`);
   }
 
   override draw(context: RenderingContext): void {
@@ -263,12 +248,10 @@ class ConvolutionRoomsScene extends Scene {
 
   override destroy(): void {
     this.app.input.onPointerDown.remove(this.onPointerDown);
-    this.app.input.onContextMenu.remove(this.onContextMenu);
     this.pressButtons?.dispose();
     this.app.audio.sound.removeEffect(this.convolution);
     this.convolution.destroy();
     this.panel.dispose();
-    this.hud.dispose();
     super.destroy();
   }
 }
@@ -281,9 +264,6 @@ const application = new Application({
     sizing: new FixedResolutionCanvasSizing(),
   },
   clearColor: Color.black,
-  loader: {
-    basePath: 'assets/',
-  },
 });
 
 void application.start(ConvolutionRoomsScene);

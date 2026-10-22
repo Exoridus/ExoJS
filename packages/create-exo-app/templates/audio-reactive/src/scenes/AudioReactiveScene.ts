@@ -1,6 +1,6 @@
 import type { RenderingContext } from '@codexo/exojs';
 import { Color, getAudioContext, Graphics, Scene, Text } from '@codexo/exojs';
-import { AudioAnalyser } from '@codexo/exojs-audio-fx';
+import { AudioAnalyser } from '@codexo/exojs/audio-fx';
 
 const BAR_COUNT = 32;
 
