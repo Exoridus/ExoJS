@@ -183,6 +183,25 @@ describe('RenderingContext', () => {
     expect(drawEvents[1]).toBe(green);
   });
 
+  test('resize keeps the camera zoom and maps the new design space', () => {
+    const { backend } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const view = new View(500, 400, 320, 200).setZoom(2);
+
+    context.view = view;
+    context.resize(640, 400);
+
+    expect(view.zoomLevel).toBe(2);
+    expect(view.width).toBeCloseTo(320);
+    expect(view.height).toBeCloseTo(200);
+    expect(view.center.x).toBe(500);
+
+    const corner = view.screenToWorld(0, 0);
+
+    expect(corner.x).toBeCloseTo(340, 2);
+    expect(corner.y).toBeCloseTo(300, 2);
+  });
+
   test('stats exposes backend stats', () => {
     const { backend } = createMockBackend();
     const context = new RenderingContext(backend);

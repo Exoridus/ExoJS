@@ -13,7 +13,8 @@ export const drawSplitWorld = (context: RenderingContext, world: RenderNode, lef
 // #endregion guide:split-views
 
 // #region guide:pointer-world
-import type { PointLike } from '@codexo/exojs';
+import type { Application, PointLike } from '@codexo/exojs';
 
-export const pointerInWorld = (view: View, pointer: PointLike): PointLike => view.screenToWorld(pointer.x, pointer.y);
+export const pointerInWorld = (app: Application, view: View, pointer: PointLike): PointLike =>
+  view.screenToWorld(pointer.x, pointer.y, app.width, app.height);
 // #endregion guide:pointer-world

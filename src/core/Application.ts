@@ -1122,10 +1122,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * {@link Pointer.x}/{@link Pointer.y} and node positions, e.g. `0..app.width`
    * - to a world position using the active camera. At the default centered
    * camera this is the identity; with a panned/zoomed/rotated camera it undoes
-   * the transform. Equivalent to `app.rendering.view.screenToWorld(x, y)`.
+   * the transform, and it honours a camera whose viewport covers only part of
+   * the canvas. Equivalent to
+   * `app.rendering.view.screenToWorld(x, y, app.width, app.height)`.
    */
   public screenToWorld(x: number, y: number): PointLike {
-    return this._rendering.view.screenToWorld(x, y);
+    return this._rendering.view.screenToWorld(x, y, this.width, this.height);
   }
 
   /**

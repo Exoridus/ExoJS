@@ -356,7 +356,7 @@
             }
           ],
           "returnType": "PointLike",
-          "description": "Convert a logical/design-space pixel coordinate - the space of Pointer.x/Pointer.y and node positions, e.g. 0..app.width - to a world position using the active camera. At the default centered camera this is the identity; with a panned/zoomed/rotated camera it undoes the transform. Equivalent to app.rendering.view.screenToWorld(x, y)."
+          "description": "Convert a logical/design-space pixel coordinate - the space of Pointer.x/Pointer.y and node positions, e.g. 0..app.width - to a world position using the active camera. At the default centered camera this is the identity; with a panned/zoomed/rotated camera it undoes the transform, and it honours a camera whose viewport covers only part of the canvas. Equivalent to app.rendering.view.screenToWorld(x, y, app.width, app.height)."
         },
         {
           "name": "setCursor",

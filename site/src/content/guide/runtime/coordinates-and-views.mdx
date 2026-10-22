@@ -35,11 +35,11 @@ For smoothing, keep a separate world-space camera target and move it toward the 
 
 ## Convert input using the same view
 
-Pointer coordinates arrive in logical canvas units. Convert them through the view that rendered the world object:
+Pointer coordinates arrive in logical canvas units. Convert them through the view that rendered the world object, over the logical canvas size so the view's viewport is taken into account:
 
 <SourceSnippet source="examples/guides/coordinates-and-views/split-views.ts" region="pointer-world" language="ts" title="Logical pointer coordinates to world coordinates" />
 
-In split-screen, first choose the viewport under the pointer, then use that viewport's view. Converting with the other player's camera can yield a plausible point in the wrong part of the world. If hit testing needs a child's local coordinates, apply the appropriate world-to-local conversion afterward.
+For a camera that covers the whole canvas, the two-argument `view.screenToWorld(x, y)` gives the same result at every zoom level; `app.screenToWorld(x, y)` does this for the active camera. In split-screen, first choose the viewport under the pointer, then use that viewport's view with the canvas size as above. Converting with the other player's camera can yield a plausible point in the wrong part of the world. If hit testing needs a child's local coordinates, apply the appropriate world-to-local conversion afterward.
 
 Do not multiply pointer coordinates by DPR to repair a camera mismatch. The input system already supplies logical canvas coordinates; backing pixels are a rendering detail.
 

@@ -800,7 +800,7 @@
             }
           ],
           "returnType": "PointLike",
-          "description": "Convert a logical/design-space pixel coordinate to a world-space position. The 2-argument form treats (x, y) as coordinates in the view's own design space (0..view.width × 0..view.height) - the same space as Pointer.x/Pointer.y and node positions - and applies only the inverse camera transform. The viewport rectangle is intentionally ignored, because design-space input already lives inside the camera's projection - the mapping from the surface to logical pixels happened upstream. At the default centered camera this is the identity."
+          "description": "Convert a logical/design-space pixel coordinate to a world-space position. The 2-argument form treats (x, y) as coordinates in the view's design space: the unzoomed size given to the constructor, resize or reset. Zooming, or writing size directly, changes how much world the view shows but not this space, so a full-surface view sized to the canvas keeps accepting Pointer.x/Pointer.y unchanged at every zoom level. The viewport rectangle is ignored; for a view that covers only part of the surface (split screen) or whose design size differs from the canvas, use the 4-argument form with the surface size. At the default centered camera this is the identity."
         },
         {
           "name": "screenToWorld",
@@ -910,7 +910,7 @@
             }
           ],
           "returnType": "PointLike",
-          "description": "Convert a raw canvas backing-store pixel coordinate to a world-space position. Accounts for the view's viewport rectangle, so it works correctly in multi-view / split-screen and letterboxed setups."
+          "description": "Convert a coordinate on the render surface to a world-space position. Accounts for the view's viewport rectangle, so it works correctly in multi-view / split-screen and letterboxed setups. The coordinate and the surface size only need to share a unit: pass app.width/app.height for pointer coordinates, or app.canvas.width/app.canvas.height for backing-store pixels."
         },
         {
           "name": "setBounds",
@@ -1499,7 +1499,7 @@
             }
           ],
           "returnType": "PointLike",
-          "description": "Convert a world-space position to logical/design-space pixel coordinates (0..view.width × 0..view.height). Inverse of the 2-argument screenToWorld; the viewport is ignored. At the default centered camera this is the identity."
+          "description": "Convert a world-space position to design-space pixel coordinates. Inverse of the 2-argument screenToWorld, with the same design space; the viewport is ignored. At the default centered camera this is the identity."
         },
         {
           "name": "worldToScreen",
@@ -1609,7 +1609,7 @@
             }
           ],
           "returnType": "PointLike",
-          "description": "Convert a world-space position to raw canvas backing-store pixel coordinates. Accounts for the view's viewport rectangle."
+          "description": "Convert a world-space position to a coordinate on the render surface. Inverse of the 4-argument screenToWorld; accounts for the view's viewport rectangle, and the result is in the unit of the surface size."
         },
         {
           "name": "zoom",
@@ -1656,7 +1656,7 @@
             }
           ],
           "returnType": "this",
-          "description": ""
+          "description": "Multiply the visible area by factor relative to the current zoom. A factor of 0.5 halves the visible area, like doubling zoomLevel."
         },
         {
           "name": "zoomIn",

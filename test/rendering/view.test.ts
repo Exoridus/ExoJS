@@ -254,6 +254,134 @@ describe('View — coordinate conversion', () => {
   });
 });
 
+describe('View — coordinate conversion under zoom', () => {
+  // Expected values are derived from the camera geometry, never from the
+  // inverse function: a zoom of `z` shows `referenceSize / z` world units
+  // centred on the camera, stretched across the whole design space.
+
+  const expectPoint = (actual: { x: number; y: number }, x: number, y: number): void => {
+    expect(actual.x).toBeCloseTo(x, 2);
+    expect(actual.y).toBeCloseTo(y, 2);
+  };
+
+  test('2-arg screenToWorld maps the design space across the zoomed visible area', () => {
+    const view = new View(400, 300, 800, 600);
+
+    view.setZoom(2);
+
+    expectPoint(view.screenToWorld(400, 300), 400, 300);
+    expectPoint(view.screenToWorld(200, 150), 300, 225);
+    expectPoint(view.screenToWorld(0, 0), 200, 150);
+    expectPoint(view.screenToWorld(800, 600), 600, 450);
+  });
+
+  test('2-arg screenToWorld zooms out below 1', () => {
+    const view = new View(400, 300, 800, 600);
+
+    view.setZoom(0.5);
+
+    expectPoint(view.screenToWorld(400, 300), 400, 300);
+    expectPoint(view.screenToWorld(200, 150), 0, 0);
+    expectPoint(view.screenToWorld(0, 0), -400, -300);
+  });
+
+  test('2-arg screenToWorld combines zoom with a panned, non-square camera', () => {
+    const view = new View(1000, 500, 1280, 720);
+
+    view.setZoom(4);
+
+    // Visible area 320×180 centred on (1000, 500).
+    expectPoint(view.screenToWorld(0, 0), 840, 410);
+    expectPoint(view.screenToWorld(1280, 720), 1160, 590);
+    expectPoint(view.screenToWorld(640, 360), 1000, 500);
+  });
+
+  test('2-arg screenToWorld scales distances by 1 / zoom under rotation', () => {
+    const view = new View(50, -20, 1280, 720);
+
+    view.setZoom(4);
+    view.setRotation(90);
+
+    const world = view.screenToWorld(640 + 100, 360);
+
+    expect(Math.hypot(world.x - 50, world.y + 20)).toBeCloseTo(25, 2);
+  });
+
+  test('2-arg worldToScreen places world points where the projection renders them', () => {
+    const view = new View(300, 200, 800, 600);
+
+    view.setZoom(2.5);
+    view.setRotation(30);
+
+    const m = view.getTransform();
+
+    for (const [x, y] of [
+      [300, 200],
+      [250, 180],
+      [410, 260],
+    ]) {
+      // The backend maps clip space onto the full 800×600 design surface.
+      const clipX = m.a * x + m.b * y + m.x;
+      const clipY = m.c * x + m.d * y + m.y;
+      const pixelX = ((clipX + 1) / 2) * 800;
+      const pixelY = ((1 - clipY) / 2) * 600;
+
+      expectPoint(view.worldToScreen(x, y), pixelX, pixelY);
+      expectPoint(view.screenToWorld(pixelX, pixelY), x, y);
+    }
+  });
+
+  test('zoom() keeps the design space and tracks the zoom level', () => {
+    const view = new View(400, 300, 800, 600);
+
+    view.zoom(0.5);
+
+    expect(view.width).toBeCloseTo(400);
+    expect(view.zoomLevel).toBeCloseTo(2);
+    expectPoint(view.screenToWorld(200, 150), 300, 225);
+  });
+
+  test('writing the size directly narrows the visible area without moving the design space', () => {
+    const view = new View(400, 300, 800, 600);
+
+    view.size.set(400, 300);
+
+    expectPoint(view.screenToWorld(200, 150), 300, 225);
+    expectPoint(view.worldToScreen(300, 225), 200, 150);
+  });
+
+  test('resize() replaces the design space and resets zoom', () => {
+    const view = new View(400, 300, 800, 600);
+
+    view.setZoom(2);
+    view.resize(1600, 1200);
+
+    expect(view.zoomLevel).toBe(1);
+    expectPoint(view.screenToWorld(0, 0), -400, -300);
+    expectPoint(view.screenToWorld(1600, 1200), 1200, 900);
+  });
+
+  test('4-arg screenToWorld agrees with the 2-arg form for a full-surface view', () => {
+    const view = new View(400, 300, 800, 600);
+
+    view.setZoom(2);
+
+    expectPoint(view.screenToWorld(200, 150, 800, 600), 300, 225);
+    expectPoint(view.screenToWorld(400, 300, 1600, 1200), 300, 225);
+  });
+
+  test('4-arg screenToWorld resolves a pointer inside a split-screen viewport', () => {
+    const right = new View(1000, 0, 400, 600).setViewport(0.5, 0, 0.5, 1);
+
+    right.setZoom(2);
+
+    // The right half of an 800×600 surface shows 200×300 world units around (1000, 0).
+    expectPoint(right.screenToWorld(600, 300, 800, 600), 1000, 0);
+    expectPoint(right.screenToWorld(400, 0, 800, 600), 900, -150);
+    expectPoint(right.worldToScreen(900, -150, 800, 600), 400, 0);
+  });
+});
+
 describe('View.destroy', () => {
   test('reports destroyed only after destroy has run', () => {
     const view = new View(0, 0, 100, 100);

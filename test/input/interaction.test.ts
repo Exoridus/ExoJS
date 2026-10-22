@@ -14,6 +14,7 @@ import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
+import { View } from '#rendering/View';
 
 import { frameDelta } from '../support/frame-delta';
 
@@ -315,6 +316,54 @@ describe('InteractionSystem — hit-test basics', () => {
 // ---------------------------------------------------------------------------
 // 2. Z-order - top child wins
 // ---------------------------------------------------------------------------
+
+describe('InteractionSystem — active camera mapping', () => {
+  const hitsAt = (
+    app: Application,
+    scene: Scene,
+    signals: MockSignals,
+    bounds: [number, number, number, number],
+    pointer: { x: number; y: number },
+  ): boolean => {
+    const im = new InteractionSystem(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(...bounds);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const handler = vi.fn();
+
+    sprite.onPointerDown.add(handler);
+    dispatchPointer(signals.onPointerDown, pointer);
+    flushInteractions(im);
+
+    im.destroy();
+    sprite.destroy();
+
+    return handler.mock.calls.length === 1;
+  };
+
+  test('hits a world node under the pointer through a zoomed camera', () => {
+    const { app, scene, signals } = createApp();
+    const view = new View(400, 300, 800, 600).setZoom(2);
+
+    (app.rendering as { view: View }).view = view;
+
+    // Design (200, 150) shows world (300, 225) at zoom 2.
+    expect(hitsAt(app, scene, signals, [290, 215, 20, 20], { x: 200, y: 150 })).toBe(true);
+  });
+
+  test('hits a world node through a split-screen active camera viewport', () => {
+    const { app, scene, signals } = createApp();
+    const view = new View(1000, 0, 400, 600).setViewport(0.5, 0, 0.5, 1).setZoom(2);
+
+    (app.rendering as { view: View }).view = view;
+
+    // The centre of the right half shows the camera centre (1000, 0).
+    expect(hitsAt(app, scene, signals, [990, -10, 20, 20], { x: 600, y: 300 })).toBe(true);
+  });
+});
 
 describe('InteractionSystem — z-order', () => {
   test('top child (added last) receives hit over bottom child at same position', () => {

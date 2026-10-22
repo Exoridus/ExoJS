@@ -130,9 +130,9 @@ const world = view.screenToWorld(pointer.x, pointer.y);
 // world.x, world.y are now in scene world space
 ```
 
-The inverse is `worldToScreen(worldX, worldY)`, and the two round-trip. If the default centered camera is active (no pan/zoom), design space already equals world space, so `screenToWorld` is the identity and no mapping is needed.
+The inverse is `worldToScreen(worldX, worldY)`, and the two round-trip. The two-argument form maps over the view's design space — the size it was created or resized with — so zooming changes how much world is visible but not which pointer coordinates are accepted. If the default centered camera is active (no pan/zoom), design space already equals world space, so `screenToWorld` is the identity and no mapping is needed. `app.screenToWorld(x, y)` maps through the active camera.
 
-For raw canvas backing-store pixels — e.g. an off-screen render target at a different pixel ratio — the four-argument form `screenToWorld(x, y, canvasWidth, canvasHeight)` additionally accounts for the viewport rectangle and physical pixel size.
+For a view that covers only part of the canvas (split screen, minimap) or whose size differs from the canvas, use the four-argument form `screenToWorld(x, y, app.width, app.height)`: it accounts for the viewport rectangle. Backing-store pixels work the same way with `app.canvas.width` and `app.canvas.height`.
 
 ## Interactive sprites
 
