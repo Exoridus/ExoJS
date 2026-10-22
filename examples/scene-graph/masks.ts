@@ -39,7 +39,11 @@ class MasksScene extends Scene {
     this.gfxSprite.setScale(1);
     this.gfxSprite.setPosition(((width * 3) / 4) | 0, (height / 2) | 0);
     this.gfxSprite.setAnchor(0.5);
+    circle.setPosition(this.gfxSprite.x, this.gfxSprite.y);
     this.gfxSprite.mask = circle;
+    this.track(circle);
+    this.track(this.rectSprite);
+    this.track(this.gfxSprite);
   }
 
   override update(delta: Seconds): void {
