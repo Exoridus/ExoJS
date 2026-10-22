@@ -1,14 +1,22 @@
 # Recorded music corpus
 
-Five CC0 excerpts complement the synthetic beat evaluation. Each file contains the first 30 seconds of its source, downmixed as `(left + right) / 2`, resampled to 48 kHz and quantized to signed 16-bit mono PCM in a canonical 44-byte-header WAV. No gain normalization, silence removal, looping, or tempo adjustment is applied. The committed files are the test inputs: CI needs neither downloads nor FFmpeg/Python dependencies.
+Thirteen CC0 excerpts complement the synthetic beat evaluation. Each file contains the first 30 seconds of its source, downmixed as `(left + right) / 2`, resampled to 48 kHz and quantized to signed 16-bit mono PCM in a canonical 44-byte-header WAV. No gain normalization, silence removal, looping, or tempo adjustment is applied. The committed files are the test inputs: CI needs neither downloads nor FFmpeg/Python dependencies.
 
-| Fixture                | Artist                                 | Source and selected original                                                                           | Selection reason                          |
-| ---------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
-| `chill-menu.wav`       | Not Jam                                | [Not Jam Music Pack](https://not-jam.itch.io/not-jam-music-pack), `ChillMenu_Loopable.wav`             | Clear percussion candidate                |
-| `descend-gameplay.wav` | Not Jam                                | [Not Jam Music Pack](https://not-jam.itch.io/not-jam-music-pack), `DescendGameplay_Loopable.wav`       | Complex breakbeat candidate               |
-| `vampires-piano.wav`   | TAD                                    | [Vampire's Piano](https://opengameart.org/content/vampires-piano), `vampires_piano_1.wav`              | Piano-led music                           |
-| `2-jazz.wav`           | HoliznaCC0                             | [2 (jazz)](https://freemusicarchive.org/music/holiznacc0/busted-guitar-jazz/2-jazz/), FMA track 204029 | Instrumental jazz                         |
-| `cave-theme.wav`       | Brandon Morris (Brandon75689 / HaelDB) | [Cave Theme](https://opengameart.org/content/cave-theme), `cave themeb4.ogg`                           | Ambient music; not assumed to be beatless |
+| Fixture                    | Artist                                 | Source and selected original                                                                                                                                            | Selection reason                                                    |
+| -------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `chill-menu.wav`           | Not Jam                                | [Not Jam Music Pack](https://not-jam.itch.io/not-jam-music-pack), `ChillMenu_Loopable.wav`                                                                              | Clear percussion candidate                                          |
+| `descend-gameplay.wav`     | Not Jam                                | [Not Jam Music Pack](https://not-jam.itch.io/not-jam-music-pack), `DescendGameplay_Loopable.wav`                                                                        | Complex breakbeat candidate                                         |
+| `vampires-piano.wav`       | TAD                                    | [Vampire's Piano](https://opengameart.org/content/vampires-piano), `vampires_piano_1.wav`                                                                               | Piano-led music                                                     |
+| `2-jazz.wav`               | HoliznaCC0                             | [2 (jazz)](https://freemusicarchive.org/music/holiznacc0/busted-guitar-jazz/2-jazz/), FMA track 204029                                                                  | Instrumental jazz                                                   |
+| `cave-theme.wav`           | Brandon Morris (Brandon75689 / HaelDB) | [Cave Theme](https://opengameart.org/content/cave-theme), `cave themeb4.ogg`                                                                                            | Ambient music; not assumed to be beatless                           |
+| `mandatory-overtime.wav`   | Joth                                   | [Mandatory Overtime](https://opengameart.org/content/mandatory-overtime), `Mandatory Overtime.mp3`                                                                      | Rhodes-led loop; published 94 BPM is a source hint, not a reference |
+| `near-and-far.wav`         | Joth                                   | [Near and Far](https://opengameart.org/content/near-and-far), `Near_and_Far.ogg`                                                                                        | Published 3/4 meter; pulse level requires review                    |
+| `friendly-talk.wav`        | illin                                  | [Friendly Talk On a Robotic Battlefield](https://opengameart.org/content/friendly-talk-on-a-robotic-battlefield-looped), `Friendly Talk On a Robotic Battlefield_0.ogg` | Electronic loop                                                     |
+| `jrpg2-piano.wav`          | Joth                                   | [JRPG2 Piano](https://opengameart.org/content/jrpg2-piano), `JRPG2 Piano.mp3`                                                                                           | Piano-led music                                                     |
+| `super-action-stage-7.wav` | Juhani Junkala (SubspaceAudio)         | [12 Music Loops](https://opengameart.org/content/12-music-loops), `216 [Super Action Chiptunes] bgm_stage_7.ogg`                                                        | Intense chiptune                                                    |
+| `relaxed-menu-title.wav`   | Juhani Junkala (SubspaceAudio)         | [12 Music Loops](https://opengameart.org/content/12-music-loops), `379 [Misc Extras] bgm_menu_title_1_relaxed.ogg`                                                      | Relaxed chiptune                                                    |
+| `space-upbeat.wav`         | Juhani Junkala (SubspaceAudio)         | [12 Music Loops](https://opengameart.org/content/12-music-loops), `397 [Misc Extras] bgm_space_upbeat_F.ogg`                                                            | Upbeat chiptune                                                     |
+| `storytime.wav`            | Juhani Junkala (SubspaceAudio)         | [12 Music Loops](https://opengameart.org/content/12-music-loops), `399 [Misc Extras] bgm_storytime.ogg`                                                                 | Storytime chiptune                                                  |
 
 All source pages offer CC0; Cave Theme additionally offers OGA-BY 3.0, and this corpus uses its CC0 option. The CC0 notice is in [CC0.txt](CC0.txt). Source and excerpt SHA-256 hashes, conversion settings, source links and annotation provenance are recorded in [manifest.json](manifest.json). These music files retain their CC0 dedication independently of the package's MIT software license. Loopable and standalone exports are distinct inputs; their references must not be interchanged without checking alignment.
 
@@ -20,9 +28,11 @@ Use the exact original whose hash matches `sourceSha256`, then the FFmpeg versio
 ffmpeg -nostdin -v error -i ORIGINAL -map_metadata -1 -af "pan=mono|c0=0.5*c0+0.5*c1,aresample=48000:resampler=swr:dither_method=none,atrim=start_sample=0:end_sample=1440000" -c:a pcm_s16le -fflags +bitexact EXCERPT.wav
 ```
 
-The output must match `sha256`; do not silently update hashes when a source, decoder or conversion changes. Different FFmpeg builds can produce different bytes. The FMA source is MP3 and Cave Theme is OGG; converting either to WAV does not restore lost detail. WAV fixes the decoded samples so tests do not depend on browser codecs or encoder padding.
+The output must match `sha256`; do not silently update hashes when a source, decoder or conversion changes. Different FFmpeg builds can produce different bytes. The FMA source and three added Joth sources are MP3; Cave Theme, Friendly Talk, Near and Far, and the four selected pack members are OGG. Converting these lossy sources to WAV does not restore lost detail. WAV fixes the decoded samples so tests do not depend on browser codecs or encoder padding.
 
 ## Reference status
+
+The eight added excerpts remain `unreviewed`. Their independent librosa proposals were generated from the canonical decoded float32 PCM using `onset_strength` and `beat_track`, librosa 1.0.0, `hop_length=256`, default `start_bpm=120`, and `trim=True`. Source-page tempo and meter hints informed selection only; they did not generate timestamps. No ExoJS output was used. Human auditory review must resolve main pulse, phase, metrical level and full-excerpt coverage before any accuracy score is reported.
 
 DescendGameplay, Vampire's Piano and 2 (jazz) have status `reviewed`: an auditory click-overlay review accepted their proposed main pulse without manually refining timestamps. ChillMenu remains `unreviewed` because its clicks mostly land between main beats, with occasional additional offsets. Cave Theme remains `unreviewed` because the clicks were too fast and its pulse convention remains unresolved; it is not a reviewed no-pulse control.
 
@@ -54,7 +64,7 @@ Initial observed values for these exact excerpts, with production defaults:
 | 2 (jazz)        |                 4 |           39 |             0.563 |                88.37 |
 | Cave Theme      |                 4 |           43 |             0.723 |               175.59 |
 
-These are observations, not correct reference tempos or latency measurements against ground truth. The accepted DescendGameplay reference is near half the detector's tempo estimate, exposing a doubled-tempo interpretation. ChillMenu phase and Cave Theme pulse selection remain unresolved. Five excerpts do not establish genre-wide generalization, vocal robustness, live-drum timing, or calibrated confidence.
+These are observations, not correct reference tempos or latency measurements against ground truth. The accepted DescendGameplay reference is near half the detector's tempo estimate, exposing a doubled-tempo interpretation. ChillMenu phase and Cave Theme pulse selection remain unresolved. Thirteen excerpts do not establish genre-wide generalization, vocal robustness, live-drum timing, or calibrated confidence.
 
 ## Reviewed measurements
 
@@ -67,3 +77,24 @@ With the accepted click-overlay references, production defaults and the fixed +/
 | 2-jazz           |     0.953 |  1.000 | 0.976 |               2 |                0.380 |                    0.380 |
 
 These are descriptive measurements against the accepted main-pulse convention. DescendGameplay exposes doubled-tempo tracking; a high recall alone does not imply correct beat density. Timing follows the accepted candidate timestamps, not sample-exact manual labels. ChillMenu and Cave Theme deliberately have no accuracy scores until their rejected proposals are corrected and reviewed. The production detector is unchanged.
+
+## Excerpt selection and provenance
+
+The additional pack excerpts use exact archive members identified by filename and SHA-256 in the manifest. Archive member indices record the one-based ZIP ordering only; filename and hash identify the source. The original archive and each member have separate hashes. The 21.333-second sporty title member is excluded so every added test input contains 30 seconds of actual source audio. No shorter source is padded or looped to meet the duration contract. Entire masters and the complete pack are not required by tests.
+
+The existing three accepted references and their reviewed measurements are preserved. Additional observations use the same production defaults and report `quality: null`; independent candidates do not establish accuracy, source BPM agreement, metrical correctness or false-positive rates. The corpus remains an integration and descriptive evaluation input, with no asserted musical accuracy threshold.
+
+Additional observed values for these exact excerpts, with production defaults:
+
+| Fixture              | Provisional beats | Locked beats | First posting (s) | Median estimated BPM |
+| -------------------- | ----------------: | -----------: | ----------------: | -------------------: |
+| mandatory-overtime   |                 6 |           89 |             0.403 |               187.42 |
+| near-and-far         |                 6 |           97 |             0.403 |               208.15 |
+| friendly-talk        |                 5 |           73 |             0.403 |               159.20 |
+| jrpg2-piano          |                 4 |           64 |             0.403 |               243.99 |
+| super-action-stage-7 |                 4 |          101 |             0.840 |               216.09 |
+| relaxed-menu-title   |                 7 |          133 |             0.403 |               277.76 |
+| space-upbeat         |                 2 |           79 |             1.437 |               169.41 |
+| storytime            |                 2 |           89 |             1.725 |               280.10 |
+
+These eight observations have no accuracy scores pending auditory review. Mandatory Overtime estimates near twice its published 94 BPM hint; this suggests a pulse-level question for review, not a verified accuracy result. Piano and chiptune estimates also require independent metrical and phase checks.

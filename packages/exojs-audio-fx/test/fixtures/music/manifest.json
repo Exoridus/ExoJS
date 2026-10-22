@@ -138,6 +138,226 @@
         ],
         "notes": "Independent proposal from librosa 1.0.0, onset_strength and beat_track, hop_length=256, default start_bpm=120, trim=True. No ExoJS output used. Tempo/phase, half-time/double-time and whether a pulse exists require auditory review. Auditory review rejected the clicks as too fast; the excerpt has no clear percussive rhythm. Pulse convention and timestamps remain unresolved; this is not a reviewed no-pulse reference."
       }
+    },
+    {
+      "id": "mandatory-overtime",
+      "title": "Mandatory Overtime",
+      "artist": "Joth",
+      "category": "rhodes-loop",
+      "sourcePage": "https://opengameart.org/content/mandatory-overtime",
+      "license": "CC0-1.0",
+      "sourceSha256": "ef0965baa81d78e0c6c08bba2d2f872b29b344bd8ea152e9affbef1d6fb6f77e",
+      "sourceFile": "Mandatory Overtime.mp3",
+      "sourceDownload": "https://opengameart.org/sites/default/files/Mandatory%20Overtime.mp3",
+      "file": "mandatory-overtime.wav",
+      "sha256": "973d4bf015929e86785de5e2604006018183c11e2e7cee6597919f52743249cf",
+      "startSec": 0,
+      "durationSec": 30,
+      "annotation": {
+        "status": "unreviewed",
+        "candidateBeatTimesSec": [
+          0.037333, 0.677333, 1.317333, 1.957333, 2.592, 3.232, 3.872, 4.506667, 5.146667, 5.786667, 6.421333, 7.061333, 7.701333, 8.336,
+          8.976, 9.616, 10.250667, 10.890667, 11.530667, 12.170667, 12.810667, 13.445333, 14.085333, 14.72, 15.36, 16.0, 16.634667,
+          17.274667, 17.914667, 18.549333, 19.189333, 19.829333, 20.464, 21.104, 21.744, 22.378667, 23.024, 23.658667, 24.293333, 24.933333,
+          25.573333, 26.208, 26.848, 27.488, 28.128, 28.768
+        ],
+        "notes": "Independent proposal from librosa 1.0.0, onset_strength and beat_track, hop_length=256, default start_bpm=120, trim=True; float32 decoded canonical PCM. No ExoJS output or source-page BPM hints used. Main perceived pulse, phase and metrical level require auditory click-overlay review; timestamps have not been manually reviewed or refined."
+      }
+    },
+    {
+      "id": "near-and-far",
+      "title": "Near and Far",
+      "artist": "Joth",
+      "category": "triple-meter-candidate",
+      "sourcePage": "https://opengameart.org/content/near-and-far",
+      "license": "CC0-1.0",
+      "sourceSha256": "b039d4096ef40f56b4e7f1089e9e4e51f6c33df1294030d936e1839724748346",
+      "sourceFile": "Near_and_Far.ogg",
+      "sourceDownload": "https://opengameart.org/sites/default/files/Near_and_Far.ogg",
+      "file": "near-and-far.wav",
+      "sha256": "9584b03f936fedca3d56c2ea194ea10686825f40af92cc21e957872fcf6c2a62",
+      "startSec": 0,
+      "durationSec": 30,
+      "annotation": {
+        "status": "unreviewed",
+        "candidateBeatTimesSec": [
+          0.037333, 0.613333, 1.178667, 1.754667, 2.325333, 2.896, 3.466667, 4.037333, 4.608, 5.178667, 5.749333, 6.32, 6.896, 7.466667,
+          8.037333, 8.608, 9.178667, 9.749333, 10.325333, 10.896, 11.466667, 12.037333, 12.608, 13.178667, 13.754667, 14.325333, 14.896,
+          15.466667, 16.037333, 16.608, 17.178667, 17.754667, 18.325333, 18.896, 19.466667, 20.037333, 20.608, 21.184, 21.749333, 22.325333,
+          22.896, 23.466667, 24.037333, 24.608, 25.178667, 25.754667, 26.32, 26.896, 27.466667, 28.037333, 28.608, 29.184
+        ],
+        "notes": "Independent proposal from librosa 1.0.0, onset_strength and beat_track, hop_length=256, default start_bpm=120, trim=True; float32 decoded canonical PCM. No ExoJS output or source-page BPM hints used. Main perceived pulse, phase and metrical level require auditory click-overlay review; timestamps have not been manually reviewed or refined."
+      }
+    },
+    {
+      "id": "friendly-talk",
+      "title": "Friendly Talk On a Robotic Battlefield",
+      "artist": "illin",
+      "category": "electronic-loop",
+      "sourcePage": "https://opengameart.org/content/friendly-talk-on-a-robotic-battlefield-looped",
+      "license": "CC0-1.0",
+      "sourceSha256": "5f8d3a77b0787c64a00420f2ab6fe6b63631b0ed4ad86bd75666cdec7e912f77",
+      "sourceFile": "Friendly Talk On a Robotic Battlefield_0.ogg",
+      "sourceDownload": "https://opengameart.org/sites/default/files/Friendly%20Talk%20On%20a%20Robotic%20Battlefield_0.ogg",
+      "file": "friendly-talk.wav",
+      "sha256": "9f1949e0374a8196759251227fbc39301be9660d8fc48be26ec56c0b882d7e7b",
+      "startSec": 0,
+      "durationSec": 30,
+      "annotation": {
+        "status": "unreviewed",
+        "candidateBeatTimesSec": [
+          0.928, 1.306667, 1.685333, 2.064, 2.442667, 2.826667, 3.205333, 3.584, 3.962667, 4.346667, 4.725333, 5.104, 5.482667, 5.861333,
+          6.245333, 6.624, 7.002667, 7.386667, 7.765333, 8.144, 8.522667, 8.901333, 9.28, 9.658667, 10.042667, 10.421333, 10.8, 11.178667,
+          11.562667, 11.941333, 12.32, 12.698667, 13.077333, 13.461333, 13.84, 14.218667, 14.597333, 14.976, 15.354667, 15.738667,
+          16.117333, 16.501333, 16.874667, 17.258667, 17.637333, 18.016, 18.394667, 18.778667, 19.152, 19.536, 19.914667, 20.293333, 20.672,
+          21.050667, 21.429333, 21.813333, 22.192, 22.581333, 22.96, 23.338667, 23.712, 24.128, 24.474667, 24.853333, 25.232, 25.616,
+          25.994667, 26.373333, 26.752, 27.130667, 27.509333, 27.893333, 28.266667
+        ],
+        "notes": "Independent proposal from librosa 1.0.0, onset_strength and beat_track, hop_length=256, default start_bpm=120, trim=True; float32 decoded canonical PCM. No ExoJS output or source-page BPM hints used. Main perceived pulse, phase and metrical level require auditory click-overlay review; timestamps have not been manually reviewed or refined."
+      }
+    },
+    {
+      "id": "jrpg2-piano",
+      "title": "JRPG2 Piano",
+      "artist": "Joth",
+      "category": "piano-led",
+      "sourcePage": "https://opengameart.org/content/jrpg2-piano",
+      "license": "CC0-1.0",
+      "sourceSha256": "00deeedf5970d8ca6e6ea7033adbfae9f770476efa0df52a70d1625902985eca",
+      "sourceFile": "JRPG2 Piano.mp3",
+      "sourceDownload": "https://opengameart.org/sites/default/files/JRPG2%20Piano.mp3",
+      "file": "jrpg2-piano.wav",
+      "sha256": "983f9e84692dc88dd6aa5aa9ac29c09a59357393206baea7cbd53322e1a963ce",
+      "startSec": 0,
+      "durationSec": 30,
+      "annotation": {
+        "status": "unreviewed",
+        "candidateBeatTimesSec": [
+          0.037333, 0.544, 1.034667, 1.413333, 1.792, 2.298667, 2.8, 3.301333, 3.813333, 4.288, 4.8, 5.285333, 5.776, 6.272, 6.736,
+          7.178667, 7.605333, 8.042667, 8.554667, 9.056, 9.488, 9.888, 10.298667, 10.773333, 11.285333, 11.792, 12.288, 12.794667,
+          13.274667, 13.797333, 14.245333, 14.709333, 15.162667, 15.610667, 16.058667, 16.554667, 17.029333, 17.541333, 18.042667, 18.544,
+          19.04, 19.52, 20.058667, 20.554667, 21.024, 21.552, 22.042667, 22.538667, 23.018667, 23.541333, 24.058667, 24.56, 25.029333,
+          25.541333, 26.042667, 26.544, 27.04, 27.52, 28.042667, 28.426667, 28.805333
+        ],
+        "notes": "Independent proposal from librosa 1.0.0, onset_strength and beat_track, hop_length=256, default start_bpm=120, trim=True; float32 decoded canonical PCM. No ExoJS output or source-page BPM hints used. Main perceived pulse, phase and metrical level require auditory click-overlay review; timestamps have not been manually reviewed or refined."
+      }
+    },
+    {
+      "id": "super-action-stage-7",
+      "title": "Super Action Chiptunes: stage 7",
+      "artist": "Juhani Junkala (SubspaceAudio)",
+      "category": "chiptune-intense",
+      "sourcePage": "https://opengameart.org/content/12-music-loops",
+      "license": "CC0-1.0",
+      "sourceSha256": "e347d7e29943df80d1dd063d1d8822ee3bad1f8d822be6a7563d3fa0afa538f6",
+      "sourceFile": "216 [Super Action Chiptunes] bgm_stage_7.ogg",
+      "sourceDownload": "https://opengameart.org/sites/default/files/12_indie_game_music_loops_0.zip",
+      "sourceArchive": "12_indie_game_music_loops_0.zip",
+      "sourceArchiveSha256": "86d86c0095216413e03922b15cf1a9a9b7d390b01e427ed9e9a10f154598a4bd",
+      "sourceArchiveMember": "216 [Super Action Chiptunes] bgm_stage_7.ogg",
+      "sourceArchiveMemberIndex": 5,
+      "file": "super-action-stage-7.wav",
+      "sha256": "747374698f2d6bb66585537ba79f3068a49e14b303b1f113ef01ed4921eb759c",
+      "startSec": 0,
+      "durationSec": 30,
+      "annotation": {
+        "status": "unreviewed",
+        "candidateBeatTimesSec": [
+          0.837333, 1.392, 1.941333, 2.490667, 3.04, 3.594667, 4.144, 4.693333, 5.242667, 5.792, 6.346667, 6.896, 7.445333, 7.994667, 8.544,
+          9.098667, 9.648, 10.197333, 10.746667, 11.301333, 11.850667, 12.4, 12.949333, 13.498667, 14.053333, 14.602667, 15.152, 15.701333,
+          16.250667, 16.805333, 17.354667, 17.904, 18.453333, 19.008, 19.557333, 20.106667, 20.656, 21.205333, 21.76, 22.309333, 22.858667,
+          23.408, 23.957333, 24.512, 25.061333, 25.610667, 26.16, 26.709333, 27.264, 27.813333, 28.362667, 28.912
+        ],
+        "notes": "Independent proposal from librosa 1.0.0, onset_strength and beat_track, hop_length=256, default start_bpm=120, trim=True; float32 decoded canonical PCM. No ExoJS output or source-page BPM hints used. Main perceived pulse, phase and metrical level require auditory click-overlay review; timestamps have not been manually reviewed or refined."
+      }
+    },
+    {
+      "id": "relaxed-menu-title",
+      "title": "Misc Extras: relaxed menu title",
+      "artist": "Juhani Junkala (SubspaceAudio)",
+      "category": "chiptune-relaxed",
+      "sourcePage": "https://opengameart.org/content/12-music-loops",
+      "license": "CC0-1.0",
+      "sourceSha256": "a79f82a6bd04f48bb042eb607185dabfa2e66e49b20adcb6c62bc408d3a336d9",
+      "sourceFile": "379 [Misc Extras] bgm_menu_title_1_relaxed.ogg",
+      "sourceDownload": "https://opengameart.org/sites/default/files/12_indie_game_music_loops_0.zip",
+      "sourceArchive": "12_indie_game_music_loops_0.zip",
+      "sourceArchiveSha256": "86d86c0095216413e03922b15cf1a9a9b7d390b01e427ed9e9a10f154598a4bd",
+      "sourceArchiveMember": "379 [Misc Extras] bgm_menu_title_1_relaxed.ogg",
+      "sourceArchiveMemberIndex": 9,
+      "file": "relaxed-menu-title.wav",
+      "sha256": "cdf231473f55c2ff8f9e114cdacb7092ffb32b79f4a686a37e324f177f3920e8",
+      "startSec": 0,
+      "durationSec": 30,
+      "annotation": {
+        "status": "unreviewed",
+        "candidateBeatTimesSec": [
+          0.448, 0.874667, 1.301333, 1.728, 2.16, 2.586667, 3.018667, 3.445333, 3.877333, 4.304, 4.730667, 5.157333, 5.589333, 6.016, 6.448,
+          6.874667, 7.306667, 7.733333, 8.16, 8.592, 9.018667, 9.445333, 9.872, 10.298667, 10.730667, 11.157333, 11.589333, 12.021333,
+          12.448, 12.874667, 13.301333, 13.733333, 14.16, 14.592, 15.018667, 15.445333, 15.877333, 16.304, 16.736, 17.162667, 17.589333,
+          18.016, 18.448, 18.874667, 19.306667, 19.733333, 20.16, 20.592, 21.018667, 21.445333, 21.872, 22.298667, 22.730667, 23.162667,
+          23.589333, 24.021333, 24.448, 24.874667, 25.301333, 25.728, 26.16, 26.592, 27.018667, 27.450667, 27.877333, 28.298667, 28.730667
+        ],
+        "notes": "Independent proposal from librosa 1.0.0, onset_strength and beat_track, hop_length=256, default start_bpm=120, trim=True; float32 decoded canonical PCM. No ExoJS output or source-page BPM hints used. Main perceived pulse, phase and metrical level require auditory click-overlay review; timestamps have not been manually reviewed or refined."
+      }
+    },
+    {
+      "id": "space-upbeat",
+      "title": "Misc Extras: space upbeat",
+      "artist": "Juhani Junkala (SubspaceAudio)",
+      "category": "chiptune-upbeat",
+      "sourcePage": "https://opengameart.org/content/12-music-loops",
+      "license": "CC0-1.0",
+      "sourceSha256": "08424f665b7d6662ca70021adaf5af9171469ca9df58aec6ac56e25118b7f1e0",
+      "sourceFile": "397 [Misc Extras] bgm_space_upbeat_F.ogg",
+      "sourceDownload": "https://opengameart.org/sites/default/files/12_indie_game_music_loops_0.zip",
+      "sourceArchive": "12_indie_game_music_loops_0.zip",
+      "sourceArchiveSha256": "86d86c0095216413e03922b15cf1a9a9b7d390b01e427ed9e9a10f154598a4bd",
+      "sourceArchiveMember": "397 [Misc Extras] bgm_space_upbeat_F.ogg",
+      "sourceArchiveMemberIndex": 11,
+      "file": "space-upbeat.wav",
+      "sha256": "fb8dede01ffda7641df41718428a2601286ac0a3c6390f367717ad1fccad32ef",
+      "startSec": 0,
+      "durationSec": 30,
+      "annotation": {
+        "status": "unreviewed",
+        "candidateBeatTimesSec": [
+          2.501333, 3.210667, 3.92, 4.629333, 5.338667, 6.048, 6.762667, 7.466667, 8.181333, 8.890667, 9.6, 10.309333, 10.938667, 11.728,
+          12.442667, 13.152, 13.861333, 14.570667, 15.28, 15.989333, 16.698667, 17.408, 18.122667, 18.832, 19.541333, 20.250667, 20.88,
+          21.669333, 22.384, 23.093333, 23.808, 24.517333, 25.221333, 25.930667, 26.645333, 27.354667, 28.064, 28.773333, 29.477333
+        ],
+        "notes": "Independent proposal from librosa 1.0.0, onset_strength and beat_track, hop_length=256, default start_bpm=120, trim=True; float32 decoded canonical PCM. No ExoJS output or source-page BPM hints used. Main perceived pulse, phase and metrical level require auditory click-overlay review; timestamps have not been manually reviewed or refined."
+      }
+    },
+    {
+      "id": "storytime",
+      "title": "Misc Extras: storytime",
+      "artist": "Juhani Junkala (SubspaceAudio)",
+      "category": "chiptune-storytime",
+      "sourcePage": "https://opengameart.org/content/12-music-loops",
+      "license": "CC0-1.0",
+      "sourceSha256": "00ef40d2a71130b3872f189a09a1f88a8c1e89edb951cebc91785655f3c7f9de",
+      "sourceFile": "399 [Misc Extras] bgm_storytime.ogg",
+      "sourceDownload": "https://opengameart.org/sites/default/files/12_indie_game_music_loops_0.zip",
+      "sourceArchive": "12_indie_game_music_loops_0.zip",
+      "sourceArchiveSha256": "86d86c0095216413e03922b15cf1a9a9b7d390b01e427ed9e9a10f154598a4bd",
+      "sourceArchiveMember": "399 [Misc Extras] bgm_storytime.ogg",
+      "sourceArchiveMemberIndex": 12,
+      "file": "storytime.wav",
+      "sha256": "03e6fe17ba2728f356cde93e56289c1a28f2adc048200dabcc6f416fe8cad4d8",
+      "startSec": 0,
+      "durationSec": 30,
+      "annotation": {
+        "status": "unreviewed",
+        "candidateBeatTimesSec": [
+          1.728, 2.16, 2.586667, 3.018667, 3.44, 3.877333, 4.298667, 4.730667, 5.157333, 5.589333, 6.016, 6.442667, 6.869333, 7.301333,
+          7.728, 8.154667, 8.581333, 9.018667, 9.445333, 9.877333, 10.298667, 10.730667, 11.157333, 11.589333, 12.010667, 12.442667,
+          12.869333, 13.301333, 13.728, 14.16, 14.586667, 15.018667, 15.44, 15.872, 16.304, 16.736, 17.157333, 17.589333, 18.016, 18.448,
+          18.869333, 19.306667, 19.733333, 20.16, 20.586667, 21.018667, 21.445333, 21.872, 22.298667, 22.730667, 23.157333, 23.589333,
+          24.016, 24.442667, 24.874667, 25.301333, 25.728, 26.16, 26.586667, 27.018667, 27.445333
+        ],
+        "notes": "Independent proposal from librosa 1.0.0, onset_strength and beat_track, hop_length=256, default start_bpm=120, trim=True; float32 decoded canonical PCM. No ExoJS output or source-page BPM hints used. Main perceived pulse, phase and metrical level require auditory click-overlay review; timestamps have not been manually reviewed or refined."
+      }
     }
   ]
 }
