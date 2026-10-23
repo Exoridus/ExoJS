@@ -1487,9 +1487,10 @@ export class WebGpuBackend implements RenderBackend {
 
     if (this._renderer) {
       this._flushActiveRendererAndEndPass();
-    } else if (this._clearRequested) {
-      // No active renderer but a clear is pending: open an empty coordinator
-      // pass so createColorAttachment consumes the clear state once.
+    }
+
+    if (this._clearRequested) {
+      // An empty active renderer may leave the frame's clear unconsumed.
       this.passCoordinator.acquirePass();
       this.passCoordinator.endPass();
     }

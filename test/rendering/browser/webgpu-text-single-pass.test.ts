@@ -36,6 +36,7 @@ import { Matrix } from '#math/Matrix';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { Text } from '#rendering/text/Text';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
@@ -173,6 +174,102 @@ const strongestBandPixel = (frame: ArrayLike<number>, band: number): RgbaTuple |
 describe('WebGPU text single-pass frame', () => {
   beforeEach(() => resetDefaultGlyphAtlasPool());
   afterEach(() => resetDefaultGlyphAtlasPool());
+
+  test.for(['retained target', 'canvas'] as const)(
+    'clears empty frames after text on %s without erasing subsequent draws',
+    async (surface, ctx) => {
+      const backend = await setupBackend();
+      const target = surface === 'retained target' ? new RenderTexture(canvasSize, canvasSize) : null;
+      const text = new Text('M', { fontSize: 24, fillColor: Color.white });
+
+      const readFrame = (): Promise<Uint8ClampedArray> =>
+        target === null ? Promise.resolve(readWebGpuFrame(backend, canvasSize)) : backend.readPixels(target, 0, 0, canvasSize, canvasSize);
+
+      const expectSolidFrame = (frame: Uint8ClampedArray, expected: RgbaTuple): void => {
+        expect(Array.from(frame.subarray(0, 4))).toEqual(expected);
+        expect(
+          frame.every((value, index) => value === expected[index % 4]),
+          'every pixel must contain only the requested clear color',
+        ).toBe(true);
+      };
+
+      text.setPosition(6, 4);
+
+      try {
+        backend.setRenderTarget(target);
+
+        if (
+          !(await renderGuarded(ctx, backend, () => {
+            backend.clear(new Color(255, 0, 0));
+            backend.flush();
+          }))
+        ) {
+          return;
+        }
+
+        expectSolidFrame(await readFrame(), [255, 0, 0, 255]);
+
+        if (
+          !(await renderGuarded(ctx, backend, () => {
+            backend.clear(Color.black);
+            text.render(backend);
+            backend.flush();
+          }))
+        ) {
+          return;
+        }
+
+        expectPixelNear(strongestBandPixel(await readFrame(), 0)!, [255, 255, 255, 255]);
+
+        for (const color of [new Color(0, 255, 0), new Color(0, 0, 255)]) {
+          // Keep the same target and renderer selection: switching either can hide an unconsumed clear.
+          if (
+            !(await renderGuarded(ctx, backend, () => {
+              backend.clear(color);
+              backend.flush();
+            }))
+          ) {
+            return;
+          }
+
+          expectSolidFrame(await readFrame(), [color.r, color.g, color.b, 255]);
+        }
+
+        if (
+          !(await renderGuarded(ctx, backend, () => {
+            backend.clear(Color.black);
+            text.render(backend);
+            backend.flush();
+          }))
+        ) {
+          return;
+        }
+
+        expectPixelNear(strongestBandPixel(await readFrame(), 0)!, [255, 255, 255, 255]);
+
+        if (target !== null) {
+          backend.setRenderTarget(null);
+
+          if (
+            !(await renderGuarded(ctx, backend, () => {
+              backend.clear(new Color(255, 0, 0));
+              backend.flush();
+            }))
+          ) {
+            return;
+          }
+
+          expectSolidFrame(readWebGpuFrame(backend, canvasSize), [255, 0, 0, 255]);
+          expectPixelNear(strongestBandPixel(await readFrame(), 0)!, [255, 255, 255, 255]);
+        }
+      } finally {
+        backend.setRenderTarget(null);
+        text.destroy();
+        target?.destroy();
+        backend.destroy();
+      }
+    },
+  );
 
   test('many sprite/text alternations cost ONE pass and ONE submit, with per-flush text pixels correct', async ctx => {
     const backend = await setupBackend();
