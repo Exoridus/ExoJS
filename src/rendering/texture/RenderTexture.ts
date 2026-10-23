@@ -231,7 +231,9 @@ export class RenderTexture extends RenderTarget {
   public override destroy(): void {
     super.destroy();
 
-    this._source = null;
+    if (this.destroyed) {
+      this._source = null;
+    }
   }
 
   private _touchTexture(): void {

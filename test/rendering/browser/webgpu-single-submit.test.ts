@@ -648,6 +648,79 @@ describe('WebGPU single-submit frame', () => {
     }
   });
 
+  test.for(['Texture', 'RenderTexture'] as const)('destroying a sampled %s drains pending draws before releasing it', async (kind, ctx) => {
+    const backend = await setupBackend();
+    const device = getBackendDevice(backend);
+    const context = new RenderingContext(backend);
+    const sourceTexture = createSolidTexture('#ff0000');
+    const source = new Sprite(sourceTexture);
+    const sampled = kind === 'Texture' ? sourceTexture : new RenderTexture(8, 8);
+    const breakTextures = palette36.map(color => createSolidTexture(color));
+    const root = buildGridScene(breakTextures, 8, 6);
+    const first = new Sprite(sampled).setPosition(0, 52);
+    const last = new Sprite(sampled).setPosition(16, 52);
+
+    root.addChildAt(first, 0);
+    root.addChild(last);
+
+    try {
+      if (sampled instanceof RenderTexture) {
+        if (
+          !(await renderGuarded(ctx, backend, () => {
+            context.renderTo(source, { target: sampled, view: sampled.view, clear: Color.transparentBlack });
+            backend.flush();
+          }))
+        ) {
+          return;
+        }
+      }
+
+      // Warm both GPU residency and batch capacity before testing disposal.
+      for (let frame = 0; frame < 2; frame++) {
+        if (!(await drawWebGpuEncoded(ctx, backend, () => root.render(backend)))) {
+          return;
+        }
+      }
+
+      if (
+        !(await drawWebGpuEncoded(ctx, backend, () => {
+          root.render(backend);
+          expect(backend.passCoordinator.hasActivePass).toBe(true);
+          const recordedDraws = backend.stats.drawCalls;
+
+          expect(recordedDraws).toBeGreaterThan(0);
+          // The first sprite is recorded; the last still waits in the batch.
+          sampled.destroy();
+          expect(backend.stats.drawCalls).toBeGreaterThan(recordedDraws);
+        }))
+      ) {
+        return;
+      }
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(readPixel(4, 56), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(20, 56), [255, 0, 0, 255]);
+      expect(sampled.destroyed).toBe(true);
+      expect(() => backend.getTextureBinding(sampled)).toThrow(/destroyed texture/i);
+    } finally {
+      root.destroy();
+      source.destroy();
+      context.destroy();
+
+      try {
+        backend.destroy();
+      } finally {
+        // A failing disposal can also make backend teardown throw while flushing.
+        device.destroy();
+      }
+
+      sampled.destroy();
+      sourceTexture.destroy();
+      breakTextures.forEach(texture => texture.destroy());
+    }
+  });
+
   test('a stencil clip still ends the pass (more than one submit) and clips pixels correctly', async ctx => {
     const backend = await setupBackend();
     const texture = createSolidTexture('#ff0000', 8);

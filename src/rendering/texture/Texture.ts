@@ -152,6 +152,7 @@ export class Texture {
   private _compressed: CompressedTexturePayload | null = null;
   private _size: Size = new Size(0, 0);
   private _isDestroyed = false;
+  private _isDestroying = false;
   private readonly _destroyListeners: Set<() => void> = new Set<() => void>();
   private readonly _releaseListeners: Set<() => void> = new Set<() => void>();
   /** @internal - load lifecycle, driven by the Loader's seamless pipeline. */
@@ -575,14 +576,20 @@ export class Texture {
     // Idempotent by contract. Without this guard a second call would take
     // `_size` through a second `destroy()` and re-fire any listener registered
     // after the first call, against GPU state that is already released.
-    if (this._isDestroyed) {
+    if (this._isDestroyed || this._isDestroying) {
       return;
     }
 
-    this._isDestroyed = true;
+    this._isDestroying = true;
 
-    for (const listener of [...this._destroyListeners]) {
-      listener();
+    // Backends must finish queued draws before the resource becomes unbindable.
+    try {
+      for (const listener of [...this._destroyListeners]) {
+        listener();
+      }
+    } finally {
+      this._isDestroyed = true;
+      this._isDestroying = false;
     }
 
     this._destroyListeners.clear();

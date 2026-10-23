@@ -70,6 +70,7 @@ export class RenderTarget {
   private _depthTexture: DepthTexture | null = null;
   private readonly _destroyListeners: Set<() => void> = new Set<() => void>();
   private _isDestroyed = false;
+  private _isDestroying = false;
   private _version = 0;
   protected _size: Size;
   protected _viewport: Rectangle = new Rectangle();
@@ -248,18 +249,24 @@ export class RenderTarget {
     // whole teardown again - `_defaultView`, `_viewport` and `_size` would each
     // take a second `destroy()`, and a listener re-registered after the first
     // call would fire against already-released GPU state.
-    if (this._isDestroyed) {
+    if (this._isDestroyed || this._isDestroying) {
       return;
     }
 
-    this._isDestroyed = true;
+    this._isDestroying = true;
 
-    // Before the listeners fire: they are how the backends drop the framebuffer
-    // this attachment is bound into.
-    this._depthTexture?.destroy();
+    // Backends must finish queued draws before the resource becomes unbindable.
+    try {
+      // Before the listeners fire: they are how the backends drop the framebuffer
+      // this attachment is bound into.
+      this._depthTexture?.destroy();
 
-    for (const listener of [...this._destroyListeners]) {
-      listener();
+      for (const listener of [...this._destroyListeners]) {
+        listener();
+      }
+    } finally {
+      this._isDestroyed = true;
+      this._isDestroying = false;
     }
 
     this._destroyListeners.clear();
