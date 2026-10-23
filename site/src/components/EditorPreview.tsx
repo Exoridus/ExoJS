@@ -138,10 +138,19 @@ export const EditorPreview = ({
       }
     };
 
+    // Responsive layout can settle after window.resize has measured an intermediate width.
+    const surface = rootRef.current?.closest<HTMLElement>('[data-preview-surface]');
+    const surfaceObserver = new ResizeObserver(recalculateZoom);
+
+    if (surface) {
+      surfaceObserver.observe(surface);
+    }
+
     window.addEventListener('resize', recalculateZoom);
     window.addEventListener('keydown', preventScroll);
 
     return () => {
+      surfaceObserver.disconnect();
       window.removeEventListener('resize', recalculateZoom);
       window.removeEventListener('keydown', preventScroll);
       disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
