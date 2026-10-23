@@ -32,10 +32,14 @@ const BLEND_MODES = [
   { mode: BlendModes.Luminosity, name: 'Luminosity' },
 ];
 class BlendmodesScene extends Scene {
+  onPointerDown = () => {
+    this.panel.step('mode', 1);
+  };
   background;
   left;
   right;
   ticker = 0;
+  panel;
   async load() {
     const app = this.app;
     const { width, height } = app;
@@ -59,7 +63,7 @@ class BlendmodesScene extends Scene {
     this.right.setScale(5);
     this.right.setTint(new Color(255, 96, 200));
     // Clicks, arrow keys and the panel buttons all move the same value.
-    const panel = demoPanel({
+    const panel = (this.panel = demoPanel({
       controls: {
         mode: choice(
           'Blend mode',
@@ -71,8 +75,8 @@ class BlendmodesScene extends Scene {
         this.left.setBlendMode(mode);
         this.right.setBlendMode(mode);
       },
-    });
-    app.input.onPointerDown.add(() => panel.step('mode', 1));
+    }));
+    this.app.input.onPointerDown.add(this.onPointerDown);
     this.inputs.onTrigger(Keyboard.Right, () => panel.step('mode', 1));
     this.inputs.onTrigger(Keyboard.Left, () => panel.step('mode', -1));
   }
@@ -88,6 +92,14 @@ class BlendmodesScene extends Scene {
     context.render(this.background);
     context.render(this.left);
     context.render(this.right);
+  }
+  destroy() {
+    this.app.input.onPointerDown.remove(this.onPointerDown);
+    this.background?.destroy();
+    this.left?.destroy();
+    this.right?.destroy();
+    this.panel?.dispose();
+    super.destroy();
   }
 }
 const app = new Application({

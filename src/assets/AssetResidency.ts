@@ -621,11 +621,8 @@ export class AssetResidency {
       // The handle/ref was re-armed to 'loading' during eviction; just re-drive
       // the fetch. A value key with no ref left (evicted after a bare `load()`)
       // still refetches: nothing but this would restore its resident payload.
-      if (this._typeRegistry.hasSeamlessAdapter(asset.type)) {
-        this._startFetch(asset, this._deferred.get(asset.key)?.options);
-      } else {
-        this._startFetch(asset, this._refs.get(asset.key)?.options);
-      }
+      const entry = this._typeRegistry.hasSeamlessAdapter(asset.type) ? this._deferred.get(asset.key) : this._refs.get(asset.key);
+      this._startFetch(asset, entry === undefined ? asset.options : entry.options);
     }
   }
 

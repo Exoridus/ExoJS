@@ -352,7 +352,16 @@ export const trackPressButtons = (canvas: HTMLCanvasElement): PressButtonTracker
   root.addEventListener('pointerdown', onDown, { capture: true });
 
   return {
-    take: pointerId => queues.get(pointerId)?.shift() ?? 0,
+    take: pointerId => {
+      const queue = queues.get(pointerId);
+      const button = queue?.shift() ?? 0;
+
+      if (queue?.length === 0) {
+        queues.delete(pointerId);
+      }
+
+      return button;
+    },
     dispose: () => {
       root.removeEventListener('pointerdown', onDown, { capture: true });
       queues.clear();
@@ -420,9 +429,6 @@ export const mountControlPanel = (options: MountControlPanelOptions = {}): Contr
 
   if (title) {
     panel.setAttribute('aria-label', title);
-  }
-
-  if (title) {
     const titleEl = document.createElement('strong');
 
     titleEl.textContent = title;

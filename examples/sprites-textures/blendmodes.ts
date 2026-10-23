@@ -46,10 +46,14 @@ const BLEND_MODES: Array<{ mode: BlendModes; name: string }> = [
 ];
 
 class BlendmodesScene extends Scene {
+  private readonly onPointerDown = (): void => {
+    this.panel.step('mode', 1);
+  };
   private background!: Sprite;
   private left!: Sprite;
   private right!: Sprite;
   private ticker = 0;
+  private panel!: ReturnType<typeof demoPanel>;
 
   override async load(): Promise<void> {
     const app = this.app;
@@ -79,7 +83,7 @@ class BlendmodesScene extends Scene {
     this.right.setTint(new Color(255, 96, 200));
 
     // Clicks, arrow keys and the panel buttons all move the same value.
-    const panel = demoPanel({
+    const panel = (this.panel = demoPanel({
       controls: {
         mode: choice(
           'Blend mode',
@@ -92,9 +96,9 @@ class BlendmodesScene extends Scene {
         this.left.setBlendMode(mode);
         this.right.setBlendMode(mode);
       },
-    });
+    }));
 
-    app.input.onPointerDown.add(() => panel.step('mode', 1));
+    this.app.input.onPointerDown.add(this.onPointerDown);
     this.inputs.onTrigger(Keyboard.Right, () => panel.step('mode', 1));
     this.inputs.onTrigger(Keyboard.Left, () => panel.step('mode', -1));
   }
@@ -114,6 +118,15 @@ class BlendmodesScene extends Scene {
     context.render(this.background);
     context.render(this.left);
     context.render(this.right);
+  }
+
+  override destroy(): void {
+    this.app.input.onPointerDown.remove(this.onPointerDown);
+    this.background?.destroy();
+    this.left?.destroy();
+    this.right?.destroy();
+    this.panel?.dispose();
+    super.destroy();
   }
 }
 

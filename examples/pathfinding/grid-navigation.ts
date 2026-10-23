@@ -1,4 +1,13 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Seconds } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  type Pointer,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+} from '@codexo/exojs';
 import { type DiagonalPolicy, GridSpace, Pathfinder, type PathResult } from '@codexo/exojs/pathfinding';
 import { choice, demoPanel, toggle } from '@examples/runtime';
 
@@ -47,6 +56,9 @@ const initialCost = (x: number, y: number): number => {
 };
 
 class GridNavigationScene extends Scene {
+  private readonly onPointerTap = (pointer: Pointer): void => {
+    this.applyPaint(pointer.x, pointer.y);
+  };
   private grid = GridSpace.from(COLUMNS, ROWS, initialCost, { cellSize: CELL });
   private readonly pathfinder = new Pathfinder();
   private terrain = new Graphics();
@@ -63,7 +75,7 @@ class GridNavigationScene extends Scene {
   private panel?: ReturnType<typeof demoPanel>;
 
   override init(): void {
-    this.app.input.onPointerTap.add(pointer => this.applyPaint(pointer.x, pointer.y));
+    this.app.input.onPointerTap.add(this.onPointerTap);
 
     this.panel = demoPanel({
       title: 'Pathfinding',
@@ -210,6 +222,9 @@ class GridNavigationScene extends Scene {
   }
 
   override destroy(): void {
+    this.app.input.onPointerTap.remove(this.onPointerTap);
+    this.terrain.destroy();
+    this.overlay.destroy();
     this.panel?.dispose();
     super.destroy();
   }

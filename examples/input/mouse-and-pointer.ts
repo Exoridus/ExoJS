@@ -1,4 +1,13 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sprite } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  type Pointer,
+  type RenderingContext,
+  Scene,
+  Sprite,
+} from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
@@ -9,6 +18,20 @@ import { mountControls } from '@examples/runtime';
 //   - a click counter (onPointerTap fires on a press+release without a drag)
 //   - a draggable sprite (the engine's built-in drag on an interactive node)
 class MouseAndPointerScene extends Scene {
+  private readonly onPointerMove = (pointer: Pointer): void => {
+    this.pointer.x = pointer.x;
+    this.pointer.y = pointer.y;
+    this.buttons = pointer.buttons;
+  };
+  private readonly onPointerDown = (pointer: Pointer): void => {
+    this.buttons = pointer.buttons;
+  };
+  private readonly onPointerUp = (pointer: Pointer): void => {
+    this.buttons = pointer.buttons;
+  };
+  private readonly onPointerTap = (): void => {
+    this.clicks++;
+  };
   private ship!: Sprite;
   private crosshair!: Graphics;
   private pointer = { x: 400, y: 300 };
@@ -32,20 +55,10 @@ class MouseAndPointerScene extends Scene {
     this.root.addChild(this.ship);
     this.crosshair = new Graphics();
 
-    app.input.onPointerMove.add(pointer => {
-      this.pointer.x = pointer.x;
-      this.pointer.y = pointer.y;
-      this.buttons = pointer.buttons;
-    });
-    app.input.onPointerDown.add(pointer => {
-      this.buttons = pointer.buttons;
-    });
-    app.input.onPointerUp.add(pointer => {
-      this.buttons = pointer.buttons;
-    });
-    app.input.onPointerTap.add(() => {
-      this.clicks++;
-    });
+    this.app.input.onPointerMove.add(this.onPointerMove);
+    this.app.input.onPointerDown.add(this.onPointerDown);
+    this.app.input.onPointerUp.add(this.onPointerUp);
+    this.app.input.onPointerTap.add(this.onPointerTap);
 
     this.hud = mountControls();
   }
@@ -76,6 +89,16 @@ class MouseAndPointerScene extends Scene {
     this.crosshair.drawLine(this.pointer.x - 12, this.pointer.y, this.pointer.x + 12, this.pointer.y);
     this.crosshair.drawLine(this.pointer.x, this.pointer.y - 12, this.pointer.x, this.pointer.y + 12);
     context.render(this.crosshair);
+  }
+
+  override destroy(): void {
+    this.app.input.onPointerMove.remove(this.onPointerMove);
+    this.app.input.onPointerDown.remove(this.onPointerDown);
+    this.app.input.onPointerUp.remove(this.onPointerUp);
+    this.app.input.onPointerTap.remove(this.onPointerTap);
+    this.crosshair?.destroy();
+    this.hud?.dispose();
+    super.destroy();
   }
 }
 

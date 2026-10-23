@@ -117,6 +117,43 @@ describe('refcount / claims', () => {
     expect(handle.audioBuffer).not.toBeNull();
   });
 
+  test('a bare font load preserves its options after the last scope releases it', async () => {
+    mockFetchAudio();
+    vi.stubGlobal(
+      'FontFace',
+      class {
+        public constructor(
+          public readonly family: string,
+          _source: BufferSource,
+          public readonly descriptors?: FontFaceDescriptors,
+        ) {}
+
+        public load(): Promise<this> {
+          return Promise.resolve(this);
+        }
+      },
+    );
+    const loader = createCoreLoader();
+    const asset = Asset.type('font', 'heading.woff2', {
+      family: 'Heading',
+      descriptors: { weight: '700' },
+      addToDocument: false,
+    });
+    const firstScope = loader.createScope({ name: 'first scene' });
+    const first = await firstScope.load(asset);
+    expect(first.family).toBe('Heading');
+    firstScope.destroy();
+
+    const secondScope = loader.createScope({ name: 'second scene' });
+    const second = await secondScope.load(asset);
+    expect(second).not.toBe(first);
+    expect(second.family).toBe('Heading');
+    expect(second).toMatchObject({ descriptors: { weight: '700' } });
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    secondScope.destroy();
+    loader.destroy();
+  });
+
   test('a not-yet-started background entry is dropped from the queue at refcount 0', () => {
     // Hanging fetch: 'a.ogg' stays in flight (never settles), so 'b'/'c' remain
     // queued behind the cap - no background fetch settles past the synchronous

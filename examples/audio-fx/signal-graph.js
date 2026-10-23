@@ -186,12 +186,12 @@ class SignalGraphScene extends Scene {
         break;
       case 'reverb':
         panel.addSlider({
-          label: 'Decay s',
-          min: 0.3,
+          label: 'Duration s',
+          min: 0.1,
           max: 5,
           step: 0.1,
-          value: this.reverb.decay,
-          onChange: value => (this.reverb.decay = value),
+          value: this.reverb.durationSeconds,
+          onChange: value => (this.reverb.durationSeconds = value),
         });
         panel.addSlider({ label: 'Wet', value: this.reverb.wet, onChange: value => (this.reverb.wet = value) });
         break;
