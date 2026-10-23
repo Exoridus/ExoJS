@@ -29,7 +29,7 @@ describe('trackPressButtons', () => {
     press(canvas, 41, 2);
     const recorded = writes.mock.calls.findIndex(([key, value]) => key === 41 && Array.isArray(value) && value[0] === 2);
     expect(recorded).toBeGreaterThanOrEqual(0);
-    const queues = writes.mock.contexts[recorded]!;
+    const queues = writes.mock.contexts[recorded] as Map<number, number[]>;
     writes.mockRestore();
 
     try {
