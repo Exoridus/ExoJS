@@ -1130,6 +1130,139 @@ const newTabChecks = async (browser: Browser, origin: string, base: string): Pro
   });
 };
 
+const responsivePreviewChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await check('acceptance responsive preview: resize and restore remain inside the surface', async () => {
+    const { page, pageErrors } = await openPlayground(browser, origin, base, 'getting-started/hello-world');
+
+    try {
+      await (await previewFrame(page)).locator('canvas').first().waitFor({ state: 'visible' });
+      const measure = () =>
+        page.locator('[data-preview-surface]').evaluate(surface => {
+          const root = surface.querySelector('iframe')!.parentElement!;
+          const outer = surface.getBoundingClientRect();
+          const inner = root.getBoundingClientRect();
+
+          return {
+            width: inner.width,
+            height: inner.height,
+            available: surface.clientWidth,
+            top: inner.top - outer.top,
+            bottom: outer.bottom - inner.bottom,
+          };
+        });
+      const fits = (layout: Awaited<ReturnType<typeof measure>>): boolean =>
+        layout.width > 0 && layout.width <= layout.available + 1 && layout.top >= -1 && layout.bottom >= -1;
+
+      for (const viewport of [
+        { width: 1600, height: 1000 },
+        { width: 1000, height: 800 },
+        { width: 1600, height: 1000 },
+      ]) {
+        await page.setViewportSize(viewport);
+        let previous = '';
+        let stableSamples = 0;
+        const settled = await waitFor(
+          measure,
+          layout => {
+            const current = JSON.stringify(layout);
+            stableSamples = fits(layout) && current === previous ? stableSamples + 1 : 0;
+            previous = current;
+
+            return stableSamples >= 2;
+          },
+          `preview fits at ${viewport.width}x${viewport.height}`,
+        );
+        await page.waitForTimeout(2000);
+        const stable = await measure();
+        assert(fits(stable), `preview clipped after settling: ${JSON.stringify(stable)}`);
+        assert(
+          Math.abs(stable.width - settled.width) <= 1 && Math.abs(stable.height - settled.height) <= 1,
+          'preview scale did not remain stable',
+        );
+      }
+
+      assert(pageErrors.length === 0, pageErrors.join('\n'));
+    } finally {
+      await page.context().close();
+    }
+  });
+};
+
+const crtChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await check('acceptance CRT: toggle, strength and RGB separation change rendered pixels', async () => {
+    const { page, pageErrors } = await openPlayground(browser, origin, base, 'filters/crt-scanlines');
+
+    try {
+      const source = await readFile(resolve(repoRoot, 'examples/filters/crt-scanlines.ts'), 'utf8');
+      // Freeze scene time while draw and DOM controls keep running, so grain cannot fake a control response.
+      await runSource(page, `${source}\napp.scenes.pause();\n(globalThis as any).__crtBackend = app.backend.backendType;`);
+      const frame = await previewFrame(page);
+      await frame.waitForFunction('globalThis.__crtBackend !== undefined');
+      console.log(`[e2e] CRT backend: ${await frame.evaluate('globalThis.__crtBackend')}`);
+      const canvas = frame.locator('canvas').first();
+
+      const capture = async (): Promise<string> => {
+        await frame.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+
+        return (await canvas.screenshot()).toString('base64');
+      };
+
+      const difference = async (first: string, second: string): Promise<number> =>
+        page.evaluate(
+          async ([a, b]) => {
+            const images = await Promise.all(
+              [a, b].map(async data => createImageBitmap(await (await fetch(`data:image/png;base64,${data}`)).blob())),
+            );
+            const pixels = images.map(image => {
+              const surface = new OffscreenCanvas(image.width, image.height);
+              const context = surface.getContext('2d')!;
+              context.drawImage(image, 0, 0);
+              // Compare the scene away from the controls and any keyboard focus outline.
+              const data = context.getImageData(0, Math.ceil(image.height * 0.2), image.width, Math.floor(image.height * 0.5)).data;
+              image.close();
+
+              return data;
+            });
+            let changed = 0;
+
+            for (let i = 0; i < pixels[0]!.length; i += 4) {
+              if (pixels[0]![i] !== pixels[1]![i] || pixels[0]![i + 1] !== pixels[1]![i + 1] || pixels[0]![i + 2] !== pixels[1]![i + 2]) {
+                changed++;
+              }
+            }
+
+            return changed;
+          },
+          [first, second],
+        );
+
+      const setSlider = async (name: string, key: 'Home' | 'End'): Promise<void> => {
+        await frame.getByRole('slider', { name, exact: true }).focus();
+        await page.keyboard.press(key);
+      };
+
+      const on = await capture();
+      await frame.getByRole('button', { name: 'CRT', exact: true }).click();
+      assert((await difference(on, await capture())) > 500, 'CRT toggle changed no meaningful scene pixels');
+      await frame.getByRole('button', { name: 'CRT', exact: true }).click();
+      assert((await difference(on, await capture())) === 0, 'CRT toggle did not restore the frozen scene');
+      await setSlider('RGB separation', 'Home');
+      await setSlider('Effect strength', 'Home');
+      const clean = await capture();
+      await setSlider('Effect strength', 'End');
+      const strong = await capture();
+      assert((await difference(clean, strong)) > 500, 'CRT strength changed no meaningful scene pixels');
+      await setSlider('RGB separation', 'End');
+      assert((await difference(strong, await capture())) > 500, 'CRT RGB separation changed no meaningful scene pixels');
+      await setSlider('RGB separation', 'Home');
+      assert((await difference(strong, await capture())) === 0, 'CRT RGB separation did not restore the frozen scene');
+      assert(pageErrors.length === 0, pageErrors.join('\n'));
+    } finally {
+      await page.context().close();
+    }
+  });
+};
+
 const maskChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
   await check('acceptance mask: circular region is visible', async () => {
     const { page } = await openPlayground(browser, origin, base, 'scene-graph/masks');
@@ -1306,6 +1439,8 @@ const main = async (): Promise<void> => {
       }));
 
   try {
+    await responsivePreviewChecks(browser, origin, base);
+    await crtChecks(browser, origin, base);
     await maskChecks(browser, origin, base);
     await audioBusChecks(browser, origin, base);
     await workerChecks(browser, origin, base);
