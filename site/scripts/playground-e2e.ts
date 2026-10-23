@@ -592,6 +592,13 @@ const assetChecks = async (browser: Browser, origin: string, base: string): Prom
   const snippets: string[] = [];
   const session = await openPlayground(browser, origin, base, 'debug-layer/asset-browser');
   const { page } = session;
+  const source = await waitFor(
+    () => page.evaluate<string>('window.monaco?.editor.getEditors()[0]?.getModel()?.getValue() ?? ""'),
+    value => value.length > 0,
+    'the asset browser editor source',
+  );
+
+  await runSource(page, `${source}\n(globalThis as any).__assetBrowserApp = app;`);
   const frame = await assetFrame(page);
   const catalog = readCatalog();
 
@@ -627,6 +634,12 @@ const assetChecks = async (browser: Browser, origin: string, base: string): Prom
       const failure = session.console.slice(before).find(message => message.text.startsWith('Failed to load'));
 
       assert(!failure, failure?.text ?? '');
+      const health = (await frame.evaluate(`new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => {
+        const app = globalThis.__assetBrowserApp;
+        resolve({state: app.state, errors: app.recentErrors.map(error => error.message)});
+      })))`)) as { state: string; errors: string[] };
+
+      assert(health.state === 'running' && health.errors.length === 0, `${id} render health: ${JSON.stringify(health)}`);
       assert(!(await outputEntries(page)).some(entry => entry.kind === 'exception'), 'an uncaught error was recorded');
 
       const resident = await residentRows(frame);
