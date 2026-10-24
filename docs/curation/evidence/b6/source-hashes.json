@@ -10,7 +10,7 @@
     "examples/scene-graph/masks.js": "dc24d4f841fe1f40762b3677c774d0bb30881d9ac0d84e217ed8a7b8233c1f47",
     "examples/sprites-textures/texture-sampling.ts": "e91767ef01289d4f8db0a12d6919214afe2e008e4248eede006c924f029ecff0",
     "examples/sprites-textures/texture-sampling.js": "e703131b72c5c6cd62fd158a5796778bcc5246bb5a2651c79d166ccb714e8f70",
-    "examples/sprites-textures/blendmodes.ts": "1ef78b84d6b5cb0d73e8cedda6d9e4890567bed5b64746a4d3ededa26f72eeb5",
+    "examples/sprites-textures/blendmodes.ts": "c4269fcc7b9808518bb32e38f4dfd7a00ed2553a7eaf7387f19843040874a1ca",
     "examples/sprites-textures/blendmodes.js": "8e2afd967c1adffe69e6ad61ac8797831a7b945c9fea5bc37504bfd9acc3a48e",
     "examples/filters/blur-filter.ts": "35ca7a2050a0204a6743feed9cab0469426d78f872b67ea4fb0e456419cc3379",
     "examples/filters/blur-filter.js": "a00981f04dad426406f59e6a54066f8080ae696dd8f50084b474862c221834fb",
