@@ -1,51 +1,87 @@
 // Auto-generated from bitmap-text-basic.ts - edit the .ts source, not this file.
-import { Application, BitmapText, Color, FixedResolutionCanvasSizing, Scene } from '@codexo/exojs';
+import { Application, BitmapText, Color, FixedResolutionCanvasSizing, ScaleModes, Scene, Text } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { choice, demoPanel } from '@examples/runtime';
+const controls = { scale: choice('Scale', ['1x', '2x', '3x', '2.5x']) };
 class BitmapTextBasicScene extends Scene {
   font;
-  title;
-  info;
-  wrapped;
+  bitmap;
   counter;
-  frame = 0;
+  raster = this.track(new Text('PLAY', { fontFamily: 'monospace', fillColor: new Color(236, 239, 242) }));
+  labels = ['BitmapText / atlas glyphs', 'Text / browser raster'].map(text =>
+    this.track(new Text(text, { fillColor: new Color(168, 175, 181) })),
+  );
+  panel;
+  elapsed = 0;
+  playing = true;
+  count = -1;
   async load() {
-    const app = this.app;
     this.font = await this.loader.load(assets.fontKenneyBlocksFnt);
-    const font = this.font;
-    const { width, height } = app;
-    const marginX = width * 0.08;
-    this.title = new BitmapText('BITMAP TEXT', font, { scale: 1.5 });
-    this.title.tint = new Color(255, 220, 80);
-    this.title.setPosition(marginX, height * 0.12);
-    this.info = new BitmapText('AngelCode .fnt   no Canvas 2D rasterisation', font);
-    this.info.setPosition(marginX, height * 0.32);
-    this.wrapped = new BitmapText('Word wrap, per-glyph kerning, and all standard ASCII chars are supported.', font, {
-      scale: 0.85,
-      layout: { maxWidth: 760 },
+    this.font.textures.forEach(texture => {
+      texture.scaleMode = ScaleModes.Nearest;
     });
-    this.wrapped.setPosition(marginX, height * 0.46);
-    this.counter = new BitmapText('Frame: 0', font);
-    this.counter.tint = new Color(160, 210, 160);
-    this.counter.setPosition(marginX, height * 0.82);
+    this.bitmap = this.track(new BitmapText('PLAY', this.font));
+    this.counter = this.track(new BitmapText('COUNT 0000', this.font));
+    this.counter.tint = new Color(136, 233, 126);
   }
-  update() {
-    this.counter.text = `Frame: ${++this.frame}`;
+  init() {
+    this.panel = demoPanel({
+      title: 'Bitmap Text',
+      layout: 'bar',
+      controls,
+      hint: 'The same word: prebuilt atlas beside browser raster. Fractional scale reveals sampling.',
+      actions: {
+        'Pause / Resume': () => {
+          this.playing = !this.playing;
+        },
+        Reset: () => {
+          this.elapsed = 0;
+          this.panel.set('scale', '1x');
+        },
+      },
+    });
+  }
+  update(delta) {
+    if (this.playing) {
+      this.elapsed += delta;
+    }
+    const { scale: k, width, contentHeight, compact } = this.panel.fit(this.app, this.app.canvas);
+    const multiplier = Number.parseFloat(this.panel.values.scale);
+    const fontSize = this.font.fontData.lineHeight;
+    const top = Math.max(28, (contentHeight - fontSize * multiplier - 54) / 2);
+    const count = Math.floor(this.elapsed * 10);
+    this.bitmap.setPosition(24 * k, top * k).setScale(multiplier * k);
+    this.raster.style.fontSize = fontSize;
+    this.raster.setPosition((width / 2 + 12) * k, top * k).setScale(multiplier * k);
+    this.labels.forEach((label, index) => {
+      label.style.fontSize = 14 * k;
+      label.setPosition((index ? width / 2 + 12 : 24) * k, 10 * k);
+    });
+    this.counter.setPosition(24 * k, (top + fontSize * multiplier + 14) * k).setScale(k);
+    if (count !== this.count) {
+      this.counter.text = `COUNT ${String(count).padStart(4, '0')}`;
+      this.count = count;
+    }
+    this.panel.status(
+      `${this.playing ? 'Counting' : 'Paused'} | ${this.panel.values.scale} | ${compact ? 'Atlas loaded' : 'kenney-blocks-32.fnt loaded | Nearest sampling'}`,
+      'success',
+    );
+    this.panel.element.querySelector('button').setAttribute('aria-pressed', String(!this.playing));
   }
   draw(context) {
-    context.render(this.title);
-    context.render(this.info);
-    context.render(this.wrapped);
+    context.render(this.bitmap);
+    context.render(this.raster);
     context.render(this.counter);
+    this.labels.forEach(label => context.render(label));
+  }
+  destroy() {
+    this.panel?.dispose();
+    super.destroy();
   }
 }
 const app = new Application({
   scenes: { BitmapTextBasicScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
-  clearColor: new Color(20, 24, 36),
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  clearColor: new Color(18, 24, 29),
 });
 await app.start(BitmapTextBasicScene);
