@@ -1,4 +1,66 @@
 // Auto-generated from runtime.ts - edit the .ts source, not this file.
+import { Color, createUITheme, defaultUITheme } from '@codexo/exojs';
+/** Applies website tokens to native widget skins while preserving their layout and insets. */
+export const siteUITheme = () => {
+  let root = document.documentElement;
+  try {
+    root = window.parent.document.documentElement;
+  } catch {
+    /* A detached cross-origin preview uses its own tokens. */
+  }
+  const tokens = getComputedStyle(root);
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 1;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  const color = (token, fallback) => {
+    if (!context) {
+      return Color.fromHex(fallback);
+    }
+    context.clearRect(0, 0, 1, 1);
+    context.fillStyle = tokens.getPropertyValue(token).trim() || fallback;
+    context.fillRect(0, 0, 1, 1);
+    const [r, g, b, a] = context.getImageData(0, 0, 1, 1).data;
+    return new Color(r, g, b, a / 255);
+  };
+  const surface = color('--color-surface', '#12181d');
+  const raised = color('--color-surface-2', '#191f24');
+  const text = color('--color-text', '#eceff2');
+  const muted = color('--color-text-muted', '#a8afb5');
+  const accent = color('--color-accent', '#88e97e');
+  const contrast = color('--color-accent-contrast', '#15351a');
+  const patch = {};
+  const highlights = new Set(['progressBarFill', 'sliderFill', 'checkboxMark', 'caret', 'selection']);
+  for (const role of Object.keys(defaultUITheme)) {
+    const states = {};
+    for (const state of ['normal', 'hover', 'pressed', 'disabled', 'focused']) {
+      const base = defaultUITheme[role][state] ?? defaultUITheme[role].normal;
+      const selected = state === 'pressed' && (role === 'button' || role === 'dropdownItem');
+      const foreground = state === 'disabled' || role === 'placeholder' ? muted : selected ? contrast : text;
+      states[state] = {
+        ...base,
+        text: { ...base.text, fontFamily: tokens.getPropertyValue('--f-sans').trim() || 'system-ui', fillColor: foreground },
+        background:
+          base.background.kind === 'fill'
+            ? {
+                ...base.background,
+                color:
+                  selected || highlights.has(role)
+                    ? accent
+                    : role.endsWith('Knob') || role === 'sliderThumb'
+                      ? text
+                      : state === 'normal'
+                        ? surface
+                        : raised,
+                borderColor: state === 'focused' ? accent : muted,
+                borderWidth: state === 'focused' ? 2 : base.background.borderWidth,
+              }
+            : base.background,
+      };
+    }
+    patch[role] = states;
+  }
+  return createUITheme(patch);
+};
 export const getExampleMeta = () => {
   const meta = globalThis.__EXAMPLE_META__;
   return meta && typeof meta === 'object' ? meta : {};

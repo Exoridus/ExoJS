@@ -1,3 +1,5 @@
+import { type UITheme } from '@codexo/exojs';
+
 /**
  * Boolean fields of the engine `Capabilities` object that an example may
  * declare as a hard runtime requirement. Each value here maps 1:1 to a
@@ -110,6 +112,8 @@ export interface MountControlPanelOptions {
     title?: string;
     corner?: OverlayCorner;
 }
+/** Applies website tokens to native widget skins while preserving their layout and insets. */
+export declare const siteUITheme: () => UITheme;
 export declare const getExampleMeta: () => ExampleRuntimeMeta;
 export declare const supportsWebGpu: () => boolean;
 export declare const createInfoElement: (maxWidth?: string) => HTMLElement;
