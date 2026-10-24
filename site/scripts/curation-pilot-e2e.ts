@@ -6,12 +6,14 @@ import { parseArgs } from 'node:util';
 import type { AnimatedSprite, Application, Text } from '@codexo/exojs';
 import { chromium, firefox, type Frame, type Page } from 'playwright';
 
+import type { ExampleRendererStatus } from '../../examples/shared/runtime';
+
 const { values } = parseArgs({
   options: {
     host: { type: 'string', default: 'http://127.0.0.1:4321/ExoJS' },
     browser: { type: 'string', default: 'chromium' },
     backend: { type: 'string', default: 'webgl2' },
-    shots: { type: 'string', default: '.workspace/playground-curation-pilot' },
+    shots: { type: 'string', default: 'docs/curation/evidence/foundation' },
   },
 });
 
@@ -39,6 +41,7 @@ interface ProbeScene {
 declare global {
   interface Window {
     __pilot: { app: Application; counts: number[] };
+    __EXAMPLE_RENDERER_STATUS__?: ExampleRendererStatus;
   }
 }
 
@@ -76,7 +79,7 @@ const openExample = async (page: Page, slug: string, width: number, height: numb
     const body = source.includes('const app = new Application(')
       ? source
           .replace('const app = new Application({', `const app = new Application({ backend: { type: '${backend}' },`)
-          .replace('await app.start(', 'window.__pilot = { app, counts: [0, 0] };\nawait app.start(')
+          .replace(/await (?:app\.start|startExample)\(/, match => `window.__pilot = { app, counts: [0, 0] };\n${match}`)
       : source;
 
     await route.fulfill({ response, body });
@@ -116,6 +119,11 @@ const openExample = async (page: Page, slug: string, width: number, height: numb
 
   assert(Math.abs(box.width - width) < 1 && Math.abs(box.height - height) < 1, `presented size: ${JSON.stringify(box)}`);
   assert.equal((await state(frame)).backend, backend, 'requested backend must not fall back');
+  assert.deepEqual(
+    await frame.evaluate(() => ({ phase: window.__EXAMPLE_RENDERER_STATUS__?.phase, actual: window.__EXAMPLE_RENDERER_STATUS__?.actual })),
+    { phase: 'active', actual: backend },
+  );
+  assert.equal(await page.locator('[data-renderer-phase="active"]').innerText(), backend === 'webgpu' ? 'WebGPU' : 'WebGL2');
 
   return frame;
 };
@@ -349,6 +357,49 @@ try {
   } finally {
     await detached.unrouteAll({ behavior: 'wait' });
     await detached.close();
+  }
+
+  if (values.browser === 'chromium' && backend === 'webgpu') {
+    for (const requested of ['auto', 'webgpu']) {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+
+      try {
+        await page.addInitScript("if (navigator.gpu) Object.defineProperty(navigator.gpu, 'requestAdapter', { value: async () => null });");
+        await page.route('**/examples/tweens-animation/frame-animation.js*', async route => {
+          const response = await route.fetch();
+          const body = (await response.text()).replace(
+            'const app = new Application({',
+            `const app = new Application({ backend: { type: '${requested}' },`,
+          );
+          await route.fulfill({ response, body });
+        });
+        await page.goto(`${values.host}/en/playground/?version=current&example=tweens-animation/frame-animation`);
+        await page.waitForSelector('iframe[src*="preview.html"]');
+        const frame = page.frames().find(candidate => candidate.url().includes('preview.html'))!;
+        const phase = requested === 'auto' ? 'fallback' : 'failed';
+        await frame.waitForFunction(expected => window.__EXAMPLE_RENDERER_STATUS__?.phase === expected, phase);
+        const reported = await frame.evaluate(() => window.__EXAMPLE_RENDERER_STATUS__!);
+        assert.equal(reported.requested, requested);
+        assert.equal(reported.actual, requested === 'auto' ? 'webgl2' : null);
+        assert.match(reported.reason!, /adapter/i);
+        assert.equal(
+          await page.locator(`[data-renderer-phase="${phase}"]`).innerText(),
+          requested === 'auto' ? 'WebGL2 (fallback)' : 'Renderer failed',
+        );
+        await page.screenshot({ path: resolve(output, `renderer-${requested}-${phase}-1280.png`) });
+        records.push({
+          example: 'renderer-state',
+          size: requested,
+          status: 'PASS',
+          checks: ['actual no-adapter initialization path', JSON.stringify(reported), 'toolbar agrees with initialized state'],
+        });
+      } catch (error) {
+        records.push({ example: 'renderer-state', size: requested, status: 'FAIL', error: String(error) });
+      } finally {
+        await page.unrouteAll({ behavior: 'wait' });
+        await page.close();
+      }
+    }
   }
 } finally {
   await browser.close();

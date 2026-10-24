@@ -24,7 +24,7 @@
       "checks": [
         "reset frame 1; three shared 0.1s steps produce frames 3/8 and 5/8",
         "paused: no frame or clock advancement over 0.6s",
-        "4.021s clip time: 32/65 onFrame events at 8/16fps",
+        "4.028s clip time: 32/65 onFrame events at 8/16fps",
         "keyboard arrows and R update the same control state",
         "presented controls >=14px type and >=32px hit area",
         "hidden preview restores finite layout and interactive controls",
@@ -63,9 +63,7 @@
       "example": "text-fonts/typographic-styling",
       "size": "detached 512x288",
       "status": "PASS",
-      "checks": [
-        "default website font loaded without a parent document"
-      ]
+      "checks": ["default website font loaded without a parent document"]
     }
   ]
 }

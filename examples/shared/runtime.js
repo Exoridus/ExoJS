@@ -1,5 +1,55 @@
 // Auto-generated from runtime.ts - edit the .ts source, not this file.
 import { Color, createUITheme, defaultUITheme } from '@codexo/exojs';
+/** Starts a sample while reporting initialized renderer state and retaining the original startup rejection. */
+export const startExample = async (app, start) => {
+  const requested = app.options.backend?.type ?? 'auto';
+  const attempted = app.backend.backendType;
+  let completed = false;
+  let lost = false;
+  const publish = (phase, actual, reason = null) => {
+    const status = { requested, phase, actual, reason };
+    window.__EXAMPLE_RENDERER_STATUS__ = status;
+    window.dispatchEvent(new CustomEvent('exo-renderer-status', { detail: status }));
+  };
+  const active = () => {
+    if (!completed || lost) {
+      return;
+    }
+    const actual = app.backend.backendType;
+    const fallback = actual !== attempted;
+    publish(
+      fallback ? 'fallback' : 'active',
+      actual,
+      fallback
+        ? app.capabilities?.webgpuAdapter === null
+          ? `No usable WebGPU adapter was detected; auto started ${actual}.`
+          : `${attempted} initialization did not succeed; auto started ${actual}. The original cause is not exposed by the engine.`
+        : null,
+    );
+  };
+  const onLost = () => {
+    lost = true;
+    publish('failed', null, 'The renderer device or context was lost. Waiting for restoration.');
+  };
+  const onRestored = () => {
+    lost = false;
+    active();
+  };
+  publish('requested', null);
+  app.onBackendLost.add(onLost);
+  app.onBackendRestored.add(onRestored);
+  publish('initializing', null);
+  try {
+    await start();
+    completed = true;
+    active();
+  } catch (error) {
+    app.onBackendLost.remove(onLost);
+    app.onBackendRestored.remove(onRestored);
+    publish('failed', null, formatErrorMessage(error));
+    throw error;
+  }
+};
 /** Applies website tokens to native widget skins while preserving their layout and insets. */
 export const siteUITheme = () => {
   let root = document.documentElement;

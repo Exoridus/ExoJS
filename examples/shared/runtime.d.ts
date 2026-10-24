@@ -38,6 +38,7 @@ export interface ExampleRuntimeMeta {
 declare global {
     interface Window {
         __EXAMPLE_META__?: ExampleRuntimeMeta | null;
+        __EXAMPLE_RENDERER_STATUS__?: ExampleRendererStatus;
         __EXAMPLE_PREVIEW_AUTOPLAY__?: (() => void | Promise<void>) | null;
     }
     var __EXAMPLE_META__: ExampleRuntimeMeta | null | undefined;
@@ -112,6 +113,35 @@ export interface MountControlPanelOptions {
     title?: string;
     corner?: OverlayCorner;
 }
+export interface ExampleRendererStatus {
+    requested: 'unknown' | 'auto' | 'webgl2' | 'webgpu';
+    phase: 'requested' | 'initializing' | 'active' | 'fallback' | 'failed';
+    actual: 'webgl2' | 'webgpu' | null;
+    reason: string | null;
+}
+interface RendererApplication {
+    readonly options: {
+        backend?: {
+            type?: 'auto' | 'webgl2' | 'webgpu';
+        };
+    };
+    readonly backend: {
+        readonly backendType: 'webgl2' | 'webgpu';
+    };
+    readonly capabilities?: {
+        readonly webgpuAdapter: object | null;
+    };
+    readonly onBackendLost: {
+        add(listener: () => void): unknown;
+        remove(listener: () => void): unknown;
+    };
+    readonly onBackendRestored: {
+        add(listener: () => void): unknown;
+        remove(listener: () => void): unknown;
+    };
+}
+/** Starts a sample while reporting initialized renderer state and retaining the original startup rejection. */
+export declare const startExample: (app: RendererApplication, start: () => Promise<unknown>) => Promise<void>;
 /** Applies website tokens to native widget skins while preserving their layout and insets. */
 export declare const siteUITheme: () => UITheme;
 export declare const getExampleMeta: () => ExampleRuntimeMeta;
@@ -247,3 +277,4 @@ export declare const insetAtlasFrame: <T extends {
  * and the shortcut never disagree.
  */
 export declare const demoPanel: <const C extends Record<string, DemoControlSpec>>(options: DemoPanelOptions<C>) => DemoPanel<C>;
+export {};

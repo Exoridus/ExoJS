@@ -4,7 +4,7 @@ The optional site caption and control bar share the website tokens and fit the p
 
 ## Verification
 
-The four new helper regressions failed before implementation and pass afterward. The four named helper, declaration, and source-sync test files pass with 17 tests. Example typecheck, targeted ESLint, generated JavaScript/declaration synchronization and diff whitespace checks pass.
+The four new helper regressions failed before implementation and pass afterward. The four named helper, declaration, renderer-state and research regression test files pass with 20 tests. Example typecheck, targeted ESLint, generated JavaScript/declaration synchronization and diff whitespace checks pass.
 
 Real browser checks pass in Chromium WebGL2, Chromium WebGPU and Firefox WebGL2 at 1280x720 and 512x288: animation event timing, pause/step/reset, keyboard parity, native pointer capture, text wrap/style/font failure, hidden-preview recovery, readable controls and disposal. Each environment also passes the detached default-font check. The JSON records and PNG pairs are in [evidence/foundation](evidence/foundation/). Firefox WebGPU is not certified: the available Firefox exposes no usable adapter in the earlier pilot capability probe.
 
@@ -20,3 +20,7 @@ The text wrap handle now ends above the first text row. Both pilot scenes use th
 ## Research corrections
 
 The pointer guide now converts clockwise gesture radians to counterclockwise SceneNode degrees. The retained-container diagnostic reads completed CPU frame cost in a scene-owned postFrame system, after the backend flush, and no longer attributes whole-frame timing to isolated collection or GPU time. Three regressions reproduce the former wrong rotation and zero-time measurement, then pass with the correction. Real touch hardware and comparative performance measurements remain unverified.
+
+## Renderer reporting
+
+The preview reports requested, initializing, active, fallback and failed states separately. Actual renderer text appears only after successful startup. The two pilot scenes use the shared start boundary; unsupported legacy sources are labelled as unreported rather than guessed from API presence. Real Chromium runs force a missing WebGPU adapter: auto selection starts WebGL2 and explains the adapter failure, while explicit WebGPU remains failed with no active renderer. WebGPU API presence and the probed adapter are deliberately separate inputs. Device/context loss and restoration callbacks have focused unit coverage; physical GPU device loss is not certified.

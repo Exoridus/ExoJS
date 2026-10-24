@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { choice, demoPanel, insetAtlasFrame, siteUITheme, slider, unitsPerCssPixel } from '../../examples/shared/runtime';
+import { choice, demoPanel, insetAtlasFrame, siteUITheme, slider, startExample, unitsPerCssPixel } from '../../examples/shared/runtime';
 
 afterEach(() => document.body.replaceChildren());
 
@@ -132,4 +132,72 @@ it('reuses website colours while preserving native widget geometry', () => {
   expect(theme.label.normal.background.kind).toBe('none');
   expect(theme.textFieldSurface.normal.insets).toEqual({ left: 8, top: 6, right: 8, bottom: 6 });
   getContext.mockRestore();
+});
+
+it('publishes actual renderer only after startup and diagnoses auto fallback and context loss', async () => {
+  const lost: Array<() => void> = [];
+  const restored: Array<() => void> = [];
+  const signal = (listeners: Array<() => void>) => ({
+    add: (listener: () => void) => listeners.push(listener),
+    remove: (listener: () => void) => listeners.splice(listeners.indexOf(listener), 1),
+  });
+  const app = {
+    options: { backend: { type: 'auto' as const } },
+    backend: { backendType: 'webgpu' as 'webgpu' | 'webgl2' },
+    onBackendLost: signal(lost),
+    onBackendRestored: signal(restored),
+  };
+  await startExample(app, async () => {
+    expect(window.__EXAMPLE_RENDERER_STATUS__).toMatchObject({ phase: 'initializing', requested: 'auto', actual: null });
+    app.backend.backendType = 'webgl2';
+  });
+  expect(window.__EXAMPLE_RENDERER_STATUS__).toMatchObject({
+    phase: 'fallback',
+    actual: 'webgl2',
+    reason: expect.stringContaining('original cause'),
+  });
+  lost[0]!();
+  expect(window.__EXAMPLE_RENDERER_STATUS__).toMatchObject({ phase: 'failed', actual: null });
+  restored[0]!();
+  expect(window.__EXAMPLE_RENDERER_STATUS__).toMatchObject({ phase: 'fallback', actual: 'webgl2' });
+});
+
+it('keeps a failed initialization distinct from a selected renderer', async () => {
+  const signal = { add: vi.fn(), remove: vi.fn() };
+  const app = {
+    options: { backend: { type: 'webgpu' as const } },
+    backend: { backendType: 'webgpu' as const },
+    onBackendLost: signal,
+    onBackendRestored: signal,
+  };
+  await expect(startExample(app, () => Promise.reject(new Error('No WebGPU adapter available')))).rejects.toThrow(
+    'No WebGPU adapter available',
+  );
+  expect(window.__EXAMPLE_RENDERER_STATUS__).toMatchObject({
+    phase: 'failed',
+    requested: 'webgpu',
+    actual: null,
+    reason: 'No WebGPU adapter available',
+  });
+  expect(signal.remove).toHaveBeenCalledTimes(2);
+});
+
+it('reports default auto selection and a probed missing adapter honestly', async () => {
+  const signal = { add: vi.fn(), remove: vi.fn() };
+  const app = {
+    options: {},
+    backend: { backendType: 'webgpu' as 'webgpu' | 'webgl2' },
+    capabilities: { webgpuAdapter: null },
+    onBackendLost: signal,
+    onBackendRestored: signal,
+  };
+  await startExample(app, async () => {
+    app.backend.backendType = 'webgl2';
+  });
+  expect(window.__EXAMPLE_RENDERER_STATUS__).toMatchObject({
+    requested: 'auto',
+    phase: 'fallback',
+    actual: 'webgl2',
+    reason: expect.stringContaining('No usable WebGPU adapter'),
+  });
 });

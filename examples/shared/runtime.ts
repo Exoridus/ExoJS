@@ -51,6 +51,7 @@ export interface ExampleRuntimeMeta {
 declare global {
   interface Window {
     __EXAMPLE_META__?: ExampleRuntimeMeta | null;
+    __EXAMPLE_RENDERER_STATUS__?: ExampleRendererStatus;
     __EXAMPLE_PREVIEW_AUTOPLAY__?: (() => void | Promise<void>) | null;
   }
 
@@ -125,6 +126,80 @@ export interface MountControlPanelOptions {
   title?: string;
   corner?: OverlayCorner;
 }
+
+export interface ExampleRendererStatus {
+  requested: 'unknown' | 'auto' | 'webgl2' | 'webgpu';
+  phase: 'requested' | 'initializing' | 'active' | 'fallback' | 'failed';
+  actual: 'webgl2' | 'webgpu' | null;
+  reason: string | null;
+}
+
+interface RendererApplication {
+  readonly options: { backend?: { type?: 'auto' | 'webgl2' | 'webgpu' } };
+  readonly backend: { readonly backendType: 'webgl2' | 'webgpu' };
+  readonly capabilities?: { readonly webgpuAdapter: object | null };
+  readonly onBackendLost: { add(listener: () => void): unknown; remove(listener: () => void): unknown };
+  readonly onBackendRestored: { add(listener: () => void): unknown; remove(listener: () => void): unknown };
+}
+
+/** Starts a sample while reporting initialized renderer state and retaining the original startup rejection. */
+export const startExample = async (app: RendererApplication, start: () => Promise<unknown>): Promise<void> => {
+  const requested = app.options.backend?.type ?? 'auto';
+  const attempted = app.backend.backendType;
+  let completed = false;
+  let lost = false;
+
+  const publish = (phase: ExampleRendererStatus['phase'], actual: ExampleRendererStatus['actual'], reason: string | null = null): void => {
+    const status = { requested, phase, actual, reason };
+    window.__EXAMPLE_RENDERER_STATUS__ = status;
+    window.dispatchEvent(new CustomEvent('exo-renderer-status', { detail: status }));
+  };
+
+  const active = (): void => {
+    if (!completed || lost) {
+      return;
+    }
+
+    const actual = app.backend.backendType;
+    const fallback = actual !== attempted;
+    publish(
+      fallback ? 'fallback' : 'active',
+      actual,
+      fallback
+        ? app.capabilities?.webgpuAdapter === null
+          ? `No usable WebGPU adapter was detected; auto started ${actual}.`
+          : `${attempted} initialization did not succeed; auto started ${actual}. The original cause is not exposed by the engine.`
+        : null,
+    );
+  };
+
+  const onLost = (): void => {
+    lost = true;
+    publish('failed', null, 'The renderer device or context was lost. Waiting for restoration.');
+  };
+
+  const onRestored = (): void => {
+    lost = false;
+    active();
+  };
+
+  publish('requested', null);
+  app.onBackendLost.add(onLost);
+  app.onBackendRestored.add(onRestored);
+  publish('initializing', null);
+
+  try {
+    await start();
+    completed = true;
+    active();
+  } catch (error) {
+    app.onBackendLost.remove(onLost);
+    app.onBackendRestored.remove(onRestored);
+    publish('failed', null, formatErrorMessage(error));
+
+    throw error;
+  }
+};
 
 /** Applies website tokens to native widget skins while preserving their layout and insets. */
 export const siteUITheme = (): UITheme => {

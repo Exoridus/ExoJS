@@ -39,15 +39,17 @@ export const renderRuntimeDts = (repositoryRoot: string): string => {
   const entry = path.resolve(repositoryRoot, 'examples', 'shared', 'runtime.ts');
   const program = ts.createProgram([entry], EMIT_OPTIONS);
 
-  let output: string | null = null;
+  const declarations: string[] = [];
 
   const result = program.emit(undefined, (fileName, text) => {
     if (fileName.endsWith('runtime.d.ts')) {
-      output = text;
+      declarations.push(text);
     }
   });
 
-  if (output === null) {
+  const output = declarations.at(-1);
+
+  if (output === undefined) {
     const diagnostics = ts.getPreEmitDiagnostics(program).concat(result.diagnostics);
     const detail = ts.formatDiagnostics(diagnostics, {
       getCanonicalFileName: fileName => fileName,

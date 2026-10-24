@@ -12,7 +12,7 @@ import {
   Text,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { choice, demoPanel } from '@examples/runtime';
+import { choice, demoPanel, startExample } from '@examples/runtime';
 const paragraph =
   'AnUnbrokenTokenRevealsHowWordBreakingWorks. ' +
   'ExoJS lays out real text as you move the wrap edge. Font, width and word boundaries change the rhythm of a page. ' +
@@ -230,4 +230,4 @@ const app = new Application({
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(247, 244, 235),
 });
-await app.start(TextLayoutScene);
+await startExample(app, () => app.start(TextLayoutScene));

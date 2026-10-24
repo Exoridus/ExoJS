@@ -15,7 +15,7 @@ import {
   Texture,
   Time,
 } from '@codexo/exojs';
-import { demoPanel, slider } from '@examples/runtime';
+import { demoPanel, slider, startExample } from '@examples/runtime';
 
 const FRAME_COUNT = 8;
 const REFERENCE_FPS = 8;
@@ -176,4 +176,4 @@ const app = new Application({
   clearColor: new Color(239, 244, 227),
 });
 
-await app.start(FrameAnimationScene);
+await startExample(app, () => app.start(FrameAnimationScene));

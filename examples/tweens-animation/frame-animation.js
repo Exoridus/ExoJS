@@ -14,7 +14,7 @@ import {
   Texture,
   Time,
 } from '@codexo/exojs';
-import { demoPanel, slider } from '@examples/runtime';
+import { demoPanel, slider, startExample } from '@examples/runtime';
 const FRAME_COUNT = 8;
 const REFERENCE_FPS = 8;
 class FrameAnimationScene extends Scene {
@@ -146,4 +146,4 @@ const app = new Application({
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(239, 244, 227),
 });
-await app.start(FrameAnimationScene);
+await startExample(app, () => app.start(FrameAnimationScene));
