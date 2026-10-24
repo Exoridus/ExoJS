@@ -1,7 +1,7 @@
 {
   "exampleCommit": "b44642b73dc647fac3737ad5da7024d220e4ba28",
   "files": {
-    "src/input/InputSystem.ts": "dc867540163acb997ab7a764377484573743d4b26798d5b2a27cc06b42b79633",
+    "src/input/InputSystem.ts": "f0f10245ed51b7373d028f3f982b3e81b329f591c2bbf4372a90b81cf2642ce6",
     "src/input/FocusController.ts": "797011e621918d0ff80a298c5eb79d8218723b0a2c84487a1f94268892c270d9",
     "src/input/keyboardCodes.ts": "d227ac5cc900fdc2211bd5a247f9139e735aeafebd4ce35bf80b2bad83e83d9a",
     "dist/esm/input/InputSystem.js": "8a0bb4091d585dea60cbdd16cb89f3267512b4a6f153335fb80a852e39a9233d",
