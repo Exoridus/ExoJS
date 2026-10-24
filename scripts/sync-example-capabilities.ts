@@ -16,18 +16,7 @@ import { fileURLToPath } from 'node:url';
 import sharedPrettierConfig from '@codexo/exojs-config/prettier';
 import { format as formatSource } from 'prettier';
 
-type Capability =
-  | 'webgl2'
-  | 'webgpu'
-  | 'pointer'
-  | 'keyboard'
-  | 'gamepad'
-  | 'touch'
-  | 'audio'
-  | 'fullscreen'
-  | 'vibration'
-  | 'offscreenCanvas'
-  | 'webWorkers';
+import { type Capability, deriveCapabilities } from './lib/example-capabilities';
 
 interface CatalogEntry {
   slug: string;
@@ -44,98 +33,6 @@ type Catalog = Record<string, CatalogEntry[]>;
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const examplesDir = join(repoRoot, 'examples');
 const manifestPath = join(examplesDir, 'examples.json');
-
-const AUDIO_SYMBOLS = [
-  'Sound',
-  'Music',
-  'OscillatorSound',
-  'AudioContext',
-  'AudioFilter',
-  'AudioBus',
-  'AudioListener',
-  'AudioAnalyser',
-  'BeatDetector',
-  'CompressorFilter',
-  'DuckingFilter',
-  'VocoderFilter',
-  'ReverbFilter',
-  'DelayFilter',
-  'EqualizerFilter',
-  'HighpassFilter',
-  'LowpassFilter',
-  'GranularFilter',
-  'PitchShiftFilter',
-  'ChorusFilter',
-  'WorkletFilter',
-];
-
-const deriveCapabilities = (source: string, slug: string, sectionSlug: string): Capability[] => {
-  const caps = new Set<Capability>();
-
-  if (source.includes("'@codexo/exojs/webgpu'") || source.includes('"@codexo/exojs/webgpu"')) {
-    caps.add('webgpu');
-  }
-
-  if (/backend:\s*\{\s*type:\s*['"]webgpu['"]/.test(source) || /backend:\s*['"]webgpu['"]/.test(source)) {
-    caps.add('webgpu');
-  }
-
-  const audioPattern = new RegExp(`\\b(${AUDIO_SYMBOLS.join('|')})\\b`);
-
-  if (audioPattern.test(source)) {
-    caps.add('audio');
-  }
-
-  if (/\bKeyboard\.[A-Z]|onKey(Down|Up|Press)/.test(source)) {
-    caps.add('keyboard');
-  }
-
-  if (/onPointer(Down|Up|Move|Tap|Cancel)/.test(source)) {
-    caps.add('pointer');
-  }
-
-  // Match Gamepad-related symbols but avoid false positives from things like
-  // "GamepadProfile" on type imports - any usage signals the example expects
-  // a controller.
-  if (/\bGamepad[A-Za-z]*\b/.test(source)) {
-    caps.add('gamepad');
-  }
-
-  // Pointer events handle touch on modern browsers, so explicit `touch`
-  // declaration is reserved for multi-touch demos that genuinely need
-  // a touch device.
-  if (slug === 'multitouch' || /\bonTouch|maxTouchPoints/.test(source)) {
-    caps.add('touch');
-  }
-
-  // Section-specific implicit requirements (chapter author asserts the
-  // example chapter implies the capability even when source doesn't mention
-  // it directly).
-  if (sectionSlug === 'spatial-audio') {
-    caps.add('audio');
-  }
-
-  if (/\bcreateWorkerSampledChunkSource\(|\bnew Worker\(/.test(source)) {
-    caps.add('webWorkers');
-  }
-
-  // Stable order for diff readability.
-  const order: Capability[] = [
-    'webgl2',
-    'webgpu',
-    'pointer',
-    'keyboard',
-    'gamepad',
-    'touch',
-    'audio',
-    'fullscreen',
-    'vibration',
-    'offscreenCanvas',
-    'webWorkers',
-  ];
-
-  return order.filter(c => caps.has(c));
-};
 
 const syncCapabilities = async (): Promise<void> => {
   const raw = readFileSync(manifestPath, 'utf8');
