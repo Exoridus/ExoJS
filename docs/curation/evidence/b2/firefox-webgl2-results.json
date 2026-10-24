@@ -1,0 +1,156 @@
+{
+  "browser": "firefox",
+  "version": "155.0",
+  "backend": "webgl2",
+  "hardware": {
+    "touch": "NOT_TESTED",
+    "gamepad": "NOT_TESTED",
+    "ime": "NOT_TESTED",
+    "mobileKeyboard": "NOT_TESTED",
+    "audio": "NOT_APPLICABLE: silent examples"
+  },
+  "records": [
+    {
+      "example": "getting-started/hello-world",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "key rotates over time; character click freezes rotation; Space resumes",
+        "application teardown removes owned controls and caption"
+      ]
+    },
+    {
+      "example": "getting-started/hello-world",
+      "size": "512x288",
+      "status": "FAIL",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\ntrue !== false\n",
+      "console": []
+    },
+    {
+      "example": "application-scenes/multiple-scenes",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "Enter starts; lifecycle includes load/init/update/destroy; five full return/start cycles have one change each",
+        "application teardown removes owned controls and caption"
+      ]
+    },
+    {
+      "example": "application-scenes/multiple-scenes",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "Enter starts; lifecycle includes load/init/update/destroy; five full return/start cycles have one change each",
+        "application teardown removes owned controls and caption"
+      ]
+    },
+    {
+      "example": "application-scenes/loading-screen",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "deliberate missing file affects one named row; retry increments only failed request; fresh Load resets queue",
+        "application teardown removes owned controls and caption"
+      ]
+    },
+    {
+      "example": "application-scenes/loading-screen",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "deliberate missing file affects one named row; retry increments only failed request; fresh Load resets queue",
+        "application teardown removes owned controls and caption"
+      ]
+    },
+    {
+      "example": "tilemap/level-loading-and-ownership",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "Harbor loads; pending Workshop cancel preserves Harbor; switch leaves one room; unload releases all room ownership",
+        "application teardown removes owned controls and caption"
+      ]
+    },
+    {
+      "example": "tilemap/level-loading-and-ownership",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "Harbor loads; pending Workshop cancel preserves Harbor; switch leaves one room; unload releases all room ownership",
+        "application teardown removes owned controls and caption"
+      ]
+    },
+    {
+      "example": "showcase/orb-dodge",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "Arrow movement; P freezes gameplay while application blur finishes; pointer resumes/restarts; deterministic collision fixtures award score then Game Over; restart clears score",
+        "application teardown removes owned controls and caption"
+      ]
+    },
+    {
+      "example": "showcase/orb-dodge",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "Arrow movement; P freezes gameplay while application blur finishes; pointer resumes/restarts; deterministic collision fixtures award score then Game Over; restart clears score",
+        "application teardown removes owned controls and caption"
+      ]
+    },
+    {
+      "example": "ui/settings-menu",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "keyboard only: Tab/Shift-Tab traverses all widgets; size/motion/choice/reset work; fixed HUD score and health buttons work while world rotates",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ]
+    },
+    {
+      "example": "ui/settings-menu",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "keyboard only: Tab/Shift-Tab traverses all widgets; size/motion/choice/reset work; fixed HUD score and health buttons work while world rotates",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ]
+    },
+    {
+      "example": "ui/text-entry-and-scrolling",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "keyboard only: name entry/Enter moves focus, note editing consumes WASD/arrows, Tab submits once, new row becomes visible via scrollTo",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ]
+    },
+    {
+      "example": "ui/text-entry-and-scrolling",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "keyboard only: name entry/Enter moves focus, note editing consumes WASD/arrows, Tab submits once, new row becomes visible via scrollTo",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ]
+    },
+    {
+      "example": "showcase/dialog-system",
+      "size": "1280x720",
+      "status": "FAIL",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nfalse !== true\n",
+      "console": []
+    },
+    {
+      "example": "showcase/dialog-system",
+      "size": "512x288",
+      "status": "FAIL",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nfalse !== true\n",
+      "console": []
+    }
+  ]
+}

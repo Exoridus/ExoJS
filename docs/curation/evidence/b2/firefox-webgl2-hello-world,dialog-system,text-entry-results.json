@@ -1,0 +1,72 @@
+{
+  "browser": "firefox",
+  "version": "155.0",
+  "backend": "webgl2",
+  "hardware": {
+    "touch": "NOT_TESTED",
+    "gamepad": "NOT_TESTED",
+    "ime": "NOT_TESTED",
+    "mobileKeyboard": "NOT_TESTED",
+    "audio": "NOT_APPLICABLE: silent examples"
+  },
+  "records": [
+    {
+      "example": "getting-started/hello-world",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "key rotates over time; character click freezes rotation; Space resumes",
+        "application teardown removes owned controls and caption"
+      ]
+    },
+    {
+      "example": "getting-started/hello-world",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "key rotates over time; character click freezes rotation; Space resumes",
+        "application teardown removes owned controls and caption"
+      ]
+    },
+    {
+      "example": "ui/text-entry-and-scrolling",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "keyboard only: name entry/Enter moves focus, note editing consumes WASD/arrows, Tab submits once, new row becomes visible via scrollTo",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ]
+    },
+    {
+      "example": "ui/text-entry-and-scrolling",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "keyboard only: name entry/Enter moves focus, note editing consumes WASD/arrows, Tab submits once, new row becomes visible via scrollTo",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ]
+    },
+    {
+      "example": "showcase/dialog-system",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "Space reveals then advances one line; keyboard choices reach both distinct consequences; pointer Continue reveals then restarts; no duplicate action",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ]
+    },
+    {
+      "example": "showcase/dialog-system",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "Space reveals then advances one line; keyboard choices reach both distinct consequences; pointer Continue reveals then restarts; no duplicate action",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ]
+    }
+  ]
+}

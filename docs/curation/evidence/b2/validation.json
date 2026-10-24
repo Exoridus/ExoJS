@@ -1,0 +1,74 @@
+{
+  "checks": [
+    {
+      "command": "pnpm exec vitest run test/examples/curation-b2.test.ts --project exojs",
+      "exit": 0,
+      "testsPassed": 4
+    },
+    {
+      "command": "same named test with retry-all and double-advance regression probes",
+      "exit": 1,
+      "testsFailed": 2,
+      "restoredSourceRetestExit": 0
+    },
+    {
+      "command": "pnpm typecheck:examples",
+      "exit": 0
+    },
+    {
+      "command": "targeted eslint over eight example sources, named test and B2 browser runner",
+      "exit": 0
+    },
+    {
+      "command": "pnpm examples:sync:check",
+      "exit": 0
+    },
+    {
+      "command": "pnpm lanes --base 84d7dbe4fa63f7a7e45b65f2f5bf49cefac95d46",
+      "exit": 0
+    },
+    {
+      "command": "git diff --check",
+      "exit": 0
+    },
+    {
+      "command": "Chromium webgl2 full B2 acceptance",
+      "exit": 1,
+      "reason": "compact settings rapid Shift+Tab"
+    },
+    {
+      "command": "Chromium webgpu full B2 acceptance",
+      "exit": 1,
+      "reason": "compact settings rapid Shift+Tab"
+    },
+    {
+      "command": "Firefox webgl2 full B2 acceptance",
+      "exit": 1,
+      "reason": "pointer/reveal assumptions corrected in focused rerun"
+    },
+    {
+      "command": "Chromium webgl2 --only text-entry",
+      "exit": 0,
+      "casesPassed": 2
+    },
+    {
+      "command": "Chromium webgpu --only text-entry",
+      "exit": 0,
+      "casesPassed": 2
+    },
+    {
+      "command": "Firefox webgl2 --only 'hello-world,dialog-system,text-entry'",
+      "exit": 0,
+      "casesPassed": 6
+    }
+  ],
+  "prePush": "NOT_RUN: publishing and serialized integration gates are owned by Lead",
+  "hardware": {
+    "touch": "NOT_TESTED",
+    "gamepad": "NOT_TESTED",
+    "ime": "NOT_TESTED",
+    "mobileKeyboard": "NOT_TESTED"
+  },
+  "audio": "NOT_APPLICABLE: all eight curated examples are silent",
+  "newArtM1M4": "BLOCKED: unavailable; existing Kenney assets used"
+}

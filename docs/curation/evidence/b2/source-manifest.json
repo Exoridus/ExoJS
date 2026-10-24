@@ -1,0 +1,24 @@
+{
+  "foundation": "f892a5f3a39767960c5364e77452b214a591c863",
+  "bundleSha256": "d2d854de80958cd7a5205f87d6858bb627e81d0ba35523a7def609fa06f9f6d9",
+  "files": {
+    "examples/getting-started/hello-world.ts": "0d2ed8b769b74af49eae8c556ee1c9075bd160a4bfcd020dc3a771ce1f050906",
+    "examples/getting-started/hello-world.js": "1daa83f2611a1ec681e3a0161e0d84795a94ed0915fb7549e9ea9efba0b378fb",
+    "examples/application-scenes/multiple-scenes.ts": "1572214a2228ea8442661a678bffd7825b942db022f5e56aa9c0c1255f62e887",
+    "examples/application-scenes/multiple-scenes.js": "155a26977617148a6df55e3eb89306002382c0bbadae888fffb6dbdb4ef49d98",
+    "examples/application-scenes/loading-screen.ts": "8a3d209eb381c141393e64ff4e67e20a9bb514d8702cc7a9f488f3bd31aae4c1",
+    "examples/application-scenes/loading-screen.js": "f9255ceba3ef5a8884f332d1337f0d5a11489778c09ec7914a0265d87527ff8e",
+    "examples/tilemap/level-loading-and-ownership.ts": "b4f95e107de0428fe813cf6b1d70481b1e5d872b4f5223c3d15c92dd58f1891d",
+    "examples/tilemap/level-loading-and-ownership.js": "2c810d186c81df2f3bedaf616043f04714d9783b564d197e85f2ee12a56b425e",
+    "examples/showcase/orb-dodge.ts": "9fceb56d0cf6d4405a7a3eabd1018d0dac9523ee9e90e685013b23e739619c67",
+    "examples/showcase/orb-dodge.js": "51b8f429daf99ef9b6a674fad92e76ba06927958ab2b9eb2ed587917a6b8407f",
+    "examples/ui/settings-menu.ts": "b496f2f08bada5119b22ad91ec82396b54416e530104f38ea7ce888f3312a614",
+    "examples/ui/settings-menu.js": "cee082ee092e907f1597dc5ca20702d016c2adb3c9d4d0edb53e31d0f9bcbd56",
+    "examples/ui/text-entry-and-scrolling.ts": "5e45f2b48849fa8ce6a9872b112d4a73770c880da7e75b06d6800fd9d4355136",
+    "examples/ui/text-entry-and-scrolling.js": "313e15ed15ecbf6e3706cce7a7fa619c4ce00726b6882c3667cf0afdedecc749",
+    "examples/showcase/dialog-system.ts": "f84bb07e041b124e9d8a6195c79f784e85fc575749152929f8b16cf2f03c49a5",
+    "examples/showcase/dialog-system.js": "223fd93f7f19feb02208d3a5adb2c7c8fbe5f3b8c774c02bc6398eb9796e61bb",
+    "site/scripts/curation-b2-e2e.ts": "50afbf2afb48379038d68a4e56c7ea8921e5024feb8227daa56a40d9049af54d",
+    "test/examples/curation-b2.test.ts": "1c1a4355f4b8d9000fb407e74931b6a2ff7739966e0250f84b0c68a8af617185"
+  }
+}

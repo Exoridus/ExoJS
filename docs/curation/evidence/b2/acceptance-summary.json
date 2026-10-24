@@ -1,0 +1,603 @@
+{
+  "status": "BLOCKED_ON_COMPACT_CHROMIUM_SHIFT_TAB",
+  "passed": 46,
+  "total": 48,
+  "sourceReports": [
+    "chromium-webgl2-results.json",
+    "chromium-webgpu-results.json",
+    "firefox-webgl2-results.json",
+    "chromium-webgl2-text-entry-results.json",
+    "chromium-webgpu-text-entry-results.json",
+    "firefox-webgl2-hello-world,dialog-system,text-entry-results.json"
+  ],
+  "cases": [
+    {
+      "browser": "chromium",
+      "backend": "webgl2",
+      "example": "getting-started/hello-world",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "key rotates over time; character click freezes rotation; Space resumes",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgl2",
+      "example": "getting-started/hello-world",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "key rotates over time; character click freezes rotation; Space resumes",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgl2",
+      "example": "application-scenes/multiple-scenes",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "Enter starts; lifecycle includes load/init/update/destroy; five full return/start cycles have one change each",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgl2",
+      "example": "application-scenes/multiple-scenes",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "Enter starts; lifecycle includes load/init/update/destroy; five full return/start cycles have one change each",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgl2",
+      "example": "application-scenes/loading-screen",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "deliberate missing file affects one named row; retry increments only failed request; fresh Load resets queue",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgl2",
+      "example": "application-scenes/loading-screen",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "deliberate missing file affects one named row; retry increments only failed request; fresh Load resets queue",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgl2",
+      "example": "tilemap/level-loading-and-ownership",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "Harbor loads; pending Workshop cancel preserves Harbor; switch leaves one room; unload releases all room ownership",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgl2",
+      "example": "tilemap/level-loading-and-ownership",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "Harbor loads; pending Workshop cancel preserves Harbor; switch leaves one room; unload releases all room ownership",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgl2",
+      "example": "showcase/orb-dodge",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "Arrow movement; P freezes gameplay while application blur finishes; pointer resumes/restarts; deterministic collision fixtures award score then Game Over; restart clears score",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgl2",
+      "example": "showcase/orb-dodge",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "Arrow movement; P freezes gameplay while application blur finishes; pointer resumes/restarts; deterministic collision fixtures award score then Game Over; restart clears score",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgl2",
+      "example": "ui/settings-menu",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "keyboard only: Tab/Shift-Tab traverses all widgets; size/motion/choice/reset work; fixed HUD score and health buttons work while world rotates",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgl2",
+      "example": "ui/settings-menu",
+      "size": "512x288",
+      "status": "FAIL",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'Slider' !== 'Button'\n",
+      "console": [],
+      "report": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgl2",
+      "example": "ui/text-entry-and-scrolling",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "keyboard only: name entry/Enter moves focus, note editing consumes WASD/arrows, Tab submits once, new row becomes visible via scrollTo",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgl2-text-entry-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgl2",
+      "example": "ui/text-entry-and-scrolling",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "keyboard only: name entry/Enter moves focus, note editing consumes WASD/arrows, Tab submits once, new row becomes visible via scrollTo",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgl2-text-entry-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgl2",
+      "example": "showcase/dialog-system",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "Space reveals then advances one line; keyboard choices reach both distinct consequences; pointer Continue reveals then restarts; no duplicate action",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgl2",
+      "example": "showcase/dialog-system",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "Space reveals then advances one line; keyboard choices reach both distinct consequences; pointer Continue reveals then restarts; no duplicate action",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgpu",
+      "example": "getting-started/hello-world",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "key rotates over time; character click freezes rotation; Space resumes",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgpu-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgpu",
+      "example": "getting-started/hello-world",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "key rotates over time; character click freezes rotation; Space resumes",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgpu-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgpu",
+      "example": "application-scenes/multiple-scenes",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "Enter starts; lifecycle includes load/init/update/destroy; five full return/start cycles have one change each",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgpu-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgpu",
+      "example": "application-scenes/multiple-scenes",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "Enter starts; lifecycle includes load/init/update/destroy; five full return/start cycles have one change each",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgpu-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgpu",
+      "example": "application-scenes/loading-screen",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "deliberate missing file affects one named row; retry increments only failed request; fresh Load resets queue",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgpu-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgpu",
+      "example": "application-scenes/loading-screen",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "deliberate missing file affects one named row; retry increments only failed request; fresh Load resets queue",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgpu-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgpu",
+      "example": "tilemap/level-loading-and-ownership",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "Harbor loads; pending Workshop cancel preserves Harbor; switch leaves one room; unload releases all room ownership",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgpu-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgpu",
+      "example": "tilemap/level-loading-and-ownership",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "Harbor loads; pending Workshop cancel preserves Harbor; switch leaves one room; unload releases all room ownership",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgpu-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgpu",
+      "example": "showcase/orb-dodge",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "Arrow movement; P freezes gameplay while application blur finishes; pointer resumes/restarts; deterministic collision fixtures award score then Game Over; restart clears score",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgpu-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgpu",
+      "example": "showcase/orb-dodge",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "Arrow movement; P freezes gameplay while application blur finishes; pointer resumes/restarts; deterministic collision fixtures award score then Game Over; restart clears score",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgpu-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgpu",
+      "example": "ui/settings-menu",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "keyboard only: Tab/Shift-Tab traverses all widgets; size/motion/choice/reset work; fixed HUD score and health buttons work while world rotates",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgpu-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgpu",
+      "example": "ui/settings-menu",
+      "size": "512x288",
+      "status": "FAIL",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'Slider' !== 'Button'\n",
+      "console": [],
+      "report": "chromium-webgpu-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgpu",
+      "example": "ui/text-entry-and-scrolling",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "keyboard only: name entry/Enter moves focus, note editing consumes WASD/arrows, Tab submits once, new row becomes visible via scrollTo",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgpu-text-entry-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgpu",
+      "example": "ui/text-entry-and-scrolling",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "keyboard only: name entry/Enter moves focus, note editing consumes WASD/arrows, Tab submits once, new row becomes visible via scrollTo",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgpu-text-entry-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgpu",
+      "example": "showcase/dialog-system",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "Space reveals then advances one line; keyboard choices reach both distinct consequences; pointer Continue reveals then restarts; no duplicate action",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgpu-results.json"
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgpu",
+      "example": "showcase/dialog-system",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "Space reveals then advances one line; keyboard choices reach both distinct consequences; pointer Continue reveals then restarts; no duplicate action",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "chromium-webgpu-results.json"
+    },
+    {
+      "browser": "firefox",
+      "backend": "webgl2",
+      "example": "getting-started/hello-world",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "key rotates over time; character click freezes rotation; Space resumes",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "firefox-webgl2-hello-world,dialog-system,text-entry-results.json"
+    },
+    {
+      "browser": "firefox",
+      "backend": "webgl2",
+      "example": "getting-started/hello-world",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "key rotates over time; character click freezes rotation; Space resumes",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "firefox-webgl2-hello-world,dialog-system,text-entry-results.json"
+    },
+    {
+      "browser": "firefox",
+      "backend": "webgl2",
+      "example": "application-scenes/multiple-scenes",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "Enter starts; lifecycle includes load/init/update/destroy; five full return/start cycles have one change each",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "firefox-webgl2-results.json"
+    },
+    {
+      "browser": "firefox",
+      "backend": "webgl2",
+      "example": "application-scenes/multiple-scenes",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "Enter starts; lifecycle includes load/init/update/destroy; five full return/start cycles have one change each",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "firefox-webgl2-results.json"
+    },
+    {
+      "browser": "firefox",
+      "backend": "webgl2",
+      "example": "application-scenes/loading-screen",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "deliberate missing file affects one named row; retry increments only failed request; fresh Load resets queue",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "firefox-webgl2-results.json"
+    },
+    {
+      "browser": "firefox",
+      "backend": "webgl2",
+      "example": "application-scenes/loading-screen",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "deliberate missing file affects one named row; retry increments only failed request; fresh Load resets queue",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "firefox-webgl2-results.json"
+    },
+    {
+      "browser": "firefox",
+      "backend": "webgl2",
+      "example": "tilemap/level-loading-and-ownership",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "Harbor loads; pending Workshop cancel preserves Harbor; switch leaves one room; unload releases all room ownership",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "firefox-webgl2-results.json"
+    },
+    {
+      "browser": "firefox",
+      "backend": "webgl2",
+      "example": "tilemap/level-loading-and-ownership",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "Harbor loads; pending Workshop cancel preserves Harbor; switch leaves one room; unload releases all room ownership",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "firefox-webgl2-results.json"
+    },
+    {
+      "browser": "firefox",
+      "backend": "webgl2",
+      "example": "showcase/orb-dodge",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "Arrow movement; P freezes gameplay while application blur finishes; pointer resumes/restarts; deterministic collision fixtures award score then Game Over; restart clears score",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "firefox-webgl2-results.json"
+    },
+    {
+      "browser": "firefox",
+      "backend": "webgl2",
+      "example": "showcase/orb-dodge",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "Arrow movement; P freezes gameplay while application blur finishes; pointer resumes/restarts; deterministic collision fixtures award score then Game Over; restart clears score",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "firefox-webgl2-results.json"
+    },
+    {
+      "browser": "firefox",
+      "backend": "webgl2",
+      "example": "ui/settings-menu",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "keyboard only: Tab/Shift-Tab traverses all widgets; size/motion/choice/reset work; fixed HUD score and health buttons work while world rotates",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "firefox-webgl2-results.json"
+    },
+    {
+      "browser": "firefox",
+      "backend": "webgl2",
+      "example": "ui/settings-menu",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "keyboard only: Tab/Shift-Tab traverses all widgets; size/motion/choice/reset work; fixed HUD score and health buttons work while world rotates",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "firefox-webgl2-results.json"
+    },
+    {
+      "browser": "firefox",
+      "backend": "webgl2",
+      "example": "ui/text-entry-and-scrolling",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "keyboard only: name entry/Enter moves focus, note editing consumes WASD/arrows, Tab submits once, new row becomes visible via scrollTo",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "firefox-webgl2-hello-world,dialog-system,text-entry-results.json"
+    },
+    {
+      "browser": "firefox",
+      "backend": "webgl2",
+      "example": "ui/text-entry-and-scrolling",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "keyboard only: name entry/Enter moves focus, note editing consumes WASD/arrows, Tab submits once, new row becomes visible via scrollTo",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "firefox-webgl2-hello-world,dialog-system,text-entry-results.json"
+    },
+    {
+      "browser": "firefox",
+      "backend": "webgl2",
+      "example": "showcase/dialog-system",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "Space reveals then advances one line; keyboard choices reach both distinct consequences; pointer Continue reveals then restarts; no duplicate action",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "firefox-webgl2-hello-world,dialog-system,text-entry-results.json"
+    },
+    {
+      "browser": "firefox",
+      "backend": "webgl2",
+      "example": "showcase/dialog-system",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "Space reveals then advances one line; keyboard choices reach both distinct consequences; pointer Continue reveals then restarts; no duplicate action",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ],
+      "report": "firefox-webgl2-hello-world,dialog-system,text-entry-results.json"
+    }
+  ]
+}

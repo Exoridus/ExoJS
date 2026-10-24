@@ -1,0 +1,31 @@
+{
+  "browser": "chromium",
+  "version": "153.0.8010.12",
+  "backend": "webgl2",
+  "hardware": {
+    "touch": "NOT_TESTED",
+    "gamepad": "NOT_TESTED",
+    "ime": "NOT_TESTED",
+    "mobileKeyboard": "NOT_TESTED",
+    "audio": "NOT_APPLICABLE: silent examples"
+  },
+  "records": [
+    {
+      "example": "ui/text-entry-and-scrolling",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "keyboard only: name entry/Enter moves focus, note editing consumes WASD/arrows, Tab submits once, new row becomes visible via scrollTo",
+        "native visible controls measured at >=32 CSS-pixel height and button labels >=14 CSS pixels",
+        "application teardown removes owned controls and caption"
+      ]
+    },
+    {
+      "example": "ui/text-entry-and-scrolling",
+      "size": "512x288",
+      "status": "FAIL",
+      "error": "AssertionError [ERR_ASSERTION]: [{\"name\":\"Button\",\"height\":42.5,\"bottom\":299,\"font\":14},{\"name\":\"TextArea\",\"height\":58,\"bottom\":262},{\"name\":\"TextInput\",\"height\":32,\"bottom\":161}]",
+      "console": []
+    }
+  ]
+}

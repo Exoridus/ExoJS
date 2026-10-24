@@ -59,7 +59,8 @@ class LevelOwnershipScene extends Scene {
   private node: TileMapNode | null = null;
   private activeId: string | null = null;
   private pending: { readonly id: string } | null = null;
-  private readonly roomLabel = new Text('No room loaded', { fillColor: new Color(31, 49, 54), fontSize: 34 });
+  private readonly roomLabel = new Text('No room loaded', { fillColor: new Color(236, 239, 242), fontSize: 34 });
+  private readonly ownership = new Text('', { fillColor: new Color(236, 239, 242) });
   private panel!: ReturnType<typeof demoPanel>;
 
   override init(): void {
@@ -74,14 +75,13 @@ class LevelOwnershipScene extends Scene {
       },
     });
     this.panel = demoPanel({
-      title: 'Rooms',
+      layout: 'bar',
+      title: 'Room Loading and Asset Ownership',
+      hint: 'Optional advanced: map and atlas claims. A 0.75 s transition delay makes Cancel observable.',
       controls: {},
       actions: {
-        'Enter Harbor': () => {
-          void this.enter('harbor');
-        },
-        'Enter Workshop': () => {
-          void this.enter('workshop');
+        'Go to other room': () => {
+          void this.enter(this.activeId === 'harbor' ? 'workshop' : 'harbor');
         },
         'Cancel pending': () => this.cancelPending(),
         'Unload room': () => this.unloadActive(),
@@ -165,7 +165,15 @@ class LevelOwnershipScene extends Scene {
   }
 
   private describeResidency(): string {
-    const atlas = this.app.loader.inspect().find(row => row.aliases.some(alias => alias.includes('mapPack_tilesheet')));
+    const rows = this.app.loader.inspect();
+    const atlas = rows.find(row => row.aliases.some(alias => alias.includes('mapPack_tilesheet')));
+    this.ownership.text = `Shared atlas: ${atlas?.claims ?? 0} claim(s)\n${Object.entries(roomPath)
+      .map(([id, path]) => {
+        const room = rows.find(row => row.aliases.some(alias => alias.includes(path)));
+
+        return `${world.getLevel(id)?.name} map: ${room?.claims ?? 0} claim(s)`;
+      })
+      .join('\n')}`;
 
     return `${this.runtime.levels.length} live room(s), shared atlas ${atlas?.claims ?? 0} claim(s)`;
   }
@@ -175,7 +183,19 @@ class LevelOwnershipScene extends Scene {
       context.render(this.node);
     }
 
+    const { scale: k, width, contentHeight, compact } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    this.roomLabel.style.fontSize = 18 * k;
+    this.roomLabel.setPosition(16 * k, 12 * k);
+    this.ownership.style.fontSize = 14 * k;
+    this.ownership.setPosition((compact ? 16 : width * 0.64) * k, (compact ? contentHeight - 76 : 70) * k);
+
+    if (this.node) {
+      this.node.setPosition(0, 42 * k);
+      this.node.setScale(Math.min((compact ? width : width * 0.61) / 1280, Math.max(30, contentHeight - (compact ? 130 : 60)) / 768) * k);
+    }
+
     context.render(this.roomLabel);
+    context.render(this.ownership);
   }
 
   override destroy(): void {
@@ -183,6 +203,7 @@ class LevelOwnershipScene extends Scene {
     this.node?.destroy();
     this.runtime?.destroy();
     this.roomLabel.destroy();
+    this.ownership.destroy();
     this.panel?.dispose();
     super.destroy();
   }

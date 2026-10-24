@@ -1,4 +1,20 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, Text } from '@codexo/exojs';
+import {
+  ActionMap,
+  Application,
+  ButtonAction,
+  Color,
+  FixedResolutionCanvasSizing,
+  GamepadButton,
+  Graphics,
+  Keyboard,
+  PhasedSceneTransition,
+  type RenderingContext,
+  Scene,
+  type SceneTransitionPhaseContext,
+  type SceneTransitionPhaseRequirements,
+  Text,
+} from '@codexo/exojs';
+import { demoPanel } from '@examples/runtime';
 
 const history: string[] = [];
 
@@ -10,104 +26,118 @@ const record = (event: string): void => {
   }
 };
 
-const makeReadout = (width: number): Text =>
-  new Text('', { fillColor: Color.white, fontSize: 19, align: 'center' }).setAnchor(0.5, 0).setPosition(width / 2, 390);
+class BarWipeTransition extends PhasedSceneTransition<Graphics[]> {
+  protected override getPhaseRequirements(): SceneTransitionPhaseRequirements {
+    return { outgoingFrame: 'none', currentFrame: 'direct' };
+  }
 
-const makeBackground = (width: number, height: number, color: Color): Graphics => {
-  const background = new Graphics();
-  background.fillColor = color;
-  background.drawRectangle(0, 0, width, height);
+  protected override createPhaseState(): Graphics[] {
+    return [0, 1].map(() => {
+      const bar = new Graphics();
+      bar.fillColor = new Color(18, 24, 29);
+      bar.drawRectangle(0, 0, 1, 1);
 
-  return background;
-};
+      return bar;
+    });
+  }
 
-class MenuScene extends Scene {
-  private background!: Graphics;
+  protected override destroyPhaseState(bars: Graphics[]): void {
+    bars.forEach(bar => bar.destroy());
+  }
+
+  protected override enter(context: SceneTransitionPhaseContext, bars: Graphics[]): void {
+    const view = context.rendering.screenView;
+    const height = (view.height * (1 - context.presence)) / 2;
+    bars[0]!.setPosition(0, 0).setScale(view.width, height);
+    bars[1]!.setPosition(0, view.height - height).setScale(view.width, height);
+    bars.forEach(bar => context.rendering.render(bar, { view }));
+  }
+
+  protected override exit(context: SceneTransitionPhaseContext, bars: Graphics[]): void {
+    this.enter(context, bars);
+  }
+}
+const wipe = new BarWipeTransition();
+
+class LifecycleScene extends Scene {
+  protected sceneName = '';
   private title!: Text;
   private readout!: Text;
+  private panel!: ReturnType<typeof demoPanel>;
   private updates = 0;
   private draws = 0;
+  private changing = false;
+  private readonly actions = new ActionMap({
+    start: new ButtonAction([Keyboard.Enter, Keyboard.Space, GamepadButton.South]),
+    back: new ButtonAction([Keyboard.Escape, GamepadButton.East]),
+  });
 
-  override async load(): Promise<void> {
-    record('Menu: load');
+  override load(): void {
+    record(`${this.sceneName}: load`);
   }
 
   override init(): void {
-    record('Menu: init');
-    this.onActivate.add(() => record('Menu: activate'));
-    this.background = makeBackground(this.app.width, this.app.height, new Color(18, 38, 72));
-    this.title = new Text('MENU\nSpace: start game', { align: 'center', fillColor: Color.white, fontSize: 36, fontWeight: 'bold' });
-    this.title.setAnchor(0.5).setPosition(this.app.width / 2, 220);
-    this.readout = makeReadout(this.app.width);
-    this.inputs.onTrigger(Keyboard.Space, () => void this.app.scenes.change(GameScene));
+    record(`${this.sceneName}: init`);
+    this.onActivate.add(() => record(`${this.sceneName}: activate`));
+    this.title = this.track(new Text(this.sceneName, { fillColor: Color.white, fontWeight: 'bold' }));
+    this.readout = this.track(new Text('', { fillColor: new Color(168, 175, 181) }));
+    this.panel = demoPanel({
+      layout: 'bar',
+      title: 'Scene Changes and Transitions',
+      controls: {},
+      hint: 'Enter / South: start; Esc / East: back. Each switch closes the bars once.',
+      actions: this.sceneName === 'Menu' ? { Start: () => this.change() } : { Back: () => this.change() },
+    });
+    this.inputs.attach(this.actions);
+    this.app.clearColor.set(this.sceneName === 'Menu' ? 26 : 22, this.sceneName === 'Menu' ? 43 : 58, 48);
+  }
+
+  private change(): void {
+    if (this.changing) {
+      return;
+    }
+
+    this.changing = true;
+    void this.app.scenes.change(this.sceneName === 'Menu' ? GameScene : MenuScene, { transition: wipe });
   }
 
   override update(): void {
-    this.updates++;
+    if (this.updates++ === 0) {
+      record(`${this.sceneName}: update`);
+    }
+
+    if ((this.sceneName === 'Menu' ? this.actions.start : this.actions.back).pressed) {
+      this.change();
+    }
   }
 
   override draw(context: RenderingContext): void {
-    this.draws++;
-    this.readout.text = `Menu update ${this.updates} · draw ${this.draws}\n${history.join('\n')}`;
-    context.render(this.background);
+    const { scale: k, width, compact } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    this.title.style.fontSize = (compact ? 30 : 48) * k;
+    this.title.setPosition(24 * k, 50 * k);
+    this.readout.style.fontSize = 14 * k;
+    this.readout.text = `Update ${this.updates} | draw ${++this.draws}\n${history.join('\n')}`;
+    this.readout.setPosition((compact ? width * 0.47 : width * 0.62) * k, 28 * k);
     context.render(this.title);
     context.render(this.readout);
   }
 
   override destroy(): void {
-    record('Menu: destroy');
+    record(`${this.sceneName}: destroy`);
+    this.panel?.dispose();
     super.destroy();
   }
 }
-
-class GameScene extends Scene {
-  private background!: Graphics;
-  private title!: Text;
-  private readout!: Text;
-  private updates = 0;
-  private draws = 0;
-
-  override async load(): Promise<void> {
-    record('Game: load');
-  }
-
-  override init(): void {
-    record('Game: init');
-    this.onActivate.add(() => record('Game: activate'));
-    this.background = makeBackground(this.app.width, this.app.height, new Color(24, 72, 42));
-    this.title = new Text('GAME\nEsc: return to menu', { align: 'center', fillColor: Color.white, fontSize: 36, fontWeight: 'bold' });
-    this.title.setAnchor(0.5).setPosition(this.app.width / 2, 220);
-    this.readout = makeReadout(this.app.width);
-    this.inputs.onTrigger(Keyboard.Escape, () => void this.app.scenes.change(MenuScene));
-  }
-
-  override update(): void {
-    this.updates++;
-  }
-
-  override draw(context: RenderingContext): void {
-    this.draws++;
-    this.readout.text = `Game update ${this.updates} · draw ${this.draws}\n${history.join('\n')}`;
-    context.render(this.background);
-    context.render(this.title);
-    context.render(this.readout);
-  }
-
-  override destroy(): void {
-    record('Game: destroy');
-    super.destroy();
-  }
+class MenuScene extends LifecycleScene {
+  protected override sceneName = 'Menu';
+}
+class GameScene extends LifecycleScene {
+  protected override sceneName = 'Game';
 }
 
 const app = new Application({
   scenes: { MenuScene, GameScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: Color.black,
 });
-
 await app.start(MenuScene);
