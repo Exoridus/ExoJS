@@ -180,6 +180,8 @@ export declare const choice: <const T extends string>(label: string, options: re
 export interface DemoPanelOptions<C extends Record<string, DemoControlSpec>> {
     title?: string;
     corner?: OverlayCorner;
+    /** A full-width control strip with native selects and CSS-pixel sizing. */
+    layout?: 'bar';
     controls: C;
     /** Buttons below the controls, in order. */
     actions?: Record<string, () => void>;
@@ -201,6 +203,10 @@ export interface DemoPanel<C extends Record<string, DemoControlSpec>> {
     status(text: string): void;
     dispose(): void;
 }
+/** Includes the outer Playground iframe transform when measuring displayed pixels. */
+export declare const unitsPerCssPixel: (app: {
+    height: number;
+}, host: HTMLElement) => number;
 /**
  * Mounts a small control panel from a declarative control list and keeps one
  * value per control. Keyboard shortcuts should call `set`/`step` so the panel
