@@ -108,6 +108,9 @@ export const EditorPreview = ({
     setUpdateId(value => value + 1);
     // The outgoing document can still log until the new one loads; its
     // messages must not reach the record the next load starts.
+    rendererCleanupRef.current?.();
+    rendererCleanupRef.current = null;
+    rendererStatusRef.current?.(null);
     outputRef.current?.detach();
     disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
     currentCanvasRef.current = { width: 0, height: 0, zoom: 1, resolutionWidth: 0, resolutionHeight: 0 };
@@ -301,12 +304,6 @@ export const EditorPreview = ({
       iframeWindow.__EXAMPLE_META__ = exampleRef.current;
       installPreviewErrorHandlers(iframeWindow, iframeBody, error => {
         sink?.writeException(generation, error.summary, error.details ?? null);
-        rendererStatusRef.current?.({
-          requested: iframeWindow.__EXAMPLE_RENDERER_STATUS__?.requested ?? 'unknown',
-          phase: 'failed',
-          actual: null,
-          reason: error.summary,
-        });
       });
     }
 

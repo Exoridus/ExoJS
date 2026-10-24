@@ -122,6 +122,7 @@ export const Editor = ({
     // value); the React-idiomatic alternative - a `key` remount - would re-init
     // Monaco on every example switch, so we suppress the heuristic here instead.
     /* eslint-disable @eslint-react/set-state-in-effect */
+    setRendererStatus(null);
     setSourceCode(null);
     setOriginalSourceCode(null);
     setExecutionCode(null);
@@ -273,6 +274,7 @@ export const Editor = ({
   }, [syncExpandedWidth]);
 
   const onUpdateCode = (event: UpdateCodeEvent): void => {
+    setRendererStatus(null);
     setRunId(id => id + 1);
     setSourceCode(event.code);
     setExecutionCode(event.executionCode ?? null);

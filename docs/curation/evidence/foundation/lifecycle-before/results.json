@@ -1,0 +1,17 @@
+{
+  "browser": "153.0.8010.12",
+  "records": [
+    {
+      "contract": "ordinary application error",
+      "status": "FAIL",
+      "phase": "failed",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'failed' !== 'active'\n"
+    },
+    {
+      "contract": "source transition and failure",
+      "status": "FAIL",
+      "phase": "active",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ 'active'\n- 'unreported'\n"
+    }
+  ]
+}

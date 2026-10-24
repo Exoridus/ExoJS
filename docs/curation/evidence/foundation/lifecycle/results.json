@@ -1,0 +1,15 @@
+{
+  "browser": "153.0.8010.12",
+  "records": [
+    {
+      "contract": "ordinary application error",
+      "status": "PASS",
+      "phase": "active"
+    },
+    {
+      "contract": "source transition and failure",
+      "status": "PASS",
+      "phase": "unreported"
+    }
+  ]
+}
