@@ -1,0 +1,89 @@
+{
+  "base": "84d7dbe4fa63f7a7e45b65f2f5bf49cefac95d46",
+  "branch": "feat/curation-b5-audio",
+  "checks": [
+    {
+      "command": "pnpm typecheck:examples",
+      "exit": 0
+    },
+    {
+      "command": "pnpm --filter @codexo/exojs-examples check-ts:scripts",
+      "exit": 0
+    },
+    {
+      "command": "pnpm exec eslint --max-warnings=0 <seven B5 target TS files> test/examples/curation-b5.test.ts site/scripts/curation-b5-e2e.ts",
+      "exit": 0
+    },
+    {
+      "command": "pnpm exec vitest run --project=exojs test/examples/curation-b5.test.ts test/site/examples-sync.test.ts",
+      "exit": 0,
+      "files": 2,
+      "tests": 4
+    },
+    {
+      "command": "pnpm --filter @codexo/exojs-examples examples:sync",
+      "exit": 0
+    },
+    {
+      "command": "pnpm lanes --base 84d7dbe4fa63f7a7e45b65f2f5bf49cefac95d46",
+      "exit": 0
+    },
+    {
+      "command": "git diff --check",
+      "exit": 0
+    }
+  ],
+  "humanListening": "NOT_TESTED",
+  "realGamepadHardware": "NOT_TESTED",
+  "materialBlockers": ["M1", "M2", "M3", "M4"],
+  "fullIntegrationPushGates": "NOT_RUN: serialized integration step",
+  "browserMatrix": [
+    {
+      "browser": "chromium",
+      "backend": "webgl2",
+      "presentationSizes": ["1280x720", "512x288"],
+      "passedCases": 12,
+      "blockedCases": 2,
+      "fullRunExit": 1,
+      "focusedIdleMuteExit": 1,
+      "reason": "Idle mute ramp/clock dependency on PR #866; strict threshold preserved. Raw full-run timeouts and focused waveform/gain evidence retained."
+    },
+    {
+      "browser": "chromium",
+      "backend": "webgpu",
+      "presentationSizes": ["1280x720", "512x288"],
+      "passedCases": 14,
+      "fullRunExit": 0
+    },
+    {
+      "browser": "firefox",
+      "backend": "webgl2",
+      "presentationSizes": ["1280x720", "512x288"],
+      "passedCases": 14,
+      "fullRunExit": 0
+    }
+  ],
+  "focusedFinalRetries": {
+    "audio-buses": "Two sizes passed on all three supported browser/backend combinations after compact label correction.",
+    "audio-visualisation": "Two sizes passed on all three supported combinations after pending-resume cancellation fix.",
+    "play-sound": "Strict focused Chromium WebGL2 run: one BLOCKED and one PASS. Both sizes have reproduced the idle-mute transient; neither size is fully accepted."
+  },
+  "sourceSha256": {
+    "examples/audio-basics/play-sound.ts": "afb3bc3e5ed37cf9e4933d8cae1d0f52aa2bac2a793f134fa9f8347da1c76e39",
+    "examples/audio-basics/play-sound.js": "12aa37bbd375c46246081304c4f0902b69be39153be5f51379c88f7b20d63df3",
+    "examples/audio-basics/music-loop.ts": "13dc39a9a8032662750313361d4248127e41267d2d2659ef2be27a24978552a8",
+    "examples/audio-basics/music-loop.js": "bb60261cb993b4a20d0c079c8eb73b4be86e3596a62a15cda1daaf3993b909ee",
+    "examples/audio-basics/audio-buses.ts": "f03c1a75ce558755fd8dd5e0fad5454408aede26e7abde6ab461fdc482fba74d",
+    "examples/audio-basics/audio-buses.js": "4dc37c58f915435b674699bea20a77ee250640c1e41c6c7da5405d30a3672717",
+    "examples/audio-fx/ducking.ts": "9a7a703ebad5a1ca40ae4696997ef355dd8de16cac70e0afd9674c979b4f2084",
+    "examples/audio-fx/ducking.js": "197b29feedb067cae96a8c86609957bdf57a064849f11d72170b0a526225dad6",
+    "examples/audio-fx/reverb-and-delay.ts": "130990afa9cc12943ad43b91e94939d0a9f817ca7109983238da5a0536ae8d84",
+    "examples/audio-fx/reverb-and-delay.js": "d5857e8fbd0080fa60ab2c076241d59eeedbeb8266bd22c557014f5675e17372",
+    "examples/showcase/audio-visualisation.ts": "1d2df568f10cf32a66c722309ee8841295523b7b5c5ec6b73095cc1869acdb38",
+    "examples/showcase/audio-visualisation.js": "2b48fb8a5890222edce4fab1bc881c43cbfe6ee94872f63f4bc45c9133570aae",
+    "examples/spatial-audio/listener-and-source.ts": "1a69cfe928330d7d7427665c6a10f5e18f442aeb6d86d3aa4a3978de9436c348",
+    "examples/spatial-audio/listener-and-source.js": "e32ca5f1a7064077bb9649dff94de79f54ae5bad195a93b8061862c7b37eb373",
+    "site/scripts/curation-b5-e2e.ts": "387260b036da10b107e1f4fb67539de75eb3e56d3e6e1ff718da50e942cb741b",
+    "test/examples/curation-b5.test.ts": "f7857df9c1e57252e6428557bc6549fd13408dd5f3f2ec204fd025767a5310ce"
+  }
+}

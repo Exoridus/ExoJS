@@ -1,0 +1,200 @@
+{
+  "executedAt": "2026-10-24T13:27:45.327Z",
+  "browser": "chromium",
+  "version": "153.0.8010.12",
+  "backend": "webgl2",
+  "humanListening": "NOT_TESTED",
+  "materialBlockers": ["M1", "M2", "M3", "M4"],
+  "records": [
+    {
+      "example": "audio-basics/play-sound",
+      "size": "1280x720",
+      "status": "FAIL",
+      "error": "TimeoutError: frame.waitForFunction: Timeout 30000ms exceeded. | page errors: "
+    },
+    {
+      "example": "audio-basics/play-sound",
+      "size": "512x288",
+      "status": "FAIL",
+      "error": "TimeoutError: frame.waitForFunction: Timeout 30000ms exceeded. | page errors: "
+    },
+    {
+      "example": "audio-basics/music-loop",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "M1/M2 unavailable; no invented transport or replacement track",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0,
+        "rms": 0
+      }
+    },
+    {
+      "example": "audio-basics/music-loop",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "M1/M2 unavailable; no invented transport or replacement track",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0,
+        "rms": 0
+      }
+    },
+    {
+      "example": "audio-basics/audio-buses",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "three real bus gain controls and SFX voice; missing M1 explicit",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.04049185290932655,
+        "rms": 0.004987673841069585
+      }
+    },
+    {
+      "example": "audio-basics/audio-buses",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "three real bus gain controls and SFX voice; missing M1 explicit",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.04049185290932655,
+        "rms": 0.004987673841069585
+      }
+    },
+    {
+      "example": "audio-fx/ducking",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "speech samples on sidechain; calibrated threshold; ratio-1 bypass; M1 missing",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.1360415816307068,
+        "rms": 0.08429094117702368
+      }
+    },
+    {
+      "example": "audio-fx/ducking",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "speech samples on sidechain; calibrated threshold; ratio-1 bypass; M1 missing",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.1360415816307068,
+        "rms": 0.07755526535329471
+      }
+    },
+    {
+      "example": "audio-fx/reverb-and-delay",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "wood samples; Small room duration; real Hall tail; Stop silences tails; voice source; Echo; dry bypass",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0,
+        "rms": 0
+      }
+    },
+    {
+      "example": "audio-fx/reverb-and-delay",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "wood samples; Small room duration; real Hall tail; Stop silences tails; voice source; Echo; dry bypass",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.00005339651397662237,
+        "rms": 0.000011756119634793504
+      }
+    },
+    {
+      "example": "showcase/audio-visualisation",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "real Pulse/Noise spectrum+waveform; pause produces digital silence; M3 missing",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.07071007043123245,
+        "rms": 0.04182684537108674
+      }
+    },
+    {
+      "example": "showcase/audio-visualisation",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "real Pulse/Noise spectrum+waveform; pause produces digital silence; M3 missing",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.07071007043123245,
+        "rms": 0.04202700451132533
+      }
+    },
+    {
+      "example": "spatial-audio/listener-and-source",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "spatial pulse samples; source drag and keyboard motion; fixed listener; falloff; orbit; Sound off stops voice",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.10943995416164398,
+        "rms": 0.040873138921108665
+      }
+    },
+    {
+      "example": "spatial-audio/listener-and-source",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "spatial pulse samples; source drag and keyboard motion; fixed listener; falloff; orbit; Sound off stops voice",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.10745875537395477,
+        "rms": 0.03520408765525981
+      }
+    }
+  ]
+}

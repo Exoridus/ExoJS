@@ -1,0 +1,39 @@
+{
+  "status": "BLOCKED_DEPENDENCY",
+  "contract": "AudioBus idle mute before a new sound",
+  "browser": "chromium",
+  "backend": "webgl2",
+  "example": "audio-basics/play-sound",
+  "humanListening": "NOT_TESTED",
+  "observation": "The headless audio clock did not advance enough during a wall-clock wait. A fresh Jump started while the public bus remained muted but its scheduled exponential gain ramp had not settled. A subsequent actual-audio-clock wait while idle timed out. No Core changes or threshold changes were made.",
+  "measured": {
+    "muted": true,
+    "volume": 0.2,
+    "maximumSampledPeak": 0.11292997002601624,
+    "firstIdleSample": {
+      "gain": 0.20042569935321808,
+      "audioTime": 0.22133333333333333,
+      "peak": 0
+    },
+    "transientSample": {
+      "gain": 0.008186795748770237,
+      "audioTime": 0.272,
+      "peak": 0.11292997002601624
+    },
+    "settledSample": {
+      "gain": 0,
+      "audioTime": 0.392,
+      "peak": 0
+    }
+  },
+  "ownership": "AudioBus ramp/idle-mute behavior remains dependent on separately owned PR #866 verification. This batch does not repair Core.",
+  "command": "pnpm --dir site exec tsx scripts/curation-b5-e2e.ts --browser chromium --backend webgl2 --only play-sound",
+  "reproducedSizes": ["1280x720", "512x288"],
+  "strictSilenceThreshold": 0.0001,
+  "compactTransientSample": {
+    "gain": 0.010857351124286652,
+    "audioTime": 0.2613333333333333,
+    "peak": 0.11471167206764221,
+    "rms": 0.031381556122613986
+  }
+}

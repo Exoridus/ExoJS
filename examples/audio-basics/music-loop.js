@@ -1,105 +1,38 @@
 // Auto-generated from music-loop.ts - edit the .ts source, not this file.
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
-import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { demoPanel, slider, toggle } from '@examples/runtime';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, Text } from '@codexo/exojs';
+import { demoPanel } from '@examples/runtime';
 class MusicLoopScene extends Scene {
-  music;
-  musicVoice;
-  graphics;
-  status;
-  tapPrompt;
-  // Progress bar geometry, canvas-relative, computed in init().
-  bar = { x: 0, y: 0, w: 0, h: 28 };
-  async load() {
-    const app = this.app;
-    const { width, height } = app;
-    // Wide progress bar centred horizontally on the 16:9 canvas.
-    this.bar = { x: width * 0.15, y: height * 0.5, w: width * 0.7, h: 28 };
-    // A single streaming track - the browser's media pipeline loops it
-    // seamlessly when `loop` is on. Music has no placeholder handle, so it is
-    // awaited with `load()` rather than claimed with `get()`.
-    this.music = await this.loader.load(assets.musicLoopMain);
-    // Core defers playback until the AudioContext unlocks on the first
-    // gesture, then starts automatically - play() returns the Voice now,
-    // and all live control (volume, rate, loop, seek) lives on it.
-    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.5, playbackRate: 1 });
-    this.graphics = new Graphics();
-    this.status = new Text('', { fillColor: Color.white, fontSize: 18 }).setPosition(this.bar.x, this.bar.y - 36);
-    // Shown while the browser still blocks audio (`app.audio.locked`); the
-    // first click or keypress unlocks it and the queued music starts.
-    this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })
-      .setAnchor(0.5, 0.5)
-      .setPosition(width / 2, height - 48);
-    // Real, engine-backed controls over the live music Voice.
-    const voice = this.musicVoice;
-    const togglePause = () => {
-      if (voice.paused || voice.ended) {
-        voice.resume();
-      } else {
-        voice.pause();
-      }
-    };
-    demoPanel({
-      title: 'Music',
-      controls: {
-        volume: slider('Volume', { min: 0, max: 1, step: 0.01, value: voice.volume }),
-        rate: slider('Playback rate', { min: 0.5, max: 2, step: 0.05, value: voice.playbackRate, format: v => `${Math.round(v * 100)}%` }),
-        loop: toggle('Loop', voice.loop),
-      },
-      actions: {
-        'Pause / resume': togglePause,
-        Restart: () => {
-          voice.seek(0);
-          voice.resume();
-        },
-      },
-      onChange: (key, _value, values) => {
-        voice.volume = values.volume;
-        voice.playbackRate = values.rate;
-        voice.loop = values.loop;
-        // Re-enabling the loop after the track ran off its end restarts it.
-        if (key === 'loop' && values.loop && voice.ended) {
-          voice.seek(0);
-          voice.resume();
-        }
-      },
+  label = this.track(
+    new Text('Track A: M1 unavailable\nTrack B: M2 unavailable\n\nTransport and crossfade need the approved music pair.', {
+      fillColor: new Color(236, 239, 242),
+      align: 'center',
+    }),
+  ).setAnchor(0.5);
+  panel;
+  init() {
+    this.panel = demoPanel({
+      layout: 'bar',
+      title: 'Music Playback and Crossfade',
+      controls: {},
+      hint: 'The approved M1 / M2 music pair is not bundled yet.',
     });
-    this.inputs.onTrigger(Keyboard.Space, togglePause);
+    this.panel.status('BLOCKED: M1 and M2 missing | No source loaded | Audio stopped', 'warning');
   }
   draw(context) {
-    const app = this.app;
-    this.graphics.clear();
-    const duration = this.musicVoice.duration;
-    const time = this.musicVoice.time;
-    // The stream captures its duration from the media element, which is NaN
-    // until metadata has loaded. Fall back to a moving marker driven purely
-    // by the playback clock when it is unavailable.
-    const hasDuration = Number.isFinite(duration) && duration > 0;
-    const progress = hasDuration ? Math.max(0, Math.min(1, time / duration)) : (time % 4) / 4;
-    const playing = !this.musicVoice.paused && !this.musicVoice.ended;
-    // Progress trough + fill.
-    this.graphics.fillColor = new Color(45, 50, 60);
-    this.graphics.drawRectangle(this.bar.x, this.bar.y, this.bar.w, this.bar.h);
-    this.graphics.fillColor = playing ? new Color(120, 200, 255) : new Color(120, 120, 120);
-    this.graphics.drawRectangle(this.bar.x, this.bar.y, this.bar.w * progress, this.bar.h);
-    const state = playing ? 'Playing' : 'Stopped';
-    const position = hasDuration ? `${time.toFixed(1)} / ${duration.toFixed(1)}s` : `${time.toFixed(1)}s`;
-    this.status.text = `${state}   ${position}   ${Math.round(this.musicVoice.playbackRate * 100)}% speed   Loop ${this.musicVoice.loop ? 'on' : 'off'}`;
-    context.render(this.graphics);
-    context.render(this.status);
-    if (app.audio.locked) {
-      context.render(this.tapPrompt);
-    }
+    const { scale, width, contentHeight } = this.panel.fit(this.app, this.app.canvas);
+    this.label.style.fontSize = 16 * scale;
+    this.label.layout = { maxWidth: (width - 32) * scale };
+    this.label.setPosition((width * scale) / 2, (contentHeight * scale) / 2);
+    context.render(this.label);
+  }
+  destroy() {
+    this.panel?.dispose();
+    super.destroy();
   }
 }
 const app = new Application({
   scenes: { MusicLoopScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
-  clearColor: Color.black,
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  clearColor: new Color(11, 16, 20),
 });
 await app.start(MusicLoopScene);

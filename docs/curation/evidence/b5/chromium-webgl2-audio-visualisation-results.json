@@ -1,0 +1,40 @@
+{
+  "executedAt": "2026-10-24T13:32:32.509Z",
+  "browser": "chromium",
+  "version": "153.0.8010.12",
+  "backend": "webgl2",
+  "humanListening": "NOT_TESTED",
+  "materialBlockers": ["M1", "M2", "M3", "M4"],
+  "records": [
+    {
+      "example": "showcase/audio-visualisation",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "real Pulse/Noise spectrum+waveform; pause digital silence; source change cancels pending resume; M3 missing",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.07071007043123245,
+        "rms": 0.04193216732753283
+      }
+    },
+    {
+      "example": "showcase/audio-visualisation",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "real Pulse/Noise spectrum+waveform; pause digital silence; source change cancels pending resume; M3 missing",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.07071007043123245,
+        "rms": 0.041923471082540686
+      }
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "executedAt": "2026-10-24T13:30:34.364Z",
+  "browser": "chromium",
+  "version": "153.0.8010.12",
+  "backend": "webgpu",
+  "humanListening": "NOT_TESTED",
+  "materialBlockers": ["M1", "M2", "M3", "M4"],
+  "records": [
+    {
+      "example": "audio-basics/audio-buses",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "three real bus gain controls and SFX voice; missing M1 explicit",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.04049185290932655,
+        "rms": 0.004987673841069585
+      }
+    },
+    {
+      "example": "audio-basics/audio-buses",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "three real bus gain controls and SFX voice; missing M1 explicit",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.04049185290932655,
+        "rms": 0.004987673841069585
+      }
+    }
+  ]
+}

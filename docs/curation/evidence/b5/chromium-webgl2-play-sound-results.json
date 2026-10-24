@@ -1,0 +1,31 @@
+{
+  "executedAt": "2026-10-24T13:29:13.625Z",
+  "browser": "chromium",
+  "version": "153.0.8010.12",
+  "backend": "webgl2",
+  "humanListening": "NOT_TESTED",
+  "materialBlockers": ["M1", "M2", "M3", "M4"],
+  "records": [
+    {
+      "example": "audio-basics/play-sound",
+      "size": "1280x720",
+      "status": "BLOCKED",
+      "error": "AssertionError [ERR_ASSERTION]: muted sample peak 0.1133861392736435; bus {\"volume\":0.2,\"muted\":true}; loud [{\"peak\":0.1133861392736435,\"rms\":0.031018936049396432,\"gain\":0.010731895454227924,\"time\":0.28},{\"peak\":0.1133861392736435,\"rms\":0.03429697931813905,\"gain\":0.003693422768265009,\"time\":0.2906666666666667},{\"peak\":0.052122268825769424,\"rms\":0.015358718432554238,\"gain\":0.0012711050221696496,\"time\":0.30133333333333334},{\"peak\":0.01669587381184101,\"rms\":0.00491475252491237,\"gain\":0.0004374556301627308,\"time\":0.312},{\"peak\":0.007482557091861963,\"rms\":0.0022094037681872694,\"gain\":0.00019656142103485763,\"time\":0.32},{\"peak\":0.0024774044286459684,\"rms\":0.0007253640020484727,\"gain\":0.00006764737190678716,\"time\":0.33066666666666666},{\"peak\":0.0007625631405971944,\"rms\":0.00022592223585985366,\"gain\":0,\"time\":0.3413333333333333},{\"peak\":0.00025890054530464113,\"rms\":0.00007357984192252938,\"gain\":0,\"time\":0.352},{\"peak\":0.00010831739928107709,\"rms\":0.000029949035702889834,\"gain\":0,\"time\":0.36}]; first [{\"peak\":0,\"rms\":0,\"gain\":0.20123697817325592,\"time\":0.232},{\"peak\":0,\"rms\":0,\"gain\":0.20123697817325592,\"time\":0.24},{\"peak\":0,\"rms\":0,\"gain\":0.06940001249313354,\"time\":0.2613333333333333},{\"peak\":0,\"rms\":0,\"gain\":0.06940001249313354,\"time\":0.2613333333333333},{\"peak\":0,\"rms\":0,\"gain\":0.023884281516075134,\"time\":0.272}]; last [{\"peak\":0.00010831739928107709,\"rms\":0.000029949035702889834,\"gain\":0,\"time\":0.36},{\"peak\":0.0000322770320053678,\"rms\":0.000008187722130309461,\"gain\":0,\"time\":0.37066666666666664},{\"peak\":0,\"rms\":0,\"gain\":0,\"time\":0.38133333333333336},{\"peak\":0,\"rms\":0,\"gain\":0,\"time\":0.392},{\"peak\":0,\"rms\":0,\"gain\":0,\"time\":0.4}] | page errors: "
+    },
+    {
+      "example": "audio-basics/play-sound",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "Click/Hurt samples; muted Jump produces digital silence; volume updates bus; keyboard Coin pad",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.14904174208641052,
+        "rms": 0.056981808413918394
+      }
+    }
+  ]
+}

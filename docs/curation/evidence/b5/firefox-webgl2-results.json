@@ -1,0 +1,218 @@
+{
+  "executedAt": "2026-10-24T13:23:51.081Z",
+  "browser": "firefox",
+  "version": "155.0",
+  "backend": "webgl2",
+  "humanListening": "NOT_TESTED",
+  "materialBlockers": ["M1", "M2", "M3", "M4"],
+  "records": [
+    {
+      "example": "audio-basics/play-sound",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "Click/Hurt samples; muted Jump produces digital silence; volume updates bus; keyboard Coin pad",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.12540863454341888,
+        "rms": 0.05099361584378055
+      }
+    },
+    {
+      "example": "audio-basics/play-sound",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "Click/Hurt samples; muted Jump produces digital silence; volume updates bus; keyboard Coin pad",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.1255764365196228,
+        "rms": 0.05099362664087056
+      }
+    },
+    {
+      "example": "audio-basics/music-loop",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "M1/M2 unavailable; no invented transport or replacement track",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0,
+        "rms": 0
+      }
+    },
+    {
+      "example": "audio-basics/music-loop",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "M1/M2 unavailable; no invented transport or replacement track",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0,
+        "rms": 0
+      }
+    },
+    {
+      "example": "audio-basics/audio-buses",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "three real bus gain controls and SFX voice; missing M1 explicit",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.041547078639268875,
+        "rms": 0.0050113473518108185
+      }
+    },
+    {
+      "example": "audio-basics/audio-buses",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "three real bus gain controls and SFX voice; missing M1 explicit",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.041547078639268875,
+        "rms": 0.0050387751913958095
+      }
+    },
+    {
+      "example": "audio-fx/ducking",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "speech samples on sidechain; calibrated threshold; ratio-1 bypass; M1 missing",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.24739809334278107,
+        "rms": 0.08436403394468246
+      }
+    },
+    {
+      "example": "audio-fx/ducking",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "speech samples on sidechain; calibrated threshold; ratio-1 bypass; M1 missing",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.24739809334278107,
+        "rms": 0.08311184199759505
+      }
+    },
+    {
+      "example": "audio-fx/reverb-and-delay",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "wood samples; Small room duration; real Hall tail; Stop silences tails; voice source; Echo; dry bypass",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.0005443420959636569,
+        "rms": 0.0001047075779207799
+      }
+    },
+    {
+      "example": "audio-fx/reverb-and-delay",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "wood samples; Small room duration; real Hall tail; Stop silences tails; voice source; Echo; dry bypass",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.030563481152057648,
+        "rms": 0.008629755044673207
+      }
+    },
+    {
+      "example": "showcase/audio-visualisation",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "real Pulse/Noise spectrum+waveform; pause produces digital silence; M3 missing",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.07070950418710709,
+        "rms": 0.041767715802604466
+      }
+    },
+    {
+      "example": "showcase/audio-visualisation",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "real Pulse/Noise spectrum+waveform; pause produces digital silence; M3 missing",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.07071007043123245,
+        "rms": 0.04184036096742668
+      }
+    },
+    {
+      "example": "spatial-audio/listener-and-source",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "spatial pulse samples; source drag and keyboard motion; fixed listener; falloff; orbit; Sound off stops voice",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.2137776017189026,
+        "rms": 0.07112821942176625
+      }
+    },
+    {
+      "example": "spatial-audio/listener-and-source",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "no voice before explicit playback gesture",
+        "spatial pulse samples; source drag and keyboard motion; fixed listener; falloff; orbit; Sound off stops voice",
+        "Reset stops voices and restores controls",
+        "application teardown removes controls"
+      ],
+      "measured": {
+        "peak": 0.21059176325798035,
+        "rms": 0.050090635272196905
+      }
+    }
+  ]
+}
