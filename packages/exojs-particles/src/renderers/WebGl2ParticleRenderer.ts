@@ -162,7 +162,8 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
 
   public render(system: ParticleSystem): this {
     const backend = this.getBackend();
-    const { texture, blendMode } = system;
+    const { texture } = system;
+    const blendMode = backend.activeDrawCommand?.material.blendMode ?? system.blendMode;
 
     // System transform / texture / UV / local-bounds are uniforms, so
     // mixing systems in one batch is invalid. Flush any prior system

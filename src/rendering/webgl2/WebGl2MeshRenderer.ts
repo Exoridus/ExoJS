@@ -184,7 +184,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     const backend = this.getBackend();
     const material = mesh.material;
     const shader = material === null ? this._defaultShader : this._getOrCreateCustomShader(material, connection.gl);
-    const blendMode = resolveBlendMode(mesh.blendMode, material);
+    const blendMode = backend.activeDrawCommand?.material.blendMode ?? resolveBlendMode(mesh.blendMode, material);
     const texture = mesh.texture ?? Texture.white;
     const command = backend.activeDrawCommand;
     const supportsInstancing = material === null || this._isInstancingCompatible(shader);
@@ -260,7 +260,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       backend._poisonRetainedCaptures();
     }
 
-    const blendMode = resolveBlendMode(mesh.blendMode, material);
+    const blendMode = backend.activeDrawCommand?.material.blendMode ?? resolveBlendMode(mesh.blendMode, material);
     const texture = mesh.texture ?? Texture.white;
     const cacheEntry = this._getOrCreateGeometryEntry(geometry, mesh, connection);
     const vao = this._getOrCreateStaticGeometryVao(

@@ -326,18 +326,29 @@ export const createEmptyMaterialKey = (): MaterialKey => ({
  *
  * @internal
  */
-export const writeMaterialKeyInto = (target: MaterialKey, drawable: Drawable, backend: RenderBackend | null): MaterialKey => {
+export const writeMaterialKeyInto = (
+  target: MaterialKey,
+  drawable: Drawable,
+  backend: RenderBackend | null,
+  capture = false,
+): MaterialKey => {
   const rendererId = getRendererId(drawable, backend);
-  const blendMode = drawable.blendMode;
   const textureId = getDrawableTextureId(drawable);
   const shaderId = getShaderId(drawable);
   const material = getMaterial(drawable);
+  const materialBlendMode = material !== null && drawable.blendMode === BlendModes.Normal ? material.blendMode : drawable.blendMode;
+  const blendMode = capture ? BlendModes.Normal : materialBlendMode;
 
   target.rendererId = rendererId;
   target.blendMode = blendMode;
   target.textureId = textureId;
   target.shaderId = shaderId;
   target.pipelineKey = material !== null ? material.pipelineKey : rendererId * 31 + blendMode;
+
+  if (capture && material !== null) {
+    target.pipelineKey = intern(pipelineKeyRegistry, `capture|${material.pipelineKey}`, () => nextPipelineKey++);
+  }
+
   target.bindKey = material !== null ? material.bindKey : rendererId * 31 + Math.max(textureId, 0);
   target.ownMaterial = material !== null;
 

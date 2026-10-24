@@ -28,9 +28,7 @@ interface EffectFrame {
   barrier: BarrierScope | null;
   backend: RenderBackend | null;
   playScope: ((scope: GroupScope) => void) | null;
-  /** Set on the `cacheAsTexture` replay path - the baked texture to composite. */
-  cachedTexture: RenderTexture | null;
-  /** Set on the full path - the filter chain's output, or the capture when there are no filters. */
+  /** Capture, filtered output or cached texture to composite into the enclosing target. */
   finalTexture: RenderTexture | null;
   /**
    * Set while resolving a NODE mask into its own target. Narrower than
@@ -44,7 +42,6 @@ const createFrame = (): EffectFrame => ({
   barrier: null,
   backend: null,
   playScope: null,
-  cachedTexture: null,
   finalTexture: null,
   maskSource: null,
 });
@@ -67,22 +64,6 @@ export class RenderEffectExecutor {
     if (frame.barrier!.childPlan !== null) {
       frame.playScope!(frame.barrier!.childPlan);
     }
-  };
-
-  /** Body: draw the `cacheAsTexture` texture straight back into the enclosing target. */
-  private static readonly _drawCachedTexture = (): void => {
-    const frame = RenderEffectExecutor._current();
-    const { barrier, backend, cachedTexture } = frame;
-
-    barrier!.node._renderPlanDrawTexture(
-      backend!,
-      cachedTexture!,
-      barrier!.left,
-      barrier!.top,
-      barrier!.width,
-      barrier!.height,
-      barrier!.effect.blendMode,
-    );
   };
 
   /** Body: composite the filter chain's output back into the enclosing target. */
@@ -125,7 +106,6 @@ export class RenderEffectExecutor {
     frame.barrier = barrier;
     frame.backend = backend;
     frame.playScope = playScope;
-    frame.cachedTexture = null;
     frame.finalTexture = null;
     frame.maskSource = null;
     RenderEffectExecutor._depth = depth + 1;
@@ -140,7 +120,6 @@ export class RenderEffectExecutor {
       frame.barrier = null;
       frame.backend = null;
       frame.playScope = null;
-      frame.cachedTexture = null;
       frame.finalTexture = null;
       frame.maskSource = null;
     }
@@ -169,8 +148,8 @@ export class RenderEffectExecutor {
       const cachedTexture = node._renderPlanGetCacheTexture();
 
       if (cachedTexture !== null) {
-        frame.cachedTexture = cachedTexture;
-        this._withClip(node, backend, barrier, this._drawCachedTexture);
+        frame.finalTexture = cachedTexture;
+        this._withClip(node, backend, barrier, this._compositeFinalTexture);
       }
 
       return;

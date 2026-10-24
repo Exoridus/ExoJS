@@ -150,12 +150,15 @@ export class WebGl2VertexArrayObject {
   }
 
   public draw(size: number, start: number, type: RenderingPrimitives = this._drawMode): this {
+    // Buffer uploads can replace the active VAO's element binding between draws.
+    this._indexBuffer?.bind();
     this._runtime?.draw(this, size, start, type);
 
     return this;
   }
 
   public drawInstanced(count: number, start: number, instanceCount: number, type: RenderingPrimitives = this._drawMode): this {
+    this._indexBuffer?.bind();
     this._runtime?.drawInstanced?.(this, count, start, instanceCount, type);
 
     return this;

@@ -326,7 +326,7 @@ export class WebGl2TextRenderer
 
     const nodeIndex = this._assignNodeIndex(node);
     const shaderType: ShaderType = node.colorGlyphs ? 'color' : 'sdf';
-    const blendMode = node.blendMode;
+    const blendMode = this.getBackend().activeDrawCommand?.material.blendMode ?? node.blendMode;
 
     for (const batch of pageQuads) {
       const page = pages[batch.pageIndex];
@@ -348,7 +348,7 @@ export class WebGl2TextRenderer
 
     const nodeIndex = this._assignNodeIndex(node);
     const shaderType: ShaderType = msdf ? 'msdf' : 'color';
-    const blendMode = node.blendMode;
+    const blendMode = this.getBackend().activeDrawCommand?.material.blendMode ?? node.blendMode;
 
     for (const batch of pageQuads) {
       const tex = textures[batch.pageIndex];

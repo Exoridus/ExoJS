@@ -42,6 +42,7 @@ export class WebGl2BackdropBlendCompositor {
   private readonly _sourceSamplerSlot: Int32Array = new Int32Array([0]);
   private readonly _backdropSamplerSlot: Int32Array = new Int32Array([1]);
   private readonly _modeValue: Int32Array = new Int32Array([0]);
+  private readonly _sourceFlipValue: Float32Array = new Float32Array([0]);
   private readonly _opaqueValue: Float32Array = new Float32Array([0]);
   private _connection: BackdropBlendCompositorConnection | null = null;
 
@@ -173,10 +174,12 @@ export class WebGl2BackdropBlendCompositor {
 
     const projection = backend.view.getTransform().toArray(false);
 
+    this._sourceFlipValue[0] = source.flipY ? 1 : 0;
     this._modeValue[0] = blendMode;
     this._opaqueValue[0] = opaqueBackdrop ? 1 : 0;
     this._shader.getUniform('u_projection').setValue(projection);
     this._shader.getUniform('u_source').setValue(this._sourceSamplerSlot);
+    this._shader.getUniform('u_sourceFlip').setValue(this._sourceFlipValue);
     this._shader.getUniform('u_backdrop').setValue(this._backdropSamplerSlot);
     this._shader.getUniform('u_mode').setValue(this._modeValue);
     this._shader.getUniform('u_opaqueBackdrop').setValue(this._opaqueValue);
