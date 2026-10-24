@@ -1,0 +1,59 @@
+{
+  "baseCommit": "4893f2bfb61444c53d0f94536eb931f18a347bf6",
+  "previousSourceSha256": "78b624daaa585580633f2b9da1be48c1bde537e51b410385e89de5a6ee2647d5",
+  "sourceSha256": "1d11a147ec55889f40b1a11abf07f81e00a1fc7fe4d0efabac36526a0c6769ea",
+  "sourceHashes": {
+    "packages/exojs-particles/src/renderers/WebGl2ParticleRenderer.ts": "a3def52eaab1a1227bd95476382094762912969b993607c1c5b8f0f4f76fa8e1",
+    "packages/exojs-particles/src/renderers/WebGpuParticleRenderer.ts": "0a0c2c49e8dad86e7115dcb156a4d646ec62d156e7084214cc265b588427d048",
+    "src/rendering/material/MaterialKey.ts": "23696cf0ad57aea8d801a72155313dccc82cfdf994d5a574db89accb76584f6e",
+    "src/rendering/plan/RenderEffectExecutor.ts": "0f682448fdba90c680dcf64f194164647a61f15a6ceeb54b7dfff71e7343b132",
+    "src/rendering/plan/RenderPlanBuilder.ts": "233e69a77f4045a0eb3aa637e8dc1481c78d8c1e26f0b174f373747c75df6d61",
+    "src/rendering/webgl2/WebGl2BackdropBlendCompositor.ts": "e334118598aa0effadc1a925a58070ade1f75427ad4b3548790be6a305329a89",
+    "src/rendering/webgl2/WebGl2MeshRenderer.ts": "4cf20f72143bb77155c399c21c410c50f4d6e8cd21073615bc1f96d085a57ea6",
+    "src/rendering/webgl2/WebGl2SpriteRenderer.ts": "b61f9f915cdd285946af642d3c068cba3e7803126909dd1fb461c202c17f8041",
+    "src/rendering/webgl2/WebGl2TextRenderer.ts": "6f1159bcf492bcdd55ccd628640f6926bd90347633627aa3e594c7699de712e1",
+    "src/rendering/webgl2/WebGl2VertexArrayObject.ts": "46375b1eb3a517492adb7faa372ac7d48554469f55e05d105816d8269a3da289",
+    "src/rendering/webgl2/shaders/backdrop-blend.frag": "e69f99d45bbe5bbe06e6d2f60cbd1290e0395507ae914dce4009a8400a68d601",
+    "src/rendering/webgpu/WebGpuMeshRenderer.ts": "9a697c343c097a4bd5b408da2beca8d97df0772f6b1dc0624b417966fbca7759",
+    "src/rendering/webgpu/WebGpuSpriteRenderer.ts": "8b8fff663c8b0b70adfe31583011cc5436afe8317d8d6be28773bc21604722d7",
+    "src/rendering/webgpu/WebGpuTextRenderer.ts": "d732787074424633c35d56418d87dd9c7e9803344864fba68c1177383b681665"
+  },
+  "regressionSha256": "3fd261ee846e6ac18faae939f331ae129a49c46ff2450c56950a76fb9e2b3619",
+  "red": {
+    "file": "test/rendering/capture-blend-state.test.ts",
+    "failures": 2,
+    "reason": "Capture bypassed the drawable material-key cache."
+  },
+  "unit": {
+    "files": [
+      "capture-blend-state",
+      "material-grouping",
+      "render-plan",
+      "retained-barrier-scope",
+      "retained-group-fragment",
+      "retained-instruction-equivalence"
+    ],
+    "passed": 62
+  },
+  "browser": [
+    {
+      "project": "browser-webgl-chromium",
+      "file": "test/rendering/browser/webgl2-capture-blend.test.ts",
+      "passed": 9
+    },
+    {
+      "project": "browser-webgpu",
+      "file": "test/rendering/browser/webgpu-capture-blend.test.ts",
+      "passed": 9
+    },
+    {
+      "project": "browser-webgl-firefox",
+      "file": "test/rendering/browser/webgl2-capture-blend.test.ts",
+      "passed": 0,
+      "status": "provider failed before tests",
+      "error": "TypeError: browserContext.newPage: Cannot read properties of undefined (reading '_page')"
+    }
+  ],
+  "checks": ["Core typecheck", "targeted ESLint", "targeted Prettier"],
+  "runtimeBuild": "Not rebuilt; browser specs execute source. Earlier built-runtime evidence remains unchanged."
+}

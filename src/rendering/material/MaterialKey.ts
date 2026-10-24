@@ -89,6 +89,10 @@ export const derivePipelineKey = (shaderId: number, blendMode: BlendModes, write
   return intern(pipelineKeyRegistry, descriptor, () => nextPipelineKey++);
 };
 
+/** @internal */
+export const deriveCapturePipelineKey = (sourcePipelineKey: number): number =>
+  intern(pipelineKeyRegistry, `capture|${sourcePipelineKey}`, () => nextPipelineKey++);
+
 /**
  * Bind key from material identity and the identities of every bound
  * texture, whether declared in the `textures` map or carried as a
@@ -326,28 +330,18 @@ export const createEmptyMaterialKey = (): MaterialKey => ({
  *
  * @internal
  */
-export const writeMaterialKeyInto = (
-  target: MaterialKey,
-  drawable: Drawable,
-  backend: RenderBackend | null,
-  capture = false,
-): MaterialKey => {
+export const writeMaterialKeyInto = (target: MaterialKey, drawable: Drawable, backend: RenderBackend | null): MaterialKey => {
   const rendererId = getRendererId(drawable, backend);
   const textureId = getDrawableTextureId(drawable);
   const shaderId = getShaderId(drawable);
   const material = getMaterial(drawable);
-  const materialBlendMode = material !== null && drawable.blendMode === BlendModes.Normal ? material.blendMode : drawable.blendMode;
-  const blendMode = capture ? BlendModes.Normal : materialBlendMode;
+  const blendMode = material !== null && drawable.blendMode === BlendModes.Normal ? material.blendMode : drawable.blendMode;
 
   target.rendererId = rendererId;
   target.blendMode = blendMode;
   target.textureId = textureId;
   target.shaderId = shaderId;
   target.pipelineKey = material !== null ? material.pipelineKey : rendererId * 31 + blendMode;
-
-  if (capture && material !== null) {
-    target.pipelineKey = intern(pipelineKeyRegistry, `capture|${material.pipelineKey}`, () => nextPipelineKey++);
-  }
 
   target.bindKey = material !== null ? material.bindKey : rendererId * 31 + Math.max(textureId, 0);
   target.ownMaterial = material !== null;

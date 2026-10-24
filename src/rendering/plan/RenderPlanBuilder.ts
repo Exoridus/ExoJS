@@ -12,7 +12,13 @@ import { type ReadonlyRectangle, Rectangle } from '#math/Rectangle';
 import type { Drawable } from '#rendering/Drawable';
 import type { Filter } from '#rendering/filters/Filter';
 import type { Geometry } from '#rendering/geometry/Geometry';
-import { createEmptyMaterialKey, type MaterialKey, materialKeyForcesFlush, writeMaterialKeyInto } from '#rendering/material/MaterialKey';
+import {
+  copyMaterialKeyInto,
+  createEmptyMaterialKey,
+  deriveCapturePipelineKey,
+  type MaterialKey,
+  materialKeyForcesFlush,
+} from '#rendering/material/MaterialKey';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
 import type { RenderTarget } from '#rendering/RenderTarget';
@@ -75,6 +81,11 @@ interface RetainedBackendHooks {
   _endRetainedCapture?(set: RetainedInstructionSet): void;
   replayRetainedBatch?(batch: unknown): void;
   _validateRetainedInstructionSet?(set: RetainedInstructionSet): boolean;
+}
+
+interface CaptureMaterialKey extends MaterialKey {
+  sourcePipelineKey: number;
+  capturePipelineKey: number;
 }
 
 /**
@@ -231,7 +242,7 @@ export class RenderPlanBuilder {
   /** Coverage guarantee of the target this build collects into, read once per build. */
   private _rootDestinationOpaque = false;
   private _captureNode: RenderNode | null = null;
-  private readonly _captureMaterials = new WeakMap<Drawable, MaterialKey>();
+  private readonly _captureMaterials = new WeakMap<Drawable, CaptureMaterialKey>();
   /**
    * Shared across every barrier. Barriers nest, but a barrier reads its four
    * integers out before collecting its children, so no nested collect can
@@ -1575,19 +1586,35 @@ export class RenderPlanBuilder {
   }
 
   private _materialForDraw(drawable: Drawable): MaterialKey {
+    const source = drawable._getOrComputeMaterialKey(this.backend);
+
     if (drawable !== this._captureNode) {
-      return drawable._getOrComputeMaterialKey(this.backend);
+      return source;
     }
 
     let material = this._captureMaterials.get(drawable);
 
     if (material === undefined) {
-      material = createEmptyMaterialKey();
+      material = Object.assign(createEmptyMaterialKey(), { sourcePipelineKey: -1, capturePipelineKey: 0 });
       this._captureMaterials.set(drawable, material);
     }
 
     // The outer composite applies this node's blend; capturing it again would erase Multiply source RGB.
-    return writeMaterialKeyInto(material, drawable, this.backend, true);
+    copyMaterialKeyInto(material, source);
+    material.blendMode = BlendModes.Normal;
+
+    if (source.ownMaterial) {
+      if (material.sourcePipelineKey !== source.pipelineKey) {
+        material.sourcePipelineKey = source.pipelineKey;
+        material.capturePipelineKey = deriveCapturePipelineKey(source.pipelineKey);
+      }
+
+      material.pipelineKey = material.capturePipelineKey;
+    } else {
+      material.pipelineKey = source.rendererId * 31 + BlendModes.Normal;
+    }
+
+    return material;
   }
 
   public emitDraw(drawable: Drawable, seq?: number): void {
