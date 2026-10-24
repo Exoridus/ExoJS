@@ -10,9 +10,13 @@ Real browser checks pass in Chromium WebGL2, Chromium WebGPU and Firefox WebGL2 
 
 The generated-vendor setup initially failed because the new worktree had no generated demo-media output. Reusing the existing output and restarting the dev server after vendor generation resolved the missing declarations and fonts; all affected browser cases were then rerun successfully.
 
-| Comparison | Before | After |
-|---|---|---|
-| Animation, compact | [Original](evidence/before-webgl2-frame-animation-512.png) | [Current](evidence/foundation/chromium-webgl2-frame-animation-512-startup.png) |
-| Text, compact | [Original](evidence/before-webgl2-typographic-styling-512.png) | [Current](evidence/foundation/chromium-webgl2-typographic-styling-512-startup.png) |
+| Comparison         | Before                                                         | After                                                                              |
+| ------------------ | -------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Animation, compact | [Original](evidence/before-webgl2-frame-animation-512.png)     | [Current](evidence/foundation/chromium-webgl2-frame-animation-512-startup.png)     |
+| Text, compact      | [Original](evidence/before-webgl2-typographic-styling-512.png) | [Current](evidence/foundation/chromium-webgl2-typographic-styling-512-startup.png) |
 
 The text wrap handle now ends above the first text row. Both pilot scenes use the shared fitter. No engine or renderer implementation changes are included.
+
+## Research corrections
+
+The pointer guide now converts clockwise gesture radians to counterclockwise SceneNode degrees. The retained-container diagnostic reads completed CPU frame cost in a scene-owned postFrame system, after the backend flush, and no longer attributes whole-frame timing to isolated collection or GPU time. Three regressions reproduce the former wrong rotation and zero-time measurement, then pass with the correction. Real touch hardware and comparative performance measurements remain unverified.

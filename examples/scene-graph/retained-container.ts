@@ -105,6 +105,16 @@ class RetainedContainerScene extends Scene {
         this.field = this.buildField(this.retained);
       },
     });
+    this.systems.add({
+      postFrame: () => {
+        const stats = this.app.backend.stats;
+        // CPU frame cost includes submission, not asynchronous GPU time or an isolated collection benchmark.
+        this.smoothedFrameMs += (stats.frameTimeMs - this.smoothedFrameMs) * 0.1;
+        this.panel.status(
+          `${FIELD_COUNT} sprites, ${stats.submittedNodes} nodes submitted, ${this.smoothedFrameMs.toFixed(2)} ms CPU frame`,
+        );
+      },
+    });
   }
 
   override update(delta: Seconds): void {
@@ -125,16 +135,6 @@ class RetainedContainerScene extends Scene {
 
     this.field.setPosition(panX, panY);
     context.render(this.field);
-
-    // frameTimeMs is wall-clock and both tiers draw the SAME pixels with the
-    // same draw calls, so the gap you see is the CPU collect/walk cost the
-    // retained tier removes. The gap widens with field size and on slower
-    // machines; on a fast desktop with a few thousand sprites it can be small.
-    this.smoothedFrameMs += (context.stats.frameTimeMs - this.smoothedFrameMs) * 0.1;
-
-    this.panel.status(
-      `${FIELD_COUNT} sprites, ${context.stats.submittedNodes} nodes submitted, ${this.smoothedFrameMs.toFixed(2)} ms per frame`,
-    );
   }
 
   /**
