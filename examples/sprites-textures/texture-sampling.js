@@ -3,6 +3,7 @@ import {
   Application,
   Color,
   FixedResolutionCanvasSizing,
+  Graphics,
   Keyboard,
   PixelSnapMode,
   ScaleModes,
@@ -11,19 +12,12 @@ import {
   Text,
   Texture,
 } from '@codexo/exojs';
-import { demoPanel, slider, toggle } from '@examples/runtime';
-// Colour textures are stored as sRGB and filtered in linear light, so the mips
-// of a checker average to the correct mid-grey rather than a darkened one.
-// Data textures (`colorSpace: 'none'`) filter their raw numeric values instead.
+import { choice, demoPanel, slider, toggle } from '@examples/runtime';
 const MODES = [
   { label: 'Nearest', scaleMode: ScaleModes.Nearest, mipmaps: false },
   { label: 'Linear', scaleMode: ScaleModes.Linear, mipmaps: false },
-  { label: 'Linear + mipmaps', scaleMode: ScaleModes.LinearMipmapLinear, mipmaps: true },
+  { label: 'Linear + mips', scaleMode: ScaleModes.LinearMipmapLinear, mipmaps: true },
 ];
-const COLUMN_X = [250, 520, 790];
-const MAGNIFIED_Y = 230;
-const MINIFIED_Y = 490;
-// Small pixel-art tile: magnifying it shows how each mode fills in between texels.
 const makePixelArt = () => {
   const canvas = document.createElement('canvas');
   canvas.width = 32;
@@ -66,82 +60,117 @@ const makeZonePlate = () => {
   ctx.putImageData(image, 0, 0);
   return canvas;
 };
-const samplingControls = {
-  magnify: slider('Magnify', { min: 1, max: 8, value: 6, step: 0.1, format: value => `${value.toFixed(1)}x` }),
-  minify: slider('Minify', { min: 0.15, max: 0.7, value: 0.35, step: 0.01, format: value => `${value.toFixed(2)}x` }),
-  snap: toggle('Pixel snap', false),
+const controls = {
+  magnify: slider('Magnify', { min: 1, max: 8, value: 3, step: 0.1 }),
+  minify: slider('Minify', { min: 0.1, max: 0.5, value: 0.25, step: 0.01 }),
+  snap: choice('Pixel snap', ['None', 'Position', 'Geometry']),
   motion: toggle('Motion', true),
 };
 class TextureSamplingScene extends Scene {
-  textures = [];
   magnified = [];
   minified = [];
+  labels = [];
+  grid = new Graphics();
   panel;
   elapsed = 0;
-  onWheel = (_deltaX, deltaY) => {
-    this.panel.set('magnify', Math.max(1, Math.min(8, this.panel.values.magnify * Math.exp(-deltaY * 0.002))));
+  cameraMotion = false;
+  cameraTime = 0;
+  zoom = 1;
+  onWheel = (_x, y) => {
+    this.zoom = Math.min(1.6, Math.max(0.5, this.zoom * Math.exp(-y * 0.001)));
   };
   init() {
     const pixelArt = makePixelArt();
-    const zonePlate = makeZonePlate();
-    // One texture per mode and pattern: every column draws the same source
-    // with the same transform, so the sampler is the only difference.
-    for (const [column, mode] of MODES.entries()) {
-      const magnifiedTexture = new Texture(pixelArt, { scaleMode: mode.scaleMode, generateMipMap: mode.mipmaps });
-      const minifiedTexture = new Texture(zonePlate, { scaleMode: mode.scaleMode, generateMipMap: mode.mipmaps });
-      this.textures.push(magnifiedTexture, minifiedTexture);
-      this.magnified.push(new Sprite(magnifiedTexture).setAnchor(0.5));
-      this.minified.push(new Sprite(minifiedTexture).setAnchor(0.5));
-      this.root.addChild(
-        this.magnified[column],
-        this.minified[column],
-        new Text(mode.label, { fillColor: Color.white, fontSize: 22, align: 'center' })
-          .setAnchor(0.5, 0.5)
-          .setPosition(COLUMN_X[column], 46),
+    const zone = makeZonePlate();
+    for (const mode of MODES) {
+      // Color is sRGB; numeric textures use colorSpace: 'none'. All columns share each source and clock.
+      this.magnified.push(
+        new Sprite(this.track(new Texture(pixelArt, { scaleMode: mode.scaleMode, generateMipMap: mode.mipmaps }))).setAnchor(0.5),
       );
+      this.minified.push(
+        new Sprite(this.track(new Texture(zone, { scaleMode: mode.scaleMode, generateMipMap: mode.mipmaps }))).setAnchor(0.5),
+      );
+      this.labels.push(new Text(mode.label, { fillColor: Color.white, fontSize: 14, align: 'center' }).setAnchor(0.5));
     }
+    this.root.addChild(this.grid, ...this.magnified, ...this.minified);
     this.panel = demoPanel({
-      title: 'Sampling lab',
-      corner: 'bottom-right',
-      controls: samplingControls,
-      onChange: (key, value) => {
-        if (key === 'snap') {
-          for (const sprite of this.magnified) {
-            sprite.pixelSnapMode = value ? PixelSnapMode.Geometry : PixelSnapMode.None;
-          }
-        }
+      title: 'Texture Sampling and Pixel Snapping',
+      layout: 'bar',
+      controls,
+      hint: 'Wheel: fractional camera zoom. Snap changes rendering, never logical positions. Rotation/skew may fall back to position snapping.',
+      actions: {
+        'Camera drift': () => {
+          this.cameraMotion = !this.cameraMotion;
+        },
+        Reset: () => this.reset(),
       },
     });
-    this.inputs.onTrigger(Keyboard.P, () => this.panel.step('snap'));
     this.inputs.onTrigger(Keyboard.Space, () => this.panel.step('motion'));
+    this.inputs.onTrigger(Keyboard.P, () => this.panel.step('snap'));
+    this.inputs.onTrigger(Keyboard.R, () => this.reset());
     this.app.input.onMouseWheel.add(this.onWheel);
   }
+  reset() {
+    this.elapsed = 0;
+    this.zoom = 1;
+    this.cameraMotion = false;
+    this.cameraTime = 0;
+    this.panel.set('magnify', 3);
+    this.panel.set('minify', 0.25);
+    this.panel.set('snap', 'None');
+  }
   update(delta) {
-    const { magnify, minify, motion } = this.panel.values;
-    if (motion) {
+    const view = this.panel.fit(this.app, this.app.canvas);
+    if (this.panel.values.motion) {
       this.elapsed += delta;
     }
-    // A slow sub-pixel drift shows snapping in the top row; a gentle scale
-    // pulse makes aliasing crawl in the bottom row.
+    this.root.setScale(view.scale);
     const drift = Math.sin(this.elapsed * 1.8) * 0.45;
-    const pulse = 1 + Math.sin(this.elapsed * 0.7) * 0.12;
-    for (let column = 0; column < MODES.length; column++) {
-      this.magnified[column].setPosition(COLUMN_X[column] + drift, MAGNIFIED_Y + drift).setScale(magnify);
-      this.minified[column].setPosition(COLUMN_X[column], MINIFIED_Y).setScale(minify * pulse);
+    const snap = { None: PixelSnapMode.None, Position: PixelSnapMode.Position, Geometry: PixelSnapMode.Geometry }[this.panel.values.snap];
+    this.grid.clear();
+    this.grid.lineWidth = 1;
+    this.grid.lineColor = new Color(255, 255, 255, 0.12);
+    for (let x = 0; x < view.width; x += 16) {
+      this.grid.drawLine(x, 32, x, view.contentHeight);
+    }
+    for (let y = 32; y < view.contentHeight; y += 16) {
+      this.grid.drawLine(0, y, view.width, y);
+    }
+    for (let i = 0; i < 3; i++) {
+      const x = (view.width * (i + 0.5)) / 3;
+      this.magnified[i].setPosition(x + drift, view.contentHeight * 0.34).setScale(this.panel.values.magnify);
+      this.minified[i].setPosition(x + drift, view.contentHeight * 0.77).setScale(this.panel.values.minify);
+      this.magnified[i].pixelSnapMode = snap;
+      this.minified[i].pixelSnapMode = snap;
+      this.labels[i].setPosition(x * view.scale, 14 * view.scale).setScale(view.scale);
+    }
+    this.app.rendering.view
+      .setCenter(this.app.width / 2 + (this.cameraMotion ? Math.sin(this.cameraTime) * 0.6 * view.scale : 0), this.app.height / 2)
+      .setZoom(this.zoom);
+    const canvas = this.app.canvas;
+    this.panel.status(
+      `CSS ${view.width.toFixed(0)}x${view.height.toFixed(0)} | logical ${this.app.width}x${this.app.height} | buffer ${canvas.width}x${canvas.height} | DPR ${devicePixelRatio} | ratio ${this.app.pixelRatio} | zoom ${this.zoom.toFixed(2)} | camera ${this.cameraMotion ? 'moving' : 'still'}`,
+    );
+  }
+  draw(context) {
+    context.render(this.root);
+    for (const label of this.labels) {
+      context.render(label, { view: context.screenView });
     }
   }
   destroy() {
     this.app.input.onMouseWheel.remove(this.onWheel);
+    this.app.rendering.view.setCenter(this.app.width / 2, this.app.height / 2).setZoom(1);
     this.panel.dispose();
     super.destroy();
-    for (const texture of this.textures) {
-      texture.destroy();
+    for (const label of this.labels) {
+      label.destroy();
     }
   }
 }
 const app = new Application({
   scenes: { TextureSamplingScene },
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
-  clearColor: new Color(14, 18, 27),
+  clearColor: new Color(38, 44, 52),
 });
 await app.start(TextureSamplingScene);

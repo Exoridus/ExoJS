@@ -1,23 +1,7 @@
 // Auto-generated from lightmap-normals.ts - edit the .ts source, not this file.
-import { Application, Color, Container, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Keyboard, ScaleModes, Scene, Sprite, Texture } from '@codexo/exojs';
 import { AlphaNormals, LightmapLighting, PointLight } from '@codexo/exojs/lighting';
-import { demoPanel, mountControls, slider, toggle } from '@examples/runtime';
-// The lightmap renderer multiplies a frame that was already drawn, so by the
-// time the light field is composited there is no surface normal anywhere. A
-// normal prepass puts one back: register a drawable and the renderer draws its
-// normal map, at the drawable's own place and rotation, into an attachment the
-// light shader then reads at its own screen position.
-//
-// Nothing is required of a drawable that is not registered - the attachment's
-// alpha is coverage, and where it is zero the light lands with no `N dot L`
-// term at all. The two halves of the floor show it side by side: the left
-// cobbles are registered, the right ones are not, so there every fragment takes
-// the light head-on, the relief flattens and the stones read slightly BRIGHTER
-// rather than darker. Normals redistribute
-// light across a surface; they never add any.
-//
-// Nobody authored a normal map here either. `AlphaNormals` reads the
-// silhouette as a height field, once at load.
+import { demoPanel, slider, toggle } from '@examples/runtime';
 const canvasTexture = (width, height, paint) => {
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -27,9 +11,9 @@ const canvasTexture = (width, height, paint) => {
     throw new Error('2D canvas context unavailable.');
   }
   paint(context);
-  return new Texture(canvas, { scaleMode: ScaleModes.Linear, generateMipMap: false });
+  return canvas;
 };
-const floorTexture = canvasTexture(64, 64, context => {
+const floorCanvas = canvasTexture(64, 64, context => {
   context.fillStyle = '#3b3a37';
   context.fillRect(0, 0, 64, 64);
   context.fillStyle = '#353431';
@@ -40,7 +24,7 @@ const floorTexture = canvasTexture(64, 64, context => {
 // the whole input the derived normals have, and it is enough to give the stone
 // an edge that turns away from the light.
 const cobbleSize = 96;
-const cobbleTexture = canvasTexture(cobbleSize, cobbleSize, context => {
+const cobbleCanvas = canvasTexture(cobbleSize, cobbleSize, context => {
   const gradient = context.createRadialGradient(
     cobbleSize / 2,
     cobbleSize / 2,
@@ -57,81 +41,114 @@ const cobbleTexture = canvasTexture(cobbleSize, cobbleSize, context => {
   context.arc(cobbleSize / 2, cobbleSize / 2, cobbleSize * 0.48, 0, Math.PI * 2);
   context.fill();
 });
+const controls = {
+  height: slider('Light height', { min: 8, max: 160, step: 2, value: 34 }),
+  normals: toggle('Normals A/B', true),
+  debug: toggle('Show normals'),
+};
 class LightmapNormalsScene extends Scene {
-  world;
+  world = new Container();
   lighting;
   normals;
-  torch;
-  lantern;
-  elapsed = 0;
+  lights = [];
+  cobbles = [];
+  panel;
+  lightX = 0.5;
+  lightY = 0.5;
+  scale = 1;
+  width = 1280;
+  height = 600;
   init() {
-    const { width, height } = this.app;
-    this.world = new Container();
-    // `auto` with an application resolves to the lightmap renderer, which is
-    // the one with a light field for a prepass to feed.
-    this.lighting = new LightmapLighting(this.app, { ambient: new Color(20, 21, 30), lightResolution: 1 });
-    this.systems.add(this.lighting);
-    const floor = new Sprite(floorTexture);
-    floor.width = width;
-    floor.height = height;
+    const floor = new Sprite(this.track(new Texture(floorCanvas, { scaleMode: ScaleModes.Linear })));
     this.world.addChild(floor);
-    // Derived once, shared by every cobble: the source holds the baked texture,
-    // and deriving it per sprite would run the same Sobel pass sixty times.
-    this.normals = new AlphaNormals(cobbleTexture);
-    for (let row = 0; row < 5; row++) {
-      for (let column = 0; column < 9; column++) {
-        const cobble = new Sprite(cobbleTexture).setAnchor(0.5);
-        const stagger = row % 2 === 0 ? 0 : 66;
-        cobble.width = 118;
-        cobble.height = 118;
-        cobble.setPosition(90 + column * 132 + stagger, 140 + row * 118);
-        // Turned, so the prepass has to rotate each normal into world space -
-        // a stone lit from the left must stay lit from the left however it sits.
-        cobble.rotation = (row * 9 + column * 23) % 360;
-        this.world.addChild(cobble);
-        if (cobble.x < width / 2) {
-          this.lighting.normalsFrom(cobble, this.normals);
+    const texture = this.track(new Texture(cobbleCanvas, { scaleMode: ScaleModes.Linear }));
+    // One alpha-derived source is shared by all stones; its normal texture is numeric data, not color.
+    this.normals = new AlphaNormals(texture);
+    this.track(this.normals.texture);
+    this.lighting = new LightmapLighting(this.app, { ambient: new Color(30, 31, 38), lightResolution: 1 });
+    this.systems.add(this.lighting);
+    for (let side = 0; side < 2; side++) {
+      for (let row = 0; row < 3; row++) {
+        for (let column = 0; column < 3; column++) {
+          const cobble = new Sprite(texture).setAnchor(0.5);
+          cobble.rotation = (row * 23 + column * 31) % 360;
+          this.cobbles.push(cobble);
+          this.world.addChild(cobble);
         }
       }
     }
-    this.torch = this.lighting.add(new PointLight({ radius: 480, intensity: 2.4, height: 34, color: new Color(255, 190, 130) }));
-    this.lantern = this.lighting.add(new PointLight({ radius: 360, intensity: 1.8, height: 90, color: new Color(150, 200, 255) }));
-    // DOM labels: canvas text would sit under the lightmap and go dark with
-    // the floor.
-    mountControls({ status: 'Left half: with normals', corner: 'top-left' });
-    mountControls({ status: 'Right half: without normals', corner: 'bottom-right' });
-    demoPanel({
-      corner: 'top-right',
-      controls: {
-        height: slider('Light height', { min: 8, max: 160, step: 2, value: this.torch.height, format: v => v.toFixed(0) }),
-        debug: toggle('Show normals'),
-      },
-      onChange: (key, value) => {
-        if (key === 'height') {
-          this.torch.height = value;
-        } else {
-          this.lighting.debug = value ? 'normals' : null;
-        }
+    for (let side = 0; side < 2; side++) {
+      this.lights.push(this.lighting.add(new PointLight({ radius: 300, intensity: 2.4, height: 34, color: new Color(255, 210, 160) })));
+    }
+    this.root.addChild(this.world);
+    this.panel = demoPanel({
+      title: 'Light a Normal-Mapped Surface',
+      layout: 'bar',
+      controls,
+      hint: 'Left: alpha-derived normals. Right: no normal registration. Shared local light coordinates are mirrored into both halves.',
+      actions: {
+        Reset: () => this.reset(),
       },
     });
+    this.inputs.onTrigger(Keyboard.Space, () => this.panel.step('normals'));
+    this.inputs.onTrigger(Keyboard.R, () => this.reset());
+    this.app.input.onPointerMove.add(this.onMove);
   }
-  update(delta) {
-    this.elapsed += delta;
-    this.torch.setPosition(640 + Math.cos(this.elapsed * 0.5) * 420, 380 + Math.sin(this.elapsed * 0.77) * 220);
-    this.lantern.setPosition(640 + Math.cos(this.elapsed * 0.31 + 2.2) * 300, 380 + Math.sin(this.elapsed * 0.44 + 1.1) * 260);
+  reset() {
+    this.lightX = 0.5;
+    this.lightY = 0.5;
+    this.panel.set('height', 34);
+    this.panel.set('normals', true);
+    this.panel.set('debug', false);
+  }
+  onMove = p => {
+    this.lightX = ((p.x / this.scale) % (this.width / 2)) / (this.width / 2);
+    this.lightY = Math.max(0, Math.min(1, p.y / this.scale / this.height));
+  };
+  update() {
+    const v = this.panel.fit(this.app, this.app.canvas);
+    this.scale = v.scale;
+    this.width = v.width;
+    this.height = v.contentHeight;
+    this.root.setScale(v.scale);
+    const floor = this.world.children[0];
+    floor.width = v.width;
+    floor.height = v.contentHeight;
+    this.lighting.clearSurfaces();
+    this.cobbles.forEach((cobble, index) => {
+      const side = Math.floor(index / 9);
+      const local = index % 9;
+      const column = local % 3;
+      const row = Math.floor(local / 3);
+      cobble.width = Math.min(v.width / 7, v.contentHeight / 3.4);
+      cobble.height = cobble.width;
+      cobble.setPosition(v.width * (side / 2 + (column + 0.5) / 6), (v.contentHeight * (row + 0.5)) / 3);
+      if (side === 0 && this.panel.values.normals) {
+        this.lighting.normalsFrom(cobble, this.normals);
+      }
+    });
+    this.lights.forEach((light, side) => {
+      light.setPosition(v.width * (side / 2 + this.lightX / 2) * v.scale, this.lightY * v.contentHeight * v.scale);
+      light.height = this.panel.values.height * v.scale;
+      light.radius = Math.min(v.width * 0.24, v.contentHeight * 0.8) * v.scale;
+    });
+    this.lighting.debug = this.panel.values.debug ? 'normals' : null;
+    this.panel.status(
+      `${this.panel.values.normals ? 'Left: alpha-derived | Right: flat' : 'Both flat (unregistered)'} | same source, rotation, local light and height | no new normal-map art`,
+    );
   }
   draw(context) {
-    context.render(this.world);
+    context.render(this.root);
+  }
+  destroy() {
+    this.app.input.onPointerMove.remove(this.onMove);
+    this.panel.dispose();
+    super.destroy();
   }
 }
 const app = new Application({
   scenes: { LightmapNormalsScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
-  clearColor: new Color(5, 6, 11),
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  clearColor: new Color(6, 7, 12),
 });
 await app.start(LightmapNormalsScene);

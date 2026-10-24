@@ -1,0 +1,13 @@
+{
+  "browser": "firefox",
+  "version": "155.0",
+  "backend": "webgl2",
+  "records": [
+    {
+      "example": "sprites-textures/video-drawable",
+      "size": "leave during loading 512x288",
+      "status": "PASS",
+      "checks": ["seek before ready is accepted; app teardown during delayed media load removes controls and ignores late completion"]
+    }
+  ]
+}

@@ -1,0 +1,239 @@
+{
+  "browser": "chromium",
+  "version": "153.0.8010.12",
+  "backend": "webgl2",
+  "records": [
+    {
+      "example": "sprites-textures/texture-sampling",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        {
+          "snapPreservesLogicalPositions": true,
+          "position": [
+            {
+              "x": 213.77672381724872,
+              "y": 199.24,
+              "snap": 0
+            },
+            {
+              "x": 640.4433904839153,
+              "y": 199.24,
+              "snap": 0
+            },
+            {
+              "x": 1067.1100571505822,
+              "y": 199.24,
+              "snap": 0
+            }
+          ],
+          "device": {
+            "dpr": 1,
+            "ratio": 1,
+            "buffer": [1280, 720]
+          }
+        }
+      ]
+    },
+    {
+      "example": "sprites-textures/texture-sampling",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        {
+          "snapPreservesLogicalPositions": true,
+          "position": [
+            {
+              "x": 85.71053275833593,
+              "y": 51.68000000000001,
+              "snap": 0
+            },
+            {
+              "x": 256.3771994250026,
+              "y": 51.68000000000001,
+              "snap": 0
+            },
+            {
+              "x": 427.04386609166926,
+              "y": 51.68000000000001,
+              "snap": 0
+            }
+          ],
+          "device": {
+            "dpr": 1,
+            "ratio": 1,
+            "buffer": [1280, 720]
+          }
+        }
+      ]
+    },
+    {
+      "example": "sprites-textures/video-drawable",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["silent paused startup; play/pause/seek; last clip selection wins; non-looping end synchronizes pause"]
+    },
+    {
+      "example": "sprites-textures/video-drawable",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["silent paused startup; play/pause/seek; last clip selection wins; non-looping end synchronizes pause"]
+    },
+    {
+      "example": "lighting/shadow-casters",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["drag, radius, spot and alpha-outline debug work; R restores all defaults"]
+    },
+    {
+      "example": "lighting/shadow-casters",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["drag, radius, spot and alpha-outline debug work; R restores all defaults"]
+    },
+    {
+      "example": "lighting/lightmap-normals",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["shared height, A/B registration and debug work; R restores synchronized defaults"]
+    },
+    {
+      "example": "lighting/lightmap-normals",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["shared height, A/B registration and debug work; R restores synchronized defaults"]
+    },
+    {
+      "example": "particles/emitter-basics",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["pause freezes live count; reset empties; rate/lifetime/speed and drag affect emitter"]
+    },
+    {
+      "example": "particles/emitter-basics",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["pause freezes live count; reset empties; rate/lifetime/speed and drag affect emitter"]
+    },
+    {
+      "example": "particles/cursor-attractor-particles",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["zero reference; repulsion strength; keyboard force placement; reset clears particles"]
+    },
+    {
+      "example": "particles/cursor-attractor-particles",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["zero reference; repulsion strength; keyboard force placement; reset clears particles"]
+    },
+    {
+      "example": "sprites-textures/texture-sampling",
+      "size": "DPR 1.25 512x288",
+      "status": "PASS",
+      "checks": [
+        {
+          "snapPreservesLogicalPositions": true,
+          "position": [
+            {
+              "x": 84.96900355933242,
+              "y": 51.68000000000001,
+              "snap": 0
+            },
+            {
+              "x": 255.6356702259991,
+              "y": 51.68000000000001,
+              "snap": 0
+            },
+            {
+              "x": 426.3023368926658,
+              "y": 51.68000000000001,
+              "snap": 0
+            }
+          ],
+          "device": {
+            "dpr": 1.25,
+            "ratio": 1.25,
+            "buffer": [1600, 900]
+          }
+        }
+      ]
+    },
+    {
+      "example": "sprites-textures/texture-sampling",
+      "size": "DPR 2 512x288",
+      "status": "PASS",
+      "checks": [
+        {
+          "snapPreservesLogicalPositions": true,
+          "position": [
+            {
+              "x": 85.76463000740424,
+              "y": 51.68000000000001,
+              "snap": 0
+            },
+            {
+              "x": 256.4312966740709,
+              "y": 51.68000000000001,
+              "snap": 0
+            },
+            {
+              "x": 427.0979633407376,
+              "y": 51.68000000000001,
+              "snap": 0
+            }
+          ],
+          "device": {
+            "dpr": 2,
+            "ratio": 2,
+            "buffer": [2560, 1440]
+          }
+        }
+      ]
+    },
+    {
+      "example": "sprites-textures/texture-sampling",
+      "size": "DPR 3 512x288",
+      "status": "PASS",
+      "checks": [
+        {
+          "snapPreservesLogicalPositions": true,
+          "position": [
+            {
+              "x": 85.68065064603265,
+              "y": 51.68000000000001,
+              "snap": 0
+            },
+            {
+              "x": 256.3473173126993,
+              "y": 51.68000000000001,
+              "snap": 0
+            },
+            {
+              "x": 427.013983979366,
+              "y": 51.68000000000001,
+              "snap": 0
+            }
+          ],
+          "device": {
+            "dpr": 3,
+            "ratio": 2,
+            "buffer": [2560, 1440]
+          }
+        }
+      ]
+    },
+    {
+      "example": "sprites-textures/video-drawable",
+      "size": "media error 512x288",
+      "status": "PASS",
+      "checks": ["actual HTTP 404 yields visible media error and teardown completes"]
+    },
+    {
+      "example": "sprites-textures/video-drawable",
+      "size": "leave during loading 512x288",
+      "status": "PASS",
+      "checks": ["seek before ready is accepted; app teardown during delayed media load removes controls and ignores late completion"]
+    }
+  ]
+}

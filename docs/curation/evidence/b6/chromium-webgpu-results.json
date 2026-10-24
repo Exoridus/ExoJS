@@ -1,0 +1,291 @@
+{
+  "browser": "chromium",
+  "version": "153.0.8010.12",
+  "backend": "webgpu",
+  "records": [
+    {
+      "example": "scene-graph/nested-transforms",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["parent rotation moves world position only; pause freezes time"]
+    },
+    {
+      "example": "scene-graph/nested-transforms",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["parent rotation moves world position only; pause freezes time"]
+    },
+    {
+      "example": "scene-graph/pivot-and-anchor",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["button and Right each step exactly 15 degrees and pause"]
+    },
+    {
+      "example": "scene-graph/pivot-and-anchor",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["button and Right each step exactly 15 degrees and pause"]
+    },
+    {
+      "example": "scene-graph/masks",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["world-space circular mask follows drag; bypass and restore"]
+    },
+    {
+      "example": "scene-graph/masks",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["world-space circular mask follows drag; bypass and restore"]
+    },
+    {
+      "example": "sprites-textures/texture-sampling",
+      "size": "1280x720",
+      "status": "FAIL",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n  [\n    {\n+     x: 213.74392488361244,\n-     x: 213.7746784436192,\n      y: 199.24\n    },\n    {\n+     x: 640.410591550279,\n-     x: 640.4413451102859,\n      y: 199.24\n    },\n    {\n+     x: 1067.077258216946,\n-     x: 1067.1080117769527,\n      y: 199.24\n    }\n  ]\n"
+    },
+    {
+      "example": "sprites-textures/texture-sampling",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        {
+          "snapPreservesLogicalPositions": true,
+          "position": [
+            {
+              "x": 85.7689858437019,
+              "y": 51.68000000000001,
+              "snap": 0
+            },
+            {
+              "x": 256.4356525103686,
+              "y": 51.68000000000001,
+              "snap": 0
+            },
+            {
+              "x": 427.10231917703527,
+              "y": 51.68000000000001,
+              "snap": 0
+            }
+          ],
+          "device": {
+            "dpr": 1,
+            "ratio": 1,
+            "buffer": [1280, 720]
+          }
+        }
+      ]
+    },
+    {
+      "example": "sprites-textures/blendmodes",
+      "size": "1280x720",
+      "status": "FAIL",
+      "error": "AssertionError [ERR_ASSERTION]: [{\"mode\":0,\"destinationAlpha\":1,\"rgba\":[121,38,101,255],\"expected\":[121,38,102,255],\"maxError\":1},{\"mode\":1,\"destinationAlpha\":1,\"rgba\":[135,101,229,255],\"expected\":[135,101,229,255],\"maxError\":0},{\"mode\":2,\"destinationAlpha\":1,\"rgba\":[11,86,148,255],\"expected\":[11,86,149,255],\"maxError\":1},{\"mode\":3,\"destinationAlpha\":1,\"rgba\":[6,27,54,255],\"expected\":[15,31,88,255],\"maxError\":34},{\"mode\":4,\"destinationAlpha\":1,\"rgba\":[126,97,195,255],\"expected\":[126,97,196,255],\"maxError\":1},{\"mode\":5,\"destinationAlpha\":1,\"rgba\":[20,38,101,255],\"expected\":[20,38,102,255],\"maxError\":1},{\"mode\":6,\"destinationAlpha\":1,\"rgba\":[121,90,182,255],\"expected\":[121,90,183,255],\"maxError\":1},{\"mode\":7,\"destinationAlpha\":1,\"rgba\":[24,35,157,255],\"expected\":[25,35,158,255],\"maxError\":1},{\"mode\":8,\"destinationAlpha\":1,\"rgba\":[45,94,227,255],\"expected\":[46,94,228,255],\"maxError\":1},{\"mode\":9,\"destinationAlpha\":1,\"rgba\":[6,27,54,255],\"expected\":[6,27,55,255],\"maxError\":1},{\"mode\":10,\"destinationAlpha\":1,\"rgba\":[67,35,121,255],\"expected\":[68,35,122,255],\"maxError\":1},{\"mode\":11,\"destinationAlpha\":1,\"rgba\":[29,54,164,255],\"expected\":[29,54,165,255],\"maxError\":1},{\"mode\":12,\"destinationAlpha\":1,\"rgba\":[107,79,135,255],\"expected\":[107,79,136,255],\"maxError\":1},{\"mode\":13,\"destinationAlpha\":1,\"rgba\":[117,93,162,255],\"expected\":[117,93,162,255],\"maxError\":0},{\"mode\":14,\"destinationAlpha\":1,\"rgba\":[137,44,110,255],\"expected\":[137,44,111,255],\"maxError\":1},{\"mode\":15,\"destinationAlpha\":1,\"rgba\":[24,90,176,255],\"expected\":[24,89,177,255],\"maxError\":1},{\"mode\":16,\"destinationAlpha\":1,\"rgba\":[130,47,110,255],\"expected\":[130,47,111,255],\"maxError\":1},{\"mode\":17,\"destinationAlpha\":1,\"rgba\":[11,81,172,255],\"expected\":[11,80,173,255],\"maxError\":1},{\"mode\":0,\"destinationAlpha\":0.45,\"rgba\":[118,23,71,213],\"expected\":[118,23,71,213],\"maxError\":0},{\"mode\":1,\"destinationAlpha\":0.45,\"rgba\":[124,51,129,213],\"expected\":[124,51,129,213],\"maxError\":0},{\"mode\":2,\"destinationAlpha\":0.45,\"rgba\":[5,38,67,115],\"expected\":[5,39,67,115],\"maxError\":1},{\"mode\":3,\"destinationAlpha\":0.45,\"rgba\":[3,12,24,213],\"expected\":[70,20,65,213],\"maxError\":67},{\"mode\":4,\"destinationAlpha\":0.45,\"rgba\":[120,49,114,213],\"expected\":[120,50,114,213],\"maxError\":1},{\"mode\":5,\"destinationAlpha\":0.45,\"rgba\":[72,23,71,213],\"expected\":[72,23,71,213],\"maxError\":0},{\"mode\":6,\"destinationAlpha\":0.45,\"rgba\":[118,46,107,213],\"expected\":[118,46,108,213],\"maxError\":1},{\"mode\":7,\"destinationAlpha\":0.45,\"rgba\":[74,21,96,213],\"expected\":[74,22,97,213],\"maxError\":1},{\"mode\":8,\"destinationAlpha\":0.45,\"rgba\":[84,48,128,213],\"expected\":[84,48,128,213],\"maxError\":0},{\"mode\":9,\"destinationAlpha\":0.45,\"rgba\":[66,18,50,213],\"expected\":[66,18,50,213],\"maxError\":0},{\"mode\":10,\"destinationAlpha\":0.45,\"rgba\":[94,21,80,213],\"expected\":[94,22,81,213],\"maxError\":1},{\"mode\":11,\"destinationAlpha\":0.45,\"rgba\":[76,30,100,213],\"expected\":[76,30,100,213],\"maxError\":0},{\"mode\":12,\"destinationAlpha\":0.45,\"rgba\":[112,41,86,213],\"expected\":[111,41,87,213],\"maxError\":1},{\"mode\":13,\"destinationAlpha\":0.45,\"rgba\":[116,48,98,213],\"expected\":[116,48,99,213],\"maxError\":1},{\"mode\":14,\"destinationAlpha\":0.45,\"rgba\":[125,25,75,213],\"expected\":[125,26,76,213],\"maxError\":1},{\"mode\":15,\"destinationAlpha\":0.45,\"rgba\":[74,46,105,213],\"expected\":[74,46,105,213],\"maxError\":0},{\"mode\":16,\"destinationAlpha\":0.45,\"rgba\":[122,27,75,213],\"expected\":[122,27,76,213],\"maxError\":1},{\"mode\":17,\"destinationAlpha\":0.45,\"rgba\":[68,42,103,213],\"expected\":[68,42,104,213],\"maxError\":1}]"
+    },
+    {
+      "example": "sprites-textures/blendmodes",
+      "size": "512x288",
+      "status": "FAIL",
+      "error": "AssertionError [ERR_ASSERTION]: [{\"mode\":0,\"destinationAlpha\":1,\"rgba\":[121,38,101,255],\"expected\":[121,38,102,255],\"maxError\":1},{\"mode\":1,\"destinationAlpha\":1,\"rgba\":[135,101,229,255],\"expected\":[135,101,229,255],\"maxError\":0},{\"mode\":2,\"destinationAlpha\":1,\"rgba\":[11,86,148,255],\"expected\":[11,86,149,255],\"maxError\":1},{\"mode\":3,\"destinationAlpha\":1,\"rgba\":[6,27,54,255],\"expected\":[15,31,88,255],\"maxError\":34},{\"mode\":4,\"destinationAlpha\":1,\"rgba\":[126,97,195,255],\"expected\":[126,97,196,255],\"maxError\":1},{\"mode\":5,\"destinationAlpha\":1,\"rgba\":[20,38,101,255],\"expected\":[20,38,102,255],\"maxError\":1},{\"mode\":6,\"destinationAlpha\":1,\"rgba\":[121,90,182,255],\"expected\":[121,90,183,255],\"maxError\":1},{\"mode\":7,\"destinationAlpha\":1,\"rgba\":[24,35,157,255],\"expected\":[25,35,158,255],\"maxError\":1},{\"mode\":8,\"destinationAlpha\":1,\"rgba\":[45,94,227,255],\"expected\":[46,94,228,255],\"maxError\":1},{\"mode\":9,\"destinationAlpha\":1,\"rgba\":[6,27,54,255],\"expected\":[6,27,55,255],\"maxError\":1},{\"mode\":10,\"destinationAlpha\":1,\"rgba\":[67,35,121,255],\"expected\":[68,35,122,255],\"maxError\":1},{\"mode\":11,\"destinationAlpha\":1,\"rgba\":[29,54,164,255],\"expected\":[29,54,165,255],\"maxError\":1},{\"mode\":12,\"destinationAlpha\":1,\"rgba\":[107,79,135,255],\"expected\":[107,79,136,255],\"maxError\":1},{\"mode\":13,\"destinationAlpha\":1,\"rgba\":[117,93,162,255],\"expected\":[117,93,162,255],\"maxError\":0},{\"mode\":14,\"destinationAlpha\":1,\"rgba\":[137,44,110,255],\"expected\":[137,44,111,255],\"maxError\":1},{\"mode\":15,\"destinationAlpha\":1,\"rgba\":[24,90,176,255],\"expected\":[24,89,177,255],\"maxError\":1},{\"mode\":16,\"destinationAlpha\":1,\"rgba\":[130,47,110,255],\"expected\":[130,47,111,255],\"maxError\":1},{\"mode\":17,\"destinationAlpha\":1,\"rgba\":[11,81,172,255],\"expected\":[11,80,173,255],\"maxError\":1},{\"mode\":0,\"destinationAlpha\":0.45,\"rgba\":[118,23,71,213],\"expected\":[118,23,71,213],\"maxError\":0},{\"mode\":1,\"destinationAlpha\":0.45,\"rgba\":[124,51,129,213],\"expected\":[124,51,129,213],\"maxError\":0},{\"mode\":2,\"destinationAlpha\":0.45,\"rgba\":[5,38,67,115],\"expected\":[5,39,67,115],\"maxError\":1},{\"mode\":3,\"destinationAlpha\":0.45,\"rgba\":[3,12,24,213],\"expected\":[70,20,65,213],\"maxError\":67},{\"mode\":4,\"destinationAlpha\":0.45,\"rgba\":[120,49,114,213],\"expected\":[120,50,114,213],\"maxError\":1},{\"mode\":5,\"destinationAlpha\":0.45,\"rgba\":[72,23,71,213],\"expected\":[72,23,71,213],\"maxError\":0},{\"mode\":6,\"destinationAlpha\":0.45,\"rgba\":[118,46,107,213],\"expected\":[118,46,108,213],\"maxError\":1},{\"mode\":7,\"destinationAlpha\":0.45,\"rgba\":[74,21,96,213],\"expected\":[74,22,97,213],\"maxError\":1},{\"mode\":8,\"destinationAlpha\":0.45,\"rgba\":[84,48,128,213],\"expected\":[84,48,128,213],\"maxError\":0},{\"mode\":9,\"destinationAlpha\":0.45,\"rgba\":[66,18,50,213],\"expected\":[66,18,50,213],\"maxError\":0},{\"mode\":10,\"destinationAlpha\":0.45,\"rgba\":[94,21,80,213],\"expected\":[94,22,81,213],\"maxError\":1},{\"mode\":11,\"destinationAlpha\":0.45,\"rgba\":[76,30,100,213],\"expected\":[76,30,100,213],\"maxError\":0},{\"mode\":12,\"destinationAlpha\":0.45,\"rgba\":[112,41,86,213],\"expected\":[111,41,87,213],\"maxError\":1},{\"mode\":13,\"destinationAlpha\":0.45,\"rgba\":[116,48,98,213],\"expected\":[116,48,99,213],\"maxError\":1},{\"mode\":14,\"destinationAlpha\":0.45,\"rgba\":[125,25,75,213],\"expected\":[125,26,76,213],\"maxError\":1},{\"mode\":15,\"destinationAlpha\":0.45,\"rgba\":[74,46,105,213],\"expected\":[74,46,105,213],\"maxError\":0},{\"mode\":16,\"destinationAlpha\":0.45,\"rgba\":[122,27,75,213],\"expected\":[122,27,76,213],\"maxError\":1},{\"mode\":17,\"destinationAlpha\":0.45,\"rgba\":[68,42,103,213],\"expected\":[68,42,104,213],\"maxError\":1}]"
+    },
+    {
+      "example": "filters/blur-filter",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["all four public filter families draw; bypass pixels match reference"]
+    },
+    {
+      "example": "filters/blur-filter",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["all four public filter families draw; bypass pixels match reference"]
+    },
+    {
+      "example": "filters/bloom-filter",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["threshold changes rendered luminance, independent intensity/spread and bypass"]
+    },
+    {
+      "example": "filters/bloom-filter",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["threshold changes rendered luminance, independent intensity/spread and bypass"]
+    },
+    {
+      "example": "render-targets/render-to-texture",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["frozen timestamp/count stay fixed while live advances; recapture occurs once"]
+    },
+    {
+      "example": "render-targets/render-to-texture",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["frozen timestamp/count stay fixed while live advances; recapture occurs once"]
+    },
+    {
+      "example": "sprites-textures/video-drawable",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["silent paused startup; explicit play advances, pause/seek work; last clip selection wins and preserves transport"]
+    },
+    {
+      "example": "sprites-textures/video-drawable",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["silent paused startup; explicit play advances, pause/seek work; last clip selection wins and preserves transport"]
+    },
+    {
+      "example": "lighting/shadow-casters",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["drag changes light; radius, spot and alpha-outline debug active"]
+    },
+    {
+      "example": "lighting/shadow-casters",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["drag changes light; radius, spot and alpha-outline debug active"]
+    },
+    {
+      "example": "lighting/lightmap-normals",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["shared height changes both lights; A/B unregisters exactly left normal surfaces; debug available"]
+    },
+    {
+      "example": "lighting/lightmap-normals",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["shared height changes both lights; A/B unregisters exactly left normal surfaces; debug available"]
+    },
+    {
+      "example": "particles/emitter-basics",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["pause freezes live count; reset empties; rate/lifetime/speed and drag affect emitter"]
+    },
+    {
+      "example": "particles/emitter-basics",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["pause freezes live count; reset empties; rate/lifetime/speed and drag affect emitter"]
+    },
+    {
+      "example": "particles/cursor-attractor-particles",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["zero reference; repulsion strength; keyboard force placement; reset clears particles"]
+    },
+    {
+      "example": "particles/cursor-attractor-particles",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["zero reference; repulsion strength; keyboard force placement; reset clears particles"]
+    },
+    {
+      "example": "sprites-textures/texture-sampling",
+      "size": "DPR 1.25 512x288",
+      "status": "PASS",
+      "checks": [
+        {
+          "snapPreservesLogicalPositions": true,
+          "position": [
+            {
+              "x": 85.78236435261874,
+              "y": 51.68000000000001,
+              "snap": 0
+            },
+            {
+              "x": 256.4490310192854,
+              "y": 51.68000000000001,
+              "snap": 0
+            },
+            {
+              "x": 427.1156976859521,
+              "y": 51.68000000000001,
+              "snap": 0
+            }
+          ],
+          "device": {
+            "dpr": 1.25,
+            "ratio": 1.25,
+            "buffer": [1600, 900]
+          }
+        }
+      ]
+    },
+    {
+      "example": "sprites-textures/texture-sampling",
+      "size": "DPR 2 512x288",
+      "status": "PASS",
+      "checks": [
+        {
+          "snapPreservesLogicalPositions": true,
+          "position": [
+            {
+              "x": 85.53685634631569,
+              "y": 51.68000000000001,
+              "snap": 0
+            },
+            {
+              "x": 256.2035230129824,
+              "y": 51.68000000000001,
+              "snap": 0
+            },
+            {
+              "x": 426.87018967964906,
+              "y": 51.68000000000001,
+              "snap": 0
+            }
+          ],
+          "device": {
+            "dpr": 2,
+            "ratio": 2,
+            "buffer": [2560, 1440]
+          }
+        }
+      ]
+    },
+    {
+      "example": "sprites-textures/texture-sampling",
+      "size": "DPR 3 512x288",
+      "status": "PASS",
+      "checks": [
+        {
+          "snapPreservesLogicalPositions": true,
+          "position": [
+            {
+              "x": 85.77406256773315,
+              "y": 51.68000000000001,
+              "snap": 0
+            },
+            {
+              "x": 256.44072923439984,
+              "y": 51.68000000000001,
+              "snap": 0
+            },
+            {
+              "x": 427.1073959010665,
+              "y": 51.68000000000001,
+              "snap": 0
+            }
+          ],
+          "device": {
+            "dpr": 3,
+            "ratio": 2,
+            "buffer": [2560, 1440]
+          }
+        }
+      ]
+    },
+    {
+      "example": "sprites-textures/video-drawable",
+      "size": "media error 512x288",
+      "status": "PASS",
+      "checks": ["actual HTTP 404 yields visible media error and teardown completes"]
+    }
+  ]
+}

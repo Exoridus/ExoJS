@@ -1,0 +1,1506 @@
+{
+  "base": "84d7dbe4fa63f7a7e45b65f2f5bf49cefac95d46",
+  "overall": "NOT_ACCEPTED",
+  "limits": {
+    "25": "Numeric backdrop-blend reference fails; see per-backend oracle JSON.",
+    "32": "Controls pass; colored-flame visual parity is not accepted. WebGL2 shows a mosaic-like pattern compared with WebGPU.",
+    "hardware": "Real touch/gamepad hardware and human audio listening not tested."
+  },
+  "environments": [
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgl2",
+      "recordFiles": ["chromium-webgl2-results.json", "chromium-webgl2-followup-results.json"],
+      "checks": 31,
+      "pass": 29,
+      "fail": 2,
+      "supersededChecks": [
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "1280x720",
+          "previousStatus": "FAIL",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "1280x720",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "lighting/shadow-casters",
+          "size": "1280x720",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "lighting/shadow-casters",
+          "size": "512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "lighting/lightmap-normals",
+          "size": "1280x720",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "lighting/lightmap-normals",
+          "size": "512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "particles/emitter-basics",
+          "size": "1280x720",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "particles/emitter-basics",
+          "size": "512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "particles/cursor-attractor-particles",
+          "size": "1280x720",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "particles/cursor-attractor-particles",
+          "size": "512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "DPR 1.25 512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "DPR 2 512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "DPR 3 512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "media error 512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgl2-followup-results.json"
+        }
+      ],
+      "records": [
+        {
+          "example": "scene-graph/nested-transforms",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["parent rotation moves world position only; pause freezes time"],
+          "recordFile": "chromium-webgl2-results.json"
+        },
+        {
+          "example": "scene-graph/nested-transforms",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["parent rotation moves world position only; pause freezes time"],
+          "recordFile": "chromium-webgl2-results.json"
+        },
+        {
+          "example": "scene-graph/pivot-and-anchor",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["button and Right each step exactly 15 degrees and pause"],
+          "recordFile": "chromium-webgl2-results.json"
+        },
+        {
+          "example": "scene-graph/pivot-and-anchor",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["button and Right each step exactly 15 degrees and pause"],
+          "recordFile": "chromium-webgl2-results.json"
+        },
+        {
+          "example": "scene-graph/masks",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["world-space circular mask follows drag; bypass and restore"],
+          "recordFile": "chromium-webgl2-results.json"
+        },
+        {
+          "example": "scene-graph/masks",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["world-space circular mask follows drag; bypass and restore"],
+          "recordFile": "chromium-webgl2-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": [
+            {
+              "snapPreservesLogicalPositions": true,
+              "position": [
+                {
+                  "x": 213.77672381724872,
+                  "y": 199.24,
+                  "snap": 0
+                },
+                {
+                  "x": 640.4433904839153,
+                  "y": 199.24,
+                  "snap": 0
+                },
+                {
+                  "x": 1067.1100571505822,
+                  "y": 199.24,
+                  "snap": 0
+                }
+              ],
+              "device": {
+                "dpr": 1,
+                "ratio": 1,
+                "buffer": [1280, 720]
+              }
+            }
+          ],
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": [
+            {
+              "snapPreservesLogicalPositions": true,
+              "position": [
+                {
+                  "x": 85.71053275833593,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 256.3771994250026,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 427.04386609166926,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                }
+              ],
+              "device": {
+                "dpr": 1,
+                "ratio": 1,
+                "buffer": [1280, 720]
+              }
+            }
+          ],
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/blendmodes",
+          "size": "1280x720",
+          "status": "FAIL",
+          "error": "AssertionError [ERR_ASSERTION]: [{\"mode\":0,\"destinationAlpha\":1,\"rgba\":[121,38,101,255],\"expected\":[121,38,102,255],\"maxError\":1},{\"mode\":1,\"destinationAlpha\":1,\"rgba\":[135,101,229,255],\"expected\":[135,101,229,255],\"maxError\":0},{\"mode\":2,\"destinationAlpha\":1,\"rgba\":[11,86,148,255],\"expected\":[11,86,149,255],\"maxError\":1},{\"mode\":3,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[15,31,88,255],\"maxError\":94},{\"mode\":4,\"destinationAlpha\":1,\"rgba\":[126,97,195,255],\"expected\":[126,97,196,255],\"maxError\":1},{\"mode\":5,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[20,38,102,255],\"maxError\":80},{\"mode\":6,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[121,90,183,255],\"maxError\":101},{\"mode\":7,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[25,35,158,255],\"maxError\":55},{\"mode\":8,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[46,94,228,255],\"maxError\":46},{\"mode\":9,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[6,27,55,255],\"maxError\":127},{\"mode\":10,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[68,35,122,255],\"maxError\":60},{\"mode\":11,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[29,54,165,255],\"maxError\":36},{\"mode\":12,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[107,79,136,255],\"maxError\":87},{\"mode\":13,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[117,93,162,255],\"maxError\":97},{\"mode\":14,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[137,44,111,255],\"maxError\":117},{\"mode\":15,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[24,89,177,255],\"maxError\":5},{\"mode\":16,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[130,47,111,255],\"maxError\":110},{\"mode\":17,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[11,80,173,255],\"maxError\":10},{\"mode\":0,\"destinationAlpha\":0.45,\"rgba\":[118,23,71,213],\"expected\":[118,23,71,213],\"maxError\":0},{\"mode\":1,\"destinationAlpha\":0.45,\"rgba\":[124,51,129,213],\"expected\":[124,51,129,213],\"maxError\":0},{\"mode\":2,\"destinationAlpha\":0.45,\"rgba\":[5,38,67,115],\"expected\":[5,39,67,115],\"maxError\":1},{\"mode\":3,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[70,20,65,213],\"maxError\":98},{\"mode\":4,\"destinationAlpha\":0.45,\"rgba\":[120,49,114,213],\"expected\":[120,50,114,213],\"maxError\":1},{\"mode\":5,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[72,23,71,213],\"maxError\":98},{\"mode\":6,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[118,46,108,213],\"maxError\":109},{\"mode\":7,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[74,22,97,213],\"maxError\":98},{\"mode\":8,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[84,48,128,213],\"maxError\":98},{\"mode\":9,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[66,18,50,213],\"maxError\":98},{\"mode\":10,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[94,22,81,213],\"maxError\":98},{\"mode\":11,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[76,30,100,213],\"maxError\":98},{\"mode\":12,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[111,41,87,213],\"maxError\":102},{\"mode\":13,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[116,48,99,213],\"maxError\":107},{\"mode\":14,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[125,26,76,213],\"maxError\":116},{\"mode\":15,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[74,46,105,213],\"maxError\":98},{\"mode\":16,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[122,27,76,213],\"maxError\":113},{\"mode\":17,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[68,42,104,213],\"maxError\":98}]",
+          "recordFile": "chromium-webgl2-results.json"
+        },
+        {
+          "example": "sprites-textures/blendmodes",
+          "size": "512x288",
+          "status": "FAIL",
+          "error": "AssertionError [ERR_ASSERTION]: [{\"mode\":0,\"destinationAlpha\":1,\"rgba\":[121,38,101,255],\"expected\":[121,38,102,255],\"maxError\":1},{\"mode\":1,\"destinationAlpha\":1,\"rgba\":[135,101,229,255],\"expected\":[135,101,229,255],\"maxError\":0},{\"mode\":2,\"destinationAlpha\":1,\"rgba\":[11,86,148,255],\"expected\":[11,86,149,255],\"maxError\":1},{\"mode\":3,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[15,31,88,255],\"maxError\":94},{\"mode\":4,\"destinationAlpha\":1,\"rgba\":[126,97,195,255],\"expected\":[126,97,196,255],\"maxError\":1},{\"mode\":5,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[20,38,102,255],\"maxError\":80},{\"mode\":6,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[121,90,183,255],\"maxError\":101},{\"mode\":7,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[25,35,158,255],\"maxError\":55},{\"mode\":8,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[46,94,228,255],\"maxError\":46},{\"mode\":9,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[6,27,55,255],\"maxError\":127},{\"mode\":10,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[68,35,122,255],\"maxError\":60},{\"mode\":11,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[29,54,165,255],\"maxError\":36},{\"mode\":12,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[107,79,136,255],\"maxError\":87},{\"mode\":13,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[117,93,162,255],\"maxError\":97},{\"mode\":14,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[137,44,111,255],\"maxError\":117},{\"mode\":15,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[24,89,177,255],\"maxError\":5},{\"mode\":16,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[130,47,111,255],\"maxError\":110},{\"mode\":17,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[11,80,173,255],\"maxError\":10},{\"mode\":0,\"destinationAlpha\":0.45,\"rgba\":[118,23,71,213],\"expected\":[118,23,71,213],\"maxError\":0},{\"mode\":1,\"destinationAlpha\":0.45,\"rgba\":[124,51,129,213],\"expected\":[124,51,129,213],\"maxError\":0},{\"mode\":2,\"destinationAlpha\":0.45,\"rgba\":[5,38,67,115],\"expected\":[5,39,67,115],\"maxError\":1},{\"mode\":3,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[70,20,65,213],\"maxError\":98},{\"mode\":4,\"destinationAlpha\":0.45,\"rgba\":[120,49,114,213],\"expected\":[120,50,114,213],\"maxError\":1},{\"mode\":5,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[72,23,71,213],\"maxError\":98},{\"mode\":6,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[118,46,108,213],\"maxError\":109},{\"mode\":7,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[74,22,97,213],\"maxError\":98},{\"mode\":8,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[84,48,128,213],\"maxError\":98},{\"mode\":9,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[66,18,50,213],\"maxError\":98},{\"mode\":10,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[94,22,81,213],\"maxError\":98},{\"mode\":11,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[76,30,100,213],\"maxError\":98},{\"mode\":12,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[111,41,87,213],\"maxError\":102},{\"mode\":13,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[116,48,99,213],\"maxError\":107},{\"mode\":14,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[125,26,76,213],\"maxError\":116},{\"mode\":15,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[74,46,105,213],\"maxError\":98},{\"mode\":16,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[122,27,76,213],\"maxError\":113},{\"mode\":17,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[68,42,104,213],\"maxError\":98}]",
+          "recordFile": "chromium-webgl2-results.json"
+        },
+        {
+          "example": "filters/blur-filter",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["all four public filter families draw; bypass pixels match reference"],
+          "recordFile": "chromium-webgl2-results.json"
+        },
+        {
+          "example": "filters/blur-filter",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["all four public filter families draw; bypass pixels match reference"],
+          "recordFile": "chromium-webgl2-results.json"
+        },
+        {
+          "example": "filters/bloom-filter",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["threshold changes rendered luminance, independent intensity/spread and bypass"],
+          "recordFile": "chromium-webgl2-results.json"
+        },
+        {
+          "example": "filters/bloom-filter",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["threshold changes rendered luminance, independent intensity/spread and bypass"],
+          "recordFile": "chromium-webgl2-results.json"
+        },
+        {
+          "example": "render-targets/render-to-texture",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["frozen timestamp/count stay fixed while live advances; recapture occurs once"],
+          "recordFile": "chromium-webgl2-results.json"
+        },
+        {
+          "example": "render-targets/render-to-texture",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["frozen timestamp/count stay fixed while live advances; recapture occurs once"],
+          "recordFile": "chromium-webgl2-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["silent paused startup; play/pause/seek; last clip selection wins; non-looping end synchronizes pause"],
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["silent paused startup; play/pause/seek; last clip selection wins; non-looping end synchronizes pause"],
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "lighting/shadow-casters",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["drag, radius, spot and alpha-outline debug work; R restores all defaults"],
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "lighting/shadow-casters",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["drag, radius, spot and alpha-outline debug work; R restores all defaults"],
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "lighting/lightmap-normals",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["shared height, A/B registration and debug work; R restores synchronized defaults"],
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "lighting/lightmap-normals",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["shared height, A/B registration and debug work; R restores synchronized defaults"],
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "particles/emitter-basics",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["pause freezes live count; reset empties; rate/lifetime/speed and drag affect emitter"],
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "particles/emitter-basics",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["pause freezes live count; reset empties; rate/lifetime/speed and drag affect emitter"],
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "particles/cursor-attractor-particles",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["zero reference; repulsion strength; keyboard force placement; reset clears particles"],
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "particles/cursor-attractor-particles",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["zero reference; repulsion strength; keyboard force placement; reset clears particles"],
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "DPR 1.25 512x288",
+          "status": "PASS",
+          "checks": [
+            {
+              "snapPreservesLogicalPositions": true,
+              "position": [
+                {
+                  "x": 84.96900355933242,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 255.6356702259991,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 426.3023368926658,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                }
+              ],
+              "device": {
+                "dpr": 1.25,
+                "ratio": 1.25,
+                "buffer": [1600, 900]
+              }
+            }
+          ],
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "DPR 2 512x288",
+          "status": "PASS",
+          "checks": [
+            {
+              "snapPreservesLogicalPositions": true,
+              "position": [
+                {
+                  "x": 85.76463000740424,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 256.4312966740709,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 427.0979633407376,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                }
+              ],
+              "device": {
+                "dpr": 2,
+                "ratio": 2,
+                "buffer": [2560, 1440]
+              }
+            }
+          ],
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "DPR 3 512x288",
+          "status": "PASS",
+          "checks": [
+            {
+              "snapPreservesLogicalPositions": true,
+              "position": [
+                {
+                  "x": 85.68065064603265,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 256.3473173126993,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 427.013983979366,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                }
+              ],
+              "device": {
+                "dpr": 3,
+                "ratio": 2,
+                "buffer": [2560, 1440]
+              }
+            }
+          ],
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "media error 512x288",
+          "status": "PASS",
+          "checks": ["actual HTTP 404 yields visible media error and teardown completes"],
+          "recordFile": "chromium-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "leave during loading 512x288",
+          "status": "PASS",
+          "checks": ["seek before ready is accepted; app teardown during delayed media load removes controls and ignores late completion"],
+          "recordFile": "chromium-webgl2-followup-results.json"
+        }
+      ]
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgpu",
+      "recordFiles": ["chromium-webgpu-results.json", "chromium-webgpu-followup-results.json"],
+      "checks": 31,
+      "pass": 29,
+      "fail": 2,
+      "supersededChecks": [
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "1280x720",
+          "previousStatus": "FAIL",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "1280x720",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "lighting/shadow-casters",
+          "size": "1280x720",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "lighting/shadow-casters",
+          "size": "512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "lighting/lightmap-normals",
+          "size": "1280x720",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "lighting/lightmap-normals",
+          "size": "512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "particles/emitter-basics",
+          "size": "1280x720",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "particles/emitter-basics",
+          "size": "512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "particles/cursor-attractor-particles",
+          "size": "1280x720",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "particles/cursor-attractor-particles",
+          "size": "512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "DPR 1.25 512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "DPR 2 512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "DPR 3 512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "media error 512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "chromium-webgpu-followup-results.json"
+        }
+      ],
+      "records": [
+        {
+          "example": "scene-graph/nested-transforms",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["parent rotation moves world position only; pause freezes time"],
+          "recordFile": "chromium-webgpu-results.json"
+        },
+        {
+          "example": "scene-graph/nested-transforms",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["parent rotation moves world position only; pause freezes time"],
+          "recordFile": "chromium-webgpu-results.json"
+        },
+        {
+          "example": "scene-graph/pivot-and-anchor",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["button and Right each step exactly 15 degrees and pause"],
+          "recordFile": "chromium-webgpu-results.json"
+        },
+        {
+          "example": "scene-graph/pivot-and-anchor",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["button and Right each step exactly 15 degrees and pause"],
+          "recordFile": "chromium-webgpu-results.json"
+        },
+        {
+          "example": "scene-graph/masks",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["world-space circular mask follows drag; bypass and restore"],
+          "recordFile": "chromium-webgpu-results.json"
+        },
+        {
+          "example": "scene-graph/masks",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["world-space circular mask follows drag; bypass and restore"],
+          "recordFile": "chromium-webgpu-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": [
+            {
+              "snapPreservesLogicalPositions": true,
+              "position": [
+                {
+                  "x": 213.75354810256565,
+                  "y": 199.24,
+                  "snap": 0
+                },
+                {
+                  "x": 640.4202147692323,
+                  "y": 199.24,
+                  "snap": 0
+                },
+                {
+                  "x": 1067.0868814358992,
+                  "y": 199.24,
+                  "snap": 0
+                }
+              ],
+              "device": {
+                "dpr": 1,
+                "ratio": 1,
+                "buffer": [1280, 720]
+              }
+            }
+          ],
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": [
+            {
+              "snapPreservesLogicalPositions": true,
+              "position": [
+                {
+                  "x": 85.7494814217539,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 256.4161480884206,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 427.08281475508727,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                }
+              ],
+              "device": {
+                "dpr": 1,
+                "ratio": 1,
+                "buffer": [1280, 720]
+              }
+            }
+          ],
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/blendmodes",
+          "size": "1280x720",
+          "status": "FAIL",
+          "error": "AssertionError [ERR_ASSERTION]: [{\"mode\":0,\"destinationAlpha\":1,\"rgba\":[121,38,101,255],\"expected\":[121,38,102,255],\"maxError\":1},{\"mode\":1,\"destinationAlpha\":1,\"rgba\":[135,101,229,255],\"expected\":[135,101,229,255],\"maxError\":0},{\"mode\":2,\"destinationAlpha\":1,\"rgba\":[11,86,148,255],\"expected\":[11,86,149,255],\"maxError\":1},{\"mode\":3,\"destinationAlpha\":1,\"rgba\":[6,27,54,255],\"expected\":[15,31,88,255],\"maxError\":34},{\"mode\":4,\"destinationAlpha\":1,\"rgba\":[126,97,195,255],\"expected\":[126,97,196,255],\"maxError\":1},{\"mode\":5,\"destinationAlpha\":1,\"rgba\":[20,38,101,255],\"expected\":[20,38,102,255],\"maxError\":1},{\"mode\":6,\"destinationAlpha\":1,\"rgba\":[121,90,182,255],\"expected\":[121,90,183,255],\"maxError\":1},{\"mode\":7,\"destinationAlpha\":1,\"rgba\":[24,35,157,255],\"expected\":[25,35,158,255],\"maxError\":1},{\"mode\":8,\"destinationAlpha\":1,\"rgba\":[45,94,227,255],\"expected\":[46,94,228,255],\"maxError\":1},{\"mode\":9,\"destinationAlpha\":1,\"rgba\":[6,27,54,255],\"expected\":[6,27,55,255],\"maxError\":1},{\"mode\":10,\"destinationAlpha\":1,\"rgba\":[67,35,121,255],\"expected\":[68,35,122,255],\"maxError\":1},{\"mode\":11,\"destinationAlpha\":1,\"rgba\":[29,54,164,255],\"expected\":[29,54,165,255],\"maxError\":1},{\"mode\":12,\"destinationAlpha\":1,\"rgba\":[107,79,135,255],\"expected\":[107,79,136,255],\"maxError\":1},{\"mode\":13,\"destinationAlpha\":1,\"rgba\":[117,93,162,255],\"expected\":[117,93,162,255],\"maxError\":0},{\"mode\":14,\"destinationAlpha\":1,\"rgba\":[137,44,110,255],\"expected\":[137,44,111,255],\"maxError\":1},{\"mode\":15,\"destinationAlpha\":1,\"rgba\":[24,90,176,255],\"expected\":[24,89,177,255],\"maxError\":1},{\"mode\":16,\"destinationAlpha\":1,\"rgba\":[130,47,110,255],\"expected\":[130,47,111,255],\"maxError\":1},{\"mode\":17,\"destinationAlpha\":1,\"rgba\":[11,81,172,255],\"expected\":[11,80,173,255],\"maxError\":1},{\"mode\":0,\"destinationAlpha\":0.45,\"rgba\":[118,23,71,213],\"expected\":[118,23,71,213],\"maxError\":0},{\"mode\":1,\"destinationAlpha\":0.45,\"rgba\":[124,51,129,213],\"expected\":[124,51,129,213],\"maxError\":0},{\"mode\":2,\"destinationAlpha\":0.45,\"rgba\":[5,38,67,115],\"expected\":[5,39,67,115],\"maxError\":1},{\"mode\":3,\"destinationAlpha\":0.45,\"rgba\":[3,12,24,213],\"expected\":[70,20,65,213],\"maxError\":67},{\"mode\":4,\"destinationAlpha\":0.45,\"rgba\":[120,49,114,213],\"expected\":[120,50,114,213],\"maxError\":1},{\"mode\":5,\"destinationAlpha\":0.45,\"rgba\":[72,23,71,213],\"expected\":[72,23,71,213],\"maxError\":0},{\"mode\":6,\"destinationAlpha\":0.45,\"rgba\":[118,46,107,213],\"expected\":[118,46,108,213],\"maxError\":1},{\"mode\":7,\"destinationAlpha\":0.45,\"rgba\":[74,21,96,213],\"expected\":[74,22,97,213],\"maxError\":1},{\"mode\":8,\"destinationAlpha\":0.45,\"rgba\":[84,48,128,213],\"expected\":[84,48,128,213],\"maxError\":0},{\"mode\":9,\"destinationAlpha\":0.45,\"rgba\":[66,18,50,213],\"expected\":[66,18,50,213],\"maxError\":0},{\"mode\":10,\"destinationAlpha\":0.45,\"rgba\":[94,21,80,213],\"expected\":[94,22,81,213],\"maxError\":1},{\"mode\":11,\"destinationAlpha\":0.45,\"rgba\":[76,30,100,213],\"expected\":[76,30,100,213],\"maxError\":0},{\"mode\":12,\"destinationAlpha\":0.45,\"rgba\":[112,41,86,213],\"expected\":[111,41,87,213],\"maxError\":1},{\"mode\":13,\"destinationAlpha\":0.45,\"rgba\":[116,48,98,213],\"expected\":[116,48,99,213],\"maxError\":1},{\"mode\":14,\"destinationAlpha\":0.45,\"rgba\":[125,25,75,213],\"expected\":[125,26,76,213],\"maxError\":1},{\"mode\":15,\"destinationAlpha\":0.45,\"rgba\":[74,46,105,213],\"expected\":[74,46,105,213],\"maxError\":0},{\"mode\":16,\"destinationAlpha\":0.45,\"rgba\":[122,27,75,213],\"expected\":[122,27,76,213],\"maxError\":1},{\"mode\":17,\"destinationAlpha\":0.45,\"rgba\":[68,42,103,213],\"expected\":[68,42,104,213],\"maxError\":1}]",
+          "recordFile": "chromium-webgpu-results.json"
+        },
+        {
+          "example": "sprites-textures/blendmodes",
+          "size": "512x288",
+          "status": "FAIL",
+          "error": "AssertionError [ERR_ASSERTION]: [{\"mode\":0,\"destinationAlpha\":1,\"rgba\":[121,38,101,255],\"expected\":[121,38,102,255],\"maxError\":1},{\"mode\":1,\"destinationAlpha\":1,\"rgba\":[135,101,229,255],\"expected\":[135,101,229,255],\"maxError\":0},{\"mode\":2,\"destinationAlpha\":1,\"rgba\":[11,86,148,255],\"expected\":[11,86,149,255],\"maxError\":1},{\"mode\":3,\"destinationAlpha\":1,\"rgba\":[6,27,54,255],\"expected\":[15,31,88,255],\"maxError\":34},{\"mode\":4,\"destinationAlpha\":1,\"rgba\":[126,97,195,255],\"expected\":[126,97,196,255],\"maxError\":1},{\"mode\":5,\"destinationAlpha\":1,\"rgba\":[20,38,101,255],\"expected\":[20,38,102,255],\"maxError\":1},{\"mode\":6,\"destinationAlpha\":1,\"rgba\":[121,90,182,255],\"expected\":[121,90,183,255],\"maxError\":1},{\"mode\":7,\"destinationAlpha\":1,\"rgba\":[24,35,157,255],\"expected\":[25,35,158,255],\"maxError\":1},{\"mode\":8,\"destinationAlpha\":1,\"rgba\":[45,94,227,255],\"expected\":[46,94,228,255],\"maxError\":1},{\"mode\":9,\"destinationAlpha\":1,\"rgba\":[6,27,54,255],\"expected\":[6,27,55,255],\"maxError\":1},{\"mode\":10,\"destinationAlpha\":1,\"rgba\":[67,35,121,255],\"expected\":[68,35,122,255],\"maxError\":1},{\"mode\":11,\"destinationAlpha\":1,\"rgba\":[29,54,164,255],\"expected\":[29,54,165,255],\"maxError\":1},{\"mode\":12,\"destinationAlpha\":1,\"rgba\":[107,79,135,255],\"expected\":[107,79,136,255],\"maxError\":1},{\"mode\":13,\"destinationAlpha\":1,\"rgba\":[117,93,162,255],\"expected\":[117,93,162,255],\"maxError\":0},{\"mode\":14,\"destinationAlpha\":1,\"rgba\":[137,44,110,255],\"expected\":[137,44,111,255],\"maxError\":1},{\"mode\":15,\"destinationAlpha\":1,\"rgba\":[24,90,176,255],\"expected\":[24,89,177,255],\"maxError\":1},{\"mode\":16,\"destinationAlpha\":1,\"rgba\":[130,47,110,255],\"expected\":[130,47,111,255],\"maxError\":1},{\"mode\":17,\"destinationAlpha\":1,\"rgba\":[11,81,172,255],\"expected\":[11,80,173,255],\"maxError\":1},{\"mode\":0,\"destinationAlpha\":0.45,\"rgba\":[118,23,71,213],\"expected\":[118,23,71,213],\"maxError\":0},{\"mode\":1,\"destinationAlpha\":0.45,\"rgba\":[124,51,129,213],\"expected\":[124,51,129,213],\"maxError\":0},{\"mode\":2,\"destinationAlpha\":0.45,\"rgba\":[5,38,67,115],\"expected\":[5,39,67,115],\"maxError\":1},{\"mode\":3,\"destinationAlpha\":0.45,\"rgba\":[3,12,24,213],\"expected\":[70,20,65,213],\"maxError\":67},{\"mode\":4,\"destinationAlpha\":0.45,\"rgba\":[120,49,114,213],\"expected\":[120,50,114,213],\"maxError\":1},{\"mode\":5,\"destinationAlpha\":0.45,\"rgba\":[72,23,71,213],\"expected\":[72,23,71,213],\"maxError\":0},{\"mode\":6,\"destinationAlpha\":0.45,\"rgba\":[118,46,107,213],\"expected\":[118,46,108,213],\"maxError\":1},{\"mode\":7,\"destinationAlpha\":0.45,\"rgba\":[74,21,96,213],\"expected\":[74,22,97,213],\"maxError\":1},{\"mode\":8,\"destinationAlpha\":0.45,\"rgba\":[84,48,128,213],\"expected\":[84,48,128,213],\"maxError\":0},{\"mode\":9,\"destinationAlpha\":0.45,\"rgba\":[66,18,50,213],\"expected\":[66,18,50,213],\"maxError\":0},{\"mode\":10,\"destinationAlpha\":0.45,\"rgba\":[94,21,80,213],\"expected\":[94,22,81,213],\"maxError\":1},{\"mode\":11,\"destinationAlpha\":0.45,\"rgba\":[76,30,100,213],\"expected\":[76,30,100,213],\"maxError\":0},{\"mode\":12,\"destinationAlpha\":0.45,\"rgba\":[112,41,86,213],\"expected\":[111,41,87,213],\"maxError\":1},{\"mode\":13,\"destinationAlpha\":0.45,\"rgba\":[116,48,98,213],\"expected\":[116,48,99,213],\"maxError\":1},{\"mode\":14,\"destinationAlpha\":0.45,\"rgba\":[125,25,75,213],\"expected\":[125,26,76,213],\"maxError\":1},{\"mode\":15,\"destinationAlpha\":0.45,\"rgba\":[74,46,105,213],\"expected\":[74,46,105,213],\"maxError\":0},{\"mode\":16,\"destinationAlpha\":0.45,\"rgba\":[122,27,75,213],\"expected\":[122,27,76,213],\"maxError\":1},{\"mode\":17,\"destinationAlpha\":0.45,\"rgba\":[68,42,103,213],\"expected\":[68,42,104,213],\"maxError\":1}]",
+          "recordFile": "chromium-webgpu-results.json"
+        },
+        {
+          "example": "filters/blur-filter",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["all four public filter families draw; bypass pixels match reference"],
+          "recordFile": "chromium-webgpu-results.json"
+        },
+        {
+          "example": "filters/blur-filter",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["all four public filter families draw; bypass pixels match reference"],
+          "recordFile": "chromium-webgpu-results.json"
+        },
+        {
+          "example": "filters/bloom-filter",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["threshold changes rendered luminance, independent intensity/spread and bypass"],
+          "recordFile": "chromium-webgpu-results.json"
+        },
+        {
+          "example": "filters/bloom-filter",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["threshold changes rendered luminance, independent intensity/spread and bypass"],
+          "recordFile": "chromium-webgpu-results.json"
+        },
+        {
+          "example": "render-targets/render-to-texture",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["frozen timestamp/count stay fixed while live advances; recapture occurs once"],
+          "recordFile": "chromium-webgpu-results.json"
+        },
+        {
+          "example": "render-targets/render-to-texture",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["frozen timestamp/count stay fixed while live advances; recapture occurs once"],
+          "recordFile": "chromium-webgpu-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["silent paused startup; play/pause/seek; last clip selection wins; non-looping end synchronizes pause"],
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["silent paused startup; play/pause/seek; last clip selection wins; non-looping end synchronizes pause"],
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "lighting/shadow-casters",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["drag, radius, spot and alpha-outline debug work; R restores all defaults"],
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "lighting/shadow-casters",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["drag, radius, spot and alpha-outline debug work; R restores all defaults"],
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "lighting/lightmap-normals",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["shared height, A/B registration and debug work; R restores synchronized defaults"],
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "lighting/lightmap-normals",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["shared height, A/B registration and debug work; R restores synchronized defaults"],
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "particles/emitter-basics",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["pause freezes live count; reset empties; rate/lifetime/speed and drag affect emitter"],
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "particles/emitter-basics",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["pause freezes live count; reset empties; rate/lifetime/speed and drag affect emitter"],
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "particles/cursor-attractor-particles",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["zero reference; repulsion strength; keyboard force placement; reset clears particles"],
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "particles/cursor-attractor-particles",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["zero reference; repulsion strength; keyboard force placement; reset clears particles"],
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "DPR 1.25 512x288",
+          "status": "PASS",
+          "checks": [
+            {
+              "snapPreservesLogicalPositions": true,
+              "position": [
+                {
+                  "x": 85.78093654346047,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 256.44760321012717,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 427.11426987679386,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                }
+              ],
+              "device": {
+                "dpr": 1.25,
+                "ratio": 1.25,
+                "buffer": [1600, 900]
+              }
+            }
+          ],
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "DPR 2 512x288",
+          "status": "PASS",
+          "checks": [
+            {
+              "snapPreservesLogicalPositions": true,
+              "position": [
+                {
+                  "x": 85.7829589087055,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 256.4496255753722,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 427.11629224203887,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                }
+              ],
+              "device": {
+                "dpr": 2,
+                "ratio": 2,
+                "buffer": [2560, 1440]
+              }
+            }
+          ],
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "DPR 3 512x288",
+          "status": "PASS",
+          "checks": [
+            {
+              "snapPreservesLogicalPositions": true,
+              "position": [
+                {
+                  "x": 85.77289997282035,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 256.439566639487,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 427.1062333061537,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                }
+              ],
+              "device": {
+                "dpr": 3,
+                "ratio": 2,
+                "buffer": [2560, 1440]
+              }
+            }
+          ],
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "media error 512x288",
+          "status": "PASS",
+          "checks": ["actual HTTP 404 yields visible media error and teardown completes"],
+          "recordFile": "chromium-webgpu-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "leave during loading 512x288",
+          "status": "PASS",
+          "checks": ["seek before ready is accepted; app teardown during delayed media load removes controls and ignores late completion"],
+          "recordFile": "chromium-webgpu-followup-results.json"
+        }
+      ]
+    },
+    {
+      "browser": "firefox",
+      "version": "155.0",
+      "backend": "webgl2",
+      "recordFiles": ["firefox-webgl2-results.json", "firefox-webgl2-followup-results.json", "firefox-webgl2-video-pending-results.json"],
+      "checks": 31,
+      "pass": 29,
+      "fail": 2,
+      "supersededChecks": [
+        {
+          "example": "scene-graph/pivot-and-anchor",
+          "size": "1280x720",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "scene-graph/pivot-and-anchor",
+          "size": "512x288",
+          "previousStatus": "FAIL",
+          "newStatus": "PASS",
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "1280x720",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "lighting/shadow-casters",
+          "size": "1280x720",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "lighting/shadow-casters",
+          "size": "512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "lighting/lightmap-normals",
+          "size": "1280x720",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "lighting/lightmap-normals",
+          "size": "512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "particles/emitter-basics",
+          "size": "1280x720",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "particles/emitter-basics",
+          "size": "512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "particles/cursor-attractor-particles",
+          "size": "1280x720",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "particles/cursor-attractor-particles",
+          "size": "512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "media error 512x288",
+          "previousStatus": "PASS",
+          "newStatus": "PASS",
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "leave during loading 512x288",
+          "previousStatus": "FAIL",
+          "newStatus": "PASS",
+          "recordFile": "firefox-webgl2-video-pending-results.json"
+        }
+      ],
+      "records": [
+        {
+          "example": "scene-graph/nested-transforms",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["parent rotation moves world position only; pause freezes time"],
+          "recordFile": "firefox-webgl2-results.json"
+        },
+        {
+          "example": "scene-graph/nested-transforms",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["parent rotation moves world position only; pause freezes time"],
+          "recordFile": "firefox-webgl2-results.json"
+        },
+        {
+          "example": "scene-graph/pivot-and-anchor",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["button and Right each step exactly 15 degrees and pause"],
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "scene-graph/pivot-and-anchor",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["button and Right each step exactly 15 degrees and pause"],
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "scene-graph/masks",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["world-space circular mask follows drag; bypass and restore"],
+          "recordFile": "firefox-webgl2-results.json"
+        },
+        {
+          "example": "scene-graph/masks",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["world-space circular mask follows drag; bypass and restore"],
+          "recordFile": "firefox-webgl2-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": [
+            {
+              "snapPreservesLogicalPositions": true,
+              "position": [
+                {
+                  "x": 213.68008265477835,
+                  "y": 199.24,
+                  "snap": 0
+                },
+                {
+                  "x": 640.346749321445,
+                  "y": 199.24,
+                  "snap": 0
+                },
+                {
+                  "x": 1067.0134159881118,
+                  "y": 199.24,
+                  "snap": 0
+                }
+              ],
+              "device": {
+                "dpr": 1,
+                "ratio": 1,
+                "buffer": [1280, 720]
+              }
+            }
+          ],
+          "recordFile": "firefox-webgl2-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": [
+            {
+              "snapPreservesLogicalPositions": true,
+              "position": [
+                {
+                  "x": 85.73571924229923,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 256.4023859089659,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 427.0690525756326,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                }
+              ],
+              "device": {
+                "dpr": 1,
+                "ratio": 1,
+                "buffer": [1280, 720]
+              }
+            }
+          ],
+          "recordFile": "firefox-webgl2-results.json"
+        },
+        {
+          "example": "sprites-textures/blendmodes",
+          "size": "1280x720",
+          "status": "FAIL",
+          "error": "AssertionError [ERR_ASSERTION]: [{\"mode\":0,\"destinationAlpha\":1,\"rgba\":[121,38,101,255],\"expected\":[121,38,102,255],\"maxError\":1},{\"mode\":1,\"destinationAlpha\":1,\"rgba\":[135,101,229,255],\"expected\":[135,101,229,255],\"maxError\":0},{\"mode\":2,\"destinationAlpha\":1,\"rgba\":[11,86,148,255],\"expected\":[11,86,149,255],\"maxError\":1},{\"mode\":3,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[15,31,88,255],\"maxError\":94},{\"mode\":4,\"destinationAlpha\":1,\"rgba\":[126,97,195,255],\"expected\":[126,97,196,255],\"maxError\":1},{\"mode\":5,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[20,38,102,255],\"maxError\":80},{\"mode\":6,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[121,90,183,255],\"maxError\":101},{\"mode\":7,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[25,35,158,255],\"maxError\":55},{\"mode\":8,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[46,94,228,255],\"maxError\":46},{\"mode\":9,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[6,27,55,255],\"maxError\":127},{\"mode\":10,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[68,35,122,255],\"maxError\":60},{\"mode\":11,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[29,54,165,255],\"maxError\":36},{\"mode\":12,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[107,79,136,255],\"maxError\":87},{\"mode\":13,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[117,93,162,255],\"maxError\":97},{\"mode\":14,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[137,44,111,255],\"maxError\":117},{\"mode\":15,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[24,89,177,255],\"maxError\":5},{\"mode\":16,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[130,47,111,255],\"maxError\":110},{\"mode\":17,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[11,80,173,255],\"maxError\":10},{\"mode\":0,\"destinationAlpha\":0.45,\"rgba\":[118,23,71,213],\"expected\":[118,23,71,213],\"maxError\":0},{\"mode\":1,\"destinationAlpha\":0.45,\"rgba\":[124,51,129,213],\"expected\":[124,51,129,213],\"maxError\":0},{\"mode\":2,\"destinationAlpha\":0.45,\"rgba\":[5,38,67,115],\"expected\":[5,39,67,115],\"maxError\":1},{\"mode\":3,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[70,20,65,213],\"maxError\":98},{\"mode\":4,\"destinationAlpha\":0.45,\"rgba\":[120,49,114,213],\"expected\":[120,50,114,213],\"maxError\":1},{\"mode\":5,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[72,23,71,213],\"maxError\":98},{\"mode\":6,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[118,46,108,213],\"maxError\":109},{\"mode\":7,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[74,22,97,213],\"maxError\":98},{\"mode\":8,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[84,48,128,213],\"maxError\":98},{\"mode\":9,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[66,18,50,213],\"maxError\":98},{\"mode\":10,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[94,22,81,213],\"maxError\":98},{\"mode\":11,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[76,30,100,213],\"maxError\":98},{\"mode\":12,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[111,41,87,213],\"maxError\":102},{\"mode\":13,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[116,48,99,213],\"maxError\":107},{\"mode\":14,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[125,26,76,213],\"maxError\":116},{\"mode\":15,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[74,46,105,213],\"maxError\":98},{\"mode\":16,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[122,27,76,213],\"maxError\":113},{\"mode\":17,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[68,42,104,213],\"maxError\":98}]",
+          "recordFile": "firefox-webgl2-results.json"
+        },
+        {
+          "example": "sprites-textures/blendmodes",
+          "size": "512x288",
+          "status": "FAIL",
+          "error": "AssertionError [ERR_ASSERTION]: [{\"mode\":0,\"destinationAlpha\":1,\"rgba\":[121,38,101,255],\"expected\":[121,38,102,255],\"maxError\":1},{\"mode\":1,\"destinationAlpha\":1,\"rgba\":[135,101,229,255],\"expected\":[135,101,229,255],\"maxError\":0},{\"mode\":2,\"destinationAlpha\":1,\"rgba\":[11,86,148,255],\"expected\":[11,86,149,255],\"maxError\":1},{\"mode\":3,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[15,31,88,255],\"maxError\":94},{\"mode\":4,\"destinationAlpha\":1,\"rgba\":[126,97,195,255],\"expected\":[126,97,196,255],\"maxError\":1},{\"mode\":5,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[20,38,102,255],\"maxError\":80},{\"mode\":6,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[121,90,183,255],\"maxError\":101},{\"mode\":7,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[25,35,158,255],\"maxError\":55},{\"mode\":8,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[46,94,228,255],\"maxError\":46},{\"mode\":9,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[6,27,55,255],\"maxError\":127},{\"mode\":10,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[68,35,122,255],\"maxError\":60},{\"mode\":11,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[29,54,165,255],\"maxError\":36},{\"mode\":12,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[107,79,136,255],\"maxError\":87},{\"mode\":13,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[117,93,162,255],\"maxError\":97},{\"mode\":14,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[137,44,111,255],\"maxError\":117},{\"mode\":15,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[24,89,177,255],\"maxError\":5},{\"mode\":16,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[130,47,111,255],\"maxError\":110},{\"mode\":17,\"destinationAlpha\":1,\"rgba\":[20,90,182,255],\"expected\":[11,80,173,255],\"maxError\":10},{\"mode\":0,\"destinationAlpha\":0.45,\"rgba\":[118,23,71,213],\"expected\":[118,23,71,213],\"maxError\":0},{\"mode\":1,\"destinationAlpha\":0.45,\"rgba\":[124,51,129,213],\"expected\":[124,51,129,213],\"maxError\":0},{\"mode\":2,\"destinationAlpha\":0.45,\"rgba\":[5,38,67,115],\"expected\":[5,39,67,115],\"maxError\":1},{\"mode\":3,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[70,20,65,213],\"maxError\":98},{\"mode\":4,\"destinationAlpha\":0.45,\"rgba\":[120,49,114,213],\"expected\":[120,50,114,213],\"maxError\":1},{\"mode\":5,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[72,23,71,213],\"maxError\":98},{\"mode\":6,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[118,46,108,213],\"maxError\":109},{\"mode\":7,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[74,22,97,213],\"maxError\":98},{\"mode\":8,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[84,48,128,213],\"maxError\":98},{\"mode\":9,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[66,18,50,213],\"maxError\":98},{\"mode\":10,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[94,22,81,213],\"maxError\":98},{\"mode\":11,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[76,30,100,213],\"maxError\":98},{\"mode\":12,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[111,41,87,213],\"maxError\":102},{\"mode\":13,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[116,48,99,213],\"maxError\":107},{\"mode\":14,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[125,26,76,213],\"maxError\":116},{\"mode\":15,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[74,46,105,213],\"maxError\":98},{\"mode\":16,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[122,27,76,213],\"maxError\":113},{\"mode\":17,\"destinationAlpha\":0.45,\"rgba\":[9,40,82,115],\"expected\":[68,42,104,213],\"maxError\":98}]",
+          "recordFile": "firefox-webgl2-results.json"
+        },
+        {
+          "example": "filters/blur-filter",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["all four public filter families draw; bypass pixels match reference"],
+          "recordFile": "firefox-webgl2-results.json"
+        },
+        {
+          "example": "filters/blur-filter",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["all four public filter families draw; bypass pixels match reference"],
+          "recordFile": "firefox-webgl2-results.json"
+        },
+        {
+          "example": "filters/bloom-filter",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["threshold changes rendered luminance, independent intensity/spread and bypass"],
+          "recordFile": "firefox-webgl2-results.json"
+        },
+        {
+          "example": "filters/bloom-filter",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["threshold changes rendered luminance, independent intensity/spread and bypass"],
+          "recordFile": "firefox-webgl2-results.json"
+        },
+        {
+          "example": "render-targets/render-to-texture",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["frozen timestamp/count stay fixed while live advances; recapture occurs once"],
+          "recordFile": "firefox-webgl2-results.json"
+        },
+        {
+          "example": "render-targets/render-to-texture",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["frozen timestamp/count stay fixed while live advances; recapture occurs once"],
+          "recordFile": "firefox-webgl2-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["silent paused startup; play/pause/seek; last clip selection wins; non-looping end synchronizes pause"],
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["silent paused startup; play/pause/seek; last clip selection wins; non-looping end synchronizes pause"],
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "lighting/shadow-casters",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["drag, radius, spot and alpha-outline debug work; R restores all defaults"],
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "lighting/shadow-casters",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["drag, radius, spot and alpha-outline debug work; R restores all defaults"],
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "lighting/lightmap-normals",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["shared height, A/B registration and debug work; R restores synchronized defaults"],
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "lighting/lightmap-normals",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["shared height, A/B registration and debug work; R restores synchronized defaults"],
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "particles/emitter-basics",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["pause freezes live count; reset empties; rate/lifetime/speed and drag affect emitter"],
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "particles/emitter-basics",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["pause freezes live count; reset empties; rate/lifetime/speed and drag affect emitter"],
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "particles/cursor-attractor-particles",
+          "size": "1280x720",
+          "status": "PASS",
+          "checks": ["zero reference; repulsion strength; keyboard force placement; reset clears particles"],
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "particles/cursor-attractor-particles",
+          "size": "512x288",
+          "status": "PASS",
+          "checks": ["zero reference; repulsion strength; keyboard force placement; reset clears particles"],
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "DPR 1.25 512x288",
+          "status": "PASS",
+          "checks": [
+            {
+              "snapPreservesLogicalPositions": true,
+              "position": [
+                {
+                  "x": 84.9378897231758,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 255.6045563898425,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 426.27122305650914,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                }
+              ],
+              "device": {
+                "dpr": 1.25,
+                "ratio": 1.25,
+                "buffer": [1600, 900]
+              }
+            }
+          ],
+          "recordFile": "firefox-webgl2-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "DPR 2 512x288",
+          "status": "PASS",
+          "checks": [
+            {
+              "snapPreservesLogicalPositions": true,
+              "position": [
+                {
+                  "x": 85.08238261346227,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 255.74904928012893,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 426.4157159467956,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                }
+              ],
+              "device": {
+                "dpr": 2,
+                "ratio": 2,
+                "buffer": [2560, 1440]
+              }
+            }
+          ],
+          "recordFile": "firefox-webgl2-results.json"
+        },
+        {
+          "example": "sprites-textures/texture-sampling",
+          "size": "DPR 3 512x288",
+          "status": "PASS",
+          "checks": [
+            {
+              "snapPreservesLogicalPositions": true,
+              "position": [
+                {
+                  "x": 85.14292744840937,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 255.80959411507604,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                },
+                {
+                  "x": 426.4762607817427,
+                  "y": 51.68000000000001,
+                  "snap": 0
+                }
+              ],
+              "device": {
+                "dpr": 3,
+                "ratio": 2,
+                "buffer": [2560, 1440]
+              }
+            }
+          ],
+          "recordFile": "firefox-webgl2-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "media error 512x288",
+          "status": "PASS",
+          "checks": ["actual HTTP 404 yields visible media error and teardown completes"],
+          "recordFile": "firefox-webgl2-followup-results.json"
+        },
+        {
+          "example": "sprites-textures/video-drawable",
+          "size": "leave during loading 512x288",
+          "status": "PASS",
+          "checks": ["seek before ready is accepted; app teardown during delayed media load removes controls and ignores late completion"],
+          "recordFile": "firefox-webgl2-video-pending-results.json"
+        }
+      ]
+    }
+  ],
+  "targets": [
+    {
+      "number": 6,
+      "example": "scene-graph/nested-transforms",
+      "status": "PASS_CHECKS",
+      "presentations": ["1280x720", "512x288"],
+      "environments": ["chromium-webgl2", "chromium-webgpu", "firefox-webgl2"]
+    },
+    {
+      "number": 7,
+      "example": "scene-graph/pivot-and-anchor",
+      "status": "PASS_CHECKS",
+      "presentations": ["1280x720", "512x288"],
+      "environments": ["chromium-webgl2", "chromium-webgpu", "firefox-webgl2"]
+    },
+    {
+      "number": 8,
+      "example": "scene-graph/masks",
+      "status": "PASS_CHECKS",
+      "presentations": ["1280x720", "512x288"],
+      "environments": ["chromium-webgl2", "chromium-webgpu", "firefox-webgl2"]
+    },
+    {
+      "number": 9,
+      "example": "sprites-textures/texture-sampling",
+      "status": "PASS_CHECKS",
+      "presentations": ["1280x720", "512x288"],
+      "environments": ["chromium-webgl2", "chromium-webgpu", "firefox-webgl2"]
+    },
+    {
+      "number": 25,
+      "example": "sprites-textures/blendmodes",
+      "status": "BLOCKED_RENDERER",
+      "presentations": ["1280x720", "512x288"],
+      "environments": ["chromium-webgl2", "chromium-webgpu", "firefox-webgl2"]
+    },
+    {
+      "number": 26,
+      "example": "filters/blur-filter",
+      "status": "PASS_CHECKS",
+      "presentations": ["1280x720", "512x288"],
+      "environments": ["chromium-webgl2", "chromium-webgpu", "firefox-webgl2"]
+    },
+    {
+      "number": 27,
+      "example": "filters/bloom-filter",
+      "status": "PASS_CHECKS",
+      "presentations": ["1280x720", "512x288"],
+      "environments": ["chromium-webgl2", "chromium-webgpu", "firefox-webgl2"]
+    },
+    {
+      "number": 28,
+      "example": "render-targets/render-to-texture",
+      "status": "PASS_CHECKS",
+      "presentations": ["1280x720", "512x288"],
+      "environments": ["chromium-webgl2", "chromium-webgpu", "firefox-webgl2"]
+    },
+    {
+      "number": 29,
+      "example": "sprites-textures/video-drawable",
+      "status": "PASS_CHECKS",
+      "presentations": ["1280x720", "512x288"],
+      "environments": ["chromium-webgl2", "chromium-webgpu", "firefox-webgl2"]
+    },
+    {
+      "number": 30,
+      "example": "lighting/shadow-casters",
+      "status": "PASS_CHECKS",
+      "presentations": ["1280x720", "512x288"],
+      "environments": ["chromium-webgl2", "chromium-webgpu", "firefox-webgl2"]
+    },
+    {
+      "number": 31,
+      "example": "lighting/lightmap-normals",
+      "status": "PASS_CHECKS",
+      "presentations": ["1280x720", "512x288"],
+      "environments": ["chromium-webgl2", "chromium-webgpu", "firefox-webgl2"]
+    },
+    {
+      "number": 32,
+      "example": "particles/emitter-basics",
+      "status": "NOT_ACCEPTED_VISUAL_PARITY",
+      "presentations": ["1280x720", "512x288"],
+      "environments": ["chromium-webgl2", "chromium-webgpu", "firefox-webgl2"]
+    },
+    {
+      "number": 33,
+      "example": "particles/cursor-attractor-particles",
+      "status": "PASS_CHECKS",
+      "presentations": ["1280x720", "512x288"],
+      "environments": ["chromium-webgl2", "chromium-webgpu", "firefox-webgl2"]
+    }
+  ]
+}

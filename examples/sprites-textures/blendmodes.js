@@ -1,15 +1,18 @@
 // Auto-generated from blendmodes.ts - edit the .ts source, not this file.
-import { Application, Asset, BlendModes, Color, FixedResolutionCanvasSizing, Keyboard, ScaleModes, Scene, Sprite } from '@codexo/exojs';
+import {
+  Application,
+  BlendModes,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  Keyboard,
+  Rectangle,
+  Scene,
+  Sprite,
+  Text,
+} from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { choice, demoPanel } from '@examples/runtime';
-const ALPHA_RINGS = assets.alphaGradientRings;
-// Blending runs in linear light on premultiplied colour, so a mode reads
-// brighter and less muddy than the same equation on encoded values would. The
-// result alpha follows source-over coverage for the coverage-preserving modes
-// (Additive keeps its RGB sum, Subtract attenuates the destination rather than
-// subtracting arithmetically).
-//
-// Every public blend mode, in enum order, paired with a display name.
+import { choice, demoPanel, slider, toggle } from '@examples/runtime';
 const BLEND_MODES = [
   { mode: BlendModes.Normal, name: 'Normal' },
   { mode: BlendModes.Additive, name: 'Additive' },
@@ -31,75 +34,109 @@ const BLEND_MODES = [
   { mode: BlendModes.Color, name: 'Color' },
   { mode: BlendModes.Luminosity, name: 'Luminosity' },
 ];
+const controls = {
+  mode: choice(
+    'Blend mode',
+    BLEND_MODES.map(entry => entry.name),
+  ),
+  alpha: slider('Source alpha', { min: 0, max: 1, step: 0.05, value: 0.7 }),
+  background: choice('Background', ['Opaque gray', 'Transparent']),
+  motion: toggle('Motion', true),
+};
 class BlendmodesScene extends Scene {
-  background;
-  left;
-  right;
-  ticker = 0;
+  destinations = [];
+  sources = [];
+  labels = [];
+  backdrop = new Graphics();
+  panel;
+  elapsed = 0;
   async load() {
-    const app = this.app;
-    const { width, height } = app;
-    // Nearest sampling keeps the ring edges and the ship's pixels crisp at 5x.
-    const textureOptions = { scaleMode: ScaleModes.Nearest };
-    const backgroundTexture = await this.loader.load(Asset.type('texture', ALPHA_RINGS.source, { textureOptions }));
-    const shipTexture = await this.loader.load(Asset.type('texture', assets.ship.source, { textureOptions }));
-    this.background = new Sprite(backgroundTexture);
-    this.background.setPosition(width / 2, height / 2);
-    this.background.setAnchor(0.5, 0.5);
-    this.background.setScale(Math.max(width, height) / 256);
-    this.background.setTint(new Color(120, 130, 150));
-    // Two overlapping sprites in complementary hues so the composite in the
-    // overlap region differs clearly between modes.
-    this.left = new Sprite(shipTexture);
-    this.left.setAnchor(0.5, 0.5);
-    this.left.setScale(5);
-    this.left.setTint(new Color(80, 210, 255));
-    this.right = new Sprite(shipTexture);
-    this.right.setAnchor(0.5, 0.5);
-    this.right.setScale(5);
-    this.right.setTint(new Color(255, 96, 200));
-    // Clicks, arrow keys and the panel buttons all move the same value.
-    const panel = demoPanel({
-      controls: {
-        mode: choice(
-          'Blend mode',
-          BLEND_MODES.map(entry => entry.name),
-        ),
-      },
-      onChange: (_key, name) => {
-        const { mode } = BLEND_MODES.find(entry => entry.name === name);
-        this.left.setBlendMode(mode);
-        this.right.setBlendMode(mode);
+    await this.loader.load(assets.platformerTilesImage);
+  }
+  init() {
+    const texture = this.loader.get(assets.platformerTilesImage);
+    for (let i = 0; i < 2; i++) {
+      const destination = new Sprite(texture)
+        .setTextureFrame(new Rectangle(650, 325, 64, 64))
+        .setAnchor(0.5)
+        .setTint(new Color(90, 220, 255));
+      const source = new Sprite(texture)
+        .setTextureFrame(new Rectangle(650, 325, 64, 64))
+        .setAnchor(0.5)
+        .setTint(new Color(255, 100, 190));
+      this.destinations.push(destination);
+      this.sources.push(source);
+      this.labels.push(new Text('', { fillColor: Color.white, fontSize: 14, align: 'center' }).setAnchor(0.5));
+    }
+    this.root.addChild(this.backdrop, this.destinations[0], this.sources[0], this.destinations[1], this.sources[1], ...this.labels);
+    this.panel = demoPanel({
+      title: 'Blend Modes',
+      layout: 'bar',
+      controls,
+      hint: 'Cyan key = destination. Magenta key = source. Linear light, premultiplied alpha.',
+      actions: {
+        'Fix frame': () => {
+          this.panel.set('motion', false);
+          this.elapsed = 0;
+        },
+        Reset: () => this.reset(),
       },
     });
-    app.input.onPointerDown.add(() => panel.step('mode', 1));
-    this.inputs.onTrigger(Keyboard.Right, () => panel.step('mode', 1));
-    this.inputs.onTrigger(Keyboard.Left, () => panel.step('mode', -1));
+    this.inputs.onTrigger(Keyboard.Left, () => this.panel.step('mode', -1));
+    this.inputs.onTrigger(Keyboard.Right, () => this.panel.step('mode'));
+    this.inputs.onTrigger(Keyboard.Space, () => this.panel.step('motion'));
+    this.inputs.onTrigger(Keyboard.R, () => this.reset());
+    this.app.input.onPointerTap.add(this.onTap);
+  }
+  onTap = () => this.panel.step('mode');
+  reset() {
+    this.elapsed = 0;
+    this.panel.set('mode', 'Normal');
+    this.panel.set('alpha', 0.7);
+    this.panel.set('background', 'Opaque gray');
   }
   update(delta) {
-    const app = this.app;
-    const { width, height } = app;
-    const offset = (Math.cos(this.ticker * 1.4) * 0.5 + 0.5) * (width * 0.22);
-    this.left.setPosition(width / 2 - offset, height / 2);
-    this.right.setPosition(width / 2 + offset, height / 2);
-    this.ticker += delta;
+    const { scale, width, contentHeight } = this.panel.fit(this.app, this.app.canvas);
+    this.root.setScale(scale);
+    if (this.panel.values.motion) {
+      this.elapsed += delta;
+    }
+    const selected = BLEND_MODES.find(entry => entry.name === this.panel.values.mode);
+    const size = Math.min(210, contentHeight * 0.85, width * 0.32);
+    const offset = size * (0.1 + Math.sin(this.elapsed) * 0.07);
+    this.backdrop.clear();
+    for (let i = 0; i < 2; i++) {
+      const x = width * (i === 0 ? 0.25 : 0.75);
+      const y = contentHeight * 0.55;
+      if (this.panel.values.background === 'Opaque gray') {
+        this.backdrop.fillColor = new Color(112, 112, 112);
+        this.backdrop.drawRectangle(x - width * 0.23, 36, width * 0.46, contentHeight - 44);
+      }
+      this.destinations[i].setPosition(x - offset, y).setScale(size / 64);
+      this.sources[i].setPosition(x + offset, y).setScale(size / 64);
+      this.sources[i].tint.a = this.panel.values.alpha;
+      this.sources[i].blendMode = i === 0 ? BlendModes.Normal : selected.mode;
+      this.labels[i].text = i === 0 ? 'Normal reference' : selected.name;
+      this.labels[i].setPosition(x, 17);
+    }
+    this.panel.status(
+      `${this.app.backend.backendType} | ${this.panel.values.background} | source alpha ${this.panel.values.alpha.toFixed(2)} | ${selected.name === 'Subtract' ? 'Subtract: Cd * (1 - Cs), not arithmetic subtraction' : 'Destination alpha 1 inside key; transparent outside'} | ${this.panel.values.motion ? 'running' : 'fixed time'}`,
+    );
   }
   draw(context) {
-    context.render(this.background);
-    context.render(this.left);
-    context.render(this.right);
+    for (const layer of this.root.children) {
+      context.render(layer);
+    }
+  }
+  destroy() {
+    this.app.input.onPointerTap.remove(this.onTap);
+    this.panel.dispose();
+    super.destroy();
   }
 }
 const app = new Application({
   scenes: { BlendmodesScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
-  // A mid-tone backdrop so darkening modes (Subtract, Multiply, Darken) stay
-  // visible instead of compositing into a black canvas.
-  clearColor: new Color(48, 54, 68),
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  clearColor: Color.transparent,
 });
 await app.start(BlendmodesScene);

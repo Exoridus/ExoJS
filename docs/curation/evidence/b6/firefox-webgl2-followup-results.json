@@ -1,0 +1,91 @@
+{
+  "browser": "firefox",
+  "version": "155.0",
+  "backend": "webgl2",
+  "records": [
+    {
+      "example": "scene-graph/pivot-and-anchor",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["button and Right each step exactly 15 degrees and pause"]
+    },
+    {
+      "example": "scene-graph/pivot-and-anchor",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["button and Right each step exactly 15 degrees and pause"]
+    },
+    {
+      "example": "sprites-textures/video-drawable",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["silent paused startup; play/pause/seek; last clip selection wins; non-looping end synchronizes pause"]
+    },
+    {
+      "example": "sprites-textures/video-drawable",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["silent paused startup; play/pause/seek; last clip selection wins; non-looping end synchronizes pause"]
+    },
+    {
+      "example": "lighting/shadow-casters",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["drag, radius, spot and alpha-outline debug work; R restores all defaults"]
+    },
+    {
+      "example": "lighting/shadow-casters",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["drag, radius, spot and alpha-outline debug work; R restores all defaults"]
+    },
+    {
+      "example": "lighting/lightmap-normals",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["shared height, A/B registration and debug work; R restores synchronized defaults"]
+    },
+    {
+      "example": "lighting/lightmap-normals",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["shared height, A/B registration and debug work; R restores synchronized defaults"]
+    },
+    {
+      "example": "particles/emitter-basics",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["pause freezes live count; reset empties; rate/lifetime/speed and drag affect emitter"]
+    },
+    {
+      "example": "particles/emitter-basics",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["pause freezes live count; reset empties; rate/lifetime/speed and drag affect emitter"]
+    },
+    {
+      "example": "particles/cursor-attractor-particles",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["zero reference; repulsion strength; keyboard force placement; reset clears particles"]
+    },
+    {
+      "example": "particles/cursor-attractor-particles",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["zero reference; repulsion strength; keyboard force placement; reset clears particles"]
+    },
+    {
+      "example": "sprites-textures/video-drawable",
+      "size": "media error 512x288",
+      "status": "PASS",
+      "checks": ["actual HTTP 404 yields visible media error and teardown completes"]
+    },
+    {
+      "example": "sprites-textures/video-drawable",
+      "size": "leave during loading 512x288",
+      "status": "FAIL",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nfalse !== true\n"
+    }
+  ]
+}
