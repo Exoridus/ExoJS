@@ -395,6 +395,62 @@ export const choice = (label, options, value = options[0]) => ({
   options,
   value,
 });
+/** Includes the outer preview transform when measuring displayed pixels. Returns 1 while hidden. */
+export const unitsPerCssPixel = (app, host) => {
+  const frame = window.frameElement;
+  const frameScale = frame && frame.clientHeight > 0 ? frame.getBoundingClientRect().height / frame.clientHeight : 1;
+  const height = host.getBoundingClientRect().height * frameScale;
+  return height > 0 ? app.height / height : 1;
+};
+const styleDemoBar = element => {
+  const style = document.createElement('style');
+  const fontRoot = new URL('../../vendor/fonts/', import.meta.url);
+  // Same-origin previews reuse the site's theme; detached or cross-origin examples retain token fallbacks.
+  try {
+    const source = window.parent.document;
+    const tokens = window.parent.getComputedStyle(source.documentElement);
+    for (const name of [
+      '--color-bg',
+      '--color-surface',
+      '--color-text',
+      '--color-text-muted',
+      '--color-accent',
+      '--amber',
+      '--f-sans',
+      '--f-mono',
+    ]) {
+      element.style.setProperty(name, tokens.getPropertyValue(name));
+    }
+  } catch {
+    // A cross-origin embed cannot read the surrounding site's theme.
+  }
+  element.classList.add('exo-demo-bar');
+  style.textContent = `
+@font-face { font-family:'Space Grotesk'; font-style:normal; font-weight:400; src:url('${fontRoot}space-grotesk-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family:'Space Grotesk'; font-style:normal; font-weight:600; src:url('${fontRoot}space-grotesk-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family:'JetBrains Mono'; font-style:normal; font-weight:400; src:url('${fontRoot}jetbrains-mono-latin-400-normal.woff2') format('woff2'); }
+.exo-demo-bar { box-sizing:border-box; display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px;
+  inset:auto auto 0 0 !important; max-width:none !important; min-width:0 !important; padding:8px 12px !important;
+  border:0 !important; border-radius:0 !important; background:var(--color-bg,#0b1014) !important;
+  color:var(--color-text,#eceff2) !important; font:15px var(--f-sans,'Space Grotesk',system-ui,sans-serif) !important;
+  transform-origin:bottom left; box-shadow:none !important; }
+.exo-demo-bar > strong { flex-basis:100%; font-size:17px !important; margin:0 !important; color:inherit !important; }
+.exo-demo-bar > div { margin:0 !important; gap:8px !important; }
+.exo-demo-bar > div > span { min-width:0 !important; color:var(--color-text-muted,#a8afb5) !important; font-size:14px !important; }
+.exo-demo-bar button,.exo-demo-bar select { min-height:32px; width:auto !important; margin:0 !important; padding:4px 8px !important;
+  border:1px solid var(--color-text-muted,#a8afb5) !important; border-radius:4px !important;
+  background:var(--color-surface,#12181d) !important; color:inherit !important; font:inherit !important; cursor:pointer; }
+.exo-demo-bar input { min-height:32px; width:80px; accent-color:var(--color-accent,#88e97e); }
+.exo-demo-bar :focus-visible { outline:2px solid var(--color-accent,#88e97e); outline-offset:2px; }
+.exo-demo-bar > .exo-demo-status { flex-basis:100%; color:var(--color-text-muted,#a8afb5) !important;
+  font:14px var(--f-mono,'JetBrains Mono',ui-monospace,monospace) !important; }
+.exo-demo-bar[data-compact] > strong { display:none !important; }
+`;
+  document.head.append(style);
+  return () => {
+    style.remove();
+  };
+};
 /**
  * Mounts a small control panel from a declarative control list and keeps one
  * value per control. Keyboard shortcuts should call `set`/`step` so the panel
@@ -402,6 +458,7 @@ export const choice = (label, options, value = options[0]) => ({
  */
 export const demoPanel = options => {
   const panel = mountControlPanel({ title: options.title, corner: options.corner });
+  const disposeBar = options.layout === 'bar' ? styleDemoBar(panel.element) : undefined;
   const values = {};
   const renderers = new Map();
   const keys = Object.keys(options.controls);
@@ -445,6 +502,26 @@ export const demoPanel = options => {
         break;
       }
       case 'choice': {
+        if (options.layout === 'bar') {
+          const row = document.createElement('label');
+          const select = document.createElement('select');
+          row.textContent = `${spec.label} `;
+          select.setAttribute('aria-label', spec.label);
+          for (const name of spec.options) {
+            select.add(new Option(name, name));
+          }
+          select.value = spec.value;
+          select.addEventListener('change', () => commit(key, select.value, true));
+          row.append(select);
+          panel.element.append(row);
+          values[key] = spec.value;
+          renderers.set(key, {
+            set: value => {
+              select.value = value;
+            },
+          });
+          break;
+        }
         const labelled = spec.options.map((name, index) => `${name} (${index + 1}/${spec.options.length})`);
         const binding = panel.addCycle({
           label: spec.label,
@@ -462,6 +539,7 @@ export const demoPanel = options => {
     panel.addButton({ label, onClick: run });
   }
   Object.assign(statusEl.style, { marginTop: '6px', font: `600 12px ${FONT_STACK}`, color: '#9fd0ff' });
+  statusEl.className = 'exo-demo-status';
   statusEl.setAttribute('aria-live', 'polite');
   statusEl.hidden = true;
   panel.element.append(statusEl);
@@ -486,7 +564,10 @@ export const demoPanel = options => {
       statusEl.textContent = text;
       statusEl.hidden = text === '';
     },
-    dispose: () => panel.dispose(),
+    dispose: () => {
+      disposeBar?.();
+      panel.dispose();
+    },
   };
   for (const key of keys) {
     options.onChange?.(key, values[key], values);

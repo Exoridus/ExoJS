@@ -1,0 +1,1217 @@
+{
+  "schemaVersion": 1,
+  "catalog": "curated-48-v2",
+  "targets": [
+    {
+      "number": 1,
+      "section": "A",
+      "title": "First Animated Sprite",
+      "id": "first-animated-sprite",
+      "source": "examples/getting-started/hello-world.ts",
+      "batch": "B2",
+      "status": "queued"
+    },
+    {
+      "number": 2,
+      "section": "A",
+      "title": "Scene Changes and Transitions",
+      "id": "scene-transitions",
+      "source": "examples/application-scenes/multiple-scenes.ts",
+      "batch": "B2",
+      "status": "queued"
+    },
+    {
+      "number": 3,
+      "section": "A",
+      "title": "Loading Progress and Retry",
+      "id": "loading-retry",
+      "source": "examples/application-scenes/loading-screen.ts",
+      "batch": "B2",
+      "status": "queued"
+    },
+    {
+      "number": 4,
+      "section": "A",
+      "title": "Room Loading and Asset Ownership",
+      "id": "room-ownership",
+      "source": "examples/tilemap/level-loading-and-ownership.ts",
+      "batch": "B2",
+      "status": "queued"
+    },
+    {
+      "number": 5,
+      "section": "A",
+      "title": "Orb Dodge",
+      "id": "orb-dodge",
+      "source": "examples/showcase/orb-dodge.ts",
+      "batch": "B2",
+      "status": "queued"
+    },
+    {
+      "number": 6,
+      "section": "B",
+      "title": "Parent and World Transforms",
+      "id": "parent-world-transforms",
+      "source": "examples/scene-graph/nested-transforms.ts",
+      "batch": "B6",
+      "status": "queued"
+    },
+    {
+      "number": 7,
+      "section": "B",
+      "title": "Pivot and Anchor",
+      "id": "pivot-anchor",
+      "source": "examples/scene-graph/pivot-and-anchor.ts",
+      "batch": "B6",
+      "status": "queued"
+    },
+    {
+      "number": 8,
+      "section": "B",
+      "title": "Masks",
+      "id": "masking",
+      "source": "examples/scene-graph/masks.ts",
+      "batch": "B6",
+      "status": "queued"
+    },
+    {
+      "number": 9,
+      "section": "B",
+      "title": "Texture Sampling and Pixel Snapping",
+      "id": "texture-sampling",
+      "source": "examples/sprites-textures/texture-sampling.ts",
+      "batch": "B6",
+      "status": "queued"
+    },
+    {
+      "number": 10,
+      "section": "B",
+      "title": "Camera Navigation and Coordinates",
+      "id": "camera-coordinates",
+      "source": "examples/application-scenes/world-vs-screen-coords.ts",
+      "batch": "B3",
+      "status": "queued"
+    },
+    {
+      "number": 11,
+      "section": "B",
+      "title": "Parallax Layers",
+      "id": "parallax-layers",
+      "source": "examples/scene-graph/parallax-starfield.ts",
+      "batch": "B3",
+      "status": "queued"
+    },
+    {
+      "number": 12,
+      "section": "B",
+      "title": "Local Split Screen",
+      "id": "local-split-screen",
+      "source": "examples/application-scenes/multi-view-split-screen.ts",
+      "batch": "B3",
+      "status": "queued"
+    },
+    {
+      "number": 13,
+      "section": "B",
+      "title": "Minimap",
+      "id": "minimap",
+      "source": "examples/render-targets/mini-map.ts",
+      "batch": "B3",
+      "status": "queued"
+    },
+    {
+      "number": 14,
+      "section": "C",
+      "title": "Input Actions and Rebinding",
+      "id": "input-actions",
+      "source": "examples/input/action-mapping.ts",
+      "batch": "B3",
+      "status": "queued"
+    },
+    {
+      "number": 15,
+      "section": "C",
+      "title": "Fly a Spaceship",
+      "id": "spaceship-actions",
+      "source": "examples/showcase/gamepad-spaceship.ts",
+      "batch": "B3",
+      "status": "queued"
+    },
+    {
+      "number": 16,
+      "section": "C",
+      "title": "UI Controls and Focus",
+      "id": "ui-focus",
+      "source": "examples/ui/settings-menu.ts",
+      "batch": "B2",
+      "status": "queued"
+    },
+    {
+      "number": 17,
+      "section": "C",
+      "title": "Text Entry and Scrolling",
+      "id": "text-entry",
+      "source": "examples/ui/text-entry-and-scrolling.ts",
+      "batch": "B2",
+      "status": "queued"
+    },
+    {
+      "number": 18,
+      "section": "C",
+      "title": "Dialogue and Choices",
+      "id": "dialogue",
+      "source": "examples/showcase/dialog-system.ts",
+      "batch": "B2",
+      "status": "queued"
+    },
+    {
+      "number": 19,
+      "section": "D",
+      "title": "Sprite Animation",
+      "id": "sprite-animation",
+      "source": "examples/tweens-animation/frame-animation.ts",
+      "batch": "B1",
+      "status": "locally-verified-review-pending"
+    },
+    {
+      "number": 20,
+      "section": "D",
+      "title": "Tweens and Easing",
+      "id": "tweens-and-easing",
+      "source": "examples/tweens-animation/tween-basics.ts",
+      "batch": "B1",
+      "status": "queued"
+    },
+    {
+      "number": 21,
+      "section": "D",
+      "title": "Impact Feedback",
+      "id": "impact-feedback",
+      "source": "examples/showcase/screen-shake-on-explosion.ts",
+      "batch": "B1",
+      "status": "queued"
+    },
+    {
+      "number": 22,
+      "section": "E",
+      "title": "Shapes and Gradients",
+      "id": "shapes-gradients",
+      "source": "examples/geometry-graphics/graphics-gradient.ts",
+      "batch": "B1",
+      "status": "queued"
+    },
+    {
+      "number": 23,
+      "section": "E",
+      "title": "Text Layout",
+      "id": "text-lab",
+      "source": "examples/text-fonts/typographic-styling.ts",
+      "batch": "B1",
+      "status": "locally-verified-review-pending"
+    },
+    {
+      "number": 24,
+      "section": "E",
+      "title": "Bitmap Text",
+      "id": "bitmap-text",
+      "source": "examples/text-fonts/bitmap-text-basic.ts",
+      "batch": "B1",
+      "status": "queued"
+    },
+    {
+      "number": 25,
+      "section": "F",
+      "title": "Blend Modes",
+      "id": "blendmodes",
+      "source": "examples/sprites-textures/blendmodes.ts",
+      "batch": "B6",
+      "status": "queued"
+    },
+    {
+      "number": 26,
+      "section": "F",
+      "title": "Sprite Filters",
+      "id": "sprite-filters",
+      "source": "examples/filters/blur-filter.ts",
+      "batch": "B6",
+      "status": "queued"
+    },
+    {
+      "number": 27,
+      "section": "F",
+      "title": "Bloom Threshold",
+      "id": "bloom",
+      "source": "examples/filters/bloom-filter.ts",
+      "batch": "B6",
+      "status": "queued"
+    },
+    {
+      "number": 28,
+      "section": "F",
+      "title": "Capture a Texture",
+      "id": "capture-texture",
+      "source": "examples/render-targets/render-to-texture.ts",
+      "batch": "B6",
+      "status": "queued"
+    },
+    {
+      "number": 29,
+      "section": "F",
+      "title": "Play a Video Texture",
+      "id": "video-texture",
+      "source": "examples/sprites-textures/video-drawable.ts",
+      "batch": "B6",
+      "status": "queued"
+    },
+    {
+      "number": 30,
+      "section": "G",
+      "title": "Cast Shadows from Shapes",
+      "id": "shape-shadows",
+      "source": "examples/lighting/shadow-casters.ts",
+      "batch": "B6",
+      "status": "queued"
+    },
+    {
+      "number": 31,
+      "section": "G",
+      "title": "Light a Normal-Mapped Surface",
+      "id": "normal-lighting",
+      "source": "examples/lighting/lightmap-normals.ts",
+      "batch": "B6",
+      "status": "queued"
+    },
+    {
+      "number": 32,
+      "section": "G",
+      "title": "Control a Particle Emitter",
+      "id": "particle-emitter",
+      "source": "examples/particles/emitter-basics.ts",
+      "batch": "B6",
+      "status": "queued"
+    },
+    {
+      "number": 33,
+      "section": "G",
+      "title": "Attract and Repel Particles",
+      "id": "particle-forces",
+      "source": "examples/particles/cursor-attractor-particles.ts",
+      "batch": "B6",
+      "status": "queued"
+    },
+    {
+      "number": 34,
+      "section": "H",
+      "title": "Play a Sound",
+      "id": "play-sound",
+      "source": "examples/audio-basics/play-sound.ts",
+      "batch": "B5",
+      "status": "queued"
+    },
+    {
+      "number": 35,
+      "section": "H",
+      "title": "Music Playback and Crossfade",
+      "id": "music-and-crossfade",
+      "source": "examples/audio-basics/music-loop.ts",
+      "batch": "B5",
+      "status": "queued"
+    },
+    {
+      "number": 36,
+      "section": "H",
+      "title": "Mix Music and Effects",
+      "id": "audio-mixer",
+      "source": "examples/audio-basics/audio-buses.ts",
+      "batch": "B5",
+      "status": "queued"
+    },
+    {
+      "number": 37,
+      "section": "H",
+      "title": "Duck Music under Speech",
+      "id": "ducking",
+      "source": "examples/audio-fx/ducking.ts",
+      "batch": "B5",
+      "status": "queued"
+    },
+    {
+      "number": 38,
+      "section": "H",
+      "title": "Hear an Audio Effect",
+      "id": "audio-effect",
+      "source": "examples/audio-fx/reverb-and-delay.ts",
+      "batch": "B5",
+      "status": "queued"
+    },
+    {
+      "number": 39,
+      "section": "H",
+      "title": "Read Spectrum and Waveform",
+      "id": "audio-analysis",
+      "source": "examples/showcase/audio-visualisation.ts",
+      "batch": "B5",
+      "status": "queued"
+    },
+    {
+      "number": 40,
+      "section": "H",
+      "title": "Position a Sound Source",
+      "id": "spatial-audio",
+      "source": "examples/spatial-audio/listener-and-source.ts",
+      "batch": "B5",
+      "status": "queued"
+    },
+    {
+      "number": 41,
+      "section": "I",
+      "title": "Editor Maps and Gameplay",
+      "id": "editor-map-gameplay",
+      "source": "examples/tilemap/editor-objects-gameplay.ts",
+      "batch": "B4",
+      "status": "queued"
+    },
+    {
+      "number": 42,
+      "section": "I",
+      "title": "Layered Tile World",
+      "id": "layered-world",
+      "source": "examples/tilemap/tile-chunks-and-bands.ts",
+      "batch": "B4",
+      "status": "queued"
+    },
+    {
+      "number": 43,
+      "section": "I",
+      "title": "Paint an Autotiled Room",
+      "id": "autotile-room",
+      "source": "examples/tilemap/paint-autotiled-room.ts",
+      "batch": "B4",
+      "status": "queued"
+    },
+    {
+      "number": 44,
+      "section": "I",
+      "title": "Tilemap Projections",
+      "id": "tile-projections",
+      "source": "examples/tilemap/tiled-isometric.ts",
+      "batch": "B4",
+      "status": "queued"
+    },
+    {
+      "number": 45,
+      "section": "I",
+      "title": "Pathfinding Playground",
+      "id": "pathfinding",
+      "source": "examples/pathfinding/grid-navigation.ts",
+      "batch": "B4",
+      "status": "queued"
+    },
+    {
+      "number": 46,
+      "section": "I",
+      "title": "Streaming Tile Worlds",
+      "id": "streaming-world",
+      "source": "examples/tilemap/tiled-infinite-map.ts",
+      "batch": "B4",
+      "status": "queued"
+    },
+    {
+      "number": 47,
+      "section": "J",
+      "title": "Drag and Throw Physics",
+      "id": "drag-physics",
+      "source": "examples/physics/sprite-follows-body.ts",
+      "batch": "B4",
+      "status": "queued"
+    },
+    {
+      "number": 48,
+      "section": "J",
+      "title": "Character Movement",
+      "id": "character-movement",
+      "source": "examples/physics/character-movement.ts",
+      "batch": "B4",
+      "status": "queued"
+    }
+  ],
+  "contracts": [
+    {
+      "source": "examples/getting-started/hello-world.ts",
+      "target": "first-animated-sprite",
+      "disposition": "retain",
+      "batch": "B2",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/getting-started/resize-and-dpr.ts",
+      "target": "preserve-getting-started-resize-and-dpr",
+      "disposition": "guide-tool-test",
+      "batch": "B2",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/application-scenes/scene-less-app.ts",
+      "target": "preserve-application-scenes-scene-less-app",
+      "disposition": "guide-tool-test",
+      "batch": "B2",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/showcase/orb-dodge.ts",
+      "target": "orb-dodge",
+      "disposition": "polish",
+      "batch": "B2",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/application-scenes/multiple-scenes.ts",
+      "target": "scene-transitions",
+      "disposition": "polish",
+      "batch": "B2",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/application-scenes/loading-screen.ts",
+      "target": "loading-retry",
+      "disposition": "polish",
+      "batch": "B2",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/sprites-textures/asset-catalogs.ts",
+      "target": "guide-asset-catalogs",
+      "disposition": "guide-tool-test",
+      "batch": "B2",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/showcase/pause-blur.ts",
+      "target": "orb-dodge",
+      "disposition": "merge",
+      "batch": "B2",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/application-scenes/custom-transition.ts",
+      "target": "scene-transitions",
+      "disposition": "merge",
+      "batch": "B2",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/tilemap/level-loading-and-ownership.ts",
+      "target": "room-ownership",
+      "disposition": "retain",
+      "batch": "B2",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/application-scenes/cached-assets-offline.ts",
+      "target": "preserve-application-scenes-cached-assets-offline",
+      "disposition": "guide-tool-test",
+      "batch": "B2",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/debug-layer/asset-browser.ts",
+      "target": "preserve-debug-layer-asset-browser",
+      "disposition": "guide-tool-test",
+      "batch": "B2",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/input/keyboard.ts",
+      "target": "preserve-input-keyboard",
+      "disposition": "guide-tool-test",
+      "batch": "B3",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/input/mouse-and-pointer.ts",
+      "target": "preserve-input-mouse-and-pointer",
+      "disposition": "guide-tool-test",
+      "batch": "B3",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/input/action-mapping.ts",
+      "target": "input-actions",
+      "disposition": "polish",
+      "batch": "B3",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/input/gamepad.ts",
+      "target": "preserve-input-gamepad",
+      "disposition": "guide-tool-test",
+      "batch": "B3",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/input/key-rebinding.ts",
+      "target": "input-actions",
+      "disposition": "merge",
+      "batch": "B3",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/input/multitouch.ts",
+      "target": "preserve-input-multitouch",
+      "disposition": "guide-tool-test",
+      "batch": "B3",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/ui/hud-and-widgets.ts",
+      "target": "ui-focus",
+      "disposition": "merge",
+      "batch": "B2",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/ui/settings-menu.ts",
+      "target": "ui-focus",
+      "disposition": "polish",
+      "batch": "B2",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/ui/text-entry-and-scrolling.ts",
+      "target": "text-entry",
+      "disposition": "retain",
+      "batch": "B2",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/showcase/dialog-system.ts",
+      "target": "dialogue",
+      "disposition": "polish",
+      "batch": "B2",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/application-scenes/multi-view-split-screen.ts",
+      "target": "local-split-screen",
+      "disposition": "retain",
+      "batch": "B3",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/sprites-textures/sprite-basics.ts",
+      "target": "first-animated-sprite",
+      "disposition": "merge",
+      "batch": "B2",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/scene-graph/nested-transforms.ts",
+      "target": "parent-world-transforms",
+      "disposition": "polish",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/scene-graph/pivot-and-anchor.ts",
+      "target": "pivot-anchor",
+      "disposition": "retain",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/sprites-textures/blendmodes.ts",
+      "target": "blendmodes",
+      "disposition": "retain",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/scene-graph/masks.ts",
+      "target": "masking",
+      "disposition": "polish",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/sprites-textures/texture-sampling.ts",
+      "target": "texture-sampling",
+      "disposition": "retain",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/application-scenes/world-vs-screen-coords.ts",
+      "target": "camera-coordinates",
+      "disposition": "polish",
+      "batch": "B3",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/scene-graph/parallax-starfield.ts",
+      "target": "parallax-layers",
+      "disposition": "polish",
+      "batch": "B3",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/application-scenes/picture-in-picture.ts",
+      "target": "guide-direct-viewports",
+      "disposition": "guide-tool-test",
+      "batch": "B3",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/render-targets/mini-map.ts",
+      "target": "minimap",
+      "disposition": "polish",
+      "batch": "B3",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/tweens-animation/frame-animation.ts",
+      "target": "sprite-animation",
+      "disposition": "polish",
+      "batch": "B1",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/tweens-animation/tween-basics.ts",
+      "target": "tweens-and-easing",
+      "disposition": "polish",
+      "batch": "B1",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/tweens-animation/tween-chains.ts",
+      "target": "tweens-and-easing",
+      "disposition": "merge",
+      "batch": "B1",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/tweens-animation/easing-curves.ts",
+      "target": "tweens-and-easing",
+      "disposition": "merge",
+      "batch": "B1",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/showcase/screen-shake-on-explosion.ts",
+      "target": "impact-feedback",
+      "disposition": "retain",
+      "batch": "B1",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/showcase/gamepad-spaceship.ts",
+      "target": "spaceship-actions",
+      "disposition": "polish",
+      "batch": "B3",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/showcase/boss-intro-cinematic.ts",
+      "target": "guide-cinematic-sequence",
+      "disposition": "guide-tool-test",
+      "batch": "B1",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/geometry-graphics/graphics-gradient.ts",
+      "target": "shapes-gradients",
+      "disposition": "polish",
+      "batch": "B1",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/text-fonts/typographic-styling.ts",
+      "target": "text-lab",
+      "disposition": "polish",
+      "batch": "B1",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/text-fonts/multiline-and-wrap.ts",
+      "target": "text-lab",
+      "disposition": "merge",
+      "batch": "B1",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/text-fonts/bitmap-text-basic.ts",
+      "target": "bitmap-text",
+      "disposition": "retain",
+      "batch": "B1",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/geometry-graphics/mesh-textured-quad.ts",
+      "target": "guide-mesh-vertices",
+      "disposition": "guide-tool-test",
+      "batch": "B1",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/geometry-graphics/mesh-deformed-grid.ts",
+      "target": "guide-mesh-deformation",
+      "disposition": "guide-tool-test",
+      "batch": "B1",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/geometry-graphics/mesh-typed-uniforms.ts",
+      "target": "guide-typed-uniforms",
+      "disposition": "guide-tool-test",
+      "batch": "B1",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/filters/bloom-filter.ts",
+      "target": "bloom",
+      "disposition": "polish",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/filters/blur-filter.ts",
+      "target": "sprite-filters",
+      "disposition": "retain",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/filters/color-matrix-filter.ts",
+      "target": "sprite-filters",
+      "disposition": "merge",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/filters/crt-scanlines.ts",
+      "target": "guide-crt-scanlines",
+      "disposition": "guide-tool-test",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/filters/custom-fragment-shader.ts",
+      "target": "guide-custom-fragment-shader",
+      "disposition": "guide-tool-test",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/filters/metaballs.ts",
+      "target": "guide-metaballs",
+      "disposition": "guide-tool-test",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/render-targets/render-to-texture.ts",
+      "target": "capture-texture",
+      "disposition": "polish",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/render-targets/trail-feedback.ts",
+      "target": "guide-trail-feedback",
+      "disposition": "guide-tool-test",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/render-targets/color-pipeline.ts",
+      "target": "diagnostic-color-pipeline",
+      "disposition": "guide-tool-test",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/render-targets/water-mirror.ts",
+      "target": "guide-water-mirror",
+      "disposition": "guide-tool-test",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/sprites-textures/video-drawable.ts",
+      "target": "video-texture",
+      "disposition": "polish",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/render-targets/render-pipeline.ts",
+      "target": "guide-render-pipeline",
+      "disposition": "guide-tool-test",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/custom-renderers/custom-triangle-renderer.ts",
+      "target": "guide-custom-triangle-renderer",
+      "disposition": "guide-tool-test",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/lighting/many-lights.ts",
+      "target": "diagnostic-many-lights",
+      "disposition": "guide-tool-test",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/lighting/shadow-casters.ts",
+      "target": "shape-shadows",
+      "disposition": "retain",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/lighting/light-cookies.ts",
+      "target": "guide-light-cookies",
+      "disposition": "guide-tool-test",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/lighting/lightmap-normals.ts",
+      "target": "normal-lighting",
+      "disposition": "retain",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/lighting/radiance-rooms.ts",
+      "target": "guide-radiance-rooms",
+      "disposition": "guide-tool-test",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/particles/emitter-basics.ts",
+      "target": "particle-emitter",
+      "disposition": "polish",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/particles/cursor-attractor-particles.ts",
+      "target": "particle-forces",
+      "disposition": "polish",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/particles/fireworks.ts",
+      "target": "guide-fireworks",
+      "disposition": "guide-tool-test",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/particles/bonfire.ts",
+      "target": "guide-bonfire",
+      "disposition": "guide-tool-test",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/showcase/audio-reactive-particles.ts",
+      "target": "guide-audio-reactive-particles",
+      "disposition": "guide-tool-test",
+      "batch": "B5",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/particles/gpu-particles.ts",
+      "target": "diagnostic-gpu-particles",
+      "disposition": "guide-tool-test",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/particles/custom-wgsl-module.ts",
+      "target": "guide-custom-wgsl-module",
+      "disposition": "guide-tool-test",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/audio-basics/play-sound.ts",
+      "target": "play-sound",
+      "disposition": "retain",
+      "batch": "B5",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/audio-basics/sound-pool.ts",
+      "target": "guide-sound-pool",
+      "disposition": "guide-tool-test",
+      "batch": "B5",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/audio-basics/music-loop.ts",
+      "target": "music-and-crossfade",
+      "disposition": "polish",
+      "batch": "B5",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/audio-basics/audio-buses.ts",
+      "target": "audio-mixer",
+      "disposition": "polish",
+      "batch": "B5",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/audio-basics/crossfade-tracks.ts",
+      "target": "music-and-crossfade",
+      "disposition": "merge",
+      "batch": "B5",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/audio-fx/reverb-and-delay.ts",
+      "target": "audio-effect",
+      "disposition": "polish",
+      "batch": "B5",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/audio-fx/pcm-stream.ts",
+      "target": "guide-pcm-stream",
+      "disposition": "guide-tool-test",
+      "batch": "B5",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/audio-fx/gpu-pcm-stream.ts",
+      "target": "diagnostic-gpu-pcm-stream",
+      "disposition": "guide-tool-test",
+      "batch": "B5",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/audio-fx/compressor.ts",
+      "target": "guide-compressor",
+      "disposition": "guide-tool-test",
+      "batch": "B5",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/audio-fx/ducking.ts",
+      "target": "ducking",
+      "disposition": "polish",
+      "batch": "B5",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/audio-fx/convolution-rooms.ts",
+      "target": "guide-convolution-rooms",
+      "disposition": "guide-tool-test",
+      "batch": "B5",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/audio-fx/effect-chains.ts",
+      "target": "guide-effect-chains",
+      "disposition": "guide-tool-test",
+      "batch": "B5",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/audio-fx/signal-graph.ts",
+      "target": "diagnostic-signal-graph",
+      "disposition": "guide-tool-test",
+      "batch": "B5",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/audio-fx/vocoder.ts",
+      "target": "guide-vocoder",
+      "disposition": "guide-tool-test",
+      "batch": "B5",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/showcase/audio-visualisation.ts",
+      "target": "audio-analysis",
+      "disposition": "polish",
+      "batch": "B5",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/beat-detection/beat-sync-pulse.ts",
+      "target": "guide-beat-sync-pulse",
+      "disposition": "guide-tool-test",
+      "batch": "B5",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/spatial-audio/listener-and-source.ts",
+      "target": "spatial-audio",
+      "disposition": "polish",
+      "batch": "B5",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/tilemap/tiled-isometric.ts",
+      "target": "tile-projections",
+      "disposition": "polish",
+      "batch": "B4",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/tilemap/hexagonal-grid.ts",
+      "target": "tile-projections",
+      "disposition": "merge",
+      "batch": "B4",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/tilemap/tile-chunks-and-bands.ts",
+      "target": "layered-world",
+      "disposition": "retain",
+      "batch": "B4",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/tilemap/tiled-map-import.ts",
+      "target": "editor-map-gameplay",
+      "disposition": "merge",
+      "batch": "B4",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/tilemap/ldtk-world-import.ts",
+      "target": "guide-ldtk-import",
+      "disposition": "guide-tool-test",
+      "batch": "B4",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/tilemap/editor-objects-gameplay.ts",
+      "target": "editor-map-gameplay",
+      "disposition": "polish",
+      "batch": "B4",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/pathfinding/grid-navigation.ts",
+      "target": "pathfinding",
+      "disposition": "retain",
+      "batch": "B4",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/pathfinding/tilemap-navigation.ts",
+      "target": "guide-editable-map-navigation",
+      "disposition": "guide-tool-test",
+      "batch": "B4",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/tilemap/paint-autotiled-room.ts",
+      "target": "autotile-room",
+      "disposition": "polish",
+      "batch": "B4",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/tilemap/tiled-infinite-map.ts",
+      "target": "streaming-world",
+      "disposition": "retain",
+      "batch": "B4",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/tilemap/worker-streamed-terrain.ts",
+      "target": "guide-worker-terrain",
+      "disposition": "guide-tool-test",
+      "batch": "B4",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/showcase/rectangles-collision.ts",
+      "target": "guide-aabb-collision",
+      "disposition": "guide-tool-test",
+      "batch": "B4",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/physics/sprite-follows-body.ts",
+      "target": "drag-physics",
+      "disposition": "polish",
+      "batch": "B4",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/physics/kinematic-movement.ts",
+      "target": "guide-kinematic-movement",
+      "disposition": "guide-tool-test",
+      "batch": "B4",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/physics/character-movement.ts",
+      "target": "character-movement",
+      "disposition": "retain",
+      "batch": "B4",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/physics/tiled-map-physics-actor.ts",
+      "target": "guide-tiled-collision-actor",
+      "disposition": "guide-tool-test",
+      "batch": "B4",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/physics/joint-driven-shadows.ts",
+      "target": "guide-dynamic-physics-shadows",
+      "disposition": "guide-tool-test",
+      "batch": "B4",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/debug-layer/pointer-and-hittest.ts",
+      "target": "diagnostic-interaction-inspector",
+      "disposition": "guide-tool-test",
+      "batch": "B3",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/performance/backend-comparison.ts",
+      "target": "diagnostic-backend-workload",
+      "disposition": "guide-tool-test",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/scene-graph/retained-container.ts",
+      "target": "diagnostic-retained-workload",
+      "disposition": "guide-tool-test",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/geometry-graphics/immediate-mode-rendering.ts",
+      "target": "diagnostic-immediate-workload",
+      "disposition": "guide-tool-test",
+      "batch": "B6",
+      "migration": "source-retained"
+    },
+    {
+      "source": "examples/performance/coroutine-loading.ts",
+      "target": "guide-coroutine-loading",
+      "disposition": "guide-tool-test",
+      "batch": "B2",
+      "migration": "source-retained"
+    }
+  ]
+}
