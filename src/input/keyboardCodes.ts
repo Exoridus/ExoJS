@@ -221,3 +221,10 @@ const modifierChannelInfo = new Map<Keyboard, ModifierChannelInfo>([
  * and the aggregate channels themselves). @internal
  */
 export const keyboardModifierChannelInfo = (channel: Keyboard): ModifierChannelInfo | undefined => modifierChannelInfo.get(channel);
+
+/** One keyboard channel transition, in the exact order it happened. */
+export interface KeyChannelEvent {
+  readonly channel: number;
+  readonly pressed: boolean;
+  readonly shiftDown: boolean;
+}

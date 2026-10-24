@@ -26,9 +26,9 @@ import { builtInGamepadDefinitions, resolveGamepadDefinition } from './gamepadDe
 import { type GestureJournalEvent, GestureRecognizer } from './GestureRecognizer';
 import type { InputBindingOptions, InputChannel } from './InputBinding';
 import { InputBinding } from './InputBinding';
-import { keyboardChannelFromCode, keyboardModifierChannelInfo } from './keyboardCodes';
+import { keyboardChannelFromCode, keyboardModifierChannelInfo, type KeyChannelEvent } from './keyboardCodes';
 import { computeDesignPoint, Pointer, PointerState, PointerStateFlag } from './Pointer';
-import { ChannelOffset, ChannelSize, maxPointers, pointerSlotSize, resolveGamepadSlotChannel } from './types';
+import { ChannelOffset, ChannelSize, Keyboard, maxPointers, pointerSlotSize, resolveGamepadSlotChannel } from './types';
 
 const gamepadSlots = 4;
 
@@ -79,12 +79,6 @@ enum InputSystemFlag {
   None = 0,
   KeyChange = 1 << 0,
   MouseWheel = 1 << 1,
-}
-
-/** One keyboard channel transition, in the exact order it happened. */
-interface KeyChannelEvent {
-  readonly channel: number;
-  readonly pressed: boolean;
 }
 
 /**
@@ -225,6 +219,7 @@ export class InputSystem {
   private readonly flags = new Flags<InputSystemFlag>();
   /** Keyboard transitions since the last flush, in true chronological order (see updateEvents). */
   private readonly keyEvents: KeyChannelEvent[] = [];
+  private _dispatchShift: boolean | null = null;
   private readonly gamepadDefinitions: GamepadDefinition[];
   private readonly slotStrategy: GamepadSlotStrategy;
 
@@ -612,6 +607,14 @@ export class InputSystem {
   /** Stop driving `host`. @internal */
   public _detachScopeHost(host: ActionScopeHost): void {
     this.scopeHosts.delete(host);
+  }
+
+  /**
+   * Shift state at the current journaled key transition, or null outside dispatch.
+   * @internal
+   */
+  public get _keyEventShift(): boolean | null {
+    return this._dispatchShift;
   }
 
   /**
@@ -1232,7 +1235,7 @@ export class InputSystem {
       this._recordChannelChanges(modifier.aggregate, 1);
     }
 
-    this.keyEvents.push({ channel, pressed: true });
+    this.keyEvents.push({ channel, pressed: true, shiftDown: this.channels[Keyboard.Shift] !== 0 });
     this.flags.addMask(InputSystemFlag.KeyChange);
   }
 
@@ -1266,7 +1269,7 @@ export class InputSystem {
       capturedByAggregate = this.capturedKeyChannels.has(modifier.aggregate);
     }
 
-    this.keyEvents.push({ channel, pressed: false });
+    this.keyEvents.push({ channel, pressed: false, shiftDown: this.channels[Keyboard.Shift] !== 0 });
     this.flags.addMask(InputSystemFlag.KeyChange);
 
     if (capturedByAggregate || this.capturedKeyChannels.has(channel)) {
@@ -1551,7 +1554,7 @@ export class InputSystem {
       if (this.channels[channel] !== 0) {
         this.channels[channel] = 0;
         this._recordChannelChanges(channel, 1);
-        this.keyEvents.push({ channel, pressed: false });
+        this.keyEvents.push({ channel, pressed: false, shiftDown: this.channels[Keyboard.Shift] !== 0 });
         this.flags.addMask(InputSystemFlag.KeyChange);
       }
     }
@@ -1753,10 +1756,16 @@ export class InputSystem {
       // dispatch in that same order, or FocusController would still see
       // Shift held when Tab's handler runs and misread it as Shift+Tab.
       for (const event of this.keyEvents) {
-        if (event.pressed) {
-          this.onKeyDown.dispatchIsolated(this.reportListenerError, event.channel);
-        } else {
-          this.onKeyUp.dispatchIsolated(this.reportListenerError, event.channel);
+        this._dispatchShift = event.shiftDown;
+
+        try {
+          if (event.pressed) {
+            this.onKeyDown.dispatchIsolated(this.reportListenerError, event.channel);
+          } else {
+            this.onKeyUp.dispatchIsolated(this.reportListenerError, event.channel);
+          }
+        } finally {
+          this._dispatchShift = null;
         }
       }
 
