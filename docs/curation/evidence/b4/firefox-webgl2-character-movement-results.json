@@ -1,0 +1,27 @@
+{
+  "browser": "firefox",
+  "version": "155.0",
+  "backend": "webgl2",
+  "hardwareTouch": "NOT_TESTED",
+  "hardwareGamepad": "NOT_TESTED",
+  "records": [
+    {
+      "example": "physics/character-movement",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "walk Action and double jump; reset; one-way passage from below and landing above; Down drops through; ramp support; shuttle carry; low step",
+        "application disposal removes controls; no page errors"
+      ]
+    },
+    {
+      "example": "physics/character-movement",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "walk Action and double jump; reset; one-way passage from below and landing above; Down drops through; ramp support; shuttle carry; low step",
+        "application disposal removes controls; no page errors"
+      ]
+    }
+  ]
+}

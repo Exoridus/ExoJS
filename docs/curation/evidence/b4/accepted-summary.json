@@ -1,0 +1,672 @@
+{
+  "acceptedCases": 48,
+  "failures": 0,
+  "presentationSizes": ["1280x720", "512x288"],
+  "compactDpr": 2,
+  "largeDpr": 1,
+  "hardwareGamepad": "NOT_TESTED",
+  "hardwareTouch": "NOT_TESTED",
+  "firefoxWebgpu": "NOT_TESTED: unavailable adapter",
+  "sourceHashFormat": "SHA-256 of LF-normalized content",
+  "sources": {
+    "examples/tilemap/editor-objects-gameplay.ts": "9e1a12451bfbfe1cbe177991a6ad998807feb374d01bdefe9cc21a8f642b3374",
+    "examples/tilemap/editor-objects-gameplay.js": "f73094db01259f1e23c0d7fefa3bea716509a280951eaa2c20701979fefb9159",
+    "examples/tilemap/tile-chunks-and-bands.ts": "032af9a23c37eb8f518ba952989d726196bfc6ce1ed97f14df7561cdd8d552f7",
+    "examples/tilemap/tile-chunks-and-bands.js": "72c4ef3a80fb18567d2ee8f5beab8b6ba8314f895f3de7746940779ed8a22dc9",
+    "examples/tilemap/paint-autotiled-room.ts": "0ae6e02d30bff43bcb070ced57141244f58139cb0e37bde803da9bbdf95e12f8",
+    "examples/tilemap/paint-autotiled-room.js": "690c09806d43d2d49fc90da97288ff07ab76ae2df95095e15016d77291cf11b5",
+    "examples/tilemap/tiled-isometric.ts": "9e536b06b401a992e3cc4357aff7871d7c3bc138634949a243adaf355cfbe528",
+    "examples/tilemap/tiled-isometric.js": "fbd0dd3e80ed43b113fec2635032a9bf88e6bde9a3e909879aaae26ded62648a",
+    "examples/pathfinding/grid-navigation.ts": "7387719049e80a3cb513108fc54d096b8c82b00c1d701270167185b1133a02f0",
+    "examples/pathfinding/grid-navigation.js": "9807399e231030bc8b4cf62c0f2e52f6309ce98ca0c94d52499c01450c5e2846",
+    "examples/tilemap/tiled-infinite-map.ts": "925594c496e2d27295a2d43caf986209433315ed50b5c19c262141e85622da67",
+    "examples/tilemap/tiled-infinite-map.js": "3dc37d09c8f5aa83309fce47c5a80c3f8f290be45ef7510e4c7ace06f0cc3a45",
+    "examples/physics/sprite-follows-body.ts": "3c680b61d57ea189a2975e1da0985dc0c8f54999d882a27d66be8d14cacc17bb",
+    "examples/physics/sprite-follows-body.js": "34c24b7e068f57a51a63680a42129cc1d1360b05f7886f23428c64cca8eed1b0",
+    "examples/physics/character-movement.ts": "4827021b01381552f97864079b76edec01c4fba9fd873140bd290e1a065885e3",
+    "examples/physics/character-movement.js": "5bc8ee32420506cf760728e2f889c3843ef3b71e6be456f1e7090d643cc377e4"
+  },
+  "supersededFailures": [
+    {
+      "browser": "firefox",
+      "backend": "webgl2",
+      "example": "pathfinding/grid-navigation",
+      "size": "1280x720",
+      "evidence": "firefox-webgl2-results.json"
+    },
+    {
+      "browser": "firefox",
+      "backend": "webgl2",
+      "example": "pathfinding/grid-navigation",
+      "size": "512x288",
+      "evidence": "firefox-webgl2-results.json"
+    }
+  ],
+  "note": "Focused reruns supersede matching earlier records. Earlier Firefox navigation failures used stale pointer conversion while the arena-fit change was being validated; the corrected focused records pass.",
+  "records": [
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgpu",
+      "example": "tilemap/editor-objects-gameplay",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "locked gem stays locked; switch opens authored door; gem collected; Reset and keyboard Select/Confirm repeat puzzle",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgpu-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgpu",
+      "example": "tilemap/editor-objects-gameplay",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "locked gem stays locked; switch opens authored door; gem collected; Reset and keyboard Select/Confirm repeat puzzle",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgpu-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgpu",
+      "example": "tilemap/tile-chunks-and-bands",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "movement Action advances actor; canopy A/B changes band visibility; all three snap modes; fractional zoom; CSS/logical/buffer/DPR/pixelRatio/camera readout",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgpu-tile-chunks-and-bands-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgpu",
+      "example": "tilemap/tile-chunks-and-bands",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "movement Action advances actor; canopy A/B changes band visibility; all three snap modes; fractional zoom; CSS/logical/buffer/DPR/pixelRatio/camera readout",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgpu-tile-chunks-and-bands-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgpu",
+      "example": "tilemap/paint-autotiled-room",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "paint/erase change actual TileLayer; neighbours recover; 16-case legend shown; pointercancel ends stroke; R restores deterministic meadow",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgpu-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgpu",
+      "example": "tilemap/paint-autotiled-room",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "paint/erase change actual TileLayer; neighbours recover; 16-case legend shown; pointercancel ends stroke; R restores deterministic meadow",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgpu-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgpu",
+      "example": "tilemap/tiled-isometric",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "isometric picking targets logical physics actor and wakes it; side-by-side hex cell centre picks (2,2); highlights >=2 CSS px",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgpu-tiled-isometric-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgpu",
+      "example": "tilemap/tiled-isometric",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "isometric picking targets logical physics actor and wakes it; side-by-side hex cell centre picks (2,2); highlights >=2 CSS px",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgpu-tiled-isometric-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgpu",
+      "example": "pathfinding/grid-navigation",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "pause freezes agent; mud is weighted cost 6 and disables JPS; 2x2 footprint and diagonal scenarios retained; reset clears paint",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgpu-grid-navigation-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgpu",
+      "example": "pathfinding/grid-navigation",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "pause freezes agent; mud is weighted cost 6 and disables JPS; 2x2 footprint and diagonal scenarios retained; reset clears paint",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgpu-grid-navigation-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgpu",
+      "example": "tilemap/tiled-infinite-map",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "camera Action pans through negative coordinates and returns; resident ground set bounded by eight authored chunks; reset returns origin",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgpu-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgpu",
+      "example": "tilemap/tiled-infinite-map",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "camera Action pans through negative coordinates and returns; resident ground set bounded by eight authored chunks; reset returns origin",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgpu-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgpu",
+      "example": "physics/sprite-follows-body",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "three bodies; rotated body query grabs; dragging creates one MouseJoint; outside release removes joint; reset retains exactly three dynamic bodies",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgpu-sprite-follows-body-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgpu",
+      "example": "physics/sprite-follows-body",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "three bodies; rotated body query grabs; dragging creates one MouseJoint; outside release removes joint; reset retains exactly three dynamic bodies",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgpu-sprite-follows-body-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgpu",
+      "example": "physics/character-movement",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "walk Action and double jump; reset; one-way passage from below and landing above; Down drops through; ramp support; shuttle carry; low step",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgpu-character-movement-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgpu",
+      "example": "physics/character-movement",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "walk Action and double jump; reset; one-way passage from below and landing above; Down drops through; ramp support; shuttle carry; low step",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgpu-character-movement-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgl2",
+      "example": "physics/character-movement",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "walk Action and double jump; reset; one-way passage from below and landing above; Down drops through; ramp support; shuttle carry; low step",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgl2",
+      "example": "physics/character-movement",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "walk Action and double jump; reset; one-way passage from below and landing above; Down drops through; ramp support; shuttle carry; low step",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "firefox",
+      "version": "155.0",
+      "backend": "webgl2",
+      "example": "tilemap/editor-objects-gameplay",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "locked gem stays locked; switch opens authored door; gem collected; Reset and keyboard Select/Confirm repeat puzzle",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "firefox-webgl2-results.json"
+    },
+    {
+      "browser": "firefox",
+      "version": "155.0",
+      "backend": "webgl2",
+      "example": "tilemap/editor-objects-gameplay",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "locked gem stays locked; switch opens authored door; gem collected; Reset and keyboard Select/Confirm repeat puzzle",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "firefox-webgl2-results.json"
+    },
+    {
+      "browser": "firefox",
+      "version": "155.0",
+      "backend": "webgl2",
+      "example": "tilemap/tile-chunks-and-bands",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "movement Action advances actor; canopy A/B changes band visibility; all three snap modes; fractional zoom; CSS/logical/buffer/DPR/pixelRatio/camera readout",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "firefox-webgl2-tile-chunks-and-bands-results.json"
+    },
+    {
+      "browser": "firefox",
+      "version": "155.0",
+      "backend": "webgl2",
+      "example": "tilemap/tile-chunks-and-bands",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "movement Action advances actor; canopy A/B changes band visibility; all three snap modes; fractional zoom; CSS/logical/buffer/DPR/pixelRatio/camera readout",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "firefox-webgl2-tile-chunks-and-bands-results.json"
+    },
+    {
+      "browser": "firefox",
+      "version": "155.0",
+      "backend": "webgl2",
+      "example": "tilemap/paint-autotiled-room",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "paint/erase change actual TileLayer; neighbours recover; 16-case legend shown; pointercancel ends stroke; R restores deterministic meadow",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "firefox-webgl2-results.json"
+    },
+    {
+      "browser": "firefox",
+      "version": "155.0",
+      "backend": "webgl2",
+      "example": "tilemap/paint-autotiled-room",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "paint/erase change actual TileLayer; neighbours recover; 16-case legend shown; pointercancel ends stroke; R restores deterministic meadow",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "firefox-webgl2-results.json"
+    },
+    {
+      "browser": "firefox",
+      "version": "155.0",
+      "backend": "webgl2",
+      "example": "tilemap/tiled-isometric",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "isometric picking targets logical physics actor and wakes it; side-by-side hex cell centre picks (2,2); highlights >=2 CSS px",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "firefox-webgl2-tiled-isometric-results.json"
+    },
+    {
+      "browser": "firefox",
+      "version": "155.0",
+      "backend": "webgl2",
+      "example": "tilemap/tiled-isometric",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "isometric picking targets logical physics actor and wakes it; side-by-side hex cell centre picks (2,2); highlights >=2 CSS px",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "firefox-webgl2-tiled-isometric-results.json"
+    },
+    {
+      "browser": "firefox",
+      "version": "155.0",
+      "backend": "webgl2",
+      "example": "pathfinding/grid-navigation",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "pause freezes agent; mud is weighted cost 6 and disables JPS; 2x2 footprint and diagonal scenarios retained; reset clears paint",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "firefox-webgl2-grid-navigation-results.json"
+    },
+    {
+      "browser": "firefox",
+      "version": "155.0",
+      "backend": "webgl2",
+      "example": "pathfinding/grid-navigation",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "pause freezes agent; mud is weighted cost 6 and disables JPS; 2x2 footprint and diagonal scenarios retained; reset clears paint",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "firefox-webgl2-grid-navigation-results.json"
+    },
+    {
+      "browser": "firefox",
+      "version": "155.0",
+      "backend": "webgl2",
+      "example": "tilemap/tiled-infinite-map",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "camera Action pans through negative coordinates and returns; resident ground set bounded by eight authored chunks; reset returns origin",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "firefox-webgl2-results.json"
+    },
+    {
+      "browser": "firefox",
+      "version": "155.0",
+      "backend": "webgl2",
+      "example": "tilemap/tiled-infinite-map",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "camera Action pans through negative coordinates and returns; resident ground set bounded by eight authored chunks; reset returns origin",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "firefox-webgl2-results.json"
+    },
+    {
+      "browser": "firefox",
+      "version": "155.0",
+      "backend": "webgl2",
+      "example": "physics/sprite-follows-body",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "three bodies; rotated body query grabs; dragging creates one MouseJoint; outside release removes joint; reset retains exactly three dynamic bodies",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "firefox-webgl2-sprite-follows-body-results.json"
+    },
+    {
+      "browser": "firefox",
+      "version": "155.0",
+      "backend": "webgl2",
+      "example": "physics/sprite-follows-body",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "three bodies; rotated body query grabs; dragging creates one MouseJoint; outside release removes joint; reset retains exactly three dynamic bodies",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "firefox-webgl2-sprite-follows-body-results.json"
+    },
+    {
+      "browser": "firefox",
+      "version": "155.0",
+      "backend": "webgl2",
+      "example": "physics/character-movement",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "walk Action and double jump; reset; one-way passage from below and landing above; Down drops through; ramp support; shuttle carry; low step",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "firefox-webgl2-character-movement-results.json"
+    },
+    {
+      "browser": "firefox",
+      "version": "155.0",
+      "backend": "webgl2",
+      "example": "physics/character-movement",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "walk Action and double jump; reset; one-way passage from below and landing above; Down drops through; ramp support; shuttle carry; low step",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "firefox-webgl2-character-movement-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgl2",
+      "example": "tilemap/editor-objects-gameplay",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "locked gem stays locked; switch opens authored door; gem collected; Reset and keyboard Select/Confirm repeat puzzle",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgl2",
+      "example": "tilemap/editor-objects-gameplay",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "locked gem stays locked; switch opens authored door; gem collected; Reset and keyboard Select/Confirm repeat puzzle",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgl2",
+      "example": "tilemap/tile-chunks-and-bands",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "movement Action advances actor; canopy A/B changes band visibility; all three snap modes; fractional zoom; CSS/logical/buffer/DPR/pixelRatio/camera readout",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgl2-tile-chunks-and-bands-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgl2",
+      "example": "tilemap/tile-chunks-and-bands",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "movement Action advances actor; canopy A/B changes band visibility; all three snap modes; fractional zoom; CSS/logical/buffer/DPR/pixelRatio/camera readout",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgl2-tile-chunks-and-bands-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgl2",
+      "example": "tilemap/paint-autotiled-room",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "paint/erase change actual TileLayer; neighbours recover; 16-case legend shown; pointercancel ends stroke; R restores deterministic meadow",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgl2",
+      "example": "tilemap/paint-autotiled-room",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "paint/erase change actual TileLayer; neighbours recover; 16-case legend shown; pointercancel ends stroke; R restores deterministic meadow",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgl2",
+      "example": "tilemap/tiled-isometric",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "isometric picking targets logical physics actor and wakes it; side-by-side hex cell centre picks (2,2); highlights >=2 CSS px",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgl2-tiled-isometric-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgl2",
+      "example": "tilemap/tiled-isometric",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "isometric picking targets logical physics actor and wakes it; side-by-side hex cell centre picks (2,2); highlights >=2 CSS px",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgl2-tiled-isometric-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgl2",
+      "example": "pathfinding/grid-navigation",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "pause freezes agent; mud is weighted cost 6 and disables JPS; 2x2 footprint and diagonal scenarios retained; reset clears paint",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgl2",
+      "example": "pathfinding/grid-navigation",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "pause freezes agent; mud is weighted cost 6 and disables JPS; 2x2 footprint and diagonal scenarios retained; reset clears paint",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgl2",
+      "example": "tilemap/tiled-infinite-map",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "camera Action pans through negative coordinates and returns; resident ground set bounded by eight authored chunks; reset returns origin",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgl2",
+      "example": "tilemap/tiled-infinite-map",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "camera Action pans through negative coordinates and returns; resident ground set bounded by eight authored chunks; reset returns origin",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgl2-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgl2",
+      "example": "physics/sprite-follows-body",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "three bodies; rotated body query grabs; dragging creates one MouseJoint; outside release removes joint; reset retains exactly three dynamic bodies",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgl2-sprite-follows-body-results.json"
+    },
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "backend": "webgl2",
+      "example": "physics/sprite-follows-body",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "three bodies; rotated body query grabs; dragging creates one MouseJoint; outside release removes joint; reset retains exactly three dynamic bodies",
+        "application disposal removes controls; no page errors"
+      ],
+      "evidence": "chromium-webgl2-sprite-follows-body-results.json"
+    }
+  ]
+}

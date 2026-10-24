@@ -1,0 +1,27 @@
+{
+  "browser": "chromium",
+  "version": "153.0.8010.12",
+  "backend": "webgl2",
+  "hardwareTouch": "NOT_TESTED",
+  "hardwareGamepad": "NOT_TESTED",
+  "records": [
+    {
+      "example": "tilemap/tiled-isometric",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "isometric picking targets logical physics actor and wakes it; side-by-side hex cell centre picks (2,2); highlights >=2 CSS px",
+        "application disposal removes controls; no page errors"
+      ]
+    },
+    {
+      "example": "tilemap/tiled-isometric",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "isometric picking targets logical physics actor and wakes it; side-by-side hex cell centre picks (2,2); highlights >=2 CSS px",
+        "application disposal removes controls; no page errors"
+      ]
+    }
+  ]
+}

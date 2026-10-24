@@ -1,0 +1,27 @@
+{
+  "browser": "chromium",
+  "version": "153.0.8010.12",
+  "backend": "webgpu",
+  "hardwareTouch": "NOT_TESTED",
+  "hardwareGamepad": "NOT_TESTED",
+  "records": [
+    {
+      "example": "pathfinding/grid-navigation",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "pause freezes agent; mud is weighted cost 6 and disables JPS; 2x2 footprint and diagonal scenarios retained; reset clears paint",
+        "application disposal removes controls; no page errors"
+      ]
+    },
+    {
+      "example": "pathfinding/grid-navigation",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "pause freezes agent; mud is weighted cost 6 and disables JPS; 2x2 footprint and diagonal scenarios retained; reset clears paint",
+        "application disposal removes controls; no page errors"
+      ]
+    }
+  ]
+}

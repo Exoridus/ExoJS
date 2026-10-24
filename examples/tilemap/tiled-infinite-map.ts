@@ -1,18 +1,22 @@
 import {
+  ActionMap,
   Application,
   Asset,
   Color,
   FixedResolutionCanvasSizing,
+  GamepadAxis,
+  Graphics,
   Keyboard,
   type RenderingContext,
   Scene,
   type Seconds,
+  VectorAction,
   View,
 } from '@codexo/exojs';
-import { ChunkStreamer, TileMapNode } from '@codexo/exojs/tilemap';
+import { ChunkStreamer, type TileLayer, TileMapNode } from '@codexo/exojs/tilemap';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { tiledExtension } from '@codexo/exojs-tiled';
-import { mountControls } from '@examples/runtime';
+import { demoPanel } from '@examples/runtime';
 
 // A hand-authored Tiled `.tmj` infinite map, streamed the same way the
 // procedural-terrain examples stream generated worlds: TiledMap.toTileMap()
@@ -37,10 +41,21 @@ class TiledInfiniteMapScene extends Scene {
   private mapNode!: TileMapNode;
   private groundStreamer!: ChunkStreamer;
   private propsStreamer!: ChunkStreamer;
-  private moveX = 0;
-  private moveY = 0;
+  private readonly actions = new ActionMap({
+    move: new VectorAction([
+      {
+        up: [Keyboard.W, Keyboard.Up],
+        down: [Keyboard.S, Keyboard.Down],
+        left: [Keyboard.A, Keyboard.Left],
+        right: [Keyboard.D, Keyboard.Right],
+      },
+      { x: GamepadAxis.LeftStickX, y: GamepadAxis.LeftStickY },
+    ]),
+  });
+  private ground!: TileLayer;
+  private readonly borders = new Graphics();
   private hudTimer = 0;
-  private hud!: ReturnType<typeof mountControls>;
+  private hud!: ReturnType<typeof demoPanel>;
 
   override async load(): Promise<void> {
     const source = await this.loader.load(Asset.type('tiledSource', assets.driftFieldsMap.source));
@@ -54,6 +69,8 @@ class TiledInfiniteMapScene extends Scene {
     if (!ground || !props) {
       throw new Error('drift-fields.tmj is missing its "Ground" or "Props" tile layer');
     }
+
+    this.ground = ground;
 
     // getChunkSource is a side effect of the toTileMap() call above - it
     // returns undefined for a finite (data-based) layer, and one
@@ -79,45 +96,38 @@ class TiledInfiniteMapScene extends Scene {
   }
 
   private setupInput(): void {
-    this.inputs.onActive(Keyboard.A, () => (this.moveX = -1));
-    this.inputs.onStop(Keyboard.A, () => {
-      if (this.moveX < 0) {
-        this.moveX = 0;
-      }
-    });
-    this.inputs.onActive(Keyboard.D, () => (this.moveX = 1));
-    this.inputs.onStop(Keyboard.D, () => {
-      if (this.moveX > 0) {
-        this.moveX = 0;
-      }
-    });
-    this.inputs.onActive(Keyboard.W, () => (this.moveY = -1));
-    this.inputs.onStop(Keyboard.W, () => {
-      if (this.moveY < 0) {
-        this.moveY = 0;
-      }
-    });
-    this.inputs.onActive(Keyboard.S, () => (this.moveY = 1));
-    this.inputs.onStop(Keyboard.S, () => {
-      if (this.moveY > 0) {
-        this.moveY = 0;
-      }
-    });
+    this.inputs.attach(this.actions);
   }
 
   private setupHud(): void {
-    this.hud = mountControls();
+    this.hud = demoPanel({
+      title: 'Streaming Tile Worlds',
+      layout: 'bar',
+      controls: {},
+      hint: 'WASD, arrows or left stick pan; cyan outlines are resident chunks.',
+      actions: { Reset: () => this.camera.setCenter(0, 0) },
+    });
   }
 
   override update(delta: Seconds): void {
-    if (this.moveX !== 0 || this.moveY !== 0) {
-      const length = Math.hypot(this.moveX, this.moveY) || 1;
+    const { x, y } = this.actions.move.value;
+    const fit = this.hud.fit(this.app, this.app.canvas as HTMLCanvasElement);
 
-      this.camera.move((this.moveX / length) * MOVE_SPEED * delta, (this.moveY / length) * MOVE_SPEED * delta);
+    if (x !== 0 || y !== 0) {
+      this.camera.move(x * MOVE_SPEED * delta, y * MOVE_SPEED * delta);
     }
 
     this.groundStreamer.update();
     this.propsStreamer.update();
+
+    this.borders.clear();
+    this.borders.lineWidth = 2 * fit.scale;
+    this.borders.lineColor = new Color(101, 210, 210);
+    this.borders.fillColor = Color.transparent;
+
+    for (const chunk of this.ground.loadedChunks()) {
+      this.borders.drawRectangle(chunk.cx * 16 * TILE, chunk.cy * 16 * TILE, 16 * TILE, 16 * TILE);
+    }
 
     this.hudTimer += delta;
 
@@ -125,7 +135,7 @@ class TiledInfiniteMapScene extends Scene {
       this.hudTimer = 0;
       const tx = Math.floor(this.camera.center.x / TILE);
       const ty = Math.floor(this.camera.center.y / TILE);
-      this.hud.setStatus(
+      this.hud.status(
         `ground ${this.groundStreamer.residentCount} chunks · props ${this.propsStreamer.residentCount} chunks · tile ${tx}, ${ty}`,
       );
     }
@@ -133,6 +143,16 @@ class TiledInfiniteMapScene extends Scene {
 
   override draw(context: RenderingContext): void {
     context.render(this.mapNode, { view: this.camera });
+    context.render(this.borders, { view: this.camera });
+  }
+
+  override destroy(): void {
+    this.groundStreamer?.destroy();
+    this.propsStreamer?.destroy();
+    this.hud?.dispose();
+    this.borders.destroy();
+    this.mapNode?.destroy();
+    super.destroy();
   }
 }
 

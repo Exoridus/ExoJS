@@ -7,13 +7,16 @@ import {
   Color,
   Container,
   FixedResolutionCanvasSizing,
+  GamepadAxis,
+  GamepadButton,
   Graphics,
   Keyboard,
   type RenderingContext,
   Scene,
   SystemOrder,
+  Text,
+  Vector,
 } from '@codexo/exojs';
-import { PhysicsDebugDraw } from '@codexo/exojs/debug';
 import {
   BoxShape,
   CapsuleShape,
@@ -26,7 +29,7 @@ import {
   PhysicsWorld,
   PolygonShape,
 } from '@codexo/exojs/physics';
-import { mountControls } from '@examples/runtime';
+import { demoPanel } from '@examples/runtime';
 
 // A platformer character on CharacterMovementComponent: it walks along the
 // ground, climbs the slope and the small step, slides off the steep face,
@@ -82,6 +85,12 @@ class PlayerControls extends BehaviorComponent {
     super();
   }
 
+  public reset(): void {
+    this.airJumpsLeft = AIR_JUMPS;
+    this.dropUntilBelow = null;
+    this.collider.filter.mask |= ONE_WAY;
+  }
+
   // Fixed steps run zero or several times per frame; an action's `tick` view
   // hands each press to exactly one of them.
   public override fixedUpdate(): void {
@@ -122,15 +131,22 @@ class CharacterMovementScene extends Scene {
     walk: new AxisAction([
       { negative: Keyboard.A, positive: Keyboard.D },
       { negative: Keyboard.Left, positive: Keyboard.Right },
+      GamepadAxis.LeftStickX,
     ]),
-    jump: new ButtonAction([Keyboard.Space, Keyboard.W, Keyboard.Up]),
-    drop: new ButtonAction([Keyboard.S, Keyboard.Down]),
+    jump: new ButtonAction([Keyboard.Space, Keyboard.W, Keyboard.Up, GamepadButton.South]),
+    drop: new ButtonAction([Keyboard.S, Keyboard.Down, GamepadButton.DPadDown]),
+    reset: new ButtonAction([Keyboard.R, GamepadButton.Select]),
   });
   private readonly overlay = new Graphics();
   private character!: CharacterMovementComponent;
   private controls!: PlayerControls;
-  private debug!: PhysicsDebugDraw;
-  private hud!: ReturnType<typeof mountControls>;
+  private readonly worldRoot = new Container();
+  private readonly terrain = new Graphics();
+  private readonly moving = new Graphics();
+  private readonly hero = new Graphics();
+  private readonly platforms: Array<{ body: PhysicsBody; width: number }> = [];
+  private readonly labels: Text[] = [];
+  private hud!: ReturnType<typeof demoPanel>;
 
   override init(): void {
     this.world = this.systems.add(new PhysicsWorld({ fixedDelta: this.app.fixedTimeStep }), { order: SystemOrder.Physics });
@@ -160,11 +176,53 @@ class CharacterMovementScene extends Scene {
     );
     this.addChild(hero);
 
-    this.debug = new PhysicsDebugDraw(this.app, this.world, { drawShapes: true });
-    this.hud = mountControls();
+    this.hero.fillColor = new Color(136, 233, 126);
+    this.hero.lineColor = new Color(33, 63, 45);
+    this.hero.lineWidth = 3;
+    this.hero.drawRoundedRectangle(-12, -26, 24, 52, 12);
+    this.worldRoot.addChild(this.terrain, this.moving, this.hero, this.overlay);
+
+    for (const [name, x, y] of [
+      ['Ramp', 690, 515],
+      ['One-way', 1010, 500],
+      ['Shuttle', 330, 450],
+    ] as const) {
+      const label = new Text(name, { fillColor: new Color(236, 239, 242), align: 'center' }).setAnchor(0.5).setPosition(x, y);
+      this.labels.push(label);
+      this.worldRoot.addChild(label);
+    }
+
+    this.hud = demoPanel({
+      title: 'Character Movement',
+      layout: 'bar',
+      controls: {},
+      hint: 'A/D or left stick walk; Space / South double jump; Down / D-pad down drops through. R resets.',
+      actions: { Reset: () => this.reset() },
+    });
+  }
+
+  private reset(): void {
+    const body = this.character.movement.body;
+    body.setTransform(new Vector(110, 620), 0);
+    this.character.launch({ x: 0, y: 0 });
+    this.controls.reset();
   }
 
   override update(): void {
+    if (this.input.reset.pressed) {
+      this.reset();
+    }
+
+    const fit = this.hud.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    const scale = Math.min(1, (fit.contentHeight * fit.scale) / 720);
+    this.worldRoot.setScale(scale).setPosition((1280 - 1280 * scale) / 2, 0);
+    this.labels.forEach(label => {
+      label.style.fontSize = (14 * fit.scale) / scale;
+    });
+    this.hero.setPosition(this.character.movement.body.x, this.character.movement.body.y);
+    this.moving.clear();
+    this.moving.fillColor = new Color(101, 210, 210);
+    this.platforms.forEach(({ body, width }) => this.moving.drawRectangle(body.x - width / 2, body.y - 8, width, 16));
     const character = this.character;
     const { velocity, groundNormal } = character;
     const support = character.groundBody;
@@ -189,7 +247,7 @@ class CharacterMovementScene extends Scene {
       parts.push('touching the ceiling');
     }
 
-    this.hud.setStatus(parts.join(' · '));
+    this.hud.status(parts.join(' · '));
   }
 
   override draw(context: RenderingContext): void {
@@ -197,7 +255,7 @@ class CharacterMovementScene extends Scene {
     const { groundNormal, velocity } = this.character;
 
     this.overlay.clear();
-    this.overlay.lineWidth = 3;
+    this.overlay.lineWidth = (2 * this.hud.fit(this.app, this.app.canvas as HTMLCanvasElement).scale) / this.worldRoot.scale.x;
 
     if (this.character.grounded) {
       this.overlay.lineColor = new Color(120, 230, 140);
@@ -207,19 +265,18 @@ class CharacterMovementScene extends Scene {
     this.overlay.lineColor = new Color(255, 170, 90);
     this.overlay.drawLine(body.x, body.y, body.x + velocity.x * 0.12, body.y + velocity.y * 0.12);
 
-    this.debug.render(context.backend);
-    context.render(this.overlay);
+    context.render(this.worldRoot);
   }
 
   override destroy(): void {
     this.hud?.dispose();
-    this.debug?.destroy();
-    this.overlay.destroy();
+    this.worldRoot.destroy();
     super.destroy();
   }
 
   private buildLevel(): void {
     const level = new PhysicsBody({ type: 'static' });
+    this.terrain.fillColor = new Color(76, 98, 88);
 
     // Floor, walls and ceiling.
     for (const [x, y, width, height] of [
@@ -234,6 +291,7 @@ class CharacterMovementScene extends Scene {
       [110, 420, 180, 20],
     ] as const) {
       level.addCollider({ shape: new BoxShape(width, height), offset: { x, y } });
+      this.terrain.drawRectangle(x - width / 2, y - height / 2, width, height);
     }
 
     // A walkable 30 degree ramp up to a plateau, and a 60 degree face down the other side.
@@ -249,6 +307,11 @@ class CharacterMovementScene extends Scene {
       ]),
       offset: { x: 560, y: 660 },
     });
+
+    this.terrain.drawPolygon([560, 660, 740, 660 - rampRise, 820, 660 - rampRise, 820 + faceRun, 660]);
+    this.terrain.lineColor = new Color(101, 210, 210);
+    this.terrain.lineWidth = 6;
+    this.terrain.drawLine(920, 545, 1100, 545);
 
     // An open chain is solid only on the side its normal faces, which makes a
     // one-way platform: jump through it from below, land on it from above.
@@ -271,6 +334,7 @@ class CharacterMovementScene extends Scene {
     const node = new Container();
     const physics = node.addComponent(new PhysicsBodyComponent(this.world, { type: 'kinematic', position, colliders: [{ shape }] }));
 
+    this.platforms.push({ body: physics.body, width: axis === 'x' ? 140 : 110 });
     node.addComponent(new Shuttle(physics.body, axis, from, to, speed));
     this.addChild(node);
   }

@@ -1,0 +1,27 @@
+{
+  "browser": "chromium",
+  "version": "153.0.8010.12",
+  "backend": "webgl2",
+  "hardwareTouch": "NOT_TESTED",
+  "hardwareGamepad": "NOT_TESTED",
+  "records": [
+    {
+      "example": "tilemap/tile-chunks-and-bands",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "movement Action advances actor; canopy A/B changes band visibility; all three snap modes; fractional zoom; CSS/logical/buffer/DPR/pixelRatio/camera readout",
+        "application disposal removes controls; no page errors"
+      ]
+    },
+    {
+      "example": "tilemap/tile-chunks-and-bands",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "movement Action advances actor; canopy A/B changes band visibility; all three snap modes; fractional zoom; CSS/logical/buffer/DPR/pixelRatio/camera readout",
+        "application disposal removes controls; no page errors"
+      ]
+    }
+  ]
+}

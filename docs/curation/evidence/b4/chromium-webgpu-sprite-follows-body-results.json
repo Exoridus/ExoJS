@@ -1,0 +1,27 @@
+{
+  "browser": "chromium",
+  "version": "153.0.8010.12",
+  "backend": "webgpu",
+  "hardwareTouch": "NOT_TESTED",
+  "hardwareGamepad": "NOT_TESTED",
+  "records": [
+    {
+      "example": "physics/sprite-follows-body",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "three bodies; rotated body query grabs; dragging creates one MouseJoint; outside release removes joint; reset retains exactly three dynamic bodies",
+        "application disposal removes controls; no page errors"
+      ]
+    },
+    {
+      "example": "physics/sprite-follows-body",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "three bodies; rotated body query grabs; dragging creates one MouseJoint; outside release removes joint; reset retains exactly three dynamic bodies",
+        "application disposal removes controls; no page errors"
+      ]
+    }
+  ]
+}

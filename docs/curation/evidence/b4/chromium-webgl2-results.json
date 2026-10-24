@@ -1,0 +1,153 @@
+{
+  "browser": "chromium",
+  "version": "153.0.8010.12",
+  "backend": "webgl2",
+  "hardwareTouch": "NOT_TESTED",
+  "hardwareGamepad": "NOT_TESTED",
+  "records": [
+    {
+      "example": "tilemap/editor-objects-gameplay",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "locked gem stays locked; switch opens authored door; gem collected; Reset and keyboard Select/Confirm repeat puzzle",
+        "application disposal removes controls; no page errors"
+      ]
+    },
+    {
+      "example": "tilemap/editor-objects-gameplay",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "locked gem stays locked; switch opens authored door; gem collected; Reset and keyboard Select/Confirm repeat puzzle",
+        "application disposal removes controls; no page errors"
+      ]
+    },
+    {
+      "example": "tilemap/tile-chunks-and-bands",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "movement Action advances actor; canopy A/B changes band visibility; all three snap modes; fractional zoom; CSS/logical/buffer/DPR/pixelRatio/camera readout",
+        "application disposal removes controls; no page errors"
+      ]
+    },
+    {
+      "example": "tilemap/tile-chunks-and-bands",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "movement Action advances actor; canopy A/B changes band visibility; all three snap modes; fractional zoom; CSS/logical/buffer/DPR/pixelRatio/camera readout",
+        "application disposal removes controls; no page errors"
+      ]
+    },
+    {
+      "example": "tilemap/paint-autotiled-room",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "paint/erase change actual TileLayer; neighbours recover; 16-case legend shown; pointercancel ends stroke; R restores deterministic meadow",
+        "application disposal removes controls; no page errors"
+      ]
+    },
+    {
+      "example": "tilemap/paint-autotiled-room",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "paint/erase change actual TileLayer; neighbours recover; 16-case legend shown; pointercancel ends stroke; R restores deterministic meadow",
+        "application disposal removes controls; no page errors"
+      ]
+    },
+    {
+      "example": "tilemap/tiled-isometric",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "isometric picking targets logical physics actor and wakes it; side-by-side hex cell centre picks (2,2)",
+        "application disposal removes controls; no page errors"
+      ]
+    },
+    {
+      "example": "tilemap/tiled-isometric",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "isometric picking targets logical physics actor and wakes it; side-by-side hex cell centre picks (2,2)",
+        "application disposal removes controls; no page errors"
+      ]
+    },
+    {
+      "example": "pathfinding/grid-navigation",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "pause freezes agent; mud is weighted cost 6 and disables JPS; 2x2 footprint and diagonal scenarios retained; reset clears paint",
+        "application disposal removes controls; no page errors"
+      ]
+    },
+    {
+      "example": "pathfinding/grid-navigation",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "pause freezes agent; mud is weighted cost 6 and disables JPS; 2x2 footprint and diagonal scenarios retained; reset clears paint",
+        "application disposal removes controls; no page errors"
+      ]
+    },
+    {
+      "example": "tilemap/tiled-infinite-map",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "camera Action pans through negative coordinates and returns; resident ground set bounded by eight authored chunks; reset returns origin",
+        "application disposal removes controls; no page errors"
+      ]
+    },
+    {
+      "example": "tilemap/tiled-infinite-map",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "camera Action pans through negative coordinates and returns; resident ground set bounded by eight authored chunks; reset returns origin",
+        "application disposal removes controls; no page errors"
+      ]
+    },
+    {
+      "example": "physics/sprite-follows-body",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "three bodies; rotated body query grabs; dragging creates one MouseJoint; outside release removes joint; reset retains exactly three dynamic bodies",
+        "application disposal removes controls; no page errors"
+      ]
+    },
+    {
+      "example": "physics/sprite-follows-body",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "three bodies; rotated body query grabs; dragging creates one MouseJoint; outside release removes joint; reset retains exactly three dynamic bodies",
+        "application disposal removes controls; no page errors"
+      ]
+    },
+    {
+      "example": "physics/character-movement",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "walk Action and double jump; reset; one-way passage from below and landing above; Down drops through; ramp support; shuttle carry; low step",
+        "application disposal removes controls; no page errors"
+      ]
+    },
+    {
+      "example": "physics/character-movement",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "walk Action and double jump; reset; one-way passage from below and landing above; Down drops through; ramp support; shuttle carry; low step",
+        "application disposal removes controls; no page errors"
+      ]
+    }
+  ]
+}
