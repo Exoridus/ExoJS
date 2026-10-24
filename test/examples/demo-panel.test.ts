@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { choice, demoPanel, slider, unitsPerCssPixel } from '../../examples/shared/runtime';
+import { choice, demoPanel, insetAtlasFrame, slider, unitsPerCssPixel } from '../../examples/shared/runtime';
 
 afterEach(() => document.body.replaceChildren());
 
@@ -59,4 +59,52 @@ it('keeps hidden iframe measurements finite without inflating text', () => {
   vi.spyOn(window, 'frameElement', 'get').mockReturnValue(frame);
   expect(unitsPerCssPixel({ height: 720 }, canvas)).toBe(1);
   vi.restoreAllMocks();
+});
+
+it('fits bars in displayed pixels and reports the unobstructed height', () => {
+  const canvas = document.createElement('canvas');
+  vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({ height: 288 } as DOMRect);
+  const panel = demoPanel({ layout: 'bar', controls: {}, hint: 'Drag the subject' });
+  Object.defineProperty(panel.element, 'offsetHeight', { value: 48 });
+  const viewport = panel.fit({ width: 1280, height: 720 }, canvas);
+  expect(viewport).toEqual({ scale: 2.5, width: 512, height: 288, compact: true, contentHeight: 240 });
+  expect(panel.element.style.transform).toBe('scale(2.5)');
+  expect(panel.fit({ width: 1280, height: 720 }, canvas)).toBe(viewport);
+  panel.dispose();
+});
+
+it('keeps semantic status updates quiet when the message is unchanged', () => {
+  const panel = demoPanel({ layout: 'bar', controls: {} });
+  panel.status('File failed', 'warning');
+  const status = panel.element.querySelector('.exo-demo-status')!;
+  const original = status.firstChild;
+  panel.status('File failed', 'warning');
+  expect(status.firstChild).toBe(original);
+  expect(status.getAttribute('data-tone')).toBe('warning');
+  panel.dispose();
+});
+
+it('rejects overloaded curated bars before mounting anything', () => {
+  expect(() =>
+    demoPanel({
+      layout: 'bar',
+      controls: { a: choice('A', ['a']), b: choice('B', ['b']), c: choice('C', ['c']), d: choice('D', ['d']), e: choice('E', ['e']) },
+    }),
+  ).toThrow(RangeError);
+  expect(document.querySelector('.exo-demo-bar')).toBeNull();
+});
+
+it('crops verified atlas borders without mutating the shared frame', () => {
+  const frame = {
+    x: 4,
+    y: 8,
+    width: 16,
+    height: 20,
+    clone() {
+      return { ...this };
+    },
+  };
+  expect(insetAtlasFrame(frame)).toMatchObject({ x: 5, y: 9, width: 14, height: 18 });
+  expect(frame.width).toBe(16);
+  expect(() => insetAtlasFrame({ ...frame, width: 2 })).toThrow(RangeError);
 });
