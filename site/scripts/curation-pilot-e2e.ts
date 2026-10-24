@@ -166,10 +166,11 @@ const animation = async (page: Page, frame: Frame, name: string): Promise<string
   await pause.click();
   const end = await state(frame);
   const elapsed = end.time - start.time;
+  const counts = end.counts.map((count, index) => count - start.counts[index]!);
 
-  assert(Math.abs(end.counts[0]! - elapsed * 8) <= 1);
-  assert(Math.abs(end.counts[1]! - elapsed * 16) <= 1);
-  checks.push(`${elapsed.toFixed(3)}s clip time: ${end.counts.join('/')} onFrame events at 8/16fps`);
+  assert(Math.abs(counts[0]! - elapsed * 8) <= 1, JSON.stringify({ start, end, elapsed, counts }));
+  assert(Math.abs(counts[1]! - elapsed * 16) <= 1, JSON.stringify({ start, end, elapsed, counts }));
+  checks.push(`${elapsed.toFixed(3)}s clip time: ${counts.join('/')} onFrame events at 8/16fps`);
   await (await frame.locator('canvas').elementHandle())!.focus();
   await page.keyboard.press('ArrowRight');
   await frame.waitForFunction(() => (window.__pilot.app.scenes.currentScene as unknown as ProbeScene).panel.values.fps === 17);
@@ -286,6 +287,20 @@ try {
 
         assert(metrics.font >= 14 && metrics.height >= 32 - 0.1, JSON.stringify(metrics));
         checks.push('presented controls >=14px type and >=32px hit area');
+        await page.locator('iframe[src*="preview.html"]').evaluate(element => {
+          element.parentElement!.style.display = 'none';
+        });
+        await page.waitForTimeout(80);
+        await page.locator('iframe[src*="preview.html"]').evaluate(element => {
+          element.parentElement!.style.display = 'block';
+        });
+        await frame.waitForTimeout(80);
+        const restored = await state(frame);
+
+        assert(Number.isFinite(restored.scale ?? 1));
+        assert(Number.isFinite(restored.width ?? 1));
+        await frame.getByRole('button', { name: 'Reset', exact: true }).click();
+        checks.push('hidden preview restores finite layout and interactive controls');
         await frame.evaluate(() => window.__pilot.app.destroy());
         assert.equal(await frame.locator('.exo-demo-bar').count(), 0);
         checks.push('application disposal removes controls');

@@ -10,9 +10,10 @@
       "checks": [
         "reset frame 1; three shared 0.1s steps produce frames 3/8 and 5/8",
         "paused: no frame or clock advancement over 0.6s",
-        "4.146s clip time: 33/67 onFrame events at 8/16fps",
+        "4.062s clip time: 33/65 onFrame events at 8/16fps",
         "keyboard arrows and R update the same control state",
         "presented controls >=14px type and >=32px hit area",
+        "hidden preview restores finite layout and interactive controls",
         "application disposal removes controls"
       ]
     },
@@ -23,9 +24,10 @@
       "checks": [
         "reset frame 1; three shared 0.1s steps produce frames 3/8 and 5/8",
         "paused: no frame or clock advancement over 0.6s",
-        "4.084s clip time: 33/66 onFrame events at 8/16fps",
+        "4.069s clip time: 33/65 onFrame events at 8/16fps",
         "keyboard arrows and R update the same control state",
         "presented controls >=14px type and >=32px hit area",
+        "hidden preview restores finite layout and interactive controls",
         "application disposal removes controls"
       ]
     },
@@ -39,6 +41,7 @@
         "heading styles; genuine missing-font request shows fallback warning",
         "Reset restores all four parameters",
         "presented controls >=14px type and >=32px hit area",
+        "hidden preview restores finite layout and interactive controls",
         "application disposal removes controls"
       ]
     },
@@ -52,6 +55,7 @@
         "heading styles; genuine missing-font request shows fallback warning",
         "Reset restores all four parameters",
         "presented controls >=14px type and >=32px hit area",
+        "hidden preview restores finite layout and interactive controls",
         "application disposal removes controls"
       ]
     },

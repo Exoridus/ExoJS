@@ -395,11 +395,12 @@ export const choice = (label, options, value = options[0]) => ({
   options,
   value,
 });
-/** Includes the outer Playground iframe transform when measuring displayed pixels. */
+/** Includes the outer preview transform when measuring displayed pixels. Returns 1 while hidden. */
 export const unitsPerCssPixel = (app, host) => {
   const frame = window.frameElement;
-  const frameScale = frame ? frame.getBoundingClientRect().height / frame.clientHeight : 1;
-  return app.height / Math.max(1, host.getBoundingClientRect().height * frameScale);
+  const frameScale = frame && frame.clientHeight > 0 ? frame.getBoundingClientRect().height / frame.clientHeight : 1;
+  const height = host.getBoundingClientRect().height * frameScale;
+  return height > 0 ? app.height / height : 1;
 };
 const styleDemoBar = element => {
   const style = document.createElement('style');

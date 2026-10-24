@@ -25,13 +25,13 @@ The only shared changed path is `examples/shared/runtime.ts` and its generated J
 
 The focused browser runner is `pnpm exec tsx site/scripts/curation-pilot-e2e.ts --backend webgl2` (use `--backend webgpu` and/or `--browser firefox`). It drives the real Playground, forces the requested backend without fallback, presents its iframe at exactly 1280x720 and 512x288, and writes captures and JSON results. Exact-size captures position the existing iframe independently of shell scrolling; they do not certify shell resizing, edited Reload or the Open button regressions owned by #866. A separate top-level preview check verifies the default font without a parent document.
 
-The runner checks frame events over at least four seconds of clip time, pause over 0.6 seconds, three shared 0.1-second steps, keyboard control synchronization, pointer capture, wrap overflow, public text style values, compact ellipsis configuration/readout, genuine font failure, reset, displayed control dimensions and application teardown. Font loading uses a native FontFaceSet; text readouts use public `textBounds` metrics, without promoting internal engine APIs.
+The runner checks frame events over at least four seconds of clip time, pause over 0.6 seconds, three shared 0.1-second steps, keyboard control synchronization, pointer capture, wrap overflow, public text style values, compact ellipsis configuration/readout, genuine font failure, reset, displayed control dimensions, hidden-preview restoration and application teardown. Font loading uses a native FontFaceSet; text readouts use public `textBounds` metrics, without promoting internal engine APIs.
 
 | Check                                                   | Result                                                                  |
 | ------------------------------------------------------- | ----------------------------------------------------------------------- |
 | `pnpm typecheck:examples`                               | PASS, exit 0                                                            |
 | `pnpm --filter @codexo/exojs-examples check-ts:scripts` | PASS, exit 0                                                            |
-| Named Unit/alias/sync/declaration/catalog tests         | PASS, 17 tests, exit 0                                                  |
+| Named Unit/alias/sync/declaration/catalog tests         | PASS, 18 tests, exit 0                                                  |
 | Chromium WebGL2, both targets and sizes, detached font  | PASS, 5 cases, exit 0                                                   |
 | Chromium WebGPU, both targets and sizes, detached font  | PASS, 5 cases, exit 0                                                   |
 | Firefox WebGL2, both targets and sizes, detached font   | PASS, 5 cases, exit 0                                                   |

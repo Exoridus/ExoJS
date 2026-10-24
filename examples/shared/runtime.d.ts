@@ -203,7 +203,7 @@ export interface DemoPanel<C extends Record<string, DemoControlSpec>> {
     status(text: string): void;
     dispose(): void;
 }
-/** Includes the outer Playground iframe transform when measuring displayed pixels. */
+/** Includes the outer preview transform when measuring displayed pixels. Returns 1 while hidden. */
 export declare const unitsPerCssPixel: (app: {
     height: number;
 }, host: HTMLElement) => number;
