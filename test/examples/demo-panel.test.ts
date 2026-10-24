@@ -49,3 +49,14 @@ it('includes the outer iframe transform without a cross-realm instanceof check',
   expect(unitsPerCssPixel({ height: 720 }, canvas)).toBe(2.5);
   vi.restoreAllMocks();
 });
+
+it('keeps hidden iframe measurements finite without inflating text', () => {
+  const canvas = document.createElement('canvas');
+  const frame = document.createElement('iframe');
+
+  vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({ height: 0 } as DOMRect);
+  vi.spyOn(frame, 'getBoundingClientRect').mockReturnValue({ height: 0 } as DOMRect);
+  vi.spyOn(window, 'frameElement', 'get').mockReturnValue(frame);
+  expect(unitsPerCssPixel({ height: 720 }, canvas)).toBe(1);
+  vi.restoreAllMocks();
+});

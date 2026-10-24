@@ -707,12 +707,13 @@ export interface DemoPanel<C extends Record<string, DemoControlSpec>> {
   dispose(): void;
 }
 
-/** Includes the outer Playground iframe transform when measuring displayed pixels. */
+/** Includes the outer preview transform when measuring displayed pixels. Returns 1 while hidden. */
 export const unitsPerCssPixel = (app: { height: number }, host: HTMLElement): number => {
   const frame = window.frameElement;
-  const frameScale = frame ? frame.getBoundingClientRect().height / frame.clientHeight : 1;
+  const frameScale = frame && frame.clientHeight > 0 ? frame.getBoundingClientRect().height / frame.clientHeight : 1;
+  const height = host.getBoundingClientRect().height * frameScale;
 
-  return app.height / Math.max(1, host.getBoundingClientRect().height * frameScale);
+  return height > 0 ? app.height / height : 1;
 };
 
 const styleDemoBar = (element: HTMLElement): (() => void) => {
