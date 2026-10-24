@@ -1,10 +1,13 @@
 import {
+  ActionMap,
   Application,
   clamp,
   Color,
   Container,
   FixedResolutionCanvasSizing,
+  GamepadAxis,
   Graphics,
+  Keyboard,
   type RenderingContext,
   RenderNodePass,
   RenderPipeline,
@@ -12,8 +15,10 @@ import {
   Scene,
   type Seconds,
   Sprite,
+  VectorAction,
   View,
 } from '@codexo/exojs';
+import { demoPanel } from '@examples/runtime';
 
 const WORLD_WIDTH = 3200;
 const WORLD_HEIGHT = 1800;
@@ -68,7 +73,21 @@ class MiniMapScene extends Scene {
   private mapCamera!: View;
   private mapTexture!: RenderTexture;
   private pipeline!: RenderPipeline;
-  private time = 0;
+  private readonly actions = new ActionMap({
+    move: new VectorAction([
+      {
+        up: [Keyboard.W, Keyboard.Up],
+        down: [Keyboard.S, Keyboard.Down],
+        left: [Keyboard.A, Keyboard.Left],
+        right: [Keyboard.D, Keyboard.Right],
+      },
+      { x: GamepadAxis.LeftStickX, y: GamepadAxis.LeftStickY },
+    ]),
+  });
+  private panel!: ReturnType<typeof demoPanel>;
+  private mapLayout = '';
+  private map!: Sprite;
+  private frame!: Graphics;
 
   override init(): void {
     const { width, height } = this.app;
@@ -84,8 +103,8 @@ class MiniMapScene extends Scene {
     this.mapCamera = new View(0, 0, MAP_SPAN, MAP_SPAN);
     this.mapTexture = new RenderTexture(MAP_SIZE, MAP_SIZE);
 
-    const map = new Sprite(this.mapTexture).setPosition(mapX, mapY);
-    const frame = new Graphics();
+    const map = (this.map = new Sprite(this.mapTexture).setPosition(mapX, mapY));
+    const frame = (this.frame = new Graphics());
 
     this.mask.fillColor = Color.white;
     this.mask.drawCircle(mapX + MAP_SIZE / 2, mapY + MAP_SIZE / 2, MAP_RADIUS);
@@ -102,18 +121,42 @@ class MiniMapScene extends Scene {
       .addPass(new RenderNodePass(this.world, { target: this.mapTexture, view: this.mapCamera, clear: Color.black }))
       .addPass(new RenderNodePass(this.world, { view: this.camera, clear: Color.black }))
       .addPass(new RenderNodePass(this.overlay));
+    this.player.setPosition(WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
+    this.inputs.attach(this.actions);
+    this.panel = demoPanel({
+      layout: 'bar',
+      title: 'Minimap',
+      controls: {},
+      hint: 'WASD / arrows / stick move. One world renders through two cameras; the circular HUD uses a render texture.',
+      actions: { Reset: () => this.player.setPosition(WORLD_WIDTH / 2, WORLD_HEIGHT / 2) },
+    });
   }
 
   override update(delta: Seconds): void {
-    this.time += delta * 0.35;
-
-    const x = WORLD_WIDTH / 2 + Math.cos(this.time) * WORLD_WIDTH * 0.4;
-    const y = WORLD_HEIGHT / 2 + Math.sin(this.time * 1.7) * WORLD_HEIGHT * 0.4;
-
+    const fit = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    const input = this.actions.move.value;
+    const x = clamp(this.player.x + input.x * 320 * delta, 28, WORLD_WIDTH - 28);
+    const y = clamp(this.player.y + input.y * 320 * delta, 28, WORLD_HEIGHT - 28);
     const { width, height } = this.app;
+    const mapScale = Math.min(1.5, fit.scale);
+    const mapX = width - (MAP_SIZE + 16) * mapScale;
+    const mapLayout = `${mapScale}:${mapX}`;
+
+    if (mapLayout !== this.mapLayout) {
+      this.mapLayout = mapLayout;
+      this.map.setScale(mapScale).setPosition(mapX, 16 * mapScale);
+      this.frame.clear();
+      this.frame.lineWidth = 2 * fit.scale;
+      this.frame.lineColor = Color.white;
+      this.frame.drawCircle(mapX + (MAP_SIZE / 2) * mapScale, (16 + MAP_SIZE / 2) * mapScale, MAP_RADIUS * mapScale);
+      this.mask.clear();
+      this.mask.fillColor = Color.white;
+      this.mask.drawCircle(mapX + (MAP_SIZE / 2) * mapScale, (16 + MAP_SIZE / 2) * mapScale, MAP_RADIUS * mapScale);
+    }
 
     this.player.setPosition(x, y);
     this.camera.setCenter(clamp(x, width / 2, WORLD_WIDTH - width / 2), clamp(y, height / 2, WORLD_HEIGHT - height / 2));
+    this.panel.status(`Player ${x.toFixed(0)}, ${y.toFixed(0)} | Minimap follows the same world`);
     this.mapCamera.setCenter(x, y);
   }
 
@@ -124,6 +167,7 @@ class MiniMapScene extends Scene {
   override destroy(): void {
     // The pipeline destroys its passes; the target, views and nodes they
     // render stay caller-owned.
+    this.panel.dispose();
     this.pipeline.destroy();
     this.mapTexture.destroy();
     this.camera.destroy();

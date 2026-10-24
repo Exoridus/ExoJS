@@ -1,0 +1,28 @@
+{
+  "sourceBase": "f892a5f3a39767960c5364e77452b214a591c863",
+  "algorithm": "SHA-256",
+  "files": {
+    "examples/application-scenes/world-vs-screen-coords.ts": "1b9dcfeb1f02075b16e33089db3d914f098d4b7db229f8269538510b72888018",
+    "examples/application-scenes/world-vs-screen-coords.js": "35e18cf51dd90526ef0f20bb018e9eecfc560dee7708a4db5bfd9ce42e2ecce7",
+    "examples/scene-graph/parallax-starfield.ts": "dd85c0b3dd7bfd960bf59e50f4f15fec29433d24748174bdf6f5e9657f66b845",
+    "examples/scene-graph/parallax-starfield.js": "9c229a80626cd14684b9a0e5c06730b41d28808be3e3fa03bb672811232515c8",
+    "examples/application-scenes/multi-view-split-screen.ts": "b85cdf73665fe029be68d2ef29e4e115e68d3b7159a60550e24d1240a5db00e4",
+    "examples/application-scenes/multi-view-split-screen.js": "c188c11fd565d0c9de75915a44502f2cd2aea1fa61c5dfad6cbec2bbc9bb3777",
+    "examples/render-targets/mini-map.ts": "a30475b5659b71405ae18768e198de97719c7c89bae01291213949a3853fcb4a",
+    "examples/render-targets/mini-map.js": "3efcdd96076c90028ebcb67b4c26830bd35992e803b82ee33faaddf7ad2f453e",
+    "examples/input/action-mapping.ts": "1d0cad18c2401e9655fc133d3b3d1d2970ea57a3fefcaf8a2539aea13a0bac14",
+    "examples/input/action-mapping.js": "c5578ed58bee56a2b8bbd005cd696fcee4804ff527be853486f87825f7747d40",
+    "examples/showcase/gamepad-spaceship.ts": "0ef9285acfeac72e327fef640a8e7ed98eb2228b7747722d57a16866305338f5",
+    "examples/showcase/gamepad-spaceship.js": "4938c796f71f33dd8572afd8a03209223c6f639b49b878b2b6df7e4290dae150",
+    "examples/input/key-rebinding.ts": "6da13117c9592b48205675a7050195f2850945e9ca0e18e12b0c0bfd65588f48",
+    "examples/input/key-rebinding.js": "da51c27e681fa2cb3e16214cb35ac9632e709bfa419f8847d41fe1631ddb6c25",
+    "examples/input/mouse-and-pointer.ts": "1bc19898d16d1b1dc737b2a133da5ea4a632073315cfe20425994bf537783581",
+    "examples/input/mouse-and-pointer.js": "b3cc47a60b68e8fc4488eb5527e1f7d12d74031be4abe35eeff42e9052fdc46e",
+    "examples/input/multitouch.ts": "594038e0ce2454da7cc824e9559952c7ec991f5c36c0509db4005b3576870435",
+    "examples/input/multitouch.js": "de26c8115c1fea6191ee615571f42d8ca024bd8a842b8efab8f3d3700276b784",
+    "src/input/InputSystem.ts": "974f40bd6043efe9fcc5b6c72107756028bc872c8a88628748b1216f15d1f721",
+    "src/platform/BrowserPlatform.ts": "151dac097cfd3236bdf1444a3e9099394dc226a7e67a7d59ef717640bd7fa8df",
+    "site/public/vendor/exojs/esm/input/InputSystem.js": "601c7f6f98c43849e8bf84cb54aabc9fcea60c1b801733e5e67890cf328b37df",
+    "site/public/vendor/exojs/esm/platform/BrowserPlatform.js": "58f72262b31c5e240281dac355a6126227ef968f917b0e085975636571deda9d"
+  }
+}

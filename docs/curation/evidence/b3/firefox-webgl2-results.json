@@ -1,0 +1,213 @@
+{
+  "browser": "firefox",
+  "version": "155.0",
+  "backend": "webgl2",
+  "hardware": {
+    "touch": "NOT_TESTED",
+    "gamepad": "NOT_TESTED",
+    "haptics": "NOT_TESTED",
+    "humanListening": "NOT_TESTED"
+  },
+  "records": [
+    {
+      "example": "application-scenes/world-vs-screen-coords",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "keyboard and simulated stick pan",
+        "wheel zoom and world marker",
+        "pan/zoom screen-world roundtrip <0.001px",
+        "reset restores initial state",
+        "scene disposal removes controls and owned handlers"
+      ]
+    },
+    {
+      "example": "application-scenes/world-vs-screen-coords",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "keyboard and simulated stick pan",
+        "wheel zoom and world marker",
+        "pan/zoom screen-world roundtrip <0.001px",
+        "reset restores initial state",
+        "scene disposal removes controls and owned handlers"
+      ]
+    },
+    {
+      "example": "scene-graph/parallax-starfield",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "three independent layers at 0.3/0.6/1.0 speed",
+        "keyboard and pointer drag",
+        "pause freezes scrolling; factor toggle",
+        "reset restores initial state",
+        "scene disposal removes controls and owned handlers"
+      ]
+    },
+    {
+      "example": "scene-graph/parallax-starfield",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "three independent layers at 0.3/0.6/1.0 speed",
+        "keyboard and pointer drag",
+        "pause freezes scrolling; factor toggle",
+        "reset restores initial state",
+        "scene disposal removes controls and owned handlers"
+      ]
+    },
+    {
+      "example": "application-scenes/multi-view-split-screen",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "simulated Pad 2 controls only P2",
+        "P1/P2 independent keys and follow cameras",
+        "shared world renders in two views",
+        "simulated pad 1 controls only P1",
+        "reset restores initial state",
+        "scene disposal removes controls and owned handlers"
+      ]
+    },
+    {
+      "example": "application-scenes/multi-view-split-screen",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "simulated Pad 2 controls only P2",
+        "P1/P2 independent keys and follow cameras",
+        "shared world renders in two views",
+        "simulated pad 1 controls only P1",
+        "reset restores initial state",
+        "scene disposal removes controls and owned handlers"
+      ]
+    },
+    {
+      "example": "render-targets/mini-map",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "action moves player",
+        "main camera and round render-texture map follow same world",
+        "reset restores initial state",
+        "scene disposal removes controls and owned handlers"
+      ]
+    },
+    {
+      "example": "render-targets/mini-map",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "action moves player",
+        "main camera and round render-texture map follow same world",
+        "reset restores initial state",
+        "scene disposal removes controls and owned handlers"
+      ]
+    },
+    {
+      "example": "input/action-mapping",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "reload preserves Q; Reset restores Space",
+        "move and pulse actions",
+        "conflict rejection and Cancel",
+        "rebind Q preserves pad South",
+        "simulated raw neutral deadzone and stick action",
+        "disconnect retains keyboard fallback",
+        "scene disposal removes controls and owned handlers"
+      ]
+    },
+    {
+      "example": "input/action-mapping",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "reload preserves Q; Reset restores Space",
+        "move and pulse actions",
+        "conflict rejection and Cancel",
+        "rebind Q preserves pad South",
+        "simulated raw neutral deadzone and stick action",
+        "disconnect retains keyboard fallback",
+        "scene disposal removes controls and owned handlers"
+      ]
+    },
+    {
+      "example": "showcase/gamepad-spaceship",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "eight keyboard headings held 0.55s align hull/muzzle/acceleration and shots within 5deg",
+        "pause freezes ship; R restarts",
+        "sound and haptics default off; explicit opt-in and haptic stop",
+        "eight simulated pad headings and trigger",
+        "shot collision and score",
+        "reset restores initial state",
+        "scene disposal removes controls and owned handlers"
+      ]
+    },
+    {
+      "example": "showcase/gamepad-spaceship",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "eight keyboard headings held 0.55s align hull/muzzle/acceleration and shots within 5deg",
+        "pause freezes ship; R restarts",
+        "sound and haptics default off; explicit opt-in and haptic stop",
+        "eight simulated pad headings and trigger",
+        "shot collision and score",
+        "reset restores initial state",
+        "scene disposal removes controls and owned handlers"
+      ]
+    },
+    {
+      "example": "input/key-rebinding",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": ["donor jump rebinding remains runnable", "scene disposal removes controls and owned handlers"]
+    },
+    {
+      "example": "input/key-rebinding",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": ["donor jump rebinding remains runnable", "scene disposal removes controls and owned handlers"]
+    },
+    {
+      "example": "input/mouse-and-pointer",
+      "size": "1280x720",
+      "status": "FAIL",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 0\n",
+      "checks": ["{\"probe\":true,\"backend\":\"webgl2\",\"scene\":true,\"state\":\"running\"}"]
+    },
+    {
+      "example": "input/mouse-and-pointer",
+      "size": "512x288",
+      "status": "FAIL",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 0\n",
+      "checks": ["{\"probe\":true,\"backend\":\"webgl2\",\"scene\":true,\"state\":\"running\"}"]
+    },
+    {
+      "example": "input/multitouch",
+      "size": "1280x720",
+      "status": "PASS",
+      "checks": [
+        "two synthetic contact IDs",
+        "pinch and same-direction rotation",
+        "cancel/up remove contact state",
+        "scene disposal removes controls and owned handlers"
+      ]
+    },
+    {
+      "example": "input/multitouch",
+      "size": "512x288",
+      "status": "PASS",
+      "checks": [
+        "two synthetic contact IDs",
+        "pinch and same-direction rotation",
+        "cancel/up remove contact state",
+        "scene disposal removes controls and owned handlers"
+      ]
+    }
+  ]
+}

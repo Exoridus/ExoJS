@@ -6,6 +6,7 @@ import {
   BlendModes,
   ButtonAction,
   Color,
+  Container,
   FixedResolutionCanvasSizing,
   type Gamepad,
   GamepadAxis,
@@ -18,7 +19,6 @@ import {
   Scene,
   type Seconds,
   Sprite,
-  Text,
   Vector,
   VectorAction,
   type Voice,
@@ -38,7 +38,7 @@ import {
   ScaleOverLifetime,
 } from '@codexo/exojs/particles';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControls } from '@examples/runtime';
+import { demoPanel, toggle } from '@examples/runtime';
 
 interface Bullet {
   x: number;
@@ -62,8 +62,15 @@ interface Asteroid {
 
 const random = new Random(7);
 
+// The hull points along local -Y; positive SceneNode rotation is counterclockwise.
+const headingToRotation = (heading: number): number => (-heading * 180) / Math.PI - 90;
+
 class GamepadSpaceshipScene extends Scene {
-  private ship!: Sprite;
+  private readonly ship = new Container();
+  private readonly flame = new Graphics();
+  private readonly muzzle = new Container().setPosition(0, -32);
+  private hull!: Sprite;
+  private playing = true;
   private velocity = new Vector(0, 0);
   private readonly actions = new ActionMap({
     move: new VectorAction([
@@ -76,6 +83,7 @@ class GamepadSpaceshipScene extends Scene {
       { x: GamepadAxis.LeftStickX, y: GamepadAxis.LeftStickY },
     ]),
     fire: new ButtonAction([Keyboard.Space, GamepadButton.RightTrigger]),
+    restart: new ButtonAction([Keyboard.R, GamepadButton.Select]),
   });
   private facing = -Math.PI / 2;
   private thrust = 0;
@@ -84,32 +92,29 @@ class GamepadSpaceshipScene extends Scene {
   private engine: Voice | null = null;
   private bullets: Bullet[] = [];
   private asteroids: Asteroid[] = [];
-  private stars!: Graphics;
+  private readonly stars = [new Graphics(), new Graphics()];
   private fx!: Graphics;
   private particles!: ParticleSystem;
   private burst!: BurstSpawn;
   private pad: Gamepad | null = null;
   private score = 0;
-  private connectPrompt!: Text;
-  private hud!: ReturnType<typeof mountControls>;
+  private hud!: ReturnType<typeof demoPanel<{ sound: ReturnType<typeof toggle>; haptics: ReturnType<typeof toggle> }>>;
 
   override init(): void {
     const app = this.app;
     const { width, height } = app;
 
-    this.stars = new Graphics();
-
-    for (let i = 0; i < 160; i++) {
-      const brightness = random.next(0.25, 0.9);
-
-      this.stars.fillColor = new Color(200, 215, 255, brightness);
-      this.stars.drawCircle(random.next(0, width), random.next(0, height), random.next(0.6, 1.8));
-    }
-
-    this.ship = new Sprite(this.loader.get(assets.ship))
-      .setAnchor(0.5)
-      .setScale(0.75)
-      .setPosition(width / 2, height / 2);
+    this.stars.forEach((layer, index) => {
+      for (let i = 0; i < (index === 0 ? 100 : 45); i++) {
+        layer.fillColor = new Color(200, 215, 255, index === 0 ? 0.25 : 0.6);
+        layer.drawCircle(random.next(-64, width + 64), random.next(-64, height + 64), index === 0 ? 1 : 2);
+      }
+    });
+    this.hull = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setScale(0.75);
+    this.ship.addChild(this.flame);
+    this.ship.addChild(this.hull);
+    this.ship.addChild(this.muzzle);
+    this.ship.setPosition(width / 2, height / 2);
     this.inputs.attach(this.actions);
 
     // A raw sawtooth is harsh; a low-pass on its own bus turns it into a
@@ -157,23 +162,71 @@ class GamepadSpaceshipScene extends Scene {
     );
     this.particles.addUpdateModule(new AlphaFadeOverLifetime());
 
-    for (let i = 0; i < 5; i++) {
-      this.asteroids.push(this.spawnAsteroid(width, height));
+    this.pad = app.input.getGamepad(0);
+    this.hud = demoPanel({
+      layout: 'bar',
+      title: 'Fly a spaceship',
+      controls: { sound: toggle('Engine sound'), haptics: toggle('Haptics') },
+      hint: 'WASD / arrows / stick thrust. Space / trigger fire. R / Select restarts. Momentum can differ from the nose.',
+      actions: {
+        'Pause / Resume': () => {
+          this.playing = !this.playing;
+
+          if (!this.playing) {
+            this.pad?.stopVibration();
+
+            if (this.engine) {
+              this.engine.volume = 0;
+            }
+          }
+        },
+        Restart: () => this.restart(),
+      },
+      onChange: (key, value) => {
+        if (key === 'sound') {
+          if (value) {
+            this.startEngine();
+          } else {
+            this.engine?.stop();
+            this.engine = null;
+          }
+        }
+
+        if (key === 'haptics' && !value) {
+          this.pad?.stopVibration();
+        }
+      },
+    });
+    this.restart();
+  }
+
+  private restart(): void {
+    random.reset();
+    this.ship.setPosition(this.app.width / 2, this.app.height / 2).setRotation(0);
+    this.facing = -Math.PI / 2;
+    this.velocity.set(0, 0);
+    this.thrust = 0;
+    this.score = 0;
+    this.bullets.length = 0;
+    this.asteroids = Array.from({ length: 5 }, (_, index) => ({
+      ...this.spawnAsteroid(this.app.width, this.app.height),
+      x: this.app.width * (0.12 + index * 0.19),
+      y: this.app.height * (index % 2 === 0 ? 0.2 : 0.55),
+    }));
+    this.pad?.stopVibration();
+
+    if (this.engine) {
+      this.engine.volume = 0;
     }
 
-    this.pad = app.input.getGamepad(0);
-    this.connectPrompt = new Text('WASD / Arrows to fly  ·  Space to fire', {
-      fillColor: new Color(200, 210, 235),
-      fontSize: 22,
-      align: 'center',
-    })
-      .setAnchor(0.5, 0.5)
-      .setPosition(width / 2, height - 40);
-
-    this.hud = mountControls({ status: 'Score: 0' });
+    this.playing = true;
   }
 
   private readonly startEngine = (): void => {
+    if (!this.hud?.values.sound || this.app.audio.locked) {
+      return;
+    }
+
     this.engine ??= this.app.audio.play(new AudioGenerator({ type: 'sawtooth', frequency: 55 }), { bus: this.engineBus, volume: 0 });
   };
 
@@ -184,8 +237,8 @@ class GamepadSpaceshipScene extends Scene {
     return {
       x: fromLeft ? -40 : width + 40,
       y: random.next(0, height),
-      vx: (fromLeft ? 1 : -1) * random.next(40, 100),
-      vy: random.next(-40, 40),
+      vx: (fromLeft ? 1 : -1) * random.next(18, 42),
+      vy: random.next(-18, 18),
       radius,
       angle: random.next(0, Math.PI * 2),
       spin: random.next(-0.8, 0.8),
@@ -194,15 +247,11 @@ class GamepadSpaceshipScene extends Scene {
   }
 
   private fire(): void {
-    this.bullets.push({
-      x: this.ship.position.x + Math.cos(this.facing) * 30,
-      y: this.ship.position.y + Math.sin(this.facing) * 30,
-      vx: Math.cos(this.facing) * 680 + this.velocity.x,
-      vy: Math.sin(this.facing) * 680 + this.velocity.y,
-      life: 1.1,
-    });
+    const origin = new Vector(0, 0).transform(this.muzzle.getGlobalTransform());
+    const nose = new Vector(0, -1).transform(this.muzzle.getGlobalTransform()).subtract(origin.x, origin.y).normalize();
+    this.bullets.push({ x: origin.x, y: origin.y, vx: nose.x * 680 + this.velocity.x, vy: nose.y * 680 + this.velocity.y, life: 1.1 });
 
-    if (this.pad?.canVibrate) {
+    if (this.hud.values.haptics && this.pad?.canVibrate) {
       void this.pad.vibrate({ duration: 80, strongMagnitude: 0.15, weakMagnitude: 0.45 });
     }
   }
@@ -211,9 +260,8 @@ class GamepadSpaceshipScene extends Scene {
     this.particles.setPosition(x, y);
     this.burst.reset();
     this.score += 1;
-    this.hud.setStatus(`Score: ${this.score}`);
 
-    if (this.pad?.canVibrate) {
+    if (this.hud.values.haptics && this.pad?.canVibrate) {
       void this.pad.vibrate({ duration: 160, strongMagnitude: 0.7, weakMagnitude: 0.4 });
     }
   }
@@ -221,6 +269,20 @@ class GamepadSpaceshipScene extends Scene {
   override update(delta: Seconds): void {
     const app = this.app;
     const { width, height } = app;
+
+    const fit = this.hud.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    this.ship.setScale(fit.scale);
+    this.hud.status(
+      `Score ${this.score} | ${this.pad?.connected ? 'Pad 1 + keyboard' : 'Keyboard fallback; pad absent'} | ${this.playing ? 'Thrust / coast / fire' : 'Paused'}`,
+    );
+
+    if (this.actions.restart.pressed) {
+      this.restart();
+    }
+
+    if (!this.playing) {
+      return;
+    }
 
     const input = this.actions.move.value;
     const mag = Math.min(1, Math.hypot(input.x, input.y));
@@ -231,7 +293,7 @@ class GamepadSpaceshipScene extends Scene {
 
     if (mag > 0.05) {
       this.facing = Math.atan2(input.y, input.x);
-      this.ship.setRotation((this.facing * 180) / Math.PI + 90);
+      this.ship.setRotation(headingToRotation(this.facing));
       this.velocity.x += Math.cos(this.facing) * mag * 420 * delta;
       this.velocity.y += Math.sin(this.facing) * mag * 420 * delta;
     }
@@ -247,7 +309,8 @@ class GamepadSpaceshipScene extends Scene {
     const damping = Math.pow(0.985, delta * 60);
     this.velocity.x *= damping;
     this.velocity.y *= damping;
-    this.wrap(this.ship.position, width, height, 32);
+    this.wrap(this.ship.position, width, fit.contentHeight * fit.scale, 32);
+    this.stars.forEach((layer, index) => layer.setPosition(-this.velocity.x * (index + 1) * 0.015, -this.velocity.y * (index + 1) * 0.015));
 
     for (const asteroid of this.asteroids) {
       asteroid.x += asteroid.vx * delta;
@@ -315,26 +378,14 @@ class GamepadSpaceshipScene extends Scene {
 
     fx.lineWidth = 0;
 
-    // Engine flame behind the ship, sized by the smoothed thrust.
-    if (this.thrust > 0.05) {
-      const back = this.facing + Math.PI;
-      const flicker = 0.85 + Math.random() * 0.3;
-      const length = (14 + this.thrust * 26) * flicker;
-      const baseX = this.ship.position.x + Math.cos(back) * 20;
-      const baseY = this.ship.position.y + Math.sin(back) * 20;
-      const side = this.facing + Math.PI / 2;
+    this.flame.clear();
 
-      fx.fillColor = new Color(255, 150, 60, 0.85);
-      fx.drawPolygon([
-        baseX + Math.cos(side) * 7,
-        baseY + Math.sin(side) * 7,
-        baseX + Math.cos(back) * length,
-        baseY + Math.sin(back) * length,
-        baseX - Math.cos(side) * 7,
-        baseY - Math.sin(side) * 7,
-      ]);
-      fx.fillColor = new Color(255, 240, 200, 0.9);
-      fx.drawCircle(baseX, baseY, 4);
+    if (this.thrust > 0.05) {
+      const length = 14 + this.thrust * 26;
+      this.flame.fillColor = new Color(255, 150, 60, 0.85);
+      this.flame.drawPolygon([-7, 22, 0, 22 + length, 7, 22]);
+      this.flame.fillColor = new Color(255, 240, 200);
+      this.flame.drawCircle(0, 24, 4);
     }
 
     for (const bullet of this.bullets) {
@@ -344,14 +395,13 @@ class GamepadSpaceshipScene extends Scene {
       fx.drawCircle(bullet.x, bullet.y, 3);
     }
 
-    context.render(this.stars);
+    for (const layer of this.stars) {
+      context.render(layer);
+    }
+
     context.render(this.fx);
     context.render(this.particles);
     context.render(this.ship);
-
-    if (!this.app.input.gamepads.some(pad => pad.connected)) {
-      context.render(this.connectPrompt);
-    }
   }
 
   override destroy(): void {
@@ -360,11 +410,16 @@ class GamepadSpaceshipScene extends Scene {
     this.engineBus.removeEffect(this.engineFilter);
     this.engineFilter.destroy();
     this.app.audio.unregisterBus(this.engineBus);
+    this.pad?.stopVibration();
     this.hud?.dispose();
-    this.stars?.destroy();
+
+    for (const layer of this.stars) {
+      layer.destroy();
+    }
+
     this.fx?.destroy();
     this.ship?.destroy();
-    this.connectPrompt?.destroy();
+
     super.destroy();
   }
 }

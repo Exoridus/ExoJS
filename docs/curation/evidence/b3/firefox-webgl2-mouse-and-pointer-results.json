@@ -1,0 +1,27 @@
+{
+  "browser": "firefox",
+  "version": "155.0",
+  "backend": "webgl2",
+  "hardware": {
+    "touch": "NOT_TESTED",
+    "gamepad": "NOT_TESTED",
+    "haptics": "NOT_TESTED",
+    "humanListening": "NOT_TESTED"
+  },
+  "records": [
+    {
+      "example": "input/mouse-and-pointer",
+      "size": "1280x720",
+      "status": "FAIL",
+      "error": "Expected values to be strictly equal:\n\n1 !== 0\n",
+      "checks": ["{\"probe\":true,\"backend\":\"webgl2\",\"scene\":true,\"state\":\"running\"}"]
+    },
+    {
+      "example": "input/mouse-and-pointer",
+      "size": "512x288",
+      "status": "FAIL",
+      "error": "Expected values to be strictly equal:\n\n1 !== 0\n",
+      "checks": ["{\"probe\":true,\"backend\":\"webgl2\",\"scene\":true,\"state\":\"running\"}"]
+    }
+  ]
+}

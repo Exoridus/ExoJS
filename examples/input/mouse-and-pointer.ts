@@ -1,4 +1,13 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sprite } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  type Pointer,
+  type RenderingContext,
+  Scene,
+  Sprite,
+} from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
@@ -19,6 +28,21 @@ class MouseAndPointerScene extends Scene {
   private clicks = 0;
   private hud!: ReturnType<typeof mountControls>;
 
+  private readonly onMove = (pointer: Pointer): void => {
+    this.pointer.x = pointer.x;
+    this.pointer.y = pointer.y;
+    this.buttons = pointer.buttons;
+  };
+  private readonly onButtons = (pointer: Pointer): void => {
+    this.buttons = pointer.buttons;
+  };
+  private readonly onCancel = (): void => {
+    this.buttons = 0;
+  };
+  private readonly onTap = (): void => {
+    this.clicks++;
+  };
+
   override init(): void {
     const app = this.app;
     const { width, height } = app;
@@ -32,22 +56,17 @@ class MouseAndPointerScene extends Scene {
     this.root.addChild(this.ship);
     this.crosshair = new Graphics();
 
-    app.input.onPointerMove.add(pointer => {
-      this.pointer.x = pointer.x;
-      this.pointer.y = pointer.y;
-      this.buttons = pointer.buttons;
-    });
-    app.input.onPointerDown.add(pointer => {
-      this.buttons = pointer.buttons;
-    });
-    app.input.onPointerUp.add(pointer => {
-      this.buttons = pointer.buttons;
-    });
-    app.input.onPointerTap.add(() => {
-      this.clicks++;
-    });
+    app.input.onPointerMove.add(this.onMove);
+    app.input.onPointerDown.add(this.onButtons);
+    app.input.onPointerUp.add(this.onButtons);
+    app.input.onPointerCancel.add(this.onCancel);
+    app.input.onPointerTap.add(this.onTap);
 
-    this.hud = mountControls();
+    this.hud = mountControls({
+      theme: 'site',
+      title: 'Pointer & capture',
+      hint: 'Drag the ship; release outside the canvas. Cancel clears held buttons.',
+    });
   }
 
   private buttonLabel(): string {
@@ -57,6 +76,7 @@ class MouseAndPointerScene extends Scene {
   }
 
   override update(): void {
+    this.hud.fit(this.app, this.app.canvas as HTMLCanvasElement);
     this.deltaX = this.pointer.x - this.previous.x;
     this.deltaY = this.pointer.y - this.previous.y;
     this.previous.x = this.pointer.x;
@@ -76,6 +96,17 @@ class MouseAndPointerScene extends Scene {
     this.crosshair.drawLine(this.pointer.x - 12, this.pointer.y, this.pointer.x + 12, this.pointer.y);
     this.crosshair.drawLine(this.pointer.x, this.pointer.y - 12, this.pointer.x, this.pointer.y + 12);
     context.render(this.crosshair);
+  }
+
+  override destroy(): void {
+    this.app.input.onPointerMove.remove(this.onMove);
+    this.app.input.onPointerDown.remove(this.onButtons);
+    this.app.input.onPointerUp.remove(this.onButtons);
+    this.app.input.onPointerCancel.remove(this.onCancel);
+    this.app.input.onPointerTap.remove(this.onTap);
+    this.hud.dispose();
+    this.crosshair.destroy();
+    super.destroy();
   }
 }
 

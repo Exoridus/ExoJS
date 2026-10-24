@@ -18,6 +18,20 @@ class MouseAndPointerScene extends Scene {
   buttons = 0;
   clicks = 0;
   hud;
+  onMove = pointer => {
+    this.pointer.x = pointer.x;
+    this.pointer.y = pointer.y;
+    this.buttons = pointer.buttons;
+  };
+  onButtons = pointer => {
+    this.buttons = pointer.buttons;
+  };
+  onCancel = () => {
+    this.buttons = 0;
+  };
+  onTap = () => {
+    this.clicks++;
+  };
   init() {
     const app = this.app;
     const { width, height } = app;
@@ -28,27 +42,23 @@ class MouseAndPointerScene extends Scene {
     this.ship.draggable = true;
     this.root.addChild(this.ship);
     this.crosshair = new Graphics();
-    app.input.onPointerMove.add(pointer => {
-      this.pointer.x = pointer.x;
-      this.pointer.y = pointer.y;
-      this.buttons = pointer.buttons;
+    app.input.onPointerMove.add(this.onMove);
+    app.input.onPointerDown.add(this.onButtons);
+    app.input.onPointerUp.add(this.onButtons);
+    app.input.onPointerCancel.add(this.onCancel);
+    app.input.onPointerTap.add(this.onTap);
+    this.hud = mountControls({
+      theme: 'site',
+      title: 'Pointer & capture',
+      hint: 'Drag the ship; release outside the canvas. Cancel clears held buttons.',
     });
-    app.input.onPointerDown.add(pointer => {
-      this.buttons = pointer.buttons;
-    });
-    app.input.onPointerUp.add(pointer => {
-      this.buttons = pointer.buttons;
-    });
-    app.input.onPointerTap.add(() => {
-      this.clicks++;
-    });
-    this.hud = mountControls();
   }
   buttonLabel() {
     const held = [this.buttons & 1 && 'Left', this.buttons & 2 && 'Right', this.buttons & 4 && 'Middle'].filter(Boolean);
     return held.length ? held.join(' + ') : 'none';
   }
   update() {
+    this.hud.fit(this.app, this.app.canvas);
     this.deltaX = this.pointer.x - this.previous.x;
     this.deltaY = this.pointer.y - this.previous.y;
     this.previous.x = this.pointer.x;
@@ -65,6 +75,16 @@ class MouseAndPointerScene extends Scene {
     this.crosshair.drawLine(this.pointer.x - 12, this.pointer.y, this.pointer.x + 12, this.pointer.y);
     this.crosshair.drawLine(this.pointer.x, this.pointer.y - 12, this.pointer.x, this.pointer.y + 12);
     context.render(this.crosshair);
+  }
+  destroy() {
+    this.app.input.onPointerMove.remove(this.onMove);
+    this.app.input.onPointerDown.remove(this.onButtons);
+    this.app.input.onPointerUp.remove(this.onButtons);
+    this.app.input.onPointerCancel.remove(this.onCancel);
+    this.app.input.onPointerTap.remove(this.onTap);
+    this.hud.dispose();
+    this.crosshair.destroy();
+    super.destroy();
   }
 }
 const app = new Application({
