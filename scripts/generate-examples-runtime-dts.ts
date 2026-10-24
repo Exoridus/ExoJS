@@ -58,5 +58,8 @@ export const renderRuntimeDts = (repositoryRoot: string): string => {
     throw new Error(`Declaration emit for examples/shared/runtime.ts produced no output.\n${detail}`);
   }
 
-  return output;
+  const declaration = ts.createSourceFile('runtime.d.ts', output, ts.ScriptTarget.ES2022);
+  const lastImport = declaration.statements.filter(ts.isImportDeclaration).at(-1);
+
+  return lastImport ? `${output.slice(0, lastImport.end)}\n\n${output.slice(lastImport.end).trimStart()}` : output;
 };
