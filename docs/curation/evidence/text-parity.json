@@ -1,0 +1,42 @@
+[
+  {
+    "webgl2": "chromium-webgl2-typographic-styling-1280-outline.png",
+    "webgpu": "chromium-webgpu-typographic-styling-1280-outline.png",
+    "identicalPng": true
+  },
+  {
+    "webgl2": "chromium-webgl2-typographic-styling-1280-shadow.png",
+    "webgpu": "chromium-webgpu-typographic-styling-1280-shadow.png",
+    "identicalPng": true
+  },
+  {
+    "webgl2": "chromium-webgl2-typographic-styling-1280-gradient.png",
+    "webgpu": "chromium-webgpu-typographic-styling-1280-gradient.png",
+    "identicalPng": true
+  },
+  {
+    "webgl2": "chromium-webgl2-typographic-styling-1280-interaction.png",
+    "webgpu": "chromium-webgpu-typographic-styling-1280-interaction.png",
+    "identicalPng": true
+  },
+  {
+    "webgl2": "chromium-webgl2-typographic-styling-512-outline.png",
+    "webgpu": "chromium-webgpu-typographic-styling-512-outline.png",
+    "identicalPng": true
+  },
+  {
+    "webgl2": "chromium-webgl2-typographic-styling-512-shadow.png",
+    "webgpu": "chromium-webgpu-typographic-styling-512-shadow.png",
+    "identicalPng": true
+  },
+  {
+    "webgl2": "chromium-webgl2-typographic-styling-512-gradient.png",
+    "webgpu": "chromium-webgpu-typographic-styling-512-gradient.png",
+    "identicalPng": true
+  },
+  {
+    "webgl2": "chromium-webgl2-typographic-styling-512-interaction.png",
+    "webgpu": "chromium-webgpu-typographic-styling-512-interaction.png",
+    "identicalPng": true
+  }
+]
