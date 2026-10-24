@@ -23,7 +23,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 const REPO_ROOT = resolve(__dirname, '../..');
 const SCANNER = 'scripts/check-inline-source.ts';
 const TSX_CLI = join('node_modules', 'tsx', 'dist', 'cli.mjs');
-const FIXTURE_DIRECTORY = 'test/ci/inline-source-fixtures';
+const FIXTURE_DIRECTORY = 'test/ci/__inline-source-fixtures__';
 /**
  * WebGl2Shader detection is scoped to engine-owned code, so a shader fixture only
  * proves anything from inside that scope. It lives under `src/` for the duration
