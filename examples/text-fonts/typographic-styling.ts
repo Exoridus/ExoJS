@@ -12,7 +12,7 @@ import {
   Text,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { choice, demoPanel, unitsPerCssPixel } from '@examples/runtime';
+import { choice, demoPanel } from '@examples/runtime';
 
 const paragraph =
   'AnUnbrokenTokenRevealsHowWordBreakingWorks. ' +
@@ -174,7 +174,7 @@ class TextLayoutScene extends Scene {
       this.reset();
     }
 
-    const k = unitsPerCssPixel(this.app, this.app.canvas as HTMLCanvasElement);
+    const { scale: k, width, height } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
 
     if (k !== this.scale) {
       this.scale = k;
@@ -186,13 +186,8 @@ class TextLayoutScene extends Scene {
     }
 
     this.dirty = false;
-    const width = this.app.width / k;
-    const height = this.app.height / k;
     const panel = this.panel.element;
 
-    panel.style.width = `${width}px`;
-    panel.style.transform = `scale(${k})`;
-    panel.toggleAttribute('data-compact', width < 720 || height < 420);
     this.width = Math.min(width - 64, Math.max(160, this.width));
     const { wrap, heading } = this.panel.values;
 
@@ -244,7 +239,7 @@ class TextLayoutScene extends Scene {
     this.guide.lineWidth = 2 * k;
     this.guide.moveTo((24 + this.width) * k, 65 * k).lineTo((24 + this.width) * k, (height - panel.offsetHeight - 12) * k);
     this.handle.style.left = `${(8 + this.width) * k}px`;
-    this.handle.style.top = `${54 * k}px`;
+    this.handle.style.top = `${38 * k}px`;
     this.handle.style.transform = `scale(${k})`;
     this.handle.setAttribute('aria-valuemax', String(Math.round(width - 64)));
     this.handle.setAttribute('aria-valuenow', String(Math.round(this.width)));
