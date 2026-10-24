@@ -81,13 +81,13 @@
       "example": "pathfinding/grid-navigation",
       "size": "1280x720",
       "status": "FAIL",
-      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 6\n\n    at interactions (C:\\Users\\User\\.codex\\worktrees\\8f44\\exojs\\site\\scripts\\curation-b4-e2e.ts:271:12)\n    at async <anonymous> (C:\\Users\\User\\.codex\\worktrees\\8f44\\exojs\\site\\scripts\\curation-b4-e2e.ts:413:24)"
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 6\n\n    at interactions (site\\scripts\\curation-b4-e2e.ts:271:12)\n    at async <anonymous> (site\\scripts\\curation-b4-e2e.ts:413:24)"
     },
     {
       "example": "pathfinding/grid-navigation",
       "size": "512x288",
       "status": "FAIL",
-      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 6\n\n    at interactions (C:\\Users\\User\\.codex\\worktrees\\8f44\\exojs\\site\\scripts\\curation-b4-e2e.ts:271:12)\n    at async <anonymous> (C:\\Users\\User\\.codex\\worktrees\\8f44\\exojs\\site\\scripts\\curation-b4-e2e.ts:413:24)"
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 6\n\n    at interactions (site\\scripts\\curation-b4-e2e.ts:271:12)\n    at async <anonymous> (site\\scripts\\curation-b4-e2e.ts:413:24)"
     },
     {
       "example": "tilemap/tiled-infinite-map",
