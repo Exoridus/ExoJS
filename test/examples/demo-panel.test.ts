@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { choice, demoPanel, insetAtlasFrame, slider, unitsPerCssPixel } from '../../examples/shared/runtime';
+import { choice, demoPanel, insetAtlasFrame, siteUITheme, slider, unitsPerCssPixel } from '../../examples/shared/runtime';
 
 afterEach(() => document.body.replaceChildren());
 
@@ -107,4 +107,29 @@ it('crops verified atlas borders without mutating the shared frame', () => {
   expect(insetAtlasFrame(frame)).toMatchObject({ x: 5, y: 9, width: 14, height: 18 });
   expect(frame.width).toBe(16);
   expect(() => insetAtlasFrame({ ...frame, width: 2 })).toThrow(RangeError);
+});
+
+it('reuses website colours while preserving native widget geometry', () => {
+  const context = {
+    clearRect: vi.fn(),
+    fillRect: vi.fn(),
+    fillStyle: '',
+    getImageData: () => ({ data: [12, 34, 56, 255] }),
+  };
+  const getContext = vi
+    .spyOn(HTMLCanvasElement.prototype, 'getContext')
+    .mockImplementation((() => context) as unknown as HTMLCanvasElement['getContext']);
+  const theme = siteUITheme();
+  const surface = theme.button.normal.background;
+  expect(surface.kind).toBe('fill');
+
+  if (surface.kind === 'fill') {
+    expect(surface.color.toRgba8()).toBe(0xff38220c);
+    expect(surface.cornerRadius).toBe(8);
+  }
+
+  expect(theme.button.focused?.background).toMatchObject({ borderWidth: 2 });
+  expect(theme.label.normal.background.kind).toBe('none');
+  expect(theme.textFieldSurface.normal.insets).toEqual({ left: 8, top: 6, right: 8, bottom: 6 });
+  getContext.mockRestore();
 });
