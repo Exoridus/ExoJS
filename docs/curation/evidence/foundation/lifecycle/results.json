@@ -10,6 +10,23 @@
       "contract": "source transition and failure",
       "status": "PASS",
       "phase": "unreported"
+    },
+    {
+      "contract": "context loss and restoration",
+      "status": "PASS",
+      "phase": "active",
+      "evidence": [
+        {
+          "phase": "failed",
+          "actual": null,
+          "nativeLost": true
+        },
+        {
+          "phase": "active",
+          "actual": "webgl2",
+          "nativeLost": false
+        }
+      ]
     }
   ]
 }
