@@ -41,3 +41,13 @@ describe('curated curriculum preservation', () => {
     ).toEqual([17, 31, 12, 51]);
   });
 });
+
+it.each([
+  ['input/multitouch.js', 'touch'],
+  ['input/action-mapping.js', 'gamepad'],
+])('keeps optional hardware optional for %s', (path, capability) => {
+  const entry = Object.values(examples)
+    .flat()
+    .find(example => example.path === path);
+  expect(entry).toMatchObject({ capabilities: expect.not.arrayContaining([capability]) });
+});

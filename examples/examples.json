@@ -165,7 +165,7 @@
       "description": "Bind keyboard and gamepad controls to one move action and one pulse action, then read both through ActionMap. WASD, arrows or the left stick move the ship; Space or the south gamepad button pulses it. The Output panel logs each resolved action as it changes.",
       "backend": "core",
       "tags": ["input", "keyboard", "gamepad"],
-      "capabilities": ["keyboard", "gamepad"],
+      "capabilities": ["keyboard"],
       "level": "intermediate"
     },
     {
@@ -199,7 +199,7 @@
       "description": "Track up to ten simultaneous touch points and render each finger as a labelled circle. Use a touchscreen with several fingers; a mouse provides a single point while a button is held.",
       "backend": "core",
       "tags": ["input", "touch", "pointer"],
-      "capabilities": ["pointer", "touch"],
+      "capabilities": ["pointer"],
       "level": "intermediate"
     },
     {
