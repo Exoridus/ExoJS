@@ -104,8 +104,8 @@ application.input.onPinch.add((scale, centerX, centerY) => {
 });
 
 application.input.onRotate.add(angleDelta => {
-    // angleDelta in radians — positive = clockwise rotation
-    map.rotate(angleDelta);
+    // Gestures use clockwise radians; SceneNode uses counterclockwise degrees.
+    map.rotate((-angleDelta * 180) / Math.PI);
 });
 
 application.input.onLongPress.add(pointer => {

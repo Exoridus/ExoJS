@@ -1,10 +1,13 @@
 import type { ReactNode } from 'react';
 
+import type { ExampleRendererStatus } from '../../../examples/shared/runtime';
 import type { Capability } from '../lib/examples-catalog';
+import { rendererLabel } from '../lib/preview-renderer';
 import styles from './PreviewToolbar.module.scss';
 import { css, cx } from './react-utils';
 
 export interface PreviewToolbarProps {
+  rendererStatus?: ExampleRendererStatus | null;
   canvasHeight: number;
   canvasWidth: number;
   capabilities: Capability[];
@@ -23,6 +26,7 @@ export interface PreviewToolbarProps {
 }
 
 export const PreviewToolbar = ({
+  rendererStatus = null,
   canvasHeight,
   canvasWidth,
   capabilities,
@@ -69,6 +73,18 @@ export const PreviewToolbar = ({
             <span className={css(styles, 'version')}>exojs@{selectedVersionId}</span>
           </>
         )}
+        <span
+          className={css(styles, 'renderer')}
+          data-renderer-phase={rendererStatus?.phase ?? 'unreported'}
+          role="status"
+          title={
+            rendererStatus
+              ? `Requested: ${rendererStatus.requested}; actual: ${rendererStatus.actual ?? 'not initialized'}${rendererStatus.reason ? `. ${rendererStatus.reason}` : ''}`
+              : 'This source does not report its initialized renderer.'
+          }
+        >
+          {rendererLabel(rendererStatus)}
+        </span>
         {capabilities.slice(0, 2).map(capability => (
           <span key={capability} className={css(styles, 'cap')}>
             {capability}

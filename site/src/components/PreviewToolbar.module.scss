@@ -131,3 +131,17 @@
     padding: 0 0.68rem;
   }
 }
+
+.renderer {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.renderer[data-renderer-phase='failed'],
+.renderer[data-renderer-phase='fallback'] {
+  color: var(--amber);
+}

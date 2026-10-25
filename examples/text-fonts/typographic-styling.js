@@ -12,7 +12,7 @@ import {
   Text,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { choice, demoPanel, unitsPerCssPixel } from '@examples/runtime';
+import { choice, demoPanel, startExample } from '@examples/runtime';
 const paragraph =
   'AnUnbrokenTokenRevealsHowWordBreakingWorks. ' +
   'ExoJS lays out real text as you move the wrap edge. Font, width and word boundaries change the rhythm of a page. ' +
@@ -152,7 +152,7 @@ class TextLayoutScene extends Scene {
     if (this.actions.reset.pressed) {
       this.reset();
     }
-    const k = unitsPerCssPixel(this.app, this.app.canvas);
+    const { scale: k, width, height } = this.panel.fit(this.app, this.app.canvas);
     if (k !== this.scale) {
       this.scale = k;
       this.dirty = true;
@@ -161,12 +161,7 @@ class TextLayoutScene extends Scene {
       return;
     }
     this.dirty = false;
-    const width = this.app.width / k;
-    const height = this.app.height / k;
     const panel = this.panel.element;
-    panel.style.width = `${width}px`;
-    panel.style.transform = `scale(${k})`;
-    panel.toggleAttribute('data-compact', width < 720 || height < 420);
     this.width = Math.min(width - 64, Math.max(160, this.width));
     const { wrap, heading } = this.panel.values;
     this.title.text = heading;
@@ -212,7 +207,7 @@ class TextLayoutScene extends Scene {
     this.guide.lineWidth = 2 * k;
     this.guide.moveTo((24 + this.width) * k, 65 * k).lineTo((24 + this.width) * k, (height - panel.offsetHeight - 12) * k);
     this.handle.style.left = `${(8 + this.width) * k}px`;
-    this.handle.style.top = `${54 * k}px`;
+    this.handle.style.top = `${38 * k}px`;
     this.handle.style.transform = `scale(${k})`;
     this.handle.setAttribute('aria-valuemax', String(Math.round(width - 64)));
     this.handle.setAttribute('aria-valuenow', String(Math.round(this.width)));
@@ -235,4 +230,4 @@ const app = new Application({
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(247, 244, 235),
 });
-await app.start(TextLayoutScene);
+await startExample(app, () => app.start(TextLayoutScene));

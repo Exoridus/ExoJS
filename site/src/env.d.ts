@@ -5,7 +5,7 @@ declare namespace JSX {
 }
 
 interface Window {
-  __EXAMPLE_META__?: import('./lib/types').Example | null;
+  __EXAMPLE_META__?: import('../../examples/shared/runtime').ExampleRuntimeMeta | null;
   __EXAMPLE_PREVIEW_ERROR_RENDERED__?: boolean;
 }
 

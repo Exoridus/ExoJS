@@ -9,8 +9,10 @@ import {
   useState,
 } from 'react';
 
+import type { ExampleRendererStatus } from '../../../examples/shared/runtime';
 import type { Capability } from '../lib/examples-catalog';
 import type { ConsoleWindow, PreviewConsole } from '../lib/preview-console';
+import { readRendererStatus } from '../lib/preview-renderer';
 import { detectRuntimeSupport, getMissingCapabilities } from '../lib/runtime-support';
 import type { Example, PreviewErrorEntry, UrlParams } from '../lib/types';
 import { buildIframeUrl } from '../lib/url-builder';
@@ -59,11 +61,13 @@ export interface EditorPreviewProps {
   /** Changing it restarts the preview even when `sourceCode` is unchanged. */
   runId?: number;
   onCanvasSize?(event: CanvasSizeEvent): void;
+  onRendererStatus?(status: ExampleRendererStatus | null): void;
 }
 
 export const EditorPreview = ({
   exampleMeta,
   onCanvasSize,
+  onRendererStatus,
   output,
   ref,
   runId = 0,
@@ -71,6 +75,12 @@ export const EditorPreview = ({
   sourceCode,
 }: EditorPreviewProps): JSX.Element => {
   const [updateId, setUpdateId] = useState(0);
+  const rendererStatusRef = useRef(onRendererStatus);
+  const rendererCleanupRef = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    rendererStatusRef.current = onRendererStatus;
+  });
+  useEffect(() => () => rendererCleanupRef.current?.(), []);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const sourceRef = useRef<string | null>(sourceCode);
@@ -98,6 +108,9 @@ export const EditorPreview = ({
     setUpdateId(value => value + 1);
     // The outgoing document can still log until the new one loads; its
     // messages must not reach the record the next load starts.
+    rendererCleanupRef.current?.();
+    rendererCleanupRef.current = null;
+    rendererStatusRef.current?.(null);
     outputRef.current?.detach();
     disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
     currentCanvasRef.current = { width: 0, height: 0, zoom: 1, resolutionWidth: 0, resolutionHeight: 0 };
@@ -269,8 +282,20 @@ export const EditorPreview = ({
     }
 
     const iframeWindow = iframe.contentWindow;
+    rendererCleanupRef.current?.();
+    rendererStatusRef.current?.(null);
 
     if (iframeWindow) {
+      const report = (event: Event): void => {
+        const status = readRendererStatus((event as CustomEvent<unknown>).detail);
+
+        if (status) {
+          rendererStatusRef.current?.(status);
+        }
+      };
+
+      iframeWindow.addEventListener('exo-renderer-status', report);
+      rendererCleanupRef.current = () => iframeWindow.removeEventListener('exo-renderer-status', report);
       const sink = outputRef.current;
       // Attached before the example's module is appended, so its first
       // top-level log is already captured.

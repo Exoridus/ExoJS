@@ -14,7 +14,7 @@ import {
   Texture,
   Time,
 } from '@codexo/exojs';
-import { demoPanel, slider, unitsPerCssPixel } from '@examples/runtime';
+import { demoPanel, slider, startExample } from '@examples/runtime';
 const FRAME_COUNT = 8;
 const REFERENCE_FPS = 8;
 class FrameAnimationScene extends Scene {
@@ -105,14 +105,8 @@ class FrameAnimationScene extends Scene {
     if (this.playing) {
       this.advance(delta);
     }
-    const k = unitsPerCssPixel(this.app, this.app.canvas);
-    const width = this.app.width / k;
-    const height = this.app.height / k;
+    const { scale: k, height, compact } = this.panel.fit(this.app, this.app.canvas);
     const panel = this.panel.element;
-    const compact = width < 720 || height < 420;
-    panel.style.width = `${width}px`;
-    panel.style.transform = `scale(${k})`;
-    panel.toggleAttribute('data-compact', compact);
     panel.querySelector('button:nth-of-type(2)').disabled = this.playing;
     panel.querySelector('button').setAttribute('aria-pressed', String(!this.playing));
     this.panel.status(
@@ -152,4 +146,4 @@ const app = new Application({
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(239, 244, 227),
 });
-await app.start(FrameAnimationScene);
+await startExample(app, () => app.start(FrameAnimationScene));

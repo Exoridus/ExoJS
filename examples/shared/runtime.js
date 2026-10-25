@@ -1,4 +1,116 @@
 // Auto-generated from runtime.ts - edit the .ts source, not this file.
+import { Color, createUITheme, defaultUITheme } from '@codexo/exojs';
+/** Starts a sample while reporting initialized renderer state and retaining the original startup rejection. */
+export const startExample = async (app, start) => {
+  const requested = app.options.backend?.type ?? 'auto';
+  const attempted = app.backend.backendType;
+  let completed = false;
+  let lost = false;
+  const publish = (phase, actual, reason = null) => {
+    const status = { requested, phase, actual, reason };
+    window.__EXAMPLE_RENDERER_STATUS__ = status;
+    window.dispatchEvent(new CustomEvent('exo-renderer-status', { detail: status }));
+  };
+  const active = () => {
+    if (!completed || lost) {
+      return;
+    }
+    const actual = app.backend.backendType;
+    const fallback = actual !== attempted;
+    publish(
+      fallback ? 'fallback' : 'active',
+      actual,
+      fallback
+        ? app.capabilities?.webgpuAdapter === null
+          ? `No usable WebGPU adapter was detected; auto started ${actual}.`
+          : `${attempted} initialization did not succeed; auto started ${actual}. The original cause is not exposed by the engine.`
+        : null,
+    );
+  };
+  const onLost = () => {
+    lost = true;
+    publish('failed', null, 'The renderer device or context was lost. Waiting for restoration.');
+  };
+  const onRestored = () => {
+    lost = false;
+    active();
+  };
+  publish('requested', null);
+  app.onBackendLost.add(onLost);
+  app.onBackendRestored.add(onRestored);
+  publish('initializing', null);
+  try {
+    await start();
+    completed = true;
+    active();
+  } catch (error) {
+    app.onBackendLost.remove(onLost);
+    app.onBackendRestored.remove(onRestored);
+    publish('failed', null, formatErrorMessage(error));
+    throw error;
+  }
+};
+/** Applies website tokens to native widget skins while preserving their layout and insets. */
+export const siteUITheme = () => {
+  let root = document.documentElement;
+  try {
+    root = window.parent.document.documentElement;
+  } catch {
+    /* A detached cross-origin preview uses its own tokens. */
+  }
+  const tokens = getComputedStyle(root);
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 1;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  const color = (token, fallback) => {
+    if (!context) {
+      return Color.fromHex(fallback);
+    }
+    context.clearRect(0, 0, 1, 1);
+    context.fillStyle = tokens.getPropertyValue(token).trim() || fallback;
+    context.fillRect(0, 0, 1, 1);
+    const [r, g, b, a] = context.getImageData(0, 0, 1, 1).data;
+    return new Color(r, g, b, a / 255);
+  };
+  const surface = color('--color-surface', '#12181d');
+  const raised = color('--color-surface-2', '#191f24');
+  const text = color('--color-text', '#eceff2');
+  const muted = color('--color-text-muted', '#a8afb5');
+  const accent = color('--color-accent', '#88e97e');
+  const contrast = color('--color-accent-contrast', '#15351a');
+  const patch = {};
+  const highlights = new Set(['progressBarFill', 'sliderFill', 'checkboxMark', 'caret', 'selection']);
+  for (const role of Object.keys(defaultUITheme)) {
+    const states = {};
+    for (const state of ['normal', 'hover', 'pressed', 'disabled', 'focused']) {
+      const base = defaultUITheme[role][state] ?? defaultUITheme[role].normal;
+      const selected = state === 'pressed' && (role === 'button' || role === 'dropdownItem');
+      const foreground = state === 'disabled' || role === 'placeholder' ? muted : selected ? contrast : text;
+      states[state] = {
+        ...base,
+        text: { ...base.text, fontFamily: tokens.getPropertyValue('--f-sans').trim() || 'system-ui', fillColor: foreground },
+        background:
+          base.background.kind === 'fill'
+            ? {
+                ...base.background,
+                color:
+                  selected || highlights.has(role)
+                    ? accent
+                    : role.endsWith('Knob') || role === 'sliderThumb'
+                      ? text
+                      : state === 'normal'
+                        ? surface
+                        : raised,
+                borderColor: state === 'focused' ? accent : muted,
+                borderWidth: state === 'focused' ? 2 : base.background.borderWidth,
+              }
+            : base.background,
+      };
+    }
+    patch[role] = states;
+  }
+  return createUITheme(patch);
+};
 export const getExampleMeta = () => {
   const meta = globalThis.__EXAMPLE_META__;
   return meta && typeof meta === 'object' ? meta : {};
@@ -118,6 +230,11 @@ const createControlRow = control => {
 export const mountControls = (options = {}) => {
   const { title = '', controls = [], status = '', hint = '', corner = 'top-left' } = options;
   const panel = createPanel(corner);
+  const disposeTheme = options.theme === 'site' ? styleDemoBar(panel) : undefined;
+  if (options.theme === 'site') {
+    panel.classList.add('exo-demo-caption');
+  }
+  const fit = createOverlayFitter(panel, corner, false);
   panel.style.pointerEvents = 'none';
   const titleEl = document.createElement('strong');
   const controlsEl = document.createElement('div');
@@ -131,12 +248,17 @@ export const mountControls = (options = {}) => {
   renderControls(controls);
   statusEl.textContent = status;
   hintEl.textContent = hint;
+  statusEl.className = 'exo-demo-status';
+  hintEl.className = 'exo-demo-hint';
   panel.append(titleEl, controlsEl, statusEl, hintEl);
   document.body.append(panel);
   return {
     element: panel,
+    fit,
     setStatus(text) {
-      statusEl.textContent = text ?? '';
+      if (statusEl.textContent !== text) {
+        statusEl.textContent = text ?? '';
+      }
     },
     setControls(list) {
       renderControls(list ?? []);
@@ -145,6 +267,7 @@ export const mountControls = (options = {}) => {
       hintEl.textContent = text ?? '';
     },
     dispose() {
+      disposeTheme?.();
       panel.remove();
     },
   };
@@ -407,6 +530,46 @@ export const unitsPerCssPixel = (app, host) => {
   const height = host.getBoundingClientRect().height * frameScale;
   return height > 0 ? app.height / height : 1;
 };
+const createOverlayFitter = (element, corner, bar) => {
+  const viewport = { scale: 0, width: 0, height: 0, compact: false, contentHeight: 0 };
+  return (app, host) => {
+    const scale = unitsPerCssPixel(app, host);
+    const width = app.width / scale;
+    const height = app.height / scale;
+    if (scale !== viewport.scale || width !== viewport.width || height !== viewport.height) {
+      viewport.scale = scale;
+      viewport.width = width;
+      viewport.height = height;
+      viewport.compact = width < 720 || height < 420;
+      element.style.transform = `scale(${scale})`;
+      element.toggleAttribute('data-compact', viewport.compact);
+      if (bar) {
+        element.style.width = `${width}px`;
+      } else {
+        element.style.transformOrigin = corner.replace('-', ' ');
+        element.style.width = `${Math.min(430, Math.max(0, width - 24))}px`;
+        for (const side of ['top', 'bottom', 'left', 'right']) {
+          element.style.setProperty(side, corner.includes(side) ? `${12 * scale}px` : 'auto', 'important');
+        }
+      }
+    }
+    viewport.contentHeight = Math.max(0, height - element.offsetHeight - (bar ? 0 : 24));
+    return viewport;
+  };
+};
+/** Crops an explicitly verified one-texel border without changing the shared frame. */
+export const insetAtlasFrame = frame => {
+  if (frame.width <= 2 || frame.height <= 2) {
+    throw new RangeError('Atlas frames must retain a positive area after insetting.');
+  }
+  // shortcut: use only verified empty borders until extruded atlas assets are available.
+  const inset = frame.clone();
+  inset.x += 1;
+  inset.y += 1;
+  inset.width -= 2;
+  inset.height -= 2;
+  return inset;
+};
 const styleDemoBar = element => {
   const style = document.createElement('style');
   const fontRoot = new URL('../../vendor/fonts/', import.meta.url);
@@ -421,6 +584,9 @@ const styleDemoBar = element => {
       '--color-text-muted',
       '--color-accent',
       '--amber',
+      '--cyan',
+      '--mint',
+      '--rose',
       '--f-sans',
       '--f-mono',
     ]) {
@@ -450,6 +616,15 @@ const styleDemoBar = element => {
 .exo-demo-bar > .exo-demo-status { flex-basis:100%; color:var(--color-text-muted,#a8afb5) !important;
   font:14px var(--f-mono,'JetBrains Mono',ui-monospace,monospace) !important; }
 .exo-demo-bar[data-compact] > strong { display:none !important; }
+.exo-demo-hint { flex-basis:100%; font-size:14px !important; color:var(--color-text-muted,#a8afb5) !important; }
+.exo-demo-bar[data-compact] .exo-demo-hint { display:none !important; }
+.exo-demo-bar .exo-demo-status[data-tone='info'] { color:var(--cyan,#65d2d2) !important; }
+.exo-demo-bar .exo-demo-status[data-tone='warning'] { color:var(--amber,#feb354) !important; }
+.exo-demo-bar .exo-demo-status[data-tone='success'] { color:var(--mint,#67cfa0) !important; }
+.exo-demo-bar .exo-demo-status[data-tone='error'] { color:var(--rose,#ff7c80) !important; }
+.exo-demo-caption { display:block !important; border-radius:6px !important; }
+.exo-demo-caption[data-compact] > strong { display:block !important; }
+.exo-demo-caption kbd,.exo-demo-caption span { font-size:14px !important; color:inherit !important; }
 `;
   document.head.append(style);
   return () => {
@@ -462,18 +637,26 @@ const styleDemoBar = element => {
  * and the shortcut never disagree.
  */
 export const demoPanel = options => {
+  if (options.layout === 'bar' && (Object.keys(options.controls).length > 4 || Object.keys(options.actions ?? {}).length > 3)) {
+    throw new RangeError('Curated bars support at most four parameters and three actions.');
+  }
   const panel = mountControlPanel({ title: options.title, corner: options.corner });
+  const fit = createOverlayFitter(panel.element, options.corner ?? 'bottom-left', options.layout === 'bar');
   const disposeBar = options.layout === 'bar' ? styleDemoBar(panel.element) : undefined;
   const values = {};
   const renderers = new Map();
   const keys = Object.keys(options.controls);
   const statusEl = document.createElement('div');
+  const rows = new Map();
   const commit = (key, value, fromControl) => {
     values[key] = value;
     if (!fromControl) {
       renderers.get(key)?.set(value);
     }
     options.onChange?.(key, value, values);
+    if (options.layout === 'bar' && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      rows.get(key)?.animate?.([{ boxShadow: '0 0 0 2px var(--color-accent,#88e97e)' }, { boxShadow: 'none' }], { duration: 450 });
+    }
   };
   for (const key of keys) {
     const spec = options.controls[key];
@@ -539,6 +722,18 @@ export const demoPanel = options => {
         break;
       }
     }
+    rows.set(key, panel.element.lastElementChild);
+  }
+  if (options.hint) {
+    const hint = document.createElement('div');
+    hint.className = 'exo-demo-hint';
+    hint.textContent = options.hint;
+    const title = panel.element.querySelector(':scope > strong');
+    if (title) {
+      title.after(hint);
+    } else {
+      panel.element.prepend(hint);
+    }
   }
   for (const [label, run] of Object.entries(options.actions ?? {})) {
     panel.addButton({ label, onClick: run });
@@ -550,6 +745,7 @@ export const demoPanel = options => {
   panel.element.append(statusEl);
   const handle = {
     element: panel.element,
+    fit,
     values,
     set: (key, value) => commit(key, value, false),
     step(key, delta = 1) {
@@ -565,8 +761,12 @@ export const demoPanel = options => {
         commit(key, next, false);
       }
     },
-    status(text) {
-      statusEl.textContent = text;
+    status(text, tone = 'neutral') {
+      if (statusEl.textContent !== text) {
+        statusEl.textContent = text;
+      }
+      statusEl.dataset.tone = tone;
+      statusEl.setAttribute('role', tone === 'error' ? 'alert' : 'status');
       statusEl.hidden = text === '';
     },
     dispose: () => {

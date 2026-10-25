@@ -1,3 +1,5 @@
+import { type UITheme } from '@codexo/exojs';
+
 /**
  * Boolean fields of the engine `Capabilities` object that an example may
  * declare as a hard runtime requirement. Each value here maps 1:1 to a
@@ -36,6 +38,7 @@ export interface ExampleRuntimeMeta {
 declare global {
     interface Window {
         __EXAMPLE_META__?: ExampleRuntimeMeta | null;
+        __EXAMPLE_RENDERER_STATUS__?: ExampleRendererStatus;
         __EXAMPLE_PREVIEW_AUTOPLAY__?: (() => void | Promise<void>) | null;
     }
     var __EXAMPLE_META__: ExampleRuntimeMeta | null | undefined;
@@ -50,6 +53,10 @@ export interface ControlHint {
 /** Handle returned by {@link mountControls}. */
 export interface ControlsHandle {
     element: HTMLElement;
+    fit(app: {
+        width: number;
+        height: number;
+    }, host: HTMLElement): DemoViewport;
     setStatus(text: string): void;
     setControls(list: ControlHint[]): void;
     setHint(text: string): void;
@@ -93,6 +100,8 @@ export interface ControlPanelHandle {
 }
 /** Options for {@link mountControls}. */
 export interface MountControlsOptions {
+    /** Uses the site caption presentation without adding interactive controls. */
+    theme?: 'site';
     title?: string;
     controls?: ControlHint[];
     status?: string;
@@ -104,6 +113,37 @@ export interface MountControlPanelOptions {
     title?: string;
     corner?: OverlayCorner;
 }
+export interface ExampleRendererStatus {
+    requested: 'unknown' | 'auto' | 'webgl2' | 'webgpu';
+    phase: 'requested' | 'initializing' | 'active' | 'fallback' | 'failed';
+    actual: 'webgl2' | 'webgpu' | null;
+    reason: string | null;
+}
+interface RendererApplication {
+    readonly options: {
+        backend?: {
+            type?: 'auto' | 'webgl2' | 'webgpu';
+        };
+    };
+    readonly backend: {
+        readonly backendType: 'webgl2' | 'webgpu';
+    };
+    readonly capabilities?: {
+        readonly webgpuAdapter: object | null;
+    };
+    readonly onBackendLost: {
+        add(listener: () => void): unknown;
+        remove(listener: () => void): unknown;
+    };
+    readonly onBackendRestored: {
+        add(listener: () => void): unknown;
+        remove(listener: () => void): unknown;
+    };
+}
+/** Starts a sample while reporting initialized renderer state and retaining the original startup rejection. */
+export declare const startExample: (app: RendererApplication, start: () => Promise<unknown>) => Promise<void>;
+/** Applies website tokens to native widget skins while preserving their layout and insets. */
+export declare const siteUITheme: () => UITheme;
 export declare const getExampleMeta: () => ExampleRuntimeMeta;
 export declare const supportsWebGpu: () => boolean;
 export declare const createInfoElement: (maxWidth?: string) => HTMLElement;
@@ -182,6 +222,8 @@ export interface DemoPanelOptions<C extends Record<string, DemoControlSpec>> {
     corner?: OverlayCorner;
     /** A full-width control strip with native selects and CSS-pixel sizing. */
     layout?: 'bar';
+    /** Instruction hidden in compact presentation. */
+    hint?: string;
     controls: C;
     /** Buttons below the controls, in order. */
     actions?: Record<string, () => void>;
@@ -191,25 +233,48 @@ export interface DemoPanelOptions<C extends Record<string, DemoControlSpec>> {
      */
     onChange?: <K extends keyof C>(key: K, value: DemoControlValue<C[K]>, values: Readonly<DemoPanelValues<C>>) => void;
 }
+/** Presented CSS-pixel dimensions and the scene area left by an overlay. */
+export interface DemoViewport {
+    readonly scale: number;
+    readonly width: number;
+    readonly height: number;
+    readonly compact: boolean;
+    readonly contentHeight: number;
+}
+export type DemoStatusTone = 'neutral' | 'info' | 'warning' | 'success' | 'error';
 /** Handle returned by {@link demoPanel}. */
 export interface DemoPanel<C extends Record<string, DemoControlSpec>> {
     readonly element: HTMLElement;
+    /** Fits a bar to the presented canvas and reports its available scene area in CSS pixels. */
+    fit(app: {
+        width: number;
+        height: number;
+    }, host: HTMLElement): DemoViewport;
     /** Current values; read-only, change them through `set` or `step`. */
     readonly values: Readonly<DemoPanelValues<C>>;
     set<K extends keyof C>(key: K, value: DemoControlValue<C[K]>): void;
     /** Moves a choice by `delta` options (wrapping), a slider by `delta` steps (clamped), or flips a toggle. */
     step(key: keyof C, delta?: number): void;
     /** A short status line under the controls; an empty string hides it. */
-    status(text: string): void;
+    status(text: string, tone?: DemoStatusTone): void;
     dispose(): void;
 }
 /** Includes the outer preview transform when measuring displayed pixels. Returns 1 while hidden. */
 export declare const unitsPerCssPixel: (app: {
     height: number;
 }, host: HTMLElement) => number;
+/** Crops an explicitly verified one-texel border without changing the shared frame. */
+export declare const insetAtlasFrame: <T extends {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    clone(): T;
+}>(frame: T) => T;
 /**
  * Mounts a small control panel from a declarative control list and keeps one
  * value per control. Keyboard shortcuts should call `set`/`step` so the panel
  * and the shortcut never disagree.
  */
 export declare const demoPanel: <const C extends Record<string, DemoControlSpec>>(options: DemoPanelOptions<C>) => DemoPanel<C>;
+export {};

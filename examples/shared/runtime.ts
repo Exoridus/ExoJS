@@ -1,3 +1,5 @@
+import { Color, createUITheme, defaultUITheme, type UISkinPatch, type UITheme, type UIThemeRole, type UIWidgetState } from '@codexo/exojs';
+
 /**
  * Boolean fields of the engine `Capabilities` object that an example may
  * declare as a hard runtime requirement. Each value here maps 1:1 to a
@@ -49,6 +51,7 @@ export interface ExampleRuntimeMeta {
 declare global {
   interface Window {
     __EXAMPLE_META__?: ExampleRuntimeMeta | null;
+    __EXAMPLE_RENDERER_STATUS__?: ExampleRendererStatus;
     __EXAMPLE_PREVIEW_AUTOPLAY__?: (() => void | Promise<void>) | null;
   }
 
@@ -71,6 +74,7 @@ export interface ControlHint {
 /** Handle returned by {@link mountControls}. */
 export interface ControlsHandle {
   element: HTMLElement;
+  fit(app: { width: number; height: number }, host: HTMLElement): DemoViewport;
   setStatus(text: string): void;
   setControls(list: ControlHint[]): void;
   setHint(text: string): void;
@@ -108,6 +112,8 @@ export interface ControlPanelHandle {
 
 /** Options for {@link mountControls}. */
 export interface MountControlsOptions {
+  /** Uses the site caption presentation without adding interactive controls. */
+  theme?: 'site';
   title?: string;
   controls?: ControlHint[];
   status?: string;
@@ -120,6 +126,152 @@ export interface MountControlPanelOptions {
   title?: string;
   corner?: OverlayCorner;
 }
+
+export interface ExampleRendererStatus {
+  requested: 'unknown' | 'auto' | 'webgl2' | 'webgpu';
+  phase: 'requested' | 'initializing' | 'active' | 'fallback' | 'failed';
+  actual: 'webgl2' | 'webgpu' | null;
+  reason: string | null;
+}
+
+interface RendererApplication {
+  readonly options: { backend?: { type?: 'auto' | 'webgl2' | 'webgpu' } };
+  readonly backend: { readonly backendType: 'webgl2' | 'webgpu' };
+  readonly capabilities?: { readonly webgpuAdapter: object | null };
+  readonly onBackendLost: { add(listener: () => void): unknown; remove(listener: () => void): unknown };
+  readonly onBackendRestored: { add(listener: () => void): unknown; remove(listener: () => void): unknown };
+}
+
+/** Starts a sample while reporting initialized renderer state and retaining the original startup rejection. */
+export const startExample = async (app: RendererApplication, start: () => Promise<unknown>): Promise<void> => {
+  const requested = app.options.backend?.type ?? 'auto';
+  const attempted = app.backend.backendType;
+  let completed = false;
+  let lost = false;
+
+  const publish = (phase: ExampleRendererStatus['phase'], actual: ExampleRendererStatus['actual'], reason: string | null = null): void => {
+    const status = { requested, phase, actual, reason };
+    window.__EXAMPLE_RENDERER_STATUS__ = status;
+    window.dispatchEvent(new CustomEvent('exo-renderer-status', { detail: status }));
+  };
+
+  const active = (): void => {
+    if (!completed || lost) {
+      return;
+    }
+
+    const actual = app.backend.backendType;
+    const fallback = actual !== attempted;
+    publish(
+      fallback ? 'fallback' : 'active',
+      actual,
+      fallback
+        ? app.capabilities?.webgpuAdapter === null
+          ? `No usable WebGPU adapter was detected; auto started ${actual}.`
+          : `${attempted} initialization did not succeed; auto started ${actual}. The original cause is not exposed by the engine.`
+        : null,
+    );
+  };
+
+  const onLost = (): void => {
+    lost = true;
+    publish('failed', null, 'The renderer device or context was lost. Waiting for restoration.');
+  };
+
+  const onRestored = (): void => {
+    lost = false;
+    active();
+  };
+
+  publish('requested', null);
+  app.onBackendLost.add(onLost);
+  app.onBackendRestored.add(onRestored);
+  publish('initializing', null);
+
+  try {
+    await start();
+    completed = true;
+    active();
+  } catch (error) {
+    app.onBackendLost.remove(onLost);
+    app.onBackendRestored.remove(onRestored);
+    publish('failed', null, formatErrorMessage(error));
+
+    throw error;
+  }
+};
+
+/** Applies website tokens to native widget skins while preserving their layout and insets. */
+export const siteUITheme = (): UITheme => {
+  let root = document.documentElement;
+
+  try {
+    root = window.parent.document.documentElement;
+  } catch {
+    /* A detached cross-origin preview uses its own tokens. */
+  }
+
+  const tokens = getComputedStyle(root);
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 1;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+
+  const color = (token: string, fallback: string): Color => {
+    if (!context) {
+      return Color.fromHex(fallback);
+    }
+
+    context.clearRect(0, 0, 1, 1);
+    context.fillStyle = tokens.getPropertyValue(token).trim() || fallback;
+    context.fillRect(0, 0, 1, 1);
+    const [r, g, b, a] = context.getImageData(0, 0, 1, 1).data;
+
+    return new Color(r!, g!, b!, a! / 255);
+  };
+
+  const surface = color('--color-surface', '#12181d');
+  const raised = color('--color-surface-2', '#191f24');
+  const text = color('--color-text', '#eceff2');
+  const muted = color('--color-text-muted', '#a8afb5');
+  const accent = color('--color-accent', '#88e97e');
+  const contrast = color('--color-accent-contrast', '#15351a');
+  const patch: Partial<Record<UIThemeRole, Partial<Record<UIWidgetState, UISkinPatch>>>> = {};
+  const highlights = new Set(['progressBarFill', 'sliderFill', 'checkboxMark', 'caret', 'selection']);
+
+  for (const role of Object.keys(defaultUITheme) as UIThemeRole[]) {
+    const states: Partial<Record<UIWidgetState, UISkinPatch>> = {};
+
+    for (const state of ['normal', 'hover', 'pressed', 'disabled', 'focused'] as UIWidgetState[]) {
+      const base = defaultUITheme[role][state] ?? defaultUITheme[role].normal;
+      const selected = state === 'pressed' && (role === 'button' || role === 'dropdownItem');
+      const foreground = state === 'disabled' || role === 'placeholder' ? muted : selected ? contrast : text;
+      states[state] = {
+        ...base,
+        text: { ...base.text, fontFamily: tokens.getPropertyValue('--f-sans').trim() || 'system-ui', fillColor: foreground },
+        background:
+          base.background.kind === 'fill'
+            ? {
+                ...base.background,
+                color:
+                  selected || highlights.has(role)
+                    ? accent
+                    : role.endsWith('Knob') || role === 'sliderThumb'
+                      ? text
+                      : state === 'normal'
+                        ? surface
+                        : raised,
+                borderColor: state === 'focused' ? accent : muted,
+                borderWidth: state === 'focused' ? 2 : base.background.borderWidth,
+              }
+            : base.background,
+      };
+    }
+
+    patch[role] = states;
+  }
+
+  return createUITheme(patch);
+};
 
 export const getExampleMeta = (): ExampleRuntimeMeta => {
   const meta = globalThis.__EXAMPLE_META__;
@@ -271,6 +423,13 @@ export const mountControls = (options: MountControlsOptions = {}): ControlsHandl
   const { title = '', controls = [], status = '', hint = '', corner = 'top-left' } = options;
 
   const panel = createPanel(corner);
+  const disposeTheme = options.theme === 'site' ? styleDemoBar(panel) : undefined;
+
+  if (options.theme === 'site') {
+    panel.classList.add('exo-demo-caption');
+  }
+
+  const fit = createOverlayFitter(panel, corner, false);
   panel.style.pointerEvents = 'none';
 
   const titleEl = document.createElement('strong');
@@ -288,14 +447,19 @@ export const mountControls = (options: MountControlsOptions = {}): ControlsHandl
   renderControls(controls);
   statusEl.textContent = status;
   hintEl.textContent = hint;
+  statusEl.className = 'exo-demo-status';
+  hintEl.className = 'exo-demo-hint';
 
   panel.append(titleEl, controlsEl, statusEl, hintEl);
   document.body.append(panel);
 
   return {
     element: panel,
+    fit,
     setStatus(text: string) {
-      statusEl.textContent = text ?? '';
+      if (statusEl.textContent !== text) {
+        statusEl.textContent = text ?? '';
+      }
     },
     setControls(list: ControlHint[]) {
       renderControls(list ?? []);
@@ -304,6 +468,7 @@ export const mountControls = (options: MountControlsOptions = {}): ControlsHandl
       hintEl.textContent = text ?? '';
     },
     dispose() {
+      disposeTheme?.();
       panel.remove();
     },
   };
@@ -690,6 +855,8 @@ export interface DemoPanelOptions<C extends Record<string, DemoControlSpec>> {
   corner?: OverlayCorner;
   /** A full-width control strip with native selects and CSS-pixel sizing. */
   layout?: 'bar';
+  /** Instruction hidden in compact presentation. */
+  hint?: string;
   controls: C;
   /** Buttons below the controls, in order. */
   actions?: Record<string, () => void>;
@@ -700,16 +867,29 @@ export interface DemoPanelOptions<C extends Record<string, DemoControlSpec>> {
   onChange?: <K extends keyof C>(key: K, value: DemoControlValue<C[K]>, values: Readonly<DemoPanelValues<C>>) => void;
 }
 
+/** Presented CSS-pixel dimensions and the scene area left by an overlay. */
+export interface DemoViewport {
+  readonly scale: number;
+  readonly width: number;
+  readonly height: number;
+  readonly compact: boolean;
+  readonly contentHeight: number;
+}
+
+export type DemoStatusTone = 'neutral' | 'info' | 'warning' | 'success' | 'error';
+
 /** Handle returned by {@link demoPanel}. */
 export interface DemoPanel<C extends Record<string, DemoControlSpec>> {
   readonly element: HTMLElement;
+  /** Fits a bar to the presented canvas and reports its available scene area in CSS pixels. */
+  fit(app: { width: number; height: number }, host: HTMLElement): DemoViewport;
   /** Current values; read-only, change them through `set` or `step`. */
   readonly values: Readonly<DemoPanelValues<C>>;
   set<K extends keyof C>(key: K, value: DemoControlValue<C[K]>): void;
   /** Moves a choice by `delta` options (wrapping), a slider by `delta` steps (clamped), or flips a toggle. */
   step(key: keyof C, delta?: number): void;
   /** A short status line under the controls; an empty string hides it. */
-  status(text: string): void;
+  status(text: string, tone?: DemoStatusTone): void;
   dispose(): void;
 }
 
@@ -720,6 +900,56 @@ export const unitsPerCssPixel = (app: { height: number }, host: HTMLElement): nu
   const height = host.getBoundingClientRect().height * frameScale;
 
   return height > 0 ? app.height / height : 1;
+};
+
+const createOverlayFitter = (element: HTMLElement, corner: OverlayCorner, bar: boolean) => {
+  const viewport = { scale: 0, width: 0, height: 0, compact: false, contentHeight: 0 };
+
+  return (app: { width: number; height: number }, host: HTMLElement): DemoViewport => {
+    const scale = unitsPerCssPixel(app, host);
+    const width = app.width / scale;
+    const height = app.height / scale;
+
+    if (scale !== viewport.scale || width !== viewport.width || height !== viewport.height) {
+      viewport.scale = scale;
+      viewport.width = width;
+      viewport.height = height;
+      viewport.compact = width < 720 || height < 420;
+      element.style.transform = `scale(${scale})`;
+      element.toggleAttribute('data-compact', viewport.compact);
+
+      if (bar) {
+        element.style.width = `${width}px`;
+      } else {
+        element.style.transformOrigin = corner.replace('-', ' ');
+        element.style.width = `${Math.min(430, Math.max(0, width - 24))}px`;
+
+        for (const side of ['top', 'bottom', 'left', 'right']) {
+          element.style.setProperty(side, corner.includes(side) ? `${12 * scale}px` : 'auto', 'important');
+        }
+      }
+    }
+
+    viewport.contentHeight = Math.max(0, height - element.offsetHeight - (bar ? 0 : 24));
+
+    return viewport;
+  };
+};
+
+/** Crops an explicitly verified one-texel border without changing the shared frame. */
+export const insetAtlasFrame = <T extends { x: number; y: number; width: number; height: number; clone(): T }>(frame: T): T => {
+  if (frame.width <= 2 || frame.height <= 2) {
+    throw new RangeError('Atlas frames must retain a positive area after insetting.');
+  }
+
+  // shortcut: use only verified empty borders until extruded atlas assets are available.
+  const inset = frame.clone();
+  inset.x += 1;
+  inset.y += 1;
+  inset.width -= 2;
+  inset.height -= 2;
+
+  return inset;
 };
 
 const styleDemoBar = (element: HTMLElement): (() => void) => {
@@ -738,6 +968,9 @@ const styleDemoBar = (element: HTMLElement): (() => void) => {
       '--color-text-muted',
       '--color-accent',
       '--amber',
+      '--cyan',
+      '--mint',
+      '--rose',
       '--f-sans',
       '--f-mono',
     ]) {
@@ -768,6 +1001,15 @@ const styleDemoBar = (element: HTMLElement): (() => void) => {
 .exo-demo-bar > .exo-demo-status { flex-basis:100%; color:var(--color-text-muted,#a8afb5) !important;
   font:14px var(--f-mono,'JetBrains Mono',ui-monospace,monospace) !important; }
 .exo-demo-bar[data-compact] > strong { display:none !important; }
+.exo-demo-hint { flex-basis:100%; font-size:14px !important; color:var(--color-text-muted,#a8afb5) !important; }
+.exo-demo-bar[data-compact] .exo-demo-hint { display:none !important; }
+.exo-demo-bar .exo-demo-status[data-tone='info'] { color:var(--cyan,#65d2d2) !important; }
+.exo-demo-bar .exo-demo-status[data-tone='warning'] { color:var(--amber,#feb354) !important; }
+.exo-demo-bar .exo-demo-status[data-tone='success'] { color:var(--mint,#67cfa0) !important; }
+.exo-demo-bar .exo-demo-status[data-tone='error'] { color:var(--rose,#ff7c80) !important; }
+.exo-demo-caption { display:block !important; border-radius:6px !important; }
+.exo-demo-caption[data-compact] > strong { display:block !important; }
+.exo-demo-caption kbd,.exo-demo-caption span { font-size:14px !important; color:inherit !important; }
 `;
   document.head.append(style);
 
@@ -782,12 +1024,18 @@ const styleDemoBar = (element: HTMLElement): (() => void) => {
  * and the shortcut never disagree.
  */
 export const demoPanel = <const C extends Record<string, DemoControlSpec>>(options: DemoPanelOptions<C>): DemoPanel<C> => {
+  if (options.layout === 'bar' && (Object.keys(options.controls).length > 4 || Object.keys(options.actions ?? {}).length > 3)) {
+    throw new RangeError('Curated bars support at most four parameters and three actions.');
+  }
+
   const panel = mountControlPanel({ title: options.title, corner: options.corner });
+  const fit = createOverlayFitter(panel.element, options.corner ?? 'bottom-left', options.layout === 'bar');
   const disposeBar = options.layout === 'bar' ? styleDemoBar(panel.element) : undefined;
   const values = {} as DemoPanelValues<C>;
   const renderers = new Map<keyof C, ControlBinding<never>>();
   const keys = Object.keys(options.controls) as Array<keyof C>;
   const statusEl = document.createElement('div');
+  const rows = new Map<keyof C, HTMLElement>();
 
   const commit = <K extends keyof C>(key: K, value: DemoControlValue<C[K]>, fromControl: boolean): void => {
     values[key] = value as DemoPanelValues<C>[K];
@@ -797,6 +1045,10 @@ export const demoPanel = <const C extends Record<string, DemoControlSpec>>(optio
     }
 
     options.onChange?.(key, value, values);
+
+    if (options.layout === 'bar' && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      rows.get(key)?.animate?.([{ boxShadow: '0 0 0 2px var(--color-accent,#88e97e)' }, { boxShadow: 'none' }], { duration: 450 });
+    }
   };
 
   for (const key of keys) {
@@ -869,6 +1121,21 @@ export const demoPanel = <const C extends Record<string, DemoControlSpec>>(optio
         break;
       }
     }
+
+    rows.set(key, panel.element.lastElementChild as HTMLElement);
+  }
+
+  if (options.hint) {
+    const hint = document.createElement('div');
+    hint.className = 'exo-demo-hint';
+    hint.textContent = options.hint;
+    const title = panel.element.querySelector(':scope > strong');
+
+    if (title) {
+      title.after(hint);
+    } else {
+      panel.element.prepend(hint);
+    }
   }
 
   for (const [label, run] of Object.entries(options.actions ?? {})) {
@@ -883,6 +1150,7 @@ export const demoPanel = <const C extends Record<string, DemoControlSpec>>(optio
 
   const handle: DemoPanel<C> = {
     element: panel.element,
+    fit,
     values,
     set: (key, value) => commit(key, value, false),
     step(key, delta = 1) {
@@ -901,8 +1169,13 @@ export const demoPanel = <const C extends Record<string, DemoControlSpec>>(optio
         commit(key, next as DemoControlValue<C[typeof key]>, false);
       }
     },
-    status(text) {
-      statusEl.textContent = text;
+    status(text, tone = 'neutral') {
+      if (statusEl.textContent !== text) {
+        statusEl.textContent = text;
+      }
+
+      statusEl.dataset.tone = tone;
+      statusEl.setAttribute('role', tone === 'error' ? 'alert' : 'status');
       statusEl.hidden = text === '';
     },
     dispose: () => {
