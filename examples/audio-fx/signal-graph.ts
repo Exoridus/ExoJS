@@ -15,7 +15,7 @@ import {
 } from '@codexo/exojs';
 import { AudioAnalyser, CompressorEffect, EqualizerEffect, LimiterEffect, ReverbEffect } from '@codexo/exojs/audio-fx';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel } from '@examples/runtime';
+import { mountControlPanel as mountDomControlPanel } from '@examples/runtime';
 
 type NodeKind = 'source' | 'effect' | 'bus' | 'output';
 type Lane = 'music' | 'sound' | 'master';
@@ -73,7 +73,7 @@ class SignalGraphScene extends Scene {
   private impact!: Sound;
   private musicVoice!: Voice;
   private musicPlaying = true;
-  private musicVolume = 0.7;
+  private musicVolume = 0.4;
   private impactVolume = 0.3;
   private autoImpact = true;
   private impactTimer = 0;
@@ -94,11 +94,11 @@ class SignalGraphScene extends Scene {
   private flow = 0;
 
   private graph = new Graphics();
-  private panel: ReturnType<typeof mountControlPanel> | null = null;
+  private panel: ReturnType<typeof mountDomControlPanel> | null = null;
   private hint!: Text;
 
   override async load(): Promise<void> {
-    this.music = await this.loader.load(assets.musicLoopMain);
+    this.music = await this.loader.load(assets.musicArcadeChiptune);
     this.impact = this.loader.get(assets.soundImpactLight);
   }
 
@@ -211,7 +211,7 @@ class SignalGraphScene extends Scene {
 
     this.selected = id;
     this.panel?.dispose();
-    const panel = mountControlPanel({ title: n.title });
+    const panel = mountDomControlPanel({ title: n.title });
     this.panel = panel;
 
     if (n.effect) {

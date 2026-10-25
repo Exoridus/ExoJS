@@ -101,6 +101,7 @@ class ParallaxStarfieldScene extends Scene {
     this.hero = new Sprite(characters.texture).setTextureFrame(characters.frames.get('character_green_idle')).setAnchor(0.5, 1);
     this.inputs.attach(this.actions);
     this.panel = demoPanel({
+      scene: this,
       layout: 'bar',
       title: 'Parallax layers',
       controls: { factors: toggle('Show factors', true) },

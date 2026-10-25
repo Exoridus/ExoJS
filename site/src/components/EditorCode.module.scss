@@ -71,9 +71,49 @@
 }
 
 .more-button {
-  width: 24px;
-  height: 24px;
+  width: 34px;
+  height: 34px;
   padding: 0;
+}
+
+.action-button {
+  appearance: none;
+  min-height: 34px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  background: transparent;
+  color: var(--fg);
+  font-family: var(--f-sans);
+  font-size: var(--text-sm);
+  cursor: pointer;
+
+  &[data-action='refresh'] {
+    background: var(--accent-soft);
+    border-color: var(--accent-line);
+    color: var(--accent);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-line);
+    outline-offset: 2px;
+  }
+}
+
+@media (pointer: coarse) {
+  .action-button,
+  .more-button {
+    min-height: 44px;
+  }
+
+  .more-button {
+    width: 44px;
+  }
 }
 
 .more-button[data-action='refresh'] {

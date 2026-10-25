@@ -113,6 +113,7 @@ class ImmediateModeScene extends Scene {
       });
     }
     this.panel = demoPanel({
+      scene: this,
       title: 'Render path',
       controls: { batched: toggle('Batch sparks', this.batched) },
       onChange: (_key, batched) => {

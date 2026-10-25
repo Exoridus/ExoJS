@@ -103,6 +103,7 @@ class ListenerAndSourceScene extends Scene {
     this.previousPosition = { x: audio.listener.position.x, y: audio.listener.position.y };
     audio.listener.target = this.listener;
     this.panel = demoPanel({
+      scene: this,
       layout: 'bar',
       title: 'Position a Sound Source',
       hint: 'Fixed listener; drag the pulse source or use arrows / WASD / left stick. R resets.',

@@ -346,7 +346,7 @@ export class Button extends Widget {
   /** Center the label in the content box the skin's insets leave. */
   private _positionLabel(): void {
     const insets = resolveUISkin(this.theme.button, this._skinState).insets;
-    const bounds = this._label.getLocalBounds();
+    const bounds = this._label.textBounds;
     const contentWidth = this._uiWidth - insets.left - insets.right;
     const contentHeight = this._uiHeight - insets.top - insets.bottom;
 

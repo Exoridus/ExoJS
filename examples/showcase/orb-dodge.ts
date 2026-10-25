@@ -129,8 +129,9 @@ class PlayScene extends Scene {
     this.timeText.setPosition(CANVAS_WIDTH - 90, 14);
     this.pauseText = this.track(new Text('PAUSED', { fillColor: Color.white, fontWeight: 'bold' })).setAnchor(0.5);
     this.panel = demoPanel({
+      scene: this,
       layout: 'bar',
-      title: 'Orb Dodge',
+      title: 'Collect & Survive',
       controls: {},
       hint: 'Move: WASD / arrows / stick. Pause: P / Esc / Start. Restart: R / Space / South.',
       actions: { 'Pause / Resume': () => this.togglePause(), Restart: () => this.restart() },
@@ -359,7 +360,7 @@ class GameOverScene extends Scene<GameOverData> {
     };
 
     this.inputs.attach(this.actions);
-    this.panel = demoPanel({ layout: 'bar', title: 'Orb Dodge', controls: {}, actions: { Restart: restart } });
+    this.panel = demoPanel({ scene: this, layout: 'bar', title: 'Collect & Survive', controls: {}, actions: { Restart: restart } });
     this.track(this.title);
     this.track(this.stats);
     this.track(this.hint);

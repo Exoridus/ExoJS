@@ -18,12 +18,6 @@ export const CURATED_SECTIONS = [
 
 export const CURATED_CATEGORY_BY_SLUG = new Map(CURATED_SECTIONS.map(section => [section.slug, section]));
 
-export const CURATION_READY =
-  curation.targets.length === 48 &&
-  curation.contracts.length === 111 &&
-  curation.targets.every(target => target.status === 'accepted') &&
-  curation.contracts.every(contract => contract.migration === 'verified');
-
 const sourcePath = (source: string): string => source.replace(/^examples\//, '').replace(/\.ts$/, '.js');
 
 export const getCuratedExamples = () => {

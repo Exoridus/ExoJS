@@ -227,6 +227,7 @@ class WorkerStreamedTerrainScene extends Scene {
 
   private setupHud(): void {
     this.panel = demoPanel({
+      scene: this,
       title: 'Provider',
       controls: {
         provider: choice('Provider', ['sync', 'worker']),

@@ -142,6 +142,7 @@ class ActionMappingScene extends Scene {
     this.processedX = this.inputs.onActive(GamepadAxis.LeftStickX);
     this.processedY = this.inputs.onActive(GamepadAxis.LeftStickY);
     this.panel = demoPanel({
+      scene: this,
       layout: 'bar',
       title: 'Input actions & rebinding',
       controls: {},

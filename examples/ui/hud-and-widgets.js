@@ -1,82 +1,67 @@
 // Auto-generated from hud-and-widgets.ts - edit the .ts source, not this file.
 import { Application, Button, Color, FixedResolutionCanvasSizing, Label, Panel, ProgressBar, Scene, Stack } from '@codexo/exojs';
-/**
- * UI-Core showcase: a screen-fixed HUD and interactive widgets live on
- * `scene.ui`, which is auto-rendered above the world. Widgets anchor to the
- * screen edges and re-layout on resize; buttons are clickable and keyboard-
- * focusable (Tab to move focus, Enter / Space to activate).
- */
+import { unitsPerCssPixel } from '@examples/runtime';
 class HudScene extends Scene {
   score = 0;
   health = 1;
   scoreLabel;
   healthBar;
   spinner;
+  buttons;
+  commands = [];
   angle = 0;
   init() {
-    // A bit of "world" content so the UI clearly sits on top of it.
-    this.spinner = new Panel({ width: 160, height: 160, color: new Color(60, 130, 235, 1), cornerRadius: 24 });
-    this.spinner.setPosition(640, 360);
-    // Rotate around the panel's centre. `origin` is the point a node is
-    // positioned and rotated about, so this also re-centres the panel on
-    // (640, 360) instead of hanging its top-left corner there. A `Panel`
-    // is a `Container` and has no content box of its own, which is why
-    // the normalised `anchor` is not the tool for this.
-    this.spinner.setOrigin(80, 80);
+    this.spinner = new Panel({ width: 120, height: 120, color: new Color(58, 104, 115), cornerRadius: 22 });
+    this.spinner.setOrigin(60, 60);
     this.addChild(this.spinner);
-    // HUD: score + health anchored to the top-left corner.
-    this.scoreLabel = new Label('Score: 0', { fontSize: 26 });
-    this.scoreLabel.anchorIn(this.ui, 'top-left', 24, 20);
-    this.ui.addChild(this.scoreLabel);
-    this.healthBar = new ProgressBar({ width: 260, height: 16, value: 1 });
-    this.healthBar.anchorIn(this.ui, 'top-left', 24, 60);
-    this.ui.addChild(this.healthBar);
-    // A panel of stacked buttons anchored to the bottom-right corner.
-    const panel = new Panel({ borderColor: new Color(255, 255, 255, 0.16), borderWidth: 1 });
-    const buttons = new Stack({ direction: 'column', spacing: 10, padding: 14 });
-    buttons.addItem(
-      this.makeButton('+10 Score', new Color(54, 120, 220, 1), () => {
-        this.score += 10;
-        this.scoreLabel.text = `Score: ${this.score}`;
-      }),
-    );
-    buttons.addItem(
-      this.makeButton('Take Damage', new Color(214, 92, 84, 1), () => {
-        this.health = Math.max(0, this.health - 0.2);
-        this.healthBar.value = this.health;
-      }),
-    );
-    buttons.addItem(
-      this.makeButton('Reset', new Color(90, 96, 110, 1), () => {
-        this.score = 0;
-        this.health = 1;
-        this.scoreLabel.text = 'Score: 0';
-        this.healthBar.value = 1;
-      }),
-    );
-    panel.setSize(buttons.uiWidth, buttons.uiHeight);
-    panel.addChild(buttons);
-    panel.anchorIn(this.ui, 'bottom-right', -24, -24);
-    this.ui.addChild(panel);
+    this.scoreLabel = new Label('Score: 0', { fontSize: 18, fontWeight: '600' });
+    this.healthBar = new ProgressBar({ width: 180, height: 10, value: 1 });
+    this.buttons = new Stack({ direction: 'row', spacing: 8 });
+    this.addCommand('+10 score', () => {
+      this.score += 10;
+      this.scoreLabel.text = `Score: ${this.score}`;
+    });
+    this.addCommand('Take damage', () => {
+      this.health = Math.max(0, this.health - 0.2);
+      this.healthBar.value = this.health;
+    });
+    this.addCommand('Reset', () => {
+      this.score = 0;
+      this.health = 1;
+      this.scoreLabel.text = 'Score: 0';
+      this.healthBar.value = 1;
+    });
+    this.ui.addChild(this.scoreLabel, this.healthBar, this.buttons);
+  }
+  addCommand(label, onClick) {
+    const button = new Button({ label, width: 144, height: 40, fontSize: 14 });
+    button.onClick.add(onClick);
+    this.commands.push(button);
+    this.buttons.addItem(button);
   }
   update(delta) {
-    this.angle += delta * 60;
+    this.angle += delta * 40;
+    const k = unitsPerCssPixel(this.app, this.app.canvas);
+    const width = this.app.width / k;
+    const height = this.app.height / k;
+    const buttonWidth = Math.min(144, (width - 48) / 3);
+    this.ui.uiScale = k;
+    this.scoreLabel.setPosition(16, 14);
+    this.healthBar.setPosition(16, 44);
+    for (const button of this.commands) {
+      if (button.uiWidth !== buttonWidth) {
+        button.setSize(buttonWidth, 40);
+      }
+    }
+    this.buttons.setPosition(16, height - 56);
+    this.spinner.setPosition(this.app.width * 0.65, this.app.height * 0.44);
+    this.spinner.setScale(k * (height < 280 ? 0.55 : 0.9));
     this.spinner.setRotation(this.angle);
-  }
-  makeButton(label, color, onClick) {
-    const button = new Button({ label, color, width: 160, height: 44 });
-    button.onClick.add(onClick);
-    return button;
   }
 }
 const app = new Application({
   scenes: { HudScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
-  clearColor: new Color(18, 22, 32),
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  clearColor: new Color(11, 18, 24),
 });
-void app.start(HudScene);
+await app.start(HudScene);

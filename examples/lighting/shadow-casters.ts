@@ -96,6 +96,7 @@ class ShadowCastersScene extends Scene {
       new SpotLight({ radius: 500, angle: 40, coneSoftness: 0.35, intensity: 0, softness: 0.35, color: new Color(255, 210, 160) }),
     );
     this.panel = demoPanel({
+      scene: this,
       title: 'Cast Shadows from Shapes',
       layout: 'bar',
       controls,

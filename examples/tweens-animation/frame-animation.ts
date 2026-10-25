@@ -68,6 +68,7 @@ class FrameAnimationScene extends Scene {
     );
     this.labels = this.clips.map(() => this.track(new Text('', { fillColor: new Color(35, 63, 59), align: 'center' })).setAnchor(0.5, 0));
     this.panel = demoPanel({
+      scene: this,
       title: 'Sprite Animation',
       layout: 'bar',
       controls: { fps: slider('Your fps', { min: 1, max: 24, step: 1, value: REFERENCE_FPS, format: value => `${value} fps` }) },
@@ -128,12 +129,12 @@ class FrameAnimationScene extends Scene {
     const { scale: k, height, compact } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
     const panel = this.panel.element;
 
-    panel.querySelector<HTMLButtonElement>('button:nth-of-type(2)')!.disabled = this.playing;
-    panel.querySelector<HTMLButtonElement>('button')!.setAttribute('aria-pressed', String(!this.playing));
+    this.panel.actions['+0.1 s']!.enabled = !this.playing;
+    this.panel.actions['Pause / Resume']!.label = this.playing ? 'Pause' : 'Resume';
     this.panel.status(
       `${this.playing ? 'Playing' : 'Paused'} | Clip time ${this.clipTime.toFixed(1)} s${compact ? '' : ' | Space pause, arrows tempo, R reset'}`,
     );
-    const ground = (height - panel.offsetHeight - 68) * k;
+    const ground = (height - panel.uiHeight - 68) * k;
     const size = Math.min(320, Math.max(80, ground / k - 12));
 
     this.marks.clear();

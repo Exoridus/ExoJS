@@ -4,7 +4,6 @@ import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { choice, demoPanel, slider, startExample, toggle } from '@examples/runtime';
 // SDR clips only. Browser external video textures do not establish an HDR pipeline.
 const VIDEOS = [
-  { label: 'Demo loop (WebM)', asset: assets.videoDemoLoop },
   { label: '4K 24 fps (MP4)', asset: assets.videoHighRes },
   { label: '1080p 60 fps (WebM)', asset: assets.videoHighFps },
 ];
@@ -30,6 +29,7 @@ class VideoDrawableScene extends Scene {
   init() {
     this.overlay = new Sprite(this.loader.get(assets.platformerTilesImage)).setTextureFrame(new Rectangle(650, 325, 64, 64)).setAnchor(0.5);
     this.panel = demoPanel({
+      scene: this,
       title: 'Play a Video Texture',
       layout: 'bar',
       controls,

@@ -1,6 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { CURATED_SECTIONS, CURATION_READY, getCuratedExamples, getPreservationEntries } from '../../lib/curation-catalog';
+import { CURATED_SECTIONS, getCuratedExamples, getPreservationEntries } from '../../lib/curation-catalog';
 import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
 
 interface Props {
@@ -34,9 +34,7 @@ const groups = [
     {kind === 'curriculum' ? (
       <>
         <p>
-          {CURATION_READY
-            ? 'Follow a focused path through scenes, interaction, rendering, sound and worlds.'
-            : 'Preview the focused learning path. The current Playground remains available while its replacement is verified.'}
+          Follow a focused path through scenes, interaction, rendering, sound and worlds.
         </p>
         {CURATED_SECTIONS.map(section => (
           <section aria-labelledby={`section-${section.key}`}>

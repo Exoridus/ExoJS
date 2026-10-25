@@ -1,5 +1,17 @@
 // Auto-generated from runtime.ts - edit the .ts source, not this file.
-import { Color, createUITheme, defaultUITheme } from '@codexo/exojs';
+import {
+  Button,
+  Color,
+  Container,
+  createUITheme,
+  defaultUITheme,
+  Dropdown,
+  Label,
+  Panel,
+  ScrollContainer,
+  Slider,
+  Toggle,
+} from '@codexo/exojs';
 /** Starts a sample while reporting initialized renderer state and retaining the original startup rejection. */
 export const startExample = async (app, start) => {
   const requested = app.options.backend?.type ?? 'auto';
@@ -636,7 +648,7 @@ const styleDemoBar = element => {
  * value per control. Keyboard shortcuts should call `set`/`step` so the panel
  * and the shortcut never disagree.
  */
-export const demoPanel = options => {
+export const domDemoPanel = options => {
   if (options.layout === 'bar' && (Object.keys(options.controls).length > 4 || Object.keys(options.actions ?? {}).length > 3)) {
     throw new RangeError('Curated bars support at most four parameters and three actions.');
   }
@@ -778,4 +790,328 @@ export const demoPanel = options => {
     options.onChange?.(key, values[key], values);
   }
   return handle;
+};
+class DemoDropdown extends Dropdown {
+  above = false;
+  open() {
+    super.open();
+    if (this.parent && this.isOpen) {
+      this.parent.zIndex = 1;
+    }
+    return this;
+  }
+  close() {
+    super.close();
+    if (this.parent) {
+      this.parent.zIndex = 0;
+    }
+    return this;
+  }
+  placeList(above) {
+    this.above = above;
+    const insets = this.theme.dropdownList.normal.insets;
+    const height = this.items.length * this.uiHeight + insets.top + insets.bottom;
+    this.listNode.setPosition(0, above ? -height : this.uiHeight);
+  }
+  _relayout() {
+    super._relayout();
+    this.placeList(this.above);
+  }
+}
+/** Scene-owned parameter controls with one shared state for widgets and shortcuts. */
+export const demoPanel = options => {
+  if (options.layout === 'bar' && (Object.keys(options.controls).length > 4 || Object.keys(options.actions ?? {}).length > 3)) {
+    throw new RangeError('Curated bars support at most four parameters and three actions.');
+  }
+  if (Object.values(options.controls).some(spec => spec.kind === 'choice' && spec.options.length === 0)) {
+    throw new RangeError('Choice controls require at least one option.');
+  }
+  const { scene } = options;
+  const app = scene.app;
+  const element = new Panel();
+  element.zIndex = 100;
+  scene.ui.addChild(element);
+  const title = new Label(options.title ?? '', { fontSize: 16 });
+  element.addChild(title);
+  const hint = new Label(options.hint ?? '', { fontSize: 13 });
+  element.addChild(hint);
+  const status = new Label('', { fontSize: 13 });
+  element.addChild(status);
+  status.visible = false;
+  const scroll = new ScrollContainer({ width: 1, height: 1, scrollbarThickness: 12 });
+  element.addChild(scroll);
+  const values = {};
+  const renderers = new Map();
+  const keys = Object.keys(options.controls);
+  const rows = [];
+  const actions = {};
+  const controlHeight = window.matchMedia?.('(pointer: coarse)').matches ? 44 : 32;
+  const rowHeight = controlHeight === 44 ? 68 : 60;
+  const actionRowHeight = controlHeight + 8;
+  let syncing = false;
+  let disposed = false;
+  let dirty = true;
+  let statusTone = 'neutral';
+  let lastRootScale = 0;
+  const viewport = { scale: 0, width: 0, height: 0, compact: false, contentHeight: 0 };
+  const commit = (key, value) => {
+    if (syncing || disposed) {
+      return;
+    }
+    syncing = true;
+    try {
+      values[key] = renderers.get(key)(value);
+    } finally {
+      syncing = false;
+    }
+    dirty = true;
+    options.onChange?.(key, values[key], values);
+  };
+  for (const key of keys) {
+    const spec = options.controls[key];
+    const row = new Container();
+    scroll.content.addChild(row);
+    const label = new Label(spec.label, { fontSize: 13 });
+    row.addChild(label);
+    label.textNode.layout = { maxHeight: 18, overflow: 'ellipsis' };
+    values[key] = spec.value;
+    if (spec.kind === 'slider') {
+      const readout = new Label('', { fontSize: 13 });
+      row.addChild(readout);
+      const control = new Slider({ ...spec, height: controlHeight, thumbSize: controlHeight === 44 ? 24 : 18 });
+      row.addChild(control);
+      control.setPosition(0, 20);
+      const render = value => {
+        control.value = value;
+        readout.text = spec.format?.(control.value) ?? control.value.toFixed(2);
+        return control.value;
+      };
+      render(spec.value);
+      renderers.set(key, render);
+      control.onChange.add(value => commit(key, value));
+      rows.push({
+        node: row,
+        resize: width => {
+          control.setSize(width, controlHeight);
+          readout.setPosition(Math.max(0, width - readout.uiWidth), 0);
+          label.textNode.layout = { maxWidth: Math.max(1, width - readout.uiWidth - 8), maxHeight: 18, overflow: 'ellipsis' };
+        },
+      });
+    } else if (spec.kind === 'toggle') {
+      const control = new Toggle({ checked: spec.value, width: controlHeight === 44 ? 68 : 48, height: controlHeight });
+      row.addChild(control);
+      control.setPosition(0, 20);
+      renderers.set(key, value => {
+        control.checked = value;
+        return value;
+      });
+      control.onChange.add(value => commit(key, value));
+      rows.push({
+        node: row,
+        resize: width => {
+          label.textNode.layout = { maxWidth: width, maxHeight: 18, overflow: 'ellipsis' };
+        },
+      });
+    } else {
+      const select = new DemoDropdown({
+        height: controlHeight,
+        padding: 8,
+        items: spec.options.map(value => ({ label: value, value })),
+        selectedIndex: spec.options.indexOf(spec.value),
+        textStyle: { fontSize: 14 },
+      });
+      row.addChild(select);
+      select.setPosition(0, 20);
+      const previous = new Button({ label: '<', width: controlHeight, height: controlHeight, fontSize: 14 });
+      row.addChild(previous);
+      const next = new Button({ label: '>', width: controlHeight, height: controlHeight, fontSize: 14 });
+      row.addChild(next);
+      const selected = new Label(spec.value, { fontSize: 14 });
+      row.addChild(selected);
+      previous.setPosition(0, 20);
+      selected.setPosition(controlHeight + 8, 20 + (controlHeight - 20) / 2);
+      previous.onClick.add(() => handle.step(key, -1));
+      next.onClick.add(() => handle.step(key));
+      select.onChange.add(value => commit(key, value));
+      renderers.set(key, value => {
+        select.selectedIndex = spec.options.indexOf(value);
+        selected.text = value;
+        return value;
+      });
+      rows.push({
+        node: row,
+        resize: (width, screenY, screenHeight, allowPopup) => {
+          const above = screenY + 20;
+          const below = screenHeight - screenY - 20 - controlHeight;
+          const insets = select.theme.dropdownList.normal.insets;
+          const listHeight = spec.options.length * controlHeight + insets.top + insets.bottom;
+          const fits = allowPopup && listHeight <= Math.max(above, below);
+          select.visible = fits;
+          previous.visible = next.visible = selected.visible = !fits;
+          select.setSize(width, controlHeight);
+          select.placeList(above >= below);
+          if (!fits) {
+            select.close();
+          }
+          next.setPosition(Math.max(0, width - controlHeight), 20);
+          selected.textNode.layout = { maxWidth: Math.max(1, width - 2 * (controlHeight + 8)), maxHeight: 20, overflow: 'ellipsis' };
+          label.textNode.layout = { maxWidth: width, maxHeight: 18, overflow: 'ellipsis' };
+        },
+      });
+    }
+  }
+  for (const [label, run] of Object.entries(options.actions ?? {})) {
+    const button = new Button({ label, height: controlHeight, fontSize: 14 });
+    scroll.content.addChild(button);
+    button.onClick.add(run);
+    actions[label] = button;
+  }
+  const reveal = (top, height) => {
+    if (top < scroll.scrollY) {
+      scroll.scrollTo(0, top);
+    } else if (top + height > scroll.scrollY + scroll.uiHeight) {
+      scroll.scrollTo(0, top + height - scroll.uiHeight);
+    }
+  };
+  for (const row of rows) {
+    for (const control of row.node.children) {
+      if (control.focusable) {
+        control.onFocus.add(() => reveal(row.node.y, rowHeight - 4));
+      }
+    }
+  }
+  for (const button of Object.values(actions)) {
+    button.onFocus.add(() => reveal(button.y, button.uiHeight));
+  }
+  const fit = (app, host) => {
+    if (disposed) {
+      return viewport;
+    }
+    const scale = unitsPerCssPixel(app, host);
+    const width = app.width / scale;
+    const height = app.height / scale;
+    const rootScale = scene.ui.uiScale;
+    if (!dirty && scale === viewport.scale && width === viewport.width && height === viewport.height && rootScale === lastRootScale) {
+      return viewport;
+    }
+    dirty = false;
+    lastRootScale = rootScale;
+    Object.assign(viewport, { scale, width, height, compact: width < 720 || height < 420 });
+    const bar = options.layout === 'bar' || viewport.compact;
+    const panelWidth = bar ? width : Math.min(300, Math.max(0, width - 24));
+    const innerWidth = Math.max(1, panelWidth - 24);
+    const columns = Math.max(1, Math.floor((innerWidth + 12) / 220));
+    const cellWidth = (innerWidth - (columns - 1) * 12 - 16) / columns;
+    let y = 10;
+    title.visible = !!options.title && !viewport.compact;
+    hint.visible = !!options.hint && !viewport.compact;
+    for (const label of [title, hint]) {
+      label.textNode.layout = { maxWidth: innerWidth, maxHeight: 20, overflow: 'ellipsis' };
+      label.setPosition(12, y);
+      if (label.visible) {
+        y += 24;
+      }
+    }
+    const controlsY = y;
+    let contentHeight = Math.ceil(rows.length / columns) * rowHeight;
+    let actionX = 0;
+    let actionRows = 0;
+    for (const button of Object.values(actions)) {
+      const buttonWidth = Math.min(innerWidth - 16, Math.max(84, button.labelNode.textBounds.width + 24));
+      if (actionX > 0 && actionX + buttonWidth > innerWidth - 16) {
+        actionX = 0;
+        actionRows++;
+      }
+      button.setSize(buttonWidth, controlHeight).setPosition(actionX, contentHeight + actionRows * actionRowHeight);
+      actionX += buttonWidth + 8;
+    }
+    if (actionX > 0) {
+      contentHeight += (actionRows + 1) * actionRowHeight;
+    }
+    status.textNode.layout = { maxWidth: innerWidth, maxHeight: viewport.compact ? 32 : 48, overflow: 'ellipsis' };
+    const statusHeight = status.visible ? Math.min(viewport.compact ? 32 : 48, status.textNode.textBounds.height) + 4 : 0;
+    const panelBudget = viewport.compact ? Math.min(height * 0.65, height - 70) : height * 0.8;
+    const visibleHeight = Math.min(contentHeight, Math.max(rowHeight - 8, panelBudget - controlsY - statusHeight - 6));
+    const overflow = visibleHeight < contentHeight;
+    scroll.setSize(innerWidth, visibleHeight).setPosition(12, controlsY);
+    scroll.clip = overflow;
+    y += visibleHeight;
+    status.setPosition(12, y);
+    y += statusHeight;
+    const panelHeight = y + 6;
+    const corner = bar ? 'bottom-left' : (options.corner ?? 'bottom-left');
+    const x = corner.endsWith('right') ? width - panelWidth - 12 : bar ? 0 : 12;
+    const top = corner.startsWith('bottom') ? Math.max(0, height - panelHeight - (bar ? 0 : 12)) : 12;
+    element
+      .setSize(panelWidth, panelHeight)
+      .setScale(scale / rootScale)
+      .setPosition((x * scale) / rootScale, (top * scale) / rootScale);
+    rows.forEach((row, index) => {
+      const rowY = Math.floor(index / columns) * rowHeight;
+      row.node.setPosition((index % columns) * (cellWidth + 12), rowY);
+      row.resize(cellWidth, top + controlsY + rowY - scroll.scrollY, height, !overflow);
+    });
+    scroll.refresh();
+    viewport.contentHeight = Math.max(0, height - panelHeight - (bar ? 0 : 24));
+    return viewport;
+  };
+  const onFrame = () => {
+    fit(app, app.canvas);
+  };
+  const dispose = () => {
+    if (!disposed) {
+      disposed = true;
+      app.onFrame.remove(onFrame);
+      if (!element.destroyed) {
+        element.destroy();
+      }
+    }
+  };
+  const handle = {
+    element,
+    actions,
+    fit,
+    values,
+    set: (key, value) => commit(key, value),
+    step(key, delta = 1) {
+      const spec = options.controls[key];
+      if (spec.kind === 'toggle') {
+        commit(key, !values[key]);
+      } else if (spec.kind === 'choice') {
+        const count = spec.options.length;
+        const index = spec.options.indexOf(values[key]);
+        commit(key, spec.options[(((index + delta) % count) + count) % count]);
+      } else {
+        commit(key, Math.min(spec.max, Math.max(spec.min, values[key] + delta * spec.step)));
+      }
+    },
+    status(text, tone = 'neutral') {
+      if (disposed || (status.text === text && statusTone === tone)) {
+        return;
+      }
+      const previousHeight = status.visible ? status.textNode.textBounds.height : 0;
+      status.text = text;
+      status.visible = text !== '';
+      if (statusTone !== tone) {
+        status.setTextStyle({ fillColor: tones[tone] });
+      }
+      statusTone = tone;
+      dirty ||= previousHeight !== (status.visible ? status.textNode.textBounds.height : 0);
+    },
+    dispose,
+  };
+  scene.track({ destroy: dispose });
+  app.onFrame.add(onFrame);
+  onFrame();
+  for (const key of keys) {
+    options.onChange?.(key, values[key], values);
+  }
+  return handle;
+};
+const tones = {
+  neutral: Color.fromHex('#b3c1cd'),
+  info: Color.fromHex('#7ed6e0'),
+  warning: Color.fromHex('#f2c078'),
+  success: Color.fromHex('#88dfc3'),
+  error: Color.fromHex('#ff929b'),
 };

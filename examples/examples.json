@@ -35,13 +35,24 @@
       "slug": "orb-dodge",
       "path": "showcase/orb-dodge.js",
       "language": "typescript",
-      "title": "Orb Dodge",
-      "description": "Dodge moving orbs, observe collisions and score, and restart a complete small game.",
+      "title": "Collect & Survive",
+      "description": "Collect circles, avoid pointed hazards, and restart a complete small game with scoring and collisions.",
       "backend": "core",
       "featured": true,
       "tags": ["game", "input", "collision", "hud"],
       "capabilities": ["keyboard"],
       "level": "intermediate"
+    },
+    {
+      "slug": "collect-survive",
+      "path": "showcase/collect-survive.js",
+      "language": "typescript",
+      "title": "Collect & Survive: From Scratch",
+      "description": "Build the asset-free learning game from its guide: move a circle, collect green pickups, avoid red hazards, score points and restart.",
+      "backend": "core",
+      "tags": ["game", "input", "collision", "guide"],
+      "capabilities": ["keyboard"],
+      "level": "intro"
     }
   ],
   "scenes-assets": [
@@ -130,6 +141,18 @@
       "backend": "core",
       "tags": ["assets", "loader", "scopes", "spritesheet", "audio", "video", "tool"],
       "capabilities": ["pointer"],
+      "level": "intermediate"
+    },
+    {
+      "slug": "transition-gallery",
+      "path": "application-scenes/transition-gallery.js",
+      "language": "typescript",
+      "title": "Transition Gallery",
+      "description": "Compare fade, crossfade, slide modes, a circular mask, shader dissolve and frozen-snapshot drift between two live scenes.",
+      "backend": "core",
+      "featured": true,
+      "tags": ["scene", "transition", "ui", "shader", "mask"],
+      "capabilities": ["keyboard"],
       "level": "intermediate"
     }
   ],
@@ -551,10 +574,11 @@
       "path": "filters/crt-scanlines.js",
       "language": "typescript",
       "title": "Retro Display",
-      "description": "Tune a combined CRT filter with scanlines, grain, vignette, barrel distortion, and RGB separation using the effect-strength and separation sliders; switch CRT off to compare the clean scene.",
+      "description": "Compare scanlines, grain and RGB separation with the original image.",
       "backend": "core",
       "tags": ["fx", "filter", "shader"],
-      "level": "intermediate"
+      "level": "intermediate",
+      "apiLinks": ["shader-filter"]
     },
     {
       "slug": "custom-fragment-shader",
@@ -1166,6 +1190,18 @@
       "capabilities": ["pointer"],
       "level": "advanced",
       "featured": true
+    },
+    {
+      "slug": "materials-playground",
+      "path": "physics/materials-playground.js",
+      "language": "typescript",
+      "title": "Material Lab",
+      "description": "Drop wood, metal and stone balls together, compare bounce and sliding friction, then reset the same starting state.",
+      "backend": "core",
+      "featured": true,
+      "tags": ["physics", "materials", "friction", "restitution"],
+      "capabilities": ["keyboard"],
+      "level": "intermediate"
     }
   ],
   "performance-diagnostics": [

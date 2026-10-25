@@ -34,6 +34,7 @@ class GraphicsGradientScene extends Scene {
 
   override init(): void {
     this.panel = demoPanel({
+      scene: this,
       title: 'Shapes and Gradients',
       layout: 'bar',
       controls,

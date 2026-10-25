@@ -131,6 +131,7 @@ class GamepadSpaceshipScene extends Scene {
     this.particles.addUpdateModule(new AlphaFadeOverLifetime());
     this.pad = app.input.getGamepad(0);
     this.hud = demoPanel({
+      scene: this,
       layout: 'bar',
       title: 'Fly a spaceship',
       controls: { sound: toggle('Engine sound'), haptics: toggle('Haptics') },

@@ -47,6 +47,7 @@ class PivotAndAnchorScene extends Scene {
     });
     this.root.addChild(...this.sprites, this.overlay, ...this.labels);
     this.panel = demoPanel({
+      scene: this,
       title: 'Pivot and Anchor',
       layout: 'bar',
       controls: {},

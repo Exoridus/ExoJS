@@ -68,6 +68,7 @@ class LifecycleScene extends Scene {
     this.title = this.track(new Text(this.sceneName, { fillColor: Color.white, fontWeight: 'bold' }));
     this.readout = this.track(new Text('', { fillColor: new Color(168, 175, 181) }));
     this.panel = demoPanel({
+      scene: this,
       layout: 'bar',
       title: 'Scene Changes and Transitions',
       controls: {},

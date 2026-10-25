@@ -18,6 +18,12 @@ const examplesDir = path.join(process.cwd(), 'examples');
 const normalizeNewlines = (content: string): string => content.replace(/\r\n/g, '\n');
 
 describe('example .js/.ts sync drift guard', () => {
+  it('lets the preview viewport own the canvas geometry without a second fixed stage transform', () => {
+    const shell = readText('site/public/preview.html');
+    expect(shell).not.toContain('scale(var(--preview-scale');
+    expect(shell).not.toContain('width: 1280px');
+    expect(shell).not.toContain('height: 720px');
+  });
   it('ships catalog workers as bundled string modules for editor-emitted imports', async () => {
     const workerPath = path.join(examplesDir, 'tilemap/worker-streamed-terrain.worker.ts');
     expect(isTranspiledExampleSource(path.basename(workerPath))).toBe(true);

@@ -78,6 +78,7 @@ class CameraNavigationScene extends Scene {
 
     this.inputs.attach(this.actions);
     this.panel = demoPanel({
+      scene: this,
       layout: 'bar',
       title: 'Camera coordinates',
       controls: {},

@@ -75,6 +75,7 @@ class LevelOwnershipScene extends Scene {
       },
     });
     this.panel = demoPanel({
+      scene: this,
       layout: 'bar',
       title: 'Room Loading and Asset Ownership',
       hint: 'Optional advanced: map and atlas claims. A 0.75 s transition delay makes Cancel observable.',

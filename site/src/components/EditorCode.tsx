@@ -16,13 +16,14 @@ import {
   useRef,
   useState,
 } from 'react';
+import { createPortal } from 'react-dom';
 
 import { findExampleCompanions } from '../lib/example-companions';
 import { findFootgunCandidates, footgunMessage, type QuickInfoResponse, returnsPromise } from '../lib/footgun-diagnostics';
 import { buildExampleUrl, buildGithubRawExampleUrl, buildPublicUrl } from '../lib/url-builder';
 import { CURRENT_VERSION_ID, isCurrentVersion } from '../lib/versions';
 import styles from './EditorCode.module.scss';
-import { css, cx } from './react-utils';
+import { css } from './react-utils';
 import { Toolbar } from './Toolbar';
 
 export interface UpdateCodeEvent {
@@ -64,6 +65,8 @@ export interface EditorCodeProps {
   /** Controls shown before the toolbar's title. */
   leading?: ReactNode;
   readOnly?: boolean;
+  toolbarTarget?: HTMLElement | null;
+  menuItems?: ReactNode;
   ref?: Ref<EditorCodeHandle>;
   selectedVersionId: string;
   sourceCode: string | null;
@@ -110,6 +113,7 @@ const SHARED_LIB_FILES = [
   // Shared example module, imported by name from examples rather than declared:
   // without it every importer reports ts2307 for `@examples/terrain-noise`.
   { path: 'examples/shared/terrain-noise.ts', virtualPath: 'file:///node_modules/@examples/terrain-noise/index.ts' },
+  { path: 'examples/shared/gallery-transitions.ts', virtualPath: 'file:///node_modules/@examples/gallery-transitions/index.ts' },
   // Ambient WebGPU names (`GPUDevice`, `GPUBuffer`, ...) used by the custom
   // renderer examples. Global declarations, so the virtual path only has to be
   // unique - nothing imports it by name.
@@ -139,9 +143,12 @@ export const EditorCode = ({
   selectedVersionId,
   sourceCode,
   sourcePath,
+  toolbarTarget,
+  menuItems,
 }: EditorCodeProps): JSX.Element => {
   const [editorValue, setEditorValue] = useState(sourceCode ?? '');
   const [showMenu, setShowMenu] = useState(false);
+  const [copyStatus, setCopyStatus] = useState('Copy');
   const [autoRefresh, setAutoRefresh] = useState(false);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const modelRef = useRef<monaco.editor.ITextModel | null>(null);
@@ -171,6 +178,8 @@ export const EditorCode = ({
     // source changes - a prop-change reset, not render-derived state.
     // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
     setEditorValue(sourceCode ?? '');
+    // eslint-disable-next-line @eslint-react/set-state-in-effect -- feedback belongs to the selected source, not the previous file
+    setCopyStatus('Copy');
     onDirty(false);
   }, [onDirty, sourceCode, sourcePath]);
 
@@ -354,7 +363,18 @@ export const EditorCode = ({
     onCursorChange({ lineNumber: 1, column: 1, selectionLength: 0 });
     updateDiagnostics(editor.getModel(), selectedVersionRef.current, typingsAppliedVersionRef.current, onDiagnostic);
     void updateFootgunMarkers(editor.getModel());
-    requestAnimationFrame(() => editor.layout());
+    requestAnimationFrame(() => {
+      editor.layout();
+      const learningRegion =
+        editor
+          .getModel()
+          ?.getLinesContent()
+          .findIndex(line => line.includes('#region guide:')) ?? -1;
+
+      if (learningRegion >= 0) {
+        editor.revealLineNearTop(learningRegion + 2);
+      }
+    });
   };
 
   const beforeMount = (): void => {
@@ -377,6 +397,7 @@ export const EditorCode = ({
       return;
     }
 
+    setEditorValue(sourceCodeRef.current ?? '');
     onResetCode({ confirmed: true });
     onDirty(false);
   };
@@ -443,98 +464,118 @@ export const EditorCode = ({
     event.currentTarget.value = '';
   };
 
-  return (
-    <section className={css(styles, 'root')} data-editor-root aria-label={`Code editor for ${exampleTitle}`}>
-      <Toolbar title="Code" leading={leading}>
-        <div className={css(styles, 'menu-anchor')} data-editor-menu-anchor>
+  const copyCode = async (): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(editorRef.current?.getValue() ?? editorValue);
+      setCopyStatus('Copied');
+    } catch {
+      setCopyStatus('Copy unavailable');
+    }
+  };
+
+  const toolbarControls = (
+    <div className={css(styles, 'menu-anchor')} data-editor-menu-anchor>
+      <button
+        className={css(styles, 'action-button')}
+        data-action="refresh"
+        type="button"
+        title="Run example (Ctrl+Enter)"
+        aria-keyshortcuts="Control+Enter Meta+Enter"
+        disabled={readOnly || !sourceCode}
+        onClick={() => void triggerRefresh()}
+      >
+        Run
+      </button>
+      <button className={css(styles, 'action-button')} data-action="reset" type="button" disabled={!canReset} onClick={resetCode}>
+        Reset
+      </button>
+      <button className={css(styles, 'action-button')} type="button" disabled={!sourceCode} onClick={() => void copyCode()}>
+        {copyStatus}
+      </button>
+      <button
+        className={css(styles, 'more-button')}
+        type="button"
+        aria-label="More options"
+        aria-expanded={showMenu}
+        data-open={showMenu ? 'true' : undefined}
+        onClick={() => setShowMenu(value => !value)}
+      >
+        <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" aria-hidden="true">
+          <circle cx="10" cy="4.5" r="1.5" />
+          <circle cx="10" cy="10" r="1.5" />
+          <circle cx="10" cy="15.5" r="1.5" />
+        </svg>
+      </button>
+      {showMenu && (
+        <div
+          className={css(styles, 'menu-dropdown')}
+          role="menu"
+          onClick={event => {
+            if ((event.target as HTMLElement).closest('[role="menuitem"]')) {
+              setShowMenu(false);
+            }
+          }}
+          onKeyDown={event => {
+            if (event.key === 'Escape') {
+              setShowMenu(false);
+              event.stopPropagation();
+            }
+          }}
+        >
           <button
-            className={cx(css(styles, 'auto-button'), autoRefresh && css(styles, 'auto-button--active'))}
-            type="button"
-            title="Auto-refresh the preview on every code change (800ms debounce)"
+            className={css(styles, 'menu-item')}
+            role="menuitemcheckbox"
+            aria-checked={autoRefresh}
             disabled={readOnly}
             onClick={() => setAutoRefresh(value => !value)}
           >
-            auto-run
+            Auto-run: {autoRefresh ? 'On' : 'Off'}
           </button>
-          <button
-            className={css(styles, 'more-button')}
-            data-action="refresh"
-            type="button"
-            title="Refresh preview (Ctrl+Enter)"
-            disabled={readOnly}
-            onClick={() => void triggerRefresh()}
-          >
-            <svg viewBox="0 0 16 16" width="1em" height="1em" style={{ display: 'block' }} fill="currentColor" aria-hidden="true">
-              <path fillRule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z" />
-              <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z" />
-            </svg>
+          {menuItems}
+          <button className={css(styles, 'menu-item')} role="menuitem" disabled={readOnly} onClick={formatCode}>
+            Format Code
           </button>
-          <button
-            className={css(styles, 'more-button')}
-            data-action="reset"
-            type="button"
-            title="Reset to original source"
-            disabled={!canReset}
-            onClick={resetCode}
-          >
-            <svg viewBox="0 0 16 16" width="1em" height="1em" style={{ display: 'block' }} fill="none" aria-hidden="true">
-              <path d="M2.2 8a5.8 5.8 0 1 0 1.4-3.8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-              <path d="M2.1 2.8v2.8h2.8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+          <button className={css(styles, 'menu-item')} role="menuitem" onClick={exportCode}>
+            Export this file
           </button>
-          <button
-            className={css(styles, 'more-button')}
-            type="button"
-            aria-label="More options"
-            aria-expanded={showMenu}
-            data-open={showMenu ? 'true' : undefined}
-            onClick={() => setShowMenu(value => !value)}
-          >
-            <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" aria-hidden="true">
-              <circle cx="10" cy="4.5" r="1.5" />
-              <circle cx="10" cy="10" r="1.5" />
-              <circle cx="10" cy="15.5" r="1.5" />
-            </svg>
-          </button>
-          {showMenu && (
-            <div className={css(styles, 'menu-dropdown')} role="menu">
-              <button className={css(styles, 'menu-item')} role="menuitem" disabled={readOnly} onClick={formatCode}>
-                Format Code
-              </button>
-              <button className={css(styles, 'menu-item')} role="menuitem" onClick={exportCode}>
-                Export this file
-              </button>
-              {companions.length > 0 && (
-                <div className={css(styles, 'menu-note')} role="group" aria-label="Files this example also imports">
-                  <span>Also imports</span>
-                  {companions.map(companion => (
-                    <a
-                      key={companion}
-                      className={css(styles, 'menu-item')}
-                      role="menuitem"
-                      href={
-                        isCurrentVersion(selectedVersionId)
-                          ? buildExampleUrl(companion)
-                          : buildGithubRawExampleUrl(selectedVersionId, companion)
-                      }
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {companion}
-                    </a>
-                  ))}
-                </div>
-              )}
-              <button className={css(styles, 'menu-item')} role="menuitem" disabled={readOnly} onClick={importCode}>
-                Import Code
-              </button>
-              <button className={css(styles, 'menu-item')} role="menuitem" data-variant="danger" disabled={!canReset} onClick={resetCode}>
-                Reset Code
-              </button>
+          {companions.length > 0 && (
+            <div className={css(styles, 'menu-note')} role="group" aria-label="Files this example also imports">
+              <span>Also imports</span>
+              {companions.map(companion => (
+                <a
+                  key={companion}
+                  className={css(styles, 'menu-item')}
+                  role="menuitem"
+                  href={
+                    isCurrentVersion(selectedVersionId)
+                      ? buildExampleUrl(companion)
+                      : buildGithubRawExampleUrl(selectedVersionId, companion)
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {companion}
+                </a>
+              ))}
             </div>
           )}
+          <button className={css(styles, 'menu-item')} role="menuitem" disabled={readOnly} onClick={importCode}>
+            Import Code
+          </button>
         </div>
-      </Toolbar>
+      )}
+    </div>
+  );
+
+  return (
+    <section className={css(styles, 'root')} data-editor-root aria-label={`Code editor for ${exampleTitle}`}>
+      {toolbarTarget ? (
+        createPortal(toolbarControls, toolbarTarget)
+      ) : (
+        <Toolbar title="Code" leading={leading}>
+          {toolbarControls}
+        </Toolbar>
+      )}
       <input ref={fileInputRef} className={css(styles, 'file-input')} type="file" accept=".js,.ts" onChange={onFileImport} />
       <div className={css(styles, 'editor-shell')} data-editor-shell>
         <div className={css(styles, 'editor-host')} data-editor-host>

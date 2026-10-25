@@ -50,6 +50,7 @@ class CursorAttractorParticlesScene extends Scene {
     this.root.addChild(this.system, this.marks);
     this.systems.add(this.system);
     this.panel = demoPanel({
+      scene: this,
       title: 'Attract and Repel Particles',
       layout: 'bar',
       controls,

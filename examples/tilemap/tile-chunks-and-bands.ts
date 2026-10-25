@@ -175,6 +175,7 @@ class TileChunksAndBandsScene extends Scene {
     const snapModes = { geometry: PixelSnapMode.Geometry, position: PixelSnapMode.Position, none: PixelSnapMode.None } as const;
 
     this.panel = demoPanel({
+      scene: this,
       layout: 'bar',
       title: 'Layered Tile World',
       controls: {

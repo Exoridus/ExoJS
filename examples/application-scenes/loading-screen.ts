@@ -28,6 +28,7 @@ class BootScene extends Scene {
     this.app.loader.onLoadProgress.add(this.onLoadProgress);
     this.app.loader.onLoadError.add(this.onLoadError);
     this.panel = demoPanel({
+      scene: this,
       layout: 'bar',
       title: 'Loading Progress and Retry',
       controls: {},

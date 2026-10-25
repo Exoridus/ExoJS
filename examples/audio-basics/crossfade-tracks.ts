@@ -15,7 +15,7 @@ import {
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { choice, type ChoiceSpec, type DemoPanel, demoPanel } from '@examples/runtime';
 
-const PEAK = 0.7;
+const PEAK = 0.4;
 const COLOR_A = new Color(120, 200, 255);
 const COLOR_B = new Color(255, 160, 120);
 
@@ -56,13 +56,16 @@ class CrossfadeTracksScene extends Scene {
     // AudioStream is a non-leaf resource kind (no seamless placeholder), so each
     // track is loaded directly through `Asset.type('music', ...)` and awaited. Both
     // tracks loop; the crossfade only swaps which one is audible.
-    [this.trackA, this.trackB] = await Promise.all([this.loader.load(assets.musicLoopA), this.loader.load(assets.musicLoopB)]);
+    [this.trackA, this.trackB] = await Promise.all([
+      this.loader.load(assets.musicLofiRhodes),
+      this.loader.load(assets.musicAtmosphericSynth),
+    ]);
 
     this.graphics = new Graphics();
-    this.labelA = new Text('Track A', { fillColor: Color.white, fontSize: 22, align: 'center' })
+    this.labelA = new Text('Lo-Fi Rhodes', { fillColor: Color.white, fontSize: 22, align: 'center' })
       .setAnchor(0.5, 0.5)
       .setPosition(this.meterAX + METER_W / 2, height * 0.26);
-    this.labelB = new Text('Track B', { fillColor: Color.white, fontSize: 22, align: 'center' })
+    this.labelB = new Text('Atmospheric Synth', { fillColor: Color.white, fontSize: 22, align: 'center' })
       .setAnchor(0.5, 0.5)
       .setPosition(this.meterBX + METER_W / 2, height * 0.26);
     this.nowPlaying = new Text('', { fillColor: Color.white, fontSize: 20, align: 'center' })
@@ -82,6 +85,7 @@ class CrossfadeTracksScene extends Scene {
     this.trackBVoice = app.audio.play(this.trackB, { loop: true, volume: 0 });
 
     this.panel = demoPanel({
+      scene: this,
       title: 'Crossfade',
       corner: 'bottom-left',
       controls: { track: choice('Track', ['Track A', 'Track B']) },

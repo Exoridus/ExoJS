@@ -193,6 +193,7 @@ class CharacterMovementScene extends Scene {
     }
 
     this.hud = demoPanel({
+      scene: this,
       title: 'Character Movement',
       layout: 'bar',
       controls: {},

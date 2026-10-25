@@ -35,7 +35,7 @@ class AudioVisualisationScene extends Scene {
   rms = 0;
   panel;
   async load() {
-    this.music = await this.loader.load(assets.musicLoopMain);
+    this.music = await this.loader.load(assets.musicDarkIndustrial);
   }
   init() {
     this.sounds = [new Sound(createTestSignal(false)), new Sound(createTestSignal(true))];
@@ -51,6 +51,7 @@ class AudioVisualisationScene extends Scene {
     this.texture = new Texture(this.canvas);
     this.screen = new Sprite(this.texture);
     this.panel = demoPanel({
+      scene: this,
       layout: 'bar',
       title: 'Read Spectrum and Waveform',
       hint: 'Analyse the music track, or compare it with a coded mono Pulse or Noise test signal.',

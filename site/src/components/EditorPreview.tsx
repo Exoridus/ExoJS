@@ -295,7 +295,26 @@ export const EditorPreview = ({
       };
 
       iframeWindow.addEventListener('exo-renderer-status', report);
-      rendererCleanupRef.current = () => iframeWindow.removeEventListener('exo-renderer-status', report);
+
+      const forwardShortcut = (event: KeyboardEvent): void => {
+        const target = event.target as HTMLElement | null;
+
+        if (
+          ((event.key.toLowerCase() === 'k' && (event.ctrlKey || event.metaKey)) || event.key === '/') &&
+          !target?.closest?.('input, textarea, [contenteditable="true"]')
+        ) {
+          event.preventDefault();
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: event.key, ctrlKey: event.ctrlKey, metaKey: event.metaKey }));
+        }
+      };
+
+      iframeWindow.addEventListener('keydown', forwardShortcut);
+
+      rendererCleanupRef.current = () => {
+        iframeWindow.removeEventListener('exo-renderer-status', report);
+        iframeWindow.removeEventListener('keydown', forwardShortcut);
+      };
+
       const sink = outputRef.current;
       // Attached before the example's module is appended, so its first
       // top-level log is already captured.
@@ -325,6 +344,7 @@ export const EditorPreview = ({
     <div ref={rootRef} className={css(styles, 'root')}>
       <iframe
         ref={iframeRef}
+        title={`Live demo: ${exampleMeta?.title ?? 'ExoJS example'}`}
         className={css(styles, 'preview')}
         onLoad={onLoadIframe}
         onError={() => {
@@ -367,7 +387,7 @@ const measureFillZoom = (root: HTMLElement | null, width: number, height: number
   const surface = root?.closest<HTMLElement>('[data-preview-surface]');
   const availableWidth = surface?.clientWidth ?? window.innerWidth;
   const widthZoom = availableWidth / width;
-  const heightZoom = (window.innerHeight * 0.72) / height;
+  const heightZoom = (window.innerHeight * 0.65) / height;
 
   return Math.max(0.1, Math.min(widthZoom, heightZoom));
 };

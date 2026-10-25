@@ -110,6 +110,7 @@ export const createUIApp = (platform: unknown = null): Harness => {
     onContextMenu: new Signal<[ContextMenuRequest]>(),
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
+    onMouseWheel: new Signal<[number, number]>(),
     onAnyGamepadButtonDown: new Signal<[Gamepad, GamepadButton, number]>(),
     _finishInteractionFrame: (): void => undefined,
   };

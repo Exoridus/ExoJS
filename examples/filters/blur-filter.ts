@@ -17,13 +17,12 @@ import { choice, demoPanel, slider, startExample, toggle } from '@examples/runti
 
 const controls = {
   filter: choice('Filter', ['Blur', 'Drop Shadow', 'Grayscale', 'Sepia']),
-  strength: slider('Radius / px', { min: 0, max: 1, step: 0.05, value: 0.5 }),
+  strength: slider('Effect strength', { min: 0, max: 1, step: 0.05, value: 0.5, format: value => `${Math.round(value * 100)}%` }),
   bypass: toggle('Bypass'),
 };
 class BlurAndShadowScene extends Scene {
   private sprites: Sprite[] = [];
   private labels: Text[] = [];
-  private strengthInput!: HTMLInputElement;
   private readonly blur = this.track(new BlurFilter({ strength: 4 }));
   private readonly shadow = this.track(new DropShadowFilter({ offsetX: 15, offsetY: 18, blur: 8, color: new Color(0, 0, 0, 0.8) }));
   private readonly color = this.track(new ColorMatrixFilter());
@@ -42,6 +41,7 @@ class BlurAndShadowScene extends Scene {
     );
     this.root.addChild(...this.sprites, ...this.labels);
     this.panel = demoPanel({
+      scene: this,
       title: 'Sprite Filters',
       layout: 'bar',
       controls,
@@ -54,7 +54,6 @@ class BlurAndShadowScene extends Scene {
         },
       },
     });
-    this.strengthInput = this.panel.element.querySelector('input[type=range]')!;
     this.inputs.onTrigger(Keyboard.Space, () => this.panel.step('bypass'));
     this.inputs.onTrigger(Keyboard.R, () => {
       this.panel.set('filter', 'Blur');
@@ -67,13 +66,6 @@ class BlurAndShadowScene extends Scene {
     const { scale, width, contentHeight } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
     this.root.setScale(scale);
     const { filter, strength, bypass } = this.panel.values;
-    const parameter = filter === 'Blur' ? 'Radius / px' : filter === 'Drop Shadow' ? 'Offset / px' : 'Amount';
-
-    if (this.strengthInput.getAttribute('aria-label') !== parameter) {
-      this.strengthInput.setAttribute('aria-label', parameter);
-      this.strengthInput.previousElementSibling!.textContent = parameter;
-    }
-
     this.blur.strength = strength * 12 * scale;
     this.shadow.offsetX = strength * 24 * scale;
     this.shadow.offsetY = strength * 24 * scale;

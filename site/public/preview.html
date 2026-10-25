@@ -9,40 +9,15 @@
                 overflow: hidden;
                 background: #0b0d12;
             }
-            /* The example mounts its canvas and DOM overlays into <body>. We make
-               <body> a fixed 1280x720 "stage" so every example keeps the same
-               coordinate space, then uniformly scale that stage to fit the iframe.
-               Because a CSS transform establishes the containing block for
-               position:fixed, the example's overlays (mountControls) scale and
-               stay aligned with the canvas instead of being clipped by a letterbox
-               — and nothing needs to change per example. */
             body {
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                width: 1280px;
-                height: 720px;
+                width: 100%;
+                height: 100%;
                 margin: 0;
-                transform: translate(-50%, -50%) scale(var(--preview-scale, 1));
-                transform-origin: center center;
             }
             canvas {
                 outline-style: none;
             }
         </style>
-        <script>
-            // Fit the 1280x720 stage to the iframe while preserving 16:9 — scale
-            // by the limiting dimension so the stage (canvas + overlays) never
-            // overflows or clips. Recomputed on every iframe resize.
-            (function () {
-                function fitStage() {
-                    var scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
-                    document.documentElement.style.setProperty('--preview-scale', String(scale));
-                }
-                window.addEventListener('resize', fitStage);
-                fitStage();
-            })();
-        </script>
         <script>
             (function () {
                 var params = new URLSearchParams(window.location.search);
@@ -154,6 +129,7 @@
                         '@codexo/exojs-demo-assets/manifest.json': './vendor/exojs-demo-assets/manifest.json?no-cache=' + noCache,
                         '@examples/runtime': './examples/shared/runtime.js?no-cache=' + noCache,
                         '@examples/terrain-noise': './examples/shared/terrain-noise.js?no-cache=' + noCache,
+                        '@examples/gallery-transitions': './examples/shared/gallery-transitions.js?no-cache=' + noCache,
                         './worker-streamed-terrain.worker.ts?worker': './examples/tilemap/worker-streamed-terrain.worker.js?no-cache=' + noCache,
                     },
                 };

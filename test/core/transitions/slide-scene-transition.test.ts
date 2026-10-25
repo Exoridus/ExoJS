@@ -3,6 +3,7 @@ import type { SceneTransitionContext, SceneTransitionEnvironment } from '#core/s
 import { SlideSceneTransition } from '#core/scene/transitions/SlideSceneTransition';
 import { Time } from '#core/units';
 import type { Sprite } from '#rendering/sprite/Sprite';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 
 // Exposes the protected authoring hooks through public wrappers - same
 // pattern as FadeSceneTransition's test suite (Task 1). Scratch state is
@@ -72,6 +73,45 @@ const stubContext = (overrides: Partial<SceneTransitionPhaseContext> = {}): Scen
 });
 
 describe('SlideSceneTransition', () => {
+  test('cover keeps its unmodified exit phase at logical size too', () => {
+    const texture = new RenderTexture(1600, 1200);
+    const render = vi.fn();
+    const session = new SlideSceneTransition({ mode: 'cover' }).beginSession(new TestEnvironment());
+
+    session.render(stubRendering(render), { outgoing: texture, current: texture, committed: false });
+
+    expect(render.mock.calls).toHaveLength(1);
+    expect((render.mock.calls[0]![0] as Sprite).width).toBe(800);
+    expect((render.mock.calls[0]![0] as Sprite).height).toBe(600);
+    session.destroy();
+    texture.destroy();
+  });
+
+  test.each(['push', 'cover', 'reveal'] as const)('%s fits physical textures into the logical screen', mode => {
+    const texture = new RenderTexture(1600, 1200);
+    const render = vi.fn();
+    const slide = new TestableSlideSceneTransition({ mode });
+    const context = stubContext({
+      phase: mode === 'reveal' ? 'exit' : 'enter',
+      presence: 1,
+      rendering: stubRendering(render),
+      frame: { outgoing: texture, current: texture, committed: true },
+    });
+
+    if (mode === 'reveal') {
+      slide.callExit(context);
+    } else {
+      slide.callEnter(context);
+    }
+
+    for (const [node] of render.mock.calls as Array<[Sprite]>) {
+      expect(node.width).toBe(800);
+      expect(node.height).toBe(600);
+    }
+
+    texture.destroy();
+  });
+
   test('defaults: direction right, mode push', () => {
     const slide = new SlideSceneTransition();
 

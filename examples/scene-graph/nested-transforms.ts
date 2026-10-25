@@ -51,6 +51,7 @@ class NestedTransformsScene extends Scene {
     this.moonOrbit.addChild(moonPath, this.moon);
     this.root.addChild(this.planetOrbit, ...this.localLabels, ...this.worldLabels);
     this.panel = demoPanel({
+      scene: this,
       title: 'Parent and World Transforms',
       layout: 'bar',
       controls: {},

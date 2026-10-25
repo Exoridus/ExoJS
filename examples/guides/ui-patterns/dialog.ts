@@ -23,6 +23,7 @@ class DialogScene extends Scene {
       lineHeight: 1.4,
     });
     this.box.setPosition(270, 360);
+    this.root.addChild(this.portrait, this.box);
 
     this.beep = this.loader.get('audio/beep.ogg');
 
@@ -30,6 +31,7 @@ class DialogScene extends Scene {
     this.chars = 0;
     this.timer = 0;
     this.done = false;
+    this.bindAdvance();
   }
 
   override update(delta: Seconds): void {
@@ -43,7 +45,7 @@ class DialogScene extends Scene {
     while (this.timer > 0.035 && this.chars < line.length) {
       this.timer -= 0.035;
       this.chars++;
-      this.app.audio.play(this.beep, { playbackRate: 1.9, volume: 0.14 });
+      this.audio.play(this.beep, { playbackRate: 1.9, volume: 0.14 });
     }
 
     this.box.text = line.slice(0, this.chars);
@@ -56,12 +58,15 @@ class DialogScene extends Scene {
 
   private bindAdvance(): void {
     // #region guide:advance-line
-    this.app.input.onPointerTap.add(() => {
+    const input = this.app.input;
+
+    const advance = (): void => {
       const line = this.lines[this.lineIndex];
 
       if (!this.done) {
         // Skip reveal - show full line
         this.chars = line.length;
+        this.box.text = line;
         this.done = true;
 
         return;
@@ -70,7 +75,16 @@ class DialogScene extends Scene {
       // Advance to next line
       this.lineIndex = (this.lineIndex + 1) % this.lines.length;
       this.chars = 0;
+      this.timer = 0;
+      this.box.text = '';
       this.done = false;
+    };
+
+    input.onPointerTap.add(advance);
+    this.track({
+      destroy: () => {
+        input.onPointerTap.remove(advance);
+      },
     });
     // #endregion guide:advance-line
   }

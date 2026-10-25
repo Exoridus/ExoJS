@@ -52,7 +52,7 @@ const PACKAGE_OUTCOMES: Readonly<Record<string, PackageOutcome>> = {
   'exojs-config': { outcome: 'NONE', evidence: [] },
   'exojs-demo-assets': {
     outcome: 'CHANGE',
-    evidence: [{ file: 'packages/exojs-demo-assets/catalog.json', includes: 'technical/color/srgb-ramp.png' }],
+    evidence: [{ file: 'packages/exojs-demo-assets/catalog.json', includes: 'images/srgb-ramp.png' }],
   },
   'exojs-ldtk': { outcome: 'TEST', evidence: [{ file: 'packages/exojs-ldtk/src/loadLdtkMap.ts', includes: "Asset.type('texture'" }] },
   'exojs-lighting': {

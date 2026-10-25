@@ -302,7 +302,10 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
     const ownRequirements = activePhase.getRequirementsForPhase(phase, this._environment.context);
 
     if (frame.current !== null && ownRequirements.currentFrame !== 'texture') {
+      const bounds = context.screenView.getBounds();
       this._identitySprite.texture = frame.current;
+      this._identitySprite.width = bounds.right - bounds.left;
+      this._identitySprite.height = bounds.bottom - bounds.top;
       this._identitySprite.x = 0;
       this._identitySprite.y = 0;
       this._identitySprite.tint.a = 1;

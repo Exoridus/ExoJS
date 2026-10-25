@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { CURATED_CATEGORY_BY_SLUG, CURATION_READY } from '../lib/curation-catalog';
+import { CURATED_CATEGORY_BY_SLUG } from '../lib/curation-catalog';
 import { buildPlaygroundNavModel, isExampleRouteActive } from '../lib/playground-nav';
 import { getExampleAvailability } from '../lib/runtime-support';
 import type { Example, ExamplesMap } from '../lib/types';
@@ -31,9 +31,26 @@ export const Navigation = ({
   selectedVersion,
 }: NavigationProps): JSX.Element => {
   const listRef = useRef<HTMLElement | null>(null);
+  const filterRef = useRef<HTMLInputElement | null>(null);
+  const [query, setQuery] = useState('');
   const allExamples = useMemo(() => Array.from(examples.values()).flat(), [examples]);
-  const categoryBySlug = selectedVersion?.id === CURRENT_VERSION_ID && CURATION_READY ? CURATED_CATEGORY_BY_SLUG : undefined;
-  const categories = useMemo(() => buildPlaygroundNavModel(allExamples, categoryBySlug), [allExamples, categoryBySlug]);
+  const categoryBySlug = selectedVersion?.id === CURRENT_VERSION_ID ? CURATED_CATEGORY_BY_SLUG : undefined;
+  const categories = useMemo(() => buildPlaygroundNavModel(allExamples, categoryBySlug, query), [allExamples, categoryBySlug, query]);
+
+  useEffect(() => {
+    const focusFilter = (event: KeyboardEvent): void => {
+      const target = event.target as HTMLElement | null;
+
+      if (event.key === '/' && !event.ctrlKey && !event.metaKey && !target?.closest?.('input, textarea, [contenteditable="true"]')) {
+        event.preventDefault();
+        filterRef.current?.focus();
+      }
+    };
+
+    document.addEventListener('keydown', focusFilter);
+
+    return () => document.removeEventListener('keydown', focusFilter);
+  }, []);
 
   useEffect(() => {
     const list = listRef.current;
@@ -46,21 +63,38 @@ export const Navigation = ({
     const listBounds = list.getBoundingClientRect();
     const activeBounds = active.getBoundingClientRect();
 
-    if (activeBounds.top < listBounds.top + 36) {
-      list.scrollTop -= listBounds.top + 36 - activeBounds.top;
-    } else if (activeBounds.bottom > listBounds.bottom) {
-      list.scrollTop += activeBounds.bottom - listBounds.bottom;
-    }
-  }, [activeExample?.path, loaded]);
+    list.scrollTop += activeBounds.top - listBounds.top - (list.clientHeight - activeBounds.height) / 2;
+  }, [activeExample?.path, loaded, query]);
 
   return (
     <section className={css(styles, 'root')}>
+      <div className={css(styles, 'filter')}>
+        <input
+          ref={filterRef}
+          type="search"
+          aria-label="Filter examples"
+          placeholder="Filter examples..."
+          value={query}
+          onChange={event => setQuery(event.currentTarget.value)}
+          onKeyDown={event => {
+            if (event.key === 'Escape') {
+              setQuery('');
+            }
+          }}
+        />
+        <kbd>/</kbd>
+      </div>
       <div className={css(styles, 'reference-links')}>
-        <a href={`${import.meta.env.BASE_URL + locale}/playground/curriculum/`}>48-example path</a>
+        <span>{allExamples.length} examples</span>
         <a href={`${import.meta.env.BASE_URL + locale}/playground/tools/`}>Tools and guides</a>
       </div>
-      <nav ref={listRef}>
+      <nav ref={listRef} aria-label="Examples">
         {loadError && <p className={css(styles, 'error')}>{loadError}</p>}
+        {loaded && !loadError && categories.length === 0 && (
+          <p className={css(styles, 'empty')} role="status">
+            No examples match “{query}”.
+          </p>
+        )}
         {!loadError &&
           loaded &&
           categories.map(category => {

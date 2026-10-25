@@ -147,6 +147,7 @@ class AutoTiledRoomScene extends Scene {
     }
 
     this.panel = demoPanel({
+      scene: this,
       title: 'Paint an Autotiled Room',
       layout: 'bar',
       hint: 'Paint the meadow. N=1, E=2, S=4, W=8; open edges have a dark border.',

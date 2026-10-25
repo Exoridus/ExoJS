@@ -29,7 +29,7 @@ import { ObjectKind, type TileMap, TileMapNode } from '@codexo/exojs/tilemap';
 import { demoAssetCategories, type DemoAssetCategory, type DemoAssetKey, demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { ldtkExtension } from '@codexo/exojs-ldtk';
 import { tiledExtension } from '@codexo/exojs-tiled';
-import { choice, type DemoControlSpec, demoPanel, slider, toggle } from '@examples/runtime';
+import { choice, type DemoControlSpec, domDemoPanel as demoPanel, slider, toggle } from '@examples/runtime';
 
 // An asset browser for the standard demo catalog. It is an ordinary scene:
 //
@@ -1268,7 +1268,7 @@ const openAudio = async ({ scene, item, scope, isCurrent }: PreviewContext): Pro
   // A sound sprite ships its clip table as JSON next to the audio file.
   const spriteTable = demoAssetCategories[item.key] === 'soundSprites' ? descriptor.source.replace(/\.[a-z0-9]+$/, '.json') : null;
   const [playable, table] = await Promise.all([
-    music ? scope.load(descriptor as typeof assets.musicLoopMain) : scope.load(descriptor as typeof assets.soundUiClick),
+    music ? scope.load(descriptor as typeof assets.musicAtmosphericSynth) : scope.load(descriptor as typeof assets.soundUiClick),
     spriteTable ? scope.load(Asset.type<Record<string, { start: number; end: number }>>('json', spriteTable)) : Promise.resolve(null),
   ]);
   const clips = table ? Object.keys(table) : [];
@@ -1547,7 +1547,7 @@ const openAudio = async ({ scene, item, scope, isCurrent }: PreviewContext): Pro
 };
 
 const openVideo = async ({ scene, item, scope, manifest, isCurrent }: PreviewContext): Promise<Preview> => {
-  const video = await scope.load(assets[item.key] as typeof assets.videoDemoLoop);
+  const video = await scope.load(assets[item.key] as typeof assets.videoHighRes);
   const element = video.videoElement;
   const meta = manifest?.media;
   const audio = scene.app.audio;

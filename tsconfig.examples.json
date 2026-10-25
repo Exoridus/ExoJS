@@ -72,7 +72,8 @@
       "@codexo/exojs/pathfinding": ["./packages/exojs-pathfinding/src/index.ts"],
       "@codexo/exojs/audio-fx": ["./packages/exojs-audio-fx/src/index.ts"],
       "@examples/runtime": ["./examples/shared/runtime.ts"],
-      "@examples/terrain-noise": ["./examples/shared/terrain-noise.ts"]
+      "@examples/terrain-noise": ["./examples/shared/terrain-noise.ts"],
+      "@examples/gallery-transitions": ["./examples/shared/gallery-transitions.ts"]
     }
   },
   "include": ["examples/**/*.ts", "examples/tilemap/worker-streamed-terrain.js", "src/typings.d.ts"],

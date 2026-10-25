@@ -1,5 +1,6 @@
 import {
   Application,
+  Asset,
   type AudioEffect,
   type AudioStream,
   Color,
@@ -51,7 +52,7 @@ const CHAINS: Chain[] = [
   {
     name: 'Arcade',
     note: 'Quantize the samples, then warm the edges with distortion.',
-    trim: 0.35,
+    trim: 0.25,
     stages: [
       { name: 'BitCrusher', create: () => new BitCrusherEffect({ bits: 5, frequencyReduction: 0.35 }) },
       { name: 'Distortion', create: () => new DistortionEffect({ drive: 0.25, wet: 0.6 }) },
@@ -60,7 +61,7 @@ const CHAINS: Chain[] = [
   {
     name: 'Space Echo',
     note: 'Stereo repeats follow a short room reflection.',
-    trim: 0.35,
+    trim: 1,
     stages: [
       { name: 'Reverb', create: () => new ReverbEffect({ decay: 1.5, wet: 0.25 }) },
       { name: 'PingPongDelay', create: () => new PingPongDelayEffect({ delayTime: 0.32, feedback: 0.5, wet: 0.45 }) },
@@ -84,7 +85,7 @@ class EffectChainsScene extends Scene {
   private panel!: DemoPanel<{ chain: ChoiceSpec<string>; bypass: ToggleSpec }>;
 
   override async load(): Promise<void> {
-    this.music = await this.loader.load(assets.musicLoopMain);
+    this.music = await this.loader.load(Asset.type('music', assets.voiceCongratulations.source));
     this.impact = this.loader.get(assets.soundImpactLight);
   }
 
@@ -96,10 +97,11 @@ class EffectChainsScene extends Scene {
       new Text('', { fillColor: Color.white, fontSize: 22, align: 'center' }).setAnchor(0.5),
     );
     this.note = new Text('', { fillColor: new Color(150, 162, 186), fontSize: 20, align: 'center' }).setAnchor(0.5).setPosition(640, 215);
-    this.prompt = new Text('Click or press any key to start the music', { fillColor: Color.white, fontSize: 22, align: 'center' })
+    this.prompt = new Text('Click or press any key to start the speech loop', { fillColor: Color.white, fontSize: 22, align: 'center' })
       .setAnchor(0.5)
       .setPosition(640, 670);
     this.panel = demoPanel({
+      scene: this,
       title: 'Effect rack',
       controls: {
         chain: choice(
@@ -150,7 +152,7 @@ class EffectChainsScene extends Scene {
     });
     this.note.text = chain.note;
 
-    master.volume = bypass ? 1 : chain.trim;
+    master.volume = bypass ? 0.6 : chain.trim;
 
     if (bypass) {
       this.panel.status('Dry signal');

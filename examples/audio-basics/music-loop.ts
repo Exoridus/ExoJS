@@ -32,11 +32,12 @@ class MusicLoopScene extends Scene {
 
   override async load(): Promise<void> {
     // Music has no placeholder handle, so it is awaited rather than claimed with `get()`.
-    this.music = await this.loader.load(assets.musicLoopMain);
+    this.music = await this.loader.load(assets.musicAtmosphericSynth);
   }
 
   override init(): void {
     this.panel = demoPanel({
+      scene: this,
       layout: 'bar',
       title: 'Control Music Playback',
       hint: 'Stream one music track. Space pauses and resumes; Restart seeks back to 0 s.',

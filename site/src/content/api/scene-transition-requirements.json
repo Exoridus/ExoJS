@@ -92,7 +92,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "A one-time snapshot of the outgoing scene's render surface, captured once before the session starts. 'none' (the common case) requests nothing."
+          "description": "A one-time snapshot of the outgoing scene and its systems, excluding the screen UI overlay. 'none' (the common case) requests nothing."
         }
       ],
       "paragraphs": [],

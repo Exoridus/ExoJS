@@ -44,7 +44,7 @@ interface FetchControl {
 const FNT_TEXT = [
   'info face="Kenney Blocks" size=32',
   'common lineHeight=32 base=27 scaleW=256 scaleH=256 pages=1 packed=0',
-  'page id=0 file="kenney-blocks-32.png"',
+  'page id=0 file="../images/font-kenney-blocks-png.png"',
   'chars count=1',
   'char id=65 x=0 y=0 width=10 height=10 xoffset=0 yoffset=0 xadvance=10 page=0 chnl=15',
 ].join('\n');
@@ -234,8 +234,7 @@ describe('A04: leafless media load explicitly and offer no synchronous handle', 
   test.each([
     ['videoHighRes'],
     ['videoHighFps'],
-    ['videoDemoLoop'],
-    ['musicLoopMain'],
+    ['musicAtmosphericSynth'],
     ['fontKenneyFuture'],
     ['fontKenneyBlocksFnt'],
     ['iconPlay'],

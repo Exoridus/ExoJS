@@ -10,7 +10,7 @@ import {
   Sprite,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { demoPanel, mountControls, toggle } from '@examples/runtime';
 
 const PRIMARY_RAMP = assets.primaryRamp;
 
@@ -27,7 +27,7 @@ class FilterStackScene extends Scene {
   // The filter chain is applied in this fixed order; each entry can be toggled.
   private active = { blur: true, tint: true, custom: true };
   private hud!: ReturnType<typeof mountControls>;
-  private panel!: ReturnType<typeof mountControlPanel>;
+  private panel!: ReturnType<typeof demoPanel>;
 
   override init(): void {
     const app = this.app;
@@ -49,28 +49,16 @@ class FilterStackScene extends Scene {
       hint: 'Filters compose in order: Blur → Tint → Custom. Toggle any subset.',
     });
 
-    this.panel = mountControlPanel({ title: 'Layers' });
-    this.panel.addToggle({
-      label: 'Blur',
-      value: this.active.blur,
-      onChange: on => {
-        this.active.blur = on;
-        this.rebuild();
+    this.panel = demoPanel({
+      scene: this,
+      title: 'Layers',
+      controls: {
+        blur: toggle('Blur', this.active.blur),
+        tint: toggle('Tint', this.active.tint),
+        custom: toggle('Custom', this.active.custom),
       },
-    });
-    this.panel.addToggle({
-      label: 'Tint',
-      value: this.active.tint,
-      onChange: on => {
-        this.active.tint = on;
-        this.rebuild();
-      },
-    });
-    this.panel.addToggle({
-      label: 'Custom',
-      value: this.active.custom,
-      onChange: on => {
-        this.active.custom = on;
+      onChange: (_key, _value, values) => {
+        this.active = { ...values };
         this.rebuild();
       },
     });

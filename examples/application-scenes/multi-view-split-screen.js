@@ -88,6 +88,7 @@ class SplitScreenScene extends Scene {
     this.inputs.attach(this.leftControls);
     this.inputs.attach(this.rightControls);
     this.panel = demoPanel({
+      scene: this,
       layout: 'bar',
       title: 'Local split screen',
       controls: {},

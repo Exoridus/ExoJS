@@ -15,10 +15,15 @@ const fillOf = (set: UISkinSet, state: 'normal' | 'hover' | 'pressed' | 'disable
 };
 
 describe('defaultUITheme', () => {
-  test('carries the widgets built-in look', () => {
-    expect(fillOf(defaultUITheme.panel).color.toRgba8()).toEqual(new Color(30, 34, 45, 0.92).toRgba8());
-    expect(fillOf(defaultUITheme.button).color.toRgba8()).toEqual(new Color(54, 120, 220, 1).toRgba8());
-    expect(fillOf(defaultUITheme.button, 'pressed').color.toRgba8()).toEqual(new Color(40, 96, 180, 1).toRgba8());
+  test('provides consistent typography, content spacing and visible focus without assets', () => {
+    expect(defaultUITheme.button.normal.text.fontFamily).toBe('system-ui');
+    expect(defaultUITheme.label.normal.text.fontFamily).toBe('system-ui');
+    expect(defaultUITheme.textFieldSurface.normal.text.fontFamily).toBe('system-ui');
+    expect(defaultUITheme.button.normal.insets).toEqual({ left: 14, top: 8, right: 14, bottom: 8 });
+    expect(fillOf(defaultUITheme.button, 'focused').borderWidth).toBe(2);
+    expect(fillOf(defaultUITheme.textFieldSurface, 'focused').borderColor.toRgba8()).toEqual(
+      fillOf(defaultUITheme.sliderThumb, 'focused').borderColor.toRgba8(),
+    );
     expect(fillOf(defaultUITheme.progressBarFill).cornerRadius).toBe(4);
     expect(defaultUITheme.label.normal.background.kind).toBe('none');
   });

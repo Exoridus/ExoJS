@@ -51,6 +51,8 @@ import {
 import { stencilWriteShaderSource } from '#rendering/webgpu/WebGpuStencilClipper';
 import { textShaderSource } from '#rendering/webgpu/WebGpuTextRenderer';
 
+import { galleryDissolveShader } from '../../examples/shared/gallery-transitions';
+
 /** Kept in step with the entries in `test/rendering/browser/webgpu-shader-compile.test.ts`. */
 const shaders: ReadonlyArray<readonly [name: string, source: string]> = [
   ['WebGpuBackend mipmap pipeline', mipmapWgsl],
@@ -76,6 +78,7 @@ const shaders: ReadonlyArray<readonly [name: string, source: string]> = [
   ['BloomFilter (generated uniform block)', bloomThresholdShader._resolveWgsl(filterUniformGroup)!],
   ['ColorMatrixFilter (generated uniform block)', colorMatrixShader._resolveWgsl(filterUniformGroup)!],
   ['DropShadowFilter (generated uniform block)', dropShadowShader._resolveWgsl(filterUniformGroup)!],
+  ['transition gallery dissolve (generated uniform block)', galleryDissolveShader._resolveWgsl(filterUniformGroup)!],
 ];
 
 const nagaBinary = process.env['EXOJS_NAGA'] ?? 'naga';

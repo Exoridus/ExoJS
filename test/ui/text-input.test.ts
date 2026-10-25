@@ -53,11 +53,11 @@ describe('TextInput', () => {
     press(harness, 5, 18);
     type('hello');
 
-    harness.signals.onPointerMove.dispatch(makePointer(53, 18), 53, 18);
+    harness.signals.onPointerMove.dispatch(makePointer(57, 18), 57, 18);
     expect(field.selectionStart).toBe(0);
     expect(field.selectionEnd).toBe(5);
 
-    harness.signals.onPointerUp.dispatch(makePointer(53, 18), 53, 18);
+    harness.signals.onPointerUp.dispatch(makePointer(57, 18), 57, 18);
     expect(field.selectionStart).toBe(0);
     expect(field.selectionEnd).toBe(5);
   });
@@ -436,10 +436,10 @@ describe('TextInput', () => {
 
     const threeGlyphs = caretRects.at(-1);
 
-    // Advance is 10 per glyph and the content box starts at inset 8: the caret
+    // Advance is 10 per glyph and the content box starts at inset 12: the caret
     // sits behind the candidate, which lives outside `value` entirely.
-    expect(oneGlyph?.x).toBe(18);
-    expect(threeGlyphs?.x).toBe(38);
+    expect(oneGlyph?.x).toBe(22);
+    expect(threeGlyphs?.x).toBe(42);
   });
 
   test('runs of spaces are laid out one glyph each, so hit testing stays aligned', () => {

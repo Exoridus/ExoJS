@@ -59,6 +59,7 @@ class GridNavigationScene extends Scene {
     this.worldRoot.addChild(this.terrain, this.overlay);
     this.app.input.onPointerTap.add(this.onTap);
     this.panel = demoPanel({
+      scene: this,
       title: 'Pathfinding Playground',
       layout: 'bar',
       hint: 'Click a goal, or paint walls and weighted mud.',

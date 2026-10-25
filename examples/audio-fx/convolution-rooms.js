@@ -120,6 +120,7 @@ class ConvolutionRoomsScene extends Scene {
     }
     this.app.input.onPointerDown.add(this.onPointerDown);
     this.panel = demoPanel({
+      scene: this,
       controls: { room: choice('Room', ROOM_LABELS) },
       onChange: (_key, value) => this.select(ROOM_LABELS.indexOf(value)),
     });
@@ -196,6 +197,7 @@ class ConvolutionRoomsScene extends Scene {
   }
 }
 const application = new Application({
+  scenes: { ConvolutionRoomsScene },
   canvas: {
     width: 1280,
     height: 720,

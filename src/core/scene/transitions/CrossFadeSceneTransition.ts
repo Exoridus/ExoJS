@@ -87,7 +87,10 @@ class CrossFadeSession implements SceneTransitionSession {
 
   /** Draw `texture` full-frame (no offset - a crossfade only blends opacity) via `sprite` at `alpha`. */
   private _drawFull(context: RenderingContext, sprite: Sprite, texture: NonNullable<SceneTransitionFrame['current']>, alpha: number): void {
+    const bounds = context.screenView.getBounds();
     sprite.texture = texture;
+    sprite.width = bounds.right - bounds.left;
+    sprite.height = bounds.bottom - bounds.top;
     sprite.x = 0;
     sprite.y = 0;
     sprite.tint.a = alpha;

@@ -1,4 +1,21 @@
-import { Color, createUITheme, defaultUITheme, type UISkinPatch, type UITheme, type UIThemeRole, type UIWidgetState } from '@codexo/exojs';
+import {
+  Button,
+  Color,
+  Container,
+  createUITheme,
+  defaultUITheme,
+  Dropdown,
+  Label,
+  Panel,
+  type Scene,
+  ScrollContainer,
+  Slider,
+  Toggle,
+  type UISkinPatch,
+  type UITheme,
+  type UIThemeRole,
+  type UIWidgetState,
+} from '@codexo/exojs';
 
 /**
  * Boolean fields of the engine `Capabilities` object that an example may
@@ -815,7 +832,7 @@ export interface ToggleSpec {
   readonly value: boolean;
 }
 
-/** One of a fixed list of named options; shows the name and its position, e.g. `Screen (5/18)`. */
+/** One of a fixed list of named options. */
 export interface ChoiceSpec<T extends string = string> {
   readonly kind: 'choice';
   readonly label: string;
@@ -851,9 +868,11 @@ export const choice = <const T extends string>(label: string, options: readonly 
 });
 
 export interface DemoPanelOptions<C extends Record<string, DemoControlSpec>> {
+  /** Owns the widgets and their frame subscription. */
+  scene: Pick<Scene, 'ui' | 'app' | 'track'>;
   title?: string;
   corner?: OverlayCorner;
-  /** A full-width control strip with native selects and CSS-pixel sizing. */
+  /** A full-width control strip sized in presented CSS pixels. */
   layout?: 'bar';
   /** Instruction hidden in compact presentation. */
   hint?: string;
@@ -879,8 +898,8 @@ export interface DemoViewport {
 export type DemoStatusTone = 'neutral' | 'info' | 'warning' | 'success' | 'error';
 
 /** Handle returned by {@link demoPanel}. */
-export interface DemoPanel<C extends Record<string, DemoControlSpec>> {
-  readonly element: HTMLElement;
+export interface DemoPanel<C extends Record<string, DemoControlSpec>, Element = Panel> {
+  readonly element: Element;
   /** Fits a bar to the presented canvas and reports its available scene area in CSS pixels. */
   fit(app: { width: number; height: number }, host: HTMLElement): DemoViewport;
   /** Current values; read-only, change them through `set` or `step`. */
@@ -1023,7 +1042,9 @@ const styleDemoBar = (element: HTMLElement): (() => void) => {
  * value per control. Keyboard shortcuts should call `set`/`step` so the panel
  * and the shortcut never disagree.
  */
-export const demoPanel = <const C extends Record<string, DemoControlSpec>>(options: DemoPanelOptions<C>): DemoPanel<C> => {
+export const domDemoPanel = <const C extends Record<string, DemoControlSpec>>(
+  options: Omit<DemoPanelOptions<C>, 'scene'>,
+): DemoPanel<C, HTMLElement> => {
   if (options.layout === 'bar' && (Object.keys(options.controls).length > 4 || Object.keys(options.actions ?? {}).length > 3)) {
     throw new RangeError('Curated bars support at most four parameters and three actions.');
   }
@@ -1148,7 +1169,7 @@ export const demoPanel = <const C extends Record<string, DemoControlSpec>>(optio
   statusEl.hidden = true;
   panel.element.append(statusEl);
 
-  const handle: DemoPanel<C> = {
+  const handle: DemoPanel<C, HTMLElement> = {
     element: panel.element,
     fit,
     values,
@@ -1189,4 +1210,383 @@ export const demoPanel = <const C extends Record<string, DemoControlSpec>>(optio
   }
 
   return handle;
+};
+
+class DemoDropdown extends Dropdown<string> {
+  public above = false;
+
+  public override open(): this {
+    super.open();
+
+    if (this.parent && this.isOpen) {
+      this.parent.zIndex = 1;
+    }
+
+    return this;
+  }
+
+  public override close(): this {
+    super.close();
+
+    if (this.parent) {
+      this.parent.zIndex = 0;
+    }
+
+    return this;
+  }
+
+  public placeList(above: boolean): void {
+    this.above = above;
+    const insets = this.theme.dropdownList.normal.insets;
+    const height = this.items.length * this.uiHeight + insets.top + insets.bottom;
+    this.listNode.setPosition(0, above ? -height : this.uiHeight);
+  }
+
+  protected override _relayout(): void {
+    super._relayout();
+    this.placeList(this.above);
+  }
+}
+
+/** Scene-owned parameter controls with one shared state for widgets and shortcuts. */
+export const demoPanel = <const C extends Record<string, DemoControlSpec>>(
+  options: DemoPanelOptions<C>,
+): DemoPanel<C> & { readonly actions: Readonly<Record<string, Button>> } => {
+  if (options.layout === 'bar' && (Object.keys(options.controls).length > 4 || Object.keys(options.actions ?? {}).length > 3)) {
+    throw new RangeError('Curated bars support at most four parameters and three actions.');
+  }
+
+  if (Object.values(options.controls).some(spec => spec.kind === 'choice' && spec.options.length === 0)) {
+    throw new RangeError('Choice controls require at least one option.');
+  }
+
+  const { scene } = options;
+  const app = scene.app;
+  const element = new Panel();
+  element.zIndex = 100;
+  scene.ui.addChild(element);
+  const title = new Label(options.title ?? '', { fontSize: 16 });
+  element.addChild(title);
+  const hint = new Label(options.hint ?? '', { fontSize: 13 });
+  element.addChild(hint);
+  const status = new Label('', { fontSize: 13 });
+  element.addChild(status);
+  status.visible = false;
+  const scroll = new ScrollContainer({ width: 1, height: 1, scrollbarThickness: 12 });
+  element.addChild(scroll);
+  const values = {} as DemoPanelValues<C>;
+  const renderers = new Map<keyof C, (value: never) => unknown>();
+  const keys = Object.keys(options.controls) as Array<keyof C>;
+  const rows: Array<{ node: Container; resize(width: number, screenY: number, screenHeight: number, allowPopup: boolean): void }> = [];
+  const actions: Record<string, Button> = {};
+  const controlHeight = window.matchMedia?.('(pointer: coarse)').matches ? 44 : 32;
+  const rowHeight = controlHeight === 44 ? 68 : 60;
+  const actionRowHeight = controlHeight + 8;
+  let syncing = false;
+  let disposed = false;
+  let dirty = true;
+  let statusTone: DemoStatusTone = 'neutral';
+  let lastRootScale = 0;
+  const viewport = { scale: 0, width: 0, height: 0, compact: false, contentHeight: 0 };
+
+  const commit = <K extends keyof C>(key: K, value: DemoControlValue<C[K]>): void => {
+    if (syncing || disposed) {
+      return;
+    }
+
+    syncing = true;
+
+    try {
+      values[key] = renderers.get(key)!(value as never) as DemoPanelValues<C>[K];
+    } finally {
+      syncing = false;
+    }
+
+    dirty = true;
+    options.onChange?.(key, values[key], values);
+  };
+
+  for (const key of keys) {
+    const spec = options.controls[key]!;
+    const row = new Container();
+    scroll.content.addChild(row);
+    const label = new Label(spec.label, { fontSize: 13 });
+    row.addChild(label);
+    label.textNode.layout = { maxHeight: 18, overflow: 'ellipsis' };
+    values[key] = spec.value as DemoPanelValues<C>[typeof key];
+
+    if (spec.kind === 'slider') {
+      const readout = new Label('', { fontSize: 13 });
+      row.addChild(readout);
+      const control = new Slider({ ...spec, height: controlHeight, thumbSize: controlHeight === 44 ? 24 : 18 });
+      row.addChild(control);
+      control.setPosition(0, 20);
+
+      const render = (value: number): number => {
+        control.value = value;
+        readout.text = spec.format?.(control.value) ?? control.value.toFixed(2);
+
+        return control.value;
+      };
+
+      render(spec.value);
+      renderers.set(key, render);
+      control.onChange.add(value => commit(key, value as DemoControlValue<C[typeof key]>));
+      rows.push({
+        node: row,
+        resize: width => {
+          control.setSize(width, controlHeight);
+          readout.setPosition(Math.max(0, width - readout.uiWidth), 0);
+          label.textNode.layout = { maxWidth: Math.max(1, width - readout.uiWidth - 8), maxHeight: 18, overflow: 'ellipsis' };
+        },
+      });
+    } else if (spec.kind === 'toggle') {
+      const control = new Toggle({ checked: spec.value, width: controlHeight === 44 ? 68 : 48, height: controlHeight });
+      row.addChild(control);
+      control.setPosition(0, 20);
+      renderers.set(key, (value: boolean) => {
+        control.checked = value;
+
+        return value;
+      });
+      control.onChange.add(value => commit(key, value as DemoControlValue<C[typeof key]>));
+      rows.push({
+        node: row,
+        resize: width => {
+          label.textNode.layout = { maxWidth: width, maxHeight: 18, overflow: 'ellipsis' };
+        },
+      });
+    } else {
+      const select = new DemoDropdown({
+        height: controlHeight,
+        padding: 8,
+        items: spec.options.map(value => ({ label: value, value })),
+        selectedIndex: spec.options.indexOf(spec.value),
+        textStyle: { fontSize: 14 },
+      });
+      row.addChild(select);
+      select.setPosition(0, 20);
+      const previous = new Button({ label: '<', width: controlHeight, height: controlHeight, fontSize: 14 });
+      row.addChild(previous);
+      const next = new Button({ label: '>', width: controlHeight, height: controlHeight, fontSize: 14 });
+      row.addChild(next);
+      const selected = new Label(spec.value, { fontSize: 14 });
+      row.addChild(selected);
+      previous.setPosition(0, 20);
+      selected.setPosition(controlHeight + 8, 20 + (controlHeight - 20) / 2);
+      previous.onClick.add(() => handle.step(key, -1));
+      next.onClick.add(() => handle.step(key));
+      select.onChange.add(value => commit(key, value as DemoControlValue<C[typeof key]>));
+      renderers.set(key, (value: string) => {
+        select.selectedIndex = spec.options.indexOf(value);
+        selected.text = value;
+
+        return value;
+      });
+      rows.push({
+        node: row,
+        resize: (width, screenY, screenHeight, allowPopup) => {
+          const above = screenY + 20;
+          const below = screenHeight - screenY - 20 - controlHeight;
+          const insets = select.theme.dropdownList.normal.insets;
+          const listHeight = spec.options.length * controlHeight + insets.top + insets.bottom;
+          const fits = allowPopup && listHeight <= Math.max(above, below);
+          select.visible = fits;
+          previous.visible = next.visible = selected.visible = !fits;
+          select.setSize(width, controlHeight);
+          select.placeList(above >= below);
+
+          if (!fits) {
+            select.close();
+          }
+
+          next.setPosition(Math.max(0, width - controlHeight), 20);
+          selected.textNode.layout = { maxWidth: Math.max(1, width - 2 * (controlHeight + 8)), maxHeight: 20, overflow: 'ellipsis' };
+          label.textNode.layout = { maxWidth: width, maxHeight: 18, overflow: 'ellipsis' };
+        },
+      });
+    }
+  }
+
+  for (const [label, run] of Object.entries(options.actions ?? {})) {
+    const button = new Button({ label, height: controlHeight, fontSize: 14 });
+    scroll.content.addChild(button);
+    button.onClick.add(run);
+    actions[label] = button;
+  }
+
+  const reveal = (top: number, height: number): void => {
+    if (top < scroll.scrollY) {
+      scroll.scrollTo(0, top);
+    } else if (top + height > scroll.scrollY + scroll.uiHeight) {
+      scroll.scrollTo(0, top + height - scroll.uiHeight);
+    }
+  };
+
+  for (const row of rows) {
+    for (const control of row.node.children) {
+      if (control.focusable) {
+        control.onFocus.add(() => reveal(row.node.y, rowHeight - 4));
+      }
+    }
+  }
+
+  for (const button of Object.values(actions)) {
+    button.onFocus.add(() => reveal(button.y, button.uiHeight));
+  }
+
+  const fit = (app: { width: number; height: number }, host: HTMLElement): DemoViewport => {
+    if (disposed) {
+      return viewport;
+    }
+
+    const scale = unitsPerCssPixel(app, host);
+    const width = app.width / scale;
+    const height = app.height / scale;
+    const rootScale = scene.ui.uiScale;
+
+    if (!dirty && scale === viewport.scale && width === viewport.width && height === viewport.height && rootScale === lastRootScale) {
+      return viewport;
+    }
+
+    dirty = false;
+    lastRootScale = rootScale;
+    Object.assign(viewport, { scale, width, height, compact: width < 720 || height < 420 });
+    const bar = options.layout === 'bar' || viewport.compact;
+    const panelWidth = bar ? width : Math.min(300, Math.max(0, width - 24));
+    const innerWidth = Math.max(1, panelWidth - 24);
+    const columns = Math.max(1, Math.floor((innerWidth + 12) / 220));
+    const cellWidth = (innerWidth - (columns - 1) * 12 - 16) / columns;
+    let y = 10;
+    title.visible = !!options.title && !viewport.compact;
+    hint.visible = !!options.hint && !viewport.compact;
+
+    for (const label of [title, hint]) {
+      label.textNode.layout = { maxWidth: innerWidth, maxHeight: 20, overflow: 'ellipsis' };
+      label.setPosition(12, y);
+
+      if (label.visible) {
+        y += 24;
+      }
+    }
+
+    const controlsY = y;
+    let contentHeight = Math.ceil(rows.length / columns) * rowHeight;
+    let actionX = 0;
+    let actionRows = 0;
+
+    for (const button of Object.values(actions)) {
+      const buttonWidth = Math.min(innerWidth - 16, Math.max(84, button.labelNode.textBounds.width + 24));
+
+      if (actionX > 0 && actionX + buttonWidth > innerWidth - 16) {
+        actionX = 0;
+        actionRows++;
+      }
+
+      button.setSize(buttonWidth, controlHeight).setPosition(actionX, contentHeight + actionRows * actionRowHeight);
+      actionX += buttonWidth + 8;
+    }
+
+    if (actionX > 0) {
+      contentHeight += (actionRows + 1) * actionRowHeight;
+    }
+
+    status.textNode.layout = { maxWidth: innerWidth, maxHeight: viewport.compact ? 32 : 48, overflow: 'ellipsis' };
+    const statusHeight = status.visible ? Math.min(viewport.compact ? 32 : 48, status.textNode.textBounds.height) + 4 : 0;
+    const panelBudget = viewport.compact ? Math.min(height * 0.65, height - 70) : height * 0.8;
+    const visibleHeight = Math.min(contentHeight, Math.max(rowHeight - 8, panelBudget - controlsY - statusHeight - 6));
+    const overflow = visibleHeight < contentHeight;
+    scroll.setSize(innerWidth, visibleHeight).setPosition(12, controlsY);
+    scroll.clip = overflow;
+    y += visibleHeight;
+    status.setPosition(12, y);
+    y += statusHeight;
+    const panelHeight = y + 6;
+    const corner = bar ? 'bottom-left' : (options.corner ?? 'bottom-left');
+    const x = corner.endsWith('right') ? width - panelWidth - 12 : bar ? 0 : 12;
+    const top = corner.startsWith('bottom') ? Math.max(0, height - panelHeight - (bar ? 0 : 12)) : 12;
+    element
+      .setSize(panelWidth, panelHeight)
+      .setScale(scale / rootScale)
+      .setPosition((x * scale) / rootScale, (top * scale) / rootScale);
+    rows.forEach((row, index) => {
+      const rowY = Math.floor(index / columns) * rowHeight;
+      row.node.setPosition((index % columns) * (cellWidth + 12), rowY);
+      row.resize(cellWidth, top + controlsY + rowY - scroll.scrollY, height, !overflow);
+    });
+    scroll.refresh();
+    viewport.contentHeight = Math.max(0, height - panelHeight - (bar ? 0 : 24));
+
+    return viewport;
+  };
+
+  const onFrame = (): void => {
+    fit(app, app.canvas as HTMLCanvasElement);
+  };
+
+  const dispose = (): void => {
+    if (!disposed) {
+      disposed = true;
+      app.onFrame.remove(onFrame);
+
+      if (!element.destroyed) {
+        element.destroy();
+      }
+    }
+  };
+
+  const handle = {
+    element,
+    actions,
+    fit,
+    values,
+    set: <K extends keyof C>(key: K, value: DemoControlValue<C[K]>) => commit(key, value),
+    step(key: keyof C, delta = 1) {
+      const spec = options.controls[key]!;
+
+      if (spec.kind === 'toggle') {
+        commit(key, !values[key] as DemoControlValue<C[typeof key]>);
+      } else if (spec.kind === 'choice') {
+        const count = spec.options.length;
+        const index = spec.options.indexOf(values[key] as string);
+        commit(key, spec.options[(((index + delta) % count) + count) % count] as DemoControlValue<C[typeof key]>);
+      } else {
+        commit(key, Math.min(spec.max, Math.max(spec.min, (values[key] as number) + delta * spec.step)) as DemoControlValue<C[typeof key]>);
+      }
+    },
+    status(text: string, tone: DemoStatusTone = 'neutral') {
+      if (disposed || (status.text === text && statusTone === tone)) {
+        return;
+      }
+
+      const previousHeight = status.visible ? status.textNode.textBounds.height : 0;
+      status.text = text;
+      status.visible = text !== '';
+
+      if (statusTone !== tone) {
+        status.setTextStyle({ fillColor: tones[tone] });
+      }
+
+      statusTone = tone;
+      dirty ||= previousHeight !== (status.visible ? status.textNode.textBounds.height : 0);
+    },
+    dispose,
+  };
+  scene.track({ destroy: dispose });
+  app.onFrame.add(onFrame);
+  onFrame();
+
+  for (const key of keys) {
+    options.onChange?.(key, values[key], values);
+  }
+
+  return handle;
+};
+
+const tones: Record<DemoStatusTone, Color> = {
+  neutral: Color.fromHex('#b3c1cd'),
+  info: Color.fromHex('#7ed6e0'),
+  warning: Color.fromHex('#f2c078'),
+  success: Color.fromHex('#88dfc3'),
+  error: Color.fromHex('#ff929b'),
 };

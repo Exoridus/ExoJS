@@ -94,6 +94,7 @@ class TextureSamplingScene extends Scene {
     }
     this.root.addChild(this.grid, ...this.magnified, ...this.minified);
     this.panel = demoPanel({
+      scene: this,
       title: 'Texture Sampling and Pixel Snapping',
       layout: 'bar',
       controls,

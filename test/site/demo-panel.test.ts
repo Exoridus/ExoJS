@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { choice, demoPanel, slider, toggle } from '../../examples/shared/runtime.ts';
+import { choice, domDemoPanel as demoPanel, slider, toggle } from '../../examples/shared/runtime.ts';
 
 const controls = () => ({
   mode: choice('Mode', ['Normal', 'Additive', 'Screen']),

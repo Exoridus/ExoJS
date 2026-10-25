@@ -317,14 +317,9 @@ export class Graphics extends Container {
     return this;
   }
 
-  /**
-   * Stroke a shape's perimeter. Shape builders return their outline OPEN
-   * (first point not repeated), but `buildPath` only closes a path whose
-   * first and last points coincide - so the closing segment (e.g. a
-   * rectangle's left edge) went missing. Repeat the first point here.
-   */
+  /** Close open outlines once; repeating a closed endpoint produces zero-length stroke segments. */
   private _strokeClosedOutline(points: number[]): void {
-    if (points.length >= 4) {
+    if (points.length >= 4 && (points[0] !== points[points.length - 2] || points[1] !== points[points.length - 1])) {
       this.drawPath([...points, points[0]!, points[1]!]);
     } else {
       this.drawPath(points);

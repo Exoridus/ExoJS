@@ -20,7 +20,7 @@ import { ObjectKind, TileMapNode } from '@codexo/exojs/tilemap';
 import { demoAssetCategories, demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { ldtkExtension } from '@codexo/exojs-ldtk';
 import { tiledExtension } from '@codexo/exojs-tiled';
-import { choice, demoPanel, slider, toggle } from '@examples/runtime';
+import { choice, domDemoPanel as demoPanel, slider, toggle } from '@examples/runtime';
 // An asset browser for the standard demo catalog. It is an ordinary scene:
 //
 //   - The list is derived from `demoAssets` and `demoAssetCategories`; nothing

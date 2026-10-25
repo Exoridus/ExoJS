@@ -2,7 +2,7 @@
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser, CompressorEffect, EqualizerEffect, LimiterEffect, ReverbEffect } from '@codexo/exojs/audio-fx';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel } from '@examples/runtime';
+import { mountControlPanel as mountDomControlPanel } from '@examples/runtime';
 const NODE_W = 180;
 const NODE_H = 86;
 const LANE_COLORS = {
@@ -26,7 +26,7 @@ class SignalGraphScene extends Scene {
   impact;
   musicVoice;
   musicPlaying = true;
-  musicVolume = 0.7;
+  musicVolume = 0.4;
   impactVolume = 0.3;
   autoImpact = true;
   impactTimer = 0;
@@ -47,7 +47,7 @@ class SignalGraphScene extends Scene {
   panel = null;
   hint;
   async load() {
-    this.music = await this.loader.load(assets.musicLoopMain);
+    this.music = await this.loader.load(assets.musicArcadeChiptune);
     this.impact = this.loader.get(assets.soundImpactLight);
   }
   init() {
@@ -132,7 +132,7 @@ class SignalGraphScene extends Scene {
     const audio = this.app.audio;
     this.selected = id;
     this.panel?.dispose();
-    const panel = mountControlPanel({ title: n.title });
+    const panel = mountDomControlPanel({ title: n.title });
     this.panel = panel;
     if (n.effect) {
       panel.addToggle({ label: 'Active', value: n.enabled, onChange: value => this.setEnabled(n, value) });

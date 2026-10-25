@@ -60,6 +60,7 @@ class EmitterBasicsScene extends Scene {
       ),
     );
     this.panel = demoPanel({
+      scene: this,
       title: 'Control a Particle Emitter',
       layout: 'bar',
       controls,

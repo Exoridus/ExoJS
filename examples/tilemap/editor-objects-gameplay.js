@@ -60,6 +60,7 @@ class EditorObjectsScene extends Scene {
     this.spawns = await spawner.spawn(map, undefined);
     this.worldRoot.addChild(this.mapNode, ...this.spawns.objects, ...this.labels);
     this.hud = demoPanel({
+      scene: this,
       title: 'Editor Maps and Gameplay',
       layout: 'bar',
       controls: {},

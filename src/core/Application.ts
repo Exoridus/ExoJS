@@ -20,6 +20,7 @@ import { createDefaultCanvas, isRenderSurface } from '#core/applicationCanvas';
 import { CoroutineSystem } from '#core/CoroutineSystem';
 import { SceneDirector } from '#core/scene/SceneDirector';
 import { SceneNavigationAbortedError } from '#core/scene/sceneErrors';
+import { SceneState } from '#core/scene/SceneState';
 import {
   type AnySceneConstructor,
   type ChangeSceneArgs,
@@ -407,6 +408,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private readonly _outputTransform: OutputTransform;
   private _outputTexture: RenderTexture | null = null;
   private _outputPassesRedirect: BackendTargetPass | null = null;
+  private _uiRedirect: BackendTargetPass | null = null;
   /**
    * Samples per pixel the engine-owned working targets are rendered at, or
    * `null` while undecided - see {@link _workingSampleCount}. Decided once and
@@ -1636,8 +1638,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * The redirect wraps the scene, the systems and the transition together so a
    * pass sees the finished frame. A system that draws a debug overlay and a
    * scene transition are both part of the picture an effect is applied to; a
-   * caller who wants an overlay left unfiltered adds it as a frame pass
-   * instead, after the effect.
+   * caller who wants an overlay left unfiltered adds it to `Scene.ui`, which
+   * is composed after frame effects and before the output transform.
    *
    * An antialias request resolved for the working targets reaches the storage
    * as a sample count rather than a target flag: a multisample target is only
@@ -1658,7 +1660,6 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // multisample chain would pay the sample cost on filters too.
       output.sampleCount = this._workingSampleCount();
       this._backend.execute(this._frameRedirect.retarget(output, output.view, clear));
-      this._backend.resolveRenderTarget(output);
     } else {
       const texture = this.frameTexture;
 
@@ -1672,20 +1673,28 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._backend.execute(this._outputPassesRedirect.retarget(output, output.view, Color.transparentBlack));
     }
 
+    const scene = this.scenes.currentScene;
+
+    if (scene?.state === SceneState.Active && scene._peekUI() !== null) {
+      this._uiRedirect ??= new BackendTargetPass(() => this.scenes.currentScene?._peekUI()?._render(this._rendering));
+      this._backend.execute(this._uiRedirect.retarget(output, output.view, null));
+    }
+
+    this._backend.resolveRenderTarget(output);
     this._outputTransform.present(this._backend, output, this._transparentCanvas, this.clearColor);
   }
 
   /** The frame's own drawing, in the order the transition placement asks for. */
   private _drawSceneAndSystems(): void {
     if (this.scenes._transitionPlacement() === 'scene') {
-      this.scenes.draw(this._rendering);
+      this.scenes._drawFrame(this._rendering);
       this.scenes._renderTransition(this._rendering);
       this.systems._draw(this._rendering);
 
       return;
     }
 
-    this.scenes.draw(this._rendering);
+    this.scenes._drawFrame(this._rendering);
     this.systems._draw(this._rendering);
     this.scenes._renderTransition(this._rendering);
   }
@@ -1737,6 +1746,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private _releaseOutputTarget(): void {
     this._outputTransform.destroy();
     this._outputPassesRedirect = null;
+    this._uiRedirect = null;
     this._outputTexture?.destroy();
     this._outputTexture = null;
   }

@@ -40,6 +40,7 @@ class PlaySoundScene extends Scene {
     this.app.audio.registerBus(this.bus);
     this.analyser = new AudioAnalyser({ source: this.bus, smoothingTimeConstant: 0 });
     this.panel = demoPanel({
+      scene: this,
       layout: 'bar',
       title: 'Play a Sound',
       hint: 'Click a pad or press 1-4. Each pad plays the labeled sound.',

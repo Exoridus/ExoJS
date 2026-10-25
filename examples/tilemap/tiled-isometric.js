@@ -93,6 +93,7 @@ class IsometricScene extends Scene {
       }
     }
     this.hud = demoPanel({
+      scene: this,
       title: 'Tilemap Projections',
       layout: 'bar',
       controls: {},

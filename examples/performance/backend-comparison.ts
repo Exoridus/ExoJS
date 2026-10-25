@@ -69,6 +69,7 @@ class BatchingScene extends Scene {
     // Keys and panel share one state; changing the backend rebuilds the whole
     // application, which mounts a fresh panel from the same module state.
     this.panel = demoPanel({
+      scene: this,
       title: 'Workload',
       corner: 'top-right',
       controls: {

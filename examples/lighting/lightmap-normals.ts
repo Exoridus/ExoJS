@@ -104,6 +104,7 @@ class LightmapNormalsScene extends Scene {
 
     this.root.addChild(this.world);
     this.panel = demoPanel({
+      scene: this,
       title: 'Light a Normal-Mapped Surface',
       layout: 'bar',
       controls,

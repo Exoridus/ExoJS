@@ -51,7 +51,7 @@ const subscribeNever = (): (() => void) => () => undefined;
  * Plain logs never open it; the first uncaught error of a preview run, or a
  * failed source load, does - unless the visitor collapsed it during that run.
  */
-export const OutputPanel = ({ output, systemErrors }: OutputPanelProps): JSX.Element => {
+export const OutputPanel = ({ output, systemErrors }: OutputPanelProps): JSX.Element | null => {
   const snapshot = useSyncExternalStore(output.subscribe, output.getSnapshot, output.getSnapshot);
   const storedOpen = useSyncExternalStore(subscribeNever, readStoredOpen, () => false);
   const [openChoice, setOpenChoice] = useState<boolean | null>(null);
@@ -123,6 +123,10 @@ export const OutputPanel = ({ output, systemErrors }: OutputPanelProps): JSX.Ele
       () => setCopied(false),
     );
   };
+
+  if (snapshot.entries.length === 0 && systemErrors.length === 0) {
+    return null;
+  }
 
   return (
     <section className={css(styles, 'root')} data-open={open ? 'true' : undefined} aria-label="Preview output">

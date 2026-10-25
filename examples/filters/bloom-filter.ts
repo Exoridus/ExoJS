@@ -42,6 +42,7 @@ class BloomFilterScene extends Scene {
     });
     this.root.addChild(...this.labels);
     this.panel = demoPanel({
+      scene: this,
       title: 'Bloom Threshold',
       layout: 'bar',
       controls,

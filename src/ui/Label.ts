@@ -82,7 +82,7 @@ export class Label extends Widget {
   }
 
   private _syncSize(): void {
-    const bounds = this._text.getLocalBounds();
+    const bounds = this._text.textBounds;
 
     this.setSize(bounds.width, bounds.height);
   }

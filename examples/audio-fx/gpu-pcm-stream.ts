@@ -94,6 +94,7 @@ class GpuPcmStreamScene extends Scene {
       .setAnchor(0.5)
       .setPosition(this.app.width / 2, this.app.height - 48);
     this.panel = demoPanel({
+      scene: this,
       title: 'GPU producer',
       controls: {
         format: choice('Readback format', Object.keys(FORMATS) as FormatName[]),

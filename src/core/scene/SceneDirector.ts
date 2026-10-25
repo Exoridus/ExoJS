@@ -1146,17 +1146,26 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * it itself.
    */
   public draw(context: RenderingContext): this {
+    return this._drawSurface(context, true);
+  }
+
+  /** @internal Draws the frame's scene surface; Application composes screen UI after frame effects. */
+  public _drawFrame(context: RenderingContext): this {
+    return this._drawSurface(context, false);
+  }
+
+  private _drawSurface(context: RenderingContext, includeUI: boolean): this {
     const currentTexture = this._sessionResources?.currentTexture ?? null;
 
     if (currentTexture !== null) {
       if (this._activeScope !== null) {
-        context._renderSurfaceInto(currentTexture, this._app.clearColor, () => this._activeScope?.draw(context));
+        context._renderSurfaceInto(currentTexture, this._app.clearColor, () => this._activeScope?.draw(context, includeUI));
       }
 
       return this;
     }
 
-    this._activeScope?.draw(context);
+    this._activeScope?.draw(context, includeUI);
 
     return this;
   }
@@ -2140,12 +2149,12 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     };
   }
 
-  /** One-time capture of `scope`'s full render surface (`Scene.draw()` + its systems + `Scene.ui`) into a fresh pooled texture, while it is still the live scope. */
+  /** Captures the outgoing world and systems; screen UI stays above transition and frame effects. */
   private _captureOutgoingSnapshot(scope: SceneScope, width: number, height: number): RenderTexture {
     const snapshot = this._app.backend.acquireRenderTexture(width, height);
 
     try {
-      this._app.rendering._renderSurfaceInto(snapshot, this._app.clearColor, () => scope.draw(this._app.rendering));
+      this._app.rendering._renderSurfaceInto(snapshot, this._app.clearColor, () => scope.draw(this._app.rendering, false));
     } catch (error) {
       this._app.backend.releaseRenderTexture(snapshot);
 

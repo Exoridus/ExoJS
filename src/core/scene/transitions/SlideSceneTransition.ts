@@ -107,7 +107,10 @@ export class SlideSceneTransition extends PhasedSceneTransition<SlidePhaseState>
     }
 
     if (this.mode === 'cover' && context.frame.outgoing !== null) {
+      const { width, height } = this._screenSize(context);
       state.snapshotSprite.texture = context.frame.outgoing;
+      state.snapshotSprite.width = width;
+      state.snapshotSprite.height = height;
       state.snapshotSprite.x = 0;
       state.snapshotSprite.y = 0;
       state.snapshotSprite.tint.a = 1;
@@ -139,6 +142,8 @@ export class SlideSceneTransition extends PhasedSceneTransition<SlidePhaseState>
     const offset = distance * (1 - context.presence) * directionSign[direction];
 
     sprite.texture = texture;
+    sprite.width = width;
+    sprite.height = height;
     sprite.x = directionAxis[direction] === 'x' ? offset : 0;
     sprite.y = directionAxis[direction] === 'x' ? 0 : offset;
     sprite.tint.a = 1;

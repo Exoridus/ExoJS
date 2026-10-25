@@ -1109,7 +1109,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Scene-bound UI layer, rendered screen-fixed on top of the scene content (after Scene.draw). Lazily created and destroyed with the scene; add widgets via this.ui.addChild(...). Unlike Scene.root, whose pass an overridden Scene.draw replaces, the UI layer is rendered every frame whatever draw() does - a first-class overlay that always sits above the world. Its children live in screen space (origin top-left, 0..width × 0..height); pointer and keyboard input route to them ahead of the world layer."
+          "description": "Scene-bound UI layer, rendered screen-fixed on top of the scene content after transitions and frame effects, before the output transform. Lazily created and destroyed with the scene; add widgets via this.ui.addChild(...). Unlike Scene.root, whose pass an overridden Scene.draw replaces, the UI layer is rendered every frame whatever draw() does - a first-class overlay that always sits above the world. Its children live in screen space (origin top-left, 0..width × 0..height); pointer and keyboard input route to them ahead of the world layer."
         }
       ],
       "paragraphs": [],

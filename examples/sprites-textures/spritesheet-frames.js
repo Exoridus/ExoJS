@@ -1,7 +1,7 @@
 // Auto-generated from spritesheet-frames.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Scene, Spritesheet } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { demoPanel, mountControls, slider, toggle } from '@examples/runtime';
 const CHARACTERS = ['beige', 'green', 'pink', 'purple', 'yellow'];
 class SpritesheetFramesScene extends Scene {
   spritesheet;
@@ -29,9 +29,18 @@ class SpritesheetFramesScene extends Scene {
       controls: [{ keys: 'Right-click', action: 'next character' }],
       hint: 'A two-frame walk cycle stepped on a timer from named spritesheet frames.',
     });
-    const panel = mountControlPanel({ title: 'Animation' });
-    panel.addSlider({ label: 'Speed (fps)', min: 1, max: 16, step: 1, value: this.fps, onChange: value => (this.fps = value) });
-    panel.addToggle({ label: 'Playing', value: true, onChange: on => (this.playing = on) });
+    demoPanel({
+      scene: this,
+      title: 'Animation',
+      controls: {
+        fps: slider('Speed (fps)', { min: 1, max: 16, step: 1, value: this.fps }),
+        playing: toggle('Playing', true),
+      },
+      onChange: (_key, _value, values) => {
+        this.fps = values.fps;
+        this.playing = values.playing;
+      },
+    });
     app.input.onContextMenu.add(() => {
       const index = (CHARACTERS.indexOf(this.character) + 1) % CHARACTERS.length;
       this.character = CHARACTERS[index];

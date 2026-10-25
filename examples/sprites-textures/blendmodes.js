@@ -70,6 +70,7 @@ class BlendmodesScene extends Scene {
     }
     this.root.addChild(this.backdrop, this.destinations[0], this.sources[0], this.destinations[1], this.sources[1], ...this.labels);
     this.panel = demoPanel({
+      scene: this,
       title: 'Blend Modes',
       layout: 'bar',
       controls,

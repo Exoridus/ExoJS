@@ -55,7 +55,7 @@ class AudioVisualisationScene extends Scene {
   >;
 
   override async load(): Promise<void> {
-    this.music = await this.loader.load(assets.musicLoopMain);
+    this.music = await this.loader.load(assets.musicDarkIndustrial);
   }
 
   override init(): void {
@@ -72,6 +72,7 @@ class AudioVisualisationScene extends Scene {
     this.texture = new Texture(this.canvas);
     this.screen = new Sprite(this.texture);
     this.panel = demoPanel({
+      scene: this,
       layout: 'bar',
       title: 'Read Spectrum and Waveform',
       hint: 'Analyse the music track, or compare it with a coded mono Pulse or Noise test signal.',

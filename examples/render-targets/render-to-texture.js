@@ -48,6 +48,7 @@ class RenderToTextureScene extends Scene {
     );
     this.root.addChild(this.live, this.snapshot, ...this.labels);
     this.panel = demoPanel({
+      scene: this,
       title: 'Capture a Texture',
       layout: 'bar',
       controls: {},

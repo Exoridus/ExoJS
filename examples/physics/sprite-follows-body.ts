@@ -88,6 +88,7 @@ class SpriteFollowsBodyScene extends Scene {
       this.bodies.push(body);
     });
     this.panel = demoPanel({
+      scene: this,
       title: 'Drag and Throw Physics',
       layout: 'bar',
       hint: 'Grab inside a body, drag, release to throw. The outlined collision shape is the hit area.',

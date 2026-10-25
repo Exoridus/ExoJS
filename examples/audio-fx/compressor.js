@@ -11,7 +11,7 @@ class CompressorScene extends Scene {
   label;
   bypass = false;
   async load() {
-    this.music = await this.loader.load(assets.musicLoopMain);
+    this.music = await this.loader.load(assets.musicLofiRhodes);
   }
   init() {
     const audio = this.app.audio;
@@ -24,6 +24,7 @@ class CompressorScene extends Scene {
     // without being louder than the rest of the catalog, and it ramps rather
     // than jumps so switching never spikes.
     demoPanel({
+      scene: this,
       title: 'Compression',
       controls: {
         input: choice('Input', ['Quiet', 'Loud']),

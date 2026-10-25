@@ -20,7 +20,7 @@ import {
   TileSet,
 } from '@codexo/exojs/tilemap';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { demoPanel, mountControls } from '@examples/runtime';
 // An infinite, procedurally generated world: the TileLayer has NO width/height
 // (unbounded), and a ChunkStreamer keeps only the chunks near the camera
 // resident. Terrain comes from a deterministic value-noise fBm sampler fed
@@ -193,12 +193,15 @@ class InfiniteTerrainScene extends Scene {
       status: '',
       hint: 'The map has no width or height. A ChunkStreamer loads chunks around the camera and evicts the ones you leave behind — revisited terrain is regenerated identically from the seed.',
     });
-    const panel = mountControlPanel({ title: 'World' });
-    panel.addButton({
-      label: 'New seed',
-      onClick: () => {
-        this.seed = (Math.random() * 0x7fffffff) | 0;
-        this.rebuildStreamer();
+    demoPanel({
+      scene: this,
+      title: 'World',
+      controls: {},
+      actions: {
+        'New seed': () => {
+          this.seed = (Math.random() * 0x7fffffff) | 0;
+          this.rebuildStreamer();
+        },
       },
     });
   }

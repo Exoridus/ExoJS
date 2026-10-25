@@ -17,13 +17,14 @@ class AudioBusesScene extends Scene {
   playbackEpoch = 0;
   failure = '';
   async load() {
-    this.music = await this.loader.load(assets.musicLoopMain);
+    this.music = await this.loader.load(assets.musicLofiRhodes);
   }
   init() {
     const audio = this.app.audio;
     this.sfx = this.loader.get(assets.soundUiClick);
     this.initial = { master: audio.master.volume, music: audio.music.volume, sound: audio.sound.volume };
     this.panel = demoPanel({
+      scene: this,
       layout: 'bar',
       title: 'Mix Music and Effects',
       hint: 'Master scales both child buses. Start the music bed, then fire effects over it.',

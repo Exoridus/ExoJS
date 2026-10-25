@@ -11,7 +11,7 @@ import {
   Text,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { type DemoPanel, demoPanel, slider, type SliderSpec, toggle, type ToggleSpec } from '@examples/runtime';
+import { type DemoPanel, demoPanel, slider, type SliderSpec, startExample, toggle, type ToggleSpec } from '@examples/runtime';
 
 const glsl = `#version 300 es
 precision highp float;
@@ -61,25 +61,36 @@ fn hash(point: vec2<f32>) -> f32 {
 
 class RetroDisplayScene extends Scene {
   private stage!: Container;
+  private background!: Sprite;
+  private title!: Text;
   private filter!: ShaderFilter;
   private panel!: DemoPanel<{ crt: ToggleSpec; strength: SliderSpec; split: SliderSpec }>;
   private time = 0;
 
+  override async load(): Promise<void> {
+    await this.loader.load(assets.uvGrid256);
+  }
+
   override init(): void {
     const { width, height } = this.app;
-    const background = new Sprite(this.loader.get(assets.uvGrid256)).setAnchor(0.5).setPosition(width / 2, height / 2);
-    background.width = width;
-    background.height = height;
-    const title = new Text('SIGNAL LOST', { fillColor: Color.white, fontSize: 96, outlineColor: Color.black, outlineWidth: 4 });
-    title.setAnchor(0.5).setPosition(width / 2, height / 2);
+    this.background = new Sprite(this.loader.get(assets.uvGrid256)).setAnchor(0.5).setPosition(width / 2, height / 2);
+    this.background.width = width;
+    this.background.height = height;
+    this.title = new Text('SIGNAL LOST', { fillColor: Color.white, fontSize: 96, outlineColor: Color.black, outlineWidth: 4 });
+    this.title.setAnchor(0.5).setPosition(width / 2, height / 2);
 
     this.stage = new Container();
-    this.stage.addChild(background, title);
+    this.stage.addChild(this.background, this.title);
+    // #region guide:retro-filter
     this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0, uAmount: 0.8, uSplit: 0.006 } });
     this.stage.filters = [this.filter];
+    // #endregion guide:retro-filter
 
     this.panel = demoPanel({
-      title: 'Retro Display',
+      scene: this,
+      layout: 'bar',
+      title: 'Controls',
+      hint: 'Turn CRT off to compare the original signal.',
       controls: {
         crt: toggle('CRT', true),
         strength: slider('Effect strength', { min: 0, max: 1, value: 0.8, step: 0.05, format: value => `${Math.round(value * 100)}%` }),
@@ -98,12 +109,26 @@ class RetroDisplayScene extends Scene {
   }
 
   override update(delta: Seconds): void {
+    const pageWidth = window.frameElement?.ownerDocument.documentElement.clientWidth ?? window.innerWidth;
+    const height = pageWidth < 600 ? Math.max(1200, Math.ceil((360 * 1280) / pageWidth)) : 720;
+
+    if (this.app.height !== height) {
+      this.app.resize(1280, height);
+    }
+
+    const { width, contentHeight, scale } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    this.stage.setScale(scale);
+    this.background.setPosition(width / 2, contentHeight / 2);
+    this.background.width = width;
+    this.background.height = contentHeight;
+    this.title.setPosition(width / 2, contentHeight / 2);
+    this.title.style.fontSize = Math.min(72, Math.max(18, contentHeight * 0.2));
     this.time += delta;
     this.filter.setUniform('uTime', this.time);
   }
 
   override draw(context: RenderingContext): void {
-    context.render(this.stage);
+    context.render(this.stage, { view: context.screenView });
   }
 
   override destroy(): void {
@@ -119,4 +144,4 @@ const app = new Application({
   clearColor: Color.black,
 });
 
-await app.start(RetroDisplayScene);
+await startExample(app, () => app.start(RetroDisplayScene));

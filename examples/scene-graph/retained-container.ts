@@ -89,6 +89,7 @@ class RetainedContainerScene extends Scene {
     this.field = this.buildField(this.retained);
 
     this.panel = demoPanel({
+      scene: this,
       title: 'Render tier',
       controls: { retained: toggle('Retained tier', this.retained) },
       onChange: (_key, retained) => {

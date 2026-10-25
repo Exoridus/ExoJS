@@ -179,6 +179,10 @@ const locale = Astro.currentLocale === 'de' ? 'de' : 'en';
   }
 
   @media (width <= 760px) {
+    .embed-head {
+      flex-wrap: wrap;
+    }
+
     .embed-body {
       grid-template-columns: 1fr;
     }

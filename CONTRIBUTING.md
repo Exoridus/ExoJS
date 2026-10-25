@@ -175,7 +175,7 @@ const orb = new Graphics();
 ```
 
 ```mdx
-<SourceSnippet source="examples/guides/build-orb-dodge/game.ts" region="spawn-orbs" title="Spawning an orb" />
+<SourceSnippet source="examples/showcase/collect-survive.ts" region="spawn-orb" title="Spawning an orb" />
 ```
 
 `<page>` is the guide page's file name, `<variant>` a stage of the chapter when one file cannot hold it (`game.ts`, `game-with-score.ts`). Splitting a chapter across variants costs the reader nothing, but every listing inside one file is checked against the same program state, so prefer one file per chapter.

@@ -33,6 +33,7 @@ class ReverbAndDelayScene extends Scene {
     this.bus.addEffect(this.reverb).addEffect(this.delay);
     this.analyser = new AudioAnalyser({ source: this.bus, smoothingTimeConstant: 0 });
     this.panel = demoPanel({
+      scene: this,
       layout: 'bar',
       title: 'Hear an Audio Effect',
       hint: 'Compare the same short sound. Bypass keeps the source level unchanged.',

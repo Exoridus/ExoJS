@@ -37,6 +37,7 @@ class MasksScene extends Scene {
     );
     this.root.addChild(...this.sprites, this.outline, ...this.labels);
     this.panel = demoPanel({
+      scene: this,
       title: 'Masks',
       layout: 'bar',
       hint: 'Drag either mask. Both clip the same Kenney hills image in world coordinates.',

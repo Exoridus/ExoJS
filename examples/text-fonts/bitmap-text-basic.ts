@@ -40,6 +40,7 @@ class BitmapTextBasicScene extends Scene {
 
   override init(): void {
     this.panel = demoPanel({
+      scene: this,
       title: 'Bitmap Text',
       layout: 'bar',
       controls,
@@ -85,7 +86,6 @@ class BitmapTextBasicScene extends Scene {
       `${this.playing ? 'Counting' : 'Paused'} | ${this.panel.values.scale} | ${compact ? 'Atlas loaded' : 'kenney-blocks-32.fnt loaded | Nearest sampling'}`,
       'success',
     );
-    this.panel.element.querySelector('button')!.setAttribute('aria-pressed', String(!this.playing));
   }
 
   override draw(context: RenderingContext): void {

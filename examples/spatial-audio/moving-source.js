@@ -1,5 +1,5 @@
 // Auto-generated from moving-source.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Sound, Text } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 // Orbit + attenuation tuned to the wide canvas so the readout reflects what you
@@ -28,11 +28,10 @@ class MovingSourceScene extends Scene {
   async load() {
     const app = this.app;
     const { width, height } = app;
-    // A continuous music loop, not a one-shot: spatialization is only
-    // audible while there is sustained signal to pan/attenuate. The derived
+    // The sustained engine makes panning and attenuation audible. The derived
     // Sound below reads .audioBuffer synchronously, so await load() instead
     // of the deferred get() (whose placeholder audioBuffer is null until fill).
-    const source = await this.loader.load(Asset.type('sound', assets.musicLoopMain.source));
+    const source = await this.loader.load(assets.soundSpaceEngine);
     this.sound = new Sound(source.audioBuffer);
     this.listener = { x: width / 2, y: height / 2 };
     app.audio.listener.target = this.listener;

@@ -73,6 +73,7 @@ class InteractiveTweensScene extends Scene {
 
   override init(): void {
     this.panel = demoPanel({
+      scene: this,
       title: 'Tweens and Easing',
       layout: 'bar',
       controls,
@@ -227,7 +228,6 @@ class InteractiveTweensScene extends Scene {
     this.panel.status(
       `${this.motionPaused ? 'Paused' : this.moving ? 'Moving' : 'Ready'} | Leg ${this.leg} | t ${this.clock.t.toFixed(2)} / ${ease(this.clock.t).toFixed(2)}`,
     );
-    this.panel.element.querySelector('button')!.setAttribute('aria-pressed', String(this.motionPaused));
   }
 
   override draw(context: RenderingContext): void {

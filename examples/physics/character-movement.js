@@ -174,6 +174,7 @@ class CharacterMovementScene extends Scene {
       this.worldRoot.addChild(label);
     }
     this.hud = demoPanel({
+      scene: this,
       title: 'Character Movement',
       layout: 'bar',
       controls: {},

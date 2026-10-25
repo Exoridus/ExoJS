@@ -3662,7 +3662,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The theme a UI layer uses until one is assigned. It reproduces the widgets' built-in look, so assigning a patch changes only what the patch names."
+          "description": "Asset-free dark surfaces, readable typography and mint interaction accents."
         },
         {
           "name": "fontType",

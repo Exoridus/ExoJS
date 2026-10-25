@@ -84,6 +84,7 @@ class TiledInfiniteMapScene extends Scene {
   }
   setupHud() {
     this.hud = demoPanel({
+      scene: this,
       title: 'Streaming Tile Worlds',
       layout: 'bar',
       controls: {},

@@ -29,6 +29,7 @@ import { composeSpriteMaterialFragmentGlsl } from '#rendering/sprite/materialSou
 import { composeTextAtlasFragmentGlsl } from '#rendering/text/atlasTextureSlots';
 import { generateGlslUniformDeclarations, withGlslUniformDeclarations } from '#rendering/uniforms/uniformSource';
 
+import { galleryDissolveShader } from '../../../examples/shared/gallery-transitions';
 import { lightCompositeShader } from '../../../packages/exojs-lighting/src/backends/FrameLightingBackend';
 import { cascadeUniforms, gatherUniforms } from '../../../packages/exojs-lighting/src/backends/radianceField';
 import { shadowMarchShader } from '../../../packages/exojs-lighting/src/backends/shadowMarch';
@@ -95,6 +96,7 @@ const generatedUniformBlocks: ReadonlyMap<string, string> = new Map([
   ['color-matrix.frag', generateGlslUniformDeclarations(colorMatrixShader.uniformSchema!)],
   ['displacement.frag', generateGlslUniformDeclarations(displacementShader.uniformSchema!)],
   ['drop-shadow.frag', generateGlslUniformDeclarations(dropShadowShader.uniformSchema!)],
+  ['gallery-dissolve.frag', generateGlslUniformDeclarations(galleryDissolveShader.uniformSchema!)],
   ['lut-3d.frag', generateGlslUniformDeclarations(lut3dShaderSource.uniformSchema!)],
   ['lut-rgb1d.frag', generateGlslUniformDeclarations(lutRgb1dShaderSource.uniformSchema!)],
   ['lit-sprite.frag', generateGlslUniformDeclarations(litSpriteShader.uniformSchema!)],
@@ -212,6 +214,17 @@ const shaders: readonly ShaderEntry[] = Object.entries(shaderModules)
       stage: path.endsWith('.vert') ? 'vertex' : 'fragment',
     };
   })
+  .concat([
+    {
+      name: 'gallery-dissolve.frag',
+      source: galleryDissolveShader.glsl!.fragment,
+      runtimeSource: withGlslUniformDeclarations(
+        galleryDissolveShader.glsl!.fragment,
+        generateGlslUniformDeclarations(galleryDissolveShader.uniformSchema!),
+      ),
+      stage: 'fragment',
+    },
+  ])
   .sort((a, b) => a.name.localeCompare(b.name));
 
 const sourceByName: Record<string, string> = Object.fromEntries(shaders.map(entry => [entry.name, entry.runtimeSource]));
@@ -252,6 +265,7 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['default-vertex.vert', 'color-matrix.frag'],
   ['default-vertex.vert', 'displacement.frag'],
   ['default-vertex.vert', 'drop-shadow.frag'],
+  ['default-vertex.vert', 'gallery-dissolve.frag'],
   ['default-vertex.vert', 'lut-3d.frag'],
   ['default-vertex.vert', 'lut-rgb1d.frag'],
   ['default-vertex.vert', 'output.frag'],

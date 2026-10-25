@@ -65,6 +65,7 @@ class MetaballsScene extends Scene {
     this.threshold = new ShaderFilter({ glsl: { fragment: glsl }, wgsl });
 
     this.panel = demoPanel({
+      scene: this,
       title: 'Filter order',
       controls: {
         passes: choice('Passes', PASSES),

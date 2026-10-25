@@ -456,7 +456,7 @@ export class SceneScope<Data = unknown> {
    * while simulation is frozen). Throws in every build if `Scene.draw`
    * returns a thenable - the hook must be synchronous.
    */
-  public draw(context: RenderingContext): void {
+  public draw(context: RenderingContext, includeUI = true): void {
     if (this._state !== SceneState.Active) {
       return;
     }
@@ -477,7 +477,10 @@ export class SceneScope<Data = unknown> {
 
     if (this._state === SceneState.Active) {
       this.systems._draw(context);
-      this.scene._peekUI()?._render(context);
+
+      if (includeUI) {
+        this.scene._peekUI()?._render(context);
+      }
     }
 
     if (__DEV__) {

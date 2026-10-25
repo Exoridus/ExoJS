@@ -22,6 +22,7 @@ class GraphicsGradientScene extends Scene {
   size = '';
   init() {
     this.panel = demoPanel({
+      scene: this,
       title: 'Shapes and Gradients',
       layout: 'bar',
       controls,

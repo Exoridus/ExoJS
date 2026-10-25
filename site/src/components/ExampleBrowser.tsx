@@ -386,7 +386,7 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
         </aside>
       )}
       <div className={css(styles, 'right-column')}>
-        <main className={css(styles, 'main-content')}>
+        <div className={css(styles, 'main-content')}>
           <Editor
             ref={editorRef}
             activeExample={activeExample}
@@ -397,7 +397,7 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
             sidebarToggleRef={sidebarToggleRef}
             onToggleSidebar={() => setSidebarOpen(value => !value)}
           />
-        </main>
+        </div>
         {isCompactMobile && (
           <nav className={css(styles, 'mobile-actions')} aria-label="Playground actions">
             <button

@@ -1,4 +1,4 @@
-import { CURATION_READY, getCuratedNavigation } from './curation-catalog';
+import { getCuratedNavigation } from './curation-catalog';
 import { resolveExampleAlias } from './example-aliases';
 import { PLAYGROUND_CATEGORY_BY_SLUG } from './playground-categories';
 import { PRESERVED_EXAMPLES } from './preserved-examples';
@@ -68,7 +68,7 @@ export const getNestedExamples = (versionId: string): ExamplesMap => {
     return new Map();
   }
 
-  if (isCurrentVersion(versionId) && CURATION_READY) {
+  if (isCurrentVersion(versionId)) {
     return getCuratedNavigation();
   }
 
@@ -101,7 +101,7 @@ export const getExampleByPath = (versionId: string, path: string): Example | nul
     return example;
   }
 
-  if (isCurrentVersion(versionId) && CURATION_READY) {
+  if (isCurrentVersion(versionId)) {
     const response = _entries.get(versionId)?.response;
 
     for (const [section, definitions] of Object.entries(response ?? {})) {

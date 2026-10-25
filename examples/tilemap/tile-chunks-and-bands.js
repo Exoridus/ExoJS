@@ -152,6 +152,7 @@ class TileChunksAndBandsScene extends Scene {
     // seams shimmer as the camera moves.
     const snapModes = { geometry: PixelSnapMode.Geometry, position: PixelSnapMode.Position, none: PixelSnapMode.None };
     this.panel = demoPanel({
+      scene: this,
       layout: 'bar',
       title: 'Layered Tile World',
       controls: {
