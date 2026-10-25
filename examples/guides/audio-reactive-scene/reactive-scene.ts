@@ -67,7 +67,6 @@ class AudioReactiveScene extends Scene {
   }
 
   update(delta: Seconds) {
-    this.view.update(delta * 1000);
     this.particles.update(delta);
 
     // Continuous frequency → background tint
