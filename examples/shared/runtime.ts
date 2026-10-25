@@ -1029,7 +1029,7 @@ export const demoPanel = <const C extends Record<string, DemoControlSpec>>(optio
   }
 
   const panel = mountControlPanel({ title: options.title, corner: options.corner });
-  const fit = createOverlayFitter(panel.element, options.corner ?? 'bottom-left', true);
+  const fit = createOverlayFitter(panel.element, options.corner ?? 'bottom-left', options.layout === 'bar');
   const disposeBar = options.layout === 'bar' ? styleDemoBar(panel.element) : undefined;
   const values = {} as DemoPanelValues<C>;
   const renderers = new Map<keyof C, ControlBinding<never>>();
@@ -1129,7 +1129,13 @@ export const demoPanel = <const C extends Record<string, DemoControlSpec>>(optio
     const hint = document.createElement('div');
     hint.className = 'exo-demo-hint';
     hint.textContent = options.hint;
-    panel.element.prepend(hint);
+    const title = panel.element.querySelector(':scope > strong');
+
+    if (title) {
+      title.after(hint);
+    } else {
+      panel.element.prepend(hint);
+    }
   }
 
   for (const [label, run] of Object.entries(options.actions ?? {})) {

@@ -641,7 +641,7 @@ export const demoPanel = options => {
     throw new RangeError('Curated bars support at most four parameters and three actions.');
   }
   const panel = mountControlPanel({ title: options.title, corner: options.corner });
-  const fit = createOverlayFitter(panel.element, options.corner ?? 'bottom-left', true);
+  const fit = createOverlayFitter(panel.element, options.corner ?? 'bottom-left', options.layout === 'bar');
   const disposeBar = options.layout === 'bar' ? styleDemoBar(panel.element) : undefined;
   const values = {};
   const renderers = new Map();
@@ -728,7 +728,12 @@ export const demoPanel = options => {
     const hint = document.createElement('div');
     hint.className = 'exo-demo-hint';
     hint.textContent = options.hint;
-    panel.element.prepend(hint);
+    const title = panel.element.querySelector(':scope > strong');
+    if (title) {
+      title.after(hint);
+    } else {
+      panel.element.prepend(hint);
+    }
   }
   for (const [label, run] of Object.entries(options.actions ?? {})) {
     panel.addButton({ label, onClick: run });

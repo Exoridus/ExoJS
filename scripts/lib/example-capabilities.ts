@@ -61,7 +61,7 @@ export const deriveCapabilities = (source: string, slug: string, sectionSlug: st
   }
 
   // Controller diagnostics need the API; regular lessons also have keyboard controls.
-  if (sectionSlug === 'input' && slug === 'gamepad' && /\bGamepad[A-Za-z]*\b/.test(source)) {
+  if (sectionSlug === 'input-ui' && slug === 'gamepad' && /\bGamepad[A-Za-z]*\b/.test(source)) {
     caps.add('gamepad');
   }
 
