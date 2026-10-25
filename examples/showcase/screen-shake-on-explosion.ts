@@ -8,7 +8,6 @@ import {
   type RenderingContext,
   Scene,
   SceneAvailability,
-  type Seconds,
   Sprite,
   Spritesheet,
   Time,
@@ -105,7 +104,7 @@ class ScreenShakeOnExplosionScene extends Scene {
     this.hud.setStatus('Ready | Click anywhere');
   }
 
-  override update(delta: Seconds): void {
+  override update(): void {
     const { scale: k, contentHeight } = this.hud.fit(this.app, this.app.canvas as HTMLCanvasElement);
 
     this.scale = k;
@@ -123,8 +122,6 @@ class ScreenShakeOnExplosionScene extends Scene {
     if (this.actions.reset.pressed) {
       this.reset();
     }
-
-    this.view.update(delta * 1000);
   }
 
   override draw(context: RenderingContext): void {

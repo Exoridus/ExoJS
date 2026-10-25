@@ -95,7 +95,7 @@ class ScreenShakeOnExplosionScene extends Scene {
     this.impacts = 0;
     this.hud.setStatus('Ready | Click anywhere');
   }
-  update(delta) {
+  update() {
     const { scale: k, contentHeight } = this.hud.fit(this.app, this.app.canvas);
     this.scale = k;
     this.centerY = Math.max(70, contentHeight * 0.6) * k;
@@ -110,7 +110,6 @@ class ScreenShakeOnExplosionScene extends Scene {
     if (this.actions.reset.pressed) {
       this.reset();
     }
-    this.view.update(delta * 1000);
   }
   draw(context) {
     this.ground.forEach(tile => context.render(tile, { view: this.view }));
