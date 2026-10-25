@@ -2,137 +2,148 @@
 import { Application, AudioBus, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser, DuckingEffect } from '@codexo/exojs/audio-fx';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { demoPanel, startExample, toggle } from '@examples/runtime';
 const VOICE_VOLUME = 0.4;
+// The sidechain receives the attenuated voice, so lower its threshold by the same gain.
+const THRESHOLD = -30 + 20 * Math.log10(VOICE_VOLUME);
 class DuckingScene extends Scene {
+  speech;
   music;
-  voice;
+  speechVoice = null;
+  musicVoice = null;
   voiceBus;
+  musicBus;
   ducking;
   musicLevel;
   voiceLevel;
-  gfx;
-  musicLabel;
-  voiceLabel;
-  tapPrompt;
-  // Smoothed bar levels so the meters glide instead of flickering frame-to-frame.
-  musicMeter = 0;
-  voiceMeter = 0;
-  // Canvas-relative bar layout computed in init().
-  barX = 0;
-  barW = 0;
-  musicBarY = 0;
-  voiceBarY = 0;
-  clickPrompt;
-  playVoice = () => {
-    // The pointer gesture also unlocks the AudioContext; firing while
-    // still locked would be silent, so wait until audio is ready.
-    if (!this.app.audio.locked) {
-      this.audio.play(this.voice, { bus: this.voiceBus, volume: VOICE_VOLUME });
-    }
-  };
+  graphics = this.track(new Graphics());
+  label = this.track(new Text('', { fillColor: new Color(236, 239, 242), align: 'center' })).setAnchor(0.5);
+  panel;
+  alive = true;
+  playbackEpoch = 0;
+  failure = '';
+  musicRms = 0;
+  voiceRms = 0;
   async load() {
-    const app = this.app;
-    const { width, height } = app;
-    // Wide meters centred on the 16:9 canvas.
-    this.barX = width * 0.1;
-    this.barW = width * 0.8;
-    this.musicBarY = height * 0.42;
-    this.voiceBarY = height * 0.55;
-    // AudioStream has no seamless adapter - await it explicitly.
-    const music = await this.loader.load(assets.musicLoopMain);
-    this.music = music;
-    // Path-only get() infers Sound from the .ogg extension - sidesteps a
-    // compile-time overload ambiguity between Sound and the Json token form
-    // when passing the Sound token explicitly.
-    this.voice = this.loader.get(assets.voiceCongratulations);
-    // Route the voice-over onto its own bus so it can drive the sidechain.
-    this.voiceBus = new AudioBus('voice-over', { parent: app.audio.master });
-    app.audio.registerBus(this.voiceBus);
-    // The ducker listens to the voice bus and pulls the music bus down
-    // whenever the voice exceeds the threshold.
-    this.ducking = new DuckingEffect({
-      sidechain: this.voiceBus,
-      // The sidechain receives the attenuated voice, so lower its threshold by the same gain.
-      threshold: -30 + 20 * Math.log10(VOICE_VOLUME),
-      ratio: 6,
-      attackMs: 25,
-      releaseMs: 260,
-    });
-    app.audio.music.addEffect(this.ducking);
-    // Tap each bus with a parallel analyser so we can show the live levels.
-    // The music meter visibly dips while the voice meter spikes - that gap
-    // is the duck.
-    this.musicLevel = new AudioAnalyser({ source: app.audio.music, smoothingTimeConstant: 0.85 });
-    this.voiceLevel = new AudioAnalyser({ source: this.voiceBus, smoothingTimeConstant: 0.6 });
-    this.gfx = new Graphics();
-    this.musicLabel = new Text('', { fillColor: Color.white, fontSize: 17 });
-    this.musicLabel.setPosition(this.barX, this.musicBarY - 26);
-    this.voiceLabel = new Text('', { fillColor: Color.white, fontSize: 17 });
-    this.voiceLabel.setPosition(this.barX, this.voiceBarY - 26);
-    // Shown while the browser still blocks audio (`app.audio.locked`); the
-    // first click or keypress unlocks it and the queued music starts.
-    this.tapPrompt = new Text('Click or press any key to start the music', { fillColor: Color.white, fontSize: 22, align: 'center' })
-      .setAnchor(0.5, 0.5)
-      .setPosition(width / 2, height - 48);
-    this.clickPrompt = new Text('Click to play the voice-over', { fillColor: Color.white, fontSize: 22, align: 'center' })
-      .setAnchor(0.5, 0.5)
-      .setPosition(width / 2, height - 48);
-    app.input.onPointerTap.add(this.playVoice);
-    // Core defers playback until the AudioContext unlocks on the first
-    // gesture, then starts automatically.
-    this.audio.play(this.music, { loop: true, volume: 0.5 });
+    this.music = await this.loader.load(assets.musicLoopMain);
   }
-  bar(label, name, y, level, color) {
-    this.gfx.fillColor = new Color(70, 70, 70);
-    this.gfx.drawRectangle(this.barX, y, this.barW, 26);
-    this.gfx.fillColor = color;
-    this.gfx.drawRectangle(this.barX, y, this.barW * Math.min(1, level), 26);
-    label.text = `${name}: ${(level * 100).toFixed(0)}%`;
+  init() {
+    const audio = this.app.audio;
+    this.speech = this.loader.get(assets.voiceMissionComplete);
+    this.voiceBus = new AudioBus('speech-sidechain', { parent: audio.master });
+    this.musicBus = new AudioBus('ducked-music', { parent: audio.music });
+    audio.registerBus(this.voiceBus).registerBus(this.musicBus);
+    this.ducking = new DuckingEffect({ sidechain: this.voiceBus, threshold: THRESHOLD, ratio: 6, attackMs: 25, releaseMs: 260 });
+    this.musicBus.addEffect(this.ducking);
+    this.musicLevel = new AudioAnalyser({ source: this.musicBus, smoothingTimeConstant: 0 });
+    this.voiceLevel = new AudioAnalyser({ source: this.voiceBus, smoothingTimeConstant: 0 });
+    this.panel = demoPanel({
+      layout: 'bar',
+      title: 'Duck Music under Speech',
+      hint: 'Start the music, then Speak: the speech sidechain pulls the music bus down. Toggle Ducking to compare.',
+      controls: { music: toggle('Music', false), enabled: toggle('Ducking', true) },
+      actions: {
+        Speak: () => void this.speak(),
+        Stop: () => this.stop(),
+        Reset: () => {
+          this.stop();
+          this.panel.set('music', false);
+          this.panel.set('enabled', true);
+        },
+      },
+      onChange: (key, value) => {
+        if (key === 'enabled') {
+          this.ducking.ratio = value ? 6 : 1;
+        } else if (value) {
+          // A stream voice defers its own start to the unlock gesture.
+          this.musicVoice ??= this.audio.play(this.music, { bus: this.musicBus, loop: true, volume: 0.5 });
+        } else {
+          this.musicVoice?.stop();
+          this.musicVoice = null;
+        }
+      },
+    });
+  }
+  async speak() {
+    const epoch = this.playbackEpoch;
+    try {
+      // Sounds played while locked are skipped, and the unlock this gesture starts settles asynchronously.
+      await new Promise(resolve => this.app.audio.onUnlock.add(() => resolve()));
+      await this.ducking.ready;
+      if (!this.alive || epoch !== this.playbackEpoch) {
+        return;
+      }
+      await this.speech.loaded;
+      if (!this.alive || epoch !== this.playbackEpoch) {
+        return;
+      }
+      if (!this.speech.ready) {
+        this.failure = 'Speech media unavailable';
+        return;
+      }
+      this.stop();
+      this.speechVoice = this.audio.play(this.speech, { bus: this.voiceBus, volume: VOICE_VOLUME });
+      this.failure = '';
+    } catch {
+      if (this.alive) {
+        this.failure = this.speech.state === 'failed' ? 'Speech media failed to load' : 'Sidechain worklet unavailable';
+      }
+    }
+  }
+  stop() {
+    this.playbackEpoch++;
+    this.speechVoice?.stop();
+    this.speechVoice = null;
+  }
+  rms(analyser) {
+    const samples = analyser.getWaveformFloat();
+    let sum = 0;
+    for (const sample of samples) {
+      sum += sample * sample;
+    }
+    return Math.sqrt(sum / samples.length);
   }
   draw(context) {
-    const app = this.app;
-    // RMS reads 0 in silence, so the meters are honest (flat until audio plays).
-    const music = this.musicLevel.getRms();
-    const voice = this.voiceLevel.getRms();
-    // Slew toward the live value; a touch of attack/decay keeps the bars readable.
-    this.musicMeter += (music - this.musicMeter) * 0.3;
-    this.voiceMeter += (voice - this.voiceMeter) * 0.5;
-    this.gfx.clear();
-    this.bar(this.musicLabel, 'music bus', this.musicBarY, this.musicMeter * 3, new Color(120, 200, 255));
-    this.bar(this.voiceLabel, 'voice bus (sidechain)', this.voiceBarY, this.voiceMeter * 3, new Color(255, 190, 120));
-    context.render(this.gfx);
-    context.render(this.musicLabel);
-    context.render(this.voiceLabel);
-    context.render(app.audio.locked ? this.tapPrompt : this.clickPrompt);
+    const { scale, width, contentHeight } = this.panel.fit(this.app, this.app.canvas);
+    this.musicRms = this.rms(this.musicLevel);
+    this.voiceRms = this.rms(this.voiceLevel);
+    const g = this.graphics.clear(),
+      x = width * 0.1 * scale,
+      w = width * 0.8 * scale,
+      y = contentHeight * 0.6 * scale;
+    for (const [index, level] of [this.musicRms, this.voiceRms].entries()) {
+      g.fillColor = new Color(25, 31, 36);
+      g.drawRectangle(x, y + index * 30 * scale, w, 18 * scale);
+      g.fillColor = new Color(101, 210, 210);
+      g.drawRectangle(x, y + index * 30 * scale, w * Math.min(1, level * 4), 18 * scale);
+    }
+    this.label.style.fontSize = 15 * scale;
+    this.label.text = `Music RMS (relative): ${this.musicRms.toFixed(3)}\nSpeech RMS (relative): ${this.voiceRms.toFixed(3)}\nSidechain threshold ${THRESHOLD.toFixed(1)} dBFS | ${this.panel.values.enabled ? 'Ducking enabled' : 'Bypass (ratio 1)'}`;
+    this.label.setPosition((width * scale) / 2, y - 46 * scale);
+    context.render(g);
+    context.render(this.label);
+    this.panel.status(
+      this.failure ||
+        `${this.app.audio.locked ? 'Click to enable audio' : 'AudioContext running'} | ${this.speech.ready ? 'Speech ready' : this.speech.state === 'failed' ? 'Speech media failed' : 'Speech loading'} | music ${this.musicVoice ? 'playing' : 'stopped'} | ${this.speechVoice && !this.speechVoice.ended ? 'speaking' : 'silent'}`,
+      this.failure ? 'error' : 'neutral',
+    );
   }
   destroy() {
-    this.app.input.onPointerTap.remove(this.playVoice);
+    this.alive = false;
+    this.stop();
+    this.musicVoice?.stop();
     this.musicLevel?.destroy();
     this.voiceLevel?.destroy();
-    if (this.ducking) {
-      this.app.audio.music.removeEffect(this.ducking);
-      this.ducking.destroy();
-    }
-    if (this.voiceBus) {
-      this.app.audio.unregisterBus(this.voiceBus);
-      this.voiceBus.destroy();
-    }
-    this.gfx?.destroy();
-    this.musicLabel?.destroy();
-    this.voiceLabel?.destroy();
-    this.tapPrompt?.destroy();
-    this.clickPrompt?.destroy();
+    this.musicBus?.removeEffect(this.ducking);
+    this.ducking?.destroy();
+    this.app.audio.unregisterBus(this.musicBus).unregisterBus(this.voiceBus);
+    this.panel?.dispose();
     super.destroy();
   }
 }
 const app = new Application({
   scenes: { DuckingScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
-  clearColor: Color.black,
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  clearColor: new Color(11, 16, 20),
 });
-await app.start(DuckingScene);
+await startExample(app, () => app.start(DuckingScene));

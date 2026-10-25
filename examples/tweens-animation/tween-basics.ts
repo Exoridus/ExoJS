@@ -17,7 +17,7 @@ import {
   TweenState,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { choice, demoPanel } from '@examples/runtime';
+import { choice, demoPanel, startExample } from '@examples/runtime';
 
 const controls = {
   easing: choice('Ease', Object.keys(Ease) as Array<keyof typeof Ease>, 'sineInOut'),
@@ -250,4 +250,4 @@ const app = new Application({
   clearColor: new Color(239, 244, 227),
 });
 
-await app.start(InteractiveTweensScene);
+await startExample(app, () => app.start(InteractiveTweensScene));

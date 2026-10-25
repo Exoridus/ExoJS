@@ -34,9 +34,10 @@ import { ToastStack } from './ToastStack';
 
 export interface ExampleBrowserProps {
   baseUrl: string;
+  locale?: 'en' | 'de';
 }
 
-export const ExampleBrowser = ({ baseUrl }: ExampleBrowserProps): JSX.Element => {
+export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps): JSX.Element => {
   const [examples, setExamples] = useState<ExamplesMap>(() => new Map());
   const [activeExample, setActiveExample] = useState<Example | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<VersionInfo | null>(null);
@@ -374,6 +375,7 @@ export const ExampleBrowser = ({ baseUrl }: ExampleBrowserProps): JSX.Element =>
           aria-hidden={!sidebarOpen}
         >
           <Navigation
+            locale={locale}
             examples={examples}
             activeExample={activeExample}
             selectedVersion={selectedVersion}

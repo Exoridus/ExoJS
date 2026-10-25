@@ -1,4 +1,15 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Vector } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  Keyboard,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  type Texture,
+  Vector,
+} from '@codexo/exojs';
 import {
   AlphaFadeOverLifetime,
   AttractToPoint,
@@ -10,105 +21,148 @@ import {
   RepelFromPoint,
 } from '@codexo/exojs/particles';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControls } from '@examples/runtime';
+import { choice, demoPanel, slider, startExample } from '@examples/runtime';
 
-// Acceleration magnitude shared by both force modules (units per second squared). Only the
-// active mode's module carries this strength; the inactive one is held at 0.
-const forceStrength = 700;
-
+const controls = {
+  mode: choice('Force', ['Attract', 'Repel']),
+  strength: slider('Strength / px/s²', { min: 0, max: 1400, step: 50, value: 700 }),
+};
 class CursorAttractorParticlesScene extends Scene {
   private system!: ParticleSystem;
-  private attractor!: AttractToPoint;
-  private repeller!: RepelFromPoint;
-  private mode: 'attract' | 'repel' = 'attract';
-  private hud!: ReturnType<typeof mountControls>;
+  private particleTexture!: Texture;
+  private readonly attractor = new AttractToPoint(0, 0, 700, 120);
+  private readonly repeller = new RepelFromPoint(0, 0, 0, 120);
+  private readonly marks = new Graphics();
+  private panel!: ReturnType<typeof demoPanel<typeof controls>>;
+  private playing = true;
+  private elapsed = 0;
+  private targetX = 0.65;
+  private targetY = 0.45;
+  private scale = 1;
+  private width = 1280;
+  private height = 600;
+
+  override async load(): Promise<void> {
+    this.particleTexture = await this.loader.load(assets.particleLight);
+  }
 
   override init(): void {
-    const app = this.app;
-    const { width, height } = app;
-
-    this.system = new ParticleSystem(this.loader.get(assets.particleLight), { capacity: 32000 });
-    this.systems.add(this.system);
-    this.system.setPosition(width / 2, height / 2);
-
+    this.system = new ParticleSystem(this.particleTexture, { capacity: 3000, simulation: 'cpu' });
     this.system.addSpawnModule(
       new RateSpawn({
-        rate: new Constant(2200),
-        lifetime: new Constant(2.6),
+        rate: new Constant(400),
+        lifetime: new Constant(3),
         position: new Constant(new Vector(0, 0)),
-        velocity: new ConeDirection(0, Math.PI, 10, 100),
+        velocity: new ConeDirection(0, Math.PI, 15, 65),
         scale: new Constant(new Vector(0.05, 0.05)),
       }),
     );
-
-    // Both force fields target the same cursor point. We swap behaviour by
-    // moving the strength between them - the inactive module stays at 0 so
-    // it contributes no acceleration. `falloff`/`radius` of 260 softens the
-    // pull/push near the centre instead of slingshotting particles.
-    this.attractor = new AttractToPoint(0, 0, forceStrength, 260);
-    this.repeller = new RepelFromPoint(0, 0, 0, 260);
-
     this.system.addUpdateModule(this.attractor);
     this.system.addUpdateModule(this.repeller);
     this.system.addUpdateModule(new AlphaFadeOverLifetime());
-
-    this.hud = mountControls({ title: 'Cursor Attractor Particles', status: 'Mode: Attract' });
-    app.input.onPointerMove.add(this.onPointerMove);
-    app.input.onPointerDown.add(this.onPointerDown);
-
-    this.setMode('attract');
+    this.root.addChild(this.system, this.marks);
+    this.systems.add(this.system);
+    this.panel = demoPanel({
+      title: 'Attract and Repel Particles',
+      layout: 'bar',
+      controls,
+      hint: 'Move pointer / arrows to place force. Click changes mode. Acceleration changes velocity over time.',
+      actions: {
+        'Pause / Resume': () => this.togglePlaying(),
+        Reset: () => this.reset(),
+      },
+    });
+    this.inputs.onTrigger(Keyboard.Space, () => this.togglePlaying());
+    this.inputs.onTrigger(Keyboard.R, () => this.reset());
+    this.inputs.onTrigger(Keyboard.Left, () => {
+      this.targetX = Math.max(0, this.targetX - 0.05);
+    });
+    this.inputs.onTrigger(Keyboard.Right, () => {
+      this.targetX = Math.min(1, this.targetX + 0.05);
+    });
+    this.inputs.onTrigger(Keyboard.Up, () => {
+      this.targetY = Math.max(0, this.targetY - 0.05);
+    });
+    this.inputs.onTrigger(Keyboard.Down, () => {
+      this.targetY = Math.min(1, this.targetY + 0.05);
+    });
+    this.app.input.onPointerMove.add(this.onMove);
+    this.app.input.onPointerTap.add(this.onTap);
   }
 
-  private readonly onPointerMove = (pointer: { x: number; y: number }): void => {
-    const localX = pointer.x - this.system.position.x;
-    const localY = pointer.y - this.system.position.y;
+  private reset(): void {
+    this.elapsed = 0;
+    this.targetX = 0.65;
+    this.targetY = 0.45;
+    this.system.clearParticles();
+    this.panel.set('mode', 'Attract');
+    this.panel.set('strength', 700);
+  }
 
-    this.attractor.x = localX;
-    this.attractor.y = localY;
-    this.repeller.x = localX;
-    this.repeller.y = localY;
+  private readonly onMove = (p: { x: number; y: number }): void => {
+    this.targetX = Math.max(0, Math.min(1, p.x / this.scale / this.width));
+    this.targetY = Math.max(0, Math.min(1, p.y / this.scale / this.height));
   };
+  private readonly onTap = (): void => this.panel.step('mode');
 
-  private readonly onPointerDown = (): void => {
-    this.setMode(this.mode === 'attract' ? 'repel' : 'attract');
-  };
+  override update(delta: Seconds): void {
+    const v = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    this.scale = v.scale;
+    this.width = v.width;
+    this.height = v.contentHeight;
+    this.root.setScale(v.scale);
+    this.system.setPosition(v.width / 2, v.contentHeight / 2);
+    const x = this.targetX * v.width;
+    const y = this.targetY * v.contentHeight;
+    this.attractor.x = this.repeller.x = x - this.system.x;
+    this.attractor.y = this.repeller.y = y - this.system.y;
+    this.attractor.strength = this.panel.values.mode === 'Attract' ? this.panel.values.strength : 0;
+    this.repeller.strength = this.panel.values.mode === 'Repel' ? this.panel.values.strength : 0;
+    this.marks.clear();
+    this.marks.fillColor = Color.transparent;
+    this.marks.lineColor = new Color(184, 242, 100);
+    this.marks.lineWidth = 2;
+    this.marks.drawCircle(x, y, 120);
+    this.marks.drawLine(x - 8, y, x + 8, y);
+    this.marks.drawLine(x, y - 8, x, y + 8);
 
-  private setMode(mode: 'attract' | 'repel'): void {
-    this.mode = mode;
-
-    if (mode === 'attract') {
-      this.attractor.strength = forceStrength;
-      this.repeller.strength = 0;
-      this.hud.setStatus('Mode: Attract');
-    } else {
-      this.attractor.strength = 0;
-      this.repeller.strength = forceStrength;
-      this.hud.setStatus('Mode: Repel');
+    if (this.playing) {
+      this.elapsed += delta;
     }
+
+    this.panel.status(
+      `${this.panel.values.mode} | ${this.system.aliveCount} active | AttractToPoint falloff 120: acts beyond ring | RepelFromPoint radius 120: zero beyond ring`,
+    );
   }
 
   override draw(context: RenderingContext): void {
     context.render(this.system);
+    context.render(this.marks);
+  }
+
+  private togglePlaying(): void {
+    this.playing = !this.playing;
+
+    // Leaving the scene's system registry freezes emission and live particles alike.
+    if (this.playing) {
+      this.systems.add(this.system);
+    } else {
+      this.systems.remove(this.system);
+    }
   }
 
   override destroy(): void {
-    this.app.input.onPointerMove.remove(this.onPointerMove);
-    this.app.input.onPointerDown.remove(this.onPointerDown);
-    this.hud.dispose();
+    this.app.input.onPointerMove.remove(this.onMove);
+    this.app.input.onPointerTap.remove(this.onTap);
+    this.panel.dispose();
     super.destroy();
   }
 }
 
 const app = new Application({
   scenes: { CursorAttractorParticlesScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
-  clearColor: Color.black,
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  clearColor: new Color(20, 27, 34),
   extensions: [particlesExtension],
 });
-
-await app.start(CursorAttractorParticlesScene);
+await startExample(app, () => app.start(CursorAttractorParticlesScene));

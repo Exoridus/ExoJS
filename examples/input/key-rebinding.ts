@@ -50,19 +50,6 @@ const saveProfile = (profile: BindingProfile): void => {
 };
 
 class KeyRebindingScene extends Scene {
-  private readonly onKeyDown = (channel: number): void => {
-    if (!this.rebindRequested) {
-      return;
-    }
-
-    this.rebindRequested = false;
-    // Rebinding is atomic and baseline-safe: the key being pressed right
-    // now does not read as a fresh jump on the very next frame.
-    this.controls.rebind('jump', channel);
-    this.profile.set('jump', this.controls.jump.serialize());
-    saveProfile(this.profile);
-    this.refreshHud();
-  };
   private graphics!: Graphics;
   private controls = new ActionMap({
     jump: new ButtonAction(Keyboard.Space),
@@ -86,25 +73,73 @@ class KeyRebindingScene extends Scene {
     this.heroY = this.groundY;
     this.graphics = new Graphics();
 
-    this.controls.applyProfile(this.profile);
+    try {
+      this.controls.applyProfile(this.profile);
+    } catch {
+      this.profile.clear();
+      this.controls.applyProfile(null);
+    }
+
     this.inputs.attach(this.controls);
 
-    this.app.input.onKeyDown.add(this.onKeyDown);
+    app.input.onKeyDown.add(this.onKeyDown);
 
-    this.hud = mountControls();
+    this.hud = mountControls({ theme: 'site', title: 'Key rebinding', hint: 'J rebinds on release. Escape cancels. R restores defaults.' });
 
     this.refreshHud();
   }
+
+  private readonly onKeyDown = (channel: number): void => {
+    if (channel === Keyboard.Escape) {
+      this.rebindRequested = false;
+      this.refreshHud();
+
+      return;
+    }
+
+    if (channel === Keyboard.R && !this.rebindRequested) {
+      this.profile.clear();
+      this.controls.applyProfile(null);
+      saveProfile(this.profile);
+      this.refreshHud();
+
+      return;
+    }
+
+    if (!this.rebindRequested) {
+      return;
+    }
+
+    this.rebindRequested = false;
+
+    // Rebinding is atomic and baseline-safe: the key being pressed right
+    // now does not read as a fresh jump on the very next frame.
+    if (channel === Keyboard.J || channel === Keyboard.R) {
+      this.rebindRequested = true;
+      this.hud.setStatus(`${channel === Keyboard.J ? 'J' : 'R'} is reserved. Choose another key.`);
+
+      return;
+    }
+
+    this.controls.rebind('jump', channel);
+    this.profile.set('jump', this.controls.jump.serialize());
+    saveProfile(this.profile);
+    this.refreshHud();
+  };
 
   private jumpToken(): InputToken | undefined {
     return this.controls.jump.channels.map(inputToken)[0];
   }
 
   private refreshHud(): void {
-    this.hud.setStatus(this.rebindRequested ? 'Press any key to assign jump...' : `Jump: ${keyName(this.jumpToken())} (J to rebind)`);
+    this.hud.setStatus(
+      this.rebindRequested ? 'Press any key to assign jump...' : `Jump: ${keyName(this.jumpToken())} (J rebind | Esc cancel | R reset)`,
+    );
   }
 
   override update(delta: Seconds): void {
+    this.hud.fit(this.app, this.app.canvas as HTMLCanvasElement);
+
     // Arm on the RELEASE of J, so the J keydown itself is not captured as
     // the new binding in the same frame.
     if (this.controls.startRebind.released && !this.rebindRequested) {
@@ -145,8 +180,8 @@ class KeyRebindingScene extends Scene {
 
   override destroy(): void {
     this.app.input.onKeyDown.remove(this.onKeyDown);
-    this.graphics?.destroy();
-    this.hud?.dispose();
+    this.hud.dispose();
+    this.graphics.destroy();
     super.destroy();
   }
 }

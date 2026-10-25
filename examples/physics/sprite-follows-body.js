@@ -1,83 +1,116 @@
 // Auto-generated from sprite-follows-body.ts - edit the .ts source, not this file.
-import { Application, Color, FixedResolutionCanvasSizing, Keyboard, Scene, Sprite, Spritesheet, SystemOrder, Vector } from '@codexo/exojs';
-import { BoxShape, MouseJoint, PhysicsWorld } from '@codexo/exojs/physics';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  Keyboard,
+  Scene,
+  Spritesheet,
+  SystemOrder,
+  Vector,
+} from '@codexo/exojs';
+import { BoxShape, MouseJoint, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControls } from '@examples/runtime';
+import { demoPanel, startExample, toggle } from '@examples/runtime';
 class SpriteFollowsBodyScene extends Scene {
   world;
-  actor;
-  actorBody;
-  dragJoint = null;
+  sprites = [];
+  bodies = [];
+  level = new Graphics();
+  overlay = new Graphics();
   floor;
-  floorBody;
-  floorY = 0;
-  settled = 0;
-  hud;
-  spritesheetData;
+  dragJoint = null;
+  grabbed = null;
+  anchor = { x: 0, y: 0 };
+  showColliders = false;
+  panel;
+  characters;
+  tiles;
   async load() {
-    this.spritesheetData = await this.loader.load(assets.platformerCharactersAtlas);
+    await this.loader.load(assets.platformerCharactersImage);
+    await this.loader.load(assets.platformerTilesImage);
+    this.characters = await this.loader.load(assets.platformerCharactersAtlas);
+    this.tiles = await this.loader.load(assets.platformerTilesAtlas);
   }
   init() {
-    const app = this.app;
-    const { width, height } = app;
-    // Gravity in px/s^2, +Y down - matches the engine's screen space.
-    this.world = new PhysicsWorld({ gravity: { x: 0, y: 1400 }, fixedDelta: app.fixedTimeStep });
-    this.systems.add(this.world, { order: SystemOrder.Physics });
-    const characters = new Spritesheet(this.loader.get(assets.platformerCharactersImage), this.spritesheetData);
-    this.floorY = height - 80;
-    // Static floor.
-    // A wide static body. `world.attach` binds it to the floor sprite, so
-    // the sprite is positioned from the body (no manual placement needed).
-    const floorWidth = width - 120;
-    const floorHeight = 48;
-    this.floor = new Sprite(this.loader.get(assets.pixelWhite)).setAnchor(0.5);
-    this.floor.width = floorWidth;
-    this.floor.height = floorHeight;
-    this.floor.tint = new Color(70, 92, 120);
-    const floorBody = this.world.attach(this.floor, {
-      type: 'static',
-      position: { x: width / 2, y: this.floorY },
-      shape: new BoxShape(floorWidth, floorHeight),
+    this.world = this.systems.add(new PhysicsWorld({ gravity: { x: 0, y: 1400 }, fixedDelta: this.app.fixedTimeStep }), {
+      order: SystemOrder.Physics,
     });
-    // Dynamic actor.
-    // A dynamic body dropped from above. Its collider is a box sized to the
-    // character art; `world.attach` binds the sprite, so it falls, lands and
-    // tracks the body (position + rotation) every fixed step.
-    this.actor = characters.getFrameSprite('character_beige_front').setAnchor(0.5).setScale(1.1);
-    this.actorBody = this.world.attach(this.actor, {
-      type: 'dynamic',
-      position: { x: width / 2, y: 140 },
-      shape: new BoxShape(70, 90),
-      friction: 0.4,
-      restitution: 0.15,
-    });
-    // Contact begins are rare events - one per landing - so each is logged to
-    // the Output panel with the speed the actor hit the floor at.
-    this.world.onCollisionStart.add(this.onContact);
-    this.floorBody = floorBody;
-    this.hud = mountControls({ status: 'Dropping...' });
-    app.input.onPointerDown.add(this.onDown);
-    app.input.onPointerMove.add(this.onMove);
-    app.input.onPointerUp.add(this.onEnd);
-    app.input.onPointerCancel.add(this.onEnd);
-    this.inputs.onTrigger(Keyboard.R, this.resetActor);
-  }
-  onContact = event => {
-    const bodies = [event.bodyA, event.bodyB];
-    if (bodies.includes(this.actorBody) && bodies.includes(this.floorBody)) {
-      const speed = Math.hypot(this.actorBody.linearVelocityX, this.actorBody.linearVelocityY);
-      console.log(`Contact: actor landed on the floor at ${speed.toFixed(0)} px/s`);
+    const characters = new Spritesheet(this.loader.get(assets.platformerCharactersImage), this.characters);
+    const tiles = new Spritesheet(this.loader.get(assets.platformerTilesImage), this.tiles);
+    this.floor = tiles.getFrameSprite('terrain_grass_block_center').setAnchor(0.5).setPosition(640, 504);
+    this.floor.width = 1152;
+    this.floor.height = 48;
+    this.world.attach(this.floor, { type: 'static', position: { x: 640, y: 504 }, shape: new BoxShape(1152, 48) });
+    this.level.fillColor = new Color(79, 99, 102);
+    this.level.drawRectangle(48, 56, 20, 448).drawRectangle(1212, 56, 20, 448);
+    this.world.add(
+      new PhysicsBody({
+        type: 'static',
+        colliders: [
+          { shape: new BoxShape(20, 448), offset: { x: 58, y: 280 } },
+          { shape: new BoxShape(20, 448), offset: { x: 1222, y: 280 } },
+        ],
+      }),
+    );
+    this.sprites.push(characters.getFrameSprite('character_beige_front').setAnchor(0.5).setScale(0.9));
+    for (const size of [72, 90]) {
+      const crate = new Graphics();
+      crate.fillColor = new Color(171, 116, 67);
+      crate.lineColor = new Color(86, 55, 36);
+      crate.lineWidth = 5;
+      crate.drawRectangle(-size / 2, -size / 2, size, size);
+      crate.drawLine(-size / 2 + 7, -size / 2 + 7, size / 2 - 7, size / 2 - 7);
+      crate.drawLine(size / 2 - 7, -size / 2 + 7, -size / 2 + 7, size / 2 - 7);
+      this.sprites.push(crate);
     }
-  };
+    this.sprites.forEach((sprite, index) => {
+      const size = [64, 72, 90][index];
+      const body = this.world.attach(sprite, {
+        type: 'dynamic',
+        position: { x: 420 + index * 220, y: 180 },
+        shape: new BoxShape(size, index === 0 ? 82 : size),
+        friction: 0.5,
+        restitution: 0.12,
+      });
+      body.isBullet = true;
+      this.bodies.push(body);
+    });
+    this.panel = demoPanel({
+      title: 'Drag and Throw Physics',
+      layout: 'bar',
+      hint: 'Grab inside a body, drag, release to throw. The outlined collision shape is the hit area.',
+      controls: { colliders: toggle('Show colliders', false) },
+      actions: { Reset: () => this.reset() },
+      onChange: (_key, value) => {
+        this.showColliders = value;
+      },
+    });
+    this.inputs.onTrigger(Keyboard.R, () => this.reset());
+    this.app.input.onPointerDown.add(this.onDown);
+    this.app.input.onPointerMove.add(this.onMove);
+    this.app.input.onPointerUp.add(this.onEnd);
+    this.app.input.onPointerCancel.add(this.onEnd);
+    window.addEventListener('pointerup', this.onEnd);
+    window.addEventListener('blur', this.onEnd);
+  }
   onDown = pointer => {
-    if (Math.abs(pointer.x - this.actorBody.x) > 42 || Math.abs(pointer.y - this.actorBody.y) > 55) {
+    this.onEnd();
+    const body = this.world
+      .queryPoint(pointer)
+      .map(collider => collider.body)
+      .find(body => this.bodies.includes(body));
+    if (!body) {
       return;
     }
-    this.onEnd();
-    console.log('Grabbed: MouseJoint attached to the actor');
-    this.dragJoint = this.world.addJoint(
-      new MouseJoint({ body: this.actorBody, target: pointer, hertz: 7, dampingRatio: 0.8, maxForce: 400_000 }),
-    );
+    body.wake();
+    this.grabbed = body;
+    const dx = pointer.x - body.x;
+    const dy = pointer.y - body.y;
+    const angle = body.angle;
+    this.anchor = { x: dx * Math.cos(angle) + dy * Math.sin(angle), y: -dx * Math.sin(angle) + dy * Math.cos(angle) };
+    this.dragJoint = this.world.addJoint(new MouseJoint({ body, target: pointer, hertz: 9, dampingRatio: 0.9, maxForce: 800_000 }));
   };
   onMove = pointer => {
     if (this.dragJoint) {
@@ -85,66 +118,78 @@ class SpriteFollowsBodyScene extends Scene {
     }
   };
   onEnd = () => {
-    if (!this.dragJoint) {
-      return;
+    if (this.dragJoint) {
+      this.world.removeJoint(this.dragJoint);
     }
-    this.world.removeJoint(this.dragJoint);
     this.dragJoint = null;
-    console.log(`Released: thrown at ${Math.hypot(this.actorBody.linearVelocityX, this.actorBody.linearVelocityY).toFixed(0)} px/s`);
+    this.grabbed = null;
   };
-  resetActor = () => {
+  reset() {
     this.onEnd();
-    this.actorBody.setTransform(new Vector(this.app.width / 2, 140), 0);
-    this.actorBody.linearVelocityX = 0;
-    this.actorBody.linearVelocityY = 0;
-    this.actorBody.angularVelocity = 0;
-  };
-  update(delta) {
-    const app = this.app;
-    const { width, height } = app;
-    const body = this.actorBody;
-    const restingSpeed = Math.hypot(body.linearVelocityX, body.linearVelocityY);
-    if (body.y > this.floorY - 60 && restingSpeed < 6) {
-      this.settled += delta;
-    } else {
-      this.settled = 0;
+    this.bodies.forEach((body, index) => {
+      body.setTransform(new Vector(420 + index * 220, 180), 0);
+      body.linearVelocityX = body.linearVelocityY = body.angularVelocity = 0;
+      body.wake();
+    });
+  }
+  update() {
+    const { scale: k } = this.panel.fit(this.app, this.app.canvas);
+    this.overlay.clear();
+    this.overlay.lineWidth = 2 * k;
+    this.overlay.lineColor = new Color(101, 210, 210);
+    this.overlay.fillColor = Color.transparent;
+    if (this.showColliders) {
+      this.bodies.forEach((body, index) => {
+        const halfWidth = [32, 36, 45][index];
+        const halfHeight = index === 0 ? 41 : halfWidth;
+        const cos = Math.cos(body.angle);
+        const sin = Math.sin(body.angle);
+        this.overlay.drawPolygon(
+          [
+            [-halfWidth, -halfHeight],
+            [halfWidth, -halfHeight],
+            [halfWidth, halfHeight],
+            [-halfWidth, halfHeight],
+          ].flatMap(([x, y]) => [body.x + x * cos - y * sin, body.y + x * sin + y * cos]),
+        );
+      });
     }
-    this.hud.setStatus(
-      this.dragJoint
-        ? 'Dragging body with MouseJoint.'
-        : this.settled > 0
-          ? `Resting on the floor (${restingSpeed.toFixed(0)} px/s)`
-          : `Moving at ${restingSpeed.toFixed(0)} px/s.`,
-    );
-    if (!this.dragJoint && (body.y > height + 200 || Math.abs(body.x - width / 2) > width)) {
-      this.resetActor();
+    if (this.dragJoint && this.grabbed) {
+      const body = this.grabbed;
+      const x = body.x + this.anchor.x * Math.cos(body.angle) - this.anchor.y * Math.sin(body.angle);
+      const y = body.y + this.anchor.x * Math.sin(body.angle) + this.anchor.y * Math.cos(body.angle);
+      const target = this.dragJoint.target;
+      this.overlay.lineColor = new Color(136, 233, 126);
+      this.overlay.drawLine(x, y, target.x, target.y).drawCircle(x, y, 4 * k);
+      this.overlay.drawLine(body.x, body.y, body.x + body.linearVelocityX * 0.1, body.y + body.linearVelocityY * 0.1);
     }
+    this.panel.status(this.grabbed ? 'Dragging | spring holds the original local grab point' : 'Ready | three bodies, one collision query');
   }
   draw(context) {
     context.render(this.floor);
-    context.render(this.actor);
+    context.render(this.level);
+    this.sprites.forEach(sprite => context.render(sprite));
+    context.render(this.overlay);
   }
   destroy() {
     this.onEnd();
-    this.world.onCollisionStart.remove(this.onContact);
     this.app.input.onPointerDown.remove(this.onDown);
     this.app.input.onPointerMove.remove(this.onMove);
     this.app.input.onPointerUp.remove(this.onEnd);
     this.app.input.onPointerCancel.remove(this.onEnd);
-    this.hud?.dispose();
-    this.actor?.destroy();
+    window.removeEventListener('pointerup', this.onEnd);
+    window.removeEventListener('blur', this.onEnd);
+    this.panel?.dispose();
+    this.sprites.forEach(sprite => sprite.destroy());
     this.floor?.destroy();
+    this.level.destroy();
+    this.overlay.destroy();
     super.destroy();
   }
 }
 const app = new Application({
   scenes: { SpriteFollowsBodyScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
-  clearColor: new Color(18, 22, 33),
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  clearColor: new Color(205, 225, 216),
 });
-await app.start(SpriteFollowsBodyScene);
+await startExample(app, () => app.start(SpriteFollowsBodyScene));

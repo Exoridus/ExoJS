@@ -1,85 +1,94 @@
 // Auto-generated from bloom-filter.ts - edit the .ts source, not this file.
-import { Application, BloomFilter, Color, Container, FixedResolutionCanvasSizing, Graphics, Scene } from '@codexo/exojs';
-import { demoPanel, slider } from '@examples/runtime';
-/**
- * Six discs of rising luminance on a dark backdrop. Only the ones above the
- * threshold glow, so dragging Threshold walks the glow along the row and shows
- * what the filter is actually selecting on.
- *
- * The threshold is measured on linear luminance, where 1 is display white, not
- * on the encoded value the Colors below are written in: an encoded channel value
- * of 128 is only about 0.22 in linear light. This scene runs on the
- * default 8-bit SDR working target, where nothing can exceed 1; an application
- * that opts into `rendering.color.workingFormat: 'hdr'` can bloom values above 1
- * with a threshold above 1.
- */
-const DISCS = [
-  new Color(40, 46, 70),
-  new Color(70, 90, 140),
-  new Color(110, 150, 210),
-  new Color(160, 210, 255),
-  new Color(225, 245, 255),
-  new Color(255, 255, 255),
-];
-const DISC_RADIUS = 48;
+import { Application, BloomFilter, Color, Container, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
+import { demoPanel, slider, startExample, toggle } from '@examples/runtime';
+// Threshold uses linear luminance: encoded gray 128 is approximately 0.22, not 0.5.
+const LEVELS = [40, 90, 140, 190, 225, 255];
+const controls = {
+  threshold: slider('Threshold', { min: 0, max: 1, step: 0.05, value: 0.6 }),
+  intensity: slider('Intensity', { min: 0, max: 4, step: 0.1, value: 1.6 }),
+  spread: slider('Spread', { min: 0, max: 24, step: 1, value: 10 }),
+  bypass: toggle('Bypass'),
+};
 class BloomFilterScene extends Scene {
-  bloom;
-  stage;
-  discs;
-  beam;
+  bloom = this.track(new BloomFilter({ threshold: 0.6, intensity: 1.6, strength: 10, levels: 3 }));
+  stage = new Container();
+  discs = new Graphics();
+  beam = new Graphics();
+  labels = [];
+  panel;
   elapsed = 0;
+  playing = true;
   init() {
-    const { width, height } = this.app;
-    this.bloom = new BloomFilter({ threshold: 0.6, intensity: 1.6, strength: 10, levels: 3 });
-    this.discs = new Graphics();
-    this.beam = new Graphics();
-    // One filter over the whole stage rather than one per shape: bloom reads
-    // the composed image, so a highlight next to another highlight glows as one
-    // light rather than as two that happen to overlap.
-    this.stage = new Container();
-    this.stage.addChild(this.discs);
-    this.stage.addChild(this.beam);
-    this.stage.filters = [this.bloom];
-    const spacing = width / (DISCS.length + 1);
-    for (let index = 0; index < DISCS.length; index++) {
-      this.discs.fillColor = DISCS[index];
-      this.discs.drawCircle(spacing * (index + 1), height * 0.38, DISC_RADIUS);
-    }
-    demoPanel({
-      title: 'Bloom',
-      controls: {
-        threshold: slider('Threshold', { min: 0, max: 1, step: 0.05, value: this.bloom.threshold }),
-        intensity: slider('Intensity', { min: 0, max: 4, step: 0.1, value: this.bloom.intensity }),
-        strength: slider('Strength', { min: 0, max: 32, step: 1, value: this.bloom.strength, format: v => v.toFixed(0) }),
-        levels: slider('Levels', { min: 1, max: 5, step: 1, value: this.bloom.levels, format: v => v.toFixed(0) }),
-      },
-      onChange: (key, value) => {
-        this.bloom[key] = value;
+    this.stage.addChild(this.discs, this.beam);
+    this.root.addChild(this.stage);
+    this.labels = LEVELS.map(value => {
+      const channel = value / 255;
+      const luminance = channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+      return new Text(luminance.toFixed(2), { fillColor: Color.white, fontSize: 14, align: 'center' }).setAnchor(0.5);
+    });
+    this.root.addChild(...this.labels);
+    this.panel = demoPanel({
+      title: 'Bloom Threshold',
+      layout: 'bar',
+      controls,
+      hint: 'Six increasing linear luminances; white sweep is the same moving input.',
+      actions: {
+        'Pause / Resume': () => {
+          this.playing = !this.playing;
+        },
+        Reset: () => this.reset(),
       },
     });
+    this.inputs.onTrigger(Keyboard.Space, () => {
+      this.playing = !this.playing;
+    });
+    this.inputs.onTrigger(Keyboard.R, () => this.reset());
+  }
+  reset() {
+    this.elapsed = 0;
+    this.panel.set('threshold', 0.6);
+    this.panel.set('intensity', 1.6);
+    this.panel.set('spread', 10);
+    this.panel.set('bypass', false);
   }
   update(delta) {
-    this.elapsed += delta;
-  }
-  draw(context) {
-    const { width, height } = this.app;
-    // A sweeping white bar: a moving highlight shows the glow tracking it,
-    // which a still image cannot.
-    const x = width * (0.5 + 0.42 * Math.sin(this.elapsed * 0.7));
+    const { scale, width, contentHeight } = this.panel.fit(this.app, this.app.canvas);
+    this.root.setScale(scale);
+    if (this.playing) {
+      this.elapsed += delta;
+    }
+    this.bloom.threshold = this.panel.values.threshold;
+    this.bloom.intensity = this.panel.values.intensity;
+    this.bloom.strength = this.panel.values.spread * scale;
+    this.stage.filters = this.panel.values.bypass ? [] : [this.bloom];
+    this.discs.clear();
+    const radius = Math.min(40, width / 20, contentHeight * 0.18);
+    LEVELS.forEach((value, index) => {
+      const x = (width * (index + 1)) / 7;
+      this.discs.fillColor = new Color(value, value, value);
+      this.discs.drawCircle(x, contentHeight * 0.4, radius);
+      this.labels[index].setPosition(x, contentHeight * 0.4 - radius - 20);
+    });
+    const x = width * (0.5 + 0.38 * Math.sin(this.elapsed * 0.7));
     this.beam.clear();
     this.beam.fillColor = Color.white;
-    this.beam.drawRoundedRectangle(x - 14, height * 0.62, 28, height * 0.24, 14);
-    context.render(this.stage);
+    this.beam.drawRoundedRectangle(x - 7, contentHeight * 0.66, 14, contentHeight * 0.2, 7);
+    this.panel.status(
+      `${this.panel.values.bypass ? 'Bypass' : 'Bloom on'} | luminance labels 0-1 | ${this.playing ? 'sweep running' : 'paused'}`,
+    );
+  }
+  draw(context) {
+    context.render(this.root);
+  }
+  destroy() {
+    this.stage.filters = [];
+    this.panel.dispose();
+    super.destroy();
   }
 }
 const app = new Application({
   scenes: { BloomFilterScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(10, 12, 20),
 });
-await app.start(BloomFilterScene);
+await startExample(app, () => app.start(BloomFilterScene));

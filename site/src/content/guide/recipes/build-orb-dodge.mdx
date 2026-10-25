@@ -31,10 +31,10 @@ If you already have a project, the only package you need is `@codexo/exojs`.
 Every ExoJS project starts with an `Application`. For a fixed-size game canvas:
 
 <SourceSnippet
-  source="examples/showcase/orb-dodge.ts"
+  source="examples/guides/build-orb-dodge/orb-dodge.ts"
   region="application-setup"
   language="ts"
-  title="examples/showcase/orb-dodge.ts"
+  title="examples/guides/build-orb-dodge/orb-dodge.ts"
 />
 
 `clearColor` sets the background the engine paints at the start of each frame, before `draw` runs. A dark near-black makes the colored orbs stand out clearly.
@@ -46,10 +46,10 @@ The game uses two scenes: `PlayScene` drives the active game loop, `GameOverScen
 Define a constant set for canvas dimensions and game parameters at the top so both scenes can reference them:
 
 <SourceSnippet
-  source="examples/showcase/orb-dodge.ts"
+  source="examples/guides/build-orb-dodge/orb-dodge.ts"
   region="constants"
   language="ts"
-  title="examples/showcase/orb-dodge.ts"
+  title="examples/guides/build-orb-dodge/orb-dodge.ts"
 />
 
 A scene has four lifecycle hooks — override the ones you need:
@@ -63,10 +63,10 @@ A scene has four lifecycle hooks — override the ones you need:
 The player is a filled circle drawn with `Graphics`. A `VectorAction` combines keyboard and controller movement into one value, which the scene uses without checking the active device:
 
 <SourceSnippet
-  source="examples/showcase/orb-dodge.ts"
+  source="examples/guides/build-orb-dodge/orb-dodge.ts"
   region="play-init"
   language="ts"
-  title="examples/showcase/orb-dodge.ts"
+  title="examples/guides/build-orb-dodge/orb-dodge.ts"
 />
 
 <Callout type="hint" title="Bind input in init, not once globally">
@@ -76,10 +76,10 @@ Bindings registered through `this.inputs` auto-dispose when the scene is destroy
 In `update`, normalize the action value so diagonal movement is not faster than cardinal movement, then clamp the position inside the canvas:
 
 <SourceSnippet
-  source="examples/showcase/orb-dodge.ts"
+  source="examples/guides/build-orb-dodge/orb-dodge.ts"
   region="play-update"
   language="ts"
-  title="examples/showcase/orb-dodge.ts"
+  title="examples/guides/build-orb-dodge/orb-dodge.ts"
 />
 
 `this.inputs` is scene-bound: all bindings registered through it are automatically released when the scene is destroyed. No manual cleanup is needed.
@@ -89,10 +89,10 @@ In `update`, normalize the action value so diagonal movement is not faster than 
 Orbs are created dynamically during `update` on a timer. Each orb spawns just outside one of the four edges and moves toward the center area with a small random offset:
 
 <SourceSnippet
-  source="examples/showcase/orb-dodge.ts"
+  source="examples/guides/build-orb-dodge/orb-dodge.ts"
   region="spawn-orb"
   language="ts"
-  title="examples/showcase/orb-dodge.ts"
+  title="examples/guides/build-orb-dodge/orb-dodge.ts"
 />
 
 Orbs are stored in an array of `{ gfx, vx, vy, danger }` objects. Danger orbs are red stars; collectible orbs are green circles.
@@ -102,10 +102,10 @@ Orbs are stored in an array of `{ gfx, vx, vy, danger }` objects. Danger orbs ar
 Each frame, move every orb and check its distance to the player. Distance collision is reliable for circles because it captures overlap without axis-aligned assumptions:
 
 <SourceSnippet
-  source="examples/showcase/orb-dodge.ts"
+  source="examples/guides/build-orb-dodge/orb-dodge.ts"
   region="collision-loop"
   language="ts"
-  title="examples/showcase/orb-dodge.ts — collision loop"
+  title="examples/guides/build-orb-dodge/orb-dodge.ts — collision loop"
 />
 
 Orbs that leave the canvas are also removed. After the loop, if `gameEnded` is true, call `change` to switch to the game-over screen. Use a flag instead of breaking early so all remaining orbs are cleaned up in the same loop pass.
@@ -115,10 +115,10 @@ Orbs that leave the canvas are also removed. After the loop, if `gameEnded` is t
 Score and elapsed time sit on top of the world as plain `Text` nodes — rendered after `context.render(this.world)` so they always appear in front:
 
 <SourceSnippet
-  source="examples/showcase/orb-dodge.ts"
+  source="examples/guides/build-orb-dodge/orb-dodge.ts"
   region="play-draw"
   language="ts"
-  title="examples/showcase/orb-dodge.ts"
+  title="examples/guides/build-orb-dodge/orb-dodge.ts"
 />
 
 `Text` content is updated by assigning to `.text`:
@@ -133,10 +133,10 @@ this.timeText.text  = `${this.elapsed.toFixed(1)} s`;
 `GameOverScene` declares its activation-data shape (`GameOverData`) and receives the final score and time via `change`'s `data` option — `init(data)` reads `data.score` / `data.time` directly, so there's no separate mutator method or intermediate state to keep in sync:
 
 <SourceSnippet
-  source="examples/showcase/orb-dodge.ts"
+  source="examples/guides/build-orb-dodge/orb-dodge.ts"
   region="game-over-scene"
   language="ts"
-  title="examples/showcase/orb-dodge.ts — GameOverScene"
+  title="examples/guides/build-orb-dodge/orb-dodge.ts — GameOverScene"
 />
 
 When the player restarts, `change(PlayScene)` switches back. `SceneDirector` always constructs a fresh `PlayScene` instance and calls its `init()` — the scene starts from scratch, so no manual reset is needed. Input bindings registered in `init` via `this.inputs` are disposed and recreated automatically with each scene activation.
@@ -152,17 +152,17 @@ Both scenes are registered by constructor in the [application setup](#applicatio
 When `SceneDirector` switches scenes it calls `destroy()` on the outgoing scene. For `PlayScene`, override it to release orb graphics that were created dynamically:
 
 <SourceSnippet
-  source="examples/showcase/orb-dodge.ts"
+  source="examples/guides/build-orb-dodge/orb-dodge.ts"
   region="play-destroy"
   language="ts"
-  title="examples/showcase/orb-dodge.ts"
+  title="examples/guides/build-orb-dodge/orb-dodge.ts"
 />
 
 Static nodes created in `init` are recreated on every activation, so they are always fresh when `init` is called again.
 
 ## Complete example
 
-The full, playable game is in the playground. Open it to read the complete source, run it, or fork it as a starting point:
+The snippets above form the complete game in `examples/guides/build-orb-dodge/orb-dodge.ts`. The playground version builds on it with a sprite player, a pause overlay that blurs the frozen scene, and a control bar. Open it to run it or fork it as a starting point:
 
 <ExamplePreview chapter="showcase" slug="orb-dodge" />
 

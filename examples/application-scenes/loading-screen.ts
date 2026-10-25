@@ -1,208 +1,129 @@
-import {
-  Application,
-  Assets,
-  Color,
-  FixedResolutionCanvasSizing,
-  Graphics,
-  Keyboard,
-  type RenderingContext,
-  Scene,
-  Sprite,
-  Text,
-} from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { demoPanel, startExample } from '@examples/runtime';
 
-const GameAssets = Assets.from({
-  ship: assets.ship,
-  grid: assets.uvGrid256,
-  ramp: assets.hueRamp,
-  click: assets.soundUiClick,
-});
+const descriptors = [assets.uvGrid256, assets.hueRamp, assets.pixelWhite];
+const names = ['Scene asset: UV grid', 'Scene asset: colour ramp', 'UI asset: white pixel'];
+type LoadState = 'waiting' | 'loading' | 'loaded' | 'failed';
 
-/**
- * One progress bar for everything the loader is doing, then a hand-over to the
- * game scene. Nothing is awaited in `load()`: the bar is driven by the loader's
- * own signals, which see every `load(...)` call from every scene and system -
- * not just this scene's. Completion is recorded as state and acted on from
- * `update()`, which only runs while this scene is active.
- */
 class BootScene extends Scene {
-  private bar!: Graphics;
-  private label!: Text;
-
-  private loaded = 0;
-  private total = 0;
-  private failed = false;
+  private readonly bar = this.track(new Graphics());
+  private readonly labels = names.map(() => this.track(new Text('', { fillColor: Color.white })));
+  private states: LoadState[] = ['waiting', 'waiting', 'waiting'];
+  private attempts = [0, 0, 0];
   private loading = false;
-  private complete = false;
-  private leaving = false;
-  private message = 'Waiting for the first request…';
+  private panel!: ReturnType<typeof demoPanel>;
 
-  private onLoadStart!: (key: string, url: string) => void;
-  private onLoadProgress!: (loaded: number, total: number, key: string) => void;
-  private onLoadError!: (key: string, error: Error) => void;
-  private onLoadComplete!: () => void;
+  // The application loader reports every request, whichever scene or scope issued it.
+  private readonly onLoadProgress = (loaded: number, total: number, key: string): void => {
+    this.panel.status(`Loading ${loaded} / ${total} - ${key}`, 'info');
+  };
+
+  private readonly onLoadError = (key: string): void => {
+    this.panel.status(`${key} failed to load.`, 'error');
+  };
 
   // #region guide:boot-signals
   override init(): void {
-    const app = this.app;
-
-    // Per-scene background. `init` runs once per activation, so navigating
-    // back here from the play scene repaints the frame in this colour.
-    app.clearColor.set(12, 16, 24);
-
-    this.bar = new Graphics();
-    this.label = new Text('', { fillColor: Color.white, fontSize: 20, align: 'center' });
-    this.label.setAnchor(0.5, 0);
-
-    // Every listener is kept in a field so `unload()` can take it off again.
-    this.onLoadStart = (key: string) => {
-      this.loading = true;
-
-      if (!this.failed) {
-        this.message = `Loading ${key}…`;
-      }
-    };
-
-    this.onLoadProgress = (loaded: number, total: number, key: string) => {
-      this.loaded = loaded;
-      this.total = total;
-
-      if (!this.failed) {
-        this.message = `${loaded} / ${total} — ${key}`;
-      }
-    };
-
-    this.onLoadError = (key: string, error: Error) => {
-      this.failed = true;
-      this.message = `Failed to load "${key}": ${error.message}`;
-    };
-
-    this.onLoadComplete = () => {
-      this.loading = false;
-
-      if (this.failed) {
-        this.message = 'Load failed. Press Space to retry.';
-      } else {
-        this.complete = true;
-      }
-    };
-
-    app.loader.onLoadStart.add(this.onLoadStart);
-    app.loader.onLoadProgress.add(this.onLoadProgress);
-    app.loader.onLoadError.add(this.onLoadError);
-    app.loader.onLoadComplete.add(this.onLoadComplete);
-
-    // Trigger loads from anywhere - the signals above see all of them. The
-    // claim goes on the application loader so the assets outlive this scene.
-    this.inputs.onTrigger(Keyboard.Space, () => {
-      if (this.failed && !this.loading) {
-        this.loadAssets();
-      }
+    this.app.loader.onLoadProgress.add(this.onLoadProgress);
+    this.app.loader.onLoadError.add(this.onLoadError);
+    this.panel = demoPanel({
+      layout: 'bar',
+      title: 'Loading Progress and Retry',
+      controls: {},
+      hint: 'Loader signals report each request. Retry requests only the failed asset.',
+      actions: {
+        Load: () => void this.loadAssets(false),
+        'Load with one broken file': () => void this.loadAssets(true),
+        'Retry failed': () => void this.retry(),
+      },
     });
-    this.loadAssets();
+    this.panel.status('Ready - choose Load or the deliberate failure.');
   }
   // #endregion guide:boot-signals
 
-  private loadAssets(): void {
-    this.failed = false;
-    this.complete = false;
-    this.loading = true;
-    this.loaded = 0;
-    this.total = 0;
-    this.message = 'Loading assets…';
-    void this.app.loader.load(GameAssets).catch(error => {
-      this.failed = true;
-      this.message = `Load failed: ${String(error)}. Press Space to retry.`;
-    });
+  private async loadOne(index: number, broken = false): Promise<void> {
+    this.states[index] = 'loading';
+    this.attempts[index]!++;
+    const descriptor = broken ? Asset.type('texture', `${assets.pixelWhite.source}.missing.png`) : descriptors[index]!;
+
+    try {
+      await this.loader.load(descriptor);
+      this.states[index] = 'loaded';
+    } catch {
+      this.states[index] = 'failed';
+    }
   }
 
-  // #region guide:boot-unsubscribe
-  override unload(): void {
-    // `this.app` is still valid here - `unload()` runs before the scene is
-    // detached, so the listeners can still be removed from the very loader
-    // they were added to.
-    const app = this.app;
-
-    app.loader.onLoadStart.remove(this.onLoadStart);
-    app.loader.onLoadProgress.remove(this.onLoadProgress);
-    app.loader.onLoadError.remove(this.onLoadError);
-    app.loader.onLoadComplete.remove(this.onLoadComplete);
-  }
-
-  override update(): void {
-    // A warm cache completes while this scene is still preparing, before it
-    // may navigate. Acting on the recorded completion here instead of inside
-    // the signal handler covers that case, and never navigates away from a
-    // scene that is no longer the active one.
-    if (!this.complete || this.leaving) {
+  private async loadAssets(broken: boolean): Promise<void> {
+    if (this.loading) {
       return;
     }
 
-    this.leaving = true;
-    void this.app.scenes.change(PlayScene);
+    descriptors.forEach(descriptor => this.loader.release(descriptor));
+    this.loading = true;
+    this.states.fill('waiting');
+    this.attempts.fill(0);
+    this.panel.status('Loading...', 'info');
+    await Promise.all([this.loadOne(0), this.loadOne(1), this.loadOne(2, broken)]);
+    this.finish();
+  }
+
+  private async retry(): Promise<void> {
+    if (this.loading || !this.states.includes('failed')) {
+      return;
+    }
+
+    this.loading = true;
+    await Promise.all(this.states.map((state, index) => (state === 'failed' ? this.loadOne(index) : undefined)));
+    this.finish();
+  }
+
+  private finish(): void {
+    if (this.lifecycleSignal.aborted) {
+      return;
+    }
+
+    this.loading = false;
+    const failed = this.states.filter(state => state === 'failed').length;
+    this.panel.status(
+      failed ? `${failed} failed - Retry failed repairs the URL.` : 'All three loaded. Load again to compare a fresh queue.',
+      failed ? 'error' : 'success',
+    );
+  }
+
+  // #region guide:boot-unsubscribe
+  override destroy(): void {
+    this.app.loader.onLoadProgress.remove(this.onLoadProgress);
+    this.app.loader.onLoadError.remove(this.onLoadError);
+    this.panel?.dispose();
+    super.destroy();
   }
   // #endregion guide:boot-unsubscribe
 
   override draw(context: RenderingContext): void {
-    const app = this.app;
-    const { width, height } = app;
-
-    const barWidth = width * 0.5;
-    const barX = (width - barWidth) / 2;
-    const barY = height / 2;
-    const ratio = this.total > 0 ? this.loaded / this.total : 0;
-
+    const { scale: k, width, contentHeight } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    const left = 24 * k;
+    const top = Math.max(18, (contentHeight - 172) / 2) * k;
+    const loaded = this.states.filter(state => state === 'loaded').length;
     this.bar.clear();
-    this.bar.fillColor = new Color(40, 46, 58);
-    this.bar.drawRectangle(barX, barY, barWidth, 26);
-    this.bar.fillColor = new Color(110, 220, 150);
-    this.bar.drawRectangle(barX, barY, barWidth * ratio, 26);
+    this.bar.fillColor = new Color(25, 31, 36);
+    this.bar.drawRectangle(left, top, (width - 48) * k, 12 * k);
+    this.bar.fillColor = new Color(136, 233, 126);
+    this.bar.drawRectangle(left, top, ((width - 48) * k * loaded) / 3, 12 * k);
     context.render(this.bar);
-
-    this.label.text = this.message;
-    this.label.setPosition(width / 2, barY + 44);
-    context.render(this.label);
-  }
-}
-
-class PlayScene extends Scene {
-  private ship!: Sprite;
-  private label!: Text;
-
-  override init(): void {
-    const app = this.app;
-    const { width, height } = app;
-
-    app.clearColor.set(16, 26, 22);
-
-    // Already resident: BootScene claimed the catalog on the application
-    // loader, so reading the same handles here costs nothing.
-    this.ship = new Sprite(GameAssets.ship).setAnchor(0.5).setPosition(width / 2, height / 2);
-
-    this.label = new Text('Loaded — press Space to visit the warm cache.', { fillColor: Color.white, fontSize: 22, align: 'center' });
-    this.label.setAnchor(0.5, 0).setPosition(width / 2, height * 0.68);
-
-    this.inputs.onTrigger(Keyboard.Space, () => {
-      void app.scenes.change(BootScene);
+    this.labels.forEach((label, index) => {
+      label.style.fontSize = 15 * k;
+      label.style.fillColor = this.states[index] === 'failed' ? new Color(255, 124, 128) : Color.white;
+      label.text = `${names[index]}\n${this.states[index]} | requests: ${this.attempts[index]}`;
+      label.setPosition(left, top + (26 + index * 48) * k);
+      context.render(label);
     });
   }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.ship);
-    context.render(this.label);
-  }
 }
-
 const app = new Application({
-  scenes: { BootScene, PlayScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
-  clearColor: Color.black,
+  scenes: { BootScene },
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  clearColor: new Color(11, 16, 20),
 });
-
-await app.start(BootScene);
+await startExample(app, () => app.start(BootScene));

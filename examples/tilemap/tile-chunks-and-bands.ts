@@ -1,9 +1,10 @@
 import {
+  ActionMap,
   Application,
   Color,
   Container,
   FixedResolutionCanvasSizing,
-  type InputBinding,
+  GamepadAxis,
   Keyboard,
   PixelSnapMode,
   Rectangle,
@@ -14,11 +15,12 @@ import {
   Spritesheet,
   type SpritesheetData,
   TextureRegion,
+  VectorAction,
   View,
 } from '@codexo/exojs';
 import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, type TileMapView, TileSet } from '@codexo/exojs/tilemap';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { choice, demoPanel, toggle } from '@examples/runtime';
+import { choice, demoPanel, startExample, toggle } from '@examples/runtime';
 
 // Core @codexo/exojs-tilemap API, with no on-disk map format involved: a
 // procedural TileMap built entirely from code.
@@ -56,10 +58,18 @@ class TileChunksAndBandsScene extends Scene {
   private explorer!: Sprite;
   private worldRoot!: Container;
   private mapView!: TileMapView;
-  private up!: InputBinding;
-  private down!: InputBinding;
-  private left!: InputBinding;
-  private right!: InputBinding;
+  private panel!: ReturnType<typeof demoPanel>;
+  private readonly actions = new ActionMap({
+    move: new VectorAction([
+      {
+        up: [Keyboard.W, Keyboard.Up],
+        down: [Keyboard.S, Keyboard.Down],
+        left: [Keyboard.A, Keyboard.Left],
+        right: [Keyboard.D, Keyboard.Right],
+      },
+      { x: GamepadAxis.LeftStickX, y: GamepadAxis.LeftStickY },
+    ]),
+  });
 
   override async load(): Promise<void> {
     // Tileset + two layers, built entirely in code
@@ -127,7 +137,7 @@ class TileChunksAndBandsScene extends Scene {
     this.mapView = map.createView({ bands: { ground: ['ground'], canopy: ['canopy'] } });
 
     const characters = new Spritesheet(
-      this.loader.get(assets.platformerCharactersImage),
+      await this.loader.load(assets.platformerCharactersImage),
       (await this.loader.load(assets.platformerCharactersAtlas)) as SpritesheetData,
     );
 
@@ -155,10 +165,7 @@ class TileChunksAndBandsScene extends Scene {
   }
 
   private setupInput(): void {
-    this.up = this.inputs.onActive([Keyboard.W, Keyboard.Up]);
-    this.down = this.inputs.onActive([Keyboard.S, Keyboard.Down]);
-    this.left = this.inputs.onActive([Keyboard.A, Keyboard.Left]);
-    this.right = this.inputs.onActive([Keyboard.D, Keyboard.Right]);
+    this.inputs.attach(this.actions);
   }
 
   private setupHud(): void {
@@ -167,30 +174,50 @@ class TileChunksAndBandsScene extends Scene {
     // seams shimmer as the camera moves.
     const snapModes = { geometry: PixelSnapMode.Geometry, position: PixelSnapMode.Position, none: PixelSnapMode.None } as const;
 
-    demoPanel({
-      title: 'Tilemap',
+    this.panel = demoPanel({
+      layout: 'bar',
+      title: 'Layered Tile World',
       controls: {
         canopy: toggle('Canopy band', true),
         snap: choice('Pixel snap', ['geometry', 'position', 'none']),
+        zoom: choice('Camera zoom', ['1', '1.25', '0.75']),
       },
       onChange: (_key, _value, values) => {
         this.mapView.band('canopy').visible = values.canopy;
         this.mapView.pixelSnapMode = snapModes[values.snap];
+        this.camera.setZoom(Number(values.zoom));
       },
     });
   }
 
   override update(delta: Seconds): void {
-    const moveX = (this.right.active ? 1 : 0) - (this.left.active ? 1 : 0);
-    const moveY = (this.down.active ? 1 : 0) - (this.up.active ? 1 : 0);
+    const { x: moveX, y: moveY } = this.actions.move.value;
+    const fit = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    const canvas = this.app.canvas as HTMLCanvasElement;
+    const height = fit.contentHeight * fit.scale;
+
+    if (this.camera.viewport.height !== height / this.app.height) {
+      this.camera
+        .resize(this.app.width, height)
+        .setZoom(Number(this.panel.values.zoom))
+        .setViewport(0, 0, 1, height / this.app.height);
+    }
+
+    this.panel.status(
+      `CSS ${Math.round(fit.width)}x${Math.round(fit.height)} | logical ${this.app.width}x${this.app.height} | buffer ${canvas.width}x${canvas.height} | DPR ${devicePixelRatio} | pixelRatio ${this.app.pixelRatio} | camera ${this.camera.center.x.toFixed(1)},${this.camera.center.y.toFixed(1)} | zoom ${this.camera.zoomLevel}`,
+    );
 
     if (moveX !== 0 || moveY !== 0) {
-      const length = Math.hypot(moveX, moveY);
-
-      this.explorer.move((moveX / length) * MOVE_SPEED * delta, (moveY / length) * MOVE_SPEED * delta);
+      this.explorer.move(moveX * MOVE_SPEED * delta, moveY * MOVE_SPEED * delta);
       this.explorer.x = Math.min(Math.max(this.explorer.x, 0), MAP_WIDTH);
       this.explorer.y = Math.min(Math.max(this.explorer.y, 0), MAP_HEIGHT);
     }
+  }
+
+  override destroy(): void {
+    this.panel?.dispose();
+    this.worldRoot?.destroy();
+    super.destroy();
   }
 
   override draw(context: RenderingContext): void {
@@ -212,4 +239,4 @@ const app = new Application({
   extensions: [tilemapExtension],
 });
 
-await app.start(TileChunksAndBandsScene);
+await startExample(app, () => app.start(TileChunksAndBandsScene));

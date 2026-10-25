@@ -26,3 +26,19 @@ nav {
   padding: 1rem;
   color: oklch(76% 0.15 27);
 }
+
+.reference-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.reference-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  font-size: 0.875rem;
+  color: var(--accent);
+}

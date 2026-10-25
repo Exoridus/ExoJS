@@ -1,75 +1,106 @@
 import {
+  ActionMap,
   Application,
   Button,
+  ButtonAction,
   Color,
   FixedResolutionCanvasSizing,
+  GamepadButton,
+  Keyboard,
+  Panel,
   type RenderingContext,
   Scene,
   type Seconds,
-  type Sound,
+  type Sprite,
+  Spritesheet,
+  type SpritesheetData,
   Text,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { mountControls, siteUITheme, startExample } from '@examples/runtime';
 
-interface DialogLine {
-  speaker: string;
-  text: string;
-}
-
-const lines: DialogLine[] = [
-  { speaker: 'Commander Vale', text: 'Commander, the anomaly has entered low orbit.' },
-  { speaker: 'Commander Vale', text: 'All wings hold formation and await my signal.' },
-  { speaker: 'Commander Vale', text: 'If this goes wrong, burn every gate behind us.' },
+const lines = ['Welcome, explorer. The bridge is washed out.', 'We can repair it together, or take the forest trail.'];
+const choices = ['Repair the bridge', 'Take the forest trail'];
+const endings = [
+  'You help Mira repair the bridge. The village opens a safe crossing for everyone.',
+  'Mira joins you on the forest trail. Together you discover a hidden garden.',
 ];
 
-const choices = ['Hold formation', 'Burn the gates'];
-
 class DialogSystemScene extends Scene {
-  private readonly onPointerTap = (): void => {
-    this.advance();
-  };
   private namePlate!: Text;
   private box!: Text;
-  private choicePrompt!: Text;
-  private beep!: Sound;
+  private portrait!: Sprite;
+  private backdrop!: Panel;
+  private continueButton!: Button;
   private replyButtons: Button[] = [];
+  private caption!: ReturnType<typeof mountControls>;
+  private sheetData!: SpritesheetData;
+  private readonly actions = new ActionMap({ advance: new ButtonAction([Keyboard.Space, GamepadButton.South]) });
   private lineIndex = 0;
   private chars = 0;
   private timer = 0;
-  private done = false;
   private awaitingChoice = false;
-  private restartPending = false;
+  private ending: number | null = null;
+  private pendingAdvance = false;
+  private pendingChoice: number | null = null;
+
+  override async load(): Promise<void> {
+    await this.loader.load(assets.platformerCharactersImage);
+    this.sheetData = await this.loader.load(assets.platformerCharactersAtlas);
+  }
 
   override init(): void {
-    const app = this.app;
-    const { width, height } = app;
-
-    const textX = width * 0.16;
-
-    this.namePlate = new Text(lines[0].speaker, { fillColor: new Color(255, 214, 120), fontSize: 26, fontWeight: 'bold' });
-    this.namePlate.setPosition(textX, height * 0.5);
-
-    this.box = new Text('', { fillColor: Color.white, fontSize: 32, lineHeight: 1.3, maxWidth: width * 0.68 });
-    this.box.setPosition(textX, height * 0.56);
-
-    this.choicePrompt = new Text('', { fillColor: new Color(150, 220, 255), fontSize: 20 });
-    this.choicePrompt.setPosition(textX, height * 0.78);
-
-    this.beep = this.loader.get(assets.soundUiConfirm);
-
+    this.ui.theme = siteUITheme();
+    this.portrait = this.track(
+      new Spritesheet(this.loader.get(assets.platformerCharactersImage), this.sheetData).getFrameSprite('character_beige_front'),
+    );
+    this.portrait.setAnchor(0.5);
+    this.namePlate = this.track(new Text('Mira', { fillColor: new Color(136, 233, 126), fontWeight: 'bold' }));
+    this.box = this.track(new Text('', { fillColor: Color.white, lineHeight: 1.35 }));
+    this.backdrop = this.track(new Panel({ color: new Color(25, 31, 36), cornerRadius: 8 }));
+    this.caption = mountControls({
+      theme: 'site',
+      title: 'Dialogue and Choices',
+      hint: 'Continue: click / Space / South. Tab or D-pad chooses a reply. Silent by default.',
+    });
+    this.continueButton = new Button({ label: 'Continue', width: 144, height: 36, fontSize: 14 });
+    this.continueButton.onClick.add(() => {
+      this.pendingAdvance = true;
+    });
+    this.ui.addChild(this.continueButton);
     this.replyButtons = choices.map((reply, index) => {
-      const button = new Button({ label: reply, width: 220, height: 48 });
-
-      button.anchorIn(this.ui, 'top-left', textX + index * 240, height * 0.78);
-      button.onClick.add(() => this.choose(reply));
+      const button = new Button({ label: reply, width: 180, height: 36, fontSize: 14 });
+      button.onClick.add(() => {
+        this.pendingChoice = index;
+      });
       this.ui.addChild(button);
 
       return button;
     });
+    this.inputs.attach(this.actions);
+    this.inputs.onTrigger(Keyboard.Tab);
+    this.showChoices(false);
+  }
 
-    this.setChoicesVisible(false);
+  private get text(): string {
+    return this.ending === null ? lines[this.lineIndex]! : endings[this.ending]!;
+  }
 
-    this.app.input.onPointerTap.add(this.onPointerTap);
+  private showChoices(visible: boolean): void {
+    this.awaitingChoice = visible;
+    this.replyButtons.forEach(button => {
+      button.visible = visible;
+    });
+    this.continueButton.visible = !visible;
+
+    if (visible) {
+      this.replyButtons[0]!.focus();
+    }
+  }
+
+  private startLine(): void {
+    this.chars = 0;
+    this.timer = 0;
   }
 
   private advance(): void {
@@ -77,103 +108,89 @@ class DialogSystemScene extends Scene {
       return;
     }
 
-    if (!this.done) {
-      // First click reveals the rest of the current line instantly.
-      this.chars = lines[this.lineIndex].text.length;
-      this.done = true;
+    if (this.chars < this.text.length) {
+      this.chars = this.text.length;
 
       return;
     }
 
-    if (this.lineIndex < lines.length - 1) {
+    if (this.ending !== null) {
+      this.ending = null;
+      this.lineIndex = 0;
+      this.continueButton.label = 'Continue';
+      this.caption.setStatus('New conversation.');
+      this.startLine();
+    } else if (this.lineIndex < lines.length - 1) {
       this.lineIndex++;
       this.startLine();
-
-      return;
+    } else {
+      this.showChoices(true);
     }
-
-    // The last line is read - offer the choice row.
-    this.awaitingChoice = true;
-    this.setChoicesVisible(true);
-  }
-
-  private startLine(): void {
-    this.chars = 0;
-    this.timer = 0;
-    this.done = false;
-    this.namePlate.text = lines[this.lineIndex].speaker;
-  }
-
-  private choose(choice: string): void {
-    const app = this.app;
-    app.audio.play(this.beep, { playbackRate: 1.2, volume: 0.3 });
-    this.choicePrompt.text = `You chose: ${choice}`;
-    this.setChoicesVisible(false);
-    // The tap that pressed the button must not also advance the restarted
-    // dialogue, so the loop back to the top waits for the next update.
-    this.restartPending = true;
-  }
-
-  private setChoicesVisible(visible: boolean): void {
-    for (const button of this.replyButtons) {
-      button.visible = visible;
-    }
-
-    this.choicePrompt.visible = !visible && this.choicePrompt.text.length > 0;
   }
 
   override update(delta: Seconds): void {
-    const app = this.app;
-
-    if (this.restartPending) {
-      this.restartPending = false;
-      this.awaitingChoice = false;
-      this.lineIndex = 0;
+    // UI activation and the South/Space action can share one input frame; coalesce them before advancing.
+    if (this.pendingChoice !== null) {
+      this.ending = this.pendingChoice;
+      this.pendingChoice = null;
+      this.pendingAdvance = false;
       this.startLine();
+      this.showChoices(false);
+      this.continueButton.label = 'Restart';
+      this.caption.setStatus(`Choice: ${choices[this.ending]}`);
+    } else if (this.pendingAdvance || this.actions.advance.pressed) {
+      this.pendingAdvance = false;
+      this.advance();
     }
 
-    if (!this.done && !this.awaitingChoice) {
+    if (!this.awaitingChoice) {
       this.timer += delta;
 
-      while (this.timer > 0.035 && this.chars < lines[this.lineIndex].text.length) {
+      while (this.timer >= 0.035 && this.chars < this.text.length) {
         this.timer -= 0.035;
         this.chars++;
-        app.audio.play(this.beep, { playbackRate: 1.9, volume: 0.14 });
       }
-
-      this.done = this.chars >= lines[this.lineIndex].text.length;
     }
 
-    this.box.text = lines[this.lineIndex].text.slice(0, this.chars);
+    this.box.text = this.text.slice(0, this.chars);
   }
 
   override draw(context: RenderingContext): void {
+    const { scale: k, width, height, contentHeight, compact } = this.caption.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    const top = height - contentHeight;
+    const textX = compact ? 112 : width * 0.28;
+    this.ui.uiScale = k;
+    this.backdrop
+      .setScale(k)
+      .setPosition((textX - 12) * k, top * k)
+      .setSize(width - textX, Math.max(80, contentHeight - 58));
+    this.portrait.setPosition((compact ? 52 : width * 0.15) * k, (top + (contentHeight - 48) / 2) * k).setScale((compact ? 0.65 : 1.4) * k);
+    this.namePlate.style.fontSize = 16 * k;
+    this.namePlate.setPosition(textX * k, (top + 8) * k);
+    this.box.style.fontSize = 16 * k;
+    const maxWidth = (width - textX - 24) * k;
+
+    if (this.box.layout.maxWidth !== maxWidth) {
+      this.box.layout = { maxWidth };
+    }
+
+    this.box.setPosition(textX * k, (top + 36) * k);
+    this.continueButton.setPosition(width - 164, height - 48);
+    this.replyButtons.forEach((button, index) => button.setPosition(width - 388 + index * 192, height - 48));
+    context.render(this.backdrop);
+    context.render(this.portrait);
     context.render(this.namePlate);
     context.render(this.box);
-
-    if (this.choicePrompt.visible) {
-      context.render(this.choicePrompt);
-    }
   }
 
   override destroy(): void {
-    this.app.input.onPointerTap.remove(this.onPointerTap);
-    this.namePlate?.destroy();
-    this.box?.destroy();
-    this.choicePrompt?.destroy();
+    this.caption?.dispose();
     super.destroy();
   }
 }
-
 const app = new Application({
   scenes: { DialogSystemScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
-  clearColor: new Color(20, 24, 34),
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  clearColor: new Color(11, 16, 20),
 });
-
-await app.start(DialogSystemScene);
+await startExample(app, () => app.start(DialogSystemScene));

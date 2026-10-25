@@ -5,6 +5,7 @@ description: 'Choose awaited or placeholder-based loading, handle failures, and 
 
 import SourceSnippet from '../../../components/SourceSnippet.astro';
 import TryIt from '../../../components/TryIt.astro';
+import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # Loading and resource lifetimes
 
@@ -121,3 +122,9 @@ A resident texture is a live runtime resource. A persistent cache holds source r
 Use [Offline and caching](/ExoJS/en/guide/assets/offline/) for persistence and connectivity, [Device variants](/ExoJS/en/guide/assets/device-variants/) for choosing a source before loading, and [Worlds and level streaming](/ExoJS/en/guide/assets/worlds-and-spawning/) for level-owned scopes. Custom asset-type authors should continue with [Authoring extensions](/ExoJS/en/guide/debugging/authoring-extensions/), not add application-specific decoders to ordinary scene code.
 
 <TryIt examples={['application-scenes/loading-screen', 'tilemap/level-loading-and-ownership', 'debug-layer/asset-browser']} api={['loader', 'loader-scope', 'asset', 'assets', 'asset-ref', 'loading-queue']} />
+
+## Application-level progress and warm navigation
+
+The focused loading example explains named failures and retry. This runnable recipe keeps application-loader progress signals and warm-cache scene navigation visible. Press Space after loading to revisit resources that the application still owns.
+
+<ExamplePreview chapter="guide-fixtures" slug="application-loading" />

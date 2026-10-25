@@ -90,7 +90,7 @@ const openExample = async (page: Page, slug: string, width: number, height: numb
     const body = source.includes('const app = new Application(')
       ? source
           .replace('const app = new Application({', `const app = new Application({ backend: { type: '${backend}' },`)
-          .replace('await app.start(', 'window.__pilot = { app, counts: [0, 0] };\nawait app.start(')
+          .replace(/await (?:app\.start|startExample)\(/, match => `window.__pilot = { app, counts: [0, 0] };\n${match}`)
       : source;
 
     await route.fulfill({ response, body });
@@ -134,7 +134,8 @@ const openExample = async (page: Page, slug: string, width: number, height: numb
   return frame;
 };
 
-const capture = async (frame: Frame, name: string) => (await frame.frameElement()).screenshot({ path: resolve(output, `${name}.png`) });
+const capture = async (frame: Frame, name: string) =>
+  (await frame.frameElement()).screenshot({ path: resolve(output, `${name}.png`), scale: 'css' });
 
 const clickWorld = async (page: Page, frame: Frame, x: number, y: number) => {
   const box = (await frame.locator('canvas').boundingBox())!;

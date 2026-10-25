@@ -16,48 +16,88 @@ const colors = [
   new Color(255, 130, 200),
 ];
 class MultitouchScene extends Scene {
-  onPointerDown = pointer => {
+  graphics;
+  labels = [];
+  pointers = new Map();
+  gestureShape = new Graphics();
+  gestureScale = 1;
+  gestureDegrees = 0;
+  focal = { x: 640, y: 360 };
+  cancelled = 0;
+  onDown = pointer => {
     if (this.pointers.size >= MAX_TOUCHES || this.pointers.has(pointer.id)) {
       return;
     }
     this.pointers.set(pointer.id, { id: pointer.id, x: pointer.x, y: pointer.y });
     this.refreshHud();
   };
-  onPointerMove = pointer => {
+  onMove = pointer => {
     const touch = this.pointers.get(pointer.id);
     if (touch) {
       touch.x = pointer.x;
       touch.y = pointer.y;
     }
   };
-  onPointerUp = pointer => {
+  onUp = pointer => {
     this.pointers.delete(pointer.id);
     this.refreshHud();
   };
-  onPointerCancel = pointer => {
-    this.pointers.delete(pointer.id);
-    this.refreshHud();
+  onCancel = pointer => {
+    this.cancelled++;
+    this.onUp(pointer);
   };
-  graphics;
-  labels = [];
-  pointers = new Map();
+  // #region guide:gesture-transform
+  onPinch = (scale, x, y) => {
+    this.gestureScale = Math.max(0.25, Math.min(3, this.gestureScale * scale));
+    this.focal = { x, y };
+  };
+  onRotate = (angleDelta, x, y) => {
+    this.gestureDegrees -= (angleDelta * 180) / Math.PI;
+    this.focal = { x, y };
+  };
+  // #endregion guide:gesture-transform
   hud;
   init() {
+    const app = this.app;
     this.graphics = new Graphics();
     // Reusable label pool - one Text per possible touch, repositioned each frame.
     for (let i = 0; i < MAX_TOUCHES; i++) {
       this.labels.push(new Text('', { fillColor: Color.white, fontSize: 16 }).setAnchor(0.5));
     }
-    this.app.input.onPointerDown.add(this.onPointerDown);
-    this.app.input.onPointerMove.add(this.onPointerMove);
-    this.app.input.onPointerUp.add(this.onPointerUp);
-    this.app.input.onPointerCancel.add(this.onPointerCancel);
-    this.hud = mountControls({ status: 'Active touches: 0 / 10' });
+    this.gestureShape.fillColor = new Color(151, 226, 60, 0.7);
+    this.gestureShape.drawPolygon([0, -65, 45, 35, -30, 35]);
+    this.gestureShape.fillColor = Color.white;
+    this.gestureShape.drawCircle(0, -40, 7);
+    app.input.onPointerDown.add(this.onDown);
+    app.input.onPointerMove.add(this.onMove);
+    app.input.onPointerUp.add(this.onUp);
+    app.input.onPointerCancel.add(this.onCancel);
+    app.input.onPinch.add(this.onPinch);
+    app.input.onRotate.add(this.onRotate);
+    this.hud = mountControls({
+      theme: 'site',
+      title: 'Multitouch gestures',
+      hint: 'Use two contacts to pinch / rotate. Mouse shows one pointer. Hardware touch remains a separate check.',
+    });
   }
   refreshHud() {
-    this.hud.setStatus(`Active touches: ${this.pointers.size} / ${MAX_TOUCHES}`);
+    this.hud?.setStatus(
+      `IDs ${[...this.pointers.keys()].join(', ') || 'none'} | Scale ${this.gestureScale.toFixed(2)} | Rotation ${this.gestureDegrees.toFixed(0)} deg | Cancelled ${this.cancelled}`,
+    );
+  }
+  update() {
+    const fit = this.hud.fit(this.app, this.app.canvas);
+    this.gestureShape
+      .setPosition(this.focal.x, Math.min(this.focal.y, fit.contentHeight * fit.scale - 70))
+      .setScale(this.gestureScale * fit.scale)
+      .setRotation(this.gestureDegrees);
+    for (const label of this.labels) {
+      label.setScale(fit.scale);
+    }
+    this.refreshHud();
   }
   draw(context) {
+    context.render(this.gestureShape);
     this.graphics.clear();
     let index = 0;
     for (const touch of this.pointers.values()) {
@@ -76,15 +116,19 @@ class MultitouchScene extends Scene {
     }
   }
   destroy() {
-    this.app.input.onPointerDown.remove(this.onPointerDown);
-    this.app.input.onPointerMove.remove(this.onPointerMove);
-    this.app.input.onPointerUp.remove(this.onPointerUp);
-    this.app.input.onPointerCancel.remove(this.onPointerCancel);
+    this.app.input.onPointerDown.remove(this.onDown);
+    this.app.input.onPointerMove.remove(this.onMove);
+    this.app.input.onPointerUp.remove(this.onUp);
+    this.app.input.onPointerCancel.remove(this.onCancel);
+    this.app.input.onPinch.remove(this.onPinch);
+    this.app.input.onRotate.remove(this.onRotate);
+    this.pointers.clear();
+    this.hud.dispose();
+    this.graphics.destroy();
+    this.gestureShape.destroy();
     for (const label of this.labels) {
       label.destroy();
     }
-    this.graphics?.destroy();
-    this.hud?.dispose();
     super.destroy();
   }
 }

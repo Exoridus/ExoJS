@@ -1,6 +1,6 @@
 // Auto-generated from graphics-gradient.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, LinearGradient, RadialGradient, Scene, Text } from '@codexo/exojs';
-import { choice, demoPanel } from '@examples/runtime';
+import { choice, demoPanel, startExample } from '@examples/runtime';
 const controls = { gradient: choice('Gradient', ['Linear', 'Radial']) };
 const stops = [
   { offset: 0, color: new Color(136, 233, 126) },
@@ -155,4 +155,4 @@ const app = new Application({
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(242, 244, 239),
 });
-await app.start(GraphicsGradientScene);
+await startExample(app, () => app.start(GraphicsGradientScene));

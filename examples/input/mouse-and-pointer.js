@@ -9,20 +9,6 @@ import { mountControls } from '@examples/runtime';
 //   - a click counter (onPointerTap fires on a press+release without a drag)
 //   - a draggable sprite (the engine's built-in drag on an interactive node)
 class MouseAndPointerScene extends Scene {
-  onPointerMove = pointer => {
-    this.pointer.x = pointer.x;
-    this.pointer.y = pointer.y;
-    this.buttons = pointer.buttons;
-  };
-  onPointerDown = pointer => {
-    this.buttons = pointer.buttons;
-  };
-  onPointerUp = pointer => {
-    this.buttons = pointer.buttons;
-  };
-  onPointerTap = () => {
-    this.clicks++;
-  };
   ship;
   crosshair;
   pointer = { x: 400, y: 300 };
@@ -32,6 +18,20 @@ class MouseAndPointerScene extends Scene {
   buttons = 0;
   clicks = 0;
   hud;
+  onMove = pointer => {
+    this.pointer.x = pointer.x;
+    this.pointer.y = pointer.y;
+    this.buttons = pointer.buttons;
+  };
+  onButtons = pointer => {
+    this.buttons = pointer.buttons;
+  };
+  onCancel = () => {
+    this.buttons = 0;
+  };
+  onTap = () => {
+    this.clicks++;
+  };
   init() {
     const app = this.app;
     const { width, height } = app;
@@ -42,17 +42,23 @@ class MouseAndPointerScene extends Scene {
     this.ship.draggable = true;
     this.root.addChild(this.ship);
     this.crosshair = new Graphics();
-    this.app.input.onPointerMove.add(this.onPointerMove);
-    this.app.input.onPointerDown.add(this.onPointerDown);
-    this.app.input.onPointerUp.add(this.onPointerUp);
-    this.app.input.onPointerTap.add(this.onPointerTap);
-    this.hud = mountControls();
+    app.input.onPointerMove.add(this.onMove);
+    app.input.onPointerDown.add(this.onButtons);
+    app.input.onPointerUp.add(this.onButtons);
+    app.input.onPointerCancel.add(this.onCancel);
+    app.input.onPointerTap.add(this.onTap);
+    this.hud = mountControls({
+      theme: 'site',
+      title: 'Pointer & capture',
+      hint: 'Drag the ship; release outside the canvas. Cancel clears held buttons.',
+    });
   }
   buttonLabel() {
     const held = [this.buttons & 1 && 'Left', this.buttons & 2 && 'Right', this.buttons & 4 && 'Middle'].filter(Boolean);
     return held.length ? held.join(' + ') : 'none';
   }
   update() {
+    this.hud.fit(this.app, this.app.canvas);
     this.deltaX = this.pointer.x - this.previous.x;
     this.deltaY = this.pointer.y - this.previous.y;
     this.previous.x = this.pointer.x;
@@ -71,12 +77,13 @@ class MouseAndPointerScene extends Scene {
     context.render(this.crosshair);
   }
   destroy() {
-    this.app.input.onPointerMove.remove(this.onPointerMove);
-    this.app.input.onPointerDown.remove(this.onPointerDown);
-    this.app.input.onPointerUp.remove(this.onPointerUp);
-    this.app.input.onPointerTap.remove(this.onPointerTap);
-    this.crosshair?.destroy();
-    this.hud?.dispose();
+    this.app.input.onPointerMove.remove(this.onMove);
+    this.app.input.onPointerDown.remove(this.onButtons);
+    this.app.input.onPointerUp.remove(this.onButtons);
+    this.app.input.onPointerCancel.remove(this.onCancel);
+    this.app.input.onPointerTap.remove(this.onTap);
+    this.hud.dispose();
+    this.crosshair.destroy();
     super.destroy();
   }
 }
