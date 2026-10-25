@@ -590,3 +590,28 @@ describe('WebGL2 ParticleSystem — mesh mutation', () => {
     }
   });
 });
+
+test('samples its texture after another sampler unit is active', async () => {
+  const backend = await createBackend();
+  const texture = createSolidTexture('#0000ff');
+  const unrelated = createSolidTexture('#ff0000');
+  const root = new Container();
+  const system = new ParticleSystem(texture, { capacity: 1 });
+
+  try {
+    system.emit();
+    system.setPosition(32, 32);
+    root.addChild(system);
+    backend.bindTexture(unrelated, 0);
+    backend.bindTexture(unrelated, 7);
+
+    render(backend, root);
+
+    expectPixelNear(readWebGl2Pixel(backend, 32, 32), [0, 0, 255, 255]);
+  } finally {
+    root.destroy();
+    texture.destroy();
+    unrelated.destroy();
+    backend.destroy();
+  }
+});

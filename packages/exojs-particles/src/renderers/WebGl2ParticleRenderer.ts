@@ -175,7 +175,7 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
     // it alone sees a texture whose payload changed under a stable identity -
     // which is what a handle from the loader does the moment its download
     // lands. Both calls collapse to nothing when the state already matches.
-    backend.bindTexture(texture);
+    backend.bindTexture(texture, 0);
     backend.setBlendMode(blendMode);
 
     const mode = system.renderMode;
