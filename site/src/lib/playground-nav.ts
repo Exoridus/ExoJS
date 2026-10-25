@@ -1,7 +1,7 @@
 // The navigation uses the thematic examples.json keys, while each entry's
 // source path keeps its original directory for stable routes and guide links.
 
-import { PLAYGROUND_CATEGORY_BY_SLUG } from './playground-categories';
+import { PLAYGROUND_CATEGORY_BY_SLUG, type PlaygroundCategory } from './playground-categories';
 import type { Example } from './types';
 
 export interface PlaygroundNavCategory {
@@ -66,7 +66,10 @@ export const isExampleRouteActive = (candidatePath: string, activePath: string |
  * Categories that end up empty (e.g. after search/tag filtering upstream) are
  * not produced.
  */
-export const buildPlaygroundNavModel = (examples: ReadonlyArray<Example>): Array<PlaygroundNavCategory> => {
+export const buildPlaygroundNavModel = (
+  examples: ReadonlyArray<Example>,
+  categoryBySlug: ReadonlyMap<string, PlaygroundCategory> = PLAYGROUND_CATEGORY_BY_SLUG,
+): Array<PlaygroundNavCategory> => {
   const bySection = new Map<string, Array<Example>>();
 
   for (const example of examples) {
@@ -82,7 +85,7 @@ export const buildPlaygroundNavModel = (examples: ReadonlyArray<Example>): Array
   const categories: Array<PlaygroundNavCategory> = [];
 
   for (const [slug, sectionExamples] of bySection) {
-    const meta = PLAYGROUND_CATEGORY_BY_SLUG.get(slug);
+    const meta = categoryBySlug.get(slug);
     categories.push({
       slug,
       title: meta?.title ?? humanizeSlug(slug),

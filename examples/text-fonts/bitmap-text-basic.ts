@@ -11,7 +11,7 @@ import {
   Text,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { choice, demoPanel } from '@examples/runtime';
+import { choice, demoPanel, startExample } from '@examples/runtime';
 
 const controls = { scale: choice('Scale', ['1x', '2x', '3x', '2.5x']) };
 
@@ -107,4 +107,4 @@ const app = new Application({
   clearColor: new Color(18, 24, 29),
 });
 
-await app.start(BitmapTextBasicScene);
+await startExample(app, () => app.start(BitmapTextBasicScene));

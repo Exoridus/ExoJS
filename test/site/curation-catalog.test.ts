@@ -51,3 +51,9 @@ it.each([
     .find(example => example.path === path);
   expect(entry).toMatchObject({ capabilities: expect.not.arrayContaining([capability]) });
 });
+
+it('reports the initialized renderer for every curated entry point', () => {
+  for (const target of curation.targets) {
+    expect(fs.readFileSync(target.source, 'utf8')).toMatch(/await startExample\(app, \(\) => app\.start\(/);
+  }
+});

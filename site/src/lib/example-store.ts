@@ -1,5 +1,7 @@
+import { CURATION_READY, getCuratedNavigation } from './curation-catalog';
 import { resolveExampleAlias } from './example-aliases';
 import { PLAYGROUND_CATEGORY_BY_SLUG } from './playground-categories';
+import { PRESERVED_EXAMPLES } from './preserved-examples';
 import { createUniqueRequest } from './request-manager';
 import type { Example, ExampleDefinition, ExamplesMap, ExamplesResponse } from './types';
 import { buildExampleUrl, buildGithubRawExampleUrl } from './url-builder';
@@ -66,6 +68,10 @@ export const getNestedExamples = (versionId: string): ExamplesMap => {
     return new Map();
   }
 
+  if (isCurrentVersion(versionId) && CURATION_READY) {
+    return getCuratedNavigation();
+  }
+
   return new Map(
     Object.entries(response)
       .sort(([a], [b]) => {
@@ -89,7 +95,27 @@ export const getExamplesList = (versionId: string): Array<Example> => Array.from
 export const getExampleByPath = (versionId: string, path: string): Example | null => {
   const resolvedPath = isCurrentVersion(versionId) ? resolveExampleAlias(path) : path;
 
-  return getExamplesList(versionId).find(example => example.path === resolvedPath) ?? null;
+  const example = getExamplesList(versionId).find(entry => entry.path === resolvedPath);
+
+  if (example) {
+    return example;
+  }
+
+  if (isCurrentVersion(versionId) && CURATION_READY) {
+    const response = _entries.get(versionId)?.response;
+
+    for (const [section, definitions] of Object.entries(response ?? {})) {
+      const retained = definitions.find(entry => entry.path === resolvedPath);
+
+      if (retained) {
+        return { ...retained, section };
+      }
+    }
+  }
+
+  const preserved = isCurrentVersion(versionId) ? PRESERVED_EXAMPLES.find(entry => entry.path === resolvedPath) : undefined;
+
+  return preserved ? { ...preserved, backend: 'core', section: 'guide-fixtures' } : null;
 };
 
 export const loadExampleSource = async (versionId: string, filePath: string): Promise<string> => {

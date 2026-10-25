@@ -16,7 +16,7 @@ import {
 } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem } from '@codexo/exojs/particles';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControls } from '@examples/runtime';
+import { mountControls, startExample } from '@examples/runtime';
 class ScreenShakeOnExplosionScene extends Scene {
   view;
   ps;
@@ -128,4 +128,4 @@ const app = new Application({
   clearColor: new Color(218, 237, 239),
   extensions: [particlesExtension],
 });
-await app.start(ScreenShakeOnExplosionScene);
+await startExample(app, () => app.start(ScreenShakeOnExplosionScene));

@@ -15,7 +15,7 @@ import {
   TweenState,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { choice, demoPanel } from '@examples/runtime';
+import { choice, demoPanel, startExample } from '@examples/runtime';
 const controls = {
   easing: choice('Ease', Object.keys(Ease), 'sineInOut'),
   mode: choice('Mode', ['One-way', 'Roundtrip', 'Route']),
@@ -216,4 +216,4 @@ const app = new Application({
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(239, 244, 227),
 });
-await app.start(InteractiveTweensScene);
+await startExample(app, () => app.start(InteractiveTweensScene));

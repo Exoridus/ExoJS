@@ -15,130 +15,132 @@ import {
   type Voice,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { demoPanel, slider, toggle } from '@examples/runtime';
+import { demoPanel, slider, startExample, toggle } from '@examples/runtime';
+
+type MusicVoice = Voice & Seekable & Pausable & Loopable & RatePitched;
+
+const DEFAULTS = { volume: 0.5, rate: 1, loop: true };
 
 class MusicLoopScene extends Scene {
   private music!: AudioStream;
-  private musicVoice!: Voice & Seekable & Pausable & Loopable & RatePitched;
-  private graphics!: Graphics;
-  private status!: Text;
-  private tapPrompt!: Text;
-  // Progress bar geometry, canvas-relative, computed in init().
-  private bar = { x: 0, y: 0, w: 0, h: 28 };
+  private voice: MusicVoice | null = null;
+  private readonly graphics = this.track(new Graphics());
+  private readonly label = this.track(new Text('', { fillColor: new Color(236, 239, 242), align: 'center' })).setAnchor(0.5);
+  private panel!: ReturnType<
+    typeof demoPanel<{ volume: ReturnType<typeof slider>; rate: ReturnType<typeof slider>; loop: ReturnType<typeof toggle> }>
+  >;
 
   override async load(): Promise<void> {
-    const app = this.app;
-    const { width, height } = app;
-
-    // Wide progress bar centred horizontally on the 16:9 canvas.
-    this.bar = { x: width * 0.15, y: height * 0.5, w: width * 0.7, h: 28 };
-
-    // A single streaming track - the browser's media pipeline loops it
-    // seamlessly when `loop` is on. Music has no placeholder handle, so it is
-    // awaited with `load()` rather than claimed with `get()`.
+    // Music has no placeholder handle, so it is awaited rather than claimed with `get()`.
     this.music = await this.loader.load(assets.musicLoopMain);
+  }
 
-    // Core defers playback until the AudioContext unlocks on the first
-    // gesture, then starts automatically - play() returns the Voice now,
-    // and all live control (volume, rate, loop, seek) lives on it.
-    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.5, playbackRate: 1 }) as Voice &
-      Seekable &
-      Pausable &
-      Loopable &
-      RatePitched;
-
-    this.graphics = new Graphics();
-    this.status = new Text('', { fillColor: Color.white, fontSize: 18 }).setPosition(this.bar.x, this.bar.y - 36);
-
-    // Shown while the browser still blocks audio (`app.audio.locked`); the
-    // first click or keypress unlocks it and the queued music starts.
-    this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })
-      .setAnchor(0.5, 0.5)
-      .setPosition(width / 2, height - 48);
-
-    // Real, engine-backed controls over the live music Voice.
-    const voice = this.musicVoice;
-
-    const togglePause = (): void => {
-      if (voice.paused || voice.ended) {
-        voice.resume();
-      } else {
-        voice.pause();
-      }
-    };
-
-    demoPanel({
-      title: 'Music',
+  override init(): void {
+    this.panel = demoPanel({
+      layout: 'bar',
+      title: 'Control Music Playback',
+      hint: 'Stream one music track. Space pauses and resumes; Restart seeks back to 0 s.',
       controls: {
-        volume: slider('Volume', { min: 0, max: 1, step: 0.01, value: voice.volume }),
-        rate: slider('Playback rate', { min: 0.5, max: 2, step: 0.05, value: voice.playbackRate, format: v => `${Math.round(v * 100)}%` }),
-        loop: toggle('Loop', voice.loop),
+        volume: slider('Volume', { min: 0, max: 1, step: 0.01, value: DEFAULTS.volume }),
+        rate: slider('Playback rate', { min: 0.5, max: 2, step: 0.05, value: DEFAULTS.rate, format: v => `${Math.round(v * 100)}%` }),
+        loop: toggle('Loop', DEFAULTS.loop),
       },
       actions: {
-        'Pause / resume': togglePause,
+        'Play / Pause': () => this.togglePause(),
         Restart: () => {
+          const voice = this.voice ?? this.play();
           voice.seek(0);
           voice.resume();
         },
+        Reset: () => {
+          this.stop();
+          this.panel.set('volume', DEFAULTS.volume);
+          this.panel.set('rate', DEFAULTS.rate);
+          this.panel.set('loop', DEFAULTS.loop);
+        },
       },
       onChange: (key, _value, values) => {
-        voice.volume = values.volume;
-        voice.playbackRate = values.rate;
-        voice.loop = values.loop;
+        if (!this.voice) {
+          return;
+        }
+
+        this.voice.volume = values.volume;
+        this.voice.playbackRate = values.rate;
+        this.voice.loop = values.loop;
 
         // Re-enabling the loop after the track ran off its end restarts it.
-        if (key === 'loop' && values.loop && voice.ended) {
-          voice.seek(0);
-          voice.resume();
+        if (key === 'loop' && values.loop && this.voice.ended) {
+          this.voice.seek(0);
+          this.voice.resume();
         }
       },
     });
+    this.inputs.onTrigger(Keyboard.Space, () => this.togglePause());
+  }
 
-    this.inputs.onTrigger(Keyboard.Space, togglePause);
+  // A stream voice defers its own start to the unlock gesture, so no unlock wait is needed here.
+  private play(): MusicVoice {
+    const { volume, rate, loop } = this.panel.values;
+    this.voice = this.app.audio.play(this.music, { bus: this.app.audio.music, volume, playbackRate: rate, loop }) as MusicVoice;
+
+    return this.voice;
+  }
+
+  private togglePause(): void {
+    if (!this.voice) {
+      this.play();
+    } else if (this.voice.ended) {
+      this.voice.seek(0);
+      this.voice.resume();
+    } else if (this.voice.paused) {
+      this.voice.resume();
+    } else {
+      this.voice.pause();
+    }
+  }
+
+  private stop(): void {
+    this.voice?.stop();
+    this.voice = null;
   }
 
   override draw(context: RenderingContext): void {
-    const app = this.app;
-    this.graphics.clear();
-
-    const duration = this.musicVoice.duration;
-    const time = this.musicVoice.time;
-    // The stream captures its duration from the media element, which is NaN
-    // until metadata has loaded. Fall back to a moving marker driven purely
-    // by the playback clock when it is unavailable.
+    const { scale, width, contentHeight } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    const voice = this.voice,
+      time = voice?.time ?? 0,
+      duration = voice?.duration ?? Number.NaN;
+    // The duration is NaN until the media element has loaded its metadata.
     const hasDuration = Number.isFinite(duration) && duration > 0;
-    const progress = hasDuration ? Math.max(0, Math.min(1, time / duration)) : (time % 4) / 4;
+    const progress = hasDuration ? Math.max(0, Math.min(1, time / duration)) : 0;
+    const state = !voice ? 'Stopped' : voice.ended ? 'Ended' : voice.paused ? 'Paused' : 'Playing';
+    const x = width * 0.15 * scale,
+      y = contentHeight * 0.55 * scale,
+      w = width * 0.7 * scale;
+    const g = this.graphics.clear();
+    g.fillColor = new Color(25, 31, 36);
+    g.drawRectangle(x, y, w, 24 * scale);
+    g.fillColor = state === 'Playing' ? new Color(101, 210, 210) : new Color(168, 175, 181);
+    g.drawRectangle(x, y, w * progress, 24 * scale);
+    this.label.style.fontSize = 16 * scale;
+    this.label.text = `${state}   ${time.toFixed(1)}${hasDuration ? ` / ${duration.toFixed(1)}` : ''} s`;
+    this.label.setPosition((width * scale) / 2, y - 30 * scale);
+    context.render(g);
+    context.render(this.label);
+    const { rate, loop } = this.panel.values;
+    this.panel.status(
+      `${this.app.audio.locked ? 'Click to enable audio' : 'AudioContext running'} | ${state} | ${Math.round(rate * 100)}% rate | Loop ${loop ? 'on' : 'off'}`,
+    );
+  }
 
-    const playing = !this.musicVoice.paused && !this.musicVoice.ended;
-
-    // Progress trough + fill.
-    this.graphics.fillColor = new Color(45, 50, 60);
-    this.graphics.drawRectangle(this.bar.x, this.bar.y, this.bar.w, this.bar.h);
-    this.graphics.fillColor = playing ? new Color(120, 200, 255) : new Color(120, 120, 120);
-    this.graphics.drawRectangle(this.bar.x, this.bar.y, this.bar.w * progress, this.bar.h);
-
-    const state = playing ? 'Playing' : 'Stopped';
-    const position = hasDuration ? `${time.toFixed(1)} / ${duration.toFixed(1)}s` : `${time.toFixed(1)}s`;
-    this.status.text = `${state}   ${position}   ${Math.round(this.musicVoice.playbackRate * 100)}% speed   Loop ${this.musicVoice.loop ? 'on' : 'off'}`;
-
-    context.render(this.graphics);
-    context.render(this.status);
-
-    if (app.audio.locked) {
-      context.render(this.tapPrompt);
-    }
+  override destroy(): void {
+    this.stop();
+    this.panel?.dispose();
+    super.destroy();
   }
 }
-
 const app = new Application({
   scenes: { MusicLoopScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
-  clearColor: Color.black,
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  clearColor: new Color(11, 16, 20),
 });
-
-await app.start(MusicLoopScene);
+await startExample(app, () => app.start(MusicLoopScene));

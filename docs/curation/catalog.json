@@ -9,7 +9,11 @@
       "id": "first-animated-sprite",
       "source": "examples/getting-started/hello-world.ts",
       "batch": "B2",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [],
+      "next": [2],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 2,
@@ -18,7 +22,11 @@
       "id": "scene-transitions",
       "source": "examples/application-scenes/multiple-scenes.ts",
       "batch": "B2",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [1],
+      "next": [3],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 3,
@@ -27,7 +35,11 @@
       "id": "loading-retry",
       "source": "examples/application-scenes/loading-screen.ts",
       "batch": "B2",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [2],
+      "next": [5, 4],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 4,
@@ -36,7 +48,11 @@
       "id": "room-ownership",
       "source": "examples/tilemap/level-loading-and-ownership.ts",
       "batch": "B2",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [3, 41],
+      "next": [41],
+      "optional": true,
+      "role": "advanced-branch"
     },
     {
       "number": 5,
@@ -45,7 +61,11 @@
       "id": "orb-dodge",
       "source": "examples/showcase/orb-dodge.ts",
       "batch": "B2",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [1, 2, 3],
+      "next": [14, 16],
+      "optional": false,
+      "role": "capstone"
     },
     {
       "number": 6,
@@ -54,7 +74,11 @@
       "id": "parent-world-transforms",
       "source": "examples/scene-graph/nested-transforms.ts",
       "batch": "B6",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [1],
+      "next": [7],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 7,
@@ -63,7 +87,11 @@
       "id": "pivot-anchor",
       "source": "examples/scene-graph/pivot-and-anchor.ts",
       "batch": "B6",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [6],
+      "next": [8],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 8,
@@ -72,7 +100,11 @@
       "id": "masking",
       "source": "examples/scene-graph/masks.ts",
       "batch": "B6",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [6],
+      "next": [9],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 9,
@@ -81,7 +113,11 @@
       "id": "texture-sampling",
       "source": "examples/sprites-textures/texture-sampling.ts",
       "batch": "B6",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [1],
+      "next": [10],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 10,
@@ -90,7 +126,11 @@
       "id": "camera-coordinates",
       "source": "examples/application-scenes/world-vs-screen-coords.ts",
       "batch": "B3",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [6],
+      "next": [11],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 11,
@@ -99,7 +139,11 @@
       "id": "parallax-layers",
       "source": "examples/scene-graph/parallax-starfield.ts",
       "batch": "B3",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [10],
+      "next": [12],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 12,
@@ -108,7 +152,11 @@
       "id": "local-split-screen",
       "source": "examples/application-scenes/multi-view-split-screen.ts",
       "batch": "B3",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [10, 14],
+      "next": [13],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 13,
@@ -117,7 +165,11 @@
       "id": "minimap",
       "source": "examples/render-targets/mini-map.ts",
       "batch": "B3",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [10],
+      "next": [14, 28],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 14,
@@ -126,7 +178,11 @@
       "id": "input-actions",
       "source": "examples/input/action-mapping.ts",
       "batch": "B3",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [1],
+      "next": [15],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 15,
@@ -135,7 +191,11 @@
       "id": "spaceship-actions",
       "source": "examples/showcase/gamepad-spaceship.ts",
       "batch": "B3",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [14, 6],
+      "next": [16],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 16,
@@ -144,7 +204,11 @@
       "id": "ui-focus",
       "source": "examples/ui/settings-menu.ts",
       "batch": "B2",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [14],
+      "next": [17],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 17,
@@ -153,7 +217,11 @@
       "id": "text-entry",
       "source": "examples/ui/text-entry-and-scrolling.ts",
       "batch": "B2",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [16],
+      "next": [18],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 18,
@@ -162,7 +230,11 @@
       "id": "dialogue",
       "source": "examples/showcase/dialog-system.ts",
       "batch": "B2",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [16, 17],
+      "next": [19],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 19,
@@ -171,7 +243,11 @@
       "id": "sprite-animation",
       "source": "examples/tweens-animation/frame-animation.ts",
       "batch": "B1",
-      "status": "locally-verified-review-pending"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [1],
+      "next": [20],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 20,
@@ -180,7 +256,11 @@
       "id": "tweens-and-easing",
       "source": "examples/tweens-animation/tween-basics.ts",
       "batch": "B1",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [1],
+      "next": [21],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 21,
@@ -189,7 +269,11 @@
       "id": "impact-feedback",
       "source": "examples/showcase/screen-shake-on-explosion.ts",
       "batch": "B1",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [20],
+      "next": [22],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 22,
@@ -198,7 +282,11 @@
       "id": "shapes-gradients",
       "source": "examples/geometry-graphics/graphics-gradient.ts",
       "batch": "B1",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [1],
+      "next": [23],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 23,
@@ -207,7 +295,11 @@
       "id": "text-lab",
       "source": "examples/text-fonts/typographic-styling.ts",
       "batch": "B1",
-      "status": "locally-verified-review-pending"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [1],
+      "next": [24],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 24,
@@ -216,7 +308,11 @@
       "id": "bitmap-text",
       "source": "examples/text-fonts/bitmap-text-basic.ts",
       "batch": "B1",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [23],
+      "next": [25],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 25,
@@ -225,7 +321,11 @@
       "id": "blendmodes",
       "source": "examples/sprites-textures/blendmodes.ts",
       "batch": "B6",
-      "status": "queued"
+      "status": "blocked-renderer",
+      "prerequisites": [6],
+      "next": [26],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 26,
@@ -234,7 +334,11 @@
       "id": "sprite-filters",
       "source": "examples/filters/blur-filter.ts",
       "batch": "B6",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [25],
+      "next": [27],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 27,
@@ -243,7 +347,11 @@
       "id": "bloom",
       "source": "examples/filters/bloom-filter.ts",
       "batch": "B6",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [26],
+      "next": [28],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 28,
@@ -252,7 +360,11 @@
       "id": "capture-texture",
       "source": "examples/render-targets/render-to-texture.ts",
       "batch": "B6",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [6],
+      "next": [29],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 29,
@@ -261,7 +373,11 @@
       "id": "video-texture",
       "source": "examples/sprites-textures/video-drawable.ts",
       "batch": "B6",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [3],
+      "next": [30],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 30,
@@ -270,7 +386,11 @@
       "id": "shape-shadows",
       "source": "examples/lighting/shadow-casters.ts",
       "batch": "B6",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [6],
+      "next": [31],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 31,
@@ -279,7 +399,11 @@
       "id": "normal-lighting",
       "source": "examples/lighting/lightmap-normals.ts",
       "batch": "B6",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [30],
+      "next": [32],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 32,
@@ -288,7 +412,11 @@
       "id": "particle-emitter",
       "source": "examples/particles/emitter-basics.ts",
       "batch": "B6",
-      "status": "queued"
+      "status": "blocked-renderer-parity",
+      "prerequisites": [6],
+      "next": [33],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 33,
@@ -297,7 +425,11 @@
       "id": "particle-forces",
       "source": "examples/particles/cursor-attractor-particles.ts",
       "batch": "B6",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [32],
+      "next": [34],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 34,
@@ -306,7 +438,11 @@
       "id": "play-sound",
       "source": "examples/audio-basics/play-sound.ts",
       "batch": "B5",
-      "status": "queued"
+      "status": "blocked-idle-mute",
+      "prerequisites": [1],
+      "next": [35],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 35,
@@ -315,7 +451,11 @@
       "id": "music-and-crossfade",
       "source": "examples/audio-basics/music-loop.ts",
       "batch": "B5",
-      "status": "queued"
+      "status": "blocked-material",
+      "prerequisites": [34],
+      "next": [36],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 36,
@@ -324,7 +464,11 @@
       "id": "audio-mixer",
       "source": "examples/audio-basics/audio-buses.ts",
       "batch": "B5",
-      "status": "queued"
+      "status": "blocked-material",
+      "prerequisites": [34, 35],
+      "next": [37],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 37,
@@ -333,7 +477,11 @@
       "id": "ducking",
       "source": "examples/audio-fx/ducking.ts",
       "batch": "B5",
-      "status": "queued"
+      "status": "blocked-material",
+      "prerequisites": [36],
+      "next": [38],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 38,
@@ -342,7 +490,11 @@
       "id": "audio-effect",
       "source": "examples/audio-fx/reverb-and-delay.ts",
       "batch": "B5",
-      "status": "queued"
+      "status": "automated-verified-hearing-pending",
+      "prerequisites": [34],
+      "next": [39],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 39,
@@ -351,7 +503,11 @@
       "id": "audio-analysis",
       "source": "examples/showcase/audio-visualisation.ts",
       "batch": "B5",
-      "status": "queued"
+      "status": "blocked-material",
+      "prerequisites": [34],
+      "next": [40],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 40,
@@ -360,7 +516,11 @@
       "id": "spatial-audio",
       "source": "examples/spatial-audio/listener-and-source.ts",
       "batch": "B5",
-      "status": "queued"
+      "status": "automated-verified-hearing-pending",
+      "prerequisites": [34, 10],
+      "next": [41],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 41,
@@ -369,7 +529,11 @@
       "id": "editor-map-gameplay",
       "source": "examples/tilemap/editor-objects-gameplay.ts",
       "batch": "B4",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [3, 6],
+      "next": [42],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 42,
@@ -378,7 +542,11 @@
       "id": "layered-world",
       "source": "examples/tilemap/tile-chunks-and-bands.ts",
       "batch": "B4",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [41],
+      "next": [43],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 43,
@@ -387,7 +555,11 @@
       "id": "autotile-room",
       "source": "examples/tilemap/paint-autotiled-room.ts",
       "batch": "B4",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [41],
+      "next": [44],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 44,
@@ -396,7 +568,11 @@
       "id": "tile-projections",
       "source": "examples/tilemap/tiled-isometric.ts",
       "batch": "B4",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [41],
+      "next": [45],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 45,
@@ -405,7 +581,11 @@
       "id": "pathfinding",
       "source": "examples/pathfinding/grid-navigation.ts",
       "batch": "B4",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [41],
+      "next": [46],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 46,
@@ -414,7 +594,11 @@
       "id": "streaming-world",
       "source": "examples/tilemap/tiled-infinite-map.ts",
       "batch": "B4",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [42],
+      "next": [47],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 47,
@@ -423,7 +607,11 @@
       "id": "drag-physics",
       "source": "examples/physics/sprite-follows-body.ts",
       "batch": "B4",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [6],
+      "next": [48],
+      "optional": false,
+      "role": "lesson"
     },
     {
       "number": 48,
@@ -432,7 +620,11 @@
       "id": "character-movement",
       "source": "examples/physics/character-movement.ts",
       "batch": "B4",
-      "status": "queued"
+      "status": "locally-verified-review-pending",
+      "prerequisites": [47, 14],
+      "next": [],
+      "optional": false,
+      "role": "lesson"
     }
   ],
   "contracts": [
@@ -441,777 +633,898 @@
       "target": "first-animated-sprite",
       "disposition": "retain",
       "batch": "B2",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/getting-started/hello-world.ts"]
     },
     {
       "source": "examples/getting-started/resize-and-dpr.ts",
       "target": "preserve-getting-started-resize-and-dpr",
       "disposition": "guide-tool-test",
       "batch": "B2",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/getting-started/resize-and-dpr.ts"]
     },
     {
       "source": "examples/application-scenes/scene-less-app.ts",
       "target": "preserve-application-scenes-scene-less-app",
       "disposition": "guide-tool-test",
       "batch": "B2",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/application-scenes/scene-less-app.ts"]
     },
     {
       "source": "examples/showcase/orb-dodge.ts",
       "target": "orb-dodge",
       "disposition": "polish",
       "batch": "B2",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/showcase/orb-dodge.ts"]
     },
     {
       "source": "examples/application-scenes/multiple-scenes.ts",
       "target": "scene-transitions",
       "disposition": "polish",
       "batch": "B2",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/application-scenes/multiple-scenes.ts"]
     },
     {
       "source": "examples/application-scenes/loading-screen.ts",
       "target": "loading-retry",
       "disposition": "polish",
       "batch": "B2",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/application-scenes/loading-screen.ts", "examples/guide-fixtures/application-loading.ts"]
     },
     {
       "source": "examples/sprites-textures/asset-catalogs.ts",
       "target": "guide-asset-catalogs",
       "disposition": "guide-tool-test",
       "batch": "B2",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/sprites-textures/asset-catalogs.ts"]
     },
     {
       "source": "examples/showcase/pause-blur.ts",
       "target": "orb-dodge",
       "disposition": "merge",
       "batch": "B2",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/showcase/pause-blur.ts"]
     },
     {
       "source": "examples/application-scenes/custom-transition.ts",
       "target": "scene-transitions",
       "disposition": "merge",
       "batch": "B2",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/application-scenes/custom-transition.ts"]
     },
     {
       "source": "examples/tilemap/level-loading-and-ownership.ts",
       "target": "room-ownership",
       "disposition": "retain",
       "batch": "B2",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/tilemap/level-loading-and-ownership.ts"]
     },
     {
       "source": "examples/application-scenes/cached-assets-offline.ts",
       "target": "preserve-application-scenes-cached-assets-offline",
       "disposition": "guide-tool-test",
       "batch": "B2",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/application-scenes/cached-assets-offline.ts"]
     },
     {
       "source": "examples/debug-layer/asset-browser.ts",
       "target": "preserve-debug-layer-asset-browser",
       "disposition": "guide-tool-test",
       "batch": "B2",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/debug-layer/asset-browser.ts"]
     },
     {
       "source": "examples/input/keyboard.ts",
       "target": "preserve-input-keyboard",
       "disposition": "guide-tool-test",
       "batch": "B3",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/input/keyboard.ts"]
     },
     {
       "source": "examples/input/mouse-and-pointer.ts",
       "target": "preserve-input-mouse-and-pointer",
       "disposition": "guide-tool-test",
       "batch": "B3",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/input/mouse-and-pointer.ts"]
     },
     {
       "source": "examples/input/action-mapping.ts",
       "target": "input-actions",
       "disposition": "polish",
       "batch": "B3",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/input/action-mapping.ts"]
     },
     {
       "source": "examples/input/gamepad.ts",
       "target": "preserve-input-gamepad",
       "disposition": "guide-tool-test",
       "batch": "B3",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/input/gamepad.ts"]
     },
     {
       "source": "examples/input/key-rebinding.ts",
       "target": "input-actions",
       "disposition": "merge",
       "batch": "B3",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/input/key-rebinding.ts"]
     },
     {
       "source": "examples/input/multitouch.ts",
       "target": "preserve-input-multitouch",
       "disposition": "guide-tool-test",
       "batch": "B3",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/input/multitouch.ts"]
     },
     {
       "source": "examples/ui/hud-and-widgets.ts",
       "target": "ui-focus",
       "disposition": "merge",
       "batch": "B2",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/ui/hud-and-widgets.ts"]
     },
     {
       "source": "examples/ui/settings-menu.ts",
       "target": "ui-focus",
       "disposition": "polish",
       "batch": "B2",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/ui/settings-menu.ts"]
     },
     {
       "source": "examples/ui/text-entry-and-scrolling.ts",
       "target": "text-entry",
       "disposition": "retain",
       "batch": "B2",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/ui/text-entry-and-scrolling.ts"]
     },
     {
       "source": "examples/showcase/dialog-system.ts",
       "target": "dialogue",
       "disposition": "polish",
       "batch": "B2",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/showcase/dialog-system.ts"]
     },
     {
       "source": "examples/application-scenes/multi-view-split-screen.ts",
       "target": "local-split-screen",
       "disposition": "retain",
       "batch": "B3",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/application-scenes/multi-view-split-screen.ts"]
     },
     {
       "source": "examples/sprites-textures/sprite-basics.ts",
       "target": "first-animated-sprite",
       "disposition": "merge",
       "batch": "B2",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/sprites-textures/sprite-basics.ts"]
     },
     {
       "source": "examples/scene-graph/nested-transforms.ts",
       "target": "parent-world-transforms",
       "disposition": "polish",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/scene-graph/nested-transforms.ts"]
     },
     {
       "source": "examples/scene-graph/pivot-and-anchor.ts",
       "target": "pivot-anchor",
       "disposition": "retain",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/scene-graph/pivot-and-anchor.ts"]
     },
     {
       "source": "examples/sprites-textures/blendmodes.ts",
       "target": "blendmodes",
       "disposition": "retain",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/sprites-textures/blendmodes.ts"]
     },
     {
       "source": "examples/scene-graph/masks.ts",
       "target": "masking",
       "disposition": "polish",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/scene-graph/masks.ts"]
     },
     {
       "source": "examples/sprites-textures/texture-sampling.ts",
       "target": "texture-sampling",
       "disposition": "retain",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/sprites-textures/texture-sampling.ts"]
     },
     {
       "source": "examples/application-scenes/world-vs-screen-coords.ts",
       "target": "camera-coordinates",
       "disposition": "polish",
       "batch": "B3",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/application-scenes/world-vs-screen-coords.ts"]
     },
     {
       "source": "examples/scene-graph/parallax-starfield.ts",
       "target": "parallax-layers",
       "disposition": "polish",
       "batch": "B3",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/scene-graph/parallax-starfield.ts"]
     },
     {
       "source": "examples/application-scenes/picture-in-picture.ts",
       "target": "guide-direct-viewports",
       "disposition": "guide-tool-test",
       "batch": "B3",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/application-scenes/picture-in-picture.ts"]
     },
     {
       "source": "examples/render-targets/mini-map.ts",
       "target": "minimap",
       "disposition": "polish",
       "batch": "B3",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/render-targets/mini-map.ts"]
     },
     {
       "source": "examples/tweens-animation/frame-animation.ts",
       "target": "sprite-animation",
       "disposition": "polish",
       "batch": "B1",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/tweens-animation/frame-animation.ts"]
     },
     {
       "source": "examples/tweens-animation/tween-basics.ts",
       "target": "tweens-and-easing",
       "disposition": "polish",
       "batch": "B1",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/tweens-animation/tween-basics.ts"]
     },
     {
       "source": "examples/tweens-animation/tween-chains.ts",
       "target": "tweens-and-easing",
       "disposition": "merge",
       "batch": "B1",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/tweens-animation/tween-chains.ts"]
     },
     {
       "source": "examples/tweens-animation/easing-curves.ts",
       "target": "tweens-and-easing",
       "disposition": "merge",
       "batch": "B1",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/tweens-animation/easing-curves.ts"]
     },
     {
       "source": "examples/showcase/screen-shake-on-explosion.ts",
       "target": "impact-feedback",
       "disposition": "retain",
       "batch": "B1",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/showcase/screen-shake-on-explosion.ts"]
     },
     {
       "source": "examples/showcase/gamepad-spaceship.ts",
       "target": "spaceship-actions",
       "disposition": "polish",
       "batch": "B3",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/showcase/gamepad-spaceship.ts"]
     },
     {
       "source": "examples/showcase/boss-intro-cinematic.ts",
       "target": "guide-cinematic-sequence",
       "disposition": "guide-tool-test",
       "batch": "B1",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/showcase/boss-intro-cinematic.ts"]
     },
     {
       "source": "examples/geometry-graphics/graphics-gradient.ts",
       "target": "shapes-gradients",
       "disposition": "polish",
       "batch": "B1",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/geometry-graphics/graphics-gradient.ts"]
     },
     {
       "source": "examples/text-fonts/typographic-styling.ts",
       "target": "text-lab",
       "disposition": "polish",
       "batch": "B1",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": [
+        "examples/text-fonts/typographic-styling.ts",
+        "examples/guide-fixtures/text-styles.ts",
+        "examples/text-fonts/multiline-and-wrap.ts",
+        "site/src/content/guide/rendering/text.mdx"
+      ]
     },
     {
       "source": "examples/text-fonts/multiline-and-wrap.ts",
       "target": "text-lab",
       "disposition": "merge",
       "batch": "B1",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/text-fonts/multiline-and-wrap.ts"]
     },
     {
       "source": "examples/text-fonts/bitmap-text-basic.ts",
       "target": "bitmap-text",
       "disposition": "retain",
       "batch": "B1",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/text-fonts/bitmap-text-basic.ts", "examples/guide-fixtures/bitmap-layout.ts"]
     },
     {
       "source": "examples/geometry-graphics/mesh-textured-quad.ts",
       "target": "guide-mesh-vertices",
       "disposition": "guide-tool-test",
       "batch": "B1",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/geometry-graphics/mesh-textured-quad.ts"]
     },
     {
       "source": "examples/geometry-graphics/mesh-deformed-grid.ts",
       "target": "guide-mesh-deformation",
       "disposition": "guide-tool-test",
       "batch": "B1",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/geometry-graphics/mesh-deformed-grid.ts"]
     },
     {
       "source": "examples/geometry-graphics/mesh-typed-uniforms.ts",
       "target": "guide-typed-uniforms",
       "disposition": "guide-tool-test",
       "batch": "B1",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/geometry-graphics/mesh-typed-uniforms.ts"]
     },
     {
       "source": "examples/filters/bloom-filter.ts",
       "target": "bloom",
       "disposition": "polish",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/filters/bloom-filter.ts"]
     },
     {
       "source": "examples/filters/blur-filter.ts",
       "target": "sprite-filters",
       "disposition": "retain",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/filters/blur-filter.ts"]
     },
     {
       "source": "examples/filters/color-matrix-filter.ts",
       "target": "sprite-filters",
       "disposition": "merge",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/filters/color-matrix-filter.ts"]
     },
     {
       "source": "examples/filters/crt-scanlines.ts",
       "target": "guide-crt-scanlines",
       "disposition": "guide-tool-test",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/filters/crt-scanlines.ts"]
     },
     {
       "source": "examples/filters/custom-fragment-shader.ts",
       "target": "guide-custom-fragment-shader",
       "disposition": "guide-tool-test",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/filters/custom-fragment-shader.ts"]
     },
     {
       "source": "examples/filters/metaballs.ts",
       "target": "guide-metaballs",
       "disposition": "guide-tool-test",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/filters/metaballs.ts"]
     },
     {
       "source": "examples/render-targets/render-to-texture.ts",
       "target": "capture-texture",
       "disposition": "polish",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/render-targets/render-to-texture.ts"]
     },
     {
       "source": "examples/render-targets/trail-feedback.ts",
       "target": "guide-trail-feedback",
       "disposition": "guide-tool-test",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/render-targets/trail-feedback.ts"]
     },
     {
       "source": "examples/render-targets/color-pipeline.ts",
       "target": "diagnostic-color-pipeline",
       "disposition": "guide-tool-test",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/render-targets/color-pipeline.ts"]
     },
     {
       "source": "examples/render-targets/water-mirror.ts",
       "target": "guide-water-mirror",
       "disposition": "guide-tool-test",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/render-targets/water-mirror.ts"]
     },
     {
       "source": "examples/sprites-textures/video-drawable.ts",
       "target": "video-texture",
       "disposition": "polish",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/sprites-textures/video-drawable.ts"]
     },
     {
       "source": "examples/render-targets/render-pipeline.ts",
       "target": "guide-render-pipeline",
       "disposition": "guide-tool-test",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/render-targets/render-pipeline.ts"]
     },
     {
       "source": "examples/custom-renderers/custom-triangle-renderer.ts",
       "target": "guide-custom-triangle-renderer",
       "disposition": "guide-tool-test",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/custom-renderers/custom-triangle-renderer.ts"]
     },
     {
       "source": "examples/lighting/many-lights.ts",
       "target": "diagnostic-many-lights",
       "disposition": "guide-tool-test",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/lighting/many-lights.ts"]
     },
     {
       "source": "examples/lighting/shadow-casters.ts",
       "target": "shape-shadows",
       "disposition": "retain",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/lighting/shadow-casters.ts"]
     },
     {
       "source": "examples/lighting/light-cookies.ts",
       "target": "guide-light-cookies",
       "disposition": "guide-tool-test",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/lighting/light-cookies.ts"]
     },
     {
       "source": "examples/lighting/lightmap-normals.ts",
       "target": "normal-lighting",
       "disposition": "retain",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/lighting/lightmap-normals.ts"]
     },
     {
       "source": "examples/lighting/radiance-rooms.ts",
       "target": "guide-radiance-rooms",
       "disposition": "guide-tool-test",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/lighting/radiance-rooms.ts"]
     },
     {
       "source": "examples/particles/emitter-basics.ts",
       "target": "particle-emitter",
       "disposition": "polish",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/particles/emitter-basics.ts"]
     },
     {
       "source": "examples/particles/cursor-attractor-particles.ts",
       "target": "particle-forces",
       "disposition": "polish",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/particles/cursor-attractor-particles.ts"]
     },
     {
       "source": "examples/particles/fireworks.ts",
       "target": "guide-fireworks",
       "disposition": "guide-tool-test",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/particles/fireworks.ts"]
     },
     {
       "source": "examples/particles/bonfire.ts",
       "target": "guide-bonfire",
       "disposition": "guide-tool-test",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/particles/bonfire.ts"]
     },
     {
       "source": "examples/showcase/audio-reactive-particles.ts",
       "target": "guide-audio-reactive-particles",
       "disposition": "guide-tool-test",
       "batch": "B5",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/showcase/audio-reactive-particles.ts"]
     },
     {
       "source": "examples/particles/gpu-particles.ts",
       "target": "diagnostic-gpu-particles",
       "disposition": "guide-tool-test",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/particles/gpu-particles.ts"]
     },
     {
       "source": "examples/particles/custom-wgsl-module.ts",
       "target": "guide-custom-wgsl-module",
       "disposition": "guide-tool-test",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/particles/custom-wgsl-module.ts"]
     },
     {
       "source": "examples/audio-basics/play-sound.ts",
       "target": "play-sound",
       "disposition": "retain",
       "batch": "B5",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/audio-basics/play-sound.ts"]
     },
     {
       "source": "examples/audio-basics/sound-pool.ts",
       "target": "guide-sound-pool",
       "disposition": "guide-tool-test",
       "batch": "B5",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/audio-basics/sound-pool.ts"]
     },
     {
       "source": "examples/audio-basics/music-loop.ts",
       "target": "music-and-crossfade",
       "disposition": "polish",
       "batch": "B5",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": [
+        "examples/audio-basics/music-loop.ts",
+        "site/src/content/guide/audio/audio-basics.mdx",
+        "test/audio/audio-stream.test.ts",
+        "examples/audio-basics/crossfade-tracks.ts"
+      ]
     },
     {
       "source": "examples/audio-basics/audio-buses.ts",
       "target": "audio-mixer",
       "disposition": "polish",
       "batch": "B5",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/audio-basics/audio-buses.ts"]
     },
     {
       "source": "examples/audio-basics/crossfade-tracks.ts",
       "target": "music-and-crossfade",
       "disposition": "merge",
       "batch": "B5",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/audio-basics/crossfade-tracks.ts"]
     },
     {
       "source": "examples/audio-fx/reverb-and-delay.ts",
       "target": "audio-effect",
       "disposition": "polish",
       "batch": "B5",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/audio-fx/reverb-and-delay.ts"]
     },
     {
       "source": "examples/audio-fx/pcm-stream.ts",
       "target": "guide-pcm-stream",
       "disposition": "guide-tool-test",
       "batch": "B5",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/audio-fx/pcm-stream.ts"]
     },
     {
       "source": "examples/audio-fx/gpu-pcm-stream.ts",
       "target": "diagnostic-gpu-pcm-stream",
       "disposition": "guide-tool-test",
       "batch": "B5",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/audio-fx/gpu-pcm-stream.ts"]
     },
     {
       "source": "examples/audio-fx/compressor.ts",
       "target": "guide-compressor",
       "disposition": "guide-tool-test",
       "batch": "B5",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/audio-fx/compressor.ts"]
     },
     {
       "source": "examples/audio-fx/ducking.ts",
       "target": "ducking",
       "disposition": "polish",
       "batch": "B5",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/audio-fx/ducking.ts"]
     },
     {
       "source": "examples/audio-fx/convolution-rooms.ts",
       "target": "guide-convolution-rooms",
       "disposition": "guide-tool-test",
       "batch": "B5",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/audio-fx/convolution-rooms.ts"]
     },
     {
       "source": "examples/audio-fx/effect-chains.ts",
       "target": "guide-effect-chains",
       "disposition": "guide-tool-test",
       "batch": "B5",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/audio-fx/effect-chains.ts"]
     },
     {
       "source": "examples/audio-fx/signal-graph.ts",
       "target": "diagnostic-signal-graph",
       "disposition": "guide-tool-test",
       "batch": "B5",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/audio-fx/signal-graph.ts"]
     },
     {
       "source": "examples/audio-fx/vocoder.ts",
       "target": "guide-vocoder",
       "disposition": "guide-tool-test",
       "batch": "B5",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/audio-fx/vocoder.ts"]
     },
     {
       "source": "examples/showcase/audio-visualisation.ts",
       "target": "audio-analysis",
       "disposition": "polish",
       "batch": "B5",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/showcase/audio-visualisation.ts"]
     },
     {
       "source": "examples/beat-detection/beat-sync-pulse.ts",
       "target": "guide-beat-sync-pulse",
       "disposition": "guide-tool-test",
       "batch": "B5",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/beat-detection/beat-sync-pulse.ts"]
     },
     {
       "source": "examples/spatial-audio/listener-and-source.ts",
       "target": "spatial-audio",
       "disposition": "polish",
       "batch": "B5",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/spatial-audio/listener-and-source.ts"]
     },
     {
       "source": "examples/tilemap/tiled-isometric.ts",
       "target": "tile-projections",
       "disposition": "polish",
       "batch": "B4",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/tilemap/tiled-isometric.ts"]
     },
     {
       "source": "examples/tilemap/hexagonal-grid.ts",
       "target": "tile-projections",
       "disposition": "merge",
       "batch": "B4",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/tilemap/hexagonal-grid.ts"]
     },
     {
       "source": "examples/tilemap/tile-chunks-and-bands.ts",
       "target": "layered-world",
       "disposition": "retain",
       "batch": "B4",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/tilemap/tile-chunks-and-bands.ts"]
     },
     {
       "source": "examples/tilemap/tiled-map-import.ts",
       "target": "editor-map-gameplay",
       "disposition": "merge",
       "batch": "B4",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/tilemap/tiled-map-import.ts"]
     },
     {
       "source": "examples/tilemap/ldtk-world-import.ts",
       "target": "guide-ldtk-import",
       "disposition": "guide-tool-test",
       "batch": "B4",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/tilemap/ldtk-world-import.ts"]
     },
     {
       "source": "examples/tilemap/editor-objects-gameplay.ts",
       "target": "editor-map-gameplay",
       "disposition": "polish",
       "batch": "B4",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/tilemap/editor-objects-gameplay.ts"]
     },
     {
       "source": "examples/pathfinding/grid-navigation.ts",
       "target": "pathfinding",
       "disposition": "retain",
       "batch": "B4",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/pathfinding/grid-navigation.ts"]
     },
     {
       "source": "examples/pathfinding/tilemap-navigation.ts",
       "target": "guide-editable-map-navigation",
       "disposition": "guide-tool-test",
       "batch": "B4",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/pathfinding/tilemap-navigation.ts"]
     },
     {
       "source": "examples/tilemap/paint-autotiled-room.ts",
       "target": "autotile-room",
       "disposition": "polish",
       "batch": "B4",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/tilemap/paint-autotiled-room.ts"]
     },
     {
       "source": "examples/tilemap/tiled-infinite-map.ts",
       "target": "streaming-world",
       "disposition": "retain",
       "batch": "B4",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/tilemap/tiled-infinite-map.ts"]
     },
     {
       "source": "examples/tilemap/worker-streamed-terrain.ts",
       "target": "guide-worker-terrain",
       "disposition": "guide-tool-test",
       "batch": "B4",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/tilemap/worker-streamed-terrain.ts"]
     },
     {
       "source": "examples/showcase/rectangles-collision.ts",
       "target": "guide-aabb-collision",
       "disposition": "guide-tool-test",
       "batch": "B4",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/showcase/rectangles-collision.ts"]
     },
     {
       "source": "examples/physics/sprite-follows-body.ts",
       "target": "drag-physics",
       "disposition": "polish",
       "batch": "B4",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/physics/sprite-follows-body.ts"]
     },
     {
       "source": "examples/physics/kinematic-movement.ts",
       "target": "guide-kinematic-movement",
       "disposition": "guide-tool-test",
       "batch": "B4",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/physics/kinematic-movement.ts"]
     },
     {
       "source": "examples/physics/character-movement.ts",
       "target": "character-movement",
       "disposition": "retain",
       "batch": "B4",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/physics/character-movement.ts"]
     },
     {
       "source": "examples/physics/tiled-map-physics-actor.ts",
       "target": "guide-tiled-collision-actor",
       "disposition": "guide-tool-test",
       "batch": "B4",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/physics/tiled-map-physics-actor.ts"]
     },
     {
       "source": "examples/physics/joint-driven-shadows.ts",
       "target": "guide-dynamic-physics-shadows",
       "disposition": "guide-tool-test",
       "batch": "B4",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/physics/joint-driven-shadows.ts"]
     },
     {
       "source": "examples/debug-layer/pointer-and-hittest.ts",
       "target": "diagnostic-interaction-inspector",
       "disposition": "guide-tool-test",
       "batch": "B3",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/debug-layer/pointer-and-hittest.ts"]
     },
     {
       "source": "examples/performance/backend-comparison.ts",
       "target": "diagnostic-backend-workload",
       "disposition": "guide-tool-test",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/performance/backend-comparison.ts"]
     },
     {
       "source": "examples/scene-graph/retained-container.ts",
       "target": "diagnostic-retained-workload",
       "disposition": "guide-tool-test",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/scene-graph/retained-container.ts"]
     },
     {
       "source": "examples/geometry-graphics/immediate-mode-rendering.ts",
       "target": "diagnostic-immediate-workload",
       "disposition": "guide-tool-test",
       "batch": "B6",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/geometry-graphics/immediate-mode-rendering.ts"]
     },
     {
       "source": "examples/performance/coroutine-loading.ts",
       "target": "guide-coroutine-loading",
       "disposition": "guide-tool-test",
       "batch": "B2",
-      "migration": "source-retained"
+      "migration": "linked-runtime-review-pending",
+      "destinations": ["examples/performance/coroutine-loading.ts"]
     }
   ]
 }

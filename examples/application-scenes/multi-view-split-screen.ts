@@ -1,6 +1,7 @@
 import {
   ActionMap,
   Application,
+  clamp,
   Color,
   FixedResolutionCanvasSizing,
   GamepadAxis,
@@ -10,18 +11,21 @@ import {
   Scene,
   type Seconds,
   Sprite,
+  Spritesheet,
   Text,
-  type Texture,
   VectorAction,
   View,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { demoPanel, startExample } from '@examples/runtime';
 
 class SplitScreenScene extends Scene {
-  private texture!: Texture;
+  private characters!: Spritesheet;
+  private panel!: ReturnType<typeof demoPanel>;
   private leftView!: View;
   private rightView!: View;
   private divider!: Graphics;
+  private dividerScale = 0;
   private grid!: Graphics;
   private labels!: Text[];
   private leftPlayer!: Sprite;
@@ -29,12 +33,16 @@ class SplitScreenScene extends Scene {
   private leftControls!: ActionMap<{ move: VectorAction }>;
   private rightControls!: ActionMap<{ move: VectorAction }>;
 
+  override async load(): Promise<void> {
+    this.characters = new Spritesheet(
+      await this.loader.load(assets.platformerCharactersImage),
+      await this.loader.load(assets.platformerCharactersAtlas),
+    );
+  }
+
   override init(): void {
     const app = this.app;
     const { width, height } = app;
-
-    this.texture = this.loader.get(assets.ship);
-
     this.leftView = new View(0, 0, width / 2, height).setViewport(0, 0, 0.5, 1);
     this.rightView = new View(0, 0, width / 2, height).setViewport(0.5, 0, 0.5, 1);
 
@@ -57,16 +65,17 @@ class SplitScreenScene extends Scene {
       new Text('P1 · WASD / Pad 1', { fillColor: new Color(120, 190, 255), fontSize: 24 }).setPosition(24, 160),
       new Text('P2 · Arrows / Pad 2', { fillColor: new Color(255, 180, 120), fontSize: 24 }).setPosition(width / 2 + 24, 160),
     ];
-    this.leftPlayer = new Sprite(this.texture)
+    this.leftPlayer = new Sprite(this.characters.texture)
+      .setTextureFrame(this.characters.frames.get('character_green_idle')!)
       .setAnchor(0.5)
       .setPosition(-160, 0)
       .setTint(new Color(120, 190, 255));
-    this.rightPlayer = new Sprite(this.texture)
+    this.rightPlayer = new Sprite(this.characters.texture)
+      .setTextureFrame(this.characters.frames.get('character_purple_idle')!)
       .setAnchor(0.5)
       .setPosition(160, 0)
       .setTint(new Color(255, 180, 120));
 
-    // One map per player: each binds its own keys and reads its own pad slot.
     this.leftControls = new ActionMap(
       {
         move: new VectorAction([
@@ -87,9 +96,38 @@ class SplitScreenScene extends Scene {
     );
     this.inputs.attach(this.leftControls);
     this.inputs.attach(this.rightControls);
+    this.panel = demoPanel({
+      layout: 'bar',
+      title: 'Local split screen',
+      controls: {},
+      hint: 'Two players share the world. Each camera follows its own player.',
+      actions: {
+        Reset: () => {
+          this.leftPlayer.setPosition(-160, 0);
+          this.rightPlayer.setPosition(160, 0);
+        },
+      },
+    });
   }
 
   override update(delta: Seconds): void {
+    const fit = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+
+    if (this.dividerScale !== fit.scale) {
+      this.dividerScale = fit.scale;
+      this.divider.clear();
+      this.divider.fillColor = Color.white;
+      this.divider.drawRectangle(this.app.width / 2 - fit.scale, 0, 2 * fit.scale, this.app.height);
+    }
+
+    this.panel.status(
+      `P1 WASD / Pad 1 ${this.app.input.gamepads[0].connected ? 'connected' : 'absent'} | P2 arrows / Pad 2 ${this.app.input.gamepads[1].connected ? 'connected' : 'absent'}`,
+    );
+    this.labels.forEach((label, i) => {
+      label.setScale(fit.scale);
+      label.setPosition((i * this.app.width) / 2 + 12 * fit.scale, 12 * fit.scale);
+      label.text = `P${i + 1}`;
+    });
     const speed = 300 * delta;
 
     const left = this.leftControls.move.value;
@@ -97,6 +135,11 @@ class SplitScreenScene extends Scene {
 
     this.leftPlayer.move(left.x * speed, left.y * speed);
     this.rightPlayer.move(right.x * speed, right.y * speed);
+
+    for (const player of [this.leftPlayer, this.rightPlayer]) {
+      player.setPosition(clamp(player.x, -1500, 1500), clamp(player.y, -1100, 1100));
+    }
+
     this.leftView.setCenter(this.leftPlayer.position.x, this.leftPlayer.position.y);
     this.rightView.setCenter(this.rightPlayer.position.x, this.rightPlayer.position.y);
   }
@@ -114,6 +157,23 @@ class SplitScreenScene extends Scene {
       context.render(label, { view: context.screenView });
     }
   }
+
+  override destroy(): void {
+    this.panel.dispose();
+    this.leftView.destroy();
+    this.rightView.destroy();
+    this.grid.destroy();
+    this.divider.destroy();
+    this.leftPlayer.destroy();
+    this.rightPlayer.destroy();
+
+    for (const label of this.labels) {
+      label.destroy();
+    }
+
+    this.characters.destroy();
+    super.destroy();
+  }
 }
 
 const app = new Application({
@@ -124,7 +184,7 @@ const app = new Application({
     mount: document.body,
     sizing: new FixedResolutionCanvasSizing(),
   },
-  clearColor: Color.black,
+  clearColor: new Color(24, 35, 46),
 });
 
-await app.start(SplitScreenScene);
+await startExample(app, () => app.start(SplitScreenScene));

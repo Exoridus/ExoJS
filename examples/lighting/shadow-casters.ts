@@ -3,6 +3,7 @@ import {
   Color,
   Container,
   FixedResolutionCanvasSizing,
+  Keyboard,
   type RenderingContext,
   ScaleModes,
   Scene,
@@ -10,18 +11,10 @@ import {
   Sprite,
   Texture,
 } from '@codexo/exojs';
-import { AlphaOccluder, type Lighting, LightmapLighting, PointLight, SpotLight } from '@codexo/exojs/lighting';
-import { type DemoPanel, demoPanel, slider, type SliderSpec, toggle, type ToggleSpec } from '@examples/runtime';
+import { AlphaOccluder, LightmapLighting, PointLight, SpotLight } from '@codexo/exojs/lighting';
+import { choice, demoPanel, slider, startExample, toggle } from '@examples/runtime';
 
-// Nothing here models a shadow. Each wall registers the outline it already
-// has - its own rectangle, or, for the pillar, the silhouette traced out of
-// its alpha channel - and the lightmap renderer turns that into a shadow for
-// every light on screen, in one instanced draw.
-//
-// `softness` is a property of the light, not a second pass: it widens the
-// shadow sample kernel, so the slider below costs nothing per light.
-
-const canvasTexture = (width: number, height: number, paint: (context: CanvasRenderingContext2D) => void): Texture => {
+const canvasTexture = (width: number, height: number, paint: (context: CanvasRenderingContext2D) => void): HTMLCanvasElement => {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
@@ -33,10 +26,10 @@ const canvasTexture = (width: number, height: number, paint: (context: CanvasRen
 
   paint(context);
 
-  return new Texture(canvas, { scaleMode: ScaleModes.Linear, generateMipMap: false });
+  return canvas;
 };
 
-const floorTexture = canvasTexture(64, 64, context => {
+const floorCanvas = canvasTexture(64, 64, context => {
   context.fillStyle = '#b3aea5';
   context.fillRect(0, 0, 64, 64);
   context.fillStyle = '#a19c94';
@@ -44,115 +37,155 @@ const floorTexture = canvasTexture(64, 64, context => {
   context.fillRect(32, 32, 32, 32);
 });
 
-const wallTexture = canvasTexture(8, 8, context => {
+const wallCanvas = canvasTexture(8, 8, context => {
   context.fillStyle = '#cfc9be';
   context.fillRect(0, 0, 8, 8);
 });
 
 // A cross, so the traced outline is visibly NOT the sprite's bounding box.
 const pillarSize = 96;
-const pillarTexture = canvasTexture(pillarSize, pillarSize, context => {
+const pillarCanvas = canvasTexture(pillarSize, pillarSize, context => {
   const arm = pillarSize / 3;
   context.fillStyle = '#d8cbb0';
   context.fillRect(arm, 0, arm, pillarSize);
   context.fillRect(0, arm, pillarSize, arm);
 });
 
-const wall = (x: number, y: number, width: number, height: number): Sprite => {
-  const sprite = new Sprite(wallTexture).setAnchor(0.5);
-
-  sprite.width = width;
-  sprite.height = height;
-  sprite.setPosition(x, y);
-  sprite.tint = new Color(150, 146, 138);
-
-  return sprite;
+const controls = {
+  radius: slider('Radius', { min: 80, max: 360, step: 10, value: 230 }),
+  softness: slider('Softness', { min: 0, max: 1, step: 0.05, value: 0.35 }),
+  occluders: toggle('Show occluders'),
+  type: choice('Light', ['Point', 'Spot']),
 };
-
 class ShadowCastersScene extends Scene {
-  private world!: Container;
-  private lighting!: Lighting;
+  private readonly world = new Container();
+  private lighting!: LightmapLighting;
   private torch!: PointLight;
   private beam!: SpotLight;
   private turntable!: Sprite;
+  private panel!: ReturnType<typeof demoPanel<typeof controls>>;
   private elapsed = 0;
-  private panel!: DemoPanel<{ softness: SliderSpec; occluders: ToggleSpec }>;
+  private playing = true;
+  private dragging = false;
+  private lightX = 0.25;
+  private lightY = 0.55;
+  private scale = 1;
+  private width = 1280;
+  private height = 600;
+  private walls: Sprite[] = [];
 
   override init(): void {
-    const { width, height } = this.app;
-
-    this.world = new Container();
-    this.lighting = new LightmapLighting(this.app, {
-      ambient: new Color(34, 36, 50),
-      lightResolution: 1,
-    });
+    const floor = new Sprite(this.track(new Texture(floorCanvas, { scaleMode: ScaleModes.Linear })));
+    this.world.addChild(floor);
+    const wallTexture = this.track(new Texture(wallCanvas));
+    const pillarTexture = this.track(new Texture(pillarCanvas));
+    this.lighting = new LightmapLighting(this.app, { ambient: new Color(45, 47, 55), lightResolution: 1 });
     this.systems.add(this.lighting);
 
-    const floor = new Sprite(floorTexture);
-
-    floor.width = width;
-    floor.height = height;
-    this.world.addChild(floor);
-
-    // Level geometry. Every wall is an opaque sprite, so its silhouette is the
-    // rectangle it is drawn as - there is nothing to author, and the outline
-    // follows the sprite however it is sized, moved or turned.
-    const walls = [wall(320, 200, 360, 28), wall(940, 250, 28, 320), wall(520, 560, 300, 28)];
-
-    this.turntable = wall(880, 560, 220, 24);
-    walls.push(this.turntable);
-
-    for (const piece of walls) {
+    for (let i = 0; i < 3; i++) {
+      const piece = new Sprite(i === 1 ? pillarTexture : wallTexture).setAnchor(0.5);
+      this.walls.push(piece);
       this.world.addChild(piece);
       this.lighting.occludeFrom(new AlphaOccluder(piece));
     }
 
-    // The cross is the same one line, and the same nothing to author: what
-    // differs is that its silhouette is a cross rather than its bounding box.
-    const pillar = new Sprite(pillarTexture).setAnchor(0.5).setPosition(640, 380);
-
-    this.world.addChild(pillar);
-    this.lighting.occludeFrom(new AlphaOccluder(pillar));
-
-    this.torch = this.lighting.add(new PointLight({ radius: 520, intensity: 2.1, softness: 0.35, color: new Color(255, 196, 140) }));
+    this.turntable = this.walls[2];
+    this.root.addChild(this.world);
+    this.torch = this.lighting.add(new PointLight({ radius: 500, intensity: 2.1, softness: 0.35, color: new Color(255, 210, 160) }));
     this.beam = this.lighting.add(
-      new SpotLight({ radius: 760, angle: 28, coneSoftness: 0.35, intensity: 2.3, softness: 0.2, color: new Color(150, 210, 255) }),
+      new SpotLight({ radius: 500, angle: 40, coneSoftness: 0.35, intensity: 0, softness: 0.35, color: new Color(255, 210, 160) }),
     );
-    this.beam.setPosition(120, 660);
-
     this.panel = demoPanel({
-      title: 'Shadow Casters',
-      corner: 'top-right',
-      controls: {
-        softness: slider('Softness', { min: 0, max: 1, value: this.torch.softness, step: 0.05, format: value => value.toFixed(2) }),
-        occluders: toggle('Show occluders', false),
-      },
-      onChange: (_key, _value, values) => {
-        this.torch.softness = values.softness;
-        this.beam.softness = values.softness;
-        this.lighting.debug = values.occluders ? 'occluders' : null;
+      title: 'Cast Shadows from Shapes',
+      layout: 'bar',
+      controls,
+      hint: 'Drag the light. Point / Spot share position; the rotating wall owns its alpha outline.',
+      actions: {
+        'Pause / Resume': () => {
+          this.playing = !this.playing;
+        },
+        Reset: () => this.reset(),
       },
     });
+    this.inputs.onTrigger(Keyboard.Space, () => {
+      this.playing = !this.playing;
+    });
+    this.inputs.onTrigger(Keyboard.R, () => this.reset());
+    this.app.input.onPointerDown.add(this.onDown);
+    this.app.input.onPointerMove.add(this.onMove);
+    this.app.input.onPointerUp.add(this.onUp);
   }
 
-  override update(delta: Seconds): void {
-    this.elapsed += delta;
+  private reset(): void {
+    this.elapsed = 0;
+    this.lightX = 0.25;
+    this.lightY = 0.55;
+    this.panel.set('radius', 230);
+    this.panel.set('softness', 0.35);
+    this.panel.set('type', 'Point');
+    this.panel.set('occluders', false);
+  }
 
-    this.torch.setPosition(640 + Math.cos(this.elapsed * 0.55) * 250, 360 + Math.sin(this.elapsed * 0.83) * 150);
-    // Aiming a spot is rotating it, so the beam sweeps by turning its node.
-    // Counter-clockwise from +x: up the screen is a POSITIVE angle, however
-    // far down the screen the world's y grows.
-    this.beam.rotation = 55 - Math.sin(this.elapsed * 0.4) * 35;
-    // A moving occluder needs no bookkeeping: the outline is local to the node.
+  private readonly onDown = (p: { x: number; y: number }): void => {
+    this.dragging = true;
+    this.onMove(p);
+  };
+  private readonly onMove = (p: { x: number; y: number }): void => {
+    if (this.dragging) {
+      this.lightX = Math.max(0, Math.min(1, p.x / this.scale / this.width));
+      this.lightY = Math.max(0, Math.min(1, p.y / this.scale / this.height));
+    }
+  };
+  private readonly onUp = (): void => {
+    this.dragging = false;
+  };
+
+  override update(delta: Seconds): void {
+    const v = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    this.scale = v.scale;
+    this.width = v.width;
+    this.height = v.contentHeight;
+    this.root.setScale(v.scale);
+    const floor = this.world.children[0] as Sprite;
+    floor.width = v.width;
+    floor.height = v.contentHeight;
+
+    if (this.playing) {
+      this.elapsed += delta;
+    }
+
+    this.walls[0].setPosition(v.width * 0.48, v.contentHeight * 0.27);
+    this.walls[0].width = v.width * 0.3;
+    this.walls[0].height = 12;
+    this.walls[1].setPosition(v.width * 0.58, v.contentHeight * 0.63).setScale(Math.min(1, v.contentHeight / 270));
+    this.walls[2].setPosition(v.width * 0.8, v.contentHeight * 0.4);
+    this.walls[2].width = v.width * 0.2;
+    this.walls[2].height = 12;
     this.turntable.rotation = this.elapsed * 22;
+
+    for (const light of [this.torch, this.beam]) {
+      light.setPosition(this.lightX * v.width * v.scale, this.lightY * v.contentHeight * v.scale);
+      light.radius = this.panel.values.radius * v.scale;
+      light.softness = this.panel.values.softness;
+    }
+
+    this.torch.intensity = this.panel.values.type === 'Point' ? 2.1 : 0;
+    this.beam.intensity = this.panel.values.type === 'Spot' ? 2.1 : 0;
+    this.beam.rotation = 0;
+    this.lighting.debug = this.panel.values.occluders ? 'occluders' : null;
+    this.panel.status(
+      `${this.panel.values.type} light | ${this.playing ? 'wall rotating' : 'paused'} | rectangle and alpha-cross cast real shadows`,
+    );
   }
 
   override draw(context: RenderingContext): void {
-    context.render(this.world);
-    this.panel.status(`${this.lighting.activeLightCount} lights - draw calls ${context.stats.drawCalls}`);
+    context.render(this.root);
   }
 
   override destroy(): void {
+    this.app.input.onPointerDown.remove(this.onDown);
+    this.app.input.onPointerMove.remove(this.onMove);
+    this.app.input.onPointerUp.remove(this.onUp);
     this.panel.dispose();
     super.destroy();
   }
@@ -160,13 +193,7 @@ class ShadowCastersScene extends Scene {
 
 const app = new Application({
   scenes: { ShadowCastersScene },
-  canvas: {
-    width: 1280,
-    height: 720,
-    mount: document.body,
-    sizing: new FixedResolutionCanvasSizing(),
-  },
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: new Color(6, 7, 12),
 });
-
-await app.start(ShadowCastersScene);
+await startExample(app, () => app.start(ShadowCastersScene));

@@ -5,29 +5,32 @@ import {
   Color,
   Dropdown,
   FixedResolutionCanvasSizing,
-  Graphics,
   Keyboard,
   Label,
   Panel,
+  ProgressBar,
   Scene,
   Slider,
+  Spritesheet,
   Stack,
   Toggle,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { mountControls, siteUITheme, startExample } from '@examples/runtime';
 const STORAGE_KEY = 'exojs-playground-settings';
-const defaults = { volume: 0.7, motion: true, theme: 'blue' };
+const defaults = { size: 1, motion: true, theme: 'lime' };
 const themeColors = {
-  blue: new Color(92, 170, 255),
-  amber: new Color(255, 180, 92),
+  lime: new Color(136, 233, 126),
+  cyan: new Color(101, 210, 210),
   violet: new Color(186, 126, 255),
 };
 const loadSettings = () => {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}');
     return {
-      volume: typeof saved.volume === 'number' && Number.isFinite(saved.volume) ? Math.max(0, Math.min(1, saved.volume)) : defaults.volume,
+      size: typeof saved.size === 'number' && Number.isFinite(saved.size) ? Math.max(0.5, Math.min(1.5, saved.size)) : defaults.size,
       motion: typeof saved.motion === 'boolean' ? saved.motion : defaults.motion,
-      theme: saved.theme === 'amber' || saved.theme === 'violet' ? saved.theme : defaults.theme,
+      theme: saved.theme === 'cyan' || saved.theme === 'violet' ? saved.theme : defaults.theme,
     };
   } catch {
     return { ...defaults };
@@ -36,96 +39,132 @@ const loadSettings = () => {
 class SettingsMenuScene extends Scene {
   settings = loadSettings();
   preview;
-  volume;
+  size;
   motion;
   theme;
-  status;
+  panel;
+  hud;
+  meter;
+  caption;
+  sheetData;
   angle = 0;
+  score = 0;
+  health = 1;
+  scoreButton;
+  damageButton;
+  async load() {
+    await this.loader.load(assets.platformerCharactersImage);
+    this.sheetData = await this.loader.load(assets.platformerCharactersAtlas);
+  }
   init() {
-    const { width, height } = this.app;
-    this.preview = new Graphics().setPosition(width * 0.79, height / 2);
+    this.ui.theme = siteUITheme();
+    this.preview = new Spritesheet(this.loader.get(assets.platformerCharactersImage), this.sheetData).getFrameSprite(
+      'character_purple_front',
+    );
+    this.preview.setAnchor(0.5);
     this.addChild(this.preview);
-    const panel = new Panel({ width: 420, height: 460, color: new Color(28, 38, 56), cornerRadius: 20 });
-    const stack = new Stack({ direction: 'column', spacing: 14, padding: 24 });
-    stack.addItem(new Label('Settings', { fontSize: 34, fillColor: Color.white }));
-    stack.addItem(new Label('Master volume', { fontSize: 21, fillColor: Color.white }));
-    this.volume = new Slider({ width: 320, min: 0, max: 1, step: 0.05, value: this.settings.volume });
-    stack.addItem(this.volume);
-    this.motion = new Toggle({ label: 'Animate preview', checked: this.settings.motion });
+    this.caption = mountControls({
+      theme: 'site',
+      title: 'UI Controls and Focus',
+      hint: 'Tab / D-pad: focus. Arrows adjust. Animate on means motion is enabled.',
+    });
+    this.panel = new Panel({ width: 252, height: 194, color: new Color(25, 31, 36), cornerRadius: 8 });
+    const stack = new Stack({ direction: 'column', spacing: 5, padding: 12 });
+    stack.addItem(new Label('Preview size', { fontSize: 14, fillColor: Color.white }));
+    this.size = new Slider({ width: 224, height: 32, min: 0.5, max: 1.5, step: 0.1, value: this.settings.size });
+    stack.addItem(this.size);
+    this.motion = new Toggle({ label: 'Animate preview', height: 32, checked: this.settings.motion, textStyle: { fontSize: 14 } });
     stack.addItem(this.motion);
-    stack.addItem(new Label('Accent colour', { fontSize: 21, fillColor: Color.white }));
     this.theme = new Dropdown({
-      width: 320,
+      width: 224,
+      height: 32,
+      textStyle: { fontSize: 14 },
       items: [
-        { label: 'Blue', value: 'blue' },
-        { label: 'Amber', value: 'amber' },
+        { label: 'Lime', value: 'lime' },
+        { label: 'Cyan', value: 'cyan' },
         { label: 'Violet', value: 'violet' },
       ],
-      selectedIndex: ['blue', 'amber', 'violet'].indexOf(this.settings.theme),
+      selectedIndex: ['lime', 'cyan', 'violet'].indexOf(this.settings.theme),
     });
     stack.addItem(this.theme);
-    const reset = new Button({ label: 'Reset settings', width: 320, height: 48 });
+    const reset = new Button({ label: 'Reset settings', width: 224, height: 32, fontSize: 14 });
     stack.addItem(reset);
-    this.status = new Label('Tab or D-pad to focus; arrows adjust controls.', { fontSize: 16, fillColor: new Color(180, 205, 230) });
-    stack.addItem(this.status);
-    panel.addChild(stack);
-    panel.anchorIn(this.ui, 'center');
-    this.ui.addChild(panel);
-    // Capture browser defaults so Tab stays in the canvas and Space activates the focused widget.
-    this.inputs.onTrigger(Keyboard.Tab, () => {
-      this.status.text = 'Tab moves focus between controls.';
+    this.panel.addChild(stack);
+    this.ui.addChild(this.panel);
+    this.hud = new Label('Score: 0', { fontSize: 14, fillColor: Color.white });
+    this.meter = new ProgressBar({ width: 120, height: 12, value: 1 });
+    this.ui.addChild(this.hud, this.meter);
+    this.scoreButton = new Button({ label: '+10 score', width: 120, height: 32, fontSize: 14 });
+    this.damageButton = new Button({ label: 'Take damage', width: 120, height: 32, fontSize: 14 });
+    this.scoreButton.onClick.add(() => {
+      this.score += 10;
+      this.hud.text = `Score: ${this.score}`;
     });
-    this.inputs.onTrigger(Keyboard.Space, () => {
-      this.status.text = 'Space activates the focused control.';
+    this.damageButton.onClick.add(() => {
+      this.health = Math.max(0, this.health - 0.2);
+      this.meter.value = this.health;
     });
-    this.volume.onChange.add(value => {
-      this.settings.volume = value;
+    this.ui.addChild(this.scoreButton, this.damageButton);
+    this.inputs.onTrigger(Keyboard.Tab);
+    this.size.onChange.add(value => {
+      this.settings.size = value;
       this.apply();
     });
-    // Discrete choices are logged to the Output panel; the volume slider is
-    // not, since it reports every step of a drag.
     this.motion.onChange.add(value => {
       this.settings.motion = value;
       this.apply();
-      console.log(`Setting: reduced motion ${value ? 'on' : 'off'}`);
     });
     this.theme.onChange.add(value => {
       this.settings.theme = value;
       this.apply();
-      console.log(`Setting: theme ${value}`);
     });
     reset.onClick.add(() => {
-      console.info('Setting: reset to defaults');
-      this.volume.value = defaults.volume;
+      this.size.value = defaults.size;
       this.motion.checked = defaults.motion;
       this.theme.selectedIndex = 0;
       this.settings = { ...defaults };
+      this.angle = 0;
+      this.score = 0;
+      this.health = 1;
+      this.hud.text = 'Score: 0';
+      this.meter.value = 1;
       this.apply();
     });
     this.apply();
   }
   apply() {
-    this.app.audio.master.volume = this.settings.volume;
-    this.preview.clear();
-    this.preview.fillColor = themeColors[this.settings.theme];
-    this.preview.drawRectangle(-62, -62, 124, 124);
+    this.preview.setTint(themeColors[this.settings.theme]);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.settings));
-      this.status.text = 'Saved in this browser. Tab or D-pad to focus.';
+      this.caption.setStatus(`${this.settings.motion ? 'Animating' : 'Motion off'} | size ${this.settings.size.toFixed(1)} | saved`);
     } catch {
-      this.status.text = 'Storage unavailable. Settings work for this visit.';
+      this.caption.setStatus('Storage unavailable; controls still work for this visit.');
     }
   }
   update(delta) {
     if (this.settings.motion) {
-      this.angle += delta * 45;
+      this.angle += delta * 35;
     }
+    const { scale: k, width, height, contentHeight, compact } = this.caption.fit(this.app, this.app.canvas);
+    const top = height - contentHeight;
+    this.ui.uiScale = k;
+    this.panel.setPosition(12, top);
+    this.hud.setPosition(width - 142, top + 4);
+    this.meter.setPosition(width - 142, top + 28);
+    this.scoreButton.setPosition(width - 142, top + 48);
+    this.damageButton.setPosition(width - 142, top + 86);
+    this.preview.setPosition(width * 0.77 * k, (top + (compact ? 158 : contentHeight * 0.57)) * k);
+    this.preview.setScale(this.settings.size * (compact ? 0.5 : 1) * k);
     this.preview.setRotation(this.angle);
+  }
+  destroy() {
+    this.caption?.dispose();
+    super.destroy();
   }
 }
 const app = new Application({
   scenes: { SettingsMenuScene },
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
-  clearColor: new Color(14, 20, 32),
+  clearColor: new Color(11, 16, 20),
 });
-await app.start(SettingsMenuScene);
+await startExample(app, () => app.start(SettingsMenuScene));

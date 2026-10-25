@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useRef } from 'react';
 
+import { CURATED_CATEGORY_BY_SLUG, CURATION_READY } from '../lib/curation-catalog';
 import { buildPlaygroundNavModel, isExampleRouteActive } from '../lib/playground-nav';
 import { getExampleAvailability } from '../lib/runtime-support';
 import type { Example, ExamplesMap } from '../lib/types';
 import { buildExampleHref } from '../lib/url-state';
-import type { VersionInfo } from '../lib/versions';
+import { CURRENT_VERSION_ID, type VersionInfo } from '../lib/versions';
 import styles from './Navigation.module.scss';
 import { NavigationLink } from './NavigationLink';
 import { NavigationSection } from './NavigationSection';
 import { css } from './react-utils';
 
 export interface NavigationProps {
+  locale?: 'en' | 'de';
   activeExample: Example | null;
   examples: ExamplesMap;
   loaded: boolean;
@@ -20,6 +22,7 @@ export interface NavigationProps {
 }
 
 export const Navigation = ({
+  locale = 'en',
   activeExample,
   examples,
   loaded,
@@ -29,7 +32,8 @@ export const Navigation = ({
 }: NavigationProps): JSX.Element => {
   const listRef = useRef<HTMLElement | null>(null);
   const allExamples = useMemo(() => Array.from(examples.values()).flat(), [examples]);
-  const categories = useMemo(() => buildPlaygroundNavModel(allExamples), [allExamples]);
+  const categoryBySlug = selectedVersion?.id === CURRENT_VERSION_ID && CURATION_READY ? CURATED_CATEGORY_BY_SLUG : undefined;
+  const categories = useMemo(() => buildPlaygroundNavModel(allExamples, categoryBySlug), [allExamples, categoryBySlug]);
 
   useEffect(() => {
     const list = listRef.current;
@@ -51,6 +55,10 @@ export const Navigation = ({
 
   return (
     <section className={css(styles, 'root')}>
+      <div className={css(styles, 'reference-links')}>
+        <a href={`${import.meta.env.BASE_URL + locale}/playground/curriculum/`}>48-example path</a>
+        <a href={`${import.meta.env.BASE_URL + locale}/playground/tools/`}>Tools and guides</a>
+      </div>
       <nav ref={listRef}>
         {loadError && <p className={css(styles, 'error')}>{loadError}</p>}
         {!loadError &&

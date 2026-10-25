@@ -1,0 +1,198 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { CURATED_SECTIONS, CURATION_READY, getCuratedExamples, getPreservationEntries } from '../../lib/curation-catalog';
+import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
+
+interface Props {
+  locale: 'en' | 'de';
+  kind: 'curriculum' | 'tools';
+}
+const { locale, kind } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const targets = getCuratedExamples();
+const preserved = getPreservationEntries();
+const title = kind === 'tools' ? 'Playground tools and guides' : '48-example learning path';
+const route = (path: string) => `${base + locale}/playground/examples/${path.replace(/\.js$/, '')}`;
+const run = (path: string) => `${base + locale}/playground/?version=current&example=${path.replace(/\.js$/, '')}`;
+const groups = [
+  { kind: 'tool', title: 'Tools' },
+  { kind: 'diagnostic', title: 'Diagnostics' },
+  { kind: 'guide', title: 'Runnable guide recipes' },
+  { kind: 'merge', title: 'Advanced contracts from combined examples' },
+];
+---
+
+<Layout title={`${title} - ExoJS`}>
+  <div class="curation-index">
+    {locale === 'de' && <EnglishFallbackNotice />}
+    <nav aria-label="Playground resources">
+      <a href={`${base + locale}/playground/`}>Playground</a>
+      <a href={`${base + locale}/playground/curriculum/`}>Learning path</a>
+      <a href={`${base + locale}/playground/tools/`}>Tools and guides</a>
+    </nav>
+    <h1>{title}</h1>
+    {kind === 'curriculum' ? (
+      <>
+        <p>
+          {CURATION_READY
+            ? 'Follow a focused path through scenes, interaction, rendering, sound and worlds.'
+            : 'Preview the focused learning path. The current Playground remains available while its replacement is verified.'}
+        </p>
+        {CURATED_SECTIONS.map(section => (
+          <section aria-labelledby={`section-${section.key}`}>
+            <h2 id={`section-${section.key}`}>{`${section.key}. ${section.title}`}</h2>
+            <ol class="entries">
+              {targets
+                .filter(entry => entry.section === section.slug)
+                .map(entry => (
+                  <li data-curated-number={entry.number}>
+                    <h3>
+                      <a href={route(entry.path)}>{`${entry.number}. ${entry.title}`}</a>
+                    </h3>
+                    {entry.optional && <p class="label">Optional advanced branch</p>}
+                    {entry.role === 'capstone' && <p class="label">Capstone</p>}
+                    <p>{entry.description}</p>
+                    {entry.prerequisites.length > 0 && (
+                      <p class="related">
+                        Before this:{' '}
+                        {entry.prerequisites.map(id => {
+                          const target = targets.find(candidate => candidate.number === id)!;
+
+                          return <a href={route(target.path)}>{target.title}</a>;
+                        })}
+                      </p>
+                    )}
+                    {entry.next.length > 0 && (
+                      <p class="related">
+                        Next:{' '}
+                        {entry.next.map(id => {
+                          const target = targets.find(candidate => candidate.number === id)!;
+
+                          return <a href={route(target.path)}>{target.title}</a>;
+                        })}
+                      </p>
+                    )}
+                    <a class="run" href={run(entry.path)}>
+                      Open in Playground
+                    </a>
+                  </li>
+                ))}
+            </ol>
+          </section>
+        ))}
+      </>
+    ) : (
+      <>
+        <p>
+          Inspect resources and devices, measure rendering workloads, or run a focused source recipe. These entries are separate from the 48
+          normal examples.
+        </p>
+        {groups.map(group => (
+          <section aria-labelledby={`group-${group.kind}`}>
+            <h2 id={`group-${group.kind}`}>{group.title}</h2>
+            <ul class="entries">
+              {preserved
+                .filter(entry => entry.kind === group.kind)
+                .map(entry => (
+                  <li data-preserved-source={entry.path}>
+                    <h3>
+                      <a href={route(entry.path)}>{entry.title}</a>
+                    </h3>
+                    <p>{entry.description}</p>
+                    <a class="run" href={run(entry.path)}>
+                      Run source
+                    </a>
+                    <a class="run" href={`${base}examples/${entry.path.replace(/\.js$/, '.ts')}`}>
+                      TypeScript
+                    </a>
+                    {entry.targetPath && (
+                      <a class="run" href={route(entry.targetPath)}>
+                        Related normal example
+                      </a>
+                    )}
+                  </li>
+                ))}
+            </ul>
+          </section>
+        ))}
+      </>
+    )}
+  </div>
+</Layout>
+<style>
+  .curation-index {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: var(--s-5);
+    color: var(--fg);
+  }
+
+  nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-4);
+  }
+
+  nav a,
+  .run {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    font-size: 0.875rem;
+    margin-right: var(--s-3);
+  }
+
+  h1 {
+    margin-block: var(--s-5);
+  }
+
+  h2 {
+    margin-top: var(--s-6);
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 1.125rem;
+  }
+
+  .entries {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+    gap: var(--s-4);
+    list-style: none;
+    padding: 0;
+  }
+
+  .entries > li {
+    background: var(--bg-elevated);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-3);
+    padding: var(--s-4);
+  }
+
+  .entries p {
+    margin-block: var(--s-3);
+  }
+
+  .label,
+  .related {
+    font-size: 0.875rem;
+    color: var(--fg-muted);
+  }
+
+  .related a {
+    display: inline-flex;
+    min-height: 32px;
+    align-items: center;
+    margin-right: var(--s-3);
+  }
+
+  a {
+    color: var(--accent);
+  }
+
+  a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+</style>

@@ -1,7 +1,7 @@
 // Auto-generated from grid-navigation.ts - edit the .ts source, not this file.
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, Scene } from '@codexo/exojs';
 import { GridSpace, Pathfinder } from '@codexo/exojs/pathfinding';
-import { choice, demoPanel, toggle } from '@examples/runtime';
+import { choice, demoPanel, startExample, toggle } from '@examples/runtime';
 // Click-to-move over a weighted grid. Everything here is plain data: a GridSpace
 // of costs and a Pathfinder, neither of which is a scene node, neither of which
 // is registered with the Application. The Graphics below only *draws* what the
@@ -21,7 +21,7 @@ const AGENT_SPEED = 260;
 const WALL_COLOR = new Color(38, 44, 58);
 const FLOOR_COLOR = new Color(24, 28, 38);
 const MUD_COLOR = new Color(78, 62, 34);
-const PATH_COLOR = new Color(90, 200, 255);
+const PATH_COLOR = new Color(254, 179, 84);
 const GOAL_COLOR = new Color(255, 170, 80);
 const AGENT_COLOR = new Color(240, 245, 255);
 /** Deterministic room-and-pillar layout, so the example looks the same every run. */
@@ -29,20 +29,18 @@ const initialCost = (x, y) => {
   if (x === 0 || y === 0 || x === COLUMNS - 1 || y === ROWS - 1) {
     return 0;
   }
-  if (x % 8 === 4 && y % 3 !== 1) {
+  if (x === 15 && y >= 5 && y <= 16 && y !== 10) {
     return 0;
   }
-  if (x % 4 === 2 && y % 6 === 3) {
+  if (y === 12 && x >= 22 && x <= 30 && x !== 26) {
     return 0;
   }
   return 1;
 };
 class GridNavigationScene extends Scene {
-  onPointerTap = pointer => {
-    this.applyPaint(pointer.x, pointer.y);
-  };
   grid = GridSpace.from(COLUMNS, ROWS, initialCost, { cellSize: CELL });
   pathfinder = new Pathfinder();
+  worldRoot = new Container();
   terrain = new Graphics();
   overlay = new Graphics();
   result = null;
@@ -54,17 +52,26 @@ class GridNavigationScene extends Scene {
   pruning = true;
   agentSize = 1;
   diagonals = 'no-corner-cutting';
+  walkerPaused = false;
+  onTap = pointer => this.applyPaint(pointer.x, pointer.y);
   panel;
   init() {
-    this.app.input.onPointerTap.add(this.onPointerTap);
+    this.worldRoot.addChild(this.terrain, this.overlay);
+    this.app.input.onPointerTap.add(this.onTap);
     this.panel = demoPanel({
-      title: 'Pathfinding',
+      title: 'Pathfinding Playground',
+      layout: 'bar',
+      hint: 'Click a goal, or paint walls and weighted mud.',
+      actions: {
+        'Pause / Resume': () => {
+          this.walkerPaused = !this.walkerPaused;
+        },
+        Reset: () => this.reset(),
+      },
       controls: {
         paint: choice('Click paints', ['goal', 'wall', 'mud']),
         pruning: toggle('Jump-point pruning', true),
-        smooth: toggle('Smooth path', false),
-        bigAgent: toggle('2x2 agent', false),
-        diagonals: choice('Diagonals', ['no-corner-cutting', 'never', 'always']),
+        scenario: choice('Scenario', ['room', 'smooth', '2x2 agent', 'no diagonals', 'all diagonals']),
       },
       onChange: (key, value) => {
         switch (key) {
@@ -74,21 +81,18 @@ class GridNavigationScene extends Scene {
           case 'pruning':
             this.pruning = value;
             break;
-          case 'smooth':
-            this.smooth = value;
-            break;
-          case 'bigAgent':
-            this.agentSize = value ? 2 : 1;
-            break;
-          case 'diagonals': {
+          case 'scenario': {
+            this.smooth = value === 'smooth';
+            this.agentSize = value === '2x2 agent' ? 2 : 1;
+            const policy = value === 'no diagonals' ? 'never' : value === 'all diagonals' ? 'always' : 'no-corner-cutting';
             // The diagonal policy is fixed at construction, so changing it
             // rebuilds the window from the costs the current one holds.
             const previous = this.grid;
             this.grid = GridSpace.from(COLUMNS, ROWS, (x, y) => previous.costAt(x, y), {
               cellSize: CELL,
-              diagonals: value,
+              diagonals: policy,
             });
-            this.diagonals = value;
+            this.diagonals = policy;
             break;
           }
         }
@@ -99,6 +103,12 @@ class GridNavigationScene extends Scene {
     this.replan();
   }
   update(delta) {
+    const fit = this.panel?.fit(this.app, this.app.canvas);
+    const scale = Math.min(1, ((fit?.contentHeight ?? 720) * (fit?.scale ?? 1)) / (ROWS * CELL));
+    this.worldRoot.setScale(scale).setPosition((this.app.width - COLUMNS * CELL * scale) / 2, 0);
+    if (this.walkerPaused) {
+      return;
+    }
     const points = this.result?.points ?? [];
     if (this.waypoint >= points.length) {
       return;
@@ -123,7 +133,7 @@ class GridNavigationScene extends Scene {
     this.overlay.clear();
     const points = this.result?.points ?? [];
     if (points.length > 1) {
-      this.overlay.lineWidth = 4;
+      this.overlay.lineWidth = (3 * (this.panel?.fit(this.app, this.app.canvas).scale ?? 1)) / this.worldRoot.scale.x;
       this.overlay.lineColor = PATH_COLOR;
       for (let index = 1; index < points.length; index++) {
         this.overlay.drawLine(points[index - 1].x, points[index - 1].y, points[index].x, points[index].y);
@@ -133,12 +143,11 @@ class GridNavigationScene extends Scene {
     this.overlay.drawCircle((this.goal.x + 0.5) * CELL, (this.goal.y + 0.5) * CELL, 8);
     this.overlay.fillColor = AGENT_COLOR;
     this.overlay.drawCircle(this.agent.x, this.agent.y, 4 + this.agentSize * 4);
-    context.render(this.terrain);
-    context.render(this.overlay);
+    context.render(this.worldRoot);
   }
   applyPaint(screenX, screenY) {
-    const x = Math.floor(screenX / CELL);
-    const y = Math.floor(screenY / CELL);
+    const x = Math.floor((screenX - this.worldRoot.x) / this.worldRoot.scale.x / CELL);
+    const y = Math.floor((screenY - this.worldRoot.y) / this.worldRoot.scale.y / CELL);
     if (this.grid.nodeAt(x, y) < 0) {
       return;
     }
@@ -151,8 +160,14 @@ class GridNavigationScene extends Scene {
     }
     this.replan();
   }
-  replan(mutate) {
-    mutate?.();
+  reset() {
+    this.grid = GridSpace.from(COLUMNS, ROWS, initialCost, { cellSize: CELL, diagonals: this.diagonals });
+    this.agent = { x: 2.5 * CELL, y: 2.5 * CELL };
+    this.goal = { x: COLUMNS - 3, y: ROWS - 3 };
+    this.drawTerrain();
+    this.replan();
+  }
+  replan() {
     // Replanning starts from the cell the walker currently stands in, not from
     // the previous path's start: it is usually somewhere between two cells.
     this.result = this.pathfinder.findPathBetween(
@@ -176,7 +191,9 @@ class GridNavigationScene extends Scene {
     );
   }
   destroy() {
-    this.app.input.onPointerTap.remove(this.onPointerTap);
+    this.app.input.onPointerTap.remove(this.onTap);
+    this.worldRoot.removeChildren();
+    this.worldRoot.destroy();
     this.terrain.destroy();
     this.overlay.destroy();
     this.panel?.dispose();
@@ -209,4 +226,4 @@ const app = new Application({
   },
   clearColor: new Color(12, 14, 20),
 });
-await app.start(GridNavigationScene);
+await startExample(app, () => app.start(GridNavigationScene));

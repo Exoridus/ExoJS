@@ -1,4 +1,5 @@
 import examplesCatalog from '../../../examples/examples.json';
+import { PRESERVED_EXAMPLES } from './preserved-examples';
 
 export type Capability =
   | 'webgl2'
@@ -33,9 +34,9 @@ export type ExamplesCatalog = Record<string, Array<CatalogEntry>>;
 export const EXAMPLES_CATALOG = examplesCatalog as ExamplesCatalog;
 
 export const getExamplesForChapter = (chapterSlug: string): Array<CatalogEntry> =>
-  Object.values(EXAMPLES_CATALOG)
-    .flat()
-    .filter(entry => entry.path.startsWith(`${chapterSlug}/`));
+  getRunnableExamples().filter(entry => entry.path.startsWith(`${chapterSlug}/`));
 
 export const getAllExamples = (): Array<CatalogEntry & { chapter: string }> =>
   Object.entries(EXAMPLES_CATALOG).flatMap(([chapter, entries]) => entries.map(entry => ({ ...entry, chapter })));
+
+export const getRunnableExamples = (): Array<CatalogEntry & { chapter: string }> => [...getAllExamples(), ...PRESERVED_EXAMPLES];

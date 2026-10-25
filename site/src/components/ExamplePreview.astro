@@ -47,7 +47,10 @@ const locale = Astro.currentLocale === 'de' ? 'de' : 'en';
       </span>
     )}
     <span class="actions">
-      <a class="action action--primary" href={`${import.meta.env.BASE_URL}${locale}/playground/?example=${chapter}/${slug}`}>
+      <a
+        class="action action--primary"
+        href={`${import.meta.env.BASE_URL}${locale}/playground/?version=current&example=${chapter}/${slug}`}
+      >
         Open in Playground
       </a>
       <a class="action action--quiet" href={sourceHref}>

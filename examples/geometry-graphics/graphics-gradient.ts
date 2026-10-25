@@ -9,7 +9,7 @@ import {
   Scene,
   Text,
 } from '@codexo/exojs';
-import { choice, demoPanel } from '@examples/runtime';
+import { choice, demoPanel, startExample } from '@examples/runtime';
 
 const controls = { gradient: choice('Gradient', ['Linear', 'Radial']) };
 const stops = [
@@ -189,4 +189,4 @@ const app = new Application({
   clearColor: new Color(242, 244, 239),
 });
 
-await app.start(GraphicsGradientScene);
+await startExample(app, () => app.start(GraphicsGradientScene));

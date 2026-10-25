@@ -1,10 +1,10 @@
 ---
 import PlaygroundExamplePage from '../../../../components/pages/PlaygroundExamplePage.astro';
 import { EXAMPLE_ALIASES } from '../../../../lib/example-aliases';
-import { getAllExamples } from '../../../../lib/examples-catalog';
+import { getRunnableExamples } from '../../../../lib/examples-catalog';
 
 export const getStaticPaths = async () =>
-  [...getAllExamples().map(entry => entry.path), ...Object.keys(EXAMPLE_ALIASES)].map(path => ({
+  [...getRunnableExamples().map(entry => entry.path), ...Object.keys(EXAMPLE_ALIASES)].map(path => ({
     params: { path: path.replace(/\.js$/, '') },
   }));
 

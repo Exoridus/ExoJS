@@ -24,7 +24,15 @@ interface Touch {
 }
 
 class MultitouchScene extends Scene {
-  private readonly onPointerDown = (pointer: Pointer): void => {
+  private graphics!: Graphics;
+  private labels: Text[] = [];
+  private pointers = new Map<number, Touch>();
+  private readonly gestureShape = new Graphics();
+  private gestureScale = 1;
+  private gestureDegrees = 0;
+  private focal = { x: 640, y: 360 };
+  private cancelled = 0;
+  private readonly onDown = (pointer: Pointer): void => {
     if (this.pointers.size >= MAX_TOUCHES || this.pointers.has(pointer.id)) {
       return;
     }
@@ -32,7 +40,7 @@ class MultitouchScene extends Scene {
     this.pointers.set(pointer.id, { id: pointer.id, x: pointer.x, y: pointer.y });
     this.refreshHud();
   };
-  private readonly onPointerMove = (pointer: Pointer): void => {
+  private readonly onMove = (pointer: Pointer): void => {
     const touch = this.pointers.get(pointer.id);
 
     if (touch) {
@@ -40,20 +48,28 @@ class MultitouchScene extends Scene {
       touch.y = pointer.y;
     }
   };
-  private readonly onPointerUp = (pointer: Pointer): void => {
+  private readonly onUp = (pointer: Pointer): void => {
     this.pointers.delete(pointer.id);
     this.refreshHud();
   };
-  private readonly onPointerCancel = (pointer: Pointer): void => {
-    this.pointers.delete(pointer.id);
-    this.refreshHud();
+  private readonly onCancel = (pointer: Pointer): void => {
+    this.cancelled++;
+    this.onUp(pointer);
   };
-  private graphics!: Graphics;
-  private labels: Text[] = [];
-  private pointers = new Map<number, Touch>();
+  // #region guide:gesture-transform
+  private readonly onPinch = (scale: number, x: number, y: number): void => {
+    this.gestureScale = Math.max(0.25, Math.min(3, this.gestureScale * scale));
+    this.focal = { x, y };
+  };
+  private readonly onRotate = (angleDelta: number, x: number, y: number): void => {
+    this.gestureDegrees -= (angleDelta * 180) / Math.PI;
+    this.focal = { x, y };
+  };
+  // #endregion guide:gesture-transform
   private hud!: ReturnType<typeof mountControls>;
 
   override init(): void {
+    const app = this.app;
     this.graphics = new Graphics();
 
     // Reusable label pool - one Text per possible touch, repositioned each frame.
@@ -61,19 +77,46 @@ class MultitouchScene extends Scene {
       this.labels.push(new Text('', { fillColor: Color.white, fontSize: 16 }).setAnchor(0.5));
     }
 
-    this.app.input.onPointerDown.add(this.onPointerDown);
-    this.app.input.onPointerMove.add(this.onPointerMove);
-    this.app.input.onPointerUp.add(this.onPointerUp);
-    this.app.input.onPointerCancel.add(this.onPointerCancel);
+    this.gestureShape.fillColor = new Color(151, 226, 60, 0.7);
+    this.gestureShape.drawPolygon([0, -65, 45, 35, -30, 35]);
+    this.gestureShape.fillColor = Color.white;
+    this.gestureShape.drawCircle(0, -40, 7);
+    app.input.onPointerDown.add(this.onDown);
+    app.input.onPointerMove.add(this.onMove);
+    app.input.onPointerUp.add(this.onUp);
+    app.input.onPointerCancel.add(this.onCancel);
+    app.input.onPinch.add(this.onPinch);
+    app.input.onRotate.add(this.onRotate);
 
-    this.hud = mountControls({ status: 'Active touches: 0 / 10' });
+    this.hud = mountControls({
+      theme: 'site',
+      title: 'Multitouch gestures',
+      hint: 'Use two contacts to pinch / rotate. Mouse shows one pointer. Hardware touch remains a separate check.',
+    });
   }
 
   private refreshHud(): void {
-    this.hud.setStatus(`Active touches: ${this.pointers.size} / ${MAX_TOUCHES}`);
+    this.hud?.setStatus(
+      `IDs ${[...this.pointers.keys()].join(', ') || 'none'} | Scale ${this.gestureScale.toFixed(2)} | Rotation ${this.gestureDegrees.toFixed(0)} deg | Cancelled ${this.cancelled}`,
+    );
+  }
+
+  override update(): void {
+    const fit = this.hud.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    this.gestureShape
+      .setPosition(this.focal.x, Math.min(this.focal.y, fit.contentHeight * fit.scale - 70))
+      .setScale(this.gestureScale * fit.scale)
+      .setRotation(this.gestureDegrees);
+
+    for (const label of this.labels) {
+      label.setScale(fit.scale);
+    }
+
+    this.refreshHud();
   }
 
   override draw(context: RenderingContext): void {
+    context.render(this.gestureShape);
     this.graphics.clear();
 
     let index = 0;
@@ -101,17 +144,21 @@ class MultitouchScene extends Scene {
   }
 
   override destroy(): void {
-    this.app.input.onPointerDown.remove(this.onPointerDown);
-    this.app.input.onPointerMove.remove(this.onPointerMove);
-    this.app.input.onPointerUp.remove(this.onPointerUp);
-    this.app.input.onPointerCancel.remove(this.onPointerCancel);
+    this.app.input.onPointerDown.remove(this.onDown);
+    this.app.input.onPointerMove.remove(this.onMove);
+    this.app.input.onPointerUp.remove(this.onUp);
+    this.app.input.onPointerCancel.remove(this.onCancel);
+    this.app.input.onPinch.remove(this.onPinch);
+    this.app.input.onRotate.remove(this.onRotate);
+    this.pointers.clear();
+    this.hud.dispose();
+    this.graphics.destroy();
+    this.gestureShape.destroy();
 
     for (const label of this.labels) {
       label.destroy();
     }
 
-    this.graphics?.destroy();
-    this.hud?.dispose();
     super.destroy();
   }
 }
