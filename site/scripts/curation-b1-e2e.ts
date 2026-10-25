@@ -375,7 +375,10 @@ try {
         checks.push('Scene replacement keeps handler count and destroys owned resources; application disposal removes UI');
         records.push({ example: slug, size: `${width}x${height}`, status: 'PASS', checks });
       } catch (error) {
-        await page.screenshot({ path: resolve(output, `${name}-failure.png`) });
+        console.error('Acceptance failure', error);
+        await page
+          .screenshot({ path: resolve(output, `${name}-failure.png`), timeout: 5000 })
+          .catch(captureError => console.error('Failure capture', String(captureError)));
         records.push({ example: slug, size: `${width}x${height}`, status: 'FAIL', error: String(error) });
       } finally {
         await page.unrouteAll({ behavior: 'wait' });
