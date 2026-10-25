@@ -3584,8 +3584,9 @@ export class WebGl2Backend implements RenderBackend {
    * both is served single-sample rather than a half-multisampled framebuffer
    * that no driver would accept. The root target is the browser's to
    * multisample.
+   * @internal
    */
-  private _effectiveSampleCount(target: RenderTarget): number {
+  public _effectiveSampleCount(target: RenderTarget): number {
     if (target.root || target.depthTexture !== null) {
       return 1;
     }
