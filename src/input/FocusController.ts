@@ -441,17 +441,9 @@ export class FocusController implements FocusHooks {
     return (state !== null && state !== SceneState.Active) || this._app.scenes._transitionGateOpen;
   }
 
-  /**
-   * Whether the aggregate {@link Keyboard.Shift} channel is currently held -
-   * read straight off the live channel buffer rather than latched from
-   * ShiftLeft/ShiftRight key events, which `InputSystem` already reconciles
-   * correctly (see `handleKeyUp`'s doc comment) when one side releases while
-   * the other stays down. A locally latched flag would have to reimplement
-   * that reconciliation to avoid flipping Tab's direction on a two-handed
-   * Shift release.
-   */
   private _isShiftDown(): boolean {
-    return this._app.input._actionSample().values[Keyboard.Shift] !== 0;
+    // A chord can press and release within one frame; the final sample loses its modifier.
+    return this._app.input._keyEventShift ?? this._app.input._actionSample().values[Keyboard.Shift] !== 0;
   }
 
   /** Navigate for an arrow key or a D-pad button; any other channel is left alone. */
