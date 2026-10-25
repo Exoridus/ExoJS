@@ -1337,7 +1337,7 @@ const audioBusChecks = async (browser: Browser, origin: string, base: string): P
         const context = getAudioContext();
         await context.resume();
         const bus = new AudioBus('idle-regression');
-        const processor = 'class Meter extends AudioWorkletProcessor { constructor() { super(); this.window = null; this.port.onmessage = e => { this.window = e.data; this.peak = 0; this.samples = 0; this.step = 0; this.previous = []; }; } process(inputs) { if (this.window) { const [start, end, transition] = this.window; for (let i = 0; i < 128; i++) { const time = currentTime + i / sampleRate; if (time >= start && time < end) { this.samples++; for (const channel of inputs[0]) this.peak = Math.max(this.peak, Math.abs(channel[i])); } if (time >= transition && time < end) { for (let channel = 0; channel < inputs[0].length; channel++) { const value = inputs[0][channel][i]; if (this.previous[channel] !== undefined) this.step = Math.max(this.step, Math.abs(value - this.previous[channel])); this.previous[channel] = value; } } } if (currentTime + 128 / sampleRate >= end) { this.port.postMessage({peak:this.peak,samples:this.samples,step:this.step}); this.window = null; } } return true; } } registerProcessor("acceptance-meter", Meter);';
+        const processor = 'class Meter extends AudioWorkletProcessor { constructor() { super(); this.window = null; this.port.onmessage = e => { if (Array.isArray(e.data)) { this.window = e.data; this.step = 0; this.previous = []; } else { this.window[0] = e.data.start; this.window[1] = e.data.end; } this.peak = 0; this.samples = 0; }; } process(inputs) { if (this.window) { const [start, end, transition] = this.window; for (let i = 0; i < 128; i++) { const time = currentTime + i / sampleRate; if (time >= start && time < end) { this.samples++; for (const channel of inputs[0]) this.peak = Math.max(this.peak, Math.abs(channel[i])); } if (time >= transition && time < end) { for (let channel = 0; channel < inputs[0].length; channel++) { const value = inputs[0][channel][i]; if (this.previous[channel] !== undefined) this.step = Math.max(this.step, Math.abs(value - this.previous[channel])); this.previous[channel] = value; } } } if (currentTime + 128 / sampleRate >= end) { this.port.postMessage({peak:this.peak,samples:this.samples,step:this.step}); this.window = null; } } return true; } } registerProcessor("acceptance-meter", Meter);';
         const url = URL.createObjectURL(new Blob([processor], {type: 'text/javascript'}));
         await context.audioWorklet.addModule(url);
         URL.revokeObjectURL(url);
@@ -1349,7 +1349,7 @@ const audioBusChecks = async (browser: Browser, origin: string, base: string): P
         const windows = [];
         const probe = async (change = null) => {
           const source = context.createBufferSource();
-          const buffer = context.createBuffer(1, context.sampleRate * 0.3, context.sampleRate);
+          const buffer = context.createBuffer(1, context.sampleRate * (change ? 3 : 0.3), context.sampleRate);
           // Fill before assignment so the source acquires initialized PCM.
           buffer.getChannelData(0).fill(0.1);
           source.buffer = buffer;
@@ -1359,12 +1359,16 @@ const audioBusChecks = async (browser: Browser, origin: string, base: string): P
             const timeout = setTimeout(() => reject(new Error('PCM window timed out: ' + context.state)), 5000);
             meter.port.onmessage = event => { clearTimeout(timeout); resolve(event.data); };
           });
-          const windowStart = change ? start + 0.15 : start - 0.01;
-          meter.port.postMessage([windowStart, start + 0.25, start + 0.03]);
+          // A busy page delays timers by far more than the gain ramps take, so the peak
+          // window follows the audio time the change actually landed at, not a fixed offset.
+          meter.port.postMessage(change ? [Infinity, start + 2.9, start + 0.03] : [start - 0.01, start + 0.25, start + 0.03]);
           source.start(start);
           if (change) {
             while (context.currentTime < start + 0.05) await sleep(5);
             await change();
+            const settled = context.currentTime + 0.1;
+            if (settled + 0.1 > start + 2.9) throw new Error('Gain change landed after the probe signal');
+            meter.port.postMessage({ start: settled, end: settled + 0.1 });
           }
           const {peak, samples, step} = await measured;
           windows.push({peak, samples, step});
