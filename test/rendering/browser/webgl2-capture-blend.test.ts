@@ -21,4 +21,14 @@ describe('webgl2 capture blending', () => {
       backend.destroy();
     }
   });
+
+  test('captures the backdrop of a render texture shorter than the canvas', async () => {
+    const backend = await createWebGl2TestBackend(96);
+
+    try {
+      await verifyCaptureBlendPixels(backend, false, 'sprite');
+    } finally {
+      backend.destroy();
+    }
+  });
 });

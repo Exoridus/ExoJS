@@ -123,7 +123,8 @@ export class WebGl2BackdropBlendCompositor {
     const scaleX = target.root && target.width > 0 ? gl.drawingBufferWidth / target.width : 1;
     const scaleY = target.root && target.height > 0 ? gl.drawingBufferHeight / target.height : 1;
     const px = Math.max(0, Math.floor(x * scaleX));
-    const py = Math.max(0, Math.floor(gl.drawingBufferHeight - (y + height) * scaleY));
+    const backingHeight = target.root ? gl.drawingBufferHeight : target.height;
+    const py = Math.max(0, Math.floor(backingHeight - (y + height) * scaleY));
     // The blit below is a raw framebuffer copy: it must land in the target's
     // own storage format, or a mismatch (e.g. an Rgba8Srgb target into an
     // Rgba8 backdrop) is not a guaranteed-compatible blit on every driver.
