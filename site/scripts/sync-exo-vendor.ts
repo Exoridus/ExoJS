@@ -558,6 +558,25 @@ const syncVendor = (): void => {
   }
 
   syncDemoAssets();
+
+  const fontDir = path.resolve(projectRoot, 'public', 'vendor', 'fonts');
+
+  fs.mkdirSync(fontDir, { recursive: true });
+
+  for (const [family, weights] of [
+    ['space-grotesk', [400, 600]],
+    ['jetbrains-mono', [400]],
+  ] as const) {
+    const packageRoot = path.dirname(requireFromSite.resolve(`@fontsource/${family}/package.json`));
+
+    for (const weight of weights) {
+      const name = `${family}-latin-${weight}-normal.woff2`;
+
+      fs.copyFileSync(path.join(packageRoot, 'files', name), path.join(fontDir, name));
+    }
+
+    fs.copyFileSync(path.join(packageRoot, 'LICENSE'), path.join(fontDir, `${family}-LICENSE.txt`));
+  }
 };
 
 syncVendor();

@@ -35,7 +35,11 @@ skills-lock.json
 # Anchored to the repository root: unanchored, the pattern also swallowed
 # `packages/*/docs/`, and a tracked file under an ignored directory makes every
 # `git add` of it fail, which breaks the pre-commit hook for that file.
-/docs/
+# The curation catalog is site data; status notes and evidence stay local.
+/docs/*
+!/docs/curation/
+/docs/curation/*
+!/docs/curation/catalog.json
 
 # === Dotfiles: blanket-ignore, then allowlist tracked ones ===
 # Anything starting with `.` is ignored by default. Protects against tool
