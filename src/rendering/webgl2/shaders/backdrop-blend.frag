@@ -8,13 +8,15 @@ precision highp float;
 // W3C blend B(Cb, Cs) for the requested mode, and outputs the blended source
 // premultiplied by its own alpha. The caller draws this with normal
 // (premultiplied source-over) blending, so the GPU composites it over the
-// untouched backdrop already in the target — transparent source regions
+// untouched backdrop already in the target - transparent source regions
 // (alpha 0) leave the backdrop showing through instead of going black.
 //
 // Mode values match the BlendModes enum (src/rendering/types.ts).
 
 uniform sampler2D u_source;
+uniform float u_sourceFlip;
 uniform sampler2D u_backdrop;
+uniform float u_backdropFlip;
 uniform int u_mode;
 // 1.0 when the target is opaque (the on-screen root canvas), whose captured
 // alpha is unreliable — an opaque framebuffer reports backdrop alpha 0, which
@@ -150,10 +152,10 @@ vec3 blendAdvanced(int mode, vec3 cb, vec3 cs) {
 }
 
 void main(void) {
-    vec4 src = texture(u_source, v_texcoord);
-    // The backdrop is captured from the framebuffer (bottom-left origin), so its
+    vec4 src = texture(u_source, vec2(v_texcoord.x, mix(v_texcoord.y, 1.0 - v_texcoord.y, u_sourceFlip)));
+    // An unmirrored capture keeps the framebuffer's bottom-left row order, so its
     // V axis is flipped relative to the source/quad UVs.
-    vec4 dst = texture(u_backdrop, vec2(v_texcoord.x, 1.0 - v_texcoord.y));
+    vec4 dst = texture(u_backdrop, vec2(v_texcoord.x, mix(v_texcoord.y, 1.0 - v_texcoord.y, u_backdropFlip)));
 
     float alphaSource = src.a;
     float alphaBackdrop = max(dst.a, u_opaqueBackdrop);

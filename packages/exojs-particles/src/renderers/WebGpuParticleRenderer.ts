@@ -194,19 +194,21 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       return;
     }
 
-    backend.setBlendMode(system.blendMode);
+    const blendMode = backend.activeDrawCommand?.material.blendMode ?? system.blendMode;
+
+    backend.setBlendMode(blendMode);
     const drawCallIndex = this._drawCallCount++;
     const drawCall = this._drawCalls[drawCallIndex];
 
     if (drawCall) {
       drawCall.system = system;
       drawCall.texture = texture;
-      drawCall.blendMode = system.blendMode;
+      drawCall.blendMode = blendMode;
     } else {
       this._drawCalls.push({
         system,
         texture,
-        blendMode: system.blendMode,
+        blendMode,
       });
     }
   }

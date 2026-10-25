@@ -42,6 +42,8 @@ export class WebGl2BackdropBlendCompositor {
   private readonly _sourceSamplerSlot: Int32Array = new Int32Array([0]);
   private readonly _backdropSamplerSlot: Int32Array = new Int32Array([1]);
   private readonly _modeValue: Int32Array = new Int32Array([0]);
+  private readonly _sourceFlipValue: Float32Array = new Float32Array([0]);
+  private readonly _backdropFlipValue: Float32Array = new Float32Array([1]);
   private readonly _opaqueValue: Float32Array = new Float32Array([0]);
   private _connection: BackdropBlendCompositorConnection | null = null;
 
@@ -122,7 +124,8 @@ export class WebGl2BackdropBlendCompositor {
     const scaleX = target.root && target.width > 0 ? gl.drawingBufferWidth / target.width : 1;
     const scaleY = target.root && target.height > 0 ? gl.drawingBufferHeight / target.height : 1;
     const px = Math.max(0, Math.floor(x * scaleX));
-    const py = Math.max(0, Math.floor(gl.drawingBufferHeight - (y + height) * scaleY));
+    const backingHeight = target.root ? gl.drawingBufferHeight : target.height;
+    const py = Math.max(0, Math.floor(backingHeight - (y + height) * scaleY));
     // The blit below is a raw framebuffer copy: it must land in the target's
     // own storage format, or a mismatch (e.g. an Rgba8Srgb target into an
     // Rgba8 backdrop) is not a guaranteed-compatible blit on every driver.
@@ -132,6 +135,12 @@ export class WebGl2BackdropBlendCompositor {
     // An opaque framebuffer (the default alpha-less root canvas) reports a
     // captured backdrop alpha of 0; treat such a backdrop as fully covered.
     const opaqueBackdrop = target.opaqueDestination;
+    // Mesa's llvmpipe can serve an unmirrored blit (or copyTexSubImage2D) of a
+    // texture that was sampled earlier before rendering still in flight into it
+    // has landed, returning an older frame's pixels. A mirrored blit stays
+    // ordered there, and the shader reads the backdrop top-down instead. A
+    // multisampled read cannot be mirrored: GL rejects a flipped resolve.
+    const mirrored = target instanceof RenderTexture && backend._effectiveSampleCount(target) === 1;
 
     try {
       // Capture the target region into the backdrop via blit; copyTexSubImage2D
@@ -139,12 +148,12 @@ export class WebGl2BackdropBlendCompositor {
       // path for the on-screen root canvas.
       gl.bindFramebuffer(gl.READ_FRAMEBUFFER, backend._renderTargetFramebuffer(target));
       gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, backend._renderTargetFramebuffer(backdrop));
-      gl.blitFramebuffer(px, py, px + cw, py + ch, 0, 0, cw, ch, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+      gl.blitFramebuffer(px, py, px + cw, py + ch, 0, mirrored ? ch : 0, cw, mirrored ? 0 : ch, gl.COLOR_BUFFER_BIT, gl.NEAREST);
       gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
       gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
       backend._rebindActiveTarget();
 
-      this._drawBlend(backend, source, backdrop, x, y, width, height, blendMode, opaqueBackdrop);
+      this._drawBlend(backend, source, backdrop, x, y, width, height, blendMode, opaqueBackdrop, mirrored);
     } finally {
       backend.releaseRenderTexture(backdrop);
     }
@@ -160,6 +169,7 @@ export class WebGl2BackdropBlendCompositor {
     height: number,
     blendMode: BlendModes,
     opaqueBackdrop: boolean,
+    backdropTopDown: boolean,
   ): void {
     const connection = this._connection;
 
@@ -173,11 +183,15 @@ export class WebGl2BackdropBlendCompositor {
 
     const projection = backend.view.getTransform().toArray(false);
 
+    this._sourceFlipValue[0] = source.flipY ? 1 : 0;
+    this._backdropFlipValue[0] = backdropTopDown ? 0 : 1;
     this._modeValue[0] = blendMode;
     this._opaqueValue[0] = opaqueBackdrop ? 1 : 0;
     this._shader.getUniform('u_projection').setValue(projection);
     this._shader.getUniform('u_source').setValue(this._sourceSamplerSlot);
+    this._shader.getUniform('u_sourceFlip').setValue(this._sourceFlipValue);
     this._shader.getUniform('u_backdrop').setValue(this._backdropSamplerSlot);
+    this._shader.getUniform('u_backdropFlip').setValue(this._backdropFlipValue);
     this._shader.getUniform('u_mode').setValue(this._modeValue);
     this._shader.getUniform('u_opaqueBackdrop').setValue(this._opaqueValue);
     this._shader.sync();

@@ -12,7 +12,13 @@ import { type ReadonlyRectangle, Rectangle } from '#math/Rectangle';
 import type { Drawable } from '#rendering/Drawable';
 import type { Filter } from '#rendering/filters/Filter';
 import type { Geometry } from '#rendering/geometry/Geometry';
-import { materialKeyForcesFlush } from '#rendering/material/MaterialKey';
+import {
+  copyMaterialKeyInto,
+  createEmptyMaterialKey,
+  deriveCapturePipelineKey,
+  type MaterialKey,
+  materialKeyForcesFlush,
+} from '#rendering/material/MaterialKey';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
 import type { RenderTarget } from '#rendering/RenderTarget';
@@ -75,6 +81,11 @@ interface RetainedBackendHooks {
   _endRetainedCapture?(set: RetainedInstructionSet): void;
   replayRetainedBatch?(batch: unknown): void;
   _validateRetainedInstructionSet?(set: RetainedInstructionSet): boolean;
+}
+
+interface CaptureMaterialKey extends MaterialKey {
+  sourcePipelineKey: number;
+  capturePipelineKey: number;
 }
 
 /**
@@ -230,6 +241,8 @@ export class RenderPlanBuilder {
   private readonly _opaqueDestinationStack: boolean[] = [];
   /** Coverage guarantee of the target this build collects into, read once per build. */
   private _rootDestinationOpaque = false;
+  private _captureNode: RenderNode | null = null;
+  private readonly _captureMaterials = new WeakMap<Drawable, CaptureMaterialKey>();
   /**
    * Shared across every barrier. Barriers nest, but a barrier reads its four
    * integers out before collecting its children, so no nested collect can
@@ -571,6 +584,11 @@ export class RenderPlanBuilder {
         this._pushScope(childPlan);
         this._resolutionStack.push(resolution);
         this._opaqueDestinationStack.push(false);
+        const previousCapture = this._captureNode;
+
+        if (needsBounds) {
+          this._captureNode = node;
+        }
 
         try {
           // The barrier's CONTENT is an ordinary subtree and gets the same
@@ -584,6 +602,7 @@ export class RenderPlanBuilder {
             node._collectForRenderPlan(this);
           }
         } finally {
+          this._captureNode = previousCapture;
           this._opaqueDestinationStack.pop();
           this._resolutionStack.pop();
           this._popScope();
@@ -1000,7 +1019,7 @@ export class RenderPlanBuilder {
     command.seq = seq;
     command.zIndex = zIndex;
     command.groupIndex = undefined;
-    command.material = drawable._getOrComputeMaterialKey(this.backend);
+    command.material = this._materialForDraw(drawable);
 
     // The stored extent is the drawable's own, unchanged - the same argument
     // the query just made. Asking the node again would resolve its parent chain
@@ -1566,6 +1585,38 @@ export class RenderPlanBuilder {
     tracked.noteKept(node.cullArea ?? node.getBounds());
   }
 
+  private _materialForDraw(drawable: Drawable): MaterialKey {
+    const source = drawable._getOrComputeMaterialKey(this.backend);
+
+    if (drawable !== this._captureNode) {
+      return source;
+    }
+
+    let material = this._captureMaterials.get(drawable);
+
+    if (material === undefined) {
+      material = Object.assign(createEmptyMaterialKey(), { sourcePipelineKey: -1, capturePipelineKey: 0 });
+      this._captureMaterials.set(drawable, material);
+    }
+
+    // The outer composite applies this node's blend; capturing it again would erase Multiply source RGB.
+    copyMaterialKeyInto(material, source);
+    material.blendMode = BlendModes.Normal;
+
+    if (source.ownMaterial) {
+      if (material.sourcePipelineKey !== source.pipelineKey) {
+        material.sourcePipelineKey = source.pipelineKey;
+        material.capturePipelineKey = deriveCapturePipelineKey(source.pipelineKey);
+      }
+
+      material.pipelineKey = material.capturePipelineKey;
+    } else {
+      material.pipelineKey = source.rendererId * 31 + BlendModes.Normal;
+    }
+
+    return material;
+  }
+
   public emitDraw(drawable: Drawable, seq?: number): void {
     const hasPending = this._hasPending;
     const pendingSeq = this._pendingSeq;
@@ -1616,7 +1667,7 @@ export class RenderPlanBuilder {
     // stale groupIndex from a previous frame (the plan player's group-adjacency
     // walk would coalesce on it before optimize() runs).
     command.groupIndex = undefined;
-    command.material = drawable._getOrComputeMaterialKey(this.backend);
+    command.material = this._materialForDraw(drawable);
     command.minX = bounds.left;
     command.minY = bounds.top;
     command.maxX = bounds.right;
@@ -1710,7 +1761,8 @@ export class RenderPlanBuilder {
     // fragment itself stays clean. Re-derive their key on the entry-replay
     // fallback so a structural retained invalidation cannot regroup using the
     // record-time snapshot before the replacement capture is produced.
-    command.material = slot.material.ownMaterial ? slot.drawable._getOrComputeMaterialKey(this.backend) : slot.material;
+    command.material =
+      slot.drawable === this._captureNode || slot.material.ownMaterial ? this._materialForDraw(slot.drawable) : slot.material;
     command.minX = slot.minX;
     command.minY = slot.minY;
     command.maxX = slot.maxX;
@@ -1872,6 +1924,7 @@ export class RenderPlanBuilder {
     this._resolutionStack.length = 0;
     this._opaqueDestinationStack.length = 0;
     this._rootDestinationOpaque = false;
+    this._captureNode = null;
     this._nodeIndex = 0;
     this._viewCullSuppression = 0;
     this._retentionRoot = null;

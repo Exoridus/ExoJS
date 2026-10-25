@@ -860,7 +860,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
   /** Default multi-texture path: rotate the base texture through the device's batch slots. */
   private _renderDefault(sprite: Sprite, texture: Texture | RenderTexture, backend: WebGpuBackend, nodeIndex: number): void {
-    const blendMode = sprite.blendMode;
+    const blendMode = backend.activeDrawCommand?.material.blendMode ?? sprite.blendMode;
 
     // Flush triggers: blend-mode change, texture-slot exhaustion, or a custom
     // batch still in flight that must drain first.
@@ -910,7 +910,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     // The material owns its blend mode; the sprite's own blendMode overrides it
     // when set away from the default (Normal).
-    const blendMode = sprite.blendMode === BlendModes.Normal ? material.blendMode : sprite.blendMode;
+    const blendMode =
+      backend.activeDrawCommand?.material.blendMode ?? (sprite.blendMode === BlendModes.Normal ? material.blendMode : sprite.blendMode);
     const blendModeChanged = this._currentBlendMode !== null && blendMode !== this._currentBlendMode;
     const materialChanged = this._currentMaterial !== null && material !== this._currentMaterial;
     const slotExhausted = !this._textureSlots.has(texture) && this._slotCount >= spriteMaterialTextureSlots;

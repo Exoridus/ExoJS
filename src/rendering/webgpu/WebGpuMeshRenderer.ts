@@ -427,7 +427,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       return;
     }
 
-    const blendMode = resolveBlendMode(mesh.blendMode, customShader);
+    const blendMode = backend.activeDrawCommand?.material.blendMode ?? resolveBlendMode(mesh.blendMode, customShader);
     backend.setBlendMode(blendMode);
 
     // A mesh WITHOUT a texture samples white, which is neutral against the
@@ -627,7 +627,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const renderTargetFormat = backend.renderTargetFormat;
     const stencil = coordinator.stencilActive;
     const depth = meshDepthMode(coordinator.depthWritesActive, writesDepth);
-    const blendMode = resolveBlendMode(mesh.blendMode, material);
+    const blendMode = backend.activeDrawCommand?.material.blendMode ?? resolveBlendMode(mesh.blendMode, material);
     // This path builds a single-target pipeline, and `drawInstanced` refuses a
     // multi-attachment target for exactly that reason, so the material's list
     // speaks for slot 0 and nothing else.

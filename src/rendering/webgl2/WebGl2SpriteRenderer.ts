@@ -783,7 +783,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
   /** Default multi-texture path: rotate the base texture through 16 slots. */
   private _renderDefault(sprite: Sprite, texture: Texture | RenderTexture, backend: WebGl2Backend, nodeIndex: number): void {
-    const blendMode = sprite.blendMode;
+    const blendMode = backend.activeDrawCommand?.material.blendMode ?? sprite.blendMode;
     const batchFull = this._instanceCount >= this._batchSize;
     const blendModeChanged = blendMode !== this._currentBlendMode;
     const slotExhausted = !this._textureSlots.has(texture) && this._slotCount >= this._maxTextureSlots;
@@ -822,7 +822,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   ): void {
     // The material owns its blend mode; the sprite's own blendMode overrides it
     // when set away from the default (Normal).
-    const blendMode = sprite.blendMode === BlendModes.Normal ? material.blendMode : sprite.blendMode;
+    const blendMode =
+      backend.activeDrawCommand?.material.blendMode ?? (sprite.blendMode === BlendModes.Normal ? material.blendMode : sprite.blendMode);
     const batchFull = this._instanceCount >= this._batchSize;
     const blendModeChanged = blendMode !== this._currentBlendMode;
     const materialChanged = material !== this._currentMaterial;
