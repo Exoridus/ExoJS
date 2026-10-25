@@ -13,6 +13,8 @@ import {
 import { AudioAnalyser, DuckingEffect } from '@codexo/exojs/audio-fx';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
+const VOICE_VOLUME = 0.4;
+
 class DuckingScene extends Scene {
   private music!: AudioStream;
   private voice!: Sound;
@@ -37,7 +39,7 @@ class DuckingScene extends Scene {
     // The pointer gesture also unlocks the AudioContext; firing while
     // still locked would be silent, so wait until audio is ready.
     if (!this.app.audio.locked) {
-      this.app.audio.play(this.voice, { bus: this.voiceBus, volume: 0.4 });
+      this.audio.play(this.voice, { bus: this.voiceBus, volume: VOICE_VOLUME });
     }
   };
 
@@ -65,7 +67,14 @@ class DuckingScene extends Scene {
 
     // The ducker listens to the voice bus and pulls the music bus down
     // whenever the voice exceeds the threshold.
-    this.ducking = new DuckingEffect({ sidechain: this.voiceBus, threshold: -30, ratio: 6, attackMs: 25, releaseMs: 260 });
+    this.ducking = new DuckingEffect({
+      sidechain: this.voiceBus,
+      // The sidechain receives the attenuated voice, so lower its threshold by the same gain.
+      threshold: -30 + 20 * Math.log10(VOICE_VOLUME),
+      ratio: 6,
+      attackMs: 25,
+      releaseMs: 260,
+    });
     app.audio.music.addEffect(this.ducking);
 
     // Tap each bus with a parallel analyser so we can show the live levels.
@@ -94,7 +103,7 @@ class DuckingScene extends Scene {
 
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically.
-    app.audio.play(this.music, { loop: true, volume: 0.5 });
+    this.audio.play(this.music, { loop: true, volume: 0.5 });
   }
 
   private bar(label: Text, name: string, y: number, level: number, color: Color): void {
@@ -126,6 +135,19 @@ class DuckingScene extends Scene {
 
   override destroy(): void {
     this.app.input.onPointerTap.remove(this.playVoice);
+    this.musicLevel?.destroy();
+    this.voiceLevel?.destroy();
+
+    if (this.ducking) {
+      this.app.audio.music.removeEffect(this.ducking);
+      this.ducking.destroy();
+    }
+
+    if (this.voiceBus) {
+      this.app.audio.unregisterBus(this.voiceBus);
+      this.voiceBus.destroy();
+    }
+
     this.gfx?.destroy();
     this.musicLabel?.destroy();
     this.voiceLabel?.destroy();

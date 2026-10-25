@@ -138,10 +138,19 @@ export const EditorPreview = ({
       }
     };
 
+    // Responsive layout can settle after window.resize has measured an intermediate width.
+    const surface = rootRef.current?.closest<HTMLElement>('[data-preview-surface]');
+    const surfaceObserver = new ResizeObserver(recalculateZoom);
+
+    if (surface) {
+      surfaceObserver.observe(surface);
+    }
+
     window.addEventListener('resize', recalculateZoom);
     window.addEventListener('keydown', preventScroll);
 
     return () => {
+      surfaceObserver.disconnect();
       window.removeEventListener('resize', recalculateZoom);
       window.removeEventListener('keydown', preventScroll);
       disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
@@ -163,9 +172,27 @@ export const EditorPreview = ({
         }
 
         const storageKey = `exo-preview-source:${Date.now()}:${Math.random().toString(36).slice(2)}`;
-        window.sessionStorage.setItem(storageKey, source);
         const target = buildPreviewUrl({ noCache: Date.now(), sourceKey: storageKey }, versionRef.current);
-        window.open(target, '_blank', 'noopener,noreferrer');
+        const preview = window.open('about:blank', '_blank');
+
+        if (!preview) {
+          return;
+        }
+
+        // A noopener tab does not inherit sessionStorage; seed its own storage before navigating.
+        preview.opener = null;
+
+        try {
+          preview.sessionStorage.setItem(storageKey, source);
+          const link = preview.document.createElement('a');
+          link.href = target;
+          link.referrerPolicy = 'no-referrer';
+          link.click();
+        } catch (error) {
+          preview.close();
+
+          throw error;
+        }
       },
     }),
     [],

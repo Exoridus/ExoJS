@@ -33,8 +33,7 @@ import ts from 'typescript';
 const WORKER_IMPORT = /^import\s+(\w+)\s+from\s+'([^']+)\?worker';[^\S\n]*$/gm;
 
 /** True for a `.ts` example that gets a generated `.js` sibling. */
-export const isTranspiledExampleSource = (name: string): boolean =>
-  name.endsWith('.ts') && !name.endsWith('.d.ts') && !name.endsWith('.worker.ts');
+export const isTranspiledExampleSource = (name: string): boolean => name.endsWith('.ts') && !name.endsWith('.d.ts');
 
 /**
  * Example subtrees that are not playground examples and therefore get no
@@ -77,8 +76,8 @@ const bundledWorkerSource = (entryPoint: string): string => {
 
 /**
  * Replaces every `?worker` import with the bundled source of the imported module,
- * as a string constant. `.worker.ts` files are excluded from the generated `.js`
- * catalog precisely because they only ever ship inlined like this.
+ * as a string constant. Worker entries also ship as string modules so the
+ * playground import map can resolve imports emitted by the editor.
  */
 const inlineWorkerImports = (source: string, tsFilePath: string): string =>
   source.replaceAll(WORKER_IMPORT, (_match, binding: string, specifier: string) => {
@@ -105,7 +104,10 @@ export const generatedHeader = (tsFileBasename: string): string =>
  * gate keep comparing generated output against committed output byte for byte.
  */
 export const transpileExampleSource = async (source: string, tsFilePath: string): Promise<string> => {
-  const { outputText } = ts.transpileModule(inlineWorkerImports(source, tsFilePath), {
+  const executable = tsFilePath.endsWith('.worker.ts')
+    ? `export default ${JSON.stringify(bundledWorkerSource(tsFilePath))};`
+    : inlineWorkerImports(source, tsFilePath);
+  const { outputText } = ts.transpileModule(executable, {
     compilerOptions: {
       module: ts.ModuleKind.ESNext,
       target: ts.ScriptTarget.ES2022,

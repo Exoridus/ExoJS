@@ -25,6 +25,9 @@ const lines: DialogLine[] = [
 const choices = ['Hold formation', 'Burn the gates'];
 
 class DialogSystemScene extends Scene {
+  private readonly onPointerTap = (): void => {
+    this.advance();
+  };
   private namePlate!: Text;
   private box!: Text;
   private choicePrompt!: Text;
@@ -66,7 +69,7 @@ class DialogSystemScene extends Scene {
 
     this.setChoicesVisible(false);
 
-    app.input.onPointerTap.add(() => this.advance());
+    this.app.input.onPointerTap.add(this.onPointerTap);
   }
 
   private advance(): void {
@@ -151,6 +154,14 @@ class DialogSystemScene extends Scene {
     if (this.choicePrompt.visible) {
       context.render(this.choicePrompt);
     }
+  }
+
+  override destroy(): void {
+    this.app.input.onPointerTap.remove(this.onPointerTap);
+    this.namePlate?.destroy();
+    this.box?.destroy();
+    this.choicePrompt?.destroy();
+    super.destroy();
   }
 }
 

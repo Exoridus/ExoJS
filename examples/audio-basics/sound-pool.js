@@ -4,6 +4,12 @@ import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 const POOL_SIZE = 12;
 const FIRE_INTERVAL = 0.04;
 class SoundPoolScene extends Scene {
+  onPointerDown = () => {
+    this.firing = true;
+  };
+  onPointerUp = () => {
+    this.firing = false;
+  };
   sound;
   graphics;
   label;
@@ -49,8 +55,8 @@ class SoundPoolScene extends Scene {
       this.firing = false;
     });
     // Holding a pointer or a finger fires as well, so touch devices can fill the pool.
-    app.input.onPointerDown.add(() => (this.firing = true));
-    app.input.onPointerUp.add(() => (this.firing = false));
+    this.app.input.onPointerDown.add(this.onPointerDown);
+    this.app.input.onPointerUp.add(this.onPointerUp);
   }
   spawnVoice() {
     const app = this.app;
@@ -114,6 +120,15 @@ class SoundPoolScene extends Scene {
     if (app.audio.locked) {
       context.render(this.tapPrompt);
     }
+  }
+  destroy() {
+    this.app.input.onPointerDown.remove(this.onPointerDown);
+    this.app.input.onPointerUp.remove(this.onPointerUp);
+    this.graphics?.destroy();
+    this.label?.destroy();
+    this.readout?.destroy();
+    this.tapPrompt?.destroy();
+    super.destroy();
   }
 }
 const app = new Application({

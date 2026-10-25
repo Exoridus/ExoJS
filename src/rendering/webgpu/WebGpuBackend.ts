@@ -1485,14 +1485,7 @@ export class WebGpuBackend implements RenderBackend {
       return this;
     }
 
-    if (this._renderer) {
-      this._flushActiveRendererAndEndPass();
-    } else if (this._clearRequested) {
-      // No active renderer but a clear is pending: open an empty coordinator
-      // pass so createColorAttachment consumes the clear state once.
-      this.passCoordinator.acquirePass();
-      this.passCoordinator.endPass();
-    }
+    this._flushActiveRendererAndEndPass();
 
     if (this._gpuTimer !== null) {
       // After the passes above have been submitted, so the resolve this queues
@@ -1963,6 +1956,12 @@ export class WebGpuBackend implements RenderBackend {
 
   private _flushActiveRendererAndEndPass(): void {
     this._renderer?.flush();
+
+    if (this._clearRequested) {
+      // Consume an empty renderer's clear before a target or pass-state change.
+      this.passCoordinator.acquirePass();
+    }
+
     // Ending the active GPU pass - and thus `queue.submit` - is centralized here
     // so it happens only at genuine boundaries (render-target / view / scissor /
     // stencil change, compositor, execute, plan / frame end), NOT once per batch

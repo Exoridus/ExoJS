@@ -50,6 +50,19 @@ const saveProfile = (profile: BindingProfile): void => {
 };
 
 class KeyRebindingScene extends Scene {
+  private readonly onKeyDown = (channel: number): void => {
+    if (!this.rebindRequested) {
+      return;
+    }
+
+    this.rebindRequested = false;
+    // Rebinding is atomic and baseline-safe: the key being pressed right
+    // now does not read as a fresh jump on the very next frame.
+    this.controls.rebind('jump', channel);
+    this.profile.set('jump', this.controls.jump.serialize());
+    saveProfile(this.profile);
+    this.refreshHud();
+  };
   private graphics!: Graphics;
   private controls = new ActionMap({
     jump: new ButtonAction(Keyboard.Space),
@@ -76,19 +89,7 @@ class KeyRebindingScene extends Scene {
     this.controls.applyProfile(this.profile);
     this.inputs.attach(this.controls);
 
-    app.input.onKeyDown.add(channel => {
-      if (!this.rebindRequested) {
-        return;
-      }
-
-      this.rebindRequested = false;
-      // Rebinding is atomic and baseline-safe: the key being pressed right
-      // now does not read as a fresh jump on the very next frame.
-      this.controls.rebind('jump', channel);
-      this.profile.set('jump', this.controls.jump.serialize());
-      saveProfile(this.profile);
-      this.refreshHud();
-    });
+    this.app.input.onKeyDown.add(this.onKeyDown);
 
     this.hud = mountControls();
 
@@ -140,6 +141,13 @@ class KeyRebindingScene extends Scene {
     this.graphics.drawRectangle(width / 2 - 20, this.heroY, 40, 40);
 
     context.render(this.graphics);
+  }
+
+  override destroy(): void {
+    this.app.input.onKeyDown.remove(this.onKeyDown);
+    this.graphics?.destroy();
+    this.hud?.dispose();
+    super.destroy();
   }
 }
 

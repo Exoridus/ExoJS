@@ -18,6 +18,19 @@ import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 const BAND_LABELS = ['Sub', 'Bass', 'Low mid', 'Mid', 'High mid', 'Presence', 'Treble', 'Air'];
 
 class AudioVisualisationScene extends Scene {
+  private readonly onPointerDown = (): void => {
+    // The first gesture only unlocks audio (core auto-starts the queued
+    // track); subsequent clicks toggle play / pause.
+    if (this.app.audio.locked) {
+      return;
+    }
+
+    if (this.musicVoice.paused) {
+      this.musicVoice.resume();
+    } else {
+      this.musicVoice.pause();
+    }
+  };
   private music!: AudioStream;
   private musicVoice!: Voice & Pausable & Seekable;
   private analyser!: AudioAnalyser;
@@ -79,19 +92,7 @@ class AudioVisualisationScene extends Scene {
       .setAnchor(0.5, 0.5)
       .setPosition(width / 2, height - 64);
 
-    app.input.onPointerDown.add(() => {
-      // The first gesture only unlocks audio (core auto-starts the queued
-      // track); subsequent clicks toggle play / pause.
-      if (app.audio.locked) {
-        return;
-      }
-
-      if (this.musicVoice.paused) {
-        this.musicVoice.resume();
-      } else {
-        this.musicVoice.pause();
-      }
-    });
+    this.app.input.onPointerDown.add(this.onPointerDown);
 
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically - play() returns the Voice now.
@@ -184,6 +185,17 @@ class AudioVisualisationScene extends Scene {
       this.tapPrompt.text = app.audio.locked ? 'Click or press any key to start the music' : 'Paused - click to resume';
       context.render(this.tapPrompt);
     }
+  }
+
+  override destroy(): void {
+    this.app.input.onPointerDown.remove(this.onPointerDown);
+    this.musicVoice?.stop();
+    this.analyser?.destroy();
+    this.detector?.destroy();
+    this.screen?.destroy();
+    this.texture?.destroy();
+    this.tapPrompt?.destroy();
+    super.destroy();
   }
 }
 

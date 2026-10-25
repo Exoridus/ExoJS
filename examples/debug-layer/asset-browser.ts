@@ -911,7 +911,7 @@ const openTexture = async ({ scene, item, scope }: PreviewContext): Promise<Prev
   const svg = descriptor.type === 'svg';
   // An SVG loads as an image element; a texture over it is this preview's to destroy.
   const texture = svg
-    ? new Texture(await scope.load(descriptor as typeof assets.iconPlay))
+    ? new Texture(await scope.load(Asset.type('svg', descriptor.source, { width: 150, height: 150 })))
     : await scope.load(descriptor as typeof assets.ship);
   const sprite = new Sprite(texture);
   const backdrop = checkerboard(texture.width, texture.height);
@@ -923,7 +923,7 @@ const openTexture = async ({ scene, item, scope }: PreviewContext): Promise<Prev
     bounds: { width: texture.width, height: texture.height },
     facts: [
       ['Pixels', `${texture.width} x ${texture.height}`],
-      ['Format', svg ? 'SVG, rasterized at its intrinsic size' : (fileName(descriptor.source).split('.').pop() ?? '').toUpperCase()],
+      ['Format', svg ? 'SVG, rasterized at the requested size' : (fileName(descriptor.source).split('.').pop() ?? '').toUpperCase()],
     ],
     mount(host) {
       const panel = host({
@@ -1851,12 +1851,12 @@ const textureSnippet = (item: BrowserItem, state: { zoom: number; nearest: boole
     'Application',
     'Scene',
     'Sprite',
-    ...(svg ? ['Texture'] : []),
+    ...(svg ? ['Asset', 'Texture'] : []),
     ...(state.nearest ? (svg ? ['ScaleModes'] : ['Asset', 'ScaleModes']) : []),
   ].sort();
   const load = svg
     ? `    // An SVG loads as an image; the texture over it is yours to destroy.
-    const image = await this.loader.load(assets.${item.key});
+    const image = await this.loader.load(Asset.type('svg', assets.${item.key}.source, { width: ${state.width}, height: ${state.height} }));
     const texture = new Texture(image${state.nearest ? ', { scaleMode: ScaleModes.Nearest }' : ''});`
     : state.nearest
       ? `    // Sampling is part of the texture handle, chosen when it is loaded.

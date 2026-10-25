@@ -40,7 +40,7 @@ void main() {
 
 const wgsl = `@group(0) @binding(1) var uTexture: texture_2d<f32>;
 @group(0) @binding(2) var uSampler: sampler;
-struct Uniforms { uTime: f32, uAmount: f32, uSplit: f32, _pad: f32 };
+struct Uniforms { @align(16) uTime: f32, @align(16) uAmount: f32, @align(16) uSplit: f32 };
 @group(1) @binding(0) var<uniform> uniforms: Uniforms;
 
 fn hash(point: vec2<f32>) -> f32 {

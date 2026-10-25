@@ -3,6 +3,13 @@ import { Application, Color, FixedResolutionCanvasSizing, Scene, Sprite, Time, V
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem } from '@codexo/exojs/particles';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 class ScreenShakeOnExplosionScene extends Scene {
+  onPointerTap = p => {
+    this.burstPos.set(p.x - this.ps.position.x, p.y - this.ps.position.y);
+    this.burst.reset();
+    this.view.shake(22, Time.seconds(0.28), { frequency: 26, decay: true });
+    this.flash.set(255, 120, 120, 1);
+    this.tweens.create(this.flash).to({ r: 255, g: 255, b: 255 }, 0.2).start();
+  };
   view;
   ps;
   burstPos;
@@ -30,13 +37,7 @@ class ScreenShakeOnExplosionScene extends Scene {
     });
     this.ps.addSpawnModule(this.burst);
     this.ps.addUpdateModule(new AlphaFadeOverLifetime());
-    app.input.onPointerTap.add(p => {
-      this.burstPos.set(p.x - this.ps.position.x, p.y - this.ps.position.y);
-      this.burst.reset();
-      this.view.shake(22, Time.seconds(0.28), { frequency: 26, decay: true });
-      this.flash.set(255, 120, 120, 1);
-      app.tweens.create(this.flash).to({ r: 255, g: 255, b: 255 }, 0.2).start();
-    });
+    this.app.input.onPointerTap.add(this.onPointerTap);
   }
   update() {
     this.ship.setTint(this.flash);
@@ -44,6 +45,13 @@ class ScreenShakeOnExplosionScene extends Scene {
   draw(context) {
     context.render(this.ps, { view: this.view });
     context.render(this.ship, { view: this.view });
+  }
+  destroy() {
+    this.app.input.onPointerTap.remove(this.onPointerTap);
+    this.view?.destroy();
+    this.ship?.destroy();
+    this.burstPos?.destroy();
+    super.destroy();
   }
 }
 const app = new Application({

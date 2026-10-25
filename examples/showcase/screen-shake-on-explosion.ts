@@ -1,8 +1,26 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, Time, Vector, View } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  type Pointer,
+  type RenderingContext,
+  Scene,
+  Sprite,
+  Time,
+  Vector,
+  View,
+} from '@codexo/exojs';
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem } from '@codexo/exojs/particles';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class ScreenShakeOnExplosionScene extends Scene {
+  private readonly onPointerTap = (p: Pointer): void => {
+    this.burstPos.set(p.x - this.ps.position.x, p.y - this.ps.position.y);
+    this.burst.reset();
+    this.view.shake(22, Time.seconds(0.28), { frequency: 26, decay: true });
+    this.flash.set(255, 120, 120, 1);
+    this.tweens.create(this.flash).to({ r: 255, g: 255, b: 255 }, 0.2).start();
+  };
   private view!: View;
   private ps!: ParticleSystem;
   private burstPos!: Vector;
@@ -32,13 +50,7 @@ class ScreenShakeOnExplosionScene extends Scene {
     });
     this.ps.addSpawnModule(this.burst);
     this.ps.addUpdateModule(new AlphaFadeOverLifetime());
-    app.input.onPointerTap.add(p => {
-      this.burstPos.set(p.x - this.ps.position.x, p.y - this.ps.position.y);
-      this.burst.reset();
-      this.view.shake(22, Time.seconds(0.28), { frequency: 26, decay: true });
-      this.flash.set(255, 120, 120, 1);
-      app.tweens.create(this.flash).to({ r: 255, g: 255, b: 255 }, 0.2).start();
-    });
+    this.app.input.onPointerTap.add(this.onPointerTap);
   }
 
   override update(): void {
@@ -48,6 +60,14 @@ class ScreenShakeOnExplosionScene extends Scene {
   override draw(context: RenderingContext): void {
     context.render(this.ps, { view: this.view });
     context.render(this.ship, { view: this.view });
+  }
+
+  override destroy(): void {
+    this.app.input.onPointerTap.remove(this.onPointerTap);
+    this.view?.destroy();
+    this.ship?.destroy();
+    this.burstPos?.destroy();
+    super.destroy();
   }
 }
 

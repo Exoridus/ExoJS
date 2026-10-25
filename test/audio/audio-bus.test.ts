@@ -16,6 +16,7 @@ interface MockGainNode {
   gain: {
     setTargetAtTime: MockInstance;
     cancelScheduledValues: MockInstance;
+    cancelAndHoldAtTime?: MockInstance;
     setValueAtTime: MockInstance;
     linearRampToValueAtTime: MockInstance;
     value: number;
@@ -190,6 +191,7 @@ describe('AudioBus', () => {
 
     expect(spy.outputNode.gain.setValueAtTime).toHaveBeenCalledWith(0.4, expect.any(Number));
     expect(spy.outputNode.gain.setTargetAtTime).not.toHaveBeenCalled();
+    expect(spy.outputNode.gain.linearRampToValueAtTime).not.toHaveBeenCalled();
 
     spy.restore();
     bus.destroy();
@@ -206,26 +208,75 @@ describe('AudioBus', () => {
     bus.destroy();
   });
 
-  // 5. Muted zeroes the gain via setTargetAtTime
-  test('setting muted=true calls setTargetAtTime(0) on outputNode', () => {
+  test('muting schedules a finite ramp ending at exact zero', () => {
     const spy = spyOnBusCreation();
 
     const bus = new AudioBus('muted-test', { muted: false });
     bus.muted = true;
 
-    expect(spy.outputNode.gain.setTargetAtTime).toHaveBeenCalledWith(0, expect.any(Number), 0.01);
+    expect(spy.outputNode.gain.linearRampToValueAtTime).toHaveBeenCalledTimes(1);
+    const [target, end] = spy.outputNode.gain.linearRampToValueAtTime.mock.calls[0]!;
+    expect(target).toBe(0);
+    expect(end).toBeGreaterThan(getAudioContext().currentTime);
+    expect(end).toBeLessThanOrEqual(getAudioContext().currentTime + 0.1);
 
     spy.restore();
     bus.destroy();
   });
 
-  test('setting muted=false calls setTargetAtTime(volume) on outputNode', () => {
+  test('unmuting ramps back to the configured volume', () => {
     const spy = spyOnBusCreation();
 
     const bus = new AudioBus('unmuted-test', { volume: 0.8, muted: true });
     bus.muted = false;
 
-    expect(spy.outputNode.gain.setTargetAtTime).toHaveBeenCalledWith(0.8, expect.any(Number), 0.01);
+    expect(spy.outputNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.8, expect.any(Number));
+
+    spy.restore();
+    bus.destroy();
+  });
+
+  test('replacing volume automation holds the current gain and cancels the old endpoint', () => {
+    const spy = spyOnBusCreation();
+    const gain = spy.outputNode.gain;
+    gain.cancelAndHoldAtTime = vi.fn();
+    const bus = new AudioBus('replace-volume');
+    const now = getAudioContext().currentTime;
+
+    bus.volume = 0;
+    gain.value = 0.35;
+    gain.cancelAndHoldAtTime.mockImplementation(() => {
+      gain.value = 1;
+    });
+    bus.volume = 0.6;
+
+    expect(gain.setValueAtTime).toHaveBeenLastCalledWith(0.35, now);
+    expect(gain.cancelAndHoldAtTime).toHaveBeenCalledTimes(2);
+    expect(gain.cancelAndHoldAtTime).toHaveBeenLastCalledWith(now);
+    expect(gain.linearRampToValueAtTime).toHaveBeenLastCalledWith(0.6, expect.any(Number));
+    expect(gain.cancelAndHoldAtTime.mock.invocationCallOrder[1]).toBeLessThan(gain.linearRampToValueAtTime.mock.invocationCallOrder[1]!);
+    expect(gain.cancelScheduledValues).not.toHaveBeenCalled();
+
+    spy.restore();
+    bus.destroy();
+  });
+
+  test('without cancelAndHoldAtTime a replacement starts at the gain before cancellation', () => {
+    const spy = spyOnBusCreation();
+    const gain = spy.outputNode.gain;
+    const bus = new AudioBus('replace-volume-fallback');
+    bus.volume = 0;
+    gain.value = 0.35;
+    gain.cancelScheduledValues.mockImplementation(() => {
+      gain.value = 1;
+    });
+
+    bus.volume = 0.6;
+
+    expect(gain.cancelScheduledValues).toHaveBeenCalledTimes(2);
+    expect(gain.cancelScheduledValues).toHaveBeenLastCalledWith(getAudioContext().currentTime);
+    expect(gain.setValueAtTime).toHaveBeenLastCalledWith(0.35, getAudioContext().currentTime);
+    expect(gain.linearRampToValueAtTime).toHaveBeenLastCalledWith(0.6, expect.any(Number));
 
     spy.restore();
     bus.destroy();
@@ -435,11 +486,11 @@ describe('AudioBus', () => {
   test('setting volume to its current value does not re-apply the gain', () => {
     const spy = spyOnBusCreation();
     const bus = new AudioBus('volume-noop', { volume: 0.5 });
-    spy.outputNode.gain.setTargetAtTime.mockClear();
+    spy.outputNode.gain.linearRampToValueAtTime.mockClear();
 
     bus.volume = 0.5;
 
-    expect(spy.outputNode.gain.setTargetAtTime).not.toHaveBeenCalled();
+    expect(spy.outputNode.gain.linearRampToValueAtTime).not.toHaveBeenCalled();
 
     spy.restore();
     bus.destroy();
@@ -448,11 +499,11 @@ describe('AudioBus', () => {
   test('setting muted to its current value does not re-apply the gain', () => {
     const spy = spyOnBusCreation();
     const bus = new AudioBus('muted-noop', { muted: true });
-    spy.outputNode.gain.setTargetAtTime.mockClear();
+    spy.outputNode.gain.linearRampToValueAtTime.mockClear();
 
     bus.muted = true;
 
-    expect(spy.outputNode.gain.setTargetAtTime).not.toHaveBeenCalled();
+    expect(spy.outputNode.gain.linearRampToValueAtTime).not.toHaveBeenCalled();
 
     spy.restore();
     bus.destroy();
@@ -659,7 +710,7 @@ describe('AudioBus', () => {
     bus.destroy();
   });
 
-  test('fadeOut(0) mutes immediately (stopAfter defaults to true) without scheduling a ramp', () => {
+  test('fadeOut(0) mutes immediately using the bounded de-click ramp', () => {
     const spy = spyOnBusCreation();
     const bus = new AudioBus('fade-out-zero');
 
@@ -667,7 +718,7 @@ describe('AudioBus', () => {
 
     expect(result).toBe(bus);
     expect(bus.muted).toBe(true);
-    expect(spy.outputNode.gain.linearRampToValueAtTime).not.toHaveBeenCalled();
+    expect(spy.outputNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
 
     spy.restore();
     bus.destroy();
