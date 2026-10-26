@@ -131,6 +131,7 @@ class AssetBrowserScene extends Scene {
   list = document.createElement('ul');
   inspector = document.createElement('aside');
   transport = document.createElement('div');
+  navigation = document.createElement('span');
   zoomReadout = document.createElement('output');
   heading = document.createElement('h2');
   facts = document.createElement('dl');
@@ -229,7 +230,11 @@ class AssetBrowserScene extends Scene {
     this.panel?.dispose();
     this.panel = null;
     this.zoomTarget = null;
-    this.transport.replaceChildren();
+    for (const control of [...this.transport.children]) {
+      if (control !== this.navigation) {
+        control.remove();
+      }
+    }
     this.backdrop = new Color(32, 37, 50);
     try {
       this.preview?.dispose();
@@ -264,13 +269,13 @@ class AssetBrowserScene extends Scene {
         const row = input?.parentElement;
         if (row) {
           Object.assign(row.style, { flex: '1 1 150px', minWidth: '130px', margin: '0' });
-          this.transport.append(row);
+          this.transport.insertBefore(row, this.navigation);
         }
       }
       for (const button of panel.element.querySelectorAll('button')) {
         if (['Play', 'Pause', 'Stop'].includes(button.textContent ?? '')) {
           Object.assign(button.style, { width: 'auto', margin: '0' });
-          this.transport.append(button);
+          this.transport.insertBefore(button, this.navigation);
         }
       }
       this.addTransportActions();
@@ -314,12 +319,23 @@ class AssetBrowserScene extends Scene {
     });
     this.transport.setAttribute('role', 'group');
     this.transport.setAttribute('aria-label', 'Preview controls');
+    this.navigation.style.display = 'contents';
+    for (const [label, direction] of [
+      ['Previous', -1],
+      ['Next', 1],
+    ]) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = label;
+      Object.assign(button.style, chipStyle(false));
+      button.addEventListener('click', () => this.stepAsset(direction));
+      this.navigation.append(button);
+    }
+    this.transport.append(this.navigation);
     document.body.append(this.transport);
   }
   addTransportActions() {
     const actions = {
-      Previous: () => this.stepAsset(-1),
-      Next: () => this.stepAsset(1),
       ...(this.preview?.bounds ? { Fit: () => this.fit(), '1:1': () => this.setZoom(unitsPerCssPixel(this.app, this.app.canvas)) } : {}),
     };
     for (const [label, run] of Object.entries(actions)) {
@@ -1149,11 +1165,11 @@ const openAudio = async ({ scene, item, scope, isCurrent }) => {
   const buffer = music ? null : playable.audioBuffer;
   const channels = buffer?.numberOfChannels ?? 0;
   const channelNames = channels === 2 ? ['L', 'R'] : Array.from({ length: channels }, (_, channel) => String(channel + 1));
-  const wave = { width: PREVIEW.width - 80, height: channels > 1 ? 300 : 220, gap: 16, left: PREVIEW.x + 40 };
   // A sound keeps its overview on top and the live signal in a strip below;
   // streamed music has no overview, so the live signal takes the middle.
   const scopeHeight = buffer ? 100 : 220;
-  const originalCenterY = PREVIEW_CENTER.y;
+  const waveformHeight = () => Math.min(channels > 1 ? 300 : 220, PREVIEW.height - 48 - scopeHeight - 32);
+  const wave = { width: PREVIEW.width - 80, height: waveformHeight(), gap: 16, left: PREVIEW.x + 40 };
   const top = buffer ? PREVIEW_CENTER.y - (wave.height + 48 + scopeHeight) / 2 : PREVIEW_CENTER.y - scopeHeight / 2;
   const lane = { height: (wave.height - wave.gap * Math.max(0, channels - 1)) / Math.max(1, channels), top };
   const strip = { top: buffer ? top + wave.height + 48 : top, height: scopeHeight };
@@ -1363,7 +1379,9 @@ const openAudio = async ({ scene, item, scope, isCurrent }) => {
     resize() {
       wave.width = PREVIEW.width - 80;
       wave.left = PREVIEW.x + 40;
-      lane.top = top + PREVIEW_CENTER.y - originalCenterY;
+      wave.height = waveformHeight();
+      lane.height = (wave.height - wave.gap * Math.max(0, channels - 1)) / Math.max(1, channels);
+      lane.top = buffer ? PREVIEW_CENTER.y - (wave.height + 48 + scopeHeight) / 2 : PREVIEW_CENTER.y - scopeHeight / 2;
       strip.top = buffer ? lane.top + wave.height + 48 : lane.top;
       labels.forEach((label, index) => {
         const channel = channels > 1 && index < channelNames.length;

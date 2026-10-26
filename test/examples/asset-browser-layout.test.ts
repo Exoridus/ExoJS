@@ -8,6 +8,8 @@ import * as Exo from '@codexo/exojs';
 import ts from 'typescript';
 import { expect, it, vi } from 'vitest';
 
+import { choice, domDemoPanel, slider, toggle } from '../../examples/shared/runtime';
+
 const source = readFileSync(resolve('examples/debug-layer/asset-browser.ts'), 'utf8');
 
 const factory = (name: string, next: string, globals: Record<string, unknown> = {}) => {
@@ -164,5 +166,146 @@ it('reflows font samples at their new width while preserving the text, size, and
     }
   } finally {
     preview.dispose();
+  }
+});
+
+it.each([376, 796])('fits decoded stereo audio at %i px and relayouts without changing playback', async height => {
+  const area = { x: 272, width: 596, height };
+  const center = { x: 570, y: height / 2 };
+  const samples = Float32Array.from({ length: 256 }, (_, index) => (index % 2 ? -1 : 1));
+  const sound = { duration: 2, audioBuffer: { duration: 2, numberOfChannels: 2, getChannelData: () => samples } };
+  const voice = { time: 0.8, ended: false, paused: false, stop: vi.fn(), pause: vi.fn(), resume: vi.fn(), volume: 0.8 };
+  const audio = { onUnlock: { add: (start: () => void) => start(), remove: vi.fn() }, play: vi.fn(() => voice), locked: false };
+  const open = factory('openAudio', 'openVideo', {
+    PREVIEW: area,
+    PREVIEW_CENTER: center,
+    MONO: 'sans-serif',
+    assets: { sound: { type: 'sound' } },
+    demoAssetCategories: { sound: 'sound' },
+    AudioAnalyser: class {
+      getWaveformFloat = () => samples;
+
+      destroy() {}
+    },
+    formatSeconds: String,
+    audioSnippet: (_item: unknown, state: unknown) => JSON.stringify(state),
+    choice,
+    slider,
+    toggle,
+  });
+  const preview = await open({
+    scene: { app: { audio } },
+    item: { key: 'sound' },
+    scope: { load: async () => sound },
+    isCurrent: () => true,
+  });
+  let panel!: ReturnType<typeof domDemoPanel>;
+
+  try {
+    preview.mount((options: Parameters<typeof domDemoPanel>[0]) => (panel = domDemoPanel(options)));
+    [...panel.element.querySelectorAll('button')].find(button => button.textContent === 'Play')!.click();
+    panel.set('volume', 0.4);
+    panel.set('position', 40);
+    const snippet = preview.snippet();
+
+    for (const nextHeight of [height, 376, 796]) {
+      if (area.height !== nextHeight) {
+        area.height = nextHeight;
+        center.y = nextHeight / 2;
+        preview.resize();
+      }
+
+      preview.update();
+      expect(preview.snippet()).toBe(snippet);
+      expect(voice.time).toBe(0.8);
+      expect(voice.volume).toBe(0.4);
+
+      for (const node of preview.overlay as Exo.RenderNode[]) {
+        const bounds = node.getBounds();
+
+        if (bounds.width > 0 && bounds.height > 0) {
+          expect(bounds.y).toBeGreaterThanOrEqual(0);
+          expect(bounds.y + bounds.height).toBeLessThanOrEqual(nextHeight);
+        }
+      }
+    }
+
+    expect(audio.play).toHaveBeenCalledTimes(1);
+    expect(voice.stop).not.toHaveBeenCalled();
+  } finally {
+    preview.dispose();
+    panel?.dispose();
+  }
+});
+
+it('keeps navigation focus across pending and repeated selections without taking focus from other controls', async () => {
+  const items = ['first', 'second', 'third'].map(key => ({ id: key, key, name: key, group: 'Textures' }));
+  const pending: Array<(preview: object) => void> = [];
+  const body = source.slice(source.indexOf('class AssetBrowserScene'), source.indexOf('const chipStyle'));
+  const compiled = ts.transpileModule(`${body}\nnew AssetBrowserScene();`, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const scene = runInNewContext(compiled, {
+    ...Exo,
+    Scene: class {},
+    document,
+    window,
+    performance,
+    console,
+    STAGE: { width: 1200, height: 480 },
+    PREVIEW: { x: 272, width: 596, height: 376 },
+    PREVIEW_CENTER: { x: 570, y: 188 },
+    SIDEBAR_WIDTH: 272,
+    INSPECTOR_WIDTH: 332,
+    FONT: 'sans-serif',
+    MONO: 'sans-serif',
+    GROUPS: ['Textures'],
+    ITEMS: items,
+    assets: Object.fromEntries(items.map(item => [item.key, { source: item.key }])),
+    fileName: String,
+    chipStyle: () => ({}),
+    demoPanel: domDemoPanel,
+    unitsPerCssPixel: () => 1,
+    isAbort: () => false,
+    openPreview: () => new Promise(resolve => pending.push(resolve)),
+  });
+  const preview = () => ({ bounds: null, facts: [], dispose: vi.fn(), mount: (host: typeof domDemoPanel) => host({ controls: {} }) });
+  scene.app = { canvas: document.createElement('canvas'), loader: { inspect: () => [] } };
+  scene.loader = { createScope: () => ({ destroy() {} }) };
+  scene.selected = items[0];
+  scene.mountTransport();
+  scene.mountPanel(preview());
+  const search = document.createElement('input');
+  document.body.append(search);
+  const navigation = (label: string) =>
+    [...scene.transport.querySelectorAll('button')].find((button: HTMLButtonElement) => button.textContent === label) as HTMLButtonElement;
+
+  try {
+    const next = navigation('Next');
+    next.focus();
+    next.click();
+    expect(scene.selected).toBe(items[1]);
+    expect(document.activeElement).toBe(next);
+    pending.shift()!(preview());
+    await Promise.resolve();
+    expect(document.activeElement).toBe(navigation('Next'));
+    navigation('Next').click();
+    expect(scene.selected).toBe(items[2]);
+    navigation('Previous').focus();
+    navigation('Previous').click();
+    expect(scene.selected).toBe(items[1]);
+    search.focus();
+    pending.shift()!(preview());
+    pending.shift()!(preview());
+    await Promise.resolve();
+    expect(document.activeElement).toBe(search);
+  } finally {
+    scene.closePreview();
+    scene.message.destroy();
+    scene.frame.destroy();
+    scene.view.destroy();
+    scene.transport.remove();
+    scene.codePanel.remove();
+    search.remove();
   }
 });

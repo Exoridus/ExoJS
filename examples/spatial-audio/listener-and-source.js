@@ -70,12 +70,14 @@ class ListenerAndSourceScene extends Scene {
   panel;
   angle = 0;
   dragging = false;
+  audioLocked = true;
   alive = true;
   failure = '';
   pulse = 0;
   startedAt = 0;
   init() {
     const audio = this.app.audio;
+    this.audioLocked = audio.locked;
     this.sound = new Sound(createPulseLoop());
     this.previousTarget = audio.listener.target;
     this.previousPosition = { x: audio.listener.position.x, y: audio.listener.position.y };
@@ -111,7 +113,7 @@ class ListenerAndSourceScene extends Scene {
   }
   onDown = (_pointer, x, y) => {
     const { scale, contentHeight } = this.panel.fit(this.app, this.app.canvas);
-    if (y >= contentHeight * scale) {
+    if (this.audioLocked || y >= contentHeight * scale || this.app.interaction.nodeAt(x, y)) {
       return;
     }
     this.panel.set('orbit', false);
@@ -163,6 +165,8 @@ class ListenerAndSourceScene extends Scene {
     this.source.y = Math.max(48 * scale, Math.min((contentHeight - 24) * scale, this.source.y));
   }
   update(delta) {
+    // Pointer presses arrive before update, after their unlock gesture may already have resumed audio.
+    this.audioLocked = this.app.audio.locked;
     const move = this.actions.move.value;
     if (this.panel.values.orbit) {
       this.angle += delta * 1.1;

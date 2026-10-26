@@ -317,7 +317,7 @@
       "path": "sprites-textures/blendmodes.js",
       "language": "typescript",
       "title": "Blend Modes",
-      "description": "Click the canvas, press Left/Right or use the panel to step through all 18 blend modes applied to two overlapping tinted keys; the source alpha slider and motion toggle show how each mode composites. Cyan key = destination. Magenta key = source. Linear light, premultiplied alpha.",
+      "description": "Press Left/Right or use the panel to step through all 18 blend modes applied to two overlapping tinted keys; the source alpha slider and motion toggle show how each mode composites. Cyan key = destination. Magenta key = source. Linear light, premultiplied alpha.",
       "backend": "core",
       "tags": ["sprite", "rendering", "fx"],
       "capabilities": ["pointer"],
@@ -607,7 +607,7 @@
       "path": "render-targets/render-to-texture.js",
       "language": "typescript",
       "title": "Capture a Texture",
-      "description": "Compare a live render texture of moving sprites with a frozen snapshot; click anywhere or press Space to capture a new frame into the right-hand texture. Press Capture or Space to capture once. The scene owns both render textures until it ends.",
+      "description": "Compare a live render texture of moving sprites with a frozen snapshot. Press Capture or Space to capture a new frame into the right-hand texture. The scene owns both render textures until it ends.",
       "backend": "core",
       "tags": ["rendering", "advanced"],
       "level": "intro"
