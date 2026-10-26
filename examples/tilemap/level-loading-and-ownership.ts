@@ -59,12 +59,12 @@ class LevelOwnershipScene extends Scene {
   private node: TileMapNode | null = null;
   private activeId: string | null = null;
   private pending: { readonly id: string } | null = null;
+  private outcome = 'Waiting';
   private readonly roomLabel = new Text('No room loaded', { fillColor: new Color(236, 239, 242), fontSize: 34 });
   private readonly ownership = new Text('', { fillColor: new Color(236, 239, 242) });
   private panel!: ReturnType<typeof demoPanel>;
 
   override init(): void {
-    this.roomLabel.position.set(470, 80);
     this.runtime = new MapWorldRuntime({
       world,
       scope: this.loader,
@@ -77,8 +77,6 @@ class LevelOwnershipScene extends Scene {
     this.panel = demoPanel({
       scene: this,
       layout: 'bar',
-      title: 'Room Loading and Asset Ownership',
-      hint: 'Optional advanced: map and atlas claims. A 0.75 s transition delay makes Cancel observable.',
       controls: {},
       actions: {
         'Go to other room': () => {
@@ -103,7 +101,7 @@ class LevelOwnershipScene extends Scene {
     const request = { id };
 
     this.pending = request;
-    this.roomLabel.text = `Loading ${world.getLevel(id)?.name}...`;
+    this.outcome = 'Loading (simulated 750 ms cancellation window)';
     this.panel.status(this.describeResidency());
 
     try {
@@ -117,10 +115,8 @@ class LevelOwnershipScene extends Scene {
 
       this.node?.destroy();
       this.node = new TileMapNode(level.map);
-      this.node.position.set(96, 34);
-      this.node.scale.set(0.85);
       this.activeId = id;
-      this.roomLabel.text = `${level.level.name} loaded`;
+      this.outcome = `${level.level.name} loaded`;
 
       if (previousId) {
         this.runtime.unloadLevel(previousId);
@@ -129,11 +125,12 @@ class LevelOwnershipScene extends Scene {
       this.panel.status(this.describeResidency());
     } catch (error) {
       if (this.pending === request) {
-        this.panel.status(error instanceof Error ? error.message : String(error));
+        this.outcome = error instanceof Error ? error.message : String(error);
       }
     } finally {
       if (this.pending === request) {
         this.pending = null;
+        this.panel.status(this.describeResidency());
       }
     }
   }
@@ -147,11 +144,13 @@ class LevelOwnershipScene extends Scene {
 
     this.pending = null;
     this.runtime.unloadLevel(id);
-    this.roomLabel.text = this.activeId ? `${world.getLevel(this.activeId)?.name} loaded` : 'No room loaded';
+    this.outcome = `Cancelled ${world.getLevel(id)?.name}; pending resources released`;
     this.panel.status(this.describeResidency());
   }
 
   private unloadActive(): void {
+    this.cancelPending();
+
     if (!this.activeId) {
       return;
     }
@@ -161,13 +160,16 @@ class LevelOwnershipScene extends Scene {
     this.node = null;
     this.activeId = null;
     this.runtime.unloadLevel(id);
-    this.roomLabel.text = 'No room loaded';
+    this.outcome = `${world.getLevel(id)?.name} unloaded; resources released`;
     this.panel.status(this.describeResidency());
   }
 
   private describeResidency(): string {
     const rows = this.app.loader.inspect();
-    const atlas = rows.find(row => row.aliases.some(alias => alias.includes('mapPack_tilesheet')));
+    const atlas = rows.find(row => row.aliases.includes(assets.mapPackTilesheet.source));
+    this.roomLabel.text = `Current: ${this.activeId ? world.getLevel(this.activeId)?.name : 'none'} | Requested: ${this.pending ? world.getLevel(this.pending.id)?.name : 'none'}`;
+    this.panel.actions['Cancel pending']!.enabled = this.pending !== null;
+    this.panel.actions['Unload room']!.enabled = this.activeId !== null || this.pending !== null;
     this.ownership.text = `Shared atlas: ${atlas?.claims ?? 0} claim(s)\n${Object.entries(roomPath)
       .map(([id, path]) => {
         const room = rows.find(row => row.aliases.some(alias => alias.includes(path)));
@@ -176,14 +178,10 @@ class LevelOwnershipScene extends Scene {
       })
       .join('\n')}`;
 
-    return `${this.runtime.levels.length} live room(s), shared atlas ${atlas?.claims ?? 0} claim(s)`;
+    return `${this.outcome} | ${this.runtime.levels.length} live room(s), shared atlas ${atlas?.claims ?? 0} claim(s)`;
   }
 
   override draw(context: RenderingContext): void {
-    if (this.node) {
-      context.render(this.node);
-    }
-
     const { scale: k, width, contentHeight, compact } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
     this.roomLabel.style.fontSize = 18 * k;
     this.roomLabel.setPosition(16 * k, 12 * k);
@@ -193,6 +191,7 @@ class LevelOwnershipScene extends Scene {
     if (this.node) {
       this.node.setPosition(0, 42 * k);
       this.node.setScale(Math.min((compact ? width : width * 0.61) / 1280, Math.max(30, contentHeight - (compact ? 130 : 60)) / 768) * k);
+      context.render(this.node);
     }
 
     context.render(this.roomLabel);

@@ -1569,7 +1569,7 @@
       "profile": "standard",
       "path": "maps/ownership-workshop-map.tmj",
       "bytes": 1347,
-      "sha256": "4e5f01e619c7446f378b45918c24c6c9149942f294eb06bca05d51e6859d26af",
+      "sha256": "ff82247f32f569aeb4006d1d0d101dc125bfb5615f9feebab14dbf1a208b65ee",
       "provenance": "exojs",
       "transitive": [
         "images/map-pack-tilesheet.png"
@@ -3298,7 +3298,7 @@
     {
       "path": "maps/ownership-workshop-map.tmj",
       "bytes": 1347,
-      "sha256": "4e5f01e619c7446f378b45918c24c6c9149942f294eb06bca05d51e6859d26af",
+      "sha256": "ff82247f32f569aeb4006d1d0d101dc125bfb5615f9feebab14dbf1a208b65ee",
       "role": "entry",
       "profile": "standard",
       "provenance": "exojs"
