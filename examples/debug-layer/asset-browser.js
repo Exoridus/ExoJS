@@ -5,8 +5,8 @@ import {
   Asset,
   BitmapText,
   Color,
-  FixedResolutionCanvasSizing,
   Graphics,
+  ManualCanvasSizing,
   ScaleModes,
   Scene,
   Sprite,
@@ -20,7 +20,7 @@ import { ObjectKind, TileMapNode } from '@codexo/exojs/tilemap';
 import { demoAssetCategories, demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { ldtkExtension } from '@codexo/exojs-ldtk';
 import { tiledExtension } from '@codexo/exojs-tiled';
-import { choice, domDemoPanel as demoPanel, slider, toggle } from '@examples/runtime';
+import { choice, domDemoPanel as demoPanel, slider, toggle, unitsPerCssPixel } from '@examples/runtime';
 // An asset browser for the standard demo catalog. It is an ordinary scene:
 //
 //   - The list is derived from `demoAssets` and `demoAssetCategories`; nothing
@@ -33,10 +33,10 @@ import { choice, domDemoPanel as demoPanel, slider, toggle } from '@examples/run
 //   - Nothing plays on selection. Play goes through `app.audio.onUnlock`, which
 //     waits for the browser's autoplay gesture and is cancelled on switch.
 //   - "Code" turns the current preview settings into a complete scene.
-const STAGE = { width: 1280, height: 720 };
+const STAGE = { width: Math.max(960, window.innerWidth), height: Math.max(480, window.innerHeight) };
 const SIDEBAR_WIDTH = 272;
 const INSPECTOR_WIDTH = 332;
-const PREVIEW = { x: SIDEBAR_WIDTH, y: 0, width: STAGE.width - SIDEBAR_WIDTH - INSPECTOR_WIDTH, height: STAGE.height };
+const PREVIEW = { x: SIDEBAR_WIDTH, y: 0, width: STAGE.width - SIDEBAR_WIDTH - INSPECTOR_WIDTH, height: STAGE.height - 104 };
 const PREVIEW_CENTER = { x: PREVIEW.x + PREVIEW.width / 2, y: PREVIEW.height / 2 };
 const FONT = '"Segoe UI", system-ui, sans-serif';
 const MONO = '"JetBrains Mono", ui-monospace, monospace';
@@ -130,6 +130,8 @@ class AssetBrowserScene extends Scene {
   tabs = document.createElement('div');
   list = document.createElement('ul');
   inspector = document.createElement('aside');
+  transport = document.createElement('div');
+  zoomReadout = document.createElement('output');
   heading = document.createElement('h2');
   facts = document.createElement('dl');
   panelSlot = document.createElement('div');
@@ -166,13 +168,19 @@ class AssetBrowserScene extends Scene {
     this.mountSidebar();
     this.mountInspector();
     this.mountCodePanel();
+    this.mountTransport();
+    window.addEventListener('resize', this.resize);
+    window.addEventListener('wheel', this.focusPreviewOnWheel, { capture: true, passive: true });
+    this.resize();
     this.message.setAnchor(0.5).setPosition(PREVIEW_CENTER.x, PREVIEW_CENTER.y);
     this.app.input.onPointerDown.add(this.onPointerDown);
     this.app.input.onPointerMove.add(this.onPointerMove);
     this.app.input.onPointerUp.add(this.onPointerUp);
     this.app.input.onMouseWheel.add(this.onWheel);
-    this.showGroup(this.group);
-    void this.select(ITEMS.find(item => item.group === this.group));
+    const requested = new URLSearchParams(window.location.search).get('asset');
+    const initial = ITEMS.find(item => item.id === requested || item.key === requested || item.atlasKey === requested) ?? ITEMS[0];
+    this.showGroup(initial.group);
+    void this.select(initial);
   }
   // --- Selection ------------------------------------------------------------
   async select(item) {
@@ -221,6 +229,7 @@ class AssetBrowserScene extends Scene {
     this.panel?.dispose();
     this.panel = null;
     this.zoomTarget = null;
+    this.transport.replaceChildren();
     this.backdrop = new Color(32, 37, 50);
     try {
       this.preview?.dispose();
@@ -250,22 +259,115 @@ class AssetBrowserScene extends Scene {
       }
       this.panelSlot.replaceChildren(panel.element);
       this.panel = panel;
+      for (const label of ['Position', 'Volume']) {
+        const input = panel.element.querySelector(`input[aria-label="${label}"]`);
+        const row = input?.parentElement;
+        if (row) {
+          Object.assign(row.style, { flex: '1 1 150px', minWidth: '130px', margin: '0' });
+          this.transport.append(row);
+        }
+      }
+      for (const button of panel.element.querySelectorAll('button')) {
+        if (['Play', 'Pause', 'Stop'].includes(button.textContent ?? '')) {
+          Object.assign(button.style, { width: 'auto', margin: '0' });
+          this.transport.append(button);
+        }
+      }
+      this.addTransportActions();
       return panel;
     };
     preview.mount(host);
   }
-  /** The camera always zooms through the panel's Zoom control when a preview has one. */
   bindZoom(target) {
     this.zoomTarget = target;
   }
-  setZoom(zoom) {
-    const center = this.view.center;
-    // Zoom about the preview's centre, which is offset from the canvas centre.
-    const focusX = center.x + (PREVIEW_CENTER.x - STAGE.width / 2) / this.view.zoomLevel;
-    const focusY = center.y + (PREVIEW_CENTER.y - STAGE.height / 2) / this.view.zoomLevel;
+  setZoom(zoom, anchor = PREVIEW_CENTER) {
+    const before = this.view.screenToWorld(anchor.x, anchor.y, STAGE.width, STAGE.height);
     this.view.setZoom(zoom);
-    this.lookAt(focusX, focusY);
+    const after = this.view.screenToWorld(anchor.x, anchor.y, STAGE.width, STAGE.height);
+    this.view.setCenter(this.view.center.x + before.x - after.x, this.view.center.y + before.y - after.y);
+    this.zoomTarget?.(zoom);
+    this.updateZoomReadout();
   }
+  updateZoomReadout() {
+    const scale = 1 / unitsPerCssPixel(this.app, this.app.canvas);
+    this.zoomReadout.value = `${Math.round(this.view.zoomLevel * scale * 100)}%`;
+  }
+  mountTransport() {
+    Object.assign(this.transport.style, {
+      position: 'fixed',
+      left: `${SIDEBAR_WIDTH}px`,
+      right: `${INSPECTOR_WIDTH}px`,
+      bottom: '0',
+      height: '104px',
+      overflowY: 'auto',
+      boxSizing: 'border-box',
+      padding: '10px',
+      display: 'flex',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: '8px',
+      background: '#0b1019',
+      color: '#dce8ff',
+      font: `13px ${FONT}`,
+      zIndex: '5',
+    });
+    this.transport.setAttribute('role', 'group');
+    this.transport.setAttribute('aria-label', 'Preview controls');
+    document.body.append(this.transport);
+  }
+  addTransportActions() {
+    const actions = {
+      Previous: () => this.stepAsset(-1),
+      Next: () => this.stepAsset(1),
+      ...(this.preview?.bounds ? { Fit: () => this.fit(), '1:1': () => this.setZoom(unitsPerCssPixel(this.app, this.app.canvas)) } : {}),
+    };
+    for (const [label, run] of Object.entries(actions)) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = label;
+      Object.assign(button.style, chipStyle(false));
+      button.addEventListener('click', run);
+      this.transport.append(button);
+    }
+    if (this.preview?.bounds) {
+      this.transport.append(this.zoomReadout);
+    }
+    this.updateZoomReadout();
+  }
+  stepAsset(direction) {
+    const items = this.visibleItems();
+    const index = items.findIndex(item => item.id === this.selected?.id);
+    const next = items[(index + direction + items.length) % items.length];
+    if (next) {
+      void this.select(next);
+    }
+  }
+  resize = () => {
+    const oldX = PREVIEW_CENTER.x;
+    const oldY = PREVIEW_CENTER.y;
+    const center = this.view.screenToWorld(oldX, oldY, STAGE.width, STAGE.height);
+    STAGE.width = Math.max(960, window.innerWidth);
+    STAGE.height = Math.max(480, window.innerHeight);
+    PREVIEW.width = STAGE.width - SIDEBAR_WIDTH - INSPECTOR_WIDTH;
+    PREVIEW.height = STAGE.height - 104;
+    PREVIEW_CENTER.x = PREVIEW.x + PREVIEW.width / 2;
+    PREVIEW_CENTER.y = PREVIEW.height / 2;
+    this.app.resize(STAGE.width, STAGE.height);
+    this.view.width = STAGE.width;
+    this.view.height = STAGE.height;
+    this.lookAt(center.x, center.y);
+    if (this.preview?.resize) {
+      this.preview.resize();
+    } else {
+      for (const node of this.preview?.overlay ?? []) {
+        node.setPosition(node.x + PREVIEW_CENTER.x - oldX, node.y + PREVIEW_CENTER.y - oldY);
+      }
+    }
+    this.codePanel.style.width = `${PREVIEW.width - 24}px`;
+    this.message.setPosition(PREVIEW_CENTER.x, PREVIEW_CENTER.y);
+    this.updateZoomReadout();
+  };
   /** Puts world point (x, y) at the centre of the preview area. */
   lookAt(x, y) {
     const zoom = this.view.zoomLevel;
@@ -278,17 +380,19 @@ class AssetBrowserScene extends Scene {
       this.lookAt(0, 0);
       return;
     }
-    const zoom = Math.min(8, (PREVIEW.width * 0.9) / bounds.width, (PREVIEW.height * 0.82) / bounds.height);
+    const bottomInset = this.preview?.bottomInset ?? 0;
+    const zoom = Math.min(8, (PREVIEW.width * 0.9) / bounds.width, ((PREVIEW.height - bottomInset) * 0.82) / bounds.height);
     this.view.setZoom(zoom);
-    this.lookAt(bounds.width / 2, bounds.height / 2);
-    this.zoomTarget?.set('zoom', zoom);
+    this.lookAt(bounds.width / 2, bounds.height / 2 + bottomInset / (2 * zoom));
+    this.zoomTarget?.(zoom);
+    this.updateZoomReadout();
   }
   setBackdrop(color) {
     this.backdrop = color;
   }
   // --- Pointer: drag pans, wheel zooms, tap hits ----------------------------
   onPointerDown = (_pointer, x, y) => {
-    if (x >= PREVIEW.x && x <= PREVIEW.x + PREVIEW.width) {
+    if (x >= PREVIEW.x && x <= PREVIEW.x + PREVIEW.width && y >= 0 && y <= PREVIEW.height) {
       this.drag = { x, y, moved: false };
     }
   };
@@ -314,16 +418,21 @@ class AssetBrowserScene extends Scene {
       this.preview.tap(point.x, point.y);
     }
   };
+  focusPreviewOnWheel = event => {
+    if (event.target === this.app.canvas) {
+      this.app.canvas.focus({ preventScroll: true });
+    }
+  };
   onWheel = (_deltaX, deltaY) => {
     if (!this.preview?.bounds) {
       return;
     }
-    const zoom = Math.min(32, Math.max(0.05, this.view.zoomLevel * Math.exp(-deltaY * 0.0015)));
-    if (this.zoomTarget) {
-      this.zoomTarget.set('zoom', zoom);
-    } else {
-      this.setZoom(zoom);
+    const point = this.app.input.getPrimaryPointerPosition();
+    if (!point || point.x < PREVIEW.x || point.x > PREVIEW.x + PREVIEW.width || point.y > PREVIEW.height) {
+      return;
     }
+    const zoom = Math.min(32, Math.max(0.05, this.view.zoomLevel * Math.exp(-deltaY * 0.0015)));
+    this.setZoom(zoom, point);
   };
   // --- Frame ----------------------------------------------------------------
   update(delta) {
@@ -351,6 +460,9 @@ class AssetBrowserScene extends Scene {
     this.app.input.onMouseWheel.remove(this.onWheel);
     this.sidebar.remove();
     this.inspector.remove();
+    this.transport.remove();
+    window.removeEventListener('resize', this.resize);
+    window.removeEventListener('wheel', this.focusPreviewOnWheel, true);
     this.codePanel.remove();
     this.frame.destroy();
     this.message.destroy();
@@ -690,7 +802,6 @@ const checkerboard = (width, height) => {
   }
   return graphics;
 };
-const zoomSlider = (value = 1) => slider('Zoom', { min: 0.05, max: 16, step: 0.05, value, format: zoom => `${Math.round(zoom * 100)}%` });
 const openTexture = async ({ scene, item, scope }) => {
   const descriptor = assets[item.key];
   const svg = descriptor.type === 'svg';
@@ -710,21 +821,17 @@ const openTexture = async ({ scene, item, scope }) => {
       ['Format', svg ? 'SVG, rasterized at the requested size' : (fileName(descriptor.source).split('.').pop() ?? '').toUpperCase()],
     ],
     mount(host) {
-      const panel = host({
+      host({
         title: 'Texture',
         controls: {
-          zoom: zoomSlider(),
           filtering: choice('Filtering', ['Linear', 'Nearest']),
           backdrop: choice('Backdrop', BACKDROP_NAMES),
         },
-        actions: { Fit: () => scene.fit(), '100%': () => panel.set('zoom', 1), Code: () => scene.showCode() },
+        actions: { Code: () => scene.showCode() },
         onChange(key, _value, values) {
-          state.zoom = values.zoom;
           state.nearest = values.filtering === 'Nearest';
           state.backdrop = values.backdrop;
-          if (key === 'zoom') {
-            scene.setZoom(values.zoom);
-          } else if (key === 'filtering') {
+          if (key === 'filtering') {
             // Sampling is per texture handle; this preview's scope owns this one.
             texture.scaleMode = state.nearest ? ScaleModes.Nearest : ScaleModes.Linear;
           } else if (key === 'backdrop') {
@@ -733,7 +840,9 @@ const openTexture = async ({ scene, item, scope }) => {
           }
         },
       });
-      scene.bindZoom(panel);
+      scene.bindZoom(zoom => {
+        state.zoom = zoom;
+      });
     },
     snippet: () =>
       textureSnippet(item, {
@@ -764,10 +873,8 @@ const openSpritesheet = async ({ scene, item, scope }) => {
   const animationLabel = new Text('', { fontSize: 15, fillColor: new Color(200, 214, 236) });
   const animated = new AnimatedSprite(texture).setAnchor(0.5);
   const selectedSprite = new Sprite(texture).setAnchor(0.5);
-  const STRIP_Y = PREVIEW.height - 208;
-  const boxWidth = (PREVIEW.width - 36) / 2;
-  const frameBox = { x: PREVIEW.x + 12, y: STRIP_Y, width: boxWidth, height: 196 };
-  const animationBox = { x: frameBox.x + boxWidth + 12, y: STRIP_Y, width: boxWidth, height: 196 };
+  const frameBox = { x: PREVIEW.x + 12, y: 0, width: 0, height: 196 };
+  const animationBox = { ...frameBox };
   const state = {
     animation: animations.length > 0 ? animations[0] : 'Frame range',
     first: 0,
@@ -785,7 +892,30 @@ const openSpritesheet = async ({ scene, item, scope }) => {
   const fitInBox = (sprite, rect, box, scale) => {
     // The two-line label takes the top 44 px of the box.
     const room = box.height - 52;
-    sprite.setScale(Math.min(scale, room / rect.height)).setPosition(box.x + box.width / 2, box.y + 44 + (box.height - 44) / 2);
+    sprite
+      .setScale(Math.min(scale, (box.width - 20) / rect.width, room / rect.height))
+      .setPosition(box.x + box.width / 2, box.y + 44 + (box.height - 44) / 2);
+  };
+  const layout = () => {
+    frameBox.y = animationBox.y = PREVIEW.height - 208;
+    frameBox.width = animationBox.width = (PREVIEW.width - 36) / 2;
+    animationBox.x = frameBox.x + frameBox.width + 12;
+    strip.clear();
+    strip.fillColor = new Color(11, 16, 25, 0.94);
+    strip.drawRectangle(PREVIEW.x, frameBox.y - 12, PREVIEW.width, 220);
+    strip.fillColor = new Color(24, 30, 44);
+    for (const box of [frameBox, animationBox]) {
+      strip.drawRectangle(box.x, box.y, box.width, box.height);
+    }
+    for (const [label, box] of [
+      [frameLabel, frameBox],
+      [animationLabel, animationBox],
+    ]) {
+      label.setPosition(box.x + 10, box.y + 6);
+      label.layout = { maxWidth: box.width - 20, maxLines: 2, overflow: 'ellipsis', ellipsis: '...' };
+    }
+    fitInBox(selectedSprite, selectedSprite.textureFrame, frameBox, 4);
+    fitInBox(animated, animated.textureFrame, animationBox, state.scale);
   };
   const redraw = () => {
     const range = new Set(clipFrames());
@@ -805,29 +935,21 @@ const openSpritesheet = async ({ scene, item, scope }) => {
     const selectedName = names[state.selected];
     const selectedRect = sheet.getFrame(selectedName);
     selectedSprite.setTextureFrame(selectedRect);
-    fitInBox(selectedSprite, selectedRect, frameBox, 4);
     frameLabel.text = `Frame ${state.selected + 1}/${names.length}
 ${selectedName}, ${selectedRect.width} x ${selectedRect.height}`;
     const frames = clipFrames().map(name => sheet.getFrame(name));
     animated.setClips({ preview: { frames, fps: state.fps, repeat: state.loop ? -1 : 1 } }).play('preview', { restart: true });
-    fitInBox(animated, frames[0], animationBox, state.scale);
     animationLabel.text = `Animation: ${state.animation === 'Frame range' ? `frames ${Math.min(state.first, state.last) + 1}-${Math.max(state.first, state.last) + 1}` : state.animation}
 ${frames.length} frames, ${state.fps} fps${state.loop ? ', loop' : ''}`;
+    layout();
   };
-  strip.fillColor = new Color(11, 16, 25, 0.94);
-  strip.drawRectangle(PREVIEW.x, STRIP_Y - 12, PREVIEW.width, PREVIEW.height - STRIP_Y + 12);
-  strip.fillColor = new Color(24, 30, 44);
-  for (const box of [frameBox, animationBox]) {
-    strip.drawRectangle(box.x, box.y, box.width, box.height);
-  }
-  frameLabel.setPosition(frameBox.x + 10, frameBox.y + 6);
-  animationLabel.setPosition(animationBox.x + 10, animationBox.y + 6);
   redraw();
   return {
     world: [backdrop, atlas, outlines],
     overlay: [strip, selectedSprite, animated, frameLabel, animationLabel],
-    // Fit the atlas into the area above the frame strip.
-    bounds: { width: texture.width, height: texture.height * (PREVIEW.height / (STRIP_Y - 24)) },
+    bounds: { width: texture.width, height: texture.height },
+    bottomInset: 220,
+    resize: layout,
     facts: [
       ['Atlas', `${texture.width} x ${texture.height} px`],
       ['Frames', String(names.length)],
@@ -837,7 +959,6 @@ ${frames.length} frames, ${state.fps} fps${state.loop ? ', loop' : ''}`;
       const last = Math.max(0, names.length - 1);
       const frameName = index => `#${Math.round(index) + 1}`;
       const controls = {
-        zoom: zoomSlider(),
         animation: choice('Animation', ['Frame range', ...animations], state.animation),
         first: slider('First frame', { min: 0, max: last, step: 1, value: state.first, format: frameName }),
         last: slider('Last frame', { min: 0, max: last, step: 1, value: state.last, format: frameName }),
@@ -852,15 +973,10 @@ ${frames.length} frames, ${state.fps} fps${state.loop ? ', loop' : ''}`;
         actions: {
           'Range from selected': () => handle.set('first', state.selected),
           'Range to selected': () => handle.set('last', state.selected),
-          Fit: () => scene.fit(),
           Code: () => scene.showCode(),
           Data: () => void scene.showData(),
         },
         onChange(key, _value, values) {
-          if (key === 'zoom') {
-            scene.setZoom(values.zoom);
-            return;
-          }
           Object.assign(state, {
             animation: values.animation,
             first: values.first,
@@ -873,7 +989,6 @@ ${frames.length} frames, ${state.fps} fps${state.loop ? ', loop' : ''}`;
           redraw();
         },
       });
-      scene.bindZoom(handle);
       handle.status('Click a frame in the atlas to select it.');
     },
     update(delta) {
@@ -922,10 +1037,9 @@ const openMap = async ({ scene, item, scope }) => {
       const layerControls = Object.fromEntries(
         map.renderableLayers.map(layer => [`layer:${layer.name}`, toggle(`Layer ${layer.name}`, true)]),
       );
-      const panel = host({
+      host({
         title: ldtk ? 'LDtk world' : 'Tiled map',
         controls: {
-          zoom: zoomSlider(),
           ...(levels.length > 1
             ? {
                 level: choice(
@@ -937,12 +1051,9 @@ const openMap = async ({ scene, item, scope }) => {
           objects: toggle('Object shapes', state.objects),
           ...layerControls,
         },
-        actions: { Fit: () => scene.fit(), Code: () => scene.showCode(), Data: () => void scene.showData() },
+        actions: { Code: () => scene.showCode(), Data: () => void scene.showData() },
         onChange(key, value) {
-          if (key === 'zoom') {
-            state.zoom = value;
-            scene.setZoom(value);
-          } else if (key === 'level') {
+          if (key === 'level') {
             state.level = Math.max(
               0,
               levels.findIndex(level => level.name === value),
@@ -962,7 +1073,9 @@ const openMap = async ({ scene, item, scope }) => {
           }
         },
       });
-      scene.bindZoom(panel);
+      scene.bindZoom(zoom => {
+        state.zoom = zoom;
+      });
     },
     snippet: () => mapSnippet(item, { level: levels[state.level].name, zoom: state.zoom, ldtk }),
     data: async () => scope.load(assets[item.key]),
@@ -1024,6 +1137,8 @@ const openAudio = async ({ scene, item, scope, isCurrent }) => {
   let pendingStart = null;
   let status = null;
   let reported = '';
+  let positionPanel = null;
+  let syncingPosition = false;
   const waveform = new Graphics();
   const playhead = new Graphics();
   const live = new Graphics();
@@ -1038,6 +1153,7 @@ const openAudio = async ({ scene, item, scope, isCurrent }) => {
   // A sound keeps its overview on top and the live signal in a strip below;
   // streamed music has no overview, so the live signal takes the middle.
   const scopeHeight = buffer ? 100 : 220;
+  const originalCenterY = PREVIEW_CENTER.y;
   const top = buffer ? PREVIEW_CENTER.y - (wave.height + 48 + scopeHeight) / 2 : PREVIEW_CENTER.y - scopeHeight / 2;
   const lane = { height: (wave.height - wave.gap * Math.max(0, channels - 1)) / Math.max(1, channels), top };
   const strip = { top: buffer ? top + wave.height + 48 : top, height: scopeHeight };
@@ -1183,6 +1299,7 @@ const openAudio = async ({ scene, item, scope, isCurrent }) => {
         title: music ? 'Music' : 'Sound',
         controls: {
           ...(clips.length > 0 ? { clip: choice('Clip', clips) } : {}),
+          position: slider('Position', { min: 0, max: 100, step: 0.1, value: 0, format: position => `${position.toFixed(0)}%` }),
           volume: slider('Volume', { min: 0, max: 1, step: 0.05, value: state.volume, format: volume => `${Math.round(volume * 100)}%` }),
           loop: toggle('Loop', state.loop),
         },
@@ -1202,6 +1319,8 @@ const openAudio = async ({ scene, item, scope, isCurrent }) => {
             state.clip = value;
             stop();
             drawWaveform();
+          } else if (key === 'position' && !syncingPosition && voice && 'time' in voice) {
+            voice.time = (target().duration * value) / 100;
           } else if (key === 'volume') {
             state.volume = value;
             if (voice) {
@@ -1212,6 +1331,7 @@ const openAudio = async ({ scene, item, scope, isCurrent }) => {
           }
         },
       });
+      positionPanel = panel;
       status = text => panel.status(text);
       panel.status('Press Play to listen.');
     },
@@ -1234,11 +1354,32 @@ const openAudio = async ({ scene, item, scope, isCurrent }) => {
       caption.visible = !playing;
       drawLive(playing ? analyser.getWaveformFloat() : null);
       drawPlayhead();
+      if (positionPanel && voice && 'time' in voice && target().duration > 0) {
+        syncingPosition = true;
+        positionPanel.set('position', (voice.time / target().duration) * 100);
+        syncingPosition = false;
+      }
+    },
+    resize() {
+      wave.width = PREVIEW.width - 80;
+      wave.left = PREVIEW.x + 40;
+      lane.top = top + PREVIEW_CENTER.y - originalCenterY;
+      strip.top = buffer ? lane.top + wave.height + 48 : lane.top;
+      labels.forEach((label, index) => {
+        const channel = channels > 1 && index < channelNames.length;
+        label.setPosition(
+          channel ? wave.left - 10 : wave.left,
+          channel ? lane.top + index * (lane.height + wave.gap) + lane.height / 2 : strip.top - 8,
+        );
+      });
+      caption.setPosition(PREVIEW_CENTER.x, strip.top + strip.height + 40);
+      drawWaveform();
     },
     snippet: () => audioSnippet(item, { ...state, music, clip: clips.length > 0 ? state.clip : null }),
     dispose() {
       stop();
       status = null;
+      positionPanel = null;
       analyser.destroy();
       waveform.destroy();
       playhead.destroy();
@@ -1285,6 +1426,7 @@ const openVideo = async ({ scene, item, scope, manifest, isCurrent }) => {
     }
   };
   const frameRate = meta?.video?.frameRate?.split('/').map(Number);
+  const fps = frameRate?.length === 2 && frameRate.every(part => Number.isFinite(part) && part > 0) ? frameRate[0] / frameRate[1] : NaN;
   return {
     world: [video],
     overlay: [],
@@ -1294,13 +1436,11 @@ const openVideo = async ({ scene, item, scope, manifest, isCurrent }) => {
       ['Duration', formatSeconds(video.duration)],
       ...(meta?.container ? [['Container', meta.container]] : []),
       ...(meta?.video?.codec ? [['Video', [meta.video.codec, meta.video.profile].filter(Boolean).join(' ')]] : []),
-      ...(frameRate && frameRate.length === 2
-        ? [['Frame rate', `${(frameRate[0] / frameRate[1]).toFixed(2).replace(/\.00$/, '')} fps`]]
-        : []),
+      ...(Number.isFinite(fps) && fps > 0 ? [['Frame rate', `${fps.toFixed(2).replace(/\.00$/, '')} fps`]] : []),
       ...(meta?.video?.pixelFormat
         ? [['Pixels', `${meta.video.pixelFormat}${meta.video.bitDepth ? `, ${meta.video.bitDepth}-bit` : ''}`]]
         : []),
-      ...(meta?.audio?.codec ? [['Audio', `${meta.audio.codec}, ${meta.audio.channels ?? '?'} ch`]] : [['Audio', 'none']]),
+      ...(meta?.audio?.codec ? [['Audio', `${meta.audio.codec}${meta.audio.channels ? `, ${meta.audio.channels} ch` : ''}`]] : []),
       // The file's dynamic range is metadata; the preview renders it through
       // the regular canvas pipeline either way.
       ...(meta?.dynamicRange ? [['Dynamic range', `${meta.dynamicRange} (file metadata)`]] : []),
@@ -1310,7 +1450,6 @@ const openVideo = async ({ scene, item, scope, manifest, isCurrent }) => {
       const handle = host({
         title: 'Video',
         controls: {
-          zoom: zoomSlider(),
           position: slider('Position', { min: 0, max: duration, step: duration / 200, value: 0, format: formatSeconds }),
           muted: toggle('Muted', state.muted),
           loop: toggle('Loop', state.loop),
@@ -1326,14 +1465,10 @@ const openVideo = async ({ scene, item, scope, manifest, isCurrent }) => {
             cancelStart();
             video.stop();
           },
-          Fit: () => scene.fit(),
           Code: () => scene.showCode(),
         },
         onChange(key, value) {
-          if (key === 'zoom') {
-            state.zoom = value;
-            scene.setZoom(value);
-          } else if (key === 'position' && !syncing) {
+          if (key === 'position' && !syncing) {
             video.currentTime = value;
           } else if (key === 'muted') {
             state.muted = value;
@@ -1351,7 +1486,9 @@ const openVideo = async ({ scene, item, scope, manifest, isCurrent }) => {
       mounted = true;
       video.applyOptions({ loop: state.loop, muted: state.muted });
       video.pause();
-      scene.bindZoom(handle);
+      scene.bindZoom(zoom => {
+        state.zoom = zoom;
+      });
       handle.status('Press Play to start.');
     },
     update(delta) {
@@ -1445,6 +1582,7 @@ const openFont = async ({ scene, item, scope }) => {
       input.addEventListener('change', () => console.log(`Preview text: "${input.value}"`));
       panel.element.append(input);
     },
+    resize: () => layout(),
     snippet: () => fontSnippet(item, { ...state, bitmap }),
     dispose() {
       for (const line of lines) {
@@ -1659,8 +1797,9 @@ const dataSnippet = item =>
   );
 const app = new Application({
   scenes: { AssetBrowserScene },
-  canvas: { width: STAGE.width, height: STAGE.height, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  canvas: { width: STAGE.width, height: STAGE.height, mount: document.body, sizing: new ManualCanvasSizing() },
   clearColor: new Color(32, 37, 50),
   extensions: [tiledExtension, ldtkExtension],
 });
+Object.assign(app.canvas.style, { width: '100%', height: '100%', display: 'block' });
 await app.start(AssetBrowserScene);

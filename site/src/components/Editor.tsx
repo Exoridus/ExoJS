@@ -26,6 +26,7 @@ import { OutputPanel } from './OutputPanel';
 import { SidebarToggle } from './PlaygroundButtons';
 import { PreviewToolbar } from './PreviewToolbar';
 import { css, cx } from './react-utils';
+import { UsedAssets } from './UsedAssets';
 
 /**
  * Rendered in place of the editor while there is no DOM to attach Monaco to,
@@ -93,7 +94,6 @@ export const Editor = ({
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [diagnostics, setDiagnostics] = useState<ReadonlyArray<EditorDiagnostic>>([]);
-  const [viewMode, setViewMode] = useState<'source' | 'compiled'>('source');
   const [layout, setLayout] = useState<EditorLayout>('stacked');
   const [order, setOrder] = useState<EditorOrder>('preview-first');
   const [splitPercent, setSplitPercent] = useState(55);
@@ -101,6 +101,7 @@ export const Editor = ({
   const [toolbarTarget, setToolbarTarget] = useState<HTMLDivElement | null>(null);
   const rootRef = useRef<HTMLElement | null>(null);
   const codeEditorRef = useRef<EditorCodeHandle | null>(null);
+  const [assetSources, setAssetSources] = useState<readonly string[] | null>(null);
   const previewRef = useRef<EditorPreviewHandle | null>(null);
   const previewFrameRef = useRef<HTMLElement | null>(null);
   const loadKeyRef = useRef<string | null>(null);
@@ -140,7 +141,6 @@ export const Editor = ({
     setOriginalExecutionCode(null);
     setSourceLoadError(null);
     setDiagnostics([]);
-    setViewMode('source');
     /* eslint-enable @eslint-react/set-state-in-effect */
 
     if (!activeExample || !selectedVersionId) {
@@ -346,21 +346,6 @@ export const Editor = ({
   const availability = getExampleAvailability(activeExample);
   const editorLanguage = activeExample?.language === 'typescript' ? 'typescript' : 'javascript';
   const displayPath = getDisplayPath(activeExample);
-  // The toggle only makes sense for a TS example - a "compiled" view of
-  // freeform JS scratch code would just be the same text back.
-  const canToggleView = editorLanguage === 'typescript';
-  const isCompiledView = canToggleView && viewMode === 'compiled';
-  const displayedLanguage = isCompiledView ? 'javascript' : editorLanguage;
-  // executionCode only reads null before the very first successful compile -
-  // once set, it holds the last successful compile even while a newer edit is
-  // still emitting (see getExecutionCode's contract in EditorCode.tsx), so this
-  // placeholder is a first-paint-only case.
-  const displayedSourceCode = isCompiledView ? (executionCode ?? '// Compiling…') : sourceCode;
-  const displayedSourcePath = isCompiledView ? (activeExample?.path ?? null) : displayPath;
-
-  const toggleViewMode = (): void => {
-    setViewMode(mode => (mode === 'source' ? 'compiled' : 'source'));
-  };
 
   const sidebarToggle =
     showSidebarToggle && !sidebarOpen ? <SidebarToggle open={sidebarOpen} toggleRef={sidebarToggleRef} onToggle={onToggleSidebar} /> : null;
@@ -454,6 +439,7 @@ export const Editor = ({
               output={output}
               onCanvasSize={onCanvasSize}
               onRendererStatus={setRendererStatus}
+              onAssets={setAssetSources}
             />
           </div>
           {!availability.available && (
@@ -506,10 +492,7 @@ export const Editor = ({
         <OutputPanel output={output} systemErrors={combinedErrors} />
       </div>
       <section id="playground-code" className={css(styles, 'editor-frame')} aria-label="Source editor">
-        <div className={css(styles, 'source-caption')}>
-          <span>Code</span>
-          <code>{displayedSourcePath}</code>
-        </div>
+        <UsedAssets sources={assetSources} />
         {/*
           Held back until after hydration. The lazy loader resolves to an empty
           component on the server and to Monaco in the browser, so rendering it
@@ -523,6 +506,7 @@ export const Editor = ({
         <Suspense fallback={null}>
           {!hydrated ? null : (
             <EditorCode
+              key={`${selectedVersionId}/${displayPath ?? 'loading'}`}
               ref={codeEditorRef}
               toolbarTarget={toolbarTarget}
               menuItems={
@@ -543,11 +527,6 @@ export const Editor = ({
                       {expandedActive ? 'Normal demo size' : 'Expand demo'}
                     </button>
                   )}
-                  {canToggleView && (
-                    <button type="button" role="menuitem" onClick={toggleViewMode}>
-                      {isCompiledView ? 'Show TypeScript source' : 'Show compiled JavaScript'}
-                    </button>
-                  )}
                   <p>
                     {canvasWidth > 0 ? `${canvasWidth} x ${canvasHeight} | ${Math.round(previewZoom * 100)}% | ` : ''}exojs@
                     {selectedVersionId}
@@ -555,10 +534,10 @@ export const Editor = ({
                   </p>
                 </div>
               }
-              sourceCode={displayedSourceCode}
-              sourcePath={displayedSourcePath}
-              language={displayedLanguage}
-              readOnly={isCompiledView}
+              sourceCode={sourceCode}
+              sourcePath={displayPath}
+              language={editorLanguage}
+              compiledCode={executionCode}
               canReset={Boolean(originalSourceCode && (dirty || sourceCode !== originalSourceCode))}
               exampleTitle={activeExample?.title ?? 'Loading...'}
               selectedVersionId={selectedVersionId}

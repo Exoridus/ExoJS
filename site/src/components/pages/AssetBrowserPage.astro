@@ -1,0 +1,82 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+interface Props {
+  locale: 'en' | 'de';
+}
+const { locale } = Astro.props;
+const base = import.meta.env.BASE_URL;
+---
+
+<Layout title="Asset Browser - ExoJS" description="Inspect the ExoJS asset library and generate usage code.">
+  <section class="asset-tool" aria-label="Asset Browser">
+    <nav aria-label="Playground tools">
+      <a href={`${base + locale}/playground/`}>Playground</a>
+      <strong>Asset Browser</strong>
+      <a href={`${base}examples/debug-layer/asset-browser.ts`} target="_blank" rel="noopener noreferrer">
+        Tool source
+      </a>
+    </nav>
+    <div class="workspace">
+      <iframe
+        title="ExoJS Asset Browser"
+        data-asset-tool
+        data-preview={`${base}preview.html?tool=asset-browser`}
+        allow="autoplay; fullscreen"
+      ></iframe>
+    </div>
+  </section>
+</Layout>
+<script>
+  const frame = document.querySelector<HTMLIFrameElement>('[data-asset-tool]');
+  if (frame?.dataset.preview) {
+    const url = new URL(frame.dataset.preview, window.location.origin);
+    const asset = new URLSearchParams(window.location.search).get('asset');
+    if (asset) {
+      url.searchParams.set('asset', asset);
+    }
+    frame.src = url.href;
+  }
+</script>
+<style>
+  .asset-tool {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 62px);
+    min-height: 520px;
+  }
+
+  nav {
+    display: flex;
+    align-items: center;
+    gap: var(--s-4);
+    flex: 0 0 auto;
+    padding: var(--s-2) var(--s-4);
+    border-bottom: 1px solid var(--line-soft);
+    font-size: var(--text-sm);
+  }
+
+  nav a:last-child {
+    margin-left: auto;
+  }
+
+  .workspace {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  iframe {
+    display: block;
+    width: 100%;
+    min-width: 960px;
+    height: 100%;
+    border: 0;
+  }
+
+  @media (width <= 760px) {
+    .asset-tool {
+      height: calc(100dvh - 58px);
+    }
+  }
+</style>

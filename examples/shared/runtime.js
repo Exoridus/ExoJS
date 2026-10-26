@@ -14,6 +14,14 @@ import {
 } from '@codexo/exojs';
 /** Starts a sample while reporting initialized renderer state and retaining the original startup rejection. */
 export const startExample = async (app, start) => {
+  const loader = app.loader;
+  window.__EXAMPLE_ASSETS__ = loader
+    ? () =>
+        loader
+          .inspect()
+          .filter(asset => asset.state === 'ready')
+          .map(asset => asset.locator)
+    : undefined;
   const requested = app.options.backend?.type ?? 'auto';
   const attempted = app.backend.backendType;
   let completed = false;
@@ -253,7 +261,7 @@ export const mountControls = (options = {}) => {
   const statusEl = document.createElement('div');
   const hintEl = document.createElement('div');
   Object.assign(titleEl.style, { display: 'block', marginBottom: '6px', fontSize: '14px', color: '#ffffff' });
-  Object.assign(statusEl.style, { marginTop: '6px', font: `600 13px ${FONT_STACK}`, color: '#9fd0ff' });
+  Object.assign(statusEl.style, { marginTop: title || controls.length ? '6px' : '0', font: `600 13px ${FONT_STACK}`, color: '#9fd0ff' });
   Object.assign(hintEl.style, { marginTop: '6px', fontSize: '12px', color: '#8aa0c4' });
   const renderControls = list => controlsEl.replaceChildren(...list.map(createControlRow));
   titleEl.textContent = title;
@@ -262,7 +270,16 @@ export const mountControls = (options = {}) => {
   hintEl.textContent = hint;
   statusEl.className = 'exo-demo-status';
   hintEl.className = 'exo-demo-hint';
-  panel.append(titleEl, controlsEl, statusEl, hintEl);
+  if (title) {
+    panel.append(titleEl);
+  }
+  if (controls.length) {
+    panel.append(controlsEl);
+  }
+  panel.append(statusEl);
+  if (hint) {
+    panel.append(hintEl);
+  }
   document.body.append(panel);
   return {
     element: panel,
@@ -274,9 +291,20 @@ export const mountControls = (options = {}) => {
     },
     setControls(list) {
       renderControls(list ?? []);
+      if (list?.length) {
+        panel.insertBefore(controlsEl, statusEl);
+      } else {
+        controlsEl.remove();
+      }
+      statusEl.style.marginTop = title || list?.length ? '6px' : '0';
     },
     setHint(text) {
       hintEl.textContent = text ?? '';
+      if (hintEl.textContent) {
+        panel.append(hintEl);
+      } else {
+        hintEl.remove();
+      }
     },
     dispose() {
       disposeTheme?.();

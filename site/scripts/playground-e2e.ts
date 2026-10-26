@@ -1,6 +1,6 @@
 /**
- * Browser checks for the playground shell's Output panel and the Asset Browser
- * example, against the built site (`site/dist`).
+ * Browser checks for the playground shell's Output panel and standalone Asset Browser,
+ * against the built site (`site/dist`) or an existing local origin.
  *
  * The console bridge spans two realms - the parent shell patches the preview
  * iframe's console - so these checks drive a real Chromium through the real
@@ -24,7 +24,8 @@
  *
  * Usage:
  *   pnpm --filter @codexo/exojs-examples playground:e2e
- *   ... --only asset          # run checks whose name contains "asset"
+ *   ... --only asset          # run the standalone Asset Browser checks and snippet typechecks
+ *   ... --origin http://127.0.0.1:4333 --only asset  # reuse a running site
  *   ... --shots <dir>         # write a screenshot after each asset preview
  *   ... --headed              # watch it run
  */
@@ -38,6 +39,7 @@ import { parseArgs } from 'node:util';
 import { type Browser, chromium, firefox, type Frame, type Page } from 'playwright';
 import ts from 'typescript';
 
+import { resolveSiteChannel } from '../../scripts/pages/site-channel.ts';
 import { readSiteBuildManifest } from '../../scripts/pages/site-manifest.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -50,6 +52,7 @@ const { values: options } = parseArgs({
   args: process.argv.slice(2),
   options: {
     only: { type: 'string' },
+    origin: { type: 'string' },
     shots: { type: 'string' },
     headed: { type: 'boolean', default: false },
     browser: { type: 'string', default: 'chromium' },
@@ -250,7 +253,7 @@ const runSource = async (page: Page, source: string): Promise<void> => {
       window.monaco.editor.getEditors()[0].getModel().setValue(${JSON.stringify(source)});
     })()`,
   );
-  await page.locator('button[aria-label="Reload preview"]').click();
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
   await waitFor(
     async () => (await previewFrame(page)).url(),
     url => url !== previousUrl,
@@ -386,7 +389,7 @@ const consoleChecks = async (browser: Browser, origin: string, base: string): Pr
   });
 
   await check('a reload starts a fresh record with nothing from the earlier preview', async () => {
-    await page.locator('button[aria-label="Reload preview"]').click();
+    await page.getByRole('button', { name: 'Run', exact: true }).click();
     await setOutputOpen(page, true);
 
     const fresh = await waitFor(
@@ -544,11 +547,58 @@ const REPRESENTATIVES = [
   'harborWorldProject',
   'soundUiClick',
   'uiSoundSprite',
-  'musicLoopMain',
-  'videoDemoLoop',
+  'musicLofiRhodes',
+  'videoHighFps',
   'fontKenneyFuture',
   'fontKenneyBlocksFnt',
 ];
+
+const openAssetBrowser = async (browser: Browser, origin: string, base: string): Promise<Session> => {
+  const context = await browser.newContext({
+    viewport: { width: 1600, height: 1000 },
+    ...(options.browser === 'chromium' ? { permissions: ['clipboard-read', 'clipboard-write'] } : {}),
+  });
+  const page = await context.newPage();
+  const session: Session = { page, console: [], pageErrors: [] };
+
+  page.on('console', message => session.console.push({ type: message.type(), text: message.text() }));
+  page.on('pageerror', error => session.pageErrors.push(error.message));
+  await page.route('**/examples/debug-layer/asset-browser.js*', async route => {
+    const response = await route.fetch();
+    const source = await response.text();
+    const hook = 'init() {';
+
+    assert(source.includes(hook), 'the Asset Browser scene has no init hook');
+    await route.fulfill({
+      response,
+      body: source.replace(
+        hook,
+        `${hook} globalThis.__assetBrowserApp = this.app; globalThis.__assetBrowserScene = this; globalThis.__assetBrowserArea = PREVIEW;`,
+      ),
+    });
+  });
+  await page.goto(`${origin}${base}/en/tools/asset-browser/?asset=ship`, { waitUntil: 'domcontentloaded' });
+  const frame = await assetFrame(page);
+
+  await frame.waitForFunction('globalThis.__assetBrowserApp?.state === "running" && globalThis.__assetBrowserScene.preview');
+  assert((await page.locator('.monaco-editor').count()) === 0, 'the tool unexpectedly mounted an editor');
+
+  return session;
+};
+
+const setAssetSlider = async (frame: Frame, label: string, value: number): Promise<void> => {
+  const input = frame.getByRole('slider', { name: label, exact: true });
+  const min = Number(await input.getAttribute('min'));
+  const step = Number(await input.getAttribute('step'));
+
+  await input.press('Home');
+
+  for (let index = 0; index < Math.round((value - min) / step); index++) {
+    await input.press('ArrowRight');
+  }
+
+  assert(Number(await input.inputValue()) === value, `${label} did not reach ${value}`);
+};
 
 const assetFrame = async (page: Page): Promise<Frame> => {
   const frame = await previewFrame(page);
@@ -590,15 +640,8 @@ const residentRows = async (frame: Frame): Promise<string[]> =>
 
 const assetChecks = async (browser: Browser, origin: string, base: string): Promise<string[]> => {
   const snippets: string[] = [];
-  const session = await openPlayground(browser, origin, base, 'debug-layer/asset-browser');
+  const session = await openAssetBrowser(browser, origin, base);
   const { page } = session;
-  const source = await waitFor(
-    () => page.evaluate<string>('window.monaco?.editor.getEditors()[0]?.getModel()?.getValue() ?? ""'),
-    value => value.length > 0,
-    'the asset browser editor source',
-  );
-
-  await runSource(page, `${source}\n(globalThis as any).__assetBrowserApp = app;`);
   const frame = await assetFrame(page);
   const catalog = readCatalog();
 
@@ -640,7 +683,7 @@ const assetChecks = async (browser: Browser, origin: string, base: string): Prom
       })))`)) as { state: string; errors: string[] };
 
       assert(health.state === 'running' && health.errors.length === 0, `${id} render health: ${JSON.stringify(health)}`);
-      assert(!(await outputEntries(page)).some(entry => entry.kind === 'exception'), 'an uncaught error was recorded');
+      assert(session.pageErrors.length === 0, `page errors: ${session.pageErrors.join(' | ')}`);
 
       const resident = await residentRows(frame);
 
@@ -656,12 +699,12 @@ const assetChecks = async (browser: Browser, origin: string, base: string): Prom
 
       if (options.shots) {
         await mkdir(options.shots, { recursive: true });
-        await page.locator('section[aria-label="Example preview"]').screenshot({ path: join(options.shots, `${id}.png`) });
+        await page.locator('section[aria-label="Asset Browser"]').screenshot({ path: join(options.shots, `${id}.png`) });
       }
     });
   }
 
-  await check('spritesheet frame selection and animation settings reach the snippet', async () => {
+  await check('asset browser: spritesheet frame selection and animation settings reach the snippet', async () => {
     await selectAsset(frame, 'platformerCharacters');
     await waitFor(
       () => inspectorHeading(frame),
@@ -671,24 +714,29 @@ const assetChecks = async (browser: Browser, origin: string, base: string): Prom
     // The panel mounts once the atlas has loaded; a tap before that has nothing to hit.
     await frame.getByRole('slider', { name: 'FPS' }).waitFor();
 
+    const atlas = JSON.parse(readFileSync(resolve(repoRoot, 'examples/assets/images/platformer-characters-atlas.json'), 'utf8')) as {
+      frames: Record<string, { frame: { x: number; y: number; w: number; h: number } }>;
+    };
+    const selected = Object.values(atlas.frames)[1]!.frame;
+    const point = await frame.evaluate<{ x: number; y: number; width: number; height: number }>(`(() => {
+      const app = globalThis.__assetBrowserApp;
+      const view = globalThis.__assetBrowserScene.view;
+      return {...view.worldToScreen(${selected.x + selected.w / 2}, ${selected.y + selected.h / 2}, app.width, app.height), width: app.width, height: app.height};
+    })()`);
     const canvas = frame.locator('canvas');
     const rect = await canvas.boundingBox();
 
     assert(rect, 'the canvas has no box');
-
     const before = session.console.length;
 
-    // `position` is in page pixels from the canvas's scaled box; the fitted
-    // atlas is centred in the preview area, above the frame strip.
-    await canvas.click({ position: { x: (610 * rect.width) / 1280, y: (150 * rect.height) / 720 } });
+    await canvas.click({ position: { x: (point.x * rect.width) / point.width, y: (point.y * rect.height) / point.height } });
     await waitFor(
       async () => session.console.slice(before).map(message => message.text),
-      texts => texts.some(text => text.startsWith('Frame ')),
-      'a frame selection log',
+      texts => texts.some(text => text.startsWith('Frame 2:')),
+      'the selected atlas frame',
     );
-
-    await frame.getByRole('slider', { name: 'FPS' }).fill('14');
-    await frame.getByRole('slider', { name: 'Last frame' }).fill('3');
+    await setAssetSlider(frame, 'FPS', 14);
+    await setAssetSlider(frame, 'Last frame', 3);
     await frame.getByRole('button', { name: 'Code', exact: true }).click();
 
     const code = await frame.locator('section[aria-label="Code"] pre').innerText();
@@ -699,55 +747,133 @@ const assetChecks = async (browser: Browser, origin: string, base: string): Prom
     await frame.getByRole('button', { name: 'Close', exact: true }).click();
   });
 
-  await check('texture filtering and zoom reach the snippet', async () => {
+  await check('asset browser: texture filtering and zoom reach the snippet', async () => {
     await selectAsset(frame, 'ship');
     await waitFor(
       () => inspectorHeading(frame),
       text => text === 'Ship',
       'the texture',
     );
-    await frame.getByRole('slider', { name: 'Zoom' }).fill('3');
+    const viewport = await frame.evaluate<{ x: number; y: number; width: number; height: number }>('({...globalThis.__assetBrowserArea})');
+    const appSize = await frame.evaluate<{ width: number; height: number }>(
+      '({width:globalThis.__assetBrowserApp.width,height:globalThis.__assetBrowserApp.height})',
+    );
+    const canvas = frame.locator('canvas');
+    const canvasBox = (await canvas.boundingBox())!;
+    const point = { x: viewport.x + viewport.width * 0.6, y: viewport.height * 0.4 };
+    const screen = {
+      x: canvasBox.x + (point.x * canvasBox.width) / appSize.width,
+      y: canvasBox.y + (point.y * canvasBox.height) / appSize.height,
+    };
+    const worldAtCursor = (): Promise<{ x: number; y: number }> =>
+      frame.evaluate(`(() => {
+      const app = globalThis.__assetBrowserApp;
+      return globalThis.__assetBrowserScene.view.screenToWorld(${point.x},${point.y},app.width,app.height);
+    })()`);
+
+    assert((await frame.getByRole('slider', { name: 'Zoom', exact: true }).count()) === 0, 'a removed zoom slider is still present');
+    await frame.getByRole('button', { name: '1:1', exact: true }).click();
+    const one = await frame.evaluate<number>(`(() => {
+      const app = globalThis.__assetBrowserApp;
+      return globalThis.__assetBrowserScene.view.zoomLevel * app.canvas.getBoundingClientRect().width / app.width;
+    })()`);
+
+    assert(Math.abs(one - 1) < 0.001, `1:1 renders a source pixel at ${one} CSS pixels`);
+    await page.mouse.move(screen.x, screen.y);
+    await frame.waitForFunction(point => {
+      const current = (
+        globalThis as unknown as { __assetBrowserApp: { input: { getPrimaryPointerPosition(): { x: number; y: number } | null } } }
+      ).__assetBrowserApp.input.getPrimaryPointerPosition();
+
+      return current && Math.hypot(current.x - point.x, current.y - point.y) < 2;
+    }, point);
+    const before = await worldAtCursor();
+    const oldZoom = await frame.evaluate<number>('globalThis.__assetBrowserScene.view.zoomLevel');
+
+    await page.mouse.wheel(0, -180);
+    const zoom = await waitFor(
+      () => frame.evaluate<number>('globalThis.__assetBrowserScene.view.zoomLevel'),
+      value => value > oldZoom,
+      'cursor zoom',
+    );
+    const after = await worldAtCursor();
+
+    assert(Math.hypot(before.x - after.x, before.y - after.y) < 0.001, 'wheel zoom moved the world point under the cursor');
     await frame.getByRole('button', { name: 'Next Filtering', exact: true }).click();
     await frame.getByRole('button', { name: 'Code', exact: true }).click();
 
     const code = await frame.locator('section[aria-label="Code"] pre').innerText();
 
-    assert(code.includes('ScaleModes.Nearest') && code.includes('setScale(3)'), `snippet: ${code}`);
+    assert(code.includes('ScaleModes.Nearest') && code.includes(`setScale(${Number(zoom.toFixed(2))})`), `snippet: ${code}`);
     snippets.push(`// texture settings\n${code}`);
     await frame.getByRole('button', { name: 'Close', exact: true }).click();
+    const center = await frame.evaluate<{ x: number; y: number }>(
+      '({x:globalThis.__assetBrowserScene.view.center.x,y:globalThis.__assetBrowserScene.view.center.y})',
+    );
+
+    await page.mouse.move(screen.x, screen.y);
+    await page.mouse.down();
+    await page.mouse.move(screen.x + 90, screen.y + 40, { steps: 12 });
+    await page.mouse.up();
+    await waitFor(
+      () => frame.evaluate<number>('globalThis.__assetBrowserScene.view.center.x'),
+      value => Math.abs(value - center.x) > 0.01,
+      'drag pan',
+    );
+    await frame.getByRole('button', { name: 'Fit', exact: true }).click();
+    const fitted = await frame.evaluate<{ left: number; top: number; right: number; bottom: number }>(`(() => {
+      const app = globalThis.__assetBrowserApp, scene = globalThis.__assetBrowserScene, bounds = scene.preview.bounds;
+      const top = scene.view.worldToScreen(0,0,app.width,app.height), bottom = scene.view.worldToScreen(bounds.width,bounds.height,app.width,app.height);
+      return {left:top.x,top:top.y,right:bottom.x,bottom:bottom.y};
+    })()`);
+
+    assert(
+      fitted.left >= viewport.x && fitted.right <= viewport.x + viewport.width && fitted.top >= 0 && fitted.bottom <= viewport.height,
+      `Fit bounds: ${JSON.stringify(fitted)}`,
+    );
   });
 
-  await check('a late load never surfaces after a newer selection', async () => {
+  await check('asset browser: a late load never surfaces after a newer selection', async () => {
     let release: () => void = () => undefined;
     const held = new Promise<void>(done => (release = done));
+    let requested = false;
 
-    await page.route('**/clips/high-res.mp4*', async route => {
+    await page.route('**/video/high-res.mp4*', async route => {
+      requested = true;
       await held;
       await route.continue().catch(() => undefined);
     });
 
-    const before = session.console.length;
+    try {
+      const before = session.console.length;
 
-    await selectAsset(frame, 'videoHighRes');
-    await page.waitForTimeout(300);
-    await selectAsset(frame, 'ship');
-    await waitFor(
-      () => inspectorHeading(frame),
-      text => text === 'Ship',
-      'the newer selection',
-    );
-    release();
-    await page.waitForTimeout(2500);
+      await selectAsset(frame, 'videoHighRes');
+      await waitFor(
+        () => Promise.resolve(requested),
+        value => value,
+        'the held high-res video request',
+      );
+      await selectAsset(frame, 'ship');
+      await waitFor(
+        () => inspectorHeading(frame),
+        text => text === 'Ship',
+        'the newer selection',
+      );
+      release();
+      await page.waitForTimeout(2500);
 
-    const texts = session.console.slice(before).map(message => message.text);
+      const texts = session.console.slice(before).map(message => message.text);
 
-    assert(!texts.some(text => text.includes('High res')), `the late video surfaced: ${texts.join(' | ')}`);
-    assert((await inspectorHeading(frame)) === 'Ship', 'the inspector shows the late selection');
-    assert(!(await residentRows(frame)).some(row => row.includes('high-res')), 'the late video stayed resident');
-    await page.unroute('**/clips/high-res.mp4*');
+      assert(!texts.some(text => text.includes('High res')), `the late video surfaced: ${texts.join(' | ')}`);
+      assert((await inspectorHeading(frame)) === 'Ship', 'the inspector shows the late selection');
+      assert(!(await residentRows(frame)).some(row => row.includes('high-res')), 'the late video stayed resident');
+    } finally {
+      release();
+      await page.unroute('**/video/high-res.mp4*');
+    }
   });
 
-  await check('many quick switches leave only the current selection resident', async () => {
+  await check('asset browser: many quick switches leave only the current selection resident', async () => {
     for (const id of [...REPRESENTATIVES, ...REPRESENTATIVES.slice().reverse()]) {
       await selectAsset(frame, id, { trusted: false });
     }
@@ -773,24 +899,30 @@ const assetChecks = async (browser: Browser, origin: string, base: string): Prom
       rows.some(row => row.startsWith('manifest.json')),
       'the manifest is missing',
     );
-    assert(!(await outputEntries(page)).some(entry => entry.kind === 'exception'), 'a switch raised an uncaught error');
+    assert(session.pageErrors.length === 0, `a switch raised an uncaught error: ${session.pageErrors.join(' | ')}`);
   });
 
-  await check('a double press of Play starts one voice and Stop stays harmless', async () => {
-    await selectAsset(frame, 'musicLoopMain');
+  await check('asset browser: a double press of Play starts one voice and Stop stays harmless', async () => {
+    await selectAsset(frame, 'musicLofiRhodes');
     await waitFor(
       () => inspectorHeading(frame),
-      text => text === 'Loop main',
+      text => text === 'Lofi rhodes',
       'the music',
     );
 
     const before = session.console.length;
-    const play = frame.getByRole('button', { name: 'Play', exact: true });
+    const transport = frame.getByRole('group', { name: 'Preview controls' });
+    const play = transport.getByRole('button', { name: 'Play', exact: true });
 
     await play.dblclick();
+    await waitFor(
+      () => frame.evaluate<number>('[...globalThis.__assetBrowserApp.audio._voices].filter(voice=>!voice.ended).length'),
+      count => count === 1,
+      'one active preview voice',
+    );
     await page.waitForTimeout(600);
-    await frame.getByRole('button', { name: 'Stop', exact: true }).click();
-    await frame.getByRole('button', { name: 'Stop', exact: true }).click();
+    await transport.getByRole('button', { name: 'Stop', exact: true }).click();
+    await transport.getByRole('button', { name: 'Stop', exact: true }).click();
 
     const played = session.console.slice(before).filter(message => message.text.startsWith('Playing'));
 
@@ -798,40 +930,52 @@ const assetChecks = async (browser: Browser, origin: string, base: string): Prom
     await selectAsset(frame, 'ship');
   });
 
-  await check('leaving the example while a load is in flight raises nothing', async () => {
+  await check('asset browser: leaving the tool while a load is in flight raises nothing', async () => {
     let release: () => void = () => undefined;
     const held = new Promise<void>(done => (release = done));
+    let requested = false;
 
-    await page.route('**/clips/high-fps.webm*', async route => {
+    await page.route('**/video/high-fps.webm*', async route => {
+      requested = true;
       await held;
       await route.continue().catch(() => undefined);
     });
-    await selectAsset(frame, 'videoHighFps');
-    await page.waitForTimeout(300);
 
-    const errorsBefore = session.pageErrors.length;
+    try {
+      await selectAsset(frame, 'videoHighFps');
+      await waitFor(
+        () => Promise.resolve(requested),
+        value => value,
+        'the held high-fps video request',
+      );
 
-    await page.locator('a[href$="/getting-started/hello-world"]').first().click();
-    await waitFor(
-      () => page.evaluate('location.hash'),
-      hash => String(hash).endsWith('hello-world'),
-      'the example switch',
-    );
-    release();
-    await page.waitForTimeout(2000);
-    assert(session.pageErrors.length === errorsBefore, `errors: ${session.pageErrors.slice(errorsBefore).join(' | ')}`);
-    assert(!(await outputEntries(page)).some(entry => entry.kind === 'exception'), 'an uncaught error reached the new preview');
-    await page.unroute('**/clips/high-fps.webm*');
+      const errorsBefore = session.pageErrors.length;
+
+      await page.locator('nav[aria-label="Playground tools"]').getByRole('link', { name: 'Playground', exact: true }).click();
+      await waitFor(
+        () => Promise.resolve(page.url()),
+        url => new URL(url).pathname.endsWith('/en/playground/'),
+        'navigation away from the tool',
+      );
+      release();
+      await page.waitForTimeout(2000);
+      assert(session.pageErrors.length === errorsBefore, `errors: ${session.pageErrors.slice(errorsBefore).join(' | ')}`);
+      const nextFrame = await previewFrame(page);
+      assert(!(await nextFrame.locator('body').getAttribute('data-preview-blanked')), 'an uncaught error blanked the new preview');
+    } finally {
+      release();
+      await page.unroute('**/video/high-fps.webm*');
+    }
   });
 
   await page.context().close();
 
-  await check('playback waiting for the audio unlock is cancelled by a switch', async () => {
+  await check('asset browser: playback waiting for the audio unlock is cancelled by a switch', async () => {
     // A fresh page: no real gesture has happened yet, so audio is still locked
     // and every interaction below until the final click is a synthetic one.
-    const locked = await openPlayground(browser, origin, base, 'debug-layer/asset-browser');
+    const locked = await openAssetBrowser(browser, origin, base);
     const lockedFrame = await assetFrame(locked.page);
-    const clickPlay = `[...document.querySelectorAll('aside button')].find(button => button.textContent === 'Play').click()`;
+    const clickPlay = `[...document.querySelectorAll('[aria-label="Preview controls"] button')].find(button => button.textContent === 'Play').click()`;
 
     await selectAsset(lockedFrame, 'soundUiClick', { trusted: false });
     await lockedFrame.getByRole('button', { name: 'Play', exact: true }).waitFor();
@@ -873,7 +1017,7 @@ const assetChecks = async (browser: Browser, origin: string, base: string): Prom
 
 /** Type-checks every generated snippet as its own module against the engine sources. */
 const typecheckSnippets = async (snippets: string[]): Promise<void> => {
-  await check(`generated snippets type-check (${snippets.length})`, async () => {
+  await check(`asset browser generated snippets type-check (${snippets.length})`, async () => {
     assert(snippets.length > 0, 'no snippets were collected');
     await rm(snippetDir, { recursive: true, force: true });
     await mkdir(snippetDir, { recursive: true });
@@ -1043,7 +1187,7 @@ const workerChecks = async (browser: Browser, origin: string, base: string): Pro
     try {
       await verifyTerrain(await previewFrame(page));
       const previousUrl = (await previewFrame(page)).url();
-      await page.getByRole('button', { name: 'Reload preview', exact: true }).click();
+      await page.getByRole('button', { name: 'Run', exact: true }).click();
       await waitFor(
         async () => (await previewFrame(page)).url(),
         url => url !== previousUrl,
@@ -1070,7 +1214,7 @@ const workerChecks = async (browser: Browser, origin: string, base: string): Pro
         await verifyTerrain(popup.mainFrame());
         await popup.close();
         const editedUrl = frame.url();
-        await page.getByRole('button', { name: 'Reload preview', exact: true }).click();
+        await page.getByRole('button', { name: 'Run', exact: true }).click();
         await waitFor(
           async () => (await previewFrame(page)).url(),
           url => url !== editedUrl,
@@ -1100,7 +1244,7 @@ const newTabChecks = async (browser: Browser, origin: string, base: string): Pro
         const frame = await previewFrame(page);
         await frame.waitForFunction(value => document.body.dataset.editedExample === value, String(cycle));
         const previousUrl = frame.url();
-        await page.getByRole('button', { name: 'Reload preview', exact: true }).click();
+        await page.getByRole('button', { name: 'Run', exact: true }).click();
         await waitFor(
           async () => (await previewFrame(page)).url(),
           url => url !== previousUrl,
@@ -1480,14 +1624,250 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
   });
 };
 
+const nativeControlChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await check('native control gestures run only their own action', async () => {
+    for (const [path, kind] of [
+      ['sprites-textures/blendmodes', 'choice'],
+      ['particles/cursor-attractor-particles', 'choice'],
+      ['scene-graph/nested-transforms', 'pause'],
+      ['sprites-textures/video-drawable', 'video'],
+      ['render-targets/render-to-texture', 'capture'],
+    ]) {
+      const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+
+      try {
+        await page.route('**/examples/shared/runtime.js*', async route => {
+          const response = await route.fetch();
+          const source = await response.text();
+          const hook = 'scene.track({ destroy: dispose });';
+          assert(source.includes(hook), 'native controls probe could not attach');
+          await route.fulfill({
+            response,
+            body: source.replace(hook, `${hook} window.__controlProbe={scene,panel:handle,controls:options.controls};`),
+          });
+        });
+        await page.goto(`${origin}${base}/en/playground/?version=current&example=${path}`);
+        await page.waitForFunction("document.querySelector('iframe')?.contentWindow?.__controlProbe?.scene.state === 'active'");
+        const frame = await previewFrame(page);
+        const hit = await frame.evaluate<{ key?: string; expected: string | number | boolean; x: number; y: number }>(`(() => {
+          const {scene:s,panel,controls}=window.__controlProbe;
+          const kind=${JSON.stringify(kind)};
+          let node,expected,key;
+          if(kind==='choice') {
+            [key]=Object.entries(controls).find(([,spec])=>spec.kind==='choice');
+            const spec=controls[key], value=panel.values[key];
+            let label;
+            const visit=n=>{if(n.constructor.name==='Label'&&n.text===spec.label)label=n;for(const c of n.children??[])visit(c);};
+            visit(panel.element);
+            node=label.parent.children.find(n=>n.constructor.name==='DemoDropdown');
+            expected=value;
+            if(!node.visible) {
+              node=label.parent.children.find(n=>n.constructor.name==='Button'&&n.label==='>');
+              expected=spec.options[(spec.options.indexOf(value)+1)%spec.options.length];
+            }
+          } else {
+            node=panel.actions[kind==='video'?'Play / Pause':'Pause / Resume'];
+            const value=kind==='video'?panel.values.paused:kind==='capture'?s.captureCount:s.playing;
+            expected=kind==='capture'?value:!value;
+          }
+          const b=node.getBounds();
+          return {key,expected,x:(b.x+b.width/2)/s.app.width,y:(b.y+b.height/2)/s.app.height};
+        })()`);
+        const canvas = (await frame.locator('canvas').boundingBox())!;
+        await page.mouse.click(canvas.x + hit.x * canvas.width, canvas.y + hit.y * canvas.height);
+        await frame.evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+        const actual = await frame.evaluate(`(() => {
+          const {scene:s,panel}=window.__controlProbe;
+          const kind=${JSON.stringify(kind)},key=${JSON.stringify(hit.key ?? '')};
+          return kind==='choice'?panel.values[key]:kind==='video'?panel.values.paused:kind==='capture'?s.captureCount:s.playing;
+        })()`);
+        assert(actual === hit.expected, `${path}: expected ${JSON.stringify(hit.expected)}, got ${JSON.stringify(actual)}`);
+      } finally {
+        await page.close();
+      }
+    }
+  });
+};
+
+const fileTabChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await check('file tabs preserve edits and run the entry while a helper is open', async () => {
+    const session = await openPlayground(browser, origin, base, 'getting-started/hello-world');
+    const { page } = session;
+    page.on('dialog', dialog => void dialog.accept());
+
+    try {
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('await startExample')");
+      const tabs = page.getByRole('group', { name: 'Example files' });
+      const entry = tabs.locator('button').first();
+      const helper = tabs.getByRole('button', { name: 'runtime.ts Read only' });
+      await page.locator('.monaco-editor').scrollIntoViewIfNeeded();
+      await page.locator('.monaco-editor .overflow-guard').click({ position: { x: 350, y: 110 } });
+      await page.keyboard.press('Control+End');
+      await page.keyboard.type('\n(window as any).__fileTabRun = "entry";');
+      const before = await page.evaluate<{ source: string; position: unknown; scroll: number; uri: string }>(`(() => {
+        const e=window.monaco.editor.getEditors()[0];
+        e.setPosition({lineNumber:25,column:4});e.setScrollTop(180);
+        return {source:e.getValue(),position:e.getPosition(),scroll:e.getScrollTop(),uri:e.getModel().uri.toString()};
+      })()`);
+      assert(before.source.includes('__fileTabRun'), 'The entry accepts keyboard edits');
+      await helper.click();
+      await page.waitForFunction("window.monaco.editor.getEditors()[0].getModel().uri.path.endsWith('/shared/runtime.ts')");
+      assert(
+        await page.evaluate('window.monaco.editor.getEditors()[0].getOption(window.monaco.editor.EditorOption.readOnly)'),
+        'Helpers are read only',
+      );
+      await page.getByRole('button', { name: 'Copy', exact: true }).click();
+      assert(
+        await page.evaluate(
+          "navigator.clipboard.readText().then(text=>text.replaceAll('\\r\\n','\\n')===window.monaco.editor.getEditors()[0].getValue())",
+        ),
+        'Copy uses the visible helper',
+      );
+      await page.getByRole('button', { name: 'Run', exact: true }).click();
+      await page.waitForFunction("document.querySelector('iframe')?.contentWindow?.__fileTabRun === 'entry'");
+      await entry.click();
+      const after = await page.evaluate<{ source: string; position: unknown; scroll: number }>(`(() => {
+        const e=window.monaco.editor.getEditors()[0];return {source:e.getValue(),position:e.getPosition(),scroll:e.getScrollTop()};
+      })()`);
+      assert(
+        after.source === before.source &&
+          JSON.stringify(after.position) === JSON.stringify(before.position) &&
+          after.scroll === before.scroll,
+        'Entry content and view survive the tab switch',
+      );
+      await page.locator('.monaco-editor .overflow-guard').click({ position: { x: 350, y: 110 } });
+      await page.keyboard.press('Control+End');
+      await page.keyboard.type('\n(window as any).__fileTabRun = "changed";');
+      await page.getByRole('button', { name: 'More options', exact: true }).click();
+      await page.getByRole('menuitem', { name: 'Open compiled JavaScript', exact: true }).click();
+      await page.waitForFunction("window.monaco.editor.getEditors()[0].getModel().uri.path.endsWith('/hello-world.js')");
+      assert(await page.getByRole('button', { name: 'Run', exact: true }).isEnabled(), 'Run stays available on compiled output');
+      await page.getByRole('button', { name: 'Run', exact: true }).click();
+      await page.waitForFunction("document.querySelector('iframe')?.contentWindow?.__fileTabRun === 'changed'");
+      assert(
+        (await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()')).includes('"changed"'),
+        'Compiled output refreshes from the entry',
+      );
+      await entry.click();
+      assert(
+        (await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()')).includes('"changed"'),
+        'Opening compiled output preserves unrun edits',
+      );
+      await helper.click();
+      await page.getByRole('button', { name: 'Reset', exact: true }).click();
+      await entry.click();
+      assert(
+        !(await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()')).includes('__fileTabRun'),
+        'Reset targets the entry',
+      );
+      await page
+        .locator('#playground-navigation')
+        .getByRole('link', { name: /^Bloom Threshold/ })
+        .click();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel()?.uri.path.includes('bloom-filter')");
+      assert(
+        await page.evaluate(
+          `window.monaco.editor.getEditors().length===1 && !window.monaco.editor.getModels().some(model=>model.uri.toString()===${JSON.stringify(before.uri)})`,
+        ),
+        'Old example models are disposed',
+      );
+      assert(session.pageErrors.length === 0, session.pageErrors.join('\n'));
+    } finally {
+      await page.context().close();
+    }
+  });
+  await check('file tabs keep helper diagnostics on their originating file', async () => {
+    const { page, pageErrors } = await openPlayground(browser, origin, base, 'getting-started/hello-world');
+
+    try {
+      await page.route('**/examples/shared/runtime.ts', route =>
+        route.fulfill({ contentType: 'text/plain', body: "export const broken: number = 'bad';" }),
+      );
+      await page.getByRole('group', { name: 'Example files' }).getByRole('button', { name: 'runtime.ts Read only' }).click();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel()?.uri.path.endsWith('/shared/runtime.ts')");
+      await page.getByRole('button', { name: 'Jump to line 1', exact: true }).first().click({ timeout: 45000 });
+      assert(
+        await page.evaluate("window.monaco.editor.getEditors()[0].getModel().uri.path.endsWith('/shared/runtime.ts')"),
+        'The diagnostic belongs to the visible helper',
+      );
+      assert(pageErrors.length === 0, pageErrors.join('\n'));
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await check('used assets open the standalone tool without losing editor changes', async () => {
+    const { page, pageErrors } = await openPlayground(browser, origin, base, 'getting-started/hello-world');
+
+    try {
+      await page.locator('[data-used-assets] summary').click({ timeout: 45000 });
+      const source = await page.evaluate<string>(`(() => {
+        const model=window.monaco.editor.getEditors()[0].getModel();
+        model.setValue(model.getValue()+'\\n// unsaved asset navigation check\\n');return model.getValue();
+      })()`);
+      const link = page.locator('[data-used-assets] a[href*="/tools/asset-browser/"]').first();
+      const href = (await link.getAttribute('href'))!;
+      const [tool] = await Promise.all([page.context().waitForEvent('page'), link.click()]);
+      await tool.waitForLoadState('domcontentloaded');
+      await tool.waitForFunction(
+        `Boolean(document.querySelector('[data-asset-tool]')?.contentDocument?.querySelector('aside[aria-label="Selected asset"] h2')?.textContent)`,
+      );
+      assert((await tool.locator('.monaco-editor').count()) === 0, 'The tool has no permanent code pane');
+      assert(
+        tool.url().includes('/tools/asset-browser/') && tool.url().includes(new URL(href).search),
+        'The selected asset deep link is preserved',
+      );
+      assert((await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()')) === source, 'Unrun entry changes survive');
+      await tool.close();
+      assert(pageErrors.length === 0, pageErrors.join('\n'));
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await check('native canvas dropdown arrows do not scroll the Playground', async () => {
+    const { page, pageErrors } = await openPlayground(browser, origin, base, 'application-scenes/transition-gallery');
+
+    try {
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('class GalleryScene')");
+      const source = await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()');
+      assert(source.includes('override init(): void {'), 'The gallery scene init is available');
+      await runSource(page, source.replace('override init(): void {', 'override init(): void { (window as any).__scrollScene = this;'));
+      const frame = await previewFrame(page);
+      await frame.waitForFunction('Boolean(globalThis.__scrollScene?.selector?.visible)');
+      await page.evaluate("document.body.style.minHeight='1600px'");
+      const hit = await frame.evaluate<{ x: number; y: number }>(`(() => {
+        const s=globalThis.__scrollScene,b=s.selector.getBounds();
+        return {x:(b.x+b.width/2)/s.app.width,y:(b.y+b.height/2)/s.app.height};
+      })()`);
+      const canvas = (await frame.locator('canvas').boundingBox())!;
+      await page.mouse.click(canvas.x + canvas.width * hit.x, canvas.y + canvas.height * hit.y);
+      await frame.waitForFunction('globalThis.__scrollScene.selector.isOpen');
+      const selected = await frame.evaluate<number>('globalThis.__scrollScene.selector.highlightedIndex');
+      const before = await page.evaluate<number>('scrollY');
+      await frame.evaluate(
+        "window.addEventListener('keydown',event=>{if(event.key==='ArrowDown')setTimeout(()=>globalThis.__arrowPrevented=event.defaultPrevented,0)},{once:true})",
+      );
+      await page.keyboard.press('ArrowDown', { delay: 35 });
+      await frame.waitForFunction(`globalThis.__scrollScene.selector.highlightedIndex === ${selected + 1} && globalThis.__arrowPrevented`);
+      await page.waitForTimeout(250);
+      assert((await page.evaluate<number>('scrollY')) === before, 'Canvas arrows must not scroll the parent document');
+      assert(pageErrors.length === 0, pageErrors.join('\n'));
+    } finally {
+      await page.context().close();
+    }
+  });
+};
+
 const main = async (): Promise<void> => {
-  const build = readSiteBuildManifest(distDir);
+  const build = options.origin ? resolveSiteChannel(process.env) : readSiteBuildManifest(distDir);
   const base = build.basePath.replace(/\/$/, '');
-  const { server, origin } = await startServer(distDir, base);
+  const { server, origin } = options.origin ? { server: null, origin: new URL(options.origin).origin } : await startServer(distDir, base);
   assert(['chromium', 'firefox'].includes(options.browser!), 'Unsupported browser');
   const browser = await (options.browser === 'firefox'
     ? firefox.launch({ headless: !options.headed, firefoxUserPrefs: { 'dom.webgpu.enabled': true } })
     : chromium.launch({
+        channel: 'chromium',
         headless: !options.headed,
         // Audio stays locked until a real gesture, as it does for a visitor.
         ignoreDefaultArgs: ['--autoplay-policy=no-user-gesture-required'],
@@ -1495,19 +1875,24 @@ const main = async (): Promise<void> => {
       }));
 
   try {
-    await headerChecks(browser, origin, base);
-    await responsivePreviewChecks(browser, origin, base);
-    await crtChecks(browser, origin, base);
-    await maskChecks(browser, origin, base);
-    await audioBusChecks(browser, origin, base);
-    await workerChecks(browser, origin, base);
-    await newTabChecks(browser, origin, base);
-    await exampleLifecycleChecks(browser, origin, base);
-    await consoleChecks(browser, origin, base);
+    if (options.only?.toLowerCase() !== 'asset' && !options.only?.toLowerCase().includes('asset browser')) {
+      await fileTabChecks(browser, origin, base);
+      await headerChecks(browser, origin, base);
+      await nativeControlChecks(browser, origin, base);
+      await responsivePreviewChecks(browser, origin, base);
+      await crtChecks(browser, origin, base);
+      await maskChecks(browser, origin, base);
+      await audioBusChecks(browser, origin, base);
+      await workerChecks(browser, origin, base);
+      await newTabChecks(browser, origin, base);
+      await exampleLifecycleChecks(browser, origin, base);
+      await consoleChecks(browser, origin, base);
+    }
+
     await typecheckSnippets(await assetChecks(browser, origin, base));
   } finally {
     await browser.close();
-    server.close();
+    server?.close();
   }
 
   const failed = results.filter(result => result.error !== null);

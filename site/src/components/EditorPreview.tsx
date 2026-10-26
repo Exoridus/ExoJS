@@ -62,12 +62,14 @@ export interface EditorPreviewProps {
   runId?: number;
   onCanvasSize?(event: CanvasSizeEvent): void;
   onRendererStatus?(status: ExampleRendererStatus | null): void;
+  onAssets?(sources: readonly string[] | null): void;
 }
 
 export const EditorPreview = ({
   exampleMeta,
   onCanvasSize,
   onRendererStatus,
+  onAssets,
   output,
   ref,
   runId = 0,
@@ -76,9 +78,11 @@ export const EditorPreview = ({
 }: EditorPreviewProps): JSX.Element => {
   const [updateId, setUpdateId] = useState(0);
   const rendererStatusRef = useRef(onRendererStatus);
+  const assetsRef = useRef(onAssets);
   const rendererCleanupRef = useRef<(() => void) | null>(null);
   useEffect(() => {
     rendererStatusRef.current = onRendererStatus;
+    assetsRef.current = onAssets;
   });
   useEffect(() => () => rendererCleanupRef.current?.(), []);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -111,6 +115,7 @@ export const EditorPreview = ({
     rendererCleanupRef.current?.();
     rendererCleanupRef.current = null;
     rendererStatusRef.current?.(null);
+    assetsRef.current?.(null);
     outputRef.current?.detach();
     disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
     currentCanvasRef.current = { width: 0, height: 0, zoom: 1, resolutionWidth: 0, resolutionHeight: 0 };
@@ -299,6 +304,10 @@ export const EditorPreview = ({
       const forwardShortcut = (event: KeyboardEvent): void => {
         const target = event.target as HTMLElement | null;
 
+        if ((target === iframeBody || target?.tagName === 'CANVAS') && PREVIEW_SCROLL_KEYS.has(event.key)) {
+          event.preventDefault();
+        }
+
         if (
           ((event.key.toLowerCase() === 'k' && (event.ctrlKey || event.metaKey)) || event.key === '/') &&
           !target?.closest?.('input, textarea, [contenteditable="true"]')
@@ -309,8 +318,19 @@ export const EditorPreview = ({
       };
 
       iframeWindow.addEventListener('keydown', forwardShortcut);
+      let previousAssets = '';
+      const assetTimer = window.setInterval(() => {
+        const sources = iframeWindow.__EXAMPLE_ASSETS__?.();
+        const key = JSON.stringify(sources ?? null);
+
+        if (key !== previousAssets) {
+          previousAssets = key;
+          assetsRef.current?.(sources ?? null);
+        }
+      }, 500);
 
       rendererCleanupRef.current = () => {
+        window.clearInterval(assetTimer);
         iframeWindow.removeEventListener('exo-renderer-status', report);
         iframeWindow.removeEventListener('keydown', forwardShortcut);
       };

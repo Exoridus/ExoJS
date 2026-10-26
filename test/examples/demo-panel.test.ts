@@ -6,6 +6,7 @@ import {
   choice,
   domDemoPanel as demoPanel,
   insetAtlasFrame,
+  mountControls,
   siteUITheme,
   slider,
   startExample,
@@ -13,6 +14,21 @@ import {
 } from '../../examples/shared/runtime.ts';
 
 afterEach(() => document.body.replaceChildren());
+
+it('omits absent caption slots while keeping live hints and controls available', () => {
+  const caption = mountControls({ status: 'Held: none' });
+  expect(caption.element.children).toHaveLength(1);
+  expect(caption.element.querySelector('strong')).toBeNull();
+  caption.setHint('Pointer captured');
+  expect(caption.element.lastElementChild?.textContent).toBe('Pointer captured');
+  caption.setControls([{ keys: 'Space', action: 'Jump' }]);
+  expect(caption.element.children).toHaveLength(3);
+  caption.setControls([]);
+  caption.setHint('');
+  expect(caption.element.children).toHaveLength(1);
+  expect(caption.element.textContent).toBe('Held: none');
+  caption.dispose();
+});
 
 it('keeps bar choices, keyboard changes and reset on the same state', () => {
   const change = vi.fn();
@@ -152,6 +168,12 @@ it('publishes actual renderer only after startup and diagnoses auto fallback and
   });
   const app = {
     options: { backend: { type: 'auto' as const } },
+    loader: {
+      inspect: vi.fn(() => [
+        { locator: 'https://example.test/ship.png', state: 'ready' },
+        { locator: 'https://example.test/pending.png', state: 'loading' },
+      ]),
+    },
     backend: { backendType: 'webgpu' as 'webgpu' | 'webgl2' },
     onBackendLost: signal(lost),
     onBackendRestored: signal(restored),
@@ -165,6 +187,9 @@ it('publishes actual renderer only after startup and diagnoses auto fallback and
     actual: 'webgl2',
     reason: expect.stringContaining('original cause'),
   });
+  expect(window.__EXAMPLE_ASSETS__?.()).toEqual(['https://example.test/ship.png']);
+  app.loader.inspect.mockReturnValue([]);
+  expect(window.__EXAMPLE_ASSETS__?.()).toEqual([]);
   lost[0]!();
   expect(window.__EXAMPLE_RENDERER_STATUS__).toMatchObject({ phase: 'failed', actual: null });
   restored[0]!();

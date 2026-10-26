@@ -6,6 +6,23 @@
   box-sizing: border-box;
 }
 
+.root [data-used-assets] {
+  padding: var(--s-2) var(--s-3);
+  border-bottom: 1px solid var(--line-soft);
+  font-size: var(--text-sm);
+
+  summary {
+    width: fit-content;
+    cursor: pointer;
+  }
+
+  ul {
+    max-height: 160px;
+    margin: var(--s-2) 0;
+    overflow: auto;
+  }
+}
+
 .example-header {
   grid-area: heading;
   min-width: 0;
@@ -173,22 +190,6 @@
 .view-tabs,
 .split-divider {
   display: none;
-}
-
-.source-caption {
-  display: flex;
-  align-items: center;
-  gap: var(--s-3);
-  padding: var(--s-3);
-  border-bottom: 1px solid var(--line-soft);
-  color: #b3c1cd;
-  font-size: var(--text-xs);
-
-  code {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
 }
 
 .preview-options {

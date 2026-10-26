@@ -147,6 +147,13 @@
         <script>
             (function () {
                 var params = new URLSearchParams(window.location.search);
+                if (params.get('tool') === 'asset-browser') {
+                    var tool = document.createElement('script');
+                    tool.type = 'module';
+                    tool.src = './examples/debug-layer/asset-browser.js';
+                    document.body.appendChild(tool);
+                    return;
+                }
                 var sourceKey = params.get('source-key');
                 if (!sourceKey) return;
 

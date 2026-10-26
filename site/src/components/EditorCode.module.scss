@@ -12,6 +12,50 @@
   position: relative;
 }
 
+.file-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg-panel);
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    flex: 0 0 auto;
+    padding: var(--s-2) var(--s-3);
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--fg-muted);
+    font: inherit;
+    font-size: var(--text-sm);
+    cursor: pointer;
+
+    &[aria-pressed='true'] {
+      border-bottom-color: var(--accent);
+      color: var(--fg);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--accent-line);
+      outline-offset: -2px;
+    }
+  }
+
+  span {
+    font-size: var(--text-xs);
+    opacity: 0.7;
+  }
+}
+
+.file-status {
+  margin: 0;
+  padding: var(--s-2);
+  font-size: var(--text-sm);
+}
+
 .editor-host {
   width: 100%;
   min-height: 340px;

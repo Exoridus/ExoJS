@@ -12,8 +12,14 @@ const base = import.meta.env.BASE_URL;
 const targets = getCuratedExamples();
 const preserved = getPreservationEntries();
 const title = kind === 'tools' ? 'Playground tools and guides' : '48-example learning path';
-const route = (path: string) => `${base + locale}/playground/examples/${path.replace(/\.js$/, '')}`;
-const run = (path: string) => `${base + locale}/playground/?version=current&example=${path.replace(/\.js$/, '')}`;
+const route = (path: string) =>
+  path === 'debug-layer/asset-browser.js'
+    ? `${base + locale}/tools/asset-browser/`
+    : `${base + locale}/playground/examples/${path.replace(/\.js$/, '')}`;
+const run = (path: string) =>
+  path === 'debug-layer/asset-browser.js'
+    ? route(path)
+    : `${base + locale}/playground/?version=current&example=${path.replace(/\.js$/, '')}`;
 const groups = [
   { kind: 'tool', title: 'Tools' },
   { kind: 'diagnostic', title: 'Diagnostics' },
@@ -33,9 +39,7 @@ const groups = [
     <h1>{title}</h1>
     {kind === 'curriculum' ? (
       <>
-        <p>
-          Follow a focused path through scenes, interaction, rendering, sound and worlds.
-        </p>
+        <p>Follow a focused path through scenes, interaction, rendering, sound and worlds.</p>
         {CURATED_SECTIONS.map(section => (
           <section aria-labelledby={`section-${section.key}`}>
             <h2 id={`section-${section.key}`}>{`${section.key}. ${section.title}`}</h2>
@@ -98,7 +102,7 @@ const groups = [
                     </h3>
                     <p>{entry.description}</p>
                     <a class="run" href={run(entry.path)}>
-                      Run source
+                      {entry.path === 'debug-layer/asset-browser.js' ? 'Open tool' : 'Run source'}
                     </a>
                     <a class="run" href={`${base}examples/${entry.path.replace(/\.js$/, '.ts')}`}>
                       TypeScript

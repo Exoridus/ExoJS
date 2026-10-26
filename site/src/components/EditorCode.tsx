@@ -60,6 +60,7 @@ export interface EditorCodeHandle {
 
 export interface EditorCodeProps {
   canReset: boolean;
+  compiledCode?: string | null;
   exampleTitle: string;
   language: 'javascript' | 'typescript';
   /** Controls shown before the toolbar's title. */
@@ -80,6 +81,7 @@ export interface EditorCodeProps {
 
 interface MonacoLanguageDefaults {
   addExtraLib(content: string, filePath?: string): unknown;
+  getExtraLibs(): Record<string, unknown>;
   setCompilerOptions(options: Record<string, unknown>): void;
   setDiagnosticsOptions(options: Record<string, unknown>): void;
   setEagerModelSync(value: boolean): void;
@@ -130,6 +132,7 @@ loader.config({ monaco });
 
 export const EditorCode = ({
   canReset,
+  compiledCode,
   exampleTitle,
   language,
   leading,
@@ -146,12 +149,19 @@ export const EditorCode = ({
   toolbarTarget,
   menuItems,
 }: EditorCodeProps): JSX.Element => {
+  const compiledPath = language === 'typescript' && sourcePath ? sourcePath.replace(/\.ts$/, '.js') : null;
+  const [showCompiled, setShowCompiled] = useState(false);
   const [editorValue, setEditorValue] = useState(sourceCode ?? '');
   const [showMenu, setShowMenu] = useState(false);
   const [copyStatus, setCopyStatus] = useState('Copy');
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [activeFile, setActiveFile] = useState(sourcePath);
+  const [fileStatus, setFileStatus] = useState('');
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const modelRef = useRef<monaco.editor.ITextModel | null>(null);
+  const entryModelRef = useRef<monaco.editor.ITextModel | null>(null);
+  const filesRef = useRef(new Map<string, { model: monaco.editor.ITextModel; view: monaco.editor.ICodeEditorViewState | null }>());
+  const fileRequestRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const footgunTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -178,10 +188,23 @@ export const EditorCode = ({
     // source changes - a prop-change reset, not render-derived state.
     // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
     setEditorValue(sourceCode ?? '');
+
+    if (entryModelRef.current?.getValue() !== (sourceCode ?? '')) {
+      entryModelRef.current?.setValue(sourceCode ?? '');
+    }
+
     // eslint-disable-next-line @eslint-react/set-state-in-effect -- feedback belongs to the selected source, not the previous file
     setCopyStatus('Copy');
     onDirty(false);
   }, [onDirty, sourceCode, sourcePath]);
+
+  useEffect(() => {
+    const model = compiledPath ? filesRef.current.get(compiledPath)?.model : null;
+
+    if (model && compiledCode !== null && compiledCode !== undefined && model.getValue() !== compiledCode) {
+      model.setValue(compiledCode);
+    }
+  }, [compiledCode, compiledPath]);
 
   useEffect(() => {
     if (!selectedVersionId) {
@@ -230,6 +253,16 @@ export const EditorCode = ({
       }
 
       disposablesRef.current = [];
+      selectedVersionRef.current = '';
+      fileRequestRef.current?.abort();
+
+      for (const file of filesRef.current.values()) {
+        if (!file.model.isDisposed()) {
+          file.model.dispose();
+        }
+      }
+
+      filesRef.current.clear();
     },
     [],
   );
@@ -241,13 +274,14 @@ export const EditorCode = ({
       return;
     }
 
-    const editor = editorRef.current;
+    const model = entryModelRef.current;
 
-    if (!editor) {
+    if (!model) {
       return;
     }
 
-    const code = editor.getValue();
+    const code = model.getValue();
+    const version = model.getVersionId();
 
     if (language !== 'typescript') {
       onUpdateCode({ code, executionCode: undefined });
@@ -256,9 +290,9 @@ export const EditorCode = ({
       return;
     }
 
-    const executionCode = await getExecutionCode(editor, language);
+    const executionCode = await getExecutionCode(model, language);
 
-    if (executionCode === null) {
+    if (executionCode === null || model.isDisposed() || model.getVersionId() !== version) {
       // TS worker couldn't emit JS (still warming up, or a transient
       // failure) - keep the last successfully-compiled preview running
       // instead of pushing raw, unparseable TypeScript into the iframe.
@@ -276,6 +310,35 @@ export const EditorCode = ({
   useEffect(() => {
     triggerRefreshRef.current = triggerRefresh;
   });
+
+  const selectFile = useCallback(
+    (path: string): void => {
+      const editor = editorRef.current;
+      const next = filesRef.current.get(path);
+
+      if (!editor || !next) {
+        return;
+      }
+
+      for (const file of filesRef.current.values()) {
+        if (file.model === editor.getModel()) {
+          file.view = editor.saveViewState();
+        }
+      }
+
+      editor.setModel(next.model);
+      modelRef.current = next.model;
+      editor.updateOptions({ readOnly: readOnly || next.model !== entryModelRef.current });
+
+      if (next.view) {
+        editor.restoreViewState(next.view);
+      }
+
+      setActiveFile(path);
+      updateDiagnostics(next.model, selectedVersionRef.current, typingsAppliedVersionRef.current, onDiagnostic);
+    },
+    [onDiagnostic, readOnly],
+  );
 
   useImperativeHandle(
     ref,
@@ -301,6 +364,12 @@ export const EditorCode = ({
   const onMount: OnMount = (editor, monacoApi) => {
     editorRef.current = editor;
     modelRef.current = editor.getModel();
+    entryModelRef.current = editor.getModel();
+
+    if (sourcePath && entryModelRef.current) {
+      filesRef.current.set(sourcePath, { model: entryModelRef.current, view: null });
+    }
+
     window.monaco = monacoApi;
 
     disposablesRef.current.push(
@@ -312,6 +381,10 @@ export const EditorCode = ({
         onCursorChange({ lineNumber: position.lineNumber, column: position.column, selectionLength });
       }),
       editor.onDidChangeModelContent(() => {
+        if (editor.getModel() !== entryModelRef.current) {
+          return;
+        }
+
         const dirty = editor.getValue() !== sourceCodeRef.current;
         onDirty(dirty);
 
@@ -336,7 +409,7 @@ export const EditorCode = ({
             autoRefreshTimerRef.current = null;
 
             if (autoRefreshRef.current) {
-              void triggerRefresh();
+              void triggerRefreshRef.current();
             }
           }, 800);
         }
@@ -398,9 +471,68 @@ export const EditorCode = ({
     }
 
     setEditorValue(sourceCodeRef.current ?? '');
+    entryModelRef.current?.setValue(sourceCodeRef.current ?? '');
     onResetCode({ confirmed: true });
     onDirty(false);
   };
+
+  const openFile = useCallback(
+    async (path: string): Promise<void> => {
+      fileRequestRef.current?.abort();
+      setFileStatus('');
+
+      if (filesRef.current.has(path)) {
+        selectFile(path);
+
+        return;
+      }
+
+      if (path === compiledPath && compiledCode !== null && compiledCode !== undefined && sourcePath) {
+        const model = monaco.editor.createModel(
+          compiledCode,
+          'javascript',
+          monaco.Uri.parse(getModelUrl(path, selectedVersionId, sourcePath)),
+        );
+        filesRef.current.set(path, { model, view: null });
+        selectFile(path);
+
+        return;
+      }
+
+      const request = new AbortController();
+      fileRequestRef.current = request;
+      setFileStatus(`Loading ${path}...`);
+
+      try {
+        const response = await fetch(
+          isCurrentVersion(selectedVersionId) ? buildExampleUrl(path) : buildGithubRawExampleUrl(selectedVersionId, path),
+          { signal: request.signal },
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const source = await response.text();
+
+        if (request.signal.aborted || !sourcePath) {
+          return;
+        }
+
+        const model = monaco.editor.createModel(source, undefined, monaco.Uri.parse(getModelUrl(path, selectedVersionId, sourcePath)));
+        filesRef.current.set(path, { model, view: null });
+        selectFile(path);
+        setFileStatus('');
+      } catch (error) {
+        if (!request.signal.aborted) {
+          setFileStatus(`Cannot open ${path}: ${String(error)}`);
+        }
+      }
+    },
+    [compiledCode, compiledPath, selectFile, selectedVersionId, sourcePath],
+  );
+
+  const activeReadOnly = readOnly || activeFile !== sourcePath;
 
   /**
    * Monaco's own document formatter, which for TypeScript and JavaScript is the
@@ -422,7 +554,7 @@ export const EditorCode = ({
   const exportCode = (): void => {
     setShowMenu(false);
     const code = editorRef.current?.getValue() ?? editorValue;
-    const fileName = sourcePath ? (sourcePath.split('/').pop() ?? 'example.js') : 'example.js';
+    const fileName = activeFile?.split('/').pop() ?? 'example.js';
     const blob = new Blob([code], { type: 'text/javascript' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -457,7 +589,7 @@ export const EditorCode = ({
       }
 
       setEditorValue(reader.result);
-      editorRef.current?.setValue(reader.result);
+      entryModelRef.current?.setValue(reader.result);
     };
 
     reader.readAsText(file);
@@ -546,34 +678,26 @@ export const EditorCode = ({
             Auto-run: {autoRefresh ? 'On' : 'Off'}
           </button>
           {menuItems}
-          <button className={css(styles, 'menu-item')} role="menuitem" disabled={readOnly} onClick={formatCode}>
+          <button className={css(styles, 'menu-item')} role="menuitem" disabled={activeReadOnly} onClick={formatCode}>
             Format Code
           </button>
           <button className={css(styles, 'menu-item')} role="menuitem" onClick={exportCode}>
             Export this file
           </button>
-          {companions.length > 0 && (
-            <div className={css(styles, 'menu-note')} role="group" aria-label="Files this example also imports">
-              <span>Also imports</span>
-              {companions.map(companion => (
-                <a
-                  key={companion}
-                  className={css(styles, 'menu-item')}
-                  role="menuitem"
-                  href={
-                    isCurrentVersion(selectedVersionId)
-                      ? buildExampleUrl(companion)
-                      : buildGithubRawExampleUrl(selectedVersionId, companion)
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {companion}
-                </a>
-              ))}
-            </div>
+          {compiledPath && (
+            <button
+              className={css(styles, 'menu-item')}
+              role="menuitem"
+              disabled={!compiledCode}
+              onClick={() => {
+                setShowCompiled(true);
+                void openFile(compiledPath);
+              }}
+            >
+              Open compiled JavaScript
+            </button>
           )}
-          <button className={css(styles, 'menu-item')} role="menuitem" disabled={readOnly} onClick={importCode}>
+          <button className={css(styles, 'menu-item')} role="menuitem" disabled={activeReadOnly} onClick={importCode}>
             Import Code
           </button>
         </div>
@@ -592,6 +716,27 @@ export const EditorCode = ({
       )}
       <input ref={fileInputRef} className={css(styles, 'file-input')} type="file" accept=".js,.ts" onChange={onFileImport} />
       <div className={css(styles, 'editor-shell')} data-editor-shell>
+        <div className={css(styles, 'file-tabs')} role="group" aria-label="Example files">
+          {sourcePath &&
+            [sourcePath, ...companions, ...(showCompiled && compiledPath ? [compiledPath] : [])].map(path => (
+              <button
+                key={path}
+                type="button"
+                aria-pressed={activeFile === path}
+                title={path}
+                value={path}
+                onClick={event => void openFile(event.currentTarget.value)}
+              >
+                {path.split('/').pop()}
+                <span>{path === sourcePath && !readOnly ? 'Editable' : 'Read only'}</span>
+              </button>
+            ))}
+        </div>
+        {fileStatus && (
+          <p role="status" className={css(styles, 'file-status')}>
+            {fileStatus}
+          </p>
+        )}
         <div className={css(styles, 'editor-host')} data-editor-host>
           {/*
             Withheld until the selected example is known. Mounting earlier would
@@ -607,7 +752,11 @@ export const EditorCode = ({
               height="100%"
               language={language}
               loading={null}
-              onChange={(value: string | undefined) => setEditorValue(value ?? '')}
+              onChange={(value: string | undefined) => {
+                if (editorRef.current?.getModel() === entryModelRef.current) {
+                  setEditorValue(value ?? '');
+                }
+              }}
               onMount={onMount}
               options={{
                 automaticLayout: true,
@@ -621,14 +770,18 @@ export const EditorCode = ({
                 lineNumbersMinChars: 4,
                 minimap: { enabled: false },
                 overviewRulerLanes: 0,
-                readOnly,
+                // shortcut: Monaco 0.55 leaves a rejected highlight delay on model switches; restore after its fix.
+                occurrencesHighlight: 'off',
+                readOnly: activeReadOnly,
                 renderValidationDecorations: 'on',
                 scrollBeyondLastLine: false,
                 tabSize: 2,
               }}
-              path={getModelUrl(sourcePath)}
+              path={getModelUrl(sourcePath, selectedVersionId, sourcePath)}
+              keepCurrentModel
+              saveViewState={false}
               theme="vs-dark"
-              value={editorValue}
+              defaultValue={sourceCode ?? ''}
             />
           )}
         </div>
@@ -637,7 +790,8 @@ export const EditorCode = ({
   );
 };
 
-const getModelUrl = (sourcePath: string): string => `file:///${sourcePath.replace(/^\/+/, '')}`;
+const getModelUrl = (path: string, version: string, entry: string): string =>
+  `file:///examples/${encodeURIComponent(version)}/${encodeURIComponent(entry)}/${path.replace(/^\/+/, '')}`;
 
 const monacoSeverityToString = (severity: number): EditorDiagnosticSeverity => {
   if (severity >= 8) {
@@ -786,13 +940,8 @@ const updateFootgunMarkers = async (model: monaco.editor.ITextModel | null): Pro
 // native parser SyntaxError (e.g. `private sprite!: Sprite` reads as two
 // adjacent identifiers), so callers must treat `null` as "not ready" and keep
 // the last successfully-compiled preview rather than swallow it into a crash.
-const getExecutionCode = async (
-  editor: monaco.editor.IStandaloneCodeEditor,
-  language: 'javascript' | 'typescript',
-): Promise<string | null> => {
-  const model = editor.getModel();
-
-  if (language !== 'typescript' || !model) {
+const getExecutionCode = async (model: monaco.editor.ITextModel, language: 'javascript' | 'typescript'): Promise<string | null> => {
+  if (language !== 'typescript') {
     return null;
   }
 
@@ -855,6 +1004,23 @@ const ensureTypingsForVersion = async (
   }
 
   const tsApi = (monaco.languages as unknown as { typescript: MonacoTypeScriptApi }).typescript;
+  const activePaths = new Set(libs.map(lib => lib.filePath));
+
+  for (const path of Object.keys(tsApi.typescriptDefaults.getExtraLibs())) {
+    if (!activePaths.has(path)) {
+      monaco.editor.getModel(monaco.Uri.parse(path))?.dispose();
+    }
+  }
+
+  // Materialized declaration models override extra libs when resolving definitions.
+  for (const lib of libs) {
+    const model = monaco.editor.getModel(monaco.Uri.parse(lib.filePath));
+
+    if (model && model.getValue() !== lib.content) {
+      model.setValue(lib.content);
+    }
+  }
+
   tsApi.javascriptDefaults.setExtraLibs(libs);
   tsApi.typescriptDefaults.setExtraLibs(libs);
   typingsAppliedVersion.current = versionId;
