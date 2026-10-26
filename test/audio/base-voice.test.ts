@@ -75,6 +75,7 @@ interface MockGainNode {
   gain: {
     setTargetAtTime: MockInstance;
     cancelScheduledValues: MockInstance;
+    cancelAndHoldAtTime?: MockInstance;
     setValueAtTime: MockInstance;
     linearRampToValueAtTime: MockInstance;
     value: number;
@@ -346,6 +347,46 @@ describe('BaseVoice — fade()', () => {
     expect(out.node!.gain.setValueAtTime).toHaveBeenCalled();
     expect(out.node!.gain.linearRampToValueAtTime).toHaveBeenCalledWith(1, expect.any(Number));
 
+    out.restore();
+    sound.destroy();
+  });
+});
+
+describe('BaseVoice - interrupted gain ramps', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  test.each([
+    ['fade', false],
+    ['fade', true],
+    ['stop', false],
+    ['stop', true],
+  ] as const)('%s holds gain before cancelling automation (native hold: %s)', (operation, nativeHold) => {
+    const system = new AudioSystem();
+    const out = captureVoiceOutput();
+    const sound = new Sound(createAudioBufferStub());
+    const voice = system.play(sound);
+    const gain = out.node!.gain;
+    gain.value = 0.35;
+    const cancel = vi.fn(() => {
+      gain.value = 1;
+    });
+
+    if (nativeHold) {
+      gain.cancelAndHoldAtTime = cancel;
+    } else {
+      gain.cancelScheduledValues = cancel;
+    }
+
+    if (operation === 'fade') {
+      voice.fade(0.2, Time.seconds(0.05));
+    } else {
+      voice.stop(Time.seconds(0.05));
+    }
+
+    expect(cancel).toHaveBeenCalledWith(getAudioContext().currentTime);
+    expect(gain.setValueAtTime).toHaveBeenLastCalledWith(0.35, getAudioContext().currentTime);
+    expect(gain.linearRampToValueAtTime).toHaveBeenLastCalledWith(operation === 'fade' ? 0.2 : 0, getAudioContext().currentTime + 0.05);
+    voice.stop();
     out.restore();
     sound.destroy();
   });
