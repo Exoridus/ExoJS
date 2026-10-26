@@ -39,6 +39,7 @@ declare global {
     interface Window {
         __EXAMPLE_META__?: ExampleRuntimeMeta | null;
         __EXAMPLE_RENDERER_STATUS__?: ExampleRendererStatus;
+        __EXAMPLE_ASSETS__?: () => readonly string[];
         __EXAMPLE_PREVIEW_AUTOPLAY__?: (() => void | Promise<void>) | null;
     }
     var __EXAMPLE_META__: ExampleRuntimeMeta | null | undefined;
@@ -120,6 +121,12 @@ export interface ExampleRendererStatus {
     reason: string | null;
 }
 interface RendererApplication {
+    readonly loader?: {
+        inspect(): ReadonlyArray<{
+            locator: string;
+            state: string;
+        }>;
+    };
     readonly options: {
         backend?: {
             type?: 'auto' | 'webgl2' | 'webgpu';

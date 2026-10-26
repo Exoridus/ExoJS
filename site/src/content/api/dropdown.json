@@ -1,6 +1,6 @@
 {
   "title": "Dropdown",
-  "description": "A closed control showing the current selection that opens a list of alternatives. Clicking it, or pressing Enter or Space while it holds focus, opens the list; the arrow keys move the highlight, Enter picks it, and Escape closes without changing the selection. With the list closed, the arrow keys step through the entries directly, so a value can be changed without ever opening it. The closed control paints the `button` role - the same states a Button does - the open list the `dropdownList` role, and each row the `dropdownItem` role, with the highlighted row in its `hover` state. The list is a child of the dropdown, so it draws above whatever the dropdown itself draws above and is clipped by the same ancestors.",
+  "description": "A closed control showing the current selection that opens a list of alternatives. Clicking it, or pressing Enter or Space while it holds focus, opens the list; the arrow keys move the highlight, Enter picks it, and Escape closes without changing the selection. With the list closed, the arrow keys step through the entries directly, so a value can be changed without ever opening it. The closed control paints the `button` role - the same states a Button does - the open list the `dropdownList` role, and each row the `dropdownItem` role, with the highlighted row in its `hover` state. The list remains a child of the dropdown and keeps its ancestor clips. Inside a UIRoot, opening raises its stacking contexts above sibling UI; closing restores their previous order without changing layout or tab order.",
   "symbol": "Dropdown",
   "kind": "class",
   "subsystem": "ui",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A closed control showing the current selection that opens a list of alternatives.",
         "Clicking it, or pressing Enter or Space while it holds focus, opens the list; the arrow keys move the highlight, Enter picks it, and Escape closes without changing the selection. With the list closed, the arrow keys step through the entries directly, so a value can be changed without ever opening it.",
-        "The closed control paints the `button` role - the same states a Button does - the open list the `dropdownList` role, and each row the `dropdownItem` role, with the highlighted row in its `hover` state. The list is a child of the dropdown, so it draws above whatever the dropdown itself draws above and is clipped by the same ancestors."
+        "The closed control paints the `button` role - the same states a Button does - the open list the `dropdownList` role, and each row the `dropdownItem` role, with the highlighted row in its `hover` state. The list remains a child of the dropdown and keeps its ancestor clips. Inside a UIRoot, opening raises its stacking contexts above sibling UI; closing restores their previous order without changing layout or tab order."
       ],
       "importLine": "import { Dropdown } from '@codexo/exojs'",
       "sourceLink": null
