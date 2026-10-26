@@ -83,6 +83,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "Coroutine",
   "CoroutineSystem",
   "CrossFadeSceneTransition",
+  "CrtFilter",
   "CsvAsset",
   "CsvAssetType",
   "DEFAULT_BLOCK_CACHE_NAME",
