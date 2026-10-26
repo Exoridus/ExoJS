@@ -299,10 +299,11 @@ const consoleChecks = async (browser: Browser, origin: string, base: string): Pr
   let marker = '';
 
   await check('output panel is collapsed by default and plain logs keep it closed', async () => {
-    await setOutputOpen(page, false);
     await page.evaluate("localStorage.removeItem('exo-playground-output-open')");
     await page.reload({ waitUntil: 'domcontentloaded' });
     await previewFrame(page);
+    assert((await outputToggle(page).count()) === 0 || !(await outputOpen(page)), 'empty output opened without a failure');
+    await runSource(page, "console.log('plain preview log');");
     await waitFor(
       () => outputToggle(page).count(),
       count => count === 1,
@@ -457,7 +458,8 @@ const consoleChecks = async (browser: Browser, origin: string, base: string): Pr
     assert(Math.abs(output.x - preview.x) < 2, 'the panel is not in the preview column');
     assert(editor.x > preview.x, 'the editor is not to the right of the preview');
 
-    await page.locator('button[aria-label="Swap the editor and the preview"]').click();
+    await page.locator('[data-example-header] summary').click();
+    await page.getByRole('button', { name: 'Swap panes', exact: true }).click();
 
     const swappedPreview = await box(page, 'section[aria-label="Example preview"]');
     const swappedOutput = await box(page, '[aria-label="Preview output"]');
@@ -465,11 +467,13 @@ const consoleChecks = async (browser: Browser, origin: string, base: string): Pr
     assert(swappedPreview.x > preview.x, 'the swap did not move the preview');
     assert(Math.abs(swappedOutput.x - swappedPreview.x) < 2, 'the panel did not follow the preview');
     assert(swappedOutput.y >= swappedPreview.y + swappedPreview.height - 1, 'the panel overlaps the swapped preview');
-    await page.locator('button[aria-label="Swap the editor and the preview"]').click();
+    await page.locator('[data-example-header] summary').click();
+    await page.getByRole('button', { name: 'Swap panes', exact: true }).click();
   });
 
   await check('the panel sits between preview and editor in the stacked layout', async () => {
-    await page.locator('button[aria-label="Switch to stacked layout"]').click();
+    await page.locator('[data-example-header] summary').click();
+    await page.getByRole('button', { name: 'Demo above code', exact: true }).click();
 
     const preview = await box(page, 'section[aria-label="Example preview"]');
     const output = await box(page, '[aria-label="Preview output"]');
@@ -477,7 +481,8 @@ const consoleChecks = async (browser: Browser, origin: string, base: string): Pr
 
     assert(output.y >= preview.y + preview.height - 1, 'the panel overlaps the preview');
     assert(editor.y >= output.y + output.height - 1, 'the editor is not below the panel');
-    await page.locator('button[aria-label="Switch to split layout"]').click();
+    await page.locator('[data-example-header] summary').click();
+    await page.getByRole('button', { name: 'Split view', exact: true }).click();
   });
 
   await page.context().close();
@@ -507,6 +512,8 @@ const consoleChecks = async (browser: Browser, origin: string, base: string): Pr
 
   await check('the panel stays usable at phone width', async () => {
     const phone = await openPlayground(browser, origin, base, 'getting-started/hello-world', { width: 390, height: 844 });
+    await runSource(phone.page, "console.log('phone output');");
+    await outputToggle(phone.page).waitFor({ state: 'visible' });
     const preview = await box(phone.page, 'section[aria-label="Example preview"]');
     const output = await box(phone.page, '[aria-label="Preview output"]');
     const scrollWidth = await phone.page.evaluate('document.documentElement.scrollWidth');
@@ -1092,7 +1099,10 @@ const exampleLifecycleChecks = async (browser: Browser, origin: string, base: st
           ['onPointerMove', 'onPointerDown', 'onPointerUp', 'onPointerTap', 'onPointerCancel', 'onKeyDown']
             .map(key => [key, globalThis.__acceptanceApp.input[key].count]))`);
         const baseline = JSON.stringify(await counts());
-        const panels = await frame.locator('body > aside').count();
+        const countPanels = () =>
+          frame.evaluate<number>(`document.querySelectorAll('body > aside').length +
+          (globalThis.__acceptanceApp.scenes.currentScene._peekUI()?.children.length ?? 0)`);
+        const panels = await countPanels();
 
         if (
           [
@@ -1117,7 +1127,7 @@ const exampleLifecycleChecks = async (browser: Browser, origin: string, base: st
           await frame.waitForFunction('globalThis.__acceptanceApp.scenes.currentScene === null');
           await frame.evaluate('globalThis.__acceptanceApp.start(globalThis.__acceptanceScene)');
           assert(JSON.stringify(await counts()) === baseline, `${example}: input listeners grew after restart ${cycle + 1}`);
-          assert((await frame.locator('body > aside').count()) === panels, `${example}: controls grew after restart`);
+          assert((await countPanels()) === panels, `${example}: controls grew after restart`);
           const unlock = frame.getByRole('button', { name: 'Enable sound', exact: true });
 
           if (await unlock.isVisible()) {
@@ -1164,27 +1174,50 @@ const exampleLifecycleChecks = async (browser: Browser, origin: string, base: st
   }
 };
 
+const clickNativeControl = async (frame: Frame, label: string, kind: string): Promise<void> => {
+  await frame.waitForFunction('globalThis.__acceptanceApp?.scenes.currentScene?.state === "active"');
+  await frame.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+  const hit = await frame.evaluate<{ x: number; y: number }>(`(() => {
+    const app=globalThis.__acceptanceApp;
+    let label;
+    const visit=node=>{if(node.constructor.name==='Label'&&node.text===${JSON.stringify(label)})label=node;for(const child of node.children??[])visit(child);};
+    visit(app.scenes.currentScene._peekUI());
+    const node=label.parent.children.find(child=>child.constructor.name===${JSON.stringify(kind)});
+    globalThis.__clickedNativeControl=node;
+    const bounds=node.getBounds();
+    return {x:(bounds.x+bounds.width/2)/app.width,y:(bounds.y+bounds.height/2)/app.height};
+  })()`);
+  const canvas = (await frame.locator('canvas').first().boundingBox())!;
+  await frame.page().mouse.click(canvas.x + hit.x * canvas.width, canvas.y + hit.y * canvas.height);
+  await frame.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+  await frame.waitForFunction('globalThis.__acceptanceApp.interaction.focused === globalThis.__clickedNativeControl');
+};
+
 const workerChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
   await check('acceptance worker terrain: initial, unchanged reload, edited reload and new tab', async () => {
     const { page, pageErrors } = await openPlayground(browser, origin, base, 'tilemap/worker-streamed-terrain');
     page.setDefaultTimeout(15_000);
 
     const verifyTerrain = async (frame: Frame): Promise<void> => {
-      await frame.getByRole('button', { name: 'Next Provider', exact: true }).click();
-      await waitFor(
-        () => frame.locator('body').innerText(),
-        text => /worker .* [1-9]\d* chunks/.test(text),
-        'worker-generated terrain',
-      );
-      await frame.getByRole('button', { name: 'Previous Provider', exact: true }).click();
-      await waitFor(
-        () => frame.locator('body').innerText(),
-        text => /sync .* [1-9]\d* chunks/.test(text),
-        'sync terrain',
-      );
+      for (const provider of ['worker', 'sync']) {
+        await clickNativeControl(frame, 'Provider', 'DemoDropdown');
+        await frame.page().keyboard.press(provider === 'worker' ? 'ArrowDown' : 'ArrowUp');
+        await frame.page().keyboard.press('Enter');
+        await frame.waitForFunction(value => {
+          const scene = (
+            globalThis as unknown as {
+              __acceptanceApp: { scenes: { currentScene: { providerMode: string; streamer: { residentCount: number } } } };
+            }
+          ).__acceptanceApp.scenes.currentScene;
+
+          return scene.providerMode === value && scene.streamer.residentCount > 0;
+        }, provider);
+      }
     };
 
     try {
+      const source = `${await readFile(resolve(repoRoot, 'examples/tilemap/worker-streamed-terrain.ts'), 'utf8')}\n(globalThis as any).__acceptanceApp = app;`;
+      await runSource(page, source);
       await verifyTerrain(await previewFrame(page));
       const previousUrl = (await previewFrame(page)).url();
       await page.getByRole('button', { name: 'Run', exact: true }).click();
@@ -1194,15 +1227,15 @@ const workerChecks = async (browser: Browser, origin: string, base: string): Pro
         'worker reload generation',
       );
       await verifyTerrain(await previewFrame(page));
-      const source = await readFile(resolve(repoRoot, 'examples/tilemap/worker-streamed-terrain.ts'), 'utf8');
 
       for (let cycle = 0; cycle < 2; cycle++) {
         await runSource(page, `${source}\ndocument.body.dataset.editedTerrain = '${cycle}';`);
         const frame = await previewFrame(page);
         await frame.waitForFunction(value => document.body.dataset.editedTerrain === value, String(cycle));
         await verifyTerrain(frame);
+        await page.locator('[data-example-header] summary').click();
         const popupPromise = page.waitForEvent('popup');
-        await page.getByRole('button', { name: 'Open in new tab', exact: true }).click();
+        await page.getByRole('button', { name: 'Open demo in new tab', exact: true }).click();
         const popup = await popupPromise;
         popup.on('pageerror', error => pageErrors.push(error.message));
         await popup.waitForFunction(value => document.body.dataset.editedTerrain === value, String(cycle));
@@ -1251,8 +1284,9 @@ const newTabChecks = async (browser: Browser, origin: string, base: string): Pro
           'unchanged edited reload',
         );
         await (await previewFrame(page)).waitForFunction(value => document.body.dataset.editedExample === value, String(cycle));
+        await page.locator('[data-example-header] summary').click();
         const popupPromise = page.waitForEvent('popup');
-        await page.getByRole('button', { name: 'Open in new tab', exact: true }).click();
+        await page.getByRole('button', { name: 'Open demo in new tab', exact: true }).click();
         const popup = await popupPromise;
         popup.on('pageerror', error => pageErrors.push(error.message));
         await popup.waitForFunction(
@@ -1338,8 +1372,11 @@ const crtChecks = async (browser: Browser, origin: string, base: string): Promis
 
     try {
       const source = await readFile(resolve(repoRoot, 'examples/filters/crt-scanlines.ts'), 'utf8');
-      // Freeze scene time while draw and DOM controls keep running, so grain cannot fake a control response.
-      await runSource(page, `${source}\napp.scenes.pause();\n(globalThis as any).__crtBackend = app.backend.backendType;`);
+      // Freeze grain time while the scene and native UI keep updating.
+      await runSource(
+        page,
+        `${source.replace('this.time += delta;', 'this.time += 0;')}\n(globalThis as any).__acceptanceApp = app;\n(globalThis as any).__crtBackend = app.backend.backendType;`,
+      );
       const frame = await previewFrame(page);
       await frame.waitForFunction('globalThis.__crtBackend !== undefined');
       console.log(`[e2e] CRT backend: ${await frame.evaluate('globalThis.__crtBackend')}`);
@@ -1381,14 +1418,14 @@ const crtChecks = async (browser: Browser, origin: string, base: string): Promis
         );
 
       const setSlider = async (name: string, key: 'Home' | 'End'): Promise<void> => {
-        await frame.getByRole('slider', { name, exact: true }).focus();
+        await clickNativeControl(frame, name, 'Slider');
         await page.keyboard.press(key);
       };
 
       const on = await capture();
-      await frame.getByRole('button', { name: 'CRT', exact: true }).click();
+      await clickNativeControl(frame, 'CRT', 'Toggle');
       assert((await difference(on, await capture())) > 500, 'CRT toggle changed no meaningful scene pixels');
-      await frame.getByRole('button', { name: 'CRT', exact: true }).click();
+      await clickNativeControl(frame, 'CRT', 'Toggle');
       assert((await difference(on, await capture())) === 0, 'CRT toggle did not restore the frozen scene');
       await setSlider('RGB separation', 'Home');
       await setSlider('Effect strength', 'Home');
@@ -1399,7 +1436,8 @@ const crtChecks = async (browser: Browser, origin: string, base: string): Promis
       await setSlider('RGB separation', 'End');
       assert((await difference(strong, await capture())) > 500, 'CRT RGB separation changed no meaningful scene pixels');
       await setSlider('RGB separation', 'Home');
-      assert((await difference(strong, await capture())) === 0, 'CRT RGB separation did not restore the frozen scene');
+      const restoredDifference = await difference(strong, await capture());
+      assert(restoredDifference === 0, `CRT RGB separation did not restore the frozen scene (${restoredDifference} pixels)`);
       assert(pageErrors.length === 0, pageErrors.join('\n'));
     } finally {
       await page.context().close();
