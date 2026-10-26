@@ -799,4 +799,38 @@ describe('WebGPU geometric (stencil) clipping', () => {
       backend.destroy();
     }
   });
+
+  test.each(['texture', 'graphics'])('keeps asymmetric content and %s alpha masks upright', async (maskKind, ctx) => {
+    const backend = await setupBackend();
+    const content = createSolidTexture('#ff0000');
+    const maskTexture = createSolidTexture('#ffffff');
+    const root = new Container();
+    const sprite = new Sprite(content);
+    const maskGraphics = new Graphics();
+    const contentContext = (content.source as HTMLCanvasElement).getContext('2d')!;
+    const maskContext = (maskTexture.source as HTMLCanvasElement).getContext('2d')!;
+
+    contentContext.fillStyle = '#0000ff';
+    contentContext.fillRect(0, 32, 64, 32);
+    maskContext.clearRect(0, 48, 64, 16);
+    maskGraphics.fillColor = Color.white;
+    maskGraphics.drawRectangle(0, 0, 64, 48);
+    sprite.mask = maskKind === 'texture' ? maskTexture : maskGraphics;
+    root.addChild(sprite);
+
+    try {
+      await renderClipped(ctx, backend, root);
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(readPixel(16, 12), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(16, 40), [0, 0, 255, 255]);
+      expectPixelNear(readPixel(16, 56), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      maskGraphics.destroy();
+      content.destroy();
+      maskTexture.destroy();
+      backend.destroy();
+    }
+  });
 });

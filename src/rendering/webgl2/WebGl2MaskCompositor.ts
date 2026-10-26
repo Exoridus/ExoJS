@@ -43,6 +43,7 @@ export class WebGl2MaskCompositor {
   private readonly _float32View: Float32Array = new Float32Array(this._vertexData);
   private readonly _contentSamplerSlot: Int32Array = new Int32Array([0]);
   private readonly _maskSamplerSlot: Int32Array = new Int32Array([1]);
+  private readonly _textureFlipY: Float32Array = new Float32Array(2);
   private _connection: MaskCompositorConnection | null = null;
 
   public connect(backend: WebGl2Backend): void {
@@ -113,10 +114,6 @@ export class WebGl2MaskCompositor {
       throw new Error('WebGl2MaskCompositor: not connected.');
     }
 
-    // Update the quad vertices for this destination rect. UVs are 0..1
-    // mapped over (left, top) → (right, bottom) with an explicit Y-flip
-    // for render-texture sampling: the mask path samples textures
-    // already authored as RGBA in render-texture orientation.
     this._writeQuadVertices(x, y, x + width, y + height);
 
     // Bind the compositor program. Setting projection + sampler uniforms
@@ -129,6 +126,10 @@ export class WebGl2MaskCompositor {
     this._shader.getUniform('u_projection').setValue(projection);
     this._shader.getUniform('u_content').setValue(this._contentSamplerSlot);
     this._shader.getUniform('u_mask').setValue(this._maskSamplerSlot);
+    // Captured content and an authored mask can have opposite texture orientations.
+    this._textureFlipY[0] = content.flipY ? 1 : 0;
+    this._textureFlipY[1] = mask.flipY ? 1 : 0;
+    this._shader.getUniform('u_textureFlipY').setValue(this._textureFlipY);
     this._shader.sync();
 
     backend.bindTexture(content, 0);
