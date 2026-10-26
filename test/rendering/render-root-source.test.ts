@@ -1,6 +1,8 @@
+import { Color } from '#core/Color';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
+import { Mesh } from '#rendering/mesh/Mesh';
 import { RenderEntryKind } from '#rendering/plan/renderCommand';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
@@ -8,6 +10,7 @@ import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import { LiveEntryReason, type SourceOther, type SourceScope } from '#rendering/plan/renderSourceItem';
 import type { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
+import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -87,7 +90,7 @@ const createDrawRecordingBackend = (): { backend: RenderBackend; draws: string[]
     renderTarget,
     rendererRegistry: {
       resolve(drawable: Drawable) {
-        if (drawable instanceof Leaf) {
+        if (drawable instanceof Leaf || drawable instanceof Mesh) {
           return flaggedRenderer;
         }
 
@@ -133,7 +136,7 @@ const createDrawRecordingBackend = (): { backend: RenderBackend; draws: string[]
       return backend;
     },
     draw(drawable: Drawable) {
-      draws.push((drawable as Leaf).id);
+      draws.push(drawable instanceof Leaf ? drawable.id : (drawable.name ?? 'mesh'));
 
       return backend;
     },
@@ -919,6 +922,60 @@ describe('render-root source: structure delta', () => {
 
     root.destroy();
     backend.destroy();
+  });
+
+  test('replaces deep graphics meshes when a live sibling also changes without walking untouched branches', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new CountingContainer());
+    const panel = new CountingContainer();
+    const middle = new CountingContainer().setPosition(110, 300);
+    const graphics = new Graphics();
+    const live = new Container().setPosition(60, 300);
+    live.clip = true;
+    live.addChild(new Leaf('live'));
+    const innerUntouched = new CountingContainer();
+    innerUntouched.addChild(new Leaf('inner-kept').setPosition(30, 0));
+    const outerUntouched = new CountingContainer();
+    outerUntouched.addChild(new Leaf('outer-kept').setPosition(250, 300));
+
+    const paint = (name: string): void => {
+      graphics.clear();
+      graphics.fillColor = Color.red;
+      graphics.lineColor = Color.white;
+      graphics.lineWidth = 1;
+      graphics.drawRectangle(0, 0, 20, 12);
+      graphics.children.forEach((mesh, index) => {
+        mesh.name = `${name}-${index}`;
+      });
+    };
+
+    paint('old');
+    middle.addChild(graphics, innerUntouched);
+    panel.addChild(new Leaf('before').setPosition(10, 300), live, middle, new Leaf('after').setPosition(200, 300));
+    root.addChild(panel, outerUntouched);
+    driveToSourceTier(root, backend);
+    const removed = [...graphics.children];
+    const collects = { root: root.collects, inner: innerUntouched.collects, outer: outerUntouched.collects };
+
+    try {
+      paint('new');
+      live.addChild(new Leaf('live-new').setPosition(20, 0));
+      expect(removed.every(mesh => mesh.parent === null && !mesh.destroyed)).toBe(true);
+      draws.length = 0;
+      playFrame(root, backend);
+
+      expect(draws).toEqual(['before', 'live', 'live-new', 'new-0', 'new-1', 'inner-kept', 'after', 'outer-kept']);
+      expect(root.collects).toBe(collects.root);
+      expect(innerUntouched.collects).toBe(collects.inner);
+      expect(outerUntouched.collects).toBe(collects.outer);
+      expect(entriesFor(root, graphics).every(entry => entry.kind !== RenderEntryKind.Draw || entry.drawable.parent === graphics)).toBe(
+        true,
+      );
+    } finally {
+      root.destroy();
+      removed.forEach(mesh => mesh.destroy());
+      backend.destroy();
+    }
   });
 
   test('an item that moved inside a re-discovered container is stored where it is now', () => {

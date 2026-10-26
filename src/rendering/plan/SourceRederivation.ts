@@ -139,9 +139,10 @@ export class SourceRederivation {
     }
 
     const mark = scope.items.count;
+    const isTarget = this._targets!.isTarget(group);
 
-    if (node._structureMarkSequence > cursor) {
-      if (!this._targets!.isTarget(group)) {
+    if (node._structureMarkSequence > cursor || isTarget) {
+      if (!isTarget) {
         return false;
       }
 

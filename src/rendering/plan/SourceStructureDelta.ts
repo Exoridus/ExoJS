@@ -32,7 +32,7 @@ export interface SourceDeltaHost {
 
 /** What a re-derivation may ask of the delta that started it. */
 export interface SourceDeltaTargets {
-  /** Whether `scope` is one the delta attributed a structural change to. */
+  /** Whether `scope` lies on a path that must be re-derived for a structural change. */
   isTarget(scope: SourceScope): boolean;
 }
 
@@ -61,6 +61,7 @@ export class SourceStructureDelta implements SourceDeltaTargets {
   /** Scopes this delta re-discovers, refilled per attempt so it allocates none. */
   private readonly _targets: SourceScope[] = [];
   private readonly _targetSet = new Set<SourceScope>();
+  private readonly _rederiveTargets = new Set<SourceScope>();
 
   /**
    * Settle the structure channel for one root.
@@ -109,6 +110,7 @@ export class SourceStructureDelta implements SourceDeltaTargets {
       // the whole subtree behind it alive until the next delta happens to run.
       this._targets.length = 0;
       this._targetSet.clear();
+      this._rederiveTargets.clear();
     }
   }
 
@@ -181,6 +183,7 @@ export class SourceStructureDelta implements SourceDeltaTargets {
 
     targets.length = 0;
     seen.clear();
+    this._rederiveTargets.clear();
 
     const attributed = source.dirtyIndex.readSince(cursor, DirtyChannel.Structure, marked => {
       const scope = source.scopeOfNode(marked);
@@ -198,6 +201,18 @@ export class SourceStructureDelta implements SourceDeltaTargets {
     }
 
     this._pruneNestedTargets(source, root);
+
+    // Carrying an unchanged intermediate group would hide a pruned target below it.
+    for (const target of seen) {
+      let current: SourceScope | null = target;
+
+      while (current !== null && !this._rederiveTargets.has(current)) {
+        this._rederiveTargets.add(current);
+        const node = sourceScopeNode(current, root);
+        const parent = node === root ? null : node.parent;
+        current = parent === null ? null : source.scopeOfNode(parent);
+      }
+    }
 
     // An uncovered effect change can turn a recorded group into a live barrier.
     return source.dirtyIndex.readSince(
@@ -330,7 +345,7 @@ export class SourceStructureDelta implements SourceDeltaTargets {
   }
 
   public isTarget(scope: SourceScope): boolean {
-    return this._targetSet.has(scope);
+    return this._rederiveTargets.has(scope);
   }
 
   /**
