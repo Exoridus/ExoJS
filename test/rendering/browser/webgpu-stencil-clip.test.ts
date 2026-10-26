@@ -800,7 +800,7 @@ describe('WebGPU geometric (stencil) clipping', () => {
     }
   });
 
-  test.each(['texture', 'graphics'])('keeps asymmetric content and %s alpha masks upright', async (maskKind, ctx) => {
+  test.for(['texture', 'graphics'])('keeps asymmetric content and %s alpha masks upright', async (maskKind, ctx) => {
     const backend = await setupBackend();
     const content = createSolidTexture('#ff0000');
     const maskTexture = createSolidTexture('#ffffff');
