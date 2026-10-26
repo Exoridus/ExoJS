@@ -1,4 +1,6 @@
-import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -17,6 +19,64 @@ const workflow = readFileSync(resolve(repoRoot, '.github/workflows/ci.yml'), 'ut
 const pullRequest = (changedFiles: string[]): CiPlan => planCi({ eventName: 'pull_request', changedFiles, refName: 'feature' });
 const push = (changedFiles: string[], refName = 'next'): CiPlan => planCi({ eventName: 'push', changedFiles, refName });
 const ids = (entries: Array<{ id: string }>): string[] => entries.map(entry => entry.id);
+
+describe('planner changed-file transport', () => {
+  it('reads a complete file list larger than a Linux environment entry', () => {
+    const directory = mkdtempSync(resolve(tmpdir(), 'exo-ci-plan-'));
+    const file = resolve(directory, 'changed files.json');
+    const files = Array.from({ length: 6000 }, (_, index) => `docs/generated/reference/long-public-symbol-${index}.json`);
+    files.push('packages/exojs-audio-fx/src/effect.ts');
+    const json = JSON.stringify(files);
+    expect(Buffer.byteLength(json)).toBeGreaterThan(128 * 1024);
+
+    try {
+      writeFileSync(file, json);
+      const output = execFileSync(process.execPath, ['scripts/ci/lanes.ts'], {
+        cwd: repoRoot,
+        env: { ...process.env, EVENT_NAME: 'pull_request', REF_NAME: 'feature', CHANGED_FILES: '', CHANGED_FILES_FILE: file },
+        encoding: 'utf8',
+      });
+      const actual = Object.fromEntries(
+        output
+          .trim()
+          .split('\n')
+          .map(line => {
+            const separator = line.indexOf('=');
+
+            return [line.slice(0, separator), JSON.parse(line.slice(separator + 1)) as unknown];
+          }),
+      );
+      const expected = pullRequest(files);
+      expect(actual['test']).toEqual(expected.test);
+      expect(actual['verify']).toEqual(expected.verify);
+      expect(actual['site']).toBe(expected.site);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('does not silently ignore a configured file that cannot be read', () => {
+    const directory = mkdtempSync(resolve(tmpdir(), 'exo-ci-plan-'));
+
+    try {
+      expect(() =>
+        execFileSync(process.execPath, ['scripts/ci/lanes.ts'], {
+          cwd: repoRoot,
+          env: { ...process.env, EVENT_NAME: 'pull_request', REF_NAME: 'feature', CHANGED_FILES_FILE: resolve(directory, 'missing') },
+          stdio: 'pipe',
+        }),
+      ).toThrow();
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps changed paths out of the step environment and writes pull-request JSON literally', () => {
+    expect(workflow).not.toMatch(/^\s+CHANGED_FILES:/m);
+    expect(workflow).toContain('CHANGED_FILES_FILE:');
+    expect(workflow).toContain("<<'CHANGED_FILES_JSON'");
+  });
+});
 
 describe('lane table', () => {
   it('has a unique id per lane', () => {

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 import { type EffectiveLanes, effectiveLanes, type LaneAreas, selectAreas } from './select-lanes.ts';
@@ -460,9 +461,11 @@ const parseChangedFiles = (raw: string | undefined): string[] => {
  * are JSON; every other value is a plain `true`/`false`.
  */
 const main = (): void => {
+  const changedFilesPath = process.env['CHANGED_FILES_FILE'];
+  const changedFiles = changedFilesPath ? readFileSync(changedFilesPath, 'utf8') : process.env['CHANGED_FILES'];
   const plan = planCi({
     eventName: process.env['EVENT_NAME'] ?? '',
-    changedFiles: parseChangedFiles(process.env['CHANGED_FILES']),
+    changedFiles: parseChangedFiles(changedFiles),
     refName: process.env['REF_NAME'] ?? '',
   });
 
