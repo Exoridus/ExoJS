@@ -160,8 +160,8 @@ class SpriteFollowsBodyScene extends Scene {
     const dx = x - body.x;
     const dy = y - body.y;
     this.grabPoint = {
-      x: (dx * Math.cos(body.angle) + dy * Math.sin(body.angle)) / sprite.scale.x,
-      y: (-dx * Math.sin(body.angle) + dy * Math.cos(body.angle)) / sprite.scale.y,
+      x: sprite.origin.x + (dx * Math.cos(body.angle) + dy * Math.sin(body.angle)) / sprite.scale.x,
+      y: sprite.origin.y + (-dx * Math.sin(body.angle) + dy * Math.cos(body.angle)) / sprite.scale.y,
     };
     this.dragPointer = pointer.id;
     this.dragJoint = this.world.addJoint(
