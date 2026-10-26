@@ -76,7 +76,7 @@ class RetroDisplayScene extends Scene {
     this.background = new Sprite(this.loader.get(assets.uvGrid256)).setAnchor(0.5).setPosition(width / 2, height / 2);
     this.background.width = width;
     this.background.height = height;
-    this.title = new Text('SIGNAL LOST', { fillColor: Color.white, fontSize: 96, outlineColor: Color.black, outlineWidth: 4 });
+    this.title = new Text('SIGNAL LOST', { fillColor: Color.white, fontSize: 96, outlineColor: Color.black, outlineWidth: 0.12 });
     this.title.setAnchor(0.5).setPosition(width / 2, height / 2);
 
     this.stage = new Container();
