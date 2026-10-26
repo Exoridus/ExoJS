@@ -154,6 +154,8 @@ Each property is a passive descriptor; reading it fetches nothing, and the scene
 
 JSON asset data under `examples/assets/` is committed compact, including Tiled maps/tilesets/templates (`.tmj`, `.tsj`, `.tj`, `.world`) and LDtk documents (`.ldtk`, `.ldtkl`). Run `pnpm assets:compact` after exporting or editing these files. `pnpm assets:compact:check` enforces this in the sync gates. Prettier ignores the asset directory; do not pretty-print large tile arrays. The example catalog `examples/examples.json` remains ordinary repository metadata.
 
+Physics examples must fit collision geometry to the visible artwork, not to an untrimmed atlas cell. Account for transparent padding, rounded corners, anchor and scale, and preserve the asset's aspect ratio. Keep any deliberate collision approximation explicit. Verify resting contacts, rotated contacts and fast dragging against walls; debug contours must use the same presentation transform as the visible sprite. Recheck the fit when an asset or frame changes.
+
 ### The `.ts` source and its committed `.js`
 
 The `.ts` file is the authored source. The `.js` beside it is generated from it by `examples:sync` and **committed**, which is unusual enough to say why: a release bundle ships the whole catalog in both languages, alongside the guides, the API reference and a working playground, so a reader can copy either form and run it locally without being online. `scripts/release/full-zip.ts` splits them into `examples/src/**` and `examples/js/**` from whatever is on disk, and the release requires a site build — which runs `examples:sync` — beforehand.
