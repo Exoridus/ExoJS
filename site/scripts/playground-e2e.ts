@@ -1645,9 +1645,44 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
 
           await page.getByRole('button', { name: 'Hide example list', exact: true }).click();
           await page.getByRole('button', { name: 'Show example list', exact: true }).click();
+          await waitFor(
+            () => page.getByRole('button', { name: 'Hide example list', exact: true }).evaluate(node => node === document.activeElement),
+            focused => focused,
+            'navigation keyboard focus',
+          );
+
+          let releasePreview!: () => void;
+          let previewRequested = false;
+          const resumePreview = new Promise<void>(resolve => {
+            releasePreview = resolve;
+          });
+          await page.route(
+            '**/preview.html?*',
+            async route => {
+              previewRequested = true;
+              await resumePreview;
+              await route.continue();
+            },
+            { times: 1 },
+          );
+          await page.getByRole('button', { name: 'Run', exact: true }).click();
+          await waitFor(
+            async () => previewRequested,
+            requested => requested,
+            'pending preview load',
+          );
+          await page.getByRole('button', { name: 'Hide example list', exact: true }).click();
+          await page.getByRole('button', { name: 'Show example list', exact: true }).click();
+          await waitFor(
+            () => page.getByRole('button', { name: 'Hide example list', exact: true }).evaluate(node => node === document.activeElement),
+            focused => focused,
+            'navigation keyboard focus before preview load',
+          );
+          releasePreview();
+          await page.waitForFunction("document.querySelector('iframe')?.contentDocument?.body?.tabIndex === -1");
           assert(
             await page.getByRole('button', { name: 'Hide example list', exact: true }).evaluate(node => node === document.activeElement),
-            'navigation lost keyboard focus',
+            'a late preview load stole navigation focus',
           );
         } else if (width <= 760) {
           assert((await page.getByRole('button', { name: 'Examples', exact: true }).count()) === 1, 'multiple mobile navigation entrances');

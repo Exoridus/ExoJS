@@ -406,7 +406,10 @@ export const EditorPreview = ({
     iframeBody.tabIndex = -1;
     void executePreviewSource(iframeBody, source, exampleRef.current);
     watchForCanvas(iframeBody);
-    focusPreviewSurface(iframe);
+
+    if (document.activeElement === document.body || document.activeElement === iframe) {
+      focusPreviewSurface(iframe);
+    }
   };
 
   if (!sourceCode) {
