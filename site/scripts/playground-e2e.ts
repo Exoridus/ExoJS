@@ -1704,6 +1704,36 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
 };
 
 const nativeControlChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await check('canvas focus preserves pointer geometry in a scrolled host', async () => {
+    const { page } = await openPlayground(browser, origin, base, 'getting-started/hello-world');
+
+    try {
+      const source = await readFile(resolve(repoRoot, 'examples/getting-started/hello-world.ts'), 'utf8');
+      await runSource(page, `${source}\n(globalThis as any).__acceptanceApp = app;`);
+      const frame = await previewFrame(page);
+      await frame.waitForFunction('globalThis.__acceptanceApp?.state === "running"');
+      const focus = (await frame.evaluate(`(() => {
+        const canvas = document.createElement('canvas');
+        canvas.tabIndex = 0;
+        Object.assign(canvas.style, { display: 'block', marginTop: '600px', height: '1400px' });
+        document.body.append(canvas);
+        const platform = new globalThis.__acceptanceApp.platform.constructor(canvas);
+        try {
+          window.scrollTo(0, 0);
+          const before = canvas.getBoundingClientRect().top;
+          platform.focusSurface();
+          return { before, after: canvas.getBoundingClientRect().top, focused: document.activeElement === canvas };
+        } finally {
+          platform.destroy();
+          canvas.remove();
+        }
+      })()`)) as { before: number; after: number; focused: boolean };
+      assert(focus.focused && focus.before === focus.after, `canvas focus changed pointer geometry: ${JSON.stringify(focus)}`);
+    } finally {
+      await page.context().close();
+    }
+  });
+
   await check('native control gestures run only their own action', async () => {
     for (const [path, kind] of [
       ['sprites-textures/blendmodes', 'choice'],

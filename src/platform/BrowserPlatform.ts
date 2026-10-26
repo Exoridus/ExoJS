@@ -133,7 +133,7 @@ export class BrowserPlatform implements PlatformAdapter {
   }
 
   public focusSurface(): void {
-    this._canvas.focus();
+    this._canvas.focus({ preventScroll: true });
   }
 
   public getSurfaceMetrics(): PlatformSurfaceMetrics {
