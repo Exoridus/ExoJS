@@ -8,31 +8,30 @@ import {
   Keyboard,
   type RenderingContext,
   Scene,
-  type Seconds,
   Text,
 } from '@codexo/exojs';
-import { demoPanel, slider, startExample, toggle } from '@examples/runtime';
+import { demoPanel, slider, startExample } from '@examples/runtime';
 
 // Threshold uses linear luminance: encoded gray 128 is approximately 0.22, not 0.5.
 const LEVELS = [40, 90, 140, 190, 225, 255];
 const controls = {
   threshold: slider('Threshold', { min: 0, max: 1, step: 0.05, value: 0.6 }),
-  intensity: slider('Intensity', { min: 0, max: 4, step: 0.1, value: 1.6 }),
-  spread: slider('Spread', { min: 0, max: 24, step: 1, value: 10 }),
-  bypass: toggle('Bypass'),
 };
 class BloomFilterScene extends Scene {
   private readonly bloom = this.track(new BloomFilter({ threshold: 0.6, intensity: 1.6, strength: 10, levels: 3 }));
   private readonly stage = new Container();
   private readonly discs = new Graphics();
-  private readonly beam = new Graphics();
   private labels: Text[] = [];
   private panel!: ReturnType<typeof demoPanel<typeof controls>>;
-  private elapsed = 0;
-  private playing = true;
+  private bloomEnabled = true;
+  private layoutWidth = 0;
+  private layoutHeight = 0;
 
   override init(): void {
-    this.stage.addChild(this.discs, this.beam);
+    this.stage.addChild(this.discs);
+    this.stage.filters = [this.bloom];
+    this.discs.interactive = true;
+    this.discs.onPointerTap.add(this.toggleBloom);
     this.root.addChild(this.stage);
     this.labels = LEVELS.map(value => {
       const channel = value / 255;
@@ -45,44 +44,38 @@ class BloomFilterScene extends Scene {
       scene: this,
       layout: 'bar',
       controls,
-      actions: {
-        'Pause / Resume': () => {
-          this.playing = !this.playing;
-        },
-      },
     });
-    this.inputs.onTrigger(Keyboard.Space, () => {
-      this.playing = !this.playing;
-    });
+    this.inputs.onTrigger(Keyboard.Space, this.toggleBloom);
   }
 
-  override update(delta: Seconds): void {
+  private readonly toggleBloom = (): void => {
+    this.bloomEnabled = !this.bloomEnabled;
+    this.stage.filters = this.bloomEnabled ? [this.bloom] : [];
+  };
+
+  override update(): void {
     const { scale, width, contentHeight } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
     this.root.setScale(scale);
 
-    if (this.playing) {
-      this.elapsed += delta;
+    this.bloom.threshold = this.panel.values.threshold;
+    this.bloom.strength = 10 * scale;
+    this.panel.status(this.bloomEnabled ? 'Bloom on' : 'Bloom off');
+
+    if (this.layoutWidth === width && this.layoutHeight === contentHeight) {
+      return;
     }
 
-    this.bloom.threshold = this.panel.values.threshold;
-    this.bloom.intensity = this.panel.values.intensity;
-    this.bloom.strength = this.panel.values.spread * scale;
-    this.stage.filters = this.panel.values.bypass ? [] : [this.bloom];
+    this.layoutWidth = width;
+    this.layoutHeight = contentHeight;
     this.discs.clear();
     const radius = Math.min(40, width / 20, contentHeight * 0.18);
+    const centerY = Math.max(radius + 32, contentHeight / 2);
     LEVELS.forEach((value, index) => {
       const x = (width * (index + 1)) / 7;
       this.discs.fillColor = new Color(value, value, value);
-      this.discs.drawCircle(x, contentHeight * 0.4, radius);
-      this.labels[index].setPosition(x, contentHeight * 0.4 - radius - 20);
+      this.discs.drawCircle(x, centerY, radius);
+      this.labels[index].setPosition(x, centerY - radius - 20);
     });
-    const x = width * (0.5 + 0.38 * Math.sin(this.elapsed * 0.7));
-    this.beam.clear();
-    this.beam.fillColor = Color.white;
-    this.beam.drawRoundedRectangle(x - 7, contentHeight * 0.66, 14, contentHeight * 0.2, 7);
-    this.panel.status(
-      `${this.panel.values.bypass ? 'Bypass' : 'Bloom on'} | luminance labels 0-1 | ${this.playing ? 'sweep running' : 'paused'}`,
-    );
   }
 
   override draw(context: RenderingContext): void {

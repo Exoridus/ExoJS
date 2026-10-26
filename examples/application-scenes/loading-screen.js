@@ -1,12 +1,14 @@
 // Auto-generated from loading-screen.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Sprite, Text } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { demoPanel, startExample } from '@examples/runtime';
-const descriptors = [assets.uvGrid256, assets.hueRamp, assets.pixelWhite];
-const names = ['Scene asset: UV grid', 'Scene asset: colour ramp', 'UI asset: white pixel'];
+import { demoPanel, startExample, toggle } from '@examples/runtime';
+const descriptors = [assets.platformerTilesImage, assets.backgroundForest, assets.spaceShipBlue];
+const names = ['Platform tiles', 'Forest background', 'Spaceship'];
+const controls = { slow: toggle('Slow queue (simulation)', true) };
 class BootScene extends Scene {
   bar = this.track(new Graphics());
   labels = names.map(() => this.track(new Text('', { fillColor: Color.white })));
+  previews = descriptors.map(() => null);
   states = ['waiting', 'waiting', 'waiting'];
   attempts = [0, 0, 0];
   loading = false;
@@ -25,22 +27,27 @@ class BootScene extends Scene {
     this.panel = demoPanel({
       scene: this,
       layout: 'bar',
-      controls: {},
+      controls,
       actions: {
         Load: () => void this.loadAssets(false),
         'Load with one broken file': () => void this.loadAssets(true),
         'Retry failed': () => void this.retry(),
       },
     });
-    this.panel.status('Ready - choose Load or the deliberate failure.');
+    this.panel.status('Load real images, or deliberately break the last URL to try Retry.');
   }
   // #endregion guide:boot-signals
   async loadOne(index, broken = false) {
     this.states[index] = 'loading';
     this.attempts[index]++;
-    const descriptor = broken ? Asset.type('texture', `${assets.pixelWhite.source}.missing.png`) : descriptors[index];
+    const descriptor = broken ? Asset.type('texture', `${descriptors[index].source}.missing.png`) : descriptors[index];
     try {
-      await this.loader.load(descriptor);
+      const texture = await this.loader.load(descriptor);
+      if (this.lifecycleSignal.aborted) {
+        return;
+      }
+      this.previews[index]?.destroy();
+      this.previews[index] = new Sprite(texture).setAnchor(0.5);
       this.states[index] = 'loaded';
     } catch {
       this.states[index] = 'failed';
@@ -50,12 +57,22 @@ class BootScene extends Scene {
     if (this.loading) {
       return;
     }
+    this.previews.forEach(sprite => sprite?.destroy());
+    this.previews.fill(null);
     descriptors.forEach(descriptor => this.loader.release(descriptor));
     this.loading = true;
     this.states.fill('waiting');
     this.attempts.fill(0);
-    this.panel.status('Loading...', 'info');
-    await Promise.all([this.loadOne(0), this.loadOne(1), this.loadOne(2, broken)]);
+    this.panel.status(this.panel.values.slow ? 'Simulation: start one real file every 400 ms.' : 'Loading real files...', 'info');
+    for (let index = 0; index < descriptors.length; index++) {
+      if (index > 0 && this.panel.values.slow) {
+        await new Promise(resolve => setTimeout(resolve, 400));
+      }
+      if (this.lifecycleSignal.aborted) {
+        return;
+      }
+      await this.loadOne(index, broken && index === descriptors.length - 1);
+    }
     this.finish();
   }
   async retry() {
@@ -81,6 +98,7 @@ class BootScene extends Scene {
   destroy() {
     this.app.loader.onLoadProgress.remove(this.onLoadProgress);
     this.app.loader.onLoadError.remove(this.onLoadError);
+    this.previews.forEach(sprite => sprite?.destroy());
     this.panel?.dispose();
     super.destroy();
   }
@@ -100,7 +118,14 @@ class BootScene extends Scene {
       label.style.fontSize = 15 * k;
       label.style.fillColor = this.states[index] === 'failed' ? new Color(255, 124, 128) : Color.white;
       label.text = `${names[index]}\n${this.states[index]} | requests: ${this.attempts[index]}`;
-      label.setPosition(left, top + (26 + index * 48) * k);
+      const y = top + (26 + index * 48) * k;
+      label.setPosition(left, y);
+      const sprite = this.previews[index];
+      if (sprite?.texture) {
+        sprite.setScale(Math.min((80 * k) / sprite.texture.width, (40 * k) / sprite.texture.height));
+        sprite.setPosition((width - 80) * k, y + 16 * k);
+        context.render(sprite);
+      }
       context.render(label);
     });
   }

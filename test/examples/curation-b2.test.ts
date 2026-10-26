@@ -24,6 +24,15 @@ const sceneClass = (path: string, name: string): new () => object => {
     },
     Graphics: class {},
     Text: class {},
+    Sprite: class {
+      setAnchor() {
+        return this;
+      }
+
+      destroy() {}
+    },
+    setTimeout,
+    toggle: (_label: string, value: boolean) => ({ value }),
     ActionMap: class {
       constructor(actions: Record<string, unknown>) {
         Object.assign(this, actions);
@@ -35,17 +44,47 @@ const sceneClass = (path: string, name: string): new () => object => {
     Keyboard: { Space: 1 },
     GamepadButton: { South: 2 },
     Asset: { type: (_type: string, source: string) => ({ source }) },
-    assets: { uvGrid256: { source: '/grid.png' }, hueRamp: { source: '/ramp.png' }, pixelWhite: { source: '/pixel.png' } },
+    assets: {
+      platformerTilesImage: { source: '/tiles.png' },
+      backgroundForest: { source: '/forest.png' },
+      spaceShipBlue: { source: '/ship.png' },
+    },
   }) as new () => object;
 };
 
 beforeEach(() => vi.clearAllMocks());
 
 describe('curated loading queue', () => {
+  it('stops the simulated queue before requesting another file after the scene ends', async () => {
+    vi.useFakeTimers();
+
+    try {
+      const scene = new (sceneClass('application-scenes/loading-screen', 'BootScene'))() as unknown as {
+        lifecycleSignal: AbortSignal;
+        loader: { load: ReturnType<typeof vi.fn>; release: ReturnType<typeof vi.fn> };
+        panel: { status: ReturnType<typeof vi.fn>; values: { slow: boolean } };
+        loadAssets(broken: boolean): Promise<void>;
+      };
+      const controller = new AbortController();
+      scene.lifecycleSignal = controller.signal;
+      scene.loader = { load: vi.fn(async () => ({})), release: vi.fn() };
+      scene.panel = { status: vi.fn(), values: { slow: true } };
+      const pending = scene.loadAssets(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(scene.loader.load).toHaveBeenCalledOnce();
+      controller.abort();
+      await vi.advanceTimersByTimeAsync(500);
+      await pending;
+      expect(scene.loader.load).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('retries only the failed row and leaves successful claims alone', async () => {
     const scene = new (sceneClass('application-scenes/loading-screen', 'BootScene'))() as unknown as {
       loader: { load: ReturnType<typeof vi.fn>; release: ReturnType<typeof vi.fn> };
-      panel: { status: ReturnType<typeof vi.fn> };
+      panel: { status: ReturnType<typeof vi.fn>; values: { slow: boolean } };
       states: string[];
       attempts: number[];
       loadAssets(broken: boolean): Promise<void>;
@@ -57,7 +96,7 @@ describe('curated loading queue', () => {
       ),
       release: vi.fn(),
     };
-    scene.panel = { status: vi.fn() };
+    scene.panel = { status: vi.fn(), values: { slow: false } };
     await scene.loadAssets(true);
     expect(scene.states).toEqual(['loaded', 'loaded', 'failed']);
     expect(scene.attempts).toEqual([1, 1, 1]);
@@ -66,7 +105,7 @@ describe('curated loading queue', () => {
     await scene.retry();
     expect(scene.states).toEqual(['loaded', 'loaded', 'loaded']);
     expect(scene.attempts).toEqual([1, 1, 2]);
-    expect(scene.loader.load).toHaveBeenCalledExactlyOnceWith({ source: '/pixel.png' });
+    expect(scene.loader.load).toHaveBeenCalledExactlyOnceWith({ source: '/ship.png' });
     expect(scene.loader.release).not.toHaveBeenCalled();
   });
 });

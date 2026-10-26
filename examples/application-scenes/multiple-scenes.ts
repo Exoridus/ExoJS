@@ -3,15 +3,12 @@ import {
   Application,
   ButtonAction,
   Color,
+  FadeSceneTransition,
   FixedResolutionCanvasSizing,
   GamepadButton,
-  Graphics,
   Keyboard,
-  PhasedSceneTransition,
   type RenderingContext,
   Scene,
-  type SceneTransitionPhaseContext,
-  type SceneTransitionPhaseRequirements,
   Text,
 } from '@codexo/exojs';
 import { demoPanel, startExample } from '@examples/runtime';
@@ -26,38 +23,7 @@ const record = (event: string): void => {
   }
 };
 
-class BarWipeTransition extends PhasedSceneTransition<Graphics[]> {
-  protected override getPhaseRequirements(): SceneTransitionPhaseRequirements {
-    return { outgoingFrame: 'none', currentFrame: 'direct' };
-  }
-
-  protected override createPhaseState(): Graphics[] {
-    return [0, 1].map(() => {
-      const bar = new Graphics();
-      bar.fillColor = new Color(18, 24, 29);
-      bar.drawRectangle(0, 0, 1, 1);
-
-      return bar;
-    });
-  }
-
-  protected override destroyPhaseState(bars: Graphics[]): void {
-    bars.forEach(bar => bar.destroy());
-  }
-
-  protected override enter(context: SceneTransitionPhaseContext, bars: Graphics[]): void {
-    const view = context.rendering.screenView;
-    const height = (view.height * (1 - context.presence)) / 2;
-    bars[0]!.setPosition(0, 0).setScale(view.width, height);
-    bars[1]!.setPosition(0, view.height - height).setScale(view.width, height);
-    bars.forEach(bar => context.rendering.render(bar, { view }));
-  }
-
-  protected override exit(context: SceneTransitionPhaseContext, bars: Graphics[]): void {
-    this.enter(context, bars);
-  }
-}
-const wipe = new BarWipeTransition();
+const wipe = new FadeSceneTransition();
 
 class LifecycleScene extends Scene {
   protected sceneName = '';

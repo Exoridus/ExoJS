@@ -86,18 +86,16 @@ class GalleryScene extends Scene {
     this.movingLight.drawCircle(0, 0, 6);
     this.movingLight.fillColor = new Color(accent.r, accent.g, accent.b, 0.15);
     this.movingLight.drawCircle(0, 0, 17);
-    this.panel = new Panel({ height: 112 });
-    const heading = new Label('Transition gallery', { fontSize: 18, fontWeight: 'bold' });
-    heading.setPosition(16, 12);
+    this.panel = new Panel({ height: 76 });
     this.detail = new Label('', { fontSize: 12, fillColor: new Color(174, 188, 198) });
-    this.detail.setPosition(16, 86);
+    this.detail.setPosition(16, 52);
     this.selector = new Dropdown({
       height: 28,
       textStyle: { fontSize: 13 },
       selectedIndex: selected,
       items: transitions.map((entry, index) => ({ label: entry.label, value: index })),
     });
-    this.selector.setPosition(16, 44);
+    this.selector.setPosition(16, 10);
     this.selector.onChange.add(index => {
       selected = index;
     });
@@ -108,8 +106,7 @@ class GalleryScene extends Scene {
     this.previous.onClick.add(() => this.select(-1));
     this.next.onClick.add(() => this.select(1));
     this.mode = new Label('', { fontSize: 13 });
-    // The open list must paint above the replay button and the panel's labels.
-    this.panel.addChild(heading, this.detail, this.replay, this.previous, this.mode, this.next, this.selector);
+    this.panel.addChild(this.detail, this.replay, this.previous, this.mode, this.next, this.selector);
     this.location = new Label(this.observatory ? '02 / AMBER OBSERVATORY' : '01 / MINT HARBOR', {
       fontSize: 15,
       fontWeight: 'bold',
@@ -189,25 +186,25 @@ class GalleryScene extends Scene {
     const height = app.height / scale;
     const compact = width < 500 || height < 320;
     this.ui.uiScale = scale;
-    this.panel.setSize(width, 112);
+    this.panel.setSize(width, 76);
     this.selector.setSize(Math.max(100, width - 136), 28);
-    this.replay.setPosition(width - 104, compact ? 10 : 42);
+    this.replay.setPosition(width - 104, 10);
     this.selector.visible = !compact;
     if (compact) {
       this.selector.close();
     }
     this.previous.visible = this.next.visible = this.mode.visible = compact;
-    this.previous.setPosition(16, 44);
-    this.next.setPosition(width - 68, 44);
-    this.mode.setPosition(80, 51);
+    this.previous.setPosition(16, 10);
+    this.next.setPosition(width - 68, 10);
+    this.mode.setPosition(80, 17);
     this.mode.text = transitions[selected].label;
     this.detail.text = width < 420 ? 'Choose an effect, then Replay to swap scenes.' : transitions[selected].detail;
     this.location.setPosition(16, height - 50);
     this.clock.setPosition(16, height - 28);
     this.background.setScale(app.width, app.height);
-    const artHeight = Math.max(60, height - 170);
+    const artHeight = Math.max(60, height - 134);
     this.art.setScale(Math.min((width - 24) / 720, artHeight / 380) * scale);
-    this.art.setPosition(app.width / 2, (112 + artHeight / 2) * scale);
+    this.art.setPosition(app.width / 2, (76 + artHeight / 2) * scale);
   }
   update(delta) {
     this.time += delta;

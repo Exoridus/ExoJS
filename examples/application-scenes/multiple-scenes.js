@@ -4,11 +4,10 @@ import {
   Application,
   ButtonAction,
   Color,
+  FadeSceneTransition,
   FixedResolutionCanvasSizing,
   GamepadButton,
-  Graphics,
   Keyboard,
-  PhasedSceneTransition,
   Scene,
   Text,
 } from '@codexo/exojs';
@@ -20,33 +19,7 @@ const record = event => {
     history.shift();
   }
 };
-class BarWipeTransition extends PhasedSceneTransition {
-  getPhaseRequirements() {
-    return { outgoingFrame: 'none', currentFrame: 'direct' };
-  }
-  createPhaseState() {
-    return [0, 1].map(() => {
-      const bar = new Graphics();
-      bar.fillColor = new Color(18, 24, 29);
-      bar.drawRectangle(0, 0, 1, 1);
-      return bar;
-    });
-  }
-  destroyPhaseState(bars) {
-    bars.forEach(bar => bar.destroy());
-  }
-  enter(context, bars) {
-    const view = context.rendering.screenView;
-    const height = (view.height * (1 - context.presence)) / 2;
-    bars[0].setPosition(0, 0).setScale(view.width, height);
-    bars[1].setPosition(0, view.height - height).setScale(view.width, height);
-    bars.forEach(bar => context.rendering.render(bar, { view }));
-  }
-  exit(context, bars) {
-    this.enter(context, bars);
-  }
-}
-const wipe = new BarWipeTransition();
+const wipe = new FadeSceneTransition();
 class LifecycleScene extends Scene {
   sceneName = '';
   title;

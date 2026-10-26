@@ -1,15 +1,4 @@
-import {
-  Application,
-  Button,
-  Color,
-  FixedResolutionCanvasSizing,
-  Label,
-  Panel,
-  ProgressBar,
-  Scene,
-  type Seconds,
-  Stack,
-} from '@codexo/exojs';
+import { Application, Button, Color, FixedResolutionCanvasSizing, Label, ProgressBar, Scene, Stack } from '@codexo/exojs';
 import { unitsPerCssPixel } from '@examples/runtime';
 
 class HudScene extends Scene {
@@ -17,15 +6,10 @@ class HudScene extends Scene {
   private health = 1;
   private scoreLabel!: Label;
   private healthBar!: ProgressBar;
-  private spinner!: Panel;
   private buttons!: Stack;
   private readonly commands: Button[] = [];
-  private angle = 0;
 
   override init(): void {
-    this.spinner = new Panel({ width: 120, height: 120, color: new Color(58, 104, 115), cornerRadius: 22 });
-    this.spinner.setOrigin(60, 60);
-    this.addChild(this.spinner);
     this.scoreLabel = new Label('Score: 0', { fontSize: 18, fontWeight: '600' });
     this.healthBar = new ProgressBar({ width: 180, height: 10, value: 1 });
     this.buttons = new Stack({ direction: 'row', spacing: 8 });
@@ -37,12 +21,6 @@ class HudScene extends Scene {
       this.health = Math.max(0, this.health - 0.2);
       this.healthBar.value = this.health;
     });
-    this.addCommand('Reset', () => {
-      this.score = 0;
-      this.health = 1;
-      this.scoreLabel.text = 'Score: 0';
-      this.healthBar.value = 1;
-    });
     this.ui.addChild(this.scoreLabel, this.healthBar, this.buttons);
   }
 
@@ -53,12 +31,11 @@ class HudScene extends Scene {
     this.buttons.addItem(button);
   }
 
-  override update(delta: Seconds): void {
-    this.angle += delta * 40;
+  override update(): void {
     const k = unitsPerCssPixel(this.app, this.app.canvas as HTMLCanvasElement);
     const width = this.app.width / k;
     const height = this.app.height / k;
-    const buttonWidth = Math.min(144, (width - 48) / 3);
+    const buttonWidth = Math.min(144, (width - 40) / this.commands.length);
     this.ui.uiScale = k;
     this.scoreLabel.setPosition(16, 14);
     this.healthBar.setPosition(16, 44);
@@ -70,9 +47,6 @@ class HudScene extends Scene {
     }
 
     this.buttons.setPosition(16, height - 56);
-    this.spinner.setPosition(this.app.width * 0.65, this.app.height * 0.44);
-    this.spinner.setScale(k * (height < 280 ? 0.55 : 0.9));
-    this.spinner.setRotation(this.angle);
   }
 }
 
