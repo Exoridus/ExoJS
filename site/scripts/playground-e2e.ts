@@ -149,7 +149,7 @@ const check = async (name: string, run: () => Promise<void>): Promise<void> => {
     results.push({ name, error: null });
     console.log(`[e2e] PASS ${name} (${Math.round(performance.now() - started)} ms)`);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? (error.stack ?? error.message) : String(error);
 
     results.push({ name, error: message });
     console.error(`[e2e] FAIL ${name}: ${message}`);
@@ -1198,11 +1198,19 @@ const workerChecks = async (browser: Browser, origin: string, base: string): Pro
     const { page, pageErrors } = await openPlayground(browser, origin, base, 'tilemap/worker-streamed-terrain');
     page.setDefaultTimeout(15_000);
 
+    let phase = 'initial';
+    let generation = 0;
+
     const verifyTerrain = async (frame: Frame): Promise<void> => {
+      generation++;
+
       for (const provider of ['worker', 'sync']) {
+        phase = `generation ${generation}, ${provider}: focus control`;
         await clickNativeControl(frame, 'Provider', 'DemoDropdown');
+        phase = `generation ${generation}, ${provider}: keyboard selection`;
         await frame.page().keyboard.press(provider === 'worker' ? 'ArrowDown' : 'ArrowUp');
         await frame.page().keyboard.press('Enter');
+        phase = `generation ${generation}, ${provider}: resident chunks`;
         await frame.waitForFunction(value => {
           const scene = (
             globalThis as unknown as {
@@ -1259,6 +1267,8 @@ const workerChecks = async (browser: Browser, origin: string, base: string): Pro
       }
 
       assert(pageErrors.length === 0, pageErrors.join('\n'));
+    } catch (error) {
+      throw new Error(`${phase}: ${String(error)}; errors: ${JSON.stringify(pageErrors)}`, { cause: error });
     } finally {
       await page.context().close();
     }
@@ -1704,6 +1714,45 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
 };
 
 const nativeControlChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await check('native panel status changes preserve control positions', async () => {
+    const { page } = await openPlayground(browser, origin, base, 'tilemap/worker-streamed-terrain', { width: 1600, height: 1200 });
+
+    try {
+      const source = await readFile(resolve(repoRoot, 'examples/tilemap/worker-streamed-terrain.ts'), 'utf8');
+      await runSource(
+        page,
+        `${source.replace('this.hudTimer += delta;', 'this.hudTimer += 0;')}\n(globalThis as any).__acceptanceApp = app;`,
+      );
+      const frame = await previewFrame(page);
+      await frame.waitForFunction('globalThis.__acceptanceApp?.scenes.currentScene?.state === "active"');
+
+      const position = async (text: string): Promise<number> => {
+        await frame.evaluate(`(() => {
+          const app = globalThis.__acceptanceApp;
+          app.scenes.currentScene.panel.status(${JSON.stringify(text)});
+          app.scenes.currentScene.panel.fit(app, app.canvas);
+        })()`);
+        await frame.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+
+        return frame.evaluate(`(() => {
+          let control;
+          const visit = node => { if(node.constructor.name === 'DemoDropdown') control = node; for(const child of node.children ?? []) visit(child); };
+          visit(globalThis.__acceptanceApp.scenes.currentScene._peekUI());
+          return control.getBounds().y;
+        })()`);
+      };
+
+      const top = await position('');
+
+      for (const text of ['Ready', 'A changing status with variable length. '.repeat(12), '']) {
+        const actual = await position(text);
+        assert(Math.abs(actual - top) < 0.001, `status moved the control from ${top} to ${actual}`);
+      }
+    } finally {
+      await page.context().close();
+    }
+  });
+
   await check('canvas focus preserves pointer geometry in a scrolled host', async () => {
     const { page } = await openPlayground(browser, origin, base, 'getting-started/hello-world');
 

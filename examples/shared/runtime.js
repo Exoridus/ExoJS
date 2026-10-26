@@ -1012,6 +1012,7 @@ export const demoPanel = options => {
     lastRootScale = rootScale;
     Object.assign(viewport, { scale, width, height, compact: width < 720 || height < 420 });
     const bar = options.layout === 'bar' || viewport.compact;
+    const corner = bar ? 'bottom-left' : (options.corner ?? 'bottom-left');
     const panelWidth = bar ? width : Math.min(300, Math.max(0, width - 24));
     const innerWidth = Math.max(1, panelWidth - 24);
     const columns = Math.max(1, Math.floor((innerWidth + 12) / 220));
@@ -1026,7 +1027,6 @@ export const demoPanel = options => {
         y += 24;
       }
     }
-    const controlsY = y;
     let contentHeight = Math.ceil(rows.length / columns) * rowHeight;
     let actionX = 0;
     let actionRows = 0;
@@ -1045,15 +1045,13 @@ export const demoPanel = options => {
     status.textNode.layout = { maxWidth: innerWidth, maxHeight: viewport.compact ? 32 : 48, overflow: 'ellipsis' };
     const statusHeight = status.visible ? Math.min(viewport.compact ? 32 : 48, status.textNode.textBounds.height) + 4 : 0;
     const panelBudget = viewport.compact ? Math.min(height * 0.65, height - 70) : height * 0.8;
-    const visibleHeight = Math.min(contentHeight, Math.max(rowHeight - 8, panelBudget - controlsY - statusHeight - 6));
+    const visibleHeight = Math.min(contentHeight, Math.max(rowHeight - 8, panelBudget - y - statusHeight - 6));
+    const controlsY = y + (corner.startsWith('bottom') ? statusHeight : 0);
     const overflow = visibleHeight < contentHeight;
     scroll.setSize(innerWidth, visibleHeight).setPosition(12, controlsY);
     scroll.clip = overflow;
-    y += visibleHeight;
-    status.setPosition(12, y);
-    y += statusHeight;
-    const panelHeight = y + 6;
-    const corner = bar ? 'bottom-left' : (options.corner ?? 'bottom-left');
+    status.setPosition(12, corner.startsWith('bottom') ? y : y + visibleHeight);
+    const panelHeight = y + visibleHeight + statusHeight + 6;
     const x = corner.endsWith('right') ? width - panelWidth - 12 : bar ? 0 : 12;
     const top = corner.startsWith('bottom') ? Math.max(0, height - panelHeight - (bar ? 0 : 12)) : 12;
     element
