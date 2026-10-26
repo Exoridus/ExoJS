@@ -92,7 +92,7 @@ The `videoHdr10` clip carries BT.2020/PQ metadata; whether it is shown as HDR de
 
 ## Content
 
-`catalog.json` is the authored source. `manifest.json`, `THIRD_PARTY_NOTICES.md`, the generated TypeScript and the `media/` tree are derived from it by `pnpm generate`. Media provenance, including third-party Kenney assets (CC0-1.0) and the Blender clip candidates, is recorded per file.
+`catalog.json` is the authored source. `manifest.json`, `THIRD_PARTY_NOTICES.md`, the generated TypeScript and the `media/` tree are derived from it by `pnpm generate`. The generated `THIRD_PARTY_NOTICES.md` collects attribution and the complete license texts for the shipped files; individual source texts remain in `examples/assets/licenses/`. Media provenance, including third-party Kenney assets (CC0-1.0) and the Blender clip candidates, is recorded per file.
 
 The authoring tree and generated media use one directory level: `images/`, `audio/`, `fonts/`, `maps/`, `video/` and `licenses/`. Atlases and audio-sprite tables sit beside their associated media. Maps and bitmap fonts retain relative references to their images. Full upstream packs and longer video sources are not part of the active asset tree. When updating an existing hosted copy, replace it from the new manifest so its paths match the descriptors.
 

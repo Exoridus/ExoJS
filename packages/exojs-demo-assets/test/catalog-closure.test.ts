@@ -8,7 +8,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { bytesOf, filesFor, packageRoot, resolveCatalog, sha256Of } from '../scripts/catalog.ts';
-import { renderAll } from '../scripts/generate.ts';
+import { renderAll, renderNotices } from '../scripts/generate.ts';
 
 const catalog = resolveCatalog();
 
@@ -150,6 +150,35 @@ describe('generated artifacts: no drift against the authored catalog', () => {
 
     for (const entry of catalog.entries) {
       expect(shipped.has(entry.path)).toBe(true);
+    }
+  });
+});
+describe('collected license texts', () => {
+  test('standard notices include each original license text once', () => {
+    const notices = renderNotices(catalog, ['standard']);
+
+    for (const file of filesFor(catalog, 'standard').filter(file => file.role === 'license')) {
+      const text = readFileSync(resolve(catalog.sourceRoot, file.path), 'utf8')
+        .replace(/\r\n?/g, '\n')
+        .replace(/[ \t]+$/gm, '')
+        .replace(/\n*$/, '');
+
+      expect(notices.split(`### ${file.path}`).length - 1).toBe(1);
+      expect(notices).toContain(`\`\`\`text\n${text}\n\`\`\``);
+    }
+  });
+
+  test('extended notices exclude standard license texts', () => {
+    const notices = renderNotices(catalog, ['extended']);
+
+    for (const file of filesFor(catalog, 'standard').filter(file => file.role === 'license')) {
+      expect(notices).not.toContain(`### ${file.path}`);
+    }
+  });
+
+  test('license sources use LF so byte hashes are reproducible across checkouts', () => {
+    for (const file of catalog.files.filter(file => file.role === 'license')) {
+      expect(readFileSync(resolve(catalog.sourceRoot, file.path), 'utf8')).not.toContain('\r');
     }
   });
 });
