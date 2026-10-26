@@ -1375,7 +1375,7 @@ const crtChecks = async (browser: Browser, origin: string, base: string): Promis
       // Freeze grain time while the scene and native UI keep updating.
       await runSource(
         page,
-        `${source.replace('this.time += delta;', 'this.time += 0;')}\n(globalThis as any).__acceptanceApp = app;\n(globalThis as any).__crtBackend = app.backend.backendType;`,
+        `${source.replace('this.filter.time += delta;', 'this.filter.time += 0;')}\n(globalThis as any).__acceptanceApp = app;\n(globalThis as any).__crtBackend = app.backend.backendType;`,
       );
       const frame = await previewFrame(page);
       await frame.waitForFunction('globalThis.__crtBackend !== undefined');

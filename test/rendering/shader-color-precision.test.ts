@@ -24,6 +24,7 @@ const colourFragmentStages = [
   'src/rendering/filters/shaders/bloom-threshold.frag',
   'src/rendering/filters/shaders/blur.frag',
   'src/rendering/filters/shaders/color-matrix.frag',
+  'src/rendering/filters/shaders/crt.frag',
   'src/rendering/filters/shaders/displacement.frag',
   'src/rendering/filters/shaders/drop-shadow.frag',
   'src/rendering/filters/shaders/lut-3d.frag',

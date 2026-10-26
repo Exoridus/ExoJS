@@ -1,58 +1,13 @@
 // Auto-generated from crt-scanlines.ts - edit the .ts source, not this file.
-import { Application, Color, Container, FixedResolutionCanvasSizing, Scene, ShaderFilter, Sprite, Text } from '@codexo/exojs';
+import { Application, Color, Container, CrtFilter, FixedResolutionCanvasSizing, Scene, Sprite, Text } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { demoPanel, slider, startExample, toggle } from '@examples/runtime';
-const glsl = `#version 300 es
-precision highp float;
-uniform sampler2D uTexture;
-uniform float uTime;
-uniform float uAmount;
-uniform float uSplit;
-in vec2 vUv;
-out vec4 fragColor;
-
-float hash(vec2 point) {
-  return fract(sin(dot(point, vec2(12.9898, 78.233))) * 43758.5453);
-}
-
-void main() {
-  vec2 centered = vUv * 2.0 - 1.0;
-  vec2 uv = centered * (1.0 + dot(centered, centered) * 0.07 * uAmount) * 0.5 + 0.5;
-  vec4 base = texture(uTexture, uv);
-  float red = texture(uTexture, uv + vec2(uSplit, 0.0)).r;
-  float blue = texture(uTexture, uv - vec2(uSplit, 0.0)).b;
-  float scan = 1.0 - 0.14 * uAmount * (0.5 + 0.5 * sin(vUv.y * 900.0));
-  float grain = (hash(vUv * vec2(1280.0, 720.0) + uTime * 45.0) - 0.5) * 0.12 * uAmount;
-  float vignette = 1.0 - smoothstep(0.42, 0.8, length(vUv - 0.5)) * 0.65 * uAmount;
-  fragColor = vec4(max(vec3(0.0), (vec3(red, base.g, blue) * scan + grain) * vignette), base.a);
-}`;
-const wgsl = `@group(0) @binding(1) var uTexture: texture_2d<f32>;
-@group(0) @binding(2) var uSampler: sampler;
-struct Uniforms { @align(16) uTime: f32, @align(16) uAmount: f32, @align(16) uSplit: f32 };
-@group(1) @binding(0) var<uniform> uniforms: Uniforms;
-
-fn hash(point: vec2<f32>) -> f32 {
-  return fract(sin(dot(point, vec2<f32>(12.9898, 78.233))) * 43758.5453);
-}
-
-@fragment fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
-  let centered = vUv * 2.0 - vec2<f32>(1.0);
-  let uv = centered * (1.0 + dot(centered, centered) * 0.07 * uniforms.uAmount) * 0.5 + vec2<f32>(0.5);
-  let base = textureSample(uTexture, uSampler, uv);
-  let red = textureSample(uTexture, uSampler, uv + vec2<f32>(uniforms.uSplit, 0.0)).r;
-  let blue = textureSample(uTexture, uSampler, uv - vec2<f32>(uniforms.uSplit, 0.0)).b;
-  let scan = 1.0 - 0.14 * uniforms.uAmount * (0.5 + 0.5 * sin(vUv.y * 900.0));
-  let grain = (hash(vUv * vec2<f32>(1280.0, 720.0) + uniforms.uTime * 45.0) - 0.5) * 0.12 * uniforms.uAmount;
-  let vignette = 1.0 - smoothstep(0.42, 0.8, length(vUv - vec2<f32>(0.5))) * 0.65 * uniforms.uAmount;
-  return vec4<f32>(max(vec3<f32>(0.0), (vec3<f32>(red, base.g, blue) * scan + grain) * vignette), base.a);
-}`;
 class RetroDisplayScene extends Scene {
   stage;
   background;
   title;
   filter;
   panel;
-  time = 0;
   async load() {
     await this.loader.load(assets.uvGrid256);
   }
@@ -66,7 +21,7 @@ class RetroDisplayScene extends Scene {
     this.stage = new Container();
     this.stage.addChild(this.background, this.title);
     // #region guide:retro-filter
-    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0, uAmount: 0.8, uSplit: 0.006 } });
+    this.filter = new CrtFilter();
     this.stage.filters = [this.filter];
     // #endregion guide:retro-filter
     this.panel = demoPanel({
@@ -81,9 +36,9 @@ class RetroDisplayScene extends Scene {
         if (key === 'crt') {
           this.stage.filters = values.crt ? [this.filter] : [];
         } else if (key === 'strength') {
-          this.filter.setUniform('uAmount', values.strength);
+          this.filter.strength = values.strength;
         } else if (key === 'split') {
-          this.filter.setUniform('uSplit', values.split);
+          this.filter.rgbSeparation = values.split;
         }
       },
     });
@@ -101,8 +56,7 @@ class RetroDisplayScene extends Scene {
     this.background.height = contentHeight;
     this.title.setPosition(width / 2, contentHeight / 2);
     this.title.style.fontSize = Math.min(72, Math.max(18, contentHeight * 0.2));
-    this.time += delta;
-    this.filter.setUniform('uTime', this.time);
+    this.filter.time += delta;
   }
   draw(context) {
     context.render(this.stage, { view: context.screenView });

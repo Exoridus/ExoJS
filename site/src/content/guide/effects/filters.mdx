@@ -101,6 +101,30 @@ A neutral matrix returns colour and alpha unchanged in either domain.
 
 For a plain per-drawable multiply, prefer [`Drawable.tint`](/ExoJS/en/guide/rendering/sprites/): it costs no render target at all. Reach for this filter when the transform is more than a multiply, or when it has to cover a whole subtree as one image.
 
+## CrtFilter
+
+`CrtFilter` combines display curvature, scanlines, grain, a vignette and horizontal RGB separation. Its `strength` controls the display treatment from `0` to `1`; `rgbSeparation` is independent and measures the horizontal offset as a fraction of the captured width.
+
+```ts
+import { Container, CrtFilter, type Seconds } from '@codexo/exojs';
+
+declare const layer: Container;
+declare const delta: Seconds;
+
+const crt = new CrtFilter({ strength: 0.8, rgbSeparation: 0.006 });
+layer.filters = [crt];
+
+// Advance from the scene's update; a fixed time freezes the grain.
+crt.time += delta;
+
+// Keep only chromatic aberration, or set both values to zero for unchanged input.
+crt.strength = 0;
+```
+
+The filter supports WebGL2 and WebGPU, including transparent sprites and text. RGB fringes use the largest alpha of the three channel samples, and grain never fills empty pixels. The capture bounds stay unchanged, so samples outside that area are transparent and fringes are clipped at its edges. Attach the filter to a container when the effect should cover a larger scene region.
+
+<ExamplePreview example="filters/crt-scanlines" />
+
 ## DropShadowFilter
 
 A soft, offset silhouette of the filtered node drawn behind it. The shadow is the input's coverage flattened to `color` (its alpha is the opacity), blurred by `blur`, and composited at `offsetX`/`offsetY` under the unchanged source; `shadowOnly` leaves the source out, which turns the same filter into a glow or a detached shadow:

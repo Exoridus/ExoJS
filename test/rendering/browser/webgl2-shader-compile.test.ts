@@ -19,6 +19,7 @@ import { colorShaderSourcesGlsl, spliceGlslPrologue } from '#rendering/colorShad
 import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { blurShader } from '#rendering/filters/BlurFilter';
 import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
+import { crtShader } from '#rendering/filters/CrtFilter';
 import { displacementShader } from '#rendering/filters/DisplacementFilter';
 import { dropShadowShader } from '#rendering/filters/DropShadowFilter';
 import { lut3dShaderSource, lutRgb1dShaderSource } from '#rendering/filters/LutFilter';
@@ -94,6 +95,7 @@ const generatedUniformBlocks: ReadonlyMap<string, string> = new Map([
   ['bloom-threshold.frag', generateGlslUniformDeclarations(bloomThresholdShader.uniformSchema!)],
   ['blur.frag', generateGlslUniformDeclarations(blurShader.uniformSchema!)],
   ['color-matrix.frag', generateGlslUniformDeclarations(colorMatrixShader.uniformSchema!)],
+  ['crt.frag', generateGlslUniformDeclarations(crtShader.uniformSchema!)],
   ['displacement.frag', generateGlslUniformDeclarations(displacementShader.uniformSchema!)],
   ['drop-shadow.frag', generateGlslUniformDeclarations(dropShadowShader.uniformSchema!)],
   ['gallery-dissolve.frag', generateGlslUniformDeclarations(galleryDissolveShader.uniformSchema!)],
@@ -263,6 +265,7 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['default-vertex.vert', 'bloom-threshold.frag'],
   ['default-vertex.vert', 'blur.frag'],
   ['default-vertex.vert', 'color-matrix.frag'],
+  ['default-vertex.vert', 'crt.frag'],
   ['default-vertex.vert', 'displacement.frag'],
   ['default-vertex.vert', 'drop-shadow.frag'],
   ['default-vertex.vert', 'gallery-dissolve.frag'],

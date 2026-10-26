@@ -578,7 +578,7 @@
       "backend": "core",
       "tags": ["fx", "filter", "shader"],
       "level": "intermediate",
-      "apiLinks": ["shader-filter"]
+      "apiLinks": ["crt-filter"]
     },
     {
       "slug": "custom-fragment-shader",
