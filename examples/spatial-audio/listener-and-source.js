@@ -2,7 +2,6 @@
 import {
   ActionMap,
   Application,
-  ButtonAction,
   Color,
   FixedResolutionCanvasSizing,
   GamepadAxis,
@@ -67,7 +66,6 @@ class ListenerAndSourceScene extends Scene {
       },
       { x: GamepadAxis.LeftStickX, y: GamepadAxis.LeftStickY },
     ]),
-    reset: new ButtonAction(Keyboard.R),
   });
   panel;
   angle = 0;
@@ -85,10 +83,7 @@ class ListenerAndSourceScene extends Scene {
     this.panel = demoPanel({
       scene: this,
       layout: 'bar',
-      title: 'Position a Sound Source',
-      hint: 'Fixed listener; drag the pulse source or use arrows / WASD / left stick. R resets.',
-      controls: { orbit: toggle('Orbit', false), falloff: choice('Falloff', MODELS), sound: toggle('Sound', false) },
-      actions: { Reset: () => this.reset() },
+      controls: { orbit: toggle('Orbit', true), falloff: choice('Falloff', MODELS), sound: toggle('Sound', true) },
       onChange: (key, _value, values) => {
         if (key === 'orbit') {
           this.dragging = false;
@@ -115,8 +110,15 @@ class ListenerAndSourceScene extends Scene {
     window.addEventListener('blur', this.onUp);
   }
   onDown = (_pointer, x, y) => {
-    const scale = this.panel.fit(this.app, this.app.canvas).scale;
-    this.dragging = !this.panel.values.orbit && Math.hypot(x - this.source.x, y - this.source.y) < 28 * scale;
+    const { scale, contentHeight } = this.panel.fit(this.app, this.app.canvas);
+    if (y >= contentHeight * scale) {
+      return;
+    }
+    this.panel.set('orbit', false);
+    this.source.x = x;
+    this.source.y = y;
+    this.clamp();
+    this.dragging = true;
   };
   onMove = (_pointer, x, y) => {
     if (this.dragging) {
@@ -155,15 +157,6 @@ class ListenerAndSourceScene extends Scene {
     this.voice = null;
     this.pulse = 0;
   }
-  reset() {
-    this.panel.set('sound', false);
-    this.panel.set('orbit', false);
-    this.panel.set('falloff', 'linear');
-    this.source.x = this.listener.x + 220;
-    this.source.y = this.listener.y;
-    this.angle = 0;
-    this.dragging = false;
-  }
   clamp() {
     const { scale, width, contentHeight } = this.panel.fit(this.app, this.app.canvas);
     this.source.x = Math.max(24 * scale, Math.min((width - 24) * scale, this.source.x));
@@ -171,9 +164,6 @@ class ListenerAndSourceScene extends Scene {
   }
   update(delta) {
     const move = this.actions.move.value;
-    if (this.actions.reset.pressed) {
-      this.reset();
-    }
     if (this.panel.values.orbit) {
       this.angle += delta * 1.1;
       this.source.x = this.listener.x + Math.cos(this.angle) * 220;
@@ -228,7 +218,7 @@ class ListenerAndSourceScene extends Scene {
     context.render(this.ears);
     this.panel.status(
       this.failure ||
-        `${this.app.audio.locked ? 'Click to enable audio' : 'AudioContext running'} | coded mono pulse ${this.voice ? 'playing' : 'stopped'} | ref ${REF_DISTANCE} / max ${MAX_DISTANCE} px | headphones: listening not tested`,
+        `${this.app.audio.locked ? 'Click to enable audio' : 'AudioContext running'} | coded mono pulse ${this.voice ? 'playing' : 'stopped'} | ref ${REF_DISTANCE} / max ${MAX_DISTANCE} px | Click to place the source; drag or use arrow keys | Headphones reveal left / right`,
       this.failure ? 'error' : 'neutral',
     );
   }
