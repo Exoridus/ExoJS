@@ -269,6 +269,18 @@ const box = async (page: Page, selector: string): Promise<{ x: number; y: number
   return rect;
 };
 
+// ResizeObserver can change the layout between protocol calls, so related rectangles must share one snapshot.
+const panelLayout = (page: Page) =>
+  page.evaluate<Record<'preview' | 'output' | 'editor', { x: number; y: number; width: number; height: number }>>(`(() => {
+    const bounds = label => {
+      const node = document.querySelector('[aria-label="' + label + '"]');
+      if (!node) throw new Error('Missing layout surface: ' + label);
+      const { x, y, width, height } = node.getBoundingClientRect();
+      return { x, y, width, height };
+    };
+    return { preview: bounds('Example preview'), output: bounds('Preview output'), editor: bounds('Source editor') };
+  })()`);
+
 // --- Console bridge -------------------------------------------------------------
 
 const CONSOLE_SOURCE = `
@@ -297,6 +309,22 @@ const consoleChecks = async (browser: Browser, origin: string, base: string): Pr
   const session = await openPlayground(browser, origin, base, 'getting-started/hello-world');
   const { page } = session;
   let marker = '';
+  await page.addInitScript({
+    content: `(() => {
+    const NativeResizeObserver = window.ResizeObserver;
+    const probe = window.__layoutResizeProbe = { hold: false, pending: [] };
+    window.ResizeObserver = class extends NativeResizeObserver {
+      constructor(callback) {
+        super((entries, observer) => {
+          const forward = () => callback.call(observer, entries, observer);
+          if (probe.hold) probe.pending.push(forward); else forward();
+        });
+      }
+    };
+  })()`,
+  });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await previewFrame(page);
 
   await check('output panel is collapsed by default and plain logs keep it closed', async () => {
     await page.evaluate("localStorage.removeItem('exo-playground-output-open')");
@@ -450,23 +478,42 @@ const consoleChecks = async (browser: Browser, origin: string, base: string): Pr
   });
 
   await check('the panel sits under the preview in the split layout and follows a swap', async () => {
-    const preview = await box(page, 'section[aria-label="Example preview"]');
-    const output = await box(page, '[aria-label="Preview output"]');
-    const editor = await box(page, 'section[aria-label="Source editor"]');
+    if ((await outputToggle(page).count()) === 0) {
+      await runSource(page, "console.log('layout probe');");
+      await outputToggle(page).waitFor();
+    }
+
+    await setOutputOpen(page, true);
+    const { preview, output, editor } = await panelLayout(page);
 
     assert(output.y >= preview.y + preview.height - 1, 'the panel overlaps the preview');
     assert(Math.abs(output.x - preview.x) < 2, 'the panel is not in the preview column');
     assert(editor.x > preview.x, 'the editor is not to the right of the preview');
 
-    await page.locator('[data-example-header] summary').click();
-    await page.getByRole('button', { name: 'Swap panes', exact: true }).click();
+    const releaseResize = () =>
+      page.evaluate(
+        '(() => { const probe = window.__layoutResizeProbe; probe.hold = false; for (const run of probe.pending.splice(0)) run(); })()',
+      );
+    await page.evaluate('window.__layoutResizeProbe.hold = true');
 
-    const swappedPreview = await box(page, 'section[aria-label="Example preview"]');
-    const swappedOutput = await box(page, '[aria-label="Preview output"]');
+    try {
+      await page.locator('[data-example-header] summary').click();
+      await page.getByRole('button', { name: 'Swap panes', exact: true }).click();
+      await page.waitForFunction('window.__layoutResizeProbe.pending.length > 0');
+      const snapshots = [await panelLayout(page)];
+      await releaseResize();
+      await page.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+      snapshots.push(await panelLayout(page));
 
-    assert(swappedPreview.x > preview.x, 'the swap did not move the preview');
-    assert(Math.abs(swappedOutput.x - swappedPreview.x) < 2, 'the panel did not follow the preview');
-    assert(swappedOutput.y >= swappedPreview.y + swappedPreview.height - 1, 'the panel overlaps the swapped preview');
+      for (const { preview: swappedPreview, output: swappedOutput } of snapshots) {
+        assert(swappedPreview.x > preview.x, 'the swap did not move the preview');
+        assert(Math.abs(swappedOutput.x - swappedPreview.x) < 2, 'the panel did not follow the preview');
+        assert(swappedOutput.y >= swappedPreview.y + swappedPreview.height - 1, 'the panel overlaps the swapped preview');
+      }
+    } finally {
+      await releaseResize();
+    }
+
     await page.locator('[data-example-header] summary').click();
     await page.getByRole('button', { name: 'Swap panes', exact: true }).click();
   });
@@ -475,9 +522,7 @@ const consoleChecks = async (browser: Browser, origin: string, base: string): Pr
     await page.locator('[data-example-header] summary').click();
     await page.getByRole('button', { name: 'Demo above code', exact: true }).click();
 
-    const preview = await box(page, 'section[aria-label="Example preview"]');
-    const output = await box(page, '[aria-label="Preview output"]');
-    const editor = await box(page, 'section[aria-label="Source editor"]');
+    const { preview, output, editor } = await panelLayout(page);
 
     assert(output.y >= preview.y + preview.height - 1, 'the panel overlaps the preview');
     assert(editor.y >= output.y + output.height - 1, 'the editor is not below the panel');
