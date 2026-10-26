@@ -199,11 +199,16 @@ export class SourceStructureDelta implements SourceDeltaTargets {
 
     this._pruneNestedTargets(source, root);
 
-    return source.dirtyIndex.readSince(cursor, DirtyChannel.Transform | DirtyChannel.Content | DirtyChannel.Tint, marked => {
-      const scope = source.scopeOfNode(marked);
+    // An uncovered effect change can turn a recorded group into a live barrier.
+    return source.dirtyIndex.readSince(
+      cursor,
+      DirtyChannel.Transform | DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect,
+      marked => {
+        const scope = source.scopeOfNode(marked);
 
-      return scope === null || this._covers(source, scope, root);
-    });
+        return scope === null || this._covers(source, scope, root);
+      },
+    );
   }
 
   /**

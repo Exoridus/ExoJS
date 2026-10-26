@@ -26,10 +26,32 @@ import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
 import { BloomFilter, type BloomFilterOptions } from '#rendering/filters/BloomFilter';
 import type { Filter } from '#rendering/filters/Filter';
+import { Graphics } from '#rendering/primitives/Graphics';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 
 import { BLUR_SCENE_SIZE } from './_blurFilterFixture';
+
+export const changingBloomScene = (): { root: Container; filtered: Container; filter: BloomFilter; redraw(): void } => {
+  const root = new Container();
+  const filtered = new Container();
+  const filter = bloom();
+  const graphics = new Graphics();
+  filtered.filters = [filter];
+  filtered.addChild(graphics);
+  root.addChild(filtered);
+
+  return {
+    root,
+    filtered,
+    filter,
+    redraw() {
+      graphics.clear();
+      graphics.fillColor = Color.white;
+      graphics.drawRectangle(24, 24, 16, 16);
+    },
+  };
+};
 
 export const THRESHOLD = 0.8;
 export const INTENSITY = 3;
