@@ -158,6 +158,7 @@ export const EditorCode = ({
   const [activeFile, setActiveFile] = useState(sourcePath);
   const [fileStatus, setFileStatus] = useState('');
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+  const readOnlyRef = useRef(readOnly);
   const modelRef = useRef<monaco.editor.ITextModel | null>(null);
   const entryModelRef = useRef<monaco.editor.ITextModel | null>(null);
   const filesRef = useRef(new Map<string, { model: monaco.editor.ITextModel; view: monaco.editor.ICodeEditorViewState | null }>());
@@ -183,6 +184,12 @@ export const EditorCode = ({
   useEffect(() => {
     autoRefreshRef.current = autoRefresh;
   }, [autoRefresh]);
+
+  useEffect(() => {
+    readOnlyRef.current = readOnly;
+    const editor = editorRef.current;
+    editor?.updateOptions({ readOnly: readOnly || editor.getModel() !== entryModelRef.current });
+  }, [readOnly]);
 
   useEffect(() => {
     // Reset the editor buffer when the selected example (sourcePath) or its loaded
@@ -329,9 +336,10 @@ export const EditorCode = ({
         }
       }
 
+      // React options may arrive from an older render, so model selection owns readOnly.
+      editor.updateOptions({ readOnly: readOnly || next.model !== entryModelRef.current });
       editor.setModel(next.model);
       modelRef.current = next.model;
-      editor.updateOptions({ readOnly: readOnly || next.model !== entryModelRef.current });
 
       if (next.view) {
         editor.restoreViewState(next.view);
@@ -368,6 +376,7 @@ export const EditorCode = ({
     editorRef.current = editor;
     modelRef.current = editor.getModel();
     entryModelRef.current = editor.getModel();
+    editor.updateOptions({ readOnly: readOnlyRef.current });
 
     if (sourcePath && entryModelRef.current) {
       filesRef.current.set(sourcePath, { model: entryModelRef.current, view: null });
@@ -792,7 +801,6 @@ export const EditorCode = ({
                 overviewRulerLanes: 0,
                 // shortcut: Monaco 0.55 leaves a rejected highlight delay on model switches; restore after its fix.
                 occurrencesHighlight: 'off',
-                readOnly: activeReadOnly,
                 renderValidationDecorations: 'on',
                 scrollBeyondLastLine: false,
                 tabSize: 2,
