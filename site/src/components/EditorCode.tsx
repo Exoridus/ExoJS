@@ -163,6 +163,7 @@ export const EditorCode = ({
   const filesRef = useRef(new Map<string, { model: monaco.editor.ITextModel; view: monaco.editor.ICodeEditorViewState | null }>());
   const fileRequestRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const importReaderRef = useRef<FileReader | null>(null);
   const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const footgunTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoRefreshRef = useRef(autoRefresh);
@@ -255,6 +256,8 @@ export const EditorCode = ({
       disposablesRef.current = [];
       selectedVersionRef.current = '';
       fileRequestRef.current?.abort();
+      importReaderRef.current?.abort();
+      importReaderRef.current = null;
 
       for (const file of filesRef.current.values()) {
         if (!file.model.isDisposed()) {
@@ -470,6 +473,8 @@ export const EditorCode = ({
       return;
     }
 
+    importReaderRef.current?.abort();
+    importReaderRef.current = null;
     setEditorValue(sourceCodeRef.current ?? '');
     entryModelRef.current?.setValue(sourceCodeRef.current ?? '');
     onResetCode({ confirmed: true });
@@ -576,20 +581,35 @@ export const EditorCode = ({
 
   const onFileImport = (event: ChangeEvent<HTMLInputElement>): void => {
     const file = event.currentTarget.files?.[0];
+    const model = entryModelRef.current;
 
-    if (!file) {
+    if (!file || !model || model.isDisposed() || readOnly) {
       return;
     }
 
+    importReaderRef.current?.abort();
     const reader = new FileReader();
+    importReaderRef.current = reader;
 
     reader.onload = () => {
-      if (typeof reader.result !== 'string') {
+      if (
+        importReaderRef.current !== reader ||
+        entryModelRef.current !== model ||
+        model.isDisposed() ||
+        typeof reader.result !== 'string'
+      ) {
         return;
       }
 
       setEditorValue(reader.result);
-      entryModelRef.current?.setValue(reader.result);
+      model.setValue(reader.result);
+      onDirty(reader.result !== sourceCodeRef.current);
+    };
+
+    reader.onloadend = () => {
+      if (importReaderRef.current === reader) {
+        importReaderRef.current = null;
+      }
     };
 
     reader.readAsText(file);
