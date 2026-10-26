@@ -1,4 +1,4 @@
-import { Button, Panel, type Scene, type UITheme } from '@codexo/exojs';
+import type { Button, Panel, Scene, UITheme } from "@codexo/exojs";
 
 /**
  * Boolean fields of the engine `Capabilities` object that an example may
