@@ -1,134 +1,71 @@
-import {
-  Application,
-  Color,
-  FixedResolutionCanvasSizing,
-  Graphics,
-  Keyboard,
-  Rectangle,
-  type RenderingContext,
-  Scene,
-  Sprite,
-  Text,
-} from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Rectangle, type RenderingContext, Scene, Sprite } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { demoPanel, startExample, toggle } from '@examples/runtime';
+import { choice, demoPanel, startExample } from '@examples/runtime';
+
+const controls = { shape: choice('Shape', ['Rectangle', 'Circle', 'Ellipse', 'Polygon']) };
 
 class MasksScene extends Scene {
-  private sprites: Sprite[] = [];
+  private sprite!: Sprite;
   private readonly rectMask = new Rectangle();
-  private readonly circle = this.track(new Graphics());
-  private readonly outline = new Graphics();
-  private labels: Text[] = [];
-  private panel!: ReturnType<typeof demoPanel<{ bypass: ReturnType<typeof toggle> }>>;
-  private scale = 1;
-  private width = 1280;
-  private contentHeight = 600;
-  private drag = -1;
-  private offsets = [
-    { x: 0, y: 0 },
-    { x: 0, y: 0 },
-  ];
+  private readonly shapeMask = this.track(new Graphics());
+  private panel!: ReturnType<typeof demoPanel<typeof controls>>;
+
+  override async load(): Promise<void> {
+    this.sprite = new Sprite(await this.loader.load(assets.backgroundPlatformerHills)).setAnchor(0.5);
+  }
 
   override init(): void {
-    const texture = this.loader.get(assets.backgroundPlatformerHills);
-    this.sprites = [0, 1].map(() => new Sprite(texture).setAnchor(0.5));
-    this.labels = ['Rectangle mask', 'Graphics circle mask'].map(text =>
-      new Text(text, { fillColor: Color.white, fontSize: 14, align: 'center' }).setAnchor(0.5),
-    );
-    this.root.addChild(...this.sprites, this.outline, ...this.labels);
-    this.panel = demoPanel({
-      scene: this,
-      title: 'Masks',
-      layout: 'bar',
-      hint: 'Drag either mask. Both clip the same Kenney hills image in world coordinates.',
-      controls: { bypass: toggle('Bypass') },
-      actions: { Reset: () => this.reset() },
-    });
-    this.inputs.onTrigger(Keyboard.Space, () => this.panel.step('bypass'));
-    this.inputs.onTrigger(Keyboard.R, () => this.reset());
-    this.app.input.onPointerDown.add(this.onDown);
-    this.app.input.onPointerMove.add(this.onMove);
-    this.app.input.onPointerUp.add(this.onUp);
+    this.sprite.interactive = true;
+    this.sprite.onPointerTap.add(() => this.panel.step('shape'));
+    this.root.addChild(this.sprite);
+    this.panel = demoPanel({ scene: this, layout: 'bar', controls });
   }
-
-  private reset(): void {
-    this.offsets = [
-      { x: 0, y: 0 },
-      { x: 0, y: 0 },
-    ];
-    this.panel.set('bypass', false);
-  }
-
-  private readonly onDown = (p: { x: number; y: number }): void => {
-    this.drag = p.x < this.app.width / 2 ? 0 : 1;
-    this.onMove(p);
-  };
-  private readonly onUp = (): void => {
-    this.drag = -1;
-  };
-  private readonly onMove = (p: { x: number; y: number }): void => {
-    if (this.drag < 0) {
-      return;
-    }
-
-    this.offsets[this.drag] = {
-      x: p.x / this.scale - this.width * (this.drag === 0 ? 0.25 : 0.75),
-      y: Math.min(this.contentHeight - 20, p.y / this.scale) - this.contentHeight / 2,
-    };
-  };
 
   override update(): void {
-    const view = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
-    this.scale = view.scale;
-    this.width = view.width;
-    this.contentHeight = view.contentHeight;
-    this.root.setScale(view.scale);
-    const radius = Math.min(70, view.contentHeight * 0.3);
-    this.outline.clear();
-    this.outline.lineColor = new Color(184, 242, 100);
-    this.outline.lineWidth = 2;
-    this.outline.fillColor = Color.transparent;
+    const { scale: k, width, contentHeight } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
+    const x = (width / 2) * k;
+    const y = (contentHeight / 2) * k;
+    const radius = Math.min(width * 0.32, contentHeight * 0.4, 200) * k;
 
-    for (const [index, sprite] of this.sprites.entries()) {
-      const x = view.width * (index === 0 ? 0.25 : 0.75);
-      const y = view.contentHeight / 2;
-      sprite.setPosition(x, y);
-      sprite.width = view.width * 0.43;
-      sprite.height = Math.max(80, view.contentHeight - 45);
-      this.labels[index].setPosition(x, 16);
-      const mx = x + this.offsets[index].x;
-      const my = y + this.offsets[index].y;
+    this.sprite.setPosition(x, y);
+    this.sprite.width = radius * 2.8;
+    this.sprite.height = radius * 2.1;
+    this.shapeMask.clear();
+    this.shapeMask.fillColor = Color.white;
 
-      if (index === 0) {
-        this.rectMask.set((mx - radius) * view.scale, (my - radius) * view.scale, radius * 2 * view.scale, radius * 2 * view.scale);
-        sprite.mask = this.panel.values.bypass ? null : this.rectMask;
-
-        for (let offset = -radius; offset < radius; offset += 12) {
-          const length = Math.min(6, radius - offset);
-          this.outline.moveTo(mx + offset, my - radius);
-          this.outline.lineTo(mx + offset + length, my - radius);
-          this.outline.moveTo(mx + offset, my + radius);
-          this.outline.lineTo(mx + offset + length, my + radius);
-          this.outline.moveTo(mx - radius, my + offset);
-          this.outline.lineTo(mx - radius, my + offset + length);
-          this.outline.moveTo(mx + radius, my + offset);
-          this.outline.lineTo(mx + radius, my + offset + length);
-        }
-      } else {
-        this.circle.clear();
-        this.circle.fillColor = Color.white;
-        this.circle.drawCircle(0, 0, radius * view.scale);
-        this.circle.setPosition(mx * view.scale, my * view.scale);
-        sprite.mask = this.panel.values.bypass ? null : this.circle;
-
-        for (let angle = 0; angle < Math.PI * 2; angle += 0.2) {
-          this.outline.moveTo(mx + Math.cos(angle) * radius, my + Math.sin(angle) * radius);
-          this.outline.lineTo(mx + Math.cos(angle + 0.1) * radius, my + Math.sin(angle + 0.1) * radius);
-        }
-      }
+    switch (this.panel.values.shape) {
+      case 'Rectangle':
+        this.rectMask.set(x - radius, y - radius * 0.72, radius * 2, radius * 1.44);
+        this.sprite.mask = this.rectMask;
+        break;
+      case 'Circle':
+        this.shapeMask.drawCircle(x, y, radius);
+        this.sprite.mask = this.shapeMask;
+        break;
+      case 'Ellipse':
+        this.shapeMask.drawEllipse(x, y, radius * 1.15, radius * 0.7);
+        this.sprite.mask = this.shapeMask;
+        break;
+      case 'Polygon':
+        this.shapeMask.drawPolygon([
+          x - radius,
+          y,
+          x - radius * 0.5,
+          y - radius * 0.85,
+          x + radius * 0.5,
+          y - radius * 0.85,
+          x + radius,
+          y,
+          x + radius * 0.5,
+          y + radius * 0.85,
+          x - radius * 0.5,
+          y + radius * 0.85,
+        ]);
+        this.sprite.mask = this.shapeMask;
+        break;
     }
 
-    this.panel.status(this.panel.values.bypass ? 'Bypass: full hills image' : 'Clipped hills image | dashed contours are masks');
+    this.panel.status('Click the image to change its mask');
   }
 
   override draw(context: RenderingContext): void {
@@ -136,10 +73,7 @@ class MasksScene extends Scene {
   }
 
   override destroy(): void {
-    this.app.input.onPointerDown.remove(this.onDown);
-    this.app.input.onPointerMove.remove(this.onMove);
-    this.app.input.onPointerUp.remove(this.onUp);
-    this.panel.dispose();
+    this.panel?.dispose();
     super.destroy();
   }
 }

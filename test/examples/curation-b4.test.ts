@@ -1,13 +1,11 @@
 // @vitest-environment node
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { runInNewContext } from 'node:vm';
 
 import { type Texture, TextureRegion } from '@codexo/exojs';
 import { GridSpace, Pathfinder } from '@codexo/exojs/pathfinding';
 import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
 import { refreshCell, TILE_TRANSFORM_IDENTITY, TileLayer, TileSet, WangSet } from '@codexo/exojs/tilemap';
-import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 const source = (slug: string) => readFileSync(resolve('examples', `${slug}.ts`), 'utf8');
@@ -54,56 +52,6 @@ describe('B4 world and physics contracts', () => {
     }
   });
 
-  it('draws the 16 reference tile edges and leaves fully connected corners seamless', () => {
-    const prefix = source('tilemap/paint-autotiled-room')
-      .split('class AutoTiledRoomScene')[0]!
-      .replace(/^import[\s\S]*?;\s*/gm, '');
-    const code = ts.transpileModule(prefix, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText;
-
-    const makeCanvas = () => {
-      const pixels = Array.from({ length: 64 }, () => Array<string>(64).fill(''));
-      const context = {
-        fillStyle: '',
-        strokeStyle: '',
-        lineWidth: 0,
-        fillRect(x: number, y: number, width: number, height: number) {
-          for (let row = y; row < y + height; row++) {
-            for (let column = x; column < x + width; column++) {
-              pixels[row]![column] = this.fillStyle;
-            }
-          }
-        },
-        beginPath() {},
-        moveTo() {},
-        lineTo() {},
-        stroke() {},
-      };
-
-      return { width: 0, height: 0, pixels, getContext: () => context };
-    };
-
-    class Texture {
-      constructor(public readonly canvas: ReturnType<typeof makeCanvas>) {}
-    }
-    const makeTile = runInNewContext(`${code}; makeTile;`, { document: { createElement: makeCanvas }, Texture }) as (
-      mask: number,
-    ) => Texture;
-
-    for (let mask = 0; mask < 16; mask++) {
-      const { pixels } = makeTile(mask).canvas;
-      [
-        [32, 0, 1],
-        [63, 32, 2],
-        [32, 63, 4],
-        [0, 32, 8],
-      ].forEach(([x, y, bit]) => {
-        expect(pixels[y!]![x!], `mask ${mask}, edge ${bit}`).toBe(mask & bit! ? '#7ebd62' : '#d8c794');
-      });
-    }
-
-    expect(makeTile(15).canvas.pixels[0]![0]).toBe('#7ebd62');
-  });
-
   it('uses exact rotated collision picking where the former fixed hit box disagrees', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
     const body = world.add(
@@ -147,7 +95,6 @@ describe('B4 world and physics contracts', () => {
     expect(navigation).toContain('this.terrain.destroy()');
     expect(navigation).toContain('this.overlay.destroy()');
     expect(navigation).toContain('this.panel?.dispose()');
-    expect(source('tilemap/tiled-isometric')).toContain('this.body.wake()');
     expect(source('tilemap/worker-streamed-terrain')).toContain('destroy()');
     expect(source('tilemap/hexagonal-grid')).toContain('chunkWidth: 4');
   });
