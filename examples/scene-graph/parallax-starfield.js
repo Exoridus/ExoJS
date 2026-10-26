@@ -117,9 +117,10 @@ class ParallaxStarfieldScene extends Scene {
   }
   update(delta) {
     const fit = this.panel.fit(this.app, this.app.canvas);
+    const move = this.actions.move.value.x;
     this.contentHeight = fit.contentHeight * fit.scale;
     if (this.playing) {
-      this.scroll += this.actions.move.value.x * 260 * delta;
+      this.scroll += move * 260 * delta;
     }
     const bottom = this.contentHeight - 45 * fit.scale;
     const tileWidth = [512, 512, 512];
@@ -138,10 +139,8 @@ class ParallaxStarfieldScene extends Scene {
         .setPosition(16 * fit.scale, index === 0 ? 20 * fit.scale : index === 1 ? bottom - 70 * fit.scale : bottom + 12 * fit.scale),
     );
     this.hero.setPosition(this.app.width / 2, bottom + 4);
-    this.hero.setScale(0.6 * fit.scale);
-    if (Math.abs(this.actions.move.value.x) > 0.01) {
-      this.hero.setScale(Math.sign(this.actions.move.value.x) * 0.6 * fit.scale, 0.6 * fit.scale);
-    }
+    const facing = Math.abs(move) > 0.01 ? Math.sign(move) : Math.sign(this.hero.scale.x);
+    this.hero.setScale(facing * 0.6 * fit.scale, 0.6 * fit.scale);
     this.panel.status(
       this.panel.values.factors
         ? `Clouds x0.3 | Hills x0.6 | Ground x1.0 | ${this.playing ? 'Move or drag' : 'Paused'}`

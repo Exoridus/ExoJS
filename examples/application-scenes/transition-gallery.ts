@@ -1,65 +1,56 @@
 import {
   Application,
-  Button,
   Color,
   Container,
   CrossFadeSceneTransition,
-  Dropdown,
   Ease,
   FadeSceneTransition,
   Graphics,
-  Label,
-  Panel,
+  Keyboard,
   ResponsiveCanvasSizing,
   Scene,
   type SceneTransition,
   type Seconds,
   SlideSceneTransition,
+  Text,
   Time,
 } from '@codexo/exojs';
 import { GallerySceneTransition } from '@examples/gallery-transitions';
-import { unitsPerCssPixel } from '@examples/runtime';
+import { startExample, unitsPerCssPixel } from '@examples/runtime';
 
-const transitions: ReadonlyArray<{ label: string; detail: string; transition: SceneTransition }> = [
+const transitions: ReadonlyArray<{ label: string; transition: SceneTransition }> = [
   {
     label: 'Fade through black',
-    detail: 'A color overlay closes, then opens.',
     transition: new FadeSceneTransition({ duration: Time.seconds(0.4) }),
   },
   {
     label: 'Crossfade',
-    detail: 'The frozen frame blends into the live scene.',
     transition: new CrossFadeSceneTransition({ duration: Time.seconds(0.9) }),
   },
   {
     label: 'Slide / push',
-    detail: 'Each scene slides through its own phase.',
     transition: new SlideSceneTransition({ direction: 'left', mode: 'push', duration: Time.seconds(0.4), easing: Ease.cubicInOut }),
   },
   {
     label: 'Slide / cover',
-    detail: 'The new scene slides over the frozen frame.',
     transition: new SlideSceneTransition({ direction: 'left', mode: 'cover', duration: Time.seconds(0.4), easing: Ease.cubicInOut }),
   },
   {
     label: 'Slide / reveal',
-    detail: 'The old scene slides away before the switch.',
     transition: new SlideSceneTransition({ direction: 'right', mode: 'reveal', duration: Time.seconds(0.4), easing: Ease.cubicInOut }),
   },
-  { label: 'Mask / iris', detail: 'A circular mask shrinks the outgoing snapshot.', transition: new GallerySceneTransition('iris') },
+  { label: 'Mask / iris', transition: new GallerySceneTransition('iris') },
   {
     label: 'Shader / dissolve',
-    detail: 'A shader dissolves the frozen frame in tiles.',
     transition: new GallerySceneTransition('dissolve'),
   },
   {
     label: 'Snapshot / drift',
-    detail: 'The old frame freezes, grows and drifts away.',
     transition: new GallerySceneTransition('snapshot'),
   },
 ];
 
-let selected = 1;
+let selected = 0;
 let playing = false;
 let failure = '';
 
@@ -69,15 +60,8 @@ class GalleryScene extends Scene {
   private readonly sky = new Graphics();
   private readonly movingLight = new Graphics();
   private readonly background = new Graphics();
-  private panel!: Panel;
-  private selector!: Dropdown<number>;
-  private replay!: Button;
-  private previous!: Button;
-  private next!: Button;
-  private mode!: Label;
-  private detail!: Label;
-  private location!: Label;
-  private clock!: Label;
+  private location!: Text;
+  private clock!: Text;
   private time = 0;
 
   override init(): void {
@@ -92,40 +76,13 @@ class GalleryScene extends Scene {
     this.movingLight.fillColor = new Color(accent.r, accent.g, accent.b, 0.15);
     this.movingLight.drawCircle(0, 0, 17);
 
-    this.panel = new Panel({ height: 76 });
-    this.detail = new Label('', { fontSize: 12, fillColor: new Color(174, 188, 198) });
-    this.detail.setPosition(16, 52);
-    this.selector = new Dropdown<number>({
-      height: 28,
-      textStyle: { fontSize: 13 },
-      selectedIndex: selected,
-      items: transitions.map((entry, index) => ({ label: entry.label, value: index })),
-    });
-    this.selector.setPosition(16, 10);
-    this.selector.onChange.add(index => {
-      selected = index;
-    });
-    this.replay = new Button({ label: 'Replay', width: 88, height: 32, fontSize: 13 });
-    this.replay.onClick.add(() => this.play());
-    this.previous = new Button({ label: 'Prev', width: 52, height: 32, fontSize: 13 });
-    this.next = new Button({ label: 'Next', width: 52, height: 32, fontSize: 13 });
-    this.previous.onClick.add(() => this.select(-1));
-    this.next.onClick.add(() => this.select(1));
-    this.mode = new Label('', { fontSize: 13 });
-    this.panel.addChild(this.detail, this.replay, this.previous, this.mode, this.next, this.selector);
-    this.location = new Label(this.observatory ? '02 / AMBER OBSERVATORY' : '01 / MINT HARBOR', {
-      fontSize: 15,
-      fontWeight: 'bold',
-      fillColor: accent,
-    });
-    this.clock = new Label('', { fontSize: 12, fillColor: new Color(174, 188, 198) });
-    this.ui.addChild(this.location, this.clock, this.panel);
+    this.background.interactive = true;
+    this.background.onPointerTap.add(() => this.play());
+    this.inputs.onTrigger(Keyboard.Space, () => this.play());
+    this.location = new Text(this.observatory ? 'AMBER OBSERVATORY' : 'MINT HARBOR', { fillColor: accent, fontWeight: 'bold' });
+    this.clock = new Text('', { fillColor: new Color(174, 188, 198) });
+    this.root.addChild(this.location, this.clock);
     this.layout();
-  }
-
-  private select(step: number): void {
-    selected = (selected + step + transitions.length) % transitions.length;
-    this.selector.selectedIndex = selected;
   }
 
   private drawLandscape(accent: Color): void {
@@ -186,8 +143,11 @@ class GalleryScene extends Scene {
     failure = '';
     void this.app.scenes
       .change(this.observatory ? HarborScene : ObservatoryScene, { transition: transitions[selected]!.transition })
+      .then(() => {
+        selected = (selected + 1) % transitions.length;
+      })
       .catch(() => {
-        failure = 'Could not change scene. Try Replay again.';
+        failure = 'Could not change scene. Click to retry.';
       })
       .finally(() => {
         playing = false;
@@ -200,38 +160,20 @@ class GalleryScene extends Scene {
     const scale = unitsPerCssPixel(app, canvas);
     const width = app.width / scale;
     const height = app.height / scale;
-    const compact = width < 500 || height < 320;
-    this.ui.uiScale = scale;
-    this.panel.setSize(width, 76);
-    this.selector.setSize(Math.max(100, width - 136), 28);
-    this.replay.setPosition(width - 104, 10);
-    this.selector.visible = !compact;
-
-    if (compact) {
-      this.selector.close();
-    }
-
-    this.previous.visible = this.next.visible = this.mode.visible = compact;
-    this.previous.setPosition(16, 10);
-    this.next.setPosition(width - 68, 10);
-    this.mode.setPosition(80, 17);
-    this.mode.text = transitions[selected]!.label;
-    this.detail.text = width < 420 ? 'Choose an effect, then Replay to swap scenes.' : transitions[selected]!.detail;
-    this.location.setPosition(16, height - 50);
-    this.clock.setPosition(16, height - 28);
     this.background.setScale(app.width, app.height);
-    const artHeight = Math.max(60, height - 134);
+    this.location.style.fontSize = 15 * scale;
+    this.location.setPosition(16 * scale, 16 * scale);
+    this.clock.style.fontSize = 13 * scale;
+    this.clock.setPosition(16 * scale, (height - 32) * scale);
+    const artHeight = Math.max(60, height - 100);
     this.art.setScale(Math.min((width - 24) / 720, artHeight / 380) * scale);
-    this.art.setPosition(app.width / 2, (76 + artHeight / 2) * scale);
+    this.art.setPosition(app.width / 2, app.height / 2);
   }
 
   override update(delta: Seconds): void {
     this.time += delta;
     this.layout();
-    this.selector.enabled = !playing;
-    this.replay.enabled = !playing;
-    this.previous.enabled = this.next.enabled = !playing;
-    this.clock.text = failure || `Live ${this.time.toFixed(1)}s  /  Tab + Enter to play`;
+    this.clock.text = failure || `${playing ? 'Playing' : 'Next'}: ${transitions[selected]!.label}`;
     this.movingLight.setPosition(
       this.observatory ? Math.cos(this.time * 0.8) * 185 : Math.sin(this.time * 0.7) * 220,
       this.observatory ? Math.sin(this.time * 0.8) * 65 - 100 : 146,
@@ -249,4 +191,4 @@ const app = new Application({
   canvas: { width: 960, height: 640, mount: document.body, sizing: new ResponsiveCanvasSizing({ minAspect: 0.65 }) },
   clearColor: new Color(12, 35, 47),
 });
-await app.start(HarborScene);
+await startExample(app, () => app.start(HarborScene));
