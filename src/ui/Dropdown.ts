@@ -1,4 +1,5 @@
 import { Signal } from '#core/Signal';
+import type { Stage } from '#core/Stage';
 import type { InteractionEvent } from '#input/InteractionEvent';
 import type { KeyEvent } from '#input/KeyEvent';
 import { Keyboard } from '#input/types';
@@ -10,6 +11,7 @@ import type { TextStyleOptions } from '#rendering/text/TextStyle';
 
 import type { UIWidgetState } from './theme';
 import { resolveUISkin } from './theme';
+import { UIRoot } from './UIRoot';
 import { Widget } from './Widget';
 import { type UIBackgroundNode, WidgetBackground } from './WidgetBackground';
 
@@ -123,8 +125,9 @@ class DropdownRow extends Widget {
  * The closed control paints the `button` role - the same states a
  * {@link Button} does - the open list the `dropdownList` role, and each row the
  * `dropdownItem` role, with the highlighted row in its `hover` state. The list
- * is a child of the dropdown, so it draws above whatever the dropdown itself
- * draws above and is clipped by the same ancestors.
+ * remains a child of the dropdown and keeps its ancestor clips. Inside a
+ * {@link UIRoot}, opening raises its stacking contexts above sibling UI;
+ * closing restores their previous order without changing layout or tab order.
  */
 export class Dropdown<T = string> extends Widget {
   /** Fires when the selection changes, with the value and its index. */
@@ -147,6 +150,7 @@ export class Dropdown<T = string> extends Widget {
   private _highlightIndex = -1;
   private _open = false;
   private _pointerInside = false;
+  private _popupRoot: UIRoot | null = null;
 
   public constructor(options: DropdownOptions<T> = {}) {
     super();
@@ -228,6 +232,7 @@ export class Dropdown<T = string> extends Widget {
       this._open = true;
       this._highlightIndex = this._selectedIndex;
       this._list.visible = true;
+      this._updatePopupRoot();
       this._syncHighlight();
       this._refreshState();
       this._invalidateBoundsCascade();
@@ -242,6 +247,8 @@ export class Dropdown<T = string> extends Widget {
       this._open = false;
       this._highlightIndex = -1;
       this._list.visible = false;
+      this._popupRoot?._releasePopup(this);
+      this._popupRoot = null;
       this._syncHighlight();
       this._refreshState();
       this._invalidateBoundsCascade();
@@ -329,7 +336,51 @@ export class Dropdown<T = string> extends Widget {
     this._refreshState();
   }
 
+  /** @internal - keep popup ownership aligned when its subtree is attached or detached. */
+  public override _setStage(stage: Stage | null): void {
+    super._setStage(stage);
+
+    if (this._open) {
+      this._updatePopupRoot();
+    }
+  }
+
+  /** @internal - an already-open detached control can be inserted directly into a UI root. */
+  public override _setParent(parent: Container | null): void {
+    super._setParent(parent);
+
+    if (this._open) {
+      this._updatePopupRoot();
+    }
+  }
+
+  private _updatePopupRoot(): void {
+    let root: UIRoot | null = null;
+
+    for (let parent = this.parent; parent !== null; parent = parent.parent) {
+      if (parent instanceof UIRoot) {
+        root = parent;
+        break;
+      }
+    }
+
+    if (root === this._popupRoot) {
+      return;
+    }
+
+    if (root === null && this._popupRoot !== null) {
+      this.close();
+
+      return;
+    }
+
+    this._popupRoot?._releasePopup(this);
+    this._popupRoot = root;
+    root?._raisePopup(this);
+  }
+
   public override destroy(): void {
+    this.close();
     this.onChange.destroy();
     this._surface.destroy();
     this._listSurface.destroy();

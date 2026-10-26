@@ -793,20 +793,6 @@ export const domDemoPanel = options => {
 };
 class DemoDropdown extends Dropdown {
   above = false;
-  open() {
-    super.open();
-    if (this.parent && this.isOpen) {
-      this.parent.zIndex = 1;
-    }
-    return this;
-  }
-  close() {
-    super.close();
-    if (this.parent) {
-      this.parent.zIndex = 0;
-    }
-    return this;
-  }
   placeList(above) {
     this.above = above;
     const insets = this.theme.dropdownList.normal.insets;

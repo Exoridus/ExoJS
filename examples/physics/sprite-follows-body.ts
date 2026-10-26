@@ -125,7 +125,7 @@ class SpriteFollowsBodyScene extends Scene {
     const angle = body.angle;
 
     this.anchor = { x: dx * Math.cos(angle) + dy * Math.sin(angle), y: -dx * Math.sin(angle) + dy * Math.cos(angle) };
-    this.dragJoint = this.world.addJoint(new MouseJoint({ body, target: pointer, hertz: 9, dampingRatio: 0.9, maxForce: 800_000 }));
+    this.dragJoint = this.world.addJoint(new MouseJoint({ body, target: pointer, hertz: 9, dampingRatio: 0.9 }));
   };
   private readonly onMove = (pointer: { x: number; y: number }): void => {
     if (this.dragJoint) {

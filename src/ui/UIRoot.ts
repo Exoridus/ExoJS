@@ -1,4 +1,5 @@
 import { Signal } from '#core/Signal';
+import type { Container } from '#rendering/Container';
 import type { RenderingContext } from '#rendering/RenderingContext';
 
 import type { UITheme } from './theme';
@@ -43,6 +44,52 @@ export class UIRoot extends ThemedContainer {
   private _viewHeight = 0;
   private _uiScale = 1;
   private _uiScaleStep = 0;
+  private readonly _popups = new Set<Container>();
+  private readonly _popupOrder = new Map<Container, number>();
+
+  /** @internal - raise an open popup's stacking contexts without changing document or focus order. */
+  public _raisePopup(popup: Container): void {
+    this._popups.add(popup);
+    this._updatePopupOrder();
+  }
+
+  /** @internal - restore stacking contexts once no open popup needs them. */
+  public _releasePopup(popup: Container): void {
+    if (this._popups.delete(popup)) {
+      this._updatePopupOrder();
+    }
+  }
+
+  private _updatePopupOrder(): void {
+    for (const [node, order] of this._popupOrder) {
+      if (!node.destroyed) {
+        node.zIndex = order;
+      }
+    }
+
+    this._popupOrder.clear();
+
+    for (const popup of this._popups) {
+      let branch = popup;
+
+      while (branch !== this && branch.parent !== null) {
+        const parent = branch.parent;
+
+        if (!this._popupOrder.has(branch)) {
+          this._popupOrder.set(branch, branch.zIndex);
+        }
+
+        let highest = branch.zIndex;
+
+        for (const sibling of parent.children) {
+          highest = Math.max(highest, sibling.zIndex);
+        }
+
+        branch.zIndex = highest + 1;
+        branch = parent;
+      }
+    }
+  }
 
   /**
    * Base theme for every widget in this layer. Widgets override parts of it
@@ -174,6 +221,8 @@ export class UIRoot extends ThemedContainer {
   }
 
   public override destroy(): void {
+    this._popups.clear();
+    this._updatePopupOrder();
     this.onResize.destroy();
     super.destroy();
   }

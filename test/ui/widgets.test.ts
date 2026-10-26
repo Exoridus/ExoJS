@@ -1051,6 +1051,81 @@ describe('Dropdown', () => {
     { label: 'High', value: 'high' },
   ];
 
+  test('an open list paints and picks above later widgets across its ancestor panels, then restores their order', () => {
+    const harness = createUIApp();
+    const panel = new Panel({ width: 220, height: 80 });
+    const stack = new Stack({ direction: 'column' });
+    const dropdown = new Dropdown({ items, selectedIndex: 0, width: 180, height: 36 });
+    const lowerButton = new Button({ label: 'Below', width: 180, height: 100 });
+    const otherPanel = new Panel({ width: 220, height: 160 });
+    const coveringButton = new Button({ label: 'Other panel', width: 180, height: 100 });
+    coveringButton.setPosition(0, 36);
+    otherPanel.addChild(coveringButton);
+    stack.addItem(dropdown);
+    stack.addItem(lowerButton);
+    panel.addChild(stack);
+    harness.scene.ui.addChild(panel, otherPanel);
+    const clicks = vi.fn();
+    coveringButton.onClick.add(clicks);
+    harness.im.focus(dropdown);
+    dropdown.open();
+
+    const tap = (): void => {
+      press(harness, 50, 90);
+      const pointer = makePointer(50, 90);
+      harness.signals.onPointerUp.dispatch(pointer, 50, 90);
+      harness.signals.onPointerTap.dispatch(pointer, 50, 90);
+      harness.im.preFrame(Time.seconds(1 / 60));
+    };
+
+    tap();
+
+    expect(dropdown.selectedValue).toBe('medium');
+    expect(dropdown.isOpen).toBe(false);
+    expect(clicks).not.toHaveBeenCalled();
+    tap();
+    expect(clicks).toHaveBeenCalledOnce();
+  });
+
+  test('closing one popup keeps another popup above covering siblings of their shared panel', () => {
+    const harness = createUIApp();
+    const panel = new Panel({ width: 220, height: 180 });
+    const first = new Dropdown({ items, selectedIndex: 0, width: 180, height: 36 });
+    const second = new Dropdown({ items, selectedIndex: 0, width: 180, height: 36 });
+    second.setPosition(0, 130);
+    panel.addChild(first, second);
+    const covering = new Button({ label: 'Covered', width: 180, height: 110 });
+    covering.setPosition(0, 166);
+    harness.scene.ui.addChild(panel, covering);
+    first.open();
+    harness.im.focus(second);
+    second.open();
+    first.close();
+
+    press(harness, 50, 220);
+    const pointer = makePointer(50, 220);
+    harness.signals.onPointerUp.dispatch(pointer, 50, 220);
+    harness.signals.onPointerTap.dispatch(pointer, 50, 220);
+    harness.im.preFrame(Time.seconds(1 / 60));
+
+    expect(second.selectedValue).toBe('medium');
+  });
+
+  test('detaching a panel closes its unfocused popup and releases its stacking claim', () => {
+    const harness = createUIApp();
+    const panel = new Panel({ width: 220, height: 100 });
+    const dropdown = new Dropdown({ items });
+    panel.addChild(dropdown);
+    harness.scene.ui.addChild(panel);
+    dropdown.open();
+
+    harness.scene.ui.removeChild(panel);
+
+    expect(dropdown.isOpen).toBe(false);
+    expect(panel.zIndex).toBe(0);
+    panel.destroy();
+  });
+
   test('list rows leave the rounded list border exposed instead of painting over it', () => {
     const dropdown = new Dropdown({ items, width: 224, height: 36 });
     dropdown.open();

@@ -1215,26 +1215,6 @@ export const domDemoPanel = <const C extends Record<string, DemoControlSpec>>(
 class DemoDropdown extends Dropdown<string> {
   public above = false;
 
-  public override open(): this {
-    super.open();
-
-    if (this.parent && this.isOpen) {
-      this.parent.zIndex = 1;
-    }
-
-    return this;
-  }
-
-  public override close(): this {
-    super.close();
-
-    if (this.parent) {
-      this.parent.zIndex = 0;
-    }
-
-    return this;
-  }
-
   public placeList(above: boolean): void {
     this.above = above;
     const insets = this.theme.dropdownList.normal.insets;
