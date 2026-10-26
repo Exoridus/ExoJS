@@ -78,6 +78,8 @@ During iteration, run the smallest relevant validation:
 
 Never run a full test project or the full gate set to find out what a change broke. Re-run only the check that was red, on the files that were red.
 
+Before a final push intended to complete a pull request, and after fixing a CI failure, run the complete applicable CI validation on the final code state. This completion run is separate from narrow iteration: include every required gate group, test project, build, generated-file check, package/site verification and browser interaction suite. A successful targeted retry alone is not completion evidence. Determine the full contract against the pull request base, not only the last incremental push. Reproduce any checkout, operating-system or backend difference exposed by CI; explicitly report checks that cannot run locally. If code changes after this run, repeat the completion validation before the final push.
+
 Before the first push, identify the complete validation contract affected by the change and run targeted checks for every affected surface. Do not rely on the push hook to discover missing validation responsibilities. This includes, where applicable, generated API/reference artifacts, central shader inventories and compile tests, source/generated example synchronization, public export/package verification, documentation generation, and package-specific browser or parity tests.
 
 Use `pnpm lanes --base <base>` before the first push to confirm that the expected repository lanes match the surfaces you identified. Run the targeted prerequisite checks needed to establish those contracts, then run `git diff --check`.
