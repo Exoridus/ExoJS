@@ -1,5 +1,4 @@
 import { Signal } from '#core/Signal';
-import type { Stage } from '#core/Stage';
 import type { InteractionEvent } from '#input/InteractionEvent';
 import type { KeyEvent } from '#input/KeyEvent';
 import { Keyboard } from '#input/types';
@@ -151,6 +150,7 @@ export class Dropdown<T = string> extends Widget {
   private _open = false;
   private _pointerInside = false;
   private _popupRoot: UIRoot | null = null;
+  private readonly _popupAncestors: Container[] = [];
 
   public constructor(options: DropdownOptions<T> = {}) {
     super();
@@ -247,6 +247,7 @@ export class Dropdown<T = string> extends Widget {
       this._open = false;
       this._highlightIndex = -1;
       this._list.visible = false;
+      this._clearPopupAncestors();
       this._popupRoot?._releasePopup(this);
       this._popupRoot = null;
       this._syncHighlight();
@@ -336,15 +337,6 @@ export class Dropdown<T = string> extends Widget {
     this._refreshState();
   }
 
-  /** @internal - keep popup ownership aligned when its subtree is attached or detached. */
-  public override _setStage(stage: Stage | null): void {
-    super._setStage(stage);
-
-    if (this._open) {
-      this._updatePopupRoot();
-    }
-  }
-
   /** @internal - an already-open detached control can be inserted directly into a UI root. */
   public override _setParent(parent: Container | null): void {
     super._setParent(parent);
@@ -355,6 +347,7 @@ export class Dropdown<T = string> extends Widget {
   }
 
   private _updatePopupRoot(): void {
+    this._clearPopupAncestors();
     let root: UIRoot | null = null;
 
     for (let parent = this.parent; parent !== null; parent = parent.parent) {
@@ -362,6 +355,9 @@ export class Dropdown<T = string> extends Widget {
         root = parent;
         break;
       }
+
+      this._popupAncestors.push(parent);
+      parent._addParentChangeListener(this._onPopupAncestorChanged);
     }
 
     if (root === this._popupRoot) {
@@ -378,6 +374,18 @@ export class Dropdown<T = string> extends Widget {
     this._popupRoot = root;
     root?._raisePopup(this);
   }
+
+  private _clearPopupAncestors(): void {
+    for (const ancestor of this._popupAncestors) {
+      ancestor._removeParentChangeListener(this._onPopupAncestorChanged);
+    }
+
+    this._popupAncestors.length = 0;
+  }
+
+  private readonly _onPopupAncestorChanged = (): void => {
+    this._updatePopupRoot();
+  };
 
   public override destroy(): void {
     this.close();

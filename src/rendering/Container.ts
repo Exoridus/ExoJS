@@ -35,6 +35,33 @@ export class Container extends RenderNode {
   private _paintChildrenView: readonly RenderNode[] | null = null;
   private _childIndexView: ReadonlyMap<RenderNode, number> | null = null;
   private _anchor: ComponentAnchor | null = null;
+  private _parentChangeListeners: Set<() => void> | null = null;
+
+  /** @internal - observe parent changes without walking the subtree. */
+  public _addParentChangeListener(listener: () => void): void {
+    (this._parentChangeListeners ??= new Set()).add(listener);
+  }
+
+  /** @internal - stop observing parent changes. */
+  public _removeParentChangeListener(listener: () => void): void {
+    this._parentChangeListeners?.delete(listener);
+
+    if (this._parentChangeListeners?.size === 0) {
+      this._parentChangeListeners = null;
+    }
+  }
+
+  /** @internal */
+  public override _setParent(parent: Container | null): void {
+    super._setParent(parent);
+
+    if (this._parentChangeListeners !== null) {
+      // A listener can replace its ancestor subscriptions while handling this change.
+      for (const listener of [...this._parentChangeListeners]) {
+        listener();
+      }
+    }
+  }
 
   /**
    * The live child list, readable by subclasses and mutable only from here.

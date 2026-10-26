@@ -1126,6 +1126,103 @@ describe('Dropdown', () => {
     panel.destroy();
   });
 
+  test.each(['remove', 'same-root', 'other-root'] as const)(
+    'a detached popup releases its stacking claim when an ancestor moves: %s',
+    move => {
+      const root = new UIRoot();
+      const otherRoot = new UIRoot();
+      const panel = new Container();
+      const nested = new Container();
+      const destination = new Container();
+      const dropdown = new Dropdown({ items });
+      panel.zIndex = 4;
+      nested.zIndex = 3;
+      dropdown.zIndex = 2;
+      nested.addChild(dropdown);
+      panel.addChild(nested);
+      root.addChild(panel, destination);
+      dropdown.open();
+
+      if (move === 'remove') {
+        root.removeChild(panel);
+      } else if (move === 'same-root') {
+        destination.addChild(panel);
+      } else {
+        otherRoot.addChild(panel);
+      }
+
+      expect(dropdown.isOpen).toBe(false);
+      expect(panel.zIndex).toBe(4);
+      expect(nested.zIndex).toBe(3);
+      expect(dropdown.zIndex).toBe(2);
+      panel.zIndex = 9;
+      const another = new Dropdown({ items });
+      root.addChild(another);
+      another.open().close();
+      expect(panel.zIndex).toBe(9);
+      root.destroy();
+      otherRoot.destroy();
+      panel.destroy();
+    },
+  );
+
+  test('a detached open subtree acquires popup ordering when an ancestor joins a UI root', () => {
+    const root = new UIRoot();
+    const panel = new Container();
+    const nested = new Container();
+    const dropdown = new Dropdown({ items });
+    const covering = new Container();
+    nested.addChild(dropdown);
+    panel.addChild(nested);
+    dropdown.open();
+    root.addChild(covering);
+    root.addChildAt(panel, 0);
+
+    expect(dropdown.isOpen).toBe(true);
+    expect(root._childrenInPaintOrder().at(-1) === panel).toBe(true);
+    dropdown.close();
+    expect(panel.zIndex).toBe(0);
+    expect(nested.zIndex).toBe(0);
+    expect(dropdown.zIndex).toBe(0);
+    root.destroy();
+  });
+
+  test('detaching a shared ancestor releases every detached popup', () => {
+    const root = new UIRoot();
+    const panel = new Container();
+    const first = new Dropdown({ items });
+    const second = new Dropdown({ items });
+    panel.addChild(first, second);
+    root.addChild(panel);
+    first.open();
+    second.open();
+
+    root.removeChild(panel);
+
+    expect(first.isOpen).toBe(false);
+    expect(second.isOpen).toBe(false);
+    expect(panel.zIndex).toBe(0);
+    expect(first.zIndex).toBe(0);
+    expect(second.zIndex).toBe(0);
+    panel.destroy();
+    root.destroy();
+  });
+
+  test('a closed dropdown does not acquire popup ordering when its ancestor joins a UI root', () => {
+    const root = new UIRoot();
+    const panel = new Container();
+    const dropdown = new Dropdown({ items });
+    panel.addChild(dropdown);
+    dropdown.open().close();
+
+    root.addChild(panel);
+
+    expect(dropdown.isOpen).toBe(false);
+    expect(panel.zIndex).toBe(0);
+    expect(dropdown.zIndex).toBe(0);
+    root.destroy();
+  });
+
   test('list rows leave the rounded list border exposed instead of painting over it', () => {
     const dropdown = new Dropdown({ items, width: 224, height: 36 });
     dropdown.open();
