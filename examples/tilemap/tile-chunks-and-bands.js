@@ -102,11 +102,10 @@ class TileChunksAndBandsScene extends Scene {
     });
     for (let ty = 0; ty < ROWS; ty++) {
       for (let tx = 0; tx < COLUMNS; tx++) {
-        // Deterministic scatter: a sand "path" tile threaded through the
-        // grass, and sparse overhead canopy tiles above it.
-        const groundTile = (tx * 3 + ty * 5) % 11 === 0 ? SAND_TILE : GRASS_TILE;
+        const onPath = Math.abs(tx - COLUMNS / 2) <= 1 || Math.abs(ty - ROWS / 2) <= 1;
+        const groundTile = onPath ? SAND_TILE : GRASS_TILE;
         ground.setTileAt(tx, ty, { tileset, localTileId: groundTile, transform: TILE_TRANSFORM_IDENTITY });
-        if ((tx * 7 + ty * 3) % 17 === 0) {
+        if ((tx % 6 === 0 && ty % 5 === 0) || (tx === COLUMNS / 2 + 1 && ty === ROWS / 2)) {
           canopy.setTileAt(tx, ty, { tileset, localTileId: TREE_TILE, transform: TILE_TRANSFORM_IDENTITY });
         }
       }
@@ -154,9 +153,8 @@ class TileChunksAndBandsScene extends Scene {
     this.panel = demoPanel({
       scene: this,
       layout: 'bar',
-      title: 'Layered Tile World',
       controls: {
-        canopy: toggle('Canopy band', true),
+        canopy: toggle('Canopy above player', true),
         snap: choice('Pixel snap', ['geometry', 'position', 'none']),
         zoom: choice('Camera zoom', ['1', '1.25', '0.75']),
       },
@@ -170,7 +168,6 @@ class TileChunksAndBandsScene extends Scene {
   update(delta) {
     const { x: moveX, y: moveY } = this.actions.move.value;
     const fit = this.panel.fit(this.app, this.app.canvas);
-    const canvas = this.app.canvas;
     const height = fit.contentHeight * fit.scale;
     if (this.camera.viewport.height !== height / this.app.height) {
       this.camera
@@ -178,9 +175,6 @@ class TileChunksAndBandsScene extends Scene {
         .setZoom(Number(this.panel.values.zoom))
         .setViewport(0, 0, 1, height / this.app.height);
     }
-    this.panel.status(
-      `CSS ${Math.round(fit.width)}x${Math.round(fit.height)} | logical ${this.app.width}x${this.app.height} | buffer ${canvas.width}x${canvas.height} | DPR ${devicePixelRatio} | pixelRatio ${this.app.pixelRatio} | camera ${this.camera.center.x.toFixed(1)},${this.camera.center.y.toFixed(1)} | zoom ${this.camera.zoomLevel}`,
-    );
     if (moveX !== 0 || moveY !== 0) {
       this.explorer.move(moveX * MOVE_SPEED * delta, moveY * MOVE_SPEED * delta);
       this.explorer.x = Math.min(Math.max(this.explorer.x, 0), MAP_WIDTH);
