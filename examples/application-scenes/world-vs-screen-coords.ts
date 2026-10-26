@@ -37,6 +37,7 @@ class CameraNavigationScene extends Scene {
     ]),
   });
   private following = true;
+  private wheelDelta = 0;
   private interacted = false;
   private pointer = { x: 640, y: 360 };
   private dragPointer: number | null = null;
@@ -114,7 +115,7 @@ class CameraNavigationScene extends Scene {
     this.dragPointer = null;
   };
   private readonly onWheel = (_x: number, y: number): void => {
-    this.zoom(Math.exp(-y * 0.001));
+    this.wheelDelta += y;
   };
 
   private zoom(factor: number): void {
@@ -131,6 +132,12 @@ class CameraNavigationScene extends Scene {
   }
 
   override update(delta: Seconds): void {
+    // Wheel signals precede pointer phases; zoom only after the latest position arrives.
+    if (this.wheelDelta !== 0) {
+      this.zoom(Math.exp(-this.wheelDelta * 0.001));
+      this.wheelDelta = 0;
+    }
+
     const { x, y } = this.actions.move.value;
     this.target.x += x * 320 * delta;
     this.target.y += y * 320 * delta;

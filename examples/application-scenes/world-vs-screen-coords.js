@@ -34,6 +34,7 @@ class CameraNavigationScene extends Scene {
     ]),
   });
   following = true;
+  wheelDelta = 0;
   interacted = false;
   pointer = { x: 640, y: 360 };
   dragPointer = null;
@@ -102,7 +103,7 @@ class CameraNavigationScene extends Scene {
     this.dragPointer = null;
   };
   onWheel = (_x, y) => {
-    this.zoom(Math.exp(-y * 0.001));
+    this.wheelDelta += y;
   };
   zoom(factor) {
     const before = this.view.screenToWorld(this.pointer.x, this.pointer.y);
@@ -115,6 +116,11 @@ class CameraNavigationScene extends Scene {
     this.interacted = true;
   }
   update(delta) {
+    // Wheel signals precede pointer phases; zoom only after the latest position arrives.
+    if (this.wheelDelta !== 0) {
+      this.zoom(Math.exp(-this.wheelDelta * 0.001));
+      this.wheelDelta = 0;
+    }
     const { x, y } = this.actions.move.value;
     this.target.x += x * 320 * delta;
     this.target.y += y * 320 * delta;
