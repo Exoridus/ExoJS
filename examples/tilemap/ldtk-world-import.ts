@@ -54,7 +54,6 @@ class LdtkWorldImportScene extends Scene {
 
     this.panel = demoPanel({
       scene: this,
-      title: 'LDtk',
       controls: {
         level: choice(
           'Level',

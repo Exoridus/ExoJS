@@ -64,17 +64,13 @@ class CursorAttractorParticlesScene extends Scene {
     this.systems.add(this.system);
     this.panel = demoPanel({
       scene: this,
-      title: 'Attract and Repel Particles',
       layout: 'bar',
       controls,
-      hint: 'Move pointer / arrows to place force. Click changes mode. Acceleration changes velocity over time.',
       actions: {
         'Pause / Resume': () => this.togglePlaying(),
-        Reset: () => this.reset(),
       },
     });
     this.inputs.onTrigger(Keyboard.Space, () => this.togglePlaying());
-    this.inputs.onTrigger(Keyboard.R, () => this.reset());
     this.inputs.onTrigger(Keyboard.Left, () => {
       this.targetX = Math.max(0, this.targetX - 0.05);
     });
@@ -88,23 +84,12 @@ class CursorAttractorParticlesScene extends Scene {
       this.targetY = Math.min(1, this.targetY + 0.05);
     });
     this.app.input.onPointerMove.add(this.onMove);
-    this.app.input.onPointerTap.add(this.onTap);
-  }
-
-  private reset(): void {
-    this.elapsed = 0;
-    this.targetX = 0.65;
-    this.targetY = 0.45;
-    this.system.clearParticles();
-    this.panel.set('mode', 'Attract');
-    this.panel.set('strength', 700);
   }
 
   private readonly onMove = (p: { x: number; y: number }): void => {
     this.targetX = Math.max(0, Math.min(1, p.x / this.scale / this.width));
     this.targetY = Math.max(0, Math.min(1, p.y / this.scale / this.height));
   };
-  private readonly onTap = (): void => this.panel.step('mode');
 
   override update(delta: Seconds): void {
     const v = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
@@ -154,7 +139,6 @@ class CursorAttractorParticlesScene extends Scene {
 
   override destroy(): void {
     this.app.input.onPointerMove.remove(this.onMove);
-    this.app.input.onPointerTap.remove(this.onTap);
     this.panel.dispose();
     super.destroy();
   }

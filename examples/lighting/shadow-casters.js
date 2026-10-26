@@ -75,33 +75,20 @@ class ShadowCastersScene extends Scene {
     );
     this.panel = demoPanel({
       scene: this,
-      title: 'Cast Shadows from Shapes',
       layout: 'bar',
       controls,
-      hint: 'Drag the light. Point / Spot share position; the rotating wall owns its alpha outline.',
       actions: {
         'Pause / Resume': () => {
           this.playing = !this.playing;
         },
-        Reset: () => this.reset(),
       },
     });
     this.inputs.onTrigger(Keyboard.Space, () => {
       this.playing = !this.playing;
     });
-    this.inputs.onTrigger(Keyboard.R, () => this.reset());
     this.app.input.onPointerDown.add(this.onDown);
     this.app.input.onPointerMove.add(this.onMove);
     this.app.input.onPointerUp.add(this.onUp);
-  }
-  reset() {
-    this.elapsed = 0;
-    this.lightX = 0.25;
-    this.lightY = 0.55;
-    this.panel.set('radius', 230);
-    this.panel.set('softness', 0.35);
-    this.panel.set('type', 'Point');
-    this.panel.set('occluders', false);
   }
   onDown = p => {
     this.dragging = true;

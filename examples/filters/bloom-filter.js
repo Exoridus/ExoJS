@@ -29,28 +29,17 @@ class BloomFilterScene extends Scene {
     this.root.addChild(...this.labels);
     this.panel = demoPanel({
       scene: this,
-      title: 'Bloom Threshold',
       layout: 'bar',
       controls,
-      hint: 'Six increasing linear luminances; white sweep is the same moving input.',
       actions: {
         'Pause / Resume': () => {
           this.playing = !this.playing;
         },
-        Reset: () => this.reset(),
       },
     });
     this.inputs.onTrigger(Keyboard.Space, () => {
       this.playing = !this.playing;
     });
-    this.inputs.onTrigger(Keyboard.R, () => this.reset());
-  }
-  reset() {
-    this.elapsed = 0;
-    this.panel.set('threshold', 0.6);
-    this.panel.set('intensity', 1.6);
-    this.panel.set('spread', 10);
-    this.panel.set('bypass', false);
   }
   update(delta) {
     const { scale, width, contentHeight } = this.panel.fit(this.app, this.app.canvas);

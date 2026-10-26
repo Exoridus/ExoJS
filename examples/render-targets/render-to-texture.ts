@@ -55,36 +55,21 @@ class RenderToTextureScene extends Scene {
     this.root.addChild(this.live, this.snapshot, ...this.labels);
     this.panel = demoPanel({
       scene: this,
-      title: 'Capture a Texture',
       layout: 'bar',
       controls: {},
-      hint: 'Click / Space captures once. The scene owns both render textures until it ends.',
       actions: {
         Capture: () => this.capture(),
         'Pause / Resume': () => {
           this.playing = !this.playing;
         },
-        Reset: () => {
-          this.time = 0;
-          this.captureCount = 0;
-          this.capture();
-        },
       },
     });
     this.inputs.onTrigger(Keyboard.Space, () => this.capture());
-    this.inputs.onTrigger(Keyboard.R, () => {
-      this.time = 0;
-      this.captureCount = 0;
-      this.capture();
-    });
-    this.app.input.onPointerTap.add(this.onTap);
   }
 
   private capture(): void {
     this.captureRequested = true;
   }
-
-  private readonly onTap = (): void => this.capture();
 
   override update(delta: Seconds): void {
     if (this.playing) {
@@ -124,7 +109,6 @@ class RenderToTextureScene extends Scene {
   }
 
   override destroy(): void {
-    this.app.input.onPointerTap.remove(this.onTap);
     this.panel.dispose();
     super.destroy();
   }

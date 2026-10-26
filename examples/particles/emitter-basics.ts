@@ -74,18 +74,14 @@ class EmitterBasicsScene extends Scene {
     );
     this.panel = demoPanel({
       scene: this,
-      title: 'Control a Particle Emitter',
       layout: 'bar',
       controls,
-      hint: 'Drag the flame and log. Size and color use elapsed / lifetime; displayed count follows rate and lifetime.',
       actions: {
         'Pause / Resume': () => this.togglePlaying(),
-        Reset: () => this.reset(),
       },
     });
     this.setSpawn();
     this.inputs.onTrigger(Keyboard.Space, () => this.togglePlaying());
-    this.inputs.onTrigger(Keyboard.R, () => this.reset());
     this.app.input.onPointerDown.add(this.onDown);
     this.app.input.onPointerMove.add(this.onMove);
     this.app.input.onPointerUp.add(this.onUp);
@@ -100,17 +96,6 @@ class EmitterBasicsScene extends Scene {
       velocity: new ConeDirection(-Math.PI / 2, Math.PI / 12, v.speed * 0.7, v.speed),
     });
     this.system.addSpawnModule(this.spawn);
-  }
-
-  private reset(): void {
-    this.elapsed = 0;
-    this.emitterX = 0.5;
-    this.emitterY = 0.85;
-    this.panel.set('rate', 100);
-    this.panel.set('lifetime', 1.2);
-    this.panel.set('speed', 80);
-    this.system.clearParticles();
-    this.setSpawn();
   }
 
   private readonly onDown = (p: { x: number; y: number }): void => {

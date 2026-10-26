@@ -29,7 +29,7 @@ class PointerAndHittestScene extends Scene {
       this.root.addChild(sprite);
       this.sprites.push(sprite);
     }
-    this.hud = mountControls({ title: 'Interaction Inspector', status: 'Front: 3 (blue)' });
+    this.hud = mountControls({ status: 'Front: 3 (blue)' });
     this.inputs.onTrigger(Keyboard.One, () => this.setFront(0));
     this.inputs.onTrigger(Keyboard.Two, () => this.setFront(1));
     this.inputs.onTrigger(Keyboard.Three, () => this.setFront(2));

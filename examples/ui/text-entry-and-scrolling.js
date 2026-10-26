@@ -28,8 +28,6 @@ class TextEntryScene extends Scene {
     this.ui.theme = siteUITheme();
     this.caption = mountControls({
       theme: 'site',
-      title: 'Text Entry and Scrolling',
-      hint: 'Tab between fields and Add. Enter in Name focuses Note. Wheel or drag the list.',
     });
     this.caption.setStatus('Write a note; adding it scrolls to the new row.');
     this.form = new Panel({ width: 240, height: 198, color: new Color(25, 31, 36), cornerRadius: 8 });

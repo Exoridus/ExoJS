@@ -124,7 +124,6 @@ class HexagonalGridScene extends Scene {
   override init(): void {
     this.panel = demoPanel({
       scene: this,
-      title: 'Grid',
       controls: {
         layout: choice(
           'Layout',

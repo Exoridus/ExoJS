@@ -80,7 +80,6 @@ class HexagonalGridScene extends Scene {
   init() {
     this.panel = demoPanel({
       scene: this,
-      title: 'Grid',
       controls: {
         layout: choice(
           'Layout',

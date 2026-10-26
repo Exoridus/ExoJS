@@ -90,7 +90,6 @@ class RetainedContainerScene extends Scene {
 
     this.panel = demoPanel({
       scene: this,
-      title: 'Render tier',
       controls: { retained: toggle('Retained tier', this.retained) },
       onChange: (_key, retained) => {
         if (retained === this.retained) {

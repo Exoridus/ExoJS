@@ -55,9 +55,7 @@ class TiledMapImportScene extends Scene {
     this.hud = demoPanel({
       scene: this,
       layout: 'bar',
-      title: 'Tiny Dungeon - Tiled Import',
       controls: {},
-      hint: 'Click an outlined zone to inspect its authored Tiled properties. Tiles are 16 px; the camera magnifies the room.',
     });
     this.hud.status(`Loaded Tiny Dungeon: ${this.zones.length} objects in the Zones layer.`);
     this.app.input.onPointerTap.add(this.onTap);

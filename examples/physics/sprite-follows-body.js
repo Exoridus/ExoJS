@@ -1,15 +1,5 @@
 // Auto-generated from sprite-follows-body.ts - edit the .ts source, not this file.
-import {
-  Application,
-  Color,
-  FixedResolutionCanvasSizing,
-  Graphics,
-  Keyboard,
-  Scene,
-  Spritesheet,
-  SystemOrder,
-  Vector,
-} from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Spritesheet, SystemOrder } from '@codexo/exojs';
 import { BoxShape, MouseJoint, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { demoPanel, startExample, toggle } from '@examples/runtime';
@@ -79,16 +69,12 @@ class SpriteFollowsBodyScene extends Scene {
     });
     this.panel = demoPanel({
       scene: this,
-      title: 'Drag and Throw Physics',
       layout: 'bar',
-      hint: 'Grab inside a body, drag, release to throw. The outlined collision shape is the hit area.',
       controls: { colliders: toggle('Show colliders', false) },
-      actions: { Reset: () => this.reset() },
       onChange: (_key, value) => {
         this.showColliders = value;
       },
     });
-    this.inputs.onTrigger(Keyboard.R, () => this.reset());
     this.app.input.onPointerDown.add(this.onDown);
     this.app.input.onPointerMove.add(this.onMove);
     this.app.input.onPointerUp.add(this.onEnd);
@@ -125,14 +111,6 @@ class SpriteFollowsBodyScene extends Scene {
     this.dragJoint = null;
     this.grabbed = null;
   };
-  reset() {
-    this.onEnd();
-    this.bodies.forEach((body, index) => {
-      body.setTransform(new Vector(420 + index * 220, 180), 0);
-      body.linearVelocityX = body.linearVelocityY = body.angularVelocity = 0;
-      body.wake();
-    });
-  }
   update() {
     const { scale: k } = this.panel.fit(this.app, this.app.canvas);
     this.overlay.clear();
@@ -164,7 +142,6 @@ class SpriteFollowsBodyScene extends Scene {
       this.overlay.drawLine(x, y, target.x, target.y).drawCircle(x, y, 4 * k);
       this.overlay.drawLine(body.x, body.y, body.x + body.linearVelocityX * 0.1, body.y + body.linearVelocityY * 0.1);
     }
-    this.panel.status(this.grabbed ? 'Dragging | spring holds the original local grab point' : 'Ready | three bodies, one collision query');
   }
   draw(context) {
     context.render(this.floor);

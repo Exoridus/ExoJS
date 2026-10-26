@@ -102,11 +102,8 @@ class TiledInfiniteMapScene extends Scene {
   private setupHud(): void {
     this.hud = demoPanel({
       scene: this,
-      title: 'Streaming Tile Worlds',
       layout: 'bar',
       controls: {},
-      hint: 'WASD, arrows or left stick pan; cyan outlines are resident chunks.',
-      actions: { Reset: () => this.camera.setCenter(0, 0) },
     });
   }
 

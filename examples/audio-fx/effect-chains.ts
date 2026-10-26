@@ -102,7 +102,6 @@ class EffectChainsScene extends Scene {
       .setPosition(640, 670);
     this.panel = demoPanel({
       scene: this,
-      title: 'Effect rack',
       controls: {
         chain: choice(
           'Chain',

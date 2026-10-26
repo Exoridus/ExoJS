@@ -72,8 +72,6 @@ class RetroDisplayScene extends Scene {
     this.panel = demoPanel({
       scene: this,
       layout: 'bar',
-      title: 'Controls',
-      hint: 'Turn CRT off to compare the original signal.',
       controls: {
         crt: toggle('CRT', true),
         strength: slider('Effect strength', { min: 0, max: 1, value: 0.8, step: 0.05, format: value => `${Math.round(value * 100)}%` }),

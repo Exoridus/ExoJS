@@ -163,7 +163,6 @@ class LightCookiesScene extends Scene {
     this.tube.setPosition(300, 640);
     this.panel = demoPanel({
       scene: this,
-      title: 'Light Cookies',
       corner: 'top-right',
       controls: {
         time: slider('Time of day', { min: -60, max: 60, value: this.sun.rotation, step: 1, format: value => `${value}` }),

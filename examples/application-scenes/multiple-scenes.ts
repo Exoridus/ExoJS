@@ -84,9 +84,7 @@ class LifecycleScene extends Scene {
     this.panel = demoPanel({
       scene: this,
       layout: 'bar',
-      title: 'Scene Changes and Transitions',
       controls: {},
-      hint: 'Enter / South: start; Esc / East: back. Each switch closes the bars once.',
       actions: this.sceneName === 'Menu' ? { Start: () => this.change() } : { Back: () => this.change() },
     });
     this.inputs.attach(this.actions);

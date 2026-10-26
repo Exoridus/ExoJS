@@ -72,7 +72,6 @@ class TiledMapPhysicsActorScene extends Scene {
     this.debug = new PhysicsDebugDraw(this.app, this.world, { drawShapes: true, drawCenters: true });
     this.panel = demoPanel({
       scene: this,
-      title: 'Collision',
       controls: { outlines: toggle('Show outlines', false) },
       onChange: (_key, value) => {
         this.showOutlines = value;

@@ -76,7 +76,6 @@ class VocoderScene extends Scene {
 
     this.panel = demoPanel({
       scene: this,
-      title: 'Voice',
       controls: {
         phrase: choice(
           'Phrase',

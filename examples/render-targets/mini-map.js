@@ -110,10 +110,7 @@ class MiniMapScene extends Scene {
     this.panel = demoPanel({
       scene: this,
       layout: 'bar',
-      title: 'Minimap',
       controls: {},
-      hint: 'WASD / arrows / stick move. One world renders through two cameras; the circular HUD uses a render texture.',
-      actions: { Reset: () => this.player.setPosition(WORLD_WIDTH / 2, WORLD_HEIGHT / 2) },
     });
   }
   update(delta) {

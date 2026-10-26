@@ -56,7 +56,6 @@ class VocoderScene extends Scene {
       .setPosition(width / 2, height - 48);
     this.panel = demoPanel({
       scene: this,
-      title: 'Voice',
       controls: {
         phrase: choice(
           'Phrase',

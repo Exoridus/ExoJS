@@ -37,7 +37,6 @@ class CachedAssetsScene extends Scene {
     this.result.position.set(215, 385);
     this.panel = demoPanel({
       scene: this,
-      title: 'Cache actions',
       controls: { offline: toggle('Offline policy', false) },
       actions: {
         'Warm generic prompts': () => {

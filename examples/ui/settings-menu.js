@@ -65,8 +65,6 @@ class SettingsMenuScene extends Scene {
     this.addChild(this.preview);
     this.caption = mountControls({
       theme: 'site',
-      title: 'UI Controls and Focus',
-      hint: 'Tab / D-pad: focus. Arrows adjust. Animate on means motion is enabled.',
     });
     this.panel = new Panel({ width: 252, height: 194, color: new Color(25, 31, 36), cornerRadius: 8 });
     const stack = new Stack({ direction: 'column', spacing: 5, padding: 12 });

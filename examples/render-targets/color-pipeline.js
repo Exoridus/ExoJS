@@ -175,7 +175,7 @@ class ColorPipelineScene extends Scene {
       this.label('The SDR panels are unaffected.', c2, r1 + 150);
     }
     if (this.hdrSupported) {
-      this.hud = mountControls({ title: 'Colour Pipeline', corner: 'top-left', status: `HDR panel: ${TONE_MAPPINGS[this.toneIndex]}` });
+      this.hud = mountControls({ corner: 'top-left', status: `HDR panel: ${TONE_MAPPINGS[this.toneIndex]}` });
       this.inputs.onTrigger(Keyboard.Space, this.cycleTone);
       this.app.input.onPointerTap.add(this.cycleTone);
     }

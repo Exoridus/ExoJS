@@ -38,7 +38,6 @@ class CompressorScene extends Scene {
     // than jumps so switching never spikes.
     demoPanel({
       scene: this,
-      title: 'Compression',
       controls: {
         input: choice('Input', ['Quiet', 'Loud']),
         bypass: toggle('Bypass'),

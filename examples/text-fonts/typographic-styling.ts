@@ -34,7 +34,6 @@ class TextLayoutScene extends Scene {
   private readonly actions = new ActionMap({
     narrower: new ButtonAction(Keyboard.Left),
     wider: new ButtonAction(Keyboard.Right),
-    reset: new ButtonAction(Keyboard.R),
   });
   private width = 620;
   private scale = 0;
@@ -50,10 +49,8 @@ class TextLayoutScene extends Scene {
   override init(): void {
     this.panel = demoPanel({
       scene: this,
-      title: 'Text Layout',
       layout: 'bar',
       controls,
-      actions: { Reset: () => this.reset() },
       onChange: (key, _value, values) => {
         this.dirty = true;
 
@@ -152,14 +149,6 @@ class TextLayoutScene extends Scene {
     this.dirty = true;
   }
 
-  private reset(): void {
-    this.width = 620;
-    this.panel.set('font', 'Space Grotesk');
-    this.panel.set('wrap', 'Words');
-    this.panel.set('heading', 'Plain');
-    this.dirty = true;
-  }
-
   override update(): void {
     if (this.actions.narrower.pressed) {
       this.width -= 20;
@@ -169,10 +158,6 @@ class TextLayoutScene extends Scene {
     if (this.actions.wider.pressed) {
       this.width += 20;
       this.dirty = true;
-    }
-
-    if (this.actions.reset.pressed) {
-      this.reset();
     }
 
     const { scale: k, width, height } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);

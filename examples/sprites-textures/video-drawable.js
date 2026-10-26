@@ -30,13 +30,11 @@ class VideoDrawableScene extends Scene {
     this.overlay = new Sprite(this.loader.get(assets.platformerTilesImage)).setTextureFrame(new Rectangle(650, 325, 64, 64)).setAnchor(0.5);
     this.panel = demoPanel({
       scene: this,
-      title: 'Play a Video Texture',
       layout: 'bar',
       controls,
-      hint: 'Muted SDR video. Play explicitly; clip changes preserve pause, seek and loop.',
       actions: {
         'Play / Pause': () => this.panel.step('paused'),
-        Reset: () => {
+        Stop: () => {
           this.elapsed = 0;
           this.panel.set('paused', true);
           this.panel.set('seek', 0);
@@ -74,9 +72,7 @@ class VideoDrawableScene extends Scene {
     this.inputs.onTrigger(Keyboard.One, () => this.panel.set('clip', VIDEOS[0].label));
     this.inputs.onTrigger(Keyboard.Two, () => this.panel.set('clip', VIDEOS[1].label));
     this.inputs.onTrigger(Keyboard.Three, () => this.panel.set('clip', VIDEOS[2].label));
-    this.app.input.onPointerTap.add(this.onTap);
   }
-  onTap = () => this.panel.step('paused');
   onError = error => {
     this.mediaState = `Error: ${error.message}`;
     this.panel.status(`Media error: ${error.message}`, 'error');
@@ -204,7 +200,6 @@ class VideoDrawableScene extends Scene {
       video.pause();
       video.muted = true;
     }
-    this.app.input.onPointerTap.remove(this.onTap);
     this.overlay.destroy();
     this.panel.dispose();
     super.destroy();

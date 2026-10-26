@@ -30,9 +30,7 @@ class BootScene extends Scene {
     this.panel = demoPanel({
       scene: this,
       layout: 'bar',
-      title: 'Loading Progress and Retry',
       controls: {},
-      hint: 'Loader signals report each request. Retry requests only the failed asset.',
       actions: {
         Load: () => void this.loadAssets(false),
         'Load with one broken file': () => void this.loadAssets(true),

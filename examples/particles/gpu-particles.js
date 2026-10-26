@@ -46,7 +46,6 @@ class GpuParticlesScene extends Scene {
     this.system.addUpdateModule(new AlphaFadeOverLifetime());
     this.panel = demoPanel({
       scene: this,
-      title: 'Particle Capacity',
       controls: {
         rate: slider('Spawn / second', {
           min: 0,

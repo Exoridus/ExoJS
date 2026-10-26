@@ -196,7 +196,6 @@ class WorkerStreamedTerrainScene extends Scene {
   setupHud() {
     this.panel = demoPanel({
       scene: this,
-      title: 'Provider',
       controls: {
         provider: choice('Provider', ['sync', 'worker']),
         cost: slider('Sample cost', { min: 0, max: 500, value: 0, step: 50, format: value => `${value}` }),

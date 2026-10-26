@@ -35,8 +35,6 @@ class ReverbAndDelayScene extends Scene {
     this.panel = demoPanel({
       scene: this,
       layout: 'bar',
-      title: 'Hear an Audio Effect',
-      hint: 'Compare the same short sound. Bypass keeps the source level unchanged.',
       controls: {
         source: choice('Source', ['Wood impact', 'Short voice']),
         preset: choice('Space', Object.keys(PRESETS)),
@@ -45,12 +43,6 @@ class ReverbAndDelayScene extends Scene {
       actions: {
         Play: () => void this.play(),
         Stop: () => this.stop(),
-        Reset: () => {
-          this.stop();
-          this.panel.set('source', 'Wood impact');
-          this.panel.set('preset', 'Dry');
-          this.panel.set('bypass', false);
-        },
       },
       onChange: (_key, _value, values) => this.applyPreset(values.preset, values.bypass),
     });

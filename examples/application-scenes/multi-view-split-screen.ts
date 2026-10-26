@@ -99,15 +99,7 @@ class SplitScreenScene extends Scene {
     this.panel = demoPanel({
       scene: this,
       layout: 'bar',
-      title: 'Local split screen',
       controls: {},
-      hint: 'Two players share the world. Each camera follows its own player.',
-      actions: {
-        Reset: () => {
-          this.leftPlayer.setPosition(-160, 0);
-          this.rightPlayer.setPosition(160, 0);
-        },
-      },
     });
   }
 

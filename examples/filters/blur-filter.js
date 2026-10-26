@@ -39,24 +39,10 @@ class BlurAndShadowScene extends Scene {
     this.root.addChild(...this.sprites, ...this.labels);
     this.panel = demoPanel({
       scene: this,
-      title: 'Sprite Filters',
       layout: 'bar',
       controls,
-      hint: 'Same Kenney key, size, tint and transform on both sides.',
-      actions: {
-        Reset: () => {
-          this.panel.set('filter', 'Blur');
-          this.panel.set('strength', 0.5);
-          this.panel.set('bypass', false);
-        },
-      },
     });
     this.inputs.onTrigger(Keyboard.Space, () => this.panel.step('bypass'));
-    this.inputs.onTrigger(Keyboard.R, () => {
-      this.panel.set('filter', 'Blur');
-      this.panel.set('strength', 0.5);
-      this.panel.set('bypass', false);
-    });
   }
   update() {
     const { scale, width, contentHeight } = this.panel.fit(this.app, this.app.canvas);

@@ -90,8 +90,6 @@ class MultitouchScene extends Scene {
 
     this.hud = mountControls({
       theme: 'site',
-      title: 'Multitouch gestures',
-      hint: 'Use two contacts to pinch / rotate. Mouse shows one pointer. Hardware touch remains a separate check.',
     });
   }
 

@@ -131,9 +131,7 @@ class PlayScene extends Scene {
     this.panel = demoPanel({
       scene: this,
       layout: 'bar',
-      title: 'Collect & Survive',
       controls: {},
-      hint: 'Move: WASD / arrows / stick. Pause: P / Esc / Start. Restart: R / Space / South.',
       actions: { 'Pause / Resume': () => this.togglePause(), Restart: () => this.restart() },
     });
     this.panel.status('Collect circles; avoid pointed red hazards.');
@@ -360,7 +358,7 @@ class GameOverScene extends Scene<GameOverData> {
     };
 
     this.inputs.attach(this.actions);
-    this.panel = demoPanel({ scene: this, layout: 'bar', title: 'Collect & Survive', controls: {}, actions: { Restart: restart } });
+    this.panel = demoPanel({ scene: this, layout: 'bar', controls: {}, actions: { Restart: restart } });
     this.track(this.title);
     this.track(this.stats);
     this.track(this.hint);

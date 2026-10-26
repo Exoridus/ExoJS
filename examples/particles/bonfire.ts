@@ -193,7 +193,6 @@ class BonfireScene extends Scene {
 
     this.panel = demoPanel({
       scene: this,
-      title: 'Campfire',
       controls: {
         intensity: slider('Intensity', { min: 0.3, max: 1.6, value: 1, step: 0.05, format: value => value.toFixed(2) }),
         wind: slider('Wind', { min: -180, max: 180, value: 0, step: 5, format: value => `${value}` }),

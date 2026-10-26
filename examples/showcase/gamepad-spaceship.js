@@ -133,9 +133,7 @@ class GamepadSpaceshipScene extends Scene {
     this.hud = demoPanel({
       scene: this,
       layout: 'bar',
-      title: 'Fly a spaceship',
       controls: { sound: toggle('Engine sound'), haptics: toggle('Haptics') },
-      hint: 'WASD / arrows / stick thrust. Space / trigger fire. R / Select restarts. Momentum can differ from the nose.',
       actions: {
         'Pause / Resume': () => {
           this.playing = !this.playing;

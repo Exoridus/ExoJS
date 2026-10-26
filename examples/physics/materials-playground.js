@@ -64,10 +64,8 @@ class MaterialsPlaygroundScene extends Scene {
     });
     this.panel = demoPanel({
       scene: this,
-      title: 'Material Lab',
       layout: 'bar',
       controls: {},
-      hint: 'Identical drops and starting speed. Rotation is locked to compare sliding friction. R resets.',
       actions: { 'Drop again': () => this.reset() },
     });
     this.inputs.onTrigger(Keyboard.R, () => this.reset());

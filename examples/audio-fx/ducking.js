@@ -40,17 +40,10 @@ class DuckingScene extends Scene {
     this.panel = demoPanel({
       scene: this,
       layout: 'bar',
-      title: 'Duck Music under Speech',
-      hint: 'Start the music, then Speak: the speech sidechain pulls the music bus down. Toggle Ducking to compare.',
       controls: { music: toggle('Music', false), enabled: toggle('Ducking', true) },
       actions: {
         Speak: () => void this.speak(),
         Stop: () => this.stop(),
-        Reset: () => {
-          this.stop();
-          this.panel.set('music', false);
-          this.panel.set('enabled', true);
-        },
       },
       onChange: (key, value) => {
         if (key === 'enabled') {

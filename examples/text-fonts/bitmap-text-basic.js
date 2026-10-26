@@ -27,17 +27,11 @@ class BitmapTextBasicScene extends Scene {
   init() {
     this.panel = demoPanel({
       scene: this,
-      title: 'Bitmap Text',
       layout: 'bar',
       controls,
-      hint: 'The same word: prebuilt atlas beside browser raster. Fractional scale reveals sampling.',
       actions: {
         'Pause / Resume': () => {
           this.playing = !this.playing;
-        },
-        Reset: () => {
-          this.elapsed = 0;
-          this.panel.set('scale', '1x');
         },
       },
     });

@@ -70,7 +70,6 @@ class BatchingScene extends Scene {
     // application, which mounts a fresh panel from the same module state.
     this.panel = demoPanel({
       scene: this,
-      title: 'Workload',
       corner: 'top-right',
       controls: {
         count: slider('Sprites', { min: COUNT_STEP, max: MAX_SPRITES, step: COUNT_STEP, value: spriteCount, format: v => v.toFixed(0) }),

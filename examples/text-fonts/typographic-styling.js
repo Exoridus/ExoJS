@@ -32,7 +32,6 @@ class TextLayoutScene extends Scene {
   actions = new ActionMap({
     narrower: new ButtonAction(Keyboard.Left),
     wider: new ButtonAction(Keyboard.Right),
-    reset: new ButtonAction(Keyboard.R),
   });
   width = 620;
   scale = 0;
@@ -46,10 +45,8 @@ class TextLayoutScene extends Scene {
   init() {
     this.panel = demoPanel({
       scene: this,
-      title: 'Text Layout',
       layout: 'bar',
       controls,
-      actions: { Reset: () => this.reset() },
       onChange: (key, _value, values) => {
         this.dirty = true;
         if (key === 'font') {
@@ -134,13 +131,6 @@ class TextLayoutScene extends Scene {
     this.body.style.fontFamily = family;
     this.dirty = true;
   }
-  reset() {
-    this.width = 620;
-    this.panel.set('font', 'Space Grotesk');
-    this.panel.set('wrap', 'Words');
-    this.panel.set('heading', 'Plain');
-    this.dirty = true;
-  }
   update() {
     if (this.actions.narrower.pressed) {
       this.width -= 20;
@@ -149,9 +139,6 @@ class TextLayoutScene extends Scene {
     if (this.actions.wider.pressed) {
       this.width += 20;
       this.dirty = true;
-    }
-    if (this.actions.reset.pressed) {
-      this.reset();
     }
     const { scale: k, width, height } = this.panel.fit(this.app, this.app.canvas);
     if (k !== this.scale) {

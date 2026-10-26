@@ -64,7 +64,6 @@ class CrossfadeTracksScene extends Scene {
     this.trackBVoice = app.audio.play(this.trackB, { loop: true, volume: 0 });
     this.panel = demoPanel({
       scene: this,
-      title: 'Crossfade',
       corner: 'bottom-left',
       controls: { track: choice('Track', ['Track A', 'Track B']) },
       onChange: (_key, value) => this.selectTrack(value === 'Track B' ? 1 : 0),

@@ -83,24 +83,11 @@ class LightmapNormalsScene extends Scene {
     this.root.addChild(this.world);
     this.panel = demoPanel({
       scene: this,
-      title: 'Light a Normal-Mapped Surface',
       layout: 'bar',
       controls,
-      hint: 'Left: alpha-derived normals. Right: no normal registration. Shared local light coordinates are mirrored into both halves.',
-      actions: {
-        Reset: () => this.reset(),
-      },
     });
     this.inputs.onTrigger(Keyboard.Space, () => this.panel.step('normals'));
-    this.inputs.onTrigger(Keyboard.R, () => this.reset());
     this.app.input.onPointerMove.add(this.onMove);
-  }
-  reset() {
-    this.lightX = 0.5;
-    this.lightY = 0.5;
-    this.panel.set('height', 34);
-    this.panel.set('normals', true);
-    this.panel.set('debug', false);
   }
   onMove = p => {
     this.lightX = ((p.x / this.scale) % (this.width / 2)) / (this.width / 2);

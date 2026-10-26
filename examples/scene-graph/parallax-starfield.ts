@@ -116,16 +116,10 @@ class ParallaxStarfieldScene extends Scene {
     this.panel = demoPanel({
       scene: this,
       layout: 'bar',
-      title: 'Parallax layers',
       controls: { factors: toggle('Show factors', true) },
-      hint: 'A/D, arrows or stick move. Drag the landscape.',
       actions: {
         'Pause / Resume': () => {
           this.playing = !this.playing;
-        },
-        Reset: () => {
-          this.scroll = 0;
-          this.playing = true;
         },
       },
     });

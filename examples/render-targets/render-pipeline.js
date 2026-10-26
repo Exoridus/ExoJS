@@ -86,7 +86,7 @@ class RenderPipelineScene extends Scene {
     };
     app.onResize.add(handleResize);
     this.detachResize = () => app.onResize.remove(handleResize);
-    this.controls = mountControls({ title: 'Composable Render Pipeline', status: 'Blur: on' });
+    this.controls = mountControls({ status: 'Blur: on' });
     this.inputs.onTrigger(Keyboard.Space, this.toggleBlur);
     app.input.onPointerTap.add(this.toggleBlur);
   }
