@@ -1586,9 +1586,9 @@ export class PhysicsWorld implements BodyOwner {
   /**
    * Shape-cast each bullet's colliders along this fixed step's motion against
    * every other body's colliders; if any would cross one, clamp the body at the
-   * earliest impact and resolve it about the surface normal (a slide for a
-   * non-bouncy body, an elastic reflection as restitution → 1) so it cannot
-   * tunnel. The sweep is an exact translation-only cast of the full shapes
+   * earliest impact and exchange a mass-weighted normal impulse with the
+   * target, using their relative velocity and combined restitution. The sweep
+   * is an exact translation-only cast of the full shapes
    * (Minkowski ray for circles, swept SAT for polygon pairs) - the step's
    * rotation is applied before the sweep, not swept through. Pairs already
    * overlapping at the start of the step are skipped: the discrete solver owns
@@ -1607,10 +1607,8 @@ export class PhysicsWorld implements BodyOwner {
       }
 
       // The step's centre-of-mass motion; every collider translated by it too.
-      const newX = body.worldCenterOfMassX;
-      const newY = body.worldCenterOfMassY;
-      const dx = newX - body._ccdPrevX;
-      const dy = newY - body._ccdPrevY;
+      const dx = body.worldCenterOfMassX - body._ccdPrevX;
+      const dy = body.worldCenterOfMassY - body._ccdPrevY;
       const distance = Math.hypot(dx, dy);
 
       if (distance < 1e-6) {
@@ -1641,17 +1639,16 @@ export class PhysicsWorld implements BodyOwner {
         this._backend.spatialIndex?.sync(this._detectionLeavesOf(body));
       }
 
-      // Reflect about the true surface normal: a slide for a non-bouncy body
-      // (restitution 0), an elastic bounce as restitution → 1. The body's own
-      // restitution combines (max) with the surface's, matching the contact solver.
-      const vn = body.linearVelocityX * best.normalX + body.linearVelocityY * best.normalY;
+      const other = blocked.body;
+      const vn =
+        (body.linearVelocityX - other.linearVelocityX) * best.normalX + (body.linearVelocityY - other.linearVelocityY) * best.normalY;
 
       if (vn < 0) {
         const restitution = vn < -ccdRestitutionThreshold ? Math.max(this._bulletRestitution(body), blocked.restitution) : 0;
-        const impulse = -(1 + restitution) * vn;
+        const impulse = (-(1 + restitution) * vn) / (body.invMass + other.invMass);
 
-        body.linearVelocityX += impulse * best.normalX;
-        body.linearVelocityY += impulse * best.normalY;
+        body.applyImpulse(impulse * best.normalX, impulse * best.normalY);
+        other.applyImpulse(-impulse * best.normalX, -impulse * best.normalY);
       }
     }
   }
