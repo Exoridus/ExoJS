@@ -74,6 +74,8 @@
   width: 34px;
   height: 34px;
   padding: 0;
+  border-color: var(--line);
+  color: var(--fg-muted);
 }
 
 .action-button {
@@ -144,6 +146,21 @@
   border-radius: var(--r-3);
   box-shadow: var(--shadow-2);
   box-sizing: border-box;
+}
+
+.compact-actions {
+  display: none;
+}
+
+@media (width <= 760px) {
+  .action-button[data-action='reset'],
+  .action-button[data-action='copy'] {
+    display: none;
+  }
+
+  .compact-actions {
+    display: block;
+  }
 }
 
 .menu-item {

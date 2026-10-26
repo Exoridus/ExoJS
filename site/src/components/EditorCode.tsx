@@ -489,7 +489,13 @@ export const EditorCode = ({
       <button className={css(styles, 'action-button')} data-action="reset" type="button" disabled={!canReset} onClick={resetCode}>
         Reset
       </button>
-      <button className={css(styles, 'action-button')} type="button" disabled={!sourceCode} onClick={() => void copyCode()}>
+      <button
+        className={css(styles, 'action-button')}
+        data-action="copy"
+        type="button"
+        disabled={!sourceCode}
+        onClick={() => void copyCode()}
+      >
         {copyStatus}
       </button>
       <button
@@ -522,6 +528,14 @@ export const EditorCode = ({
             }
           }}
         >
+          <div className={css(styles, 'compact-actions')}>
+            <button className={css(styles, 'menu-item')} role="menuitem" disabled={!canReset} onClick={resetCode}>
+              Reset example
+            </button>
+            <button className={css(styles, 'menu-item')} role="menuitem" disabled={!sourceCode} onClick={() => void copyCode()}>
+              {copyStatus}
+            </button>
+          </div>
           <button
             className={css(styles, 'menu-item')}
             role="menuitemcheckbox"

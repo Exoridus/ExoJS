@@ -29,6 +29,7 @@ import { BottomSheet } from './BottomSheet';
 import { Editor, type EditorHandle } from './Editor';
 import styles from './ExampleBrowser.module.scss';
 import { Navigation } from './Navigation';
+import { SidebarToggle } from './PlaygroundButtons';
 import { css, cx } from './react-utils';
 import { ToastStack } from './ToastStack';
 
@@ -362,6 +363,11 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
     }
   };
 
+  const toggleSidebar = (): void => {
+    setSidebarOpen(value => !value);
+    window.requestAnimationFrame(() => sidebarToggleRef.current?.focus());
+  };
+
   return (
     // The grid has a column for the navigation only while the navigation is
     // actually rendered: a `display: none` sidebar leaves its track behind, and
@@ -376,6 +382,7 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
         >
           <Navigation
             locale={locale}
+            headerAction={sidebarOpen ? <SidebarToggle open toggleRef={sidebarToggleRef} onToggle={toggleSidebar} /> : undefined}
             examples={examples}
             activeExample={activeExample}
             selectedVersion={selectedVersion}
@@ -395,7 +402,7 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
             showSidebarToggle={!isCompactMobile}
             sidebarOpen={sidebarOpen}
             sidebarToggleRef={sidebarToggleRef}
-            onToggleSidebar={() => setSidebarOpen(value => !value)}
+            onToggleSidebar={toggleSidebar}
           />
         </div>
         {isCompactMobile && (

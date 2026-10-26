@@ -8,44 +8,57 @@
 
 .example-header {
   grid-area: heading;
-  margin: 0 0 var(--s-4);
-  padding: var(--s-3) var(--s-2);
+  min-width: 0;
+  margin: 0 0 var(--s-3);
+  padding: var(--s-2);
 
   h1 {
+    flex: 1 1 auto;
+    min-width: 0;
     margin: 0;
     font-family: var(--f-sans);
-    font-size: var(--text-2xl);
+    font-size: 1.125rem;
     line-height: 1.25;
     letter-spacing: -0.025em;
-  }
-
-  p {
-    max-width: 75ch;
-    margin: var(--s-2) 0;
-    color: var(--fg-muted);
-    font-size: var(--text-sm);
-    line-height: 1.55;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
 .example-heading {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
+  min-height: 2.75rem;
   gap: var(--s-3);
 }
 
-.example-level {
+.example-context {
+  display: flex;
+  align-items: center;
+  min-height: 2.25rem;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+.example-description {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
   color: var(--fg-muted);
-  font-size: var(--text-xs);
-  text-transform: capitalize;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .learning-links {
   display: flex;
-  flex-wrap: wrap;
+  flex: 0 0 auto;
   gap: var(--s-2) var(--s-4);
   font-size: var(--text-xs);
+  white-space: nowrap;
 
   a {
     color: var(--accent);
@@ -54,6 +67,59 @@
     &:hover {
       text-decoration: underline;
     }
+  }
+}
+
+.example-info {
+  position: relative;
+  flex: 0 0 auto;
+  z-index: 30;
+
+  summary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2rem;
+    padding: 0 var(--s-2);
+    list-style: none;
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    color: var(--fg-muted);
+    cursor: pointer;
+    font-size: var(--text-xs);
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  > div {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    width: min(36rem, calc(100vw - 2rem));
+    padding: var(--s-4);
+    background: var(--bg-panel);
+    color: var(--fg);
+    border: 1px solid var(--line);
+    border-radius: var(--r-3);
+    box-shadow: var(--shadow-2);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  p {
+    margin: var(--s-3) 0;
+  }
+
+  .learning-links {
+    flex-wrap: wrap;
+    white-space: normal;
   }
 }
 
@@ -94,7 +160,6 @@
   // deliberately much taller - so top alignment would strand the preview
   // against the upper edge with all the slack below it.
   align-items: center;
-
   min-height: 0;
   background: var(--bg-code);
   overflow: hidden;
@@ -102,18 +167,7 @@
 }
 
 .toolbar-slot {
-  --fg: #edf3f8;
-  --fg-muted: #b3c1cd;
-  --line: #425361;
-  --line-soft: #32424f;
-  --bg-panel: #17232d;
-  --bg-input: #202e39;
-  --accent: #a2e7cb;
-  --accent-soft: #213d34;
-  --accent-line: #527d6b;
-
-  grid-area: toolbar;
-  margin-bottom: var(--s-3);
+  flex: 0 0 auto;
 }
 
 .view-tabs,
@@ -277,7 +331,6 @@
     display: grid;
     grid-template:
       'heading heading heading' auto
-      'toolbar toolbar toolbar' auto
       'preview divider editor' auto
       'diag divider editor' auto
       'output divider editor' auto
@@ -289,7 +342,6 @@
   .root[data-layout='split'][data-order='editor-first'] {
     grid-template-areas:
       'heading heading heading'
-      'toolbar toolbar toolbar'
       'editor divider preview'
       'editor divider diag'
       'editor divider output'
@@ -390,29 +442,22 @@
 
 @media (width <= 760px) {
   .example-header {
-    padding: var(--s-3);
+    padding: var(--s-2) var(--s-3);
   }
 
-  .example-heading {
-    align-items: flex-start;
-  }
-
-  .example-heading h1 {
-    font-size: var(--text-xl);
-  }
-
-  .example-level {
+  .example-description,
+  .example-context > .learning-links {
     display: none;
   }
 
   .view-tabs {
     display: flex;
     gap: var(--s-2);
-    padding: 0 var(--s-3) var(--s-3);
+    flex: 1 1 auto;
 
     button {
-      flex: 1;
-      min-height: 44px;
+      min-height: 2rem;
+      padding: 0 var(--s-3);
       border: 1px solid var(--line);
       border-radius: var(--r-2);
       background: transparent;

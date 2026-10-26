@@ -3,18 +3,7 @@
   z-index: 20;
   display: flex;
   align-items: center;
-  gap: var(--s-3);
-  min-height: 48px;
-  padding: var(--s-2) var(--s-3);
-  background: var(--bg-code);
-  border-bottom: 1px solid var(--line-soft);
-  border-radius: var(--r-3) var(--r-3) 0 0;
-}
-
-.label {
-  color: var(--fg-muted);
-  font-family: var(--f-sans);
-  font-size: var(--text-xs);
+  min-height: 2.75rem;
 }
 
 .actions {
@@ -55,11 +44,5 @@
 
   .button--icon {
     width: 44px;
-  }
-}
-
-@media (width <= 480px) {
-  .label {
-    display: none;
   }
 }

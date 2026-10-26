@@ -362,12 +362,8 @@ export const Editor = ({
     setViewMode(mode => (mode === 'source' ? 'compiled' : 'source'));
   };
 
-  // The example list's toggle sits in the header of the card beside the list,
-  // and the swap in the header of the card on the right; stacked, the preview
-  // is the top card and nothing swaps.
-  const sidebarToggle = showSidebarToggle ? (
-    <SidebarToggle open={sidebarOpen} toggleRef={sidebarToggleRef} onToggle={onToggleSidebar} />
-  ) : null;
+  const sidebarToggle =
+    showSidebarToggle && !sidebarOpen ? <SidebarToggle open={sidebarOpen} toggleRef={sidebarToggleRef} onToggle={onToggleSidebar} /> : null;
 
   return (
     <section
@@ -379,40 +375,68 @@ export const Editor = ({
       style={{ '--split-percent': `${splitPercent}%` } as CSSProperties}
     >
       {activeExample && (
-        <header className={css(styles, 'example-header')}>
-          <div className={css(styles, 'example-heading')}>
-            <h1>{activeExample.title}</h1>
-            {activeExample.level && <span className={css(styles, 'example-level')}>{activeExample.level}</span>}
+        <header className={css(styles, 'example-header')} data-example-header>
+          <div className={css(styles, 'example-heading')} data-header-row="primary">
+            {sidebarToggle}
+            <h1 title={activeExample.title}>{activeExample.title}</h1>
+            <div className={css(styles, 'toolbar-slot')}>
+              <PreviewToolbar actionsRef={setToolbarTarget} />
+            </div>
           </div>
-          <p>{activeExample.description}</p>
-          {renderLearningLinks(activeExample)}
+          <div className={css(styles, 'example-context')} data-header-row="context">
+            <p className={css(styles, 'example-description')} title={activeExample.description}>
+              {activeExample.description}
+            </p>
+            {renderLearningLinks(activeExample, 1)}
+            <div className={css(styles, 'view-tabs')} role="tablist" aria-label="Example view">
+              <button
+                id="demo-view-tab"
+                type="button"
+                role="tab"
+                aria-selected={activeView === 'demo'}
+                aria-controls="playground-demo"
+                onClick={() => setActiveView('demo')}
+              >
+                Demo
+              </button>
+              <button
+                id="code-view-tab"
+                type="button"
+                role="tab"
+                aria-selected={activeView === 'code'}
+                aria-controls="playground-code"
+                onClick={() => setActiveView('code')}
+              >
+                Code
+              </button>
+            </div>
+            <details
+              key={activeExample.path}
+              className={css(styles, 'example-info')}
+              onBlur={event => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                  event.currentTarget.open = false;
+                }
+              }}
+              onKeyDown={event => {
+                if (event.key === 'Escape') {
+                  event.currentTarget.open = false;
+                  event.currentTarget.querySelector('summary')?.focus();
+                  event.stopPropagation();
+                }
+              }}
+            >
+              <summary>Info</summary>
+              <div>
+                <h2>{activeExample.title}</h2>
+                <p>{activeExample.description}</p>
+                {activeExample.level && <p>Level: {activeExample.level}</p>}
+                {renderLearningLinks(activeExample)}
+              </div>
+            </details>
+          </div>
         </header>
       )}
-      <div className={css(styles, 'view-tabs')} role="tablist" aria-label="Example view">
-        <button
-          id="demo-view-tab"
-          type="button"
-          role="tab"
-          aria-selected={activeView === 'demo'}
-          aria-controls="playground-demo"
-          onClick={() => setActiveView('demo')}
-        >
-          Demo
-        </button>
-        <button
-          id="code-view-tab"
-          type="button"
-          role="tab"
-          aria-selected={activeView === 'code'}
-          aria-controls="playground-code"
-          onClick={() => setActiveView('code')}
-        >
-          Code
-        </button>
-      </div>
-      <div className={css(styles, 'toolbar-slot')}>
-        <PreviewToolbar actionsRef={setToolbarTarget} leading={sidebarToggle} />
-      </div>
       <section
         id="playground-demo"
         ref={previewFrameRef}
@@ -551,7 +575,7 @@ export const Editor = ({
   );
 };
 
-const renderLearningLinks = (example: Example): JSX.Element | null => {
+const renderLearningLinks = (example: Example, apiLimit = 3): JSX.Element | null => {
   const path = example.path.replace(/\.js$/, '');
   const chapter = GUIDE_CHAPTERS.find(chapter => chapter.examples.includes(path));
 
@@ -566,7 +590,7 @@ const renderLearningLinks = (example: Example): JSX.Element | null => {
   return (
     <nav className={css(styles, 'learning-links')} aria-label="Learn about this example">
       {chapter && <a href={buildPublicUrl(`${locale}/guide/${chapter.path}/`)}>Learn in the Guide</a>}
-      {apiLinks.slice(0, 3).map(symbol => (
+      {apiLinks.slice(0, apiLimit).map(symbol => (
         <a key={symbol} href={buildPublicUrl(`${locale}/api/${symbol}/`)}>
           API:{' '}
           {symbol

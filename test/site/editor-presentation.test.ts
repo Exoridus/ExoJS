@@ -69,6 +69,17 @@ describe('playground presentation', () => {
     expect(html).toContain('>Code</button>');
   });
 
+  it('groups execution and layout controls with the title and offers full context on demand', () => {
+    const html = render();
+    const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'));
+    expect(header).toContain('data-example-header');
+    expect(header).toContain('data-header-row="primary"');
+    expect(header).toContain('data-header-row="context"');
+    expect(header).toContain('<details');
+    expect(header).toMatch(/<summary[^>]*>Info<\/summary>/);
+    expect(header).toContain('aria-label="Example view"');
+  });
+
   it('keeps unknown renderer diagnostics out of the presentation', () => {
     expect(render()).not.toContain('Renderer not reported');
   });

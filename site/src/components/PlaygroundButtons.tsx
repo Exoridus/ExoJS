@@ -9,7 +9,7 @@ export interface SidebarToggleProps {
   onToggle(): void;
 }
 
-/** Shows or hides the example list. Lives in the header of whichever card sits next to it. */
+/** Toggles example navigation from its header or the collapsed navigation entrance. */
 export const SidebarToggle = ({ open, toggleRef, onToggle }: SidebarToggleProps): JSX.Element => (
   <button
     ref={toggleRef}

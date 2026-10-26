@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 import { CURATED_CATEGORY_BY_SLUG } from '../lib/curation-catalog';
 import { buildPlaygroundNavModel, isExampleRouteActive } from '../lib/playground-nav';
@@ -13,6 +13,7 @@ import { css } from './react-utils';
 
 export interface NavigationProps {
   locale?: 'en' | 'de';
+  headerAction?: ReactNode;
   activeExample: Example | null;
   examples: ExamplesMap;
   loaded: boolean;
@@ -23,6 +24,7 @@ export interface NavigationProps {
 
 export const Navigation = ({
   locale = 'en',
+  headerAction,
   activeExample,
   examples,
   loaded,
@@ -87,6 +89,7 @@ export const Navigation = ({
       <div className={css(styles, 'reference-links')}>
         <span>{allExamples.length} examples</span>
         <a href={`${import.meta.env.BASE_URL + locale}/playground/tools/`}>Tools and guides</a>
+        {headerAction}
       </div>
       <nav ref={listRef} aria-label="Examples">
         {loadError && <p className={css(styles, 'error')}>{loadError}</p>}

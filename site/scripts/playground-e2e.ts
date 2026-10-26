@@ -1428,6 +1428,58 @@ const audioBusChecks = async (browser: Browser, origin: string, base: string): P
   });
 };
 
+const headerChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await check('header stays stable and navigation remains compact', async () => {
+    for (const width of [1440, 1024, 390, 320]) {
+      const { page } = await openPlayground(browser, origin, base, 'filters/bloom-filter', { width, height: 1000 });
+
+      try {
+        await page.getByRole('button', { name: 'More options', exact: true }).waitFor();
+        const header = page.locator('[data-example-header]');
+        const height = (await header.boundingBox())!.height;
+        await header.locator('summary').click();
+        assert((await header.locator('details').getAttribute('open')) !== null, 'example context is inaccessible');
+        await header.locator('summary').press('Escape');
+        assert((await header.locator('details').getAttribute('open')) === null, 'Escape did not close example context');
+
+        if (width >= 1120) {
+          for (const title of ['First Animated Sprite', 'Room Loading and Asset Ownership', 'Bloom Threshold']) {
+            await page
+              .locator('#playground-navigation')
+              .getByRole('link', { name: new RegExp(`^${title}`) })
+              .click();
+            await waitFor(
+              () => header.locator('h1').textContent(),
+              value => value === title,
+              'selected example title',
+            );
+            assert((await header.boundingBox())!.height === height, 'example selection changed the header height');
+          }
+
+          await page.getByRole('button', { name: 'Hide example list', exact: true }).click();
+          await page.getByRole('button', { name: 'Show example list', exact: true }).click();
+          assert(
+            await page.getByRole('button', { name: 'Hide example list', exact: true }).evaluate(node => node === document.activeElement),
+            'navigation lost keyboard focus',
+          );
+        } else if (width <= 760) {
+          assert((await page.getByRole('button', { name: 'Examples', exact: true }).count()) === 1, 'multiple mobile navigation entrances');
+          assert(
+            (await page.getByRole('button', { name: 'Examples', exact: true }).boundingBox())!.height <= 50,
+            'navigation styles stretched the mobile actions',
+          );
+          await page.getByRole('button', { name: 'More options', exact: true }).click();
+          await page.getByRole('menuitem', { name: 'Copy', exact: true }).waitFor();
+        }
+
+        assert(!(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)), 'header overflows the viewport');
+      } finally {
+        await page.context().close();
+      }
+    }
+  });
+};
+
 const main = async (): Promise<void> => {
   const build = readSiteBuildManifest(distDir);
   const base = build.basePath.replace(/\/$/, '');
@@ -1443,6 +1495,7 @@ const main = async (): Promise<void> => {
       }));
 
   try {
+    await headerChecks(browser, origin, base);
     await responsivePreviewChecks(browser, origin, base);
     await crtChecks(browser, origin, base);
     await maskChecks(browser, origin, base);
