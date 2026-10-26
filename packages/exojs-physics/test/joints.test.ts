@@ -359,6 +359,56 @@ describe('joints', () => {
     expect(heavy.x).toBeLessThan(200); // but maxForce kept it from reaching the far target
   });
 
+  it.each([60, 144])('preserves a center-grabbed body velocity on release at %i Hz', rate => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const body = world.add(new PhysicsBody({ type: 'dynamic', colliders: [{ shape: new BoxShape(20, 20) }] }));
+    const joint = world.addJoint(new MouseJoint({ body, target: { x: 0, y: 0 }, hertz: 6, dampingRatio: 0.8 }));
+
+    for (let frame = 1; frame <= rate; frame++) {
+      joint.target = { x: (320 * frame) / rate, y: 0 };
+      world.step(1 / rate);
+    }
+
+    expect(body.linearVelocityX).toBeGreaterThan(250);
+    const velocity = body.linearVelocityX;
+    const position = body.x;
+    world.removeJoint(joint);
+    advance(world, 0.1);
+    expect(body.linearVelocityX).toBeCloseTo(velocity, 6);
+    expect(body.x - position).toBeCloseTo(velocity * 0.1, 5);
+    world.destroy();
+  });
+
+  it('a force-limited mouse joint accelerates without relaxing its driving impulse away', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const body = world.add(new PhysicsBody({ type: 'dynamic', colliders: [{ shape: new BoxShape(20, 20) }] }));
+    const joint = world.addJoint(new MouseJoint({ body, target: { x: 0, y: 0 }, maxForce: body.mass * 6000 }));
+    joint.target = { x: 2000, y: 0 };
+    world.step(FRAME);
+
+    expect(body.linearVelocityX).toBeCloseTo(6000 * FRAME, 5);
+    advance(world, 0.1);
+    expect(body.linearVelocityX).toBeCloseTo(6000 * (7 / 60), 5);
+    expect(body.x).toBeGreaterThan(30);
+    world.destroy();
+  });
+
+  it('a force-limited bullet drag reaches a wall without passing through it', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    world.add(new PhysicsBody({ type: 'static', position: { x: 300, y: 0 }, colliders: [{ shape: new BoxShape(20, 400) }] }));
+    const body = world.add(new PhysicsBody({ type: 'dynamic', isBullet: true, colliders: [{ shape: new BoxShape(72, 72) }] }));
+    const joint = world.addJoint(new MouseJoint({ body, target: { x: 0, y: 0 }, maxForce: body.mass * 6000 }));
+    joint.target = { x: 500, y: 0 };
+
+    for (let frame = 0; frame < 120; frame++) {
+      world.step(FRAME);
+      expect(body.colliders[0]!.aabb.maxX).toBeLessThanOrEqual(290.5);
+    }
+
+    expect(body.x).toBeGreaterThan(250);
+    world.destroy();
+  });
+
   it('a motorized wheel joint reaches and holds its target spin speed', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
     const chassis = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));

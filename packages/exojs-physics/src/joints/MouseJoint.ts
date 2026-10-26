@@ -136,7 +136,8 @@ export class MouseJoint extends Joint {
 
   /** @internal */
   public override _solve(useBias: boolean): void {
-    if (!this._active) {
+    // A driven spring must retain its velocity; bias-free relaxation would brake the throw.
+    if (!this._active || !useBias) {
       return;
     }
 
@@ -145,8 +146,8 @@ export class MouseJoint extends Joint {
     // Velocity of the grab point.
     const cdotX = body.linearVelocityX - body.angularVelocity * this._ry;
     const cdotY = body.linearVelocityY + body.angularVelocity * this._rx;
-    const rhsX = cdotX + (useBias ? this._biasRate * this._cx : 0);
-    const rhsY = cdotY + (useBias ? this._biasRate * this._cy : 0);
+    const rhsX = cdotX + this._biasRate * this._cx;
+    const rhsY = cdotY + this._biasRate * this._cy;
 
     const solvedX = this._invK11 * rhsX + this._invK12 * rhsY;
     const solvedY = this._invK12 * rhsX + this._invK22 * rhsY;
