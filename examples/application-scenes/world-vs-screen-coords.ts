@@ -6,6 +6,7 @@ import {
   GamepadAxis,
   Graphics,
   Keyboard,
+  type Pointer,
   type RenderingContext,
   Scene,
   type Seconds,
@@ -13,15 +14,19 @@ import {
   VectorAction,
   View,
 } from '@codexo/exojs';
-import { demoPanel, startExample } from '@examples/runtime';
+import { startExample, unitsPerCssPixel } from '@examples/runtime';
 
 class CameraNavigationScene extends Scene {
   private view!: View;
-  private readonly grid = new Graphics();
-  private readonly landmarks = new Graphics();
-  private readonly labels: Text[] = [];
+  private readonly ground = new Graphics();
+  private readonly target = new Graphics().setPosition(640, 360);
+  private readonly hint = new Text('WASD: move | F: free + drag | Wheel: zoom', {
+    fillColor: Color.white,
+    fontSize: 15,
+  }).setAnchor(0.5, 1);
+  private readonly readout = new Text('', { fillColor: new Color(154, 196, 188), fontSize: 13, fontFamily: 'monospace' });
   private readonly actions = new ActionMap({
-    pan: new VectorAction([
+    move: new VectorAction([
       {
         up: [Keyboard.W, Keyboard.Up],
         down: [Keyboard.S, Keyboard.Down],
@@ -31,110 +36,152 @@ class CameraNavigationScene extends Scene {
       { x: GamepadAxis.LeftStickX, y: GamepadAxis.LeftStickY },
     ]),
   });
+  private following = true;
+  private interacted = false;
   private pointer = { x: 640, y: 360 };
-  private world = { x: 640, y: 360 };
-  private gridWidth = 0;
-  private panel!: ReturnType<typeof demoPanel>;
-  private readonly onPointerMove = (_pointer: unknown, x: number, y: number): void => {
-    this.pointer.x = x;
-    this.pointer.y = y;
-  };
-  private readonly onMouseWheel = (_deltaX: number, deltaY: number): void => {
-    this.zoom(Math.exp(-deltaY * 0.001));
-  };
+  private dragPointer: number | null = null;
 
   override init(): void {
-    const { width, height } = this.app;
-    this.view = new View(width / 2, height / 2, width, height);
+    this.view = new View(640, 360, this.app.width, this.app.height).follow(this.target);
+    this.ground.fillColor = new Color(28, 38, 53);
+    this.ground.drawRectangle(-1600, -1200, 4480, 3120);
+    this.ground.fillColor = new Color(47, 61, 80);
+    this.ground.drawRectangle(-1600, 290, 4480, 140).drawRectangle(570, -1200, 140, 3120);
+    this.ground.fillColor = new Color(85, 150, 155);
 
-    const points = [
-      { x: 320, y: 240, name: 'A (320, 240)', color: new Color(111, 163, 232) },
-      { x: 960, y: 240, name: 'B (960, 240)', color: new Color(151, 226, 60) },
-      { x: 640, y: 400, name: 'C (640, 400)', color: new Color(190, 147, 224) },
-    ];
-
-    for (const point of points) {
-      this.landmarks.fillColor = point.color;
-      this.landmarks.drawRoundedRectangle(point.x - 32, point.y - 32, 64, 64, 8);
-      this.labels.push(new Text(point.name, { fillColor: Color.white, fontSize: 22 }).setAnchor(0.5, 0).setPosition(point.x, point.y + 42));
+    for (let x = -1200; x < 2800; x += 400) {
+      this.ground.drawRectangle(x, 284, 120, 12).drawRectangle(x, 424, 120, 12);
     }
 
+    this.target.fillColor = new Color(240, 217, 138);
+    this.target.drawPolygon([0, -28, 22, 22, 0, 12, -22, 22]);
     this.inputs.attach(this.actions);
-    this.panel = demoPanel({
-      scene: this,
-      layout: 'bar',
-      controls: {},
+    this.inputs.onTrigger(Keyboard.F, () => {
+      this.following = !this.following;
+      this.endDrag();
+
+      if (this.following) {
+        this.view.follow(this.target);
+      } else {
+        this.view.clearFollow();
+      }
+
+      this.interacted = true;
     });
     this.inputs.onTrigger(Keyboard.Equal, () => this.zoom(1.2));
     this.inputs.onTrigger(Keyboard.Minus, () => this.zoom(1 / 1.2));
-    this.app.input.onPointerMove.add(this.onPointerMove);
-    this.app.input.onMouseWheel.add(this.onMouseWheel);
+    this.app.input.onPointerDown.add(this.onDown);
+    this.app.input.onPointerMove.add(this.onMove);
+    this.app.input.onPointerUp.add(this.onEnd);
+    this.app.input.onPointerCancel.add(this.onEnd);
+    this.app.input.onMouseWheel.add(this.onWheel);
+    // Native release/blur must end navigation even outside the input surface.
+    window.addEventListener('pointerup', this.onWindowEnd);
+    window.addEventListener('blur', this.endDrag);
   }
 
+  private readonly onDown = (pointer: Pointer, x: number, y: number): void => {
+    if (this.following || this.dragPointer !== null) {
+      return;
+    }
+
+    this.dragPointer = pointer.id;
+    this.pointer = { x, y };
+  };
+  private readonly onMove = (pointer: Pointer, x: number, y: number): void => {
+    if (this.dragPointer !== null && pointer.id !== this.dragPointer) {
+      return;
+    }
+
+    if (this.dragPointer !== null) {
+      this.view.move((this.pointer.x - x) / this.view.zoomLevel, (this.pointer.y - y) / this.view.zoomLevel);
+      this.interacted = true;
+    }
+
+    this.pointer = { x, y };
+  };
+  private readonly onEnd = (pointer: Pointer): void => {
+    if (pointer.id === this.dragPointer) {
+      this.endDrag();
+    }
+  };
+  private readonly onWindowEnd = (event: PointerEvent): void => {
+    if (event.pointerId === this.dragPointer) {
+      this.endDrag();
+    }
+  };
+  private readonly endDrag = (): void => {
+    this.dragPointer = null;
+  };
+  private readonly onWheel = (_x: number, y: number): void => {
+    this.zoom(Math.exp(-y * 0.001));
+  };
+
   private zoom(factor: number): void {
-    this.view.setZoom(Math.max(0.3, Math.min(3, this.view.zoomLevel * factor)));
+    const before = this.view.screenToWorld(this.pointer.x, this.pointer.y);
+    this.view.setZoom(Math.max(0.4, Math.min(3, this.view.zoomLevel * factor)));
+    const after = this.view.screenToWorld(this.pointer.x, this.pointer.y);
+    this.view.move(before.x - after.x, before.y - after.y);
+
+    if (this.following) {
+      this.view.follow(this.target, { offsetX: this.view.center.x - this.target.x, offsetY: this.view.center.y - this.target.y });
+    }
+
+    this.interacted = true;
   }
 
   override update(delta: Seconds): void {
-    const fit = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
-    const lineWidth = fit.scale / this.view.zoomLevel;
+    const { x, y } = this.actions.move.value;
+    this.target.x += x * 320 * delta;
+    this.target.y += y * 320 * delta;
 
-    if (lineWidth !== this.gridWidth) {
-      this.gridWidth = lineWidth;
-      this.grid.clear();
-      // Strokes stay one CSS pixel wide even when the world and iframe are scaled.
-      this.grid.lineWidth = lineWidth;
-      this.grid.lineColor = new Color(182, 199, 219, 0.3);
-
-      for (let x = -3200; x <= 4480; x += 80) {
-        this.grid.drawLine(x, -2400, x, 3120);
-      }
-
-      for (let y = -2400; y <= 3120; y += 80) {
-        this.grid.drawLine(-3200, y, 4480, y);
-      }
+    if (x || y) {
+      this.interacted = true;
     }
 
-    for (const label of this.labels) {
-      label.setScale(fit.scale / this.view.zoomLevel);
-    }
-
-    const { x, y } = this.actions.pan.value;
-    this.view.move(x * 420 * delta, y * 420 * delta);
-    this.world = this.view.screenToWorld(this.pointer.x, this.pointer.y);
-    this.panel.status(
-      `Screen ${this.pointer.x.toFixed(0)}, ${this.pointer.y.toFixed(0)} | World ${this.world.x.toFixed(0)}, ${this.world.y.toFixed(0)} | Zoom ${this.view.zoomLevel.toFixed(2)}`,
-    );
+    const scale = unitsPerCssPixel(this.app, this.app.canvas as HTMLCanvasElement);
+    const world = this.view.screenToWorld(this.pointer.x, this.pointer.y);
+    const screen = this.view.worldToScreen(world.x, world.y);
+    this.readout.text = `Screen ${screen.x.toFixed(0)}, ${screen.y.toFixed(0)}\nWorld ${world.x.toFixed(0)}, ${world.y.toFixed(0)}`;
+    this.readout
+      .setScale(scale)
+      .setPosition(
+        Math.min(this.app.width - 190 * scale, screen.x + 16 * scale),
+        Math.max(0, Math.min(this.app.height - 50 * scale, screen.y + 20 * scale)),
+      );
+    this.hint.setScale(Math.min(scale, this.app.width / 360)).setPosition(this.app.width / 2, this.app.height - 20 * scale);
   }
 
   override draw(context: RenderingContext): void {
-    context.render(this.grid, { view: this.view });
-    context.render(this.landmarks, { view: this.view });
+    context.render(this.ground, { view: this.view });
+    context.render(this.target, { view: this.view });
+    context.render(this.readout, { view: context.screenView });
 
-    for (const label of this.labels) {
-      context.render(label, { view: this.view });
+    if (!this.interacted) {
+      context.render(this.hint, { view: context.screenView });
     }
   }
 
   override destroy(): void {
-    this.app.input.onPointerMove.remove(this.onPointerMove);
-    this.app.input.onMouseWheel.remove(this.onMouseWheel);
-    this.panel.dispose();
-    this.view.destroy();
-    this.grid.destroy();
-    this.landmarks.destroy();
-
-    for (const label of this.labels) {
-      label.destroy();
-    }
-
+    this.endDrag();
+    this.app.input.onPointerDown.remove(this.onDown);
+    this.app.input.onPointerMove.remove(this.onMove);
+    this.app.input.onPointerUp.remove(this.onEnd);
+    this.app.input.onPointerCancel.remove(this.onEnd);
+    this.app.input.onMouseWheel.remove(this.onWheel);
+    window.removeEventListener('pointerup', this.onWindowEnd);
+    window.removeEventListener('blur', this.endDrag);
+    this.view?.destroy();
+    this.ground.destroy();
+    this.target.destroy();
+    this.hint.destroy();
+    this.readout.destroy();
     super.destroy();
   }
 }
-
 const app = new Application({
   scenes: { CameraNavigationScene },
   canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
-  clearColor: new Color(16, 23, 30),
+  clearColor: new Color(14, 21, 32),
 });
 await startExample(app, () => app.start(CameraNavigationScene));
