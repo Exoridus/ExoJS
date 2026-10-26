@@ -80,6 +80,7 @@ const createWorkingTargetHarness = (
 
   record['options'] = { rendering: resolveRenderingOptions(options.antialias === true ? { webglAttributes: { antialias: true } } : {}) };
   record['_backend'] = backend;
+  record['scenes'] = { currentScene: null };
   record['_rendering'] = { resize: (): void => {} };
   record['onResize'] = { dispatch: (): void => {} };
   record['_geometry'] = sizing;
@@ -183,6 +184,7 @@ describe('working frame target', () => {
       'target:offscreen',
       'passes',
       'target:root',
+      'resolve',
       'present',
     ]);
   });
