@@ -4,6 +4,8 @@ import {
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
+  Keyboard,
+  type Pausable,
   type RenderingContext,
   Scene,
   type Sound,
@@ -13,10 +15,16 @@ import {
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { demoPanel, slider, startExample, toggle } from '@examples/runtime';
 
+const PADS = [
+  { name: 'Coin', asset: assets.soundCoin, key: Keyboard.One },
+  { name: 'Laser', asset: assets.soundLaser, key: Keyboard.Two },
+  { name: 'Bell', asset: assets.soundImpactBellHeavy, key: Keyboard.Three },
+];
+
 class AudioBusesScene extends Scene {
-  private sfx!: Sound;
+  private sounds: Sound[] = [];
   private music!: AudioStream;
-  private musicVoice: Voice | null = null;
+  private musicVoice: (Voice & Pausable) | null = null;
   private voices: Voice[] = [];
   private readonly graphics = this.track(new Graphics());
   private readonly labels = ['Master', 'Music', 'Sound'].map(name =>
@@ -34,6 +42,7 @@ class AudioBusesScene extends Scene {
   private alive = true;
   private playbackEpoch = 0;
   private failure = '';
+  private last = 'none';
 
   override async load(): Promise<void> {
     this.music = await this.loader.load(assets.musicLofiRhodes);
@@ -41,29 +50,21 @@ class AudioBusesScene extends Scene {
 
   override init(): void {
     const audio = this.app.audio;
-    this.sfx = this.loader.get(assets.soundUiClick);
+    this.sounds = PADS.map(pad => this.loader.get(pad.asset));
     this.initial = { master: audio.master.volume, music: audio.music.volume, sound: audio.sound.volume };
     this.panel = demoPanel({
       scene: this,
       layout: 'bar',
-      title: 'Mix Music and Effects',
-      hint: 'Master scales both child buses. Start the music bed, then fire effects over it.',
       controls: {
         master: slider('Master', { min: 0, max: 1, step: 0.01, value: this.initial.master }),
-        music: slider('Music', { min: 0, max: 1, step: 0.01, value: this.initial.music }),
-        sound: slider('Sound', { min: 0, max: 1, step: 0.01, value: this.initial.sound }),
-        bed: toggle('Music bed', false),
+        music: slider('Music', { min: 0, max: 1, step: 0.01, value: 0.7 }),
+        sound: slider('Effects', { min: 0, max: 1, step: 0.01, value: 0.7 }),
+        bed: toggle('Music', true),
       },
       actions: {
-        'Play SFX': () => void this.play(),
-        Stop: () => this.stop(),
-        Reset: () => {
-          this.stop();
-
-          for (const key of ['master', 'music', 'sound'] as const) {
-            this.panel.set(key, this.initial[key]);
-          }
-        },
+        '1 Coin': () => void this.play(0),
+        '2 Laser': () => void this.play(1),
+        '3 Bell': () => void this.play(2),
       },
       onChange: (key, _value, values) => {
         if (key !== 'bed') {
@@ -72,16 +73,18 @@ class AudioBusesScene extends Scene {
           audio.sound.volume = values.sound;
         } else if (values.bed) {
           // A stream voice defers its own start to the unlock gesture.
-          this.musicVoice ??= audio.play(this.music, { bus: audio.music, loop: true, volume: 0.5 });
+          this.musicVoice ??= audio.play(this.music, { bus: audio.music, loop: true, volume: 0.4 });
         } else {
           this.musicVoice?.stop();
           this.musicVoice = null;
         }
       },
     });
+    PADS.forEach((pad, index) => this.inputs.onTrigger(pad.key, () => void this.play(index)));
+    this.inputs.onTrigger(Keyboard.Escape, () => this.stop());
   }
 
-  private async play(): Promise<void> {
+  private async play(index: number): Promise<void> {
     const epoch = this.playbackEpoch;
 
     try {
@@ -92,20 +95,22 @@ class AudioBusesScene extends Scene {
         return;
       }
 
-      await this.sfx.loaded;
+      const sound = this.sounds[index]!;
+      await sound.loaded;
 
       if (!this.alive || epoch !== this.playbackEpoch) {
         return;
       }
 
-      if (!this.sfx.ready) {
+      if (!sound.ready) {
         this.failure = 'SFX media unavailable';
 
         return;
       }
 
       this.voices = this.voices.filter(voice => !voice.ended);
-      this.voices.push(this.app.audio.play(this.sfx, { bus: this.app.audio.sound, volume: 0.35 }));
+      this.voices.push(this.app.audio.play(sound, { bus: this.app.audio.sound, volume: 0.35 }));
+      this.last = PADS[index]!.name;
       this.failure = '';
     } catch {
       this.failure = 'SFX media failed to load';
@@ -142,7 +147,7 @@ class AudioBusesScene extends Scene {
     context.render(g);
     this.panel.status(
       this.failure ||
-        `${this.app.audio.locked ? 'Click to enable audio' : 'AudioContext running'} | ${this.sfx.ready ? 'SFX ready' : this.sfx.state === 'failed' ? 'SFX media failed' : 'SFX loading'} | music bed ${this.musicVoice ? 'playing' : 'stopped'} | music path gain ${(values.master * values.music).toFixed(2)} | sound path gain ${(values.master * values.sound).toFixed(2)}`,
+        `${this.app.audio.locked ? 'Click to start audio' : this.musicVoice && !this.musicVoice.ended ? (this.musicVoice.paused ? 'Music starting' : 'Music playing') : 'Music stopped'} | ${this.voices.reduce((count, voice) => count + Number(!voice.ended), 0)} active effects | Last: ${this.last} | Music gain ${(values.master * values.music).toFixed(2)} | Effects gain ${(values.master * values.sound).toFixed(2)}`,
       this.failure ? 'error' : 'neutral',
     );
   }
