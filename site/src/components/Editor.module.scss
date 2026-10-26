@@ -6,23 +6,6 @@
   box-sizing: border-box;
 }
 
-.root [data-used-assets] {
-  padding: var(--s-2) var(--s-3);
-  border-bottom: 1px solid var(--line-soft);
-  font-size: var(--text-sm);
-
-  summary {
-    width: fit-content;
-    cursor: pointer;
-  }
-
-  ul {
-    max-height: 160px;
-    margin: var(--s-2) 0;
-    overflow: auto;
-  }
-}
-
 .example-header {
   grid-area: heading;
   min-width: 0;
@@ -87,59 +70,6 @@
   }
 }
 
-.example-info {
-  position: relative;
-  flex: 0 0 auto;
-  z-index: 30;
-
-  summary {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 2rem;
-    padding: 0 var(--s-2);
-    list-style: none;
-    border: 1px solid var(--line);
-    border-radius: var(--r-2);
-    color: var(--fg-muted);
-    cursor: pointer;
-    font-size: var(--text-xs);
-  }
-
-  summary::-webkit-details-marker {
-    display: none;
-  }
-
-  > div {
-    position: absolute;
-    top: calc(100% + 6px);
-    right: 0;
-    width: min(36rem, calc(100vw - 2rem));
-    padding: var(--s-4);
-    background: var(--bg-panel);
-    color: var(--fg);
-    border: 1px solid var(--line);
-    border-radius: var(--r-3);
-    box-shadow: var(--shadow-2);
-    font-size: var(--text-sm);
-    line-height: 1.5;
-  }
-
-  h2 {
-    margin: 0;
-    font-size: 1rem;
-  }
-
-  p {
-    margin: var(--s-3) 0;
-  }
-
-  .learning-links {
-    flex-wrap: wrap;
-    white-space: normal;
-  }
-}
-
 .preview-frame,
 .editor-frame {
   display: flex;
@@ -193,8 +123,42 @@
 }
 
 .preview-options {
-  border-block: 1px solid var(--line-soft);
-  padding-block: var(--s-1);
+  position: relative;
+  z-index: 40;
+
+  summary {
+    display: flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 var(--s-3);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    color: var(--fg);
+    font-size: var(--text-sm);
+    list-style: none;
+    cursor: pointer;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary:focus-visible {
+    outline: 2px solid var(--accent-line);
+  }
+
+  > div {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    width: max-content;
+    min-width: 190px;
+    padding: var(--s-1);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-3);
+    background: var(--bg-panel);
+    box-shadow: var(--shadow-2);
+  }
 
   button {
     display: block;
@@ -446,7 +410,16 @@
     padding: var(--s-2) var(--s-3);
   }
 
-  .example-description,
+  .example-context {
+    flex-wrap: wrap;
+    row-gap: var(--s-1);
+  }
+
+  .example-description {
+    flex: 1 1 100%;
+    order: 1;
+  }
+
   .example-context > .learning-links {
     display: none;
   }

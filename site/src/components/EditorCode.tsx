@@ -20,6 +20,7 @@ import { createPortal } from 'react-dom';
 
 import { findExampleCompanions } from '../lib/example-companions';
 import { findFootgunCandidates, footgunMessage, type QuickInfoResponse, returnsPromise } from '../lib/footgun-diagnostics';
+import { isEditableSharedFile } from '../lib/preview-modules';
 import { buildExampleUrl, buildGithubRawExampleUrl, buildPublicUrl } from '../lib/url-builder';
 import { CURRENT_VERSION_ID, isCurrentVersion } from '../lib/versions';
 import styles from './EditorCode.module.scss';
@@ -29,6 +30,7 @@ import { Toolbar } from './Toolbar';
 export interface UpdateCodeEvent {
   code: string;
   executionCode?: string;
+  executionModules?: Record<string, string>;
 }
 
 export interface ResetCodeEvent {
@@ -162,6 +164,7 @@ export const EditorCode = ({
   const modelRef = useRef<monaco.editor.ITextModel | null>(null);
   const entryModelRef = useRef<monaco.editor.ITextModel | null>(null);
   const filesRef = useRef(new Map<string, { model: monaco.editor.ITextModel; view: monaco.editor.ICodeEditorViewState | null }>());
+  const originalFilesRef = useRef(new Map<string, string>());
   const fileRequestRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const importReaderRef = useRef<FileReader | null>(null);
@@ -188,7 +191,10 @@ export const EditorCode = ({
   useEffect(() => {
     readOnlyRef.current = readOnly;
     const editor = editorRef.current;
-    editor?.updateOptions({ readOnly: readOnly || editor.getModel() !== entryModelRef.current });
+    const model = editor?.getModel();
+    const editable =
+      model === entryModelRef.current || [...filesRef.current].some(([path, file]) => file.model === model && isEditableSharedFile(path));
+    editor?.updateOptions({ readOnly: readOnly || !editable });
   }, [readOnly]);
 
   useEffect(() => {
@@ -203,7 +209,11 @@ export const EditorCode = ({
 
     // eslint-disable-next-line @eslint-react/set-state-in-effect -- feedback belongs to the selected source, not the previous file
     setCopyStatus('Copy');
-    onDirty(false);
+    onDirty(
+      [...filesRef.current].some(
+        ([path, file]) => isEditableSharedFile(path) && file.model.getValue() !== originalFilesRef.current.get(path),
+      ),
+    );
   }, [onDirty, sourceCode, sourcePath]);
 
   useEffect(() => {
@@ -273,6 +283,7 @@ export const EditorCode = ({
       }
 
       filesRef.current.clear();
+      originalFilesRef.current.clear();
     },
     [],
   );
@@ -292,25 +303,37 @@ export const EditorCode = ({
 
     const code = model.getValue();
     const version = model.getVersionId();
+    const editableHelpers = [...filesRef.current]
+      .filter(([path]) => isEditableSharedFile(path))
+      .map(([path, file]) => ({ path, model: file.model, version: file.model.getVersionId() }));
+    const helpers = editableHelpers.filter(file => file.model.getValue() !== originalFilesRef.current.get(file.path));
+    const [executionCode, ...compiledHelpers] = await Promise.all([
+      language === 'typescript' ? getExecutionCode(model, language) : Promise.resolve(code),
+      ...helpers.map(file => getExecutionCode(file.model, 'typescript')),
+    ]);
 
-    if (language !== 'typescript') {
-      onUpdateCode({ code, executionCode: undefined });
-      onDirty(false);
-
+    if (
+      executionCode === null ||
+      compiledHelpers.some(code => code === null) ||
+      model.isDisposed() ||
+      model.getVersionId() !== version ||
+      editableHelpers.some(file => file.model.isDisposed() || file.model.getVersionId() !== file.version) ||
+      [...filesRef.current].some(
+        ([path, file]) =>
+          isEditableSharedFile(path) &&
+          !editableHelpers.some(helper => helper.path === path) &&
+          file.model.getValue() !== originalFilesRef.current.get(path),
+      )
+    ) {
       return;
     }
 
-    const executionCode = await getExecutionCode(model, language);
-
-    if (executionCode === null || model.isDisposed() || model.getVersionId() !== version) {
-      // TS worker couldn't emit JS (still warming up, or a transient
-      // failure) - keep the last successfully-compiled preview running
-      // instead of pushing raw, unparseable TypeScript into the iframe.
-      return;
-    }
-
-    onUpdateCode({ code, executionCode });
-    onDirty(false);
+    onUpdateCode({
+      code,
+      executionCode,
+      executionModules: Object.fromEntries(helpers.map((file, index) => [file.path, compiledHelpers[index]!])),
+    });
+    onDirty(helpers.length > 0);
   }, [language, onUpdateCode, onDirty, readOnly]);
 
   // `onMount` runs once, so the addCommand closures below would otherwise
@@ -337,7 +360,7 @@ export const EditorCode = ({
       }
 
       // React options may arrive from an older render, so model selection owns readOnly.
-      editor.updateOptions({ readOnly: readOnly || next.model !== entryModelRef.current });
+      editor.updateOptions({ readOnly: readOnly || (path !== sourcePath && !isEditableSharedFile(path)) });
       editor.setModel(next.model);
       modelRef.current = next.model;
 
@@ -348,7 +371,7 @@ export const EditorCode = ({
       setActiveFile(path);
       updateDiagnostics(next.model, selectedVersionRef.current, typingsAppliedVersionRef.current, onDiagnostic);
     },
-    [onDiagnostic, readOnly],
+    [onDiagnostic, readOnly, sourcePath],
   );
 
   useImperativeHandle(
@@ -393,11 +416,11 @@ export const EditorCode = ({
         onCursorChange({ lineNumber: position.lineNumber, column: position.column, selectionLength });
       }),
       editor.onDidChangeModelContent(() => {
-        if (editor.getModel() !== entryModelRef.current) {
-          return;
-        }
-
-        const dirty = editor.getValue() !== sourceCodeRef.current;
+        const dirty =
+          entryModelRef.current?.getValue() !== sourceCodeRef.current ||
+          [...filesRef.current].some(
+            ([path, file]) => isEditableSharedFile(path) && file.model.getValue() !== originalFilesRef.current.get(path),
+          );
         onDirty(dirty);
 
         // Scheduled from the content change rather than from
@@ -412,7 +435,7 @@ export const EditorCode = ({
           void updateFootgunMarkers(editor.getModel());
         }, FOOTGUN_DEBOUNCE_MS);
 
-        if (autoRefreshRef.current && dirty) {
+        if (autoRefreshRef.current && !editor.getOption(monacoApi.editor.EditorOption.readOnly)) {
           if (autoRefreshTimerRef.current !== null) {
             clearTimeout(autoRefreshTimerRef.current);
           }
@@ -478,14 +501,30 @@ export const EditorCode = ({
   const resetCode = (): void => {
     setShowMenu(false);
 
-    if (!canReset || !window.confirm('Reset the editor to the original example source?')) {
+    if (!canReset || !window.confirm('Reset the example and edited helper files to their original source?')) {
       return;
     }
 
     importReaderRef.current?.abort();
     importReaderRef.current = null;
+
+    if (autoRefreshTimerRef.current !== null) {
+      clearTimeout(autoRefreshTimerRef.current);
+      autoRefreshTimerRef.current = null;
+    }
+
+    for (const [path, original] of originalFilesRef.current) {
+      filesRef.current.get(path)?.model.setValue(original);
+    }
+
     setEditorValue(sourceCodeRef.current ?? '');
     entryModelRef.current?.setValue(sourceCodeRef.current ?? '');
+
+    if (autoRefreshTimerRef.current !== null) {
+      clearTimeout(autoRefreshTimerRef.current);
+      autoRefreshTimerRef.current = null;
+    }
+
     onResetCode({ confirmed: true });
     onDirty(false);
   };
@@ -535,6 +574,7 @@ export const EditorCode = ({
 
         const model = monaco.editor.createModel(source, undefined, monaco.Uri.parse(getModelUrl(path, selectedVersionId, sourcePath)));
         filesRef.current.set(path, { model, view: null });
+        originalFilesRef.current.set(path, source);
         selectFile(path);
         setFileStatus('');
       } catch (error) {
@@ -546,7 +586,7 @@ export const EditorCode = ({
     [compiledCode, compiledPath, selectFile, selectedVersionId, sourcePath],
   );
 
-  const activeReadOnly = readOnly || activeFile !== sourcePath;
+  const activeReadOnly = readOnly || (activeFile !== sourcePath && !isEditableSharedFile(activeFile));
 
   /**
    * Monaco's own document formatter, which for TypeScript and JavaScript is the
@@ -612,7 +652,12 @@ export const EditorCode = ({
 
       setEditorValue(reader.result);
       model.setValue(reader.result);
-      onDirty(reader.result !== sourceCodeRef.current);
+      onDirty(
+        reader.result !== sourceCodeRef.current ||
+          [...filesRef.current].some(
+            ([path, file]) => isEditableSharedFile(path) && file.model.getValue() !== originalFilesRef.current.get(path),
+          ),
+      );
     };
 
     reader.onloadend = () => {
@@ -634,8 +679,8 @@ export const EditorCode = ({
     }
   };
 
-  const toolbarControls = (
-    <div className={css(styles, 'menu-anchor')} data-editor-menu-anchor>
+  const runControls = (
+    <div className={css(styles, 'menu-anchor')}>
       <button
         className={css(styles, 'action-button')}
         data-action="refresh"
@@ -650,6 +695,12 @@ export const EditorCode = ({
       <button className={css(styles, 'action-button')} data-action="reset" type="button" disabled={!canReset} onClick={resetCode}>
         Reset
       </button>
+      {menuItems}
+    </div>
+  );
+
+  const toolbarControls = (
+    <div className={css(styles, 'menu-anchor')} data-editor-menu-anchor>
       <button
         className={css(styles, 'action-button')}
         data-action="copy"
@@ -659,10 +710,13 @@ export const EditorCode = ({
       >
         {copyStatus}
       </button>
+      <button className={css(styles, 'action-button')} type="button" disabled={activeReadOnly} onClick={formatCode}>
+        Format
+      </button>
       <button
         className={css(styles, 'more-button')}
         type="button"
-        aria-label="More options"
+        aria-label="File options"
         aria-expanded={showMenu}
         data-open={showMenu ? 'true' : undefined}
         onClick={() => setShowMenu(value => !value)}
@@ -690,9 +744,6 @@ export const EditorCode = ({
           }}
         >
           <div className={css(styles, 'compact-actions')}>
-            <button className={css(styles, 'menu-item')} role="menuitem" disabled={!canReset} onClick={resetCode}>
-              Reset example
-            </button>
             <button className={css(styles, 'menu-item')} role="menuitem" disabled={!sourceCode} onClick={() => void copyCode()}>
               {copyStatus}
             </button>
@@ -706,10 +757,7 @@ export const EditorCode = ({
           >
             Auto-run: {autoRefresh ? 'On' : 'Off'}
           </button>
-          {menuItems}
-          <button className={css(styles, 'menu-item')} role="menuitem" disabled={activeReadOnly} onClick={formatCode}>
-            Format Code
-          </button>
+
           <button className={css(styles, 'menu-item')} role="menuitem" onClick={exportCode}>
             Export this file
           </button>
@@ -726,8 +774,8 @@ export const EditorCode = ({
               Open compiled JavaScript
             </button>
           )}
-          <button className={css(styles, 'menu-item')} role="menuitem" disabled={activeReadOnly} onClick={importCode}>
-            Import Code
+          <button className={css(styles, 'menu-item')} role="menuitem" disabled={readOnly} onClick={importCode}>
+            Import main file
           </button>
         </div>
       )}
@@ -736,30 +784,32 @@ export const EditorCode = ({
 
   return (
     <section className={css(styles, 'root')} data-editor-root aria-label={`Code editor for ${exampleTitle}`}>
-      {toolbarTarget ? (
-        createPortal(toolbarControls, toolbarTarget)
-      ) : (
+      {toolbarTarget && createPortal(runControls, toolbarTarget)}
+      {!toolbarTarget && (
         <Toolbar title="Code" leading={leading}>
-          {toolbarControls}
+          {runControls}
         </Toolbar>
       )}
       <input ref={fileInputRef} className={css(styles, 'file-input')} type="file" accept=".js,.ts" onChange={onFileImport} />
       <div className={css(styles, 'editor-shell')} data-editor-shell>
-        <div className={css(styles, 'file-tabs')} role="group" aria-label="Example files">
-          {sourcePath &&
-            [sourcePath, ...companions, ...(showCompiled && compiledPath ? [compiledPath] : [])].map(path => (
-              <button
-                key={path}
-                type="button"
-                aria-pressed={activeFile === path}
-                title={path}
-                value={path}
-                onClick={event => void openFile(event.currentTarget.value)}
-              >
-                {path.split('/').pop()}
-                <span>{path === sourcePath && !readOnly ? 'Editable' : 'Read only'}</span>
-              </button>
-            ))}
+        <div className={css(styles, 'file-toolbar')}>
+          <div className={css(styles, 'file-tabs')} role="group" aria-label="Example files">
+            {sourcePath &&
+              [sourcePath, ...companions, ...(showCompiled && compiledPath ? [compiledPath] : [])].map(path => (
+                <button
+                  key={path}
+                  type="button"
+                  aria-pressed={activeFile === path}
+                  title={path}
+                  value={path}
+                  onClick={event => void openFile(event.currentTarget.value)}
+                >
+                  {path.split('/').pop()}
+                  <span>{!readOnly && (path === sourcePath || isEditableSharedFile(path)) ? 'Editable' : 'Read only'}</span>
+                </button>
+              ))}
+          </div>
+          {toolbarControls}
         </div>
         {fileStatus && (
           <p role="status" className={css(styles, 'file-status')}>

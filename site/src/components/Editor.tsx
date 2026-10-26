@@ -1,15 +1,4 @@
-import {
-  type CSSProperties,
-  type FunctionComponent,
-  lazy,
-  type Ref,
-  Suspense,
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from 'react';
+import { type CSSProperties, type FunctionComponent, lazy, type Ref, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 import type { ExampleRendererStatus } from '../../../examples/shared/runtime';
 import { loadExampleSource } from '../lib/example-store';
@@ -44,11 +33,6 @@ const EditorCode = lazy<FunctionComponent<EditorCodeProps>>(async () => {
   return { default: mod.EditorCode };
 });
 
-export interface EditorHandle {
-  openPreviewInTab(): void;
-  triggerReload(): void;
-}
-
 export type EditorLayout = 'split' | 'stacked';
 /** Which card sits next to the example list in the split layout. */
 export type EditorOrder = 'preview-first' | 'editor-first';
@@ -60,7 +44,6 @@ const SPLIT_STORAGE_KEY = 'exo-playground-split';
 export interface EditorProps {
   activeExample: Example | null;
   catalogLoadError: string | null;
-  ref?: Ref<EditorHandle>;
   selectedVersionId: string;
   showSidebarToggle: boolean;
   sidebarOpen: boolean;
@@ -71,7 +54,6 @@ export interface EditorProps {
 export const Editor = ({
   activeExample,
   catalogLoadError,
-  ref,
   selectedVersionId,
   showSidebarToggle,
   sidebarOpen,
@@ -83,6 +65,7 @@ export const Editor = ({
   const [sourceCode, setSourceCode] = useState<string | null>(null);
   const [originalSourceCode, setOriginalSourceCode] = useState<string | null>(null);
   const [executionCode, setExecutionCode] = useState<string | null>(null);
+  const [executionModules, setExecutionModules] = useState<Record<string, string>>({});
   const [originalExecutionCode, setOriginalExecutionCode] = useState<string | null>(null);
   const [sourceLoadError, setSourceLoadError] = useState<PreviewErrorEntry | null>(null);
   const [output] = useState(() => new PreviewConsole());
@@ -106,19 +89,6 @@ export const Editor = ({
   const previewFrameRef = useRef<HTMLElement | null>(null);
   const loadKeyRef = useRef<string | null>(null);
 
-  useImperativeHandle(
-    ref,
-    () => ({
-      openPreviewInTab(): void {
-        previewRef.current?.openPreviewInTab();
-      },
-      triggerReload(): void {
-        codeEditorRef.current?.triggerRefresh();
-      },
-    }),
-    [],
-  );
-
   useEffect(() => {
     const path = activeExample?.path ?? null;
     const loadKey = path && selectedVersionId ? `${selectedVersionId}::${path}` : null;
@@ -138,6 +108,7 @@ export const Editor = ({
     setSourceCode(null);
     setOriginalSourceCode(null);
     setExecutionCode(null);
+    setExecutionModules({});
     setOriginalExecutionCode(null);
     setSourceLoadError(null);
     setDiagnostics([]);
@@ -312,6 +283,7 @@ export const Editor = ({
     setRunId(id => id + 1);
     setSourceCode(event.code);
     setExecutionCode(event.executionCode ?? null);
+    setExecutionModules(event.executionModules ?? {});
   };
 
   const onResetCode = (_event: ResetCodeEvent): void => {
@@ -321,6 +293,7 @@ export const Editor = ({
 
     setSourceCode(originalSourceCode);
     setExecutionCode(originalExecutionCode);
+    setExecutionModules({});
   };
 
   const onCanvasSize = useCallback((event: CanvasSizeEvent): void => {
@@ -395,30 +368,6 @@ export const Editor = ({
                 Code
               </button>
             </div>
-            <details
-              key={activeExample.path}
-              className={css(styles, 'example-info')}
-              onBlur={event => {
-                if (!event.currentTarget.contains(event.relatedTarget)) {
-                  event.currentTarget.open = false;
-                }
-              }}
-              onKeyDown={event => {
-                if (event.key === 'Escape') {
-                  event.currentTarget.open = false;
-                  event.currentTarget.querySelector('summary')?.focus();
-                  event.stopPropagation();
-                }
-              }}
-            >
-              <summary>Info</summary>
-              <div>
-                <h2>{activeExample.title}</h2>
-                <p>{activeExample.description}</p>
-                {activeExample.level && <p>Level: {activeExample.level}</p>}
-                {renderLearningLinks(activeExample)}
-              </div>
-            </details>
           </div>
         </header>
       )}
@@ -433,6 +382,7 @@ export const Editor = ({
             <EditorPreview
               ref={previewRef}
               sourceCode={executionCode ?? sourceCode}
+              executionModules={executionModules}
               runId={runId}
               exampleMeta={activeExample}
               selectedVersionId={selectedVersionId}
@@ -510,29 +460,51 @@ export const Editor = ({
               ref={codeEditorRef}
               toolbarTarget={toolbarTarget}
               menuItems={
-                <div className={css(styles, 'preview-options')} role="group" aria-label="Preview and layout">
-                  <button type="button" role="menuitem" data-layout-action onClick={toggleLayout}>
-                    {layout === 'stacked' ? 'Split view' : 'Demo above code'}
-                  </button>
-                  {layout === 'split' && (
-                    <button type="button" role="menuitem" data-layout-action onClick={swapOrder}>
-                      Swap panes
+                <details
+                  className={css(styles, 'preview-options')}
+                  onBlur={event => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) {
+                      event.currentTarget.open = false;
+                    }
+                  }}
+                  onKeyDown={event => {
+                    if (event.key === 'Escape') {
+                      event.currentTarget.open = false;
+                      event.currentTarget.querySelector('summary')?.focus();
+                      event.stopPropagation();
+                    }
+                  }}
+                  onClick={event => {
+                    if ((event.target as HTMLElement).closest('button')) {
+                      event.currentTarget.open = false;
+                    }
+                  }}
+                >
+                  <summary>View</summary>
+                  <div role="group" aria-label="Preview and layout">
+                    <button type="button" data-layout-action onClick={toggleLayout}>
+                      {layout === 'stacked' ? 'Split view' : 'Demo above code'}
                     </button>
-                  )}
-                  <button type="button" role="menuitem" onClick={() => previewRef.current?.openPreviewInTab()}>
-                    Open demo in new tab
-                  </button>
-                  {layout === 'stacked' && (
-                    <button type="button" role="menuitem" onClick={() => setPreviewExpanded(value => !value)}>
-                      {expandedActive ? 'Normal demo size' : 'Expand demo'}
+                    {layout === 'split' && (
+                      <button type="button" data-layout-action onClick={swapOrder}>
+                        Swap panes
+                      </button>
+                    )}
+                    <button type="button" onClick={() => previewRef.current?.openPreviewInTab()}>
+                      Open demo in new tab
                     </button>
-                  )}
-                  <p>
-                    {canvasWidth > 0 ? `${canvasWidth} x ${canvasHeight} | ${Math.round(previewZoom * 100)}% | ` : ''}exojs@
-                    {selectedVersionId}
-                    {rendererStatus?.actual ? ` | ${rendererStatus.actual}` : ''}
-                  </p>
-                </div>
+                    {layout === 'stacked' && (
+                      <button type="button" onClick={() => setPreviewExpanded(value => !value)}>
+                        {expandedActive ? 'Normal demo size' : 'Expand demo'}
+                      </button>
+                    )}
+                    <p>
+                      {canvasWidth > 0 ? `${canvasWidth} x ${canvasHeight} | ${Math.round(previewZoom * 100)}% | ` : ''}exojs@
+                      {selectedVersionId}
+                      {rendererStatus?.actual ? ` | ${rendererStatus.actual}` : ''}
+                    </p>
+                  </div>
+                </details>
               }
               sourceCode={sourceCode}
               sourcePath={displayPath}

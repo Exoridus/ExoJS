@@ -89,6 +89,7 @@ const fixture = () => {
     sourceCodeRef: { current: 'original' },
     filesRef: { current: new Map([['entry.ts', { model }]]) },
     fileRequestRef: { current: null },
+    originalFilesRef: { current: new Map() },
     autoRefreshTimerRef: { current: null },
     footgunTimerRef: { current: null },
     disposablesRef: { current: [] },

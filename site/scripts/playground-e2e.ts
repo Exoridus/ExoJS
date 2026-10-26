@@ -1578,13 +1578,18 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
       const { page } = await openPlayground(browser, origin, base, 'filters/bloom-filter', { width, height: 1000 });
 
       try {
-        await page.getByRole('button', { name: 'More options', exact: true }).waitFor();
+        await page.getByRole('button', { name: 'Run', exact: true }).waitFor();
         const header = page.locator('[data-example-header]');
         const height = (await header.boundingBox())!.height;
+        assert(
+          await header.locator('[data-header-row="context"] > p').isVisible(),
+          'Example instructions must remain visible on narrow screens',
+        );
+        assert((await header.getByText('Info', { exact: true }).count()) === 0, 'duplicate information panel remains');
         await header.locator('summary').click();
-        assert((await header.locator('details').getAttribute('open')) !== null, 'example context is inaccessible');
+        assert((await header.locator('details').getAttribute('open')) !== null, 'view options are inaccessible');
         await header.locator('summary').press('Escape');
-        assert((await header.locator('details').getAttribute('open')) === null, 'Escape did not close example context');
+        assert((await header.locator('details').getAttribute('open')) === null, 'Escape did not close view options');
 
         if (width >= 1120) {
           for (const title of ['First Animated Sprite', 'Room Loading and Asset Ownership', 'Bloom Threshold']) {
@@ -1612,7 +1617,8 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
             (await page.getByRole('button', { name: 'Examples', exact: true }).boundingBox())!.height <= 50,
             'navigation styles stretched the mobile actions',
           );
-          await page.getByRole('button', { name: 'More options', exact: true }).click();
+          await page.getByRole('tab', { name: 'Code', exact: true }).click();
+          await page.getByRole('button', { name: 'File options', exact: true }).click();
           await page.getByRole('menuitem', { name: 'Copy', exact: true }).waitFor();
         }
 
@@ -1699,7 +1705,7 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
       await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('await startExample')");
       const tabs = page.getByRole('group', { name: 'Example files' });
       const entry = tabs.locator('button').first();
-      const helper = tabs.getByRole('button', { name: 'runtime.ts Read only' });
+      const helper = tabs.getByRole('button', { name: 'runtime.ts Editable' });
       await page.locator('.monaco-editor').scrollIntoViewIfNeeded();
       await page.locator('.monaco-editor .overflow-guard').click({ position: { x: 350, y: 110 } });
       await page.keyboard.press('Control+End');
@@ -1713,8 +1719,8 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
       await helper.click();
       await page.waitForFunction("window.monaco.editor.getEditors()[0].getModel().uri.path.endsWith('/shared/runtime.ts')");
       assert(
-        await page.evaluate('window.monaco.editor.getEditors()[0].getOption(window.monaco.editor.EditorOption.readOnly)'),
-        'Helpers are read only',
+        !(await page.evaluate('window.monaco.editor.getEditors()[0].getOption(window.monaco.editor.EditorOption.readOnly)')),
+        'Shared helper source is editable',
       );
       await page.getByRole('button', { name: 'Copy', exact: true }).click();
       assert(
@@ -1723,8 +1729,20 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
         ),
         'Copy uses the visible helper',
       );
+      await page.locator('.monaco-editor .overflow-guard').click({ position: { x: 350, y: 110 } });
+      await page.keyboard.press('Control+End');
+      await page.keyboard.type('\n(window as any).__helperRun = "edited";');
       await page.getByRole('button', { name: 'Run', exact: true }).click();
-      await page.waitForFunction("document.querySelector('iframe')?.contentWindow?.__fileTabRun === 'entry'");
+      await page.waitForFunction(
+        "document.querySelector('iframe')?.contentWindow?.__fileTabRun === 'entry' && document.querySelector('iframe')?.contentWindow?.__helperRun === 'edited'",
+      );
+      await page.locator('[data-example-header] summary').click();
+      const popupPromise = page.context().waitForEvent('page');
+      await page.getByRole('button', { name: 'Open demo in new tab', exact: true }).click();
+      const standalone = await popupPromise;
+      await standalone.waitForFunction("window.__fileTabRun === 'entry' && window.__helperRun === 'edited'");
+      assert(await standalone.evaluate(() => window.opener === null), 'Edited helpers preserve detached-tab isolation');
+      await standalone.close();
       await entry.click();
       const after = await page.evaluate<{ source: string; position: unknown; scroll: number }>(`(() => {
         const e=window.monaco.editor.getEditors()[0];return {source:e.getValue(),position:e.getPosition(),scroll:e.getScrollTop()};
@@ -1738,7 +1756,7 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
       await page.locator('.monaco-editor .overflow-guard').click({ position: { x: 350, y: 110 } });
       await page.keyboard.press('Control+End');
       await page.keyboard.type('\n(window as any).__fileTabRun = "changed";');
-      await page.getByRole('button', { name: 'More options', exact: true }).click();
+      await page.getByRole('button', { name: 'File options', exact: true }).click();
       await page.getByRole('menuitem', { name: 'Open compiled JavaScript', exact: true }).click();
       await page.waitForFunction("window.monaco.editor.getEditors()[0].getModel().uri.path.endsWith('/hello-world.js')");
       assert(await page.getByRole('button', { name: 'Run', exact: true }).isEnabled(), 'Run stays available on compiled output');
@@ -1755,10 +1773,17 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
       );
       await helper.click();
       await page.getByRole('button', { name: 'Reset', exact: true }).click();
+      assert(
+        !(await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()')).includes('__helperRun'),
+        'Reset restores helper source',
+      );
       await entry.click();
       assert(
         !(await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()')).includes('__fileTabRun'),
         'Reset targets the entry',
+      );
+      await page.waitForFunction(
+        "document.querySelector('iframe')?.contentDocument?.querySelector('canvas') && !('__helperRun' in document.querySelector('iframe').contentWindow)",
       );
       await page
         .locator('#playground-navigation')
@@ -1783,7 +1808,7 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
       await page.route('**/examples/shared/runtime.ts', route =>
         route.fulfill({ contentType: 'text/plain', body: "export const broken: number = 'bad';" }),
       );
-      await page.getByRole('group', { name: 'Example files' }).getByRole('button', { name: 'runtime.ts Read only' }).click();
+      await page.getByRole('group', { name: 'Example files' }).getByRole('button', { name: 'runtime.ts Editable' }).click();
       await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel()?.uri.path.endsWith('/shared/runtime.ts')");
       await page.getByRole('button', { name: 'Jump to line 1', exact: true }).first().click({ timeout: 45000 });
       assert(
@@ -1805,6 +1830,8 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
         const model=window.monaco.editor.getEditors()[0].getModel();
         model.setValue(model.getValue()+'\\n// unsaved asset navigation check\\n');return model.getValue();
       })()`);
+      await page.locator('[data-used-assets] button').first().click();
+      await page.getByRole('region', { name: 'Asset preview' }).waitFor();
       const link = page.locator('[data-used-assets] a[href*="/tools/asset-browser/"]').first();
       const href = (await link.getAttribute('href'))!;
       const [tool] = await Promise.all([page.context().waitForEvent('page'), link.click()]);
@@ -1826,30 +1853,30 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
   });
 
   await check('native canvas dropdown arrows do not scroll the Playground', async () => {
-    const { page, pageErrors } = await openPlayground(browser, origin, base, 'application-scenes/transition-gallery');
+    const { page, pageErrors } = await openPlayground(browser, origin, base, 'ui/settings-menu');
 
     try {
-      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('class GalleryScene')");
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('class SettingsMenuScene')");
       const source = await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()');
-      assert(source.includes('override init(): void {'), 'The gallery scene init is available');
+      assert(source.includes('override init(): void {'), 'The settings scene init is available');
       await runSource(page, source.replace('override init(): void {', 'override init(): void { (window as any).__scrollScene = this;'));
       const frame = await previewFrame(page);
-      await frame.waitForFunction('Boolean(globalThis.__scrollScene?.selector?.visible)');
+      await frame.waitForFunction('Boolean(globalThis.__scrollScene?.theme?.visible)');
       await page.evaluate("document.body.style.minHeight='1600px'");
       const hit = await frame.evaluate<{ x: number; y: number }>(`(() => {
-        const s=globalThis.__scrollScene,b=s.selector.getBounds();
+        const s=globalThis.__scrollScene,b=s.theme.getBounds();
         return {x:(b.x+b.width/2)/s.app.width,y:(b.y+b.height/2)/s.app.height};
       })()`);
       const canvas = (await frame.locator('canvas').boundingBox())!;
       await page.mouse.click(canvas.x + canvas.width * hit.x, canvas.y + canvas.height * hit.y);
-      await frame.waitForFunction('globalThis.__scrollScene.selector.isOpen');
-      const selected = await frame.evaluate<number>('globalThis.__scrollScene.selector.highlightedIndex');
+      await frame.waitForFunction('globalThis.__scrollScene.theme.isOpen');
+      const selected = await frame.evaluate<number>('globalThis.__scrollScene.theme.highlightedIndex');
       const before = await page.evaluate<number>('scrollY');
       await frame.evaluate(
         "window.addEventListener('keydown',event=>{if(event.key==='ArrowDown')setTimeout(()=>globalThis.__arrowPrevented=event.defaultPrevented,0)},{once:true})",
       );
       await page.keyboard.press('ArrowDown', { delay: 35 });
-      await frame.waitForFunction(`globalThis.__scrollScene.selector.highlightedIndex === ${selected + 1} && globalThis.__arrowPrevented`);
+      await frame.waitForFunction(`globalThis.__scrollScene.theme.highlightedIndex === ${selected + 1} && globalThis.__arrowPrevented`);
       await page.waitForTimeout(250);
       assert((await page.evaluate<number>('scrollY')) === before, 'Canvas arrows must not scroll the parent document');
       assert(pageErrors.length === 0, pageErrors.join('\n'));

@@ -26,7 +26,7 @@ import {
   type VersionInfo,
 } from '../lib/versions';
 import { BottomSheet } from './BottomSheet';
-import { Editor, type EditorHandle } from './Editor';
+import { Editor } from './Editor';
 import styles from './ExampleBrowser.module.scss';
 import { Navigation } from './Navigation';
 import { SidebarToggle } from './PlaygroundButtons';
@@ -49,7 +49,6 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
   const [examplesSheetOpen, setExamplesSheetOpen] = useState(false);
   const [examplesSheetOpener, setExamplesSheetOpener] = useState<HTMLElement | null>(null);
   const sidebarToggleRef = useRef<HTMLButtonElement | null>(null);
-  const editorRef = useRef<EditorHandle | null>(null);
   const mobileExamplesButtonRef = useRef<HTMLButtonElement | null>(null);
   const previousVersionIdRef = useRef<string | null>(null);
   const missingExampleToastEnabledRef = useRef(false);
@@ -395,7 +394,6 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
       <div className={css(styles, 'right-column')}>
         <div className={css(styles, 'main-content')}>
           <Editor
-            ref={editorRef}
             activeExample={activeExample}
             catalogLoadError={loadError}
             selectedVersionId={selectedVersion?.id ?? ''}
@@ -419,14 +417,6 @@ export const ExampleBrowser = ({ baseUrl, locale = 'en' }: ExampleBrowserProps):
               }}
             >
               Examples
-            </button>
-            <button
-              className={cx(css(styles, 'mobile-action'), css(styles, 'mobile-action--run'))}
-              type="button"
-              disabled={!activeExample}
-              onClick={() => editorRef.current?.triggerReload()}
-            >
-              Run
             </button>
           </nav>
         )}

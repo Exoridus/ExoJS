@@ -5,6 +5,8 @@ import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
 import { expect, it } from 'vitest';
 
+import { isEditableSharedFile } from '../../site/src/lib/preview-modules';
+
 const file = ts.createSourceFile(
   'EditorCode.tsx',
   readFileSync('site/src/components/EditorCode.tsx', 'utf8'),
@@ -78,6 +80,7 @@ const fixture = (readOnly = false) => {
   };
   const context = {
     readOnly,
+    isEditableSharedFile,
     readOnlyRef: { current: readOnly },
     sourcePath: 'entry.ts',
     editorRef: { current: editor },

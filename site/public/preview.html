@@ -133,6 +133,40 @@
                         './worker-streamed-terrain.worker.ts?worker': './examples/tilemap/worker-streamed-terrain.worker.js?no-cache=' + noCache,
                     },
                 };
+                var modulesKey = params.get('modules-key');
+                var moduleUrls = [];
+                var releaseModules = function () {
+                    moduleUrls.forEach(function (url) { URL.revokeObjectURL(url); });
+                    moduleUrls = [];
+                };
+
+                if (modulesKey) {
+                    window.addEventListener('pagehide', releaseModules, { once: true });
+
+                    try {
+                        var snapshot = window.sessionStorage.getItem(modulesKey);
+                        window.sessionStorage.removeItem(modulesKey);
+                        if (!snapshot) throw new Error('The edited helper snapshot is no longer available. Run the example again.');
+                        var modules = JSON.parse(snapshot);
+                        if (!modules || typeof modules !== 'object' || Array.isArray(modules)) throw new Error('Invalid edited helper snapshot.');
+
+                        Object.keys(importMap.imports).forEach(function (alias) {
+                            if (alias !== '@examples/runtime' && alias !== '@examples/gallery-transitions') return;
+                            var path = 'shared/' + alias.slice('@examples/'.length) + '.ts';
+                            if (!Object.prototype.hasOwnProperty.call(modules, path)) return;
+                            if (typeof modules[path] !== 'string') throw new Error('Invalid edited helper source: ' + path);
+                            // Shared helpers resolve fonts and other assets relative to their original module location.
+                            var originalUrl = new URL(importMap.imports[alias], window.location.href).href;
+                            var source = 'import.meta.url = ' + JSON.stringify(originalUrl) + ';\n' + modules[path];
+                            var moduleUrl = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
+                            moduleUrls.push(moduleUrl);
+                            importMap.imports[alias] = moduleUrl;
+                        });
+                    } catch (error) {
+                        releaseModules();
+                        document.documentElement.dataset.previewModulesError = 'Could not load edited helper modules. ' + error.message;
+                    }
+                }
                 var script = document.createElement('script');
 
                 script.type = 'importmap';
@@ -147,6 +181,15 @@
         <script>
             (function () {
                 var params = new URLSearchParams(window.location.search);
+                var modulesError = document.documentElement.dataset.previewModulesError;
+                if (modulesError) {
+                    var message = document.createElement('p');
+                    message.setAttribute('role', 'alert');
+                    message.style.cssText = 'color:#fca5a5;font:16px sans-serif;padding:24px';
+                    message.textContent = modulesError;
+                    document.body.appendChild(message);
+                    return;
+                }
                 if (params.get('tool') === 'asset-browser') {
                     var tool = document.createElement('script');
                     tool.type = 'module';

@@ -12,6 +12,7 @@ import {
 import type { ExampleRendererStatus } from '../../../examples/shared/runtime';
 import type { Capability } from '../lib/examples-catalog';
 import type { ConsoleWindow, PreviewConsole } from '../lib/preview-console';
+import { serializePreviewModules } from '../lib/preview-modules';
 import { readRendererStatus } from '../lib/preview-renderer';
 import { detectRuntimeSupport, getMissingCapabilities } from '../lib/runtime-support';
 import type { Example, PreviewErrorEntry, UrlParams } from '../lib/types';
@@ -53,6 +54,7 @@ export interface EditorPreviewProps {
   ref?: Ref<EditorPreviewHandle>;
   selectedVersionId: string;
   sourceCode: string | null;
+  executionModules?: Readonly<Record<string, string>>;
   /**
    * Receives the preview's console output and uncaught errors. Each iframe load
    * starts a new generation of it; without one, errors only blank the preview.
@@ -67,6 +69,7 @@ export interface EditorPreviewProps {
 
 export const EditorPreview = ({
   exampleMeta,
+  executionModules,
   onCanvasSize,
   onRendererStatus,
   onAssets,
@@ -76,7 +79,13 @@ export const EditorPreview = ({
   selectedVersionId,
   sourceCode,
 }: EditorPreviewProps): JSX.Element => {
-  const [updateId, setUpdateId] = useState(0);
+  const [previewRequest, setPreviewRequest] = useState<{
+    id: number;
+    modules: string | null;
+    modulesKey?: string;
+    error: string | null;
+  }>({ id: 0, modules: null, error: null });
+  const requestRef = useRef(previewRequest);
   const rendererStatusRef = useRef(onRendererStatus);
   const assetsRef = useRef(onAssets);
   const rendererCleanupRef = useRef<(() => void) | null>(null);
@@ -107,9 +116,25 @@ export const EditorPreview = ({
   });
 
   useEffect(() => {
-    // Bump the iframe cache-buster to force a reload when the source changes.
-    // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect -- reload preview on source change
-    setUpdateId(value => value + 1);
+    let modules: string | null = null;
+    let modulesKey: string | undefined;
+    let error: string | null = null;
+
+    try {
+      modules = serializePreviewModules(executionModules);
+
+      if (modules !== null) {
+        modulesKey = `exo-preview-modules:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+        window.sessionStorage.setItem(modulesKey, modules);
+      }
+    } catch (cause) {
+      error = `Could not prepare edited helper modules. ${createPreviewErrorEntry(cause).summary}`;
+    }
+
+    const request = { id: requestRef.current.id + 1, modules, modulesKey, error };
+    requestRef.current = request;
+    // eslint-disable-next-line @eslint-react/set-state-in-effect -- start a fresh document after staging its helper snapshot
+    setPreviewRequest(request);
     // The outgoing document can still log until the new one loads; its
     // messages must not reach the record the next load starts.
     rendererCleanupRef.current?.();
@@ -128,7 +153,17 @@ export const EditorPreview = ({
     rootRef.current?.style.setProperty('--canvas-h', `${STAGE_HEIGHT}px`);
     rootRef.current?.style.setProperty('--preview-zoom', String(zoom));
     onCanvasSize?.({ width: 0, height: 0, zoom: 1 });
-  }, [onCanvasSize, sourceCode, runId]);
+
+    return () => {
+      if (modulesKey) {
+        try {
+          window.sessionStorage.removeItem(modulesKey);
+        } catch {
+          // Storage access can be revoked before the outgoing frame is cleaned up.
+        }
+      }
+    };
+  }, [onCanvasSize, sourceCode, executionModules, runId, selectedVersionId, exampleMeta?.path]);
 
   useEffect(() => {
     const recalculateZoom = (): void => {
@@ -190,7 +225,9 @@ export const EditorPreview = ({
         }
 
         const storageKey = `exo-preview-source:${Date.now()}:${Math.random().toString(36).slice(2)}`;
-        const target = buildPreviewUrl({ noCache: Date.now(), sourceKey: storageKey }, versionRef.current);
+        const modules = requestRef.current.modules;
+        const modulesKey = modules === null ? undefined : `${storageKey}:modules`;
+        const target = buildPreviewUrl({ noCache: Date.now(), sourceKey: storageKey, modulesKey }, versionRef.current);
         const preview = window.open('about:blank', '_blank');
 
         if (!preview) {
@@ -202,6 +239,11 @@ export const EditorPreview = ({
 
         try {
           preview.sessionStorage.setItem(storageKey, source);
+
+          if (modulesKey && modules !== null) {
+            preview.sessionStorage.setItem(modulesKey, modules);
+          }
+
           const link = preview.document.createElement('a');
           link.href = target;
           link.referrerPolicy = 'no-referrer';
@@ -286,6 +328,12 @@ export const EditorPreview = ({
       return;
     }
 
+    const loadedId = new URL(iframe.contentWindow?.location.href ?? iframe.src).searchParams.get('no-cache');
+
+    if (loadedId !== String(requestRef.current.id)) {
+      return;
+    }
+
     const iframeWindow = iframe.contentWindow;
     rendererCleanupRef.current?.();
     rendererStatusRef.current?.(null);
@@ -344,6 +392,15 @@ export const EditorPreview = ({
       installPreviewErrorHandlers(iframeWindow, iframeBody, error => {
         sink?.writeException(generation, error.summary, error.details ?? null);
       });
+
+      const modulesError = iframeBody.ownerDocument.documentElement.dataset.previewModulesError;
+
+      if (modulesError) {
+        sink?.writeException(generation, modulesError, null);
+        renderExecutionError(iframeBody);
+
+        return;
+      }
     }
 
     iframeBody.tabIndex = -1;
@@ -356,6 +413,14 @@ export const EditorPreview = ({
     return (
       <div ref={rootRef} className={css(styles, 'root')}>
         <LoadingSpinner centered />
+      </div>
+    );
+  }
+
+  if (previewRequest.error) {
+    return (
+      <div ref={rootRef} className={css(styles, 'root')}>
+        <p role="alert">{previewRequest.error}</p>
       </div>
     );
   }
@@ -380,7 +445,7 @@ export const EditorPreview = ({
         }}
         allow="autoplay"
         tabIndex={0}
-        src={buildPreviewUrl({ noCache: updateId }, selectedVersionId)}
+        src={buildPreviewUrl({ noCache: previewRequest.id, modulesKey: previewRequest.modulesKey }, selectedVersionId)}
       />
     </div>
   );
@@ -412,7 +477,7 @@ const measureFillZoom = (root: HTMLElement | null, width: number, height: number
   return Math.max(0.1, Math.min(widthZoom, heightZoom));
 };
 
-const buildPreviewUrl = (options: { noCache: number; sourceKey?: string }, selectedVersionId: string): string => {
+const buildPreviewUrl = (options: { noCache: number; sourceKey?: string; modulesKey?: string }, selectedVersionId: string): string => {
   const params: UrlParams = { 'no-cache': options.noCache };
 
   if (selectedVersionId) {
@@ -421,6 +486,10 @@ const buildPreviewUrl = (options: { noCache: number; sourceKey?: string }, selec
 
   if (options.sourceKey) {
     params['source-key'] = options.sourceKey;
+  }
+
+  if (options.modulesKey) {
+    params['modules-key'] = options.modulesKey;
   }
 
   return buildIframeUrl(params);

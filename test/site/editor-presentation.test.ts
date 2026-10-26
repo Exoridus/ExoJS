@@ -1,11 +1,15 @@
 // @vitest-environment node
 import { createRequire } from 'node:module';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { Editor, type EditorProps } from '../../site/src/components/Editor';
-import { EditorPreview } from '../../site/src/components/EditorPreview';
+import type { Example } from '../../site/src/lib/types';
 import { configureUrls } from '../../site/src/lib/url-builder';
+
+const { Editor } = await vi.importActual<{ Editor: (props: Record<string, unknown>) => unknown }>('../../site/src/components/Editor');
+const { EditorPreview } = await vi.importActual<{ EditorPreview: (props: Record<string, unknown>) => unknown }>(
+  '../../site/src/components/EditorPreview',
+);
 
 configureUrls({ baseUrl: 'https://example.test/ExoJS/' });
 
@@ -13,7 +17,7 @@ const siteRequire = createRequire(new URL('../../site/package.json', import.meta
 const { createElement, createRef } = siteRequire('react');
 const { renderToStaticMarkup } = siteRequire('react-dom/server');
 
-const example: NonNullable<EditorProps['activeExample']> = {
+const example: Example = {
   slug: 'retro-display',
   path: 'filters/crt-scanlines.js',
   title: 'Retro Display',
@@ -69,14 +73,14 @@ describe('playground presentation', () => {
     expect(html).toContain('>Code</button>');
   });
 
-  it('groups execution and layout controls with the title and offers full context on demand', () => {
+  it('keeps a stable header without a duplicate information panel', () => {
     const html = render();
     const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'));
     expect(header).toContain('data-example-header');
     expect(header).toContain('data-header-row="primary"');
     expect(header).toContain('data-header-row="context"');
-    expect(header).toContain('<details');
-    expect(header).toMatch(/<summary[^>]*>Info<\/summary>/);
+    expect(header).not.toMatch(/<summary[^>]*>Info<\/summary>/);
+    expect(header).not.toContain('<h2');
     expect(header).toContain('aria-label="Example view"');
   });
 
