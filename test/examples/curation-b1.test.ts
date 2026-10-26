@@ -18,7 +18,6 @@ interface TweenExample {
   panel: { values: { easing: keyof typeof Ease; mode: string }; set(key: string, value: string): void };
   moveTo(x: number, y: number): void;
   pause(): void;
-  reset(): void;
 }
 
 const createTweenExample = (mode = 'One-way'): { scene: TweenExample; advance(seconds: number): void } => {
@@ -84,7 +83,7 @@ describe('B1 tween interaction', () => {
     expect(scene.moving).toBe(false);
   });
 
-  it.each(['Roundtrip', 'Route'])('%s returns to its starting position and resets its clock', mode => {
+  it.each(['Roundtrip', 'Route'])('%s returns to its starting position and starts another route with a fresh clock', mode => {
     const { scene, advance } = createTweenExample(mode);
 
     scene.moveTo(0.8, 0.2);
@@ -92,16 +91,18 @@ describe('B1 tween interaction', () => {
     expect(scene.position).toEqual({ x: 0.5, y: 0.5 });
     expect(scene.leg).toBe(mode === 'Route' ? 4 : 2);
     expect(scene.moving).toBe(false);
-    scene.reset();
-    expect(scene.clock.t).toBe(0);
-    expect(scene.steps).toEqual([]);
-    expect(scene.panel.values).toEqual({ easing: 'sineInOut', mode: 'One-way' });
+    scene.moveTo(0.1, 0.8);
+    advance(0.01);
+    expect(scene.clock.t).toBeCloseTo(0.01 / 0.9);
+    expect(scene.leg).toBe(1);
+    expect(scene.steps.length).toBeGreaterThan(0);
+    expect(scene.panel.values).toEqual({ easing: 'linear', mode });
   });
 });
 
 describe('B1 bitmap material', () => {
   it('the comparison word and counter are present in the supplied atlas', () => {
-    const descriptor = fs.readFileSync('examples/assets/demo/fonts/kenney-blocks-32.fnt', 'utf8');
+    const descriptor = fs.readFileSync('examples/assets/fonts/font-kenney-blocks-fnt.fnt', 'utf8');
     const glyphs = new Set([...descriptor.matchAll(/^char id=(\d+)/gm)].map(match => Number(match[1])));
 
     for (const character of 'PLAYCOUNT 0123456789') {

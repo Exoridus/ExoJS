@@ -1,19 +1,21 @@
-import { type FunctionComponent, lazy, type Ref, Suspense, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { type CSSProperties, type FunctionComponent, lazy, type Ref, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 import type { ExampleRendererStatus } from '../../../examples/shared/runtime';
 import { loadExampleSource } from '../lib/example-store';
+import { GUIDE_CHAPTERS } from '../lib/guide-structure';
 import { PreviewConsole } from '../lib/preview-console';
 import { getExampleAvailability } from '../lib/runtime-support';
 import type { Example, PreviewErrorEntry } from '../lib/types';
+import { buildPublicUrl } from '../lib/url-builder';
 import { type DiagnosticJumpEvent, DiagnosticsStrip } from './DiagnosticsStrip';
 import styles from './Editor.module.scss';
-import type { EditorCodeHandle, EditorCodeProps, EditorCursorEvent, EditorDiagnostic, ResetCodeEvent, UpdateCodeEvent } from './EditorCode';
+import type { EditorCodeHandle, EditorCodeProps, EditorDiagnostic, ResetCodeEvent, UpdateCodeEvent } from './EditorCode';
 import { type CanvasSizeEvent, EditorPreview, type EditorPreviewHandle } from './EditorPreview';
-import { EditorStatusBar } from './EditorStatusBar';
 import { OutputPanel } from './OutputPanel';
-import { SidebarToggle, SwapButton } from './PlaygroundButtons';
+import { SidebarToggle } from './PlaygroundButtons';
 import { PreviewToolbar } from './PreviewToolbar';
 import { css, cx } from './react-utils';
+import { UsedAssets } from './UsedAssets';
 
 /**
  * Rendered in place of the editor while there is no DOM to attach Monaco to,
@@ -31,22 +33,17 @@ const EditorCode = lazy<FunctionComponent<EditorCodeProps>>(async () => {
   return { default: mod.EditorCode };
 });
 
-export interface EditorHandle {
-  openPreviewInTab(): void;
-  triggerReload(): void;
-}
-
 export type EditorLayout = 'split' | 'stacked';
 /** Which card sits next to the example list in the split layout. */
 export type EditorOrder = 'preview-first' | 'editor-first';
 
 const LAYOUT_STORAGE_KEY = 'exo-playground-layout';
 const ORDER_STORAGE_KEY = 'exo-playground-order';
+const SPLIT_STORAGE_KEY = 'exo-playground-split';
 
 export interface EditorProps {
   activeExample: Example | null;
   catalogLoadError: string | null;
-  ref?: Ref<EditorHandle>;
   selectedVersionId: string;
   showSidebarToggle: boolean;
   sidebarOpen: boolean;
@@ -57,7 +54,6 @@ export interface EditorProps {
 export const Editor = ({
   activeExample,
   catalogLoadError,
-  ref,
   selectedVersionId,
   showSidebarToggle,
   sidebarOpen,
@@ -69,6 +65,7 @@ export const Editor = ({
   const [sourceCode, setSourceCode] = useState<string | null>(null);
   const [originalSourceCode, setOriginalSourceCode] = useState<string | null>(null);
   const [executionCode, setExecutionCode] = useState<string | null>(null);
+  const [executionModules, setExecutionModules] = useState<Record<string, string>>({});
   const [originalExecutionCode, setOriginalExecutionCode] = useState<string | null>(null);
   const [sourceLoadError, setSourceLoadError] = useState<PreviewErrorEntry | null>(null);
   const [output] = useState(() => new PreviewConsole());
@@ -78,34 +75,19 @@ export const Editor = ({
   const [canvasHeight, setCanvasHeight] = useState(0);
   const [previewZoom, setPreviewZoom] = useState(1);
   const [previewExpanded, setPreviewExpanded] = useState(false);
-  const [cursorLine, setCursorLine] = useState(1);
-  const [cursorColumn, setCursorColumn] = useState(1);
-  const [selectionLength, setSelectionLength] = useState(0);
   const [dirty, setDirty] = useState(false);
   const [diagnostics, setDiagnostics] = useState<ReadonlyArray<EditorDiagnostic>>([]);
-  const [viewMode, setViewMode] = useState<'source' | 'compiled'>('source');
-  // Split (editor left, preview right) is the desktop default; the stored
-  // preference is applied after mount so SSR and first client render match.
-  // Below 1120px the CSS ignores the mode and always stacks.
-  const [layout, setLayout] = useState<EditorLayout>('split');
+  const [layout, setLayout] = useState<EditorLayout>('stacked');
   const [order, setOrder] = useState<EditorOrder>('preview-first');
+  const [splitPercent, setSplitPercent] = useState(55);
+  const [activeView, setActiveView] = useState<'demo' | 'code'>('demo');
+  const [toolbarTarget, setToolbarTarget] = useState<HTMLDivElement | null>(null);
+  const rootRef = useRef<HTMLElement | null>(null);
   const codeEditorRef = useRef<EditorCodeHandle | null>(null);
+  const [assetSources, setAssetSources] = useState<readonly string[] | null>(null);
   const previewRef = useRef<EditorPreviewHandle | null>(null);
   const previewFrameRef = useRef<HTMLElement | null>(null);
   const loadKeyRef = useRef<string | null>(null);
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      openPreviewInTab(): void {
-        previewRef.current?.openPreviewInTab();
-      },
-      triggerReload(): void {
-        codeEditorRef.current?.triggerRefresh();
-      },
-    }),
-    [],
-  );
 
   useEffect(() => {
     const path = activeExample?.path ?? null;
@@ -126,10 +108,10 @@ export const Editor = ({
     setSourceCode(null);
     setOriginalSourceCode(null);
     setExecutionCode(null);
+    setExecutionModules({});
     setOriginalExecutionCode(null);
     setSourceLoadError(null);
     setDiagnostics([]);
-    setViewMode('source');
     /* eslint-enable @eslint-react/set-state-in-effect */
 
     if (!activeExample || !selectedVersionId) {
@@ -198,22 +180,45 @@ export const Editor = ({
   }, []);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(LAYOUT_STORAGE_KEY);
+    try {
+      const stored = window.localStorage.getItem(LAYOUT_STORAGE_KEY);
 
-    // Applying a stored preference is the canonical "sync with external
-    // store on mount" effect.
-    if (stored === 'split' || stored === 'stacked') {
-      // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
-      setLayout(stored);
-    }
+      // Applying a stored preference is the canonical "sync with external
+      // store on mount" effect.
+      if (stored === 'split' || stored === 'stacked') {
+        // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
+        setLayout(stored);
+      }
 
-    const storedOrder = window.localStorage.getItem(ORDER_STORAGE_KEY);
+      const storedOrder = window.localStorage.getItem(ORDER_STORAGE_KEY);
 
-    if (storedOrder === 'preview-first' || storedOrder === 'editor-first') {
-      // eslint-disable-next-line @eslint-react/set-state-in-effect
-      setOrder(storedOrder);
+      if (storedOrder === 'preview-first' || storedOrder === 'editor-first') {
+        // eslint-disable-next-line @eslint-react/set-state-in-effect
+        setOrder(storedOrder);
+      }
+
+      const storedSplit = window.localStorage.getItem(SPLIT_STORAGE_KEY);
+      const parsedSplit = storedSplit === null ? 55 : Number(storedSplit);
+
+      if (Number.isFinite(parsedSplit)) {
+        // eslint-disable-next-line @eslint-react/set-state-in-effect
+        setSplitPercent(Math.min(70, Math.max(35, parsedSplit)));
+      }
+    } catch {
+      // Storage can be unavailable in embedded or restricted browsing contexts.
     }
   }, []);
+
+  const resizeSplit = (percent: number): void => {
+    const next = Math.min(70, Math.max(35, percent));
+    setSplitPercent(next);
+
+    try {
+      window.localStorage.setItem(SPLIT_STORAGE_KEY, String(next));
+    } catch {
+      // The current session remains usable without persisted preferences.
+    }
+  };
 
   const swapOrder = (): void => {
     setOrder(current => {
@@ -278,6 +283,7 @@ export const Editor = ({
     setRunId(id => id + 1);
     setSourceCode(event.code);
     setExecutionCode(event.executionCode ?? null);
+    setExecutionModules(event.executionModules ?? {});
   };
 
   const onResetCode = (_event: ResetCodeEvent): void => {
@@ -287,12 +293,7 @@ export const Editor = ({
 
     setSourceCode(originalSourceCode);
     setExecutionCode(originalExecutionCode);
-  };
-
-  const onCursorChange = (event: EditorCursorEvent): void => {
-    setCursorLine(event.lineNumber);
-    setCursorColumn(event.column);
-    setSelectionLength(event.selectionLength);
+    setExecutionModules({});
   };
 
   const onCanvasSize = useCallback((event: CanvasSizeEvent): void => {
@@ -302,7 +303,8 @@ export const Editor = ({
   }, []);
 
   const onDiagnosticJump = (event: DiagnosticJumpEvent): void => {
-    codeEditorRef.current?.jumpToLine(event.lineNumber, event.column);
+    setActiveView('code');
+    requestAnimationFrame(() => codeEditorRef.current?.jumpToLine(event.lineNumber, event.column));
   };
 
   const combinedErrors = [
@@ -315,69 +317,79 @@ export const Editor = ({
   }
 
   const availability = getExampleAvailability(activeExample);
-  const languageLabel = activeExample?.language === 'typescript' ? 'TypeScript' : 'JavaScript';
   const editorLanguage = activeExample?.language === 'typescript' ? 'typescript' : 'javascript';
   const displayPath = getDisplayPath(activeExample);
-  // The toggle only makes sense for a TS example - a "compiled" view of
-  // freeform JS scratch code would just be the same text back.
-  const canToggleView = editorLanguage === 'typescript';
-  const isCompiledView = canToggleView && viewMode === 'compiled';
-  const displayedLanguage = isCompiledView ? 'javascript' : editorLanguage;
-  // executionCode only reads null before the very first successful compile -
-  // once set, it holds the last successful compile even while a newer edit is
-  // still emitting (see getExecutionCode's contract in EditorCode.tsx), so this
-  // placeholder is a first-paint-only case.
-  const displayedSourceCode = isCompiledView ? (executionCode ?? '// Compiling…') : sourceCode;
-  const displayedSourcePath = isCompiledView ? (activeExample?.path ?? null) : displayPath;
 
-  const toggleViewMode = (): void => {
-    setViewMode(mode => (mode === 'source' ? 'compiled' : 'source'));
-  };
-
-  // The example list's toggle sits in the header of the card beside the list,
-  // and the swap in the header of the card on the right; stacked, the preview
-  // is the top card and nothing swaps.
-  const previewLeads = layout === 'stacked' || order === 'preview-first';
-  const sidebarToggle = showSidebarToggle ? (
-    <SidebarToggle open={sidebarOpen} toggleRef={sidebarToggleRef} onToggle={onToggleSidebar} />
-  ) : null;
-  const swapButton = layout === 'split' ? <SwapButton onSwap={swapOrder} /> : null;
+  const sidebarToggle =
+    showSidebarToggle && !sidebarOpen ? <SidebarToggle open={sidebarOpen} toggleRef={sidebarToggleRef} onToggle={onToggleSidebar} /> : null;
 
   return (
-    <section className={css(styles, 'root')} data-layout={layout} data-order={order}>
+    <section
+      ref={rootRef}
+      className={css(styles, 'root')}
+      data-layout={layout}
+      data-order={order}
+      data-active-view={activeView}
+      style={{ '--split-percent': `${splitPercent}%` } as CSSProperties}
+    >
+      {activeExample && (
+        <header className={css(styles, 'example-header')} data-example-header>
+          <div className={css(styles, 'example-heading')} data-header-row="primary">
+            {sidebarToggle}
+            <h1 title={activeExample.title}>{activeExample.title}</h1>
+            <div className={css(styles, 'toolbar-slot')}>
+              <PreviewToolbar actionsRef={setToolbarTarget} />
+            </div>
+          </div>
+          <div className={css(styles, 'example-context')} data-header-row="context">
+            <p className={css(styles, 'example-description')} title={activeExample.description}>
+              {activeExample.description}
+            </p>
+            {renderLearningLinks(activeExample, 1)}
+            <div className={css(styles, 'view-tabs')} role="tablist" aria-label="Example view">
+              <button
+                id="demo-view-tab"
+                type="button"
+                role="tab"
+                aria-selected={activeView === 'demo'}
+                aria-controls="playground-demo"
+                onClick={() => setActiveView('demo')}
+              >
+                Demo
+              </button>
+              <button
+                id="code-view-tab"
+                type="button"
+                role="tab"
+                aria-selected={activeView === 'code'}
+                aria-controls="playground-code"
+                onClick={() => setActiveView('code')}
+              >
+                Code
+              </button>
+            </div>
+          </div>
+        </header>
+      )}
       <section
+        id="playground-demo"
         ref={previewFrameRef}
         className={cx(css(styles, 'preview-frame'), expandedActive && css(styles, 'preview-frame--expanded'))}
         aria-label="Example preview"
       >
-        <PreviewToolbar
-          exampleTitle={activeExample?.title ?? ''}
-          capabilities={activeExample?.capabilities ?? []}
-          rendererStatus={rendererStatus}
-          canvasWidth={canvasWidth}
-          canvasHeight={canvasHeight}
-          zoom={previewZoom}
-          selectedVersionId={selectedVersionId}
-          disabled={!sourceCode}
-          expanded={expandedActive}
-          layout={layout}
-          leading={previewLeads ? sidebarToggle : swapButton}
-          onReload={() => codeEditorRef.current?.triggerRefresh()}
-          onOpenTab={() => previewRef.current?.openPreviewInTab()}
-          onToggleExpand={() => setPreviewExpanded(value => !value)}
-          onToggleLayout={toggleLayout}
-        />
         <div className={css(styles, 'preview-surface')} data-preview-surface>
           <div className={css(styles, 'preview-component')}>
             <EditorPreview
               ref={previewRef}
               sourceCode={executionCode ?? sourceCode}
+              executionModules={executionModules}
               runId={runId}
               exampleMeta={activeExample}
               selectedVersionId={selectedVersionId}
               output={output}
               onCanvasSize={onCanvasSize}
               onRendererStatus={setRendererStatus}
+              onAssets={setAssetSources}
             />
           </div>
           {!availability.available && (
@@ -394,13 +406,43 @@ export const Editor = ({
           )}
         </div>
       </section>
+      <div
+        className={css(styles, 'split-divider')}
+        role="separator"
+        aria-label="Resize preview and editor"
+        aria-orientation="vertical"
+        aria-valuemin={35}
+        aria-valuemax={70}
+        aria-valuenow={Math.round(splitPercent)}
+        tabIndex={0}
+        onPointerDown={event => {
+          event.preventDefault();
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={event => {
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            const bounds = rootRef.current!.getBoundingClientRect();
+            resizeSplit(((event.clientX - bounds.left) / bounds.width) * 100);
+          }
+        }}
+        onPointerUp={event => event.currentTarget.releasePointerCapture(event.pointerId)}
+        onKeyDown={event => {
+          if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+            event.preventDefault();
+            const boundary = event.key === 'Home' ? 35 : 70;
+            const next = event.key === 'Home' || event.key === 'End' ? boundary : splitPercent + (event.key === 'ArrowRight' ? 2 : -2);
+            resizeSplit(next);
+          }
+        }}
+      />
       <div className={css(styles, 'diagnostics-slot')}>
         <DiagnosticsStrip diagnostics={diagnostics} onDiagnosticJump={onDiagnosticJump} />
       </div>
       <div className={css(styles, 'output-slot')}>
         <OutputPanel output={output} systemErrors={combinedErrors} />
       </div>
-      <section className={css(styles, 'editor-frame')} aria-label="Source editor">
+      <section id="playground-code" className={css(styles, 'editor-frame')} aria-label="Source editor">
+        <UsedAssets sources={assetSources} />
         {/*
           Held back until after hydration. The lazy loader resolves to an empty
           component on the server and to Monaco in the browser, so rendering it
@@ -414,34 +456,101 @@ export const Editor = ({
         <Suspense fallback={null}>
           {!hydrated ? null : (
             <EditorCode
+              key={`${selectedVersionId}/${displayPath ?? 'loading'}`}
               ref={codeEditorRef}
-              leading={previewLeads ? swapButton : sidebarToggle}
-              sourceCode={displayedSourceCode}
-              sourcePath={displayedSourcePath}
-              language={displayedLanguage}
-              readOnly={isCompiledView}
-              canReset={Boolean(originalSourceCode && sourceCode !== originalSourceCode)}
+              toolbarTarget={toolbarTarget}
+              menuItems={
+                <details
+                  className={css(styles, 'preview-options')}
+                  onBlur={event => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) {
+                      event.currentTarget.open = false;
+                    }
+                  }}
+                  onKeyDown={event => {
+                    if (event.key === 'Escape') {
+                      event.currentTarget.open = false;
+                      event.currentTarget.querySelector('summary')?.focus();
+                      event.stopPropagation();
+                    }
+                  }}
+                  onClick={event => {
+                    if ((event.target as HTMLElement).closest('button')) {
+                      event.currentTarget.open = false;
+                    }
+                  }}
+                >
+                  <summary>View</summary>
+                  <div role="group" aria-label="Preview and layout">
+                    <button type="button" data-layout-action onClick={toggleLayout}>
+                      {layout === 'stacked' ? 'Split view' : 'Demo above code'}
+                    </button>
+                    {layout === 'split' && (
+                      <button type="button" data-layout-action onClick={swapOrder}>
+                        Swap panes
+                      </button>
+                    )}
+                    <button type="button" onClick={() => previewRef.current?.openPreviewInTab()}>
+                      Open demo in new tab
+                    </button>
+                    {layout === 'stacked' && (
+                      <button type="button" onClick={() => setPreviewExpanded(value => !value)}>
+                        {expandedActive ? 'Normal demo size' : 'Expand demo'}
+                      </button>
+                    )}
+                    <p>
+                      {canvasWidth > 0 ? `${canvasWidth} x ${canvasHeight} | ${Math.round(previewZoom * 100)}% | ` : ''}exojs@
+                      {selectedVersionId}
+                      {rendererStatus?.actual ? ` | ${rendererStatus.actual}` : ''}
+                    </p>
+                  </div>
+                </details>
+              }
+              sourceCode={sourceCode}
+              sourcePath={displayPath}
+              language={editorLanguage}
+              compiledCode={executionCode}
+              canReset={Boolean(originalSourceCode && (dirty || sourceCode !== originalSourceCode))}
               exampleTitle={activeExample?.title ?? 'Loading...'}
               selectedVersionId={selectedVersionId}
               onUpdateCode={onUpdateCode}
               onResetCode={onResetCode}
-              onCursorChange={onCursorChange}
+              onCursorChange={() => undefined}
               onDiagnostic={setDiagnostics}
               onDirty={setDirty}
             />
           )}
         </Suspense>
-        <EditorStatusBar
-          line={cursorLine}
-          column={cursorColumn}
-          selectionLength={selectionLength}
-          dirty={dirty}
-          language={languageLabel}
-          viewMode={canToggleView ? viewMode : undefined}
-          onToggleViewMode={canToggleView ? toggleViewMode : undefined}
-        />
       </section>
     </section>
+  );
+};
+
+const renderLearningLinks = (example: Example, apiLimit = 3): JSX.Element | null => {
+  const path = example.path.replace(/\.js$/, '');
+  const chapter = GUIDE_CHAPTERS.find(chapter => chapter.examples.includes(path));
+
+  const apiLinks = example.apiLinks ?? chapter?.apiLinks ?? [];
+
+  if (!chapter && apiLinks.length === 0) {
+    return null;
+  }
+
+  const locale = typeof document !== 'undefined' && document.documentElement.lang === 'de' ? 'de' : 'en';
+
+  return (
+    <nav className={css(styles, 'learning-links')} aria-label="Learn about this example">
+      {chapter && <a href={buildPublicUrl(`${locale}/guide/${chapter.path}/`)}>Learn in the Guide</a>}
+      {apiLinks.slice(0, apiLimit).map(symbol => (
+        <a key={symbol} href={buildPublicUrl(`${locale}/api/${symbol}/`)}>
+          API:{' '}
+          {symbol
+            .split('-')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join('')}
+        </a>
+      ))}
+    </nav>
   );
 };
 

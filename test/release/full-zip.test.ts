@@ -81,7 +81,7 @@ describe('scanForbiddenContent', () => {
   });
 
   it('allows .ts under examples/src (lesson sources are not runtime entrypoints)', () => {
-    write('examples/src/a/b.ts', 'const p = assets.musicLoopMain;\nexport {};\n');
+    write('examples/src/a/b.ts', 'const p = assets.musicJingleSuccess;\nexport {};\n');
     expect(scanForbiddenContent(tree)).toEqual([]);
   });
 });

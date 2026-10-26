@@ -32,7 +32,7 @@ class BeatSyncPulseScene extends Scene {
     const { width, height } = app;
 
     // AudioStream has no seamless adapter - await it explicitly.
-    const track = await this.loader.load(assets.musicLoopMain);
+    const track = await this.loader.load(assets.musicDrumLoop);
     this.music = track;
     this.sprite = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setPosition(width / 2, height / 2);
 

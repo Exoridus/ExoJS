@@ -4,11 +4,11 @@
  * drift. These run without Core so the content package can be verified before
  * the engine is built.
  */
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { bytesOf, filesFor, packageRoot, resolveCatalog, sha256Of } from '../scripts/catalog.ts';
-import { renderAll } from '../scripts/generate.ts';
+import { renderAll, renderNotices } from '../scripts/generate.ts';
 
 const catalog = resolveCatalog();
 
@@ -26,12 +26,12 @@ describe('profiles: standard and extended are separate deliveries', () => {
   const standard = filesFor(catalog, 'standard');
   const extended = filesFor(catalog, 'extended');
 
-  test('the standard profile stays under the 20 MB media budget', () => {
-    expect(bytesOf(standard)).toBeLessThan(20_000_000);
+  test('the standard profile with full-length music stays under the 30 MB media budget', () => {
+    expect(bytesOf(standard)).toBeLessThan(30_000_000);
   });
 
   test('the extended profile contains only the HDR candidate and is not smuggled into standard', () => {
-    expect(extended.map(file => file.path)).toEqual(['demo/video/clips/hdr10.webm']);
+    expect(extended.map(file => file.path)).toEqual(['video/hdr10.webm']);
     expect(standard.some(file => file.path.includes('hdr10'))).toBe(false);
     expect(bytesOf(standard) + bytesOf(extended)).toBeGreaterThan(34_000_000);
   });
@@ -41,6 +41,60 @@ describe('profiles: standard and extended are separate deliveries', () => {
 
     for (const file of extended) {
       expect(standardPaths.has(file.path)).toBe(false);
+    }
+  });
+});
+
+describe('source layout', () => {
+  test('the authoring tree contains exactly the catalog files in six flat directories', () => {
+    const directories = readdirSync(catalog.sourceRoot);
+
+    expect(directories.sort()).toEqual(['audio', 'fonts', 'images', 'licenses', 'maps', 'video']);
+
+    const paths = directories.flatMap(directory =>
+      readdirSync(resolve(catalog.sourceRoot, directory), { withFileTypes: true }).map(file => {
+        expect(file.isFile()).toBe(true);
+
+        return `${directory}/${file.name}`;
+      }),
+    );
+
+    expect(paths.sort()).toEqual(catalog.files.map(file => file.path).sort());
+  });
+
+  test('published files use one directory level by media type', () => {
+    for (const file of catalog.files) {
+      expect(file.path).toMatch(/^(?:images|audio|fonts|maps|video|licenses)\/[^/]+$/);
+    }
+  });
+
+  test('isometric map images retain their upstream license', () => {
+    const images = catalog.files.filter(file => file.path.startsWith('images/isometric-landscape-tile-'));
+
+    expect(images).toHaveLength(6);
+    expect(images.every(file => file.provenance === 'kenney-isometric-tiles-landscape')).toBe(true);
+    expect(catalog.files.some(file => file.path === 'licenses/kenney-isometric-tiles-landscape.txt')).toBe(true);
+  });
+
+  test('unknown provenance for a transitive image is rejected', () => {
+    expect(() =>
+      resolveCatalog({
+        ...catalog.source,
+        fileProvenance: { ...catalog.source.fileProvenance, 'images/isometric-landscape-tile-000.png': 'missing-owner' },
+      }),
+    ).toThrow(/unknown provenance/);
+  });
+
+  test('atlas image names resolve beside their JSON files', () => {
+    const atlases = catalog.entries.filter(entry => entry.path.startsWith('images/') && entry.path.endsWith('.json'));
+
+    expect(atlases.length).toBeGreaterThan(0);
+
+    for (const entry of atlases) {
+      const atlas = JSON.parse(readFileSync(resolve(catalog.sourceRoot, entry.path), 'utf8')) as { meta: { image: string } };
+
+      expect(atlas.meta.image).not.toContain('/');
+      expect(existsSync(resolve(catalog.sourceRoot, 'images', atlas.meta.image))).toBe(true);
     }
   });
 });
@@ -96,6 +150,35 @@ describe('generated artifacts: no drift against the authored catalog', () => {
 
     for (const entry of catalog.entries) {
       expect(shipped.has(entry.path)).toBe(true);
+    }
+  });
+});
+describe('collected license texts', () => {
+  test('standard notices include each original license text once', () => {
+    const notices = renderNotices(catalog, ['standard']);
+
+    for (const file of filesFor(catalog, 'standard').filter(file => file.role === 'license')) {
+      const text = readFileSync(resolve(catalog.sourceRoot, file.path), 'utf8')
+        .replace(/\r\n?/g, '\n')
+        .replace(/[ \t]+$/gm, '')
+        .replace(/\n*$/, '');
+
+      expect(notices.split(`### ${file.path}`).length - 1).toBe(1);
+      expect(notices).toContain(`\`\`\`text\n${text}\n\`\`\``);
+    }
+  });
+
+  test('extended notices exclude standard license texts', () => {
+    const notices = renderNotices(catalog, ['extended']);
+
+    for (const file of filesFor(catalog, 'standard').filter(file => file.role === 'license')) {
+      expect(notices).not.toContain(`### ${file.path}`);
+    }
+  });
+
+  test('license sources use LF so byte hashes are reproducible across checkouts', () => {
+    for (const file of catalog.files.filter(file => file.role === 'license')) {
+      expect(readFileSync(resolve(catalog.sourceRoot, file.path), 'utf8')).not.toContain('\r');
     }
   });
 });

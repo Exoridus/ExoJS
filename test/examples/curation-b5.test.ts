@@ -40,37 +40,6 @@ const helpers = <T>(file: string, names: string): T => {
   return context.result as T;
 };
 
-it('produces deterministic mono pulse/noise with headroom and different spectral material', () => {
-  const { createTestSignal } = helpers<{ createTestSignal(noise: boolean): TestBuffer }>(
-    'showcase/audio-visualisation',
-    'createTestSignal',
-  );
-  const pulse = createTestSignal(false),
-    noise = createTestSignal(true);
-  expect(pulse.numberOfChannels).toBe(1);
-  expect(noise.numberOfChannels).toBe(1);
-  expect(pulse.length).toBe(48000);
-  expect(pulse.sampleRate).toBe(48000);
-  expect(noise.getChannelData()).toEqual(createTestSignal(true).getChannelData());
-
-  for (const buffer of [pulse, noise]) {
-    const values = buffer.getChannelData();
-    let peak = 0,
-      energy = 0;
-
-    for (const sample of values) {
-      peak = Math.max(peak, Math.abs(sample));
-      energy += sample * sample;
-    }
-
-    expect(peak).toBeLessThan(0.5);
-    expect(Math.sqrt(energy / values.length)).toBeGreaterThan(0.04);
-  }
-
-  expect(pulse.getChannelData()[12000]).toBe(0);
-  expect(noise.getChannelData()[12000]).not.toBe(0);
-});
-
 it('mirrors the Web Audio PannerNode distance models for the example parameters', () => {
   const { attenuation } = helpers<{ attenuation(model: string, distance: number): number }>(
     'spatial-audio/listener-and-source',

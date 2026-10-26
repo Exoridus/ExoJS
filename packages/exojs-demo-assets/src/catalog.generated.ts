@@ -12,294 +12,350 @@ import { Asset } from '@codexo/exojs';
  * SVG images have no synchronous handle and load with `await loader.load()`.
  */
 export interface DemoAssetDefinitions {
-  /** `demo/textures/ship-a.png` (4 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/space-ship-blue.png` (3 kB). Kenney Space Shooter Remastered, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  readonly spaceShipBlue: ResourceAsset<Texture>;
+  /** `images/space-enemy-red.png` (3 kB). Kenney Space Shooter Remastered, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  readonly spaceEnemyRed: ResourceAsset<Texture>;
+  /** `images/space-boss-red.png` (4 kB). Kenney Space Shooter Remastered, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  readonly spaceBossRed: ResourceAsset<Texture>;
+  /** `images/space-meteor-brown.png` (2 kB). Kenney Space Shooter Remastered, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  readonly spaceMeteorBrown: ResourceAsset<Texture>;
+  /** `images/space-meteor-grey.png` (2 kB). Kenney Space Shooter Remastered, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  readonly spaceMeteorGrey: ResourceAsset<Texture>;
+  /** `images/space-laser-blue.png` (1 kB). Kenney Space Shooter Remastered, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  readonly spaceLaserBlue: ResourceAsset<Texture>;
+  /** `images/physics-wood-ball.png` (2 kB). Kenney Physics Assets, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  readonly physicsWoodBall: ResourceAsset<Texture>;
+  /** `images/physics-metal-ball.png` (2 kB). Kenney Physics Assets, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  readonly physicsMetalBall: ResourceAsset<Texture>;
+  /** `images/physics-stone-ball.png` (2 kB). Kenney Physics Assets, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  readonly physicsStoneBall: ResourceAsset<Texture>;
+  /** `images/light-cookie-window.png` (1 kB). Kenney Light Masks, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  readonly lightCookieWindow: ResourceAsset<Texture>;
+  /** `images/light-cookie-foliage.png` (39 kB). Kenney Light Masks, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  readonly lightCookieFoliage: ResourceAsset<Texture>;
+  /** `images/light-cookie-caustics.png` (22 kB). Kenney Light Masks, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  readonly lightCookieCaustics: ResourceAsset<Texture>;
+  /** `images/tiny-dungeon-tiles.png` (5 kB). Kenney Tiny Dungeon, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  readonly tinyDungeonTiles: ResourceAsset<Texture>;
+  /** `maps/tiny-dungeon-map.tmj` (3 kB). ExoJS original work, MIT. Load with await `loader.load()`. Also fetches `images/tiny-dungeon-tiles.png`. */
+  readonly tinyDungeonMap: ValueAsset<unknown>;
+  /** `images/ship.png` (4 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
   readonly ship: ResourceAsset<Texture>;
-  /** `demo/textures/particle-flame.png` (54 kB). Kenney Particle Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/particle-flame.png` (54 kB). Kenney Particle Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly particleFlame: ResourceAsset<Texture>;
-  /** `demo/textures/particle-smoke.png` (40 kB). Kenney Particle Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/particle-smoke.png` (40 kB). Kenney Particle Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly particleSmoke: ResourceAsset<Texture>;
-  /** `demo/textures/particle-star.png` (31 kB). Kenney Particle Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/particle-star.png` (31 kB). Kenney Particle Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly particleStar: ResourceAsset<Texture>;
-  /** `demo/textures/particle-spark.png` (80 kB). Kenney Particle Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/particle-spark.png` (80 kB). Kenney Particle Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly particleSpark: ResourceAsset<Texture>;
-  /** `demo/textures/particle-light.png` (93 kB). Kenney Particle Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/particle-light.png` (93 kB). Kenney Particle Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly particleLight: ResourceAsset<Texture>;
-  /** `demo/textures/pixel-white.png` (1 kB). Kenney Development Essentials, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/pixel-white.png` (1 kB). Kenney Development Essentials, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly pixelWhite: ResourceAsset<Texture>;
-  /** `demo/textures/pixel-black.png` (1 kB). Kenney Development Essentials, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/pixel-black.png` (1 kB). Kenney Development Essentials, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly pixelBlack: ResourceAsset<Texture>;
-  /** `demo/textures/pixel-transparent.png` (1 kB). Kenney Development Essentials, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/pixel-transparent.png` (1 kB). Kenney Development Essentials, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly pixelTransparent: ResourceAsset<Texture>;
-  /** `demo/textures/checkerboard-transparent.png` (1 kB). Kenney Development Essentials, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/checkerboard-transparent.png` (1 kB). Kenney Development Essentials, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly checkerboardTransparent: ResourceAsset<Texture>;
-  /** `demo/textures/kenney-uv.png` (9 kB). Kenney Development Essentials, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/kenney-uv.png` (9 kB). Kenney Development Essentials, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly kenneyUv: ResourceAsset<Texture>;
-  /** `demo/textures/prototype-dark-01.png` (3 kB). Kenney Prototype Textures, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/prototype-dark-01.png` (3 kB). Kenney Prototype Textures, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly prototypeDark01: ResourceAsset<Texture>;
-  /** `demo/textures/prototype-light-01.png` (1 kB). Kenney Prototype Textures, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/prototype-light-01.png` (1 kB). Kenney Prototype Textures, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly prototypeLight01: ResourceAsset<Texture>;
-  /** `demo/textures/prototype-grid.png` (3 kB). Kenney Prototype Textures, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/prototype-grid.png` (3 kB). Kenney Prototype Textures, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly prototypeGrid: ResourceAsset<Texture>;
-  /** `technical/alpha/alpha-edge-straight.png` (1 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/alpha-edge-straight.png` (1 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
   readonly alphaEdgeStraight: ResourceAsset<Texture>;
-  /** `technical/alpha/alpha-gradient-rings.png` (64 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/alpha-gradient-rings.png` (64 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
   readonly alphaGradientRings: ResourceAsset<Texture>;
-  /** `technical/filtering/checker-256.png` (25 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/checker-256.png` (25 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
   readonly checker256: ResourceAsset<Texture>;
-  /** `technical/filtering/pixel-grid-128.png` (1 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/pixel-grid-128.png` (1 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
   readonly pixelGrid128: ResourceAsset<Texture>;
-  /** `technical/filtering/uv-grid-256.png` (32 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/uv-grid-256.png` (32 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
   readonly uvGrid256: ResourceAsset<Texture>;
-  /** `technical/color/srgb-ramp.png` (1 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/srgb-ramp.png` (1 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
   readonly srgbRamp: ResourceAsset<Texture>;
-  /** `technical/color/hue-ramp.png` (1 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/hue-ramp.png` (1 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
   readonly hueRamp: ResourceAsset<Texture>;
-  /** `technical/color/primary-ramp.png` (1 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/primary-ramp.png` (1 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
   readonly primaryRamp: ResourceAsset<Texture>;
-  /** `demo/backgrounds/platformer-clouds.png` (2 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/background-platformer-clouds.png` (2 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly backgroundPlatformerClouds: ResourceAsset<Texture>;
-  /** `demo/backgrounds/platformer-hills.png` (2 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/background-platformer-hills.png` (2 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly backgroundPlatformerHills: ResourceAsset<Texture>;
-  /** `demo/backgrounds/castles.png` (15 kB). Kenney Background Elements Remastered, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/background-castles.png` (15 kB). Kenney Background Elements Remastered, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly backgroundCastles: ResourceAsset<Texture>;
-  /** `demo/backgrounds/forest.png` (20 kB). Kenney Background Elements Remastered, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/background-forest.png` (20 kB). Kenney Background Elements Remastered, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly backgroundForest: ResourceAsset<Texture>;
-  /** `demo/spritesheets/kenney/platformer-backgrounds.png` (20 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/platformer-backgrounds-image.png` (20 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly platformerBackgroundsImage: ResourceAsset<Texture>;
-  /** `demo/spritesheets/kenney/platformer-backgrounds.json` (3 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/platformer-backgrounds-atlas.json` (3 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with await `loader.load()`. */
   readonly platformerBackgroundsAtlas: ValueAsset<SpritesheetData>;
-  /** `demo/spritesheets/kenney/platformer-characters.png` (70 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/platformer-characters-image.png` (70 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly platformerCharactersImage: ResourceAsset<Texture>;
-  /** `demo/spritesheets/kenney/platformer-characters.json` (9 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/platformer-characters-atlas.json` (9 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with await `loader.load()`. */
   readonly platformerCharactersAtlas: ValueAsset<SpritesheetData>;
-  /** `demo/spritesheets/kenney/platformer-enemies.png` (36 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/platformer-enemies-image.png` (36 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly platformerEnemiesImage: ResourceAsset<Texture>;
-  /** `demo/spritesheets/kenney/platformer-enemies.json` (12 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/platformer-enemies-atlas.json` (12 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with await `loader.load()`. */
   readonly platformerEnemiesAtlas: ValueAsset<SpritesheetData>;
-  /** `demo/spritesheets/kenney/platformer-tiles.png` (112 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/platformer-tiles-image.png` (112 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly platformerTilesImage: ResourceAsset<Texture>;
-  /** `demo/spritesheets/kenney/platformer-tiles.json` (63 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/platformer-tiles-atlas.json` (63 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with await `loader.load()`. */
   readonly platformerTilesAtlas: ValueAsset<SpritesheetData>;
-  /** `demo/spritesheets/kenney/background-elements.png` (87 kB). Kenney Background Elements Remastered, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/background-elements-image.png` (87 kB). Kenney Background Elements Remastered, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly backgroundElementsImage: ResourceAsset<Texture>;
-  /** `demo/spritesheets/kenney/background-elements.json` (14 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/background-elements-atlas.json` (14 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with await `loader.load()`. */
   readonly backgroundElementsAtlas: ValueAsset<SpritesheetData>;
-  /** `demo/spritesheets/kenney/map-pack.png` (189 kB). Kenney Map Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/map-pack-image.png` (189 kB). Kenney Map Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly mapPackImage: ResourceAsset<Texture>;
-  /** `demo/spritesheets/kenney/map-pack.json` (37 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/map-pack-atlas.json` (36 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with await `loader.load()`. */
   readonly mapPackAtlas: ValueAsset<SpritesheetData>;
-  /** `demo/vendor/kenney/map-pack/Tilesheet/mapPack_tilesheet.png` (205 kB). Kenney Map Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/map-pack-tilesheet.png` (205 kB). Kenney Map Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly mapPackTilesheet: ResourceAsset<Texture>;
-  /** `demo/input-prompts/generic.png` (7 kB). Kenney Input Prompts, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/generic-input-prompts-image.png` (7 kB). Kenney Input Prompts, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly genericInputPromptsImage: ResourceAsset<Texture>;
-  /** `demo/input-prompts/generic.json` (7 kB). Kenney Input Prompts, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/generic-input-prompts-atlas.json` (7 kB). Kenney Input Prompts, CC0-1.0. Load with await `loader.load()`. */
   readonly genericInputPromptsAtlas: ValueAsset<SpritesheetData>;
-  /** `demo/input-prompts/keyboard-mouse.png` (31 kB). Kenney Input Prompts, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/keyboard-mouse-input-prompts-image.png` (31 kB). Kenney Input Prompts, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly keyboardMouseInputPromptsImage: ResourceAsset<Texture>;
-  /** `demo/input-prompts/keyboard-mouse.json` (51 kB). Kenney Input Prompts, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/keyboard-mouse-input-prompts-atlas.json` (51 kB). Kenney Input Prompts, CC0-1.0. Load with await `loader.load()`. */
   readonly keyboardMouseInputPromptsAtlas: ValueAsset<SpritesheetData>;
-  /** `demo/input-prompts/nintendo-switch.png` (24 kB). Kenney Input Prompts, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/nintendo-switch-input-prompts-image.png` (24 kB). Kenney Input Prompts, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly nintendoSwitchInputPromptsImage: ResourceAsset<Texture>;
-  /** `demo/input-prompts/nintendo-switch.json` (23 kB). Kenney Input Prompts, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/nintendo-switch-input-prompts-atlas.json` (23 kB). Kenney Input Prompts, CC0-1.0. Load with await `loader.load()`. */
   readonly nintendoSwitchInputPromptsAtlas: ValueAsset<SpritesheetData>;
-  /** `demo/input-prompts/playstation-series.png` (30 kB). Kenney Input Prompts, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/playstation-series-input-prompts-image.png` (30 kB). Kenney Input Prompts, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly playstationSeriesInputPromptsImage: ResourceAsset<Texture>;
-  /** `demo/input-prompts/playstation-series.json` (28 kB). Kenney Input Prompts, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/playstation-series-input-prompts-atlas.json` (28 kB). Kenney Input Prompts, CC0-1.0. Load with await `loader.load()`. */
   readonly playstationSeriesInputPromptsAtlas: ValueAsset<SpritesheetData>;
-  /** `demo/input-prompts/xbox-series.png` (22 kB). Kenney Input Prompts, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/xbox-series-input-prompts-image.png` (22 kB). Kenney Input Prompts, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly xboxSeriesInputPromptsImage: ResourceAsset<Texture>;
-  /** `demo/input-prompts/xbox-series.json` (20 kB). Kenney Input Prompts, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/xbox-series-input-prompts-atlas.json` (20 kB). Kenney Input Prompts, CC0-1.0. Load with await `loader.load()`. */
   readonly xboxSeriesInputPromptsAtlas: ValueAsset<SpritesheetData>;
-  /** `demo/svg/play.svg` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
+  /** `images/icon-play.svg` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
   readonly iconPlay: LeaflessAsset<HTMLImageElement>;
-  /** `demo/svg/pause.svg` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
+  /** `images/icon-pause.svg` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
   readonly iconPause: LeaflessAsset<HTMLImageElement>;
-  /** `demo/svg/reset.svg` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
+  /** `images/icon-reset.svg` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
   readonly iconReset: LeaflessAsset<HTMLImageElement>;
-  /** `demo/svg/arrow-right.svg` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
+  /** `images/icon-arrow-right.svg` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
   readonly iconArrowRight: LeaflessAsset<HTMLImageElement>;
-  /** `demo/svg/sparkle.svg` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
+  /** `images/icon-sparkle.svg` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
   readonly iconSparkle: LeaflessAsset<HTMLImageElement>;
-  /** `demo/svg/audio-wave.svg` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
+  /** `images/icon-audio-wave.svg` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
   readonly iconAudioWave: LeaflessAsset<HTMLImageElement>;
-  /** `demo/svg/image-placeholder.svg` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
+  /** `images/icon-image-placeholder.svg` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
   readonly iconImagePlaceholder: LeaflessAsset<HTMLImageElement>;
-  /** `demo/svg/rune-mark.svg` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
+  /** `images/icon-rune-mark.svg` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
   readonly iconRuneMark: LeaflessAsset<HTMLImageElement>;
-  /** `svg/exo-wordmark.svg` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
+  /** `images/exo-wordmark.svg` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
   readonly exoWordmark: LeaflessAsset<HTMLImageElement>;
-  /** `demo/cursors/arrow.svg` (1 kB). Kenney Cursor Pack, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/cursor-arrow.svg` (1 kB). Kenney Cursor Pack, CC0-1.0. Load with await `loader.load()`. */
   readonly cursorArrow: LeaflessAsset<HTMLImageElement>;
-  /** `demo/cursors/pointer.svg` (1 kB). Kenney Cursor Pack, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/cursor-pointer.svg` (1 kB). Kenney Cursor Pack, CC0-1.0. Load with await `loader.load()`. */
   readonly cursorPointer: LeaflessAsset<HTMLImageElement>;
-  /** `demo/cursors/hand.svg` (1 kB). Kenney Cursor Pack, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/cursor-hand.svg` (1 kB). Kenney Cursor Pack, CC0-1.0. Load with await `loader.load()`. */
   readonly cursorHand: LeaflessAsset<HTMLImageElement>;
-  /** `demo/cursors/busy.svg` (1 kB). Kenney Cursor Pack, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/cursor-busy.svg` (1 kB). Kenney Cursor Pack, CC0-1.0. Load with await `loader.load()`. */
   readonly cursorBusy: LeaflessAsset<HTMLImageElement>;
-  /** `demo/cursors/cross.svg` (1 kB). Kenney Cursor Pack, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/cursor-cross.svg` (1 kB). Kenney Cursor Pack, CC0-1.0. Load with await `loader.load()`. */
   readonly cursorCross: LeaflessAsset<HTMLImageElement>;
-  /** `demo/fonts/Kenney Future.ttf` (34 kB). Kenney Fonts, CC0-1.0. Load with await `loader.load()`. */
+  /** `fonts/font-kenney-future.ttf` (34 kB). Kenney Fonts, CC0-1.0. Load with await `loader.load()`. */
   readonly fontKenneyFuture: LeaflessAsset<FontFace>;
-  /** `demo/fonts/Kenney Pixel.ttf` (28 kB). Kenney Fonts, CC0-1.0. Load with await `loader.load()`. */
+  /** `fonts/font-kenney-pixel.ttf` (28 kB). Kenney Fonts, CC0-1.0. Load with await `loader.load()`. */
   readonly fontKenneyPixel: LeaflessAsset<FontFace>;
-  /** `demo/fonts/Kenney Mini.ttf` (26 kB). Kenney Fonts, CC0-1.0. Load with await `loader.load()`. */
+  /** `fonts/font-kenney-mini.ttf` (26 kB). Kenney Fonts, CC0-1.0. Load with await `loader.load()`. */
   readonly fontKenneyMini: LeaflessAsset<FontFace>;
-  /** `demo/fonts/Kenney Mini Square Mono.ttf` (25 kB). Kenney Fonts, CC0-1.0. Load with await `loader.load()`. */
+  /** `fonts/font-kenney-mini-square-mono.ttf` (25 kB). Kenney Fonts, CC0-1.0. Load with await `loader.load()`. */
   readonly fontKenneyMiniSquareMono: LeaflessAsset<FontFace>;
-  /** `demo/fonts/kenney-blocks-32.fnt` (11 kB). Kenney Blocks bitmap font (32 px), CC0-1.0. Load with await `loader.load()`. Also fetches `demo/fonts/kenney-blocks-32.png`. */
+  /** `fonts/font-kenney-blocks-fnt.fnt` (11 kB). Kenney Blocks bitmap font (32 px), CC0-1.0. Load with await `loader.load()`. Also fetches `images/font-kenney-blocks-png.png`. */
   readonly fontKenneyBlocksFnt: LeaflessAsset<BmFont>;
-  /** `demo/fonts/kenney-blocks-32.png` (3 kB). Kenney Blocks bitmap font (32 px), CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `images/font-kenney-blocks-png.png` (3 kB). Kenney Blocks bitmap font (32 px), CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly fontKenneyBlocksPng: ResourceAsset<Texture>;
-  /** `demo/sound/ui-click.ogg` (5 kB). Kenney Interface Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/sound-ui-click.ogg` (5 kB). Kenney Interface Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly soundUiClick: ResourceAsset<Sound>;
-  /** `demo/sound/ui-confirm.ogg` (9 kB). Kenney Interface Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/sound-ui-confirm.ogg` (9 kB). Kenney Interface Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly soundUiConfirm: ResourceAsset<Sound>;
-  /** `demo/sound/ui-bong.ogg` (5 kB). Kenney Interface Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/sound-ui-bong.ogg` (5 kB). Kenney Interface Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly soundUiBong: ResourceAsset<Sound>;
-  /** `demo/sound/back.ogg` (7 kB). Kenney Interface Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/sound-back.ogg` (7 kB). Kenney Interface Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly soundBack: ResourceAsset<Sound>;
-  /** `demo/sound/click-alt.ogg` (11 kB). Kenney UI Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/sound-click-alt.ogg` (11 kB). Kenney UI Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly soundClickAlt: ResourceAsset<Sound>;
-  /** `demo/sound/switch.ogg` (9 kB). Kenney UI Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/sound-switch.ogg` (9 kB). Kenney UI Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly soundSwitch: ResourceAsset<Sound>;
-  /** `demo/sound/impact-light.ogg` (6 kB). Kenney Impact Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/sound-impact-light.ogg` (6 kB). Kenney Impact Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly soundImpactLight: ResourceAsset<Sound>;
-  /** `demo/sound/impact-heavy.ogg` (6 kB). Kenney Impact Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/sound-impact-heavy.ogg` (6 kB). Kenney Impact Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly soundImpactHeavy: ResourceAsset<Sound>;
-  /** `demo/sound/impact-wood.ogg` (7 kB). Kenney Impact Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/sound-impact-wood.ogg` (7 kB). Kenney Impact Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly soundImpactWood: ResourceAsset<Sound>;
-  /** `audio/impactBell_heavy_000.ogg` (14 kB). Kenney Impact Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/sound-impact-bell-heavy.ogg` (14 kB). Kenney Impact Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly soundImpactBellHeavy: ResourceAsset<Sound>;
-  /** `audio/impactGlass_heavy_000.ogg` (7 kB). Kenney Impact Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/sound-impact-glass-heavy.ogg` (7 kB). Kenney Impact Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly soundImpactGlassHeavy: ResourceAsset<Sound>;
-  /** `audio/impactWood_heavy_000.ogg` (6 kB). Kenney Impact Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/sound-impact-wood-heavy.ogg` (6 kB). Kenney Impact Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly soundImpactWoodHeavy: ResourceAsset<Sound>;
-  /** `audio/impactMetal_heavy_000.ogg` (6 kB). Kenney Impact Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/sound-impact-metal-heavy.ogg` (6 kB). Kenney Impact Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly soundImpactMetalHeavy: ResourceAsset<Sound>;
-  /** `demo/sound/jump.ogg` (6 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/sound-jump.ogg` (6 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly soundJump: ResourceAsset<Sound>;
-  /** `demo/sound/coin.ogg` (6 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/sound-coin.ogg` (6 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly soundCoin: ResourceAsset<Sound>;
-  /** `demo/sound/hurt.ogg` (6 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/sound-hurt.ogg` (6 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly soundHurt: ResourceAsset<Sound>;
-  /** `demo/sound/power-up.ogg` (9 kB). Kenney Digital Audio, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/sound-power-up.ogg` (9 kB). Kenney Digital Audio, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly soundPowerUp: ResourceAsset<Sound>;
-  /** `demo/sound/laser.ogg` (9 kB). Kenney Digital Audio, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/sound-laser.ogg` (9 kB). Kenney Digital Audio, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly soundLaser: ResourceAsset<Sound>;
-  /** `demo/sound-sprites/ui/ui.ogg` (17 kB). Sound sprites assembled from Kenney Interface Sounds, UI Pack, Impact Sounds and Digital Audio, CC0-1.0. Load with `loader.get()` or `await loader.load()`. Also fetches `demo/sound-sprites/ui/ui.json`. */
+  /** `audio/ui-sound-sprite.ogg` (28 kB). Sound sprites assembled from Kenney Interface Sounds, UI Pack, Impact Sounds and Digital Audio, CC0-1.0. Load with `loader.get()` or `await loader.load()`. Also fetches `audio/ui-sound-sprite.json`. */
   readonly uiSoundSprite: ResourceAsset<Sound>;
-  /** `demo/sound-sprites/impacts/impacts.ogg` (11 kB). Sound sprites assembled from Kenney Interface Sounds, UI Pack, Impact Sounds and Digital Audio, CC0-1.0. Load with `loader.get()` or `await loader.load()`. Also fetches `demo/sound-sprites/impacts/impacts.json`. */
+  /** `audio/impacts-sound-sprite.ogg` (11 kB). Sound sprites assembled from Kenney Interface Sounds, UI Pack, Impact Sounds and Digital Audio, CC0-1.0. Load with `loader.get()` or `await loader.load()`. Also fetches `audio/impacts-sound-sprite.json`. */
   readonly impactsSoundSprite: ResourceAsset<Sound>;
-  /** `demo/sound-sprites/digital/digital.ogg` (23 kB). Sound sprites assembled from Kenney Interface Sounds, UI Pack, Impact Sounds and Digital Audio, CC0-1.0. Load with `loader.get()` or `await loader.load()`. Also fetches `demo/sound-sprites/digital/digital.json`. */
+  /** `audio/digital-sound-sprite.ogg` (23 kB). Sound sprites assembled from Kenney Interface Sounds, UI Pack, Impact Sounds and Digital Audio, CC0-1.0. Load with `loader.get()` or `await loader.load()`. Also fetches `audio/digital-sound-sprite.json`. */
   readonly digitalSoundSprite: ResourceAsset<Sound>;
-  /** `demo/music/demo-loop-main.ogg` (12 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
-  readonly musicLoopMain: LeaflessAsset<AudioStream>;
-  /** `demo/music/demo-loop-a.ogg` (16 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
+  /** `audio/music-drum-loop.ogg` (212 kB). Horde War Drums loop, CC0-1.0. Load with await `loader.load()`. */
+  readonly musicDrumLoop: LeaflessAsset<AudioStream>;
+  /** `audio/sound-space-engine.ogg` (117 kB). Kenney Sci-Fi Sounds, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  readonly soundSpaceEngine: ResourceAsset<Sound>;
+  /** `audio/music-loop-a.ogg` (16 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
   readonly musicLoopA: LeaflessAsset<AudioStream>;
-  /** `demo/music/demo-loop-b.ogg` (13 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
+  /** `audio/music-loop-b.ogg` (13 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
   readonly musicLoopB: LeaflessAsset<AudioStream>;
-  /** `demo/music/jingle-success.ogg` (40 kB). Kenney Music Jingles, CC0-1.0. Load with await `loader.load()`. */
+  /** `audio/music-jingle-success.ogg` (40 kB). Kenney Music Jingles, CC0-1.0. Load with await `loader.load()`. */
   readonly musicJingleSuccess: LeaflessAsset<AudioStream>;
-  /** `demo/music/jingle-failure.ogg` (9 kB). Kenney Music Jingles, CC0-1.0. Load with await `loader.load()`. */
+  /** `audio/music-jingle-failure.ogg` (9 kB). Kenney Music Jingles, CC0-1.0. Load with await `loader.load()`. */
   readonly musicJingleFailure: LeaflessAsset<AudioStream>;
-  /** `demo/music/jingle-retro-a.ogg` (10 kB). Kenney Music Jingles, CC0-1.0. Load with await `loader.load()`. */
+  /** `audio/music-jingle-retro-a.ogg` (10 kB). Kenney Music Jingles, CC0-1.0. Load with await `loader.load()`. */
   readonly musicJingleRetroA: LeaflessAsset<AudioStream>;
-  /** `demo/music/jingle-retro-b.ogg` (16 kB). Kenney Music Jingles, CC0-1.0. Load with await `loader.load()`. */
+  /** `audio/music-jingle-retro-b.ogg` (16 kB). Kenney Music Jingles, CC0-1.0. Load with await `loader.load()`. */
   readonly musicJingleRetroB: LeaflessAsset<AudioStream>;
-  /** `demo/voice/congratulations.ogg` (14 kB). Kenney Voiceover Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/voice-congratulations.ogg` (14 kB). Kenney Voiceover Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly voiceCongratulations: ResourceAsset<Sound>;
-  /** `demo/voice/mission-complete.ogg` (11 kB). Kenney Voiceover Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/voice-mission-complete.ogg` (11 kB). Kenney Voiceover Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly voiceMissionComplete: ResourceAsset<Sound>;
-  /** `demo/voice/objective-achieved.ogg` (13 kB). Kenney Voiceover Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/voice-objective-achieved.ogg` (13 kB). Kenney Voiceover Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly voiceObjectiveAchieved: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_001.wav` (84 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-001.wav` (84 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom001: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_002.wav` (7 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-002.wav` (7 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom002: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_003.wav` (7 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-003.wav` (7 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom003: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_004.wav` (109 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-004.wav` (109 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom004: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_005.wav` (109 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-005.wav` (109 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom005: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_006.wav` (47 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-006.wav` (47 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom006: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_007.wav` (124 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-007.wav` (124 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom007: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_008.wav` (124 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-008.wav` (124 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom008: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_009.wav` (17 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-009.wav` (17 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom009: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_010.wav` (10 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-010.wav` (10 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom010: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_011.wav` (4 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-011.wav` (4 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom011: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_012.wav` (2 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-012.wav` (2 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom012: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_013.wav` (1 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-013.wav` (1 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom013: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_014.wav` (1 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-014.wav` (1 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom014: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_015.wav` (83 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-015.wav` (83 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom015: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_016.wav` (209 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-016.wav` (209 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom016: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_017.wav` (194 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-017.wav` (194 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom017: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_018.wav` (55 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-018.wav` (55 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom018: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_019.wav` (18 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-019.wav` (18 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom019: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_020.wav` (34 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-020.wav` (34 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom020: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_021.wav` (12 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-021.wav` (12 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom021: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_022.wav` (6 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-022.wav` (6 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom022: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_023.wav` (1 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-023.wav` (1 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom023: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_024.wav` (80 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-024.wav` (80 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom024: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_025.wav` (81 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-025.wav` (81 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom025: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_026.wav` (80 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-026.wav` (80 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom026: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_027.wav` (80 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-027.wav` (80 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom027: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_028.wav` (125 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-028.wav` (125 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom028: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_029.wav` (109 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-029.wav` (109 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom029: ResourceAsset<Sound>;
-  /** `audio/ir/AK-SROOMS_030.wav` (94 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
+  /** `audio/impulse-room-030.wav` (94 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom030: ResourceAsset<Sound>;
-  /** `json/maps/isometric-landscape.tmj` (3 kB). ExoJS original work, MIT. Load with await `loader.load()`. Also fetches `demo/vendor/kenney/isometric-tiles-landscape/PNG/landscapeTiles_020.png`, `demo/vendor/kenney/isometric-tiles-landscape/PNG/landscapeTiles_000.png`, `demo/vendor/kenney/isometric-tiles-landscape/PNG/landscapeTiles_001.png`, `demo/vendor/kenney/isometric-tiles-landscape/PNG/landscapeTiles_005.png`, `demo/vendor/kenney/isometric-tiles-landscape/PNG/landscapeTiles_030.png`, `demo/vendor/kenney/isometric-tiles-landscape/PNG/landscapeTiles_040.png`. */
+  /** `maps/isometric-landscape.tmj` (3 kB). ExoJS original work, MIT. Load with await `loader.load()`. Also fetches `images/isometric-landscape-tile-020.png`, `images/isometric-landscape-tile-000.png`, `images/isometric-landscape-tile-001.png`, `images/isometric-landscape-tile-005.png`, `images/isometric-landscape-tile-030.png`, `images/isometric-landscape-tile-040.png`. */
   readonly isometricLandscape: ValueAsset<unknown>;
-  /** `json/maps/drift-fields.tmj` (11 kB). ExoJS original work, MIT. Load with await `loader.load()`. Also fetches `demo/vendor/kenney/map-pack/Tilesheet/mapPack_tilesheet.png`. */
+  /** `maps/drift-fields-map.tmj` (11 kB). ExoJS original work, MIT. Load with await `loader.load()`. Also fetches `images/map-pack-tilesheet.png`. */
   readonly driftFieldsMap: ValueAsset<unknown>;
-  /** `json/maps/harbor-plaza.tmj` (3 kB). ExoJS original work, MIT. Load with await `loader.load()`. Also fetches `demo/vendor/kenney/map-pack/Tilesheet/mapPack_tilesheet.png`. */
+  /** `maps/harbor-plaza-map.tmj` (3 kB). ExoJS original work, MIT. Load with await `loader.load()`. Also fetches `images/map-pack-tilesheet.png`. */
   readonly harborPlazaMap: ValueAsset<unknown>;
-  /** `json/maps/harbor-world.ldtk` (9 kB). ExoJS original work, MIT. Load with await `loader.load()`. Also fetches `demo/vendor/kenney/map-pack/Tilesheet/mapPack_tilesheet.png`. */
+  /** `maps/harbor-world-project.ldtk` (9 kB). ExoJS original work, MIT. Load with await `loader.load()`. Also fetches `images/map-pack-tilesheet.png`. */
   readonly harborWorldProject: ValueAsset<unknown>;
-  /** `json/maps/ownership-workshop.tmj` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. Also fetches `demo/vendor/kenney/map-pack/Tilesheet/mapPack_tilesheet.png`. */
+  /** `maps/ownership-workshop-map.tmj` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. Also fetches `images/map-pack-tilesheet.png`. */
   readonly ownershipWorkshopMap: ValueAsset<unknown>;
-  /** `json/maps/physics-room.tmj` (2 kB). ExoJS original work, MIT. Load with await `loader.load()`. Also fetches `demo/vendor/kenney/map-pack/Tilesheet/mapPack_tilesheet.png`. */
+  /** `maps/physics-room-map.tmj` (2 kB). ExoJS original work, MIT. Load with await `loader.load()`. Also fetches `images/map-pack-tilesheet.png`. */
   readonly physicsRoomMap: ValueAsset<unknown>;
-  /** `demo/video/demo-loop.webm` (9 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
-  readonly videoDemoLoop: LeaflessAsset<Video>;
-  /** `demo/video/clips/high-res.mp4` (4.2 MB). Glass Half, CC-BY-3.0. Load with await `loader.load()`. */
+  /** `video/high-res.mp4` (4.2 MB). Glass Half, CC-BY-3.0. Load with await `loader.load()`. */
   readonly videoHighRes: LeaflessAsset<Video>;
-  /** `demo/video/clips/high-fps.webm` (10.6 MB). Big Buck Bunny, Sunflower version (60 fps), CC-BY-3.0. Load with await `loader.load()`. */
+  /** `video/high-fps.webm` (10.6 MB). Big Buck Bunny, Sunflower version (60 fps), CC-BY-3.0. Load with await `loader.load()`. */
   readonly videoHighFps: LeaflessAsset<Video>;
+  /** `audio/music-calm-piano.mp3` (645 kB). JRPG2 Piano, CC0-1.0. Load with await `loader.load()`. */
+  readonly musicCalmPiano: LeaflessAsset<AudioStream>;
+  /** `audio/music-lofi-rhodes.mp3` (822 kB). Mandatory Overtime, CC0-1.0. Load with await `loader.load()`. */
+  readonly musicLofiRhodes: LeaflessAsset<AudioStream>;
+  /** `audio/music-atmospheric-synth.ogg` (706 kB). Near and Far, CC0-1.0. Load with await `loader.load()`. */
+  readonly musicAtmosphericSynth: LeaflessAsset<AudioStream>;
+  /** `audio/music-arcade-chiptune.mp3` (356 kB). 8Bit Title Screen, CC0-1.0. Load with await `loader.load()`. */
+  readonly musicArcadeChiptune: LeaflessAsset<AudioStream>;
+  /** `audio/music-glitch-machine.ogg` (1.6 MB). Friendly Talk on a Robotic Battlefield, CC0-1.0. Load with await `loader.load()`. */
+  readonly musicGlitchMachine: LeaflessAsset<AudioStream>;
+  /** `audio/music-dark-industrial.mp3` (3.4 MB). The 9th Circle, CC0-1.0. Load with await `loader.load()`. */
+  readonly musicDarkIndustrial: LeaflessAsset<AudioStream>;
+  /** `audio/music-action-synth-rock.mp3` (2.3 MB). MonsterVania - Ghost Land, CC0-1.0. Load with await `loader.load()`. */
+  readonly musicActionSynthRock: LeaflessAsset<AudioStream>;
 }
 
 /** The name of one standard demo asset. */
 export type DemoAssetKey = keyof DemoAssetDefinitions;
 
 /** The browsing category a demo asset is listed under. */
-export type DemoAssetCategory = 'textures' | 'technical' | 'backgrounds' | 'spritesheets' | 'inputPrompts' | 'icons' | 'cursors' | 'fonts' | 'sound' | 'soundSprites' | 'music' | 'voice' | 'impulseResponses' | 'maps' | 'video';
+export type DemoAssetCategory = 'textures' | 'maps' | 'technical' | 'backgrounds' | 'spritesheets' | 'inputPrompts' | 'icons' | 'cursors' | 'fonts' | 'sound' | 'soundSprites' | 'music' | 'voice' | 'impulseResponses' | 'video';
 
 /** The category of every standard demo asset, for browsers and filters. Static data; reading it loads nothing. */
 export const demoAssetCategories: Readonly<Record<DemoAssetKey, DemoAssetCategory>> = Object.freeze({
+  spaceShipBlue: 'textures',
+  spaceEnemyRed: 'textures',
+  spaceBossRed: 'textures',
+  spaceMeteorBrown: 'textures',
+  spaceMeteorGrey: 'textures',
+  spaceLaserBlue: 'textures',
+  physicsWoodBall: 'textures',
+  physicsMetalBall: 'textures',
+  physicsStoneBall: 'textures',
+  lightCookieWindow: 'textures',
+  lightCookieFoliage: 'textures',
+  lightCookieCaustics: 'textures',
+  tinyDungeonTiles: 'textures',
+  tinyDungeonMap: 'maps',
   ship: 'textures',
   particleFlame: 'textures',
   particleSmoke: 'textures',
@@ -390,7 +446,8 @@ export const demoAssetCategories: Readonly<Record<DemoAssetKey, DemoAssetCategor
   uiSoundSprite: 'soundSprites',
   impactsSoundSprite: 'soundSprites',
   digitalSoundSprite: 'soundSprites',
-  musicLoopMain: 'music',
+  musicDrumLoop: 'music',
+  soundSpaceEngine: 'sound',
   musicLoopA: 'music',
   musicLoopB: 'music',
   musicJingleSuccess: 'music',
@@ -436,153 +493,180 @@ export const demoAssetCategories: Readonly<Record<DemoAssetKey, DemoAssetCategor
   harborWorldProject: 'maps',
   ownershipWorkshopMap: 'maps',
   physicsRoomMap: 'maps',
-  videoDemoLoop: 'video',
   videoHighRes: 'video',
   videoHighFps: 'video',
+  musicCalmPiano: 'music',
+  musicLofiRhodes: 'music',
+  musicAtmosphericSynth: 'music',
+  musicArcadeChiptune: 'music',
+  musicGlitchMachine: 'music',
+  musicDarkIndustrial: 'music',
+  musicActionSynthRock: 'music',
 });
 
 /** @internal */
 export const buildDemoAssets = (url: (path: string) => string): DemoAssetDefinitions =>
   Object.freeze({
-    ship: Asset.type('texture', url('demo/textures/ship-a.png')),
-    particleFlame: Asset.type('texture', url('demo/textures/particle-flame.png')),
-    particleSmoke: Asset.type('texture', url('demo/textures/particle-smoke.png')),
-    particleStar: Asset.type('texture', url('demo/textures/particle-star.png')),
-    particleSpark: Asset.type('texture', url('demo/textures/particle-spark.png')),
-    particleLight: Asset.type('texture', url('demo/textures/particle-light.png')),
-    pixelWhite: Asset.type('texture', url('demo/textures/pixel-white.png')),
-    pixelBlack: Asset.type('texture', url('demo/textures/pixel-black.png')),
-    pixelTransparent: Asset.type('texture', url('demo/textures/pixel-transparent.png')),
-    checkerboardTransparent: Asset.type('texture', url('demo/textures/checkerboard-transparent.png')),
-    kenneyUv: Asset.type('texture', url('demo/textures/kenney-uv.png')),
-    prototypeDark01: Asset.type('texture', url('demo/textures/prototype-dark-01.png')),
-    prototypeLight01: Asset.type('texture', url('demo/textures/prototype-light-01.png')),
-    prototypeGrid: Asset.type('texture', url('demo/textures/prototype-grid.png')),
-    alphaEdgeStraight: Asset.type('texture', url('technical/alpha/alpha-edge-straight.png')),
-    alphaGradientRings: Asset.type('texture', url('technical/alpha/alpha-gradient-rings.png')),
-    checker256: Asset.type('texture', url('technical/filtering/checker-256.png')),
-    pixelGrid128: Asset.type('texture', url('technical/filtering/pixel-grid-128.png')),
-    uvGrid256: Asset.type('texture', url('technical/filtering/uv-grid-256.png')),
-    srgbRamp: Asset.type('texture', url('technical/color/srgb-ramp.png')),
-    hueRamp: Asset.type('texture', url('technical/color/hue-ramp.png')),
-    primaryRamp: Asset.type('texture', url('technical/color/primary-ramp.png')),
-    backgroundPlatformerClouds: Asset.type('texture', url('demo/backgrounds/platformer-clouds.png')),
-    backgroundPlatformerHills: Asset.type('texture', url('demo/backgrounds/platformer-hills.png')),
-    backgroundCastles: Asset.type('texture', url('demo/backgrounds/castles.png')),
-    backgroundForest: Asset.type('texture', url('demo/backgrounds/forest.png')),
-    platformerBackgroundsImage: Asset.type('texture', url('demo/spritesheets/kenney/platformer-backgrounds.png')),
-    platformerBackgroundsAtlas: Asset.type<SpritesheetData>('json', url('demo/spritesheets/kenney/platformer-backgrounds.json')),
-    platformerCharactersImage: Asset.type('texture', url('demo/spritesheets/kenney/platformer-characters.png')),
-    platformerCharactersAtlas: Asset.type<SpritesheetData>('json', url('demo/spritesheets/kenney/platformer-characters.json')),
-    platformerEnemiesImage: Asset.type('texture', url('demo/spritesheets/kenney/platformer-enemies.png')),
-    platformerEnemiesAtlas: Asset.type<SpritesheetData>('json', url('demo/spritesheets/kenney/platformer-enemies.json')),
-    platformerTilesImage: Asset.type('texture', url('demo/spritesheets/kenney/platformer-tiles.png')),
-    platformerTilesAtlas: Asset.type<SpritesheetData>('json', url('demo/spritesheets/kenney/platformer-tiles.json')),
-    backgroundElementsImage: Asset.type('texture', url('demo/spritesheets/kenney/background-elements.png')),
-    backgroundElementsAtlas: Asset.type<SpritesheetData>('json', url('demo/spritesheets/kenney/background-elements.json')),
-    mapPackImage: Asset.type('texture', url('demo/spritesheets/kenney/map-pack.png')),
-    mapPackAtlas: Asset.type<SpritesheetData>('json', url('demo/spritesheets/kenney/map-pack.json')),
-    mapPackTilesheet: Asset.type('texture', url('demo/vendor/kenney/map-pack/Tilesheet/mapPack_tilesheet.png')),
-    genericInputPromptsImage: Asset.type('texture', url('demo/input-prompts/generic.png')),
-    genericInputPromptsAtlas: Asset.type<SpritesheetData>('json', url('demo/input-prompts/generic.json')),
-    keyboardMouseInputPromptsImage: Asset.type('texture', url('demo/input-prompts/keyboard-mouse.png')),
-    keyboardMouseInputPromptsAtlas: Asset.type<SpritesheetData>('json', url('demo/input-prompts/keyboard-mouse.json')),
-    nintendoSwitchInputPromptsImage: Asset.type('texture', url('demo/input-prompts/nintendo-switch.png')),
-    nintendoSwitchInputPromptsAtlas: Asset.type<SpritesheetData>('json', url('demo/input-prompts/nintendo-switch.json')),
-    playstationSeriesInputPromptsImage: Asset.type('texture', url('demo/input-prompts/playstation-series.png')),
-    playstationSeriesInputPromptsAtlas: Asset.type<SpritesheetData>('json', url('demo/input-prompts/playstation-series.json')),
-    xboxSeriesInputPromptsImage: Asset.type('texture', url('demo/input-prompts/xbox-series.png')),
-    xboxSeriesInputPromptsAtlas: Asset.type<SpritesheetData>('json', url('demo/input-prompts/xbox-series.json')),
-    iconPlay: Asset.type('svg', url('demo/svg/play.svg')),
-    iconPause: Asset.type('svg', url('demo/svg/pause.svg')),
-    iconReset: Asset.type('svg', url('demo/svg/reset.svg')),
-    iconArrowRight: Asset.type('svg', url('demo/svg/arrow-right.svg')),
-    iconSparkle: Asset.type('svg', url('demo/svg/sparkle.svg')),
-    iconAudioWave: Asset.type('svg', url('demo/svg/audio-wave.svg')),
-    iconImagePlaceholder: Asset.type('svg', url('demo/svg/image-placeholder.svg')),
-    iconRuneMark: Asset.type('svg', url('demo/svg/rune-mark.svg')),
-    exoWordmark: Asset.type('svg', url('svg/exo-wordmark.svg')),
-    cursorArrow: Asset.type('svg', url('demo/cursors/arrow.svg')),
-    cursorPointer: Asset.type('svg', url('demo/cursors/pointer.svg')),
-    cursorHand: Asset.type('svg', url('demo/cursors/hand.svg')),
-    cursorBusy: Asset.type('svg', url('demo/cursors/busy.svg')),
-    cursorCross: Asset.type('svg', url('demo/cursors/cross.svg')),
-    fontKenneyFuture: Asset.type('font', url('demo/fonts/Kenney Future.ttf'), { family: 'Kenney Future' }),
-    fontKenneyPixel: Asset.type('font', url('demo/fonts/Kenney Pixel.ttf'), { family: 'Kenney Pixel' }),
-    fontKenneyMini: Asset.type('font', url('demo/fonts/Kenney Mini.ttf'), { family: 'Kenney Mini' }),
-    fontKenneyMiniSquareMono: Asset.type('font', url('demo/fonts/Kenney Mini Square Mono.ttf'), { family: 'Kenney Mini Square Mono' }),
-    fontKenneyBlocksFnt: Asset.type('bmFont', url('demo/fonts/kenney-blocks-32.fnt')),
-    fontKenneyBlocksPng: Asset.type('texture', url('demo/fonts/kenney-blocks-32.png')),
-    soundUiClick: Asset.type('sound', url('demo/sound/ui-click.ogg')),
-    soundUiConfirm: Asset.type('sound', url('demo/sound/ui-confirm.ogg')),
-    soundUiBong: Asset.type('sound', url('demo/sound/ui-bong.ogg')),
-    soundBack: Asset.type('sound', url('demo/sound/back.ogg')),
-    soundClickAlt: Asset.type('sound', url('demo/sound/click-alt.ogg')),
-    soundSwitch: Asset.type('sound', url('demo/sound/switch.ogg')),
-    soundImpactLight: Asset.type('sound', url('demo/sound/impact-light.ogg')),
-    soundImpactHeavy: Asset.type('sound', url('demo/sound/impact-heavy.ogg')),
-    soundImpactWood: Asset.type('sound', url('demo/sound/impact-wood.ogg')),
-    soundImpactBellHeavy: Asset.type('sound', url('audio/impactBell_heavy_000.ogg')),
-    soundImpactGlassHeavy: Asset.type('sound', url('audio/impactGlass_heavy_000.ogg')),
-    soundImpactWoodHeavy: Asset.type('sound', url('audio/impactWood_heavy_000.ogg')),
-    soundImpactMetalHeavy: Asset.type('sound', url('audio/impactMetal_heavy_000.ogg')),
-    soundJump: Asset.type('sound', url('demo/sound/jump.ogg')),
-    soundCoin: Asset.type('sound', url('demo/sound/coin.ogg')),
-    soundHurt: Asset.type('sound', url('demo/sound/hurt.ogg')),
-    soundPowerUp: Asset.type('sound', url('demo/sound/power-up.ogg')),
-    soundLaser: Asset.type('sound', url('demo/sound/laser.ogg')),
-    uiSoundSprite: Asset.type('sound', url('demo/sound-sprites/ui/ui.ogg'), { sprites: url('demo/sound-sprites/ui/ui.json') }),
-    impactsSoundSprite: Asset.type('sound', url('demo/sound-sprites/impacts/impacts.ogg'), { sprites: url('demo/sound-sprites/impacts/impacts.json') }),
-    digitalSoundSprite: Asset.type('sound', url('demo/sound-sprites/digital/digital.ogg'), { sprites: url('demo/sound-sprites/digital/digital.json') }),
-    musicLoopMain: Asset.type('music', url('demo/music/demo-loop-main.ogg')),
-    musicLoopA: Asset.type('music', url('demo/music/demo-loop-a.ogg')),
-    musicLoopB: Asset.type('music', url('demo/music/demo-loop-b.ogg')),
-    musicJingleSuccess: Asset.type('music', url('demo/music/jingle-success.ogg')),
-    musicJingleFailure: Asset.type('music', url('demo/music/jingle-failure.ogg')),
-    musicJingleRetroA: Asset.type('music', url('demo/music/jingle-retro-a.ogg')),
-    musicJingleRetroB: Asset.type('music', url('demo/music/jingle-retro-b.ogg')),
-    voiceCongratulations: Asset.type('sound', url('demo/voice/congratulations.ogg')),
-    voiceMissionComplete: Asset.type('sound', url('demo/voice/mission-complete.ogg')),
-    voiceObjectiveAchieved: Asset.type('sound', url('demo/voice/objective-achieved.ogg')),
-    impulseRoom001: Asset.type('sound', url('audio/ir/AK-SROOMS_001.wav')),
-    impulseRoom002: Asset.type('sound', url('audio/ir/AK-SROOMS_002.wav')),
-    impulseRoom003: Asset.type('sound', url('audio/ir/AK-SROOMS_003.wav')),
-    impulseRoom004: Asset.type('sound', url('audio/ir/AK-SROOMS_004.wav')),
-    impulseRoom005: Asset.type('sound', url('audio/ir/AK-SROOMS_005.wav')),
-    impulseRoom006: Asset.type('sound', url('audio/ir/AK-SROOMS_006.wav')),
-    impulseRoom007: Asset.type('sound', url('audio/ir/AK-SROOMS_007.wav')),
-    impulseRoom008: Asset.type('sound', url('audio/ir/AK-SROOMS_008.wav')),
-    impulseRoom009: Asset.type('sound', url('audio/ir/AK-SROOMS_009.wav')),
-    impulseRoom010: Asset.type('sound', url('audio/ir/AK-SROOMS_010.wav')),
-    impulseRoom011: Asset.type('sound', url('audio/ir/AK-SROOMS_011.wav')),
-    impulseRoom012: Asset.type('sound', url('audio/ir/AK-SROOMS_012.wav')),
-    impulseRoom013: Asset.type('sound', url('audio/ir/AK-SROOMS_013.wav')),
-    impulseRoom014: Asset.type('sound', url('audio/ir/AK-SROOMS_014.wav')),
-    impulseRoom015: Asset.type('sound', url('audio/ir/AK-SROOMS_015.wav')),
-    impulseRoom016: Asset.type('sound', url('audio/ir/AK-SROOMS_016.wav')),
-    impulseRoom017: Asset.type('sound', url('audio/ir/AK-SROOMS_017.wav')),
-    impulseRoom018: Asset.type('sound', url('audio/ir/AK-SROOMS_018.wav')),
-    impulseRoom019: Asset.type('sound', url('audio/ir/AK-SROOMS_019.wav')),
-    impulseRoom020: Asset.type('sound', url('audio/ir/AK-SROOMS_020.wav')),
-    impulseRoom021: Asset.type('sound', url('audio/ir/AK-SROOMS_021.wav')),
-    impulseRoom022: Asset.type('sound', url('audio/ir/AK-SROOMS_022.wav')),
-    impulseRoom023: Asset.type('sound', url('audio/ir/AK-SROOMS_023.wav')),
-    impulseRoom024: Asset.type('sound', url('audio/ir/AK-SROOMS_024.wav')),
-    impulseRoom025: Asset.type('sound', url('audio/ir/AK-SROOMS_025.wav')),
-    impulseRoom026: Asset.type('sound', url('audio/ir/AK-SROOMS_026.wav')),
-    impulseRoom027: Asset.type('sound', url('audio/ir/AK-SROOMS_027.wav')),
-    impulseRoom028: Asset.type('sound', url('audio/ir/AK-SROOMS_028.wav')),
-    impulseRoom029: Asset.type('sound', url('audio/ir/AK-SROOMS_029.wav')),
-    impulseRoom030: Asset.type('sound', url('audio/ir/AK-SROOMS_030.wav')),
-    isometricLandscape: Asset.type('json', url('json/maps/isometric-landscape.tmj')),
-    driftFieldsMap: Asset.type('json', url('json/maps/drift-fields.tmj')),
-    harborPlazaMap: Asset.type('json', url('json/maps/harbor-plaza.tmj')),
-    harborWorldProject: Asset.type('json', url('json/maps/harbor-world.ldtk')),
-    ownershipWorkshopMap: Asset.type('json', url('json/maps/ownership-workshop.tmj')),
-    physicsRoomMap: Asset.type('json', url('json/maps/physics-room.tmj')),
-    videoDemoLoop: Asset.type('video', url('demo/video/demo-loop.webm')),
-    videoHighRes: Asset.type('video', url('demo/video/clips/high-res.mp4')),
-    videoHighFps: Asset.type('video', url('demo/video/clips/high-fps.webm')),
+    spaceShipBlue: Asset.type('texture', url('images/space-ship-blue.png')),
+    spaceEnemyRed: Asset.type('texture', url('images/space-enemy-red.png')),
+    spaceBossRed: Asset.type('texture', url('images/space-boss-red.png')),
+    spaceMeteorBrown: Asset.type('texture', url('images/space-meteor-brown.png')),
+    spaceMeteorGrey: Asset.type('texture', url('images/space-meteor-grey.png')),
+    spaceLaserBlue: Asset.type('texture', url('images/space-laser-blue.png')),
+    physicsWoodBall: Asset.type('texture', url('images/physics-wood-ball.png')),
+    physicsMetalBall: Asset.type('texture', url('images/physics-metal-ball.png')),
+    physicsStoneBall: Asset.type('texture', url('images/physics-stone-ball.png')),
+    lightCookieWindow: Asset.type('texture', url('images/light-cookie-window.png')),
+    lightCookieFoliage: Asset.type('texture', url('images/light-cookie-foliage.png')),
+    lightCookieCaustics: Asset.type('texture', url('images/light-cookie-caustics.png')),
+    tinyDungeonTiles: Asset.type('texture', url('images/tiny-dungeon-tiles.png')),
+    tinyDungeonMap: Asset.type('json', url('maps/tiny-dungeon-map.tmj')),
+    ship: Asset.type('texture', url('images/ship.png')),
+    particleFlame: Asset.type('texture', url('images/particle-flame.png')),
+    particleSmoke: Asset.type('texture', url('images/particle-smoke.png')),
+    particleStar: Asset.type('texture', url('images/particle-star.png')),
+    particleSpark: Asset.type('texture', url('images/particle-spark.png')),
+    particleLight: Asset.type('texture', url('images/particle-light.png')),
+    pixelWhite: Asset.type('texture', url('images/pixel-white.png')),
+    pixelBlack: Asset.type('texture', url('images/pixel-black.png')),
+    pixelTransparent: Asset.type('texture', url('images/pixel-transparent.png')),
+    checkerboardTransparent: Asset.type('texture', url('images/checkerboard-transparent.png')),
+    kenneyUv: Asset.type('texture', url('images/kenney-uv.png')),
+    prototypeDark01: Asset.type('texture', url('images/prototype-dark-01.png')),
+    prototypeLight01: Asset.type('texture', url('images/prototype-light-01.png')),
+    prototypeGrid: Asset.type('texture', url('images/prototype-grid.png')),
+    alphaEdgeStraight: Asset.type('texture', url('images/alpha-edge-straight.png')),
+    alphaGradientRings: Asset.type('texture', url('images/alpha-gradient-rings.png')),
+    checker256: Asset.type('texture', url('images/checker-256.png')),
+    pixelGrid128: Asset.type('texture', url('images/pixel-grid-128.png')),
+    uvGrid256: Asset.type('texture', url('images/uv-grid-256.png')),
+    srgbRamp: Asset.type('texture', url('images/srgb-ramp.png')),
+    hueRamp: Asset.type('texture', url('images/hue-ramp.png')),
+    primaryRamp: Asset.type('texture', url('images/primary-ramp.png')),
+    backgroundPlatformerClouds: Asset.type('texture', url('images/background-platformer-clouds.png')),
+    backgroundPlatformerHills: Asset.type('texture', url('images/background-platformer-hills.png')),
+    backgroundCastles: Asset.type('texture', url('images/background-castles.png')),
+    backgroundForest: Asset.type('texture', url('images/background-forest.png')),
+    platformerBackgroundsImage: Asset.type('texture', url('images/platformer-backgrounds-image.png')),
+    platformerBackgroundsAtlas: Asset.type<SpritesheetData>('json', url('images/platformer-backgrounds-atlas.json')),
+    platformerCharactersImage: Asset.type('texture', url('images/platformer-characters-image.png')),
+    platformerCharactersAtlas: Asset.type<SpritesheetData>('json', url('images/platformer-characters-atlas.json')),
+    platformerEnemiesImage: Asset.type('texture', url('images/platformer-enemies-image.png')),
+    platformerEnemiesAtlas: Asset.type<SpritesheetData>('json', url('images/platformer-enemies-atlas.json')),
+    platformerTilesImage: Asset.type('texture', url('images/platformer-tiles-image.png')),
+    platformerTilesAtlas: Asset.type<SpritesheetData>('json', url('images/platformer-tiles-atlas.json')),
+    backgroundElementsImage: Asset.type('texture', url('images/background-elements-image.png')),
+    backgroundElementsAtlas: Asset.type<SpritesheetData>('json', url('images/background-elements-atlas.json')),
+    mapPackImage: Asset.type('texture', url('images/map-pack-image.png')),
+    mapPackAtlas: Asset.type<SpritesheetData>('json', url('images/map-pack-atlas.json')),
+    mapPackTilesheet: Asset.type('texture', url('images/map-pack-tilesheet.png')),
+    genericInputPromptsImage: Asset.type('texture', url('images/generic-input-prompts-image.png')),
+    genericInputPromptsAtlas: Asset.type<SpritesheetData>('json', url('images/generic-input-prompts-atlas.json')),
+    keyboardMouseInputPromptsImage: Asset.type('texture', url('images/keyboard-mouse-input-prompts-image.png')),
+    keyboardMouseInputPromptsAtlas: Asset.type<SpritesheetData>('json', url('images/keyboard-mouse-input-prompts-atlas.json')),
+    nintendoSwitchInputPromptsImage: Asset.type('texture', url('images/nintendo-switch-input-prompts-image.png')),
+    nintendoSwitchInputPromptsAtlas: Asset.type<SpritesheetData>('json', url('images/nintendo-switch-input-prompts-atlas.json')),
+    playstationSeriesInputPromptsImage: Asset.type('texture', url('images/playstation-series-input-prompts-image.png')),
+    playstationSeriesInputPromptsAtlas: Asset.type<SpritesheetData>('json', url('images/playstation-series-input-prompts-atlas.json')),
+    xboxSeriesInputPromptsImage: Asset.type('texture', url('images/xbox-series-input-prompts-image.png')),
+    xboxSeriesInputPromptsAtlas: Asset.type<SpritesheetData>('json', url('images/xbox-series-input-prompts-atlas.json')),
+    iconPlay: Asset.type('svg', url('images/icon-play.svg')),
+    iconPause: Asset.type('svg', url('images/icon-pause.svg')),
+    iconReset: Asset.type('svg', url('images/icon-reset.svg')),
+    iconArrowRight: Asset.type('svg', url('images/icon-arrow-right.svg')),
+    iconSparkle: Asset.type('svg', url('images/icon-sparkle.svg')),
+    iconAudioWave: Asset.type('svg', url('images/icon-audio-wave.svg')),
+    iconImagePlaceholder: Asset.type('svg', url('images/icon-image-placeholder.svg')),
+    iconRuneMark: Asset.type('svg', url('images/icon-rune-mark.svg')),
+    exoWordmark: Asset.type('svg', url('images/exo-wordmark.svg')),
+    cursorArrow: Asset.type('svg', url('images/cursor-arrow.svg')),
+    cursorPointer: Asset.type('svg', url('images/cursor-pointer.svg')),
+    cursorHand: Asset.type('svg', url('images/cursor-hand.svg')),
+    cursorBusy: Asset.type('svg', url('images/cursor-busy.svg')),
+    cursorCross: Asset.type('svg', url('images/cursor-cross.svg')),
+    fontKenneyFuture: Asset.type('font', url('fonts/font-kenney-future.ttf'), { family: 'Kenney Future' }),
+    fontKenneyPixel: Asset.type('font', url('fonts/font-kenney-pixel.ttf'), { family: 'Kenney Pixel' }),
+    fontKenneyMini: Asset.type('font', url('fonts/font-kenney-mini.ttf'), { family: 'Kenney Mini' }),
+    fontKenneyMiniSquareMono: Asset.type('font', url('fonts/font-kenney-mini-square-mono.ttf'), { family: 'Kenney Mini Square Mono' }),
+    fontKenneyBlocksFnt: Asset.type('bmFont', url('fonts/font-kenney-blocks-fnt.fnt')),
+    fontKenneyBlocksPng: Asset.type('texture', url('images/font-kenney-blocks-png.png')),
+    soundUiClick: Asset.type('sound', url('audio/sound-ui-click.ogg')),
+    soundUiConfirm: Asset.type('sound', url('audio/sound-ui-confirm.ogg')),
+    soundUiBong: Asset.type('sound', url('audio/sound-ui-bong.ogg')),
+    soundBack: Asset.type('sound', url('audio/sound-back.ogg')),
+    soundClickAlt: Asset.type('sound', url('audio/sound-click-alt.ogg')),
+    soundSwitch: Asset.type('sound', url('audio/sound-switch.ogg')),
+    soundImpactLight: Asset.type('sound', url('audio/sound-impact-light.ogg')),
+    soundImpactHeavy: Asset.type('sound', url('audio/sound-impact-heavy.ogg')),
+    soundImpactWood: Asset.type('sound', url('audio/sound-impact-wood.ogg')),
+    soundImpactBellHeavy: Asset.type('sound', url('audio/sound-impact-bell-heavy.ogg')),
+    soundImpactGlassHeavy: Asset.type('sound', url('audio/sound-impact-glass-heavy.ogg')),
+    soundImpactWoodHeavy: Asset.type('sound', url('audio/sound-impact-wood-heavy.ogg')),
+    soundImpactMetalHeavy: Asset.type('sound', url('audio/sound-impact-metal-heavy.ogg')),
+    soundJump: Asset.type('sound', url('audio/sound-jump.ogg')),
+    soundCoin: Asset.type('sound', url('audio/sound-coin.ogg')),
+    soundHurt: Asset.type('sound', url('audio/sound-hurt.ogg')),
+    soundPowerUp: Asset.type('sound', url('audio/sound-power-up.ogg')),
+    soundLaser: Asset.type('sound', url('audio/sound-laser.ogg')),
+    uiSoundSprite: Asset.type('sound', url('audio/ui-sound-sprite.ogg'), { sprites: url('audio/ui-sound-sprite.json') }),
+    impactsSoundSprite: Asset.type('sound', url('audio/impacts-sound-sprite.ogg'), { sprites: url('audio/impacts-sound-sprite.json') }),
+    digitalSoundSprite: Asset.type('sound', url('audio/digital-sound-sprite.ogg'), { sprites: url('audio/digital-sound-sprite.json') }),
+    musicDrumLoop: Asset.type('music', url('audio/music-drum-loop.ogg')),
+    soundSpaceEngine: Asset.type('sound', url('audio/sound-space-engine.ogg')),
+    musicLoopA: Asset.type('music', url('audio/music-loop-a.ogg')),
+    musicLoopB: Asset.type('music', url('audio/music-loop-b.ogg')),
+    musicJingleSuccess: Asset.type('music', url('audio/music-jingle-success.ogg')),
+    musicJingleFailure: Asset.type('music', url('audio/music-jingle-failure.ogg')),
+    musicJingleRetroA: Asset.type('music', url('audio/music-jingle-retro-a.ogg')),
+    musicJingleRetroB: Asset.type('music', url('audio/music-jingle-retro-b.ogg')),
+    voiceCongratulations: Asset.type('sound', url('audio/voice-congratulations.ogg')),
+    voiceMissionComplete: Asset.type('sound', url('audio/voice-mission-complete.ogg')),
+    voiceObjectiveAchieved: Asset.type('sound', url('audio/voice-objective-achieved.ogg')),
+    impulseRoom001: Asset.type('sound', url('audio/impulse-room-001.wav')),
+    impulseRoom002: Asset.type('sound', url('audio/impulse-room-002.wav')),
+    impulseRoom003: Asset.type('sound', url('audio/impulse-room-003.wav')),
+    impulseRoom004: Asset.type('sound', url('audio/impulse-room-004.wav')),
+    impulseRoom005: Asset.type('sound', url('audio/impulse-room-005.wav')),
+    impulseRoom006: Asset.type('sound', url('audio/impulse-room-006.wav')),
+    impulseRoom007: Asset.type('sound', url('audio/impulse-room-007.wav')),
+    impulseRoom008: Asset.type('sound', url('audio/impulse-room-008.wav')),
+    impulseRoom009: Asset.type('sound', url('audio/impulse-room-009.wav')),
+    impulseRoom010: Asset.type('sound', url('audio/impulse-room-010.wav')),
+    impulseRoom011: Asset.type('sound', url('audio/impulse-room-011.wav')),
+    impulseRoom012: Asset.type('sound', url('audio/impulse-room-012.wav')),
+    impulseRoom013: Asset.type('sound', url('audio/impulse-room-013.wav')),
+    impulseRoom014: Asset.type('sound', url('audio/impulse-room-014.wav')),
+    impulseRoom015: Asset.type('sound', url('audio/impulse-room-015.wav')),
+    impulseRoom016: Asset.type('sound', url('audio/impulse-room-016.wav')),
+    impulseRoom017: Asset.type('sound', url('audio/impulse-room-017.wav')),
+    impulseRoom018: Asset.type('sound', url('audio/impulse-room-018.wav')),
+    impulseRoom019: Asset.type('sound', url('audio/impulse-room-019.wav')),
+    impulseRoom020: Asset.type('sound', url('audio/impulse-room-020.wav')),
+    impulseRoom021: Asset.type('sound', url('audio/impulse-room-021.wav')),
+    impulseRoom022: Asset.type('sound', url('audio/impulse-room-022.wav')),
+    impulseRoom023: Asset.type('sound', url('audio/impulse-room-023.wav')),
+    impulseRoom024: Asset.type('sound', url('audio/impulse-room-024.wav')),
+    impulseRoom025: Asset.type('sound', url('audio/impulse-room-025.wav')),
+    impulseRoom026: Asset.type('sound', url('audio/impulse-room-026.wav')),
+    impulseRoom027: Asset.type('sound', url('audio/impulse-room-027.wav')),
+    impulseRoom028: Asset.type('sound', url('audio/impulse-room-028.wav')),
+    impulseRoom029: Asset.type('sound', url('audio/impulse-room-029.wav')),
+    impulseRoom030: Asset.type('sound', url('audio/impulse-room-030.wav')),
+    isometricLandscape: Asset.type('json', url('maps/isometric-landscape.tmj')),
+    driftFieldsMap: Asset.type('json', url('maps/drift-fields-map.tmj')),
+    harborPlazaMap: Asset.type('json', url('maps/harbor-plaza-map.tmj')),
+    harborWorldProject: Asset.type('json', url('maps/harbor-world-project.ldtk')),
+    ownershipWorkshopMap: Asset.type('json', url('maps/ownership-workshop-map.tmj')),
+    physicsRoomMap: Asset.type('json', url('maps/physics-room-map.tmj')),
+    videoHighRes: Asset.type('video', url('video/high-res.mp4')),
+    videoHighFps: Asset.type('video', url('video/high-fps.webm')),
+    musicCalmPiano: Asset.type('music', url('audio/music-calm-piano.mp3')),
+    musicLofiRhodes: Asset.type('music', url('audio/music-lofi-rhodes.mp3')),
+    musicAtmosphericSynth: Asset.type('music', url('audio/music-atmospheric-synth.ogg')),
+    musicArcadeChiptune: Asset.type('music', url('audio/music-arcade-chiptune.mp3')),
+    musicGlitchMachine: Asset.type('music', url('audio/music-glitch-machine.ogg')),
+    musicDarkIndustrial: Asset.type('music', url('audio/music-dark-industrial.mp3')),
+    musicActionSynthRock: Asset.type('music', url('audio/music-action-synth-rock.mp3')),
   });
 
 /**
@@ -592,12 +676,12 @@ export const buildDemoAssets = (url: (path: string) => string): DemoAssetDefinit
  * serve it, and pass its location to `createExtendedDemoAssets()`.
  */
 export interface ExtendedDemoAssetDefinitions {
-  /** `demo/video/clips/hdr10.webm` (15.4 MB). Singularity, CC-BY-4.0. Load with await `loader.load()`. */
+  /** `video/hdr10.webm` (15.4 MB). Singularity, CC-BY-4.0. Load with await `loader.load()`. */
   readonly videoHdr10: LeaflessAsset<Video>;
 }
 
 /** @internal */
 export const buildExtendedDemoAssets = (url: (path: string) => string): ExtendedDemoAssetDefinitions =>
   Object.freeze({
-    videoHdr10: Asset.type('video', url('demo/video/clips/hdr10.webm')),
+    videoHdr10: Asset.type('video', url('video/hdr10.webm')),
   });

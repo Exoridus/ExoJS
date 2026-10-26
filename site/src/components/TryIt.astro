@@ -46,7 +46,10 @@ const exampleLinks = examples.map(ref => {
 
   return {
     label: entry.title,
-    href: `${base}${locale}/playground/?example=${category}/${slug}`,
+    href:
+      ref === 'debug-layer/asset-browser'
+        ? `${base}${locale}/tools/asset-browser/`
+        : `${base}${locale}/playground/?example=${category}/${slug}`,
   };
 });
 

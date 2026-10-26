@@ -1,9 +1,94 @@
-﻿import { getAudioContext, onAudioContextReady } from '#audio/audioContext';
+﻿import { AudioBus } from '#audio/AudioBus';
+import { getAudioContext, onAudioContextReady } from '#audio/audioContext';
 import { LowpassFilter } from '#audio/filters/LowpassFilter';
 
 import { mutable } from '../../support/mutable';
 
 describe('LowpassFilter', () => {
+  describe('effect lifecycle', () => {
+    it('resolves ready and routes bus audio through an immediately initialized filter', async () => {
+      getAudioContext();
+      const filter = new LowpassFilter();
+      const bus = new AudioBus('filter-ready');
+      const input = bus.getInputNode()!;
+      const connect = vi.spyOn(input, 'connect');
+      const resolved = vi.fn();
+      void filter.ready.then(resolved);
+
+      try {
+        bus.addEffect(filter);
+        await Promise.resolve();
+
+        expect(connect).toHaveBeenCalledWith(filter.inputNode);
+        expect(resolved).toHaveBeenCalledOnce();
+      } finally {
+        bus.destroy();
+        filter.destroy();
+        connect.mockRestore();
+      }
+    });
+
+    it('keeps ready pending while locked and wires a bus created before the filter after unlock', async () => {
+      const ctx = getAudioContext();
+      const originalState = ctx.state;
+      mutable(ctx).state = 'suspended';
+      const bus = new AudioBus('filter-locked');
+      const filter = new LowpassFilter();
+      const resolved = vi.fn();
+      void filter.ready.then(resolved);
+      bus.addEffect(filter);
+
+      try {
+        await Promise.resolve();
+        expect(resolved).not.toHaveBeenCalled();
+        filter.frequency = 600;
+        filter.resonance = 3;
+
+        mutable(ctx).state = originalState;
+        onAudioContextReady.dispatch(ctx);
+        const input = bus.getInputNode()!;
+        const connect = vi.spyOn(input, 'connect');
+
+        try {
+          await Promise.resolve();
+          expect(connect).toHaveBeenCalledWith(filter.inputNode);
+          expect(resolved).toHaveBeenCalledOnce();
+        } finally {
+          connect.mockRestore();
+        }
+      } finally {
+        mutable(ctx).state = originalState;
+        bus.destroy();
+        filter.destroy();
+      }
+    });
+
+    it('rejects ready and cancels deferred node creation when destroyed while locked', async () => {
+      const ctx = getAudioContext();
+      const originalState = ctx.state;
+      const createNode = vi.spyOn(ctx, 'createBiquadFilter');
+      mutable(ctx).state = 'suspended';
+      const filter = new LowpassFilter();
+      const rejected = vi.fn();
+      void filter.ready.catch(rejected);
+
+      try {
+        filter.destroy();
+        await Promise.resolve();
+        expect(rejected).toHaveBeenCalledWith(expect.objectContaining({ name: 'AbortError' }));
+
+        mutable(ctx).state = originalState;
+        onAudioContextReady.dispatch(ctx);
+        expect(createNode).not.toHaveBeenCalled();
+        expect(() => filter.inputNode).toThrow();
+      } finally {
+        mutable(ctx).state = originalState;
+        filter.destroy();
+        createNode.mockRestore();
+      }
+    });
+  });
+
   describe('construction', () => {
     it('creates a filter node on construction when AudioContext is running', () => {
       const ctx = getAudioContext();

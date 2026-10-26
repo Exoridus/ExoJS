@@ -33,7 +33,7 @@ class FrequencyBandsScene extends Scene {
   async load() {
     const app = this.app;
     // AudioStream has no seamless adapter - await it explicitly.
-    const track = await this.loader.load(assets.musicLoopMain);
+    const track = await this.loader.load(assets.musicGlitchMachine);
     this.music = track;
     this.analyser = new AudioAnalyser({ fftSize: 2048, smoothingTimeConstant: 0.75 });
     this.analyser.source = app.audio.music;
@@ -69,7 +69,7 @@ class FrequencyBandsScene extends Scene {
       .setPosition(width / 2, height - 48);
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically.
-    app.audio.play(this.music, { loop: true, volume: 0.6 });
+    app.audio.play(this.music, { loop: true, volume: 0.2 });
   }
   update() {
     const spectrum = this.analyser.getSpectrum();

@@ -27,6 +27,7 @@ class BossIntroCinematicScene extends Scene {
   private title!: Text;
   private titleState!: { count: number };
   private boss!: Sprite;
+  private escorts: Sprite[] = [];
   private music!: AudioStream;
   private musicVoice!: Voice & Seekable & Pausable;
   private finished = false;
@@ -43,29 +44,44 @@ class BossIntroCinematicScene extends Scene {
 
     // Start the camera left of the boss so the push-in sweeps across to it.
     this.view = new View(width * 0.42, height / 2, width, height);
-    this.bg = new Graphics();
-    this.bars = new Graphics();
+    this.bg = this.track(new Graphics());
+    this.bg.fillColor = new Color(9, 15, 30);
+    this.bg.drawRectangle(-width * 0.25, 0, width * 1.5, height);
+
+    for (let i = 0; i < 120; i++) {
+      this.bg.fillColor = new Color(170, 195, 230, 0.3 + (i % 4) * 0.15);
+      this.bg.drawCircle(((i * 137) % (width * 1.5)) - width * 0.25, (i * 193) % height, 1 + (i % 2));
+    }
+
+    this.bars = this.track(new Graphics());
     this.barSize = { v: 0 };
-    this.title = new Text('', { fillColor: Color.white, fontSize: 56, fontWeight: 'bold' });
+    this.title = this.track(new Text('', { fillColor: Color.white, fontSize: 56, fontWeight: 'bold' }));
     this.title.setPosition(width * 0.12, height * 0.2);
     this.titleState = { count: 0 };
-    this.boss = new Sprite(this.loader.get(assets.ship))
+    this.boss = this.track(new Sprite(this.loader.get(assets.spaceBossRed)))
       .setAnchor(0.5)
       .setScale(0.4)
-      .setPosition(width * 0.62, height / 2)
-      .setTint(new Color(255, 130, 130));
+      .setPosition(width * 0.62, height / 2);
+    this.escorts = [-1, 1].map(side =>
+      this.track(new Sprite(this.loader.get(assets.spaceEnemyRed)))
+        .setAnchor(0.5)
+        .setScale(0.8)
+        .setPosition(width * 0.78, height / 2 + side * 135),
+    );
     // Music has no placeholder handle, so it is awaited with `load()`.
-    this.music = await this.loader.load(assets.musicLoopMain);
+    this.music = await this.loader.load(assets.musicActionSynthRock);
 
     // Shown while the browser still blocks audio (`app.audio.locked`); the
     // first click or keypress unlocks it and the sting + cinematic start.
-    this.tapPrompt = new Text('Click or press any key to start the cinematic', { fillColor: Color.white, fontSize: 22, align: 'center' })
+    this.tapPrompt = this.track(
+      new Text('Click or press any key to start the cinematic', { fillColor: Color.white, fontSize: 22, align: 'center' }),
+    )
       .setAnchor(0.5, 0.5)
       .setPosition(width / 2, height - 64);
 
     // Core defers playback until the AudioContext unlocks on the first
     // gesture; start the cinematic in lockstep with the sting on unlock.
-    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.2 }) as Voice & Seekable & Pausable;
+    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.15 }) as Voice & Seekable & Pausable;
     app.audio.onUnlock.add(this.playSequence);
 
     this.inputs.onTrigger(Keyboard.R, () => this.replay());
@@ -81,7 +97,7 @@ class BossIntroCinematicScene extends Scene {
 
     // Restart the sting from the top so the reveal beat lines up again.
     this.musicVoice.seek(0);
-    this.musicVoice.volume = 0.2;
+    this.musicVoice.volume = 0.15;
 
     if (this.musicVoice.paused) {
       this.musicVoice.resume();
@@ -135,18 +151,19 @@ class BossIntroCinematicScene extends Scene {
         .start(),
     );
     // Music swells up under the reveal.
-    this.sequenceTweens.push(this.tweens.create(this.musicVoice).to({ volume: 0.6 }, 2).start());
+    this.sequenceTweens.push(this.tweens.create(this.musicVoice).to({ volume: 0.45 }, 2).start());
   };
 
   override draw(context: RenderingContext): void {
     const app = this.app;
     const { width, height } = this;
 
-    this.bg.clear();
-    this.bg.fillColor = new Color(36, 42, 70);
-    // Span well past the view edges so the push-in never reveals a seam.
-    this.bg.drawRectangle(-width * 0.25, 0, width * 1.5, height);
     context.render(this.bg, { view: this.view });
+
+    for (const escort of this.escorts) {
+      context.render(escort, { view: this.view });
+    }
+
     context.render(this.boss, { view: this.view });
     context.render(this.title, { view: context.screenView });
     this.bars.clear();

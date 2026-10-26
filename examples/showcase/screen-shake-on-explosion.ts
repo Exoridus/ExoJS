@@ -5,6 +5,7 @@ import {
   Color,
   FixedResolutionCanvasSizing,
   Keyboard,
+  PixelSnapMode,
   type RenderingContext,
   Scene,
   SceneAvailability,
@@ -32,7 +33,7 @@ class ScreenShakeOnExplosionScene extends Scene {
   private impacts = 0;
   private scale = 1;
   private centerY = 0;
-  private readonly actions = new ActionMap({ impact: new ButtonAction(Keyboard.Space), reset: new ButtonAction(Keyboard.R) });
+  private readonly actions = new ActionMap({ impact: new ButtonAction(Keyboard.Space) });
   private readonly onPointerDown = (_pointer: unknown, x: number, y: number): void => this.impact(x, y);
 
   override async load(): Promise<void> {
@@ -50,9 +51,14 @@ class ScreenShakeOnExplosionScene extends Scene {
     });
 
     this.block = this.track(sheet.getFrameSprite('block_planks').setAnchor(0.5, 1));
-    this.ground = Array.from({ length: 9 }, () =>
-      this.track(new Sprite(texture).setTextureFrame(sheet.getFrame('terrain_grass_block_top')).setAnchor(0.5, 0)),
-    );
+    this.ground = Array.from({ length: 9 }, () => {
+      const tile = this.track(new Sprite(texture).setTextureFrame(sheet.getFrame('terrain_grass_block_top')).setAnchor(0.5, 0));
+
+      // Keep shared tile edges closed at fractional canvas scales and during camera shake.
+      tile.pixelSnapMode = PixelSnapMode.Geometry;
+
+      return tile;
+    });
   }
 
   override init(): void {
@@ -71,12 +77,7 @@ class ScreenShakeOnExplosionScene extends Scene {
     this.hud = mountControls({
       theme: 'site',
       corner: 'bottom-left',
-      title: 'Impact Feedback',
-      controls: [
-        { keys: ['Click', 'Space'], action: 'burst + tint + shake' },
-        { keys: 'R', action: 'reset' },
-      ],
-      status: 'Ready | Click anywhere',
+      controls: [{ keys: ['Click', 'Space'], action: 'burst + tint + shake' }],
     });
     this.inputs.attach(this.actions);
     this.app.input.onPointerDown.add(this.onPointerDown);
@@ -94,16 +95,6 @@ class ScreenShakeOnExplosionScene extends Scene {
     this.hud.setStatus(`Impact ${this.impacts} | Burst + tint + shake`);
   }
 
-  private reset(): void {
-    this.flashTween?.stop();
-    this.flash.set(255, 255, 255, 1);
-    this.ps.clearParticles();
-    this.burst.config.schedule = [];
-    this.view.clearShake();
-    this.impacts = 0;
-    this.hud.setStatus('Ready | Click anywhere');
-  }
-
   override update(): void {
     const { scale: k, contentHeight } = this.hud.fit(this.app, this.app.canvas as HTMLCanvasElement);
 
@@ -117,10 +108,6 @@ class ScreenShakeOnExplosionScene extends Scene {
 
     if (this.actions.impact.pressed) {
       this.impact(this.app.width / 2, this.centerY - 40 * k);
-    }
-
-    if (this.actions.reset.pressed) {
-      this.reset();
     }
   }
 

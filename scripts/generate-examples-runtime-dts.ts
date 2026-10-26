@@ -47,7 +47,7 @@ export const renderRuntimeDts = (repositoryRoot: string): string => {
     }
   });
 
-  const output = declarations.at(-1);
+  let output = declarations.at(-1);
 
   if (output === undefined) {
     const diagnostics = ts.getPreEmitDiagnostics(program).concat(result.diagnostics);
@@ -61,7 +61,38 @@ export const renderRuntimeDts = (repositoryRoot: string): string => {
   }
 
   const declaration = ts.createSourceFile('runtime.d.ts', output, ts.ScriptTarget.ES2022);
-  const lastImport = declaration.statements.filter(ts.isImportDeclaration).at(-1);
+  const imports = declaration.statements.filter(ts.isImportDeclaration);
+  const printer = ts.createPrinter();
+
+  for (const statement of imports.toReversed()) {
+    const clause = statement.importClause;
+
+    if (!clause) {
+      continue;
+    }
+
+    const bindings = clause.namedBindings;
+    const typeBindings =
+      bindings && ts.isNamedImports(bindings)
+        ? ts.factory.updateNamedImports(
+            bindings,
+            bindings.elements.map(element => ts.factory.updateImportSpecifier(element, false, element.propertyName, element.name)),
+          )
+        : bindings;
+    const typeImport = ts.factory.updateImportDeclaration(
+      statement,
+      statement.modifiers,
+      ts.factory.updateImportClause(clause, true, clause.name, typeBindings),
+      statement.moduleSpecifier,
+      statement.attributes,
+    );
+    output =
+      output.slice(0, statement.getStart(declaration)) +
+      printer.printNode(ts.EmitHint.Unspecified, typeImport, declaration) +
+      output.slice(statement.end);
+  }
+
+  const lastImport = ts.createSourceFile('runtime.d.ts', output, ts.ScriptTarget.ES2022).statements.filter(ts.isImportDeclaration).at(-1);
 
   return lastImport ? `${output.slice(0, lastImport.end)}\n\n${output.slice(lastImport.end).trimStart()}` : output;
 };

@@ -64,8 +64,6 @@ class MouseAndPointerScene extends Scene {
 
     this.hud = mountControls({
       theme: 'site',
-      title: 'Pointer & capture',
-      hint: 'Drag the ship; release outside the canvas. Cancel clears held buttons.',
     });
   }
 

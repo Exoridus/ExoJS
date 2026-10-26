@@ -659,7 +659,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Follow keyboard focus on this widget, so it can paint the focused state and react in Widget._onFocusChanged. Interactive subclasses call this in their constructor; it is opt-in because subscribing allocates the focus signals, which a decorative widget would never fire."
+          "description": "Follow keyboard focus on this widget, so it can paint the focused state and react in Widget._onFocusChanged. Pointer presses request focus. Interactive subclasses call this in their constructor; it is opt-in because subscribing allocates the focus signals, which a decorative widget would never fire."
         },
         {
           "name": "[iterator]",

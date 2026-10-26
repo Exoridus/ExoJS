@@ -77,32 +77,19 @@ class BlendmodesScene extends Scene {
 
     this.root.addChild(this.backdrop, this.destinations[0], this.sources[0], this.destinations[1], this.sources[1], ...this.labels);
     this.panel = demoPanel({
-      title: 'Blend Modes',
+      scene: this,
       layout: 'bar',
       controls,
-      hint: 'Cyan key = destination. Magenta key = source. Linear light, premultiplied alpha.',
       actions: {
         'Fix frame': () => {
           this.panel.set('motion', false);
           this.elapsed = 0;
         },
-        Reset: () => this.reset(),
       },
     });
     this.inputs.onTrigger(Keyboard.Left, () => this.panel.step('mode', -1));
     this.inputs.onTrigger(Keyboard.Right, () => this.panel.step('mode'));
     this.inputs.onTrigger(Keyboard.Space, () => this.panel.step('motion'));
-    this.inputs.onTrigger(Keyboard.R, () => this.reset());
-    this.app.input.onPointerTap.add(this.onTap);
-  }
-
-  private readonly onTap = (): void => this.panel.step('mode');
-
-  private reset(): void {
-    this.elapsed = 0;
-    this.panel.set('mode', 'Normal');
-    this.panel.set('alpha', 0.7);
-    this.panel.set('background', 'Opaque gray');
   }
 
   override update(delta: Seconds): void {
@@ -147,7 +134,6 @@ class BlendmodesScene extends Scene {
   }
 
   override destroy(): void {
-    this.app.input.onPointerTap.remove(this.onTap);
     this.panel.dispose();
     super.destroy();
   }

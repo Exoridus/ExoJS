@@ -1,4 +1,4 @@
-import { type UITheme } from '@codexo/exojs';
+import type { Button, Panel, Scene, UITheme } from "@codexo/exojs";
 
 /**
  * Boolean fields of the engine `Capabilities` object that an example may
@@ -39,6 +39,7 @@ declare global {
     interface Window {
         __EXAMPLE_META__?: ExampleRuntimeMeta | null;
         __EXAMPLE_RENDERER_STATUS__?: ExampleRendererStatus;
+        __EXAMPLE_ASSETS__?: () => readonly string[];
         __EXAMPLE_PREVIEW_AUTOPLAY__?: (() => void | Promise<void>) | null;
     }
     var __EXAMPLE_META__: ExampleRuntimeMeta | null | undefined;
@@ -120,6 +121,12 @@ export interface ExampleRendererStatus {
     reason: string | null;
 }
 interface RendererApplication {
+    readonly loader?: {
+        inspect(): ReadonlyArray<{
+            locator: string;
+            state: string;
+        }>;
+    };
     readonly options: {
         backend?: {
             type?: 'auto' | 'webgl2' | 'webgpu';
@@ -195,7 +202,7 @@ export interface ToggleSpec {
     readonly label: string;
     readonly value: boolean;
 }
-/** One of a fixed list of named options; shows the name and its position, e.g. `Screen (5/18)`. */
+/** One of a fixed list of named options. */
 export interface ChoiceSpec<T extends string = string> {
     readonly kind: 'choice';
     readonly label: string;
@@ -218,9 +225,11 @@ export declare const slider: (label: string, options: {
 export declare const toggle: (label: string, value?: boolean) => ToggleSpec;
 export declare const choice: <const T extends string>(label: string, options: readonly T[], value?: T) => ChoiceSpec<T>;
 export interface DemoPanelOptions<C extends Record<string, DemoControlSpec>> {
+    /** Owns the widgets and their frame subscription. */
+    scene: Pick<Scene, 'ui' | 'app' | 'track'>;
     title?: string;
     corner?: OverlayCorner;
-    /** A full-width control strip with native selects and CSS-pixel sizing. */
+    /** A full-width control strip sized in presented CSS pixels. */
     layout?: 'bar';
     /** Instruction hidden in compact presentation. */
     hint?: string;
@@ -243,8 +252,8 @@ export interface DemoViewport {
 }
 export type DemoStatusTone = 'neutral' | 'info' | 'warning' | 'success' | 'error';
 /** Handle returned by {@link demoPanel}. */
-export interface DemoPanel<C extends Record<string, DemoControlSpec>> {
-    readonly element: HTMLElement;
+export interface DemoPanel<C extends Record<string, DemoControlSpec>, Element = Panel> {
+    readonly element: Element;
     /** Fits a bar to the presented canvas and reports its available scene area in CSS pixels. */
     fit(app: {
         width: number;
@@ -276,5 +285,9 @@ export declare const insetAtlasFrame: <T extends {
  * value per control. Keyboard shortcuts should call `set`/`step` so the panel
  * and the shortcut never disagree.
  */
-export declare const demoPanel: <const C extends Record<string, DemoControlSpec>>(options: DemoPanelOptions<C>) => DemoPanel<C>;
+export declare const domDemoPanel: <const C extends Record<string, DemoControlSpec>>(options: Omit<DemoPanelOptions<C>, "scene">) => DemoPanel<C, HTMLElement>;
+/** Scene-owned parameter controls with one shared state for widgets and shortcuts. */
+export declare const demoPanel: <const C extends Record<string, DemoControlSpec>>(options: DemoPanelOptions<C>) => DemoPanel<C> & {
+    readonly actions: Readonly<Record<string, Button>>;
+};
 export {};

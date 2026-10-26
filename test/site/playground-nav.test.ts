@@ -15,6 +15,23 @@ const ex = (section: string, slug: string, extra: Partial<Example> = {}): Exampl
   ...extra,
 });
 
+describe('navigation filtering', () => {
+  const retro = ex('filters', 'retro', { title: 'Retro Display', tags: ['CRT'] });
+  const music = ex('audio', 'music', { title: 'Music playback' });
+
+  it('matches every query word across titles, tags and categories without changing catalog order', () => {
+    const categories = buildPlaygroundNavModel([retro, music], undefined, '  RETRO   crt  ');
+
+    expect(categories.flatMap(category => category.examples)).toEqual([retro]);
+    expect(buildPlaygroundNavModel([retro, music], undefined, 'filters').flatMap(category => category.examples)).toEqual([retro]);
+  });
+
+  it('returns no categories for an unknown term and keeps the full catalog for an empty filter', () => {
+    expect(buildPlaygroundNavModel([retro, music], undefined, 'missing')).toEqual([]);
+    expect(buildPlaygroundNavModel([retro, music], undefined, '  ').flatMap(category => category.examples)).toHaveLength(2);
+  });
+});
+
 // A flat list synthesised from the real catalog, exactly how the live store
 // hands examples to the nav (each entry once, carrying its `section`).
 const catalogExamples = (): Example[] =>

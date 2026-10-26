@@ -1,3 +1,4 @@
+import type { InteractionEvent } from '#input/InteractionEvent';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 
@@ -56,6 +57,11 @@ export abstract class Widget extends ThemedContainer {
   private _uiAnchorOffsetY = 0;
   private _uiAnchorRoot: UIRoot | null = null;
   private _focusedNow = false;
+  private readonly _onPointerFocus = (event: InteractionEvent): void => {
+    if (event.target === this && this.effectiveEnabled) {
+      this.focus();
+    }
+  };
   private readonly _onFocusGained = (): void => {
     this._focusedNow = true;
     this._onFocusChanged(true);
@@ -228,13 +234,15 @@ export abstract class Widget extends ThemedContainer {
 
   /**
    * Follow keyboard focus on this widget, so it can paint the `focused` state
-   * and react in {@link Widget._onFocusChanged}. Interactive subclasses call
+   * and react in {@link Widget._onFocusChanged}. Pointer presses request focus.
+   * Interactive subclasses call
    * this in their constructor; it is opt-in because subscribing allocates the
    * focus signals, which a decorative widget would never fire.
    */
   protected _trackFocus(): void {
     this.onFocus.add(this._onFocusGained);
     this.onBlur.add(this._onFocusLost);
+    this.onPointerDown.add(this._onPointerFocus);
   }
 
   /**

@@ -267,9 +267,12 @@ describe('BrowserPlatform', () => {
 
     expect(platform.surfaceFocused).toBe(false);
 
+    const focus = vi.spyOn(canvas, 'focus');
+
     platform.focusSurface();
 
     expect(platform.surfaceFocused).toBe(true);
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
 
     canvas.remove();
   });

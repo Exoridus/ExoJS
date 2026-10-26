@@ -325,7 +325,7 @@ These raise a clear error or are intentionally absent from this release:
 
 ## Isometric coordinates and physics
 
-The [Isometric Landscape example](/ExoJS/en/playground/examples/tilemap/tiled-isometric/) loads a real isometric `.tmj` map using Kenney's Isometric Tiles Landscape assets (CC0). Click to pick a diamond and move a physics actor; the central bridge passes between the authored collider banks.
+The [Tilemap Projections example](/ExoJS/en/playground/examples/tilemap/tiled-isometric/) loads real isometric and hexagonal maps. Select one large projection and point at cells to inspect its screen-to-tile conversion. Physics integration remains a separate example.
 
 `TileMap.projection` owns the mapping. `tileToPixel(tx, ty)` returns the top vertex of an isometric cell; `pixelToTile(x, y)` inverse-projects and floors both coordinates. Negative cells work for infinite maps. Pass map-local display coordinates after undoing camera and scene transforms. This selects a logical cell, not the opaque pixel of artwork extending above it.
 

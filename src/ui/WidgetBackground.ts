@@ -78,16 +78,18 @@ export class WidgetBackground {
 
   private _paintFill(background: UIFillBackground, width: number, height: number): void {
     const graphics = this._node instanceof Graphics ? this._node : this._replaceNode(new Graphics());
+    const borderWidth = Math.min(Math.max(0, background.borderWidth), width, height);
+    const inset = borderWidth / 2;
 
     graphics.clear();
 
-    if (background.borderWidth > 0) {
-      graphics.lineWidth = background.borderWidth;
+    if (borderWidth > 0) {
+      graphics.lineWidth = borderWidth;
       graphics.lineColor = background.borderColor;
     }
 
     graphics.fillColor = background.color;
-    graphics.drawRoundedRectangle(0, 0, width, height, background.cornerRadius);
+    graphics.drawRoundedRectangle(inset, inset, width - borderWidth, height - borderWidth, Math.max(0, background.cornerRadius - inset));
   }
 
   private _paintAnimated(background: UIAnimatedBackground, width: number, height: number): void {

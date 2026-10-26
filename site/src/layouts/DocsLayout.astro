@@ -623,6 +623,7 @@ const isWideVariant = variant === 'wide';
     background: transparent;
     padding: 0;
     max-width: none;
+    min-width: 0;
   }
 
   .docs-shell--guide .docs-shell__rail {
@@ -963,14 +964,14 @@ const isWideVariant = variant === 'wide';
 
   @media (width <= 760px) {
     .docs-shell--guide {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
       width: min(1280px, 100% - 1rem);
       gap: var(--s-4);
       padding: var(--s-4) 0 var(--s-8);
     }
 
     .docs-shell--guide.docs-shell--with-rail {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
     }
 
     .docs-shell--guide .docs-shell__sidebar,

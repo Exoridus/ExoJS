@@ -9,7 +9,7 @@ import {
   Sprite,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { demoPanel, mountControls, slider, toggle } from '@examples/runtime';
 
 const SHIP = assets.ship;
 
@@ -18,7 +18,7 @@ class DropShadowFilterScene extends Scene {
   private sprite!: Sprite;
   private elapsed = 0;
   private hud!: ReturnType<typeof mountControls>;
-  private panel!: ReturnType<typeof mountControlPanel>;
+  private panel!: ReturnType<typeof demoPanel>;
 
   override init(): void {
     const { width, height } = this.app;
@@ -38,56 +38,22 @@ class DropShadowFilterScene extends Scene {
       status: this.statusText(),
     });
 
-    this.panel = mountControlPanel({ title: 'Shadow' });
-    this.panel.addSlider({
-      label: 'Offset X',
-      min: -40,
-      max: 40,
-      step: 1,
-      value: this.shadow.offsetX,
-      onChange: value => {
-        this.shadow.offsetX = value;
-        this.refresh();
+    this.panel = demoPanel({
+      scene: this,
+      title: 'Shadow',
+      controls: {
+        offsetX: slider('Offset X', { min: -40, max: 40, step: 1, value: this.shadow.offsetX }),
+        offsetY: slider('Offset Y', { min: -40, max: 40, step: 1, value: this.shadow.offsetY }),
+        blur: slider('Blur', { min: 0, max: 24, step: 0.5, value: this.shadow.blur }),
+        opacity: slider('Opacity', { min: 0, max: 1, step: 0.05, value: this.shadow.color.a }),
+        shadowOnly: toggle('Shadow only'),
       },
-    });
-    this.panel.addSlider({
-      label: 'Offset Y',
-      min: -40,
-      max: 40,
-      step: 1,
-      value: this.shadow.offsetY,
-      onChange: value => {
-        this.shadow.offsetY = value;
-        this.refresh();
-      },
-    });
-    this.panel.addSlider({
-      label: 'Blur',
-      min: 0,
-      max: 24,
-      step: 0.5,
-      value: this.shadow.blur,
-      onChange: value => {
-        this.shadow.blur = value;
-        this.refresh();
-      },
-    });
-    this.panel.addSlider({
-      label: 'Opacity',
-      min: 0,
-      max: 1,
-      step: 0.05,
-      value: this.shadow.color.a,
-      onChange: value => {
-        this.shadow.color = new Color(0, 0, 0, value);
-        this.refresh();
-      },
-    });
-    this.panel.addToggle({
-      label: 'Shadow only',
-      value: false,
-      onChange: on => {
-        this.shadow.shadowOnly = on;
+      onChange: (_key, _value, values) => {
+        this.shadow.offsetX = values.offsetX;
+        this.shadow.offsetY = values.offsetY;
+        this.shadow.blur = values.blur;
+        this.shadow.color = new Color(0, 0, 0, values.opacity);
+        this.shadow.shadowOnly = values.shadowOnly;
         this.refresh();
       },
     });

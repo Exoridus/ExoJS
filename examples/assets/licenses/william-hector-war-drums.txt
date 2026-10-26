@@ -1,0 +1,9 @@
+Horde War Drums loop
+Author: William Hector
+License: CC0-1.0
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Source: https://opengameart.org/content/horde-war-drums-loop
+Original download: https://opengameart.org/sites/default/files/horde_war_drums_by_william_hector.wav
+
+The author marks this work as CC0 on the source page and specifies 130 BPM.
+The source WAV was converted to Ogg Vorbis with 6 dB of attenuation.

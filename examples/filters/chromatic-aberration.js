@@ -1,7 +1,7 @@
 // Auto-generated from chromatic-aberration.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { demoPanel, mountControls, slider } from '@examples/runtime';
 // A dense checkerboard makes the per-channel RGB split read clearly along edges.
 const CHECKER = assets.checker256;
 const glsl = `#version 300 es
@@ -45,19 +45,15 @@ class ChromaticAberrationScene extends Scene {
       status: this.statusText(),
       hint: 'A fragment-shader filter samples red and blue at opposite UV offsets.',
     });
-    this.panel = mountControlPanel({ title: 'Lens' });
-    this.panel.addSlider({
-      label: 'Intensity',
-      min: 0,
-      max: 1,
-      step: 0.01,
-      value: this.intensity,
-      onChange: value => {
+    this.panel = demoPanel({
+      scene: this,
+      title: 'Lens',
+      controls: { intensity: slider('Intensity', { min: 0, max: 1, step: 0.01, value: this.intensity }) },
+      onChange: (_key, value) => {
         this.intensity = value;
         this.applyIntensity();
       },
     });
-    this.applyIntensity();
   }
   applyIntensity() {
     this.filter.setUniform('uOffset', this.intensity * MAX_OFFSET);

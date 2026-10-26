@@ -124,8 +124,9 @@ export abstract class CheckableWidget extends Widget {
   protected abstract _paintControl(): void;
 
   protected override _relayout(): void {
+    this._applyTextStyle();
     const control = this._controlSize();
-    const labelBounds = this._labelNode?.getLocalBounds() ?? null;
+    const labelBounds = this._labelNode?.textBounds ?? null;
 
     if (!this._explicitSize) {
       const width = control.width + (labelBounds === null ? 0 : this._labelGap + labelBounds.width);
@@ -144,7 +145,12 @@ export abstract class CheckableWidget extends Widget {
   }
 
   protected override _repaint(): void {
-    this._applyTextStyle();
+    if (this._applyTextStyle()) {
+      this._relayout();
+
+      return;
+    }
+
     this._paintControl();
   }
 
@@ -165,19 +171,21 @@ export abstract class CheckableWidget extends Widget {
   /** The role the label's text style comes from - the control's own surface role. */
   protected abstract _textRole(): UIThemeRole;
 
-  private _applyTextStyle(): void {
+  private _applyTextStyle(): boolean {
     if (this._labelNode === null) {
-      return;
+      return false;
     }
 
     const skinText = resolveUISkin(this.theme[this._textRole()], this._skinState).text;
 
     if (skinText === this._appliedText) {
-      return;
+      return false;
     }
 
     this._appliedText = skinText;
     this._labelNode.style = { ...skinText, ...this._textStyle };
+
+    return true;
   }
 
   private readonly _onPointerOver = (): void => {

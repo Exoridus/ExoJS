@@ -29,7 +29,7 @@ export interface SceneTransitionContext {
  * provision them before the session's first frame.
  */
 export interface SceneTransitionRequirements {
-  /** A one-time snapshot of the outgoing scene's render surface, captured once before the session starts. `'none'` (the common case) requests nothing. */
+  /** A one-time snapshot of the outgoing scene and its systems, excluding the screen UI overlay. `'none'` (the common case) requests nothing. */
   readonly outgoingFrame: 'none' | 'snapshot';
   /** `'direct'`: the live surface draws straight to the screen, no texture. `'texture'`: the live surface renders into a pooled offscreen texture every frame instead. `'none'`: no live-surface resource at all. */
   readonly currentFrame: 'none' | 'direct' | 'texture';

@@ -17,6 +17,7 @@
 import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { blurShader } from '#rendering/filters/BlurFilter';
 import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
+import { crtShader } from '#rendering/filters/CrtFilter';
 import { displacementShader } from '#rendering/filters/DisplacementFilter';
 import { dropShadowShader } from '#rendering/filters/DropShadowFilter';
 import { lut3dShaderSource, lutRgb1dShaderSource } from '#rendering/filters/LutFilter';
@@ -30,6 +31,7 @@ const pairs: ReadonlyArray<{ readonly name: string; readonly source: AnyShader; 
   { name: 'BlurFilter', source: blurShader, fragment: 'blur.frag' },
   { name: 'BloomFilter', source: bloomThresholdShader, fragment: 'bloom-threshold.frag' },
   { name: 'ColorMatrixFilter', source: colorMatrixShader, fragment: 'color-matrix.frag' },
+  { name: 'CrtFilter', source: crtShader, fragment: 'crt.frag' },
   { name: "LutFilter 'rgb1d'", source: lutRgb1dShaderSource, fragment: 'lut-rgb1d.frag' },
   { name: "LutFilter '3d'", source: lut3dShaderSource, fragment: 'lut-3d.frag' },
   { name: 'DropShadowFilter', source: dropShadowShader, fragment: 'drop-shadow.frag' },

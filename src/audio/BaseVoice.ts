@@ -11,6 +11,7 @@ import { isEffectReady } from './AudioEffect';
 import { AudioSend } from './AudioSend';
 import type { AudioSystem } from './AudioSystem';
 import type { DistanceModel, Spatializable, SpatialPoint, Voice } from './Playable';
+import { rampGain } from './rampGain';
 import {
   createVelocitySample,
   deriveVelocity,
@@ -285,9 +286,7 @@ export abstract class BaseVoice implements Voice {
       return;
     }
 
-    node.gain.cancelScheduledValues(ctx.currentTime);
-    node.gain.setValueAtTime(node.gain.value, ctx.currentTime);
-    node.gain.linearRampToValueAtTime(target, ctx.currentTime + duration);
+    rampGain(node.gain, target, ctx.currentTime, duration);
   }
 
   public stop(fade?: Seconds): void {
@@ -298,9 +297,7 @@ export abstract class BaseVoice implements Voice {
     if (fade !== undefined && fade > 0) {
       const ctx = this._audioContext;
       const node = this._output;
-      node.gain.cancelScheduledValues(ctx.currentTime);
-      node.gain.setValueAtTime(node.gain.value, ctx.currentTime);
-      node.gain.linearRampToValueAtTime(0, ctx.currentTime + fade);
+      rampGain(node.gain, 0, ctx.currentTime, fade);
 
       this._clearStopTimer();
       this._stopTimer = setTimeout(() => {

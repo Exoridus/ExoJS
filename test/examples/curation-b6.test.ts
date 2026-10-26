@@ -63,7 +63,8 @@ describe('B6 scene and effect teaching contracts', () => {
     const text = source('sprites-textures/video-drawable');
     expect(text).toContain('request !== this.generation');
     expect(text).toContain('this.lifecycleSignal.aborted');
-    expect(text).toContain('this.app.input.onPointerTap.remove(this.onTap)');
+    expect(text).not.toContain('this.app.input.onPointerTap');
+    expect(text).toContain('Keyboard.Space');
     expect(text).toContain("toggle('Paused', true)");
     expect(text).toContain('loaded.muted = true');
   });

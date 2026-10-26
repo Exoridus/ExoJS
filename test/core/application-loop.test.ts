@@ -538,7 +538,7 @@ describe('Application.update() — loop timing', () => {
     test('the frame is cleared to clearColor, once, before the scene draws', () => {
       mockFrameElapsed(app, 16);
 
-      const draw = vi.spyOn(app.scenes, 'draw');
+      const draw = vi.spyOn(app.scenes, '_drawFrame');
 
       app.update();
 

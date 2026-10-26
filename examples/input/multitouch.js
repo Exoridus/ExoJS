@@ -76,8 +76,6 @@ class MultitouchScene extends Scene {
     app.input.onRotate.add(this.onRotate);
     this.hud = mountControls({
       theme: 'site',
-      title: 'Multitouch gestures',
-      hint: 'Use two contacts to pinch / rotate. Mouse shows one pointer. Hardware touch remains a separate check.',
     });
   }
   refreshHud() {

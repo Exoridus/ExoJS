@@ -60,8 +60,6 @@ class DialogSystemScene extends Scene {
     this.backdrop = this.track(new Panel({ color: new Color(25, 31, 36), cornerRadius: 8 }));
     this.caption = mountControls({
       theme: 'site',
-      title: 'Dialogue and Choices',
-      hint: 'Continue: click / Space / South. Tab or D-pad chooses a reply. Silent by default.',
     });
     this.continueButton = new Button({ label: 'Continue', width: 144, height: 36, fontSize: 14 });
     this.continueButton.onClick.add(() => {

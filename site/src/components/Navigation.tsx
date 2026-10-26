@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
-import { CURATED_CATEGORY_BY_SLUG, CURATION_READY } from '../lib/curation-catalog';
-import { buildPlaygroundNavModel, isExampleRouteActive } from '../lib/playground-nav';
+import { buildPlaygroundLaunchHref, buildPlaygroundNavModel, isExampleRouteActive } from '../lib/playground-nav';
 import { getExampleAvailability } from '../lib/runtime-support';
 import type { Example, ExamplesMap } from '../lib/types';
 import { buildExampleHref } from '../lib/url-state';
@@ -13,6 +12,7 @@ import { css } from './react-utils';
 
 export interface NavigationProps {
   locale?: 'en' | 'de';
+  headerAction?: ReactNode;
   activeExample: Example | null;
   examples: ExamplesMap;
   loaded: boolean;
@@ -23,6 +23,7 @@ export interface NavigationProps {
 
 export const Navigation = ({
   locale = 'en',
+  headerAction,
   activeExample,
   examples,
   loaded,
@@ -31,9 +32,25 @@ export const Navigation = ({
   selectedVersion,
 }: NavigationProps): JSX.Element => {
   const listRef = useRef<HTMLElement | null>(null);
+  const filterRef = useRef<HTMLInputElement | null>(null);
+  const [query, setQuery] = useState('');
   const allExamples = useMemo(() => Array.from(examples.values()).flat(), [examples]);
-  const categoryBySlug = selectedVersion?.id === CURRENT_VERSION_ID && CURATION_READY ? CURATED_CATEGORY_BY_SLUG : undefined;
-  const categories = useMemo(() => buildPlaygroundNavModel(allExamples, categoryBySlug), [allExamples, categoryBySlug]);
+  const categories = useMemo(() => buildPlaygroundNavModel(allExamples, undefined, query), [allExamples, query]);
+
+  useEffect(() => {
+    const focusFilter = (event: KeyboardEvent): void => {
+      const target = event.target as HTMLElement | null;
+
+      if (event.key === '/' && !event.ctrlKey && !event.metaKey && !target?.closest?.('input, textarea, [contenteditable="true"]')) {
+        event.preventDefault();
+        filterRef.current?.focus();
+      }
+    };
+
+    document.addEventListener('keydown', focusFilter);
+
+    return () => document.removeEventListener('keydown', focusFilter);
+  }, []);
 
   useEffect(() => {
     const list = listRef.current;
@@ -46,21 +63,39 @@ export const Navigation = ({
     const listBounds = list.getBoundingClientRect();
     const activeBounds = active.getBoundingClientRect();
 
-    if (activeBounds.top < listBounds.top + 36) {
-      list.scrollTop -= listBounds.top + 36 - activeBounds.top;
-    } else if (activeBounds.bottom > listBounds.bottom) {
-      list.scrollTop += activeBounds.bottom - listBounds.bottom;
-    }
-  }, [activeExample?.path, loaded]);
+    list.scrollTop += activeBounds.top - listBounds.top - (list.clientHeight - activeBounds.height) / 2;
+  }, [activeExample?.path, loaded, query]);
 
   return (
     <section className={css(styles, 'root')}>
-      <div className={css(styles, 'reference-links')}>
-        <a href={`${import.meta.env.BASE_URL + locale}/playground/curriculum/`}>48-example path</a>
-        <a href={`${import.meta.env.BASE_URL + locale}/playground/tools/`}>Tools and guides</a>
+      <div className={css(styles, 'filter')}>
+        <input
+          ref={filterRef}
+          type="search"
+          aria-label="Filter examples and tools"
+          placeholder="Filter examples and tools..."
+          value={query}
+          onChange={event => setQuery(event.currentTarget.value)}
+          onKeyDown={event => {
+            if (event.key === 'Escape') {
+              setQuery('');
+            }
+          }}
+        />
+        <kbd>/</kbd>
       </div>
-      <nav ref={listRef}>
+      <div className={css(styles, 'reference-links')}>
+        <span>{allExamples.length} entries</span>
+        <a href={`${import.meta.env.BASE_URL + locale}/playground/tools/`}>All examples</a>
+        {headerAction}
+      </div>
+      <nav ref={listRef} aria-label="Examples">
         {loadError && <p className={css(styles, 'error')}>{loadError}</p>}
+        {loaded && !loadError && categories.length === 0 && (
+          <p className={css(styles, 'empty')} role="status">
+            No examples or tools match “{query}”.
+          </p>
+        )}
         {!loadError &&
           loaded &&
           categories.map(category => {
@@ -70,12 +105,17 @@ export const Navigation = ({
               <NavigationSection key={category.slug} headline={category.title} unavailableCount={unavailableCount}>
                 {category.examples.map(example => {
                   const availability = getExampleAvailability(example);
+                  const standaloneTool = selectedVersion?.id === CURRENT_VERSION_ID && example.path === 'debug-layer/asset-browser.js';
 
                   return (
                     <NavigationLink
                       key={example.path}
-                      href={buildExampleHref(example.path, selectedVersion?.id ?? null)}
-                      path={example.path}
+                      href={
+                        standaloneTool
+                          ? buildPlaygroundLaunchHref(example.path, locale, import.meta.env.BASE_URL)
+                          : buildExampleHref(example.path, selectedVersion?.id ?? null)
+                      }
+                      path={standaloneTool ? '' : example.path}
                       title={example.title}
                       description={example.description}
                       level={example.level}

@@ -1,6 +1,6 @@
 /**
- * Browser checks for the playground shell's Output panel and the Asset Browser
- * example, against the built site (`site/dist`).
+ * Browser checks for the playground shell's Output panel and standalone Asset Browser,
+ * against the built site (`site/dist`) or an existing local origin.
  *
  * The console bridge spans two realms - the parent shell patches the preview
  * iframe's console - so these checks drive a real Chromium through the real
@@ -24,7 +24,8 @@
  *
  * Usage:
  *   pnpm --filter @codexo/exojs-examples playground:e2e
- *   ... --only asset          # run checks whose name contains "asset"
+ *   ... --only asset          # run the standalone Asset Browser checks and snippet typechecks
+ *   ... --origin http://127.0.0.1:4333 --only asset  # reuse a running site
  *   ... --shots <dir>         # write a screenshot after each asset preview
  *   ... --headed              # watch it run
  */
@@ -38,6 +39,7 @@ import { parseArgs } from 'node:util';
 import { type Browser, chromium, firefox, type Frame, type Page } from 'playwright';
 import ts from 'typescript';
 
+import { resolveSiteChannel } from '../../scripts/pages/site-channel.ts';
 import { readSiteBuildManifest } from '../../scripts/pages/site-manifest.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -50,6 +52,7 @@ const { values: options } = parseArgs({
   args: process.argv.slice(2),
   options: {
     only: { type: 'string' },
+    origin: { type: 'string' },
     shots: { type: 'string' },
     headed: { type: 'boolean', default: false },
     browser: { type: 'string', default: 'chromium' },
@@ -146,7 +149,7 @@ const check = async (name: string, run: () => Promise<void>): Promise<void> => {
     results.push({ name, error: null });
     console.log(`[e2e] PASS ${name} (${Math.round(performance.now() - started)} ms)`);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? (error.stack ?? error.message) : String(error);
 
     results.push({ name, error: message });
     console.error(`[e2e] FAIL ${name}: ${message}`);
@@ -250,7 +253,7 @@ const runSource = async (page: Page, source: string): Promise<void> => {
       window.monaco.editor.getEditors()[0].getModel().setValue(${JSON.stringify(source)});
     })()`,
   );
-  await page.locator('button[aria-label="Reload preview"]').click();
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
   await waitFor(
     async () => (await previewFrame(page)).url(),
     url => url !== previousUrl,
@@ -265,6 +268,18 @@ const box = async (page: Page, selector: string): Promise<{ x: number; y: number
 
   return rect;
 };
+
+// ResizeObserver can change the layout between protocol calls, so related rectangles must share one snapshot.
+const panelLayout = (page: Page) =>
+  page.evaluate<Record<'preview' | 'output' | 'editor', { x: number; y: number; width: number; height: number }>>(`(() => {
+    const bounds = label => {
+      const node = document.querySelector('[aria-label="' + label + '"]');
+      if (!node) throw new Error('Missing layout surface: ' + label);
+      const { x, y, width, height } = node.getBoundingClientRect();
+      return { x, y, width, height };
+    };
+    return { preview: bounds('Example preview'), output: bounds('Preview output'), editor: bounds('Source editor') };
+  })()`);
 
 // --- Console bridge -------------------------------------------------------------
 
@@ -294,12 +309,29 @@ const consoleChecks = async (browser: Browser, origin: string, base: string): Pr
   const session = await openPlayground(browser, origin, base, 'getting-started/hello-world');
   const { page } = session;
   let marker = '';
+  await page.addInitScript({
+    content: `(() => {
+    const NativeResizeObserver = window.ResizeObserver;
+    const probe = window.__layoutResizeProbe = { hold: false, pending: [] };
+    window.ResizeObserver = class extends NativeResizeObserver {
+      constructor(callback) {
+        super((entries, observer) => {
+          const forward = () => callback.call(observer, entries, observer);
+          if (probe.hold) probe.pending.push(forward); else forward();
+        });
+      }
+    };
+  })()`,
+  });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await previewFrame(page);
 
   await check('output panel is collapsed by default and plain logs keep it closed', async () => {
-    await setOutputOpen(page, false);
     await page.evaluate("localStorage.removeItem('exo-playground-output-open')");
     await page.reload({ waitUntil: 'domcontentloaded' });
     await previewFrame(page);
+    assert((await outputToggle(page).count()) === 0 || !(await outputOpen(page)), 'empty output opened without a failure');
+    await runSource(page, "console.log('plain preview log');");
     await waitFor(
       () => outputToggle(page).count(),
       count => count === 1,
@@ -386,7 +418,7 @@ const consoleChecks = async (browser: Browser, origin: string, base: string): Pr
   });
 
   await check('a reload starts a fresh record with nothing from the earlier preview', async () => {
-    await page.locator('button[aria-label="Reload preview"]').click();
+    await page.getByRole('button', { name: 'Run', exact: true }).click();
     await setOutputOpen(page, true);
 
     const fresh = await waitFor(
@@ -446,35 +478,56 @@ const consoleChecks = async (browser: Browser, origin: string, base: string): Pr
   });
 
   await check('the panel sits under the preview in the split layout and follows a swap', async () => {
-    const preview = await box(page, 'section[aria-label="Example preview"]');
-    const output = await box(page, '[aria-label="Preview output"]');
-    const editor = await box(page, 'section[aria-label="Source editor"]');
+    if ((await outputToggle(page).count()) === 0) {
+      await runSource(page, "console.log('layout probe');");
+      await outputToggle(page).waitFor();
+    }
+
+    await setOutputOpen(page, true);
+    const { preview, output, editor } = await panelLayout(page);
 
     assert(output.y >= preview.y + preview.height - 1, 'the panel overlaps the preview');
     assert(Math.abs(output.x - preview.x) < 2, 'the panel is not in the preview column');
     assert(editor.x > preview.x, 'the editor is not to the right of the preview');
 
-    await page.locator('button[aria-label="Swap the editor and the preview"]').click();
+    const releaseResize = () =>
+      page.evaluate(
+        '(() => { const probe = window.__layoutResizeProbe; probe.hold = false; for (const run of probe.pending.splice(0)) run(); })()',
+      );
+    await page.evaluate('window.__layoutResizeProbe.hold = true');
 
-    const swappedPreview = await box(page, 'section[aria-label="Example preview"]');
-    const swappedOutput = await box(page, '[aria-label="Preview output"]');
+    try {
+      await page.locator('[data-example-header] summary').click();
+      await page.getByRole('button', { name: 'Swap panes', exact: true }).click();
+      await page.waitForFunction('window.__layoutResizeProbe.pending.length > 0');
+      const snapshots = [await panelLayout(page)];
+      await releaseResize();
+      await page.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+      snapshots.push(await panelLayout(page));
 
-    assert(swappedPreview.x > preview.x, 'the swap did not move the preview');
-    assert(Math.abs(swappedOutput.x - swappedPreview.x) < 2, 'the panel did not follow the preview');
-    assert(swappedOutput.y >= swappedPreview.y + swappedPreview.height - 1, 'the panel overlaps the swapped preview');
-    await page.locator('button[aria-label="Swap the editor and the preview"]').click();
+      for (const { preview: swappedPreview, output: swappedOutput } of snapshots) {
+        assert(swappedPreview.x > preview.x, 'the swap did not move the preview');
+        assert(Math.abs(swappedOutput.x - swappedPreview.x) < 2, 'the panel did not follow the preview');
+        assert(swappedOutput.y >= swappedPreview.y + swappedPreview.height - 1, 'the panel overlaps the swapped preview');
+      }
+    } finally {
+      await releaseResize();
+    }
+
+    await page.locator('[data-example-header] summary').click();
+    await page.getByRole('button', { name: 'Swap panes', exact: true }).click();
   });
 
   await check('the panel sits between preview and editor in the stacked layout', async () => {
-    await page.locator('button[aria-label="Switch to stacked layout"]').click();
+    await page.locator('[data-example-header] summary').click();
+    await page.getByRole('button', { name: 'Demo above code', exact: true }).click();
 
-    const preview = await box(page, 'section[aria-label="Example preview"]');
-    const output = await box(page, '[aria-label="Preview output"]');
-    const editor = await box(page, 'section[aria-label="Source editor"]');
+    const { preview, output, editor } = await panelLayout(page);
 
     assert(output.y >= preview.y + preview.height - 1, 'the panel overlaps the preview');
     assert(editor.y >= output.y + output.height - 1, 'the editor is not below the panel');
-    await page.locator('button[aria-label="Switch to split layout"]').click();
+    await page.locator('[data-example-header] summary').click();
+    await page.getByRole('button', { name: 'Split view', exact: true }).click();
   });
 
   await page.context().close();
@@ -504,6 +557,8 @@ const consoleChecks = async (browser: Browser, origin: string, base: string): Pr
 
   await check('the panel stays usable at phone width', async () => {
     const phone = await openPlayground(browser, origin, base, 'getting-started/hello-world', { width: 390, height: 844 });
+    await runSource(phone.page, "console.log('phone output');");
+    await outputToggle(phone.page).waitFor({ state: 'visible' });
     const preview = await box(phone.page, 'section[aria-label="Example preview"]');
     const output = await box(phone.page, '[aria-label="Preview output"]');
     const scrollWidth = await phone.page.evaluate('document.documentElement.scrollWidth');
@@ -544,11 +599,58 @@ const REPRESENTATIVES = [
   'harborWorldProject',
   'soundUiClick',
   'uiSoundSprite',
-  'musicLoopMain',
-  'videoDemoLoop',
+  'musicLofiRhodes',
+  'videoHighFps',
   'fontKenneyFuture',
   'fontKenneyBlocksFnt',
 ];
+
+const openAssetBrowser = async (browser: Browser, origin: string, base: string): Promise<Session> => {
+  const context = await browser.newContext({
+    viewport: { width: 1600, height: 1000 },
+    ...(options.browser === 'chromium' ? { permissions: ['clipboard-read', 'clipboard-write'] } : {}),
+  });
+  const page = await context.newPage();
+  const session: Session = { page, console: [], pageErrors: [] };
+
+  page.on('console', message => session.console.push({ type: message.type(), text: message.text() }));
+  page.on('pageerror', error => session.pageErrors.push(error.message));
+  await page.route('**/examples/debug-layer/asset-browser.js*', async route => {
+    const response = await route.fetch();
+    const source = await response.text();
+    const hook = 'init() {';
+
+    assert(source.includes(hook), 'the Asset Browser scene has no init hook');
+    await route.fulfill({
+      response,
+      body: source.replace(
+        hook,
+        `${hook} globalThis.__assetBrowserApp = this.app; globalThis.__assetBrowserScene = this; globalThis.__assetBrowserArea = PREVIEW;`,
+      ),
+    });
+  });
+  await page.goto(`${origin}${base}/en/tools/asset-browser/?asset=ship`, { waitUntil: 'domcontentloaded' });
+  const frame = await assetFrame(page);
+
+  await frame.waitForFunction('globalThis.__assetBrowserApp?.state === "running" && globalThis.__assetBrowserScene.preview');
+  assert((await page.locator('.monaco-editor').count()) === 0, 'the tool unexpectedly mounted an editor');
+
+  return session;
+};
+
+const setAssetSlider = async (frame: Frame, label: string, value: number): Promise<void> => {
+  const input = frame.getByRole('slider', { name: label, exact: true });
+  const min = Number(await input.getAttribute('min'));
+  const step = Number(await input.getAttribute('step'));
+
+  await input.press('Home');
+
+  for (let index = 0; index < Math.round((value - min) / step); index++) {
+    await input.press('ArrowRight');
+  }
+
+  assert(Number(await input.inputValue()) === value, `${label} did not reach ${value}`);
+};
 
 const assetFrame = async (page: Page): Promise<Frame> => {
   const frame = await previewFrame(page);
@@ -590,15 +692,8 @@ const residentRows = async (frame: Frame): Promise<string[]> =>
 
 const assetChecks = async (browser: Browser, origin: string, base: string): Promise<string[]> => {
   const snippets: string[] = [];
-  const session = await openPlayground(browser, origin, base, 'debug-layer/asset-browser');
+  const session = await openAssetBrowser(browser, origin, base);
   const { page } = session;
-  const source = await waitFor(
-    () => page.evaluate<string>('window.monaco?.editor.getEditors()[0]?.getModel()?.getValue() ?? ""'),
-    value => value.length > 0,
-    'the asset browser editor source',
-  );
-
-  await runSource(page, `${source}\n(globalThis as any).__assetBrowserApp = app;`);
   const frame = await assetFrame(page);
   const catalog = readCatalog();
 
@@ -640,7 +735,7 @@ const assetChecks = async (browser: Browser, origin: string, base: string): Prom
       })))`)) as { state: string; errors: string[] };
 
       assert(health.state === 'running' && health.errors.length === 0, `${id} render health: ${JSON.stringify(health)}`);
-      assert(!(await outputEntries(page)).some(entry => entry.kind === 'exception'), 'an uncaught error was recorded');
+      assert(session.pageErrors.length === 0, `page errors: ${session.pageErrors.join(' | ')}`);
 
       const resident = await residentRows(frame);
 
@@ -656,12 +751,12 @@ const assetChecks = async (browser: Browser, origin: string, base: string): Prom
 
       if (options.shots) {
         await mkdir(options.shots, { recursive: true });
-        await page.locator('section[aria-label="Example preview"]').screenshot({ path: join(options.shots, `${id}.png`) });
+        await page.locator('section[aria-label="Asset Browser"]').screenshot({ path: join(options.shots, `${id}.png`) });
       }
     });
   }
 
-  await check('spritesheet frame selection and animation settings reach the snippet', async () => {
+  await check('asset browser: spritesheet frame selection and animation settings reach the snippet', async () => {
     await selectAsset(frame, 'platformerCharacters');
     await waitFor(
       () => inspectorHeading(frame),
@@ -671,24 +766,29 @@ const assetChecks = async (browser: Browser, origin: string, base: string): Prom
     // The panel mounts once the atlas has loaded; a tap before that has nothing to hit.
     await frame.getByRole('slider', { name: 'FPS' }).waitFor();
 
+    const atlas = JSON.parse(readFileSync(resolve(repoRoot, 'examples/assets/images/platformer-characters-atlas.json'), 'utf8')) as {
+      frames: Record<string, { frame: { x: number; y: number; w: number; h: number } }>;
+    };
+    const selected = Object.values(atlas.frames)[1]!.frame;
+    const point = await frame.evaluate<{ x: number; y: number; width: number; height: number }>(`(() => {
+      const app = globalThis.__assetBrowserApp;
+      const view = globalThis.__assetBrowserScene.view;
+      return {...view.worldToScreen(${selected.x + selected.w / 2}, ${selected.y + selected.h / 2}, app.width, app.height), width: app.width, height: app.height};
+    })()`);
     const canvas = frame.locator('canvas');
     const rect = await canvas.boundingBox();
 
     assert(rect, 'the canvas has no box');
-
     const before = session.console.length;
 
-    // `position` is in page pixels from the canvas's scaled box; the fitted
-    // atlas is centred in the preview area, above the frame strip.
-    await canvas.click({ position: { x: (610 * rect.width) / 1280, y: (150 * rect.height) / 720 } });
+    await canvas.click({ position: { x: (point.x * rect.width) / point.width, y: (point.y * rect.height) / point.height } });
     await waitFor(
       async () => session.console.slice(before).map(message => message.text),
-      texts => texts.some(text => text.startsWith('Frame ')),
-      'a frame selection log',
+      texts => texts.some(text => text.startsWith('Frame 2:')),
+      'the selected atlas frame',
     );
-
-    await frame.getByRole('slider', { name: 'FPS' }).fill('14');
-    await frame.getByRole('slider', { name: 'Last frame' }).fill('3');
+    await setAssetSlider(frame, 'FPS', 14);
+    await setAssetSlider(frame, 'Last frame', 3);
     await frame.getByRole('button', { name: 'Code', exact: true }).click();
 
     const code = await frame.locator('section[aria-label="Code"] pre').innerText();
@@ -699,55 +799,133 @@ const assetChecks = async (browser: Browser, origin: string, base: string): Prom
     await frame.getByRole('button', { name: 'Close', exact: true }).click();
   });
 
-  await check('texture filtering and zoom reach the snippet', async () => {
+  await check('asset browser: texture filtering and zoom reach the snippet', async () => {
     await selectAsset(frame, 'ship');
     await waitFor(
       () => inspectorHeading(frame),
       text => text === 'Ship',
       'the texture',
     );
-    await frame.getByRole('slider', { name: 'Zoom' }).fill('3');
+    const viewport = await frame.evaluate<{ x: number; y: number; width: number; height: number }>('({...globalThis.__assetBrowserArea})');
+    const appSize = await frame.evaluate<{ width: number; height: number }>(
+      '({width:globalThis.__assetBrowserApp.width,height:globalThis.__assetBrowserApp.height})',
+    );
+    const canvas = frame.locator('canvas');
+    const canvasBox = (await canvas.boundingBox())!;
+    const point = { x: viewport.x + viewport.width * 0.6, y: viewport.height * 0.4 };
+    const screen = {
+      x: canvasBox.x + (point.x * canvasBox.width) / appSize.width,
+      y: canvasBox.y + (point.y * canvasBox.height) / appSize.height,
+    };
+    const worldAtCursor = (): Promise<{ x: number; y: number }> =>
+      frame.evaluate(`(() => {
+      const app = globalThis.__assetBrowserApp;
+      return globalThis.__assetBrowserScene.view.screenToWorld(${point.x},${point.y},app.width,app.height);
+    })()`);
+
+    assert((await frame.getByRole('slider', { name: 'Zoom', exact: true }).count()) === 0, 'a removed zoom slider is still present');
+    await frame.getByRole('button', { name: '1:1', exact: true }).click();
+    const one = await frame.evaluate<number>(`(() => {
+      const app = globalThis.__assetBrowserApp;
+      return globalThis.__assetBrowserScene.view.zoomLevel * app.canvas.getBoundingClientRect().width / app.width;
+    })()`);
+
+    assert(Math.abs(one - 1) < 0.001, `1:1 renders a source pixel at ${one} CSS pixels`);
+    await page.mouse.move(screen.x, screen.y);
+    await frame.waitForFunction(point => {
+      const current = (
+        globalThis as unknown as { __assetBrowserApp: { input: { getPrimaryPointerPosition(): { x: number; y: number } | null } } }
+      ).__assetBrowserApp.input.getPrimaryPointerPosition();
+
+      return current && Math.hypot(current.x - point.x, current.y - point.y) < 2;
+    }, point);
+    const before = await worldAtCursor();
+    const oldZoom = await frame.evaluate<number>('globalThis.__assetBrowserScene.view.zoomLevel');
+
+    await page.mouse.wheel(0, -180);
+    const zoom = await waitFor(
+      () => frame.evaluate<number>('globalThis.__assetBrowserScene.view.zoomLevel'),
+      value => value > oldZoom,
+      'cursor zoom',
+    );
+    const after = await worldAtCursor();
+
+    assert(Math.hypot(before.x - after.x, before.y - after.y) < 0.001, 'wheel zoom moved the world point under the cursor');
     await frame.getByRole('button', { name: 'Next Filtering', exact: true }).click();
     await frame.getByRole('button', { name: 'Code', exact: true }).click();
 
     const code = await frame.locator('section[aria-label="Code"] pre').innerText();
 
-    assert(code.includes('ScaleModes.Nearest') && code.includes('setScale(3)'), `snippet: ${code}`);
+    assert(code.includes('ScaleModes.Nearest') && code.includes(`setScale(${Number(zoom.toFixed(2))})`), `snippet: ${code}`);
     snippets.push(`// texture settings\n${code}`);
     await frame.getByRole('button', { name: 'Close', exact: true }).click();
+    const center = await frame.evaluate<{ x: number; y: number }>(
+      '({x:globalThis.__assetBrowserScene.view.center.x,y:globalThis.__assetBrowserScene.view.center.y})',
+    );
+
+    await page.mouse.move(screen.x, screen.y);
+    await page.mouse.down();
+    await page.mouse.move(screen.x + 90, screen.y + 40, { steps: 12 });
+    await page.mouse.up();
+    await waitFor(
+      () => frame.evaluate<number>('globalThis.__assetBrowserScene.view.center.x'),
+      value => Math.abs(value - center.x) > 0.01,
+      'drag pan',
+    );
+    await frame.getByRole('button', { name: 'Fit', exact: true }).click();
+    const fitted = await frame.evaluate<{ left: number; top: number; right: number; bottom: number }>(`(() => {
+      const app = globalThis.__assetBrowserApp, scene = globalThis.__assetBrowserScene, bounds = scene.preview.bounds;
+      const top = scene.view.worldToScreen(0,0,app.width,app.height), bottom = scene.view.worldToScreen(bounds.width,bounds.height,app.width,app.height);
+      return {left:top.x,top:top.y,right:bottom.x,bottom:bottom.y};
+    })()`);
+
+    assert(
+      fitted.left >= viewport.x && fitted.right <= viewport.x + viewport.width && fitted.top >= 0 && fitted.bottom <= viewport.height,
+      `Fit bounds: ${JSON.stringify(fitted)}`,
+    );
   });
 
-  await check('a late load never surfaces after a newer selection', async () => {
+  await check('asset browser: a late load never surfaces after a newer selection', async () => {
     let release: () => void = () => undefined;
     const held = new Promise<void>(done => (release = done));
+    let requested = false;
 
-    await page.route('**/clips/high-res.mp4*', async route => {
+    await page.route('**/video/high-res.mp4*', async route => {
+      requested = true;
       await held;
       await route.continue().catch(() => undefined);
     });
 
-    const before = session.console.length;
+    try {
+      const before = session.console.length;
 
-    await selectAsset(frame, 'videoHighRes');
-    await page.waitForTimeout(300);
-    await selectAsset(frame, 'ship');
-    await waitFor(
-      () => inspectorHeading(frame),
-      text => text === 'Ship',
-      'the newer selection',
-    );
-    release();
-    await page.waitForTimeout(2500);
+      await selectAsset(frame, 'videoHighRes');
+      await waitFor(
+        () => Promise.resolve(requested),
+        value => value,
+        'the held high-res video request',
+      );
+      await selectAsset(frame, 'ship');
+      await waitFor(
+        () => inspectorHeading(frame),
+        text => text === 'Ship',
+        'the newer selection',
+      );
+      release();
+      await page.waitForTimeout(2500);
 
-    const texts = session.console.slice(before).map(message => message.text);
+      const texts = session.console.slice(before).map(message => message.text);
 
-    assert(!texts.some(text => text.includes('High res')), `the late video surfaced: ${texts.join(' | ')}`);
-    assert((await inspectorHeading(frame)) === 'Ship', 'the inspector shows the late selection');
-    assert(!(await residentRows(frame)).some(row => row.includes('high-res')), 'the late video stayed resident');
-    await page.unroute('**/clips/high-res.mp4*');
+      assert(!texts.some(text => text.includes('High res')), `the late video surfaced: ${texts.join(' | ')}`);
+      assert((await inspectorHeading(frame)) === 'Ship', 'the inspector shows the late selection');
+      assert(!(await residentRows(frame)).some(row => row.includes('high-res')), 'the late video stayed resident');
+    } finally {
+      release();
+      await page.unroute('**/video/high-res.mp4*');
+    }
   });
 
-  await check('many quick switches leave only the current selection resident', async () => {
+  await check('asset browser: many quick switches leave only the current selection resident', async () => {
     for (const id of [...REPRESENTATIVES, ...REPRESENTATIVES.slice().reverse()]) {
       await selectAsset(frame, id, { trusted: false });
     }
@@ -773,24 +951,30 @@ const assetChecks = async (browser: Browser, origin: string, base: string): Prom
       rows.some(row => row.startsWith('manifest.json')),
       'the manifest is missing',
     );
-    assert(!(await outputEntries(page)).some(entry => entry.kind === 'exception'), 'a switch raised an uncaught error');
+    assert(session.pageErrors.length === 0, `a switch raised an uncaught error: ${session.pageErrors.join(' | ')}`);
   });
 
-  await check('a double press of Play starts one voice and Stop stays harmless', async () => {
-    await selectAsset(frame, 'musicLoopMain');
+  await check('asset browser: a double press of Play starts one voice and Stop stays harmless', async () => {
+    await selectAsset(frame, 'musicLofiRhodes');
     await waitFor(
       () => inspectorHeading(frame),
-      text => text === 'Loop main',
+      text => text === 'Lofi rhodes',
       'the music',
     );
 
     const before = session.console.length;
-    const play = frame.getByRole('button', { name: 'Play', exact: true });
+    const transport = frame.getByRole('group', { name: 'Preview controls' });
+    const play = transport.getByRole('button', { name: 'Play', exact: true });
 
     await play.dblclick();
+    await waitFor(
+      () => frame.evaluate<number>('[...globalThis.__assetBrowserApp.audio._voices].filter(voice=>!voice.ended).length'),
+      count => count === 1,
+      'one active preview voice',
+    );
     await page.waitForTimeout(600);
-    await frame.getByRole('button', { name: 'Stop', exact: true }).click();
-    await frame.getByRole('button', { name: 'Stop', exact: true }).click();
+    await transport.getByRole('button', { name: 'Stop', exact: true }).click();
+    await transport.getByRole('button', { name: 'Stop', exact: true }).click();
 
     const played = session.console.slice(before).filter(message => message.text.startsWith('Playing'));
 
@@ -798,40 +982,52 @@ const assetChecks = async (browser: Browser, origin: string, base: string): Prom
     await selectAsset(frame, 'ship');
   });
 
-  await check('leaving the example while a load is in flight raises nothing', async () => {
+  await check('asset browser: leaving the tool while a load is in flight raises nothing', async () => {
     let release: () => void = () => undefined;
     const held = new Promise<void>(done => (release = done));
+    let requested = false;
 
-    await page.route('**/clips/high-fps.webm*', async route => {
+    await page.route('**/video/high-fps.webm*', async route => {
+      requested = true;
       await held;
       await route.continue().catch(() => undefined);
     });
-    await selectAsset(frame, 'videoHighFps');
-    await page.waitForTimeout(300);
 
-    const errorsBefore = session.pageErrors.length;
+    try {
+      await selectAsset(frame, 'videoHighFps');
+      await waitFor(
+        () => Promise.resolve(requested),
+        value => value,
+        'the held high-fps video request',
+      );
 
-    await page.locator('a[href$="/getting-started/hello-world"]').first().click();
-    await waitFor(
-      () => page.evaluate('location.hash'),
-      hash => String(hash).endsWith('hello-world'),
-      'the example switch',
-    );
-    release();
-    await page.waitForTimeout(2000);
-    assert(session.pageErrors.length === errorsBefore, `errors: ${session.pageErrors.slice(errorsBefore).join(' | ')}`);
-    assert(!(await outputEntries(page)).some(entry => entry.kind === 'exception'), 'an uncaught error reached the new preview');
-    await page.unroute('**/clips/high-fps.webm*');
+      const errorsBefore = session.pageErrors.length;
+
+      await page.locator('nav[aria-label="Playground tools"]').getByRole('link', { name: 'Playground', exact: true }).click();
+      await waitFor(
+        () => Promise.resolve(page.url()),
+        url => new URL(url).pathname.endsWith('/en/playground/'),
+        'navigation away from the tool',
+      );
+      release();
+      await page.waitForTimeout(2000);
+      assert(session.pageErrors.length === errorsBefore, `errors: ${session.pageErrors.slice(errorsBefore).join(' | ')}`);
+      const nextFrame = await previewFrame(page);
+      assert(!(await nextFrame.locator('body').getAttribute('data-preview-blanked')), 'an uncaught error blanked the new preview');
+    } finally {
+      release();
+      await page.unroute('**/video/high-fps.webm*');
+    }
   });
 
   await page.context().close();
 
-  await check('playback waiting for the audio unlock is cancelled by a switch', async () => {
+  await check('asset browser: playback waiting for the audio unlock is cancelled by a switch', async () => {
     // A fresh page: no real gesture has happened yet, so audio is still locked
     // and every interaction below until the final click is a synthetic one.
-    const locked = await openPlayground(browser, origin, base, 'debug-layer/asset-browser');
+    const locked = await openAssetBrowser(browser, origin, base);
     const lockedFrame = await assetFrame(locked.page);
-    const clickPlay = `[...document.querySelectorAll('aside button')].find(button => button.textContent === 'Play').click()`;
+    const clickPlay = `[...document.querySelectorAll('[aria-label="Preview controls"] button')].find(button => button.textContent === 'Play').click()`;
 
     await selectAsset(lockedFrame, 'soundUiClick', { trusted: false });
     await lockedFrame.getByRole('button', { name: 'Play', exact: true }).waitFor();
@@ -873,7 +1069,7 @@ const assetChecks = async (browser: Browser, origin: string, base: string): Prom
 
 /** Type-checks every generated snippet as its own module against the engine sources. */
 const typecheckSnippets = async (snippets: string[]): Promise<void> => {
-  await check(`generated snippets type-check (${snippets.length})`, async () => {
+  await check(`asset browser generated snippets type-check (${snippets.length})`, async () => {
     assert(snippets.length > 0, 'no snippets were collected');
     await rm(snippetDir, { recursive: true, force: true });
     await mkdir(snippetDir, { recursive: true });
@@ -948,7 +1144,10 @@ const exampleLifecycleChecks = async (browser: Browser, origin: string, base: st
           ['onPointerMove', 'onPointerDown', 'onPointerUp', 'onPointerTap', 'onPointerCancel', 'onKeyDown']
             .map(key => [key, globalThis.__acceptanceApp.input[key].count]))`);
         const baseline = JSON.stringify(await counts());
-        const panels = await frame.locator('body > aside').count();
+        const countPanels = () =>
+          frame.evaluate<number>(`document.querySelectorAll('body > aside').length +
+          (globalThis.__acceptanceApp.scenes.currentScene._peekUI()?.children.length ?? 0)`);
+        const panels = await countPanels();
 
         if (
           [
@@ -973,7 +1172,7 @@ const exampleLifecycleChecks = async (browser: Browser, origin: string, base: st
           await frame.waitForFunction('globalThis.__acceptanceApp.scenes.currentScene === null');
           await frame.evaluate('globalThis.__acceptanceApp.start(globalThis.__acceptanceScene)');
           assert(JSON.stringify(await counts()) === baseline, `${example}: input listeners grew after restart ${cycle + 1}`);
-          assert((await frame.locator('body > aside').count()) === panels, `${example}: controls grew after restart`);
+          assert((await countPanels()) === panels, `${example}: controls grew after restart`);
           const unlock = frame.getByRole('button', { name: 'Enable sound', exact: true });
 
           if (await unlock.isVisible()) {
@@ -1020,45 +1219,76 @@ const exampleLifecycleChecks = async (browser: Browser, origin: string, base: st
   }
 };
 
+const clickNativeControl = async (frame: Frame, label: string, kind: string): Promise<void> => {
+  await frame.waitForFunction('globalThis.__acceptanceApp?.scenes.currentScene?.state === "active"');
+  await frame.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+  const hit = await frame.evaluate<{ x: number; y: number }>(`(() => {
+    const app=globalThis.__acceptanceApp;
+    let label;
+    const visit=node=>{if(node.constructor.name==='Label'&&node.text===${JSON.stringify(label)})label=node;for(const child of node.children??[])visit(child);};
+    visit(app.scenes.currentScene._peekUI());
+    const node=label.parent.children.find(child=>child.constructor.name===${JSON.stringify(kind)});
+    globalThis.__clickedNativeControl=node;
+    const bounds=node.getBounds();
+    return {x:(bounds.x+bounds.width/2)/app.width,y:(bounds.y+bounds.height/2)/app.height};
+  })()`);
+  const canvas = (await frame.locator('canvas').first().boundingBox())!;
+  await frame.page().mouse.click(canvas.x + hit.x * canvas.width, canvas.y + hit.y * canvas.height);
+  await frame.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+  await frame.waitForFunction('globalThis.__acceptanceApp.interaction.focused === globalThis.__clickedNativeControl');
+};
+
 const workerChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
   await check('acceptance worker terrain: initial, unchanged reload, edited reload and new tab', async () => {
     const { page, pageErrors } = await openPlayground(browser, origin, base, 'tilemap/worker-streamed-terrain');
     page.setDefaultTimeout(15_000);
 
+    let phase = 'initial';
+    let generation = 0;
+
     const verifyTerrain = async (frame: Frame): Promise<void> => {
-      await frame.getByRole('button', { name: 'Next Provider', exact: true }).click();
-      await waitFor(
-        () => frame.locator('body').innerText(),
-        text => /worker .* [1-9]\d* chunks/.test(text),
-        'worker-generated terrain',
-      );
-      await frame.getByRole('button', { name: 'Previous Provider', exact: true }).click();
-      await waitFor(
-        () => frame.locator('body').innerText(),
-        text => /sync .* [1-9]\d* chunks/.test(text),
-        'sync terrain',
-      );
+      generation++;
+
+      for (const provider of ['worker', 'sync']) {
+        phase = `generation ${generation}, ${provider}: focus control`;
+        await clickNativeControl(frame, 'Provider', 'DemoDropdown');
+        phase = `generation ${generation}, ${provider}: keyboard selection`;
+        await frame.page().keyboard.press(provider === 'worker' ? 'ArrowDown' : 'ArrowUp');
+        await frame.page().keyboard.press('Enter');
+        phase = `generation ${generation}, ${provider}: resident chunks`;
+        await frame.waitForFunction(value => {
+          const scene = (
+            globalThis as unknown as {
+              __acceptanceApp: { scenes: { currentScene: { providerMode: string; streamer: { residentCount: number } } } };
+            }
+          ).__acceptanceApp.scenes.currentScene;
+
+          return scene.providerMode === value && scene.streamer.residentCount > 0;
+        }, provider);
+      }
     };
 
     try {
+      const source = `${await readFile(resolve(repoRoot, 'examples/tilemap/worker-streamed-terrain.ts'), 'utf8')}\n(globalThis as any).__acceptanceApp = app;`;
+      await runSource(page, source);
       await verifyTerrain(await previewFrame(page));
       const previousUrl = (await previewFrame(page)).url();
-      await page.getByRole('button', { name: 'Reload preview', exact: true }).click();
+      await page.getByRole('button', { name: 'Run', exact: true }).click();
       await waitFor(
         async () => (await previewFrame(page)).url(),
         url => url !== previousUrl,
         'worker reload generation',
       );
       await verifyTerrain(await previewFrame(page));
-      const source = await readFile(resolve(repoRoot, 'examples/tilemap/worker-streamed-terrain.ts'), 'utf8');
 
       for (let cycle = 0; cycle < 2; cycle++) {
         await runSource(page, `${source}\ndocument.body.dataset.editedTerrain = '${cycle}';`);
         const frame = await previewFrame(page);
         await frame.waitForFunction(value => document.body.dataset.editedTerrain === value, String(cycle));
         await verifyTerrain(frame);
+        await page.locator('[data-example-header] summary').click();
         const popupPromise = page.waitForEvent('popup');
-        await page.getByRole('button', { name: 'Open in new tab', exact: true }).click();
+        await page.getByRole('button', { name: 'Open demo in new tab', exact: true }).click();
         const popup = await popupPromise;
         popup.on('pageerror', error => pageErrors.push(error.message));
         await popup.waitForFunction(value => document.body.dataset.editedTerrain === value, String(cycle));
@@ -1070,7 +1300,7 @@ const workerChecks = async (browser: Browser, origin: string, base: string): Pro
         await verifyTerrain(popup.mainFrame());
         await popup.close();
         const editedUrl = frame.url();
-        await page.getByRole('button', { name: 'Reload preview', exact: true }).click();
+        await page.getByRole('button', { name: 'Run', exact: true }).click();
         await waitFor(
           async () => (await previewFrame(page)).url(),
           url => url !== editedUrl,
@@ -1082,6 +1312,8 @@ const workerChecks = async (browser: Browser, origin: string, base: string): Pro
       }
 
       assert(pageErrors.length === 0, pageErrors.join('\n'));
+    } catch (error) {
+      throw new Error(`${phase}: ${String(error)}; errors: ${JSON.stringify(pageErrors)}`, { cause: error });
     } finally {
       await page.context().close();
     }
@@ -1100,15 +1332,16 @@ const newTabChecks = async (browser: Browser, origin: string, base: string): Pro
         const frame = await previewFrame(page);
         await frame.waitForFunction(value => document.body.dataset.editedExample === value, String(cycle));
         const previousUrl = frame.url();
-        await page.getByRole('button', { name: 'Reload preview', exact: true }).click();
+        await page.getByRole('button', { name: 'Run', exact: true }).click();
         await waitFor(
           async () => (await previewFrame(page)).url(),
           url => url !== previousUrl,
           'unchanged edited reload',
         );
         await (await previewFrame(page)).waitForFunction(value => document.body.dataset.editedExample === value, String(cycle));
+        await page.locator('[data-example-header] summary').click();
         const popupPromise = page.waitForEvent('popup');
-        await page.getByRole('button', { name: 'Open in new tab', exact: true }).click();
+        await page.getByRole('button', { name: 'Open demo in new tab', exact: true }).click();
         const popup = await popupPromise;
         popup.on('pageerror', error => pageErrors.push(error.message));
         await popup.waitForFunction(
@@ -1194,8 +1427,11 @@ const crtChecks = async (browser: Browser, origin: string, base: string): Promis
 
     try {
       const source = await readFile(resolve(repoRoot, 'examples/filters/crt-scanlines.ts'), 'utf8');
-      // Freeze scene time while draw and DOM controls keep running, so grain cannot fake a control response.
-      await runSource(page, `${source}\napp.scenes.pause();\n(globalThis as any).__crtBackend = app.backend.backendType;`);
+      // Freeze grain time while the scene and native UI keep updating.
+      await runSource(
+        page,
+        `${source.replace('this.filter.time += delta;', 'this.filter.time += 0;')}\n(globalThis as any).__acceptanceApp = app;\n(globalThis as any).__crtBackend = app.backend.backendType;`,
+      );
       const frame = await previewFrame(page);
       await frame.waitForFunction('globalThis.__crtBackend !== undefined');
       console.log(`[e2e] CRT backend: ${await frame.evaluate('globalThis.__crtBackend')}`);
@@ -1237,14 +1473,14 @@ const crtChecks = async (browser: Browser, origin: string, base: string): Promis
         );
 
       const setSlider = async (name: string, key: 'Home' | 'End'): Promise<void> => {
-        await frame.getByRole('slider', { name, exact: true }).focus();
+        await clickNativeControl(frame, name, 'Slider');
         await page.keyboard.press(key);
       };
 
       const on = await capture();
-      await frame.getByRole('button', { name: 'CRT', exact: true }).click();
+      await clickNativeControl(frame, 'CRT', 'Toggle');
       assert((await difference(on, await capture())) > 500, 'CRT toggle changed no meaningful scene pixels');
-      await frame.getByRole('button', { name: 'CRT', exact: true }).click();
+      await clickNativeControl(frame, 'CRT', 'Toggle');
       assert((await difference(on, await capture())) === 0, 'CRT toggle did not restore the frozen scene');
       await setSlider('RGB separation', 'Home');
       await setSlider('Effect strength', 'Home');
@@ -1255,7 +1491,8 @@ const crtChecks = async (browser: Browser, origin: string, base: string): Promis
       await setSlider('RGB separation', 'End');
       assert((await difference(strong, await capture())) > 500, 'CRT RGB separation changed no meaningful scene pixels');
       await setSlider('RGB separation', 'Home');
-      assert((await difference(strong, await capture())) === 0, 'CRT RGB separation did not restore the frozen scene');
+      const restoredDifference = await difference(strong, await capture());
+      assert(restoredDifference === 0, `CRT RGB separation did not restore the frozen scene (${restoredDifference} pixels)`);
       assert(pageErrors.length === 0, pageErrors.join('\n'));
     } finally {
       await page.context().close();
@@ -1428,14 +1665,433 @@ const audioBusChecks = async (browser: Browser, origin: string, base: string): P
   });
 };
 
+const headerChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await check('header stays stable and navigation remains compact', async () => {
+    for (const width of [1440, 1024, 390, 320]) {
+      const { page } = await openPlayground(browser, origin, base, 'filters/bloom-filter', { width, height: 1000 });
+
+      try {
+        await page.getByRole('button', { name: 'Run', exact: true }).waitFor();
+        const header = page.locator('[data-example-header]');
+        const height = (await header.boundingBox())!.height;
+        assert(
+          await header.locator('[data-header-row="context"] > p').isVisible(),
+          'Example instructions must remain visible on narrow screens',
+        );
+        assert((await header.getByText('Info', { exact: true }).count()) === 0, 'duplicate information panel remains');
+        await header.locator('summary').click();
+        assert((await header.locator('details').getAttribute('open')) !== null, 'view options are inaccessible');
+        await header.locator('summary').press('Escape');
+        assert((await header.locator('details').getAttribute('open')) === null, 'Escape did not close view options');
+
+        if (width >= 1120) {
+          for (const title of ['First Animated Sprite', 'Room Loading and Asset Ownership', 'Bloom Threshold']) {
+            await page
+              .locator('#playground-navigation')
+              .getByRole('link', { name: new RegExp(`^${title}`) })
+              .click();
+            await waitFor(
+              () => header.locator('h1').textContent(),
+              value => value === title,
+              'selected example title',
+            );
+            assert((await header.boundingBox())!.height === height, 'example selection changed the header height');
+          }
+
+          await page.getByRole('button', { name: 'Hide example list', exact: true }).click();
+          await page.getByRole('button', { name: 'Show example list', exact: true }).click();
+          await waitFor(
+            () => page.getByRole('button', { name: 'Hide example list', exact: true }).evaluate(node => node === document.activeElement),
+            focused => focused,
+            'navigation keyboard focus',
+          );
+
+          let releasePreview!: () => void;
+          let previewRequested = false;
+          const resumePreview = new Promise<void>(resolve => {
+            releasePreview = resolve;
+          });
+          await page.route(
+            '**/preview.html?*',
+            async route => {
+              previewRequested = true;
+              await resumePreview;
+              await route.continue();
+            },
+            { times: 1 },
+          );
+          await page.getByRole('button', { name: 'Run', exact: true }).click();
+          await waitFor(
+            async () => previewRequested,
+            requested => requested,
+            'pending preview load',
+          );
+          await page.getByRole('button', { name: 'Hide example list', exact: true }).click();
+          await page.getByRole('button', { name: 'Show example list', exact: true }).click();
+          await waitFor(
+            () => page.getByRole('button', { name: 'Hide example list', exact: true }).evaluate(node => node === document.activeElement),
+            focused => focused,
+            'navigation keyboard focus before preview load',
+          );
+          releasePreview();
+          await page.waitForFunction("document.querySelector('iframe')?.contentDocument?.body?.tabIndex === -1");
+          assert(
+            await page.getByRole('button', { name: 'Hide example list', exact: true }).evaluate(node => node === document.activeElement),
+            'a late preview load stole navigation focus',
+          );
+        } else if (width <= 760) {
+          assert((await page.getByRole('button', { name: 'Examples', exact: true }).count()) === 1, 'multiple mobile navigation entrances');
+          assert(
+            (await page.getByRole('button', { name: 'Examples', exact: true }).boundingBox())!.height <= 50,
+            'navigation styles stretched the mobile actions',
+          );
+          await page.getByRole('tab', { name: 'Code', exact: true }).click();
+          await page.getByRole('button', { name: 'File options', exact: true }).click();
+          await page.getByRole('menuitem', { name: 'Copy', exact: true }).waitFor();
+        }
+
+        assert(!(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)), 'header overflows the viewport');
+      } finally {
+        await page.context().close();
+      }
+    }
+  });
+};
+
+const nativeControlChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await check('native panel status changes preserve control positions', async () => {
+    const { page } = await openPlayground(browser, origin, base, 'tilemap/worker-streamed-terrain', { width: 1600, height: 1200 });
+
+    try {
+      const source = await readFile(resolve(repoRoot, 'examples/tilemap/worker-streamed-terrain.ts'), 'utf8');
+      await runSource(
+        page,
+        `${source.replace('this.hudTimer += delta;', 'this.hudTimer += 0;')}\n(globalThis as any).__acceptanceApp = app;`,
+      );
+      const frame = await previewFrame(page);
+      await frame.waitForFunction('globalThis.__acceptanceApp?.scenes.currentScene?.state === "active"');
+
+      const position = async (text: string): Promise<number> => {
+        await frame.evaluate(`(() => {
+          const app = globalThis.__acceptanceApp;
+          app.scenes.currentScene.panel.status(${JSON.stringify(text)});
+          app.scenes.currentScene.panel.fit(app, app.canvas);
+        })()`);
+        await frame.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+
+        return frame.evaluate(`(() => {
+          let control;
+          const visit = node => { if(node.constructor.name === 'DemoDropdown') control = node; for(const child of node.children ?? []) visit(child); };
+          visit(globalThis.__acceptanceApp.scenes.currentScene._peekUI());
+          return control.getBounds().y;
+        })()`);
+      };
+
+      const top = await position('');
+
+      for (const text of ['Ready', 'A changing status with variable length. '.repeat(12), '']) {
+        const actual = await position(text);
+        assert(Math.abs(actual - top) < 0.001, `status moved the control from ${top} to ${actual}`);
+      }
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await check('canvas focus preserves pointer geometry in a scrolled host', async () => {
+    const { page } = await openPlayground(browser, origin, base, 'getting-started/hello-world');
+
+    try {
+      const source = await readFile(resolve(repoRoot, 'examples/getting-started/hello-world.ts'), 'utf8');
+      await runSource(page, `${source}\n(globalThis as any).__acceptanceApp = app;`);
+      const frame = await previewFrame(page);
+      await frame.waitForFunction('globalThis.__acceptanceApp?.state === "running"');
+      const focus = (await frame.evaluate(`(() => {
+        const canvas = document.createElement('canvas');
+        canvas.tabIndex = 0;
+        Object.assign(canvas.style, { display: 'block', marginTop: '600px', height: '1400px' });
+        document.body.append(canvas);
+        const platform = new globalThis.__acceptanceApp.platform.constructor(canvas);
+        try {
+          window.scrollTo(0, 0);
+          const before = canvas.getBoundingClientRect().top;
+          platform.focusSurface();
+          return { before, after: canvas.getBoundingClientRect().top, focused: document.activeElement === canvas };
+        } finally {
+          platform.destroy();
+          canvas.remove();
+        }
+      })()`)) as { before: number; after: number; focused: boolean };
+      assert(focus.focused && focus.before === focus.after, `canvas focus changed pointer geometry: ${JSON.stringify(focus)}`);
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await check('native control gestures run only their own action', async () => {
+    for (const [path, kind] of [
+      ['sprites-textures/blendmodes', 'choice'],
+      ['particles/cursor-attractor-particles', 'choice'],
+      ['scene-graph/nested-transforms', 'pause'],
+      ['sprites-textures/video-drawable', 'video'],
+      ['render-targets/render-to-texture', 'capture'],
+    ]) {
+      const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+
+      try {
+        await page.route('**/examples/shared/runtime.js*', async route => {
+          const response = await route.fetch();
+          const source = await response.text();
+          const hook = 'scene.track({ destroy: dispose });';
+          assert(source.includes(hook), 'native controls probe could not attach');
+          await route.fulfill({
+            response,
+            body: source.replace(hook, `${hook} window.__controlProbe={scene,panel:handle,controls:options.controls};`),
+          });
+        });
+        await page.goto(`${origin}${base}/en/playground/?version=current&example=${path}`);
+        await page.waitForFunction("document.querySelector('iframe')?.contentWindow?.__controlProbe?.scene.state === 'active'");
+        const frame = await previewFrame(page);
+        const hit = await frame.evaluate<{ key?: string; expected: string | number | boolean; x: number; y: number }>(`(() => {
+          const {scene:s,panel,controls}=window.__controlProbe;
+          const kind=${JSON.stringify(kind)};
+          let node,expected,key;
+          if(kind==='choice') {
+            [key]=Object.entries(controls).find(([,spec])=>spec.kind==='choice');
+            const spec=controls[key], value=panel.values[key];
+            let label;
+            const visit=n=>{if(n.constructor.name==='Label'&&n.text===spec.label)label=n;for(const c of n.children??[])visit(c);};
+            visit(panel.element);
+            node=label.parent.children.find(n=>n.constructor.name==='DemoDropdown');
+            expected=value;
+            if(!node.visible) {
+              node=label.parent.children.find(n=>n.constructor.name==='Button'&&n.label==='>');
+              expected=spec.options[(spec.options.indexOf(value)+1)%spec.options.length];
+            }
+          } else {
+            node=panel.actions[kind==='video'?'Play / Pause':'Pause / Resume'];
+            const value=kind==='video'?panel.values.paused:kind==='capture'?s.captureCount:s.playing;
+            expected=kind==='capture'?value:!value;
+          }
+          const b=node.getBounds();
+          return {key,expected,x:(b.x+b.width/2)/s.app.width,y:(b.y+b.height/2)/s.app.height};
+        })()`);
+        const canvas = (await frame.locator('canvas').boundingBox())!;
+        await page.mouse.click(canvas.x + hit.x * canvas.width, canvas.y + hit.y * canvas.height);
+        await frame.evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+        const actual = await frame.evaluate(`(() => {
+          const {scene:s,panel}=window.__controlProbe;
+          const kind=${JSON.stringify(kind)},key=${JSON.stringify(hit.key ?? '')};
+          return kind==='choice'?panel.values[key]:kind==='video'?panel.values.paused:kind==='capture'?s.captureCount:s.playing;
+        })()`);
+        assert(actual === hit.expected, `${path}: expected ${JSON.stringify(hit.expected)}, got ${JSON.stringify(actual)}`);
+      } finally {
+        await page.close();
+      }
+    }
+  });
+};
+
+const fileTabChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  await check('file tabs preserve edits and run the entry while a helper is open', async () => {
+    const session = await openPlayground(browser, origin, base, 'getting-started/hello-world');
+    const { page } = session;
+    page.on('dialog', dialog => void dialog.accept());
+
+    try {
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('await startExample')");
+      const tabs = page.getByRole('group', { name: 'Example files' });
+      const entry = tabs.locator('button').first();
+      const helper = tabs.getByRole('button', { name: 'runtime.ts Editable' });
+      await page.locator('.monaco-editor').scrollIntoViewIfNeeded();
+      await page.locator('.monaco-editor .overflow-guard').click({ position: { x: 350, y: 110 } });
+      await page.keyboard.press('Control+End');
+      await page.keyboard.type('\n(window as any).__fileTabRun = "entry";');
+      const before = await page.evaluate<{ source: string; position: unknown; scroll: number; uri: string }>(`(() => {
+        const e=window.monaco.editor.getEditors()[0];
+        e.setPosition({lineNumber:25,column:4});e.setScrollTop(180);
+        return {source:e.getValue(),position:e.getPosition(),scroll:e.getScrollTop(),uri:e.getModel().uri.toString()};
+      })()`);
+      assert(before.source.includes('__fileTabRun'), 'The entry accepts keyboard edits');
+      await helper.click();
+      await page.waitForFunction("window.monaco.editor.getEditors()[0].getModel().uri.path.endsWith('/shared/runtime.ts')");
+      assert(
+        !(await page.evaluate('window.monaco.editor.getEditors()[0].getOption(window.monaco.editor.EditorOption.readOnly)')),
+        'Shared helper source is editable',
+      );
+      await page.getByRole('button', { name: 'Copy', exact: true }).click();
+      assert(
+        await page.evaluate(
+          "navigator.clipboard.readText().then(text=>text.replaceAll('\\r\\n','\\n')===window.monaco.editor.getEditors()[0].getValue())",
+        ),
+        'Copy uses the visible helper',
+      );
+      await page.locator('.monaco-editor .overflow-guard').click({ position: { x: 350, y: 110 } });
+      await page.keyboard.press('Control+End');
+      await page.keyboard.type('\n(window as any).__helperRun = "edited";');
+      await page.getByRole('button', { name: 'Run', exact: true }).click();
+      await page.waitForFunction(
+        "document.querySelector('iframe')?.contentWindow?.__fileTabRun === 'entry' && document.querySelector('iframe')?.contentWindow?.__helperRun === 'edited'",
+      );
+      await page.locator('[data-example-header] summary').click();
+      const popupPromise = page.context().waitForEvent('page');
+      await page.getByRole('button', { name: 'Open demo in new tab', exact: true }).click();
+      const standalone = await popupPromise;
+      await standalone.waitForFunction("window.__fileTabRun === 'entry' && window.__helperRun === 'edited'");
+      assert(await standalone.evaluate(() => window.opener === null), 'Edited helpers preserve detached-tab isolation');
+      await standalone.close();
+      await entry.click();
+      const after = await page.evaluate<{ source: string; position: unknown; scroll: number }>(`(() => {
+        const e=window.monaco.editor.getEditors()[0];return {source:e.getValue(),position:e.getPosition(),scroll:e.getScrollTop()};
+      })()`);
+      assert(
+        after.source === before.source &&
+          JSON.stringify(after.position) === JSON.stringify(before.position) &&
+          after.scroll === before.scroll,
+        'Entry content and view survive the tab switch',
+      );
+      await page.locator('.monaco-editor .overflow-guard').click({ position: { x: 350, y: 110 } });
+      await page.keyboard.press('Control+End');
+      await page.keyboard.type('\n(window as any).__fileTabRun = "changed";');
+      await page.getByRole('button', { name: 'File options', exact: true }).click();
+      await page.getByRole('menuitem', { name: 'Open compiled JavaScript', exact: true }).click();
+      await page.waitForFunction("window.monaco.editor.getEditors()[0].getModel().uri.path.endsWith('/hello-world.js')");
+      assert(await page.getByRole('button', { name: 'Run', exact: true }).isEnabled(), 'Run stays available on compiled output');
+      await page.getByRole('button', { name: 'Run', exact: true }).click();
+      await page.waitForFunction("document.querySelector('iframe')?.contentWindow?.__fileTabRun === 'changed'");
+      assert(
+        (await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()')).includes('"changed"'),
+        'Compiled output refreshes from the entry',
+      );
+      await entry.click();
+      assert(
+        (await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()')).includes('"changed"'),
+        'Opening compiled output preserves unrun edits',
+      );
+      await helper.click();
+      await page.getByRole('button', { name: 'Reset', exact: true }).click();
+      assert(
+        !(await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()')).includes('__helperRun'),
+        'Reset restores helper source',
+      );
+      await entry.click();
+      assert(
+        !(await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()')).includes('__fileTabRun'),
+        'Reset targets the entry',
+      );
+      await page.waitForFunction(
+        "document.querySelector('iframe')?.contentDocument?.querySelector('canvas') && !('__helperRun' in document.querySelector('iframe').contentWindow)",
+      );
+      await page
+        .locator('#playground-navigation')
+        .getByRole('link', { name: /^Bloom Threshold/ })
+        .click();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel()?.uri.path.includes('bloom-filter')");
+      assert(
+        await page.evaluate(
+          `window.monaco.editor.getEditors().length===1 && !window.monaco.editor.getModels().some(model=>model.uri.toString()===${JSON.stringify(before.uri)})`,
+        ),
+        'Old example models are disposed',
+      );
+      assert(session.pageErrors.length === 0, session.pageErrors.join('\n'));
+    } finally {
+      await page.context().close();
+    }
+  });
+  await check('file tabs keep helper diagnostics on their originating file', async () => {
+    const { page, pageErrors } = await openPlayground(browser, origin, base, 'getting-started/hello-world');
+
+    try {
+      await page.route('**/examples/shared/runtime.ts', route =>
+        route.fulfill({ contentType: 'text/plain', body: "export const broken: number = 'bad';" }),
+      );
+      await page.getByRole('group', { name: 'Example files' }).getByRole('button', { name: 'runtime.ts Editable' }).click();
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getModel()?.uri.path.endsWith('/shared/runtime.ts')");
+      await page.getByRole('button', { name: 'Jump to line 1', exact: true }).first().click({ timeout: 45000 });
+      assert(
+        await page.evaluate("window.monaco.editor.getEditors()[0].getModel().uri.path.endsWith('/shared/runtime.ts')"),
+        'The diagnostic belongs to the visible helper',
+      );
+      assert(pageErrors.length === 0, pageErrors.join('\n'));
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await check('used assets open the standalone tool without losing editor changes', async () => {
+    const { page, pageErrors } = await openPlayground(browser, origin, base, 'getting-started/hello-world');
+
+    try {
+      await page.locator('[data-used-assets] summary').click({ timeout: 45000 });
+      const source = await page.evaluate<string>(`(() => {
+        const model=window.monaco.editor.getEditors()[0].getModel();
+        model.setValue(model.getValue()+'\\n// unsaved asset navigation check\\n');return model.getValue();
+      })()`);
+      await page.locator('[data-used-assets] button').first().click();
+      await page.getByRole('region', { name: 'Asset preview' }).waitFor();
+      const link = page.locator('[data-used-assets] a[href*="/tools/asset-browser/"]').first();
+      const href = (await link.getAttribute('href'))!;
+      const [tool] = await Promise.all([page.context().waitForEvent('page'), link.click()]);
+      await tool.waitForLoadState('domcontentloaded');
+      await tool.waitForFunction(
+        `Boolean(document.querySelector('[data-asset-tool]')?.contentDocument?.querySelector('aside[aria-label="Selected asset"] h2')?.textContent)`,
+      );
+      assert((await tool.locator('.monaco-editor').count()) === 0, 'The tool has no permanent code pane');
+      assert(
+        tool.url().includes('/tools/asset-browser/') && tool.url().includes(new URL(href).search),
+        'The selected asset deep link is preserved',
+      );
+      assert((await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()')) === source, 'Unrun entry changes survive');
+      await tool.close();
+      assert(pageErrors.length === 0, pageErrors.join('\n'));
+    } finally {
+      await page.context().close();
+    }
+  });
+
+  await check('native canvas dropdown arrows do not scroll the Playground', async () => {
+    const { page, pageErrors } = await openPlayground(browser, origin, base, 'ui/settings-menu');
+
+    try {
+      await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('class SettingsMenuScene')");
+      const source = await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()');
+      assert(source.includes('override init(): void {'), 'The settings scene init is available');
+      await runSource(page, source.replace('override init(): void {', 'override init(): void { (window as any).__scrollScene = this;'));
+      const frame = await previewFrame(page);
+      await frame.waitForFunction('Boolean(globalThis.__scrollScene?.theme?.visible)');
+      await page.evaluate("document.body.style.minHeight='1600px'");
+      const hit = await frame.evaluate<{ x: number; y: number }>(`(() => {
+        const s=globalThis.__scrollScene,b=s.theme.getBounds();
+        return {x:(b.x+b.width/2)/s.app.width,y:(b.y+b.height/2)/s.app.height};
+      })()`);
+      const canvas = (await frame.locator('canvas').boundingBox())!;
+      await page.mouse.click(canvas.x + canvas.width * hit.x, canvas.y + canvas.height * hit.y);
+      await frame.waitForFunction('globalThis.__scrollScene.theme.isOpen');
+      const selected = await frame.evaluate<number>('globalThis.__scrollScene.theme.highlightedIndex');
+      const before = await page.evaluate<number>('scrollY');
+      await frame.evaluate(
+        "window.addEventListener('keydown',event=>{if(event.key==='ArrowDown')setTimeout(()=>globalThis.__arrowPrevented=event.defaultPrevented,0)},{once:true})",
+      );
+      await page.keyboard.press('ArrowDown', { delay: 35 });
+      await frame.waitForFunction(`globalThis.__scrollScene.theme.highlightedIndex === ${selected + 1} && globalThis.__arrowPrevented`);
+      await page.waitForTimeout(250);
+      assert((await page.evaluate<number>('scrollY')) === before, 'Canvas arrows must not scroll the parent document');
+      assert(pageErrors.length === 0, pageErrors.join('\n'));
+    } finally {
+      await page.context().close();
+    }
+  });
+};
+
 const main = async (): Promise<void> => {
-  const build = readSiteBuildManifest(distDir);
+  const build = options.origin ? resolveSiteChannel(process.env) : readSiteBuildManifest(distDir);
   const base = build.basePath.replace(/\/$/, '');
-  const { server, origin } = await startServer(distDir, base);
+  const { server, origin } = options.origin ? { server: null, origin: new URL(options.origin).origin } : await startServer(distDir, base);
   assert(['chromium', 'firefox'].includes(options.browser!), 'Unsupported browser');
   const browser = await (options.browser === 'firefox'
     ? firefox.launch({ headless: !options.headed, firefoxUserPrefs: { 'dom.webgpu.enabled': true } })
     : chromium.launch({
+        channel: 'chromium',
         headless: !options.headed,
         // Audio stays locked until a real gesture, as it does for a visitor.
         ignoreDefaultArgs: ['--autoplay-policy=no-user-gesture-required'],
@@ -1443,18 +2099,24 @@ const main = async (): Promise<void> => {
       }));
 
   try {
-    await responsivePreviewChecks(browser, origin, base);
-    await crtChecks(browser, origin, base);
-    await maskChecks(browser, origin, base);
-    await audioBusChecks(browser, origin, base);
-    await workerChecks(browser, origin, base);
-    await newTabChecks(browser, origin, base);
-    await exampleLifecycleChecks(browser, origin, base);
-    await consoleChecks(browser, origin, base);
+    if (options.only?.toLowerCase() !== 'asset' && !options.only?.toLowerCase().includes('asset browser')) {
+      await fileTabChecks(browser, origin, base);
+      await headerChecks(browser, origin, base);
+      await nativeControlChecks(browser, origin, base);
+      await responsivePreviewChecks(browser, origin, base);
+      await crtChecks(browser, origin, base);
+      await maskChecks(browser, origin, base);
+      await audioBusChecks(browser, origin, base);
+      await workerChecks(browser, origin, base);
+      await newTabChecks(browser, origin, base);
+      await exampleLifecycleChecks(browser, origin, base);
+      await consoleChecks(browser, origin, base);
+    }
+
     await typecheckSnippets(await assetChecks(browser, origin, base));
   } finally {
     await browser.close();
-    server.close();
+    server?.close();
   }
 
   const failed = results.filter(result => result.error !== null);

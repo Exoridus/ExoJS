@@ -17,7 +17,7 @@ class PcmStreamScene extends Scene {
       .setAnchor(0.5)
       .setPosition(this.app.width / 2, this.app.height - 48);
     this.panel = demoPanel({
-      title: 'PCM producer',
+      scene: this,
       controls: { producing: toggle('Produce PCM', true) },
       actions: {
         'Clear queue': () => this.stream?.clear(),

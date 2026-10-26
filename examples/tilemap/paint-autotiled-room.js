@@ -5,11 +5,10 @@ import {
   Container,
   FixedResolutionCanvasSizing,
   Graphics,
-  Keyboard,
   Scene,
   Sprite,
+  Spritesheet,
   Text,
-  Texture,
   TextureRegion,
 } from '@codexo/exojs';
 import {
@@ -22,7 +21,8 @@ import {
   TileSet,
   WangSet,
 } from '@codexo/exojs/tilemap';
-import { choice, demoPanel, startExample, toggle } from '@examples/runtime';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { demoPanel, startExample, toggle, trackPressButtons } from '@examples/runtime';
 const TILE = 64;
 const WIDTH = 16;
 const HEIGHT = 9;
@@ -33,40 +33,24 @@ const DIRECTIONS = [
   [0, 1, 4],
   [-1, 0, 8],
 ];
-const makeTile = mask => {
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = TILE;
-  const paint = canvas.getContext('2d');
-  paint.fillStyle = '#7ebd62';
-  paint.fillRect(0, 0, TILE, TILE);
-  paint.fillStyle = '#d8c794';
-  for (const [dx, dy, bit] of DIRECTIONS) {
-    if (!(mask & bit)) {
-      paint.fillRect(dx < 0 ? 0 : dx > 0 ? 58 : 0, dy < 0 ? 0 : dy > 0 ? 58 : 0, dx === 0 ? 64 : 6, dy === 0 ? 64 : 6);
-    }
-  }
-  paint.strokeStyle = '#497a42';
-  paint.lineWidth = 3;
-  paint.beginPath();
-  if (!(mask & 1)) {
-    paint.moveTo(mask & 8 ? 0 : 6, 6);
-    paint.lineTo(mask & 2 ? 64 : 58, 6);
-  }
-  if (!(mask & 2)) {
-    paint.moveTo(58, mask & 1 ? 0 : 6);
-    paint.lineTo(58, mask & 4 ? 64 : 58);
-  }
-  if (!(mask & 4)) {
-    paint.moveTo(mask & 8 ? 0 : 6, 58);
-    paint.lineTo(mask & 2 ? 64 : 58, 58);
-  }
-  if (!(mask & 8)) {
-    paint.moveTo(6, mask & 1 ? 0 : 6);
-    paint.lineTo(6, mask & 4 ? 64 : 58);
-  }
-  paint.stroke();
-  return new Texture(canvas);
-};
+const TILE_FRAMES = [
+  'block',
+  'vertical_bottom',
+  'horizontal_left',
+  'block_bottom_left',
+  'vertical_top',
+  'vertical_middle',
+  'block_top_left',
+  'block_left',
+  'horizontal_right',
+  'block_bottom_right',
+  'horizontal_middle',
+  'block_bottom',
+  'block_top_right',
+  'block_right',
+  'block_top',
+  'block_center',
+].map(frame => `terrain_stone_${frame}`);
 class AutoTiledRoomScene extends Scene {
   layer;
   tileset;
@@ -78,24 +62,28 @@ class AutoTiledRoomScene extends Scene {
   labels = [];
   samples = [];
   numbers = [];
-  textures = [];
+  sheet;
+  pressButtons;
   panel;
   wang = new WangSet({ tilesetIndex: 0, type: 'edge', blobMap: Object.fromEntries(MASK_TILES.map(mask => [mask, mask])) });
   erase = false;
   painting = false;
   showMasks = false;
   selected = { x: 0, y: 0 };
-  init() {
-    this.textures = MASK_TILES.map(makeTile);
+  async load() {
+    this.sheet = new Spritesheet(await this.loader.load(assets.platformerTilesImage), await this.loader.load(assets.platformerTilesAtlas));
     this.tileset = new TileSet({
-      name: 'four-neighbour-meadow',
+      name: 'stone-room',
       tileWidth: TILE,
       tileHeight: TILE,
-      tileImages: this.textures.map(texture => new TextureRegion(texture, { x: 0, y: 0, width: TILE, height: TILE })),
+      tileImages: TILE_FRAMES.map(name => new TextureRegion(this.sheet.texture, this.sheet.getFrame(name))),
     });
+  }
+  init() {
+    this.pressButtons = trackPressButtons(this.app.canvas);
     this.layer = new TileLayer({
       id: 1,
-      name: 'meadow',
+      name: 'stone-floor',
       width: WIDTH,
       height: HEIGHT,
       tileWidth: TILE,
@@ -106,14 +94,12 @@ class AutoTiledRoomScene extends Scene {
     this.node = new TileMapNode(
       new TileMap({ width: WIDTH, height: HEIGHT, tileWidth: TILE, tileHeight: TILE, tilesets: [this.tileset], layers: [this.layer] }),
     );
-    this.ground.fillColor = new Color(216, 199, 148);
+    this.ground.fillColor = new Color(39, 48, 60);
     this.ground.drawRectangle(0, 0, WIDTH * TILE, HEIGHT * TILE);
-    this.ground.fillColor = new Color(77, 159, 187);
-    this.ground.drawRoundedRectangle(10 * TILE, 2 * TILE, 4 * TILE, 3 * TILE, 24);
     this.worldRoot.addChild(this.ground, this.node, this.masks);
     for (let y = 0; y < HEIGHT; y++) {
       for (let x = 0; x < WIDTH; x++) {
-        const label = new Text('', { fillColor: new Color(27, 51, 30), align: 'center' })
+        const label = new Text('', { fillColor: new Color(255, 255, 255), align: 'center' })
           .setAnchor(0.5)
           .setPosition((x + 0.5) * TILE, (y + 0.5) * TILE);
         this.labels.push(label);
@@ -121,31 +107,26 @@ class AutoTiledRoomScene extends Scene {
       }
     }
     for (const mask of MASK_TILES) {
-      const sample = new Sprite(this.textures[mask]);
+      const sample = new Sprite(this.sheet.texture).setTextureFrame(this.sheet.getFrame(TILE_FRAMES[mask]));
       const label = new Text(String(mask), { fillColor: new Color(236, 239, 242), align: 'center' }).setAnchor(0.5, 0);
       this.samples.push(sample);
       this.numbers.push(label);
       this.legend.addChild(sample, label);
     }
     this.panel = demoPanel({
-      title: 'Paint an Autotiled Room',
+      scene: this,
       layout: 'bar',
-      hint: 'Paint the meadow. N=1, E=2, S=4, W=8; open edges have a dark border.',
-      controls: { mode: choice('Brush', ['paint', 'erase']), masks: toggle('Show masks', false) },
-      actions: { Reset: () => this.reset() },
+      controls: { masks: toggle('Show masks', false) },
       onChange: (_key, _value, values) => {
-        this.erase = values.mode === 'erase';
         this.showMasks = values.masks;
       },
     });
-    this.inputs.onTrigger(Keyboard.R, () => this.reset());
     this.app.input.onPointerDown.add(this.onDown);
     this.app.input.onPointerMove.add(this.onMove);
     this.app.input.onPointerUp.add(this.onEnd);
     this.app.input.onPointerCancel.add(this.onEnd);
     window.addEventListener('pointerup', this.onEnd);
     window.addEventListener('blur', this.onEnd);
-    this.reset();
   }
   reset() {
     this.painting = false;
@@ -178,6 +159,11 @@ class AutoTiledRoomScene extends Scene {
     refreshCell(this.layer, x, y, this.wang, { wrapBorder: false });
   };
   onDown = pointer => {
+    const button = this.pressButtons.take(pointer.id);
+    if (button !== 0 && button !== 2) {
+      return;
+    }
+    this.erase = button === 2;
     this.painting = true;
     this.paint(pointer);
   };
@@ -228,7 +214,8 @@ class AutoTiledRoomScene extends Scene {
     this.panel?.dispose();
     this.worldRoot.destroy();
     this.legend.destroy();
-    this.textures.forEach(texture => texture.destroy());
+    this.pressButtons?.dispose();
+    this.sheet?.clear();
     super.destroy();
   }
 }

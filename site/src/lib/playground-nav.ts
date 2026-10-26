@@ -1,8 +1,17 @@
 // The navigation uses the thematic examples.json keys, while each entry's
 // source path keeps its original directory for stable routes and guide links.
 
+import { resolveExampleAlias } from './example-aliases';
 import { PLAYGROUND_CATEGORY_BY_SLUG, type PlaygroundCategory } from './playground-categories';
 import type { Example } from './types';
+
+export const buildPlaygroundLaunchHref = (path: string, locale: 'en' | 'de', base: string): string => {
+  const canonical = resolveExampleAlias(path);
+
+  return canonical === 'debug-layer/asset-browser.js'
+    ? `${base + locale}/tools/asset-browser/`
+    : `${base + locale}/playground/?version=current&example=${canonical.replace(/\.js$/, '')}`;
+};
 
 export interface PlaygroundNavCategory {
   /** Catalog category slug, e.g. `"particles"` (matches the `examples.json` key). */
@@ -69,10 +78,19 @@ export const isExampleRouteActive = (candidatePath: string, activePath: string |
 export const buildPlaygroundNavModel = (
   examples: ReadonlyArray<Example>,
   categoryBySlug: ReadonlyMap<string, PlaygroundCategory> = PLAYGROUND_CATEGORY_BY_SLUG,
+  query = '',
 ): Array<PlaygroundNavCategory> => {
   const bySection = new Map<string, Array<Example>>();
+  const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
 
   for (const example of examples) {
+    const category = categoryBySlug.get(example.section)?.title ?? humanizeSlug(example.section);
+    const text = `${example.title} ${example.description} ${example.tags?.join(' ') ?? ''} ${category}`.toLowerCase();
+
+    if (!terms.every(term => text.includes(term))) {
+      continue;
+    }
+
     const existing = bySection.get(example.section);
 
     if (existing) {

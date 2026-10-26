@@ -15,6 +15,10 @@ describe('examples/shared/runtime.d.ts', () => {
     expect(committed).toBe(renderRuntimeDts(repositoryRoot));
   });
 
+  it('emits declaration dependencies as type-only imports', () => {
+    expect(renderRuntimeDts(repositoryRoot)).toContain('import type { Button, Panel, Scene, UITheme }');
+  });
+
   it('declares the helper kit the examples import', () => {
     expect(committed).toContain('export declare const mountControls:');
     expect(committed).toContain('export declare const mountControlPanel:');

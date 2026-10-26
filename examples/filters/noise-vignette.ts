@@ -9,7 +9,7 @@ import {
   Sprite,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { demoPanel, mountControls, slider } from '@examples/runtime';
 
 // A detailed full-frame texture so grain + vignette read as a screen-wide post
 // effect rather than decorating one small sprite.
@@ -38,7 +38,7 @@ class NoiseVignetteScene extends Scene {
   private filter!: ShaderFilter;
   private sprite!: Sprite;
   private hud!: ReturnType<typeof mountControls>;
-  private panel!: ReturnType<typeof mountControlPanel>;
+  private panel!: ReturnType<typeof demoPanel>;
 
   override init(): void {
     const app = this.app;
@@ -61,14 +61,11 @@ class NoiseVignetteScene extends Scene {
       hint: 'A single-pass filter adds animated grain and a radial vignette across the frame.',
     });
 
-    this.panel = mountControlPanel({ title: 'Grade' });
-    this.panel.addSlider({
-      label: 'Intensity',
-      min: 0,
-      max: 1,
-      step: 0.01,
-      value: this.intensity,
-      onChange: value => {
+    this.panel = demoPanel({
+      scene: this,
+      title: 'Grade',
+      controls: { intensity: slider('Intensity', { min: 0, max: 1, step: 0.01, value: this.intensity }) },
+      onChange: (_key, value) => {
         this.intensity = value;
         this.filter.setUniform('uIntensity', value);
         this.hud.setStatus(this.statusText());

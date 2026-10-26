@@ -37,7 +37,6 @@ class EditorObjectsScene extends Scene {
     next: new ButtonAction([Keyboard.Right, Keyboard.Tab, GamepadButton.DPadRight]),
     previous: new ButtonAction([Keyboard.Left, GamepadButton.DPadLeft]),
     confirm: new ButtonAction([Keyboard.Enter, Keyboard.Space, GamepadButton.South]),
-    reset: new ButtonAction([Keyboard.R, GamepadButton.Select]),
   });
   doorOpen = false;
   collected = false;
@@ -60,11 +59,9 @@ class EditorObjectsScene extends Scene {
     this.spawns = await spawner.spawn(map, undefined);
     this.worldRoot.addChild(this.mapNode, ...this.spawns.objects, ...this.labels);
     this.hud = demoPanel({
-      title: 'Editor Maps and Gameplay',
+      scene: this,
       layout: 'bar',
       controls: {},
-      hint: 'Select with arrows, confirm with Enter / South. Click the switch, then the gem.',
-      actions: { Reset: () => this.reset() },
     });
     this.inputs.attach(this.actions);
     this.app.input.onPointerMove.add(this.onHover);
@@ -141,9 +138,6 @@ class EditorObjectsScene extends Scene {
         x: this.worldRoot.x + (object.x + object.width / 2) * scale,
         y: this.worldRoot.y + (object.y + object.height / 2) * scale,
       });
-    }
-    if (this.actions.reset.pressed) {
-      this.reset();
     }
   }
   draw(context) {

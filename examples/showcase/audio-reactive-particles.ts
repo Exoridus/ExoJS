@@ -34,7 +34,7 @@ class AudioReactiveParticlesScene extends Scene {
     // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
     // is loaded directly through `Asset.type('music', ...)` and awaited rather
     // than fetched synchronously via `get()`.
-    this.music = await this.loader.load(assets.musicLoopMain);
+    this.music = await this.loader.load(assets.musicActionSynthRock);
 
     // Two parallel taps of the same track: the analyser gives per-band
     // energy (drives emission), the detector gives beats (recolours).
@@ -76,7 +76,7 @@ class AudioReactiveParticlesScene extends Scene {
 
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically - play() returns the Voice now.
-    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.6 });
+    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.45 });
   }
 
   override update(_delta: Seconds): void {

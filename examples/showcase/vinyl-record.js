@@ -19,7 +19,7 @@ class VinylRecordScene extends Scene {
     // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
     // is loaded directly through `Asset.type('music', ...)` and awaited rather
     // than fetched synchronously via `get()`.
-    this.music = await this.loader.load(assets.musicLoopMain);
+    this.music = await this.loader.load(assets.musicLofiRhodes);
     this.analyser = new AudioAnalyser({ fftSize: 1024, source: app.audio.music });
     this.disc = new Graphics();
     this.bars = new Graphics();
@@ -36,7 +36,7 @@ class VinylRecordScene extends Scene {
       .setPosition(width / 2, height - 64);
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically - play() returns the Voice now.
-    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.6 });
+    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.45 });
   }
   update(delta) {
     // Spin speed is driven by live audio energy, not a constant fallback BPM.

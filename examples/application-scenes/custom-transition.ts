@@ -147,50 +147,40 @@ class BarWipeSceneTransition extends SceneTransition {
 
 const wipe = new BarWipeSceneTransition(Time.seconds(0.3), new Color(12, 14, 20, 1));
 
-class MenuScene extends Scene {
-  private label!: Text;
+class WipeScene extends Scene {
+  protected menu = true;
+  private readonly background = this.track(new Graphics());
+  private readonly label = this.track(new Text('', { align: 'center', fillColor: Color.white, fontSize: 34, fontWeight: 'bold' }));
+  private changing = false;
 
   override init(): void {
-    const app = this.app;
-    const { width, height } = app;
+    this.background.fillColor = this.menu ? new Color(18, 38, 72) : new Color(24, 72, 42);
+    this.background.drawRectangle(0, 0, this.app.width, this.app.height);
+    this.background.interactive = true;
+    this.background.onPointerTap.add(() => this.change());
+    this.inputs.onTrigger(Keyboard.Space, () => this.change());
+    this.label.text = this.menu ? 'MENU' : 'GAME';
+    this.label.setAnchor(0.5).setPosition(this.app.width / 2, this.app.height / 2);
+    this.root.addChild(this.background, this.label);
+  }
 
-    app.clearColor.set(18, 38, 72, 1);
+  private change(): void {
+    if (this.changing) {
+      return;
+    }
 
-    this.label = new Text('MENU\nSpace to start', { align: 'center', fillColor: Color.white, fontSize: 34, fontWeight: 'bold' });
-    this.label.setAnchor(0.5);
-    this.label.setPosition(width / 2, height / 2);
-
-    this.inputs.onTrigger(Keyboard.Space, () => {
-      void app.scenes.change(GameScene, { transition: wipe });
-    });
+    this.changing = true;
+    void this.app.scenes.change(this.menu ? GameScene : MenuScene, { transition: wipe });
   }
 
   override draw(context: RenderingContext): void {
-    context.render(this.label);
+    context.render(this.root);
   }
 }
 
-class GameScene extends Scene {
-  private label!: Text;
-
-  override init(): void {
-    const app = this.app;
-    const { width, height } = app;
-
-    app.clearColor.set(24, 72, 42, 1);
-
-    this.label = new Text('GAME\nEsc for the menu', { align: 'center', fillColor: Color.white, fontSize: 34, fontWeight: 'bold' });
-    this.label.setAnchor(0.5);
-    this.label.setPosition(width / 2, height / 2);
-
-    this.inputs.onTrigger(Keyboard.Escape, () => {
-      void app.scenes.change(MenuScene, { transition: wipe });
-    });
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.label);
-  }
+class MenuScene extends WipeScene {}
+class GameScene extends WipeScene {
+  protected override menu = false;
 }
 
 const app = new Application({

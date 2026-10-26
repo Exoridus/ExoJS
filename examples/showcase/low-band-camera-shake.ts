@@ -31,7 +31,7 @@ class LowBandCameraShakeScene extends Scene {
     // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
     // is loaded directly through `Asset.type('music', ...)` and awaited rather
     // than fetched synchronously via `get()`.
-    this.music = await this.loader.load(assets.musicLoopMain);
+    this.music = await this.loader.load(assets.musicGlitchMachine);
     this.analyser = new AudioAnalyser({ fftSize: 1024, source: app.audio.music });
     this.view = new View(width / 2, height / 2, width, height);
     this.sprite = new Sprite(this.loader.get(assets.ship))
@@ -54,7 +54,7 @@ class LowBandCameraShakeScene extends Scene {
 
     // Core defers playback until the AudioContext unlocks on the first
     // gesture, then starts automatically - play() returns the Voice now.
-    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.6 });
+    this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.2 });
   }
 
   override update(): void {

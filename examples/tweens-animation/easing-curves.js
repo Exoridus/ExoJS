@@ -49,7 +49,7 @@ class EasingCurvesScene extends Scene {
   init() {
     this.sprite = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setScale(2);
     this.panel = demoPanel({
-      title: 'Easing',
+      scene: this,
       controls: {
         easing: choice(
           'Curve',

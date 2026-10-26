@@ -68,7 +68,7 @@ class KeyRebindingScene extends Scene {
     }
     this.inputs.attach(this.controls);
     app.input.onKeyDown.add(this.onKeyDown);
-    this.hud = mountControls({ theme: 'site', title: 'Key rebinding', hint: 'J rebinds on release. Escape cancels. R restores defaults.' });
+    this.hud = mountControls({ theme: 'site' });
     this.refreshHud();
   }
   onKeyDown = channel => {

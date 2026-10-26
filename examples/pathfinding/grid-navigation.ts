@@ -79,14 +79,12 @@ class GridNavigationScene extends Scene {
     this.app.input.onPointerTap.add(this.onTap);
 
     this.panel = demoPanel({
-      title: 'Pathfinding Playground',
+      scene: this,
       layout: 'bar',
-      hint: 'Click a goal, or paint walls and weighted mud.',
       actions: {
         'Pause / Resume': () => {
           this.walkerPaused = !this.walkerPaused;
         },
-        Reset: () => this.reset(),
       },
       controls: {
         paint: choice('Click paints', ['goal', 'wall', 'mud']),
@@ -201,14 +199,6 @@ class GridNavigationScene extends Scene {
       this.drawTerrain();
     }
 
-    this.replan();
-  }
-
-  private reset(): void {
-    this.grid = GridSpace.from(COLUMNS, ROWS, initialCost, { cellSize: CELL, diagonals: this.diagonals });
-    this.agent = { x: 2.5 * CELL, y: 2.5 * CELL };
-    this.goal = { x: COLUMNS - 3, y: ROWS - 3 };
-    this.drawTerrain();
     this.replan();
   }
 

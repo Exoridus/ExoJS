@@ -1,6 +1,6 @@
 import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { demoPanel, mountControls, slider } from '@examples/runtime';
 
 // A dense checkerboard makes the per-channel RGB split read clearly along edges.
 const CHECKER = assets.checker256;
@@ -31,7 +31,7 @@ class ChromaticAberrationScene extends Scene {
   private sprite!: Sprite;
   private intensity = 0.4;
   private hud!: ReturnType<typeof mountControls>;
-  private panel!: ReturnType<typeof mountControlPanel>;
+  private panel!: ReturnType<typeof demoPanel>;
 
   override init(): void {
     const app = this.app;
@@ -52,20 +52,15 @@ class ChromaticAberrationScene extends Scene {
       hint: 'A fragment-shader filter samples red and blue at opposite UV offsets.',
     });
 
-    this.panel = mountControlPanel({ title: 'Lens' });
-    this.panel.addSlider({
-      label: 'Intensity',
-      min: 0,
-      max: 1,
-      step: 0.01,
-      value: this.intensity,
-      onChange: value => {
+    this.panel = demoPanel({
+      scene: this,
+      title: 'Lens',
+      controls: { intensity: slider('Intensity', { min: 0, max: 1, step: 0.01, value: this.intensity }) },
+      onChange: (_key, value) => {
         this.intensity = value;
         this.applyIntensity();
       },
     });
-
-    this.applyIntensity();
   }
 
   private applyIntensity(): void {

@@ -1,18 +1,5 @@
 ---
-import ChannelHead from '../../../../components/ChannelHead.astro';
-
-// The Asset Browser is a playground example; this address only forwards links
-// published while it had a page of its own.
-const target = `${import.meta.env.BASE_URL}de/playground/?version=current&example=debug-layer/asset-browser`;
+import AssetBrowserPage from '../../../../components/pages/AssetBrowserPage.astro';
 ---
 
-<html lang="de">
-  <head>
-    <ChannelHead />
-    <meta http-equiv="refresh" content={`0;url=${target}`} />
-    <link rel="canonical" href={target} />
-  </head>
-  <body>
-    <a href={target}>Asset-Browser-Example öffnen</a>
-  </body>
-</html>
+<AssetBrowserPage locale="de" />

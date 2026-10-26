@@ -14,7 +14,7 @@ import {
   WrapModes,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
-import { mountControlPanel, mountControls } from '@examples/runtime';
+import { demoPanel, mountControls, slider, toggle } from '@examples/runtime';
 
 const SHIP = assets.ship;
 const MAP_SIZE = 256;
@@ -57,7 +57,7 @@ class DisplacementFilterScene extends Scene {
   private sprite!: Sprite;
   private scrolling = true;
   private hud!: ReturnType<typeof mountControls>;
-  private panel!: ReturnType<typeof mountControlPanel>;
+  private panel!: ReturnType<typeof demoPanel>;
 
   override init(): void {
     const { width, height } = this.app;
@@ -76,23 +76,17 @@ class DisplacementFilterScene extends Scene {
       status: this.statusText(),
     });
 
-    this.panel = mountControlPanel({ title: 'Ripple' });
-    this.panel.addSlider({
-      label: 'Scale',
-      min: 0,
-      max: 80,
-      step: 1,
-      value: this.ripple.scaleX,
-      onChange: value => {
-        this.ripple.setScale(value);
-        this.refresh();
+    this.panel = demoPanel({
+      scene: this,
+      title: 'Ripple',
+      controls: {
+        scale: slider('Scale', { min: 0, max: 80, step: 1, value: this.ripple.scaleX }),
+        scrolling: toggle('Scroll', this.scrolling),
       },
-    });
-    this.panel.addToggle({
-      label: 'Scroll',
-      value: this.scrolling,
-      onChange: on => {
-        this.scrolling = on;
+      onChange: (_key, _value, values) => {
+        this.ripple.setScale(values.scale);
+        this.scrolling = values.scrolling;
+        this.refresh();
       },
     });
   }

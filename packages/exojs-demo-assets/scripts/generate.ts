@@ -276,6 +276,17 @@ export const renderNotices = (catalog: ResolvedCatalog, profiles: readonly DemoA
     return lines.join('\n');
   });
 
+  const licenseTexts = files
+    .filter(file => file.role === 'license')
+    .map(file => {
+      const text = readFileSync(resolve(catalog.sourceRoot, file.path), 'utf8')
+        .replace(/\r\n?/g, '\n')
+        .replace(/[ \t]+$/gm, '')
+        .replace(/\n*$/, '');
+
+      return `### ${file.path}\n\n\`\`\`text\n${text}\n\`\`\`\n`;
+    });
+
   return `${[
     '# Third-Party Notices',
     '',
@@ -284,6 +295,7 @@ export const renderNotices = (catalog: ResolvedCatalog, profiles: readonly DemoA
     'MIT are original ExoJS work.',
     '',
     ...sections.flatMap(section => [section, '']),
+    ...(licenseTexts.length === 0 ? [] : ['## License texts', '', ...licenseTexts]),
   ].join('\n')}`;
 };
 

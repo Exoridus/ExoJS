@@ -226,6 +226,8 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "CrossFadeOptions: interface",
   "CrossFadeSceneTransition: class",
   "CrossFadeSceneTransitionOptions: interface",
+  "CrtFilter: class",
+  "CrtFilterOptions: interface",
   "CsvAsset: class",
   "CsvAssetOptions: interface",
   "CsvAssetType: class",

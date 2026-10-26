@@ -34,6 +34,7 @@ import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
 import { BloomFilter } from '#rendering/filters/BloomFilter';
 import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
+import { CrtFilter } from '#rendering/filters/CrtFilter';
 import { DropShadowFilter } from '#rendering/filters/DropShadowFilter';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { DataTexture } from '#rendering/texture/DataTexture';
@@ -156,6 +157,34 @@ export const filterScenes: readonly Scene[] = [
         { x: 41, y: 41, expect: [SHADOW.r, SHADOW.g, SHADOW.b, 255] as const, describe: 'shadow beyond the source' },
         { x: 2, y: 2, expect: [0, 0, 0, 255] as const, describe: 'cleared background' },
       ],
+    },
+  },
+  {
+    name: 'filter/crt-frozen-asymmetric',
+    feature: 'CrtFilter',
+    size: 64,
+    fixture: 'colour-modified',
+    nearestSampled: false,
+    build: () => {
+      const data = new Uint8Array(64 * 64 * 4);
+
+      for (let y = 0; y < 64; y++) {
+        for (let x = 0; x < 64; x++) {
+          const offset = (y * 64 + x) * 4;
+
+          data[offset] = 48 + x * 2;
+          data[offset + 1] = 32 + y * 3;
+          data[offset + 2] = y < 20 && x > 35 ? 240 : 64;
+          data[offset + 3] = 255;
+        }
+      }
+
+      const root = new Container();
+
+      root.addChild(new Sprite(new DataTexture({ width: 64, height: 64, format: TextureFormat.Rgba8, data })));
+      root.filters = [new CrtFilter({ strength: 0.85, rgbSeparation: 3 / 64, time: 2 })];
+
+      return root;
     },
   },
 ];

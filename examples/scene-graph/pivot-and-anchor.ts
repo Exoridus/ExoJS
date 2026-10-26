@@ -47,27 +47,20 @@ class PivotAndAnchorScene extends Scene {
     });
     this.root.addChild(...this.sprites, this.overlay, ...this.labels);
     this.panel = demoPanel({
-      title: 'Pivot and Anchor',
+      scene: this,
       layout: 'bar',
       controls: {},
-      hint: 'Red cross: position / pivot. Cyan: world bounds. Same texture and angle.',
       actions: {
         'Pause / Resume': () => {
           this.playing = !this.playing;
         },
         'Step 15°': () => this.step(),
-        Reset: () => {
-          this.angle = 0;
-        },
       },
     });
     this.inputs.onTrigger(Keyboard.Space, () => {
       this.playing = !this.playing;
     });
     this.inputs.onTrigger(Keyboard.Right, () => this.step());
-    this.inputs.onTrigger(Keyboard.R, () => {
-      this.angle = 0;
-    });
   }
 
   private step(): void {

@@ -34,11 +34,9 @@ class GraphicsGradientScene extends Scene {
 
   override init(): void {
     this.panel = demoPanel({
-      title: 'Shapes and Gradients',
+      scene: this,
       layout: 'bar',
       controls,
-      hint: 'Drag A / B. Arrow keys move a focused handle.',
-      actions: { Reset: () => this.reset() },
       onChange: () => {
         this.dirty = true;
       },
@@ -88,15 +86,6 @@ class GraphicsGradientScene extends Scene {
       });
       document.body.append(handle);
     });
-  }
-
-  private reset(): void {
-    this.points = [
-      [0.15, 0.3],
-      [0.85, 0.7],
-    ];
-    this.panel.set('gradient', 'Linear');
-    this.dirty = true;
   }
 
   override update(): void {

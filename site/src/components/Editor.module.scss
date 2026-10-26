@@ -1,9 +1,73 @@
 .root {
   display: block;
-  width: min(100%, 1160px);
+  width: 100%;
   margin: 0 auto;
   padding: 0.08rem 0 0.8rem;
   box-sizing: border-box;
+}
+
+.example-header {
+  grid-area: heading;
+  min-width: 0;
+  margin: 0 0 var(--s-3);
+  padding: var(--s-2);
+
+  h1 {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    font-family: var(--f-sans);
+    font-size: 1.125rem;
+    line-height: 1.25;
+    letter-spacing: -0.025em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.example-heading {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  gap: var(--s-3);
+}
+
+.example-context {
+  display: flex;
+  align-items: center;
+  min-height: 2.25rem;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+.example-description {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.learning-links {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--s-2) var(--s-4);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+
+  a {
+    color: var(--accent);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
 }
 
 .preview-frame,
@@ -20,6 +84,7 @@
 .preview-frame {
   margin: 0 auto 0.75rem;
   box-shadow: var(--shadow-2);
+  overflow: visible;
 }
 
 .preview-frame--expanded {
@@ -42,14 +107,83 @@
   // deliberately much taller - so top alignment would strand the preview
   // against the upper edge with all the slack below it.
   align-items: center;
-
-  // Reserve the 16:9 stage height BEFORE the example reports its canvas
-  // size, so the layout doesn't jump when the preview appears. Purely a
-  // container measure — the iframe's own zoom mechanics stay untouched.
-  aspect-ratio: 16 / 9;
-  min-height: 240px;
+  min-height: 0;
   background: var(--bg-code);
-  overflow: auto hidden;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.toolbar-slot {
+  flex: 0 0 auto;
+}
+
+.view-tabs,
+.split-divider {
+  display: none;
+}
+
+.preview-options {
+  position: relative;
+  z-index: 40;
+
+  summary {
+    display: flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 var(--s-3);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    color: var(--fg);
+    font-size: var(--text-sm);
+    list-style: none;
+    cursor: pointer;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary:focus-visible {
+    outline: 2px solid var(--accent-line);
+  }
+
+  > div {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    width: max-content;
+    min-width: 190px;
+    padding: var(--s-1);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-3);
+    background: var(--bg-panel);
+    box-shadow: var(--shadow-2);
+  }
+
+  button {
+    display: block;
+    width: 100%;
+    min-height: 36px;
+    padding: var(--s-2) var(--s-3);
+    border: 0;
+    background: transparent;
+    color: var(--fg);
+    text-align: left;
+    font-family: var(--f-sans);
+    font-size: var(--text-sm);
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--accent-soft);
+    }
+  }
+
+  p {
+    margin: var(--s-2) var(--s-3);
+    color: var(--fg-muted);
+    font-size: var(--text-xs);
+  }
 }
 
 .unavailable-overlay {
@@ -161,20 +295,48 @@
     padding: 0;
     display: grid;
     grid-template:
-      'preview editor' auto
-      'diag editor' auto
-      'output editor' auto
-      '. editor' 1fr / minmax(0, 1fr) minmax(0, 1fr);
+      'heading heading heading' auto
+      'preview divider editor' auto
+      'diag divider editor' auto
+      'output divider editor' auto
+      '. divider editor' 1fr / minmax(0, var(--split-percent, 55%)) 12px minmax(0, 1fr);
     gap: 0.75rem;
     align-items: start;
   }
 
   .root[data-layout='split'][data-order='editor-first'] {
     grid-template-areas:
-      'editor preview'
-      'editor diag'
-      'editor output'
-      'editor .';
+      'heading heading heading'
+      'editor divider preview'
+      'editor divider diag'
+      'editor divider output'
+      'editor divider .';
+  }
+
+  .root[data-layout='split'] .split-divider {
+    display: block;
+    grid-area: divider;
+    position: relative;
+    align-self: stretch;
+    cursor: col-resize;
+    touch-action: none;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0 4px;
+      border-radius: var(--r-2);
+      background: var(--line);
+    }
+
+    &:hover::before,
+    &:focus-visible::before {
+      background: var(--accent);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--accent-line);
+    }
   }
 
   .root[data-layout='split'] .editor-frame {
@@ -221,6 +383,10 @@
 }
 
 @media (width <= 1119px) {
+  .preview-options button[data-layout-action] {
+    display: none;
+  }
+
   .root {
     width: 100%;
     margin: 0;
@@ -240,9 +406,53 @@
 }
 
 @media (width <= 760px) {
+  .example-header {
+    padding: var(--s-2) var(--s-3);
+  }
+
+  .example-context {
+    flex-wrap: wrap;
+    row-gap: var(--s-1);
+  }
+
+  .example-description {
+    flex: 1 1 100%;
+    order: 1;
+  }
+
+  .example-context > .learning-links {
+    display: none;
+  }
+
+  .view-tabs {
+    display: flex;
+    gap: var(--s-2);
+    flex: 1 1 auto;
+
+    button {
+      min-height: 2rem;
+      padding: 0 var(--s-3);
+      border: 1px solid var(--line);
+      border-radius: var(--r-2);
+      background: transparent;
+      color: var(--fg-muted);
+      font: inherit;
+
+      &[aria-selected='true'] {
+        color: var(--accent);
+        background: var(--accent-soft);
+        border-color: var(--accent-line);
+      }
+    }
+  }
+
+  .root[data-active-view='demo'] .editor-frame,
+  .root[data-active-view='code'] .preview-frame {
+    display: none;
+  }
+
   .preview-surface {
-    min-height: 180px;
-    max-height: min(44dvh, 330px);
+    min-height: 0;
   }
 
   .preview-component {

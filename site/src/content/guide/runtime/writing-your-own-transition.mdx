@@ -52,7 +52,7 @@ For one navigation, in this order:
 - `currentFrame: 'texture'` — the live scene is redirected into an off-screen texture instead, handed to you as `frame.current`. You decide where and how it lands on screen. This is what a slide or a cross-fade wants, and it is the only way to move the scene itself.
 - `outgoingFrame: 'snapshot'` — one frozen capture of the outgoing scene, taken before the session starts, handed to you as `frame.outgoing` for the whole session. Use it to keep the old scene visible after it is gone.
 
-Both default to `'none'`. Ask for the least you need: `'texture'` costs a full-screen render target per frame, `'snapshot'` costs one for the session.
+Both fields are required. Ask for the least you need: `'texture'` costs a full-screen render target per frame, `'snapshot'` costs one for the session. Use `currentFrame: 'none'` only when your session does not need the live scene to be drawn.
 
 `frame.current` is the outgoing scene before the commit and the incoming scene after it — the same field, a different scene. The textures are borrowed: draw from them, never retain or destroy them.
 
@@ -203,10 +203,12 @@ Three details in that session are the contract, not style:
 
 `placement` is read live, every frame:
 
-- `'screen'` draws the transition after the scene _and_ after the application's own draw systems — an overlay above everything.
+- `'screen'` draws the transition after the scene and the application's own draw systems.
 - `'scene'` draws it between the scene and the app's draw systems, so an app-level HUD or debug overlay stays on top of the transition.
 
 A session may change its answer mid-transition; the director re-reads it each frame.
+
+`scene.ui` is composed after either placement and after frame effects. It stays outside transition snapshots, so controls remain readable while the world changes. Put artwork in `scene.root` when the transition should move or fade it.
 
 ## Aborting
 
@@ -269,7 +271,7 @@ class PhasedBarWipe extends PhasedSceneTransition<{ readonly bar: Graphics }> {
 `exit` runs while the old scene leaves, `enter` while the new one arrives, and `context.presence` goes `1 → 0` in `exit` and `0 → 1` in `enter` — so one formula serves both phases without inverting anything. `createPhaseState()` gives each session its own scratch objects and `destroyPhaseState()` releases them again; the definition itself stays immutable.
 
 <Callout type="info" title="Phase state is created and released in pairs">
-`createPhaseState()` runs once per session and `destroyPhaseState(state)` once per session, on every exit path — including an abort before the commit. Override the second whenever the first allocates something GPU-backed (a `Graphics`, a `Geometry`, a `Material`); plain scratch — a `Matrix`, a `Color`, numbers — needs no override. A `{ enter, exit }` pair gets one state per side, and each side is released with its own phase's hook.
+`createPhaseState()` runs once for each phase, giving exit and enter separate state even when one definition supplies both. Each state is released once through `destroyPhaseState(state)`, on every exit path, including an abort before the commit. Override that hook whenever state allocates something GPU-backed (a `Graphics`, a `Geometry`, a `Material`); plain scratch such as a `Matrix`, a `Color`, or numbers needs no override. A `{ enter, exit }` pair releases each state through its own definition's hook.
 </Callout>
 
 ## Prove it
@@ -300,15 +302,19 @@ await game.scenes.change(MenuScene, { transition: shared });
 
 ## Examples
 
+<ExamplePreview chapter="application-scenes" slug="transition-gallery" />
+
+Compare fade, crossfade, all three slide modes, a circular mask, a shader dissolve, and a drifting outgoing snapshot. The same harbor and observatory scenes run behind each effect. The moving light and scene clock make the frozen outgoing frame easy to distinguish from the live incoming scene. The custom effects request `outgoingFrame: 'snapshot'` with `currentFrame: 'direct'`, commit immediately, and animate only after `committed` becomes true. Their sprites, masks, and filters belong to each session; the snapshot remains borrowed from the director.
+
 <ExamplePreview chapter="application-scenes" slug="custom-transition" />
 
 The bar wipe from this chapter, running: press Space and Escape to navigate between two scenes.
 
 <ExamplePreview chapter="application-scenes" slug="multiple-scenes" />
 
-The same navigation without a transition, for comparison.
+Scene switching with a phased bar wipe and a lifecycle event readout.
 
-<TryIt examples={['application-scenes/custom-transition', 'application-scenes/multiple-scenes']} api={['scene-transition', 'phased-scene-transition', 'scene-director']} />
+<TryIt examples={['application-scenes/transition-gallery', 'application-scenes/custom-transition', 'application-scenes/multiple-scenes']} api={['scene-transition', 'phased-scene-transition', 'scene-director']} />
 
 ## Where to go next
 

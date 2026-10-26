@@ -122,10 +122,9 @@ class ActionMappingScene extends Scene {
     this.processedX = this.inputs.onActive(GamepadAxis.LeftStickX);
     this.processedY = this.inputs.onActive(GamepadAxis.LeftStickY);
     this.panel = demoPanel({
+      scene: this,
       layout: 'bar',
-      title: 'Input actions & rebinding',
       controls: {},
-      hint: 'WASD / arrows / stick move. Pulse uses Space / South. Stick radial deadzone 0.20; action threshold 0.15.',
       actions: {
         'Rebind pulse': () => {
           this.rebinding = true;
@@ -133,14 +132,12 @@ class ActionMappingScene extends Scene {
           this.app.canvas.focus();
         },
         Cancel: () => this.cancel(),
-        Reset: () => {
+        'Restore bindings': () => {
           this.cancel();
           this.actions.applyProfile(null);
           this.profile.clear();
           this.save();
           this.message = 'Defaults restored';
-          this.sprite.setPosition(this.app.width / 2, this.app.height / 2);
-          this.pulseCount = 0;
           this.app.canvas.focus();
         },
       },

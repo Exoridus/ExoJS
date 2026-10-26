@@ -41,6 +41,7 @@ import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { blurShader } from '#rendering/filters/BlurFilter';
 import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
+import { crtShader } from '#rendering/filters/CrtFilter';
 import { displacementShader } from '#rendering/filters/DisplacementFilter';
 import { dropShadowShader } from '#rendering/filters/DropShadowFilter';
 import { lut3dShaderSource, lutRgb1dShaderSource } from '#rendering/filters/LutFilter';
@@ -60,6 +61,7 @@ import {
 import { stencilWriteShaderSource } from '#rendering/webgpu/WebGpuStencilClipper';
 import { textShaderSource } from '#rendering/webgpu/WebGpuTextRenderer';
 
+import { galleryDissolveShader } from '../../../examples/shared/gallery-transitions';
 import { cascadeUniforms, gatherUniforms } from '../../../packages/exojs-lighting/src/backends/radianceField';
 import { shadowMarchShader } from '../../../packages/exojs-lighting/src/backends/shadowMarch';
 import { transportCascadeShader, transportGatherShader } from '../../../packages/exojs-lighting/src/backends/transportShaders';
@@ -106,7 +108,9 @@ const shaders: readonly ShaderEntry[] = [
   { name: 'BloomFilter (generated uniform block)', source: bloomThresholdShader._resolveWgsl(filterUniformGroup)! },
   { name: 'BlurFilter (generated uniform block)', source: blurShader._resolveWgsl(filterUniformGroup)! },
   { name: 'ColorMatrixFilter (generated uniform block)', source: colorMatrixShader._resolveWgsl(filterUniformGroup)! },
+  { name: 'CrtFilter (generated uniform block)', source: crtShader._resolveWgsl(filterUniformGroup)! },
   { name: 'DropShadowFilter (generated uniform block)', source: dropShadowShader._resolveWgsl(filterUniformGroup)! },
+  { name: 'transition gallery dissolve (generated uniform block)', source: galleryDissolveShader._resolveWgsl(filterUniformGroup)! },
   { name: 'DisplacementFilter (generated uniform block)', source: displacementShader._resolveWgsl(filterUniformGroup)! },
   { name: 'LutFilter 3D (generated uniform block)', source: lut3dShaderSource._resolveWgsl(filterUniformGroup)! },
   { name: 'LutFilter 1D (generated uniform block)', source: lutRgb1dShaderSource._resolveWgsl(filterUniformGroup)! },

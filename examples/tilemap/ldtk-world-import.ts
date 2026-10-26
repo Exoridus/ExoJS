@@ -53,7 +53,7 @@ class LdtkWorldImportScene extends Scene {
     this.world = await this.loader.load(Asset.type('ldtkMap', assets.harborWorldProject.source));
 
     this.panel = demoPanel({
-      title: 'LDtk',
+      scene: this,
       controls: {
         level: choice(
           'Level',

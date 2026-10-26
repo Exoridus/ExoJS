@@ -1,5 +1,6 @@
 import {
   Application,
+  Asset,
   Color,
   Container,
   FixedResolutionCanvasSizing,
@@ -12,21 +13,21 @@ import {
   WrapModes,
 } from '@codexo/exojs';
 import { AlphaOccluder, type Lighting, LightmapLighting, LineLight, PointLight, SpotLight, SunLight } from '@codexo/exojs/lighting';
-import { type DemoPanel, demoPanel, slider, type SliderSpec, toggle, type ToggleSpec } from '@examples/runtime';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { choice, type ChoiceSpec, type DemoPanel, demoPanel, slider, type SliderSpec, toggle, type ToggleSpec } from '@examples/runtime';
 
-// Four light shapes, one scene, and the shape of the light doing the work that
-// a texture would otherwise have to do.
+// Four light shapes share a scene with selectable Kenney masks and generated cookies.
 //
 // A cookie is one texture slot on the light: its full 0..1 lies on the light's
 // own bounding square, so the pattern turns with a cone and scales with a
 // radius. Nothing is projected, nothing is authored per wall - the window bars
-// below are a 128x128 canvas carried by the lamp that casts them.
+// below are a mask texture carried by the lamp that casts them.
 //
 // The sun is the one shape that is not a pool of light: it has a direction and
 // no position, so its shadows are parallel and it reaches whatever the camera
 // can see.
 
-const canvasTexture = (size: number, paint: (context: CanvasRenderingContext2D) => void, wrap = WrapModes.ClampToEdge): Texture => {
+const canvasTexture = (size: number, paint: (context: CanvasRenderingContext2D) => void, colorSpace: 'srgb' | 'none' = 'srgb'): Texture => {
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
@@ -38,7 +39,7 @@ const canvasTexture = (size: number, paint: (context: CanvasRenderingContext2D) 
 
   paint(context);
 
-  return new Texture(canvas, { scaleMode: ScaleModes.Linear, wrapMode: wrap, generateMipMap: false });
+  return new Texture(canvas, { scaleMode: ScaleModes.Linear, wrapMode: WrapModes.ClampToEdge, generateMipMap: false, colorSpace });
 };
 
 const floorTexture = canvasTexture(64, context => {
@@ -51,31 +52,39 @@ const floorTexture = canvasTexture(64, context => {
 
 // A window: bars of shadow across an otherwise open pane. Transparent where the
 // light is blocked, because a cookie multiplies rather than adds.
-const windowCookie = canvasTexture(128, context => {
-  context.clearRect(0, 0, 128, 128);
-  context.fillStyle = '#ffffff';
-  context.fillRect(10, 10, 108, 108);
-  context.globalCompositeOperation = 'destination-out';
-  context.fillRect(60, 10, 8, 108);
-  context.fillRect(10, 60, 108, 8);
-});
+const windowCookie = canvasTexture(
+  128,
+  context => {
+    context.clearRect(0, 0, 128, 128);
+    context.fillStyle = '#ffffff';
+    context.fillRect(10, 10, 108, 108);
+    context.globalCompositeOperation = 'destination-out';
+    context.fillRect(60, 10, 8, 108);
+    context.fillRect(10, 60, 108, 8);
+  },
+  'none',
+);
 
 // Leaf shade for the spot: a scatter of holes, so the cone reads as light
 // falling through a canopy rather than as a cone.
-const canopyCookie = canvasTexture(128, context => {
-  context.fillStyle = '#ffffff';
-  context.fillRect(0, 0, 128, 128);
-  context.globalCompositeOperation = 'destination-out';
+const canopyCookie = canvasTexture(
+  128,
+  context => {
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, 128, 128);
+    context.globalCompositeOperation = 'destination-out';
 
-  for (let index = 0; index < 60; index++) {
-    const angle = index * 2.399963;
-    const distance = Math.sqrt(index / 60) * 58;
+    for (let index = 0; index < 60; index++) {
+      const angle = index * 2.399963;
+      const distance = Math.sqrt(index / 60) * 58;
 
-    context.beginPath();
-    context.arc(64 + Math.cos(angle) * distance, 64 + Math.sin(angle) * distance, 5 + (index % 4) * 2.5, 0, Math.PI * 2);
-    context.fill();
-  }
-});
+      context.beginPath();
+      context.arc(64 + Math.cos(angle) * distance, 64 + Math.sin(angle) * distance, 5 + (index % 4) * 2.5, 0, Math.PI * 2);
+      context.fill();
+    }
+  },
+  'none',
+);
 
 const blockTexture = canvasTexture(8, context => {
   context.fillStyle = '#6d675d';
@@ -100,13 +109,19 @@ class LightCookiesScene extends Scene {
   private canopy!: SpotLight;
   private tube!: LineLight;
   private elapsed = 0;
-  private panel!: DemoPanel<{ time: SliderSpec; sun: SliderSpec; cookies: ToggleSpec }>;
+  private panel!: DemoPanel<{ time: SliderSpec; sun: SliderSpec; cookies: ToggleSpec; pattern: ChoiceSpec }>;
+  private masks!: { window: Texture; foliage: Texture; caustics: Texture };
 
   override init(): void {
     const { width, height } = this.app;
 
-    this.world = new Container();
-    this.lighting = new LightmapLighting(this.app, { ambient: new Color(16, 18, 28), lightResolution: 1 });
+    this.world = this.track(new Container());
+    this.masks = {
+      window: this.loader.get(Asset.type('texture', assets.lightCookieWindow.source, { textureOptions: { colorSpace: 'none' } })),
+      foliage: this.loader.get(Asset.type('texture', assets.lightCookieFoliage.source, { textureOptions: { colorSpace: 'none' } })),
+      caustics: this.loader.get(Asset.type('texture', assets.lightCookieCaustics.source, { textureOptions: { colorSpace: 'none' } })),
+    };
+    this.lighting = new LightmapLighting(this.app, { ambient: new Color(16, 18, 28), lightResolution: 1, scene: this });
     this.systems.add(this.lighting);
 
     const floor = new Sprite(floorTexture);
@@ -132,7 +147,7 @@ class LightCookiesScene extends Scene {
 
     // Directional: no position, no falloff, parallel shadows. It travels along
     // the node's rotation, so the time of day below is one number.
-    this.sun = this.lighting.add(new SunLight({ intensity: 0.55, softness: 0.05, color: new Color(255, 236, 205) }));
+    this.sun = this.track(this.lighting.add(new SunLight({ intensity: 0.55, softness: 0.05, color: new Color(255, 236, 205) })));
     this.sun.rotation = 20;
 
     // A point light wearing a window. The bars are the cookie, not geometry -
@@ -143,45 +158,52 @@ class LightCookiesScene extends Scene {
     // with the lamp rather than staying on the floor the way a real window's
     // would. A pattern anchored to the world is a projection, and that is a
     // different feature.
-    this.window = this.lighting.add(
-      new PointLight({ radius: 300, intensity: 2.4, softness: 0.05, color: new Color(255, 214, 160), cookie: windowCookie }),
+    this.window = this.track(
+      this.lighting.add(
+        new PointLight({ radius: 300, intensity: 2.4, softness: 0.05, color: new Color(255, 214, 160), cookie: windowCookie }),
+      ),
     );
     this.window.setPosition(880, 240);
 
     // The same slot on a cone: the pattern turns with the light.
-    this.canopy = this.lighting.add(
-      new SpotLight({
-        radius: 420,
-        angle: 34,
-        coneSoftness: 0.4,
-        intensity: 2.2,
-        softness: 0.05,
-        color: new Color(186, 255, 198),
-        cookie: canopyCookie,
-      }),
+    this.canopy = this.track(
+      this.lighting.add(
+        new SpotLight({
+          radius: 420,
+          angle: 34,
+          coneSoftness: 0.4,
+          intensity: 2.2,
+          softness: 0.05,
+          color: new Color(186, 255, 198),
+          cookie: canopyCookie,
+        }),
+      ),
     );
     this.canopy.setPosition(960, 620);
 
     // No cookie, a different shape: falloff is measured from the segment, so
     // the pool is a capsule - which is what a tube of neon actually looks like.
-    this.tube = this.lighting.add(
-      new LineLight({ length: 260, radius: 64, intensity: 2.6, softness: 0.05, color: new Color(120, 190, 255) }),
+    this.tube = this.track(
+      this.lighting.add(new LineLight({ length: 260, radius: 64, intensity: 2.6, softness: 0.05, color: new Color(120, 190, 255) })),
     );
     this.tube.setPosition(300, 640);
 
     this.panel = demoPanel({
-      title: 'Light Cookies',
+      scene: this,
       corner: 'top-right',
       controls: {
         time: slider('Time of day', { min: -60, max: 60, value: this.sun.rotation, step: 1, format: value => `${value}` }),
         sun: slider('Sun intensity', { min: 0, max: 1.2, value: this.sun.intensity, step: 0.05, format: value => value.toFixed(2) }),
         cookies: toggle('Cookies', true),
+        pattern: choice('Pattern', ['Kenney window + foliage', 'Kenney caustics', 'Generated window + foliage']),
       },
       onChange: (_key, _value, values) => {
         this.sun.rotation = values.time;
         this.sun.intensity = values.sun;
-        this.window.cookie = values.cookies ? windowCookie : null;
-        this.canopy.cookie = values.cookies ? canopyCookie : null;
+        const generated = values.pattern === 'Generated window + foliage';
+        const caustics = values.pattern === 'Kenney caustics';
+        this.window.cookie = values.cookies ? (generated ? windowCookie : caustics ? this.masks.caustics : this.masks.window) : null;
+        this.canopy.cookie = values.cookies ? (generated ? canopyCookie : caustics ? this.masks.caustics : this.masks.foliage) : null;
       },
     });
   }

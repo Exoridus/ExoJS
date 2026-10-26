@@ -112,6 +112,7 @@ class CoroutineLoadingScene extends Scene {
   }
 }
 const app = new Application({
+  scenes: { CoroutineLoadingScene },
   canvas: {
     width: 1280,
     height: 720,

@@ -153,7 +153,7 @@ class ManyLightsScene extends Scene {
     this.orbits[0].light.setPosition(width * 0.25, height / 2);
     this.orbits[0].marker.setPosition(width * 0.25, height / 2);
     this.panel = demoPanel({
-      title: 'Normal-Mapped Lighting',
+      scene: this,
       corner: 'top-right',
       controls: {
         lights: slider('Active lights', { min: 1, max: MAX_LIGHTS, value: this.visibleLights, step: 1, format: value => `${value}` }),

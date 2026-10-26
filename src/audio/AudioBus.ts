@@ -6,6 +6,7 @@ import { clamp } from '#math/utils';
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audioContext';
 import type { AudioEffect } from './AudioEffect';
 import { isEffectReady } from './AudioEffect';
+import { rampGain } from './rampGain';
 
 /** Construction options for {@link AudioBus}. */
 export interface AudioBusOptions {
@@ -245,9 +246,7 @@ export class AudioBus {
 
     const ctx = this._setup.audioContext;
     const node = this._setup.outputNode;
-    node.gain.cancelScheduledValues(ctx.currentTime);
-    node.gain.setValueAtTime(node.gain.value, ctx.currentTime);
-    node.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
+    rampGain(node.gain, 0, ctx.currentTime, duration);
 
     if (stopAfter) {
       this._scheduledStopId = setTimeout(() => {
@@ -499,20 +498,7 @@ export class AudioBus {
     }
 
     const target = this._muted ? 0 : this._volume;
-    const gain = this._setup.outputNode.gain;
-    const now = this._setup.audioContext.currentTime;
-    const held = gain.value;
-
-    if (typeof gain.cancelAndHoldAtTime === 'function') {
-      gain.cancelAndHoldAtTime(now);
-    } else {
-      gain.cancelScheduledValues(now);
-    }
-
-    // Holding a settled value may leave no event anchoring the next ramp at now.
-    gain.setValueAtTime(held, now);
-    // A finite endpoint settles idle buses; an unbounded target can resume at stale gain.
-    gain.linearRampToValueAtTime(target, now + 0.02);
+    rampGain(this._setup.outputNode.gain, target, this._setup.audioContext.currentTime, 0.02);
   }
 
   private _clearScheduledStop(): void {

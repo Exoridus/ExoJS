@@ -359,6 +359,30 @@ describe('AudioBus', () => {
     bus.destroy();
   });
 
+  test.each([false, true])('fadeOut holds gain before cancelling an active ramp (native hold: %s)', nativeHold => {
+    const spy = spyOnBusCreation();
+    const bus = new AudioBus('interrupted-fade');
+    const gain = spy.outputNode.gain;
+    gain.value = 0.35;
+    const cancel = vi.fn(() => {
+      gain.value = 1;
+    });
+
+    if (nativeHold) {
+      gain.cancelAndHoldAtTime = cancel;
+    } else {
+      gain.cancelScheduledValues = cancel;
+    }
+
+    bus.fadeOut(Time.seconds(0.05), { stopAfter: false });
+
+    expect(cancel).toHaveBeenCalledWith(getAudioContext().currentTime);
+    expect(gain.setValueAtTime).toHaveBeenLastCalledWith(0.35, getAudioContext().currentTime);
+    expect(gain.linearRampToValueAtTime).toHaveBeenLastCalledWith(0, getAudioContext().currentTime + 0.05);
+    spy.restore();
+    bus.destroy();
+  });
+
   test('fadeOut(500, { stopAfter: false }) does NOT mute after duration', () => {
     vi.useFakeTimers();
     const spy = spyOnBusCreation();

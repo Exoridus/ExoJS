@@ -11,7 +11,7 @@
   border-right: 1px solid var(--line-soft);
 }
 
-nav {
+.root > nav {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden auto;
@@ -33,6 +33,51 @@ nav {
   gap: 0.5rem;
   padding: 0.4rem 0.6rem;
   border-bottom: 1px solid var(--line-soft);
+  align-items: center;
+  justify-content: space-between;
+
+  span {
+    color: var(--fg-muted);
+    font-size: var(--text-xs);
+  }
+}
+
+.filter {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: var(--s-3) var(--s-2) 0;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  background: var(--bg-input);
+
+  input {
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--fg);
+    font: inherit;
+    font-size: var(--text-sm);
+  }
+
+  &:focus-within {
+    outline: 2px solid var(--accent-line);
+  }
+
+  kbd {
+    color: var(--fg-muted);
+    font-size: var(--text-xs);
+  }
+}
+
+.empty {
+  padding: var(--s-4);
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
 }
 
 .reference-links a {

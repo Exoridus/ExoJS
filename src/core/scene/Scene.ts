@@ -327,7 +327,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
 
   /**
    * Scene-bound UI layer, rendered screen-fixed on top of the scene content
-   * (after {@link Scene.draw}). Lazily created and destroyed with the scene;
+   * after transitions and frame effects, before the output transform. Lazily created and destroyed with the scene;
    * add widgets via `this.ui.addChild(...)`.
    *
    * Unlike {@link Scene.root}, whose pass an overridden {@link Scene.draw}

@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import catalog from '../../docs/curation/catalog.json';
-import { getCuratedExamples, getCuratedNavigation, getPreservationEntries } from '../../site/src/lib/curation-catalog';
+import { getCuratedExamples, getPlaygroundNavigation } from '../../site/src/lib/curation-catalog';
 import { EXAMPLE_ALIASES, resolveExampleAlias } from '../../site/src/lib/example-aliases';
 import { getRunnableExamples } from '../../site/src/lib/examples-catalog';
 
@@ -32,16 +32,15 @@ describe('runnable curriculum preservation', () => {
       expect(paths.has(resolveExampleAlias(alias))).toBe(true);
     }
   });
-  it('offers exactly 48 independent normal targets and separate runnable preservation entries', () => {
+  it('includes the learning path and other runnable entries in one explorer', () => {
     const curated = getCuratedExamples();
     expect(curated).toHaveLength(48);
-    const navigation = getCuratedNavigation();
-    expect(navigation.size).toBe(10);
-    expect([...navigation.values()].flat().map(entry => entry.order)).toEqual(Array.from({ length: 48 }, (_, index) => index + 1));
+    const navigation = getPlaygroundNavigation();
     expect(new Set(curated.map(entry => entry.path)).size).toBe(48);
-    const preserved = getPreservationEntries();
-    expect(preserved).toHaveLength(66);
-    expect(preserved.filter(entry => entry.kind === 'merge')).toHaveLength(12);
+    const preserved = [...navigation.values()].flat();
+    expect(new Set(preserved.map(entry => entry.path))).toEqual(
+      new Set(getRunnableExamples().map(entry => resolveExampleAlias(entry.path))),
+    );
     expect(preserved.some(entry => entry.path === 'tilemap/hexagonal-grid.js')).toBe(true);
     expect(preserved.some(entry => entry.path === 'audio-fx/gpu-pcm-stream.js')).toBe(true);
     expect(preserved.some(entry => entry.path === 'tilemap/worker-streamed-terrain.js')).toBe(true);

@@ -1,0 +1,125 @@
+{
+  "title": "CrtFilterOptions",
+  "description": "Construction-time options for a CrtFilter.",
+  "symbol": "CrtFilterOptions",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction-time options for a CrtFilter."
+      ],
+      "importLine": "import { CrtFilterOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "rgbSeparation",
+          "signature": "rgbSeparation?: number",
+          "signatureTokens": [
+            {
+              "text": "rgbSeparation",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Horizontal red/blue sampling offset as a fraction of capture width, clamped to zero or greater. Default 0.006."
+        },
+        {
+          "name": "strength",
+          "signature": "strength?: number",
+          "signatureTokens": [
+            {
+              "text": "strength",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Curvature, scanline, grain and vignette strength, clamped to [0, 1]. Default 0.8."
+        },
+        {
+          "name": "time",
+          "signature": "time?: number",
+          "signatureTokens": [
+            {
+              "text": "time",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Grain animation time in seconds, clamped to zero or greater. Advance it from the scene's update. Default 0."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/filters/CrtFilter.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/CrtFilter.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/filters/CrtFilter.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/CrtFilter.ts"
+}

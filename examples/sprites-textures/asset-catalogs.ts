@@ -90,7 +90,7 @@ class AssetCatalogsScene extends Scene {
     // Non-leaf types (`music`, `video`, `bmFont`, `font`, ...) have no
     // bare-path form and no placeholder to hand back, even for a literal
     // path - they are always loaded by reference and awaited.
-    this.theme = await this.loader.load(assets.musicLoopMain);
+    this.theme = await this.loader.load(assets.musicJingleSuccess);
     // #endregion guide:non-leaf-load
 
     // #region guide:catalog-failure

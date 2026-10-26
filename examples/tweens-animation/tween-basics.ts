@@ -37,7 +37,6 @@ class InteractiveTweensScene extends Scene {
     previous: new ButtonAction(Keyboard.Left),
     next: new ButtonAction(Keyboard.Right),
     pause: new ButtonAction(Keyboard.Space),
-    reset: new ButtonAction(Keyboard.R),
   });
   private readonly position = { x: 0.5, y: 0.5 };
   private readonly clock = { t: 0 };
@@ -73,11 +72,10 @@ class InteractiveTweensScene extends Scene {
 
   override init(): void {
     this.panel = demoPanel({
-      title: 'Tweens and Easing',
+      scene: this,
       layout: 'bar',
       controls,
-      hint: 'Click a target. Click again to interrupt. Arrows change ease.',
-      actions: { 'Pause / Resume': () => this.pause(), Reset: () => this.reset() },
+      actions: { 'Pause / Resume': () => this.pause() },
       onChange: () => this.stop(),
     });
     this.inputs.attach(this.actions);
@@ -147,16 +145,6 @@ class InteractiveTweensScene extends Scene {
     });
   }
 
-  private reset(): void {
-    this.stop();
-    this.position.x = this.position.y = 0.5;
-    this.target = { ...this.position };
-    this.clock.t = 0;
-    this.leg = 0;
-    this.panel.set('easing', 'sineInOut');
-    this.panel.set('mode', 'One-way');
-  }
-
   override update(): void {
     if (this.actions.previous.pressed) {
       this.panel.step('easing', -1);
@@ -168,10 +156,6 @@ class InteractiveTweensScene extends Scene {
 
     if (this.actions.pause.pressed) {
       this.pause();
-    }
-
-    if (this.actions.reset.pressed) {
-      this.reset();
     }
 
     const { scale: k, width, contentHeight } = this.panel.fit(this.app, this.app.canvas as HTMLCanvasElement);
@@ -227,7 +211,6 @@ class InteractiveTweensScene extends Scene {
     this.panel.status(
       `${this.motionPaused ? 'Paused' : this.moving ? 'Moving' : 'Ready'} | Leg ${this.leg} | t ${this.clock.t.toFixed(2)} / ${ease(this.clock.t).toFixed(2)}`,
     );
-    this.panel.element.querySelector('button')!.setAttribute('aria-pressed', String(this.motionPaused));
   }
 
   override draw(context: RenderingContext): void {

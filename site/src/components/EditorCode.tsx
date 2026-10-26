@@ -16,18 +16,21 @@ import {
   useRef,
   useState,
 } from 'react';
+import { createPortal } from 'react-dom';
 
 import { findExampleCompanions } from '../lib/example-companions';
 import { findFootgunCandidates, footgunMessage, type QuickInfoResponse, returnsPromise } from '../lib/footgun-diagnostics';
+import { isEditableSharedFile } from '../lib/preview-modules';
 import { buildExampleUrl, buildGithubRawExampleUrl, buildPublicUrl } from '../lib/url-builder';
 import { CURRENT_VERSION_ID, isCurrentVersion } from '../lib/versions';
 import styles from './EditorCode.module.scss';
-import { css, cx } from './react-utils';
+import { css } from './react-utils';
 import { Toolbar } from './Toolbar';
 
 export interface UpdateCodeEvent {
   code: string;
   executionCode?: string;
+  executionModules?: Record<string, string>;
 }
 
 export interface ResetCodeEvent {
@@ -59,11 +62,14 @@ export interface EditorCodeHandle {
 
 export interface EditorCodeProps {
   canReset: boolean;
+  compiledCode?: string | null;
   exampleTitle: string;
   language: 'javascript' | 'typescript';
   /** Controls shown before the toolbar's title. */
   leading?: ReactNode;
   readOnly?: boolean;
+  toolbarTarget?: HTMLElement | null;
+  menuItems?: ReactNode;
   ref?: Ref<EditorCodeHandle>;
   selectedVersionId: string;
   sourceCode: string | null;
@@ -77,6 +83,7 @@ export interface EditorCodeProps {
 
 interface MonacoLanguageDefaults {
   addExtraLib(content: string, filePath?: string): unknown;
+  getExtraLibs(): Record<string, unknown>;
   setCompilerOptions(options: Record<string, unknown>): void;
   setDiagnosticsOptions(options: Record<string, unknown>): void;
   setEagerModelSync(value: boolean): void;
@@ -110,6 +117,7 @@ const SHARED_LIB_FILES = [
   // Shared example module, imported by name from examples rather than declared:
   // without it every importer reports ts2307 for `@examples/terrain-noise`.
   { path: 'examples/shared/terrain-noise.ts', virtualPath: 'file:///node_modules/@examples/terrain-noise/index.ts' },
+  { path: 'examples/shared/gallery-transitions.ts', virtualPath: 'file:///node_modules/@examples/gallery-transitions/index.ts' },
   // Ambient WebGPU names (`GPUDevice`, `GPUBuffer`, ...) used by the custom
   // renderer examples. Global declarations, so the virtual path only has to be
   // unique - nothing imports it by name.
@@ -126,6 +134,7 @@ loader.config({ monaco });
 
 export const EditorCode = ({
   canReset,
+  compiledCode,
   exampleTitle,
   language,
   leading,
@@ -139,13 +148,26 @@ export const EditorCode = ({
   selectedVersionId,
   sourceCode,
   sourcePath,
+  toolbarTarget,
+  menuItems,
 }: EditorCodeProps): JSX.Element => {
+  const compiledPath = language === 'typescript' && sourcePath ? sourcePath.replace(/\.ts$/, '.js') : null;
+  const [showCompiled, setShowCompiled] = useState(false);
   const [editorValue, setEditorValue] = useState(sourceCode ?? '');
   const [showMenu, setShowMenu] = useState(false);
+  const [copyStatus, setCopyStatus] = useState('Copy');
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [activeFile, setActiveFile] = useState(sourcePath);
+  const [fileStatus, setFileStatus] = useState('');
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+  const readOnlyRef = useRef(readOnly);
   const modelRef = useRef<monaco.editor.ITextModel | null>(null);
+  const entryModelRef = useRef<monaco.editor.ITextModel | null>(null);
+  const filesRef = useRef(new Map<string, { model: monaco.editor.ITextModel; view: monaco.editor.ICodeEditorViewState | null }>());
+  const originalFilesRef = useRef(new Map<string, string>());
+  const fileRequestRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const importReaderRef = useRef<FileReader | null>(null);
   const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const footgunTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoRefreshRef = useRef(autoRefresh);
@@ -167,12 +189,40 @@ export const EditorCode = ({
   }, [autoRefresh]);
 
   useEffect(() => {
+    readOnlyRef.current = readOnly;
+    const editor = editorRef.current;
+    const model = editor?.getModel();
+    const editable =
+      model === entryModelRef.current || [...filesRef.current].some(([path, file]) => file.model === model && isEditableSharedFile(path));
+    editor?.updateOptions({ readOnly: readOnly || !editable });
+  }, [readOnly]);
+
+  useEffect(() => {
     // Reset the editor buffer when the selected example (sourcePath) or its loaded
     // source changes - a prop-change reset, not render-derived state.
     // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
     setEditorValue(sourceCode ?? '');
-    onDirty(false);
+
+    if (entryModelRef.current?.getValue() !== (sourceCode ?? '')) {
+      entryModelRef.current?.setValue(sourceCode ?? '');
+    }
+
+    // eslint-disable-next-line @eslint-react/set-state-in-effect -- feedback belongs to the selected source, not the previous file
+    setCopyStatus('Copy');
+    onDirty(
+      [...filesRef.current].some(
+        ([path, file]) => isEditableSharedFile(path) && file.model.getValue() !== originalFilesRef.current.get(path),
+      ),
+    );
   }, [onDirty, sourceCode, sourcePath]);
+
+  useEffect(() => {
+    const model = compiledPath ? filesRef.current.get(compiledPath)?.model : null;
+
+    if (model && compiledCode !== null && compiledCode !== undefined && model.getValue() !== compiledCode) {
+      model.setValue(compiledCode);
+    }
+  }, [compiledCode, compiledPath]);
 
   useEffect(() => {
     if (!selectedVersionId) {
@@ -221,6 +271,19 @@ export const EditorCode = ({
       }
 
       disposablesRef.current = [];
+      selectedVersionRef.current = '';
+      fileRequestRef.current?.abort();
+      importReaderRef.current?.abort();
+      importReaderRef.current = null;
+
+      for (const file of filesRef.current.values()) {
+        if (!file.model.isDisposed()) {
+          file.model.dispose();
+        }
+      }
+
+      filesRef.current.clear();
+      originalFilesRef.current.clear();
     },
     [],
   );
@@ -232,32 +295,45 @@ export const EditorCode = ({
       return;
     }
 
-    const editor = editorRef.current;
+    const model = entryModelRef.current;
 
-    if (!editor) {
+    if (!model) {
       return;
     }
 
-    const code = editor.getValue();
+    const code = model.getValue();
+    const version = model.getVersionId();
+    const editableHelpers = [...filesRef.current]
+      .filter(([path]) => isEditableSharedFile(path))
+      .map(([path, file]) => ({ path, model: file.model, version: file.model.getVersionId() }));
+    const helpers = editableHelpers.filter(file => file.model.getValue() !== originalFilesRef.current.get(file.path));
+    const [executionCode, ...compiledHelpers] = await Promise.all([
+      language === 'typescript' ? getExecutionCode(model, language) : Promise.resolve(code),
+      ...helpers.map(file => getExecutionCode(file.model, 'typescript')),
+    ]);
 
-    if (language !== 'typescript') {
-      onUpdateCode({ code, executionCode: undefined });
-      onDirty(false);
-
+    if (
+      executionCode === null ||
+      compiledHelpers.some(code => code === null) ||
+      model.isDisposed() ||
+      model.getVersionId() !== version ||
+      editableHelpers.some(file => file.model.isDisposed() || file.model.getVersionId() !== file.version) ||
+      [...filesRef.current].some(
+        ([path, file]) =>
+          isEditableSharedFile(path) &&
+          !editableHelpers.some(helper => helper.path === path) &&
+          file.model.getValue() !== originalFilesRef.current.get(path),
+      )
+    ) {
       return;
     }
 
-    const executionCode = await getExecutionCode(editor, language);
-
-    if (executionCode === null) {
-      // TS worker couldn't emit JS (still warming up, or a transient
-      // failure) - keep the last successfully-compiled preview running
-      // instead of pushing raw, unparseable TypeScript into the iframe.
-      return;
-    }
-
-    onUpdateCode({ code, executionCode });
-    onDirty(false);
+    onUpdateCode({
+      code,
+      executionCode,
+      executionModules: Object.fromEntries(helpers.map((file, index) => [file.path, compiledHelpers[index]!])),
+    });
+    onDirty(helpers.length > 0);
   }, [language, onUpdateCode, onDirty, readOnly]);
 
   // `onMount` runs once, so the addCommand closures below would otherwise
@@ -267,6 +343,36 @@ export const EditorCode = ({
   useEffect(() => {
     triggerRefreshRef.current = triggerRefresh;
   });
+
+  const selectFile = useCallback(
+    (path: string): void => {
+      const editor = editorRef.current;
+      const next = filesRef.current.get(path);
+
+      if (!editor || !next) {
+        return;
+      }
+
+      for (const file of filesRef.current.values()) {
+        if (file.model === editor.getModel()) {
+          file.view = editor.saveViewState();
+        }
+      }
+
+      // React options may arrive from an older render, so model selection owns readOnly.
+      editor.updateOptions({ readOnly: readOnly || (path !== sourcePath && !isEditableSharedFile(path)) });
+      editor.setModel(next.model);
+      modelRef.current = next.model;
+
+      if (next.view) {
+        editor.restoreViewState(next.view);
+      }
+
+      setActiveFile(path);
+      updateDiagnostics(next.model, selectedVersionRef.current, typingsAppliedVersionRef.current, onDiagnostic);
+    },
+    [onDiagnostic, readOnly, sourcePath],
+  );
 
   useImperativeHandle(
     ref,
@@ -292,6 +398,13 @@ export const EditorCode = ({
   const onMount: OnMount = (editor, monacoApi) => {
     editorRef.current = editor;
     modelRef.current = editor.getModel();
+    entryModelRef.current = editor.getModel();
+    editor.updateOptions({ readOnly: readOnlyRef.current });
+
+    if (sourcePath && entryModelRef.current) {
+      filesRef.current.set(sourcePath, { model: entryModelRef.current, view: null });
+    }
+
     window.monaco = monacoApi;
 
     disposablesRef.current.push(
@@ -303,7 +416,11 @@ export const EditorCode = ({
         onCursorChange({ lineNumber: position.lineNumber, column: position.column, selectionLength });
       }),
       editor.onDidChangeModelContent(() => {
-        const dirty = editor.getValue() !== sourceCodeRef.current;
+        const dirty =
+          entryModelRef.current?.getValue() !== sourceCodeRef.current ||
+          [...filesRef.current].some(
+            ([path, file]) => isEditableSharedFile(path) && file.model.getValue() !== originalFilesRef.current.get(path),
+          );
         onDirty(dirty);
 
         // Scheduled from the content change rather than from
@@ -318,7 +435,7 @@ export const EditorCode = ({
           void updateFootgunMarkers(editor.getModel());
         }, FOOTGUN_DEBOUNCE_MS);
 
-        if (autoRefreshRef.current && dirty) {
+        if (autoRefreshRef.current && !editor.getOption(monacoApi.editor.EditorOption.readOnly)) {
           if (autoRefreshTimerRef.current !== null) {
             clearTimeout(autoRefreshTimerRef.current);
           }
@@ -327,7 +444,7 @@ export const EditorCode = ({
             autoRefreshTimerRef.current = null;
 
             if (autoRefreshRef.current) {
-              void triggerRefresh();
+              void triggerRefreshRef.current();
             }
           }, 800);
         }
@@ -354,7 +471,18 @@ export const EditorCode = ({
     onCursorChange({ lineNumber: 1, column: 1, selectionLength: 0 });
     updateDiagnostics(editor.getModel(), selectedVersionRef.current, typingsAppliedVersionRef.current, onDiagnostic);
     void updateFootgunMarkers(editor.getModel());
-    requestAnimationFrame(() => editor.layout());
+    requestAnimationFrame(() => {
+      editor.layout();
+      const learningRegion =
+        editor
+          .getModel()
+          ?.getLinesContent()
+          .findIndex(line => line.includes('#region guide:')) ?? -1;
+
+      if (learningRegion >= 0) {
+        editor.revealLineNearTop(learningRegion + 2);
+      }
+    });
   };
 
   const beforeMount = (): void => {
@@ -373,13 +501,92 @@ export const EditorCode = ({
   const resetCode = (): void => {
     setShowMenu(false);
 
-    if (!canReset || !window.confirm('Reset the editor to the original example source?')) {
+    if (!canReset || !window.confirm('Reset the example and edited helper files to their original source?')) {
       return;
+    }
+
+    importReaderRef.current?.abort();
+    importReaderRef.current = null;
+
+    if (autoRefreshTimerRef.current !== null) {
+      clearTimeout(autoRefreshTimerRef.current);
+      autoRefreshTimerRef.current = null;
+    }
+
+    for (const [path, original] of originalFilesRef.current) {
+      filesRef.current.get(path)?.model.setValue(original);
+    }
+
+    setEditorValue(sourceCodeRef.current ?? '');
+    entryModelRef.current?.setValue(sourceCodeRef.current ?? '');
+
+    if (autoRefreshTimerRef.current !== null) {
+      clearTimeout(autoRefreshTimerRef.current);
+      autoRefreshTimerRef.current = null;
     }
 
     onResetCode({ confirmed: true });
     onDirty(false);
   };
+
+  const openFile = useCallback(
+    async (path: string): Promise<void> => {
+      fileRequestRef.current?.abort();
+      setFileStatus('');
+
+      if (filesRef.current.has(path)) {
+        selectFile(path);
+
+        return;
+      }
+
+      if (path === compiledPath && compiledCode !== null && compiledCode !== undefined && sourcePath) {
+        const model = monaco.editor.createModel(
+          compiledCode,
+          'javascript',
+          monaco.Uri.parse(getModelUrl(path, selectedVersionId, sourcePath)),
+        );
+        filesRef.current.set(path, { model, view: null });
+        selectFile(path);
+
+        return;
+      }
+
+      const request = new AbortController();
+      fileRequestRef.current = request;
+      setFileStatus(`Loading ${path}...`);
+
+      try {
+        const response = await fetch(
+          isCurrentVersion(selectedVersionId) ? buildExampleUrl(path) : buildGithubRawExampleUrl(selectedVersionId, path),
+          { signal: request.signal },
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const source = await response.text();
+
+        if (request.signal.aborted || !sourcePath) {
+          return;
+        }
+
+        const model = monaco.editor.createModel(source, undefined, monaco.Uri.parse(getModelUrl(path, selectedVersionId, sourcePath)));
+        filesRef.current.set(path, { model, view: null });
+        originalFilesRef.current.set(path, source);
+        selectFile(path);
+        setFileStatus('');
+      } catch (error) {
+        if (!request.signal.aborted) {
+          setFileStatus(`Cannot open ${path}: ${String(error)}`);
+        }
+      }
+    },
+    [compiledCode, compiledPath, selectFile, selectedVersionId, sourcePath],
+  );
+
+  const activeReadOnly = readOnly || (activeFile !== sourcePath && !isEditableSharedFile(activeFile));
 
   /**
    * Monaco's own document formatter, which for TypeScript and JavaScript is the
@@ -401,7 +608,7 @@ export const EditorCode = ({
   const exportCode = (): void => {
     setShowMenu(false);
     const code = editorRef.current?.getValue() ?? editorValue;
-    const fileName = sourcePath ? (sourcePath.split('/').pop() ?? 'example.js') : 'example.js';
+    const fileName = activeFile?.split('/').pop() ?? 'example.js';
     const blob = new Blob([code], { type: 'text/javascript' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -423,120 +630,192 @@ export const EditorCode = ({
 
   const onFileImport = (event: ChangeEvent<HTMLInputElement>): void => {
     const file = event.currentTarget.files?.[0];
+    const model = entryModelRef.current;
 
-    if (!file) {
+    if (!file || !model || model.isDisposed() || readOnly) {
       return;
     }
 
+    importReaderRef.current?.abort();
     const reader = new FileReader();
+    importReaderRef.current = reader;
 
     reader.onload = () => {
-      if (typeof reader.result !== 'string') {
+      if (
+        importReaderRef.current !== reader ||
+        entryModelRef.current !== model ||
+        model.isDisposed() ||
+        typeof reader.result !== 'string'
+      ) {
         return;
       }
 
       setEditorValue(reader.result);
-      editorRef.current?.setValue(reader.result);
+      model.setValue(reader.result);
+      onDirty(
+        reader.result !== sourceCodeRef.current ||
+          [...filesRef.current].some(
+            ([path, file]) => isEditableSharedFile(path) && file.model.getValue() !== originalFilesRef.current.get(path),
+          ),
+      );
+    };
+
+    reader.onloadend = () => {
+      if (importReaderRef.current === reader) {
+        importReaderRef.current = null;
+      }
     };
 
     reader.readAsText(file);
     event.currentTarget.value = '';
   };
 
-  return (
-    <section className={css(styles, 'root')} data-editor-root aria-label={`Code editor for ${exampleTitle}`}>
-      <Toolbar title="Code" leading={leading}>
-        <div className={css(styles, 'menu-anchor')} data-editor-menu-anchor>
+  const copyCode = async (): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(editorRef.current?.getValue() ?? editorValue);
+      setCopyStatus('Copied');
+    } catch {
+      setCopyStatus('Copy unavailable');
+    }
+  };
+
+  const runControls = (
+    <div className={css(styles, 'menu-anchor')}>
+      <button
+        className={css(styles, 'action-button')}
+        data-action="refresh"
+        type="button"
+        title="Run example (Ctrl+Enter)"
+        aria-keyshortcuts="Control+Enter Meta+Enter"
+        disabled={readOnly || !sourceCode}
+        onClick={() => void triggerRefresh()}
+      >
+        Run
+      </button>
+      <button className={css(styles, 'action-button')} data-action="reset" type="button" disabled={!canReset} onClick={resetCode}>
+        Reset
+      </button>
+      {menuItems}
+    </div>
+  );
+
+  const toolbarControls = (
+    <div className={css(styles, 'menu-anchor')} data-editor-menu-anchor>
+      <button
+        className={css(styles, 'action-button')}
+        data-action="copy"
+        type="button"
+        disabled={!sourceCode}
+        onClick={() => void copyCode()}
+      >
+        {copyStatus}
+      </button>
+      <button className={css(styles, 'action-button')} type="button" disabled={activeReadOnly} onClick={formatCode}>
+        Format
+      </button>
+      <button
+        className={css(styles, 'more-button')}
+        type="button"
+        aria-label="File options"
+        aria-expanded={showMenu}
+        data-open={showMenu ? 'true' : undefined}
+        onClick={() => setShowMenu(value => !value)}
+      >
+        <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" aria-hidden="true">
+          <circle cx="10" cy="4.5" r="1.5" />
+          <circle cx="10" cy="10" r="1.5" />
+          <circle cx="10" cy="15.5" r="1.5" />
+        </svg>
+      </button>
+      {showMenu && (
+        <div
+          className={css(styles, 'menu-dropdown')}
+          role="menu"
+          onClick={event => {
+            if ((event.target as HTMLElement).closest('[role="menuitem"]')) {
+              setShowMenu(false);
+            }
+          }}
+          onKeyDown={event => {
+            if (event.key === 'Escape') {
+              setShowMenu(false);
+              event.stopPropagation();
+            }
+          }}
+        >
+          <div className={css(styles, 'compact-actions')}>
+            <button className={css(styles, 'menu-item')} role="menuitem" disabled={!sourceCode} onClick={() => void copyCode()}>
+              {copyStatus}
+            </button>
+          </div>
           <button
-            className={cx(css(styles, 'auto-button'), autoRefresh && css(styles, 'auto-button--active'))}
-            type="button"
-            title="Auto-refresh the preview on every code change (800ms debounce)"
+            className={css(styles, 'menu-item')}
+            role="menuitemcheckbox"
+            aria-checked={autoRefresh}
             disabled={readOnly}
             onClick={() => setAutoRefresh(value => !value)}
           >
-            auto-run
+            Auto-run: {autoRefresh ? 'On' : 'Off'}
           </button>
-          <button
-            className={css(styles, 'more-button')}
-            data-action="refresh"
-            type="button"
-            title="Refresh preview (Ctrl+Enter)"
-            disabled={readOnly}
-            onClick={() => void triggerRefresh()}
-          >
-            <svg viewBox="0 0 16 16" width="1em" height="1em" style={{ display: 'block' }} fill="currentColor" aria-hidden="true">
-              <path fillRule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z" />
-              <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z" />
-            </svg>
+
+          <button className={css(styles, 'menu-item')} role="menuitem" onClick={exportCode}>
+            Export this file
           </button>
-          <button
-            className={css(styles, 'more-button')}
-            data-action="reset"
-            type="button"
-            title="Reset to original source"
-            disabled={!canReset}
-            onClick={resetCode}
-          >
-            <svg viewBox="0 0 16 16" width="1em" height="1em" style={{ display: 'block' }} fill="none" aria-hidden="true">
-              <path d="M2.2 8a5.8 5.8 0 1 0 1.4-3.8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-              <path d="M2.1 2.8v2.8h2.8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-          <button
-            className={css(styles, 'more-button')}
-            type="button"
-            aria-label="More options"
-            aria-expanded={showMenu}
-            data-open={showMenu ? 'true' : undefined}
-            onClick={() => setShowMenu(value => !value)}
-          >
-            <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" aria-hidden="true">
-              <circle cx="10" cy="4.5" r="1.5" />
-              <circle cx="10" cy="10" r="1.5" />
-              <circle cx="10" cy="15.5" r="1.5" />
-            </svg>
-          </button>
-          {showMenu && (
-            <div className={css(styles, 'menu-dropdown')} role="menu">
-              <button className={css(styles, 'menu-item')} role="menuitem" disabled={readOnly} onClick={formatCode}>
-                Format Code
-              </button>
-              <button className={css(styles, 'menu-item')} role="menuitem" onClick={exportCode}>
-                Export this file
-              </button>
-              {companions.length > 0 && (
-                <div className={css(styles, 'menu-note')} role="group" aria-label="Files this example also imports">
-                  <span>Also imports</span>
-                  {companions.map(companion => (
-                    <a
-                      key={companion}
-                      className={css(styles, 'menu-item')}
-                      role="menuitem"
-                      href={
-                        isCurrentVersion(selectedVersionId)
-                          ? buildExampleUrl(companion)
-                          : buildGithubRawExampleUrl(selectedVersionId, companion)
-                      }
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {companion}
-                    </a>
-                  ))}
-                </div>
-              )}
-              <button className={css(styles, 'menu-item')} role="menuitem" disabled={readOnly} onClick={importCode}>
-                Import Code
-              </button>
-              <button className={css(styles, 'menu-item')} role="menuitem" data-variant="danger" disabled={!canReset} onClick={resetCode}>
-                Reset Code
-              </button>
-            </div>
+          {compiledPath && (
+            <button
+              className={css(styles, 'menu-item')}
+              role="menuitem"
+              disabled={!compiledCode}
+              onClick={() => {
+                setShowCompiled(true);
+                void openFile(compiledPath);
+              }}
+            >
+              Open compiled JavaScript
+            </button>
           )}
+          <button className={css(styles, 'menu-item')} role="menuitem" disabled={readOnly} onClick={importCode}>
+            Import main file
+          </button>
         </div>
-      </Toolbar>
+      )}
+    </div>
+  );
+
+  return (
+    <section className={css(styles, 'root')} data-editor-root aria-label={`Code editor for ${exampleTitle}`}>
+      {toolbarTarget && createPortal(runControls, toolbarTarget)}
+      {!toolbarTarget && (
+        <Toolbar title="Code" leading={leading}>
+          {runControls}
+        </Toolbar>
+      )}
       <input ref={fileInputRef} className={css(styles, 'file-input')} type="file" accept=".js,.ts" onChange={onFileImport} />
       <div className={css(styles, 'editor-shell')} data-editor-shell>
+        <div className={css(styles, 'file-toolbar')}>
+          <div className={css(styles, 'file-tabs')} role="group" aria-label="Example files">
+            {sourcePath &&
+              [sourcePath, ...companions, ...(showCompiled && compiledPath ? [compiledPath] : [])].map(path => (
+                <button
+                  key={path}
+                  type="button"
+                  aria-pressed={activeFile === path}
+                  title={path}
+                  value={path}
+                  onClick={event => void openFile(event.currentTarget.value)}
+                >
+                  {path.split('/').pop()}
+                  <span>{!readOnly && (path === sourcePath || isEditableSharedFile(path)) ? 'Editable' : 'Read only'}</span>
+                </button>
+              ))}
+          </div>
+          {toolbarControls}
+        </div>
+        {fileStatus && (
+          <p role="status" className={css(styles, 'file-status')}>
+            {fileStatus}
+          </p>
+        )}
         <div className={css(styles, 'editor-host')} data-editor-host>
           {/*
             Withheld until the selected example is known. Mounting earlier would
@@ -552,7 +831,11 @@ export const EditorCode = ({
               height="100%"
               language={language}
               loading={null}
-              onChange={(value: string | undefined) => setEditorValue(value ?? '')}
+              onChange={(value: string | undefined) => {
+                if (editorRef.current?.getModel() === entryModelRef.current) {
+                  setEditorValue(value ?? '');
+                }
+              }}
               onMount={onMount}
               options={{
                 automaticLayout: true,
@@ -566,14 +849,17 @@ export const EditorCode = ({
                 lineNumbersMinChars: 4,
                 minimap: { enabled: false },
                 overviewRulerLanes: 0,
-                readOnly,
+                // shortcut: Monaco 0.55 leaves a rejected highlight delay on model switches; restore after its fix.
+                occurrencesHighlight: 'off',
                 renderValidationDecorations: 'on',
                 scrollBeyondLastLine: false,
                 tabSize: 2,
               }}
-              path={getModelUrl(sourcePath)}
+              path={getModelUrl(sourcePath, selectedVersionId, sourcePath)}
+              keepCurrentModel
+              saveViewState={false}
               theme="vs-dark"
-              value={editorValue}
+              defaultValue={sourceCode ?? ''}
             />
           )}
         </div>
@@ -582,7 +868,8 @@ export const EditorCode = ({
   );
 };
 
-const getModelUrl = (sourcePath: string): string => `file:///${sourcePath.replace(/^\/+/, '')}`;
+const getModelUrl = (path: string, version: string, entry: string): string =>
+  `file:///examples/${encodeURIComponent(version)}/${encodeURIComponent(entry)}/${path.replace(/^\/+/, '')}`;
 
 const monacoSeverityToString = (severity: number): EditorDiagnosticSeverity => {
   if (severity >= 8) {
@@ -731,13 +1018,8 @@ const updateFootgunMarkers = async (model: monaco.editor.ITextModel | null): Pro
 // native parser SyntaxError (e.g. `private sprite!: Sprite` reads as two
 // adjacent identifiers), so callers must treat `null` as "not ready" and keep
 // the last successfully-compiled preview rather than swallow it into a crash.
-const getExecutionCode = async (
-  editor: monaco.editor.IStandaloneCodeEditor,
-  language: 'javascript' | 'typescript',
-): Promise<string | null> => {
-  const model = editor.getModel();
-
-  if (language !== 'typescript' || !model) {
+const getExecutionCode = async (model: monaco.editor.ITextModel, language: 'javascript' | 'typescript'): Promise<string | null> => {
+  if (language !== 'typescript') {
     return null;
   }
 
@@ -800,6 +1082,23 @@ const ensureTypingsForVersion = async (
   }
 
   const tsApi = (monaco.languages as unknown as { typescript: MonacoTypeScriptApi }).typescript;
+  const activePaths = new Set(libs.map(lib => lib.filePath));
+
+  for (const path of Object.keys(tsApi.typescriptDefaults.getExtraLibs())) {
+    if (!activePaths.has(path)) {
+      monaco.editor.getModel(monaco.Uri.parse(path))?.dispose();
+    }
+  }
+
+  // Materialized declaration models override extra libs when resolving definitions.
+  for (const lib of libs) {
+    const model = monaco.editor.getModel(monaco.Uri.parse(lib.filePath));
+
+    if (model && model.getValue() !== lib.content) {
+      model.setValue(lib.content);
+    }
+  }
+
   tsApi.javascriptDefaults.setExtraLibs(libs);
   tsApi.typescriptDefaults.setExtraLibs(libs);
   typingsAppliedVersion.current = versionId;

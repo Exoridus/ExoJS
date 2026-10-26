@@ -50,7 +50,7 @@ class MetaballsScene extends Scene {
     this.blur = new BlurFilter({ strength: 6 });
     this.threshold = new ShaderFilter({ glsl: { fragment: glsl }, wgsl });
     this.panel = demoPanel({
-      title: 'Filter order',
+      scene: this,
       controls: {
         passes: choice('Passes', PASSES),
         blur: slider('Blur strength', { min: 1, max: 12, value: 6, step: 0.25, format: value => value.toFixed(2) }),

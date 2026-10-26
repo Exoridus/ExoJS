@@ -175,7 +175,7 @@ class RadianceRoomsScene extends Scene {
     // so a project that only ever builds one leaves the other out of its bundle.
     // Space pauses the lamp, so both renderers can be compared at one instant.
     const panel = demoPanel({
-      title: 'Lighting',
+      scene: this,
       corner: 'top-right',
       controls: {
         renderer: choice('Renderer', ['Radiance', 'Lightmap']),

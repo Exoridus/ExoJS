@@ -10,7 +10,11 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 A scene has two drawing surfaces with different responsibilities. `scene.root` contains the world you render explicitly. `scene.ui` contains screen-fixed UI that the engine renders automatically above that world. Put a score, health bar, or menu on `ui` so camera movement does not move the interface.
 
+The UI is composed after scene transitions and frame effects, before the output transform. Lighting, bloom, and scene fades therefore leave its controls and text unchanged. Put interface artwork in `scene.root` instead when it should participate in those effects or a transition snapshot.
+
 Core includes retained UI widgets. You do not need an extra package for buttons, panels, text inputs, sliders, or dropdowns. Use DOM UI instead when the surrounding application, accessibility requirements, browser-native controls, or document layout make it the better host.
+
+Widgets start with a shared dark theme, system typography, and mint accents for focus and values. No stylesheet or image pack is required. Set `scene.ui.theme = createUITheme(...)` to customize the layer, or use a widget's theme overrides for a local variation. Theme changes apply to existing labels as well as backgrounds; the surrounding website's CSS does not determine the native widget theme.
 
 ## Build a small HUD
 
@@ -38,7 +42,7 @@ A widget's UI dimensions, drawable bounds, origin, and text ink bounds are relat
 | A command | `Button` with a clear label and activation behavior. |
 | A setting | `Checkbox`, `Slider`, or `Dropdown` as appropriate. |
 | Text entry | `TextInput` or `TextArea`. |
-| Grouped or overflowing content | `Panel`, `Stack`, and `ScrollView`. |
+| Grouped or overflowing content | `Panel`, `Stack`, and `ScrollContainer`. |
 
 The API reference owns each widget's exact options, defaults, and events. The normal workflow is to create the widget, place it in a layout, subscribe to a meaningful user action, and update the displayed value when application state changes. Do not duplicate authoritative game state inside several unrelated widget callbacks.
 

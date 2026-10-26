@@ -49,8 +49,6 @@ class MouseAndPointerScene extends Scene {
     app.input.onPointerTap.add(this.onTap);
     this.hud = mountControls({
       theme: 'site',
-      title: 'Pointer & capture',
-      hint: 'Drag the ship; release outside the canvas. Cancel clears held buttons.',
     });
   }
   buttonLabel() {

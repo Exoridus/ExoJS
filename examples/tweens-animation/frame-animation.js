@@ -8,133 +8,62 @@ import {
   FixedResolutionCanvasSizing,
   Graphics,
   Keyboard,
-  Rectangle,
   Scene,
-  Text,
-  Texture,
-  Time,
+  Spritesheet,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { demoPanel, slider, startExample } from '@examples/runtime';
-const FRAME_COUNT = 8;
-const REFERENCE_FPS = 8;
 class FrameAnimationScene extends Scene {
-  clips = [];
-  labels = [];
-  frames = Array.from({ length: FRAME_COUNT }, (_, index) => new Rectangle(index * 96, 0, 96, 96));
-  marks = this.track(new Graphics());
-  actions = new ActionMap({
-    pause: new ButtonAction(Keyboard.Space),
-    reset: new ButtonAction(Keyboard.R),
-    slower: new ButtonAction(Keyboard.Left),
-    faster: new ButtonAction(Keyboard.Right),
-  });
+  sprite;
+  frames = [];
+  ground = this.track(new Graphics());
+  actions = new ActionMap({ pause: new ButtonAction(Keyboard.Space) });
   panel;
-  playing = true;
-  clipTime = 0;
+  async load() {
+    const [texture, data] = await Promise.all([
+      this.loader.load(assets.platformerCharactersImage),
+      this.loader.load(assets.platformerCharactersAtlas),
+    ]);
+    const sheet = new Spritesheet(texture, data);
+    this.track({ destroy: () => sheet.clear() });
+    this.frames = ['character_green_walk_a', 'character_green_walk_b'].map(name => sheet.getFrame(name));
+    this.sprite = new AnimatedSprite(texture, { walk: { frames: this.frames, fps: 8 } }).setAnchor(0.5, 1).play('walk');
+  }
   init() {
-    const sheet = document.createElement('canvas');
-    sheet.width = 96 * FRAME_COUNT;
-    sheet.height = 96;
-    const paint = sheet.getContext('2d');
-    for (let frame = 0; frame < FRAME_COUNT; frame++) {
-      const lift = Math.sin((frame / FRAME_COUNT) * Math.PI) * 24;
-      const x = frame * 96;
-      paint.fillStyle = '#233f3b';
-      paint.beginPath();
-      paint.roundRect(x + 22, 32 - lift, 52, 48, 12);
-      paint.fill();
-      paint.fillStyle = '#88e97e';
-      paint.beginPath();
-      paint.roundRect(x + 26, 36 - lift, 44, 40, 9);
-      paint.fill();
-      paint.fillStyle = '#233f3b';
-      paint.fillRect(x + 35, 45 - lift, 5, 7);
-      paint.fillRect(x + 56, 45 - lift, 5, 7);
-      paint.fillRect(x + 29, 78 - lift, 12, 5);
-      paint.fillRect(x + 55, 78 - lift, 12, 5);
-    }
-    const texture = this.track(new Texture(sheet));
-    this.clips = [REFERENCE_FPS, REFERENCE_FPS].map(fps =>
-      this.track(new AnimatedSprite(texture, { bounce: { frames: this.frames, fps } }).setAnchor(0.5, 1).play('bounce')),
-    );
-    this.labels = this.clips.map(() => this.track(new Text('', { fillColor: new Color(35, 63, 59), align: 'center' })).setAnchor(0.5, 0));
+    this.root.addChild(this.ground, this.sprite);
     this.panel = demoPanel({
-      title: 'Sprite Animation',
+      scene: this,
       layout: 'bar',
-      controls: { fps: slider('Your fps', { min: 1, max: 24, step: 1, value: REFERENCE_FPS, format: value => `${value} fps` }) },
-      actions: { 'Pause / Resume': () => this.pause(), '+0.1 s': () => this.step(), Reset: () => this.reset() },
-      onChange: (_key, fps) => this.clips[1].addClip('bounce', { frames: this.frames, fps }),
+      controls: { fps: slider('FPS', { min: 1, max: 24, step: 1, value: 8, format: value => `${value} fps` }) },
+      actions: { Pause: () => this.pause() },
+      onChange: (_key, fps) => this.sprite.addClip('walk', { frames: this.frames, fps }),
     });
     this.inputs.attach(this.actions);
   }
   pause() {
-    this.playing = !this.playing;
-  }
-  advance(delta) {
-    this.clipTime += delta;
-    // Immediate-mode sprites have no AnimationSystem owner; both receive exactly the same clip time.
-    for (const clip of this.clips) {
-      clip.resume();
-      clip.update(delta);
-      clip.pause();
+    if (this.sprite.playing) {
+      this.sprite.pause();
+    } else {
+      this.sprite.resume();
     }
   }
-  step() {
-    if (!this.playing) {
-      this.advance(Time.seconds(0.1));
-    }
-  }
-  reset() {
-    this.clipTime = 0;
-    this.panel.set('fps', REFERENCE_FPS);
-    this.clips.forEach(clip => clip.play('bounce').pause());
-  }
-  update(delta) {
+  update() {
     if (this.actions.pause.pressed) {
       this.pause();
     }
-    if (this.actions.reset.pressed) {
-      this.reset();
-    }
-    if (this.actions.slower.pressed) {
-      this.panel.step('fps', -1);
-    }
-    if (this.actions.faster.pressed) {
-      this.panel.step('fps');
-    }
-    if (this.playing) {
-      this.advance(delta);
-    }
-    const { scale: k, height, compact } = this.panel.fit(this.app, this.app.canvas);
-    const panel = this.panel.element;
-    panel.querySelector('button:nth-of-type(2)').disabled = this.playing;
-    panel.querySelector('button').setAttribute('aria-pressed', String(!this.playing));
-    this.panel.status(
-      `${this.playing ? 'Playing' : 'Paused'} | Clip time ${this.clipTime.toFixed(1)} s${compact ? '' : ' | Space pause, arrows tempo, R reset'}`,
-    );
-    const ground = (height - panel.offsetHeight - 68) * k;
-    const size = Math.min(320, Math.max(80, ground / k - 12));
-    this.marks.clear();
-    this.marks.lineColor = new Color(134, 155, 141);
-    this.marks.lineWidth = 2 * k;
-    this.marks.moveTo(24 * k, ground).lineTo(this.app.width - 24 * k, ground);
-    this.clips.forEach((clip, index) => {
-      const x = this.app.width * (index === 0 ? 0.27 : 0.73);
-      clip.setPosition(x, ground).setScale((size * k) / 96);
-      const label = this.labels[index];
-      label.style.fontSize = 15 * k;
-      label.text = `${index === 0 ? 'Reference' : 'Your clip'} | ${index === 0 ? REFERENCE_FPS : this.panel.values.fps} fps\nFrame ${clip.currentFrame + 1}/${FRAME_COUNT}`;
-      label.setPosition(x, ground + 8 * k);
-      for (let frame = 0; frame < FRAME_COUNT; frame++) {
-        this.marks.fillColor = frame === clip.currentFrame ? new Color(35, 100, 60) : new Color(196, 208, 194);
-        this.marks.drawRectangle(x + (frame - 4) * 14 * k, ground + 50 * k, 10 * k, 5 * k);
-      }
-    });
+    const { scale: k, width, contentHeight } = this.panel.fit(this.app, this.app.canvas);
+    const size = Math.min(320, contentHeight * 0.8, width * 0.65) * k;
+    const baseline = (contentHeight + size / k) * 0.5 * k;
+    this.sprite.setPosition(this.app.width / 2, baseline).setScale(size / 128);
+    this.ground.clear();
+    this.ground.lineColor = new Color(134, 155, 141);
+    this.ground.lineWidth = 2 * k;
+    this.ground.moveTo(this.app.width / 2 - size * 0.7, baseline).lineTo(this.app.width / 2 + size * 0.7, baseline);
+    this.panel.actions.Pause.label = this.sprite.playing ? 'Pause' : 'Play';
+    this.panel.status(`Frame ${this.sprite.currentFrame + 1}/${this.frames.length} | ${this.sprite.playing ? 'Playing' : 'Paused'}`);
   }
   draw(context) {
-    context.render(this.marks);
-    this.clips.forEach(clip => context.render(clip));
-    this.labels.forEach(label => context.render(label));
+    context.render(this.root);
   }
   destroy() {
     this.panel?.dispose();

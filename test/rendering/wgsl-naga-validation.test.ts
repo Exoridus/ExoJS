@@ -35,6 +35,7 @@ import { describe, expect, test } from 'vitest';
 
 import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
+import { crtShader } from '#rendering/filters/CrtFilter';
 import { dropShadowShader } from '#rendering/filters/DropShadowFilter';
 import { spriteMaterialPrologueWgsl } from '#rendering/sprite/materialSources';
 import { filterUniformGroup } from '#rendering/uniforms/uniformLayout';
@@ -50,6 +51,8 @@ import {
 } from '#rendering/webgpu/WebGpuSpriteRenderer';
 import { stencilWriteShaderSource } from '#rendering/webgpu/WebGpuStencilClipper';
 import { textShaderSource } from '#rendering/webgpu/WebGpuTextRenderer';
+
+import { galleryDissolveShader } from '../../examples/shared/gallery-transitions';
 
 /** Kept in step with the entries in `test/rendering/browser/webgpu-shader-compile.test.ts`. */
 const shaders: ReadonlyArray<readonly [name: string, source: string]> = [
@@ -75,7 +78,9 @@ const shaders: ReadonlyArray<readonly [name: string, source: string]> = [
   // to validate.
   ['BloomFilter (generated uniform block)', bloomThresholdShader._resolveWgsl(filterUniformGroup)!],
   ['ColorMatrixFilter (generated uniform block)', colorMatrixShader._resolveWgsl(filterUniformGroup)!],
+  ['CrtFilter (generated uniform block)', crtShader._resolveWgsl(filterUniformGroup)!],
   ['DropShadowFilter (generated uniform block)', dropShadowShader._resolveWgsl(filterUniformGroup)!],
+  ['transition gallery dissolve (generated uniform block)', galleryDissolveShader._resolveWgsl(filterUniformGroup)!],
 ];
 
 const nagaBinary = process.env['EXOJS_NAGA'] ?? 'naga';

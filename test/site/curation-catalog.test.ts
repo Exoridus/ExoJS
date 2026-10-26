@@ -27,7 +27,14 @@ describe('curated curriculum preservation', () => {
 
     expect(curation.contracts).toHaveLength(111);
     expect(new Set(curation.contracts.map(contract => contract.source)).size).toBe(111);
-    expect(curation.contracts.map(contract => contract.source).sort()).toEqual(paths.sort());
+    expect(paths.sort()).toEqual(
+      [
+        ...curation.contracts.map(contract => contract.source),
+        'examples/application-scenes/transition-gallery.ts',
+        'examples/physics/materials-playground.ts',
+        'examples/showcase/collect-survive.ts',
+      ].sort(),
+    );
 
     for (const contract of curation.contracts) {
       expect(fs.existsSync(contract.source)).toBe(true);

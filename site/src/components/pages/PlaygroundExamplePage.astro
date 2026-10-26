@@ -21,7 +21,10 @@ if (!entry) {
 
 const categoryTitle = PLAYGROUND_CATEGORY_BY_SLUG.get(entry.chapter)?.title ?? entry.chapter;
 const slug = entry.path.replace(/\.js$/, '');
-const playgroundHref = `${import.meta.env.BASE_URL}${locale}/playground/?version=${CURRENT_VERSION_ID}&example=${slug}`;
+const isAssetTool = entry.path === 'debug-layer/asset-browser.js';
+const playgroundHref = isAssetTool
+  ? `${import.meta.env.BASE_URL}${locale}/tools/asset-browser/`
+  : `${import.meta.env.BASE_URL}${locale}/playground/?version=${CURRENT_VERSION_ID}&example=${slug}`;
 const title = `${entry.title} — ExoJS Playground`;
 ---
 
@@ -36,7 +39,9 @@ const title = `${entry.title} — ExoJS Playground`;
       data-pagefind-meta={locale === 'en' ? `title:${entry.title}` : undefined}
     >
       {locale === 'de' && <EnglishFallbackNotice />}
-      <p class="example-eyebrow">{categoryTitle} &middot; Playground example</p>
+      <p class="example-eyebrow">
+        {categoryTitle} &middot; {isAssetTool ? 'Developer tool' : 'Playground example'}
+      </p>
       <h1>{entry.title}</h1>
       <p class="example-description">{entry.description}</p>
       <p class="example-facts">
@@ -63,7 +68,7 @@ const title = `${entry.title} — ExoJS Playground`;
       )}
       <p>
         <a class="example-cta" href={playgroundHref}>
-          Open in Playground →
+          {isAssetTool ? 'Open tool →' : 'Open in Playground →'}
         </a>
       </p>
     </article>

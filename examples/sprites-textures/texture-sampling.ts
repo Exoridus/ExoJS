@@ -108,31 +108,18 @@ class TextureSamplingScene extends Scene {
 
     this.root.addChild(this.grid, ...this.magnified, ...this.minified);
     this.panel = demoPanel({
-      title: 'Texture Sampling and Pixel Snapping',
+      scene: this,
       layout: 'bar',
       controls,
-      hint: 'Wheel: fractional camera zoom. Snap changes rendering, never logical positions. Rotation/skew may fall back to position snapping.',
       actions: {
         'Camera drift': () => {
           this.cameraMotion = !this.cameraMotion;
         },
-        Reset: () => this.reset(),
       },
     });
     this.inputs.onTrigger(Keyboard.Space, () => this.panel.step('motion'));
     this.inputs.onTrigger(Keyboard.P, () => this.panel.step('snap'));
-    this.inputs.onTrigger(Keyboard.R, () => this.reset());
     this.app.input.onMouseWheel.add(this.onWheel);
-  }
-
-  private reset(): void {
-    this.elapsed = 0;
-    this.zoom = 1;
-    this.cameraMotion = false;
-    this.cameraTime = 0;
-    this.panel.set('magnify', 3);
-    this.panel.set('minify', 0.25);
-    this.panel.set('snap', 'None');
   }
 
   override update(delta: Seconds): void {

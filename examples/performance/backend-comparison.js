@@ -50,7 +50,7 @@ class BatchingScene extends Scene {
     // Keys and panel share one state; changing the backend rebuilds the whole
     // application, which mounts a fresh panel from the same module state.
     this.panel = demoPanel({
-      title: 'Workload',
+      scene: this,
       corner: 'top-right',
       controls: {
         count: slider('Sprites', { min: COUNT_STEP, max: MAX_SPRITES, step: COUNT_STEP, value: spriteCount, format: v => v.toFixed(0) }),

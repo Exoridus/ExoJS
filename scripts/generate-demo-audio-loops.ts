@@ -1,11 +1,10 @@
 /**
- * Generates three short loopable demo audio tracks as OGG files.
+ * Generates two short loopable demo audio tracks as OGG files.
  *
  * Loop A  - bright major chord pulse (G major, higher register)
  * Loop B  - calm minor chord drone (D minor, lower register)
- * Loop Main - mid-range ambient chord (C major)
  *
- * Overwrites the three committed loops in `examples/assets/demo/audio`.
+ * Overwrites the two committed loops in `examples/assets/audio`.
  *
  * Requires: ffmpeg on PATH
  * Run: tsx scripts/generate-demo-audio-loops.ts
@@ -18,7 +17,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const outDir = path.resolve(__dirname, '../examples/assets/demo/audio');
+const outDir = path.resolve(__dirname, '../examples/assets/audio');
 
 const SAMPLE_RATE = 22050;
 const CHANNELS = 1;
@@ -125,7 +124,7 @@ const generateChordLoop = ({ freqs, durationS, tremoloHz, tremoloDepth, masterVo
 
 const LOOPS = [
   {
-    name: 'demo-loop-a',
+    name: 'music-loop-a',
     // G major: G4 B4 D5 - bright, upper register
     freqs: [392, 493.88, 587.33],
     durationS: 5,
@@ -134,22 +133,13 @@ const LOOPS = [
     masterVolume: 0.4,
   },
   {
-    name: 'demo-loop-b',
+    name: 'music-loop-b',
     // D minor: D3 F3 A3 - darker, lower register
     freqs: [146.83, 174.61, 220],
     durationS: 6,
     tremoloHz: 1.2, // slow pulse → calm
     tremoloDepth: 0.45,
     masterVolume: 0.38,
-  },
-  {
-    name: 'demo-loop-main',
-    // C major: C3 E3 G3 - neutral, mid-range
-    freqs: [130.81, 164.81, 196],
-    durationS: 5,
-    tremoloHz: 2, // moderate pulse → background-friendly
-    tremoloDepth: 0.35,
-    masterVolume: 0.36,
   },
 ];
 

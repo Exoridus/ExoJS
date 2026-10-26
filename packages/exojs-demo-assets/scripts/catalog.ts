@@ -8,7 +8,7 @@
  * profiles) and the package tests (drift and closure checks).
  */
 import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { posix, resolve } from 'node:path';
 
 export const packageRoot = resolve(import.meta.dirname, '..');
@@ -45,6 +45,7 @@ export interface CatalogSource {
   readonly sourceRoot: string;
   readonly provenance: Readonly<Record<string, ProvenanceRecord>>;
   readonly media: Readonly<Record<string, unknown>>;
+  readonly fileProvenance?: Readonly<Record<string, string>>;
   readonly entries: readonly CatalogEntry[];
   readonly blocked: ReadonlyArray<{ readonly path: string; readonly reason: string }>;
 }
@@ -56,8 +57,6 @@ export interface ResolvedFile {
   readonly role: 'entry' | 'transitive' | 'license';
   readonly profile: DemoAssetProfile;
   readonly provenance: string;
-  /** A byte-identical file in a vendored upstream pack, when there is one. */
-  readonly upstream?: string;
 }
 
 export interface ResolvedEntry extends CatalogEntry {
@@ -78,10 +77,6 @@ const TYPES: ReadonlySet<string> = new Set(['texture', 'json', 'sound', 'music',
 const KEY = /^[a-z][A-Za-z0-9]*$/;
 const MEDIA_SUFFIX =
   /\.(png|jpe?g|webp|avif|gif|ktx2|svg|ogg|mp3|wav|m4a|mp4|webm|json|tmj|tsj|tj|tmx|tsx|tx|ldtk|ldtkl|fnt|ttf|otf|woff2?|vtt|srt)$/i;
-const VENDOR_PACK = /^demo\/vendor\/kenney\/([^/]+)\//;
-
-/** The provenance id of a Kenney pack directory. Most packs are named without the prefix; `kenney-fonts` already carries it. */
-const kenneyPackId = (pack: string): string => (pack.startsWith('kenney-') ? pack : `kenney-${pack}`);
 
 export const sha256Of = (file: string): string => createHash('sha256').update(readFileSync(file)).digest('hex');
 
@@ -91,8 +86,7 @@ export const readCatalogSource = (): CatalogSource =>
 /**
  * Files an asset names relative to itself: tilesets and images of a Tiled or
  * LDtk map, and the pages of a bitmap font. Atlas JSON is deliberately not
- * followed: its `meta.image` names the file the atlas was exported from, not
- * the image shipped next to it.
+ * followed because its texture is supplied explicitly by the caller.
  */
 const referencedFiles = (sourceRoot: string, path: string): string[] => {
   const absolute = resolve(sourceRoot, path);
@@ -125,35 +119,6 @@ const referencedFiles = (sourceRoot: string, path: string): string[] => {
   return names.map(name => posix.normalize(posix.join(directory, name)));
 };
 
-const vendorIndex = (sourceRoot: string): Map<string, string> => {
-  const index = new Map<string, string>();
-  const vendorRoot = resolve(sourceRoot, 'demo', 'vendor');
-
-  if (!existsSync(vendorRoot)) {
-    return index;
-  }
-
-  const walk = (directory: string): void => {
-    for (const entry of readdirSync(directory, { withFileTypes: true })) {
-      const absolute = resolve(directory, entry.name);
-
-      if (entry.isDirectory()) {
-        walk(absolute);
-      } else if (statSync(absolute).size > 0) {
-        const hash = sha256Of(absolute);
-
-        if (!index.has(hash)) {
-          index.set(hash, absolute.slice(sourceRoot.length + 1).replaceAll('\\', '/'));
-        }
-      }
-    }
-  };
-
-  walk(vendorRoot);
-
-  return index;
-};
-
 /** Validates the authored catalog and resolves its file sets. Throws listing every problem found. */
 export const resolveCatalog = (source: CatalogSource = readCatalogSource()): ResolvedCatalog => {
   const sourceRoot = resolve(packageRoot, source.sourceRoot);
@@ -161,7 +126,6 @@ export const resolveCatalog = (source: CatalogSource = readCatalogSource()): Res
   const seenKeys = new Set<string>();
   const seenPaths = new Map<string, string>();
   const blocked = new Set(source.blocked.map(item => item.path));
-  const upstream = vendorIndex(sourceRoot);
   const files = new Map<string, ResolvedFile>();
 
   const addFile = (path: string, role: ResolvedFile['role'], profile: DemoAssetProfile, provenance: string): void => {
@@ -186,7 +150,6 @@ export const resolveCatalog = (source: CatalogSource = readCatalogSource()): Res
     }
 
     const sha256 = sha256Of(absolute);
-    const match = upstream.get(sha256);
     files.set(path, {
       path,
       bytes: statSync(absolute).size,
@@ -194,7 +157,6 @@ export const resolveCatalog = (source: CatalogSource = readCatalogSource()): Res
       role,
       profile,
       provenance,
-      ...(match !== undefined && match !== path ? { upstream: match } : {}),
     });
   };
 
@@ -243,17 +205,6 @@ export const resolveCatalog = (source: CatalogSource = readCatalogSource()): Res
       continue;
     }
 
-    // A curated copy of a vendored pack file must name that pack, so the notice
-    // can never attribute a file to the wrong upstream.
-    const pack = entryFile.upstream === undefined ? undefined : VENDOR_PACK.exec(entryFile.upstream)?.[1];
-    const expectedProvenance = pack === undefined ? undefined : kenneyPackId(pack);
-
-    if (expectedProvenance !== undefined && entry.provenance !== expectedProvenance) {
-      problems.push(
-        `${entry.key}: byte-identical to ${entryFile.upstream}, but attributed to ${entry.provenance} instead of ${expectedProvenance}`,
-      );
-    }
-
     const transitive: string[] = [];
     const pending = [entry.path, ...Object.values(entry.options ?? {}).flatMap(value => (typeof value === 'object' ? [value.$path] : []))];
     const visited = new Set<string>();
@@ -274,11 +225,7 @@ export const resolveCatalog = (source: CatalogSource = readCatalogSource()): Res
           problems.push(`${entry.key}: depends on blocked ${next}`);
         }
 
-        const vendorPack = VENDOR_PACK.exec(next)?.[1];
-        const owner =
-          vendorPack !== undefined && source.provenance[kenneyPackId(vendorPack)] !== undefined
-            ? kenneyPackId(vendorPack)
-            : entry.provenance;
+        const owner = source.fileProvenance?.[next] ?? entry.provenance;
         addFile(next, 'transitive', profile, owner);
       }
 
@@ -289,6 +236,16 @@ export const resolveCatalog = (source: CatalogSource = readCatalogSource()): Res
 
     const resolvedEntryFile = files.get(entry.path)!;
     entries.push({ ...entry, profile, sha256: resolvedEntryFile.sha256, bytes: resolvedEntryFile.bytes, transitive });
+  }
+
+  for (const [path, provenance] of Object.entries(source.fileProvenance ?? {})) {
+    if (!files.has(path)) {
+      problems.push(`${path}: provenance override does not name a published file`);
+    }
+
+    if (source.provenance[provenance] === undefined) {
+      problems.push(`${path}: unknown provenance "${provenance}"`);
+    }
   }
 
   const provenanceUsed = new Map<string, DemoAssetProfile>();

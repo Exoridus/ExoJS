@@ -57,7 +57,7 @@
     {
       "number": 5,
       "section": "A",
-      "title": "Orb Dodge",
+      "title": "Collect & Survive",
       "id": "orb-dodge",
       "source": "examples/showcase/orb-dodge.ts",
       "batch": "B2",

@@ -32,7 +32,6 @@ class TextLayoutScene extends Scene {
   actions = new ActionMap({
     narrower: new ButtonAction(Keyboard.Left),
     wider: new ButtonAction(Keyboard.Right),
-    reset: new ButtonAction(Keyboard.R),
   });
   width = 620;
   scale = 0;
@@ -45,10 +44,9 @@ class TextLayoutScene extends Scene {
   }
   init() {
     this.panel = demoPanel({
-      title: 'Text Layout',
+      scene: this,
       layout: 'bar',
       controls,
-      actions: { Reset: () => this.reset() },
       onChange: (key, _value, values) => {
         this.dirty = true;
         if (key === 'font') {
@@ -133,13 +131,6 @@ class TextLayoutScene extends Scene {
     this.body.style.fontFamily = family;
     this.dirty = true;
   }
-  reset() {
-    this.width = 620;
-    this.panel.set('font', 'Space Grotesk');
-    this.panel.set('wrap', 'Words');
-    this.panel.set('heading', 'Plain');
-    this.dirty = true;
-  }
   update() {
     if (this.actions.narrower.pressed) {
       this.width -= 20;
@@ -148,9 +139,6 @@ class TextLayoutScene extends Scene {
     if (this.actions.wider.pressed) {
       this.width += 20;
       this.dirty = true;
-    }
-    if (this.actions.reset.pressed) {
-      this.reset();
     }
     const { scale: k, width, height } = this.panel.fit(this.app, this.app.canvas);
     if (k !== this.scale) {
@@ -190,22 +178,17 @@ class TextLayoutScene extends Scene {
     const lineHeight = this.body.style.fontSize * this.body.style.lineHeight + this.body.style.leading;
     const total = Math.round(this.body.textBounds.height / lineHeight);
     this.panel.status(`${this.fontStatus} | ${Math.round(this.width)} px | ${total} lines`);
-    const maxHeight = Math.max(27, height - panel.offsetHeight - 94) * k;
+    const maxHeight = Math.max(27, height - panel.uiHeight - 94) * k;
     this.body.layout = { ...layout, maxHeight, overflow: 'ellipsis' };
     const shown = Math.round(this.body.textBounds.height / lineHeight);
     this.panel.status(
       `${this.fontStatus} | ${Math.round(this.width)} px | ${shown} of ${total} lines${wrap === 'No wrap' ? ' | No wrap: intentional overflow' : ''}`,
-    );
-    const status = panel.querySelector('.exo-demo-status');
-    status.style.setProperty(
-      'color',
-      this.panel.values.font === 'Missing file' ? 'var(--amber,#feb354)' : 'var(--color-text-muted,#a8afb5)',
-      'important',
+      this.panel.values.font === 'Missing file' ? 'warning' : 'neutral',
     );
     this.guide.clear();
     this.guide.lineColor = new Color(35, 100, 60);
     this.guide.lineWidth = 2 * k;
-    this.guide.moveTo((24 + this.width) * k, 65 * k).lineTo((24 + this.width) * k, (height - panel.offsetHeight - 12) * k);
+    this.guide.moveTo((24 + this.width) * k, 65 * k).lineTo((24 + this.width) * k, (height - panel.uiHeight - 12) * k);
     this.handle.style.left = `${(8 + this.width) * k}px`;
     this.handle.style.top = `${38 * k}px`;
     this.handle.style.transform = `scale(${k})`;

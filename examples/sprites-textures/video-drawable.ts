@@ -15,7 +15,6 @@ import { choice, demoPanel, slider, startExample, toggle } from '@examples/runti
 
 // SDR clips only. Browser external video textures do not establish an HDR pipeline.
 const VIDEOS = [
-  { label: 'Demo loop (WebM)', asset: assets.videoDemoLoop },
   { label: '4K 24 fps (MP4)', asset: assets.videoHighRes },
   { label: '1080p 60 fps (WebM)', asset: assets.videoHighFps },
 ];
@@ -42,13 +41,12 @@ class VideoDrawableScene extends Scene {
   override init(): void {
     this.overlay = new Sprite(this.loader.get(assets.platformerTilesImage)).setTextureFrame(new Rectangle(650, 325, 64, 64)).setAnchor(0.5);
     this.panel = demoPanel({
-      title: 'Play a Video Texture',
+      scene: this,
       layout: 'bar',
       controls,
-      hint: 'Muted SDR video. Play explicitly; clip changes preserve pause, seek and loop.',
       actions: {
         'Play / Pause': () => this.panel.step('paused'),
-        Reset: () => {
+        Stop: () => {
           this.elapsed = 0;
           this.panel.set('paused', true);
           this.panel.set('seek', 0);
@@ -91,10 +89,8 @@ class VideoDrawableScene extends Scene {
     this.inputs.onTrigger(Keyboard.One, () => this.panel.set('clip', VIDEOS[0].label));
     this.inputs.onTrigger(Keyboard.Two, () => this.panel.set('clip', VIDEOS[1].label));
     this.inputs.onTrigger(Keyboard.Three, () => this.panel.set('clip', VIDEOS[2].label));
-    this.app.input.onPointerTap.add(this.onTap);
   }
 
-  private readonly onTap = (): void => this.panel.step('paused');
   private readonly onError = (error: Error): void => {
     this.mediaState = `Error: ${error.message}`;
     this.panel.status(`Media error: ${error.message}`, 'error');
@@ -247,7 +243,6 @@ class VideoDrawableScene extends Scene {
       video.muted = true;
     }
 
-    this.app.input.onPointerTap.remove(this.onTap);
     this.overlay.destroy();
     this.panel.dispose();
     super.destroy();

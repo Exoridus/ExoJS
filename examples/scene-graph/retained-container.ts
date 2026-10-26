@@ -3,15 +3,15 @@ import {
   Color,
   Container,
   FixedResolutionCanvasSizing,
-  Rectangle,
   type RenderingContext,
   RetainedContainer,
   Scene,
   type Seconds,
   Sprite,
-  Texture,
+  Spritesheet,
 } from '@codexo/exojs';
-import { type DemoPanel, demoPanel, toggle, type ToggleSpec } from '@examples/runtime';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
+import { type DemoPanel, demoPanel, startExample, toggle, type ToggleSpec } from '@examples/runtime';
 
 // A decor field far larger than the viewport: thousands of sprites that are
 // authored ONCE and never mutated again - the exact shape the retained tier is
@@ -21,58 +21,8 @@ const FIELD_ROWS = 60;
 const TILE_SPACING = 34;
 const FIELD_COUNT = FIELD_COLUMNS * FIELD_ROWS;
 
-const drawAtlasCell = (
-  context: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  background: string,
-  accent: string,
-  shape: string,
-): void => {
-  context.fillStyle = background;
-  context.fillRect(x, y, 64, 64);
-
-  context.fillStyle = accent;
-  context.beginPath();
-
-  if (shape === 'circle') {
-    context.arc(x + 32, y + 32, 18, 0, Math.PI * 2);
-  } else if (shape === 'diamond') {
-    context.moveTo(x + 32, y + 12);
-    context.lineTo(x + 52, y + 32);
-    context.lineTo(x + 32, y + 52);
-    context.lineTo(x + 12, y + 32);
-    context.closePath();
-  } else if (shape === 'square') {
-    context.rect(x + 16, y + 16, 32, 32);
-  } else {
-    context.moveTo(x + 32, y + 12);
-    context.lineTo(x + 52, y + 52);
-    context.lineTo(x + 12, y + 52);
-    context.closePath();
-  }
-
-  context.fill();
-};
-
-/** Draw a small 2x2 sprite atlas procedurally so the example needs no asset load. */
-const createAtlasTexture = (): Texture => {
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d')!;
-
-  canvas.width = 128;
-  canvas.height = 128;
-
-  drawAtlasCell(context, 0, 0, '#0f172a', '#ffd166', 'circle');
-  drawAtlasCell(context, 64, 0, '#10243d', '#7dd3fc', 'diamond');
-  drawAtlasCell(context, 0, 64, '#112b21', '#4ade80', 'square');
-  drawAtlasCell(context, 64, 64, '#23163c', '#ff6b6b', 'triangle');
-
-  return new Texture(canvas);
-};
-
 class RetainedContainerScene extends Scene {
-  private atlas!: Texture;
+  private sheet!: Spritesheet;
   // Typed as the base Container so the same field code works whether the
   // active group is a RetainedContainer or a plain Container.
   private field!: Container;
@@ -84,12 +34,15 @@ class RetainedContainerScene extends Scene {
 
   private panel!: DemoPanel<{ retained: ToggleSpec }>;
 
+  override async load(): Promise<void> {
+    this.sheet = new Spritesheet(await this.loader.load(assets.platformerTilesImage), await this.loader.load(assets.platformerTilesAtlas));
+  }
+
   override init(): void {
-    this.atlas = createAtlasTexture();
     this.field = this.buildField(this.retained);
 
     this.panel = demoPanel({
-      title: 'Render tier',
+      scene: this,
       controls: { retained: toggle('Retained tier', this.retained) },
       onChange: (_key, retained) => {
         if (retained === this.retained) {
@@ -147,14 +100,16 @@ class RetainedContainerScene extends Scene {
     // toggle on the instance itself - the tier is chosen at construction.
     const group = retained ? new RetainedContainer() : new Container();
 
-    const frames = [new Rectangle(0, 0, 64, 64), new Rectangle(64, 0, 64, 64), new Rectangle(0, 64, 64, 64), new Rectangle(64, 64, 64, 64)];
+    const frames = ['terrain_grass_block', 'terrain_sand_block', 'terrain_stone_block', 'terrain_snow_block'].map(name =>
+      this.sheet.getFrame(name),
+    );
     const palette = [Color.white, new Color(0x87ceeb), new Color(0xffd700), new Color(0x00fa9a), new Color(0xff69b4), new Color(0x9370db)];
 
     let index = 0;
 
     for (let row = 0; row < FIELD_ROWS; row++) {
       for (let column = 0; column < FIELD_COLUMNS; column++) {
-        const sprite = new Sprite(this.atlas);
+        const sprite = new Sprite(this.sheet.texture);
 
         // Deterministic layout, centered on the group origin so panning the
         // group reveals the field drifting as one rigid sheet.
@@ -177,7 +132,8 @@ class RetainedContainerScene extends Scene {
   override destroy(): void {
     this.panel?.dispose();
     this.field?.destroy();
-    this.atlas?.destroy();
+    this.sheet?.clear();
+    super.destroy();
   }
 }
 
@@ -192,4 +148,4 @@ const app = new Application({
   clearColor: new Color(6, 9, 18, 1),
 });
 
-await app.start(RetainedContainerScene);
+await startExample(app, () => app.start(RetainedContainerScene));

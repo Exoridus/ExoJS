@@ -51,10 +51,9 @@ class NestedTransformsScene extends Scene {
     this.moonOrbit.addChild(moonPath, this.moon);
     this.root.addChild(this.planetOrbit, ...this.localLabels, ...this.worldLabels);
     this.panel = demoPanel({
-      title: 'Parent and World Transforms',
+      scene: this,
       layout: 'bar',
       controls: {},
-      hint: 'Click / Space pauses. Parent +15 degrees changes world positions, keeping local offsets.',
       actions: {
         'Pause / Resume': () => {
           this.playing = !this.playing;
@@ -63,24 +62,11 @@ class NestedTransformsScene extends Scene {
           this.playing = false;
           this.planetOrbit.rotate(15);
         },
-        Reset: () => this.reset(),
       },
     });
     this.inputs.onTrigger(Keyboard.Space, () => {
       this.playing = !this.playing;
     });
-    this.inputs.onTrigger(Keyboard.R, () => this.reset());
-    this.app.input.onPointerTap.add(this.onTap);
-  }
-
-  private readonly onTap = (): void => {
-    this.playing = !this.playing;
-  };
-
-  private reset(): void {
-    this.elapsed = 0;
-    this.planetOrbit.rotation = 0;
-    this.moonOrbit.rotation = 0;
   }
 
   override update(delta: Seconds): void {
@@ -117,7 +103,6 @@ class NestedTransformsScene extends Scene {
   }
 
   override destroy(): void {
-    this.app.input.onPointerTap.remove(this.onTap);
     this.panel.dispose();
     super.destroy();
   }

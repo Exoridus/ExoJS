@@ -132,7 +132,7 @@
     bottom: 0;
     z-index: 25;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 0.48rem;
     padding: 0.46rem 0.54rem calc(0.46rem + env(safe-area-inset-bottom));
     border-top: 1px solid var(--line-soft);
@@ -153,12 +153,6 @@
     letter-spacing: 0.03em;
     text-transform: uppercase;
     cursor: pointer;
-  }
-
-  .mobile-action--run {
-    border-color: color-mix(in oklab, var(--accent-line), transparent 38%);
-    color: var(--accent);
-    background: color-mix(in oklab, var(--accent-soft), var(--bg-canvas) 44%);
   }
 
   .mobile-action:focus-visible {
