@@ -2,7 +2,7 @@ import type { CatalogEntry } from './examples-catalog';
 
 export const PRESERVED_EXAMPLES: ReadonlyArray<CatalogEntry & { chapter: string }> = [
   {
-    chapter: 'guide-fixtures',
+    chapter: 'scenes-assets',
     slug: 'application-loading',
     path: 'guide-fixtures/application-loading.js',
     title: 'Application Loader Signals',
@@ -12,7 +12,7 @@ export const PRESERVED_EXAMPLES: ReadonlyArray<CatalogEntry & { chapter: string 
     level: 'intermediate',
   },
   {
-    chapter: 'guide-fixtures',
+    chapter: 'graphics-text',
     slug: 'text-styles',
     path: 'guide-fixtures/text-styles.js',
     title: 'Font Styles and Decorations',
@@ -22,7 +22,7 @@ export const PRESERVED_EXAMPLES: ReadonlyArray<CatalogEntry & { chapter: string 
     level: 'intermediate',
   },
   {
-    chapter: 'guide-fixtures',
+    chapter: 'graphics-text',
     slug: 'bitmap-layout',
     path: 'guide-fixtures/bitmap-layout.js',
     title: 'Bitmap Font Layout',

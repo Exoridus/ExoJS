@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { CURATED_SECTIONS, getCuratedExamples, getPreservationEntries } from '../../lib/curation-catalog';
+import { CURATED_SECTIONS, getCuratedExamples, getPlaygroundNavigation } from '../../lib/curation-catalog';
+import { buildPlaygroundLaunchHref } from '../../lib/playground-nav';
 import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
 
 interface Props {
@@ -10,22 +11,9 @@ interface Props {
 const { locale, kind } = Astro.props;
 const base = import.meta.env.BASE_URL;
 const targets = getCuratedExamples();
-const preserved = getPreservationEntries();
-const title = kind === 'tools' ? 'Playground tools and guides' : '48-example learning path';
-const route = (path: string) =>
-  path === 'debug-layer/asset-browser.js'
-    ? `${base + locale}/tools/asset-browser/`
-    : `${base + locale}/playground/examples/${path.replace(/\.js$/, '')}`;
-const run = (path: string) =>
-  path === 'debug-layer/asset-browser.js'
-    ? route(path)
-    : `${base + locale}/playground/?version=current&example=${path.replace(/\.js$/, '')}`;
-const groups = [
-  { kind: 'tool', title: 'Tools' },
-  { kind: 'diagnostic', title: 'Diagnostics' },
-  { kind: 'guide', title: 'Runnable guide recipes' },
-  { kind: 'merge', title: 'Advanced contracts from combined examples' },
-];
+const title = kind === 'tools' ? 'Examples and tools' : 'Learning path';
+const run = (path: string) => buildPlaygroundLaunchHref(path, locale, base);
+const groups = [...getPlaygroundNavigation()];
 ---
 
 <Layout title={`${title} - ExoJS`}>
@@ -34,7 +22,7 @@ const groups = [
     <nav aria-label="Playground resources">
       <a href={`${base + locale}/playground/`}>Playground</a>
       <a href={`${base + locale}/playground/curriculum/`}>Learning path</a>
-      <a href={`${base + locale}/playground/tools/`}>Tools and guides</a>
+      <a href={`${base + locale}/playground/tools/`}>Examples and tools</a>
     </nav>
     <h1>{title}</h1>
     {kind === 'curriculum' ? (
@@ -49,7 +37,7 @@ const groups = [
                 .map(entry => (
                   <li data-curated-number={entry.number}>
                     <h3>
-                      <a href={route(entry.path)}>{`${entry.number}. ${entry.title}`}</a>
+                      <a href={run(entry.path)}>{`${entry.number}. ${entry.title}`}</a>
                     </h3>
                     {entry.optional && <p class="label">Optional advanced branch</p>}
                     {entry.role === 'capstone' && <p class="label">Capstone</p>}
@@ -60,7 +48,7 @@ const groups = [
                         {entry.prerequisites.map(id => {
                           const target = targets.find(candidate => candidate.number === id)!;
 
-                          return <a href={route(target.path)}>{target.title}</a>;
+                          return <a href={run(target.path)}>{target.title}</a>;
                         })}
                       </p>
                     )}
@@ -70,13 +58,10 @@ const groups = [
                         {entry.next.map(id => {
                           const target = targets.find(candidate => candidate.number === id)!;
 
-                          return <a href={route(target.path)}>{target.title}</a>;
+                          return <a href={run(target.path)}>{target.title}</a>;
                         })}
                       </p>
                     )}
-                    <a class="run" href={run(entry.path)}>
-                      Open in Playground
-                    </a>
                   </li>
                 ))}
             </ol>
@@ -85,35 +70,22 @@ const groups = [
       </>
     ) : (
       <>
-        <p>
-          Inspect resources and devices, measure rendering workloads, or run a focused source recipe. These entries are separate from the 48
-          normal examples.
-        </p>
-        {groups.map(group => (
-          <section aria-labelledby={`group-${group.kind}`}>
-            <h2 id={`group-${group.kind}`}>{group.title}</h2>
+        <p>Explore runnable examples and inspect assets. Open any title to launch it.</p>
+        {groups.map(([category, entries], index) => (
+          <section aria-labelledby={`group-${index}`}>
+            <h2 id={`group-${index}`}>{category}</h2>
             <ul class="entries">
-              {preserved
-                .filter(entry => entry.kind === group.kind)
-                .map(entry => (
-                  <li data-preserved-source={entry.path}>
-                    <h3>
-                      <a href={route(entry.path)}>{entry.title}</a>
-                    </h3>
-                    <p>{entry.description}</p>
-                    <a class="run" href={run(entry.path)}>
-                      {entry.path === 'debug-layer/asset-browser.js' ? 'Open tool' : 'Run source'}
-                    </a>
-                    <a class="run" href={`${base}examples/${entry.path.replace(/\.js$/, '.ts')}`}>
-                      TypeScript
-                    </a>
-                    {entry.targetPath && (
-                      <a class="run" href={route(entry.targetPath)}>
-                        Related normal example
-                      </a>
-                    )}
-                  </li>
-                ))}
+              {entries.map(entry => (
+                <li data-example-path={entry.path}>
+                  <h3>
+                    <a href={run(entry.path)}>{entry.title}</a>
+                  </h3>
+                  <p>{entry.description}</p>
+                  <a class="run" href={`${base}examples/${entry.path.replace(/\.js$/, '.ts')}`}>
+                    TypeScript
+                  </a>
+                </li>
+              ))}
             </ul>
           </section>
         ))}

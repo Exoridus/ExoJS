@@ -1,8 +1,17 @@
 // The navigation uses the thematic examples.json keys, while each entry's
 // source path keeps its original directory for stable routes and guide links.
 
+import { resolveExampleAlias } from './example-aliases';
 import { PLAYGROUND_CATEGORY_BY_SLUG, type PlaygroundCategory } from './playground-categories';
 import type { Example } from './types';
+
+export const buildPlaygroundLaunchHref = (path: string, locale: 'en' | 'de', base: string): string => {
+  const canonical = resolveExampleAlias(path);
+
+  return canonical === 'debug-layer/asset-browser.js'
+    ? `${base + locale}/tools/asset-browser/`
+    : `${base + locale}/playground/?version=current&example=${canonical.replace(/\.js$/, '')}`;
+};
 
 export interface PlaygroundNavCategory {
   /** Catalog category slug, e.g. `"particles"` (matches the `examples.json` key). */

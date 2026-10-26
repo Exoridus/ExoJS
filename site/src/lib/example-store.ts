@@ -1,4 +1,4 @@
-import { getCuratedNavigation } from './curation-catalog';
+import { getPlaygroundNavigation } from './curation-catalog';
 import { resolveExampleAlias } from './example-aliases';
 import { PLAYGROUND_CATEGORY_BY_SLUG } from './playground-categories';
 import { PRESERVED_EXAMPLES } from './preserved-examples';
@@ -69,7 +69,7 @@ export const getNestedExamples = (versionId: string): ExamplesMap => {
   }
 
   if (isCurrentVersion(versionId)) {
-    return getCuratedNavigation();
+    return getPlaygroundNavigation();
   }
 
   return new Map(

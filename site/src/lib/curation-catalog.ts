@@ -1,6 +1,7 @@
 import curation from '../../../docs/curation/catalog.json';
+import { resolveExampleAlias } from './example-aliases';
 import { getAllExamples, getRunnableExamples } from './examples-catalog';
-import { PRESERVED_EXAMPLES } from './preserved-examples';
+import { buildPlaygroundNavModel } from './playground-nav';
 import type { Example, ExamplesMap } from './types';
 
 export const CURATED_SECTIONS = [
@@ -15,8 +16,6 @@ export const CURATED_SECTIONS = [
   { key: 'I', slug: 'worlds-navigation', title: 'Tilemaps and navigation', order: 9 },
   { key: 'J', slug: 'physics-collision', title: 'Physics', order: 10 },
 ] as const;
-
-export const CURATED_CATEGORY_BY_SLUG = new Map(CURATED_SECTIONS.map(section => [section.slug, section]));
 
 const sourcePath = (source: string): string => source.replace(/^examples\//, '').replace(/\.ts$/, '.js');
 
@@ -36,45 +35,10 @@ export const getCuratedExamples = () => {
   });
 };
 
-export const getPreservationEntries = () => {
-  const entries = new Map(getRunnableExamples().map(entry => [entry.path, entry]));
-  const tools = new Set(['debug-layer/asset-browser.js', 'input/gamepad.js']);
-  const retained = curation.contracts
-    .filter(contract => contract.disposition === 'merge' || contract.disposition === 'guide-tool-test')
-    .map(contract => {
-      const path = sourcePath(contract.source);
-      const entry = entries.get(path);
+export const getPlaygroundNavigation = (): ExamplesMap => {
+  const entries = getRunnableExamples()
+    .filter(entry => resolveExampleAlias(entry.path) === entry.path)
+    .map(entry => ({ ...entry, backend: entry.backend as Example['backend'], section: entry.chapter }));
 
-      if (!entry) {
-        throw new Error(`Missing runnable preservation source: ${path}`);
-      }
-
-      const target = curation.targets.find(candidate => candidate.id === contract.target);
-      let kind = 'guide';
-
-      if (contract.disposition === 'merge') {
-        kind = 'merge';
-      } else if (tools.has(path)) {
-        kind = 'tool';
-      } else if (contract.target.startsWith('diagnostic-')) {
-        kind = 'diagnostic';
-      }
-
-      return { ...entry, kind, targetPath: target ? sourcePath(target.source) : undefined };
-    });
-
-  return [...retained, ...PRESERVED_EXAMPLES.map(entry => ({ ...entry, kind: 'guide', targetPath: undefined }))];
-};
-
-export const getCuratedNavigation = (): ExamplesMap => {
-  const entries = getCuratedExamples();
-
-  return new Map(
-    CURATED_SECTIONS.map(section => [
-      section.title,
-      entries
-        .filter(entry => entry.section === section.slug)
-        .map(entry => ({ ...entry, backend: entry.backend as Example['backend'], order: entry.number })),
-    ]),
-  );
+  return new Map(buildPlaygroundNavModel(entries).map(category => [category.title, category.examples]));
 };
