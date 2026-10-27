@@ -140,6 +140,7 @@ export type UIThemeRole =
   | 'checkbox'
   | 'checkboxMark'
   | 'toggleTrack'
+  | 'toggleFill'
   | 'toggleKnob'
   | 'sliderTrack'
   | 'sliderFill'
@@ -303,8 +304,12 @@ export const defaultUITheme: UITheme = {
     disabled: skin(fill(new Color(24, 35, 44), 999, new Color(45, 62, 73), 1), disabledText),
     focused: skin(fill(new Color(35, 55, 68), 999, accentColor, 2), controlText),
   },
-  toggleKnob: {
+  toggleFill: {
     normal: skin(fill(accentColor, 999)),
+    disabled: skin(fill(new Color(45, 62, 73), 999)),
+  },
+  toggleKnob: {
+    normal: skin(fill(textColor, 999)),
     disabled: skin(fill(disabledColor, 999)),
   },
   sliderTrack: {

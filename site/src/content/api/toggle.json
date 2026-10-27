@@ -1,16 +1,16 @@
 {
   "title": "Toggle",
-  "description": "A switch that slides between off and on, with an optional label beside it. Behaviourally identical to Checkbox - same state machine, same keyboard activation, same CheckableWidget.onChange - and different only in what it paints: the `toggleTrack` role carries the interaction states, and the `toggleKnob` role slides to the side `checked` selects.",
+  "description": "A switch that slides between off and on, with an optional label beside it. Behaviourally identical to Checkbox - same state machine, same keyboard activation, same CheckableWidget.onChange - and different only in what it paints: the `toggleTrack` role carries the interaction states, the `toggleFill` role covers the track while `checked`, and the `toggleKnob` role slides to the side `checked` selects.",
   "symbol": "Toggle",
   "kind": "class",
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 137,
+  "memberCount": 138,
   "counts": {
     "constructors": 1,
     "methods": 69,
-    "properties": 52,
+    "properties": 53,
     "events": 15
   },
   "sections": [
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "A switch that slides between off and on, with an optional label beside it.",
-        "Behaviourally identical to Checkbox - same state machine, same keyboard activation, same CheckableWidget.onChange - and different only in what it paints: the `toggleTrack` role carries the interaction states, and the `toggleKnob` role slides to the side `checked` selects."
+        "Behaviourally identical to Checkbox - same state machine, same keyboard activation, same CheckableWidget.onChange - and different only in what it paints: the `toggleTrack` role carries the interaction states, the `toggleFill` role covers the track while `checked`, and the `toggleKnob` role slides to the side `checked` selects."
       ],
       "importLine": "import { Toggle } from '@codexo/exojs'",
       "sourceLink": null
@@ -3997,6 +3997,35 @@
           "params": [],
           "returnType": null,
           "description": "The widget's own enabled flag, independent of any ancestor's. Disabling a container widget does not change this on its children - see effectiveEnabled for the value interaction and keyboard focus actually consult, and for what disabling a container does to them."
+        },
+        {
+          "name": "fillNode",
+          "signature": "fillNode: UIBackgroundNode | null",
+          "signatureTokens": [
+            {
+              "text": "fillNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIBackgroundNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node painting the checked fill, or null while unchecked or the fill paints nothing."
         },
         {
           "name": "filters",

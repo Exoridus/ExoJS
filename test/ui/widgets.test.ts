@@ -898,6 +898,24 @@ describe('Toggle', () => {
     expect(toggle.trackNode).toBeInstanceOf(Graphics);
   });
 
+  test('the fill covers the track only while checked, between track and knob', () => {
+    const toggle = new Toggle({ width: 44, height: 24 });
+
+    new UIRoot().addChild(toggle);
+
+    expect(toggle.fillNode).toBeNull();
+
+    toggle.checked = true;
+
+    expect(toggle.fillNode).toBeInstanceOf(Graphics);
+    expect(toggle.children.indexOf(toggle.fillNode!)).toBe(toggle.children.indexOf(toggle.trackNode!) + 1);
+    expect(toggle.children.indexOf(toggle.knobNode!)).toBe(toggle.children.indexOf(toggle.fillNode!) + 1);
+
+    toggle.checked = false;
+
+    expect(toggle.fillNode).toBeNull();
+  });
+
   test('it flips on a tap like a checkbox does', () => {
     const toggle = new Toggle();
     const handler = vi.fn();
