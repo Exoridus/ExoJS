@@ -190,10 +190,15 @@
                     document.body.appendChild(message);
                     return;
                 }
-                if (params.get('tool') === 'asset-browser') {
+                var tools = {
+                    'asset-browser': './examples/debug-layer/asset-browser.js',
+                    'widget-lab': './examples/ui/widget-lab.js',
+                };
+                var toolSource = Object.prototype.hasOwnProperty.call(tools, params.get('tool')) ? tools[params.get('tool')] : null;
+                if (toolSource) {
                     var tool = document.createElement('script');
                     tool.type = 'module';
-                    tool.src = './examples/debug-layer/asset-browser.js';
+                    tool.src = toolSource;
                     document.body.appendChild(tool);
                     return;
                 }

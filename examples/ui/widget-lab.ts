@@ -6,6 +6,7 @@ import {
   defaultUITheme,
   Dropdown,
   FixedResolutionCanvasSizing,
+  Keyboard,
   Label,
   Panel,
   ProgressBar,
@@ -14,6 +15,7 @@ import {
   Slider,
   Stack,
   Toggle,
+  type Widget,
 } from '@codexo/exojs';
 import { siteUITheme, startExample } from '@examples/runtime';
 
@@ -22,124 +24,181 @@ const items = [
   { label: 'Medium', value: 'medium' },
   { label: 'High', value: 'high' },
 ];
-const muted = new Color(150, 160, 175);
+// Neutral at low alpha so the rule reads on both light and dark theme surfaces.
+const rule = new Color(128, 128, 128, 0.3);
 
-// Manual QA bench for the native UI widgets. Every control either changes a
-// widget state or exercises a layer-wide concern (theme, cascade, teardown);
-// the readout shows each widget's resolved state.
+const heading = (text: string): Label => new Label(text, { fontSize: 16, fontWeight: '600' });
+const caption = (text: string): Label => new Label(text, { fontSize: 13 });
+
+const createWidgets = () => {
+  const button = new Button({ label: 'Clicked 0x', width: 200, height: 36 });
+  const covered = new Button({ label: 'Covered 0x', width: 200, height: 36 });
+  const rows = new Stack({ direction: 'column', spacing: 6, padding: 12 });
+
+  return {
+    button,
+    checkbox: new Checkbox({ label: 'Enable shadows', size: 20 }),
+    toggle: new Toggle({ label: 'Music', height: 28 }),
+    slider: new Slider({ width: 240, height: 24, min: 0, max: 1, step: 0.05, value: 0.5 }),
+    bar: new ProgressBar({ width: 240, height: 10, value: 0.5 }),
+    dropdown: new Dropdown({ items, selectedIndex: 0, width: 200, height: 36 }),
+    covered,
+    scroll: new ScrollContainer({ width: 440, height: 300, scrollbars: 'auto' }),
+    rows,
+    clippedDropdown: new Dropdown({ items, width: 200, height: 36 }),
+    add: new Button({ label: 'Add row', width: 120, height: 32 }),
+    remove: new Button({ label: 'Remove row', width: 120, height: 32 }),
+  };
+};
+
+type LabWidgets = ReturnType<typeof createWidgets>;
+
+// Manual QA bench for the native UI widgets. The bench row changes layer-wide
+// conditions (theme, disabled cascade, teardown); the lab below holds one
+// live instance of each widget, and the status line reports resolved states.
 class WidgetLabScene extends Scene {
+  public readonly bench = {
+    theme: new Toggle({ label: 'Site theme', height: 28, checked: true }),
+    disable: new Toggle({ label: 'Disable lab', height: 28 }),
+    teardown: new Button({ label: 'Destroy lab', width: 140, height: 32 }),
+  };
+  public widgets: LabWidgets | null = null;
   private lab: Panel | null = null;
-  private readout!: Label;
-  private states: () => string = () => '';
+  private status!: Label;
 
   override init(): void {
     const siteTheme = siteUITheme();
+    const { theme, disable, teardown } = this.bench;
     this.ui.theme = siteTheme;
-
-    const bench = new Stack({ direction: 'row', spacing: 12, padding: 0 });
-    const theme = new Toggle({ label: 'Site theme', height: 28, checked: true });
-    const disableAll = new Toggle({ label: 'Disable lab', height: 28 });
-    const teardown = new Button({ label: 'Destroy lab', width: 150, height: 28 });
+    // Claims Tab for UI focus traversal; unbound, the browser moves focus out of the canvas.
+    this.inputs.onTrigger(Keyboard.Tab);
     theme.onChange.add(on => (this.ui.theme = on ? siteTheme : defaultUITheme));
-    disableAll.onChange.add(off => this.lab && (this.lab.enabled = !off));
-    teardown.onClick.add(() => {
+    disable.onChange.add(off => {
       if (this.lab) {
-        this.destroyLab();
-        teardown.label = 'Rebuild lab';
-      } else {
-        this.buildLab(!disableAll.checked);
-        teardown.label = 'Destroy lab';
+        this.lab.enabled = !off;
       }
     });
+    teardown.onClick.add(() => (this.lab ? this.destroyLab() : this.buildLab()));
+
+    const backdrop = new Panel({ width: 1280, height: 720 });
+    const title = new Label('Widget Lab', { fontSize: 22, fontWeight: '600' });
+    title.setPosition(24, 22);
+    const bench = new Stack({ direction: 'row', spacing: 20, padding: 0 });
     bench.addItem(theme);
-    bench.addItem(disableAll);
+    bench.addItem(disable);
     bench.addItem(teardown);
-    bench.setPosition(24, 20);
-    this.ui.addChild(bench);
-
-    this.readout = new Label('', { fontSize: 13, fillColor: muted });
-    this.readout.setPosition(24, 680);
-    this.ui.addChild(this.readout);
-
-    this.buildLab(true);
+    bench.setPosition(1256 - bench.width, 20);
+    this.status = caption('');
+    this.status.setPosition(24, 686);
+    this.ui.addChild(backdrop, title, bench, this.status);
+    this.buildLab();
   }
 
-  private buildLab(enabled: boolean): void {
-    const lab = new Panel({ width: 1232, height: 600, color: new Color(22, 27, 34), cornerRadius: 10 });
-    lab.setPosition(24, 64);
-    lab.enabled = enabled;
+  public states(): string {
+    const w = this.widgets;
 
-    const controls = new Stack({ direction: 'column', spacing: 12, padding: 16 });
-    const button = new Button({ label: 'Clicked 0x', width: 200, height: 36 });
-    let clicks = 0;
-    button.onClick.add(() => (button.label = `Clicked ${++clicks}x`));
-    const checkbox = new Checkbox({ label: 'Checkbox', size: 20 });
-    const toggle = new Toggle({ label: 'Toggle', height: 28 });
-    const slider = new Slider({ width: 280, height: 24, min: 0, max: 1, step: 0.05, value: 0.5 });
-    const bar = new ProgressBar({ width: 280, height: 12, value: 0.5 });
-    slider.onChange.add(value => (bar.value = value));
-    const dropdown = new Dropdown({ items, selectedIndex: 1, width: 200, height: 32 });
-    // Opens over the button below it: the list must stack above later siblings.
-    const underDropdown = new Button({ label: 'Covered by open list', width: 200, height: 36 });
-    controls.addItem(new Label('Controls', { fontSize: 16, fillColor: Color.white }));
-
-    for (const widget of [button, checkbox, toggle, slider, bar, dropdown, underDropdown]) {
-      controls.addItem(widget);
+    if (!w) {
+      return 'lab destroyed';
     }
 
-    controls.setPosition(0, 0);
-    lab.addChild(controls);
+    return [
+      `button ${w.button.state}`,
+      `checkbox ${w.checkbox.state} ${w.checkbox.checked}`,
+      `toggle ${w.toggle.state} ${w.toggle.checked}`,
+      `slider ${w.slider.state} ${w.slider.value.toFixed(2)}`,
+      `dropdown ${w.dropdown.state} ${w.dropdown.isOpen ? 'open' : 'closed'} ${w.dropdown.selectedValue ?? '-'}`,
+      `clipped ${w.clippedDropdown.isOpen ? 'open' : 'closed'}`,
+      `scroll ${w.scroll.scrollY.toFixed(0)}`,
+    ].join('   ');
+  }
 
-    const scroll = new ScrollContainer({ width: 520, height: 300, scrollbars: 'auto' });
-    const rows = new Stack({ direction: 'column', spacing: 6, padding: 8 });
-    // Inside the clipped viewport: shows whether an open list escapes the clip.
-    const clippedDropdown = new Dropdown({ items, width: 200, height: 32 });
-    rows.addItem(clippedDropdown);
-    scroll.content.addChild(rows);
+  private buildLab(): void {
+    const w = createWidgets();
+    const lab = new Panel({ width: 1232, height: 596, cornerRadius: 12, borderWidth: 1, borderColor: rule });
+    lab.setPosition(24, 72);
+    lab.enabled = !this.bench.disable.checked;
 
-    const add = new Button({ label: 'Add row', width: 120, height: 30 });
-    const remove = new Button({ label: 'Remove row', width: 120, height: 30 });
-    add.onClick.add(() => rows.addItem(new Label(`Row ${rows.children.length}`, { fontSize: 14, fillColor: Color.white })));
-    remove.onClick.add(() => {
-      const last = rows.children[rows.children.length - 1];
+    let clicks = 0;
+    let coveredClicks = 0;
+    w.button.onClick.add(() => (w.button.label = `Clicked ${++clicks}x`));
+    w.covered.onClick.add(() => (w.covered.label = `Covered ${++coveredClicks}x`));
+    w.slider.onChange.add(value => (w.bar.value = value));
 
-      if (last !== undefined && last !== clippedDropdown) {
-        rows.removeItem(last);
+    const controls: Array<[string, Widget]> = [
+      ['Button', w.button],
+      ['Checkbox', w.checkbox],
+      ['Toggle', w.toggle],
+      ['Slider', w.slider],
+      ['Progress', w.bar],
+      ['Dropdown', w.dropdown],
+      // Directly below the open list: a row pick must not reach it.
+      ['Under popup', w.covered],
+    ];
+    const left = heading('Controls');
+    left.setPosition(28, 24);
+    lab.addChild(left);
+    controls.forEach(([name, widget], index) => {
+      const y = 72 + index * 64;
+      const label = caption(name);
+      label.setPosition(28, y + (36 - label.height) / 2);
+      widget.setPosition(160, y + (36 - widget.height) / 2);
+      lab.addChild(label, widget);
+    });
+
+    // Eight rows push the dropdown down so its open list crosses the viewport's lower edge.
+    for (let row = 1; row <= 8; row++) {
+      w.rows.addItem(caption(`Row ${row}`));
+    }
+
+    w.rows.addItem(w.clippedDropdown);
+    w.scroll.content.addChild(w.rows);
+    // A background makes the whole viewport hit-testable, so the wheel scrolls over empty space too.
+    w.scroll.setBackground(new Color(128, 128, 128, 0.08));
+    // The rows stack grows inside the content, which the container cannot observe.
+    w.add.onClick.add(() => {
+      w.rows.addItem(caption(`Row ${w.rows.children.length}`));
+      w.scroll.refresh();
+    });
+    w.remove.onClick.add(() => {
+      const last = w.rows.children[w.rows.children.length - 1];
+
+      if (last !== undefined && w.rows.children.indexOf(last) > w.rows.children.indexOf(w.clippedDropdown)) {
+        w.rows.removeItem(last);
         last.destroy();
+        w.scroll.refresh();
       }
     });
 
-    const layout = new Stack({ direction: 'column', spacing: 12, padding: 16 });
-    const rowButtons = new Stack({ direction: 'row', spacing: 8, padding: 0 });
-    rowButtons.addItem(add);
-    rowButtons.addItem(remove);
-    layout.addItem(new Label('Scroll, clip and dynamic layout', { fontSize: 16, fillColor: Color.white }));
-    layout.addItem(rowButtons);
-    layout.addItem(scroll);
-    layout.setPosition(560, 0);
-    lab.addChild(layout);
+    const right = new Stack({ direction: 'column', spacing: 14, padding: 0 });
+    const actions = new Stack({ direction: 'row', spacing: 8, padding: 0 });
+    actions.addItem(w.add);
+    actions.addItem(w.remove);
+    right.addItem(heading('Scrolling and clipping'));
+    right.addItem(caption('The dropdown sits near the lower edge of the clipped viewport.'));
+    right.addItem(actions);
+    right.addItem(w.scroll);
+    right.setPosition(620, 24);
+    lab.addChild(right);
+
+    const divider = new Panel({ width: 1, height: 548, color: rule });
+    divider.setPosition(588, 24);
+    lab.addChild(divider);
 
     this.ui.addChild(lab);
     this.lab = lab;
-    this.states = () =>
-      [
-        `button ${button.state}`,
-        `checkbox ${checkbox.state} ${checkbox.checked}`,
-        `toggle ${toggle.state} ${toggle.checked}`,
-        `slider ${slider.state} ${slider.value.toFixed(2)}`,
-        `dropdown ${dropdown.state} ${dropdown.isOpen ? 'open' : 'closed'} ${dropdown.selectedValue ?? '-'}`,
-        `scroll y ${scroll.scrollY.toFixed(0)}`,
-      ].join('  |  ');
+    this.widgets = w;
+    this.bench.teardown.label = 'Destroy lab';
   }
 
   private destroyLab(): void {
     this.lab?.destroy();
     this.lab = null;
-    this.states = () => 'lab destroyed';
+    this.widgets = null;
+    this.bench.teardown.label = 'Rebuild lab';
   }
 
   override update(): void {
-    this.readout.text = this.states();
+    this.status.text = this.states();
   }
 }
 

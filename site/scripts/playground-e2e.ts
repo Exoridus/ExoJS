@@ -690,6 +690,91 @@ const inspectorHeading = (frame: Frame): Promise<string> => frame.locator('aside
 const residentRows = async (frame: Frame): Promise<string[]> =>
   frame.$$eval('aside[aria-label="Selected asset"] details li', items => items.map(item => item.textContent ?? ''));
 
+const widgetLabChecks = async (browser: Browser, origin: string, base: string): Promise<void> => {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  const pageErrors: string[] = [];
+
+  page.on('pageerror', error => pageErrors.push(error.message));
+  await page.route('**/examples/ui/widget-lab.js*', async route => {
+    const response = await route.fetch();
+    const source = await response.text();
+
+    assert(source.includes('init() {'), 'the Widget Lab scene has no init hook');
+    await route.fulfill({ response, body: source.replace('init() {', 'init() { globalThis.__widgetLab = this;') });
+  });
+
+  try {
+    await page.goto(`${origin}${base}/en/tools/widget-lab/`, { waitUntil: 'domcontentloaded' });
+    const frame = await previewFrame(page);
+
+    await frame.waitForFunction('globalThis.__widgetLab?.widgets && globalThis.__EXAMPLE_RENDERER_STATUS__?.actual');
+    const box = (await frame.locator('canvas').first().boundingBox())!;
+
+    const clickNode = async (path: string): Promise<void> => {
+      const [x, y] = await frame.evaluate<[number, number]>(
+        `(() => { const b = globalThis.__widgetLab.${path}.getBounds(); return [b.x + b.width / 2, b.y + b.height / 2]; })()`,
+      );
+
+      await page.mouse.click(box.x + (x * box.width) / 1280, box.y + (y * box.height) / 720);
+    };
+
+    const read = <T>(expression: string): Promise<T> => frame.evaluate<T>(`globalThis.__widgetLab.${expression}`);
+
+    await check('widget lab opens directly as a tool without an editor', async () => {
+      assert((await page.locator('.monaco-editor').count()) === 0, 'the tool unexpectedly mounted an editor');
+      assert(await read<boolean>('widgets.button.enabled'), 'the lab did not build its widgets');
+    });
+
+    await check('widget lab keeps Tab and Space inside the canvas', async () => {
+      await clickNode('widgets.button');
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Space');
+      await waitFor(() => read<boolean>('widgets.checkbox.checked'), Boolean, 'Space on the focused checkbox');
+    });
+
+    await check('widget lab dropdown list stacks above and shields the widget below it', async () => {
+      await clickNode('widgets.dropdown');
+      await waitFor(() => read<boolean>('widgets.dropdown.isOpen'), Boolean, 'the dropdown to open');
+      await clickNode('widgets.covered');
+      await waitFor(
+        () => read<string | null>('widgets.dropdown.selectedValue'),
+        value => value === 'medium',
+        'a row pick',
+      );
+      assert((await read<string>('widgets.covered.label')) === 'Covered 0x', 'the click reached the covered button');
+    });
+
+    await check('widget lab disabled cascade and destroy/rebuild', async () => {
+      await clickNode('bench.disable');
+      await waitFor(
+        () => read<string>('widgets.button.state'),
+        state => state === 'disabled',
+        'the disabled cascade',
+      );
+      await clickNode('bench.disable');
+      await clickNode('widgets.dropdown');
+      await clickNode('bench.teardown');
+      await waitFor(
+        () => read<unknown>('widgets'),
+        value => value === null,
+        'the lab to be destroyed',
+      );
+      await clickNode('bench.teardown');
+      await waitFor(() => read<boolean>('widgets !== null'), Boolean, 'the lab to be rebuilt');
+      await clickNode('widgets.button');
+      await waitFor(
+        () => read<string>('widgets.button.label'),
+        label => label === 'Clicked 1x',
+        'one click on the rebuilt button',
+      );
+      assert(pageErrors.length === 0, `page errors: ${pageErrors.join(' | ')}`);
+    });
+  } finally {
+    await context.close();
+  }
+};
+
 const assetChecks = async (browser: Browser, origin: string, base: string): Promise<string[]> => {
   const snippets: string[] = [];
   const session = await openAssetBrowser(browser, origin, base);
@@ -2034,7 +2119,7 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
       const [tool] = await Promise.all([page.context().waitForEvent('page'), link.click()]);
       await tool.waitForLoadState('domcontentloaded');
       await tool.waitForFunction(
-        `Boolean(document.querySelector('[data-asset-tool]')?.contentDocument?.querySelector('aside[aria-label="Selected asset"] h2')?.textContent)`,
+        `Boolean(document.querySelector('[data-tool-frame]')?.contentDocument?.querySelector('aside[aria-label="Selected asset"] h2')?.textContent)`,
       );
       assert((await tool.locator('.monaco-editor').count()) === 0, 'The tool has no permanent code pane');
       assert(
@@ -2113,6 +2198,7 @@ const main = async (): Promise<void> => {
       await consoleChecks(browser, origin, base);
     }
 
+    await widgetLabChecks(browser, origin, base);
     await typecheckSnippets(await assetChecks(browser, origin, base));
   } finally {
     await browser.close();
