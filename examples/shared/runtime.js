@@ -99,7 +99,10 @@ export const siteUITheme = () => {
   const accent = color('--color-accent', '#88e97e');
   const contrast = color('--color-accent-contrast', '#15351a');
   const patch = {};
-  const highlights = new Set(['progressBarFill', 'sliderFill', 'checkboxMark', 'caret', 'selection']);
+  const highlights = new Set(['progressBarFill', 'sliderFill', 'checkboxMark', 'toggleFill', 'caret', 'selection']);
+  // Tracks sit on the page surface, so they need a tone of their own to stay visible.
+  const tracks = new Set(['progressBarTrack', 'sliderTrack', 'toggleTrack', 'scrollbarTrack']);
+  const track = new Color(muted.r, muted.g, muted.b, 0.28);
   for (const role of Object.keys(defaultUITheme)) {
     const states = {};
     for (const state of ['normal', 'hover', 'pressed', 'disabled', 'focused']) {
@@ -116,11 +119,15 @@ export const siteUITheme = () => {
                 color:
                   selected || highlights.has(role)
                     ? accent
-                    : role.endsWith('Knob') || role === 'sliderThumb'
-                      ? text
-                      : state === 'normal'
-                        ? surface
-                        : raised,
+                    : role === 'toggleKnob'
+                      ? surface
+                      : role === 'sliderThumb'
+                        ? text
+                        : tracks.has(role)
+                          ? track
+                          : state === 'normal'
+                            ? surface
+                            : raised,
                 borderColor: state === 'focused' ? accent : muted,
                 borderWidth: state === 'focused' ? 2 : base.background.borderWidth,
               }
