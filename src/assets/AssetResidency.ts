@@ -4,6 +4,7 @@ import type { Signal } from '#core/Signal';
 
 import type { AssetConstructor } from './AssetConstructor';
 import type { AssetDecoder } from './AssetDecoder';
+import { reportAssetObserverFailure, sameOptions } from './assetDiagnostics';
 import { _readMeta } from './assetMeta';
 import { AssetRef } from './AssetRef';
 import { type AssetReferenceLookup, AssetRequestLog } from './AssetRequestLog';
@@ -254,7 +255,7 @@ export class AssetResidency {
   // true regardless of unrelated unload/reset ordering that happened since.
   private readonly _everRegisteredHandles = new WeakSet();
 
-  private _concurrency: number;
+  private _concurrency = 0;
   private _backgroundQueue: QueueEntry[] = [];
   private _backgroundActive = 0;
   private _backgroundTotal = 0;
@@ -275,7 +276,7 @@ export class AssetResidency {
     this._requestLog = new AssetRequestLog(typeRegistry);
     this._decoder = decoder;
     this._signals = signals;
-    this._concurrency = concurrency;
+    this.setConcurrency(concurrency);
     this._hooks = hooks;
   }
 
@@ -774,8 +775,10 @@ export class AssetResidency {
    * teardown for them.
    */
   private _evictValueKey(asset: CanonicalAsset, stored: unknown): void {
-    this._typeRegistry.getInstalled(asset.type)?.factory.dispose?.(stored);
+    const dependencies = this._dependencyScopes.get(asset.key);
+
     this._resources.delete(asset.key);
+    this._dependencyScopes.delete(asset.key);
 
     const entry = this._refs.get(asset.key);
 
@@ -786,11 +789,24 @@ export class AssetResidency {
     }
 
     this._evicted.add(asset.key);
-    this._releaseDependencies(asset.key);
     // Drop a resolved-but-not-yet-cleaned in-flight entry so the reclaim's
     // re-fetch starts fresh instead of deduping onto it - see the seamless
     // branch above for the full reasoning; it applies verbatim here.
     this._inFlight.delete(asset.key);
+
+    try {
+      this._typeRegistry.getInstalled(asset.type)?.factory.dispose?.(stored);
+    } catch (error) {
+      logger.error(`Asset disposer failed for "${asset.source}".`, {
+        source: 'assets',
+        error: error instanceof Error ? error : new Error(String(error)),
+      });
+    } finally {
+      // A disposer may reclaim the key; release only the previous resource's dependencies.
+      if (dependencies !== undefined) {
+        this._releaseScope(dependencies);
+      }
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -1461,7 +1477,7 @@ export class AssetResidency {
       // managed to pull in before failing. A cancel is left alone: the key's own
       // eviction path already released them.
       this._releaseDependencies(asset.key);
-      this._signals.onError.dispatch(asset.type, asset.source, err);
+      this._signals.onError.dispatchIsolated(reportAssetObserverFailure, asset.type, asset.source, err);
     }
   }
 
@@ -1633,7 +1649,7 @@ export class AssetResidency {
       this._createDeferredEntry(asset, resource);
     }
 
-    this._signals.onLoaded.dispatch(asset.type, asset.source, resource);
+    this._signals.onLoaded.dispatchIsolated(reportAssetObserverFailure, asset.type, asset.source, resource);
 
     // Free-on-arrival: a deferred handle whose every claimer released
     // during the in-flight fetch has now converged into the resource map at
@@ -1723,7 +1739,7 @@ export class AssetResidency {
   }
 
   private _onBackgroundItemDone(): void {
-    this._signals.onProgress.dispatch(this._backgroundLoaded, this._backgroundTotal);
+    this._signals.onProgress.dispatchIsolated(reportAssetObserverFailure, this._backgroundLoaded, this._backgroundTotal);
 
     if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
       this._settleBackgroundWaiters();
@@ -1781,8 +1797,12 @@ export class AssetResidency {
     });
   }
 
-  /** Sets the maximum number of simultaneous background-queue fetches. */
+  /** Sets a nonnegative integer limit; zero pauses queued background fetches. */
   public setConcurrency(n: number): void {
+    if (!Number.isInteger(n) || n < 0) {
+      throw new RangeError('Background concurrency must be a nonnegative integer.');
+    }
+
     this._concurrency = n;
   }
 
@@ -2069,26 +2089,3 @@ export class AssetResidency {
     this._settleBackgroundWaiters();
   }
 }
-
-/**
- * Structural comparison of two option bags, for the dev-only ignored-options
- * diagnostic. Depth-limited: an option value nested deeper than an asset type's
- * own configuration ever goes is compared by identity rather than risking an
- * unbounded walk of whatever a caller put there.
- */
-const sameOptions = (a: unknown, b: unknown, depth = 0): boolean => {
-  if (Object.is(a, b)) {
-    return true;
-  }
-
-  if (depth >= 4 || typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) {
-    return false;
-  }
-
-  const keys = Object.keys(a);
-
-  return (
-    keys.length === Object.keys(b).length &&
-    keys.every(key => sameOptions((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key], depth + 1))
-  );
-};

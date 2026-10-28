@@ -224,6 +224,7 @@ export class Loader {
   private readonly _typeRegistry = new AssetTypeRegistry();
   private readonly _decoder: AssetDecoder;
   private readonly _residency: AssetResidency;
+  private _destroyed = false;
 
   /**
    * Resolve a bare path once for both `get()` and `load()`: normalize it to the
@@ -999,6 +1000,7 @@ export class Loader {
 
   /**
    * Sets the maximum number of simultaneous background-queue fetches.
+   * Requires a nonnegative integer; zero pauses queued fetches.
    * Takes effect at the next background-queue drain - on completion of a
    * running fetch, on enqueue, or on {@link awaitBackground} - and does not
    * start or abort a fetch that is already running.
@@ -1499,6 +1501,7 @@ export class Loader {
    *
    * Clears all in-memory assets and in-flight tracking, and disconnects all
    * signals. Also calls `destroy?.()` on every installed type's factory.
+   * Completes teardown before rethrowing the first cleanup failure, if any.
    *
    * Cache stores are destroyed only when this loader was given the stores
    * themselves, and therefore owns the cache it wrapped them in. An
@@ -1507,11 +1510,23 @@ export class Loader {
    * application is done with it.
    */
   public destroy(): void {
+    if (this._destroyed) {
+      return;
+    }
+
+    this._destroyed = true;
+
     // Order matters: factory teardown must run after store teardown (via
     // this._decoder.destroy()) - see the regression test in loader.test.ts.
-    this._decoder.destroy();
-    this._typeRegistry.destroy();
-    this._residency.destroy();
+    const errors: unknown[] = [];
+
+    for (const stage of [this._decoder, this._typeRegistry, this._residency]) {
+      try {
+        stage.destroy();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
 
     this.onProgress.destroy();
     this.onLoaded.destroy();
@@ -1521,6 +1536,10 @@ export class Loader {
     this.onLoadComplete.destroy();
     this.onLoadError.destroy();
     this.onCacheError.destroy();
+
+    if (errors.length > 0) {
+      throw errors[0];
+    }
   }
 
   // -----------------------------------------------------------------------
