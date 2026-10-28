@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { type Coroutine, CoroutineSystem } from '#core/CoroutineSystem';
 import { DestroyScope } from '#core/DestroyScope';
@@ -7,8 +7,7 @@ import { type Seconds, seconds } from '#core/units';
 
 /**
  * A stand-in for the frame's remaining time. The system derives its slice from
- * this once per phase, so a stub here is all a spec needs to pin the slice -
- * no injected clock, and nothing timing-dependent.
+ * this once per phase, independently of the time spent consuming its slice.
  */
 const frameBudget = (remaining: number): FrameBudget => ({ timeRemaining: () => seconds(remaining) });
 
@@ -189,6 +188,15 @@ describe('CoroutineSystem', () => {
   });
 
   describe('the budget a body receives', () => {
+    beforeEach(() => {
+      // Runner scheduling must not consume the slice while checking its grant.
+      vi.spyOn(performance, 'now').mockReturnValue(1000);
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     test('is positive at the first step, because minSlice is a real grant', () => {
       const system = new CoroutineSystem({ budget: seconds(0), minSlice: seconds(0.001) });
       const seen: number[] = [];
@@ -216,9 +224,26 @@ describe('CoroutineSystem', () => {
       frame(system, frameBudget(0.008));
 
       expect(seen).toHaveLength(1);
-      // A quarter of 8 ms, minus whatever the step itself took to reach the read.
       expect(seen[0]).toBeGreaterThan(0);
       expect(seen[0]).toBeLessThanOrEqual(0.002);
+      expect(seen[0]).toBe(0.002);
+    });
+
+    test('deducts elapsed time and clamps an exhausted slice to zero', () => {
+      const system = new CoroutineSystem({ budget: { share: 0.25, max: seconds(1) }, minSlice: seconds(0) });
+      const seen: number[] = [];
+
+      system.queue(function* (budget): Generator<void, void> {
+        vi.mocked(performance.now).mockReturnValue(1000.5);
+        seen.push(budget.timeRemaining());
+        vi.mocked(performance.now).mockReturnValue(1003);
+        seen.push(budget.timeRemaining());
+        yield;
+      });
+
+      frame(system, frameBudget(0.008));
+
+      expect(seen).toEqual([0.0015, 0]);
     });
 
     test('caps the share at `max`', () => {
