@@ -111,6 +111,31 @@ describe('Application lifecycle guards', () => {
     await expect(app.start()).rejects.toThrow(/after destroy/);
   });
 
+  test('successful backend initialization after destroy does not restart frames or publish capabilities', async () => {
+    let finishInitialize: () => void = () => {};
+
+    backendControl.initialize = (): Promise<void> =>
+      new Promise<void>(resolve => {
+        finishInitialize = resolve;
+      });
+
+    const app = new Application({ backend: { type: 'webgl2' } });
+    const profile = app.loader.variants.profile;
+    const startPromise = app.start();
+
+    await flush(3);
+    await app.destroy();
+
+    finishInitialize();
+
+    await startPromise;
+    await flush();
+
+    expect(app.state).toBe(ApplicationState.Destroyed);
+    expect(rafSpy).not.toHaveBeenCalled();
+    expect(app.loader.variants.profile).toBe(profile);
+  });
+
   test('destroy() waits for a navigation in flight before releasing the subsystems', async () => {
     const events: string[] = [];
     let releaseLoad: () => void = () => {};

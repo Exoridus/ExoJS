@@ -1487,6 +1487,7 @@ export class RenderPlanBuilder {
     // Stale items describe a subtree that no longer exists, and world bounds
     // stored against a different ancestry are not repairable. Release them here
     // rather than leaving a million dead records reachable until the next build.
+    representation.releasePersistentSlots();
     existing?.invalidate();
     representation.derivedProduct?.release();
 
