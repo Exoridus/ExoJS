@@ -162,6 +162,40 @@ describe('textureSeamlessAdapter', () => {
 });
 
 describe('soundSeamlessAdapter', () => {
+  test('placeholder keeps its asset playback settings and early user changes across fill and reload', () => {
+    const handle = soundSeamlessAdapter.createPlaceholder({
+      playbackOptions: { volume: 0.4, loop: true, playbackRate: 2, muted: true },
+      poolSize: 3,
+    });
+
+    expect([handle.volume, handle.loop, handle.playbackRate, handle.muted, handle.poolSize]).toEqual([0.4, true, 2, true, 3]);
+
+    handle.volume = 0.2;
+    soundSeamlessAdapter.fill(handle, new Sound(bufferStub(3)));
+    soundSeamlessAdapter.evict(handle);
+    soundSeamlessAdapter.fill(handle, new Sound(bufferStub(4)));
+
+    expect([handle.volume, handle.loop, handle.playbackRate, handle.muted, handle.poolSize]).toEqual([0.2, true, 2, true, 3]);
+  });
+
+  test('fill transfers decoded sprite definitions and replaces them when the asset heals', () => {
+    const handle = soundSeamlessAdapter.createPlaceholder();
+    const donor = new Sound(bufferStub(3), { sprites: { hit: { start: 0.5, end: 1, loop: true } } });
+
+    soundSeamlessAdapter.fill(handle, donor);
+
+    expect(handle.hasSprite('hit')).toBe(true);
+    expect(handle.sprite('hit').duration).toBe(0.5);
+    expect(handle.sprite('hit').loop).toBe(true);
+
+    soundSeamlessAdapter.evict(handle);
+    soundSeamlessAdapter.fill(handle, new Sound(bufferStub(5), { sprites: { tail: { start: 2, end: 5 } } }));
+
+    expect(handle.hasSprite('hit')).toBe(false);
+    expect(handle.sprite('tail').duration).toBe(3);
+    expect(donor.sprite('hit').duration).toBe(0.5);
+  });
+
   test('createPlaceholder yields a loading Sound with no buffer', () => {
     const handle = soundSeamlessAdapter.createPlaceholder();
     expect(handle).toBeInstanceOf(Sound);

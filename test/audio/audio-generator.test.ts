@@ -284,6 +284,29 @@ describe('AudioGenerator', () => {
     gen.destroy();
   });
 
+  test('repeated stop during the release tail does not reschedule its end', () => {
+    const system = new AudioSystem();
+    const spy = setupSpy();
+    const env = new Envelope({ release: Time.seconds(0.5) });
+    const release = vi.spyOn(env, 'releaseAt');
+    const gen = new AudioGenerator({ envelope: env });
+    let now = 1;
+
+    vi.spyOn(getAudioContext(), 'currentTime', 'get').mockImplementation(() => now);
+
+    const voice = system.play(gen);
+
+    voice.stop();
+    now = 1.2;
+    voice.stop();
+
+    expect(release).toHaveBeenCalledTimes(1);
+    expect(spy.oscillators[0]!.stop).toHaveBeenCalledExactlyOnceWith(1.5);
+
+    spy.restore();
+    gen.destroy();
+  });
+
   // ---- Bus routing ----
 
   test('voice routes to system.sound by default', () => {

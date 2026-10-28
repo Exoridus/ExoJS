@@ -274,7 +274,7 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
   // -------------------------------------------------------------------------
 
   public override stop(fade?: Seconds): void {
-    if (this._ended) {
+    if (this._ended || this._stopping) {
       return;
     }
 

@@ -2,6 +2,7 @@
 
 import { getAudioContext } from '#audio/audioContext';
 import { AudioListener } from '#audio/AudioListener';
+import { createSpatialSmoothingSettings } from '#audio/spatialSmoothing';
 import { Signal } from '#core/Signal';
 import { Drawable } from '#rendering/Drawable';
 import { RetainedContainer } from '#rendering/RetainedContainer';
@@ -38,6 +39,44 @@ const makeViewStub = (x: number, y: number) => ({
 // ---------------------------------------------------------------------------
 
 describe('AudioListener', () => {
+  test('automatic velocity settles after detaching a target and follows manual movement', () => {
+    const settings = createSpatialSmoothingSettings();
+
+    settings.dopplerFactor = 1;
+
+    const listener = new AudioListener(settings);
+    const target = { x: 0, y: 0 };
+    let now = 0;
+
+    vi.spyOn(getCtx(), 'currentTime', 'get').mockImplementation(() => now);
+    listener.target = target;
+    listener._tick();
+    target.x = 10;
+    now = 1;
+    listener._tick();
+
+    expect(listener.velocity.x).toBe(10);
+
+    listener.target = null;
+    now = 2;
+    listener._tick();
+
+    expect(listener.velocity.x).toBe(0);
+
+    listener.position.set(30, 5);
+    now = 3;
+    listener._tick();
+
+    expect([listener.velocity.x, listener.velocity.y]).toEqual([20, 5]);
+
+    listener.velocity = { x: 3, y: 4 };
+    now = 4;
+    listener._tick();
+    expect([listener.velocity.x, listener.velocity.y]).toEqual([3, 4]);
+
+    listener.destroy();
+  });
+
   beforeEach(() => {
     // Reset mock call history on listener AudioParams
     const l = getListenerMock();

@@ -195,7 +195,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Height of the source above (positive) or below (negative) the world plane, in world units. Default 0. Independent of Spatializable.position, and preserved across a position change that does not carry a z. It contributes to distance attenuation, to the panner's own directionality, and to Doppler - a source rising straight up recedes."
+          "description": "Height of the source above (positive) or below (negative) the world plane, in world units. Default 0. Independent of Spatializable.position, and preserved across a position change that does not carry a z. It contributes to distance attenuation, to the panner's own directionality, and to Doppler - a source rising straight up recedes. Without a position or followed node, its horizontal coordinates are the world origin."
         },
         {
           "name": "elevationVelocity",

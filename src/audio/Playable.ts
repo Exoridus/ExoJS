@@ -62,6 +62,8 @@ export interface Voice extends Spatializable {
    * Attaching does not transfer ownership: the caller keeps the effect and must
    * `destroy()` it. Neither the voice ending nor {@link Voice.removeEffect}
    * destroys it.
+   * A live voice rejects an effect whose nodes are not initialized without
+   * changing its current chain. Await {@link AudioEffect.ready} before attaching.
    */
   addEffect(effect: AudioEffect): this;
   /** Remove a previously added per-voice effect. The caller still owns it and must `destroy()` it. */
@@ -176,6 +178,8 @@ export interface Spatializable {
    * position change that does not carry a `z`. It contributes to distance
    * attenuation, to the panner's own directionality, and to Doppler - a source
    * rising straight up recedes.
+   * Without a position or followed node, its horizontal coordinates are the
+   * world origin.
    */
   elevation: number;
   /**

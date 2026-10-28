@@ -232,6 +232,8 @@ export abstract class BaseVoice implements Voice {
    * Attaching the same effect twice is a caller error: the rebuilt chain would
    * wire the effect's output back into its own input, producing a feedback
    * loop. The dev build asserts; production ignores the second attach.
+   * An effect whose audio nodes are not initialized is rejected without
+   * changing the current chain; await its ready promise before attaching it.
    */
   public addEffect(effect: AudioEffect): this {
     if (this._ended) {
@@ -242,6 +244,10 @@ export abstract class BaseVoice implements Voice {
       assert(false, 'Voice.addEffect: this effect is already attached to the voice.');
 
       return this;
+    }
+
+    if (!isEffectReady(effect)) {
+      throw new Error('Voice.addEffect: effect is not yet initialized. Await effect.ready before attaching it.');
     }
 
     this._effects.push(effect);
@@ -677,7 +683,8 @@ export abstract class BaseVoice implements Voice {
       x = this._position.x;
       y = this._position.y;
     } else {
-      return;
+      x = 0;
+      y = 0;
     }
 
     const panner = this._panner as unknown as Partial<{
