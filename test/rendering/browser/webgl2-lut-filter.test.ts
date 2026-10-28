@@ -83,3 +83,27 @@ describe('LutFilter rgb1d grading (WebGL2)', () => {
     expect(perChannel).not.toEqual(redIndexed);
   });
 });
+
+test.each(['owner', 'ancestor'])('replacing a LUT refreshes its %s cache', async cache => {
+  const backend = await createWebGl2TestBackend(LUT_SCENE_SIZE);
+  const filter = new LutFilter({ mode: 'rgb1d' });
+  const identity = filter.lut;
+  const replacement = probeLut();
+  const { root, texture } = lutScene('#00ff00', filter);
+  (cache === 'owner' ? root.children[0]! : root).cacheAsTexture = true;
+
+  try {
+    renderWebGl2Encoded(backend, root, CLEAR);
+    expectPixelNear(readWebGl2Pixel(backend, SAMPLE_POINT, SAMPLE_POINT), [0, 255, 0, 255]);
+    filter.setLut(replacement);
+    renderWebGl2Encoded(backend, root, CLEAR);
+    expectPixelNear(readWebGl2Pixel(backend, SAMPLE_POINT, SAMPLE_POINT), expectedProbeOutput(0, 255, 0));
+  } finally {
+    root.destroy();
+    texture.destroy();
+    filter.destroy();
+    identity.destroy();
+    replacement.destroy();
+    backend.destroy();
+  }
+});

@@ -133,6 +133,12 @@ export class GlyphAtlasPool {
       }
     }
 
+    for (const [key, metrics] of this._metrics) {
+      if (key.startsWith(prefix)) {
+        metrics.clear();
+      }
+    }
+
     for (const [key, metrics] of this._shapedMetrics) {
       if (key.startsWith(prefix)) {
         metrics.clear();
