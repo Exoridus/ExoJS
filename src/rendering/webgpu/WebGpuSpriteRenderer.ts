@@ -1178,6 +1178,22 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
    * rotate their base textures through the slot table, so the check is the same.
    */
   private _batchWouldMutateTexture(backend: WebGpuBackend): boolean {
+    if (this._currentMaterial !== null) {
+      const material = this._currentMaterial;
+
+      for (const name of material._bindingSchema.textureUniformNames) {
+        if (backend.textureUploadWouldMutate(material._getUniformValue(name) as Texture | RenderTexture)) {
+          return true;
+        }
+      }
+
+      for (const name of material._bindingSchema.textureNames) {
+        if (backend.textureUploadWouldMutate(material._getTextureValue(name))) {
+          return true;
+        }
+      }
+    }
+
     for (let i = 0; i < this._slotCount; i++) {
       const texture = this._activeTextures[i];
 

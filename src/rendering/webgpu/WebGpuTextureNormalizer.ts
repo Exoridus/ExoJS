@@ -64,14 +64,10 @@ interface PassLevel {
 export class WebGpuTextureNormalizer {
   private readonly _device: GPUDevice;
   private readonly _accountant: GpuResourceAccountant | null;
-  /** Straight-source scratch, one per storage format, grown only. */
-  private readonly _staging = new Map<GPUTextureFormat, NormalizeStaging>();
+  /** Straight-source scratch, one per storage format and mip index, grown only. */
+  private readonly _staging = new Map<string, NormalizeStaging>();
   /** Per-format pipeline and sampler, shaped like the mipmap resources. */
   private readonly _resources = new Map<GPUTextureFormat, NormalizeResources>();
-  /** One uniform buffer per distinct staging/level extent pair. */
-  private readonly _levelScales = new Map<string, GPUBuffer>();
-  /** Reused per level so the uniform write allocates nothing. */
-  private readonly _levelScaleData = new Float32Array(4);
 
   /**
    * @param accountant Books each staging texture, so scratch memory is part of the
@@ -87,13 +83,11 @@ export class WebGpuTextureNormalizer {
    *
    * A level whose alpha is uniformly opaque keeps the plain `writeTexture` path:
    * premultiplying it would be a no-op, and a pass per level is not free. Every
-   * level that does need a pass is staged into the same scratch texture first, so
-   * a chain costs one staging allocation and one submit.
+   * level that needs a pass uses independent scratch storage so later queue
+   * writes cannot overwrite an earlier pass's input before the shared submit.
    */
   public normalizeLevels(destination: GPUTexture, format: GPUTextureFormat, levels: readonly WebGpuColorNormalizationLevel[]): void {
     let passLevelCount = 0;
-    let stagingWidth = 0;
-    let stagingHeight = 0;
 
     for (const [mipLevel, level] of levels.entries()) {
       if (isFullyOpaqueLevel(level.data)) {
@@ -107,21 +101,20 @@ export class WebGpuTextureNormalizer {
       }
 
       passLevelCount++;
-      stagingWidth = Math.max(stagingWidth, level.width);
-      stagingHeight = Math.max(stagingHeight, level.height);
     }
 
     if (passLevelCount === 0) {
       return;
     }
 
-    const staging = this._ensureStaging(format, stagingWidth, stagingHeight);
     const encoder = this._device.createCommandEncoder({ label: 'backend:color-normalize-encoder' });
 
     for (const [mipLevel, level] of levels.entries()) {
       if (isFullyOpaqueLevel(level.data)) {
         continue;
       }
+
+      const staging = this._ensureStaging(format, level.width, level.height, false, mipLevel);
 
       this._device.queue.writeTexture(
         { texture: staging.texture },
@@ -207,13 +200,8 @@ export class WebGpuTextureNormalizer {
       this._accountant?.free(staging.accountedBytes);
     }
 
-    for (const buffer of this._levelScales.values()) {
-      buffer.destroy();
-    }
-
     this._staging.clear();
     this._resources.clear();
-    this._levelScales.clear();
   }
 
   public destroy(): void {
@@ -234,7 +222,6 @@ export class WebGpuTextureNormalizer {
       entries: [
         { binding: 0, resource: staging.texture.createView({ baseMipLevel: 0, mipLevelCount: 1 }) },
         { binding: 1, resource: resources.sampler },
-        { binding: 2, resource: { buffer: this._levelScaleBuffer(staging.width, staging.height, level.width, level.height) } },
       ],
     });
     const pass = encoder.beginRenderPass({
@@ -258,13 +245,14 @@ export class WebGpuTextureNormalizer {
   }
 
   /**
-   * Keep one staging texture per format large enough for the levels being staged,
+   * Keep one staging texture per format and mip index large enough for its level,
    * reallocating only when one does not fit. `exact` reallocates at the requested
    * extent even when it fits, which is what a single-level external copy needs
    * because `copyExternalImageToTexture` sizes its destination to the source.
    */
-  private _ensureStaging(format: GPUTextureFormat, width: number, height: number, exact = false): NormalizeStaging {
-    const existing = this._staging.get(format);
+  private _ensureStaging(format: GPUTextureFormat, width: number, height: number, exact = false, mipLevel = 0): NormalizeStaging {
+    const key = `${format}:${mipLevel}`;
+    const existing = this._staging.get(key);
     const fits = existing !== undefined && existing.width >= width && existing.height >= height;
 
     if (existing !== undefined && fits && !exact) {
@@ -292,7 +280,7 @@ export class WebGpuTextureNormalizer {
 
     this._accountant?.allocate(accountedBytes);
 
-    this._staging.set(format, staging);
+    this._staging.set(key, staging);
 
     return staging;
   }
@@ -313,7 +301,6 @@ export class WebGpuTextureNormalizer {
         entries: [
           { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
           { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'non-filtering' } },
-          { binding: 2, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
         ],
       });
       const pipelineLayout = device.createPipelineLayout({
@@ -354,39 +341,5 @@ export class WebGpuTextureNormalizer {
         detail: textureNormalizeWgsl,
       });
     }
-  }
-
-  /**
-   * The uniform carrying what fraction of the staging texture this level fills.
-   *
-   * Keyed on the pair, so a chain reuses one buffer per level extent across
-   * uploads instead of allocating per upload. A new extent is a new buffer, which
-   * bounds the map by the number of distinct mip sizes a session has staged.
-   */
-  private _levelScaleBuffer(stagingWidth: number, stagingHeight: number, levelWidth: number, levelHeight: number): GPUBuffer {
-    const key = `${levelWidth}x${levelHeight}@${stagingWidth}x${stagingHeight}`;
-    const existing = this._levelScales.get(key);
-
-    if (existing !== undefined) {
-      return existing;
-    }
-
-    const data = this._levelScaleData;
-
-    data[0] = levelWidth / stagingWidth;
-    data[1] = levelHeight / stagingHeight;
-    data[2] = 0;
-    data[3] = 0;
-
-    const buffer = this._device.createBuffer({
-      label: 'backend:color-normalize-level-scale',
-      size: data.byteLength,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
-
-    this._device.queue.writeBuffer(buffer, 0, data);
-    this._levelScales.set(key, buffer);
-
-    return buffer;
   }
 }

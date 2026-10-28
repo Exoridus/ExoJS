@@ -3,7 +3,7 @@ import type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet
 import type { View } from '#rendering/View';
 
 import { DirtyRowTracker } from './DirtyRowTracker';
-import type { WebGpuRetainedRendererReplayState } from './retainedGroupResources';
+import type { WebGpuRetainedBatchReplayer, WebGpuRetainedRendererReplayState } from './retainedGroupResources';
 import { retainedGroupUniformBytes, retainedTintSlotBytes, retainedTransformSlotBytes } from './retainedGroupResources';
 import { requireRepresentableStorageGrowth } from './storageLimits';
 import { WebGpuNativeRetainedReplay } from './WebGpuNativeRetainedReplay';
@@ -99,13 +99,8 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   public uboViewUpdateId = -1;
   /** The open pass this bundle's replayed draws were last recorded into. */
   public drawsInPass: WebGpuActiveRenderPass | null = null;
-  /**
-   * Auxiliary replay state owned by an indexed-geometry replayer (mesh). Null
-   * for the sprite-layout renderers, which use this bundle's own UBO/bind
-   * group. Disposed on device loss / destroy so the renderer's group(0) UBO
-   * follows the bundle's lifecycle (grow-only, freed on teardown).
-   */
-  public rendererReplayState: WebGpuRetainedRendererReplayState | null = null;
+  /** Renderer-specific state remains owned until the bundle releases its GPU resources. */
+  public readonly rendererReplayStates = new Map<WebGpuRetainedBatchReplayer, WebGpuRetainedRendererReplayState>();
 
   /** @internal */
   public constructor(accountant: GpuResourceAccountant, onRelease: (bundle: WebGpuRetainedGroupBundle) => void) {
@@ -377,7 +372,9 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
 
     // A renderer that keeps its own per-node store off this bundle (Text) stages
     // its patches the same way and has no other point to flush them at.
-    this.rendererReplayState?.flushRowPatches?.();
+    for (const state of this.rendererReplayStates.values()) {
+      state.flushRowPatches?.();
+    }
   }
 
   /**
@@ -465,9 +462,12 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
     this.uboView = null;
     this.uboViewUpdateId = -1;
     this.drawsInPass = null;
-    // The mesh replayer's group(0) UBO belonged to the dropped device state.
-    this.rendererReplayState?.destroy();
-    this.rendererReplayState = null;
+
+    for (const state of this.rendererReplayStates.values()) {
+      state.destroy();
+    }
+
+    this.rendererReplayStates.clear();
 
     if (this._accountedBytes > 0) {
       this._accountant.free(this._accountedBytes);
