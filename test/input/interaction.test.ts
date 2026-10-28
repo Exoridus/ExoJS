@@ -248,6 +248,55 @@ const flushInteractions = (im: InteractionSystem): void => {
 // ---------------------------------------------------------------------------
 
 describe('InteractionSystem — hit-test basics', () => {
+  test('destroy detaches world and UI roots and ignores later node notifications', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionSystem(app);
+
+    im.attachRoot(scene.root);
+    im.attachUIRoot(scene.ui);
+    im.destroy();
+
+    expect(scene.root._getStage()).toBeNull();
+    expect(scene.ui._getStage()).toBeNull();
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+    const onDown = vi.fn();
+
+    sprite.interactive = true;
+    sprite.onPointerDown.add(onDown);
+    scene.addChild(sprite);
+    im._notifyNodeAdded(sprite);
+    im._notifyInteractiveChanged(sprite, true);
+    im._notifyBoundsInvalidated(sprite);
+    im.attachRoot(scene.root);
+    im.attachUIRoot(scene.ui);
+
+    expect(scene.root._getStage()).toBeNull();
+    expect(scene.ui._getStage()).toBeNull();
+    expect(im._getDebugQuadtree()).toBeNull();
+
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    expect(onDown).not.toHaveBeenCalled();
+    expect(() => im.destroy()).not.toThrow();
+
+    sprite.destroy();
+  });
+
+  test('destroy does not detach a root already transferred to another interaction system', () => {
+    const { app, scene } = createApp();
+    const first = new InteractionSystem(app);
+    const second = new InteractionSystem(app);
+
+    first.attachRoot(scene.root);
+    second.attachRoot(scene.root);
+    first.destroy();
+
+    expect(scene.root._getStage()?.interaction).toBe(second);
+
+    second.destroy();
+    expect(scene.root._getStage()).toBeNull();
+  });
+
   test('fires onPointerDown on interactive sprite when pointer is over it', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionSystem(app);

@@ -331,16 +331,27 @@ export class AssetTypeRegistry {
     return new Error(`No asset type is installed for ${this._describeType(token)}. Install it through an extension's "assets" list first.`);
   }
 
-  /** Destroys every installed factory. */
+  /** Destroys every installed factory, then rethrows the first teardown failure, if any. */
   public destroy(): void {
-    for (const installed of this._byId.values()) {
-      installed.factory.destroy?.();
-    }
+    const installedTypes = [...this._byId.values()];
+    const errors: unknown[] = [];
 
     this._byId.clear();
     this._byToken.clear();
     this._extensionTypes.clear();
     this._extensionOverrides.clear();
+
+    for (const installed of installedTypes) {
+      try {
+        installed.factory.destroy?.();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+
+    if (errors.length > 0) {
+      throw errors[0];
+    }
   }
 }
 

@@ -322,7 +322,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Tears down the loader and all resources it owns. Clears all in-memory assets and in-flight tracking, and disconnects all signals. Also calls destroy?.() on every installed type's factory. Cache stores are destroyed only when this loader was given the stores themselves, and therefore owns the cache it wrapped them in. An AssetCache passed in belongs to its builder and may be serving other loaders, so it is left alone - destroy it yourself when the application is done with it."
+          "description": "Tears down the loader and all resources it owns. Clears all in-memory assets and in-flight tracking, and disconnects all signals. Also calls destroy?.() on every installed type's factory. Completes teardown before rethrowing the first cleanup failure, if any. Cache stores are destroyed only when this loader was given the stores themselves, and therefore owns the cache it wrapped them in. An AssetCache passed in belongs to its builder and may be serving other loaders, so it is left alone - destroy it yourself when the application is done with it."
         },
         {
           "name": "get",
@@ -2164,7 +2164,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Sets the maximum number of simultaneous background-queue fetches. Takes effect at the next background-queue drain - on completion of a running fetch, on enqueue, or on awaitBackground - and does not start or abort a fetch that is already running."
+          "description": "Sets the maximum number of simultaneous background-queue fetches. Requires a nonnegative integer; zero pauses queued fetches. Takes effect at the next background-queue drain - on completion of a running fetch, on enqueue, or on awaitBackground - and does not start or abort a fetch that is already running."
         },
         {
           "name": "stats",
