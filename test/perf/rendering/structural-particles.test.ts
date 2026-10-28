@@ -8,13 +8,15 @@
  * which grows its instance buffer on demand. Anything less means the same
  * scene renders a different particle count per backend.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { materializeRendererBindings } from '#extensions/materialize';
 import { Container } from '#rendering/Container';
+import { Geometry } from '#rendering/geometry/Geometry';
 
 import { createParticlesExtension } from '../../../packages/exojs-particles/src/particlesExtension';
 import { ParticleSystem } from '../../../packages/exojs-particles/src/ParticleSystem';
+import { MeshParticles } from '../../../packages/exojs-particles/src/renderModes/MeshParticles';
 import { makeTextures } from './fixtures';
 import { createWebGl2Harness, measureFrame, type WebGl2Harness } from './harness';
 
@@ -51,6 +53,40 @@ const buildParticleScene = (count: number): { root: Container; system: ParticleS
 };
 
 describe('structural — WebGL2 particles', () => {
+  it('updates nonindexed mesh draw counts across growth and shrink', () => {
+    withParticleHarness(8, harness => {
+      const geometry = new Geometry({
+        attributes: [{ name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 }],
+        vertexData: new Float32Array([0, 0, 16, 0, 0, 16]),
+        stride: 8,
+      });
+      const mode = new MeshParticles({ geometry });
+      const system = new ParticleSystem(makeTextures(1)[0]!, { capacity: 1, render: mode });
+      const root = new Container();
+      const unindexed = vi.spyOn(harness.context, 'drawArraysInstanced');
+
+      system.emit();
+      system.setPosition(640, 360);
+      root.addChild(system);
+      measureFrame(harness, root);
+      expect(unindexed).toHaveBeenLastCalledWith(4, 0, 3, 1);
+
+      geometry.vertexData = new Float32Array([0, 0, 32, 0, 32, 32, 0, 32]);
+      geometry.invalidate();
+      measureFrame(harness, root);
+      expect(unindexed).toHaveBeenLastCalledWith(4, 0, 4, 1);
+
+      geometry.vertexData = new Float32Array([0, 0, 8, 0, 0, 8]);
+      geometry.invalidate();
+      measureFrame(harness, root);
+      expect(unindexed).toHaveBeenLastCalledWith(4, 0, 3, 1);
+
+      root.destroy();
+      mode.destroy();
+      geometry.destroy();
+    });
+  });
+
   it('draws every live particle when the count is below the batch size', () => {
     withParticleHarness(256, harness => {
       const { root, system } = buildParticleScene(100);

@@ -50,9 +50,11 @@ export class Interval implements Cloneable<Interval> {
   }
 
   /**
-   * Return the signed overlap length between this interval and `interval`.
-   * Positive when they overlap; the sign encodes which end overlaps more.
-   * Used by the SAT solver to compute penetration depth.
+   * End-to-end span between this interval and `interval`: `this.max -
+   * interval.min` when this interval ends first, otherwise `interval.max -
+   * this.min`. It equals the overlap length for a partial overlap and is
+   * larger when one interval contains the other; use {@link overlaps} for the
+   * containment-safe test.
    */
   public getOverlap(interval: Interval): number {
     return this.max < interval.max ? this.max - interval.min : interval.max - this.min;

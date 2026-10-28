@@ -8,6 +8,33 @@ import { QueryEngine } from '../src/query/QueryEngine';
 import { colliderAt } from './support';
 
 describe('queries', () => {
+  it.each([
+    [{ x: NaN, y: 0 }, { x: 1, y: 0 }, Infinity],
+    [{ x: 0, y: Infinity }, { x: 1, y: 0 }, Infinity],
+    [{ x: 0, y: 0 }, { x: NaN, y: 0 }, Infinity],
+    [{ x: 0, y: 0 }, { x: 1, y: Infinity }, Infinity],
+    [{ x: 0, y: 0 }, { x: 1, y: 0 }, NaN],
+    [{ x: 0, y: 0 }, { x: 1, y: 0 }, -1],
+    [{ x: 0, y: 0 }, { x: 1, y: 0 }, -Infinity],
+  ])('rejects nonfinite rays or invalid distance before querying either backend', (origin, direction, maxDistance) => {
+    const spatialIndex = {
+      sync(): never {
+        throw new Error('invalid ray reached the spatial index');
+      },
+      queryAabb(): Collider[] {
+        return [];
+      },
+      rayCast(): void {},
+    };
+
+    for (const index of [undefined, spatialIndex]) {
+      const query = new QueryEngine([], index);
+
+      expect(() => query.rayCast(origin, direction, undefined, maxDistance)).toThrow(RangeError);
+      expect(() => query.rayCastAll(origin, direction, undefined, undefined, maxDistance)).toThrow(RangeError);
+    }
+  });
+
   it('queryPoint returns colliders containing the point', () => {
     const world = new PhysicsWorld();
     const box = colliderAt(world, new BoxShape(20, 20), { x: 0, y: 0 });

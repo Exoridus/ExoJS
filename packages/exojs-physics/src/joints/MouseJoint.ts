@@ -10,11 +10,11 @@ export interface MouseJointOptions {
   body: PhysicsBody;
   /** World point to pull the body toward - also the grab point on the body at creation. */
   target: Readonly<PointLike>;
-  /** Soft-spring frequency in Hz (higher = snappier). Default `5`. */
+  /** Positive finite soft-spring frequency in Hz (higher = snappier). Default `5`. */
   hertz?: number;
-  /** Soft-spring damping ratio. Default `0.7`. */
+  /** Nonnegative finite soft-spring damping ratio; zero is undamped. Default `0.7`. */
   dampingRatio?: number;
-  /** Maximum pulling force - clamps the per-step impulse so heavy bodies lag. Default `Infinity`. */
+  /** Positive maximum pulling force, finite or `Infinity`. Clamps the per-step impulse so heavy bodies lag. Default `Infinity`. */
   maxForce?: number;
 }
 
@@ -30,12 +30,9 @@ const scratch: PointLike = { x: 0, y: 0 };
  * constraint that touches only the dragged body.
  */
 export class MouseJoint extends Joint {
-  /** Soft-spring frequency in Hz. */
-  public hertz: number;
-  /** Soft-spring damping ratio. */
-  public dampingRatio: number;
-  /** Maximum pulling force. */
-  public maxForce: number;
+  private _hertz = 5;
+  private _dampingRatio = 0.7;
+  private _maxForce = Infinity;
 
   private readonly _localAnchorX: number;
   private readonly _localAnchorY: number;
@@ -71,6 +68,45 @@ export class MouseJoint extends Joint {
     this.hertz = options.hertz ?? 5;
     this.dampingRatio = options.dampingRatio ?? 0.7;
     this.maxForce = options.maxForce ?? Infinity;
+  }
+
+  /** Positive finite soft-spring frequency in Hz. Invalid assignments throw `RangeError`. */
+  public get hertz(): number {
+    return this._hertz;
+  }
+
+  public set hertz(value: number) {
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new RangeError('MouseJoint.hertz must be finite and greater than zero.');
+    }
+
+    this._hertz = value;
+  }
+
+  /** Nonnegative finite damping ratio. Invalid assignments throw `RangeError`; zero is undamped. */
+  public get dampingRatio(): number {
+    return this._dampingRatio;
+  }
+
+  public set dampingRatio(value: number) {
+    if (!Number.isFinite(value) || value < 0) {
+      throw new RangeError('MouseJoint.dampingRatio must be finite and nonnegative.');
+    }
+
+    this._dampingRatio = value;
+  }
+
+  /** Positive pulling force limit, finite or `Infinity`. Invalid assignments throw `RangeError`. */
+  public get maxForce(): number {
+    return this._maxForce;
+  }
+
+  public set maxForce(value: number) {
+    if (!(value > 0)) {
+      throw new RangeError('MouseJoint.maxForce must be greater than zero.');
+    }
+
+    this._maxForce = value;
   }
 
   /** The world point the body is pulled toward. Reassigning wakes the body so a drag tracks live. */

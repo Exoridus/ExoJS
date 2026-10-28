@@ -197,6 +197,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
   private readonly _device: GPUDevice | null = null;
   private readonly _simulation: 'auto' | 'cpu';
   private _deathGeneration = 0;
+  private _storageGeneration = 0;
   private _gpuState: ParticleGpuState | null = null;
   private _glState: ParticleGlState | null = null;
   private readonly _backendSignals: Signal[] = [];
@@ -759,6 +760,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
   /** Clears particles and pending death callbacks while retaining allocated simulation resources. */
   public clearParticles(): this {
     this._deathGeneration++;
+    this._storageGeneration++;
     this._gpuDirtySlots.clear();
     this._resetPendingDeaths();
     this._simulationState?.discardDeaths();
@@ -1101,12 +1103,17 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
 
     // Compact: forward pass, report deaths on expired, copy survivors down.
     const deathModules = this._deathModules;
+    const generation = this._storageGeneration;
     let writeIndex = 0;
 
     for (let readIndex = 0; readIndex < storage.count; readIndex++) {
       if (elapsed[readIndex]! >= lifetime[readIndex]!) {
         if (deathModules.length > 0) {
           this._reportDeath(storage.snapshot(readIndex));
+
+          if (this.destroyed || generation !== this._storageGeneration) {
+            return;
+          }
         }
 
         alive[readIndex] = 0;
@@ -1131,9 +1138,14 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
   /** Hands one death snapshot to every registered death module, in registration order. */
   private _reportDeath(death: ParticleDeathContext): void {
     const deathModules = this._deathModules;
+    const generation = this._deathGeneration;
 
     for (let m = 0; m < deathModules.length; m++) {
       deathModules[m]!.onDeath(this, death);
+
+      if (this.destroyed || generation !== this._deathGeneration) {
+        return;
+      }
     }
   }
 

@@ -164,7 +164,10 @@ export const meshParticleWgsl = `${colorShaderSourcesWgsl}${meshParticleWgslModu
  * `(x, y, u, v)` table - the shader binds fixed names, a caller's geometry may
  * use any - and re-read whenever the geometry's `version` changes. Edit the
  * geometry in place, call `invalidate()` on it, and the next draw picks it up.
- * Changing the vertex *count* is equally fine.
+ * Changing the vertex *count* is equally fine, provided every existing index
+ * remains in range. In-place index edits are uploaded on the same invalidation;
+ * the index list's length, element type and topology belong to the geometry's
+ * immutable layout and require a new geometry and mode to change.
  *
  * **Atlas frames still work.** The mesh's own UVs are treated exactly like the
  * quad's 0..1 corners: the shader mixes them across the particle's resolved
@@ -256,6 +259,7 @@ export class MeshParticles extends ParticleRenderMode {
    * once a backend actually compiles it.
    */
   public get material(): Material {
+    this._syncMesh();
     this._material ??= new ParticleMaterial({
       shader: new Shader({
         glsl: { vertex: vertexSource, fragment: fragmentSource },
@@ -300,7 +304,16 @@ export class MeshParticles extends ParticleRenderMode {
       return;
     }
 
-    this._meshVersion = this.mesh.version;
+    const indices = this.mesh.indices;
+    const vertexCount = this.mesh.vertexCount;
+
+    if (indices !== null) {
+      for (let index = 0; index < indices.length; index++) {
+        if (indices[index]! >= vertexCount) {
+          throw new RangeError(`MeshParticles: index ${indices[index]!} is out of range for vertex count ${vertexCount}.`);
+        }
+      }
+    }
 
     const table = readMeshTable(this.mesh, this._meshTable);
 
@@ -310,5 +323,6 @@ export class MeshParticles extends ParticleRenderMode {
     }
 
     this.vertexGeometry.invalidate();
+    this._meshVersion = this.mesh.version;
   }
 }

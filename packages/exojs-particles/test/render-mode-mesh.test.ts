@@ -172,4 +172,45 @@ describe('MeshParticles', () => {
     // A bumped version is what tells the executors to re-upload the buffer.
     expect(mode.vertexGeometry.version).toBeGreaterThan(before);
   });
+
+  it('refreshes the vertex count when an unindexed source grows and shrinks', () => {
+    const mesh = makeTriangle();
+    const mode = new MeshParticles({ geometry: mesh });
+    const system = new ParticleSystem({ capacity: 1 });
+
+    mesh.vertexData = new Float32Array(8 * 4);
+    mesh.invalidate();
+    mode.build(system, system._storage);
+
+    expect(mode.vertexGeometry.vertexCount).toBe(8);
+    expect(mode.vertexGeometry.indexCount).toBe(8);
+
+    mesh.vertexData = new Float32Array(3 * 4);
+    mesh.invalidate();
+    mode.build(system, system._storage);
+
+    expect(mode.vertexGeometry.vertexCount).toBe(3);
+    expect(mode.vertexGeometry.indices).toBeNull();
+    expect(mode.vertexGeometry.indexCount).toBe(3);
+
+    mode.destroy();
+    mesh.destroy();
+    system.destroy();
+  });
+
+  it('rejects a vertex shrink that leaves source indices outside the mesh on every retry', () => {
+    const mesh = makeTriangle(true);
+    const mode = new MeshParticles({ geometry: mesh });
+    const system = new ParticleSystem({ capacity: 1 });
+
+    mesh.vertexData = new Float32Array(2 * 4);
+    mesh.invalidate();
+
+    expect(() => mode.build(system, system._storage)).toThrow(/index.*out of range/i);
+    expect(() => mode.build(system, system._storage)).toThrow(/index.*out of range/i);
+
+    mode.destroy();
+    mesh.destroy();
+    system.destroy();
+  });
 });
