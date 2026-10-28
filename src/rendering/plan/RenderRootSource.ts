@@ -456,7 +456,10 @@ export class RenderRootSource {
    * carry map: for every new global handle, the handle the same drawable held
    * before, or -1 when it is new here.
    *
-   * The returned array is the source's own and stays valid until the next delta.
+   * Only valid on a source that still holds a root scope - the caller reaches
+   * this through {@link canApplyStructureDelta}. The returned array is the
+   * source's own and stays valid until the next delta; it is grow-only and may
+   * be longer than {@link itemCount}, so only `[0, itemCount)` is meaningful.
    */
   public commitStructureDelta(
     root: RenderNode,

@@ -415,10 +415,6 @@ export class InteractionSystem {
   }
 
   /**
-   * Returns all currently captured RenderNodes (nodes that have an active
-   * drag / pointer-capture in progress). Used by debug layers.
-   */
-  /**
    * Snapshot of nodes that currently have pointer-capture (a pointer
    * pressed inside them and is being dragged). Used internally for drag
    * routing; exposed read-only for diagnostic / debug consumers.
@@ -2088,7 +2084,8 @@ export class InteractionSystem {
    * Flush stale entries: drop each stale node's old index entry and re-index
    * it with fresh bounds AND a freshly resolved group anchor (a boundary
    * engage/disengage flip re-buckets the node between the tree and the
-   * anchored side list here). Called at the start of update().
+   * anchored side list here). Called at the start of every non-gated flush
+   * (`_dispatchFrame`), before the journal drains.
    *
    * Remove+reinsert rather than the tree's `update()`: `update()` only touches
    * the tree, so it cannot re-bucket a node between the tree and the anchored

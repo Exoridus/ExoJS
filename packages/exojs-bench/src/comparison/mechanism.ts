@@ -80,7 +80,11 @@ export interface RenderingMechanismOptions {
   readonly drawless?: boolean;
 }
 
-/** Mechanism sentence for a rendering row, or `null` when neither arm reported counters. */
+/**
+ * Mechanism sentence for a rendering row, or `null` when either arm reported no
+ * counters, and also when both arms drew nothing for a scene that is meant to
+ * draw something (see {@link RenderingMechanismOptions.drawless}).
+ */
 export const renderingMechanism = (
   exojs: StructuralCounters | null,
   competitor: StructuralCounters | null,

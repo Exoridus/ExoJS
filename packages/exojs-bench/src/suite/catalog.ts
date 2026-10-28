@@ -4,9 +4,10 @@
  *
  * The domain matrices (`buildMatrix`, `buildPhysicsMatrix`) stay the source of
  * truth for what a scenario IS - its scene shape, budgets and capability gates.
- * This module only states which of their rungs a given suite selects, plus the
- * unit a load is quoted in, which is what lets a reader tell a million world
- * tiles apart from a million visible particles.
+ * This module states which loads a given suite selects and the unit each is
+ * quoted in - not always a rung of the domain ladder, because a suite can add a
+ * headline load the development matrix never had. The unit is what lets a
+ * reader tell a million world tiles apart from a million visible particles.
  */
 
 /** Test plans a run can be resolved against. */
@@ -41,7 +42,10 @@ export interface LoadSpec {
    * `1280 x 720`, not as `720 viewport`.
    */
   readonly label?: string;
-  /** Whether the `reference` plan selects this load. `full` selects every load. */
+  /**
+   * Whether the `reference` plan selects this load. `full` selects every load
+   * except the extreme ones, which only `--extreme` admits.
+   */
   readonly reference: boolean;
   /**
    * Whether this load is the scenario's headline - the one a card shows before

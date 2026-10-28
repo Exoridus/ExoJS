@@ -361,7 +361,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "CSS font-family this style resolves glyphs through. Assigning a FontFace stores only its family: nothing here registers the face with document.fonts, so pass a loaded face as TextStyleOptions.font when constructing the node to have Text register and await it. The family alone still selects an already registered face."
         },
         {
           "name": "fontKey",
@@ -495,7 +495,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Multi-stop fill gradient, or null when the glyph interior takes fillColor. Read back normalized: stops cloned, offsets clamped to 0..1 and sorted, angle resolved. Assigning re-normalizes, so the object handed in is never aliased and mutating it afterwards changes nothing."
+          "description": "Multi-stop fill gradient, or null when the glyph interior takes fillColor. Normalized on the way in: stops cloned, offsets clamped to 0..1 and sorted, angle resolved. Assigning re-normalizes, so the object handed in is never aliased and mutating it afterwards changes nothing. The getter returns that same normalized object rather than a copy, so treat it as read-only: editing a stop's color in place bypasses dirty tracking and the owning node is never told to re-pack the ramp."
         },
         {
           "name": "leading",

@@ -1286,20 +1286,20 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * reset every clock the frame body depends on - all in one place so every
    * call site that can start the loop does so identically. `_state` is left
    * untouched (still `Loading` at the point {@link Application.start} calls
-   * this) - {@link Application.update}'s gate reads `_frameLoopActive`, a
-   * strict superset of `_state === Running`.
+   * this) - {@link Application.update}'s gate reads the scheduler's `active`
+   * flag, a strict superset of `_state === Running`.
    */
   private _startFrameLoop(): void {
     this._scheduler.start();
   }
 
   /**
-   * Halt the per-frame loop: clear {@link Application._frameLoopActive},
-   * cancel the pending RAF request, and stop the active/frame clocks. Called
-   * from every place the loop can stop (fatal frame error, {@link
-   * Application.stop}, {@link Application.destroy} during the `Loading`
-   * window) so `_frameLoopActive` is the single source of truth everywhere,
-   * not only where the loop starts. Idempotent - a
+   * Halt the per-frame loop: clear the scheduler's `active` flag, cancel the
+   * pending RAF request, and stop the active/frame clocks. Called from every
+   * place the loop can stop (fatal frame error, {@link Application.stop},
+   * {@link Application.destroy} during the `Loading` window) so that flag is
+   * the single source of truth everywhere, not only where the loop starts.
+   * Idempotent - a
    * second call while the loop is already stopped is a no-op. Always aborts
    * whatever scene navigation is in flight via
    * {@link SceneDirector._abortInFlightNavigation} - a transition session
@@ -1526,8 +1526,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * Halt the per-frame loop, unload the active scene, and stop the active
    * + frame clocks. Leaves backend, input, audio, etc. intact - call
    * {@link Application.destroy} to release everything. Acts whenever the
-   * frame loop is actually live (`_frameLoopActive`), including mid-`start()`
-   * - not only while `_state` is `Running`.
+   * frame loop is actually live (the scheduler's `active` flag), including
+   * mid-`start()` - not only while `_state` is `Running`.
    *
    * A stop is allowed to interrupt a navigation - that is the point of it.
    * Everything scene-related is therefore delegated to the single
@@ -1851,11 +1851,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * scene director, all clocks, all signals) and release event listeners. The
    * application instance is unusable after this call.
    *
-   * The page is left as it was found: the active sizing policy is detached, so
-   * its observers go and the CSS box it wrote is cleared, and a canvas the
-   * engine created itself is removed from the document. A canvas supplied
-   * through `canvas.element` belongs to the caller and stays in place, as does
-   * every element around it - no sizing policy ever styles the page itself.
+   * The active sizing policy is detached, so its observers go; the CSS box it
+   * wrote stays on the canvas so the frozen last frame does not collapse. A
+   * canvas the engine created itself is removed from the document, which
+   * discards that box with it. A canvas supplied through `canvas.element`
+   * belongs to the caller and stays in place, including the inline width and
+   * height the policy wrote on it.
    *
    * Fires the RAF halt synchronously (so no further frame runs after this
    * call returns) and returns a Promise that fulfils once the rest of teardown

@@ -149,6 +149,13 @@ export class WebGl2VertexArrayObject {
     return this;
   }
 
+  /**
+   * Draw the VAO's current range.
+   *
+   * With an index buffer bound, `size` is an index count and `start` is a BYTE
+   * offset into that element buffer (`gl.drawElements`). Without one, `size` is
+   * a vertex count and `start` is a vertex index (`gl.drawArrays`).
+   */
   public draw(size: number, start: number, type: RenderingPrimitives = this._drawMode): this {
     // Buffer uploads can replace the active VAO's element binding between draws.
     this._indexBuffer?.bind();

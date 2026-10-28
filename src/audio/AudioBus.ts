@@ -302,8 +302,9 @@ export class AudioBus {
   /**
    * The `GainNode` a source connects to in order to feed this bus. `null` until
    * the `AudioContext` is unlocked and the bus has built its node chain, and
-   * again after {@link destroy}, so callers must re-read it rather than cache
-   * it - the chain is rebuilt on context recovery.
+   * again after {@link destroy}. The nodes are built once and survive a
+   * suspend/resume of the context, so a node read after setup stays valid for
+   * the bus's lifetime - only a `null` has to be re-read.
    *
    * Part of the audio extension contract for custom effects and analysers.
    * @advanced
@@ -315,8 +316,8 @@ export class AudioBus {
   /**
    * The `GainNode` carrying this bus's post-effect, post-pan signal, for taps
    * that read the bus without altering it (analysers, sidechain sources).
-   * `null` under the same conditions as {@link getInputNode}, and subject to the
-   * same no-caching rule.
+   * `null` under the same conditions as {@link getInputNode}, and stable for the
+   * bus's lifetime once it is not `null`.
    *
    * Part of the audio extension contract for custom effects and analysers.
    * @advanced

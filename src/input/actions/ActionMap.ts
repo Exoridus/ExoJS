@@ -141,7 +141,7 @@ const assertClaimable = (action: Action, name: string, pending: ReadonlySet<Acti
  * on the instance, so a map reads like the control scheme it describes.
  *
  * Each action instance belongs to exactly one `ActionMap`, checked and
- * rejected at construction (see {@link claimAction}) - an action's
+ * rejected at construction (see `assertClaimable`) - an action's
  * frame-to-frame state (an aggregate value, and for {@link ButtonAction} an
  * edge) is meaningful only when exactly one caller samples it once per real
  * frame; two maps sharing an instance would silently corrupt whichever

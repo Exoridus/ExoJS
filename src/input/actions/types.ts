@@ -120,8 +120,10 @@ export interface ActionSample {
 }
 
 /**
- * Fixed-step clock of one {@link InputSystem}. `serial` counts the fixed steps
- * started so far; `active` is `true` while one of them runs.
+ * Fixed-step clock of one {@link InputSystem}. `serial` counts sampled-input
+ * windows: it advances when a fixed step starts, and again when a window is
+ * retired without starting one, so retired input can never be delivered as the
+ * next step's. `active` is `true` while a fixed step runs.
  *
  * @internal
  */

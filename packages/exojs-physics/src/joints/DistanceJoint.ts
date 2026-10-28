@@ -48,9 +48,9 @@ export class DistanceJoint extends Joint {
   public hertz: number;
   /** Soft-spring damping ratio. */
   public dampingRatio: number;
-  /** Minimum allowed distance (rope/limit mode). */
+  /** Minimum allowed distance. Limit mode is fixed at construction: a joint built without `minLength`/`maxLength` stays an equality joint and ignores later writes to this field. */
   public minLength: number;
-  /** Maximum allowed distance (rope/limit mode). */
+  /** Maximum allowed distance (the rope length). Limit mode is fixed at construction; see {@link minLength}. Defaults to `Infinity` in limit mode. */
   public maxLength: number;
 
   private readonly _limited: boolean;

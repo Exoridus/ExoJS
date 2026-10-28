@@ -57,7 +57,7 @@ export interface ColliderOptions {
  * immutable (rebuild the collider to change geometry).
  */
 export class Collider {
-  /** Stable id, assigned when the owning body joins a world (`-1` until then). */
+  /** The collision geometry. */
   public readonly shape: AnyShape;
   public readonly offsetX: number;
   public readonly offsetY: number;
@@ -136,8 +136,9 @@ export class Collider {
   }
 
   /**
-   * The body this collider belongs to. `null` until the collider has been added
-   * to a body that has joined a world (free-standing colliders have no body yet).
+   * The body this collider belongs to.
+   *
+   * @throws Error when the collider has not been attached to a body in a world.
    */
   public get body(): PhysicsBody {
     if (this._body === null) {

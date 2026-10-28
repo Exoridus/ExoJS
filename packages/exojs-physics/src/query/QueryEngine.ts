@@ -238,7 +238,8 @@ export class QueryEngine {
   }
 
   /**
-   * Invoke `callback` for each collider whose AABB overlaps `bounds`. Allocation-free.
+   * Invoke `callback` for each collider whose AABB overlaps `bounds`. Allocation-free
+   * when no filter is passed; a filter is normalised into one small object per call.
    *
    * NOT re-entrant on itself: `callback` runs mid-traversal over a scratch
    * buffer dedicated to this method, so it may safely call `queryPoint`,

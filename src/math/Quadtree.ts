@@ -7,8 +7,9 @@ export interface QuadtreeItem<T> {
 }
 
 /**
- * Generic recursive spatial index used by the engine's `InteractionSystem`
- * to accelerate per-frame hit-testing of scene nodes.
+ * Generic recursive spatial index for axis-aligned bounding boxes. The engine's
+ * hit-testing path indexes nodes with `DynamicAabbTree` instead; this class
+ * remains a public spatial-index utility.
  *
  * Items are inserted with their axis-aligned bounding box; the tree
  * automatically subdivides into four quadrants (NW/NE/SW/SE) when a node
@@ -175,7 +176,7 @@ export class Quadtree<T> {
     return false;
   }
 
-  /** Remove all items and collapse all child nodes. Child `Quadtree` instances are retained but reset. */
+  /** Remove all items and collapse all child nodes. Child `Quadtree` instances are released, not retained. */
   public clear(): void {
     this._items.length = 0;
 
@@ -190,9 +191,9 @@ export class Quadtree<T> {
 
   /**
    * Walk every subdivided region's bounding rectangle, calling `callback`
-   * once per node in the tree (including the root). Used by
-   * {@link HitTestLayer} to visualise quadtree partitioning. Not part of
-   * the stable public API - friend-class access only.
+   * once per node in the tree (including the root). The debug hit-test layer
+   * visualises `DynamicAabbTree` partitions instead. Not part of the stable
+   * public API - friend-class access only.
    *
    * @internal
    */

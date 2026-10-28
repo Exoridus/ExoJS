@@ -34,8 +34,8 @@ export interface ProbeSceneSpec {
   readonly label: string;
   /**
    * Whether the scene allocates an internal effect / cache render target. Only
-   * these scenes have a meaningful `parent-resolution` arm; the others would
-   * measure the identical work twice.
+   * these scenes have a meaningful `logical` arm; the others would measure the
+   * identical work twice.
    */
   readonly usesInternalTarget: boolean;
   /** What the scene is for, shown on the page so the tester knows what to look at. */

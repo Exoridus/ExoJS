@@ -83,8 +83,8 @@ export interface Provenance extends BaseProvenance {
   /** True when the adapter is a software rasterizer - timings are then untrusted. */
   readonly software: boolean;
   /**
-   * The clock grid the run's FIRST session observed, or `null` where no session
-   * opened.
+   * The clock grid the run's FIRST session observed; `null` where no session
+   * opened, and on a CPU profile, which probes no clock.
    *
    * Provenance only. A run opens one session per arm, so this describes the
    * conditions rather than qualifying any particular measurement; each cell

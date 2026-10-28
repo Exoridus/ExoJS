@@ -66,8 +66,8 @@ type RequireAtLeastOne<T, Keys extends keyof T = keyof T> = Pick<T, Exclude<keyo
 /**
  * A per-frame unit of simulation or rendering, owned by a {@link SystemRegistry}
  * (`app.systems` or `scene.systems`). A system is a class instance or plain
- * object that implements at least one of {@link SystemMethods.fixedUpdate},
- * {@link SystemMethods.update}, or {@link SystemMethods.draw} - it participates
+ * object that implements at least one {@link SystemMethods} phase - any of
+ * `preFrame`, `fixedUpdate`, `update`, `draw` or `postFrame` - and participates
  * only in the phases it defines.
  *
  * ```ts

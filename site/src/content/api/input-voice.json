@@ -293,7 +293,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Insert panner between the voice's source and its output gain. The source is currently connected directly to BaseVoice._output; rewire it as source → panner → output."
+          "description": "Insert panner between the voice's source and its output gain. The source is currently connected directly to BaseVoice._output; rewire it as source -> panner -> output."
         },
         {
           "name": "_tail",
@@ -648,7 +648,7 @@
             }
           ],
           "returnType": "Promise<Sound>",
-          "description": "Record duration of the live input and resolve with a playable Sound. Uses MediaRecorder under the hood, then decodes the captured blob into an AudioBuffer."
+          "description": "Record duration of the live input and resolve with a playable Sound. Uses MediaRecorder under the hood, then decodes the captured blob into an AudioBuffer. The resolved Sound is owned by the caller and must be destroy()ed like any other. Recording is independent of this voice's lifecycle: it keeps running if the voice is stopped, and rejects if the recorder or the decode fails."
         },
         {
           "name": "removeEffect",
@@ -891,7 +891,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Full-gain cone half-angle in degrees. Default 360 (omnidirectional - no cone)."
+          "description": "Full-gain cone angle in degrees, as a full apex angle (not a half-angle). Default 360 (omnidirectional - no cone)."
         },
         {
           "name": "coneOuterAngle",
@@ -912,7 +912,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Falloff-to-coneOuterGain cone half-angle in degrees. Default 360."
+          "description": "Falloff-to-coneOuterGain cone angle in degrees, as a full apex angle. Default 360."
         },
         {
           "name": "coneOuterGain",
@@ -1263,7 +1263,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "World-space velocity of the source (world units/second), or null. Feeds the Doppler calculation (app.audio.spatial.dopplerFactor) - has no other effect. Explicit; when null and follow(node) is active, velocity is auto-derived each frame from the tracked node's position delta instead."
+          "description": "World-space velocity of the source (world units/second), or null. Feeds the Doppler calculation (app.audio.spatial.dopplerFactor) - has no other effect. Explicit; when null, the horizontal velocity is auto-derived each frame from the position delta of whatever this voice tracks, follow(node) or a plain position, and the vertical component comes only from Spatializable.elevationVelocity."
         },
         {
           "name": "volume",

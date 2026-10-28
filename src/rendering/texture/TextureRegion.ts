@@ -158,6 +158,9 @@ const validateOptions = (options: TextureRegionOptions, textureWidth: number, te
  * construction and validated against the texture, which must therefore already
  * know its dimensions - a still-loading texture makes the rectangle
  * unverifiable, so the constructor throws.
+ * A later resize of the texture - a canvas source redrawn larger, say - does
+ * not update that rectangle: its extents and UVs stay as captured, so rebuild
+ * the region when the source's own dimensions change.
  *
  * **Whole-texture regions** omit the rectangle and cover the entire texture.
  * They derive their geometry from the texture instead of capturing it, so one

@@ -23,10 +23,12 @@ export const enum RetainedInstructionKind {
 /**
  * Backend-owned GPU resource bundle for one retained group: the
  * group's persistent instance buffer, transform store, and per-batch
- * VAOs/bind groups live behind this handle. The plan layer only reads the
- * generation counter - bumped whenever the backend recreates or destroys the
- * bundle's resources (device restore, growth reallocation, destroy) - to
- * reject instruction sets that reference stale GPU state.
+ * VAOs/bind groups live behind this handle. The plan layer reads the generation
+ * counter - bumped whenever the backend recreates or destroys the bundle's
+ * resources (device restore, growth reallocation, destroy) - to reject
+ * instruction sets that reference stale GPU state, and drives the optional
+ * row-patch members below through `retainedTransformRowPatch` when a moved
+ * row has to be corrected in place.
  */
 export interface RetainedGroupBundle {
   /** Monotonic resource generation; a mismatch invalidates referencing sets. */

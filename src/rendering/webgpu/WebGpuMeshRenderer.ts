@@ -145,13 +145,6 @@ interface InstancedPipelineKey {
   readonly depth: MeshDepthMode;
 }
 
-/**
- * Cache key for the default + instanced (static-batch) pipeline maps. The
- * stencil dimension keeps the clip and no-clip variants distinct, mirroring the
- * sprite renderer: a stencil pipeline carries depth/stencil state and is only
- * valid in a pass with the matching attachment, so the two are never
- * interchangeable.
- */
 // Indexed by component count minus one.
 const instanceVertexFormats: readonly GPUVertexFormat[] = ['float32', 'float32x2', 'float32x3', 'float32x4'];
 
@@ -170,6 +163,13 @@ const instanceAttributeBufferLayout = (instances: InstanceDataView): GPUVertexBu
   })),
 });
 
+/**
+ * Cache key for the default and instanced pipeline maps. The stencil dimension
+ * keeps the clip and no-clip variants distinct, mirroring the sprite renderer: a
+ * stencil pipeline carries depth/stencil state and is only valid in a pass with
+ * the matching attachment, so the two are never interchangeable. The depth
+ * dimension is a cache dimension for the same reason.
+ */
 const meshPipelineCacheKey = (
   blendMode: BlendModes,
   format: GPUTextureFormat,
@@ -1618,7 +1618,6 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     return max;
   }
 
-  /** Whether any texture this flush binds would be re-uploaded or resized when synced. */
   /** Whether any pending draw of this flush writes depth into the bound target. */
   private _pendingWritesDepth(backend: WebGpuBackend): boolean {
     for (let i = 0; i < this._drawCallCount; i++) {
@@ -1630,6 +1629,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     return false;
   }
 
+  /** Whether any texture this flush binds would be re-uploaded or resized when synced. */
   private _flushWouldMutateTexture(backend: WebGpuBackend): boolean {
     for (let i = 0; i < this._drawCallCount; i++) {
       if (backend.textureUploadWouldMutate(this._drawCalls[i]!.texture)) {

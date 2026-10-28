@@ -157,7 +157,8 @@ export class Tween<T extends object = object> {
    * easing function, not the raw elapsed/duration ratio.
    *
    * Returns `0` while the tween is in the delay phase (state is `Active` but
-   * the configured delay has not yet elapsed).
+   * the configured delay has not yet elapsed), except for a zero-duration
+   * tween, which reports `1` immediately, delay included.
    */
   public get progress(): number {
     if (this._duration === 0) {

@@ -48,7 +48,7 @@ export class AssetRef<T> {
     return this._loadState.loaded(this._value as T);
   }
 
-  /** The parsed value. Throws while `'loading'` or `'failed'` - await {@link loaded} or check {@link loadState}. */
+  /** The parsed value. Throws until `'ready'` - also while `'idle'` (a catalog leaf not yet adopted), `'loading'` or `'failed'`; check {@link loadState}. */
   public get value(): T {
     if (!this._hasValue || this._loadState.value !== 'ready') {
       throw new Error(`AssetRef.value accessed while '${this._loadState.value}'. Await 'loaded' or check 'loadState'.`);

@@ -78,7 +78,7 @@ export interface GlyphSdfResult {
   glyphTop: number;
   /** Pixels from tile left to glyph left = buffer. */
   glyphLeft: number;
-  /** Logical horizontal advance for cursor movement. */
+  /** Horizontal advance in raster pixels - the units of the `fontSize` given. */
   glyphAdvance: number;
 }
 
@@ -90,8 +90,9 @@ type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
  * SDF generator for a single font variant.
  *
  * Maintains an internal canvas that is resized per glyph and a set of reusable
- * EDT working arrays that grow on demand (no per-call allocations once the
- * largest glyph has been processed).
+ * EDT working arrays that grow on demand. The draw path itself still allocates
+ * per call: the alpha readback plus the fresh result buffer {@link draw} hands
+ * back.
  * @advanced
  */
 export class GlyphSdf {
@@ -149,13 +150,6 @@ export class GlyphSdf {
   }
 
   /**
-   * Rasterize `char` and compute its SDF.
-   *
-   * Returns a new {@link GlyphSdfResult} each call. The `data` buffer is a
-   * fresh `Uint8ClampedArray`; the caller may hold a reference to it safely
-   * across subsequent `draw()` calls.
-   */
-  /**
    * Ensure font-level ascent/descent are measured. Called once per GlyphSdf
    * instance - deferred to the first draw() so the canvas context is ready.
    * Uses `fontBoundingBoxAscent/Descent` when available; falls back to
@@ -186,6 +180,13 @@ export class GlyphSdf {
     this._metricsReady = true;
   }
 
+  /**
+   * Rasterize `char` and compute its SDF.
+   *
+   * Returns a new {@link GlyphSdfResult} each call. The `data` buffer is a
+   * fresh `Uint8ClampedArray`; the caller may hold a reference to it safely
+   * across subsequent `draw()` calls.
+   */
   public draw(char: string): GlyphSdfResult {
     this._ensureFontMetrics();
 

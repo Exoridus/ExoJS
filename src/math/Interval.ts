@@ -6,8 +6,9 @@ let temp: Interval | null = null;
  * A closed scalar interval `[min, max]` used by the SAT collision solver to
  * represent the projection of a shape onto a separating axis.
  *
- * `Interval.temp` provides a shared scratch instance for hot paths.
- * `Interval.zero` is a read-only `[0, 0]` sentinel.
+ * `Interval.temp` provides a shared scratch instance for hot paths; never
+ * hold it across calls. `Interval.zero` is a shared `[0, 0]` constant whose
+ * fields are still writable - callers must not mutate it.
  */
 export class Interval implements Cloneable<Interval> {
   public min: number;

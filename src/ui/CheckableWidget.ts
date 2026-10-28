@@ -94,6 +94,10 @@ export abstract class CheckableWidget extends Widget {
     return this._labelNode?.text ?? '';
   }
 
+  /**
+   * Replace the label text. A control constructed without `options.label`
+   * has no label node, so assigning here is a no-op.
+   */
   public set label(value: string) {
     if (this._labelNode !== null && this._labelNode.text !== value) {
       this._labelNode.text = value;

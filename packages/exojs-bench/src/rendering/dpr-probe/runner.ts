@@ -140,13 +140,13 @@ const nextFrame = async (): Promise<number> =>
     requestAnimationFrame(resolve);
   });
 
-/** Everything {@link runProbeCell} needs beyond the cell itself. */
 /** Logical (CSS) stage every cell in a run renders at. Fixed for the whole run. */
 export interface StageSize {
   readonly width: number;
   readonly height: number;
 }
 
+/** Everything {@link runProbeCell} needs beyond the cell itself. */
 export interface RunProbeCellOptions {
   readonly cell: ProbeCell;
   readonly backend: ProbeBackendRequest;

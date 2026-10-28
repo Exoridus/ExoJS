@@ -256,9 +256,10 @@ const withStandardLayoutGuard = (resolved: ResolvedGamepadDefinition, descriptor
  *
  * Iterates `definitions` in order - exact product IDs first, then vendor fallbacks,
  * then a generic catch-all - and returns the first match. Falls back to
- * {@link GenericDualAnalogGamepadMapping} when no definition matches, and
- * replaces a matched {@link GamepadMappingLayout.Raw} mapping with the generic
- * layout when the browser reports `mapping: "standard"` for the device.
+ * {@link createStandardGamepadMapping} with the generic dual-analog family when
+ * no definition matches, and replaces a matched
+ * {@link GamepadMappingLayout.Raw} mapping with the generic layout when the
+ * browser reports `mapping: "standard"` for the device.
  *
  * @example
  * const resolved = resolveGamepadDefinition(navigator.getGamepads()[0]!);

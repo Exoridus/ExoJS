@@ -173,6 +173,10 @@ const rowRect = (
  * in the transform texture. Pass `target` from the per-flush path to keep the
  * mapping allocation-free; the result is only valid until the next call that
  * shares the same target.
+ *
+ * `rowCount` must be positive and the range must stay within
+ * `layout.rowCapacity`; a zero, negative or out-of-range span is not validated
+ * and yields an empty or out-of-bounds rectangle.
  * @internal
  */
 export const transformTextureRect = (

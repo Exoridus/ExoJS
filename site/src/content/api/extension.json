@@ -1,6 +1,6 @@
 {
   "title": "Extension",
-  "description": "An ExoJS extension: an immutable descriptor that contributes renderer bindings, asset bindings, serializer bindings and/or app-level systems. Holds no Application, backend, GPU, or loader instances. Pass it to the application that should have it, via ApplicationOptions.extensions - that is the only way an extension takes effect, so what an application can do is readable at its construction rather than inferred from which modules were imported. The descriptor is a shared, frozen singleton: the same object equips any number of Applications. Per-application state therefore never belongs on it - it belongs in the closure Extension.install opens, which is also what the returned ExtensionDisposer closes over.",
+  "description": "An ExoJS extension: an immutable descriptor that contributes renderer bindings, asset bindings, serializer bindings and/or app-level systems. Holds no Application, backend, GPU, or loader instances. Pass it to the application that should have it, via ApplicationOptions.extensions - that is the only way an extension takes effect, so what an application can do is readable at its construction rather than inferred from which modules were imported. The descriptor is a shared singleton, immutable by contract and frozen in development builds: the same object equips any number of Applications. Per-application state therefore never belongs on it - it belongs in the closure Extension.install opens, which is also what the returned ExtensionDisposer closes over.",
   "symbol": "Extension",
   "kind": "interface",
   "subsystem": "extensions",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "An ExoJS extension: an immutable descriptor that contributes renderer bindings, asset bindings, serializer bindings and/or app-level systems. Holds no Application, backend, GPU, or loader instances. Pass it to the application that should have it, via ApplicationOptions.extensions - that is the only way an extension takes effect, so what an application can do is readable at its construction rather than inferred from which modules were imported.",
-        "The descriptor is a shared, frozen singleton: the same object equips any number of Applications. Per-application state therefore never belongs on it - it belongs in the closure Extension.install opens, which is also what the returned ExtensionDisposer closes over."
+        "The descriptor is a shared singleton, immutable by contract and frozen in development builds: the same object equips any number of Applications. Per-application state therefore never belongs on it - it belongs in the closure Extension.install opens, which is also what the returned ExtensionDisposer closes over."
       ],
       "importLine": "import { Extension } from '@codexo/exojs/extensions'",
       "sourceLink": null

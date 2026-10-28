@@ -56,8 +56,12 @@ export interface Voice extends Spatializable {
   bus: AudioBus;
   /**
    * Insert a per-voice {@link AudioEffect} into this voice's output chain
-   * (after the volume gain, before the bus). Effects are applied in insertion
-   * order.
+   * (after the volume gain and the occlusion stage, before the bus). Effects
+   * are applied in insertion order.
+   *
+   * Attaching does not transfer ownership: the caller keeps the effect and must
+   * `destroy()` it. Neither the voice ending nor {@link Voice.removeEffect}
+   * destroys it.
    */
   addEffect(effect: AudioEffect): this;
   /** Remove a previously added per-voice effect. The caller still owns it and must `destroy()` it. */
@@ -189,8 +193,9 @@ export interface Spatializable {
    */
   occlusion: number;
   /**
-   * Track a {@link SceneNode}: the voice reads the node's global translation
-   * each frame. Pass `null` to stop following and fall back to
+   * Track a {@link SceneNode}: the voice reads the node's world transform each
+   * frame, so a node nested inside a transform group pans from where it is
+   * drawn. Pass `null` to stop following and fall back to
    * {@link Spatializable.position}.
    */
   follow(node: SceneNode | null): void;
@@ -214,18 +219,22 @@ export interface Spatializable {
    * `coneOuterAngle` are narrowed below 360°. Default `0`.
    */
   orientation: number;
-  /** Full-gain cone half-angle in degrees. Default `360` (omnidirectional - no cone). */
+  /**
+   * Full-gain cone angle in degrees, as a full apex angle (not a half-angle).
+   * Default `360` (omnidirectional - no cone).
+   */
   coneInnerAngle: number;
-  /** Falloff-to-`coneOuterGain` cone half-angle in degrees. Default `360`. */
+  /** Falloff-to-`coneOuterGain` cone angle in degrees, as a full apex angle. Default `360`. */
   coneOuterAngle: number;
   /** Gain applied outside `coneOuterAngle`. Default `0`. */
   coneOuterGain: number;
   /**
    * World-space velocity of the source (world units/second), or `null`.
    * Feeds the Doppler calculation (`app.audio.spatial.dopplerFactor`) -
-   * has no other effect. Explicit; when `null` and `follow(node)` is
-   * active, velocity is auto-derived each frame from the tracked node's
-   * position delta instead.
+   * has no other effect. Explicit; when `null`, the horizontal velocity is
+   * auto-derived each frame from the position delta of whatever this voice
+   * tracks, `follow(node)` or a plain `position`, and the vertical component
+   * comes only from {@link Spatializable.elevationVelocity}.
    */
   get velocity(): Vector | null;
   /**
@@ -276,9 +285,9 @@ export interface PlayOptions {
   panningModel?: PanningModelType;
   /** Initial cone facing direction, in degrees (`SceneNode.rotation` convention). Default `0`. */
   orientation?: number;
-  /** Initial full-gain cone half-angle. Default `360` (no cone). */
+  /** Initial full-gain cone angle, as a full apex angle (not a half-angle). Default `360` (no cone). */
   coneInnerAngle?: number;
-  /** Initial falloff cone half-angle. Default `360`. */
+  /** Initial falloff cone angle, as a full apex angle. Default `360`. */
   coneOuterAngle?: number;
   /** Initial gain outside the outer cone. Default `0`. */
   coneOuterGain?: number;

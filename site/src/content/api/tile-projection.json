@@ -873,7 +873,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Staggered and hexagonal grids: the shifted axis. 'y' for the other orientations, where it has no effect."
+          "description": "Staggered and hexagonal grids: the shifted axis. Has no effect for other orientations; the supplied value is retained."
         },
         {
           "name": "staggerIndex",
@@ -902,7 +902,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Staggered and hexagonal grids: which rows or columns are shifted. 'odd' for the other orientations, where it has no effect."
+          "description": "Staggered and hexagonal grids: which rows or columns are shifted. Has no effect for other orientations; the supplied value is retained."
         },
         {
           "name": "tileHeight",
