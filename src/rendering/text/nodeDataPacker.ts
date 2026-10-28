@@ -109,7 +109,7 @@ export const packTextNodeData = (target: Float32Array, base: number, node: Text 
   // fragment from the field's screen-space gradient, so a floor here would
   // only smear the shadow of a node that asked for none.
   target[base + 18] = style.shadowBlur * 0.1;
-  target[base + 19] = gradient === null ? 0 : gradient.stops.length;
+  target[base + 19] = gradient === null ? 0 : Math.min(gradient.stops.length, textGradientMaxStops);
 
   // Shadow color (texel 5)
   const sc = style.shadowColor;
@@ -212,8 +212,8 @@ const packTextGradient = (
     target[axisBase + 2] = 0.5 - (width * dirX + height * dirY) / (2 * lineLength);
   }
 
-  for (let i = 0; i < gradient.stops.length; i++) {
-    // In-bounds: i < stops.length, and TextStyle caps it at textGradientMaxStops.
+  for (let i = 0; i < Math.min(gradient.stops.length, textGradientMaxStops); i++) {
+    // Bound writes even if JavaScript callers mutate the readonly stop list.
     const stop = gradient.stops[i]!;
     const at = colorBase + i * 4;
 

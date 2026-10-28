@@ -232,7 +232,7 @@ export class LutFilter extends Filter {
   }
 
   /**
-   * Replace the LUT texture. Returns `this` for chaining.
+   * Replace the LUT texture and invalidate cached owners. Returns `this` for chaining.
    *
    * The LUT is sampled as numeric data in the filter's own colour domain, so
    * it must resolve to `colorSpace: 'none'`: `'srgb'` storage would apply its
@@ -248,6 +248,7 @@ export class LutFilter extends Filter {
 
     this._lut = lut;
     this._shaderFilter._setTexture('uLut', lut);
+    this.invalidate();
 
     return this;
   }

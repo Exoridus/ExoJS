@@ -706,3 +706,19 @@ describe('LutFilter.destroy', () => {
     output.destroy();
   });
 });
+
+test('setLut invalidates attached owners and preserves caller-owned textures', () => {
+  const filter = new LutFilter();
+  const lut = LutFilter.identityLut3D(2);
+  const owner = { invalidateCache: vi.fn() };
+  const destroy = vi.spyOn(lut, 'destroy');
+  filter._attachOwner(owner);
+  filter.setLut(lut);
+  expect(owner.invalidateCache).toHaveBeenCalledTimes(1);
+  filter._detachOwner(owner);
+  filter.setLut(lut);
+  expect(owner.invalidateCache).toHaveBeenCalledTimes(1);
+  filter.destroy();
+  expect(destroy).not.toHaveBeenCalled();
+  lut.destroy();
+});
