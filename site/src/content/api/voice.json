@@ -76,7 +76,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Insert a per-voice AudioEffect into this voice's output chain (after the volume gain and the occlusion stage, before the bus). Effects are applied in insertion order. Attaching does not transfer ownership: the caller keeps the effect and must destroy() it. Neither the voice ending nor Voice.removeEffect destroys it."
+          "description": "Insert a per-voice AudioEffect into this voice's output chain (after the volume gain and the occlusion stage, before the bus). Effects are applied in insertion order. Attaching does not transfer ownership: the caller keeps the effect and must destroy() it. Neither the voice ending nor Voice.removeEffect destroys it. A live voice rejects an effect whose nodes are not initialized without changing its current chain. Await AudioEffect.ready before attaching."
         },
         {
           "name": "addSend",
@@ -416,7 +416,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Stop playback and release this voice's resources. Pass fade to ramp the volume to zero over that duration before stopping; omit (or pass 0) to stop immediately. Idempotent - calling again is a no-op."
+          "description": "Stop playback and release this voice's resources. A positive fade ramps volume to zero before stopping and replaces any pending fade. Omitting it or passing 0 stops immediately; generator voices with an envelope use its release stage instead. Repeated release stops do not extend that stage. Calls after playback has ended have no effect."
         }
       ],
       "paragraphs": [],
@@ -551,7 +551,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Height of the source above (positive) or below (negative) the world plane, in world units. Default 0. Independent of Spatializable.position, and preserved across a position change that does not carry a z. It contributes to distance attenuation, to the panner's own directionality, and to Doppler - a source rising straight up recedes."
+          "description": "Height of the source above (positive) or below (negative) the world plane, in world units. Default 0. Independent of Spatializable.position, and preserved across a position change that does not carry a z. It contributes to distance attenuation, to the panner's own directionality, and to Doppler - a source rising straight up recedes. Without a position or followed node, its horizontal coordinates are the world origin."
         },
         {
           "name": "elevationVelocity",

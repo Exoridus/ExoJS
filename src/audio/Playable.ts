@@ -29,9 +29,11 @@ import type { AudioSystem } from './AudioSystem';
  */
 export interface Voice extends Spatializable {
   /**
-   * Stop playback and release this voice's resources. Pass `fade` to ramp the
-   * volume to zero over that duration before stopping; omit (or pass `0`) to
-   * stop immediately. Idempotent - calling again is a no-op.
+   * Stop playback and release this voice's resources. A positive `fade` ramps
+   * volume to zero before stopping and replaces any pending fade. Omitting it
+   * or passing `0` stops immediately; generator voices with an envelope use
+   * its release stage instead. Repeated release stops do not extend that stage.
+   * Calls after playback has ended have no effect.
    */
   stop(fade?: Seconds): void;
   /** Playback volume in the range [0, 1]. Bus volume (0..2) can amplify beyond this. */
@@ -62,6 +64,8 @@ export interface Voice extends Spatializable {
    * Attaching does not transfer ownership: the caller keeps the effect and must
    * `destroy()` it. Neither the voice ending nor {@link Voice.removeEffect}
    * destroys it.
+   * A live voice rejects an effect whose nodes are not initialized without
+   * changing its current chain. Await {@link AudioEffect.ready} before attaching.
    */
   addEffect(effect: AudioEffect): this;
   /** Remove a previously added per-voice effect. The caller still owns it and must `destroy()` it. */
@@ -176,6 +180,8 @@ export interface Spatializable {
    * position change that does not carry a `z`. It contributes to distance
    * attenuation, to the panner's own directionality, and to Doppler - a source
    * rising straight up recedes.
+   * Without a position or followed node, its horizontal coordinates are the
+   * world origin.
    */
   elevation: number;
   /**

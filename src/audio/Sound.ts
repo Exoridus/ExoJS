@@ -491,6 +491,18 @@ export class Sound implements Playable {
     this._clipEnd = Infinity;
   }
 
+  /** Fill a deferred handle with decoded content, preserving its own playback settings. @internal */
+  public _fillFrom(donor: Sound): void {
+    const buffer = donor.audioBuffer;
+
+    if (buffer === null) {
+      throw new Error('Sound._fillFrom: donor has no decoded buffer.');
+    }
+
+    this._setBuffer(buffer);
+    this.setSprites(Object.fromEntries(donor._sprites));
+  }
+
   /**
    * Drop the decoded payload back to the placeholder state (refcount-0 eviction).
    * Identity is preserved; a later load heals in place.

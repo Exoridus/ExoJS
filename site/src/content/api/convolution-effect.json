@@ -292,7 +292,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Set or replace the impulse response. Accepts a decoded AudioBuffer, a Sound (its audioBuffer is read immediately, so the Sound must already be decoded), or null to clear the IR (wet path goes silent). Safe to call before the audio context is ready - the impulse is stored and applied once nodes are created. **Web Audio note:** normalize is written to the convolver *before* buffer is assigned, as required by the spec for the value to take effect."
+          "description": "Set or replace the impulse response. Accepts a decoded AudioBuffer, a Sound (its audioBuffer is read immediately, so the Sound must already be decoded), or null to clear the IR (wet path goes silent). Safe to call before the audio context is ready - the impulse is stored and applied once nodes are created. **Web Audio note:** normalize is written to the convolver *before* buffer is assigned, as required by the spec for the value to take effect. Only mono, stereo and four-channel impulses are accepted. Conversion failures are logged and leave the previous impulse in place."
         }
       ],
       "paragraphs": [],

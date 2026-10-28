@@ -398,7 +398,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Append an effect to this voice's chain. Attaching the same effect twice is a caller error: the rebuilt chain would wire the effect's output back into its own input, producing a feedback loop. The dev build asserts; production ignores the second attach."
+          "description": "Append an effect to this voice's chain. Attaching the same effect twice is a caller error: the rebuilt chain would wire the effect's output back into its own input, producing a feedback loop. The dev build asserts; production ignores the second attach. An effect whose audio nodes are not initialized is rejected without changing the current chain; await its ready promise before attaching it."
         },
         {
           "name": "addSend",
@@ -840,7 +840,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Stop playback and release this voice's resources. Pass fade to ramp the volume to zero over that duration before stopping; omit (or pass 0) to stop immediately. Idempotent - calling again is a no-op."
+          "description": "Stop playback and release this voice's resources. A positive fade ramps volume to zero before stopping and replaces any pending fade. Omitting it or passing 0 stops immediately; generator voices with an envelope use its release stage instead. Repeated release stops do not extend that stage. Calls after playback has ended have no effect."
         }
       ],
       "paragraphs": [],
@@ -975,7 +975,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Height of the source above (positive) or below (negative) the world plane, in world units. Default 0. Independent of Spatializable.position, and preserved across a position change that does not carry a z. It contributes to distance attenuation, to the panner's own directionality, and to Doppler - a source rising straight up recedes."
+          "description": "Height of the source above (positive) or below (negative) the world plane, in world units. Default 0. Independent of Spatializable.position, and preserved across a position change that does not carry a z. It contributes to distance attenuation, to the panner's own directionality, and to Doppler - a source rising straight up recedes. Without a position or followed node, its horizontal coordinates are the world origin."
         },
         {
           "name": "elevationVelocity",
