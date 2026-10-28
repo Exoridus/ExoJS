@@ -1,8 +1,14 @@
+/** One extrapolated schedule entry from {@link BeatDetector.lookahead}; its time may already have passed. */
 export interface UpcomingBeat {
+  /** Predicted time on the audio-context clock, not on the `performance.now()` timeline. */
   audioTime: number;
+  /** BPM assumed for this prediction. */
   tempo: number;
+  /** True when the predicted position starts a bar under a known meter. */
   isDownbeat: boolean;
+  /** Predicted position within the bar (1..N); display counting when `meterKnown` is false. */
   beatInBar: number;
+  /** True when the cycle and its phase are available; false forces `isDownbeat` to false. */
   meterKnown?: boolean;
 }
 

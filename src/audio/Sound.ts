@@ -53,6 +53,11 @@ export interface SoundOptions {
   poolSize?: number;
   poolStrategy?: SoundPoolStrategy;
   priority?: number;
+  /**
+   * Sprite map, applied through {@link Sound.setSprites}. Each clip is validated
+   * against the sound's buffer, so a bufferless (deferred) sound rejects every
+   * definition - add sprites after `loaded` has settled instead.
+   */
   sprites?: Readonly<Record<string, AudioSpriteClip>>;
   /** Default volume for voices created from this sound. Range [0, 1]. Default: 1. */
   volume?: number;
@@ -317,6 +322,11 @@ export class Sound implements Playable {
    * Define (or redefine) a named sub-region of the buffer. Redefining a name
    * discards the sub-{@link Sound} {@link Sound.sprite} memoized for it, so the
    * next lookup reflects the new window.
+   *
+   * @throws If the name is empty or trims to nothing, a time is not finite,
+   * `start` is negative, `end` is not greater than `start`, or `end` exceeds
+   * the sound's current duration. A bufferless (deferred) sound has duration
+   * `0`, so it rejects every definition.
    */
   public addSprite(name: string, clip: AudioSpriteClip): this {
     if (name.trim().length === 0) {

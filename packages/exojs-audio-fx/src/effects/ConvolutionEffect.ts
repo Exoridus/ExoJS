@@ -4,8 +4,10 @@ import { AudioEffect, Sound } from '@codexo/exojs';
 export interface ConvolutionEffectOptions {
   /**
    * Impulse response. Accepts a decoded `AudioBuffer` or a `Sound` (its
-   * `audioBuffer` is used). If omitted the effect runs dry (passthrough) until
-   * {@link ConvolutionEffect.setImpulse} is called.
+   * `audioBuffer` is used); a `Sound` set before the effect is set up is
+   * resolved when the graph is built. A `Sound` still undecoded at that point
+   * is treated as absent and is not applied later, and with no impulse the wet
+   * path is silent while the dry path runs at `1 - wet`.
    */
   impulse?: AudioBuffer | Sound;
   /**
@@ -192,9 +194,10 @@ export class ConvolutionEffect extends AudioEffect {
 
   /**
    * Set or replace the impulse response. Accepts a decoded `AudioBuffer`, a
-   * `Sound` (its `audioBuffer` is used), or `null` to clear the IR (wet path
-   * goes silent). Safe to call before the audio context is ready - the impulse
-   * is stored and applied once nodes are created.
+   * `Sound` (its `audioBuffer` is read immediately, so the `Sound` must already
+   * be decoded), or `null` to clear the IR (wet path goes silent). Safe to call
+   * before the audio context is ready - the impulse is stored and applied once
+   * nodes are created.
    *
    * **Web Audio note:** `normalize` is written to the convolver *before*
    * `buffer` is assigned, as required by the spec for the value to take effect.

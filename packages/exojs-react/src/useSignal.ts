@@ -25,7 +25,10 @@ import { useCallback, useSyncExternalStore } from 'react';
  *   (e.g. before an `Application` exists) - the hook simply does not subscribe
  *   to anything and `getSnapshot` still runs on every render.
  * @param getSnapshot - Reads the current value. Called on mount and again after
- *   every dispatch of `signal`.
+ *   every dispatch of `signal`. `useSyncExternalStore` compares consecutive
+ *   results with `Object.is`, so return a primitive or a cached object that
+ *   stays identical until the underlying data changes; a fresh object on every
+ *   call re-renders without end.
  */
 export const useSignal = <Args extends unknown[], T>(signal: Signal<Args> | null | undefined, getSnapshot: () => T): T => {
   const subscribe = useCallback(

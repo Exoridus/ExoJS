@@ -283,9 +283,11 @@ export interface BaseProvenance {
 export interface LibraryProvenance {
   /** npm package name, e.g. `pixi.js` or `@codexo/exojs-physics`. */
   readonly name: string;
-  /** Exact installed version (from the resolved package manifest). */
+  /** Version declared by the resolved manifest, `'unknown'` when it declares
+   * none, or `'not-installed'` when resolution or manifest reading failed. */
   readonly version: string;
-  /** Absolute path the manifest was resolved from - the reproducibility receipt. */
+  /** Absolute path of the resolved manifest, or an empty string when the
+   * manifest could not be read or parsed. */
   readonly resolvedFrom: string;
 }
 

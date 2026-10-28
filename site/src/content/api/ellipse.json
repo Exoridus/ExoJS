@@ -230,7 +230,7 @@
             }
           ],
           "returnType": "CollisionResponse | null",
-          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (e.g. Line against any shape, Ellipse against Ellipse or Polygon). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
+          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (for example Line against any shape, or Ellipse against a Point). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
         },
         {
           "name": "contains",
@@ -513,7 +513,7 @@
           ],
           "params": [],
           "returnType": "Vector[]",
-          "description": "Return the outward-facing edge normals used by the SAT solver. The array should be cached and reused across calls."
+          "description": "An ellipse has no discrete edge normals, so this returns an empty array and SAT (for example collidesWith(Polygon)) separates using only the other shape's axes, which is approximate."
         },
         {
           "name": "intersectsWith",

@@ -1,3 +1,21 @@
+// PcmStream AudioWorkletProcessor - ring-buffered pull-model PCM source.
+//
+// Built through the `?worklet` plugin (see `@codexo/exojs-build`), which
+// bundles this module into the single self-contained source string
+// `registerAudioWorkletProcessor` (`#audio/worklet/registerWorklet`) hands to
+// `audioWorklet.addModule()` via a Blob URL. Typechecked against the
+// AudioWorkletGlobalScope (`worklet-globals.d.ts` + `../../tsconfig.worklets.json`).
+//
+// Host -> processor: `write` carries one planar Float32Array of whole frames
+// (channel planes back to back); `start` pins the context time at which
+// playback begins, rounded to a frame; `ack` re-arms the throttled `status`
+// reply; `clear` drops the queue and acknowledges while still accepting
+// writes; `close` refuses new writes and drains what is queued before ending;
+// `destroy` drops the queue and makes `process` return false. The status
+// counters are cumulative: released frames (played, cleared or dropped by
+// capacity), played frames, missing frames and starvation runs.
+//
+// Output is ring content only; routing and node lifetime stay host-side.
 class PcmStreamProcessor extends AudioWorkletProcessor {
   private readonly _channels: number;
   private readonly _capacity: number;

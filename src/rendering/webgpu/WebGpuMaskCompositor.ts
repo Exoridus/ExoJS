@@ -22,13 +22,14 @@ const projectionUniformBytes = 64;
 /**
  * Single-quad two-texture compositor used by
  * `WebGpuBackend.composeWithAlphaMask`. Renders the content texture
- * onto the active render target with each output texel's alpha multiplied
- * by the mask texture's alpha. Both textures are sampled with stretched-fit
- * UVs over the destination rectangle.
+ * onto the active render target with each output texel's color and alpha both
+ * scaled by the mask texture's alpha, so the result stays premultiplied. Both
+ * textures are sampled with stretched-fit UVs over the destination rectangle.
  *
- * Pipelines are cached per (target format, blend mode). The compositor is
- * not a {@link AbstractWebGpuRenderer} and never participates in renderer
- * registry dispatch - the manager invokes it directly.
+ * Pipelines are cached per (target format, blend mode, and whether the
+ * geometric stencil clip is active). The compositor is not a
+ * {@link AbstractWebGpuRenderer} and never participates in renderer registry
+ * dispatch - the manager invokes it directly.
  */
 export class WebGpuMaskCompositor {
   private readonly _projectionData: Float32Array = new Float32Array(16);

@@ -209,7 +209,8 @@ export class PcmStreamSource {
   /**
    * Begin once, no earlier than `time` in audio-context seconds (default now).
    * Sample positions round up to the next audio frame; a past time starts at
-   * the next available quantum. Returns false unless ready and not yet started.
+   * the next available quantum. Returns false unless ready and not yet started;
+   * a ready source throws `RangeError` when `time` is not finite or is negative.
    */
   public start(time = this._context.currentTime): boolean {
     if (this._state !== 'ready') {

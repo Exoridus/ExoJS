@@ -35,7 +35,9 @@ import { replaceExcaliburChild } from './excaliburLifecycle';
  *
  * The harness owns frame cadence, so Excalibur's own game loop is halted right
  * after boot (`engine.clock.stop()`), and one frame is produced by replicating
- * exactly what the engine's private per-frame draw does, using only public API:
+ * exactly what the engine's private per-frame draw does, from the public
+ * lifecycle and draw calls plus the engine's own `_predraw`/`_postdraw`
+ * internals, which have no public equivalent:
  * `beginDrawLifecycle → clear → _predraw → currentScene.draw → _postdraw → flush
  * → endDrawLifecycle`. Only the DRAW half runs; the update systems (motion,
  * collision, the off-screen culling tagger) are never stepped, so only
@@ -361,9 +363,9 @@ export const createExcaliburAdapter = (): EngineAdapter => {
 
     teardown(): void {
       if (engine !== null) {
-        // `dispose` tears the whole engine down - scene graph, systems and the
-        // WebGL2 context. A fresh engine + canvas is created for the next cell,
-        // so nothing here needs to survive.
+        // `dispose` tears the engine down - scene graph and systems. The harness
+        // additionally force-loses the previous cell's WebGL context when it
+        // replaces the canvas; nothing here needs to survive that.
         engine.dispose();
         engine = null;
       }

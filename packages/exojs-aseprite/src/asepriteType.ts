@@ -50,6 +50,10 @@ const resolveAsepriteUrl = (ref: string, base: string): string => {
 /**
  * Thrown when an Aseprite JSON document does not match the expected shape.
  * `source` is the URL of the file being parsed.
+ *
+ * Loading through the Loader reports it as the load failure's `cause`, not as
+ * the rejection itself; when the stored document is not valid JSON, the cause
+ * is a `SyntaxError` instead.
  */
 export class AsepriteFormatError extends Error {
   public readonly source: string;

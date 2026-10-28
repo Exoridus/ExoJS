@@ -1916,7 +1916,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Monotonic layer revision counter. Increments on every cell mutation that changes a stored value. No-op writes and failed mutations do NOT increment."
+          "description": "Monotonic layer revision counter. Increments once per mutation call that changes at least one stored value, and once when a chunk is adopted or evicted. No-op writes and failed mutations do NOT increment."
         }
       ],
       "paragraphs": [],

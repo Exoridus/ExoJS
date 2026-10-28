@@ -205,6 +205,11 @@ export class LoaderScope implements Destroyable {
    * scope, so the container's assets share this scope's lifetime rather than
    * getting one of their own.
    *
+   * An unpack that fails partway leaves the claims it already registered on
+   * this scope: the successful entries stay resident until released, or until
+   * the scope is destroyed. {@link Loader.loadContainer} creates and owns its
+   * scope instead, so it releases those partial claims itself.
+   *
    * See {@link Loader.loadContainer} for the format and identity contract.
    */
   public loadContainer(source: string | ManifestPack, options?: LoadContainerOptions): Promise<void> {

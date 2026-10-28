@@ -154,9 +154,10 @@ interface TextRetainedRendererData {
  * `MeshRetainedReplayState`. Holds Text's OWN persistent per-node data buffer
  * (same 10-vec4/node layout the live path uses) and FrameUniforms buffer,
  * since Text's row format differs from both the shared `TransformBuffer` row
- * layout AND the shared 128-byte group UBO {@link WebGpuRetainedGroupBundle}
- * itself owns (Text's `FrameUniforms` is a 96-byte mat3x3 pair, not the
- * mat4x4 pair every other retained renderer's shared UBO uses).
+ * layout AND the shared group UBO {@link WebGpuRetainedGroupBundle} itself
+ * owns. Text's per-node row is 20 vec4 and its frame block is 112 bytes - a
+ * projection/group mat3x3 pair plus the device-pixel snap viewport - not the
+ * 144-byte mat4x4 block every other retained renderer shares.
  *
  * A bundle can hold at most ONE recorded Text batch per capture (`flush()`
  * poisons rather than recording a second one) - so this state is a single

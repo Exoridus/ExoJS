@@ -134,12 +134,6 @@ const WARMUP_BUDGET_MS = 10_000;
 const HARD_FRAME_BUDGET_MS = FRAME_BUDGET_MS * 10;
 
 /**
- * Reduce accumulated structural totals to per-frame figures. Draw/bind/upload
- * counts are steady-state per frame, so an even division is expected; a
- * remainder means the harness has a bug (a fractional draw call is nonsense),
- * so the raw totals are surfaced instead and flagged via the returned note.
- */
-/**
  * This page's clock grid, probed once and reused by every cell the session
  * measures.
  *
@@ -151,6 +145,12 @@ let probedClock: ClockReport | null = null;
 
 const pageClock = (): ClockReport => (probedClock ??= probeClock());
 
+/**
+ * Reduce accumulated structural totals to per-frame figures. Draw/bind/upload
+ * counts are usually steady-state per frame, so an even division is expected;
+ * a remainder is surfaced as raw totals plus a note rather than reported as a
+ * fractional per-frame figure.
+ */
 const perFrameStructural = (totals: StructuralCounters, frames: number): { structural: StructuralCounters; note: string | null } => {
   const draws = totals.drawCalls / frames;
   const binds = totals.textureBinds / frames;
@@ -263,6 +263,12 @@ const attachProbes = (
  * still brackets exactly `mutate` + `renderFrame` (the primary metric); the GPU
  * bracket sits outside it so the restructuring does not change what CPU time
  * measures.
+ *
+ * `hold` keeps the scene alive after the call so a caller can capture its last
+ * frame; a direct caller owns that scene and must release it. {@link runBaselineCell}
+ * registers the held adapter so {@link disposeHeldCell} (or the next baseline
+ * cell) releases it. Setup and measurement failures are torn down regardless of
+ * `hold`.
  */
 export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HTMLCanvasElement, hold = false): Promise<CellResult> => {
   const archetype = ARCHETYPES.find(candidate => candidate.id === spec.archetype);

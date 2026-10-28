@@ -553,6 +553,11 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     return this.setTextureFrame(Rectangle.temp.set(0, 0, this._texture.width, this._texture.height));
   }
 
+  /**
+   * Registers a spawn module. The system takes ownership: {@link clearSpawnModules}
+   * and {@link destroy} call `destroy()` on it, so one module instance must not
+   * be shared between systems.
+   */
   public addSpawnModule(mod: SpawnModule): this {
     this._spawnModules.push(mod);
 
@@ -571,6 +576,9 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
    * simulation moves to the CPU, which has no copy of the integrated state, so
    * the system clears its live particles rather than continuing from stale
    * values (see {@link clearParticles}).
+   *
+   * The system takes ownership as for {@link addSpawnModule}: clearing the list
+   * or destroying the system destroys the module instance it was given.
    */
   public addUpdateModule(mod: UpdateModule): this {
     this._updateModules.push(mod);
@@ -579,6 +587,11 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     return this;
   }
 
+  /**
+   * Registers a death module. The system takes ownership: {@link clearDeathModules}
+   * and {@link destroy} call `destroy()` on it, so one instance must not be
+   * shared between systems.
+   */
   public addDeathModule(mod: DeathModule): this {
     const hadNone = this._deathModules.length === 0;
 
@@ -772,12 +785,11 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
   /**
    * @internal
    *
-   * Collect-hook: captures the active backend before this node is emitted so
-   * the next `update()` can compile a GPU pipeline if the backend turned out
-   * to be `WebGpuBackend`. Re-captures and rebuilds when the backend
-   * reference changes (e.g. after device-loss recovery).
+   * Collect-hook: captures the active GPU-capable backend before this node is
+   * emitted so the next `update()` can compile a pipeline for it. Re-subscribes
+   * to that backend's reset signals, and rebuilds when either the backend
+   * reference changes (device-loss recovery) or the same backend resets.
    */
-  /** @internal */
   public override collect(builder: RenderPlanBuilder, seq?: number): void {
     const backend = builder.backend;
 
