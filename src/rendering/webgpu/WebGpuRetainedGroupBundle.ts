@@ -32,10 +32,12 @@ const rowsPerPatchBlock = 64;
  * - an instance VERTEX buffer holding the recorded batch bytes (node indices
  *   rebased group-local),
  * - a STORAGE buffer holding the group's transform rows `[0, N)`,
- * - a 128-byte uniform buffer with the same `ProjectionUniforms` layout as
- *   the shared sprite UBO (projection mat4 + group mat4) so the existing
- *   bind-group(0) layout - and therefore every existing pipeline - is reused
- *   as-is at replay,
+ * - a STORAGE buffer holding the group's tint rows `[0, N)`, uploaded from the
+ *   dirty-row runs after a re-tint,
+ * - a 144-byte uniform buffer with the same leading layout as the shared
+ *   sprite UBO (projection mat4 + group mat4 + snap-viewport vec4), so
+ *   compatible renderers reuse the bind-group(0) layout at replay
+ *   as-is,
  * - cached bind groups(0) pairing them with each renderer layout.
  *
  * Buffers are grow-only across recaptures - no realloc churn under
@@ -86,11 +88,11 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   private _onRelease: ((bundle: WebGpuRetainedGroupBundle) => void) | null;
 
   // ── Replay-time uniform tracking ─────────────────────────────────────────
-  // The 128-byte mirror of the group UBO (projection at [0,16), group matrix
-  // at [16,32)) plus the (view, updateId) it was written for. Replays skip
-  // the writeBuffer while the content is unchanged; a content change while
-  // the OPEN pass already holds this bundle's replayed draws is the same-
-  // frame double-replay hazard and ends the pass first.
+  // The 144-byte mirror of the group UBO (projection at [0,16), group matrix
+  // at [16,32), snap viewport at [32,36)) plus the (view, updateId) it was
+  // written for. Replays skip the writeBuffer while the content is unchanged;
+  // a content change while the OPEN pass already holds this bundle's replayed
+  // draws is the same-frame double-replay hazard and ends the pass first.
   public readonly uboData = new Float32Array(retainedGroupUniformBytes / Float32Array.BYTES_PER_ELEMENT);
   public uboWritten = false;
   public uboView: View | null = null;
@@ -129,10 +131,11 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   }
 
   /**
-   * The shared frame-buffer row the stored transform rows were rebased from
-   * (see {@link RetainedGroupBundle.transformRowBase}). A group-local row
-   * is `capturedNodeIndex - transformRowBase`; the reconciler maps a moved
-   * node's captured index back to the group-owned storage without re-recording.
+   * The shared frame-buffer row the stored transform rows were rebased from at
+   * CAPTURE finalize - informational, and the marker that this bundle supports
+   * in-place transform patching. The reconciler does NOT map a moved node
+   * through this value; it uses the fragment's own capture-frame base (see
+   * `RetainedGroupFragment.recordedRowBase`).
    */
   public get transformRowBase(): number {
     return this._transformRowBase;

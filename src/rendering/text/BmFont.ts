@@ -47,7 +47,10 @@ export interface BmFontData {
  * @stable
  */
 export class BmFont {
+  /** The parsed descriptor: page names, glyph metrics, kerning pairs and vertical metrics. */
   public readonly fontData: BmFontData;
+  /** Page textures in descriptor page order. This object does not own them;
+   * the caller or the producing asset keeps ownership. */
   public readonly textures: readonly Texture[];
 
   public constructor(fontData: BmFontData, textures: readonly Texture[]) {

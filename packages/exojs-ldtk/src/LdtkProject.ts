@@ -72,7 +72,15 @@ export interface LdtkRuntimeOptions {
  *   context: { services, save },
  * });
  *
- * scene.addChild(forest.map.createView().root);
+ * const view = forest.map.createView();
+ *
+ * for (const layer of view.layers) {
+ *   scene.addChild(layer);
+ * }
+ *
+ * // Release the view before runtime.unloadLevel(); it owns its layer nodes.
+ * view.destroy();
+ *
  * runtime.unloadLevel(forest.id);
  * ```
  */

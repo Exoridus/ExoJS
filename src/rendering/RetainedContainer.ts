@@ -27,7 +27,9 @@ const retainedDiagnosticThreshold = 108;
  * Opt-in at construction; there is no runtime toggle. The existing
  * revision contract ({@link RenderNode.invalidateContent} and the automatic
  * bumps on built-in mutation paths) is the entire authoring surface: any
- * mutation inside the subtree drops the retained fragment for one frame.
+ * content or structure mutation recaptures the subtree, while an eligible
+ * transform-only move patches the affected baked transform rows in place when
+ * the recording can be reconciled, and recaptures otherwise.
  *
  * Trade-offs of the group-local space convention: descendants
  * resolve group-relative transforms, so hit-testing/`getBounds()` inside the

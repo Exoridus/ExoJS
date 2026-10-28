@@ -159,11 +159,14 @@ export interface FrameLightingBackendOptions {
  * has no surface normals to shade against, because the frame it multiplies is
  * already flat.
  *
- * One instanced draw covers every visible light. The instance transform
- * carries position, radius and cone rotation, the tint carries colour, and two
- * instance attributes carry the cone, the intensity, the light's row in the
- * shadow map and its softness. The quad is the light's bounding square, so a
- * light costs the fill of its own radius rather than of the screen.
+ * Local lights batch by cookie texture: one instanced draw per distinct
+ * cookie, and directional lights draw in a batch of their own. The instance
+ * transform carries position, radius and cone rotation, the tint carries
+ * colour, and three instance attributes carry the cone, the intensity, the
+ * segment half-length, the light's row in the shadow map, its softness, and
+ * the falloff radius, height and axis the surface-normal term reads. The quad is
+ * the light's bounding square, so a light costs the fill of its own radius
+ * rather than of the screen.
  *
  * # Accumulation
  *

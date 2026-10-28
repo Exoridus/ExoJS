@@ -15,9 +15,10 @@ import { STAGE_SIZE } from '../scenes';
 /**
  * Manual DPR / internal-render-target probe page.
  *
- * Opened by hand on a real device; there is no driver, no result collector and
- * no remote control. Everything the run produces stays in the page until the
- * tester presses `Copy JSON`.
+ * Opened by hand on a real device. There is no remote-control UI, but the page
+ * exposes `__dprProbe` for headless driving and the serve script accepts a
+ * `POST /submit`; otherwise everything the run produces stays in the page
+ * until the tester presses `Copy JSON`.
  */
 
 // Same reason as the matrix harness: a device's feature set is immutable, so

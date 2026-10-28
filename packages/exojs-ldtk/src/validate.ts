@@ -8,7 +8,8 @@
 // optional ones the adapter actually reads, and nothing else. Field-instance
 // `__value`s are checked against the shape their `__type` declares, because the
 // conversion pass casts rather than probes; a `__type` this package does not
-// model is left alone so a future LDtk field type still loads.
+// model is left unchecked here, and the conversion pass rejects it by name
+// when a non-null value of that type is converted.
 //
 // Unlike the Tiled validator, this one asserts in place and hands the caller
 // back the very object it was given rather than rebuilding a normalised copy.

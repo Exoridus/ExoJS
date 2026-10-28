@@ -491,7 +491,7 @@
             }
           ],
           "returnType": "this",
-          "description": ""
+          "description": "Registers a death module. The system takes ownership: clearDeathModules and destroy call destroy() on it, so one instance must not be shared between systems."
         },
         {
           "name": "addFilter",
@@ -585,7 +585,7 @@
             }
           ],
           "returnType": "this",
-          "description": ""
+          "description": "Registers a spawn module. The system takes ownership: clearSpawnModules and destroy call destroy() on it, so one module instance must not be shared between systems."
         },
         {
           "name": "addUpdateModule",
@@ -632,7 +632,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Registers an update module. Modules run in registration order, each seeing what the previous ones did. Modules may be added and removed at any time, including mid-flight: the next update rebuilds whatever the change invalidated. On the GPU path that is the compute program alone - live particles keep the state the device has been integrating. Adding a module without the selected shader implementation to a running GPU system is the one change that cannot preserve them: the simulation moves to the CPU, which has no copy of the integrated state, so the system clears its live particles rather than continuing from stale values (see clearParticles)."
+          "description": "Registers an update module. Modules run in registration order, each seeing what the previous ones did. Modules may be added and removed at any time, including mid-flight: the next update rebuilds whatever the change invalidated. On the GPU path that is the compute program alone - live particles keep the state the device has been integrating. Adding a module without the selected shader implementation to a running GPU system is the one change that cannot preserve them: the simulation moves to the CPU, which has no copy of the integrated state, so the system clears its live particles rather than continuing from stale values (see clearParticles). The system takes ownership as for addSpawnModule: clearing the list or destroying the system destroys the module instance it was given."
         },
         {
           "name": "blur",
@@ -861,7 +861,7 @@
             }
           ],
           "returnType": "CollisionResponse | null",
-          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (e.g. Line against any shape, Ellipse against Ellipse or Polygon). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
+          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (for example Line against any shape, or Ellipse against a Point). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
         },
         {
           "name": "contains",

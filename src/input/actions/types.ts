@@ -187,7 +187,9 @@ export class ActionOwnership {
    * (see {@link ActionMapOwner._snapshotActionChannels}), a full channel
    * snapshot - as of the moment this map started (or resumed) observing its
    * current owner. Called from {@link ActionMapBase._attach} and from
-   * `InputSystem._resyncActionMap`. The next `resolve()` call that returns
+   * {@link ActionMapBase._armBaseline} when a scope adds or rearms a changed
+   * claim, or `_ownership` directly when availability resumes. The next
+   * `resolve()` call that returns
    * `'baseline'` uses the watermark, via {@link filterBatches}, to replay
    * only batches pushed at-or-after this moment, discarding anything still
    * sitting in the same real frame's shared log from BEFORE this map started

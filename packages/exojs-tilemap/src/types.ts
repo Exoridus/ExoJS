@@ -188,7 +188,9 @@ const TRANSFORM_DIAGONAL = 1 << 2;
  * The localTileId is stored as (localTileId + 1) so that a packed value of 0
  * cleanly represents an empty cell, while tile 0 from tileset 0 with identity
  * transform is stored as 1 (non-zero).
- * Returns 0 for an empty cell.
+ * For a valid integer reference the result is always non-zero; `0` is
+ * reserved for an empty cell. Only negative and overflowing indices are
+ * validated, so callers encode empty cells explicitly as 0.
  *
  * Public so chunk-provider authors (e.g. a format adapter or procedural
  * generator) can build a {@link ChunkPayload}'s `tiles` array without

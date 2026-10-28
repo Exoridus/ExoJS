@@ -35,9 +35,9 @@ export interface RenderPassInspectorEntry {
   readonly drawableLabel: string;
   /** Filter instances currently attached, in execution order. */
   readonly filters: readonly Filter[];
-  /** Bounding-box width as the filter pipeline sees it (ceil). */
+  /** Bounding-box width in the node's {@link SceneNode.getBounds} space (ceil, at least 1); an expanding filter captures a larger domain. */
   readonly width: number;
-  /** Bounding-box height as the filter pipeline sees it (ceil). */
+  /** Bounding-box height in the node's {@link SceneNode.getBounds} space (ceil, at least 1); an expanding filter captures a larger domain. */
   readonly height: number;
   /** Whether the drawable has a mask attached (mask passes count toward total). */
   readonly hasMask: boolean;
@@ -47,7 +47,9 @@ export interface RenderPassInspectorEntry {
 
 /**
  * One row of a {@link RenderPipeline} listing produced by {@link RenderPassInspectorLayer.describePipeline}.
- * Identity is the pass object; `label` is display-only (no names are required). Nested pipelines increase `depth`.
+ * Rows are positional only: they carry no pass object, and `label` is
+ * display-only, so equal labels do not identify equal rows. Nested
+ * pipelines increase `depth`.
  */
 export interface RenderPipelineRow {
   /** Nesting depth (0 = top-level pass). */

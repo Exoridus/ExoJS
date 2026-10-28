@@ -1253,7 +1253,7 @@
             }
           ],
           "returnType": "CollisionResponse | null",
-          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (e.g. Line against any shape, Ellipse against Ellipse or Polygon). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
+          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (for example Line against any shape, or Ellipse against a Point). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
         },
         {
           "name": "contains",
@@ -2529,7 +2529,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Set the panel's background from a colour, a texture, a region or a full descriptor; null returns it to its skin. A colour becomes a fill override on top of the skin, so the skin's corner radius and border survive it. Layout-invalidating: a nine-slice and a fill can imply different content boxes."
+          "description": "Set the panel's background from a colour, a texture, a region or a full descriptor; null returns it to its skin. A colour becomes a fill override on top of the skin, so the skin's corner radius and border survive it. Layout-invalidating: it repaints the effective background and re-applies anchors, but the panel positions no children from a skin inset."
         },
         {
           "name": "setChildIndex",

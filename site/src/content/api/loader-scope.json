@@ -1163,7 +1163,7 @@
             }
           ],
           "returnType": "Promise<void>",
-          "description": "Unpacks an asset container (.exoa) and claims every entry under THIS scope, so the container's assets share this scope's lifetime rather than getting one of their own. See Loader.loadContainer for the format and identity contract."
+          "description": "Unpacks an asset container (.exoa) and claims every entry under THIS scope, so the container's assets share this scope's lifetime rather than getting one of their own. An unpack that fails partway leaves the claims it already registered on this scope: the successful entries stay resident until released, or until the scope is destroyed. Loader.loadContainer creates and owns its scope instead, so it releases those partial claims itself. See Loader.loadContainer for the format and identity contract."
         },
         {
           "name": "release",

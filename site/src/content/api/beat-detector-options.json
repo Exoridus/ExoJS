@@ -174,7 +174,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "FFT size for onset detection. Default 2048."
+          "description": "FFT size for onset detection: an integer power of two of at least 2. Default 2048."
         },
         {
           "name": "hopSize",
@@ -282,7 +282,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Maximum detectable BPM. Default 300."
+          "description": "Maximum detectable BPM. Default 300. Keep it above minBpm."
         },
         {
           "name": "melBands",
@@ -332,7 +332,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Minimum detectable BPM. Default 50."
+          "description": "Minimum detectable BPM. Default 50. Keep it below maxBpm; the worklet assumes a positive finite range and does not validate it."
         },
         {
           "name": "minSettlingMs",

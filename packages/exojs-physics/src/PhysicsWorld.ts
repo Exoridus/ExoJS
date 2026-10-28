@@ -280,11 +280,13 @@ export interface AttachOptions {
 /**
  * The collision/query world: owns bodies, colliders, the detection backend,
  * bindings, the query engine and the fixed-step accumulator. Stepped by the
- * caller (commonly from a `Scene.update`), each fixed sub-step it integrates
- * body velocities, runs broad- and narrow-phase detection, solves contacts and
- * integrates positions, then fires immutable contact/sensor events and writes
- * bound node transforms. It holds **no module-level state**, so any number of
- * worlds run in isolation.
+ * caller (commonly from a `Scene.update`): each fixed step runs broad- and
+ * narrow-phase detection once, then sub-steps that integrate body velocities,
+ * solve contacts and integrate positions; the step then fires immutable
+ * contact/sensor events. Bound node transforms are not written per sub-step:
+ * a manual step presents them once when it returns, while a hosted fixed
+ * step defers to the variable update, which presents interpolated transforms. It holds
+ * **no module-level state**, so any number of worlds run in isolation.
  *
  * The dynamics are a native, warm-started **TGS-Soft** solver (Box2D-v3 "soft
  * step"): each fixed step runs detection once, then several sub-steps, each
@@ -1750,7 +1752,12 @@ export class PhysicsWorld implements BodyOwner {
     return restitution;
   }
 
-  /** Run `command` now, or queue it when inside an event dispatch (deferred to end of step). */
+  /**
+   * Run `command` now, or queue it while inside an event dispatch. The queue is
+   * drained once per `step`/`fixedUpdate` call, after every fixed step that call
+   * ran, so a command issued from a callback of a multi-step advance applies at
+   * the end of that advance rather than between its steps.
+   */
   private _defer(command: () => void): void {
     if (this._dispatching) {
       this._commands.push(command);

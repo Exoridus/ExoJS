@@ -41,8 +41,9 @@ const gradientTextureSize = 256;
  *
  * Fill and stroke are both opt-in: a shape is filled only once a fill
  * color/style is set (the fill defaults to transparent), and stroked only while
- * `lineWidth > 0`. An outline-only shape therefore needs just `lineColor` +
- * `lineWidth`, with no fill bleeding underneath.
+ * `lineWidth > 0`. The explicit stroke methods (`drawLine`, `drawPath`) use the
+ * current line style and do not check the fill. An outline-only shape therefore
+ * needs just `lineColor` + `lineWidth`, with no fill bleeding underneath.
  *
  * Gradient styles are rasterized once to a {@link DataTexture} via
  * {@link Gradient.toTexture} and sampled across each shape's local bounding

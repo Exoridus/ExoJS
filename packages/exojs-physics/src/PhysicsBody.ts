@@ -364,9 +364,12 @@ export class PhysicsBody {
   }
 
   /**
-   * Apply an instantaneous world-space impulse at `(pointX, pointY)` (world space;
-   * defaults to the centre of mass), changing velocity immediately. No-op on
-   * static/kinematic bodies (infinite mass). Returns `this`.
+   * Apply an instantaneous world-space impulse at `(pointX, pointY)` (world
+   * space), changing velocity immediately. Pass both coordinates or neither: an
+   * application point is used only when both are given, and the impulse then
+   * also applies a torque unless rotation is locked or the moment is zero;
+   * otherwise it acts at the centre of mass.
+   * No-op on static/kinematic bodies (infinite mass). Returns `this`.
    */
   public applyImpulse(impulseX: number, impulseY: number, pointX?: number, pointY?: number): this {
     if (this.invMass === 0) {
@@ -573,17 +576,19 @@ export class PhysicsBody {
   }
 
   /**
-   * @internal - join `owner`'s world with the allocated `id`. Allocates ids for
-   * and registers every held collider, then aggregates the mass model and
-   * synchronises world geometry. Called once by {@link PhysicsWorld.add}.
+   * @internal - join `owner`'s world with the allocated `id`. Aggregates the
+   * mass model and validates it first, then allocates ids for and links every
+   * held collider, synchronises their world geometry and registers them. Called
+   * once by {@link PhysicsWorld.add}.
    *
-   * Ordering matters and mirrors the per-collider create path exactly: ids and
-   * the body link go on first, then a single mass recompute over the full
-   * collider set (so the centre of mass / inertia aggregate is correct), then
-   * `synchronize` over every collider (the cached world geometry the broad/narrow
-   * phase reads), then world registration last. Recomputing mass before all
-   * colliders are linked, or syncing before the mass model exists, would feed the
-   * solver a stale CoM and produce subtle integration bugs.
+   * The mass pass runs before the body claims a world: it reads only the held
+   * colliders (the set is complete before any id is allocated), so a rejected
+   * dynamic body can be fixed and added again instead of staying half-attached.
+   * After that the order mirrors the per-collider create path exactly - ids and
+   * the body link, then `synchronize` over every collider (the cached world
+   * geometry the broad/narrow phase reads), then world registration last, so the
+   * solver never sees a collider that is registered but not yet placed in the
+   * body's frame.
    */
   public _attachToWorld(owner: BodyOwner, id: number): void {
     if (this._destroyed) {

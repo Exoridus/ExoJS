@@ -90,7 +90,10 @@ interface ParticleModeResources {
  * the buffer - and this renderer is the executor: each `render(system)` flushes
  * any pending batch, sets the system-level uniforms (transform, local bounds,
  * texture) and asks the mode to build its vertex data. The next `flush()`
- * uploads that data and issues the single draw the mode declares.
+ * uploads that data and issues the single draw the mode declares. A system
+ * simulating through WebGL2 transform feedback skips the CPU build and the
+ * vertex upload: its simulation buffer already holds the instance data, which
+ * `flush()` binds for the same instanced draw.
  *
  * Everything mode-specific is read off the mode's `dataLayout`/`Material`, so a
  * new primitive is a new mode rather than a change here: the vertex array

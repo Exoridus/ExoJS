@@ -511,6 +511,9 @@ const runCellOrWedge = async (page: import('playwright').Page, spec: CellSpec, h
   return Promise.race([run, timeout]);
 };
 
+/** File stem of one cell's captured frame - the cell's identity, safe for a file name. */
+const captureName = (cell: CellSpec): string => `${cell.backend}-${cell.archetype}-${String(cell.nodeCount)}-${cell.engine}-${cell.config}`;
+
 /**
  * Runs one backend's cell list, isolating each arm in its OWN browser session and
  * each cell behind a wall-clock timeout. Invokes `onCellResult` after EACH cell so
@@ -521,16 +524,13 @@ const runCellOrWedge = async (page: import('playwright').Page, spec: CellSpec, h
  * JIT/prebundle, not comparability, while it lets one arm's leaked GPU/driver state
  * wedge a LATER arm's (or its own later) cell. Each arm therefore gets a fresh
  * browser (Vite prebundle is server-side, so relaunch is cheap), and any cell that
- * WEDGES (`CELL_TIMEOUT_MS`) is abandoned as `unavailable` with the browser
- * relaunched for the arm's remaining cells. The matrix always completes; a
- * pathological arm loses only its wedging cells, each disclosed in the report.
+ * WEDGES (`CELL_TIMEOUT_MS`) is reported as `unavailable`; the browser is
+ * relaunched for remaining cells. Browser launch or page setup can still throw
+ * outside that recovery boundary and abort the matrix run.
  *
  * For WebGPU the adapter identity is read once; a null or software adapter emits
  * every cell as `unavailable` rather than measuring a software rasterizer.
  */
-/** File stem of one cell's captured frame - the cell's identity, safe for a file name. */
-const captureName = (cell: CellSpec): string => `${cell.backend}-${cell.archetype}-${String(cell.nodeCount)}-${cell.engine}-${cell.config}`;
-
 const runBackend = async (options: {
   baseUrl: string;
   backend: Backend;
@@ -967,20 +967,6 @@ export interface MatrixOutcome {
   readonly results: CellResult[];
 }
 
-/**
- * Runs the whole baseline matrix end-to-end against the real GPU.
- *
- * One browser per backend: WebGL2 and WebGPU need different launch flags, so
- * each backend runs its full cell list in its own single session. The
- * same-session rule holds per backend; a WebGL2-vs-WebGPU comparison is a
- * cross-backend comparison, satisfied by running the two sessions back-to-back
- * on the same machine in one invocation, with a provenance block recorded per
- * backend. Requested backend order is preserved so the report lists WebGL2
- * first.
- *
- * `onCellResult` (optional) fires after every cell so the caller can persist it
- * immediately; the returned {@link MatrixOutcome} is the same set aggregated.
- */
 /** The cell selection one matrix invocation would measure, resolved without touching a browser. */
 export interface MatrixCellSelection {
   readonly backends: readonly Backend[];
@@ -1010,6 +996,19 @@ export const resolveMatrixCells = (options: MatrixCellSelection): CellSpec[] => 
     : selected.map(cell => ({ ...cell, timedFrames: options.timedFramesOverride! }));
 };
 
+/**
+ * Runs the whole baseline matrix end-to-end against the real GPU.
+ *
+ * WebGL2 and WebGPU need different launch flags, so each backend runs its cell
+ * list independently, with one fresh browser per arm (see {@link runBackend}).
+ * The comparison is therefore across backends on the same machine in one
+ * invocation, with a provenance block recorded per backend. Backends run in
+ * the order given by `options.backends`; the default matrix lists WebGL2
+ * first.
+ *
+ * `onCellResult` (optional) fires after every cell so the caller can persist it
+ * immediately; the returned {@link MatrixOutcome} is the same set aggregated.
+ */
 export const runMatrix = async (options: {
   backends: readonly Backend[];
   /**

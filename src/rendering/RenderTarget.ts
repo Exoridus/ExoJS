@@ -192,6 +192,12 @@ export class RenderTarget {
     return this;
   }
 
+  /**
+   * The viewport `view` maps to, in whole pixels of this target's coordinate
+   * space (logical units for a root target). The returned
+   * {@link Rectangle} is this target's own reusable storage: the next call
+   * rewrites it, so copy the values out when they must outlive it.
+   */
   public getViewport(view: View = this._view): Rectangle {
     const { x, y, width, height } = view.viewport;
 

@@ -155,38 +155,6 @@ export interface LoadOptions {
 // Loader
 // ---------------------------------------------------------------------------
 
-/**
- * Central asset management hub for ExoJS applications.
- *
- * The `Loader` orchestrates fetching, processing, caching, and retrieval of
- * all engine asset types. It ships with a built-in {@link AssetType} for every first-party
- * kind (Texture, Sound, AudioStream, Video, FontFace, ImageBitmap or HTMLImageElement, JSON,
- * text, SVG, subtitles, binary, and WASM); an application adds its own by
- * listing them in an extension.
- *
- * Assets can be loaded in two ways:
- * - **Direct** - `loader.load(Assets.from({ hero: 'hero.png' }))` fetches
- *   immediately and resolves to the finished assets.
- * - **Background** - pass `{ priority: LoadPriority.Background }` to `load(...)` to pre-warm
- *   assets at low priority; {@link awaitBackground} resolves once the queue drains.
- *
- * Once loaded, assets are stored in memory and returned from cache on
- * subsequent `load` or {@link get} calls without re-fetching.
- *
- * @example
- * ```ts
- * const loader = new Loader({ basePath: '/assets/', cache: new IndexedDbStore('game') });
- * const { hero } = await loader.load(Assets.from({ hero: 'hero.png' }));
- * ```
- *
- * @remarks Internally, `Loader` is a thin orchestrator over three collaborators:
- * `AssetTypeRegistry` (installed types, their suffixes and factories),
- * `AssetDecoder` (URL resolution, acquisition, codec and factory dispatch),
- * and `AssetResidency` (claims, in-flight dedup, the resident-resource store,
- * deferred-handle healing, the background queue). `Loader` itself keeps the
- * public call-shape dispatch (`load`/`get`/`unload` and their internal
- * scene-scope entry points) and the foreground-batch progress signals.
- */
 /** How {@link Loader.loadContainer} fetches a container. */
 export interface LoadContainerOptions {
   /**
@@ -216,6 +184,42 @@ export interface LoadManifestOptions {
   readonly cache?: RequestCache;
 }
 
+/**
+ * Central asset management hub for ExoJS applications.
+ *
+ * The `Loader` orchestrates fetching, processing, caching, and retrieval of
+ * assets. An `Application` installs the first-party {@link AssetType}s
+ * (Texture, Sound, AudioStream, Video, FontFace, ImageBitmap or
+ * HTMLImageElement, JSON, text, SVG, subtitles, binary, and WASM). A standalone
+ * `Loader` resolves no suffix until a type is registered on it; an application
+ * adds its own types by listing them in an extension.
+ *
+ * Assets can be loaded in two ways:
+ * - **Direct** - `loader.load(Assets.from({ hero: 'hero.png' }))` fetches
+ *   immediately and resolves to the finished assets.
+ * - **Background** - pass `{ priority: LoadPriority.Background }` to `load(...)` to pre-warm
+ *   assets at low priority; {@link awaitBackground} resolves once the queue drains.
+ *
+ * Once loaded, assets are stored in memory and returned from cache on
+ * subsequent `load` or {@link get} calls without re-fetching.
+ *
+ * @example
+ * ```ts
+ * // Access the application-installed loader.
+ * // Its asset types were registered during Application construction.
+ * // A standalone Loader requires explicit asset-type registration.
+ * const loader = app.loader;
+ * const { hero } = await loader.load(Assets.from({ hero: 'hero.png' }));
+ * ```
+ *
+ * @remarks Internally, `Loader` is a thin orchestrator over three collaborators:
+ * `AssetTypeRegistry` (installed types, their suffixes and factories),
+ * `AssetDecoder` (URL resolution, acquisition, codec and factory dispatch),
+ * and `AssetResidency` (claims, in-flight dedup, the resident-resource store,
+ * deferred-handle healing, the background queue). `Loader` itself keeps the
+ * public call-shape dispatch (`load`/`get`/`unload` and their internal scene-scope
+ * entry points) and the foreground-batch progress signals.
+ */
 export class Loader {
   private readonly _typeRegistry = new AssetTypeRegistry();
   private readonly _decoder: AssetDecoder;
@@ -995,7 +999,9 @@ export class Loader {
 
   /**
    * Sets the maximum number of simultaneous background-queue fetches.
-   * Takes effect on the next {@link awaitBackground} call or `load(..., { background })`.
+   * Takes effect at the next background-queue drain - on completion of a
+   * running fetch, on enqueue, or on {@link awaitBackground} - and does not
+   * start or abort a fetch that is already running.
    */
   public setConcurrency(n: number): this {
     this._residency.setConcurrency(n);

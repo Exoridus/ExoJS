@@ -360,7 +360,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The document's world layout: level placement, bounds and neighbour graph, one MapWorld per LDtk world (exactly one for a single-world project). Built on first access and cached. This is metadata about *where* levels are, independent of the runtime maps in levels. Use it to navigate; use import('./LdtkWorld').LdtkWorld instead when levels should be loaded on demand rather than all at once."
+          "description": "The document's world layout: level placement, bounds and neighbour graph, one MapWorld per LDtk world (exactly one for a single-world project). Built on first access and cached. This is metadata about *where* levels are, independent of the runtime maps in levels. Use it to navigate; use import('./LdtkProject').LdtkProject with import('@codexo/exojs/tilemap').MapWorldRuntime instead when levels should be loaded on demand rather than all at once."
         }
       ],
       "paragraphs": [],

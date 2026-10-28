@@ -56,12 +56,12 @@ const rotatedCentre = (x: number, y: number, width: number, height: number, angl
 };
 
 /**
- * The tightest conservative cover of an ellipse the shape set offers: a capsule
- * whose radius is the minor semi-axis and whose spine runs the difference of the
- * semi-axes along the major axis. Every ellipse point is within the minor
- * semi-axis of that spine, and the capsule is itself inside the circumscribed
- * circle, so it covers the ellipse and is never worse than the circle. A round
- * ellipse degenerates to that circle.
+ * Conservative rounded cover of an ellipse for the capsule branch: the radius is
+ * the minor semi-axis and the spine runs the difference of the semi-axes along
+ * the major axis, so every ellipse point lies inside the capsule and it touches
+ * the four extreme points. Below {@link MINIMUM_SPINE} it becomes the circle of
+ * the minor semi-axis, which can under-cover the major axis slightly. This is
+ * the closest cover the shape set offers, not the tightest possible.
  */
 const ellipseShape = (width: number, height: number): BoxShape | CapsuleShape | CircleShape | null => {
   const semiMajor = Math.max(width, height) / 2;

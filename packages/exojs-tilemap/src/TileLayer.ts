@@ -279,8 +279,9 @@ export class TileLayer {
 
   /**
    * Monotonic layer revision counter.
-   * Increments on every cell mutation that actually changes a stored value.
-   * Does NOT increment on no-op writes or failed mutations.
+   * Increments once per mutation call that changes at least one stored value,
+   * and once when a chunk is adopted or evicted. No-op writes and failed
+   * mutations do NOT increment.
    */
   private _revision = 0;
 
@@ -806,8 +807,9 @@ export class TileLayer {
 
   /**
    * Monotonic layer revision counter.
-   * Increments on every cell mutation that changes a stored value.
-   * No-op writes and failed mutations do NOT increment.
+   * Increments once per mutation call that changes at least one stored value,
+   * and once when a chunk is adopted or evicted. No-op writes and failed
+   * mutations do NOT increment.
    * @advanced
    */
   public get revision(): number {
