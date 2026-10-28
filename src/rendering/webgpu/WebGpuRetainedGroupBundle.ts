@@ -26,6 +26,10 @@ const transformFloatsPerRow = retainedTransformSlotBytes / Float32Array.BYTES_PE
 /** Rows one patch block covers: 2 KB of transform rows, 256 B of tints. */
 const rowsPerPatchBlock = 64;
 
+const flushRendererRowPatches = (state: WebGpuRetainedRendererReplayState): void => {
+  state.flushRowPatches?.();
+};
+
 /**
  * Group-owned GPU resources for one retained group on the WebGPU backend:
  *
@@ -372,9 +376,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
 
     // A renderer that keeps its own per-node store off this bundle (Text) stages
     // its patches the same way and has no other point to flush them at.
-    for (const state of this.rendererReplayStates.values()) {
-      state.flushRowPatches?.();
-    }
+    this.rendererReplayStates.forEach(flushRendererRowPatches);
   }
 
   /**
