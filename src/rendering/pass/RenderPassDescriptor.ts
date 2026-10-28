@@ -3,11 +3,12 @@ import type { RenderTarget } from '#rendering/RenderTarget';
 import type { View } from '#rendering/View';
 
 /**
- * Whether a render pass carries a stencil attachment.
+ * Whether a render pass declares a stencil attachment.
  *
- * WebGL2 stencil is ambient per-target GL state, so this flag is largely
- * informational there; the WebGPU backend uses it to
- * decide whether a pass descriptor needs a `depthStencilAttachment`.
+ * WebGL2 applies the flag as the pass's stencil-enable state. The WebGPU
+ * coordinator ignores it and derives the depth/stencil attachment from its
+ * active-stencil state instead, so a WebGPU pass that needs stencil must
+ * enable it through that state.
  */
 export enum StencilAttachmentMode {
   None = 0,
@@ -39,9 +40,10 @@ export interface RenderPassDescriptor {
 }
 
 /**
- * Snapshot of the pass currently open on a {@link RenderPassCoordinator}. The
- * WebGPU coordinator exposes the live encoder alongside these fields from phase
- * 12D; the shared shape lives here so both backends agree on it.
+ * Snapshot of the state shared by an open pass on a
+ * {@link RenderPassCoordinator}: the view it renders with and whether a stencil
+ * attachment is active. The WebGPU coordinator's own active-pass object also
+ * carries the live encoder.
  * @internal
  */
 export interface ActiveRenderPass {

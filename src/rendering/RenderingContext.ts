@@ -319,45 +319,57 @@ export class RenderingContext implements DrawContext {
    */
   public capture(node: RenderNode, options: CaptureOptions): RenderTexture {
     const target = new RenderTexture(options.width, options.height, options.format !== undefined ? { format: options.format } : undefined);
-    const view = new View(options.width / 2, options.height / 2, options.width, options.height);
+    const view = target.view;
     const coordinator = (this._backend as RenderBackend & Partial<RenderPassCoordinatorHost>).passCoordinator;
 
-    if (coordinator) {
-      coordinator.withChildPass(
-        {
-          target,
-          view,
-          load: options.clearColor !== undefined ? 'clear' : 'load',
-          clearColor: options.clearColor ?? null,
-          stencil: StencilAttachmentMode.None,
-        },
-        () => {
-          playRenderTree(node, this._backend);
-        },
-      );
+    try {
+      if (coordinator) {
+        coordinator.withChildPass(
+          {
+            target,
+            view,
+            load: options.clearColor !== undefined ? 'clear' : 'load',
+            clearColor: options.clearColor ?? null,
+            stencil: StencilAttachmentMode.None,
+          },
+          () => {
+            playRenderTree(node, this._backend);
+          },
+        );
+
+        return target;
+      }
+
+      // Legacy fallback for backends without a pass coordinator (e.g. test stubs).
+      const previousTarget = this._backend.renderTarget;
+      const previousView = this._backend.view;
+
+      try {
+        this._backend.setRenderTarget(target);
+        this._backend.setView(view);
+
+        if (options.clearColor !== undefined) {
+          this._backend.clear(options.clearColor);
+        }
+
+        playRenderTree(node, this._backend);
+      } finally {
+        this._backend.setRenderTarget(previousTarget);
+        this._backend.setView(previousView);
+      }
 
       return target;
+    } catch (error) {
+      try {
+        target.destroy();
+      } catch (cleanupError) {
+        throw new AggregateError([error, cleanupError], 'Capture failed and its render texture could not be released cleanly.', {
+          cause: cleanupError,
+        });
+      }
+
+      throw error;
     }
-
-    // Legacy fallback for backends without a pass coordinator (e.g. test stubs).
-    const previousTarget = this._backend.renderTarget;
-    const previousView = this._backend.view;
-
-    this._backend.setRenderTarget(target);
-    this._backend.setView(view);
-
-    if (options.clearColor !== undefined) {
-      this._backend.clear(options.clearColor);
-    }
-
-    try {
-      playRenderTree(node, this._backend);
-    } finally {
-      this._backend.setRenderTarget(previousTarget);
-      this._backend.setView(previousView);
-    }
-
-    return target;
   }
 
   /**

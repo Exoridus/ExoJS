@@ -21,9 +21,17 @@ interface RenderInstructionSlot {
 }
 
 interface RenderGroupPlaybackContext {
+  /** Number of instructions in this group's own draw run. */
   readonly groupInstructionCount: number;
+  /**
+   * Pass instruction index of this group's first draw, counted by the
+   * enclosing scope. Scope-local: draws inside a nested sub-scope are not
+   * included in the count.
+   */
   readonly firstPassInstructionIndex: number;
+  /** Last pass instruction index of this group's own run; same scope-local caveat. */
   readonly lastPassInstructionIndex: number;
+  /** Ordinal of this group among the enclosing scope's own draw runs; nested scopes are not counted. */
   readonly passGroupIndex: number;
 }
 

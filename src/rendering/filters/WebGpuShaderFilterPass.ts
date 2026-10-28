@@ -82,6 +82,7 @@ interface WebGpuConnection {
   readonly sampler: GPUSampler;
   /** One buffer per uniform binding: one per declared block, else the packed buffer. */
   readonly userUniformBuffers: Array<GPUBuffer | null>;
+  readonly textureLayout: readonly boolean[];
 }
 
 /**
@@ -259,8 +260,11 @@ export class WebGpuShaderFilterPass {
   }
 
   private _ensureConnected(backend: WebGpuBackend, output: RenderTexture): void {
-    // A replaced device leaves every buffer, layout and pipeline of the old one unusable.
-    if (this._connection !== null && this._connection.device !== backend.device) {
+    // Device and texture sample types are part of the pipeline layout's compatibility contract.
+    if (
+      this._connection !== null &&
+      (this._connection.device !== backend.device || !this._matchesTextureLayout(backend, this._connection.textureLayout))
+    ) {
       this.destroy();
     }
 
@@ -372,6 +376,7 @@ export class WebGpuShaderFilterPass {
       pipelines,
       sampler,
       userUniformBuffers: new Array<GPUBuffer | null>(Math.max(this._bindings.blocks.length, 1)).fill(null),
+      textureLayout: this._collectTextures().map(texture => backend.isNonFilterableTexture(texture)),
     };
 
     // Fresh buffers hold nothing this pass wrote, whatever it wrote to the
@@ -398,8 +403,36 @@ export class WebGpuShaderFilterPass {
     return textures;
   }
 
+  private _matchesTextureLayout(backend: WebGpuBackend, layout: readonly boolean[]): boolean {
+    let index = 0;
+
+    for (const name in this._uniforms) {
+      if (!Object.prototype.hasOwnProperty.call(this._uniforms, name)) {
+        continue;
+      }
+
+      const value = this._uniforms[name]!;
+
+      if (isTextureValue(value) && backend.isNonFilterableTexture(value) !== layout[index++]) {
+        return false;
+      }
+    }
+
+    for (const name in this._bindings.textures) {
+      if (
+        Object.prototype.hasOwnProperty.call(this._bindings.textures, name) &&
+        backend.isNonFilterableTexture(this._bindings.textures[name]!) !== layout[index++]
+      ) {
+        return false;
+      }
+    }
+
+    return index === layout.length;
+  }
+
   /**
    * Build the GPUBindGroupLayout for group 1 (user uniforms).
+   * Texture slot count or sample-type changes rebuild this layout and its pipelines before the next draw.
    *
    * Layout:
    *   binding 0 - uniform buffer (scalar/vector uniforms), if any scalar uniforms exist

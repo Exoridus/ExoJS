@@ -197,9 +197,9 @@ export class WebGpuTextureNormalizer {
   }
 
   /**
-   * Drop every device-owned object, for a lost or replaced device. Unlike
-   * {@link destroy} this leaves the instance usable: the next upload rebuilds
-   * against the new device.
+   * Drop every device-owned object on the current device. The instance stays
+   * bound to its original device; a backend replacing its device must discard
+   * this normalizer and create a new one.
    */
   public reset(): void {
     for (const staging of this._staging.values()) {

@@ -14,6 +14,7 @@ import { describe, expect, test } from 'vitest';
 import { Color } from '#core/Color';
 import { Matrix } from '#math/Matrix';
 import { Vector } from '#math/Vector';
+import { Container } from '#rendering/Container';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
 import { Shader } from '#rendering/shader/Shader';
 import { UniformArray, UniformStruct } from '#rendering/uniforms/uniformDeclarations';
@@ -46,6 +47,56 @@ const source = new Shader({ glsl: { vertex: GLSL_VERTEX, fragment: GLSL }, unifo
 const build = (): MeshMaterial<typeof declaration> => new MeshMaterial({ shader: source });
 
 describe('uniform block values', () => {
+  test('nested point-like defaults snapshot observable getters without retaining their owner', () => {
+    const owner = new Container();
+
+    owner.setPosition(3, 4);
+
+    const withDefaults = new Shader({
+      glsl: { vertex: GLSL_VERTEX, fragment: GLSL },
+      uniforms: { nested: new UniformStruct({ origin: { type: UniformType.Vec2, default: owner.position } }) },
+    });
+
+    owner.setPosition(9, 9);
+
+    const material = new MeshMaterial({ shader: withDefaults });
+
+    expect(material.uniforms.nested.origin.x).toBe(3);
+    expect(material.uniforms.nested.origin.y).toBe(4);
+    owner.destroy();
+  });
+
+  test('layout defaults snapshot mutable arrays, nested records and class inputs', () => {
+    const vector = new Vector(3, 4);
+    const matrix = new Matrix().translate(5, 6);
+    const tint = new Color(255, 0, 0);
+    const nested = { strength: 0.75 };
+    const values = new Float32Array(16).fill(2);
+    const withDefaults = new Shader({
+      glsl: { vertex: GLSL_VERTEX, fragment: GLSL },
+      uniforms: {
+        origin: { type: UniformType.Vec2, default: vector },
+        view: { type: UniformType.Mat3, default: matrix },
+        tint: { type: UniformType.Vec4, default: tint },
+        custom: { type: new UniformStruct({ strength: UniformType.Float }), default: nested },
+        projection: { type: UniformType.Mat4, default: values },
+      },
+    });
+    const first = new MeshMaterial({ shader: withDefaults });
+
+    vector.set(9, 9);
+    matrix.translate(20, 20);
+    tint.set(0, 255, 0);
+    nested.strength = 9;
+    values.fill(9);
+
+    const second = new MeshMaterial({ shader: withDefaults });
+
+    expect(second._blocks[0]!.float32).toEqual(first._blocks[0]!.float32);
+    expect(second.uniforms.origin.x).toBe(3);
+    expect(second.uniforms.custom.strength.value).toBe(0.75);
+  });
+
   test('every field starts at zero, matrices included', () => {
     const material = build();
 

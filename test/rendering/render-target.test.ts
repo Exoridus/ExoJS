@@ -1,7 +1,41 @@
 import { RenderTarget } from '#rendering/RenderTarget';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { View } from '#rendering/View';
 
 describe('RenderTarget view ownership', () => {
+  test('render texture source cleanup survives a throwing target listener', () => {
+    const target = new RenderTexture(1, 1);
+
+    target.source = new DataView(new ArrayBuffer(4));
+    target.addDestroyListener(() => {
+      throw new Error('listener failed');
+    });
+
+    expect(() => target.destroy()).toThrow('listener failed');
+    expect(target.source).toBeNull();
+  });
+
+  test('a throwing destroy listener does not skip other listeners or owned cleanup', () => {
+    const target = new RenderTarget(32, 32);
+    const ownedView = target.view;
+    const listener = vi.fn();
+    const failure = new Error('listener failed');
+
+    target.addDestroyListener(() => {
+      throw failure;
+    });
+    target.addDestroyListener(listener);
+
+    expect(() => target.destroy()).toThrow(failure);
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(ownedView.destroyed).toBe(true);
+    expect(target.destroyed).toBe(true);
+
+    target.destroy();
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
   test('setView does not destroy the view it replaces', () => {
     const target = new RenderTarget(320, 200);
     const first = new View(0, 0, 320, 200);

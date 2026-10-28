@@ -1048,8 +1048,9 @@ export class WebGpuScalableSpriteRenderer
    */
   public async prewarmPipelines(formats: readonly GPUTextureFormat[]): Promise<void> {
     const device = this._device;
+    const pipelineLayout = this._pipelineLayout;
 
-    if (!device || !this._shaderModule || !this._pipelineLayout) {
+    if (!device || !this._shaderModule || !pipelineLayout) {
       return;
     }
 
@@ -1081,7 +1082,9 @@ export class WebGpuScalableSpriteRenderer
 
           promises.push(
             device.createRenderPipelineAsync(this._buildPipelineDescriptor(kind, blendMode, format)).then(pipeline => {
-              this._pipelines.set(key, pipeline);
+              if (this._device === device && this._pipelineLayout === pipelineLayout) {
+                this._pipelines.set(key, pipeline);
+              }
             }),
           );
         }
