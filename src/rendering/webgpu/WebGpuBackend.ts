@@ -629,6 +629,10 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   public initialize(): Promise<this> {
+    if (this._destroyed) {
+      return Promise.reject(new Error('Cannot initialize a destroyed WebGPU backend.'));
+    }
+
     if (!this._initializePromise) {
       this._initializePromise = this._initialize().catch((error: unknown) => {
         this._initializePromise = null;
@@ -2533,6 +2537,8 @@ export class WebGpuBackend implements RenderBackend {
       throw this._createInitializationError('Failed to request a WebGPU adapter.', error);
     }
 
+    this._assertInitializationActive();
+
     if (adapter === null) {
       throw new Error('Could not acquire a WebGPU adapter.');
     }
@@ -2542,6 +2548,8 @@ export class WebGpuBackend implements RenderBackend {
     try {
       device = await this._requestDeviceFrom(adapter);
     } catch (error) {
+      this._assertInitializationActive();
+
       // Each adapter can create only one device, so retry against a fresh one.
 
       try {
@@ -2549,6 +2557,8 @@ export class WebGpuBackend implements RenderBackend {
       } catch (retryError) {
         throw this._createInitializationError('Failed to request a WebGPU adapter.', retryError);
       }
+
+      this._assertInitializationActive();
 
       if (adapter === null) {
         throw new Error('Could not acquire a WebGPU adapter.', { cause: error });
@@ -2559,6 +2569,11 @@ export class WebGpuBackend implements RenderBackend {
       } catch (retryError) {
         throw this._createInitializationError('Failed to request a WebGPU device.', retryError);
       }
+    }
+
+    if (this._destroyed) {
+      device?.destroy();
+      this._assertInitializationActive();
     }
 
     if (device === null) {
@@ -2634,8 +2649,15 @@ export class WebGpuBackend implements RenderBackend {
     const prewarmFormats: readonly GPUTextureFormat[] = [this.format, managedTextureFormat];
 
     await this._prewarmRendererPipelines(prewarmFormats);
+    this._assertInitializationActive();
 
     return this;
+  }
+
+  private _assertInitializationActive(): void {
+    if (this._destroyed) {
+      throw new Error('Cannot initialize a destroyed WebGPU backend.');
+    }
   }
 
   private _subscribeToDeviceLoss(): void {
@@ -2827,6 +2849,7 @@ export class WebGpuBackend implements RenderBackend {
     // Same for the normalization pass: its staging textures, pipeline and uniform
     // buffers are all dead handles, and the recovered device gets fresh ones.
     this._textureNormalizer?.reset();
+    this._textureNormalizer = null;
     this._transformStorage?.destroy();
     this._transformStorage = null;
     this._activeDrawCommand = null;

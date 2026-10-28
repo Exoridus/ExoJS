@@ -101,6 +101,21 @@ const fragmentSource = [
 ].join('\n');
 
 describe('WebGl2ShaderProgram — structured RenderError (contracts 1, 2)', () => {
+  test('disconnect releases the linked program once even when program teardown calls disconnect again', () => {
+    const gl = createMockGl();
+    const shader = new WebGl2Shader(vertexSource, fragmentSource);
+
+    shader.connect(createWebGl2ShaderProgram(gl));
+    shader.disconnect();
+    shader.destroy();
+    shader.disconnect();
+
+    expect(gl.deleteProgram).toHaveBeenCalledTimes(1);
+    expect(gl.deleteShader).toHaveBeenCalledTimes(2);
+    expect(shader.attributes.size).toBe(0);
+    expect(shader.uniforms.size).toBe(0);
+  });
+
   test('vertex compile failure throws RenderError with code shader-compile, label in message, marked excerpt in detail', () => {
     const gl = createMockGl({
       failCompileStage: VERTEX_SHADER,

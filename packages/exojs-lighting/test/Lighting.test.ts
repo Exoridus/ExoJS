@@ -23,6 +23,7 @@ import { LightmapLighting } from '../src/LightmapLighting';
 import { LineLight } from '../src/lights/LineLight';
 import { PointLight } from '../src/lights/PointLight';
 import { SpotLight } from '../src/lights/SpotLight';
+import { SunLight } from '../src/lights/SunLight';
 import { LitMaterial } from '../src/LitMaterial';
 import { NormalMap } from '../src/normals/NormalMap';
 import { RadianceLighting } from '../src/RadianceLighting';
@@ -121,6 +122,27 @@ describe('Lighting', () => {
     expect(lighting.activeLightCount).toBe(1);
     expect(buffer[0]).toBe(1);
     expect(buffer[slot(lighting, 0, 0) + 2]).toBe(30);
+  });
+
+  test.each([
+    { label: 'a sun', create: () => new SunLight() },
+    { label: 'a zero-radius point light', create: () => new PointLight({ radius: 0 }) },
+    { label: 'a negative-radius spot light', create: () => new SpotLight({ radius: -1 }) },
+  ])('$label does not consume the only forward slot ahead of a usable point light', ({ create }) => {
+    const lighting = new ForwardLighting({ maxLights: 1 });
+
+    lighting.add(create());
+    lighting.add(new PointLight({ radius: 45 }).setPosition(12, 34));
+    lighting.update();
+
+    const buffer = textureOf(lighting).buffer;
+    const offset = slot(lighting, 0, 0);
+
+    expect(lighting.activeLightCount).toBe(1);
+    expect(buffer[0]).toBe(1);
+    expect(Array.from(buffer.subarray(offset, offset + 3))).toEqual([12, 34, 45]);
+
+    lighting.destroy();
   });
 
   test('lights beyond the renderer capacity are dropped rather than overwriting the last slot', () => {

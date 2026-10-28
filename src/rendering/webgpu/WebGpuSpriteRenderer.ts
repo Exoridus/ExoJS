@@ -1546,8 +1546,9 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
    */
   public async prewarmPipelines(formats: readonly GPUTextureFormat[]): Promise<void> {
     const device = this._device;
+    const pipelineLayout = this._pipelineLayout;
 
-    if (!device || !this._shaderModule || !this._pipelineLayout) {
+    if (!device || !this._shaderModule || !pipelineLayout) {
       return;
     }
 
@@ -1580,7 +1581,9 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
         }
 
         const promise = device.createRenderPipelineAsync(this._buildPipelineDescriptor(blendMode, format)).then(pipeline => {
-          this._pipelines.set(format, pipelineKey, pipeline);
+          if (this._device === device && this._pipelineLayout === pipelineLayout) {
+            this._pipelines.set(format, pipelineKey, pipeline);
+          }
         });
 
         promises.push(promise);

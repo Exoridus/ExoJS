@@ -21,6 +21,9 @@ import { Texture } from '#rendering/texture/Texture';
 import { BlendModes, ScaleModes } from '#rendering/types';
 import { Video } from '#rendering/video/Video';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
+import { WebGpuMeshRenderer } from '#rendering/webgpu/WebGpuMeshRenderer';
+import { WebGpuSpriteRenderer } from '#rendering/webgpu/WebGpuSpriteRenderer';
+import { WebGpuTextRenderer } from '#rendering/webgpu/WebGpuTextRenderer';
 
 import { particlesExtension, ParticleSystem } from '../../packages/exojs-particles/src/index';
 
@@ -446,6 +449,159 @@ const installCoreAndParticleRenderers = (backend: WebGpuBackend, renderingOption
 };
 
 describe('WebGpuBackend', () => {
+  test('destroy during pipeline prewarm rejects initialization without repopulating renderer caches', async () => {
+    const environment = createMockWebGpuEnvironment();
+    const adapter = (await navigator.gpu.requestAdapter())!;
+    const device = await adapter.requestDevice();
+    const pending: Array<() => void> = [];
+
+    Object.defineProperty(device, 'createRenderPipelineAsync', {
+      value: vi.fn(() => new Promise<GPURenderPipeline>(resolve => pending.push(() => resolve({} as GPURenderPipeline)))),
+    });
+
+    const manager = new WebGpuBackend({ canvas: environment.canvas, options: {} } as Application);
+
+    installCoreRenderers(manager);
+
+    const renderers = [...manager.rendererRegistry.renderers()];
+    const sprite = renderers.find(renderer => renderer instanceof WebGpuSpriteRenderer) as unknown as {
+      _pipelines: { has(format: GPUTextureFormat, variant: number): boolean };
+    };
+    const mesh = renderers.find(renderer => renderer instanceof WebGpuMeshRenderer) as unknown as {
+      _pipelines: Map<string, GPURenderPipeline>;
+      _instancedPipelines: Map<string, GPURenderPipeline>;
+    };
+    const text = renderers.find(renderer => renderer instanceof WebGpuTextRenderer) as unknown as {
+      _pipelines: Map<string, GPURenderPipeline>;
+    };
+    const initialization = manager.initialize().then(
+      () => 'resolved',
+      () => 'rejected',
+    );
+
+    try {
+      await vi.waitFor(() => expect(pending.length).toBeGreaterThan(0));
+      manager.destroy();
+
+      for (const finish of pending) {
+        finish();
+      }
+
+      expect.soft(await initialization).toBe('rejected');
+      expect.soft(sprite._pipelines.has('bgra8unorm', BlendModes.Normal << 1)).toBe(false);
+      expect.soft(mesh._pipelines.size).toBe(0);
+      expect.soft(mesh._instancedPipelines.size).toBe(0);
+      expect.soft(text._pipelines.size).toBe(0);
+      expect(environment.destroyDevice).toHaveBeenCalledTimes(1);
+    } finally {
+      manager.destroy();
+      environment.restore();
+    }
+  });
+
+  test('destroy during adapter acquisition prevents device creation and reinitialization', async () => {
+    const environment = createMockWebGpuEnvironment();
+    const adapter = await navigator.gpu.requestAdapter();
+    let resolveAdapter!: (adapter: GPUAdapter | null) => void;
+
+    vi.mocked(navigator.gpu.requestAdapter).mockReturnValueOnce(
+      new Promise(resolve => {
+        resolveAdapter = resolve;
+      }),
+    );
+
+    const manager = new WebGpuBackend({ canvas: environment.canvas, options: {} } as Application);
+    const initialization = manager.initialize().catch((error: unknown) => error);
+
+    try {
+      manager.destroy();
+      resolveAdapter(adapter);
+
+      expect(await initialization).toBeInstanceOf(Error);
+      expect(adapter!.requestDevice).not.toHaveBeenCalled();
+      expect(environment.context.configure).not.toHaveBeenCalled();
+      await expect(manager.initialize()).rejects.toThrow(/destroy/i);
+    } finally {
+      manager.destroy();
+      environment.restore();
+    }
+  });
+
+  test.each(['resolve', 'reject'])('destroy during device acquisition settles a late %s without publishing or retrying', async outcome => {
+    const environment = createMockWebGpuEnvironment();
+    const adapter = (await navigator.gpu.requestAdapter())!;
+    const device = await adapter.requestDevice();
+    let resolveDevice!: (device: GPUDevice) => void;
+    let rejectDevice!: (error: Error) => void;
+
+    vi.mocked(adapter.requestDevice).mockReturnValueOnce(
+      new Promise((resolve, reject) => {
+        resolveDevice = resolve;
+        rejectDevice = reject;
+      }),
+    );
+    vi.mocked(navigator.gpu.requestAdapter).mockResolvedValue(adapter);
+
+    const manager = new WebGpuBackend({ canvas: environment.canvas, options: {} } as Application);
+    const initialization = manager.initialize().catch((error: unknown) => error);
+
+    try {
+      await Promise.resolve();
+      manager.destroy();
+
+      const requests = vi.mocked(navigator.gpu.requestAdapter).mock.calls.length;
+
+      if (outcome === 'resolve') {
+        resolveDevice(device);
+      } else {
+        rejectDevice(new Error('late device rejection'));
+      }
+
+      expect(await initialization).toBeInstanceOf(Error);
+      expect(environment.context.configure).not.toHaveBeenCalled();
+      expect(navigator.gpu.requestAdapter).toHaveBeenCalledTimes(requests);
+      expect(environment.destroyDevice).toHaveBeenCalledTimes(outcome === 'resolve' ? 1 : 0);
+      expect(() => manager.device).toThrow(/not initialized/);
+    } finally {
+      manager.destroy();
+      environment.restore();
+    }
+  });
+
+  test('device teardown discards the normalizer before the next device is installed', async () => {
+    const environment = createMockWebGpuEnvironment();
+    const manager = new WebGpuBackend({ canvas: environment.canvas, options: {} } as Application);
+    const internal = manager as unknown as {
+      _getTextureNormalizer(): object;
+      _initialize(): Promise<WebGpuBackend>;
+      _teardownDeviceState(): void;
+      _textureNormalizer: object | null;
+    };
+
+    try {
+      await manager.initialize();
+
+      const first = internal._getTextureNormalizer();
+      const restoredDevice = { ...manager.device } as GPUDevice;
+
+      vi.mocked(navigator.gpu.requestAdapter).mockResolvedValue({
+        requestDevice: vi.fn(async () => restoredDevice),
+      } as unknown as GPUAdapter);
+
+      internal._teardownDeviceState();
+
+      expect(internal._textureNormalizer).toBeNull();
+
+      await internal._initialize();
+
+      expect(manager.device).toBe(restoredDevice);
+      expect(internal._getTextureNormalizer()).not.toBe(first);
+    } finally {
+      manager.destroy();
+      environment.restore();
+    }
+  });
+
   test('flushes the active renderer when switching renderer types', async () => {
     const environment = createMockWebGpuEnvironment();
 

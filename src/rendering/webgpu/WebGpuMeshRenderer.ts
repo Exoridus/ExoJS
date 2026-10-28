@@ -1215,8 +1215,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
   public async prewarmPipelines(formats: readonly GPUTextureFormat[]): Promise<void> {
     const device = this._device;
+    const pipelineLayout = this._pipelineLayout;
+    const instancedPipelineLayout = this._instancedPipelineLayout;
 
-    if (!device || !this._shaderModule || !this._pipelineLayout) {
+    if (!device || !this._shaderModule || !pipelineLayout) {
       return;
     }
 
@@ -1249,14 +1251,18 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
         promises.push(
           device.createRenderPipelineAsync(this._buildPipelineDescriptor(blendMode, format)).then(pipeline => {
-            this._pipelines.set(key, pipeline);
+            if (this._device === device && this._pipelineLayout === pipelineLayout) {
+              this._pipelines.set(key, pipeline);
+            }
           }),
         );
 
         if (!this._instancedPipelines.has(key)) {
           promises.push(
             device.createRenderPipelineAsync(this._buildInstancedPipelineDescriptor(blendMode, format)).then(pipeline => {
-              this._instancedPipelines.set(key, pipeline);
+              if (this._device === device && this._instancedPipelineLayout === instancedPipelineLayout) {
+                this._instancedPipelines.set(key, pipeline);
+              }
             }),
           );
         }

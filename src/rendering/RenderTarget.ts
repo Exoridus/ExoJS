@@ -261,14 +261,24 @@ export class RenderTarget {
 
     this._isDestroying = true;
 
+    const errors: unknown[] = [];
+
     // Backends must finish queued draws before the resource becomes unbindable.
     try {
       // Before the listeners fire: they are how the backends drop the framebuffer
       // this attachment is bound into.
-      this._depthTexture?.destroy();
+      try {
+        this._depthTexture?.destroy();
+      } catch (error) {
+        errors.push(error);
+      }
 
       for (const listener of [...this._destroyListeners]) {
-        listener();
+        try {
+          listener();
+        } catch (error) {
+          errors.push(error);
+        }
       }
     } finally {
       this._isDestroyed = true;
@@ -284,6 +294,10 @@ export class RenderTarget {
     this._defaultView.destroy();
     this._viewport.destroy();
     this._size.destroy();
+
+    if (errors.length > 0) {
+      throw errors[0];
+    }
   }
 
   /**
