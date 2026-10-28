@@ -86,7 +86,7 @@
             }
           ],
           "returnType": "Promise<CacheReadResult>",
-          "description": "Read one of this layout's records. Rejects when the store could not answer."
+          "description": "Read one of this layout's records. Resolves to a miss when no read store held it; rejects when a store failed and no later store supplied a hit."
         },
         {
           "name": "write",

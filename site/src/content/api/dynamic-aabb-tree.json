@@ -994,7 +994,7 @@
             }
           ],
           "returnType": "void",
-          "description": ""
+          "description": "Remove a live leaf and return its slot to the pool. proxy must still be owned by the caller: removing the same proxy twice frees its slot twice, duplicating it on the free list and corrupting later reuse."
         },
         {
           "name": "update",

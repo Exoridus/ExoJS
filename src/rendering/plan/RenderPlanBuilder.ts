@@ -128,6 +128,9 @@ interface MutableGroupScope extends GroupScope, EntryPlacementState {
   firstOwnMaterial: boolean;
 }
 
+/** Placeholder for a pooled descriptor's `filters` before its first fill. */
+const emptyFilters: readonly Filter[] = Object.freeze([]);
+
 /**
  * Effect-less descriptor shared by every sub-branch escape barrier:
  * all effect stages are disabled, so {@link RenderEffectExecutor.play} is a
@@ -135,9 +138,6 @@ interface MutableGroupScope extends GroupScope, EntryPlacementState {
  * playback semantics - the group uniform is suspended (the branch collected
  * world-space transforms) and fragment capture records a live re-dispatch.
  */
-/** Placeholder for a pooled descriptor's `filters` before its first fill. */
-const emptyFilters: readonly Filter[] = Object.freeze([]);
-
 const groupEscapeEffect: EffectDescriptor = Object.freeze({
   filters: emptyFilters,
   clip: ClipKind.None,

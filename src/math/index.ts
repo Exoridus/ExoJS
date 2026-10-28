@@ -1,10 +1,10 @@
 export type * from './AabbLike';
 export * from './Circle';
 export type * from './CircleLike';
-// `./Collision` provides the collision TYPES (CollisionType, Collidable,
-// CollisionResponse) - it does NOT export a `Collision` value despite the
-// filename. The `Collision` VALUE below is the query-namespace facade
-// (intersects.*/resolve.*) from `./collision-detection`. Keep these distinct.
+// `./Collision` exports both the low-level `intersection*`/`getCollision*`
+// helpers and the `Collision` facade value, so only the facade is re-exported
+// here. The collision TYPES (CollisionType, Collidable, CollisionResponse) come
+// from `./collisionTypes` below. Keep these distinct.
 export { Collision } from './Collision';
 export * from './collisionTypes';
 export * from './DynamicAabbTree';

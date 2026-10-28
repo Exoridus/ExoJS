@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Negate the raw value before threshold comparison. Default false."
+          "description": "Invert the raw value within 0..1 (1 - value) before the deadzone. Default false."
         },
         {
           "name": "threshold",

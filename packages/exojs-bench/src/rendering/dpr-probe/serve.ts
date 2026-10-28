@@ -10,14 +10,14 @@ import { readEngineVersion, startViteServer } from '../../shared/viteServer';
  * Serve the manual DPR / internal-render-target probe page so a real phone on
  * the same network can open it.
  *
- * There is no driver here on purpose: no result collector, no
- * device farm, no remote control. This script starts the page and prints a URL;
- * everything else happens on the device, and the capture comes back through the
- * page's own `Copy JSON`.
+ * There is no driver and no device farm. This script starts the page, prints a
+ * URL and accepts `POST /submit`, which writes a capture into the repository's
+ * gitignored scratch directory; `Copy JSON` on the page stays as the route that
+ * needs no server support.
  *
  * ```sh
  * pnpm --filter @codexo/exojs-bench probe:dpr
- * pnpm --filter @codexo/exojs-bench probe:dpr -- --http   # no TLS, see below
+ * pnpm --filter @codexo/exojs-bench probe:dpr -- --http   # no TLS, see the certificate note
  * ```
  */
 

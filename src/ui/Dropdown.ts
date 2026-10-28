@@ -129,7 +129,7 @@ class DropdownRow extends Widget {
  * closing restores their previous order without changing layout or tab order.
  */
 export class Dropdown<T = string> extends Widget {
-  /** Fires when the selection changes, with the value and its index. */
+  /** Fires when the selection moves to another entry, with its value and index; clearing the selection does not fire. */
   public readonly onChange = new Signal<[value: T, index: number, dropdown: Dropdown<T>]>();
 
   private readonly _surface = new WidgetBackground(this, 0);

@@ -68,7 +68,10 @@ const copyButton = element<HTMLButtonElement>('copy-json');
 const clearButton = element<HTMLButtonElement>('clear-results');
 const jsonOutput = element<HTMLTextAreaElement>('json-output');
 
-/** `Application.resolveAutoPixelRatio` - mirrored so the capture records what `auto` WOULD have chosen. */
+/**
+ * Mirrors the engine's internal auto-ratio clamp so the capture records what
+ * `auto` WOULD have chosen.
+ */
 const ENGINE_MAX_AUTO_PIXEL_RATIO = 2;
 const engineAutoPixelRatio = Math.min(window.devicePixelRatio || 1, ENGINE_MAX_AUTO_PIXEL_RATIO);
 

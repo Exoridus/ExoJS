@@ -2,7 +2,7 @@
  * The shared colour-space and alpha-association helper sources every draw stage
  * that samples colour composes.
  *
- * Two rules hold across both backends and every source kind, and this module
+ * Three rules hold across both backends and every source kind, and this module
  * exists so they cannot be restated per path:
  *
  * - **Association is applied once, here.** A sampled colour is associated by

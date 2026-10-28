@@ -35,7 +35,7 @@ const colorFormatBytesPerPixel = (format: ColorTextureFormat): number => {
 
 /**
  * Recycles the short-lived {@link RenderTexture}s that filters, masks and
- * backdrop blends allocate every frame, keyed by exact `width × height ×
+ * backdrop blends allocate every frame, keyed by exact `width x height x
  * format` match.
  *
  * Bounded on purpose. Any workflow whose intermediates resize as they animate
@@ -65,9 +65,13 @@ export class RenderTexturePool {
   }
 
   /**
-   * Take a pooled texture of exactly `width × height` in `format`, or allocate
+   * Take a pooled texture of exactly `width x height` in `format`, or allocate
    * a fresh one. The result is borrowed: hand it back with {@link release}
    * rather than destroying it.
+   *
+   * Nothing is cleared: a recycled entry still holds whatever its previous
+   * borrower drew, so clear or fully overwrite the surface before relying on
+   * every pixel.
    */
   public acquire(width: number, height: number, format: ColorTextureFormat = TextureFormat.Rgba8): RenderTexture {
     for (let index = 0; index < this._textures.length; index++) {

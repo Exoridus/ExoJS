@@ -169,8 +169,9 @@ export class LimiterEffect extends AudioEffect {
   }
 
   /**
-   * Input-to-output dB ratio above the threshold. Range 1..20, default 20
-   * (brick-wall). Lower for a softer, more compressor-like limiter.
+   * Input-to-output dB ratio above the threshold. Range 1..20, default 20,
+   * the hardest curve the node exposes. Lower for a softer, more
+   * compressor-like limiter.
    * Changes are ramped smoothly via `setTargetAtTime`.
    */
   public get ratio(): number {

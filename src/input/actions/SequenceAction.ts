@@ -175,8 +175,9 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
    * half-completed pattern that goes quiet snaps back to `0` on the frame its
    * window actually elapses - no event has to arrive first. It is still not a
    * timer: expiry is observed on the frames the owning {@link ActionMap} is
-   * updated, so a map that is detached or unavailable holds its progress until
-   * it is fed again.
+   * updated, so a map that is detached holds its progress until it is fed
+   * again, while one that becomes unavailable is reset and re-armed from the
+   * live channel state when it resumes.
    */
   public get progress(): number {
     return this._step / this._steps.length;

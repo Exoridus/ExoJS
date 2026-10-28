@@ -187,9 +187,10 @@ const noopStructuralProbe: StructuralProbe = {
  * context is recoverable from the canvas - `getContext('webgl2')` returns the
  * same object the engine created - but the WebGPU device is not, so it comes from
  * the adapter. WebGL2 uses a hardware `EXT_disjoint_timer_query_webgl2` timer when
- * present; WebGPU has no externally-wireable hardware timestamp, so it uses the
- * submit-to-done wall clock (see {@link createWebGpuGpuTimer}) - a de-vsynced
- * measure of GPU work that replaces the old vsync-bound rAF delta.
+ * present; WebGPU uses `timestamp-query` around each frame's render passes when
+ * the device grants it (see {@link createWebGpuGpuTimer}), and reports the
+ * submit-to-done queue clock beside it as a separate series - the queue clock is
+ * not a frame time.
  */
 const attachProbes = (
   adapter: EngineAdapter,
@@ -256,7 +257,7 @@ const attachProbes = (
  * per-frame CPU time, full-frame wall-clock and draw-call structure.
  *
  * Frame time prefers a real GPU timer: the WebGL2 hardware query, or the WebGPU
- * submit-to-done wall clock (de-vsynced GPU work). Only when no GPU
+ * `timestamp-query` around the frame's render passes. Only when no GPU
  * timer resolved samples does it fall back to the rAF delta, reported with
  * {@link NO_GPU_TIMER_NOTE} - a GPU number is never fabricated. The CPU timer
  * still brackets exactly `mutate` + `renderFrame` (the primary metric); the GPU

@@ -635,12 +635,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   }
 
   /**
-   * Draw `count` instances, instance `i` reading slot `order[i]`.
+   * Draw `count` instances, instance `i` reading slot `order[offset + i]`.
    *
-   * One `drawIndexed` for the whole root: the store's texture table binds once,
-   * the order stream is issued verbatim, and no per-instance data crosses the
-   * bus. Nothing here may reorder or split the stream - it IS the draw order the
-   * plan built.
+   * One `drawIndexed` for this segment: the store's texture table binds once,
+   * the order stream is issued verbatim from `offset`, and no per-instance data
+   * crosses the bus. Nothing here may reorder or split the segment further - it
+   * IS the draw order the plan built for this range.
    * @internal
    */
   public _drawPersistentSlots(
@@ -1532,10 +1532,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   }
 
   /**
-   * Pre-create render pipelines for every blend-mode × target-format
-   * combination this renderer can produce, asynchronously and in
-   * parallel. Called from the render system's init path so by the time
-   * the first frame draws, all pipelines exist in cache.
+   * Pre-create the no-stencil render pipelines for the blend modes this
+   * renderer prewarms, across every supplied target format, asynchronously
+   * and in parallel. Stencil-clip variants and custom-material pipelines are
+   * created lazily on first use. Called from the render system's init path so
+   * that by the time the first frame draws, the prewarmed pipelines exist in
+   * cache.
    *
    * Without prewarm, the first draw of any new (blendMode, format)
    * combination would fall back to the synchronous _getPipeline() path,
@@ -1593,8 +1595,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     const f32 = this._instanceFloat32;
     const u32 = this._instanceUint32;
 
-    // localBounds: left, top, right, bottom (words 0..3, offset 0) - device-snapped in
-    // PixelSnapMode.Geometry, otherwise the logical local bounds.
+    // localBounds: left, top, right, bottom (words 0..3, offset 0) - always the
+    // sprite's logical local bounds; geometry-mode snapping is in the vertex stage.
     const bounds = this._activeBounds ?? sprite.getLocalBounds();
 
     f32[offset + 0] = bounds.left;

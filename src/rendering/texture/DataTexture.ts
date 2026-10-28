@@ -270,8 +270,8 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
    * than {@link commit} for ring-buffer patterns where only one row or column
    * changes per frame. If a region was already pending, the union is uploaded.
    *
-   * Coordinates are pixel-space with origin at the top-left. Bounds are clamped
-   * to the texture dimensions; out-of-range rectangles throw.
+   * Coordinates are pixel-space with origin at the top-left. They are not
+   * clamped: a rectangle that leaves the texture throws.
    */
   public commitRect(x: number, y: number, width: number, height: number): this {
     if (!Number.isInteger(x) || !Number.isInteger(y) || !Number.isInteger(width) || !Number.isInteger(height)) {

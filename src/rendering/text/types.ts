@@ -70,7 +70,10 @@ export interface TextLayoutStyle {
   readonly underline?: boolean;
   /** Defaults to `false`. */
   readonly strikethrough?: boolean;
-  /** `0` or omitted derives the thickness from the font's metrics. */
+  /**
+   * `0` or omitted derives the thickness from the font size; the metrics place
+   * the rules.
+   */
   readonly decorationThickness?: number;
   /** Extra downward offset in pixels applied to both rules. Defaults to `0`. */
   readonly decorationOffset?: number;

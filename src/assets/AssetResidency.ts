@@ -205,7 +205,7 @@ export class AssetResidency {
   private readonly _resources = new Map<ResourceKey, ResidentEntry>();
   // Identity this residency binds catalog leaves to; see `_bindLeaves`.
   private readonly _leafOwner = {};
-  // Reverse lookup: loaded resource object → the (type, source) it was first
+  // Reverse lookup: loaded resource object -> the (type, source) it was first
   // stored under. Backs Loader.keyFor for scene serialization. A WeakMap so
   // it never retains resources; only object resources participate.
   private readonly _resourceKeys = new WeakMap<object, { type: AssetConstructor; source: string; key: ResourceKey }>();
@@ -1176,7 +1176,7 @@ export class AssetResidency {
   // -----------------------------------------------------------------------
 
   /**
-   * Wire the reverse `handle → key` lookup and mark `handle` as a real,
+   * Wire the reverse `handle -> key` lookup and mark `handle` as a real,
    * residency-issued handle/ref for the lifetime of the object - the latter
    * (`_everRegisteredHandles`) is never cleared, unlike `_handleKeys`, which
    * {@link _forgetKey} (via {@link unloadAll}) deletes for a settled key. The
@@ -1190,7 +1190,7 @@ export class AssetResidency {
 
   /**
    * Register a fresh deferred entry for `key` holding `handle` weakly, wire the
-   * reverse `handle → key` lookup, and arm GC pruning. Returns the entry so the
+   * reverse `handle -> key` lookup, and arm GC pruning. Returns the entry so the
    * caller can add further co-handles.
    */
   private _createDeferredEntry(
@@ -1496,8 +1496,9 @@ export class AssetResidency {
   /**
    * Store a resolved resource under its canonical key: fills every deferred
    * handle / value-ref waiting on the key (multi-handle fill), respects
-   * "free on arrival" for a key unloaded mid-fetch, and registers the
-   * canonical reverse (resource → key) lookup. Called from `AssetDecoder`
+   * "free on arrival" for a key whose last claim was released mid-fetch, and
+   * registers the canonical reverse (resource -> key) lookup. Called from
+   * `AssetDecoder`
    * via the `storeResource` callback `Loader`'s constructor wires to this
    * method.
    * @internal
@@ -1570,7 +1571,7 @@ export class AssetResidency {
         }
 
         // A non-get producer (load(), container, background) may store into a
-        // key whose handle is 'failed' (e.g. an earlier get() 404'd). fill() →
+        // key whose handle is 'failed' (e.g. an earlier get() 404'd). fill() ->
         // settle() must run from a re-armed state so `.loaded` re-materializes a
         // resolved promise; without begin() the handle would read 'ready' while
         // its cached `.loaded` stayed permanently rejected. Skip a handle
@@ -1818,7 +1819,7 @@ export class AssetResidency {
    * Hard, claim-forgetting reset of the resident store. If `type` is provided,
    * only that type's assets are cleared; otherwise all types are flushed.
    * Does not cancel in-flight fetches - but forgets each key's claim/handle
-   * bookkeeping so repeated load→reset cycles cannot accumulate stale entries.
+   * bookkeeping so repeated load->reset cycles cannot accumulate stale entries.
    *
    * Deliberately NOT public on {@link Loader}: it discards every scope's claim,
    * so a caller could free assets another scope still owns. Scope-aware release

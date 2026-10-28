@@ -110,6 +110,11 @@ export class DynamicAabbTree<T> {
     return true;
   }
 
+  /**
+   * Remove a live leaf and return its slot to the pool. `proxy` must still be
+   * owned by the caller: removing the same proxy twice frees its slot twice,
+   * duplicating it on the free list and corrupting later reuse.
+   */
   public remove(proxy: number): void {
     this._removeLeaf(proxy);
     this._freeNode(proxy);

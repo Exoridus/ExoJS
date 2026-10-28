@@ -10,10 +10,10 @@ export interface RingModulatorEffectOptions {
    */
   frequency?: number;
   /**
-   * Carrier oscillator waveform shape. Default `'sine'`. Any
-   * `OscillatorType` is accepted (`'sine'`, `'square'`, `'sawtooth'`,
-   * `'triangle'`). Non-sine shapes introduce additional harmonic content into
-   * both sidebands.
+   * Carrier oscillator waveform shape. Default `'sine'`. One of `'sine'`,
+   * `'square'`, `'sawtooth'` or `'triangle'`; `'custom'` is not supported
+   * because no `PeriodicWave` is set. Non-sine shapes introduce additional
+   * harmonic content into both sidebands.
    */
   waveform?: OscillatorType;
   /**

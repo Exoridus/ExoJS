@@ -621,8 +621,9 @@ export class TileMap {
 
   /**
    * Monotonic map revision counter. Increments on structural changes only
-   * (add/remove layer, add tileset). Cell mutations are tracked per-chunk
-   * and per-layer; the renderer reads chunk-level revisions directly.
+   * (add/remove tile, image, or object layer; add tileset). Cell mutations
+   * are tracked per-chunk and per-layer; the renderer reads chunk-level
+   * revisions directly.
    * @advanced
    */
   public get revision(): number {
@@ -644,7 +645,7 @@ export class TileMap {
    * Destroy the map and all owned layers and chunk storage.
    *
    * Is idempotent. Does NOT destroy tileset textures (Loader-owned) or
-   * any SceneNodes (those do not exist yet in this slice).
+   * any SceneNodes (see {@link import('./TileMapNode').TileMapNode}).
    */
   public destroy(): void {
     if (this._destroyed) {

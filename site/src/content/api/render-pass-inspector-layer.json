@@ -1,6 +1,6 @@
 {
   "title": "RenderPassInspectorLayer",
-  "description": "Debug layer that lists every visible RenderNode in the scene tree with an attached filter chain, and optionally a RenderPipeline set with setPipeline. Renders a compact text panel with per-node rows showing the filter sequence, bounding-box dimensions, and mask/cache status. Use during development to answer: - \"Is my filter actually attached?\" - it appears in the list - \"Is this node configured to render through a cache?\" - `[cached]` flag The pass total counts the attached filters plus one per collected entry with a mask. It is a structural estimate, not a hardware-pass count or GPU timing: multi-step filters are not expanded, cached work is not subtracted, and mask-only nodes are not collected. The returned entries are reused on every update. For deep per-pass inspection (intermediate render-target contents, GLSL/WGSL source, uniform values), use Spector.js or Chrome DevTools' WebGPU panel. On WebGPU, draws with a custom mesh or sprite material carry debug-group labels, so those tools can tell them apart.",
+  "description": "Debug layer that lists every visible RenderNode in the scene tree with an attached filter chain, and optionally a RenderPipeline set with setPipeline. Renders a compact text panel with per-node rows showing the filter sequence, bounding-box dimensions, and mask/cache status. Use during development to answer: - \"Is my filter actually attached?\" - it appears in the list - \"Is this node configured to render through a cache?\" - `[cached]` flag The pass total counts the attached filters plus one per collected entry with a mask. It is a structural estimate, not a hardware-pass count or GPU timing: multi-step filters are not expanded, cached work is not subtracted, and mask-only nodes are not collected. The entry array is reused and refilled on every update. For deep per-pass inspection (intermediate render-target contents, GLSL/WGSL source, uniform values), use Spector.js or Chrome DevTools' WebGPU panel. On WebGPU, draws with a custom mesh or sprite material carry debug-group labels, so those tools can tell them apart.",
   "symbol": "RenderPassInspectorLayer",
   "kind": "class",
   "subsystem": "debug",
@@ -22,7 +22,7 @@
         "Debug layer that lists every visible RenderNode in the scene tree with an attached filter chain, and optionally a RenderPipeline set with setPipeline. Renders a compact text panel with per-node rows showing the filter sequence, bounding-box dimensions, and mask/cache status.",
         "Use during development to answer:",
         "- \"Is my filter actually attached?\" - it appears in the list - \"Is this node configured to render through a cache?\" - `[cached]` flag",
-        "The pass total counts the attached filters plus one per collected entry with a mask. It is a structural estimate, not a hardware-pass count or GPU timing: multi-step filters are not expanded, cached work is not subtracted, and mask-only nodes are not collected. The returned entries are reused on every update.",
+        "The pass total counts the attached filters plus one per collected entry with a mask. It is a structural estimate, not a hardware-pass count or GPU timing: multi-step filters are not expanded, cached work is not subtracted, and mask-only nodes are not collected. The entry array is reused and refilled on every update.",
         "For deep per-pass inspection (intermediate render-target contents, GLSL/WGSL source, uniform values), use Spector.js or Chrome DevTools' WebGPU panel. On WebGPU, draws with a custom mesh or sprite material carry debug-group labels, so those tools can tell them apart."
       ],
       "importLine": "import { RenderPassInspectorLayer } from '@codexo/exojs/debug'",
@@ -411,7 +411,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Read-only snapshot of the entries collected on the most recent update call. Useful for tests and for external tooling that wants to render its own visualisation rather than use the built-in panel."
+          "description": "The entries collected by the most recent update call, as a live array: the same instance is truncated and refilled on the next update, so copy it if it must outlive the current frame. Useful for tests and for external tooling that wants to render its own visualisation rather than use the built-in panel."
         },
         {
           "name": "pipeline",

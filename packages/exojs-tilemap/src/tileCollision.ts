@@ -103,7 +103,10 @@ export interface TileCollisionShape {
  * @advanced
  */
 export interface TileCollisionGeometry {
-  /** Merged whole-cell rectangles, in row-major order. */
+  /**
+   * Whole-cell rectangles: row-major when merging, otherwise in the order
+   * cells were claimed.
+   */
   readonly rects: readonly TileCollisionRect[];
   /** Non-whole-cell shapes, in the order their tiles were walked. */
   readonly shapes: readonly TileCollisionShape[];

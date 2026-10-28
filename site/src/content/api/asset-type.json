@@ -1,6 +1,6 @@
 {
   "title": "AssetType",
-  "description": "A first-class asset type: everything the loader needs to know about one kind of asset, in one value. An instance is an immutable descriptor. Installing it on an Application - by listing it in an Extension's `assets` - is what makes it loadable there, and only there: two applications in one process may have entirely different type sets. Installation calls createFactory once, so the mutable half of a type lives per application and is destroyed with it. The type owns four separable decisions, and no more: - what it is called (id) and which file suffixes name it (extensions); - when two requests are the same runtime resource (resourceIdentity); - when two requests acquire the same source data (sourceIdentity); - how a representation is read (codec), laid out in a cache (layout) and turned into a resource (createFactory); - what a catalog hands out before the payload arrives (leaf). Acquisition, caching and residency are the loader's, and the type is deliberately given no way to reach them.",
+  "description": "A first-class asset type: everything the loader needs to know about one kind of asset, in one value. An instance is an immutable descriptor. Installing it on an Application - by listing it in an Extension's `assets` - is what makes it loadable there, and only there: two applications in one process may have entirely different type sets. Installation calls createFactory once, so the mutable half of a type lives per application and is destroyed with it. The type owns five separable decisions, and no more: - what it is called (id) and which file suffixes name it (extensions); - when two requests are the same runtime resource (resourceIdentity); - when two requests acquire the same source data (sourceIdentity); - how a representation is read (codec), laid out in a cache (layout) and turned into a resource (createFactory); - what a catalog hands out before the payload arrives (leaf). Acquisition, caching and residency are the loader's, and the type is deliberately given no way to reach them.",
   "symbol": "AssetType",
   "kind": "class",
   "subsystem": "assets",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A first-class asset type: everything the loader needs to know about one kind of asset, in one value.",
         "An instance is an immutable descriptor. Installing it on an Application - by listing it in an Extension's `assets` - is what makes it loadable there, and only there: two applications in one process may have entirely different type sets. Installation calls createFactory once, so the mutable half of a type lives per application and is destroyed with it.",
-        "The type owns four separable decisions, and no more:",
+        "The type owns five separable decisions, and no more:",
         "- what it is called (id) and which file suffixes name it (extensions); - when two requests are the same runtime resource (resourceIdentity); - when two requests acquire the same source data (sourceIdentity); - how a representation is read (codec), laid out in a cache (layout) and turned into a resource (createFactory); - what a catalog hands out before the payload arrives (leaf).",
         "Acquisition, caching and residency are the loader's, and the type is deliberately given no way to reach them."
       ],

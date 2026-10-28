@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Delay time in seconds. Range 0..5, default 0.3."
         },
         {
           "name": "feedback",
@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Fraction of the delayed signal fed back into the delay input. Range 0..0.95, default 0.4."
         },
         {
           "name": "wet",
@@ -101,7 +101,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Dry/wet mix, 0..1. The dry level is automatically 1 - wet. Default 0.5."
         }
       ],
       "paragraphs": [],

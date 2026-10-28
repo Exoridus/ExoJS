@@ -2,6 +2,11 @@
 precision highp float;
 precision highp sampler2D;
 
+// u_content is the premultiplied drawable, u_mask the mask texture sampled for
+// its alpha only; both are sampled through per-texture flips selected by
+// u_textureFlipY.x (content) and .y (mask). The mask alpha scales ALL FOUR
+// components - RGB is premultiplied, so leaving it unscaled would divide the
+// colour by the reduced alpha on the way out.
 uniform sampler2D u_content;
 uniform sampler2D u_mask;
 uniform vec2 u_textureFlipY;

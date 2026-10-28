@@ -841,7 +841,7 @@ export class TileLayer {
 
   /**
    * Total number of non-empty tiles across all chunks.
-   * Walk is cheap for dense layers; sparse layers benefit from empty-chunk fast path.
+   * O(total cells in all loaded chunks); empty chunks are not skipped.
    * @advanced
    */
   public countNonEmptyTiles(): number {

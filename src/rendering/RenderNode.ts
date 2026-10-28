@@ -205,7 +205,7 @@ export abstract class RenderNode extends SceneNode {
    * - `clipShape` is a `Rectangle` - clip to that world-space rectangle via
    *   scissor.
    * - `clipShape` is a `Geometry` - clip to the geometry's silhouette via the
-   *   stencil buffer (WebGL2). Only fragments inside the shape survive.
+   *   stencil buffer on both backends. Only fragments inside the shape survive.
    *
    * Clipping wraps the node's final (filtered/masked) output and acts as a
    * render barrier: draw commands are never reordered or batched across the

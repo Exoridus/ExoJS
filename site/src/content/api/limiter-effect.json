@@ -344,7 +344,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Input-to-output dB ratio above the threshold. Range 1..20, default 20 (brick-wall). Lower for a softer, more compressor-like limiter. Changes are ramped smoothly via setTargetAtTime."
+          "description": "Input-to-output dB ratio above the threshold. Range 1..20, default 20, the hardest curve the node exposes. Lower for a softer, more compressor-like limiter. Changes are ramped smoothly via setTargetAtTime."
         },
         {
           "name": "ready",

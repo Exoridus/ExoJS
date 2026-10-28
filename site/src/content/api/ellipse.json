@@ -1,6 +1,6 @@
 {
   "title": "Ellipse",
-  "description": "Mutable axis-aligned ellipse shape defined by a centre position and separate horizontal (`rx`) and vertical (`ry`) half-radii. Implements Collidable for use in the intersection pipeline. `collidesWith` supports: SceneNode (AABB), Rectangle, Circle, Polygon, and Ellipse. Ellipse-vs-Line always returns `null` - use `intersectsWith`.",
+  "description": "Mutable axis-aligned ellipse shape defined by a centre position and separate horizontal (`rx`) and vertical (`ry`) half-radii. Implements Collidable for use in the intersection pipeline. `collidesWith` supports: SceneNode (AABB), Rectangle, Circle, Polygon, and Ellipse. Point and Line targets always return `null` - use `intersectsWith`.",
   "symbol": "Ellipse",
   "kind": "class",
   "subsystem": "math",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Mutable axis-aligned ellipse shape defined by a centre position and separate horizontal (`rx`) and vertical (`ry`) half-radii. Implements Collidable for use in the intersection pipeline.",
-        "`collidesWith` supports: SceneNode (AABB), Rectangle, Circle, Polygon, and Ellipse. Ellipse-vs-Line always returns `null` - use `intersectsWith`."
+        "`collidesWith` supports: SceneNode (AABB), Rectangle, Circle, Polygon, and Ellipse. Point and Line targets always return `null` - use `intersectsWith`."
       ],
       "importLine": "import { Ellipse } from '@codexo/exojs'",
       "sourceLink": null

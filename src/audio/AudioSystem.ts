@@ -155,8 +155,9 @@ export class AudioSystem {
   public readonly sound: AudioBus;
   public readonly listener: AudioListener;
   /**
-   * Tunable smoothing applied to per-frame panner/listener position updates,
-   * shared by the {@link AudioListener} and every spatial voice. Adjust
+   * Tunable smoothing applied to per-frame panner position updates on every
+   * spatial voice, in the same settings object the {@link AudioListener} reads
+   * its Doppler tuning from. Adjust
    * `smoothing` (the `setTargetAtTime` time constant) or `teleportThreshold`
    * (the snap-instead-of-ramp jump distance) to trade responsiveness against
    * zipper-noise suppression (AU4). Reachable as `app.audio.spatial`.

@@ -139,8 +139,9 @@ export class SerializationRegistry {
 
 /**
  * Process-wide default registry. Core node serializers register here lazily on
- * first use; extension serializers are materialised here at Application
- * construction.
+ * first use. Extension serializers are not registered here: each Application
+ * materialises them into its own chained registry at construction, so they stay
+ * isolated per application and resolve through this registry as the fallback.
  */
 export const defaultSerializationRegistry = new SerializationRegistry();
 

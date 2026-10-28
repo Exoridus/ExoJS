@@ -1,7 +1,7 @@
 /**
  * Timer-methodology probe for the WebGPU benchmark frame-time metric.
  *
- * `stallProbe.ts` answers "what does the engine do on this frame". This probe
+ * A stall probe answers "what does the engine do on this frame". This probe
  * answers a different question: "what does the harness's WebGPU frame-time
  * SAMPLE actually measure". It therefore records the full event timeline of a
  * timed frame -
@@ -24,8 +24,8 @@
  * timestamps are injected by wrapping the live `GPUDevice`'s
  * `createCommandEncoder`/`beginRenderPass`/`finish`, and the `timestamp-query`
  * feature is obtained by wrapping `GPUAdapter.prototype.requestDevice` before the
- * engine asks for its device. The same prototype-patching technique the stall
- * stall probe uses.
+ * engine asks for its device. The same prototype-patching technique a stall
+ * probe uses.
  *
  * @internal Test/perf-only.
  */
@@ -162,7 +162,7 @@ export interface TimerFrameRecord {
 export interface TimerControlResult {
   /** Smallest non-zero `performance.now()` delta observed in a tight loop (ms). */
   readonly nowMinDeltaMs: number;
-  /** Distinct `performance.now()` deltas observed, most frequent first, as `[deltaMs, count]`. */
+  /** Up to eight most frequent `performance.now()` deltas, most frequent first, as `[deltaMs, count]`. */
   readonly nowDeltaHistogram: ReadonlyArray<readonly [number, number]>;
   /** Whether the page is cross-origin isolated (which lifts Chromium's 100µs clock clamp). */
   readonly crossOriginIsolated: boolean;

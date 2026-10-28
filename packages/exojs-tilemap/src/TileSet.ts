@@ -339,8 +339,9 @@ export class TileSet {
   }
 
   /**
-   * Read-only snapshot of all per-tile definitions.
-   * The returned record is a caller-owned copy.
+   * Read-only snapshot of each defined tile's properties, keyed by local tile
+   * id. Ids without a definition are absent. The returned record is frozen;
+   * the property bags it references are the tileset's frozen ones.
    * @advanced
    */
   public get allDefinitions(): Readonly<Record<number, TileProperties | undefined>> {

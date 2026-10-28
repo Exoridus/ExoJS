@@ -134,9 +134,11 @@ export const deriveBindKey = (
  * Stable material identity used for safe draw-command grouping and
  * eventual instanced batching.
  *
- * - {@link pipelineKey} drives pipeline/program reuse: identical key ⇒
- *   identical GPU pipeline state (shader + blend). Two draws
- *   with the same pipeline key can be issued with a single pipeline bind.
+ * - {@link pipelineKey} drives pipeline/program reuse for the material's own
+ *   shader and blend state. A drawable-level `blendMode` override is not part
+ *   of the key: it is a renderer-owned flush boundary recorded in
+ *   {@link MaterialKey.blendMode}, so two keys sharing a pipelineKey can still
+ *   need separate pipeline binds.
  * - {@link bindKey} drives texture/sampler-bind reuse: identical key ⇒
  *   identical bindings. Two draws with the same bind key can share a bind
  *   group / texture-slot state.

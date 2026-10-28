@@ -1,6 +1,6 @@
 {
   "title": "AssetLeaf",
-  "description": "What an asset type hands out for one of its assets inside a catalog, before the payload has arrived. `'ref'` hands out a deferred AssetRef that resolves once the load settles - the right shape for a decoded value nobody can render early. A SeamlessAdapter hands out the resource itself, empty, and transplants the payload into that same object when it arrives, so consumers wired to it need no re-wiring. `'none'` declares that the type has no meaningful placeholder at all. Its assets cannot appear in a catalog by bare path and must be named explicitly with AssetType.asset.",
+  "description": "What an asset type hands out for one of its assets inside a catalog, before the payload has arrived. `'ref'` hands out a deferred AssetRef that resolves once the load settles - the right shape for a decoded value nobody can render early. A SeamlessAdapter hands out the resource itself, empty, and transplants the payload into that same object when it arrives, so consumers wired to it need no re-wiring. `'none'` declares that the type has no meaningful placeholder at all. Its assets cannot be held by a catalog under any name, and are loaded directly through the descriptor AssetType.asset produces.",
   "symbol": "AssetLeaf",
   "kind": "type",
   "subsystem": "assets",
@@ -22,7 +22,7 @@
         "What an asset type hands out for one of its assets inside a catalog, before the payload has arrived.",
         "`'ref'` hands out a deferred AssetRef that resolves once the load settles - the right shape for a decoded value nobody can render early.",
         "A SeamlessAdapter hands out the resource itself, empty, and transplants the payload into that same object when it arrives, so consumers wired to it need no re-wiring.",
-        "`'none'` declares that the type has no meaningful placeholder at all. Its assets cannot appear in a catalog by bare path and must be named explicitly with AssetType.asset."
+        "`'none'` declares that the type has no meaningful placeholder at all. Its assets cannot be held by a catalog under any name, and are loaded directly through the descriptor AssetType.asset produces."
       ],
       "importLine": "import { AssetLeaf } from '@codexo/exojs'",
       "sourceLink": null

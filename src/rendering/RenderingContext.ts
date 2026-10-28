@@ -277,15 +277,6 @@ export class RenderingContext implements DrawContext {
   }
 
   /**
-   * Renders `node` into an off-screen {@link RenderTexture} and returns it.
-   *
-   * The View is centered at `(width / 2, height / 2)` so that the origin
-   * of the node's local space sits at the center of the render texture.
-   *
-   * Saves and restores the active render target and view so the caller's
-   * rendering state is undisturbed.
-   */
-  /**
    * Whether a {@link RenderTexture} of the given color format can be rendered
    * into on the active backend. `'rgba8'` is always supported; the float formats
    * (`'rgba16f'` / `'rgba32f'`) require hardware/extension support (WebGL2

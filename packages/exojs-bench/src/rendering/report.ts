@@ -18,8 +18,10 @@ const FRAME_BUDGET_NODE_THRESHOLD = 100_000;
 const UNTRUSTED_MARK = 'UNTRUSTED (software rasterizer)';
 
 /**
- * A cell is `hitching` when its p95 CPU time towers over its median AND lands
- * above an interactive frame budget.
+ * A cell is `hitching` when its p95 CPU time towers over its median AND clears
+ * the absolute `HITCH_FLOOR_MS` floor of 8ms - half a 60fps frame, not a full
+ * frame budget: the test never reads `frameMs`, so a cell can be marked while
+ * its reported frame time is still inside an interactive budget.
  *
  * Both halves are needed. The ratio alone fires on a cell that is fast
  * throughout (0.1ms median, 0.5ms p95 is a scheduling blip, not a hitch); the

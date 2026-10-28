@@ -12,7 +12,7 @@ import { ThemedContainer } from './ThemedContainer';
  * The UI layer is composed after scene transitions and frame effects, before
  * the output transform, also when `Scene.draw()` is overridden. It uses the
  * {@link RenderingContext.screenView}, so its children live in screen space
- * (origin top-left, `0..width` × `0..height`) and never scroll with the
+ * (origin top-left, `0..width` x `0..height`) and never scroll with the
  * camera. Pointer hit-testing and keyboard focus are routed to UI nodes in that
  * same screen space, ahead of the world layer.
  *

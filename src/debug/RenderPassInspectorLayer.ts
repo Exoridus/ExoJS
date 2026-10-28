@@ -74,8 +74,8 @@ export interface RenderPipelineRow {
  * The pass total counts the attached filters plus one per collected entry with
  * a mask. It is a structural estimate, not a hardware-pass count or GPU timing:
  * multi-step filters are not expanded, cached work is not subtracted, and
- * mask-only nodes are not collected. The returned entries are reused on every
- * update.
+ * mask-only nodes are not collected. The entry array is reused and refilled on
+ * every update.
  *
  * For deep per-pass inspection (intermediate render-target contents, GLSL/WGSL
  * source, uniform values), use Spector.js or Chrome DevTools' WebGPU panel.
@@ -160,10 +160,11 @@ export class RenderPassInspectorLayer extends DebugLayer {
   }
 
   /**
-   * Read-only snapshot of the entries collected on the most recent
-   * {@link update} call. Useful for tests and for external tooling that
-   * wants to render its own visualisation rather than use the built-in
-   * panel.
+   * The entries collected by the most recent {@link update} call, as a live
+   * array: the same instance is truncated and refilled on the next update, so
+   * copy it if it must outlive the current frame. Useful for tests and for
+   * external tooling that wants to render its own visualisation rather than
+   * use the built-in panel.
    */
   public get entries(): readonly RenderPassInspectorEntry[] {
     return this._entries;

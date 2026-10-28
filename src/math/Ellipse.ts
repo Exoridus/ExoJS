@@ -28,7 +28,8 @@ import { Vector } from './Vector';
  * {@link Collidable} for use in the intersection pipeline.
  *
  * `collidesWith` supports: SceneNode (AABB), Rectangle, Circle, Polygon, and
- * Ellipse. Ellipse-vs-Line always returns `null` - use `intersectsWith`.
+ * Ellipse. Point and Line targets always return `null` - use
+ * `intersectsWith`.
  */
 export class Ellipse implements ShapeLike {
   public readonly collisionType: CollisionType = CollisionType.Ellipse;

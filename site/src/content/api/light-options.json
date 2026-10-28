@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Light colour. Alpha is ignored. Defaults to opaque white."
+          "description": "Light colour. Alpha is ignored. Defaults to opaque white. A Color passed here is stored, not copied, so mutating it later changes this light."
         },
         {
           "name": "cookie",

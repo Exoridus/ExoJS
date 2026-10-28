@@ -184,7 +184,7 @@ const devLastRegistry: WeakMap<System, WeakRef<SystemRegistry>> | null = __DEV__
  * Phase-dispatching registry of {@link System}s, shared by `Scene` (as
  * `scene.systems`) and `Application` (as `app.systems`). Each system
  * participates only in the scheduler phases it implements
- * (`preFrame`/`fixedUpdate`/`update`/`draw`); within a phase, systems run in ascending
+ * (`preFrame`/`fixedUpdate`/`update`/`draw`/`postFrame`); within a phase, systems run in ascending
  * `order` (ties keep registration order) and are destroyed in reverse
  * registration order when the registry is destroyed.
  *

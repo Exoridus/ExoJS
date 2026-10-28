@@ -852,9 +852,9 @@ export class Loader {
   /**
    * Claimed variant of {@link load}: identical logic, but every resolved key is
    * claimed under `claimer` (refcount). The public {@link load} delegates here
-   * under the app-lifetime {@link _rootClaimer}; the scene-scoped loader proxy
-   * passes its own scope. Claiming under `_rootClaimer` (which only `release()`
-   * frees) is observationally a no-op for existing callers.
+   * under the app-lifetime {@link _appScope}; the scene-scoped loader proxy
+   * passes its own scope. Claiming under `_appScope` (whose claims only
+   * {@link destroy} frees) is observationally a no-op for existing callers.
    * @internal
    */
   public _loadClaimed(claimer: LoaderScope, arg0: unknown, arg1?: unknown): LoadingQueue<unknown> {
@@ -1103,7 +1103,7 @@ export class Loader {
   /**
    * Claimed variant of {@link get}: identical resolution, but each resolved key
    * is claimed under `claimer` (refcount). The public {@link get} delegates here
-   * under the app-lifetime {@link _rootClaimer}; the scene-scoped loader proxy
+   * under the app-lifetime {@link _appScope}; the scene-scoped loader proxy
    * passes its own scope. `_claim` runs AFTER `AssetResidency._getSeamless`/
    * `_getRef` so an evicted key's re-fetch is driven from here (the re-armed
    * handle reads `'loading'`, which `_getSeamless` alone would not re-fetch).

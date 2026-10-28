@@ -14,9 +14,9 @@ import maskSuperblocksFragment from './shaders/mask-superblocks.frag';
 import maskSuperblocksWgsl from './shaders/mask-superblocks.wgsl';
 
 /**
- * Mask texels one block covers, on each axis. The transport chunk walks blocks
- * of this size and both halves of it repeat the number, so a change here is a
- * change in three places.
+ * Mask texels one block covers, on each axis. The transport walk and the two
+ * mask reductions repeat the number in both GLSL and WGSL, so a change here is
+ * a change in five places.
  * @internal
  */
 export const MASK_COARSE = 8;

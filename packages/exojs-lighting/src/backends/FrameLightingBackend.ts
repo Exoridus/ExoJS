@@ -56,7 +56,6 @@ import sunQuadWgsl from './shaders/sun-quad.wgsl';
 import { ShadowMarchFiller } from './shadowMarch';
 import { removeStaleShadowRows, ShadowGeometryRevision, type ShadowRowState, type SunShadowRowState } from './shadowRows';
 
-/** Cone cosine that no direction can fail, which is how a point light says "no cone". */
 /**
  * The composite that multiplies the frame by the light: one instanced quad,
  * told the debug exposure and nothing else.
@@ -68,6 +67,7 @@ export const lightCompositeShader = new Shader({
   wgsl: `${INSTANCE_TRANSFORM_WGSL}\n${lightCompositeWgsl}`,
 });
 
+/** Cone cosine that no direction can fail, which is how a point light says "no cone". */
 const noCone = -1;
 /** Shadow row a light without occluders in reach carries: the shader reads it as "nothing blocks". */
 const noShadow = -1;
@@ -228,8 +228,8 @@ export abstract class FrameLightingBackend implements LightingBackend {
    * field's own resolution and size, so a fragment's position in one is its
    * position in the other.
    *
-   * Parked at one texel and switched off unless something reads it. Nothing
-   * marches it yet - the `mask` debug view is its only consumer - and a pass
+   * Parked at one texel and switched off unless something reads it - the
+   * `mask` debug view, the shadow march, or the cascade chain - and a pass
    * that runs for nobody is the defect `post` shipped with once already.
    */
   protected readonly _maskTarget: RenderTexture;
