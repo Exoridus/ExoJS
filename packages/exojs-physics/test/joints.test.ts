@@ -30,6 +30,42 @@ const advance = (world: PhysicsWorld, seconds: number): void => {
 };
 
 describe('joints', () => {
+  it.each([
+    ['hertz', 0],
+    ['hertz', -1],
+    ['hertz', NaN],
+    ['hertz', Infinity],
+    ['dampingRatio', -1],
+    ['dampingRatio', NaN],
+    ['dampingRatio', Infinity],
+    ['maxForce', 0],
+    ['maxForce', -1],
+    ['maxForce', NaN],
+  ] as const)('rejects invalid MouseJoint %s=%s before simulation or mutation', (property, value) => {
+    const body = new PhysicsBody({ colliders: [{ shape: new BoxShape(16, 16) }] });
+    const joint = new MouseJoint({ body, target: { x: 0, y: 0 } });
+    const previous = joint[property];
+
+    expect(() => new MouseJoint({ body, target: { x: 0, y: 0 }, [property]: value })).toThrow(RangeError);
+    expect(() => {
+      joint[property] = value;
+    }).toThrow(RangeError);
+    expect(joint[property]).toBe(previous);
+  });
+
+  it('allows an undamped MouseJoint spring without producing nonfinite body state', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const body = world.add(new PhysicsBody({ colliders: [{ shape: new BoxShape(16, 16) }] }));
+    const joint = world.addJoint(new MouseJoint({ body, target: { x: 0, y: 0 }, hertz: 5, dampingRatio: 0 }));
+
+    joint.target = { x: 100, y: 0 };
+    advance(world, 1);
+
+    expect([body.x, body.y, body.linearVelocityX, body.linearVelocityY, body.angularVelocity].every(Number.isFinite)).toBe(true);
+    expect(body.x).toBeGreaterThan(0);
+    world.destroy();
+  });
+
   it('a distance joint holds a hanging body at the rest length', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));

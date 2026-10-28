@@ -30,7 +30,7 @@ export interface SweptHit {
  * occurs (0 = already overlapping at start, 1 = just barely reaches).
  *
  * Already-overlapping case (tEntry < 0 overall): returns `t = 0` with the
- * normal of the deepest-penetration axis, allowing callers to handle the
+ * normal along the shortest separating translation, allowing callers to handle the
  * "I'm already inside" situation without a separate discrete test.
  */
 export const sweepRectangle = (moving: Rectangle, deltaX: number, deltaY: number, target: Rectangle): SweptHit | null => {
@@ -87,19 +87,22 @@ export const sweepRectangle = (moving: Rectangle, deltaX: number, deltaY: number
   const hitY = moving.y + deltaY * t;
 
   // Normal is on the axis whose slab entry was latest.
-  // Already-overlapping: use the deepest-penetration axis normal.
+  // Already-overlapping: use the shortest separating translation.
   let normalX = 0;
   let normalY = 0;
 
   if (tEntry <= 0) {
-    // Already overlapping - pick the axis with least penetration
-    const overlapX = Math.min(movMaxX - tarMinX, tarMaxX - movMinX);
-    const overlapY = Math.min(movMaxY - tarMinY, tarMaxY - movMinY);
+    const exitLeft = movMaxX - tarMinX;
+    const exitRight = tarMaxX - movMinX;
+    const exitTop = movMaxY - tarMinY;
+    const exitBottom = tarMaxY - movMinY;
+    const overlapX = Math.min(exitLeft, exitRight);
+    const overlapY = Math.min(exitTop, exitBottom);
 
     if (overlapX < overlapY) {
-      normalX = movMinX < tarMinX ? -1 : 1;
+      normalX = exitLeft < exitRight ? -1 : 1;
     } else {
-      normalY = movMinY < tarMinY ? -1 : 1;
+      normalY = exitTop < exitBottom ? -1 : 1;
     }
   } else if (tEntryX > tEntryY) {
     // X axis had the latest entry

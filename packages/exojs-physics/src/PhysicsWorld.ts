@@ -12,6 +12,7 @@ import type { SweepHit } from './collision/sweep';
 import { canSweep, sweepProxies } from './collision/sweep';
 import { bodyPairKey, type ContactRecord } from './ContactGraph';
 import type { ContactModifier } from './ContactModifier';
+import { dispatchContactEvents } from './dispatchContactEvents';
 import type { CollisionEvent, SensorEvent } from './events';
 import { type Joint, softConstraint } from './joints/Joint';
 import type { BodyOwner } from './PhysicsBody';
@@ -48,6 +49,12 @@ const clampAlpha = (alpha: number): number => {
   }
 
   return alpha < 1 ? alpha : 1;
+};
+
+const assertDestructionOwner = (body: PhysicsBody, owner: BodyOwner): void => {
+  if (body._isForeignTo(owner)) {
+    throw new Error('PhysicsWorld: cannot destroy a body or collider owned by another world.');
+  }
 };
 
 /**
@@ -591,6 +598,7 @@ export class PhysicsWorld implements BodyOwner {
    * Convenience: create a body carrying a single collider, add it to the world
    * and bind it to `node` in one call. The node tracks `body.position` after each
    * step. Returns the body. Equivalent to `new PhysicsBody(...)` + `add` + `bind`.
+   * If binding fails, the newly created body and collider are destroyed with the usual callback deferral.
    *
    * When `options.position`/`options.angle` are omitted, the body starts at
    * `node`'s current WORLD position/rotation (via `getWorldTransform()`,
@@ -620,7 +628,14 @@ export class PhysicsWorld implements BodyOwner {
     });
 
     this.add(body);
-    this.bind(body, node);
+
+    try {
+      this.bind(body, node);
+    } catch (error) {
+      this.destroyBody(body);
+
+      throw error;
+    }
 
     return body;
   }
@@ -678,8 +693,11 @@ export class PhysicsWorld implements BodyOwner {
    * Destroy a body and its colliders. Every dynamic body touching it is woken,
    * so anything that was resting on the destroyed body falls once its support is
    * gone. Deferred when called inside a callback.
+   * Rejects bodies owned by another world before changing either world.
    */
   public destroyBody(body: PhysicsBody): void {
+    assertDestructionOwner(body, this);
+
     this._pendingBodyRemovals.delete(body);
     this._defer(() => this._removeBody(body));
   }
@@ -688,8 +706,11 @@ export class PhysicsWorld implements BodyOwner {
    * Destroy a single collider, recomputing its body's mass. Wakes every dynamic
    * body touching it, the same way {@link destroyBody} does. Deferred when
    * called inside a callback.
+   * Rejects colliders owned by another world before changing either world.
    */
   public destroyCollider(collider: Collider): void {
+    assertDestructionOwner(collider.body, this);
+
     // Checked here rather than in the deferred removal so the error surfaces at
     // the call site that caused it, not out of the middle of a `step()`.
     assertBodyKeepsItsMass(collider, this._pendingColliderRemovals);
@@ -1323,39 +1344,13 @@ export class PhysicsWorld implements BodyOwner {
   }
 
   private _dispatchEvents(): void {
-    const graph = this._backend.contactGraph;
-
     this._dispatching = true;
 
-    // Pairs ended by a removal since the last dispatch go first, so an end
-    // always precedes a new start of the same pair.
-    for (const event of graph.removalCollisionEnd) {
-      this.onCollisionEnd.dispatch(event);
+    try {
+      dispatchContactEvents(this._backend.contactGraph, this);
+    } finally {
+      this._dispatching = false;
     }
-
-    for (const event of graph.removalSensorExit) {
-      this.onSensorExit.dispatch(event);
-    }
-
-    graph.clearRemovalEnds();
-
-    for (const event of graph.collisionEnd) {
-      this.onCollisionEnd.dispatch(event);
-    }
-
-    for (const event of graph.sensorExit) {
-      this.onSensorExit.dispatch(event);
-    }
-
-    for (const event of graph.collisionStart) {
-      this.onCollisionStart.dispatch(event);
-    }
-
-    for (const event of graph.sensorEnter) {
-      this.onSensorEnter.dispatch(event);
-    }
-
-    this._dispatching = false;
   }
 
   /**
@@ -1795,6 +1790,8 @@ export class PhysicsWorld implements BodyOwner {
   }
 
   private _removeBody(body: PhysicsBody): void {
+    assertDestructionOwner(body, this);
+
     const index = this._bodies.indexOf(body);
 
     if (index === -1) {
@@ -1859,6 +1856,8 @@ export class PhysicsWorld implements BodyOwner {
   }
 
   private _removeCollider(collider: Collider): void {
+    assertDestructionOwner(collider.body, this);
+
     this._detachCollider(collider);
     this._backend.contactGraph.sealRemovalEnds();
     collider.body._removeCollider(collider);

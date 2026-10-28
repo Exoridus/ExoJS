@@ -35,6 +35,41 @@ const fakeNode = (): FakeNode => ({
 });
 
 describe('PhysicsWorld lifecycle and mass model', () => {
+  it('rolls back the newly created body when attach rejects a skewed node', () => {
+    const world = new PhysicsWorld();
+    const node = fakeNode();
+
+    node.skewX = 1;
+
+    expect(() => world.attach(node as unknown as SceneNode, { shape: new BoxShape(16, 16) })).toThrow(/skew/i);
+    expect(world.bodies).toHaveLength(0);
+    expect(world.colliders).toHaveLength(0);
+    expect(world.queryPoint({ x: 0, y: 0 })).toHaveLength(0);
+
+    world.destroy();
+  });
+
+  it('rolls back a queued failed attach when its collision callback aborts the step', () => {
+    const world = new PhysicsWorld();
+    const node = fakeNode();
+
+    node.skewX = 1;
+    colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 });
+    world.add(new PhysicsBody({ type: 'kinematic', position: { x: 8, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
+    world.onCollisionStart.once(() => {
+      world.attach(node as unknown as SceneNode, { shape: new BoxShape(16, 16) });
+    });
+
+    expect(() => world.step(1 / 60)).toThrow(/skew/i);
+    expect(world.bodies).toHaveLength(2);
+    expect(world.colliders).toHaveLength(2);
+    world.step(1 / 60);
+    expect(world.bodies).toHaveLength(2);
+    expect(world.colliders).toHaveLength(2);
+
+    world.destroy();
+  });
+
   it('adds a freely-constructed static body carrying a collider', () => {
     const world = new PhysicsWorld();
     const collider = new Collider({ shape: new BoxShape(800, 32) });

@@ -96,6 +96,22 @@ describe('sweepRectangle', () => {
     expect(hit!.t).toBe(0);
   });
 
+  test.each([
+    [1, 8, 4, 4, -1, 0],
+    [15, 8, 4, 4, 1, 0],
+    [8, 1, 4, 4, 0, -1],
+    [8, 15, 4, 4, 0, 1],
+    [-2, 8, 4, 4, -1, 0],
+    [18, 8, 4, 4, 1, 0],
+  ])('initial overlap at (%s, %s) chooses the nearest separating face', (x, y, width, height, normalX, normalY) => {
+    const hit = sweepRectangle(rect(x, y, width, height), 0, 0, rect(0, 0, 20, 20));
+
+    expect(hit).not.toBeNull();
+    expect(hit!.t).toBe(0);
+    expect(hit!.normalX).toBe(normalX);
+    expect(hit!.normalY).toBe(normalY);
+  });
+
   test('zero delta not overlapping → null', () => {
     const moving = rect(0, 0, 10, 10);
     const target = rect(50, 50, 10, 10);
