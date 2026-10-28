@@ -141,13 +141,21 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
       throw new InputBindingError('SequenceAction: a serialized sequence binding must be an array of steps.');
     }
 
-    return (data.binding as readonly unknown[]).map(step => {
+    const binding = (data.binding as readonly unknown[]).map(step => {
       if (!Array.isArray(step)) {
         throw new InputBindingError('SequenceAction: every serialized step must be an array of alternatives.');
       }
 
       return (step as readonly unknown[]).map(alternative => channelsFromTokens(alternative, 'a sequence alternative'));
     });
+
+    try {
+      normalizeSequence(binding, 'SequenceAction');
+    } catch (error) {
+      throw new InputBindingError((error as Error).message);
+    }
+
+    return binding;
   }
 
   protected override _resolve(binding: SequenceBinding, slot: GamepadSlot): void {

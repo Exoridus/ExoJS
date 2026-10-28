@@ -113,7 +113,15 @@ export class ChordAction<const Binding extends ChordBinding = ChordBinding> exte
       throw new InputBindingError('ChordAction: a serialized chord binding must be an array of alternatives.');
     }
 
-    return (data.binding as readonly unknown[]).map(alternative => channelsFromTokens(alternative, 'a chord alternative'));
+    const binding = (data.binding as readonly unknown[]).map(alternative => channelsFromTokens(alternative, 'a chord alternative'));
+
+    try {
+      normalizeSequence([binding], 'ChordAction');
+    } catch (error) {
+      throw new InputBindingError((error as Error).message);
+    }
+
+    return binding;
   }
 
   protected override _resolve(binding: ChordBinding, slot: GamepadSlot): void {

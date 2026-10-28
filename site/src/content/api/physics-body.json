@@ -137,7 +137,7 @@
             }
           ],
           "returnType": "Collider",
-          "description": "Attach a collider to this body. Accepts a Collider instance or its ColliderOptions (a convenience that constructs the collider for you). When the body is already in a world, the collider is id-allocated, registered, the mass model is recomputed and the world geometry synchronised immediately; on a free-standing body the collider is simply held until world.add(). Returns the collider."
+          "description": "Attach a collider to this body. Accepts a Collider instance or its ColliderOptions (a convenience that constructs the collider for you). When the body is already in a world, the collider is id-allocated, registered, the mass model is recomputed and the world geometry synchronised immediately; on a free-standing body the collider is simply held until world.add(). A collider is reserved by one body even before it joins a world. Throws if the collider already belongs to a body or has been destroyed. Returns the collider."
         },
         {
           "name": "applyForce",

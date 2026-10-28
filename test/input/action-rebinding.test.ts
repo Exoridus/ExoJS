@@ -434,3 +434,40 @@ describe('conflict detection', () => {
     expect(map.conflicts()).toEqual([{ token: 'keyboard.key-a', channel: Keyboard.A, actions: ['steer', 'save'] }]);
   });
 });
+
+describe('structurally invalid profiles', () => {
+  test.each([
+    { kind: 'chord' as const, binding: [] },
+    { kind: 'chord' as const, binding: [[]] },
+    { kind: 'chord' as const, binding: [['keyboard.key-a', 'keyboard.key-a']] },
+    { kind: 'sequence' as const, binding: [] },
+    { kind: 'sequence' as const, binding: [[]] },
+    { kind: 'sequence' as const, binding: [[[]]] },
+    { kind: 'sequence' as const, binding: [[['keyboard.key-a', 'keyboard.key-a']]] },
+  ])('rejects $kind $binding before touching bindings or sampled state', binding => {
+    const driver = createDriver();
+    const map = new ActionMap({
+      jump: new ButtonAction(Keyboard.Space),
+      pattern: binding.kind === 'chord' ? new ChordAction('Control+S') : new SequenceAction('A>B'),
+    });
+    map.rebind('jump', Keyboard.K);
+    driver.set(Keyboard.K, 1);
+    map._update(driver.sample);
+    const before = map.serializeBindings();
+    const channels = map.jump.channels;
+    const descriptor = map.jump.binding;
+    const patternDescriptor = map.pattern.binding;
+    const profile = new BindingProfile().set('jump', { kind: 'button', binding: ['keyboard.key-j'] }).set('pattern', binding);
+
+    expect(() => map.applyProfile(profile)).toThrow(InputBindingError);
+    expect(map.serializeBindings()).toEqual(before);
+    expect(map.jump.channels).toBe(channels);
+    expect(map.jump.binding).toBe(descriptor);
+    expect(map.pattern.binding).toBe(patternDescriptor);
+    expect(map.jump.active).toBe(true);
+    driver.frame();
+    driver.set(Keyboard.K, 0);
+    map._update(driver.sample);
+    expect(map.jump.released).toBe(true);
+  });
+});
