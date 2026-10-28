@@ -1,5 +1,7 @@
 import { Color } from '#core/Color';
+import { Component } from '#core/Component';
 import { logger } from '#core/Logger';
+import { detachedNodeDirtyIndex, DirtyChannel, NodeDirtyIndex } from '#core/nodeDirtyIndex';
 import type { Stage } from '#core/Stage';
 import type { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
@@ -55,6 +57,107 @@ const armRecording = (group: RetainedContainer, backend: RenderBackend): void =>
 };
 
 describe('RetainedContainer: transform-row patch seam', () => {
+  test.each(['normal', 'throwing', 'reentrant'])('destroying an attached group preserves the other consumer (%s child)', teardown => {
+    const dirtyIndex = new NodeDirtyIndex();
+    const root = new Container();
+    const discarded = new RetainedContainer();
+    const surviving = new RetainedContainer();
+    const child = new LeafDrawable('surviving');
+    const detachedRelease = vi.spyOn(detachedNodeDirtyIndex, 'releaseConsumer');
+    const detachedRetain = vi.spyOn(detachedNodeDirtyIndex, 'retainConsumer');
+
+    surviving.addChild(child);
+    root.addChild(discarded, surviving);
+    root._setStage({
+      dirtyIndex,
+      interaction: {
+        _notifyNodeAdded() {},
+        _notifyNodeRemoved() {},
+        _notifyBoundsInvalidated() {},
+        _notifyInteractiveChanged() {},
+        _notifyTransformGroupMoved() {},
+      },
+      focus: { _notifyNodeRemoved() {} },
+    } as unknown as Stage);
+
+    if (teardown !== 'normal') {
+      class Teardown extends Component {
+        protected override onDestroy(): void {
+          if (teardown === 'reentrant') {
+            discarded.destroy();
+          } else {
+            throw new Error('child teardown failed');
+          }
+        }
+      }
+
+      const childWithTeardown = new LeafDrawable('teardown');
+
+      childWithTeardown.addComponent(new Teardown());
+      discarded.addChild(childWithTeardown);
+    }
+
+    detachedRelease.mockClear();
+    detachedRetain.mockClear();
+
+    try {
+      if (teardown === 'throwing') {
+        expect(() => discarded.destroy()).toThrow('child teardown failed');
+      } else {
+        discarded.destroy();
+      }
+
+      discarded.destroy();
+
+      expect(dirtyIndex.armed).toBe(true);
+      expect(detachedRelease.mock.calls.length).toBe(detachedRetain.mock.calls.length);
+
+      fragmentOf(surviving).markTransformsSeen();
+      child.setPosition(7, 7);
+
+      expect(unseenOwnedMoves(surviving)).toEqual([child]);
+    } finally {
+      root.destroy();
+      detachedRelease.mockRestore();
+      detachedRetain.mockRestore();
+      dirtyIndex.reset();
+    }
+
+    expect(dirtyIndex.armed).toBe(false);
+  });
+
+  test('an expired transform cursor drops the baked recording before replay', () => {
+    const backend = createTestBackend();
+    const group = new RetainedContainer();
+    const child = new LeafDrawable('a');
+    const other = new LeafDrawable('other');
+
+    group.addChild(child);
+    collectDraws(group, backend);
+    armRecording(group, backend);
+
+    const fragment = fragmentOf(group);
+
+    fragment.markTransformsSeen();
+
+    for (let frame = 0; frame < 10; frame++) {
+      fragment.dirtyIndex.mark(other, DirtyChannel.Transform);
+      fragment.dirtyIndex.advance();
+    }
+
+    expect(fragment.transformMarksProvable).toBe(false);
+
+    child.setPosition(40, 40);
+    collectDraws(group, backend);
+
+    expect(fragment.instructions?.hasRecording).toBe(false);
+    expect(fragment.transformMarksProvable).toBe(true);
+
+    group.destroy();
+    other.destroy();
+    backend.destroy();
+  });
+
   test('a direct child move is a move this group owns', () => {
     const backend = createTestBackend();
     const group = new RetainedContainer();

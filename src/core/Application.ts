@@ -1214,6 +1214,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     try {
       await this.initializeBackend();
 
+      if (this._destroyPromise !== null) {
+        return this;
+      }
+
       if (this.options.hello) {
         hello({ backend: this._backendType });
       }
@@ -1242,6 +1246,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
       this._capabilities = await capabilitiesPromise;
 
+      if (this._destroyPromise !== null) {
+        return this;
+      }
+
       // Ahead of the initial navigation, so tooling is attached in time to see
       // the first scene load. Once per application: a later `start()` after a
       // `stop()` is a restart, not a second application.
@@ -1250,7 +1258,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         onAppInitialized.dispatch(this);
       }
 
-      if (target !== undefined) {
+      if (target !== undefined && this._destroyPromise === null) {
         // `target`'s implementation-level type is a union (registered key
         // OR constructor) - TS overload resolution does not distribute
         // over a union-typed argument, so the cast picks the constructor
@@ -2176,10 +2184,15 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private async initializeBackend(): Promise<void> {
     try {
       await this._backend.initialize();
+
+      if (this._destroyPromise !== null) {
+        return;
+      }
+
       this.publishAssetVariantProfile();
       this._validateWorkingColorFormatCapability();
     } catch (error) {
-      if (this.options.backend?.type !== 'auto' || this._backendType !== 'webgpu') {
+      if (this._destroyPromise !== null || this.options.backend?.type !== 'auto' || this._backendType !== 'webgpu') {
         throw error;
       }
 
@@ -2208,6 +2221,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._rendering.resize(this._geometry.width, this._geometry.height);
 
       await this._backend.initialize();
+
+      if (this._destroyPromise !== null) {
+        return;
+      }
+
       this.publishAssetVariantProfile();
       this._validateWorkingColorFormatCapability();
     }
