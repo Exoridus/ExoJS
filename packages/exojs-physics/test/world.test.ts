@@ -2,7 +2,7 @@ import { Container, Drawable, type SceneNode, Time } from '@codexo/exojs';
 import { describe, expect, it } from 'vitest';
 
 import { createAabb, expandAabb } from '../src/Aabb';
-import { BoxShape, CircleShape, Collider, DistanceJoint, PhysicsBody, PhysicsWorld, SegmentShape } from '../src/index';
+import { BoxShape, ChainShape, CircleShape, Collider, DistanceJoint, PhysicsBody, PhysicsWorld, SegmentShape } from '../src/index';
 import { colliderAt } from './support';
 
 interface FakeNode {
@@ -834,4 +834,101 @@ describe('PhysicsWorld.fixedUpdate()', () => {
 
     expect(events).toContain('start');
   });
+});
+
+describe('collider ownership reservation', () => {
+  it('rejects duplicate and shared instances before detached bodies enter a world', () => {
+    const collider = new Collider({ shape: new CircleShape(3) });
+    const body = new PhysicsBody({ colliders: [collider] });
+    const other = new PhysicsBody();
+
+    expect(() => collider.body).toThrow(/not been attached/);
+    expect(() => body.addCollider(collider)).toThrow(/already belongs/);
+    expect(() => other.addCollider(collider)).toThrow(/already belongs/);
+    expect(() => new PhysicsBody({ colliders: [collider] })).toThrow(/already belongs/);
+    expect(body.colliders).toEqual([collider]);
+    expect(other.colliders).toEqual([]);
+    expect(collider.id).toBe(-1);
+  });
+
+  it('retains ownership across removal and readdition without mutating world entries', () => {
+    const world = new PhysicsWorld();
+    const collider = new Collider({ shape: new CircleShape(3) });
+    const body = world.add(new PhysicsBody({ colliders: [collider] }));
+    const mass = body.mass;
+    const id = collider.id;
+    const other = world.add(new PhysicsBody());
+
+    expect(() => body.addCollider(collider)).toThrow(/already belongs/);
+    expect(() => other.addCollider(collider)).toThrow(/already belongs/);
+    expect(body.mass).toBe(mass);
+    expect(collider.id).toBe(id);
+    expect(world.colliders).toEqual([collider]);
+    world.remove(body);
+    expect(() => other.addCollider(collider)).toThrow(/already belongs/);
+    world.add(body);
+    expect(collider.body).toBe(body);
+    expect(world.colliders).toEqual([collider]);
+    world.destroy();
+    expect(() => new PhysicsBody({ colliders: [collider] })).toThrow(/destroyed/);
+  });
+
+  it('releases reservations when a constructor fails after earlier valid entries', () => {
+    const free = new Collider({ shape: new CircleShape(3) });
+    const taken = new Collider({ shape: new CircleShape(4) });
+    const owner = new PhysicsBody({ colliders: [taken] });
+
+    expect(() => new PhysicsBody({ colliders: [free, taken] })).toThrow(/already belongs/);
+    expect(() => new PhysicsBody({ colliders: [free, free] })).toThrow(/already belongs/);
+    const recovered = new PhysicsBody({ colliders: [free] });
+    expect(recovered.colliders).toEqual([free]);
+    expect(owner.colliders).toEqual([taken]);
+    expect(() => new PhysicsBody({ colliders: [taken] })).toThrow(/already belongs/);
+  });
+});
+
+it('rejects an attached chain proxy without changing its original body', () => {
+  const world = new PhysicsWorld();
+  const chain = new Collider({
+    shape: new ChainShape([
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+    ]),
+  });
+  const owner = world.add(new PhysicsBody({ type: 'static', colliders: [chain] }));
+  const proxy = chain.chainEdges![0]!;
+  const other = world.add(new PhysicsBody({ type: 'static' }));
+  expect(() => other.addCollider(proxy)).toThrow(/already belongs/);
+  expect(proxy.body).toBe(owner);
+  expect(other.colliders).toEqual([]);
+  world.remove(owner);
+  expect(() => other.addCollider(proxy)).toThrow(/already belongs/);
+  world.add(owner);
+  expect(proxy.body).toBe(owner);
+  world.destroy();
+});
+
+it('releases reservations if later collider options fail during construction', () => {
+  const collider = new Collider({ shape: new CircleShape(3) });
+  const invalid = {
+    get shape(): never {
+      throw new Error('invalid shape');
+    },
+  };
+  expect(() => new PhysicsBody({ colliders: [collider, invalid] })).toThrow('invalid shape');
+  const recovered = new PhysicsBody({ colliders: [collider] });
+  expect(recovered.colliders).toEqual([collider]);
+  expect(() => collider.body).toThrow(/not been attached/);
+});
+
+it('reserves constructor colliders without calling subclass overrides', () => {
+  class CustomBody extends PhysicsBody {
+    public override addCollider(): Collider {
+      throw new Error('subclass is not initialized');
+    }
+  }
+  const collider = new Collider({ shape: new CircleShape(3) });
+  const body = new CustomBody({ colliders: [collider] });
+  expect(body.colliders).toEqual([collider]);
+  expect(() => new PhysicsBody({ colliders: [collider] })).toThrow(/already belongs/);
 });

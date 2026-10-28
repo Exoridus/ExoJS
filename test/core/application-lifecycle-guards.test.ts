@@ -7,6 +7,8 @@ import type { MockInstance } from 'vitest';
  * still running, and the public update() must not fork the frame loop.
  */
 import { Application, ApplicationState } from '#core/Application';
+import { onAppInitialized } from '#core/application/devHooks';
+import { Capabilities } from '#core/Capabilities';
 import { Scene } from '#core/scene/Scene';
 
 const backendControl = vi.hoisted(() => ({
@@ -215,4 +217,116 @@ describe('Application lifecycle guards', () => {
 
     await app.destroy();
   });
+});
+
+describe('startup stop supersession', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test('stop during backend initialization prevents late frames and allows restart', async () => {
+    let finish = (): void => {};
+    backendControl.initialize = () =>
+      new Promise<void>(resolve => {
+        finish = resolve;
+      });
+    const raf = vi.spyOn(globalThis, 'requestAnimationFrame').mockReturnValue(1);
+    const app = new Application({ backend: { type: 'webgl2' } });
+    const starting = app.start();
+    await flush();
+    app.stop();
+    expect(app.state).toBe(ApplicationState.Stopped);
+    finish();
+    await starting;
+    expect(app.state).toBe(ApplicationState.Stopped);
+    expect(raf).not.toHaveBeenCalled();
+    backendControl.initialize = () => Promise.resolve();
+    await app.start();
+    expect(app.state).toBe(ApplicationState.Running);
+    await app.destroy();
+  });
+
+  test('stop while capabilities are pending prevents initial scene activation', async () => {
+    const capabilities = await Capabilities.ready;
+    let finish = (): void => {};
+    vi.spyOn(Capabilities, 'ready', 'get').mockReturnValue(
+      new Promise(resolve => {
+        finish = () => resolve(capabilities);
+      }),
+    );
+    backendControl.initialize = () => Promise.resolve();
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockReturnValue(1);
+    const init = vi.fn();
+    class Target extends Scene {
+      public override init(): void {
+        init();
+      }
+    }
+    const app = new Application({ backend: { type: 'webgl2' }, scenes: { target: Target } });
+    const starting = app.start(Target);
+    await flush();
+    app.stop();
+    finish();
+    await starting;
+    expect(app.state).toBe(ApplicationState.Stopped);
+    expect(init).not.toHaveBeenCalled();
+    expect(app.scenes.currentScene).toBeNull();
+    await app.destroy();
+  });
+
+  test('stop from the initialized hook prevents initial navigation', async () => {
+    backendControl.initialize = () => Promise.resolve();
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockReturnValue(1);
+    const init = vi.fn();
+    class Target extends Scene {
+      public override init(): void {
+        init();
+      }
+    }
+    const app = new Application({ backend: { type: 'webgl2' }, scenes: { target: Target } });
+
+    const stop = (announced: Application): void => {
+      if (announced === app) {
+        app.stop();
+      }
+    };
+
+    onAppInitialized.add(stop);
+
+    try {
+      await app.start(Target);
+      expect(init).not.toHaveBeenCalled();
+      expect(app.state).toBe(ApplicationState.Stopped);
+    } finally {
+      onAppInitialized.remove(stop);
+      await app.destroy();
+    }
+  });
+});
+
+test('stopped startup keeps concurrent callers joined until backend rejection settles', async () => {
+  let reject = (_error: Error): void => {};
+  backendControl.initialize = () =>
+    new Promise<void>((_resolve, fail) => {
+      reject = fail;
+    });
+  vi.spyOn(globalThis, 'requestAnimationFrame').mockReturnValue(1);
+  const app = new Application({ backend: { type: 'webgl2' } });
+  const first = app.start();
+  await flush();
+  app.stop();
+  const second = app.start();
+  const settled = Promise.allSettled([first, second]);
+  const failure = new Error('backend failed');
+  reject(failure);
+  expect(await settled).toEqual([
+    { status: 'rejected', reason: failure },
+    { status: 'rejected', reason: failure },
+  ]);
+  expect(app.state).toBe(ApplicationState.Stopped);
+  backendControl.initialize = () => Promise.resolve();
+  await app.start();
+  expect(app.state).toBe(ApplicationState.Running);
+  await app.destroy();
+  vi.restoreAllMocks();
 });

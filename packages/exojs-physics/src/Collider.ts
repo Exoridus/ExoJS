@@ -71,6 +71,7 @@ export class Collider {
 
   private _id = -1;
   private _body: PhysicsBody | null = null;
+  private _reservedBody: PhysicsBody | null = null;
   private readonly _chainEdges: readonly Collider[] | null;
   private _chainParent: Collider | null = null;
   private readonly _localTransform: Transform;
@@ -302,6 +303,26 @@ export class Collider {
     this._aabb.maxY = maxY + radius;
   }
 
+  /** @internal - reserve one body owner before any world registration. */
+  public _reserve(body: PhysicsBody): void {
+    if (this._destroyed) {
+      throw new Error('Collider: cannot attach a destroyed collider.');
+    }
+
+    if (this._reservedBody !== null || this._body !== null) {
+      throw new Error('Collider: this collider already belongs to a body.');
+    }
+
+    this._reservedBody = body;
+  }
+
+  /** @internal - undo ownership when body construction fails. */
+  public _releaseReservation(body: PhysicsBody): void {
+    if (this._reservedBody === body) {
+      this._reservedBody = null;
+    }
+  }
+
   /** @internal - bind this collider to its body and id (called when the body joins a world). */
   public _attach(body: PhysicsBody, id: number): void {
     this._body = body;
@@ -352,6 +373,7 @@ export class Collider {
   /** @internal - mark destroyed (called by the world). */
   public _markDestroyed(): void {
     this._destroyed = true;
+    this._reservedBody = null;
 
     if (this._chainEdges !== null) {
       for (const edge of this._chainEdges) {

@@ -275,7 +275,7 @@ class ActionMapBase<T extends ActionRecord> {
    * older save file freezing it.
    *
    * @throws {InputBindingError} If an override names an action this map does not declare,
-   * its kind does not match that action, or it contains an unknown input token.
+   * its kind does not match that action, or its binding structure or input tokens are invalid.
    */
   public applyProfile(profile: BindingProfile | null): void {
     const changes: Array<readonly [Action, unknown]> = [];

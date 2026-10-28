@@ -113,7 +113,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Colliders to attach up-front. Each may be a Collider instance or its ColliderOptions."
+          "description": "Colliders to reserve for this body. An instance cannot already belong to another body or occur twice."
         },
         {
           "name": "fixedRotation",

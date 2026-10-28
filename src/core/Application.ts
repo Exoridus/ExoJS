@@ -1214,7 +1214,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     try {
       await this.initializeBackend();
 
-      if (this._destroyPromise !== null) {
+      if (this._destroyPromise !== null || this._state !== ApplicationState.Loading) {
         return this;
       }
 
@@ -1246,7 +1246,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
       this._capabilities = await capabilitiesPromise;
 
-      if (this._destroyPromise !== null) {
+      if (this._destroyPromise !== null || this._state !== ApplicationState.Loading) {
         return this;
       }
 
@@ -1258,7 +1258,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         onAppInitialized.dispatch(this);
       }
 
-      if (target !== undefined && this._destroyPromise === null) {
+      if (target !== undefined && this._destroyPromise === null && this._state === ApplicationState.Loading) {
         // `target`'s implementation-level type is a union (registered key
         // OR constructor) - TS overload resolution does not distribute
         // over a union-typed argument, so the cast picks the constructor
@@ -1533,9 +1533,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * Halt the per-frame loop, unload the active scene, and stop the active
    * + frame clocks. Leaves backend, input, audio, etc. intact - call
-   * {@link Application.destroy} to release everything. Acts whenever the
-   * frame loop is actually live (the scheduler's `active` flag), including
-   * mid-`start()` - not only while `_state` is `Running`.
+   * {@link Application.destroy} to release everything. Also supersedes a
+   * pending startup before its frame loop begins or its initial scene activates.
    *
    * A stop is allowed to interrupt a navigation - that is the point of it.
    * Everything scene-related is therefore delegated to the single
@@ -1566,7 +1565,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * teardown ordering matters.
    */
   public stop(): this {
-    if (!this._scheduler.active) {
+    if (!this._scheduler.active && this._state !== ApplicationState.Loading) {
       return this;
     }
 

@@ -25,7 +25,7 @@ export interface BodyOptions {
   fixedRotation?: boolean;
   /** When `true`, the body's colliders are shape-cast along each step's motion (CCD) so it cannot tunnel through thin geometry. Default `false`. */
   isBullet?: boolean;
-  /** Colliders to attach up-front. Each may be a {@link Collider} instance or its {@link ColliderOptions}. */
+  /** Colliders to reserve for this body. An instance cannot already belong to another body or occur twice. */
   colliders?: Array<Collider | ColliderOptions>;
 }
 
@@ -163,10 +163,19 @@ export class PhysicsBody {
     // Build up-front colliders now (no id/world registration until the body
     // joins a world via `world.add()`). They sit in `_colliders` unsynchronised;
     // `_attachToWorld` assigns ids, registers them and computes the mass model.
-    if (options.colliders) {
-      for (const entry of options.colliders) {
-        this._colliders.push(entry instanceof Collider ? entry : new Collider(entry));
+    try {
+      for (const entry of options.colliders ?? []) {
+        const collider = entry instanceof Collider ? entry : new Collider(entry);
+
+        collider._reserve(this);
+        this._colliders.push(collider);
       }
+    } catch (error) {
+      for (const collider of this._colliders) {
+        collider._releaseReservation(this);
+      }
+
+      throw error;
     }
   }
 
@@ -268,6 +277,8 @@ export class PhysicsBody {
    * When the body is already in a world, the collider is id-allocated, registered,
    * the mass model is recomputed and the world geometry synchronised immediately;
    * on a free-standing body the collider is simply held until `world.add()`.
+   * A collider is reserved by one body even before it joins a world.
+   * Throws if the collider already belongs to a body or has been destroyed.
    * Returns the collider.
    */
   public addCollider(collider: Collider | ColliderOptions): Collider {
@@ -279,6 +290,7 @@ export class PhysicsBody {
     // one-directional - no runtime cycle.
     const instance = collider instanceof Collider ? collider : new Collider(collider);
 
+    instance._reserve(this);
     this._colliders.push(instance);
 
     // Before the body joins a world there is no owner to allocate ids / register
