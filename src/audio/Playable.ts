@@ -29,9 +29,11 @@ import type { AudioSystem } from './AudioSystem';
  */
 export interface Voice extends Spatializable {
   /**
-   * Stop playback and release this voice's resources. Pass `fade` to ramp the
-   * volume to zero over that duration before stopping; omit (or pass `0`) to
-   * stop immediately. Idempotent - calling again is a no-op.
+   * Stop playback and release this voice's resources. A positive `fade` ramps
+   * volume to zero before stopping and replaces any pending fade. Omitting it
+   * or passing `0` stops immediately; generator voices with an envelope use
+   * its release stage instead. Repeated release stops do not extend that stage.
+   * Calls after playback has ended have no effect.
    */
   stop(fade?: Seconds): void;
   /** Playback volume in the range [0, 1]. Bus volume (0..2) can amplify beyond this. */

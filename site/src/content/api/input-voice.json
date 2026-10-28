@@ -840,7 +840,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Stop playback and release this voice's resources. Pass fade to ramp the volume to zero over that duration before stopping; omit (or pass 0) to stop immediately. Idempotent - calling again is a no-op."
+          "description": "Stop playback and release this voice's resources. A positive fade ramps volume to zero before stopping and replaces any pending fade. Omitting it or passing 0 stops immediately; generator voices with an envelope use its release stage instead. Repeated release stops do not extend that stage. Calls after playback has ended have no effect."
         }
       ],
       "paragraphs": [],
