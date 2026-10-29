@@ -29,7 +29,11 @@ export interface AudioGeneratorOptions {
   poolSize?: number;
   /** Eviction strategy when the pool is full. Default `FirstInFirstOut`. */
   poolStrategy?: SoundPoolStrategy;
-  /** Priority for the `LowestPriority` strategy. Default 0. */
+  /**
+   * Priority shared by every voice this generator starts. The `LowestPriority`
+   * strategy cannot tell such voices apart, so it evicts the oldest; this field
+   * does not change eviction. Default 0.
+   */
   priority?: number;
 }
 
@@ -76,7 +80,7 @@ export class AudioGenerator implements Playable {
 
   private _poolSize: number;
   private _poolStrategy: SoundPoolStrategy;
-  /** Priority for the `LowestPriority` eviction strategy. */
+  /** Priority shared by every voice this generator starts; it does not change eviction. */
   public priority: number;
 
   private readonly _activeVoices: PooledGeneratorVoice[] = [];

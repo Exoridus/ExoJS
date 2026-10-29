@@ -1,5 +1,5 @@
 import { Color } from '#core/Color';
-import { assert } from '#core/dev';
+import { assert, invariant } from '#core/dev';
 import { Signal } from '#core/Signal';
 import type { GradientStop } from '#rendering/gradient/Gradient';
 
@@ -58,7 +58,7 @@ const byOffset = (left: GradientStop, right: GradientStop): number => left.offse
  */
 const _normalizeGradient = (gradient: TextGradient): ResolvedTextGradient => {
   assert(gradient.stops.length >= 2, 'TextStyle gradient requires at least 2 colour stops.');
-  assert(gradient.stops.length <= textGradientMaxStops, `TextStyle gradient accepts at most ${textGradientMaxStops} colour stops.`);
+  invariant(gradient.stops.length <= textGradientMaxStops, `TextStyle gradient accepts at most ${textGradientMaxStops} colour stops.`);
 
   const stops = gradient.stops
     .map(stop => {
@@ -339,6 +339,15 @@ export class TextStyle {
 
   // ── Font properties (hint: 'font') ─────────────────────────────────────
 
+  /**
+   * CSS font-family this style resolves glyphs through.
+   *
+   * Assigning a `FontFace` stores only its family: nothing here registers the
+   * face with `document.fonts`, so pass a loaded face as
+   * {@link TextStyleOptions.font} when constructing the node to have `Text`
+   * register and await it. The family alone still selects an already
+   * registered face.
+   */
   public get fontFamily(): FontFamily {
     return this._fontFamily;
   }
@@ -642,9 +651,14 @@ export class TextStyle {
    * Multi-stop fill gradient, or `null` when the glyph interior takes
    * `fillColor`.
    *
-   * Read back normalized: stops cloned, offsets clamped to `0..1` and sorted,
-   * `angle` resolved. Assigning re-normalizes, so the object handed in is
-   * never aliased and mutating it afterwards changes nothing.
+   * Normalized on the way in: stops cloned, offsets clamped to `0..1` and
+   * sorted, `angle` resolved. Assigning re-normalizes, so the object handed in
+   * is never aliased and mutating it afterwards changes nothing.
+   *
+   * The getter returns that same normalized object rather than a copy, so
+   * treat it as read-only: editing a stop's `color` in place bypasses dirty
+   * tracking and the owning node is never told to re-pack the ramp.
+   * @throws Error - More than eight stops are supplied, in every build.
    */
   public get gradient(): ResolvedTextGradient | null {
     return this._gradient;

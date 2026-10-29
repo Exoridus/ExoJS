@@ -42,6 +42,18 @@ export interface WebGl2VertexArrayObjectRuntime {
   destroy(vao: WebGl2VertexArrayObject): void;
 }
 
+/**
+ * Backend-agnostic vertex-array layout: the attributes (buffer, location,
+ * component size, type, stride and start) plus the optional element buffer a
+ * draw reads, with a version that changes whenever the layout does so a
+ * runtime can re-specify GL pointers only then.
+ *
+ * The runtime owns the native VAO; `destroy()` delegates to it and drops the
+ * local references. The referenced attribute buffers belong to their creators
+ * and are never destroyed transitively, and the `attributes` array is kept as
+ * the descriptor the runtime reads.
+ * @advanced
+ */
 export class WebGl2VertexArrayObject {
   private readonly _attributes: VaoAttribute[] = [];
   private _indexBuffer: WebGl2RenderBuffer | null = null;
@@ -149,6 +161,13 @@ export class WebGl2VertexArrayObject {
     return this;
   }
 
+  /**
+   * Draw the VAO's current range.
+   *
+   * With an index buffer bound, `size` is an index count and `start` is a BYTE
+   * offset into that element buffer (`gl.drawElements`). Without one, `size` is
+   * a vertex count and `start` is a vertex index (`gl.drawArrays`).
+   */
   public draw(size: number, start: number, type: RenderingPrimitives = this._drawMode): this {
     // Buffer uploads can replace the active VAO's element binding between draws.
     this._indexBuffer?.bind();

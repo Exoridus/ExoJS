@@ -4,7 +4,7 @@ import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { DerivedRootProduct } from '#rendering/plan/DerivedRootProduct';
-import type { PersistentSlotBundle } from '#rendering/plan/persistentSlotDraw';
+import type { PersistentSlotBackend, PersistentSlotBundle } from '#rendering/plan/persistentSlotDraw';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
@@ -15,6 +15,8 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { createRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RetainedContainer } from '#rendering/RetainedContainer';
+import { Sprite } from '#rendering/sprite/Sprite';
+import { Texture } from '#rendering/texture/Texture';
 import { View } from '#rendering/View';
 
 /**
@@ -38,11 +40,13 @@ const flaggedRenderer = { supportsRetainedBatches: true, _supportsPersistentSlot
 
 interface SlotStore extends PersistentSlotBundle {
   readonly ids: string[];
+  readonly textures: Array<Sprite['texture'] | undefined>;
+  readonly sourceTextures: Map<Sprite, Sprite['texture']>;
   readonly segments: Array<[offset: number, count: number]>;
 }
 
 interface Harness {
-  backend: RenderBackend;
+  backend: RenderBackend & PersistentSlotBackend;
   /** Everything that reached the backend, in order: leaf ids (through either path), scissor pushes and pops. */
   events: string[];
   /** One store per acquired root, in acquisition order. */
@@ -123,8 +127,18 @@ const createHarness = (): Harness => {
     },
     _endDrawPlan(): void {},
     _setRenderGroupTransform(): void {},
-    _acquirePersistentSlots(): PersistentSlotBundle | null {
-      const store: SlotStore = { generation: 1, ids: [], segments: [], destroy() {} };
+    _acquirePersistentSlots(source: RenderRootSource): PersistentSlotBundle | null {
+      const store: SlotStore = { generation: 1, ids: [], textures: [], sourceTextures: new Map(), segments: [], destroy() {} };
+
+      for (const scope of source.scopes) {
+        for (let index = 0; index < scope.items.count; index++) {
+          const drawable = scope.items.drawables[index];
+
+          if (drawable instanceof Sprite) {
+            store.sourceTextures.set(drawable, drawable.texture);
+          }
+        }
+      }
 
       stores.push(store);
 
@@ -140,6 +154,12 @@ const createHarness = (): Harness => {
         const local = entered[i * 3 + 1]!;
 
         store.ids[entered[i * 3 + 2]!] = (scope.items.drawables[local] as Leaf).id;
+
+        const drawable = scope.items.drawables[local];
+
+        if (drawable instanceof Sprite) {
+          store.textures[entered[i * 3 + 2]!] = store.sourceTextures.get(drawable);
+        }
       }
     },
     _drawPersistentOrder(bundle: PersistentSlotBundle, order: Uint32Array, _orderCount: number, offset: number, count: number): void {
@@ -151,7 +171,7 @@ const createHarness = (): Harness => {
         events.push(store.ids[order[i]!]!);
       }
     },
-  } as unknown as RenderBackend;
+  } as unknown as RenderBackend & PersistentSlotBackend;
 
   return Object.assign(harness, { backend });
 };
@@ -232,6 +252,56 @@ const frameEvents = (harness: Harness, root: RenderNode): string[] => {
 };
 
 describe('persistent slots: a live entry cuts the order stream', () => {
+  test('a full source rebuild replaces slots and replays the changed texture', () => {
+    const harness = createHarness();
+    const root = new Container();
+    const canvas = document.createElement('canvas');
+    const first = new Texture(canvas);
+    const second = new Texture(canvas);
+    const sprite = new Sprite(first);
+    const drawnTextures: Array<Sprite['texture'] | undefined> = [];
+
+    root.cullable = false;
+    sprite.setPosition(100, 300);
+    root.addChild(sprite);
+
+    harness.backend._drawPersistentOrder = (bundle, order, _orderCount, offset, count): void => {
+      for (let index = offset; index < offset + count; index++) {
+        drawnTextures.push((bundle as SlotStore).textures[order[index]!]);
+      }
+    };
+
+    try {
+      driveToSourceTier(root, harness.backend);
+      expect(drawnTextures).toContain(first);
+
+      const oldStore = harness.stores.at(-1)!;
+      const release = vi.spyOn(oldStore, 'destroy');
+      const acquisitions = harness.stores.length;
+
+      sprite.texture = second;
+      driveToSourceTier(root, harness.backend);
+      drawnTextures.length = 0;
+
+      playFrame(root, harness.backend);
+
+      expect(drawnTextures).toHaveLength(1);
+      expect(drawnTextures[0]).toBe(second);
+      expect(harness.stores.length).toBeGreaterThan(acquisitions);
+      expect(release).toHaveBeenCalledTimes(1);
+
+      drawnTextures.length = 0;
+      playFrame(root, harness.backend);
+      expect(drawnTextures).toHaveLength(1);
+      expect(drawnTextures[0]).toBe(second);
+    } finally {
+      root.destroy();
+      first.destroy();
+      second.destroy();
+      harness.backend.destroy();
+    }
+  });
+
   test('counts an offscreen subgroup once and never queries its descendants', () => {
     const harness = createHarness();
     const root = new Container();

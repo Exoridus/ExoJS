@@ -4,7 +4,10 @@ import type { Lighting } from '../Lighting';
 
 /** Options every light shares. Each field is also mutable afterwards. */
 export interface LightOptions {
-  /** Light colour. Alpha is ignored. Defaults to opaque white. */
+  /**
+   * Light colour. Alpha is ignored. Defaults to opaque white. A `Color` passed
+   * here is stored, not copied, so mutating it later changes this light.
+   */
   readonly color?: Color;
   /** Linear brightness multiplier. Defaults to `1`. */
   readonly intensity?: number;

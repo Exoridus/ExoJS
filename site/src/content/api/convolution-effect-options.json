@@ -84,7 +84,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Impulse response. Accepts a decoded AudioBuffer or a Sound (its audioBuffer is used). If omitted the effect runs dry (passthrough) until ConvolutionEffect.setImpulse is called."
+          "description": "Impulse response. Accepts a decoded AudioBuffer or a Sound (its audioBuffer is used); a Sound set before the effect is set up is resolved when the graph is built. A Sound still undecoded at that point is treated as absent and is not applied later, and with no impulse the wet path is silent while the dry path runs at 1 - wet."
         },
         {
           "name": "normalize",

@@ -11,14 +11,14 @@ import { textGradientMaxStops } from './TextStyle';
 //
 // Texel 0     : (a,  c,  snapMode,  tx) - mat3 column-major: col0 + translate.x
 // Texel 1     : (b,  d,  0,  ty) - mat3 column-major: col1 + translate.y
-// Texel 2     : (r,  g,  b,  a ) - fillColor (linear 0-1)
+// Texel 2     : (r,  g,  b,  a ) - fillColor (authored sRGB 0-1; the shader decodes it)
 // Texel 3     : (r,  g,  b,  a ) - outlineColor
 // Texel 4     : (outlineMin, shadowAlpha, shadowBlur, gradientStopCount)
-//                 outlineMin = 0.5 → disabled; < 0.5 → enabled with that threshold
-//                 gradientStopCount = 0 → the fill takes `fillColor`
+//                 outlineMin = 0.5 -> disabled; < 0.5 -> enabled with that threshold
+//                 gradientStopCount = 0 -> the fill takes `fillColor`
 // Texel 5     : (r,  g,  b,  a ) - shadowColor
 // Texel 6     : (shadowOffX_px, shadowOffY_px, decorationOverride, sdfRadius_logical)
-//                 decorationOverride = 1 → a decoration quad takes texel 8
+//                 decorationOverride = 1 -> a decoration quad takes texel 8
 // Texel 7     : (gradAxisX, gradAxisY, gradBias, 0)
 //                 ramp position t = dot(gradUV, gradAxis) + gradBias
 // Texel 8     : (r, g, b, a) - decorationColor
@@ -28,9 +28,10 @@ import { textGradientMaxStops } from './TextStyle';
 // Texel 19    : gradient stop offsets 4..7
 //
 // texel 0's spare `.z` carries the snap-mode flag the vertex shader reads to
-// decide whether to snap the glyph origin to the device-pixel grid. Both
-// shaders divide the shadow offset by the atlas page size (a per-batch
-// uniform) to convert px → UV space.
+// decide whether to snap the glyph origin to the device-pixel grid. Each shader
+// divides the shadow offset by its own page-size source - a per-batch uniform
+// in WebGL2 (u_pageSize), the per-slot texture dimensions in WebGPU - to
+// convert the stored texels to UV space.
 
 /** Texels per packed node row. @internal */
 export const textNodeDataTexels = 20;
@@ -97,7 +98,7 @@ export const packTextNodeData = (target: Float32Array, base: number, node: Text 
   target[base + 15] = oc.a;
 
   // Params (texel 4): outlineMin, shadowAlpha, shadowBlur, gradientStopCount
-  // outlineMin = 0.5 → disabled; 0.5 - outlineWidth when enabled
+  // outlineMin = 0.5 -> disabled; 0.5 - outlineWidth when enabled
   const gradient = style.gradient;
   const outlineMin = style.outlineWidth > 0 ? Math.max(0, 0.5 - style.outlineWidth) : 0.5;
   target[base + 16] = outlineMin;
@@ -108,7 +109,7 @@ export const packTextNodeData = (target: Float32Array, base: number, node: Text 
   // fragment from the field's screen-space gradient, so a floor here would
   // only smear the shadow of a node that asked for none.
   target[base + 18] = style.shadowBlur * 0.1;
-  target[base + 19] = gradient === null ? 0 : gradient.stops.length;
+  target[base + 19] = gradient === null ? 0 : Math.min(gradient.stops.length, textGradientMaxStops);
 
   // Shadow color (texel 5)
   const sc = style.shadowColor;
@@ -211,8 +212,8 @@ const packTextGradient = (
     target[axisBase + 2] = 0.5 - (width * dirX + height * dirY) / (2 * lineLength);
   }
 
-  for (let i = 0; i < gradient.stops.length; i++) {
-    // In-bounds: i < stops.length, and TextStyle caps it at textGradientMaxStops.
+  for (let i = 0; i < Math.min(gradient.stops.length, textGradientMaxStops); i++) {
+    // Bound writes even if JavaScript callers mutate the readonly stop list.
     const stop = gradient.stops[i]!;
     const at = colorBase + i * 4;
 

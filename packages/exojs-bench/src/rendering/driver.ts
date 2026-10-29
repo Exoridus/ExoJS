@@ -17,16 +17,19 @@ import {
   classifyPrerelease,
   declaredPrereleaseOf,
   DEFAULT_RENDERING_BROWSER,
+  isSoftwareRenderer,
   readLibraryProvenance,
   readOsRelease,
   readPlatformVersion,
 } from '../shared/provenance';
+import { raceWithTimeout } from '../shared/timeout';
 import type { ViteDevServer } from '../shared/viteServer';
 import { readEngineVersion, RENDERING_LIBRARY_ARMS, startViteServer as startPageServer } from '../shared/viteServer';
 import type { RunPlan } from '../suite/plan';
 import { buildMatrix } from './archetypes';
 import { excaliburCovers, phaserCovers, pixiCulledCovers } from './coverage';
 import type { ArchetypeSpec, Backend, CellResult, CellSpec, EngineAdapter } from './EngineAdapter';
+import { profileProvenance } from './profileProvenance';
 import type { MatrixSelection } from './selection';
 import { applyPlan, applySelection } from './selection';
 import { isScrolling, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from './world';
@@ -83,8 +86,14 @@ export interface Provenance extends BaseProvenance {
   /** True when the adapter is a software rasterizer - timings are then untrusted. */
   readonly software: boolean;
   /**
-   * The clock grid the run's FIRST session observed, or `null` where no session
-   * opened.
+   * Set when the adapter identity could not be read. The run is not verified
+   * hardware, so its timings carry the untrusted mark even though `software`
+   * is false.
+   */
+  readonly adapterUnverified?: boolean;
+  /**
+   * The clock grid the run's FIRST session observed; `null` where no session
+   * opened, and on a CPU profile, which probes no clock.
    *
    * Provenance only. A run opens one session per arm, so this describes the
    * conditions rather than qualifying any particular measurement; each cell
@@ -315,7 +324,6 @@ const readRendererInPage = async (page: import('playwright').Page): Promise<stri
   });
 
 /** Whether a renderer string names a software rasterizer rather than a real GPU. */
-const isSoftwareRenderer = (renderer: string): boolean => /swiftshader|llvmpipe|software/i.test(renderer);
 
 /** Resolved WebGPU adapter identity for one backend run. */
 export interface WebGpuIdentity {
@@ -481,6 +489,9 @@ const CELL_TIMEOUT_MS = 60_000;
 /** Sentinel returned by {@link runCellOrWedge} when a cell exceeds {@link CELL_TIMEOUT_MS}. */
 const CELL_WEDGED = Symbol('cell-wedged');
 
+/** Sentinel for a capture or dispose that outlived {@link CELL_TIMEOUT_MS}. */
+const CAPTURE_WEDGED = Symbol('capture-wedged');
+
 /**
  * Run one cell, resolving to {@link CELL_WEDGED} if it does not finish within
  * {@link CELL_TIMEOUT_MS} - the page is then presumed frozen and its browser must
@@ -511,6 +522,9 @@ const runCellOrWedge = async (page: import('playwright').Page, spec: CellSpec, h
   return Promise.race([run, timeout]);
 };
 
+/** File stem of one cell's captured frame - the cell's identity, safe for a file name. */
+const captureName = (cell: CellSpec): string => `${cell.backend}-${cell.archetype}-${String(cell.nodeCount)}-${cell.engine}-${cell.config}`;
+
 /**
  * Runs one backend's cell list, isolating each arm in its OWN browser session and
  * each cell behind a wall-clock timeout. Invokes `onCellResult` after EACH cell so
@@ -521,16 +535,13 @@ const runCellOrWedge = async (page: import('playwright').Page, spec: CellSpec, h
  * JIT/prebundle, not comparability, while it lets one arm's leaked GPU/driver state
  * wedge a LATER arm's (or its own later) cell. Each arm therefore gets a fresh
  * browser (Vite prebundle is server-side, so relaunch is cheap), and any cell that
- * WEDGES (`CELL_TIMEOUT_MS`) is abandoned as `unavailable` with the browser
- * relaunched for the arm's remaining cells. The matrix always completes; a
- * pathological arm loses only its wedging cells, each disclosed in the report.
+ * WEDGES (`CELL_TIMEOUT_MS`) is reported as `unavailable`; the browser is
+ * relaunched for remaining cells. Browser launch or page setup can still throw
+ * outside that recovery boundary and abort the matrix run.
  *
  * For WebGPU the adapter identity is read once; a null or software adapter emits
  * every cell as `unavailable` rather than measuring a software rasterizer.
  */
-/** File stem of one cell's captured frame - the cell's identity, safe for a file name. */
-const captureName = (cell: CellSpec): string => `${cell.backend}-${cell.archetype}-${String(cell.nodeCount)}-${cell.engine}-${cell.config}`;
-
 const runBackend = async (options: {
   baseUrl: string;
   backend: Backend;
@@ -651,11 +662,34 @@ const runBackend = async (options: {
           // `page.screenshot` rather than a canvas readback: a WebGPU canvas
           // never yields its contents to `drawImage`.
           if (captureDir !== undefined && outcome.status === 'ok') {
-            await page.screenshot({
-              path: resolve(captureDir, `${captureName(cell)}.png`),
-              clip: { x: 0, y: 0, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT },
-            });
-            await page.evaluate(() => globalThis.__disposeHeldCell!());
+            const shot = await raceWithTimeout(
+              page.screenshot({
+                path: resolve(captureDir, `${captureName(cell)}.png`),
+                clip: { x: 0, y: 0, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT },
+              }),
+              CELL_TIMEOUT_MS,
+              CAPTURE_WEDGED,
+            );
+
+            if (shot === CAPTURE_WEDGED) {
+              relaunch = true;
+              break;
+            }
+          }
+
+          if (captureDir !== undefined) {
+            // The hold is released whether or not the cell was capturable, so an
+            // `exceeded` cell cannot keep its scene alive into the next cell.
+            const disposed = await raceWithTimeout(
+              page.evaluate(() => globalThis.__disposeHeldCell!()),
+              CELL_TIMEOUT_MS,
+              CAPTURE_WEDGED,
+            );
+
+            if (disposed === CAPTURE_WEDGED) {
+              relaunch = true;
+              break;
+            }
           }
 
           if (backend === 'webgl2' && renderer === null && outcome.status === 'ok') {
@@ -862,7 +896,12 @@ export const profileCell = async (options: {
       const stopped = (await client.send('Profiler.stop')) as unknown as { profile: CdpProfile };
       const profile = stopped.profile;
 
-      const adapter = spec.backend === 'webgpu' ? 'profiled webgpu session' : await readRendererInPage(page);
+      const identity = spec.backend === 'webgpu' ? await readWebGpuAdapter(page, browserName) : null;
+      const { adapter, software, adapterUnverified } = profileProvenance(
+        spec.backend,
+        identity,
+        spec.backend === 'webgpu' ? null : await readRendererInPage(page),
+      );
 
       await page.evaluate(() => globalThis.__profileDispose!());
 
@@ -941,7 +980,8 @@ export const profileCell = async (options: {
           clock: null,
           engineVersion,
           timestamp: new Date().toISOString(),
-          software: isSoftwareRenderer(adapter),
+          software,
+          ...(adapterUnverified === true && { adapterUnverified: true }),
         },
         frames,
         wallMs,
@@ -967,20 +1007,6 @@ export interface MatrixOutcome {
   readonly results: CellResult[];
 }
 
-/**
- * Runs the whole baseline matrix end-to-end against the real GPU.
- *
- * One browser per backend: WebGL2 and WebGPU need different launch flags, so
- * each backend runs its full cell list in its own single session. The
- * same-session rule holds per backend; a WebGL2-vs-WebGPU comparison is a
- * cross-backend comparison, satisfied by running the two sessions back-to-back
- * on the same machine in one invocation, with a provenance block recorded per
- * backend. Requested backend order is preserved so the report lists WebGL2
- * first.
- *
- * `onCellResult` (optional) fires after every cell so the caller can persist it
- * immediately; the returned {@link MatrixOutcome} is the same set aggregated.
- */
 /** The cell selection one matrix invocation would measure, resolved without touching a browser. */
 export interface MatrixCellSelection {
   readonly backends: readonly Backend[];
@@ -1010,6 +1036,19 @@ export const resolveMatrixCells = (options: MatrixCellSelection): CellSpec[] => 
     : selected.map(cell => ({ ...cell, timedFrames: options.timedFramesOverride! }));
 };
 
+/**
+ * Runs the whole baseline matrix end-to-end against the real GPU.
+ *
+ * WebGL2 and WebGPU need different launch flags, so each backend runs its cell
+ * list independently, with one fresh browser per arm (see {@link runBackend}).
+ * The comparison is therefore across backends on the same machine in one
+ * invocation, with a provenance block recorded per backend. Backends run in
+ * the order given by `options.backends`; the default matrix lists WebGL2
+ * first.
+ *
+ * `onCellResult` (optional) fires after every cell so the caller can persist it
+ * immediately; the returned {@link MatrixOutcome} is the same set aggregated.
+ */
 export const runMatrix = async (options: {
   backends: readonly Backend[];
   /**

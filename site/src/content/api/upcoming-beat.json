@@ -1,6 +1,6 @@
 {
   "title": "UpcomingBeat",
-  "description": "",
+  "description": "One extrapolated schedule entry from BeatDetector.lookahead; its time may already have passed.",
   "symbol": "UpcomingBeat",
   "kind": "interface",
   "subsystem": "audio",
@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [],
+      "paragraphs": [
+        "One extrapolated schedule entry from BeatDetector.lookahead; its time may already have passed."
+      ],
       "importLine": "import { UpcomingBeat } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },
@@ -45,7 +47,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Predicted time on the audio-context clock, not on the performance.now() timeline."
         },
         {
           "name": "beatInBar",
@@ -66,7 +68,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Predicted position within the bar (1..N); display counting when meterKnown is false."
         },
         {
           "name": "isDownbeat",
@@ -87,7 +89,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "True when the predicted position starts a bar under a known meter."
         },
         {
           "name": "meterKnown",
@@ -112,7 +114,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "True when the cycle and its phase are available; false forces isDownbeat to false."
         },
         {
           "name": "tempo",
@@ -133,7 +135,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "BPM assumed for this prediction."
         }
       ],
       "paragraphs": [],

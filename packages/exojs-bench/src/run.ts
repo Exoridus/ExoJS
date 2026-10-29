@@ -9,7 +9,7 @@ import type { ArchetypeId, Backend, CellResult, MatrixSelection, RenderingBrowse
 import { isHitching, parseRenderingBrowser, profileCell, runMatrix, writeReport } from './rendering';
 import { ARCHETYPES } from './rendering/archetypes';
 import { resolveMatrixCells } from './rendering/driver';
-import { parseArgs } from './shared/args';
+import { parseArgs, parsePositiveInt } from './shared/args';
 import { createCheckpointWriter } from './shared/checkpoint';
 import type { PlatformDeclaration } from './shared/provenance';
 import { parsePlatformDeclaration, PLATFORM_DECLARATION_SYNTAX, readPlatformVersion } from './shared/provenance';
@@ -324,15 +324,7 @@ const runRenderingDomain = async (args: Map<string, string>, selector: DomainSel
   const archetypes = parseList('archetype', archetypeArg) as ArchetypeId[] | undefined;
   const engines = parseList('engine', engineArg);
   const configs = parseList('config', args.get('config'));
-  const nodeCounts = parseList('nodes', nodesArg)?.map(value => {
-    const nodeCount = Number.parseInt(value, 10);
-
-    if (Number.isNaN(nodeCount)) {
-      throw new Error(`--nodes must be an integer or a comma-separated list of integers (got '${nodesArg}').`);
-    }
-
-    return nodeCount;
-  });
+  const nodeCounts = parseList('nodes', nodesArg)?.map(value => parsePositiveInt('--nodes', value));
 
   const selection: MatrixSelection = {
     ...(engines !== undefined && { engines }),
@@ -353,13 +345,7 @@ const runRenderingDomain = async (args: Map<string, string>, selector: DomainSel
   let timedFramesOverride: number | undefined;
 
   if (framesArg !== undefined) {
-    const frames = Number.parseInt(framesArg, 10);
-
-    if (Number.isNaN(frames) || frames < 1) {
-      throw new Error(`--frames must be a positive integer (got '${framesArg}').`);
-    }
-
-    timedFramesOverride = frames;
+    timedFramesOverride = parsePositiveInt('--frames', framesArg);
   }
 
   if (args.has('profile')) {
@@ -536,13 +522,7 @@ const runPhysicsDomain = async (args: Map<string, string>, selector: DomainSelec
   if (bodiesArg !== undefined) {
     refuseSplitList('bodies', bodiesArg);
 
-    const bodyCount = Number.parseInt(bodiesArg, 10);
-
-    if (Number.isNaN(bodyCount)) {
-      throw new Error(`--bodies must be an integer (got '${bodiesArg}').`);
-    }
-
-    filter.bodyCount = bodyCount;
+    filter.bodyCount = parsePositiveInt('--bodies', bodiesArg);
   }
 
   // `--frames`: override every selected cell's timed-step count (like the
@@ -552,13 +532,7 @@ const runPhysicsDomain = async (args: Map<string, string>, selector: DomainSelec
   let timedStepsOverride: number | undefined;
 
   if (framesArg !== undefined) {
-    const frames = Number.parseInt(framesArg, 10);
-
-    if (Number.isNaN(frames) || frames < 1) {
-      throw new Error(`--frames must be a positive integer (got '${framesArg}').`);
-    }
-
-    timedStepsOverride = frames;
+    timedStepsOverride = parsePositiveInt('--frames', framesArg);
   }
 
   const isSubset = archetypeArg !== undefined || bodiesArg !== undefined || engineArg !== undefined || timedStepsOverride !== undefined;

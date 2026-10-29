@@ -24,6 +24,12 @@ export interface SunLightOptions extends LightOptions {
  * turning the sun is rotating it - and a sun parented to the world rotates a
  * whole day with one tween.
  *
+ * # Renderers
+ *
+ * `lightmap` gives it a strip shadow map and `radiance` gives it the sky every
+ * unblocked ray ends in. `forward` has no directional path and does not publish
+ * this light; use one of the directional renderers instead.
+ *
  * # Shadows
  *
  * A sun's shadow map is a LINE, not a circle. There is no centre to measure

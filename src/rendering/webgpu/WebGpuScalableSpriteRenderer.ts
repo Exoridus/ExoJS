@@ -716,7 +716,7 @@ export class WebGpuScalableSpriteRenderer
    * the OPEN pass. All STATE is resolved live (pipeline via the existing
    * `_getPipeline('geo', ...)` cache, texture bind group(1) via the existing
    * texture-bind-group cache - resolving re-syncs dirty texture content, the
-   * group's 128-byte UBO written only when its content changed) and only DATA
+   * group's 144-byte UBO written only when its content changed) and only DATA
    * is cached (instance bytes, group transform storage). Mirrors
    * {@link WebGpuSpriteRenderer._replayRecordedSpriteBatch}.
    * @internal
@@ -1048,8 +1048,9 @@ export class WebGpuScalableSpriteRenderer
    */
   public async prewarmPipelines(formats: readonly GPUTextureFormat[]): Promise<void> {
     const device = this._device;
+    const pipelineLayout = this._pipelineLayout;
 
-    if (!device || !this._shaderModule || !this._pipelineLayout) {
+    if (!device || !this._shaderModule || !pipelineLayout) {
       return;
     }
 
@@ -1081,7 +1082,9 @@ export class WebGpuScalableSpriteRenderer
 
           promises.push(
             device.createRenderPipelineAsync(this._buildPipelineDescriptor(kind, blendMode, format)).then(pipeline => {
-              this._pipelines.set(key, pipeline);
+              if (this._device === device && this._pipelineLayout === pipelineLayout) {
+                this._pipelines.set(key, pipeline);
+              }
             }),
           );
         }

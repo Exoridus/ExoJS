@@ -4,6 +4,7 @@ import type { Signal } from '#core/Signal';
 
 import type { AssetConstructor } from './AssetConstructor';
 import type { AssetDecoder } from './AssetDecoder';
+import { reportAssetObserverFailure, sameOptions } from './assetDiagnostics';
 import { _readMeta } from './assetMeta';
 import { AssetRef } from './AssetRef';
 import { type AssetReferenceLookup, AssetRequestLog } from './AssetRequestLog';
@@ -205,7 +206,7 @@ export class AssetResidency {
   private readonly _resources = new Map<ResourceKey, ResidentEntry>();
   // Identity this residency binds catalog leaves to; see `_bindLeaves`.
   private readonly _leafOwner = {};
-  // Reverse lookup: loaded resource object → the (type, source) it was first
+  // Reverse lookup: loaded resource object -> the (type, source) it was first
   // stored under. Backs Loader.keyFor for scene serialization. A WeakMap so
   // it never retains resources; only object resources participate.
   private readonly _resourceKeys = new WeakMap<object, { type: AssetConstructor; source: string; key: ResourceKey }>();
@@ -254,7 +255,7 @@ export class AssetResidency {
   // true regardless of unrelated unload/reset ordering that happened since.
   private readonly _everRegisteredHandles = new WeakSet();
 
-  private _concurrency: number;
+  private _concurrency = 0;
   private _backgroundQueue: QueueEntry[] = [];
   private _backgroundActive = 0;
   private _backgroundTotal = 0;
@@ -275,7 +276,7 @@ export class AssetResidency {
     this._requestLog = new AssetRequestLog(typeRegistry);
     this._decoder = decoder;
     this._signals = signals;
-    this._concurrency = concurrency;
+    this.setConcurrency(concurrency);
     this._hooks = hooks;
   }
 
@@ -774,8 +775,10 @@ export class AssetResidency {
    * teardown for them.
    */
   private _evictValueKey(asset: CanonicalAsset, stored: unknown): void {
-    this._typeRegistry.getInstalled(asset.type)?.factory.dispose?.(stored);
+    const dependencies = this._dependencyScopes.get(asset.key);
+
     this._resources.delete(asset.key);
+    this._dependencyScopes.delete(asset.key);
 
     const entry = this._refs.get(asset.key);
 
@@ -786,11 +789,24 @@ export class AssetResidency {
     }
 
     this._evicted.add(asset.key);
-    this._releaseDependencies(asset.key);
     // Drop a resolved-but-not-yet-cleaned in-flight entry so the reclaim's
     // re-fetch starts fresh instead of deduping onto it - see the seamless
     // branch above for the full reasoning; it applies verbatim here.
     this._inFlight.delete(asset.key);
+
+    try {
+      this._typeRegistry.getInstalled(asset.type)?.factory.dispose?.(stored);
+    } catch (error) {
+      logger.error(`Asset disposer failed for "${asset.source}".`, {
+        source: 'assets',
+        error: error instanceof Error ? error : new Error(String(error)),
+      });
+    } finally {
+      // A disposer may reclaim the key; release only the previous resource's dependencies.
+      if (dependencies !== undefined) {
+        this._releaseScope(dependencies);
+      }
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -1176,7 +1192,7 @@ export class AssetResidency {
   // -----------------------------------------------------------------------
 
   /**
-   * Wire the reverse `handle → key` lookup and mark `handle` as a real,
+   * Wire the reverse `handle -> key` lookup and mark `handle` as a real,
    * residency-issued handle/ref for the lifetime of the object - the latter
    * (`_everRegisteredHandles`) is never cleared, unlike `_handleKeys`, which
    * {@link _forgetKey} (via {@link unloadAll}) deletes for a settled key. The
@@ -1190,7 +1206,7 @@ export class AssetResidency {
 
   /**
    * Register a fresh deferred entry for `key` holding `handle` weakly, wire the
-   * reverse `handle → key` lookup, and arm GC pruning. Returns the entry so the
+   * reverse `handle -> key` lookup, and arm GC pruning. Returns the entry so the
    * caller can add further co-handles.
    */
   private _createDeferredEntry(
@@ -1461,7 +1477,7 @@ export class AssetResidency {
       // managed to pull in before failing. A cancel is left alone: the key's own
       // eviction path already released them.
       this._releaseDependencies(asset.key);
-      this._signals.onError.dispatch(asset.type, asset.source, err);
+      this._signals.onError.dispatchIsolated(reportAssetObserverFailure, asset.type, asset.source, err);
     }
   }
 
@@ -1496,8 +1512,9 @@ export class AssetResidency {
   /**
    * Store a resolved resource under its canonical key: fills every deferred
    * handle / value-ref waiting on the key (multi-handle fill), respects
-   * "free on arrival" for a key unloaded mid-fetch, and registers the
-   * canonical reverse (resource → key) lookup. Called from `AssetDecoder`
+   * "free on arrival" for a key whose last claim was released mid-fetch, and
+   * registers the canonical reverse (resource -> key) lookup. Called from
+   * `AssetDecoder`
    * via the `storeResource` callback `Loader`'s constructor wires to this
    * method.
    * @internal
@@ -1570,7 +1587,7 @@ export class AssetResidency {
         }
 
         // A non-get producer (load(), container, background) may store into a
-        // key whose handle is 'failed' (e.g. an earlier get() 404'd). fill() →
+        // key whose handle is 'failed' (e.g. an earlier get() 404'd). fill() ->
         // settle() must run from a re-armed state so `.loaded` re-materializes a
         // resolved promise; without begin() the handle would read 'ready' while
         // its cached `.loaded` stayed permanently rejected. Skip a handle
@@ -1632,7 +1649,7 @@ export class AssetResidency {
       this._createDeferredEntry(asset, resource);
     }
 
-    this._signals.onLoaded.dispatch(asset.type, asset.source, resource);
+    this._signals.onLoaded.dispatchIsolated(reportAssetObserverFailure, asset.type, asset.source, resource);
 
     // Free-on-arrival: a deferred handle whose every claimer released
     // during the in-flight fetch has now converged into the resource map at
@@ -1722,7 +1739,7 @@ export class AssetResidency {
   }
 
   private _onBackgroundItemDone(): void {
-    this._signals.onProgress.dispatch(this._backgroundLoaded, this._backgroundTotal);
+    this._signals.onProgress.dispatchIsolated(reportAssetObserverFailure, this._backgroundLoaded, this._backgroundTotal);
 
     if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
       this._settleBackgroundWaiters();
@@ -1780,8 +1797,12 @@ export class AssetResidency {
     });
   }
 
-  /** Sets the maximum number of simultaneous background-queue fetches. */
+  /** Sets a nonnegative integer limit; zero pauses queued background fetches. */
   public setConcurrency(n: number): void {
+    if (!Number.isInteger(n) || n < 0) {
+      throw new RangeError('Background concurrency must be a nonnegative integer.');
+    }
+
     this._concurrency = n;
   }
 
@@ -1818,7 +1839,7 @@ export class AssetResidency {
    * Hard, claim-forgetting reset of the resident store. If `type` is provided,
    * only that type's assets are cleared; otherwise all types are flushed.
    * Does not cancel in-flight fetches - but forgets each key's claim/handle
-   * bookkeeping so repeated load→reset cycles cannot accumulate stale entries.
+   * bookkeeping so repeated load->reset cycles cannot accumulate stale entries.
    *
    * Deliberately NOT public on {@link Loader}: it discards every scope's claim,
    * so a caller could free assets another scope still owns. Scope-aware release
@@ -2068,26 +2089,3 @@ export class AssetResidency {
     this._settleBackgroundWaiters();
   }
 }
-
-/**
- * Structural comparison of two option bags, for the dev-only ignored-options
- * diagnostic. Depth-limited: an option value nested deeper than an asset type's
- * own configuration ever goes is compared by identity rather than risking an
- * unbounded walk of whatever a caller put there.
- */
-const sameOptions = (a: unknown, b: unknown, depth = 0): boolean => {
-  if (Object.is(a, b)) {
-    return true;
-  }
-
-  if (depth >= 4 || typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) {
-    return false;
-  }
-
-  const keys = Object.keys(a);
-
-  return (
-    keys.length === Object.keys(b).length &&
-    keys.every(key => sameOptions((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key], depth + 1))
-  );
-};

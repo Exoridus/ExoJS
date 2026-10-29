@@ -14,8 +14,8 @@ import type { BroadPhase, CandidatePair } from './BroadPhase';
  * shapes commonly span 10-30px): large enough that a few steps of ordinary
  * motion stay inside the margin (skipping the sync phase's remove+reinsert),
  * small enough it doesn't inflate fat AABBs into spurious candidates for
- * densely packed scenes. Fixed per the design's v1 scope (no velocity-based
- * predictive expansion) - revisit if benchmarks want a different value.
+ * densely packed scenes. No velocity-based predictive expansion; revisit if
+ * benchmarks want a different value.
  */
 const AABB_MARGIN = 4;
 
@@ -33,9 +33,9 @@ const byPairId = (p: CandidatePair, q: CandidatePair): number => p.a.id - q.a.id
  * sleeping world pays one flag read per collider); (2) one full pass over the
  * persistent pair set dropping any pair whose fat AABBs no longer overlap -
  * cheap (O(1) per pair) and run every step regardless of movement, exactly
- * mirroring Box2D's own `b2ContactManager::Collide` (see the design's
- * correctness argument for why a single global pass, not a per-moved-leaf
- * rescan, is both correct and the right complexity); (3) emit, keeping only
+ * mirroring Box2D's own `b2ContactManager::Collide` (a pair separates only when
+ * one of its leaves moved, and every moved leaf is re-queried in phase 1, so one
+ * global pass is both correct and the right complexity); (3) emit, keeping only
  * pairs whose *tight* AABBs overlap.
  *
  * Phases 2 and 3 are skipped whole when nothing they read has changed since the

@@ -22,10 +22,12 @@ fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     let transparent = uniforms.uTransparentCanvas > 0.5;
     let premultiplyOutput = uniforms.uTransparentCanvas < 1.5;
 
-    // Transparent target: unassociate before the transform, re-associate the
-    // encoded result afterwards. Opaque target: composite the linear PMA
-    // color over the clear-color matte first, so a partially covered pixel is
-    // never brightened by an unassociate it should not receive.
+    // `uTransparentCanvas` is a mode, not a flag: 0 = opaque, 1 = transparent
+    // with premultiplied output, 2 = transparent with straight output.
+    // Transparent target: unassociate before the transform, then re-associate
+    // the encoded result afterwards (mode 1 only). Opaque target: composite the
+    // linear PMA color over the clear-color matte first, so a partially covered
+    // pixel is never brightened by an unassociate it should not receive.
     let unassociated = select(vec3<f32>(0.0), src.rgb / src.a, src.a > 0.0);
     let composited = src.rgb + (1.0 - src.a) * uniforms.uMatteColor;
     let straight = select(composited, unassociated, transparent);

@@ -531,7 +531,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Parse a SpritesheetData descriptor, populating frames, sprites, and animations. When keepFrames is false (default), all existing frames and sprites are destroyed before parsing."
+          "description": "Parse a SpritesheetData descriptor, populating frames, sprites, and animations. When keepFrames is false (default), all existing frames and sprites are destroyed and every animation definition is cleared before parsing."
         },
         {
           "name": "removeFrame",

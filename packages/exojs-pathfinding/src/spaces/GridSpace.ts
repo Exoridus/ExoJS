@@ -332,7 +332,10 @@ export class GridSpace implements NavigationSpace {
 
   /**
    * String-pulls the path: keeps a node only when the straight line past it is
-   * blocked, so the result is the same route with its staircase removed.
+   * blocked, so the staircase between kept nodes is removed. On a weighted
+   * grid a kept segment may cross cells up to the cost of the most expensive
+   * cell of the section it replaces, endpoints included; smoothing does not
+   * recompute {@link PathResult.cost}, which still describes the search result.
    *
    * The returned nodes are no longer adjacent - the guarantee is that the
    * straight segment between two consecutive ones stays inside walkable cells

@@ -88,6 +88,16 @@ The regular pre-push hook is the final local integration check, not the discover
 
 Do not weaken, delete, skip, or baseline a failing test or gate merely to make the change pass without establishing that the expectation itself is wrong.
 
+## Multi-workstream pull requests and integration
+
+For substantial multi-agent or multi-subsystem work, decide the PR dependency graph before implementation. Give independent changes separate branches and worktrees from the same current `origin/next` base, open independent PRs against `next`, and run their CI concurrently. Do not make unrelated fixes a linear stack simply to group a sprint. Give shared files and generated artifacts one writer. Group tightly coupled small fixes into one coherent PR with logical commits.
+
+When a PR genuinely depends on another, prefer GitHub's native stacked pull requests over manually chaining feature-branch bases. Inspect the installed CLI with `gh stack --help` rather than assuming commands exist; use the supported `gh stack init`, `gh stack submit` and `gh stack merge` lifecycle where available. Preserve existing PRs when adopting a stack, keep each level's diff limited to its own changes, and verify required CI and review for every actual PR head before a coordinated merge. Continue to squash each PR by default, consistent with the changelog policy. Do not bypass required checks or merge-authorization requirements.
+
+If a lower PR was squash-merged separately, first reconcile descendant commits against the new `next` history (for example, with `git rebase --onto`) so previously merged commits are not proposed again. Inspect the previous remote SHA before any necessary history rewrite and use an explicit `--force-with-lease=<ref>:<expected-sha>`; do not disturb unrelated worktrees or saved work. Reuse prior validation only when the tested tree remains provably equivalent, and still obtain the required checks on the final PR heads and integration result.
+
+Record workstream ownership, dependencies, proof, PRs and remaining blockers in private `.workspace/` notes. Do not enable a merge queue, change branch protections, relax CI, or change the squash policy without a separate explicit decision.
+
 ## Scope
 
 Keep changes scoped to the requested problem. Local cleanup is appropriate when necessary for the change or when touching an immediately adjacent violation; do not turn a bounded task into repository-wide cleanup.

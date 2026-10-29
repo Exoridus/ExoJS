@@ -17,8 +17,9 @@ import { PolygonShape } from './PolygonShape';
  * know whether its input is convex can route everything through here.
  *
  * @throws RangeError on a non-finite coordinate, on fewer than three distinct
- * non-collinear vertices, on a self-intersecting outline, or when a part comes
- * out too degenerate for {@link PolygonShape}.
+ * non-collinear vertices, on a self-intersecting outline, when the outline is
+ * too degenerate to decompose into area-preserving convex parts, or when a
+ * resulting part is too degenerate for {@link PolygonShape}.
  */
 export const toConvexPolygonShapes = (vertices: ReadonlyArray<Readonly<PointLike>>): PolygonShape[] =>
   decomposeToConvexParts(vertices).map(part => new PolygonShape(part));

@@ -155,38 +155,6 @@ export interface LoadOptions {
 // Loader
 // ---------------------------------------------------------------------------
 
-/**
- * Central asset management hub for ExoJS applications.
- *
- * The `Loader` orchestrates fetching, processing, caching, and retrieval of
- * all engine asset types. It ships with a built-in {@link AssetType} for every first-party
- * kind (Texture, Sound, AudioStream, Video, FontFace, ImageBitmap or HTMLImageElement, JSON,
- * text, SVG, subtitles, binary, and WASM); an application adds its own by
- * listing them in an extension.
- *
- * Assets can be loaded in two ways:
- * - **Direct** - `loader.load(Assets.from({ hero: 'hero.png' }))` fetches
- *   immediately and resolves to the finished assets.
- * - **Background** - pass `{ priority: LoadPriority.Background }` to `load(...)` to pre-warm
- *   assets at low priority; {@link awaitBackground} resolves once the queue drains.
- *
- * Once loaded, assets are stored in memory and returned from cache on
- * subsequent `load` or {@link get} calls without re-fetching.
- *
- * @example
- * ```ts
- * const loader = new Loader({ basePath: '/assets/', cache: new IndexedDbStore('game') });
- * const { hero } = await loader.load(Assets.from({ hero: 'hero.png' }));
- * ```
- *
- * @remarks Internally, `Loader` is a thin orchestrator over three collaborators:
- * `AssetTypeRegistry` (installed types, their suffixes and factories),
- * `AssetDecoder` (URL resolution, acquisition, codec and factory dispatch),
- * and `AssetResidency` (claims, in-flight dedup, the resident-resource store,
- * deferred-handle healing, the background queue). `Loader` itself keeps the
- * public call-shape dispatch (`load`/`get`/`unload` and their internal
- * scene-scope entry points) and the foreground-batch progress signals.
- */
 /** How {@link Loader.loadContainer} fetches a container. */
 export interface LoadContainerOptions {
   /**
@@ -216,10 +184,47 @@ export interface LoadManifestOptions {
   readonly cache?: RequestCache;
 }
 
+/**
+ * Central asset management hub for ExoJS applications.
+ *
+ * The `Loader` orchestrates fetching, processing, caching, and retrieval of
+ * assets. An `Application` installs the first-party {@link AssetType}s
+ * (Texture, Sound, AudioStream, Video, FontFace, ImageBitmap or
+ * HTMLImageElement, JSON, text, SVG, subtitles, binary, and WASM). A standalone
+ * `Loader` resolves no suffix until a type is registered on it; an application
+ * adds its own types by listing them in an extension.
+ *
+ * Assets can be loaded in two ways:
+ * - **Direct** - `loader.load(Assets.from({ hero: 'hero.png' }))` fetches
+ *   immediately and resolves to the finished assets.
+ * - **Background** - pass `{ priority: LoadPriority.Background }` to `load(...)` to pre-warm
+ *   assets at low priority; {@link awaitBackground} resolves once the queue drains.
+ *
+ * Once loaded, assets are stored in memory and returned from cache on
+ * subsequent `load` or {@link get} calls without re-fetching.
+ *
+ * @example
+ * ```ts
+ * // Access the application-installed loader.
+ * // Its asset types were registered during Application construction.
+ * // A standalone Loader requires explicit asset-type registration.
+ * const loader = app.loader;
+ * const { hero } = await loader.load(Assets.from({ hero: 'hero.png' }));
+ * ```
+ *
+ * @remarks Internally, `Loader` is a thin orchestrator over three collaborators:
+ * `AssetTypeRegistry` (installed types, their suffixes and factories),
+ * `AssetDecoder` (URL resolution, acquisition, codec and factory dispatch),
+ * and `AssetResidency` (claims, in-flight dedup, the resident-resource store,
+ * deferred-handle healing, the background queue). `Loader` itself keeps the
+ * public call-shape dispatch (`load`/`get`/`unload` and their internal scene-scope
+ * entry points) and the foreground-batch progress signals.
+ */
 export class Loader {
   private readonly _typeRegistry = new AssetTypeRegistry();
   private readonly _decoder: AssetDecoder;
   private readonly _residency: AssetResidency;
+  private _destroyed = false;
 
   /**
    * Resolve a bare path once for both `get()` and `load()`: normalize it to the
@@ -852,9 +857,9 @@ export class Loader {
   /**
    * Claimed variant of {@link load}: identical logic, but every resolved key is
    * claimed under `claimer` (refcount). The public {@link load} delegates here
-   * under the app-lifetime {@link _rootClaimer}; the scene-scoped loader proxy
-   * passes its own scope. Claiming under `_rootClaimer` (which only `release()`
-   * frees) is observationally a no-op for existing callers.
+   * under the app-lifetime {@link _appScope}; the scene-scoped loader proxy
+   * passes its own scope. Claiming under `_appScope` (whose claims only
+   * {@link destroy} frees) is observationally a no-op for existing callers.
    * @internal
    */
   public _loadClaimed(claimer: LoaderScope, arg0: unknown, arg1?: unknown): LoadingQueue<unknown> {
@@ -995,7 +1000,10 @@ export class Loader {
 
   /**
    * Sets the maximum number of simultaneous background-queue fetches.
-   * Takes effect on the next {@link awaitBackground} call or `load(..., { background })`.
+   * Requires a nonnegative integer; zero pauses queued fetches.
+   * Takes effect at the next background-queue drain - on completion of a
+   * running fetch, on enqueue, or on {@link awaitBackground} - and does not
+   * start or abort a fetch that is already running.
    */
   public setConcurrency(n: number): this {
     this._residency.setConcurrency(n);
@@ -1103,7 +1111,7 @@ export class Loader {
   /**
    * Claimed variant of {@link get}: identical resolution, but each resolved key
    * is claimed under `claimer` (refcount). The public {@link get} delegates here
-   * under the app-lifetime {@link _rootClaimer}; the scene-scoped loader proxy
+   * under the app-lifetime {@link _appScope}; the scene-scoped loader proxy
    * passes its own scope. `_claim` runs AFTER `AssetResidency._getSeamless`/
    * `_getRef` so an evicted key's re-fetch is driven from here (the re-armed
    * handle reads `'loading'`, which `_getSeamless` alone would not re-fetch).
@@ -1493,6 +1501,7 @@ export class Loader {
    *
    * Clears all in-memory assets and in-flight tracking, and disconnects all
    * signals. Also calls `destroy?.()` on every installed type's factory.
+   * Completes teardown before rethrowing the first cleanup failure, if any.
    *
    * Cache stores are destroyed only when this loader was given the stores
    * themselves, and therefore owns the cache it wrapped them in. An
@@ -1501,11 +1510,23 @@ export class Loader {
    * application is done with it.
    */
   public destroy(): void {
+    if (this._destroyed) {
+      return;
+    }
+
+    this._destroyed = true;
+
     // Order matters: factory teardown must run after store teardown (via
     // this._decoder.destroy()) - see the regression test in loader.test.ts.
-    this._decoder.destroy();
-    this._typeRegistry.destroy();
-    this._residency.destroy();
+    const errors: unknown[] = [];
+
+    for (const stage of [this._decoder, this._typeRegistry, this._residency]) {
+      try {
+        stage.destroy();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
 
     this.onProgress.destroy();
     this.onLoaded.destroy();
@@ -1515,6 +1536,10 @@ export class Loader {
     this.onLoadComplete.destroy();
     this.onLoadError.destroy();
     this.onCacheError.destroy();
+
+    if (errors.length > 0) {
+      throw errors[0];
+    }
   }
 
   // -----------------------------------------------------------------------

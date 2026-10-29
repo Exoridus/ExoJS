@@ -22,8 +22,8 @@ import type { SeamlessAdapter } from './seamless';
  * wired to it need no re-wiring.
  *
  * `'none'` declares that the type has no meaningful placeholder at all. Its
- * assets cannot appear in a catalog by bare path and must be named explicitly
- * with {@link AssetType.asset}.
+ * assets cannot be held by a catalog under any name, and are loaded directly
+ * through the descriptor {@link AssetType.asset} produces.
  * @advanced
  */
 export type AssetLeaf<Resource> = 'ref' | 'none' | SeamlessAdapter<Resource>;
@@ -95,7 +95,7 @@ export interface AssetRequest<Options = undefined> {
  * {@link createFactory} once, so the mutable half of a type lives per
  * application and is destroyed with it.
  *
- * The type owns four separable decisions, and no more:
+ * The type owns five separable decisions, and no more:
  *
  * - what it is called ({@link id}) and which file suffixes name it ({@link extensions});
  * - when two requests are the same runtime resource ({@link resourceIdentity});

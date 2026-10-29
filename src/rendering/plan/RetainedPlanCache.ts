@@ -159,6 +159,7 @@ export class RetainedPlanCache {
     this._hasCapture = true;
   }
 
+  /** Drop the capture and every pooled drawable reference while retaining reusable record objects. */
   public invalidate(): void {
     releasePooledDrawables(this._slotPool);
     this._hasCapture = false;

@@ -22,7 +22,7 @@ export interface VocoderEffectOptions {
 }
 
 /**
- * Phase-vocoder-style effect implemented as a {@link WorkletEffect}. Analyzes
+ * Channel-vocoder effect implemented as a {@link WorkletEffect}. Analyzes
  * the spectral envelope of a `modulator` {@link AudioBus} across a bank of
  * log-spaced bandpass filters and applies that envelope to the carrier signal
  * (the main input). The result is the classic "robot voice" or talking-synth

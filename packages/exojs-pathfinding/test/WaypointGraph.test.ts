@@ -128,6 +128,37 @@ describe('WaypointGraph', () => {
     expect(graph.describeEdge(a, b)?.kind).toBe('jump');
   });
 
+  it('ignores an edge from a removed node instead of creating a phantom link', () => {
+    const graph = new WaypointGraph();
+    const a = graph.addNode(0, 0);
+    const b = graph.addNode(10, 0);
+
+    graph.removeNode(a);
+    graph.addEdge(a, b, { cost: 1 });
+
+    // A phantom edge would grow the degree budget and tighten the heuristic
+    // scale even though no live node can reach it.
+    expect(graph.maxDegree).toBe(0);
+    expect(graph.heuristic(a, b)).toBe(10);
+
+    const reused = graph.addNode(20, 0);
+    expect(reused).toBe(a);
+    expect(graph.describeEdge(reused, b)).toBeNull();
+  });
+
+  it('rejects a zero, negative or non-finite edge cost', () => {
+    const graph = new WaypointGraph();
+    const a = graph.addNode(0, 0);
+    const b = graph.addNode(10, 0);
+
+    for (const cost of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => graph.addEdge(a, b, { cost })).toThrow(RangeError);
+    }
+
+    graph.addEdge(a, b, { cost: 2 });
+    expect(new Pathfinder().findPath(graph, a, b).cost).toBe(2);
+  });
+
   it('finds the nearest node for a coordinate query', () => {
     const graph = new WaypointGraph();
     const a = graph.addNode(0, 0);

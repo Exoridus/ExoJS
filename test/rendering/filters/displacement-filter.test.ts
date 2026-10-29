@@ -146,3 +146,33 @@ describe('DisplacementFilter numeric-only map', () => {
     expect(() => new DisplacementFilter({ map: numericMap })).not.toThrow();
   });
 });
+
+describe('DisplacementFilter owner invalidation', () => {
+  test('map and offsets invalidate attached owners only', () => {
+    const first = map();
+    const second = map();
+    const filter = new DisplacementFilter({ map: first });
+    const owner = { invalidateCache: vi.fn() };
+    filter._attachOwner(owner);
+    const firstDestroy = vi.spyOn(first, 'destroy');
+    const secondDestroy = vi.spyOn(second, 'destroy');
+    filter.map = second;
+    expect(owner.invalidateCache).toHaveBeenCalledTimes(1);
+    filter.offsetU = 0.5;
+    expect(owner.invalidateCache).toHaveBeenCalledTimes(2);
+    filter.offsetV = 0.25;
+    expect(owner.invalidateCache).toHaveBeenCalledTimes(3);
+    filter.map = second;
+    filter.offsetU = 0.5;
+    filter.offsetV = 0.25;
+    expect(owner.invalidateCache).toHaveBeenCalledTimes(3);
+    filter._detachOwner(owner);
+    filter.offsetU = 0;
+    expect(owner.invalidateCache).toHaveBeenCalledTimes(3);
+    filter.destroy();
+    expect(firstDestroy).not.toHaveBeenCalled();
+    expect(secondDestroy).not.toHaveBeenCalled();
+    first.destroy();
+    second.destroy();
+  });
+});

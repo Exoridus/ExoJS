@@ -34,8 +34,9 @@ const degenerateAreaFraction = 1e-9;
  * which suits import-time geometry rather than a per-step path.
  *
  * @throws RangeError if a coordinate is not finite, if fewer than three
- * distinct non-collinear vertices remain after cleanup, or if the outline
- * intersects itself.
+ * distinct non-collinear vertices remain after cleanup, if the outline
+ * intersects itself, or if it is too degenerate to triangulate into parts that
+ * preserve its area.
  * @internal
  */
 export const decomposeToConvexParts = (vertices: ReadonlyArray<Readonly<PointLike>>): PointLike[][] => {

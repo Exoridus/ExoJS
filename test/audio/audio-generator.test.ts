@@ -284,6 +284,118 @@ describe('AudioGenerator', () => {
     gen.destroy();
   });
 
+  describe('replacing an explicit stop fade', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    test.each([undefined, Time.seconds(0)])('a generator without an envelope can stop immediately during a fade (fade=%s)', fade => {
+      const system = new AudioSystem();
+      const spy = setupSpy();
+      const gen = new AudioGenerator();
+      const voice = system.play(gen);
+
+      voice.stop(Time.seconds(1));
+      vi.advanceTimersByTime(100);
+      expect(voice.ended).toBe(false);
+
+      voice.stop(fade);
+
+      expect(voice.ended).toBe(true);
+      expect(vi.getTimerCount()).toBe(0);
+      spy.restore();
+      gen.destroy();
+    });
+
+    test('a generator with an envelope can begin its release during a fade', () => {
+      const system = new AudioSystem();
+      const spy = setupSpy();
+      const envelope = new Envelope({ release: Time.seconds(0.5) });
+      const release = vi.spyOn(envelope, 'releaseAt');
+      const gen = new AudioGenerator({ envelope });
+      const voice = system.play(gen);
+
+      voice.stop(Time.seconds(1));
+      vi.advanceTimersByTime(100);
+      voice.stop();
+
+      expect(release).toHaveBeenCalledTimes(1);
+      expect(spy.oscillators[0]!.stop).toHaveBeenCalledExactlyOnceWith(getAudioContext().currentTime + 0.5);
+      expect(voice.ended).toBe(false);
+      spy.oscillators[0]!.onended!();
+      expect(voice.ended).toBe(true);
+      expect(vi.getTimerCount()).toBe(0);
+      spy.restore();
+      gen.destroy();
+    });
+
+    test('an explicit short fade can finish an envelope release earlier', () => {
+      const system = new AudioSystem();
+      const spy = setupSpy();
+      const gen = new AudioGenerator({ envelope: new Envelope({ release: Time.seconds(1) }) });
+      const voice = system.play(gen);
+
+      voice.stop();
+      voice.stop(Time.seconds(0.1));
+      vi.advanceTimersByTime(99);
+      expect(voice.ended).toBe(false);
+
+      vi.advanceTimersByTime(1);
+
+      expect(voice.ended).toBe(true);
+      expect(vi.getTimerCount()).toBe(0);
+      spy.restore();
+      gen.destroy();
+    });
+
+    test.each([false, true])('a shorter fade replaces the pending timer (envelope=%s)', withEnvelope => {
+      const system = new AudioSystem();
+      const spy = setupSpy();
+      const gen = new AudioGenerator({ envelope: withEnvelope ? new Envelope() : null });
+      const voice = system.play(gen);
+
+      voice.stop(Time.seconds(1));
+      vi.advanceTimersByTime(100);
+      voice.stop(Time.seconds(0.2));
+      vi.advanceTimersByTime(199);
+      expect(voice.ended).toBe(false);
+
+      vi.advanceTimersByTime(1);
+
+      expect(voice.ended).toBe(true);
+      expect(vi.getTimerCount()).toBe(0);
+      spy.restore();
+      gen.destroy();
+    });
+  });
+
+  test('repeated stop during the release tail does not reschedule its end', () => {
+    const system = new AudioSystem();
+    const spy = setupSpy();
+    const env = new Envelope({ release: Time.seconds(0.5) });
+    const release = vi.spyOn(env, 'releaseAt');
+    const gen = new AudioGenerator({ envelope: env });
+    let now = 1;
+
+    vi.spyOn(getAudioContext(), 'currentTime', 'get').mockImplementation(() => now);
+
+    const voice = system.play(gen);
+
+    voice.stop();
+    now = 1.2;
+    voice.stop();
+
+    expect(release).toHaveBeenCalledTimes(1);
+    expect(spy.oscillators[0]!.stop).toHaveBeenCalledExactlyOnceWith(1.5);
+
+    spy.restore();
+    gen.destroy();
+  });
+
   // ---- Bus routing ----
 
   test('voice routes to system.sound by default', () => {

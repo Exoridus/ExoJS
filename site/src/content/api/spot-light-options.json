@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Half-angle of the cone in DEGREES, measured from its axis. Defaults to 30."
+          "description": "Half-angle of the cone in DEGREES, measured from its axis. Defaults to 30. Rendering clamps the angle to 0..90, but the stored value stays as assigned, so a wider cone is not rendered."
         },
         {
           "name": "color",
@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Light colour. Alpha is ignored. Defaults to opaque white."
+          "description": "Light colour. Alpha is ignored. Defaults to opaque white. A Color passed here is stored, not copied, so mutating it later changes this light."
         },
         {
           "name": "coneSoftness",

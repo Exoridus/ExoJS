@@ -326,9 +326,10 @@ export class AsepriteSheet {
       }
 
       // Aseprite's `tag.repeat` (a numeric string, `'1'` through any N) maps
-      // directly onto the engine's `repeat` count. Absent means the tag
-      // loops indefinitely, the engine's `-1` sentinel.
-      const repeat = tag.repeat !== undefined ? Number(tag.repeat) : -1;
+      // directly onto the engine's `repeat` count. Absent or `'0'` means the
+      // tag loops indefinitely, the engine's `-1` sentinel.
+      const parsedRepeat = tag.repeat !== undefined ? Number(tag.repeat) : -1;
+      const repeat = parsedRepeat === 0 ? -1 : parsedRepeat;
       const fps = avgFps(taggedFrames);
 
       // Per-frame hold duration (Aseprite "duration"), so uneven hold-frames

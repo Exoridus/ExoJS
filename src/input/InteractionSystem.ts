@@ -18,6 +18,8 @@ import { FocusController } from './FocusController';
 import { isHittable, isWithinAncestorClips, isWithinClip } from './hitTestPredicates';
 import type { InteractionEventType } from './InteractionEvent';
 import { InteractionEvent } from './InteractionEvent';
+import { InteractionRootBindings } from './InteractionRootBindings';
+import { bubbleInteractionEvent, iterateInteractionSubtree, removeScopesInSubtree } from './interactionTree';
 import type { Pointer } from './Pointer';
 import { createScopeToken, type ScopeToken } from './ScopeToken';
 
@@ -236,6 +238,7 @@ export class InteractionSystem {
 
   /** This system's service bundle, installed on a scene root via {@link attachRoot}. */
   private readonly _stage: Stage;
+  private readonly _rootBindings = new InteractionRootBindings();
 
   /**
    * UI-layer interaction hooks: mostly no-ops, so screen-fixed UI nodes are
@@ -249,7 +252,11 @@ export class InteractionSystem {
    * registration is the only part that doesn't apply here.
    */
   private readonly _uiInteraction: InteractionHooks = {
-    _notifyNodeAdded: () => this._focus._enforceActiveScopeTrap(),
+    _notifyNodeAdded: () => {
+      if (!this._rootBindings.destroyed) {
+        this._focus._enforceActiveScopeTrap();
+      }
+    },
     _notifyNodeRemoved: () => {},
     _notifyInteractiveChanged: () => {},
     _notifyBoundsInvalidated: () => {},
@@ -415,10 +422,6 @@ export class InteractionSystem {
   }
 
   /**
-   * Returns all currently captured RenderNodes (nodes that have an active
-   * drag / pointer-capture in progress). Used by debug layers.
-   */
-  /**
    * Snapshot of nodes that currently have pointer-capture (a pointer
    * pressed inside them and is being dragged). Used internally for drag
    * routing; exposed read-only for diagnostic / debug consumers.
@@ -536,7 +539,15 @@ export class InteractionSystem {
     return this._tree;
   }
 
+  /**
+   * Release listeners, pointer and focus state, the spatial index and the Stage
+   * bundles installed on scene roots. Later scene mutations cannot reactivate this system.
+   */
   public destroy(): void {
+    if (!this._rootBindings.destroy()) {
+      return;
+    }
+
     this._app.input.onPointerDown.remove(this._onPointerDownHandler);
     this._app.input.onPointerMove.remove(this._onPointerMoveHandler);
     this._app.input.onPointerUp.remove(this._onPointerUpHandler);
@@ -649,6 +660,10 @@ export class InteractionSystem {
    * events were dispatched instead of skipping them.
    */
   public preFrame(_delta: Seconds): void {
+    if (this._rootBindings.destroyed) {
+      return;
+    }
+
     let completed = false;
 
     try {
@@ -671,7 +686,10 @@ export class InteractionSystem {
    * @internal
    */
   public attachRoot(root: RenderNode): void {
-    root._setStage(this._stage);
+    if (!this._rootBindings.attach(root, this._stage)) {
+      return;
+    }
+
     this._notifyNodeAdded(root);
   }
 
@@ -688,43 +706,14 @@ export class InteractionSystem {
    * @internal
    */
   public detachRoot(root: RenderNode): void {
-    this._removeScopesInSubtree(root);
+    if (!this._rootBindings.detach(root, this._stage)) {
+      return;
+    }
+
+    removeScopesInSubtree(this._scopeStack, root, this._focus);
     this._focus._notifyNodeRemoved(root);
     this._notifyNodeRemoved(root);
     root._setStage(null);
-  }
-
-  /** Whether `node` is `root` itself or lives somewhere in its subtree. */
-  private _isDescendantOrSelf(node: RenderNode, root: RenderNode): boolean {
-    let current: RenderNode | null = node;
-
-    while (current !== null) {
-      if (current === root) {
-        return true;
-      }
-
-      current = current.parent;
-    }
-
-    return false;
-  }
-
-  /**
-   * Remove only the scope entries rooted inside `root`'s own subtree from
-   * {@link _scopeStack}, popping each through {@link FocusController.popScope}
-   * so focus reacts the same way it would for an explicit `popScope` call.
-   * Shared by {@link detachRoot} (world layer) and {@link detachUIRoot} (UI
-   * layer) so both tear down scopes identically.
-   */
-  private _removeScopesInSubtree(root: RenderNode): void {
-    for (let i = this._scopeStack.length - 1; i >= 0; i--) {
-      const entry = this._scopeStack[i];
-
-      if (entry !== undefined && this._isDescendantOrSelf(entry.root, root)) {
-        this._scopeStack.splice(i, 1);
-        this._focus.popScope(entry.token);
-      }
-    }
   }
 
   /**
@@ -740,7 +729,10 @@ export class InteractionSystem {
    * @internal
    */
   public attachUIRoot(root: Container): void {
-    root._setStage(this._uiStage);
+    if (!this._rootBindings.attach(root, this._uiStage)) {
+      return;
+    }
+
     this._focus._enforceActiveScopeTrap();
   }
 
@@ -752,7 +744,11 @@ export class InteractionSystem {
    * @internal
    */
   public detachUIRoot(root: Container): void {
-    this._removeScopesInSubtree(root);
+    if (!this._rootBindings.detach(root, this._uiStage)) {
+      return;
+    }
+
+    removeScopesInSubtree(this._scopeStack, root, this._focus);
     this._focus._notifyNodeRemoved(root);
     root._setStage(null);
   }
@@ -774,7 +770,11 @@ export class InteractionSystem {
    * @internal
    */
   public _notifyNodeAdded(node: RenderNode): void {
-    for (const n of this._iterateSubtree(node)) {
+    if (this._rootBindings.destroyed) {
+      return;
+    }
+
+    for (const n of iterateInteractionSubtree(node)) {
       if (n.interactive) {
         this._registerNode(n);
         this._hoverDirty = true;
@@ -793,9 +793,13 @@ export class InteractionSystem {
    * @internal
    */
   public _notifyNodeRemoved(node: RenderNode): void {
+    if (this._rootBindings.destroyed) {
+      return;
+    }
+
     this._retireHoverInSubtree(node);
 
-    for (const n of this._iterateSubtree(node)) {
+    for (const n of iterateInteractionSubtree(node)) {
       if (this._interactiveNodes.has(n)) {
         this._unregisterNode(n);
       }
@@ -810,6 +814,10 @@ export class InteractionSystem {
    * @internal
    */
   public _notifyInteractiveChanged(node: RenderNode, becameInteractive: boolean): void {
+    if (this._rootBindings.destroyed) {
+      return;
+    }
+
     if (becameInteractive) {
       this._registerNode(node);
       this._hoverDirty = true;
@@ -829,6 +837,10 @@ export class InteractionSystem {
    * @internal
    */
   public _notifyBoundsInvalidated(node: RenderNode): void {
+    if (this._rootBindings.destroyed) {
+      return;
+    }
+
     if (this._interactiveNodes.has(node)) {
       this._staleNodes.add(node);
       this._hoverDirty = true;
@@ -846,6 +858,10 @@ export class InteractionSystem {
    * @internal
    */
   public _notifyTransformGroupMoved(group: RenderNode): void {
+    if (this._rootBindings.destroyed) {
+      return;
+    }
+
     const descendants = this._groupWorldDescendants.get(group);
 
     if (descendants === undefined) {
@@ -944,6 +960,10 @@ export class InteractionSystem {
    * correlation key every other per-pointer map in this class already uses.
    */
   private _enqueuePhase(pointer: Pointer, kind: InteractionPhaseKind, x: number, y: number): void {
+    if (this._rootBindings.destroyed) {
+      return;
+    }
+
     const journal = this._journal;
 
     // Every phase, Cancel/Leave included - those are dropped again only once
@@ -1049,6 +1069,10 @@ export class InteractionSystem {
   /**
    * Fail closed: drop every queued entry and forget the drag, capture, press
    * and hover state of each pointer in `touchedIds` or in the journal.
+   *
+   * No fallback `pointerout` is dispatched on this path. It runs after a
+   * handler failure or a gated frame, when node handlers must not run again,
+   * so the pointer's hover bookkeeping is discarded instead.
    */
   private _discardJournal(touchedIds: Set<number>): void {
     for (const entry of this._journal) {
@@ -1089,7 +1113,7 @@ export class InteractionSystem {
           if (hit !== null) {
             const event = new InteractionEvent('pointerdown', hit, pointer, x, y);
 
-            this._dispatchBubble(event);
+            bubbleInteractionEvent(event);
 
             // The handler just run may have destroyed or detached `hit`
             // itself - see `_isLive`'s doc comment - so neither the press
@@ -1136,7 +1160,7 @@ export class InteractionSystem {
           // destroyed the dragged node - which IS `hit` while a drag is
           // active, since _resolvePhase short-circuits to the captured node.
           if (hit !== null && this._isLive(hit)) {
-            this._dispatchBubble(new InteractionEvent('pointermove', hit, pointer, x, y));
+            bubbleInteractionEvent(new InteractionEvent('pointermove', hit, pointer, x, y));
           }
 
           this._dispatchDragTick(id, pointer, x, y);
@@ -1156,7 +1180,7 @@ export class InteractionSystem {
           const { node: hit, x, y } = this._resolvePhase(phaseX, phaseY, this._currentCapture(id));
 
           if (hit !== null && this._isLive(hit)) {
-            this._dispatchBubble(new InteractionEvent('pointerup', hit, pointer, x, y));
+            bubbleInteractionEvent(new InteractionEvent('pointerup', hit, pointer, x, y));
           }
 
           this._completeDrag(id, pointer, x, y);
@@ -1184,7 +1208,7 @@ export class InteractionSystem {
             const tapHit = this._resolvePhase(phaseX, phaseY, this._currentCapture(id));
 
             if (tapHit.node === pressTarget) {
-              this._dispatchBubble(new InteractionEvent('pointertap', pressTarget, pointer, tapHit.x, tapHit.y));
+              bubbleInteractionEvent(new InteractionEvent('pointertap', pressTarget, pointer, tapHit.x, tapHit.y));
             }
           }
 
@@ -1195,7 +1219,7 @@ export class InteractionSystem {
           const { node: hit, x, y } = this._resolvePhase(phaseX, phaseY, this._currentCapture(id));
 
           if (hit !== null && this._isLive(hit)) {
-            this._dispatchBubble(new InteractionEvent('contextmenu', hit, pointer, x, y));
+            bubbleInteractionEvent(new InteractionEvent('contextmenu', hit, pointer, x, y));
           }
 
           break;
@@ -1211,7 +1235,7 @@ export class InteractionSystem {
             const last = this._lastHit.get(id) ?? null;
 
             if (last !== null && this._isLive(last)) {
-              this._dispatchBubble(new InteractionEvent('pointerout', last, pointer, x, y));
+              bubbleInteractionEvent(new InteractionEvent('pointerout', last, pointer, x, y));
             }
           }
 
@@ -1272,13 +1296,13 @@ export class InteractionSystem {
     }
 
     if (last !== null && this._isLive(last)) {
-      this._dispatchBubble(new InteractionEvent('pointerout', last, pointer, x, y));
+      bubbleInteractionEvent(new InteractionEvent('pointerout', last, pointer, x, y));
     }
 
     // The pointerout handler just run on `last` may have destroyed or
     // detached `hit` (a different node) before it gets its own dispatch.
     if (hit !== null && this._isLive(hit)) {
-      this._dispatchBubble(new InteractionEvent('pointerover', hit, pointer, x, y));
+      bubbleInteractionEvent(new InteractionEvent('pointerover', hit, pointer, x, y));
     }
 
     // Either dispatch just above - pointerout on `last`, or `hit`'s own
@@ -1996,7 +2020,7 @@ export class InteractionSystem {
 
       const { x, y } = this._designToLayerSpace(pointer.x, pointer.y, this._isUINode(hit));
 
-      this._dispatchBubble(new InteractionEvent('pointerout', hit, pointer, x, y));
+      bubbleInteractionEvent(new InteractionEvent('pointerout', hit, pointer, x, y));
     }
   }
 
@@ -2088,7 +2112,8 @@ export class InteractionSystem {
    * Flush stale entries: drop each stale node's old index entry and re-index
    * it with fresh bounds AND a freshly resolved group anchor (a boundary
    * engage/disengage flip re-buckets the node between the tree and the
-   * anchored side list here). Called at the start of update().
+   * anchored side list here). Called at the start of every non-gated flush
+   * (`_dispatchFrame`), before the journal drains.
    *
    * Remove+reinsert rather than the tree's `update()`: `update()` only touches
    * the tree, so it cannot re-bucket a node between the tree and the anchored
@@ -2142,67 +2167,14 @@ export class InteractionSystem {
     );
   }
 
-  /**
-   * Iterative pre-order subtree traversal (root first). Generator form keeps
-   * callers simple and avoids recursive stack growth on deep hierarchies.
-   */
-  private *_iterateSubtree(root: RenderNode): Generator<RenderNode> {
-    const stack: RenderNode[] = [root];
-
-    while (stack.length > 0) {
-      const node = stack.pop()!;
-
-      yield node;
-
-      if (node instanceof Container) {
-        // Push in reverse so iteration preserves child insertion order.
-        for (let index = node.children.length - 1; index >= 0; index--) {
-          const child = node.children[index];
-
-          if (child !== undefined) {
-            stack.push(child);
-          }
-        }
-      }
-    }
-  }
-
   // ---------------------------------------------------------------------------
   // Dispatch helpers
   // ---------------------------------------------------------------------------
-
-  /**
-   * Walk the event from its target up through every ancestor. `interactive`
-   * decides whether a node can be *hit*, not whether an event may pass through
-   * it - a plain layout container in the middle of the path must not silently
-   * cut a listener on the node above it off from the event. Propagation ends
-   * only at the root or at an explicit {@link InteractionEvent.stopPropagation}.
-   */
-  private _dispatchBubble(event: InteractionEvent): void {
-    let current: RenderNode | null = event.target;
-
-    while (current !== null) {
-      event.currentTarget = current;
-      this._signalFor(event.type, current)?.dispatch(event);
-
-      if (event.propagationStopped) {
-        break;
-      }
-
-      current = current.parent;
-    }
-  }
 
   /** Dispatch an event directly on a single node without bubbling. */
   private _dispatchDirect(event: InteractionEvent, signal: Signal<[InteractionEvent]> | null): void {
     event.currentTarget = event.target;
     signal?.dispatch(event);
-  }
-
-  private _signalFor(type: InteractionEventType, node: RenderNode): Signal<[InteractionEvent]> | null {
-    // Peek (never materialize): a node with no listener for `type` has no
-    // signal, so dispatch simply skips it.
-    return node._peekInteractionSignal(type);
   }
 
   // ---------------------------------------------------------------------------

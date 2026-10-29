@@ -374,6 +374,11 @@ describe('AsepriteSheet.parse — repeat', () => {
     const sheet = AsepriteSheet.parse(makeData(undefined), newTexture());
     expect(sheet.clips.get('clip')!.repeat).toBe(-1);
   });
+
+  it('repeat: "0" means Aseprite infinite loop (repeat: -1), not an invalid zero', () => {
+    const sheet = AsepriteSheet.parse(makeData('0'), newTexture());
+    expect(sheet.clips.get('clip')!.repeat).toBe(-1);
+  });
 });
 
 // ── AsepriteSheet.parse - slices ────────────────────────────────────────────────

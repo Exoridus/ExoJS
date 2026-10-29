@@ -24,9 +24,11 @@ export interface SamplerOptions {
 /**
  * How a texture's source content is interpreted on its way to the GPU.
  *
- * Unlike {@link SamplerOptions}, these belong to the texture itself: they
- * decide what ends up in GPU memory, so changing one requires a re-upload
- * rather than a different sampler.
+ * Unlike {@link SamplerOptions}, these belong to the texture itself: most of
+ * them decide what ends up in GPU memory, so changing one requires a re-upload
+ * rather than a different sampler. `flipY` is resolved when UVs are packed
+ * instead; changing it does not by itself invalidate geometry already recorded
+ * against the old value, so invalidate that geometry explicitly.
  */
 export interface TextureUploadOptions {
   /**

@@ -117,11 +117,9 @@ export class AudioListener {
    * @internal
    */
   public _tick(): void {
-    if (this.target === null) {
-      return;
+    if (this.target !== null) {
+      this._readTargetPosition();
     }
-
-    this._readTargetPosition();
 
     if (!this._explicitVelocity && this._ctx !== null && this._settings.dopplerFactor !== 0) {
       deriveVelocity(this._velocitySample, this.position.x, this.position.y, this._ctx.currentTime);

@@ -321,7 +321,7 @@
           ],
           "params": [],
           "returnType": "Promise<boolean>",
-          "description": "Opens the database connection, running any pending schema migrations. Resolves to true when the connection is ready; rejects on error. Calling this when already connected is a no-op that resolves true."
+          "description": "Opens the database connection, running any pending schema migrations. Resolves to true when the connection is ready; rejects on error. Calling this when already connected is a no-op that resolves true. Data operations open the connection on demand, so an explicit call is only needed to surface a migration failure before the first read or write."
         },
         {
           "name": "delete",
@@ -442,7 +442,7 @@
           ],
           "params": [],
           "returnType": "Promise<boolean>",
-          "description": "Disconnects and then permanently deletes the entire database. Resolves true on success."
+          "description": "Disconnects and then permanently deletes the entire database. Resolves true on success. The instance stays usable: a later write recreates the database."
         },
         {
           "name": "destroy",
@@ -471,7 +471,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Synchronously closes any open handles without waiting for pending transactions to complete. Prefer disconnect for graceful teardown."
+          "description": "Synchronously closes any open handles without waiting for pending transactions to complete. Prefer disconnect for graceful teardown. Terminal for this instance: afterwards every operation that needs a connection rejects, while deleteStorage still runs."
         },
         {
           "name": "disconnect",

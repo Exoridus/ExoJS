@@ -167,6 +167,14 @@ describe('exo serve', () => {
       expect(response.headers.get('content-range')).toBe('bytes */3');
     }));
 
+  test('a range whose end precedes its start is answered whole, never as a 206', async () =>
+    serving({ root, port: 0 }, async server => {
+      const response = await fetch(new URL('assets/data.bin', server.url), { headers: { Range: 'bytes=2-1' } });
+
+      expect(response.status).toBe(200);
+      expect(new Uint8Array(await response.arrayBuffer())).toEqual(new Uint8Array([1, 2, 3]));
+    }));
+
   test('a range it will not serve piecewise is answered whole rather than refused', async () =>
     serving({ root, port: 0 }, async server => {
       const response = await fetch(new URL('assets/data.bin', server.url), { headers: { Range: 'bytes=0-0, 2-2' } });

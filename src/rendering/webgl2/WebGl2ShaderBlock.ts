@@ -2,6 +2,11 @@ import { WebGl2ShaderUniform } from '#rendering/webgl2/WebGl2ShaderUniform';
 
 import { webGl2PrimitiveArrayConstructors, webGl2PrimitiveByteSizeMapping } from './shaderMappings';
 
+/**
+ * Reflection metadata and an owned GPU buffer for one active GLSL uniform block.
+ * Uniform views share the block's CPU buffer, which {@link upload} sends to the GPU.
+ * @advanced
+ */
 export class WebGl2ShaderBlock {
   public readonly index: number;
   public readonly name: string;
@@ -11,7 +16,7 @@ export class WebGl2ShaderBlock {
   private readonly _context: WebGL2RenderingContext;
   private readonly _program: WebGLProgram;
   private readonly _blockData: ArrayBuffer;
-  private readonly _uniformBuffer: WebGLBuffer | null;
+  private _uniformBuffer: WebGLBuffer | null;
   private readonly _uniforms: Map<string, WebGl2ShaderUniform> = new Map<string, WebGl2ShaderUniform>();
 
   public constructor(gl: WebGL2RenderingContext, program: WebGLProgram, index: number) {
@@ -32,6 +37,7 @@ export class WebGl2ShaderBlock {
     gl.uniformBlockBinding(this._program, this.index, this.binding);
   }
 
+  /** Look up an active member by its property name, without an array suffix. */
   public getUniform(name: string): WebGl2ShaderUniform {
     if (!this._uniforms.has(name)) {
       throw new Error(`Uniform "${name}" is not available.`);
@@ -48,6 +54,11 @@ export class WebGl2ShaderBlock {
   }
 
   public destroy(): void {
+    if (this._uniformBuffer !== null) {
+      this._context.deleteBuffer(this._uniformBuffer);
+      this._uniformBuffer = null;
+    }
+
     for (const uniform of this._uniforms.values()) {
       uniform.destroy();
     }

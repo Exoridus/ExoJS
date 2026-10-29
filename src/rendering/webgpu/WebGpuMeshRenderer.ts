@@ -145,13 +145,6 @@ interface InstancedPipelineKey {
   readonly depth: MeshDepthMode;
 }
 
-/**
- * Cache key for the default + instanced (static-batch) pipeline maps. The
- * stencil dimension keeps the clip and no-clip variants distinct, mirroring the
- * sprite renderer: a stencil pipeline carries depth/stencil state and is only
- * valid in a pass with the matching attachment, so the two are never
- * interchangeable.
- */
 // Indexed by component count minus one.
 const instanceVertexFormats: readonly GPUVertexFormat[] = ['float32', 'float32x2', 'float32x3', 'float32x4'];
 
@@ -170,6 +163,13 @@ const instanceAttributeBufferLayout = (instances: InstanceDataView): GPUVertexBu
   })),
 });
 
+/**
+ * Cache key for the default and instanced pipeline maps. The stencil dimension
+ * keeps the clip and no-clip variants distinct, mirroring the sprite renderer: a
+ * stencil pipeline carries depth/stencil state and is only valid in a pass with
+ * the matching attachment, so the two are never interchangeable. The depth
+ * dimension is a cache dimension for the same reason.
+ */
 const meshPipelineCacheKey = (
   blendMode: BlendModes,
   format: GPUTextureFormat,
@@ -247,7 +247,7 @@ const maxCustomTextureSlots = 7; // user texture uniforms; group 2 binding 1..N
 
 /**
  * Per-bundle mesh replay state (mesh opt-in). Parked
- * on the group bundle's {@link WebGpuRetainedGroupBundle.rendererReplayState} so
+ * on the group bundle's {@link WebGpuRetainedGroupBundle.rendererReplayStates} so
  * it shares the bundle's grow-only / explicitly-freed lifecycle. Holds the mesh
  * group(0) `TransformUniforms` UBO (one dynamic-offset slot per recorded batch,
  * because the per-batch premultiply flag differs) + its bind group, plus the
@@ -1215,8 +1215,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
   public async prewarmPipelines(formats: readonly GPUTextureFormat[]): Promise<void> {
     const device = this._device;
+    const pipelineLayout = this._pipelineLayout;
+    const instancedPipelineLayout = this._instancedPipelineLayout;
 
-    if (!device || !this._shaderModule || !this._pipelineLayout) {
+    if (!device || !this._shaderModule || !pipelineLayout) {
       return;
     }
 
@@ -1249,14 +1251,18 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
         promises.push(
           device.createRenderPipelineAsync(this._buildPipelineDescriptor(blendMode, format)).then(pipeline => {
-            this._pipelines.set(key, pipeline);
+            if (this._device === device && this._pipelineLayout === pipelineLayout) {
+              this._pipelines.set(key, pipeline);
+            }
           }),
         );
 
         if (!this._instancedPipelines.has(key)) {
           promises.push(
             device.createRenderPipelineAsync(this._buildInstancedPipelineDescriptor(blendMode, format)).then(pipeline => {
-              this._instancedPipelines.set(key, pipeline);
+              if (this._device === device && this._instancedPipelineLayout === instancedPipelineLayout) {
+                this._instancedPipelines.set(key, pipeline);
+              }
             }),
           );
         }
@@ -1618,7 +1624,6 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     return max;
   }
 
-  /** Whether any texture this flush binds would be re-uploaded or resized when synced. */
   /** Whether any pending draw of this flush writes depth into the bound target. */
   private _pendingWritesDepth(backend: WebGpuBackend): boolean {
     for (let i = 0; i < this._drawCallCount; i++) {
@@ -1630,6 +1635,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     return false;
   }
 
+  /** Whether any texture this flush binds would be re-uploaded or resized when synced. */
   private _flushWouldMutateTexture(backend: WebGpuBackend): boolean {
     for (let i = 0; i < this._drawCallCount; i++) {
       if (backend.textureUploadWouldMutate(this._drawCalls[i]!.texture)) {
@@ -2062,7 +2068,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   }
 
   private _getMeshReplayState(bundle: WebGpuRetainedGroupBundle): MeshRetainedReplayState {
-    const existing = bundle.rendererReplayState;
+    const existing = bundle.rendererReplayStates.get(this);
 
     if (existing instanceof MeshRetainedReplayState) {
       return existing;
@@ -2070,7 +2076,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     const state = new MeshRetainedReplayState();
 
-    bundle.rendererReplayState = state;
+    bundle.rendererReplayStates.set(this, state);
 
     return state;
   }

@@ -353,6 +353,9 @@ const neutralFill: UIFillBackground = fill(new Color(0, 0, 0, 0), 0, new Color(0
  * Apply a widget's fill overrides on top of the background its skin provides.
  * A patched skin that does not paint a fill (a nine-slice, or nothing) becomes
  * one: the caller asked for a colour, so they get a colour.
+ * An empty patch object still counts as an override: with a nine-slice or no
+ * background it yields a transparent fill, while an existing fill keeps its
+ * colour, border and radius. Pass `null` for no override.
  *
  * @internal
  */

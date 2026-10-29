@@ -20,10 +20,15 @@ export const median = (samples: readonly number[]): number => {
 
 /**
  * `p`th percentile of `samples` using the nearest-rank method on the sorted array:
- * `index = ceil(p / 100 * n) - 1`, clamped to `[0, n - 1]`. Throws on an empty array rather
- * than returning `NaN`.
+ * `index = ceil(p / 100 * n) - 1`, clamped to `[0, n - 1]`. Throws on an empty array
+ * rather than returning `NaN`, and on a percentage that is not a finite value in
+ * `[0, 100]` rather than returning `undefined` from a `number` signature.
  */
 export const percentile = (samples: readonly number[], p: number): number => {
+  if (!Number.isFinite(p) || p < 0 || p > 100) {
+    throw new Error('percentile: p must be a finite percentage between 0 and 100');
+  }
+
   if (samples.length === 0) {
     throw new Error('percentile: samples must not be empty');
   }

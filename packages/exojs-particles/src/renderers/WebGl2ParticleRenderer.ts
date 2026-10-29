@@ -74,7 +74,7 @@ interface ParticleModeResources {
   readonly primitive: RenderingPrimitives;
   readonly instanced: boolean;
   /** Indices (or vertices, when the geometry carries none) per drawn element. */
-  readonly indexCount: number;
+  indexCount: number;
   /** Byte view over the mode's scratch buffer, rebuilt whenever the mode grows it. */
   bytes: Uint8Array;
   source: ArrayBuffer | null;
@@ -90,7 +90,10 @@ interface ParticleModeResources {
  * the buffer - and this renderer is the executor: each `render(system)` flushes
  * any pending batch, sets the system-level uniforms (transform, local bounds,
  * texture) and asks the mode to build its vertex data. The next `flush()`
- * uploads that data and issues the single draw the mode declares.
+ * uploads that data and issues the single draw the mode declares. A system
+ * simulating through WebGL2 transform feedback skips the CPU build and the
+ * vertex upload: its simulation buffer already holds the instance data, which
+ * `flush()` binds for the same instanced draw.
  *
  * Everything mode-specific is read off the mode's `dataLayout`/`Material`, so a
  * new primitive is a new mode rather than a change here: the vertex array
@@ -244,8 +247,14 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
     const meshGeometry = mode.vertexGeometry;
 
     if (meshGeometry !== null && resources.meshBuffer !== null && resources.meshVersion !== meshGeometry.version) {
-      resources.meshVersion = meshGeometry.version;
       resources.meshBuffer.upload(meshGeometry.vertexData);
+
+      if (resources.indexBuffer !== null && meshGeometry.indices !== null) {
+        resources.indexBuffer.upload(meshGeometry.indices);
+      }
+
+      resources.indexCount = meshGeometry.indexCount;
+      resources.meshVersion = meshGeometry.version;
     }
 
     resources.vertexBuffer.upload(this._resolveUploadSource(mode, resources), 0, this._drawCount * resources.stride);

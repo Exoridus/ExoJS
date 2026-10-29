@@ -277,15 +277,6 @@ export class RenderingContext implements DrawContext {
   }
 
   /**
-   * Renders `node` into an off-screen {@link RenderTexture} and returns it.
-   *
-   * The View is centered at `(width / 2, height / 2)` so that the origin
-   * of the node's local space sits at the center of the render texture.
-   *
-   * Saves and restores the active render target and view so the caller's
-   * rendering state is undisturbed.
-   */
-  /**
    * Whether a {@link RenderTexture} of the given color format can be rendered
    * into on the active backend. `'rgba8'` is always supported; the float formats
    * (`'rgba16f'` / `'rgba32f'`) require hardware/extension support (WebGL2
@@ -328,45 +319,57 @@ export class RenderingContext implements DrawContext {
    */
   public capture(node: RenderNode, options: CaptureOptions): RenderTexture {
     const target = new RenderTexture(options.width, options.height, options.format !== undefined ? { format: options.format } : undefined);
-    const view = new View(options.width / 2, options.height / 2, options.width, options.height);
+    const view = target.view;
     const coordinator = (this._backend as RenderBackend & Partial<RenderPassCoordinatorHost>).passCoordinator;
 
-    if (coordinator) {
-      coordinator.withChildPass(
-        {
-          target,
-          view,
-          load: options.clearColor !== undefined ? 'clear' : 'load',
-          clearColor: options.clearColor ?? null,
-          stencil: StencilAttachmentMode.None,
-        },
-        () => {
-          playRenderTree(node, this._backend);
-        },
-      );
+    try {
+      if (coordinator) {
+        coordinator.withChildPass(
+          {
+            target,
+            view,
+            load: options.clearColor !== undefined ? 'clear' : 'load',
+            clearColor: options.clearColor ?? null,
+            stencil: StencilAttachmentMode.None,
+          },
+          () => {
+            playRenderTree(node, this._backend);
+          },
+        );
+
+        return target;
+      }
+
+      // Legacy fallback for backends without a pass coordinator (e.g. test stubs).
+      const previousTarget = this._backend.renderTarget;
+      const previousView = this._backend.view;
+
+      try {
+        this._backend.setRenderTarget(target);
+        this._backend.setView(view);
+
+        if (options.clearColor !== undefined) {
+          this._backend.clear(options.clearColor);
+        }
+
+        playRenderTree(node, this._backend);
+      } finally {
+        this._backend.setRenderTarget(previousTarget);
+        this._backend.setView(previousView);
+      }
 
       return target;
+    } catch (error) {
+      try {
+        target.destroy();
+      } catch (cleanupError) {
+        throw new AggregateError([error, cleanupError], 'Capture failed and its render texture could not be released cleanly.', {
+          cause: cleanupError,
+        });
+      }
+
+      throw error;
     }
-
-    // Legacy fallback for backends without a pass coordinator (e.g. test stubs).
-    const previousTarget = this._backend.renderTarget;
-    const previousView = this._backend.view;
-
-    this._backend.setRenderTarget(target);
-    this._backend.setView(view);
-
-    if (options.clearColor !== undefined) {
-      this._backend.clear(options.clearColor);
-    }
-
-    try {
-      playRenderTree(node, this._backend);
-    } finally {
-      this._backend.setRenderTarget(previousTarget);
-      this._backend.setView(previousView);
-    }
-
-    return target;
   }
 
   /**

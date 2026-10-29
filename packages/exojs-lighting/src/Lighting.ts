@@ -270,8 +270,8 @@ export abstract class Lighting {
    * Register a light and return it, so it can be created, parented and
    * registered in one expression.
    *
-   * Registering the same light twice shades it twice; the second registration
-   * is ignored instead.
+   * Registering the same light twice would shade it twice, so the second
+   * registration is ignored instead.
    */
   public add<T extends Light>(light: T): T {
     if (light._lighting === this) {
@@ -326,7 +326,7 @@ export abstract class Lighting {
    *
    * The source is asked, once per frame, for the edges in the region the
    * visible lights jointly reach. It is the caller's; the system only reads
-   * it. Registering the same source twice collects it twice, so the second
+   * it. Registering the same source twice would collect it twice, so the second
    * registration is ignored instead.
    */
   public occludeFrom<T extends OccluderSource>(source: T): T {

@@ -366,7 +366,8 @@ jobs:
     needs: [plan, site]
     if: ${{ !cancelled() && needs.plan.outputs.smoke == 'true' && needs.site.result == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # The full catalog and Playground suites run serially on software graphics.
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup

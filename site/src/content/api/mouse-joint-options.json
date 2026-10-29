@@ -72,7 +72,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Soft-spring damping ratio. Default 0.7."
+          "description": "Nonnegative finite soft-spring damping ratio; zero is undamped. Default 0.7."
         },
         {
           "name": "hertz",
@@ -97,7 +97,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Soft-spring frequency in Hz (higher = snappier). Default 5."
+          "description": "Positive finite soft-spring frequency in Hz (higher = snappier). Default 5."
         },
         {
           "name": "maxForce",
@@ -122,7 +122,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Maximum pulling force - clamps the per-step impulse so heavy bodies lag. Default Infinity."
+          "description": "Positive maximum pulling force, finite or Infinity. Clamps the per-step impulse so heavy bodies lag. Default Infinity."
         },
         {
           "name": "target",

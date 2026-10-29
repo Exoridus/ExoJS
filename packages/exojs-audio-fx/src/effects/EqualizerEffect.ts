@@ -2,11 +2,17 @@ import { AudioEffect } from '@codexo/exojs';
 
 /** Construction options for {@link EqualizerEffect}. */
 export interface EqualizerEffectOptions {
+  /** Low-shelf gain in dB. Range -40..40, default 0. */
   low?: number;
+  /** Peaking mid-band gain in dB. Range -40..40, default 0. */
   mid?: number;
+  /** High-shelf gain in dB. Range -40..40, default 0. */
   high?: number;
+  /** Low-shelf cutoff frequency in Hz. Default 250. */
   lowFrequency?: number;
+  /** Peaking mid-band centre frequency in Hz. Default 1500. */
   midFrequency?: number;
+  /** High-shelf cutoff frequency in Hz. Default 6000. */
   highFrequency?: number;
 }
 

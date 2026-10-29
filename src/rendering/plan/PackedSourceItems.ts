@@ -186,14 +186,6 @@ export class PackedSourceItems {
   }
 
   /**
-   * Drop everything back to `length` items.
-   *
-   * Discovery needs this because a producer that turns out to have read the view
-   * is collapsed into one live entry AFTER its collect ran, so the items it
-   * already contributed have to be withdrawn (see
-   * `RenderPlanBuilder._resolveViewAttribution`).
-   */
-  /**
    * Append item `index` of `source` under a fresh placement, copying its stored
    * bounds instead of asking the drawable again. Prepacked rows are not carried:
    * the receiving store packs them when it is first asked to.
@@ -210,6 +202,14 @@ export class PackedSourceItems {
     );
   }
 
+  /**
+   * Drop everything back to `length` items.
+   *
+   * Discovery needs this because a producer that turns out to have read the view
+   * is collapsed into one live entry AFTER its collect ran, so the items it
+   * already contributed have to be withdrawn (see
+   * `RenderPlanBuilder._resolveViewAttribution`).
+   */
   public truncate(length: number): void {
     if (length < this._count) {
       this.drawables.length = length;

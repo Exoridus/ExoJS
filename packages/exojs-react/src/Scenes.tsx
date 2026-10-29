@@ -78,7 +78,9 @@ export interface ScenesProps {
 
 /**
  * Declarative scene switch over the one-active-scene model. Renders a set of
- * {@link Scene} declarations and activates the one whose `name` equals `active`
+ * {@link Scene} declarations - collected from this component's direct children
+ * only, so a fragment or wrapper element hides them - and activates the one
+ * whose `name` equals `active`
  * via `app.start()` (first activation) or `app.scenes.change()` (subsequent
  * switches, with the optional `transition`) - the declaration's `component`
  * constructor must be registered in `ApplicationOptions.scenes`. The active

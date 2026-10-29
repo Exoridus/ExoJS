@@ -85,9 +85,10 @@ interface ParticleModeResources {
   readonly topology: GPUPrimitiveTopology;
   readonly stripIndexFormat: GPUIndexFormat | undefined;
   readonly indexBuffer: GPUBuffer | null;
+  readonly indexData: Uint8Array | null;
   readonly indexFormat: GPUIndexFormat;
   /** Indices (or vertices, when the geometry carries none) per drawn element. */
-  readonly indexCount: number;
+  indexCount: number;
   readonly instanced: boolean;
   readonly pipelines: Map<string, GPURenderPipeline>;
   vertexBuffer: GPUBuffer | null;
@@ -597,11 +598,12 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     // both on its layout instead.
     const indices = meshGeometry !== null ? meshGeometry.indices : layout.indices;
     let indexBuffer: GPUBuffer | null = null;
+    let indexData: Uint8Array | null = null;
 
     if (indices !== null) {
       // Padded to a 4-byte multiple, which `queue.writeBuffer` requires and a
       // 16-bit index list of odd length does not satisfy on its own.
-      const indexData = new Uint8Array(Math.ceil(indices.byteLength / 4) * 4);
+      indexData = new Uint8Array(Math.ceil(indices.byteLength / 4) * 4);
 
       indexData.set(new Uint8Array(indices.buffer, indices.byteOffset, indices.byteLength));
 
@@ -663,6 +665,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       // Required by WebGPU for indexed strip draws, and forbidden otherwise.
       stripIndexFormat: indexedStrip ? indexFormat : undefined,
       indexBuffer,
+      indexData,
       indexFormat,
       indexCount: meshGeometry !== null ? meshGeometry.indexCount : layout.indexCount,
       instanced: mode.instanced,
@@ -687,14 +690,33 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
 
     const meshData = meshGeometry.vertexData;
 
-    resources.meshVersion = meshGeometry.version;
+    if (meshData.byteLength > resources.meshBuffer.size) {
+      const grown = device.createBuffer({
+        size: Math.ceil(meshData.byteLength / 4) * 4,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      });
+
+      resources.meshBuffer.destroy();
+      resources.meshBuffer = grown;
+    }
+
     device.queue.writeBuffer(
       resources.meshBuffer,
       0,
       meshData instanceof Float32Array ? meshData.buffer : meshData,
-      0,
+      meshData instanceof Float32Array ? meshData.byteOffset : 0,
       meshData.byteLength,
     );
+
+    const indices = meshGeometry.indices;
+
+    if (indices !== null && resources.indexBuffer !== null && resources.indexData !== null) {
+      resources.indexData.set(new Uint8Array(indices.buffer, indices.byteOffset, indices.byteLength));
+      device.queue.writeBuffer(resources.indexBuffer, 0, resources.indexData.buffer, 0, resources.indexData.byteLength);
+    }
+
+    resources.indexCount = meshGeometry.indexCount;
+    resources.meshVersion = meshGeometry.version;
   }
 
   private _destroyResources(resources: ParticleModeResources): void {

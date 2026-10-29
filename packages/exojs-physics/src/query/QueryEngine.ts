@@ -17,6 +17,20 @@ import type { SpatialIndex } from './SpatialIndex';
 /** Reused sink for the closest-point primitives; queries run sequentially. */
 const _pointScratch: PointLike = { x: 0, y: 0 };
 
+const validateRay = (origin: Readonly<PointLike>, direction: Readonly<PointLike>, maxDistance: number): number => {
+  const length = Math.hypot(direction.x, direction.y);
+
+  if (!Number.isFinite(origin.x) || !Number.isFinite(origin.y) || !Number.isFinite(length) || length < 1e-9) {
+    throw new RangeError('QueryEngine: ray origin must be finite and direction must be finite and non-zero.');
+  }
+
+  if (!(maxDistance >= 0)) {
+    throw new RangeError('QueryEngine: ray maxDistance must be nonnegative.');
+  }
+
+  return length;
+};
+
 /** Every shape kind that can be a collision operand - a chain is solved per edge. */
 type SolverShape = Exclude<AnyShape, ChainShape>;
 
@@ -238,7 +252,8 @@ export class QueryEngine {
   }
 
   /**
-   * Invoke `callback` for each collider whose AABB overlaps `bounds`. Allocation-free.
+   * Invoke `callback` for each collider whose AABB overlaps `bounds`. Allocation-free
+   * when no filter is passed; a filter is normalised into one small object per call.
    *
    * NOT re-entrant on itself: `callback` runs mid-traversal over a scratch
    * buffer dedicated to this method, so it may safely call `queryPoint`,
@@ -274,13 +289,9 @@ export class QueryEngine {
     }
   }
 
-  /** Nearest collider hit by the ray from `origin` along `direction`, or `null`. */
+  /** Nearest ray hit, or `null`. Requires a finite origin, finite nonzero direction and nonnegative distance (or `Infinity`). */
   public rayCast(origin: Readonly<PointLike>, direction: Readonly<PointLike>, filter?: QueryFilter, maxDistance = Infinity): RayHit | null {
-    const length = Math.hypot(direction.x, direction.y);
-
-    if (length < 1e-9) {
-      throw new RangeError('QueryEngine.rayCast: direction must be non-zero.');
-    }
+    const length = validateRay(origin, direction, maxDistance);
 
     const dx = direction.x / length;
     const dy = direction.y / length;
@@ -315,7 +326,7 @@ export class QueryEngine {
     return best;
   }
 
-  /** All collider hits along the ray, sorted by distance. Writes into `out` (cleared first) when given. */
+  /** All hits sorted by distance; clears `out` when given. Input requirements match {@link rayCast}; invalid input throws before clearing `out`. */
   public rayCastAll(
     origin: Readonly<PointLike>,
     direction: Readonly<PointLike>,
@@ -323,11 +334,7 @@ export class QueryEngine {
     out?: RayHit[],
     maxDistance = Infinity,
   ): RayHit[] {
-    const length = Math.hypot(direction.x, direction.y);
-
-    if (length < 1e-9) {
-      throw new RangeError('QueryEngine.rayCastAll: direction must be non-zero.');
-    }
+    const length = validateRay(origin, direction, maxDistance);
 
     const dx = direction.x / length;
     const dy = direction.y / length;

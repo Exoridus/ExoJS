@@ -35,9 +35,9 @@ export interface RenderPassInspectorEntry {
   readonly drawableLabel: string;
   /** Filter instances currently attached, in execution order. */
   readonly filters: readonly Filter[];
-  /** Bounding-box width as the filter pipeline sees it (ceil). */
+  /** Bounding-box width in the node's {@link SceneNode.getBounds} space (ceil, at least 1); an expanding filter captures a larger domain. */
   readonly width: number;
-  /** Bounding-box height as the filter pipeline sees it (ceil). */
+  /** Bounding-box height in the node's {@link SceneNode.getBounds} space (ceil, at least 1); an expanding filter captures a larger domain. */
   readonly height: number;
   /** Whether the drawable has a mask attached (mask passes count toward total). */
   readonly hasMask: boolean;
@@ -47,7 +47,9 @@ export interface RenderPassInspectorEntry {
 
 /**
  * One row of a {@link RenderPipeline} listing produced by {@link RenderPassInspectorLayer.describePipeline}.
- * Identity is the pass object; `label` is display-only (no names are required). Nested pipelines increase `depth`.
+ * Rows are positional only: they carry no pass object, and `label` is
+ * display-only, so equal labels do not identify equal rows. Nested
+ * pipelines increase `depth`.
  */
 export interface RenderPipelineRow {
   /** Nesting depth (0 = top-level pass). */
@@ -74,8 +76,8 @@ export interface RenderPipelineRow {
  * The pass total counts the attached filters plus one per collected entry with
  * a mask. It is a structural estimate, not a hardware-pass count or GPU timing:
  * multi-step filters are not expanded, cached work is not subtracted, and
- * mask-only nodes are not collected. The returned entries are reused on every
- * update.
+ * mask-only nodes are not collected. The entry array is reused and refilled on
+ * every update.
  *
  * For deep per-pass inspection (intermediate render-target contents, GLSL/WGSL
  * source, uniform values), use Spector.js or Chrome DevTools' WebGPU panel.
@@ -160,10 +162,11 @@ export class RenderPassInspectorLayer extends DebugLayer {
   }
 
   /**
-   * Read-only snapshot of the entries collected on the most recent
-   * {@link update} call. Useful for tests and for external tooling that
-   * wants to render its own visualisation rather than use the built-in
-   * panel.
+   * The entries collected by the most recent {@link update} call, as a live
+   * array: the same instance is truncated and refilled on the next update, so
+   * copy it if it must outlive the current frame. Useful for tests and for
+   * external tooling that wants to render its own visualisation rather than
+   * use the built-in panel.
    */
   public get entries(): readonly RenderPassInspectorEntry[] {
     return this._entries;

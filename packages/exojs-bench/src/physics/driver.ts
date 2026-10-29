@@ -20,6 +20,7 @@ import {
   readLibraryProvenance,
   readPlatformVersion,
 } from '../shared/provenance';
+import { raceWithTimeout } from '../shared/timeout';
 import type { ViteDevServer } from '../shared/viteServer';
 import { PHYSICS_LIBRARY_ARMS, startViteServer as startPageServer } from '../shared/viteServer';
 import type { RunPlan } from '../suite/plan';
@@ -213,32 +214,14 @@ const runCellInPage = async (
  * Run one cell, resolving to {@link CELL_WEDGED} if it does not finish within
  * {@link CELL_TIMEOUT_MS}. The still-pending evaluate is left to reject when the
  * browser closes; its rejection is swallowed so it never surfaces as an
- * unhandled rejection.
+ * unhandled rejection, and the hang guard is disarmed on every settlement.
  */
 const runCellOrWedge = async (
   page: import('playwright').Page,
   spec: PhysicsCellSpec,
   resolutionMs: number | null,
-): Promise<PhysicsCellResult | typeof CELL_WEDGED> => {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<typeof CELL_WEDGED>(resolvePromise => {
-    timer = setTimeout(() => resolvePromise(CELL_WEDGED), CELL_TIMEOUT_MS);
-  });
-
-  const run = runCellInPage(page, spec, resolutionMs).then(result => {
-    if (timer !== undefined) {
-      clearTimeout(timer);
-    }
-
-    return result;
-  });
-
-  run.catch(() => {
-    /* intentionally ignored */
-  });
-
-  return Promise.race([run, timeout]);
-};
+): Promise<PhysicsCellResult | typeof CELL_WEDGED> =>
+  raceWithTimeout(runCellInPage(page, spec, resolutionMs), CELL_TIMEOUT_MS, CELL_WEDGED);
 
 /** A page ready to drive cells, plus what it reported about itself. */
 interface HarnessSession {
@@ -315,9 +298,10 @@ export const runPhysicsMatrix = async (
   let relaunched = false;
 
   try {
-    const { arms, clock } = session;
-    const available = new Set(arms.filter(arm => arm.available).map(arm => `${arm.engine}/${arm.config}`));
-    const reasons = new Map(arms.map(arm => [`${arm.engine}/${arm.config}`, arm.reason]));
+    const { arms } = session;
+    let clock = session.clock;
+    let available = new Set(arms.filter(arm => arm.available).map(arm => `${arm.engine}/${arm.config}`));
+    let reasons = new Map(arms.map(arm => [`${arm.engine}/${arm.config}`, arm.reason]));
 
     const allCells = buildPhysicsMatrix(arms);
     const planned = options.plan ? applyPhysicsPlan(allCells, options.plan) : allCells;
@@ -359,6 +343,12 @@ export const runPhysicsMatrix = async (
 
         await session.browser.close();
         session = await openSession(baseUrl, browserName);
+
+        // The relaunched page is a new measurement condition: its clock, its
+        // arm set and its version are what the remaining cells run against.
+        clock = session.clock;
+        available = new Set(session.arms.filter(arm => arm.available).map(arm => `${arm.engine}/${arm.config}`));
+        reasons = new Map(session.arms.map(arm => [`${arm.engine}/${arm.config}`, arm.reason]));
         continue;
       }
 
@@ -397,7 +387,6 @@ export const runPhysicsMatrix = async (
         'All arms build the byte-identical scene (bodies, positions, shapes, sizes, static/dynamic split, gravity, perturbed-body set) from the shared deterministic RNG, and the perturbed-body selection is asserted equal across arms before each cell is timed.',
         'Each arm runs at its own engine defaults for solver iterations, contact model and sleeping - those engine differences are the measured quantity in a native-vs-adapter comparison, disclosed per arm below.',
         'Arm roles: matter-js, planck and nape-js are the JAVASCRIPT PEERS exojs-physics is compared against; rapier is a Rust/WASM engine and stands as the REFERENCE CEILING for what leaving JavaScript buys, not as a peer a JS solver is expected to match.',
-        "Jointed bodies do not collide with each other. The joint scene pins each link at the edge it shares with the next, so whether that pair ALSO registers a contact is a configuration choice and not a property of the scene - and the libraries disagree about it at their defaults. Every arm that exposes the switch is set explicitly (exojs collideConnected=false, planck collideConnected=false, rapier setContactsEnabled(false), nape Constraint.ignore=true) so the row measures the constraint work and not each engine's contact margin at a touching edge. matter-js exposes no per-constraint switch and is left at its defaults, where it produces no contact between the links of this scene; its figure is published on that basis rather than on a configured one.",
         'Jointed bodies do not collide with each other. The joint scene pins each link at the edge it shares with the next, so whether that pair ALSO registers a contact is a configuration choice rather than a property of the scene - and the libraries disagree about it at their defaults. Every arm that exposes the switch is set explicitly (exojs collideConnected=false, planck collideConnected=false, rapier setContactsEnabled(false), nape Constraint.ignore=true), so the row measures constraint work and not each engine contact margin at a touching edge. matter-js exposes no per-constraint switch and is left at its defaults, where it produces no contact between the links of this scene; its figure is published on that basis rather than on a configured one.',
         ...(unavailableArms.length > 0
           ? [

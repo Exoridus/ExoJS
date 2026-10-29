@@ -96,6 +96,22 @@ describe('sweepRectangle', () => {
     expect(hit!.t).toBe(0);
   });
 
+  test.each([
+    [1, 8, 4, 4, -1, 0],
+    [15, 8, 4, 4, 1, 0],
+    [8, 1, 4, 4, 0, -1],
+    [8, 15, 4, 4, 0, 1],
+    [-2, 8, 4, 4, -1, 0],
+    [18, 8, 4, 4, 1, 0],
+  ])('initial overlap at (%s, %s) chooses the nearest separating face', (x, y, width, height, normalX, normalY) => {
+    const hit = sweepRectangle(rect(x, y, width, height), 0, 0, rect(0, 0, 20, 20));
+
+    expect(hit).not.toBeNull();
+    expect(hit!.t).toBe(0);
+    expect(hit!.normalX).toBe(normalX);
+    expect(hit!.normalY).toBe(normalY);
+  });
+
   test('zero delta not overlapping → null', () => {
     const moving = rect(0, 0, 10, 10);
     const target = rect(50, 50, 10, 10);
@@ -611,5 +627,27 @@ describe('substepSweep', () => {
     expect(last.x).toBeCloseTo(30, 8);
     expect(last.y).toBeCloseTo(40, 8);
     expect(last.t).toBeCloseTo(1, 10);
+  });
+
+  test('a non-positive or non-finite maxStepSize still yields t=0 and t=1', () => {
+    // Bounded read: an infinite generator (maxStepSize 0 with a real delta)
+    // must fail this assertion instead of hanging the suite.
+    const take = (generator: Iterable<{ t: number }>): number[] => {
+      const steps: number[] = [];
+
+      for (const snapshot of generator) {
+        steps.push(snapshot.t);
+
+        if (steps.length === 2) {
+          break;
+        }
+      }
+
+      return steps;
+    };
+
+    expect(take(substepSweep(0, 0, 10, 0, 0))).toEqual([0, 1]);
+    expect(take(substepSweep(0, 0, 0, 0, 0))).toEqual([0, 1]);
+    expect(take(substepSweep(0, 0, 10, 0, Number.NaN))).toEqual([0, 1]);
   });
 });

@@ -203,3 +203,17 @@ describe('buildChunkPages', () => {
     expect(pages).toHaveLength(0);
   });
 });
+
+describe('packTile index validation', () => {
+  it('rejects fractional and NaN indices instead of folding them onto another tile', () => {
+    for (const localTileId of [Number.NaN, 1.5, Number.POSITIVE_INFINITY]) {
+      expect(() => packTile(0, localTileId, TILE_TRANSFORM_IDENTITY)).toThrow(/must be an integer/);
+    }
+
+    for (const tilesetIndex of [Number.NaN, 0.5, Number.POSITIVE_INFINITY]) {
+      expect(() => packTile(tilesetIndex, 0, TILE_TRANSFORM_IDENTITY)).toThrow(/must be an integer/);
+    }
+
+    expect(packTile(0, 0, TILE_TRANSFORM_IDENTITY)).toBe(1);
+  });
+});

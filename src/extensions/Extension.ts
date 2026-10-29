@@ -77,8 +77,9 @@ export type ExtensionDisposer = () => void;
  * extension takes effect, so what an application can do is readable at its
  * construction rather than inferred from which modules were imported.
  *
- * The descriptor is a shared, frozen singleton: the same object equips any
- * number of Applications. Per-application state therefore never belongs on it
+ * The descriptor is a shared singleton, immutable by contract and frozen in
+ * development builds: the same object equips any number of Applications.
+ * Per-application state therefore never belongs on it
  * - it belongs in the closure {@link Extension.install} opens, which is also
  * what the returned {@link ExtensionDisposer} closes over.
  * @advanced

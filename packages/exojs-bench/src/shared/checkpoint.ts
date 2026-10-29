@@ -28,7 +28,7 @@ export interface CheckpointWriter<TRecord> {
   append(record: TRecord): void;
   /** Every record persisted so far, in completion order. */
   readonly records: readonly TRecord[];
-  /** Absolute path of the append-only JSONL checkpoint file. */
+  /** Path of the append-only JSONL checkpoint file; absolute when `outDir` is. */
   readonly jsonlPath: string;
 }
 

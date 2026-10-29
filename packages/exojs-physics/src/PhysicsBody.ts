@@ -25,7 +25,7 @@ export interface BodyOptions {
   fixedRotation?: boolean;
   /** When `true`, the body's colliders are shape-cast along each step's motion (CCD) so it cannot tunnel through thin geometry. Default `false`. */
   isBullet?: boolean;
-  /** Colliders to attach up-front. Each may be a {@link Collider} instance or its {@link ColliderOptions}. */
+  /** Colliders to reserve for this body. An instance cannot already belong to another body or occur twice. */
   colliders?: Array<Collider | ColliderOptions>;
 }
 
@@ -163,10 +163,19 @@ export class PhysicsBody {
     // Build up-front colliders now (no id/world registration until the body
     // joins a world via `world.add()`). They sit in `_colliders` unsynchronised;
     // `_attachToWorld` assigns ids, registers them and computes the mass model.
-    if (options.colliders) {
-      for (const entry of options.colliders) {
-        this._colliders.push(entry instanceof Collider ? entry : new Collider(entry));
+    try {
+      for (const entry of options.colliders ?? []) {
+        const collider = entry instanceof Collider ? entry : new Collider(entry);
+
+        collider._reserve(this);
+        this._colliders.push(collider);
       }
+    } catch (error) {
+      for (const collider of this._colliders) {
+        collider._releaseReservation(this);
+      }
+
+      throw error;
     }
   }
 
@@ -268,6 +277,8 @@ export class PhysicsBody {
    * When the body is already in a world, the collider is id-allocated, registered,
    * the mass model is recomputed and the world geometry synchronised immediately;
    * on a free-standing body the collider is simply held until `world.add()`.
+   * A collider is reserved by one body even before it joins a world.
+   * Throws if the collider already belongs to a body or has been destroyed.
    * Returns the collider.
    */
   public addCollider(collider: Collider | ColliderOptions): Collider {
@@ -279,6 +290,7 @@ export class PhysicsBody {
     // one-directional - no runtime cycle.
     const instance = collider instanceof Collider ? collider : new Collider(collider);
 
+    instance._reserve(this);
     this._colliders.push(instance);
 
     // Before the body joins a world there is no owner to allocate ids / register
@@ -364,9 +376,12 @@ export class PhysicsBody {
   }
 
   /**
-   * Apply an instantaneous world-space impulse at `(pointX, pointY)` (world space;
-   * defaults to the centre of mass), changing velocity immediately. No-op on
-   * static/kinematic bodies (infinite mass). Returns `this`.
+   * Apply an instantaneous world-space impulse at `(pointX, pointY)` (world
+   * space), changing velocity immediately. Pass both coordinates or neither: an
+   * application point is used only when both are given, and the impulse then
+   * also applies a torque unless rotation is locked or the moment is zero;
+   * otherwise it acts at the centre of mass.
+   * No-op on static/kinematic bodies (infinite mass). Returns `this`.
    */
   public applyImpulse(impulseX: number, impulseY: number, pointX?: number, pointY?: number): this {
     if (this.invMass === 0) {
@@ -573,17 +588,19 @@ export class PhysicsBody {
   }
 
   /**
-   * @internal - join `owner`'s world with the allocated `id`. Allocates ids for
-   * and registers every held collider, then aggregates the mass model and
-   * synchronises world geometry. Called once by {@link PhysicsWorld.add}.
+   * @internal - join `owner`'s world with the allocated `id`. Aggregates the
+   * mass model and validates it first, then allocates ids for and links every
+   * held collider, synchronises their world geometry and registers them. Called
+   * once by {@link PhysicsWorld.add}.
    *
-   * Ordering matters and mirrors the per-collider create path exactly: ids and
-   * the body link go on first, then a single mass recompute over the full
-   * collider set (so the centre of mass / inertia aggregate is correct), then
-   * `synchronize` over every collider (the cached world geometry the broad/narrow
-   * phase reads), then world registration last. Recomputing mass before all
-   * colliders are linked, or syncing before the mass model exists, would feed the
-   * solver a stale CoM and produce subtle integration bugs.
+   * The mass pass runs before the body claims a world: it reads only the held
+   * colliders (the set is complete before any id is allocated), so a rejected
+   * dynamic body can be fixed and added again instead of staying half-attached.
+   * After that the order mirrors the per-collider create path exactly - ids and
+   * the body link, then `synchronize` over every collider (the cached world
+   * geometry the broad/narrow phase reads), then world registration last, so the
+   * solver never sees a collider that is registered but not yet placed in the
+   * body's frame.
    */
   public _attachToWorld(owner: BodyOwner, id: number): void {
     if (this._destroyed) {

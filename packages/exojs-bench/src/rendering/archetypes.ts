@@ -482,11 +482,12 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // draws quads, and none of them pays for layout or glyph lookup. All four arms
   // have real text nodes, so these two rows carry full cross-arm meaning.
   //
-  // The pair differs in exactly ONE field - `textUpdate` - so the delta between
-  // them is the cost of invalidating a laid-out string and nothing else.
-  // `text-static` lays out once at build time and then only draws; `text-dynamic`
-  // re-sets a quarter of its leaves' strings every frame, which is the shape a
-  // real HUD produces (a few counters change, the rest of the labels do not).
+  // `text-static` lays out once at build time and never mutates; `text-dynamic`
+  // sets `mutationFraction: 0.25` and `textUpdate`, so each selected leaf has its
+  // string re-set every frame rather than moved - the shape a real HUD produces
+  // (a few counters change, the rest of the labels do not). The delta between the
+  // rows covers string generation, the setter and the resulting re-layout; the
+  // selection machinery itself is measured separately by `dynamic-heavy`.
   // A fraction of 1 was rejected: re-laying out every label in the scene every
   // frame is not a workload anything ships, and at the top step it would abort on
   // every arm, replacing three comparable rows with three aborts.
@@ -584,18 +585,6 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     cullingEnabled: false,
     filterChainDepth: 4,
   },
-  // NESTED CLIPPING. One axis-aligned rectangle mask per spine container, each
-  // inset inside its parent's rect so no level is a no-op. Both arms implement an
-  // unrotated rect mask as GPU scissor/clip state, so the row measures the
-  // nesting rather than one arm's intermediate-target policy.
-  //
-  // Shares the render-target machinery of the filter rows and the same coverage
-  // exclusion; otherwise identical to `static-heavy` at depth 4.
-  //
-  // The nesting depth is one greater than the mask depth on purpose: the scene
-  // root stays unmasked so the Pixi arm has somewhere to host its mask sources
-  // (a Pixi mask source parented under the container it masks would be clipped by
-  // its own mask), and both arms therefore clip spine levels 1..3.
   // BLOOM-SHAPED MULTIPASS. The composite a real post-processing stack renders,
   // which no `filter-chain-*` row reaches: the scene is captured into an
   // off-screen target, that capture is blurred DOWN into a half-resolution
@@ -624,6 +613,18 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     cullingEnabled: false,
     compositeBlurStrength: 2,
   },
+  // NESTED CLIPPING. One axis-aligned rectangle mask per spine container, each
+  // inset inside its parent's rect so no level is a no-op. Both arms implement an
+  // unrotated rect mask as GPU scissor/clip state, so the row measures the
+  // nesting rather than one arm's intermediate-target policy.
+  //
+  // Shares the render-target machinery of the filter rows and the same coverage
+  // exclusion; otherwise identical to `static-heavy` at depth 4.
+  //
+  // The nesting depth is one greater than the mask depth on purpose: the scene
+  // root stays unmasked so the Pixi arm has somewhere to host its mask sources
+  // (a Pixi mask source parented under the container it masks would be clipped by
+  // its own mask), and both arms therefore clip spine levels 1..3.
   {
     id: 'mask-clip',
     category: 'render-targets',
@@ -635,9 +636,6 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     cullingEnabled: false,
     maskDepth: 3,
   },
-  // `mask-clip` with every rect moving each frame: the delta against the row
-  // above is what an effect change alone costs the retained products around
-  // it, which is the shape of every scrolling clip.
   // TILEMAPS. The one scene shape practically every 2D game has and that no
   // sprite archetype describes: a world far larger than the viewport, drawn
   // through a dedicated tile path rather than one node per tile.
@@ -838,6 +836,9 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     cullingEnabled: false,
     layoutPassesPerFrame: LAYOUT_PASSES_PER_FRAME,
   },
+  // `mask-clip` with every rect moving each frame: the delta against the row
+  // above is what an effect change alone costs the retained products around
+  // it, which is the shape of every scrolling clip.
   {
     id: 'mask-clip-animated',
     category: 'render-targets',

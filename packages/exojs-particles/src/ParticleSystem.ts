@@ -197,6 +197,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
   private readonly _device: GPUDevice | null = null;
   private readonly _simulation: 'auto' | 'cpu';
   private _deathGeneration = 0;
+  private _storageGeneration = 0;
   private _gpuState: ParticleGpuState | null = null;
   private _glState: ParticleGlState | null = null;
   private readonly _backendSignals: Signal[] = [];
@@ -553,6 +554,11 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     return this.setTextureFrame(Rectangle.temp.set(0, 0, this._texture.width, this._texture.height));
   }
 
+  /**
+   * Registers a spawn module. The system takes ownership: {@link clearSpawnModules}
+   * and {@link destroy} call `destroy()` on it, so one module instance must not
+   * be shared between systems.
+   */
   public addSpawnModule(mod: SpawnModule): this {
     this._spawnModules.push(mod);
 
@@ -571,6 +577,9 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
    * simulation moves to the CPU, which has no copy of the integrated state, so
    * the system clears its live particles rather than continuing from stale
    * values (see {@link clearParticles}).
+   *
+   * The system takes ownership as for {@link addSpawnModule}: clearing the list
+   * or destroying the system destroys the module instance it was given.
    */
   public addUpdateModule(mod: UpdateModule): this {
     this._updateModules.push(mod);
@@ -579,6 +588,11 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     return this;
   }
 
+  /**
+   * Registers a death module. The system takes ownership: {@link clearDeathModules}
+   * and {@link destroy} call `destroy()` on it, so one instance must not be
+   * shared between systems.
+   */
   public addDeathModule(mod: DeathModule): this {
     const hadNone = this._deathModules.length === 0;
 
@@ -746,6 +760,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
   /** Clears particles and pending death callbacks while retaining allocated simulation resources. */
   public clearParticles(): this {
     this._deathGeneration++;
+    this._storageGeneration++;
     this._gpuDirtySlots.clear();
     this._resetPendingDeaths();
     this._simulationState?.discardDeaths();
@@ -772,12 +787,11 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
   /**
    * @internal
    *
-   * Collect-hook: captures the active backend before this node is emitted so
-   * the next `update()` can compile a GPU pipeline if the backend turned out
-   * to be `WebGpuBackend`. Re-captures and rebuilds when the backend
-   * reference changes (e.g. after device-loss recovery).
+   * Collect-hook: captures the active GPU-capable backend before this node is
+   * emitted so the next `update()` can compile a pipeline for it. Re-subscribes
+   * to that backend's reset signals, and rebuilds when either the backend
+   * reference changes (device-loss recovery) or the same backend resets.
    */
-  /** @internal */
   public override collect(builder: RenderPlanBuilder, seq?: number): void {
     const backend = builder.backend;
 
@@ -1089,12 +1103,17 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
 
     // Compact: forward pass, report deaths on expired, copy survivors down.
     const deathModules = this._deathModules;
+    const generation = this._storageGeneration;
     let writeIndex = 0;
 
     for (let readIndex = 0; readIndex < storage.count; readIndex++) {
       if (elapsed[readIndex]! >= lifetime[readIndex]!) {
         if (deathModules.length > 0) {
           this._reportDeath(storage.snapshot(readIndex));
+
+          if (this.destroyed || generation !== this._storageGeneration) {
+            return;
+          }
         }
 
         alive[readIndex] = 0;
@@ -1119,9 +1138,14 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
   /** Hands one death snapshot to every registered death module, in registration order. */
   private _reportDeath(death: ParticleDeathContext): void {
     const deathModules = this._deathModules;
+    const generation = this._deathGeneration;
 
     for (let m = 0; m < deathModules.length; m++) {
       deathModules[m]!.onDeath(this, death);
+
+      if (this.destroyed || generation !== this._deathGeneration) {
+        return;
+      }
     }
   }
 

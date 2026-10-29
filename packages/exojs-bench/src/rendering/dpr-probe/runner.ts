@@ -10,6 +10,7 @@ import type { RenderTextureAcquirer, RestoreInstrumentation, TargetRecorder } fr
 import { createTargetRecorder, instrumentAcquireRenderTexture, instrumentCacheTexture } from './instrumentation';
 import type { InternalTargetRecord, ProbeCell, ProbeCellResult, ProbeMode, ProbeSceneId } from './matrix';
 import { internalToMainPixelRatio } from './matrix';
+import { releaseFailedPreview } from './previewCleanup';
 import type { ProbeScene } from './scenes';
 import { createProbeScene } from './scenes';
 
@@ -140,13 +141,13 @@ const nextFrame = async (): Promise<number> =>
     requestAnimationFrame(resolve);
   });
 
-/** Everything {@link runProbeCell} needs beyond the cell itself. */
 /** Logical (CSS) stage every cell in a run renders at. Fixed for the whole run. */
 export interface StageSize {
   readonly width: number;
   readonly height: number;
 }
 
+/** Everything {@link runProbeCell} needs beyond the cell itself. */
 export interface RunProbeCellOptions {
   readonly cell: ProbeCell;
   readonly backend: ProbeBackendRequest;
@@ -407,63 +408,82 @@ export const startVisualPreview = async (options: {
 }): Promise<VisualPreview> => {
   const canvas = freshStageCanvas(options.host);
   const booted = await bootProbeApplication(canvas, options.stage, options.pixelRatio, options.backend);
-  const scene = createProbeScene(options.scene, {
-    stageWidth: options.stage.width,
-    stageHeight: options.stage.height,
-    mode: options.mode,
-    ...(options.textPixelRatio !== undefined && { textPixelRatio: options.textPixelRatio }),
-  });
-  const recorder = createTargetRecorder();
-  const restores: RestoreInstrumentation[] = [
-    instrumentAcquireRenderTexture(booted.app.backend as unknown as RenderTextureAcquirer, recorder),
-  ];
+  const restores: RestoreInstrumentation[] = [];
 
-  for (const node of scene.cacheNodes) {
-    restores.push(instrumentCacheTexture(node, recorder));
-  }
+  let scene: ProbeScene | null = null;
 
-  let running = true;
-  let frame = 0;
-  let handle = 0;
+  try {
+    const activeScene = createProbeScene(options.scene, {
+      stageWidth: options.stage.width,
+      stageHeight: options.stage.height,
+      mode: options.mode,
+      ...(options.textPixelRatio !== undefined && { textPixelRatio: options.textPixelRatio }),
+    });
 
-  const loop = (): void => {
-    if (!running) {
-      return;
+    scene = activeScene;
+
+    const recorder = createTargetRecorder();
+
+    restores.push(instrumentAcquireRenderTexture(booted.app.backend as unknown as RenderTextureAcquirer, recorder));
+
+    for (const node of activeScene.cacheNodes) {
+      restores.push(instrumentCacheTexture(node, recorder));
     }
 
-    scene.update(frame++);
-    booted.app.backend.resetStats();
-    booted.app.backend.clear();
-    booted.app.rendering.render(scene.root);
-    booted.app.backend.flush();
-    handle = requestAnimationFrame(loop);
-  };
+    let running = true;
+    let frame = 0;
+    let handle = 0;
 
-  // Arm across the FIRST frame only, so the readout shows per-frame target
-  // shapes and, for `cacheAsTexture`, catches the one frame that bakes.
-  recorder.arm();
-  loop();
-  recorder.disarm();
-
-  return {
-    backingWidth: canvas.width,
-    backingHeight: canvas.height,
-    cssWidth: parseFloat(canvas.style.width) || canvas.clientWidth,
-    cssHeight: parseFloat(canvas.style.height) || canvas.clientHeight,
-    backendType: booted.backendType,
-    internalTargets: recorder.summary(),
-    async stop(): Promise<void> {
-      running = false;
-      cancelAnimationFrame(handle);
-      // One frame of slack so an in-flight callback cannot touch a destroyed app.
-      await nextFrame();
-
-      for (const undo of restores) {
-        undo();
+    const loop = (): void => {
+      if (!running) {
+        return;
       }
 
-      scene.dispose();
-      booted.app.destroy();
-    },
-  };
+      activeScene.update(frame++);
+      booted.app.backend.resetStats();
+      booted.app.backend.clear();
+      booted.app.rendering.render(activeScene.root);
+      booted.app.backend.flush();
+      handle = requestAnimationFrame(loop);
+    };
+
+    // Arm across the FIRST frame only, so the readout shows per-frame target
+    // shapes and, for `cacheAsTexture`, catches the one frame that bakes.
+    recorder.arm();
+    loop();
+    recorder.disarm();
+
+    return {
+      backingWidth: canvas.width,
+      backingHeight: canvas.height,
+      cssWidth: parseFloat(canvas.style.width) || canvas.clientWidth,
+      cssHeight: parseFloat(canvas.style.height) || canvas.clientHeight,
+      backendType: booted.backendType,
+      internalTargets: recorder.summary(),
+      async stop(): Promise<void> {
+        running = false;
+        cancelAnimationFrame(handle);
+        // One frame of slack so an in-flight callback cannot touch a destroyed app.
+        await nextFrame();
+
+        for (const undo of restores) {
+          undo();
+        }
+
+        activeScene.dispose();
+        booted.app.destroy();
+      },
+    };
+  } catch (error) {
+    // A failure after boot would otherwise leave the live backend, context,
+    // scene resources and style instrumentation unreachable; the caller only
+    // drops its reference.
+    releaseFailedPreview({
+      restores: restores.splice(0),
+      disposeScene: scene === null ? null : () => scene!.dispose(),
+      destroyApp: () => booted.app.destroy(),
+    });
+
+    throw error;
+  }
 };

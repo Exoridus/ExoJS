@@ -23,9 +23,11 @@ import particleSimulateWgsl from './shaders/particle-simulate.wgsl';
 /**
  * GPU-side mirror of one {@link ParticleSystem}. Owns:
  *
- * - **8 packed storage buffers** for the per-particle SoA data:
- *   positions/velocities/scales/rotInfo/timing as `vec2<f32>`, color and
- *   textureIndex as `u32`, plus the instance output buffer. Sits at the
+ * - **Seven packed storage buffers** for the per-particle SoA data -
+ *   positions/velocities/scales/timing as `vec2<f32>`, `rotInfo` as
+ *   `vec4<f32>` (rotation, rotation speed, frame index, terminal marker),
+ *   color as `u32`, plus the instance output buffer - and, while the system
+ *   reports deaths, an eighth buffer for the death backlog. Sits at the
  *   default WebGPU `maxStorageBuffersPerShaderStage = 8` limit. Built on
  *   the shared {@link WebGpuStorageBuffer} SDK primitive.
  * - **Three uniform buffers** (sim state `dt`/`liveCount`, module configs -

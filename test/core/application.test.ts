@@ -111,6 +111,7 @@ const loadApplicationHarness = async (
     update: vi.fn(),
     change: vi.fn().mockResolvedValue(undefined),
     destroy: vi.fn(),
+    _dispose: vi.fn().mockResolvedValue(undefined),
   };
   const inputSystem = {
     update: vi.fn(),
@@ -366,6 +367,38 @@ describe('Application', () => {
       expect(webglManager.initialize).toHaveBeenCalledTimes(1);
       expect(sceneDirector.change).toHaveBeenCalledTimes(1);
       expect(app.backend).toBe(webglManager);
+    } finally {
+      restoreGpu();
+      rafSpy.mockRestore();
+    }
+  });
+
+  test('auto backend does not create a fallback after destroy while WebGPU initializes', async () => {
+    const restoreGpu = setNavigatorGpu({});
+    let failInitialize: (error: Error) => void = () => {};
+    const webgpuInitialize = vi.fn(
+      () =>
+        new Promise<void>((_resolve, reject) => {
+          failInitialize = reject;
+        }),
+    );
+    const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+
+    try {
+      const { Application, ApplicationState, BackendMock, sceneDirector } = await loadApplicationHarness({ webgpuInitialize });
+      const app = new Application({ backend: { type: 'auto' } });
+      const startPromise = app.start(DummyScene).catch(() => undefined);
+
+      await app.destroy();
+
+      failInitialize(new Error('late WebGPU initialization failure'));
+
+      await startPromise;
+
+      expect(app.state).toBe(ApplicationState.Destroyed);
+      expect(BackendMock).not.toHaveBeenCalled();
+      expect(sceneDirector.change).not.toHaveBeenCalled();
+      expect(rafSpy).not.toHaveBeenCalled();
     } finally {
       restoreGpu();
       rafSpy.mockRestore();

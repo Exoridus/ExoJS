@@ -5,7 +5,7 @@
  * sorts run over ~1,000 elements every step, so that temp buffer is per-step
  * garbage. Heap sort sorts in place with only a constant number of locals.
  *
- * Heap sort is not stable, but every physics comparator (`byMinX`, `byPairId`,
+ * Heap sort is not stable, but every physics comparator (`byPairId`,
  * `byRecordPair`, `byColliderPair`, `bySensorPair`) breaks ties on collider id,
  * so no two elements ever compare equal - the ordering is total and therefore
  * bit-identical to the `Array.prototype.sort` it replaces (replay

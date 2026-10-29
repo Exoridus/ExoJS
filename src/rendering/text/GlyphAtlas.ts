@@ -18,11 +18,11 @@ import type { FontVariantKey, GlyphInfo, GlyphKey, GlyphProvider, SolidTexel, Te
 export type AtlasMode = 'sdf' | 'color';
 
 /**
- * SDF buffer radius in pixels - the maximum distance outside a glyph that the
- * SDF field encodes. Determines the maximum usable outline/shadow reach.
- * Exported so applications can import this constant when computing shader uniforms.
+ * SDF buffer radius in logical pixels - the maximum distance outside a glyph
+ * that the SDF field encodes. Determines the maximum usable outline/shadow
+ * reach. Exported so applications can import this constant when computing
+ * shader uniforms.
  */
-
 export const SDF_RADIUS = 8;
 
 const glyphPadding = 2;
@@ -360,10 +360,12 @@ export class GlyphAtlas implements GlyphProvider {
   private readonly _metrics: GlyphMetrics;
 
   /**
-   * Dispatched whenever a new atlas page is allocated.
+   * Dispatched whenever a page beyond the base one is allocated.
    *
-   * Listen here to detect unexpected atlas growth (e.g. many unique CJK glyphs
-   * or an oversized font size). The payload is the zero-based page index.
+   * The page the constructor creates is not reported, so the first event
+   * carries index 1. Listen here to detect unexpected atlas growth (e.g. many
+   * unique CJK glyphs or an oversized font size). The payload is the
+   * zero-based page index.
    *
    * ```ts
    * const atlas = pool.getAtlas({ family: 'Roboto', fontWeight: '400' });

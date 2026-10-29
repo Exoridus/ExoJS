@@ -18,7 +18,14 @@ export const decodeFloat16 = (bits: number): number => {
   return sign * (1024 + fraction) * 2 ** (exponent - 25);
 };
 
-/** Copy padded GPU rows into existing top-down RGBA storage. @internal */
+/**
+ * Copy padded GPU rows into existing top-down RGBA storage. The destination must
+ * already hold `width * height * 4` components and have the matching component
+ * type: `Float32Array` for float formats, a byte array for RGBA8. RGBA16F source
+ * rows are decoded to float32; every other supported format copies its
+ * components unchanged.
+ * @internal
+ */
 export const unpackPixelRows = (
   mapped: ArrayBuffer,
   destination: PixelArray,

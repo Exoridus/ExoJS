@@ -5,6 +5,7 @@ import { Range } from '../src/distributions/Range';
 import { VectorRange } from '../src/distributions/VectorRange';
 import { ApplyForce } from '../src/modules/ApplyForce';
 import { BurstSpawn } from '../src/modules/BurstSpawn';
+import { DeathModule } from '../src/modules/DeathModule';
 import { RateSpawn } from '../src/modules/RateSpawn';
 import { SpawnOnDeath } from '../src/modules/SpawnOnDeath';
 import { ParticleSystem } from '../src/ParticleSystem';
@@ -184,6 +185,77 @@ describe('ParticleSystem texture / frame accessors', () => {
 });
 
 describe('ParticleSystem module registries', () => {
+  test.each([1, 2])('clearing death modules on callback %s finishes compacting surviving particles', clearOnCallback => {
+    const system = new ParticleSystem(makeTexture(), { capacity: 4, simulation: 'cpu' });
+    let callbacks = 0;
+
+    for (const lifetime of [0.1, 10, 0.1]) {
+      system.emit()!.lifetime = lifetime;
+    }
+
+    class ClearModules extends DeathModule {
+      public onDeath(owner: ParticleSystem): void {
+        if (++callbacks === clearOnCallback) {
+          owner.clearDeathModules();
+        }
+      }
+    }
+
+    system.addDeathModule(new ClearModules());
+    system.update(tick(0.2));
+
+    expect(system.liveCount).toBe(1);
+    expect(system.aliveCount).toBe(1);
+    system.update(tick(0.2));
+    expect(system.liveCount).toBe(1);
+    expect(system.aliveCount).toBe(1);
+    expect(callbacks).toBe(clearOnCallback);
+
+    system.destroy();
+  });
+
+  test.each([false, true])('clearParticles in a death callback preserves the cleared state (emit replacement: %s)', emitReplacement => {
+    const system = new ParticleSystem(makeTexture(), { capacity: 4, simulation: 'cpu' });
+    const survivor = system.emit()!;
+    let callbacks = 0;
+    let laterCallbacks = 0;
+
+    survivor.lifetime = 10;
+
+    const expired = system.emit()!;
+
+    expired.lifetime = 0.1;
+
+    class ClearOnDeath extends DeathModule {
+      public onDeath(owner: ParticleSystem): void {
+        callbacks++;
+        owner.clearParticles();
+
+        if (emitReplacement) {
+          owner.emit()!.lifetime = 10;
+        }
+      }
+    }
+
+    class UnexpectedDeath extends DeathModule {
+      public onDeath(): void {
+        laterCallbacks++;
+      }
+    }
+
+    system.addDeathModule(new ClearOnDeath());
+    system.addDeathModule(new UnexpectedDeath());
+    system.update(tick(0.2));
+
+    expect(system.liveCount).toBe(emitReplacement ? 1 : 0);
+    expect(system.aliveCount).toBe(emitReplacement ? 1 : 0);
+    system.update(tick(0.1));
+    expect(callbacks).toBe(1);
+    expect(laterCallbacks).toBe(0);
+
+    system.destroy();
+  });
+
   test('spawnModules / updateModules / deathModules expose what was registered', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 8 });
     const spawn = new RateSpawn({ rate: new Constant(1) });

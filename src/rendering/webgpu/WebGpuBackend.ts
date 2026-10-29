@@ -629,6 +629,10 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   public initialize(): Promise<this> {
+    if (this._destroyed) {
+      return Promise.reject(new Error('Cannot initialize a destroyed WebGPU backend.'));
+    }
+
     if (!this._initializePromise) {
       this._initializePromise = this._initialize().catch((error: unknown) => {
         this._initializePromise = null;
@@ -1295,11 +1299,13 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /**
-   * No-op: nothing this backend renders into is ever multisampled, so there is
-   * no multisample storage to publish. A `RenderTarget.sampleCount` above `1`
-   * stays inert here for the reason {@link colorFormatCapabilities} records -
-   * WebGPU has no antialias request to honor and no pipeline carrying a sample
-   * count - rather than resolving an attachment that does not exist.
+   * Clears the requested sample count rather than resolving anything: nothing
+   * this backend renders into is ever multisampled, so there is no multisample
+   * storage to publish. A `RenderTarget.sampleCount` above `1` is reset to `1`
+   * for the reason {@link colorFormatCapabilities} records - WebGPU has no
+   * antialias request to honor and no pipeline carrying a sample count - and
+   * leaving the field at the requested value would advertise storage that does
+   * not exist.
    */
   public resolveRenderTarget(target: RenderTarget): void {
     if (target.sampleCount > 1) {
@@ -1603,15 +1609,14 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /**
+   * Resolve the pass attachment for colour slot `index` of the bound target.
+   *
    * **The returned record is reused**, including its nested `clearValue`. The
    * one caller (`WebGpuPassCoordinator.acquirePass`) hands it straight to
    * `beginRenderPass`, which reads the descriptor synchronously - so nothing
    * ever needs it to survive the call. An effect-heavy frame opens hundreds of
    * passes (501 on `filter/color 100`), and two fresh records per pass was one
    * of the larger remaining per-pass costs.
-   */
-  /**
-   * Resolve the pass attachment for colour slot `index` of the bound target.
    *
    * The load op is resolved once, on slot 0: it answers whether this target has
    * already been drawn into this frame, which is a property of the target, and the
@@ -1783,6 +1788,18 @@ export class WebGpuBackend implements RenderBackend {
     return size;
   }
 
+  /**
+   * The `(view, sampler)` pair to bind for `texture`, resolving and uploading
+   * its content first.
+   *
+   * **The default path returns a record owned by the texture and rewritten on
+   * the next resolution of that texture.** Read `view` and `sampler` before
+   * resolving another binding; keep the two fields, not the record. A
+   * `samplerOverride` returns a freshly allocated pair instead, because one
+   * texture can be bound under several sampling states in a single batch.
+   *
+   * Part of the renderer SDK contract for extension renderers.
+   */
   public getTextureBinding(
     texture: Texture | RenderTexture,
     samplerOverride: SamplerOptions | null = null,
@@ -2520,6 +2537,8 @@ export class WebGpuBackend implements RenderBackend {
       throw this._createInitializationError('Failed to request a WebGPU adapter.', error);
     }
 
+    this._assertInitializationActive();
+
     if (adapter === null) {
       throw new Error('Could not acquire a WebGPU adapter.');
     }
@@ -2529,6 +2548,8 @@ export class WebGpuBackend implements RenderBackend {
     try {
       device = await this._requestDeviceFrom(adapter);
     } catch (error) {
+      this._assertInitializationActive();
+
       // Each adapter can create only one device, so retry against a fresh one.
 
       try {
@@ -2536,6 +2557,8 @@ export class WebGpuBackend implements RenderBackend {
       } catch (retryError) {
         throw this._createInitializationError('Failed to request a WebGPU adapter.', retryError);
       }
+
+      this._assertInitializationActive();
 
       if (adapter === null) {
         throw new Error('Could not acquire a WebGPU adapter.', { cause: error });
@@ -2546,6 +2569,11 @@ export class WebGpuBackend implements RenderBackend {
       } catch (retryError) {
         throw this._createInitializationError('Failed to request a WebGPU device.', retryError);
       }
+    }
+
+    if (this._destroyed) {
+      device?.destroy();
+      this._assertInitializationActive();
     }
 
     if (device === null) {
@@ -2621,8 +2649,15 @@ export class WebGpuBackend implements RenderBackend {
     const prewarmFormats: readonly GPUTextureFormat[] = [this.format, managedTextureFormat];
 
     await this._prewarmRendererPipelines(prewarmFormats);
+    this._assertInitializationActive();
 
     return this;
+  }
+
+  private _assertInitializationActive(): void {
+    if (this._destroyed) {
+      throw new Error('Cannot initialize a destroyed WebGPU backend.');
+    }
   }
 
   private _subscribeToDeviceLoss(): void {
@@ -2814,6 +2849,7 @@ export class WebGpuBackend implements RenderBackend {
     // Same for the normalization pass: its staging textures, pipeline and uniform
     // buffers are all dead handles, and the recovered device gets fresh ones.
     this._textureNormalizer?.reset();
+    this._textureNormalizer = null;
     this._transformStorage?.destroy();
     this._transformStorage = null;
     this._activeDrawCommand = null;

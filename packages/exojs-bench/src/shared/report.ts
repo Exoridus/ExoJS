@@ -28,8 +28,16 @@ export const formatMs = (value: number | null): string => (value === null ? 'n/a
 /** Formats a structural counter: integers stay integers, uneven per-step/frame totals keep two decimals. */
 export const formatCount = (value: number): string => (Number.isInteger(value) ? String(value) : value.toFixed(2));
 
-/** Escapes a CSV field, quoting when it holds a comma, quote or newline. */
-export const csvField = (value: string): string => (/[",\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value);
+/** Escapes a CSV field, quoting when it holds a comma, quote, carriage return or newline. */
+export const csvField = (value: string): string => (/[",\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value);
+
+/**
+ * Escapes a Markdown table cell. Line breaks collapse to one space before pipes
+ * are escaped: a break inside a cell ends the row, so every later column would
+ * shift. Playwright evaluate errors carry multi-line stacks, which is exactly
+ * the note a failed cell records.
+ */
+export const markdownCell = (value: string): string => value.replaceAll(/\r?\n|\r/g, ' ').replaceAll('|', '\\|');
 
 /**
  * A spec's identity as a string: every field in a fixed key order, so two
@@ -102,23 +110,55 @@ export const mergeLibraries = (existing: readonly LibraryProvenance[], incoming:
 };
 
 /**
- * The report `outDir` already holds, parsed, or `undefined` when there is none.
- * A `results.json` that exists but does not parse is an error rather than a
- * fresh start: replacing it would discard whatever the file still held, and the
- * caller could not tell that from an empty directory.
+ * The report `outDir` already holds, parsed and shape-checked, or `undefined`
+ * when there is none.
+ *
+ * A `results.json` that exists but does not parse - or parses into a value this
+ * report cannot read - is an error rather than a fresh start: replacing it would
+ * discard whatever the file still held, and the caller could not tell that from
+ * an empty directory. A bare cast would accept a foreign artefact and fail later
+ * with an opaque TypeError, after the run had already been measured.
  */
-export const readExistingReport = <TData>(outDir: string): TData | undefined => {
+export const readExistingReport = <TData>(outDir: string, isShape: (value: unknown) => value is TData): TData | undefined => {
   const path = join(outDir, 'results.json');
 
   if (!existsSync(path)) {
     return undefined;
   }
 
+  let parsed: unknown;
+
   try {
-    return JSON.parse(readFileSync(path, 'utf8')) as TData;
+    parsed = JSON.parse(readFileSync(path, 'utf8'));
   } catch (error) {
     throw new Error(`could not parse the existing ${path}; move it aside before writing a new report`, { cause: error });
   }
+
+  if (!isShape(parsed)) {
+    throw new Error(`the existing ${path} does not have this report's shape; move it aside before writing a new report`);
+  }
+
+  return parsed;
+};
+
+/**
+ * Whether a parsed value carries the shape every benchmark report holds: a
+ * provenance stamp (an array in the rendering domain, one object in physics),
+ * the library arms and the results. The cell and provenance fields themselves
+ * are the domain's own.
+ */
+export const isReportShape = <T>(value: unknown): value is T => {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as { provenance?: unknown; libraries?: unknown; results?: unknown };
+
+  return (
+    (Array.isArray(record.provenance) || (typeof record.provenance === 'object' && record.provenance !== null)) &&
+    Array.isArray(record.libraries) &&
+    Array.isArray(record.results)
+  );
 };
 
 /** The three rendered report artifacts, already formatted by the domain. */

@@ -63,6 +63,20 @@ const createStubDevice = (): StubDevice => {
   return { device, syncCreates: () => syncCreates };
 };
 
+const delayPrewarm = (stub: StubDevice): (() => void) => {
+  const pending: Array<() => void> = [];
+
+  vi.spyOn(stub.device, 'createRenderPipelineAsync').mockImplementation(
+    () => new Promise<GPURenderPipeline>(resolve => pending.push(() => resolve({} as GPURenderPipeline))),
+  );
+
+  return () => {
+    for (const finish of pending) {
+      finish();
+    }
+  };
+};
+
 // _buildPipelineDescriptor reads the GPUColorWrite global, which jsdom does
 // not provide.
 const previousColorWrite = Object.getOwnPropertyDescriptor(globalThis, 'GPUColorWrite');
@@ -97,6 +111,29 @@ describe('WebGpuSpriteRenderer pipeline prewarm', () => {
 
     return { renderer, stub };
   };
+
+  test.each(['device', 'layout'])('late prewarm cannot populate a replacement %s connection', async changed => {
+    const { renderer, stub } = setup();
+    const finish = delayPrewarm(stub);
+    const warming = renderer.prewarmPipelines(formats);
+    const replacement = changed === 'device' ? createStubDevice() : stub;
+    const internal = renderer as unknown as {
+      _device: GPUDevice;
+      _pipelineLayout: GPUPipelineLayout;
+      _getPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline;
+    };
+
+    if (changed === 'device') {
+      internal._device = replacement.device;
+    } else {
+      internal._pipelineLayout = {} as GPUPipelineLayout;
+    }
+
+    finish();
+    await warming;
+    internal._getPipeline(BlendModes.Normal, formats[0]!, false);
+    expect(replacement.syncCreates()).toBe(1);
+  });
 
   test('prewarmed pipelines are found by the hot-path lookup (no synchronous compiles)', async () => {
     const { renderer, stub } = setup();
@@ -173,6 +210,33 @@ describe('WebGpuMeshRenderer pipeline prewarm', () => {
     return { renderer, stub, pipelines: internals._pipelines, instancedPipelines: internals._instancedPipelines };
   };
 
+  test.each(['device', 'layout'])('late prewarm cannot populate a replacement %s connection', async changed => {
+    const { renderer, stub } = setup();
+    const finish = delayPrewarm(stub);
+    const warming = renderer.prewarmPipelines(formats);
+    const replacement = changed === 'device' ? createStubDevice() : stub;
+    const internal = renderer as unknown as {
+      _device: GPUDevice;
+      _pipelineLayout: GPUPipelineLayout;
+      _instancedPipelineLayout: GPUPipelineLayout;
+      _getPipeline(key: { blendMode: BlendModes; format: GPUTextureFormat; stencil: boolean }): GPURenderPipeline;
+      _getInstancedPipeline(key: { blendMode: BlendModes; format: GPUTextureFormat; stencil: boolean }): GPURenderPipeline;
+    };
+
+    if (changed === 'device') {
+      internal._device = replacement.device;
+    } else {
+      internal._pipelineLayout = {} as GPUPipelineLayout;
+      internal._instancedPipelineLayout = {} as GPUPipelineLayout;
+    }
+
+    finish();
+    await warming;
+    internal._getPipeline({ blendMode: BlendModes.Normal, format: formats[0]!, stencil: false });
+    internal._getInstancedPipeline({ blendMode: BlendModes.Normal, format: formats[0]!, stencil: false });
+    expect(replacement.syncCreates()).toBe(2);
+  });
+
   test('prewarmed default + instanced pipelines are found by the hot-path lookups', async () => {
     const { renderer, stub } = setup();
 
@@ -231,6 +295,30 @@ describe('WebGpuScalableSpriteRenderer pipeline prewarm', () => {
     return { renderer, stub, pipelines: internals._pipelines };
   };
 
+  test.each(['device', 'layout'])('late prewarm cannot populate a replacement %s connection', async changed => {
+    const { renderer, stub } = setup();
+    const finish = delayPrewarm(stub);
+    const warming = renderer.prewarmPipelines(formats);
+    const replacement = changed === 'device' ? createStubDevice() : stub;
+    const internal = renderer as unknown as {
+      _device: GPUDevice;
+      _pipelineLayout: GPUPipelineLayout;
+      _getPipeline(kind: 'shader' | 'geo', blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline;
+    };
+
+    if (changed === 'device') {
+      internal._device = replacement.device;
+    } else {
+      internal._pipelineLayout = {} as GPUPipelineLayout;
+    }
+
+    finish();
+    await warming;
+    internal._getPipeline('shader', BlendModes.Normal, formats[0]!, false);
+    internal._getPipeline('geo', BlendModes.Normal, formats[0]!, false);
+    expect(replacement.syncCreates()).toBe(2);
+  });
+
   test('prewarmed shader + geometry pipelines are found by the hot-path lookup', async () => {
     const { renderer, stub } = setup();
 
@@ -283,6 +371,29 @@ describe('WebGpuTextRenderer pipeline prewarm', () => {
 
     return { renderer, stub, pipelines: internals._pipelines };
   };
+
+  test.each(['device', 'layout'])('late prewarm cannot populate a replacement %s connection', async changed => {
+    const { renderer, stub } = setup();
+    const finish = delayPrewarm(stub);
+    const warming = renderer.prewarmPipelines(formats);
+    const replacement = changed === 'device' ? createStubDevice() : stub;
+    const internal = renderer as unknown as {
+      _device: GPUDevice;
+      _pipelineLayout: GPUPipelineLayout;
+      _getPipeline(shaderType: 'sdf', blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline;
+    };
+
+    if (changed === 'device') {
+      internal._device = replacement.device;
+    } else {
+      internal._pipelineLayout = {} as GPUPipelineLayout;
+    }
+
+    finish();
+    await warming;
+    internal._getPipeline('sdf', BlendModes.Normal, formats[0]!, false);
+    expect(replacement.syncCreates()).toBe(1);
+  });
 
   test('prewarmed pipelines are found by the hot-path lookup', async () => {
     const { renderer, stub } = setup();

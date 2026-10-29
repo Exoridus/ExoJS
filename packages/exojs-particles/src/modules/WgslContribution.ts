@@ -24,7 +24,8 @@ export type WgslTextureBinding = ParticleTextureBinding;
  *   - `positions[idx].x` / `.y` (was posX/posY)
  *   - `velocities[idx].x` / `.y` (was velX/velY)
  *   - `scales[idx].x` / `.y` (was scaleX/scaleY)
- *   - `rotInfo[idx].x` / `.y` (rotation, rotationSpeed; z is the frame index and w is reserved)
+ *   - `rotInfo[idx].x` / `.y` (rotation, rotationSpeed; z is the frame index and w is
+ *   the lifecycle lane owned by the simulation step - never write it from a body)
  *   - `timing[idx].x` / `.y` (elapsed, lifetime)
  *   - `color[idx]` - packed RGBA u32, single channel (no .x/.y)
  * - `sim: SimUniforms` - `{ dt: f32, liveCount: u32 }`.

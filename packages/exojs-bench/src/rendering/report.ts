@@ -1,8 +1,11 @@
+import { exceedsFrameBudget } from '../shared/frameBudget';
 import type { LibraryProvenance } from '../shared/provenance';
 import {
   csvField,
   formatCount as count,
   formatMs as ms,
+  isReportShape,
+  markdownCell,
   mergeCellResults,
   mergeLibraries,
   readExistingReport,
@@ -11,15 +14,20 @@ import {
 import type { Provenance } from './driver';
 import type { Backend, CellResult } from './EngineAdapter';
 
-/** Node count at or above which a full-frame time is beyond any interactive budget. */
-const FRAME_BUDGET_NODE_THRESHOLD = 100_000;
-
 /** Marker appended to timing columns when the run used a software rasterizer. */
 const UNTRUSTED_MARK = 'UNTRUSTED (software rasterizer)';
 
+/** Marker appended to timing columns when no adapter identity could be read. */
+const UNVERIFIED_ADAPTER_MARK = 'UNTRUSTED (adapter unverified)';
+
+/** Whether a cell's measured frame time is past a whole 60 fps frame. */
+const beyondFrameBudget = (result: CellResult): boolean => exceedsFrameBudget(result.frameMsMedian);
+
 /**
- * A cell is `hitching` when its p95 CPU time towers over its median AND lands
- * above an interactive frame budget.
+ * A cell is `hitching` when its p95 CPU time towers over its median AND clears
+ * the absolute `HITCH_FLOOR_MS` floor of 8ms - half a 60fps frame, not a full
+ * frame budget: the test never reads `frameMs`, so a cell can be marked while
+ * its reported frame time is still inside an interactive budget.
  *
  * Both halves are needed. The ratio alone fires on a cell that is fast
  * throughout (0.1ms median, 0.5ms p95 is a scheduling blip, not a hitch); the
@@ -55,11 +63,27 @@ export interface ReportData {
 /** True when any provenance stamp reports a software rasterizer. */
 const isSoftware = (data: ReportData): boolean => data.provenance.some(entry => entry.software);
 
-/** The `frameMsMedian` cell text, suffixed `beyond-frame-budget` past the node threshold. */
+/** True when any provenance stamp could not identify its adapter. */
+const hasUnverifiedAdapter = (data: ReportData): boolean => data.provenance.some(entry => entry.adapterUnverified === true);
+
+/** The untrusted mark for the timing columns, or an empty suffix when they are trusted. */
+const untrustedTimingMark = (data: ReportData): string => {
+  if (isSoftware(data)) {
+    return ` — ${UNTRUSTED_MARK}`;
+  }
+
+  if (hasUnverifiedAdapter(data)) {
+    return ` — ${UNVERIFIED_ADAPTER_MARK}`;
+  }
+
+  return '';
+};
+
+/** The `frameMsMedian` cell text, suffixed `beyond-frame-budget` when the measured frame is past a whole frame. */
 const frameMedianCell = (result: CellResult): string => {
   const base = ms(result.frameMsMedian);
 
-  return result.spec.nodeCount >= FRAME_BUDGET_NODE_THRESHOLD ? `${base} beyond-frame-budget` : base;
+  return beyondFrameBudget(result) ? `${base} beyond-frame-budget` : base;
 };
 
 /** Ordered columns shared by the CSV and the Markdown table. */
@@ -88,7 +112,7 @@ const CSV_HEADER = [
 
 const toCsvRow = (result: CellResult): string => {
   const { spec, structural } = result;
-  const beyondBudget = spec.nodeCount >= FRAME_BUDGET_NODE_THRESHOLD ? 'beyond-frame-budget' : '';
+  const beyondBudget = beyondFrameBudget(result) ? 'beyond-frame-budget' : '';
   const fields = [
     spec.engine,
     spec.config,
@@ -127,7 +151,6 @@ const toCsv = (data: ReportData): string => [CSV_HEADER.join(','), ...data.resul
  * rAF delta rather than a real GPU timer, is visible in the row it belongs to.
  */
 const toMarkdown = (data: ReportData): string => {
-  const software = isSoftware(data);
   const lines: string[] = [];
 
   lines.push('# Baseline Benchmark Results', '');
@@ -176,6 +199,10 @@ const toMarkdown = (data: ReportData): string => {
       lines.push('', `**SOFTWARE RASTERIZER — TIMINGS UNTRUSTED FOR ${entry.backend}**`);
     }
 
+    if (entry.adapterUnverified === true) {
+      lines.push('', `**ADAPTER UNVERIFIED — TIMINGS NOT CONFIRMED HARDWARE FOR ${entry.backend}**`);
+    }
+
     lines.push('');
   }
 
@@ -204,7 +231,7 @@ const toMarkdown = (data: ReportData): string => {
 
   // Annotate the timing column headers when timings are untrusted; structural
   // counters stay unannotated because they remain valid on a software rasterizer.
-  const timingSuffix = software ? ` — ${UNTRUSTED_MARK}` : '';
+  const timingSuffix = untrustedTimingMark(data);
   const header = [
     'engine',
     'config',
@@ -245,7 +272,7 @@ const toMarkdown = (data: ReportData): string => {
       String(spec.warmupFrames),
       String(spec.timedFrames),
       result.status,
-      (result.note ?? '').replaceAll('|', '\\|'),
+      markdownCell(result.note ?? ''),
     ];
 
     lines.push(`| ${row.join(' | ')} |`);
@@ -294,7 +321,7 @@ export const mergeReportData = (existing: ReportData | undefined, incoming: Repo
  * merged data, so all three artifacts describe the same cell set.
  */
 export const writeReport = (run: ReportData, outDir: string): void => {
-  const data = mergeReportData(readExistingReport<ReportData>(outDir), run);
+  const data = mergeReportData(readExistingReport<ReportData>(outDir, isReportShape), run);
 
   writeReportArtifacts(outDir, {
     json: `${JSON.stringify(data, null, 2)}\n`,
