@@ -314,6 +314,8 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
   let tileIds: Uint8Array = new Uint8Array(0);
   /** The tile atlas every chunk draws from, kept so a rebuilt chunk gets the identical tileset. */
   let tileAtlas: TextureSource | null = null;
+  /** The owning Texture of {@link tileAtlas}, kept so releaseTilemap can destroy the GPU texture itself. */
+  let tileAtlasTexture: Texture | null = null;
 
   /** Paint one chunk from {@link tileIds} into its (empty) tilemap. */
   const paintChunk = (chunk: TileChunk): void => {
@@ -372,6 +374,7 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
     const atlas = Texture.from(createTileAtlasCanvas());
 
     tileAtlas = atlas.source;
+    tileAtlasTexture = atlas;
 
     tileTextures = Array.from(
       { length: TILE_VARIANTS },
@@ -461,6 +464,8 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
     tileChunks = [];
     tileTextures = [];
     tileIds = new Uint8Array(0);
+    tileAtlasTexture?.destroy(true);
+    tileAtlasTexture = null;
     tileAtlas = null;
     tilemapSpec = null;
   };
