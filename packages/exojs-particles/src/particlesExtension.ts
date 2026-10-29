@@ -11,7 +11,8 @@ import { ParticleSystem } from './ParticleSystem';
 export interface ParticlesExtensionOptions {
   /**
    * Particles the WebGL2 renderer's instance buffer is pre-sized for.
-   * Defaults to 8192.
+   * Defaults to 8192. Must be a positive integer: a negative, fractional or
+   * non-finite value throws when the extension is created.
    *
    * This is a starting allocation, not a limit: a system with more live
    * particles grows the buffer instead of dropping the surplus, so raise it
