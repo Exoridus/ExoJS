@@ -1504,7 +1504,8 @@ export class Loader {
    * Tears down the loader and all resources it owns.
    *
    * Clears all in-memory assets and in-flight tracking, and disconnects all
-   * signals. Also calls `destroy?.()` on every installed type's factory.
+   * signals. Pending handles and refs reject with an `AbortError`.
+   * Also calls `destroy?.()` on every installed type's factory.
    * Completes teardown before rethrowing the first cleanup failure, if any.
    *
    * Cache stores are destroyed only when this loader was given the stores
@@ -1521,10 +1522,11 @@ export class Loader {
     this._destroyed = true;
 
     // Order matters: factory teardown must run after store teardown (via
-    // this._decoder.destroy()) - see the regression test in loader.test.ts.
+    // this._decoder.destroy()). Pending handles still need their registered adapters
+    // while residency settles them, before factory teardown clears the registry.
     const errors: unknown[] = [];
 
-    for (const stage of [this._decoder, this._typeRegistry, this._residency]) {
+    for (const stage of [this._decoder, this._residency, this._typeRegistry]) {
       try {
         stage.destroy();
       } catch (error) {

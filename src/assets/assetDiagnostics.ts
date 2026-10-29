@@ -1,5 +1,7 @@
 import { logger } from '#core/Logger';
 
+import type { CanonicalAsset } from './canonicalKey';
+
 /** Reports observer failures without rejecting successful asset work. @internal */
 export const reportAssetObserverFailure = (error: unknown): void => {
   logger.error('Asset observer failed.', {
@@ -28,5 +30,15 @@ export const sameOptions = (a: unknown, b: unknown, depth = 0): boolean => {
   return (
     keys.length === Object.keys(b).length &&
     keys.every(key => sameOptions((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key], depth + 1))
+  );
+};
+
+/** Reports a seamless missing source once per canonical key. @internal */
+export const warnMissingAssetSource = (asset: CanonicalAsset, error: Error): void => {
+  logger.warn(
+    `Asset "${asset.source}" failed to load: ${error.message} ` +
+      `Seamless get()/Assets.from() fetch the literal path and heal a placeholder in place, so a typo or an ` +
+      `un-preloaded alias 404s without throwing. Check the path and the loader basePath, and preload it via Assets.from() / load().`,
+    { source: 'Loader', once: `loader:missing-source:${asset.key}` },
   );
 };

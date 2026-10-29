@@ -4,13 +4,14 @@ import type { Signal } from '#core/Signal';
 
 import type { AssetConstructor } from './AssetConstructor';
 import type { AssetDecoder } from './AssetDecoder';
-import { reportAssetObserverFailure, sameOptions } from './assetDiagnostics';
+import { reportAssetObserverFailure, sameOptions, warnMissingAssetSource } from './assetDiagnostics';
 import { _readMeta } from './assetMeta';
 import { AssetRef } from './AssetRef';
 import { type AssetReferenceLookup, AssetRequestLog } from './AssetRequestLog';
 import type { AssetTypeRegistry } from './AssetTypeRegistry';
 import type { AssetLocator, CanonicalAsset, ResourceKey } from './canonicalKey';
 import { _bindLeaves as bindCatalogLeaves } from './catalogLeaf';
+import { failPendingAssets } from './failPendingAssets';
 import type { LoaderScope, LoaderScopeKind } from './LoaderScope';
 import { residentBytes } from './residentBytes';
 import type { SeamlessAdapter } from './seamless';
@@ -1456,7 +1457,7 @@ export class AssetResidency {
       }
 
       if (!cancelled) {
-        this._warnMissingSource(asset, err);
+        warnMissingAssetSource(asset, err);
       }
     } else {
       const refEntry = this._refs.get(asset.key);
@@ -1467,7 +1468,7 @@ export class AssetResidency {
         }
 
         if (!cancelled) {
-          this._warnMissingSource(asset, err);
+          warnMissingAssetSource(asset, err);
         }
       }
     }
@@ -1479,21 +1480,6 @@ export class AssetResidency {
       this._releaseDependencies(asset.key);
       this._signals.onError.dispatchIsolated(reportAssetObserverFailure, asset.type, asset.source, err);
     }
-  }
-
-  /**
-   * Dev-only diagnostic for the seamless silent-404 trap: a `get('x.png')` /
-   * adopted-catalog / `Assets.from(...)` leaf whose fetch ends in a 404 or
-   * network error only ever surfaces a `'failed'` placeholder. Warns ONCE per
-   * source. Stripped in production.
-   */
-  private _warnMissingSource(asset: CanonicalAsset, error: Error): void {
-    logger.warn(
-      `Asset "${asset.source}" failed to load: ${error.message} ` +
-        `Seamless get()/Assets.from() fetch the literal path and heal a placeholder in place, so a typo or an ` +
-        `un-preloaded alias 404s without throwing. Check the path and the loader basePath, and preload it via Assets.from() / load().`,
-      { source: 'Loader', once: `loader:missing-source:${asset.key}` },
-    );
   }
 
   /** The representative (first-inserted) member of a ref set, or `undefined` if empty. */
@@ -2059,15 +2045,16 @@ export class AssetResidency {
 
   /**
    * Clears all resident-resource, in-flight, claim, and background-queue state,
-   * cancelling every fetch still running. Called from `Loader.destroy()` - the
-   * loader is going away, so no holder can possibly still want a result, and a
-   * download left running would only compete for bandwidth with whatever
-   * replaces it.
+   * cancelling every fetch still running and rejecting every pending handle/ref.
+   * Ready and failed handles keep their settled state. Completes cleanup before
+   * rethrowing the first adapter failure, if any.
    */
   public destroy(): void {
     for (const abort of this._abort.values()) {
       abort.abort();
     }
+
+    const errors = failPendingAssets(this._typeRegistry, this._deferred.values(), this._refs.values());
 
     this._abort.clear();
     this._resources.clear();
@@ -2087,5 +2074,9 @@ export class AssetResidency {
 
     // A pending awaitBackground() caller must not hang forever past destroy().
     this._settleBackgroundWaiters();
+
+    if (errors.length > 0) {
+      throw errors[0];
+    }
   }
 }

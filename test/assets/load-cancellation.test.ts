@@ -72,6 +72,24 @@ describe('asset load cancellation', () => {
     global.fetch = originalFetch;
   });
 
+  test('destroy settles pending texture handles and value refs even when their fetches are still loading', async () => {
+    const calls = mockPendingFetch();
+    const loader = createCoreLoader();
+    const handle = loader.get('pending.png');
+    const ref = loader.get('pending.txt');
+    const handleLoaded = handle.loaded.catch((error: unknown) => error);
+    const refLoaded = ref.loaded.catch((error: unknown) => error);
+    await flush();
+    expect(calls).toHaveLength(2);
+
+    loader.destroy();
+
+    expect(handle.loadState).toBe('failed');
+    expect(ref.loadState).toBe('failed');
+    await expect(handleLoaded).resolves.toMatchObject({ name: 'AbortError' });
+    await expect(refLoaded).resolves.toMatchObject({ name: 'AbortError' });
+  });
+
   test('cancelling a load aborts the underlying fetch', async () => {
     const calls = mockPendingFetch();
     const loader = createCoreLoader();
