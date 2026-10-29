@@ -216,6 +216,7 @@ describe('binding serialization', () => {
 
     expect(() => BindingProfile.fromJSON(null)).toThrow(InputBindingError);
     expect(() => BindingProfile.fromJSON({ version: 2, overrides: {} })).toThrow(InputBindingError);
+    expect(() => BindingProfile.fromJSON({ version: 1, overrides: null })).toThrow(InputBindingError);
     expect(() => map.applyProfile(new BindingProfile().set('jump', { kind: 'button', binding: ['keyboard.hyperspace'] }))).toThrow(
       InputBindingError,
     );

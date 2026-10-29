@@ -284,7 +284,13 @@ export const migrate = (data: unknown): SerializedScene => {
     throw new Error('Cannot deserialize scene: the document is not an object.');
   }
 
-  const version = typeof scene.version === 'number' ? scene.version : 0;
+  const version: unknown = scene.version === undefined ? 0 : scene.version;
+
+  // A fractional, negative or non-numeric version would skip every migration
+  // step while still being published as the document's version.
+  if (typeof version !== 'number' || !Number.isInteger(version) || version < 0) {
+    throw new Error(`Cannot deserialize scene: data version ${String(version)} is not a non-negative integer.`);
+  }
 
   if (version > SERIALIZATION_VERSION) {
     throw new Error(`Cannot deserialize scene: data version ${version} is newer than the supported version ${SERIALIZATION_VERSION}.`);
@@ -322,7 +328,11 @@ export const migratePrefab = (data: unknown): SerializedPrefab => {
     throw new Error('Cannot deserialize prefab: the document is not an object.');
   }
 
-  const version = typeof document.version === 'number' ? document.version : 0;
+  const version: unknown = document.version === undefined ? 0 : document.version;
+
+  if (typeof version !== 'number' || !Number.isInteger(version) || version < 0) {
+    throw new Error(`Cannot deserialize prefab: data version ${String(version)} is not a non-negative integer.`);
+  }
 
   if (version > SERIALIZATION_VERSION) {
     throw new Error(`Cannot deserialize prefab: data version ${version} is newer than the supported version ${SERIALIZATION_VERSION}.`);

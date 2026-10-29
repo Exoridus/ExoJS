@@ -13,10 +13,11 @@ import {
   readString,
   REPEAT_MODES,
 } from '#core/serialization/read';
-import { _resetDefaultSerializers, deserializeTree, migrate } from '#core/serialization/serialize';
+import { _resetDefaultSerializers, deserializeTree, migrate, migratePrefab } from '#core/serialization/serialize';
 import { SERIALIZATION_VERSION, type SerializedNode } from '#core/serialization/types';
 import { Signal } from '#core/Signal';
 import { type Container } from '#rendering/Container';
+import type { Mesh } from '#rendering/mesh/Mesh';
 import { type RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
@@ -196,6 +197,15 @@ describe('serialization validation — top-level frame (migrate)', () => {
     expect(() => migrate({ version: SERIALIZATION_VERSION + 1, root: { type: 'Container' } })).toThrow();
   });
 
+  it('rejects a version that is not a non-negative integer, for scenes and prefabs', () => {
+    for (const version of [Number.NaN, -1, 1.5, '2', null]) {
+      expect(() => migrate({ version, root: { type: 'Container' } })).toThrow(/not a non-negative integer/);
+      expect(() => migratePrefab({ version, root: { type: 'Container' } })).toThrow(/not a non-negative integer/);
+    }
+
+    expect(migrate({ root: { type: 'Container' } }).version).toBe(0);
+  });
+
   it('accepts a well-formed document and drops an invalid ui layer', () => {
     const ok = migrate({ version: SERIALIZATION_VERSION, root: { type: 'Container' } });
     expect(ok.root.type).toBe('Container');
@@ -206,5 +216,27 @@ describe('serialization validation — top-level frame (migrate)', () => {
 
     const withUi = migrate({ version: SERIALIZATION_VERSION, root: { type: 'Container' }, ui: { type: 'UIRoot' } });
     expect(withUi.ui?.type).toBe('UIRoot');
+  });
+});
+
+describe('serialization validation — Mesh geometry', () => {
+  it('never stores a non-finite vertex or uv value', () => {
+    const mesh = deserializeTree(node({ type: 'Mesh', vertices: [0, 0, 10, 0, 'x', Number.POSITIVE_INFINITY] })) as Mesh;
+
+    expect([...mesh.vertices]).toEqual([0, 0, 10, 0, 0, 0]);
+  });
+
+  it('rejects an index that a Uint16Array would wrap or truncate', () => {
+    const geometry = { type: 'Mesh', vertices: [0, 0, 10, 0, 0, 10] };
+
+    expect(() => deserializeTree(node({ ...geometry, indices: [0, 1, 70_000] }))).toThrow(/indices must be integers/);
+    expect(() => deserializeTree(node({ ...geometry, indices: [0, 1, 1.5] }))).toThrow(/indices must be integers/);
+    expect(() => deserializeTree(node({ ...geometry, indices: [0, 1, 3] }))).toThrow(/indices must be integers/);
+  });
+
+  it('still accepts in-range integer indices', () => {
+    const mesh = deserializeTree(node({ type: 'Mesh', vertices: [0, 0, 10, 0, 0, 10], indices: [0, 1, 2] })) as Mesh;
+
+    expect(mesh.indices).toEqual(new Uint16Array([0, 1, 2]));
   });
 });
