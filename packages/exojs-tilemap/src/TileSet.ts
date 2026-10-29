@@ -259,19 +259,18 @@ export class TileSet {
    * tilesets programmatically.
    */
   public setDefinitions(definitions: readonly TileDefinition[]): void {
-    const map = this._definitions as Map<number, TileDefinition>;
-    map.clear();
+    // Validate the whole batch before clearing, so a bad entry cannot wipe the
+    // definitions that are already installed.
+    for (const def of definitions) {
+      if (def.localTileId < 0 || def.localTileId >= this.tileCount) {
+        throw new Error(`Tile definition localTileId ${def.localTileId} out of range [0, ${this.tileCount - 1}].`);
+      }
+    }
+
+    (this._definitions as Map<number, TileDefinition>).clear();
 
     for (const def of definitions) {
-      const props = def.properties ? Object.freeze({ ...def.properties }) : undefined;
-      const animation = def.animation ? Object.freeze(def.animation.map(frame => Object.freeze({ ...frame }))) : undefined;
-      const collision = def.collision ? Object.freeze([...def.collision]) : undefined;
-      map.set(def.localTileId, {
-        localTileId: def.localTileId,
-        ...(props !== undefined && { properties: props }),
-        ...(animation !== undefined && { animation }),
-        ...(collision !== undefined && { collision }),
-      });
+      this._setDefinition(def.localTileId, def);
     }
   }
 
