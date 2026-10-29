@@ -138,6 +138,26 @@ describe('OffscreenPlatform', () => {
     platform.destroy();
   });
 
+  it('keeps delivering when a listener throws a value that cannot be stringified', () => {
+    const platform = new OffscreenPlatform(createSurface());
+    const seen: string[] = [];
+    const error = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+
+    // A null-prototype object has no `toString`, so building a message with
+    // String() would throw again from inside the catch.
+    platform.onSurfaceEvent('pointerdown', () => {
+      throw Object.create(null);
+    });
+    platform.onSurfaceEvent('pointerdown', () => void seen.push('second'));
+
+    expect(() => platform.emitSurfaceEvent('pointerdown', createPointerEvent(1))).not.toThrow();
+    expect(seen).toEqual(['second']);
+    expect(error).toHaveBeenCalledTimes(1);
+
+    error.mockRestore();
+    platform.destroy();
+  });
+
   it('notifies visibility subscribers only on an actual change', () => {
     const platform = new OffscreenPlatform(createSurface());
     const changes: boolean[] = [];

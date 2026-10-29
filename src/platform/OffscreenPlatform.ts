@@ -385,7 +385,12 @@ export class OffscreenPlatform implements PlatformAdapter {
       } catch (error) {
         logger.error('A platform event listener threw while handling a forwarded event.', {
           source: 'OffscreenPlatform',
-          error: error instanceof Error ? error : new Error(String(error)),
+          // String() itself throws on a null-prototype payload, which would
+          // escape this catch and defeat the isolation it exists for.
+          error:
+            error instanceof Error
+              ? error
+              : new Error(typeof error === 'string' ? error : 'A platform event listener threw a non-Error value.'),
         });
       }
     }
