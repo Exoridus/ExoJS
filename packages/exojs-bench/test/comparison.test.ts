@@ -828,3 +828,17 @@ describe('renderComparison', () => {
     expect(document).toContain('not reportable');
   });
 });
+
+describe('renderingMechanism drawless archetypes', () => {
+  const nothing = { drawCalls: 0, textureBinds: 0, bufferUploads: 0 };
+
+  test('keeps the both-zero row when the archetype draws nothing by design', () => {
+    const mechanism = renderingMechanism(nothing, nothing, { drawless: true });
+
+    expect(mechanism).toContain('neither arm submits anything');
+  });
+
+  test('drops the both-zero row without the drawless flag', () => {
+    expect(renderingMechanism(nothing, nothing)).toBeNull();
+  });
+});
