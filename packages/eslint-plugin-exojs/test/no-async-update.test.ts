@@ -30,6 +30,9 @@ ruleTester.run('no-async-update', noAsyncUpdate, {
     'class MyScene extends Scene { async init() {} }',
     // Unrelated async methods never match the covered name set.
     'class Loader { async fetchData() {} }',
+    // Static members are not on the instance the frame loop dispatches.
+    'class Clock { static async update() {} }',
+    'class Clock { static update = async () => {}; }',
     // Documented limitation: a computed key's name is not known
     // syntactically, so it is not checked.
     "class MySystem { async ['update']() {} }",

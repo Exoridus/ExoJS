@@ -62,6 +62,25 @@ export enum OldEnum { A }
     });
   });
 
+  it('reads declaration-file exports, which carry the declare modifier', () => {
+    const source = `
+/** @deprecated Use NewConst. */
+export declare const OldConst: number;
+
+/** @deprecated Use NewClass. */
+export declare abstract class OldClass {}
+
+/** @deprecated Use NewFn. */
+export declare function oldFn(): void;
+`;
+
+    expect(collectDeprecatedExportsFromSource(source)).toEqual({
+      OldConst: 'Use NewConst.',
+      OldClass: 'Use NewClass.',
+      oldFn: 'Use NewFn.',
+    });
+  });
+
   it('only attributes the tag to an export the comment directly precedes', () => {
     const source = `
 /**
