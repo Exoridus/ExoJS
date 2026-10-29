@@ -3,6 +3,7 @@ import {
   csvField,
   formatCount as count,
   formatMs as ms,
+  markdownCell,
   mergeCellResults,
   mergeLibraries,
   readExistingReport,
@@ -127,11 +128,7 @@ const toMarkdown = (data: PhysicsReportData): string => {
   lines.push(`| ${COLUMNS.map(() => '---').join(' | ')} |`);
 
   for (const result of data.results) {
-    lines.push(
-      `| ${toRow(result)
-        .map(field => field.replaceAll('|', '\\|'))
-        .join(' | ')} |`,
-    );
+    lines.push(`| ${toRow(result).map(markdownCell).join(' | ')} |`);
   }
 
   lines.push('');

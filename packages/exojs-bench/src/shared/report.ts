@@ -32,6 +32,14 @@ export const formatCount = (value: number): string => (Number.isInteger(value) ?
 export const csvField = (value: string): string => (/[",\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value);
 
 /**
+ * Escapes a Markdown table cell. Line breaks collapse to one space before pipes
+ * are escaped: a break inside a cell ends the row, so every later column would
+ * shift. Playwright evaluate errors carry multi-line stacks, which is exactly
+ * the note a failed cell records.
+ */
+export const markdownCell = (value: string): string => value.replaceAll(/\r?\n|\r/g, ' ').replaceAll('|', '\\|');
+
+/**
  * A spec's identity as a string: every field in a fixed key order, so two
  * results describe the same cell exactly when their specs are field-for-field
  * equal. Spec types hold only primitives, which is what makes this exact.
