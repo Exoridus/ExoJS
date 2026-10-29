@@ -31,6 +31,10 @@ describe('canonicalizeSource', () => {
     expect(canonicalizeSource('/assets/', '/other/hero.png')).toBe('url:/other/hero.png');
   });
 
+  test('an uppercase scheme is still an absolute URL', () => {
+    expect(canonicalizeSource('/assets/', 'HTTPS://cdn.example/hero.png')).toBe('url:HTTPS://cdn.example/hero.png');
+  });
+
   test('never rewrites the authority when collapsing an escaping ..', () => {
     expect(canonicalizeSource('/assets/', 'https://cdn.example/../../hero.png')).toBe('url:https://cdn.example/hero.png');
   });
