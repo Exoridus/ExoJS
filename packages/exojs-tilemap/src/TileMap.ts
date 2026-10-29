@@ -199,7 +199,13 @@ export class TileMap {
     }
 
     if (options.objectLayers) {
-      this._objectLayers.push(...options.objectLayers);
+      for (const layer of options.objectLayers) {
+        if (this._objectLayers.some(existing => existing.id === layer.id)) {
+          throw new Error(`Object layer ID ${layer.id} already exists in map "${this.name}".`);
+        }
+
+        this._objectLayers.push(layer);
+      }
     }
 
     if (options.imageLayers) {
@@ -398,10 +404,15 @@ export class TileMap {
 
   /**
    * Add an object layer after construction.
-   * @throws If the map is destroyed.
+   * @throws If the map is destroyed or an object layer with the same ID already exists.
    */
   public addObjectLayer(layer: ObjectLayer): void {
     this._checkDestroyed();
+
+    if (this._objectLayers.some(existing => existing.id === layer.id)) {
+      throw new Error(`Object layer ID ${layer.id} already exists in map "${this.name}".`);
+    }
+
     this._objectLayers.push(layer);
     this._revision++;
   }

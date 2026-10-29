@@ -921,6 +921,24 @@ describe('TileLayer', () => {
     expect(layer.revision).toBe(revisionBefore + 1);
   });
 
+  it('rejects a decoded word whose local tile id is negative', () => {
+    const ts2 = makeTileset('second');
+    const layer = new TileLayer({
+      id: 0,
+      name: 'l',
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [ts, ts2],
+      chunkWidth: 2,
+      chunkHeight: 2,
+    });
+    // Tileset 1 with zero local bits: storedId 0 decodes to localTileId -1.
+    layer._adoptChunk(0, 0, { width: 2, height: 2, tiles: new Uint32Array([1 << 20, 0, 0, 0]) });
+
+    expect(layer.getTileAt(0, 0)).toBeNull();
+    expect([...layer.tilesInRect(0, 0, 2, 2)]).toHaveLength(0);
+  });
+
   it('_evictChunk on a not-loaded chunk is a no-op returning false', () => {
     const layer = new TileLayer({
       id: 0,
@@ -1887,6 +1905,28 @@ describe('TileMap', () => {
     expect(map.removeObjectLayer(1)).toBe(true);
     expect(map.getObjectLayerById(1)).toBeUndefined();
     expect(map.objectLayers).toHaveLength(0);
+  });
+
+  it('rejects a duplicate object layer ID in the constructor', () => {
+    expect(
+      () =>
+        new TileMap({
+          width: 64,
+          height: 64,
+          tileWidth: 32,
+          tileHeight: 32,
+          objectLayers: [new ObjectLayer({ id: 1, name: 'a' }), new ObjectLayer({ id: 1, name: 'b' })],
+        }),
+    ).toThrow(/Object layer ID 1 already exists/);
+  });
+
+  it('rejects addObjectLayer with an ID that is already in use', () => {
+    const map = new TileMap({ width: 64, height: 64, tileWidth: 32, tileHeight: 32 });
+
+    map.addObjectLayer(new ObjectLayer({ id: 1, name: 'a' }));
+
+    expect(() => map.addObjectLayer(new ObjectLayer({ id: 1, name: 'b' }))).toThrow(/Object layer ID 1 already exists/);
+    expect(map.objectLayers).toHaveLength(1);
   });
 
   it('removeObjectLayer returns false for non-existent ID', () => {

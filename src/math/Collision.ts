@@ -784,9 +784,15 @@ const getCollisionEllipseEllipse = (ellipseA: Ellipse, ellipseB: Ellipse): Colli
 const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionResponse | null => {
   const normalsA = shapeA.getNormals();
   const normalsB = shapeB.getNormals();
-  // Any real Collidable yields at least one edge normal, so one of these is
-  // defined; the `||` chain preserves the prior "A's first else B's first" intent.
-  const projection = (normalsA[0] || normalsB[0])!.clone();
+  // SAT requires at least one edge normal. A degenerate shape (empty polygon,
+  // a line, an ellipse) yields none, so there is no axis to separate on.
+  const firstNormal = normalsA[0] ?? normalsB[0];
+
+  if (firstNormal === undefined) {
+    return null;
+  }
+
+  const projection = firstNormal.clone();
   const projA = new Interval();
   const projB = new Interval();
 

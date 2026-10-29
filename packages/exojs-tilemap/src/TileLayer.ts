@@ -157,7 +157,7 @@ const validateTileLayerOptions = (options: TileLayerOptions): ResolvedTileLayerO
 
   const opacity = options.opacity ?? 1;
 
-  if (typeof opacity !== 'number' || opacity < 0 || opacity > 1) {
+  if (typeof opacity !== 'number' || !Number.isFinite(opacity) || opacity < 0 || opacity > 1) {
     throw new Error(`TileLayer opacity must be 0..1 (got ${opacity}).`);
   }
 
@@ -543,7 +543,7 @@ export class TileLayer {
 
     const tileset = this.tilesets[decoded.tilesetIndex]!;
 
-    if (decoded.localTileId >= tileset.tileCount) {
+    if (decoded.localTileId < 0 || decoded.localTileId >= tileset.tileCount) {
       return null;
     }
 
@@ -754,7 +754,7 @@ export class TileLayer {
 
             const tileset = this.tilesets[decoded.tilesetIndex]!;
 
-            if (decoded.localTileId >= tileset.tileCount) {
+            if (decoded.localTileId < 0 || decoded.localTileId >= tileset.tileCount) {
               continue;
             }
 

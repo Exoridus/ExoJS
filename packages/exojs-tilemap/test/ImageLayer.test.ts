@@ -57,6 +57,15 @@ describe('ImageLayer', () => {
     expect(layer.repeatY).toBe(true);
   });
 
+  it('rejects out-of-range and non-finite opacity', () => {
+    for (const opacity of [1.5, -0.1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => new ImageLayer({ id: 1, image: 'bg.png', opacity })).toThrow(/opacity must be 0\.\.1/);
+    }
+
+    expect(new ImageLayer({ id: 1, image: 'bg.png', opacity: 0 }).opacity).toBe(0);
+    expect(new ImageLayer({ id: 1, image: 'bg.png', opacity: 1 }).opacity).toBe(1);
+  });
+
   it('rejects a non-positive parallax scale', () => {
     expect(() => new ImageLayer({ id: 1, image: 'bg.png', parallaxScale: 0 })).toThrow(/positive finite number/);
   });

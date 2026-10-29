@@ -444,7 +444,9 @@ export const substepSweep = function* (
   maxStepSize: number,
 ): IterableIterator<{ x: number; y: number; t: number }> {
   const length = Math.hypot(deltaX, deltaY);
-  const stepCount = Math.max(1, Math.ceil(length / maxStepSize));
+  // A non-positive or non-finite step would make the loop infinite (length > 0)
+  // or empty (length === 0); one step still yields the documented t=0 and t=1.
+  const stepCount = maxStepSize > 0 && Number.isFinite(maxStepSize) ? Math.max(1, Math.ceil(length / maxStepSize)) : 1;
 
   for (let i = 0; i <= stepCount; i++) {
     const t = i / stepCount;

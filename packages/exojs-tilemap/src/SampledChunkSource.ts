@@ -72,8 +72,21 @@ export const createSampledChunkSource = (layer: TileLayer, options: SampledChunk
             continue;
           }
 
-          out ??= new Uint32Array(chunkWidth * chunkHeight);
           const tilesetIndex = layer.tilesets.indexOf(resolved.tileset);
+
+          if (tilesetIndex === -1) {
+            throw new Error(
+              `Sampled chunk (${tx}, ${ty}) resolved a tile from tileset "${resolved.tileset.name}", which is not part of this layer.`,
+            );
+          }
+
+          if (resolved.localTileId < 0 || resolved.localTileId >= resolved.tileset.tileCount) {
+            throw new Error(
+              `Sampled chunk (${tx}, ${ty}) resolved local tile ${resolved.localTileId}, outside tileset "${resolved.tileset.name}" (${resolved.tileset.tileCount} tiles).`,
+            );
+          }
+
+          out ??= new Uint32Array(chunkWidth * chunkHeight);
           out[(ty - startTy) * chunkWidth + (tx - startTx)] = packTile(tilesetIndex, resolved.localTileId, resolved.transform);
         }
       }
