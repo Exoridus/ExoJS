@@ -447,11 +447,11 @@ export const scenariosFor = (domain: 'rendering' | 'physics'): readonly Scenario
 
 /** The scenario's headline load, i.e. the one a published card shows first. */
 export const primaryLoadOf = (scenario: ScenarioLoads): LoadSpec => {
-  const primary = scenario.loads.find(load => load.primary === true);
+  const primaries = scenario.loads.filter(load => load.primary === true);
 
-  if (primary === undefined) {
-    throw new Error(`Scenario '${scenario.scenarioId}' names no primary load; exactly one load must carry it.`);
+  if (primaries.length !== 1) {
+    throw new Error(`Scenario '${scenario.scenarioId}' names ${String(primaries.length)} primary loads; exactly one load must carry it.`);
   }
 
-  return primary;
+  return primaries[0]!;
 };
