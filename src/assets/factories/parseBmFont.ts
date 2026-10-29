@@ -27,7 +27,7 @@ const strVal = (line: string, key: string): string => {
  */
 export const parseBmFontText = (text: string): BmFontData => {
   const lines = text.split(/\r?\n/);
-  const pages: string[] = [];
+  const pages = new Map<number, string>();
   const chars = new Map<number, BmFontChar>();
   const kernings = new Map<string, number>();
   let lineHeight = 0;
@@ -52,7 +52,21 @@ export const parseBmFontText = (text: string): BmFontData => {
       case 'page': {
         const id = intVal(line, 'id');
         const file = strVal(line, 'file');
-        pages[id] = file;
+
+        // A glyph indexes its atlas by `page`, which is a position in the pages
+        // list rather than a lookup by id, so a hole or a repeated id would make
+        // that index name the wrong file - or nothing at all.
+        if (pages.has(id)) {
+          throw new Error(`BmFont parse error: duplicate page id ${id}; page ids must be unique.`);
+        }
+
+        if (id !== pages.size) {
+          throw new Error(
+            `BmFont parse error: page id ${id} leaves a gap; page ids must be contiguous from 0 so a glyph's page indexes its page file.`,
+          );
+        }
+
+        pages.set(id, file);
         break;
       }
 
@@ -84,5 +98,5 @@ export const parseBmFontText = (text: string): BmFontData => {
     }
   }
 
-  return { pages, chars, kernings, lineHeight, base };
+  return { pages: [...pages.values()], chars, kernings, lineHeight, base };
 };
