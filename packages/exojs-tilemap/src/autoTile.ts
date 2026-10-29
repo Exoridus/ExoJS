@@ -157,7 +157,7 @@ const validateBlobMap = (layer: TileLayer, wangSet: WangSet): void => {
   for (const [mask, localTileId] of wangSet.blobMap) {
     if (localTileId < 0 || localTileId >= tileset.tileCount) {
       throw new Error(
-        `autoTile(): blobMap maps mask ${mask} to localTileId ${localTileId}, outside tileset "${tileset.name}" tileCount ${tileset.tileCount}.`,
+        `blobMap maps mask ${mask} to localTileId ${localTileId}, outside tileset "${tileset.name}" tileCount ${tileset.tileCount}.`,
       );
     }
   }
@@ -309,12 +309,17 @@ export const autoTile = (layer: TileLayer, wangSet: WangSet, options?: AutoTileO
  * @param y       Tile Y of the edited cell.
  * @param wangSet The Wang set to resolve variants from.
  * @param options Membership / border options (shared with {@link autoTile}).
+ * @throws If a `blobMap` variant is not a valid local tile ID of
+ * `layer.tilesets[wangSet.tilesetIndex]`; the check runs before the first write,
+ * so no cell of the neighbourhood is left half-updated.
  */
 export const refreshCell = (layer: TileLayer, x: number, y: number, wangSet: WangSet, options?: AutoTileOptions): void => {
   const matchFn = options?.matchFn;
   const wrapBorder = options?.wrapBorder ?? true;
   const w = layer.width;
   const h = layer.height;
+
+  validateBlobMap(layer, wangSet);
 
   // Live membership test (reads the current layer; variant-stable by default).
   const isInGroup = (nx: number, ny: number): boolean => {

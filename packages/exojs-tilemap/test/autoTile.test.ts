@@ -406,7 +406,7 @@ describe('autoTile — applyVariant defensive paths', () => {
 // Test 4c: blobMap variants are validated before any cell is written
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe('autoTile — validates blobMap variants against the tileset', () => {
+describe('blobMap validation — autoTile and refreshCell', () => {
   const rawTiles = (layer: TileLayer, w: number, h: number): number[] => {
     const raw: number[] = [];
 
@@ -449,6 +449,38 @@ describe('autoTile — validates blobMap variants against the tileset', () => {
     expect(thrown).toBeInstanceOf(Error);
     // The invalid variant must be caught in a pre-pass: earlier cells (which do
     // resolve to valid IDs) must not have been rewritten before the throw.
+    expect(rawTiles(layer, 3, 3)).toEqual(before);
+    expect(layer.revision).toBe(revisionBefore);
+  });
+
+  it('refreshCell throws before writing when the neighbourhood hits an invalid variant', () => {
+    const ts = makeTileset256();
+    const layer = makeLayer(ts, 3, 3);
+
+    for (let ty = 0; ty < 3; ty++) {
+      for (let tx = 0; tx < 3; tx++) {
+        setTile(layer, ts, tx, ty, 0);
+      }
+    }
+
+    const before = rawTiles(layer, 3, 3);
+    const revisionBefore = layer.revision;
+
+    const blobMap = identityBlobMap();
+    blobMap.set(255, 256);
+    const wangSet = new WangSet({ blobMap, tilesetIndex: 0, type: 'blob' });
+
+    let thrown: unknown;
+
+    try {
+      refreshCell(layer, 1, 1, wangSet, { wrapBorder: false });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(Error);
+    // The eight neighbours resolve to valid partial masks and are reached
+    // before the centre's mask 255; none of the nine cells may be rewritten.
     expect(rawTiles(layer, 3, 3)).toEqual(before);
     expect(layer.revision).toBe(revisionBefore);
   });
