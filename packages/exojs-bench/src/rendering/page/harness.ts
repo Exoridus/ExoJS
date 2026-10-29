@@ -22,6 +22,7 @@ import {
   WEBGPU_NO_TIMESTAMP_NOTE,
   WEBGPU_QUEUE_NOTE,
 } from './gpuFrameTimer';
+import { completedCellStatus, shouldRetainHeldScene, shouldTeardownAfterCell } from './holdPolicy';
 
 // Must run before any arm's `init` calls `requestDevice`; a top-level statement
 // in this entry module is the earliest such point. Previously a module-scope
@@ -279,6 +280,7 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
 
   let probe: StructuralProbe | null = null;
   let completed = false;
+  let exceeded = false;
 
   try {
     await adapter.init(canvas, spec.backend);
@@ -341,7 +343,6 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
     probe.reset();
 
     const rafDeltasMs: number[] = [];
-    let exceeded = false;
     // Set to the human-readable reason the moment the cell aborts, so the two
     // abort paths (single-frame hard cap vs. sustained-median) each explain
     // themselves precisely instead of the note being reconstructed after the fact.
@@ -510,10 +511,9 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
     // frame it just measured. Tearing down first leaves an arm-dependent canvas
     // - some engines keep the last frame, others release the context and blank
     // it - so a capture taken afterwards would compare teardown policies rather
-    // than scenes.
-    // Failed setup and measurement attempts are never retained: only a complete
-    // cell can provide a frame worth capturing.
-    if (!hold || !completed) {
+    // than scenes. Only an ok cell is capturable: an exceeded cell is never
+    // captured, so it is torn down here rather than retained for nobody.
+    if (shouldTeardownAfterCell(hold, completedCellStatus(completed, exceeded))) {
       adapter.teardown();
     }
   }
@@ -615,7 +615,7 @@ const runBaselineCell = async (cell: CellSpec, hold = false): Promise<CellResult
   const adapter = await resolveAdapter(cell.engine, cell.config);
   const result = await runCell(adapter, cell, canvas, hold);
 
-  if (hold) {
+  if (shouldRetainHeldScene(hold, result.status)) {
     heldAdapter = adapter;
   }
 
@@ -653,9 +653,19 @@ const profileSetup = async (cell: CellSpec, warmupFrames: number): Promise<void>
   await adapter.init(canvas, cell.backend);
   adapter.buildScene(archetype, cell.nodeCount, SEED);
 
-  for (let frame = 0; frame < warmupFrames; frame++) {
+  for (let frame = 0, deadline = performance.now() + WARMUP_BUDGET_MS; frame < warmupFrames; frame++) {
     adapter.mutate(frame);
     adapter.renderFrame();
+
+    // Same wall-clock bound the measured path uses: a heavy arm must not grind
+    // through every warmup frame (with no driver-side wedge cap) before the
+    // sampler starts.
+    if (performance.now() >= deadline) {
+      profileState.frame = frame + 1;
+      profileState.adapter = adapter;
+
+      return;
+    }
   }
 
   profileState.adapter = adapter;

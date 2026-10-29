@@ -75,7 +75,7 @@ export const PROBE_SCENES: readonly ProbeSceneSpec[] = [
     label: 'cacheAsTexture',
     usesInternalTarget: true,
     purpose:
-      'The baseline content behind cacheAsTexture, baked once and replayed — the case that used to lose visible sharpness on HiDPI. WITHOUT the text nodes: a cacheAsTexture container containing Text draws nothing at all on WebGL2, which is the backend every iOS browser uses.',
+      'The baseline content behind cacheAsTexture, baked once and replayed — the case that used to lose visible sharpness on HiDPI. WITHOUT the text nodes: a cacheAsTexture container containing Text drew nothing on WebGL2 while that engine defect existed; it has since been fixed and is covered by the backend tests, and the text stays omitted so captures remain comparable with the ones taken before the fix.',
   },
   {
     id: 'cache-dirty',

@@ -149,7 +149,7 @@ interface SubmitRequest {
   readonly url?: string;
   readonly method?: string;
   on(event: 'data', listener: (chunk: Buffer) => void): void;
-  on(event: 'end', listener: () => void): void;
+  on(event: 'end' | 'error', listener: () => void): void;
   destroy(): void;
 }
 
@@ -211,6 +211,10 @@ const submitPlugin = (): unknown => ({
         chunks.push(chunk);
       });
 
+      request.on('error', () => {
+        aborted = true;
+      });
+
       request.on('end', () => {
         if (aborted) {
           return;
@@ -240,8 +244,17 @@ const submitPlugin = (): unknown => ({
           typeof capture.deviceLabel === 'string' && capture.deviceLabel.trim().length > 0 ? slug(capture.deviceLabel) : 'unnamed-device';
         const target = join(CAPTURE_DIR, `${stamp}-${device}.json`);
 
-        mkdirSync(CAPTURE_DIR, { recursive: true });
-        writeFileSync(target, body, 'utf8');
+        try {
+          mkdirSync(CAPTURE_DIR, { recursive: true });
+          writeFileSync(target, body, 'utf8');
+        } catch (error) {
+          // A throwing listener is outside connect's middleware try/catch and
+          // would terminate the dev server without answering the phone.
+          fail(500, `could not store the capture: ${error instanceof Error ? error.message : String(error)}`);
+
+          return;
+        }
+
         process.stdout.write(`\n  capture received: ${target}  (${capture.cells.length} cells)\n`);
 
         response.statusCode = 200;
