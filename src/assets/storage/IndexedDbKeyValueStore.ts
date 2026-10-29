@@ -5,11 +5,11 @@ import type { KeyValueStore } from './KeyValueStore';
 export interface IndexedDbKeyValueStoreOptions {
   /** IndexedDB database name. */
   name: string;
-  /** Schema version. Default `1`. */
+  /** Schema version. Default `1`. Increase it when adding a store to an existing database. */
   version?: number;
-  /** Object-store name within the database. Default `"__kv_store"`. */
+  /** Object-store name within the database. Default `"__kv_store"`. Default upgrades preserve sibling stores. */
   storeName?: string;
-  /** Explicit per-version schema callbacks. See {@link IndexedDbDatabase} for migration semantics. */
+  /** Explicit schema callbacks replace default store creation and control the whole database schema. See {@link IndexedDbDatabase}. */
   migrations?: Record<number, (db: IDBDatabase, transaction: IDBTransaction) => boolean>;
 }
 
@@ -41,8 +41,19 @@ export class IndexedDbKeyValueStore implements KeyValueStore {
     const options = typeof nameOrOptions === 'string' ? { name: nameOrOptions } : nameOrOptions;
     const storeName = options.storeName ?? defaultStoreName;
 
+    const version = options.version ?? 1;
+    const migrations = options.migrations ?? {
+      [version]: (database: IDBDatabase): boolean => {
+        if (!database.objectStoreNames.contains(storeName)) {
+          database.createObjectStore(storeName, { keyPath: 'name' });
+        }
+
+        return true;
+      },
+    };
+
     this._storeName = storeName;
-    this._database = new IndexedDbDatabase(options.name, options.version ?? 1, [storeName], options.migrations);
+    this._database = new IndexedDbDatabase(options.name, version, [storeName], migrations);
   }
 
   public async get<T>(key: string): Promise<T | null> {
