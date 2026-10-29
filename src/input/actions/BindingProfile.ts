@@ -98,7 +98,7 @@ export class BindingProfile {
       );
     }
 
-    if (overrides === undefined || typeof overrides !== 'object') {
+    if (overrides === null || typeof overrides !== 'object') {
       throw new InputBindingError('BindingProfile: a serialized profile needs an "overrides" object.');
     }
 

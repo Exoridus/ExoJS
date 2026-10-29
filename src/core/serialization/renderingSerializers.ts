@@ -20,9 +20,24 @@ import { compact, deserializeStyleOptions, readLayoutOptions, serializeStyle } f
 
 // ── Small helpers ────────────────────────────────────────────────────────────
 
-const toF32 = (value: unknown): Float32Array => (Array.isArray(value) ? new Float32Array(value.map(Number)) : new Float32Array());
-const toU16 = (value: unknown): Uint16Array => (Array.isArray(value) ? new Uint16Array(value.map(Number)) : new Uint16Array());
-const toU32 = (value: unknown): Uint32Array => (Array.isArray(value) ? new Uint32Array(value.map(Number)) : new Uint32Array());
+const toF32 = (value: unknown): Float32Array => new Float32Array(asNumberArray(value) ?? []);
+const toU32 = (value: unknown): Uint32Array => new Uint32Array(asNumberArray(value) ?? []);
+
+/** Reads a Uint16 index array, rejecting the wrap a fractional or out-of-range index would suffer when it is stored. */
+const toU16 = (value: unknown, vertexCount: number): Uint16Array => {
+  if (!Array.isArray(value)) {
+    return new Uint16Array();
+  }
+
+  const limit = Math.min(vertexCount, 0x10000);
+
+  if (!value.every(entry => Number.isInteger(entry) && entry >= 0 && entry < limit)) {
+    throw new Error(`Cannot deserialize Mesh: indices must be integers in [0, ${limit}).`);
+  }
+
+  return new Uint16Array(value);
+};
+
 const num = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
 
 /** Read a {@link NineSliceInsets} from JSON, defaulting any missing/invalid edge to 0 (never `undefined` - `slices` is required and `undefined` would crash `normalizeInsets`). */
@@ -132,10 +147,12 @@ const meshSerializer: NodeSerializer<Mesh> = {
     return out;
   },
   read(data, ctx) {
+    const vertices = toF32(data.vertices);
+
     return new Mesh(
       compact({
-        vertices: toF32(data.vertices),
-        indices: data.indices !== undefined ? toU16(data.indices) : undefined,
+        vertices,
+        indices: data.indices !== undefined ? toU16(data.indices, vertices.length / 2) : undefined,
         uvs: data.uvs !== undefined ? toF32(data.uvs) : undefined,
         colors: data.colors !== undefined ? toU32(data.colors) : undefined,
         texture: ctx.resolveAsset(data.texture, Texture),
