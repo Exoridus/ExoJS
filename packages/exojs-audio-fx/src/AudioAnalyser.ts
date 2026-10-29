@@ -16,7 +16,7 @@ export interface AudioAnalyserOptions {
   fftSize?: number;
   /** Time-domain smoothing constant in 0..1 applied between successive analyses. Default 0.8. */
   smoothingTimeConstant?: number;
-  /** Minimum dBFS rendered by the byte-domain spectrum getters. Default -100. */
+  /** Minimum dBFS rendered by byte spectra and the floor for mel float bands. Default -100. */
   minDecibels?: number;
   /** Maximum dBFS rendered by the byte-domain spectrum getters. Default -30. */
   maxDecibels?: number;
@@ -312,7 +312,11 @@ export class AudioAnalyser {
     return out;
   }
 
-  /** Mel-scaled spectrum, float domain (dBFS values). Output length = `bands`. */
+  /**
+   * Mel band power in dBFS, floored at `minDecibels` for silence.
+   * Triangular weights sum linear power before conversion back to dBFS.
+   * Returns zeroes while no analyser is connected.
+   */
   public getSpectrumMelFloat(into?: Float32Array<ArrayBuffer>, options?: SpectrumMappingOptions): Float32Array<ArrayBuffer> {
     const bandCount = options?.bands ?? 32;
     const out = into ?? new Float32Array(bandCount);
@@ -325,7 +329,17 @@ export class AudioAnalyser {
     }
 
     this._analyser.getFloatFrequencyData(this._floatSpectrum);
-    applyFilterbank(this._floatSpectrum, filterbank, out);
+
+    for (let b = 0; b < filterbank.length; b++) {
+      const { startBin, weights } = filterbank[b]!;
+      let power = 0;
+
+      for (let i = 0; i < weights.length; i++) {
+        power += Math.pow(10, this._floatSpectrum[startBin + i]! / 10) * weights[i]!;
+      }
+
+      out[b] = Math.max(this._analyser.minDecibels, 10 * Math.log10(power));
+    }
 
     return out;
   }
