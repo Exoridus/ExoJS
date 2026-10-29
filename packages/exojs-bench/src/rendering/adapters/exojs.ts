@@ -1604,6 +1604,8 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       releaseTilemap();
       releaseParticles();
       releaseLit();
+      releaseBlur();
+      releasePicking();
       releaseLayout();
 
       if (root !== null) {

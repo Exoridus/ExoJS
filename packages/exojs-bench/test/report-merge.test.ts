@@ -323,3 +323,27 @@ describe('markdownCell', () => {
     expect(markdownCell('a\rb')).toBe('a b');
   });
 });
+
+describe('existing report shape', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'exojs-bench-report-shape-'));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  test('refuses a parsed report that is not this schema instead of failing inside the merge', () => {
+    writeFileSync(join(dir, 'results.json'), JSON.stringify({ results: [] }));
+
+    expect(() => writeReport({ provenance: [], libraries: [], results: [] }, dir)).toThrow(/results\.json/);
+  });
+
+  test('refuses a JSON array, which parses but carries no report fields', () => {
+    writeFileSync(join(dir, 'results.json'), '[]');
+
+    expect(() => writeReport({ provenance: [], libraries: [], results: [] }, dir)).toThrow(/results\.json/);
+  });
+});

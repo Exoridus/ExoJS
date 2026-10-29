@@ -52,3 +52,12 @@ describe('DPR probe tool', () => {
     expect(resetAt).toBeLessThan(readoutAt);
   });
 });
+
+describe('held-cell teardown', () => {
+  test('the harness clears the held adapter before its teardown can throw', () => {
+    const source = read('src/rendering/page/harness.ts');
+    const body = source.slice(source.indexOf('const disposeHeldCell'), source.indexOf('const adapterKey'));
+
+    expect(body.indexOf('heldAdapter = null')).toBeLessThan(body.indexOf('held?.teardown'));
+  });
+});

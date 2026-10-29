@@ -4,6 +4,7 @@ import {
   csvField,
   formatCount as count,
   formatMs as ms,
+  isReportShape,
   markdownCell,
   mergeCellResults,
   mergeLibraries,
@@ -298,7 +299,7 @@ export const mergeReportData = (existing: ReportData | undefined, incoming: Repo
  * merged data, so all three artifacts describe the same cell set.
  */
 export const writeReport = (run: ReportData, outDir: string): void => {
-  const data = mergeReportData(readExistingReport<ReportData>(outDir), run);
+  const data = mergeReportData(readExistingReport<ReportData>(outDir, isReportShape), run);
 
   writeReportArtifacts(outDir, {
     json: `${JSON.stringify(data, null, 2)}\n`,
