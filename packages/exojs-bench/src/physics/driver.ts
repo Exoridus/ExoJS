@@ -298,9 +298,10 @@ export const runPhysicsMatrix = async (
   let relaunched = false;
 
   try {
-    const { arms, clock } = session;
-    const available = new Set(arms.filter(arm => arm.available).map(arm => `${arm.engine}/${arm.config}`));
-    const reasons = new Map(arms.map(arm => [`${arm.engine}/${arm.config}`, arm.reason]));
+    const { arms } = session;
+    let clock = session.clock;
+    let available = new Set(arms.filter(arm => arm.available).map(arm => `${arm.engine}/${arm.config}`));
+    let reasons = new Map(arms.map(arm => [`${arm.engine}/${arm.config}`, arm.reason]));
 
     const allCells = buildPhysicsMatrix(arms);
     const planned = options.plan ? applyPhysicsPlan(allCells, options.plan) : allCells;
@@ -342,6 +343,12 @@ export const runPhysicsMatrix = async (
 
         await session.browser.close();
         session = await openSession(baseUrl, browserName);
+
+        // The relaunched page is a new measurement condition: its clock, its
+        // arm set and its version are what the remaining cells run against.
+        clock = session.clock;
+        available = new Set(session.arms.filter(arm => arm.available).map(arm => `${arm.engine}/${arm.config}`));
+        reasons = new Map(session.arms.map(arm => [`${arm.engine}/${arm.config}`, arm.reason]));
         continue;
       }
 
