@@ -153,10 +153,13 @@ export class AssetCacheLayer extends DebugLayer {
       }
     }
 
-    const visibleCount = Math.min(lines.length, this._lines.length);
+    const rowCount = this._lines.length;
+    const overflow = lines.length > rowCount;
+    // The marker takes the last row, so one fewer line fits whenever it shows.
+    const dataCount = overflow ? rowCount - 1 : lines.length;
 
     for (const [index, line] of this._lines.entries()) {
-      const entry = index < visibleCount ? lines[index] : undefined;
+      const entry = index < dataCount ? lines[index] : undefined;
 
       line.text = entry?.text ?? '';
       line.visible = entry !== undefined;
@@ -166,11 +169,11 @@ export class AssetCacheLayer extends DebugLayer {
       }
     }
 
-    if (lines.length > this._lines.length) {
-      const last = this._lines[this._lines.length - 1];
+    if (overflow) {
+      const last = this._lines[rowCount - 1];
 
       if (last !== undefined) {
-        last.text = `... (+${lines.length - this._lines.length} more)`;
+        last.text = `... (+${lines.length - dataCount} more)`;
         last.style.fillColor = dimColor;
         last.visible = true;
       }
@@ -178,7 +181,7 @@ export class AssetCacheLayer extends DebugLayer {
 
     this._bg.clear();
     this._bg.fillColor = bgColor;
-    this._bg.drawRectangle(panelX, panelY, panelW, panelPadding * 2 + panelLineH * (1 + visibleCount));
+    this._bg.drawRectangle(panelX, panelY, panelW, panelPadding * 2 + panelLineH * (1 + Math.min(lines.length, rowCount)));
   }
 
   private _build(): void {

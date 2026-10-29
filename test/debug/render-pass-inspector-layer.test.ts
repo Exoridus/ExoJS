@@ -374,4 +374,20 @@ describe('RenderPassInspectorLayer — HUD overflow', () => {
     expect(last?.text).toMatch(/^\.\.\. \(\+\d+ more\)$/);
     expect(last?.visible).toBe(true);
   });
+
+  test('the summary line counts every line the reserved row pushed out', () => {
+    // 24 line budget: one entry header plus 26 filters is 27 lines, so 23 rows
+    // carry data and the 24th is the marker - four lines are hidden, not three.
+    const manyFilters = Array.from({ length: 26 }, (_, i) => makeFilter(`Filter${i}`));
+    const layer = new RenderPassInspectorLayer(makeApp(makeNode({ filters: manyFilters })));
+
+    layer.update(makeTime());
+
+    const lines = (layer as unknown as { _lines: Text[] })._lines;
+    const hidden = Number(/\(\+(\d+) more\)/.exec(lines[lines.length - 1]?.text ?? '')?.[1]);
+    const dataRows = lines.filter(line => line.visible && !line.text.startsWith('... (+')).length;
+
+    expect(hidden).toBe(4);
+    expect(dataRows + hidden).toBe(27);
+  });
 });
