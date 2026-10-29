@@ -10,6 +10,7 @@ import type { Stage } from '#core/Stage';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
+import { Panel } from '#ui/Panel';
 import { ScrollContainer } from '#ui/ScrollContainer';
 
 // ---------------------------------------------------------------------------
@@ -189,6 +190,34 @@ describe('ScrollContainer mouse-wheel routing', () => {
     onMouseWheel.dispatch(0, 50);
 
     expect(scroll.scrollY).toBe(0);
+  });
+
+  test('a disabled container ignores the wheel, and a disabled ancestor disables its nested container', () => {
+    const { stage, onMouseWheel, setHovered } = makeStage();
+    const scroll = new ScrollContainer({ width: 100, height: 100 });
+
+    stubContentBounds(scroll, new Rectangle(0, 0, 500, 500));
+    scroll._setStage(stage);
+    setHovered(scroll.content);
+    scroll.enabled = false;
+
+    onMouseWheel.dispatch(0, 50);
+
+    expect(scroll.scrollY).toBe(0);
+    expect(scroll.interactive).toBe(false);
+
+    const panel = new Panel({ width: 200, height: 200 });
+    const nested = new ScrollContainer({ width: 100, height: 100 });
+
+    stubContentBounds(nested, new Rectangle(0, 0, 500, 500));
+    panel.addChild(nested);
+    panel._setStage(stage);
+    setHovered(nested.content);
+    panel.enabled = false;
+
+    onMouseWheel.dispatch(0, 50);
+
+    expect(nested.scrollY).toBe(0);
   });
 
   test('takes the wheel for a hit on a descendant of its content', () => {

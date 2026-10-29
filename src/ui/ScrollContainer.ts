@@ -121,7 +121,7 @@ export class ScrollContainer extends Widget {
   private readonly _viewportRect = new Rectangle();
 
   private readonly _onWheel = (deltaX: number, deltaY: number): void => {
-    if (!this._ownsWheel(this._stage?.app?.interaction.getHoveredNode() ?? null)) {
+    if (!this.effectiveEnabled || !this._ownsWheel(this._stage?.app?.interaction.getHoveredNode() ?? null)) {
       return;
     }
 
@@ -248,6 +248,12 @@ export class ScrollContainer extends Widget {
 
   protected override _repaint(): void {
     this._surface.apply(this._background ?? transparentBackground, this._uiWidth, this._uiHeight);
+  }
+
+  protected override _onEnabledChanged(effectiveEnabled: boolean): void {
+    // The wheel path is an app-level signal, not a widget event handler, and a
+    // disabled container must also stop claiming the hover that routes it.
+    this.interactive = effectiveEnabled;
   }
 
   protected override _relayout(): void {
