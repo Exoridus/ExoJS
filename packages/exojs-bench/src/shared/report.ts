@@ -28,8 +28,8 @@ export const formatMs = (value: number | null): string => (value === null ? 'n/a
 /** Formats a structural counter: integers stay integers, uneven per-step/frame totals keep two decimals. */
 export const formatCount = (value: number): string => (Number.isInteger(value) ? String(value) : value.toFixed(2));
 
-/** Escapes a CSV field, quoting when it holds a comma, quote or newline. */
-export const csvField = (value: string): string => (/[",\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value);
+/** Escapes a CSV field, quoting when it holds a comma, quote, carriage return or newline. */
+export const csvField = (value: string): string => (/[",\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value);
 
 /**
  * A spec's identity as a string: every field in a fixed key order, so two
