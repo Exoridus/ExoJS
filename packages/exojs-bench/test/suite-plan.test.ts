@@ -35,6 +35,25 @@ const INTERNAL_PROBES = [
   'overdraw',
 ];
 
+describe('primaryLoadOf', () => {
+  const scenario = (loads: ScenarioLoads['loads']): ScenarioLoads => ({ scenarioId: 'fixture', unit: 'nodes', loads });
+
+  test('throws when no load is primary', () => {
+    expect(() => primaryLoadOf(scenario([{ loadId: '1k', value: 1_000, reference: true }]))).toThrow(/exactly one/);
+  });
+
+  test('throws when two loads claim to be primary', () => {
+    expect(() =>
+      primaryLoadOf(
+        scenario([
+          { loadId: '1k', value: 1_000, reference: true, primary: true },
+          { loadId: '2k', value: 2_000, reference: false, primary: true },
+        ]),
+      ),
+    ).toThrow(/exactly one/);
+  });
+});
+
 describe('published workload catalog', () => {
   const catalogs: ReadonlyArray<readonly [string, readonly ScenarioLoads[]]> = [
     ['rendering', RENDERING_SCENARIOS],

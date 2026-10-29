@@ -251,6 +251,17 @@ describe('renderingMechanism', () => {
       renderingMechanism({ drawCalls: 0, textureBinds: 0, bufferUploads: 0 }, { drawCalls: 0, textureBinds: 0, bufferUploads: 0 }),
     ).toBeNull();
   });
+
+  test('yields no mechanism when only one arm issued no draw call', () => {
+    // A zero on one arm means that arm did not render the archetype; the
+    // difference is a failed measurement, not a structural finding.
+    expect(
+      renderingMechanism({ drawCalls: 0, textureBinds: 5, bufferUploads: 5 }, { drawCalls: 10, textureBinds: 5, bufferUploads: 5 }),
+    ).toBeNull();
+    expect(
+      renderingMechanism({ drawCalls: 10, textureBinds: 5, bufferUploads: 5 }, { drawCalls: 0, textureBinds: 5, bufferUploads: 5 }),
+    ).toBeNull();
+  });
 });
 
 describe('physicsMechanism', () => {
@@ -271,6 +282,18 @@ describe('physicsMechanism', () => {
 
     expect(mechanism).toContain('ExoJS resolves fewer solved contacts (20 vs 200)');
     expect(mechanism).toContain('not semantically identical');
+  });
+
+  test('does not claim an identical scene when the arms disagree on a quoted counter', () => {
+    // Near-equal bodies/contacts but a joint count only one arm reports. The
+    // quoted numbers are evidence of equivalence only if both arms produced them.
+    const mechanism = physicsMechanism(
+      { bodyCount: 100, contactCount: 50, jointCount: 0, rayHits: 0 },
+      { bodyCount: 100, contactCount: 50, jointCount: 400, rayHits: 0 },
+    );
+
+    expect(mechanism).not.toContain('identical scene');
+    expect(mechanism).toContain('400 joints');
   });
 });
 

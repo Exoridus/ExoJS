@@ -11,7 +11,7 @@ import type { Provenance } from '../src/rendering/driver';
 import type { ArchetypeId, Backend, CellResult } from '../src/rendering/EngineAdapter';
 import { type ReportData, writeReport } from '../src/rendering/report';
 import type { ClockReport } from '../src/shared/clock';
-import { mergeCellResults, mergeLibraries } from '../src/shared/report';
+import { csvField, mergeCellResults, mergeLibraries } from '../src/shared/report';
 
 /**
  * A clock fine enough that no fixture duration trips the timer check, so a test
@@ -292,5 +292,15 @@ describe('writePhysicsReport merges into an existing results.json', () => {
       ['box-stack', 4],
       ['joints', 7],
     ]);
+  });
+});
+
+describe('csvField', () => {
+  test('quotes a field holding a carriage return', () => {
+    expect(csvField('before\rafter')).toBe('"before\rafter"');
+  });
+
+  test('leaves a plain field unquoted', () => {
+    expect(csvField('plain note')).toBe('plain note');
   });
 });
