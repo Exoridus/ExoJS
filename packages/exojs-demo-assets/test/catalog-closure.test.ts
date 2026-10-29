@@ -152,6 +152,26 @@ describe('generated artifacts: no drift against the authored catalog', () => {
       expect(shipped.has(entry.path)).toBe(true);
     }
   });
+
+  test('"Also fetches" is claimed only by types whose loader loads those files', () => {
+    const module = renderAll(catalog)['src/catalog.generated.ts']!;
+    const docLine = (path: string): string | undefined =>
+      module.split('\n').find(line => line.startsWith('  /**') && line.includes(`\`${path}\``));
+
+    for (const entry of catalog.entries.filter(item => item.transitive.length > 0)) {
+      const line = docLine(entry.path);
+
+      expect(line).toBeDefined();
+
+      if (entry.type === 'sound' || entry.type === 'bmFont') {
+        expect(line).toContain(`Also fetches \`${entry.transitive[0]}\``);
+      } else {
+        // A json map references its tileset images, but loading the json asset
+        // fetches only the document.
+        expect(line).not.toContain('Also fetches');
+      }
+    }
+  });
 });
 describe('collected license texts', () => {
   test('standard notices include each original license text once', () => {

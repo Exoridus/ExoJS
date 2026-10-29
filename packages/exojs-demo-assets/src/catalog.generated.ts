@@ -38,7 +38,7 @@ export interface DemoAssetDefinitions {
   readonly lightCookieCaustics: ResourceAsset<Texture>;
   /** `images/tiny-dungeon-tiles.png` (5 kB). Kenney Tiny Dungeon, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly tinyDungeonTiles: ResourceAsset<Texture>;
-  /** `maps/tiny-dungeon-map.tmj` (3 kB). ExoJS original work, MIT. Load with await `loader.load()`. Also fetches `images/tiny-dungeon-tiles.png`. */
+  /** `maps/tiny-dungeon-map.tmj` (3 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
   readonly tinyDungeonMap: ValueAsset<unknown>;
   /** `images/ship.png` (4 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
   readonly ship: ResourceAsset<Texture>;
@@ -302,17 +302,17 @@ export interface DemoAssetDefinitions {
   readonly impulseRoom029: ResourceAsset<Sound>;
   /** `audio/impulse-room-030.wav` (94 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom030: ResourceAsset<Sound>;
-  /** `maps/isometric-landscape.tmj` (3 kB). ExoJS original work, MIT. Load with await `loader.load()`. Also fetches `images/isometric-landscape-tile-020.png`, `images/isometric-landscape-tile-000.png`, `images/isometric-landscape-tile-001.png`, `images/isometric-landscape-tile-005.png`, `images/isometric-landscape-tile-030.png`, `images/isometric-landscape-tile-040.png`. */
+  /** `maps/isometric-landscape.tmj` (3 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
   readonly isometricLandscape: ValueAsset<unknown>;
-  /** `maps/drift-fields-map.tmj` (11 kB). ExoJS original work, MIT. Load with await `loader.load()`. Also fetches `images/map-pack-tilesheet.png`. */
+  /** `maps/drift-fields-map.tmj` (11 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
   readonly driftFieldsMap: ValueAsset<unknown>;
-  /** `maps/harbor-plaza-map.tmj` (3 kB). ExoJS original work, MIT. Load with await `loader.load()`. Also fetches `images/map-pack-tilesheet.png`. */
+  /** `maps/harbor-plaza-map.tmj` (3 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
   readonly harborPlazaMap: ValueAsset<unknown>;
-  /** `maps/harbor-world-project.ldtk` (9 kB). ExoJS original work, MIT. Load with await `loader.load()`. Also fetches `images/map-pack-tilesheet.png`. */
+  /** `maps/harbor-world-project.ldtk` (9 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
   readonly harborWorldProject: ValueAsset<unknown>;
-  /** `maps/ownership-workshop-map.tmj` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. Also fetches `images/map-pack-tilesheet.png`. */
+  /** `maps/ownership-workshop-map.tmj` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
   readonly ownershipWorkshopMap: ValueAsset<unknown>;
-  /** `maps/physics-room-map.tmj` (2 kB). ExoJS original work, MIT. Load with await `loader.load()`. Also fetches `images/map-pack-tilesheet.png`. */
+  /** `maps/physics-room-map.tmj` (2 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
   readonly physicsRoomMap: ValueAsset<unknown>;
   /** `video/high-res.mp4` (4.2 MB). Glass Half, CC-BY-3.0. Load with await `loader.load()`. */
   readonly videoHighRes: LeaflessAsset<Video>;
