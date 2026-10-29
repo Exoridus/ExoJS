@@ -679,6 +679,28 @@ const runControls = async (device: GPUDevice | null, samples: number, timestamps
 };
 
 /**
+ * Whether every resolved render-pass timestamp is an integer number of
+ * microseconds, or `null` when no timestamp was resolved at all.
+ *
+ * An empty sample set is the absence of the observation, not evidence that the
+ * clock quantises: a rig that is available but never resolved a pass (for
+ * example a query pool that never completed) used to report `true` because
+ * `every` on an empty array is `true`.
+ */
+export const timestampsQuantized = (
+  rig: { readonly available: boolean } | null,
+  frames: ReadonlyArray<Pick<TimerFrameRecord, 'gpuPassMs'>>,
+): boolean | null => {
+  if (rig === null || !rig.available) {
+    return null;
+  }
+
+  const timed = frames.filter(frame => frame.gpuPassMs !== null);
+
+  return timed.length === 0 ? null : timed.every(frame => Number.isInteger(Math.round((frame.gpuPassMs ?? 0) * 1e4) / 1e3));
+};
+
+/**
  * Run one timer-methodology cell and return its full event timeline.
  *
  * Installed on `globalThis` so the Node driver invokes it through
@@ -896,10 +918,7 @@ export const runTimerProbe = async (spec: TimerProbeSpec): Promise<TimerProbeRes
       notes.push(...rig.notes.filter(note => !notes.includes(note)));
     }
 
-    const quantized =
-      rig === null || !rig.available
-        ? null
-        : frames.filter(frame => frame.gpuPassMs !== null).every(frame => Number.isInteger(Math.round((frame.gpuPassMs ?? 0) * 1e4) / 1e3));
+    const quantized = timestampsQuantized(rig, frames);
 
     const controls = spec.controls ? await runControls(device, spec.controlSamples, quantized) : null;
 

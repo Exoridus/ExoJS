@@ -201,6 +201,9 @@ const refreshPreview = async (): Promise<void> => {
 
   await visual.preview?.stop();
   visual.preview = null;
+  // The preview is not a run: restore the section title and drop the run's
+  // DONE/ABORTED line, which describes a state the tester has left.
+  setProgress('', 'idle');
   visualReadout.textContent = 'starting…';
 
   try {
@@ -365,7 +368,7 @@ const renderResults = (): void => {
  */
 const buildNotes = (backendSelected: string, webgpuTimestampQuery: boolean | null): string[] => {
   const notes = [
-    'Both modes are ordinary production settings since NEU-S4 shipped: `inherit` leaves `Filter.resolution` / `RenderNode.cacheResolution` at their default, `logical` pins both to 1 and reproduces the pre-NEU-S4 sizing exactly. No bench-only sizing hook is involved; every cell measures the production path.',
+    'Both modes are ordinary production settings: `inherit` leaves `Filter.resolution` / `RenderNode.cacheResolution` at their default, `logical` pins both to 1 and reproduces the earlier fixed-logical sizing exactly. No bench-only sizing hook is involved; every cell measures the production path.',
     'BlurFilter.radius is in LOGICAL units, so it is identical in both arms - the filter converts it into target texels itself. The arms therefore blur over the same on-screen distance and differ only in how finely it is sampled.',
     'The `cache-texture` scene is static: the cache is baked once and replayed, so its CPU column is a REPLAY cost and its interesting property is sharpness. The `cache-dirty` scene is the same content moved every frame, so the cache re-bakes every frame - that column is the bake cost, and it is the one that scales with the target resolution.',
     `Cells are ordered scene → mode → ascending DPR, so the four ratios of one pair are adjacent in time. Each result carries \`index\` and \`startOffsetMs\` so a thermal drift across the run stays visible.`,

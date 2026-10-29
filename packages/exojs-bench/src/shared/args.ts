@@ -69,8 +69,8 @@ export const unclaimedArgs = (argv: readonly string[]): string[] => scan(argv).u
 
 /**
  * One positive integer flag value, rejecting anything the matrix would turn into
- * an empty measurement. `Number.parseInt` accepts a numeric prefix (`1000abc`)
- * and does not reject zero or negatives, so it cannot be used for a count.
+ * an empty measurement. `Number.parseInt` accepts a numeric prefix and does not
+ * reject zero or negatives, so it cannot be used for a count.
  */
 export const parsePositiveInt = (flag: string, value: string): number => {
   if (!/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
