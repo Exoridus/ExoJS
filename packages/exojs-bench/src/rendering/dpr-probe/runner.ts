@@ -10,6 +10,7 @@ import type { RenderTextureAcquirer, RestoreInstrumentation, TargetRecorder } fr
 import { createTargetRecorder, instrumentAcquireRenderTexture, instrumentCacheTexture } from './instrumentation';
 import type { InternalTargetRecord, ProbeCell, ProbeCellResult, ProbeMode, ProbeSceneId } from './matrix';
 import { internalToMainPixelRatio } from './matrix';
+import { releaseFailedPreview } from './previewCleanup';
 import type { ProbeScene } from './scenes';
 import { createProbeScene } from './scenes';
 
@@ -409,18 +410,23 @@ export const startVisualPreview = async (options: {
   const booted = await bootProbeApplication(canvas, options.stage, options.pixelRatio, options.backend);
   const restores: RestoreInstrumentation[] = [];
 
+  let scene: ProbeScene | null = null;
+
   try {
-    const scene = createProbeScene(options.scene, {
+    const activeScene = createProbeScene(options.scene, {
       stageWidth: options.stage.width,
       stageHeight: options.stage.height,
       mode: options.mode,
       ...(options.textPixelRatio !== undefined && { textPixelRatio: options.textPixelRatio }),
     });
+
+    scene = activeScene;
+
     const recorder = createTargetRecorder();
 
     restores.push(instrumentAcquireRenderTexture(booted.app.backend as unknown as RenderTextureAcquirer, recorder));
 
-    for (const node of scene.cacheNodes) {
+    for (const node of activeScene.cacheNodes) {
       restores.push(instrumentCacheTexture(node, recorder));
     }
 
@@ -433,10 +439,10 @@ export const startVisualPreview = async (options: {
         return;
       }
 
-      scene.update(frame++);
+      activeScene.update(frame++);
       booted.app.backend.resetStats();
       booted.app.backend.clear();
-      booted.app.rendering.render(scene.root);
+      booted.app.rendering.render(activeScene.root);
       booted.app.backend.flush();
       handle = requestAnimationFrame(loop);
     };
@@ -464,18 +470,19 @@ export const startVisualPreview = async (options: {
           undo();
         }
 
-        scene.dispose();
+        activeScene.dispose();
         booted.app.destroy();
       },
     };
   } catch (error) {
-    // A failure after boot would otherwise leave the live backend, context and
-    // style instrumentation unreachable; the caller only drops its reference.
-    for (const undo of restores.splice(0)) {
-      undo();
-    }
-
-    booted.app.destroy();
+    // A failure after boot would otherwise leave the live backend, context,
+    // scene resources and style instrumentation unreachable; the caller only
+    // drops its reference.
+    releaseFailedPreview({
+      restores: restores.splice(0),
+      disposeScene: scene === null ? null : () => scene!.dispose(),
+      destroyApp: () => booted.app.destroy(),
+    });
 
     throw error;
   }
