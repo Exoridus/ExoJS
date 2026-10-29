@@ -32,6 +32,7 @@ import { LAUNCH_FLAGS, readEngineVersion, readWebGpuAdapter, startViteServer, WE
 import type { Backend } from './rendering/EngineAdapter';
 import type { TimerFrameRecord, TimerProbeMode, TimerProbeResult, TimerProbeSpec } from './rendering/page/timerProbe';
 import { parsePositiveInt } from './shared/args';
+import { median, percentile } from './shared/timing';
 
 const args = process.argv.slice(2);
 
@@ -94,23 +95,6 @@ const cellKey = (spec: TimerProbeSpec): string =>
     spec.drainAfterWarmup ? 'drained' : 'undrained',
     spec.timestampQueries ? 'ts' : 'no-ts',
   ].join(' ');
-
-const median = (values: readonly number[]): number => {
-  const sorted = [...values].sort((a, b) => a - b);
-
-  return sorted.length === 0 ? 0 : sorted[Math.floor(sorted.length / 2)]!;
-};
-
-/** Nearest-rank percentile - the same definition `shared/timing.ts` uses. */
-const percentile = (values: readonly number[], p: number): number => {
-  const sorted = [...values].sort((a, b) => a - b);
-
-  if (sorted.length === 0) {
-    return 0;
-  }
-
-  return sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil((p / 100) * sorted.length) - 1))]!;
-};
 
 const max = (values: readonly number[]): number => (values.length === 0 ? 0 : Math.max(...values));
 
