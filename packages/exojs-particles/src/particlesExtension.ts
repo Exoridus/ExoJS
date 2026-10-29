@@ -59,6 +59,10 @@ export const particlesExtension: Extension = Object.freeze({
 export const createParticlesExtension = (options: ParticlesExtensionOptions = {}): Extension => {
   const batchSize = options.batchSize ?? 8192;
 
+  if (!Number.isInteger(batchSize) || batchSize < 1) {
+    throw new Error('createParticlesExtension: batchSize must be a positive integer.');
+  }
+
   return {
     id: '@codexo/exojs-particles',
     renderers: [buildParticlesRendererBinding(batchSize)],
