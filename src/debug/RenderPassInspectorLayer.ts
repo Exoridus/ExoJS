@@ -316,16 +316,19 @@ export class RenderPassInspectorLayer extends DebugLayer {
 
     this._header.text = `Render Passes: ${this.totalPasses}`;
 
-    const visibleCount = Math.min(lines.length, this._lines.length);
+    const rowCount = this._lines.length;
+    const overflow = lines.length > rowCount;
+    // The marker takes the last row, so one fewer line fits whenever it shows.
+    const dataCount = overflow ? rowCount - 1 : lines.length;
 
-    for (let i = 0; i < this._lines.length; i++) {
+    for (let i = 0; i < rowCount; i++) {
       const line = this._lines[i];
 
       if (line === undefined) {
         continue;
       }
 
-      const entry = i < visibleCount ? lines[i] : undefined;
+      const entry = i < dataCount ? lines[i] : undefined;
 
       if (entry !== undefined) {
         line.text = entry.text;
@@ -337,19 +340,18 @@ export class RenderPassInspectorLayer extends DebugLayer {
       }
     }
 
-    if (lines.length > this._lines.length) {
-      const last = this._lines[this._lines.length - 1];
-      const overflow = lines.length - this._lines.length;
+    if (overflow) {
+      const last = this._lines[rowCount - 1];
 
       if (last !== undefined) {
-        last.text = `... (+${overflow} more)`;
+        last.text = `... (+${lines.length - dataCount} more)`;
         last.style.fillColor = dimColor;
         last.visible = true;
       }
     }
 
     // Resize background to fit content.
-    const panelHeight = panelPadding * 2 + panelLineH * (1 + visibleCount);
+    const panelHeight = panelPadding * 2 + panelLineH * (1 + Math.min(lines.length, rowCount));
     this._bg.clear();
     this._bg.fillColor = bgColor;
     this._bg.drawRectangle(panelX, panelY, panelMinW, panelHeight);
