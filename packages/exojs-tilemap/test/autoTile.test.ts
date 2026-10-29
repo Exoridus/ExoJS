@@ -317,6 +317,24 @@ describe('WangSet — membership', () => {
     expect(wangSet.blobMap.get(0)).toBe(10);
     expect(wangSet.blobMap.get(255)).toBe(11);
   });
+
+  it('snapshots a caller-supplied Map, so later mutation cannot desync lookup from membership', () => {
+    const source = new Map<number, number>([
+      [0, 10],
+      [255, 11],
+    ]);
+    const wangSet = new WangSet({ blobMap: source, tilesetIndex: 0 });
+
+    source.set(0, 12);
+    source.set(128, 13);
+
+    expect(wangSet.getTileId(0)).toBe(10);
+    expect(wangSet.getTileId(128)).toBeUndefined();
+    expect(wangSet.isMember(10)).toBe(true);
+    expect(wangSet.isMember(12)).toBe(false);
+    expect(wangSet.isMember(13)).toBe(false);
+    expect(wangSet.blobMap.get(0)).toBe(10);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
