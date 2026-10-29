@@ -403,6 +403,58 @@ describe('autoTile — applyVariant defensive paths', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// Test 4c: blobMap variants are validated before any cell is written
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('autoTile — validates blobMap variants against the tileset', () => {
+  const rawTiles = (layer: TileLayer, w: number, h: number): number[] => {
+    const raw: number[] = [];
+
+    for (let ty = 0; ty < h; ty++) {
+      for (let tx = 0; tx < w; tx++) {
+        raw.push(layer.getRawTileAt(tx, ty));
+      }
+    }
+
+    return raw;
+  };
+
+  it('throws before writing when a blobMap variant is outside the tileset tileCount', () => {
+    const ts = makeTileset256();
+    const layer = makeLayer(ts, 3, 3);
+
+    for (let ty = 0; ty < 3; ty++) {
+      for (let tx = 0; tx < 3; tx++) {
+        setTile(layer, ts, tx, ty, 0);
+      }
+    }
+
+    const before = rawTiles(layer, 3, 3);
+    const revisionBefore = layer.revision;
+
+    // Identity map, but mask 255 (the centre cell) resolves to 256 - one past
+    // the last valid local tile ID of a 256-tile set.
+    const blobMap = identityBlobMap();
+    blobMap.set(255, 256);
+    const wangSet = new WangSet({ blobMap, tilesetIndex: 0, type: 'blob' });
+
+    let thrown: unknown;
+
+    try {
+      autoTile(layer, wangSet, { wrapBorder: false });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(Error);
+    // The invalid variant must be caught in a pre-pass: earlier cells (which do
+    // resolve to valid IDs) must not have been rewritten before the throw.
+    expect(rawTiles(layer, 3, 3)).toEqual(before);
+    expect(layer.revision).toBe(revisionBefore);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // Test 5: refreshCell - incremental autotiling around an edit
 // ═══════════════════════════════════════════════════════════════════════════
 

@@ -142,6 +142,27 @@ const applyVariant = (layer: TileLayer, wangSet: WangSet, tx: number, ty: number
   });
 };
 
+/**
+ * Fail before the first write if the set maps a mask to a variant the target
+ * tileset cannot represent. A `tilesetIndex` with no matching tileset stays a
+ * silent no-op, matching {@link applyVariant}.
+ */
+const validateBlobMap = (layer: TileLayer, wangSet: WangSet): void => {
+  const tileset = layer.tilesets[wangSet.tilesetIndex];
+
+  if (!tileset) {
+    return;
+  }
+
+  for (const [mask, localTileId] of wangSet.blobMap) {
+    if (localTileId < 0 || localTileId >= tileset.tileCount) {
+      throw new Error(
+        `autoTile(): blobMap maps mask ${mask} to localTileId ${localTileId}, outside tileset "${tileset.name}" tileCount ${tileset.tileCount}.`,
+      );
+    }
+  }
+};
+
 // ── Public API ────────────────────────────────────────────────────────────
 
 /**
@@ -177,6 +198,9 @@ const applyVariant = (layer: TileLayer, wangSet: WangSet, tx: number, ty: number
  * @throws If `layer` is unbounded (no fixed width/height) - there is no
  * "whole layer" to sweep. Use {@link refreshCell} to autotile an unbounded
  * layer incrementally, one edited cell at a time.
+ * @throws If a `blobMap` variant is not a valid local tile ID of
+ * `layer.tilesets[wangSet.tilesetIndex]`. The check runs before the first write,
+ * so the layer is never left partly autotiled.
  */
 export const autoTile = (layer: TileLayer, wangSet: WangSet, options?: AutoTileOptions): void => {
   const matchFn = options?.matchFn;
@@ -187,6 +211,8 @@ export const autoTile = (layer: TileLayer, wangSet: WangSet, options?: AutoTileO
   if (w === undefined || h === undefined) {
     throw new Error('autoTile() requires a bounded layer (sweeps the whole layer) — use refreshCell() on an unbounded layer instead.');
   }
+
+  validateBlobMap(layer, wangSet);
 
   // ── Pass 1: snapshot ─────────────────────────────────────────────────
   // Capture each cell's (tilesetIndex, localTileId) before any writes so
