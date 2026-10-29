@@ -100,7 +100,7 @@
             }
           ],
           "returnType": "InputScope",
-          "description": ""
+          "description": "Rejected construction preserves every map's previous scope membership."
         }
       ],
       "paragraphs": [],
