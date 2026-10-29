@@ -4,6 +4,9 @@ import { triangulate } from './triangulate';
 import { TAU } from './utils';
 import { Vector } from './Vector';
 
+// WebGL2 reserves index 65535 for primitive restart, leaving vertex indices 0..65534.
+const maxMeshVertices = 65535;
+
 /**
  * Raw mesh data produced by geometry builders. `vertices` is a flat `Float32Array`
  * of `(x, y)` pairs, `indices` is a triangle list for indexed rendering, and
@@ -55,7 +58,7 @@ export const buildLine = (startX: number, startY: number, endX: number, endY: nu
  * are bevelled to avoid extremely long spikes.
  * Consecutive duplicate points are ignored; a single distinct point produces
  * an empty mesh. The returned outline remains the original input.
- * Throws when the generated strip exceeds 65536 vertices.
+ * Throws when the generated strip exceeds 65535 vertices.
  */
 export const buildPath = (points: number[], width: number): MeshGeometryData => {
   if (points.length < 4) {
@@ -234,7 +237,7 @@ export const buildPath = (points: number[], width: number): MeshGeometryData => 
   // produces a triangle. Even i: (i, i+1, i+2). Odd i: (i+1, i, i+2).
   // This preserves the same winding the original triangle-strip pipeline saw.
   const stripVertexCount = stripVertices.length / 2;
-  invariant(stripVertexCount <= 65536, 'buildPath: at most 65536 vertices fit in the 16-bit index buffer.');
+  invariant(stripVertexCount <= maxMeshVertices, 'buildPath: at most 65535 vertices fit in the 16-bit index buffer.');
   const vertices = new Float32Array(stripVertices);
   const triangleCount = stripVertexCount >= 3 ? stripVertexCount - 2 : 0;
   const indices = new Uint16Array(triangleCount * 3);
@@ -339,7 +342,7 @@ export const buildEllipse = (centerX: number, centerY: number, radiusX: number, 
 /**
  * Build a filled simple (non-self-intersecting) polygon as a triangle-list
  * mesh via ear-clipping triangulation. `points` must contain at least three
- * `(x, y)` pairs (minimum 6 values) and at most 65536 vertices; throws otherwise.
+ * `(x, y)` pairs (minimum 6 values) and at most 65535 vertices; throws otherwise.
  */
 export const buildPolygon = (points: number[]): MeshGeometryData => {
   if (points.length < 6) {
@@ -347,7 +350,7 @@ export const buildPolygon = (points: number[]): MeshGeometryData => {
   }
 
   const length = points.length / 2;
-  invariant(length <= 65536, 'buildPolygon: at most 65536 vertices fit in the 16-bit index buffer.');
+  invariant(length <= maxMeshVertices, 'buildPolygon: at most 65535 vertices fit in the 16-bit index buffer.');
   const triangles = triangulate(points);
   const vertices = new Float32Array(points.length);
 

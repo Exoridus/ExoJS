@@ -83,13 +83,13 @@ describe('buildLine', () => {
 
 describe('buildPath', () => {
   test('rejects a strip that exceeds the 16-bit index range', () => {
-    const points = Array.from({ length: 32769 }, (_, i) => [i, 0]).flat();
+    const points = Array.from({ length: 32768 }, (_, i) => [i, 0]).flat();
 
-    expect(() => buildPath(points, 2)).toThrow('65536');
+    expect(() => buildPath(points, 2)).toThrow('65535');
     const boundary = buildPath(points.slice(0, -2), 2);
 
-    expect(boundary.vertices).toHaveLength(65536 * 2);
-    expect(boundary.indices.at(-1)).toBe(65535);
+    expect(boundary.vertices).toHaveLength(65534 * 2);
+    expect(boundary.indices.at(-1)).toBe(65533);
   });
 
   test('duplicate closing points preserve a closed mesh', () => {
@@ -229,8 +229,8 @@ describe('buildPath', () => {
 
 describe('buildPolygon', () => {
   test('rejects outlines that exceed the 16-bit index range', () => {
-    expect(() => buildPolygon(new Array<number>(65537 * 2).fill(0))).toThrow('65536');
-    expect(() => buildPolygon(new Array<number>(65536 * 2).fill(0))).not.toThrow();
+    expect(() => buildPolygon(new Array<number>(65536 * 2).fill(0))).toThrow('65535');
+    expect(() => buildPolygon(new Array<number>(65535 * 2).fill(0))).not.toThrow();
   });
 
   test('throws when fewer than three point pairs are supplied', () => {
