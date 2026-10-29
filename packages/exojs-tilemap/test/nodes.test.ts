@@ -743,6 +743,34 @@ describe('unbounded layer/map nodes', () => {
     expect(bounds.height).toBe(64);
   });
 
+  it('TileMapNode.getLocalBounds() resets once the last layer is removed', () => {
+    const tileset = makeTileset('tiles', 16);
+    const layer = new TileLayer({
+      id: 1,
+      name: 'l',
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
+    });
+    layer._adoptChunk(0, 0, {
+      width: 4,
+      height: 4,
+      tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
+    });
+    const map = new TileMap({ name: 'm', tileWidth: 16, tileHeight: 16, layers: [layer] });
+    const node = new TileMapNode(map);
+
+    expect(node.getLocalBounds().width).toBe(64);
+
+    map.removeLayer(1);
+    node.refreshLayers();
+
+    expect(node.getLocalBounds().width).toBe(0);
+    expect(node.getLocalBounds().height).toBe(0);
+  });
+
   it('TileMapNode is not cullable when the map is unbounded, and cullable when bounded', () => {
     const tileset = makeTileset('tiles', 16);
     const unboundedLayer = new TileLayer({
@@ -970,6 +998,7 @@ describe('TileLayerNode structural-listener reaction', () => {
     const node = new TileLayerNode(layer);
     node.refresh();
     expect(node.chunkNodes).toHaveLength(1);
+    expect(node.getLocalBounds().width).toBe(64);
     const removedNode = node.chunkNodes[0]!;
     const destroySpy = vi.spyOn(removedNode, 'destroy');
 
@@ -977,6 +1006,8 @@ describe('TileLayerNode structural-listener reaction', () => {
 
     expect(node.chunkNodes).toHaveLength(0);
     expect(destroySpy).toHaveBeenCalledOnce();
+    expect(node.getLocalBounds().width).toBe(0);
+    expect(node.getLocalBounds().height).toBe(0);
   });
 
   it('evicting a coordinate with no chunk node is a no-op that does not affect other nodes', () => {

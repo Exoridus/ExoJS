@@ -224,8 +224,9 @@ export class TileLayerNode extends Container {
     // is what narrows them to numbers - `bounded` is a plain boolean getter.
     const { pixelHeight, pixelWidth } = this._layer;
 
+    bounds.set(0, 0, 0, 0);
+
     if (this._layer.projection.orientation !== 'orthogonal') {
-      bounds.set(0, 0, 0, 0);
       aggregateChildLocalBounds(this._chunkNodes, bounds);
     } else if (pixelWidth !== undefined && pixelHeight !== undefined) {
       bounds.set(this._layer.projection.originX, this._layer.projection.originY, pixelWidth, pixelHeight);
