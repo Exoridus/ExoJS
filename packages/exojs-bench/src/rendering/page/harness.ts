@@ -527,8 +527,12 @@ let heldAdapter: EngineAdapter | null = null;
 
 /** Tear down the scene {@link runCell} was asked to hold. Safe to call when nothing is held. */
 const disposeHeldCell = (): void => {
-  heldAdapter?.teardown();
+  const held = heldAdapter;
+
+  // Clear the hold BEFORE teardown: a throwing teardown must not leave the
+  // broken adapter in place, where every later cell would hit the same throw.
   heldAdapter = null;
+  held?.teardown();
 };
 
 /** Registry key uniquely identifying an engine arm by its engine + config labels. */

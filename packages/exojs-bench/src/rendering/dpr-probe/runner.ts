@@ -407,63 +407,76 @@ export const startVisualPreview = async (options: {
 }): Promise<VisualPreview> => {
   const canvas = freshStageCanvas(options.host);
   const booted = await bootProbeApplication(canvas, options.stage, options.pixelRatio, options.backend);
-  const scene = createProbeScene(options.scene, {
-    stageWidth: options.stage.width,
-    stageHeight: options.stage.height,
-    mode: options.mode,
-    ...(options.textPixelRatio !== undefined && { textPixelRatio: options.textPixelRatio }),
-  });
-  const recorder = createTargetRecorder();
-  const restores: RestoreInstrumentation[] = [
-    instrumentAcquireRenderTexture(booted.app.backend as unknown as RenderTextureAcquirer, recorder),
-  ];
+  const restores: RestoreInstrumentation[] = [];
 
-  for (const node of scene.cacheNodes) {
-    restores.push(instrumentCacheTexture(node, recorder));
-  }
+  try {
+    const scene = createProbeScene(options.scene, {
+      stageWidth: options.stage.width,
+      stageHeight: options.stage.height,
+      mode: options.mode,
+      ...(options.textPixelRatio !== undefined && { textPixelRatio: options.textPixelRatio }),
+    });
+    const recorder = createTargetRecorder();
 
-  let running = true;
-  let frame = 0;
-  let handle = 0;
+    restores.push(instrumentAcquireRenderTexture(booted.app.backend as unknown as RenderTextureAcquirer, recorder));
 
-  const loop = (): void => {
-    if (!running) {
-      return;
+    for (const node of scene.cacheNodes) {
+      restores.push(instrumentCacheTexture(node, recorder));
     }
 
-    scene.update(frame++);
-    booted.app.backend.resetStats();
-    booted.app.backend.clear();
-    booted.app.rendering.render(scene.root);
-    booted.app.backend.flush();
-    handle = requestAnimationFrame(loop);
-  };
+    let running = true;
+    let frame = 0;
+    let handle = 0;
 
-  // Arm across the FIRST frame only, so the readout shows per-frame target
-  // shapes and, for `cacheAsTexture`, catches the one frame that bakes.
-  recorder.arm();
-  loop();
-  recorder.disarm();
-
-  return {
-    backingWidth: canvas.width,
-    backingHeight: canvas.height,
-    cssWidth: parseFloat(canvas.style.width) || canvas.clientWidth,
-    cssHeight: parseFloat(canvas.style.height) || canvas.clientHeight,
-    backendType: booted.backendType,
-    internalTargets: recorder.summary(),
-    async stop(): Promise<void> {
-      running = false;
-      cancelAnimationFrame(handle);
-      // One frame of slack so an in-flight callback cannot touch a destroyed app.
-      await nextFrame();
-
-      for (const undo of restores) {
-        undo();
+    const loop = (): void => {
+      if (!running) {
+        return;
       }
 
-      scene.dispose();
-      booted.app.destroy();
-    },
-  };
+      scene.update(frame++);
+      booted.app.backend.resetStats();
+      booted.app.backend.clear();
+      booted.app.rendering.render(scene.root);
+      booted.app.backend.flush();
+      handle = requestAnimationFrame(loop);
+    };
+
+    // Arm across the FIRST frame only, so the readout shows per-frame target
+    // shapes and, for `cacheAsTexture`, catches the one frame that bakes.
+    recorder.arm();
+    loop();
+    recorder.disarm();
+
+    return {
+      backingWidth: canvas.width,
+      backingHeight: canvas.height,
+      cssWidth: parseFloat(canvas.style.width) || canvas.clientWidth,
+      cssHeight: parseFloat(canvas.style.height) || canvas.clientHeight,
+      backendType: booted.backendType,
+      internalTargets: recorder.summary(),
+      async stop(): Promise<void> {
+        running = false;
+        cancelAnimationFrame(handle);
+        // One frame of slack so an in-flight callback cannot touch a destroyed app.
+        await nextFrame();
+
+        for (const undo of restores) {
+          undo();
+        }
+
+        scene.dispose();
+        booted.app.destroy();
+      },
+    };
+  } catch (error) {
+    // A failure after boot would otherwise leave the live backend, context and
+    // style instrumentation unreachable; the caller only drops its reference.
+    for (const undo of restores.splice(0)) {
+      undo();
+    }
+
+    booted.app.destroy();
+
+    throw error;
+  }
 };
