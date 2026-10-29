@@ -259,7 +259,14 @@ const validateLayerDef = (raw: unknown, source: string, path: string): void => {
   expectInteger(def.uid, source, joinPath(path, 'uid'));
   expectString(def.identifier, source, joinPath(path, 'identifier'));
   validateLayerType(def.type, source, joinPath(path, 'type'));
-  expectNonNegativeInteger(def.gridSize, source, joinPath(path, 'gridSize'));
+
+  // Entity layers never divide by the grid; every other layer type does.
+  if (def.type === 'Entities') {
+    expectNonNegativeInteger(def.gridSize, source, joinPath(path, 'gridSize'));
+  } else {
+    expectPositiveInteger(def.gridSize, source, joinPath(path, 'gridSize'));
+  }
+
   optionalNumber(def, 'pxOffsetX', source, path);
   optionalNumber(def, 'pxOffsetY', source, path);
   optionalNumber(def, 'parallaxFactorX', source, path);
@@ -428,7 +435,14 @@ const validateLayerInstance = (raw: unknown, source: string, path: string): void
   validateLayerType(layer.__type, source, joinPath(path, '__type'));
   expectNonNegativeInteger(layer.__cWid, source, joinPath(path, '__cWid'));
   expectNonNegativeInteger(layer.__cHei, source, joinPath(path, '__cHei'));
-  expectNonNegativeInteger(layer.__gridSize, source, joinPath(path, '__gridSize'));
+
+  // Entity layers never divide by the grid; every other layer type does.
+  if (layer.__type === 'Entities') {
+    expectNonNegativeInteger(layer.__gridSize, source, joinPath(path, '__gridSize'));
+  } else {
+    expectPositiveInteger(layer.__gridSize, source, joinPath(path, '__gridSize'));
+  }
+
   expectInteger(layer.layerDefUid, source, joinPath(path, 'layerDefUid'));
   expectInteger(layer.levelId, source, joinPath(path, 'levelId'));
   expectBoolean(layer.visible, source, joinPath(path, 'visible'));
