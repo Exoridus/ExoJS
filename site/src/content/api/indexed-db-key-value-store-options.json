@@ -107,7 +107,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Explicit per-version schema callbacks. See IndexedDbDatabase for migration semantics."
+          "description": "Explicit schema callbacks replace default store creation and control the whole database schema. See IndexedDbDatabase."
         },
         {
           "name": "name",
@@ -153,7 +153,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Object-store name within the database. Default \"__kv_store\"."
+          "description": "Object-store name within the database. Default \"__kv_store\". Default upgrades preserve sibling stores."
         },
         {
           "name": "version",
@@ -178,7 +178,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Schema version. Default 1."
+          "description": "Schema version. Default 1. Increase it when adding a store to an existing database."
         }
       ],
       "paragraphs": [],
