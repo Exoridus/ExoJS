@@ -21,6 +21,7 @@ import {
   readOsRelease,
   readPlatformVersion,
 } from '../shared/provenance';
+import { raceWithTimeout } from '../shared/timeout';
 import type { ViteDevServer } from '../shared/viteServer';
 import { readEngineVersion, RENDERING_LIBRARY_ARMS, startViteServer as startPageServer } from '../shared/viteServer';
 import type { RunPlan } from '../suite/plan';
@@ -481,6 +482,9 @@ const CELL_TIMEOUT_MS = 60_000;
 /** Sentinel returned by {@link runCellOrWedge} when a cell exceeds {@link CELL_TIMEOUT_MS}. */
 const CELL_WEDGED = Symbol('cell-wedged');
 
+/** Sentinel for a capture or dispose that outlived {@link CELL_TIMEOUT_MS}. */
+const CAPTURE_WEDGED = Symbol('capture-wedged');
+
 /**
  * Run one cell, resolving to {@link CELL_WEDGED} if it does not finish within
  * {@link CELL_TIMEOUT_MS} - the page is then presumed frozen and its browser must
@@ -651,11 +655,34 @@ const runBackend = async (options: {
           // `page.screenshot` rather than a canvas readback: a WebGPU canvas
           // never yields its contents to `drawImage`.
           if (captureDir !== undefined && outcome.status === 'ok') {
-            await page.screenshot({
-              path: resolve(captureDir, `${captureName(cell)}.png`),
-              clip: { x: 0, y: 0, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT },
-            });
-            await page.evaluate(() => globalThis.__disposeHeldCell!());
+            const shot = await raceWithTimeout(
+              page.screenshot({
+                path: resolve(captureDir, `${captureName(cell)}.png`),
+                clip: { x: 0, y: 0, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT },
+              }),
+              CELL_TIMEOUT_MS,
+              CAPTURE_WEDGED,
+            );
+
+            if (shot === CAPTURE_WEDGED) {
+              relaunch = true;
+              break;
+            }
+          }
+
+          if (captureDir !== undefined) {
+            // The hold is released whether or not the cell was capturable, so an
+            // `exceeded` cell cannot keep its scene alive into the next cell.
+            const disposed = await raceWithTimeout(
+              page.evaluate(() => globalThis.__disposeHeldCell!()),
+              CELL_TIMEOUT_MS,
+              CAPTURE_WEDGED,
+            );
+
+            if (disposed === CAPTURE_WEDGED) {
+              relaunch = true;
+              break;
+            }
           }
 
           if (backend === 'webgl2' && renderer === null && outcome.status === 'ok') {
@@ -806,6 +833,24 @@ const shortenProfileUrl = (url: string): string => {
  * quietly falling back to Chromium, which would attribute one engine's frame
  * cost to another engine's name.
  */
+/** Renderer identity and the software-rasterizer bit for one profile. */
+export const profileProvenance = (
+  backend: Backend,
+  identity: WebGpuIdentity | null,
+  renderer: string | null,
+): { adapter: string; software: boolean } => {
+  if (backend === 'webgpu') {
+    // The profile path used to stamp a literal that named no adapter, so a
+    // SwiftShader profile was published as hardware. Read the identity the same
+    // way runBackend does and keep the literal only when it was unavailable.
+    return identity !== null && identity.usable
+      ? { adapter: identity.adapter, software: isSoftwareRenderer(identity.adapter) }
+      : { adapter: 'profiled webgpu session', software: false };
+  }
+
+  return { adapter: renderer ?? 'unknown renderer', software: renderer !== null && isSoftwareRenderer(renderer) };
+};
+
 export const profileCell = async (options: {
   spec: CellSpec;
   /** Frames rendered inside the sampled window. */
@@ -862,7 +907,12 @@ export const profileCell = async (options: {
       const stopped = (await client.send('Profiler.stop')) as unknown as { profile: CdpProfile };
       const profile = stopped.profile;
 
-      const adapter = spec.backend === 'webgpu' ? 'profiled webgpu session' : await readRendererInPage(page);
+      const identity = spec.backend === 'webgpu' ? await readWebGpuAdapter(page, browserName) : null;
+      const { adapter, software } = profileProvenance(
+        spec.backend,
+        identity,
+        spec.backend === 'webgpu' ? null : await readRendererInPage(page),
+      );
 
       await page.evaluate(() => globalThis.__profileDispose!());
 
@@ -941,7 +991,7 @@ export const profileCell = async (options: {
           clock: null,
           engineVersion,
           timestamp: new Date().toISOString(),
-          software: isSoftwareRenderer(adapter),
+          software,
         },
         frames,
         wallMs,

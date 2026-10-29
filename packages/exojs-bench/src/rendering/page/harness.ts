@@ -615,7 +615,7 @@ const runBaselineCell = async (cell: CellSpec, hold = false): Promise<CellResult
   const adapter = await resolveAdapter(cell.engine, cell.config);
   const result = await runCell(adapter, cell, canvas, hold);
 
-  if (hold) {
+  if (hold && result.status === 'ok') {
     heldAdapter = adapter;
   }
 
@@ -653,9 +653,19 @@ const profileSetup = async (cell: CellSpec, warmupFrames: number): Promise<void>
   await adapter.init(canvas, cell.backend);
   adapter.buildScene(archetype, cell.nodeCount, SEED);
 
-  for (let frame = 0; frame < warmupFrames; frame++) {
+  for (let frame = 0, deadline = performance.now() + WARMUP_BUDGET_MS; frame < warmupFrames; frame++) {
     adapter.mutate(frame);
     adapter.renderFrame();
+
+    // Same wall-clock bound the measured path uses: a heavy arm must not grind
+    // through every warmup frame (with no driver-side wedge cap) before the
+    // sampler starts.
+    if (performance.now() >= deadline) {
+      profileState.frame = frame + 1;
+      profileState.adapter = adapter;
+
+      return;
+    }
   }
 
   profileState.adapter = adapter;
