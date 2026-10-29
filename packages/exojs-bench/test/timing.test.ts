@@ -32,6 +32,16 @@ describe('percentile', () => {
   test('p100 returns the maximum', () => {
     expect(percentile([1, 5, 3], 100)).toBe(5);
   });
+
+  test('throws on a non-finite percentage rather than returning undefined', () => {
+    expect(() => percentile([1, 2, 3], Number.NaN)).toThrow(/percentile/);
+    expect(() => percentile([1], Number.POSITIVE_INFINITY)).toThrow(/percentile/);
+  });
+
+  test('throws on a percentage outside 0..100', () => {
+    expect(() => percentile([1, 2, 3], -1)).toThrow(/percentile/);
+    expect(() => percentile([1, 2, 3], 101)).toThrow(/percentile/);
+  });
 });
 
 describe('shouldAbort', () => {
