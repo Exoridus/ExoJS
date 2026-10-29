@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Loadable, Loader } from '#assets/Loader';
+import { Color } from '#core/Color';
 import {
   asNumberArray,
   asObject,
@@ -13,9 +14,10 @@ import {
   readString,
   REPEAT_MODES,
 } from '#core/serialization/read';
-import { _resetDefaultSerializers, deserializeTree, migrate, migratePrefab } from '#core/serialization/serialize';
+import { _resetDefaultSerializers, deserializeTree, migrate, migratePrefab, serializeTree } from '#core/serialization/serialize';
 import { SERIALIZATION_VERSION, type SerializedNode } from '#core/serialization/types';
 import { Signal } from '#core/Signal';
+import { Rectangle } from '#math/Rectangle';
 import { type Container } from '#rendering/Container';
 import type { Mesh } from '#rendering/mesh/Mesh';
 import { type RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
@@ -235,6 +237,91 @@ describe('serialization validation — numeric render state', () => {
 
     expect(Number.isFinite(text.sdfRadius)).toBe(true);
     expect(text.sdfRadius).toBe(SDF_RADIUS);
+  });
+});
+
+describe('serialization validation — numeric common fields', () => {
+  it('keeps the constructed defaults for non-finite transform fields', () => {
+    const container = deserializeTree(
+      node({
+        type: 'Container',
+        x: Number.NaN,
+        y: Number.POSITIVE_INFINITY,
+        rotation: Number.POSITIVE_INFINITY,
+        scaleX: Number.NaN,
+        scaleY: Number.NEGATIVE_INFINITY,
+        skewX: Number.NaN,
+        skewY: Number.POSITIVE_INFINITY,
+        originX: Number.NaN,
+        originY: Number.POSITIVE_INFINITY,
+        zIndex: Number.NaN,
+      }),
+    );
+
+    expect(container.x).toBe(0);
+    expect(container.y).toBe(0);
+    expect(container.rotation).toBe(0);
+    expect(container.scale.x).toBe(1);
+    expect(container.scale.y).toBe(1);
+    expect(container.skewX).toBe(0);
+    expect(container.skewY).toBe(0);
+    expect(container.origin.x).toBe(0);
+    expect(container.origin.y).toBe(0);
+    expect(container.zIndex).toBe(0);
+  });
+
+  it('never stores a non-finite cullArea or clipShape edge', () => {
+    const sprite = deserializeTree(
+      node({ type: 'Sprite', cullArea: [0, 0, Number.NaN, 1], clipShape: [0, 0, 4, Number.POSITIVE_INFINITY] }),
+    ) as Sprite;
+
+    // A non-finite edge collapses to 0, so the rectangle stays finite.
+    expect(sprite.cullArea).toMatchObject({ x: 0, y: 0, width: 0, height: 1 });
+    expect(sprite.clipShape).toMatchObject({ x: 0, y: 0, width: 4, height: 0 });
+  });
+
+  it('falls back to the default tint when a channel is corrupt', () => {
+    const sprite = deserializeTree(node({ type: 'Sprite', tint: [1, 2, 3, Number.NaN] })) as Sprite;
+
+    expect(sprite.tint.r).toBe(255);
+    expect(sprite.tint.g).toBe(255);
+    expect(sprite.tint.b).toBe(255);
+    expect(sprite.tint.a).toBe(1);
+  });
+
+  it('round-trips a valid full transform and render state unchanged', () => {
+    const original = new Sprite();
+
+    original.x = 10;
+    original.y = -5;
+    original.rotation = 30;
+    original.scale.set(2, 0.5);
+    original.skewX = 5;
+    original.skewY = -5;
+    original.origin.set(3, 4);
+    original.zIndex = 2;
+    original.tabIndex = 1;
+    original.cullArea = new Rectangle(1, 2, 3, 4);
+    original.clipShape = new Rectangle(5, 6, 7, 8);
+    original.tint = new Color(10, 20, 30, 0.5);
+
+    const restored = deserializeTree(serializeTree(original)) as Sprite;
+
+    expect(restored.x).toBe(10);
+    expect(restored.y).toBe(-5);
+    expect(restored.rotation).toBe(30);
+    expect(restored.scale.x).toBe(2);
+    expect(restored.scale.y).toBe(0.5);
+    expect(restored.skewX).toBe(5);
+    expect(restored.skewY).toBe(-5);
+    expect(restored.origin.x).toBe(3);
+    expect(restored.origin.y).toBe(4);
+    expect(restored.zIndex).toBe(2);
+    expect(restored.tabIndex).toBe(1);
+    expect(restored.cullArea).toMatchObject({ x: 1, y: 2, width: 3, height: 4 });
+    expect(restored.clipShape).toMatchObject({ x: 5, y: 6, width: 7, height: 8 });
+    expect(restored.tint.r).toBe(10);
+    expect(restored.tint.a).toBe(0.5);
   });
 });
 

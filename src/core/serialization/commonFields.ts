@@ -1,4 +1,3 @@
-import { Color } from '#core/Color';
 import { logger } from '#core/Logger';
 import type { SceneNode } from '#core/SceneNode';
 import { Rectangle } from '#math/Rectangle';
@@ -7,6 +6,8 @@ import { isPixelSnapMode, PixelSnapMode } from '#rendering/pixelSnap';
 import { RenderNode } from '#rendering/RenderNode';
 import { BlendModes } from '#rendering/types';
 
+import { asNumberArray, readNumber } from './read';
+import { arrayToColor } from './serializerHelpers';
 import type { SerializedNode } from './types';
 
 /**
@@ -157,32 +158,46 @@ export const writeCommonFields = (node: SceneNode, out: SerializedNode): void =>
  * resetting scale). Absent fields keep the node's constructed defaults.
  */
 export const applyCommonFields = (node: SceneNode, data: SerializedNode): void => {
-  if (typeof data.x === 'number') {
-    node.x = data.x;
+  const x = readNumber(data, 'x');
+
+  if (x !== undefined) {
+    node.x = x;
   }
 
-  if (typeof data.y === 'number') {
-    node.y = data.y;
+  const y = readNumber(data, 'y');
+
+  if (y !== undefined) {
+    node.y = y;
   }
 
-  if (typeof data.rotation === 'number') {
-    node.rotation = data.rotation;
+  const rotation = readNumber(data, 'rotation');
+
+  if (rotation !== undefined) {
+    node.rotation = rotation;
   }
 
-  if (typeof data.scaleX === 'number') {
-    node.scale.x = data.scaleX;
+  const scaleX = readNumber(data, 'scaleX');
+
+  if (scaleX !== undefined) {
+    node.scale.x = scaleX;
   }
 
-  if (typeof data.scaleY === 'number') {
-    node.scale.y = data.scaleY;
+  const scaleY = readNumber(data, 'scaleY');
+
+  if (scaleY !== undefined) {
+    node.scale.y = scaleY;
   }
 
-  if (typeof data.skewX === 'number') {
-    node.skewX = data.skewX;
+  const skewX = readNumber(data, 'skewX');
+
+  if (skewX !== undefined) {
+    node.skewX = skewX;
   }
 
-  if (typeof data.skewY === 'number') {
-    node.skewY = data.skewY;
+  const skewY = readNumber(data, 'skewY');
+
+  if (skewY !== undefined) {
+    node.skewY = skewY;
   }
 
   // The anchor is applied BEFORE the origin, and deliberately so: writing the
@@ -191,28 +206,34 @@ export const applyCommonFields = (node: SceneNode, data: SerializedNode): void =
   // other way round would let the anchor silently overwrite a pivot the
   // document recorded.
   if (node instanceof Drawable) {
-    const anchorX = typeof data.anchorX === 'number' ? data.anchorX : 0;
-    const anchorY = typeof data.anchorY === 'number' ? data.anchorY : 0;
+    const anchorX = readNumber(data, 'anchorX', 0);
+    const anchorY = readNumber(data, 'anchorY', 0);
 
     if (anchorX !== 0 || anchorY !== 0) {
       node.anchor.set(anchorX, anchorY);
     }
   }
 
-  if (typeof data.originX === 'number') {
-    node.origin.x = data.originX;
+  const originX = readNumber(data, 'originX');
+
+  if (originX !== undefined) {
+    node.origin.x = originX;
   }
 
-  if (typeof data.originY === 'number') {
-    node.origin.y = data.originY;
+  const originY = readNumber(data, 'originY');
+
+  if (originY !== undefined) {
+    node.origin.y = originY;
   }
 
   if (data.visible === false) {
     node.visible = false;
   }
 
-  if (typeof data.zIndex === 'number') {
-    node.zIndex = data.zIndex;
+  const zIndex = readNumber(data, 'zIndex');
+
+  if (zIndex !== undefined) {
+    node.zIndex = zIndex;
   }
 
   if (typeof data.name === 'string') {
@@ -224,10 +245,10 @@ export const applyCommonFields = (node: SceneNode, data: SerializedNode): void =
       node.cullable = false;
     }
 
-    const cullArea = data.cullArea;
+    const cullArea = asNumberArray(data.cullArea);
 
-    if (Array.isArray(cullArea) && cullArea.length === 4) {
-      node.cullArea = new Rectangle(Number(cullArea[0]), Number(cullArea[1]), Number(cullArea[2]), Number(cullArea[3]));
+    if (cullArea?.length === 4) {
+      node.cullArea = new Rectangle(cullArea[0] ?? 0, cullArea[1] ?? 0, cullArea[2] ?? 0, cullArea[3] ?? 0);
     }
 
     if (data.interactive === true) {
@@ -242,8 +263,10 @@ export const applyCommonFields = (node: SceneNode, data: SerializedNode): void =
       node.focusable = true;
     }
 
-    if (typeof data.tabIndex === 'number') {
-      node.tabIndex = data.tabIndex;
+    const tabIndex = readNumber(data, 'tabIndex');
+
+    if (tabIndex !== undefined) {
+      node.tabIndex = tabIndex;
     }
 
     if (typeof data.cursor === 'string') {
@@ -262,18 +285,18 @@ export const applyCommonFields = (node: SceneNode, data: SerializedNode): void =
       node.cacheAsTexture = true;
     }
 
-    const clipShape = data.clipShape;
+    const clipShape = asNumberArray(data.clipShape);
 
-    if (Array.isArray(clipShape) && clipShape.length === 4) {
-      node.clipShape = new Rectangle(Number(clipShape[0]), Number(clipShape[1]), Number(clipShape[2]), Number(clipShape[3]));
+    if (clipShape?.length === 4) {
+      node.clipShape = new Rectangle(clipShape[0] ?? 0, clipShape[1] ?? 0, clipShape[2] ?? 0, clipShape[3] ?? 0);
     }
   }
 
   if (node instanceof Drawable) {
-    const tint = data.tint;
+    const tint = arrayToColor(data.tint);
 
-    if (Array.isArray(tint) && tint.length === 4) {
-      node.tint = new Color(Number(tint[0]), Number(tint[1]), Number(tint[2]), Number(tint[3]));
+    if (tint !== undefined) {
+      node.tint = tint;
     }
 
     if (typeof data.blendMode === 'number') {
