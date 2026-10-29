@@ -901,8 +901,8 @@ const rayCastCircle = (collider: Collider, ox: number, oy: number, dx: number, d
   const b = mx * dx + my * dy;
   const cc = mx * mx + my * my - r * r;
 
-  // Origin outside and pointing away.
-  if (cc > 0 && b > 0) {
+  // A ray beginning inside a solid has no entry, matching the polygon and capsule paths.
+  if (cc < 0 || (cc > 0 && b > 0)) {
     return null;
   }
 

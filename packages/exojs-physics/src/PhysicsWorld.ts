@@ -1154,12 +1154,12 @@ export class PhysicsWorld implements BodyOwner {
     this._query.forEachAabbHit(bounds, filter, callback);
   }
 
-  /** Nearest collider hit by the ray, or `null`. */
+  /** Nearest collider entry hit by the ray, or `null`. Solids containing the origin are ignored. */
   public rayCast(origin: Readonly<PointLike>, direction: Readonly<PointLike>, filter?: QueryFilter, maxDistance?: number): RayHit | null {
     return this._query.rayCast(origin, direction, filter, maxDistance);
   }
 
-  /** All collider hits along the ray, sorted by distance. Writes into `out` (cleared) if given. */
+  /** All collider entry hits along the ray, sorted by distance. Solids containing the origin are ignored. Writes into `out` (cleared) if given. */
   public rayCastAll(
     origin: Readonly<PointLike>,
     direction: Readonly<PointLike>,
