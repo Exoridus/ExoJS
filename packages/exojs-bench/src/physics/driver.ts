@@ -20,6 +20,7 @@ import {
   readLibraryProvenance,
   readPlatformVersion,
 } from '../shared/provenance';
+import { raceWithTimeout } from '../shared/timeout';
 import type { ViteDevServer } from '../shared/viteServer';
 import { PHYSICS_LIBRARY_ARMS, startViteServer as startPageServer } from '../shared/viteServer';
 import type { RunPlan } from '../suite/plan';
@@ -213,32 +214,14 @@ const runCellInPage = async (
  * Run one cell, resolving to {@link CELL_WEDGED} if it does not finish within
  * {@link CELL_TIMEOUT_MS}. The still-pending evaluate is left to reject when the
  * browser closes; its rejection is swallowed so it never surfaces as an
- * unhandled rejection.
+ * unhandled rejection, and the hang guard is disarmed on every settlement.
  */
 const runCellOrWedge = async (
   page: import('playwright').Page,
   spec: PhysicsCellSpec,
   resolutionMs: number | null,
-): Promise<PhysicsCellResult | typeof CELL_WEDGED> => {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<typeof CELL_WEDGED>(resolvePromise => {
-    timer = setTimeout(() => resolvePromise(CELL_WEDGED), CELL_TIMEOUT_MS);
-  });
-
-  const run = runCellInPage(page, spec, resolutionMs).then(result => {
-    if (timer !== undefined) {
-      clearTimeout(timer);
-    }
-
-    return result;
-  });
-
-  run.catch(() => {
-    /* intentionally ignored */
-  });
-
-  return Promise.race([run, timeout]);
-};
+): Promise<PhysicsCellResult | typeof CELL_WEDGED> =>
+  raceWithTimeout(runCellInPage(page, spec, resolutionMs), CELL_TIMEOUT_MS, CELL_WEDGED);
 
 /** A page ready to drive cells, plus what it reported about itself. */
 interface HarnessSession {
