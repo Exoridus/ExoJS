@@ -1051,6 +1051,42 @@ describe('Dropdown', () => {
     { label: 'High', value: 'high' },
   ];
 
+  test('clamps an out-of-range initial selection to no selection', () => {
+    expect(new Dropdown({ items, selectedIndex: 99 }).selectedIndex).toBe(-1);
+    expect(new Dropdown({ items, selectedIndex: -2 }).selectedIndex).toBe(-1);
+    expect(new Dropdown({ items, selectedIndex: 2 }).selectedIndex).toBe(2);
+  });
+
+  test('re-clamps the open highlight when the items shrink, so Enter still picks a real item', () => {
+    const harness = createUIApp();
+    const wide = Array.from({ length: 5 }, (_, index) => ({ label: `Item ${index}`, value: index }));
+    const dropdown = new Dropdown({ items: wide, width: 180, height: 36 });
+
+    harness.scene.ui.addChild(dropdown);
+    dropdown.open();
+
+    for (let step = 0; step < 4; step++) {
+      dropdown.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Down, dropdown));
+    }
+
+    expect(dropdown.highlightedIndex).toBe(3);
+
+    const changes = vi.fn();
+
+    dropdown.onChange.add(changes);
+    dropdown.setItems([
+      { label: 'A', value: 3 },
+      { label: 'B', value: 4 },
+    ]);
+
+    expect(dropdown.highlightedIndex).toBe(1);
+
+    dropdown.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Enter, dropdown));
+
+    expect(changes).toHaveBeenCalledOnce();
+    expect(dropdown.selectedValue).toBe(4);
+  });
+
   test('an open list paints and picks above later widgets across its ancestor panels, then restores their order', () => {
     const harness = createUIApp();
     const panel = new Panel({ width: 220, height: 80 });

@@ -226,6 +226,17 @@ describe('TextInput', () => {
     expect(field.value).toBe('ab');
   });
 
+  test('a masked field re-renders when maskChar is set after construction', () => {
+    const field = new TextInput({ value: 'secret' });
+
+    expect(field.textNode.text).toBe('secret');
+
+    field.maskChar = '*';
+
+    expect(field.renderedText).toBe('******');
+    expect(field.textNode.text).toBe('******');
+  });
+
   test('an unmasked cut is forwarded so the clipboard write survives', () => {
     const harness = createUIApp();
     const field = new TextInput({ width: 200, height: 36 });

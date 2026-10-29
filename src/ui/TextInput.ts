@@ -99,6 +99,7 @@ export class TextInput extends TextEditWidget {
 
   public set maskChar(value: string | null) {
     this.model.maskChar = value;
+    this._invalidatePaint();
     this._setHints(this._currentHints());
   }
 
