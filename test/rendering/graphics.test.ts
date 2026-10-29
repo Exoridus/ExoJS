@@ -18,6 +18,19 @@ const createLinearGradient = (): LinearGradient =>
   );
 
 describe('Graphics', () => {
+  test('a path with only one distinct point leaves existing drawing intact', () => {
+    const graphics = new Graphics();
+    graphics.lineWidth = 2;
+    graphics.drawPath([0, 0, 10, 0]);
+    const mesh = graphics.children[0];
+
+    expect(graphics.drawPath([4, 5, 4, 5, 4, 5])).toBe(graphics);
+    expect(graphics.children).toEqual([mesh]);
+    graphics.drawPath([0, 0, 0, 10]);
+    expect(graphics.children).toHaveLength(2);
+    graphics.destroy();
+  });
+
   test('a rounded rectangle stroke has finite vertices around every corner', () => {
     const graphics = new Graphics();
     graphics.lineWidth = 1;

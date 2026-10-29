@@ -1,8 +1,11 @@
-import { assert } from '#core/dev';
+import { assert, invariant } from '#core/dev';
 
 import { triangulate } from './triangulate';
 import { TAU } from './utils';
 import { Vector } from './Vector';
+
+// WebGL2 reserves index 65535 for primitive restart, leaving vertex indices 0..65534.
+const maxMeshVertices = 65535;
 
 /**
  * Raw mesh data produced by geometry builders. `vertices` is a flat `Float32Array`
@@ -53,6 +56,9 @@ export const buildLine = (startX: number, startY: number, endX: number, endY: nu
  *
  * Uses miter joints at each interior vertex; joints exceeding 14× lineWidth
  * are bevelled to avoid extremely long spikes.
+ * Consecutive duplicate points are ignored; a single distinct point produces
+ * an empty mesh. The returned outline remains the original input.
+ * Throws when the generated strip exceeds 65535 vertices.
  */
 export const buildPath = (points: number[], width: number): MeshGeometryData => {
   if (points.length < 4) {
@@ -64,10 +70,26 @@ export const buildPath = (points: number[], width: number): MeshGeometryData => 
   // that neither throws nor draws.
   assert(points.length % 2 === 0, 'buildPath: points must hold (x, y) pairs, so its length must be even.');
 
+  const outlinePoints = points;
+  let distinct: number[] | undefined;
+
+  for (let i = 2; i < points.length; i += 2) {
+    if (points[i] === points[i - 2] && points[i + 1] === points[i - 1]) {
+      distinct ??= points.slice(0, i);
+    } else {
+      distinct?.push(points[i]!, points[i + 1]!);
+    }
+  }
+
+  points = distinct ?? points;
+
+  if (points.length < 4) {
+    return { vertices: new Float32Array(), indices: new Uint16Array(), points: outlinePoints };
+  }
+
   const lineWidth = width / 2;
   const firstPoint = new Vector(points[0], points[1]);
   const lastPoint = new Vector(points[points.length - 2], points[points.length - 1]);
-  const outlinePoints = points;
 
   if (firstPoint.x === lastPoint.x && firstPoint.y === lastPoint.y) {
     points = [...points];
@@ -215,6 +237,7 @@ export const buildPath = (points: number[], width: number): MeshGeometryData => 
   // produces a triangle. Even i: (i, i+1, i+2). Odd i: (i+1, i, i+2).
   // This preserves the same winding the original triangle-strip pipeline saw.
   const stripVertexCount = stripVertices.length / 2;
+  invariant(stripVertexCount <= maxMeshVertices, 'buildPath: at most 65535 vertices fit in the 16-bit index buffer.');
   const vertices = new Float32Array(stripVertices);
   const triangleCount = stripVertexCount >= 3 ? stripVertexCount - 2 : 0;
   const indices = new Uint16Array(triangleCount * 3);
@@ -319,7 +342,7 @@ export const buildEllipse = (centerX: number, centerY: number, radiusX: number, 
 /**
  * Build a filled simple (non-self-intersecting) polygon as a triangle-list
  * mesh via ear-clipping triangulation. `points` must contain at least three
- * `(x, y)` pairs (minimum 6 values); throws otherwise.
+ * `(x, y)` pairs (minimum 6 values) and at most 65535 vertices; throws otherwise.
  */
 export const buildPolygon = (points: number[]): MeshGeometryData => {
   if (points.length < 6) {
@@ -327,6 +350,7 @@ export const buildPolygon = (points: number[]): MeshGeometryData => {
   }
 
   const length = points.length / 2;
+  invariant(length <= maxMeshVertices, 'buildPolygon: at most 65535 vertices fit in the 16-bit index buffer.');
   const triangles = triangulate(points);
   const vertices = new Float32Array(points.length);
 
