@@ -280,6 +280,8 @@ export interface BaseProvenance {
  * ("ExoJS vs Pixi", "stay-native vs adapter") is auditable - a reader can see
  * precisely which build produced the numbers and reproduce it.
  */
+/** Whether a renderer string names a software rasterizer, whose timings are untrusted. */
+export const isSoftwareRenderer = (renderer: string): boolean => /swiftshader|llvmpipe|software/i.test(renderer);
 export interface LibraryProvenance {
   /** npm package name, e.g. `pixi.js` or `@codexo/exojs-physics`. */
   readonly name: string;

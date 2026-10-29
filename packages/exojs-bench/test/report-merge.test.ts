@@ -346,4 +346,20 @@ describe('existing report shape', () => {
 
     expect(() => writeReport({ provenance: [], libraries: [], results: [] }, dir)).toThrow(/results\.json/);
   });
+
+  test('marks timings untrusted when the adapter identity is unverified', () => {
+    writeReport(
+      {
+        provenance: [{ ...stamp('webgpu', 't1'), adapterUnverified: true }],
+        libraries: [],
+        results: [cell({ archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 2 })],
+      },
+      dir,
+    );
+
+    const md = readFileSync(join(dir, 'results.md'), 'utf8');
+
+    expect(md).toContain('ADAPTER UNVERIFIED');
+    expect(md).toContain('UNTRUSTED (adapter unverified)');
+  });
 });

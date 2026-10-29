@@ -17,6 +17,7 @@ import {
   classifyPrerelease,
   declaredPrereleaseOf,
   DEFAULT_RENDERING_BROWSER,
+  isSoftwareRenderer,
   readLibraryProvenance,
   readOsRelease,
   readPlatformVersion,
@@ -28,6 +29,7 @@ import type { RunPlan } from '../suite/plan';
 import { buildMatrix } from './archetypes';
 import { excaliburCovers, phaserCovers, pixiCulledCovers } from './coverage';
 import type { ArchetypeSpec, Backend, CellResult, CellSpec, EngineAdapter } from './EngineAdapter';
+import { profileProvenance } from './profileProvenance';
 import type { MatrixSelection } from './selection';
 import { applyPlan, applySelection } from './selection';
 import { isScrolling, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from './world';
@@ -83,6 +85,12 @@ export interface Provenance extends BaseProvenance {
   readonly headless: boolean;
   /** True when the adapter is a software rasterizer - timings are then untrusted. */
   readonly software: boolean;
+  /**
+   * Set when the adapter identity could not be read. The run is not verified
+   * hardware, so its timings carry the untrusted mark even though `software`
+   * is false.
+   */
+  readonly adapterUnverified?: boolean;
   /**
    * The clock grid the run's FIRST session observed; `null` where no session
    * opened, and on a CPU profile, which probes no clock.
@@ -316,7 +324,6 @@ const readRendererInPage = async (page: import('playwright').Page): Promise<stri
   });
 
 /** Whether a renderer string names a software rasterizer rather than a real GPU. */
-const isSoftwareRenderer = (renderer: string): boolean => /swiftshader|llvmpipe|software/i.test(renderer);
 
 /** Resolved WebGPU adapter identity for one backend run. */
 export interface WebGpuIdentity {
@@ -833,24 +840,6 @@ const shortenProfileUrl = (url: string): string => {
  * quietly falling back to Chromium, which would attribute one engine's frame
  * cost to another engine's name.
  */
-/** Renderer identity and the software-rasterizer bit for one profile. */
-export const profileProvenance = (
-  backend: Backend,
-  identity: WebGpuIdentity | null,
-  renderer: string | null,
-): { adapter: string; software: boolean } => {
-  if (backend === 'webgpu') {
-    // The profile path used to stamp a literal that named no adapter, so a
-    // SwiftShader profile was published as hardware. Read the identity the same
-    // way runBackend does and keep the literal only when it was unavailable.
-    return identity !== null && identity.usable
-      ? { adapter: identity.adapter, software: isSoftwareRenderer(identity.adapter) }
-      : { adapter: 'profiled webgpu session', software: false };
-  }
-
-  return { adapter: renderer ?? 'unknown renderer', software: renderer !== null && isSoftwareRenderer(renderer) };
-};
-
 export const profileCell = async (options: {
   spec: CellSpec;
   /** Frames rendered inside the sampled window. */
@@ -908,7 +897,7 @@ export const profileCell = async (options: {
       const profile = stopped.profile;
 
       const identity = spec.backend === 'webgpu' ? await readWebGpuAdapter(page, browserName) : null;
-      const { adapter, software } = profileProvenance(
+      const { adapter, software, adapterUnverified } = profileProvenance(
         spec.backend,
         identity,
         spec.backend === 'webgpu' ? null : await readRendererInPage(page),
@@ -992,6 +981,7 @@ export const profileCell = async (options: {
           engineVersion,
           timestamp: new Date().toISOString(),
           software,
+          ...(adapterUnverified === true && { adapterUnverified: true }),
         },
         frames,
         wallMs,

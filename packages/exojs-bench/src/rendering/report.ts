@@ -17,6 +17,9 @@ import type { Backend, CellResult } from './EngineAdapter';
 /** Marker appended to timing columns when the run used a software rasterizer. */
 const UNTRUSTED_MARK = 'UNTRUSTED (software rasterizer)';
 
+/** Marker appended to timing columns when no adapter identity could be read. */
+const UNVERIFIED_ADAPTER_MARK = 'UNTRUSTED (adapter unverified)';
+
 /** Whether a cell's measured frame time is past a whole 60 fps frame. */
 const beyondFrameBudget = (result: CellResult): boolean => exceedsFrameBudget(result.frameMsMedian);
 
@@ -59,6 +62,22 @@ export interface ReportData {
 
 /** True when any provenance stamp reports a software rasterizer. */
 const isSoftware = (data: ReportData): boolean => data.provenance.some(entry => entry.software);
+
+/** True when any provenance stamp could not identify its adapter. */
+const hasUnverifiedAdapter = (data: ReportData): boolean => data.provenance.some(entry => entry.adapterUnverified === true);
+
+/** The untrusted mark for the timing columns, or an empty suffix when they are trusted. */
+const untrustedTimingMark = (data: ReportData): string => {
+  if (isSoftware(data)) {
+    return ` — ${UNTRUSTED_MARK}`;
+  }
+
+  if (hasUnverifiedAdapter(data)) {
+    return ` — ${UNVERIFIED_ADAPTER_MARK}`;
+  }
+
+  return '';
+};
 
 /** The `frameMsMedian` cell text, suffixed `beyond-frame-budget` when the measured frame is past a whole frame. */
 const frameMedianCell = (result: CellResult): string => {
@@ -132,7 +151,6 @@ const toCsv = (data: ReportData): string => [CSV_HEADER.join(','), ...data.resul
  * rAF delta rather than a real GPU timer, is visible in the row it belongs to.
  */
 const toMarkdown = (data: ReportData): string => {
-  const software = isSoftware(data);
   const lines: string[] = [];
 
   lines.push('# Baseline Benchmark Results', '');
@@ -181,6 +199,10 @@ const toMarkdown = (data: ReportData): string => {
       lines.push('', `**SOFTWARE RASTERIZER — TIMINGS UNTRUSTED FOR ${entry.backend}**`);
     }
 
+    if (entry.adapterUnverified === true) {
+      lines.push('', `**ADAPTER UNVERIFIED — TIMINGS NOT CONFIRMED HARDWARE FOR ${entry.backend}**`);
+    }
+
     lines.push('');
   }
 
@@ -209,7 +231,7 @@ const toMarkdown = (data: ReportData): string => {
 
   // Annotate the timing column headers when timings are untrusted; structural
   // counters stay unannotated because they remain valid on a software rasterizer.
-  const timingSuffix = software ? ` — ${UNTRUSTED_MARK}` : '';
+  const timingSuffix = untrustedTimingMark(data);
   const header = [
     'engine',
     'config',
