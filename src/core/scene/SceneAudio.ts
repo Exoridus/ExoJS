@@ -333,6 +333,15 @@ class PendingVoice implements Voice {
 
     if (!this._cancelled) {
       this._cancelled = true;
+
+      for (const send of this._sendList) {
+        send.destroy();
+      }
+
+      this._sendList.length = 0;
+      this._dummyOutput.disconnect();
+      this._pendingEffects.length = 0;
+      this._followTarget = null;
       this._releasePoints();
       this.onEnd.dispatch();
     }
@@ -677,6 +686,7 @@ class PendingVoice implements Voice {
     }
 
     this._sendList.length = 0;
+    this._dummyOutput.disconnect();
     this._replaySpatial(real);
     real.onEnd.add((): void => {
       endForwarded = true;

@@ -116,7 +116,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Cancel every queued coroutine."
+          "description": "Cancel currently queued work. Work queued by cancellation cleanup runs in a later frame."
         },
         {
           "name": "destroy",

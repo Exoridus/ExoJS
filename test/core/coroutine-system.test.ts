@@ -39,6 +39,85 @@ const countTo = function* (limit: number, log?: number[]): Generator<void, numbe
   return i;
 };
 
+describe('Coroutine clear snapshots', () => {
+  test('destroy rejects work queued by cancellation cleanup', () => {
+    const system = new CoroutineSystem();
+    const enqueue = vi.fn(() => system.queue(countTo(1)));
+    system.queue(function* () {
+      try {
+        yield;
+      } finally {
+        enqueue();
+      }
+    });
+    frame(system);
+    system.destroy();
+    expect(enqueue).toHaveBeenCalledTimes(1);
+    expect(system.pending).toBe(0);
+    expect(system.destroyed).toBe(true);
+  });
+
+  test('work queued by cancelled cleanup survives until the next frame', () => {
+    const system = new CoroutineSystem({ budget: seconds(1) });
+    const steps = vi.fn();
+    system.queue(function* () {
+      try {
+        yield;
+      } finally {
+        system.queue(function* () {
+          steps();
+          yield;
+        });
+      }
+    });
+    frame(system);
+    system.clear();
+    expect(system.pending).toBe(1);
+    frame(system);
+    expect(steps).toHaveBeenCalledTimes(1);
+    system.destroy();
+  });
+
+  test('a cancelling body factory never advances its returned iterator', () => {
+    const system = new CoroutineSystem({ budget: seconds(1) });
+    const next = vi.fn(() => ({ done: false as const, value: undefined }));
+    const coroutine = system.queue(() => {
+      system.clear();
+
+      return { next };
+    });
+    expect(() => frame(system)).not.toThrow();
+    expect(coroutine.status).toBe('cancelled');
+    expect(next).not.toHaveBeenCalled();
+  });
+});
+
+describe('CoroutineSystem cancellation reentry', () => {
+  test('clear from a running body cancels the pass without resettlement', async () => {
+    const system = new CoroutineSystem({ budget: seconds(1) });
+    const later = vi.fn();
+    const first = system.queue(function* () {
+      yield* [];
+      system.clear();
+
+      return 42;
+    });
+    const second = system.queue(function* () {
+      later();
+      yield;
+    });
+    const ended = Promise.allSettled([first.done, second.done]);
+
+    expect(() => frame(system)).not.toThrow();
+    expect(() => frame(system)).not.toThrow();
+    expect(first.status).toBe('cancelled');
+    expect(second.status).toBe('cancelled');
+    expect(later).not.toHaveBeenCalled();
+    expect(system.pending).toBe(0);
+    expect((await ended).map(result => result.status)).toEqual(['rejected', 'rejected']);
+  });
+});
+
 describe('CoroutineSystem', () => {
   test('runs a coroutine to completion across frames and exposes the return value', () => {
     const system = zeroSliceSystem();

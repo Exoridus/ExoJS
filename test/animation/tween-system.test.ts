@@ -10,6 +10,50 @@ const makeTarget = () => ({ x: 0, y: 0 });
 /** Number of tweens the system currently holds a reference to. */
 const trackedCount = (system: TweenSystem): number => (system as unknown as { _tweens: unknown[] })._tweens.length;
 
+describe('Tween ownership during iteration', () => {
+  test('a transferred tween is skipped by its old in-flight snapshot', () => {
+    const oldSystem = new TweenSystem();
+    const nextSystem = new TweenSystem();
+    const target = makeTarget();
+    const trigger = oldSystem.create(makeTarget()).to({ x: 1 }, 1);
+    const tween = oldSystem.create(target).to({ x: 100 }, 1);
+    trigger.onUpdate(() => nextSystem.add(tween));
+    trigger.start();
+    tween.start();
+    oldSystem.preFrame(sec(0.25));
+    expect(target.x).toBe(0);
+    nextSystem.preFrame(sec(0.25));
+    expect(target.x).toBe(25);
+    oldSystem.destroy();
+    expect(tween.state).toBe(TweenState.Active);
+    nextSystem.destroy();
+  });
+});
+
+describe('Tween system ownership transfer', () => {
+  test.each(['add', 'sequence'] as const)('%s transfers an active tween without retaining the old owner', transfer => {
+    const oldSystem = new TweenSystem();
+    const nextSystem = new TweenSystem();
+    const target = makeTarget();
+    const tween = oldSystem.create(target).to({ x: 100 }, 1).start();
+
+    if (transfer === 'add') {
+      nextSystem.add(tween);
+    } else {
+      nextSystem.sequence([tween]);
+    }
+
+    oldSystem.preFrame(sec(0.25));
+    expect(target.x).toBe(0);
+    expect(trackedCount(oldSystem)).toBe(0);
+    tween.start();
+    nextSystem.preFrame(sec(0.25));
+    expect(target.x).toBe(25);
+    tween.stop();
+    expect(trackedCount(nextSystem)).toBe(0);
+  });
+});
+
 describe('TweenSystem', () => {
   test('create() returns a Tween bound to the system', () => {
     const system = new TweenSystem();

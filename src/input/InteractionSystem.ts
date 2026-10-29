@@ -1231,12 +1231,12 @@ export class InteractionSystem {
 
           const { x, y } = this._resolvePhase(phaseX, phaseY, this._currentCapture(id));
 
-          if (!this._completeDrag(id, pointer, x, y)) {
-            const last = this._lastHit.get(id) ?? null;
+          this._completeDrag(id, pointer, x, y);
 
-            if (last !== null && this._isLive(last)) {
-              bubbleInteractionEvent(new InteractionEvent('pointerout', last, pointer, x, y));
-            }
+          const last = this._lastHit.get(id) ?? null;
+
+          if (last !== null && this._isLive(last)) {
+            bubbleInteractionEvent(new InteractionEvent('pointerout', last, pointer, x, y));
           }
 
           this._lastHit.delete(id);
@@ -1472,9 +1472,7 @@ export class InteractionSystem {
    * real (promoted) drag fires `dragend` before its capture is released; a
    * candidate that never got promoted is simply dropped - it was never a
    * drag, so nothing needs undoing beyond forgetting it. Returns whether an
-   * ACTIVE drag actually ended (dragend fired) - that is what suppresses a
-   * following pointertap, and (for an exit event) what skips the fallback
-   * pointerout.
+   * ACTIVE drag actually ended (dragend fired).
    */
   private _completeDrag(id: number, pointer: Pointer, x: number, y: number): boolean {
     const drag = this._drags.get(id) ?? null;

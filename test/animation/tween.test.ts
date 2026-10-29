@@ -10,6 +10,65 @@ const sec = (seconds: number): Seconds => Time.seconds(seconds);
 // Minimal sprite-like target.
 const makeSprite = (x = 0, y = 0, alpha = 1) => ({ x, y, alpha });
 
+describe('Tween lifecycle callback stops', () => {
+  test.each(['start', 'repeat'] as const)('stop from on%s prevents later progress writes', callback => {
+    const target = { x: 0 };
+    const tween = new Tween(target).to({ x: 10 }, 1).repeat(1).yoyo();
+    const stop = () => tween.stop();
+
+    if (callback === 'start') {
+      tween.onStart(stop);
+    } else {
+      tween.onRepeat(stop);
+    }
+
+    tween.start();
+    tween.update(1.5);
+    expect(tween.state).toBe(TweenState.Stopped);
+    expect(target.x).toBe(callback === 'start' ? 0 : 10);
+  });
+});
+
+describe('Tween paused callback completion', () => {
+  test('pause from onUpdate postpones completion and can be stopped', () => {
+    const complete = vi.fn();
+    const tween = new Tween({ x: 0 })
+      .to({ x: 1 }, 1)
+      .onUpdate(() => tween.pause())
+      .onComplete(complete)
+      .start();
+    tween.update(1);
+    expect(tween.state).toBe(TweenState.Paused);
+    tween.stop();
+    tween.update(1);
+    expect(tween.state).toBe(TweenState.Stopped);
+    expect(complete).not.toHaveBeenCalled();
+  });
+});
+
+describe('Tween callback cancellation', () => {
+  test.each([1, 2])('stop on update %i prevents completion and chained playback', stopAt => {
+    const complete = vi.fn();
+    const next = new Tween({ x: 0 }).to({ x: 1 }, 1);
+    let updates = 0;
+    const tween = new Tween({ x: 0 })
+      .to({ x: 1 }, 1)
+      .onUpdate(() => {
+        if (++updates === stopAt) {
+          tween.stop();
+        }
+      })
+      .onComplete(complete);
+    tween.chain(next);
+    tween.start();
+    tween.update(1);
+
+    expect(tween.state).toBe(TweenState.Stopped);
+    expect(complete).not.toHaveBeenCalled();
+    expect(next.state).toBe(TweenState.Idle);
+  });
+});
+
 describe('Tween', () => {
   describe('initial state', () => {
     test('new tween is Idle', () => {

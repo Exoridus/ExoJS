@@ -324,7 +324,13 @@ export class Coroutine<T = void, P = void> implements Destroyable {
       this._body = null;
 
       try {
-        this._iterator = body(budget);
+        const iterator = body(budget);
+
+        if (this.settled) {
+          return false;
+        }
+
+        this._iterator = iterator;
       } catch (error) {
         this._settle('failed', undefined, error);
 
@@ -342,6 +348,10 @@ export class Coroutine<T = void, P = void> implements Destroyable {
       return false;
     }
 
+    if (this.settled) {
+      return false;
+    }
+
     if (next.done === true) {
       this._settle('done', next.value, undefined);
 
@@ -354,6 +364,10 @@ export class Coroutine<T = void, P = void> implements Destroyable {
   }
 
   private _settle(status: 'done' | 'failed' | 'cancelled', result: T | undefined, thrown: unknown): void {
+    if (this.settled) {
+      return;
+    }
+
     const error = status === 'done' ? undefined : toError(thrown);
 
     this._status = status;
@@ -416,7 +430,7 @@ export class CoroutineSystem implements Destroyable {
   /** See {@link CoroutineSystemOptions.minSlice}. `null` keeps the cadence-derived default. */
   public minSlice: Seconds | null;
 
-  private readonly _coroutines: Array<Coroutine<unknown, unknown>> = [];
+  private _coroutines: Array<Coroutine<unknown, unknown>> = [];
   private readonly _sliceBudget: FrameBudget;
   private _frameTarget: () => Seconds = () => fallbackFrameTargetSeconds;
   private _sliceDeadlineMs = 0;
@@ -511,16 +525,18 @@ export class CoroutineSystem implements Destroyable {
     this._lastFrameMs = hostTimeSource.now() - startedMs;
   }
 
-  /** Cancel every queued coroutine. */
+  /** Cancel currently queued work. Work queued by cancellation cleanup runs in a later frame. */
   public clear(): void {
-    // Copied first: `cancel()` runs the body's `finally`, which may queue or
-    // cancel others and would otherwise mutate the array under the loop.
-    for (const coroutine of [...this._coroutines]) {
+    // Detach first: cancellation can queue new work, and an active frame still
+    // holds this queue until its current pass returns.
+    const coroutines = this._coroutines;
+
+    this._coroutines = [];
+    this._cursor = 0;
+
+    for (const coroutine of coroutines) {
       coroutine.cancel();
     }
-
-    this._coroutines.length = 0;
-    this._cursor = 0;
   }
 
   public destroy(): void {
@@ -528,8 +544,8 @@ export class CoroutineSystem implements Destroyable {
       return;
     }
 
-    this.clear();
     this._destroyed = true;
+    this.clear();
   }
 
   /** @internal A writable {@link Coroutine.priority} invalidates the run order. */
