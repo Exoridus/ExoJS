@@ -83,8 +83,12 @@ const resolvePackUrl = (manifestUrl: string, name: string, file: unknown): strin
     fail(`pack "${name}" has a "file" that is not a path beside the manifest`);
   }
 
-  const slash = manifestUrl.lastIndexOf('/');
-  const directory = slash === -1 ? './' : manifestUrl.slice(0, slash + 1);
+  // A signed manifest URL can carry a `/` inside its query or fragment; only the
+  // path component decides where the packs live.
+  const queryStart = manifestUrl.search(/[?#]/);
+  const manifestPath = queryStart === -1 ? manifestUrl : manifestUrl.slice(0, queryStart);
+  const slash = manifestPath.lastIndexOf('/');
+  const directory = slash === -1 ? './' : manifestPath.slice(0, slash + 1);
   const hasDocumentBase = typeof location !== 'undefined';
   const base = hasDocumentBase ? location.href : SYNTHETIC_BASE;
   let directoryUrl: URL;

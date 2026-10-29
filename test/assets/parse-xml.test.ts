@@ -15,11 +15,9 @@ describe('parseXmlDocument', () => {
     expect(() => parseXmlDocument('<root><unclosed></root>')).toThrow(AssetDecodeError);
   });
 
-  test('falls back to "unknown error" when the detected parsererror element has no text content', () => {
-    // A parse failure is detected purely by the presence of a <parsererror>
-    // element, which is all DOMParser reports - so a well-formed document that
-    // happens to contain its own empty one is (mis)detected the same way, and
-    // exercises the "no text" fallback message.
-    expect(() => parseXmlDocument('<root><parsererror></parsererror></root>')).toThrow('XML parse error: unknown error');
+  test('keeps a document that models its own parsererror element', () => {
+    const doc = parseXmlDocument('<root><parsererror>text</parsererror></root>');
+
+    expect(doc.querySelector('parsererror')?.textContent).toBe('text');
   });
 });

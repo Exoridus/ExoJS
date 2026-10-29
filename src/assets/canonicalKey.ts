@@ -78,8 +78,12 @@ export interface CanonicalAsset {
 const isOpaqueSource = (source: string): boolean => source.startsWith('blob:') || source.startsWith('data:');
 
 /** Sources that resolve without the loader base path: absolute URLs, protocol-relative, and root-relative paths. */
-const isAbsoluteSource = (source: string): boolean =>
-  source.startsWith('http://') || source.startsWith('https://') || source.startsWith('//') || source.startsWith('/');
+const isAbsoluteSource = (source: string): boolean => {
+  // URL schemes are case-insensitive, so `HTTPS://` is as absolute as `https://`.
+  const scheme = source.slice(0, 8).toLowerCase();
+
+  return scheme.startsWith('http://') || scheme.startsWith('https://') || source.startsWith('//') || source.startsWith('/');
+};
 
 /**
  * Collapse `.` and `..` segments and drop the fragment, leaving scheme,

@@ -58,7 +58,14 @@ export const loadSoundSpriteSheet = async (source: string, scope: AssetDependenc
       fail(source, `the entry "${name}" has a non-boolean "loop"`);
     }
 
-    sheet[name] = { start: start as number, end: end as number, ...(loop !== undefined && { loop: loop as boolean }) };
+    // `sheet[name] = clip` would invoke Object.prototype's setter for the name
+    // "__proto__"; define the entry so every sidecar key stays an own property.
+    Object.defineProperty(sheet, name, {
+      value: { start: start as number, end: end as number, ...(loop !== undefined && { loop: loop as boolean }) },
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    });
   }
 
   return sheet;

@@ -173,6 +173,17 @@ describe('AssetManifest', () => {
     expect(pack.entries).toEqual(['a.bin', 'b.bin', 'c.bin']);
   });
 
+  test('addresses packs under the manifest directory when a signed URL has slashes in its query', async () => {
+    const deployment = deploy({ level1: threePacked(2) });
+
+    serve(deployment);
+
+    const manifest = await AssetManifest.open('/assets/assets.json?sig=part/a&exp=1');
+    const record = deployment.document.packs['level1']!;
+
+    expect(new URL(manifest.pack('level1').url).pathname).toBe(`/assets/${record.file as string}`);
+  });
+
   test('finds the pack carrying a source', async () => {
     serve(deploy({ level1: threePacked(2), boot: encodeContainer([{ source: 'boot.bin', type: 'binary', bytes: noise(64, 9) }]) }));
 
