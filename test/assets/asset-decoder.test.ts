@@ -160,7 +160,10 @@ describe('AssetDecoder', () => {
     const remove = vi.spyOn(application.signal, 'removeEventListener');
     const { decoder, typeRegistry, canonical } = createDecoder({ cache: null });
     decoder.fetchOptions = { signal: application.signal };
-    const entered = Promise.withResolvers<void>();
+    let enter!: () => void;
+    const entered = new Promise<void>(resolve => {
+      enter = resolve;
+    });
     typeRegistry.installAll([
       testAssetType<string, string>({
         id: 'typeA',
@@ -168,7 +171,7 @@ describe('AssetDecoder', () => {
         create: async (_source, context) => {
           expect(context.signal).toBe(load.signal);
           expect(context.signal?.aborted).toBe(false);
-          entered.resolve();
+          enter();
 
           return new Promise((_resolve, reject) => {
             context.signal?.addEventListener('abort', () => reject(context.signal?.reason as Error));
@@ -180,7 +183,7 @@ describe('AssetDecoder', () => {
 
     try {
       const result = decoder._dispatchFetch(canonical(TypeA, 'asset'), undefined, load.signal, fakeScope);
-      await entered.promise;
+      await entered;
       expect(remove).toHaveBeenCalledTimes(1);
       const reason = new DOMException('cancelled factory', 'AbortError');
       load.abort(reason);

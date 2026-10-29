@@ -249,7 +249,8 @@ export class AssetDecoder {
    * are composed rather than one replacing the other: the application's signal
    * is the only cancellation an application-level abort has, and the load's is
    * what a release or a scope teardown fires. Without a load signal the very
-   * `fetchOptions` object is handed on unchanged.
+   * `fetchOptions` object is handed on unchanged. Release fallback listeners
+   * after reading the response body; releasing never aborts either input signal.
    */
   private _requestOptions(fetchOptions: RequestInit, signal?: AbortSignal): AcquisitionRequest {
     const configured = fetchOptions.signal;
@@ -307,7 +308,7 @@ export class AssetDecoder {
    * The block-wise container path does its own fetching - that is the point of
    * it - but must still resolve the source against the loader's base path and
    * carry the application's `fetchOptions`, exactly as every other acquisition
-   * does.
+   * does. A caller supplying a signal releases its request after the body is read.
    * @internal
    */
   public _containerRequest(url: string, signal?: AbortSignal): AcquisitionRequest & { url: string } {
