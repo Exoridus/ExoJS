@@ -517,7 +517,7 @@ describe('WebGpuBackend color storage accounting', () => {
     expect(gpu.stats.gpuMemoryBytes - baseline).toBe(staging);
   });
 
-  test('an authored full chain books the summed level footprint plus the scratch sized for its base level', async () => {
+  test('an authored full chain owns separate level storage and pooled scratch until device teardown', async () => {
     const gpu = await create();
     const baseline = gpu.stats.gpuMemoryBytes;
     const levels = [
@@ -530,9 +530,17 @@ describe('WebGpuBackend color storage accounting', () => {
 
     gpu.getTextureBinding(texture);
 
-    expect(gpu.stats.gpuMemoryBytes - baseline).toBe(chainBytes(8, 8, 4, 4) + 8 * 8 * 4);
+    const levelBytes = chainBytes(8, 8, TEXEL_BYTES.rgba8srgb, levels.length);
+
+    expect(gpu.stats.gpuMemoryBytes - baseline).toBe(2 * levelBytes);
 
     texture.destroy();
+
+    expect(gpu.stats.gpuMemoryBytes - baseline).toBe(levelBytes);
+
+    (gpu as unknown as { _teardownDeviceState: () => void })._teardownDeviceState();
+
+    expect(gpu.stats.gpuMemoryBytes).toBe(0);
   });
 
   test('a device teardown drops every owned byte, scratch included', async () => {

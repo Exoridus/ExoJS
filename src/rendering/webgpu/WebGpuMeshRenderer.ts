@@ -247,7 +247,7 @@ const maxCustomTextureSlots = 7; // user texture uniforms; group 2 binding 1..N
 
 /**
  * Per-bundle mesh replay state (mesh opt-in). Parked
- * on the group bundle's {@link WebGpuRetainedGroupBundle.rendererReplayState} so
+ * on the group bundle's {@link WebGpuRetainedGroupBundle.rendererReplayStates} so
  * it shares the bundle's grow-only / explicitly-freed lifecycle. Holds the mesh
  * group(0) `TransformUniforms` UBO (one dynamic-offset slot per recorded batch,
  * because the per-batch premultiply flag differs) + its bind group, plus the
@@ -2068,7 +2068,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   }
 
   private _getMeshReplayState(bundle: WebGpuRetainedGroupBundle): MeshRetainedReplayState {
-    const existing = bundle.rendererReplayState;
+    const existing = bundle.rendererReplayStates.get(this);
 
     if (existing instanceof MeshRetainedReplayState) {
       return existing;
@@ -2076,7 +2076,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     const state = new MeshRetainedReplayState();
 
-    bundle.rendererReplayState = state;
+    bundle.rendererReplayStates.set(this, state);
 
     return state;
   }

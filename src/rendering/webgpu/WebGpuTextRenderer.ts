@@ -149,7 +149,7 @@ interface TextRetainedRendererData {
 
 /**
  * Per-bundle Text replay state (retained-batch opt-in), parked on
- * {@link WebGpuRetainedGroupBundle.rendererReplayState} so it shares the
+ * {@link WebGpuRetainedGroupBundle.rendererReplayStates} so it shares the
  * bundle's grow-only / explicitly-freed lifecycle - mirrors Mesh's
  * `MeshRetainedReplayState`. Holds Text's OWN persistent per-node data buffer
  * (same 10-vec4/node layout the live path uses) and FrameUniforms buffer,
@@ -1500,7 +1500,7 @@ export class WebGpuTextRenderer
       return false;
     }
 
-    const state = bundle.rendererReplayState;
+    const state = bundle.rendererReplayStates.get(this);
 
     if (!(state instanceof TextRetainedReplayState) || state.nodeDataBuffer === null) {
       return false;
@@ -1521,11 +1521,11 @@ export class WebGpuTextRenderer
   }
 
   private _getTextReplayState(bundle: WebGpuRetainedGroupBundle, device: GPUDevice): TextRetainedReplayState {
-    const existing = bundle.rendererReplayState;
+    const existing = bundle.rendererReplayStates.get(this);
     const state = existing instanceof TextRetainedReplayState ? existing : new TextRetainedReplayState();
 
     if (existing !== state) {
-      bundle.rendererReplayState = state;
+      bundle.rendererReplayStates.set(this, state);
     }
 
     if (state.uniformBuffer === null) {

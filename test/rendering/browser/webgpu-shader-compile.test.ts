@@ -60,6 +60,7 @@ import {
 } from '#rendering/webgpu/WebGpuSpriteRenderer';
 import { stencilWriteShaderSource } from '#rendering/webgpu/WebGpuStencilClipper';
 import { textShaderSource } from '#rendering/webgpu/WebGpuTextRenderer';
+import { textureNormalizeWgsl } from '#rendering/webgpu/WebGpuTextureNormalizer';
 
 import { galleryDissolveShader } from '../../../examples/shared/gallery-transitions';
 import { cascadeUniforms, gatherUniforms } from '../../../packages/exojs-lighting/src/backends/radianceField';
@@ -79,6 +80,7 @@ const composedGather = transportGatherShader(gatherUniforms);
 
 const shaders: readonly ShaderEntry[] = [
   { name: 'WebGpuBackend mipmap pipeline', source: mipmapWgsl },
+  { name: 'WebGpuTextureNormalizer', source: textureNormalizeWgsl },
   { name: 'WebGpuBackdropBlendCompositor', source: backdropBlendCompositorWgsl },
   { name: 'WebGpuMaskCompositor', source: maskCompositorWgsl },
   { name: 'WebGpuMeshRenderer (default)', source: meshShaderSource },
