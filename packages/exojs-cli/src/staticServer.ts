@@ -87,6 +87,10 @@ const resolveRange = (header: string | undefined, size: number): ByteRange | 'un
     return 'unsatisfiable';
   }
 
+  if (hasEnd && Number(rawEnd) < start) {
+    return null;
+  }
+
   return { start, end: hasEnd ? Math.min(Number(rawEnd), size - 1) : size - 1 };
 };
 
