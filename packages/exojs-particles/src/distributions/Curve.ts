@@ -35,7 +35,7 @@ export class Curve implements LifetimeFunction<number> {
       throw new Error('Curve requires at least one keyframe.');
     }
 
-    this._keys = [...keys].sort(compareT);
+    this._keys = keys.map(key => ({ t: key.t, v: key.v })).sort(compareT);
   }
 
   public evaluate(t: number): number {
