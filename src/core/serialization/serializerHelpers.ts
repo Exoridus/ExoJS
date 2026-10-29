@@ -40,11 +40,27 @@ export const compact = <T extends object>(options: T): { [K in keyof T]: Exclude
 /** Serialize a colour to `[r, g, b, a]` (r/g/b 0..255, a 0..1). */
 export const colorToArray = (color: Color): [number, number, number, number] => [color.r, color.g, color.b, color.a];
 
-/** Deserialize a `[r, g, b, a]` tuple back to a {@link Color}, or `undefined`. */
-export const arrayToColor = (value: unknown): Color | undefined =>
-  Array.isArray(value) && value.length === 4
-    ? new Color(Number(value[0]), Number(value[1]), Number(value[2]), Number(value[3]))
-    : undefined;
+const isChannel = (value: unknown, max: number): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= max;
+
+/**
+ * Deserialize a `[r, g, b, a]` tuple back to a {@link Color}, or `undefined`
+ * when it is not four finite numbers in their documented ranges (r/g/b 0..255,
+ * a 0..1).
+ */
+export const arrayToColor = (value: unknown): Color | undefined => {
+  if (!Array.isArray(value) || value.length !== 4) {
+    return undefined;
+  }
+
+  const [r, g, b, a] = value as unknown[];
+
+  if (!isChannel(r, 255) || !isChannel(g, 255) || !isChannel(b, 255) || !isChannel(a, 1)) {
+    return undefined;
+  }
+
+  return new Color(r, g, b, a);
+};
 
 const colorEquals = (color: Color, r: number, g: number, b: number, a: number): boolean =>
   color.r === r && color.g === g && color.b === b && color.a === a;
@@ -205,6 +221,19 @@ export const serializeStyleOptions = (options: TextStyleOptions | null): Record<
   return Object.keys(out).length > 0 ? out : undefined;
 };
 
+const STYLE_NUMBER_KEYS = [
+  'fontSize',
+  'outlineWidth',
+  'lineHeight',
+  'leading',
+  'shadowOffsetX',
+  'shadowOffsetY',
+  'shadowAlpha',
+  'shadowBlur',
+  'decorationThickness',
+  'decorationOffset',
+] as const satisfies ReadonlyArray<keyof TextStyleOptions>;
+
 export const deserializeStyleOptions = (data: unknown): TextStyleOptions | undefined => {
   if (typeof data !== 'object' || data === null) {
     return undefined;
@@ -235,8 +264,12 @@ export const deserializeStyleOptions = (data: unknown): TextStyleOptions | undef
     options.fontVariant = fontVariant;
   }
 
-  if (typeof source.fontSize === 'number') {
-    options.fontSize = source.fontSize;
+  for (const key of STYLE_NUMBER_KEYS) {
+    const value = readNumber(source, key);
+
+    if (value !== undefined) {
+      Object.assign(options, { [key]: value });
+    }
   }
 
   const fillColor = arrayToColor(source.fillColor);
@@ -251,10 +284,6 @@ export const deserializeStyleOptions = (data: unknown): TextStyleOptions | undef
     options.outlineColor = outlineColor;
   }
 
-  if (typeof source.outlineWidth === 'number') {
-    options.outlineWidth = source.outlineWidth;
-  }
-
   const align = readEnum(source, 'align', TEXT_ALIGNMENTS);
 
   if (align !== undefined) {
@@ -267,34 +296,10 @@ export const deserializeStyleOptions = (data: unknown): TextStyleOptions | undef
     options.textTransform = textTransform;
   }
 
-  if (typeof source.lineHeight === 'number') {
-    options.lineHeight = source.lineHeight;
-  }
-
-  if (typeof source.leading === 'number') {
-    options.leading = source.leading;
-  }
-
   const shadowColor = arrayToColor(source.shadowColor);
 
   if (shadowColor !== undefined) {
     options.shadowColor = shadowColor;
-  }
-
-  if (typeof source.shadowOffsetX === 'number') {
-    options.shadowOffsetX = source.shadowOffsetX;
-  }
-
-  if (typeof source.shadowOffsetY === 'number') {
-    options.shadowOffsetY = source.shadowOffsetY;
-  }
-
-  if (typeof source.shadowAlpha === 'number') {
-    options.shadowAlpha = source.shadowAlpha;
-  }
-
-  if (typeof source.shadowBlur === 'number') {
-    options.shadowBlur = source.shadowBlur;
   }
 
   if (typeof source.underline === 'boolean') {
@@ -309,14 +314,6 @@ export const deserializeStyleOptions = (data: unknown): TextStyleOptions | undef
 
   if (decorationColor !== undefined) {
     options.decorationColor = decorationColor;
-  }
-
-  if (typeof source.decorationThickness === 'number') {
-    options.decorationThickness = source.decorationThickness;
-  }
-
-  if (typeof source.decorationOffset === 'number') {
-    options.decorationOffset = source.decorationOffset;
   }
 
   const gradient = jsonToGradient(source.gradient);
@@ -359,19 +356,22 @@ export const jsonToGradient = (value: unknown): TextGradient | undefined => {
 
     const stop = entry as Record<string, unknown>;
     const color = arrayToColor(stop.color);
+    const offset = readNumber(stop, 'offset');
 
-    if (color === undefined || typeof stop.offset !== 'number') {
+    if (color === undefined || offset === undefined) {
       continue;
     }
 
-    stops.push({ offset: stop.offset, color });
+    stops.push({ offset, color });
   }
 
   if (stops.length < 2) {
     return undefined;
   }
 
-  return typeof source.angle === 'number' ? { stops, angle: source.angle } : { stops };
+  const angle = readNumber(source, 'angle');
+
+  return angle === undefined ? { stops } : { stops, angle };
 };
 
 // ── LayoutOptions ─────────────────────────────────────────────────────────────
