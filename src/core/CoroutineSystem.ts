@@ -152,6 +152,7 @@ export class Coroutine<T = void, P = void> implements Destroyable {
   private _reject: ((reason: unknown) => void) | null = null;
   private _body: CoroutineBody<T, P> | null;
   private _iterator: Iterator<P, T, undefined> | null;
+  private _stepping = false;
   private _priority: number;
   private _abortListener: (() => void) | null = null;
   private readonly _signal: AbortSignal | undefined;
@@ -288,12 +289,8 @@ export class Coroutine<T = void, P = void> implements Destroyable {
 
     this._settle('cancelled', undefined, cancelledError());
 
-    // `return()` runs the body's `finally` blocks; it must not throw into the
-    // caller, which may be a scope tearing down many coroutines at once.
-    try {
-      iterator?.return?.();
-    } catch {
-      // The coroutine is already cancelled; its cleanup failure has nowhere to go.
+    if (!this._stepping) {
+      this._close(iterator);
     }
   }
 
@@ -313,54 +310,62 @@ export class Coroutine<T = void, P = void> implements Destroyable {
    */
   public _step(budget: FrameBudget): boolean {
     this._status = 'running';
+    this._stepping = true;
+    let iterator = this._iterator;
 
-    if (this._iterator === null) {
-      const body = this._body;
+    try {
+      if (iterator === null) {
+        const body = this._body;
 
-      if (body === null) {
-        return false;
-      }
+        if (body === null) {
+          return false;
+        }
 
-      this._body = null;
-
-      try {
-        const iterator = body(budget);
+        this._body = null;
+        iterator = body(budget);
 
         if (this.settled) {
           return false;
         }
 
         this._iterator = iterator;
-      } catch (error) {
-        this._settle('failed', undefined, error);
+      }
+
+      const next = iterator.next();
+
+      if (this.settled) {
+        return false;
+      }
+
+      if (next.done === true) {
+        this._settle('done', next.value, undefined);
 
         return false;
       }
-    }
 
-    let next: IteratorResult<P, T>;
+      this._progress = next.value;
 
-    try {
-      next = this._iterator.next();
+      return true;
     } catch (error) {
       this._settle('failed', undefined, error);
 
       return false;
+    } finally {
+      this._stepping = false;
+
+      // A running generator rejects return(); cancellation must close it after next() returns.
+      if (this.status === 'cancelled') {
+        this._close(iterator);
+      }
     }
+  }
 
-    if (this.settled) {
-      return false;
+  private _close(iterator: Iterator<P, T, undefined> | null): void {
+    try {
+      iterator?.return?.();
+    } catch {
+      // The coroutine is already cancelled; its cleanup failure has nowhere to go.
     }
-
-    if (next.done === true) {
-      this._settle('done', next.value, undefined);
-
-      return false;
-    }
-
-    this._progress = next.value;
-
-    return true;
   }
 
   private _settle(status: 'done' | 'failed' | 'cancelled', result: T | undefined, thrown: unknown): void {
