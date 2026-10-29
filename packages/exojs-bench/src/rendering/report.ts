@@ -1,3 +1,4 @@
+import { exceedsFrameBudget } from '../shared/frameBudget';
 import type { LibraryProvenance } from '../shared/provenance';
 import {
   csvField,
@@ -11,11 +12,11 @@ import {
 import type { Provenance } from './driver';
 import type { Backend, CellResult } from './EngineAdapter';
 
-/** Node count at or above which a full-frame time is beyond any interactive budget. */
-const FRAME_BUDGET_NODE_THRESHOLD = 100_000;
-
 /** Marker appended to timing columns when the run used a software rasterizer. */
 const UNTRUSTED_MARK = 'UNTRUSTED (software rasterizer)';
+
+/** Whether a cell's measured frame time is past a whole 60 fps frame. */
+const beyondFrameBudget = (result: CellResult): boolean => exceedsFrameBudget(result.frameMsMedian);
 
 /**
  * A cell is `hitching` when its p95 CPU time towers over its median AND clears
@@ -57,11 +58,11 @@ export interface ReportData {
 /** True when any provenance stamp reports a software rasterizer. */
 const isSoftware = (data: ReportData): boolean => data.provenance.some(entry => entry.software);
 
-/** The `frameMsMedian` cell text, suffixed `beyond-frame-budget` past the node threshold. */
+/** The `frameMsMedian` cell text, suffixed `beyond-frame-budget` when the measured frame is past a whole frame. */
 const frameMedianCell = (result: CellResult): string => {
   const base = ms(result.frameMsMedian);
 
-  return result.spec.nodeCount >= FRAME_BUDGET_NODE_THRESHOLD ? `${base} beyond-frame-budget` : base;
+  return beyondFrameBudget(result) ? `${base} beyond-frame-budget` : base;
 };
 
 /** Ordered columns shared by the CSV and the Markdown table. */
@@ -90,7 +91,7 @@ const CSV_HEADER = [
 
 const toCsvRow = (result: CellResult): string => {
   const { spec, structural } = result;
-  const beyondBudget = spec.nodeCount >= FRAME_BUDGET_NODE_THRESHOLD ? 'beyond-frame-budget' : '';
+  const beyondBudget = beyondFrameBudget(result) ? 'beyond-frame-budget' : '';
   const fields = [
     spec.engine,
     spec.config,
