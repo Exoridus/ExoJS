@@ -37,7 +37,7 @@ export class AssetRequestLog {
     this._typeRegistry = typeRegistry;
   }
 
-  /** Record that `asset`'s source - and, when known, its logical request - resolved to its key. */
+  /** Record the source spellings - and, when known, the logical request - that resolved to `asset`'s key. */
   public record(asset: CanonicalAsset): void {
     let aliases = this._aliases.get(asset.key);
 
@@ -47,6 +47,10 @@ export class AssetRequestLog {
     }
 
     aliases.add(asset.source);
+
+    if (asset.requested !== undefined) {
+      aliases.add(asset.requested);
+    }
 
     if (asset.requested === undefined) {
       return;
