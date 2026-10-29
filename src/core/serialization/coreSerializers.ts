@@ -7,7 +7,7 @@ import { SDF_RADIUS, Text } from '#rendering/text/Text';
 import { Texture } from '#rendering/texture/Texture';
 
 import type { NodeSerializer } from './NodeSerializer';
-import { asSerializedNode } from './read';
+import { asNumberArray, asSerializedNode, readNumber } from './read';
 import { registerRenderingSerializers } from './renderingSerializers';
 import type { SerializationRegistry } from './SerializationRegistry';
 import { compact, deserializeStyleOptions, readLayoutOptions, serializeStyle } from './serializerHelpers';
@@ -76,13 +76,13 @@ const spriteSerializer: NodeSerializer<Sprite> = {
   read(data, ctx) {
     const texture = ctx.resolveAsset(data.texture, Texture);
     const sprite = new Sprite(texture);
-    const frame = data.frame;
+    const frame = asNumberArray(data.frame);
 
-    if (texture !== null && Array.isArray(frame) && frame.length === 4) {
+    if (texture !== null && frame?.length === 4) {
       // A dedicated rectangle, not the shared Rectangle.temp: setTextureFrame
       // reads its argument again after re-entering node code (bounds/origin
       // invalidation), and this call has no instance to own a scratch on.
-      sprite.setTextureFrame(new Rectangle(Number(frame[0]), Number(frame[1]), Number(frame[2]), Number(frame[3])));
+      sprite.setTextureFrame(new Rectangle(frame[0] ?? 0, frame[1] ?? 0, frame[2] ?? 0, frame[3] ?? 0));
     }
 
     return sprite;
@@ -123,7 +123,7 @@ const textSerializer: NodeSerializer<Text> = {
         ...deserializeStyleOptions(data.style),
         ...layout,
         colorGlyphs: data.colorGlyphs === true,
-        sdfRadius: typeof data.sdfRadius === 'number' ? data.sdfRadius : undefined,
+        sdfRadius: readNumber(data, 'sdfRadius'),
       }),
     );
   },

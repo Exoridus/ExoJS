@@ -23,7 +23,7 @@ import { Sprite } from '#rendering/sprite/Sprite';
 import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
-import { type Text } from '#rendering/text/Text';
+import { SDF_RADIUS, type Text } from '#rendering/text/Text';
 import type { GlyphInfo } from '#rendering/text/types';
 import { Texture } from '#rendering/texture/Texture';
 
@@ -216,6 +216,25 @@ describe('serialization validation — top-level frame (migrate)', () => {
 
     const withUi = migrate({ version: SERIALIZATION_VERSION, root: { type: 'Container' }, ui: { type: 'UIRoot' } });
     expect(withUi.ui?.type).toBe('UIRoot');
+  });
+});
+
+describe('serialization validation — numeric render state', () => {
+  it('never stores a non-finite sprite frame', () => {
+    const texture = new Texture(Object.assign(document.createElement('canvas'), { width: 16, height: 16 }));
+    const loader = fakeLoader([{ type: Texture as unknown as Loadable, source: 'tex', resource: texture }]);
+    const sprite = deserializeTree(node({ type: 'Sprite', texture: 'tex', frame: [0, 0, Number.NaN, 10] }), loader) as Sprite;
+
+    expect(Number.isFinite(sprite.textureFrame.width)).toBe(true);
+    expect(Number.isFinite(sprite.textureFrame.height)).toBe(true);
+    expect(sprite.textureFrame.height).toBe(10); // the valid edges survive
+  });
+
+  it('never stores a non-finite text sdfRadius', () => {
+    const text = deserializeTree(node({ type: 'Text', text: 'hi', sdfRadius: Number.POSITIVE_INFINITY })) as Text;
+
+    expect(Number.isFinite(text.sdfRadius)).toBe(true);
+    expect(text.sdfRadius).toBe(SDF_RADIUS);
   });
 });
 
