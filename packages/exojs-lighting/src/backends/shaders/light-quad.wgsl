@@ -252,7 +252,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     // The quad spans -1..1 in the light's own frame, which is the cookie's 0..1
     // exactly - so the pattern turns and scales with the light for free, and a
     // premultiplied texel that is transparent contributes nothing.
-    let cookie = textureSample(u_cookie, u_cookieSampler, input.local * 0.5 + vec2<f32>(0.5)).rgb;
+    let cookie = textureSample(u_cookie, u_cookieSampler, vec2<f32>(input.local.x / (input.half + 1.0), input.local.y) * 0.5 + vec2<f32>(0.5)).rgb;
 
     return vec4<f32>(input.tint.rgb * cookie * (falloff * falloff * coneTerm * input.intensity * shadow * surface), 1.0);
 }
