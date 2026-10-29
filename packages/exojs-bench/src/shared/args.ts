@@ -66,3 +66,16 @@ export const parseArgList = (argv: readonly string[], key: string): string[] =>
  * should reject these rather than ignore them.
  */
 export const unclaimedArgs = (argv: readonly string[]): string[] => scan(argv).unclaimed;
+
+/**
+ * One positive integer flag value, rejecting anything the matrix would turn into
+ * an empty measurement. `Number.parseInt` accepts a numeric prefix (`1000abc`)
+ * and does not reject zero or negatives, so it cannot be used for a count.
+ */
+export const parsePositiveInt = (flag: string, value: string): number => {
+  if (!/^\d+$/.test(value) || Number.parseInt(value, 10) < 1) {
+    throw new Error(`${flag} must be a positive integer (got '${value}').`);
+  }
+
+  return Number.parseInt(value, 10);
+};
