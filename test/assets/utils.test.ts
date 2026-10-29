@@ -39,6 +39,23 @@ describe('determineMimeType', () => {
     }
   });
 
+  test('every audio signature sniffs to a registered media type', () => {
+    const audio = [
+      { name: 'AU', bytes: [0x2e, 0x73, 0x6e, 0x64, 0, 0, 0, 0], mimeType: 'audio/basic' },
+      { name: 'MP3', bytes: [0x49, 0x44, 0x33, 0x04, 0, 0, 0, 0], mimeType: 'audio/mpeg' },
+      { name: 'WAVE', bytes: [0x52, 0x49, 0x46, 0x46, 0x24, 0, 0, 0, 0x57, 0x41, 0x56, 0x45], mimeType: 'audio/wav' },
+      { name: 'MIDI', bytes: [0x4d, 0x54, 0x68, 0x64, 0, 0, 0, 6], mimeType: 'audio/midi' },
+      { name: 'AIFF', bytes: [0x46, 0x4f, 0x52, 0x4d, 0, 0, 0, 0, 0x41, 0x49, 0x46, 0x46], mimeType: 'audio/aiff' },
+    ];
+
+    for (const { name, bytes, mimeType } of audio) {
+      const detected = determineMimeType(toBuffer(bytes));
+
+      expect({ name, detected }).toEqual({ name, detected: mimeType });
+      expect(detected).toMatch(/^[a-z]+\/[a-z0-9.+-]+$/);
+    }
+  });
+
   describe('MP4 detection (matchesMp4Video)', () => {
     test('detects a valid MP4 box (correct box size, "ftypmp4" brand)', () => {
       // 20-byte box: [box size u32][ 'ftypmp4' ][ padding ] - header.length === boxSize (20),
