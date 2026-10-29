@@ -48,30 +48,53 @@ const CONTAINER_NAMESPACE = 'exoa';
 /** A container is acquired whole, so one record holds it. */
 const containerLayout = SingleEntryLayout.version<ArrayBuffer>(2);
 
+interface ComposedSignal {
+  readonly signal: AbortSignal;
+  readonly release?: (() => void) | undefined;
+}
+
+interface AcquisitionRequest {
+  readonly init: RequestInit;
+  readonly release?: (() => void) | undefined;
+}
+
 /** A signal that aborts as soon as either input does, with that input's reason. */
-const anySignal = (first: AbortSignal, second: AbortSignal): AbortSignal => {
+const anySignal = (first: AbortSignal, second: AbortSignal): ComposedSignal => {
   if (typeof AbortSignal.any === 'function') {
-    return AbortSignal.any([first, second]);
+    return { signal: AbortSignal.any([first, second]) };
+  }
+
+  if (first.aborted || second.aborted) {
+    return { signal: first.aborted ? first : second };
   }
 
   const controller = new AbortController();
+  let released = false;
 
-  const follow = (source: AbortSignal): void => {
-    if (source.aborted) {
-      controller.abort(source.reason);
-
+  const release = (): void => {
+    if (released) {
       return;
     }
 
-    // Removing the listeners is what keeps a long-lived application signal from
-    // accumulating one per asset load; aborting the composite fires them off.
-    source.addEventListener('abort', () => controller.abort(source.reason), { once: true, signal: controller.signal });
+    released = true;
+    first.removeEventListener('abort', abortFirst);
+    second.removeEventListener('abort', abortSecond);
   };
 
-  follow(first);
-  follow(second);
+  const abortFirst = (): void => {
+    release();
+    controller.abort(first.reason);
+  };
 
-  return controller.signal;
+  const abortSecond = (): void => {
+    release();
+    controller.abort(second.reason);
+  };
+
+  first.addEventListener('abort', abortFirst, { once: true });
+  second.addEventListener('abort', abortSecond, { once: true });
+
+  return { signal: controller.signal, release };
 };
 
 /** The shape an identity hook sees. Options are omitted entirely when the request carried none. */
@@ -192,8 +215,17 @@ export class AssetDecoder {
     signal?: AbortSignal,
   ): Promise<T> {
     const url = this._resolveUrl(source);
-    const requestOptions = this._requestOptions(signal);
-    const fetchRepresentation = async (): Promise<T> => read(await fetchAsset(url, requestOptions));
+    const fetchOptions = this._fetchOptions;
+
+    const fetchRepresentation = async (): Promise<T> => {
+      const request = this._requestOptions(fetchOptions, signal);
+
+      try {
+        return await read(await fetchAsset(url, request.init));
+      } finally {
+        request.release?.();
+      }
+    };
 
     if (this._cache === null) {
       return fetchRepresentation();
@@ -217,16 +249,22 @@ export class AssetDecoder {
    * are composed rather than one replacing the other: the application's signal
    * is the only cancellation an application-level abort has, and the load's is
    * what a release or a scope teardown fires. Without a load signal the very
-   * `fetchOptions` object is handed on, so a plain fetch stays allocation-free.
+   * `fetchOptions` object is handed on unchanged.
    */
-  private _requestOptions(signal?: AbortSignal): RequestInit {
+  private _requestOptions(fetchOptions: RequestInit, signal?: AbortSignal): AcquisitionRequest {
+    const configured = fetchOptions.signal;
+
     if (signal === undefined) {
-      return this._fetchOptions;
+      return { init: fetchOptions };
     }
 
-    const configured = this._fetchOptions.signal;
+    if (configured === undefined || configured === null) {
+      return { init: { ...fetchOptions, signal } };
+    }
 
-    return { ...this._fetchOptions, signal: configured === undefined || configured === null ? signal : anySignal(configured, signal) };
+    const composed = anySignal(configured, signal);
+
+    return { init: { ...fetchOptions, signal: composed.signal }, release: composed.release };
   }
 
   /**
@@ -272,8 +310,8 @@ export class AssetDecoder {
    * does.
    * @internal
    */
-  public _containerRequest(url: string, signal?: AbortSignal): { url: string; init: RequestInit } {
-    return { url: this._resolveUrl(url), init: this._requestOptions(signal) };
+  public _containerRequest(url: string, signal?: AbortSignal): AcquisitionRequest & { url: string } {
+    return { url: this._resolveUrl(url), ...this._requestOptions(this._fetchOptions, signal) };
   }
 
   /** The context a factory sees for one request. */

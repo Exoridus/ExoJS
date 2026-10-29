@@ -9,7 +9,7 @@ import { AssetCache } from '#assets/cache/AssetCache';
 import type { CacheContext } from '#assets/cache/CachePolicy';
 import { CacheRoute } from '#assets/cache/CacheRoute';
 import { type CanonicalAsset, canonicalizeSource, resourceKey, sourceKey } from '#assets/canonicalKey';
-import type { Loader } from '#assets/Loader';
+import { Loader } from '#assets/Loader';
 import type { LoaderScope } from '#assets/LoaderScope';
 
 import { createCacheStoreDouble, createRecordingPolicy } from './cache-test-doubles';
@@ -53,6 +53,173 @@ const createDecoder = (overrides: { cache?: AssetCache | null; basePath?: string
 };
 
 describe('AssetDecoder', () => {
+  test.each(['network', 'cache', 'failure', 'factory', 'manifest', 'manifest failure'] as const)(
+    'fallback signal listeners are released after %s acquisition',
+    async mode => {
+      const descriptor = Object.getOwnPropertyDescriptor(AbortSignal, 'any')!;
+      Object.defineProperty(AbortSignal, 'any', { ...descriptor, value: undefined });
+      const application = new AbortController();
+      const add = vi.spyOn(application.signal, 'addEventListener');
+      const remove = vi.spyOn(application.signal, 'removeEventListener');
+      const { decoder, typeRegistry, canonical } = createDecoder({ cache: mode === 'cache' ? createFakeCache().cache : null });
+      decoder.fetchOptions = { signal: application.signal };
+      typeRegistry.installAll([
+        testAssetType<string, string>({
+          id: 'typeA',
+          token: TypeA,
+          create: async (source, context) => {
+            expect(context.signal?.aborted).toBe(false);
+
+            if (mode === 'factory') {
+              throw new Error('factory failed');
+            }
+
+            return source;
+          },
+        }),
+      ]);
+      const loader = new Loader({ fetchOptions: { signal: application.signal } });
+      const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+        if (mode === 'failure') {
+          throw new Error('transport failed');
+        }
+
+        return new Response(mode === 'manifest' ? JSON.stringify({ version: 1, packs: {} }) : 'payload');
+      });
+
+      try {
+        for (let index = 0; index < 3; index++) {
+          const load = new AbortController();
+          const result = mode.startsWith('manifest')
+            ? loader.loadManifest('manifest.json', { signal: load.signal })
+            : decoder._dispatchFetch(canonical(TypeA, `asset-${index}`), undefined, load.signal, fakeScope);
+
+          if (mode === 'failure') {
+            await expect(result).rejects.toThrow('transport failed');
+          } else if (mode === 'factory' || mode === 'manifest failure') {
+            await expect(result).rejects.toThrow();
+          } else if (mode === 'manifest') {
+            await expect(result).resolves.toBeDefined();
+          } else {
+            await expect(result).resolves.toBe(mode === 'cache' ? 'resolved' : 'payload');
+          }
+
+          expect(remove).toHaveBeenCalledTimes(add.mock.calls.length);
+          expect(load.signal.aborted).toBe(false);
+        }
+
+        expect(application.signal.aborted).toBe(false);
+      } finally {
+        Object.defineProperty(AbortSignal, 'any', descriptor);
+        add.mockRestore();
+        remove.mockRestore();
+        fetch.mockRestore();
+        loader.destroy();
+      }
+    },
+  );
+
+  test.each(['application', 'load'] as const)('fallback forwards %s cancellation and releases both listeners', async owner => {
+    const descriptor = Object.getOwnPropertyDescriptor(AbortSignal, 'any')!;
+    Object.defineProperty(AbortSignal, 'any', { ...descriptor, value: undefined });
+    const application = new AbortController();
+    const load = new AbortController();
+    const applicationRemove = vi.spyOn(application.signal, 'removeEventListener');
+    const loadRemove = vi.spyOn(load.signal, 'removeEventListener');
+    const { decoder, typeRegistry, canonical } = createDecoder({ cache: null });
+    decoder.fetchOptions = { signal: application.signal };
+    typeRegistry.installAll([testAssetType<string, string>({ id: 'typeA', token: TypeA, create: async source => source })]);
+    const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (_url, options) =>
+        new Promise<Response>((_resolve, reject) => {
+          options?.signal?.addEventListener('abort', () => reject(options.signal?.reason as Error));
+        }),
+    );
+
+    try {
+      const result = decoder._dispatchFetch(canonical(TypeA, 'asset'), undefined, load.signal, fakeScope);
+      const reason = new DOMException('cancelled', 'AbortError');
+      (owner === 'application' ? application : load).abort(reason);
+      await expect(result).rejects.toBe(reason);
+      expect(applicationRemove).toHaveBeenCalledTimes(1);
+      expect(loadRemove).toHaveBeenCalledTimes(1);
+      expect((owner === 'application' ? load : application).signal.aborted).toBe(false);
+    } finally {
+      Object.defineProperty(AbortSignal, 'any', descriptor);
+      applicationRemove.mockRestore();
+      loadRemove.mockRestore();
+      fetch.mockRestore();
+    }
+  });
+
+  test('releasing fallback network listeners preserves cancellation during factory creation', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(AbortSignal, 'any')!;
+    Object.defineProperty(AbortSignal, 'any', { ...descriptor, value: undefined });
+    const application = new AbortController();
+    const load = new AbortController();
+    const remove = vi.spyOn(application.signal, 'removeEventListener');
+    const { decoder, typeRegistry, canonical } = createDecoder({ cache: null });
+    decoder.fetchOptions = { signal: application.signal };
+    const entered = Promise.withResolvers<void>();
+    typeRegistry.installAll([
+      testAssetType<string, string>({
+        id: 'typeA',
+        token: TypeA,
+        create: async (_source, context) => {
+          expect(context.signal).toBe(load.signal);
+          expect(context.signal?.aborted).toBe(false);
+          entered.resolve();
+
+          return new Promise((_resolve, reject) => {
+            context.signal?.addEventListener('abort', () => reject(context.signal?.reason as Error));
+          });
+        },
+      }),
+    ]);
+    const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('payload'));
+
+    try {
+      const result = decoder._dispatchFetch(canonical(TypeA, 'asset'), undefined, load.signal, fakeScope);
+      await entered.promise;
+      expect(remove).toHaveBeenCalledTimes(1);
+      const reason = new DOMException('cancelled factory', 'AbortError');
+      load.abort(reason);
+      await expect(result).rejects.toBe(reason);
+    } finally {
+      Object.defineProperty(AbortSignal, 'any', descriptor);
+      remove.mockRestore();
+      fetch.mockRestore();
+    }
+  });
+
+  test('a cached policy can fetch later with live fallback cancellation', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(AbortSignal, 'any')!;
+    Object.defineProperty(AbortSignal, 'any', { ...descriptor, value: undefined });
+    const application = new AbortController();
+    const load = new AbortController();
+    const { cache, contexts } = createFakeCache();
+    const { decoder, typeRegistry, canonical } = createDecoder({ cache });
+    decoder.fetchOptions = { signal: application.signal };
+    typeRegistry.installAll([testAssetType<string, string>({ id: 'typeA', token: TypeA, create: async source => source })]);
+    const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (_url, options) =>
+        new Promise<Response>((_resolve, reject) => {
+          options?.signal?.addEventListener('abort', () => reject(options.signal?.reason as Error));
+        }),
+    );
+
+    try {
+      await decoder._dispatchFetch(canonical(TypeA, 'asset'), undefined, load.signal, fakeScope);
+      const refresh = contexts[0]!.fetch();
+      const reason = new DOMException('cancelled refresh', 'AbortError');
+      application.abort(reason);
+      await expect(refresh).rejects.toBe(reason);
+    } finally {
+      Object.defineProperty(AbortSignal, 'any', descriptor);
+      fetch.mockRestore();
+    }
+  });
+
   test('basePath/fetchOptions round-trip', () => {
     const { decoder } = createDecoder();
 

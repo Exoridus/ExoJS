@@ -636,7 +636,11 @@ export class Loader {
     const request = this._decoder._containerRequest(url, options?.signal);
     const manifestOptions: AssetManifestOptions = { init: { ...request.init, cache: options?.cache ?? 'no-cache' } };
 
-    return AssetManifest.open(request.url, manifestOptions);
+    try {
+      return await AssetManifest.open(request.url, manifestOptions);
+    } finally {
+      request.release?.();
+    }
   }
 
   /**
