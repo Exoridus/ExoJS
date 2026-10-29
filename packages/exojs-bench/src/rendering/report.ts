@@ -4,6 +4,7 @@ import {
   csvField,
   formatCount as count,
   formatMs as ms,
+  markdownCell,
   mergeCellResults,
   mergeLibraries,
   readExistingReport,
@@ -248,7 +249,7 @@ const toMarkdown = (data: ReportData): string => {
       String(spec.warmupFrames),
       String(spec.timedFrames),
       result.status,
-      (result.note ?? '').replaceAll('|', '\\|'),
+      markdownCell(result.note ?? ''),
     ];
 
     lines.push(`| ${row.join(' | ')} |`);

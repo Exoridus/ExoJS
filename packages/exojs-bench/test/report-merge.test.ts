@@ -11,7 +11,7 @@ import type { Provenance } from '../src/rendering/driver';
 import type { ArchetypeId, Backend, CellResult } from '../src/rendering/EngineAdapter';
 import { type ReportData, writeReport } from '../src/rendering/report';
 import type { ClockReport } from '../src/shared/clock';
-import { csvField, mergeCellResults, mergeLibraries } from '../src/shared/report';
+import { csvField, markdownCell, mergeCellResults, mergeLibraries } from '../src/shared/report';
 
 /**
  * A clock fine enough that no fixture duration trips the timer check, so a test
@@ -270,6 +270,17 @@ describe('writePhysicsReport merges into an existing results.json', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  test('keeps a multi-line note inside one markdown row', () => {
+    const result = { ...physicsCell('joints', 1000, 7), note: 'cell errored (isolated; run continued): a\nb|c' };
+
+    writePhysicsReport({ provenance: physicsStamp('151.0'), libraries: [], results: [result] }, dir);
+
+    const md = readFileSync(join(dir, 'results.md'), 'utf8');
+
+    expect(md.split('\n').filter(line => line.startsWith('|'))).toHaveLength(3);
+    expect(md).toContain('a b\\|c');
+  });
+
   test('a subset rerun replaces only the cells it measured ok and takes the newer provenance stamp', () => {
     const first: PhysicsReportData = {
       provenance: physicsStamp('150.0'),
@@ -302,5 +313,13 @@ describe('csvField', () => {
 
   test('leaves a plain field unquoted', () => {
     expect(csvField('plain note')).toBe('plain note');
+  });
+});
+
+describe('markdownCell', () => {
+  test('collapses a line break to one space before escaping the pipe', () => {
+    expect(markdownCell('a\nb|c')).toBe('a b\\|c');
+    expect(markdownCell('a\r\nb')).toBe('a b');
+    expect(markdownCell('a\rb')).toBe('a b');
   });
 });

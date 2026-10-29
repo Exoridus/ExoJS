@@ -31,6 +31,7 @@ import { chromium } from 'playwright';
 import { LAUNCH_FLAGS, readEngineVersion, readWebGpuAdapter, startViteServer, WEBGPU_LAUNCH_FLAGS } from './rendering/driver';
 import type { Backend } from './rendering/EngineAdapter';
 import type { TimerFrameRecord, TimerProbeMode, TimerProbeResult, TimerProbeSpec } from './rendering/page/timerProbe';
+import { parsePositiveInt } from './shared/args';
 
 const args = process.argv.slice(2);
 
@@ -46,15 +47,21 @@ const list = (name: string, fallback: string): string[] =>
     .map(value => value.trim())
     .filter(value => value.length > 0);
 
-const nodeCounts = list('nodes', '1000000').map(Number);
+const nodeCountTokens = list('nodes', '1000000');
+const nodeCounts = nodeCountTokens.map(value => parsePositiveInt('--nodes', value));
+
+if (nodeCounts.length === 0) {
+  throw new Error('--nodes must name at least one positive integer node count.');
+}
+
 const configs = list('config', 'retained') as Array<'current' | 'retained'>;
 const backends = list('backends', 'webgpu') as Backend[];
 const modes = list('mode', 'pipelined') as TimerProbeMode[];
 const archetype = flag('archetype') ?? 'scrolling-world';
-const timedFrames = Number(flag('frames') ?? 30);
-const warmupFrames = Number(flag('warmup') ?? 40);
-const repeats = Number(flag('repeats') ?? 1);
-const controlSamples = Number(flag('control-samples') ?? 20);
+const timedFrames = parsePositiveInt('--frames', flag('frames') ?? '30');
+const warmupFrames = parsePositiveInt('--warmup', flag('warmup') ?? '40');
+const repeats = parsePositiveInt('--repeats', flag('repeats') ?? '1');
+const controlSamples = parsePositiveInt('--control-samples', flag('control-samples') ?? '20');
 const noDrain = args.includes('--no-drain');
 const noTimestamps = args.includes('--no-timestamps');
 const controlsOnly = args.includes('--controls-only');

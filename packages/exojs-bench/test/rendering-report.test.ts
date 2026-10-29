@@ -61,4 +61,14 @@ describe('rendering report frame budget mark', () => {
 
     expect(csvColumn(readFileSync(join(dir, 'results.csv'), 'utf8'), 'frameBudget')).toEqual(['']);
   });
+
+  test('keeps a multi-line note inside one markdown row', () => {
+    const result = { ...cell(1_000, 1), note: 'cell errored (isolated; run continued): a\nb|c' };
+    writeReport({ provenance: [], libraries: [], results: [result] }, dir);
+
+    const md = readFileSync(join(dir, 'results.md'), 'utf8');
+
+    expect(md.split('\n').filter(line => line.startsWith('|'))).toHaveLength(3);
+    expect(md).toContain('a b\\|c');
+  });
 });

@@ -291,7 +291,7 @@ const main = async (): Promise<void> => {
   process.stdout.write(
     [
       '',
-      `ExoJS DPR / internal render-target probe — NEU-S4`,
+      `ExoJS DPR / internal render-target probe`,
       `  commit   ${gitSha}`,
       `  engine   ${version}`,
       '',
