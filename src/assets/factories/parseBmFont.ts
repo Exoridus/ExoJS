@@ -53,17 +53,8 @@ export const parseBmFontText = (text: string): BmFontData => {
         const id = intVal(line, 'id');
         const file = strVal(line, 'file');
 
-        // A glyph indexes its atlas by `page`, which is a position in the pages
-        // list rather than a lookup by id, so a hole or a repeated id would make
-        // that index name the wrong file - or nothing at all.
         if (pages.has(id)) {
           throw new Error(`BmFont parse error: duplicate page id ${id}; page ids must be unique.`);
-        }
-
-        if (id !== pages.size) {
-          throw new Error(
-            `BmFont parse error: page id ${id} leaves a gap; page ids must be contiguous from 0 so a glyph's page indexes its page file.`,
-          );
         }
 
         pages.set(id, file);
@@ -98,5 +89,18 @@ export const parseBmFontText = (text: string): BmFontData => {
     }
   }
 
-  return { pages: [...pages.values()], chars, kernings, lineHeight, base };
+  // A glyph indexes its atlas by `page`, which is a position in the pages list
+  // rather than a lookup by id, so the ids must form 0..n-1. Checked after the
+  // parse because descriptors are free to declare their page lines in any order.
+  const ordered = [...pages.entries()].sort(([left], [right]) => left - right);
+
+  for (const [index, [id]] of ordered.entries()) {
+    if (id !== index) {
+      throw new Error(
+        `BmFont parse error: page id ${id} leaves a gap; page ids must be contiguous from 0 so a glyph's page indexes its page file.`,
+      );
+    }
+  }
+
+  return { pages: ordered.map(([, file]) => file), chars, kernings, lineHeight, base };
 };

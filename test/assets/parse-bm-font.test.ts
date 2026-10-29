@@ -46,6 +46,24 @@ page id=1 file="atlas_1.png"
     expect(parseBmFontText(fnt).pages).toEqual(['atlas_0.png', 'atlas_1.png']);
   });
 
+  test('accepts page lines declared out of id order and returns them by id', () => {
+    const fnt = `
+common lineHeight=32 base=26
+page id=1 file="atlas_1.png"
+page id=0 file="atlas_0.png"
+chars count=1
+char id=65 x=0 y=0 width=10 height=14 xoffset=0 yoffset=0 xadvance=12 page=1
+`;
+
+    const data = parseBmFontText(fnt);
+    const glyph = data.chars.get(65);
+
+    expect(data.pages).toEqual(['atlas_0.png', 'atlas_1.png']);
+    // The glyph's page id is a position in `pages`, so page 1 must name file 1.
+    expect(glyph?.page).toBe(1);
+    expect(data.pages[glyph!.page]).toBe('atlas_1.png');
+  });
+
   test('still parses a descriptor that declares no pages at all', () => {
     expect(parseBmFontText(descriptor('')).pages).toEqual([]);
   });
