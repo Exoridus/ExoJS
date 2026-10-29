@@ -42,6 +42,12 @@ const resolveAsepriteUrl = (ref: string, base: string): string => {
   // A root-relative base must produce a root-relative result again - dropping
   // the leading slash would make the browser re-resolve the reference against
   // the document base URL (e.g. `/site/assets/x.png` → `/site/site/assets/...`).
+  // A protocol-relative base keeps both slashes for the same reason; the
+  // synthetic resolution already dropped the authority prefix.
+  if (base.startsWith('//')) {
+    return `//${relative}`;
+  }
+
   return base.startsWith('/') ? `/${relative}` : relative;
 };
 
@@ -95,6 +101,21 @@ const validateAsepriteData = (raw: unknown, source: string): AsepriteData => {
 
   if (!Array.isArray(frames) && (typeof frames !== 'object' || frames === null)) {
     throw new AsepriteFormatError(source, '"frames" must be an array or an object');
+  }
+
+  // A rotated packed frame stores its pixels transposed; the runtime samples
+  // the rectangle verbatim, so accepting it would render wrong pixels.
+  const frameEntries: Array<[string, unknown]> = Array.isArray(frames)
+    ? frames.map((frame, index) => [String(index), frame])
+    : Object.entries(frames);
+
+  for (const [key, frame] of frameEntries) {
+    if (isRecord(frame) && frame.rotated === true) {
+      throw new AsepriteFormatError(
+        source,
+        `"frames.${key}" is rotated; packed rotated frames are not supported - export the sheet with rotation disabled`,
+      );
+    }
   }
 
   validateFrameTags(meta.frameTags, source);

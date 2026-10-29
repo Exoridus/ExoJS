@@ -82,7 +82,7 @@ export class TiledMap {
   public readonly properties: readonly TiledPropertyData[];
 
   private readonly _imageTextures: ReadonlyMap<number, Texture>;
-  private readonly _chunkSources = new Map<number, ChunkSource>();
+  private _chunkSources = new Map<number, ChunkSource>();
 
   public constructor(
     source: string,
@@ -168,7 +168,9 @@ export class TiledMap {
    * in the Loader cache. Destroying the returned map does not unload textures.
    */
   public toTileMap(): TileMap {
-    this._chunkSources.clear();
+    // Build into a fresh map: a conversion that throws must leave the
+    // providers of the previous conversion intact.
+    const chunkSources = new Map<number, ChunkSource>();
 
     if (this.orientation === 'hexagonal') {
       rejectHexagonalRotations(this.layers, this.source);
@@ -293,7 +295,7 @@ export class TiledMap {
           if (layer.data) {
             populateTileLayer(rLayer, layer.data, this.tilesets, indexToRuntime, layer.width);
           } else if (chunked) {
-            this._chunkSources.set(layer.id, buildTiledChunkSource(layer, rLayer, this.tilesets, indexToRuntime, this.source));
+            chunkSources.set(layer.id, buildTiledChunkSource(layer, rLayer, this.tilesets, indexToRuntime, this.source));
           }
 
           runtimeLayers.push(rLayer);
@@ -327,7 +329,7 @@ export class TiledMap {
 
     convertLayers(this.layers, rootGroupStyle);
 
-    return new TileMap({
+    const tileMap = new TileMap({
       name: this.source,
       // Tiled always reports width/height as 0 at the map level for an
       // infinite map (its extent is unbounded/streamed); omit both rather
@@ -346,6 +348,10 @@ export class TiledMap {
       properties: convertProperties(this.properties),
       documentOrder: order,
     });
+
+    this._chunkSources = chunkSources;
+
+    return tileMap;
   }
 
   /**
