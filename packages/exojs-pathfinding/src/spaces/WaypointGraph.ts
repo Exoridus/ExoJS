@@ -136,12 +136,17 @@ export class WaypointGraph<Payload = unknown> implements NavigationSpace<Payload
   public addEdge(from: number, to: number, options: WaypointEdgeOptions<Payload> = {}): void {
     const edges = this.adjacency[from];
 
-    if (edges === undefined || this.alive[to] !== true) {
+    if (edges === undefined || this.alive[from] !== true || this.alive[to] !== true) {
       return;
     }
 
     const length = this.length(from, to);
     const cost = options.cost ?? (length > 0 ? length : 1);
+
+    if (!Number.isFinite(cost) || cost <= 0) {
+      throw new RangeError(`WaypointGraph.addEdge: cost must be a positive finite number, got ${cost}`);
+    }
+
     const edge: Edge<Payload> = { to, cost, kind: options.kind ?? 'walk', data: options.data ?? null };
     const existing = edges.findIndex(candidate => candidate.to === to);
 

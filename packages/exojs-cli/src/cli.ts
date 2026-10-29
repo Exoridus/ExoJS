@@ -12,7 +12,8 @@ Commands:
                          cross-origin isolation headers
   create [name]          Scaffold a new app
   doctor [dir]           Check an installed project's environment
-  assets pack <file>     Pack assets into an .exoa container, optionally under a
+  assets pack <pack-description>
+                         Pack assets into an .exoa container, optionally under a
                          content-addressed name plus an asset manifest
 
 Options:

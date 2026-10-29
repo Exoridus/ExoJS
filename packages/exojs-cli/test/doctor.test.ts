@@ -145,6 +145,26 @@ describe('exo doctor', () => {
     expect(runDoctor([projectDir])).toBe(1);
     expect(report()).toContain('safari 14 cannot run WebGL2');
   });
+
+  test('reads only the production section of .browserslistrc', () => {
+    healthyProject();
+    write('.browserslistrc', '[production]\nchrome >= 120\n\n[development]\nsafari >= 14\n');
+
+    expect(runDoctor([projectDir])).toBe(0);
+    expect(report()).not.toContain('safari 14');
+  });
+
+  test('a range with a minor component is unevaluated rather than satisfied', () => {
+    healthyProject();
+    const [major, minor] = process.versions.node.split('.');
+    install('@codexo/exojs', {
+      version: '0.17.0',
+      devEngines: { runtime: { name: 'node', version: `^${major}.${Number(minor) + 1}` } },
+    });
+
+    expect(runDoctor([projectDir])).toBe(0);
+    expect(report()).toContain('cannot evaluate the declared range');
+  });
 });
 
 describe('browser target evaluation', () => {

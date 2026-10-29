@@ -48,6 +48,11 @@ describe('exo argument parsing', () => {
     expect(() => parseArgs(['--port'], portOnly)).toThrow('option "--port" expects a value');
   });
 
+  test('a following option is not consumed as a value', () => {
+    expect(() => parseArgs(['--host', '--no-spa'], serveOptions)).toThrow('option "--host" expects a value');
+    expect(() => parseArgs(['--port', '--no-spa'], serveOptions)).toThrow('option "--port" expects a value');
+  });
+
   test('a boolean option given a value names the option', () => {
     expect(() => parseArgs(['--no-spa=yes'], spaOnly)).toThrow('option "--no-spa" takes no value');
   });
@@ -78,7 +83,7 @@ describe('exo command dispatch', () => {
     const { out } = captureOutput();
 
     await expect(runCli(['--help'])).resolves.toBe(0);
-    expect(out.join('\n')).toContain('assets pack <file>');
+    expect(out.join('\n')).toContain('assets pack <pack-description>');
   });
 
   test('--version prints this package version', async () => {
