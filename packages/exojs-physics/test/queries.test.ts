@@ -78,6 +78,19 @@ describe('queries', () => {
     expect((hit as RayHit).normal.x).toBeCloseTo(-1, 6);
   });
 
+  it.each([new CircleShape(10), new BoxShape(20, 20)])('ray casts ignore a solid containing the origin (%s)', shape => {
+    const world = new PhysicsWorld();
+    colliderAt(world, shape, { x: 0, y: 0 });
+
+    for (const origin of [
+      { x: 0, y: 0 },
+      { x: 5, y: 0 },
+    ]) {
+      expect(world.rayCast(origin, { x: 1, y: 0 })).toBeNull();
+      expect(world.rayCastAll(origin, { x: -1, y: 0 })).toEqual([]);
+    }
+  });
+
   it('rayCast hits a circle and reports a radial normal', () => {
     const world = new PhysicsWorld();
     colliderAt(world, new CircleShape(10), { x: 0, y: 100 });

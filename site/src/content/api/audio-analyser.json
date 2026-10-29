@@ -840,7 +840,7 @@
             }
           ],
           "returnType": "Float32Array<ArrayBuffer>",
-          "description": "Mel-scaled spectrum, float domain (dBFS values). Output length = bands."
+          "description": "Mel band power in dBFS, floored at minDecibels for silence. Triangular weights sum linear power before conversion back to dBFS. Returns zeroes while no analyser is connected."
         },
         {
           "name": "getWaveform",
