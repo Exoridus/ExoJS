@@ -1,3 +1,4 @@
+import { logger } from '#core/Logger';
 import type { BrowserGamepad } from '#input/gamepadDefinitions';
 
 import type {
@@ -375,9 +376,18 @@ export class OffscreenPlatform implements PlatformAdapter {
     const delivered = { ...event, preventDefault: suppress, stopImmediatePropagation: suppress };
 
     // Copied because a listener may unsubscribe itself, or another, while the
-    // event is being delivered.
+    // event is being delivered. Each call is isolated the way DOM dispatch
+    // isolates its listeners: a throwing subscriber must not suppress the rest
+    // of the event or unwind into the host's forwarder.
     for (const listener of [...listeners]) {
-      (listener as (event: unknown) => void)(delivered);
+      try {
+        (listener as (event: unknown) => void)(delivered);
+      } catch (error) {
+        logger.error('A platform event listener threw while handling a forwarded event.', {
+          source: 'OffscreenPlatform',
+          error: error instanceof Error ? error : new Error(String(error)),
+        });
+      }
     }
 
     return suppressed;
