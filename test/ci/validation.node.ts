@@ -350,6 +350,92 @@ void test('a completed command retires its pending idle diagnostic process befor
   }
 });
 
+void test('idle inspection runs once per continuous stall and rearms on either output stream', async () => {
+  const childProcess = (await import('node:child_process')).default;
+  const { once } = await import('node:events');
+  const { syncBuiltinESMExports } = await import('node:module');
+  const originalExecFile = childProcess.execFile;
+  const originalSpawn = childProcess.spawn;
+  const originalInterval = globalThis.setInterval;
+  const observers: Array<ReturnType<typeof childProcess.execFile>> = [];
+  let command: ReturnType<typeof childProcess.spawn> | undefined;
+  let clock = Date.now();
+  let tick!: () => void;
+  mock.method(Date, 'now', () => clock);
+  mock.method(globalThis, 'setInterval', (callback: () => void, milliseconds: number) => {
+    if (milliseconds === 15_000) {
+      tick = callback;
+
+      return originalInterval(() => {}, milliseconds);
+    }
+
+    return originalInterval(callback, milliseconds);
+  });
+  mock.method(childProcess, 'spawn', (...args: unknown[]) => {
+    command = Reflect.apply(originalSpawn, childProcess, args);
+
+    return command;
+  });
+  mock.method(childProcess, 'execFile', (...args: unknown[]) => {
+    if (args[0] === 'powershell') {
+      const options = args[2] as { signal?: AbortSignal };
+      const callback = args.at(-1) as (error: Error | null, stdout: string, stderr: string) => void;
+      const observer = originalExecFile(process.execPath, ['-e', ''], { signal: options.signal }, callback);
+      observers.push(observer);
+
+      return observer;
+    }
+
+    return Reflect.apply(originalExecFile, childProcess, args);
+  });
+  syncBuiltinESMExports();
+  const control = join(directory(), 'activity');
+  writeFileSync(control, 'ready');
+  const script =
+    "const fs = require('node:fs'); const path = process.argv[1];" +
+    "fs.watchFile(path, { interval: 10 }, () => { const action = fs.readFileSync(path, 'utf8');" +
+    "if (action === 'exit') process.exit(0); else process[action].write('activity\\n'); });" +
+    "process.stdout.write('ready\\n');";
+  const running = capture(() => run('streams', directory(), { args: ['-e', script, control] }));
+
+  const finishInspection = async (): Promise<void> => {
+    await once(observers.at(-1)!, 'close');
+    await new Promise<void>(resolve => setImmediate(resolve));
+  };
+
+  try {
+    assert.ok(command?.stdout);
+    await once(command.stdout, 'data');
+    clock += 61_000;
+    tick();
+    await finishInspection();
+    assert.equal(observers.length, 1);
+    tick();
+    assert.equal(observers.length, 1, 'A completed snapshot must not repeat without new output');
+
+    for (const stream of ['stdout', 'stderr'] as const) {
+      const activity = once(command[stream]!, 'data');
+      writeFileSync(control, stream);
+      await activity;
+      clock += 61_000;
+      const previous: number = observers.length;
+      tick();
+      assert.equal(observers.length, previous + 1, `${stream} must rearm idle inspection`);
+      await finishInspection();
+      tick();
+      assert.equal(observers.length, previous + 1);
+    }
+  } finally {
+    writeFileSync(control, 'exit');
+    await running;
+    await Promise.all(
+      observers.filter(observer => observer.exitCode === null && observer.signalCode === null).map(observer => once(observer, 'close')),
+    );
+    mock.restoreAll();
+    syncBuiltinESMExports();
+  }
+});
+
 void test('stopping waits for an already aborted idle observer to close', { timeout: 12_000 }, async () => {
   const childProcess = (await import('node:child_process')).default;
   const { syncBuiltinESMExports } = await import('node:module');

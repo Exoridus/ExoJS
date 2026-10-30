@@ -411,19 +411,31 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
     // Observation only - nothing here terminates anything.
     const IDLE_MS = 60_000;
     let lastActivity = Date.now();
+    let activityGeneration = 0;
+    let inspectedGeneration = -1;
     child.stdout?.on('data', () => {
       lastActivity = Date.now();
+      activityGeneration++;
     });
     child.stderr?.on('data', () => {
       lastActivity = Date.now();
+      activityGeneration++;
     });
     const idle = setInterval(() => {
       const idleMs = Date.now() - lastActivity;
 
-      if (finished || closing || idleSnapshot || idleController.signal.aborted || idleMs < IDLE_MS) {
+      if (
+        finished ||
+        closing ||
+        idleSnapshot ||
+        idleController.signal.aborted ||
+        idleMs < IDLE_MS ||
+        inspectedGeneration === activityGeneration
+      ) {
         return;
       }
 
+      inspectedGeneration = activityGeneration;
       idleSnapshot = describeOwnedTree(child.pid, idleController.signal).catch(error => [String(error)]);
       void idleSnapshot.then(tree => {
         trace('idle-snapshot', `idleMs=${idleMs} tree=[${tree.join(' | ')}]`);
