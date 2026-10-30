@@ -58,7 +58,7 @@ export class WebStorageStore implements KeyValueStore {
 
     try {
       // `undefined`, functions and symbols stringify to `undefined` rather than throwing.
-      payload = JSON.stringify(value);
+      payload = (JSON.stringify as (input: unknown) => string | undefined)(value);
     } catch {
       return Promise.reject(new Error('WebStorageStore.set() failed: value is not JSON-serializable.'));
     }
