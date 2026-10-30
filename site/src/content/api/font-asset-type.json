@@ -268,7 +268,7 @@
             }
           ],
           "returnType": "string",
-          "description": "The family name is baked into the face, so one file registered under two families is two resources."
+          "description": "Family and CSS descriptors are baked into the face, so distinct interpretations are distinct resources."
         },
         {
           "name": "sourceIdentity",

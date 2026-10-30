@@ -1,4 +1,4 @@
-﻿import type { MockInstance } from 'vitest';
+import type { MockInstance } from 'vitest';
 
 /**
  * ShaderFilter unit tests for the WebGL2 half.
@@ -7,6 +7,7 @@
  * apply() flow, uniform marshalling, missing-source guard, and lifecycle
  * methods without requiring a real WebGL2RenderingContext.
  */
+import { Signal } from '#core/Signal';
 import type { ShaderFilterUniformValue } from '#rendering/filters/ShaderFilter';
 import { ShaderFilter } from '#rendering/filters/ShaderFilter';
 import { ShaderFilterBackendError } from '#rendering/filters/ShaderFilterBackendError';
@@ -17,7 +18,7 @@ import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
-import { ShaderPrimitives } from '#rendering/types';
+import { BlendModes, ShaderPrimitives } from '#rendering/types';
 import type { View } from '#rendering/View';
 import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
@@ -139,6 +140,7 @@ const makeGlMock = (): WebGL2RenderingContext => {
 // ---------------------------------------------------------------------------
 
 interface MockBackendExtras {
+  setBlendMode: MockInstance;
   bindShader: MockInstance;
   bindTexture: MockInstance;
   bindVertexArrayObject: MockInstance;
@@ -151,8 +153,10 @@ const makeWebGl2Backend = (glOverride?: WebGL2RenderingContext): RenderBackend &
   let currentTarget: RenderTarget = root;
   const stats = createRenderStats();
   const gl = glOverride ?? makeGlMock();
+  const onContextLost = new Signal();
 
   const bindShader = vi.fn();
+  const setBlendMode = vi.fn();
   const bindTexture = vi.fn();
   const bindVertexArrayObject = vi.fn();
   const execute = vi.fn(pass => {
@@ -163,6 +167,7 @@ const makeWebGl2Backend = (glOverride?: WebGL2RenderingContext): RenderBackend &
 
   const backend = {
     backendType: RenderBackendType.WebGl2,
+    onContextLost,
     stats,
     context: gl,
     get renderTarget() {
@@ -217,9 +222,11 @@ const makeWebGl2Backend = (glOverride?: WebGL2RenderingContext): RenderBackend &
       return this;
     },
     destroy() {
+      onContextLost.destroy();
       root.destroy();
     },
     bindShader,
+    setBlendMode,
     bindTexture,
     bindVertexArrayObject,
     execute,
@@ -333,9 +340,72 @@ const glslPassOf = (filter: ShaderFilter): Record<string, unknown> | null =>
 // ---------------------------------------------------------------------------
 
 describe('ShaderFilter on WebGL2', () => {
+  test('selects source-over through the backend before drawing the fullscreen quad', () => {
+    const backend = makeWebGl2Backend();
+    const input = new RenderTexture(8, 8);
+    const output = new RenderTexture(8, 8);
+    const filter = new ShaderFilter({ glsl: { fragment: minimalFragSrc } });
+
+    vi.mocked(backend.context.drawArrays).mockImplementation(() => {
+      expect(backend.setBlendMode).toHaveBeenLastCalledWith(BlendModes.Normal);
+    });
+
+    try {
+      filter.apply(backend, input, output);
+      expect(backend.context.drawArrays).toHaveBeenCalledOnce();
+    } finally {
+      filter.destroy();
+      input.destroy();
+      output.destroy();
+      backend.destroy();
+    }
+  });
+
   // 1. Construction with a GLSL fragment only - succeeds
   test('constructs successfully with only a GLSL fragment source', () => {
     expect(() => new ShaderFilter({ glsl: { fragment: minimalFragSrc } })).not.toThrow();
+  });
+
+  test('invalidates all GL objects on loss, reconnects once and removes its listener on destroy', () => {
+    const backend = makeWebGl2Backend();
+    const gl = backend.context;
+    const filter = new ShaderFilter({ glsl: { fragment: minimalFragSrc } });
+    const input = new RenderTexture(8, 8);
+    const output = new RenderTexture(8, 8);
+
+    try {
+      expect(backend.onContextLost.count).toBe(0);
+      filter.apply(backend, input, output);
+      filter.apply(backend, input, output);
+      expect(backend.onContextLost.count).toBe(1);
+      expect(gl.createProgram).toHaveBeenCalledTimes(1);
+
+      backend.onContextLost.dispatch();
+      expect(backend.onContextLost.count).toBe(0);
+      expect(gl.deleteProgram).toHaveBeenCalledTimes(1);
+      expect(gl.deleteBuffer).toHaveBeenCalledTimes(1);
+      expect(gl.deleteVertexArray).toHaveBeenCalledTimes(1);
+
+      filter.apply(backend, input, output);
+      filter.apply(backend, input, output);
+      expect(backend.onContextLost.count).toBe(1);
+      expect(gl.createProgram).toHaveBeenCalledTimes(2);
+      expect(gl.createBuffer).toHaveBeenCalledTimes(2);
+      expect(gl.createVertexArray).toHaveBeenCalledTimes(2);
+
+      filter.destroy();
+      filter.destroy();
+      backend.onContextLost.dispatch();
+      expect(backend.onContextLost.count).toBe(0);
+      expect(gl.deleteProgram).toHaveBeenCalledTimes(2);
+      expect(gl.deleteBuffer).toHaveBeenCalledTimes(2);
+      expect(gl.deleteVertexArray).toHaveBeenCalledTimes(2);
+    } finally {
+      filter.destroy();
+      input.destroy();
+      output.destroy();
+      backend.destroy();
+    }
   });
 
   // 2. Construction without any source - throws

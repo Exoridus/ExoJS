@@ -34,6 +34,12 @@ describe('@codexo/exojs-particles root', () => {
     expect(ext.id).toBe('@codexo/exojs-particles');
     expect(ext.renderers).toBeDefined();
   });
+
+  it('createParticlesExtension() rejects a batchSize that is not a positive integer', () => {
+    for (const batchSize of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => createParticlesExtension({ batchSize })).toThrow(/batchSize/);
+    }
+  });
 });
 
 describe('particlesExtension renderer binding — renders through the package', () => {

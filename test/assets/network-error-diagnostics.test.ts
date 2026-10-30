@@ -70,6 +70,18 @@ describe.each(policies)('%s network failures', (_name, makePolicy) => {
     expect(networkError.message).toBe('Failed to fetch "https://example.com/missing.json" (404 Not Found).');
   });
 
+  test('cancels an unread error body before reporting the status', async () => {
+    const cancel = vi.fn(async () => {});
+    global.fetch = vi.fn(
+      async () => ({ ok: false, status: 404, statusText: 'Not Found', body: { cancel } }) as unknown as Response,
+    ) as unknown as typeof fetch;
+
+    const error = await acquire(makePolicy(), 'https://example.com/missing.json').catch((reason: unknown) => reason);
+
+    expect(error).toBeInstanceOf(AssetNetworkError);
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
   test('a transport failure rejects with an AssetNetworkError carrying the original rejection as cause', async () => {
     const transportFailure = new TypeError('Failed to fetch');
 

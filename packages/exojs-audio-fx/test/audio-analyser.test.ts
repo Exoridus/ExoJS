@@ -3,6 +3,7 @@ import { getAudioContext, isAudioContextReady } from '@codexo/exojs';
 import { AudioBus } from '@codexo/exojs';
 
 import { AudioAnalyser } from '../src/AudioAnalyser';
+import { buildMelFilterbank } from '../src/dsp/mel';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -466,6 +467,32 @@ describe('AudioAnalyser', () => {
   });
 
   describe('getSpectrumMelFloat', () => {
+    it('floors silent bands and sums mixed bins in power while preserving dBFS output', () => {
+      const a = new AudioAnalyser({ source: makeAudioNode(), fftSize: 512, minDecibels: -90 });
+      const node = (a as unknown as { _analyser: AnalyserNode })._analyser;
+      const read = vi.spyOn(node, 'getFloatFrequencyData').mockImplementation(out => out.fill(-Infinity));
+      expect(Array.from(a.getSpectrumMelFloat(undefined, { bands: 8 }))).toEqual(Array(8).fill(-90));
+      const spectrum = new Float32Array(256).fill(-Infinity);
+      spectrum[8] = -20;
+      spectrum[9] = -40;
+      read.mockImplementation(out => out.set(spectrum));
+      const bands = buildMelFilterbank(8, 20, 20000, 512, getAudioContext().sampleRate);
+      const result = a.getSpectrumMelFloat(undefined, { bands: 8 });
+
+      for (let b = 0; b < bands.length; b++) {
+        const band = bands[b]!;
+        let power = 0;
+
+        for (const bin of [8, 9]) {
+          power += Math.pow(10, spectrum[bin]! / 10) * (band.weights[bin - band.startBin] ?? 0);
+        }
+
+        expect(result[b]).toBeCloseTo(Math.max(-90, 10 * Math.log10(power)), 4);
+      }
+
+      a.destroy();
+    });
+
     it('returns a Float32Array of the requested band count', () => {
       const a = new AudioAnalyser({ source: makeAudioNode(), fftSize: 512 });
       const result = a.getSpectrumMelFloat(undefined, { bands: 16 });

@@ -1378,7 +1378,7 @@
             }
           ],
           "returnType": "RayHit | null",
-          "description": "Nearest collider hit by the ray, or null."
+          "description": "Nearest collider entry hit by the ray, or null. Solids containing the origin are ignored."
         },
         {
           "name": "rayCastAll",
@@ -1613,7 +1613,7 @@
             }
           ],
           "returnType": "RayHit[]",
-          "description": "All collider hits along the ray, sorted by distance. Writes into out (cleared) if given."
+          "description": "All collider entry hits along the ray, sorted by distance. Solids containing the origin are ignored. Writes into out (cleared) if given."
         },
         {
           "name": "remove",

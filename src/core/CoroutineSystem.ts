@@ -152,6 +152,7 @@ export class Coroutine<T = void, P = void> implements Destroyable {
   private _reject: ((reason: unknown) => void) | null = null;
   private _body: CoroutineBody<T, P> | null;
   private _iterator: Iterator<P, T, undefined> | null;
+  private _stepping = false;
   private _priority: number;
   private _abortListener: (() => void) | null = null;
   private readonly _signal: AbortSignal | undefined;
@@ -288,12 +289,8 @@ export class Coroutine<T = void, P = void> implements Destroyable {
 
     this._settle('cancelled', undefined, cancelledError());
 
-    // `return()` runs the body's `finally` blocks; it must not throw into the
-    // caller, which may be a scope tearing down many coroutines at once.
-    try {
-      iterator?.return?.();
-    } catch {
-      // The coroutine is already cancelled; its cleanup failure has nowhere to go.
+    if (!this._stepping) {
+      this._close(iterator);
     }
   }
 
@@ -313,47 +310,69 @@ export class Coroutine<T = void, P = void> implements Destroyable {
    */
   public _step(budget: FrameBudget): boolean {
     this._status = 'running';
-
-    if (this._iterator === null) {
-      const body = this._body;
-
-      if (body === null) {
-        return false;
-      }
-
-      this._body = null;
-
-      try {
-        this._iterator = body(budget);
-      } catch (error) {
-        this._settle('failed', undefined, error);
-
-        return false;
-      }
-    }
-
-    let next: IteratorResult<P, T>;
+    this._stepping = true;
+    let iterator = this._iterator;
 
     try {
-      next = this._iterator.next();
+      if (iterator === null) {
+        const body = this._body;
+
+        if (body === null) {
+          return false;
+        }
+
+        this._body = null;
+        iterator = body(budget);
+
+        if (this.settled) {
+          return false;
+        }
+
+        this._iterator = iterator;
+      }
+
+      const next = iterator.next();
+
+      if (this.settled) {
+        return false;
+      }
+
+      if (next.done === true) {
+        this._settle('done', next.value, undefined);
+
+        return false;
+      }
+
+      this._progress = next.value;
+
+      return true;
     } catch (error) {
       this._settle('failed', undefined, error);
 
       return false;
+    } finally {
+      this._stepping = false;
+
+      // A running generator rejects return(); cancellation must close it after next() returns.
+      if (this.status === 'cancelled') {
+        this._close(iterator);
+      }
     }
+  }
 
-    if (next.done === true) {
-      this._settle('done', next.value, undefined);
-
-      return false;
+  private _close(iterator: Iterator<P, T, undefined> | null): void {
+    try {
+      iterator?.return?.();
+    } catch {
+      // The coroutine is already cancelled; its cleanup failure has nowhere to go.
     }
-
-    this._progress = next.value;
-
-    return true;
   }
 
   private _settle(status: 'done' | 'failed' | 'cancelled', result: T | undefined, thrown: unknown): void {
+    if (this.settled) {
+      return;
+    }
+
     const error = status === 'done' ? undefined : toError(thrown);
 
     this._status = status;
@@ -416,7 +435,7 @@ export class CoroutineSystem implements Destroyable {
   /** See {@link CoroutineSystemOptions.minSlice}. `null` keeps the cadence-derived default. */
   public minSlice: Seconds | null;
 
-  private readonly _coroutines: Array<Coroutine<unknown, unknown>> = [];
+  private _coroutines: Array<Coroutine<unknown, unknown>> = [];
   private readonly _sliceBudget: FrameBudget;
   private _frameTarget: () => Seconds = () => fallbackFrameTargetSeconds;
   private _sliceDeadlineMs = 0;
@@ -511,16 +530,18 @@ export class CoroutineSystem implements Destroyable {
     this._lastFrameMs = hostTimeSource.now() - startedMs;
   }
 
-  /** Cancel every queued coroutine. */
+  /** Cancel currently queued work. Work queued by cancellation cleanup runs in a later frame. */
   public clear(): void {
-    // Copied first: `cancel()` runs the body's `finally`, which may queue or
-    // cancel others and would otherwise mutate the array under the loop.
-    for (const coroutine of [...this._coroutines]) {
+    // Detach first: cancellation can queue new work, and an active frame still
+    // holds this queue until its current pass returns.
+    const coroutines = this._coroutines;
+
+    this._coroutines = [];
+    this._cursor = 0;
+
+    for (const coroutine of coroutines) {
       coroutine.cancel();
     }
-
-    this._coroutines.length = 0;
-    this._cursor = 0;
   }
 
   public destroy(): void {
@@ -528,8 +549,8 @@ export class CoroutineSystem implements Destroyable {
       return;
     }
 
-    this.clear();
     this._destroyed = true;
+    this.clear();
   }
 
   /** @internal A writable {@link Coroutine.priority} invalidates the run order. */

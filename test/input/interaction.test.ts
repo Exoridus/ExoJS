@@ -1553,6 +1553,36 @@ describe('InteractionSystem — drag and drop', () => {
     sprite.destroy();
   });
 
+  test.each(['cancel', 'leave'] as const)('pointer %s balances hover after ending a drag', exit => {
+    const { app, scene, signals, canvas } = createApp();
+    mockPointerCapture(canvas);
+    const im = new InteractionSystem(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+    sprite.interactive = true;
+    sprite.draggable = true;
+    scene.addChild(sprite);
+    const over = vi.fn();
+    const out = vi.fn();
+    const end = vi.fn();
+    sprite.onPointerOver.add(over);
+    sprite.onPointerOut.add(out);
+    sprite.onDragEnd.add(end);
+    dispatchPointer(signals.onPointerMove, { x: 50, y: 50 });
+    flushInteractions(im);
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    flushInteractions(im);
+    dispatchPointer(signals.onPointerMove, { x: 50, y: 90, travelled: pastThreshold });
+    flushInteractions(im);
+    dispatchPointer(exit === 'cancel' ? signals.onPointerCancel : signals.onPointerLeave, { x: 50, y: 90 });
+    flushInteractions(im);
+    expect(end).toHaveBeenCalledTimes(1);
+    expect(over).toHaveBeenCalledTimes(1);
+    expect(out).toHaveBeenCalledTimes(1);
+    im.destroy();
+    sprite.destroy();
+  });
+
   test('pointercancel during drag fires onDragEnd and clears drag state', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);

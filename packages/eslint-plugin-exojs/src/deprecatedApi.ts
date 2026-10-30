@@ -13,7 +13,7 @@
 import { readFileSync } from 'node:fs';
 
 const DOC_COMMENT_BEFORE_EXPORT =
-  /\/\*\*([\s\S]*?)\*\/\s*export\s+(?:abstract\s+)?(?:const|class|function|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g;
+  /\/\*\*([\s\S]*?)\*\/\s*export\s+(?:declare\s+)?(?:abstract\s+)?(?:const|class|function|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g;
 
 /** Strips the leading `*`/`* ` from one JSDoc body line. */
 const stripDocGutter = (line: string): string => line.replace(/^\s*\*\s?/, '').trim();

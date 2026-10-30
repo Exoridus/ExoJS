@@ -97,6 +97,29 @@ describe('judgeRun', () => {
       failure: 'infrastructure',
     });
   });
+
+  it('preserves cleanup failures after a timeout or interruption', () => {
+    for (const outcome of [
+      { timedOut: true, status: 124 },
+      { aborted: true, status: 130 },
+    ]) {
+      expect(judgeRun({ ...outcome, cleanupError: 'descendant survived' }, 'required')).toMatchObject({
+        status: 'FAIL',
+        failure: 'infrastructure',
+        detail: 'process cleanup incomplete: descendant survived',
+        exitCode: outcome.status,
+      });
+    }
+
+    for (const status of [0, 130, 143]) {
+      expect(judgeRun({ status, aborted: true, cleanupError: 'descendant survived' }, 'informational')).toMatchObject({
+        status: 'FAIL',
+        failure: 'infrastructure',
+        detail: 'process cleanup incomplete: descendant survived',
+        exitCode: status || 130,
+      });
+    }
+  });
 });
 
 describe('recorded rows', () => {

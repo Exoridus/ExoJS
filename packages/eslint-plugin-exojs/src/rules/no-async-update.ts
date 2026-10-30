@@ -87,7 +87,8 @@ export const noAsyncUpdate: Rule.RuleModule = {
     return {
       // `class X { async update() {} }`
       MethodDefinition(node) {
-        if (node.kind !== 'method') {
+        // A static member is not on the instance the frame loop dispatches.
+        if (node.kind !== 'method' || node.static) {
           return;
         }
 
@@ -95,6 +96,10 @@ export const noAsyncUpdate: Rule.RuleModule = {
       },
       // `class X { update = async (delta) => {}; }`
       PropertyDefinition(node) {
+        if (node.static) {
+          return;
+        }
+
         check(node.key, node.computed, node.value);
       },
       // `{ async update() {} }` / `{ update: async (delta) => {} }` - a system

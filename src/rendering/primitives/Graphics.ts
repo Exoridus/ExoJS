@@ -313,7 +313,9 @@ export class Graphics extends Container {
   public drawPath(path: number[]): this {
     const data = buildPath(path, this._lineWidth);
 
-    this.addChild(this._createStrokeMesh(data));
+    if (data.indices.length > 0) {
+      this.addChild(this._createStrokeMesh(data));
+    }
 
     return this;
   }
