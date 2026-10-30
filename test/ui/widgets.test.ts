@@ -24,7 +24,7 @@ import { ProgressBar } from '#ui/ProgressBar';
 import { Slider } from '#ui/Slider';
 import { Stack } from '#ui/Stack';
 import type { UITheme } from '#ui/theme';
-import { createUITheme } from '#ui/theme';
+import { createUITheme, defaultUITheme } from '#ui/theme';
 import { Toggle } from '#ui/Toggle';
 import { UIRoot } from '#ui/UIRoot';
 import { Widget } from '#ui/Widget';
@@ -914,6 +914,32 @@ describe('Toggle', () => {
     toggle.checked = false;
 
     expect(toggle.fillNode).toBeNull();
+  });
+
+  test('a hand-written theme without toggleFill falls back to the default fill', () => {
+    const { toggleFill: _omitted, ...legacy } = defaultUITheme;
+    const toggle = new Toggle({ width: 44, height: 24 });
+    const root = new UIRoot();
+
+    root.theme = legacy;
+    root.addChild(toggle);
+    toggle.checked = true;
+
+    expect(toggle.fillNode).toBeInstanceOf(Graphics);
+  });
+
+  test('patching toggleFill over a theme that omits it starts from the default skin', () => {
+    const { toggleFill: _omitted, ...legacy } = defaultUITheme;
+    const patched = createUITheme(
+      {
+        toggleFill: {
+          normal: { background: { kind: 'fill', color: Color.red, borderColor: Color.black, borderWidth: 0, cornerRadius: 2 } },
+        },
+      },
+      legacy,
+    );
+
+    expect(patched.toggleFill?.normal.insets).toEqual(defaultUITheme.toggleFill.normal.insets);
   });
 
   test('it flips on a tap like a checkbox does', () => {

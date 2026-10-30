@@ -152,8 +152,14 @@ export type UIThemeRole =
   | 'caret'
   | 'selection';
 
-/** Skins for every role, as resolved for a widget. */
-export type UITheme = Readonly<Record<UIThemeRole, UISkinSet>>;
+/**
+ * Skins for every role, as resolved for a widget. `toggleFill` may be left out
+ * of a hand-written theme: a checked {@link Toggle} then uses the default
+ * theme's fill.
+ */
+export type UITheme = Readonly<Record<Exclude<UIThemeRole, 'toggleFill'>, UISkinSet>> & {
+  readonly toggleFill?: UISkinSet;
+};
 
 /** Skin fields to override; an omitted field keeps the inherited one. */
 export type UISkinPatch = Partial<UISkin>;
@@ -258,7 +264,7 @@ const buttonInsets: UIInsets = { left: 14, top: 8, right: 14, bottom: 8 };
 const fieldInsets: UIInsets = { left: 12, top: 8, right: 12, bottom: 8 };
 
 /** Asset-free dark surfaces, readable typography and mint interaction accents. */
-export const defaultUITheme: UITheme = {
+export const defaultUITheme: Required<UITheme> = {
   panel: {
     normal: skin(fill(new Color(22, 35, 44), 10, new Color(52, 73, 86), 1)),
   },
@@ -377,6 +383,9 @@ export const applyUIFillPatch = (background: UIBackground, patch: UIFillPatch | 
   };
 };
 
+/** The skin set `theme` defines for `role`, or the default theme's when a hand-written theme leaves the role out. */
+export const themeSkinSet = (theme: UITheme, role: UIThemeRole): UISkinSet => theme[role] ?? defaultUITheme[role];
+
 /** The skin a state paints with, falling back to `normal` where undefined. */
 export const resolveUISkin = (set: UISkinSet, state: UIWidgetState): UISkin => set[state] ?? set.normal;
 
@@ -419,7 +428,7 @@ export const createUITheme = (patch: UIThemePatch, base: UITheme = defaultUIThem
     const setPatch = patch[role];
 
     if (setPatch !== undefined) {
-      merged[role] = mergeSkinSet(base[role], setPatch);
+      merged[role] = mergeSkinSet(themeSkinSet(base, role), setPatch);
     }
   }
 

@@ -3,7 +3,7 @@ import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 
 import type { UISkin, UITheme, UIThemePatch, UIThemeRole, UIWidgetState } from './theme';
-import { createUITheme, resolveUISkin } from './theme';
+import { createUITheme, resolveUISkin, themeSkinSet } from './theme';
 import { ThemedContainer } from './ThemedContainer';
 import type { UIRoot } from './UIRoot';
 
@@ -256,7 +256,7 @@ export abstract class Widget extends ThemedContainer {
 
   /** The skin `role` paints with in this widget's current state. */
   protected _skin(role: UIThemeRole): UISkin {
-    return resolveUISkin(this._theme[role], this._skinState);
+    return resolveUISkin(themeSkinSet(this._theme, role), this._skinState);
   }
 
   /** Switch the state skins resolve for, repainting when it actually changes. */
