@@ -36,6 +36,9 @@ const walkPrototype = (ctor: SceneNodeConstructor): SceneNodeConstructor | null 
  * nearest registered base serializer - nearest across this registry *and* its
  * fallback, never the nearest one this registry happens to know);
  * deserialize resolves by type name.
+ * A type name must identify one constructor across the fallback chain. Conflicts
+ * introduced by later fallback registrations throw when that name or a matching
+ * node is resolved.
  * Core registers the built-in node types; extensions contribute their own via
  * the {@link Extension.serializers} binding.
  *
@@ -60,11 +63,12 @@ export class SerializationRegistry {
 
   /**
    * Register `serializer` for `ctor` under `typeName`. Re-registering the same
-   * `(typeName, ctor)` pair overwrites silently; registering an existing
-   * `typeName` against a **different** constructor throws.
+   * `(typeName, ctor)` pair overwrites silently. A name already bound to a
+   * different constructor in this registry or its fallback chain throws without
+   * changing this registry.
    */
   public register<T extends SceneNode>(typeName: string, ctor: SceneNodeConstructor<T>, serializer: NodeSerializer<T>): void {
-    const existing = this._byName.get(typeName);
+    const existing = this.resolveByName(typeName);
 
     if (existing !== undefined && existing.ctor !== ctor) {
       throw new Error(`A serializer for type name "${typeName}" is already registered for a different constructor.`);
@@ -97,6 +101,8 @@ export class SerializationRegistry {
       const entry = this._resolveExactCtor(ctor);
 
       if (entry !== undefined) {
+        this.resolveByName(entry.typeName);
+
         return entry;
       }
 
@@ -116,7 +122,14 @@ export class SerializationRegistry {
    * @internal
    */
   public resolveByName(typeName: string): SerializerEntry | undefined {
-    return this._byName.get(typeName) ?? this._fallback?.resolveByName(typeName);
+    const own = this._byName.get(typeName);
+    const inherited = this._fallback?.resolveByName(typeName);
+
+    if (own !== undefined && inherited !== undefined && own.ctor !== inherited.ctor) {
+      throw new Error(`A serializer for type name "${typeName}" is already registered for a different constructor.`);
+    }
+
+    return own ?? inherited;
   }
 
   /** Returns `true` if a serializer is registered under `typeName`. */
