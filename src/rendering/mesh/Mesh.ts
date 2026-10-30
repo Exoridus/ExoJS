@@ -290,8 +290,8 @@ const findAttribute = (attributes: readonly GeometryAttribute[], names: Set<stri
  * Read a {@link Geometry}'s standard mesh attributes into the flat
  * `vertices`/`uvs`/`colors` arrays the mesh renderers consume. Only the
  * `triangle-list` topology and the canonical attribute layout (`f32` position
- * and texcoord, `u8`/`u32`/`f32` color) are supported - this is the immediate
- * (non-batched) bridge; shared GPU buffers and instancing arrive later.
+ * and texcoord, `u8`/`u32`/`f32` color) are supported. The flattened arrays
+ * serve both the immediate draw path and the pooled batch source.
  *
  * Exported (not barrelled) so the pooled immediate-draw mesh can reuse the exact
  * same flattening the `Mesh` constructor applies.

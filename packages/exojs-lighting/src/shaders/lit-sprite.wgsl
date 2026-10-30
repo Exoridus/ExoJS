@@ -2,9 +2,9 @@
 // sprite-material prologue, which declares `VertexOutput`, the group(0)
 // projection, the group(1) base-texture slot table and `sampleBase()`.
 //
-// group(2) binding 0 is the engine's user-uniform buffer, unused here: the
-// light count and the ambient term travel in the light texture, so this
-// material has no per-frame uniform to write.
+// group(2) binding 0 is the engine's user-uniform buffer, which carries this
+// material's `emissive` and `normalY` values. The light count and the ambient
+// term travel in the light texture instead.
 @group(2) @binding(1) var u_normalMap: texture_2d<f32>;
 @group(2) @binding(2) var u_normalMapSampler: sampler;
 @group(2) @binding(3) var u_lights: texture_2d<f32>;

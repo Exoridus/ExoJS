@@ -28,11 +28,13 @@ import beatDetectorWorkletSource from './worklets/beat-detector.worklet.ts?workl
 export type BeatDetectorSource = AudioBus | Voice | MediaStream | AudioNode | null;
 
 export interface BeatDetectorOptions {
-  /** Minimum detectable BPM. Default 50. */
+  /** Minimum detectable BPM. Default 50. Keep it below maxBpm; the worklet
+   * assumes a positive finite range and does not validate it. */
   minBpm?: number;
-  /** Maximum detectable BPM. Default 300. */
+  /** Maximum detectable BPM. Default 300. Keep it above minBpm. */
   maxBpm?: number;
-  /** FFT size for onset detection. Default 2048. */
+  /** FFT size for onset detection: an integer power of two of at least 2.
+   * Default 2048. */
   fftSize?: number;
   /** Hop size in samples between successive FFTs. Default 512. */
   hopSize?: number;

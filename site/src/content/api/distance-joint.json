@@ -250,7 +250,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Maximum allowed distance (rope/limit mode)."
+          "description": "Maximum allowed distance (the rope length). Limit mode is fixed at construction; see minLength. Defaults to Infinity in limit mode."
         },
         {
           "name": "minLength",
@@ -271,7 +271,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Minimum allowed distance (rope/limit mode)."
+          "description": "Minimum allowed distance. Limit mode is fixed at construction: a joint built without minLength/maxLength stays an equality joint and ignores later writes to this field."
         }
       ],
       "paragraphs": [],

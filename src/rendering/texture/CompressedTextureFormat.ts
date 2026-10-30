@@ -62,7 +62,7 @@ export enum CompressedTextureFormat {
   Etc2Rgba8Srgb = 'etc2-rgba8srgb',
   /** EAC: single channel, 2:1 ratio. */
   EacR11Unorm = 'eac-r11unorm',
-  /** EAC: two channels, 1:1 ratio. */
+  /** EAC: two channels, 16 bytes per 4x4 block (8 bits per texel). */
   EacRg11Unorm = 'eac-rg11unorm',
   /** ASTC 4x4: RGBA at 8 bits per pixel. Highest ASTC quality. */
   Astc4x4Unorm = 'astc-4x4-unorm',

@@ -1,5 +1,7 @@
 import type { Signal } from '#core/Signal';
 
+import { reportAssetObserverFailure } from './assetDiagnostics';
+
 /** The progress signal surface a {@link LoadBatch} reports into. Implemented by both `Loader` and `LoaderScope`. */
 export interface LoadBatchSignals {
   readonly onLoadStart: Signal<[key: string, url: string]>;
@@ -19,6 +21,7 @@ export interface LoadBatchSignals {
  */
 export class LoadBatch {
   private readonly _signals: LoadBatchSignals;
+  private readonly _pending = new Map<string, number>();
   private _active = 0;
   private _loaded = 0;
   private _total = 0;
@@ -34,26 +37,48 @@ export class LoadBatch {
 
     this._active++;
     this._total++;
+    this._pending.set(key, (this._pending.get(key) ?? 0) + 1);
 
     if (this._active === 1) {
-      this._signals.onLoadStart.dispatch(key, url);
+      this._signals.onLoadStart.dispatchIsolated(reportAssetObserverFailure, key, url);
     }
   }
 
-  /** `error` is omitted for a cancellation: the batch still settles, but nothing failed. */
+  /** Unmatched settlements are ignored. Cancellation settles without reporting an error. */
   public settle(key: string, success: boolean, error?: Error): void {
+    const pending = this._pending.get(key);
+
+    if (pending === undefined) {
+      return;
+    }
+
+    if (pending === 1) {
+      this._pending.delete(key);
+    } else {
+      this._pending.set(key, pending - 1);
+    }
+
     if (success) {
       this._loaded++;
-    } else if (error !== undefined) {
-      this._signals.onLoadError.dispatch(key, error);
     }
 
     this._active--;
-    this._signals.onLoadProgress.dispatch(this._loaded, this._total, key);
+    const loaded = this._loaded;
+    const total = this._total;
+    const complete = this._active === 0;
 
-    if (this._active === 0) {
+    if (complete) {
       this._total = 0;
-      this._signals.onLoadComplete.dispatch();
+    }
+
+    if (!success && error !== undefined) {
+      this._signals.onLoadError.dispatchIsolated(reportAssetObserverFailure, key, error);
+    }
+
+    this._signals.onLoadProgress.dispatchIsolated(reportAssetObserverFailure, loaded, total, key);
+
+    if (complete) {
+      this._signals.onLoadComplete.dispatchIsolated(reportAssetObserverFailure);
     }
   }
 }

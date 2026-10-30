@@ -257,7 +257,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Return true when **any** of the supplied flags are currently set (bitwise OR test). Allocates a rest array and a closure per call - use hasMask on hot paths."
+          "description": "Return true when **any** of the supplied flags are currently set (bitwise OR test). Allocates a rest array per call - use hasMask on hot paths."
         },
         {
           "name": "hasMask",

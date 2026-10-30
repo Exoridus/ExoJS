@@ -4,7 +4,10 @@ import type { Lighting } from '../Lighting';
 
 /** Options every light shares. Each field is also mutable afterwards. */
 export interface LightOptions {
-  /** Light colour. Alpha is ignored. Defaults to opaque white. */
+  /**
+   * Light colour. Alpha is ignored. Defaults to opaque white. A `Color` passed
+   * here is stored, not copied, so mutating it later changes this light.
+   */
   readonly color?: Color;
   /** Linear brightness multiplier. Defaults to `1`. */
   readonly intensity?: number;
@@ -32,13 +35,13 @@ export interface LightOptions {
    */
   readonly softness?: number;
   /**
-   * Texture the light is shone through, sampled across its own bounding square
+   * Texture the light is shone through, sampled across its own bounding rectangle
    * - a window cross, leaf shade, a stained-glass pattern. Multiplied into the
    * light, so a transparent part of the cookie casts nothing and an opaque
    * white one changes nothing.
    *
-   * The square maps onto the texture's full `0..1`, turns with the light and
-   * scales with its radius, so the pattern stays fixed to the lamp rather than
+   * The rectangle maps onto the texture's full `0..1`, turns with the light and
+   * scales with its radius and segment length, so the pattern stays fixed to the lamp rather than
    * to the world. Wrapping is the texture's own business; a cookie meant to end
    * at its edge wants `ClampToEdge`.
    *

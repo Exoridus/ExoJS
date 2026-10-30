@@ -229,10 +229,12 @@ export class RenderTexture extends RenderTarget {
   }
 
   public override destroy(): void {
-    super.destroy();
-
-    if (this.destroyed) {
-      this._source = null;
+    try {
+      super.destroy();
+    } finally {
+      if (this.destroyed) {
+        this._source = null;
+      }
     }
   }
 

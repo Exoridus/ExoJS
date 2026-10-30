@@ -1,6 +1,6 @@
 {
   "title": "Video",
-  "description": "Renders an `HTMLVideoElement` as a live texture on a Sprite. `Video` wraps a video element, manages playback (play/pause/stop/seek, volume, loop, playback rate), and keeps the underlying Texture in sync with the decoded video frame stream via `requestVideoFrameCallback` (falling back to `currentTime` polling on browsers that lack it). Audio is routed through the Web Audio API gain node and can be directed to any AudioBus. Frames are uploaded as sRGB colour, like any other browser image source, so the video is SDR content. The engine has no HDR video path: an HDR clip reaches it as whatever SDR frames the browser hands over.",
+  "description": "Renders an `HTMLVideoElement` as a live texture on a Sprite. `Video` wraps a video element, manages playback (play/pause/stop/seek, volume, loop, playback rate), and keeps the underlying Texture in sync with the decoded video frame stream. Collecting a visible video node compares `currentTime` against the last one seen, and `requestVideoFrameCallback`, where the browser has it, marks a new frame as soon as it is presented. Audio is routed through the Web Audio API gain node and can be directed to any AudioBus. Frames are uploaded as sRGB colour, like any other browser image source, so the video is SDR content. The engine has no HDR video path: an HDR clip reaches it as whatever SDR frames the browser hands over.",
   "symbol": "Video",
   "kind": "class",
   "subsystem": "rendering",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Renders an `HTMLVideoElement` as a live texture on a Sprite.",
-        "`Video` wraps a video element, manages playback (play/pause/stop/seek, volume, loop, playback rate), and keeps the underlying Texture in sync with the decoded video frame stream via `requestVideoFrameCallback` (falling back to `currentTime` polling on browsers that lack it). Audio is routed through the Web Audio API gain node and can be directed to any AudioBus.",
+        "`Video` wraps a video element, manages playback (play/pause/stop/seek, volume, loop, playback rate), and keeps the underlying Texture in sync with the decoded video frame stream. Collecting a visible video node compares `currentTime` against the last one seen, and `requestVideoFrameCallback`, where the browser has it, marks a new frame as soon as it is presented. Audio is routed through the Web Audio API gain node and can be directed to any AudioBus.",
         "Frames are uploaded as sRGB colour, like any other browser image source, so the video is SDR content. The engine has no HDR video path: an HDR clip reaches it as whatever SDR frames the browser hands over."
       ],
       "importLine": "import { Video } from '@codexo/exojs'",
@@ -481,7 +481,7 @@
             }
           ],
           "returnType": "CollisionResponse | null",
-          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (e.g. Line against any shape, Ellipse against Ellipse or Polygon). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
+          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (for example Line against any shape, or Ellipse against a Point). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
         },
         {
           "name": "contains",
@@ -3176,7 +3176,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When true, descendants are geometrically clipped to clipShape. Unlike mask (which is alpha/visibility masking), clip is a hard geometric boundary: - clipShape === null - clip to this node's world-space bounds (getBounds), using the GPU scissor fast path. - clipShape is a Rectangle - clip to that world-space rectangle via scissor. - clipShape is a Geometry - clip to the geometry's silhouette via the stencil buffer (WebGL2). Only fragments inside the shape survive. Clipping wraps the node's final (filtered/masked) output and acts as a render barrier: draw commands are never reordered or batched across the clip boundary."
+          "description": "When true, descendants are geometrically clipped to clipShape. Unlike mask (which is alpha/visibility masking), clip is a hard geometric boundary: - clipShape === null - clip to this node's world-space bounds (getBounds), using the GPU scissor fast path. - clipShape is a Rectangle - clip to that world-space rectangle via scissor. - clipShape is a Geometry - clip to the geometry's silhouette via the stencil buffer on both backends. Only fragments inside the shape survive. Clipping wraps the node's final (filtered/masked) output and acts as a render barrier: draw commands are never reordered or batched across the clip boundary."
         },
         {
           "name": "clipShape",

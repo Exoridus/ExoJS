@@ -43,7 +43,7 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
 // backends pack through - see it for what each texel carries.
 //
 // The shaders divide shadowOffset by u_pageSize (a per-batch uniform shared by
-// compatible atlas textures) to convert px → UV space.
+// compatible atlas textures) to convert px -> UV space.
 
 const nodeTexels = textNodeDataTexels;
 const nodeFloats = textNodeDataFloats;
@@ -102,10 +102,10 @@ interface TextRetainedRendererData {
 
 /**
  * Group-owned WebGL2 replay state for one recorded Text batch: the persistent
- * per-node RGBA32F data texture (10 texels/row - transform AND style, read
- * live by both shader stages) and the drawable→row-index map the
- * own-transform-move O(1) patch uses. Grow-only across recaptures; released by
- * the bundle on destroy.
+ * per-node RGBA32F data texture (20 texels/row - transform, style, gradient
+ * ramp and ink bounds, read live by both shader stages) and the
+ * drawable->row-index map the own-transform-move O(1) patch uses. Grow-only
+ * across recaptures; released by the bundle on destroy.
  */
 class TextRetainedReplayState implements WebGl2RetainedRendererReplayState {
   public nodeDataTexture: DataTexture<TextureFormat.Rgba32F> | null = null;
@@ -382,9 +382,9 @@ export class WebGl2TextRenderer
   }
 
   // ── Node data packing ────────────────────────────────────────────────────
-  // The 10-texel/40-float layout is packed by the shared, backend-free
+  // The 20-texel/80-float layout is packed by the shared, backend-free
   // `packTextNodeData` (mirrors `WebGpuTextRenderer`, byte for byte) - see
-  // `textNodeDataPacker.ts` for the texel-by-texel layout comment.
+  // `nodeDataPacker.ts` for the texel-by-texel layout comment.
 
   private _packNodeData(ni: number, node: Text | BitmapText): void {
     packTextNodeData(this._nodeDataArray, ni * nodeFloats, node);
@@ -743,7 +743,7 @@ export class WebGl2TextRenderer
    * instance buffer (based at the batch byte offset) and its element buffer at
    * the renderer-owned quad-index pattern, then (re)build the group-owned
    * per-node data texture (transform + style, read live by both shader stages)
-   * and the drawable→row-index map the own-transform-move patch uses.
+   * and the drawable->row-index map the own-transform-move patch uses.
    * @internal
    */
   public configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
@@ -867,7 +867,7 @@ export class WebGl2TextRenderer
 
   /**
    * Own-transform-move O(1) patch ({@link OwnTransformRowPatcher}): recompute
-   * only the moved node's transform-texel pair (2 of its 10 texels) via
+   * only the moved node's transform-texel pair (2 of its 20 texels) via
    * `getGlobalTransform()` (group-local - {@link RetainedContainer} composes up
    * to the enclosing boundary only) and upload just that row's 2-texel range in
    * the persisted node-data texture - mirrors `WebGpuTextRenderer`'s buffer

@@ -92,7 +92,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Slide axis in world space at creation (normalised internally). The body may only translate along this axis."
+          "description": "Slide axis in world space at creation (normalised internally). It is stored in body A's frame and re-derived from body A's rotation each step, so it turns with body A; keep the rail body static for a direction that stays fixed in the world."
         },
         {
           "name": "bodyA",

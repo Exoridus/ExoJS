@@ -31,6 +31,11 @@ export const removeStaleShadowRows = <T extends { epoch: number }>(rows: Map<Lig
   }
 };
 
+/**
+ * The revision of a segment buffer's contents: it stays put while the count
+ * and the first `count * 4` floats match the previous call, and increments
+ * when either differs. `clear` drops the retained capacity and resets it.
+ */
 export class ShadowGeometryRevision {
   private _segments = new Float32Array(0);
   private _segmentCount = -1;

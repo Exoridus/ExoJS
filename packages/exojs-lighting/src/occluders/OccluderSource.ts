@@ -24,6 +24,10 @@ export interface OccluderSink {
    * polygon outline is written.
    *
    * Fewer than two points contribute nothing.
+   *
+   * The array is only valid for the duration of the call: a source may hand
+   * over its own scratch buffer and overwrite it for the next polyline, as
+   * {@link PhysicsOccluder} does, so a sink must copy what it keeps.
    */
   addPolyline(points: ArrayLike<number>, closed: boolean): void;
   /**

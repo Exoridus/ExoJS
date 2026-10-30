@@ -11,7 +11,7 @@ import type { Provenance } from '../src/rendering/driver';
 import type { ArchetypeId, Backend, CellResult } from '../src/rendering/EngineAdapter';
 import { type ReportData, writeReport } from '../src/rendering/report';
 import type { ClockReport } from '../src/shared/clock';
-import { mergeCellResults, mergeLibraries } from '../src/shared/report';
+import { csvField, markdownCell, mergeCellResults, mergeLibraries } from '../src/shared/report';
 
 /**
  * A clock fine enough that no fixture duration trips the timer check, so a test
@@ -270,6 +270,17 @@ describe('writePhysicsReport merges into an existing results.json', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  test('keeps a multi-line note inside one markdown row', () => {
+    const result = { ...physicsCell('joints', 1000, 7), note: 'cell errored (isolated; run continued): a\nb|c' };
+
+    writePhysicsReport({ provenance: physicsStamp('151.0'), libraries: [], results: [result] }, dir);
+
+    const md = readFileSync(join(dir, 'results.md'), 'utf8');
+
+    expect(md.split('\n').filter(line => line.startsWith('|'))).toHaveLength(3);
+    expect(md).toContain('a b\\|c');
+  });
+
   test('a subset rerun replaces only the cells it measured ok and takes the newer provenance stamp', () => {
     const first: PhysicsReportData = {
       provenance: physicsStamp('150.0'),
@@ -292,5 +303,63 @@ describe('writePhysicsReport merges into an existing results.json', () => {
       ['box-stack', 4],
       ['joints', 7],
     ]);
+  });
+});
+
+describe('csvField', () => {
+  test('quotes a field holding a carriage return', () => {
+    expect(csvField('before\rafter')).toBe('"before\rafter"');
+  });
+
+  test('leaves a plain field unquoted', () => {
+    expect(csvField('plain note')).toBe('plain note');
+  });
+});
+
+describe('markdownCell', () => {
+  test('collapses a line break to one space before escaping the pipe', () => {
+    expect(markdownCell('a\nb|c')).toBe('a b\\|c');
+    expect(markdownCell('a\r\nb')).toBe('a b');
+    expect(markdownCell('a\rb')).toBe('a b');
+  });
+});
+
+describe('existing report shape', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'exojs-bench-report-shape-'));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  test('refuses a parsed report that is not this schema instead of failing inside the merge', () => {
+    writeFileSync(join(dir, 'results.json'), JSON.stringify({ results: [] }));
+
+    expect(() => writeReport({ provenance: [], libraries: [], results: [] }, dir)).toThrow(/results\.json/);
+  });
+
+  test('refuses a JSON array, which parses but carries no report fields', () => {
+    writeFileSync(join(dir, 'results.json'), '[]');
+
+    expect(() => writeReport({ provenance: [], libraries: [], results: [] }, dir)).toThrow(/results\.json/);
+  });
+
+  test('marks timings untrusted when the adapter identity is unverified', () => {
+    writeReport(
+      {
+        provenance: [{ ...stamp('webgpu', 't1'), adapterUnverified: true }],
+        libraries: [],
+        results: [cell({ archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 2 })],
+      },
+      dir,
+    );
+
+    const md = readFileSync(join(dir, 'results.md'), 'utf8');
+
+    expect(md).toContain('ADAPTER UNVERIFIED');
+    expect(md).toContain('UNTRUSTED (adapter unverified)');
   });
 });

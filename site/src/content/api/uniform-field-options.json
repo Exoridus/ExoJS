@@ -63,7 +63,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Value a fresh instance starts from. Omitted fields start at zero, matrices included. The declaration keeps a copy: mutating the value afterwards does not reach an instance built from it."
+          "description": "Value a fresh instance starts from. Omitted fields start at zero, matrices included. The value is snapshotted when the layout is built; later mutations of the original do not affect an instance constructed afterwards."
         },
         {
           "name": "type",

@@ -1,7 +1,9 @@
 import { CompressedTextureFormat as Format } from '#rendering/texture/CompressedTextureFormat';
 
 export interface BasisTarget {
+  /** Basis transcoder target (`basist::transcoder_texture_format`) handed to the worker. */
   readonly id: number;
+  /** Engine format the transcoded blocks upload as; absent when the target is uncompressed RGBA32. */
   readonly format?: Format;
 }
 
@@ -25,7 +27,15 @@ for (const [linear, srgb, id, alpha] of [
   candidates.set(srgb, { id, format: srgb, alpha, srgb: true });
 }
 
-/** Uses the backend's ranking, retaining all RGB channels and authored alpha. */
+/**
+ * Uses the backend's ranking, retaining all RGB channels and authored alpha.
+ *
+ * When no candidate matches the payload's transfer - or, for a payload with
+ * alpha, none of the alpha-capable candidates is supported - the result is
+ * `{ id: 13 }`, Basis `cTFRGBA32`: uncompressed RGBA, which `decodeKtx2` turns
+ * into an `rgba8` payload at four bytes per texel. The absence of `format` is
+ * what marks that case.
+ */
 export const selectBasisTarget = (formats: readonly Format[], hasAlpha: boolean, srgb: boolean): BasisTarget => {
   for (const format of formats) {
     const candidate = candidates.get(format);

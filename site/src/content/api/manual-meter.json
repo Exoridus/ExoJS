@@ -113,7 +113,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Null or omitted leaves phase unknown."
+          "description": "Zero-based phase of the first tracked beat after reset; an integer from 0 through cyclePulses - 1. Null or omitted leaves phase unknown."
         }
       ],
       "paragraphs": [],

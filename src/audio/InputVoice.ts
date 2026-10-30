@@ -55,6 +55,11 @@ export class InputVoice extends BaseVoice {
    * Record `duration` of the live input and resolve with a playable
    * {@link Sound}. Uses `MediaRecorder` under the hood, then decodes the
    * captured blob into an `AudioBuffer`.
+   *
+   * The resolved {@link Sound} is owned by the caller and must be `destroy()`ed
+   * like any other. Recording is independent of this voice's lifecycle: it
+   * keeps running if the voice is stopped, and rejects if the recorder or the
+   * decode fails.
    */
   public async record(duration: Seconds): Promise<Sound> {
     const recorder = new MediaRecorder(this._stream);

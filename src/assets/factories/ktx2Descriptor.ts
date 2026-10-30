@@ -50,7 +50,9 @@ export interface Ktx2Descriptor {
   readonly typeSize: number;
   readonly pixelWidth: number;
   readonly pixelHeight: number;
+  /** Level ranges actually present in the index: `max(declaredLevelCount, 1)`. */
   readonly levelCount: number;
+  /** Header `levelCount` verbatim; 0 asks the reader to generate mips. */
   readonly declaredLevelCount: number;
   readonly supercompressionScheme: number;
   readonly levels: readonly Ktx2LevelRange[];

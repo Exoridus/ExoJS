@@ -343,7 +343,6 @@ const validateTiledTextData = (raw: unknown, source: string, path: string): Tile
 
 // ── Objects ──────────────────────────────────────────────────────────────────
 
-/** @internal */
 /** Object fields a template supplies and an instance may override. */
 const TEMPLATE_FIELDS: readonly TiledTemplateField[] = [
   'name',

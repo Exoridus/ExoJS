@@ -1,6 +1,6 @@
 {
   "title": "TextAreaOptions",
-  "description": "Options for TextArea.",
+  "description": "Options for TextArea. The visible height defaults to `120` pixels rather than the base field's `36`.",
   "symbol": "TextAreaOptions",
   "kind": "interface",
   "subsystem": "ui",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Options for TextArea."
+        "Options for TextArea. The visible height defaults to `120` pixels rather than the base field's `36`."
       ],
       "importLine": "import { TextAreaOptions } from '@codexo/exojs'",
       "sourceLink": null

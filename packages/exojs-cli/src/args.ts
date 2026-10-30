@@ -55,6 +55,12 @@ export const parseArgs = (argv: readonly string[], spec: OptionSpec): ParsedArgs
       continue;
     }
 
+    // A following option belongs to the caller, not to this value: without
+    // this check `--host --no-spa` silently stores the flag as the host.
+    if (inlineValue === undefined && rest[0] !== undefined && rest[0] !== '-' && rest[0].startsWith('-')) {
+      throw new CliError(`option "--${name}" expects a value`);
+    }
+
     const value = inlineValue ?? rest.shift();
 
     if (value === undefined) {

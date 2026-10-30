@@ -532,9 +532,12 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   /**
    * Draw the pooled pending-draws in the half-open range `[start, end)` as one
    * instanced batch. Callers (flush single-draw and run-batching) guarantee
-   * `end > start` and that every slot in the range shares geometry/shader/
-   * material/blend/texture (see {@link _isSameBatch}). Iterating the range
-   * in place avoids the per-batch array copy a `slice()` would allocate.
+   * `end > start`, that every slot passes {@link _canBatchStatic} (a
+   * plan-path command and static geometry, so the first slot's command and
+   * geometry are non-null), and that every slot in the range shares
+   * geometry/shader/material/blend/texture (see {@link _isSameBatch}).
+   * Iterating the range in place avoids the per-batch array copy a `slice()`
+   * would allocate.
    */
   private _drawStaticBatch(start: number, end: number, backend: WebGl2Backend, connection: MeshRendererConnection): void {
     // In-bounds: `start < end <= _pendingCount`, so `start` is a filled slot.

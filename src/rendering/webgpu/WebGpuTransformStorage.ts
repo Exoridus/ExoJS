@@ -40,8 +40,11 @@ export class WebGpuTransformStorage {
   };
 
   /**
-   * Underlying shared transform buffer. Exposed for internal stats / tests
-   * (write, skip and upload counters); not part of any public surface.
+   * The shared, frame-scoped CPU transform buffer this instance uploads from.
+   * Production code reaches through it for the plan handles - `begin` (frame
+   * reset), `rewindTo` / `frameHash` (nested-plan isolation) and `count` - and
+   * the tests read its write, skip and upload counters. Not part of any public
+   * surface.
    * @internal
    */
   public get buffer(): TransformBuffer {

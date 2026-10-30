@@ -46,7 +46,8 @@ export class Spritesheet {
   /**
    * Parse a {@link SpritesheetData} descriptor, populating `frames`,
    * `sprites`, and `animations`. When `keepFrames` is `false` (default),
-   * all existing frames and sprites are destroyed before parsing.
+   * all existing frames and sprites are destroyed and every animation
+   * definition is cleared before parsing.
    */
   public parse(data: SpritesheetData, keepFrames = false): void {
     if (!keepFrames) {

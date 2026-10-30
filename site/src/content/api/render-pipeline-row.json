@@ -1,6 +1,6 @@
 {
   "title": "RenderPipelineRow",
-  "description": "One row of a RenderPipeline listing produced by RenderPassInspectorLayer.describePipeline. Identity is the pass object; `label` is display-only (no names are required). Nested pipelines increase `depth`.",
+  "description": "One row of a RenderPipeline listing produced by RenderPassInspectorLayer.describePipeline. Rows are positional only: they carry no pass object, and `label` is display-only, so equal labels do not identify equal rows. Nested pipelines increase `depth`.",
   "symbol": "RenderPipelineRow",
   "kind": "interface",
   "subsystem": "debug",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "One row of a RenderPipeline listing produced by RenderPassInspectorLayer.describePipeline. Identity is the pass object; `label` is display-only (no names are required). Nested pipelines increase `depth`."
+        "One row of a RenderPipeline listing produced by RenderPassInspectorLayer.describePipeline. Rows are positional only: they carry no pass object, and `label` is display-only, so equal labels do not identify equal rows. Nested pipelines increase `depth`."
       ],
       "importLine": "import { RenderPipelineRow } from '@codexo/exojs/debug'",
       "sourceLink": null

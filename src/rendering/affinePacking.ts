@@ -37,8 +37,10 @@ import type { Matrix } from '#math/Matrix';
  * # Shared per-node transform slots
  *
  * The shared transform storage ({@link TransformBuffer}) packs each node as
- * `m0 = (a, b, c, d)`, `m1 = (tx, ty, 0, 0)`, `m2 = tint`. The canonical WGSL
- * slot math consuming it is therefore:
+ * `m0 = (a, b, c, d)` and `m1 = (tx, ty, snapMode, 0)` in float rows, with
+ * tint in a parallel rgba8 row (see `TRANSFORM_TINT_BYTES_PER_ROW` and
+ * `packTintRow`). The canonical WGSL slot math consuming the transform rows is
+ * therefore:
  *
  * ```wgsl
  * let worldX = slot.m0.x * localX + slot.m0.y * localY + slot.m1.x; // a·x + b·y + tx

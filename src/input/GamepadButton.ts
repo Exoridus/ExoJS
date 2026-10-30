@@ -55,7 +55,7 @@ export type GamepadButtonChannel = (
 
 /** Construction options for a {@link GamepadButton}. */
 export interface GamepadButtonOptions {
-  /** Negate the raw value before threshold comparison. Default `false`. */
+  /** Invert the raw value within 0..1 (`1 - value`) before the deadzone. Default `false`. */
   invert?: boolean;
   /** Activation threshold in 0..1 - values at or below this read as 0 (deadzone). Default 0.2. */
   threshold?: number;

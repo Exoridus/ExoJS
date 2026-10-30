@@ -3,6 +3,172 @@ import { Panel } from '#ui/Panel';
 import { Stack } from '#ui/Stack';
 
 describe('Stack reactivity', () => {
+  test.each(['row', 'column'] as const)('settles nested %s fractional grow and stretch', direction => {
+    const outer = new Stack({ direction, spacing: 0.5, align: 'stretch' });
+    const one = new Stack({ direction, spacing: 0, align: 'stretch' });
+    const two = new Stack({ direction, spacing: 0, align: 'stretch' });
+    const first = new Panel({ width: 20, height: 10 });
+    const second = new Panel({ width: 20, height: 10 });
+    one.addChild(first);
+    two.addChild(second);
+    one.setGrow(first, 1);
+    two.setGrow(second, 1);
+    outer.addChild(one, two);
+    outer.setGrow(one, 1);
+    outer.setGrow(two, 2);
+
+    for (const [width, height] of [
+      [301, 203],
+      [302, 204],
+    ] as const) {
+      outer.setSize(width, height);
+      const natural = direction === 'row' ? 20 : 10;
+      const leftover = (direction === 'row' ? width : height) - natural * 2 - 0.5;
+      const expected = natural + leftover / 3;
+      expect(direction === 'row' ? one.uiWidth : one.uiHeight).toBeCloseTo(expected);
+      expect(direction === 'row' ? first.uiWidth : first.uiHeight).toBeCloseTo(expected);
+      expect(direction === 'row' ? first.uiHeight : first.uiWidth).toBe(direction === 'row' ? height : width);
+      expect(direction === 'row' ? two.position.x : two.position.y).toBeCloseTo(expected + 0.5);
+      expect(direction === 'row' ? second.uiWidth : second.uiHeight).toBeCloseTo(natural + (leftover * 2) / 3);
+      expect([outer.uiWidth, outer.uiHeight]).toEqual([width, height]);
+    }
+
+    outer.destroy();
+  });
+
+  test.each(['row', 'column'] as const)('releases a detached nested %s constraint on its next layout', direction => {
+    const outer = new Stack({ direction, spacing: 0 });
+    const inner = new Stack({ direction, spacing: 0 });
+    const next = new Stack({ direction, spacing: 0 });
+    const child = new Panel({ width: 20, height: 10 });
+    inner.addChild(child);
+    outer.setSize(300, 200);
+    outer.addChild(inner);
+    outer.align = 'stretch';
+    outer.setGrow(inner, 1);
+    expect([inner.uiWidth, inner.uiHeight]).toEqual([300, 200]);
+    outer.removeChild(inner);
+    inner.layout();
+    expect([inner.uiWidth, inner.uiHeight]).toEqual([20, 10]);
+    next.addChild(inner);
+    child.setSize(50, 30);
+    expect([inner.uiWidth, inner.uiHeight]).toEqual([50, 30]);
+    expect([next.uiWidth, next.uiHeight]).toEqual([50, 30]);
+    outer.destroy();
+    next.destroy();
+  });
+
+  test.each(['row', 'column'] as const)('updates nested %s siblings and ancestors in the constraint release operation', direction => {
+    const ancestor = new Stack({ direction, spacing: 0 });
+    const outer = new Stack({ direction, spacing: 0 });
+    const inner = new Stack({ direction, spacing: 0 });
+    const child = new Panel({ width: 20, height: 10 });
+    const following = new Panel({ width: direction === 'row' ? 5 : 100, height: direction === 'row' ? 100 : 5 });
+    inner.addChild(child);
+    outer.addChild(inner, following);
+    ancestor.addChild(outer);
+    outer.align = 'stretch';
+    child.setSize(50, 30);
+    outer.align = 'start';
+
+    expect(direction === 'row' ? following.position.x : following.position.y).toBe(direction === 'row' ? 50 : 30);
+    expect([inner.uiWidth, inner.uiHeight]).toEqual([50, 30]);
+    expect([outer.uiWidth, outer.uiHeight]).toEqual(direction === 'row' ? [55, 100] : [100, 35]);
+    expect([ancestor.uiWidth, ancestor.uiHeight]).toEqual(direction === 'row' ? [55, 100] : [100, 35]);
+    ancestor.destroy();
+  });
+
+  test.each(['row', 'column'] as const)('releases nested %s stretch without pinning intrinsic sizing', direction => {
+    const outer = new Stack({ direction, spacing: 0 });
+    const inner = new Stack({ direction, spacing: 0 });
+    const child = new Panel({ width: 20, height: 10 });
+    inner.addChild(child);
+    outer.setSize(300, 200);
+    outer.addChild(inner);
+
+    outer.align = 'stretch';
+    expect(direction === 'row' ? inner.uiHeight : inner.uiWidth).toBe(direction === 'row' ? 200 : 300);
+    outer.align = 'start';
+    expect([inner.uiWidth, inner.uiHeight]).toEqual([20, 10]);
+    child.setSize(50, 30);
+    expect([inner.uiWidth, inner.uiHeight]).toEqual([50, 30]);
+    child.setSize(8, 6);
+    expect([inner.uiWidth, inner.uiHeight]).toEqual([8, 6]);
+    outer.destroy();
+  });
+
+  test.each(['row', 'column'] as const)('releases nested %s grow without pinning intrinsic sizing', direction => {
+    const outer = new Stack({ direction, spacing: 0 });
+    const inner = new Stack({ direction, spacing: 0 });
+    const child = new Panel({ width: 20, height: 10 });
+    inner.addChild(child);
+    outer.setSize(300, 200);
+    outer.addChild(inner);
+
+    outer.setGrow(inner, 1);
+    expect(direction === 'row' ? inner.uiWidth : inner.uiHeight).toBe(direction === 'row' ? 300 : 200);
+    outer.setGrow(inner, 0);
+    expect([inner.uiWidth, inner.uiHeight]).toEqual([20, 10]);
+    child.setSize(50, 30);
+    expect([inner.uiWidth, inner.uiHeight]).toEqual([50, 30]);
+    child.setSize(8, 6);
+    expect([inner.uiWidth, inner.uiHeight]).toEqual([8, 6]);
+    outer.destroy();
+  });
+
+  test.each(['row', 'column'] as const)('preserves caller-sized nested %s boxes after stretch and grow release', direction => {
+    const outer = new Stack({ direction, spacing: 0 });
+    const inner = new Stack({ direction, spacing: 0 });
+    const child = new Panel({ width: 20, height: 10 });
+    inner.addChild(child);
+    inner.setSize(80, 40);
+    outer.setSize(300, 200);
+    outer.addChild(inner);
+    outer.align = 'stretch';
+    outer.setGrow(inner, 1);
+    expect([inner.uiWidth, inner.uiHeight]).toEqual([300, 200]);
+    outer.align = 'start';
+    outer.setGrow(inner, 0);
+    child.setSize(50, 30);
+    expect([inner.uiWidth, inner.uiHeight]).toEqual([80, 40]);
+    outer.destroy();
+  });
+
+  test.each(['row', 'column'] as const)('keeps nested %s stretch effective during child reflow', direction => {
+    const outer = new Stack({ direction, spacing: 0 });
+    const inner = new Stack({ direction, spacing: 0, align: 'end' });
+    const child = new Panel({ width: 20, height: 10 });
+    inner.addChild(child);
+    outer.setSize(300, 200);
+    outer.addChild(inner);
+    outer.align = 'stretch';
+    child.setSize(50, 30);
+
+    expect(direction === 'row' ? inner.uiHeight : inner.uiWidth).toBe(direction === 'row' ? 200 : 300);
+    expect(direction === 'row' ? child.position.y : child.position.x).toBe(direction === 'row' ? 170 : 250);
+    outer.align = 'start';
+    expect([inner.uiWidth, inner.uiHeight]).toEqual([50, 30]);
+    outer.destroy();
+  });
+
+  test.each(['row', 'column'] as const)('keeps nested %s grow effective during child reflow', direction => {
+    const outer = new Stack({ direction, spacing: 0 });
+    const inner = new Stack({ direction, spacing: 0 });
+    const child = new Panel({ width: 20, height: 10 });
+    inner.addChild(child);
+    inner.setGrow(child, 1);
+    outer.setSize(300, 200);
+    outer.addChild(inner);
+    outer.setGrow(inner, 1);
+    inner.padding = 2;
+
+    expect(direction === 'row' ? inner.uiWidth : inner.uiHeight).toBe(direction === 'row' ? 300 : 200);
+    expect(direction === 'row' ? child.uiWidth : child.uiHeight).toBe(direction === 'row' ? 296 : 196);
+    outer.setGrow(inner, 0);
+    expect([inner.uiWidth, inner.uiHeight]).toEqual([24, 14]);
+    outer.destroy();
+  });
+
   test('flows a child added with addChild, without an explicit layout call', () => {
     const stack = new Stack({ direction: 'column', spacing: 10 });
     const a = new Panel({ width: 100, height: 30 });

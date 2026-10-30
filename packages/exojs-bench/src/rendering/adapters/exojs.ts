@@ -182,8 +182,8 @@ const createBatchQuad = (): Geometry => {
 
 /**
  * Fixed-function blend modes cycled by the `mixed-blend` / `mixed-material`
- * archetypes. Deliberately only modes 0-4 (`isAdvancedBlendMode` false, see
- * `#rendering/types`): those map to a GPU blend equation and have a
+ * archetypes. Deliberately only the four below (`isAdvancedBlendMode` false,
+ * see `#rendering/types`): those map to a GPU blend equation and have a
  * one-to-one Pixi equivalent. An advanced mode would route through the
  * backdrop-capture compositor here and through a completely different (or
  * absent) path on the other arm, so the comparison would be meaningless.
@@ -244,14 +244,6 @@ interface MutableLeaf {
 }
 
 /**
- * Text leaf for the text archetypes: an SDF {@link Text} node carrying the
- * shared, index-derived glyph run.
- *
- * `fontSize` is fixed across the arms rather than scaled with the node count, so
- * the glyph raster - and therefore the atlas pressure a text scene puts on the
- * engine - is a property of the archetype instead of a property of the cell.
- */
-/**
  * A leaf of the UI-layout tree: a widget with a layout box and nothing painted
  * in it.
  *
@@ -263,6 +255,14 @@ interface MutableLeaf {
  */
 class LayoutLeaf extends Widget {}
 
+/**
+ * Text leaf for the text archetypes: an SDF {@link Text} node carrying the
+ * shared, index-derived glyph run.
+ *
+ * `fontSize` is fixed across the arms rather than scaled with the node count, so
+ * the glyph raster - and therefore the atlas pressure a text scene puts on the
+ * engine - is a property of the archetype instead of a property of the cell.
+ */
 const createTextLeaf = (index: number, glyphs: number): Text => new Text(textForLeaf(index, glyphs), { fontSize: TEXT_FONT_SIZE });
 
 /**
@@ -1604,6 +1604,8 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       releaseTilemap();
       releaseParticles();
       releaseLit();
+      releaseBlur();
+      releasePicking();
       releaseLayout();
 
       if (root !== null) {

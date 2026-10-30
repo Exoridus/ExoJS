@@ -233,7 +233,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Sprite map, applied through Sound.setSprites. Each clip is validated against the sound's buffer, so a bufferless (deferred) sound rejects every definition - add sprites after loaded has settled instead."
         },
         {
           "name": "volume",

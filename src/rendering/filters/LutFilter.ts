@@ -96,10 +96,10 @@ export const lut3dShaderSource = createFilterShader({
  * const filter = new LutFilter({ mode: '3d', size: 17 }).setLut(lut);
  * sprite.filters = [filter];
  *
- * // Animated per-channel curves - shift the ramp every frame:
+ * // Animated per-channel curves - rewrite the ramp every frame:
  * const ramp = LutFilter.identityLut1D();
- * const filter = new LutFilter({ mode: 'rgb1d' }).setLut(ramp);
- * // Replace `ramp.source` per frame with a shifted copy.
+ * const curves = new LutFilter({ mode: 'rgb1d' }).setLut(ramp);
+ * // Shift `ramp.buffer` per frame, then call `ramp.commit()` to upload it.
  * ```
  *
  * Runs on a {@link ShaderFilter} carrying both a GLSL and a WGSL source, so it
@@ -232,7 +232,7 @@ export class LutFilter extends Filter {
   }
 
   /**
-   * Replace the LUT texture. Returns `this` for chaining.
+   * Replace the LUT texture and invalidate cached owners. Returns `this` for chaining.
    *
    * The LUT is sampled as numeric data in the filter's own colour domain, so
    * it must resolve to `colorSpace: 'none'`: `'srgb'` storage would apply its
@@ -248,6 +248,7 @@ export class LutFilter extends Filter {
 
     this._lut = lut;
     this._shaderFilter._setTexture('uLut', lut);
+    this.invalidate();
 
     return this;
   }

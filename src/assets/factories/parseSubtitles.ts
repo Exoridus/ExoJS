@@ -85,6 +85,7 @@ const applyCueSettings = (cue: VTTCue, settings: string): void => {
 
           if (!Number.isNaN(num)) {
             cue.line = num;
+            cue.snapToLines = !linePart.endsWith('%');
           }
 
           if (alignPart !== undefined && validLineAlignValues.has(alignPart)) {

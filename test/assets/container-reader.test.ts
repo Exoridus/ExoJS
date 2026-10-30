@@ -304,3 +304,82 @@ describe('ContainerReader fragments', () => {
     await expect(reader.readEntryRange(reader.entry('note')!, 3, 10)).rejects.toThrow(AssetDecodeError);
   });
 });
+
+describe('ContainerReader failed work', () => {
+  test('concurrent failures share one fetch and a later read retries', async () => {
+    const container = encodeContainer([{ source: 'note', type: 'text', bytes: utf8('hello') }]);
+    const { requests } = serve(container);
+    const reader = await ContainerReader.open('/pack.exoa');
+    const entry = reader.entry('note')!;
+    vi.mocked(global.fetch).mockRejectedValueOnce(new Error('offline'));
+
+    const failed = await Promise.allSettled([reader.readEntry(entry), reader.readEntry(entry)]);
+
+    expect(failed.map(result => result.status)).toEqual(['rejected', 'rejected']);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(text(await reader.readEntry(entry))).toBe('hello');
+    expect(requests).toHaveLength(2);
+    await reader.readEntry(entry);
+    expect(global.fetch).toHaveBeenCalledTimes(3);
+  });
+
+  test.each([
+    ['get', false],
+    ['get', true],
+    ['put', false],
+    ['put', true],
+  ] as const)('%s failure (async=%s) leaves source reads usable', async (method, asynchronous) => {
+    const container = encodeContainer([{ source: 'note', type: 'text', bytes: utf8('hello') }]);
+
+    const failure = (): Promise<never> => {
+      if (asynchronous) {
+        return Promise.reject(new Error('storage unavailable'));
+      }
+
+      throw new Error('storage unavailable');
+    };
+
+    const store: ContainerBlockStore = { get: async () => undefined, put: async () => {} };
+    store[method] = failure;
+    const reader = ContainerReader.fromBuffer(container, { store });
+
+    expect(text(await reader.readEntry(reader.entry('note')!))).toBe('hello');
+    await new Promise(resolve => setTimeout(resolve, 0));
+  });
+});
+
+test('settlement from released pending work does not remove its replacement', async () => {
+  const container = encodeContainer([{ source: 'note', type: 'text', bytes: utf8('hello') }]);
+  serve(container);
+  const reader = await ContainerReader.open('/pack.exoa');
+  const fetch = vi.mocked(global.fetch);
+  const serveFetch = fetch.getMockImplementation()!;
+  let rejectOld = (_error: Error): void => {};
+  let resolveNew = (): void => {};
+  fetch.mockImplementationOnce(
+    () =>
+      new Promise((_resolve, reject) => {
+        rejectOld = reject;
+      }),
+  );
+  const entry = reader.entry('note')!;
+  const oldSettled = reader.readEntry(entry).catch(() => undefined);
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+  reader.release();
+  fetch.mockImplementationOnce(
+    (...args) =>
+      new Promise(resolve => {
+        resolveNew = () => {
+          void serveFetch(...args).then(resolve);
+        };
+      }),
+  );
+  const replacement = reader.readEntry(entry);
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
+  rejectOld(new Error('old source failure'));
+  await oldSettled;
+  const joined = reader.readEntry(entry);
+  resolveNew();
+  expect((await Promise.all([replacement, joined])).map(text)).toEqual(['hello', 'hello']);
+  expect(fetch).toHaveBeenCalledTimes(3);
+});

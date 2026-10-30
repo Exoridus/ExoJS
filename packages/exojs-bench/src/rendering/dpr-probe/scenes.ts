@@ -344,15 +344,12 @@ const buildOverdrawScene = (stageWidth: number, stageHeight: number): ProbeScene
  * and not what this probe is about. Its measured cost is therefore the REPLAY
  * cost, and its interesting column is sharpness, not milliseconds.
  *
- * It is also the only scene WITHOUT text, and not by preference. Measured while
- * building this probe (desktop Chromium, both backends, same page): a
- * `cacheAsTexture` container that contains a `Text` node draws NOTHING on WebGL2
- * - not the text and not its non-text siblings - while the identical scene
- * renders correctly on WebGPU, and while the same content behind a filter (no
- * cache) renders correctly on both. Since iOS Safari is always WebGL2, keeping
- * text here would have made the whole `cacheAsTexture` arm a black rectangle on
- * the device this probe exists for. The omission is stated in the run's notes
- * rather than quietly compensated for.
+ * It is also the only scene WITHOUT text. That was forced by a WebGL2 defect seen
+ * while building this probe: a `cacheAsTexture` container holding a `Text` node
+ * drew nothing, text and non-text siblings alike, while the same scene rendered
+ * correctly on WebGPU. The omission is kept so new captures stay comparable with
+ * the ones taken before the fix; `cacheAsTexture` with text is covered by the
+ * backend cache-as-texture browser tests.
  */
 export const createProbeScene = (id: ProbeSceneId, options: ProbeSceneOptions): ProbeScene => {
   const { stageWidth, stageHeight, mode } = options;

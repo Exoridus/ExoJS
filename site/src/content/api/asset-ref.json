@@ -222,7 +222,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The parsed value. Throws while 'loading' or 'failed' - await loaded or check loadState."
+          "description": "The parsed value. Throws until 'ready' - also while 'idle' (a catalog leaf not yet adopted), 'loading' or 'failed'; check loadState."
         }
       ],
       "paragraphs": [],

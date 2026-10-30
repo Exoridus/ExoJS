@@ -77,7 +77,7 @@ void main(void) {
   // texel 4: (outlineMin, shadowAlpha, shadowBlur, gradientStopCount)
   //          outlineMin = 0.5 → disabled; outlineMin < 0.5 → enabled
   // texel 5: shadowColor
-  // texel 6: (shadowOffX_px, shadowOffY_px, 0, sdfRadius_logical)
+  // texel 6: (shadowOffX_px, shadowOffY_px, decorationOverride, sdfRadius_logical)
   // texel 7: (gradAxisX, gradAxisY, gradBias, 0)
   // texels 10-19: gradient stop colours and offsets
   vec4 tFill    = decodeAuthoredColor(texelFetch(u_nodeData, ivec2(2, ni), 0));

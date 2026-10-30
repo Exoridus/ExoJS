@@ -1,8 +1,9 @@
 // @codexo/exojs/renderer-sdk - curated backend-author surface.
 // Advanced symbols for renderer and backend authors (abstract renderers, render
 // backends, low-level GL/GPU building blocks). Ordinary application code should
-// import from the root `@codexo/exojs` barrel; these symbols are intentionally
-// kept out of it (see src/rendering/public.ts).
+// import from the root `@codexo/exojs` barrel. A few shared primitives (Drawable,
+// Texture, BlendModes, View, ...) are part of that application surface as well;
+// the rest is intentionally kept out of it (see src/rendering/public.ts).
 //
 // Custom renderers extend the ABSTRACT renderers below (AbstractWebGl2Renderer /
 // AbstractWebGl2BatchedRenderer / AbstractWebGpuRenderer) - the subclass-stable

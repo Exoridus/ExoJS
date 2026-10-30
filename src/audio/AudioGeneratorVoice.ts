@@ -54,11 +54,10 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
    */
   private _halted = false;
   /**
-   * `true` once a stop is in flight - an envelope release or a timed fade -
-   * and the voice is only waiting to be finished. Such a voice can no longer be
-   * paused, only ended.
+   * A pending envelope release or timed fade. Such a voice can no longer be
+   * paused, only ended. Only an envelope release must not be rescheduled.
    */
-  private _stopping = false;
+  private _stopping: 'fade' | 'release' | null = null;
   /** Context time the currently-scheduled envelope counts its stages from. */
   private _envelopeStartedAt: number;
   /** Envelope progress frozen at the last {@link AudioGeneratorVoice.pause}. */
@@ -287,15 +286,19 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
     }
 
     if (fade !== undefined && fade > 0) {
-      this._stopping = true;
+      this._stopping = 'fade';
       super.stop(fade);
 
       return;
     }
 
     if (this._envelope) {
+      if (this._stopping === 'release') {
+        return;
+      }
+
       const now = this._audioContext.currentTime;
-      this._stopping = true;
+      this._stopping = 'release';
       this._envelope.releaseAt(this._envelopeGain.gain, now);
       const stopAt = now + this._envelope.release;
 

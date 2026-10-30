@@ -20,7 +20,9 @@ export interface FilterOwner {
  * that is composited back onto the scene after all filters in the chain have
  * been applied. Subclasses implement {@link apply} to run their shader pass.
  * Stock implementations: {@link BlurFilter}, {@link ColorMatrixFilter},
- * {@link LutFilter}. User-supplied GLSL/WGSL shaders: {@link ShaderFilter}.
+ * {@link LutFilter}, {@link BloomFilter}, {@link DropShadowFilter},
+ * {@link DisplacementFilter} and {@link CrtFilter}. User-supplied GLSL/WGSL
+ * shaders: {@link ShaderFilter}.
  */
 export abstract class Filter {
   /**

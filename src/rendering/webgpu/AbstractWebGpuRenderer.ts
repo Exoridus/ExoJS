@@ -17,6 +17,11 @@ import type { WebGpuBackend } from './WebGpuBackend';
  * - onDisconnect(): tear down GPU resources
  * - render(drawable): collect draw call data for the given drawable
  * - flush(): encode and submit command buffers for all collected draw calls
+ *
+ * `connect()` binds the first backend only: while unconnected, a backend of
+ * another type throws; a second call while connected is a no-op regardless of
+ * its type. `disconnect()` flushes and runs `onDisconnect()` before unbinding;
+ * a throw in either leaves the renderer bound.
  */
 export abstract class AbstractWebGpuRenderer<Target extends Drawable> implements Renderer<WebGpuBackend, Target> {
   public readonly backendType = RenderBackendType.WebGpu;

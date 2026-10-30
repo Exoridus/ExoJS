@@ -3,7 +3,7 @@ import type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet
 import type { View } from '#rendering/View';
 
 import { DirtyRowTracker } from './DirtyRowTracker';
-import type { WebGpuRetainedRendererReplayState } from './retainedGroupResources';
+import type { WebGpuRetainedBatchReplayer, WebGpuRetainedRendererReplayState } from './retainedGroupResources';
 import { retainedGroupUniformBytes, retainedTintSlotBytes, retainedTransformSlotBytes } from './retainedGroupResources';
 import { requireRepresentableStorageGrowth } from './storageLimits';
 import { WebGpuNativeRetainedReplay } from './WebGpuNativeRetainedReplay';
@@ -26,16 +26,22 @@ const transformFloatsPerRow = retainedTransformSlotBytes / Float32Array.BYTES_PE
 /** Rows one patch block covers: 2 KB of transform rows, 256 B of tints. */
 const rowsPerPatchBlock = 64;
 
+const flushRendererRowPatches = (state: WebGpuRetainedRendererReplayState): void => {
+  state.flushRowPatches?.();
+};
+
 /**
  * Group-owned GPU resources for one retained group on the WebGPU backend:
  *
  * - an instance VERTEX buffer holding the recorded batch bytes (node indices
  *   rebased group-local),
  * - a STORAGE buffer holding the group's transform rows `[0, N)`,
- * - a 128-byte uniform buffer with the same `ProjectionUniforms` layout as
- *   the shared sprite UBO (projection mat4 + group mat4) so the existing
- *   bind-group(0) layout - and therefore every existing pipeline - is reused
- *   as-is at replay,
+ * - a STORAGE buffer holding the group's tint rows `[0, N)`, uploaded from the
+ *   dirty-row runs after a re-tint,
+ * - a 144-byte uniform buffer with the same leading layout as the shared
+ *   sprite UBO (projection mat4 + group mat4 + snap-viewport vec4), so
+ *   compatible renderers reuse the bind-group(0) layout at replay
+ *   as-is,
  * - cached bind groups(0) pairing them with each renderer layout.
  *
  * Buffers are grow-only across recaptures - no realloc churn under
@@ -86,24 +92,19 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   private _onRelease: ((bundle: WebGpuRetainedGroupBundle) => void) | null;
 
   // ── Replay-time uniform tracking ─────────────────────────────────────────
-  // The 128-byte mirror of the group UBO (projection at [0,16), group matrix
-  // at [16,32)) plus the (view, updateId) it was written for. Replays skip
-  // the writeBuffer while the content is unchanged; a content change while
-  // the OPEN pass already holds this bundle's replayed draws is the same-
-  // frame double-replay hazard and ends the pass first.
+  // The 144-byte mirror of the group UBO (projection at [0,16), group matrix
+  // at [16,32), snap viewport at [32,36)) plus the (view, updateId) it was
+  // written for. Replays skip the writeBuffer while the content is unchanged;
+  // a content change while the OPEN pass already holds this bundle's replayed
+  // draws is the same-frame double-replay hazard and ends the pass first.
   public readonly uboData = new Float32Array(retainedGroupUniformBytes / Float32Array.BYTES_PER_ELEMENT);
   public uboWritten = false;
   public uboView: View | null = null;
   public uboViewUpdateId = -1;
   /** The open pass this bundle's replayed draws were last recorded into. */
   public drawsInPass: WebGpuActiveRenderPass | null = null;
-  /**
-   * Auxiliary replay state owned by an indexed-geometry replayer (mesh). Null
-   * for the sprite-layout renderers, which use this bundle's own UBO/bind
-   * group. Disposed on device loss / destroy so the renderer's group(0) UBO
-   * follows the bundle's lifecycle (grow-only, freed on teardown).
-   */
-  public rendererReplayState: WebGpuRetainedRendererReplayState | null = null;
+  /** Renderer-specific state remains owned until the bundle releases its GPU resources. */
+  public readonly rendererReplayStates = new Map<WebGpuRetainedBatchReplayer, WebGpuRetainedRendererReplayState>();
 
   /** @internal */
   public constructor(accountant: GpuResourceAccountant, onRelease: (bundle: WebGpuRetainedGroupBundle) => void) {
@@ -129,10 +130,11 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   }
 
   /**
-   * The shared frame-buffer row the stored transform rows were rebased from
-   * (see {@link RetainedGroupBundle.transformRowBase}). A group-local row
-   * is `capturedNodeIndex - transformRowBase`; the reconciler maps a moved
-   * node's captured index back to the group-owned storage without re-recording.
+   * The shared frame-buffer row the stored transform rows were rebased from at
+   * CAPTURE finalize - informational, and the marker that this bundle supports
+   * in-place transform patching. The reconciler does NOT map a moved node
+   * through this value; it uses the fragment's own capture-frame base (see
+   * `RetainedGroupFragment.recordedRowBase`).
    */
   public get transformRowBase(): number {
     return this._transformRowBase;
@@ -374,7 +376,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
 
     // A renderer that keeps its own per-node store off this bundle (Text) stages
     // its patches the same way and has no other point to flush them at.
-    this.rendererReplayState?.flushRowPatches?.();
+    this.rendererReplayStates.forEach(flushRendererRowPatches);
   }
 
   /**
@@ -462,9 +464,12 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
     this.uboView = null;
     this.uboViewUpdateId = -1;
     this.drawsInPass = null;
-    // The mesh replayer's group(0) UBO belonged to the dropped device state.
-    this.rendererReplayState?.destroy();
-    this.rendererReplayState = null;
+
+    for (const state of this.rendererReplayStates.values()) {
+      state.destroy();
+    }
+
+    this.rendererReplayStates.clear();
 
     if (this._accountedBytes > 0) {
       this._accountant.free(this._accountedBytes);

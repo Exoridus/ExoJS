@@ -288,6 +288,45 @@ describe('RenderingContext', () => {
     result.destroy();
   });
 
+  test.each(['draw', 'clear', 'coordinator'])('capture releases its unreturned texture after a %s failure', stage => {
+    const { backend, draw, clear, setRenderTargetSpy } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const sprite = new Sprite(createTexture());
+    const failure = new Error('capture failed');
+    const previousTarget = backend.renderTarget;
+    const previousView = backend.view;
+    let allocated: RenderTarget | null = null;
+
+    if (stage === 'coordinator') {
+      Object.defineProperty(backend, 'passCoordinator', {
+        value: {
+          withChildPass(descriptor: { target: RenderTarget }): void {
+            allocated = descriptor.target;
+
+            throw failure;
+          },
+        },
+      });
+    } else if (stage === 'clear') {
+      clear.mockImplementation(() => {
+        throw failure;
+      });
+    } else {
+      draw.mockImplementation(() => {
+        throw failure;
+      });
+    }
+
+    expect(() => context.capture(sprite, { width: 64, height: 64, clearColor: Color.black })).toThrow(failure);
+
+    allocated ??= setRenderTargetSpy.mock.calls[0]![0]!;
+
+    expect(allocated.destroyed).toBe(true);
+    expect(backend.renderTarget).toBe(previousTarget);
+    expect(backend.view).toBe(previousView);
+    sprite.destroy();
+  });
+
   test('renderTo restores previous render target on exception', () => {
     const { backend, root, draw } = createMockBackend();
     const context = new RenderingContext(backend);

@@ -33,8 +33,9 @@ export interface LdtkToTileMapOptions {
    *
    * When provided, tile layers are populated with tile data from
    * `gridTiles` / `autoLayerTiles`. Without this map, tile layers are created
-   * with the correct dimensions but no tiles are placed - only entity and
-   * object layers carry data.
+   * with the correct dimensions but no tiles are placed; IntGrid layers still
+   * expose their raw CSV and value definitions, and level/entity metadata is
+   * unaffected.
    *
    * Populate via {@link import('./loadLdtkMap').loadLdtkMap} for asset-loading
    * flows, or pass a hand-crafted map for testing.
@@ -53,6 +54,10 @@ export interface LdtkToTileMapOptions {
  *
  * Pass `options.tilesets` to populate tile data; omit it for structure-only
  * conversion (useful in unit tests that do not need textures).
+ *
+ * Externalized levels (`layerInstances: null`) convert to empty maps -
+ * resolve their `.ldtkl` payloads through `loadLdtkMap` or
+ * {@link import('./LdtkProject').LdtkProject}.
  *
  * Transparently handles both LDtk root shapes via {@link getLdtkLevelEntries}:
  * single-world (`data.levels`) and multi-world (`data.worlds[].levels`) - in

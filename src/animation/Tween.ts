@@ -157,7 +157,8 @@ export class Tween<T extends object = object> {
    * easing function, not the raw elapsed/duration ratio.
    *
    * Returns `0` while the tween is in the delay phase (state is `Active` but
-   * the configured delay has not yet elapsed).
+   * the configured delay has not yet elapsed), except for a zero-duration
+   * tween, which reports `1` immediately, delay included.
    */
   public get progress(): number {
     if (this._duration === 0) {
@@ -369,7 +370,10 @@ export class Tween<T extends object = object> {
    * @internal
    */
   public _attachSystem(system: TweenSystem): void {
-    this._system = system;
+    if (this._system !== system) {
+      this._system?.remove(this);
+      this._system = system;
+    }
   }
 
   /**
@@ -426,7 +430,9 @@ export class Tween<T extends object = object> {
     }
 
     // Apply interpolation.
-    this._applyProgress();
+    if (!this._applyProgress()) {
+      return;
+    }
 
     if (this._elapsed >= this._duration) {
       // Cycle complete.
@@ -439,6 +445,11 @@ export class Tween<T extends object = object> {
         }
 
         this._onRepeat?.();
+
+        // Pausing defers property writes, but still prepares the next cycle.
+        if (!this._canPrepareNextCycle()) {
+          return;
+        }
 
         // Flip direction for yoyo.
         if (this._yoyo) {
@@ -458,6 +469,10 @@ export class Tween<T extends object = object> {
         this._complete();
       }
     }
+  }
+
+  private _canPrepareNextCycle(): boolean {
+    return this._state === TweenState.Active || this._state === TweenState.Paused;
   }
 
   private _captureStartValues(): void {
@@ -481,9 +496,9 @@ export class Tween<T extends object = object> {
     this._startValues = snap;
   }
 
-  private _applyProgress(): void {
-    if (this._startValues === null) {
-      return;
+  private _applyProgress(): boolean {
+    if (this._startValues === null || this._state !== TweenState.Active) {
+      return false;
     }
 
     const rawT = this._duration === 0 ? 1 : Math.min(this._elapsed / this._duration, 1);
@@ -505,12 +520,17 @@ export class Tween<T extends object = object> {
     }
 
     this._onUpdate?.(easedT);
+
+    return this.state === TweenState.Active;
   }
 
   private _complete(): void {
     // Ensure the target is at its final interpolated position.
     this._elapsed = this._duration;
-    this._applyProgress();
+
+    if (!this._applyProgress()) {
+      return;
+    }
 
     this._state = TweenState.Complete;
     this._system?.remove(this);

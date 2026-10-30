@@ -19,6 +19,26 @@ const createReporter = (): { reporter: ApplicationErrorReporter; onError: Signal
 };
 
 describe('ApplicationErrorReporter', () => {
+  test('a throwing error observer does not prevent subsequent observers or the fatal-frame decision', () => {
+    const onError = new Signal<[error: Error]>();
+    const received: Error[] = [];
+    const failure = new Error('frame failed');
+
+    onError.add(() => {
+      throw new Error('observer failed');
+    });
+    onError.add(error => received.push(error));
+
+    const reporter = new ApplicationErrorReporter(onError, null);
+
+    for (let attempt = 1; attempt <= maxConsecutiveFrameErrors; attempt++) {
+      expect(reporter.recordFrameError(failure)).toBe(attempt === maxConsecutiveFrameErrors);
+    }
+
+    expect(received).toEqual([failure, failure, failure]);
+    expect(reporter.recent).toHaveLength(maxConsecutiveFrameErrors);
+  });
+
   beforeEach(() => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });

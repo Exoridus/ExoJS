@@ -39,7 +39,8 @@ export class SoundFactory implements AssetFactory<ArrayBuffer, Sound, SoundAsset
     let audioBuffer: AudioBuffer;
 
     try {
-      audioBuffer = await decodeAudioData(source);
+      // Web Audio consumes its input buffer; the source may still belong to a cache or another acquisition.
+      audioBuffer = await decodeAudioData(source.slice(0, source.byteLength));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
 

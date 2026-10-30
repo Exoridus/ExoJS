@@ -415,7 +415,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Set to true if the atlas was produced by msdf-atlas-gen (MSDF). Selects the text-msdf shader which applies the median SDF formula. Defaults to false (colour/RGBA atlas)."
+          "description": "Set to true if the atlas was produced by msdf-atlas-gen (MSDF). Selects the text-msdf shader which applies the median SDF formula. Defaults to false (colour/RGBA atlas). Read once at construction: setFont replaces the atlas without changing it, so a node switched between colour and MSDF fonts needs a new instance."
         },
         {
           "name": "outlineColor",

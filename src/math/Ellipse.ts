@@ -28,7 +28,8 @@ import { Vector } from './Vector';
  * {@link Collidable} for use in the intersection pipeline.
  *
  * `collidesWith` supports: SceneNode (AABB), Rectangle, Circle, Polygon, and
- * Ellipse. Ellipse-vs-Line always returns `null` - use `intersectsWith`.
+ * Ellipse. Point and Line targets always return `null` - use
+ * `intersectsWith`.
  */
 export class Ellipse implements ShapeLike {
   public readonly collisionType: CollisionType = CollisionType.Ellipse;
@@ -123,6 +124,11 @@ export class Ellipse implements ShapeLike {
     return out.set(this.x - this.rx, this.y - this.ry, this.rx * 2, this.ry * 2);
   }
 
+  /**
+   * An ellipse has no discrete edge normals, so this returns an empty array and
+   * SAT (for example `collidesWith(Polygon)`) separates using only the other
+   * shape's axes, which is approximate.
+   */
   public getNormals(): Vector[] {
     return [];
   }

@@ -65,8 +65,8 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
    * Retained-batch capability opt-in: a tile chunk's per-flush
    * instanced batches (fixed 32-byte layout, tile word at word 7) can be
    * recorded into a group's instruction set and replayed from group-owned
-   * resources. Pixel-snapped draws are excluded by the collect-time
-   * recordability predicate (and belt-and-braces poisoning in {@link render});
+   * resources. Both pixel-snap modes resolve in the vertex shader from the
+   * transform row, so a pixel-snapped tile chunk is recordable like any other;
    * tile chunks have no custom-material path to exclude.
    * @internal
    */
@@ -272,8 +272,8 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     // Retained recording: while a capture window is open, hand the
     // exact packed instance words of this flush to the backend - byte-
     // identical to what just drew. A batch always binds a single tileset
-    // texture (slot 0); a pixel-snapped node already poisoned the capture in
-    // render().
+    // texture (slot 0); pixel snapping rides on the transform row, so a
+    // snapped node records and replays like any other.
     if (backend._isRetainedCapturing && this._currentTexture !== null) {
       this._recordTextures[0] = this._currentTexture;
       backend.recordRetainedBatch(

@@ -84,6 +84,14 @@ export class BasisKtx2Runtime {
     });
   }
 
+  /**
+   * Terminate the worker and fail every pending request with the same error;
+   * later work is rejected with it too, except a call whose signal is already
+   * aborted, which keeps its `AbortError`.
+   *
+   * Called by the owning factory when the runtime is torn down; a destroyed
+   * runtime cannot be reused.
+   */
   public destroy(): void {
     this._fail(new Error('Basis worker runtime was destroyed.'));
   }

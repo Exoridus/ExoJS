@@ -29,7 +29,8 @@ export interface StaticServer {
   /** The address to open, with the port actually bound. */
   readonly url: string;
   readonly port: number;
-  /** Stops listening and waits for the open connections to finish. */
+  /** Stops listening, tears down remaining HTTP connections and resolves on the
+   * `server.close` callback; in-flight responses are not awaited. */
   close(): Promise<void>;
 }
 
@@ -84,6 +85,10 @@ const resolveRange = (header: string | undefined, size: number): ByteRange | 'un
 
   if (start >= size) {
     return 'unsatisfiable';
+  }
+
+  if (hasEnd && Number(rawEnd) < start) {
+    return null;
   }
 
   return { start, end: hasEnd ? Math.min(Number(rawEnd), size - 1) : size - 1 };

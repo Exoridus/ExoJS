@@ -154,7 +154,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Append a polyline given as [x0, y0, x1, y1, ...] in world space. With closed, the last point is joined back to the first, which is how a polygon outline is written. Fewer than two points contribute nothing."
+          "description": "Append a polyline given as [x0, y0, x1, y1, ...] in world space. With closed, the last point is joined back to the first, which is how a polygon outline is written. Fewer than two points contribute nothing. The array is only valid for the duration of the call: a source may hand over its own scratch buffer and overwrite it for the next polyline, as PhysicsOccluder does, so a sink must copy what it keeps."
         },
         {
           "name": "addSegment",

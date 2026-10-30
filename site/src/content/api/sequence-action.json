@@ -308,7 +308,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "How far the pattern has advanced, as completedSteps / totalSteps - in [0, (n-1)/n] for n steps, and never 1: the same update that accepts the final step also sets triggered and resets progress back to 0, so a caller polling both together never observes progress at its nominal maximum. maxGap/timeout expiry is evaluated once per frame against ActionSample.timestamp as well as against each arriving batch, so a half-completed pattern that goes quiet snaps back to 0 on the frame its window actually elapses - no event has to arrive first. It is still not a timer: expiry is observed on the frames the owning ActionMap is updated, so a map that is detached or unavailable holds its progress until it is fed again."
+          "description": "How far the pattern has advanced, as completedSteps / totalSteps - in [0, (n-1)/n] for n steps, and never 1: the same update that accepts the final step also sets triggered and resets progress back to 0, so a caller polling both together never observes progress at its nominal maximum. maxGap/timeout expiry is evaluated once per frame against ActionSample.timestamp as well as against each arriving batch, so a half-completed pattern that goes quiet snaps back to 0 on the frame its window actually elapses - no event has to arrive first. It is still not a timer: expiry is observed on the frames the owning ActionMap is updated, so a map that is detached holds its progress until it is fed again, while one that becomes unavailable is reset and re-armed from the live channel state when it resumes."
         },
         {
           "name": "triggered",

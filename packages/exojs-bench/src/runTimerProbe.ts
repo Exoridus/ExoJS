@@ -31,6 +31,8 @@ import { chromium } from 'playwright';
 import { LAUNCH_FLAGS, readEngineVersion, readWebGpuAdapter, startViteServer, WEBGPU_LAUNCH_FLAGS } from './rendering/driver';
 import type { Backend } from './rendering/EngineAdapter';
 import type { TimerFrameRecord, TimerProbeMode, TimerProbeResult, TimerProbeSpec } from './rendering/page/timerProbe';
+import { parsePositiveInt } from './shared/args';
+import { median, percentile } from './shared/timing';
 
 const args = process.argv.slice(2);
 
@@ -46,15 +48,21 @@ const list = (name: string, fallback: string): string[] =>
     .map(value => value.trim())
     .filter(value => value.length > 0);
 
-const nodeCounts = list('nodes', '1000000').map(Number);
+const nodeCountTokens = list('nodes', '1000000');
+const nodeCounts = nodeCountTokens.map(value => parsePositiveInt('--nodes', value));
+
+if (nodeCounts.length === 0) {
+  throw new Error('--nodes must name at least one positive integer node count.');
+}
+
 const configs = list('config', 'retained') as Array<'current' | 'retained'>;
 const backends = list('backends', 'webgpu') as Backend[];
 const modes = list('mode', 'pipelined') as TimerProbeMode[];
 const archetype = flag('archetype') ?? 'scrolling-world';
-const timedFrames = Number(flag('frames') ?? 30);
-const warmupFrames = Number(flag('warmup') ?? 40);
-const repeats = Number(flag('repeats') ?? 1);
-const controlSamples = Number(flag('control-samples') ?? 20);
+const timedFrames = parsePositiveInt('--frames', flag('frames') ?? '30');
+const warmupFrames = parsePositiveInt('--warmup', flag('warmup') ?? '40');
+const repeats = parsePositiveInt('--repeats', flag('repeats') ?? '1');
+const controlSamples = parsePositiveInt('--control-samples', flag('control-samples') ?? '20');
 const noDrain = args.includes('--no-drain');
 const noTimestamps = args.includes('--no-timestamps');
 const controlsOnly = args.includes('--controls-only');
@@ -87,23 +95,6 @@ const cellKey = (spec: TimerProbeSpec): string =>
     spec.drainAfterWarmup ? 'drained' : 'undrained',
     spec.timestampQueries ? 'ts' : 'no-ts',
   ].join(' ');
-
-const median = (values: readonly number[]): number => {
-  const sorted = [...values].sort((a, b) => a - b);
-
-  return sorted.length === 0 ? 0 : sorted[Math.floor(sorted.length / 2)]!;
-};
-
-/** Nearest-rank percentile - the same definition `shared/timing.ts` uses. */
-const percentile = (values: readonly number[], p: number): number => {
-  const sorted = [...values].sort((a, b) => a - b);
-
-  if (sorted.length === 0) {
-    return 0;
-  }
-
-  return sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil((p / 100) * sorted.length) - 1))]!;
-};
 
 const max = (values: readonly number[]): number => (values.length === 0 ? 0 : Math.max(...values));
 

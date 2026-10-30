@@ -137,6 +137,7 @@ export class Text extends AbstractText {
    * `GlyphAtlas.clear()` just discarded and repacked differently.
    */
   private readonly _onAtlasCleared = (): void => {
+    this._releaseShapedSource();
     this._markDirty('layout');
   };
 
@@ -215,6 +216,7 @@ export class Text extends AbstractText {
 
   public set style(v: TextStyle | TextStyleOptions) {
     this._replaceStyle(v instanceof TextStyle ? v : new TextStyle(v));
+    this._faceLoadVersion++;
 
     if (!(v instanceof TextStyle)) {
       const face = this._extractFace(v);
@@ -375,7 +377,7 @@ export class Text extends AbstractText {
 
   /**
    * Register `face` with `document.fonts` if needed, await its load, then
-   * clear the relevant atlas slice and rebuild geometry.
+   * clear the typeface's measurements and rasters, then rebuild geometry.
    *
    * Uses a version counter to discard stale loads when the style is replaced
    * before the previous face finishes loading.

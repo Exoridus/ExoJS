@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Attack time in milliseconds - how quickly the ducker engages. Default 30."
         },
         {
           "name": "ratio",
@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Compression ratio applied above the threshold. Range 1..20, default 4."
         },
         {
           "name": "releaseMs",
@@ -101,7 +101,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Release time in milliseconds - how quickly the ducker disengages. Default 300."
         },
         {
           "name": "sidechain",
@@ -122,7 +122,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Bus whose level drives the attenuation. Required."
         },
         {
           "name": "threshold",
@@ -147,7 +147,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Sidechain level above which the main signal is attenuated, in dBFS. Range -100..0, default -20."
         }
       ],
       "paragraphs": [],

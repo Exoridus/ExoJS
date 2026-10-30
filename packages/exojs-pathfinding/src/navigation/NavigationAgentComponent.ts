@@ -240,6 +240,7 @@ export class NavigationAgentComponent<Payload = unknown> extends BehaviorCompone
     this._target = null;
     this._hasGoal = false;
     this._path = null;
+    this._waypoint = 0;
     this._replanRequested = false;
     this._pendingSince = -1;
     this._halt();
@@ -304,6 +305,7 @@ export class NavigationAgentComponent<Payload = unknown> extends BehaviorCompone
   protected override onDestroy(): void {
     this._target = null;
     this._path = null;
+    this._waypoint = 0;
     this._hasGoal = false;
     this.onStatusChange.destroy();
   }

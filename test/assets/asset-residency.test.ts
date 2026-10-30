@@ -13,6 +13,7 @@ import type { Loader } from '#assets/Loader';
 import { LoaderScope } from '#assets/LoaderScope';
 import type { SeamlessAdapter } from '#assets/seamless';
 import type { WeakHandleSet } from '#assets/WeakHandleSet';
+import { Signal } from '#core/Signal';
 
 import { testAssetType } from './test-asset-type';
 
@@ -79,9 +80,13 @@ const createResidency = (overrides: { cache?: AssetCache; concurrency?: number }
     ownsCache: true,
     connectivity: null,
   });
-  const onProgress = { dispatch: vi.fn() } as unknown as import('#core/Signal').Signal<[number, number]>;
-  const onLoaded = { dispatch: vi.fn() } as unknown as import('#core/Signal').Signal<[unknown, string, unknown]>;
-  const onError = { dispatch: vi.fn() } as unknown as import('#core/Signal').Signal<[unknown, string, Error]>;
+  const onProgress = new Signal<[number, number]>();
+  const onLoaded = new Signal<[unknown, string, unknown]>();
+  const onError = new Signal<[unknown, string, Error]>();
+
+  vi.spyOn(onProgress, 'dispatchIsolated');
+  vi.spyOn(onLoaded, 'dispatchIsolated');
+  vi.spyOn(onError, 'dispatchIsolated');
 
   // Several cases here drive the residency with no type installed at all, which
   // is a legitimate state for it: the identity is spelled out rather than looked
@@ -111,6 +116,45 @@ const createResidency = (overrides: { cache?: AssetCache; concurrency?: number }
 };
 
 describe('AssetResidency', () => {
+  test.each([-1, NaN, Infinity, 1.5])('rejects invalid background concurrency %s at construction and assignment', concurrency => {
+    expect(() => createResidency({ concurrency })).toThrow(RangeError);
+
+    const { residency } = createResidency();
+
+    expect(() => residency.setConcurrency(concurrency)).toThrow(RangeError);
+    expect(() => residency.setConcurrency(1)).not.toThrow();
+    residency.destroy();
+  });
+
+  test('a throwing value disposer still re-arms refs and permits a fresh claim', async () => {
+    const { residency, typeRegistry, canonical } = createResidency({ cache: createFakeCache(() => 'reloaded').cache });
+    const failure = new Error('dispose failed');
+
+    installTypeA(typeRegistry, {
+      dispose: () => {
+        throw failure;
+      },
+    });
+
+    const scope = new LoaderScope(fakeLoader, 'scope', 'scope');
+    const asset = canonical(TypeA, 'a.json');
+    const ref = residency._getRef(asset);
+
+    residency._claim(asset, scope);
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(ref.state).toBe('ready');
+    expect(() => residency._release(asset.key, scope)).not.toThrow();
+    expect(ref.state).toBe('loading');
+    expect(residency._peekResource(asset.key)).toBeNull();
+
+    residency._claim(asset, scope);
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(ref.value).toBe('reloaded');
+    residency.destroy();
+  });
+
   describe('claim / release / eviction', () => {
     test('claim then release at refcount 0 evicts a stored, seamless-adapted resource', async () => {
       const { residency, typeRegistry, canonical } = createResidency();
@@ -268,7 +312,7 @@ describe('AssetResidency', () => {
       expect(adapter.fill).toHaveBeenCalledWith(handleB, donor);
       // The signals boundary - onLoaded dispatches with the REPRESENTATIVE handle
       // (handleA), the same value _storeResource returned above, not the raw donor.
-      expect(onLoaded.dispatch).toHaveBeenCalledWith(TypeA, 'a.png', handleA);
+      expect(onLoaded.dispatchIsolated).toHaveBeenCalledWith(expect.any(Function), TypeA, 'a.png', handleA);
     });
 
     test('free-on-arrival: a key whose last claim released mid-fetch evicts immediately once the fetch lands', () => {
@@ -330,7 +374,7 @@ describe('AssetResidency', () => {
       residency._getSeamless(canonical(TypeA, 'fail.png'), adapter);
       await new Promise(r => setTimeout(r, 0));
 
-      expect(onError.dispatch).toHaveBeenCalledWith(TypeA, 'fail.png', expect.any(Error));
+      expect(onError.dispatchIsolated).toHaveBeenCalledWith(expect.any(Function), TypeA, 'fail.png', expect.any(Error));
     });
   });
 
@@ -348,7 +392,7 @@ describe('AssetResidency', () => {
       expect(residency._peekResource(canonical(TypeA, 'bg.png').key)).toBe('bg-value');
       // The signals boundary - onProgress dispatches the (loaded, total) counts as
       // the single queued entry completes.
-      expect(onProgress.dispatch).toHaveBeenCalledWith(1, 1);
+      expect(onProgress.dispatchIsolated).toHaveBeenCalledWith(expect.any(Function), 1, 1);
     });
 
     test('a direct claim on a queued key boosts it out of the background queue immediately', async () => {
@@ -414,7 +458,7 @@ describe('AssetResidency', () => {
       residency._release(asset.key, scope);
 
       await expect(pending).resolves.toBeUndefined();
-      expect(onProgress.dispatch).toHaveBeenLastCalledWith(0, 0);
+      expect(onProgress.dispatchIsolated).toHaveBeenLastCalledWith(expect.any(Function), 0, 0);
     });
 
     test('setConcurrency changes how many entries drain concurrently', async () => {
@@ -522,6 +566,63 @@ describe('AssetResidency', () => {
       expect(residency._getHandleKey(handle)).toBe(canonical(TypeA, 'a.png').key);
       expect(residency._getHandleKey({})).toBeUndefined();
     });
+  });
+
+  test('destroy continues failing pending handles after an adapter failure and clears tracking', () => {
+    const cache = createFakeCache(() => new Promise(() => {})).cache;
+    const { residency, typeRegistry, canonical } = createResidency({ cache });
+    const adapter = createFakeSeamlessAdapter();
+    installTypeA(typeRegistry, { leaf: adapter });
+    const asset = canonical(TypeA, 'pending.png');
+    residency._getSeamless(asset, adapter);
+    const second = adapter.createPlaceholder() as object;
+    const entry = (residency as unknown as { _deferred: Map<string, { handles: WeakHandleSet }> })._deferred.get(asset.key)!;
+    residency._addDeferredHandle(asset.key, entry, second);
+    const failure = new Error('adapter failed');
+    vi.mocked(adapter.fail).mockImplementationOnce(() => {
+      throw failure;
+    });
+
+    expect(() => residency.destroy()).toThrow(failure);
+    expect(adapter.stateOf(second)).toBe('failed');
+    expect(residency._inspect()).toEqual([]);
+  });
+
+  test('destroy preserves ready seamless handles', async () => {
+    const { residency, typeRegistry, canonical } = createResidency();
+    const adapter = createFakeSeamlessAdapter();
+    installTypeA(typeRegistry, { leaf: adapter });
+    const asset = canonical(TypeA, 'ready.png');
+    const handle = residency._getSeamless(asset, adapter);
+    residency._claim(asset, new LoaderScope(fakeLoader, 'scope'));
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(adapter.stateOf(handle)).toBe('ready');
+    residency.destroy();
+    expect(adapter.stateOf(handle)).toBe('ready');
+    expect(adapter.fail).not.toHaveBeenCalled();
+  });
+
+  test.each([false, true])('destroy preserves an already settled ref (failed=%s)', async failed => {
+    const cache = createFakeCache().cache;
+    const { residency, typeRegistry, canonical } = createResidency({ cache });
+    installTypeA(typeRegistry);
+    const failure = new Error('load failed');
+
+    if (failed) {
+      vi.spyOn(cache, 'resolve').mockRejectedValue(failure);
+    }
+
+    const ref = residency._getRef(canonical(TypeA, 'settled.txt'));
+    await ref.loaded.catch(() => undefined);
+    const state = ref.state;
+    const error = ref.error;
+    residency.destroy();
+    expect(ref.state).toBe(state);
+    expect(ref.error).toBe(error);
+
+    if (!failed) {
+      expect(ref.value).toBe('resolved');
+    }
   });
 
   test('destroy() clears resident resources, in-flight tracking, claims, and the background queue', async () => {

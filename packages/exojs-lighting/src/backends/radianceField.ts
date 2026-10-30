@@ -123,7 +123,10 @@ export interface TransportBinding {
   readonly tableWidth: number;
 }
 
-/** Tuning for the radiance field. Every entry has a default derived from the surface. */
+/**
+ * Tuning for the radiance field. The public options set a default for every
+ * entry; only the cascade count is derived from the view.
+ */
 export interface RadianceFieldOptions {
   /** Light-field texels between the finest cascade's probes. */
   readonly probeSpacing: number;

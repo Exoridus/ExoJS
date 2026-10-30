@@ -3,8 +3,14 @@
 import { BlendModes } from '#rendering/types';
 
 /**
- * Returns the GPUBlendState for a given ExoJS blend mode.
- * Shared by all WebGPU renderers to avoid duplication.
+ * Returns the fixed-function `GPUBlendState` for an ExoJS blend mode.
+ *
+ * Covers the blend states expressible in fixed-function hardware: `Normal`,
+ * `Additive`, `Subtract`, `Multiply` and `Screen`. `Multiply` is exact only
+ * against an opaque destination; a translucent destination is handled by the
+ * backdrop-aware compositor instead. Every backdrop-composited mode (`Darken`
+ * through `Luminosity`) and every unrecognised value falls back to
+ * premultiplied source-over here.
  */
 export const getWebGpuBlendState = (blendMode: BlendModes): GPUBlendState => {
   switch (blendMode) {

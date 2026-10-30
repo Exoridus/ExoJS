@@ -369,6 +369,23 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
     expect(typeof source!.getChunk).toBe('function');
   });
 
+  it('keeps the previous conversion chunk sources when a later conversion throws', async () => {
+    const { loadSource } = makeInfiniteMapContext([{ x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(1) }]);
+    const map = await loadSource('inf.tmj');
+    map.toTileMap();
+
+    const tileset = (map as unknown as { tilesets: Array<{ texture?: unknown }> }).tilesets[0]!;
+    const texture = tileset.texture;
+    tileset.texture = undefined;
+
+    try {
+      expect(() => map.toTileMap()).toThrow(/has no image/);
+      expect(map.getChunkSource(1)).toBeDefined();
+    } finally {
+      tileset.texture = texture;
+    }
+  });
+
   it('throws TiledFormatError for non-uniform on-disk chunk size within one layer', async () => {
     const { loadSource } = makeInfiniteMapContext([
       { x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(1) },

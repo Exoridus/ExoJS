@@ -204,7 +204,7 @@ void main() {
     // The quad spans -1..1 in the light's own frame, which is the cookie's 0..1
     // exactly - so the pattern turns and scales with the light for free, and a
     // premultiplied texel that is transparent contributes nothing.
-    vec3 cookie = texture(u_cookie, v_local * 0.5 + 0.5).rgb;
+    vec3 cookie = texture(u_cookie, vec2(v_local.x / (v_half + 1.0), v_local.y) * 0.5 + 0.5).rgb;
 
     fragColor = vec4(v_tint.rgb * cookie * (falloff * falloff * coneTerm * v_intensity * shadowTerm(length(v_local) / (v_half + 1.0)) * surfaceTerm()), 1.0);
 }

@@ -24,9 +24,9 @@ export class ParticleCurveLookup {
  * Numeric authored-color storage: this table holds packed `Color`
  * components (sRGB-encoded, per {@link ColorGradient}), never a
  * hardware-sRGB-decoded texture. The GL texture is uploaded as `RGBA8` and
- * the WebGPU texture as `rgba8unorm`, both read with a raw integer fetch
- * (`texelFetch` / `textureLoad`) so no backend applies an implicit sRGB
- * decode. {@link sampleColorLookup}, {@link particleLookupGlsl} and
+ * the WebGPU texture as `rgba8unorm`, both read with a normalized fetch
+ * (`texelFetch` / `textureLoad`) from a non-sRGB format, so no backend applies
+ * an implicit sRGB decode. {@link sampleColorLookup}, {@link particleLookupGlsl} and
  * {@link particleLookupWgsl} all implement the identical
  * nearest-plus-fractional-lerp formula over these bytes, so CPU, WebGL2 and
  * WebGPU particles read the same authored color at a given lifetime/speed

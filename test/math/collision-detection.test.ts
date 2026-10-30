@@ -980,6 +980,11 @@ describe('getCollisionSat', () => {
     expect(getCollisionSat(square(0, 0, 10), diamond(14, -3, 5))).toBeNull();
   });
 
+  test('returns null when neither shape yields an edge normal', () => {
+    expect(getCollisionSat(new Ellipse(0, 0, 10, 10), new Polygon())).toBeNull();
+    expect(getCollisionSat(new Polygon(), new Ellipse(0, 0, 10, 10))).toBeNull();
+  });
+
   test('shapeAinB stays true through every axis of the first shape, then flips false in the second loop', () => {
     // Along the square's own axes (X/Y), the diamond's projection always
     // contains the square's - so shapeAinB survives the entire first loop.

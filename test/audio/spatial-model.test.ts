@@ -209,6 +209,11 @@ describe('elevation - the third axis', () => {
     voice.elevation = 8;
 
     expect(panners.panners).toHaveLength(1);
+    expect(lastWritten(panners.panners[0]!.positionY)).toBe(8);
+
+    voice.elevation = 12;
+    tickSpatial(voice);
+    expect(lastWritten(panners.panners[0]!.positionY)).toBe(12);
 
     panners.restore();
     sound.destroy();

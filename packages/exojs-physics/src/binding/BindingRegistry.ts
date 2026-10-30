@@ -132,7 +132,7 @@ export class BindingRegistry {
     }
   }
 
-  /** `true` when at least one binding exists. */
+  /** Number of active bindings. */
   public get size(): number {
     return this._bindings.size;
   }

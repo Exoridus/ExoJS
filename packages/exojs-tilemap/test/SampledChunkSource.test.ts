@@ -155,7 +155,7 @@ describe('createSampledChunkSource', () => {
       mapValueToTile: () => ({ tileset: foreignTileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY }),
     });
 
-    expect(() => source.getChunk(0, 0)).toThrow(/Tileset index -1/);
+    expect(() => source.getChunk(0, 0)).toThrow(/Sampled chunk \(0, 0\).*not part of this layer/);
   });
 
   it("clamps edge-chunk cells past a bounded layer's width/height to empty", () => {
@@ -222,5 +222,16 @@ describe('createSampledChunkSource', () => {
     expect(layer.getTileAt(1, 0)).toBeNull();
     // (2,0): sample = 2, even -> resolves to localTileId 1.
     expect(layer.getTileAt(2, 0)).toEqual({ tileset, localTileId: 1, transform: TILE_TRANSFORM_IDENTITY });
+  });
+
+  it('rejects a local tile id outside the tileset at the sampler coordinate', () => {
+    const tileset = makeTileset();
+    const layer = makeUnboundedLayer(tileset, 2, 2);
+    const source = createSampledChunkSource(layer, {
+      sample: () => 1,
+      mapValueToTile: () => ({ tileset, localTileId: 16, transform: TILE_TRANSFORM_IDENTITY }),
+    });
+
+    expect(() => source.getChunk(0, 0)).toThrow(/Sampled chunk \(0, 0\).*outside tileset/);
   });
 });

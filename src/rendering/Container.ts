@@ -17,7 +17,8 @@ import { RenderNode } from './RenderNode';
  *
  * Bounds aggregate the local bounds + every visible child's bounds, so
  * `container.getBounds()` always returns the smallest axis-aligned rectangle
- * containing the subtree. The size and edge accessors report that rectangle;
+ * containing the visible part of the subtree. The size and edge accessors
+ * report that rectangle;
  * writing to `width`/`height` rescales `scale` to fit.
  *
  * Adding a child re-parents it: the previous parent is detached

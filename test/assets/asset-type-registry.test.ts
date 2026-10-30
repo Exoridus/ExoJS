@@ -30,6 +30,24 @@ const type = (spec: {
   });
 
 describe('AssetTypeRegistry', () => {
+  test('a factory teardown failure still destroys every factory and clears the registry once', () => {
+    const registry = new AssetTypeRegistry();
+    const failure = new Error('factory teardown failed');
+    const first = vi.fn(() => {
+      throw failure;
+    });
+    const second = vi.fn();
+
+    registry.installAll([type({ id: 'first', destroy: first }), type({ id: 'second', destroy: second })]);
+
+    expect(() => registry.destroy()).toThrow(failure);
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(registry.hasAssetType('first')).toBe(false);
+    expect(registry.hasAssetType('second')).toBe(false);
+    expect(() => registry.destroy()).not.toThrow();
+    expect(first).toHaveBeenCalledTimes(1);
+  });
+
   test('installs a type under its id, its token and every suffix it claims', () => {
     const registry = new AssetTypeRegistry();
 

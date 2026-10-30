@@ -149,14 +149,15 @@ interface TextRetainedRendererData {
 
 /**
  * Per-bundle Text replay state (retained-batch opt-in), parked on
- * {@link WebGpuRetainedGroupBundle.rendererReplayState} so it shares the
+ * {@link WebGpuRetainedGroupBundle.rendererReplayStates} so it shares the
  * bundle's grow-only / explicitly-freed lifecycle - mirrors Mesh's
  * `MeshRetainedReplayState`. Holds Text's OWN persistent per-node data buffer
  * (same 10-vec4/node layout the live path uses) and FrameUniforms buffer,
  * since Text's row format differs from both the shared `TransformBuffer` row
- * layout AND the shared 128-byte group UBO {@link WebGpuRetainedGroupBundle}
- * itself owns (Text's `FrameUniforms` is a 96-byte mat3x3 pair, not the
- * mat4x4 pair every other retained renderer's shared UBO uses).
+ * layout AND the shared group UBO {@link WebGpuRetainedGroupBundle} itself
+ * owns. Text's per-node row is 20 vec4 and its frame block is 112 bytes - a
+ * projection/group mat3x3 pair plus the device-pixel snap viewport - not the
+ * 144-byte mat4x4 block every other retained renderer shares.
  *
  * A bundle can hold at most ONE recorded Text batch per capture (`flush()`
  * poisons rather than recording a second one) - so this state is a single
@@ -705,8 +706,9 @@ export class WebGpuTextRenderer
    */
   public async prewarmPipelines(formats: readonly GPUTextureFormat[]): Promise<void> {
     const device = this._device;
+    const pipelineLayout = this._pipelineLayout;
 
-    if (!device || !this._shaderModule || !this._pipelineLayout) {
+    if (!device || !this._shaderModule || !pipelineLayout) {
       return;
     }
 
@@ -732,7 +734,9 @@ export class WebGpuTextRenderer
 
         promises.push(
           device.createRenderPipelineAsync(this._buildPipelineDescriptor(shaderType, BlendModes.Normal, format)).then(pipeline => {
-            this._pipelines.set(key, pipeline);
+            if (this._device === device && this._pipelineLayout === pipelineLayout) {
+              this._pipelines.set(key, pipeline);
+            }
           }),
         );
       }
@@ -1496,7 +1500,7 @@ export class WebGpuTextRenderer
       return false;
     }
 
-    const state = bundle.rendererReplayState;
+    const state = bundle.rendererReplayStates.get(this);
 
     if (!(state instanceof TextRetainedReplayState) || state.nodeDataBuffer === null) {
       return false;
@@ -1517,11 +1521,11 @@ export class WebGpuTextRenderer
   }
 
   private _getTextReplayState(bundle: WebGpuRetainedGroupBundle, device: GPUDevice): TextRetainedReplayState {
-    const existing = bundle.rendererReplayState;
+    const existing = bundle.rendererReplayStates.get(this);
     const state = existing instanceof TextRetainedReplayState ? existing : new TextRetainedReplayState();
 
     if (existing !== state) {
-      bundle.rendererReplayState = state;
+      bundle.rendererReplayStates.set(this, state);
     }
 
     if (state.uniformBuffer === null) {

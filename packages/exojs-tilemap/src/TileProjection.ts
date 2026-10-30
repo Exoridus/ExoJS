@@ -47,9 +47,9 @@ export class TileProjection {
   public readonly tileHeight: number;
   public readonly originX: number;
   public readonly originY: number;
-  /** Staggered and hexagonal grids: the shifted axis. `'y'` for the other orientations, where it has no effect. */
+  /** Staggered and hexagonal grids: the shifted axis. Has no effect for other orientations; the supplied value is retained. */
   public readonly staggerAxis: 'x' | 'y';
-  /** Staggered and hexagonal grids: which rows or columns are shifted. `'odd'` for the other orientations, where it has no effect. */
+  /** Staggered and hexagonal grids: which rows or columns are shifted. Has no effect for other orientations; the supplied value is retained. */
   public readonly staggerIndex: 'odd' | 'even';
   /** Hexagonal grids: length of the straight sides along the stagger axis. `0` for every other orientation. */
   public readonly hexSideLength: number;

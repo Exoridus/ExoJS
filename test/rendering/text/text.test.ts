@@ -679,4 +679,56 @@ describe('Text — FontFace-first', () => {
     await flushMicrotasks();
     expect(mockFontsAdd).toHaveBeenCalledWith(face);
   });
+
+  test('a rejected face load leaves the current geometry and caches alone', async () => {
+    const face = makeFace();
+    (face as unknown as MockFontFace).load.mockRejectedValueOnce(new Error('font unavailable'));
+    const text = new Text('Hello', { font: face });
+    const before = text.pageQuads[0];
+    const cleared = mockPool.clearVariant.mock.calls.length;
+    await flushMicrotasks();
+    expect(text.pageQuads[0]).toBe(before);
+    expect(mockPool.clearVariant).toHaveBeenCalledTimes(cleared);
+    text.destroy();
+  });
+
+  test('a stale face load does not invalidate the replacement typeface', async () => {
+    let resolve!: () => void;
+    const face = makeFace();
+    (face as unknown as MockFontFace).load.mockImplementationOnce(
+      () =>
+        new Promise<void>(r => {
+          resolve = r;
+        }),
+    );
+    const text = new Text('Hello', { font: face });
+    text.style = { fontFamily: 'ReplacementFont' };
+    const before = text.pageQuads[0];
+    const cleared = mockPool.clearVariant.mock.calls.length;
+    resolve();
+    await flushMicrotasks();
+    expect(text.pageQuads[0]).toBe(before);
+    expect(mockPool.clearVariant).toHaveBeenCalledTimes(cleared);
+    text.destroy();
+  });
+
+  test('an invalid replacement style leaves the pending face load active', async () => {
+    let resolve!: () => void;
+    const face = makeFace();
+    (face as unknown as MockFontFace).load.mockImplementationOnce(
+      () =>
+        new Promise<void>(r => {
+          resolve = r;
+        }),
+    );
+    const text = new Text('Hello', { font: face });
+    const cleared = mockPool.clearVariant.mock.calls.length;
+    expect(() => {
+      text.style = { gradient: { stops: Array.from({ length: 9 }, () => ({ offset: 0, color: Color.white })) } };
+    }).toThrow(/at most 8/);
+    resolve();
+    await flushMicrotasks();
+    expect(mockPool.clearVariant).toHaveBeenCalledTimes(cleared + 1);
+    text.destroy();
+  });
 });

@@ -119,7 +119,7 @@ export class ContainerReader {
    *
    * Prefer {@link readEntries} for several: entries commonly share a block, and
    * reading them together is what keeps a shared block fetched and decoded
-   * once.
+   * once. Failed block reads are retried by a later call.
    */
   public async readEntry(entry: ContainerEntry): Promise<ArrayBuffer> {
     const [bytes] = await this.readEntries([entry]);
@@ -232,12 +232,17 @@ export class ContainerReader {
       return inFlight;
     }
 
-    const decoding = this._fetchAndDecode(index).then(bytes => {
-      this._decoded.set(index, bytes);
-      this._pending.delete(index);
+    const decoding = this._fetchAndDecode(index)
+      .then(bytes => {
+        this._decoded.set(index, bytes);
 
-      return bytes;
-    });
+        return bytes;
+      })
+      .finally(() => {
+        if (this._pending.get(index) === decoding) {
+          this._pending.delete(index);
+        }
+      });
 
     this._pending.set(index, decoding);
 
@@ -262,7 +267,9 @@ export class ContainerReader {
 
   /** A block's stored bytes: the store first, then the source, and the store is offered what was fetched. */
   private async _stored(block: ContainerBlock): Promise<Uint8Array<ArrayBuffer>> {
-    const cached = await this._store?.get(block.hash);
+    const cached = await Promise.resolve()
+      .then(async () => this._store?.get(block.hash))
+      .catch(() => undefined);
 
     // A store answers by hash, so a hit whose length disagrees with the head is
     // a collision or a corrupted entry - fetch rather than decode it.
@@ -272,7 +279,9 @@ export class ContainerReader {
 
     const fetched = await this._source.read(this.container.dataOffset + block.storedOffset, block.storedLength);
 
-    void this._store?.put(block.hash, fetched);
+    void Promise.resolve()
+      .then(async () => this._store?.put(block.hash, fetched))
+      .catch(() => undefined);
 
     return fetched;
   }

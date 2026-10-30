@@ -13,7 +13,7 @@ export interface PrismaticJointOptions extends JointOptions {
   bodyB: PhysicsBody;
   /** Shared world-space anchor at creation. */
   anchor: Readonly<PointLike>;
-  /** Slide axis in world space at creation (normalised internally). The body may only translate along this axis. */
+  /** Slide axis in world space at creation (normalised internally). It is stored in body A's frame and re-derived from body A's rotation each step, so it turns with body A; keep the rail body static for a direction that stays fixed in the world. */
   axis: Readonly<PointLike>;
   /** Enable the linear motor (drives translation along the axis toward {@link motorSpeed}). Default `false`. */
   enableMotor?: boolean;

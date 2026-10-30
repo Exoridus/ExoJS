@@ -345,3 +345,28 @@ describe('missing timestamp-query', () => {
     expect(samples.queueMs).toHaveLength(1);
   });
 });
+
+describe('prototype-backed instrumentation restore', () => {
+  test('removes the own property it added, so the prototype method is reachable again', () => {
+    class Backend {
+      public acquired: number[][] = [];
+
+      public acquireRenderTexture(width: number, height: number): void {
+        this.acquired.push([width, height]);
+      }
+    }
+
+    const backend = new Backend();
+    const recorder = createTargetRecorder();
+    const restore = instrumentAcquireRenderTexture(backend, recorder);
+
+    // The instrumentation shadows the prototype method with an own property.
+    expect(Object.hasOwn(backend, 'acquireRenderTexture')).toBe(true);
+
+    restore();
+
+    expect(Object.hasOwn(backend, 'acquireRenderTexture')).toBe(false);
+    backend.acquireRenderTexture(16, 16);
+    expect(backend.acquired).toEqual([[16, 16]]);
+  });
+});

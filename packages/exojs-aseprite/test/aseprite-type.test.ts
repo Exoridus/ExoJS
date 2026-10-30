@@ -129,6 +129,12 @@ describe('asepriteType - array fixture', () => {
     await loadSheet('/assets/sprites/hero.json');
     expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', '/assets/sprites/hero.png'));
   });
+
+  it('resolves a relative image ref against a protocol-relative source, preserving the authority', async () => {
+    const { loadSheet, loaderLoad } = makeContext({ '//cdn.example.com/art/hero.json': loadFixture('hero.array.json') });
+    await loadSheet('//cdn.example.com/art/hero.json');
+    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', '//cdn.example.com/art/hero.png'));
+  });
 });
 
 // ── load() - validation / AsepriteFormatError ───────────────────────────────────
@@ -164,6 +170,14 @@ describe('asepriteType - AsepriteFormatError on malformed input', () => {
 
   it('rejects "frames" that is neither an array nor an object', async () => {
     await expect(loadRaw({ frames: 5, meta: { image: 'x.png' } })).rejects.toThrow(/"frames" must be an array or an object/);
+  });
+
+  it('rejects a rotated packed frame instead of sampling a transposed rectangle', async () => {
+    const rect = { x: 0, y: 0, w: 16, h: 16 };
+    await expect(loadRaw({ frames: [{ rotated: true, frame: rect }], meta: { image: 'x.png' } })).rejects.toThrow(/"frames\.0" is rotated/);
+    await expect(loadRaw({ frames: { hero: { rotated: true, frame: rect } }, meta: { image: 'x.png' } })).rejects.toThrow(
+      /"frames\.hero" is rotated/,
+    );
   });
 
   it('attaches the source URL and typed name to the thrown error', async () => {

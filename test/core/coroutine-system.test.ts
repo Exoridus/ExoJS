@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { type Coroutine, CoroutineSystem } from '#core/CoroutineSystem';
 import { DestroyScope } from '#core/DestroyScope';
@@ -7,8 +7,7 @@ import { type Seconds, seconds } from '#core/units';
 
 /**
  * A stand-in for the frame's remaining time. The system derives its slice from
- * this once per phase, so a stub here is all a spec needs to pin the slice -
- * no injected clock, and nothing timing-dependent.
+ * this once per phase, independently of the time spent consuming its slice.
  */
 const frameBudget = (remaining: number): FrameBudget => ({ timeRemaining: () => seconds(remaining) });
 
@@ -39,6 +38,174 @@ const countTo = function* (limit: number, log?: number[]): Generator<void, numbe
 
   return i;
 };
+
+describe('Coroutine clear snapshots', () => {
+  test('throwing after self-cancellation preserves the cancellation error and closes once', () => {
+    const system = new CoroutineSystem({ budget: seconds(1) });
+    const cleanup = vi.fn(() => ({ done: true as const, value: undefined }));
+    let cancellation: Error | undefined;
+    const coroutine = system.queue({
+      next: () => {
+        coroutine.cancel();
+        cancellation = coroutine.error;
+
+        throw new Error('body failed after cancellation');
+      },
+      return: cleanup,
+    });
+    expect(() => frame(system)).not.toThrow();
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(coroutine.status).toBe('cancelled');
+    expect(coroutine.error).toBe(cancellation);
+    expect(coroutine.result).toBeUndefined();
+  });
+
+  test.each([false, true])('custom iterator closes exactly once when cancelled inside step=%s', insideStep => {
+    const system = new CoroutineSystem({ budget: seconds(1) });
+    const cleanup = vi.fn(() => ({ done: true as const, value: undefined }));
+    const coroutine = system.queue({
+      next: () => {
+        if (insideStep) {
+          coroutine.cancel();
+        }
+
+        return { done: false as const, value: undefined };
+      },
+      return: cleanup,
+    });
+    frame(system);
+    coroutine.cancel();
+    system.destroy();
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(coroutine.status).toBe('cancelled');
+  });
+
+  test('deferred cleanup failure preserves cancellation and cannot escape the frame', () => {
+    const system = new CoroutineSystem({ budget: seconds(1) });
+    const cleanup = vi.fn(() => {
+      throw new Error('cleanup failed');
+    });
+    const coroutine = system.queue(function* () {
+      try {
+        system.clear();
+        yield;
+      } finally {
+        cleanup();
+      }
+    });
+    expect(() => frame(system)).not.toThrow();
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(coroutine.status).toBe('cancelled');
+  });
+
+  test('clear inside a running generator closes its finally after yielding', () => {
+    const system = new CoroutineSystem({ budget: seconds(1) });
+    const cleanup = vi.fn();
+    const coroutine = system.queue(function* () {
+      try {
+        system.clear();
+        yield;
+      } finally {
+        cleanup();
+      }
+    });
+    frame(system);
+    expect(coroutine.status).toBe('cancelled');
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    frame(system);
+    system.destroy();
+    expect(cleanup).toHaveBeenCalledTimes(1);
+  });
+
+  test('a cancelled body factory releases the iterator it returns', () => {
+    const system = new CoroutineSystem({ budget: seconds(1) });
+    const cleanup = vi.fn(() => ({ done: true as const, value: undefined }));
+    system.queue(() => {
+      system.clear();
+
+      return { next: () => ({ done: false as const, value: undefined }), return: cleanup };
+    });
+    frame(system);
+    expect(cleanup).toHaveBeenCalledTimes(1);
+  });
+
+  test('destroy rejects work queued by cancellation cleanup', () => {
+    const system = new CoroutineSystem();
+    const enqueue = vi.fn(() => system.queue(countTo(1)));
+    system.queue(function* () {
+      try {
+        yield;
+      } finally {
+        enqueue();
+      }
+    });
+    frame(system);
+    system.destroy();
+    expect(enqueue).toHaveBeenCalledTimes(1);
+    expect(system.pending).toBe(0);
+    expect(system.destroyed).toBe(true);
+  });
+
+  test('work queued by cancelled cleanup survives until the next frame', () => {
+    const system = new CoroutineSystem({ budget: seconds(1) });
+    const steps = vi.fn();
+    system.queue(function* () {
+      try {
+        yield;
+      } finally {
+        system.queue(function* () {
+          steps();
+          yield;
+        });
+      }
+    });
+    frame(system);
+    system.clear();
+    expect(system.pending).toBe(1);
+    frame(system);
+    expect(steps).toHaveBeenCalledTimes(1);
+    system.destroy();
+  });
+
+  test('a cancelling body factory never advances its returned iterator', () => {
+    const system = new CoroutineSystem({ budget: seconds(1) });
+    const next = vi.fn(() => ({ done: false as const, value: undefined }));
+    const coroutine = system.queue(() => {
+      system.clear();
+
+      return { next };
+    });
+    expect(() => frame(system)).not.toThrow();
+    expect(coroutine.status).toBe('cancelled');
+    expect(next).not.toHaveBeenCalled();
+  });
+});
+
+describe('CoroutineSystem cancellation reentry', () => {
+  test('clear from a running body cancels the pass without resettlement', async () => {
+    const system = new CoroutineSystem({ budget: seconds(1) });
+    const later = vi.fn();
+    const first = system.queue(function* () {
+      yield* [];
+      system.clear();
+
+      return 42;
+    });
+    const second = system.queue(function* () {
+      later();
+      yield;
+    });
+    const ended = Promise.allSettled([first.done, second.done]);
+
+    expect(() => frame(system)).not.toThrow();
+    expect(() => frame(system)).not.toThrow();
+    expect(first.status).toBe('cancelled');
+    expect(second.status).toBe('cancelled');
+    expect(later).not.toHaveBeenCalled();
+    expect(system.pending).toBe(0);
+    expect((await ended).map(result => result.status)).toEqual(['rejected', 'rejected']);
+  });
+});
 
 describe('CoroutineSystem', () => {
   test('runs a coroutine to completion across frames and exposes the return value', () => {
@@ -189,6 +356,15 @@ describe('CoroutineSystem', () => {
   });
 
   describe('the budget a body receives', () => {
+    beforeEach(() => {
+      // Runner scheduling must not consume the slice while checking its grant.
+      vi.spyOn(performance, 'now').mockReturnValue(1000);
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     test('is positive at the first step, because minSlice is a real grant', () => {
       const system = new CoroutineSystem({ budget: seconds(0), minSlice: seconds(0.001) });
       const seen: number[] = [];
@@ -216,9 +392,26 @@ describe('CoroutineSystem', () => {
       frame(system, frameBudget(0.008));
 
       expect(seen).toHaveLength(1);
-      // A quarter of 8 ms, minus whatever the step itself took to reach the read.
       expect(seen[0]).toBeGreaterThan(0);
       expect(seen[0]).toBeLessThanOrEqual(0.002);
+      expect(seen[0]).toBe(0.002);
+    });
+
+    test('deducts elapsed time and clamps an exhausted slice to zero', () => {
+      const system = new CoroutineSystem({ budget: { share: 0.25, max: seconds(1) }, minSlice: seconds(0) });
+      const seen: number[] = [];
+
+      system.queue(function* (budget): Generator<void, void> {
+        vi.mocked(performance.now).mockReturnValue(1000.5);
+        seen.push(budget.timeRemaining());
+        vi.mocked(performance.now).mockReturnValue(1003);
+        seen.push(budget.timeRemaining());
+        yield;
+      });
+
+      frame(system, frameBudget(0.008));
+
+      expect(seen).toEqual([0.0015, 0]);
     });
 
     test('caps the share at `max`', () => {

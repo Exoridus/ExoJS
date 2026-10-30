@@ -51,9 +51,10 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
   /**
    * Retained-batch capability opt-in: a tile chunk's per-flush
    * instanced batches (fixed 32-byte layout, tile word at word 7) record and
-   * replay from group-owned resources. Pixel-snapped draws are excluded by
-   * the collect-time recordability predicate (and belt-and-braces poisoning
-   * in {@link render}); tile chunks have no custom-material path to exclude.
+   * replay from group-owned resources. Pixel snapping is resolved in the
+   * vertex shader from the group UBO's live snap rect, so the recorded
+   * instance bytes stay view-independent and a snapped chunk needs no
+   * exclusion here; tile chunks have no custom-material path to exclude.
    * @internal
    */
   public readonly supportsRetainedBatches = true;
@@ -498,8 +499,8 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     // recorded data IS the drawn data, byte-identical by construction.
     // Recorded regardless of the live visibility decision above (mask/
     // scissor), since visibility is re-evaluated live at replay. A batch
-    // always binds a single tileset texture (slot 0); a pixel-snapped node
-    // already poisoned the capture in render().
+    // always binds a single tileset texture (slot 0); pixel snapping is
+    // resolved live at replay from the bundle's group UBO.
     if (this._quadIndex > 0 && backend._retainedCaptureActive && blendMode !== null && texture !== null) {
       this._recordTextures[0] = texture;
       backend.recordRetainedBatch(

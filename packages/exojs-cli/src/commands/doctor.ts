@@ -65,9 +65,11 @@ const satisfiesNodeRange = (range: string, version: string): boolean | null => {
     comparator = '^';
   }
 
-  const major = trimmed.slice(comparator.length).split('.')[0] ?? '';
+  const [major, ...minorAndPatch] = trimmed.slice(comparator.length).split('.');
 
-  if (!DIGITS.test(major)) {
+  // Only the `24`, `24.x`, `^24` and `>=24` forms are evaluated; a minor or
+  // patch component would be silently ignored by the major-only comparison.
+  if (!DIGITS.test(major ?? '') || minorAndPatch.some(part => part !== 'x' && part !== 'X')) {
     return null;
   }
 
@@ -112,11 +114,37 @@ const installedEnginePackages = (projectDir: string): Array<{ name: string; vers
   return found;
 };
 
+const SECTION_HEADER = /^\s*\[([^\]]+)\]\s*$/;
+
+/**
+ * Only the production section (and the unsectioned preamble) applies to this
+ * check; a `[development]`-only browser must not fail a production project.
+ */
+const productionBrowserslistQueries = (text: string): string[] => {
+  const queries: string[] = [];
+  let section: string | undefined;
+
+  for (const line of text.split(/\r?\n/)) {
+    const header = SECTION_HEADER.exec(line);
+
+    if (header !== null) {
+      section = header[1]?.trim().toLowerCase();
+      continue;
+    }
+
+    if (section === undefined || section === 'production') {
+      queries.push(line);
+    }
+  }
+
+  return queries;
+};
+
 const browserslistQueries = (projectDir: string, manifest: ProjectManifest): string[] => {
   const configPath = join(projectDir, '.browserslistrc');
 
   if (existsSync(configPath)) {
-    return readFileSync(configPath, 'utf8').split(/\r?\n/);
+    return productionBrowserslistQueries(readFileSync(configPath, 'utf8'));
   }
 
   const declared = manifest.browserslist;

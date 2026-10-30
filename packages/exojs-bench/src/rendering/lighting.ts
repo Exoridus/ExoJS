@@ -18,7 +18,7 @@ export const LIT_SPRITE_SIZE = 24;
  * The lightmap renderer's cost per light is the fill of its own radius, so this
  * is the number the archetype is really sweeping against the light count - a
  * figure quoted without it says nothing. Sized so that a light covers about a
- * fortieth of the field: large enough to overlap its neighbours, small enough
+ * fourteenth of the field: large enough to overlap its neighbours, small enough
  * that a hundred of them do not simply resolve the viewport a hundred times
  * over and turn the row into `overdraw` under another name.
  */

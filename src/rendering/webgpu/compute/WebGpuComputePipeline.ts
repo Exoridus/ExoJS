@@ -130,6 +130,16 @@ export class WebGpuComputePipeline {
     this.workgroupSize = workgroupSize;
   }
 
+  /**
+   * Compile `opts.wgsl` and build the pipeline plus one bind-group layout per
+   * entry in `opts.bindingGroups`.
+   *
+   * `workgroupSize` is used for the X axis of {@link dispatch}, which computes
+   * `ceil(itemCount / workgroupSize)` workgroups in X only. It must match a
+   * shader whose `@workgroup_size` is `(n, 1, 1)`; nothing reads or validates
+   * the declaration, so a mismatch silently dispatches the wrong count, and a
+   * multi-dimensional workgroup needs an explicit `dispatchWorkgroups` call.
+   */
   public static create(
     device: GPUDevice,
     opts: {

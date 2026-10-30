@@ -40,7 +40,7 @@ import { GRID_MARGIN, gridLayout, gridPosition, VIEWPORT_HEIGHT, VIEWPORT_WIDTH 
 /**
  * Phaser 4.2 arm of the rendering benchmark.
  *
- * Builds the byte-for-byte same scene the ExoJS and Pixi arms build
+ * Builds the same neutral scene the ExoJS and Pixi arms build
  * (`adapters/exojs.ts`, `adapters/pixi.ts`) and mutates the identical leaf set
  * selected by the shared `selectMutationIndices`, exposing the result through
  * {@link EngineAdapter.mutationSignature} so the harness's cross-arm determinism

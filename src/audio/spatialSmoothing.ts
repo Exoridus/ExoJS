@@ -195,14 +195,14 @@ export const createVelocitySample = (): VelocitySample => ({ lastPosition: null,
  * {@link AudioListener} so both sides of a Doppler calculation resolve
  * "auto-derived velocity" the same way.
  *
- * Below {@link POSITION_EPSILON} of movement, the sample is treated as
- * stationary and is skipped entirely - the previously derived velocity is
- * retained rather than snapped to zero, mirroring {@link SmoothedAudioParam}'s
- * own stationary-skip. This means a source that stops moving keeps its last
- * Doppler shift for one more tick instead of instantly zeroing it, and it
- * means a real movement is never lost to a same-timestamp sample (see
- * {@link MIN_VELOCITY_DT}) - the *next* distinctly-different position still
- * measures its delta against the last position that was actually recorded.
+ * Below {@link POSITION_EPSILON} of movement the sample is treated as
+ * stationary: once `now` has advanced, the derived velocity is zeroed and the
+ * recorded position and time advance with it, so a source that stops moving
+ * loses its last Doppler shift on that tick instead of coasting on it. Two
+ * samples on the same `now` change nothing; a real movement uses the
+ * {@link MIN_VELOCITY_DT} floor instead of a zero interval, so the *next*
+ * distinctly-different position still measures its delta against the last
+ * recorded one.
  */
 export const deriveVelocity = (sample: VelocitySample, x: number, y: number, now: number): void => {
   if (sample.lastPosition === null) {

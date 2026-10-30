@@ -114,8 +114,8 @@ export class Panel extends Widget {
    * Set the panel's background from a colour, a texture, a region or a full
    * descriptor; `null` returns it to its skin. A colour becomes a fill override
    * on top of the skin, so the skin's corner radius and border survive it.
-   * Layout-invalidating: a nine-slice and a fill can imply different content
-   * boxes.
+   * Layout-invalidating: it repaints the effective background and re-applies
+   * anchors, but the panel positions no children from a skin inset.
    */
   public setBackground(background: UIBackgroundInput | null, options: UIBackgroundOptions = {}): this {
     this._applyBackgroundInput(background, options);

@@ -3,6 +3,8 @@ import {
   csvField,
   formatCount as count,
   formatMs as ms,
+  isReportShape,
+  markdownCell,
   mergeCellResults,
   mergeLibraries,
   readExistingReport,
@@ -127,11 +129,7 @@ const toMarkdown = (data: PhysicsReportData): string => {
   lines.push(`| ${COLUMNS.map(() => '---').join(' | ')} |`);
 
   for (const result of data.results) {
-    lines.push(
-      `| ${toRow(result)
-        .map(field => field.replaceAll('|', '\\|'))
-        .join(' | ')} |`,
-    );
+    lines.push(`| ${toRow(result).map(markdownCell).join(' | ')} |`);
   }
 
   lines.push('');
@@ -166,7 +164,7 @@ export const mergePhysicsReportData = (existing: PhysicsReportData | undefined, 
  * the merged data, so all three artifacts describe the same cell set.
  */
 export const writePhysicsReport = (run: PhysicsReportData, outDir: string): void => {
-  const data = mergePhysicsReportData(readExistingReport<PhysicsReportData>(outDir), run);
+  const data = mergePhysicsReportData(readExistingReport<PhysicsReportData>(outDir, isReportShape), run);
 
   writeReportArtifacts(outDir, {
     json: `${JSON.stringify(data, null, 2)}\n`,

@@ -51,12 +51,14 @@ import {
 } from '#rendering/webgpu/WebGpuSpriteRenderer';
 import { stencilWriteShaderSource } from '#rendering/webgpu/WebGpuStencilClipper';
 import { textShaderSource } from '#rendering/webgpu/WebGpuTextRenderer';
+import { textureNormalizeWgsl } from '#rendering/webgpu/WebGpuTextureNormalizer';
 
 import { galleryDissolveShader } from '../../examples/shared/gallery-transitions';
 
 /** Kept in step with the entries in `test/rendering/browser/webgpu-shader-compile.test.ts`. */
 const shaders: ReadonlyArray<readonly [name: string, source: string]> = [
   ['WebGpuBackend mipmap pipeline', mipmapWgsl],
+  ['WebGpuTextureNormalizer', textureNormalizeWgsl],
   ['WebGpuBackdropBlendCompositor', backdropBlendCompositorWgsl],
   ['WebGpuMaskCompositor', maskCompositorWgsl],
   ['WebGpuMeshRenderer (default)', meshShaderSource],

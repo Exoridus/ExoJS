@@ -677,7 +677,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Dispatched whenever a new atlas page is allocated. Listen here to detect unexpected atlas growth (e.g. many unique CJK glyphs or an oversized font size). The payload is the zero-based page index. ts const atlas = pool.getAtlas({ family: 'Roboto', fontWeight: '400' }); atlas.onPageAdded.on(idx => console.warn(Atlas page ${idx} added)); "
+          "description": "Dispatched whenever a page beyond the base one is allocated. The page the constructor creates is not reported, so the first event carries index 1. Listen here to detect unexpected atlas growth (e.g. many unique CJK glyphs or an oversized font size). The payload is the zero-based page index. ts const atlas = pool.getAtlas({ family: 'Roboto', fontWeight: '400' }); atlas.onPageAdded.on(idx => console.warn(Atlas page ${idx} added)); "
         }
       ],
       "paragraphs": [],

@@ -484,7 +484,6 @@ export interface CellResult extends BaseCellResult<CellSpec> {
   readonly clock: ClockReport | null;
 }
 
-/** Neutral contract an engine arm implements so the harness can drive it identically across arms. */
 /** What an arm reports about the geometry its last layout pass produced. */
 export interface LayoutDigestReport {
   /** Index of the last pass the arm resolved, counted from the first pass of the cell (warmup included). */
@@ -493,6 +492,7 @@ export interface LayoutDigestReport {
   readonly digest: number;
 }
 
+/** Neutral contract an engine arm implements so the harness can drive it identically across arms. */
 export interface EngineAdapter {
   /** Engine label, e.g. `'exojs'` or `'reference'`. */
   readonly engine: string;

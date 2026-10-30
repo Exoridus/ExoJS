@@ -3,11 +3,13 @@ import type { BaseCellResult } from '../shared/result';
 /**
  * Identifier for one of the fixed set of physics scene archetypes.
  *
- * Kept deliberately small (review-note "don't overdo the physics implementation"):
- * a settling box stack, a field of bouncing dynamic bodies, and a mixed
- * static-geometry + dynamic-bodies scene. These cover the three cost regimes an
- * ExoJS user cares about when deciding stay-native vs. attach an adapter -
- * resting-contact solving, wide broad-phase + many active contacts, and a mix.
+ * Kept deliberately small: four base scenes - a settling box stack, a field of
+ * bouncing dynamic bodies, a mixed static-geometry + dynamic-bodies scene, and
+ * joint chains - plus variants that add a query load, churn or a material change
+ * on top of one of them. Together they cover the cost regimes an ExoJS user
+ * cares about when deciding stay-native vs. attach an adapter: resting-contact
+ * solving, wide broad-phase + many active contacts, a mix, and constraint
+ * solving.
  */
 export type PhysicsArchetypeId =
   'box-stack' | 'many-dynamic' | 'mixed-static-dynamic' | 'raycast' | 'body-churn' | 'joints' | 'settling-pile';
@@ -210,8 +212,8 @@ export interface PhysicsAdapter extends PhysicsArmIdentity {
    * {@link setup} selected (see `shared/mutation.ts::mutationSignature`). The
    * driver compares it against the canonical selection for the cell and fails
    * loudly on divergence, so a future cross-arm comparison rests on an assertion
-   * rather than a prose contract. Optional: an arm that omits it is skipped with
-   * a warning, leaving its determinism unverified rather than blocking the run.
+   * rather than a prose contract. Optional: an arm that omits it has its
+   * determinism left unverified rather than blocking the run.
    */
   mutationSignature?(): string;
   /**

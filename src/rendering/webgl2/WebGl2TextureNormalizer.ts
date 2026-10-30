@@ -100,10 +100,11 @@ export class WebGl2TextureNormalizer {
   private _sourceLocation: WebGLUniformLocation | null = null;
   private _levelScaleLocation: WebGLUniformLocation | null = null;
 
-  /** Straight-source scratch holding the base level; smaller levels share its corner. */
+  /** Fixed-function tests the pass disables and restores, snapshotted in {@link _rasterEnabled}. */
   private readonly _rasterCapabilities: Int32Array;
   private readonly _rasterEnabled = new Uint8Array(passThroughRasterCapabilities);
 
+  /** Straight-source scratch holding the base level; smaller levels share its corner. */
   private _staging: WebGLTexture | null = null;
   private _stagingFormat = 0;
   private _stagingWidth = 0;

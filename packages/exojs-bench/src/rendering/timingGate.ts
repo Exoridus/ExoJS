@@ -106,7 +106,8 @@ export interface TimingComparison {
   readonly baselineP95: number;
   /** Measured p95 (ms). */
   readonly measuredP95: number;
-  /** True when the median exceeded the threshold. */
+  /** True when the relative median increase exceeds the threshold and the
+   * absolute increase meets or exceeds the absolute floor. */
   readonly failed: boolean;
 }
 

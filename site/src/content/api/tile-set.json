@@ -784,7 +784,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Read-only snapshot of all per-tile definitions. The returned record is a caller-owned copy."
+          "description": "Read-only snapshot of each defined tile's properties, keyed by local tile id. Ids without a definition are absent. The returned record is frozen; the property bags it references are the tileset's frozen ones."
         }
       ],
       "paragraphs": [],

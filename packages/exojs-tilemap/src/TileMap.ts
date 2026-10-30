@@ -199,7 +199,13 @@ export class TileMap {
     }
 
     if (options.objectLayers) {
-      this._objectLayers.push(...options.objectLayers);
+      for (const layer of options.objectLayers) {
+        if (this._objectLayers.some(existing => existing.id === layer.id)) {
+          throw new Error(`Object layer ID ${layer.id} already exists in map "${this.name}".`);
+        }
+
+        this._objectLayers.push(layer);
+      }
     }
 
     if (options.imageLayers) {
@@ -398,10 +404,15 @@ export class TileMap {
 
   /**
    * Add an object layer after construction.
-   * @throws If the map is destroyed.
+   * @throws If the map is destroyed or an object layer with the same ID already exists.
    */
   public addObjectLayer(layer: ObjectLayer): void {
     this._checkDestroyed();
+
+    if (this._objectLayers.some(existing => existing.id === layer.id)) {
+      throw new Error(`Object layer ID ${layer.id} already exists in map "${this.name}".`);
+    }
+
     this._objectLayers.push(layer);
     this._revision++;
   }
@@ -621,8 +632,9 @@ export class TileMap {
 
   /**
    * Monotonic map revision counter. Increments on structural changes only
-   * (add/remove layer, add tileset). Cell mutations are tracked per-chunk
-   * and per-layer; the renderer reads chunk-level revisions directly.
+   * (add/remove tile, image, or object layer; add tileset). Cell mutations
+   * are tracked per-chunk and per-layer; the renderer reads chunk-level
+   * revisions directly.
    * @advanced
    */
   public get revision(): number {
@@ -644,7 +656,7 @@ export class TileMap {
    * Destroy the map and all owned layers and chunk storage.
    *
    * Is idempotent. Does NOT destroy tileset textures (Loader-owned) or
-   * any SceneNodes (those do not exist yet in this slice).
+   * any SceneNodes (see {@link import('./TileMapNode').TileMapNode}).
    */
   public destroy(): void {
     if (this._destroyed) {

@@ -2,8 +2,11 @@ import { AudioEffect } from '@codexo/exojs';
 
 /** Construction options for {@link CompressorEffect}. All values are clamped to their valid ranges on assignment. */
 export interface CompressorEffectOptions {
+  /** Level in dBFS above which compression begins. Range -100..0, default -24. */
   threshold?: number;
+  /** Width in dB of the soft-knee transition around the threshold. Range 0..40, default 30. */
   knee?: number;
+  /** Input-to-output dB ratio above the threshold. Range 1..20, default 12. */
   ratio?: number;
   /** Time in seconds for the compressor to engage after the signal exceeds the threshold. Range 0..1, default 0.003. */
   attack?: number;

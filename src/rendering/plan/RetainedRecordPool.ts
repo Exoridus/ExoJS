@@ -72,7 +72,12 @@ export class RetainedRecordPool<T> {
     return this._cursor;
   }
 
-  /** Record `index` of the capture in progress; callers hold `index < used`. */
+  /** Number of allocated records, including the reusable tail above {@link used}. */
+  public get capacity(): number {
+    return this._records.length;
+  }
+
+  /** Allocated record `index`; callers hold `index < capacity`. */
   public at(index: number): T {
     return this._records[index]!;
   }
@@ -107,13 +112,11 @@ export class RetainedRecordPool<T> {
  * survive and their `drawable` is rewritten in place on the next capture, so
  * pool reuse is unaffected.
  *
- * Only the records the last capture actually took are cleared: beyond `used`
- * the pool holds records whose `drawable` was already cleared by an earlier
- * pass or never written at all.
+ * Every allocated record is cleared, including records above a shrunk live prefix.
  * @internal
  */
 export const releasePooledDrawables = <T extends { drawable: Drawable }>(pool: RetainedRecordPool<T>): void => {
-  for (let index = 0; index < pool.used; index++) {
+  for (let index = 0; index < pool.capacity; index++) {
     pool.at(index).drawable = undefined as unknown as Drawable;
   }
 };

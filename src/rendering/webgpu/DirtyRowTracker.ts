@@ -36,8 +36,10 @@ export class DirtyRowTracker {
   private _hasDirty = false;
 
   /**
-   * @param rowsPerBlock Rows one dirty block covers.
-   * @param rowBytes Bytes one row occupies in the store.
+   * @param rowsPerBlock Rows one dirty block covers; a positive integer.
+   * @param rowBytes Bytes one row occupies in the store, in the same layout as
+   * the mirror passed to {@link flush}. A positive multiple of 4: uploads are
+   * `queue.writeBuffer` calls, whose offsets and sizes are 4-byte aligned.
    */
   public constructor(
     private readonly rowsPerBlock: number,

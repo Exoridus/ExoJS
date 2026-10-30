@@ -464,6 +464,22 @@ describe('NavigationAgentComponent', () => {
     expect(movement.stops).toBe(2);
   });
 
+  it('resets waypointIndex when stop() discards the route', async () => {
+    const space = GridSpace.from(10, 1, () => 1, { cellSize: CELL });
+    const { agent, frame } = await setup({ space }, center(0, 0));
+
+    agent.moveTo(center(9, 0));
+    frame();
+
+    expect(agent.path).not.toBeNull();
+    expect(agent.waypointIndex).toBeGreaterThan(0);
+
+    agent.stop();
+
+    expect(agent.path).toBeNull();
+    expect(agent.waypointIndex).toBe(0);
+  });
+
   it('honours the arrival distance', async () => {
     const space = GridSpace.from(10, 1, () => 1, { cellSize: CELL });
     const { node, agent, runUntil } = await setup({ space, arrivalDistance: 12 }, center(0, 0));

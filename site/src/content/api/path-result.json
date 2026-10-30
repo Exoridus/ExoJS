@@ -47,7 +47,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Total traversal cost of nodes. Smoothing does not change it."
+          "description": "Total traversal cost of the unsmoothed graph-search result. Smoothing changes only the waypoints and does not recompute this value."
         },
         {
           "name": "edges",

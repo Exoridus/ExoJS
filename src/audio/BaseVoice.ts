@@ -45,7 +45,7 @@ const defaultSpatialConfig: VoiceSpatialConfig = {
 /** Construction parameters shared by every concrete voice. */
 export interface BaseVoiceInit {
   audioContext: AudioContext;
-  /** The voice's output gain - the last node before the bus. */
+  /** The voice's output gain - the stable tap point ahead of the occlusion stage and per-voice effects. */
   output: GainNode;
   bus: AudioBus;
   system: AudioSystem;
@@ -72,11 +72,13 @@ export interface SpatialVoice extends Voice {
  * routing - and the {@link Spatializable} capability via a lazily-inserted
  * `PannerNode`.
  *
- * The voice graph is `<source> → [panner] → output(gain) → bus.input`. The
- * `output` gain is always the last node (a stable tap point); the panner is
- * inserted between the source and the gain only once the voice is actually
- * spatialized. Concrete voices provide the two source-specific hooks
- * {@link BaseVoice._routeThroughPanner} and {@link BaseVoice._teardownSource}.
+ * The voice graph is `<source> -> [panner] -> output(gain) -> [occlusion] ->
+ * [effects] -> bus.input`. The `output` gain is a stable tap point that
+ * per-voice sends and effects start from; the panner is inserted between the
+ * source and the gain only once the voice is actually spatialized. Concrete
+ * voices provide the source-specific hooks
+ * {@link BaseVoice._routeThroughPanner}, {@link BaseVoice._routeDirect} and
+ * {@link BaseVoice._teardownSource}.
  */
 export abstract class BaseVoice implements Voice {
   protected readonly _audioContext: AudioContext;
@@ -230,6 +232,8 @@ export abstract class BaseVoice implements Voice {
    * Attaching the same effect twice is a caller error: the rebuilt chain would
    * wire the effect's output back into its own input, producing a feedback
    * loop. The dev build asserts; production ignores the second attach.
+   * An effect whose audio nodes are not initialized is rejected without
+   * changing the current chain; await its ready promise before attaching it.
    */
   public addEffect(effect: AudioEffect): this {
     if (this._ended) {
@@ -240,6 +244,10 @@ export abstract class BaseVoice implements Voice {
       assert(false, 'Voice.addEffect: this effect is already attached to the voice.');
 
       return this;
+    }
+
+    if (!isEffectReady(effect)) {
+      throw new Error('Voice.addEffect: effect is not yet initialized. Await effect.ready before attaching it.');
     }
 
     this._effects.push(effect);
@@ -524,7 +532,7 @@ export abstract class BaseVoice implements Voice {
     }
 
     // Reject a non-finite component outright (no partial write) - an
-    // explicit NaN/±Infinity velocity would otherwise feed straight into the
+    // explicit NaN/+/-Infinity velocity would otherwise feed straight into the
     // Doppler ratio calculation. Keep whatever velocity was in effect before.
     if (!Number.isFinite(value.x) || !Number.isFinite(value.y)) {
       return;
@@ -675,7 +683,8 @@ export abstract class BaseVoice implements Voice {
       x = this._position.x;
       y = this._position.y;
     } else {
-      return;
+      x = 0;
+      y = 0;
     }
 
     const panner = this._panner as unknown as Partial<{
@@ -958,7 +967,7 @@ export abstract class BaseVoice implements Voice {
     });
   }
 
-  /** Rewire `output → [effects...] → bus` after the per-voice effect chain changes. */
+  /** Rewire `output -> [effects...] -> bus` after the per-voice effect chain changes. */
   private _rebuildEffectChain(): void {
     if (this._ended) {
       return;
@@ -1121,7 +1130,7 @@ export abstract class BaseVoice implements Voice {
   /**
    * Insert `panner` between the voice's source and its output gain. The source
    * is currently connected directly to {@link BaseVoice._output}; rewire it as
-   * `source → panner → output`.
+   * `source -> panner -> output`.
    */
   protected abstract _routeThroughPanner(panner: PannerNode): void;
 

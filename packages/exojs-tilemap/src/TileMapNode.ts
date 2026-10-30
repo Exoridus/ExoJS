@@ -149,8 +149,9 @@ export class TileMapNode extends Container {
     // is what narrows them to numbers - `bounded` is a plain boolean getter.
     const { pixelHeight, pixelWidth } = this._map;
 
+    bounds.set(0, 0, 0, 0);
+
     if (this._map.projection.orientation !== 'orthogonal') {
-      bounds.set(0, 0, 0, 0);
       aggregateChildLocalBounds(this._layerNodes, bounds);
     } else if (pixelWidth !== undefined && pixelHeight !== undefined) {
       bounds.set(this._map.projection.originX, this._map.projection.originY, pixelWidth, pixelHeight);

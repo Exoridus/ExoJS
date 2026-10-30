@@ -1,6 +1,6 @@
 /**
- * A chunk payload ready to install into a {@link import('./TileLayer').TileLayer}
- * via {@link import('./TileLayer').TileLayer._adoptChunk} - the same shape
+ * A chunk payload a streaming controller installs into a
+ * {@link import('./TileLayer').TileLayer} - the same shape
  * {@link import('./TileChunk').TileChunk}'s constructor accepts as its
  * `source` parameter, named and exported so provider authors have a type to
  * import instead of matching an inline shape.

@@ -1,4 +1,14 @@
-import { classifyPrerelease, DEFAULT_RENDERING_BROWSER, parsePlatformDeclaration, parseRenderingBrowser } from '../src/shared/provenance';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import {
+  classifyPrerelease,
+  DEFAULT_RENDERING_BROWSER,
+  parsePlatformDeclaration,
+  parseRenderingBrowser,
+  readLibraryProvenance,
+} from '../src/shared/provenance';
 
 /**
  * The provenance decisions a run cannot take back: which browser it was
@@ -86,4 +96,35 @@ describe('parsePlatformDeclaration', () => {
       expect(() => parsePlatformDeclaration(raw)).toThrow(/major version/);
     },
   );
+});
+
+describe('readLibraryProvenance', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'exojs-bench-provenance-'));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  test('reports an absent package as not installed', () => {
+    const [entry] = readLibraryProvenance(['missing-arm'], () => {
+      throw new Error('not found');
+    });
+
+    expect(entry).toMatchObject({ name: 'missing-arm', version: 'not-installed', resolvedFrom: '' });
+  });
+
+  test('reports an installed package with an unreadable manifest as unreadable, keeping the path', () => {
+    const manifest = join(dir, 'package.json');
+
+    writeFileSync(manifest, '{ version: ');
+
+    const [entry] = readLibraryProvenance(['broken-arm'], () => manifest);
+
+    expect(entry?.version).toBe('unreadable');
+    expect(entry?.resolvedFrom).toContain(manifest);
+  });
 });

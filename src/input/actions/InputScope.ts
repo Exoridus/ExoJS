@@ -33,6 +33,7 @@ import type { AnyActionMap } from './ActionMap';
 export class InputScope {
   private readonly _maps: AnyActionMap[] = [];
 
+  /** Rejected construction preserves every map's previous scope membership. */
   public constructor(maps?: AnyActionMap | readonly AnyActionMap[]) {
     if (maps === undefined) {
       return;
@@ -42,8 +43,18 @@ export class InputScope {
     // annotating restores the element type for the loop below.
     const list: readonly AnyActionMap[] = Array.isArray(maps) ? maps : [maps];
 
-    for (const map of list) {
-      this.add(map);
+    try {
+      for (const map of list) {
+        this.add(map);
+      }
+    } catch (error: unknown) {
+      for (const map of this._maps) {
+        scopeByMap.delete(map);
+      }
+
+      this._maps.length = 0;
+
+      throw error;
     }
   }
 

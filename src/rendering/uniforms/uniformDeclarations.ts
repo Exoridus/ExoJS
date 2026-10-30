@@ -9,8 +9,8 @@
  * `default` a fresh instance starts from.
  */
 
-import type { Color } from '#core/Color';
-import type { Matrix } from '#math/Matrix';
+import { Color } from '#core/Color';
+import { Matrix } from '#math/Matrix';
 import type { PointLike } from '#math/PointLike';
 import type { Vector } from '#math/Vector';
 
@@ -45,8 +45,8 @@ export interface UniformFieldOptions<T extends UniformFieldType = UniformFieldTy
   readonly type: T;
   /**
    * Value a fresh instance starts from. Omitted fields start at zero, matrices
-   * included. The declaration keeps a copy: mutating the value afterwards does
-   * not reach an instance built from it.
+   * included. The value is snapshotted when the layout is built; later mutations
+   * of the original do not affect an instance constructed afterwards.
    */
   readonly default?: UniformInput<T>;
 }
@@ -204,6 +204,43 @@ export const uniformFieldDefaultOf = (declaration: UniformFieldDeclaration): unk
     ? undefined
     : declaration.default;
 
+const snapshotUniformDefault = (value: unknown, type?: UniformFieldType): unknown => {
+  if (value instanceof Color) {
+    return [...value.toArray(true)];
+  }
+
+  if (value instanceof Matrix) {
+    return [...value.toArray()];
+  }
+
+  if (type === UniformType.Vec2 && value !== null && typeof value === 'object' && 'x' in value && 'y' in value) {
+    return [value.x, value.y];
+  }
+
+  if (value instanceof Float32Array) {
+    return [...value];
+  }
+
+  if (Array.isArray(value)) {
+    const element = type instanceof UniformArray ? type.element : undefined;
+
+    return value.map(nested => snapshotUniformDefault(nested, element));
+  }
+
+  if (value !== null && typeof value === 'object') {
+    const fields = type instanceof UniformStruct ? type.fields : null;
+
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nested]) => [
+        key,
+        snapshotUniformDefault(nested, fields?.[key] === undefined ? undefined : uniformFieldTypeOf(fields[key])),
+      ]),
+    );
+  }
+
+  return value;
+};
+
 /**
  * The declared defaults of `fields` as one nested value record, or `null` when
  * every field starts at zero.
@@ -223,7 +260,7 @@ export const collectUniformDefaults = (fields: UniformFields): Record<string, un
     const declared = uniformFieldDefaultOf(declaration);
 
     if (declared !== undefined) {
-      defaults[name] = declared;
+      defaults[name] = snapshotUniformDefault(declared, uniformFieldTypeOf(declaration));
       any = true;
       continue;
     }
@@ -245,7 +282,7 @@ export const collectUniformDefaults = (fields: UniformFields): Record<string, un
       const nested = collectUniformDefaults(fieldType.element.fields);
 
       if (nested !== null) {
-        defaults[name] = Array.from({ length: fieldType.length }, () => nested);
+        defaults[name] = Array.from({ length: fieldType.length }, () => snapshotUniformDefault(nested));
         any = true;
       }
     }

@@ -198,7 +198,9 @@ export class WebGl2ScalableSpriteRenderer
 
       const geometryOverflow = repeating === null && this._geoQuadCount + sprite.quads.length > this._batchSize;
 
-      if (pathChanged || texChanged || blendChanged || modeChanged || geometryOverflow) {
+      const shaderOverflow = strategy === 'shader' && this._shaderQuadCount >= this._batchSize;
+
+      if (pathChanged || texChanged || blendChanged || modeChanged || geometryOverflow || shaderOverflow) {
         this.flush();
       }
     }
@@ -266,10 +268,6 @@ export class WebGl2ScalableSpriteRenderer
     // When flipY, negate tilingY and start from tilingY so V runs top→bottom.
     const uvParamY = flipY ? -tilingY : tilingY;
     const uvParamW = flipY ? tilingY + offsetV : offsetV;
-
-    if (this._shaderQuadCount >= this._batchSize) {
-      this.flush();
-    }
 
     const idx = this._shaderQuadCount * shaderWordsPerInstance;
     const f32 = this._shaderF32;

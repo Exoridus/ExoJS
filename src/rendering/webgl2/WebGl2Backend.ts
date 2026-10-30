@@ -238,9 +238,10 @@ interface ManagedRenderTargetState {
   /** Colour texture currently attached to {@link resolveFramebuffer}. */
   resolveTexture: WebGLTexture | null;
   /**
-   * Whether a draw or a clear has landed in {@link multisampleColor} since the
-   * last resolve, so a readback of the target's texture can be served a fresh
-   * resolve instead of the previous frame's.
+   * Whether {@link multisampleColor} may hold content the resolve destination
+   * does not: set when the multisample storage is allocated and on every bind
+   * that reuses it, cleared by a resolve. Deliberately conservative - a bind
+   * that drew nothing costs one redundant resolve, never a stale read.
    */
   multisampleDirty: boolean;
 }
@@ -615,9 +616,10 @@ export class WebGl2Backend implements RenderBackend {
    * Device pixels per logical unit of the canvas root target.
    *
    * Derived rather than stored: the root target carries the LOGICAL size while
-   * the canvas backing store carries `logical × pixelRatio`, so the ratio
-   * between them is always current - including after a `resize()` that changes
-   * only one of the two.
+   * the canvas backing store carries whatever the active sizing policy committed
+   * (the base geometry's `logical x pixelRatio` when there is none), so the
+   * ratio between them is always current - including after a `resize()` that
+   * changes only one of the two.
    */
   public get rootResolution(): number {
     const logicalWidth = this._rootRenderTarget.width;
@@ -3059,7 +3061,7 @@ export class WebGl2Backend implements RenderBackend {
   /**
    * Re-book a managed texture's GPU storage with the resource accountant after a
    * full `texImage2D` (re)allocation: frees the previously booked size (if any -
-   * e.g. on resize) and allocates the new `width · height · bytesPerPixel`
+   * e.g. on resize) and allocates the new `width * height * bytesPerPixel`
    * footprint, including the mip chain when the texture generates mips.
    */
   private _bookTextureStorage(state: ManagedTextureState, texture: Texture | RenderTexture, bytesPerPixel: number): void {

@@ -370,7 +370,8 @@ export class View {
    * stops automatically when `duration` elapses. Call {@link clearShake} to
    * cancel early.
    *
-   * @param intensity - Maximum pixel displacement at peak amplitude.
+   * @param intensity - Maximum per-axis displacement in world units at peak
+   * amplitude; the view transform scales it on screen.
    * @param duration  - How long the shake lasts.
    * @param options   - Shake behaviour overrides ({@link ViewShakeOptions}).
    */

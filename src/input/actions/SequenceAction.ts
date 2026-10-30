@@ -141,13 +141,21 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
       throw new InputBindingError('SequenceAction: a serialized sequence binding must be an array of steps.');
     }
 
-    return (data.binding as readonly unknown[]).map(step => {
+    const binding = (data.binding as readonly unknown[]).map(step => {
       if (!Array.isArray(step)) {
         throw new InputBindingError('SequenceAction: every serialized step must be an array of alternatives.');
       }
 
       return (step as readonly unknown[]).map(alternative => channelsFromTokens(alternative, 'a sequence alternative'));
     });
+
+    try {
+      normalizeSequence(binding, 'SequenceAction');
+    } catch (error) {
+      throw new InputBindingError((error as Error).message);
+    }
+
+    return binding;
   }
 
   protected override _resolve(binding: SequenceBinding, slot: GamepadSlot): void {
@@ -175,8 +183,9 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
    * half-completed pattern that goes quiet snaps back to `0` on the frame its
    * window actually elapses - no event has to arrive first. It is still not a
    * timer: expiry is observed on the frames the owning {@link ActionMap} is
-   * updated, so a map that is detached or unavailable holds its progress until
-   * it is fed again.
+   * updated, so a map that is detached holds its progress until it is fed
+   * again, while one that becomes unavailable is reset and re-armed from the
+   * live channel state when it resumes.
    */
   public get progress(): number {
     return this._step / this._steps.length;

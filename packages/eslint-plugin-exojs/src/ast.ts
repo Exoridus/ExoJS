@@ -17,8 +17,10 @@ export type ClassNode = ClassDeclaration | ClassExpression;
 export type FunctionMember = MethodDefinition | PropertyDefinition;
 
 /**
- * Static name of a (possibly computed) property/method key, or `undefined` when
- * the name cannot be determined without evaluating the key expression.
+ * Static name of a property/method key, or `undefined` for a computed key.
+ *
+ * A computed key is never resolved, even when it is a string literal, because
+ * the rules deliberately do not evaluate key expressions.
  */
 export const staticKeyName = (key: Expression | PrivateIdentifier, computed: boolean): string | undefined => {
   if (computed) {

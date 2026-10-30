@@ -243,6 +243,52 @@ describe('validateLdtkData — rejects malformed documents', () => {
     ).toThrow(/unknown layer type "Hexes"/);
   });
 
+  it('rejects a tile layer instance whose __gridSize is 0 with the property path', () => {
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.levels[0].layerInstances[0].__gridSize = 0;
+        }),
+        SOURCE,
+      ),
+    ).toThrow(/levels\[0\]\.layerInstances\[0\]\.__gridSize/);
+  });
+
+  it('rejects a tile layer definition whose gridSize is 0', () => {
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.defs.layers[0].gridSize = 0;
+        }),
+        SOURCE,
+      ),
+    ).toThrow(/defs\.layers\[0\]\.gridSize/);
+  });
+
+  it('accepts an Entities layer whose grid size is 0', () => {
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.defs.layers[1] = { uid: 103, identifier: 'Entities', type: 'Entities', gridSize: 0 };
+          root.levels[0].layerInstances = [
+            {
+              __identifier: 'Entities',
+              __type: 'Entities',
+              __cWid: 4,
+              __cHei: 4,
+              __gridSize: 0,
+              layerDefUid: 103,
+              levelId: 1,
+              visible: true,
+              iid: 'entity-layer-iid',
+            },
+          ];
+        }),
+        SOURCE,
+      ),
+    ).not.toThrow();
+  });
+
   it('rejects a level whose layerInstances is neither an array nor null', () => {
     expect(() =>
       validateLdtkData(

@@ -280,14 +280,42 @@ export interface BaseProvenance {
  * ("ExoJS vs Pixi", "stay-native vs adapter") is auditable - a reader can see
  * precisely which build produced the numbers and reproduce it.
  */
+/** Whether a renderer string names a software rasterizer, whose timings are untrusted. */
+export const isSoftwareRenderer = (renderer: string): boolean => /swiftshader|llvmpipe|software/i.test(renderer);
 export interface LibraryProvenance {
   /** npm package name, e.g. `pixi.js` or `@codexo/exojs-physics`. */
   readonly name: string;
-  /** Exact installed version (from the resolved package manifest). */
+  /** Version declared by the resolved manifest, `'unknown'` when it declares
+   * none, or `'not-installed'` when resolution or manifest reading failed. */
   readonly version: string;
-  /** Absolute path the manifest was resolved from - the reproducibility receipt. */
+  /** Absolute path of the resolved manifest, or an empty string when the
+   * manifest could not be read or parsed. */
   readonly resolvedFrom: string;
 }
+
+/** The manifest path of an installed package, resolved through its exports map. */
+const defaultManifestPath = (name: string): string => {
+  const nodeRequire = createRequire(import.meta.url);
+
+  try {
+    return nodeRequire.resolve(`${name}/package.json`);
+  } catch {
+    // Package hides ./package.json behind exports: walk up from the entry.
+    let dir = dirname(nodeRequire.resolve(name));
+
+    while (!existsSync(resolve(dir, 'package.json'))) {
+      const parent = dirname(dir);
+
+      if (parent === dir) {
+        throw new Error(`could not locate package.json for '${name}'`);
+      }
+
+      dir = parent;
+    }
+
+    return resolve(dir, 'package.json');
+  }
+};
 
 /**
  * Read the installed version + resolution path of each named package arm.
@@ -296,43 +324,39 @@ export interface LibraryProvenance {
  * packages do not expose `./package.json` in `exports`, so a direct
  * `require.resolve('<name>/package.json')` can fail). A package that cannot be
  * resolved is recorded as `not-installed` rather than throwing - a run that does
- * not need every arm present must not be blocked by a missing one.
+ * not need every arm present must not be blocked by a missing one. A package
+ * that resolves but whose manifest cannot be read or parsed is recorded as
+ * `unreadable`, with the path and the failure in `resolvedFrom`.
  *
  * Lifted out of the rendering driver (where it was hardcoded to `['pixi.js']`)
  * so the physics domain can read `@codexo/exojs-physics`'s version the same way.
  */
-export const readLibraryProvenance = (names: readonly string[]): LibraryProvenance[] => {
-  const nodeRequire = createRequire(import.meta.url);
+export const readLibraryProvenance = (
+  names: readonly string[],
+  resolveManifestPath: (name: string) => string = defaultManifestPath,
+): LibraryProvenance[] => {
   const provenance: LibraryProvenance[] = [];
 
   for (const name of names) {
+    let manifestPath: string;
+
     try {
-      let manifestPath: string;
+      manifestPath = resolveManifestPath(name);
+    } catch {
+      provenance.push({ name, version: 'not-installed', resolvedFrom: '' });
+      continue;
+    }
 
-      try {
-        manifestPath = nodeRequire.resolve(`${name}/package.json`);
-      } catch {
-        // Package hides ./package.json behind exports: walk up from the entry.
-        let dir = dirname(nodeRequire.resolve(name));
-
-        while (!existsSync(resolve(dir, 'package.json'))) {
-          const parent = dirname(dir);
-
-          if (parent === dir) {
-            throw new Error(`could not locate package.json for '${name}'`);
-          }
-
-          dir = parent;
-        }
-
-        manifestPath = resolve(dir, 'package.json');
-      }
-
+    try {
       const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { version?: string };
 
       provenance.push({ name, version: manifest.version ?? 'unknown', resolvedFrom: manifestPath });
-    } catch {
-      provenance.push({ name, version: 'not-installed', resolvedFrom: '' });
+    } catch (error) {
+      // The package resolved but its manifest did not load: reporting that as
+      // "not installed" states a false fact about the environment.
+      const reason = error instanceof Error ? error.message : String(error);
+
+      provenance.push({ name, version: 'unreadable', resolvedFrom: `${manifestPath} (${reason})` });
     }
   }
 

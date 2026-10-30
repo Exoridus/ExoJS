@@ -303,6 +303,17 @@ describe('EditContextTextInput', () => {
     expect(lastContext().enterKeyHint).toBe('go');
   });
 
+  test('dropping a hint restores the host default instead of keeping the last one', () => {
+    const { backend } = createBackend();
+
+    backend.setHints({ inputMode: 'numeric', enterKeyHint: 'go' });
+    // The widget rebuilds the snapshot and omits unset members.
+    backend.setHints({});
+
+    expect(lastContext().inputMode).toBe('');
+    expect(lastContext().enterKeyHint).toBe('');
+  });
+
   test('destroy detaches every listener and removes the element', () => {
     const { backend, edits } = createBackend();
     const context = lastContext();

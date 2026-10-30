@@ -166,7 +166,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": ""
+          "description": "Release listeners, pointer and focus state, the spatial index and the Stage bundles installed on scene roots. Later scene mutations cannot reactivate this system."
         },
         {
           "name": "focus",

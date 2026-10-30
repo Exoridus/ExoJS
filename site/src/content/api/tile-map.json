@@ -442,7 +442,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Destroy the map and all owned layers and chunk storage. Is idempotent. Does NOT destroy tileset textures (Loader-owned) or any SceneNodes (those do not exist yet in this slice)."
+          "description": "Destroy the map and all owned layers and chunk storage. Is idempotent. Does NOT destroy tileset textures (Loader-owned) or any SceneNodes (see import('./TileMapNode').TileMapNode)."
         },
         {
           "name": "getImageLayer",
@@ -1957,7 +1957,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Monotonic map revision counter. Increments on structural changes only (add/remove layer, add tileset). Cell mutations are tracked per-chunk and per-layer; the renderer reads chunk-level revisions directly."
+          "description": "Monotonic map revision counter. Increments on structural changes only (add/remove tile, image, or object layer; add tileset). Cell mutations are tracked per-chunk and per-layer; the renderer reads chunk-level revisions directly."
         },
         {
           "name": "tilesets",

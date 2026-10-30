@@ -159,6 +159,17 @@ describe('RenderNodePass', () => {
 });
 
 describe('CallbackRenderPass', () => {
+  test('without a target, the explicit view reaches the callback', () => {
+    const { context } = createContext();
+    const target = new RenderTexture(8, 8);
+    const callback = vi.fn();
+
+    new CallbackRenderPass(callback, { view: target.view }).execute(context);
+
+    expect((callback.mock.calls[0]?.[0] as PassContext).view).toBe(target.view);
+    target.destroy();
+  });
+
   test('without a target, runs the callback with a pass context for the active target', () => {
     const { context, cleared } = createContext();
     const callback = vi.fn();

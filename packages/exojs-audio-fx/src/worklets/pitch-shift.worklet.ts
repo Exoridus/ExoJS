@@ -64,8 +64,10 @@ class PitchShiftProcessor extends DisposableProcessor {
   }
 
   private _buildHannWindow(n: number): Float32Array {
-    // Periodic Hann: w(p) + w(p + n/2) === 1, i.e. constant-overlap-add at
-    // 50% overlap, so two adjacent grains reconstruct unity amplitude.
+    // Periodic Hann: for an even n, w(p) + w(p + n/2) === 1, i.e. constant-
+    // overlap-add at 50% overlap, so two adjacent grains reconstruct unity
+    // amplitude. With an odd n the hop is floor(n/2) and the identity does not
+    // hold; use an even grainSize.
     const w = new Float32Array(n);
 
     for (let i = 0; i < n; i++) {

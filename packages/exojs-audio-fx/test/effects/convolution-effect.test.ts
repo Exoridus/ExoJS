@@ -1,4 +1,4 @@
-import { getAudioContext, Sound } from '@codexo/exojs';
+import { getAudioContext, logger, Sound } from '@codexo/exojs';
 
 import { ConvolutionEffect } from '../../src/effects/ConvolutionEffect';
 
@@ -24,6 +24,8 @@ const makeConvolverNode = () => ({
 });
 
 describe('ConvolutionEffect', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   describe('construction', () => {
     it('uses default wet of 1.0', () => {
       const effect = new ConvolutionEffect();
@@ -357,6 +359,129 @@ describe('ConvolutionEffect', () => {
   });
 
   describe('setImpulse', () => {
+    it('a rejected impulse does not cancel a valid conversion already in flight', async () => {
+      const ctx = getAudioContext();
+      const { convolver, gainSpy, convolverSpy } = wireConvolver(ctx);
+      const current = ctx.createBuffer(1, 44100, ctx.sampleRate);
+      const converted = ctx.createBuffer(1, 44100, ctx.sampleRate);
+      const effect = new ConvolutionEffect({ impulse: current });
+      let complete!: (buffer: AudioBuffer) => void;
+      const render = vi.spyOn(OfflineAudioContext.prototype, 'startRendering').mockReturnValue(
+        new Promise<AudioBuffer>(resolve => {
+          complete = resolve;
+        }),
+      );
+
+      effect.setImpulse(ctx.createBuffer(1, 48000, 48000));
+      expect(() => effect.setImpulse(ctx.createBuffer(3, 44100, ctx.sampleRate))).toThrow(RangeError);
+      expect(convolver.buffer).toBe(current);
+
+      complete(converted);
+
+      await vi.waitFor(() => expect(convolver.buffer).toBe(converted));
+
+      effect.destroy();
+      render.mockRestore();
+      gainSpy.mockRestore();
+      convolverSpy.mockRestore();
+    });
+
+    it('a throwing conversion error reporter cannot create an unhandled rejection', async () => {
+      const ctx = getAudioContext();
+      const { convolver, gainSpy, convolverSpy } = wireConvolver(ctx);
+      const current = ctx.createBuffer(1, 44100, ctx.sampleRate);
+      const effect = new ConvolutionEffect({ impulse: current });
+      const render = vi.spyOn(OfflineAudioContext.prototype, 'startRendering').mockRejectedValue(new Error('conversion failed'));
+      const report = vi.spyOn(logger, 'error').mockImplementation(() => {
+        throw new Error('error reporter failed');
+      });
+
+      effect.setImpulse(ctx.createBuffer(1, 48000, 48000));
+
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
+
+      expect(report).toHaveBeenCalledTimes(1);
+      expect(convolver.buffer).toBe(current);
+
+      effect.destroy();
+      render.mockRestore();
+      report.mockRestore();
+      gainSpy.mockRestore();
+      convolverSpy.mockRestore();
+    });
+
+    it.each([44100, 48000])('rejects a three-channel impulse at %i Hz before replacing the current one', sampleRate => {
+      const ctx = getAudioContext();
+      const { convolver, gainSpy, convolverSpy } = wireConvolver(ctx);
+      const current = ctx.createBuffer(1, 44100, ctx.sampleRate);
+      const effect = new ConvolutionEffect({ impulse: current });
+
+      expect(() => effect.setImpulse(ctx.createBuffer(3, 44100, sampleRate))).toThrow(RangeError);
+      expect(convolver.buffer).toBe(current);
+
+      effect.destroy();
+      gainSpy.mockRestore();
+      convolverSpy.mockRestore();
+    });
+
+    it('reports a failed resample and retains the current impulse', async () => {
+      const ctx = getAudioContext();
+      const { convolver, gainSpy, convolverSpy } = wireConvolver(ctx);
+      const current = ctx.createBuffer(1, 44100, ctx.sampleRate);
+      const effect = new ConvolutionEffect({ impulse: current });
+      const failure = new Error('resampling failed');
+      const render = vi.spyOn(OfflineAudioContext.prototype, 'startRendering').mockRejectedValue(failure);
+      const report = vi.spyOn(logger, 'error').mockImplementation(() => {});
+
+      effect.setImpulse(ctx.createBuffer(1, 48000, 48000));
+
+      await vi.waitFor(() => expect(report).toHaveBeenCalledTimes(1));
+
+      expect(report.mock.calls[0]![1]).toMatchObject({ error: failure });
+      expect(convolver.buffer).toBe(current);
+
+      effect.destroy();
+      render.mockRestore();
+      report.mockRestore();
+      gainSpy.mockRestore();
+      convolverSpy.mockRestore();
+    });
+
+    it.each(['replace', 'destroy'])('handles an obsolete resample rejection after %s', async action => {
+      const ctx = getAudioContext();
+      const { convolver, gainSpy, convolverSpy } = wireConvolver(ctx);
+      const current = ctx.createBuffer(1, 44100, ctx.sampleRate);
+      const effect = new ConvolutionEffect({ impulse: current });
+      let reject!: (reason: Error) => void;
+      const render = vi.spyOn(OfflineAudioContext.prototype, 'startRendering').mockReturnValue(
+        new Promise<AudioBuffer>((_resolve, fail) => {
+          reject = fail;
+        }),
+      );
+      const report = vi.spyOn(logger, 'error').mockImplementation(() => {});
+
+      effect.setImpulse(ctx.createBuffer(1, 48000, 48000));
+
+      if (action === 'destroy') {
+        effect.destroy();
+      } else {
+        effect.setImpulse(current);
+      }
+
+      reject(new Error('obsolete conversion failed'));
+
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
+
+      expect(report).not.toHaveBeenCalled();
+      expect(convolver.buffer).toBe(current);
+
+      effect.destroy();
+      render.mockRestore();
+      report.mockRestore();
+      gainSpy.mockRestore();
+      convolverSpy.mockRestore();
+    });
+
     const wireConvolver = (ctx: AudioContext) => {
       const convolver = makeConvolverNode();
       convolver.context = ctx;

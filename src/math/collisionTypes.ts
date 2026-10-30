@@ -33,8 +33,7 @@ export interface Collidable {
    * Returns `null` in two cases:
    * - the shapes do not overlap, **or**
    * - the specific shape-pair combination does not support response generation
-   *   (e.g. `Line` against any shape, `Ellipse` against `Ellipse` or
-   *   `Polygon`).
+   *   (for example `Line` against any shape, or `Ellipse` against a `Point`).
    *
    * Use {@link intersectsWith} for a universal boolean overlap check that works
    * across all supported shape pairs.

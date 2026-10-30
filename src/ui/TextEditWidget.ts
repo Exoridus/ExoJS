@@ -377,7 +377,11 @@ export abstract class TextEditWidget extends Widget {
     this.setSize(options.width ?? 200, options.height ?? 36);
   }
 
-  /** The text held, never masked. Assigning replaces the whole value. */
+  /**
+   * The text held, never masked. Assigning replaces the whole value and
+   * bypasses `maxLength` and `filter`, which gate edits rather than authored
+   * values.
+   */
   public get value(): string {
     return this.model.value;
   }

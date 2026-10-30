@@ -314,6 +314,8 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
   let tileIds: Uint8Array = new Uint8Array(0);
   /** The tile atlas every chunk draws from, kept so a rebuilt chunk gets the identical tileset. */
   let tileAtlas: TextureSource | null = null;
+  /** The owning Texture of {@link tileAtlas}, kept so releaseTilemap can destroy the GPU texture itself. */
+  let tileAtlasTexture: Texture | null = null;
 
   /** Paint one chunk from {@link tileIds} into its (empty) tilemap. */
   const paintChunk = (chunk: TileChunk): void => {
@@ -372,6 +374,7 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
     const atlas = Texture.from(createTileAtlasCanvas());
 
     tileAtlas = atlas.source;
+    tileAtlasTexture = atlas;
 
     tileTextures = Array.from(
       { length: TILE_VARIANTS },
@@ -461,6 +464,8 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
     tileChunks = [];
     tileTextures = [];
     tileIds = new Uint8Array(0);
+    tileAtlasTexture?.destroy(true);
+    tileAtlasTexture = null;
     tileAtlas = null;
     tilemapSpec = null;
   };
@@ -574,14 +579,6 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
   let blurTexture: Texture | null = null;
 
   /**
-   * Build the blur scene: one textured quad under a separable two-pass Gaussian,
-   * configured to the same nine taps and the same reach as every other arm.
-   *
-   * `quality` is how many times Pixi repeats the pair of sweeps, so it stays at
-   * one: raising it would run the filter several times over and publish the
-   * extra passes as a slower blur rather than as the different effect they are.
-   */
-  /**
    * Standard deviation, in texels, of Pixi's nine-tap weight table at unit tap
    * spacing.
    *
@@ -598,6 +595,14 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
    */
   const PIXI_KERNEL_SIGMA = 2.021;
 
+  /**
+   * Build the blur scene: one textured quad under a separable two-pass Gaussian,
+   * configured to the same nine taps and the same reach as every other arm.
+   *
+   * `quality` is how many times Pixi repeats the pair of sweeps, so it stays at
+   * one: raising it would run the filter several times over and publish the
+   * extra passes as a slower blur rather than as the different effect they are.
+   */
   const buildBlurScene = (spec: ArchetypeSpec, nodeCount: number): void => {
     const texture = Texture.from(createBlurSourceCanvas());
     const sprite = new Sprite(texture);
@@ -1324,9 +1329,7 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
 
       // Pixi v8's WebGPU renderer exposes the live GPU object (adapter + device)
       // as `renderer.gpu`; `renderer.gpu.device` is the `GPUDevice` the harness
-      // attaches its structural probe and submit→done timer to. This is what
-      // fixes the "webgpu backend did not expose a GPUDevice" probe blocker for
-      // the Pixi arm.
+      // attaches its structural probe and submit→done timer to.
       const renderer = app.renderer as WebGPURenderer;
 
       return renderer.gpu?.device ?? null;

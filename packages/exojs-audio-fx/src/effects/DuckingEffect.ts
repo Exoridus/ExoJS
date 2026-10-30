@@ -4,10 +4,15 @@ import duckingWorkletSource from '../worklets/ducking.worklet.ts?worklet';
 
 /** Construction options for {@link DuckingEffect}. `sidechain` is required. */
 export interface DuckingEffectOptions {
+  /** Bus whose level drives the attenuation. Required. */
   sidechain: AudioBus;
+  /** Sidechain level above which the main signal is attenuated, in dBFS. Range -100..0, default -20. */
   threshold?: number;
+  /** Compression ratio applied above the threshold. Range 1..20, default 4. */
   ratio?: number;
+  /** Attack time in milliseconds - how quickly the ducker engages. Default 30. */
   attackMs?: number;
+  /** Release time in milliseconds - how quickly the ducker disengages. Default 300. */
   releaseMs?: number;
 }
 

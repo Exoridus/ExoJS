@@ -1,9 +1,10 @@
 ﻿import type { Distribution } from './Distribution';
 
 /**
- * Uniform random number in `[min, max]`. Each `sample()` returns a fresh
- * roll; the bounds are inclusive on both ends (modulo the rounding bias
- * inherent to `Math.random()`).
+ * Uniform random number from `min + Math.random() * (max - min)`. Each
+ * `sample()` returns a fresh roll. `Math.random()` is on `[0, 1)`, so the result
+ * is below `max` mathematically, but floating-point rounding can land on `max`
+ * for some bounds - do not rely on an exclusive upper bound.
  */
 export class Range implements Distribution<number> {
   public constructor(

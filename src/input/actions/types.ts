@@ -120,8 +120,10 @@ export interface ActionSample {
 }
 
 /**
- * Fixed-step clock of one {@link InputSystem}. `serial` counts the fixed steps
- * started so far; `active` is `true` while one of them runs.
+ * Fixed-step clock of one {@link InputSystem}. `serial` counts sampled-input
+ * windows: it advances when a fixed step starts, and again when a window is
+ * retired without starting one, so retired input can never be delivered as the
+ * next step's. `active` is `true` while a fixed step runs.
  *
  * @internal
  */
@@ -185,7 +187,9 @@ export class ActionOwnership {
    * (see {@link ActionMapOwner._snapshotActionChannels}), a full channel
    * snapshot - as of the moment this map started (or resumed) observing its
    * current owner. Called from {@link ActionMapBase._attach} and from
-   * `InputSystem._resyncActionMap`. The next `resolve()` call that returns
+   * {@link ActionMapBase._armBaseline} when a scope adds or rearms a changed
+   * claim, or `_ownership` directly when availability resumes. The next
+   * `resolve()` call that returns
    * `'baseline'` uses the watermark, via {@link filterBatches}, to replay
    * only batches pushed at-or-after this moment, discarding anything still
    * sitting in the same real frame's shared log from BEFORE this map started

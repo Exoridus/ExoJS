@@ -24,12 +24,12 @@ import type { ArchetypeId, Backend, CellResult, StructuralCounters } from './Eng
 /**
  * Archetypes the gate does not guard, with the reason it cannot.
  *
- * Both exclusions are empirical, from a run comparing every archetype's counters
- * on a real GPU (RTX 5070 Ti / D3D11) against SwiftShader at the gate's own node
- * count. Every other archetype produced byte-identical draw, bind and upload
- * counts on both, which is the precondition the gate's CI residency rests on -
- * so all three counters are guarded, and a counter that had differed would have
- * been dropped from the gate rather than given a tolerance.
+ * The exclusions are deliberate and recorded per archetype in the mapping. A run
+ * comparing every archetype's counters on a real GPU (RTX 5070 Ti / D3D11)
+ * against SwiftShader at the gate's own node count showed byte-identical draw,
+ * bind and upload counts for the archetypes that stayed in the gate - the
+ * precondition the gate's CI residency rests on. A counter that had differed
+ * would have been dropped from the gate rather than given a tolerance.
  */
 export const UNGUARDED_ARCHETYPES: Readonly<Partial<Record<ArchetypeId, string>>> = {
   'batch-breaking':

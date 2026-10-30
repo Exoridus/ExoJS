@@ -67,7 +67,8 @@ export const colorMatrixShader = createFilterShader({
  * subtree.filters = [new ColorMatrixFilter().grayscale().brightness(1.1)];
  *
  * // Damage flash: multiply the subtree by red for a few frames.
- * flash.tint(Color.red);
+ * const flash = new ColorMatrixFilter().tint(Color.red);
+ * subtree.filters = [flash];
  * ```
  *
  * For a cheap per-drawable multiply, use {@link Drawable.tint} instead - it

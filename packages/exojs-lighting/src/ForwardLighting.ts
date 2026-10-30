@@ -47,11 +47,12 @@ const isHost = (value: ForwardLightingOptions | LightingHost | undefined): value
  * this.systems.add(lighting);
  * ```
  *
- * One draw and no extra render targets, which is what makes it the floor
- * renderer. It is also the only one that does normal mapping, through
- * {@link LitMaterial} - the other two multiply a finished frame, which has no
- * surface normals left to shade against. The price is the cap: every lit
- * fragment walks every light, so {@link ForwardLightingOptions.maxLights}
+ * Without a `post` chain it adds no draw of its own and no extra render
+ * targets, which is what makes it the floor renderer; a chain adds a filter
+ * pass over the finished frame. It is the only renderer that takes its
+ * normals from a material ({@link LitMaterial}) rather than from registered
+ * surfaces, which `lightmap` reads through its normal prepass. The price is the cap: every
+ * lit fragment walks every light, so {@link ForwardLightingOptions.maxLights}
  * bounds how many there may be, and it casts no shadows at all.
  *
  * It is the one system that can be built without a host, because its light data

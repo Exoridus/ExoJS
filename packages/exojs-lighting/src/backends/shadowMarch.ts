@@ -51,9 +51,10 @@ const createFilter = (lights: DataTexture<TextureFormat.Rgba32F>): ShaderFilter<
  * further out than that casts no shadow here where the segment walk would
  * still find it.
  *
- * The atlas is a float render target, which WebGL2 only has with
- * `EXT_color_buffer_float` - {@link isSupported} is the question to ask before
- * building one.
+ * The atlas is an `Rgba16F` render target: WebGL2 can render into one only
+ * with a float-colour extension, WebGPU natively, and the frame lighting
+ * backend builds a filler only where the active backend reports
+ * `TextureFormat.Rgba16F` renderable.
  * @internal
  */
 export class ShadowMarchFiller {

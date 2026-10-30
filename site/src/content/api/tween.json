@@ -793,7 +793,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Current eased progress in 0..1. Reflects the eased t after applying the easing function, not the raw elapsed/duration ratio. Returns 0 while the tween is in the delay phase (state is Active but the configured delay has not yet elapsed)."
+          "description": "Current eased progress in 0..1. Reflects the eased t after applying the easing function, not the raw elapsed/duration ratio. Returns 0 while the tween is in the delay phase (state is Active but the configured delay has not yet elapsed), except for a zero-duration tween, which reports 1 immediately, delay included."
         },
         {
           "name": "state",

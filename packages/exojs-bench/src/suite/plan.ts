@@ -87,12 +87,10 @@ export const computePlanHash = (suite: SuiteKind, domain: PlanDomain, workloads:
 };
 
 /**
- * Canonical key of one measured cell.
- *
- * Carries the arm, its configuration, the backend, the scenario revision and the
- * load, because each of those changes what was measured. Two results may only be
- * pooled when their keys match; anything coarser pools a WebGPU cell with a
- * WebGL2 one, or this revision of a scene with the previous one.
+ * Key of one measured cell: the domain, the arm, its configuration, the backend,
+ * the scenario and the load. Two results may only be pooled when their keys
+ * match and the surrounding plan identity is compatible; anything coarser pools
+ * a WebGPU cell with a WebGL2 one.
  */
 export const cellKey = (parts: {
   readonly domain: PlanDomain;
@@ -200,11 +198,16 @@ export const resolveSuitePlan = (options: {
   };
 };
 
-/** Load values the plan selected for one scenario, ascending. */
+/** Load values the plan selected for one scenario, in plan order. */
 export const loadValuesFor = (plan: RunPlan, scenarioId: string): readonly number[] =>
   plan.workloads.filter(workload => workload.scenarioId === scenarioId).map(workload => workload.value);
 
-/** Parse and validate the `--suite` selector. */
+/**
+ * Parse and validate the `--suite` selector.
+ *
+ * An absent selector resolves to `full`; any value besides `reference` and
+ * `full` throws.
+ */
 export const parseSuite = (raw: string | undefined): SuiteKind => {
   if (raw === undefined || raw === 'full') {
     return 'full';

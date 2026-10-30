@@ -104,7 +104,7 @@ describe('RetainedRecordPool', () => {
     expect(pool.at(0)).toBe(first);
   });
 
-  test('releasePooledDrawables clears exactly the capture in progress', () => {
+  test('releasePooledDrawables clears the live capture and the retained tail after shrinking', () => {
     const pool = new RetainedRecordPool(createRecord);
     const kept = pool.acquire();
     const dropped = pool.acquire();
@@ -112,14 +112,16 @@ describe('RetainedRecordPool', () => {
     kept.drawable = drawableA;
     dropped.drawable = drawableB;
 
-    // Shrink the live capture to one record, then release: the record beyond
-    // `used` is not this capture's and is left alone.
     pool.rewind();
     pool.acquire();
     releasePooledDrawables(pool);
 
     expect(kept.drawable).toBeUndefined();
-    expect(dropped.drawable).toBe(drawableB);
+    expect(dropped.drawable).toBeUndefined();
+
+    pool.rewind();
+    expect(pool.acquire()).toBe(kept);
+    expect(pool.acquire()).toBe(dropped);
   });
 });
 

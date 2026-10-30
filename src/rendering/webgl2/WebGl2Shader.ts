@@ -72,10 +72,21 @@ export class WebGl2Shader {
     return this;
   }
 
+  /**
+   * Detach and release the program's GPU resources. Safe to call more than once;
+   * {@link destroy} is the conventional entry point.
+   */
   public disconnect(): this {
+    const program = this._program;
+
     this._program = null;
-    this.attributes.clear();
-    this.uniforms.clear();
+
+    try {
+      program?.destroy(this);
+    } finally {
+      this.attributes.clear();
+      this.uniforms.clear();
+    }
 
     return this;
   }
@@ -131,9 +142,6 @@ export class WebGl2Shader {
   }
 
   public destroy(): void {
-    this._program?.destroy(this);
-    this._program = null;
-    this.attributes.clear();
-    this.uniforms.clear();
+    this.disconnect();
   }
 }

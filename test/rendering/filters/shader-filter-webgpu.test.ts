@@ -395,6 +395,45 @@ const wgslPassOf = (filter: ShaderFilter): Record<string, unknown> | null =>
 // ---------------------------------------------------------------------------
 
 describe('ShaderFilter on WebGPU', () => {
+  test('texture binding count and sample type changes rebuild the cached layout', () => {
+    const backend = makeWebGpuBackend(env);
+    const first = new Texture(document.createElement('canvas'));
+    const second = new Texture(document.createElement('canvas'));
+    const filter = new ShaderFilter({ wgsl: minimalFragSrc, uniforms: { uFirst: first } });
+    const input = new RenderTexture(16, 16);
+    const output = new RenderTexture(16, 16);
+    const userLayout = (): GPUBindGroupLayoutDescriptor => env.createBindGroupLayout.mock.calls.at(-1)![0] as GPUBindGroupLayoutDescriptor;
+
+    try {
+      filter.apply(backend, input, output);
+      expect(Array.from(userLayout().entries)).toHaveLength(3);
+
+      filter.setUniform('uSecond', second);
+      filter.apply(backend, input, output);
+      expect(Array.from(userLayout().entries)).toHaveLength(5);
+      expect(env.createRenderPipeline).toHaveBeenCalledTimes(2);
+
+      filter.setUniform('uSecond', 0);
+      filter.apply(backend, input, output);
+      expect(Array.from(userLayout().entries)).toHaveLength(3);
+
+      filter.setUniform('uFirst', second);
+      filter.apply(backend, input, output);
+      expect(env.createRenderPipeline).toHaveBeenCalledTimes(3);
+
+      vi.mocked(backend.isNonFilterableTexture).mockReturnValue(true);
+      filter.apply(backend, input, output);
+      expect(Array.from(userLayout().entries)[1]!.texture?.sampleType).toBe('unfilterable-float');
+      expect(env.createRenderPipeline).toHaveBeenCalledTimes(4);
+    } finally {
+      filter.destroy();
+      first.destroy();
+      second.destroy();
+      input.destroy();
+      output.destroy();
+    }
+  });
+
   let env: MockWebGpuEnv;
 
   beforeEach(() => {

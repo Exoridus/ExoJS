@@ -2,7 +2,10 @@ import { Scrollbar } from './Scrollbar';
 import type { TextEditWidgetOptions } from './TextEditWidget';
 import { TextEditWidget } from './TextEditWidget';
 
-/** Options for {@link TextArea}. */
+/**
+ * Options for {@link TextArea}. The visible height defaults to `120` pixels
+ * rather than the base field's `36`.
+ */
 export interface TextAreaOptions extends Omit<TextEditWidgetOptions, 'multiline'> {
   /** Hint shown while the field holds no text. Default `''`. */
   placeholder?: string;

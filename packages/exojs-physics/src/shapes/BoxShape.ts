@@ -1,9 +1,10 @@
 import { PolygonShape } from './PolygonShape';
 
 /**
- * Axis-aligned box of `width × height` centred on the collider's local origin -
- * a convenience over {@link PolygonShape}. The result is a regular polygon, so
- * it participates in the polygon narrow phase like any other convex shape.
+ * Box of `width x height`, aligned to the collider's local axes and centred on
+ * its local origin - a convenience over {@link PolygonShape}. The result is a
+ * convex quad, so it participates in the polygon narrow phase like any other
+ * convex shape.
  */
 export class BoxShape extends PolygonShape {
   public readonly width: number;

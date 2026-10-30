@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Width in dB of the soft-knee transition around the threshold. Range 0..40, default 30."
         },
         {
           "name": "ratio",
@@ -101,7 +101,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Input-to-output dB ratio above the threshold. Range 1..20, default 12."
         },
         {
           "name": "release",
@@ -151,7 +151,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Level in dBFS above which compression begins. Range -100..0, default -24."
         }
       ],
       "paragraphs": [],

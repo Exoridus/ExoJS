@@ -5,12 +5,14 @@ import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
 
 /**
- * Exponential velocity damping. Each frame multiplies every live particle's
- * velocity by `(1 - drag * dt)`, simulating linear air resistance.
+ * Multiplicative velocity damping. Each frame multiplies every live particle's
+ * velocity by `(1 - drag * dt)`, approximating linear air resistance.
  *
- * `drag = 0` is no damping; `drag = 1` halves velocity in ~1 second; higher
- * values slow particles faster. Negative values accelerate (don't do that
- * unless you mean it).
+ * `drag = 0` is no damping; `drag = 1` removes about 63% of velocity per
+ * second in the small-step limit, and the exact factor depends on the frame
+ * rate. Damping is monotonic only while `0 <= drag * dt <= 1`; beyond that the
+ * factor changes sign, and past 2 its magnitude grows. Negative values
+ * accelerate (don't do that unless you mean it).
  *
  * GPU-eligible.
  */

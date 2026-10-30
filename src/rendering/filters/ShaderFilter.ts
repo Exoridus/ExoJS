@@ -343,9 +343,13 @@ export const createFilterShader = <
  * Without a declaration the source keeps today's contract: anything in
  * {@link uniforms} is bound after the auto-binds, GLSL resolves them by name
  * with texture uniforms claiming slots 1..N, and WGSL packs every non-texture
- * uniform into one buffer at `@group(1) @binding(0)`, each in a 16-byte slot
- * **in declaration order**, binding texture uniforms from `@group(1) @binding(1)`
- * onwards, each followed by its sampler.
+ * uniform into one buffer at `@group(1) @binding(0)`, each in a 16-byte slot in
+ * the order the record holds them. An existing name keeps its slot for the
+ * pass's life, and the record order is the layout order, so pass values in the
+ * order the WGSL declares them. A name added later appends a slot at the end and
+ * cannot move the slots before it, but it is not part of the pipeline's declared
+ * layout. Texture uniforms follow from `@group(1) @binding(1)` onwards, each
+ * followed by its sampler.
  *
  * ## Missing sources
  *

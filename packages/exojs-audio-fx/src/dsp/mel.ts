@@ -28,9 +28,9 @@ export interface MelBand {
 /**
  * Build a mel filterbank.
  *
- * @param numBands   Number of mel bands (default 24).
- * @param fMin       Lowest frequency in Hz (default 80).
- * @param fMax       Highest frequency in Hz (default 8000).
+ * @param bandCount  Number of mel bands (the beat detector defaults to 24).
+ * @param fMin       Lowest frequency in Hz (the beat detector passes 80).
+ * @param fMax       Highest frequency in Hz (the beat detector passes 8000).
  * @param fftSize    Number of FFT points (e.g., 2048).
  * @param sampleRate Audio sample rate in Hz (e.g., 48000).
  */

@@ -45,6 +45,7 @@ export type LogSink = (entry: LogEntry) => void;
  * outright in production builds (`__DEV__` is `false`); `error()` always
  * reaches every registered sink. In development a {@link createConsoleSink}
  * is installed by default - see {@link logger}.
+ * Sink failures are isolated so logging cannot interrupt engine error handling.
  */
 export class Logger {
   private readonly _sinks: LogSink[] = [];
@@ -77,7 +78,11 @@ export class Logger {
     };
 
     for (const sink of this._sinks) {
-      sink(entry);
+      try {
+        sink(entry);
+      } catch {
+        // Reporting a failed sink through this logger would recurse into the same sink.
+      }
     }
   }
 

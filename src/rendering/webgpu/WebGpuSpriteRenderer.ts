@@ -635,12 +635,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   }
 
   /**
-   * Draw `count` instances, instance `i` reading slot `order[i]`.
+   * Draw `count` instances, instance `i` reading slot `order[offset + i]`.
    *
-   * One `drawIndexed` for the whole root: the store's texture table binds once,
-   * the order stream is issued verbatim, and no per-instance data crosses the
-   * bus. Nothing here may reorder or split the stream - it IS the draw order the
-   * plan built.
+   * One `drawIndexed` for this segment: the store's texture table binds once,
+   * the order stream is issued verbatim from `offset`, and no per-instance data
+   * crosses the bus. Nothing here may reorder or split the segment further - it
+   * IS the draw order the plan built for this range.
    * @internal
    */
   public _drawPersistentSlots(
@@ -1178,6 +1178,22 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
    * rotate their base textures through the slot table, so the check is the same.
    */
   private _batchWouldMutateTexture(backend: WebGpuBackend): boolean {
+    if (this._currentMaterial !== null) {
+      const material = this._currentMaterial;
+
+      for (const name of material._bindingSchema.textureUniformNames) {
+        if (backend.textureUploadWouldMutate(material._getUniformValue(name) as Texture | RenderTexture)) {
+          return true;
+        }
+      }
+
+      for (const name of material._bindingSchema.textureNames) {
+        if (backend.textureUploadWouldMutate(material._getTextureValue(name))) {
+          return true;
+        }
+      }
+    }
+
     for (let i = 0; i < this._slotCount; i++) {
       const texture = this._activeTextures[i];
 
@@ -1532,10 +1548,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   }
 
   /**
-   * Pre-create render pipelines for every blend-mode × target-format
-   * combination this renderer can produce, asynchronously and in
-   * parallel. Called from the render system's init path so by the time
-   * the first frame draws, all pipelines exist in cache.
+   * Pre-create the no-stencil render pipelines for the blend modes this
+   * renderer prewarms, across every supplied target format, asynchronously
+   * and in parallel. Stencil-clip variants and custom-material pipelines are
+   * created lazily on first use. Called from the render system's init path so
+   * that by the time the first frame draws, the prewarmed pipelines exist in
+   * cache.
    *
    * Without prewarm, the first draw of any new (blendMode, format)
    * combination would fall back to the synchronous _getPipeline() path,
@@ -1544,8 +1562,9 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
    */
   public async prewarmPipelines(formats: readonly GPUTextureFormat[]): Promise<void> {
     const device = this._device;
+    const pipelineLayout = this._pipelineLayout;
 
-    if (!device || !this._shaderModule || !this._pipelineLayout) {
+    if (!device || !this._shaderModule || !pipelineLayout) {
       return;
     }
 
@@ -1578,7 +1597,9 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
         }
 
         const promise = device.createRenderPipelineAsync(this._buildPipelineDescriptor(blendMode, format)).then(pipeline => {
-          this._pipelines.set(format, pipelineKey, pipeline);
+          if (this._device === device && this._pipelineLayout === pipelineLayout) {
+            this._pipelines.set(format, pipelineKey, pipeline);
+          }
         });
 
         promises.push(promise);
@@ -1593,8 +1614,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     const f32 = this._instanceFloat32;
     const u32 = this._instanceUint32;
 
-    // localBounds: left, top, right, bottom (words 0..3, offset 0) - device-snapped in
-    // PixelSnapMode.Geometry, otherwise the logical local bounds.
+    // localBounds: left, top, right, bottom (words 0..3, offset 0) - always the
+    // sprite's logical local bounds; geometry-mode snapping is in the vertex stage.
     const bounds = this._activeBounds ?? sprite.getLocalBounds();
 
     f32[offset + 0] = bounds.left;

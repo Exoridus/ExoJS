@@ -78,6 +78,26 @@ describe('Voice — per-voice effects', () => {
     vi.restoreAllMocks();
   });
 
+  test('an unready effect leaves the existing chain intact and does not poison later additions', () => {
+    const system = new AudioSystem();
+    const out = captureVoiceOutput();
+    const sound = new Sound(makeBufferStub());
+    const voice = system.play(sound);
+
+    out.node!.disconnect.mockClear();
+
+    expect(() => voice.addEffect(makeUnreadyEffect())).toThrow(/not yet initialized/);
+    expect(out.node!.disconnect).not.toHaveBeenCalled();
+
+    const ready = makeStubEffect();
+
+    expect(() => voice.addEffect(ready)).not.toThrow();
+    expect(out.node!.connect).toHaveBeenCalledWith(ready.inputNode);
+
+    sound.destroy();
+    out.restore();
+  });
+
   test('addEffect inserts the effect between the voice output and the bus', () => {
     const system = new AudioSystem(); // before spy so bus gains are not captured
     const out = captureVoiceOutput();

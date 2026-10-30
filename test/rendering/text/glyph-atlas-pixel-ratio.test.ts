@@ -249,3 +249,25 @@ describe('GlyphAtlas rasterization at a pixel ratio', () => {
     expect(info.uvBottom).toBe((2 + 18) / 1024);
   });
 });
+
+test('clearVariant clears standalone metrics across caps variants, preserving other typefaces', () => {
+  const pool = new GlyphAtlasPool();
+  const ordinary = pool.getMetrics({ family: 'Loaded' });
+  const caps = pool.getMetrics({ family: 'Loaded', fontVariant: 'small-caps' });
+  const other = pool.getMetrics({ family: 'Other' });
+  expect(ordinary.advance('M', 32)).toBe(10);
+  expect(caps.advance('M', 32)).toBe(10);
+  expect(other.advance('M', 32)).toBe(10);
+  const ordinaryClear = vi.spyOn(ordinary, 'clear');
+  const capsClear = vi.spyOn(caps, 'clear');
+  const otherClear = vi.spyOn(other, 'clear');
+  measured.width = 23;
+  pool.clearVariant({ family: 'Loaded' });
+  expect(ordinaryClear).toHaveBeenCalledOnce();
+  expect(capsClear).toHaveBeenCalledOnce();
+  expect(otherClear).not.toHaveBeenCalled();
+  expect(ordinary.advance('M', 32)).toBe(23);
+  expect(caps.advance('M', 32)).toBe(23);
+  expect(other.advance('M', 32)).toBe(10);
+  measured.width = 10;
+});

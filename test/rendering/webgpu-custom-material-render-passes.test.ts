@@ -18,11 +18,14 @@
  * draw in the open pass already read still gets its own.
  */
 
+import { vi } from 'vitest';
+
 import { Color } from '#core/Color';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Shader } from '#rendering/shader/Shader';
 import { Sprite } from '#rendering/sprite/Sprite';
+import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
@@ -58,6 +61,51 @@ const createMaterial = (color: Float32Array): SpriteMaterial =>
   });
 
 describe('WebGPU custom-material batches and render passes', () => {
+  test.each(['uniforms', 'textures'] as const)('submits earlier draws before uploading a changed material %s texture', async binding => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const backend = await createMockBackend(environment);
+      const extra = Texture.fromPixels({
+        colorSpace: 'srgb',
+        alphaMode: 'straight',
+        levels: [{ data: new Uint8Array([255, 0, 0, 255]), width: 1, height: 1 }],
+      });
+      extra.generateMipMap = false;
+      const material = new SpriteMaterial({
+        shader: new Shader({ wgsl: spriteFragmentWgsl }),
+        uniforms: { u_userColor: new Float32Array([1, 0, 0, 1]), ...(binding === 'uniforms' ? { u_extra: extra } : {}) },
+        textures: binding === 'textures' ? { u_extra: extra } : {},
+      });
+      const sprite = new Sprite(createCanvasTexture());
+      sprite.material = material;
+      renderFrame(backend, [sprite, sprite, sprite, sprite]);
+      backend.resetStats();
+      backend.clear(Color.black);
+      sprite.render(backend);
+      backend.rendererRegistry.resolve(sprite).flush();
+      const submit = vi.spyOn(backend.device.queue, 'submit');
+      const upload = vi.spyOn(backend.device.queue, 'writeTexture');
+      extra.setPixels({
+        colorSpace: 'srgb',
+        alphaMode: 'straight',
+        levels: [{ width: 1, height: 1, data: new Uint8Array([0, 0, 255, 255]) }],
+      });
+      sprite.render(backend);
+      backend.flush();
+
+      expect(upload).toHaveBeenCalledTimes(1);
+      expect(submit.mock.invocationCallOrder[0]).toBeLessThan(upload.mock.invocationCallOrder[0]!);
+      expect(backend.stats.renderPasses).toBeGreaterThan(1);
+      extra.destroy();
+      sprite.destroy();
+      material.destroy();
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
   test('sprites on distinct base textures merge into one draw in one render pass', async () => {
     const environment = createMockWebGpuEnvironment();
 

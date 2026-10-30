@@ -74,14 +74,6 @@ export interface RetainedFragmentBarrier {
 export type RetainedFragmentEntry = RetainedFragmentDraw | RetainedFragmentGroup | RetainedFragmentBarrier;
 
 /**
- * Process-wide monotonic epoch for the dirty-transform-row dedup
- * (see {@link RetainedGroupFragment}). Each fragment reset claims a fresh value,
- * so a node's dedup stamp from any earlier cycle - this fragment's or another's
- * - can never equal a fragment's current epoch, making a false dedup (a dropped
- * move → stale render) impossible.
- */
-
-/**
  * Whole-command-range fragment cache for one {@link RetainedContainer}.
  * Keyed on the subtree's aggregate
  * content/structure revision and the backend identity - deliberately NOT on

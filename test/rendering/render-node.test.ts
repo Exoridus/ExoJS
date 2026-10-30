@@ -154,3 +154,56 @@ describe('RenderNode and SceneNode contract', () => {
     container.destroy();
   });
 });
+
+describe('subtree texture cache revisions', () => {
+  test.each([
+    ['content', (child: Container) => child.invalidateCache()],
+    ['transform', (child: Container) => child.setPosition(1, 1)],
+    ['structure', (child: Container) => child.addChild(new Container())],
+    [
+      'visibility',
+      (child: Container) => {
+        child.visible = false;
+      },
+    ],
+  ] as const)('a descendant %s change rejects a bounds-stable cached image', (_kind, mutate) => {
+    const cached = new Container();
+    const child = new Container();
+    cached.addChild(new Container().addChild(child));
+    cached.cacheAsTexture = true;
+    const texture = new RenderTexture(10, 10);
+    cached._renderPlanStoreCacheTexture(texture, 0, 0, 10, 10, 1);
+    expect(cached._renderPlanCanReuseTextureCache(0, 0, 10, 10, 1)).toBe(true);
+    mutate(child);
+    expect(cached._renderPlanCanReuseTextureCache(0, 0, 10, 10, 1)).toBe(false);
+    cached.destroy();
+  });
+
+  test('unchanged subtrees reuse their image after an unrelated sibling changes', () => {
+    const root = new Container();
+    const cached = new Container();
+    const sibling = new Container();
+    root.addChild(cached, sibling);
+    cached.cacheAsTexture = true;
+    cached._renderPlanStoreCacheTexture(new RenderTexture(10, 10), 0, 0, 10, 10, 1);
+    sibling.invalidateCache();
+    expect(cached._renderPlanCanReuseTextureCache(0, 0, 10, 10, 1)).toBe(true);
+    expect(cached._renderPlanCanReuseTextureCache(0, 0, 10, 10, 1)).toBe(true);
+    root.destroy();
+  });
+
+  test('cache publication separates consecutive content mutations', () => {
+    const cached = new Container();
+    const child = new Container();
+    cached.addChild(child);
+    cached.cacheAsTexture = true;
+    const texture = new RenderTexture(10, 10);
+    child.invalidateCache();
+    cached._renderPlanStoreCacheTexture(texture, 0, 0, 10, 10, 1);
+    child.invalidateCache();
+    expect(cached._renderPlanCanReuseTextureCache(0, 0, 10, 10, 1)).toBe(false);
+    cached._renderPlanStoreCacheTexture(texture, 0, 0, 10, 10, 1);
+    expect(cached._renderPlanCanReuseTextureCache(0, 0, 10, 10, 1)).toBe(true);
+    cached.destroy();
+  });
+});

@@ -129,7 +129,7 @@ class DropdownRow extends Widget {
  * closing restores their previous order without changing layout or tab order.
  */
 export class Dropdown<T = string> extends Widget {
-  /** Fires when the selection changes, with the value and its index. */
+  /** Fires when the selection moves to another entry, with its value and index; clearing the selection does not fire. */
   public readonly onChange = new Signal<[value: T, index: number, dropdown: Dropdown<T>]>();
 
   private readonly _surface = new WidgetBackground(this, 0);
@@ -160,7 +160,10 @@ export class Dropdown<T = string> extends Widget {
     this._padding = options.padding ?? 12;
     this._textStyle = options.textStyle ?? null;
     this._rowHeight = options.height ?? 36;
-    this._selectedIndex = options.selectedIndex ?? -1;
+    this._selectedIndex =
+      options.selectedIndex !== undefined && options.selectedIndex >= 0 && options.selectedIndex < this._items.length
+        ? options.selectedIndex
+        : -1;
 
     this._appliedText = resolveUISkin(this.theme.button, 'normal').text;
     this._label = new Text(this._labelText(), { ...this._appliedText, align: 'left', ...this._textStyle });
@@ -196,7 +199,9 @@ export class Dropdown<T = string> extends Widget {
     this._items.length = 0;
     this._items.push(...items);
     this._selectedIndex = Math.min(this._selectedIndex, this._items.length - 1);
+    this._highlightIndex = Math.min(this._highlightIndex, this._items.length - 1);
     this._buildRows();
+    this._syncHighlight();
     this._invalidateLayout();
 
     return this;

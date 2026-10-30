@@ -1892,20 +1892,20 @@ export class InputSystem {
    * terminal this flush, once `InteractionSystem` has fully drained its own
    * node-level dispatch for the frame. `InputSystem._drainJournal` only
    * flags a terminal pointer as PENDING - it must not destroy it itself,
-   * because `InteractionSystem._prepareFrame` (a separate top-level call the
-   * app's frame loop makes right after `InputSystem._prepareFrame` returns)
-   * still has queued node-level events - e.g. a `contextmenu` request - that
+   * because `InteractionSystem.preFrame` - the core system the frame loop
+   * runs right after `InputSystem.preFrame` - still has queued node-level
+   * events - e.g. a `contextmenu` request - that
    * reference that same `Pointer` object and dispatch only during ITS OWN
    * pass. Destroying the pointer any earlier would hand a node handler an
    * already-destroyed `Pointer`.
    *
-   * Called from `Application`'s frame loop in a `finally` block around
-   * `interaction._prepareFrame()`, so retirement still runs even if a node
+   * Called from `InteractionSystem.preFrame`'s `finally` block, after the
+   * frame's node-level dispatch, so retirement still runs even if a node
    * handler throws.
    *
    * Re-validates BOTH that a pending pointer is still genuinely terminal AND
    * that it's still the live map entry for its id before destroying it - a
-   * node handler running during `InteractionSystem._prepareFrame` can
+   * node handler running during `InteractionSystem.preFrame` can
    * synchronously drive a same-`pointerId` re-entry (see
    * {@link handlePointerOver}'s doc comment) that replaces the map entry with
    * a fresh, non-terminal `Pointer` for that same id; that new object must

@@ -28,9 +28,10 @@ const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
  * Single-quad two-texture compositor used by `WebGl2Backend.composeWithAlphaMask`.
  *
  * Renders the content texture onto the active render target with each
- * output texel's alpha multiplied by the mask texture's alpha at the
- * same UV. Both textures are sampled with stretched-fit UVs over the
- * destination rectangle.
+ * output texel's components multiplied by the mask texture's alpha at the
+ * same UV - both the premultiplied RGB and the alpha are masked. Both
+ * textures are sampled with stretched-fit UVs over the destination
+ * rectangle.
  *
  * Intentionally not a {@link AbstractWebGl2Renderer} subclass: this
  * compositor is invoked directly by the system for non-Drawable

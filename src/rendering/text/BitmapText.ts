@@ -25,6 +25,10 @@ export interface BitmapTextOptions extends Omit<TextStyleOptions, 'fontSize'> {
    * Set to `true` if the atlas was produced by `msdf-atlas-gen` (MSDF).
    * Selects the `text-msdf` shader which applies the median SDF formula.
    * Defaults to `false` (colour/RGBA atlas).
+   *
+   * Read once at construction: {@link setFont} replaces the atlas without
+   * changing it, so a node switched between colour and MSDF fonts needs a
+   * new instance.
    */
   msdf?: boolean;
   /** Layout options forwarded to the text layout engine. */

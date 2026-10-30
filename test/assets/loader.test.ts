@@ -1467,6 +1467,45 @@ describe('loadContainer()', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('destroy()', () => {
+  test('a reentrant factory teardown and repeated destroy release the owned cache once', () => {
+    const store = createCacheStoreDouble();
+    const loader = new Loader({ cache: store });
+    const destroy = vi.fn(() => loader.destroy());
+
+    loader._installAssetTypes([testAssetType({ id: 'reentrant', create: async () => 'unused', destroy })]);
+    loader.destroy();
+    loader.destroy();
+
+    expect(store.destroy).toHaveBeenCalledTimes(1);
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
+  test('factory failure does not leave later factories, resident assets or signals alive', async () => {
+    const loader = createCoreLoader();
+    const failure = new Error('factory teardown failed');
+    const second = vi.fn();
+
+    loader._installAssetTypes([
+      testAssetType({ id: 'dummyAsset', token: DummyAsset, acquires: false, create: async () => 'resident' }),
+      testAssetType({
+        id: 'throwing',
+        create: async () => 'unused',
+        destroy: () => {
+          throw failure;
+        },
+      }),
+      testAssetType({ id: 'later', create: async () => 'unused', destroy: second }),
+    ]);
+    loader.onLoaded.add(() => {});
+
+    await loader.load(new Asset({ type: 'dummyAsset', source: 'resident.dat' }));
+    expect(loader.stats().ready).toBe(1);
+    expect(() => loader.destroy()).toThrow(failure);
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(loader.stats().ready).toBe(0);
+    expect(loader.onLoaded.count).toBe(0);
+  });
+
   test('destroys cache stores, calls destroy() on every installed factory, and clears signals', () => {
     class DestroyAsset {}
     const store = createCacheStoreDouble();

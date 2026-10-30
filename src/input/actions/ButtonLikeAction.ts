@@ -192,11 +192,13 @@ export abstract class ButtonLikeAction<Binding> extends ActionBase<Binding> {
   }
 
   /**
-   * Clear all state, as if no source had ever been touched - used when an
-   * owner stops feeding this action (a scene suspend), after a rebind, and by
-   * the owning {@link ActionMap} to force a fresh baseline on a legitimate
-   * ownership handoff, since the new owner's channel buffer is unrelated to
-   * the old one's.
+   * Clear the aggregate, edge and seeding state, as if no source had ever
+   * been touched - used when an owner stops feeding this action (a scene
+   * suspend), after a rebind, and by the owning {@link ActionMap} to force a
+   * fresh baseline on a legitimate ownership handoff, since the new owner's
+   * channel buffer is unrelated to the old one's. Tick occurrences are not
+   * part of this reset: they are dropped separately by {@link _dropTickInput},
+   * and a rebind deliberately keeps occurrences already sampled.
    *
    * @internal
    */

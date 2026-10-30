@@ -27,10 +27,12 @@ type FrameCallbackVideoElement = HTMLVideoElement &
  *
  * `Video` wraps a video element, manages playback (play/pause/stop/seek,
  * volume, loop, playback rate), and keeps the underlying {@link Texture}
- * in sync with the decoded video frame stream via
- * `requestVideoFrameCallback` (falling back to `currentTime` polling on
- * browsers that lack it). Audio is routed through the Web Audio API gain
- * node and can be directed to any {@link AudioBus}.
+ * in sync with the decoded video frame stream. Collecting a visible video node
+ * compares `currentTime` against the last one seen, and
+ * `requestVideoFrameCallback`, where the browser has it, marks a new frame as
+ * soon as it is presented.
+ * Audio is routed through the Web Audio API gain node and can be directed to
+ * any {@link AudioBus}.
  *
  * Frames are uploaded as sRGB colour, like any other browser image source, so
  * the video is SDR content. The engine has no HDR video path: an HDR clip

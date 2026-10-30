@@ -3,7 +3,7 @@ import { BackendTargetPass } from '#rendering/BackendTargetPass';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
-import { BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
+import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
 import { createWebGl2ShaderProgram } from '#rendering/webgl2/shaderProgram';
 import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { WebGl2RenderBuffer } from '#rendering/webgl2/WebGl2RenderBuffer';
@@ -68,6 +68,8 @@ export class WebGl2ShaderFilterPass {
 
   private _shader: WebGl2Shader | null = null;
   private _connection: WebGl2Connection | null = null;
+  private _backend: WebGl2Backend | null = null;
+  private readonly _onContextLost = (): void => this.destroy();
   /** The textures the running pass reads from and writes to, staged by {@link apply}. */
   private _passInput: RenderTexture | null = null;
   private _passOutput: RenderTexture | null = null;
@@ -98,6 +100,9 @@ export class WebGl2ShaderFilterPass {
   }
 
   public destroy(): void {
+    this._backend?.onContextLost.remove(this._onContextLost);
+    this._backend = null;
+
     if (this._connection !== null) {
       this._connection.vertexBuffer.destroy();
       this._connection.vao.destroy();
@@ -186,6 +191,8 @@ export class WebGl2ShaderFilterPass {
     // Draw the fullscreen quad
     const connection = this._connection!;
 
+    // Source-over on the cleared target preserves the premultiplied shader output.
+    gl2.setBlendMode(BlendModes.Normal);
     gl2.bindVertexArrayObject(connection.vao);
     connection.vao.draw(4, 0, RenderingPrimitives.TriangleStrip);
 
@@ -225,6 +232,10 @@ export class WebGl2ShaderFilterPass {
 
     this._shader = shader;
     this._connection = { gl, vertexBuffer, vao };
+
+    // Every GL object above dies with the context; the next apply rebuilds them.
+    this._backend = backend;
+    backend.onContextLost.add(this._onContextLost);
   }
 
   private _createVertexBuffer(gl: WebGL2RenderingContext): WebGl2RenderBuffer {

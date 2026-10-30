@@ -80,7 +80,11 @@ export interface RenderingMechanismOptions {
   readonly drawless?: boolean;
 }
 
-/** Mechanism sentence for a rendering row, or `null` when neither arm reported counters. */
+/**
+ * Mechanism sentence for a rendering row, or `null` when either arm reported no
+ * counters, and also when either arm drew nothing for a scene that is meant to
+ * draw something (see {@link RenderingMechanismOptions.drawless}).
+ */
 export const renderingMechanism = (
   exojs: StructuralCounters | null,
   competitor: StructuralCounters | null,
@@ -90,11 +94,12 @@ export const renderingMechanism = (
     return null;
   }
 
-  if (exojs.drawCalls === 0 && competitor.drawCalls === 0) {
+  if (exojs.drawCalls === 0 || competitor.drawCalls === 0) {
     // A cell that issued no draw call at all did not render the archetype, so
     // its counters describe nothing - unless the archetype draws nothing on
-    // purpose (see `drawless`).
-    if (options.drawless !== true) {
+    // purpose (see `drawless`). A zero on only one arm is a failed measurement,
+    // not a structural finding, so it cannot carry an attribution either.
+    if (options.drawless !== true || exojs.drawCalls !== 0 || competitor.drawCalls !== 0) {
       return null;
     }
 
@@ -133,9 +138,22 @@ export const physicsMechanism = (exojs: PhysicsStructuralCounters | null, compet
     return `${leader} resolves fewer ${dominant.label} (${dominant.exojs} vs ${dominant.competitor}); the counters are not semantically identical across arms (see the run's caveats)`;
   }
 
-  const shared = `${exojs.bodyCount} bodies, ${exojs.contactCount} contacts, ${exojs.jointCount} joints on both arms`;
+  const counts = (counters: PhysicsStructuralCounters): string =>
+    `${counters.bodyCount} bodies, ${counters.contactCount} contacts, ${counters.jointCount} joints`;
+  const identical =
+    exojs.bodyCount === competitor.bodyCount &&
+    exojs.contactCount === competitor.contactCount &&
+    exojs.jointCount === competitor.jointCount;
+  const hasRays = exojs.rayHits > 0 || competitor.rayHits > 0;
+  const rays = hasRays ? ` with ${exojs.rayHits} vs ${competitor.rayHits} ray hits per step` : '';
 
-  return exojs.rayHits > 0 || competitor.rayHits > 0
-    ? `identical scene (${shared}) with ${exojs.rayHits} vs ${competitor.rayHits} ray hits per step; the difference is query and solver cost`
-    : `identical scene (${shared}); the difference is solver cost`;
+  // Only counters both arms reported can evidence equivalence; quoting the ExoJS
+  // arm's numbers "on both arms" would publish one arm's structure as the other's.
+  if (!identical) {
+    return `scene counters differ (ExoJS ${counts(exojs)} vs competitor ${counts(competitor)})${rays}; no single counter difference is large enough to explain the gap`;
+  }
+
+  return hasRays
+    ? `identical scene (${counts(exojs)})${rays}; the difference is query and solver cost`
+    : `identical scene (${counts(exojs)}); the difference is solver cost`;
 };

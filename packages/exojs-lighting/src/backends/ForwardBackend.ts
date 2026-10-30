@@ -151,7 +151,7 @@ export class ForwardBackend implements LightingBackend {
     return this._texture;
   }
 
-  /** Lights the last publish actually wrote - disabled ones and the surplus beyond {@link maxLights} are skipped. */
+  /** Published lights; disabled, nonpositive-radius and excess lights are skipped. */
   public get activeLightCount(): number {
     return this._activeCount;
   }
@@ -179,12 +179,18 @@ export class ForwardBackend implements LightingBackend {
         continue;
       }
 
+      const radius = lightRadius(light);
+
+      if (radius <= 0) {
+        continue;
+      }
+
       const offset = (written + headerColumns) * channels;
 
       light.getWorldPosition(scratchPosition);
       buffer[offset] = scratchPosition.x;
       buffer[offset + 1] = scratchPosition.y;
-      buffer[offset + 2] = lightRadius(light);
+      buffer[offset + 2] = radius;
       buffer[offset + 3] = light.intensity;
 
       writeLightColorRgb(buffer, secondRow + offset, light.color);

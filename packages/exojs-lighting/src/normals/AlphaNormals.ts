@@ -17,6 +17,10 @@ import type { NormalConvention, NormalSource } from './NormalSource';
  *
  * The source must be drawable at construction: a texture that is still loading
  * yields a flat map rather than waiting.
+ *
+ * The derived map is a full-size RGBA8 texture allocated by this source. Like
+ * every texture a material binds, it stays caller-owned - nothing here
+ * destroys it - so call `texture.destroy()` once no material uses it.
  */
 export class AlphaNormals implements NormalSource {
   public readonly texture: Texture;

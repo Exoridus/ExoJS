@@ -15,10 +15,12 @@ export interface MapLevelLoadContext {
    * when the level unloads, and claiming an asset another level also holds
    * never takes it away from that level.
    *
-   * Its lifetime ends when {@link signal} aborts: an unload releases the scope
-   * without waiting for a provider still in flight, so a provider that resumes
-   * after that point must not claim through it any more. Check `signal.aborted`
-   * after every `await` before touching the scope again.
+   * A cancellation ends the scope's useful life, but not instantly: an unload
+   * aborts {@link signal} and returns, and the scope is destroyed once a provider
+   * call still in flight settles, or earlier when the parent runtime scope is
+   * destroyed. Treat `signal.aborted` as final after every `await` and stop
+   * claiming; a provider that never settles keeps its scope alive until the
+   * runtime scope dies.
    */
   readonly scope: LoaderScope;
   /** Aborts when the level is unloaded or the load is cancelled. */

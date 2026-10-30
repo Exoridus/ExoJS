@@ -103,7 +103,8 @@ export class TweenSequencer {
 
   /**
    * Playback progress in 0..1, advancing in discrete steps as each stage
-   * completes. Equals `1` when the entire sequence has finished.
+   * completes in either direction; it resets to `0` when a repeat starts.
+   * Equals `1` when the entire sequence has finished.
    */
   public get progress(): number {
     const n = this._stages.length;

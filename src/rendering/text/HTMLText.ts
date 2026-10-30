@@ -13,7 +13,11 @@ const fontMime: Record<FontFormat, string> = {
 };
 
 export interface HTMLTextOptions {
-  /** CSS injected inside a &lt;style&gt; tag within the SVG foreignObject. */
+  /**
+   * CSS injected inside a &lt;style&gt; tag within the SVG foreignObject. There
+   * is no `body` element in that document - the wrapped content is a `div`, so
+   * style that element instead.
+   */
   css?: string;
   /** Logical width in pixels. Default: 256 */
   width?: number;
@@ -50,7 +54,7 @@ export interface HTMLTextOptions {
  * ```ts
  * const label = new HTMLText(
  *   '<b>Score</b>: <span style="color:gold">9999</span>',
- *   { width: 200, height: 40, css: 'body { font: 20px Arial; color: white; }' },
+ *   { width: 200, height: 40, css: 'div { font: 20px Arial; color: white; }' },
  * );
  * scene.addChild(label);
  * await label.ready; // optional - wait for first render

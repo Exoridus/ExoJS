@@ -155,7 +155,7 @@
             }
           ],
           "returnType": "T",
-          "description": "Register a light and return it, so it can be created, parented and registered in one expression. Registering the same light twice shades it twice; the second registration is ignored instead."
+          "description": "Register a light and return it, so it can be created, parented and registered in one expression. Registering the same light twice would shade it twice, so the second registration is ignored instead."
         },
         {
           "name": "clear",
@@ -386,7 +386,7 @@
             }
           ],
           "returnType": "T",
-          "description": "Register something that blocks light, and return it so it can be built and registered in one expression. Only a renderer with shadows reads them - forward has no light field to darken, and skips collecting entirely. ts lighting.occludeFrom(new PhysicsOccluder(world));  The source is asked, once per frame, for the edges in the region the visible lights jointly reach. It is the caller's; the system only reads it. Registering the same source twice collects it twice, so the second registration is ignored instead."
+          "description": "Register something that blocks light, and return it so it can be built and registered in one expression. Only a renderer with shadows reads them - forward has no light field to darken, and skips collecting entirely. ts lighting.occludeFrom(new PhysicsOccluder(world));  The source is asked, once per frame, for the edges in the region the visible lights jointly reach. It is the caller's; the system only reads it. Registering the same source twice would collect it twice, so the second registration is ignored instead."
         },
         {
           "name": "remove",

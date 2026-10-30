@@ -82,7 +82,7 @@ export class TiledMap {
   public readonly properties: readonly TiledPropertyData[];
 
   private readonly _imageTextures: ReadonlyMap<number, Texture>;
-  private readonly _chunkSources = new Map<number, ChunkSource>();
+  private _chunkSources = new Map<number, ChunkSource>();
 
   public constructor(
     source: string,
@@ -156,9 +156,8 @@ export class TiledMap {
    * The runtime map has no group node, so each group's own style is baked into
    * its children as Tiled composes it: `visible` ANDs, `opacity` and the
    * parallax factors multiply, the offsets add, and tint colours multiply per
-   * colour channel. Object layers take the visibility, opacity and offset the
-   * same way - `ObjectLayer` carries no parallax or tint of its own, so a
-   * group's contribution to those two is dropped for object layers only.
+   * colour channel. Object layers carry that same composed style; they are
+   * data-only, so applying it is the consumer's job.
    *
    * An `infinite: true` (chunked) tile layer converts to an **unbounded**
    * runtime `TileLayer` with no tiles populated eagerly - its data streams in
@@ -169,7 +168,9 @@ export class TiledMap {
    * in the Loader cache. Destroying the returned map does not unload textures.
    */
   public toTileMap(): TileMap {
-    this._chunkSources.clear();
+    // Build into a fresh map: a conversion that throws must leave the
+    // providers of the previous conversion intact.
+    const chunkSources = new Map<number, ChunkSource>();
 
     if (this.orientation === 'hexagonal') {
       rejectHexagonalRotations(this.layers, this.source);
@@ -294,7 +295,7 @@ export class TiledMap {
           if (layer.data) {
             populateTileLayer(rLayer, layer.data, this.tilesets, indexToRuntime, layer.width);
           } else if (chunked) {
-            this._chunkSources.set(layer.id, buildTiledChunkSource(layer, rLayer, this.tilesets, indexToRuntime, this.source));
+            chunkSources.set(layer.id, buildTiledChunkSource(layer, rLayer, this.tilesets, indexToRuntime, this.source));
           }
 
           runtimeLayers.push(rLayer);
@@ -328,7 +329,7 @@ export class TiledMap {
 
     convertLayers(this.layers, rootGroupStyle);
 
-    return new TileMap({
+    const tileMap = new TileMap({
       name: this.source,
       // Tiled always reports width/height as 0 at the map level for an
       // infinite map (its extent is unbounded/streamed); omit both rather
@@ -347,6 +348,10 @@ export class TiledMap {
       properties: convertProperties(this.properties),
       documentOrder: order,
     });
+
+    this._chunkSources = chunkSources;
+
+    return tileMap;
   }
 
   /**
@@ -365,9 +370,9 @@ export class TiledMap {
   }
 
   /**
-   * Releases this map's reference to its parsed source. Tileset textures are
-   * Loader-owned and may be shared with other maps; this does NOT destroy
-   * them.
+   * Loader eviction hook. Does nothing: tileset textures are Loader-owned and
+   * may be shared with other maps, and the parsed source is reclaimed with
+   * this instance.
    */
   public destroy(): void {
     // Intentionally empty: all sub-resources (textures) are Loader-owned.
@@ -885,13 +890,6 @@ const parseTiledColor = (value: string | undefined): number | null => {
 };
 
 /**
- * Build runtime {@link TileDefinition}s from a Tiled tileset's per-tile data,
- * carrying over per-tile properties, animation frames, and collision shapes
- * (the tile's `objectgroup`). Tiles whose `id` is out of range, and animation
- * frames referencing out-of-range local ids, are skipped so the runtime tileset
- * never receives malformed definitions.
- */
-/**
  * Runtime tileset for a collection-of-images tileset: each tile samples its own
  * texture, cut to the tile's sub-rectangle when one is set (Tiled 1.9+). Ids
  * without a tile - removed in the editor - stay empty.
@@ -952,6 +950,13 @@ const applyTileDefinitions = (rts: TileSet, tiledTs: TiledTileset): void => {
   }
 };
 
+/**
+ * Build runtime {@link TileDefinition}s from a Tiled tileset's per-tile data,
+ * carrying over per-tile properties, animation frames, and collision shapes
+ * (the tile's `objectgroup`). Tiles whose `id` is out of range, and animation
+ * frames referencing out-of-range local ids, are skipped so the runtime tileset
+ * never receives malformed definitions.
+ */
 const buildTileDefinitions = (tiles: readonly TiledTileData[], tileCount: number): TileDefinition[] => {
   const defs: TileDefinition[] = [];
 

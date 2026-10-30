@@ -157,7 +157,7 @@ const validateTileLayerOptions = (options: TileLayerOptions): ResolvedTileLayerO
 
   const opacity = options.opacity ?? 1;
 
-  if (typeof opacity !== 'number' || opacity < 0 || opacity > 1) {
+  if (typeof opacity !== 'number' || !Number.isFinite(opacity) || opacity < 0 || opacity > 1) {
     throw new Error(`TileLayer opacity must be 0..1 (got ${opacity}).`);
   }
 
@@ -279,8 +279,9 @@ export class TileLayer {
 
   /**
    * Monotonic layer revision counter.
-   * Increments on every cell mutation that actually changes a stored value.
-   * Does NOT increment on no-op writes or failed mutations.
+   * Increments once per mutation call that changes at least one stored value,
+   * and once when a chunk is adopted or evicted. No-op writes and failed
+   * mutations do NOT increment.
    */
   private _revision = 0;
 
@@ -542,7 +543,7 @@ export class TileLayer {
 
     const tileset = this.tilesets[decoded.tilesetIndex]!;
 
-    if (decoded.localTileId >= tileset.tileCount) {
+    if (decoded.localTileId < 0 || decoded.localTileId >= tileset.tileCount) {
       return null;
     }
 
@@ -753,7 +754,7 @@ export class TileLayer {
 
             const tileset = this.tilesets[decoded.tilesetIndex]!;
 
-            if (decoded.localTileId >= tileset.tileCount) {
+            if (decoded.localTileId < 0 || decoded.localTileId >= tileset.tileCount) {
               continue;
             }
 
@@ -806,8 +807,9 @@ export class TileLayer {
 
   /**
    * Monotonic layer revision counter.
-   * Increments on every cell mutation that changes a stored value.
-   * No-op writes and failed mutations do NOT increment.
+   * Increments once per mutation call that changes at least one stored value,
+   * and once when a chunk is adopted or evicted. No-op writes and failed
+   * mutations do NOT increment.
    * @advanced
    */
   public get revision(): number {
@@ -841,7 +843,7 @@ export class TileLayer {
 
   /**
    * Total number of non-empty tiles across all chunks.
-   * Walk is cheap for dense layers; sparse layers benefit from empty-chunk fast path.
+   * O(total cells in all loaded chunks); empty chunks are not skipped.
    * @advanced
    */
   public countNonEmptyTiles(): number {

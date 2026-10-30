@@ -102,7 +102,9 @@ export abstract class CanvasSizing {
    * Release everything {@link CanvasSizing.attach} created - observers,
    * listeners, message channels - and undo any styling the policy applied
    * itself. The CSS box committed through {@link CanvasSizingContext.apply} is
-   * not one of those: the application clears that on detach. The default
+   * not one of those: the application owns it. Replacing the policy clears it;
+   * application teardown deliberately leaves it in place so the frozen final
+   * frame does not collapse. The default
    * implementation does nothing, which is correct for a policy that observes
    * nothing.
    */

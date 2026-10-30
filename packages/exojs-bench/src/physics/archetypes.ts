@@ -94,8 +94,12 @@ const JOINTS_COUNTS = [4_500, 9_000, 15_000] as const;
 const SETTLING_PILE_COUNTS = [1_500, 3_000, 5_800] as const;
 
 /**
- * The physics archetypes. Kept to three representative scenes (review-note
- * "don't overdo it"):
+ * The physics archetypes. Four scene forms - box stack, many dynamic bodies,
+ * mixed static/dynamic, and joint chains - plus variants that layer a query
+ * load, extra churn or a different material on one of them. Each variant is a
+ * delta against its base scene, though it may adjust more than one setting
+ * (churn also perturbs a fraction of the bodies per frame, and the settling
+ * pile uses its own warmup budget):
  * - `box-stack` - settling columns of boxes on a static floor: resting-contact
  *   solving + warm-start + sleeping, the tall-stack stability path.
  * - `many-dynamic` - a field of small dynamic bodies bouncing in a bounded box,

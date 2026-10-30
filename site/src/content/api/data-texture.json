@@ -324,7 +324,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Mark a sub-region of the buffer dirty for partial upload. More efficient than commit for ring-buffer patterns where only one row or column changes per frame. If a region was already pending, the union is uploaded. Coordinates are pixel-space with origin at the top-left. Bounds are clamped to the texture dimensions; out-of-range rectangles throw."
+          "description": "Mark a sub-region of the buffer dirty for partial upload. More efficient than commit for ring-buffer patterns where only one row or column changes per frame. If a region was already pending, the union is uploaded. Coordinates are pixel-space with origin at the top-left. They are not clamped: a rectangle that leaves the texture throws."
         },
         {
           "name": "destroy",

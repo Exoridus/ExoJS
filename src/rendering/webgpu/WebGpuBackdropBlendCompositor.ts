@@ -24,7 +24,7 @@ const blendUniformBytes = 16;
 
 /**
  * Single-quad backdrop-aware blend compositor used by
- * `WebGpuBackend.composeWithBackdropBlend` (spike: invoked directly). Captures
+ * `WebGpuBackend.composeWithBackdropBlend`. Captures
  * the active target's `[x, y, width, height]` region into a compositor-owned
  * texture via `copyTextureToTexture`, samples the premultiplied source (group 1,
  * slot 0) and captured backdrop (slot 2), computes the W3C blend for the

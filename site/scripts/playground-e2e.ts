@@ -41,6 +41,7 @@ import ts from 'typescript';
 
 import { resolveSiteChannel } from '../../scripts/pages/site-channel.ts';
 import { readSiteBuildManifest } from '../../scripts/pages/site-manifest.ts';
+import { playgroundDiagnostics } from './playground-diagnostics';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(here, '..');
@@ -136,6 +137,27 @@ interface CheckResult {
 }
 
 const results: CheckResult[] = [];
+const diagnosticsByPage = new Map<Page, { collector: ReturnType<typeof playgroundDiagnostics>; check: symbol | undefined }>();
+let currentCheck: symbol | undefined;
+
+const watchPage = (page: Page): ReturnType<typeof playgroundDiagnostics> => {
+  let diagnostics = diagnosticsByPage.get(page)?.collector;
+
+  if (!diagnostics) {
+    diagnostics = playgroundDiagnostics(page, resolve(repoRoot, '.workspace/reports/playground-e2e'));
+    diagnosticsByPage.set(page, { collector: diagnostics, check: currentCheck });
+    page.once('close', () => diagnosticsByPage.delete(page));
+  }
+
+  return diagnostics;
+};
+
+const reportFailure = async (page: Page, error: unknown): Promise<void> => {
+  await diagnosticsByPage
+    .get(page)
+    ?.collector.capture(error)
+    .catch(cause => console.error(`[e2e] Diagnostics failed: ${String(cause)}`));
+};
 
 const check = async (name: string, run: () => Promise<void>): Promise<void> => {
   if (options.only && !name.toLowerCase().includes(options.only.toLowerCase())) {
@@ -143,16 +165,35 @@ const check = async (name: string, run: () => Promise<void>): Promise<void> => {
   }
 
   const started = performance.now();
+  const checkToken = Symbol(name);
+  const parentCheck = currentCheck;
+  currentCheck = checkToken;
 
   try {
     await run();
     results.push({ name, error: null });
     console.log(`[e2e] PASS ${name} (${Math.round(performance.now() - started)} ms)`);
   } catch (error) {
+    await Promise.all(
+      [...diagnosticsByPage]
+        .filter(([, entry]) => entry.check === undefined || entry.check === checkToken)
+        .map(async ([page, entry]) => {
+          await reportFailure(page, error);
+
+          if (entry.check === checkToken) {
+            await page
+              .context()
+              .close()
+              .catch(cause => console.error(`[e2e] Failed context cleanup: ${String(cause)}`));
+          }
+        }),
+    );
     const message = error instanceof Error ? (error.stack ?? error.message) : String(error);
 
     results.push({ name, error: message });
     console.error(`[e2e] FAIL ${name}: ${message}`);
+  } finally {
+    currentCheck = parentCheck;
   }
 };
 
@@ -200,6 +241,7 @@ const openPlayground = async (
     ...(options.browser === 'chromium' ? { permissions: ['clipboard-read', 'clipboard-write'] } : {}),
   });
   const page = await context.newPage();
+  watchPage(page);
   const session: Session = { page, console: [], pageErrors: [] };
 
   page.on('console', message => session.console.push({ type: message.type(), text: message.text() }));
@@ -611,6 +653,7 @@ const openAssetBrowser = async (browser: Browser, origin: string, base: string):
     ...(options.browser === 'chromium' ? { permissions: ['clipboard-read', 'clipboard-write'] } : {}),
   });
   const page = await context.newPage();
+  watchPage(page);
   const session: Session = { page, console: [], pageErrors: [] };
 
   page.on('console', message => session.console.push({ type: message.type(), text: message.text() }));
@@ -1288,6 +1331,7 @@ const exampleLifecycleChecks = async (browser: Browser, origin: string, base: st
           await frame.locator('body').screenshot({ path: resolve(options.shots, `${example.replaceAll('/', '-')}-restarted.png`) });
         }
       } catch (error) {
+        await reportFailure(page, error);
         const frame = await previewFrame(page);
         const diagnostics = await frame.evaluate(
           `({url:location.href,body:document.body.innerText,app:globalThis.__acceptanceApp?.state,source:[...document.scripts].at(-1)?.textContent?.slice(-300)})`,
@@ -1398,6 +1442,8 @@ const workerChecks = async (browser: Browser, origin: string, base: string): Pro
 
       assert(pageErrors.length === 0, pageErrors.join('\n'));
     } catch (error) {
+      await reportFailure(page, error);
+
       throw new Error(`${phase}: ${String(error)}; errors: ${JSON.stringify(pageErrors)}`, { cause: error });
     } finally {
       await page.context().close();
@@ -1442,6 +1488,10 @@ const newTabChecks = async (browser: Browser, origin: string, base: string): Pro
       }
 
       assert(pageErrors.length === 0, pageErrors.join('\n'));
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
     } finally {
       await page.context().close();
     }
@@ -1500,6 +1550,10 @@ const responsivePreviewChecks = async (browser: Browser, origin: string, base: s
       }
 
       assert(pageErrors.length === 0, pageErrors.join('\n'));
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
     } finally {
       await page.context().close();
     }
@@ -1579,6 +1633,10 @@ const crtChecks = async (browser: Browser, origin: string, base: string): Promis
       const restoredDifference = await difference(strong, await capture());
       assert(restoredDifference === 0, `CRT RGB separation did not restore the frozen scene (${restoredDifference} pixels)`);
       assert(pageErrors.length === 0, pageErrors.join('\n'));
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
     } finally {
       await page.context().close();
     }
@@ -1629,6 +1687,10 @@ const maskChecks = async (browser: Browser, origin: string, base: string): Promi
         await mkdir(options.shots, { recursive: true });
         await canvas.screenshot({ path: resolve(options.shots, 'mask-circular-region.png') });
       }
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
     } finally {
       await page.context().close();
     }
@@ -1744,6 +1806,10 @@ const audioBusChecks = async (browser: Browser, origin: string, base: string): P
         `replacement gain incorrect: ${JSON.stringify(peaks)}`,
       );
       console.log(`[e2e] PCM ${options.browser}: ${JSON.stringify(peaks)}`);
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
     } finally {
       await page.context().close();
     }
@@ -1836,6 +1902,10 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
         }
 
         assert(!(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)), 'header overflows the viewport');
+      } catch (error) {
+        await reportFailure(page, error);
+
+        throw error;
       } finally {
         await page.context().close();
       }
@@ -1878,6 +1948,10 @@ const nativeControlChecks = async (browser: Browser, origin: string, base: strin
         const actual = await position(text);
         assert(Math.abs(actual - top) < 0.001, `status moved the control from ${top} to ${actual}`);
       }
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
     } finally {
       await page.context().close();
     }
@@ -1908,6 +1982,10 @@ const nativeControlChecks = async (browser: Browser, origin: string, base: strin
         }
       })()`)) as { before: number; after: number; focused: boolean };
       assert(focus.focused && focus.before === focus.after, `canvas focus changed pointer geometry: ${JSON.stringify(focus)}`);
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
     } finally {
       await page.context().close();
     }
@@ -1922,6 +2000,7 @@ const nativeControlChecks = async (browser: Browser, origin: string, base: strin
       ['render-targets/render-to-texture', 'capture'],
     ]) {
       const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+      watchPage(page);
 
       try {
         await page.route('**/examples/shared/runtime.js*', async route => {
@@ -1970,6 +2049,10 @@ const nativeControlChecks = async (browser: Browser, origin: string, base: strin
           return kind==='choice'?panel.values[key]:kind==='video'?panel.values.paused:kind==='capture'?s.captureCount:s.playing;
         })()`);
         assert(actual === hit.expected, `${path}: expected ${JSON.stringify(hit.expected)}, got ${JSON.stringify(actual)}`);
+      } catch (error) {
+        await reportFailure(page, error);
+
+        throw error;
       } finally {
         await page.close();
       }
@@ -1981,10 +2064,13 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
   await check('file tabs preserve edits and run the entry while a helper is open', async () => {
     const session = await openPlayground(browser, origin, base, 'getting-started/hello-world');
     const { page } = session;
+    let diagnostics: ReturnType<typeof playgroundDiagnostics> | undefined;
     page.on('dialog', dialog => void dialog.accept());
 
     try {
+      diagnostics = watchPage(page);
       await page.waitForFunction("window.monaco?.editor.getEditors()[0]?.getValue().includes('await startExample')");
+      await diagnostics.observeEditor();
       const tabs = page.getByRole('group', { name: 'Example files' });
       const entry = tabs.locator('button').first();
       const helper = tabs.getByRole('button', { name: 'runtime.ts Editable' });
@@ -1992,6 +2078,7 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
       await page.locator('.monaco-editor .overflow-guard').click({ position: { x: 350, y: 110 } });
       await page.keyboard.press('Control+End');
       await page.keyboard.type('\n(window as any).__fileTabRun = "entry";');
+      diagnostics.mark('entry-edited');
       const before = await page.evaluate<{ source: string; position: unknown; scroll: number; uri: string }>(`(() => {
         const e=window.monaco.editor.getEditors()[0];
         e.setPosition({lineNumber:25,column:4});e.setScrollTop(180);
@@ -2014,6 +2101,7 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
       await page.locator('.monaco-editor .overflow-guard').click({ position: { x: 350, y: 110 } });
       await page.keyboard.press('Control+End');
       await page.keyboard.type('\n(window as any).__helperRun = "edited";');
+      diagnostics.mark('helper-edited');
       await page.getByRole('button', { name: 'Run', exact: true }).click();
       await page.waitForFunction(
         "document.querySelector('iframe')?.contentWindow?.__fileTabRun === 'entry' && document.querySelector('iframe')?.contentWindow?.__helperRun === 'edited'",
@@ -2038,12 +2126,15 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
       await page.locator('.monaco-editor .overflow-guard').click({ position: { x: 350, y: 110 } });
       await page.keyboard.press('Control+End');
       await page.keyboard.type('\n(window as any).__fileTabRun = "changed";');
+      diagnostics.mark('entry-changed');
       await page.getByRole('button', { name: 'File options', exact: true }).click();
       await page.getByRole('menuitem', { name: 'Open compiled JavaScript', exact: true }).click();
       await page.waitForFunction("window.monaco.editor.getEditors()[0].getModel().uri.path.endsWith('/hello-world.js')");
+      diagnostics.mark('compiled-selected');
       assert(await page.getByRole('button', { name: 'Run', exact: true }).isEnabled(), 'Run stays available on compiled output');
       await page.getByRole('button', { name: 'Run', exact: true }).click();
       await page.waitForFunction("document.querySelector('iframe')?.contentWindow?.__fileTabRun === 'changed'");
+      diagnostics.mark('changed-preview-running');
       assert(
         (await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()')).includes('"changed"'),
         'Compiled output refreshes from the entry',
@@ -2079,6 +2170,10 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
         'Old example models are disposed',
       );
       assert(session.pageErrors.length === 0, session.pageErrors.join('\n'));
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
     } finally {
       await page.context().close();
     }
@@ -2098,6 +2193,10 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
         'The diagnostic belongs to the visible helper',
       );
       assert(pageErrors.length === 0, pageErrors.join('\n'));
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
     } finally {
       await page.context().close();
     }
@@ -2129,6 +2228,10 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
       assert((await page.evaluate<string>('window.monaco.editor.getEditors()[0].getValue()')) === source, 'Unrun entry changes survive');
       await tool.close();
       assert(pageErrors.length === 0, pageErrors.join('\n'));
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
     } finally {
       await page.context().close();
     }
@@ -2162,6 +2265,10 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
       await page.waitForTimeout(250);
       assert((await page.evaluate<number>('scrollY')) === before, 'Canvas arrows must not scroll the parent document');
       assert(pageErrors.length === 0, pageErrors.join('\n'));
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
     } finally {
       await page.context().close();
     }

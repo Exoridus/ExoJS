@@ -10,9 +10,9 @@ precision highp int;
 // slot-addressed stores that only change when an item enters or leaves the view,
 // and the single per-instance attribute is the slot to read.
 //
-// The shared half of this shader (snapBoundary + everything from the corner
-// selection to the end of main) is byte-identical to `sprite.vert` and pinned
-// that way by `test/rendering/sprite-shader-variants.test.ts`. Edit both.
+// The shared part of this shader (snapBoundary, plus the corner selection and
+// the output writes) mirrors `sprite.vert`; edit both. The matrix reads happen
+// at a different point here, so the two files are not byte-identical.
 //
 // Store layout, all three addressed by the SAME row mapping as the shared
 // transform texture (`exoTransformTexel` / `exoTintTexel`), because a slot row

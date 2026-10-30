@@ -10,10 +10,10 @@ import { createHash } from 'node:crypto';
  * therefore the whole verification.
  *
  * This is an integrity mechanism, not an authenticity one. It cannot prove who
- * ran the harness - the recipe is public. What it does prove is that the
- * numbers, the provenance and the verdicts in one file were produced together
- * by one harness run and have not been edited since, which is exactly what a
- * hand-written result file fails.
+ * ran the harness or that the harness wrote the file - the recipe is public, so
+ * anyone can edit a figure and recompute the digest. What it does prove is that
+ * the canonical serialization of the document matches the digest recorded in it,
+ * so an edit made after the digest was computed is detectable.
  */
 
 /** Hash algorithm the signature value is produced with. */

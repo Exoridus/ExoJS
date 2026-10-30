@@ -23,8 +23,10 @@ export const nodeWorldPosition = (node: SceneNode): Readonly<PointLike> => {
  * WORLD rotation. `SceneNode` builds its rotation block as
  * `[[cos, sin], [-sin, cos]]`, which turns counter-clockwise on the Y-down
  * screen while a body angle turns clockwise, so the angle is `atan2(c, a)`,
- * the inverse of the negation `PhysicsBinding.sync` applies. Falls back to `0`
- * for a duck-typed node without `getWorldTransform`.
+ * the inverse of the negation `PhysicsBinding.sync` applies. A uniform positive
+ * scale cancels out of both terms; a mirrored, degenerate or sheared transform
+ * (or ancestor) makes the result a different angle. Falls back to `0` for a duck-typed node without
+ * `getWorldTransform`.
  */
 export const nodeWorldAngle = (node: SceneNode): number => {
   const asNode = node as Partial<SceneNode>;

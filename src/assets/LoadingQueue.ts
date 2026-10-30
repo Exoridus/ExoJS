@@ -1,5 +1,7 @@
 import { Signal } from '#core/Signal';
 
+import { reportAssetObserverFailure } from './assetDiagnostics';
+
 // ---------------------------------------------------------------------------
 // Progress
 // ---------------------------------------------------------------------------
@@ -95,7 +97,7 @@ export class LoadingQueue<T> implements PromiseLike<T> {
       failed,
     };
 
-    this.onProgress.dispatch(this._progress);
+    this.onProgress.dispatchIsolated(reportAssetObserverFailure, this._progress);
   }
 
   // PromiseLike<T>

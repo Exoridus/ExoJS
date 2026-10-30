@@ -1,6 +1,6 @@
 {
   "title": "BeatAnalysisDiscontinuity",
-  "description": "",
+  "description": "Why the beat analysis lost continuity. Every reason discards the accumulated evidence and starts a new analysis epoch; `eof` and `explicitPause` also stop analysis until `resume`, `reset` or a source change, which clear that stop.",
   "symbol": "BeatAnalysisDiscontinuity",
   "kind": "type",
   "subsystem": "audio",
@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [],
+      "paragraphs": [
+        "Why the beat analysis lost continuity. Every reason discards the accumulated evidence and starts a new analysis epoch; `eof` and `explicitPause` also stop analysis until `resume`, `reset` or a source change, which clear that stop."
+      ],
       "importLine": "import { BeatAnalysisDiscontinuity } from '@codexo/exojs/audio-fx'",
       "sourceLink": null
     },

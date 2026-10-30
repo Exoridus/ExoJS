@@ -101,7 +101,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Minimum dBFS rendered by the byte-domain spectrum getters. Default -100."
+          "description": "Minimum dBFS rendered by byte spectra and the floor for mel float bands. Default -100."
         },
         {
           "name": "smoothingTimeConstant",

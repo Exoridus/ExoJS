@@ -35,7 +35,7 @@ export interface WebGpuTimestampSink {
  * GPU frame timer backed by WebGPU's `timestamp-query` feature.
  *
  * Every render pass the frame opens is bracketed by a timestamp pair, and the
- * frame's GPU time is the sum of those intervals. Two consequences are worth
+ * frame's GPU time is the sum of those intervals. Three consequences are worth
  * knowing before reading the number:
  *
  * - It measures render-pass EXECUTION. `queue.writeBuffer` and `writeTexture`
@@ -44,6 +44,11 @@ export interface WebGpuTimestampSink {
  *   its own encoder at texture-upload time, is likewise not counted.
  * - Results are read back asynchronously, so the published value trails the
  *   frame on screen by at least one frame.
+ *
+ * - A frame that produces no usable timestamp pair publishes nothing, so the
+ *   previous value stays current instead of falling back to `null` or zero.
+ *   A frame with no pass opened, exhausted query slots, no free readback
+ *   buffer and a dropped mapping all take that path.
  *
  * The wall-clock alternative (`queue.onSubmittedWorkDone`) is deliberately not
  * used as a fallback: its floor is when the browser observes completion, which

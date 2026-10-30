@@ -33,7 +33,9 @@ export interface Verdict {
   readonly side: VerdictSide;
   /** `exojs / competitor` - below 1 means ExoJS took less time. */
   readonly ratio: number;
-  /** How many times faster the leading arm is; `1` when neither leads. */
+  /** How many times faster the leading arm is; `1` inside the noise band and
+   * `NaN` when no quantitative factor is published (not comparable, or unstable
+   * across runs). */
   readonly factor: number;
   /** The ladder's word for this outcome, ready to print. */
   readonly label: string;

@@ -39,7 +39,9 @@ export interface CellAggregate {
   /**
    * True when every run placed the pair on the same rung and the pooled medians
    * land on that rung too. A false value means the runs disagreed, and the cell
-   * publishes no verdict.
+   * publishes no verdict. A run that produced no comparable cell for the pair
+   * also makes the cell unstable: it placed the pair on no rung, so the runs
+   * cannot be said to agree on one.
    *
    * Runs that agree the pair is `not-comparable` are stable: they agreed, and
    * "not comparable" was never a verdict.

@@ -30,9 +30,20 @@ export abstract class WorkletEffect extends AudioEffect {
   private readonly _auxInputs: Array<{ output: AudioNode; input: number }> = [];
   private readonly _pendingAuxSetups: Array<() => void> = [];
 
-  /** The processor name registered via `registerProcessor()` in the worklet source. */
+  /**
+   * The processor name registered via `registerProcessor()` in the worklet source.
+   *
+   * Read synchronously while this base class's constructor runs, so it must not
+   * depend on subclass field initializers - return a constant.
+   */
   protected abstract get _workletName(): string;
-  /** The full worklet source code as a JavaScript string. */
+  /**
+   * The full worklet source code as a JavaScript string.
+   *
+   * Read synchronously while this base class's constructor runs, so it must not
+   * depend on subclass field initializers - return a constant or a module-level
+   * import.
+   */
   protected abstract get _workletSource(): string;
   /** AudioWorkletNode constructor options. Default: 1 input, 1 output. */
   protected get _workletOptions(): AudioWorkletNodeOptions {
@@ -64,9 +75,11 @@ export abstract class WorkletEffect extends AudioEffect {
 
   public constructor() {
     super();
-    // Deliberately from this base constructor: `_setup` only creates the gain
-    // staging here and reads subclass state after the worklet module loads,
-    // which always settles after the subclass constructor has finished.
+    // Deliberately from this base constructor: setup runs as soon as the shared
+    // AudioContext is ready, which can be before the subclass constructor body
+    // has run. It therefore reads only the constant worklet name/source here and
+    // defers every other subclass property read to the worklet-ready callback
+    // below, which always settles after the subclass constructor.
     this._deferSetup(context => this._setup(context));
   }
 

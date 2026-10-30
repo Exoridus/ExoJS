@@ -8,9 +8,9 @@
  * would ever reach the device. Give one of them a distinct key, or combine
  * them into a single module.
  *
- * Only the WebGPU path builds that shader - the CPU path runs each module's
- * `apply()` independently and is unaffected - which is why the same scene used
- * to run on WebGL2 and die with a raw WGSL error on WebGPU.
+ * The WebGPU and WebGL2 paths both build one combined simulation shader, so
+ * both reject the duplicate with this error. Only the CPU path is unaffected:
+ * it runs each module's `apply()` independently, one module at a time.
  */
 export class ParticleModuleKeyCollisionError extends Error {
   /** The contested {@link WgslContribution.key}. */

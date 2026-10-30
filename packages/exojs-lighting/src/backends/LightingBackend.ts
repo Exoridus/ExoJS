@@ -66,11 +66,13 @@ export interface LightingBackend {
   debugExposure: number;
 
   /**
-   * Take this frame's lights, ambient term and occluder field. Called once per
-   * frame from the system's update phase, before anything draws.
+   * Take this frame's lights, ambient term and occluder field. Called once by
+   * the owning system at construction and once per frame from its update
+   * phase, in both cases before anything draws.
    *
-   * All four are read, never retained: they belong to the system and are
-   * rewritten between frames. A renderer that casts no shadows ignores the
+   * The four are the system's, not this renderer's: the arrays and the field
+   * are rewritten between frames, so a renderer must not mutate them or treat
+   * them as state of its own. A renderer that casts no shadows ignores the
    * field, and one that takes its normals from a material ignores the
    * surfaces.
    */

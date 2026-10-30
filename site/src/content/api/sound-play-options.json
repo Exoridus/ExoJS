@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Initial full-gain cone half-angle. Default 360 (no cone)."
+          "description": "Initial full-gain cone angle, as a full apex angle (not a half-angle). Default 360 (no cone)."
         },
         {
           "name": "coneOuterAngle",
@@ -101,7 +101,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Initial falloff cone half-angle. Default 360."
+          "description": "Initial falloff cone angle, as a full apex angle. Default 360."
         },
         {
           "name": "coneOuterGain",

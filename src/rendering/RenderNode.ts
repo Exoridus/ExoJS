@@ -205,7 +205,7 @@ export abstract class RenderNode extends SceneNode {
    * - `clipShape` is a `Rectangle` - clip to that world-space rectangle via
    *   scissor.
    * - `clipShape` is a `Geometry` - clip to the geometry's silhouette via the
-   *   stencil buffer (WebGL2). Only fragments inside the shape survive.
+   *   stencil buffer on both backends. Only fragments inside the shape survive.
    *
    * Clipping wraps the node's final (filtered/masked) output and acts as a
    * render barrier: draw commands are never reordered or batched across the
@@ -467,6 +467,8 @@ export abstract class RenderNode extends SceneNode {
    */
   private _cacheBakedResolution = 0;
   private _cacheDirty = true;
+  private _cacheContentRevision = -1;
+  private _cacheTransformRevision = -1;
   private _cacheTexture: RenderTexture | null = null;
   private _retainedRoot: RetainedRootRepresentation | null = null;
 
@@ -953,6 +955,8 @@ export abstract class RenderNode extends SceneNode {
     if (
       !this._cacheAsTexture ||
       this._cacheDirty ||
+      this._cacheContentRevision !== this._contentRevision ||
+      this._cacheTransformRevision !== this._transformRevision ||
       this._cacheTexture === null ||
       this._cacheBounds === null ||
       this._cacheBakedResolution !== resolution
@@ -991,6 +995,8 @@ export abstract class RenderNode extends SceneNode {
     (this._cacheBounds ??= new Rectangle()).set(left, top, width, height);
     this._cacheBakedResolution = resolution;
     this._cacheDirty = false;
+    this._cacheContentRevision = this._contentRevision;
+    this._cacheTransformRevision = this._transformRevision;
   }
 
   /** @internal */

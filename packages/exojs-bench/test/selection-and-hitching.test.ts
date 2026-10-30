@@ -1,7 +1,8 @@
 import type { CellResult, CellSpec } from '../src/rendering/EngineAdapter';
 import { isHitching } from '../src/rendering/report';
-import { applySelection } from '../src/rendering/selection';
+import { applyPlan, applySelection } from '../src/rendering/selection';
 import type { ClockReport } from '../src/shared/clock';
+import type { RunPlan } from '../src/suite/plan';
 
 /**
  * A clock fine enough that no fixture duration trips the timer check, so a test
@@ -87,5 +88,44 @@ describe('isHitching', () => {
   test('does not mark a cell that is uniformly slow', () => {
     // The median already reports this honestly; nothing is hiding behind it.
     expect(isHitching(result(30, 34))).toBe(false);
+  });
+});
+
+describe('applySelection arm identity', () => {
+  test('keeps two arms whose engine/config labels collide under a space join', () => {
+    // `${engine} ${config}` merges these into one identity; the NUL-joined key
+    // keeps them apart.
+    const cells = [cell({ engine: 'a b', config: 'c' }), cell({ engine: 'a', config: 'b c' })];
+
+    const selected = applySelection(cells, { nodeCounts: [1_000] });
+
+    expect(selected.map(entry => [entry.engine, entry.config])).toEqual([
+      ['a b', 'c'],
+      ['a', 'b c'],
+    ]);
+  });
+
+  test('applyPlan keeps the same two arms apart', () => {
+    const cells = [cell({ engine: 'a b', config: 'c' }), cell({ engine: 'a', config: 'b c' })];
+    const plan: RunPlan = {
+      meta: {
+        suite: 'reference',
+        planId: 'exojs-comparison',
+        planRevision: 1,
+        planHash: 'fixture',
+        domain: 'rendering',
+        extreme: false,
+        exploratory: false,
+      },
+      workloads: [{ scenarioId: 'static-heavy', loadId: '1k', value: 1_000, unit: 'nodes', primary: true, extreme: false }],
+      missingScenarios: [],
+    };
+
+    const selected = applyPlan(cells, plan);
+
+    expect(selected.map(entry => [entry.engine, entry.config])).toEqual([
+      ['a b', 'c'],
+      ['a', 'b c'],
+    ]);
   });
 });

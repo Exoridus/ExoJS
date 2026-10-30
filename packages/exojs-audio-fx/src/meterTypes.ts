@@ -35,7 +35,7 @@ export interface MeterEstimate {
 export interface ManualMeter {
   /** Integer from 1 through 32. */
   readonly cyclePulses: number;
-  /** Null or omitted leaves phase unknown. */
+  /** Zero-based phase of the first tracked beat after reset; an integer from 0 through `cyclePulses - 1`. Null or omitted leaves phase unknown. */
   readonly phasePulses?: number | null;
   /** A power of two from 1 through 128, or null when unspecified. */
   readonly denominator?: number | null;

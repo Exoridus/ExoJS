@@ -75,7 +75,8 @@ export enum PointerButton {
 
 /**
  * Channel indices for keyboard keys, addressed by PHYSICAL key position.
- * Pass any value to the {@link Input} constructor to react to that key.
+ * Register a channel with `InputSystem.onTrigger` (or bind it through
+ * `SceneInputs`) to react to that key.
  *
  * A key is identified by the Web platform's layout-independent
  * `KeyboardEvent.code` (see {@link keyboardChannelFromCode}), not by the
@@ -104,7 +105,7 @@ export enum PointerButton {
  *
  * @example
  * ```ts
- * const jump = new Input(Keyboard.Space, { onTrigger: () => player.jump() });
+ * const jump = app.input.onTrigger(Keyboard.Space, () => player.jump());
  * ```
  */
 export enum Keyboard {

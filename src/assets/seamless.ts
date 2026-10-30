@@ -1,3 +1,4 @@
+import type { SoundAssetOptions } from '#assets/factories/SoundFactory';
 import { Sound } from '#audio/Sound';
 import type { LoadStateValue } from '#core/LoadState';
 import { logger } from '#core/Logger';
@@ -129,15 +130,17 @@ export const textureSeamlessAdapter: SeamlessAdapter<Texture> = {
 };
 
 /**
- * Seamless adapter for {@link Sound}: placeholder is a bufferless Sound;
- * fill transplants the decoded {@link AudioBuffer} in place via `_setBuffer`;
- * fail leaves the handle bufferless (play() renders silence + warns);
+ * Seamless adapter for {@link Sound}: a bufferless placeholder carries its own
+ * playback defaults; fill transfers the decoded buffer and sprite definitions
+ * without overwriting playback settings changed on the handle.
+ * Failure leaves the handle bufferless (play() renders silence + warns);
  * evict drops the buffer back to placeholder for a later heal.
  * @internal
  */
 export const soundSeamlessAdapter: SeamlessAdapter<Sound> = {
-  createPlaceholder(): Sound {
-    const handle = new Sound(null);
+  createPlaceholder(options?: unknown): Sound {
+    const { playbackOptions, poolSize } = (options ?? {}) as SoundAssetOptions;
+    const handle = new Sound(null, { ...playbackOptions, ...(poolSize !== undefined && { poolSize }) });
     handle._loadState.begin();
 
     return handle;
@@ -148,11 +151,7 @@ export const soundSeamlessAdapter: SeamlessAdapter<Sound> = {
   },
 
   fill(handle: Sound, donor: Sound): void {
-    if (donor.audioBuffer === null) {
-      throw new Error('soundSeamlessAdapter.fill: donor has no decoded buffer.');
-    }
-
-    handle._setBuffer(donor.audioBuffer);
+    handle._fillFrom(donor);
     handle._loadState.settle(handle);
   },
 

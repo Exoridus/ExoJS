@@ -59,7 +59,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Merged whole-cell rectangles, in row-major order."
+          "description": "Whole-cell rectangles: row-major when merging, otherwise in the order cells were claimed."
         },
         {
           "name": "shapes",

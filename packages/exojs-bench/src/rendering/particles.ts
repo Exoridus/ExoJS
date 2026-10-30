@@ -21,12 +21,11 @@ export const PARTICLE_SIZE = 4;
 export const PARTICLE_ALPHA = 0.5;
 
 /**
- * Packed `0xAABBGGRR` tint every particle carries: white at
- * {@link PARTICLE_ALPHA}.
+ * Packed `0xAABBGGRR` tint every particle carries: white at the 8-bit
+ * quantization of {@link PARTICLE_ALPHA} (`0x80`, i.e. 128/255).
  *
- * Stated as the packed word because that is the form the storage takes, and
- * deriving it in each arm is how two arms end up a rounding step apart on the
- * alpha channel.
+ * Stated as the packed word because that is the form the storage takes; an arm
+ * that derives the byte itself can land on either side of the rounding.
  */
 export const PARTICLE_TINT = ((Math.round(PARTICLE_ALPHA * 255) << 24) | 0x00_ff_ff_ff) >>> 0;
 
@@ -74,11 +73,13 @@ const sampler = (index: number): (() => number) => createRng((PARTICLE_SEED + Ma
 /**
  * The initial state of particle `index` of `total`.
  *
- * Positions fill the viewport and velocities are a modest drift, so the
- * lifecycle scene stays inside the frame for its whole life and no arm spends
- * its time on particles nothing can see. Ages are spread evenly over one
- * lifetime, which is what makes respawns land on different frames rather than
- * all at once.
+ * Positions fill the viewport and velocities are a modest drift, so particles
+ * stay near where they started; a particle seeded close enough to an edge can
+ * still drift out of the frame before it respawns. This model is shared by the
+ * arms that seed from these descriptors; an arm with its own particle lifecycle
+ * chooses its own initial state.
+ * Ages are spread evenly over one lifetime, which is what makes respawns land
+ * on different frames rather than all at once.
  */
 export const particleSeedAt = (index: number, total: number): ParticleSeedState => {
   const random = sampler(index);

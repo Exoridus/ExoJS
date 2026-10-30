@@ -61,7 +61,8 @@ const pad = (text: string, width: number, align: ColumnAlign): string => (align 
  * Render `rows` under `columns` as a bordered table.
  *
  * Rows shorter than the column list are padded with empty cells, so a caller may
- * leave a trailing column off a row it has nothing to say in. Returns the lines
+ * leave a trailing column off a row it has nothing to say in. Cells past the last
+ * column are ignored. Returns the lines
  * rather than printing them, which is what lets a caller indent a table inside a
  * larger block.
  */

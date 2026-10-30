@@ -82,6 +82,42 @@ describe('buildLine', () => {
 // ---------------------------------------------------------------------------
 
 describe('buildPath', () => {
+  test('rejects a strip that exceeds the 16-bit index range', () => {
+    const points = Array.from({ length: 32768 }, (_, i) => [i, 0]).flat();
+
+    expect(() => buildPath(points, 2)).toThrow('65535');
+    const boundary = buildPath(points.slice(0, -2), 2);
+
+    expect(boundary.vertices).toHaveLength(65534 * 2);
+    expect(boundary.indices.at(-1)).toBe(65533);
+  });
+
+  test('duplicate closing points preserve a closed mesh', () => {
+    const result = buildPath([0, 0, 10, 0, 10, 10, 0, 0, 0, 0], 4);
+    const expected = buildPath([0, 0, 10, 0, 10, 10, 0, 0], 4);
+
+    expect(result.vertices).toEqual(expected.vertices);
+    expect(result.indices).toEqual(expected.indices);
+  });
+
+  test('consecutive duplicate points preserve the nondegenerate mesh and original outline', () => {
+    const points = [0, 0, 0, 0, 10, 0, 10, 0, 10, 10, 10, 10];
+    const result = buildPath(points, 4);
+    const expected = buildPath([0, 0, 10, 0, 10, 10], 4);
+
+    expect(result.vertices).toEqual(expected.vertices);
+    expect(result.indices).toEqual(expected.indices);
+    expect(result.points).toBe(points);
+    expect(points).toEqual([0, 0, 0, 0, 10, 0, 10, 0, 10, 10, 10, 10]);
+  });
+
+  test('a path containing only one distinct point has no triangles', () => {
+    const result = buildPath([2, 3, 2, 3, 2, 3], 4);
+
+    expect(result.vertices).toHaveLength(0);
+    expect(result.indices).toHaveLength(0);
+  });
+
   test('throws when fewer than two point pairs are supplied', () => {
     expect(() => buildPath([0, 0], 4)).toThrow();
   });
@@ -192,6 +228,11 @@ describe('buildPath', () => {
 // ---------------------------------------------------------------------------
 
 describe('buildPolygon', () => {
+  test('rejects outlines that exceed the 16-bit index range', () => {
+    expect(() => buildPolygon(new Array<number>(65536 * 2).fill(0))).toThrow('65535');
+    expect(() => buildPolygon(new Array<number>(65535 * 2).fill(0))).not.toThrow();
+  });
+
   test('throws when fewer than three point pairs are supplied', () => {
     expect(() => buildPolygon([0, 0, 10, 0])).toThrow();
   });

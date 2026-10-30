@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "High-shelf gain in dB. Range -40..40, default 0."
         },
         {
           "name": "highFrequency",
@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "High-shelf cutoff frequency in Hz. Default 6000."
         },
         {
           "name": "low",
@@ -101,7 +101,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Low-shelf gain in dB. Range -40..40, default 0."
         },
         {
           "name": "lowFrequency",
@@ -126,7 +126,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Low-shelf cutoff frequency in Hz. Default 250."
         },
         {
           "name": "mid",
@@ -151,7 +151,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Peaking mid-band gain in dB. Range -40..40, default 0."
         },
         {
           "name": "midFrequency",
@@ -176,7 +176,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Peaking mid-band centre frequency in Hz. Default 1500."
         }
       ],
       "paragraphs": [],

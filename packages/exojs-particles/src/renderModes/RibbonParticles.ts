@@ -49,7 +49,9 @@ export const ribbonParticleWgsl = `${colorShaderSourcesWgsl}${ribbonParticleWgsl
  * Every particle contributes two vertices, offset either side of the path
  * running through its neighbours, so the whole live range becomes one continuous
  * band - the shape a sword arc, a projectile streak or a smoke plume wants,
- * where a quad-per-particle would show as a dotted line.
+ * where a quad-per-particle would show as a dotted line. A leading run of
+ * particles whose neighbours coincide contributes no pair, so a strip can be
+ * shorter than the live count; wholly coincident input emits no strip at all.
  *
  * Layout of the per-vertex buffer {@link build} fills (20 bytes, 3 attributes):
  *

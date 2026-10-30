@@ -366,7 +366,8 @@ jobs:
     needs: [plan, site]
     if: ${{ !cancelled() && needs.plan.outputs.smoke == 'true' && needs.site.result == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # The full catalog and Playground suites run serially on software graphics.
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
@@ -395,6 +396,7 @@ jobs:
           path: |
             .workspace/reports/example-smoke.md
             .workspace/reports/example-smoke-artifacts
+            .workspace/reports/playground-e2e
           retention-days: 7
           include-hidden-files: true
           if-no-files-found: ignore

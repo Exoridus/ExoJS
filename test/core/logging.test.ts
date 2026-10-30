@@ -5,6 +5,19 @@ import { _resetHello, createConsoleSink, hello, type LogEntry, Logger, logger, L
 // ---------------------------------------------------------------------------
 
 describe('Logger', () => {
+  test('a throwing sink does not interrupt later sinks or engine control flow', () => {
+    const instance = new Logger();
+    const received: LogEntry[] = [];
+
+    instance.addSink(() => {
+      throw new Error('sink failed');
+    });
+    instance.addSink(entry => received.push(entry));
+
+    expect(() => instance.error('original failure')).not.toThrow();
+    expect(received.map(entry => entry.message)).toEqual(['original failure']);
+  });
+
   let instance: Logger;
 
   beforeEach(() => {

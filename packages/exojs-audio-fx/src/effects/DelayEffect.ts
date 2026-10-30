@@ -2,8 +2,11 @@ import { AudioEffect } from '@codexo/exojs';
 
 /** Construction options for {@link DelayEffect}. */
 export interface DelayEffectOptions {
+  /** Delay time in seconds. Range 0..5, default 0.3. */
   delaySeconds?: number;
+  /** Fraction of the delayed signal fed back into the delay input. Range 0..0.95, default 0.4. */
   feedback?: number;
+  /** Dry/wet mix, 0..1. The dry level is automatically `1 - wet`. Default 0.5. */
   wet?: number;
 }
 

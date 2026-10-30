@@ -49,7 +49,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "CSS injected inside a &lt;style&gt; tag within the SVG foreignObject."
+          "description": "CSS injected inside a &lt;style&gt; tag within the SVG foreignObject. There is no body element in that document - the wrapped content is a div, so style that element instead."
         },
         {
           "name": "height",

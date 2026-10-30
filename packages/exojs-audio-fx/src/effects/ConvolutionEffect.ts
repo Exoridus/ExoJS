@@ -1,11 +1,13 @@
-import { AudioEffect, Sound } from '@codexo/exojs';
+import { AudioEffect, logger, Sound } from '@codexo/exojs';
 
 /** Construction options for {@link ConvolutionEffect}. */
 export interface ConvolutionEffectOptions {
   /**
    * Impulse response. Accepts a decoded `AudioBuffer` or a `Sound` (its
-   * `audioBuffer` is used). If omitted the effect runs dry (passthrough) until
-   * {@link ConvolutionEffect.setImpulse} is called.
+   * `audioBuffer` is used); a `Sound` set before the effect is set up is
+   * resolved when the graph is built. A `Sound` still undecoded at that point
+   * is treated as absent and is not applied later, and with no impulse the wet
+   * path is silent while the dry path runs at `1 - wet`.
    */
   impulse?: AudioBuffer | Sound;
   /**
@@ -192,16 +194,17 @@ export class ConvolutionEffect extends AudioEffect {
 
   /**
    * Set or replace the impulse response. Accepts a decoded `AudioBuffer`, a
-   * `Sound` (its `audioBuffer` is used), or `null` to clear the IR (wet path
-   * goes silent). Safe to call before the audio context is ready - the impulse
-   * is stored and applied once nodes are created.
+   * `Sound` (its `audioBuffer` is read immediately, so the `Sound` must already
+   * be decoded), or `null` to clear the IR (wet path goes silent). Safe to call
+   * before the audio context is ready - the impulse is stored and applied once
+   * nodes are created.
    *
    * **Web Audio note:** `normalize` is written to the convolver *before*
    * `buffer` is assigned, as required by the spec for the value to take effect.
+   * Only mono, stereo and four-channel impulses are accepted. Conversion
+   * failures are logged and leave the previous impulse in place.
    */
   public setImpulse(ir: AudioBuffer | Sound | null): void {
-    const generation = ++this._impulseGeneration;
-
     if (!this._setup) {
       // Store for application in _setupNodes once the context is ready.
       this._pendingImpulse = ir;
@@ -210,6 +213,12 @@ export class ConvolutionEffect extends AudioEffect {
     }
 
     const resolved = this._resolveBuffer(ir);
+
+    if (resolved !== null && resolved.numberOfChannels !== 1 && resolved.numberOfChannels !== 2 && resolved.numberOfChannels !== 4) {
+      throw new RangeError('ConvolutionEffect requires a mono, stereo or four-channel impulse response.');
+    }
+
+    const generation = ++this._impulseGeneration;
     const rate = this._setup.convolver.context.sampleRate;
 
     if (resolved === null || resolved.sampleRate === rate) {
@@ -223,12 +232,25 @@ export class ConvolutionEffect extends AudioEffect {
     // resamples as it plays. Assets decoded before a live context exists land
     // at the default rate, so an IR routinely needs a conversion pass first.
     // The wet path keeps the previous IR until the new one is converted.
-    void resampleBuffer(resolved, rate).then(converted => {
-      // A newer impulse may have been requested while this one converted.
-      if (this._impulseGeneration === generation && this._setup) {
-        this._applyImpulse(converted);
-      }
-    });
+    void resampleBuffer(resolved, rate)
+      .then(converted => {
+        // A newer impulse may have been requested while this one converted.
+        if (this._impulseGeneration === generation && this._setup) {
+          this._applyImpulse(converted);
+        }
+      })
+      .catch((error: unknown) => {
+        if (this._impulseGeneration === generation && this._setup) {
+          try {
+            logger.error('ConvolutionEffect could not convert the impulse response; the previous impulse remains active.', {
+              source: 'ConvolutionEffect',
+              ...(error instanceof Error && { error }),
+            });
+          } catch {
+            // A failed log sink must not turn a handled conversion failure into an unhandled rejection.
+          }
+        }
+      });
   }
 
   /** Assign an IR that is known to match the context rate. */
