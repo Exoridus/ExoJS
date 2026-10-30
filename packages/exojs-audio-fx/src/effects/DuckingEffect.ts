@@ -16,6 +16,14 @@ export interface DuckingEffectOptions {
   releaseMs?: number;
 }
 
+const requireFinite = (name: string, value: number): number => {
+  if (!Number.isFinite(value)) {
+    throw new RangeError(`DuckingEffect ${name} must be a finite number, got ${value}.`);
+  }
+
+  return value;
+};
+
 /**
  * Sidechain compressor (ducker) implemented as an {@link WorkletEffect}.
  * Attenuates the main audio signal whenever the `sidechain` {@link AudioBus}
@@ -41,10 +49,10 @@ export class DuckingEffect extends WorkletEffect {
     }
 
     this._sidechain = options.sidechain;
-    this._threshold = options.threshold ?? -20;
-    this._ratio = options.ratio ?? 4;
-    this._attackMs = options.attackMs ?? 30;
-    this._releaseMs = options.releaseMs ?? 300;
+    this._threshold = Math.max(-100, Math.min(0, requireFinite('threshold', options.threshold ?? -20)));
+    this._ratio = Math.max(1, Math.min(20, requireFinite('ratio', options.ratio ?? 4)));
+    this._attackMs = Math.max(0.001, requireFinite('attackMs', options.attackMs ?? 30));
+    this._releaseMs = Math.max(0.001, requireFinite('releaseMs', options.releaseMs ?? 300));
   }
 
   protected get _workletName(): string {

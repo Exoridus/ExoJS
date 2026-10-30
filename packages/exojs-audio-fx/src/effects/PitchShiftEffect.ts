@@ -41,7 +41,10 @@ export class PitchShiftEffect extends WorkletEffect {
   public constructor(options: PitchShiftEffectOptions = {}) {
     super();
     this._pitch = Math.max(0.25, Math.min(4, options.pitch ?? 1));
-    this._grainSize = options.grainSize ?? 1024;
+    // The worklet halves the frame for its hop, so an odd or tiny size misaligns the overlap.
+    const grainSize = Number.isFinite(options.grainSize) ? Math.floor(options.grainSize!) : 1024;
+
+    this._grainSize = Math.max(2, grainSize - (grainSize % 2))
     this.wet = options.wet ?? 1;
   }
 
