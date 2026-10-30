@@ -9,7 +9,7 @@ import { parseLocalLaneOptions, selectLocalLanes } from './ci/local-lanes.ts';
 import { effectiveLanes, type LaneAreas, selectAreas } from './ci/select-lanes.ts';
 import { atLeastOutputMode, readOutputOptions } from './lib/output.ts';
 import { runCommand, type RunCommandResult } from './lib/run-command.ts';
-import { acquireValidationLock } from './lib/validation-lock.ts';
+import { type acquireValidationLock, waitForValidationLock } from './lib/validation-lock.ts';
 
 /** Lists the affected lanes; --run executes them. --only <id[,id]> is a diagnostic subset, never full validation. */
 const git = (...args: string[]): string => {
@@ -91,7 +91,8 @@ const main = async (): Promise<void> => {
     return;
   }
 
-  const lock = acquireValidationLock(process.cwd());
+  let lock: ReturnType<typeof acquireValidationLock> | undefined;
+  let checkoutLock: ReturnType<typeof acquireValidationLock> | undefined;
   const controller = new AbortController();
   let interrupted = 0;
 
@@ -114,6 +115,17 @@ const main = async (): Promise<void> => {
   let retainLock = false;
 
   try {
+    const onWait = (owner: string): void => {
+      process.stderr.write(`lanes: waiting for validation ownership. ${owner}\n`);
+    };
+
+    checkoutLock = await waitForValidationLock(process.cwd(), controller.signal, onWait, 'checkout');
+
+    // Builds and reports belong to the checkout; test lanes also share GPU and machine-load budgets.
+    if (selected.some(lane => lane.local !== 'gate')) {
+      lock = await waitForValidationLock(process.cwd(), controller.signal, onWait);
+    }
+
     for (const lane of selected) {
       if (controller.signal.aborted) {
         status = interrupted;
@@ -137,6 +149,12 @@ const main = async (): Promise<void> => {
     }
 
     completed = status === 0 && results.length === selected.length;
+  } catch (error) {
+    if (!controller.signal.aborted) {
+      throw error;
+    }
+
+    status = interrupted;
   } finally {
     process.removeListener('SIGINT', onInterrupt);
     process.removeListener('SIGTERM', onTerminate);
@@ -155,9 +173,12 @@ const main = async (): Promise<void> => {
       }
     } finally {
       if (!retainLock) {
-        lock.release();
+        lock?.release();
+        checkoutLock?.release();
       } else {
-        process.stderr.write(`lanes: cleanup was incomplete; inspect the owned processes before removing ${lock.path}.\n`);
+        process.stderr.write(
+          `lanes: cleanup was incomplete; inspect the owned processes before removing ${lock?.path ?? checkoutLock!.path}.\n`,
+        );
       }
     }
   }

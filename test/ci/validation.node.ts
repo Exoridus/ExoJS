@@ -685,6 +685,86 @@ void test('repository lock rejects a second owner and releases only its own toke
   second.release();
 });
 
+void test('validation lock waiting continues after a different process releases ownership', async () => {
+  const { fork, spawnSync } = await import('node:child_process');
+  const { once } = await import('node:events');
+  const { waitForValidationLock } = await import('../../scripts/lib/validation-lock.ts');
+  const cwd = directory();
+  assert.equal(spawnSync('git', ['init', '-q', cwd]).status, 0);
+  const owner = fork(resolve(import.meta.dirname, 'fixtures/validation-lock-owner.ts'), [cwd], { silent: true });
+
+  try {
+    await once(owner, 'message');
+    const exited = once(owner, 'exit');
+    let waits = 0;
+    const lock = await waitForValidationLock(cwd, new AbortController().signal, () => {
+      waits++;
+      owner.send('release');
+    });
+
+    try {
+      await exited;
+      assert.equal(waits, 1);
+      assert.equal(JSON.parse(readFileSync(lock.path, 'utf8')).pid, process.pid);
+    } finally {
+      lock.release();
+    }
+  } finally {
+    if (owner.exitCode === null && owner.signalCode === null) {
+      owner.kill();
+    }
+  }
+});
+
+void test('validation lock waiting aborts without removing an owner or a replacement token', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { acquireValidationLock, waitForValidationLock } = await import('../../scripts/lib/validation-lock.ts');
+  const cwd = directory();
+  assert.equal(spawnSync('git', ['init', '-q', cwd]).status, 0);
+  const owner = acquireValidationLock(cwd);
+  const controller = new AbortController();
+  const original = readFileSync(owner.path, 'utf8');
+  const replacement = JSON.stringify({ ...JSON.parse(original), token: 'replacement' });
+
+  try {
+    await assert.rejects(
+      waitForValidationLock(cwd, controller.signal, () => {
+        writeFileSync(owner.path, replacement);
+        controller.abort();
+      }),
+      { name: 'AbortError' },
+    );
+    owner.release();
+    assert.equal(readFileSync(owner.path, 'utf8'), replacement);
+  } finally {
+    rmSync(owner.path);
+  }
+});
+
+void test('validation lock waiting preserves crashed owners until explicit recovery', async () => {
+  const { fork, spawnSync } = await import('node:child_process');
+  const { once } = await import('node:events');
+  const { waitForValidationLock } = await import('../../scripts/lib/validation-lock.ts');
+  const cwd = directory();
+  assert.equal(spawnSync('git', ['init', '-q', cwd]).status, 0);
+  const owner = fork(resolve(import.meta.dirname, 'fixtures/validation-lock-owner.ts'), [cwd], { silent: true });
+  await once(owner, 'message');
+  const path = join(cwd, '.git/exojs-validation.lock');
+  const original = readFileSync(path, 'utf8');
+  const exited = once(owner, 'exit');
+  owner.kill('SIGKILL');
+  await exited;
+  const controller = new AbortController();
+  await assert.rejects(
+    waitForValidationLock(cwd, controller.signal, () => controller.abort()),
+    { name: 'AbortError' },
+  );
+  assert.equal(readFileSync(path, 'utf8'), original);
+  rmSync(path);
+  const recovered = await waitForValidationLock(cwd, new AbortController().signal, () => assert.fail('Recovered lock should be free'));
+  recovered.release();
+});
+
 void test('bounds a large unterminated failure tail while keeping the full disk log', async () => {
   const { spawnSync } = await import('node:child_process');
   const cwd = directory();
@@ -746,11 +826,12 @@ const prepareCli = async (status: number): Promise<{ cwd: string; env: NodeJS.Pr
   mkdirSync(bin);
   const executable = resolve(import.meta.dirname, 'fixtures/validation-pnpm.ts');
 
+  // Test-runner filters can contain shell operators; this fixture needs only Node's native TypeScript support.
   if (process.platform === 'win32') {
-    writeFileSync(join(bin, 'pnpm.cmd'), `@"${process.execPath}" ${process.execArgv.join(' ')} "${executable}" %*\r\n`);
+    writeFileSync(join(bin, 'pnpm.cmd'), `@"${process.execPath}" "${executable}" %*\r\n`);
   } else {
     const shim = join(bin, 'pnpm');
-    writeFileSync(shim, `#!/bin/sh\nexec "${process.execPath}" ${process.execArgv.join(' ')} "${executable}" "$@"\n`);
+    writeFileSync(shim, `#!/bin/sh\nexec "${process.execPath}" "${executable}" "$@"\n`);
     chmodSync(shim, 0o755);
   }
 
@@ -759,6 +840,62 @@ const prepareCli = async (status: number): Promise<{ cwd: string; env: NodeJS.Pr
 
   return { cwd, env: { ...process.env, PATH: `${bin}${delimiter}${process.env['PATH'] ?? process.env['Path'] ?? ''}` } };
 };
+
+void test('CLI checkout-only gates do not wait for another checkout resource lane', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { acquireValidationLock } = await import('../../scripts/lib/validation-lock.ts');
+  const { cwd, env } = await prepareCli(0);
+  const repository = acquireValidationLock(cwd);
+
+  try {
+    const result = spawnSync(
+      process.execPath,
+      [...process.execArgv, resolve(import.meta.dirname, '../../scripts/lanes.ts'), '--run', '--only=typecheck', '--output=silent'],
+      { cwd, env, encoding: 'utf8', timeout: 3000 },
+    );
+    assert.equal(result.status, 0, `${String(result.error)} ${result.stderr}`);
+    assert.equal(JSON.parse(readFileSync(repository.path, 'utf8')).pid, process.pid);
+    assert.match(readFileSync(join(cwd, 'pnpm-calls.jsonl'), 'utf8'), /gates.*typecheck/);
+    assert.throws(() => readFileSync(join(cwd, '.git/exojs-checkout-validation.lock')));
+  } finally {
+    repository.release();
+  }
+});
+
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  void test(`CLI ${signal} cancels resource waiting and releases only its checkout`, { timeout: 10_000 }, async t => {
+    const { fork } = await import('node:child_process');
+    const { once } = await import('node:events');
+    const { acquireValidationLock } = await import('../../scripts/lib/validation-lock.ts');
+    const { cwd, env } = await prepareCli(0);
+    const owner = acquireValidationLock(cwd);
+    const original = readFileSync(owner.path, 'utf8');
+    const runner = fork(resolve(import.meta.dirname, 'fixtures/validation-lane-runner.ts'), [], { cwd, env, silent: true });
+
+    try {
+      let stderr = '';
+
+      while (!stderr.includes('waiting for validation ownership')) {
+        const [chunk] = await once(runner.stderr!, 'data', { signal: t.signal });
+        stderr += String(chunk);
+      }
+
+      const finished = once(runner, 'exit', { signal: t.signal });
+      runner.send(signal);
+      const [code] = await finished;
+      assert.equal(code, signal === 'SIGINT' ? 130 : 143);
+      assert.equal(readFileSync(owner.path, 'utf8'), original);
+      assert.throws(() => readFileSync(join(cwd, '.git/exojs-checkout-validation.lock')));
+      assert.throws(() => readFileSync(join(cwd, 'pnpm-calls.jsonl')));
+    } finally {
+      owner.release();
+
+      if (runner.exitCode === null && runner.signalCode === null) {
+        runner.kill();
+      }
+    }
+  });
+}
 
 void test('CLI executes only the requested lane, passes its budget, and labels the result diagnostic', async () => {
   const { spawnSync } = await import('node:child_process');
@@ -852,6 +989,17 @@ void test('linked worktrees contend for the same repository validation lock', as
 
   try {
     assert.throws(() => acquireValidationLock(worktree), /Validation already owns/);
+    const checkout = acquireValidationLock(cwd, 'checkout');
+    const linked = acquireValidationLock(worktree, 'checkout');
+
+    try {
+      assert.notEqual(checkout.path, linked.path);
+      assert.throws(() => acquireValidationLock(cwd, 'checkout'), /Validation already owns/);
+      assert.throws(() => acquireValidationLock(worktree, 'checkout'), /Validation already owns/);
+    } finally {
+      checkout.release();
+      linked.release();
+    }
   } finally {
     first.release();
   }
