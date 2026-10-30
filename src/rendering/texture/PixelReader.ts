@@ -342,15 +342,21 @@ export class PixelReader<T extends PixelArray = Uint8ClampedArray> {
 
     const { x, y, width, height } = resolvePixelRegion('PixelReader', this.source, this._region, this._dataType);
 
-    this._sourceWidth = this.source.width;
-    this._sourceHeight = this.source.height;
-
     if (width === this._width && height === this._height && this._region !== undefined) {
+      this._sourceWidth = this.source.width;
+      this._sourceHeight = this.source.height;
+
       return;
     }
 
+    // Created before the old readback is released so a failing allocation leaves
+    // the reader on its previous, still usable readback.
+    const readback = this._backend.createPixelReadback(this.source, x, y, width, height, this.slots, this._dataType);
+
     this._readback.destroy();
-    this._readback = this._backend.createPixelReadback(this.source, x, y, width, height, this.slots, this._dataType);
+    this._readback = readback;
+    this._sourceWidth = this.source.width;
+    this._sourceHeight = this.source.height;
     this._width = width;
     this._height = height;
     this._generation++;

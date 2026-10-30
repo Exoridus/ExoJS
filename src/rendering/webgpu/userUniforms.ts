@@ -321,22 +321,24 @@ export const packUserUniforms = (
       c3 = length > 3 ? arr[3]! : 0;
     }
 
-    if (data[base] !== c0) {
+    // Compared in f32: the stored mirror is already rounded, so a double such as
+    // 0.1 would otherwise differ from it on every frame and re-upload forever.
+    if (data[base] !== Math.fround(c0)) {
       data[base] = c0;
       changed = true;
     }
 
-    if (data[base + 1] !== c1) {
+    if (data[base + 1] !== Math.fround(c1)) {
       data[base + 1] = c1;
       changed = true;
     }
 
-    if (data[base + 2] !== c2) {
+    if (data[base + 2] !== Math.fround(c2)) {
       data[base + 2] = c2;
       changed = true;
     }
 
-    if (data[base + 3] !== c3) {
+    if (data[base + 3] !== Math.fround(c3)) {
       data[base + 3] = c3;
       changed = true;
     }
