@@ -300,7 +300,7 @@ describe('phase state release on failure', () => {
     public failCreateAt = -1;
     public failDestroy = false;
 
-    protected override createPhaseState(): object {
+    protected override createPhaseState(): void {
       if (this.created.length === this.failCreateAt) {
         throw new Error('create failed');
       }
@@ -308,11 +308,11 @@ describe('phase state release on failure', () => {
       const state = {};
       this.created.push(state);
 
-      return state;
+      return state as unknown as void;
     }
 
-    protected override destroyPhaseState(state: object): void {
-      this.destroyed.push(state);
+    protected override destroyPhaseState(state: void): void {
+      this.destroyed.push(state as unknown as object);
 
       if (this.failDestroy) {
         throw new Error('destroy failed');
