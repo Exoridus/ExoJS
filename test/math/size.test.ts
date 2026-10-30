@@ -239,6 +239,12 @@ describe('Size', () => {
     expect(() => size.destroy()).not.toThrow();
   });
 
+  test('static zero rejects mutation and stays (0, 0)', () => {
+    expect(() => Size.zero.set(5, 5)).toThrow(TypeError);
+    expect(Size.zero.width).toBe(0);
+    expect(Size.zero.height).toBe(0);
+  });
+
   test('static zero is a (0, 0) sentinel', () => {
     expect(Size.zero.width).toBe(0);
     expect(Size.zero.height).toBe(0);
