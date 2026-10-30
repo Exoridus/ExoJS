@@ -3,7 +3,7 @@ import { BackendTargetPass } from '#rendering/BackendTargetPass';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
-import { BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
+import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
 import { createWebGl2ShaderProgram } from '#rendering/webgl2/shaderProgram';
 import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { WebGl2RenderBuffer } from '#rendering/webgl2/WebGl2RenderBuffer';
@@ -186,6 +186,8 @@ export class WebGl2ShaderFilterPass {
     // Draw the fullscreen quad
     const connection = this._connection!;
 
+    // Source-over on the cleared target preserves the premultiplied shader output.
+    gl2.setBlendMode(BlendModes.Normal);
     gl2.bindVertexArrayObject(connection.vao);
     connection.vao.draw(4, 0, RenderingPrimitives.TriangleStrip);
 

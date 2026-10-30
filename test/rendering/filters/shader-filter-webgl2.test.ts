@@ -17,7 +17,7 @@ import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
-import { ShaderPrimitives } from '#rendering/types';
+import { BlendModes, ShaderPrimitives } from '#rendering/types';
 import type { View } from '#rendering/View';
 import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
@@ -139,6 +139,7 @@ const makeGlMock = (): WebGL2RenderingContext => {
 // ---------------------------------------------------------------------------
 
 interface MockBackendExtras {
+  setBlendMode: MockInstance;
   bindShader: MockInstance;
   bindTexture: MockInstance;
   bindVertexArrayObject: MockInstance;
@@ -153,6 +154,7 @@ const makeWebGl2Backend = (glOverride?: WebGL2RenderingContext): RenderBackend &
   const gl = glOverride ?? makeGlMock();
 
   const bindShader = vi.fn();
+  const setBlendMode = vi.fn();
   const bindTexture = vi.fn();
   const bindVertexArrayObject = vi.fn();
   const execute = vi.fn(pass => {
@@ -220,6 +222,7 @@ const makeWebGl2Backend = (glOverride?: WebGL2RenderingContext): RenderBackend &
       root.destroy();
     },
     bindShader,
+    setBlendMode,
     bindTexture,
     bindVertexArrayObject,
     execute,
@@ -333,6 +336,27 @@ const glslPassOf = (filter: ShaderFilter): Record<string, unknown> | null =>
 // ---------------------------------------------------------------------------
 
 describe('ShaderFilter on WebGL2', () => {
+  test('selects source-over through the backend before drawing the fullscreen quad', () => {
+    const backend = makeWebGl2Backend();
+    const input = new RenderTexture(8, 8);
+    const output = new RenderTexture(8, 8);
+    const filter = new ShaderFilter({ glsl: { fragment: minimalFragSrc } });
+
+    vi.mocked(backend.context.drawArrays).mockImplementation(() => {
+      expect(backend.setBlendMode).toHaveBeenLastCalledWith(BlendModes.Normal);
+    });
+
+    try {
+      filter.apply(backend, input, output);
+      expect(backend.context.drawArrays).toHaveBeenCalledOnce();
+    } finally {
+      filter.destroy();
+      input.destroy();
+      output.destroy();
+      backend.destroy();
+    }
+  });
+
   // 1. Construction with a GLSL fragment only - succeeds
   test('constructs successfully with only a GLSL fragment source', () => {
     expect(() => new ShaderFilter({ glsl: { fragment: minimalFragSrc } })).not.toThrow();
