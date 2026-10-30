@@ -431,6 +431,10 @@ export class QueryEngine {
       throw new RangeError('PhysicsWorld.shapeCast: position and displacement must be finite.');
     }
 
+    if (options.angle !== undefined && !Number.isFinite(options.angle)) {
+      throw new RangeError('PhysicsWorld.shapeCast: angle must be finite.');
+    }
+
     const start = this._castStart;
 
     fillProxy(shape, position.x, position.y, options.angle ?? 0, start);

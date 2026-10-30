@@ -14,7 +14,8 @@ export interface FrameLightingOptions extends LightingOptions {
    * {@link RadianceLighting}, which SAMPLES the field instead of painting into
    * it: the occluder mask a ray reads is rasterised at this density, so a
    * coarse field quantises the scene rather than the light and a source moving
-   * by less than a texel makes the whole picture jump.
+   * by less than a texel makes the whole picture jump. Must be finite and above
+   * 0; anything else throws at construction.
    */
   readonly lightResolution?: number;
   /**
@@ -30,7 +31,7 @@ export interface FrameLightingOptions extends LightingOptions {
    * Angular bins in each light's shadow map. A bin is the finest shadow edge
    * the renderer can resolve, so a large light on a high-resolution canvas
    * wants more of them; the cost is linear in the light count. Defaults to
-   * `256`.
+   * `256`, clamped to 8..4096. A non-finite value throws.
    *
    * It trades against how wide a penumbra can get. The shadow filter samples
    * every bin under its kernel and spends at most 21 fetches doing it, so the
@@ -54,15 +55,30 @@ export interface FrameLightingOptions extends LightingOptions {
   readonly post?: readonly Filter[];
 }
 
+const maxShadowResolution = 4096;
+
 /** The backend options a frame-composing renderer is built from. @internal */
 export const frameBackendOptions = (
   host: LightingHost,
   options: FrameLightingOptions,
   resolution: number,
-): FrameLightingBackendOptions => ({
-  app: host,
-  post: options.post ?? [],
-  resolution: options.lightResolution ?? resolution,
-  shadowResolution: Math.max(8, Math.round(options.shadowResolution ?? 256)),
-  fieldMargin: Math.min(1, Math.max(0, options.fieldMargin ?? 0.25)),
-});
+): FrameLightingBackendOptions => {
+  const lightResolution = options.lightResolution ?? resolution;
+  const shadowResolution = options.shadowResolution ?? 256;
+
+  if (!Number.isFinite(lightResolution) || lightResolution <= 0) {
+    throw new RangeError(`lightResolution must be a finite number above 0, got ${lightResolution}.`);
+  }
+
+  if (!Number.isFinite(shadowResolution)) {
+    throw new RangeError(`shadowResolution must be a finite number, got ${shadowResolution}.`);
+  }
+
+  return {
+    app: host,
+    post: options.post ?? [],
+    resolution: lightResolution,
+    shadowResolution: Math.min(maxShadowResolution, Math.max(8, Math.round(shadowResolution))),
+    fieldMargin: Math.min(1, Math.max(0, options.fieldMargin ?? 0.25)),
+  };
+};

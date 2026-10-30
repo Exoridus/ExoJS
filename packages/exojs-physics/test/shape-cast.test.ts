@@ -231,4 +231,10 @@ describe('PhysicsWorld.shapeCast', () => {
     // kilobytes on top.
     expect(rate.bytesPerIteration).toBeLessThan(4 * 1024);
   });
+
+  it('rejects a non-finite angle', () => {
+    const world = new PhysicsWorld();
+
+    expect(() => world.shapeCast(new CircleShape(5), { x: 0, y: 0 }, { x: 1, y: 0 }, { angle: Number.NaN })).toThrow(RangeError);
+  });
 });

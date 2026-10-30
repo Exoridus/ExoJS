@@ -469,4 +469,10 @@ describe('chain performance', () => {
     // of the solid floor's rate; sharing the proxies keeps the two comparable.
     expect(chainRate.bytesPerIteration).toBeLessThan(boxRate.bytesPerIteration * 2 + 64 * 1024);
   });
+
+  it('welds a vertex closer than the shortest segment instead of throwing from the edge', () => {
+    const chain = new ChainShape(points(0, 0, 5e-4, 0, 10, 0));
+
+    expect(chain.count).toBe(2);
+  });
 });

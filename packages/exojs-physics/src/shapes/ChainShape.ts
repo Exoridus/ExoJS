@@ -4,7 +4,8 @@ import { ChainEdgeShape } from './ChainEdgeShape';
 import { Shape } from './Shape';
 
 /** Vertices closer than this (px) are welded into one. */
-const weldEpsilon = 1e-4;
+// Matches SegmentShape.minimumLength: a closer pair would build an edge that cannot exist.
+const weldEpsilon = 1e-3;
 
 /** Construction options for a {@link ChainShape}. */
 export interface ChainShapeOptions {
