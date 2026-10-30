@@ -141,17 +141,35 @@ export class WebGl2OutputPass {
     const gl = backend.context;
     const shader = new WebGl2Shader(defaultGlslVertexSource, fragmentSource);
 
-    shader.connect(createWebGl2ShaderProgram(gl));
-    shader.sync();
+    let vaoHandle: WebGLVertexArrayObject | null = null;
+    let vertexBuffer: WebGl2RenderBuffer | null = null;
+    let vao: WebGl2VertexArrayObject;
 
-    const vaoHandle = gl.createVertexArray();
+    // A failed attempt leaves `_shader` null, so every retry starts from scratch
+    // and must not strand the objects an earlier attempt created.
+    try {
+      shader.connect(createWebGl2ShaderProgram(gl));
+      shader.sync();
 
-    if (vaoHandle === null) {
-      throw new Error('WebGl2OutputPass: could not create vertex array object.');
+      vaoHandle = gl.createVertexArray();
+
+      if (vaoHandle === null) {
+        throw new Error('WebGl2OutputPass: could not create vertex array object.');
+      }
+
+      vertexBuffer = this._createVertexBuffer(gl);
+      vao = this._createVao(gl, vaoHandle, shader, vertexBuffer);
+    } catch (error) {
+      vertexBuffer?.destroy();
+
+      if (vaoHandle !== null) {
+        gl.deleteVertexArray(vaoHandle);
+      }
+
+      shader.destroy();
+
+      throw error;
     }
-
-    const vertexBuffer = this._createVertexBuffer(gl);
-    const vao = this._createVao(gl, vaoHandle, shader, vertexBuffer);
 
     this._shader = shader;
     this._connection = { vertexBuffer, vao };

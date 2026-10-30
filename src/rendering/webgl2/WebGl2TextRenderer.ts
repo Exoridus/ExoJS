@@ -235,9 +235,14 @@ export class WebGl2TextRenderer
       return;
     }
 
-    this._uploadNodeData(c);
-    this._drawBatches(c);
-    this._resetFrameState();
+    // A throwing draw must not leave this frame's quads queued: the next flush
+    // would draw them again on top of its own.
+    try {
+      this._uploadNodeData(c);
+      this._drawBatches(c);
+    } finally {
+      this._resetFrameState();
+    }
   }
 
   public destroy(): void {
