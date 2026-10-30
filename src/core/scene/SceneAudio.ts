@@ -333,6 +333,15 @@ class PendingVoice implements Voice {
 
     if (!this._cancelled) {
       this._cancelled = true;
+
+      for (const send of this._sendList) {
+        send.destroy();
+      }
+
+      this._sendList.length = 0;
+      this._dummyOutput.disconnect();
+      this._pendingEffects.length = 0;
+      this._followTarget = null;
       this._releasePoints();
       this.onEnd.dispatch();
     }
@@ -577,6 +586,14 @@ class PendingVoice implements Voice {
     // until flush re-points it at the real voice.
     const send = new AudioSend(getAudioContext(), this._dummyOutput, bus, level);
 
+    if (this._cancelled) {
+      send.destroy();
+      // Destroying a send leaves its source connection intact; this placeholder can never flush.
+      this._dummyOutput.disconnect();
+
+      return send;
+    }
+
     this._sendList.push(send);
 
     return send;
@@ -584,6 +601,12 @@ class PendingVoice implements Voice {
 
   /** @internal */
   public _adoptSend(send: AudioSend): void {
+    if (this._cancelled) {
+      send.destroy();
+
+      return;
+    }
+
     if (this._real) {
       this._real._adoptSend(send);
 
@@ -677,6 +700,7 @@ class PendingVoice implements Voice {
     }
 
     this._sendList.length = 0;
+    this._dummyOutput.disconnect();
     this._replaySpatial(real);
     real.onEnd.add((): void => {
       endForwarded = true;

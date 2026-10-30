@@ -68,7 +68,9 @@ export class WangSet {
     this.type = options.type ?? 'blob';
 
     if (options.blobMap instanceof Map) {
-      this._map = options.blobMap;
+      // Snapshot the input: a caller that keeps and mutates its Map must not
+      // desync the lookup from the membership set built from it below.
+      this._map = new Map(options.blobMap);
     } else {
       const map = new Map<number, number>();
 

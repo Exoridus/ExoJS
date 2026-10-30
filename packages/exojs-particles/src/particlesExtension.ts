@@ -11,7 +11,8 @@ import { ParticleSystem } from './ParticleSystem';
 export interface ParticlesExtensionOptions {
   /**
    * Particles the WebGL2 renderer's instance buffer is pre-sized for.
-   * Defaults to 8192.
+   * Defaults to 8192. Must be a positive integer: a negative, fractional or
+   * non-finite value throws when the extension is created.
    *
    * This is a starting allocation, not a limit: a system with more live
    * particles grows the buffer instead of dropping the surplus, so raise it
@@ -58,6 +59,10 @@ export const particlesExtension: Extension = Object.freeze({
  */
 export const createParticlesExtension = (options: ParticlesExtensionOptions = {}): Extension => {
   const batchSize = options.batchSize ?? 8192;
+
+  if (!Number.isInteger(batchSize) || batchSize < 1) {
+    throw new Error('createParticlesExtension: batchSize must be a positive integer.');
+  }
 
   return {
     id: '@codexo/exojs-particles',
