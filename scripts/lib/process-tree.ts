@@ -1,5 +1,6 @@
 import { type ChildProcess, spawn, spawnSync } from 'node:child_process';
 import { join } from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 
 const signalGroup = (group: number, signal: NodeJS.Signals): string | undefined => {
   try {
@@ -48,6 +49,38 @@ const ownedGroups = (root: number): number[] => {
   }
 
   return [...groups];
+};
+
+const waitForGroupExit = async (groups: readonly number[]): Promise<string | undefined> => {
+  const deadline = Date.now() + 1000;
+
+  while (Date.now() < deadline) {
+    const snapshot = spawnSync('ps', ['-A', '-o', 'pgid=,stat='], {
+      encoding: 'utf8',
+      timeout: Math.max(1, deadline - Date.now()),
+    });
+
+    if (snapshot.status !== 0) {
+      return `Cannot confirm owned process exit: ${snapshot.stderr || snapshot.error?.message || snapshot.status}`;
+    }
+
+    const live = snapshot.stdout
+      .trim()
+      .split('\n')
+      .some(line => {
+        const [group, state] = line.trim().split(/\s+/);
+
+        return groups.includes(Number(group)) && !state?.startsWith('Z');
+      });
+
+    if (!live) {
+      return undefined;
+    }
+
+    await delay(20);
+  }
+
+  return `Owned process groups did not exit after SIGKILL: ${groups.join(', ')}`;
 };
 
 /** Terminates the owned command tree; never searches by executable name or start time. */
@@ -130,6 +163,13 @@ export const stopProcessTree = async (
     if (error) {
       errors.push(error);
     }
+  }
+
+  // A root's close event and a successful kill syscall do not establish descendant exit.
+  const pendingExit = await waitForGroupExit(groups);
+
+  if (pendingExit) {
+    errors.push(pendingExit);
   }
 
   return errors.length > 0 ? errors.join('; ') : undefined;

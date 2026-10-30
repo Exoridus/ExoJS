@@ -540,6 +540,68 @@ for (const mode of ['stubborn', 'tree', 'detached-tree']) {
   });
 }
 
+void test('confirms descendant exit before releasing ownership even after the root closes', async () => {
+  const originalKill = process.kill;
+  const deliveries: Array<Promise<void>> = [];
+  const controller = new AbortController();
+
+  if (process.platform !== 'win32') {
+    mock.method(process, 'kill', (...args: unknown[]) => {
+      if (typeof args[0] === 'number' && args[0] < 0 && args[1] === 'SIGKILL') {
+        // Signal delivery and process exit are separate from root pipe closure.
+        deliveries.push(
+          new Promise<void>((resolve, reject) => {
+            setTimeout(() => {
+              try {
+                Reflect.apply(originalKill, process, args);
+                resolve();
+              } catch (error) {
+                if ((error as NodeJS.ErrnoException).code === 'ESRCH') {
+                  resolve();
+                } else {
+                  reject(error instanceof Error ? error : new Error(String(error)));
+                }
+              }
+            }, 50);
+          }),
+        );
+
+        return true;
+      }
+
+      return Reflect.apply(originalKill, process, args);
+    });
+  }
+
+  try {
+    const cwd = directory();
+    const pidFile = join(cwd, 'pid');
+    const running = capture(() =>
+      run('quiet-tree', cwd, {
+        args: [fixture, 'quiet-tree', pidFile],
+        signal: controller.signal,
+        killGraceMs: 80,
+      }),
+    );
+    const pid = await waitForFile(pidFile);
+    assert.equal(isRunning(pid), true);
+    controller.abort();
+    const { result } = await running;
+    assert.equal(result.status, 130);
+    assert.equal(result.cleanupError, undefined);
+    assert.equal(isRunning(pid), false, `owned descendant ${pid} survived ownership release`);
+    assert.equal(existsSync(`${pidFile}.expired`), false);
+
+    if (process.platform !== 'win32') {
+      assert.ok(deliveries.length > 0, 'The delayed signal must exercise the shutdown barrier');
+    }
+  } finally {
+    controller.abort();
+    await Promise.all(deliveries);
+    mock.restoreAll();
+  }
+});
+
 void test('rejects invalid budgets instead of silently disabling supervision', async () => {
   for (const timeoutMs of [0, -1, Number.NaN, Number.POSITIVE_INFINITY, 2 ** 31]) {
     await assert.rejects(run('streams', directory(), { timeoutMs }), /timeoutMs/);

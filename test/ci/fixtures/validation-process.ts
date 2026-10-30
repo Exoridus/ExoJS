@@ -43,9 +43,9 @@ if (mode === 'streams') {
     },
     process.platform === 'win32' ? 15_000 : 1800,
   );
-} else if (mode === 'tree' || mode === 'orphan' || mode === 'detached-tree') {
+} else if (mode === 'tree' || mode === 'orphan' || mode === 'detached-tree' || mode === 'quiet-tree') {
   const child = spawn(process.execPath, [import.meta.filename, 'stubborn', pidFile!], {
-    stdio: ['ignore', 'inherit', 'inherit'],
+    stdio: mode === 'quiet-tree' ? 'ignore' : ['ignore', 'inherit', 'inherit'],
     detached: mode === 'detached-tree',
   });
   process.stdout.write(`child=${child.pid}\n`);
