@@ -568,6 +568,63 @@ describe('AssetResidency', () => {
     });
   });
 
+  test('destroy continues failing pending handles after an adapter failure and clears tracking', () => {
+    const cache = createFakeCache(() => new Promise(() => {})).cache;
+    const { residency, typeRegistry, canonical } = createResidency({ cache });
+    const adapter = createFakeSeamlessAdapter();
+    installTypeA(typeRegistry, { leaf: adapter });
+    const asset = canonical(TypeA, 'pending.png');
+    residency._getSeamless(asset, adapter);
+    const second = adapter.createPlaceholder() as object;
+    const entry = (residency as unknown as { _deferred: Map<string, { handles: WeakHandleSet }> })._deferred.get(asset.key)!;
+    residency._addDeferredHandle(asset.key, entry, second);
+    const failure = new Error('adapter failed');
+    vi.mocked(adapter.fail).mockImplementationOnce(() => {
+      throw failure;
+    });
+
+    expect(() => residency.destroy()).toThrow(failure);
+    expect(adapter.stateOf(second)).toBe('failed');
+    expect(residency._inspect()).toEqual([]);
+  });
+
+  test('destroy preserves ready seamless handles', async () => {
+    const { residency, typeRegistry, canonical } = createResidency();
+    const adapter = createFakeSeamlessAdapter();
+    installTypeA(typeRegistry, { leaf: adapter });
+    const asset = canonical(TypeA, 'ready.png');
+    const handle = residency._getSeamless(asset, adapter);
+    residency._claim(asset, new LoaderScope(fakeLoader, 'scope'));
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(adapter.stateOf(handle)).toBe('ready');
+    residency.destroy();
+    expect(adapter.stateOf(handle)).toBe('ready');
+    expect(adapter.fail).not.toHaveBeenCalled();
+  });
+
+  test.each([false, true])('destroy preserves an already settled ref (failed=%s)', async failed => {
+    const cache = createFakeCache().cache;
+    const { residency, typeRegistry, canonical } = createResidency({ cache });
+    installTypeA(typeRegistry);
+    const failure = new Error('load failed');
+
+    if (failed) {
+      vi.spyOn(cache, 'resolve').mockRejectedValue(failure);
+    }
+
+    const ref = residency._getRef(canonical(TypeA, 'settled.txt'));
+    await ref.loaded.catch(() => undefined);
+    const state = ref.state;
+    const error = ref.error;
+    residency.destroy();
+    expect(ref.state).toBe(state);
+    expect(ref.error).toBe(error);
+
+    if (!failed) {
+      expect(ref.value).toBe('resolved');
+    }
+  });
+
   test('destroy() clears resident resources, in-flight tracking, claims, and the background queue', async () => {
     const { residency, typeRegistry, canonical } = createResidency({ concurrency: 0 });
     residency._storeResource(canonical(TypeA, 'a.png'), 'value');

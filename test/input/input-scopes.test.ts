@@ -82,6 +82,34 @@ const createHarness = (): Harness => {
 };
 
 describe('InputScope', () => {
+  test.each(['scope', 'direct'] as const)('rejected construction leaves earlier maps reusable by %s ownership', ownership => {
+    const free = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+    const otherFree = new ActionMap({ fire: new ButtonAction(Keyboard.Control) });
+    const owned = new ActionMap({ close: new ButtonAction(Keyboard.Escape) });
+    const original = new InputScope(owned);
+
+    expect(() => new InputScope([free, free, otherFree, owned])).toThrow(/already belongs to another InputScope/);
+    expect(original.maps).toEqual([owned]);
+
+    if (ownership === 'scope') {
+      const recovered = new InputScope([free, otherFree]);
+      expect(recovered.maps).toEqual([free, otherFree]);
+    } else {
+      const h = createHarness();
+      expect(() => h.inputs.attach(free)).not.toThrow();
+      expect(() => h.inputs.attach(otherFree)).not.toThrow();
+      h.frame();
+      h.next();
+      h.set(Keyboard.Space, 1);
+      h.set(Keyboard.Control, 1);
+      h.frame();
+      expect(free.jump.pressed).toBe(true);
+      expect(otherFree.fire.pressed).toBe(true);
+    }
+
+    expect(original.maps).toEqual([owned]);
+  });
+
   test('collects maps and reports them in insertion order', () => {
     const a = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
     const b = new ActionMap({ fire: new ButtonAction(Keyboard.Control) });

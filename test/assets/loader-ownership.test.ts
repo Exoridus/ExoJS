@@ -2,9 +2,10 @@ import { Asset } from '#assets/Asset';
 import { Assets } from '#assets/Assets';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
+import { logger } from '#core/Logger';
 import { materializeAssetTypes } from '#extensions/materialize';
 import { BmFont } from '#rendering/text/BmFont';
-import type { Texture } from '#rendering/texture/Texture';
+import { Texture } from '#rendering/texture/Texture';
 
 const createCoreLoader = (): Loader => {
   const loader = new Loader({ basePath: '/' });
@@ -274,6 +275,33 @@ describe('ownership diagnostics', () => {
 });
 
 describe('per-scope load progress', () => {
+  test('throwing progress observers do not reject loads or strand scope and aggregate batches', async () => {
+    mockFetch();
+    const loader = createCoreLoader();
+    const scope = loader.createScope();
+    const report = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+    const scopeComplete = vi.fn();
+    const loaderComplete = vi.fn();
+    scope.onLoadProgress.add(() => {
+      throw new Error('scope observer failed');
+    });
+    loader.onLoadProgress.add(() => {
+      throw new Error('loader observer failed');
+    });
+    scope.onLoadComplete.add(scopeComplete);
+    loader.onLoadComplete.add(loaderComplete);
+
+    try {
+      await expect(scope.load('first.png')).resolves.toBeInstanceOf(Texture);
+      await expect(scope.load('second.png')).resolves.toBeInstanceOf(Texture);
+      expect(scopeComplete).toHaveBeenCalledTimes(2);
+      expect(loaderComplete).toHaveBeenCalledTimes(2);
+    } finally {
+      report.mockRestore();
+      loader.destroy();
+    }
+  });
+
   test('a scope reports its own batch while the loader reports the aggregate', async () => {
     mockFetch();
     const loader = createCoreLoader();
