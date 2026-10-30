@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { constants, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, join, relative, resolve } from 'node:path';
 import { mock, test } from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
 
@@ -28,8 +28,55 @@ const directory = (): string => {
   return path;
 };
 
-const run = (mode: string, cwd: string, extra: Partial<Parameters<typeof runCommand>[0]> = {}) =>
-  runCommand({
+const retainCleanupEvidence = (result: Awaited<ReturnType<typeof runCommand>>, cwd: string): string | undefined => {
+  if (result.logPath && (result.cleanupError || process.env['EXOJS_VALIDATION_DIAGNOSTICS'] === '1')) {
+    try {
+      const directory = resolve('.workspace/logs');
+      const retained = join(directory, `validation-cleanup-${basename(result.logPath)}`);
+      mkdirSync(directory, { recursive: true });
+      copyFileSync(result.logPath, retained, constants.COPYFILE_EXCL);
+
+      if (result.cleanupError) {
+        let pid: number | null = null;
+        let running: boolean | null = null;
+
+        try {
+          const value = Number(readFileSync(join(cwd, 'pid'), 'utf8').slice(0, 32));
+
+          if (Number.isSafeInteger(value) && value > 0) {
+            pid = value;
+            running = isRunning(value);
+          }
+        } catch {
+          // Missing markers or inaccessible processes cannot confirm liveness.
+        }
+
+        writeFileSync(
+          `${retained}.cleanup.json`,
+          `${JSON.stringify({
+            checkedAt: new Date().toISOString(),
+            pid,
+            running,
+            expired: existsSync(join(cwd, 'pid.expired')),
+            rootExpired: existsSync(join(cwd, 'pid.root-expired')),
+          })}\n`,
+          { flag: 'wx' },
+        );
+      }
+
+      process.stderr.write(`Retained cleanup trace: ${relative(process.cwd(), retained)}\n`);
+
+      return retained;
+    } catch (error) {
+      process.stderr.write(`Cannot retain cleanup trace: ${String(error)}\n`);
+    }
+  }
+
+  return undefined;
+};
+
+const run = async (mode: string, cwd: string, extra: Partial<Parameters<typeof runCommand>[0]> = {}) => {
+  const result = await runCommand({
     label: 'supervisor-test',
     command: process.execPath,
     args: [fixture, mode],
@@ -37,6 +84,11 @@ const run = (mode: string, cwd: string, extra: Partial<Parameters<typeof runComm
     output: 'silent',
     ...extra,
   });
+  retainCleanupEvidence(result, cwd);
+
+  return result;
+};
+
 // The supervisor announces a failed run on the process streams, so a test that
 // provokes one would print a fake `FAIL` block into an otherwise green run. A
 // capture keeps those announcements, asserts them and restores the streams.
@@ -125,6 +177,82 @@ const waitForFile = async (path: string): Promise<number> => {
 
   throw new Error(`Fixture did not write ${path}`);
 };
+
+void test('cleanup evidence retains only the owned PID, sentinel state and log', () => {
+  const cwd = directory();
+  const logPath = join(cwd, `${basename(cwd)}.log`);
+  writeFileSync(logPath, 'owned cleanup log\n');
+  writeFileSync(join(cwd, 'pid'), String(process.pid));
+  writeFileSync(join(cwd, 'pid.expired'), 'expired');
+  writeFileSync(join(cwd, 'unrelated.json'), 'not part of cleanup evidence');
+  const retained = retainCleanupEvidence({ status: 130, signal: null, durationMs: 1, cleanupError: 'diagnostic contract', logPath }, cwd);
+  assert.ok(retained);
+  assert.equal(readFileSync(retained, 'utf8'), 'owned cleanup log\n');
+  const snapshot = JSON.parse(readFileSync(`${retained}.cleanup.json`, 'utf8'));
+  assert.deepEqual(Object.keys(snapshot).sort(), ['checkedAt', 'expired', 'pid', 'rootExpired', 'running']);
+  assert.equal(snapshot.pid, process.pid);
+  assert.equal(snapshot.running, true);
+  assert.equal(snapshot.expired, true);
+  assert.equal(snapshot.rootExpired, false);
+  assert.ok(Number.isFinite(Date.parse(snapshot.checkedAt)));
+});
+
+void test('cleanup evidence never treats a missing or invalid PID marker as a process', () => {
+  for (const marker of [undefined, '', '0', '-1', 'not a PID']) {
+    const cwd = directory();
+    const logPath = join(cwd, `${basename(cwd)}.log`);
+    writeFileSync(logPath, 'owned cleanup log\n');
+
+    if (marker !== undefined) {
+      writeFileSync(join(cwd, 'pid'), marker);
+    }
+
+    const retained = retainCleanupEvidence({ status: 130, signal: null, durationMs: 1, cleanupError: 'diagnostic contract', logPath }, cwd);
+    assert.ok(retained);
+    const snapshot = JSON.parse(readFileSync(`${retained}.cleanup.json`, 'utf8'));
+    assert.equal(snapshot.pid, null);
+    assert.equal(snapshot.running, null);
+    assert.equal(snapshot.expired, false);
+    assert.equal(snapshot.rootExpired, false);
+  }
+});
+
+if (process.platform === 'win32') {
+  void test('Windows cleanup phases remain bounded and preserve terminal phases after truncation', async () => {
+    const { spawnSync } = await import('node:child_process');
+    const script = resolve(import.meta.dirname, '../../scripts/lib/stop-process-tree.ps1').replaceAll("'", "''");
+    const command = `
+      $ProgressPreference = 'SilentlyContinue'
+      $tokens = $null; $errors = $null
+      $ast = [Management.Automation.Language.Parser]::ParseFile('${script}', [ref]$tokens, [ref]$errors)
+      if ($errors.Count) { throw 'Invalid cleanup script' }
+      $writer = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Write-CleanupPhase' }, $true)
+      foreach ($statement in $ast.EndBlock.Statements) {
+        if ($statement.Extent.StartOffset -ge $writer.Extent.StartOffset) { break }
+        if ($statement -is [Management.Automation.Language.AssignmentStatementAst]) { Invoke-Expression $statement.Extent.Text }
+      }
+      Invoke-Expression $writer.Extent.Text
+      foreach ($phase in @('entry', 'cim-begin', 'cim-end', 'root-identity-begin', 'root-identity-end', 'targets')) { Write-CleanupPhase $phase }
+      for ($index = 0; $index -lt 100; $index++) { Write-CleanupPhase 'identity-begin' "target=$index" -TargetDetail }
+      Write-CleanupPhase 'remaining-begin'
+      Write-CleanupPhase 'remaining-end' 'count=0'
+      Write-CleanupPhase 'exit'
+    `;
+    const result = spawnSync(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64')],
+      { encoding: 'utf8', windowsHide: true, timeout: 8000 },
+    );
+    assert.equal(result.error, undefined);
+    assert.equal(result.status, 0, result.stderr);
+    const phases = result.stderr.trim().split(/\r?\n/);
+    assert.ok(phases.length <= 32, `Diagnostic output must stay bounded: ${result.stderr}`);
+    assert.match(result.stderr, /details-truncated/);
+    assert.match(result.stderr, /remaining-begin/);
+    assert.match(result.stderr, /remaining-end count=0/);
+    assert.match(phases.at(-1)!, / exit\s*$/);
+  });
+}
 
 void test('PID readiness waits for a positive integer after an empty publication', async () => {
   const path = join(directory(), 'pid');

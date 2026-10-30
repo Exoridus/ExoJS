@@ -88,6 +88,7 @@ export const stopProcessTree = async (
   child: ChildProcess,
   graceMs: number,
   birth: { earliest: number; latest: number; exitedAt?: number },
+  onDiagnostic?: (message: string) => void,
 ): Promise<string | undefined> => {
   const pid = child.pid;
 
@@ -99,6 +100,7 @@ export const stopProcessTree = async (
     const powershell = join(process.env['SystemRoot'] ?? 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
 
     return new Promise(resolve => {
+      const helperStarted = Date.now();
       const killer = spawn(
         powershell,
         [
@@ -120,18 +122,37 @@ export const stopProcessTree = async (
         { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] },
       );
       let diagnostic = '';
+
+      const observe = (message: string): void => {
+        try {
+          onDiagnostic?.(`windows-cleanup t+${Date.now() - helperStarted}ms root=${pid} helper=${killer.pid ?? '?'} ${message}`);
+        } catch {
+          // Diagnostic delivery must not interrupt ownership cleanup.
+        }
+      };
+
+      const withDiagnostic = (message: string): string =>
+        diagnostic.trim() ? `${message}\nCaptured cleanup phases:\n${diagnostic.trim()}` : message;
+      observe(`spawn-returned node=${process.version} execPath=${process.execPath}`);
+      killer.once('spawn', () => observe('spawn'));
+      killer.once('exit', (code, signal) => observe(`exit code=${code} signal=${signal}`));
       killer.stderr.on('data', (chunk: Buffer) => {
         diagnostic = (diagnostic + chunk.toString()).slice(-8192);
+        observe(`stderr ${chunk.toString().slice(-8192).trim()}`);
       });
       const timer = setTimeout(() => {
-        killer.kill();
-        resolve(`Process-tree cleanup timed out for owned PID ${pid}; inspect descendants before retrying.`);
+        observe('deadline-reached');
+        const killed = killer.kill();
+        observe(`kill-returned ${killed}`);
+        resolve(withDiagnostic(`Process-tree cleanup timed out for owned PID ${pid}; inspect descendants before retrying.`));
       }, 8000);
       killer.once('error', error => {
+        observe(`error ${error.message}`);
         clearTimeout(timer);
         resolve(`Cannot stop owned PID ${pid}: ${error.message}`);
       });
       killer.once('close', code => {
+        observe(`close code=${code}`);
         clearTimeout(timer);
         resolve(
           code === 0
