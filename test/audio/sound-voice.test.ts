@@ -309,6 +309,37 @@ describe('SoundVoice — capabilities', () => {
     sound.destroy();
   });
 
+  test('time advances at the detuned speed', () => {
+    const factory = setupSourceSpy();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub(10));
+    const voice = system.play(sound, { detune: 1200 }) as SoundVoice;
+
+    mutable(getAudioContext()).currentTime = 1;
+    expect(voice.time).toBeCloseTo(2);
+
+    mutable(getAudioContext()).currentTime = 0;
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('changing detune mid-play keeps the playhead and speeds up only afterwards', () => {
+    const factory = setupSourceSpy();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub(10));
+    const voice = system.play(sound) as SoundVoice;
+    const ctx = getAudioContext();
+
+    mutable(ctx).currentTime = 2;
+    voice.detune = 1200;
+    mutable(ctx).currentTime = 3;
+    expect(voice.time).toBeCloseTo(4);
+
+    mutable(ctx).currentTime = 0;
+    factory.restore();
+    sound.destroy();
+  });
+
   // ---- loop setter no-ops ----
 
   test('loop setter is a no-op when the value is unchanged', () => {

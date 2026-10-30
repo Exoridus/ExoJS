@@ -386,11 +386,11 @@ describe('Sound — LeastRecentlyUsed remaining-time estimate', () => {
 describe('Sound — LeastRecentlyUsed eviction while the audio context is not ready', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  // LRU falls back to `now = 0` when the audio context is not running yet.
   // Playing is skipped outright while locked, so the surviving way in is
   // `setPoolSize()` - a pool shrunk while audio is suspended still has to pick
-  // a victim, and must do so without spawning a context to read the clock from.
-  test('LRU eviction still picks a victim when isAudioContextReady() is false', () => {
+  // the voice closest to its end from the live playheads.
+  test('LRU eviction picks the voice closest to its end while the context is not ready', () => {
+    const time = mockCurrentTime(0);
     const factory = setupSourceFactory();
     const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(4), {
@@ -398,8 +398,10 @@ describe('Sound — LeastRecentlyUsed eviction while the audio context is not re
       poolStrategy: SoundPoolStrategy.LeastRecentlyUsed,
     });
 
-    system.play(sound); // src[0]
-    system.play(sound); // src[1]
+    const older = system.play(sound);
+    time.setTime(1);
+    const newer = system.play(sound);
+    time.setTime(3);
 
     const ctx = getAudioContext();
     const originalState = ctx.state;
@@ -409,9 +411,10 @@ describe('Sound — LeastRecentlyUsed eviction while the audio context is not re
 
     mutable(ctx).state = originalState;
 
-    expect(factory.sources.length).toBe(2);
-    expect(factory.sources[0].stop).toHaveBeenCalledTimes(1);
+    expect(older.ended).toBe(true);
+    expect(newer.ended).toBe(false);
 
+    time.restore();
     factory.restore();
     sound.destroy();
   });
