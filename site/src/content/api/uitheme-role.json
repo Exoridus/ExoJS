@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "UIThemeRole",
-          "signature": "\"button\" | \"caret\" | \"checkbox\" | \"checkboxMark\" | \"dropdownItem\" | \"dropdownList\" | \"label\" | \"panel\" | \"placeholder\" | \"progressBarFill\" | \"progressBarTrack\" | \"scrollbarThumb\" | \"scrollbarTrack\" | \"selection\" | \"sliderFill\" | \"sliderThumb\" | \"sliderTrack\" | \"textFieldSurface\" | \"toggleKnob\" | \"toggleTrack\"",
+          "signature": "\"button\" | \"caret\" | \"checkbox\" | \"checkboxMark\" | \"dropdownItem\" | \"dropdownList\" | \"label\" | \"panel\" | \"placeholder\" | \"progressBarFill\" | \"progressBarTrack\" | \"scrollbarThumb\" | \"scrollbarTrack\" | \"selection\" | \"sliderFill\" | \"sliderThumb\" | \"sliderTrack\" | \"textFieldSurface\" | \"toggleFill\" | \"toggleKnob\" | \"toggleTrack\"",
           "signatureTokens": [
             {
               "text": "\"button\"",
@@ -170,6 +170,14 @@
             },
             {
               "text": "\"textFieldSurface\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"toggleFill\"",
               "kind": "keyword"
             },
             {

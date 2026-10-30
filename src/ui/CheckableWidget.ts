@@ -5,7 +5,7 @@ import { Text } from '#rendering/text/Text';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 
 import type { UIThemeRole, UIWidgetState } from './theme';
-import { resolveUISkin } from './theme';
+import { resolveUISkin, themeSkinSet } from './theme';
 import { Widget } from './Widget';
 
 /** Options shared by the two-state controls ({@link Checkbox}, {@link Toggle}). */
@@ -51,7 +51,7 @@ export abstract class CheckableWidget extends Widget {
     if (options.label === undefined) {
       this._labelNode = null;
     } else {
-      this._appliedText = resolveUISkin(this.theme[textRole], 'normal').text;
+      this._appliedText = resolveUISkin(themeSkinSet(this.theme, textRole), 'normal').text;
       this._labelNode = new Text(options.label, { ...this._appliedText, ...this._textStyle });
       this.addChild(this._labelNode);
     }
@@ -180,7 +180,7 @@ export abstract class CheckableWidget extends Widget {
       return false;
     }
 
-    const skinText = resolveUISkin(this.theme[this._textRole()], this._skinState).text;
+    const skinText = resolveUISkin(themeSkinSet(this.theme, this._textRole()), this._skinState).text;
 
     if (skinText === this._appliedText) {
       return false;

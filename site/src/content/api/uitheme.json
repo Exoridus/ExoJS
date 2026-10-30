@@ -1,6 +1,6 @@
 {
   "title": "UITheme",
-  "description": "Skins for every role, as resolved for a widget.",
+  "description": "Skins for every role, as resolved for a widget. `toggleFill` may be left out of a hand-written theme: a checked Toggle then uses the default theme's fill.",
   "symbol": "UITheme",
   "kind": "type",
   "subsystem": "ui",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Skins for every role, as resolved for a widget."
+        "Skins for every role, as resolved for a widget. `toggleFill` may be left out of a hand-written theme: a checked Toggle then uses the default theme's fill."
       ],
       "importLine": "import { UITheme } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "UITheme",
-          "signature": "Readonly<Record<UIThemeRole, UISkinSet>>",
+          "signature": "Readonly<Record<Exclude<UIThemeRole, \"toggleFill\">, UISkinSet>> & { toggleFill?: UISkinSet }",
           "signatureTokens": [
             {
               "text": "Readonly",
@@ -49,8 +49,28 @@
               "kind": "punctuation"
             },
             {
+              "text": "Exclude",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
               "text": "UIThemeRole",
               "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"toggleFill\"",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ", ",
@@ -66,6 +86,34 @@
             },
             {
               "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "toggleFill",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UISkinSet",
+              "kind": "type"
+            },
+            {
+              "text": " }",
               "kind": "punctuation"
             }
           ],

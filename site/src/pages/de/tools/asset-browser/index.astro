@@ -1,5 +1,12 @@
 ---
-import AssetBrowserPage from '../../../../components/pages/AssetBrowserPage.astro';
+import ToolPage from '../../../../components/pages/ToolPage.astro';
 ---
 
-<AssetBrowserPage locale="de" />
+<ToolPage
+  locale="de"
+  tool="asset-browser"
+  title="Asset Browser"
+  description="Inspect the ExoJS asset library and generate usage code."
+  source="debug-layer/asset-browser.ts"
+  forward={['asset']}
+/>

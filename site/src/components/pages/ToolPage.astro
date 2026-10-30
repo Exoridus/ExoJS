@@ -3,43 +3,55 @@ import Layout from '../../layouts/Layout.astro';
 
 interface Props {
   locale: 'en' | 'de';
+  /** Key `preview.html` resolves to the tool's example module. */
+  tool: 'asset-browser' | 'widget-lab';
+  title: string;
+  description: string;
+  /** Example source path under `examples/`. */
+  source: string;
+  /** Page query parameters handed on to the tool. */
+  forward?: readonly string[];
 }
-const { locale } = Astro.props;
+const { locale, tool, title, description, source, forward = [] } = Astro.props;
 const base = import.meta.env.BASE_URL;
 ---
 
-<Layout title="Asset Browser - ExoJS" description="Inspect the ExoJS asset library and generate usage code.">
-  <section class="asset-tool" aria-label="Asset Browser">
+<Layout title={`${title} - ExoJS`} description={description}>
+  <section class="tool" aria-label={title}>
     <nav aria-label="Playground tools">
       <a href={`${base + locale}/playground/`}>Playground</a>
-      <strong>Asset Browser</strong>
-      <a href={`${base}examples/debug-layer/asset-browser.ts`} target="_blank" rel="noopener noreferrer">
+      <strong>{title}</strong>
+      <a href={`${base}examples/${source}`} target="_blank" rel="noopener noreferrer">
         Tool source
       </a>
     </nav>
     <div class="workspace">
       <iframe
-        title="ExoJS Asset Browser"
-        data-asset-tool
-        data-preview={`${base}preview.html?tool=asset-browser`}
+        title={`ExoJS ${title}`}
+        data-tool-frame
+        data-preview={`${base}preview.html?tool=${tool}`}
+        data-forward={forward.join(',')}
         allow="autoplay; fullscreen"
       ></iframe>
     </div>
   </section>
 </Layout>
 <script>
-  const frame = document.querySelector<HTMLIFrameElement>('[data-asset-tool]');
+  const frame = document.querySelector<HTMLIFrameElement>('[data-tool-frame]');
   if (frame?.dataset.preview) {
     const url = new URL(frame.dataset.preview, window.location.origin);
-    const asset = new URLSearchParams(window.location.search).get('asset');
-    if (asset) {
-      url.searchParams.set('asset', asset);
+    const page = new URLSearchParams(window.location.search);
+    for (const name of (frame.dataset.forward ?? '').split(',').filter(Boolean)) {
+      const value = page.get(name);
+      if (value) {
+        url.searchParams.set(name, value);
+      }
     }
     frame.src = url.href;
   }
 </script>
 <style>
-  .asset-tool {
+  .tool {
     display: flex;
     flex-direction: column;
     height: calc(100dvh - 62px);
@@ -75,7 +87,7 @@ const base = import.meta.env.BASE_URL;
   }
 
   @media (width <= 760px) {
-    .asset-tool {
+    .tool {
       height: calc(100dvh - 58px);
     }
   }

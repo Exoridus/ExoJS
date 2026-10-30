@@ -3645,7 +3645,7 @@
         },
         {
           "name": "defaultUITheme",
-          "signature": "defaultUITheme: UITheme",
+          "signature": "defaultUITheme: Required<UITheme>",
           "signatureTokens": [
             {
               "text": "defaultUITheme",
@@ -3656,8 +3656,20 @@
               "kind": "punctuation"
             },
             {
+              "text": "Required",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
               "text": "UITheme",
               "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
