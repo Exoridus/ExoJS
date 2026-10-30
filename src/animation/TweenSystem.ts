@@ -58,7 +58,7 @@ export class TweenSystem {
    * by one system phase, and a callback that reached it again would already be
    * corrupting the tween list it is iterating.
    */
-  private readonly _tweenCursor: Tween[] = [];
+  private readonly _tweenCursor: Array<Tween | null> = [];
   private readonly _tickerCursor: Ticker[] = [];
 
   /**
@@ -143,7 +143,8 @@ export class TweenSystem {
    * Take ownership of a stand-alone Tween (created via `new Tween(target)`, or
    * previously bound to a different system) so it participates in this update
    * loop: from here on, {@link Tween.start} enters it and completion or
-   * {@link Tween.stop} evicts it again.
+   * {@link Tween.stop} evicts it again. The previous system immediately stops
+   * retaining and advancing the transferred tween.
    *
    * Binding and entering are two separate steps. A tween that is already
    * running or paused is live - nothing will call `start()` on it again to
@@ -170,6 +171,12 @@ export class TweenSystem {
 
     if (index !== -1) {
       this._tweens.splice(index, 1);
+    }
+
+    const pending = this._tweenCursor.indexOf(tween);
+
+    if (pending !== -1) {
+      this._tweenCursor[pending] = null;
     }
 
     return this;
@@ -218,7 +225,7 @@ export class TweenSystem {
     const tweens = fill(this._tweenCursor, this._tweens);
 
     for (const tween of tweens) {
-      tween.update(deltaSeconds);
+      tween?.update(deltaSeconds);
     }
 
     const tickers = fill(this._tickerCursor, this._tickers);
