@@ -4,6 +4,10 @@ import { writeFileSync } from 'node:fs';
 const mode = process.argv[2];
 const pidFile = process.argv[3];
 
+if (process.env['EXOJS_VALIDATION_DIAGNOSTICS'] === '1' && (mode === 'tree' || mode === 'stubborn')) {
+  process.stderr.write(`validation-fixture-node ${JSON.stringify({ mode, version: process.version, execPath: process.execPath })}\n`);
+}
+
 if (mode === 'streams') {
   process.stdout.write(`stdout:${process.env['EXOJS_OUTPUT']}\n`);
   process.stderr.write('stderr\n');

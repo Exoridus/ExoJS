@@ -341,11 +341,16 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
       process.stderr.write(`STOP ${options.label}: ${why}; owned PID ${child.pid ?? 'not started'}; log ${displayPath}\n`);
       // Cleanup performs its own ownership inspection; a second scan competes with its deadline.
       idleController.abort();
-      stopping = stopProcessTree(child, graceMs, {
-        earliest: spawnStarted,
-        latest: spawnFinished,
-        ...(exitedAt === undefined ? {} : { exitedAt }),
-      })
+      stopping = stopProcessTree(
+        child,
+        graceMs,
+        {
+          earliest: spawnStarted,
+          latest: spawnFinished,
+          ...(exitedAt === undefined ? {} : { exitedAt }),
+        },
+        message => trace('cleanup', message),
+      )
         .then(error => {
           cleanupError = error;
           cleanupDone = true;
