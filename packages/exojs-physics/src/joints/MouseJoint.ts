@@ -52,6 +52,7 @@ export class MouseJoint extends Joint {
   private _impulseX = 0;
   private _impulseY = 0;
   private _maxImpulse = 0;
+  private _h = 0;
 
   public constructor(options: MouseJointOptions) {
     // Single-body constraint: a private static ground stands in for bodyA so the
@@ -150,6 +151,7 @@ export class MouseJoint extends Joint {
     this._invK12 = -invDet * k12;
     this._invK22 = invDet * k11;
     this._maxImpulse = this.maxForce * h;
+    this._h = h;
 
     const omega = 2 * Math.PI * this.hertz;
     const a1 = 2 * this.dampingRatio + h * omega;
@@ -172,8 +174,7 @@ export class MouseJoint extends Joint {
 
   /** @internal */
   public override _solve(useBias: boolean): void {
-    // A driven spring must retain its velocity; bias-free relaxation would brake the throw.
-    if (!this._active || !useBias) {
+    if (!this._active) {
       return;
     }
 
@@ -182,8 +183,12 @@ export class MouseJoint extends Joint {
     // Velocity of the grab point.
     const cdotX = body.linearVelocityX - body.angularVelocity * this._ry;
     const cdotY = body.linearVelocityY + body.angularVelocity * this._rx;
-    const rhsX = cdotX + this._biasRate * this._cx;
-    const rhsY = cdotY + this._biasRate * this._cy;
+    // The spring is a real force, so the relax pass keeps its bias (a bias-free relax would
+    // drive the grab point to rest and brake a throw). Positions advanced since _prepare, so
+    // the relax pass measures the error at the advanced grab point to avoid applying it twice.
+    const advance = useBias ? 0 : this._h;
+    const rhsX = cdotX + this._biasRate * (this._cx + advance * cdotX);
+    const rhsY = cdotY + this._biasRate * (this._cy + advance * cdotY);
 
     const solvedX = this._invK11 * rhsX + this._invK12 * rhsY;
     const solvedY = this._invK12 * rhsX + this._invK22 * rhsY;
