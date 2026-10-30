@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { mock, test } from 'node:test';
@@ -32,7 +32,7 @@ const run = (mode: string, cwd: string, extra: Partial<Parameters<typeof runComm
   runCommand({
     label: 'supervisor-test',
     command: process.execPath,
-    args: [...process.execArgv, fixture, mode],
+    args: [fixture, mode],
     cwd,
     output: 'silent',
     ...extra,
@@ -176,7 +176,7 @@ for (const mode of ['sleep', 'stubborn', 'tree', 'detached-tree']) {
     const pidFile = join(cwd, 'pid');
     const { result, stderr } = await capture(() =>
       run(mode, cwd, {
-        args: [...process.execArgv, fixture, mode, pidFile],
+        args: [fixture, mode, pidFile],
         timeoutMs: 300,
         killGraceMs: 100,
       }),
@@ -186,13 +186,28 @@ for (const mode of ['sleep', 'stubborn', 'tree', 'detached-tree']) {
     assert.match(stderr, /STOP supervisor-test: timeout; owned PID \d+/);
     assert.equal(stderr.match(/FAIL supervisor-test \(timeout,/g)?.length, 1);
     assert.ok(result.durationMs < (process.platform === 'win32' ? 12_000 : 1600), `duration=${result.durationMs}`);
-    const pid = await waitForFile(pidFile);
+    assert.equal(result.cleanupError, undefined);
+    // A deadline can expire before fixture code runs, so ownership comes from the supervisor and spawn log.
+    const pids = new Set([Number(/owned PID (\d+)/.exec(stderr)![1])]);
 
-    for (let i = 0; i < 50 && isRunning(pid); i++) {
-      await delay(20);
+    for (const match of readFileSync(result.logPath!, 'utf8').matchAll(/child=(\d+)/g)) {
+      pids.add(Number(match[1]));
     }
 
-    assert.equal(isRunning(pid), false, `owned child ${pid} survived`);
+    if (existsSync(pidFile)) {
+      pids.add(Number(readFileSync(pidFile, 'utf8')));
+    }
+
+    for (const pid of pids) {
+      for (let i = 0; i < 50 && isRunning(pid); i++) {
+        await delay(20);
+      }
+
+      assert.equal(isRunning(pid), false, `owned child ${pid} survived`);
+    }
+
+    assert.equal(existsSync(`${pidFile}.expired`), false, 'Fixture self-expiry must not substitute for cleanup');
+    assert.equal(existsSync(`${pidFile}.root-expired`), false, 'Root self-expiry must not substitute for cleanup');
   });
 }
 
@@ -202,7 +217,7 @@ void test('stops a running root even when the recorded spawn window misses the k
   // still holds a handle to cannot have had its PID reused, so that miss must not stop the cleanup.
   const cwd = directory();
   const pidFile = join(cwd, 'pid');
-  const child = spawn(process.execPath, [...process.execArgv, fixture, 'stubborn', pidFile], { stdio: 'ignore', cwd });
+  const child = spawn(process.execPath, [fixture, 'stubborn', pidFile], { stdio: 'ignore', cwd });
   const now = Date.now();
 
   try {
@@ -273,7 +288,7 @@ void test('timeout diagnostics do not postpone owned process termination', async
     const { result } = await capture(() => run('stubborn', directory(), { timeoutMs: 300, killGraceMs: 100 }));
     assert.equal(result.status, 124);
     assert.ok(events.includes('cleanup-start'), events.join(','));
-    assert.ok(events.indexOf('cleanup-start') < events.indexOf('snapshot-end'), events.join(','));
+    assert.equal(events.includes('snapshot-start'), false, 'Stopping must not launch a competing process inspection');
   } finally {
     mock.restoreAll();
     syncBuiltinESMExports();
@@ -335,12 +350,100 @@ void test('a completed command retires its pending idle diagnostic process befor
   }
 });
 
+void test('stopping waits for an already aborted idle observer to close', { timeout: 12_000 }, async () => {
+  const childProcess = (await import('node:child_process')).default;
+  const { syncBuiltinESMExports } = await import('node:module');
+  const originalExecFile = childProcess.execFile;
+  const originalSpawn = childProcess.spawn;
+  const originalKill = process.kill;
+  const originalInterval = globalThis.setInterval;
+  const originalNow = Date.now;
+  const controller = new AbortController();
+  let inspectedReady!: () => void;
+  let cleanupReady!: () => void;
+  const inspected = new Promise<void>(resolve => {
+    inspectedReady = resolve;
+  });
+  const cleaned = new Promise<void>(resolve => {
+    cleanupReady = resolve;
+  });
+  let observer: ReturnType<typeof childProcess.execFile> | undefined;
+  let offset = 0;
+  let settled = false;
+  mock.method(Date, 'now', () => originalNow() + offset);
+  mock.method(globalThis, 'setInterval', (callback: () => void, milliseconds: number) =>
+    originalInterval(callback, milliseconds === 15_000 ? 1 : milliseconds),
+  );
+  mock.method(childProcess, 'execFile', (...args: unknown[]) => {
+    if (args[0] === 'powershell') {
+      const callback = args.at(-1) as (error: Error | null, stdout: string, stderr: string) => void;
+      // Keep the actual observer open after abort to exercise callback/close ordering independently.
+      observer = originalExecFile(process.execPath, ['-e', 'setTimeout(() => {}, 10000)'], callback);
+      inspectedReady();
+
+      return observer;
+    }
+
+    return Reflect.apply(originalExecFile, childProcess, args);
+  });
+  mock.method(childProcess, 'spawn', (...args: unknown[]) => {
+    const child = Reflect.apply(originalSpawn, childProcess, args);
+
+    if (Array.isArray(args[1]) && args[1].includes('-RootProcessId')) {
+      child.once('close', cleanupReady);
+    }
+
+    return child;
+  });
+  mock.method(process, 'kill', (...args: unknown[]) => {
+    const result = Reflect.apply(originalKill, process, args);
+
+    if (typeof args[0] === 'number' && args[0] < 0 && args[1] === 'SIGKILL') {
+      cleanupReady();
+    }
+
+    return result;
+  });
+  syncBuiltinESMExports();
+
+  try {
+    const cwd = directory();
+    const pidFile = join(cwd, 'pid');
+    const running = capture(() =>
+      run('stubborn', cwd, { args: [fixture, 'stubborn', pidFile], signal: controller.signal, killGraceMs: 80 }),
+    );
+    void running.then(() => {
+      settled = true;
+    });
+    await waitForFile(pidFile);
+    offset = 61_000;
+    await inspected;
+    controller.abort();
+    offset = 0;
+    await cleaned;
+    await new Promise<void>(resolve => setImmediate(resolve));
+    assert.equal(settled, false, 'Ownership must outlive the observer');
+    assert.ok(observer?.pid);
+    observer.kill('SIGKILL');
+    const { result } = await running;
+    assert.equal(result.status, 130);
+    assert.equal(result.cleanupError, undefined);
+    assert.equal(isRunning(observer.pid), false);
+    assert.equal(isRunning(Number(readFileSync(pidFile, 'utf8'))), false);
+  } finally {
+    controller.abort();
+    observer?.kill('SIGKILL');
+    mock.restoreAll();
+    syncBuiltinESMExports();
+  }
+});
+
 void test('times out orphan without leaving its child running', async t => {
   const cwd = directory();
   const pidFile = join(cwd, 'pid');
   const { result, stderr } = await capture(() =>
     run('orphan', cwd, {
-      args: [...process.execArgv, fixture, 'orphan', pidFile],
+      args: [fixture, 'orphan', pidFile],
       timeoutMs: 300,
       killGraceMs: 100,
     }),
@@ -376,7 +479,7 @@ void test('times out orphan without leaving its child running', async t => {
 });
 
 void test('timeout does not kill an unrelated process', async () => {
-  const unrelated = spawn(process.execPath, [...process.execArgv, fixture, 'sleep'], { stdio: 'ignore' });
+  const unrelated = spawn(process.execPath, [fixture, 'sleep'], { stdio: 'ignore' });
 
   try {
     const { result, stderr } = await capture(() => run('sleep', directory(), { timeoutMs: 200, killGraceMs: 80 }));
@@ -395,7 +498,7 @@ void test('an already aborted command never starts', async () => {
   const cwd = directory();
   const pidFile = join(cwd, 'pid');
   const { result, stdout, stderr } = await capture(() =>
-    run('sleep', cwd, { args: [...process.execArgv, fixture, 'sleep', pidFile], signal: controller.signal }),
+    run('sleep', cwd, { args: [fixture, 'sleep', pidFile], signal: controller.signal }),
   );
   assert.equal(result.status, 130);
   assert.equal(result.aborted, true);
@@ -405,30 +508,37 @@ void test('an already aborted command never starts', async () => {
   assert.throws(() => readFileSync(pidFile));
 });
 
-void test('an explicit abort stops a running command and removes process listeners', async () => {
-  const controller = new AbortController();
-  const before = ['SIGINT', 'SIGTERM'].map(signal => process.listenerCount(signal));
-  const cwd = directory();
-  const pidFile = join(cwd, 'pid');
-  const running = capture(() =>
-    run('stubborn', cwd, {
-      args: [...process.execArgv, fixture, 'stubborn', pidFile],
-      signal: controller.signal,
-      killGraceMs: 80,
-    }),
-  );
-  await waitForFile(pidFile);
-  controller.abort();
-  const { result, stderr } = await running;
-  assert.equal(result.status, 130);
-  assert.equal(result.aborted, true);
-  assert.match(stderr, /STOP supervisor-test: abort/);
-  assert.match(stderr, /FAIL supervisor-test \(abort,/);
-  assert.deepEqual(
-    ['SIGINT', 'SIGTERM'].map(signal => process.listenerCount(signal)),
-    before,
-  );
-});
+for (const mode of ['stubborn', 'tree', 'detached-tree']) {
+  void test(`an explicit abort stops a ready ${mode} and removes process listeners`, async () => {
+    const controller = new AbortController();
+    const before = ['SIGINT', 'SIGTERM'].map(signal => process.listenerCount(signal));
+    const cwd = directory();
+    const pidFile = join(cwd, 'pid');
+    const running = capture(() =>
+      run(mode, cwd, {
+        args: [fixture, mode, pidFile],
+        signal: controller.signal,
+        killGraceMs: 80,
+      }),
+    );
+    const pid = await waitForFile(pidFile);
+    assert.equal(isRunning(pid), true, 'The owned fixture must be running before cancellation');
+    controller.abort();
+    const { result, stderr } = await running;
+    assert.equal(result.status, 130);
+    assert.equal(result.aborted, true);
+    assert.equal(result.cleanupError, undefined);
+    assert.equal(isRunning(pid), false, `ready child ${pid} survived`);
+    assert.equal(existsSync(`${pidFile}.expired`), false);
+    assert.equal(existsSync(`${pidFile}.root-expired`), false);
+    assert.match(stderr, /STOP supervisor-test: abort/);
+    assert.match(stderr, /FAIL supervisor-test \(abort,/);
+    assert.deepEqual(
+      ['SIGINT', 'SIGTERM'].map(signal => process.listenerCount(signal)),
+      before,
+    );
+  });
+}
 
 void test('rejects invalid budgets instead of silently disabling supervision', async () => {
   for (const timeoutMs of [0, -1, Number.NaN, Number.POSITIVE_INFINITY, 2 ** 31]) {

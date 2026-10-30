@@ -251,13 +251,7 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
       }
 
       if (idleSnapshot) {
-        if (!idleController.signal.aborted) {
-          idleController.abort();
-          void idleSnapshot.then(() => {
-            idleSnapshot = undefined;
-            report();
-          });
-        }
+        idleController.abort();
 
         return;
       }
@@ -345,17 +339,14 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
       requestedSignal = signal;
       trace('stop', `why=${why} signal=${signal ?? 'none'}`);
       process.stderr.write(`STOP ${options.label}: ${why}; owned PID ${child.pid ?? 'not started'}; log ${displayPath}\n`);
-      // Process inspection must not postpone termination or block the supervisor's deadline timers.
-      stopping = Promise.all([
-        describeOwnedTree(child.pid),
-        stopProcessTree(child, graceMs, {
-          earliest: spawnStarted,
-          latest: spawnFinished,
-          ...(exitedAt === undefined ? {} : { exitedAt }),
-        }),
-      ])
-        .then(([tree, error]) => {
-          trace('stop-snapshot', `tree=[${tree.join(' | ')}]`);
+      // Cleanup performs its own ownership inspection; a second scan competes with its deadline.
+      idleController.abort();
+      stopping = stopProcessTree(child, graceMs, {
+        earliest: spawnStarted,
+        latest: spawnFinished,
+        ...(exitedAt === undefined ? {} : { exitedAt }),
+      })
+        .then(error => {
           cleanupError = error;
           cleanupDone = true;
 
@@ -437,6 +428,7 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
       void idleSnapshot.then(tree => {
         trace('idle-snapshot', `idleMs=${idleMs} tree=[${tree.join(' | ')}]`);
         idleSnapshot = undefined;
+        report();
       });
     }, 15_000);
     idle.unref?.();
