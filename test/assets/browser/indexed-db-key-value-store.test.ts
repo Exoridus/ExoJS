@@ -29,22 +29,54 @@ const schema = async (name: string): Promise<{ version: number; names: string[] 
   return result;
 };
 
+// Closing connections may briefly block deletion while their existing transactions finish.
+const waitForDeletion = (request: IDBOpenDBRequest): Promise<void> =>
+  new Promise<void>((resolve, reject) => {
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error ?? new Error('Database removal failed.'));
+  });
+
 afterEach(async () => {
   for (const store of stores.splice(0)) {
     store.destroy();
   }
 
   for (const name of names.splice(0)) {
-    await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.deleteDatabase(name);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error ?? new Error('Database removal failed.'));
-      request.onblocked = () => reject(new Error('Owned test database removal was blocked.'));
-    });
+    await waitForDeletion(indexedDB.deleteDatabase(name));
   }
 });
 
 describe('IndexedDbKeyValueStore schema ownership in a real browser', () => {
+  test('database cleanup waits for a blocked deletion to finish', async () => {
+    const name = uniqueName();
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(name);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error ?? new Error('Database open failed.'));
+    });
+    const request = indexedDB.deleteDatabase(name);
+    const deletion = waitForDeletion(request);
+    let settled = false;
+    void deletion.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      },
+    );
+    const blocked = new Promise<void>(resolve => request.addEventListener('blocked', () => resolve(), { once: true }));
+
+    try {
+      await blocked;
+      expect(settled).toBe(false);
+      database.close();
+      await deletion;
+    } finally {
+      database.close();
+    }
+  });
+
   test.each(['saves', 'settings'])('a shared migration creates every store on a fresh install opened first by %s', async firstStore => {
     const name = uniqueName();
     const migrations = {
