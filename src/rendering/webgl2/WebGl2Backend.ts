@@ -830,6 +830,7 @@ export class WebGl2Backend implements RenderBackend {
     if (store !== null) {
       store.owner = owner;
       this._persistentStores.add(store);
+      store.onDestroyed = () => this._persistentStores.delete(store);
     }
 
     return store;

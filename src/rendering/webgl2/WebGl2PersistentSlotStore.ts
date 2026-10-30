@@ -151,6 +151,9 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
   private _maxTextureSize = WEBGL2_MIN_MAX_TEXTURE_SIZE;
   private _destroyed = false;
 
+  /** Invoked once when the store is destroyed; lets its owner stop tracking it. */
+  public onDestroyed: (() => void) | null = null;
+
   public get generation(): number {
     return this._generation;
   }
@@ -445,6 +448,8 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
     this.textureIndexOfHandle = new Uint8Array(0);
     this.spareTextureIndexOfHandle = new Uint8Array(0);
     this._order = new Uint32Array(0);
+    this.onDestroyed?.();
+    this.onDestroyed = null;
   }
 
   private _markDirty(slot: number): void {

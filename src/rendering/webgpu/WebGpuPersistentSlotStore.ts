@@ -187,6 +187,9 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
   private _accountedOrderBytes = 0;
   private _destroyed = false;
 
+  /** Invoked once when the store is destroyed; lets its owner stop tracking it. */
+  public onDestroyed: (() => void) | null = null;
+
   /**
    * The root's base textures, in the slot order the packed rows reference.
    *
@@ -605,6 +608,8 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
     this.textures.length = 0;
     this.textureIndexOfHandle = new Uint8Array(0);
     this.spareTextureIndexOfHandle = new Uint8Array(0);
+    this.onDestroyed?.();
+    this.onDestroyed = null;
   }
 
   private _allocateSlotBuffers(slots: number): void {
