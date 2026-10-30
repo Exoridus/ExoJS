@@ -101,7 +101,7 @@ export class MeshMaterial<
     super(options);
 
     this.writesDepth = options.writesDepth ?? false;
-    this.blendModes = options.blendModes ?? null;
+    this.blendModes = options.blendModes !== undefined ? [...options.blendModes] : null;
     this._blendModesDescriptor = this.blendModes !== null ? this.blendModes.join(',') : '';
   }
 
