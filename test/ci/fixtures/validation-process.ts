@@ -33,10 +33,19 @@ if (mode === 'streams') {
 
   process.stdout.write('ready\n');
   // Bounded even when testing the old supervisor, which has no timeout.
-  setTimeout(() => process.exit(0), process.platform === 'win32' ? 15_000 : 1800);
-} else if (mode === 'tree' || mode === 'orphan' || mode === 'detached-tree') {
-  const child = spawn(process.execPath, [...process.execArgv, import.meta.filename, 'stubborn', pidFile!], {
-    stdio: ['ignore', 'inherit', 'inherit'],
+  setTimeout(
+    () => {
+      if (pidFile) {
+        writeFileSync(`${pidFile}.expired`, 'expired');
+      }
+
+      process.exit(0);
+    },
+    process.platform === 'win32' ? 15_000 : 1800,
+  );
+} else if (mode === 'tree' || mode === 'orphan' || mode === 'detached-tree' || mode === 'quiet-tree') {
+  const child = spawn(process.execPath, [import.meta.filename, 'stubborn', pidFile!], {
+    stdio: mode === 'quiet-tree' ? 'ignore' : ['ignore', 'inherit', 'inherit'],
     detached: mode === 'detached-tree',
   });
   process.stdout.write(`child=${child.pid}\n`);
@@ -47,7 +56,16 @@ if (mode === 'streams') {
     child.once('spawn', () => process.exit(0));
     child.once('error', () => process.exit(1));
   } else {
-    setTimeout(() => process.exit(0), process.platform === 'win32' ? 15_100 : 1900);
+    setTimeout(
+      () => {
+        if (pidFile) {
+          writeFileSync(`${pidFile}.root-expired`, 'expired');
+        }
+
+        process.exit(0);
+      },
+      process.platform === 'win32' ? 15_100 : 1900,
+    );
   }
 } else {
   throw new Error(`Unknown validation fixture: ${mode}`);

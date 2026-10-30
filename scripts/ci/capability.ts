@@ -103,6 +103,16 @@ export interface RunOutcome {
 export const judgeRun = (outcome: RunOutcome, policy: RowPolicy): RowVerdict => {
   const exit = (code: number): number => (policy === 'required' ? code : 0);
 
+  if (outcome.cleanupError !== undefined) {
+    return {
+      status: 'FAIL',
+      failure: 'infrastructure',
+      detail: `process cleanup incomplete: ${outcome.cleanupError}`,
+      proceed: false,
+      exitCode: outcome.aborted ? outcome.status || 130 : exit(outcome.status || 1),
+    };
+  }
+
   if (outcome.timedOut) {
     return {
       status: 'FAIL',
@@ -115,16 +125,6 @@ export const judgeRun = (outcome: RunOutcome, policy: RowPolicy): RowVerdict => 
 
   if (outcome.aborted) {
     return { status: 'FAIL', failure: 'infrastructure', detail: 'interrupted', proceed: false, exitCode: outcome.status || 130 };
-  }
-
-  if (outcome.cleanupError !== undefined) {
-    return {
-      status: 'FAIL',
-      failure: 'infrastructure',
-      detail: `process cleanup incomplete: ${outcome.cleanupError}`,
-      proceed: false,
-      exitCode: exit(outcome.status || 1),
-    };
   }
 
   if (outcome.status !== 0) {
