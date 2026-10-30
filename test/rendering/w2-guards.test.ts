@@ -132,12 +132,7 @@ describe('Spritesheet.addFrame', () => {
 });
 
 describe('HTMLText', () => {
-  test.each([
-    { width: 0 },
-    { height: -1 },
-    { resolution: 0 },
-    { resolution: Number.NaN },
-  ])('constructor rejects %j', options => {
+  test.each([{ width: 0 }, { height: -1 }, { resolution: 0 }, { resolution: Number.NaN }])('constructor rejects %j', options => {
     expect(() => new HTMLText('x', options)).toThrow(RangeError);
   });
 });
@@ -156,4 +151,3 @@ describe('vector uniforms', () => {
     expect(() => new MeshMaterial({ shader })).toThrow();
   });
 });
-
