@@ -45,6 +45,27 @@ afterEach(async () => {
 });
 
 describe('IndexedDbKeyValueStore schema ownership in a real browser', () => {
+  test.each(['saves', 'settings'])('a shared migration creates every store on a fresh install opened first by %s', async firstStore => {
+    const name = uniqueName();
+    const migrations = {
+      2: (database: IDBDatabase): boolean => {
+        database.createObjectStore('saves', { keyPath: 'name' });
+        database.createObjectStore('settings', { keyPath: 'name' });
+
+        return true;
+      },
+    };
+    const secondStore = firstStore === 'saves' ? 'settings' : 'saves';
+    const first = new IndexedDbKeyValueStore({ name, storeName: firstStore, version: 2, migrations });
+    const second = new IndexedDbKeyValueStore({ name, storeName: secondStore, version: 2, migrations });
+    stores.push(first, second);
+    await first.set('value', firstStore);
+    await second.set('value', secondStore);
+    await expect(first.get('value')).resolves.toBe(firstStore);
+    await expect(second.get('value')).resolves.toBe(secondStore);
+    expect(await schema(name)).toEqual({ version: 2, names: ['saves', 'settings'] });
+  });
+
   test('adding a store preserves a sibling save game across version upgrade', async () => {
     const name = uniqueName();
     const first = createStore(name, 'saves', 1);

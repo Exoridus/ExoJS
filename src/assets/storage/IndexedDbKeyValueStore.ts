@@ -5,11 +5,11 @@ import type { KeyValueStore } from './KeyValueStore';
 export interface IndexedDbKeyValueStoreOptions {
   /** IndexedDB database name. */
   name: string;
-  /** Schema version. Default `1`. Increase it when adding a store to an existing database. */
+  /** Shared database schema version. Default `1`. A version increase alone does not create every store on a fresh installation. */
   version?: number;
-  /** Object-store name within the database. Default `"__kv_store"`. Default upgrades preserve sibling stores. */
+  /** Object-store name within the database. Default `"__kv_store"`. Use separate database names for independent stores, or a shared version and explicit migrations that create the complete shared schema. */
   storeName?: string;
-  /** Explicit schema callbacks replace default store creation and control the whole database schema. See {@link IndexedDbDatabase}. */
+  /** Explicit schema callbacks replace default store creation and control the whole database schema, including every store needed on fresh installations. See {@link IndexedDbDatabase}. */
   migrations?: Record<number, (db: IDBDatabase, transaction: IDBTransaction) => boolean>;
 }
 
