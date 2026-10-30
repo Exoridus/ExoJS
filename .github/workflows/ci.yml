@@ -396,6 +396,7 @@ jobs:
           path: |
             .workspace/reports/example-smoke.md
             .workspace/reports/example-smoke-artifacts
+            .workspace/reports/playground-e2e
           retention-days: 7
           include-hidden-files: true
           if-no-files-found: ignore

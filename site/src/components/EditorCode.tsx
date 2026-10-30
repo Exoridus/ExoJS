@@ -541,10 +541,11 @@ export const EditorCode = ({
       }
 
       if (path === compiledPath && compiledCode !== null && compiledCode !== undefined && sourcePath) {
+        // A derived buffer must not occupy the TypeScript entry's emit target.
         const model = monaco.editor.createModel(
           compiledCode,
           'javascript',
-          monaco.Uri.parse(getModelUrl(path, selectedVersionId, sourcePath)),
+          monaco.Uri.parse(`${getModelUrl(path, selectedVersionId, sourcePath)}?compiled-output`),
         );
         filesRef.current.set(path, { model, view: null });
         selectFile(path);
