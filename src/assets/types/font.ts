@@ -20,9 +20,25 @@ export class FontAssetType extends AssetType<ArrayBuffer, FontFace, FontAssetOpt
   public override readonly _token: AssetConstructor = FontAsset;
   public override readonly codec: AssetSourceCodec<ArrayBuffer> = binarySourceCodec;
 
-  /** The family name is baked into the face, so one file registered under two families is two resources. */
+  /** Family and CSS descriptors are baked into the face, so distinct interpretations are distinct resources. */
   public override resourceIdentity({ options }: AssetRequest<FontAssetOptions>): string {
-    return options?.family === undefined ? '' : `family=${options.family}`;
+    // Legacy font-loading implementations accept variant even when lib.dom omits it.
+    const descriptors = options?.descriptors as (FontFaceDescriptors & { variant?: string }) | undefined;
+
+    return JSON.stringify({
+      family: options?.family,
+      ascentOverride: descriptors?.ascentOverride,
+      descentOverride: descriptors?.descentOverride,
+      display: descriptors?.display,
+      featureSettings: descriptors?.featureSettings,
+      lineGapOverride: descriptors?.lineGapOverride,
+      stretch: descriptors?.stretch,
+      style: descriptors?.style,
+      unicodeRange: descriptors?.unicodeRange,
+      variant: descriptors?.variant,
+      variationSettings: descriptors?.variationSettings,
+      weight: descriptors?.weight,
+    });
   }
 
   public createFactory(): AssetFactory<ArrayBuffer, FontFace, FontAssetOptions> {
