@@ -12,6 +12,12 @@ const fontMime: Record<FontFormat, string> = {
   otf: 'font/otf',
 };
 
+const assertPositiveFinite = (name: string, value: number): void => {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new RangeError(`HTMLText ${name} must be a positive finite number, received ${value}.`);
+  }
+};
+
 export interface HTMLTextOptions {
   /**
    * CSS injected inside a &lt;style&gt; tag within the SVG foreignObject. There
@@ -86,6 +92,9 @@ export class HTMLText extends Container {
     this._width = options.width ?? 256;
     this._height = options.height ?? 128;
     this._resolution = options.resolution ?? 1;
+    assertPositiveFinite('width', this._width);
+    assertPositiveFinite('height', this._height);
+    assertPositiveFinite('resolution', this._resolution);
 
     const [canvas, ctx] = HTMLText._makeCanvas(Math.ceil(this._width * this._resolution), Math.ceil(this._height * this._resolution));
     this._canvas = canvas;
@@ -150,6 +159,8 @@ export class HTMLText extends Container {
   }
 
   public set resolution(v: number) {
+    assertPositiveFinite('resolution', v);
+
     if (this._resolution === v) {
       return;
     }
@@ -216,6 +227,9 @@ export class HTMLText extends Container {
    * both at once - it triggers a single re-render instead of two.
    */
   public resize(width: number, height: number): this {
+    assertPositiveFinite('width', width);
+    assertPositiveFinite('height', height);
+
     if (this._width === width && this._height === height) {
       return this;
     }

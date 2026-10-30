@@ -550,6 +550,13 @@ export class Texture {
    * to notify backends that a re-upload is needed.
    */
   public updateSource(): this {
+    // A compressed payload has no source to measure; its size is the one it was given.
+    if (this._compressed !== null) {
+      this._touch();
+
+      return this;
+    }
+
     const { width, height } = getTextureSourceSize(this._source);
 
     this.setSize(width, height);
@@ -590,15 +597,14 @@ export class Texture {
     } finally {
       this._isDestroyed = true;
       this._isDestroying = false;
+      this._destroyListeners.clear();
+      this._releaseListeners.clear();
+      this._size.destroy();
+      this._source = null;
+      this._sourceMetadata = null;
+      this._pixels = null;
+      this._compressed = null;
     }
-
-    this._destroyListeners.clear();
-    this._releaseListeners.clear();
-    this._size.destroy();
-    this._source = null;
-    this._sourceMetadata = null;
-    this._pixels = null;
-    this._compressed = null;
   }
 
   /**

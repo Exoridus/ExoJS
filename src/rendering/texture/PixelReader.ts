@@ -52,7 +52,8 @@ export const resolvePixelRegionBounds = (method: string, source: RenderTexture, 
   const width = region !== undefined ? Math.trunc(region.width) : source.width;
   const height = region !== undefined ? Math.trunc(region.height) : source.height;
 
-  if (width <= 0 || height <= 0 || x < 0 || y < 0 || x + width > source.width || y + height > source.height) {
+  // Negated positive form so a NaN coordinate or extent is refused too.
+  if (!(width > 0 && height > 0 && x >= 0 && y >= 0 && x + width <= source.width && y + height <= source.height)) {
     throw new Error(`${method} region ${width}x${height} at ${x},${y} does not lie inside the ${source.width}x${source.height} texture.`);
   }
 
@@ -341,15 +342,21 @@ export class PixelReader<T extends PixelArray = Uint8ClampedArray> {
 
     const { x, y, width, height } = resolvePixelRegion('PixelReader', this.source, this._region, this._dataType);
 
-    this._sourceWidth = this.source.width;
-    this._sourceHeight = this.source.height;
-
     if (width === this._width && height === this._height && this._region !== undefined) {
+      this._sourceWidth = this.source.width;
+      this._sourceHeight = this.source.height;
+
       return;
     }
 
+    // Created before the old readback is released so a failing allocation leaves
+    // the reader on its previous, still usable readback.
+    const readback = this._backend.createPixelReadback(this.source, x, y, width, height, this.slots, this._dataType);
+
     this._readback.destroy();
-    this._readback = this._backend.createPixelReadback(this.source, x, y, width, height, this.slots, this._dataType);
+    this._readback = readback;
+    this._sourceWidth = this.source.width;
+    this._sourceHeight = this.source.height;
     this._width = width;
     this._height = height;
     this._generation++;

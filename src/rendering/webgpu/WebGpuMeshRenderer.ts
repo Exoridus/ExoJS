@@ -98,7 +98,6 @@ interface MeshDrawCall {
   indexByteOffset: number;
   indexCount: number;
   indexFormat: MeshIndexFormat;
-  customDrawIndex: number; // index within the per-shader custom queue, -1 for default
 }
 
 /**
@@ -451,11 +450,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const indexCount = mesh.indexCount;
     const indexFormat = mesh.indexFormat;
 
-    let customDrawIndex = -1;
-
     if (customShader !== null) {
       const resources = this._getOrCreateCustomShaderResources(customShader);
-      customDrawIndex = resources.drawCount;
       resources.drawCount++;
       resources.totalVertices += vertexCount;
       resources.totalIndexBytes += alignIndexBytes(indexCount, indexFormat);
@@ -476,7 +472,6 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       indexByteOffset: 0,
       indexCount,
       indexFormat,
-      customDrawIndex,
     };
 
     // Use mutable record (interface readonly is for type safety against

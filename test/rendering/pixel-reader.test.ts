@@ -212,3 +212,38 @@ describe('PixelReader', () => {
     expect(spy).toHaveBeenCalledWith(source, 10, 2, 5, 3, 3, 'uint8');
   });
 });
+
+describe('PixelReader resize failure', () => {
+  test('a failing replacement keeps the previous readback and retries on the next request', () => {
+    const readbacks: Array<ReturnType<typeof createPixelReadbackDouble>> = [];
+    let failNext = false;
+    const backend = {
+      ...createRenderBackendDouble(),
+      createPixelReadback: ((_s: RenderTexture, _x: number, _y: number, width: number, height: number, slots: number) => {
+        if (failNext) {
+          failNext = false;
+
+          throw new Error('allocation failed');
+        }
+
+        const readback = createPixelReadbackDouble(width, height, slots, 'uint8');
+
+        readbacks.push(readback);
+
+        return readback;
+      }) as unknown as RenderBackend['createPixelReadback'],
+    };
+    const source = new RenderTexture(4, 4);
+    const reader = new RenderingContext(backend).createPixelReader(source);
+
+    source.setSize(8, 2);
+    failNext = true;
+
+    expect(() => reader.request()).toThrow('allocation failed');
+    expect(readbacks[0]!.destroyed).toBe(false);
+
+    expect(reader.request()).not.toBeNull();
+    expect(readbacks).toHaveLength(2);
+    expect([reader.width, reader.height]).toEqual([8, 2]);
+  });
+});

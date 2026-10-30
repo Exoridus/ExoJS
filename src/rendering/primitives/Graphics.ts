@@ -380,8 +380,12 @@ export class Graphics extends Container {
     return this;
   }
 
-  /** Fill a circle and optionally stroke its outline if `lineWidth > 0`. */
+  /** Fill a circle and optionally stroke its outline if `lineWidth > 0`. A radius that is not positive draws nothing. */
   public drawCircle(centerX: number, centerY: number, radius: number): this {
+    if (!(radius > 0)) {
+      return this;
+    }
+
     const data = buildCircle(centerX, centerY, radius);
 
     this._appendFill(data);
@@ -393,8 +397,12 @@ export class Graphics extends Container {
     return this;
   }
 
-  /** Fill an ellipse and optionally stroke its outline if `lineWidth > 0`. */
+  /** Fill an ellipse and optionally stroke its outline if `lineWidth > 0`. A radius that is not positive draws nothing. */
   public drawEllipse(centerX: number, centerY: number, radiusX: number, radiusY: number): this {
+    if (!(radiusX > 0) || !(radiusY > 0)) {
+      return this;
+    }
+
     const data = buildEllipse(centerX, centerY, radiusX, radiusY);
 
     this._appendFill(data);
@@ -470,13 +478,15 @@ export class Graphics extends Container {
   }
 
   public override destroy(): void {
-    super.destroy();
+    try {
+      super.destroy();
+    } finally {
+      this.clear();
 
-    this.clear();
-
-    this._lineColor.destroy();
-    this._fillColor.destroy();
-    this._currentPoint.destroy();
+      this._lineColor.destroy();
+      this._fillColor.destroy();
+      this._currentPoint.destroy();
+    }
   }
 
   /**
