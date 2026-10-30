@@ -172,7 +172,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Register a single frame by name, creating its Rectangle and pre-configured Sprite."
+          "description": "Register a single frame by name, creating its Rectangle and pre-configured Sprite. A frame already registered under name is destroyed and replaced."
         },
         {
           "name": "clear",

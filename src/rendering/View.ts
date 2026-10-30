@@ -281,8 +281,13 @@ export class View {
   /**
    * Multiply the visible area by `factor` relative to the current zoom. A
    * factor of `0.5` halves the visible area, like doubling {@link zoomLevel}.
+   * @throws RangeError if `factor` is not a positive finite number.
    */
   public zoom(factor: number): this {
+    if (!Number.isFinite(factor) || factor <= 0) {
+      throw new RangeError(`View.zoom factor must be a positive finite number, received ${factor}.`);
+    }
+
     this._zoomLevel = Math.max(0.0001, this._zoomLevel / factor);
     this._size.set(this._size.width * factor, this._size.height * factor);
 

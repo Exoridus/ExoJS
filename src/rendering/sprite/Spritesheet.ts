@@ -65,8 +65,13 @@ export class Spritesheet {
     }
   }
 
-  /** Register a single frame by name, creating its {@link Rectangle} and pre-configured {@link Sprite}. */
+  /**
+   * Register a single frame by name, creating its {@link Rectangle} and pre-configured {@link Sprite}.
+   * A frame already registered under `name` is destroyed and replaced.
+   */
   public addFrame(name: string, data: SpritesheetFrame): this {
+    this.removeFrame(name);
+
     const { x, y, w, h } = data.frame;
     const frame = new Rectangle(x, y, w, h);
     const sprite = new Sprite(this.texture);

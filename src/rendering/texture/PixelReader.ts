@@ -52,7 +52,8 @@ export const resolvePixelRegionBounds = (method: string, source: RenderTexture, 
   const width = region !== undefined ? Math.trunc(region.width) : source.width;
   const height = region !== undefined ? Math.trunc(region.height) : source.height;
 
-  if (width <= 0 || height <= 0 || x < 0 || y < 0 || x + width > source.width || y + height > source.height) {
+  // Negated positive form so a NaN coordinate or extent is refused too.
+  if (!(width > 0 && height > 0 && x >= 0 && y >= 0 && x + width <= source.width && y + height <= source.height)) {
     throw new Error(`${method} region ${width}x${height} at ${x},${y} does not lie inside the ${source.width}x${source.height} texture.`);
   }
 

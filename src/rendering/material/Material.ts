@@ -316,11 +316,23 @@ export abstract class Material<F extends UniformFields | undefined = undefined, 
    * typical usage is to drop the reference.
    */
   public destroy(): void {
-    for (const callback of this._disposeCallbacks) {
-      callback();
-    }
+    const callbacks = [...this._disposeCallbacks];
 
     this._disposeCallbacks.clear();
+
+    const failures: unknown[] = [];
+
+    for (const callback of callbacks) {
+      try {
+        callback();
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+
+    if (failures.length > 0) {
+      throw failures[0];
+    }
   }
 
   /**

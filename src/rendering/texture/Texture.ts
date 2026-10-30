@@ -590,15 +590,14 @@ export class Texture {
     } finally {
       this._isDestroyed = true;
       this._isDestroying = false;
+      this._destroyListeners.clear();
+      this._releaseListeners.clear();
+      this._size.destroy();
+      this._source = null;
+      this._sourceMetadata = null;
+      this._pixels = null;
+      this._compressed = null;
     }
-
-    this._destroyListeners.clear();
-    this._releaseListeners.clear();
-    this._size.destroy();
-    this._source = null;
-    this._sourceMetadata = null;
-    this._pixels = null;
-    this._compressed = null;
   }
 
   /**

@@ -1257,7 +1257,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Fill a circle and optionally stroke its outline if lineWidth > 0."
+          "description": "Fill a circle and optionally stroke its outline if lineWidth > 0. A radius that is not positive draws nothing."
         },
         {
           "name": "drawEllipse",
@@ -1367,7 +1367,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Fill an ellipse and optionally stroke its outline if lineWidth > 0."
+          "description": "Fill an ellipse and optionally stroke its outline if lineWidth > 0. A radius that is not positive draws nothing."
         },
         {
           "name": "drawLine",

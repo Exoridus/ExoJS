@@ -279,7 +279,7 @@ class Vector2Accessor extends VectorAccessor implements UniformVector2 {
   }
 
   public _write(value: unknown): boolean {
-    if (isComponentList(value)) {
+    if (isComponentList(value) && value.length >= 2) {
       return this._writeComponents(value[0]!, value[1]!);
     }
 
@@ -343,7 +343,7 @@ class Vector3Accessor extends VectorAccessor implements UniformVector3 {
   }
 
   public _write(value: unknown): boolean {
-    if (isComponentList(value)) {
+    if (isComponentList(value) && value.length >= 3) {
       return this._writeComponents(value[0]!, value[1]!, value[2]!);
     }
 
@@ -413,7 +413,7 @@ class Vector4Accessor extends VectorAccessor implements UniformVector4 {
   }
 
   public _write(value: unknown): boolean {
-    if (isComponentList(value)) {
+    if (isComponentList(value) && value.length >= 4) {
       return this._writeComponents(value[0]!, value[1]!, value[2]!, value[3]!);
     }
 
