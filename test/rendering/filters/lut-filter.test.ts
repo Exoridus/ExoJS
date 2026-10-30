@@ -232,6 +232,7 @@ const makeWebGl2Backend = (): RenderBackend & WebGl2Backend => {
     destroy() {
       root.destroy();
     },
+    setBlendMode: vi.fn(),
     bindShader: vi.fn(),
     bindTexture: vi.fn(),
     bindVertexArrayObject: vi.fn(),
