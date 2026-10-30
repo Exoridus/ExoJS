@@ -193,6 +193,8 @@ export class LutFilter extends Filter {
   private readonly _colorSpace: LutDomain;
   private readonly _shaderFilter: LutShaderFilter;
   private _lut: Texture;
+  /** The identity LUT the constructor created, which this filter owns until a caller supplies another. */
+  private _ownedLut: Texture | null = null;
 
   public constructor(options: LutFilterOptions = {}) {
     super();
@@ -203,6 +205,7 @@ export class LutFilter extends Filter {
     const is3d = this._mode === '3d';
 
     this._lut = is3d ? LutFilter.identityLut3D(this._size) : LutFilter.identityLut1D();
+    this._ownedLut = this._lut;
 
     const domain = this._colorSpace === 'srgb' ? 1 : 0;
 
@@ -248,6 +251,12 @@ export class LutFilter extends Filter {
 
     this._lut = lut;
     this._shaderFilter._setTexture('uLut', lut);
+
+    if (this._ownedLut !== null && this._ownedLut !== lut) {
+      this._ownedLut.destroy();
+      this._ownedLut = null;
+    }
+
     this.invalidate();
 
     return this;
@@ -261,6 +270,8 @@ export class LutFilter extends Filter {
   public override destroy(): void {
     super.destroy();
     this._shaderFilter.destroy();
+    this._ownedLut?.destroy();
+    this._ownedLut = null;
   }
 }
 
