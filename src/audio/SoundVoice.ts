@@ -101,7 +101,7 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
       return clamp(this._pausedAt - this._window.base, 0, span);
     }
 
-    const elapsed = (this._audioContext.currentTime - this._startedAt) * this._playbackRate;
+    const elapsed = (this._audioContext.currentTime - this._startedAt) * this._speed;
     let pos = this._offsetAtStart - this._window.base + elapsed;
 
     if (this._loop && span > 0) {
@@ -198,6 +198,21 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
     return this._halted;
   }
 
+  /**
+   * Seconds of wall-clock time until the voice plays out, or `Infinity` while
+   * it loops. Follows the current playhead, playback rate and detune; a
+   * halted voice reports the time it would need once resumed.
+   * @internal
+   */
+  public get _remainingTime(): number {
+    return this._loop ? Infinity : (this.duration - this.time) / this._speed;
+  }
+
+  /** Playhead speed in buffer seconds per context second. */
+  private get _speed(): number {
+    return this._playbackRate * 2 ** (this._detune / 1200);
+  }
+
   protected override _applyHold(): void {
     if (this._held) {
       this._halt();
@@ -240,7 +255,7 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
       return false;
     }
 
-    const elapsed = (this._audioContext.currentTime - this._startedAt) * this._playbackRate;
+    const elapsed = (this._audioContext.currentTime - this._startedAt) * this._speed;
 
     return this._offsetAtStart + elapsed >= this._window.end;
   }
@@ -333,6 +348,12 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
   }
 
   public set detune(value: number) {
+    if (!this._ended && !this._halted) {
+      // Re-base so the playhead keeps the speed it had up to now.
+      this._offsetAtStart = this._window.base + this.time;
+      this._startedAt = this._audioContext.currentTime;
+    }
+
     this._detune = value;
 
     if (!this._ended && !this._halted) {

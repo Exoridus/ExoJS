@@ -12,7 +12,7 @@ import type { MockInstance } from 'vitest';
  */
 import { getAudioContext } from '#audio/audioContext';
 import { AudioSystem } from '#audio/AudioSystem';
-import type { Pausable, Voice } from '#audio/Playable';
+import type { Loopable, Pausable, RatePitched, Voice } from '#audio/Playable';
 import { Sound, SoundPoolStrategy } from '#audio/Sound';
 
 import { mutable } from '../support/mutable';
@@ -28,8 +28,8 @@ interface MockBufferSourceNode {
   stop: MockInstance;
   connect: MockInstance;
   disconnect: MockInstance;
-  playbackRate: { value: number };
-  detune: { value: number };
+  playbackRate: { value: number; setTargetAtTime: MockInstance };
+  detune: { value: number; setTargetAtTime: MockInstance };
   loop: boolean;
   loopStart: number;
   loopEnd: number;
@@ -42,8 +42,8 @@ const createSourceMock = (): MockBufferSourceNode => ({
   disconnect: vi.fn(),
   start: vi.fn(),
   stop: vi.fn(),
-  playbackRate: { value: 1 },
-  detune: { value: 0 },
+  playbackRate: { value: 1, setTargetAtTime: vi.fn() },
+  detune: { value: 0, setTargetAtTime: vi.fn() },
   loop: false,
   loopStart: 0,
   loopEnd: 0,
@@ -268,6 +268,118 @@ describe('Sound — LeastRecentlyUsed eviction', () => {
     timeMock.restore();
     factory.restore();
     sound.destroy();
+  });
+});
+
+describe('Sound — LeastRecentlyUsed remaining-time estimate', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  type FullVoice = Voice & Pausable & Loopable & RatePitched;
+
+  const setup = (): { time: ReturnType<typeof mockCurrentTime>; factory: SourceFactory; system: AudioSystem; sound: Sound } => {
+    const time = mockCurrentTime(0);
+    const factory = setupSourceFactory();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub(10), {
+      poolSize: 2,
+      poolStrategy: SoundPoolStrategy.LeastRecentlyUsed,
+    });
+
+    return { time, factory, system, sound };
+  };
+
+  const teardown = ({ time, factory, sound }: ReturnType<typeof setup>): void => {
+    time.restore();
+    factory.restore();
+    sound.destroy();
+  };
+
+  test('a slow voice outlasts a newer normal-speed voice', () => {
+    const ctx = setup();
+    const slow = ctx.system.play(ctx.sound, { playbackRate: 0.5 }) as FullVoice;
+    ctx.time.setTime(1);
+    const normal = ctx.system.play(ctx.sound) as FullVoice;
+    ctx.time.setTime(2);
+    ctx.system.play(ctx.sound);
+
+    expect(normal.ended).toBe(true);
+    expect(slow.ended).toBe(false);
+    teardown(ctx);
+  });
+
+  test('a rate change mid-play shortens the remaining time', () => {
+    const ctx = setup();
+    const first = ctx.system.play(ctx.sound) as FullVoice;
+    ctx.time.setTime(1);
+    const second = ctx.system.play(ctx.sound) as FullVoice;
+    ctx.time.setTime(2);
+    first.playbackRate = 0.5;
+    second.playbackRate = 4;
+    ctx.time.setTime(3);
+    ctx.system.play(ctx.sound);
+
+    expect(second.ended).toBe(true);
+    expect(first.ended).toBe(false);
+    teardown(ctx);
+  });
+
+  test('detune scales the remaining time like playback rate', () => {
+    const ctx = setup();
+    const low = ctx.system.play(ctx.sound, { detune: -1200 }) as FullVoice;
+    ctx.time.setTime(1);
+    const normal = ctx.system.play(ctx.sound) as FullVoice;
+    ctx.time.setTime(2);
+    ctx.system.play(ctx.sound);
+
+    expect(normal.ended).toBe(true);
+    expect(low.ended).toBe(false);
+    teardown(ctx);
+  });
+
+  test('a paused voice does not age while paused', () => {
+    const ctx = setup();
+    const older = ctx.system.play(ctx.sound) as FullVoice;
+    ctx.time.setTime(1);
+    older.pause();
+    ctx.time.setTime(8);
+    const newer = ctx.system.play(ctx.sound, { playbackRate: 4 }) as FullVoice;
+    ctx.time.setTime(9);
+    newer.pause();
+    ctx.time.setTime(20);
+    ctx.system.play(ctx.sound);
+
+    // Frozen remaining: older has 9 buffer seconds at 1x, newer 6 at 4x.
+    expect(newer.ended).toBe(true);
+    expect(older.ended).toBe(false);
+    teardown(ctx);
+  });
+
+  test('a voice looped after starting is never the closest to its end', () => {
+    const ctx = setup();
+    const looped = ctx.system.play(ctx.sound) as FullVoice;
+    looped.loop = true;
+    ctx.time.setTime(1);
+    const normal = ctx.system.play(ctx.sound) as FullVoice;
+    ctx.time.setTime(2);
+    ctx.system.play(ctx.sound);
+
+    expect(normal.ended).toBe(true);
+    expect(looped.ended).toBe(false);
+    teardown(ctx);
+  });
+
+  test('a voice whose loop was cleared becomes evictable by its playhead', () => {
+    const ctx = setup();
+    const unlooped = ctx.system.play(ctx.sound, { loop: true }) as FullVoice;
+    unlooped.loop = false;
+    ctx.time.setTime(1);
+    const normal = ctx.system.play(ctx.sound) as FullVoice;
+    ctx.time.setTime(2);
+    ctx.system.play(ctx.sound);
+
+    expect(unlooped.ended).toBe(true);
+    expect(normal.ended).toBe(false);
+    teardown(ctx);
   });
 });
 
