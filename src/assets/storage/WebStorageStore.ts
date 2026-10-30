@@ -38,26 +38,32 @@ export class WebStorageStore implements KeyValueStore {
     this._prefix = options.prefix ?? '';
   }
 
-  public get<T>(key: string): Promise<T | null> {
+  // eslint-disable-next-line @typescript-eslint/require-await
+  public async get<T>(key: string): Promise<T | null> {
     const raw = this._storage.getItem(this._prefix + key);
 
     if (raw === null) {
-      return Promise.resolve(null);
+      return null;
     }
 
     try {
-      return Promise.resolve(JSON.parse(raw) as T);
+      return JSON.parse(raw) as T;
     } catch {
-      return Promise.reject(new Error(`WebStorageStore.get() failed: stored value for key "${key}" is not valid JSON.`));
+      throw new Error(`WebStorageStore.get() failed: stored value for key "${key}" is not valid JSON.`);
     }
   }
 
   public set(key: string, value: unknown): Promise<void> {
-    let payload: string;
+    let payload: string | undefined;
 
     try {
-      payload = JSON.stringify(value);
+      // `undefined`, functions and symbols stringify to `undefined` rather than throwing.
+      payload = JSON.stringify(value) as string | undefined;
     } catch {
+      return Promise.reject(new Error('WebStorageStore.set() failed: value is not JSON-serializable.'));
+    }
+
+    if (payload === undefined) {
       return Promise.reject(new Error('WebStorageStore.set() failed: value is not JSON-serializable.'));
     }
 
@@ -73,17 +79,20 @@ export class WebStorageStore implements KeyValueStore {
     return Promise.resolve();
   }
 
-  public has(key: string): Promise<boolean> {
-    return Promise.resolve(this._storage.getItem(this._prefix + key) !== null);
+  // Async so a throwing Storage (access denied) rejects instead of throwing synchronously.
+  // eslint-disable-next-line @typescript-eslint/require-await
+  public async has(key: string): Promise<boolean> {
+    return this._storage.getItem(this._prefix + key) !== null;
   }
 
-  public delete(key: string): Promise<boolean> {
+  // eslint-disable-next-line @typescript-eslint/require-await
+  public async delete(key: string): Promise<boolean> {
     const fullKey = this._prefix + key;
     const existed = this._storage.getItem(fullKey) !== null;
 
     this._storage.removeItem(fullKey);
 
-    return Promise.resolve(existed);
+    return existed;
   }
 
   public clear(): Promise<boolean> {

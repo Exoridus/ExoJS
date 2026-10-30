@@ -93,6 +93,38 @@ export const requestResult = <T>(request: IDBRequest<T>, failure: IndexedDbFailu
   });
 
 /**
+ * Issue a write on a transaction whose completion is already being awaited.
+ *
+ * `put()` and `delete()` throw synchronously (a `DataCloneError` for a value
+ * that cannot be cloned, a `DataError` for an invalid key). Left alone, that
+ * would escape untyped and strand `committed` as an unhandled rejection once
+ * the transaction aborts.
+ * @internal
+ */
+export const issueWrite = (
+  transaction: IDBTransaction,
+  committed: Promise<void>,
+  failure: IndexedDbFailureContext,
+  issue: () => void,
+): Promise<void> => {
+  try {
+    issue();
+  } catch (error: unknown) {
+    committed.catch(() => undefined);
+
+    try {
+      transaction.abort();
+    } catch {
+      // Already finished; nothing left to abort.
+    }
+
+    return Promise.reject(asCacheError(failure, error));
+  }
+
+  return committed;
+};
+
+/**
  * Resolve once `transaction` has COMMITTED.
  *
  * A write is not durable when its `IDBRequest` succeeds - the transaction can
