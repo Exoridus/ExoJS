@@ -137,9 +137,11 @@ export abstract class ActionBase<Binding> {
    * @internal
    */
   public _rebind(binding: Binding | null, slot: GamepadSlot): void {
-    this._binding = binding ?? this._defaultBinding;
+    const nextBinding = binding ?? this._defaultBinding;
+    // Resolution can reject a descriptor; preserve the previous binding and slot until it succeeds.
+    this._resolve(nextBinding, slot);
+    this._binding = nextBinding;
     this._slot = slot;
-    this._resolve(this._binding, slot);
     this._reset();
   }
 

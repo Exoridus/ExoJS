@@ -280,5 +280,19 @@ export const toChannels = (binding: OneOrMany<InputChannel> | undefined): readon
     return [];
   }
 
-  return Array.isArray(binding) ? (binding as readonly number[]) : [binding as number];
+  const channels: readonly unknown[] = Array.isArray(binding) ? binding : [binding];
+  // Resolution must consume validated values without rereading caller-owned accessors.
+  const validated = new Array<number>(channels.length);
+
+  for (let i = 0; i < validated.length; i++) {
+    const channel = channels[i];
+
+    if (typeof channel !== 'number') {
+      throw new Error('Input binding: channel groups must contain numeric input channels.');
+    }
+
+    validated[i] = channel;
+  }
+
+  return validated;
 };
