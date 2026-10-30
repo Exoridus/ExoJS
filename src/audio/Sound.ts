@@ -84,10 +84,6 @@ export interface SoundPlayOptions extends PlayOptions {
 /** Internal record tracking an active voice for pool management. */
 interface PooledVoice {
   readonly voice: SoundVoice;
-  /** audioContext.currentTime when the voice was started. */
-  readonly startedAt: number;
-  /** Finite playback duration in seconds, or Infinity for looping. */
-  readonly effectiveDuration: number;
 }
 
 /**
@@ -666,9 +662,7 @@ export class Sound implements Playable {
     seedVoiceFromPlayOptions(voice, options);
     seedVoiceSends(voice, options);
 
-    const startedAt = audioContext.currentTime;
-    const effectiveDuration = loop ? Infinity : window.end - offset;
-    const pooledVoice: PooledVoice = { voice, startedAt, effectiveDuration };
+    const pooledVoice: PooledVoice = { voice };
 
     voice.onEnd.add((): void => {
       const index = this._activeVoices.indexOf(pooledVoice);
@@ -713,11 +707,10 @@ export class Sound implements Playable {
    *
    * Silent voices - paused by their caller or held by a paused or retained
    * scene - are considered only as a last resort. Such a voice is not a stale
-   * one - it is frozen exactly where it stopped, waiting to play on - but its
-   * pool bookkeeping (`startedAt`) keeps aging against the still-running
-   * context clock, so both strategies would otherwise single it out: FIFO sees
-   * the oldest entry, LRU the one with the least time left. Evicting it stops
-   * it for good, so the ambience never comes back.
+   * one - it is frozen exactly where it stopped, waiting to play on - but
+   * both strategies would otherwise single it out: FIFO sees the oldest entry,
+   * LRU the one with the least time left. Evicting it stops it for good, so
+   * the ambience never comes back.
    */
   private _pickEvictionVictim(): number {
     const unpaused = this._pickVictim(false);
@@ -755,7 +748,6 @@ export class Sound implements Playable {
   }
 
   private _pickClosestToEnd(includePaused: boolean): number {
-    const now = isAudioContextReady() ? getAudioContext().currentTime : 0;
     let minRemaining = Infinity;
     let minIndex = -1;
 
@@ -766,8 +758,7 @@ export class Sound implements Playable {
         continue;
       }
 
-      const elapsed = now - src.startedAt;
-      const remaining = src.effectiveDuration - elapsed;
+      const remaining = src.voice._remainingTime;
 
       if (minIndex === -1 || remaining < minRemaining) {
         minRemaining = remaining;
