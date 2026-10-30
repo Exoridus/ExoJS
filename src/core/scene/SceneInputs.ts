@@ -116,6 +116,7 @@ export class SceneInputs implements Destroyable {
       this._syncScope(scope);
     } catch (error) {
       this.popScope(scope);
+
       throw error;
     }
 

@@ -233,6 +233,7 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
       this._enterPhaseState = this._enterPhase._createPhaseStateForSession();
     } catch (error) {
       this._exitPhase._destroyPhaseStateForSession(this._exitPhaseState);
+
       throw error;
     }
   }
