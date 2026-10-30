@@ -1397,6 +1397,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     this._device = null;
     this._backend = null;
     this._drawCallCount = 0;
+    this._drawCalls.length = 0;
+    this._customVertexCursors.clear();
+    this._customIndexCursors.clear();
     this._vertexBufferCapacity = 0;
     this._indexBufferCapacity = 0;
     this._uniformBufferCapacity = 0;
@@ -2513,6 +2516,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
   private _resetFrame(): void {
     this._drawCallCount = 0;
+    // Stale slots would keep last frame's meshes, materials and textures alive.
+    this._drawCalls.length = 0;
 
     for (const resources of this._customShaders.values()) {
       resources.drawCount = 0;
