@@ -72,7 +72,9 @@ export class InputVoice extends BaseVoice {
     });
 
     return new Promise<Sound>((resolve, reject) => {
-      recorder.addEventListener('stop', () => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+
+      const onStop = (): void => {
         void (async (): Promise<void> => {
           try {
             const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
@@ -82,11 +84,21 @@ export class InputVoice extends BaseVoice {
             reject(error instanceof Error ? error : new Error(String(error)));
           }
         })();
-      });
-      recorder.addEventListener('error', () => reject(new Error('Recording failed.')));
+      };
+      // A failed recorder never delivers a usable blob: cancel the pending stop so
+      // it does not decode a partial capture or keep the timer alive.
+      const onError = (): void => {
+        clearTimeout(timer);
+        recorder.removeEventListener('stop', onStop);
+        recorder.removeEventListener('error', onError);
+        reject(new Error('Recording failed.'));
+      };
+
+      recorder.addEventListener('stop', onStop);
+      recorder.addEventListener('error', onError);
 
       recorder.start();
-      setTimeout(
+      timer = setTimeout(
         () => {
           if (recorder.state !== 'inactive') {
             recorder.stop();

@@ -289,3 +289,30 @@ describe('dependency scopes', () => {
     expect(kept.loadState).toBe('ready');
   });
 });
+
+describe('scope teardown failures', () => {
+  test('a throwing child does not stop its siblings or the parent release', () => {
+    const loader = createCoreLoader();
+    const parent = loader.createScope({ name: 'world' });
+    const bad = parent.createScope({ name: 'bad' });
+    const good = parent.createScope({ name: 'good' });
+    const releaseScope = vi.spyOn(loader, '_releaseScope');
+
+    releaseScope.mockImplementationOnce(() => {
+      throw new Error('release failed');
+    });
+
+    expect(() => parent.destroy()).toThrow('release failed');
+    expect(releaseScope).toHaveBeenCalledWith(good);
+    expect(releaseScope).toHaveBeenCalledWith(bad);
+    expect(releaseScope).toHaveBeenCalledWith(parent);
+  });
+});
+
+describe('Loader.load argument validation', () => {
+  test.each([[42], [null], [undefined]])('rejects %s synchronously with a message naming the argument', value => {
+    const loader = createCoreLoader();
+
+    expect(() => loader.load(value as never)).toThrow(/Loader\.load\(\) expects/);
+  });
+});

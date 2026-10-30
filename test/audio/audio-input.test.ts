@@ -40,6 +40,14 @@ class MockMediaRecorder {
     (this._handlers[type] ??= []).push(handler);
   }
 
+  public removeEventListener(type: string, handler: (event: { data: Blob }) => void): void {
+    const handlers = this._handlers[type];
+
+    if (handlers !== undefined) {
+      handlers.splice(handlers.indexOf(handler) >>> 0, 1);
+    }
+  }
+
   public start(): void {
     this.state = 'recording';
   }
@@ -231,6 +239,31 @@ describe('AudioInput / InputVoice', () => {
     await promise;
 
     // The timeout guard sees state === 'inactive' already and does not call stop() again.
+    expect(stopSpy).not.toHaveBeenCalled();
+
+    vi.useRealTimers();
+    voice.stop();
+  });
+
+  test('record() rejects once on a recorder error and never stops or decodes afterwards', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('MediaRecorder', MockMediaRecorder);
+
+    const stream = makeStream();
+    stubGetUserMedia(stream);
+    const input = await AudioInput.open();
+    const system = new AudioSystem();
+    const voice = system.open(input);
+
+    const promise = voice.record(Time.seconds(0.05));
+    const rejection = expect(promise).rejects.toThrow('Recording failed.');
+    const recorder = MockMediaRecorder.instances[0]!;
+    const stopSpy = vi.spyOn(recorder, 'stop');
+
+    recorder.triggerError();
+    await vi.advanceTimersByTimeAsync(100);
+    await rejection;
+
     expect(stopSpy).not.toHaveBeenCalled();
 
     vi.useRealTimers();

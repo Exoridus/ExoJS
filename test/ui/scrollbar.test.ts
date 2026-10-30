@@ -133,6 +133,22 @@ describe('Scrollbar geometry', () => {
 });
 
 describe('Scrollbar drag', () => {
+  test('disabling the bar, or an ancestor, mid-drag ends the drag', () => {
+    const { stage, onPointerMove } = makeStage();
+    const bar = new Scrollbar().setLength(200);
+
+    bar._setStage(stage);
+    bar.setRange(100, 400);
+    bar.thumbNode.onPointerDown.dispatch(pointerDownAt(0, 10));
+    expect(bar.dragging).toBe(true);
+
+    bar.enabled = false;
+    expect(bar.dragging).toBe(false);
+
+    onPointerMove.dispatch(fakePointer, 0, 85);
+    expect(bar.offset).toBe(0);
+  });
+
   test('a thumb drag reports the offset it travelled to', () => {
     const { stage, onPointerMove, onPointerUp } = makeStage();
     const bar = new Scrollbar().setLength(200);

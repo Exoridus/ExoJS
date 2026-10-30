@@ -222,6 +222,11 @@ const modifierChannelInfo = new Map<Keyboard, ModifierChannelInfo>([
  */
 export const keyboardModifierChannelInfo = (channel: Keyboard): ModifierChannelInfo | undefined => modifierChannelInfo.get(channel);
 
+const aggregateModifierChannels: ReadonlySet<number> = new Set([...modifierChannelInfo.values()].map(info => info.aggregate));
+
+/** Whether `channel` is an aggregate modifier channel (`Shift`), buffer state with no key of its own. @internal */
+export const isKeyboardAggregateChannel = (channel: number): boolean => aggregateModifierChannels.has(channel);
+
 /** One keyboard channel transition, in the exact order it happened. */
 export interface KeyChannelEvent {
   readonly channel: number;
