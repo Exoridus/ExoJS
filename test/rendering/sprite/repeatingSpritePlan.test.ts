@@ -274,6 +274,20 @@ describe('buildRepeatingSpriteQuads — atlas region UV', () => {
   });
 });
 
+describe('buildRepeatingSpriteQuads — asymmetric extrusion', () => {
+  test('only the edges without extrusion are inset', () => {
+    const tex = makeTex(256, 256);
+    const region = new TextureRegion(tex, { x: 64, y: 64, width: 32, height: 32, extrusion: { left: 1, top: 0, right: 0, bottom: 0 } });
+    const quads = buildRepeatingSpriteQuads(region, 32, 32, 'repeat', 'repeat', 'round', 'round', 0, 0);
+    const half = 0.5 / 256;
+
+    expect(quads[0].u0).toBeCloseTo(region.u0, 7);
+    expect(quads[0].v0).toBeCloseTo(region.v0 + half, 7);
+    expect(quads[0].u1).toBeCloseTo(region.u1 - half, 7);
+    expect(quads[0].v1).toBeCloseTo(region.v1 - half, 7);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // buildRepeatingSpriteQuads - offset
 // ---------------------------------------------------------------------------

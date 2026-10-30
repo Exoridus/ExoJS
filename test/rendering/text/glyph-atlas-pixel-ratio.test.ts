@@ -271,3 +271,17 @@ test('clearVariant clears standalone metrics across caps variants, preserving ot
   expect(other.advance('M', 32)).toBe(10);
   measured.width = 10;
 });
+
+describe('GlyphAtlas oversized tile', () => {
+  test('a tile larger than a page leaves the atlas with its existing pages', () => {
+    const atlas = new GlyphAtlas({ family: 'Roboto', fontWeight: '400' }, 16, 'color', 8, 4);
+    const added: number[] = [];
+
+    atlas.onPageAdded.add(index => added.push(index));
+
+    expect(() => atlas.getGlyph('A', 12)).toThrow(/exceeds/);
+    expect(() => atlas.getGlyph('B', 12)).toThrow(/exceeds/);
+    expect(atlas.pages).toHaveLength(1);
+    expect(added).toEqual([]);
+  });
+});
