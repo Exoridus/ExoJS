@@ -24,8 +24,8 @@ const ensureCoreSerializers = (): void => {
     return;
   }
 
-  _coreRegistered = true;
   registerCoreSerializers(defaultSerializationRegistry);
+  _coreRegistered = true;
 };
 
 /**
