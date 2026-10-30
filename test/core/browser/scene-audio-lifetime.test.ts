@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 
 import { getAudioContext } from '#audio/audioContext';
+import { AudioSend } from '#audio/AudioSend';
 import { AudioSystem } from '#audio/AudioSystem';
 import { Sound } from '#audio/Sound';
 import type { Application } from '#core/Application';
@@ -31,6 +32,44 @@ afterAll(async () => {
 });
 
 describe('SceneAudio native graph ownership', () => {
+  test.each(['add', 'adopt'] as const)('releases a native send requested after pending cancellation: %s', method => {
+    const audioContext = getAudioContext();
+    const system = new AudioSystem();
+    const sound = new Sound(audioContext.createBuffer(1, audioContext.sampleRate, audioContext.sampleRate));
+    const audio = new SceneAudio({ audio: system } as unknown as Application, () => SceneState.Preparing);
+    const source = audioContext.createGain();
+
+    try {
+      const voice = audio.play(sound);
+      const bus = system.music;
+      expect(bus.getInputNode()).toBeInstanceOf(GainNode);
+      const placeholderDisconnect = vi.spyOn(voice.output, 'disconnect');
+      voice.stop();
+      const gain = audioContext.createGain();
+      const disconnect = vi.spyOn(gain, 'disconnect');
+      vi.spyOn(audioContext, 'createGain').mockReturnValueOnce(gain);
+      const send = method === 'add' ? voice.addSend(bus) : new AudioSend(audioContext, source, bus, 1);
+
+      if (method === 'adopt') {
+        voice._adoptSend(send);
+      }
+
+      expect(gain).toBeInstanceOf(GainNode);
+      expect(send.destroyed).toBe(true);
+      expect(disconnect).toHaveBeenCalledTimes(1);
+      expect(placeholderDisconnect).toHaveBeenCalledTimes(method === 'add' ? 2 : 1);
+      expect(voice.sends).toHaveLength(0);
+      audio._flushPending();
+      expect(disconnect).toHaveBeenCalledTimes(1);
+    } finally {
+      source.disconnect();
+      audio.destroy();
+      sound.destroy();
+      system.destroy();
+      vi.restoreAllMocks();
+    }
+  });
+
   test('pending cancellation disconnects its native placeholder and send before ending', () => {
     const audioContext = getAudioContext();
     const system = new AudioSystem();
