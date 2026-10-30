@@ -381,4 +381,28 @@ describe('EqualizerEffect', () => {
       expect(filter.high).toBe(20);
     });
   });
+
+  describe('frequency bounds', () => {
+    it('rejects a non-finite frequency at construction and floors a negative one', () => {
+      expect(() => new EqualizerEffect({ midFrequency: Number.NaN })).toThrow(RangeError);
+      expect(new EqualizerEffect({ highFrequency: -5 }).highFrequency).toBe(0);
+    });
+
+    it('caps a cutoff above Nyquist at setup', () => {
+      const ctx = getAudioContext();
+      const frequencies: number[] = [];
+      const spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
+        const node = makeBiquadFilterNode(ctx, 'lowshelf');
+
+        node.frequency.setValueAtTime.mockImplementation((value: number) => frequencies.push(value));
+
+        return node as unknown as BiquadFilterNode;
+      });
+
+      new EqualizerEffect({ lowFrequency: 1e9 });
+
+      expect(Math.max(...frequencies)).toBeLessThanOrEqual(ctx.sampleRate / 2);
+      spy.mockRestore();
+    });
+  });
 });

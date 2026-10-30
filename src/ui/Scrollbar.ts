@@ -348,6 +348,12 @@ export class Scrollbar extends Widget {
     }
   }
 
+  protected override _onEnabledChanged(effectiveEnabled: boolean): void {
+    if (!effectiveEnabled) {
+      this._endDrag();
+    }
+  }
+
   /** @internal - a drag cannot outlive the tree the pointer signals came from. */
   public override _setStage(stage: Stage | null): void {
     if (this._dragging && this._stage?.app !== stage?.app) {

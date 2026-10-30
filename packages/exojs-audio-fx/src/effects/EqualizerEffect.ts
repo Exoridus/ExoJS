@@ -22,6 +22,14 @@ interface EqualizerEffectSetup {
   readonly highShelf: BiquadFilterNode;
 }
 
+const requireFrequency = (name: string, value: number): number => {
+  if (!Number.isFinite(value)) {
+    throw new RangeError(`EqualizerEffect ${name} must be a finite number, got ${value}.`);
+  }
+
+  return Math.max(0, value);
+};
+
 /**
  * Three-band equalizer (low shelf / peaking mid / high shelf) built from a
  * series chain of `BiquadFilterNode` instances. Gain values are in dB and
@@ -43,9 +51,9 @@ export class EqualizerEffect extends AudioEffect {
     this._low = Math.max(-40, Math.min(40, options.low ?? 0));
     this._mid = Math.max(-40, Math.min(40, options.mid ?? 0));
     this._high = Math.max(-40, Math.min(40, options.high ?? 0));
-    this._lowFrequency = options.lowFrequency ?? 250;
-    this._midFrequency = options.midFrequency ?? 1500;
-    this._highFrequency = options.highFrequency ?? 6000;
+    this._lowFrequency = requireFrequency('lowFrequency', options.lowFrequency ?? 250);
+    this._midFrequency = requireFrequency('midFrequency', options.midFrequency ?? 1500);
+    this._highFrequency = requireFrequency('highFrequency', options.highFrequency ?? 6000);
     this._deferSetup(context => this._setupNodes(context));
   }
 
@@ -155,19 +163,22 @@ export class EqualizerEffect extends AudioEffect {
   }
 
   private _setupNodes(ctx: AudioContext): void {
+    // A cutoff above Nyquist is out of range for a BiquadFilterNode.
+    const nyquist = ctx.sampleRate / 2;
+
     const lowShelf = ctx.createBiquadFilter();
     lowShelf.type = 'lowshelf';
-    lowShelf.frequency.setValueAtTime(this._lowFrequency, ctx.currentTime);
+    lowShelf.frequency.setValueAtTime(Math.min(this._lowFrequency, nyquist), ctx.currentTime);
     lowShelf.gain.setValueAtTime(this._low, ctx.currentTime);
 
     const peaking = ctx.createBiquadFilter();
     peaking.type = 'peaking';
-    peaking.frequency.setValueAtTime(this._midFrequency, ctx.currentTime);
+    peaking.frequency.setValueAtTime(Math.min(this._midFrequency, nyquist), ctx.currentTime);
     peaking.gain.setValueAtTime(this._mid, ctx.currentTime);
 
     const highShelf = ctx.createBiquadFilter();
     highShelf.type = 'highshelf';
-    highShelf.frequency.setValueAtTime(this._highFrequency, ctx.currentTime);
+    highShelf.frequency.setValueAtTime(Math.min(this._highFrequency, nyquist), ctx.currentTime);
     highShelf.gain.setValueAtTime(this._high, ctx.currentTime);
 
     // Series chain: lowShelf → peaking → highShelf

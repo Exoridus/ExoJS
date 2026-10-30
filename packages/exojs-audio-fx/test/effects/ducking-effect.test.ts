@@ -318,4 +318,15 @@ describe('DuckingEffect', () => {
       expect(() => filter.destroy()).not.toThrow();
     });
   });
+
+  describe('construction bounds', () => {
+    it('clamps out-of-range options like the setters and rejects NaN', () => {
+      const filter = new DuckingEffect({ sidechain, threshold: 50, ratio: 100, attackMs: -5 });
+
+      expect(filter.threshold).toBe(0);
+      expect(filter.ratio).toBe(20);
+      expect(filter.attackMs).toBe(0.001);
+      expect(() => new DuckingEffect({ sidechain, ratio: Number.NaN })).toThrow(RangeError);
+    });
+  });
 });

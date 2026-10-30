@@ -270,16 +270,35 @@ export class LoaderScope implements Destroyable {
 
     this._destroyed = true;
 
+    const failures: unknown[] = [];
+
     if (this._children !== undefined) {
       // Each child removes itself from this set while destroying, so iterate a copy.
       for (const child of [...this._children]) {
-        child.destroy();
+        try {
+          child.destroy();
+        } catch (error: unknown) {
+          failures.push(error);
+        }
       }
 
       this._children.clear();
     }
 
     this._parent?._children?.delete(this);
-    this._loader._releaseScope(this);
+
+    try {
+      this._loader._releaseScope(this);
+    } catch (error: unknown) {
+      failures.push(error);
+    }
+
+    if (failures.length === 1) {
+      throw failures[0];
+    }
+
+    if (failures.length > 1) {
+      throw new AggregateError(failures, '[ExoJS] LoaderScope.destroy(): several teardown steps threw.');
+    }
   }
 }

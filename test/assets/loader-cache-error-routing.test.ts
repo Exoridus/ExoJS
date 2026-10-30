@@ -65,6 +65,20 @@ describe('Loader.onCacheError routing', () => {
     loader.destroy();
   });
 
+  test('a throwing onCacheError listener does not fail the acquisition', async () => {
+    const loader = new Loader({ cache: createFullStore() });
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    loader.onCacheError.add(() => {
+      throw new Error('listener failed');
+    });
+
+    await expect(fetchThrough(loader, 'a.txt')).resolves.toBe('payload');
+
+    consoleErrorSpy.mockRestore();
+    loader.destroy();
+  });
+
   test('two loaders sharing one policy instance do not receive each other errors', async () => {
     const sharedPolicy = new CacheFirstPolicy();
     const failingLoader = new Loader({ cache: new AssetCache({ policy: sharedPolicy, stores: createFullStore() }) });

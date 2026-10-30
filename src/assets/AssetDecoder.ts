@@ -5,6 +5,7 @@ import type { CacheLayout } from '#assets/cache/CacheLayout';
 import { SingleEntryLayout } from '#assets/cache/SingleEntryLayout';
 import type { Connectivity, NetworkSnapshot } from '#core/Connectivity';
 import { unrestrictedNetwork } from '#core/Connectivity';
+import { logger } from '#core/Logger';
 
 import { AssetDecodeError } from './AssetDecodeError';
 import type { AssetFactoryContext } from './AssetFactory';
@@ -136,7 +137,14 @@ export class AssetDecoder {
    * loader between calls.
    */
   private readonly _reportCacheError = (error: AssetCacheError): void => {
-    this._loader.onCacheError.dispatch(error);
+    // A throwing listener must not unwind the cache path it observes, which
+    // would skip the remaining stores and the fallback read.
+    this._loader.onCacheError.dispatchIsolated(listenerError => {
+      logger.error('Loader.onCacheError listener failed.', {
+        source: 'Loader',
+        ...(listenerError instanceof Error && { error: listenerError }),
+      });
+    }, error);
   };
 
   public constructor(loader: Loader, typeRegistry: AssetTypeRegistry, options: AssetDecoderOptions) {

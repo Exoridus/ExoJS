@@ -243,4 +243,18 @@ describe('PitchShiftEffect', () => {
       expect(() => filter.destroy()).not.toThrow();
     });
   });
+
+  describe('grainSize', () => {
+    it.each([
+      [0, 2],
+      [1023, 1022],
+      [-1, 2],
+      [Number.NaN, 1024],
+      [1024, 1024],
+    ])('normalizes %s to an even size of at least 2 (%s)', (input, expected) => {
+      const effect = new PitchShiftEffect({ grainSize: input });
+
+      expect((effect as unknown as { _grainSize: number })._grainSize).toBe(expected);
+    });
+  });
 });
