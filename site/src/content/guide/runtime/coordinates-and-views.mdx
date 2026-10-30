@@ -45,7 +45,9 @@ Do not multiply pointer coordinates by DPR to repair a camera mismatch. The inpu
 
 <ExamplePreview chapter="application-scenes" slug="world-vs-screen-coords" />
 
-The example pans with WASD or arrows, zooms with the wheel, and places markers at converted world points while its readout stays fixed on screen.
+Move a target with WASD, arrows or a stick while View follows it; press F for free-camera dragging, zoom at the pointer and compare screen/world coordinates. The wheel and + / - zoom around the pointer, including while following: the view keeps the resulting offset from the target. Press F again to return to centered follow. The small pointer readout uses both `screenToWorld()` and `worldToScreen()`; it does not place markers. Movement requires a keyboard or controller; free-camera dragging also accepts touch.
+
+This example uses `view.follow(target)` with its default immediate tracking. The optional `lerp` is a factor per rendered frame, so the same value gives different smoothing at 60 and 144 Hz. For smoothing measured in seconds, use the exponential target described above.
 
 ## Draw one world through multiple views
 

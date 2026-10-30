@@ -348,8 +348,8 @@
       "slug": "world-vs-screen-coords",
       "path": "application-scenes/world-vs-screen-coords.js",
       "language": "typescript",
-      "title": "Camera Navigation and Coordinates",
-      "description": "Pan with WASD or arrows, zoom with the wheel or + / -, and compare pointer screen/world coordinates on a stable grid.",
+      "title": "Camera Follow and Navigation",
+      "description": "Move a target with WASD, arrows or a stick while View follows it; press F for free-camera dragging, zoom at the pointer and compare screen/world coordinates.",
       "backend": "core",
       "tags": ["camera", "view", "pointer", "coordinates"],
       "capabilities": ["keyboard", "pointer"],
@@ -1141,11 +1141,11 @@
       "path": "physics/sprite-follows-body.js",
       "language": "typescript",
       "title": "Drag and Throw Physics",
-      "description": "Pick a real physics body, drag it against gravity and release it to throw. The mouse joint preserves collision and body rotation.",
+      "description": "Grab a dynamic body at the pointer with MouseJoint, drag and release to throw; world.attach keeps the sprite on its rotating, colliding body. Press C for colliders.",
       "backend": "core",
       "tags": ["physics", "binding", "pointer", "joints"],
       "capabilities": ["pointer", "keyboard"],
-      "level": "intro"
+      "level": "intermediate"
     },
     {
       "slug": "kinematic-movement",

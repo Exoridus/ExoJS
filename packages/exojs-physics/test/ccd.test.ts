@@ -27,6 +27,65 @@ const fireAtWall = (bullet: boolean): { world: PhysicsWorld; ball: PhysicsBody }
 };
 
 describe('continuous collision (bullet mode)', () => {
+  it.each([
+    { density: 1, restitution: 0, sleeping: false },
+    { density: 3, restitution: 0, sleeping: false },
+    { density: 1, restitution: 1, sleeping: true },
+  ])('transfers a swept impact to a dynamic target ($density, $restitution, $sleeping)', ({ density, restitution, sleeping }) => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const bullet = world.add(
+      new PhysicsBody({
+        type: 'dynamic',
+        isBullet: true,
+        colliders: [{ shape: new BoxShape(72, 72), restitution }],
+      }),
+    );
+    const target = world.add(
+      new PhysicsBody({
+        type: 'dynamic',
+        position: { x: 100, y: 0 },
+        colliders: [{ shape: new BoxShape(72, 72), density, restitution }],
+      }),
+    );
+    target._setSleeping(sleeping);
+    bullet.linearVelocityX = 6000;
+
+    world.step(FRAME);
+
+    const impulse = ((1 + restitution) * 6000) / (bullet.invMass + target.invMass);
+    expect(bullet.linearVelocityX).toBeCloseTo(6000 - impulse * bullet.invMass, 6);
+    expect(target.linearVelocityX).toBeCloseTo(impulse * target.invMass, 6);
+    expect(bullet.mass * bullet.linearVelocityX + target.mass * target.linearVelocityX).toBeCloseTo(bullet.mass * 6000, 6);
+    expect(target.isSleeping).toBe(false);
+    world.destroy();
+  });
+
+  it('resolves a swept impact relative to a moving kinematic target without changing its velocity', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const bullet = world.add(
+      new PhysicsBody({
+        type: 'dynamic',
+        isBullet: true,
+        colliders: [{ shape: new BoxShape(72, 72), restitution: 0 }],
+      }),
+    );
+    const target = world.add(
+      new PhysicsBody({
+        type: 'kinematic',
+        position: { x: 100, y: 0 },
+        colliders: [{ shape: new BoxShape(72, 72), restitution: 0 }],
+      }),
+    );
+    bullet.linearVelocityX = 6000;
+    target.linearVelocityX = 120;
+
+    world.step(FRAME);
+
+    expect(bullet.linearVelocityX).toBeCloseTo(120, 6);
+    expect(target.linearVelocityX).toBe(120);
+    world.destroy();
+  });
+
   it('a fast bullet does not tunnel through a thin static wall', () => {
     // Without CCD the body tunnels straight through (the documented limit).
     const plain = fireAtWall(false);
