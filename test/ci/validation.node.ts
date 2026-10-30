@@ -1290,3 +1290,118 @@ void test('unconfigured generic commands retain their unlimited deadline contrac
   assert.match(readFileSync(result.logPath!, 'utf8'), /timeoutMs=none/);
   assert.equal(stdout + stderr, '', 'a silent success announces nothing');
 });
+
+const runArguments = async (
+  args: readonly string[],
+  options: { spacedPath?: boolean; executableOnly?: boolean; pnpmAlias?: boolean; blockShim?: boolean } = {},
+) => {
+  const cwd = directory();
+  const script = join(cwd, 'arguments.mjs');
+  writeFileSync(script, "process.stdout.write('ARGV:' + JSON.stringify(process.argv.slice(2)) + '\\n');\n");
+  let command = process.execPath;
+  let argv = [script, ...args];
+
+  if (process.platform === 'win32' && !options.executableOnly) {
+    command = join(cwd, options.pnpmAlias ? 'pnpm.cmd' : options.spacedPath ? 'argument shim.cmd' : 'arguments.cmd');
+    writeFileSync(
+      command,
+      (options.blockShim || options.pnpmAlias
+        ? [
+            '@echo off',
+            '@setlocal',
+            `@if exist "${process.execPath}" (`,
+            `"${process.execPath}" "${script}" %*`,
+            ') else (',
+            'exit /b 1',
+            ')',
+            '',
+          ]
+        : ['@echo off', `"${process.execPath}" "${script}" %*`, '']
+      ).join('\r\n'),
+    );
+    argv = [...args];
+  }
+
+  const beforePath = process.env['PATH'];
+
+  try {
+    if (process.platform === 'win32' && options.pnpmAlias) {
+      process.env['PATH'] = `${cwd};${beforePath ?? ''}`;
+      command = 'pnpm';
+    }
+
+    const result = await runCommand({ label: 'supervisor-test', command, args: argv, cwd, output: 'silent' });
+    assert.equal(result.status, 0, readFileSync(result.logPath!, 'utf8'));
+    const line = readFileSync(result.logPath!, 'utf8')
+      .split(/\r?\n/)
+      .find(value => value.startsWith('ARGV:'));
+    assert.ok(line, 'the child must publish its observed argv');
+
+    return JSON.parse(line.slice(5)) as string[];
+  } finally {
+    if (beforePath === undefined) {
+      delete process.env['PATH'];
+    } else {
+      process.env['PATH'] = beforePath;
+    }
+  }
+};
+
+void test('structured whitespace arguments reach the child unchanged', async () => {
+  const args = ['--testNamePattern=draws the whole root', 'selected.test.ts', ' leading', 'trailing ', 'two\twords'];
+  assert.deepEqual(await runArguments(args), args);
+  assert.deepEqual(await runArguments(args, { blockShim: true }), args);
+  assert.deepEqual(await runArguments(args, { pnpmAlias: true }), args);
+});
+
+void test('structured quoted and empty arguments survive a batch path with spaces', async () => {
+  const args = ['', '"quoted"', 'say "hello world"', '\\', 'C:\\path with spaces\\', 'ends\\\\', 'path\\"quote', '  '];
+  assert.deepEqual(await runArguments(args, { spacedPath: true }), args);
+  assert.deepEqual(await runArguments(args, { spacedPath: true, blockShim: true }), args);
+  assert.deepEqual(await runArguments([], { spacedPath: true }), []);
+  assert.deepEqual(await runArguments(args, { executableOnly: true }), args);
+});
+
+void test('structured batch arguments keep metacharacters and sentinel variables literal', async () => {
+  const before = process.env['EXOJS_TEST_ARGV_SENTINEL'];
+  process.env['EXOJS_TEST_ARGV_SENTINEL'] = 'unexpected-expansion';
+  const args = [
+    'echo literal&echo ARGV_SENTINEL_UNEXPECTED',
+    'echo literal|echo ARGV_SENTINEL_UNEXPECTED',
+    'echo literal<NUL',
+    'echo literal>NUL',
+    'echo (round)[square]',
+    'caret^value',
+    'quoted"echo literal&echo ARGV_SENTINEL_UNEXPECTED',
+    '%EXOJS_TEST_ARGV_SENTINEL%',
+    '!EXOJS_TEST_ARGV_SENTINEL!',
+    'comma,semi;star*question?',
+  ];
+
+  try {
+    assert.deepEqual(await runArguments(args), args);
+    assert.deepEqual(await runArguments(args, { blockShim: true }), args);
+    assert.deepEqual(await runArguments(args, { executableOnly: true }), args);
+    assert.deepEqual(await runArguments(args, { pnpmAlias: true }), args);
+  } finally {
+    if (before === undefined) {
+      delete process.env['EXOJS_TEST_ARGV_SENTINEL'];
+    } else {
+      process.env['EXOJS_TEST_ARGV_SENTINEL'] = before;
+    }
+  }
+});
+
+void test('raw shell command strings retain their interpretation', async () => {
+  const cwd = directory();
+  const script = join(cwd, 'raw-arguments.mjs');
+  writeFileSync(script, "process.stdout.write('RAW:' + JSON.stringify(process.argv.slice(2)) + '\\n');\n");
+  const result = await runCommand({
+    label: 'supervisor-test',
+    command: `"${process.execPath}" "${script}" "raw shell argument"`,
+    cwd,
+    output: 'silent',
+  });
+  assert.equal(result.status, 0, readFileSync(result.logPath!, 'utf8'));
+  assert.match(readFileSync(result.logPath!, 'utf8'), /RAW:\["raw shell argument"\]/);
+});

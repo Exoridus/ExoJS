@@ -33,6 +33,22 @@ export interface RunCommandResult {
   readonly cleanupError?: string;
 }
 
+const cmdMetaCharacters = /([()[\]%!^"\x60<>&|;, *?])/g;
+
+const quoteCmdArgument = (argument: string): string => {
+  // Preserve quoted executable arguments before protecting them from cmd.exe's parser.
+  const escaped = argument.replace(/\\+|"/g, (part: string, offset: number) => {
+    if (part === '"') {
+      return '\\"';
+    }
+
+    return offset + part.length === argument.length || argument[offset + part.length] === '"' ? part + part : part;
+  });
+
+  // Both the outer shell and the batch shim parse metacharacters before the executable sees argv.
+  return `"${escaped}"`.replace(cmdMetaCharacters, '^$1').replace(cmdMetaCharacters, '^$1');
+};
+
 const duration = (milliseconds: number): string => `${(milliseconds / 1000).toFixed(1)}s`;
 
 const positiveTimer = (value: number, name: string): number => {
@@ -202,8 +218,14 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
       child = windowsShell
         ? spawn(
             process.env['ComSpec'] ?? 'cmd.exe',
-            ['/d', '/s', '/c', [executable, ...(options.args ?? [])].map(arg => (/\s/.test(arg) ? JSON.stringify(arg) : arg)).join(' ')],
-            common,
+            [
+              '/d',
+              '/v:off',
+              '/s',
+              '/c',
+              `"${[executable.replace(cmdMetaCharacters, '^$1'), ...(options.args ?? []).map(quoteCmdArgument)].join(' ')}"`,
+            ],
+            { ...common, windowsVerbatimArguments: true },
           )
         : hasArguments
           ? spawn(executable, [...options.args!], common)
