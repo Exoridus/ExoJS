@@ -1,6 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import { Color } from '#core/Color';
+import { Signal } from '#core/Signal';
 /**
  * LutFilter unit tests.
  *
@@ -80,6 +81,7 @@ const makeWebGl2Backend = (): RenderBackend & WebGl2Backend => {
   const root = new RenderTarget(64, 64, true);
   let currentTarget: RenderTarget = root;
   const stats = createRenderStats();
+  const onContextLost = new Signal();
 
   const gl = {
     createProgram: vi.fn(() => ({})),
@@ -168,6 +170,7 @@ const makeWebGl2Backend = (): RenderBackend & WebGl2Backend => {
 
   return {
     backendType: RenderBackendType.WebGl2,
+    onContextLost,
     stats,
     context: gl,
     get renderTarget() {
@@ -230,6 +233,7 @@ const makeWebGl2Backend = (): RenderBackend & WebGl2Backend => {
       return this;
     },
     destroy() {
+      onContextLost.destroy();
       root.destroy();
     },
     setBlendMode: vi.fn(),
