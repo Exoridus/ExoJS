@@ -10,6 +10,7 @@ import { CompressedTextureFormat, orderCompressedFormats } from '#rendering/text
  * declared nowhere.
  */
 const enum Gl {
+  CompressedRgbS3tcDxt1 = 0x83f0,
   CompressedRgbaS3tcDxt1 = 0x83f1,
   CompressedRgbaS3tcDxt3 = 0x83f2,
   CompressedRgbaS3tcDxt5 = 0x83f3,
@@ -71,6 +72,7 @@ const families: ReadonlyArray<{
   {
     extension: 'WEBGL_compressed_texture_s3tc',
     formats: {
+      [CompressedTextureFormat.Bc1RgbUnorm]: Gl.CompressedRgbS3tcDxt1,
       [CompressedTextureFormat.Bc1RgbaUnorm]: Gl.CompressedRgbaS3tcDxt1,
       [CompressedTextureFormat.Bc2RgbaUnorm]: Gl.CompressedRgbaS3tcDxt3,
       [CompressedTextureFormat.Bc3RgbaUnorm]: Gl.CompressedRgbaS3tcDxt5,

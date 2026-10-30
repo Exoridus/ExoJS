@@ -10,7 +10,7 @@
 precision highp float;
 
 uniform sampler2D u_nodeData;  // RGBA32F per-node data (see WebGl2TextRenderer)
-uniform float     u_pageSize;  // atlas page size in px (for shadow UV conversion)
+uniform vec2      u_pageSize;  // atlas page size in px (for shadow UV conversion)
 
 flat in int   v_nodeIndex;
 flat in uint  v_decoration;
@@ -130,9 +130,9 @@ void main(void) {
     // Flat per node, so the branch is coherent across the whole draw and the two
     // extra taps cost nothing on the isotropic path.
     if (abs(densityY - densityX) > 0.001 * max(densityX, densityY)) {
-      float texel = 1.0 / u_pageSize;
-      float sdU = sampleBase(v_textureSlot, v_texcoord + vec2(texel, 0.0)).r;
-      float sdV = sampleBase(v_textureSlot, v_texcoord + vec2(0.0, texel)).r;
+      vec2  texel = 1.0 / u_pageSize;
+      float sdU = sampleBase(v_textureSlot, v_texcoord + vec2(texel.x, 0.0)).r;
+      float sdV = sampleBase(v_textureSlot, v_texcoord + vec2(0.0, texel.y)).r;
       vec2  grad = vec2(sdU - sd, sdV - sd);
       float gradLength = length(grad);
 

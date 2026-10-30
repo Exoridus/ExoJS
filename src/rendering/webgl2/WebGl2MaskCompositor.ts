@@ -144,9 +144,9 @@ export class WebGl2MaskCompositor {
     backend.stats.batches++;
     backend.stats.drawCalls++;
 
-    // Reset the active texture unit to 0 to avoid leaking unit 1 into
-    // subsequent renderer state.
+    // Unbinding unit 1 leaves it active; later binds that omit a unit expect unit 0.
     backend.bindTexture(null, 1);
+    backend.setActiveTextureUnit(0);
   }
 
   private _writeQuadVertices(left: number, top: number, right: number, bottom: number): void {
