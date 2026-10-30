@@ -1,4 +1,4 @@
-﻿import type { MockInstance } from 'vitest';
+import type { MockInstance } from 'vitest';
 
 /**
  * ShaderFilter unit tests for the WebGL2 half.
@@ -337,6 +337,11 @@ const glslPassOf = (filter: ShaderFilter): Record<string, unknown> | null =>
 // ---------------------------------------------------------------------------
 
 describe('ShaderFilter on WebGL2', () => {
+  // 1. Construction with a GLSL fragment only - succeeds
+  test('constructs successfully with only a GLSL fragment source', () => {
+    expect(() => new ShaderFilter({ glsl: { fragment: minimalFragSrc } })).not.toThrow();
+  });
+
   test('invalidates all GL objects on loss, reconnects once and removes its listener on destroy', () => {
     const backend = makeWebGl2Backend();
     const gl = backend.context;
@@ -377,11 +382,6 @@ describe('ShaderFilter on WebGL2', () => {
       output.destroy();
       backend.destroy();
     }
-  });
-
-  // 1. Construction with a GLSL fragment only - succeeds
-  test('constructs successfully with only a GLSL fragment source', () => {
-    expect(() => new ShaderFilter({ glsl: { fragment: minimalFragSrc } })).not.toThrow();
   });
 
   // 2. Construction without any source - throws
