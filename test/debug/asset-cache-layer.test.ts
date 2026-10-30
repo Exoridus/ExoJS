@@ -142,7 +142,22 @@ describe('AssetCacheLayer', () => {
     const lines = visibleLines(layer);
 
     expect(lines).toHaveLength(14);
-    expect(lines[13]).toBe('... (+17 more)');
+    // 31 snapshot lines, 13 of which fit beside the marker reserved for the
+    // last row: 18 are hidden, not 17.
+    expect(lines[13]).toBe('... (+18 more)');
+  });
+
+  test('content that exactly fills the panel keeps every row and shows no marker', () => {
+    const byType = Array.from({ length: 13 }, (_unused, index) => ({ type: `t${index}`, ready: 1, pending: 0, failed: 0, bytes: 0 }));
+    const { app } = makeApp({ ready: 13, pending: 0, failed: 0, bytes: 0, byType, largest: [] });
+    const layer = new AssetCacheLayer(app);
+
+    layer.update(time(16));
+
+    const lines = visibleLines(layer);
+
+    expect(lines).toHaveLength(14);
+    expect(lines[13]).toContain('t12');
   });
 
   test('destroy() releases the panel and is safe to repeat', () => {

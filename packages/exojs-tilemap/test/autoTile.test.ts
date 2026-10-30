@@ -317,6 +317,24 @@ describe('WangSet — membership', () => {
     expect(wangSet.blobMap.get(0)).toBe(10);
     expect(wangSet.blobMap.get(255)).toBe(11);
   });
+
+  it('snapshots a caller-supplied Map, so later mutation cannot desync lookup from membership', () => {
+    const source = new Map<number, number>([
+      [0, 10],
+      [255, 11],
+    ]);
+    const wangSet = new WangSet({ blobMap: source, tilesetIndex: 0 });
+
+    source.set(0, 12);
+    source.set(128, 13);
+
+    expect(wangSet.getTileId(0)).toBe(10);
+    expect(wangSet.getTileId(128)).toBeUndefined();
+    expect(wangSet.isMember(10)).toBe(true);
+    expect(wangSet.isMember(12)).toBe(false);
+    expect(wangSet.isMember(13)).toBe(false);
+    expect(wangSet.blobMap.get(0)).toBe(10);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -381,6 +399,90 @@ describe('autoTile — applyVariant defensive paths', () => {
     // wrapBorder defaulting to true means every corner neighbor counts as
     // in-group, so the corner cell ends up with the full mask (255).
     expect(layer.getTileAt(0, 0)?.localTileId).toBe(255);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Test 4c: blobMap variants are validated before any cell is written
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('blobMap validation — autoTile and refreshCell', () => {
+  const rawTiles = (layer: TileLayer, w: number, h: number): number[] => {
+    const raw: number[] = [];
+
+    for (let ty = 0; ty < h; ty++) {
+      for (let tx = 0; tx < w; tx++) {
+        raw.push(layer.getRawTileAt(tx, ty));
+      }
+    }
+
+    return raw;
+  };
+
+  it('throws before writing when a blobMap variant is outside the tileset tileCount', () => {
+    const ts = makeTileset256();
+    const layer = makeLayer(ts, 3, 3);
+
+    for (let ty = 0; ty < 3; ty++) {
+      for (let tx = 0; tx < 3; tx++) {
+        setTile(layer, ts, tx, ty, 0);
+      }
+    }
+
+    const before = rawTiles(layer, 3, 3);
+    const revisionBefore = layer.revision;
+
+    // Identity map, but mask 255 (the centre cell) resolves to 256 - one past
+    // the last valid local tile ID of a 256-tile set.
+    const blobMap = identityBlobMap();
+    blobMap.set(255, 256);
+    const wangSet = new WangSet({ blobMap, tilesetIndex: 0, type: 'blob' });
+
+    let thrown: unknown;
+
+    try {
+      autoTile(layer, wangSet, { wrapBorder: false });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(Error);
+    // The invalid variant must be caught in a pre-pass: earlier cells (which do
+    // resolve to valid IDs) must not have been rewritten before the throw.
+    expect(rawTiles(layer, 3, 3)).toEqual(before);
+    expect(layer.revision).toBe(revisionBefore);
+  });
+
+  it('refreshCell throws before writing when the neighbourhood hits an invalid variant', () => {
+    const ts = makeTileset256();
+    const layer = makeLayer(ts, 3, 3);
+
+    for (let ty = 0; ty < 3; ty++) {
+      for (let tx = 0; tx < 3; tx++) {
+        setTile(layer, ts, tx, ty, 0);
+      }
+    }
+
+    const before = rawTiles(layer, 3, 3);
+    const revisionBefore = layer.revision;
+
+    const blobMap = identityBlobMap();
+    blobMap.set(255, 256);
+    const wangSet = new WangSet({ blobMap, tilesetIndex: 0, type: 'blob' });
+
+    let thrown: unknown;
+
+    try {
+      refreshCell(layer, 1, 1, wangSet, { wrapBorder: false });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(Error);
+    // The eight neighbours resolve to valid partial masks and are reached
+    // before the centre's mask 255; none of the nine cells may be rewritten.
+    expect(rawTiles(layer, 3, 3)).toEqual(before);
+    expect(layer.revision).toBe(revisionBefore);
   });
 });
 

@@ -57,6 +57,23 @@ describe('Curve non-monotonic sampling', () => {
   test('rejects an empty keyframe list', () => {
     expect(() => new Curve([])).toThrow();
   });
+
+  test('copies its keys, so mutating an input key after construction cannot desync the sorted order', () => {
+    const keys = [
+      { t: 0, v: 0 },
+      { t: 0.5, v: 5 },
+      { t: 1, v: 10 },
+    ];
+    const curve = new Curve(keys);
+
+    // Fold the last key back before the middle one: the curve must keep the
+    // construction-time keyframes, not the caller's mutated objects.
+    keys[2]!.t = 0.25;
+    keys[1]!.v = 500;
+
+    expect(curve.evaluate(0.4)).toBeCloseTo(4);
+    expect(curve.evaluate(0.5)).toBeCloseTo(5);
+  });
 });
 
 describe('ColorGradient non-monotonic sampling', () => {

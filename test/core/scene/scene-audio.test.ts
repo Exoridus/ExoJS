@@ -84,6 +84,36 @@ const silent = (voice: Voice): boolean => {
   return (real as unknown as { _halted?: boolean; paused: boolean })._halted ?? (real as unknown as { paused: boolean }).paused;
 };
 
+describe('Pending voice graph lifetime', () => {
+  test('cancellation releases every placeholder output and send before onEnd', () => {
+    const system = new AudioSystem();
+    const sound = new Sound({ duration: 10 } as AudioBuffer);
+    const audio = new SceneAudio({ audio: system } as unknown as Application, () => SceneState.Preparing);
+    const play = vi.spyOn(system, 'play');
+
+    for (let i = 0; i < 100; i++) {
+      const voice = audio.play(sound);
+      const output = vi.spyOn(voice.output, 'disconnect');
+      const send = voice.addSend(voice.bus);
+      const ended = vi.fn(() => {
+        expect(send.destroyed).toBe(true);
+        expect(voice.sends).toHaveLength(0);
+        expect(output).toHaveBeenCalledTimes(1);
+      });
+      voice.onEnd.add(ended);
+      voice.stop();
+      voice.stop();
+      expect(ended).toHaveBeenCalledTimes(1);
+    }
+
+    audio._flushPending();
+    expect(play).not.toHaveBeenCalled();
+    audio.destroy();
+    sound.destroy();
+    system.destroy();
+  });
+});
+
 describe('SceneAudio', () => {
   test('play() delegates to app.audio.play and tracks the returned Voice', () => {
     const voice = makeVoice();

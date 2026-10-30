@@ -485,6 +485,29 @@ describe('lightmap renderer WebGPU browser', () => {
     }
   });
 
+  test('a line light maps its cookie across the full capsule bounds', async () => {
+    const host = await createHost();
+    const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });
+    const cookie = new DataTexture({
+      width: 4,
+      height: 1,
+      format: TextureFormat.Rgba8,
+      data: new Uint8Array([255, 255, 255, 255, 0, 0, 0, 255, 255, 255, 255, 255, 0, 0, 0, 255]),
+    });
+    lighting.add(new LineLight({ length: 32, radius: 16, intensity: 1, cookie })).setPosition(32, 32);
+    drawWhiteFrame(host);
+
+    try {
+      const at = await renderFrame(host, lighting);
+      expect(at).not.toBeNull();
+      expect(at!(44, 32)).toBeGreaterThan(at!(20, 32) + 50);
+    } finally {
+      cookie.destroy();
+      lighting.destroy();
+      host.destroy();
+    }
+  });
+
   test('a cookie patterns the light across its own bounding square, in both axes', async ctx => {
     const host = await createHost();
     const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1 });

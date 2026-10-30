@@ -338,13 +338,11 @@ export class EditContextTextInput implements PlatformTextInput {
   public setHints(hints: PlatformTextInputHints): void {
     this._hints = hints;
 
-    if (hints.inputMode !== undefined) {
-      this._context.inputMode = hints.inputMode;
-    }
-
-    if (hints.enterKeyHint !== undefined) {
-      this._context.enterKeyHint = hints.enterKeyHint;
-    }
+    // The widget rebuilds this snapshot each time and omits unset members, so
+    // a missing hint has to clear the host property; leaving the previous value
+    // in place would keep the old keyboard and confirm key.
+    this._context.inputMode = hints.inputMode ?? '';
+    this._context.enterKeyHint = hints.enterKeyHint ?? '';
   }
 
   public destroy(): void {

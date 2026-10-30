@@ -370,7 +370,10 @@ export class Tween<T extends object = object> {
    * @internal
    */
   public _attachSystem(system: TweenSystem): void {
-    this._system = system;
+    if (this._system !== system) {
+      this._system?.remove(this);
+      this._system = system;
+    }
   }
 
   /**
@@ -427,7 +430,9 @@ export class Tween<T extends object = object> {
     }
 
     // Apply interpolation.
-    this._applyProgress();
+    if (!this._applyProgress()) {
+      return;
+    }
 
     if (this._elapsed >= this._duration) {
       // Cycle complete.
@@ -440,6 +445,10 @@ export class Tween<T extends object = object> {
         }
 
         this._onRepeat?.();
+
+        if (this.state !== TweenState.Active) {
+          return;
+        }
 
         // Flip direction for yoyo.
         if (this._yoyo) {
@@ -482,9 +491,9 @@ export class Tween<T extends object = object> {
     this._startValues = snap;
   }
 
-  private _applyProgress(): void {
-    if (this._startValues === null) {
-      return;
+  private _applyProgress(): boolean {
+    if (this._startValues === null || this._state !== TweenState.Active) {
+      return false;
     }
 
     const rawT = this._duration === 0 ? 1 : Math.min(this._elapsed / this._duration, 1);
@@ -506,12 +515,17 @@ export class Tween<T extends object = object> {
     }
 
     this._onUpdate?.(easedT);
+
+    return this.state === TweenState.Active;
   }
 
   private _complete(): void {
     // Ensure the target is at its final interpolated position.
     this._elapsed = this._duration;
-    this._applyProgress();
+
+    if (!this._applyProgress()) {
+      return;
+    }
 
     this._state = TweenState.Complete;
     this._system?.remove(this);
