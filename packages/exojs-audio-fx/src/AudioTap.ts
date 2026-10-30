@@ -32,6 +32,8 @@ export class AudioTap {
       return;
     }
 
+    const previous = this._source;
+
     this._disconnect();
     this._cancelDeferred();
     this._source = value;
@@ -42,7 +44,21 @@ export class AudioTap {
 
     if (isAudioContextReady()) {
       this._cancelPendingSetup();
-      this._connect(value, getAudioContext());
+
+      try {
+        this._connect(value, getAudioContext());
+      } catch (error: unknown) {
+        // A source the context cannot tap (a duck-typed stream that throws) must
+        // not also cost the previous, working tap.
+        this._source = previous;
+        this._disconnect();
+
+        if (previous !== null) {
+          this._connect(previous, getAudioContext());
+        }
+
+        throw error;
+      }
     } else {
       this._cancelPendingSetup();
 
