@@ -83,7 +83,9 @@ describe('WebGL2 compositors leave texture unit 0 active', () => {
     const { backend, activeUnit } = create();
     const content = new DataTexture({ width: 4, height: 4, format: TextureFormat.Rgba8 });
     const mask = new DataTexture({ width: 4, height: 4, format: TextureFormat.Rgba8 });
-    const compositor = (backend as unknown as { _maskCompositor: { connect(b: WebGl2Backend): void; compose: (...args: unknown[]) => void } })._maskCompositor;
+    const compositor = (
+      backend as unknown as { _maskCompositor: { connect(b: WebGl2Backend): void; compose: (...args: unknown[]) => void } }
+    )._maskCompositor;
 
     compositor.connect(backend);
     compositor.compose(backend, content, mask, 0, 0, 4, 4, BlendModes.Normal);

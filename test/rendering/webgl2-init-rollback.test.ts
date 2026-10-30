@@ -12,7 +12,7 @@ import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { WebGl2OutputPass } from '#rendering/webgl2/WebGl2OutputPass';
 import { WebGl2StencilClipper } from '#rendering/webgl2/WebGl2StencilClipper';
 import { WebGl2TextRenderer } from '#rendering/webgl2/WebGl2TextRenderer';
-import { type WebGl2ColorNormalizationHost,WebGl2TextureNormalizer } from '#rendering/webgl2/WebGl2TextureNormalizer';
+import { type WebGl2ColorNormalizationHost, WebGl2TextureNormalizer } from '#rendering/webgl2/WebGl2TextureNormalizer';
 import { WebGl2VertexArrayObject } from '#rendering/webgl2/WebGl2VertexArrayObject';
 
 import { createFakeWebGl2Context, GlEventLog, GlRecorder, installFakeWebGl2Globals } from '../perf/rendering/fakeWebGl2';
