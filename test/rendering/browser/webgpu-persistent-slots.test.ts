@@ -26,6 +26,7 @@ import type { DerivedSlotStats } from '#rendering/plan/DerivedSelectionState';
 import type { RenderNode } from '#rendering/RenderNode';
 import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { Sprite } from '#rendering/sprite/Sprite';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
@@ -163,6 +164,62 @@ const validatedFrame = async (ctx: { skip: (reason: string) => void }, backend: 
 };
 
 describe('WebGPU persistent-indexed selection', () => {
+  test.for([undefined, true, false])('RenderTexture orientation survives persistent promotion (flipY=%s)', async (flipY, ctx) => {
+    const backend = await createBackend();
+    const texture = new RenderTexture(tile, tile * 2, flipY === undefined ? undefined : { flipY });
+    const redTexture = solidTexture('#ff0000');
+    const blueTexture = solidTexture('#0000ff');
+    const pattern = new Container();
+    pattern.addChild(new Sprite(redTexture), new Sprite(blueTexture).setPosition(0, tile));
+    const root = new Container();
+    root.addChild(new Sprite(texture));
+    root.cullable = false;
+    const persistentDraw = vi.spyOn(backend, '_drawPersistentOrder');
+
+    try {
+      backend.setRenderTarget(texture);
+      render(backend, pattern);
+      backend.setRenderTarget(null);
+
+      if (!(await validatedFrame(ctx, backend, () => render(backend, root)))) {
+        return;
+      }
+
+      expect(root._retainedRootRepresentation().heldPersistentSlots).toBeNull();
+      expect(persistentDraw).not.toHaveBeenCalled();
+      let readPixel = readWebGpuPixels(backend, canvasSize);
+      const liveTop = readPixel(tile / 2, tile / 2);
+      const liveBottom = readPixel(tile / 2, tile * 1.5);
+      expectPixelNear(liveTop, red);
+      expectPixelNear(liveBottom, blue);
+
+      for (let frame = 0; frame < 3; frame++) {
+        backend.view.move(canvasSize * 4, 0);
+        render(backend, root);
+        backend.view.move(-canvasSize * 4, 0);
+        render(backend, root);
+      }
+
+      if (!(await validatedFrame(ctx, backend, () => render(backend, root)))) {
+        return;
+      }
+
+      expect(root._retainedRootRepresentation().heldPersistentSlots).not.toBeNull();
+      expect(persistentDraw).toHaveBeenCalled();
+      readPixel = readWebGpuPixels(backend, canvasSize);
+      expectPixelNear(readPixel(tile / 2, tile / 2), liveTop);
+      expectPixelNear(readPixel(tile / 2, tile * 1.5), liveBottom);
+    } finally {
+      persistentDraw.mockRestore();
+      root.destroy();
+      pattern.destroy();
+      texture.destroy();
+      redTexture.destroy();
+      blueTexture.destroy();
+      backend.destroy();
+    }
+  });
+
   test('draws the whole root from slot stores in one indexed draw', async ctx => {
     const backend = await createBackend();
     const root = new Container();
