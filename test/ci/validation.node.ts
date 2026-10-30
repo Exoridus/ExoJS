@@ -111,14 +111,28 @@ const isRunning = (pid: number): boolean => {
 const waitForFile = async (path: string): Promise<number> => {
   for (let i = 0; i < 100; i++) {
     try {
-      return Number(readFileSync(path, 'utf8'));
+      const pid = Number(readFileSync(path, 'utf8'));
+
+      if (Number.isSafeInteger(pid) && pid > 0) {
+        return pid;
+      }
     } catch {
-      await delay(20);
+      // The fixture may not have opened its PID file yet.
     }
+
+    await delay(20);
   }
 
   throw new Error(`Fixture did not write ${path}`);
 };
+
+void test('PID readiness waits for a positive integer after an empty publication', async () => {
+  const path = join(directory(), 'pid');
+  writeFileSync(path, '');
+  const ready = waitForFile(path);
+  writeFileSync(path, String(process.pid));
+  assert.equal(await ready, process.pid);
+});
 
 for (const output of ['silent', 'compact', 'normal', 'verbose'] as const) {
   void test(`records both streams and propagates ${output} mode`, async () => {
@@ -195,7 +209,11 @@ for (const mode of ['sleep', 'stubborn', 'tree', 'detached-tree']) {
     }
 
     if (existsSync(pidFile)) {
-      pids.add(Number(readFileSync(pidFile, 'utf8')));
+      const pid = Number(readFileSync(pidFile, 'utf8'));
+
+      if (Number.isSafeInteger(pid) && pid > 0) {
+        pids.add(pid);
+      }
     }
 
     for (const pid of pids) {
@@ -394,7 +412,7 @@ void test('idle inspection runs once per continuous stall and rearms on either o
   const script =
     "const fs = require('node:fs'); const path = process.argv[1];" +
     "fs.watchFile(path, { interval: 10 }, () => { const action = fs.readFileSync(path, 'utf8');" +
-    "if (action === 'exit') process.exit(0); else process[action].write('activity\\n'); });" +
+    "if (action === 'exit') process.exit(0); else if (action === 'stdout' || action === 'stderr') process[action].write('activity\\n'); });" +
     "process.stdout.write('ready\\n');";
   const running = capture(() => run('streams', directory(), { args: ['-e', script, control] }));
 
@@ -427,12 +445,13 @@ void test('idle inspection runs once per continuous stall and rearms on either o
     }
   } finally {
     writeFileSync(control, 'exit');
-    await running;
+    const { result } = await running;
     await Promise.all(
       observers.filter(observer => observer.exitCode === null && observer.signalCode === null).map(observer => once(observer, 'close')),
     );
     mock.restoreAll();
     syncBuiltinESMExports();
+    assert.equal(result.status, 0, 'The idle control fixture must exit successfully');
   }
 });
 
@@ -538,11 +557,17 @@ void test('times out orphan without leaving its child running', async t => {
 
   for (let i = 0; i < 100; i++) {
     try {
-      pid = Number(readFileSync(pidFile, 'utf8'));
-      break;
+      const published = Number(readFileSync(pidFile, 'utf8'));
+
+      if (Number.isSafeInteger(published) && published > 0) {
+        pid = published;
+        break;
+      }
     } catch {
-      await delay(20);
+      // The descendant may not have opened its PID file yet.
     }
+
+    await delay(20);
   }
 
   // Not every host lets a descendant outlive the process that created it. Where the
