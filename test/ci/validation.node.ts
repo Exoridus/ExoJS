@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { test } from 'node:test';
+import { mock, test } from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { stopProcessTree } from '../../scripts/lib/process-tree.ts';
@@ -220,6 +220,118 @@ void test('stops a running root even when the recorded spawn window misses the k
     if (child.exitCode === null) {
       child.kill('SIGKILL');
     }
+  }
+});
+
+void test('timeout diagnostics do not postpone owned process termination', async () => {
+  const childProcess = (await import('node:child_process')).default;
+  const { syncBuiltinESMExports } = await import('node:module');
+  const originalSync = childProcess.spawnSync;
+  const originalExecFile = childProcess.execFile;
+  const originalSpawn = childProcess.spawn;
+  const originalKill = process.kill;
+  const events: string[] = [];
+  mock.method(childProcess, 'spawnSync', (...args: unknown[]) => {
+    if (args[0] === 'powershell') {
+      events.push('snapshot-start', 'snapshot-end');
+
+      return { stdout: 'diagnostic snapshot', stderr: '', status: 0 };
+    }
+
+    return Reflect.apply(originalSync, childProcess, args);
+  });
+  mock.method(childProcess, 'execFile', (...args: unknown[]) => {
+    if (args[0] === 'powershell') {
+      events.push('snapshot-start');
+      const callback = args.at(-1) as (error: null, stdout: string, stderr: string) => void;
+
+      return originalExecFile(process.execPath, ['-e', ''], () => {
+        events.push('snapshot-end');
+        callback(null, 'diagnostic snapshot', '');
+      });
+    }
+
+    return Reflect.apply(originalExecFile, childProcess, args);
+  });
+  mock.method(childProcess, 'spawn', (...args: unknown[]) => {
+    if (Array.isArray(args[1]) && args[1].includes('-RootProcessId')) {
+      events.push('cleanup-start');
+    }
+
+    return Reflect.apply(originalSpawn, childProcess, args);
+  });
+  mock.method(process, 'kill', (...args: unknown[]) => {
+    if (typeof args[0] === 'number' && args[0] < 0 && args[1] === 'SIGTERM') {
+      events.push('cleanup-start');
+    }
+
+    return Reflect.apply(originalKill, process, args);
+  });
+  syncBuiltinESMExports();
+
+  try {
+    const { result } = await capture(() => run('stubborn', directory(), { timeoutMs: 300, killGraceMs: 100 }));
+    assert.equal(result.status, 124);
+    assert.ok(events.includes('cleanup-start'), events.join(','));
+    assert.ok(events.indexOf('cleanup-start') < events.indexOf('snapshot-end'), events.join(','));
+  } finally {
+    mock.restoreAll();
+    syncBuiltinESMExports();
+  }
+});
+
+void test('a completed command retires its pending idle diagnostic process before settling', async () => {
+  const childProcess = (await import('node:child_process')).default;
+  const { syncBuiltinESMExports } = await import('node:module');
+  const originalExecFile = childProcess.execFile;
+  const originalInterval = globalThis.setInterval;
+  const originalNow = Date.now;
+  let offset = 0;
+  let diagnostic: ReturnType<typeof childProcess.execFile> | undefined;
+  let diagnosticClosed = false;
+  let observedIdle = false;
+  mock.method(Date, 'now', () => originalNow() + offset);
+  mock.method(globalThis, 'setInterval', (callback: () => void, milliseconds: number) =>
+    milliseconds === 15_000
+      ? originalInterval(() => {
+          if (!observedIdle) {
+            observedIdle = true;
+            callback();
+          }
+        }, 1)
+      : originalInterval(callback, milliseconds),
+  );
+  mock.method(childProcess, 'execFile', (...args: unknown[]) => {
+    if (args[0] === 'powershell') {
+      const options = args[2] as { signal?: AbortSignal };
+      const callback = args.at(-1) as (error: Error | null, stdout: string, stderr: string) => void;
+      diagnostic = originalExecFile(process.execPath, ['-e', 'setTimeout(() => {}, 10000)'], { signal: options.signal }, callback);
+      diagnostic.once('close', () => {
+        diagnosticClosed = true;
+      });
+
+      return diagnostic;
+    }
+
+    return Reflect.apply(originalExecFile, childProcess, args);
+  });
+  syncBuiltinESMExports();
+
+  try {
+    const running = capture(() => run('streams', directory()));
+    offset = 61_000;
+    const { result } = await running;
+    assert.equal(result.status, 0);
+    assert.ok(diagnostic?.pid, 'The idle diagnostic must actually start');
+    assert.equal(diagnosticClosed, true, 'Ownership was released before the diagnostic close event');
+    assert.equal(isRunning(diagnostic.pid), false, 'The diagnostic process survived ownership release');
+  } finally {
+    if (diagnostic?.exitCode === null && diagnostic.signalCode === null) {
+      diagnostic.kill();
+    }
+
+    mock.restoreAll();
+    syncBuiltinESMExports();
   }
 });
 

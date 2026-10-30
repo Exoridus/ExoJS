@@ -1,4 +1,4 @@
-import { type ChildProcess, spawn, type SpawnOptions, spawnSync } from 'node:child_process';
+import { type ChildProcess, execFile, spawn, type SpawnOptions } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createWriteStream, mkdirSync, openSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
@@ -67,7 +67,7 @@ class TailBuffer {
  * rule as the stop path - descendants of the child, never a sweep by executable
  * name - and terminates nothing.
  */
-const describeOwnedTree = (root: number | undefined): string[] => {
+const describeOwnedTree = async (root: number | undefined, signal?: AbortSignal): Promise<string[]> => {
   if (root === undefined) {
     return ['(no pid)'];
   }
@@ -79,12 +79,24 @@ const describeOwnedTree = (root: number | undefined): string[] => {
     '[void]$ids.Add($rootPid);' +
     'do { $added = $false; foreach ($p in $all) { if ($ids.Contains([int]$p.ParentProcessId) -and -not $ids.Contains([int]$p.ProcessId)) { [void]$ids.Add([int]$p.ProcessId); $added = $true } } } while ($added);' +
     '$all | Where-Object { $ids.Contains([int]$_.ProcessId) } | ForEach-Object { "$($_.ProcessId)<-$($_.ParentProcessId) $($_.Name)" }';
-  const out = spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], {
-    encoding: 'utf8',
-    timeout: 10_000,
-    env: { ...process.env, EXOJS_TREE_ROOT: String(root) },
+  const text = await new Promise<string>(resolveSnapshot => {
+    let diagnostic = 'snapshot failed';
+    const observer = execFile(
+      'powershell',
+      ['-NoProfile', '-NonInteractive', '-Command', script],
+      {
+        encoding: 'utf8',
+        timeout: 10_000,
+        windowsHide: true,
+        signal,
+        env: { ...process.env, EXOJS_TREE_ROOT: String(root) },
+      },
+      (error, stdout, stderr) => {
+        diagnostic = (stdout || stderr || error?.message || 'snapshot failed').trim();
+      },
+    );
+    observer.once('close', () => resolveSnapshot(diagnostic));
   });
-  const text = (out.stdout || out.stderr || 'snapshot failed').trim();
 
   return text
     .split('\n')
@@ -138,6 +150,8 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
     let stopping: Promise<void> | undefined;
     let cleanupDone = false;
     let drainTimer: ReturnType<typeof setTimeout> | undefined;
+    const idleController = new AbortController();
+    let idleSnapshot: Promise<string[]> | undefined;
     const paused = new Set<Readable>();
     const hasArguments = (options.args?.length ?? 0) > 0;
     const windowsShell = process.platform === 'win32' && (options.command === 'pnpm' || options.command.endsWith('.cmd'));
@@ -236,6 +250,18 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
         return;
       }
 
+      if (idleSnapshot) {
+        if (!idleController.signal.aborted) {
+          idleController.abort();
+          void idleSnapshot.then(() => {
+            idleSnapshot = undefined;
+            report();
+          });
+        }
+
+        return;
+      }
+
       closing = true;
       clearTimeout(timeout);
       clearInterval(heartbeat);
@@ -317,14 +343,19 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
 
       reason = why;
       requestedSignal = signal;
-      trace('stop', `why=${why} signal=${signal ?? 'none'} tree=[${describeOwnedTree(child.pid).join(' | ')}]`);
+      trace('stop', `why=${why} signal=${signal ?? 'none'}`);
       process.stderr.write(`STOP ${options.label}: ${why}; owned PID ${child.pid ?? 'not started'}; log ${displayPath}\n`);
-      stopping = stopProcessTree(child, graceMs, {
-        earliest: spawnStarted,
-        latest: spawnFinished,
-        ...(exitedAt === undefined ? {} : { exitedAt }),
-      })
-        .then(error => {
+      // Process inspection must not postpone termination or block the supervisor's deadline timers.
+      stopping = Promise.all([
+        describeOwnedTree(child.pid),
+        stopProcessTree(child, graceMs, {
+          earliest: spawnStarted,
+          latest: spawnFinished,
+          ...(exitedAt === undefined ? {} : { exitedAt }),
+        }),
+      ])
+        .then(([tree, error]) => {
+          trace('stop-snapshot', `tree=[${tree.join(' | ')}]`);
           cleanupError = error;
           cleanupDone = true;
 
@@ -398,12 +429,15 @@ export const runCommand = async (options: RunCommandOptions): Promise<RunCommand
     const idle = setInterval(() => {
       const idleMs = Date.now() - lastActivity;
 
-      if (finished || closing || idleMs < IDLE_MS) {
+      if (finished || closing || idleSnapshot || idleController.signal.aborted || idleMs < IDLE_MS) {
         return;
       }
 
-      const tree = describeOwnedTree(child.pid);
-      trace('idle-snapshot', `idleMs=${idleMs} tree=[${tree.join(' | ')}]`);
+      idleSnapshot = describeOwnedTree(child.pid, idleController.signal).catch(error => [String(error)]);
+      void idleSnapshot.then(tree => {
+        trace('idle-snapshot', `idleMs=${idleMs} tree=[${tree.join(' | ')}]`);
+        idleSnapshot = undefined;
+      });
     }, 15_000);
     idle.unref?.();
 
