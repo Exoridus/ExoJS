@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Upper bound on the taps one sweep may take per side, as a cost cap. Omit it and the tap count follows strength on its own, which is the usual case; set it to trade smoothness for texture fetches on a weak device. Capping does not shorten the blur: the taps still span the full kernel, so a cap well below the derived count widens their spacing and can show as banding. The ceiling is 32 either way."
+          "description": "Upper bound on the taps one sweep may take per side, as a cost cap. Omit it and the tap count follows strength on its own, which is the usual case; set it to trade smoothness for texture fetches on a weak device. Capping does not shorten the blur: the taps still span the full kernel, so a cap well below the derived count widens their spacing and can show as banding. The ceiling is 32 either way. 0 is the same as omitting it."
         },
         {
           "name": "strength",
