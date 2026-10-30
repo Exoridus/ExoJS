@@ -318,6 +318,7 @@ describe('WebStorageStore edge cases', () => {
 
   test('a throwing Storage rejects get/has/delete instead of throwing synchronously', async () => {
     const storage = createWebStorage();
+
     const denied = (): never => {
       throw new Error('SecurityError: denied');
     };

@@ -62,6 +62,7 @@ export class AudioSend {
     } catch {
       // The source already dropped the edge (InvalidAccessError); nothing left to cut.
     }
+
     this._source = source;
     source.connect(this._gain);
   }
