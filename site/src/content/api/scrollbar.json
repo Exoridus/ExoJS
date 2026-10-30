@@ -348,7 +348,7 @@
         },
         {
           "name": "_onEnabledChanged",
-          "signature": "_onEnabledChanged(_effectiveEnabled: boolean): void",
+          "signature": "_onEnabledChanged(effectiveEnabled: boolean): void",
           "signatureTokens": [
             {
               "text": "_onEnabledChanged",
@@ -359,7 +359,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "_effectiveEnabled",
+              "text": "effectiveEnabled",
               "kind": "param"
             },
             {
@@ -385,7 +385,7 @@
           ],
           "params": [
             {
-              "name": "_effectiveEnabled",
+              "name": "effectiveEnabled",
               "type": "boolean",
               "optional": false
             }
