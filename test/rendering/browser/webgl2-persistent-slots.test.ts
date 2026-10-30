@@ -20,6 +20,7 @@ import type { DerivedSlotStats } from '#rendering/plan/DerivedSelectionState';
 import type { RenderNode } from '#rendering/RenderNode';
 import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { Sprite } from '#rendering/sprite/Sprite';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
@@ -114,6 +115,52 @@ const settle = (backend: WebGl2Backend, node: RenderNode, frames = 6): void => {
 };
 
 describe('WebGL2 persistent-indexed selection', () => {
+  test.each([undefined, true, false])('RenderTexture orientation survives persistent promotion (flipY=%s)', async flipY => {
+    const backend = await createBackend();
+    const texture = new RenderTexture(tile, tile * 2, flipY === undefined ? undefined : { flipY });
+    const redTexture = solidTexture('#ff0000');
+    const blueTexture = solidTexture('#0000ff');
+    const pattern = new Container();
+    pattern.addChild(new Sprite(redTexture), new Sprite(blueTexture).setPosition(0, tile));
+    const root = new Container();
+    root.addChild(new Sprite(texture));
+    root.cullable = false;
+    const persistentDraw = vi.spyOn(backend, '_drawPersistentOrder');
+
+    try {
+      backend.setRenderTarget(texture);
+      render(backend, pattern);
+      backend.setRenderTarget(null);
+      render(backend, root);
+      expect(root._retainedRootRepresentation().heldPersistentSlots).toBeNull();
+      expect(persistentDraw).not.toHaveBeenCalled();
+      const liveTop = readWebGl2Pixel(backend, tile / 2, tile / 2);
+      const liveBottom = readWebGl2Pixel(backend, tile / 2, tile * 1.5);
+      expectPixelNear(liveTop, flipY === false ? blue : red);
+      expectPixelNear(liveBottom, flipY === false ? red : blue);
+
+      for (let frame = 0; frame < 3; frame++) {
+        backend.view.move(canvasSize * 4, 0);
+        render(backend, root);
+        backend.view.move(-canvasSize * 4, 0);
+        render(backend, root);
+      }
+
+      expect(root._retainedRootRepresentation().heldPersistentSlots).not.toBeNull();
+      expect(persistentDraw).toHaveBeenCalled();
+      expectPixelNear(readWebGl2Pixel(backend, tile / 2, tile / 2), liveTop);
+      expectPixelNear(readWebGl2Pixel(backend, tile / 2, tile * 1.5), liveBottom);
+    } finally {
+      persistentDraw.mockRestore();
+      root.destroy();
+      pattern.destroy();
+      texture.destroy();
+      redTexture.destroy();
+      blueTexture.destroy();
+      backend.destroy();
+    }
+  });
+
   test('a live batch flushed after a slot draw keeps its own vertex layout', async () => {
     const backend = await createBackend();
     const rootA = new Container();

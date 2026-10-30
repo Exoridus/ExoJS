@@ -4,7 +4,7 @@ import type { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { PersistentSlotBundle } from '#rendering/plan/persistentSlotDraw';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import { SOURCE_QUAD_FLOATS } from '#rendering/sourceQuadRecord';
-import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { TRANSFORM_FLOATS_PER_ROW, TRANSFORM_TINT_BYTES_PER_ROW } from '#rendering/TransformBuffer';
 import { BlendModes } from '#rendering/types';
@@ -362,8 +362,8 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
    * Deliberately takes offsets into typed arrays rather than a drawable: the
    * whole point of the source-side prepack is that an item entering the view is
    * never read out of the scene graph again, so this method must have no way to
-   * do so. The quad record's eight floats are already this store's quad layout -
-   * local bounds then UV - so they copy straight across.
+   * do so. The quad record's eight floats use this store's layout - local bounds
+   * then UV - with render-target orientation normalized for WebGPU.
    *
    * `textureIndex` overwrites the canonical transform row's spare fourth
    * component, which the shared packer leaves at zero and no other shader reads.
@@ -394,6 +394,15 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
 
     for (let i = 0; i < floatsPerQuadRecord; i++) {
       quadRecords[quadTarget + i] = quads[quadOffset + i]!;
+    }
+
+    const texture = this.textures[textureIndex];
+
+    // Canonical quads include RenderTexture's flip, but WebGPU attachments use top-down storage.
+    if (texture instanceof RenderTexture && texture.flipY) {
+      const top = quadRecords[quadTarget + 5]!;
+      quadRecords[quadTarget + 5] = quadRecords[quadTarget + 7]!;
+      quadRecords[quadTarget + 7] = top;
     }
 
     const tintTarget = slot * tintBytesPerSlot;
