@@ -308,27 +308,31 @@ describe('IndexedDbKeyValueStore', () => {
     expect(() => store.destroy()).not.toThrow();
   });
 
-describe('WebStorageStore edge cases', () => {
-  test.each([['undefined', undefined], ['a function', () => 1], ['a symbol', Symbol('s')]])('set rejects %s and stores nothing', async (_label, value) => {
-    const store = new WebStorageStore(createWebStorage());
+  describe('WebStorageStore edge cases', () => {
+    test.each([
+      ['undefined', undefined],
+      ['a function', () => 1],
+      ['a symbol', Symbol('s')],
+    ])('set rejects %s and stores nothing', async (_label, value) => {
+      const store = new WebStorageStore(createWebStorage());
 
-    await expect(store.set('k', value)).rejects.toThrow('value is not JSON-serializable');
-    await expect(store.has('k')).resolves.toBe(false);
+      await expect(store.set('k', value)).rejects.toThrow('value is not JSON-serializable');
+      await expect(store.has('k')).resolves.toBe(false);
+    });
+
+    test('a throwing Storage rejects get/has/delete instead of throwing synchronously', async () => {
+      const storage = createWebStorage();
+
+      const denied = (): never => {
+        throw new Error('SecurityError: denied');
+      };
+
+      storage.getItem = denied;
+      const store = new WebStorageStore(storage);
+
+      await expect(store.get('k')).rejects.toThrow(/denied/);
+      await expect(store.has('k')).rejects.toThrow(/denied/);
+      await expect(store.delete('k')).rejects.toThrow(/denied/);
+    });
   });
-
-  test('a throwing Storage rejects get/has/delete instead of throwing synchronously', async () => {
-    const storage = createWebStorage();
-
-    const denied = (): never => {
-      throw new Error('SecurityError: denied');
-    };
-
-    storage.getItem = denied;
-    const store = new WebStorageStore(storage);
-
-    await expect(store.get('k')).rejects.toThrow(/denied/);
-    await expect(store.has('k')).rejects.toThrow(/denied/);
-    await expect(store.delete('k')).rejects.toThrow(/denied/);
-  });
-});
 });

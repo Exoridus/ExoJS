@@ -1,6 +1,7 @@
 import { type Seconds, seconds } from '#core/units';
 
-const finiteOr = (value: number | undefined, fallback: number): number => (value !== undefined && Number.isFinite(value) ? value : fallback);
+const finiteOr = (value: number | undefined, fallback: number): number =>
+  value !== undefined && Number.isFinite(value) ? value : fallback;
 
 export interface EnvelopeOptions {
   /** Attack time - gain ramps from 0 to peak (1.0). Default 0.01. */
