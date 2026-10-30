@@ -65,7 +65,7 @@ export const playgroundDiagnostics = (page: Page, directory: string) => {
         for (const editor of window.monaco?.editor.getEditors() ?? []) {
           const record = kind => {
             const model = editor.getModel();
-            events.push({ms:Math.round(performance.now()-started),kind,uri:model?.uri.path,version:model?.getVersionId(),focused:editor.hasTextFocus()});
+            events.push({ms:Math.round(performance.now()-started),kind,uri:model?.uri.toString(),version:model?.getVersionId(),focused:editor.hasTextFocus()});
             if (events.length > 160) events.shift();
           };
           editor.onDidChangeModel(() => record('model'));
@@ -97,10 +97,10 @@ export const playgroundDiagnostics = (page: Page, directory: string) => {
             } catch { return {ready:'unavailable'}; }
           })(),
           models:(window.monaco?.editor.getModels() ?? []).filter(m=>m.uri.path.startsWith('/examples/')).slice(0,12).map(m=>({
-            uri:m.uri.path,version:m.getVersionId(),source:m.getValue(),
+            uri:m.uri.toString(),version:m.getVersionId(),source:m.getValue(),
             markers:window.monaco.editor.getModelMarkers({resource:m.uri}).slice(0,8).map(d=>({severity:d.severity,line:d.startLineNumber,code:d.code}))
           })),
-          editors:(window.monaco?.editor.getEditors() ?? []).map(e=>({uri:e.getModel()?.uri.path,version:e.getModel()?.getVersionId(),focused:e.hasTextFocus(),readOnly:e.getOption(window.monaco.editor.EditorOption.readOnly)})),
+          editors:(window.monaco?.editor.getEditors() ?? []).map(e=>({uri:e.getModel()?.uri.toString(),version:e.getModel()?.getVersionId(),focused:e.hasTextFocus(),readOnly:e.getOption(window.monaco.editor.EditorOption.readOnly)})),
           status:[...document.querySelectorAll('[role="status"]')].map(e=>e.textContent?.slice(0,200)),
           transitions:window.__playgroundDiagnosticEvents ?? []
         }))()`,
