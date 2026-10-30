@@ -2,7 +2,7 @@ import { AssetCacheError, type AssetCacheOperation } from '#assets/cache/AssetCa
 import { supportsIndexedDb } from '#core/utils';
 
 import type { Database } from './Database';
-import { openIndexedDb, requestResult, transactionComplete } from './indexedDbSupport';
+import { issueWrite, openIndexedDb, requestResult, transactionComplete } from './indexedDbSupport';
 
 /** A record as written into an object store keyed by `name`. */
 interface StoredRecord<T> {
@@ -102,16 +102,15 @@ export class IndexedDbDatabase implements Database {
 
   public async save(type: string, name: string, data: unknown): Promise<void> {
     const store = await this._objectStore('write', type, 'readwrite', name);
-    const committed = transactionComplete(store.transaction, {
+    const failure = {
       operation: 'write',
       message: 'An error occurred while saving an item.',
       store: type,
       key: name,
-    });
+    } as const;
+    const committed = transactionComplete(store.transaction, failure);
 
-    store.put({ name, data });
-
-    return committed;
+    return issueWrite(store.transaction, committed, failure, () => store.put({ name, data }));
   }
 
   public async delete(type: string, name: string): Promise<boolean> {
@@ -123,10 +122,12 @@ export class IndexedDbDatabase implements Database {
       key: name,
     });
 
+    const existing = store.get(name);
+
     store.delete(name);
     await committed;
 
-    return true;
+    return existing.result !== undefined;
   }
 
   public async clearStorage(type: string): Promise<boolean> {

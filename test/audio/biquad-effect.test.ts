@@ -168,4 +168,8 @@ describe('BiquadEffect', () => {
     spy.restore();
     fx.destroy();
   });
+
+  test('a non-finite frequency is rejected at construction', () => {
+    expect(() => new BiquadEffect({ frequency: Number.NaN })).toThrow(RangeError);
+  });
 });

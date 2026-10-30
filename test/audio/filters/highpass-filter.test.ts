@@ -250,4 +250,11 @@ describe('HighpassFilter', () => {
       filter.destroy();
     });
   });
+
+  test('construction clamps frequency and resonance like the setters do', () => {
+    const filter = new HighpassFilter({ frequency: 99999, resonance: 0 });
+
+    expect(filter.frequency).toBe(20000);
+    expect(filter.resonance).toBe(0.0001);
+  });
 });

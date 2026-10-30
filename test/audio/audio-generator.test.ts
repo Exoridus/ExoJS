@@ -476,6 +476,25 @@ describe('AudioGenerator', () => {
     expect(gen.poolSize).toBe(1);
   });
 
+  test('shrinking poolSize stops the excess voices, and later plays stay within the new size', () => {
+    const system = new AudioSystem();
+    const spy = setupSpy();
+    const gen = new AudioGenerator({ poolSize: 3 });
+    const voices = [system.play(gen), system.play(gen), system.play(gen)];
+
+    gen.poolSize = 1;
+
+    expect(voices.map(voice => voice.ended)).toEqual([true, true, false]);
+
+    const next = system.play(gen);
+
+    expect(voices[2]?.ended).toBe(true);
+    expect(next.ended).toBe(false);
+
+    spy.restore();
+    gen.destroy();
+  });
+
   test('poolStrategy setter updates the eviction strategy', () => {
     const gen = new AudioGenerator();
     gen.poolStrategy = SoundPoolStrategy.LeastRecentlyUsed;

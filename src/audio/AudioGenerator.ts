@@ -91,6 +91,7 @@ export class AudioGenerator implements Playable {
 
   public set poolSize(value: number) {
     this._poolSize = Math.max(1, Math.floor(value));
+    this._evictDownTo(this._poolSize);
   }
 
   public get poolStrategy(): SoundPoolStrategy {
@@ -145,15 +146,7 @@ export class AudioGenerator implements Playable {
 
     this._pruneEndedVoices();
 
-    if (this._activeVoices.length >= this._poolSize) {
-      const victimIndex = this._pickEvictionVictim();
-      const victim = this._activeVoices[victimIndex];
-
-      if (victim) {
-        this._activeVoices.splice(victimIndex, 1);
-        victim.voice.stop();
-      }
-    }
+    this._evictDownTo(this._poolSize - 1);
 
     const audioContext = getAudioContext();
     const output = audioContext.createGain();
@@ -222,6 +215,21 @@ export class AudioGenerator implements Playable {
       if (this._activeVoices[i]?.voice.ended === true) {
         this._activeVoices.splice(i, 1);
       }
+    }
+  }
+
+  /** Stop voices, by the configured strategy, until at most `limit` remain. */
+  private _evictDownTo(limit: number): void {
+    while (this._activeVoices.length > limit) {
+      const victimIndex = this._pickEvictionVictim();
+      const victim = this._activeVoices[victimIndex];
+
+      if (!victim) {
+        break;
+      }
+
+      this._activeVoices.splice(victimIndex, 1);
+      victim.voice.stop();
     }
   }
 

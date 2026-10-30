@@ -1,3 +1,4 @@
+import { logger } from '#core/Logger';
 import { clamp } from '#math/utils';
 
 import { isAudioContextReady, onAudioContextReady } from './audioContext';
@@ -248,9 +249,16 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
   private _play(): void {
     // Wrapped: a test double or legacy element may return nothing from play().
     Promise.resolve(this._element.play()).catch((error: unknown) => {
-      if (!(error instanceof DOMException && error.name === 'AbortError')) {
-        throw error;
+      // A pause() or seek that interrupts the request aborts it; that is not a failure.
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
       }
+
+      logger.warn('Audio stream playback was rejected; the voice was ended.', {
+        source: 'AudioStream',
+        ...(error instanceof Error && { error }),
+      });
+      this._finish();
     });
   }
 

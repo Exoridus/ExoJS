@@ -29,6 +29,8 @@ interface DatabaseRecord {
 /** Single-shot fault queue shared by every object store carved out of one fake factory. */
 class RequestFaultQueue {
   private _nextError: Error | null = null;
+  /** Thrown synchronously by the next `put()`, like a `DataCloneError`. */
+  public putError: Error | null = null;
 
   public queue(error: Error): void {
     this._nextError = error;
@@ -92,6 +94,14 @@ class FakeIdbObjectStore {
   }
 
   public put(value: Record<string, unknown>): FakeIdbRequest {
+    if (this._faults.putError !== null) {
+      const error = this._faults.putError;
+
+      this._faults.putError = null;
+
+      throw error;
+    }
+
     const key = value[this._store.keyPath] as string;
 
     return this._request(() => {
@@ -405,6 +415,8 @@ export interface FakeIndexedDb {
   failNextUpgrade(error?: Error): void;
   /** The next object-store request (`get`/`put`/`delete`/`clear`) fails. */
   failNextRequest(error?: Error): void;
+  /** The next `put()` throws synchronously, like a `DataCloneError`. */
+  throwOnNextPut(error?: Error): void;
   /** The next `deleteDatabase()` call fails. */
   failNextDeleteDatabase(error?: Error): void;
   /** True once `name` has been opened at least once (survives disconnects). */
@@ -431,6 +443,9 @@ export const createFakeIndexedDb = (): FakeIndexedDb => {
     },
     failNextUpgrade: (error = new Error('fake upgrade error')) => {
       factory.queueUpgradeError(error);
+    },
+    throwOnNextPut: (error = new Error('fake put error')) => {
+      factory.faults.putError = error;
     },
     failNextRequest: (error = new Error('fake request error')) => {
       factory.faults.queue(error);

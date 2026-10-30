@@ -35,6 +35,11 @@ export class BiquadEffect extends AudioEffect {
     super();
     this._type = options.type ?? 'lowpass';
     this._frequency = options.frequency ?? 1000;
+
+    if (!Number.isFinite(this._frequency)) {
+      throw new RangeError(`BiquadEffect frequency must be a finite number, got ${this._frequency}.`);
+    }
+
     this._resonance = options.resonance ?? 1;
     this._gain = options.gain ?? 0;
     this._detune = options.detune ?? 0;

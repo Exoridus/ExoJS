@@ -60,4 +60,31 @@ describe('IndexedDbKeyValueStore schema ownership with the IndexedDB fixture', (
     expect(fake.storeNamesOf('explicit')).toEqual(['settings']);
     settings.destroy();
   });
+
+  describe('IndexedDbKeyValueStore delete and write failures', () => {
+    test('delete reports whether an entry existed', async () => {
+      const { IndexedDbKeyValueStore } = await loadStore();
+      const store = new IndexedDbKeyValueStore('delete-result');
+
+      await store.set('present', 1);
+
+      await expect(store.delete('present')).resolves.toBe(true);
+      await expect(store.delete('present')).resolves.toBe(false);
+      await expect(store.delete('missing')).resolves.toBe(false);
+      store.destroy();
+    });
+
+    test('a synchronous put failure rejects as an AssetCacheError naming store and key', async () => {
+      const { IndexedDbKeyValueStore, fake } = await loadStore();
+      const store = new IndexedDbKeyValueStore({ name: 'clone-failure', storeName: 'saves' });
+      const cause = new Error('could not be cloned');
+
+      fake.throwOnNextPut(cause);
+
+      const failure: unknown = await store.set('slot', { a: 1 }).catch((error: unknown) => error);
+
+      expect(failure).toMatchObject({ name: 'AssetCacheError', operation: 'write', store: 'saves', key: 'slot', cause });
+      store.destroy();
+    });
+  });
 });

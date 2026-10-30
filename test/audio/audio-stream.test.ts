@@ -59,6 +59,36 @@ describe('AudioStream', () => {
     stream.destroy();
   });
 
+  test('a play() rejection other than AbortError ends the voice with one warning', async () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    vi.spyOn(el, 'play').mockRejectedValue(new DOMException('x', 'NotSupportedError'));
+
+    const voice = system.play(new AudioStream(el)) as AudioStreamVoice;
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(voice.ended).toBe(true);
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  test('an AbortError play() rejection leaves the voice running', async () => {
+    const system = new AudioSystem();
+    const el = createAudioElementStub();
+
+    vi.spyOn(el, 'play').mockRejectedValue(new DOMException('x', 'AbortError'));
+
+    const voice = system.play(new AudioStream(el)) as AudioStreamVoice;
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(voice.ended).toBe(false);
+  });
+
   test('voice.pause()/resume() drive the underlying element', () => {
     const system = new AudioSystem();
     const el = createAudioElementStub();

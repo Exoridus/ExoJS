@@ -305,4 +305,12 @@ describe('Envelope', () => {
       env.destroy();
     }).not.toThrow();
   });
+
+  test('non-finite options fall back to the defaults', () => {
+    const envelope = new Envelope({ attack: Number.NaN as never, sustainLevel: Number.NaN });
+
+    expect(Number.isFinite(envelope.attack)).toBe(true);
+    expect(envelope.attack).toBe(0.01);
+    expect(envelope.sustainLevel).toBe(0.7);
+  });
 });
