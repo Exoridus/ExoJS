@@ -57,7 +57,11 @@ export class AudioSend {
       return;
     }
 
-    this._source.disconnect(this._gain);
+    try {
+      this._source.disconnect(this._gain);
+    } catch {
+      // The source already dropped the edge (InvalidAccessError); nothing left to cut.
+    }
     this._source = source;
     source.connect(this._gain);
   }
@@ -90,8 +94,9 @@ export class AudioSend {
   }
 
   /**
-   * Disconnect and discard. Idempotent. The source node and the target bus are
-   * untouched - only this send's own gain node goes away.
+   * Disconnect and discard. Idempotent. The source node keeps its other
+   * connections and the target bus is untouched - only this send's own gain node
+   * and the source's edge into it go away.
    */
   public destroy(): void {
     if (this._destroyed) {
@@ -101,6 +106,7 @@ export class AudioSend {
     this._destroyed = true;
     this._pendingBusSetup?.();
     this._pendingBusSetup = null;
+    this._source.disconnect(this._gain);
     this._gain.disconnect();
   }
 

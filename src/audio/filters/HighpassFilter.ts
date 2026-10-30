@@ -20,8 +20,8 @@ export class HighpassFilter extends AudioEffect {
 
   public constructor(options: HighpassFilterOptions = {}) {
     super();
-    this._frequency = options.frequency ?? 1000;
-    this._resonance = options.resonance ?? 1;
+    this._frequency = Math.max(20, Math.min(20000, options.frequency ?? 1000));
+    this._resonance = Math.max(0.0001, options.resonance ?? 1);
 
     this._deferSetup(context => this._setup(context));
   }

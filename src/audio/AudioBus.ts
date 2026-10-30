@@ -327,6 +327,10 @@ export class AudioBus {
   }
 
   private _setupAudio(audioContext: AudioContext): void {
+    if (this._destroyed) {
+      return;
+    }
+
     const inputNode = audioContext.createGain();
     const panNode = audioContext.createStereoPanner();
     const outputNode = audioContext.createGain();
@@ -384,8 +388,17 @@ export class AudioBus {
 
     this._pendingSetup = null;
 
+    // One callback's failure must not skip the rest, nor abort the unlock
+    // dispatch this runs inside.
     for (const callback of pending) {
-      callback();
+      try {
+        callback();
+      } catch (error: unknown) {
+        logger.error('An AudioBus setup callback threw.', {
+          source: 'AudioBus',
+          ...(error instanceof Error && { error }),
+        });
+      }
     }
   }
 
@@ -401,6 +414,10 @@ export class AudioBus {
    * own pending callback (AU3).
    */
   public onceSetup(callback: () => void): () => void {
+    if (this._destroyed) {
+      return (): void => undefined;
+    }
+
     if (this._setup) {
       callback();
 

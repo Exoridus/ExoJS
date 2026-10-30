@@ -840,6 +840,74 @@ describe('AudioBus', () => {
     vi.resetModules();
   });
 
+  test('onceSetup() after destroy() queues nothing, and a late ready signal builds no nodes', async () => {
+    vi.resetModules();
+    const fakeSignal = new Signal<[AudioContext]>();
+    const createGain = vi.fn();
+    const fakeCtx = { currentTime: 0, destination: {}, createGain, createStereoPanner: vi.fn() } as unknown as AudioContext;
+
+    vi.doMock('#audio/audioContext', () => ({
+      getAudioContext: () => fakeCtx,
+      isAudioContextReady: () => false,
+      onAudioContextReady: fakeSignal,
+    }));
+
+    const { AudioBus: DeferredAudioBus } = await import('#audio/AudioBus');
+    const bus = new DeferredAudioBus('late-setup');
+    const callback = vi.fn();
+
+    bus.destroy();
+    bus.onceSetup(callback);
+
+    expect((bus as unknown as { _pendingSetup: unknown })._pendingSetup).toBeNull();
+
+    (bus as unknown as { _onAudioContextReady: (ctx: AudioContext) => void })._onAudioContextReady(fakeCtx);
+
+    expect(callback).not.toHaveBeenCalled();
+    expect(createGain).not.toHaveBeenCalled();
+
+    vi.doUnmock('#audio/audioContext');
+    vi.resetModules();
+  });
+
+  test('a throwing setup callback does not skip the next one or the rest of the unlock dispatch', async () => {
+    vi.resetModules();
+    const fakeSignal = new Signal<[AudioContext]>();
+    const makeFakeGain = () => ({ connect: vi.fn(), disconnect: vi.fn(), gain: { setTargetAtTime: vi.fn(), setValueAtTime: vi.fn() } });
+    const fakeCtx = {
+      currentTime: 0,
+      destination: {},
+      createGain: makeFakeGain,
+      createStereoPanner: () => ({ connect: vi.fn(), disconnect: vi.fn(), pan: { setTargetAtTime: vi.fn() } }),
+    } as unknown as AudioContext;
+
+    vi.doMock('#audio/audioContext', () => ({
+      getAudioContext: () => fakeCtx,
+      isAudioContextReady: () => false,
+      onAudioContextReady: fakeSignal,
+    }));
+
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { AudioBus: DeferredAudioBus } = await import('#audio/AudioBus');
+    const bus = new DeferredAudioBus('throwing-setup');
+    const second = vi.fn();
+    const laterListener = vi.fn();
+
+    bus.onceSetup(() => {
+      throw new Error('first failed');
+    });
+    bus.onceSetup(second);
+    fakeSignal.add(laterListener);
+
+    expect(() => fakeSignal.dispatch(fakeCtx)).not.toThrow();
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(laterListener).toHaveBeenCalledTimes(1);
+
+    consoleErrorSpy.mockRestore();
+    vi.doUnmock('#audio/audioContext');
+    vi.resetModules();
+  });
+
   test('onceSetup() flushes queued callbacks once the bus sets up (AU3)', async () => {
     vi.resetModules();
     const fakeSignal = new Signal<[AudioContext]>();
