@@ -256,13 +256,16 @@ describe('AudioInput / InputVoice', () => {
     const voice = system.open(input);
 
     const promise = voice.record(Time.seconds(0.05));
-    const rejection = expect(promise).rejects.toThrow('Recording failed.');
+    const rejection = promise.then(
+      () => undefined,
+      (error: unknown) => error,
+    );
     const recorder = MockMediaRecorder.instances[0]!;
     const stopSpy = vi.spyOn(recorder, 'stop');
 
     recorder.triggerError();
     await vi.advanceTimersByTimeAsync(100);
-    await rejection;
+    expect(await rejection).toEqual(new Error('Recording failed.'));
 
     expect(stopSpy).not.toHaveBeenCalled();
 

@@ -3,9 +3,9 @@ import { AssetCacheError } from '#assets/cache/AssetCacheError';
 import { AssetCacheMissError } from '#assets/cache/AssetCacheMissError';
 import type { CacheLayout } from '#assets/cache/CacheLayout';
 import { SingleEntryLayout } from '#assets/cache/SingleEntryLayout';
-import { logger } from '#core/Logger';
 import type { Connectivity, NetworkSnapshot } from '#core/Connectivity';
 import { unrestrictedNetwork } from '#core/Connectivity';
+import { logger } from '#core/Logger';
 
 import { AssetDecodeError } from './AssetDecodeError';
 import type { AssetFactoryContext } from './AssetFactory';

@@ -58,11 +58,7 @@ export interface FrameLightingOptions extends LightingOptions {
 const maxShadowResolution = 4096;
 
 /** The backend options a frame-composing renderer is built from. @internal */
-export const frameBackendOptions = (
-  host: LightingHost,
-  options: FrameLightingOptions,
-  resolution: number,
-): FrameLightingBackendOptions => {
+export const frameBackendOptions = (host: LightingHost, options: FrameLightingOptions, resolution: number): FrameLightingBackendOptions => {
   const lightResolution = options.lightResolution ?? resolution;
   const shadowResolution = options.shadowResolution ?? 256;
 

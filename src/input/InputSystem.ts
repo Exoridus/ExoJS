@@ -1,3 +1,10 @@
+/*
+ * eslint-disable-next-line is not enough for `max-lines`: the rule reports the
+ * file, not a line. The input system is one cohesive surface over a shared channel
+ * buffer, and splitting it would scatter that state across modules. Known
+ * deviation, candidate for extraction.
+ */
+/* eslint-disable max-lines */
 import type { Application } from '#core/Application';
 import { logger } from '#core/Logger';
 import { Signal } from '#core/Signal';

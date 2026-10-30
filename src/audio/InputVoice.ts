@@ -72,8 +72,6 @@ export class InputVoice extends BaseVoice {
     });
 
     return new Promise<Sound>((resolve, reject) => {
-      let timer: ReturnType<typeof setTimeout> | undefined;
-
       const onStop = (): void => {
         void (async (): Promise<void> => {
           try {
@@ -85,6 +83,7 @@ export class InputVoice extends BaseVoice {
           }
         })();
       };
+
       // A failed recorder never delivers a usable blob: cancel the pending stop so
       // it does not decode a partial capture or keep the timer alive.
       const onError = (): void => {
@@ -98,7 +97,7 @@ export class InputVoice extends BaseVoice {
       recorder.addEventListener('error', onError);
 
       recorder.start();
-      timer = setTimeout(
+      const timer = setTimeout(
         () => {
           if (recorder.state !== 'inactive') {
             recorder.stop();

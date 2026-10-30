@@ -969,7 +969,9 @@ export class Loader {
     // `{ type, source }` config by its suffix. An already-built `Asset` and a
     // full config pass through unchanged.
     if (typeof arg0 !== 'object' || arg0 === null) {
-      throw new TypeError(`Loader.load() expects an Asset, an Assets catalog, a leaf, a path string or a record of assets, got ${String(arg0)}.`);
+      throw new TypeError(
+        `Loader.load() expects an Asset, an Assets catalog, a leaf, a path string or a record of assets, got ${String(arg0)}.`,
+      );
     }
 
     const configMap = arg0 as Record<string, AssetInput>;
