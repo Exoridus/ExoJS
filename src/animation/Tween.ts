@@ -446,7 +446,8 @@ export class Tween<T extends object = object> {
 
         this._onRepeat?.();
 
-        if (this.state !== TweenState.Active) {
+        // Pausing defers property writes, but still prepares the next cycle.
+        if (!this._canPrepareNextCycle()) {
           return;
         }
 
@@ -468,6 +469,10 @@ export class Tween<T extends object = object> {
         this._complete();
       }
     }
+  }
+
+  private _canPrepareNextCycle(): boolean {
+    return this._state === TweenState.Active || this._state === TweenState.Paused;
   }
 
   private _captureStartValues(): void {
