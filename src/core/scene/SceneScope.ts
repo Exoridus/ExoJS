@@ -213,8 +213,9 @@ export class SceneScope<Data = unknown> {
     const errors: unknown[] = [];
 
     this._guard(errors, () => {
-      this._attachAutoRoots();
+      // Set first so a partial attach is still detached on teardown.
       this._rootsAttached = true;
+      this._attachAutoRoots();
     });
     this._guard(errors, () => this.interaction.resume());
     this._guard(errors, () => this.tweens.activate());
