@@ -57,7 +57,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Disconnect and discard. Idempotent. The source node keeps its other connections and the target bus is untouched - only this send's own gain node and the source's edge into it go away."
+          "description": "Disconnect and discard. Idempotent. The source node and the target bus are untouched - only this send's own gain node goes away."
         }
       ],
       "paragraphs": [],
