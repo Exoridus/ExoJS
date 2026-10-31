@@ -1372,4 +1372,15 @@ describe('layoutText textTransform', () => {
 
     expect(wrapped.lines).toHaveLength(2);
   });
+
+  test('CRLF and lone CR are line separators, not laid-out glyphs', () => {
+    const style = new TextStyle({ fontSize: 16, align: 'left' });
+    const crlf = recordingProvider();
+    const cr = recordingProvider();
+
+    expect(layoutText('a\r\nb', style, {}, crlf.provider).placements).toHaveLength(2);
+    expect(layoutText('a\rb', style, {}, cr.provider).placements).toHaveLength(2);
+    expect(crlf.units).not.toContain('\r');
+    expect(cr.units).not.toContain('\r');
+  });
 });
