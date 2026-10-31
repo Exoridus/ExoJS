@@ -109,10 +109,34 @@ describe('SystemRegistry ordering — before/after', () => {
     const b = new CycleSystemB();
 
     registry.add(a, { before: [b] });
-    registry.add(b, { before: [a] });
 
-    expect(() => tick(registry)).toThrow(/CycleSystemA/);
-    expect(() => tick(registry)).toThrow(/CycleSystemB/);
+    expect(() => registry.add(b, { before: [a] })).toThrow(/CycleSystemA/);
+    expect(registry.has(b)).toBe(false);
+    expect(registry.size).toBe(1);
+    expect(() => tick(registry)).not.toThrow();
+  });
+
+  test('a cycle closed by an add buffered during a frame is rejected without losing the other adds of that frame', () => {
+    const registry = new SystemRegistry();
+    const log: string[] = [];
+    const a = makeSystem(log, 'a');
+    const b = makeSystem(log, 'b');
+    const ok = makeSystem(log, 'ok');
+
+    registry.add(a, { before: [b] });
+
+    registry._beginFrame();
+    registry.add(b, { before: [a] });
+    registry.add(ok);
+
+    expect(() => registry._endFrame()).toThrow(/cycle/);
+    expect(registry.has(b)).toBe(false);
+    expect(registry.has(ok)).toBe(true);
+
+    registry.add(b);
+    tick(registry);
+
+    expect(log).toEqual(['a', 'ok', 'b']);
   });
 });
 

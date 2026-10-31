@@ -193,8 +193,9 @@ const devLastRegistry: WeakMap<System, WeakRef<SystemRegistry>> | null = __DEV__
  * replacement: `order`/registration sequence still decide ties among
  * registrations the graph doesn't relate to each other. A `before`/`after`
  * reference to a system outside the current phase - a different phase, or
- * never registered - is silently a no-op there, not an error. A cycle throws
- * once the affected phase list is next sorted.
+ * never registered - is silently a no-op there, not an error. A cycle among
+ * `before`/`after` constraints makes `add()` throw and leaves the registry
+ * unchanged; for an add buffered during a frame it throws at the frame boundary.
  *
  * Structural mutations are frame-scoped: a system added
  * during a frame - whether from outside or from another system's own
@@ -634,10 +635,22 @@ export class SystemRegistry implements Destroyable {
       devLastRegistry!.set(system, new WeakRef(this));
     }
 
-    this._registrations.set(system, registration);
-    this._activeCount++;
-
     const wants = (phase: SystemPhase): boolean => options?.phases === undefined || options.phases.includes(phase);
+
+    // Rejected before anything is registered, so a contradictory before/after
+    // set can neither leave a half-added system nor poison every later sort of
+    // the phase list it would have joined.
+    this._registrations.set(system, registration);
+
+    try {
+      this._assertAcyclic(registration, wants);
+    } catch (error) {
+      this._registrations.delete(system);
+
+      throw error;
+    }
+
+    this._activeCount++;
 
     if (system.preFrame !== undefined && wants('preFrame')) {
       this._preFrameList.push(registration);
@@ -665,6 +678,23 @@ export class SystemRegistry implements Destroyable {
     }
 
     this.onAdd.dispatch(system);
+  }
+
+  private _assertAcyclic(registration: SystemRegistration, wants: (phase: SystemPhase) => boolean): void {
+    const { system } = registration;
+    const phases: Array<[SystemPhase, SystemRegistration[], boolean]> = [
+      ['preFrame', this._preFrameList, system.preFrame !== undefined],
+      ['fixedUpdate', this._fixedList, system.fixedUpdate !== undefined],
+      ['update', this._updateList, system.update !== undefined],
+      ['draw', this._drawList, system.draw !== undefined],
+      ['postFrame', this._postFrameList, system.postFrame !== undefined],
+    ];
+
+    for (const [phase, list, implemented] of phases) {
+      if (implemented && wants(phase)) {
+        sortRegistrations([...list, registration], this._registrations);
+      }
+    }
   }
 
   /** Drop a queued removal so the frame boundary does not finalize it a second time. */
