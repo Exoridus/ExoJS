@@ -300,7 +300,11 @@ export const applyCommonFields = (node: SceneNode, data: SerializedNode): void =
     }
 
     if (typeof data.blendMode === 'number') {
-      node.blendMode = data.blendMode;
+      const blendModes = Object.values(BlendModes) as number[];
+
+      if (blendModes.includes(data.blendMode)) {
+        node.blendMode = data.blendMode;
+      }
     }
 
     if (typeof data.pixelSnapMode === 'number' && isPixelSnapMode(data.pixelSnapMode)) {

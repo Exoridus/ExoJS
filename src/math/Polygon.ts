@@ -180,6 +180,10 @@ export class Polygon implements ShapeLike {
   }
 
   public getBounds(out: Rectangle = new Rectangle()): Rectangle {
+    if (this._points.length === 0) {
+      return out.set(this.x, this.y, 0, 0);
+    }
+
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;

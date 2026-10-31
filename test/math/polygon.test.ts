@@ -386,6 +386,16 @@ describe('Polygon.getBounds()', () => {
 
     polygon.destroy();
   });
+
+  test('an empty polygon has finite zero bounds', () => {
+    const polygon = new Polygon([], 7, 9);
+    const bounds = polygon.getBounds();
+
+    expect(bounds.x).toBe(7);
+    expect(bounds.y).toBe(9);
+    expect(bounds.width).toBe(0);
+    expect(bounds.height).toBe(0);
+  });
 });
 
 describe('Polygon.contains()', () => {

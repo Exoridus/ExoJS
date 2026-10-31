@@ -28,6 +28,7 @@ import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { SDF_RADIUS, type Text } from '#rendering/text/Text';
 import type { GlyphInfo } from '#rendering/text/types';
 import { Texture } from '#rendering/texture/Texture';
+import { BlendModes } from '#rendering/types';
 
 // Text construction needs a GlyphAtlasPool; inject a mock so the Text-based
 // cases run without a real canvas 2D context (mirrors serialization.test.ts).
@@ -140,6 +141,13 @@ describe('serialization validation — node deserialization (untrusted input)', 
     expect(result.x).toBe(0);
     expect(result.y).toBe(0);
     expect(result.rotation).toBe(0);
+  });
+
+  it('drops a non-finite transform and an unknown blend mode', () => {
+    const sprite = deserializeTree(node({ type: 'Sprite', x: Number.POSITIVE_INFINITY, blendMode: 999 })) as Sprite;
+
+    expect(sprite.x).toBe(0);
+    expect(sprite.blendMode).toBe(BlendModes.Normal);
   });
 
   it('falls back to defaults for unknown enum values (fontWeight / align)', () => {

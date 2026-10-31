@@ -134,6 +134,19 @@ describe('ObservableSize', () => {
       size.destroy();
     });
 
+    test('a single argument applies uniformly, like Size.set()', () => {
+      const callback = vi.fn();
+      const size = new ObservableSize(callback, 5, 6);
+
+      size.set(10);
+
+      expect(size.width).toBe(10);
+      expect(size.height).toBe(10);
+      expect(callback).toHaveBeenCalledTimes(1);
+
+      size.destroy();
+    });
+
     test('returns this for chaining', () => {
       const callback = vi.fn();
       const size = new ObservableSize(callback);

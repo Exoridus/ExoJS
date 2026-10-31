@@ -209,8 +209,8 @@ export class Quadtree<T> {
 
   public destroy(): void {
     this._items.length = 0;
-    this._bounds.destroy();
 
+    // `_bounds` is borrowed from the caller, not owned by the tree.
     if (this._children !== null) {
       for (const child of this._children) {
         child.destroy();
