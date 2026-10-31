@@ -55,16 +55,27 @@ export class WebGl2StencilClipper {
       throw new Error('WebGl2StencilClipper: could not create vertex array object.');
     }
 
-    this._shader.connect(createWebGl2ShaderProgram(gl));
-    this._shader.sync();
+    let vertexBuffer: WebGl2RenderBuffer | null = null;
+    let vao: WebGl2VertexArrayObject;
 
-    const vertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._positions, BufferUsage.DynamicDraw).connect(
-      this._createBufferRuntime(gl),
-      backend.accountant,
-    );
-    const vao = new WebGl2VertexArrayObject(RenderingPrimitives.Triangles)
-      .addAttribute(vertexBuffer, this._shader.getAttribute('a_position'), gl.FLOAT, false, positionStrideBytes, 0)
-      .connect(this._createVaoRuntime(gl, vaoHandle));
+    try {
+      this._shader.connect(createWebGl2ShaderProgram(gl));
+      this._shader.sync();
+
+      vertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._positions, BufferUsage.DynamicDraw).connect(
+        this._createBufferRuntime(gl),
+        backend.accountant,
+      );
+      vao = new WebGl2VertexArrayObject(RenderingPrimitives.Triangles)
+        .addAttribute(vertexBuffer, this._shader.getAttribute('a_position'), gl.FLOAT, false, positionStrideBytes, 0)
+        .connect(this._createVaoRuntime(gl, vaoHandle));
+    } catch (error) {
+      vertexBuffer?.destroy();
+      gl.deleteVertexArray(vaoHandle);
+      this._shader.destroy();
+
+      throw error;
+    }
 
     this._connection = { gl, vao, vertexBuffer };
   }

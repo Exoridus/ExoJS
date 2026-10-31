@@ -1,5 +1,14 @@
 import { AudioEffect } from '@codexo/exojs';
 
+/** Carrier shapes a ring modulator can use; `'custom'` needs a `PeriodicWave` it never sets. */
+export type RingModulatorWaveform = Exclude<OscillatorType, 'custom'>;
+
+const assertWaveform = (waveform: OscillatorType): void => {
+  if (waveform === 'custom') {
+    throw new RangeError("RingModulatorEffect does not support the 'custom' waveform.");
+  }
+};
+
 /** Construction options for {@link RingModulatorEffect}. */
 export interface RingModulatorEffectOptions {
   /**
@@ -15,7 +24,7 @@ export interface RingModulatorEffectOptions {
    * because no `PeriodicWave` is set. Non-sine shapes introduce additional
    * harmonic content into both sidebands.
    */
-  waveform?: OscillatorType;
+  waveform?: RingModulatorWaveform;
   /**
    * Dry/wet mix, 0..1. The dry level is automatically `1 - wet`. Default 1.0
    * (fully wet / ring-modulated). Set to 0.5 for an equal mix of dry and
@@ -68,12 +77,13 @@ interface RingModulatorEffectSetup {
 export class RingModulatorEffect extends AudioEffect {
   private _setup: RingModulatorEffectSetup | null = null;
   private _frequency: number;
-  private _waveform: OscillatorType;
+  private _waveform: RingModulatorWaveform;
   private _wet: number;
 
   public constructor(options: RingModulatorEffectOptions = {}) {
     super();
     this._frequency = Math.max(0, Math.min(20000, options.frequency ?? 440));
+    assertWaveform(options.waveform ?? 'sine');
     this._waveform = options.waveform ?? 'sine';
     this._wet = Math.max(0, Math.min(1, options.wet ?? 1));
     this._deferSetup(context => this._setupNodes(context));
@@ -125,11 +135,12 @@ export class RingModulatorEffect extends AudioEffect {
    * immediately (no smoothing; waveform transitions are instantaneous in Web
    * Audio).
    */
-  public get waveform(): OscillatorType {
+  public get waveform(): RingModulatorWaveform {
     return this._waveform;
   }
 
-  public set waveform(value: OscillatorType) {
+  public set waveform(value: RingModulatorWaveform) {
+    assertWaveform(value);
     this._waveform = value;
 
     if (this._setup) {

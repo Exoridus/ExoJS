@@ -247,9 +247,9 @@ const computeSliceUvGrid = (region: TextureRegion, slices: NineSliceInsets): UvG
 
   const ext = region.extrusion;
 
-  // Outer boundary insets: use extrusion if available, otherwise half-texel.
-  const outerInsetU = ext.left > 0 || ext.right > 0 ? 0 : halfTexelInset / tw;
-  const outerInsetV = ext.top > 0 || ext.bottom > 0 ? 0 : halfTexelInset / th;
+  // Outer boundary insets, per edge: an extruded edge needs none, any other gets a half-texel.
+  const insetU = halfTexelInset / tw;
+  const insetV = halfTexelInset / th;
 
   // Inner slice boundary insets: always apply half-texel to prevent
   // bilinear bleed across internal slice seams.
@@ -263,10 +263,10 @@ const computeSliceUvGrid = (region: TextureRegion, slices: NineSliceInsets): UvG
   const vBottomBound = (ry + rh - slices.bottom) / th;
 
   // Outer UV bounds (possibly inset)
-  const uOuter0 = region.u0 + outerInsetU;
-  const uOuter1 = region.u1 - outerInsetU;
-  const vOuter0 = region.v0 + outerInsetV;
-  const vOuter1 = region.v1 - outerInsetV;
+  const uOuter0 = region.u0 + (ext.left > 0 ? 0 : insetU);
+  const uOuter1 = region.u1 - (ext.right > 0 ? 0 : insetU);
+  const vOuter0 = region.v0 + (ext.top > 0 ? 0 : insetV);
+  const vOuter1 = region.v1 - (ext.bottom > 0 ? 0 : insetV);
 
   // Clamp internal boundaries to prevent UV inversion on narrow cells
   const u1 = clampUv(uLeftBound - innerInsetU, uOuter0, uOuter1);

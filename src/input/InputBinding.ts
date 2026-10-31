@@ -181,9 +181,9 @@ export class InputBinding {
     return this._value;
   }
 
-  /** `true` when the last sampled value exceeded the channel's threshold. */
+  /** `true` when the last sampled value was non-zero, including a negative axis deflection. */
   public get active(): boolean {
-    return this._value > 0;
+    return this._value !== 0;
   }
 
   /**

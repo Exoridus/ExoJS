@@ -491,12 +491,18 @@ export class GlyphAtlas implements GlyphProvider {
   // ── Private ──────────────────────────────────────────────────────────────
 
   private _addPage(): AtlasPage {
-    const index = this._pages.length;
-    const page = new AtlasPage(index, this._pageSize, this._pageSize, this._mode);
+    return this._attachPage(this._createPage());
+  }
+
+  private _createPage(): AtlasPage {
+    return new AtlasPage(this._pages.length, this._pageSize, this._pageSize, this._mode);
+  }
+
+  private _attachPage(page: AtlasPage): AtlasPage {
     this._pages.push(page);
 
-    if (index > 0) {
-      this.onPageAdded.dispatch(index);
+    if (page.index > 0) {
+      this.onPageAdded.dispatch(page.index);
     }
 
     return page;
@@ -637,7 +643,9 @@ export class GlyphAtlas implements GlyphProvider {
       }
     }
 
-    const newPage = this._addPage();
+    // Built detached: a tile that cannot fit even an empty page must not leave
+    // that page attached, or the atlas would grow by one empty page per failure.
+    const newPage = this._createPage();
     const slot = newPage.insert(w, h);
 
     if (slot === null) {
@@ -650,6 +658,8 @@ export class GlyphAtlas implements GlyphProvider {
           `Lower the font size, lower the text pixelRatio, or use a larger atlas page size.`,
       );
     }
+
+    this._attachPage(newPage);
 
     return { page: newPage, slot };
   }

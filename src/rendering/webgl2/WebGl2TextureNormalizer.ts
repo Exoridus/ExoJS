@@ -422,10 +422,22 @@ export class WebGl2TextureNormalizer {
 
     const gl = this._gl;
     const vertex = this._compile(gl.VERTEX_SHADER, vertexSource);
-    const fragment = this._compile(gl.FRAGMENT_SHADER, fragmentSource);
+    let fragment: WebGLShader;
+
+    try {
+      fragment = this._compile(gl.FRAGMENT_SHADER, fragmentSource);
+    } catch (error) {
+      gl.deleteShader(vertex);
+
+      throw error;
+    }
+
     const program = gl.createProgram();
 
     if (program === null) {
+      gl.deleteShader(vertex);
+      gl.deleteShader(fragment);
+
       throw new Error('WebGL2: could not create the colour-normalization program.');
     }
 
@@ -447,14 +459,33 @@ export class WebGl2TextureNormalizer {
       });
     }
 
+    // `_program` is the "fully built" marker the guard above returns on, so it is
+    // published only after every companion object exists.
+    try {
+      this._framebuffer = gl.createFramebuffer();
+      this._quadBuffer = this._createQuadBuffer(gl);
+      this._quadArray = this._createQuadArray(gl, program);
+    } catch (error) {
+      this._releaseProgramObjects(gl, program);
+
+      throw error;
+    }
+
     this._program = program;
     this._sourceLocation = gl.getUniformLocation(program, 'u_source');
     this._levelScaleLocation = gl.getUniformLocation(program, 'u_levelScale');
-    this._framebuffer = gl.createFramebuffer();
-    this._quadBuffer = this._createQuadBuffer(gl);
-    this._quadArray = this._createQuadArray(gl, program);
 
     return program;
+  }
+
+  private _releaseProgramObjects(gl: WebGL2RenderingContext, program: WebGLProgram): void {
+    gl.deleteVertexArray(this._quadArray);
+    gl.deleteBuffer(this._quadBuffer);
+    gl.deleteFramebuffer(this._framebuffer);
+    gl.deleteProgram(program);
+    this._quadArray = null;
+    this._quadBuffer = null;
+    this._framebuffer = null;
   }
 
   private _compile(type: number, source: string): WebGLShader {

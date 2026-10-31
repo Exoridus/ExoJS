@@ -180,7 +180,7 @@ export class WebGl2TextRenderer
   private readonly _colorShader: WebGl2Shader = new WebGl2Shader(textVertSource, composeTextAtlasFragmentGlsl(textColorFragSource));
 
   private readonly _nodeDataUnitScratch = new Int32Array([textAtlasTextureSlots]);
-  private readonly _floatScratch = new Float32Array(1);
+  private readonly _pageSizeScratch = new Float32Array(2);
   // Own-transform-move patch scratch: 2 texels (transform cols 0-1), mirrors
   // WebGpuTextRenderer's `_patchRowScratch`.
   private readonly _patchRowScratch = new Float32Array(8);
@@ -235,9 +235,14 @@ export class WebGl2TextRenderer
       return;
     }
 
-    this._uploadNodeData(c);
-    this._drawBatches(c);
-    this._resetFrameState();
+    // A throwing draw must not leave this frame's quads queued: the next flush
+    // would draw them again on top of its own.
+    try {
+      this._uploadNodeData(c);
+      this._drawBatches(c);
+    } finally {
+      this._resetFrameState();
+    }
   }
 
   public destroy(): void {
@@ -606,8 +611,9 @@ export class WebGl2TextRenderer
       }
 
       if (shader.uniforms.has('u_pageSize')) {
-        this._floatScratch[0] = first.atlasTexture.width;
-        shader.getUniform('u_pageSize').setValue(this._floatScratch);
+        this._pageSizeScratch[0] = first.atlasTexture.width;
+        this._pageSizeScratch[1] = first.atlasTexture.height;
+        shader.getUniform('u_pageSize').setValue(this._pageSizeScratch);
       }
 
       // Stage uniforms before sync(): setValue() only marks a uniform dirty for the
@@ -854,8 +860,9 @@ export class WebGl2TextRenderer
     }
 
     if (shader.uniforms.has('u_pageSize')) {
-      this._floatScratch[0] = atlas.width;
-      shader.getUniform('u_pageSize').setValue(this._floatScratch);
+      this._pageSizeScratch[0] = atlas.width;
+      this._pageSizeScratch[1] = atlas.height;
+      shader.getUniform('u_pageSize').setValue(this._pageSizeScratch);
     }
 
     shader.sync();

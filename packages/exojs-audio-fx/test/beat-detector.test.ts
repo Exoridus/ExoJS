@@ -1329,6 +1329,12 @@ describe('BeatDetector', () => {
       d.destroy();
     });
   });
+
+  describe('BeatDetector fftSize validation', () => {
+    it.each([[1000], [32], [Number.NaN]])('rejects fftSize %s', fftSize => {
+      expect(() => new BeatDetector({ fftSize })).toThrow(RangeError);
+    });
+  });
 });
 
 // Import for the type in the test above

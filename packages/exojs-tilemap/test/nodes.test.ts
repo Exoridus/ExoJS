@@ -106,6 +106,22 @@ describe('TileLayerNode', () => {
     expect(node.children).toHaveLength(2);
   });
 
+  it('drops its chunk nodes and subscription when the layer is destroyed', () => {
+    const tileset = makeTileset();
+    const layer = makeLayer(tileset);
+    layer.setTileAt(0, 0, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
+
+    const node = new TileLayerNode(layer);
+
+    expect(node.chunkNodes).toHaveLength(1);
+
+    layer.destroy();
+
+    expect(node.chunkNodes).toHaveLength(0);
+    expect(node.children).toHaveLength(0);
+    expect((layer as unknown as { _structuralListeners: unknown })._structuralListeners).toBeNull();
+  });
+
   it('skips empty chunks', () => {
     const tileset = makeTileset();
     const layer = makeLayer(tileset);

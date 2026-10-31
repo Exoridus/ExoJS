@@ -713,4 +713,15 @@ describe('AudioAnalyser', () => {
       bus.destroy();
     });
   });
+
+  describe('option validation', () => {
+    it.each([[1000], [16], [65536], [Number.NaN]])('rejects fftSize %s', fftSize => {
+      expect(() => new AudioAnalyser({ fftSize })).toThrow(/power of two/);
+    });
+
+    it('rejects inverted decibel bounds and an out-of-range smoothing constant', () => {
+      expect(() => new AudioAnalyser({ minDecibels: -10, maxDecibels: -30 })).toThrow(RangeError);
+      expect(() => new AudioAnalyser({ smoothingTimeConstant: 2 })).toThrow(RangeError);
+    });
+  });
 });

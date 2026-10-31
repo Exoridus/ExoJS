@@ -167,6 +167,11 @@ export class TileMapBand extends Container {
     }
   }
 
+  /** @internal Whether {@link destroy} has run; a destroyed band adopts nothing further. */
+  public _hasBeenDestroyed(): boolean {
+    return this._destroyed;
+  }
+
   /**
    * Destroy the band: detach it from its application parent, then destroy the
    * layer nodes it owns (freeing their chunk geometry / image sprites).

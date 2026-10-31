@@ -620,6 +620,25 @@ describe('layoutText direction', () => {
     expect(placements[1].x).toBe(20);
   });
 
+  test('direction "rtl" asks the provider for kerning pairs in logical order', () => {
+    const base = makeCharProvider({ A: 10, B: 20 });
+    const pairs: string[] = [];
+    const provider: GlyphProvider = {
+      ...base,
+      getKerning: (prev, next) => {
+        pairs.push(`${prev}${next}`);
+
+        return prev === 'A' && next === 'B' ? -3 : 0;
+      },
+    };
+    const style = new TextStyle({ fontSize: 16, align: 'left' });
+
+    const placements = layoutText('AB', style, { direction: 'rtl' }, provider).placements;
+
+    expect(pairs).toEqual(['AB']);
+    expect(placements[1].x).toBe(20 - 3);
+  });
+
   test('direction "rtl" reverses each line independently', () => {
     const provider = makeCharProvider({ A: 10, B: 20, C: 30, D: 40 });
     const style = new TextStyle({ fontSize: 16, lineHeight: 1.2, align: 'left' });

@@ -106,6 +106,8 @@ export class Gamepad {
   private readonly _pendingControls: Array<GamepadButton | GamepadAxis> = [];
   private readonly _pendingValues: number[] = [];
   private _pendingLength = 0;
+  /** Whether {@link _sample} has run since the last publish, i.e. the pending entries belong to a frame not yet delivered. */
+  private _sampledUnpublished = false;
 
   public constructor(slot: 0 | 1 | 2 | 3, channels: Float32Array) {
     this._slot = slot;
@@ -449,8 +451,13 @@ export class Gamepad {
    */
   public _sample(): void {
     // Notifications a skipped publish left behind belong to a frame that is
-    // over; delivering them now would replay it.
-    this._pendingLength = 0;
+    // over; delivering them now would replay it. Releases queued by a
+    // disconnect since the last publish are not from a frame, so they stay.
+    if (this._sampledUnpublished) {
+      this._pendingLength = 0;
+    }
+
+    this._sampledUnpublished = true;
 
     if (this._browserGamepad !== null && this._mapping !== null) {
       this._sampleControls(this._browserGamepad, this._mapping);
@@ -471,6 +478,8 @@ export class Gamepad {
    */
   public _publish(onError?: ListenerErrorSink): void {
     const length = this._pendingLength;
+
+    this._sampledUnpublished = false;
 
     // Spent before the first listener runs, so one that throws (without
     // `onError`) cannot leave the rest to be delivered by a later publish.
@@ -611,8 +620,19 @@ export class Gamepad {
       return;
     }
 
+    if (this._sampledUnpublished) {
+      this._pendingLength = 0;
+      this._sampledUnpublished = false;
+    }
+
     for (const button of this._mapping.buttons) {
-      this._channels[this._resolveOffset(button.channel)] = 0;
+      const offset = this._resolveOffset(button.channel);
+
+      if (this._channels[offset] !== 0) {
+        this._queue(PendingControl.ButtonUp, button, 0);
+      }
+
+      this._channels[offset] = 0;
     }
 
     for (const axis of this._mapping.axes) {

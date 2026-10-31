@@ -338,6 +338,10 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    */
   public get ui(): UIRoot {
     if (this._ui === null) {
+      if (this._destroyScope.destroyed) {
+        throw new Error('Scene.ui is unavailable after the scene was destroyed.');
+      }
+
       this._ui = this._destroyScope.track(this._anchorComponents(new UIRoot()));
 
       // If the scene is already active (its root carries a stage), bind the UI

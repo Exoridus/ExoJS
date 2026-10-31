@@ -571,6 +571,11 @@ export class TileMapView {
       if (this._definitionSelects(def, layer)) {
         const band = this._bandByName.get(def.name)!;
 
+        // A band the application destroyed can no longer own anything: the node stays view-owned.
+        if (band._hasBeenDestroyed()) {
+          return;
+        }
+
         band._adopt(node);
         this._nodeBand.set(node, band);
 

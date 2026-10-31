@@ -1389,12 +1389,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
 
     // Wire material.destroy() through to evict + dispose the cached program.
     material.onDispose(() => {
-      const stored = this._customShaders.get(material);
-
-      if (stored !== undefined) {
-        stored.destroy();
-        this._customShaders.delete(material);
-      }
+      this._customShaders.delete(material);
+      this._compatibilityCache.delete(shader);
+      shader.destroy();
     });
 
     return shader;

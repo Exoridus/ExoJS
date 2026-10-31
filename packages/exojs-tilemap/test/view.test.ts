@@ -555,6 +555,26 @@ describe('TileMapView refreshLayers', () => {
     expect(view.getLayerNodeById(2)).toBe(node);
   });
 
+  it('a destroyed band adopts no new node; the view keeps and destroys it', () => {
+    const { map, tileset, view } = makeScene();
+    const roofBand = view.band('roof');
+
+    roofBand.destroy();
+    map.removeLayer(3);
+    map.addLayer(makeLayer(tileset, { id: 7, name: 'roofs' }));
+    view.refreshLayers();
+
+    const added = view.getLayerNodeById(7)!;
+
+    expect(added.parent).not.toBe(roofBand);
+    expect(added.parent).toBeNull();
+    expect((roofBand as unknown as { _layerNodes: unknown[] })._layerNodes).not.toContain(added);
+
+    view.destroy();
+
+    expect(view.layers).toHaveLength(0);
+  });
+
   it('a layer replaced under the same id gets a fresh node', () => {
     const { map, tileset, view } = makeScene();
     const stale = view.getLayerNodeById(3)!;
