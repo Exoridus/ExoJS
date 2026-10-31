@@ -389,7 +389,7 @@ describe('persistent refusal falls onto a path that now fails loudly', () => {
       const mock = createMockDevice();
       const store = new WebGpuPersistentSlotStore();
 
-      store.connectDevice(mock.device, undefined as never);
+      store.connectDevice(mock.device, new GpuResourceAccountant(createRenderStats()));
 
       // Step 1: the per-root store cannot represent the selection, so the plan
       // puts the root back on the streamed path.

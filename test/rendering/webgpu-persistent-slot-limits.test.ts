@@ -18,6 +18,8 @@
  * can put the root back on the streamed path.
  */
 
+import { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
+import { createRenderStats } from '#rendering/RenderStats';
 import { persistentSlotGrowthCapacity, WebGpuPersistentSlotStore } from '#rendering/webgpu/WebGpuPersistentSlotStore';
 
 /** WebGPU's spec defaults - what a device gets when nothing higher is requested. */
@@ -64,7 +66,7 @@ const withGpuBufferUsage = (body: () => void): void => {
 const createStore = (limits?: Partial<GPUSupportedLimits>): WebGpuPersistentSlotStore => {
   const store = new WebGpuPersistentSlotStore();
 
-  store.connectDevice(createMockDevice(limits), undefined as never);
+  store.connectDevice(createMockDevice(limits), new GpuResourceAccountant(createRenderStats()));
 
   return store;
 };
@@ -158,7 +160,7 @@ describe('WebGpuPersistentSlotStore device limits', () => {
       // Device loss, then recovery onto a device granting only the defaults. A
       // ceiling cached from the lost device would still admit the selection.
       store.invalidateDeviceResources();
-      store.connectDevice(createMockDevice(defaultLimits), undefined as never);
+      store.connectDevice(createMockDevice(defaultLimits), new GpuResourceAccountant(createRenderStats()));
 
       expect(store.canRepresent(DEFAULT_SLOT_CEILING * 4, 1)).toBe(false);
       expect(store.canRepresent(DEFAULT_SLOT_CEILING, 1)).toBe(true);
