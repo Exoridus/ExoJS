@@ -35,6 +35,11 @@ const resolveAxisBinding = (binding: AxisBinding, slot: GamepadSlot): ResolvedAx
     return { direct: rebase([binding]), negative: [], positive: [] };
   }
 
+  // A chord or sequence pattern string is a valid button binding, but would resolve to no channels here.
+  if (typeof binding !== 'object' || binding === null) {
+    throw new InputBindingError('AxisAction: a binding must be a channel or a { negative, positive } pair.');
+  }
+
   return {
     direct: [],
     negative: rebase(toChannels(binding.negative)),

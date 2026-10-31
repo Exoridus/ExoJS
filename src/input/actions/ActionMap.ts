@@ -375,8 +375,24 @@ class ActionMapBase<T extends ActionRecord> {
   private _applyAtomically(changes: ReadonlyArray<readonly [Action, unknown]>): void {
     const slot: GamepadSlot = this._gamepad?.slot ?? 0;
 
-    for (const [action, binding] of changes) {
-      (action as ActionBase<unknown>)._rebind(binding, slot);
+    const applied: Array<readonly [ActionBase<unknown>, unknown, GamepadSlot]> = [];
+
+    try {
+      for (const [action, binding] of changes) {
+        const target = action as ActionBase<unknown>;
+        const previous = [target, target.binding, target._gamepadSlot] as const;
+
+        target._rebind(binding, slot);
+        applied.push(previous);
+      }
+    } catch (error: unknown) {
+      // A later descriptor was rejected: put back the ones already applied, so a
+      // profile is taken whole or not at all.
+      for (const [target, binding, previousSlot] of applied.reverse()) {
+        target._rebind(binding, previousSlot);
+      }
+
+      throw error;
     }
 
     const owner = this._owner;

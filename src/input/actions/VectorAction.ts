@@ -35,6 +35,10 @@ const resolveVectorBinding = (binding: VectorBinding, slot: GamepadSlot): Resolv
   const rebase = (source: OneOrMany<InputChannel> | undefined): readonly number[] =>
     toChannels(source).map(channel => resolveGamepadSlotChannel(channel, slot));
 
+  if (typeof binding !== 'object' || binding === null) {
+    throw new InputBindingError('VectorAction: a binding must be an object with x, y, up, down, left or right.');
+  }
+
   const shape = binding as VectorBindingShape;
 
   return {
