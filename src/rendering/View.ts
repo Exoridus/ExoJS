@@ -434,6 +434,7 @@ export class View {
     this._sin = 0;
     this._cos = 1;
 
+    this._setDirty();
     this._flags.addMask(ViewFlags.Transform);
 
     return this;

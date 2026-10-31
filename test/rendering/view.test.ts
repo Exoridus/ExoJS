@@ -155,6 +155,22 @@ describe('View.viewport — invalidation on direct mutation', () => {
     view.destroy();
   });
 
+  test('reset() invalidates the cached transform when only the rotation changes', () => {
+    const view = new View(10, 20, 100, 200);
+
+    view.setRotation(45);
+    view.getTransform();
+
+    const before = view.updateId;
+
+    view.reset(10, 20, 100, 200);
+
+    expect(view.updateId).toBeGreaterThan(before);
+    expect(view.rotation).toBe(0);
+
+    view.destroy();
+  });
+
   test('reset() restores the full-canvas viewport and bumps updateId even when nothing else changes', () => {
     const view = new View(10, 20, 100, 200);
 
