@@ -230,5 +230,17 @@ describe('Quadtree', () => {
 
       expect(() => tree.destroy()).not.toThrow();
     });
+
+    test('leaves the caller-owned bounds rectangle usable', () => {
+      const onChange = vi.fn();
+      const bounds = new Rectangle(0, 0, 100, 100, onChange);
+      const tree = new Quadtree<string>(bounds);
+
+      tree.destroy();
+      bounds.set(10, 10, 50, 50);
+
+      expect(onChange).toHaveBeenCalled();
+      expect(bounds.width).toBe(50);
+    });
   });
 });
