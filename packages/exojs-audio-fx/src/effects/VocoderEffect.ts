@@ -44,6 +44,10 @@ export class VocoderEffect extends WorkletEffect {
     super();
 
     if (!options.modulator) {
+      // The base constructor has already scheduled worklet setup, which would
+      // otherwise still run for an effect nobody can reach.
+      this.destroy();
+
       throw new Error('VocoderEffect requires a modulator AudioBus.');
     }
 

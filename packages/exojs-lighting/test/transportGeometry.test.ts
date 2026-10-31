@@ -339,13 +339,17 @@ describe('TransportGeometry', () => {
     const dark = new PointLight({ radius: 100, intensity: 0 });
     const inverted = new PointLight({ radius: 100, intensity: -1 });
     const broken = new PointLight({ radius: 100, intensity: Number.NaN });
+    const unbounded = new PointLight({ radius: 100, intensity: Number.POSITIVE_INFINITY });
+    const infiniteReach = new PointLight({ radius: Number.POSITIVE_INFINITY });
     const on = new PointLight({ radius: 100 });
 
     dark.position.set(10, 10);
     inverted.position.set(20, 20);
     broken.position.set(30, 30);
     on.position.set(40, 40);
-    geometry.build(new Float32Array(0), 0, [dark, inverted, broken, on], region, 10);
+    unbounded.position.set(50, 50);
+    infiniteReach.position.set(60, 60);
+    geometry.build(new Float32Array(0), 0, [dark, inverted, broken, unbounded, infiniteReach, on], region, 10);
 
     // A negative intensity would otherwise be written as a negative density
     // and subtract light along every ray that crossed the source.

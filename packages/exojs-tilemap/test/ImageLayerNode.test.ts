@@ -152,6 +152,15 @@ describe('ImageLayerNode parallax', () => {
     expect(spriteOf(node).width).toBe(320);
   });
 
+  it('expands repeat coverage for a scale set on the node itself', () => {
+    const node = new ImageLayerNode(makeLayer({ texture: fakeTexture(64, 64), repeatX: true }));
+
+    node.setScale(0.5, 0.5);
+    collect(node, mockBuilder({ bounds: { x: 0, y: 0, width: 160, height: 64 } }));
+
+    expect(spriteOf(node).width).toBe(320);
+  });
+
   it('position is restored to the base offset after _collectContent', () => {
     const node = new ImageLayerNode(makeLayer({ offsetX: 10, offsetY: 20, parallaxX: 0.5, parallaxY: 0.5 }));
 

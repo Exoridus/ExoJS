@@ -149,3 +149,36 @@ describe('fft', () => {
     });
   });
 });
+
+describe('fft against a direct DFT', () => {
+  it.each([8, 64, 256])('matches the O(n^2) transform of the Hann-windowed signal at size %i', n => {
+    const real = new Float32Array(n);
+    const imag = new Float32Array(n);
+
+    for (let i = 0; i < n; i++) {
+      real[i] = Math.sin(i * 0.37) + 0.5 * Math.cos(i * 1.91) + ((i * 7) % 5) / 10;
+    }
+
+    // The transform windows its input first, so the reference is built from the
+    // same windowed samples rather than from the raw signal.
+    const windowed = Float32Array.from(real);
+
+    hannWindow(windowed, new Float32Array(n));
+    fft(real, imag);
+
+    for (let k = 0; k < n; k++) {
+      let sumReal = 0;
+      let sumImag = 0;
+
+      for (let t = 0; t < n; t++) {
+        const angle = (-2 * Math.PI * k * t) / n;
+
+        sumReal += windowed[t]! * Math.cos(angle);
+        sumImag += windowed[t]! * Math.sin(angle);
+      }
+
+      expect(real[k]).toBeCloseTo(sumReal, 3);
+      expect(imag[k]).toBeCloseTo(sumImag, 3);
+    }
+  });
+});

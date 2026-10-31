@@ -85,9 +85,9 @@ export class PhysicsBodyComponent extends Component {
   }
 
   protected override onDisable(): void {
-    // A body the world already destroyed (the world itself ended first) has
-    // nothing left to leave.
-    if (!this.body.destroyed) {
+    // A body the world already destroyed (the world itself ended first), or one
+    // the caller removed from the world directly, has nothing left to leave.
+    if (!this.body.destroyed && this.body._isMemberOf(this.world)) {
       this.world.remove(this.body);
     }
   }

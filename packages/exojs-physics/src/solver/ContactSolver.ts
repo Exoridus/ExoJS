@@ -121,6 +121,12 @@ export class ContactSolver {
   private readonly _constraints: ContactConstraint[] = [];
   private _count = 0;
 
+  /** Drop the pooled constraints, which otherwise keep the last frame's contacts and bodies reachable. */
+  public clear(): void {
+    this._constraints.length = 0;
+    this._count = 0;
+  }
+
   /**
    * Build the per-contact constraints for this frame from the touching solid
    * contacts. `h` is the sub-step duration (`fixedDelta / subStepCount`); the
