@@ -103,6 +103,13 @@ const identifierPattern = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const reservedFieldNames = new Set<string>(['set', 'setPacked', 'commit', 'at', 'length', 'uniforms', 'revision']);
 
 /** @internal */
+export const validateUniformBlockKey = (key: string): void => {
+  if (!identifierPattern.test(key) || key.startsWith('gl_') || key.includes('__')) {
+    throw new Error(`Shader \`uniformBlocks.${key}\` is not a valid shader identifier (no leading digit, no \`gl_\` prefix, no \`__\`).`);
+  }
+};
+
+/** @internal */
 export const validateUniformFields = (fields: UniformFields, path: string): void => {
   for (const name of Object.keys(fields)) {
     if (!identifierPattern.test(name) || name.startsWith('gl_') || name.includes('__')) {

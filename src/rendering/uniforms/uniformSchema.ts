@@ -6,7 +6,7 @@
 
 import { UniformBlockData } from './UniformBlockData';
 import type { UniformBlockRecord, UniformFields, UniformStructInput } from './uniformDeclarations';
-import { UniformBlock, validateUniformFields } from './uniformDeclarations';
+import { UniformBlock, validateUniformBlockKey, validateUniformFields } from './uniformDeclarations';
 import type { UniformBlockLayout, UniformSchemaLayout } from './uniformLayout';
 import {
   computeUniformBlockLayout,
@@ -86,6 +86,8 @@ export const buildUniformSchemaLayout = (
   }
 
   const blocks: UniformBlockLayout[] = keys.map(key => {
+    validateUniformBlockKey(key);
+
     // In-bounds: `key` comes from `uniformBlocks`' own keys.
     const block = uniformBlocks[key]!;
 

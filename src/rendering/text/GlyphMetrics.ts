@@ -101,7 +101,8 @@ export class GlyphMetrics implements GlyphProvider {
   }
 
   public getKerning(prev: string, next: string, fontSize: number): number {
-    const key = `${prev}${next}:${fontSize}`;
+    // The separator keeps ('a', 'bc') apart from ('ab', 'c'), which concatenate alike.
+    const key = `${prev}\u{0}${next}:${fontSize}`;
     const cached = this._kerning.get(key);
 
     if (cached !== undefined) {

@@ -200,6 +200,12 @@ describe('uniform block layout', () => {
     expect(generateWgslUniformDeclarations(explicit, 1)).toContain('@group(1) @binding(1) var<uniform> material: ExoUniforms_material;');
   });
 
+  test.each(['my-block', '1block', 'gl_block', 'a__b', ''])('a block key %j that is not a shader identifier is rejected', key => {
+    expect(() => buildUniformSchemaLayout(undefined, { [key]: new UniformBlock({ tint: UniformType.Vec4 }) })).toThrow(
+      /valid shader identifier/,
+    );
+  });
+
   test('`uniforms` and `uniformBlocks` cannot both be declared', () => {
     expect(() => buildUniformSchemaLayout(everyVariant, { camera: new UniformBlock({ tint: UniformType.Vec4 }) })).toThrow(/not both/);
   });
