@@ -29,6 +29,27 @@ export interface BodyOptions {
   colliders?: Array<Collider | ColliderOptions>;
 }
 
+const assertFiniteBodyOption = (name: string, value: number): void => {
+  if (!Number.isFinite(value)) {
+    throw new RangeError(`PhysicsBody: ${name} must be a finite number, received ${value}.`);
+  }
+};
+
+const assertNonNegativeBodyOption = (name: string, value: number): void => {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new RangeError(`PhysicsBody: ${name} must be a non-negative finite number, received ${value}.`);
+  }
+};
+
+const validateBodyOptions = (options: BodyOptions): void => {
+  assertFiniteBodyOption('position.x', options.position?.x ?? 0);
+  assertFiniteBodyOption('position.y', options.position?.y ?? 0);
+  assertFiniteBodyOption('angle', options.angle ?? 0);
+  assertFiniteBodyOption('gravityScale', options.gravityScale ?? 1);
+  assertNonNegativeBodyOption('linearDamping', options.linearDamping ?? 0);
+  assertNonNegativeBodyOption('angularDamping', options.angularDamping ?? 0);
+};
+
 /**
  * Internal hook the world hands to each body so colliders can be id-allocated
  * and registered without the body importing the concrete world class.
@@ -149,6 +170,8 @@ export class PhysicsBody {
   private _destroyed = false;
 
   public constructor(options: BodyOptions = {}) {
+    validateBodyOptions(options);
+
     this.type = options.type ?? 'dynamic';
     this._transform = createTransform(options.position?.x ?? 0, options.position?.y ?? 0, options.angle ?? 0);
     this._previousX = this._transform.x;
