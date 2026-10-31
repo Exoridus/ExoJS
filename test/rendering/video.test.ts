@@ -475,9 +475,21 @@ describe('Video', () => {
       await Promise.resolve();
       await Promise.resolve();
 
-      // Resolved start, but the element was paused again before it settled.
-      mockVideo.element.play = () => Promise.resolve();
+      // The start resolves only after the element has been paused again.
+      let resolvePlay!: () => void;
+
+      mockVideo.element.play = () => {
+        mockVideo.setPaused(false);
+
+        return new Promise<void>(resolve => {
+          resolvePlay = resolve;
+        });
+      };
+
       video.play();
+      video.pause();
+      mockVideo.setPaused(true);
+      resolvePlay();
       await Promise.resolve();
 
       expect(startSpy).not.toHaveBeenCalled();
