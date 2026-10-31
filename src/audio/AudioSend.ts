@@ -101,6 +101,16 @@ export class AudioSend {
     this._destroyed = true;
     this._pendingBusSetup?.();
     this._pendingBusSetup = null;
+
+    // The source outlives the send, so its edge into this gain has to go too;
+    // disconnecting the gain only removes the gain's own outputs. The source
+    // may already have dropped all its edges, which Web Audio reports by throwing.
+    try {
+      this._source.disconnect(this._gain);
+    } catch {
+      // Already disconnected.
+    }
+
     this._gain.disconnect();
   }
 

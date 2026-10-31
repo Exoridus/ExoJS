@@ -11,6 +11,7 @@ import type { MockInstance } from 'vitest';
 
 import { AudioBus } from '#audio/AudioBus';
 import { getAudioContext } from '#audio/audioContext';
+import { AudioSend } from '#audio/AudioSend';
 import { AudioSystem } from '#audio/AudioSystem';
 import { AudioZone } from '#audio/AudioZone';
 import { Sound } from '#audio/Sound';
@@ -486,6 +487,24 @@ describe('AudioSend', () => {
 
     reverb.destroy();
     sound.destroy();
+  });
+
+  test('destroy() detaches the source from the send gain as well as the gain from the bus', () => {
+    const gain = { gain: { value: 0 }, connect: vi.fn(), disconnect: vi.fn() };
+    const source = { connect: vi.fn(), disconnect: vi.fn() };
+    const bus = { getInputNode: () => null, onceSetup: () => () => {} };
+    const send = new AudioSend(
+      { createGain: () => gain } as unknown as AudioContext,
+      source as unknown as AudioNode,
+      bus as unknown as AudioBus,
+      1,
+    );
+
+    send.destroy();
+    send.destroy();
+
+    expect(source.disconnect).toHaveBeenCalledTimes(1);
+    expect(source.disconnect).toHaveBeenCalledWith(gain);
   });
 
   test('the voice tears its sends down when it ends', () => {

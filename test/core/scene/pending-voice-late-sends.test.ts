@@ -28,7 +28,7 @@ describe('Cancelled pending voice sends', () => {
       if (method === 'add') {
         send = voice.addSend(bus);
         expect(outputConnect).toHaveBeenCalledTimes(1);
-        expect(outputDisconnect).toHaveBeenCalledTimes(2);
+        expect(outputDisconnect).toHaveBeenCalledTimes(3);
       } else {
         send = new AudioSend(context, source, bus, 1);
         const retarget = vi.spyOn(send, '_retarget');

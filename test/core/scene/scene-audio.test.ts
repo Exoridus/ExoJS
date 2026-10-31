@@ -98,7 +98,7 @@ describe('Pending voice graph lifetime', () => {
       const ended = vi.fn(() => {
         expect(send.destroyed).toBe(true);
         expect(voice.sends).toHaveLength(0);
-        expect(output).toHaveBeenCalledTimes(1);
+        expect(output).toHaveBeenCalledTimes(2);
       });
       voice.onEnd.add(ended);
       voice.stop();
