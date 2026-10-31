@@ -43,7 +43,14 @@ export abstract class AbstractWebGl2Renderer<Target extends Drawable> implements
     }
 
     this._backend = backend;
-    this.onConnect(backend);
+
+    try {
+      this.onConnect(backend);
+    } catch (error) {
+      this._backend = null;
+
+      throw error;
+    }
   }
 
   public disconnect(): void {
@@ -51,9 +58,15 @@ export abstract class AbstractWebGl2Renderer<Target extends Drawable> implements
       return;
     }
 
-    this.flush();
-    this.onDisconnect();
-    this._backend = null;
+    try {
+      this.flush();
+    } finally {
+      try {
+        this.onDisconnect();
+      } finally {
+        this._backend = null;
+      }
+    }
   }
 
   public abstract render(drawable: Target): void;

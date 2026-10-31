@@ -30,6 +30,9 @@ interface RendererConnection {
   readonly vaoHandle: WebGLVertexArrayObject;
 }
 
+// 16-bit quad indices: 16384 quads would end on index 65535, the primitive-restart value.
+const maxBatchSize = 16383;
+
 /**
  * Specialization of {@link AbstractWebGl2Renderer} for renderers that
  * batch many drawables of the same type into one or two GPU draw calls
@@ -58,9 +61,9 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
   /**
    * @param batchSize Quads the shared vertex and index buffers hold. `vertexData` is `batchSize * attributeCount`
    * 32-bit slots and `indexData` is six indices per quad, so one flush submits the
-   * prefix filled so far. Must not exceed 16383: at 16384 quads the last index is
-   * 65535, which WebGL2 treats as a primitive-restart index and truncates the
-   * final triangle.
+   * prefix filled so far. Must be an integer from 1 to 16383, otherwise the constructor throws: at 16384
+   * quads the last index is 65535, which WebGL2 treats as a primitive-restart
+   * index and truncates the final triangle.
    * @param attributeCount 32-bit slots per quad in the interleaved vertex buffer - four vertices of
    * `attributeCount / 4` slots each - written through `float32View`, or `uint32View` for integer attributes.
    * @param vertexSource GLSL vertex stage shared by the batch.
@@ -68,6 +71,10 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
    */
   protected constructor(batchSize: number, attributeCount: number, vertexSource: string, fragmentSource: string) {
     super();
+
+    if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > maxBatchSize) {
+      throw new RangeError(`${this.constructor.name}: batchSize must be an integer between 1 and ${maxBatchSize}, received ${batchSize}.`);
+    }
 
     this.batchSize = batchSize;
     this.attributeCount = attributeCount;

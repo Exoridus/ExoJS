@@ -1461,6 +1461,32 @@ describe('Application lifecycle / getters / sizing', () => {
       consoleErrorSpy.mockRestore();
     });
 
+    test('a throwing onError listener does not become an unhandled rejection', async () => {
+      const { Application, ApplicationState, sceneDirector } = await loadHarness();
+      const app = new Application({ backend: { type: 'webgl2' } });
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const unhandled = vi.fn();
+      sceneDirector._stopAndClearActiveScene.mockRejectedValueOnce(new Error('scene teardown failed'));
+
+      const rawApp = app as unknown as Record<string, unknown>;
+      rawApp['_state'] = ApplicationState.Running;
+      setFrameLoopActive(app, true);
+      app.onError.add(() => {
+        throw new Error('listener failed');
+      });
+      process.on('unhandledRejection', unhandled);
+
+      try {
+        app.stop();
+        await new Promise(resolve => setTimeout(resolve, 10));
+
+        expect(unhandled).not.toHaveBeenCalled();
+      } finally {
+        process.off('unhandledRejection', unhandled);
+        consoleErrorSpy.mockRestore();
+      }
+    });
+
     test('wraps a non-Error rejection value into a new Error', async () => {
       const { Application, ApplicationState, sceneDirector } = await loadHarness();
       const app = new Application({ backend: { type: 'webgl2' } });

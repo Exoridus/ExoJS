@@ -109,4 +109,62 @@ describe('CollisionResponse A -> B contract', () => {
     expect(response.shapeBinA).toBe(true);
     expect(response.projectionN.x).toBeGreaterThan(0);
   });
+
+  describe('full containment with different centres', () => {
+    const big: ReadonlyArray<readonly [string, (cx: number, cy: number) => Movable]> = [
+      ['Rectangle', (cx, cy) => new Rectangle(cx - 50, cy - 50, 100, 100)],
+      ['Circle', (cx, cy) => new Circle(cx, cy, 50)],
+      ['Ellipse', (cx, cy) => new Ellipse(cx, cy, 50, 45)],
+      [
+        'Polygon',
+        (cx, cy) =>
+          new Polygon([
+            new Vector(cx - 50, cy - 50),
+            new Vector(cx + 50, cy - 50),
+            new Vector(cx + 50, cy + 50),
+            new Vector(cx - 50, cy + 50),
+          ]),
+      ],
+    ];
+
+    // Pairs whose MTV is a true separating translation; the rest are approximations.
+    const exact = new Set(['Rectangle/Rectangle', 'Rectangle/Polygon', 'Polygon/Rectangle', 'Polygon/Polygon', 'Circle/Circle']);
+
+    describe.each(big)('%s (large)', (nameBig, makeBig) => {
+      describe.each(shapeKinds)('with %s (small, off-centre)', (nameSmall, makeSmall) => {
+        test.each([
+          ['large as shapeA', true],
+          ['large as shapeB', false],
+        ] as const)('%s: both resolutions reduce the overlap', (_label, bigIsA) => {
+          const make = (): [Movable, Movable] => (bigIsA ? [makeBig(0, 0), makeSmall(20, 8)] : [makeSmall(20, 8), makeBig(0, 0)]);
+          const [a, b] = make();
+          const response = a.collidesWith(b);
+
+          expect(response).not.toBeNull();
+
+          const { projectionV, overlap } = response!;
+          const [a1, b1] = make();
+
+          b1.x += projectionV.x;
+          b1.y += projectionV.y;
+
+          const [a2, b2] = make();
+
+          a2.x -= projectionV.x;
+          a2.y -= projectionV.y;
+
+          const names = bigIsA ? `${nameBig}/${nameSmall}` : `${nameSmall}/${nameBig}`;
+          const after = [depth(a1, b1), depth(a2, b2)];
+
+          expect(after[0]).toBeLessThan(overlap);
+          expect(after[1]).toBeLessThan(overlap);
+
+          if (exact.has(names)) {
+            expect(after[0]).toBeCloseTo(0);
+            expect(after[1]).toBeCloseTo(0);
+          }
+        });
+      });
+    });
+  });
 });

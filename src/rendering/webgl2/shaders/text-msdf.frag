@@ -10,7 +10,7 @@
 precision highp float;
 
 uniform sampler2D u_nodeData;  // RGBA32F per-node data (see WebGl2TextRenderer)
-uniform float     u_pageSize;  // atlas page size in px (for shadow UV conversion)
+uniform vec2      u_pageSize;  // atlas page size in px (for shadow UV conversion)
 
 flat in int   v_nodeIndex;
 flat in uint  v_decoration;

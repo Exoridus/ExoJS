@@ -105,6 +105,8 @@ For two-way separation (two dynamic objects), split the MTV:
 
 The sign convention: `projectionN` points **from shapeA (the caller) toward shapeB (the argument)**, i.e. into the surface the caller is being pushed out of. A player standing on a floor therefore sees `projectionN.y > 0` (y grows downward), and a ceiling hit gives `projectionN.y < 0`. For coincident centres or equally deep axes the direction is a fixed choice that does not flip with the operand order.
 
+The push-out is exact (the shapes touch afterwards, even when one contains the other) for Rectangle/Rectangle, Circle/Circle, Circle/Rectangle, Circle/Polygon and the Rectangle/Polygon/rotated-node SAT pairs. Every pair involving an `Ellipse` is an approximation: the direction is still A to B and the overlap shrinks, but a small residual overlap can remain, so test again after resolving if you need exact contact.
+
 <Callout type="info" title="Discrete checks tunnel past fast movers">
 `intersectsWith` and `collidesWith` only test the shapes at their current position, so a fast mover can pass straight through a thin wall between frames. For high speeds, sweep the motion with the `Sweep.*` helpers instead of a point-in-time overlap test.
 </Callout>

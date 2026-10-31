@@ -1269,20 +1269,29 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
           return;
         }
 
-        this._reportDeath({
-          x: record.x,
-          y: record.y,
-          velocityX: record.velocityX,
-          velocityY: record.velocityY,
-          rotation: record.rotation,
-          scaleX: record.scaleX,
-          scaleY: record.scaleY,
-          color: record.color,
-          elapsed: record.elapsed,
-          // Records are slot-ordered and, within a slot, in the order the
-          // device appended them - which is the order the lifetimes queued.
-          lifetime: pending.get(record.slot)?.shift() ?? 0,
-        });
+        // Fire-and-forget caller: a throwing module must neither reject the drain
+        // unhandled nor cost the rest of the batch its deliveries.
+        try {
+          this._reportDeath({
+            x: record.x,
+            y: record.y,
+            velocityX: record.velocityX,
+            velocityY: record.velocityY,
+            rotation: record.rotation,
+            scaleX: record.scaleX,
+            scaleY: record.scaleY,
+            color: record.color,
+            elapsed: record.elapsed,
+            // Records are slot-ordered and, within a slot, in the order the
+            // device appended them - which is the order the lifetimes queued.
+            lifetime: pending.get(record.slot)?.shift() ?? 0,
+          });
+        } catch (error: unknown) {
+          logger.error('A particle death module threw.', {
+            source: 'ParticleSystem',
+            ...(error instanceof Error && { error }),
+          });
+        }
       }
     });
   }

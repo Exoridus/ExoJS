@@ -210,6 +210,7 @@ export class WebGl2BackdropBlendCompositor {
     backend.stats.drawCalls++;
 
     backend.bindTexture(null, 1);
+    backend.setActiveTextureUnit(0);
   }
 
   private _writeQuadVertices(left: number, top: number, right: number, bottom: number): void {

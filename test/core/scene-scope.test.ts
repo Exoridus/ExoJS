@@ -745,4 +745,24 @@ describe('SceneScope', () => {
       expect(onResume).not.toHaveBeenCalled();
     });
   });
+
+  describe('activation failure cleanup', () => {
+    test('a UI root whose attach throws during activate() is still detached on destroy', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const scope = new SceneScope(app, scene);
+
+      await scope.prepare(undefined);
+      void scene.ui;
+      vi.mocked(app.interaction.attachUIRoot).mockImplementationOnce(() => {
+        throw new Error('attach failed');
+      });
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      scope.activate();
+      await scope.destroy();
+
+      expect(app.interaction.detachRoot).toHaveBeenCalledWith(scene.root);
+    });
+  });
 });

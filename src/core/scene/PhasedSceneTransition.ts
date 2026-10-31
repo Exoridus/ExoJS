@@ -228,7 +228,14 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
     private readonly _environment: SceneTransitionEnvironment,
   ) {
     this._exitPhaseState = this._exitPhase._createPhaseStateForSession();
-    this._enterPhaseState = this._enterPhase._createPhaseStateForSession();
+
+    try {
+      this._enterPhaseState = this._enterPhase._createPhaseStateForSession();
+    } catch (error) {
+      this._exitPhase._destroyPhaseStateForSession(this._exitPhaseState);
+
+      throw error;
+    }
   }
 
   public get done(): boolean {
@@ -334,8 +341,13 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
     }
 
     this._phaseStateDestroyed = true;
-    this._exitPhase._destroyPhaseStateForSession(this._exitPhaseState);
-    this._enterPhase._destroyPhaseStateForSession(this._enterPhaseState);
+
+    // The enter state is released even when the exit disposer throws.
+    try {
+      this._exitPhase._destroyPhaseStateForSession(this._exitPhaseState);
+    } finally {
+      this._enterPhase._destroyPhaseStateForSession(this._enterPhaseState);
+    }
   }
 }
 

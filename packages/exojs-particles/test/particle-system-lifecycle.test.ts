@@ -454,3 +454,54 @@ describe('BurstSpawn — capacity exhaustion and full field config', () => {
     }
   });
 });
+
+describe('GPU death delivery failures', () => {
+  test('a throwing death module is logged once per record and does not reject or skip the batch', async () => {
+    const system = new ParticleSystem();
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const seen: number[] = [];
+
+    class ThrowOnFirst extends DeathModule {
+      public onDeath(_owner: ParticleSystem, death: { x: number }): void {
+        seen.push(death.x);
+
+        if (seen.length === 1) {
+          throw new Error('module failed');
+        }
+      }
+    }
+
+    system.addDeathModule(new ThrowOnFirst());
+
+    const record = (x: number) => ({
+      slot: 0,
+      x,
+      y: 0,
+      velocityX: 0,
+      velocityY: 0,
+      rotation: 0,
+      scaleX: 1,
+      scaleY: 1,
+      color: 0,
+      elapsed: 0,
+    });
+
+    Object.defineProperty(system, '_simulationState', {
+      get: () => ({
+        readDeaths: (deliver: (records: unknown[]) => void) => Promise.resolve(deliver([record(1), record(2)])),
+        discardDeaths: () => undefined,
+        destroy: () => undefined,
+      }),
+    });
+
+    await expect(
+      (system as unknown as { _drainDeaths: (pending: Map<number, number[]>) => Promise<void> })._drainDeaths(new Map()),
+    ).resolves.toBeUndefined();
+
+    expect(seen).toEqual([1, 2]);
+    expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+
+    consoleErrorSpy.mockRestore();
+    system.destroy();
+  });
+});

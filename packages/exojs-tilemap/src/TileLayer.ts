@@ -838,6 +838,14 @@ export class TileLayer {
     }
 
     this._destroyed = true;
+
+    // Observers drop the nodes they built for these chunks, then lose their
+    // subscription: nothing will ever be notified by a destroyed layer again.
+    for (const chunk of [...this._chunks.values()]) {
+      this._notifyStructural({ cx: chunk.cx, cy: chunk.cy, chunk: null });
+    }
+
+    this._structuralListeners = null;
     this._chunks.clear();
   }
 

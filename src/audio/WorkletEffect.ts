@@ -279,6 +279,15 @@ export abstract class WorkletEffect extends AudioEffect {
       const node = new AudioWorkletNode(audioContext, this._workletName, this._workletOptions);
       this._workletNode = node;
 
+      // A processor that throws goes silent for good; without this the wet path
+      // just stops with nothing reported.
+      node.onprocessorerror = (): void => {
+        logger.warn(`${this.constructor.name}: the audio worklet "${this._workletName}" stopped after a processor error.`, {
+          source: 'WorkletEffect',
+          once: `workleteffect-processor-error:${this._workletName}`,
+        });
+      };
+
       // Wet path: input → worklet → wetGain.
       this._inputGain.connect(node);
       node.connect(this._wetGain);

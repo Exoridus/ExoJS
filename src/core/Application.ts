@@ -1255,7 +1255,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // `stop()` is a restart, not a second application.
       if (__DEV__ && !this._announced) {
         this._announced = true;
-        onAppInitialized.dispatch(this);
+        onAppInitialized.dispatchIsolated(observerError => {
+          this._errors.report(observerError instanceof Error ? observerError : new Error(String(observerError)), false);
+        }, this);
       }
 
       if (target !== undefined && this._destroyPromise === null && this._state === ApplicationState.Loading) {
@@ -1587,7 +1589,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         source: 'Application',
         ...(error instanceof Error && { error }),
       });
-      this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
+      this._errors.report(error instanceof Error ? error : new Error(String(error)), false, true);
     });
 
     this._setState(ApplicationState.Stopped);

@@ -24,7 +24,7 @@ export { PhaserEffect, type PhaserEffectOptions } from './effects/PhaserEffect';
 export { PingPongDelayEffect, type PingPongDelayEffectOptions } from './effects/PingPongDelayEffect';
 export { PitchShiftEffect, type PitchShiftEffectOptions } from './effects/PitchShiftEffect';
 export { ReverbEffect, type ReverbEffectOptions } from './effects/ReverbEffect';
-export { RingModulatorEffect, type RingModulatorEffectOptions } from './effects/RingModulatorEffect';
+export { RingModulatorEffect, type RingModulatorEffectOptions, type RingModulatorWaveform } from './effects/RingModulatorEffect';
 export { TremoloEffect, type TremoloEffectOptions } from './effects/TremoloEffect';
 export { VocoderEffect, type VocoderEffectOptions } from './effects/VocoderEffect';
 export type { ManualMeter, MeterCandidate, MeterEstimate, MeterEstimateReason, MeterModel } from './meterTypes';

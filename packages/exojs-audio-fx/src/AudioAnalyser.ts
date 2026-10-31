@@ -82,7 +82,23 @@ export class AudioAnalyser {
       source: options?.source ?? null,
     };
 
-    const binCount = this._options.fftSize >> 1;
+    const { fftSize, minDecibels, maxDecibels, smoothingTimeConstant } = this._options;
+
+    // The AnalyserNode throws on these only once a context exists, which is
+    // too late to point at the options when the context is still locked.
+    if (!Number.isInteger(fftSize) || fftSize < 32 || fftSize > 32768 || (fftSize & (fftSize - 1)) !== 0) {
+      throw new RangeError(`AudioAnalyser fftSize must be a power of two between 32 and 32768, got ${fftSize}.`);
+    }
+
+    if (!(minDecibels < maxDecibels)) {
+      throw new RangeError(`AudioAnalyser minDecibels (${minDecibels}) must be below maxDecibels (${maxDecibels}).`);
+    }
+
+    if (!(smoothingTimeConstant >= 0 && smoothingTimeConstant <= 1)) {
+      throw new RangeError(`AudioAnalyser smoothingTimeConstant must be within 0..1, got ${smoothingTimeConstant}.`);
+    }
+
+    const binCount = fftSize >> 1;
     this._byteSpectrum = new Uint8Array(binCount);
     this._floatSpectrum = new Float32Array(binCount);
     this._byteWaveform = new Uint8Array(binCount);

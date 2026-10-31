@@ -132,13 +132,14 @@ export const buildRepeatingSpriteQuads = (
   const th = region.texture.height;
   const ext = region.extrusion;
 
-  const outerInsetU = ext.left > 0 || ext.right > 0 ? 0 : halfTexelInset / tw;
-  const outerInsetV = ext.top > 0 || ext.bottom > 0 ? 0 : halfTexelInset / th;
+  const insetU = halfTexelInset / tw;
+  const insetV = halfTexelInset / th;
 
-  const uMin = region.u0 + outerInsetU;
-  const uMax = region.u1 - outerInsetU;
-  const vMin = region.v0 + outerInsetV;
-  const vMax = region.v1 - outerInsetV;
+  // Per edge: an extruded edge needs no inset, any other gets a half-texel.
+  const uMin = region.u0 + (ext.left > 0 ? 0 : insetU);
+  const uMax = region.u1 - (ext.right > 0 ? 0 : insetU);
+  const vMin = region.v0 + (ext.top > 0 ? 0 : insetV);
+  const vMax = region.v1 - (ext.bottom > 0 ? 0 : insetV);
 
   const srcW = region.width;
   const srcH = region.height;

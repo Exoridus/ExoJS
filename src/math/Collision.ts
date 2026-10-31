@@ -312,8 +312,10 @@ const intersectionPolyPoly = (polygonA: Polygon, polygonB: Polygon): boolean => 
  * `projectionN` is the unit normal of the minimum-penetration axis, pointing
  * from `rectA` toward `rectB`; `projectionV` is `projectionN` scaled by the
  * overlap. Moving `rectB` by `projectionV`, or `rectA` by its negation,
- * separates the rectangles with the smallest possible displacement. When both
- * centres coincide the direction along the chosen axis is positive.
+ * separates the rectangles exactly with the smallest possible displacement,
+ * including when one rectangle contains the other. If several directions are
+ * equally short (for example identical rectangles) the first of +X, -X, +Y, -Y
+ * wins, independent of operand order.
  */
 const getCollisionRectangleRectangle = (rectA: Rectangle, rectB: Rectangle): CollisionResponse | null => {
   if (rectB.left > rectA.right || rectB.top > rectA.bottom) {
@@ -324,31 +326,27 @@ const getCollisionRectangleRectangle = (rectA: Rectangle, rectB: Rectangle): Col
     return null;
   }
 
-  const overlapX = Math.min(rectA.right, rectB.right) - Math.max(rectA.left, rectB.left);
-  const overlapY = Math.min(rectA.bottom, rectB.bottom) - Math.max(rectA.top, rectB.top);
+  // Distance rectB has to travel along each axis direction to clear rectA.
+  // Using all four candidates (not just the intersection extent) keeps the
+  // result a real separating translation when one rectangle contains the other.
+  const candidates = [
+    { x: 1, y: 0, distance: rectA.right - rectB.left },
+    { x: -1, y: 0, distance: rectB.right - rectA.left },
+    { x: 0, y: 1, distance: rectA.bottom - rectB.top },
+    { x: 0, y: -1, distance: rectB.bottom - rectA.top },
+  ];
 
-  // Pick the axis with the smaller overlap as the MTV - pushing along that
-  // axis separates the rectangles with the least displacement. Sign is
-  // determined by whether rectB's center is right/below or left/above of
-  // rectA's center.
-  const centerAx = rectA.left + rectA.width * 0.5;
-  const centerAy = rectA.top + rectA.height * 0.5;
-  const centerBx = rectB.left + rectB.width * 0.5;
-  const centerBy = rectB.top + rectB.height * 0.5;
+  let best = candidates[0]!;
 
-  let normalX: number;
-  let normalY: number;
-  let overlap: number;
-
-  if (overlapX < overlapY) {
-    overlap = overlapX;
-    normalX = centerBx < centerAx ? -1 : 1;
-    normalY = 0;
-  } else {
-    overlap = overlapY;
-    normalX = 0;
-    normalY = centerBy < centerAy ? -1 : 1;
+  for (const candidate of candidates) {
+    if (candidate.distance < best.distance) {
+      best = candidate;
+    }
   }
+
+  const normalX = best.x;
+  const normalY = best.y;
+  const overlap = best.distance;
 
   const projectionN = new Vector(normalX, normalY);
   const projectionV = new Vector(normalX * overlap, normalY * overlap);
@@ -490,6 +488,9 @@ const getCollisionCircleRectangle = (circle: Circle, rect: Rectangle, swap = fal
  * is `shapeA` unless `swap` is `true`; `projectionN` always points from
  * `shapeA` toward `shapeB`.
  *
+ * Approximate: the translation reduces the overlap but may leave a small
+ * residual.
+ *
  * Approach: find the closest point on the rect to the ellipse center, then
  * compare its distance against the ellipse's boundary along that direction.
  * For an axis-aligned ellipse with half-radii `(rx, ry)`, the boundary
@@ -559,7 +560,8 @@ const getCollisionEllipseRectangle = (ellipse: Ellipse, rect: Rectangle, swap = 
  * Compute a {@link CollisionResponse} between an axis-aligned ellipse and a
  * circle. Returns `null` when they do not overlap. Uses the ellipse's
  * directional boundary distance plus the circle's radius along the connecting
- * axis to compute penetration depth. The ellipse is `shapeA` unless `swap` is
+ * axis to compute penetration depth. Approximate: the translation reduces the
+ * overlap but may leave a small residual. The ellipse is `shapeA` unless `swap` is
  * `true`; `projectionN` always points from `shapeA` toward `shapeB`. With
  * coincident centres the axis is the ellipse's smaller radius axis.
  */
@@ -741,7 +743,8 @@ const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = fals
  * Returns `null` when they do not overlap. `projectionN` points from
  * `ellipseA` toward `ellipseB`.
  *
- * Uses the centre-to-centre axis as the separation axis and computes each
+ * Approximate: the translation reduces the overlap but may leave a small
+ * residual. Uses the centre-to-centre axis as the separation axis and computes each
  * ellipse's exact boundary distance along that direction via the formula
  * `sqrt((nx·rx)² + (ny·ry)²)`.  This is exact when the minimum-penetration
  * axis coincides with the centre axis (e.g. circles, concentric ellipses) and
@@ -807,6 +810,8 @@ const getCollisionEllipseEllipse = (ellipseA: Ellipse, ellipseB: Ellipse): Colli
  * shape-specific responses use - so moving `shapeB` by `projectionV`, or
  * `shapeA` by its negation, pulls the pair apart. When the projection midpoints
  * on the winning axis coincide the axis keeps its edge-normal orientation.
+ * Exact for convex polygons and rectangles; an ellipse contributes no edge
+ * normals, so ellipse pairs are approximate.
  */
 const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionResponse | null => {
   const normalsA = shapeA.getNormals();

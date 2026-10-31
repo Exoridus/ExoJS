@@ -412,4 +412,19 @@ describe('RingModulatorEffect', () => {
       expect(() => effect.destroy()).not.toThrow();
     });
   });
+
+  describe('waveform validation', () => {
+    it("rejects the 'custom' waveform before any node is created", () => {
+      expect(() => new RingModulatorEffect({ waveform: 'custom' as never })).toThrow(RangeError);
+    });
+
+    it("rejects assigning 'custom'", () => {
+      const effect = new RingModulatorEffect();
+
+      expect(() => {
+        effect.waveform = 'custom' as never;
+      }).toThrow(RangeError);
+      expect(effect.waveform).toBe('sine');
+    });
+  });
 });

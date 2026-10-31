@@ -650,6 +650,31 @@ describe('ShaderFilter on WebGPU', () => {
     larger.destroy();
   });
 
+  test('an Int32Array uniform reaches the buffer as integer bits', () => {
+    const backend = makeWebGpuBackend(env);
+    const filter = new ShaderFilter({ wgsl: minimalFragSrc, uniforms: { uCount: new Int32Array([7, -2]) } });
+    const input = new RenderTexture(16, 16);
+    const output = new RenderTexture(64, 64);
+
+    filter.apply(backend, input, output);
+
+    const call = env.queue.writeBuffer.mock.calls.find((args: unknown[]) => {
+      const data = args[2] as Float32Array;
+
+      return data instanceof Float32Array && data.length === 4 && new Int32Array(data.buffer, data.byteOffset, 4)[0] === 7;
+    });
+
+    expect(call).toBeDefined();
+
+    const data = call![2] as Float32Array;
+
+    expect(Array.from(new Int32Array(data.buffer, data.byteOffset, 4))).toEqual([7, -2, 0, 0]);
+
+    filter.destroy();
+    input.destroy();
+    output.destroy();
+  });
+
   // 12. Number uniform → 16-byte aligned slot in the user UBO
   test('number uniform is placed at the start of a 16-byte slot', () => {
     const backend = makeWebGpuBackend(env);
