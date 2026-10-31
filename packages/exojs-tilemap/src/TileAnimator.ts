@@ -99,7 +99,7 @@ export class TileAnimator {
       cell.currentFrame = frameIndex;
       const frame = cell.frames[frameIndex];
 
-      if (frame === undefined) {
+      if (frame === undefined || !this._ownsCell(cell)) {
         continue;
       }
 
@@ -121,7 +121,7 @@ export class TileAnimator {
     for (const cell of this._cells) {
       const frame = cell.frames[0];
 
-      if (frame === undefined) {
+      if (frame === undefined || !this._ownsCell(cell)) {
         continue;
       }
 
@@ -148,6 +148,13 @@ export class TileAnimator {
   public destroy(): void {
     this._cells = [];
     this._elapsedMs = 0;
+  }
+
+  /** False once the caller removed or replaced the animated tile, so the animator must not write it back. */
+  private _ownsCell(cell: AnimatedCell): boolean {
+    const tile = cell.layer.getTileAt(cell.tx, cell.ty);
+
+    return !!tile && tile.tileset === cell.tileset && cell.frames.some(frame => frame.localTileId === tile.localTileId);
   }
 
   /** Scan all layers for cells whose tile carries a (multi-frame) animation. */
