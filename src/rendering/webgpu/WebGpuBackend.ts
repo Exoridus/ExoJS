@@ -1339,7 +1339,7 @@ export class WebGpuBackend implements RenderBackend {
     height: number,
     dataType: PixelDataType = 'uint8',
   ): Promise<PixelArray> {
-    this.flush();
+    this.flushPending();
 
     const texture = this._syncTexture(source).texture;
     // `copyTextureToBuffer` wants every row to start on a 256-byte boundary,
@@ -1483,6 +1483,20 @@ export class WebGpuBackend implements RenderBackend {
   public resize(width: number, height: number): this {
     this._rootRenderTarget.resize(width, height);
     this._hasPresentedFrame = false;
+
+    return this;
+  }
+
+  /**
+   * Submit the queued draws and end the open pass without closing the frame's
+   * GPU timing window. For work that needs the target contents mid-frame; the
+   * frame-end {@link flush} would otherwise leave every later pass untimed.
+   * @internal
+   */
+  public flushPending(): this {
+    if (this._device && this._context) {
+      this._flushActiveRendererAndEndPass();
+    }
 
     return this;
   }

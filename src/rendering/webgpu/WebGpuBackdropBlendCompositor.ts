@@ -217,7 +217,7 @@ export class WebGpuBackdropBlendCompositor {
 
     // Clears/draws are deferred on WebGPU; flush so the target texture holds the
     // real backdrop before the standalone copy below reads it.
-    manager.flush();
+    manager.flushPending();
 
     const format = manager.renderTargetFormat;
     const attachment = manager._getAttachmentPixelSize(target);

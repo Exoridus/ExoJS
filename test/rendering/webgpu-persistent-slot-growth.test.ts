@@ -15,6 +15,8 @@
  * that produced it.
  */
 
+import { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
+import { createRenderStats } from '#rendering/RenderStats';
 import { SOURCE_QUAD_FLOATS } from '#rendering/sourceQuadRecord';
 import { TRANSFORM_FLOATS_PER_ROW, TRANSFORM_TINT_BYTES_PER_ROW } from '#rendering/TransformBuffer';
 import { WebGpuPersistentSlotStore } from '#rendering/webgpu/WebGpuPersistentSlotStore';
@@ -36,7 +38,7 @@ const createMockDevice = (): GPUDevice =>
 const withGpuBufferUsage = (body: () => void): void => {
   const previous = Object.getOwnPropertyDescriptor(globalThis, 'GPUBufferUsage');
 
-  Object.defineProperty(globalThis, 'GPUBufferUsage', { configurable: true, value: { STORAGE: 128, COPY_DST: 8 } });
+  Object.defineProperty(globalThis, 'GPUBufferUsage', { configurable: true, value: { STORAGE: 128, COPY_DST: 8, UNIFORM: 64 } });
 
   try {
     body();
@@ -53,7 +55,7 @@ const withGpuBufferUsage = (body: () => void): void => {
 const createStore = (): WebGpuPersistentSlotStore => {
   const store = new WebGpuPersistentSlotStore();
 
-  store.connectDevice(createMockDevice(), undefined as never);
+  store.connectDevice(createMockDevice(), new GpuResourceAccountant(createRenderStats()));
 
   return store;
 };

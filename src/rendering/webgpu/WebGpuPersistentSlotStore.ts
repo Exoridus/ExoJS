@@ -183,6 +183,7 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
 
   private _device: GPUDevice | null = null;
   private _accountant: GpuResourceAccountant | null = null;
+  private _accountedUniformBytes = 0;
   private _accountedBytes = 0;
   private _accountedOrderBytes = 0;
   private _destroyed = false;
@@ -258,11 +259,15 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
   public connectDevice(device: GPUDevice, accountant: GpuResourceAccountant): void {
     this._device = device;
     this._accountant = accountant;
-    this._uniformBuffer ??= device.createBuffer({
-      label: 'sprite:persistent-uniform-buffer',
-      size: persistentUniformBytes,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
+
+    if (this._uniformBuffer === null) {
+      this._uniformBuffer = device.createBuffer({
+        label: 'sprite:persistent-uniform-buffer',
+        size: persistentUniformBytes,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+      this._accountedUniformBytes = accountant.reallocate(0, persistentUniformBytes);
+    }
   }
 
   /**
@@ -669,6 +674,11 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
     if (this._accountedOrderBytes > 0) {
       this._accountant?.free(this._accountedOrderBytes);
       this._accountedOrderBytes = 0;
+    }
+
+    if (this._accountedUniformBytes > 0) {
+      this._accountant?.free(this._accountedUniformBytes);
+      this._accountedUniformBytes = 0;
     }
   }
 
