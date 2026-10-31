@@ -94,7 +94,7 @@ const loadImageLayerTextures = async (
     if (layer.type === 'imagelayer' && layer.image) {
       const imageUrl = resolveTiledUrl(layer.image, mapSource);
 
-      pending.push(context.dependencies.load(Asset.type('texture', imageUrl)).then(texture => new Map([[layer.id, texture as Texture]])));
+      pending.push(context.dependencies.load(Asset.type('texture', imageUrl)).then(texture => new Map([[layer.id, texture]])));
     } else if (layer.type === 'group') {
       pending.push(loadImageLayerTextures(layer.layers, mapSource, context));
     }

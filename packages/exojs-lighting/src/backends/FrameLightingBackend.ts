@@ -33,6 +33,7 @@ import type { NormalSurface } from '../normals/NormalSurface';
 import type { OccluderField } from '../occluders/OccluderField';
 import type { OccluderDrawable } from '../occluders/OccluderSource';
 import { buildShadowRow, buildSunShadowRow } from '../occluders/shadowMap';
+import { pickDebugTexture, releaseDestroyedBatches } from './backendHelpers';
 import { fieldGrid } from './fieldGrid';
 import type { LightingBackend } from './LightingBackend';
 import lightCompositeFragment from './shaders/light-composite.frag';
@@ -568,14 +569,8 @@ ${sunQuadWgsl}`,
     this._compositeMaterial.setTexture('u_light', this._debugTexture(view));
   }
 
-  /** The intermediate a debug view multiplies the white frame by. */
   private _debugTexture(view: LightingDebugView): Texture {
-    if (view === 'normals') {
-      // Without a surface the target is a 1x1 placeholder, which would smear one texel over the frame.
-      return this._surfaceCount > 0 ? this._normalTarget : transparentTexture();
-    }
-
-    return view === 'mask' ? this._maskTarget : this._target;
+    return pickDebugTexture(view, this._normalPass.enabled ? this._normalTarget : transparentTexture(), this._maskTarget, this._target);
   }
 
   /** The accumulated light, for a debug view that wants to show it. @internal */
@@ -1281,6 +1276,7 @@ ${sunQuadWgsl}`,
       }
 
       this._sunMaterial.setTexture('u_normal', this._boundNormals());
+      this._compositeMaterial.setTexture('u_light', this._debugTexture(this._debug));
     }
 
     this._surfaceCount = written;
@@ -1299,7 +1295,7 @@ ${sunQuadWgsl}`,
       return existing;
     }
 
-    this._releaseDestroyedCookieBatches();
+    releaseDestroyedBatches(this._lightBatches);
 
     const material = new MeshMaterial({
       shader: new Shader({
@@ -1323,22 +1319,6 @@ ${sunQuadWgsl}`,
     this._lightBatches.set(cookie, batch);
 
     return batch;
-  }
-
-  /**
-   * Drops the batches of cookie textures that were destroyed since they were
-   * built. Run on a miss only: a destroyed cookie can no longer be asked for, so
-   * its batch would otherwise pin a material (and the texture) for the backend's
-   * life.
-   */
-  private _releaseDestroyedCookieBatches(): void {
-    for (const [cookie, batch] of this._lightBatches) {
-      if (cookie.destroyed) {
-        batch.material?.destroy();
-        batch.destroy();
-        this._lightBatches.delete(cookie);
-      }
-    }
   }
 
   /** The polar rows the light shader should read: the marched atlas, or the walked ones. */
@@ -1609,10 +1589,6 @@ ${normalPrepassWgsl}`,
     // describes a surface, which is what keeps the attachment free for a scene
     // that registers none.
     this._normalTarget.setSize(this._surfaceCount > 0 ? width : 1, this._surfaceCount > 0 ? height : 1);
-
-    if (this._debug === 'normals') {
-      this._compositeMaterial.setTexture('u_light', this._debugTexture('normals'));
-    }
     // At the light field's density over the view and its margin, so a texel of
     // the mask is a texel of the block level reduced from it.
     //
