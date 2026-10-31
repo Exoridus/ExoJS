@@ -91,7 +91,20 @@ const brandAt = (header: Uint8Array, offset: number): string =>
     : String.fromCharCode(header[offset] ?? 0, header[offset + 1] ?? 0, header[offset + 2] ?? 0, header[offset + 3] ?? 0);
 
 /** ISO base media brands whose files carry video; audio-only brands such as `M4A ` are deliberately absent. */
-const mp4VideoBrands: ReadonlySet<string> = new Set(['mp41', 'mp42', 'isom', 'iso2', 'iso3', 'iso4', 'iso5', 'iso6', 'avc1', 'dash', 'mmp4', 'M4V ']);
+const mp4VideoBrands: ReadonlySet<string> = new Set([
+  'mp41',
+  'mp42',
+  'isom',
+  'iso2',
+  'iso3',
+  'iso4',
+  'iso5',
+  'iso6',
+  'avc1',
+  'dash',
+  'mmp4',
+  'M4V ',
+]);
 
 /**
  * An MP4 video: an `ftyp` box whose major brand, or any compatible brand within

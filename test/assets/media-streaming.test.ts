@@ -445,6 +445,7 @@ describe('attachMediaSource observer failures', () => {
     const { attachMediaSource } = await import('#assets/factories/mediaSource');
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const messages = { error: 'e', abort: 'a', emptied: 'm', stalled: 's' };
+
     const onSettled = (): never => {
       throw new Error('observer failed');
     };

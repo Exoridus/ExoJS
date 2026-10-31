@@ -643,7 +643,9 @@ describe('rejected rebinds leave the map untouched', () => {
     });
     const jumpBinding = map.jump.binding;
     const jumpChannels = [...map.jump.channels];
-    const apply = (map as unknown as { _applyAtomically(changes: ReadonlyArray<readonly [unknown, unknown]>): void })._applyAtomically.bind(map);
+    const apply = (map as unknown as { _applyAtomically(changes: ReadonlyArray<readonly [unknown, unknown]>): void })._applyAtomically.bind(
+      map,
+    );
 
     expect(() =>
       apply([

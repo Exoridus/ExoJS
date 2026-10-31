@@ -62,8 +62,16 @@ describe('determineMimeType', () => {
       const bytes = new Uint8Array(size);
 
       new DataView(bytes.buffer).setUint32(0, size, false);
-      bytes.set([...`ftyp${major}`].map(character => character.charCodeAt(0)), 4);
-      compatible.forEach((brand, index) => bytes.set([...brand].map(character => character.charCodeAt(0)), 16 + index * 4));
+      bytes.set(
+        [...`ftyp${major}`].map(character => character.charCodeAt(0)),
+        4,
+      );
+      compatible.forEach((brand, index) =>
+        bytes.set(
+          [...brand].map(character => character.charCodeAt(0)),
+          16 + index * 4,
+        ),
+      );
 
       return bytes.buffer;
     };

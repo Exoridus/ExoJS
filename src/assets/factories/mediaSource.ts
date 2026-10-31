@@ -105,6 +105,7 @@ export const attachMediaSource = (options: AttachMediaSourceOptions): Promise<vo
       }
 
       signal?.removeEventListener('abort', onAbort);
+
       // A throwing observer must not leave the load promise pending forever.
       try {
         onSettled?.();
