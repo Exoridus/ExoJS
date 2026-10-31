@@ -58,6 +58,7 @@ const gradientTextureSize = 256;
  */
 export class Graphics extends Container {
   private readonly _shapes = new Map<GraphicsShapeSource, GraphicsShape>();
+  private readonly _createdMeshes = new WeakSet<Mesh>();
   private _defaultFill: Color | null = null;
 
   public constructor(options: GraphicsAppearancePatch = {}) {
@@ -525,14 +526,28 @@ export class Graphics extends Container {
     return this;
   }
 
-  /** Remove all child meshes and reset pen state (position, fill/stroke styles, line width). */
+  /**
+   * Remove all child meshes and reset pen state (position, fill/stroke styles, line width).
+   *
+   * Meshes created by drawing calls and retained shapes are destroyed. Meshes
+   * added with `addChild` are only detached; their owner keeps them.
+   */
   public clear(): this {
     for (const shape of this._shapes.values()) {
       shape._dispose();
     }
 
     this._shapes.clear();
+
+    const children = [...this.children];
+
     this.removeChildren();
+
+    for (const child of children) {
+      if (this._createdMeshes.has(child)) {
+        child.destroy();
+      }
+    }
 
     this._lineWidth = 0;
     this._fillColor.copy(Color.transparentBlack);
@@ -622,6 +637,7 @@ export class Graphics extends Container {
     });
 
     mesh.tint = color;
+    this._createdMeshes.add(mesh);
 
     return mesh;
   }
@@ -632,12 +648,16 @@ export class Graphics extends Container {
    * white tint and vertex color leave the sampled gradient color unmodulated.
    */
   private _createGradientMesh(data: MeshGeometryData, texture: DataTexture<TextureFormat.Rgba8>): Mesh {
-    return new Mesh({
+    const mesh = new Mesh({
       vertices: data.vertices,
       indices: data.indices,
       uvs: computeBoundsUvs(data.vertices),
       texture,
     });
+
+    this._createdMeshes.add(mesh);
+
+    return mesh;
   }
 
   private _rasterizeGradient(gradient: Gradient): DataTexture<TextureFormat.Rgba8> {

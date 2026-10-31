@@ -960,7 +960,9 @@ describe('render-root source: structure delta', () => {
     try {
       paint('new');
       live.addChild(new Leaf('live-new').setPosition(20, 0));
-      expect(removed.every(mesh => mesh.parent === null && !mesh.destroyed)).toBe(true);
+      // clear() destroys the meshes Graphics drew itself; the retained plan must
+      // replace them without touching the destroyed ones.
+      expect(removed.every(mesh => mesh.parent === null && mesh.destroyed)).toBe(true);
       draws.length = 0;
       playFrame(root, backend);
 
