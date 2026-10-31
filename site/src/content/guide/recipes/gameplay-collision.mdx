@@ -52,7 +52,7 @@ All shape-pair combinations are supported for boolean overlap — rectangle-rect
 |-------|------|---------|
 | `overlap` | `number` | Penetration depth (positive) |
 | `projectionN` | `Vector` | Unit normal of the minimum-translation axis, pointing from shapeA (the caller) toward shapeB (the argument) |
-| `projectionV` | `Vector` | MTV = `projectionN × overlap`; `shapeB += projectionV` or `shapeA -= projectionV` separates the pair |
+| `projectionV` | `Vector` | Translation along the collision axis (`projectionN × overlap`); move B by `+projectionV` or A by `-projectionV` (approximate for ellipse pairs) |
 | `shapeAinB` | `boolean` | `true` if A is fully inside B |
 | `shapeBinA` | `boolean` | `true` if B is fully inside A |
 | `shapeA` | `Collidable` | Reference to the first shape |
@@ -72,7 +72,7 @@ Supported response pairs in the current implementation:
 
 ## Resolving collisions: using projectionV
 
-`projectionV` is the minimum-translation vector (MTV): the smallest displacement that separates the two shapes. `projectionV` points from the caller (`shapeA`) toward the argument (`shapeB`): add it to the argument or subtract it from the caller and the shapes no longer overlap. Swapping the operands negates the vector.
+`projectionV` is the displacement computed along the selected collision axis, pointing from the caller (`shapeA`) toward the argument (`shapeB`). Add it to B or subtract it from A to move the shapes apart. For exact shape pairs, this separates them completely; ellipse responses use an approximate axis and depth, so residual overlap may remain. Swapping operands negates the vector except in ambiguous cases such as coincident centres.
 
 <SourceSnippet
   source="examples/guides/gameplay-collision/collision-response.ts"

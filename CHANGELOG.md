@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING: Unify CollisionResponse projection normals from shapeA to shapeB.** ([#943](https://github.com/Exoridus/ExoJS/pull/943))
+
 ## [0.19.1] - 2026-10-07
 
 ### Changed
