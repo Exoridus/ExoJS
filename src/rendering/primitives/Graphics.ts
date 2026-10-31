@@ -78,7 +78,10 @@ export class Graphics extends Container {
     return this;
   }
 
-  /** Register a live, borrowed rectangle. Duplicate source identities throw. */
+  /**
+   * Register a live, borrowed source shape. Duplicate source identities throw.
+   * Destroying the source removes its drawing from every Graphics using it.
+   */
   public addShape(source: GraphicsShapeSource, options: GraphicsAppearancePatch = {}): GraphicsShape {
     if (this.destroyed) {
       throw new Error('Cannot add a shape to destroyed Graphics.');
@@ -88,7 +91,12 @@ export class Graphics extends Container {
       throw new Error('Shape source is already registered in this Graphics.');
     }
 
-    const shape = new GraphicsShape(source, () => this._defaultFill, options);
+    const shape = new GraphicsShape(
+      source,
+      () => this._defaultFill,
+      options,
+      () => this._removeShape(source),
+    );
 
     this.addChild(shape._drawable);
     this._shapes.set(source, shape);
@@ -99,6 +107,18 @@ export class Graphics extends Container {
   /** Look up a retained drawing by source identity, or return `null` when absent. */
   public getShape(source: GraphicsShapeSource): GraphicsShape | null {
     return this._shapes.get(source) ?? null;
+  }
+
+  private _removeShape(source: GraphicsShapeSource): void {
+    const shape = this._shapes.get(source);
+
+    if (shape === undefined) {
+      return;
+    }
+
+    this._shapes.delete(source);
+    this.removeChild(shape._drawable);
+    shape._dispose();
   }
 
   private _lineWidth = 0;

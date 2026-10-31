@@ -201,8 +201,9 @@ export class Ellipse extends ShapeRevision implements ShapeLike {
   }
 
   public destroy(): void {
-    this._releaseGeometryListeners();
     this._position.destroy();
     this._radius.destroy();
+
+    this._releaseGeometryListeners();
   }
 }

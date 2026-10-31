@@ -255,7 +255,6 @@ export class Circle extends ShapeRevision implements ShapeLike {
   }
 
   public destroy(): void {
-    this._releaseGeometryListeners();
     this._position.destroy();
 
     if (this._collisionVertices !== null) {
@@ -273,6 +272,8 @@ export class Circle extends ShapeRevision implements ShapeLike {
 
       this._normals = null;
     }
+
+    this._releaseGeometryListeners();
   }
 
   private getCollisionVertices(): Vector[] {

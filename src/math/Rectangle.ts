@@ -356,11 +356,12 @@ export class Rectangle extends ShapeRevision implements ShapeLike, ReadonlyRecta
     // Drop the owner notification along with the reactive components, so a
     // rectangle retained past its owner's teardown cannot invalidate it again.
     this._onChange = null;
-    this._releaseGeometryListeners();
 
     if (this._normals) {
       this._normals = null;
     }
+
+    this._releaseGeometryListeners();
   }
 
   private _updateNormals(normals: Vector[]): void {

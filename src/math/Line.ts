@@ -177,9 +177,10 @@ export class Line extends ShapeRevision implements ShapeLike {
   }
 
   public destroy(): void {
-    this._releaseGeometryListeners();
     this._fromPosition.destroy();
     this._toPosition.destroy();
+
+    this._releaseGeometryListeners();
   }
 
   public static get temp(): Line {

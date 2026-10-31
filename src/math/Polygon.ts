@@ -335,8 +335,6 @@ export class Polygon extends ShapeRevision implements ShapeLike {
   }
 
   public destroy(): void {
-    this._releaseGeometryListeners();
-
     for (const point of this._points) {
       point.destroy();
     }
@@ -356,6 +354,8 @@ export class Polygon extends ShapeRevision implements ShapeLike {
     this._position.destroy();
     this._points.length = 0;
     this._edges.length = 0;
+
+    this._releaseGeometryListeners();
   }
 
   /**

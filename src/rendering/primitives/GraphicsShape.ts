@@ -18,9 +18,12 @@ export interface GraphicsAppearancePatch {
 }
 
 /**
- * A retained drawing of a borrowed rectangle. Geometry edits are live; local
- * fill overrides are independent of other drawings of the same rectangle.
- * Clearing or destroying its Graphics invalidates the handle, not the source.
+ * A retained drawing of a borrowed source shape. Geometry edits are live; local
+ * fill overrides are independent of other drawings of the same source.
+ *
+ * The handle is removed, and {@link GraphicsShape.removed} turns `true`, when its
+ * Graphics is cleared or destroyed, or when the source shape itself is
+ * destroyed. Removing a drawing never destroys the source.
  */
 export class GraphicsShape {
   private _fill: Color | null | undefined;
@@ -33,12 +36,17 @@ export class GraphicsShape {
     source: GraphicsShapeSource,
     private readonly _defaultFill: () => Color | null,
     options: GraphicsAppearancePatch,
+    onSourceDestroyed: () => void,
   ) {
     const data = buildGraphicsFill(source);
     this._hasGeometry = data !== null && data.indices.length > 0;
     this._mesh = new ShapeMesh(this._hasGeometry ? data! : buildRectangle(0, 0, 0, 0));
     this._fill = options.fill?.clone() ?? options.fill;
     this._unsubscribe = source._subscribeGeometry(() => {
+      if (this._unsubscribe === null) {
+        return;
+      }
+
       if (source instanceof Rectangle) {
         const { x, y, width, height } = source;
         const vertices = this._mesh.vertices;
@@ -63,13 +71,17 @@ export class GraphicsShape {
 
         this._applyAppearance();
       }
-    });
+    }, onSourceDestroyed);
     this._applyAppearance();
   }
 
   /** @internal */
   public get _drawable(): Mesh {
     return this._mesh;
+  }
+
+  public get removed(): boolean {
+    return this._unsubscribe === null;
   }
 
   /** Patch only specified fields. `null` disables the fill. Throws after removal. */
