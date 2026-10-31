@@ -66,6 +66,24 @@ describe('VideoFactory', () => {
     video.destroy();
   });
 
+  test('a Video constructor failure revokes the object URL once and leaves nothing for destroy() to release', async () => {
+    const factory = new VideoFactory();
+    const playbackOptions = {
+      get volume(): number {
+        throw new Error('bad playback options');
+      },
+    } as unknown as Partial<import('#core/types').PlaybackOptions>;
+
+    const promise = factory.create({ blob: new Blob([VIDEO_HEADER]) }, factoryContext({ playbackOptions }));
+    lastVideo().dispatchEvent(new Event('canplay'));
+
+    await expect(promise).rejects.toThrow('bad playback options');
+
+    expect(revokeObjectUrlSpy).toHaveBeenCalledTimes(1);
+    factory.destroy();
+    expect(revokeObjectUrlSpy).toHaveBeenCalledTimes(1);
+  });
+
   test('create() honors a custom loadEvent option', async () => {
     const factory = new VideoFactory();
 
