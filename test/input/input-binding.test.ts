@@ -565,3 +565,22 @@ describe('InputBinding — unbind() idempotency', () => {
     expect(detach).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('InputBinding - signed axis', () => {
+  test('a negative deflection reads as active with its signed value', () => {
+    const channels = makeChannels();
+    const binding = new InputBinding([1]);
+    const onStart = vi.fn();
+
+    binding.onStart.add(onStart);
+    binding.update(channels);
+    channels[1] = -1;
+    binding.update(channels, [batchOf(1, -1)]);
+
+    expect(onStart).toHaveBeenCalledWith(-1);
+    expect(binding.value).toBe(-1);
+    expect(binding.active).toBe(true);
+
+    binding.unbind();
+  });
+});

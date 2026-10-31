@@ -263,4 +263,15 @@ describe('Scene', () => {
       expect(() => scene.destroy()).not.toThrow();
     });
   });
+
+  describe('ui after destroy', () => {
+    test('throws and allocates no UIRoot once the scene was torn down', () => {
+      const scene = new Scene();
+
+      scene._teardownInternals();
+
+      expect(() => scene.ui).toThrow(/after the scene was destroyed/);
+      expect(scene._peekUI()).toBeNull();
+    });
+  });
 });

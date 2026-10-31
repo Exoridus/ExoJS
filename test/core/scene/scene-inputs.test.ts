@@ -5,6 +5,7 @@ import { SceneState } from '#core/scene/SceneState';
 import { Signal } from '#core/Signal';
 import { ActionMap } from '#input/actions/ActionMap';
 import { ButtonAction } from '#input/actions/ButtonAction';
+import { InputScope } from '#input/actions/InputScope';
 import type { ActionSample, ChannelEventBatch } from '#input/actions/types';
 import type { InputBinding } from '#input/InputBinding';
 import type { ActionScopeHost } from '#input/InputSystem';
@@ -571,6 +572,29 @@ describe('SceneInputs action maps', () => {
     advanceFrame(sample);
     frame(sample);
     expect(map.jump.active).toBe(false);
+  });
+
+  test('a rejected pushScope leaves the stack, the maps and later pushes untouched', () => {
+    const { frame, inputs } = createMapStub();
+    const clean = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+    const direct = new ActionMap({ fire: new ButtonAction(Keyboard.Enter) });
+    const fresh = new ActionMap({ run: new ButtonAction(Keyboard.Shift) });
+
+    inputs.attach(direct);
+
+    const bad = new InputScope([fresh, direct]);
+
+    expect(() => inputs.pushScope(bad)).toThrow(/already attached directly/);
+    expect(fresh.attached).toBe(false);
+    expect(direct.attached).toBe(true);
+
+    const sample = createEmptySample();
+
+    setChannel(sample, Keyboard.Space, 1);
+    expect(() => inputs.pushScope(new InputScope(clean))).not.toThrow();
+    frame(sample);
+    expect(clean.jump.active).toBe(true);
+    expect(inputs.popScope(bad)).toBeNull();
   });
 });
 

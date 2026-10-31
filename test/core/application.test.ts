@@ -657,6 +657,9 @@ describe('Application', () => {
     rawApp['_state'] = ApplicationState.Running;
     rawApp['scenes'] = sceneDirector;
     rawApp['_inputTickClock'] = { open: vi.fn(), close: vi.fn(), retire: vi.fn() };
+    const errors = { report: vi.fn() };
+
+    rawApp['_errors'] = errors;
 
     // A real scheduler rather than a double: this spec is about `stop()`
     // reaching the pending frame request and both running clocks, which are
@@ -678,6 +681,7 @@ describe('Application', () => {
     expect(activeClockStop).toHaveBeenCalledTimes(1);
     expect(frameClockStop).toHaveBeenCalledTimes(1);
     expect(app.state).toBe(ApplicationState.Stopped);
+    expect(errors.report).toHaveBeenCalledWith(sceneTeardownError, false, true);
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       '%c[ExoJS][Application]',
       expect.stringContaining('color'),

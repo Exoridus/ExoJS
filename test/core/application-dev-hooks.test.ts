@@ -84,6 +84,26 @@ describe('onAppInitialized', () => {
     void app.destroy();
   });
 
+  test('a throwing listener does not fail start() and reaches the error reporter', async () => {
+    const { Application, onAppInitialized, announced } = await loadHarness();
+    const app = new Application({ backend: { type: 'webgl2' } });
+    const errors: Error[] = [];
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const boom = new Error('listener failed');
+
+    app.onError.add(error => errors.push(error));
+    onAppInitialized.add(() => {
+      throw boom;
+    });
+
+    await expect(app.start()).resolves.toBe(app);
+
+    expect(errors).toEqual([boom]);
+    expect(announced).toEqual([app]);
+    consoleErrorSpy.mockRestore();
+    void app.destroy();
+  });
+
   test('a constructed but never started application is not announced', async () => {
     const { Application, announced } = await loadHarness();
     const app = new Application({ backend: { type: 'webgl2' } });

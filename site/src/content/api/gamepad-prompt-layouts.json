@@ -273,7 +273,7 @@
       "members": [
         {
           "name": "controls",
-          "signature": "controls: GamepadPromptControl[]",
+          "signature": "controls: readonly GamepadPromptControl[]",
           "signatureTokens": [
             {
               "text": "controls",
@@ -281,6 +281,14 @@
             },
             {
               "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
               "kind": "punctuation"
             },
             {
@@ -294,7 +302,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Complete ordered list of every GamepadPromptControl token."
+          "description": "Complete ordered list of every GamepadPromptControl token. Frozen: the list is shared by every caller."
         }
       ],
       "paragraphs": [],
