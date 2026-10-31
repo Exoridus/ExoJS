@@ -18,22 +18,44 @@ export interface SvgAssetOptions {
 
 const SVG_OPEN_TAG = '<svg';
 
+/** Index of the `>` closing the tag that starts at `start`, skipping any `>` inside a quoted attribute value. */
+const findTagEnd = (markup: string, start: number): number => {
+  let quote = '';
+
+  for (let index = start; index < markup.length; index++) {
+    const char = markup.charAt(index);
+
+    if (quote !== '') {
+      if (char === quote) {
+        quote = '';
+      }
+    } else if (char === '"' || char === "'") {
+      quote = char;
+    } else if (char === '>') {
+      return index;
+    }
+  }
+
+  return -1;
+};
+
 /** Replaces the root element's own width/height with the requested ones. */
 const resize = (markup: string, width: number | undefined, height: number | undefined): string => {
   const start = markup.indexOf(SVG_OPEN_TAG);
-  const tagEnd = start === -1 ? -1 : markup.indexOf('>', start);
+  const tagEnd = start === -1 ? -1 : findTagEnd(markup, start);
 
   if (start === -1 || tagEnd === -1) {
     return markup;
   }
 
+  const selfClosing = markup[tagEnd - 1] === '/';
   const attributes = markup
-    .slice(start + SVG_OPEN_TAG.length, tagEnd)
+    .slice(start + SVG_OPEN_TAG.length, selfClosing ? tagEnd - 1 : tagEnd)
     .replaceAll(/\s+width=(?:"[^"]*"|'[^']*')/g, '')
     .replaceAll(/\s+height=(?:"[^"]*"|'[^']*')/g, '');
   const requested = (width === undefined ? '' : ` width="${width}"`) + (height === undefined ? '' : ` height="${height}"`);
 
-  return `${markup.slice(0, start)}${SVG_OPEN_TAG}${attributes}${requested}>${markup.slice(tagEnd + 1)}`;
+  return `${markup.slice(0, start)}${SVG_OPEN_TAG}${attributes}${requested}${selfClosing ? '/>' : '>'}${markup.slice(tagEnd + 1)}`;
 };
 
 /**
