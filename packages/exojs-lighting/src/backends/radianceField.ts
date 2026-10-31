@@ -52,6 +52,9 @@ export const gatherUniforms = {
 /** Levels the chain is allowed to grow to. Each one quadruples the reach, so six cover any surface. */
 const MAX_CASCADES = 6;
 
+/** Largest finite half-float value. */
+const HALF_FLOAT_MAX = 65504;
+
 /**
  * A directional light's angular radius per unit of `softness`, in radians.
  *
@@ -463,8 +466,12 @@ export class RadianceField {
     const radius = Math.max(0.001, sun.softness * SUN_SIZE);
 
     sun.getWorldDirection(scratchDirection);
-    cascade.uniforms.uSun.set(scratchDirection.x, scratchDirection.y, radius, (sun.intensity * Math.PI) / radius);
     const sunRgb = radianceColorRgb(sun.color);
+    // The cascade accumulates in half floats: a hard-edged, bright sun would carry
+    // more per ray than a channel can hold and turn infinite.
+    const ceiling = HALF_FLOAT_MAX / Math.max(1, sunRgb.r, sunRgb.g, sunRgb.b);
+
+    cascade.uniforms.uSun.set(scratchDirection.x, scratchDirection.y, radius, Math.min(ceiling, (sun.intensity * Math.PI) / radius));
     cascade.uniforms.uSunColor.set(sunRgb.r, sunRgb.g, sunRgb.b);
   }
 
