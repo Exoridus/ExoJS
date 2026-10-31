@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import { AudioBus } from '#audio/AudioBus';
-import { getAudioContext } from '#audio/audioContext';
+import { getAudioContext, onAudioContextReady } from '#audio/audioContext';
 import type { Rectangle } from '#math/Rectangle';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { Video } from '#rendering/video/Video';
@@ -241,6 +241,28 @@ describe('Video', () => {
     });
   });
 
+  describe('duration', () => {
+    test('follows metadata that arrives after construction', () => {
+      const mockVideo = createMockVideoElement();
+      let duration = Number.NaN;
+
+      Object.defineProperty(mockVideo.element, 'duration', { configurable: true, get: () => duration });
+
+      const video = new Video(mockVideo.element);
+
+      expect(video.duration).toBeNaN();
+
+      duration = 12;
+      mockVideo.setDimensions(320, 180);
+      mockVideo.element.dispatchEvent(new Event('loadedmetadata'));
+
+      expect(video.duration).toBe(12);
+      expect(video.progress).toBe(0);
+
+      video.destroy();
+    });
+  });
+
   describe('progress', () => {
     test('computes (currentTime % duration) / duration', () => {
       const mockVideo = createMockVideoElement();
@@ -340,6 +362,40 @@ describe('Video', () => {
     });
   });
 
+  describe('before the audio context is ready', () => {
+    test('volume and muted act on the element, then hand over to the gain node', () => {
+      const audioContext = getAudioContext() as { state: AudioContextState } & AudioContext;
+      const mockVideo = createMockVideoElement();
+
+      audioContext.state = 'suspended';
+
+      try {
+        const video = new Video(mockVideo.element);
+
+        video.muted = true;
+        video.volume = 1.5;
+        expect(mockVideo.element.muted).toBe(true);
+        expect(mockVideo.element.volume).toBe(1);
+
+        video.volume = 0.25;
+        expect(mockVideo.element.volume).toBe(0.25);
+
+        audioContext.state = 'running';
+        onAudioContextReady.dispatch(audioContext);
+
+        expect(mockVideo.element.muted).toBe(false);
+        expect(mockVideo.element.volume).toBe(1);
+        expect(video.muted).toBe(true);
+        expect(video.volume).toBe(0.25);
+        expect(gainTarget(video)).not.toBeNull();
+
+        video.destroy();
+      } finally {
+        audioContext.state = 'running';
+      }
+    });
+  });
+
   describe('muted', () => {
     test('setMuted no-ops when unchanged and updates the gain target when changed', () => {
       const mockVideo = createMockVideoElement();
@@ -362,7 +418,7 @@ describe('Video', () => {
   });
 
   describe('paused / playing', () => {
-    test('play() dispatches onStart only when transitioning from paused', () => {
+    test('play() dispatches onStart only when transitioning from paused', async () => {
       const mockVideo = createMockVideoElement();
       const video = new Video(mockVideo.element);
       const startSpy = vi.fn();
@@ -371,12 +427,60 @@ describe('Video', () => {
       mockVideo.setPaused(true);
 
       video.play();
+      mockVideo.setPaused(false);
+      await Promise.resolve();
       expect(startSpy).toHaveBeenCalledTimes(1);
 
-      // Simulate the video now actually playing; a second play() is a no-op.
-      mockVideo.setPaused(false);
+      // Already playing - a second play() is a no-op.
       video.play();
+      await Promise.resolve();
       expect(startSpy).toHaveBeenCalledTimes(1);
+
+      video.destroy();
+    });
+
+    test('play() dispatches onStart only once the element has started playing', async () => {
+      const mockVideo = createMockVideoElement();
+      let resolvePlay!: () => void;
+
+      mockVideo.element.play = () =>
+        new Promise<void>(resolve => {
+          resolvePlay = resolve;
+        });
+
+      const video = new Video(mockVideo.element);
+      const startSpy = vi.fn();
+
+      video.onStart.add(startSpy);
+      video.play();
+      expect(startSpy).not.toHaveBeenCalled();
+
+      mockVideo.setPaused(false);
+      resolvePlay();
+      await Promise.resolve();
+      expect(startSpy).toHaveBeenCalledTimes(1);
+
+      video.destroy();
+    });
+
+    test('play() dispatches nothing when the browser refuses or a pause supersedes the start', async () => {
+      const mockVideo = createMockVideoElement();
+      const video = new Video(mockVideo.element);
+      const startSpy = vi.fn();
+
+      video.onStart.add(startSpy);
+
+      mockVideo.element.play = () => Promise.reject(new DOMException('blocked', 'NotAllowedError'));
+      video.play();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      // Resolved start, but the element was paused again before it settled.
+      mockVideo.element.play = () => Promise.resolve();
+      video.play();
+      await Promise.resolve();
+
+      expect(startSpy).not.toHaveBeenCalled();
 
       video.destroy();
     });
