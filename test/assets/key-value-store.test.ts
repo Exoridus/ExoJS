@@ -168,6 +168,14 @@ describe('MemoryStore', () => {
 
     await expect(store.delete('absent')).resolves.toBe(false);
   });
+
+  test('a present entry never reads back as undefined', async () => {
+    const store = new MemoryStore();
+
+    await store.set('present', undefined);
+
+    await expect(store.get('present')).resolves.toBeNull();
+  });
 });
 
 describe('WebStorageStore', () => {
