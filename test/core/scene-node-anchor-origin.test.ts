@@ -118,6 +118,28 @@ describe('sprite anchoring is unchanged (regression guard)', () => {
     sprite.destroy();
   });
 
+  test('NineSliceSprite keeps an anchored origin when it is resized, and an explicit origin without an anchor', () => {
+    const anchored = new NineSliceSprite(createTextureStub(), { slices: { left: 4, top: 4, right: 4, bottom: 4 } });
+
+    anchored.setSize(80, 40);
+    anchored.anchor.set(1, 1);
+    anchored.setSize(120, 30);
+
+    expect(anchored.origin.x).toBe(120);
+    expect(anchored.origin.y).toBe(30);
+
+    const free = new NineSliceSprite(createTextureStub(), { slices: { left: 4, top: 4, right: 4, bottom: 4 } });
+
+    free.setOrigin(3, 5);
+    free.setSize(120, 30);
+
+    expect(free.origin.x).toBe(3);
+    expect(free.origin.y).toBe(5);
+
+    anchored.destroy();
+    free.destroy();
+  });
+
   test('RepeatingSprite anchors on its layout size', () => {
     const sprite = new RepeatingSprite(createTextureStub());
 

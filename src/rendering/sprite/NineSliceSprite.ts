@@ -138,6 +138,11 @@ export class NineSliceSprite extends Drawable {
       this._height = height;
       this._geometryDirty = true;
       this.invalidateCache();
+
+      // A zero anchor leaves an explicitly set origin alone.
+      if (this.anchor.x !== 0 || this.anchor.y !== 0) {
+        this._updateOrigin();
+      }
     }
 
     return this;
