@@ -415,6 +415,10 @@ const parseWgslUniforms = (source: string): Record<string, string> => {
       continue;
     }
 
+    if (/^sampler(?:_comparison)?$/.test(type.trim())) {
+      continue;
+    }
+
     result[name] = type.trim();
   }
 
