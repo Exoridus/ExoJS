@@ -334,15 +334,13 @@ export class TileMapView {
     }
 
     const currentLayers = this._map.layers;
-    const currentIds = new Set<number>();
-
-    for (const layer of currentLayers) {
-      currentIds.add(layer.id);
-    }
+    // By instance: a layer removed and replaced under the same id is a new layer
+    // and needs a new node, not the destroyed one's.
+    const currentLayerSet = new Set(currentLayers);
 
     // 1. Remove nodes whose layer no longer exists.
     for (const node of [...this._layerNodes]) {
-      if (!currentIds.has(node.layer.id)) {
+      if (!currentLayerSet.has(node.layer)) {
         this._removeTileNode(node);
       }
     }
