@@ -9,7 +9,7 @@ import type { Rectangle } from '#math/Rectangle';
  * widget's own undo ring, not the host's.
  */
 export type TextEditIntent =
-  | { kind: 'insert'; text: string }
+  | { kind: 'insert'; text: string; source?: 'input' | 'paste' }
   | { kind: 'deleteContent'; direction: 'backward' | 'forward'; granularity: 'character' | 'word' | 'line' }
   | { kind: 'historyUndo' }
   | { kind: 'historyRedo' };
