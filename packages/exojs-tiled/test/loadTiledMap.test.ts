@@ -169,6 +169,60 @@ describe('loadTiledMap — image layer nested inside a group layer', () => {
   });
 });
 
+describe('loadTiledMap — image requests', () => {
+  it('issues every per-tile image and image-layer request before the first one settles', async () => {
+    const { loadMap, load, loaderLoad } = makeContext({
+      'many.tmj': {
+        type: 'map',
+        version: '1.10',
+        orientation: 'orthogonal',
+        renderorder: 'right-down',
+        width: 1,
+        height: 1,
+        tilewidth: 16,
+        tileheight: 16,
+        infinite: false,
+        layers: [
+          { id: 1, name: 'A', type: 'imagelayer', visible: true, x: 0, y: 0, opacity: 1, image: 'a.png' },
+          { id: 2, name: 'B', type: 'imagelayer', visible: true, x: 0, y: 0, opacity: 1, image: 'b.png' },
+        ],
+        tilesets: [
+          {
+            firstgid: 1,
+            name: 'collection',
+            tilewidth: 16,
+            tileheight: 16,
+            tilecount: 3,
+            columns: 0,
+            tiles: [
+              { id: 0, image: 't0.png', imagewidth: 16, imageheight: 16 },
+              { id: 1, image: 't1.png', imagewidth: 16, imageheight: 16 },
+              { id: 2, image: 't2.png', imagewidth: 16, imageheight: 16 },
+            ],
+          },
+        ],
+      },
+    });
+    let inFlight = 0;
+    let peak = 0;
+    const base = load.getMockImplementation()!;
+
+    load.mockImplementation(async (asset: unknown) => {
+      inFlight++;
+      peak = Math.max(peak, inFlight);
+      await new Promise(resolve => setTimeout(resolve, 5));
+      inFlight--;
+
+      return base(asset);
+    });
+
+    await loadMap('many.tmj');
+
+    expect(loaderLoad).toHaveBeenCalledTimes(5);
+    expect(peak).toBeGreaterThanOrEqual(3);
+  });
+});
+
 describe('loadTiledMap — error propagation', () => {
   it('propagates TiledFormatError for invalid TMJ', async () => {
     const { loadMap } = makeContext({
