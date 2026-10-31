@@ -249,7 +249,8 @@ export const layoutText = (
 
         // Kerning adjustment before placing this cluster.
         if (prevCluster !== null && provider.getKerning !== undefined) {
-          cursorX += provider.getKerning(prevCluster, cluster, fontSize);
+          // Kerning pairs are keyed in logical order, which for RTL is the reverse of the walk.
+          cursorX += rtl ? provider.getKerning(cluster, prevCluster, fontSize) : provider.getKerning(prevCluster, cluster, fontSize);
         }
 
         const info = provider.getGlyph(cluster, fontSize);

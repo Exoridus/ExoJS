@@ -56,7 +56,7 @@ export interface BlurFilterOptions {
    *
    * Capping does not shorten the blur: the taps still span the full kernel, so
    * a cap well below the derived count widens their spacing and can show as
-   * banding. The ceiling is 32 either way.
+   * banding. The ceiling is 32 either way. `0` is the same as omitting it.
    */
   readonly quality?: number;
 }
@@ -270,4 +270,4 @@ export class BlurFilter extends Filter {
 
 /** `0` for "derive from the strength", otherwise a tap cap inside the shader's table. */
 const clampTapLimit = (quality: number | undefined): number =>
-  quality === undefined ? 0 : Math.min(MAX_TAPS_PER_SIDE, Math.max(1, Math.floor(quality)));
+  quality === undefined || quality === 0 ? 0 : Math.min(MAX_TAPS_PER_SIDE, Math.max(1, Math.floor(quality)));

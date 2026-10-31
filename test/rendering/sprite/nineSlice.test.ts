@@ -274,6 +274,26 @@ describe('buildNineSliceQuads — UV boundaries', () => {
     expect(br.v1).toBe(region.v1);
   });
 
+  test('asymmetric extrusion insets only the edges that are not extruded', () => {
+    const tex = makeTexture(128, 128);
+    const region = new TextureRegion(tex, {
+      x: 32,
+      y: 32,
+      width: 64,
+      height: 64,
+      extrusion: { left: 2, top: 0, right: 0, bottom: 2 },
+    });
+    const slices = { left: 10, top: 10, right: 10, bottom: 10 };
+    const border = { left: 10, top: 10, right: 10, bottom: 10 };
+    const quads = buildNineSliceQuads(region, slices, border, 64, 64, undefined);
+    const half = 0.5 / 128;
+
+    expect(quads[0].u0).toBe(region.u0);
+    expect(quads[0].v0).toBe(region.v0 + half);
+    expect(quads[3].u1).toBe(region.u1 - half);
+    expect(quads[3].v1).toBe(region.v1);
+  });
+
   test('no extrusion: outer UVs are half-texel inset', () => {
     const tex = makeTexture(64, 64);
     const region = makeRegion(tex);
