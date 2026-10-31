@@ -72,6 +72,21 @@ describe('Graphics live area sources', () => {
     second.destroy();
   });
 
+  test('a registered circle keeps its exact mathematical bounds while its drawing uses the tessellated extent', () => {
+    const source = new Circle(0, 0, 10);
+    const graphics = new Graphics({ fill: Color.red });
+
+    graphics.addShape(source);
+    source.radius = 20;
+
+    expect(source.getBounds().width).toBe(40);
+    expect(graphics.getChildAt(0).getLocalBounds().width).toBeLessThan(40);
+    expect(graphics.getChildAt(0).getLocalBounds().width).toBeCloseTo(immediateCircleWidth(20));
+
+    graphics.destroy();
+    source.destroy();
+  });
+
   test('an initially empty path can become visible and empty again', () => {
     const source = new GraphicsPath();
     const graphics = new Graphics({ fill: Color.red });
