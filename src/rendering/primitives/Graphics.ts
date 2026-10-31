@@ -58,7 +58,7 @@ const gradientTextureSize = 256;
  */
 export class Graphics extends Container {
   private readonly _shapes = new Map<GraphicsShapeSource, GraphicsShape>();
-  private readonly _createdMeshes = new WeakSet<Mesh>();
+  private readonly _createdMeshes = new WeakSet<RenderNode>();
   private _defaultFill: Color | null = null;
 
   public constructor(options: GraphicsAppearancePatch = {}) {

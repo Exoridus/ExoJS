@@ -508,7 +508,7 @@
             }
           ],
           "returnType": "GraphicsShape",
-          "description": "Register a live, borrowed rectangle. Duplicate source identities throw."
+          "description": "Register a live, borrowed source shape. Duplicate source identities throw. Destroying the source removes its drawing from every Graphics using it."
         },
         {
           "name": "arcTo",
@@ -849,7 +849,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": "Remove all child meshes and reset pen state (position, fill/stroke styles, line width)."
+          "description": "Remove all child meshes and reset pen state (position, fill/stroke styles, line width). Meshes created by drawing calls and retained shapes are destroyed. Meshes added with addChild are only detached; their owner keeps them."
         },
         {
           "name": "clearFilters",
