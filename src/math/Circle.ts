@@ -20,6 +20,8 @@ import type { Line } from './Line';
 import type { Polygon } from './Polygon';
 import { Rectangle } from './Rectangle';
 import type { ShapeLike } from './ShapeLike';
+import { ShapeRevision } from './ShapeRevision';
+import { ShapeVector } from './ShapeVector';
 import { Vector } from './Vector';
 
 let temp: Circle | null = null;
@@ -34,7 +36,7 @@ let temp: Circle | null = null;
  *
  * `Circle.temp` is a shared scratch instance for intermediate calculations.
  */
-export class Circle implements ShapeLike {
+export class Circle extends ShapeRevision implements ShapeLike {
   /**
    * Number of polygon segments used to approximate the circle boundary for
    * SAT collision tests. Increasing this improves accuracy at the cost of
@@ -44,7 +46,7 @@ export class Circle implements ShapeLike {
 
   public readonly collisionType: CollisionType = CollisionType.Circle;
 
-  private readonly _position: Vector;
+  private readonly _position: ShapeVector;
   private _collisionVertices: Vector[] | null = null;
   private _verticesDirty = true;
   private _normals: Vector[] | null = null;
@@ -52,8 +54,16 @@ export class Circle implements ShapeLike {
   private _radius: number;
 
   public constructor(x = 0, y = 0, radius = 0) {
-    this._position = new Vector(x, y);
+    super();
+    this._position = new ShapeVector(this, x, y);
     this._radius = radius;
+  }
+
+  /** @internal */
+  public _onObservableChange(): void {
+    this._verticesDirty = true;
+    this._normalsDirty = true;
+    this._notifyGeometry();
   }
 
   public get position(): Vector {
@@ -62,8 +72,6 @@ export class Circle implements ShapeLike {
 
   public set position(position: Vector) {
     this._position.copy(position);
-    this._verticesDirty = true;
-    this._normalsDirty = true;
   }
 
   public get x(): number {
@@ -76,8 +84,6 @@ export class Circle implements ShapeLike {
     }
 
     this._position.x = x;
-    this._verticesDirty = true;
-    this._normalsDirty = true;
   }
 
   public get y(): number {
@@ -90,8 +96,6 @@ export class Circle implements ShapeLike {
     }
 
     this._position.y = y;
-    this._verticesDirty = true;
-    this._normalsDirty = true;
   }
 
   public get radius(): number {
@@ -106,6 +110,7 @@ export class Circle implements ShapeLike {
     this._radius = radius;
     this._verticesDirty = true;
     this._normalsDirty = true;
+    this._notifyGeometry();
   }
 
   /**
@@ -114,42 +119,31 @@ export class Circle implements ShapeLike {
    */
   public setPosition(x: number, y: number): this {
     this._position.set(x, y);
-    this._verticesDirty = true;
-    this._normalsDirty = true;
 
     return this;
   }
 
-  /**
-   * Set the circle's radius. No-op when the value has not changed. Invalidates
-   * the normal and vertex caches. Returns `this` for chaining.
-   */
+  /** No-op when the radius is unchanged. */
   public setRadius(radius: number): this {
-    if (this._radius !== radius) {
-      this._radius = radius;
-      this._verticesDirty = true;
-      this._normalsDirty = true;
-    }
+    this.radius = radius;
 
     return this;
   }
 
   public set(x: number, y: number, radius: number): this {
-    this._position.set(x, y);
+    const moved = this._position._setSilently(x, y);
+    const resized = this._radius !== radius;
     this._radius = radius;
-    this._verticesDirty = true;
-    this._normalsDirty = true;
+
+    if (moved || resized) {
+      this._onObservableChange();
+    }
 
     return this;
   }
 
   public copy(circle: Circle): this {
-    this._position.copy(circle.position);
-    this._radius = circle.radius;
-    this._verticesDirty = true;
-    this._normalsDirty = true;
-
-    return this;
+    return this.set(circle.x, circle.y, circle.radius);
   }
 
   public clone(): this {
@@ -261,6 +255,7 @@ export class Circle implements ShapeLike {
   }
 
   public destroy(): void {
+    this._releaseGeometryListeners();
     this._position.destroy();
 
     if (this._collisionVertices !== null) {

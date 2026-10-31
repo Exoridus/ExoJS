@@ -23,6 +23,7 @@ import { ObservableVector } from './ObservableVector';
 import type { Polygon } from './Polygon';
 import type { RectangleLike } from './RectangleLike';
 import type { ShapeLike } from './ShapeLike';
+import { ShapeRevision } from './ShapeRevision';
 import type { Size } from './Size';
 import { inRange } from './utils';
 import { Vector } from './Vector';
@@ -86,7 +87,7 @@ export interface ReadonlyRectangle extends Collidable {
  * See {@link ReadonlyRectangle} for the read-only view engine APIs hand out
  * when they return a live internal rectangle.
  */
-export class Rectangle implements ShapeLike, ReadonlyRectangle {
+export class Rectangle extends ShapeRevision implements ShapeLike, ReadonlyRectangle {
   public readonly collisionType: CollisionType = CollisionType.Rectangle;
 
   private readonly _position: ObservableVector;
@@ -94,7 +95,6 @@ export class Rectangle implements ShapeLike, ReadonlyRectangle {
   private _normals: Vector[] | null = null;
   private _normalsDirty = false;
   private _onChange: (() => void) | null;
-  private _geometryListeners: Set<() => void> | null = null;
 
   /**
    * @param x        - Left edge.
@@ -104,6 +104,7 @@ export class Rectangle implements ShapeLike, ReadonlyRectangle {
    * @param onChange - Owner notification invoked after any mutation. Defaults to `null`.
    */
   public constructor(x = 0, y = x, width = 0, height = width, onChange: (() => void) | null = null) {
+    super();
     this._position = new ObservableVector(this, 0, x, y);
     this._size = new ObservableSize(this._onObservableChange.bind(this), width, height);
     this._onChange = onChange;
@@ -123,22 +124,8 @@ export class Rectangle implements ShapeLike, ReadonlyRectangle {
     try {
       this._onChange?.();
     } finally {
-      this._geometryListeners?.forEach(listener => listener());
+      this._notifyGeometry();
     }
-  }
-
-  /** @internal */
-  public _subscribeGeometry(listener: () => void): () => void {
-    this._geometryListeners ??= new Set();
-    this._geometryListeners.add(listener);
-
-    return () => {
-      this._geometryListeners?.delete(listener);
-
-      if (this._geometryListeners?.size === 0) {
-        this._geometryListeners = null;
-      }
-    };
   }
 
   public get position(): AbstractVector {
@@ -369,7 +356,7 @@ export class Rectangle implements ShapeLike, ReadonlyRectangle {
     // Drop the owner notification along with the reactive components, so a
     // rectangle retained past its owner's teardown cannot invalidate it again.
     this._onChange = null;
-    this._geometryListeners = null;
+    this._releaseGeometryListeners();
 
     if (this._normals) {
       this._normals = null;

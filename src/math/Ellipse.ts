@@ -20,6 +20,8 @@ import type { Line } from './Line';
 import type { Polygon } from './Polygon';
 import { Rectangle } from './Rectangle';
 import type { ShapeLike } from './ShapeLike';
+import { ShapeRevision } from './ShapeRevision';
+import { ShapeVector } from './ShapeVector';
 import { Vector } from './Vector';
 
 /**
@@ -31,15 +33,21 @@ import { Vector } from './Vector';
  * Ellipse. Point and Line targets always return `null` - use
  * `intersectsWith`.
  */
-export class Ellipse implements ShapeLike {
+export class Ellipse extends ShapeRevision implements ShapeLike {
   public readonly collisionType: CollisionType = CollisionType.Ellipse;
 
-  private readonly _position: Vector;
-  private readonly _radius: Vector;
+  private readonly _position: ShapeVector;
+  private readonly _radius: ShapeVector;
 
   public constructor(x = 0, y = 0, halfWidth = 0, halfHeight = halfWidth) {
-    this._position = new Vector(x, y);
-    this._radius = new Vector(halfWidth, halfHeight);
+    super();
+    this._position = new ShapeVector(this, x, y);
+    this._radius = new ShapeVector(this, halfWidth, halfHeight);
+  }
+
+  /** @internal */
+  public _onObservableChange(): void {
+    this._notifyGeometry();
   }
 
   public get position(): Vector {
@@ -103,17 +111,18 @@ export class Ellipse implements ShapeLike {
   }
 
   public set(x: number, y: number, radiusX: number, radiusY: number): this {
-    this._position.set(x, y);
-    this._radius.set(radiusX, radiusY);
+    const moved = this._position._setSilently(x, y);
+    const resized = this._radius._setSilently(radiusX, radiusY);
+
+    if (moved || resized) {
+      this._notifyGeometry();
+    }
 
     return this;
   }
 
   public copy(ellipse: Ellipse): this {
-    this._position.copy(ellipse.position);
-    this._radius.copy(ellipse.radius);
-
-    return this;
+    return this.set(ellipse.x, ellipse.y, ellipse.rx, ellipse.ry);
   }
 
   public clone(): this {
@@ -192,6 +201,7 @@ export class Ellipse implements ShapeLike {
   }
 
   public destroy(): void {
+    this._releaseGeometryListeners();
     this._position.destroy();
     this._radius.destroy();
   }

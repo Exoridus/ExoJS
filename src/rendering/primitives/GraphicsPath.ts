@@ -1,3 +1,4 @@
+import { ShapeRevision } from '#math/ShapeRevision';
 import { TAU } from '#math/utils';
 
 /** One flattened subpath produced by {@link GraphicsPath.contours}. */
@@ -63,7 +64,7 @@ const MAX_SUBDIVISION_DEPTH = 16;
  * segment its own mesh. A path is assembled first and drawn as one shape, so
  * it can be filled, joined across segments, and kept for later.
  */
-export class GraphicsPath {
+export class GraphicsPath extends ShapeRevision {
   private readonly _ops: PathOp[] = [];
   private readonly _data: number[] = [];
   private _startX = 0;
@@ -287,12 +288,17 @@ export class GraphicsPath {
 
   /** Discard every command, leaving the path as newly constructed. */
   public clear(): this {
+    const changed = !this.isEmpty;
     this._ops.length = 0;
     this._data.length = 0;
     this._startX = 0;
     this._startY = 0;
     this._currentX = 0;
     this._currentY = 0;
+
+    if (changed) {
+      this._notifyGeometry();
+    }
 
     return this;
   }
@@ -427,6 +433,7 @@ export class GraphicsPath {
   private _push(op: PathOp, ...args: number[]): void {
     this._ops.push(op);
     this._data.push(...args);
+    this._notifyGeometry();
   }
 }
 

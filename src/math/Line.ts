@@ -16,6 +16,8 @@ import { Interval } from './Interval';
 import type { Polygon } from './Polygon';
 import { Rectangle } from './Rectangle';
 import type { ShapeLike } from './ShapeLike';
+import { ShapeRevision } from './ShapeRevision';
+import { ShapeVector } from './ShapeVector';
 import { Vector } from './Vector';
 
 let temp: Line | null = null;
@@ -31,15 +33,21 @@ let temp: Line | null = null;
  *
  * `Line.temp` is a shared scratch instance.
  */
-export class Line implements ShapeLike {
+export class Line extends ShapeRevision implements ShapeLike {
   public readonly collisionType: CollisionType = CollisionType.Line;
 
-  private readonly _fromPosition: Vector;
-  private readonly _toPosition: Vector;
+  private readonly _fromPosition: ShapeVector;
+  private readonly _toPosition: ShapeVector;
 
   public constructor(x1 = 0, y1 = 0, x2 = 0, y2 = 0) {
-    this._fromPosition = new Vector(x1, y1);
-    this._toPosition = new Vector(x2, y2);
+    super();
+    this._fromPosition = new ShapeVector(this, x1, y1);
+    this._toPosition = new ShapeVector(this, x2, y2);
+  }
+
+  /** @internal */
+  public _onObservableChange(): void {
+    this._notifyGeometry();
   }
 
   public get fromPosition(): Vector {
@@ -91,17 +99,18 @@ export class Line implements ShapeLike {
   }
 
   public set(x1: number, y1: number, x2: number, y2: number): this {
-    this._fromPosition.set(x1, y1);
-    this._toPosition.set(x2, y2);
+    const fromChanged = this._fromPosition._setSilently(x1, y1);
+    const toChanged = this._toPosition._setSilently(x2, y2);
+
+    if (fromChanged || toChanged) {
+      this._notifyGeometry();
+    }
 
     return this;
   }
 
   public copy(line: Line): this {
-    this._fromPosition.copy(line.fromPosition);
-    this.toPosition.copy(line.toPosition);
-
-    return this;
+    return this.set(line.fromX, line.fromY, line.toX, line.toY);
   }
 
   public clone(): this {
@@ -168,6 +177,7 @@ export class Line implements ShapeLike {
   }
 
   public destroy(): void {
+    this._releaseGeometryListeners();
     this._fromPosition.destroy();
     this._toPosition.destroy();
   }
