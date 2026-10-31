@@ -182,7 +182,7 @@ export class ImageLayerNode extends Container {
       }
 
       try {
-        this._updateRepeatCoverage(builder, layer.parallaxScale);
+        this._updateRepeatCoverage(builder);
         super._collectContent(builder);
       } finally {
         if (patchesPosition) {
@@ -215,7 +215,7 @@ export class ImageLayerNode extends Container {
    * follows the parallax-shifted origin. Skips the rebuild when neither the view
    * span nor the patched origin changed since the last frame.
    */
-  private _updateRepeatCoverage(builder: RenderPlanBuilder, parallaxScale = 1): void {
+  private _updateRepeatCoverage(builder: RenderPlanBuilder): void {
     const layer = this._layer;
     const sprite = this._sprite;
 
@@ -226,6 +226,10 @@ export class ImageLayerNode extends Container {
     const bounds = builder.view.getBounds();
     const originX = this.x;
     const originY = this.y;
+    // The node's effective scale: parallax scaling has already been folded into it
+    // by the caller, and a scale the caller set on the node counts the same.
+    const scaleX = Math.abs(this.scale.x) || 1;
+    const scaleY = Math.abs(this.scale.y) || 1;
 
     if (
       bounds.x === this._covViewX &&
@@ -252,8 +256,8 @@ export class ImageLayerNode extends Container {
 
     if (layer.repeatX) {
       const imgW = this._imageWidth;
-      const localViewMin = (bounds.x - originX) / parallaxScale;
-      const localViewWidth = bounds.width / parallaxScale;
+      const localViewMin = (bounds.x - originX) / scaleX;
+      const localViewWidth = bounds.width / scaleX;
       const startLocal = Math.floor(localViewMin / imgW) * imgW;
       const periods = Math.ceil((localViewMin + localViewWidth - startLocal) / imgW);
 
@@ -263,8 +267,8 @@ export class ImageLayerNode extends Container {
 
     if (layer.repeatY) {
       const imgH = this._imageHeight;
-      const localViewMin = (bounds.y - originY) / parallaxScale;
-      const localViewHeight = bounds.height / parallaxScale;
+      const localViewMin = (bounds.y - originY) / scaleY;
+      const localViewHeight = bounds.height / scaleY;
       const startLocal = Math.floor(localViewMin / imgH) * imgH;
       const periods = Math.ceil((localViewMin + localViewHeight - startLocal) / imgH);
 
