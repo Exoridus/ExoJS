@@ -2258,7 +2258,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Return true when value is a non-zero power of two."
+          "description": "Return true when value is a positive integer power of two (1, 2, 4, ...)."
         },
         {
           "name": "keyboardChannelFromCode",

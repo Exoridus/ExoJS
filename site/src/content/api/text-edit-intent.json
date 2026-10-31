@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "TextEditIntent",
-          "signature": "{ direction: \"backward\" | \"forward\"; granularity: \"character\" | \"line\" | \"word\"; kind: \"deleteContent\" } | { kind: \"historyRedo\" } | { kind: \"historyUndo\" } | { kind: \"insert\"; text: string }",
+          "signature": "{ direction: \"backward\" | \"forward\"; granularity: \"character\" | \"line\" | \"word\"; kind: \"deleteContent\" } | { kind: \"historyRedo\" } | { kind: \"historyUndo\" } | { kind: \"insert\"; source?: \"input\" | \"paste\"; text: string }",
           "signatureTokens": [
             {
               "text": "{ ",
@@ -174,6 +174,34 @@
             },
             {
               "text": "\"insert\"",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"input\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"paste\"",
               "kind": "keyword"
             },
             {
