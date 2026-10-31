@@ -444,7 +444,7 @@
         },
         {
           "name": "addShape",
-          "signature": "addShape(source: Rectangle, options: GraphicsAppearancePatch): GraphicsShape",
+          "signature": "addShape(source: GraphicsShapeSource, options: GraphicsAppearancePatch): GraphicsShape",
           "signatureTokens": [
             {
               "text": "addShape",
@@ -463,7 +463,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Rectangle",
+              "text": "GraphicsShapeSource",
               "kind": "type"
             },
             {
@@ -498,7 +498,7 @@
           "params": [
             {
               "name": "source",
-              "type": "Rectangle",
+              "type": "GraphicsShapeSource",
               "optional": false
             },
             {
@@ -2466,7 +2466,7 @@
         },
         {
           "name": "getShape",
-          "signature": "getShape(source: Rectangle): GraphicsShape | null",
+          "signature": "getShape(source: GraphicsShapeSource): GraphicsShape | null",
           "signatureTokens": [
             {
               "text": "getShape",
@@ -2485,7 +2485,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Rectangle",
+              "text": "GraphicsShapeSource",
               "kind": "type"
             },
             {
@@ -2512,7 +2512,7 @@
           "params": [
             {
               "name": "source",
-              "type": "Rectangle",
+              "type": "GraphicsShapeSource",
               "optional": false
             }
           ],

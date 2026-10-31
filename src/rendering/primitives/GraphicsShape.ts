@@ -1,6 +1,16 @@
 import type { Color } from '#core/Color';
-import type { Rectangle } from '#math/Rectangle';
-import type { Mesh } from '#rendering/mesh/Mesh';
+import type { Circle } from '#math/Circle';
+import type { Ellipse } from '#math/Ellipse';
+import { buildRectangle, type MeshGeometryData } from '#math/geometry';
+import type { Polygon } from '#math/Polygon';
+import { Rectangle } from '#math/Rectangle';
+import { Mesh } from '#rendering/mesh/Mesh';
+
+import { buildGraphicsFill } from './graphicsGeometry';
+import type { GraphicsPath } from './GraphicsPath';
+
+/** Live geometric sources that can be filled. */
+export type GraphicsShapeSource = Rectangle | Circle | Ellipse | Polygon | GraphicsPath;
 
 /** Appearance fields supported by retained rectangle drawings. Paint values are copied. */
 export interface GraphicsAppearancePatch {
@@ -15,31 +25,51 @@ export interface GraphicsAppearancePatch {
 export class GraphicsShape {
   private _fill: Color | null | undefined;
   private _unsubscribe: (() => void) | null;
+  private _hasGeometry: boolean;
+  private readonly _mesh: ShapeMesh;
 
   /** @internal */
   public constructor(
-    source: Rectangle,
-    private readonly _mesh: Mesh,
+    source: GraphicsShapeSource,
     private readonly _defaultFill: () => Color | null,
     options: GraphicsAppearancePatch,
   ) {
+    const data = buildGraphicsFill(source);
+    this._hasGeometry = data !== null && data.indices.length > 0;
+    this._mesh = new ShapeMesh(this._hasGeometry ? data! : buildRectangle(0, 0, 0, 0));
     this._fill = options.fill?.clone() ?? options.fill;
     this._unsubscribe = source._subscribeGeometry(() => {
-      const { x, y, width, height } = source;
-      const vertices = this._mesh.vertices;
+      if (source instanceof Rectangle) {
+        const { x, y, width, height } = source;
+        const vertices = this._mesh.vertices;
 
-      vertices[0] = x;
-      vertices[1] = y;
-      vertices[2] = x + width;
-      vertices[3] = y;
-      vertices[4] = x;
-      vertices[5] = y + height;
-      vertices[6] = x + width;
-      vertices[7] = y + height;
-      this._mesh.recomputeLocalBounds();
-      this._mesh.invalidateContent();
+        vertices[0] = x;
+        vertices[1] = y;
+        vertices[2] = x + width;
+        vertices[3] = y;
+        vertices[4] = x;
+        vertices[5] = y + height;
+        vertices[6] = x + width;
+        vertices[7] = y + height;
+        this._mesh.recomputeLocalBounds();
+        this._mesh.invalidateContent();
+      } else {
+        const updated = buildGraphicsFill(source);
+        this._hasGeometry = updated !== null && updated.indices.length > 0;
+
+        if (this._hasGeometry) {
+          this._mesh.setGeometry(updated!);
+        }
+
+        this._applyAppearance();
+      }
     });
     this._applyAppearance();
+  }
+
+  /** @internal */
+  public get _drawable(): Mesh {
+    return this._mesh;
   }
 
   /** Patch only specified fields. `null` disables the fill. Throws after removal. */
@@ -60,7 +90,7 @@ export class GraphicsShape {
   public _applyAppearance(): void {
     const fill = this._fill === undefined ? this._defaultFill() : this._fill;
 
-    this._mesh.visible = fill !== null && fill.a !== 0;
+    this._mesh.visible = this._hasGeometry && fill !== null && fill.a !== 0;
 
     if (fill !== null) {
       this._mesh.tint = fill;
@@ -72,5 +102,18 @@ export class GraphicsShape {
     this._unsubscribe?.();
     this._unsubscribe = null;
     this._mesh.destroy();
+  }
+}
+
+class ShapeMesh extends Mesh {
+  public constructor(data: MeshGeometryData) {
+    super({ vertices: data.vertices, indices: data.indices });
+  }
+
+  public setGeometry(data: MeshGeometryData): void {
+    this._vertices = data.vertices;
+    this._indices = data.indices;
+    this.recomputeLocalBounds();
+    this.invalidateContent();
   }
 }

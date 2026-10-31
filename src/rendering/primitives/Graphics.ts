@@ -10,14 +10,13 @@ import {
   buildRoundedRectangle,
   buildStar,
 } from '#math/geometry';
-import { type Rectangle } from '#math/Rectangle';
 import { bezierCurveTo, clamp, quadraticCurveTo, TAU } from '#math/utils';
 import { Vector } from '#math/Vector';
 import { Container } from '#rendering/Container';
 import type { Gradient } from '#rendering/gradient/Gradient';
 import { Mesh } from '#rendering/mesh/Mesh';
 import type { GraphicsPath } from '#rendering/primitives/GraphicsPath';
-import { type GraphicsAppearancePatch, GraphicsShape } from '#rendering/primitives/GraphicsShape';
+import { type GraphicsAppearancePatch, GraphicsShape, type GraphicsShapeSource } from '#rendering/primitives/GraphicsShape';
 import type { RenderNode } from '#rendering/RenderNode';
 import type { DataTexture } from '#rendering/texture/DataTexture';
 import { ScaleModes, type TextureFormat } from '#rendering/types';
@@ -58,7 +57,7 @@ const gradientTextureSize = 256;
  * tint, and mask support from {@link Container}.
  */
 export class Graphics extends Container {
-  private readonly _shapes = new Map<Rectangle, GraphicsShape>();
+  private readonly _shapes = new Map<GraphicsShapeSource, GraphicsShape>();
   private _defaultFill: Color | null = null;
 
   public constructor(options: GraphicsAppearancePatch = {}) {
@@ -80,7 +79,7 @@ export class Graphics extends Container {
   }
 
   /** Register a live, borrowed rectangle. Duplicate source identities throw. */
-  public addShape(source: Rectangle, options: GraphicsAppearancePatch = {}): GraphicsShape {
+  public addShape(source: GraphicsShapeSource, options: GraphicsAppearancePatch = {}): GraphicsShape {
     if (this.destroyed) {
       throw new Error('Cannot add a shape to destroyed Graphics.');
     }
@@ -89,18 +88,16 @@ export class Graphics extends Container {
       throw new Error('Shape source is already registered in this Graphics.');
     }
 
-    const data = buildRectangle(source.x, source.y, source.width, source.height);
-    const mesh = new Mesh({ vertices: data.vertices, indices: data.indices });
-    const shape = new GraphicsShape(source, mesh, () => this._defaultFill, options);
+    const shape = new GraphicsShape(source, () => this._defaultFill, options);
 
-    this.addChild(mesh);
+    this.addChild(shape._drawable);
     this._shapes.set(source, shape);
 
     return shape;
   }
 
   /** Look up a retained drawing by source identity, or return `null` when absent. */
-  public getShape(source: Rectangle): GraphicsShape | null {
+  public getShape(source: GraphicsShapeSource): GraphicsShape | null {
     return this._shapes.get(source) ?? null;
   }
 
