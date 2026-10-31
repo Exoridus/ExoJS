@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest';
 
 import { RadianceField, type TransportBinding } from '../src/backends/radianceField';
 import { PointLight } from '../src/lights/PointLight';
+import { SunLight } from '../src/lights/SunLight';
 
 /**
  * The filters are built inside {@link RadianceField.useTransport} and are not
@@ -170,6 +171,22 @@ describe('RadianceField transport wiring', () => {
 
     expectWalkTerms(cascade, grown);
     expectWalkTerms(gather, grown);
+
+    field.destroy();
+  });
+
+  test('a bright, hard-edged sun stays finite in half-float radiance', () => {
+    const field = fieldWith();
+
+    field.useTransport(bindingFor(1, 9));
+    field.collectSources([new SunLight({ intensity: 100, softness: 0 })]);
+    field.update(new View(32, 32, 64, 64), new View(32, 32, 80, 80), 1, Color.black);
+
+    const sun = walkersOf(field).cascade!.uniforms['uSun']!;
+    const colour = walkersOf(field).cascade!.uniforms['uSunColor']!;
+
+    expect(Number.isFinite(sun.w)).toBe(true);
+    expect(sun.w * Math.max(1, colour.x, colour.y, colour.z)).toBeLessThanOrEqual(65504);
 
     field.destroy();
   });

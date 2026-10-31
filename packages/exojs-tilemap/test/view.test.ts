@@ -575,6 +575,22 @@ describe('TileMapView refreshLayers', () => {
     expect(view.layers).toHaveLength(0);
   });
 
+  it('a layer replaced under the same id gets a fresh node', () => {
+    const { map, tileset, view } = makeScene();
+    const stale = view.getLayerNodeById(3)!;
+
+    map.removeLayer(3);
+    map.addLayer(makeLayer(tileset, { id: 3, name: 'roofs' }));
+    view.refreshLayers();
+
+    const fresh = view.getLayerNodeById(3)!;
+
+    expect(fresh).not.toBe(stale);
+    expect(view.layers).toContain(fresh);
+    expect(view.layers).not.toContain(stale);
+    expect(fresh.layer).toBe(map.getTileLayerById(3));
+  });
+
   it('picks up an added layer as view-owned (unbanded) and keeps existing identities', () => {
     const { map, tileset, view, worldRoot, actors, hero } = makeScene();
     const groundBand = view.band('ground');

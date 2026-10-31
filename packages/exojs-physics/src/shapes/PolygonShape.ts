@@ -3,6 +3,8 @@ import type { PointLike } from '@codexo/exojs';
 import type { ShapeMassProperties } from './Shape';
 import { Shape } from './Shape';
 
+const maxVertices = 256;
+
 /** Vertices closer than this (px) are treated as coincident → degenerate. */
 const weldEpsilon = 1e-4;
 
@@ -33,6 +35,12 @@ export class PolygonShape extends Shape {
 
     if (vertices.length < 3) {
       throw new RangeError(`PolygonShape: needs at least 3 vertices, received ${vertices.length}.`);
+    }
+
+    // Contact point ids encode the reference edge in eight bits; more edges would alias them
+    // and break warm starting.
+    if (vertices.length > maxVertices) {
+      throw new RangeError(`PolygonShape: at most ${maxVertices} vertices are supported, received ${vertices.length}.`);
     }
 
     const points: number[] = [];

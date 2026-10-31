@@ -33,6 +33,7 @@ import type { NormalSurface } from '../normals/NormalSurface';
 import type { OccluderField } from '../occluders/OccluderField';
 import type { OccluderDrawable } from '../occluders/OccluderSource';
 import { buildShadowRow, buildSunShadowRow } from '../occluders/shadowMap';
+import { pickDebugTexture, releaseDestroyedBatches } from './backendHelpers';
 import { fieldGrid } from './fieldGrid';
 import type { LightingBackend } from './LightingBackend';
 import lightCompositeFragment from './shaders/light-composite.frag';
@@ -568,13 +569,8 @@ ${sunQuadWgsl}`,
     this._compositeMaterial.setTexture('u_light', this._debugTexture(view));
   }
 
-  /** The intermediate a debug view multiplies the white frame by. */
-  private _debugTexture(view: LightingDebugView): RenderTexture {
-    if (view === 'normals') {
-      return this._normalTarget;
-    }
-
-    return view === 'mask' ? this._maskTarget : this._target;
+  private _debugTexture(view: LightingDebugView): RenderTexture | Texture {
+    return pickDebugTexture(view, this._normalPass.enabled ? this._normalTarget : transparentTexture(), this._maskTarget, this._target);
   }
 
   /** The accumulated light, for a debug view that wants to show it. @internal */
@@ -1280,6 +1276,7 @@ ${sunQuadWgsl}`,
       }
 
       this._sunMaterial.setTexture('u_normal', this._boundNormals());
+      this._compositeMaterial.setTexture('u_light', this._debugTexture(this._debug));
     }
 
     this._surfaceCount = written;
@@ -1297,6 +1294,8 @@ ${sunQuadWgsl}`,
     if (existing !== undefined) {
       return existing;
     }
+
+    releaseDestroyedBatches(this._lightBatches);
 
     const material = new MeshMaterial({
       shader: new Shader({

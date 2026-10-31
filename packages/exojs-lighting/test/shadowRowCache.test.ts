@@ -198,4 +198,42 @@ describe('lightmap shadow row cache', () => {
 
     lighting.destroy();
   });
+
+  test('a destroyed cookie texture no longer pins its light batch', () => {
+    const lighting = new LightmapLighting(fakeApp(), { ambient: Color.black });
+    const backend = lighting.backend as unknown as {
+      _lightBatch: (cookie: Texture) => unknown;
+      _lightBatches: Map<Texture, unknown>;
+    };
+    const first = Texture.fromColor(Color.white, 1);
+    const second = Texture.fromColor(Color.red, 1);
+
+    backend._lightBatch(first);
+    first.destroy();
+    backend._lightBatch(second);
+
+    expect([...backend._lightBatches.keys()]).toEqual([second]);
+
+    lighting.destroy();
+    second.destroy();
+  });
+
+  test('the normals debug view shows the placeholder transparent texture while no surface is registered', () => {
+    const lighting = new LightmapLighting(fakeApp(), { ambient: Color.black });
+    const backend = lighting.backend as unknown as {
+      _compositeMaterial: { setTexture: (name: string, texture: Texture) => void };
+      _normalTarget: Texture;
+    };
+    const setTexture = vi.spyOn(backend._compositeMaterial, 'setTexture');
+
+    lighting.debug = 'normals';
+    lighting.update();
+
+    const lightBindings = setTexture.mock.calls.filter(([name]) => name === 'u_light').map(([, texture]) => texture);
+
+    expect(lightBindings.length).toBeGreaterThan(0);
+    expect(lightBindings.every(texture => texture !== backend._normalTarget)).toBe(true);
+
+    lighting.destroy();
+  });
 });

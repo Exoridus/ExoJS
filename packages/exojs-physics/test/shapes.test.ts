@@ -216,4 +216,15 @@ describe('Shape mass capability', () => {
     expect(body.mass).toBeCloseTo(solidOnly.mass);
     expect(body.inertia).toBeCloseTo(solidOnly.inertia);
   });
+
+  it('rejects a polygon with more edges than a contact point id can encode', () => {
+    const ring = (count: number) =>
+      Array.from({ length: count }, (_, i) => ({
+        x: 100 * Math.cos((2 * Math.PI * i) / count),
+        y: 100 * Math.sin((2 * Math.PI * i) / count),
+      }));
+
+    expect(() => new PolygonShape(ring(257))).toThrow(RangeError);
+    expect(() => new PolygonShape(ring(256))).not.toThrow();
+  });
 });
