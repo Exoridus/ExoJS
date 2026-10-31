@@ -52,7 +52,7 @@ export const PERF_RUNS = {
   },
   smoke: {
     summary: 'every in-process benchmark once, for its exit code (the `sync` gate)',
-    runs: ['rendering', 'audio', 'collision', 'scene-graph', 'interaction', 'collect-phase', 'profile'],
+    runs: ['rendering', 'audio', 'collision', 'scene-graph', 'graphics-sources', 'interaction', 'collect-phase', 'profile'],
   },
 
   renderers: { summary: 'structural renderer sweep, full matrix', command: 'tsx test/perf/rendering/run-sweep.ts full' },

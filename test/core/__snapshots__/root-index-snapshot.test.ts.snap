@@ -120,6 +120,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "Gradient",
   "Graphics",
   "GraphicsPath",
+  "GraphicsShape",
   "HTMLText",
   "HighpassFilter",
   "INSTANCE_TRANSFORM_GLSL",
