@@ -60,7 +60,7 @@ export class Button extends Widget {
   private readonly _label: Text;
   private readonly _backgrounds: Partial<Record<UIWidgetState, UIBackground>> = {};
   private readonly _fills: Partial<Record<UIWidgetState, UIFillPatch>> = {};
-  private _textStyle: TextStyleOptions | null = null;
+  private _textStyle: Readonly<TextStyleOptions> | null = null;
   /** The skin text object last pushed into the label, for a cheap identity check per paint. */
   private _appliedText: TextStyleOptions | null = null;
   private _pointerInside = false;
@@ -105,10 +105,10 @@ export class Button extends Widget {
     }
 
     if (options.textColor !== undefined || options.fontSize !== undefined) {
-      this._textStyle = {
+      this._textStyle = Object.freeze({
         ...(options.textColor !== undefined && { fillColor: options.textColor }),
         ...(options.fontSize !== undefined && { fontSize: options.fontSize }),
-      };
+      });
     }
 
     this._appliedText = resolveUISkin(this.theme.button, 'normal').text;
@@ -193,7 +193,7 @@ export class Button extends Widget {
   }
 
   /** The text-style overrides this button carries, or `null` when it takes the skin's. */
-  public get textStyleOverrides(): TextStyleOptions | null {
+  public get textStyleOverrides(): Readonly<TextStyleOptions> | null {
     return this._textStyle;
   }
 
@@ -248,7 +248,7 @@ export class Button extends Widget {
    * Layout-invalidating - the label is re-measured and re-centered.
    */
   public setTextStyle(style: TextStyleOptions | null): this {
-    this._textStyle = style === null ? null : { ...this._textStyle, ...style };
+    this._textStyle = style === null ? null : Object.freeze({ ...this._textStyle, ...style });
     this._appliedText = null;
     this._invalidateLayout();
 
