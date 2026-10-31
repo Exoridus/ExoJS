@@ -14,7 +14,7 @@ import {
 } from '../dsp/tempogram';
 
 export class TempoCandidateScorer {
-  private readonly _rawScores = new Float64Array(3);
+  private _rawScores = new Float64Array(3);
 
   public constructor(
     private readonly _sampleRate: number,
@@ -24,6 +24,10 @@ export class TempoCandidateScorer {
   ) {}
 
   public scoreInto(acf: Float32Array, minLag: number, into: TempoCandidateResult[]): number {
+    if (this._rawScores.length < into.length) {
+      this._rawScores = new Float64Array(into.length);
+    }
+
     const numLags = acf.length;
     const lastIdx = numLags - 1;
     const loBpm = this._minBpm * (1 - candidateEdgeTolerance);

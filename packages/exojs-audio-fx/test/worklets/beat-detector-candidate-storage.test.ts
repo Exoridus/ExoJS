@@ -71,6 +71,15 @@ describe('beat detector candidate storage', () => {
     expect(candidates.slice(1).map(candidate => candidate.score)).toEqual([0, 0]);
   });
 
+  it('ranks zero-score ties by raw peak for more than three candidate slots', () => {
+    const scorer = new TempoCandidateScorer(48_000, 512, 1, 10_000);
+    const candidates = Array.from({ length: 5 }, () => ({ bpm: 0, score: 0, lag: 0 }));
+    const acf = new Float32Array([0, 0, 0.05, 0, 0.04, 0, 0.03, 0, 0.02, 0, 0.01, 0]);
+
+    expect(scorer.scoreInto(acf, 1, candidates)).toBe(5);
+    expect(candidates.map(candidate => candidate.lag)).toEqual([5, 3, 7, 9, 11]);
+  });
+
   it('keeps published candidate snapshots unchanged by subsequent pooled updates', () => {
     runDetector(new Float32Array(0), {
       prepare: value => {

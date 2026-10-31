@@ -39,6 +39,13 @@ describe('VocoderEffect', () => {
       }).toThrow('VocoderEffect requires a modulator AudioBus.');
     });
 
+    it('tears down the base worklet graph when construction throws', () => {
+      const destroy = vi.spyOn(VocoderEffect.prototype, 'destroy');
+
+      expect(() => new VocoderEffect({} as never)).toThrow();
+      expect(destroy).toHaveBeenCalledTimes(1);
+    });
+
     it('throws if modulator is null', () => {
       expect(() => {
         new VocoderEffect({ modulator: null as never });

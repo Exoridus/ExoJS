@@ -14,7 +14,7 @@ import {
 } from '@codexo/exojs';
 
 import type { Light } from '../lights/Light';
-import { lightRadius } from '../lights/reach';
+import { isEmissive, lightFalloff, lightRadius } from '../lights/reach';
 import { SunLight } from '../lights/SunLight';
 import {
   angularAverageShader,
@@ -242,7 +242,7 @@ export class RadianceField {
       // A positive test rather than `<= 0`, so a non-finite intensity counts
       // as emitting nothing here too rather than as a source the tables then
       // leave out.
-      if (!light.enabled || !(light.intensity > 0)) {
+      if (!light.enabled || !isEmissive(light.intensity)) {
         continue;
       }
 
@@ -255,7 +255,7 @@ export class RadianceField {
         continue;
       }
 
-      if (lightRadius(light) > 0) {
+      if (isEmissive(lightFalloff(light)) && lightRadius(light) > 0) {
         written++;
       }
     }

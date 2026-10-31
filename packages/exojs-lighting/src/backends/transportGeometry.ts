@@ -2,7 +2,7 @@ import type { Color, ReadonlyRectangle } from '@codexo/exojs';
 
 import type { Light } from '../lights/Light';
 import { LineLight } from '../lights/LineLight';
-import { lightFalloff, lightHalfLength } from '../lights/reach';
+import { isEmissive, lightFalloff, lightHalfLength } from '../lights/reach';
 import { SpotLight } from '../lights/SpotLight';
 
 /** Floats per texel of every table, which are all RGBA32F. */
@@ -249,7 +249,7 @@ export class TransportGeometry {
       // light along every ray that crossed the source and a non-finite one
       // would poison the table. Written as a positive test so that both are
       // left out, on the same terms the chain counts its sources by.
-      if (light.enabled && light.intensity > 0 && lightFalloff(light) > 0) {
+      if (light.enabled && isEmissive(light.intensity) && isEmissive(lightFalloff(light))) {
         placed.push(light);
       }
     }

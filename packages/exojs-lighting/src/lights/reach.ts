@@ -4,6 +4,13 @@ import { PointLight } from './PointLight';
 import { SpotLight } from './SpotLight';
 
 /**
+ * Whether `value` can scale emission: strictly positive and finite. Infinity
+ * passes a bare `> 0` test and then turns the emitter density into NaN.
+ * @internal
+ */
+export const isEmissive = (value: number): boolean => Number.isFinite(value) && value > 0;
+
+/**
  * How far a light's falloff reaches from whatever emits, in world pixels, or
  * `0` for a shape the renderers cannot express yet.
  *
