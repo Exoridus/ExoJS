@@ -2,6 +2,7 @@ import { Color } from '#core/Color';
 import type { ReadonlyRectangle, Rectangle } from '#math/Rectangle';
 import { BackendTargetPass } from '#rendering/BackendTargetPass';
 import { drawDrawableDirect } from '#rendering/plan/drawDrawableDirect';
+import { resolveTargetResolution } from '#rendering/plan/targetResolution';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -244,7 +245,7 @@ export class BloomFilter extends Filter {
     // disagree about how far a given strength reaches.
     this._blur.getOutputBounds(input, output);
 
-    const declared = typeof this.resolution === 'number' ? this.resolution : 1;
+    const declared = resolveTargetResolution(this.resolution, 1);
     const chainReach = 2 ** this._levels / Math.min(1, declared);
 
     output.set(output.x - chainReach, output.y - chainReach, output.width + chainReach * 2, output.height + chainReach * 2);

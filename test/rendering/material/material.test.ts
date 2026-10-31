@@ -99,6 +99,18 @@ describe('Shader', () => {
     expect(wgsl).not.toHaveProperty('u_mesh');
   });
 
+  test('WGSL reflection leaves sampler bindings out, so a texture and its sampler do not read as drift', () => {
+    const wgsl = `
+@group(2) @binding(0) var u_noise: texture_2d<f32>;
+@group(2) @binding(1) var u_noiseSampler: sampler;
+@group(2) @binding(2) var u_shadowSampler: sampler_comparison;
+`;
+    const source = new Shader({ glsl: { vertex: GLSL_VERTEX, fragment: 'uniform sampler2D u_noise;\nvoid main() {}' }, wgsl });
+
+    expect(source.getDeclaredUniforms().wgsl).toEqual({ u_noise: 'texture_2d<f32>' });
+    expect(source.detectUniformDrift().onlyInWgsl).toEqual([]);
+  });
+
   test('detectUniformDrift reports names declared in only one language', () => {
     const source = new Shader({
       glsl: { vertex: GLSL_VERTEX, fragment: 'uniform float u_extra;\nvoid main() {}' },

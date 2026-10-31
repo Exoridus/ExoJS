@@ -692,3 +692,36 @@ describe('AnimatedSprite', () => {
     });
   });
 });
+
+describe('AnimatedSprite clip registry changes', () => {
+  const build = (): AnimatedSprite =>
+    new AnimatedSprite(null, {
+      walk: { frames: createFrames(), fps: 10 },
+      run: { frames: createFrames(), fps: 20 },
+    });
+
+  test('removing the active clip clears currentClip and keeps resume() inert', () => {
+    const sprite = build();
+
+    sprite.play('walk');
+    sprite.removeClip('walk');
+
+    expect(sprite.currentClip).toBeNull();
+
+    sprite.resume();
+
+    expect(sprite.playing).toBe(false);
+  });
+
+  test('setClips without the active clip clears it, and keeps it when the name survives', () => {
+    const sprite = build();
+
+    sprite.play('walk');
+    sprite.setClips({ walk: { frames: createFrames(), fps: 5 } });
+    expect(sprite.currentClip).toBe('walk');
+
+    sprite.setClips({ run: { frames: createFrames(), fps: 5 } });
+    expect(sprite.currentClip).toBeNull();
+    expect(sprite.playing).toBe(false);
+  });
+});
