@@ -28,6 +28,17 @@ describe('DataTexture', () => {
       expect(tex.buffer.length).toBe(32); // 4 * 2 * 4 channels
     });
 
+    test('an explicitly undefined colorSpace keeps the numeric none default', () => {
+      const tex = new DataTexture({
+        width: 1,
+        height: 1,
+        format: TextureFormat.Rgba8,
+        textureOptions: { colorSpace: undefined } as unknown as { colorSpace: 'none' },
+      });
+
+      expect(tex.colorSpace).toBe('none');
+    });
+
     test('allocates internal Float32Array of width*height*4 for rgba32f', () => {
       const tex = new DataTexture({ width: 4, height: 2, format: TextureFormat.Rgba32F });
       expect(tex.buffer).toBeInstanceOf(Float32Array);

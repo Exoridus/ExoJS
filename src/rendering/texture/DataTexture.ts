@@ -154,6 +154,10 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
   public constructor(options: DataTextureOptions & { format: F }) {
     const textureOptions = { ...DataTexture.defaultOptions, ...options.textureOptions };
 
+    // An explicitly undefined option must not override the data default; a
+    // numeric texture is never colour-managed.
+    textureOptions.colorSpace ??= 'none';
+
     if (textureOptions.colorSpace === 'srgb') {
       throw new Error("DataTexture colorSpace cannot be 'srgb' - numerical data is never colour-managed.");
     }
