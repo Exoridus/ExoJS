@@ -164,21 +164,16 @@ describe('WebGL2 tilemap — tile orientation', () => {
 
             for (const cx of [0, 1]) {
               for (const cy of [0, 1]) {
-                let su = cx;
-                let sv = cy;
+                // Tiled order: the diagonal transpose comes first and the flips then
+                // mirror the destination axes, so a screen corner is traced back by
+                // undoing the flips before the transpose.
+                let su = flipX ? 1 - cx : cx;
+                let sv = flipY ? 1 - cy : cy;
 
                 if (diagonal) {
                   const t = su;
                   su = sv;
                   sv = t;
-                }
-
-                if (flipX) {
-                  su = 1 - su;
-                }
-
-                if (flipY) {
-                  sv = 1 - sv;
                 }
 
                 expectPixelNear(measured[cx][cy], identity[su][sv]);

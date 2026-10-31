@@ -335,10 +335,15 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       const tileFlipY = (q.orient & 2) !== 0;
       const diagonal = (q.orient & 4) !== 0;
 
-      const uA = flipX ? q.u1 : q.u0;
-      const uB = flipX ? q.u0 : q.u1;
-      let vA = tileFlipY ? q.v1 : q.v0;
-      let vB = tileFlipY ? q.v0 : q.v1;
+      // Tiled applies the diagonal transpose before the flips, so the flips act
+      // on destination axes; once the shader swaps the UV corner axes for a
+      // diagonal tile, flipX has to mirror the v range and flipY the u range.
+      const mirrorU = diagonal ? tileFlipY : flipX;
+      const mirrorV = diagonal ? flipX : tileFlipY;
+      const uA = mirrorU ? q.u1 : q.u0;
+      const uB = mirrorU ? q.u0 : q.u1;
+      let vA = mirrorV ? q.v1 : q.v0;
+      let vB = mirrorV ? q.v0 : q.v1;
 
       if (flipYTexture) {
         const swap = vA;
