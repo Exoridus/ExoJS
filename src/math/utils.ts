@@ -48,8 +48,8 @@ export const sign = (value: number): number => value && (value < 0 ? -1 : 1);
 /** Linear interpolation between `startValue` and `endValue` at normalized `ratio` ∈ [0, 1]. */
 export const lerp = (startValue: number, endValue: number, ratio: number): number => (1 - ratio) * startValue + ratio * endValue;
 
-/** Return `true` when `value` is a non-zero power of two. */
-export const isPowerOfTwo = (value: number): boolean => value !== 0 && (value & (value - 1)) === 0;
+/** Return `true` when `value` is a positive integer power of two (`1`, `2`, `4`, ...). */
+export const isPowerOfTwo = (value: number): boolean => value >= 1 && Number.isInteger(Math.log2(value));
 
 /**
  * Return `true` when `value` lies within `[min, max]` (inclusive, regardless
