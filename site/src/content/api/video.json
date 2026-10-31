@@ -1296,7 +1296,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Start video playback. Dispatches onStart if the video was paused. Applies options before playing."
+          "description": "Start video playback. Applies options before playing. When the video was paused, onStart is dispatched once the element has actually started playing. A start the browser refuses (autoplay policy) or one superseded by pause() before it begins dispatches nothing."
         },
         {
           "name": "project",
@@ -3371,7 +3371,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Media duration in seconds; NaN until the element has loaded its metadata."
         },
         {
           "name": "filters",
