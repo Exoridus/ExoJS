@@ -161,7 +161,19 @@ export class ContactGraph {
 
       const isSensor = ownerA.isSensor || ownerB.isSensor;
       const key = pairKey(a.id, b.id);
-      const existing = this._records.get(key);
+      let existing = this._records.get(key);
+
+      // The sensor flag is fixed per record, so flipping it on a live pair ends the
+      // old record as the kind it began as and starts a new one for the new kind.
+      if (existing !== undefined && existing.isSensor !== isSensor) {
+        if (existing.touching) {
+          this._emitEnd(existing);
+        }
+
+        this._records.delete(key);
+        existing = undefined;
+      }
+
       const record = existing ?? createRecord(a, b, ownerA, ownerB, isSensor);
       const touching = isSensor ? testOverlap(a, b) : collide(a, b, record.manifold);
 

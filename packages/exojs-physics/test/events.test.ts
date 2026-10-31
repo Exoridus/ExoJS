@@ -75,6 +75,26 @@ describe('contact events', () => {
     expect(exits).toHaveLength(1);
   });
 
+  it('a collider turned into a sensor mid-contact ends as a solid pair and continues as a sensor pair', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const solid = colliderAt(world, new BoxShape(20, 20), { x: 0, y: 0 });
+    const body = world.add(new PhysicsBody({ type: 'kinematic', position: { x: 5, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
+    const log: string[] = [];
+
+    world.onCollisionStart.add(() => log.push('start'));
+    world.onCollisionEnd.add(() => log.push('end'));
+    world.onSensorEnter.add(() => log.push('enter'));
+    world.onSensorExit.add(() => log.push('exit'));
+
+    world.step(DT);
+    solid.isSensor = true;
+    world.step(DT);
+    body.setTransform({ x: 80, y: 0 });
+    world.step(DT);
+
+    expect(log).toEqual(['start', 'end', 'enter', 'exit']);
+  });
+
   it('dispatches every fixed step in a multi-step call, not just the last one', () => {
     // Runs the same trajectory (constant velocity, so total simulated time is
     // what matters) accumulated into different-sized `step()` calls. A frame
