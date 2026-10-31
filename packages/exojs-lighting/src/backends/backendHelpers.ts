@@ -26,7 +26,7 @@ export const releaseDestroyedBatches = <B extends { readonly material?: { destro
  * one texel over the frame, so the caller passes whichever is valid.
  * @internal
  */
-export const pickDebugTexture = (view: LightingDebugView, normals: Texture, mask: Texture, light: Texture): Texture => {
+export const pickDebugTexture = <T>(view: LightingDebugView, normals: T, mask: T, light: T): T => {
   if (view === 'normals') {
     return normals;
   }

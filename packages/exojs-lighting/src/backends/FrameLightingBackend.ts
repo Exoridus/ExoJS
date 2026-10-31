@@ -569,7 +569,7 @@ ${sunQuadWgsl}`,
     this._compositeMaterial.setTexture('u_light', this._debugTexture(view));
   }
 
-  private _debugTexture(view: LightingDebugView): Texture {
+  private _debugTexture(view: LightingDebugView): RenderTexture | Texture {
     return pickDebugTexture(view, this._normalPass.enabled ? this._normalTarget : transparentTexture(), this._maskTarget, this._target);
   }
 

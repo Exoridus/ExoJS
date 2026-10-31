@@ -34,7 +34,7 @@ const loadTiledTilesetResources = async (
 
   if (data.image !== undefined) {
     imageUrl = resolveTiledUrl(data.image, baseUrl);
-    texturePending = context.dependencies.load(Asset.type('texture', imageUrl));
+    texturePending = Promise.resolve(context.dependencies.load(Asset.type('texture', imageUrl)));
   }
 
   // Every image is requested before any is awaited, so a tileset of per-tile
@@ -43,7 +43,7 @@ const loadTiledTilesetResources = async (
 
   for (const tile of data.tiles ?? []) {
     if (tile.image !== undefined) {
-      tileEntries.push([tile.id, context.dependencies.load(Asset.type('texture', resolveTiledUrl(tile.image, baseUrl)))]);
+      tileEntries.push([tile.id, Promise.resolve(context.dependencies.load(Asset.type('texture', resolveTiledUrl(tile.image, baseUrl))))]);
     }
   }
 
@@ -94,7 +94,9 @@ const loadImageLayerTextures = async (
     if (layer.type === 'imagelayer' && layer.image) {
       const imageUrl = resolveTiledUrl(layer.image, mapSource);
 
-      pending.push(context.dependencies.load(Asset.type('texture', imageUrl)).then(texture => new Map([[layer.id, texture]])));
+      pending.push(
+        Promise.resolve(context.dependencies.load(Asset.type('texture', imageUrl))).then(texture => new Map([[layer.id, texture]])),
+      );
     } else if (layer.type === 'group') {
       pending.push(loadImageLayerTextures(layer.layers, mapSource, context));
     }
