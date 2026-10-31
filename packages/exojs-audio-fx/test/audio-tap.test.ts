@@ -177,4 +177,25 @@ describe('AudioTap', () => {
     expect(tap.source).toBeNull();
     expect(source.connect).not.toHaveBeenCalled();
   });
+
+  test('a source that cannot be tapped leaves the previous tap and source in place', () => {
+    const tap = new AudioTap();
+    const target = makeNode();
+    const first = makeNode();
+    const broken = { getTracks: () => [] } as unknown as MediaStream;
+
+    tap.attach(target, context);
+    tap.source = first;
+    vi.spyOn(context, 'createMediaStreamSource').mockImplementation(() => {
+      throw new Error('cannot tap');
+    });
+
+    expect(() => {
+      tap.source = broken;
+    }).toThrow('cannot tap');
+    expect(tap.source).toBe(first);
+    expect(first.connect).toHaveBeenLastCalledWith(target, 0, 0);
+    expect(vi.mocked(first.connect).mock.calls.length).toBeGreaterThan(vi.mocked(first.disconnect).mock.calls.length);
+    tap.destroy();
+  });
 });

@@ -200,6 +200,21 @@ describe('WorkletEffect', () => {
     });
   });
 
+  it('a processor error after load is reported as one warning', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const filter = new TestWorkletEffect();
+
+    await filter.ready;
+
+    const node = filter['_workletNode'] as unknown as { onprocessorerror: (() => void) | null };
+
+    node.onprocessorerror?.();
+    node.onprocessorerror?.();
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    filter.destroy();
+  });
+
   it('destroy tells the processor to stop before disconnecting it', async () => {
     const filter = new TestWorkletEffect();
     await filter.ready;

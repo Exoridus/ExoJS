@@ -339,7 +339,7 @@
         },
         {
           "name": "waveform",
-          "signature": "waveform: OscillatorType",
+          "signature": "waveform: RingModulatorWaveform",
           "signatureTokens": [
             {
               "text": "waveform",
@@ -350,7 +350,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "OscillatorType",
+              "text": "RingModulatorWaveform",
               "kind": "type"
             }
           ],

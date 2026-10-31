@@ -301,10 +301,17 @@ export class BeatDetector {
   public justBeatWindow: number;
 
   public constructor(options?: BeatDetectorOptions) {
+    const fftSize = options?.fftSize ?? 2048;
+
+    // The worklet indexes its ring buffer with a bit mask, which only works for a power of two.
+    if (!Number.isInteger(fftSize) || fftSize < 64 || (fftSize & (fftSize - 1)) !== 0) {
+      throw new RangeError(`BeatDetector fftSize must be a power of two of at least 64, got ${fftSize}.`);
+    }
+
     this._options = {
       minBpm: options?.minBpm ?? 50,
       maxBpm: options?.maxBpm ?? 300,
-      fftSize: options?.fftSize ?? 2048,
+      fftSize,
       hopSize: options?.hopSize ?? 512,
       fastTempoWindowSec: options?.fastTempoWindowSec ?? 2.5,
       stableTempoWindowSec: options?.stableTempoWindowSec ?? 8,
