@@ -90,7 +90,19 @@ export class VideoFactory implements AssetFactory<MediaAssetSource, Video, Video
       throw error;
     }
 
-    return new Video(video, options.playbackOptions, options.textureOptions);
+    try {
+      return new Video(video, options.playbackOptions, options.textureOptions);
+    } catch (error: unknown) {
+      // The element is attached but no Video will ever own it, so no dispose() follows.
+      this._elements.delete(video);
+      detachMediaElement(video);
+
+      if (objectUrl !== undefined) {
+        this._objectUrls.revoke(objectUrl);
+      }
+
+      throw error;
+    }
   }
 
   /** Ends playback and the transfer behind a released video, and frees its data. */

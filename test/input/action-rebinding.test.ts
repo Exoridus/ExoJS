@@ -618,3 +618,42 @@ describe('direct button rebind validation', () => {
     expect(() => map.serializeBindings()).not.toThrow();
   });
 });
+
+describe('rejected rebinds leave the map untouched', () => {
+  test('an axis or vector rejects a pattern string and keeps its channels', () => {
+    const map = new ActionMap({
+      move: new AxisAction({ negative: Keyboard.A, positive: Keyboard.D }),
+      look: new VectorAction({ up: Keyboard.W, down: Keyboard.S }),
+    });
+    const moveChannels = [...map.move.channels];
+    const lookChannels = [...map.look.channels];
+    const moveBinding = map.move.binding;
+
+    expect(() => (map as unknown as { rebind(name: string, binding: unknown): void }).rebind('move', 'ctrl+k')).toThrow(InputBindingError);
+    expect(() => (map as unknown as { rebind(name: string, binding: unknown): void }).rebind('look', 'ctrl+k')).toThrow(InputBindingError);
+    expect(map.move.binding).toBe(moveBinding);
+    expect([...map.move.channels]).toEqual(moveChannels);
+    expect([...map.look.channels]).toEqual(lookChannels);
+  });
+
+  test('a batch whose later entry is rejected restores the earlier ones', () => {
+    const map = new ActionMap({
+      jump: new ButtonAction(Keyboard.Space),
+      move: new AxisAction({ negative: Keyboard.A, positive: Keyboard.D }),
+    });
+    const jumpBinding = map.jump.binding;
+    const jumpChannels = [...map.jump.channels];
+    const apply = (map as unknown as { _applyAtomically(changes: ReadonlyArray<readonly [unknown, unknown]>): void })._applyAtomically.bind(
+      map,
+    );
+
+    expect(() =>
+      apply([
+        [map.jump, Keyboard.J],
+        [map.move, 'ctrl+k'],
+      ]),
+    ).toThrow(InputBindingError);
+    expect(map.jump.binding).toBe(jumpBinding);
+    expect([...map.jump.channels]).toEqual(jumpChannels);
+  });
+});

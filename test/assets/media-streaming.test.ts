@@ -439,3 +439,29 @@ describe('the media option surface', () => {
     expect(rejected).toBeDefined();
   });
 });
+
+describe('attachMediaSource observer failures', () => {
+  test('an onSettled that throws still settles the load, on both the load and the error path', async () => {
+    const { attachMediaSource } = await import('#assets/factories/mediaSource');
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const messages = { error: 'e', abort: 'a', emptied: 'm', stalled: 's' };
+
+    const onSettled = (): never => {
+      throw new Error('observer failed');
+    };
+
+    const ok = document.createElement('video');
+    const loaded = attachMediaSource({ element: ok, src: 'a.mp4', messages, onSettled });
+
+    ok.dispatchEvent(new Event('canplay'));
+    await expect(loaded).resolves.toBeUndefined();
+
+    const bad = document.createElement('video');
+    const failed = attachMediaSource({ element: bad, src: 'b.mp4', messages, onSettled });
+
+    bad.dispatchEvent(new Event('error'));
+    await expect(failed).rejects.toThrow('e');
+
+    consoleErrorSpy.mockRestore();
+  });
+});

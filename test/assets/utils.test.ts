@@ -57,6 +57,35 @@ describe('determineMimeType', () => {
   });
 
   describe('MP4 detection (matchesMp4Video)', () => {
+    const ftyp = (major: string, ...compatible: string[]): ArrayBuffer => {
+      const size = 16 + compatible.length * 4;
+      const bytes = new Uint8Array(size);
+
+      new DataView(bytes.buffer).setUint32(0, size, false);
+      bytes.set(
+        [...`ftyp${major}`].map(character => character.charCodeAt(0)),
+        4,
+      );
+      compatible.forEach((brand, index) =>
+        bytes.set(
+          [...brand].map(character => character.charCodeAt(0)),
+          16 + index * 4,
+        ),
+      );
+
+      return bytes.buffer;
+    };
+
+    test('detects the common ISO base media major brands and a video compatible brand', () => {
+      expect(determineMimeType(ftyp('isom'))).toBe('video/mp4');
+      expect(determineMimeType(ftyp('mp42'))).toBe('video/mp4');
+      expect(determineMimeType(ftyp('M4A ', 'isom'))).toBe('video/mp4');
+    });
+
+    test('does not sniff an audio-only major brand as video', () => {
+      expect(determineMimeType(ftyp('M4A ', 'M4A '))).toBe('text/plain');
+    });
+
     test('detects a valid MP4 box (correct box size, "ftypmp4" brand)', () => {
       // 20-byte box: [box size u32][ 'ftypmp4' ][ padding ] - header.length === boxSize (20),
       // which satisfies `header.length >= max(12, boxSize)` and `boxSize % 4 === 0`.

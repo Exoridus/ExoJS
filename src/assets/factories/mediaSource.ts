@@ -1,3 +1,4 @@
+import { logger } from '#core/Logger';
 import type { MediaCrossOrigin, StreamingLoadEvent } from '#core/types';
 
 const onceListenerOption = { once: true };
@@ -104,7 +105,14 @@ export const attachMediaSource = (options: AttachMediaSourceOptions): Promise<vo
       }
 
       signal?.removeEventListener('abort', onAbort);
-      onSettled?.();
+
+      // A throwing observer must not leave the load promise pending forever.
+      try {
+        onSettled?.();
+      } catch (error: unknown) {
+        logger.error('A media load onSettled callback threw.', { source: 'Loader', ...(error instanceof Error && { error }) });
+      }
+
       fn();
     };
 
