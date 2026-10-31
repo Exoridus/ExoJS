@@ -261,6 +261,11 @@ export class Loader {
     return { type, source, ctor };
   }
 
+  /** Options a bare path implies for its type - shared by `load` and `peek` so both key identically. */
+  private _barePathOptions(type: AssetTypeName, source: string): unknown {
+    return type === 'font' ? { family: (source.split('/').pop()?.split(/[?#]/)[0] ?? '').replace(/\.[^.]+$/, '') } : undefined;
+  }
+
   /**
    * Resolve a request to its one canonical identity. Called once per entry
    * point, always before a fetch can start, so no later layer can derive a
@@ -925,9 +930,7 @@ export class Loader {
 
       const { type, source: path, ctor } = this._resolveBarePath(arg0);
 
-      // The font type requires a family option - infer it from the filename when not provided
-      const options: unknown =
-        type === 'font' ? { family: (path.split('/').pop()?.split(/[?#]/)[0] ?? '').replace(/\.[^.]+$/, '') } : undefined;
+      const options = this._barePathOptions(type, path);
 
       // Canonicalized from the caller's logical path, not the variant selected for
       // it: the selection happens again inside, and the request keeps the name a
@@ -1273,8 +1276,11 @@ export class Loader {
       // carrying them must peek the key it would actually load.
       options = Object.keys(rest).length > 0 ? rest : undefined;
     } else if (typeof input === 'string') {
-      ctor = this._resolveBarePath(input).ctor;
+      const resolved = this._resolveBarePath(input);
+
+      ctor = resolved.ctor;
       source = input;
+      options = this._barePathOptions(resolved.type, resolved.source);
     } else {
       throw new Error(
         'Loader: peek() accepts a path string or an Asset.type(...) descriptor. A catalog leaf is already a handle - read its loadState instead.',

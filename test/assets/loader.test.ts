@@ -1903,6 +1903,26 @@ describe('bare-path loading for non-leaf resource types', () => {
     expect(received).toEqual({ family: 'Roboto' });
   });
 
+  test('peek(path) finds a font that load(path) stored with its implied family', async () => {
+    const loader = new Loader({ basePath: '/' });
+
+    loader._installAssetTypes([
+      testAssetType<string, string, { family: string }>({
+        id: 'font',
+        token: FontAsset,
+        extensions: ['woff2'],
+        leaf: 'none',
+        acquires: false,
+        resourceIdentity: request => JSON.stringify(request.options ?? null),
+        create: async () => 'face',
+      }),
+    ]);
+
+    await loader.load('fonts/Roboto.woff2' as never);
+
+    expect(loader.peek('fonts/Roboto.woff2' as never)).toBe('face');
+  });
+
   test('load(path) for the font type strips a query string before inferring the family', async () => {
     const loader = new Loader({ basePath: '/' });
     let received: unknown;
