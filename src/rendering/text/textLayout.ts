@@ -141,25 +141,37 @@ export const layoutText = (
   const toSource = (index: number): number =>
     sourceMap === null ? Math.min(index, text.length) : sourceMap[Math.min(index, sourceMap.length - 1)]!;
 
-  // Split into hard lines then optionally word-wrap each.
+  // Split into hard lines then optionally word-wrap each. CRLF and lone CR
+  // are line separators too, not glyphs to lay out on the line they end.
   const allLines: LayoutLine[] = [];
-  let hardStart = 0;
+  const hardLines: Array<{ readonly text: string; readonly start: number }> = [];
+  let cursor = 0;
 
-  for (const hard of preprocessed.split('\n')) {
+  for (const separator of preprocessed.matchAll(/\r\n|\r|\n/g)) {
+    const index = separator.index ?? cursor;
+
+    hardLines.push({ text: preprocessed.slice(cursor, index), start: cursor });
+    cursor = index + separator[0].length;
+  }
+
+  hardLines.push({ text: preprocessed.slice(cursor), start: cursor });
+
+  for (const hard of hardLines) {
     if (maxWidth === undefined) {
-      allLines.push({ text: hard, start: hardStart, contentLength: hard.length });
+      allLines.push({ text: hard.text, start: hard.start, contentLength: hard.text.length });
     } else {
       const ranges = shaped
-        ? _wrapShapedLine(hard, fontSize, shaper, maxWidth, breakWords, locale)
-        : _wrapLine(hard, fontSize, provider, maxWidth, letterSpacing, breakWords, locale, tabWidth);
+        ? _wrapShapedLine(hard.text, fontSize, shaper, maxWidth, breakWords, locale)
+        : _wrapLine(hard.text, fontSize, provider, maxWidth, letterSpacing, breakWords, locale, tabWidth);
 
       for (const range of ranges) {
-        allLines.push({ text: hard.slice(range.start, range.end), start: hardStart + range.start, contentLength: range.end - range.start });
+        allLines.push({
+          text: hard.text.slice(range.start, range.end),
+          start: hard.start + range.start,
+          contentLength: range.end - range.start,
+        });
       }
     }
-
-    // Past the line break the hard split consumed.
-    hardStart += hard.length + 1;
   }
 
   // ── Overflow ──────────────────────────────────────────────────────────────
