@@ -202,6 +202,7 @@ export class Dropdown<T = string> extends Widget {
     this._highlightIndex = Math.min(this._highlightIndex, this._items.length - 1);
     this._buildRows();
     this._syncHighlight();
+    this._label.text = this._labelText();
     this._invalidateLayout();
 
     return this;

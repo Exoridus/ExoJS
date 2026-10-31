@@ -99,7 +99,7 @@ export abstract class TextEditWidget extends Widget {
   private _appliedPlaceholder: TextStyleOptions | null = null;
   private _readOnly: boolean;
   private _placeholder = '';
-  private readonly _hints: PlatformTextInputHints = {};
+  private _hints: PlatformTextInputHints = {};
   private _seam: PlatformTextInput | null = null;
   private _scrollX = 0;
   private _scrollY = 0;
@@ -569,7 +569,9 @@ export abstract class TextEditWidget extends Widget {
 
   /** Assign input-method hints; forwarded to the transport on the next sync. */
   protected _setHints(hints: PlatformTextInputHints): void {
-    Object.assign(this._hints, hints);
+    // Replace the snapshot rather than patching it: the widget omits unset
+    // members, so a removed hint must clear the transport's previous value.
+    this._hints = { ...hints };
     this._seam?.setHints(this._hints);
   }
 

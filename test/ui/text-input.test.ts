@@ -547,4 +547,26 @@ describe('TextInput', () => {
     expect(harness.signals.onPointerMove.count).toBeLessThan(before);
     expect(harness.signals.onPointerUp.count).toBeLessThan(upBefore);
   });
+
+  test('clearing maskChar re-enables clipboard reads', () => {
+    const harness = createUIApp();
+    const field = new TextInput({ width: 200, height: 36, maskChar: '*' });
+
+    harness.scene.ui.addChild(field);
+    press(harness, 5, 18);
+    type('ab');
+    field.selectAll();
+
+    const masked = new Event('copy', { cancelable: true, bubbles: true });
+
+    transportTextarea().dispatchEvent(masked);
+    expect(masked.defaultPrevented).toBe(true);
+
+    field.maskChar = null;
+
+    const unmasked = new Event('copy', { cancelable: true, bubbles: true });
+
+    transportTextarea().dispatchEvent(unmasked);
+    expect(unmasked.defaultPrevented).toBe(false);
+  });
 });

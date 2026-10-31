@@ -1596,3 +1596,23 @@ describe('Dropdown', () => {
     expect(() => dropdown.destroy()).not.toThrow();
   });
 });
+
+describe('Dropdown item replacement', () => {
+  test('setItems keeps the closed label in step with the selected entry', () => {
+    const dropdown = new Dropdown({
+      items: [
+        { label: 'Low', value: 'low' },
+        { label: 'Medium', value: 'medium' },
+      ],
+      selectedIndex: 1,
+    });
+    const label = dropdown.children.find((child): child is Text => child instanceof Text)!;
+
+    dropdown.setItems([
+      { label: 'Low', value: 'low' },
+      { label: 'High', value: 'high' },
+    ]);
+
+    expect(label.text).toBe('High');
+  });
+});
