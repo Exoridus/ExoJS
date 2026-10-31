@@ -181,7 +181,10 @@ export class Circle implements ShapeLike {
 
       // Resized with the vertices: `collisionSegments` may change between calls.
       if (this._normals === null || this._normals.length !== points.length) {
-        this._normals?.forEach(normal => normal.destroy());
+        for (const normal of this._normals ?? []) {
+          normal.destroy();
+        }
+
         this._normals = points.map(() => new Vector());
       }
 
@@ -201,7 +204,7 @@ export class Circle implements ShapeLike {
       this._normalsDirty = false;
     }
 
-    return this._normals!;
+    return this._normals;
   }
 
   /**
@@ -282,7 +285,10 @@ export class Circle implements ShapeLike {
       const segments = Circle.collisionSegments;
 
       if (this._collisionVertices === null || this._collisionVertices.length !== segments) {
-        this._collisionVertices?.forEach(vertex => vertex.destroy());
+        for (const vertex of this._collisionVertices ?? []) {
+          vertex.destroy();
+        }
+
         this._collisionVertices = new Array(segments);
 
         for (let i = 0; i < segments; i++) {
@@ -302,7 +308,7 @@ export class Circle implements ShapeLike {
       this._verticesDirty = false;
     }
 
-    return this._collisionVertices!;
+    return this._collisionVertices;
   }
 
   /**

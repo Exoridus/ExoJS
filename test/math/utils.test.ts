@@ -158,6 +158,7 @@ describe('isPowerOfTwo', () => {
     for (const value of [2.5, 1.5, 0.5, -2, Number.NaN, Number.POSITIVE_INFINITY]) {
       expect(isPowerOfTwo(value)).toBe(false);
     }
+
     expect(isPowerOfTwo(2 ** 40)).toBe(true);
   });
 

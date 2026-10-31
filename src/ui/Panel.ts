@@ -145,7 +145,6 @@ export class Panel extends Widget {
     }
 
     this._background = background === null ? null : createUIBackground(background, options);
-
   }
 
   protected override _repaint(): void {
