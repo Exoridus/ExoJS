@@ -346,6 +346,10 @@ describe('AxisAction', () => {
 
     expect(action.active).toBe(true);
   });
+
+  it('rejects a descriptor of another action kind', () => {
+    expect(() => new AxisAction({ kind: 'button', binding: Keyboard.A } as never)).toThrow(/cannot apply a "button" binding/);
+  });
 });
 
 describe('VectorAction', () => {

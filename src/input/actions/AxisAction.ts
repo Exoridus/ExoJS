@@ -40,6 +40,12 @@ const resolveAxisBinding = (binding: AxisBinding, slot: GamepadSlot): ResolvedAx
     throw new InputBindingError('AxisAction: a binding must be a channel or a { negative, positive } pair.');
   }
 
+  // A serialized descriptor of another action kind is a caller error, not an
+  // empty axis that can never move.
+  if ('kind' in binding && (binding as { kind?: unknown }).kind !== 'axis') {
+    throw new InputBindingError(`AxisAction: cannot apply a "${String((binding as { kind: unknown }).kind)}" binding.`);
+  }
+
   return {
     direct: [],
     negative: rebase(toChannels(binding.negative)),

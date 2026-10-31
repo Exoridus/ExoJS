@@ -529,6 +529,23 @@ describe('Stack', () => {
     expect(stack.uiWidth).toBe(40);
     expect(stack.uiHeight).toBe(20);
   });
+
+  test('a direction change restores a grown child to its natural size', () => {
+    const stack = new Stack({ direction: 'row', spacing: 0 });
+    const child = new Panel({ width: 40, height: 20 });
+
+    stack.addItem(child);
+    stack.setSize(100, 20);
+    stack.setGrow(child, 1);
+
+    expect(child.uiWidth).toBe(100);
+    expect(child.uiHeight).toBe(20);
+
+    stack.direction = 'column';
+
+    expect(child.uiWidth).toBe(40);
+    expect(child.uiHeight).toBe(20);
+  });
 });
 
 // ── Skins, themes and controlled setters ─────────────────────────────────────
@@ -1577,5 +1594,25 @@ describe('Dropdown', () => {
     expect(dropdown.onChange.count).toBe(0);
 
     expect(() => dropdown.destroy()).not.toThrow();
+  });
+});
+
+describe('Dropdown item replacement', () => {
+  test('setItems keeps the closed label in step with the selected entry', () => {
+    const dropdown = new Dropdown({
+      items: [
+        { label: 'Low', value: 'low' },
+        { label: 'Medium', value: 'medium' },
+      ],
+      selectedIndex: 1,
+    });
+    const label = dropdown.children.find((child): child is Text => child instanceof Text)!;
+
+    dropdown.setItems([
+      { label: 'Low', value: 'low' },
+      { label: 'High', value: 'high' },
+    ]);
+
+    expect(label.text).toBe('High');
   });
 });

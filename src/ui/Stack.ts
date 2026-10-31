@@ -20,8 +20,8 @@ export interface StackOptions {
 
 /** The extents a child had before the stack grew or stretched it. */
 interface NaturalSize {
-  readonly main?: number;
-  readonly cross?: number;
+  readonly width?: number;
+  readonly height?: number;
 }
 
 /**
@@ -277,10 +277,12 @@ export class Stack extends Widget {
     const isRow = this._direction === 'row';
     const size = this._measure(child);
     const imposed = this._natural.get(child);
+    const naturalWidth = imposed?.width ?? size.width;
+    const naturalHeight = imposed?.height ?? size.height;
 
     return {
-      main: imposed?.main ?? (isRow ? size.width : size.height),
-      cross: imposed?.cross ?? (isRow ? size.height : size.width),
+      main: isRow ? naturalWidth : naturalHeight,
+      cross: isRow ? naturalHeight : naturalWidth,
     };
   }
 
@@ -293,9 +295,13 @@ export class Stack extends Widget {
     const isRow = this._direction === 'row';
     const grew = mainSize !== natural.main;
     const stretched = crossSize !== natural.cross;
+    const naturalWidth = isRow ? natural.main : natural.cross;
+    const naturalHeight = isRow ? natural.cross : natural.main;
 
     if (grew || stretched) {
-      this._natural.set(child, { ...(grew && { main: natural.main }), ...(stretched && { cross: natural.cross }) });
+      // Absolute extents, not direction-relative ones: a later direction change
+      // must not read the old width as the new height.
+      this._natural.set(child, { width: naturalWidth, height: naturalHeight });
     } else {
       this._natural.delete(child);
     }
