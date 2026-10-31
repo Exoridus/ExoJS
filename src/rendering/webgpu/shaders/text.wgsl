@@ -166,7 +166,7 @@ fn fragmentSdf(in: VertexOutput) -> @location(0) vec4<f32> {
     let shadowAlpha  = tParams.y;
     let blur         = tParams.z;
     let gradStops    = u32(tParams.w + 0.5);
-    let pageSize     = f32(atlasTextureDimensions(in.textureSlot).x);
+    let pageSize     = vec2<f32>(atlasTextureDimensions(in.textureSlot));
     let shadowOffset = tShadow2.xy / pageSize;
 
     let uvDx = dpdx(in.texcoord);
@@ -192,8 +192,8 @@ fn fragmentSdf(in: VertexOutput) -> @location(0) vec4<f32> {
 
         if (abs(densityY - densityX) > 0.001 * max(densityX, densityY)) {
             let texel = 1.0 / pageSize;
-            let sdU = sampleTexture(in.textureSlot, in.texcoord + vec2<f32>(texel, 0.0), uvDx, uvDy).r;
-            let sdV = sampleTexture(in.textureSlot, in.texcoord + vec2<f32>(0.0, texel), uvDx, uvDy).r;
+            let sdU = sampleTexture(in.textureSlot, in.texcoord + vec2<f32>(texel.x, 0.0), uvDx, uvDy).r;
+            let sdV = sampleTexture(in.textureSlot, in.texcoord + vec2<f32>(0.0, texel.y), uvDx, uvDy).r;
             let grad = vec2<f32>(sdU - sd, sdV - sd);
             let gradLength = length(grad);
 
@@ -261,7 +261,7 @@ fn fragmentMsdf(in: VertexOutput) -> @location(0) vec4<f32> {
     let shadowAlpha  = tParams.y;
     let blur         = tParams.z;
     let gradStops    = u32(tParams.w + 0.5);
-    let pageSize     = f32(atlasTextureDimensions(in.textureSlot).x);
+    let pageSize     = vec2<f32>(atlasTextureDimensions(in.textureSlot));
     let shadowOffset = tShadow2.xy / pageSize;
 
     let uvDx = dpdx(in.texcoord);

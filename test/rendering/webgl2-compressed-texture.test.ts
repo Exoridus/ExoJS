@@ -114,6 +114,7 @@ describe('WebGl2Backend.supportedTextureFormats', () => {
       CompressedTextureFormat.Bc7RgbaUnormSrgb,
       CompressedTextureFormat.Bc3RgbaUnorm,
       CompressedTextureFormat.Bc2RgbaUnorm,
+      CompressedTextureFormat.Bc1RgbUnorm,
       CompressedTextureFormat.Bc1RgbaUnorm,
       CompressedTextureFormat.Bc6hRgbUfloat,
       CompressedTextureFormat.Bc6hRgbFloat,
