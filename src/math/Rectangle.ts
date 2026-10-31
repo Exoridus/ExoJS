@@ -94,6 +94,7 @@ export class Rectangle implements ShapeLike, ReadonlyRectangle {
   private _normals: Vector[] | null = null;
   private _normalsDirty = false;
   private _onChange: (() => void) | null;
+  private _geometryListeners: Set<() => void> | null = null;
 
   /**
    * @param x        - Left edge.
@@ -118,7 +119,26 @@ export class Rectangle implements ShapeLike, ReadonlyRectangle {
    */
   public _onObservableChange(): void {
     this._normalsDirty = true;
-    this._onChange?.();
+
+    try {
+      this._onChange?.();
+    } finally {
+      this._geometryListeners?.forEach(listener => listener());
+    }
+  }
+
+  /** @internal */
+  public _subscribeGeometry(listener: () => void): () => void {
+    this._geometryListeners ??= new Set();
+    this._geometryListeners.add(listener);
+
+    return () => {
+      this._geometryListeners?.delete(listener);
+
+      if (this._geometryListeners?.size === 0) {
+        this._geometryListeners = null;
+      }
+    };
   }
 
   public get position(): AbstractVector {
@@ -349,6 +369,7 @@ export class Rectangle implements ShapeLike, ReadonlyRectangle {
     // Drop the owner notification along with the reactive components, so a
     // rectangle retained past its owner's teardown cannot invalidate it again.
     this._onChange = null;
+    this._geometryListeners = null;
 
     if (this._normals) {
       this._normals = null;
