@@ -582,6 +582,11 @@ export class SystemRegistry implements Destroyable {
     const failures: unknown[] = [];
 
     for (const registration of remaining) {
+      // An earlier destroy() may have removed this member.
+      if (!registration.active) {
+        continue;
+      }
+
       try {
         registration.system.destroy?.();
       } catch (error) {

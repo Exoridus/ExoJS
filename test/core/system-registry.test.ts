@@ -136,6 +136,25 @@ describe('SystemRegistry.destroy() — a throwing system cannot strand the rest'
     expect(destroyed).toEqual(['last', 'first']);
   });
 
+  test('a system removed by an earlier destroy() is not destroyed afterwards', () => {
+    const registry = new SystemRegistry();
+    const destroyed: string[] = [];
+    const removed: System = { update: (): void => {}, destroy: (): void => void destroyed.push('removed') };
+
+    registry.add(removed);
+    registry.add({
+      update: (): void => {},
+      destroy: (): void => {
+        destroyed.push('remover');
+        registry.remove(removed);
+      },
+    });
+
+    registry.destroy();
+
+    expect(destroyed).toEqual(['remover']);
+  });
+
   test('the clear-and-reset tail still runs, so the registry does not stay live', () => {
     const registry = new SystemRegistry();
     const survivor = { update: (): void => {} };
