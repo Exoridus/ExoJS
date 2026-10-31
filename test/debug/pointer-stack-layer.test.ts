@@ -160,6 +160,21 @@ describe('PointerStackLayer', () => {
     }).not.toThrow();
   });
 
+  test('an overflowing stack shows its overflow row inside the panel', () => {
+    const children = Array.from({ length: 12 }, (_, i) => makeNode({ name: `N${i}`, containsResult: true, zIndex: i }));
+    const root = makeNode({ containsResult: false, children });
+    const layer = new PointerStackLayer(makeApp({ root, pointerPos: { x: 1, y: 1 } }));
+
+    layer.update(Time.toSeconds(Time.milliseconds(16)));
+
+    const internals = layer as unknown as { _lines: Array<{ text: string; visible: boolean; y: number }> };
+    const visible = internals._lines.filter(line => line.visible);
+    const bg = (layer as unknown as { _bg: { getBounds: () => { height: number } } })._bg;
+
+    expect(visible.at(-1)!.text).toContain('+2 more');
+    expect(Math.max(...visible.map(line => line.y)) + 14).toBeLessThanOrEqual(bg.getBounds().height);
+  });
+
   test('with cursor at (100, 100) and 3 containing nodes, all appear in stack', () => {
     const nodeA = makeNode({ name: 'NodeA', containsResult: true, zIndex: 5 });
     const nodeB = makeNode({ name: 'NodeB', containsResult: true, zIndex: 2 });

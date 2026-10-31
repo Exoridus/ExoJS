@@ -16,11 +16,13 @@ import { DebugLayer } from './DebugLayer';
 // ---------------------------------------------------------------------------
 
 const panelW = 260;
-const panelH = 160;
 const panelPad = 8;
 const lineH = 14;
 const textSize = 11;
 const maxEntries = 10;
+// Cursor row, header row, the entries and the overflow row.
+const totalLines = maxEntries + 3;
+const panelH = panelPad * 2 + totalLines * lineH;
 
 // Semi-transparent dark background.
 const bgColor = new Color(0, 0, 0, 0.7);
@@ -123,9 +125,7 @@ export class PointerStackLayer extends DebugLayer {
     this._root = new Container();
     this._root.addChild(this._bg);
 
-    // Pre-allocate enough Text nodes for header + entries.
-    const totalLines = maxEntries + 2; // header row + cursor row + entries
-
+    // Pre-allocate enough Text nodes for every row, including the overflow one.
     for (let i = 0; i < totalLines; i++) {
       const t = new Text('', style);
 
