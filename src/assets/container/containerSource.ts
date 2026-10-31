@@ -132,22 +132,45 @@ export const openContainerSource = async (url: string, init?: RequestInit): Prom
 
   const body = await probe.arrayBuffer();
 
-  if (probe.status !== 206 || !addressableByOffset(probe)) {
+  if (probe.status !== 206) {
     if (__DEV__) {
-      const reason =
-        probe.status !== 206
-          ? 'the server answered the byte-range request with the whole file'
-          : 'the response is content-encoded, so its byte offsets address the encoded stream';
-
       logger.warn(
-        `"${url}" is read whole because ${reason}. Block-wise loading needs byte ranges (Accept-Ranges: bytes, 206) on an uncompressed response; until the server provides them every load fetches the entire pack.`,
+        `"${url}" is read whole because the server answered the byte-range request with the whole file. Block-wise loading needs byte ranges (Accept-Ranges: bytes, 206) on an uncompressed response; until the server provides them every load fetches the entire pack.`,
         { source: 'Loader' },
       );
     }
 
-    // The whole file, either because the server sent it or because its offsets
-    // cannot be trusted. Both end at the same place: read from memory.
     return { source: bufferContainerSource(body), headPrefix: body };
+  }
+
+  if (!addressableByOffset(probe)) {
+    if (__DEV__) {
+      logger.warn(
+        `"${url}" is read whole because the response is content-encoded, so its byte offsets address the encoded stream. Block-wise loading needs byte ranges (Accept-Ranges: bytes, 206) on an uncompressed response; until the server provides them every load fetches the entire pack.`,
+        { source: 'Loader' },
+      );
+    }
+
+    const total = totalFromContentRange(probe.headers.get('content-range'));
+
+    // A small file can arrive whole even on a content-encoded 206; only a
+    // prefix shorter than the advertised total needs the second request.
+    if (total !== null && body.byteLength >= total) {
+      return { source: bufferContainerSource(body), headPrefix: body };
+    }
+
+    // The 206 body is only the probe prefix. Its offsets cannot address the
+    // encoded stream, so fetch the whole file once more without a Range header
+    // instead of mistaking that prefix for the complete container.
+    const whole = await fetch(url, init);
+
+    if (!whole.ok) {
+      failTransport(url, whole, 'the whole file');
+    }
+
+    const wholeBody = await whole.arrayBuffer();
+
+    return { source: bufferContainerSource(wholeBody), headPrefix: wholeBody };
   }
 
   const byteLength = totalFromContentRange(probe.headers.get('content-range'));

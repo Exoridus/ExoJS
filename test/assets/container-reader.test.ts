@@ -4,6 +4,7 @@ import { AssetDecodeError } from '#assets/AssetDecodeError';
 import { parseContainer } from '#assets/container/assetContainer';
 import type { ContainerBlockStore } from '#assets/container/containerBlockStore';
 import { ContainerReader } from '#assets/container/ContainerReader';
+import { openContainerSource } from '#assets/container/containerSource';
 import { logger } from '#core/Logger';
 
 const utf8 = (text: string): Uint8Array => new TextEncoder().encode(text);
@@ -382,4 +383,24 @@ test('settlement from released pending work does not remove its replacement', as
   resolveNew();
   expect((await Promise.all([replacement, joined])).map(text)).toEqual(['hello', 'hello']);
   expect(fetch).toHaveBeenCalledTimes(3);
+});
+
+describe('openContainerSource content-encoded prefix', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  test('a content-encoded 206 probe is refetched as the whole file', async () => {
+    const container = encodeContainer([{ source: 'big.bin', type: 'binary', bytes: noise(80000, 7) }], { blockSize: 65536 });
+    const { requests } = serve(container, { contentEncoding: 'gzip' });
+
+    const opened = await openContainerSource('/big.exoa');
+
+    expect(opened.source.byteLength).toBe(new Uint8Array(container).byteLength);
+    expect(requests).toHaveLength(2);
+    expect(requests[0]?.range).toBeDefined();
+    expect(requests[1]?.range).toBeUndefined();
+  });
 });
