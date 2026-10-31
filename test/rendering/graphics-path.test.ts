@@ -110,6 +110,10 @@ describe('GraphicsPath', () => {
   });
 
   describe('arcs', () => {
+    test('a zero-sweep arc adds no vertex beyond its start point', () => {
+      expect(new GraphicsPath().moveTo(10, 0).arc(0, 0, 10, 0, 0).contours()).toEqual([]);
+    });
+
     test('sweep clockwise by default and anticlockwise on request', () => {
       const clockwise = new GraphicsPath().arc(0, 0, 10, 0, Math.PI / 2).contours()[0]!;
       const anticlockwise = new GraphicsPath().arc(0, 0, 10, 0, Math.PI / 2, true).contours()[0]!;

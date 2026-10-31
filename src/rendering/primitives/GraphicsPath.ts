@@ -556,6 +556,10 @@ const flattenArc = (
     }
   }
 
+  if (sweep === 0) {
+    return;
+  }
+
   // Largest turn per segment that keeps the chord's sagitta within tolerance.
   // A tolerance at or above the radius would admit any angle, so cap the step
   // at a quarter turn to keep even a coarse arc recognisable.
