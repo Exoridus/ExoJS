@@ -628,12 +628,12 @@ describe('getCollisionCircleRectangle', () => {
     expect(getCollisionCircleRectangle(circle(1000, 1000, 5), rect(0, 0, 10, 10))).toBeNull();
   });
 
-  test('circle overlapping the rectangle face-on computes the correct normal', () => {
+  test('circle overlapping the rectangle face-on computes the correct normal (circle is shapeA, so the normal points into the rectangle)', () => {
     // Circle centred to the right of the rectangle, overlapping its right face.
     const response = getCollisionCircleRectangle(circle(13, 5, 5), rect(0, 0, 10, 10));
 
     expect(response).not.toBeNull();
-    expect(response!.projectionN.x).toBeCloseTo(1);
+    expect(response!.projectionN.x).toBeCloseTo(-1);
     expect(response!.projectionN.y).toBeCloseTo(0);
     expect(response!.overlap).toBeCloseTo(2);
   });
@@ -643,7 +643,7 @@ describe('getCollisionCircleRectangle', () => {
     const response = getCollisionCircleRectangle(circle(3, 5, 1), rect(0, 0, 10, 10));
 
     expect(response).not.toBeNull();
-    expect(response!.projectionN.x).toBeCloseTo(-1);
+    expect(response!.projectionN.x).toBeCloseTo(1);
     expect(response!.projectionN.y).toBeCloseTo(0);
   });
 
@@ -674,7 +674,7 @@ describe('getCollisionCircleRectangle', () => {
 
     expect(response).not.toBeNull();
     expect(response!.projectionN.x).toBeCloseTo(0);
-    expect(response!.projectionN.y).toBeCloseTo(-1);
+    expect(response!.projectionN.y).toBeCloseTo(1);
   });
 
   test('circle centre exactly inside the rectangle, Y exit axis, exitBottom is the smaller exit', () => {
@@ -683,7 +683,7 @@ describe('getCollisionCircleRectangle', () => {
 
     expect(response).not.toBeNull();
     expect(response!.projectionN.x).toBeCloseTo(0);
-    expect(response!.projectionN.y).toBeCloseTo(1);
+    expect(response!.projectionN.y).toBeCloseTo(-1);
   });
 });
 
@@ -701,7 +701,7 @@ describe('getCollisionEllipseRectangle', () => {
     const response = getCollisionEllipseRectangle(ellipse(-1, 5, 3, 3), rect(0, 0, 10, 10));
 
     expect(response).not.toBeNull();
-    expect(response!.projectionN.x).toBeCloseTo(-1);
+    expect(response!.projectionN.x).toBeCloseTo(1);
     expect(response!.projectionN.y).toBeCloseTo(0);
     expect(response!.overlap).toBeCloseTo(2);
   });
@@ -710,7 +710,7 @@ describe('getCollisionEllipseRectangle', () => {
     const response = getCollisionEllipseRectangle(ellipse(3, 5, 2, 2), rect(0, 0, 10, 10));
 
     expect(response).not.toBeNull();
-    expect(response!.projectionN.x).toBeCloseTo(-1);
+    expect(response!.projectionN.x).toBeCloseTo(1);
     expect(response!.projectionN.y).toBeCloseTo(0);
     expect(response!.overlap).toBeCloseTo(5); // minExitX (3) + ellipse.rx (2)
   });
@@ -719,7 +719,7 @@ describe('getCollisionEllipseRectangle', () => {
     const response = getCollisionEllipseRectangle(ellipse(7, 5, 2, 2), rect(0, 0, 10, 10));
 
     expect(response).not.toBeNull();
-    expect(response!.projectionN.x).toBeCloseTo(1);
+    expect(response!.projectionN.x).toBeCloseTo(-1);
     expect(response!.projectionN.y).toBeCloseTo(0);
     expect(response!.overlap).toBeCloseTo(5); // minExitX (3) + ellipse.rx (2)
   });
@@ -743,7 +743,7 @@ describe('getCollisionEllipseRectangle', () => {
 
     expect(response).not.toBeNull();
     expect(response!.projectionN.x).toBeCloseTo(0);
-    expect(response!.projectionN.y).toBeCloseTo(-1);
+    expect(response!.projectionN.y).toBeCloseTo(1);
     expect(response!.overlap).toBeCloseTo(4); // minExitY (2) + ellipse.ry (2)
   });
 
@@ -753,7 +753,7 @@ describe('getCollisionEllipseRectangle', () => {
 
     expect(response).not.toBeNull();
     expect(response!.projectionN.x).toBeCloseTo(0);
-    expect(response!.projectionN.y).toBeCloseTo(1);
+    expect(response!.projectionN.y).toBeCloseTo(-1);
     expect(response!.overlap).toBeCloseTo(4); // minExitY (2) + ellipse.ry (2)
   });
 });
@@ -771,8 +771,8 @@ describe('getCollisionEllipseCircle', () => {
     const response = getCollisionEllipseCircle(ellipse(0, 0, 5, 3), circle(6, 0, 2));
 
     expect(response).not.toBeNull();
-    // normal points from the circle toward the ellipse, i.e. in -X here.
-    expect(response!.projectionN.x).toBeCloseTo(-1);
+    // normal points from the ellipse (shapeA) toward the circle (shapeB), i.e. +X here.
+    expect(response!.projectionN.x).toBeCloseTo(1);
     expect(response!.overlap).toBeCloseTo(1); // ellipseBoundary(5) + circleRadius(2) - distance(6)
   });
 
@@ -781,7 +781,7 @@ describe('getCollisionEllipseCircle', () => {
 
     expect(response).not.toBeNull();
     expect(response!.projectionN.x).toBeCloseTo(0);
-    expect(response!.projectionN.y).toBeCloseTo(1);
+    expect(response!.projectionN.y).toBeCloseTo(-1);
     expect(response!.overlap).toBeCloseTo(4); // ellipse.ry(3) + circle.radius(1)
   });
 
@@ -789,7 +789,7 @@ describe('getCollisionEllipseCircle', () => {
     const response = getCollisionEllipseCircle(ellipse(0, 0, 2, 5), circle(0, 0, 1));
 
     expect(response).not.toBeNull();
-    expect(response!.projectionN.x).toBeCloseTo(1);
+    expect(response!.projectionN.x).toBeCloseTo(-1);
     expect(response!.projectionN.y).toBeCloseTo(0);
     expect(response!.overlap).toBeCloseTo(3); // ellipse.rx(2) + circle.radius(1)
   });
@@ -907,7 +907,7 @@ describe('getCollisionEllipseEllipse', () => {
 
     expect(response).not.toBeNull();
     expect(response!.overlap).toBeGreaterThan(0);
-    expect(response!.projectionN.x).toBeCloseTo(-1);
+    expect(response!.projectionN.x).toBeCloseTo(1);
   });
 
   test('coincident centres with rx > ry push along Y using the smaller axis', () => {

@@ -8,6 +8,6 @@ const wall = new Rectangle(100, 200, 80, 160);
 const response = player.collidesWith(wall);
 
 if (response) {
-  player.setPosition(player.x + response.projectionV.x, player.y + response.projectionV.y);
+  player.setPosition(player.x - response.projectionV.x, player.y - response.projectionV.y);
 }
 // #endregion guide:collision-response

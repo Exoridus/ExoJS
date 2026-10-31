@@ -28,16 +28,14 @@ describe('getCollisionRectangleRectangle', () => {
     expect(response!.overlap).toBe(2);
   });
 
-  // 2. Fully contained: overlap equals smaller dimension
-  test('fully-contained rect: overlap equals smaller rect dimension', () => {
-    // rectA: (0,0)→(10,10), rectB (inner): (2,2)→(6,6) (4×4)
-    // overlapX = min(10,6) - max(0,2) = 6 - 2 = 4
-    // overlapY = min(10,6) - max(0,2) = 6 - 2 = 4
-    // overlap = min(4, 4) = 4
+  // 2. Fully contained: overlap is the smallest distance that moves B out of A
+  test('fully-contained rect: overlap is the smallest push-out distance', () => {
+    // rectA: (0,0)->(10,10), rectB (inner): (2,2)->(6,6)
+    // B must leave A on one side: +x 10-2=8, -x 6-0=6, +y 8, -y 6 -> overlap 6
     const response = getCollisionRectangleRectangle(rect(0, 0, 10, 10), rect(2, 2, 4, 4));
 
     expect(response).not.toBeNull();
-    expect(response!.overlap).toBe(4);
+    expect(response!.overlap).toBe(6);
     expect(response!.shapeBinA).toBe(true);
     expect(response!.shapeAinB).toBe(false);
   });

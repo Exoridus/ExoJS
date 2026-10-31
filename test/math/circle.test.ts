@@ -411,7 +411,7 @@ describe('Circle', () => {
       const response = circle.collidesWith(fakeSceneNode(new Rectangle(0, 0, 10, 10)));
 
       expect(response).not.toBeNull();
-      expect(response!.projectionN.x).toBeCloseTo(1);
+      expect(response!.projectionN.x).toBeCloseTo(-1);
     });
 
     test('Rectangle branch', () => {

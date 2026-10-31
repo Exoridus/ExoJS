@@ -9,11 +9,11 @@ const response = player.collidesWith(surface);
 
 if (response) {
   // Separate first
-  player.setPosition(player.x + response.projectionV.x, player.y + response.projectionV.y);
+  player.setPosition(player.x - response.projectionV.x, player.y - response.projectionV.y);
 
   // Then classify direction
-  if (response.projectionN.y < -0.7) {
-    // Normal points upward - player is on a floor
+  if (response.projectionN.y > 0.7) {
+    // Normal points from the player down into the surface - player is on a floor
     isGrounded = true;
   } else if (Math.abs(response.projectionN.x) > 0.7) {
     // Normal is mostly horizontal - player hit a wall
