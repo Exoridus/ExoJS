@@ -812,7 +812,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Set the circle's radius. No-op when the value has not changed. Invalidates the normal and vertex caches. Returns this for chaining."
+          "description": "No-op when the radius is unchanged."
         }
       ],
       "paragraphs": [],

@@ -43,6 +43,31 @@ g.fillColor = new Color(0x4682b4);
 g.drawRectangle(40, -20, 60, 40);
 ```
 
+## Live rectangle sources
+
+Use `addShape` to retain a borrowed `Rectangle` with a solid fill. The same source can drive different Graphics, each with its own appearance:
+
+```ts
+import { Color, Graphics, Rectangle } from '@codexo/exojs';
+
+const bounds = new Rectangle(0, 0, 120, 80);
+const first = new Graphics({ fill: Color.blue });
+const second = new Graphics({ fill: Color.red });
+const panel = first.addShape(bounds);
+second.addShape(bounds);
+
+bounds.width = 180;
+panel.setStyle({ fill: Color.green });
+```
+
+Both drawings follow position and size edits, including nested vector/size mutations, without replacing their meshes. A fill patch changes only appearance. `getShape(source)` looks up by object identity and returns a handle or `null`; registering the same source twice in one Graphics throws.
+
+Constructor `fill` is a live default for these entries. `setDefaultStyle({ fill })` updates entries that have no local fill override. `setStyle` changes only specified fields; `null` disables the fill. Paint colors are copied when assigned.
+
+`clear()` and `destroy()` release subscriptions and generated meshes without destroying the borrowed rectangle. Old handles reject style edits after removal. Keep sources alive while registered. External Mesh children are detached by `clear()`, as before.
+
+This retained-source API currently supports Rectangle and solid fill only. Existing `draw*` methods retain their active-style snapshot behavior; stroke, other live source types and geometry modifiers are separate additions.
+
 ## Writing a color
 
 `Color` takes four spellings, and which one to reach for follows from whether alpha belongs in the literal:

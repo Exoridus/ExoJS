@@ -6,10 +6,10 @@
   "subsystem": "math",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 20,
+  "memberCount": 21,
   "counts": {
     "constructors": 1,
-    "methods": 13,
+    "methods": 14,
     "properties": 6,
     "events": 0
   },
@@ -825,6 +825,35 @@
           ],
           "returnType": "this",
           "description": ""
+        },
+        {
+          "name": "updateGeometry",
+          "signature": "updateGeometry(): this",
+          "signatureTokens": [
+            {
+              "text": "updateGeometry",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Rebuild edges after direct point edits and invalidate dependent geometry."
         }
       ],
       "paragraphs": [],
@@ -904,7 +933,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Direct vertex edits take effect after updateGeometry."
         },
         {
           "name": "position",

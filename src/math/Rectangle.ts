@@ -23,6 +23,7 @@ import { ObservableVector } from './ObservableVector';
 import type { Polygon } from './Polygon';
 import type { RectangleLike } from './RectangleLike';
 import type { ShapeLike } from './ShapeLike';
+import { ShapeRevision } from './ShapeRevision';
 import type { Size } from './Size';
 import { inRange } from './utils';
 import { Vector } from './Vector';
@@ -86,7 +87,7 @@ export interface ReadonlyRectangle extends Collidable {
  * See {@link ReadonlyRectangle} for the read-only view engine APIs hand out
  * when they return a live internal rectangle.
  */
-export class Rectangle implements ShapeLike, ReadonlyRectangle {
+export class Rectangle extends ShapeRevision implements ShapeLike, ReadonlyRectangle {
   public readonly collisionType: CollisionType = CollisionType.Rectangle;
 
   private readonly _position: ObservableVector;
@@ -103,6 +104,7 @@ export class Rectangle implements ShapeLike, ReadonlyRectangle {
    * @param onChange - Owner notification invoked after any mutation. Defaults to `null`.
    */
   public constructor(x = 0, y = x, width = 0, height = width, onChange: (() => void) | null = null) {
+    super();
     this._position = new ObservableVector(this, 0, x, y);
     this._size = new ObservableSize(this._onObservableChange.bind(this), width, height);
     this._onChange = onChange;
@@ -118,7 +120,12 @@ export class Rectangle implements ShapeLike, ReadonlyRectangle {
    */
   public _onObservableChange(): void {
     this._normalsDirty = true;
-    this._onChange?.();
+
+    try {
+      this._onChange?.();
+    } finally {
+      this._notifyGeometry();
+    }
   }
 
   public get position(): AbstractVector {
@@ -353,6 +360,8 @@ export class Rectangle implements ShapeLike, ReadonlyRectangle {
     if (this._normals) {
       this._normals = null;
     }
+
+    this._releaseGeometryListeners();
   }
 
   private _updateNormals(normals: Vector[]): void {

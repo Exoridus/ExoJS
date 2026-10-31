@@ -16,6 +16,7 @@ import { Container } from '#rendering/Container';
 import type { Gradient } from '#rendering/gradient/Gradient';
 import { Mesh } from '#rendering/mesh/Mesh';
 import type { GraphicsPath } from '#rendering/primitives/GraphicsPath';
+import { type GraphicsAppearancePatch, GraphicsShape, type GraphicsShapeSource } from '#rendering/primitives/GraphicsShape';
 import type { RenderNode } from '#rendering/RenderNode';
 import type { DataTexture } from '#rendering/texture/DataTexture';
 import { ScaleModes, type TextureFormat } from '#rendering/types';
@@ -56,6 +57,71 @@ const gradientTextureSize = 256;
  * tint, and mask support from {@link Container}.
  */
 export class Graphics extends Container {
+  private readonly _shapes = new Map<GraphicsShapeSource, GraphicsShape>();
+  private readonly _createdMeshes = new WeakSet<RenderNode>();
+  private _defaultFill: Color | null = null;
+
+  public constructor(options: GraphicsAppearancePatch = {}) {
+    super();
+    this.setDefaultStyle(options);
+  }
+
+  /** Update the live fill inherited by retained drawings without local overrides. */
+  public setDefaultStyle(patch: GraphicsAppearancePatch): this {
+    if (patch.fill !== undefined) {
+      this._defaultFill = patch.fill?.clone() ?? null;
+
+      for (const shape of this._shapes.values()) {
+        shape._applyAppearance();
+      }
+    }
+
+    return this;
+  }
+
+  /**
+   * Register a live, borrowed source shape. Duplicate source identities throw.
+   * Destroying the source removes its drawing from every Graphics using it.
+   */
+  public addShape(source: GraphicsShapeSource, options: GraphicsAppearancePatch = {}): GraphicsShape {
+    if (this.destroyed) {
+      throw new Error('Cannot add a shape to destroyed Graphics.');
+    }
+
+    if (this._shapes.has(source)) {
+      throw new Error('Shape source is already registered in this Graphics.');
+    }
+
+    const shape = new GraphicsShape(
+      source,
+      () => this._defaultFill,
+      options,
+      () => this._removeShape(source),
+    );
+
+    this.addChild(shape._drawable);
+    this._shapes.set(source, shape);
+
+    return shape;
+  }
+
+  /** Look up a retained drawing by source identity, or return `null` when absent. */
+  public getShape(source: GraphicsShapeSource): GraphicsShape | null {
+    return this._shapes.get(source) ?? null;
+  }
+
+  private _removeShape(source: GraphicsShapeSource): void {
+    const shape = this._shapes.get(source);
+
+    if (shape === undefined) {
+      return;
+    }
+
+    this._shapes.delete(source);
+    this.removeChild(shape._drawable);
+    shape._dispose();
+  }
+
   private _lineWidth = 0;
   // Fill defaults to transparent: a shape is filled only when a fill color/style is
   // set, mirroring how the stroke is gated on `lineWidth > 0`. This keeps an
@@ -460,9 +526,28 @@ export class Graphics extends Container {
     return this;
   }
 
-  /** Remove all child meshes and reset pen state (position, fill/stroke styles, line width). */
+  /**
+   * Remove all child meshes and reset pen state (position, fill/stroke styles, line width).
+   *
+   * Meshes created by drawing calls and retained shapes are destroyed. Meshes
+   * added with `addChild` are only detached; their owner keeps them.
+   */
   public clear(): this {
+    for (const shape of this._shapes.values()) {
+      shape._dispose();
+    }
+
+    this._shapes.clear();
+
+    const children = [...this.children];
+
     this.removeChildren();
+
+    for (const child of children) {
+      if (this._createdMeshes.has(child)) {
+        child.destroy();
+      }
+    }
 
     this._lineWidth = 0;
     this._fillColor.copy(Color.transparentBlack);
@@ -478,6 +563,10 @@ export class Graphics extends Container {
   }
 
   public override destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
+
     try {
       super.destroy();
     } finally {
@@ -548,6 +637,7 @@ export class Graphics extends Container {
     });
 
     mesh.tint = color;
+    this._createdMeshes.add(mesh);
 
     return mesh;
   }
@@ -558,12 +648,16 @@ export class Graphics extends Container {
    * white tint and vertex color leave the sampled gradient color unmodulated.
    */
   private _createGradientMesh(data: MeshGeometryData, texture: DataTexture<TextureFormat.Rgba8>): Mesh {
-    return new Mesh({
+    const mesh = new Mesh({
       vertices: data.vertices,
       indices: data.indices,
       uvs: computeBoundsUvs(data.vertices),
       texture,
     });
+
+    this._createdMeshes.add(mesh);
+
+    return mesh;
   }
 
   private _rasterizeGradient(gradient: Gradient): DataTexture<TextureFormat.Rgba8> {
