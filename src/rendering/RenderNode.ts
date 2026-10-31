@@ -519,6 +519,14 @@ export abstract class RenderNode extends SceneNode {
     }
 
     if (mask instanceof RenderNode) {
+      // Rendering a mask re-renders its whole subtree, so a mask that contains
+      // this node would render this node's mask again, without end.
+      for (let ancestor = this.parent; ancestor !== null; ancestor = ancestor.parent) {
+        if (ancestor === mask) {
+          throw new Error('A RenderNode cannot use one of its ancestors as its mask source.');
+        }
+      }
+
       const seen = new Set<RenderNode>([this]);
 
       for (let node: MaskSource = mask; node instanceof RenderNode; node = node._mask) {

@@ -180,6 +180,8 @@ export class AnimatedSprite extends Sprite {
       this.addClip(name, clip);
     }
 
+    this._dropMissingCurrentClip();
+
     return this;
   }
 
@@ -307,8 +309,21 @@ export class AnimatedSprite extends Sprite {
     }
 
     this._clips.delete(name);
+    this._dropMissingCurrentClip();
 
     return this;
+  }
+
+  /** Forget the active clip once it is no longer registered, so `currentClip` and `resume()` never refer to it. */
+  private _dropMissingCurrentClip(): void {
+    if (this._currentClipName === null || this._clips.has(this._currentClipName)) {
+      return;
+    }
+
+    this._currentClipName = null;
+    this._playing = false;
+    this._elapsedFrameTime = seconds(0);
+    this._syncSystemRegistration();
   }
 
   /**

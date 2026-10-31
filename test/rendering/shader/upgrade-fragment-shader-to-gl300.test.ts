@@ -166,4 +166,18 @@ void main() { gl_FragColor = vec4(1.0); }`;
     expect(versionMatches).not.toBeNull();
     expect(versionMatches!.length).toBe(1);
   });
+
+  test('replaces a legacy #version directive that follows a comment or uses CRLF', () => {
+    const sources = [
+      '// header\n#version 100\nvoid main() { gl_FragColor = vec4(1.0); }',
+      '#version 100\r\nvoid main() { gl_FragColor = vec4(1.0); }',
+    ];
+
+    for (const src of sources) {
+      const out = upgradeFragmentShaderToGl300(src);
+
+      expect(out.match(/#version/g)).toHaveLength(1);
+      expect(out.startsWith('#version 300 es')).toBe(true);
+    }
+  });
 });
