@@ -68,8 +68,18 @@ export interface CollisionResponse {
   readonly shapeAinB: boolean;
   /** `true` when `shapeB` is fully contained within `shapeA`. */
   readonly shapeBinA: boolean;
-  /** Unit normal of the minimum-translation axis. */
+  /**
+   * Unit normal of the minimum-translation axis, pointing from `shapeA` (the
+   * object `collidesWith` was called on) toward `shapeB` (the argument).
+   * Swapping the operands negates it, except for ambiguous cases (coincident
+   * centres, equal penetration on several axes) where the axis is a fixed
+   * deterministic choice that does not depend on operand order.
+   */
   readonly projectionN: Vector;
-  /** Minimum-translation vector: `projectionN` scaled by `overlap`. */
+  /**
+   * Minimum-translation vector: `projectionN` scaled by `overlap`. Adding it
+   * to `shapeB`'s position, or subtracting it from `shapeA`'s, separates the
+   * shapes. To push the caller out of the argument, subtract `projectionV`.
+   */
   readonly projectionV: Vector;
 }

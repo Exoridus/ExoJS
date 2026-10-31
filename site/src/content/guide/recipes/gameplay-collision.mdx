@@ -51,8 +51,8 @@ All shape-pair combinations are supported for boolean overlap — rectangle-rect
 | Field | Type | Meaning |
 |-------|------|---------|
 | `overlap` | `number` | Penetration depth (positive) |
-| `projectionN` | `Vector` | Unit normal of the minimum-translation axis |
-| `projectionV` | `Vector` | MTV = `projectionN × overlap` — the push-out vector |
+| `projectionN` | `Vector` | Unit normal of the minimum-translation axis, pointing from shapeA (the caller) toward shapeB (the argument) |
+| `projectionV` | `Vector` | MTV = `projectionN × overlap`; `shapeB += projectionV` or `shapeA -= projectionV` separates the pair |
 | `shapeAinB` | `boolean` | `true` if A is fully inside B |
 | `shapeBinA` | `boolean` | `true` if B is fully inside A |
 | `shapeA` | `Collidable` | Reference to the first shape |
@@ -72,7 +72,7 @@ Supported response pairs in the current implementation:
 
 ## Resolving collisions: using projectionV
 
-`projectionV` is the minimum-translation vector (MTV): the smallest displacement that separates the two shapes. Move the caller by `projectionV` and the shapes no longer overlap.
+`projectionV` is the minimum-translation vector (MTV): the smallest displacement that separates the two shapes. `projectionV` points from the caller (`shapeA`) toward the argument (`shapeB`): add it to the argument or subtract it from the caller and the shapes no longer overlap. Swapping the operands negates the vector.
 
 <SourceSnippet
   source="examples/guides/gameplay-collision/collision-response.ts"
@@ -103,7 +103,7 @@ For two-way separation (two dynamic objects), split the MTV:
   title="examples/guides/gameplay-collision/shape-queries.ts"
 />
 
-The sign convention: `projectionN` points **from shapeB toward shapeA** (away from the surface the caller is being pushed out of).
+The sign convention: `projectionN` points **from shapeA (the caller) toward shapeB (the argument)**, i.e. into the surface the caller is being pushed out of. A player standing on a floor therefore sees `projectionN.y > 0` (y grows downward), and a ceiling hit gives `projectionN.y < 0`. For coincident centres or equally deep axes the direction is a fixed choice that does not flip with the operand order.
 
 <Callout type="info" title="Discrete checks tunnel past fast movers">
 `intersectsWith` and `collidesWith` only test the shapes at their current position, so a fast mover can pass straight through a thin wall between frames. For high speeds, sweep the motion with the `Sweep.*` helpers instead of a point-in-time overlap test.
@@ -140,7 +140,7 @@ box.setPosition(200, 200);
 if (hero.intersectsWith(box)) {
     const response = hero.collidesWith(box);
     if (response) {
-        hero.move(response.projectionV.x, response.projectionV.y);
+        hero.move(-response.projectionV.x, -response.projectionV.y);
     }
 }
 ```
