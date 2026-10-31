@@ -57,7 +57,7 @@ describe('SceneAudio native graph ownership', () => {
       expect(gain).toBeInstanceOf(GainNode);
       expect(send.destroyed).toBe(true);
       expect(disconnect).toHaveBeenCalledTimes(1);
-      expect(placeholderDisconnect).toHaveBeenCalledTimes(method === 'add' ? 2 : 1);
+      expect(placeholderDisconnect).toHaveBeenCalledTimes(method === 'add' ? 3 : 1);
       expect(voice.sends).toHaveLength(0);
       audio._flushPending();
       expect(disconnect).toHaveBeenCalledTimes(1);
@@ -91,7 +91,7 @@ describe('SceneAudio native graph ownership', () => {
       const ended = vi.fn(() => {
         expect(send.destroyed).toBe(true);
         expect(voice.sends).toHaveLength(0);
-        expect(disconnect).toHaveBeenCalledTimes(1);
+        expect(disconnect).toHaveBeenCalledTimes(2);
         expect(disconnectSend).toHaveBeenCalledTimes(1);
       });
       voice.onEnd.add(ended);

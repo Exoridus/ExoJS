@@ -115,6 +115,23 @@ describe('SvgFactory', () => {
     expect(text).not.toContain('height="5"');
   });
 
+  test('create() keeps a ">" inside a root attribute value and a self-closing root intact', async () => {
+    const factory = new SvgFactory();
+
+    const first = factory.create('<svg data-note="a>b" width="5"><rect/></svg>', factoryContext({ width: 100 }));
+    lastImage().dispatchEvent(new Event('load'));
+    await first;
+
+    const second = factory.create('<svg width="5" viewBox="0 0 1 1"/>', factoryContext({ width: 100 }));
+    lastImage().dispatchEvent(new Event('load'));
+    await second;
+
+    const markupOf = async (call: number): Promise<string> => (createObjectUrlSpy.mock.calls[call]?.[0] as Blob).text();
+
+    expect(await markupOf(0)).toBe('<svg data-note="a>b" width="100"><rect/></svg>');
+    expect(await markupOf(1)).toBe('<svg viewBox="0 0 1 1" width="100"/>');
+  });
+
   test('create() leaves the markup untouched when width/height are not provided', async () => {
     const factory = new SvgFactory();
     const source = '<svg viewBox="0 0 10 10"><rect width="1" height="1"/></svg>';
