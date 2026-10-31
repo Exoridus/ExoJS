@@ -154,6 +154,14 @@ describe('isPowerOfTwo', () => {
     expect(isPowerOfTwo(100)).toBe(false);
   });
 
+  test('fractions, negatives and non-finite values return false', () => {
+    for (const value of [2.5, 1.5, 0.5, -2, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(isPowerOfTwo(value)).toBe(false);
+    }
+
+    expect(isPowerOfTwo(2 ** 40)).toBe(true);
+  });
+
   test('zero returns false', () => {
     expect(isPowerOfTwo(0)).toBe(false);
   });

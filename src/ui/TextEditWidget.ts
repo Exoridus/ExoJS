@@ -109,6 +109,8 @@ export abstract class TextEditWidget extends Widget {
   private _blinkApp: Application | null = null;
   private _pointerInside = false;
   private _dragging = false;
+  /** The application the drag subscribed to; the field may have left the stage by the time it ends. */
+  private _dragApp: Application | null = null;
   /**
    * The contact that started the current selection drag. The drag follows the
    * application's pointer signals, which carry every contact, so a second
@@ -694,7 +696,7 @@ export abstract class TextEditWidget extends Widget {
 
     switch (intent.kind) {
       case 'insert':
-        this.model.insert(intent.text, 'input');
+        this.model.insert(intent.text, intent.source ?? 'input');
 
         if (intent.text === '\n') {
           this._hostLineBreaks++;
@@ -768,6 +770,7 @@ export abstract class TextEditWidget extends Widget {
 
     this._dragging = true;
     this._dragPointerId = pointerId;
+    this._dragApp = app;
     app.input.onPointerMove.add(this._onPointerDragMove);
     app.input.onPointerUp.add(this._onPointerDragEnd);
     app.input.onPointerCancel.add(this._onPointerDragEnd);
@@ -781,9 +784,11 @@ export abstract class TextEditWidget extends Widget {
     this._dragging = false;
     this._dragPointerId = -1;
 
-    const app = this._stage?.app;
+    const app = this._dragApp;
 
-    if (app === undefined) {
+    this._dragApp = null;
+
+    if (app === null) {
       return;
     }
 

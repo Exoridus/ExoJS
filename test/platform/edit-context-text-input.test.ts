@@ -277,7 +277,7 @@ describe('EditContextTextInput', () => {
     transportElement().dispatchEvent(event);
 
     expect(event.defaultPrevented).toBe(true);
-    expect(edits).toEqual([{ kind: 'insert', text: 'pasted' }]);
+    expect(edits).toEqual([{ kind: 'insert', text: 'pasted', source: 'paste' }]);
   });
 
   test('geometry reaches the context: control bounds, selection bounds, character bounds', () => {

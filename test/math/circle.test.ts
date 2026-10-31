@@ -460,4 +460,24 @@ describe('Circle', () => {
       expect(second).toBe(first);
     });
   });
+
+  describe('collisionSegments changes after the cache was built', () => {
+    const original = Circle.collisionSegments;
+
+    afterEach(() => {
+      Circle.collisionSegments = original;
+    });
+
+    it('rebuilds vertices and normals at the new segment count', () => {
+      const circle = new Circle(0, 0, 10);
+
+      expect(circle.getNormals()).toHaveLength(32);
+
+      Circle.collisionSegments = 64;
+      circle.setRadius(11);
+
+      expect(circle.getNormals()).toHaveLength(64);
+      expect(circle.getNormals().every(normal => Number.isFinite(normal.x) && Number.isFinite(normal.y))).toBe(true);
+    });
+  });
 });

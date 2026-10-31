@@ -84,7 +84,7 @@ export class BrowserTextInput implements PlatformTextInput {
         text = event.data ?? '';
       }
 
-      this._onEdit.dispatch({ kind: 'insert', text });
+      this._onEdit.dispatch({ kind: 'insert', text, ...(type === 'insertFromPaste' && { source: 'paste' as const }) });
 
       return;
     }

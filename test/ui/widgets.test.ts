@@ -96,6 +96,44 @@ test('button borders stay inside their layout box in normal and focused states',
   }
 });
 
+describe('Panel background and fill overrides', () => {
+  it('setBackground(null) returns the panel to its skin, dropping a fill override', () => {
+    const skinColor = new Panel().color!.clone();
+    const panel = new Panel().setFill({ color: Color.red });
+
+    expect(panel.color!.equals(Color.red)).toBe(true);
+
+    panel.setBackground(null);
+
+    expect(panel.color!.equals(skinColor)).toBe(true);
+    expect(panel.fillOverrides).toBeNull();
+  });
+
+  it('a fill override applied after a texture background is what the panel paints', () => {
+    const panel = new Panel().setBackground(textureStub());
+
+    panel.setFill({ color: Color.red });
+
+    expect(panel.color!.equals(Color.red)).toBe(true);
+  });
+});
+
+describe('text style overrides', () => {
+  it('Label and Button hand out a read-only snapshot, so only setTextStyle changes the style', () => {
+    const label = new Label('abc').setTextStyle({ fontSize: 20 });
+    const button = new Button({ label: 'ok' }).setTextStyle({ fontSize: 20 });
+
+    for (const widget of [label, button]) {
+      const overrides = widget.textStyleOverrides as { fontSize?: number };
+
+      expect(() => {
+        overrides.fontSize = 24;
+      }).toThrow(TypeError);
+      expect(widget.textStyleOverrides?.fontSize).toBe(20);
+    }
+  });
+});
+
 describe('Panel', () => {
   test('takes its explicit layout size', () => {
     const panel = new Panel({ width: 200, height: 100 });

@@ -513,4 +513,38 @@ describe('TextInput', () => {
 
     expect(field.placeholderNode.visible).toBe(false);
   });
+
+  test('undo takes back a paste on its own, not the typing before it', () => {
+    const harness = createUIApp();
+    const field = new TextInput({ width: 200, height: 36 });
+
+    harness.scene.ui.addChild(field);
+    press(harness, 5, 18);
+    type('ab');
+    fireBeforeInput('insertFromPaste', { dataTransfer: { getData: () => 'cd' } });
+    expect(field.value).toBe('abcd');
+
+    fireBeforeInput('historyUndo');
+
+    expect(field.value).toBe('ab');
+  });
+
+  test('destroying a field that left the scene mid-drag unsubscribes its pointer handlers', () => {
+    const harness = createUIApp();
+    const field = new TextInput({ width: 200, height: 36 });
+
+    harness.scene.ui.addChild(field);
+    press(harness, 5, 18);
+
+    const before = harness.signals.onPointerMove.count;
+    const upBefore = harness.signals.onPointerUp.count;
+
+    expect(before).toBeGreaterThan(0);
+
+    harness.scene.ui.removeChild(field);
+    field.destroy();
+
+    expect(harness.signals.onPointerMove.count).toBeLessThan(before);
+    expect(harness.signals.onPointerUp.count).toBeLessThan(upBefore);
+  });
 });

@@ -4323,7 +4323,7 @@
         },
         {
           "name": "textStyleOverrides",
-          "signature": "textStyleOverrides: TextStyleOptions | null",
+          "signature": "textStyleOverrides: Readonly<TextStyleOptions> | null",
           "signatureTokens": [
             {
               "text": "textStyleOverrides",
@@ -4334,8 +4334,20 @@
               "kind": "punctuation"
             },
             {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
               "text": "TextStyleOptions",
               "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": " | ",

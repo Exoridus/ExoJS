@@ -211,7 +211,7 @@ export class EditContextTextInput implements PlatformTextInput {
     const text = event.clipboardData?.getData('text/plain') ?? '';
 
     if (text !== '') {
-      this._onEdit.dispatch({ kind: 'insert', text });
+      this._onEdit.dispatch({ kind: 'insert', text, source: 'paste' });
     }
   };
 
