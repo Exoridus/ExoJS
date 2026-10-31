@@ -1,4 +1,7 @@
-/** Render-independent geometry notifications. @internal */
+/**
+ * Base of the shapes whose geometry edits Graphics can follow. It adds no
+ * public members; its subscription hooks are engine-internal.
+ */
 export class ShapeRevision {
   private _geometryListeners: Map<() => void, (() => void) | null> | null = null;
   /** @internal */
