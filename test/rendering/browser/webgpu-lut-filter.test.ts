@@ -109,3 +109,7 @@ const checkNonfilteringLut = async (ctx: { skip(reason: string): void }, mode: '
 test('3D LUT samples through its paired nonfiltering sampler', async ctx => {
   await checkNonfilteringLut(ctx, '3d');
 });
+
+test('RGB-1D LUT samples through its paired nonfiltering sampler', async ctx => {
+  await checkNonfilteringLut(ctx, 'rgb1d');
+});
