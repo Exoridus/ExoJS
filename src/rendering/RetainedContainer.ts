@@ -7,6 +7,7 @@ import { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
 import { reconcileRetainedTransformRows } from '#rendering/plan/retainedTransformRowPatch';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { blendModeNeedsBackdrop } from '#rendering/types';
+import type { View } from '#rendering/View';
 
 import { Container } from './Container';
 import type { RenderNode } from './RenderNode';
@@ -22,7 +23,8 @@ const retainedDiagnosticThreshold = 108;
  * previously-collected command range is spliced into the render plan - no
  * walk, no per-child culling, no material keys - and moving the container
  * (or the camera) changes only one per-group GPU matrix instead of touching
- * every descendant.
+ * every descendant. Descendants that derive content from the view are
+ * recollected when that view changes.
  *
  * Opt-in at construction; there is no runtime toggle. The existing
  * revision contract ({@link RenderNode.invalidateContent} and the automatic
@@ -66,6 +68,8 @@ const retainedDiagnosticThreshold = 108;
  */
 export class RetainedContainer extends Container {
   private readonly _fragment = new RetainedGroupFragment(this);
+  private _fragmentView: View | null = null;
+  private _fragmentViewUpdateId = -1;
   private _destroying = false;
   private _groupVersion = 0;
   private _devFragmentBuilds = 0;
@@ -277,6 +281,9 @@ export class RetainedContainer extends Container {
       return;
     }
 
+    const view = builder._retentionView;
+    const viewMatches = this._fragmentView === null || (this._fragmentView === view && this._fragmentViewUpdateId === view.updateId);
+
     // A recorded draw can no longer outlive its drawable: `SceneNode.destroy`
     // unlinks the node, and that removal stamps every ancestor up to this
     // boundary structure-dirty, so a destroyed descendant always fails the key
@@ -284,15 +291,21 @@ export class RetainedContainer extends Container {
     // Clean, or dirty only on or below a live re-dispatch record - a child
     // mask's rect moved - which the capture holds nothing about.
     if (
-      this._fragment.isClean(this._contentRevision, this._structureRevision, builder.backend) ||
-      this._fragment.reconcileLiveEntryChanges(
-        this._contentRevision,
-        this._structureRevision,
-        builder.backend,
-        this,
-        builder._destinationOpaque(),
-      )
+      viewMatches &&
+      (this._fragment.isClean(this._contentRevision, this._structureRevision, builder.backend) ||
+        this._fragment.reconcileLiveEntryChanges(
+          this._contentRevision,
+          this._structureRevision,
+          builder.backend,
+          this,
+          builder._destinationOpaque(),
+        ))
     ) {
+      if (this._fragmentView !== null) {
+        // Enclosing captures inherit the dependency even when this group replays.
+        builder._noteViewRead();
+      }
+
       // A content/structure-clean frame may still carry transform-only
       // descendant moves, since an own-transform move no longer content-
       // dirties. The recorded instruction set's baked transform rows are stale
@@ -347,6 +360,8 @@ export class RetainedContainer extends Container {
     // only the plain collect.
     const suppressCapture = this._fragment.shouldSuppressCapture(this._contentRevision, this._structureRevision);
 
+    const viewReadVersion = builder._viewReadVersion;
+
     for (let index = 0; index < this._children.length; index++) {
       // In-bounds: index < length.
       this._children[index]!.collect(builder, index);
@@ -357,6 +372,8 @@ export class RetainedContainer extends Container {
     }
 
     if (!suppressCapture) {
+      this._fragmentView = builder._viewReadVersion === viewReadVersion ? null : view;
+      this._fragmentViewUpdateId = view.updateId;
       this._fragment.capture(
         this._contentRevision,
         this._structureRevision,

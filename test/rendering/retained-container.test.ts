@@ -1920,3 +1920,41 @@ describe('RetainedContainer: destroyed-child eviction', () => {
     backend.destroy();
   });
 });
+
+test.each([false, true])('view-dependent descendants refresh through retained groups (nested=%s)', nested => {
+  class ViewReader extends LeafDrawable {
+    public centers: number[] = [];
+
+    protected override _collectContent(builder: RenderPlanBuilder): void {
+      this.centers.push(builder.view.center.x);
+      super._collectContent(builder);
+    }
+  }
+
+  const backend = createTestBackend();
+  const group = new RetainedContainer();
+  const leaf = new ViewReader('view');
+  const root = new Container();
+
+  leaf.cullable = false;
+
+  if (nested) {
+    const inner = new RetainedContainer();
+
+    inner.addChild(leaf);
+    group.addChild(inner);
+  } else {
+    group.addChild(leaf);
+  }
+
+  root.addChild(group);
+  collectDraws(root, backend);
+  collectDraws(root, backend);
+  expect(leaf.centers).toHaveLength(1);
+  backend.view.center.x += 5;
+  collectDraws(root, backend);
+  expect(leaf.centers).toHaveLength(2);
+  expect(leaf.centers[1]).toBe(backend.view.center.x);
+  root.destroy();
+  backend.destroy();
+});
