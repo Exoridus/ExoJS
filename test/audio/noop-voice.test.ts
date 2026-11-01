@@ -84,6 +84,15 @@ describe('NoopVoice', () => {
     bus.destroy();
   });
 
+  test('rejects sends after ending', () => {
+    const bus = new AudioBus('noop-send');
+    const voice = new NoopVoice(bus);
+
+    expect(() => voice.addSend(bus)).toThrow('Cannot open an audio send on a voice that has already ended.');
+    expect(voice.sends).toHaveLength(0);
+    bus.destroy();
+  });
+
   test('onEnd exists but never fires', () => {
     const bus = new AudioBus('noop-bus-8');
     const voice = new NoopVoice(bus);

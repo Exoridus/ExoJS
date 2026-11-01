@@ -616,15 +616,13 @@ export abstract class BaseVoice implements Voice {
   }
 
   public addSend(bus: AudioBus, level = 1): AudioSend {
+    if (this._ended) {
+      throw new Error('Cannot open an audio send on a voice that has already ended.');
+    }
+
     const send = new AudioSend(this._audioContext, this._output, bus, level);
 
     this._sends.push(send);
-
-    // A send on an already-finished voice is legal but pointless; destroying it
-    // straight away keeps the invariant that a voice's sends never outlive it.
-    if (this._ended) {
-      send.destroy();
-    }
 
     return send;
   }
