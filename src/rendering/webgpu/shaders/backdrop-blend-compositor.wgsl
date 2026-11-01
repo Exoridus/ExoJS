@@ -134,9 +134,8 @@ fn blendAdvanced(mode: u32, cb: vec3<f32>, cs: vec3<f32>) -> vec3<f32> {
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     let src = textureSample(sourceTexture, sourceSampler, input.texcoord);
-    // copyTextureToTexture preserves the target's top-left orientation, so the
-    // backdrop is sampled at the same UV as the quad — no V-flip (unlike the
-    // WebGL2 framebuffer-blit path, which reads bottom-left order).
+    // Fragment positions and the clipped capture origin are in target pixels.
+    // copyTextureToTexture preserves top-left orientation, so no V-flip is needed.
     let backdropUv = (input.position.xy - blend.captureOrigin) / vec2<f32>(textureDimensions(backdropTexture));
     let dst = textureSample(backdropTexture, backdropSampler, backdropUv);
 

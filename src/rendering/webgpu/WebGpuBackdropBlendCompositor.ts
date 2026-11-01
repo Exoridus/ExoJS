@@ -243,7 +243,7 @@ export class WebGpuBackdropBlendCompositor {
       return;
     }
 
-    const backdropView = this._ensureBackdrop(device, captureWidth, captureHeight, format);
+    const backdropView = this._ensureBackdrop(device, cw, ch, format);
 
     // Capture the target region into the backdrop on a standalone encoder; a copy
     // cannot run inside a render pass (the coordinator's passes self-submit).
@@ -251,7 +251,7 @@ export class WebGpuBackdropBlendCompositor {
 
     encoder.copyTextureToTexture(
       { texture: manager._renderTargetTexture(target), origin: { x: ox, y: oy, z: 0 } },
-      { texture: this._backdropTexture!, origin: { x: ox - rawX, y: oy - rawY, z: 0 } },
+      { texture: this._backdropTexture!, origin: { x: 0, y: 0, z: 0 } },
       { width: cw, height: ch, depthOrArrayLayers: 1 },
     );
 
@@ -260,8 +260,8 @@ export class WebGpuBackdropBlendCompositor {
     // A root target is a fully covered backdrop only while the canvas composites
     // opaquely; under `alphaMode: 'premultiplied'` its captured alpha is real and
     // must be honoured. Offscreen targets always carry real alpha.
-    this._blendOriginView[0] = rawX;
-    this._blendOriginView[1] = rawY;
+    this._blendOriginView[0] = ox;
+    this._blendOriginView[1] = oy;
     this._drawBlend(manager, source, backdropView, x, y, width, height, blendMode, target.opaqueDestination);
   }
 
