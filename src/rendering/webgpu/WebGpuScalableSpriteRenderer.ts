@@ -11,7 +11,7 @@ import { isSampleableTexture } from '#rendering/texture/deferredTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { RepeatMode } from '#rendering/texture/repeat';
 import { Texture } from '#rendering/texture/Texture';
-import { BlendModes } from '#rendering/types';
+import { BlendModes, ScaleModes } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
@@ -610,7 +610,7 @@ export class WebGpuScalableSpriteRenderer
 
     const modeX = this._currentModeX ?? 'repeat';
     const modeY = this._currentModeY ?? 'repeat';
-    const sampler = this._getOrCreateSampler(device, modeX, modeY);
+    const sampler = this._getOrCreateSampler(device, modeX, modeY, this._currentTexture.scaleMode);
     // The shader path pairs the resolved texture view with a wrap-mode sampler
     // (not the backend's default), so the cache is keyed on both identities.
     const texView = backend.getTextureBinding(this._currentTexture).view;
@@ -885,8 +885,13 @@ export class WebGpuScalableSpriteRenderer
   // Private helpers
   // -----------------------------------------------------------------------
 
-  private _getOrCreateSampler(device: GPUDevice, modeX: RepeatMode, modeY: RepeatMode): GPUSampler {
-    const key = `${modeX}:${modeY}`;
+  private _getOrCreateSampler(device: GPUDevice, modeX: RepeatMode, modeY: RepeatMode, scaleMode: ScaleModes): GPUSampler {
+    const filter =
+      scaleMode === ScaleModes.Nearest || scaleMode === ScaleModes.NearestMipmapNearest || scaleMode === ScaleModes.NearestMipmapLinear
+        ? 'nearest'
+        : 'linear';
+    const mipmapFilter = scaleMode === ScaleModes.NearestMipmapLinear || scaleMode === ScaleModes.LinearMipmapLinear ? 'linear' : 'nearest';
+    const key = `${modeX}:${modeY}:${scaleMode}`;
     const existing = this._samplers.get(key);
 
     if (existing) {
@@ -897,8 +902,9 @@ export class WebGpuScalableSpriteRenderer
       label: 'repeating-sprite:sampler',
       addressModeU: repeatModeToAddressMode(modeX),
       addressModeV: repeatModeToAddressMode(modeY),
-      magFilter: 'linear',
-      minFilter: 'linear',
+      magFilter: filter,
+      minFilter: filter,
+      mipmapFilter,
     });
     this._samplers.set(key, sampler);
 
