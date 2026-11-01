@@ -1,5 +1,3 @@
-import { assert } from '#core/dev';
-
 import { CanvasSizing, type CanvasSizingContext } from './CanvasSizing';
 import { HostTracker, resolveHost } from './HostTracker';
 
@@ -84,9 +82,8 @@ export class ResponsiveCanvasSizing extends CanvasSizing {
     const baseAspect = context.baseWidth / context.baseHeight;
     const minAspect = this._minAspect ?? baseAspect;
 
-    if (__DEV__) {
-      assert(
-        minAspect > 0 && minAspect <= baseAspect,
+    if (!(minAspect > 0 && minAspect <= baseAspect)) {
+      throw new RangeError(
         `ResponsiveCanvasSizing minAspect must be greater than 0 and at most the base aspect ratio (${baseAspect}), got ${minAspect}. A value above the base ratio would crop the base view on every host.`,
       );
     }
