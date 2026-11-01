@@ -294,6 +294,23 @@ describe('EditContextTextInput', () => {
     expect(context.characterBounds?.bounds.length).toBe(3);
   });
 
+  test('caret and character bounds use viewport coordinates', () => {
+    const canvas = document.createElement('canvas');
+    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 200, 300, 150));
+    const backend = new EditContextTextInput(canvas);
+    const context = lastContext();
+    backend.setBounds(new Rectangle(10, 20, 200, 30));
+    backend.setCaretRect(new Rectangle(40, 25, 1, 24));
+    context.emit('characterboundsupdate', { rangeStart: 0, rangeEnd: 2 });
+    expect([context.controlBounds?.x, context.controlBounds?.y]).toEqual([110, 220]);
+    expect([context.selectionBounds?.x, context.selectionBounds?.y]).toEqual([140, 225]);
+    expect(context.characterBounds?.bounds.map(rect => [rect.x, rect.y])).toEqual([
+      [140, 225],
+      [140, 225],
+    ]);
+    backend.destroy();
+  });
+
   test('hints reach the context', () => {
     const { backend } = createBackend();
 

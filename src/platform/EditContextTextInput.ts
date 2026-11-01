@@ -163,7 +163,8 @@ export class EditContextTextInput implements PlatformTextInput {
       return;
     }
 
-    const dom = new DOMRect(rect.x, rect.y, rect.width, rect.height);
+    const canvasRect = this._canvas.getBoundingClientRect();
+    const dom = new DOMRect(canvasRect.left + rect.x, canvasRect.top + rect.y, rect.width, rect.height);
     const bounds: DOMRect[] = [];
 
     for (let offset = event.rangeStart; offset < event.rangeEnd; offset++) {
@@ -332,7 +333,8 @@ export class EditContextTextInput implements PlatformTextInput {
 
   public setCaretRect(rect: Rectangle): void {
     this._caretRect = rect.clone();
-    this._context.updateSelectionBounds(new DOMRect(rect.x, rect.y, rect.width, rect.height));
+    const canvasRect = this._canvas.getBoundingClientRect();
+    this._context.updateSelectionBounds(new DOMRect(canvasRect.left + rect.x, canvasRect.top + rect.y, rect.width, rect.height));
   }
 
   public setHints(hints: PlatformTextInputHints): void {
