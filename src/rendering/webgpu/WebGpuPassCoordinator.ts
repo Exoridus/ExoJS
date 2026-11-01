@@ -335,7 +335,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   }
 
   /**
-   * Drop the open pass WITHOUT ending or submitting it. For teardown paths only,
+   * Drop the open pass WITHOUT ending or submitting it. Used for failed writes and teardown,
    * where the recorded draws must not reach the queue at all: backend destroy,
    * and device-loss teardown, where the encoder belongs to the dead device.
    *
@@ -433,12 +433,22 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     this._stencilRef = depth;
     this._stencilLoadOp = depth === 0 ? 'clear' : 'load';
 
-    const active = this.acquirePass();
-    this._stencil.draw(active.pass, active.targetFormat, true, shape, transform, active.view);
-    this.markPassDraws();
-    this.endPass();
+    try {
+      const active = this.acquirePass();
 
-    this._stencilWriteInProgress = false;
+      this._stencil.draw(active.pass, active.targetFormat, true, shape, transform, active.view);
+      this.markPassDraws();
+      this.endPass();
+    } catch (error) {
+      // A partial stencil write must never reach the queue.
+      this.discardPass();
+
+      throw error;
+    } finally {
+      this._stencilWriteInProgress = false;
+      this._stencilRef = depth;
+    }
+
     this._stencilDepths.set(target, depth + 1);
     this._stencilRef = depth + 1;
     this._getStencilStack(target).push({ shape, transform: new Matrix().copy(transform) });
@@ -448,7 +458,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   public popStencilClip(): void {
     const target = this._backend.renderTarget;
     const stack = this._stencilStacks.get(target);
-    const entry = stack?.pop();
+    const entry = stack?.[stack.length - 1];
 
     if (entry === undefined) {
       return;
@@ -464,12 +474,23 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     this._stencilRef = depth;
     this._stencilLoadOp = 'load';
 
-    const active = this.acquirePass();
-    this._stencil.draw(active.pass, active.targetFormat, false, entry.shape, entry.transform, active.view);
-    this.markPassDraws();
-    this.endPass();
+    try {
+      const active = this.acquirePass();
 
-    this._stencilWriteInProgress = false;
+      this._stencil.draw(active.pass, active.targetFormat, false, entry.shape, entry.transform, active.view);
+      this.markPassDraws();
+      this.endPass();
+    } catch (error) {
+      // A partial stencil write must never reach the queue.
+      this.discardPass();
+
+      throw error;
+    } finally {
+      this._stencilWriteInProgress = false;
+      this._stencilRef = depth;
+    }
+
+    stack!.pop();
     this._stencilDepths.set(target, depth - 1);
     this._stencilRef = depth - 1;
   }
