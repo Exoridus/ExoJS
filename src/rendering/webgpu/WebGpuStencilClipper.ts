@@ -50,8 +50,8 @@ export class WebGpuStencilClipper {
   private _bindGroup: GPUBindGroup | null = null;
   private _vertexBuffer: GPUBuffer | null = null;
   private _vertexBufferCapacity = 0;
-  private readonly _incrementPipelines = new Map<GPUTextureFormat, GPURenderPipeline>();
-  private readonly _decrementPipelines = new Map<GPUTextureFormat, GPURenderPipeline>();
+  private readonly _incrementPipelines = new Map<string, GPURenderPipeline>();
+  private readonly _decrementPipelines = new Map<string, GPURenderPipeline>();
   private readonly _stencilTextures = new Map<object, ManagedStencilTexture>();
 
   public connect(device: GPUDevice): void {
@@ -195,7 +195,8 @@ export class WebGpuStencilClipper {
 
   private _getPipeline(format: GPUTextureFormat, increment: boolean, topology: Geometry['topology']): GPURenderPipeline {
     const cache = increment ? this._incrementPipelines : this._decrementPipelines;
-    const existing = cache.get(format);
+    const key = `${format}:${topology}`;
+    const existing = cache.get(key);
 
     if (existing !== undefined) {
       return existing;
@@ -231,7 +232,7 @@ export class WebGpuStencilClipper {
       },
     });
 
-    cache.set(format, pipeline);
+    cache.set(key, pipeline);
 
     return pipeline;
   }
