@@ -68,6 +68,30 @@ describe('useScene', () => {
     expect(app.start).toHaveBeenCalledTimes(1);
   });
 
+  it('applies the latest requested scene after an in-flight switch', async () => {
+    const app = makeApp();
+    const view = render(provide(app, <SceneProbe sceneClass={LevelScene} deps={[0]} />));
+    await view.findByText('LevelScene');
+    const change = app.scenes.change.getMockImplementation()! as (...args: unknown[]) => unknown;
+    let finish!: () => void;
+    app.scenes.change.mockImplementationOnce(async (...args: unknown[]) => {
+      await new Promise<void>(resolve => {
+        finish = resolve;
+      });
+
+      return change(...args);
+    });
+    const errors = vi.fn();
+    app.onError.add(errors);
+    view.rerender(provide(app, <SceneProbe sceneClass={MenuScene} deps={[1]} />));
+    view.rerender(provide(app, <SceneProbe sceneClass={LevelScene} deps={[2]} />));
+    expect(app.scenes.change).toHaveBeenCalledTimes(1);
+    finish();
+    await waitFor(() => expect(app.scenes.currentScene).toBeInstanceOf(LevelScene));
+    await waitFor(() => expect(app.scenes.change).toHaveBeenCalledTimes(2));
+    expect(errors).not.toHaveBeenCalled();
+  });
+
   it('does not call change() when the component unmounts (no public API clears the director mid-lifetime)', async () => {
     const app = makeApp();
     const view = render(provide(app, <SceneProbe sceneClass={LevelScene} />));
