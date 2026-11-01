@@ -270,11 +270,11 @@ export const LANES: readonly Lane[] = [
     // `typecheck:packages`. The harness's unit tests need none of them and run
     // in the ordinary `test` project list.
     run: 'pnpm typecheck:bench && pnpm gate:bench:structural && pnpm test:bench:browser',
-    ciRun: `pnpm typecheck:bench && ${qualifiedRow({ name: 'Chromium / Bench Structural', timeoutMinutes: 25, command: 'pnpm gate:bench:structural' })} && ${qualifiedRow({ name: 'Chromium / Bench Browser Tests', timeoutMinutes: 10, command: 'pnpm test:bench:browser' })}`,
+    ciRun: `pnpm typecheck:bench && ${qualifiedRow({ name: 'Chromium / Bench Structural', timeoutMinutes: 25, command: 'pnpm gate:bench:structural' })} && ${qualifiedRow({ name: 'Chromium / Bench Browser Tests', timeoutMinutes: 4, command: 'pnpm test:bench:browser' })}`,
     browser: 'chromium',
     local: 'browser',
     minimumOutput: 'compact',
-    timeoutMinutes: 40,
+    timeoutMinutes: 30,
   },
 
   {
