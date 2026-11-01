@@ -1235,12 +1235,14 @@ export class InputSystem {
     }
 
     this.channels[channel] = 1;
-    this._recordChannelChanges(channel, 1);
 
     if (modifier !== undefined) {
       this.channels[modifier.aggregate] = 1;
-      this._recordChannelChanges(modifier.aggregate, 1);
     }
+
+    const first = Math.min(channel, modifier?.aggregate ?? channel);
+    const last = Math.max(channel, modifier?.aggregate ?? channel);
+    this._recordChannelChanges(first, last - first + 1);
 
     this.keyEvents.push({ channel, pressed: true, shiftDown: this.channels[Keyboard.Shift] !== 0 });
     this.flags.addMask(InputSystemFlag.KeyChange);
@@ -1265,16 +1267,18 @@ export class InputSystem {
     }
 
     this.channels[channel] = 0;
-    this._recordChannelChanges(channel, 1);
 
     const modifier = keyboardModifierChannelInfo(channel);
     let capturedByAggregate = false;
 
     if (modifier !== undefined) {
       this.channels[modifier.aggregate] = this.channels[modifier.sibling] ?? 0;
-      this._recordChannelChanges(modifier.aggregate, 1);
       capturedByAggregate = this.capturedKeyChannels.has(modifier.aggregate);
     }
+
+    const first = Math.min(channel, modifier?.aggregate ?? channel);
+    const last = Math.max(channel, modifier?.aggregate ?? channel);
+    this._recordChannelChanges(first, last - first + 1);
 
     this.keyEvents.push({ channel, pressed: false, shiftDown: this.channels[Keyboard.Shift] !== 0 });
     this.flags.addMask(InputSystemFlag.KeyChange);
@@ -1560,7 +1564,6 @@ export class InputSystem {
 
       if (this.channels[channel] !== 0) {
         this.channels[channel] = 0;
-        this._recordChannelChanges(channel, 1);
 
         // The aggregate is buffer state, never a key event of its own.
         if (!isKeyboardAggregateChannel(channel)) {
@@ -1569,6 +1572,8 @@ export class InputSystem {
         }
       }
     }
+
+    this._recordChannelChanges(ChannelOffset.Keyboard, ChannelSize.Category);
   }
 
   /**
