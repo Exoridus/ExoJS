@@ -93,3 +93,58 @@ test('keeps capture stage metadata and rejects runs with a different stage', asy
   await vi.waitFor(() => expect(document.querySelector('#status')!.textContent).toContain('clear'));
   expect(mocks.run).toHaveBeenCalledTimes(1);
 });
+
+test.each(['environment', 'preview-stop', 'run-stop'] as const)(
+  'recovers from a rejected %s transition and permits a later run',
+  async failurePoint => {
+    document.documentElement.innerHTML = readFileSync('packages/exojs-bench/src/rendering/dpr-probe/page/index.html', 'utf8');
+    vi.stubGlobal('__PROBE_META__', { gitSha: 'test', engineVersion: 'test' });
+    HTMLElement.prototype.scrollIntoView = vi.fn();
+    mocks.start.mockReset();
+    mocks.run.mockReset();
+    const preview = {
+      backendType: 'webgl2',
+      cssWidth: 1,
+      cssHeight: 1,
+      backingWidth: 1,
+      backingHeight: 1,
+      internalTargets: [],
+      stop: vi.fn().mockResolvedValue(undefined),
+    };
+    const error = new Error('transition failed');
+    mocks.start.mockResolvedValue(preview);
+    mocks.run.mockResolvedValue({ errors: [], internalTargets: [] });
+
+    if (failurePoint === 'environment') {
+      mocks.start.mockRejectedValueOnce(error);
+    }
+
+    await import('../src/rendering/dpr-probe/page/probe');
+    await vi.waitFor(() => expect(mocks.start).toHaveBeenCalledTimes(2));
+    const runButton = document.querySelector<HTMLButtonElement>('#run-sustained-2')!;
+
+    if (failurePoint === 'environment') {
+      expect(document.querySelector('#status')!.textContent).toContain('transition failed');
+    } else {
+      preview.stop.mockRejectedValueOnce(error);
+
+      if (failurePoint === 'preview-stop') {
+        const buttons = document.querySelectorAll<HTMLButtonElement>('#dpr-buttons button');
+        buttons[0]!.click();
+        await vi.waitFor(() => expect(document.querySelector('#visual-readout')!.textContent).toContain('transition failed'));
+        buttons[1]!.click();
+        await vi.waitFor(() => expect(mocks.start).toHaveBeenCalledTimes(3));
+      } else {
+        runButton.click();
+        await vi.waitFor(() => expect(document.querySelector('#status')!.textContent).toContain('aborted: transition failed'));
+        expect(runButton.disabled).toBe(false);
+        expect(document.querySelector<HTMLButtonElement>('#run-matrix')!.disabled).toBe(false);
+        expect(document.querySelector<HTMLButtonElement>('#run-sustained-3')!.disabled).toBe(false);
+      }
+    }
+
+    runButton.click();
+    await vi.waitFor(() => expect(mocks.run).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(runButton.disabled).toBe(false));
+  },
+);

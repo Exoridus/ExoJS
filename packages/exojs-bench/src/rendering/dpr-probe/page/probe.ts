@@ -197,23 +197,23 @@ const addButton = (host: HTMLElement, value: string, label: string, onClick: () 
  */
 const refreshPreview = (): Promise<void> => {
   previewTransition = previewTransition.then(async () => {
-    if (busy) {
-      return;
-    }
-
-    await visual.preview?.stop();
-    visual.preview = null;
-
-    if (busy) {
-      return;
-    }
-
-    // The preview is not a run: restore the section title and drop the run's
-    // DONE/ABORTED line, which describes a state the tester has left.
-    setProgress('', 'idle');
-    visualReadout.textContent = 'starting…';
-
     try {
+      if (busy) {
+        return;
+      }
+
+      await visual.preview?.stop();
+      visual.preview = null;
+
+      if (busy) {
+        return;
+      }
+
+      // The preview is not a run: restore the section title and drop the run's
+      // DONE/ABORTED line, which describes a state the tester has left.
+      setProgress('', 'idle');
+      visualReadout.textContent = 'starting…';
+
       const preview = await startVisualPreview({
         scene: visual.scene,
         mode: visual.mode,
@@ -487,15 +487,15 @@ const runCells = async (cells: readonly ProbeCell[], measureMs: number, label: s
   runSustained2Button.disabled = true;
   runSustained3Button.disabled = true;
 
-  await previewTransition;
-  await visual.preview?.stop();
-  visual.preview = null;
-  visualReadout.textContent = 'preview stopped while measuring — one variant on screen at a time.';
-
-  const runStartedAt = performance.now();
-  const backend = backendRequest();
-
   try {
+    await previewTransition;
+    await visual.preview?.stop();
+    visual.preview = null;
+    visualReadout.textContent = 'preview stopped while measuring — one variant on screen at a time.';
+
+    const runStartedAt = performance.now();
+    const backend = backendRequest();
+
     for (let i = 0; i < cells.length; i++) {
       const cell = cells[i]!;
 
@@ -679,8 +679,12 @@ buildControls();
 renderResults();
 setStatus(`idle — the full matrix is ${buildProbeMatrix().length} cells, roughly ${estimatedMinutes} minutes.`);
 
-previewTransition = probeEnvironmentOnce().then(() => {
-  renderEnvironment();
-  refreshJson();
-});
+previewTransition = probeEnvironmentOnce()
+  .then(() => {
+    renderEnvironment();
+    refreshJson();
+  })
+  .catch((error: unknown) => {
+    setStatus(`Environment probe failed: ${error instanceof Error ? error.message : String(error)}`, true);
+  });
 void refreshPreview();
