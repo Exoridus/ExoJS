@@ -175,6 +175,7 @@ describe('MemoryStore', () => {
     await store.set('present', undefined);
 
     await expect(store.get('present')).resolves.toBeNull();
+    await expect(store.has('present')).resolves.toBe(true);
   });
 });
 
