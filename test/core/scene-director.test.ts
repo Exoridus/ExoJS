@@ -1372,6 +1372,55 @@ describe('SceneDirector — preload', () => {
     await disposal;
   });
 
+  test('disposal started by a superseded preload abort waits for its teardown', async () => {
+    const app = createApplicationStub();
+    let release!: () => void;
+    const unloadGate = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    let disposal: Promise<void> | undefined;
+    let disposed = false;
+    let unloading = false;
+    let unloaded = false;
+    class DataScene extends Scene<{ level: number }> {
+      public override init(data: Readonly<{ level: number }>): void {
+        if (data.level === 1) {
+          this.lifecycleSignal.addEventListener('abort', () => {
+            disposal = director._dispose().then(() => {
+              disposed = true;
+            });
+          });
+        }
+      }
+
+      public override async unload(): Promise<void> {
+        if (!unloading) {
+          unloading = true;
+          await unloadGate;
+          unloaded = true;
+        }
+      }
+    }
+    const director = new SceneDirector(app, { preloaded: DataScene });
+
+    await director.preload(DataScene, { data: { level: 1 } });
+
+    try {
+      await director.preload(DataScene, { data: { level: 2 } });
+      await settle();
+      expect(disposal).toBeDefined();
+      expect(unloading).toBe(true);
+      expect(unloaded).toBe(false);
+      expect(disposed).toBe(false);
+    } finally {
+      release();
+      await disposal;
+    }
+
+    expect(unloaded).toBe(true);
+    expect(disposed).toBe(true);
+  });
+
   test('preload() rejects (dev builds) when the target is not registered', async () => {
     const app = createApplicationStub();
     const UnregisteredScene = makeSceneClass();
