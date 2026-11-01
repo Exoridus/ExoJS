@@ -42,10 +42,10 @@ const colorKey = (color: Color | undefined): string | undefined =>
  * }
  * ```
  *
- * **Reactivity model.** The Application is recreated only when an *identity*
- * option changes - currently the render `backend` (you cannot hot-swap WebGL2 ↔
- * WebGPU). All other supported options are applied *live* without tearing the
- * app down:
+ * **Reactivity model.** The Application is created when the canvas attaches and
+ * recreated when that element or the render `backend` changes (you cannot
+ * hot-swap WebGL2 and WebGPU). Detaching the canvas destroys the Application.
+ * Other supported options are applied *live* without tearing the app down:
  *
  * - `canvas.width` / `canvas.height` → `app.resize(...)`
  * - `clearColor` → `app.clearColor`
@@ -91,10 +91,10 @@ export const useExoApplication = (
     onErrorRef.current = onError;
   });
 
-  // Identity: only the backend type forces a full recreation.
+  // Other option values are captured at creation or synchronized below.
   const backendKey = options?.backend?.type ?? 'auto';
 
-  // ── Lifecycle: create on mount / recreate on backend change ───────────────
+  // Lifecycle follows the attached canvas and backend.
   useEffect(() => {
     if (!canvas) {
       return;
@@ -145,8 +145,7 @@ export const useExoApplication = (
         setApp(null);
       }
     };
-    // Recreate only when the backend identity changes; live options are synced
-    // by the effects below. `options` is intentionally read at (re)create time.
+    // `options` is intentionally read at creation; live values are synced below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backendKey, canvas]);
 
