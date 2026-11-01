@@ -5,6 +5,7 @@ import type { Signal } from '#core/Signal';
 import type { AssetConstructor } from './AssetConstructor';
 import type { AssetDecoder } from './AssetDecoder';
 import { reportAssetObserverFailure, sameOptions, warnMissingAssetSource } from './assetDiagnostics';
+import { hasFailedAssetHandle, retryAssetHandles } from './assetHandleRetry';
 import { _readMeta } from './assetMeta';
 import { AssetRef } from './AssetRef';
 import { type AssetReferenceLookup, AssetRequestLog } from './AssetRequestLog';
@@ -588,10 +589,10 @@ export class AssetResidency {
     if (this._evicted.has(asset.key)) {
       this._evicted.delete(asset.key);
 
-      // The handle/ref was re-armed to 'loading' during eviction; just re-drive
-      // the fetch. A value key with no ref left (evicted after a bare `load()`)
-      // still refetches: nothing but this would restore its resident payload.
-      const entry = this._typeRegistry.hasSeamlessAdapter(asset.type) ? this._deferred.get(asset.key) : this._refs.get(asset.key);
+      // Cancellation settles old promises before a reclaim can re-arm them.
+      const adapter = this._typeRegistry.getSeamlessAdapter(asset.type);
+      const entry = adapter !== undefined ? this._deferred.get(asset.key) : this._refs.get(asset.key);
+      retryAssetHandles(entry, adapter);
       this._startFetch(asset, entry === undefined ? this._optionsFor(asset.key, asset.options) : entry.options);
     }
   }
@@ -704,7 +705,7 @@ export class AssetResidency {
       // resource map where the seamless branch above can read the value itself -
       // for a seamless type the stored resource is always the handle object.
       this._evictValueKey(asset, stored);
-    } else if (this._abortInFlight(key)) {
+    } else if (this._abortInFlight(asset)) {
       // Nothing resident: whatever fetch is running for this key (if any) has no
       // claimer left waiting on it. Cancel it, and mark the key evicted so a later
       // claim re-drives the fetch into the handles this abort leaves behind.
@@ -902,13 +903,9 @@ export class AssetResidency {
       // solely on the adopted ref's own retry, unchanged: a ref's `parse()` can
       // reject a payload that fetched fine, and re-running it for every joining
       // ref would turn an unrelated adopt into a silent re-parse of the set.
-      if (existingRef !== undefined && (retryingFailedLeaf || (stored === undefined && this._hasFailedRef(existingRef)))) {
+      if (existingRef !== undefined && (retryingFailedLeaf || (stored === undefined && hasFailedAssetHandle(existingRef)))) {
         if (stored === undefined) {
-          for (const ref of existingRef.refs) {
-            if (ref.state === 'failed') {
-              ref._begin();
-            }
-          }
+          retryAssetHandles(existingRef);
 
           if (background) {
             this._enqueueBackgroundFetch(asset, existingRef.options);
@@ -1017,13 +1014,9 @@ export class AssetResidency {
       stored === undefined &&
       deferredEntry !== undefined &&
       adapter !== undefined &&
-      (retryingFailedLeaf || this._hasFailedHandle(deferredEntry, adapter))
+      (retryingFailedLeaf || hasFailedAssetHandle(deferredEntry, adapter))
     ) {
-      for (const candidate of deferredEntry.handles) {
-        if (adapter.stateOf(candidate) === 'failed') {
-          adapter.begin(candidate);
-        }
-      }
+      retryAssetHandles(deferredEntry, adapter);
 
       if (background) {
         this._enqueueBackgroundFetch(asset, deferredEntry.options);
@@ -1220,41 +1213,6 @@ export class AssetResidency {
     this._deferredFinalization.register(handle, key);
   }
 
-  /**
-   * Does any live handle registered for a seamless key sit in `'failed'`? Then
-   * the key's last attempt ended in failure, and an adoption joining it is a
-   * retry - whatever state the adopted handle itself was in. Restarting is
-   * harmless in the one case where a fetch IS already running past a `'failed'`
-   * straggler ({@link _getSeamless} re-arms only the representative):
-   * {@link _loadSingle} dedupes on the key's in-flight entry, and the straggler
-   * needed the re-arm regardless.
-   */
-  private _hasFailedHandle(entry: { readonly handles: WeakHandleSet }, adapter: SeamlessAdapter<unknown>): boolean {
-    for (const handle of entry.handles) {
-      if (adapter.stateOf(handle) === 'failed') {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Value-ref twin of {@link _hasFailedHandle}: does any ref registered for a
-   * value key sit in `'failed'`? Then the key's last attempt ended in failure
-   * and an adoption joining it is a retry, whatever state the adopted ref
-   * itself was in.
-   */
-  private _hasFailedRef(entry: { readonly refs: ReadonlySet<AssetRef<unknown>> }): boolean {
-    for (const ref of entry.refs) {
-      if (ref.state === 'failed') {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
   // -----------------------------------------------------------------------
   // In-flight tracking / fetch dispatch
   // -----------------------------------------------------------------------
@@ -1277,6 +1235,19 @@ export class AssetResidency {
     const inFlight = this._inFlight.get(asset.key);
 
     if (inFlight !== undefined) {
+      const abort = this._abort.get(asset.key);
+
+      if (abort?.signal.aborted === true) {
+        // Finish the cancelled attempt's cleanup before sharing a replacement.
+        await inFlight.catch(() => undefined);
+
+        if (!this._claims.has(asset.key)) {
+          throw abort.signal.reason;
+        }
+
+        return this._loadSingle(asset, options);
+      }
+
       return inFlight;
     }
 
@@ -1376,15 +1347,18 @@ export class AssetResidency {
   }
 
   /**
-   * Drop `key`'s interest in whatever fetch is running for it. Returns whether
-   * it was actually aborted - a fetch another holder still needs stays running.
+   * Cancel unclaimed work while retaining its tracking through settlement.
+   * Returns whether a cancelled attempt still needs cleanup.
    */
-  private _abortInFlight(key: ResourceKey): boolean {
-    if (this._abort.get(key)?.release(key) !== true) {
+  private _abortInFlight(asset: CanonicalAsset): boolean {
+    const abort = this._abort.get(asset.key);
+
+    if (abort === undefined || (!abort.signal.aborted && !abort.release(asset.key))) {
       return false;
     }
 
-    this._abort.delete(key);
+    // Settle old handle promises before a synchronous reclaim re-arms them.
+    this._onTrackedFailure(asset, abort.signal.reason);
 
     return true;
   }
@@ -1414,8 +1388,13 @@ export class AssetResidency {
 
     // Non-swallowing observer: fails deferred handles / value refs (fresh
     // error each attempt) and dispatches onError exactly once for the failed
-    // fetch, regardless of which verb (get/load/background) started it.
-    trackedPromise.catch((error: unknown) => this._onTrackedFailure(asset, error));
+    // fetch, regardless of which verb (get/load/background) started it. An
+    // aborted attempt already failed its handles before they could be re-armed.
+    trackedPromise.catch((error: unknown) => {
+      if (abort?.signal.aborted !== true) {
+        this._onTrackedFailure(asset, error);
+      }
+    });
     this._inFlight.set(key, trackedPromise);
 
     return trackedPromise;
