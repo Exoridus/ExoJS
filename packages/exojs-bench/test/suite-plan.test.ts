@@ -7,7 +7,7 @@ import { applyPlan } from '../src/rendering/selection';
 import type { ScenarioLoads } from '../src/suite/catalog';
 import { PHYSICS_SCENARIOS, primaryLoadOf, RENDERING_SCENARIOS } from '../src/suite/catalog';
 import type { PlanDomain } from '../src/suite/plan';
-import { cellKey, parseSuite, resolveSuitePlan } from '../src/suite/plan';
+import { cellKey, computePlanHash, parseSuite, resolveSuitePlan } from '../src/suite/plan';
 
 const RENDERING_LADDERS = new Map<string, readonly number[]>(ARCHETYPES.map(archetype => [archetype.id as string, archetype.nodeCounts]));
 const PHYSICS_LADDERS = new Map<string, readonly number[]>(
@@ -19,6 +19,14 @@ const planFor = (suite: 'reference' | 'full', domain: PlanDomain, extreme = fals
 
 const scenarioIds = (plan: ReturnType<typeof resolveSuitePlan>): Set<string> =>
   new Set(plan.workloads.map(workload => workload.scenarioId));
+
+it('changes plan identity when a workload unit or membership changes', () => {
+  const workload = { scenarioId: 'scene', loadId: '1k', value: 1000, unit: 'nodes' as const, primary: true, extreme: false };
+  const original = computePlanHash('reference', 'rendering', [workload]);
+
+  expect(computePlanHash('reference', 'rendering', [{ ...workload, unit: 'bodies' }])).not.toBe(original);
+  expect(computePlanHash('reference', 'rendering', [])).not.toBe(original);
+});
 
 /**
  * ExoJS-internal probes: archetypes the published catalog deliberately omits
