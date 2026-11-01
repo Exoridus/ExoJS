@@ -170,7 +170,12 @@ export abstract class TextEditWidget extends Widget {
 
     const x = event.x;
     const y = event.y;
-    const local = this._localPoint.set(x, y).transformInverse(this.getGlobalTransform());
+    const local = this._toLocalPoint(x, y);
+
+    if (local === null) {
+      return;
+    }
+
     const offset = this._offsetAtLocal(local.x, local.y);
     const now = performance.now();
     const isDoublePress =
@@ -199,7 +204,11 @@ export abstract class TextEditWidget extends Widget {
       return;
     }
 
-    const local = this._localPoint.set(x, y).transformInverse(this.getGlobalTransform());
+    const local = this._toLocalPoint(x, y);
+
+    if (local === null) {
+      return;
+    }
 
     this.model.setSelection(this._dragAnchor, this._offsetAtLocal(local.x, local.y));
     this._afterModelChange();
@@ -330,7 +339,6 @@ export abstract class TextEditWidget extends Widget {
   }
 
   private readonly _fieldRect = new Rectangle();
-  private readonly _localPoint = new Vector();
   private readonly _scratchTopLeft = new Vector();
   private readonly _scratchBottomRight = new Vector();
 
@@ -480,7 +488,6 @@ export abstract class TextEditWidget extends Widget {
     this.onChange.destroy();
     this._onSubmit.destroy();
     this._fieldRect.destroy();
-    this._localPoint.destroy();
     this._scratchTopLeft.destroy();
     this._scratchBottomRight.destroy();
     super.destroy();
