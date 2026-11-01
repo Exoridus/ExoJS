@@ -310,6 +310,25 @@ describe('buildRenderingComparison', () => {
     cell({ engine: 'pixi', config: 'default', archetype: 'text-static', nodeCount: 5_000, cpuMsMedian: 12.2 }),
   ];
 
+  test('keeps configurations of the same engine distinct and checks each for the headline', () => {
+    const results = [
+      ...fixture(),
+      cell({ engine: 'pixi', config: 'culled', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 7 }),
+      cell({ engine: 'pixi', config: 'culled', archetype: 'static-heavy', nodeCount: 5_000, cpuMsMedian: 9, status: 'exceeded' }),
+    ];
+    const [block] = buildRenderingComparison(results);
+    const row = block!.sections
+      .flatMap(section => section.rows)
+      .find(entry => entry.archetype === 'static-heavy' && entry.count === 1_000)!;
+
+    expect(block!.competitors).toEqual(['pixi', 'pixi (culled)']);
+    expect(row.cells.map(entry => [entry.competitor, entry.competitorMs])).toEqual([
+      ['pixi', 2],
+      ['pixi (culled)', 7],
+    ]);
+    expect(block!.headlineCount).toBe(1_000);
+  });
+
   test('publishes one block per backend measured', () => {
     const blocks = buildRenderingComparison(fixture());
 
