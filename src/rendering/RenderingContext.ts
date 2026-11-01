@@ -450,7 +450,9 @@ export class RenderingContext implements DrawContext {
    * throws rather than silently erasing that emission - premultiplied data is
    * invalid in that configuration, not a transparent black pixel. Pass
    * `background` to composite over an opaque color instead, which always
-   * succeeds and returns alpha `1` everywhere.
+   * succeeds and returns alpha `1` everywhere. The check reads the region back
+   * once more in the source's own format, so the default doubles the download
+   * cost; `background` skips it.
    *
    * On WebGPU a 32-bit float source (`Rgba32F`) is only accepted on a device
    * that can filter it (`float32-filterable`); elsewhere the call rejects with a

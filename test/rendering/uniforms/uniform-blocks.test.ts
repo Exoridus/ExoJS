@@ -18,6 +18,7 @@ import { Container } from '#rendering/Container';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
 import { Shader } from '#rendering/shader/Shader';
 import { UniformArray, UniformStruct } from '#rendering/uniforms/uniformDeclarations';
+import { withGlslUniformDeclarations } from '#rendering/uniforms/uniformSource';
 import { UniformType } from '#rendering/uniforms/UniformType';
 
 const GLSL = /* glsl */ `#version 300 es
@@ -303,5 +304,19 @@ describe('uniform block values', () => {
     material.setUniform('u_time', 2);
 
     expect(material.uniforms.u_time).toBe(2);
+  });
+});
+
+describe('uniform declaration hygiene', () => {
+  test.each(['_sink', '_path', '_members', '_write', 'constructor'])('rejects the accessor-internal field name %s', name => {
+    expect(() => new UniformStruct({ [name]: UniformType.Float })).toThrow(/reserved by the uniform accessor API/);
+  });
+
+  test('keeps generated GLSL declarations below #version when a block comment leads the source', () => {
+    const source = '/* header\n   spans lines */\n#version 300 es\nvoid main() {}';
+    const result = withGlslUniformDeclarations(source, 'DECL');
+
+    expect(result.indexOf('#version')).toBeLessThan(result.indexOf('DECL'));
+    expect(result.indexOf('/* header')).toBeLessThan(result.indexOf('#version'));
   });
 });

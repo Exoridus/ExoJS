@@ -100,7 +100,20 @@ const identifierPattern = /^[A-Za-z_][A-Za-z0-9_]*$/;
  * Field names that would shadow a member of the accessor a struct or block
  * hands out, making `uniforms.thing.set(...)` mean two different things.
  */
-const reservedFieldNames = new Set<string>(['set', 'setPacked', 'commit', 'at', 'length', 'uniforms', 'revision']);
+const reservedFieldNames = new Set<string>([
+  'set',
+  'setPacked',
+  'commit',
+  'at',
+  'length',
+  'uniforms',
+  'revision',
+  'constructor',
+  '_sink',
+  '_path',
+  '_members',
+  '_write',
+]);
 
 /** @internal */
 export const validateUniformBlockKey = (key: string): void => {
