@@ -163,7 +163,7 @@ export const layoutText = (
       allLines.push({ text: hard.text, start: hard.start, contentLength: hard.text.length });
     } else {
       const ranges =
-        shaped || provider.getKerning !== undefined || rtl
+        shaped || rtl
           ? _wrapMeasuredLine(hard.text, maxWidth, breakWords, locale, measureLine)
           : _wrapLine(hard.text, fontSize, provider, maxWidth, letterSpacing, breakWords, locale, tabWidth);
 
@@ -1036,7 +1036,7 @@ const _applyWhiteSpace = (text: string, mode: 'normal' | 'pre' | 'pre-line'): Pr
 
 /** Cursor advance including the trailing letter-spacing gap, using placement order. */
 const _cursorAdvance = (
-  text: string,
+  text: string | readonly string[],
   fontSize: number,
   provider: GlyphProvider,
   letterSpacing: number,
@@ -1044,10 +1044,10 @@ const _cursorAdvance = (
   tabWidth: () => number,
   startX: number,
   rtl = false,
+  previous: string | null = null,
 ): number => {
   let advance = 0;
-  let previous: string | null = null;
-  const clusters = isTrivialText(text) ? text : graphemes(text, locale);
+  const clusters = typeof text === 'string' && !isTrivialText(text) ? graphemes(text, locale) : text;
 
   for (let i = 0; i < clusters.length; i++) {
     const cluster = clusters[rtl ? clusters.length - 1 - i : i]!;
@@ -1095,9 +1095,14 @@ const _wrapLine = (
   let gapStart = -1;
   let gapEnd = -1;
   let gapAdvance = 0;
+  let previous: string | null = null;
 
   for (const run of textRuns(line, locale)) {
     const text = line.slice(run.start, run.end);
+    const clusters = isTrivialText(text) ? text : graphemes(text, locale);
+    const beforeRun = previous;
+
+    previous = clusters[clusters.length - 1] ?? null;
 
     if (run.whitespace) {
       if (gapStart === -1) {
@@ -1105,11 +1110,22 @@ const _wrapLine = (
       }
 
       gapEnd = run.end;
-      gapAdvance += _cursorAdvance(text, fontSize, provider, letterSpacing, locale, tabWidth, currentAdvance + gapAdvance);
+      gapAdvance += _cursorAdvance(
+        clusters,
+        fontSize,
+        provider,
+        letterSpacing,
+        locale,
+        tabWidth,
+        currentAdvance + gapAdvance,
+        false,
+        beforeRun,
+      );
       continue;
     }
 
-    const wordAdvance = _cursorAdvance(text, fontSize, provider, letterSpacing, locale, tabWidth, currentAdvance + gapAdvance);
+    const wordAdvance = _cursorAdvance(clusters, fontSize, provider, letterSpacing, locale, tabWidth, 0);
+    const boundaryKerning = beforeRun === null ? 0 : (provider.getKerning?.(beforeRun, clusters[0]!, fontSize) ?? 0);
 
     if (breakWords && wordAdvance - letterSpacing > maxWidth) {
       if (start !== -1) {
@@ -1123,18 +1139,22 @@ const _wrapLine = (
       let chunkStart = run.start;
       let chunkEnd = run.start;
       let chunkAdvance = 0;
+      let chunkPrevious: string | null = null;
 
       for (const bounds of _clusterBounds(line, run.start, run.end, locale)) {
-        const clusterAdvance = provider.getGlyph(line.slice(bounds.start, bounds.end), fontSize).advance + letterSpacing;
+        const cluster = line.slice(bounds.start, bounds.end);
+        const clusterAdvance = provider.getGlyph(cluster, fontSize).advance + letterSpacing;
+        const kerning = chunkPrevious === null ? 0 : (provider.getKerning?.(chunkPrevious, cluster, fontSize) ?? 0);
 
-        if (chunkEnd > chunkStart && chunkAdvance + clusterAdvance - letterSpacing > maxWidth) {
+        if (chunkEnd > chunkStart && chunkAdvance + kerning + clusterAdvance - letterSpacing > maxWidth) {
           ranges.push({ start: chunkStart, end: chunkEnd });
           chunkStart = bounds.start;
           chunkAdvance = clusterAdvance;
         } else {
-          chunkAdvance += clusterAdvance;
+          chunkAdvance += kerning + clusterAdvance;
         }
 
+        chunkPrevious = cluster;
         chunkEnd = bounds.end;
       }
 
@@ -1148,9 +1168,9 @@ const _wrapLine = (
       start = run.start;
       end = run.end;
       currentAdvance = wordAdvance;
-    } else if (currentAdvance + gapAdvance + wordAdvance - letterSpacing <= maxWidth) {
+    } else if (currentAdvance + gapAdvance + boundaryKerning + wordAdvance - letterSpacing <= maxWidth) {
       end = run.end;
-      currentAdvance += gapAdvance + wordAdvance;
+      currentAdvance += gapAdvance + boundaryKerning + wordAdvance;
     } else {
       ranges.push({ start, end });
       start = run.start;
