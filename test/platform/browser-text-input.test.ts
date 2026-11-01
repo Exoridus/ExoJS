@@ -45,3 +45,57 @@ describe('BrowserTextInput hints', () => {
     backend.destroy();
   });
 });
+
+describe('BrowserTextInput editing', () => {
+  test.each([
+    ['insertText', { kind: 'insert', text: 'x' }],
+    ['insertCompositionText', { kind: 'insert', text: 'x' }],
+    ['insertFromPaste', { kind: 'insert', text: 'x', source: 'paste' }],
+    ['insertLineBreak', { kind: 'insert', text: '\n' }],
+    ['deleteContentBackward', { kind: 'deleteContent', direction: 'backward', granularity: 'character' }],
+    ['deleteContentForward', { kind: 'deleteContent', direction: 'forward', granularity: 'character' }],
+    ['deleteWordBackward', { kind: 'deleteContent', direction: 'backward', granularity: 'word' }],
+    ['deleteWordForward', { kind: 'deleteContent', direction: 'forward', granularity: 'word' }],
+    ['deleteSoftLineBackward', { kind: 'deleteContent', direction: 'backward', granularity: 'line' }],
+    ['deleteSoftLineForward', { kind: 'deleteContent', direction: 'forward', granularity: 'line' }],
+    ['historyUndo', { kind: 'historyUndo' }],
+    ['historyRedo', { kind: 'historyRedo' }],
+  ] as const)('%s emits one intent and cancels the host edit', (inputType, expected) => {
+    const backend = new BrowserTextInput(document.createElement('canvas'));
+    const listener = vi.fn();
+    backend.onEdit.add(listener);
+    const event = new InputEvent('beforeinput', { inputType, data: 'x', cancelable: true });
+
+    transportElement().dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+    expect(listener).toHaveBeenCalledExactlyOnceWith(expected);
+    backend.destroy();
+  });
+
+  test.each([false, true])('cut cancellation follows masking=%s', masked => {
+    const backend = new BrowserTextInput(document.createElement('canvas'));
+    backend.setHints({ masked });
+    const listener = vi.fn();
+    backend.onEdit.add(listener);
+    const event = new InputEvent('beforeinput', { inputType: 'deleteByCut', cancelable: true });
+
+    transportElement().dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(masked);
+    expect(listener).toHaveBeenCalledTimes(masked ? 0 : 1);
+    backend.destroy();
+  });
+
+  test('composition suppresses beforeinput edits', () => {
+    const backend = new BrowserTextInput(document.createElement('canvas'));
+    const listener = vi.fn();
+    backend.onEdit.add(listener);
+    const element = transportElement();
+    element.dispatchEvent(new CompositionEvent('compositionstart'));
+    const event = new InputEvent('beforeinput', { inputType: 'insertText', data: 'x', cancelable: true });
+
+    element.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+    expect(listener).not.toHaveBeenCalled();
+    backend.destroy();
+  });
+});
