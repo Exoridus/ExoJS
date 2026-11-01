@@ -48,7 +48,7 @@ export const useScene = <T extends Scene>(SceneClass: new () => T, deps: Depende
   // run has since taken over - the flag below only covers a run whose own
   // cleanup has fired.
   const generationRef = useRef(0);
-  const navigationRef = useRef<Promise<void> | null>(null);
+  const navigationRef = useRef(new WeakMap<typeof app, Promise<void>>());
 
   useEffect(() => {
     let cancelled = false;
@@ -64,12 +64,12 @@ export const useScene = <T extends Scene>(SceneClass: new () => T, deps: Depende
     // to its concrete void-data instantiation here.
     const target = SceneClass as SceneConstructor;
 
-    const previous = navigationRef.current;
+    const previous = navigationRef.current.get(app);
     const joiningStartup = app.state === ApplicationState.Loading;
 
     const apply = async (): Promise<void> => {
       try {
-        if (previous !== null && !joiningStartup) {
+        if (previous !== undefined && !joiningStartup) {
           await previous;
 
           if (isStale()) {
@@ -118,10 +118,10 @@ export const useScene = <T extends Scene>(SceneClass: new () => T, deps: Depende
     };
 
     const navigation = apply();
-    navigationRef.current = navigation;
+    navigationRef.current.set(app, navigation);
     void navigation.then(() => {
-      if (navigationRef.current === navigation) {
-        navigationRef.current = null;
+      if (navigationRef.current.get(app) === navigation) {
+        navigationRef.current.delete(app);
       }
     });
 

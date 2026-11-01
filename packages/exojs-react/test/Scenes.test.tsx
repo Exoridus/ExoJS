@@ -65,6 +65,32 @@ beforeEach(() => {
 });
 
 describe('<Scenes> / <Scene> / useActiveScene', () => {
+  it('keeps navigation independent between applications and serializes when returning', async () => {
+    const a = makeApp();
+    const b = makeApp();
+    const view = render(<Tree app={a} active="title" />);
+    await view.findByText('TitleScene');
+    const change = a.scenes.change.getMockImplementation()! as (...args: unknown[]) => unknown;
+    let finish!: () => void;
+    a.scenes.change.mockImplementationOnce(async (...args: unknown[]) => {
+      await new Promise<void>(resolve => {
+        finish = resolve;
+      });
+
+      return change(...args);
+    });
+    view.rerender(<Tree app={a} active="game" />);
+    expect(a.scenes.change).toHaveBeenCalledTimes(1);
+    view.rerender(<Tree app={b} active="title" />);
+    expect(b.start).toHaveBeenCalledTimes(1);
+    await view.findByText('TitleScene');
+    view.rerender(<Tree app={a} active="title" />);
+    expect(a.scenes.change).toHaveBeenCalledTimes(1);
+    finish();
+    await waitFor(() => expect(a.scenes.change).toHaveBeenCalledTimes(2));
+    await view.findByText('TitleScene');
+  });
+
   it('activates the first scene via app.start() (engine stopped) and exposes it through useActiveScene', async () => {
     const app = makeApp();
     const { findByTestId } = render(<Tree app={app} active="title" />);
