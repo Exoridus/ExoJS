@@ -193,7 +193,7 @@ describe('EditContextTextInput', () => {
     context.emit('compositionstart', {});
     context.emit('textupdate', { updateRangeStart: 0, updateRangeEnd: 0, text: 'k', selectionStart: 1, selectionEnd: 1 });
     context.emit('textupdate', { updateRangeStart: 0, updateRangeEnd: 1, text: 'kan', selectionStart: 3, selectionEnd: 3 });
-    context.emit('compositionend', { text: 'kan' });
+    context.emit('compositionend', { data: 'kan' });
 
     expect(compositions).toEqual([
       { phase: 'start' },

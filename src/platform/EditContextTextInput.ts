@@ -32,12 +32,12 @@ interface EditContextLike {
   addEventListener(type: 'textupdate', listener: (event: TextUpdateEvent) => void): void;
   addEventListener(type: 'characterboundsupdate', listener: (event: CharacterBoundsEvent) => void): void;
   addEventListener(type: 'compositionstart', listener: (event: never) => void): void;
-  addEventListener(type: 'compositionend', listener: (event: { text?: string }) => void): void;
+  addEventListener(type: 'compositionend', listener: (event: CompositionEvent) => void): void;
   addEventListener(type: string, listener: (event: unknown) => void): void;
   removeEventListener(type: 'textupdate', listener: (event: TextUpdateEvent) => void): void;
   removeEventListener(type: 'characterboundsupdate', listener: (event: CharacterBoundsEvent) => void): void;
   removeEventListener(type: 'compositionstart', listener: (event: never) => void): void;
-  removeEventListener(type: 'compositionend', listener: (event: { text?: string }) => void): void;
+  removeEventListener(type: 'compositionend', listener: (event: CompositionEvent) => void): void;
   removeEventListener(type: string, listener: (event: unknown) => void): void;
 }
 
@@ -146,9 +146,9 @@ export class EditContextTextInput implements PlatformTextInput {
     this._onComposition.dispatch({ phase: 'start' });
   };
 
-  private readonly _compositionEnd = (event: { text?: string }): void => {
+  private readonly _compositionEnd = (event: CompositionEvent): void => {
     this._composing = false;
-    this._onComposition.dispatch({ phase: 'end', text: event.text ?? '' });
+    this._onComposition.dispatch({ phase: 'end', text: event.data });
   };
 
   private readonly _characterBoundsUpdate = (event: { rangeStart: number; rangeEnd: number }): void => {
