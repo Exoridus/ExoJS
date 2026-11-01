@@ -107,6 +107,24 @@ describe('a drawable whose geometry follows its texture invalidates when a defer
     ).resolves.toBe(true);
   });
 
+  test('a Mesh whose texture is assigned while it is still loading', async () => {
+    const { texture, finishLoad } = makePendingTexture();
+    const mesh = new Mesh({
+      vertices: new Float32Array([0, 0, 10, 0, 10, 10, 0, 10]),
+      uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
+      indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
+    });
+
+    mesh.texture = texture;
+
+    const before = (mesh as unknown as { _contentRevision: number })._contentRevision;
+
+    finishLoad();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect((mesh as unknown as { _contentRevision: number })._contentRevision).not.toBe(before);
+  });
+
   test('a Sprite whose frame was chosen before the payload landed', async () => {
     // A Spritesheet slices frames out of an atlas that may still be loading, so
     // the frame is set while the texture reports 0x0. UVs are the frame over

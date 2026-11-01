@@ -104,12 +104,14 @@ export class MultiRenderTarget extends RenderTarget {
 
   public override resize(width: number, height: number): this {
     super.resize(width, height);
+    this._defaultView.resize(width, height).setCenter(width / 2, height / 2);
 
     // Attachments follow unconditionally rather than lazily: an attachment left
     // at the old size makes the whole framebuffer incomplete, and the symptom
-    // would surface on the next unrelated draw into it.
+    // would surface on the next unrelated draw into it. `setSize` rather than
+    // `resize` so the attachment's texture version and default view follow too.
     for (const attachment of this.attachments) {
-      attachment.resize(width, height);
+      attachment.setSize(width, height);
     }
 
     return this;

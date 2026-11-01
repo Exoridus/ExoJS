@@ -436,7 +436,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       customShader.destroy();
     }
 
-    for (const entry of this._geometryCache.values()) {
+    for (const [geometry, entry] of this._geometryCache) {
+      geometry._offDispose(entry.disposeListener);
+
       for (const perLayout of entry.vaos.values()) {
         for (const vao of perLayout.values()) {
           vao.destroy();

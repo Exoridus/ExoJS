@@ -126,6 +126,21 @@ describe('Geometry', () => {
     ).toThrow(/requires a position attribute/);
   });
 
+  test('a detached dispose callback is not run by destroy', () => {
+    const geometry = createGeometry();
+    const kept = vi.fn();
+    const detached = vi.fn();
+
+    geometry._onDispose(kept);
+    geometry._onDispose(detached);
+    geometry._offDispose(detached);
+
+    geometry.destroy();
+
+    expect(kept).toHaveBeenCalledTimes(1);
+    expect(detached).not.toHaveBeenCalled();
+  });
+
   test('destroy runs registered dispose callbacks once', () => {
     const geometry = createGeometry();
     const disposeA = vi.fn();

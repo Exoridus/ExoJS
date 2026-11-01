@@ -188,6 +188,21 @@ describe('MultiRenderTarget', () => {
     target.destroy();
   });
 
+  test('resizing recentres the default views of the target and its attachments', () => {
+    const target = new MultiRenderTarget(64, 64, { formats: [TextureFormat.Rgba8, TextureFormat.Rgba8] });
+
+    target.resize(128, 96);
+
+    for (const view of [target.view, ...target.attachments.map(attachment => attachment.view)]) {
+      expect(view.width).toBe(128);
+      expect(view.height).toBe(96);
+      expect(view.center.x).toBe(64);
+      expect(view.center.y).toBe(48);
+    }
+
+    target.destroy();
+  });
+
   test('destroying it destroys the attachments it owns', () => {
     const target = new MultiRenderTarget(16, 16, { formats: [TextureFormat.Rgba8, TextureFormat.Rgba8] });
     const [first, second] = target.attachments;
