@@ -1654,14 +1654,12 @@ export class WebGl2Backend implements RenderBackend {
     // Only flush the open batch when the view actually changes. The unconditional
     // flush forced one draw call per render() call (each render() re-applies the
     // same camera view), defeating cross-call batching.
-    try {
-      if (this._renderTarget.view !== view) {
-        this._flushActiveRenderer();
-      }
-    } finally {
-      this._renderTarget.setView(view);
-      this._bindRenderTarget(this._renderTarget);
+    if (this._renderTarget.view !== view) {
+      this._flushActiveRenderer();
     }
+
+    this._renderTarget.setView(view);
+    this._bindRenderTarget(this._renderTarget);
 
     return this;
   }

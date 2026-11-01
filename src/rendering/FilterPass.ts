@@ -179,6 +179,8 @@ export class FilterPass extends RenderPass {
       try {
         backend.setView(view);
         this._drawBlit(backend);
+        // A rejected sprite flush clears its batch, so finally can restore the camera.
+        backend.setView(previousView);
       } finally {
         backend.setView(previousView);
       }

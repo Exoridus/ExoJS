@@ -1460,9 +1460,9 @@ export class WebGpuBackend implements RenderBackend {
       this._passCoordinatorInstance?.discardPass();
 
       throw error;
-    } finally {
-      this._renderTarget.setView(view);
     }
+
+    this._renderTarget.setView(view);
 
     return this;
   }
