@@ -6,6 +6,8 @@
 import { describe, test } from 'vitest';
 
 import { LutFilter } from '#rendering/filters/LutFilter';
+import { DataTexture } from '#rendering/texture/DataTexture';
+import { TextureFormat } from '#rendering/types';
 
 import { createWebGpuTestBackend, readWebGpuPixels, renderWebGpuEncoded } from './_backendSetup';
 import { CLEAR, expectedProbeOutput, LUT_SCENE_SIZE, lutScene, PROBE_COLOURS, probeLut, SAMPLE_POINT } from './_lutFilterFixture';
@@ -72,4 +74,38 @@ describe('LutFilter rgb1d grading (WebGPU)', () => {
       backend.destroy();
     }
   });
+});
+
+const checkNonfilteringLut = async (ctx: { skip(reason: string): void }, mode: '3d' | 'rgb1d'): Promise<void> => {
+  const backend = await createWebGpuTestBackend(LUT_SCENE_SIZE);
+  const identity = mode === '3d' ? LutFilter.identityLut3D(2) : LutFilter.identityLut1D(2);
+  const lut = new DataTexture({
+    width: identity.width,
+    height: identity.height,
+    format: TextureFormat.Rgba32F,
+    data: Float32Array.from(identity.buffer, value => value / 255),
+  });
+  const filter = new LutFilter({ mode, size: 2 }).setLut(lut);
+  const { root, texture } = lutScene('#ff0000', filter);
+
+  vi.spyOn(backend, 'isNonFilterableTexture').mockImplementation(candidate => candidate === lut);
+
+  try {
+    if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) {
+      return;
+    }
+
+    expectPixelNear(readWebGpuPixels(backend, LUT_SCENE_SIZE)(SAMPLE_POINT, SAMPLE_POINT), [255, 0, 0, 255]);
+  } finally {
+    root.destroy();
+    filter.destroy();
+    texture.destroy();
+    identity.destroy();
+    lut.destroy();
+    backend.destroy();
+  }
+};
+
+test('3D LUT samples through its paired nonfiltering sampler', async ctx => {
+  await checkNonfilteringLut(ctx, '3d');
 });
