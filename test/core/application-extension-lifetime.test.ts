@@ -9,6 +9,7 @@ import type { MockInstance } from 'vitest';
  */
 import { Application } from '#core/Application';
 import type { System } from '#core/System';
+import { seconds } from '#core/units';
 import type { Extension } from '#extensions/Extension';
 
 vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
@@ -61,6 +62,28 @@ beforeEach(() => {
 
 afterEach(() => {
   rafSpy.mockRestore();
+});
+
+describe('application coroutine clock', () => {
+  test('the coroutine budget reads the application platform clock', () => {
+    const app = new Application({ backend: { type: 'webgl2' } });
+    let now = 1000;
+    vi.spyOn(app.platform, 'now').mockImplementation(() => now);
+    vi.spyOn(performance, 'now').mockReturnValue(0);
+    app.coroutines.budget = seconds(0.01);
+    app.coroutines.minSlice = seconds(0);
+    const seen: number[] = [];
+    app.coroutines.queue(function* (budget): Generator<void, void> {
+      now += 4;
+      seen.push(budget.timeRemaining());
+      yield;
+    });
+
+    app.coroutines.postFrame(seconds(0.016), { timeRemaining: () => seconds(1) });
+    expect(seen[0]).toBeCloseTo(0.006, 6);
+    vi.restoreAllMocks();
+    void app.destroy();
+  });
 });
 
 describe('Extension install()', () => {

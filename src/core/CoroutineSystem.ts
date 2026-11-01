@@ -438,6 +438,7 @@ export class CoroutineSystem implements Destroyable {
   private _coroutines: Array<Coroutine<unknown, unknown>> = [];
   private readonly _sliceBudget: FrameBudget;
   private _frameTarget: () => Seconds = () => fallbackFrameTargetSeconds;
+  private _timeSource: TimeSource = hostTimeSource;
   private _sliceDeadlineMs = 0;
   private _lastFrameMs = 0;
   private _nextSequence = 0;
@@ -453,7 +454,7 @@ export class CoroutineSystem implements Destroyable {
     // One instance for the system's lifetime: a body may hold it across a
     // yield, and the frame path must not allocate.
     this._sliceBudget = {
-      timeRemaining: (): Seconds => seconds(Math.max(0, this._sliceDeadlineMs - hostTimeSource.now()) / 1000),
+      timeRemaining: (): Seconds => seconds(Math.max(0, this._sliceDeadlineMs - this._timeSource.now()) / 1000),
     };
   }
 
@@ -519,7 +520,7 @@ export class CoroutineSystem implements Destroyable {
       this._sort();
     }
 
-    const startedMs = hostTimeSource.now();
+    const startedMs = this._timeSource.now();
     const sliceMs = toMilliseconds(this._sliceFor(budget));
 
     this._sliceDeadlineMs = startedMs + sliceMs;
@@ -527,7 +528,7 @@ export class CoroutineSystem implements Destroyable {
     this._advance(sliceMs);
     this._compact();
 
-    this._lastFrameMs = hostTimeSource.now() - startedMs;
+    this._lastFrameMs = this._timeSource.now() - startedMs;
   }
 
   /** Cancel currently queued work. Work queued by cancellation cleanup runs in a later frame. */
@@ -566,6 +567,11 @@ export class CoroutineSystem implements Destroyable {
    */
   public _bindFrameTarget(source: () => Seconds): void {
     this._frameTarget = source;
+  }
+
+  /** @internal Bind the owning application's monotonic clock. */
+  public _bindTimeSource(source: TimeSource): void {
+    this._timeSource = source;
   }
 
   /**
@@ -615,18 +621,18 @@ export class CoroutineSystem implements Destroyable {
           continue;
         }
 
-        if (stepped > 0 && hostTimeSource.now() >= this._sliceDeadlineMs) {
+        if (stepped > 0 && this._timeSource.now() >= this._sliceDeadlineMs) {
           stoppedAt = index;
           break;
         }
 
-        const beforeMs = hostTimeSource.now();
+        const beforeMs = this._timeSource.now();
 
         stepped++;
         coroutine._step(this._sliceBudget);
 
         if (__DEV__) {
-          this._reportPathologicalStep(coroutine, hostTimeSource.now() - beforeMs, sliceMs);
+          this._reportPathologicalStep(coroutine, this._timeSource.now() - beforeMs, sliceMs);
         }
       }
 
