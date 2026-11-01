@@ -345,9 +345,10 @@ const parseCullMarginConfig = (config: string): number | null => {
     return null;
   }
 
+  const numerator = Number(match[1]);
   const denominator = Number(match[2]);
 
-  return denominator === 0 ? null : Number(match[1]) / denominator;
+  return !Number.isSafeInteger(numerator) || !Number.isSafeInteger(denominator) || denominator === 0 ? null : numerator / denominator;
 };
 
 /** Builder internals the calibration arm reaches into; `private` is compile-time only. */
@@ -386,6 +387,10 @@ const applyCullMarginOverride = (ratio: number | null): void => {
 export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: ExoJsAdapterConfig = 'current'): EngineAdapter => {
   const supported: readonly Backend[] = backendFilter ?? ['webgl2', 'webgpu'];
   const cullMargin = parseCullMarginConfig(config);
+
+  if (config.startsWith('cull-margin-') && cullMargin === null) {
+    throw new Error(`Invalid cull margin configuration: ${config}`);
+  }
 
   let app: Application | null = null;
   let root: Container | null = null;
