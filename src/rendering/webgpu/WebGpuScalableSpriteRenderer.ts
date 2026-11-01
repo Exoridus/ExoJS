@@ -559,6 +559,26 @@ export class WebGpuScalableSpriteRenderer
       backend.passCoordinator.acquirePass();
     }
 
+    // Retained recording: while a capture window is open,
+    // hand the exact packed geometry-path bytes of this flush to the backend -
+    // independent of the capture frame's visibility. A single base texture binds to group(1),
+    // so the recorded slot list is one entry. Shader-path batches poison the capture.
+    if (this._geoQuadCount > 0 && backend._retainedCaptureActive && this._currentTexture !== null && this._currentBlendMode !== null) {
+      this._recordTextureScratch[0] = this._currentTexture;
+      backend.recordRetainedBatch(
+        this,
+        this._geoInstData,
+        this._geoQuadCount * geoStrideBytes,
+        this._geoQuadCount,
+        this._currentBlendMode,
+        this._recordTextureScratch,
+        1,
+        null,
+        null,
+        this._geoBatchNodeCount,
+      );
+    }
+
     // Batch flushes no longer submit; the backend ends the pass at boundaries.
     this._shaderQuadCount = 0;
     this._geoQuadCount = 0;
@@ -655,27 +675,6 @@ export class WebGpuScalableSpriteRenderer
     backend.passCoordinator.markPassDraws();
     backend.stats.batches++;
     backend.stats.drawCalls++;
-
-    // Retained recording: while a capture window is open,
-    // hand the exact packed geometry-path bytes of this flush to the backend -
-    // byte-identical to what just drew. A single base texture binds to group(1),
-    // so the recorded slot list is one entry. WebGl2Shader-path batches never reach
-    // here (render() poisoned the window if one appeared).
-    if (backend._retainedCaptureActive && this._currentTexture !== null && this._currentBlendMode !== null) {
-      this._recordTextureScratch[0] = this._currentTexture;
-      backend.recordRetainedBatch(
-        this,
-        this._geoInstData,
-        this._geoQuadCount * geoStrideBytes,
-        this._geoQuadCount,
-        this._currentBlendMode,
-        this._recordTextureScratch,
-        1,
-        null,
-        null,
-        this._geoBatchNodeCount,
-      );
-    }
   }
 
   // ── Retained-batch record/replay ──────────────────────────────────────────
