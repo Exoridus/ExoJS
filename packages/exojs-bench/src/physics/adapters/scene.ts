@@ -1,6 +1,6 @@
 import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
 import { createRng } from '../../shared/rng';
-import type { PhysicsArchetypeSpec, PhysicsSceneShape } from '../PhysicsAdapter';
+import type { PhysicsArchetypeSpec } from '../PhysicsAdapter';
 
 /**
  * Engine-neutral description of a physics scene - the fairness backbone the
@@ -332,8 +332,8 @@ const buildJointChains = (
 };
 
 /** World extent (px) each scene shape occupies, used to lay out the ray sweep across it. */
-const sceneExtent = (shape: PhysicsSceneShape, bodyCount: number): { width: number; height: number } => {
-  switch (shape) {
+const sceneExtent = (spec: PhysicsArchetypeSpec, bodyCount: number): { width: number; height: number } => {
+  switch (spec.scene) {
     case 'box-stack': {
       const columns = Math.max(1, Math.ceil(bodyCount / 8));
 
@@ -350,9 +350,10 @@ const sceneExtent = (shape: PhysicsSceneShape, bodyCount: number): { width: numb
       return { width: columns * (BODY_SIZE + 10) + 200, height: 1_440 };
     }
     case 'joint-chains': {
-      const chains = Math.max(1, Math.ceil(bodyCount / 8));
+      const length = Math.max(1, spec.jointChainLength ?? 1);
+      const chains = Math.max(1, Math.ceil(bodyCount / length));
 
-      return { width: 120 + chains * BODY_SIZE * 4 + 120, height: 1_000 };
+      return { width: 120 + chains * BODY_SIZE * 4 + 120, height: Math.max(1_000, 320 + Math.min(bodyCount, length) * BODY_SIZE) };
     }
   }
 };
@@ -435,6 +436,6 @@ export const describePhysicsScene = (spec: PhysicsArchetypeSpec, bodyCount: numb
     dynamicOffset: bodies.findIndex(body => body.type === 'dynamic'),
     joints,
     churnIndices: spec.churn === true ? perturbed : [],
-    extent: sceneExtent(spec.scene, bodyCount),
+    extent: sceneExtent(spec, bodyCount),
   };
 };
