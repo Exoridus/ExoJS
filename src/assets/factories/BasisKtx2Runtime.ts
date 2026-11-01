@@ -113,6 +113,8 @@ export class BasisKtx2Runtime {
           const error = new Error(data.message);
           reject(error);
           this._fail(error);
+          this._failure = undefined;
+          this._initPromise = undefined;
         } else if (data.kind === 'result') {
           this._settle(data.id, undefined, data.levels);
         } else if (data.kind === 'error') {
