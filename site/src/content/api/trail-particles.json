@@ -1,6 +1,6 @@
 {
   "title": "TrailParticles",
-  "description": "A motion trail behind every particle: each one drags a strip through the positions it recently occupied, and all of them are drawn in a single non-instanced draw. Where `RibbonParticles` connects the particles of one system into one band, this connects each particle to its own past - the shape a swarm of sparks, tracer rounds or comet debris wants, where every element needs its own streak. Layout of the per-vertex buffer build fills (20 bytes, 3 attributes): ``` a_position f32x2 (offset 0, 8 bytes) strip vertex (system-local) a_texcoord f32x2 (offset 8, 8 bytes) u along the trail, v across it a_color u8x4 (offset 16, 4 bytes) RGBA tint, alpha faded by age ``` **History is recorded on the particle's own clock.** A position is appended to a particle's ring buffer once its age has advanced by TrailParticlesOptions.interval, so a trail covers the same span of travel whatever the frame rate; the live position is always drawn as the head, which keeps the strip attached to the particle between two samples. **One instance per system.** The history is per-particle state carried across frames and addressed by simulation slot, so two systems sharing one instance would overwrite each other's trails. **The strips are built on the CPU**, so this mode is not GPU-eligible and a system using it stays on the CPU simulation path (observable through `ParticleSystem.gpuMode`). That is also what lets the history survive a death: CPU-mode slots are dense and compaction copies survivors forward stably, which is what build re-aligns the history rows against. It identifies a particle by its age and its lifetime, so an update module that rewrites a live particle's lifetime restarts that particle's trail.",
+  "description": "A motion trail behind every particle: each one drags a strip through the positions it recently occupied, and all of them are drawn in a single non-instanced draw. Where `RibbonParticles` connects the particles of one system into one band, this connects each particle to its own past - the shape a swarm of sparks, tracer rounds or comet debris wants, where every element needs its own streak. Layout of the per-vertex buffer build fills (20 bytes, 3 attributes): ``` a_position f32x2 (offset 0, 8 bytes) strip vertex (system-local) a_texcoord f32x2 (offset 8, 8 bytes) u along the trail, v across it a_color u8x4 (offset 16, 4 bytes) RGBA tint, alpha faded by age ``` **History is recorded on the particle's own clock.** A position is appended to a particle's ring buffer once its age has advanced by TrailParticlesOptions.interval, so a trail covers the same span of travel whatever the frame rate; the live position is always drawn as the head, which keeps the strip attached to the particle between two samples. **One instance per system.** The history is per-particle state carried across frames and addressed by simulation slot, so two systems sharing one instance would overwrite each other's trails. **The strips are built on the CPU**, so this mode is not GPU-eligible and a system using it stays on the CPU simulation path (observable through `ParticleSystem.gpuMode`). That is also what lets the history survive a death: CPU-mode slots are dense and compaction copies survivors forward stably, which is what build re-aligns the history rows against. It tracks each particle across slot reuse, so a replacement starts a new trail. An update module that rewrites a live particle's lifetime also restarts its trail.",
   "symbol": "TrailParticles",
   "kind": "class",
   "subsystem": "particles",
@@ -25,7 +25,7 @@
         "``` a_position f32x2 (offset 0, 8 bytes) strip vertex (system-local) a_texcoord f32x2 (offset 8, 8 bytes) u along the trail, v across it a_color u8x4 (offset 16, 4 bytes) RGBA tint, alpha faded by age ```",
         "**History is recorded on the particle's own clock.** A position is appended to a particle's ring buffer once its age has advanced by TrailParticlesOptions.interval, so a trail covers the same span of travel whatever the frame rate; the live position is always drawn as the head, which keeps the strip attached to the particle between two samples.",
         "**One instance per system.** The history is per-particle state carried across frames and addressed by simulation slot, so two systems sharing one instance would overwrite each other's trails.",
-        "**The strips are built on the CPU**, so this mode is not GPU-eligible and a system using it stays on the CPU simulation path (observable through `ParticleSystem.gpuMode`). That is also what lets the history survive a death: CPU-mode slots are dense and compaction copies survivors forward stably, which is what build re-aligns the history rows against. It identifies a particle by its age and its lifetime, so an update module that rewrites a live particle's lifetime restarts that particle's trail."
+        "**The strips are built on the CPU**, so this mode is not GPU-eligible and a system using it stays on the CPU simulation path (observable through `ParticleSystem.gpuMode`). That is also what lets the history survive a death: CPU-mode slots are dense and compaction copies survivors forward stably, which is what build re-aligns the history rows against. It tracks each particle across slot reuse, so a replacement starts a new trail. An update module that rewrites a live particle's lifetime also restarts its trail."
       ],
       "importLine": "import { TrailParticles } from '@codexo/exojs/particles'",
       "sourceLink": null
@@ -233,7 +233,7 @@
         },
         {
           "name": "build",
-          "signature": "build(_system: ParticleSystem, particles: ParticleBatch): void",
+          "signature": "build(system: ParticleSystem, particles: ParticleBatch): void",
           "signatureTokens": [
             {
               "text": "build",
@@ -244,7 +244,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "_system",
+              "text": "system",
               "kind": "param"
             },
             {
@@ -286,7 +286,7 @@
           ],
           "params": [
             {
-              "name": "_system",
+              "name": "system",
               "type": "ParticleSystem",
               "optional": false
             },
