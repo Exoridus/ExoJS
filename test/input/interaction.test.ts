@@ -2449,6 +2449,32 @@ describe('InteractionSystem — clip-aware hit-testing', () => {
     clipper.destroy();
   });
 
+  test('a nested scope respects clipping ancestors', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionSystem(app);
+    im.attachRoot(scene.root);
+    const clipper = new TestClipContainer();
+    const scope = new Container();
+    const child = new TestSprite().setBounds(0, 0, 100, 100);
+    clipper.clip = true;
+    clipper.clipShape = new Rectangle(0, 0, 50, 50);
+    child.interactive = true;
+    scope.addChild(child);
+    clipper.addChild(scope);
+    scene.addChild(clipper);
+    im.pushScope(scope);
+    const handler = vi.fn();
+    child.onPointerDown.add(handler);
+    dispatchPointer(signals.onPointerDown, { x: 75, y: 75 });
+    flushInteractions(im);
+    expect(handler).not.toHaveBeenCalled();
+    dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
+    flushInteractions(im);
+    expect(handler).toHaveBeenCalledTimes(1);
+    im.destroy();
+    scene.root.destroy();
+  });
+
   test('a Rectangle clipShape bounds descendant hits in the scoped/recursive hit-test path', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionSystem(app);
