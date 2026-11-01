@@ -112,27 +112,33 @@ const bootProbeApplication = async (
 
   // Full production init, then stop the engine's own rAF loop: the probe owns
   // frame cadence so warmup and the measured window are identical across cells.
-  await app.start();
-  app.stop();
+  try {
+    await app.start();
+    app.stop();
 
-  const rendering = app.backend;
+    const rendering = app.backend;
 
-  if (rendering.backendType === RenderBackendType.WebGpu) {
-    const device = (rendering as WebGpuBackend).device;
-    const timer = createWebGpuGpuTimer(device);
+    if (rendering.backendType === RenderBackendType.WebGpu) {
+      const device = (rendering as WebGpuBackend).device;
+      const timer = createWebGpuGpuTimer(device);
 
-    return { app, canvas, backendType: rendering.backendType, gpuTimer: timer, webgpuTimestampQuery: timer.available };
+      return { app, canvas, backendType: rendering.backendType, gpuTimer: timer, webgpuTimestampQuery: timer.available };
+    }
+
+    const gl = canvas.getContext('webgl2');
+
+    return {
+      app,
+      canvas,
+      backendType: rendering.backendType,
+      gpuTimer: gl === null ? noopGpuTimer : createWebGl2GpuTimer(gl),
+      webgpuTimestampQuery: null,
+    };
+  } catch (error) {
+    await app.destroy();
+
+    throw error;
   }
-
-  const gl = canvas.getContext('webgl2');
-
-  return {
-    app,
-    canvas,
-    backendType: rendering.backendType,
-    gpuTimer: gl === null ? noopGpuTimer : createWebGl2GpuTimer(gl),
-    webgpuTimestampQuery: null,
-  };
 };
 
 /** Wait for one animation frame, resolving with its timestamp. */
@@ -371,7 +377,8 @@ export const runProbeCell = async (options: RunProbeCellOptions): Promise<ProbeC
     stopErrorCapture();
     restore();
     scene?.dispose();
-    booted?.app.destroy();
+    await booted?.app.destroy();
+    canvas.remove();
   }
 };
 
@@ -407,7 +414,16 @@ export const startVisualPreview = async (options: {
   host: HTMLElement;
 }): Promise<VisualPreview> => {
   const canvas = freshStageCanvas(options.host);
-  const booted = await bootProbeApplication(canvas, options.stage, options.pixelRatio, options.backend);
+  let booted: ProbeApplication;
+
+  try {
+    booted = await bootProbeApplication(canvas, options.stage, options.pixelRatio, options.backend);
+  } catch (error) {
+    canvas.remove();
+
+    throw error;
+  }
+
   const restores: RestoreInstrumentation[] = [];
 
   let scene: ProbeScene | null = null;
@@ -471,18 +487,20 @@ export const startVisualPreview = async (options: {
         }
 
         activeScene.dispose();
-        booted.app.destroy();
+        await booted.app.destroy();
+        canvas.remove();
       },
     };
   } catch (error) {
     // A failure after boot would otherwise leave the live backend, context,
     // scene resources and style instrumentation unreachable; the caller only
     // drops its reference.
-    releaseFailedPreview({
+    await releaseFailedPreview({
       restores: restores.splice(0),
       disposeScene: scene === null ? null : () => scene!.dispose(),
       destroyApp: () => booted.app.destroy(),
     });
+    canvas.remove();
 
     throw error;
   }

@@ -3,22 +3,24 @@ import { describe, expect, test } from 'vitest';
 import { releaseFailedPreview } from '../src/rendering/dpr-probe/previewCleanup';
 
 describe('releaseFailedPreview', () => {
-  test('undoes instrumentation, disposes the scene and destroys the app', () => {
+  test('undoes instrumentation, disposes the scene and destroys the app', async () => {
     const calls: string[] = [];
 
-    releaseFailedPreview({
+    await releaseFailedPreview({
       restores: [() => calls.push('undo')],
       disposeScene: () => calls.push('scene'),
-      destroyApp: () => calls.push('app'),
+      destroyApp: () => {
+        calls.push('app');
+      },
     });
 
     expect(calls).toEqual(['undo', 'scene', 'app']);
   });
 
-  test('keeps releasing when an earlier step throws, and never obscures the caller error', () => {
+  test('keeps releasing when an earlier step throws, and never obscures the caller error', async () => {
     const calls: string[] = [];
 
-    expect(() =>
+    await expect(
       releaseFailedPreview({
         restores: [
           () => calls.push('undo-1'),
@@ -33,20 +35,24 @@ describe('releaseFailedPreview', () => {
 
           throw new Error('dispose failed');
         },
-        destroyApp: () => calls.push('app'),
+        destroyApp: () => {
+          calls.push('app');
+        },
       }),
-    ).not.toThrow();
+    ).resolves.toBeUndefined();
 
     expect(calls).toEqual(['undo-1', 'undo-2', 'scene', 'app']);
   });
 
-  test('skips the scene when construction never returned', () => {
+  test('skips the scene when construction never returned', async () => {
     const calls: string[] = [];
 
-    releaseFailedPreview({
+    await releaseFailedPreview({
       restores: [],
       disposeScene: null,
-      destroyApp: () => calls.push('app'),
+      destroyApp: () => {
+        calls.push('app');
+      },
     });
 
     expect(calls).toEqual(['app']);
