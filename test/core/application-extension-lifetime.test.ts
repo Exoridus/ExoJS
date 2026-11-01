@@ -110,6 +110,17 @@ describe('Extension install()', () => {
     void appB.destroy();
   });
 
+  test('rejects an asynchronous installer and disposes earlier extensions', () => {
+    const dispose = vi.fn();
+    const prior: Extension = { id: 'prior', install: () => dispose };
+    const asyncExtension: Extension = { id: 'async-extension', install: () => Promise.resolve() as unknown as void };
+
+    expect(() => new Application({ backend: { type: 'webgl2' }, extensions: [prior, asyncExtension] })).toThrow(
+      /async-extension.*synchronous/,
+    );
+    expect(dispose).toHaveBeenCalledOnce();
+  });
+
   test('an extension without install is not an error', () => {
     expect(() => new Application({ backend: { type: 'webgl2' }, extensions: [{ id: 'bindings-only' }] })).not.toThrow();
   });
