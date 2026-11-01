@@ -12,7 +12,6 @@ test('composite bloom matches the shared visual tolerance after downsampling', a
   const server = await startViteServer({
     pageDir: fileURLToPath(new URL('../src/rendering/page', import.meta.url)),
     version: readEngineVersion(),
-    libraryArms: ['pixi.js', '@pixi/layout', '@pixi/tilemap'],
   });
   let browser: Browser | undefined;
 
