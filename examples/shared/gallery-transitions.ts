@@ -124,6 +124,7 @@ class GalleryTransitionSession implements SceneTransitionSession {
 
   public destroy(): void {
     this.sprite.destroy();
+    this.filter?.destroy();
     this.circle?.destroy();
   }
 }

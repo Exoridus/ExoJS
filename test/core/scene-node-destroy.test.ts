@@ -39,12 +39,12 @@ describe('SceneNode.destroy() idempotence', () => {
     node.destroy();
 
     expect(positionDestroy).toHaveBeenCalledTimes(1);
-    expect(filterDestroy).toHaveBeenCalledTimes(1);
+    expect(filterDestroy).not.toHaveBeenCalled();
 
     node.destroy();
 
     expect(positionDestroy).toHaveBeenCalledTimes(1);
-    expect(filterDestroy).toHaveBeenCalledTimes(1);
+    expect(filterDestroy).not.toHaveBeenCalled();
   });
 
   test('a second destroy() on a RenderNode subclass releases nothing twice', () => {
