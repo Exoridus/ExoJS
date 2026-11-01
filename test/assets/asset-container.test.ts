@@ -14,6 +14,7 @@ import {
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { materializeAssetTypes } from '#extensions/materialize';
+import { ScaleModes } from '#rendering/types';
 
 import { testAssetType } from './test-asset-type';
 
@@ -647,6 +648,50 @@ describe('Loader.loadContainer', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     await expect(joined).resolves.toEqual({ body: 'from-container' });
     expect(loader.peek(Asset.type('gated' as never, 'level.gated'))).toEqual({ body: 'from-container' });
+  });
+
+  test('a get during container texture decoding preserves the container sampler', async () => {
+    let entered!: () => void;
+    let release!: () => void;
+    const enteredDecode = new Promise<void>(resolve => (entered = resolve));
+    const gate = new Promise<void>(resolve => (release = resolve));
+    const container = encodeContainer([
+      {
+        source: 'ship.png',
+        type: 'texture',
+        bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+        options: { textureOptions: { scaleMode: ScaleModes.Nearest } },
+      },
+    ]);
+    const fetchSpy = mockContainerFetch(container);
+    const loader = createCoreLoader();
+    vi.stubGlobal('createImageBitmap', async () => {
+      entered();
+      await gate;
+
+      return { width: 16, height: 16 };
+    });
+
+    try {
+      const unpacking = loader.loadContainer('pack.exoa');
+
+      await enteredDecode;
+      const handle = loader.get('ship.png');
+
+      release();
+      await unpacking;
+      await handle.loaded;
+
+      expect(handle.scaleMode).toBe(ScaleModes.Nearest);
+      expect(handle.width).toBe(16);
+      expect(loader.peek('ship.png')).toBe(handle);
+      expect(await loader.load(Asset.type('texture', 'ship.png'))).toBe(handle);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      release();
+      loader.destroy();
+      vi.unstubAllGlobals();
+    }
   });
 
   test('a container that fails while unpacking leaves nothing claimed', async () => {

@@ -155,6 +155,67 @@ describe('AssetResidency', () => {
     residency.destroy();
   });
 
+  test.each([false, true])('a load retains its options through a later ref and reclaim (get while loading=%s)', async duringLoad => {
+    const seen: unknown[] = [];
+    const { residency, typeRegistry, canonical } = createResidency();
+    typeRegistry.installAll([
+      testAssetType<string, unknown>({
+        id: 'typeA',
+        token: TypeA,
+        create: async (_source, context) => {
+          seen.push(context.options);
+
+          return 'value';
+        },
+      }),
+    ]);
+    const options = { quality: 'first' };
+    const asset = { ...canonical(TypeA, 'options.txt'), options };
+    const scope = new LoaderScope(fakeLoader, 'scope');
+    residency._claim(asset, scope);
+    const loading = residency._loadSingle(asset, options);
+
+    if (!duringLoad) {
+      await loading;
+    }
+
+    const ref = residency._getRef(asset, { quality: 'later' });
+    await loading;
+    residency._release(asset.key, scope);
+    residency._claim(asset, scope);
+    await ref.loaded;
+    expect(seen).toEqual([options, options]);
+    residency.destroy();
+  });
+
+  test('a bare seamless load retains its options when reclaimed', async () => {
+    const seen: unknown[] = [];
+    const { residency, typeRegistry, canonical } = createResidency();
+    const adapter = createFakeSeamlessAdapter();
+    typeRegistry.installAll([
+      testAssetType<string, unknown>({
+        id: 'typeA',
+        token: TypeA,
+        leaf: adapter as never,
+        create: async (_source, context) => {
+          seen.push(context.options);
+
+          return {};
+        },
+      }),
+    ]);
+    const options = { colorSpace: 'srgb' };
+    const asset = { ...canonical(TypeA, 'texture.png'), options };
+    const scope = new LoaderScope(fakeLoader, 'scope');
+    residency._claim(asset, scope);
+    await residency._loadSingle(asset, options);
+    residency._release(asset.key, scope);
+    residency._claim({ ...asset, options: undefined }, scope);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(seen).toEqual([options, options]);
+    residency.destroy();
+  });
+
   describe('claim / release / eviction', () => {
     test('claim then release at refcount 0 evicts a stored, seamless-adapted resource', async () => {
       const { residency, typeRegistry, canonical } = createResidency();
