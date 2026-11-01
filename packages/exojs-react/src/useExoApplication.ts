@@ -73,7 +73,7 @@ export const useExoApplication = (
   onReady?: (app: Application) => void,
   onError?: (error: unknown) => void,
 ): UseExoApplicationResult => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
   const [app, setApp] = useState<Application | null>(null);
   const teardownRef = useRef<Promise<unknown> | null>(null);
 
@@ -95,8 +95,6 @@ export const useExoApplication = (
 
   // ── Lifecycle: create on mount / recreate on backend change ───────────────
   useEffect(() => {
-    const canvas = canvasRef.current;
-
     if (!canvas) {
       return;
     }
@@ -149,7 +147,7 @@ export const useExoApplication = (
     // Recreate only when the backend identity changes; live options are synced
     // by the effects below. `options` is intentionally read at (re)create time.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [backendKey]);
+  }, [backendKey, canvas]);
 
   // ── Live sync: error reporting ─────────────────────────────────────────────
   useEffect(() => {
@@ -188,5 +186,5 @@ export const useExoApplication = (
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app, clearKey]);
 
-  return { app, canvasRef };
+  return { app, canvasRef: setCanvas };
 };

@@ -80,6 +80,24 @@ const mount = (
   };
 };
 
+describe('useExoApplication - delayed canvas', () => {
+  it('creates an application when the canvas attaches after mount', () => {
+    let latest!: UseExoApplicationResult;
+
+    const Delayed = ({ show }: { show: boolean }): ReactElement => {
+      latest = useExoApplication();
+
+      return show ? <canvas ref={latest.canvasRef} /> : <div />;
+    };
+
+    const view = render(<Delayed show={false} />);
+    expect(latest.app).toBeNull();
+    view.rerender(<Delayed show />);
+    expect(MockApplication.instances).toHaveLength(1);
+    expect(latest.app).toBe(MockApplication.instances[0]);
+  });
+});
+
 const onlyInstance = (): MockApplication => {
   expect(MockApplication.instances).toHaveLength(1);
 
