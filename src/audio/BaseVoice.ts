@@ -765,7 +765,7 @@ export abstract class BaseVoice implements Voice {
     let vy: number;
     // Only ever explicit: a derived velocity comes from the tracked position,
     // and nothing tracks elevation - `follow()` reads a 2D scene node.
-    const vz = this._explicitVelocity ? this._elevationVelocity : 0;
+    const vz = this._elevationVelocity;
 
     if (this._explicitVelocity && this._velocity !== null) {
       vx = this._velocity.x;
