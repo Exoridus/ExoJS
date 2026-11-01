@@ -235,6 +235,8 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       throw new Error('drawInstancedBatch requires a mesh constructed from a geometry.');
     }
 
+    this.flush();
+
     const backend = this.getBackend();
     const material = mesh.material;
     const shader = material === null ? this._defaultShader : this._getOrCreateCustomShader(material, connection.gl);
