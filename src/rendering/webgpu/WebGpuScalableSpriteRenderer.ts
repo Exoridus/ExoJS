@@ -663,7 +663,13 @@ export class WebGpuScalableSpriteRenderer
       'repeating-sprite:texture-bind-group:geo',
     );
 
-    const pipeline = this._getPipeline('geo', this._currentBlendMode, backend.renderTargetFormat, stencil);
+    const pipeline = this._getPipeline(
+      'geo',
+      this._currentBlendMode,
+      backend.renderTargetFormat,
+      stencil,
+      backend.shouldPremultiplyTextureSample(this._currentTexture),
+    );
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, uniformBindGroup);
@@ -816,7 +822,13 @@ export class WebGpuScalableSpriteRenderer
     const active = coordinator.acquirePass();
     const pass = active.pass;
 
-    const nativePipeline = this._getPipeline('geo', payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive);
+    const nativePipeline = this._getPipeline(
+      'geo',
+      payload.blendMode,
+      backend.renderTargetFormat,
+      coordinator.stencilActive,
+      backend.shouldPremultiplyTextureSample(texture),
+    );
     const nativeFrameBindGroup = bundle.getBindGroup(device, this._uniformBindGroupLayout!, false);
 
     const nativeCompatible = backend.colorAttachmentCount === 1;
@@ -963,8 +975,14 @@ export class WebGpuScalableSpriteRenderer
     return group;
   }
 
-  private _getPipeline(kind: 'shader' | 'geo', blend: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
-    const key = `${kind}:${blend}:${format}:${stencil ? 's' : 'n'}`;
+  private _getPipeline(
+    kind: 'shader' | 'geo',
+    blend: BlendModes,
+    format: GPUTextureFormat,
+    stencil: boolean,
+    premultiply = false,
+  ): GPURenderPipeline {
+    const key = `${kind}:${blend}:${format}:${premultiply ? 'p' : 'a'}:${stencil ? 's' : 'n'}`;
     const existing = this._pipelines.get(key);
 
     if (existing) {
@@ -975,7 +993,7 @@ export class WebGpuScalableSpriteRenderer
       throw new Error('WebGpuScalableSpriteRenderer: not connected.');
     }
 
-    const pipeline = this._device.createRenderPipeline(this._buildPipelineDescriptor(kind, blend, format, stencil));
+    const pipeline = this._device.createRenderPipeline(this._buildPipelineDescriptor(kind, blend, format, stencil, premultiply));
     this._pipelines.set(key, pipeline);
 
     return pipeline;
@@ -986,6 +1004,7 @@ export class WebGpuScalableSpriteRenderer
     blend: BlendModes,
     format: GPUTextureFormat,
     stencil = false,
+    premultiply = false,
   ): GPURenderPipelineDescriptor {
     if (!this._shaderModule || !this._pipelineLayout) {
       throw new Error('WebGpuScalableSpriteRenderer: not connected.');
@@ -1031,6 +1050,7 @@ export class WebGpuScalableSpriteRenderer
       fragment: {
         module: this._shaderModule,
         entryPoint: isShader ? 'shaderFrag' : 'geoFrag',
+        constants: { premultiplySample: premultiply ? 1 : 0 },
         targets: [{ format, blend: getWebGpuBlendState(blend), writeMask: GPUColorWrite.ALL }],
       },
       primitive: { topology: 'triangle-list' },
@@ -1079,7 +1099,7 @@ export class WebGpuScalableSpriteRenderer
     for (const kind of kinds) {
       for (const blendMode of blendModes) {
         for (const format of formats) {
-          const key = `${kind}:${blendMode}:${format}:n`;
+          const key = `${kind}:${blendMode}:${format}:a:n`;
 
           if (this._pipelines.has(key)) {
             continue;
