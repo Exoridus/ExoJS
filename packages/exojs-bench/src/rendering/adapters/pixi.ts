@@ -1144,7 +1144,9 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
         const overlay = new Sprite(blurred);
 
         source.scale.set(BLOOM_DOWNSCALE);
-        source.filters = [new BlurFilter({ strength: bloomStrength, quality: 2 })];
+        source.filters = [
+          new BlurFilter({ strength: bloomStrength / PIXI_KERNEL_SIGMA, quality: 1, kernelSize: BLUR_TAPS_PER_SIDE * 2 + 1 }),
+        ];
         overlay.width = VIEWPORT_WIDTH;
         overlay.height = VIEWPORT_HEIGHT;
         overlay.blendMode = 'add';
