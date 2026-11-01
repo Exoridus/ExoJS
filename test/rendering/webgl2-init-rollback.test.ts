@@ -257,3 +257,40 @@ describe('WebGl2MeshRenderer connection rollback', () => {
     expect(log.leaked('vertexArray')).toHaveLength(0);
   });
 });
+describe('WebGl2TextRenderer connection rollback', () => {
+  test.each(['buffer', 'attribute', 'texture'])('a failed %s setup releases resources and can reconnect', failure => {
+    const { gl, log } = createGl();
+    const backend = {
+      backendType: RenderBackendType.WebGl2,
+      context: gl,
+      accountant: null,
+      bindRawTexture: vi.fn(),
+    } as unknown as WebGl2Backend;
+    const renderer = new WebGl2TextRenderer();
+
+    const fail = (): never => {
+      throw new Error('setup failed');
+    };
+
+    const spy =
+      failure === 'attribute'
+        ? vi.spyOn(WebGl2VertexArrayObject.prototype, 'addAttribute').mockImplementationOnce(fail)
+        : failure === 'buffer'
+          ? vi.spyOn(gl, 'createBuffer').mockImplementationOnce(fail)
+          : vi.spyOn(gl, 'texImage2D').mockImplementationOnce(fail);
+
+    expect(() => renderer.connect(backend)).toThrow('setup failed');
+    expect(log.leaked('program')).toHaveLength(0);
+    expect(log.leaked('buffer')).toHaveLength(0);
+    expect(log.leaked('vertexArray')).toHaveLength(0);
+    expect(log.leaked('texture')).toHaveLength(0);
+    spy.mockRestore();
+    renderer.connect(backend);
+    expect(log.leaked('program')).toHaveLength(3);
+    renderer.disconnect();
+    expect(log.leaked('program')).toHaveLength(0);
+    expect(log.leaked('buffer')).toHaveLength(0);
+    expect(log.leaked('vertexArray')).toHaveLength(0);
+    expect(log.leaked('texture')).toHaveLength(0);
+  });
+});
