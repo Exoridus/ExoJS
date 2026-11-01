@@ -79,7 +79,7 @@ describe('tiledWangSetToWangSet — corner type', () => {
     expect(result.getTileId(31)).toBe(12);
   });
 
-  it.each(['autoTile', 'refreshCell'])('applies every converted corner combination to its neighborhood with %s', apply => {
+  it.each(['autoTile', 'refreshCell'])('resolves every valid blob neighborhood with %s', apply => {
     const wangtiles = Array.from({ length: 16 }, (_, corners) => ({
       tileid: corners,
       wangid: [0, (corners >> 1) & 1, 0, (corners >> 3) & 1, 0, (corners >> 2) & 1, 0, corners & 1],
@@ -94,30 +94,30 @@ describe('tiledWangSetToWangSet — corner type', () => {
       tileHeight: 32,
       texture: new TextureRegion(texture, { x: 0, y: 0, width: 128, height: 128 }),
     });
-    const neighborhoods = [
-      [
-        [0, 0],
-        [1, 0],
-        [0, 1],
-      ],
-      [
-        [2, 0],
-        [1, 0],
-        [2, 1],
-      ],
-      [
-        [0, 2],
-        [0, 1],
-        [1, 2],
-      ],
-      [
-        [2, 2],
-        [2, 1],
-        [1, 2],
-      ],
+    const neighbors = [
+      [0, 0, 1],
+      [1, 0, 2],
+      [2, 0, 4],
+      [0, 1, 8],
+      [2, 1, 16],
+      [0, 2, 32],
+      [1, 2, 64],
+      [2, 2, 128],
     ];
+    const failures: number[] = [];
+    let validMasks = 0;
 
-    for (let corners = 0; corners < 16; corners++) {
+    for (let mask = 0; mask < 256; mask++) {
+      if (
+        ((mask & 1) !== 0 && (mask & 10) !== 10) ||
+        ((mask & 4) !== 0 && (mask & 18) !== 18) ||
+        ((mask & 32) !== 0 && (mask & 72) !== 72) ||
+        ((mask & 128) !== 0 && (mask & 80) !== 80)
+      ) {
+        continue;
+      }
+
+      validMasks++;
       const layer = new TileLayer({
         id: 0,
         name: 'terrain',
@@ -130,11 +130,9 @@ describe('tiledWangSetToWangSet — corner type', () => {
       const tile = { localTileId: 15, tileset, transform: TILE_TRANSFORM_IDENTITY };
       layer.setTileAt(1, 1, tile);
 
-      for (let corner = 0; corner < 4; corner++) {
-        if ((corners & (1 << corner)) !== 0) {
-          for (const [x, y] of neighborhoods[corner]!) {
-            layer.setTileAt(x!, y!, tile);
-          }
+      for (const [x, y, bit] of neighbors) {
+        if ((mask & bit!) !== 0) {
+          layer.setTileAt(x!, y!, tile);
         }
       }
 
@@ -144,14 +142,20 @@ describe('tiledWangSetToWangSet — corner type', () => {
         refreshCell(layer, 1, 1, set, { wrapBorder: false });
       }
 
-      expect(layer.getTileAt(1, 1)?.localTileId, `corner combination ${corners}`).toBe(corners);
+      const expected = (mask & 1) | ((mask & 4) >> 1) | ((mask & 32) >> 3) | ((mask & 128) >> 4);
+
+      if (layer.getTileAt(1, 1)?.localTileId !== expected) {
+        failures.push(mask);
+      }
     }
+
+    expect(validMasks).toBe(47);
+    expect(failures).toEqual([]);
   });
 
-  it('returns undefined for a mask with no mapping', () => {
+  it('returns undefined for an unmapped corner pattern', () => {
     const result = tiledWangSetToWangSet(cornerSet, TILESET_INDEX)!;
-    // mask 2 (top-only cardinal bit, not used by corner wangsets) → not mapped
-    expect(result.getTileId(2)).toBeUndefined();
+    expect(result.getTileId(11)).toBeUndefined();
   });
 
   it('all mapped tile ids are members', () => {
