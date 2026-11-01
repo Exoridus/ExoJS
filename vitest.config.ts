@@ -433,6 +433,15 @@ export default defineConfig({
         ...createJsdomTestProject({
           name: 'exojs-bench',
           include: ['packages/exojs-bench/test/**/*.test.ts'],
+          // Launches Chromium; runs in the bench lane, which provisions it.
+          exclude: [...configDefaults.exclude, 'packages/exojs-bench/test/**/*.browser.test.ts'],
+        }),
+        plugins: [benchEngineHashImports()],
+      },
+      {
+        ...createJsdomTestProject({
+          name: 'exojs-bench-browser',
+          include: ['packages/exojs-bench/test/**/*.browser.test.ts'],
         }),
         plugins: [benchEngineHashImports()],
       },
