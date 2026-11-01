@@ -20,7 +20,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { createRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RetainedContainer } from '#rendering/RetainedContainer';
-import type { View } from '#rendering/View';
+import { View } from '#rendering/View';
 
 class LeafDrawable extends Drawable {
   public constructor(public readonly id: string) {
@@ -1957,4 +1957,56 @@ test.each([false, true])('view-dependent descendants refresh through retained gr
   expect(leaf.centers[1]).toBe(backend.view.center.x);
   root.destroy();
   backend.destroy();
+});
+
+test.each(['pan', 'replacement'])('cached drawables keep view dependencies across sibling invalidation (%s)', change => {
+  class ViewReader extends LeafDrawable {
+    public readonly centers: number[] = [];
+
+    protected override _collectContent(builder: RenderPlanBuilder): void {
+      this.centers.push(builder.view.center.x);
+      super._collectContent(builder);
+    }
+  }
+
+  const backend = createTestBackend();
+  const view = new View(400, 300, 800, 600);
+  const root = new Container();
+  const group = new RetainedContainer();
+  const intermediate = new Container();
+  const reader = new ViewReader('reader');
+  const sibling = new LeafDrawable('sibling');
+
+  backend.setView(view);
+  reader.cullable = false;
+  intermediate.addChild(reader);
+  group.addChild(intermediate, sibling);
+  root.addChild(group);
+
+  try {
+    collectDraws(root, backend);
+    collectDraws(root, backend);
+    expect(reader.centers).toEqual([400]);
+
+    sibling.invalidateCache();
+    collectDraws(root, backend);
+    expect(reader.centers).toEqual([400]);
+
+    if (change === 'pan') {
+      view.center.x = 405;
+    } else {
+      const replacement = new View(405, 300, 800, 600);
+
+      expect(replacement.updateId).toBe(view.updateId);
+      backend.setView(replacement);
+    }
+
+    collectDraws(root, backend);
+    expect(reader.centers).toEqual([400, 405]);
+    collectDraws(root, backend);
+    expect(reader.centers).toEqual([400, 405]);
+  } finally {
+    root.destroy();
+    backend.destroy();
+  }
 });

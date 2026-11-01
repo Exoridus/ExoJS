@@ -9,14 +9,17 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
-import type { View } from '#rendering/View';
+import { View } from '#rendering/View';
 
 const material: MaterialKey = { rendererId: 1, blendMode: 0, textureId: -1, shaderId: -1, pipelineKey: 1, bindKey: 1, ownMaterial: false };
+const viewA = new View(0, 0, 320, 200);
+const viewB = new View(5, 0, 320, 200);
 const fakeBackendA = {} as RenderBackend;
 const fakeBackendB = {} as RenderBackend;
 
 const makeSlot = (drawable: Drawable): RetainedDrawSlot => ({
   childIndex: 0,
+  viewDependent: false,
   drawable,
   seq: 0,
   zIndex: 0,
@@ -49,17 +52,18 @@ const captureOne = (
   transform: number,
   view: number,
   backend: RenderBackend,
+  viewIdentity: View,
 ): void => {
   cache._beginCapture();
-  cache._appendSlot(0, makeCommand(drawable));
-  cache._commitCapture(content, structure, transform, view, backend);
+  cache._appendSlot(0, makeCommand(drawable), false);
+  cache._commitCapture(content, structure, transform, view, backend, viewIdentity);
 };
 
 describe('RetainedPlanCache', () => {
   test('isClean is false before any capture', () => {
     const cache = new RetainedPlanCache();
 
-    expect(cache.isClean(1, 1, 1, 1, fakeBackendA)).toBe(false);
+    expect(cache.isClean(1, 1, 1, 1, fakeBackendA, viewA)).toBe(false);
     expect(cache.slotCount).toBe(0);
   });
 
@@ -67,17 +71,21 @@ describe('RetainedPlanCache', () => {
     const cache = new RetainedPlanCache();
     const drawable = new Drawable();
 
-    captureOne(cache, drawable, 5, 3, 2, 7, fakeBackendA);
+    captureOne(cache, drawable, 5, 3, 2, 7, fakeBackendA, viewA);
 
-    expect(cache.isClean(5, 3, 2, 7, fakeBackendA)).toBe(true);
+    expect(cache.isClean(5, 3, 2, 7, fakeBackendA, viewA)).toBe(true);
     expect(cache.slotCount).toBe(1);
     expect(cache.slotAt(0).drawable).toBe(drawable);
+    expect(cache.slotAt(0).viewDependent).toBe(false);
 
-    expect(cache.isClean(6, 3, 2, 7, fakeBackendA)).toBe(false); // content changed
-    expect(cache.isClean(5, 4, 2, 7, fakeBackendA)).toBe(false); // structure changed
-    expect(cache.isClean(5, 3, 9, 7, fakeBackendA)).toBe(false); // transform changed
-    expect(cache.isClean(5, 3, 2, 8, fakeBackendA)).toBe(false); // view moved
-    expect(cache.isClean(5, 3, 2, 7, fakeBackendB)).toBe(false); // backend swapped
+    expect(cache.isClean(6, 3, 2, 7, fakeBackendA, viewA)).toBe(false); // content changed
+    expect(cache.isClean(5, 4, 2, 7, fakeBackendA, viewA)).toBe(false); // structure changed
+    expect(cache.isClean(5, 3, 9, 7, fakeBackendA, viewA)).toBe(false); // transform changed
+    expect(cache.isClean(5, 3, 2, 8, fakeBackendA, viewA)).toBe(false); // view moved
+    expect(cache.isClean(5, 3, 2, 7, fakeBackendB, viewA)).toBe(false); // backend swapped
+
+    expect(viewB.updateId).toBe(viewA.updateId);
+    expect(cache.isClean(5, 3, 2, 7, fakeBackendA, viewB)).toBe(false);
 
     drawable.destroy();
   });
@@ -86,11 +94,11 @@ describe('RetainedPlanCache', () => {
     const cache = new RetainedPlanCache();
     const drawable = new Drawable();
 
-    captureOne(cache, drawable, 1, 1, 1, 1, fakeBackendA);
+    captureOne(cache, drawable, 1, 1, 1, 1, fakeBackendA, viewA);
     cache._beginCapture();
-    cache._appendSlot(0, makeCommand(drawable));
+    cache._appendSlot(0, makeCommand(drawable), false);
 
-    expect(cache.isClean(1, 1, 1, 1, fakeBackendA)).toBe(false);
+    expect(cache.isClean(1, 1, 1, 1, fakeBackendA, viewA)).toBe(false);
 
     drawable.destroy();
   });
@@ -99,10 +107,10 @@ describe('RetainedPlanCache', () => {
     const cache = new RetainedPlanCache();
     const drawable = new Drawable();
 
-    captureOne(cache, drawable, 1, 1, 1, 1, fakeBackendA);
+    captureOne(cache, drawable, 1, 1, 1, 1, fakeBackendA, viewA);
     cache.invalidate();
 
-    expect(cache.isClean(1, 1, 1, 1, fakeBackendA)).toBe(false);
+    expect(cache.isClean(1, 1, 1, 1, fakeBackendA, viewA)).toBe(false);
     expect(cache.slotCount).toBe(0);
 
     drawable.destroy();
@@ -112,7 +120,7 @@ describe('RetainedPlanCache', () => {
     const cache = new RetainedPlanCache();
     const drawable = new Drawable();
 
-    captureOne(cache, drawable, 1, 1, 1, 1, fakeBackendA);
+    captureOne(cache, drawable, 1, 1, 1, 1, fakeBackendA, viewA);
 
     const slotBefore = cache.slotAt(0);
     const materialBefore = slotBefore.material;
@@ -120,11 +128,12 @@ describe('RetainedPlanCache', () => {
     expect(materialBefore).not.toBe(material); // copied, not aliased
 
     cache._beginCapture();
-    cache._appendSlot(3, makeCommand(drawable, 9));
-    cache._commitCapture(2, 1, 1, 1, fakeBackendA);
+    cache._appendSlot(3, makeCommand(drawable, 9), true);
+    cache._commitCapture(2, 1, 1, 1, fakeBackendA, viewA);
 
     expect(cache.slotAt(0)).toBe(slotBefore); // same pooled record...
     expect(cache.slotAt(0).material).toBe(materialBefore); // ...same pooled key object
+    expect(cache.slotAt(0).viewDependent).toBe(true);
     expect(cache.slotAt(0).childIndex).toBe(3); // ...refreshed data
     expect(cache.slotAt(0).minX).toBe(9);
     expect(cache.slotAt(0).material.pipelineKey).toBe(material.pipelineKey);
@@ -136,7 +145,7 @@ describe('RetainedPlanCache', () => {
     const cache = new RetainedPlanCache();
     const drawable = new Drawable();
 
-    captureOne(cache, drawable, 1, 1, 1, 1, fakeBackendA);
+    captureOne(cache, drawable, 1, 1, 1, 1, fakeBackendA, viewA);
 
     const pooledSlot = cache.slotAt(0);
 
@@ -151,11 +160,12 @@ describe('RetainedPlanCache', () => {
     expect(pooledSlot.drawable).toBeUndefined();
 
     cache._beginCapture();
-    cache._appendSlot(0, makeCommand(drawable));
-    cache._commitCapture(2, 1, 1, 1, fakeBackendA);
+    cache._appendSlot(0, makeCommand(drawable), false);
+    cache._commitCapture(2, 1, 1, 1, fakeBackendA, viewA);
 
     expect(cache.slotAt(0)).toBe(pooledSlot);
     expect(cache.slotAt(0).drawable).toBe(drawable);
+    expect(cache.slotAt(0).viewDependent).toBe(false);
 
     drawable.destroy();
   });

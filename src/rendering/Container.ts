@@ -670,7 +670,14 @@ export class Container extends RenderNode {
     // so a destroyed direct child always fails the key check above rather than
     // being replayed from a stale slot.
     if (
-      this._retainedPlan?.isClean(this._contentRevision, this._structureRevision, this._transformRevision, viewUpdateId, builder.backend)
+      this._retainedPlan?.isClean(
+        this._contentRevision,
+        this._structureRevision,
+        this._transformRevision,
+        viewUpdateId,
+        builder.backend,
+        builder._retentionView,
+      )
     ) {
       this._replayRetainedChildren(builder);
 
@@ -699,6 +706,10 @@ export class Container extends RenderNode {
       const slot = slotIndex < slotCount ? cache.slotAt(slotIndex) : null;
 
       if (slot !== null && slot.childIndex === index) {
+        if (slot.viewDependent) {
+          builder._noteViewRead();
+        }
+
         builder._replayRetainedDraw(slot);
         slotIndex++;
       } else {
@@ -751,6 +762,7 @@ export class Container extends RenderNode {
       // The scope is still open, so its entry COUNT is the collected length -
       // the array itself may run past it (see `_peekCurrentScopeEntries`).
       const beforeCount = builder._peekCurrentScopeEntryCount();
+      const viewReadVersion = builder._viewReadVersion;
 
       child.collect(builder, index);
 
@@ -760,7 +772,7 @@ export class Container extends RenderNode {
         const entry = builder._peekCurrentScopeEntries()[afterCount - 1]!;
 
         if (entry.kind === RenderEntryKind.Draw && entry.command.drawable === child) {
-          (this._retainedPlan ??= new RetainedPlanCache())._appendSlot(index, entry.command);
+          (this._retainedPlan ??= new RetainedPlanCache())._appendSlot(index, entry.command, builder._viewReadVersion !== viewReadVersion);
         }
       }
     }
@@ -775,6 +787,7 @@ export class Container extends RenderNode {
         this._transformRevision,
         viewUpdateId,
         builder.backend,
+        builder._retentionView,
       );
     }
   }
