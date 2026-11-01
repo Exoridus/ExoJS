@@ -50,6 +50,13 @@ export const measureTimerResolutionMs = (): number => {
   return Number.isFinite(smallest) ? smallest : 0;
 };
 
+const releaseStageCanvas = (canvas: HTMLCanvasElement): void => {
+  const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl');
+
+  gl?.getExtension('WEBGL_lose_context')?.loseContext();
+  canvas.remove();
+};
+
 /**
  * Replace `#stage` with a pristine canvas.
  *
@@ -64,10 +71,7 @@ const freshStageCanvas = (host: HTMLElement): HTMLCanvasElement => {
   const previous = host.querySelector('canvas');
 
   if (previous !== null) {
-    const gl = previous.getContext('webgl2') ?? previous.getContext('webgl');
-
-    gl?.getExtension('WEBGL_lose_context')?.loseContext();
-    previous.remove();
+    releaseStageCanvas(previous);
   }
 
   const canvas = document.createElement('canvas');
@@ -378,7 +382,7 @@ export const runProbeCell = async (options: RunProbeCellOptions): Promise<ProbeC
     restore();
     scene?.dispose();
     await booted?.app.destroy();
-    canvas.remove();
+    releaseStageCanvas(canvas);
   }
 };
 
@@ -419,7 +423,7 @@ export const startVisualPreview = async (options: {
   try {
     booted = await bootProbeApplication(canvas, options.stage, options.pixelRatio, options.backend);
   } catch (error) {
-    canvas.remove();
+    releaseStageCanvas(canvas);
 
     throw error;
   }
@@ -488,7 +492,7 @@ export const startVisualPreview = async (options: {
 
         activeScene.dispose();
         await booted.app.destroy();
-        canvas.remove();
+        releaseStageCanvas(canvas);
       },
     };
   } catch (error) {
@@ -500,7 +504,7 @@ export const startVisualPreview = async (options: {
       disposeScene: scene === null ? null : () => scene!.dispose(),
       destroyApp: () => booted.app.destroy(),
     });
-    canvas.remove();
+    releaseStageCanvas(canvas);
 
     throw error;
   }
