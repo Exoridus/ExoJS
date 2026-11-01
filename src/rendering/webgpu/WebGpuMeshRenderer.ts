@@ -1356,7 +1356,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     this._instancedPipelines.clear();
     this._textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView }>();
 
-    for (const entry of this._geometryCache.values()) {
+    for (const [geometry, entry] of this._geometryCache) {
+      geometry._offDispose(entry.disposeListener);
       entry.vertexBuffer.destroy();
       entry.indexBuffer.destroy();
     }
