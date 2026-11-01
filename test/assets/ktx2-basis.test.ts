@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
 import { afterEach, describe, expect, test, vi } from 'vitest';
@@ -10,6 +11,20 @@ import { factoryContext } from './factory-context';
 
 const fixture = (name: string): ArrayBuffer => Uint8Array.from(readFileSync(`test/fixtures/${name}.ktx2`)).buffer;
 afterEach(() => vi.unstubAllGlobals());
+
+describe('Basis runtime', () => {
+  test('documented runtime checksums match the shipped files', () => {
+    const base = 'src/assets/factories/basis';
+    const readme = readFileSync(`${base}/README.md`, 'utf8');
+
+    for (const file of ['basis_transcoder.mjs', 'basis_transcoder.wasm']) {
+      const hash = createHash('sha256')
+        .update(readFileSync(`${base}/${file}`))
+        .digest('hex');
+      expect(readme).toContain(`\`${hash}\` for \`${file}\``);
+    }
+  });
+});
 
 describe('KTX2 decode dispatch', () => {
   test.each(['bc7-unorm', 'astc-4x4-unorm', 'etc2-rgba8-unorm'])('native %s never creates a worker and aliases its source', async name => {
