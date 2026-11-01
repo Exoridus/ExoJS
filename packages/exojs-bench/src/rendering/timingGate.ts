@@ -106,6 +106,9 @@ export interface TimingComparison {
   readonly baselineP95: number;
   /** Measured p95 (ms). */
   readonly measuredP95: number;
+  /** Timed frames in the baseline and measured run. */
+  readonly baselineFrames: number;
+  readonly measuredFrames: number;
   /** True when the relative median increase exceeds the threshold and the
    * absolute increase meets or exceeds the absolute floor. */
   readonly failed: boolean;
@@ -177,6 +180,8 @@ export const compareToTimingBaseline = (baseline: TimingBaseline, results: reado
       change,
       baselineP95: expected.cpuMsP95,
       measuredP95: result.cpuMsP95,
+      baselineFrames: expected.timedFrames,
+      measuredFrames: result.spec.timedFrames,
       failed: change > TIMING_THRESHOLD && result.cpuMsMedian - expected.cpuMsMedian >= TIMING_FLOOR_MS,
     });
   }
@@ -215,7 +220,7 @@ export const formatTimingOutcome = (outcome: TimingOutcome): string => {
     const percent = `${comparison.change >= 0 ? '+' : ''}${(comparison.change * 100).toFixed(1)}%`;
 
     lines.push(
-      `${comparison.failed ? 'FAIL' : 'ok  '} ${timingCellId(comparison.cell)}: median ${comparison.baselineMs.toFixed(3)} -> ${comparison.measuredMs.toFixed(3)} ms (${percent}); p95 ${comparison.baselineP95.toFixed(3)} -> ${comparison.measuredP95.toFixed(3)} ms (reported, not gated)`,
+      `${comparison.failed ? 'FAIL' : 'ok  '} ${timingCellId(comparison.cell)}: median ${comparison.baselineMs.toFixed(3)} -> ${comparison.measuredMs.toFixed(3)} ms (${percent}); p95 ${comparison.baselineP95.toFixed(3)} -> ${comparison.measuredP95.toFixed(3)} ms (reported, not gated); frames ${String(comparison.baselineFrames)} -> ${String(comparison.measuredFrames)}`,
     );
   }
 
