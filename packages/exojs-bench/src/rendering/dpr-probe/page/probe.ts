@@ -116,6 +116,7 @@ const resolveStage = (): StageSize => {
 
 const collected: ProbeCellResult[] = [];
 let busy = false;
+let previewTransition: Promise<void> = Promise.resolve();
 
 const requestedBackend = new URLSearchParams(globalThis.location.search).get('backend');
 
@@ -194,39 +195,48 @@ const addButton = (host: HTMLElement, value: string, label: string, onClick: () 
  * a time, and two `Application`s sharing the page would also compete for GPU
  * contexts.
  */
-const refreshPreview = async (): Promise<void> => {
-  if (busy) {
-    return;
-  }
+const refreshPreview = (): Promise<void> => {
+  previewTransition = previewTransition.then(async () => {
+    if (busy) {
+      return;
+    }
 
-  await visual.preview?.stop();
-  visual.preview = null;
-  // The preview is not a run: restore the section title and drop the run's
-  // DONE/ABORTED line, which describes a state the tester has left.
-  setProgress('', 'idle');
-  visualReadout.textContent = 'starting…';
+    await visual.preview?.stop();
+    visual.preview = null;
 
-  try {
-    const preview = await startVisualPreview({
-      scene: visual.scene,
-      mode: visual.mode,
-      pixelRatio: visual.dpr,
-      ...(visual.textRatio !== null && { textPixelRatio: visual.textRatio }),
-      stage: resolveStage(),
-      backend: backendRequest(),
-      host: stageHost,
-    });
+    if (busy) {
+      return;
+    }
 
-    visual.preview = preview;
-    visualReadout.textContent = [
-      `${visual.scene}  ·  DPR ${visual.dpr}  ·  text ${visual.textRatio === null ? `inherit (${visual.dpr})` : visual.textRatio}  ·  ${visual.mode}  ·  ${preview.backendType}`,
-      `css ${preview.cssWidth}×${preview.cssHeight}  ·  backing ${preview.backingWidth}×${preview.backingHeight} (${preview.backingWidth * preview.backingHeight} px)`,
-      `internal targets: ${describeTargets({ internalTargets: preview.internalTargets })}`,
-      PROBE_SCENES.find(scene => scene.id === visual.scene)?.purpose ?? '',
-    ].join('\n');
-  } catch (error) {
-    visualReadout.textContent = `preview failed: ${error instanceof Error ? error.message : String(error)}`;
-  }
+    // The preview is not a run: restore the section title and drop the run's
+    // DONE/ABORTED line, which describes a state the tester has left.
+    setProgress('', 'idle');
+    visualReadout.textContent = 'starting…';
+
+    try {
+      const preview = await startVisualPreview({
+        scene: visual.scene,
+        mode: visual.mode,
+        pixelRatio: visual.dpr,
+        ...(visual.textRatio !== null && { textPixelRatio: visual.textRatio }),
+        stage: resolveStage(),
+        backend: backendRequest(),
+        host: stageHost,
+      });
+
+      visual.preview = preview;
+      visualReadout.textContent = [
+        `${visual.scene}  ·  DPR ${visual.dpr}  ·  text ${visual.textRatio === null ? `inherit (${visual.dpr})` : visual.textRatio}  ·  ${visual.mode}  ·  ${preview.backendType}`,
+        `css ${preview.cssWidth}×${preview.cssHeight}  ·  backing ${preview.backingWidth}×${preview.backingHeight} (${preview.backingWidth * preview.backingHeight} px)`,
+        `internal targets: ${describeTargets({ internalTargets: preview.internalTargets })}`,
+        PROBE_SCENES.find(scene => scene.id === visual.scene)?.purpose ?? '',
+      ].join('\n');
+    } catch (error) {
+      visualReadout.textContent = `preview failed: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  });
+
+  return previewTransition;
 };
 
 const buildControls = (): void => {
@@ -462,6 +472,7 @@ const runCells = async (cells: readonly ProbeCell[], measureMs: number, label: s
   runSustained2Button.disabled = true;
   runSustained3Button.disabled = true;
 
+  await previewTransition;
   await visual.preview?.stop();
   visual.preview = null;
   visualReadout.textContent = 'preview stopped while measuring — one variant on screen at a time.';
@@ -658,9 +669,8 @@ buildControls();
 renderResults();
 setStatus(`idle — the full matrix is ${buildProbeMatrix().length} cells, roughly ${estimatedMinutes} minutes.`);
 
-void (async (): Promise<void> => {
-  await probeEnvironmentOnce();
+previewTransition = probeEnvironmentOnce().then(() => {
   renderEnvironment();
   refreshJson();
-  await refreshPreview();
-})();
+});
+void refreshPreview();
