@@ -12,6 +12,10 @@ vi.mock('#assets/storage/IndexedDbDatabase', () => {
       return Promise.resolve(idbStorage.has(recordKey) ? idbStorage.get(recordKey)! : null);
     }
 
+    public _has(storeName: string, key: string): Promise<boolean> {
+      return Promise.resolve(idbStorage.has(`${storeName}:${key}`));
+    }
+
     public save(storeName: string, key: string, data: unknown): Promise<void> {
       idbStorage.set(`${storeName}:${key}`, data);
 
