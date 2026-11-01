@@ -1384,3 +1384,39 @@ describe('layoutText textTransform', () => {
     expect(cr.units).not.toContain('\r');
   });
 });
+
+describe('fit measurement matches glyph placement', () => {
+  const style = new TextStyle({ fontSize: 16 });
+  const kerned: GlyphProvider = { ...makeProvider(), getKerning: (a, b) => (a === 'A' && b === 'V' ? 8 : 0) };
+
+  test('word splitting accounts for positive kerning', () => {
+    const { lines } = layoutText('AVAV', style, { maxWidth: 25, breakWords: true }, kerned);
+
+    expect(lines.map(line => line.width)).toEqual([10, 20, 10]);
+  });
+
+  test('word wrap includes kerning across whitespace boundaries', () => {
+    const provider: GlyphProvider = { ...makeProvider(), getKerning: (a, b) => (a === ' ' && b === 'V' ? 8 : 0) };
+    const { lines } = layoutText('A V', style, { maxWidth: 30 }, provider);
+
+    expect(lines.map(line => line.width)).toEqual([10, 10]);
+  });
+
+  test('ellipsis accounts for kerning against the marker', () => {
+    const provider: GlyphProvider = { ...makeProvider(), getKerning: (a, b) => (a === 'V' && b === '.' ? 8 : 0) };
+    const { lines } = layoutText('AV\nX', style, { maxWidth: 30, maxLines: 1, overflow: 'ellipsis', ellipsis: '.' }, provider);
+
+    expect(lines[0]!.width).toBe(20);
+  });
+
+  test('ellipsis honors tab stops in its retained prefix', () => {
+    const { lines } = layoutText(
+      'A\tB\nX',
+      style,
+      { whiteSpace: 'pre', tabSize: 4, maxWidth: 50, maxLines: 1, overflow: 'ellipsis', ellipsis: '.' },
+      makeProvider(),
+    );
+
+    expect(lines[0]!.width).toBe(50);
+  });
+});

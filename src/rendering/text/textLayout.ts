@@ -124,6 +124,8 @@ export const layoutText = (
   // Resolved on the first tab only: asking for the space glyph would rasterize
   // one into the atlas for every string, tab or no tab.
   const tabWidth = _tabWidthResolver(layout.tabSize, fontSize, provider);
+  const measureLine = (line: string): number =>
+    shaped ? shaper.measureLine(line, fontSize) : _lineAdvance(line, fontSize, provider, letterSpacing, locale, tabWidth, rtl);
   // A shaped line carries its spacing inside the raster the browser produced,
   // so adding it between placements again would double it.
   const glyphSpacing = shaped ? 0 : letterSpacing;
@@ -160,9 +162,10 @@ export const layoutText = (
     if (maxWidth === undefined) {
       allLines.push({ text: hard.text, start: hard.start, contentLength: hard.text.length });
     } else {
-      const ranges = shaped
-        ? _wrapShapedLine(hard.text, fontSize, shaper, maxWidth, breakWords, locale)
-        : _wrapLine(hard.text, fontSize, provider, maxWidth, letterSpacing, breakWords, locale, tabWidth);
+      const ranges =
+        shaped || provider.getKerning !== undefined || rtl
+          ? _wrapMeasuredLine(hard.text, maxWidth, breakWords, locale, measureLine)
+          : _wrapLine(hard.text, fontSize, provider, maxWidth, letterSpacing, breakWords, locale, tabWidth);
 
       for (const range of ranges) {
         allLines.push({
@@ -191,16 +194,11 @@ export const layoutText = (
     // A capped run also marks a line that no wrap could shorten - a single
     // unbreakable word under `maxLines: 1` is exactly the case a caller reaches
     // for the marker to cover, and dropping no line at all is how it presents.
-    const tooWide =
-      maxWidth !== undefined &&
-      (shaped ? shaper.measureLine(last.text, fontSize) : _lineAdvance(last.text, fontSize, provider, letterSpacing, locale, tabWidth)) >
-        maxWidth;
+    const tooWide = maxWidth !== undefined && measureLine(last.text) > maxWidth;
 
     if (dropped || tooWide) {
       const ellipsis = layout.ellipsis ?? defaultEllipsis;
-      const truncated = shaped
-        ? _ellipsizeShaped(last.text, ellipsis, fontSize, shaper, maxWidth, locale)
-        : _ellipsize(last.text, ellipsis, fontSize, provider, maxWidth, letterSpacing, locale);
+      const truncated = _ellipsize(last.text, ellipsis, maxWidth, locale, measureLine);
 
       allLines[lastIndex] = { text: truncated.text, start: last.start, contentLength: truncated.contentLength };
     }
@@ -692,50 +690,24 @@ const _lineAdvance = (
   letterSpacing: number,
   locale: string | undefined,
   tabWidth: () => number,
-): number => (line.length === 0 ? 0 : _cursorAdvance(line, fontSize, provider, letterSpacing, locale, tabWidth, 0) - letterSpacing);
+  rtl = false,
+): number => (line.length === 0 ? 0 : _cursorAdvance(line, fontSize, provider, letterSpacing, locale, tabWidth, 0, rtl) - letterSpacing);
 
-/** Advance width of a run of grapheme clusters, without the gap after the last one. */
-const _measureClusters = (clusters: readonly string[], fontSize: number, provider: GlyphProvider, letterSpacing: number): number => {
-  if (clusters.length === 0) {
-    return 0;
-  }
-
-  let width = 0;
-
-  for (const cluster of clusters) {
-    width += provider.getGlyph(cluster, fontSize).advance + letterSpacing;
-  }
-
-  // The gap after the final glyph is not part of the line's ink extent.
-  return width - letterSpacing;
-};
-
-/**
- * Append `ellipsis` to `line`, dropping trailing grapheme clusters until the
- * result fits `maxWidth`. Whole clusters go, so truncation never leaves a
- * dangling combining mark or half a flag behind. Without a `maxWidth` there is
- * nothing to fit against, so the marker is simply appended.
- */
+/** Drop trailing clusters until the contextual line, including its marker, fits. */
 const _ellipsize = (
   line: string,
   ellipsis: string,
-  fontSize: number,
-  provider: GlyphProvider,
   maxWidth: number | undefined,
-  letterSpacing: number,
   locale: string | undefined,
+  measureLine: (line: string) => number,
 ): TruncatedLine => {
   if (maxWidth === undefined) {
     return { text: line + ellipsis, contentLength: line.length };
   }
 
   const clusters = graphemes(line, locale);
-  // The marker is laid out cluster by cluster like any other text, so it has to
-  // be measured that way too - handing it to the provider whole would ask the
-  // atlas for one glyph standing for the entire string.
-  const markerClusters = ellipsis.length === 0 ? [] : graphemes(ellipsis, locale);
 
-  while (clusters.length > 0 && _measureClusters([...clusters, ...markerClusters], fontSize, provider, letterSpacing) > maxWidth) {
+  while (clusters.length > 0 && measureLine(`${clusters.join('')}${ellipsis}`) > maxWidth) {
     clusters.pop();
   }
 
@@ -744,49 +716,13 @@ const _ellipsize = (
   return { text: kept + ellipsis, contentLength: kept.length };
 };
 
-/**
- * The shaped counterpart of {@link _ellipsize}. Every candidate is measured
- * complete, marker included: for contextual text the width of a prefix plus
- * the width of the marker is not the width of the two together.
- */
-const _ellipsizeShaped = (
+/** Greedy wrapping for text whose widths depend on neighboring clusters. */
+const _wrapMeasuredLine = (
   line: string,
-  ellipsis: string,
-  fontSize: number,
-  shaper: LineShaper,
-  maxWidth: number | undefined,
-  locale: string | undefined,
-): TruncatedLine => {
-  if (maxWidth === undefined) {
-    return { text: line + ellipsis, contentLength: line.length };
-  }
-
-  const clusters = graphemes(line, locale);
-
-  while (clusters.length > 0 && shaper.measureLine(`${clusters.join('')}${ellipsis}`, fontSize) > maxWidth) {
-    clusters.pop();
-  }
-
-  const kept = clusters.join('');
-
-  return { text: kept + ellipsis, contentLength: kept.length };
-};
-
-/**
- * Greedy word wrap for browser-shaped text.
- *
- * Structurally the same pass as {@link _wrapLine}, with one difference that
- * matters: a candidate is measured as one contextual string rather than summed
- * from the widths of its parts, because for contextual text those are not the
- * same number.
- */
-const _wrapShapedLine = (
-  line: string,
-  fontSize: number,
-  shaper: LineShaper,
   maxWidth: number,
   breakWords: boolean,
   locale: string | undefined,
+  measureLine: (line: string) => number,
 ): LineRange[] => {
   if (line.length === 0) {
     return [{ start: 0, end: 0 }];
@@ -808,7 +744,7 @@ const _wrapShapedLine = (
       continue;
     }
 
-    if (breakWords && shaper.measureLine(line.slice(run.start, run.end), fontSize) > maxWidth) {
+    if (breakWords && measureLine(line.slice(run.start, run.end)) > maxWidth) {
       if (start !== -1) {
         ranges.push({ start, end });
       }
@@ -820,7 +756,7 @@ const _wrapShapedLine = (
       let chunkEnd = run.start;
 
       for (const bounds of _clusterBounds(line, run.start, run.end, locale)) {
-        if (chunkEnd > chunkStart && shaper.measureLine(line.slice(chunkStart, bounds.end), fontSize) > maxWidth) {
+        if (chunkEnd > chunkStart && measureLine(line.slice(chunkStart, bounds.end)) > maxWidth) {
           ranges.push({ start: chunkStart, end: chunkEnd });
           chunkStart = bounds.start;
         }
@@ -839,7 +775,7 @@ const _wrapShapedLine = (
       // The candidate is one contiguous slice, so measuring it also measures
       // the blanks it swallowed - which is the point: contextual widths do not
       // add up from parts.
-    } else if (shaper.measureLine(line.slice(start, run.end), fontSize) <= maxWidth) {
+    } else if (measureLine(line.slice(start, run.end)) <= maxWidth) {
       end = run.end;
     } else {
       ranges.push({ start, end });
@@ -1098,16 +1034,7 @@ const _applyWhiteSpace = (text: string, mode: 'normal' | 'pre' | 'pre-line'): Pr
   return { text: out, sourceMap: Int32Array.from(map) };
 };
 
-/**
- * Cursor advance of `text`, INCLUDING the letter-spacing gap after its last
- * cluster. Widths in this form add up across concatenation, so the wrapper can
- * compose a candidate from parts it measured separately; a line's reported
- * width drops the one trailing gap again.
- *
- * `startX` is where on its line the run begins, which only a tab reads: a tab
- * stop is measured from the line origin, so the same run of tabs is a different
- * width depending on what precedes it.
- */
+/** Cursor advance including the trailing letter-spacing gap, using placement order. */
 const _cursorAdvance = (
   text: string,
   fontSize: number,
@@ -1116,24 +1043,22 @@ const _cursorAdvance = (
   locale: string | undefined,
   tabWidth: () => number,
   startX: number,
+  rtl = false,
 ): number => {
   let advance = 0;
+  let previous: string | null = null;
+  const clusters = isTrivialText(text) ? text : graphemes(text, locale);
 
-  if (isTrivialText(text)) {
-    for (let i = 0; i < text.length; i++) {
-      const cluster = text[i]!;
-      const info = provider.getGlyph(cluster, fontSize);
-
-      advance += (cluster === '	' ? _tabAdvance(startX + advance, tabWidth(), info.advance) : info.advance) + letterSpacing;
-    }
-
-    return advance;
-  }
-
-  for (const cluster of graphemes(text, locale)) {
+  for (let i = 0; i < clusters.length; i++) {
+    const cluster = clusters[rtl ? clusters.length - 1 - i : i]!;
     const info = provider.getGlyph(cluster, fontSize);
 
-    advance += (cluster === '	' ? _tabAdvance(startX + advance, tabWidth(), info.advance) : info.advance) + letterSpacing;
+    if (previous !== null && provider.getKerning !== undefined) {
+      advance += rtl ? provider.getKerning(cluster, previous, fontSize) : provider.getKerning(previous, cluster, fontSize);
+    }
+
+    advance += (cluster === '\t' ? _tabAdvance(startX + advance, tabWidth(), info.advance) : info.advance) + letterSpacing;
+    previous = cluster;
   }
 
   return advance;
