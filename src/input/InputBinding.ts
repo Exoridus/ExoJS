@@ -144,7 +144,7 @@ export class InputBinding {
   /**
    * Values of this binding's resolved channels at the exact construction
    * boundary, in the same order as {@link channels}. Supplied by the
-   * {@link InputSystem} when it creates a binding; direct/internal callers
+   * {@link InputSystem} or {@link Gamepad} when it creates a binding; direct/internal callers
    * may omit it and retain the legacy watermark reconstruction fallback.
    */
   private readonly _constructionBaseline: Float32Array | null;
@@ -235,17 +235,24 @@ export class InputBinding {
     this._pendingLength = 0;
 
     if (batches === undefined) {
-      this._seeded = true;
+      let timestamp: number | null = getPreciseTime();
+
+      if (!this._seeded) {
+        this._seeded = true;
+
+        if (this._constructionBaseline === null) {
+          timestamp = null;
+        } else {
+          this._channelValues.set(this._constructionBaseline);
+          this._applyEdge(null);
+        }
+      }
 
       for (let i = 0; i < this.channels.length; i++) {
         this._channelValues[i] = channels[this.channels[i]!] ?? 0;
       }
 
-      // This path never replays an ordered batch history at all (see this
-      // method's own doc comment) - every call is a live, single-instant
-      // read, exactly like the pre-timestamp design, so "now" is always the
-      // correct occurred-at for whatever edge this read reveals.
-      this._replayOrEvaluate([], getPreciseTime());
+      this._replayOrEvaluate([], timestamp);
 
       return;
     }
