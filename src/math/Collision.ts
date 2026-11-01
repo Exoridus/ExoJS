@@ -87,6 +87,7 @@ const intersectionLineRect = (line: Line, rectangle: Rectangle): boolean => {
   const bottomRight = { x: x + width, y: y + height };
 
   return (
+    intersectionPointRect(line.fromPosition, rectangle) ||
     intersectionLineLineSegments(line.fromPosition, line.toPosition, topLeft, bottomLeft) ||
     intersectionLineLineSegments(line.fromPosition, line.toPosition, topRight, bottomRight) ||
     intersectionLineLineSegments(line.fromPosition, line.toPosition, topLeft, topRight) ||
@@ -160,6 +161,10 @@ const intersectionLineEllipse = (line: Line, ellipse: Ellipse): boolean => {
 const intersectionLinePoly = (line: Line, polygon: Polygon): boolean => {
   const { x: offsetX, y: offsetY, points } = polygon;
   const len = points.length;
+
+  if (intersectionPointPoly(line.fromPosition, polygon)) {
+    return true;
+  }
 
   for (let i = 0; i < len; i++) {
     // i and (i + 1) % len are valid indices into the length-`len` points array.

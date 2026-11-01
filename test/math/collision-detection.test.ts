@@ -62,6 +62,18 @@ const diamond = (cx: number, cy: number, r: number): Polygon =>
 // intersectionPointPoint
 // ---------------------------------------------------------------------------
 
+describe('segment overlap', () => {
+  test('detects contained and edge-aligned segments', () => {
+    const target = rect(0, 0, 10, 10);
+    const polygon = square(0, 0, 10);
+    expect(intersectionLineRect(line(2, 2, 4, 4), target)).toBe(true);
+    expect(intersectionLinePoly(line(2, 2, 4, 4), polygon)).toBe(true);
+    expect(intersectionLineRect(line(2, 0, 4, 0), target)).toBe(true);
+    expect(intersectionLinePoly(line(2, 0, 4, 0), polygon)).toBe(true);
+    expect(intersectionLineLine(line(2, 0, 4, 0), line(0, 0, 10, 0))).toBe(true);
+  });
+});
+
 describe('intersectionPointPoint', () => {
   test('identical points intersect with zero threshold', () => {
     expect(intersectionPointPoint({ x: 1, y: 1 }, { x: 1, y: 1 })).toBe(true);
