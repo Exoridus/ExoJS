@@ -229,6 +229,7 @@ describe('BoundingBoxesLayer', () => {
       interactive: false,
       getBounds: vi.fn(() => ({ width: 0, height: 0, left: 0, top: 0, right: 0, bottom: 0 })),
       contains: vi.fn(() => false),
+      _resolveTransformGroupAnchor: vi.fn(() => null),
       children: [node0, node1],
     };
 
@@ -256,6 +257,7 @@ describe('BoundingBoxesLayer', () => {
       interactive: false,
       getBounds: vi.fn(() => ({ width: 0, height: 0, left: 0, top: 0, right: 0, bottom: 0 })),
       contains: vi.fn(() => false),
+      _resolveTransformGroupAnchor: vi.fn(() => null),
       children: [node1, node2],
     };
 
@@ -290,6 +292,7 @@ describe('BoundingBoxesLayer', () => {
       interactive: false,
       getBounds: vi.fn(() => ({ width: 0, height: 0, left: 0, top: 0, right: 0, bottom: 0 })),
       contains: vi.fn(() => false),
+      _resolveTransformGroupAnchor: vi.fn(() => null),
       children: nodes,
     };
 
@@ -323,6 +326,7 @@ describe('BoundingBoxesLayer', () => {
       interactive: false,
       getBounds: vi.fn(() => ({ width: 10, height: 10, left: 0, top: 0, right: 10, bottom: 10 })),
       contains: vi.fn(() => false),
+      _resolveTransformGroupAnchor: vi.fn(() => null),
     };
     const app = makeApp(leaf as unknown as FakeNode);
     const layer = new BoundingBoxesLayer(app);
