@@ -10,8 +10,9 @@ import type { TiledWangSetData } from './data';
  *
  * - **`'corner'`** - Maps the four corner positions of each `wangtile` to the
  *   four corner bits of the 8-bit blob mask and returns a `WangSet` of type
- *   `'blob'`. Only color index `> 0` in the Tiled wangid is treated as "this
- *   terrain"; color index `0` means unset (not this terrain).
+ *   `'blob'`. Each set corner also sets its two supporting cardinal bits. Only
+ *   color index `> 0` in the Tiled wangid is treated as "this terrain"; color
+ *   index `0` means unset (not this terrain).
  *
  *   Tiled corner wangid position → WangSet blob bit mapping:
  *   - `wangid[7]` (top-left)     → bit 0 (value 1)
@@ -97,6 +98,22 @@ const convertCornerWangSet = (wangSet: TiledWangSetData, tilesetIndex: number): 
 
     if ((id[cornerIndexBottomRight] ?? 0) > 0) {
       mask |= blobBitBottomRight;
+    }
+
+    if ((mask & (blobBitTopLeft | blobBitTopRight)) !== 0) {
+      mask |= 2;
+    }
+
+    if ((mask & (blobBitTopRight | blobBitBottomRight)) !== 0) {
+      mask |= 16;
+    }
+
+    if ((mask & (blobBitBottomLeft | blobBitBottomRight)) !== 0) {
+      mask |= 64;
+    }
+
+    if ((mask & (blobBitTopLeft | blobBitBottomLeft)) !== 0) {
+      mask |= 8;
     }
 
     // Last writer wins when two wangtiles produce the same mask

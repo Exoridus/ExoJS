@@ -1,4 +1,5 @@
-import { WangSet } from '@codexo/exojs/tilemap';
+import { type Texture, TextureRegion } from '@codexo/exojs';
+import { autoTile, refreshCell, TILE_TRANSFORM_IDENTITY, TileLayer, TileSet, WangSet } from '@codexo/exojs/tilemap';
 import { describe, expect, it } from 'vitest';
 
 import type { TiledWangSetData } from '../src/data';
@@ -36,9 +37,9 @@ const makeWangSet = (type: string, wangtiles: Array<{ tileid: number; wangid: nu
 
 describe('tiledWangSetToWangSet — corner type', () => {
   // Build a corner wangset with 3 tiles:
-  //   tile 10: all corners set → blob mask TL|TR|BL|BR = 1|4|32|128 = 165
+  //   tile 10: all corners set → blob mask = 255
   //   tile 11: no corners set  → blob mask = 0
-  //   tile 12: TL + TR only    → blob mask TL|TR = 1|4 = 5
+  //   tile 12: TL + TR only    → blob mask TL|T|TR|L|R = 31
   const cornerSet = makeWangSet('corner', [
     //        top topright right botright bot botleft left topleft
     { tileid: 10, wangid: [0, 1, 0, 1, 0, 1, 0, 1] }, // all corners
@@ -61,10 +62,10 @@ describe('tiledWangSetToWangSet — corner type', () => {
     expect(result.type).toBe('blob');
   });
 
-  it('maps all-corners mask (165) → tile 10', () => {
+  it('maps all-corners mask (255) → tile 10', () => {
     const result = tiledWangSetToWangSet(cornerSet, TILESET_INDEX)!;
-    // TL(1) | TR(4) | BL(32) | BR(128) = 165
-    expect(result.getTileId(165)).toBe(10);
+    // All corners and cardinal bits are set.
+    expect(result.getTileId(255)).toBe(10);
   });
 
   it('maps no-corners mask (0) → tile 11', () => {
@@ -72,10 +73,79 @@ describe('tiledWangSetToWangSet — corner type', () => {
     expect(result.getTileId(0)).toBe(11);
   });
 
-  it('maps TL+TR mask (5) → tile 12', () => {
+  it('maps TL+TR mask (31) to tile 12', () => {
     const result = tiledWangSetToWangSet(cornerSet, TILESET_INDEX)!;
-    // TL(1) | TR(4) = 5
-    expect(result.getTileId(5)).toBe(12);
+    // TL(1) | T(2) | TR(4) | L(8) | R(16) = 31
+    expect(result.getTileId(31)).toBe(12);
+  });
+
+  it.each(['autoTile', 'refreshCell'])('applies every converted corner combination to its neighborhood with %s', apply => {
+    const wangtiles = Array.from({ length: 16 }, (_, corners) => ({
+      tileid: corners,
+      wangid: [0, (corners >> 1) & 1, 0, (corners >> 3) & 1, 0, (corners >> 2) & 1, 0, corners & 1],
+    }));
+    const set = tiledWangSetToWangSet(makeWangSet('corner', wangtiles), 0)!;
+    const texture = { width: 128, height: 128, destroyed: false } as Texture;
+    const tileset = new TileSet({
+      columns: 4,
+      name: 'terrain',
+      tileCount: 16,
+      tileWidth: 32,
+      tileHeight: 32,
+      texture: new TextureRegion(texture, { x: 0, y: 0, width: 128, height: 128 }),
+    });
+    const neighborhoods = [
+      [
+        [0, 0],
+        [1, 0],
+        [0, 1],
+      ],
+      [
+        [2, 0],
+        [1, 0],
+        [2, 1],
+      ],
+      [
+        [0, 2],
+        [0, 1],
+        [1, 2],
+      ],
+      [
+        [2, 2],
+        [2, 1],
+        [1, 2],
+      ],
+    ];
+
+    for (let corners = 0; corners < 16; corners++) {
+      const layer = new TileLayer({
+        id: 0,
+        name: 'terrain',
+        width: 3,
+        height: 3,
+        tileWidth: 32,
+        tileHeight: 32,
+        tilesets: [tileset],
+      });
+      const tile = { localTileId: 15, tileset, transform: TILE_TRANSFORM_IDENTITY };
+      layer.setTileAt(1, 1, tile);
+
+      for (let corner = 0; corner < 4; corner++) {
+        if ((corners & (1 << corner)) !== 0) {
+          for (const [x, y] of neighborhoods[corner]!) {
+            layer.setTileAt(x!, y!, tile);
+          }
+        }
+      }
+
+      if (apply === 'autoTile') {
+        autoTile(layer, set, { wrapBorder: false });
+      } else {
+        refreshCell(layer, 1, 1, set, { wrapBorder: false });
+      }
+
+      expect(layer.getTileAt(1, 1)?.localTileId, `corner combination ${corners}`).toBe(corners);
+    }
   });
 
   it('returns undefined for a mask with no mapping', () => {
