@@ -5,6 +5,7 @@ struct ProjectionUniforms {
 struct BlendUniforms {
     mode: u32,
     opaqueBackdrop: f32,
+    captureOrigin: vec2<f32>,
 };
 
 @group(0) @binding(0)
@@ -136,7 +137,8 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     // copyTextureToTexture preserves the target's top-left orientation, so the
     // backdrop is sampled at the same UV as the quad — no V-flip (unlike the
     // WebGL2 framebuffer-blit path, which reads bottom-left order).
-    let dst = textureSample(backdropTexture, backdropSampler, input.texcoord);
+    let backdropUv = (input.position.xy - blend.captureOrigin) / vec2<f32>(textureDimensions(backdropTexture));
+    let dst = textureSample(backdropTexture, backdropSampler, backdropUv);
 
     let alphaSource = src.a;
     // An opaque target (the on-screen root canvas, alphaMode 'opaque') has an

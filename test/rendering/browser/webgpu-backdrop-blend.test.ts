@@ -35,6 +35,7 @@ import { Color } from '#core/Color';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import { BlendModes, ScaleModes, TextureFormat } from '#rendering/types';
+import { View } from '#rendering/View';
 import { WebGpuBackdropBlendCompositor } from '#rendering/webgpu/WebGpuBackdropBlendCompositor';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
@@ -368,4 +369,45 @@ describe('WebGPU backdrop-aware blend — root coverage follows alphaMode', () =
       }
     }
   });
+});
+
+test.each([
+  { viewportX: 0.5, rotation: 0 },
+  { viewportX: 0, rotation: 37 },
+  { viewportX: 0.5, rotation: 37 },
+])('backdrop pixels stay aligned with viewport $viewportX and rotation $rotation', async ({ viewportX, rotation }) => {
+  const backend = await setupBackend();
+  const white = solidDataTexture(255, 255, 255);
+  const backdrop = new DataTexture({
+    width: 2,
+    height: 2,
+    format: TextureFormat.Rgba8,
+    data: new Uint8Array([200, 40, 40, 255, 200, 40, 40, 255, 200, 40, 40, 255, 40, 40, 200, 255]),
+    textureOptions: { scaleMode: ScaleModes.Nearest },
+  });
+  const view = new View(32, 32, 64, 64);
+  const compositor = new WebGpuBackdropBlendCompositor();
+
+  compositor.connect(backend.device);
+
+  try {
+    drawBackdrop(backend, backdrop);
+    view.setViewport(viewportX, 0, 1 - viewportX, 1);
+    view.rotation = rotation;
+    backend.setView(view);
+    compositor.compose(backend, white, 4, 8, 48, 40, BlendModes.Darken);
+
+    const readPixel = await readGpuCanvas(backend);
+
+    expectRgbNear(readPixel(40, 24), [200, 40, 40]);
+    expectRgbNear(readPixel(40, 40), [40, 40, 200]);
+    expectRgbNear(readPixel(48, 24), [200, 40, 40]);
+    expectRgbNear(readPixel(48, 40), [40, 40, 200]);
+  } finally {
+    compositor.disconnect();
+    view.destroy();
+    backdrop.destroy();
+    white.destroy();
+    backend.destroy();
+  }
 });
