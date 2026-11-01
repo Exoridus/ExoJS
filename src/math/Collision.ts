@@ -429,13 +429,11 @@ const getCollisionCircleRectangle = (circle: Circle, rect: Rectangle, swap = fal
 
   // Containment flags: A inside B when the rect fully covers the circle,
   // B inside A when the circle fully covers the rect's bounding extent.
-  const halfWidth = rect.width / 2;
-  const halfHeight = rect.height / 2;
-  const minHalf = Math.min(halfWidth, halfHeight);
-  const maxHalf = Math.max(halfWidth, halfHeight);
-  const centerDistance = getDistance(circle.x, circle.y, rect.left + halfWidth, rect.top + halfHeight);
-  const containsA = radius <= minHalf && centerDistance <= minHalf - radius;
-  const containsB = maxHalf <= radius && centerDistance <= radius - maxHalf;
+  const containsA =
+    circle.x - radius >= rect.left && circle.x + radius <= rect.right && circle.y - radius >= rect.top && circle.y + radius <= rect.bottom;
+  const farthestX = Math.max(Math.abs(circle.x - rect.left), Math.abs(circle.x - rect.right));
+  const farthestY = Math.max(Math.abs(circle.y - rect.top), Math.abs(circle.y - rect.bottom));
+  const containsB = farthestX * farthestX + farthestY * farthestY <= radius * radius;
 
   // Natural normal points from the rect surface toward the circle. When the circle
   // center lies inside the rect (distance == 0) fall back to a unit vector
