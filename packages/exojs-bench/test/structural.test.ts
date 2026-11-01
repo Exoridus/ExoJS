@@ -110,6 +110,7 @@ const makeFakeGpu = () => {
   const queue = {
     writeBuffer: () => calls.push('writeBuffer'),
     writeTexture: () => calls.push('writeTexture'),
+    copyExternalImageToTexture: () => calls.push('copyExternalImageToTexture'),
     submit: () => calls.push('submit'),
   } as unknown as GPUQueue;
 
@@ -128,6 +129,20 @@ const makeFakeGpu = () => {
 };
 
 describe('attachWebGpuProbe', () => {
+  test('counts external image uploads and restores the queue on detach', () => {
+    const device = makeFakeGpu();
+    const probe = attachWebGpuProbe(device);
+    const copy = () =>
+      device.queue.copyExternalImageToTexture({} as GPUCopyExternalImageSourceInfo, {} as GPUCopyExternalImageDestInfo, [1, 1]);
+
+    copy();
+    expect(probe.counters.bufferUploads).toBe(1);
+    probe.detach();
+    copy();
+    expect(probe.counters.bufferUploads).toBe(1);
+    expect(device.calls).toEqual(['copyExternalImageToTexture', 'copyExternalImageToTexture']);
+  });
+
   test('counts draw calls across all draw entry points', () => {
     const device = makeFakeGpu();
     const probe = attachWebGpuProbe(device);
