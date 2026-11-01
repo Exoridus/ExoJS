@@ -55,7 +55,7 @@ class ColourRampCyclingScene extends Scene {
     const { width, height } = app;
 
     this.ramp = LutFilter.fromImage(buildRampCanvas(0));
-    this.filter = new LutFilter({ mode: 'rgb1d' }).setLut(this.ramp);
+    this.filter = this.track(new LutFilter({ mode: 'rgb1d' }).setLut(this.ramp));
 
     this.sprite = new Sprite(this.loader.get(PRIMARY_RAMP)).setAnchor(0.5).setScale(4);
     this.sprite.setPosition(width / 2, height / 2);

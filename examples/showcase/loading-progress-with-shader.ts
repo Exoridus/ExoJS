@@ -34,7 +34,7 @@ class LoadingProgressWithShaderScene extends Scene {
       .setAnchor(0.5)
       .setScale(2.4)
       .setPosition(width / 2, height / 2);
-    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uProgress: 0 } });
+    this.filter = this.track(new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uProgress: 0 } }));
     this.ring.filters = [this.filter];
     app.tweens.create(this.progress).to({ v: 1 }, 2.4).start();
   }

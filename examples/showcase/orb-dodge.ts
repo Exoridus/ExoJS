@@ -46,7 +46,7 @@ class PlayScene extends Scene {
   private sheetData!: SpritesheetData;
   private panel!: ReturnType<typeof demoPanel>;
   private pauseText!: Text;
-  private readonly blur = new BlurFilter({ strength: 0 });
+  private readonly blur = this.track(new BlurFilter({ strength: 0 }));
   private blurTween: Tween | null = null;
   private navigating = false;
   private orbs: OrbData[] = [];

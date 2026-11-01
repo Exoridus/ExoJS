@@ -25,7 +25,7 @@ class DropShadowFilterScene extends Scene {
 
     // A shadow that trails the ship down and to the right, soft enough to read
     // as depth rather than as a second sprite.
-    this.shadow = new DropShadowFilter({ offsetX: 12, offsetY: 16, blur: 6, quality: 2, color: new Color(0, 0, 0, 0.6) });
+    this.shadow = this.track(new DropShadowFilter({ offsetX: 12, offsetY: 16, blur: 6, quality: 2, color: new Color(0, 0, 0, 0.6) }));
     this.sprite = new Sprite(this.loader.get(SHIP))
       .setAnchor(0.5)
       .setScale(10)
