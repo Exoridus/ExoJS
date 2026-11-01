@@ -302,6 +302,11 @@ export const runProbeCell = async (options: RunProbeCellOptions): Promise<ProbeC
     const measuredMs = performance.now() - startedAt;
     const gpuSamples = await gpuTimer.collect();
     const gpuUsable = gpuTimer.available && gpuSamples.frameMs.length > 0;
+
+    if (booted.webgpuTimestampQuery === null && gpuTimer.note !== null) {
+      errors.push(gpuTimer.note);
+    }
+
     const internalTargets = instrumentation.recorder.summary();
     const backingWidth = canvas.width;
     const backingHeight = canvas.height;
