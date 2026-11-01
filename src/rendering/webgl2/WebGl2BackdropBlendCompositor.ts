@@ -43,6 +43,7 @@ export class WebGl2BackdropBlendCompositor {
   private readonly _backdropSamplerSlot: Int32Array = new Int32Array([1]);
   private readonly _modeValue: Int32Array = new Int32Array([0]);
   private readonly _sourceFlipValue: Float32Array = new Float32Array([0]);
+  private readonly _backdropRectValue = new Float32Array(4);
   private readonly _backdropFlipValue: Float32Array = new Float32Array([1]);
   private readonly _opaqueValue: Float32Array = new Float32Array([0]);
   private _connection: BackdropBlendCompositorConnection | null = null;
@@ -121,17 +122,37 @@ export class WebGl2BackdropBlendCompositor {
 
     const gl = backend.context;
     const target = backend.renderTarget;
-    const scaleX = target.root && target.width > 0 ? gl.drawingBufferWidth / target.width : 1;
-    const scaleY = target.root && target.height > 0 ? gl.drawingBufferHeight / target.height : 1;
-    const px = Math.max(0, Math.floor(x * scaleX));
+    const backingWidth = target.root ? gl.drawingBufferWidth : target.width;
     const backingHeight = target.root ? gl.drawingBufferHeight : target.height;
-    const py = Math.max(0, Math.floor(backingHeight - (y + height) * scaleY));
-    // The blit below is a raw framebuffer copy: it must land in the target's
-    // own storage format, or a mismatch (e.g. an Rgba8Srgb target into an
-    // Rgba8 backdrop) is not a guaranteed-compatible blit on every driver.
-    const backdrop = backend.acquireRenderTexture(width, height, target instanceof RenderTexture ? target.format : TextureFormat.Rgba8);
-    const cw = Math.min(backdrop.width, Math.max(0, Math.round(width * scaleX)));
-    const ch = Math.min(backdrop.height, Math.max(0, Math.round(height * scaleY)));
+    const viewport = backend._snapViewport;
+    const projection = backend.view.getTransform();
+    const originX = viewport.x + ((projection.a * x + projection.b * y + projection.x + 1) * viewport.width) / 2;
+    const originY = viewport.y + ((projection.c * x + projection.d * y + projection.y + 1) * viewport.height) / 2;
+    const dxX = (projection.a * width * viewport.width) / 2;
+    const dyX = (projection.b * height * viewport.width) / 2;
+    const dxY = (projection.c * width * viewport.height) / 2;
+    const dyY = (projection.d * height * viewport.height) / 2;
+    const rawX = Math.floor(originX + Math.min(0, dxX) + Math.min(0, dyX));
+    const rawY = Math.floor(originY + Math.min(0, dxY) + Math.min(0, dyY));
+    const captureWidth = Math.max(1, Math.ceil(originX + Math.max(0, dxX) + Math.max(0, dyX)) - rawX);
+    const captureHeight = Math.max(1, Math.ceil(originY + Math.max(0, dxY) + Math.max(0, dyY)) - rawY);
+    const px = Math.max(0, rawX);
+    const py = Math.max(0, rawY);
+    const cw = Math.max(0, Math.min(backingWidth, rawX + captureWidth) - px);
+    const ch = Math.max(0, Math.min(backingHeight, rawY + captureHeight) - py);
+
+    if (cw === 0 || ch === 0) {
+      return;
+    }
+
+    // Storage-sized captures preserve texel density and allow multisample resolves without scaling.
+    const backdrop = backend.acquireRenderTexture(
+      captureWidth,
+      captureHeight,
+      target instanceof RenderTexture ? target.format : TextureFormat.Rgba8,
+    );
+    const dx = px - rawX;
+    const dy = py - rawY;
     // An opaque framebuffer (the default alpha-less root canvas) reports a
     // captured backdrop alpha of 0; treat such a backdrop as fully covered.
     const opaqueBackdrop = target.opaqueDestination;
@@ -148,11 +169,26 @@ export class WebGl2BackdropBlendCompositor {
       // path for the on-screen root canvas.
       gl.bindFramebuffer(gl.READ_FRAMEBUFFER, backend._renderTargetFramebuffer(target));
       gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, backend._renderTargetFramebuffer(backdrop));
-      gl.blitFramebuffer(px, py, px + cw, py + ch, 0, mirrored ? ch : 0, cw, mirrored ? 0 : ch, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+      gl.blitFramebuffer(
+        px,
+        py,
+        px + cw,
+        py + ch,
+        dx,
+        mirrored ? captureHeight - dy : dy,
+        dx + cw,
+        mirrored ? captureHeight - dy - ch : dy + ch,
+        gl.COLOR_BUFFER_BIT,
+        gl.NEAREST,
+      );
       gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
       gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
       backend._rebindActiveTarget();
 
+      this._backdropRectValue[0] = rawX;
+      this._backdropRectValue[1] = rawY;
+      this._backdropRectValue[2] = captureWidth;
+      this._backdropRectValue[3] = captureHeight;
       this._drawBlend(backend, source, backdrop, x, y, width, height, blendMode, opaqueBackdrop, mirrored);
     } finally {
       backend.releaseRenderTexture(backdrop);
@@ -184,13 +220,14 @@ export class WebGl2BackdropBlendCompositor {
     const projection = backend.view.getTransform().toArray(false);
 
     this._sourceFlipValue[0] = source.flipY ? 1 : 0;
-    this._backdropFlipValue[0] = backdropTopDown ? 0 : 1;
+    this._backdropFlipValue[0] = backdropTopDown ? 1 : 0;
     this._modeValue[0] = blendMode;
     this._opaqueValue[0] = opaqueBackdrop ? 1 : 0;
     this._shader.getUniform('u_projection').setValue(projection);
     this._shader.getUniform('u_source').setValue(this._sourceSamplerSlot);
     this._shader.getUniform('u_sourceFlip').setValue(this._sourceFlipValue);
     this._shader.getUniform('u_backdrop').setValue(this._backdropSamplerSlot);
+    this._shader.getUniform('u_backdropRect').setValue(this._backdropRectValue);
     this._shader.getUniform('u_backdropFlip').setValue(this._backdropFlipValue);
     this._shader.getUniform('u_mode').setValue(this._modeValue);
     this._shader.getUniform('u_opaqueBackdrop').setValue(this._opaqueValue);
