@@ -1687,11 +1687,13 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   private _discardStalePreload(entry: PreloadEntry): void {
     this._beginPreloadCancellation(entry);
 
-    void entry.ready
-      .then(() => this._disposeScene(entry.scope, { dispatchStopScene: false }))
-      .catch(() => {
-        /* prepare() itself failed - already cleaned up */
-      });
+    void this._trackTeardown(
+      entry.ready
+        .then(() => this._disposeScene(entry.scope, { dispatchStopScene: false }))
+        .catch(() => {
+          /* prepare() itself failed - already cleaned up */
+        }),
+    );
   }
 
   /**
