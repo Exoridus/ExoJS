@@ -14,7 +14,6 @@ import { Text } from '#rendering/text/Text';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 import type { TextLayoutResult } from '#rendering/text/types';
 
-import type { TextEditGranularity } from './TextEditingModel';
 import { glyphCount, glyphOffsetAtIndex, graphemeOffsets, TextEditingModel } from './TextEditingModel';
 import type { UIWidgetState } from './theme';
 import { resolveUISkin } from './theme';
@@ -56,15 +55,6 @@ const modifierChannels = new Set<number>([
   Keyboard.MetaLeft,
   Keyboard.MetaRight,
 ]);
-
-/** The granularity a delete asks for; the word modifier wins over the line modifier. */
-const _deleteGranularity = (word: boolean, line: boolean): TextEditGranularity => {
-  if (word) {
-    return 'word';
-  }
-
-  return line ? 'line' : 'character';
-};
 
 /**
  * Base class of the text-editing widgets ({@link TextInput},
@@ -264,7 +254,7 @@ export abstract class TextEditWidget extends Widget {
 
     const extend = this._shiftDown;
     const word = this._controlDown;
-    const consumed = this._handleEditKeys(channel, extend, word, this._shiftDown);
+    const consumed = this._handleEditKeys(channel, extend, word);
     /* eslint-enable @typescript-eslint/no-unsafe-enum-comparison */
 
     if (consumed) {
@@ -273,7 +263,7 @@ export abstract class TextEditWidget extends Widget {
     }
   }
 
-  private _handleEditKeys(channel: number, extend: boolean, word: boolean, line: boolean): boolean {
+  private _handleEditKeys(channel: number, extend: boolean, word: boolean): boolean {
     // `channel` is a generic numeric input channel (KeyEvent.channel is
     // `number`), intentionally compared against the Keyboard enum constants
     // - see KeyEvent docs.
@@ -316,11 +306,11 @@ export abstract class TextEditWidget extends Widget {
 
         return true;
       case Keyboard.Backspace:
-        this._deleteContent('backward', word, line);
+        this._deleteContent('backward', word);
 
         return true;
       case Keyboard.Delete:
-        this._deleteContent('forward', word, line);
+        this._deleteContent('forward', word);
 
         return true;
       default:
@@ -675,7 +665,7 @@ export abstract class TextEditWidget extends Widget {
    * Apply the delete a keystroke asks for, unless the transport already
    * reported the same one - see {@link TextEditWidget._hostDeletes}.
    */
-  private _deleteContent(direction: 'backward' | 'forward', word: boolean, line: boolean): void {
+  private _deleteContent(direction: 'backward' | 'forward', word: boolean): void {
     if (this._readOnly) {
       return;
     }
@@ -686,7 +676,7 @@ export abstract class TextEditWidget extends Widget {
       return;
     }
 
-    this.model.deleteContent(direction, _deleteGranularity(word, line));
+    this.model.deleteContent(direction, word ? 'word' : 'character');
   }
 
   private _applyIntent(intent: TextEditIntent): void {

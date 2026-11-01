@@ -277,6 +277,19 @@ describe('TextInput', () => {
     expect(field.value).toBe('a');
   });
 
+  test.each([Keyboard.Backspace, Keyboard.Delete])('Shift with delete removes one grapheme', key => {
+    const harness = createUIApp();
+    const field = new TextInput({ width: 200, height: 36 });
+    harness.scene.ui.addChild(field);
+    press(harness, 5, 18);
+    type('abcd');
+    press(harness, 31, 18);
+    expect(field.selectionStart).toBe(2);
+    harness.signals.onKeyDown.dispatch(Keyboard.ShiftLeft);
+    harness.signals.onKeyDown.dispatch(key);
+    expect(field.value).toBe(key === Keyboard.Backspace ? 'acd' : 'abd');
+  });
+
   test('a modifier held when the field loses focus does not stay held', () => {
     const harness = createUIApp();
     const field = new TextInput({ width: 200, height: 36 });
