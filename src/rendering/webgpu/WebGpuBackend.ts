@@ -1072,6 +1072,16 @@ export class WebGpuBackend implements RenderBackend {
     assertLiveRenderTarget(nextRenderTarget);
 
     if (this._renderTarget !== nextRenderTarget) {
+      if (isMultiAttachmentTarget(nextRenderTarget) && nextRenderTarget.attachments.length > this.maxColorAttachments) {
+        throw new RenderError({
+          code: 'unsupported-format',
+          backendType: RenderBackendType.WebGpu,
+          message:
+            `This device accepts ${this.maxColorAttachments} colour attachment(s), but the target declares ` +
+            `${nextRenderTarget.attachments.length}. Check backend.maxColorAttachments.`,
+        });
+      }
+
       this._flushActiveRendererAndEndPass();
 
       if (this._renderTarget !== this._rootRenderTarget) {
@@ -1081,16 +1091,6 @@ export class WebGpuBackend implements RenderBackend {
       this._renderTarget = nextRenderTarget;
       this._multiAttachmentTarget = isMultiAttachmentTarget(nextRenderTarget);
       this._stats.renderTargetChanges++;
-
-      if (this._multiAttachmentTarget && (nextRenderTarget as MultiRenderTarget).attachments.length > this.maxColorAttachments) {
-        throw new RenderError({
-          code: 'unsupported-format',
-          backendType: RenderBackendType.WebGpu,
-          message:
-            `This device accepts ${this.maxColorAttachments} colour attachment(s), but the target declares ` +
-            `${(nextRenderTarget as MultiRenderTarget).attachments.length}. Check backend.maxColorAttachments.`,
-        });
-      }
 
       if (nextRenderTarget !== this._rootRenderTarget) {
         this._subscribeRenderTarget(nextRenderTarget);

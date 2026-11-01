@@ -9,6 +9,7 @@ import { Container } from '#rendering/Container';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import { Drawable } from '#rendering/Drawable';
 import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
+import { MultiRenderTarget } from '#rendering/MultiRenderTarget';
 import { Graphics } from '#rendering/primitives/Graphics';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { Renderer } from '#rendering/Renderer';
@@ -18,7 +19,7 @@ import { Text } from '#rendering/text/Text';
 import { TextStyle } from '#rendering/text/TextStyle';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
-import { BlendModes, ScaleModes } from '#rendering/types';
+import { BlendModes, ScaleModes, TextureFormat } from '#rendering/types';
 import { Video } from '#rendering/video/Video';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 import { WebGpuMeshRenderer } from '#rendering/webgpu/WebGpuMeshRenderer';
@@ -2908,4 +2909,33 @@ describe('WebGpuBackend', () => {
       environment.restore();
     }
   });
+});
+
+test('rejecting an oversized render target preserves the current target and its destroy subscription', async () => {
+  const environment = createMockWebGpuEnvironment();
+  const backend = new WebGpuBackend({ canvas: environment.canvas, options: {} } as Application);
+  const current = new RenderTexture(32, 32);
+  let oversized: MultiRenderTarget | null = null;
+
+  try {
+    await backend.initialize();
+    const root = backend.renderTarget;
+
+    backend.setRenderTarget(current);
+    const changes = backend.stats.renderTargetChanges;
+
+    oversized = new MultiRenderTarget(32, 32, {
+      formats: Array.from({ length: backend.maxColorAttachments + 1 }, () => TextureFormat.Rgba8),
+    });
+    expect(() => backend.setRenderTarget(oversized)).toThrow('colour attachment');
+    expect(backend.renderTarget).toBe(current);
+    expect(backend.stats.renderTargetChanges).toBe(changes);
+    current.destroy();
+    expect(backend.renderTarget).toBe(root);
+  } finally {
+    backend.destroy();
+    current.destroy();
+    oversized?.destroy();
+    environment.restore();
+  }
 });
