@@ -10,12 +10,22 @@ import { MockApplication } from './support/mock-application';
 // ApplicationState, ...) stays real via `importActual`. The mock module is
 // imported INSIDE the factory because `vi.mock` is hoisted above the file's
 // imports, so top-level bindings are not yet initialised when it runs.
+const construction = vi.hoisted(() => vi.fn());
+
 vi.mock('@codexo/exojs', async importActual => {
   const actual = await importActual<typeof import('@codexo/exojs')>();
   const { MockApplication: MockApp, configureApplicationState } = await import('./support/mock-application');
   configureApplicationState(actual.ApplicationState);
 
-  return { ...actual, Application: MockApp };
+  return {
+    ...actual,
+    Application: class extends MockApp {
+      public constructor(options: ConstructorParameters<typeof MockApp>[0]) {
+        construction();
+        super(options);
+      }
+    },
+  };
 });
 
 /**
@@ -106,6 +116,7 @@ const onlyInstance = (): MockApplication => {
 
 beforeEach(() => {
   MockApplication.reset();
+  construction.mockReset();
 });
 
 describe('useExoApplication — construction & wiring', () => {
@@ -175,6 +186,31 @@ describe('useExoApplication — identity vs live options', () => {
       finish();
     });
     await waitFor(() => expect(MockApplication.instances).toHaveLength(2));
+  });
+
+  it.each(['construction', 'onReady'] as const)('reports replacement %s failures after teardown', async failurePoint => {
+    const onError = vi.fn();
+    const onReady = vi.fn();
+    const harness = mount({ options: { backend: { type: 'webgl2' } }, onReady, onError });
+    let finish!: () => void;
+    onlyInstance().destroy.mockImplementationOnce(
+      () =>
+        new Promise<void>(resolve => {
+          finish = resolve;
+        }),
+    );
+    const error = new Error('replacement failed');
+    const failingCallback = failurePoint === 'construction' ? construction : onReady;
+    failingCallback.mockImplementationOnce(() => {
+      throw error;
+    });
+
+    harness.rerender({ options: { backend: { type: 'webgpu' } }, onReady, onError });
+    expect(onError).not.toHaveBeenCalled();
+    await act(async () => {
+      finish();
+    });
+    await waitFor(() => expect(onError).toHaveBeenCalledExactlyOnceWith(error));
   });
 
   it('recreates (and destroys) the Application when the backend type changes', async () => {

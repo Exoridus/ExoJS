@@ -65,8 +65,9 @@ const colorKey = (color: Color | undefined): string | undefined =>
  * @param options - Application options (the canvas element is the one you render).
  * @param onReady - Called once each time an Application is created.
  * @param onError - Called for every {@link Application.onError} dispatch (async
- *   init/scene-load failures) while an Application exists. Re-subscribed
- *   automatically whenever the Application is (re)created.
+ *   init/scene-load failures) while an Application exists, and for failures
+ *   during asynchronous replacement after teardown. Re-subscribed automatically
+ *   whenever the Application is (re)created.
  */
 export const useExoApplication = (
   options?: ExoApplicationOptions,
@@ -120,7 +121,7 @@ export const useExoApplication = (
     if (pending === null) {
       create();
     } else {
-      void pending.then(create, (error: unknown) => {
+      void pending.then(create).catch((error: unknown) => {
         if (!cancelled) {
           onErrorRef.current?.(error);
         }
