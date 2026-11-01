@@ -1101,6 +1101,10 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   public pushScissorRect(bounds: Rectangle): this {
+    if (this._deviceLost || this._device === null) {
+      return this;
+    }
+
     this._flushActiveRendererAndEndPass();
 
     const depth = this._clipDepth;
@@ -1219,7 +1223,7 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   public popScissorRect(): this {
-    if (this._clipDepth === 0) {
+    if (this._deviceLost || this._device === null || this._clipDepth === 0) {
       return this;
     }
 

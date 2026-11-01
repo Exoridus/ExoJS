@@ -2939,3 +2939,29 @@ test('rejecting an oversized render target preserves the current target and its 
     environment.restore();
   }
 });
+
+test.each(['uninitialized', 'lost'])('scissor state silently no-ops while the device is %s', async state => {
+  const environment = createMockWebGpuEnvironment();
+  const backend = new WebGpuBackend({ canvas: environment.canvas, options: {} } as Application);
+  const internals = backend as unknown as { _deviceLost: boolean; _flushActiveRendererAndEndPass(): void; _clipDepth: number };
+
+  try {
+    if (state === 'lost') {
+      await backend.initialize();
+      internals._deviceLost = true;
+    }
+
+    const flush = vi.spyOn(internals, '_flushActiveRendererAndEndPass').mockImplementation(() => {
+      throw new Error('unavailable device touched');
+    });
+
+    expect(() => backend.pushScissorRect(new Rectangle(0, 0, 10, 10))).not.toThrow();
+    expect(() => backend.popScissorRect()).not.toThrow();
+    expect(internals._clipDepth).toBe(0);
+    expect(flush).not.toHaveBeenCalled();
+    flush.mockRestore();
+  } finally {
+    backend.destroy();
+    environment.restore();
+  }
+});
