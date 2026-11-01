@@ -11,7 +11,7 @@ import {
   WebGpuUniformBuffer,
 } from '@codexo/exojs/renderer-sdk';
 
-import { uploadParticleLookup } from '#modules/particleLookup';
+import { lookupSize, uploadParticleLookup } from '#modules/particleLookup';
 import type { UpdateModule } from '#modules/UpdateModule';
 import type { WgslContribution, WgslUniformField } from '#modules/WgslContribution';
 import { getWgslUniformByteSize } from '#modules/WgslContribution';
@@ -343,7 +343,7 @@ export class ParticleGpuState {
       for (const t of c.textures) {
         const tex = this.device.createTexture({
           label: `particle-tex-${c.key}-${t.name}`,
-          size: { width: 256, height: 1, depthOrArrayLayers: 1 },
+          size: { width: lookupSize, height: 1, depthOrArrayLayers: 1 },
           format: t.format,
           usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
           dimension: '1d',
