@@ -155,6 +155,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   // Pinned unit index for the shared transform buffer sampler.
   private readonly _transformUnitScratch: Int32Array = new Int32Array([transformTextureUnit]);
   private readonly _tintUnitScratch: Int32Array = new Int32Array([transformTintTextureUnit]);
+  private readonly _samplePremultiplyMask = new Int32Array(1);
   private _currentMaterial: AnySpriteMaterial | null = null;
   private readonly _retainedPreparedEpoch = new WeakMap<AnySpriteMaterial, number>();
   // Local bounds resolved for the sprite currently being packed. Geometry-mode
@@ -334,12 +335,22 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     backend.bindTexture(store.attributeTexture, slotAttributeTextureUnit);
     backend.bindTexture(store.transformTexture, transformTextureUnit);
     backend.bindTexture(store.tintTexture, transformTintTextureUnit);
-    shader.sync();
-    backend.bindVertexArrayObject(vao);
+    let premultiplyMask = 0;
 
     for (let i = 0; i < store.textures.length; i++) {
-      backend.bindTexture(store.textures[i]!, i);
+      const texture = store.textures[i]!;
+
+      backend.bindTexture(texture, i);
+
+      if (backend.shouldPremultiplyTextureSample(texture)) {
+        premultiplyMask |= 1 << i;
+      }
     }
+
+    this._samplePremultiplyMask[0] = premultiplyMask;
+    shader.getUniform('u_samplePremultiplyMask').setValue(this._samplePremultiplyMask);
+    shader.sync();
+    backend.bindVertexArrayObject(vao);
 
     vao.drawInstanced(4, 0, count, RenderingPrimitives.TriangleStrip);
     backend.stats.batches++;
