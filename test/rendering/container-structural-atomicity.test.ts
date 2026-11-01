@@ -191,3 +191,56 @@ describe('Container structural methods are atomic against user callbacks', () =>
     target.destroy();
   });
 });
+
+describe('Container removal completes after throwing blur handlers', () => {
+  test.each(['single', 'range', 'destroy'])('%s removal releases stage and structure state', mode => {
+    const { stage, focus } = createStage();
+    const container = new Container();
+    const branch = new Container();
+    const first = new DummyDrawable();
+    const second = new DummyDrawable();
+
+    branch.addChild(first);
+    container._setStage(stage);
+    container.addChild(branch, second);
+    first.focusable = true;
+    focus.focus(first);
+
+    const revision = container._structureRevision;
+    const error = new Error('blur failed');
+
+    first.onBlur.add(() => {
+      throw error;
+    });
+
+    expect(() => {
+      if (mode === 'single') {
+        container.removeChild(branch);
+      } else if (mode === 'range') {
+        container.removeChildren();
+      } else {
+        container.destroy();
+      }
+    }).toThrow(error);
+
+    expect(branch.parent).toBeNull();
+    expect(branch._getStage()).toBeNull();
+    expect(first._getStage()).toBeNull();
+    expect(container._structureRevision).toBeGreaterThan(revision);
+    expect(container.children).toEqual(mode === 'single' ? [second] : []);
+
+    if (mode !== 'single') {
+      expect(second.parent).toBeNull();
+      expect(second._getStage()).toBeNull();
+    }
+
+    if (mode === 'destroy') {
+      expect(container.destroyed).toBe(true);
+      expect(branch.destroyed).toBe(true);
+      expect(first.destroyed).toBe(true);
+      expect(second.destroyed).toBe(true);
+    }
+
+    container.destroy();
+  });
+});

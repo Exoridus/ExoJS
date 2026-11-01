@@ -459,25 +459,39 @@ export class Container extends RenderNode {
     // would observe a stale snapshot still containing `child`.
     this._invalidateChildOrder();
 
-    if (child?.parent === this) {
-      const componentRuntime = child._componentNodes > 0 ? this._componentRuntime(false) : null;
+    try {
+      if (child?.parent === this) {
+        const componentRuntime = child._componentNodes > 0 ? this._componentRuntime(false) : null;
 
-      // Cascade bounds up BEFORE clearing parent so the walk reaches this node.
-      this._invalidateBoundsCascade();
+        this._invalidateBoundsCascade();
+        this._detachChildState(child, componentRuntime === keep ? null : componentRuntime);
+      }
+    } finally {
+      this.invalidateCache();
+      this._markStructureDirty();
+      this._onChildListChanged();
+    }
+  }
+
+  private _detachChildState(child: RenderNode, runtime: ComponentRuntime | null): void {
+    try {
       child._setParent(null);
       child._invalidateSubtreeTransform();
-      this._stage?.interaction._notifyNodeRemoved(child);
-      this._stage?.focus._notifyNodeRemoved(child);
-      child._setStage(null);
 
-      if (child._componentNodes > 0) {
-        this._releaseComponents(child, componentRuntime === keep ? null : componentRuntime);
+      try {
+        this._stage?.interaction._notifyNodeRemoved(child);
+      } finally {
+        this._stage?.focus._notifyNodeRemoved(child);
+      }
+    } finally {
+      try {
+        child._setStage(null);
+      } finally {
+        if (child._componentNodes > 0) {
+          this._releaseComponents(child, runtime);
+        }
       }
     }
-
-    this.invalidateCache();
-    this._markStructureDirty();
-    this._onChildListChanged();
   }
 
   /**
@@ -510,16 +524,14 @@ export class Container extends RenderNode {
 
     const componentRuntime = this._componentNodes > 0 ? this._componentRuntime(false) : null;
 
+    const errors: unknown[] = [];
+
     for (const child of removed) {
       if (child.parent === this) {
-        child._setParent(null);
-        child._invalidateSubtreeTransform();
-        this._stage?.interaction._notifyNodeRemoved(child);
-        this._stage?.focus._notifyNodeRemoved(child);
-        child._setStage(null);
-
-        if (child._componentNodes > 0) {
-          this._releaseComponents(child, componentRuntime);
+        try {
+          this._detachChildState(child, componentRuntime);
+        } catch (error) {
+          errors.push(error);
         }
       }
     }
@@ -527,6 +539,10 @@ export class Container extends RenderNode {
     this.invalidateCache();
     this._markStructureDirty();
     this._onChildListChanged();
+
+    if (errors.length > 0) {
+      throw errors[0];
+    }
 
     return this;
   }
@@ -828,7 +844,7 @@ export class Container extends RenderNode {
    * Destroy this container and every node beneath it.
    *
    * Ownership is by containment: detaching a subtree only unlinks it, so the
-   * descendants' GPU-backed resources (cached textures, filters, render
+   * descendants' GPU-backed resources (cached textures, render
    * textures) and signal listeners would outlive the tree that owned them and
    * leak on every scene change.
    *
@@ -848,12 +864,17 @@ export class Container extends RenderNode {
 
     // Detach first, so every child leaves the interaction/focus registries and
     // drops its stage while it is still a valid node; only then tear it down.
-    this.removeChildren();
+    const errors: unknown[] = [];
+
+    try {
+      this.removeChildren();
+    } catch (error) {
+      errors.push(error);
+    }
 
     // A throwing child teardown (a component's onDestroy, a subclass override)
     // must not leave its siblings and this container alive; the first error
     // surfaces once everything is torn down.
-    const errors: unknown[] = [];
 
     for (const child of children) {
       // A child the caller already destroyed stays destroyed - re-entering its
