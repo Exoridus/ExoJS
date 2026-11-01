@@ -622,7 +622,13 @@ export class WebGpuScalableSpriteRenderer
       'repeating-sprite:texture-bind-group:shader',
     );
 
-    const pipeline = this._getPipeline('shader', this._currentBlendMode, backend.renderTargetFormat, stencil);
+    const pipeline = this._getPipeline(
+      'shader',
+      this._currentBlendMode,
+      backend.renderTargetFormat,
+      stencil,
+      backend.shouldPremultiplyTextureSample(this._currentTexture),
+    );
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, uniformBindGroup);
