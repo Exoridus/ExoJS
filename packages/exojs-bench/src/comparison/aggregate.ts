@@ -437,7 +437,7 @@ const armKeys = (libraries: readonly LibraryProvenance[]): readonly string[] =>
  *
  * Throws {@link IncomparableRunsError} when the runs were measured on different
  * machines or browsers, at different engine versions, against different library
- * arms, or over different matrices.
+ * arms, over different matrices, or with different per-cell sampling budgets.
  */
 export const aggregateRenderingRuns = (runs: readonly ReportData[]): AggregatedRendering => {
   requireRuns(runs, 'rendering');
@@ -458,6 +458,12 @@ export const aggregateRenderingRuns = (runs: readonly ReportData[]): AggregatedR
   requireSameSet(
     runs.map(run => run.results.map(result => renderingCellKey(result.spec))),
     'cells',
+    'rendering',
+  );
+
+  requireSameSet(
+    runs.map(run => run.results.map(({ spec }) => `${renderingCellKey(spec)}|${String(spec.warmupFrames)}|${String(spec.timedFrames)}`)),
+    'sampling budgets',
     'rendering',
   );
 
@@ -494,6 +500,12 @@ export const aggregatePhysicsRuns = (runs: readonly PhysicsReportData[]): Aggreg
   requireSameSet(
     runs.map(run => run.results.map(result => physicsCellKey(result.spec))),
     'cells',
+    'physics',
+  );
+
+  requireSameSet(
+    runs.map(run => run.results.map(({ spec }) => `${physicsCellKey(spec)}|${String(spec.warmupSteps)}|${String(spec.timedSteps)}`)),
+    'sampling budgets',
     'physics',
   );
 

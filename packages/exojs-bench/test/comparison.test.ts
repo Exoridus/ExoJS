@@ -589,6 +589,17 @@ describe('aggregateRenderingRuns', () => {
     expect(() => aggregateRenderingRuns([run(2), wider])).toThrow(/does not measure the same cells/);
   });
 
+  test.each(['warmupFrames', 'timedFrames'] as const)('rejects different rendering %s for the same cell', field => {
+    const original = run(2);
+    const changed = renderingRun(
+      original.results.map((result, index) =>
+        index === 1 ? { ...result, spec: { ...result.spec, [field]: result.spec[field] + 1 } } : result,
+      ),
+    );
+
+    expect(() => aggregateRenderingRuns([original, changed])).toThrow(/sampling budgets/);
+  });
+
   test('rejects runs measured on different GPUs', () => {
     const elsewhere = renderingRun(run(2).results, {
       stamp: { adapter: 'ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Max, Unspecified Version)' },
@@ -662,6 +673,17 @@ describe('aggregatePhysicsRuns', () => {
     expect(pooled.aggregate.competitor).toEqual({ minMs: 1.1, maxMs: 3, ratio: 3 / 1.1 });
     expect(pooled.aggregate.stable).toBe(false);
     expect(pooled.verdict.label).toBe('unstable across runs');
+  });
+
+  test.each(['warmupSteps', 'timedSteps'] as const)('rejects different physics %s for the same cell', field => {
+    const original = run(2);
+    const changed = physicsRun(
+      original.results.map((result, index) =>
+        index === 1 ? { ...result, spec: { ...result.spec, [field]: result.spec[field] + 1 } } : result,
+      ),
+    );
+
+    expect(() => aggregatePhysicsRuns([original, changed])).toThrow(/sampling budgets/);
   });
 
   test('rejects runs measured on different CPUs, which is the physics domain of a different machine', () => {
