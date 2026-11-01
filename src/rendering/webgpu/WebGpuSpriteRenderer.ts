@@ -944,6 +944,19 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   }
 
   public flush(): void {
+    try {
+      this._flushBatch();
+    } finally {
+      // A rejected batch must not be retried after its target or camera changes.
+      this._instanceCount = 0;
+      this._maxNodeIndex = 0;
+      this._resetSlots();
+      this._currentBlendMode = null;
+      this._currentMaterial = null;
+    }
+  }
+
+  private _flushBatch(): void {
     const backend = this._backend;
     const device = this._device;
     const uniformBuffer = this._uniformBuffer;
@@ -1122,15 +1135,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
         isCustom ? createRetainedMaterialState(this._currentMaterial!) : null,
       );
     }
-
-    // Batch flushes never submit; the backend ends the pass at genuine
-    // boundaries, and the hazard checks above end it early when this batch would
-    // retroactively change data an already-recorded draw reads.
-    this._instanceCount = 0;
-    this._maxNodeIndex = 0;
-    this._resetSlots();
-    this._currentBlendMode = null;
-    this._currentMaterial = null;
   }
 
   /**

@@ -1452,11 +1452,17 @@ export class WebGpuBackend implements RenderBackend {
     // Only flush the open batch when the view actually changes. The unconditional
     // flush forced one draw call per render() call (each render() re-applies the
     // same camera view), defeating cross-call batching.
-    if (this._renderTarget.view !== view) {
-      this._flushActiveRendererAndEndPass();
-    }
+    try {
+      if (this._renderTarget.view !== view) {
+        this._flushActiveRendererAndEndPass();
+      }
+    } catch (error) {
+      this._passCoordinatorInstance?.discardPass();
 
-    this._renderTarget.setView(view);
+      throw error;
+    } finally {
+      this._renderTarget.setView(view);
+    }
 
     return this;
   }

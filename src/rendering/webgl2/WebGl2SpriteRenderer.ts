@@ -387,16 +387,25 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   }
 
   public flush(): void {
+    try {
+      this._flushBatch();
+    } finally {
+      // A rejected batch must not be retried after its target or camera changes.
+      this._instanceCount = 0;
+      this._maxNodeIndex = 0;
+      this._resetSlots();
+      this._currentBlendMode = null;
+      this._currentMaterial = null;
+    }
+  }
+
+  private _flushBatch(): void {
     const backend = this.getBackendOrNull();
     const instanceBuffer = this._instanceBuffer;
     const vao = this._vao;
     const connection = this._connection;
 
     if (this._instanceCount === 0 || backend === null || instanceBuffer === null || vao === null || connection === null) {
-      this._maxNodeIndex = 0;
-      this._currentBlendMode = null;
-      this._resetSlots();
-
       return;
     }
 
@@ -470,12 +479,6 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
         material === null ? null : createRetainedMaterialState(material),
       );
     }
-
-    this._instanceCount = 0;
-    this._maxNodeIndex = 0;
-    this._currentBlendMode = null;
-
-    this._resetSlots();
   }
 
   /**
