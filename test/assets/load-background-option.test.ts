@@ -2,6 +2,7 @@ import { Assets } from '#assets/Assets';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, LoadPriority } from '#assets/Loader';
 import { materializeAssetTypes } from '#extensions/materialize';
+import { Texture } from '#rendering/texture/Texture';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in the sibling adopt/background specs). */
 const createCoreLoader = (): Loader => {
@@ -162,6 +163,47 @@ describe('load(target, { priority: LoadPriority.Background })', () => {
 
     expect(catalog.config.loadState).toBe('ready');
     expect(catalog.config.value).toEqual({ hp: 9 });
+  });
+
+  test.each(['one', 'type', 'all'] as const)('hard unload %s removes queued work before it can start', async mode => {
+    const fetchMock = mockFetchImage();
+    const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
+    loader.setConcurrency(0);
+    const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
+    owner.load(catalog, { priority: LoadPriority.Background });
+    const waiting = loader.awaitBackground();
+    const internal = loader as unknown as {
+      _residency: { _unloadOne(asset: unknown): void; unloadAll(type?: typeof Texture): void };
+      _canonicalize(type: typeof Texture, source: string): unknown;
+    };
+
+    if (mode === 'one') {
+      internal._residency._unloadOne(internal._canonicalize(Texture, 'ship.png'));
+    } else {
+      internal._residency.unloadAll(mode === 'type' ? Texture : undefined);
+    }
+
+    expect(isQueued(loader, 'ship.png')).toBe(false);
+    await waiting;
+    loader.setConcurrency(6);
+    await loader.awaitBackground();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test('typed hard unload leaves other queued types intact', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
+    loader.setConcurrency(0);
+    const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png' }, config: { type: 'json', source: 'config.json' } });
+    owner.load(catalog, { priority: LoadPriority.Background });
+    (loader as unknown as { _residency: { unloadAll(type: typeof Texture): void } })._residency.unloadAll(Texture);
+
+    expect(isQueued(loader, 'ship.png')).toBe(false);
+    expect(isQueued(loader, 'config.json')).toBe(true);
+    owner.release(catalog.config);
+    await loader.awaitBackground();
   });
 
   test('releasing a background-queued catalog at refcount 0 drops the entry from the queue', async () => {
