@@ -477,7 +477,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
     // A single blur from the full-size capture into the half-size target is both
     // the downsample and the blur: the filter sizes its sweep to the OUTPUT, so
     // the wide kernel runs over a quarter of the fragments.
-    const filter = new BlurFilter({ strength, quality: 2 });
+    const filter = new BlurFilter({ strength, quality: BLUR_TAPS_PER_SIDE });
     const overlay = new Sprite(bloom).setBlendMode(BlendModes.Additive);
 
     overlay.width = VIEWPORT_WIDTH;
