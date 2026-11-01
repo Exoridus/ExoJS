@@ -1489,7 +1489,9 @@ export class AssetResidency {
    * Store a resolved resource under its canonical key: fills every deferred
    * handle / value-ref waiting on the key (multi-handle fill), respects
    * "free on arrival" for a key whose last claim was released mid-fetch, and
-   * registers the canonical reverse (resource -> key) lookup. Called from
+   * registers the canonical reverse (resource -> key) lookup. An explicit
+   * unload during fetch instead fails waiting handles and disposes the result
+   * without storing it. Called from
    * `AssetDecoder`
    * via the `storeResource` callback `Loader`'s constructor wires to this
    * method.
