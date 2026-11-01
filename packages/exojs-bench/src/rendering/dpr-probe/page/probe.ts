@@ -405,7 +405,7 @@ const buildNotes = (backendSelected: string, webgpuTimestampQuery: boolean | nul
   }
 
   notes.push(
-    stagePreset === 'fixed'
+    runStagePreset === 'fixed'
       ? `The stage is a fixed ${STAGE_SIZE}x${STAGE_SIZE} CSS square, far smaller than a full-screen game. It is the preset that compares across devices; use "fill the screen" for a number that reflects what an app actually renders.`
       : "The stage was the device's usable area, so these numbers reflect a full-screen app but do not compare to a capture taken on a differently sized screen.",
   );
@@ -426,6 +426,7 @@ const buildNotes = (backendSelected: string, webgpuTimestampQuery: boolean | nul
  * probe exists to avoid.
  */
 let runStage: StageSize = { width: STAGE_SIZE, height: STAGE_SIZE };
+let runStagePreset: 'fixed' | 'fill' = 'fixed';
 let lastBackendSelected: string | null = null;
 let lastWebgpuTimestampQuery: boolean | null = null;
 let lastGpuTimerSource = 'not determined yet';
@@ -451,7 +452,7 @@ const buildResult = (): ProbeResult => {
     timerResolutionMs,
     stageWidth: runStage.width,
     stageHeight: runStage.height,
-    stagePreset,
+    stagePreset: runStagePreset,
     cells: collected,
     notes: buildNotes(backendSelected, lastWebgpuTimestampQuery),
   };
@@ -467,6 +468,20 @@ const runCells = async (cells: readonly ProbeCell[], measureMs: number, label: s
     return;
   }
 
+  const nextStage = resolveStage();
+  const nextStagePreset = stagePreset;
+
+  if (
+    collected.length > 0 &&
+    (nextStagePreset !== runStagePreset || nextStage.width !== runStage.width || nextStage.height !== runStage.height)
+  ) {
+    setStatus('Stage changed; clear results before measuring another stage.', true);
+
+    return;
+  }
+
+  runStage = nextStage;
+  runStagePreset = nextStagePreset;
   busy = true;
   runMatrixButton.disabled = true;
   runSustained2Button.disabled = true;
@@ -479,11 +494,6 @@ const runCells = async (cells: readonly ProbeCell[], measureMs: number, label: s
 
   const runStartedAt = performance.now();
   const backend = backendRequest();
-
-  // Frozen for the whole run: `fill` reads the viewport, and a rotation or a
-  // browser-chrome change mid-run would silently make the later cells a
-  // different measurement than the earlier ones.
-  runStage = resolveStage();
 
   try {
     for (let i = 0; i < cells.length; i++) {

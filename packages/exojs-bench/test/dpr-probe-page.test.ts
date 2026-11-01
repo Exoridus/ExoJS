@@ -60,3 +60,36 @@ test('serializes preview switches and waits for teardown before measuring', asyn
   await vi.waitFor(() => expect(mocks.run).toHaveBeenCalledTimes(1));
   expect(mocks.start).toHaveBeenCalledTimes(2);
 });
+
+test('keeps capture stage metadata and rejects runs with a different stage', async () => {
+  document.documentElement.innerHTML = readFileSync('packages/exojs-bench/src/rendering/dpr-probe/page/index.html', 'utf8');
+  vi.stubGlobal('__PROBE_META__', { gitSha: 'test', engineVersion: 'test' });
+  HTMLElement.prototype.scrollIntoView = vi.fn();
+  const preview = {
+    backendType: 'webgl2',
+    cssWidth: 1,
+    cssHeight: 1,
+    backingWidth: 1,
+    backingHeight: 1,
+    internalTargets: [],
+    stop: vi.fn().mockResolvedValue(undefined),
+  };
+  mocks.start.mockResolvedValue(preview);
+  const cell = deferred<{ errors: never[]; internalTargets: never[] }>();
+  mocks.run.mockReturnValueOnce(cell.promise).mockResolvedValue({ errors: [], internalTargets: [] });
+  await import('../src/rendering/dpr-probe/page/probe');
+  await vi.waitFor(() => expect(mocks.start).toHaveBeenCalledTimes(2));
+  document.querySelector<HTMLButtonElement>('#run-sustained-2')!.click();
+  await vi.waitFor(() => expect(mocks.run).toHaveBeenCalledTimes(1));
+  document.querySelector<HTMLButtonElement>('#stage-buttons button[data-value="fill"]')!.click();
+  cell.resolve({ errors: [], internalTargets: [] });
+  await vi.waitFor(() => expect(globalThis.__dprProbe!.collected).toHaveLength(1));
+  const result = globalThis.__dprProbe!.buildResult();
+  expect(result.stagePreset).toBe('fixed');
+  expect([result.stageWidth, result.stageHeight]).toEqual([360, 360]);
+  expect(result.notes.some(note => note.includes('fixed 360x360'))).toBe(true);
+  await vi.waitFor(() => expect(document.querySelector<HTMLButtonElement>('#run-sustained-2')!.disabled).toBe(false));
+  document.querySelector<HTMLButtonElement>('#run-sustained-2')!.click();
+  await vi.waitFor(() => expect(document.querySelector('#status')!.textContent).toContain('clear'));
+  expect(mocks.run).toHaveBeenCalledTimes(1);
+});
