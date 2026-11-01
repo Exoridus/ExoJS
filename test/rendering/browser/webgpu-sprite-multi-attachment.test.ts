@@ -13,6 +13,7 @@
 
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
+import { Geometry } from '#rendering/geometry/Geometry';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { MultiRenderTarget } from '#rendering/MultiRenderTarget';
 import { RenderingContext } from '#rendering/RenderingContext';
@@ -51,9 +52,8 @@ fn fragmentMain(input: VertexOutput) -> FragmentOutput {
   });
 
 describe('WebGPU sprite in a multi-attachment pass', () => {
-  test('a sprite with a two-output material writes both attachments', async ctx => {
+  test.for([false, true])('a sprite with a two-output material writes both attachments (clip=%s)', async (clip, ctx) => {
     if (!(await webGpuAvailable())) {
-      // eslint-disable-next-line vitest/no-disabled-tests -- runtime guard: no adapter on this machine
       ctx.skip('No WebGPU adapter available.');
 
       return;
@@ -61,7 +61,7 @@ describe('WebGPU sprite in a multi-attachment pass', () => {
 
     const backend: WebGpuBackend = await createWebGpuTestBackend(canvasSize);
     const device = getBackendDevice(backend);
-    const target = new MultiRenderTarget(targetSize, targetSize, { formats: [TextureFormat.Rgba8, TextureFormat.Rgba8] });
+    const target = new MultiRenderTarget(targetSize, targetSize, { formats: [TextureFormat.Rgba8, TextureFormat.Rgba16F] });
     const context = new RenderingContext(backend);
     const material = twoSlotSpriteMaterial();
     const sprite = new Sprite(Texture.fromColor(new Color(255, 0, 0), 1));
@@ -69,6 +69,17 @@ describe('WebGPU sprite in a multi-attachment pass', () => {
     sprite.width = targetSize;
     sprite.height = targetSize;
     sprite.material = material;
+
+    const scene = new Container();
+    const shape = new Geometry({
+      attributes: [{ name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 }],
+      vertexData: new Float32Array([0, 0, 24, 0, 0, 32, 24, 0, 24, 32, 0, 32]),
+      stride: 8,
+    });
+
+    scene.addChild(sprite);
+    scene.clip = clip;
+    scene.clipShape = shape;
 
     const colour = new Sprite(target.attachment(0));
     const marker = new Sprite(target.attachment(1));
@@ -79,7 +90,8 @@ describe('WebGPU sprite in a multi-attachment pass', () => {
 
     const cleanup = (): void => {
       display.destroy();
-      sprite.destroy();
+      scene.destroy();
+      shape.destroy();
       material.destroy();
       target.destroy();
       backend.destroy();
@@ -90,7 +102,7 @@ describe('WebGPU sprite in a multi-attachment pass', () => {
     try {
       // The multi-attachment draw is the thing under test, so its validation
       // scope is popped here rather than inside the helper that displays it.
-      context.renderTo(sprite, { target, clear: Color.transparentBlack });
+      context.renderTo(scene, { target, clear: Color.transparentBlack });
       backend.flush();
 
       expect(await device.popErrorScope()).toBeNull();
@@ -104,6 +116,11 @@ describe('WebGPU sprite in a multi-attachment pass', () => {
 
       expect(readPixel(16, 16)[0]).toBeGreaterThan(200);
       expect(readPixel(48, 16)[1]).toBeGreaterThan(200);
+
+      if (clip) {
+        expect(readPixel(28, 16)[0]).toBeLessThan(5);
+        expect(readPixel(60, 16)[1]).toBeLessThan(5);
+      }
     } finally {
       cleanup();
     }

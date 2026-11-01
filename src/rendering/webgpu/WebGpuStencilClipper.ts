@@ -156,7 +156,7 @@ export class WebGpuStencilClipper {
    */
   public draw(
     pass: GPURenderPassEncoder,
-    format: GPUTextureFormat,
+    formats: readonly GPUTextureFormat[],
     increment: boolean,
     shape: Geometry,
     transform: Matrix,
@@ -187,15 +187,15 @@ export class WebGpuStencilClipper {
       vertexCount * 2 * Float32Array.BYTES_PER_ELEMENT,
     );
 
-    pass.setPipeline(this._getPipeline(format, increment, shape.topology));
+    pass.setPipeline(this._getPipeline(formats, increment, shape.topology));
     pass.setBindGroup(0, this._bindGroup);
     pass.setVertexBuffer(0, this._vertexBuffer);
     pass.draw(vertexCount);
   }
 
-  private _getPipeline(format: GPUTextureFormat, increment: boolean, topology: Geometry['topology']): GPURenderPipeline {
+  private _getPipeline(formats: readonly GPUTextureFormat[], increment: boolean, topology: Geometry['topology']): GPURenderPipeline {
     const cache = increment ? this._incrementPipelines : this._decrementPipelines;
-    const key = `${format}:${topology}`;
+    const key = `${formats.join(',')}:${topology}`;
     const existing = cache.get(key);
 
     if (existing !== undefined) {
@@ -218,7 +218,7 @@ export class WebGpuStencilClipper {
         module: this._shaderModule!,
         entryPoint: 'fragmentMain',
         // writeMask 0: no colour output, only the stencil aspect is modified.
-        targets: [{ format, writeMask: 0 }],
+        targets: formats.map(format => ({ format, writeMask: 0 })),
       },
       primitive: { topology: topology === 'triangle-strip' ? 'triangle-strip' : 'triangle-list' },
       depthStencil: {

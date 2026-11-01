@@ -72,6 +72,7 @@ const createMockBackend = (
     },
     device: { createCommandEncoder } as unknown as GPUDevice,
     renderTargetFormat: 'rgba8unorm' as GPUTextureFormat,
+    renderTargetFormats: ['rgba8unorm'],
     stats,
     setRenderTarget,
     setView,
@@ -448,7 +449,7 @@ describe('WebGpuPassCoordinator', () => {
 
         expect(fakeStencil.connect).toHaveBeenCalledTimes(1);
         expect(fakeStencil.draw).toHaveBeenCalledTimes(1);
-        expect(fakeStencil.draw).toHaveBeenCalledWith(expect.anything(), 'rgba8unorm', true, geometryStub, transform, expect.anything());
+        expect(fakeStencil.draw).toHaveBeenCalledWith(expect.anything(), ['rgba8unorm'], true, geometryStub, transform, expect.anything());
         // The clip is now in effect: depth 1 > 0 on the active target.
         expect(coordinator.stencilActive).toBe(true);
         expect(coordinator.unbalancedStencilClips()).toBe(1);

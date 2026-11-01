@@ -86,6 +86,7 @@ export interface WebGpuPassBackend {
   readonly view: View;
   readonly device: GPUDevice;
   readonly renderTargetFormat: GPUTextureFormat;
+  readonly renderTargetFormats: readonly GPUTextureFormat[];
   readonly stats: RenderStats;
   setRenderTarget(target: RenderTarget | null): unknown;
   setView(view: View | null): unknown;
@@ -436,7 +437,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     try {
       const active = this.acquirePass();
 
-      this._stencil.draw(active.pass, active.targetFormat, true, shape, transform, active.view);
+      this._stencil.draw(active.pass, this._backend.renderTargetFormats, true, shape, transform, active.view);
       this.markPassDraws();
       this.endPass();
     } catch (error) {
@@ -477,7 +478,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     try {
       const active = this.acquirePass();
 
-      this._stencil.draw(active.pass, active.targetFormat, false, entry.shape, entry.transform, active.view);
+      this._stencil.draw(active.pass, this._backend.renderTargetFormats, false, entry.shape, entry.transform, active.view);
       this.markPassDraws();
       this.endPass();
     } catch (error) {
