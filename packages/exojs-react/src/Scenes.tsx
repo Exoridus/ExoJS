@@ -119,6 +119,7 @@ export const Scenes = ({ active, transition, children }: ScenesProps): ReactElem
   // Bumped on every effect run so an async activation can tell whether a newer
   // run has taken over since it started.
   const generationRef = useRef(0);
+  const navigationRef = useRef<Promise<void> | null>(null);
 
   // Collect the <Scene> declarations from children (keyed by name).
   const registry = useMemo(() => {
@@ -158,8 +159,19 @@ export const Scenes = ({ active, transition, children }: ScenesProps): ReactElem
     const isStale = (): boolean => cancelled || generationRef.current !== generation;
     const changeOptions = transition !== undefined ? { transition } : {};
 
+    const previous = navigationRef.current;
+    const joiningStartup = app.state === ApplicationState.Loading;
+
     const apply = async (): Promise<void> => {
       try {
+        if (previous !== null && !joiningStartup) {
+          await previous;
+
+          if (isStale()) {
+            return;
+          }
+        }
+
         if (app.state === ApplicationState.Stopped || app.state === ApplicationState.Loading) {
           // Loading means an earlier run's start() is still in flight,
           // including its initial navigation, which scenes.change() would
@@ -195,7 +207,13 @@ export const Scenes = ({ active, transition, children }: ScenesProps): ReactElem
       }
     };
 
-    void apply();
+    const navigation = apply();
+    navigationRef.current = navigation;
+    void navigation.then(() => {
+      if (navigationRef.current === navigation) {
+        navigationRef.current = null;
+      }
+    });
 
     return () => {
       cancelled = true;

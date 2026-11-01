@@ -124,6 +124,31 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
     expect((await view.findByTestId('active')).textContent).toBe('GameScene');
   });
 
+  it('applies the last active scene after an in-flight switch', async () => {
+    const app = makeApp();
+    const view = render(<Tree app={app} active="title" />);
+    await view.findByText('TitleScene');
+    const change = app.scenes.change.getMockImplementation()! as (...args: unknown[]) => unknown;
+    let finish!: () => void;
+    app.scenes.change.mockImplementationOnce(async (...args: unknown[]) => {
+      await new Promise<void>(resolve => {
+        finish = resolve;
+      });
+
+      return change(...args);
+    });
+    const errors = vi.fn();
+    app.onError.add(errors);
+    view.rerender(<Tree app={app} active="game" />);
+    view.rerender(<Tree app={app} active="title" />);
+    expect(app.scenes.change).toHaveBeenCalledTimes(1);
+    finish();
+    await waitFor(() => expect(app.scenes.change).toHaveBeenCalledTimes(2));
+    await view.findByText('TitleScene');
+    expect(app.scenes.currentScene).toBeInstanceOf(TitleScene);
+    expect(errors).not.toHaveBeenCalled();
+  });
+
   it('clears the local HUD overlay (without touching the director) when the active name matches no <Scene>', async () => {
     const app = makeApp();
     const view = render(<Tree app={app} active="title" />);
