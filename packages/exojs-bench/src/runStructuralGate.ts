@@ -75,6 +75,10 @@ const main = async (): Promise<void> => {
       adapter,
     });
 
+    if (baseline.cells.length === 0) {
+      throw new Error('Cannot update the structural baseline: no guarded cells were measured.');
+    }
+
     mkdirSync(dirname(baselinePath), { recursive: true });
     writeFileSync(baselinePath, `${JSON.stringify(baseline, null, 2)}\n`);
 
