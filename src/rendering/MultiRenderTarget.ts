@@ -103,8 +103,13 @@ export class MultiRenderTarget extends RenderTarget {
   }
 
   public override resize(width: number, height: number): this {
+    const changed = width !== this.width || height !== this.height;
+
     super.resize(width, height);
-    this._defaultView.resize(width, height).setCenter(width / 2, height / 2);
+
+    if (changed) {
+      this._defaultView.resize(width, height).setCenter(width / 2, height / 2);
+    }
 
     // Attachments follow unconditionally rather than lazily: an attachment left
     // at the old size makes the whole framebuffer incomplete, and the symptom

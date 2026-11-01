@@ -191,7 +191,13 @@ describe('MultiRenderTarget', () => {
   test('resizing recentres the default views of the target and its attachments', () => {
     const target = new MultiRenderTarget(64, 64, { formats: [TextureFormat.Rgba8, TextureFormat.Rgba8] });
 
+    const versions = target.attachments.map(attachment => attachment.textureVersion);
+
     target.resize(128, 96);
+
+    target.attachments.forEach((attachment, index) => {
+      expect(attachment.textureVersion).toBeGreaterThan(versions[index]!);
+    });
 
     for (const view of [target.view, ...target.attachments.map(attachment => attachment.view)]) {
       expect(view.width).toBe(128);
