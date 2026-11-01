@@ -80,6 +80,24 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
     expect((await findByTestId('hud')).textContent).toBe('title-hud');
   });
 
+  it('activates a changed declaration for the same active name', async () => {
+    const app = makeApp();
+    const tree = (component: new () => ExoScene): ReactElement => (
+      <ExoContext.Provider value={app as unknown as Application}>
+        <Scenes active="main">
+          <Scene name="main" component={component}>
+            <ActiveProbe />
+          </Scene>
+        </Scenes>
+      </ExoContext.Provider>
+    );
+    const view = render(tree(TitleScene));
+    await view.findByText('TitleScene');
+    view.rerender(tree(GameScene));
+    await view.findByText('GameScene');
+    expect(app.scenes.currentScene).toBeInstanceOf(GameScene);
+  });
+
   it('renders only the active scene’s children as the overlay', async () => {
     const app = makeApp();
     const { findByTestId } = render(<Tree app={app} active="title" />);

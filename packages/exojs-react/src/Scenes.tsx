@@ -201,10 +201,8 @@ export const Scenes = ({ active, transition, children }: ScenesProps): ReactElem
       cancelled = true;
       setInstance(null);
     };
-    // Re-activate when the active name changes. SceneClass/transition derive
-    // from `active`; keying on app + active avoids re-instantiating each render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [app, active]);
+  }, [app, active, SceneClass]);
 
   return <ActiveSceneContext.Provider value={instance}>{instance !== null && entry?.children}</ActiveSceneContext.Provider>;
 };
