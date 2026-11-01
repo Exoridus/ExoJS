@@ -75,6 +75,7 @@ export const useExoApplication = (
 ): UseExoApplicationResult => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [app, setApp] = useState<Application | null>(null);
+  const teardownRef = useRef<Promise<unknown> | null>(null);
 
   // Latest onReady without retriggering the lifecycle effect. Updated in an
   // effect (not during render) so the ref-write happens after commit.
@@ -100,23 +101,50 @@ export const useExoApplication = (
       return;
     }
 
-    // Bind to the React-rendered canvas. The engine never removes a canvas it
-    // did not create (Application.destroy leaves it in the DOM), so React stays
-    // the sole owner of the element's lifecycle.
-    const application = new Application({
-      ...options,
-      canvas: { ...options?.canvas, element: canvas },
-    });
+    let cancelled = false;
+    let application: Application | null = null;
 
-    setApp(application);
-    onReadyRef.current?.(application);
+    const create = (): void => {
+      if (cancelled) {
+        return;
+      }
+
+      application = new Application({
+        ...options,
+        canvas: { ...options?.canvas, element: canvas },
+      });
+      setApp(application);
+      onReadyRef.current?.(application);
+    };
+
+    const pending = teardownRef.current;
+
+    if (pending === null) {
+      create();
+    } else {
+      void pending.then(create, (error: unknown) => {
+        if (!cancelled) {
+          onErrorRef.current?.(error);
+        }
+      });
+    }
 
     return () => {
-      // A React cleanup function cannot await, and teardown failures already
-      // travel through the application's own error pipeline - so the Promise
-      // is deliberately dropped rather than reported a second time here.
-      void application.destroy();
-      setApp(null);
+      cancelled = true;
+
+      if (application !== null) {
+        const teardown = Promise.resolve(application.destroy());
+        teardownRef.current = teardown;
+        void teardown.then(
+          () => {
+            if (teardownRef.current === teardown) {
+              teardownRef.current = null;
+            }
+          },
+          () => undefined,
+        );
+        setApp(null);
+      }
     };
     // Recreate only when the backend identity changes; live options are synced
     // by the effects below. `options` is intentionally read at (re)create time.

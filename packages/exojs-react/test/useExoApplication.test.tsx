@@ -1,5 +1,5 @@
 import { type Application, Color, ManualCanvasSizing } from '@codexo/exojs';
-import { render } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -140,13 +140,32 @@ describe('useExoApplication — canvasRef never attached', () => {
 });
 
 describe('useExoApplication — identity vs live options', () => {
-  it('recreates (and destroys) the Application when the backend type changes', () => {
+  it('waits for teardown before constructing a replacement on the canvas', async () => {
+    const harness = mount({ options: { backend: { type: 'webgl2' } } });
+    const first = onlyInstance();
+    let finish!: () => void;
+    first.destroy.mockImplementationOnce(
+      () =>
+        new Promise<void>(resolve => {
+          finish = resolve;
+        }),
+    );
+
+    harness.rerender({ options: { backend: { type: 'webgpu' } } });
+    expect(MockApplication.instances).toHaveLength(1);
+    await act(async () => {
+      finish();
+    });
+    await waitFor(() => expect(MockApplication.instances).toHaveLength(2));
+  });
+
+  it('recreates (and destroys) the Application when the backend type changes', async () => {
     const harness = mount({ options: { backend: { type: 'webgl2' }, canvas: { width: 800, height: 600 } } });
     const first = onlyInstance();
 
     harness.rerender({ options: { backend: { type: 'webgpu' }, canvas: { width: 800, height: 600 } } });
 
-    expect(MockApplication.instances).toHaveLength(2);
+    await waitFor(() => expect(MockApplication.instances).toHaveLength(2));
     expect(first.destroy).toHaveBeenCalledTimes(1);
     expect(harness.result().app).toBe(MockApplication.instances[1]);
   });
