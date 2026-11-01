@@ -219,6 +219,7 @@ export class PerformanceLayer extends DebugLayer {
       this._gpuTimingAvailable = false;
     }
 
+    this._overBudgetPainted = false;
     this._textFps = null;
     this._textFrame = null;
     this._textGpu = null;
