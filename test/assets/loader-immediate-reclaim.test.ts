@@ -6,7 +6,7 @@ import { Texture } from '#rendering/texture/Texture';
 
 import { testAssetType } from './test-asset-type';
 
-const createLoader = (seamless = false) => {
+const createLoader = (seamless = false, onAbort?: () => void) => {
   const loader = new Loader();
   const onError = vi.fn();
   const options = { marker: 'original' };
@@ -24,7 +24,10 @@ const createLoader = (seamless = false) => {
 
       if (attempts === 1) {
         return new Promise((_resolve, reject) => {
-          const rejectAbort = () => reject(context.signal?.reason as Error);
+          const rejectAbort = () => {
+            onAbort?.();
+            reject(context.signal?.reason as Error);
+          };
 
           if (context.signal?.aborted) {
             rejectAbort();
@@ -55,6 +58,104 @@ const createLoader = (seamless = false) => {
 };
 
 describe('immediate asset reclaim', () => {
+  test.each([false, true])('a get from the factory abort listener heals the shared handle (seamless=%s)', async seamless => {
+    let reclaimed: AssetRef<string> | Texture | undefined;
+    let replacement: Promise<unknown> | undefined;
+    const { loader, options, attempts, onError } = createLoader(seamless, () => {
+      reclaimed = next.get(path, options) as AssetRef<string> | Texture;
+      replacement = reclaimed.loaded;
+    });
+    const first = loader.createScope();
+    const next = loader.createScope();
+    const path = seamless ? 'asset.png' : 'asset.txt';
+
+    try {
+      const handle = first.get(path, options) as AssetRef<string> | Texture;
+      const cancelled = handle.loaded.catch((error: unknown) => error);
+      first.destroy();
+
+      expect(reclaimed).toBe(handle);
+      await expect(cancelled).resolves.toMatchObject({ name: 'AbortError' });
+      await expect(replacement).resolves.toBe(seamless ? handle : 'ready');
+      expect(attempts()).toBe(2);
+      expect(onError).not.toHaveBeenCalled();
+      expect(loader.inspect().find(row => row.locator.endsWith('dependency.dat'))?.claims).toBe(1);
+      next.destroy();
+      expect(loader.inspect()).toHaveLength(0);
+    } finally {
+      loader.destroy();
+    }
+  });
+
+  test.each(['get', 'load'] as const)('a cancelled signal-ignoring factory cannot supply a later %s claim', async method => {
+    const loader = new Loader();
+    const first = loader.createScope();
+    const next = loader.createScope();
+    const other = loader.createScope();
+    let enter!: () => void;
+    const entered = new Promise<void>(resolve => {
+      enter = resolve;
+    });
+    let finish!: () => void;
+    const finished = new Promise<void>(resolve => {
+      finish = resolve;
+    });
+    const dispose = vi.fn();
+    const onLoaded = vi.fn();
+    const onError = vi.fn();
+    let attempts = 0;
+    const dependency = testAssetType({ id: 'dependency', acquires: false, create: async () => 'dependency' });
+    const type = testAssetType({
+      id: 'text',
+      extensions: ['txt'],
+      acquires: false,
+      dispose,
+      create: async (_source, context) => {
+        const attempt = ++attempts;
+        await context.dependencies.load(dependency.asset('dependency.dat'));
+
+        if (attempt === 1) {
+          enter();
+          await finished;
+        }
+
+        return attempt === 1 ? 'cancelled' : 'replacement';
+      },
+    });
+    loader._installAssetTypes([type, dependency]);
+    loader.onLoaded.add(onLoaded);
+    loader.onError.add(onError);
+
+    try {
+      const initial = first.load(type.asset('asset.txt'));
+      const cancelled = initial.catch((error: unknown) => error);
+      await entered;
+      first.destroy();
+      expect(loader.inspect().some(row => row.locator.endsWith('dependency.dat'))).toBe(false);
+      onLoaded.mockClear();
+      const a = method === 'get' ? next.get('asset.txt').loaded : next.load(type.asset('asset.txt'));
+      const b = other.load(type.asset('asset.txt'));
+      expect(attempts).toBe(1);
+      finish();
+
+      await expect(a).resolves.toBe('replacement');
+      await expect(b).resolves.toBe('replacement');
+      await expect(cancelled).resolves.toMatchObject({ name: 'AbortError' });
+      expect(attempts).toBe(2);
+      expect(dispose).toHaveBeenCalledExactlyOnceWith('cancelled');
+      expect(onLoaded.mock.calls.map(call => call[2])).toEqual(['dependency', 'replacement']);
+      expect(onError).not.toHaveBeenCalled();
+      expect(loader.inspect().find(row => row.locator.endsWith('dependency.dat'))?.claims).toBe(1);
+      next.destroy();
+      expect(loader.inspect().find(row => row.locator.endsWith('dependency.dat'))?.claims).toBe(1);
+      other.destroy();
+      expect(loader.inspect()).toHaveLength(0);
+    } finally {
+      finish();
+      loader.destroy();
+    }
+  });
+
   test('a load in the same turn as the last release starts a replacement attempt', async () => {
     const { loader, type, options, attempts, seenOptions, onError } = createLoader();
     const first = loader.createScope();

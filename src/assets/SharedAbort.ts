@@ -13,6 +13,7 @@ export class SharedAbort {
   private readonly _controller = new AbortController();
   private readonly _holders = new Set<string>();
   private _settled = false;
+  private _reason: DOMException | undefined;
 
   public constructor(holder: string) {
     this._holders.add(holder);
@@ -23,17 +24,34 @@ export class SharedAbort {
     return this._controller.signal;
   }
 
+  /** Cancellation is visible before abort listeners run. */
+  public get cancelled(): boolean {
+    return this._reason !== undefined || this.signal.aborted;
+  }
+
+  public get reason(): unknown {
+    return this._reason ?? (this.signal.reason as unknown);
+  }
+
   /**
    * Leave as a holder. Returns `true` only when this departure emptied the
    * holder set and therefore aborted the operation, so the caller can drop its
-   * bookkeeping for a handle that is now spent.
+   * bookkeeping for a handle that is now spent. `beforeAbort` runs after
+   * cancellation is published and before signal listeners are invoked.
    */
-  public release(holder: string): boolean {
+  public release(holder: string, beforeAbort: (reason: DOMException) => void): boolean {
     if (!this._holders.delete(holder) || this._holders.size > 0 || this._settled) {
       return false;
     }
 
-    this._controller.abort();
+    const reason = new DOMException('This operation was aborted', 'AbortError');
+    this._reason = reason;
+
+    try {
+      beforeAbort(reason);
+    } finally {
+      this._controller.abort(reason);
+    }
 
     return true;
   }

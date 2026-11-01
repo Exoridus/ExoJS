@@ -187,7 +187,7 @@ describe('refcount / claims', () => {
     expect(handle.audioBuffer).toBeNull(); // both gone → evicted
   });
 
-  test('release while the fetch is still in flight frees the handle on arrival', async () => {
+  test('release while the fetch is still in flight rejects the pending handle', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
     const owner = loader.createScope({ name: 'owner' });
@@ -198,21 +198,15 @@ describe('refcount / claims', () => {
     expect(loader['_residency']['_deferred'].has(key)).toBe(true);
     expect(handle.loadState).toBe('loading');
 
-    // Capture .loaded BEFORE the fill so the awaiter holds the promise that the
-    // fill settles (a later read re-materializes a fresh 'loading' promise).
     const captured = handle.loaded;
+    const completion = loader['_residency']['_inFlight'].get(key)!.catch((error: unknown) => error);
 
-    // Release before load settles: hits _evictKey's leave-it branch (deferred
-    // !== undefined) - it must NOT re-arm or drop the in-flight fetch.
     owner.release(handle);
 
-    // Free-on-arrival: the running fetch completes and settles the captured
-    // .loaded (the asset WAS fully there), but because refcount is 0 the payload
-    // is freed immediately on arrival.
-    await captured;
+    await expect(captured).rejects.toMatchObject({ name: 'AbortError' });
+    await expect(completion).resolves.toMatchObject({ name: 'AbortError' });
     expect(handle.audioBuffer).toBeNull();
-    expect(handle.loadState).toBe('loading');
-    // Identity held: the handle is re-registered as a deferred, evicted placeholder.
+    expect(handle.loadState).toBe('failed');
     expect(loader['_residency']['_resources'].has(loader['_canonicalize'](Sound, 'boom.ogg').key)).toBe(false);
     expect(loader['_residency']['_deferred'].has(key)).toBe(true);
   });
@@ -250,23 +244,38 @@ describe('refcount / claims', () => {
     expect(handle.audioBuffer).not.toBeNull();
   });
 
-  test('in-flight arrival at refcount 0 frees immediately but .loaded still resolves', async () => {
+  test('a decode that completes after release cannot fill the cancelled handle', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
     const owner = loader.createScope({ name: 'owner' });
 
+    let enter!: () => void;
+    const entered = new Promise<void>(resolve => {
+      enter = resolve;
+    });
+    let finishDecode!: (buffer: AudioBuffer) => void;
+    const decoded = new Promise<AudioBuffer>(resolve => {
+      finishDecode = resolve;
+    });
+    decodeAudioDataMock.mockImplementationOnce(() => {
+      enter();
+
+      return decoded;
+    });
     const handle = owner.get('boom.ogg');
-    // Capture the pending .loaded before releasing: this is the promise the fill
-    // settles, so the awaiter observes the completed asset even after eviction.
     const captured = handle.loaded;
+    const key = loader['_canonicalize'](Sound, 'boom.ogg').key;
+    const completion = loader['_residency']['_inFlight'].get(key)!.catch((error: unknown) => error);
+    await entered;
 
-    owner.release(handle); // refcount 0 while the fetch is still in flight
+    owner.release(handle);
+    finishDecode({ duration: 2 } as AudioBuffer);
 
-    // The captured promise resolves (the asset WAS fully fetched)...
-    await expect(captured).resolves.toBe(handle);
-    // ...but the payload was freed on arrival because nothing claims it.
+    await expect(captured).rejects.toMatchObject({ name: 'AbortError' });
+    await expect(completion).resolves.toMatchObject({ name: 'AbortError' });
     expect(handle.audioBuffer).toBeNull();
-    expect(handle.loadState).toBe('loading');
+    expect(handle.loadState).toBe('failed');
+    expect(loader['_residency']['_resources'].has(key)).toBe(false);
   });
 
   test('release of an unheld key is a no-op (no throw)', () => {

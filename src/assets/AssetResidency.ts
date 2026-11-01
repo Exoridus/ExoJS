@@ -705,12 +705,8 @@ export class AssetResidency {
       // resource map where the seamless branch above can read the value itself -
       // for a seamless type the stored resource is always the handle object.
       this._evictValueKey(asset, stored);
-    } else if (this._abortInFlight(asset)) {
-      // Nothing resident: whatever fetch is running for this key (if any) has no
-      // claimer left waiting on it. Cancel it, and mark the key evicted so a later
-      // claim re-drives the fetch into the handles this abort leaves behind.
-      this._evicted.add(key);
-      this._releaseDependencies(key);
+    } else {
+      this._abortInFlight(asset);
     }
 
     const queued = this._backgroundQueue.findIndex(entry => entry.asset.key === key);
@@ -1237,12 +1233,12 @@ export class AssetResidency {
     if (inFlight !== undefined) {
       const abort = this._abort.get(asset.key);
 
-      if (abort?.signal.aborted === true) {
+      if (abort?.cancelled === true) {
         // Finish the cancelled attempt's cleanup before sharing a replacement.
         await inFlight.catch(() => undefined);
 
         if (!this._claims.has(asset.key)) {
-          throw abort.signal.reason;
+          throw abort.reason;
         }
 
         return this._loadSingle(asset, options);
@@ -1348,19 +1344,25 @@ export class AssetResidency {
 
   /**
    * Cancel unclaimed work while retaining its tracking through settlement.
-   * Returns whether a cancelled attempt still needs cleanup.
    */
-  private _abortInFlight(asset: CanonicalAsset): boolean {
+  private _abortInFlight(asset: CanonicalAsset): void {
     const abort = this._abort.get(asset.key);
 
-    if (abort === undefined || (!abort.signal.aborted && !abort.release(asset.key))) {
-      return false;
+    if (abort === undefined) {
+      return;
     }
 
-    // Settle old handle promises before a synchronous reclaim re-arms them.
-    this._onTrackedFailure(asset, abort.signal.reason);
+    if (abort.cancelled) {
+      this._onFetchAborted(asset, abort.reason);
+    } else {
+      abort.release(asset.key, reason => this._onFetchAborted(asset, reason));
+    }
+  }
 
-    return true;
+  private _onFetchAborted(asset: CanonicalAsset, reason: unknown): void {
+    this._evicted.add(asset.key);
+    this._onTrackedFailure(asset, reason);
+    this._releaseDependencies(asset.key);
   }
 
   private _trackInFlight(asset: CanonicalAsset, promise: Promise<unknown>, abort?: SharedAbort): Promise<unknown> {
@@ -1417,8 +1419,8 @@ export class AssetResidency {
       this._acquisitionOptions.delete(asset.key);
     }
 
-    const err = this._normalizeError(error);
     const cancelled = isAbortError(error);
+    const err = cancelled ? (error as Error) : this._normalizeError(error);
     const deferredEntry = this._deferred.get(asset.key);
 
     if (deferredEntry !== undefined) {
