@@ -160,6 +160,7 @@ export class ParticleStorage implements ParticleBatch {
   public readonly lifetime: Float32Array;
   public readonly frame: Uint16Array;
   public readonly alive: Uint8Array;
+  public readonly spawnIds: Float64Array;
 
   public readonly position: ParticleVectorChannel;
   public readonly velocity: ParticleVectorChannel;
@@ -169,6 +170,8 @@ export class ParticleStorage implements ParticleBatch {
 
   /** Upper bound of the range that can hold live particles. Owned by the system. */
   public count = 0;
+
+  private _nextSpawnId = 0;
 
   public constructor(capacity: number) {
     this.capacity = capacity;
@@ -185,6 +188,7 @@ export class ParticleStorage implements ParticleBatch {
     this.lifetime = new Float32Array(capacity);
     this.frame = new Uint16Array(capacity);
     this.alive = new Uint8Array(capacity);
+    this.spawnIds = new Float64Array(capacity);
 
     this.position = { x: this.posX, y: this.posY };
     this.velocity = { x: this.velX, y: this.velY };
@@ -199,6 +203,7 @@ export class ParticleStorage implements ParticleBatch {
 
   /** Resets one slot to the spawn defaults every writer starts from. */
   public reset(slot: number): void {
+    this.spawnIds[slot] = ++this._nextSpawnId;
     this.posX[slot] = 0;
     this.posY[slot] = 0;
     this.velX[slot] = 0;
@@ -215,6 +220,7 @@ export class ParticleStorage implements ParticleBatch {
 
   /** Copies every channel of `from` onto `to`, for the CPU compaction pass. */
   public copySlot(from: number, to: number): void {
+    this.spawnIds[to] = this.spawnIds[from]!;
     this.posX[to] = this.posX[from]!;
     this.posY[to] = this.posY[from]!;
     this.velX[to] = this.velX[from]!;

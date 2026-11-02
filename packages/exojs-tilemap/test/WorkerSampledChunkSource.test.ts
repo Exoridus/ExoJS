@@ -117,6 +117,26 @@ describe('createWorkerSampledChunkSource', () => {
     }
   });
 
+  it.each(['mapping', 'packing'])('rejects a request when %s fails', async failure => {
+    const tileset = makeTileset();
+    const source = createWorkerSampledChunkSource(makeUnboundedLayer(tileset, 1, 1), {
+      workerSource: '',
+      mapValueToTile: () => {
+        if (failure === 'mapping') {
+          throw new Error('mapping failed');
+        }
+
+        return { tileset, localTileId: 0.5, transform: TILE_TRANSFORM_IDENTITY };
+      },
+    });
+    const promise = source.getChunk(0, 0);
+    const worker = lastWorker!;
+    const request = worker.posted[0] as { requestId: number };
+    worker.respond({ requestId: request.requestId, values: new Float64Array([1]) });
+    await expect(promise).rejects.toThrow(failure === 'mapping' ? 'mapping failed' : /integer/);
+    source.destroy();
+  });
+
   it('returns null when every sampled value maps to null', async () => {
     const tileset = makeTileset();
     const layer = makeUnboundedLayer(tileset, 2, 2);

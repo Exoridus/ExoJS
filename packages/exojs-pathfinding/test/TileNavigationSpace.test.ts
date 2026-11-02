@@ -110,6 +110,42 @@ describe('TileNavigationSpace', () => {
     expect(new Pathfinder().findPathBetween(navigation, 1, 1, 5, 1).cost).toBe(4);
   });
 
+  it.each([true, false])('keeps costs unchanged after a failed sync (chunked: %s)', chunked => {
+    const layer = layerOf(['........']);
+    const source = chunked
+      ? layer
+      : {
+          get revision() {
+            return layer.revision;
+          },
+          width: 8,
+          height: 1,
+          tileWidth: 16,
+          tileHeight: 16,
+          getTileAt: (x: number, y: number) => layer.getTileAt(x, y),
+        };
+    let fail = false;
+    const navigation = new TileNavigationSpace(source, {
+      cost: (value, x) => {
+        if (fail && x === 5) {
+          throw new Error('sampling failed');
+        }
+
+        return cost(value);
+      },
+    });
+    const revision = navigation.revision;
+    layer.setTileAt(0, 0, tile(WALL));
+    layer.setTileAt(5, 0, tile(WALL));
+    fail = true;
+    expect(() => navigation.sync()).toThrow('sampling failed');
+    expect(navigation.costAt(0, 0)).toBe(1);
+    expect(navigation.costAt(5, 0)).toBe(1);
+    fail = false;
+    expect(navigation.revision).toBeGreaterThan(revision);
+    expect([navigation.costAt(0, 0), navigation.costAt(5, 0)]).toEqual([0, 0]);
+  });
+
   it('does no work while the source is unchanged', () => {
     const layer = layerOf(ARENA);
     let calls = 0;
