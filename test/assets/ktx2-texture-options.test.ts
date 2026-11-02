@@ -3,9 +3,13 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { NormalMap } from '@codexo/exojs/lighting';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
+import { Asset } from '#assets/Asset';
+import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { type TextureAssetOptions, TextureFactory } from '#assets/factories/TextureFactory';
+import { Loader } from '#assets/Loader';
+import { materializeAssetTypes } from '#extensions/materialize';
 
 import { factoryContext } from './factory-context';
 
@@ -24,6 +28,54 @@ const load = (name: string, textureOptions?: TextureAssetOptions['textureOptions
   );
 
 describe('KTX2 texture options', () => {
+  test.each([false, true])('a failed bare load accepts corrected options (release failed claim=%s)', async release => {
+    const loader = new Loader();
+    const scope = loader.createScope();
+    materializeAssetTypes(loader, coreAssetTypes);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(fixture('rgba8-linear.ktx2'))),
+    );
+
+    try {
+      const rejected = Asset.type('texture', 'rgba8-linear.ktx2', { textureOptions: { flipY: true } });
+
+      await expect(scope.load(rejected)).rejects.toThrow(/flipY cannot re-orient/);
+
+      if (release) {
+        scope.release(rejected);
+      }
+
+      const texture = await scope.load(Asset.type('texture', 'rgba8-linear.ktx2'));
+
+      expect(texture.colorSpace).toBe('linear-srgb');
+      expect(texture.loadState).toBe('ready');
+    } finally {
+      loader.destroy();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test('a failed shared handle keeps its original options during a bare retry', async () => {
+    const loader = new Loader();
+    materializeAssetTypes(loader, coreAssetTypes);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(fixture('rgba8-linear.ktx2'))),
+    );
+
+    try {
+      const handle = loader.get('rgba8-linear.ktx2', { textureOptions: { flipY: true } });
+
+      await expect(handle.loaded).rejects.toThrow(/flipY cannot re-orient/);
+      await expect(loader.load(Asset.type('texture', 'rgba8-linear.ktx2'))).rejects.toThrow(/flipY cannot re-orient/);
+      expect(handle.loadState).toBe('failed');
+    } finally {
+      loader.destroy();
+      vi.unstubAllGlobals();
+    }
+  });
+
   test('a linear payload declared numeric loads as exact data with its upload options', async () => {
     const texture = await load('rgba8-linear.ktx2', { colorSpace: 'none', premultiplyAlpha: false, generateMipMap: false });
 

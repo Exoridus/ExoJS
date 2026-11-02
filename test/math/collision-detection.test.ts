@@ -62,6 +62,29 @@ const diamond = (cx: number, cy: number, r: number): Polygon =>
 // intersectionPointPoint
 // ---------------------------------------------------------------------------
 
+describe('circle and rectangle containment', () => {
+  test('reports full containment for elongated rectangles and corner gaps', () => {
+    const inside = getCollisionCircleRectangle(circle(18, 5, 1), rect(0, 0, 20, 10))!;
+    expect(inside.shapeAinB).toBe(true);
+    const cornerOutside = getCollisionCircleRectangle(circle(0, 0, 5), rect(-4, -4, 8, 8))!;
+    expect(cornerOutside.shapeBinA).toBe(false);
+    const cornerInside = getCollisionCircleRectangle(circle(0, 0, 6), rect(-4, -4, 8, 8))!;
+    expect(cornerInside.shapeBinA).toBe(true);
+  });
+});
+
+describe('segment overlap', () => {
+  test('detects contained and edge-aligned segments', () => {
+    const target = rect(0, 0, 10, 10);
+    const polygon = square(0, 0, 10);
+    expect(intersectionLineRect(line(2, 2, 4, 4), target)).toBe(true);
+    expect(intersectionLinePoly(line(2, 2, 4, 4), polygon)).toBe(true);
+    expect(intersectionLineRect(line(2, 0, 4, 0), target)).toBe(true);
+    expect(intersectionLinePoly(line(2, 0, 4, 0), polygon)).toBe(true);
+    expect(intersectionLineLine(line(2, 0, 4, 0), line(0, 0, 10, 0))).toBe(true);
+  });
+});
+
 describe('intersectionPointPoint', () => {
   test('identical points intersect with zero threshold', () => {
     expect(intersectionPointPoint({ x: 1, y: 1 }, { x: 1, y: 1 })).toBe(true);

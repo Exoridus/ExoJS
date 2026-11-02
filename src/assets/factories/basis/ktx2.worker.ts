@@ -48,7 +48,11 @@ const initialize = (): ReturnType<typeof createBasis> => {
     module.initializeBasis();
 
     return module;
-  })();
+  })().catch(error => {
+    initPromise = undefined;
+
+    throw error;
+  });
 
   return initPromise;
 };
