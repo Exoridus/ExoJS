@@ -582,17 +582,13 @@ class PendingVoice implements Voice {
       return this._real.addSend(bus, level);
     }
 
+    if (this._cancelled) {
+      throw new Error('Cannot open an audio send on a voice that has already ended.');
+    }
+
     // Wired to the placeholder output, which nothing feeds, so the send is silent
     // until flush re-points it at the real voice.
     const send = new AudioSend(getAudioContext(), this._dummyOutput, bus, level);
-
-    if (this._cancelled) {
-      send.destroy();
-      // Destroying a send leaves its source connection intact; this placeholder can never flush.
-      this._dummyOutput.disconnect();
-
-      return send;
-    }
 
     this._sendList.push(send);
 

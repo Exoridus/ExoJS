@@ -116,6 +116,7 @@ const resolveStage = (): StageSize => {
 
 const collected: ProbeCellResult[] = [];
 let busy = false;
+let previewTransition: Promise<void> = Promise.resolve();
 
 const requestedBackend = new URLSearchParams(globalThis.location.search).get('backend');
 
@@ -194,39 +195,48 @@ const addButton = (host: HTMLElement, value: string, label: string, onClick: () 
  * a time, and two `Application`s sharing the page would also compete for GPU
  * contexts.
  */
-const refreshPreview = async (): Promise<void> => {
-  if (busy) {
-    return;
-  }
+const refreshPreview = (): Promise<void> => {
+  previewTransition = previewTransition.then(async () => {
+    try {
+      if (busy) {
+        return;
+      }
 
-  await visual.preview?.stop();
-  visual.preview = null;
-  // The preview is not a run: restore the section title and drop the run's
-  // DONE/ABORTED line, which describes a state the tester has left.
-  setProgress('', 'idle');
-  visualReadout.textContent = 'starting…';
+      await visual.preview?.stop();
+      visual.preview = null;
 
-  try {
-    const preview = await startVisualPreview({
-      scene: visual.scene,
-      mode: visual.mode,
-      pixelRatio: visual.dpr,
-      ...(visual.textRatio !== null && { textPixelRatio: visual.textRatio }),
-      stage: resolveStage(),
-      backend: backendRequest(),
-      host: stageHost,
-    });
+      if (busy) {
+        return;
+      }
 
-    visual.preview = preview;
-    visualReadout.textContent = [
-      `${visual.scene}  ·  DPR ${visual.dpr}  ·  text ${visual.textRatio === null ? `inherit (${visual.dpr})` : visual.textRatio}  ·  ${visual.mode}  ·  ${preview.backendType}`,
-      `css ${preview.cssWidth}×${preview.cssHeight}  ·  backing ${preview.backingWidth}×${preview.backingHeight} (${preview.backingWidth * preview.backingHeight} px)`,
-      `internal targets: ${describeTargets({ internalTargets: preview.internalTargets })}`,
-      PROBE_SCENES.find(scene => scene.id === visual.scene)?.purpose ?? '',
-    ].join('\n');
-  } catch (error) {
-    visualReadout.textContent = `preview failed: ${error instanceof Error ? error.message : String(error)}`;
-  }
+      // The preview is not a run: restore the section title and drop the run's
+      // DONE/ABORTED line, which describes a state the tester has left.
+      setProgress('', 'idle');
+      visualReadout.textContent = 'starting…';
+
+      const preview = await startVisualPreview({
+        scene: visual.scene,
+        mode: visual.mode,
+        pixelRatio: visual.dpr,
+        ...(visual.textRatio !== null && { textPixelRatio: visual.textRatio }),
+        stage: resolveStage(),
+        backend: backendRequest(),
+        host: stageHost,
+      });
+
+      visual.preview = preview;
+      visualReadout.textContent = [
+        `${visual.scene}  ·  DPR ${visual.dpr}  ·  text ${visual.textRatio === null ? `inherit (${visual.dpr})` : visual.textRatio}  ·  ${visual.mode}  ·  ${preview.backendType}`,
+        `css ${preview.cssWidth}×${preview.cssHeight}  ·  backing ${preview.backingWidth}×${preview.backingHeight} (${preview.backingWidth * preview.backingHeight} px)`,
+        `internal targets: ${describeTargets({ internalTargets: preview.internalTargets })}`,
+        PROBE_SCENES.find(scene => scene.id === visual.scene)?.purpose ?? '',
+      ].join('\n');
+    } catch (error) {
+      visualReadout.textContent = `preview failed: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  });
+
+  return previewTransition;
 };
 
 const buildControls = (): void => {
@@ -395,7 +405,7 @@ const buildNotes = (backendSelected: string, webgpuTimestampQuery: boolean | nul
   }
 
   notes.push(
-    stagePreset === 'fixed'
+    runStagePreset === 'fixed'
       ? `The stage is a fixed ${STAGE_SIZE}x${STAGE_SIZE} CSS square, far smaller than a full-screen game. It is the preset that compares across devices; use "fill the screen" for a number that reflects what an app actually renders.`
       : "The stage was the device's usable area, so these numbers reflect a full-screen app but do not compare to a capture taken on a differently sized screen.",
   );
@@ -416,6 +426,7 @@ const buildNotes = (backendSelected: string, webgpuTimestampQuery: boolean | nul
  * probe exists to avoid.
  */
 let runStage: StageSize = { width: STAGE_SIZE, height: STAGE_SIZE };
+let runStagePreset: 'fixed' | 'fill' = 'fixed';
 let lastBackendSelected: string | null = null;
 let lastWebgpuTimestampQuery: boolean | null = null;
 let lastGpuTimerSource = 'not determined yet';
@@ -441,7 +452,7 @@ const buildResult = (): ProbeResult => {
     timerResolutionMs,
     stageWidth: runStage.width,
     stageHeight: runStage.height,
-    stagePreset,
+    stagePreset: runStagePreset,
     cells: collected,
     notes: buildNotes(backendSelected, lastWebgpuTimestampQuery),
   };
@@ -457,24 +468,34 @@ const runCells = async (cells: readonly ProbeCell[], measureMs: number, label: s
     return;
   }
 
+  const nextStage = resolveStage();
+  const nextStagePreset = stagePreset;
+
+  if (
+    collected.length > 0 &&
+    (nextStagePreset !== runStagePreset || nextStage.width !== runStage.width || nextStage.height !== runStage.height)
+  ) {
+    setStatus('Stage changed; clear results before measuring another stage.', true);
+
+    return;
+  }
+
+  runStage = nextStage;
+  runStagePreset = nextStagePreset;
   busy = true;
   runMatrixButton.disabled = true;
   runSustained2Button.disabled = true;
   runSustained3Button.disabled = true;
 
-  await visual.preview?.stop();
-  visual.preview = null;
-  visualReadout.textContent = 'preview stopped while measuring — one variant on screen at a time.';
-
-  const runStartedAt = performance.now();
-  const backend = backendRequest();
-
-  // Frozen for the whole run: `fill` reads the viewport, and a rotation or a
-  // browser-chrome change mid-run would silently make the later cells a
-  // different measurement than the earlier ones.
-  runStage = resolveStage();
-
   try {
+    await previewTransition;
+    await visual.preview?.stop();
+    visual.preview = null;
+    visualReadout.textContent = 'preview stopped while measuring — one variant on screen at a time.';
+
+    const runStartedAt = performance.now();
+    const backend = backendRequest();
+
     for (let i = 0; i < cells.length; i++) {
       const cell = cells[i]!;
 
@@ -658,9 +679,12 @@ buildControls();
 renderResults();
 setStatus(`idle — the full matrix is ${buildProbeMatrix().length} cells, roughly ${estimatedMinutes} minutes.`);
 
-void (async (): Promise<void> => {
-  await probeEnvironmentOnce();
-  renderEnvironment();
-  refreshJson();
-  await refreshPreview();
-})();
+previewTransition = probeEnvironmentOnce()
+  .then(() => {
+    renderEnvironment();
+    refreshJson();
+  })
+  .catch((error: unknown) => {
+    setStatus(`Environment probe failed: ${error instanceof Error ? error.message : String(error)}`, true);
+  });
+void refreshPreview();

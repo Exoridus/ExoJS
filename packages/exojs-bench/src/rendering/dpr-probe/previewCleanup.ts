@@ -7,11 +7,11 @@
  * unreachable. Every step runs even when an earlier one throws, so the app is
  * always destroyed and the original error is what reaches the caller.
  */
-export const releaseFailedPreview = (parts: {
+export const releaseFailedPreview = async (parts: {
   readonly restores: ReadonlyArray<() => void>;
   readonly disposeScene: (() => void) | null;
-  readonly destroyApp: () => void;
-}): void => {
+  readonly destroyApp: () => void | Promise<void>;
+}): Promise<void> => {
   for (const undo of parts.restores) {
     try {
       undo();
@@ -29,7 +29,7 @@ export const releaseFailedPreview = (parts: {
   }
 
   try {
-    parts.destroyApp();
+    await parts.destroyApp();
   } catch {
     /* the original failure is the error worth reporting */
   }

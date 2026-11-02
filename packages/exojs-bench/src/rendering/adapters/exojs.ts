@@ -389,6 +389,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
 
   let app: Application | null = null;
   let root: Container | null = null;
+  let filters: Filter[] = [];
   let textures: Texture[] = [];
   /** Custom sprite materials built for the `mixed-material` archetype; empty for every other archetype. */
   let materials: SpriteMaterial[] = [];
@@ -477,7 +478,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
     // A single blur from the full-size capture into the half-size target is both
     // the downsample and the blur: the filter sizes its sweep to the OUTPUT, so
     // the wide kernel runs over a quarter of the fragments.
-    const filter = new BlurFilter({ strength, quality: 2 });
+    const filter = new BlurFilter({ strength, quality: BLUR_TAPS_PER_SIDE });
     const overlay = new Sprite(bloom).setBlendMode(BlendModes.Additive);
 
     overlay.width = VIEWPORT_WIDTH;
@@ -828,7 +829,8 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
     root.addChild(sprite);
     // `quality` caps the taps per side, so 4 gives the 4 + 1 + 4 the shared
     // contract asks for instead of the count the strength would derive.
-    root.filters = [new BlurFilter({ strength: blurStrength(spec), quality: BLUR_TAPS_PER_SIDE })];
+    filters = [new BlurFilter({ strength: blurStrength(spec), quality: BLUR_TAPS_PER_SIDE })];
+    root.filters = filters;
 
     blurTexture = texture;
   };
@@ -1310,8 +1312,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
           chain.push(createChainFilter(link));
         }
 
-        // Ownership transfers to the node, which destroys the chain in its own
-        // `destroy()` - so teardown must not destroy these a second time.
+        filters = chain;
         sceneRoot.filters = chain;
       }
 
@@ -1609,9 +1610,16 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       releaseLayout();
 
       if (root !== null) {
+        root.filters = [];
         root.destroy();
         root = null;
       }
+
+      for (const filter of filters) {
+        filter.destroy();
+      }
+
+      filters = [];
 
       sharedMeshGeometry?.destroy();
       sharedMeshGeometry = null;

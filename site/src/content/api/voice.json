@@ -148,7 +148,7 @@
             }
           ],
           "returnType": "AudioSend",
-          "description": "Open a parallel send from this voice's output into bus at level (default 1). The dry path is untouched: the voice keeps playing into its own Voice.bus, and a copy of the same signal additionally reaches bus. Use it for shared ambience processing - one reverb serving many voices - which an insert effect cannot express, because an insert replaces the signal rather than duplicating it. The returned AudioSend is owned by this voice and torn down with it; remove one early with Voice.removeSend only to change the routing."
+          "description": "Open a parallel send from this voice's output into bus at level (default 1). The dry path is untouched: the voice keeps playing into its own Voice.bus, and a copy of the same signal additionally reaches bus. Use it for shared ambience processing - one reverb serving many voices - which an insert effect cannot express, because an insert replaces the signal rather than duplicating it. The returned AudioSend is owned by this voice and torn down with it; remove one early with Voice.removeSend only to change the routing. Throws if this voice has already ended, without creating a send."
         },
         {
           "name": "fade",

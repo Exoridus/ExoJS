@@ -182,6 +182,7 @@
     "test:browser:assets": "vitest run --project=browser-assets-chromium",
     "test:browser:core": "vitest run --project=browser-core-chromium",
     "test:browser:audio": "vitest run --project=browser-audio-chromium",
+    "test:bench:browser": "vitest run --project=bench-browser",
     "test:browser:tilemap": "vitest run --project=browser-tilemap-chromium",
     "test:browser:build": "vitest run --project=browser-build-chromium",
     "test:parity": "tsx ./scripts/run-parity.ts --project=browser-webgpu test/rendering/parity",
