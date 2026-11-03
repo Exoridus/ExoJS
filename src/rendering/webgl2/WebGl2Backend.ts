@@ -3803,7 +3803,7 @@ export class WebGl2Backend implements RenderBackend {
 
   /**
    * Return the packing scratch for `state`, at least `length` elements long
-   * (grown on demand, never shrunk, kind-matched to `source`). It is NOT
+   * (grown on demand, never shrunk, kind-matched to `format`). It is NOT
    * narrowed to `length`: the caller passes it to the `(..., srcData, srcOffset)`
    * overload, which reads exactly the rectangle's worth of elements from the
    * offset - so a longer buffer uploads the same bytes as an exact-length view
@@ -3817,12 +3817,8 @@ export class WebGl2Backend implements RenderBackend {
    * contiguous, so `_syncTexture` hands GL an offset into the texture buffer
    * itself.
    */
-  private _acquirePartialUploadScratch(
-    state: ManagedTextureState,
-    source: Float32Array | Uint8Array,
-    length: number,
-  ): Float32Array | Uint8Array {
-    const isFloat = source instanceof Float32Array;
+  private _acquirePartialUploadScratch(state: ManagedTextureState, format: DataTextureFormat, length: number): Float32Array | Uint8Array {
+    const isFloat = format === TextureFormat.R32F || format === TextureFormat.Rgba32F;
     let scratch = state.partialUploadScratch;
 
     if (scratch === null || scratch.length < length || isFloat !== scratch instanceof Float32Array) {
@@ -4038,7 +4034,7 @@ export class WebGl2Backend implements RenderBackend {
           // never reallocated per call - see `_acquirePartialUploadScratch`)
           // that gl.texSubImage2D can read as one tightly packed block.
           const subRowChannels = region.width * channels;
-          const subView = this._acquirePartialUploadScratch(state, texture.buffer, region.width * region.height * channels);
+          const subView = this._acquirePartialUploadScratch(state, format, region.width * region.height * channels);
           const source = texture.buffer;
 
           if (subRowChannels <= nativeRowCopyThreshold) {

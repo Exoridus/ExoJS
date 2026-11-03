@@ -3385,7 +3385,7 @@ export class WebGpuBackend implements RenderBackend {
   /**
    * Return a packing scratch view sized exactly `length`, backed by
    * `state.partialUploadScratch` (grown on demand, never shrunk, kind-matched
-   * to `source`). Reusing this buffer across every partial `DataTexture`
+   * to `format`). Reusing this buffer across every partial `DataTexture`
    * upload - instead of allocating a fresh temporary array per sync - is what
    * keeps a barrier-heavy scene's per-frame CPU garbage flat instead of
    * scaling with flush count: each flush's transform (and separate tint) sync
@@ -3404,10 +3404,10 @@ export class WebGpuBackend implements RenderBackend {
    */
   private _acquirePartialUploadScratch(
     state: ManagedWebGpuTextureState,
-    source: Float32Array | Uint8Array,
+    format: DataTextureFormat,
     length: number,
   ): Float32Array | Uint8Array {
-    const isFloat = source instanceof Float32Array;
+    const isFloat = format === TextureFormat.R32F || format === TextureFormat.Rgba32F;
     let scratch = state.partialUploadScratch;
 
     if (scratch === null || scratch.length < length || isFloat !== scratch instanceof Float32Array) {
@@ -3587,7 +3587,7 @@ export class WebGpuBackend implements RenderBackend {
             // so it is the common case rather than a corner one.
             subBuffer = this._acquireContiguousUploadView(state, texture.buffer, region.y * rowChannels, length);
           } else {
-            subBuffer = this._acquirePartialUploadScratch(state, texture.buffer, length);
+            subBuffer = this._acquirePartialUploadScratch(state, format, length);
 
             for (let row = 0; row < region.height; row++) {
               const sourceStart = (region.y + row) * rowChannels + region.x * channels;
