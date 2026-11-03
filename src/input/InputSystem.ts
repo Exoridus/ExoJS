@@ -1605,7 +1605,7 @@ export class InputSystem {
       platform.onSurfaceEvent('pointerup', event => this.handlePointerUp(event), active),
       platform.onSurfaceEvent('pointercancel', event => this.handlePointerCancel(event), passive),
       platform.onSurfaceEvent('contextmenu', event => this.handleContextMenu(event), active),
-      platform.onPointerLockChange(locked => this.onPointerLockChange.dispatch(locked)),
+      platform.onPointerLockChange(locked => this.onPointerLockChange.dispatchIsolated(this.reportListenerError, locked)),
     );
 
     if (!this.allowTextSelection) {

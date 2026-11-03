@@ -676,6 +676,47 @@ describe('a throwing listener', () => {
     expect(errors).toEqual([failure]);
   });
 
+  test('a throwing pointer-lock listener reports immediately and preserves later input and platform listeners', async () => {
+    const { app, errors, frame } = await setup();
+    const seen: boolean[] = [];
+    const platformSeen: boolean[] = [];
+    const hostErrors: unknown[] = [];
+    const descriptor = Object.getOwnPropertyDescriptor(document, 'pointerLockElement');
+
+    const captureHostError = (event: ErrorEvent): void => {
+      hostErrors.push(event.error);
+      event.preventDefault();
+    };
+
+    app.input.onPointerLockChange.add(throwOnce('pointer-lock listener'));
+    app.input.onPointerLockChange.add(locked => seen.push(locked));
+    const unsubscribe = app.platform.onPointerLockChange(locked => platformSeen.push(locked));
+    window.addEventListener('error', captureHostError);
+
+    try {
+      Object.defineProperty(document, 'pointerLockElement', { configurable: true, value: app.canvas });
+      document.dispatchEvent(new Event('pointerlockchange'));
+
+      expect(seen).toEqual([true]);
+      expect(platformSeen).toEqual([true]);
+      expect(hostErrors).toEqual([]);
+      expect(errors.map(error => error.message)).toEqual(['pointer-lock listener']);
+
+      frame();
+
+      expect(errors).toHaveLength(1);
+    } finally {
+      unsubscribe();
+      window.removeEventListener('error', captureHostError);
+
+      if (descriptor) {
+        Object.defineProperty(document, 'pointerLockElement', descriptor);
+      } else {
+        Reflect.deleteProperty(document, 'pointerLockElement');
+      }
+    }
+  });
+
   test('a throwing focus listener on a press the host would not focus keeps the press and is reported without failing a frame', async () => {
     const { app, frame, errors } = await setup();
     let downs = 0;
