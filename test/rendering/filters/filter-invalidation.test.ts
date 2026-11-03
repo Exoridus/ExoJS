@@ -148,6 +148,31 @@ describe('every stock filter owns its own invalidation', () => {
 });
 
 describe('attachment decides who is notified', () => {
+  test('assigning the live filters list preserves the chain and owner notifications without invalidation', () => {
+    const node = new CountingNode();
+    const first = new ProbeFilter();
+    const second = new ProbeFilter();
+
+    node.filters = [first, second];
+
+    const filters = node.filters;
+    const afterAttach = node.invalidations;
+
+    node.filters = filters;
+
+    expect(node.filters).toBe(filters);
+    expect(node.filters).toEqual([first, second]);
+    expect(node.invalidations).toBe(afterAttach);
+
+    first.change();
+    second.change();
+
+    expect(node.invalidations).toBe(afterAttach + 2);
+    node.destroy();
+    first.destroy();
+    second.destroy();
+  });
+
   test('a removed filter no longer reaches its former owner', () => {
     const node = new CountingNode();
     const filter = new ProbeFilter();

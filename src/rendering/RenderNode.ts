@@ -471,6 +471,10 @@ export abstract class RenderNode extends SceneNode {
   }
 
   public set filters(filters: readonly Filter[]) {
+    if (filters === this.filters) {
+      return;
+    }
+
     this._detachFilterOwnership();
 
     if (filters.length === 0) {
