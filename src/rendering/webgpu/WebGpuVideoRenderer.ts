@@ -20,7 +20,7 @@ import type { WebGpuBackend } from './WebGpuBackend';
 import { WebGpuPassArena } from './WebGpuPassArena';
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
 import { pipelineVariantKey, WebGpuPipelineVariantCache } from './WebGpuPipelineVariantCache';
-import { buildSpriteShaderSource } from './WebGpuSpriteRenderer';
+import { buildSpriteShaderSource, WebGpuSpriteRenderer } from './WebGpuSpriteRenderer';
 
 // Byte-for-byte the sprite instance layout: localBounds vec4 f32 (16) +
 // uvBounds u16x4 packed as 2×u32 (8) + packedSlotFlags u32 (4) + nodeIndex u32
@@ -51,7 +51,8 @@ const videoInstanceVertexBufferLayout: GPUVertexBufferLayout = {
  * without its multi-texture batching. Each flush attempts a zero-copy
  * `GPUExternalTexture` import fresh (never cached across frames - pause,
  * seek, and source changes all affect readiness), falling back to a
- * `texture_2d` copy-upload path on any failure.
+ * `texture_2d` copy-upload path on any failure. Videos with a sprite material
+ * use the sprite renderer's texture_2d path for its shader and blend behavior.
  *
  * Deliberately declares neither `supportsRetainedBatches` nor
  * `_supportsPersistentSlots`, unlike {@link WebGpuSpriteRenderer}. The cost is
@@ -66,6 +67,7 @@ const videoInstanceVertexBufferLayout: GPUVertexBufferLayout = {
  */
 export class WebGpuVideoRenderer extends AbstractWebGpuRenderer<Video> {
   private _device: GPUDevice | null = null;
+  private _materialRenderer: WebGpuSpriteRenderer | null = null;
 
   private _uniformBindGroupLayout: GPUBindGroupLayout | null = null;
   private _fallbackTextureBindGroupLayout: GPUBindGroupLayout | null = null;
@@ -170,30 +172,35 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
   }
 
   protected onDisconnect(): void {
-    this._instanceArena.destroy();
-    this._indexBuffer?.destroy();
-    this._uniformBuffer?.destroy();
+    try {
+      this._materialRenderer?.disconnect();
+    } finally {
+      this._materialRenderer = null;
+      this._instanceArena.destroy();
+      this._indexBuffer?.destroy();
+      this._uniformBuffer?.destroy();
 
-    this._fallbackPipelines.clear();
-    this._externalPipelines.clear();
-    this._indexBuffer = null;
-    this._uniformBuffer = null;
-    this._transformBindGroup = null;
-    this._transformStorageBuffer = null;
-    this._tintStorageBuffer = null;
-    this._writtenView = null;
-    this._writtenViewUpdateId = -1;
-    this._hasWrittenProjection = false;
-    this._fallbackPipelineLayout = null;
-    this._fallbackTextureBindGroupLayout = null;
-    this._uniformBindGroupLayout = null;
-    this._fallbackShaderModule = null;
-    this._externalPipelineLayout = null;
-    this._externalTextureBindGroupLayout = null;
-    this._externalShaderModule = null;
-    this._device = null;
-    this._pendingVideo = null;
-    this._pendingTexture = null;
+      this._fallbackPipelines.clear();
+      this._externalPipelines.clear();
+      this._indexBuffer = null;
+      this._uniformBuffer = null;
+      this._transformBindGroup = null;
+      this._transformStorageBuffer = null;
+      this._tintStorageBuffer = null;
+      this._writtenView = null;
+      this._writtenViewUpdateId = -1;
+      this._hasWrittenProjection = false;
+      this._fallbackPipelineLayout = null;
+      this._fallbackTextureBindGroupLayout = null;
+      this._uniformBindGroupLayout = null;
+      this._fallbackShaderModule = null;
+      this._externalPipelineLayout = null;
+      this._externalTextureBindGroupLayout = null;
+      this._externalShaderModule = null;
+      this._device = null;
+      this._pendingVideo = null;
+      this._pendingTexture = null;
+    }
   }
 
   public render(video: Video): void {
@@ -203,6 +210,18 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
     if (backend === null || !(texture instanceof Texture) || texture.width === 0 || texture.height === 0 || texture.source === null) {
       return;
     }
+
+    if (video.material !== null) {
+      this.flush();
+      const renderer = (this._materialRenderer ??= new WebGpuSpriteRenderer());
+
+      renderer.connect(backend);
+      renderer.render(video);
+
+      return;
+    }
+
+    this._materialRenderer?.flush();
 
     // Only one video is ever in flight (no batching across videos - each gets
     // its own draw); a second render() before this one flushed means two
@@ -221,6 +240,8 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
   }
 
   public flush(): void {
+    this._materialRenderer?.flush();
+
     const backend = this.getBackendOrNull();
     const device = this._device;
     const uniformBuffer = this._uniformBuffer;

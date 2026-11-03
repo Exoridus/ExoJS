@@ -309,3 +309,27 @@ describe('WebGPU mesh index width', () => {
     }
   });
 });
+
+test('a WebGL2 mesh batch drains queued mesh draws in call order', () => {
+  const harness = createGlSpyHarness();
+  const queued = buildGeometry({ triangles: 1 });
+  const batched = buildGeometry({ triangles: 2 });
+  const mesh = new Mesh({ geometry: queued });
+  const batch = new RenderBatch(batched);
+
+  try {
+    batch.add(new Matrix(), Color.white);
+    const context = new RenderingContext(harness.backend);
+
+    harness.backend.setView(context.view);
+    harness.backend.draw(mesh);
+    context.drawBatch(batch);
+    harness.backend.flush();
+    expect(harness.draws.map(draw => draw.count)).toEqual([3, 6]);
+  } finally {
+    harness.destroy();
+    mesh.destroy();
+    queued.destroy();
+    batched.destroy();
+  }
+});

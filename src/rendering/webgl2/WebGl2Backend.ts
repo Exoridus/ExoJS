@@ -2286,6 +2286,7 @@ export class WebGl2Backend implements RenderBackend {
 
   public resize(width: number, height: number): this {
     this._rootRenderTarget.resize(width, height);
+    this._rootRenderTarget.updateViewport();
     this._bindRenderTarget(this._renderTarget);
 
     return this;

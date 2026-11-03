@@ -1,6 +1,7 @@
 @group(0) @binding(1) var uTexture: texture_2d<f32>;
 @group(0) @binding(2) var uSampler: sampler;
 @group(1) @binding(1) var uLut: texture_2d<f32>;
+@group(1) @binding(2) var uLutSampler: sampler;
 
 @fragment
 fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
@@ -18,9 +19,9 @@ fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     let domainRgb = select(straight, linearToSrgb(straight), domainSrgb);
     let gradedCoord = domainRgb * ((n - 1.0) / n) + 0.5 / n;
     let result = vec3<f32>(
-        textureSample(uLut, uSampler, vec2<f32>(gradedCoord.r, 0.5)).r,
-        textureSample(uLut, uSampler, vec2<f32>(gradedCoord.g, 0.5)).g,
-        textureSample(uLut, uSampler, vec2<f32>(gradedCoord.b, 0.5)).b,
+        textureSample(uLut, uLutSampler, vec2<f32>(gradedCoord.r, 0.5)).r,
+        textureSample(uLut, uLutSampler, vec2<f32>(gradedCoord.g, 0.5)).g,
+        textureSample(uLut, uLutSampler, vec2<f32>(gradedCoord.b, 0.5)).b,
     );
     let graded = select(result, srgbToLinear(result), domainSrgb);
 

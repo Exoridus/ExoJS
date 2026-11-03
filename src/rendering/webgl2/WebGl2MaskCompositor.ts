@@ -59,30 +59,35 @@ export class WebGl2MaskCompositor {
       throw new Error('WebGl2MaskCompositor: could not create vertex array object.');
     }
 
-    this._shader.connect(createWebGl2ShaderProgram(gl));
-
     const bufferHandles = new Map<WebGl2RenderBuffer, WebGLBuffer>();
-    const indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, quadIndices, BufferUsage.StaticDraw).connect(
-      this._createBufferRuntime(gl, bufferHandles),
-      backend.accountant,
-    );
-    const vertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._vertexData, BufferUsage.DynamicDraw).connect(
-      this._createBufferRuntime(gl, bufferHandles),
-      backend.accountant,
-    );
+    const indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, quadIndices, BufferUsage.StaticDraw);
+    const vertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._vertexData, BufferUsage.DynamicDraw);
 
-    // Force shader finalize so getAttribute() below sees a populated
-    // attribute table; the async-compile path defers extraction until
-    // the first sync() call.
-    this._shader.sync();
+    try {
+      this._shader.connect(createWebGl2ShaderProgram(gl));
+      indexBuffer.connect(this._createBufferRuntime(gl, bufferHandles), backend.accountant);
+      vertexBuffer.connect(this._createBufferRuntime(gl, bufferHandles), backend.accountant);
 
-    const vao = new WebGl2VertexArrayObject()
-      .addIndex(indexBuffer)
-      .addAttribute(vertexBuffer, this._shader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
-      .addAttribute(vertexBuffer, this._shader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
-      .connect(this._createVaoRuntime(gl, vaoHandle));
+      // Force shader finalize so getAttribute() below sees a populated
+      // attribute table; the async-compile path defers extraction until
+      // the first sync() call.
+      this._shader.sync();
 
-    this._connection = { gl, vaoHandle, vao, indexBuffer, vertexBuffer, bufferHandles };
+      const vao = new WebGl2VertexArrayObject()
+        .addIndex(indexBuffer)
+        .addAttribute(vertexBuffer, this._shader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
+        .addAttribute(vertexBuffer, this._shader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
+        .connect(this._createVaoRuntime(gl, vaoHandle));
+
+      this._connection = { gl, vaoHandle, vao, indexBuffer, vertexBuffer, bufferHandles };
+    } catch (error) {
+      indexBuffer.destroy();
+      vertexBuffer.destroy();
+      gl.deleteVertexArray(vaoHandle);
+      this._shader.destroy();
+
+      throw error;
+    }
   }
 
   public disconnect(): void {

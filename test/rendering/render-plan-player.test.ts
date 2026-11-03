@@ -1,3 +1,5 @@
+import type { Matrix } from '#math/Matrix';
+import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { type MaterialKey } from '#rendering/material/MaterialKey';
 import { type DrawCommand, RenderEntryKind } from '#rendering/plan/renderCommand';
@@ -237,4 +239,48 @@ describe('render plan player', () => {
     expect(second.slots).toEqual(first.slots);
     expect(second.uploads).toEqual(first.uploads);
   });
+});
+
+test('nested playback preserves the active outer group matrix reference', () => {
+  const makeScope = (x: number): GroupScope => {
+    const node = new Container();
+
+    node.position.x = x;
+    const group = createGroupScopeDouble([drawEntry(createDrawCommand(new BoxDrawable('box'), 0, 0, 1))]);
+
+    group.transformNode = node;
+
+    return createGroupScopeDouble([groupEntry(group, 0)]);
+  };
+
+  let outerMatrix: Matrix | null = null;
+  let innerMatrix: Matrix | null = null;
+  const inner = {
+    _setRenderGroupTransform(matrix: Matrix | null) {
+      if (matrix !== null) {
+        innerMatrix = matrix;
+      }
+    },
+    draw() {
+      return this;
+    },
+  } as unknown as RenderBackend;
+  const outer = {
+    _setRenderGroupTransform(matrix: Matrix | null) {
+      if (matrix !== null) {
+        outerMatrix = matrix;
+      }
+    },
+    draw() {
+      const before = outerMatrix!.clone();
+
+      RenderPlanPlayer.playScope(makeScope(200), inner);
+      expect(outerMatrix).not.toBe(innerMatrix);
+      expect(outerMatrix).toEqual(before);
+
+      return this;
+    },
+  } as unknown as RenderBackend;
+
+  RenderPlanPlayer.playScope(makeScope(10), outer);
 });

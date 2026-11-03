@@ -8,18 +8,22 @@ import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import { Drawable } from '#rendering/Drawable';
+import { FilterPass } from '#rendering/FilterPass';
 import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
+import { MultiRenderTarget } from '#rendering/MultiRenderTarget';
 import { Graphics } from '#rendering/primitives/Graphics';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { Renderer } from '#rendering/Renderer';
 import type { RenderError } from '#rendering/RenderError';
+import { RenderingContext } from '#rendering/RenderingContext';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Text } from '#rendering/text/Text';
 import { TextStyle } from '#rendering/text/TextStyle';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
-import { BlendModes, ScaleModes } from '#rendering/types';
+import { BlendModes, ScaleModes, TextureFormat } from '#rendering/types';
 import { Video } from '#rendering/video/Video';
+import { View } from '#rendering/View';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 import { WebGpuMeshRenderer } from '#rendering/webgpu/WebGpuMeshRenderer';
 import { WebGpuSpriteRenderer } from '#rendering/webgpu/WebGpuSpriteRenderer';
@@ -987,6 +991,53 @@ describe('WebGpuBackend', () => {
       expect(environment.textures.length).toBeGreaterThan(0);
       expect(environment.textures.every(gpuTexture => gpuTexture.destroy.mock.calls.length > 0)).toBe(true);
     } finally {
+      environment.restore();
+    }
+  });
+
+  test('restores the caller camera and discards a blit batch rejected during the final flush', async () => {
+    const environment = createMockWebGpuEnvironment();
+    const backend = new WebGpuBackend({
+      canvas: environment.canvas,
+      options: { canvas: { width: 128, height: 128 } },
+    } as unknown as Application);
+    const camera = View.from({ center: { x: 300, y: 200 }, size: { width: 20, height: 10 }, rotation: 35 });
+    const source = new RenderTexture(128, 128, { format: TextureFormat.Rgba32F, scaleMode: ScaleModes.Linear });
+    const pass = new FilterPass(source);
+    const healthySource = new RenderTexture(16, 16);
+    const sprite = new Sprite(healthySource).setPosition(300, 200);
+
+    try {
+      installCoreRenderers(backend);
+      await backend.initialize();
+      backend.setView(camera);
+
+      expect(() => pass.execute(new RenderingContext(backend))).toThrow('float32-filterable');
+      expect.soft(backend.view).toBe(camera);
+      expect
+        .soft([backend.view.center.x, backend.view.center.y, backend.view.size.width, backend.view.size.height, backend.view.rotation])
+        .toEqual([300, 200, 20, 10, 35]);
+      expect.soft(backend.passCoordinator.hasActivePass).toBe(false);
+      pass.destroy();
+      expect.soft(backend.view).toBe(camera);
+      expect.soft(() => backend.flush()).not.toThrow();
+      expect.soft(backend.stats.drawCalls).toBe(0);
+      expect
+        .soft(() => {
+          sprite.render(backend);
+          backend.flush();
+        })
+        .not.toThrow();
+      expect.soft(backend.stats.drawCalls).toBe(1);
+    } finally {
+      source.scaleMode = ScaleModes.Nearest;
+      backend.setView(camera);
+      pass.destroy();
+      sprite.destroy();
+      backend.destroy();
+      source.destroy();
+      healthySource.destroy();
+      camera.destroy();
       environment.restore();
     }
   });
@@ -2908,4 +2959,59 @@ describe('WebGpuBackend', () => {
       environment.restore();
     }
   });
+});
+
+test('rejecting an oversized render target preserves the current target and its destroy subscription', async () => {
+  const environment = createMockWebGpuEnvironment();
+  const backend = new WebGpuBackend({ canvas: environment.canvas, options: {} } as Application);
+  const current = new RenderTexture(32, 32);
+  let oversized: MultiRenderTarget | null = null;
+
+  try {
+    await backend.initialize();
+    const root = backend.renderTarget;
+
+    backend.setRenderTarget(current);
+    const changes = backend.stats.renderTargetChanges;
+
+    oversized = new MultiRenderTarget(32, 32, {
+      formats: Array.from({ length: backend.maxColorAttachments + 1 }, () => TextureFormat.Rgba8),
+    });
+    expect(() => backend.setRenderTarget(oversized)).toThrow('colour attachment');
+    expect(backend.renderTarget).toBe(current);
+    expect(backend.stats.renderTargetChanges).toBe(changes);
+    current.destroy();
+    expect(backend.renderTarget).toBe(root);
+  } finally {
+    backend.destroy();
+    current.destroy();
+    oversized?.destroy();
+    environment.restore();
+  }
+});
+
+test.each(['uninitialized', 'lost'])('scissor state silently no-ops while the device is %s', async state => {
+  const environment = createMockWebGpuEnvironment();
+  const backend = new WebGpuBackend({ canvas: environment.canvas, options: {} } as Application);
+  const internals = backend as unknown as { _deviceLost: boolean; _flushActiveRendererAndEndPass(): void; _clipDepth: number };
+
+  try {
+    if (state === 'lost') {
+      await backend.initialize();
+      internals._deviceLost = true;
+    }
+
+    const flush = vi.spyOn(internals, '_flushActiveRendererAndEndPass').mockImplementation(() => {
+      throw new Error('unavailable device touched');
+    });
+
+    expect(() => backend.pushScissorRect(new Rectangle(0, 0, 10, 10))).not.toThrow();
+    expect(() => backend.popScissorRect()).not.toThrow();
+    expect(internals._clipDepth).toBe(0);
+    expect(flush).not.toHaveBeenCalled();
+    flush.mockRestore();
+  } finally {
+    backend.destroy();
+    environment.restore();
+  }
 });

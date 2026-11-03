@@ -69,7 +69,9 @@ class InfiniteGridScene extends Scene {
     this.sprite = new Sprite(this.loader.get(assets.uvGrid256));
     this.sprite.width = width;
     this.sprite.height = height;
-    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uCenter: [0, 0], uViewSize: [width, height] } });
+    this.filter = this.track(
+      new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uCenter: [0, 0], uViewSize: [width, height] } }),
+    );
     this.sprite.filters = [this.filter];
     this.inputs.onActive(Keyboard.A, () => {
       this.move.x = -1;

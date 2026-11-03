@@ -28,10 +28,6 @@ import type { ColorTextureFormat, TargetResolution } from './types';
 import { BlendModes, isAdvancedBlendMode, TextureFormat } from './types';
 import { View } from './View';
 
-interface DestroyableFilter {
-  destroy(): void;
-}
-
 /**
  * The cache sprite, described structurally so this module never imports the
  * `Sprite` class (that edge would close a runtime cycle). `Drawable` is folded
@@ -54,9 +50,6 @@ interface RenderNodeSpriteLike extends Drawable {
   render(backend: RenderBackend): this;
   destroy(): void;
 }
-
-const isDestroyableFilter = (filter: Filter): filter is Filter & DestroyableFilter =>
-  'destroy' in filter && typeof (filter as Partial<DestroyableFilter>).destroy === 'function';
 
 /** Shared empty result for every node that has no filter list of its own. */
 const NO_FILTERS: readonly Filter[] = [];
@@ -472,6 +465,7 @@ export abstract class RenderNode extends SceneNode {
   private _cacheTexture: RenderTexture | null = null;
   private _retainedRoot: RetainedRootRepresentation | null = null;
 
+  /** Filters are borrowed; destroying this node detaches them without destroying them. */
   public get filters(): readonly Filter[] {
     return this._filters ?? NO_FILTERS;
   }
@@ -1074,12 +1068,6 @@ export abstract class RenderNode extends SceneNode {
 
     if (this._filters !== null) {
       this._detachFilterOwnership();
-
-      for (const filter of this._filters) {
-        if (isDestroyableFilter(filter)) {
-          filter.destroy();
-        }
-      }
 
       this._filters.length = 0;
       this._filters = null;

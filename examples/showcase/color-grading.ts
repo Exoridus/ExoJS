@@ -102,7 +102,7 @@ class ColorGradingScene extends Scene {
     // encoded values and returns linear premultiplied colour. The tables are
     // numeric (`fromImage` never decodes them), and the identity baseline
     // leaves colour and fractional alpha unchanged.
-    this.filter = new LutFilter({ mode: '3d', size: LUT_SIZE, colorSpace: 'srgb' }).setLut(this.luts[0]);
+    this.filter = this.track(new LutFilter({ mode: '3d', size: LUT_SIZE, colorSpace: 'srgb' }).setLut(this.luts[0]));
 
     this.sprite = new Sprite(this.loader.get(PRIMARY_RAMP)).setAnchor(0.5).setScale(3.5);
     this.sprite.setPosition(width / 2, height / 2);

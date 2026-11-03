@@ -211,6 +211,30 @@ describe('attachment decides who is notified', () => {
 });
 
 describe('a shared filter notifies every consumer', () => {
+  test('destroying one owner preserves the shared filter and its other owner', () => {
+    const first = new CountingNode();
+    const second = new CountingNode();
+    const filter = new ProbeFilter();
+    const destroy = vi.spyOn(filter, 'destroy');
+
+    first.addFilter(filter);
+    second.addFilter(filter);
+    first.destroy();
+
+    const firstBefore = first.invalidations;
+    const secondBefore = second.invalidations;
+
+    filter.change();
+
+    expect(destroy).not.toHaveBeenCalled();
+    expect(first.invalidations).toBe(firstBefore);
+    expect(second.invalidations).toBe(secondBefore + 1);
+    second.destroy();
+    expect(destroy).not.toHaveBeenCalled();
+    filter.destroy();
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
   test('one mutation reaches both nodes', () => {
     const first = new CountingNode();
     const second = new CountingNode();

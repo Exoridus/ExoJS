@@ -1072,6 +1072,16 @@ export class WebGpuBackend implements RenderBackend {
     assertLiveRenderTarget(nextRenderTarget);
 
     if (this._renderTarget !== nextRenderTarget) {
+      if (isMultiAttachmentTarget(nextRenderTarget) && nextRenderTarget.attachments.length > this.maxColorAttachments) {
+        throw new RenderError({
+          code: 'unsupported-format',
+          backendType: RenderBackendType.WebGpu,
+          message:
+            `This device accepts ${this.maxColorAttachments} colour attachment(s), but the target declares ` +
+            `${nextRenderTarget.attachments.length}. Check backend.maxColorAttachments.`,
+        });
+      }
+
       this._flushActiveRendererAndEndPass();
 
       if (this._renderTarget !== this._rootRenderTarget) {
@@ -1082,16 +1092,6 @@ export class WebGpuBackend implements RenderBackend {
       this._multiAttachmentTarget = isMultiAttachmentTarget(nextRenderTarget);
       this._stats.renderTargetChanges++;
 
-      if (this._multiAttachmentTarget && (nextRenderTarget as MultiRenderTarget).attachments.length > this.maxColorAttachments) {
-        throw new RenderError({
-          code: 'unsupported-format',
-          backendType: RenderBackendType.WebGpu,
-          message:
-            `This device accepts ${this.maxColorAttachments} colour attachment(s), but the target declares ` +
-            `${(nextRenderTarget as MultiRenderTarget).attachments.length}. Check backend.maxColorAttachments.`,
-        });
-      }
-
       if (nextRenderTarget !== this._rootRenderTarget) {
         this._subscribeRenderTarget(nextRenderTarget);
       }
@@ -1101,6 +1101,10 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   public pushScissorRect(bounds: Rectangle): this {
+    if (this._deviceLost || this._device === null) {
+      return this;
+    }
+
     this._flushActiveRendererAndEndPass();
 
     const depth = this._clipDepth;
@@ -1219,7 +1223,7 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   public popScissorRect(): this {
-    if (this._clipDepth === 0) {
+    if (this._deviceLost || this._device === null || this._clipDepth === 0) {
       return this;
     }
 
@@ -1448,8 +1452,14 @@ export class WebGpuBackend implements RenderBackend {
     // Only flush the open batch when the view actually changes. The unconditional
     // flush forced one draw call per render() call (each render() re-applies the
     // same camera view), defeating cross-call batching.
-    if (this._renderTarget.view !== view) {
-      this._flushActiveRendererAndEndPass();
+    try {
+      if (this._renderTarget.view !== view) {
+        this._flushActiveRendererAndEndPass();
+      }
+    } catch (error) {
+      this._passCoordinatorInstance?.discardPass();
+
+      throw error;
     }
 
     this._renderTarget.setView(view);

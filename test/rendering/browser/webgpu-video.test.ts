@@ -44,10 +44,13 @@ import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
 import { Geometry } from '#rendering/geometry/Geometry';
+import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RenderNode } from '#rendering/RenderNode';
+import { Shader } from '#rendering/shader/Shader';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
+import { BlendModes } from '#rendering/types';
 import { Video } from '#rendering/video/Video';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
@@ -620,4 +623,42 @@ describe('WebGPU Video device-loss teardown', { timeout: 30_000 }, () => {
       second?.destroy();
     }
   });
+});
+
+test('video honors its sprite material shader and material blend mode', async () => {
+  const fixture = await createSolidColorVideo('#ffffff', 16);
+  const backend = await setupBackend();
+  const video = new Video(fixture.video);
+  const material = new SpriteMaterial({
+    shader: new Shader({
+      wgsl: `
+@fragment
+fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
+  let base = sampleBase(input.textureSlot, input.texcoord);
+  return vec4<f32>(base.rgb * vec3<f32>(0.0, 1.0, 0.0), base.a);
+}`,
+    }),
+    blendMode: BlendModes.Additive,
+  });
+
+  video.material = material;
+  video.setPosition(8, 8);
+
+  try {
+    const device = getBackendDevice(backend);
+
+    device.pushErrorScope('validation');
+    backend.resetStats();
+    backend.clear(new Color(255, 0, 0));
+    video.render(backend);
+    backend.flush();
+    expect((await device.popErrorScope())?.message ?? null).toBeNull();
+    await device.queue.onSubmittedWorkDone();
+    expectPixelNear(readWebGpuPixels(backend, canvasSize)(16, 16), [255, 255, 0, 255]);
+  } finally {
+    video.destroy();
+    material.destroy();
+    fixture.dispose();
+    backend.destroy();
+  }
 });

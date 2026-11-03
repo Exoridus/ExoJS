@@ -72,6 +72,7 @@ const createMockBackend = (
     },
     device: { createCommandEncoder } as unknown as GPUDevice,
     renderTargetFormat: 'rgba8unorm' as GPUTextureFormat,
+    renderTargetFormats: ['rgba8unorm'],
     stats,
     setRenderTarget,
     setView,
@@ -448,7 +449,7 @@ describe('WebGpuPassCoordinator', () => {
 
         expect(fakeStencil.connect).toHaveBeenCalledTimes(1);
         expect(fakeStencil.draw).toHaveBeenCalledTimes(1);
-        expect(fakeStencil.draw).toHaveBeenCalledWith(expect.anything(), 'rgba8unorm', true, geometryStub, transform, expect.anything());
+        expect(fakeStencil.draw).toHaveBeenCalledWith(expect.anything(), ['rgba8unorm'], true, geometryStub, transform, expect.anything());
         // The clip is now in effect: depth 1 > 0 on the active target.
         expect(coordinator.stencilActive).toBe(true);
         expect(coordinator.unbalancedStencilClips()).toBe(1);
@@ -630,4 +631,45 @@ describe('WebGpuPassCoordinator', () => {
       }
     });
   });
+});
+
+test.each(['push', 'pop'])('a failed stencil %s leaves coherent state and can retry', operation => {
+  const root = new RenderTarget(64, 64, true);
+  const { backend } = createMockBackend(root);
+  const coordinator = new WebGpuPassCoordinator(backend);
+  const stencil = createFakeStencilClipper();
+  const transform = new Matrix();
+
+  installFakeStencil(coordinator, stencil);
+
+  if (operation === 'pop') {
+    coordinator.pushStencilClip(geometryStub, transform);
+  }
+
+  stencil.draw.mockImplementationOnce(() => {
+    throw new Error('stencil failed');
+  });
+
+  expect(() => {
+    if (operation === 'push') {
+      coordinator.pushStencilClip(geometryStub, transform);
+    } else {
+      coordinator.popStencilClip();
+    }
+  }).toThrow('stencil failed');
+
+  expect(coordinator.hasActivePass).toBe(false);
+  expect(coordinator.unbalancedStencilClips()).toBe(operation === 'push' ? 0 : 1);
+  expect(coordinator.stencilActive).toBe(operation === 'pop');
+  expect(coordinator.stencilReference).toBe(operation === 'push' ? 0 : 1);
+
+  if (operation === 'push') {
+    coordinator.pushStencilClip(geometryStub, transform);
+  }
+
+  coordinator.popStencilClip();
+  expect(coordinator.stencilActive).toBe(false);
+  expect(coordinator.unbalancedStencilClips()).toBe(0);
+  transform.destroy();
+  root.destroy();
 });

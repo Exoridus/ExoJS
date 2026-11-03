@@ -11,7 +11,7 @@ import { isSampleableTexture } from '#rendering/texture/deferredTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { RepeatMode } from '#rendering/texture/repeat';
 import { Texture } from '#rendering/texture/Texture';
-import { BlendModes } from '#rendering/types';
+import { BlendModes, ScaleModes } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
@@ -559,6 +559,26 @@ export class WebGpuScalableSpriteRenderer
       backend.passCoordinator.acquirePass();
     }
 
+    // Retained recording: while a capture window is open,
+    // hand the exact packed geometry-path bytes of this flush to the backend -
+    // independent of the capture frame's visibility. A single base texture binds to group(1),
+    // so the recorded slot list is one entry. Shader-path batches poison the capture.
+    if (this._geoQuadCount > 0 && backend._retainedCaptureActive && this._currentTexture !== null && this._currentBlendMode !== null) {
+      this._recordTextureScratch[0] = this._currentTexture;
+      backend.recordRetainedBatch(
+        this,
+        this._geoInstData,
+        this._geoQuadCount * geoStrideBytes,
+        this._geoQuadCount,
+        this._currentBlendMode,
+        this._recordTextureScratch,
+        1,
+        null,
+        null,
+        this._geoBatchNodeCount,
+      );
+    }
+
     // Batch flushes no longer submit; the backend ends the pass at boundaries.
     this._shaderQuadCount = 0;
     this._geoQuadCount = 0;
@@ -590,7 +610,7 @@ export class WebGpuScalableSpriteRenderer
 
     const modeX = this._currentModeX ?? 'repeat';
     const modeY = this._currentModeY ?? 'repeat';
-    const sampler = this._getOrCreateSampler(device, modeX, modeY);
+    const sampler = this._getOrCreateSampler(device, modeX, modeY, this._currentTexture.scaleMode);
     // The shader path pairs the resolved texture view with a wrap-mode sampler
     // (not the backend's default), so the cache is keyed on both identities.
     const texView = backend.getTextureBinding(this._currentTexture).view;
@@ -602,7 +622,13 @@ export class WebGpuScalableSpriteRenderer
       'repeating-sprite:texture-bind-group:shader',
     );
 
-    const pipeline = this._getPipeline('shader', this._currentBlendMode, backend.renderTargetFormat, stencil);
+    const pipeline = this._getPipeline(
+      'shader',
+      this._currentBlendMode,
+      backend.renderTargetFormat,
+      stencil,
+      backend.shouldPremultiplyTextureSample(this._currentTexture),
+    );
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, uniformBindGroup);
@@ -643,7 +669,13 @@ export class WebGpuScalableSpriteRenderer
       'repeating-sprite:texture-bind-group:geo',
     );
 
-    const pipeline = this._getPipeline('geo', this._currentBlendMode, backend.renderTargetFormat, stencil);
+    const pipeline = this._getPipeline(
+      'geo',
+      this._currentBlendMode,
+      backend.renderTargetFormat,
+      stencil,
+      backend.shouldPremultiplyTextureSample(this._currentTexture),
+    );
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, uniformBindGroup);
@@ -655,27 +687,6 @@ export class WebGpuScalableSpriteRenderer
     backend.passCoordinator.markPassDraws();
     backend.stats.batches++;
     backend.stats.drawCalls++;
-
-    // Retained recording: while a capture window is open,
-    // hand the exact packed geometry-path bytes of this flush to the backend -
-    // byte-identical to what just drew. A single base texture binds to group(1),
-    // so the recorded slot list is one entry. WebGl2Shader-path batches never reach
-    // here (render() poisoned the window if one appeared).
-    if (backend._retainedCaptureActive && this._currentTexture !== null && this._currentBlendMode !== null) {
-      this._recordTextureScratch[0] = this._currentTexture;
-      backend.recordRetainedBatch(
-        this,
-        this._geoInstData,
-        this._geoQuadCount * geoStrideBytes,
-        this._geoQuadCount,
-        this._currentBlendMode,
-        this._recordTextureScratch,
-        1,
-        null,
-        null,
-        this._geoBatchNodeCount,
-      );
-    }
   }
 
   // ── Retained-batch record/replay ──────────────────────────────────────────
@@ -817,7 +828,13 @@ export class WebGpuScalableSpriteRenderer
     const active = coordinator.acquirePass();
     const pass = active.pass;
 
-    const nativePipeline = this._getPipeline('geo', payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive);
+    const nativePipeline = this._getPipeline(
+      'geo',
+      payload.blendMode,
+      backend.renderTargetFormat,
+      coordinator.stencilActive,
+      backend.shouldPremultiplyTextureSample(texture),
+    );
     const nativeFrameBindGroup = bundle.getBindGroup(device, this._uniformBindGroupLayout!, false);
 
     const nativeCompatible = backend.colorAttachmentCount === 1;
@@ -886,8 +903,13 @@ export class WebGpuScalableSpriteRenderer
   // Private helpers
   // -----------------------------------------------------------------------
 
-  private _getOrCreateSampler(device: GPUDevice, modeX: RepeatMode, modeY: RepeatMode): GPUSampler {
-    const key = `${modeX}:${modeY}`;
+  private _getOrCreateSampler(device: GPUDevice, modeX: RepeatMode, modeY: RepeatMode, scaleMode: ScaleModes): GPUSampler {
+    const filter =
+      scaleMode === ScaleModes.Nearest || scaleMode === ScaleModes.NearestMipmapNearest || scaleMode === ScaleModes.NearestMipmapLinear
+        ? 'nearest'
+        : 'linear';
+    const mipmapFilter = scaleMode === ScaleModes.NearestMipmapLinear || scaleMode === ScaleModes.LinearMipmapLinear ? 'linear' : 'nearest';
+    const key = `${modeX}:${modeY}:${scaleMode}`;
     const existing = this._samplers.get(key);
 
     if (existing) {
@@ -898,8 +920,9 @@ export class WebGpuScalableSpriteRenderer
       label: 'repeating-sprite:sampler',
       addressModeU: repeatModeToAddressMode(modeX),
       addressModeV: repeatModeToAddressMode(modeY),
-      magFilter: 'linear',
-      minFilter: 'linear',
+      magFilter: filter,
+      minFilter: filter,
+      mipmapFilter,
     });
     this._samplers.set(key, sampler);
 
@@ -958,8 +981,14 @@ export class WebGpuScalableSpriteRenderer
     return group;
   }
 
-  private _getPipeline(kind: 'shader' | 'geo', blend: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
-    const key = `${kind}:${blend}:${format}:${stencil ? 's' : 'n'}`;
+  private _getPipeline(
+    kind: 'shader' | 'geo',
+    blend: BlendModes,
+    format: GPUTextureFormat,
+    stencil: boolean,
+    premultiply = false,
+  ): GPURenderPipeline {
+    const key = `${kind}:${blend}:${format}:${premultiply ? 'p' : 'a'}:${stencil ? 's' : 'n'}`;
     const existing = this._pipelines.get(key);
 
     if (existing) {
@@ -970,7 +999,7 @@ export class WebGpuScalableSpriteRenderer
       throw new Error('WebGpuScalableSpriteRenderer: not connected.');
     }
 
-    const pipeline = this._device.createRenderPipeline(this._buildPipelineDescriptor(kind, blend, format, stencil));
+    const pipeline = this._device.createRenderPipeline(this._buildPipelineDescriptor(kind, blend, format, stencil, premultiply));
     this._pipelines.set(key, pipeline);
 
     return pipeline;
@@ -981,6 +1010,7 @@ export class WebGpuScalableSpriteRenderer
     blend: BlendModes,
     format: GPUTextureFormat,
     stencil = false,
+    premultiply = false,
   ): GPURenderPipelineDescriptor {
     if (!this._shaderModule || !this._pipelineLayout) {
       throw new Error('WebGpuScalableSpriteRenderer: not connected.');
@@ -1026,6 +1056,7 @@ export class WebGpuScalableSpriteRenderer
       fragment: {
         module: this._shaderModule,
         entryPoint: isShader ? 'shaderFrag' : 'geoFrag',
+        constants: { premultiplySample: premultiply ? 1 : 0 },
         targets: [{ format, blend: getWebGpuBlendState(blend), writeMask: GPUColorWrite.ALL }],
       },
       primitive: { topology: 'triangle-list' },
@@ -1074,7 +1105,7 @@ export class WebGpuScalableSpriteRenderer
     for (const kind of kinds) {
       for (const blendMode of blendModes) {
         for (const format of formats) {
-          const key = `${kind}:${blendMode}:${format}:n`;
+          const key = `${kind}:${blendMode}:${format}:a:n`;
 
           if (this._pipelines.has(key)) {
             continue;

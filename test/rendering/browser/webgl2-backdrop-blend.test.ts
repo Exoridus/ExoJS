@@ -20,6 +20,7 @@ import { Color } from '#core/Color';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes, TextureFormat } from '#rendering/types';
+import { View } from '#rendering/View';
 import { WebGl2BackdropBlendCompositor } from '#rendering/webgl2/WebGl2BackdropBlendCompositor';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
@@ -319,4 +320,41 @@ describe('WebGL2 backdrop-aware blend — root coverage follows alphaMode', () =
   test("'premultiplied': an empty root contributes no backdrop coverage", async () => {
     expectRgbNear(await composeOverEmptyRoot('premultiplied'), sourceColor);
   });
+});
+
+test.each([
+  { viewportX: 0.5, rotation: 0 },
+  { viewportX: 0, rotation: 37 },
+  { viewportX: 0.5, rotation: 37 },
+])('backdrop pixels stay aligned with viewport $viewportX and rotation $rotation', async ({ viewportX, rotation }) => {
+  const backend = await createBackend();
+  const white = createSolidTexture('#ffffff', true);
+  const compositor = new WebGl2BackdropBlendCompositor();
+  const gl = backend.context;
+
+  compositor.connect(backend);
+
+  try {
+    backend.clear(new Color(200, 40, 40));
+    gl.enable(gl.SCISSOR_TEST);
+    gl.scissor(32, 0, 32, 32);
+    gl.clearColor(40 / 255, 40 / 255, 200 / 255, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.disable(gl.SCISSOR_TEST);
+    const view = new View(32, 32, 64, 64);
+
+    view.setViewport(viewportX, 0, 1 - viewportX, 1);
+    view.rotation = rotation;
+    backend.setView(view);
+    compositor.compose(backend, white, 4, 8, 48, 40, BlendModes.Darken);
+    expectRgbNear(readPixel(backend, 40, 24), [200, 40, 40]);
+    expectRgbNear(readPixel(backend, 40, 40), [40, 40, 200]);
+    expectRgbNear(readPixel(backend, 48, 24), [200, 40, 40]);
+    expectRgbNear(readPixel(backend, 48, 40), [40, 40, 200]);
+  } finally {
+    compositor.disconnect();
+    white.destroy();
+    backend.view.destroy();
+    backend.destroy();
+  }
 });

@@ -20,6 +20,7 @@ import type { DerivedSlotStats } from '#rendering/plan/DerivedSelectionState';
 import type { RenderNode } from '#rendering/RenderNode';
 import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { Sprite } from '#rendering/sprite/Sprite';
+import { CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
@@ -527,4 +528,43 @@ describe('WebGL2 persistent-indexed selection', () => {
       backend.destroy();
     }
   });
+});
+
+test('persistent sprite selection preserves straight-alpha sample association', async () => {
+  const backend = await createBackend();
+  const texture = new Texture(null).setCompressed({
+    format: CompressedTextureFormat.Bc3RgbaUnorm,
+    colorSpace: 'linear-srgb',
+    alphaMode: 'straight',
+    levels: [{ width: 4, height: 4, data: new Uint8Array([128, 128, 0, 0, 0, 0, 0, 0, 0, 248, 0, 248, 0, 0, 0, 0]) }],
+  });
+  const root = new Container();
+  const sprite = new Sprite(texture);
+  const persistent = vi.spyOn(backend, '_drawPersistentOrder');
+
+  sprite.width = tile;
+  sprite.height = tile;
+  root.addChild(sprite);
+  root.cullable = false;
+
+  try {
+    expect(backend.shouldPremultiplyTextureSample(texture)).toBe(true);
+    render(backend, root);
+    const live = readWebGl2Pixel(backend, 8, 8);
+
+    for (let frame = 0; frame < 3; frame++) {
+      backend.view.move(canvasSize * 4, 0);
+      render(backend, root);
+      backend.view.move(-canvasSize * 4, 0);
+      render(backend, root);
+    }
+
+    expect(persistent).toHaveBeenCalled();
+    expectPixelNear(readWebGl2Pixel(backend, 8, 8), live);
+  } finally {
+    persistent.mockRestore();
+    root.destroy();
+    texture.destroy();
+    backend.destroy();
+  }
 });

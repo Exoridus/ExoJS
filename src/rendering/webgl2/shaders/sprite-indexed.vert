@@ -30,6 +30,7 @@ precision highp int;
 // WebGL2 minimum guarantees; a third texel would need 3072.
 layout(location = 0) in uint a_slot;
 
+uniform highp int u_samplePremultiplyMask;
 uniform mat3 u_projection;
 uniform mat3 u_group;
 uniform vec4 u_viewport;                        // device-pixel viewport rect (x, y, width, height) for position snapping
@@ -126,5 +127,6 @@ void main(void) {
     // rather than an extra gamma step.
     highp vec3 linearTint = srgbToLinear(m2.rgb);
     v_color = vec4(linearTint * m2.a, m2.a);
-    v_textureSlot = a_textureSlot;
+    uint premultiplySample = (uint(u_samplePremultiplyMask) >> a_textureSlot) & 1u;
+    v_textureSlot = a_textureSlot | (premultiplySample << 8u);
 }
