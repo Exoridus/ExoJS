@@ -78,7 +78,10 @@ export const PLAN_REVISION = 1;
  * contract difference. A changed load value or unit is.
  */
 export const computePlanHash = (suite: SuiteKind, domain: PlanDomain, workloads: readonly WorkloadSpec[]): string => {
-  const body = workloads.map(workload => `${workload.scenarioId}/${workload.loadId}/${String(workload.value)}/${workload.unit}`).join('\n');
+  const body = workloads
+    .map(workload => `${workload.scenarioId}/${workload.loadId}/${String(workload.value)}/${workload.unit}`)
+    .sort()
+    .join('\n');
 
   return createHash('sha256')
     .update(`exojs-bench-plan/v1\n${suite}\n${domain}\n${String(PLAN_REVISION)}\n${body}`)

@@ -101,8 +101,10 @@ export const applySelection = (cells: readonly CellSpec[], selection: MatrixSele
     arms.set(armKey(cell), cell);
   }
 
+  const nodeCounts = [...new Set(selection.nodeCounts)];
+
   return [...arms.values()].flatMap(cell =>
-    selection.nodeCounts!.map(nodeCount => ({
+    nodeCounts.map(nodeCount => ({
       ...cell,
       nodeCount,
       timedFrames: timedFramesFor(nodeCount),

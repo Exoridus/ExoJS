@@ -48,7 +48,13 @@ export const timerCheckOfRun = (durations: ReadonlyArray<number | null>, resolut
   const floor = resolutionMs * MIN_RESOLVED_STEPS;
   const measured = durations.filter((ms): ms is number => ms !== null && Number.isFinite(ms));
 
-  return measured.some(ms => ms < floor) ? 'limited' : 'resolved';
+  if (measured.some(ms => ms < floor)) {
+    return 'limited';
+  }
+
+  // A reading that is missing or not finite cannot be checked, and a check that
+  // covers only part of the durations is not a pass.
+  return measured.length === durations.length && measured.length > 0 ? 'resolved' : 'unknown';
 };
 
 /**
