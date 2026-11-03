@@ -158,6 +158,46 @@ describe('MeshParticles', () => {
     expect(Array.from(table.subarray(0, 8))).toEqual([-4, -4, 0, 0, 4, -4, 0, 0]);
   });
 
+  it('zero-fills the missing component of a scalar UV attribute instead of reading its neighbour', () => {
+    const mesh = new Geometry({
+      attributes: [
+        { name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 },
+        { name: 'a_uv', size: 1, type: 'f32', normalized: false, offset: 8 },
+        { name: 'weight', size: 1, type: 'f32', normalized: false, offset: 12 },
+      ],
+      vertexData: new Float32Array([2, 3, 0.25, 99]),
+      stride: 16,
+    });
+    const mode = new MeshParticles({ geometry: mesh });
+
+    expect(Array.from(mode.vertexGeometry.vertexData as Float32Array)).toEqual([2, 3, 0.25, 0]);
+    mode.destroy();
+    mesh.destroy();
+  });
+
+  it('does not read past a scalar UV attribute at the end of the vertex buffer', () => {
+    const data = new ArrayBuffer(10);
+    const view = new DataView(data);
+
+    view.setFloat32(0, 2, true);
+    view.setFloat32(4, 3, true);
+    view.setUint16(8, 65535, true);
+
+    const mesh = new Geometry({
+      attributes: [
+        { name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 },
+        { name: 'a_uv', size: 1, type: 'u16', normalized: true, offset: 8 },
+      ],
+      vertexData: data,
+      stride: 10,
+    });
+    const mode = new MeshParticles({ geometry: mesh });
+
+    expect(Array.from(mode.vertexGeometry.vertexData as Float32Array)).toEqual([2, 3, 1, 0]);
+    mode.destroy();
+    mesh.destroy();
+  });
+
   it('re-reads the mesh after an in-place mutation', () => {
     const mesh = makeTriangle();
     const mode = new MeshParticles({ geometry: mesh });
