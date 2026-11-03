@@ -1,3 +1,4 @@
+import { invariant } from '#core/dev';
 import { Rectangle } from '#math/Rectangle';
 import type { Texture } from '#rendering/texture/Texture';
 
@@ -100,10 +101,11 @@ export class Spritesheet {
 
   /**
    * Register a single frame by name, creating its {@link Rectangle} and pre-configured {@link Sprite}.
-   * A frame already registered under `name` is destroyed and replaced.
+   * A frame already registered under `name` is destroyed and replaced. Animation definitions are preserved.
    */
   public addFrame(name: string, data: SpritesheetFrame): this {
-    this.removeFrame(name);
+    this.frames.get(name)?.destroy();
+    this.sprites.get(name)?.destroy();
 
     const { x, y, w, h } = data.frame;
     const frame = new Rectangle(x, y, w, h);
@@ -117,8 +119,22 @@ export class Spritesheet {
     return this;
   }
 
-  /** Destroy and remove a single frame's {@link Rectangle} and {@link Sprite} by name. No-op if the frame does not exist. */
+  /**
+   * Destroy and remove a single frame's {@link Rectangle} and {@link Sprite} by name. No-op if the frame does not exist.
+   * Throws without changing any state or resources if an animation definition references the frame.
+   * Remove those definitions from {@link animations} before removing the frame, or use {@link addFrame} to replace it.
+   */
   public removeFrame(name: string): this {
+    const references: string[] = [];
+
+    for (const [animation, frameNames] of this.animations) {
+      if (frameNames.includes(name)) {
+        references.push(`"${animation}"`);
+      }
+    }
+
+    invariant(references.length === 0, `Spritesheet frame "${name}" is referenced by animation(s): ${references.join(', ')}.`);
+
     this.frames.get(name)?.destroy();
     this.frames.delete(name);
 

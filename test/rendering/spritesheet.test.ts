@@ -118,12 +118,51 @@ describe('Spritesheet', () => {
   });
 
   describe('removeFrame', () => {
+    test('rejects referenced frames before changing any state or resources', () => {
+      const texture = createTextureStub();
+      const spritesheet = new Spritesheet(texture, {
+        frames: {
+          a: { frame: { x: 0, y: 0, w: 16, h: 16 } },
+          b: { frame: { x: 16, y: 0, w: 16, h: 16 } },
+        },
+        animations: { idle: ['a'], walk: ['b', 'a', 'a'] },
+      });
+      const frames = [...spritesheet.frames];
+      const sprites = [...spritesheet.sprites];
+      const animations = [...spritesheet.animations];
+      const destroyFrame = vi.spyOn(spritesheet.getFrame('a'), 'destroy');
+      const destroySprite = vi.spyOn(spritesheet.getFrameSprite('a'), 'destroy');
+
+      expect(() => spritesheet.removeFrame('a')).toThrow(/frame "a".*"idle".*"walk"/);
+      expect([...spritesheet.frames]).toEqual(frames);
+      expect([...spritesheet.sprites]).toEqual(sprites);
+      expect([...spritesheet.animations]).toEqual(animations);
+      expect(spritesheet.getFrame('a')).toBe(frames[0]![1]);
+      expect(spritesheet.getFrameSprite('a')).toBe(sprites[0]![1]);
+      expect(spritesheet.getAnimationFrameNames('idle')).toBe(animations[0]![1]);
+      expect(spritesheet.getAnimationFrameNames('walk')).toBe(animations[1]![1]);
+      expect(spritesheet.texture).toBe(texture);
+      expect(destroyFrame).not.toHaveBeenCalled();
+      expect(destroySprite).not.toHaveBeenCalled();
+      expect(() => AnimatedSprite.fromSpritesheet(spritesheet)).not.toThrow();
+
+      spritesheet.animations.delete('idle');
+      expect(() => spritesheet.removeFrame('a')).toThrow(/"walk"/);
+      spritesheet.animations.delete('walk');
+      expect(spritesheet.removeFrame('a')).toBe(spritesheet);
+      expect(spritesheet.frames.has('a')).toBe(false);
+      expect(spritesheet.sprites.has('a')).toBe(false);
+      expect(destroyFrame).toHaveBeenCalledOnce();
+      expect(destroySprite).toHaveBeenCalledOnce();
+    });
+
     test('removes a registered frame and its sprite', () => {
       const spritesheet = new Spritesheet(createTextureStub(), {
         frames: {
           a: { frame: { x: 0, y: 0, w: 16, h: 16 } },
           b: { frame: { x: 16, y: 0, w: 16, h: 16 } },
         },
+        animations: { idle: ['b'] },
       });
 
       spritesheet.removeFrame('a');
@@ -131,6 +170,7 @@ describe('Spritesheet', () => {
       expect(spritesheet.frames.has('a')).toBe(false);
       expect(spritesheet.sprites.has('a')).toBe(false);
       expect(spritesheet.frames.has('b')).toBe(true);
+      expect(spritesheet.getAnimationFrameNames('idle')).toEqual(['b']);
       expect(() => spritesheet.getFrame('a')).toThrow();
     });
 
@@ -140,5 +180,26 @@ describe('Spritesheet', () => {
       expect(() => spritesheet.removeFrame('missing')).not.toThrow();
       expect(spritesheet.frames.size).toBe(0);
     });
+  });
+
+  test('replacing a referenced frame preserves animation definitions', () => {
+    const spritesheet = new Spritesheet(createTextureStub(), {
+      frames: { a: { frame: { x: 0, y: 0, w: 16, h: 16 } } },
+      animations: { idle: ['a'] },
+    });
+    const frame = spritesheet.getFrame('a');
+    const sprite = spritesheet.getFrameSprite('a');
+    const animation = spritesheet.getAnimationFrameNames('idle');
+    const destroyFrame = vi.spyOn(frame, 'destroy');
+    const destroySprite = vi.spyOn(sprite, 'destroy');
+
+    expect(spritesheet.addFrame('a', { frame: { x: 32, y: 0, w: 8, h: 8 } })).toBe(spritesheet);
+    expect(spritesheet.getFrame('a')).not.toBe(frame);
+    expect(spritesheet.getFrame('a').width).toBe(8);
+    expect(spritesheet.getFrameSprite('a')).not.toBe(sprite);
+    expect(spritesheet.getAnimationFrameNames('idle')).toBe(animation);
+    expect(destroyFrame).toHaveBeenCalledOnce();
+    expect(destroySprite).toHaveBeenCalledOnce();
+    expect(() => AnimatedSprite.fromSpritesheet(spritesheet)).not.toThrow();
   });
 });

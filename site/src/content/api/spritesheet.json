@@ -172,7 +172,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Register a single frame by name, creating its Rectangle and pre-configured Sprite. A frame already registered under name is destroyed and replaced."
+          "description": "Register a single frame by name, creating its Rectangle and pre-configured Sprite. A frame already registered under name is destroyed and replaced. Animation definitions are preserved."
         },
         {
           "name": "clear",
@@ -578,7 +578,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Destroy and remove a single frame's Rectangle and Sprite by name. No-op if the frame does not exist."
+          "description": "Destroy and remove a single frame's Rectangle and Sprite by name. No-op if the frame does not exist. Throws without changing any state or resources if an animation definition references the frame. Remove those definitions from animations before removing the frame, or use addFrame to replace it."
         }
       ],
       "paragraphs": [],
