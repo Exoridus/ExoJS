@@ -1,0 +1,614 @@
+{
+  "$schema": "../pixelbolt.schema.json",
+  "version": 1,
+  "name": "pixel-vfx-workshop-smoke",
+  "width": 32,
+  "height": 32,
+  "palette": {
+    "$ref": "../palette.json"
+  },
+  "anchor": [16, 27],
+  "frames": [
+    {
+      "name": "f00",
+      "duration": 85,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 10,
+          "y": 5,
+          "rows": [
+            ".......mms....",
+            ".......mmss...",
+            ".....mmmssss..",
+            "....mmmmssss..",
+            "..mmmmmssssss.",
+            ".mmmmmsss.sss.",
+            "mmmmmsss...s..",
+            "mmmmmssss.ss..",
+            "mmmmmsssssss..",
+            ".mmmmmssssss..",
+            "..mmmmsss..s..",
+            "...mmmmsss..s.",
+            "...mmmmmsss...",
+            "....mllmssssss",
+            "....mllmssssss",
+            "....mllmssssss",
+            "....mllmssss..",
+            "....mlmssss...",
+            "....mmmsss....",
+            "....mmsss.....",
+            "....mmss......",
+            ".....mss......",
+            ".....mss......"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f01",
+      "duration": 85,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 10,
+          "y": 4,
+          "rows": [
+            "........m.....",
+            ".......mms....",
+            "......mmsss...",
+            ".....mmmsss...",
+            "...mmmmsssss..",
+            ".mmmmmssssss..",
+            "mmmmmmssssss..",
+            "mmmmmssss.ss..",
+            "mmmmmsss...s..",
+            ".mmmmmsss.ss..",
+            "..mmmmssss....",
+            "...mmmmsss..s.",
+            "...mmmmmsss..s",
+            "....mllmssssss",
+            "....mllmmsssss",
+            "....mllmssssss",
+            "....mllmsssss.",
+            "....mlmsssss..",
+            "....mlmssss...",
+            "....mmssss....",
+            "....mmsss.....",
+            "....mmss......",
+            ".....mss......",
+            ".....mss......"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f02",
+      "duration": 85,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 10,
+          "y": 4,
+          "rows": [
+            "........m......",
+            ".......mss.....",
+            "......mmss.....",
+            "....mmmssss....",
+            "...mmmmsssss...",
+            ".mmmmmssssss...",
+            "mmmmmmssssss...",
+            "mmmmmmsss.ss...",
+            ".mmmmmss...s...",
+            "..mmmmmss......",
+            "...mmmmsss..s..",
+            "...mmmmmsss..s.",
+            "....mllmmsssss.",
+            "....mllmmssssss",
+            "....mllmmssssss",
+            "....mllmssssss.",
+            "....llmmsssss..",
+            "...mllmssss....",
+            "...mlmssss.....",
+            "...mmmsss......",
+            "....mmsss......",
+            "....mmss.......",
+            ".....mss.......",
+            ".....mss......."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f03",
+      "duration": 85,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 11,
+          "y": 4,
+          "rows": [
+            ".......s......",
+            "......mss.....",
+            ".....mmss.....",
+            "...mmmssss....",
+            ".mmmmssssss...",
+            "mmmmmssssss...",
+            "mmmmmssssss...",
+            "mmmmmssssss...",
+            ".mmmmmsss..s..",
+            "..mmmmss......",
+            "..mmmmmss...s.",
+            "...mllmmsssss.",
+            "...mllmmssssss",
+            "...mllmmssssss",
+            "..mmllmssssss.",
+            "..mllmmsssss..",
+            "..mllmsssss...",
+            "..mlmsssss....",
+            "..mlmsss......",
+            "..mmmsss......",
+            "..mmmsss......",
+            "...mmss.......",
+            "....mss.......",
+            "....mss......."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f04",
+      "duration": 85,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 11,
+          "y": 4,
+          "rows": [
+            ".......s......",
+            "......mss.....",
+            "....mmsss.....",
+            "...mmmssss....",
+            ".mmmmssssss...",
+            "mmmmmssssss...",
+            "mmmmmsssssss..",
+            ".mmmmmsss..s..",
+            "..mmmmsss.....",
+            "..mmmmms....s.",
+            "...mllmms.s...",
+            "...mllmmssssss",
+            "...mllmmssssss",
+            "..mlllmmssssss",
+            "..mllmmssssss.",
+            "..mllmssssss..",
+            "..llmsssss....",
+            "..llmssss.....",
+            "..llmsss......",
+            "..mmmsss......",
+            "..mmmsss......",
+            "...mmss.......",
+            "....mss.......",
+            "....mss......."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f05",
+      "duration": 85,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 11,
+          "y": 4,
+          "rows": [
+            ".......s......",
+            "......ms......",
+            "....mmsss.....",
+            "...mmmssss....",
+            ".mmmmssssss...",
+            "mmmmmsssssss..",
+            ".mmmmmssssss..",
+            "..mmmmssss....",
+            "..mllmmsss..s.",
+            "...mllmms.....",
+            "...mllmmss.sss",
+            "...mllmmssssss",
+            "..mmllmmssssss",
+            "..mllmmssssss.",
+            ".mlllmssssss..",
+            ".mllmssssss...",
+            ".mllmssss.....",
+            ".mlmssss......",
+            ".mmmssss......",
+            "..mmssss......",
+            "..mmmsss......",
+            "...mmsss......",
+            "....mss.......",
+            "....mss......."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f06",
+      "duration": 85,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 12,
+          "y": 4,
+          "rows": [
+            "......s......",
+            "....mms......",
+            "...mmsss.....",
+            "..mmmssss....",
+            "mmmmmsssss...",
+            "mmmmmssssss..",
+            ".mmmmssss..s.",
+            ".mllmmsss..s.",
+            "..mllmms.....",
+            "..mllmmss.sss",
+            "..mllmmssssss",
+            ".mmllmmssssss",
+            ".mllmmsssssss",
+            "mllmmsssssss.",
+            "mllmssssss...",
+            "mlmmsssss....",
+            "mlmsssss.....",
+            "mmmssss......",
+            "mmmssss......",
+            ".mmmsss......",
+            "..mmsss......",
+            "..mmsss......",
+            "...mss.......",
+            "...mss......."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f07",
+      "duration": 85,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 11,
+          "y": 4,
+          "rows": [
+            ".......s......",
+            ".....mms......",
+            "....mmsss.....",
+            "...mmmssss....",
+            "..mmmmsssss...",
+            "..mmmmmsss..s.",
+            "..mllmmsss..s.",
+            "...mllmmss....",
+            "...mllmms...ss",
+            "...mllmmss.sss",
+            "...mllmmssssss",
+            "..mllmmsssssss",
+            ".mllmmsssssss.",
+            "mmllmmssssss..",
+            "mllmmsssss....",
+            "mllmsssss.....",
+            ".mmmssss......",
+            ".mmmssss......",
+            ".mmmssss......",
+            "..mmmsss......",
+            "...mmsss......",
+            "...mmmss......",
+            "....mms.......",
+            "....mss......."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f08",
+      "duration": 85,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 11,
+          "y": 4,
+          "rows": [
+            "......ms......",
+            ".....mms......",
+            "....mmsss.....",
+            "...mmmssss....",
+            "...mmmmss..s..",
+            "..mmmmmsss..s.",
+            "...mllmmss....",
+            "...mllmms....s",
+            "...mllmmss.sss",
+            "...mllmmssssss",
+            "..mllmmsssssss",
+            ".mlllmsssssss.",
+            "mlllmmssssss..",
+            "mllmmssssss...",
+            "mllmssssss....",
+            "mmmmsssss.....",
+            ".mmmssss......",
+            ".mmmssss......",
+            "..mmmssss.....",
+            "..mmmssss.....",
+            "...mmmsss.....",
+            "....mmss......",
+            "....mms.......",
+            "....mss......."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f09",
+      "duration": 85,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 11,
+          "y": 4,
+          "rows": [
+            ".......s......",
+            ".....mms......",
+            "....mmmss.....",
+            "....mmmssss...",
+            "...mmmmsss....",
+            "...mmmmmss....",
+            "...mllmms....s",
+            "...mllmmss.sss",
+            "...mllmmssssss",
+            "..mllmmsssssss",
+            ".mlllmmssssss.",
+            "mlllmmssssss..",
+            "mllmmssssss...",
+            "mllmssssss....",
+            "mmmmsssss.....",
+            "mmmmsssss.....",
+            ".mmmsssss.....",
+            ".mmmmssss.....",
+            "..mmmssss.....",
+            "...mmmsss.....",
+            "...mmmsss.....",
+            "....mmss......",
+            "....mms.......",
+            "....mss......."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f10",
+      "duration": 85,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 10,
+          "y": 4,
+          "rows": [
+            "........s......",
+            ".......mss.....",
+            "......mmsss....",
+            ".....mmmss.....",
+            ".....mmmmss....",
+            "....mmmmmss....",
+            "....mllmms...ss",
+            "....mllmmss.sss",
+            "...mlllmsssssss",
+            "..mlllmmssssss.",
+            ".mlllmmsssssss.",
+            "mmllmmsssssss..",
+            "mllmmssssss....",
+            "mmmmmsssss.....",
+            ".mmmmsssss.....",
+            ".mmmmsssss.....",
+            "..mmmmssss.....",
+            "...mmmsssss....",
+            "...mmmmssss....",
+            "....mmmssss....",
+            ".....mmsss.....",
+            ".....mmss......",
+            ".....mms.......",
+            ".....mss......."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f11",
+      "duration": 85,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 10,
+          "y": 4,
+          "rows": [
+            "........s......",
+            ".......mss.....",
+            "......mmss.....",
+            "......mmms.....",
+            ".....mmmmss..s.",
+            "....mmmmms...s.",
+            "....mllmmss.sss",
+            "...mmllmsssssss",
+            "..mmllmmssssss.",
+            ".mlllmmsssssss.",
+            "mmllmmsssssss..",
+            "mllmmsssssss...",
+            "mmmmmssssss....",
+            "mmmmmsssss.....",
+            ".mmmmsssss.....",
+            "..mmmmssss.....",
+            "..mmmmsssss....",
+            "...mmmmssss....",
+            "....mmmssss....",
+            "....mmmssss....",
+            ".....mmsss.....",
+            ".....mmss......",
+            ".....mms.......",
+            ".....mss......."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f12",
+      "duration": 85,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 10,
+          "y": 4,
+          "rows": [
+            "........s.....",
+            ".......ms.....",
+            "......mmms....",
+            "......mmms....",
+            ".....mmmmss.ss",
+            "....mmmmms...s",
+            "....mllmsss.ss",
+            "...mllmmssssss",
+            ".mmllmmsssssss",
+            "mmllmmsssssss.",
+            "mmmmmsssssss..",
+            "mmmmmssssss...",
+            "mmmmmssssss...",
+            ".mmmmsssss....",
+            "..mmmmsssss...",
+            "..mmmmsssss...",
+            "...mmmmsssss..",
+            "...mmmmsssss..",
+            "....mmmmssss..",
+            ".....mmmsss...",
+            ".....mmsss....",
+            ".....mmss.....",
+            ".....mms......",
+            ".....mss......"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f13",
+      "duration": 85,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 10,
+          "y": 5,
+          "rows": [
+            ".......mm.....",
+            ".......mms....",
+            "......mmms....",
+            ".....mmmmss.s.",
+            "....mmmmss...s",
+            "...mllmmsss.ss",
+            "..mllmmsssssss",
+            ".mllmmsssssss.",
+            "mmmmmsssssss..",
+            "mmmmmsssssss..",
+            "mmmmmssssss...",
+            ".mmmmssssss...",
+            ".mmmmmss..s...",
+            "..mmmmsssss...",
+            "...mmmmsssss..",
+            "...mmmmssssss.",
+            "....mlmmsssss.",
+            "....mllmssss..",
+            ".....mmmsss...",
+            ".....mmsss....",
+            ".....mmss.....",
+            ".....mss......",
+            ".....mss......"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f14",
+      "duration": 85,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 10,
+          "y": 5,
+          "rows": [
+            ".......mm.....",
+            ".......mms....",
+            "......mmmsss..",
+            ".....mmmmssss.",
+            "...mmmmmss.sss",
+            "..mllmmss...s.",
+            ".mllmmssss.ss.",
+            "mmmmmmsssssss.",
+            "mmmmmsssssss..",
+            "mmmmmssssss...",
+            "mmmmmssssss...",
+            ".mmmmmsss.....",
+            "..mmmmsss..s..",
+            "...mmmmsssss..",
+            "...mmmmmsssss.",
+            "....mlmmsssss.",
+            "....mllmsssss.",
+            "....mllmssss..",
+            ".....mmssss...",
+            ".....mmsss....",
+            ".....mmss.....",
+            ".....mss......",
+            ".....mss......"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f15",
+      "duration": 85,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 10,
+          "y": 5,
+          "rows": [
+            ".......mm.....",
+            ".......mmss...",
+            "......mmmsss..",
+            "....mmmmsssss.",
+            "...mmmmsss.ss.",
+            ".mmllmmss...s.",
+            "mmmmmmssss.ss.",
+            "mmmmmsssssss..",
+            "mmmmmsssssss..",
+            "mmmmmssssss...",
+            ".mmmmmsss.....",
+            "..mmmmsss..s..",
+            "...mmmmsss....",
+            "...mmmmmsssss.",
+            "....mllmssssss",
+            "....mllmsssss.",
+            "....mllmsssss.",
+            "....mlmmssss..",
+            "....mmmsss....",
+            "....mmmss.....",
+            ".....msss.....",
+            ".....mss......",
+            ".....mss......"
+          ]
+        }
+      ]
+    }
+  ],
+  "animations": {
+    "play": {
+      "frames": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07", "f08", "f09", "f10", "f11", "f12", "f13", "f14", "f15"],
+      "direction": "forward",
+      "loop": true
+    }
+  },
+  "sheet": {
+    "columns": 4,
+    "padding": 2,
+    "scale": 1,
+    "trim": false
+  }
+}

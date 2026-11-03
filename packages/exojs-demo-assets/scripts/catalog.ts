@@ -37,6 +37,7 @@ export interface CatalogEntry {
   readonly category: string;
   readonly provenance: string;
   readonly profile?: DemoAssetProfile;
+  readonly entrypoint?: 'pixel-vfx';
   readonly valueType?: 'SpritesheetData';
   readonly options?: Readonly<Record<string, OptionValue>>;
 }
@@ -177,6 +178,10 @@ export const resolveCatalog = (source: CatalogSource = readCatalogSource()): Res
 
     if (!TYPES.has(entry.type)) {
       problems.push(`${entry.key}: unknown type "${entry.type}"`);
+    }
+
+    if (entry.entrypoint !== undefined && (entry.entrypoint !== 'pixel-vfx' || profile !== 'standard')) {
+      problems.push(`${entry.key}: entrypoint must be "pixel-vfx" and use the standard media profile`);
     }
 
     if (blocked.has(entry.path)) {

@@ -1123,6 +1123,7 @@ const getTypingsForVersion = (versionId: string): Promise<ReadonlyArray<ExtraLib
 // vendored copy (extension typings are not vendored per historical version).
 const EXTENSION_PACKAGES: ReadonlyArray<{ baseUrl: string; packageName: string }> = [
   { baseUrl: 'vendor/exojs-tiled/', packageName: '@codexo/exojs-tiled' },
+  { baseUrl: 'vendor/exojs-aseprite/', packageName: '@codexo/exojs-aseprite' },
   { baseUrl: 'vendor/exojs-ldtk/', packageName: '@codexo/exojs-ldtk' },
   { baseUrl: 'vendor/exojs-demo-assets/', packageName: '@codexo/exojs-demo-assets' },
 ];

@@ -1,0 +1,11 @@
+{
+  "repository": "https://github.com/skulitom/Pixelbolt.git",
+  "commit": "20cfdb478666cac39b5e474667735ba470e4d1f4",
+  "version": "0.11.0",
+  "license": "MIT",
+  "schema": {
+    "path": "schema.json",
+    "sha256": "6a135394903da873d5c8604d00171290d6b26ac80200f49d0d61c2b6d7072b19",
+    "source": "https://github.com/skulitom/Pixelbolt/blob/20cfdb478666cac39b5e474667735ba470e4d1f4/schema.json"
+  }
+}

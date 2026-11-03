@@ -1,0 +1,249 @@
+{
+  "$schema": "../pixelbolt.schema.json",
+  "version": 1,
+  "name": "pixel-vfx-ground-dust",
+  "width": 64,
+  "height": 64,
+  "palette": {
+    "$ref": "../palette.json"
+  },
+  "anchor": [32, 52],
+  "frames": [
+    {
+      "name": "f00",
+      "duration": 35,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 25,
+          "y": 48,
+          "rows": ["...ffffff......", "..feeeeeefff...", "..eeeeeeeeee...", "ffeeeeeeeeeefff", ".......d......."]
+        }
+      ]
+    },
+    {
+      "name": "f01",
+      "duration": 40,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 21,
+          "y": 46,
+          "rows": [
+            "......fff.............",
+            "...fffeeeffffffff.....",
+            "..feeeeeeeeeeeeeefff..",
+            ".feeeeeeeeeeeeeeeeeef.",
+            "feeeeeeeeeeeeeeeeeeeef",
+            ".deeeeeeeeeeeeeeeeeedd",
+            "...........d.........."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f02",
+      "duration": 45,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 15,
+          "y": 41,
+          "rows": [
+            "...........................ee....",
+            "......f..........................",
+            ".................................",
+            ".................................",
+            ".......ffffffff..................",
+            ".....ffeeeeeeeefffffffffff.......",
+            "...ffeeeeeeeeeeeeeeeeeeeeeff.....",
+            "..feeeeeeeeeeeeeeeeeeeeeeeeefff..",
+            "ffeeeeeeeeeeeeeeeeeeeeeeeeeeeeeff",
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "..eeeeeeeeeeeeeeeeeeeeeeeeeeeee..",
+            "......eeeeeeee...d.......eee....."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f03",
+      "duration": 50,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 12,
+          "y": 40,
+          "rows": [
+            "...............................ee......",
+            ".......................................",
+            "........f..............................",
+            ".......................................",
+            ".......................................",
+            "........fffffffff......................",
+            ".....fffeeeeeeeeefff..fffffffff........",
+            "...ffeeeeeeeeeeeeeeeffeeeeeeeeeffff....",
+            ".ffeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeefff.",
+            "feeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeef",
+            "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "....eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee..",
+            ".......eee..........d.................."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f04",
+      "duration": 55,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 9,
+          "y": 40,
+          "rows": [
+            "...................................ee........",
+            ".............................................",
+            "..........f..................................",
+            "...........fff...............................",
+            "...........eeeff.................fff.........",
+            "...ffff.fffeeeeefff.........fffffe...........",
+            "....eeefeeeeeeeeeeeffff...ffeeeeeeff....fff..",
+            "...feeeeeeeeeeeeeeeeeeef.feeeeeeeeeeffffe....",
+            ".ffeeeeeeeeee.....eeeeeefeeeeeee.eeeeeeeefff.",
+            "feeeeeeeeeee.......eeeeeeeeeee.efeeee...eeeef",
+            ".eeeeee.eeeeff...ffee.....eeeef.eeeee....eee.",
+            "....eeefeeeeeefffee..........eefeeeeeffffe..."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f05",
+      "duration": 60,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 7,
+          "y": 40,
+          "rows": [
+            ".......................................ee.........",
+            "..................................................",
+            "...........f......................................",
+            "...........fff....................................",
+            "..........feeeffff...................ff...........",
+            "..ffff..ffeeeeeeeeff...........ffffffe.......fff..",
+            "...eeeffeeeeeeeeeeeeffff.....ffeeeeeeeffffff......",
+            "..feeeeeeeeeeeeeeeeeeeeef...feeeeeeeeeeeeeeeff....",
+            "ffeeeeeeeeeee......eeeeee..feeeeee..eeeeeeeeeeffff",
+            "eeeeeeeeeeeee......eeee....eeeeee...eeeee.....eeee",
+            ".eeeee....eeeffffffee..........eefffeeeeef...fee..",
+            ".....effffee..eeee.................ee....efffe...."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f06",
+      "duration": 65,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 6,
+          "y": 40,
+          "rows": [
+            ".........................................ee.........",
+            "....................................................",
+            "....................................................",
+            "...........fff......................................",
+            ".............ef........................ff...........",
+            "..fff.....fffeeffff................ffff.............",
+            "...eefffffeeeeeeeeefff...........ffeeeefff.....fff..",
+            "..feeeeeeee.eee.eee.eef........ffeeeeeeee.fffffee...",
+            "ffeeeeeeee........efee.........ee........feeeeeee.ff",
+            "ee.......e...ff..feee...........e...f...fe.......fe.",
+            "...ffffffe...eeffe..................efff....fffff..."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f07",
+      "duration": 70,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 5,
+          "y": 40,
+          "rows": [
+            "...........................................ee........",
+            ".....................................................",
+            ".....................................................",
+            "...........f.........................................",
+            "............fff......................................",
+            "..fff......feeefff......................fff..........",
+            "....eff...feeeeeeefff...............ffffeee.......ff.",
+            "..ffeeefffe......e.ee.............ffeeeeee.ff.ffffe..",
+            "ffe......ee......efe...............e......feefe.e.e.f",
+            "..e....ff....ffffe....................ffffe.......ef."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f08",
+      "duration": 80,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 6,
+          "y": 45,
+          "rows": [
+            "...........eeee....................................",
+            ".........eeeeee.e....................eeeee.........",
+            ".eeee.e..e.....ee...................e.....ee...eeee",
+            "e....ee.....eeee......................eeee....e...."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f09",
+      "duration": 90,
+      "ops": [
+        {
+          "op": "grid",
+          "x": 7,
+          "y": 46,
+          "rows": [
+            ".........eeee.e.......................ee..........",
+            "ee.e......eeee.......................e..e.......ee",
+            ".ee.............................................ee"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "f10",
+      "duration": 110,
+      "ops": []
+    },
+    {
+      "name": "f11",
+      "duration": 140,
+      "ops": []
+    }
+  ],
+  "animations": {
+    "play": {
+      "frames": ["f00", "f01", "f02", "f03", "f04", "f05", "f06", "f07", "f08", "f09", "f10", "f11"],
+      "direction": "forward",
+      "loop": false
+    }
+  },
+  "sheet": {
+    "columns": 4,
+    "padding": 2,
+    "scale": 1,
+    "trim": false
+  }
+}

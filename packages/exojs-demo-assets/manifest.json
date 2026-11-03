@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "profiles": {
     "standard": {
-      "files": 195,
-      "bytes": 29167334
+      "files": 207,
+      "bytes": 29192448
     },
     "extended": {
       "files": 1,
@@ -1772,6 +1772,138 @@
       "bytes": 2306159,
       "sha256": "fed1f0b0966698c1be851a975e11b8ff552b1677f59cc836542f7a8fc5020b2c",
       "provenance": "music-action-synth-rock"
+    },
+    {
+      "key": "mechanicalSparksImage",
+      "type": "texture",
+      "category": "pixel-vfx",
+      "profile": "standard",
+      "entrypoint": "pixel-vfx",
+      "path": "images/pixel-vfx-mechanical-sparks.png",
+      "bytes": 526,
+      "sha256": "04a2f35e0a8d77761b06608dbbee48837644e17f6dfa997072f974d71049fa59",
+      "provenance": "exojs"
+    },
+    {
+      "key": "mechanicalSparksAtlas",
+      "type": "json",
+      "category": "pixel-vfx",
+      "profile": "standard",
+      "entrypoint": "pixel-vfx",
+      "path": "images/pixel-vfx-mechanical-sparks.json",
+      "bytes": 2873,
+      "sha256": "ce437aa1c42912b423f7541003d691fe8b182f72b61aed183fbdc063ce7446d0",
+      "provenance": "exojs"
+    },
+    {
+      "key": "groundDustImage",
+      "type": "texture",
+      "category": "pixel-vfx",
+      "profile": "standard",
+      "entrypoint": "pixel-vfx",
+      "path": "images/pixel-vfx-ground-dust.png",
+      "bytes": 946,
+      "sha256": "4fc4fc61c5ac525368270b4028fb7e1bd88abb6cbd8dd509426db5f1207659db",
+      "provenance": "exojs"
+    },
+    {
+      "key": "groundDustAtlas",
+      "type": "json",
+      "category": "pixel-vfx",
+      "profile": "standard",
+      "entrypoint": "pixel-vfx",
+      "path": "images/pixel-vfx-ground-dust.json",
+      "bytes": 2898,
+      "sha256": "8e1755388b5506d86fb8e0ae3a63c342799d65a0e5b900d57bf6427345b3231b",
+      "provenance": "exojs"
+    },
+    {
+      "key": "impactBurstImage",
+      "type": "texture",
+      "category": "pixel-vfx",
+      "profile": "standard",
+      "entrypoint": "pixel-vfx",
+      "path": "images/pixel-vfx-impact-burst.png",
+      "bytes": 644,
+      "sha256": "d0b9d3d596b8e1de7bba214e7b3079d1f60c6f47f6895a7583fb215acc910770",
+      "provenance": "exojs"
+    },
+    {
+      "key": "impactBurstAtlas",
+      "type": "json",
+      "category": "pixel-vfx",
+      "profile": "standard",
+      "entrypoint": "pixel-vfx",
+      "path": "images/pixel-vfx-impact-burst.json",
+      "bytes": 2416,
+      "sha256": "ae8819d6239d2434d30511b6173aa9103d1cdfd5a91b7f3a703ad4d92ba93931",
+      "provenance": "exojs"
+    },
+    {
+      "key": "workshopSmokeImage",
+      "type": "texture",
+      "category": "pixel-vfx",
+      "profile": "standard",
+      "entrypoint": "pixel-vfx",
+      "path": "images/pixel-vfx-workshop-smoke.png",
+      "bytes": 1041,
+      "sha256": "bc1eb2d97362f2bae2032c49b22326faffaa6e9c2ca9379f368554635d0f3e79",
+      "provenance": "exojs"
+    },
+    {
+      "key": "workshopSmokeAtlas",
+      "type": "json",
+      "category": "pixel-vfx",
+      "profile": "standard",
+      "entrypoint": "pixel-vfx",
+      "path": "images/pixel-vfx-workshop-smoke.json",
+      "bytes": 3800,
+      "sha256": "5e99d97c3abeb473d17fc40962ceb39a98bfd31ca1fd5f4354d7f409df1dd271",
+      "provenance": "exojs"
+    },
+    {
+      "key": "relicActivationImage",
+      "type": "texture",
+      "category": "pixel-vfx",
+      "profile": "standard",
+      "entrypoint": "pixel-vfx",
+      "path": "images/pixel-vfx-relic-activation.png",
+      "bytes": 1947,
+      "sha256": "d08e9cce4830947a2aaebe5225c184241b0680d208ccfd0764533ba3f2e55c70",
+      "provenance": "exojs"
+    },
+    {
+      "key": "relicActivationAtlas",
+      "type": "json",
+      "category": "pixel-vfx",
+      "profile": "standard",
+      "entrypoint": "pixel-vfx",
+      "path": "images/pixel-vfx-relic-activation.json",
+      "bytes": 3831,
+      "sha256": "b189a5519195706ab75b63c25f8345c5281bddd63a5f95faafd95270043e0bbd",
+      "provenance": "exojs"
+    },
+    {
+      "key": "energyDischargeImage",
+      "type": "texture",
+      "category": "pixel-vfx",
+      "profile": "standard",
+      "entrypoint": "pixel-vfx",
+      "path": "images/pixel-vfx-energy-discharge.png",
+      "bytes": 1325,
+      "sha256": "765aab46d0933b5a4245be500fc50ca911fe1c6ed2c79bb1ed1bfe1ed3513782",
+      "provenance": "exojs"
+    },
+    {
+      "key": "energyDischargeAtlas",
+      "type": "json",
+      "category": "pixel-vfx",
+      "profile": "standard",
+      "entrypoint": "pixel-vfx",
+      "path": "images/pixel-vfx-energy-discharge.json",
+      "bytes": 2867,
+      "sha256": "222cae2c0dbc3cb7a59c6ab2e3355b0ea3b99cf06c3ed740274c800d40509d8c",
+      "provenance": "exojs"
     }
   ],
   "files": [
@@ -2838,6 +2970,102 @@
       "role": "entry",
       "profile": "standard",
       "provenance": "kenney-development-essentials"
+    },
+    {
+      "path": "images/pixel-vfx-energy-discharge.json",
+      "bytes": 2867,
+      "sha256": "222cae2c0dbc3cb7a59c6ab2e3355b0ea3b99cf06c3ed740274c800d40509d8c",
+      "role": "entry",
+      "profile": "standard",
+      "provenance": "exojs"
+    },
+    {
+      "path": "images/pixel-vfx-energy-discharge.png",
+      "bytes": 1325,
+      "sha256": "765aab46d0933b5a4245be500fc50ca911fe1c6ed2c79bb1ed1bfe1ed3513782",
+      "role": "entry",
+      "profile": "standard",
+      "provenance": "exojs"
+    },
+    {
+      "path": "images/pixel-vfx-ground-dust.json",
+      "bytes": 2898,
+      "sha256": "8e1755388b5506d86fb8e0ae3a63c342799d65a0e5b900d57bf6427345b3231b",
+      "role": "entry",
+      "profile": "standard",
+      "provenance": "exojs"
+    },
+    {
+      "path": "images/pixel-vfx-ground-dust.png",
+      "bytes": 946,
+      "sha256": "4fc4fc61c5ac525368270b4028fb7e1bd88abb6cbd8dd509426db5f1207659db",
+      "role": "entry",
+      "profile": "standard",
+      "provenance": "exojs"
+    },
+    {
+      "path": "images/pixel-vfx-impact-burst.json",
+      "bytes": 2416,
+      "sha256": "ae8819d6239d2434d30511b6173aa9103d1cdfd5a91b7f3a703ad4d92ba93931",
+      "role": "entry",
+      "profile": "standard",
+      "provenance": "exojs"
+    },
+    {
+      "path": "images/pixel-vfx-impact-burst.png",
+      "bytes": 644,
+      "sha256": "d0b9d3d596b8e1de7bba214e7b3079d1f60c6f47f6895a7583fb215acc910770",
+      "role": "entry",
+      "profile": "standard",
+      "provenance": "exojs"
+    },
+    {
+      "path": "images/pixel-vfx-mechanical-sparks.json",
+      "bytes": 2873,
+      "sha256": "ce437aa1c42912b423f7541003d691fe8b182f72b61aed183fbdc063ce7446d0",
+      "role": "entry",
+      "profile": "standard",
+      "provenance": "exojs"
+    },
+    {
+      "path": "images/pixel-vfx-mechanical-sparks.png",
+      "bytes": 526,
+      "sha256": "04a2f35e0a8d77761b06608dbbee48837644e17f6dfa997072f974d71049fa59",
+      "role": "entry",
+      "profile": "standard",
+      "provenance": "exojs"
+    },
+    {
+      "path": "images/pixel-vfx-relic-activation.json",
+      "bytes": 3831,
+      "sha256": "b189a5519195706ab75b63c25f8345c5281bddd63a5f95faafd95270043e0bbd",
+      "role": "entry",
+      "profile": "standard",
+      "provenance": "exojs"
+    },
+    {
+      "path": "images/pixel-vfx-relic-activation.png",
+      "bytes": 1947,
+      "sha256": "d08e9cce4830947a2aaebe5225c184241b0680d208ccfd0764533ba3f2e55c70",
+      "role": "entry",
+      "profile": "standard",
+      "provenance": "exojs"
+    },
+    {
+      "path": "images/pixel-vfx-workshop-smoke.json",
+      "bytes": 3800,
+      "sha256": "5e99d97c3abeb473d17fc40962ceb39a98bfd31ca1fd5f4354d7f409df1dd271",
+      "role": "entry",
+      "profile": "standard",
+      "provenance": "exojs"
+    },
+    {
+      "path": "images/pixel-vfx-workshop-smoke.png",
+      "bytes": 1041,
+      "sha256": "bc1eb2d97362f2bae2032c49b22326faffaa6e9c2ca9379f368554635d0f3e79",
+      "role": "entry",
+      "profile": "standard",
+      "provenance": "exojs"
     },
     {
       "path": "images/pixel-white.png",

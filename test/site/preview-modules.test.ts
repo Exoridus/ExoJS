@@ -57,6 +57,12 @@ const loadPreview = (snapshot: string | null) => {
   return { blobs, events, dataset, storage, imports };
 };
 
+it('resolves the pixel gallery adapter and opt-in media catalog in the preview', () => {
+  const preview = loadPreview('{}');
+  expect(preview.imports['@codexo/exojs-aseprite']).toBe('./vendor/exojs-aseprite/esm/index.js?no-cache=1');
+  expect(preview.imports['@codexo/exojs-demo-assets/pixel-vfx']).toBe('./vendor/exojs-demo-assets/esm/pixel-vfx.generated.js?no-cache=1');
+});
+
 it('maps edited shared helpers to preview-owned modules and releases their URLs on pagehide', async () => {
   const preview = loadPreview(
     JSON.stringify({

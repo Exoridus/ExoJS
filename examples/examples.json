@@ -740,6 +740,17 @@
   ],
   "particles": [
     {
+      "slug": "pixel-vfx-gallery",
+      "path": "showcase/pixel-vfx-gallery.js",
+      "language": "typescript",
+      "title": "Pixel VFX Gallery",
+      "description": "Compare six pixel effects at native size and 2x, replay or step each animation, and inspect live sparks and smoke driven by particle modules. Scroll to the live emitters below the sprite sheets.",
+      "backend": "core",
+      "tags": ["particles", "spritesheet", "animation", "pixel-art"],
+      "capabilities": ["pointer"],
+      "level": "intermediate"
+    },
+    {
       "slug": "emitter-basics",
       "path": "particles/emitter-basics.js",
       "language": "typescript",

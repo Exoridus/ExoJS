@@ -457,6 +457,10 @@ const syncDemoAssets = (): void => {
         virtualPath: 'file:///node_modules/@codexo/exojs-demo-assets/extended.d.ts',
         content: "export * from './dist/esm/extended';\n",
       },
+      {
+        virtualPath: 'file:///node_modules/@codexo/exojs-demo-assets/pixel-vfx.d.ts',
+        content: "export * from './dist/esm/pixel-vfx.generated';\n",
+      },
     ],
   };
   fs.writeFileSync(path.resolve(vendorDir, 'monaco-registry.json'), `${JSON.stringify(registry, null, 2)}\n`, 'utf8');
@@ -508,7 +512,7 @@ const syncVendor = (): void => {
   // `/debug`). Without this the playground's TypeScript worker
   // can't resolve `@codexo/exojs-tiled` & co. and every adapter example
   // shows a ts2307 "Cannot find module" error.
-  const extensionPackages = ['exojs-tiled', 'exojs-ldtk'] as const;
+  const extensionPackages = ['exojs-tiled', 'exojs-aseprite', 'exojs-ldtk'] as const;
 
   for (const pkgName of extensionPackages) {
     let pkgRoot: string;

@@ -29,6 +29,10 @@ const aliasConfig = [
     replacement: fileURLToPath(new URL('./packages/exojs-demo-assets/src/extended.ts', import.meta.url)),
   },
   {
+    find: '@codexo/exojs-demo-assets/pixel-vfx',
+    replacement: fileURLToPath(new URL('./packages/exojs-demo-assets/src/pixel-vfx.generated.ts', import.meta.url)),
+  },
+  {
     find: '@codexo/exojs-demo-assets',
     replacement: fileURLToPath(new URL('./packages/exojs-demo-assets/src/index.ts', import.meta.url)),
   },
