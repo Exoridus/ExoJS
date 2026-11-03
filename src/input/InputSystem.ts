@@ -798,6 +798,10 @@ export class InputSystem {
       this._sampleFrame(delta);
       consumed = this.frameBatches.length;
       this._publishFrame();
+    } catch (error) {
+      this._closeInputFrame(false);
+
+      throw error;
     } finally {
       // Close the frame: the ordered batch log is released here rather than
       // where it is read - every action within the frame must see the same
@@ -902,7 +906,13 @@ export class InputSystem {
 
   /** Log a listener error and forward it to {@link Application.onError} without failing a frame. */
   private _reportImmediately(error: unknown): void {
-    const normalized = error instanceof Error ? error : new Error(String(error));
+    let normalized: Error;
+
+    try {
+      normalized = error instanceof Error ? error : new Error(String(error));
+    } catch {
+      normalized = new Error('An input listener threw an unprintable value.', { cause: error });
+    }
 
     logger.error('An input listener threw.', { source: 'InputSystem', error: normalized });
     // Isolated: reporting must not throw back into the host event handler or
@@ -1605,7 +1615,7 @@ export class InputSystem {
       platform.onSurfaceEvent('pointerup', event => this.handlePointerUp(event), active),
       platform.onSurfaceEvent('pointercancel', event => this.handlePointerCancel(event), passive),
       platform.onSurfaceEvent('contextmenu', event => this.handleContextMenu(event), active),
-      platform.onPointerLockChange(locked => this.onPointerLockChange.dispatch(locked)),
+      platform.onPointerLockChange(locked => this.onPointerLockChange.dispatchIsolated(this.reportListenerError, locked)),
     );
 
     if (!this.allowTextSelection) {
