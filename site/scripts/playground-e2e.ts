@@ -624,10 +624,10 @@ interface CatalogEntry {
 
 const readCatalog = (): CatalogEntry[] => {
   const catalog = JSON.parse(readFileSync(resolve(repoRoot, 'packages', 'exojs-demo-assets', 'manifest.json'), 'utf8')) as {
-    entries: Array<CatalogEntry & { profile: string }>;
+    entries: Array<CatalogEntry & { profile: string; entrypoint?: string }>;
   };
 
-  return catalog.entries.filter(entry => entry.profile === 'standard');
+  return catalog.entries.filter(entry => entry.profile === 'standard' && entry.entrypoint === undefined);
 };
 
 /** One asset of every preview kind, by the id the browser lists it under. */
