@@ -578,7 +578,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Destroy and remove a single frame's Rectangle and Sprite by name. No-op if the frame does not exist. Throws without changing any state or resources if an animation definition references the frame. Remove those definitions from animations before removing the frame, or use addFrame to replace it."
+          "description": "Destroy and remove a single frame's Rectangle and Sprite by name. No-op if the frame does not exist and no animation definition references the name. Throws without changing any state or resources if an animation definition references the name, even when the frame is missing. Remove those definitions from animations before removing the frame, or use addFrame to replace it."
         }
       ],
       "paragraphs": [],

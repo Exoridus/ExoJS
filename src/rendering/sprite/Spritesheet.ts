@@ -123,8 +123,8 @@ export class Spritesheet {
   }
 
   /**
-   * Destroy and remove a single frame's {@link Rectangle} and {@link Sprite} by name. No-op if the frame does not exist.
-   * Throws without changing any state or resources if an animation definition references the frame.
+   * Destroy and remove a single frame's {@link Rectangle} and {@link Sprite} by name. No-op if the frame does not exist and no animation definition references the name.
+   * Throws without changing any state or resources if an animation definition references the name, even when the frame is missing.
    * Remove those definitions from {@link animations} before removing the frame, or use {@link addFrame} to replace it.
    */
   public removeFrame(name: string): this {
