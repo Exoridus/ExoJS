@@ -184,6 +184,16 @@ const orb = new Graphics();
 
 These sources are part of the example catalog for tooling — `typecheck:examples`, ESLint and Prettier cover them — but not for the playground: they get no generated `.js` sibling, no `examples.json` entry, and are left out of the served example snapshot. The one exception is the React chapter: its listings live in `packages/exojs-react/examples/guides/*.tsx`, because React resolves through that package's own `node_modules` and the root package deliberately carries no `react` dependency. The package's `typecheck` script and its ESLint config cover them; `<SourceSnippet source>` is repo-root relative either way. A listing that is a fragment (a method body shown without its class, a value only the reader owns) stays a fenced block in the MDX; `pnpm typecheck:guides` checks those.
 
+## Visual evidence for visible changes
+
+A pull request that changes what the Playground or a renderer draws shows it. Tests and the blank-canvas smoke prove that nothing crashed; they do not prove that the result looks right.
+
+Capture with the existing smoke harness, narrowed to the affected examples: `pnpm test:examples:smoke --only <path substring> --shots <dir> --shot-times <seconds,...>`. Choose the sample times so that each state that matters appears at least once: for an animation, the start, the key mid-states and the settled end. A transition needs its closing, fully covered and opening states, and one capture of a default state does not cover a change that has several selectable variants, each of which is captured separately. `<name>.captures.json` records when each capture was actually taken. Those times are wall-clock observations, not simulation frames, so cite them as observed and do not present them as deterministic frame numbers.
+
+Keep the captures untracked under `.workspace/visual-review/current/` and replace them when the change is revised, rather than archiving one set per commit. Do not commit screenshots, and do not sweep the whole gallery to prove a local change; the CI smoke already covers that for crashes and blank output.
+
+Put one or two representative images per changed behaviour into the pull request description so a reviewer sees them without checking the branch out. If the images cannot be attached or have not been reviewed by a person, keep the pull request in Draft and say that visual acceptance is pending.
+
 ## Compile-time build constants
 
 Three synthetic identifiers (denoted by the `__*__` convention) are statically replaced at build time by every Rollup/Vite/Vitest configuration in the repository:
