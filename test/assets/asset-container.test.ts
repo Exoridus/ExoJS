@@ -741,6 +741,43 @@ describe('Loader.loadContainer', () => {
     }
   });
 
+  test('awaitBackground drains when the joined texture decode rejects', async () => {
+    let entered!: () => void;
+    let fail!: () => void;
+    const enteredDecode = new Promise<void>(resolve => (entered = resolve));
+    const gate = new Promise<void>((_, reject) => (fail = () => reject(new Error('decode failed'))));
+    const container = encodeContainer([{ source: 'ship.png', type: 'texture', bytes: new Uint8Array([1]) }]);
+    const loader = createCoreLoader();
+
+    loader.setConcurrency(0);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(container)),
+    );
+    vi.stubGlobal('createImageBitmap', async () => {
+      entered();
+      await gate;
+
+      return { width: 16, height: 16 };
+    });
+
+    try {
+      const loading = loader.load(Assets.from({ ship: 'ship.png' }), { priority: LoadPriority.Background }).catch(() => undefined);
+      const unpacking = loader.loadContainer('pack.exoa').catch(() => undefined);
+
+      await enteredDecode;
+      loader.setConcurrency(1);
+
+      const drained = loader.awaitBackground();
+
+      fail();
+      await Promise.all([unpacking, loading, drained]);
+    } finally {
+      loader.destroy();
+      vi.unstubAllGlobals();
+    }
+  });
+
   test('a get during container texture decoding preserves the container sampler', async () => {
     let entered!: () => void;
     let release!: () => void;
