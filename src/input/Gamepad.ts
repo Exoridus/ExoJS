@@ -654,7 +654,8 @@ export class Gamepad {
     // type; annotate `list` so the element type is restored for `.map`.
     const list: readonly InputChannel[] = Array.isArray(channel) ? channel : [channel];
     const resolved = list.map(c => this._resolveGamepadChannel(c));
-    const binding = new InputBinding(resolved, options, this._detacher);
+    const baseline = Float32Array.from(resolved, index => this._channels[index] ?? 0);
+    const binding = new InputBinding(resolved, options, this._detacher, 0, baseline);
     this._bindings.add(binding);
 
     return binding;

@@ -1,5 +1,6 @@
 import type { Application } from '#core/Application';
 import { logger } from '#core/Logger';
+import { requireSynchronousHook } from '#core/syncHooks';
 
 import type { Extension, ExtensionDisposer } from './Extension';
 
@@ -17,6 +18,11 @@ import type { Extension, ExtensionDisposer } from './Extension';
 export const installExtensions = (app: Application, extensions: readonly Extension[], disposers: ExtensionDisposer[]): void => {
   for (const extension of extensions) {
     const disposer = extension.install?.(app);
+    requireSynchronousHook(
+      disposer,
+      `Extension "${extension.id}".install()`,
+      'Start asynchronous work separately and return a synchronous disposer.',
+    );
 
     if (typeof disposer === 'function') {
       disposers.push(disposer);

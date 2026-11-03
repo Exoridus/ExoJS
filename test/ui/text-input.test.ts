@@ -62,6 +62,23 @@ describe('TextInput', () => {
     expect(field.selectionEnd).toBe(5);
   });
 
+  test('ignores a drag while its transform is singular', () => {
+    const harness = createUIApp();
+    const field = new TextInput({ width: 200, height: 36 });
+    harness.scene.ui.addChild(field);
+    press(harness, 5, 18);
+    type('hello');
+    const selection = [field.selectionStart, field.selectionEnd];
+    field.scale.set(0, 1);
+
+    expect(() => harness.signals.onPointerMove.dispatch(makePointer(57, 18), 57, 18)).not.toThrow();
+    expect([field.selectionStart, field.selectionEnd]).toEqual(selection);
+    field.scale.set(1, 1);
+    harness.signals.onPointerMove.dispatch(makePointer(57, 18), 57, 18);
+    expect(field.selectionStart).toBe(0);
+    expect(field.selectionEnd).toBe(5);
+  });
+
   test('a second contact neither extends the selection nor ends the drag', () => {
     const harness = createUIApp();
     const field = new TextInput({ width: 200, height: 36 });

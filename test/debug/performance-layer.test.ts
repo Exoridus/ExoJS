@@ -340,6 +340,18 @@ describe('PerformanceLayer', () => {
       expect(internals(layer)._textBudget?.text).toBe('Over: 0/120 (33.3ms)');
     });
 
+    test('rebuilding the panel restores the over-budget color', () => {
+      const layer = new PerformanceLayer(makeApp());
+      layer.update(time(40));
+      const red = internals(layer)._textFrame!.style.fillColor.clone();
+      layer.destroy();
+
+      layer.update(time(40));
+
+      expect(internals(layer)._textFrame!.style.fillColor.equals(red)).toBe(true);
+      expect(internals(layer)._textBudget!.style.fillColor.equals(red)).toBe(true);
+    });
+
     test('the frame-time and budget rows turn red while the window holds an overrun and revert once it ages out', () => {
       const layer = new PerformanceLayer(makeApp());
 

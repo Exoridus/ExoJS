@@ -128,6 +128,7 @@ describe('InputBinding — update() lifecycle signals', () => {
     binding.onStop.add(onStop);
     binding.onTrigger.add(onTrigger);
 
+    binding.update(channels);
     channels[1] = 1;
     binding.update(channels);
 
@@ -152,6 +153,7 @@ describe('InputBinding — update() lifecycle signals', () => {
     binding.onStop.add(onStop);
     binding.onTrigger.add(onTrigger);
 
+    binding.update(channels);
     channels[1] = 1;
     binding.update(channels);
 
@@ -194,6 +196,25 @@ describe('InputBinding — update() lifecycle signals', () => {
       binding.update(channels);
     }).not.toThrow();
     expect(onActive).not.toHaveBeenCalled();
+  });
+});
+
+describe('InputBinding without batch history', () => {
+  test('a held source at first sample does not synthesize a tap on release', () => {
+    const binding = new InputBinding([1], { threshold: 100000 });
+    const channels = makeChannels();
+    const onStart = vi.fn();
+    const onTrigger = vi.fn();
+    binding.onStart.add(onStart);
+    binding.onTrigger.add(onTrigger);
+    channels[1] = 1;
+
+    binding.update(channels);
+    channels[1] = 0;
+    binding.update(channels);
+
+    expect(onStart).toHaveBeenCalledOnce();
+    expect(onTrigger).not.toHaveBeenCalled();
   });
 });
 

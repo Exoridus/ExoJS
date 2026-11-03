@@ -178,6 +178,21 @@ describe('Scrollbar drag', () => {
     expect(bar.offset).toBe(150);
   });
 
+  test('ignores a drag while its transform is singular', () => {
+    const { stage, onPointerMove } = makeStage();
+    const bar = new Scrollbar().setLength(200);
+    bar._setStage(stage);
+    bar.setRange(100, 400);
+    bar.thumbNode.onPointerDown.dispatch(pointerDownAt(0, 10));
+    bar.scale.set(0, 1);
+
+    expect(() => onPointerMove.dispatch(fakePointer, 0, 85)).not.toThrow();
+    expect(bar.offset).toBe(0);
+    bar.scale.set(1, 1);
+    onPointerMove.dispatch(fakePointer, 0, 85);
+    expect(bar.offset).toBe(150);
+  });
+
   test('a second contact neither drags the thumb nor ends the drag', () => {
     const { stage, onPointerMove, onPointerUp } = makeStage();
     const bar = new Scrollbar().setLength(200);

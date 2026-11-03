@@ -192,6 +192,17 @@ describe('ObservableVector.add() / subtract() overrides', () => {
   });
 });
 
+describe('ObservableVector.multiply()', () => {
+  test('notifies once after both components change', () => {
+    const snapshots: number[][] = [];
+    const v = new ObservableVector({ _onObservableChange: () => snapshots.push([v.x, v.y]) }, 0, 2, 3);
+
+    v.multiply(2, 4);
+
+    expect(snapshots).toEqual([[4, 12]]);
+  });
+});
+
 describe('ObservableVector.scale()', () => {
   test('multiplies both components explicitly and notifies once', () => {
     const onChange = vi.fn();

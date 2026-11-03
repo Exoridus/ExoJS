@@ -2,7 +2,6 @@ import { Signal } from '#core/Signal';
 import type { Stage } from '#core/Stage';
 import type { InteractionEvent } from '#input/InteractionEvent';
 import type { Pointer } from '#input/Pointer';
-import { Vector } from '#math/Vector';
 
 import { Widget } from './Widget';
 import { type UIBackgroundNode, WidgetBackground } from './WidgetBackground';
@@ -109,8 +108,6 @@ export class Scrollbar extends Widget {
    * finger elsewhere must not move this thumb or end its drag.
    */
   private _dragPointerId = -1;
-  /** Scratch vector reused while dragging - a pointer move must not allocate. */
-  private readonly _localPoint = new Vector();
 
   private readonly _onGlobalPointerMove = (pointer: Pointer, x: number, y: number): void => {
     if (pointer.id !== this._dragPointerId) {
@@ -274,12 +271,18 @@ export class Scrollbar extends Widget {
       return;
     }
 
+    const axis = this._axisOf(event.x, event.y);
+
+    if (axis === null) {
+      return;
+    }
+
     event.stopPropagation();
 
     this._dragging = true;
     this._dragPointerId = event.pointer.id;
     this._dragOffset = this._offset;
-    this._dragOrigin = this._axisOf(event.x, event.y);
+    this._dragOrigin = axis;
     this._thumb.setPressed(true);
     this._subscribeDrag(true);
   };
@@ -296,7 +299,13 @@ export class Scrollbar extends Widget {
       return;
     }
 
-    const delta = this._axisOf(x, y) - this._dragOrigin;
+    const axis = this._axisOf(x, y);
+
+    if (axis === null) {
+      return;
+    }
+
+    const delta = axis - this._dragOrigin;
     const next = this._dragOffset + (delta / travel) * this.maxOffset;
     const clamped = Math.max(0, Math.min(next, this.maxOffset));
 
@@ -319,8 +328,12 @@ export class Scrollbar extends Widget {
   }
 
   /** The scroll-axis component of a screen point, in this bar's own space. */
-  private _axisOf(x: number, y: number): number {
-    const local = this._localPoint.set(x, y).transformInverse(this.getGlobalTransform());
+  private _axisOf(x: number, y: number): number | null {
+    const local = this._toLocalPoint(x, y);
+
+    if (local === null) {
+      return null;
+    }
 
     return this._orientation === 'vertical' ? local.y : local.x;
   }
@@ -367,7 +380,6 @@ export class Scrollbar extends Widget {
     this._endDrag();
     this.onScroll.destroy();
     this._track.destroy();
-    this._localPoint.destroy();
     super.destroy();
   }
 }
