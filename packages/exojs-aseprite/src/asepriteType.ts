@@ -103,21 +103,7 @@ const validateAsepriteData = (raw: unknown, source: string): AsepriteData => {
     throw new AsepriteFormatError(source, '"frames" must be an array or an object');
   }
 
-  // A rotated packed frame stores its pixels transposed; the runtime samples
-  // the rectangle verbatim, so accepting it would render wrong pixels.
-  const frameEntries: Array<[string, unknown]> = Array.isArray(frames)
-    ? frames.map((frame, index) => [String(index), frame])
-    : Object.entries(frames);
-
-  for (const [key, frame] of frameEntries) {
-    if (isRecord(frame) && frame.rotated === true) {
-      throw new AsepriteFormatError(
-        source,
-        `"frames.${key}" is rotated; packed rotated frames are not supported - export the sheet with rotation disabled`,
-      );
-    }
-  }
-
+  validateFrames(frames, source);
   validateFrameTags(meta.frameTags, source);
   validateSlices(meta.slices, source);
 
@@ -132,6 +118,37 @@ const isRect = (value: unknown): boolean =>
   isRecord(value) && [value.x, value.y, value.w, value.h].every(component => typeof component === 'number' && Number.isFinite(component));
 
 const isFrameIndex = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value >= 0;
+
+const validateFrames = (frames: object, source: string): void => {
+  // A rotated packed frame stores its pixels transposed; the runtime samples
+  // the rectangle verbatim, so accepting it would render wrong pixels.
+  const frameEntries: Array<[string, unknown]> = Array.isArray(frames)
+    ? frames.map((frame, index) => [String(index), frame])
+    : Object.entries(frames);
+
+  for (const [key, frame] of frameEntries) {
+    if (isRecord(frame) && frame.rotated === true) {
+      throw new AsepriteFormatError(
+        source,
+        `"frames.${key}" is rotated; packed rotated frames are not supported - export the sheet with rotation disabled`,
+      );
+    }
+
+    if (
+      !isRecord(frame) ||
+      !isRect(frame.frame) ||
+      typeof frame.duration !== 'number' ||
+      !Number.isFinite(frame.duration) ||
+      typeof frame.trimmed !== 'boolean' ||
+      !isRect(frame.spriteSourceSize)
+    ) {
+      throw new AsepriteFormatError(
+        source,
+        `"frames.${key}" must have frame and spriteSourceSize rectangles, a finite duration and a boolean trimmed flag`,
+      );
+    }
+  }
+};
 
 /** A malformed tag would otherwise become a clip with no frames or a `NaN` repeat count. */
 const validateFrameTags = (tags: unknown, source: string): void => {

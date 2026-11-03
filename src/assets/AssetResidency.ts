@@ -1643,12 +1643,6 @@ export class AssetResidency {
         continue;
       }
 
-      if (this._resources.has(entry.asset.key) || this._inFlight.has(entry.asset.key)) {
-        this._backgroundLoaded++;
-        this._onBackgroundItemDone();
-        continue;
-      }
-
       this._startBackgroundEntry(entry);
     }
   }
@@ -1662,11 +1656,9 @@ export class AssetResidency {
 
     const [entry] = this._backgroundQueue.splice(index, 1);
 
-    if (entry === undefined) {
-      return;
+    if (entry !== undefined) {
+      this._startBackgroundEntry(entry);
     }
-
-    this._startBackgroundEntry(entry);
   }
 
   private _dropQueuedBackground(key: ResourceKey): void {
@@ -1710,9 +1702,19 @@ export class AssetResidency {
   }
 
   private _startBackgroundEntry(entry: QueueEntry): void {
+    if (this._resources.has(entry.asset.key)) {
+      this._backgroundLoaded++;
+      this._onBackgroundItemDone();
+
+      return;
+    }
+
     this._backgroundActive++;
 
-    this._dispatchTracked(entry.asset, entry.options)
+    // An acquisition already in flight is joined, not restarted, and the queue
+    // stays busy until it settles: draining must not report a decode that is
+    // still running as finished.
+    (this._inFlight.get(entry.asset.key) ?? this._dispatchTracked(entry.asset, entry.options))
       .catch(() => {
         /* Failure handled centrally in _onTrackedFailure. */
       })
