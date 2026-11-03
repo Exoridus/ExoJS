@@ -466,8 +466,7 @@ export class PhysicsWorld implements BodyOwner {
   private readonly _islandParent: number[] = [];
   /** Pooled per-island minimum sleep time, indexed by union-find root. */
   private readonly _islandMinSleep: number[] = [];
-  /** Pooled scratch for the CCD pass (clamp target, per-pair sweep hit, best hit, swept AABB) - keeps the sweep allocation-free. */
-  private readonly _ccdClampPosition = { x: 0, y: 0 };
+  /** Pooled scratch for the CCD pass (per-pair sweep hit, best hit, swept AABB) - keeps the sweep allocation-free. */
   private readonly _ccdSweepHit: SweepHit = { t: 0, normalX: 0, normalY: 0 };
   private readonly _ccdBestHit: SweepHit = { t: 0, normalX: 0, normalY: 0 };
   private readonly _ccdSweptAabb: AabbLike = createAabb();
@@ -1627,9 +1626,7 @@ export class PhysicsWorld implements BodyOwner {
       if (clampDistance < distance) {
         const pullBack = (clampDistance - distance) / distance;
 
-        this._ccdClampPosition.x = body.x + dx * pullBack;
-        this._ccdClampPosition.y = body.y + dy * pullBack;
-        body.setTransform(this._ccdClampPosition, body.angle);
+        body._correctPosition(dx * pullBack, dy * pullBack);
 
         // The clamp pulled this body back behind the pose the index was synced
         // from; refresh just its own leaves so a later bullet's query still sees it.

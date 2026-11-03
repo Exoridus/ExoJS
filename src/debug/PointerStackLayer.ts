@@ -32,7 +32,8 @@ const textColor = Color.white.clone();
 
 /**
  * Debug layer that shows a screen-space panel (top-right corner) listing all
- * RenderNodes under the current pointer position, sorted by zIndex descending.
+ * RenderNodes under the current pointer position, with UI before world nodes
+ * and each layer sorted by zIndex descending.
  * Screen-space.
  */
 export class PointerStackLayer extends DebugLayer {
@@ -52,7 +53,7 @@ export class PointerStackLayer extends DebugLayer {
   /**
    * Lazily initialize the panel on first call, reposition it to the
    * top-right corner, and populate text lines with the current pointer
-   * stack (up to 10 entries, sorted by zIndex descending).
+   * stack (up to 10 entries, UI first and descending zIndex within each layer).
    */
   public override update(_delta: Seconds): void {
     if (this._root === null) {
@@ -146,23 +147,32 @@ export class PointerStackLayer extends DebugLayer {
 
     const { x: sx, y: sy } = pos;
 
-    // The pointer x/y is canvas-relative. InteractionSystem passes this
-    // directly to node.contains(), so we do the same.
-    const worldX = sx;
-    const worldY = sy;
-
     const lines: string[] = [];
 
     lines.push(`Cursor: (${sx.toFixed(0)}, ${sy.toFixed(0)})`);
     lines.push('Stack (top→bottom):');
 
     // Collect all visible RenderNodes whose contains() returns true.
-    const root = this._app.scenes.currentScene?.root;
-    const stack: RenderNode[] = [];
+    const scene = this._app.scenes.currentScene;
+    const root = scene?.root;
+    let stack: RenderNode[] = [];
 
     if (root) {
-      this._collectContaining(root, worldX, worldY, stack);
+      const world = this._app.rendering.view.screenToWorld(sx, sy, this._app.width, this._app.height);
+
+      this._collectContaining(root, world.x, world.y, stack);
       stack.sort((a, b) => b.zIndex - a.zIndex);
+    }
+
+    const uiRoot = scene?._peekUI();
+
+    if (uiRoot) {
+      const ui = this._app.rendering.screenView.screenToWorld(sx, sy, this._app.width, this._app.height);
+      const uiStack: RenderNode[] = [];
+
+      this._collectContaining(uiRoot, ui.x, ui.y, uiStack);
+      uiStack.sort((a, b) => b.zIndex - a.zIndex);
+      stack = [...uiStack, ...stack];
     }
 
     const shown = stack.slice(0, maxEntries);

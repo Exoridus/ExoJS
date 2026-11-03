@@ -365,6 +365,14 @@ export class PhysicsBody {
     }
   }
 
+  /** @internal Correct simulated motion without collapsing the interpolation pair as a teleport would. */
+  public _correctPosition(dx: number, dy: number): void {
+    this.wake();
+    this._transform.x += dx;
+    this._transform.y += dy;
+    this.synchronizeColliders();
+  }
+
   /** World-space centre of mass X (body origin + rotated local centre of mass). */
   public get worldCenterOfMassX(): number {
     return this._transform.x + this._transform.cos * this._comX - this._transform.sin * this._comY;
