@@ -2,6 +2,7 @@ import { CONTAINER_DEFAULT_BLOCK_SIZE, type ContainerInput, encodeContainer } fr
 
 import { Asset } from '#assets/Asset';
 import { AssetDecodeError } from '#assets/AssetDecodeError';
+import { Assets } from '#assets/Assets';
 import {
   CONTAINER_ALIGNMENT,
   CONTAINER_HEADER_SIZE,
@@ -12,7 +13,7 @@ import {
   readContainerEntry,
 } from '#assets/container/assetContainer';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
-import { Loader } from '#assets/Loader';
+import { Loader, LoadPriority } from '#assets/Loader';
 import { materializeAssetTypes } from '#extensions/materialize';
 import { ScaleModes } from '#rendering/types';
 
@@ -648,6 +649,51 @@ describe('Loader.loadContainer', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     await expect(joined).resolves.toEqual({ body: 'from-container' });
     expect(loader.peek(Asset.type('gated' as never, 'level.gated'))).toEqual({ body: 'from-container' });
+  });
+
+  test.each([false, true])('a queued texture joins a container without fetching again (unpacked: %s)', async unpacked => {
+    let entered!: () => void;
+    let release!: () => void;
+    const enteredDecode = new Promise<void>(resolve => (entered = resolve));
+    const gate = new Promise<void>(resolve => (release = resolve));
+    const container = encodeContainer([{ source: 'ship.png', type: 'texture', bytes: new Uint8Array([1]) }]);
+    const fetchSpy = vi.fn(async () => new Response(container));
+    const loader = createCoreLoader();
+
+    loader.setConcurrency(0);
+    vi.stubGlobal('fetch', fetchSpy);
+    vi.stubGlobal('createImageBitmap', async () => {
+      entered();
+      await gate;
+
+      return { width: 16, height: 16 };
+    });
+
+    try {
+      const catalog = Assets.from({ ship: 'ship.png' });
+      const background = loader.load(catalog, { priority: LoadPriority.Background });
+      const unpacking = loader.loadContainer('pack.exoa');
+
+      await enteredDecode;
+
+      if (unpacked) {
+        release();
+        await unpacking;
+      }
+
+      const handle = loader.get('ship.png');
+
+      release();
+      loader.setConcurrency(1);
+      await Promise.all([unpacking, background, handle.loaded, loader.awaitBackground()]);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(handle).toBe(catalog.ship);
+      expect(handle.width).toBe(16);
+    } finally {
+      release();
+      loader.destroy();
+      vi.unstubAllGlobals();
+    }
   });
 
   test('a get during container texture decoding preserves the container sampler', async () => {

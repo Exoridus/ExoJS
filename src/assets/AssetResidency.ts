@@ -1643,12 +1643,6 @@ export class AssetResidency {
         continue;
       }
 
-      if (this._resources.has(entry.asset.key) || this._inFlight.has(entry.asset.key)) {
-        this._backgroundLoaded++;
-        this._onBackgroundItemDone();
-        continue;
-      }
-
       this._startBackgroundEntry(entry);
     }
   }
@@ -1662,11 +1656,9 @@ export class AssetResidency {
 
     const [entry] = this._backgroundQueue.splice(index, 1);
 
-    if (entry === undefined) {
-      return;
+    if (entry !== undefined) {
+      this._startBackgroundEntry(entry);
     }
-
-    this._startBackgroundEntry(entry);
   }
 
   private _dropQueuedBackground(key: ResourceKey): void {
@@ -1710,6 +1702,13 @@ export class AssetResidency {
   }
 
   private _startBackgroundEntry(entry: QueueEntry): void {
+    if (this._resources.has(entry.asset.key) || this._inFlight.has(entry.asset.key)) {
+      this._backgroundLoaded++;
+      this._onBackgroundItemDone();
+
+      return;
+    }
+
     this._backgroundActive++;
 
     this._dispatchTracked(entry.asset, entry.options)
