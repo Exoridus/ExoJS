@@ -18,6 +18,7 @@
 // definition), then restore it - an instance created later (e.g. from a test's
 // `beforeAll`) would otherwise see the global's restored (unset) value. Capturing
 // it here, at eval time, is what makes construction see the right value.
+import { validateVocoderBands } from '../dsp/validateVocoderBands';
 import { DisposableProcessor } from './disposable-processor';
 
 const sampleRate: number = (globalThis as unknown as { sampleRate: number }).sampleRate;
@@ -64,6 +65,12 @@ class VocoderProcessor extends DisposableProcessor {
     const minHz = opts.minHz ?? 80;
     const maxHz = opts.maxHz ?? 8000;
     const Q = opts.bandQ ?? 4;
+
+    validateVocoderBands(bandCount, minHz, maxHz, Q);
+
+    if ((bandCount === 1 ? minHz : maxHz) >= sampleRate / 2) {
+      throw new RangeError('Vocoder band centers must be below the Nyquist frequency.');
+    }
 
     for (let i = 0; i < bandCount; i++) {
       const ratio = bandCount === 1 ? 0 : i / (bandCount - 1);

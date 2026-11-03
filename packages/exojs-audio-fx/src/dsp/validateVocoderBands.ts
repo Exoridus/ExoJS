@@ -1,0 +1,15 @@
+const MAX_VOCODER_BANDS = 64;
+
+export const validateVocoderBands = (numBands: number, minHz: number, maxHz: number, bandQ: number): void => {
+  if (!Number.isInteger(numBands) || numBands < 1 || numBands > MAX_VOCODER_BANDS) {
+    throw new RangeError(`Vocoder numBands must be an integer from 1 to ${MAX_VOCODER_BANDS}.`);
+  }
+
+  if (!Number.isFinite(minHz) || minHz <= 0 || !Number.isFinite(maxHz) || maxHz < minHz || !Number.isFinite(maxHz / minHz)) {
+    throw new RangeError('Vocoder frequencies must be finite with 0 < minHz <= maxHz and a finite maxHz/minHz ratio.');
+  }
+
+  if (!Number.isFinite(bandQ) || bandQ <= 0 || !(Number.isFinite(1 / (2 * bandQ)) && 1 / (2 * bandQ) > 0)) {
+    throw new RangeError('Vocoder bandQ must be finite and positive with a finite, nonzero reciprocal.');
+  }
+};
