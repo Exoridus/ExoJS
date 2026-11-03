@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "profiles": {
     "standard": {
-      "files": 195,
-      "bytes": 29167334
+      "files": 200,
+      "bytes": 34788981
     },
     "extended": {
       "files": 1,
@@ -1772,6 +1772,46 @@
       "bytes": 2306159,
       "sha256": "fed1f0b0966698c1be851a975e11b8ff552b1677f59cc836542f7a8fc5020b2c",
       "provenance": "music-action-synth-rock"
+    },
+    {
+      "key": "pixelfxTransitionsManifest",
+      "type": "json",
+      "category": "textures",
+      "profile": "standard",
+      "path": "images/pixelfx-transitions.json",
+      "bytes": 858,
+      "sha256": "f4c43cd7e95fd57c34356fa590e75981f0c87d36de2a13c26ab62097d3ebe449",
+      "provenance": "pixelfx-transitions"
+    },
+    {
+      "key": "pixelfxBurnAway",
+      "type": "texture",
+      "category": "textures",
+      "profile": "standard",
+      "path": "images/pixelfx-burn-away.png",
+      "bytes": 2545545,
+      "sha256": "fcf13cd6e5fc822edddc6dcf2d46df8db279008af57c64d9d92b54e55eb6a3fb",
+      "provenance": "pixelfx-transitions"
+    },
+    {
+      "key": "pixelfxPixelDissolve",
+      "type": "texture",
+      "category": "textures",
+      "profile": "standard",
+      "path": "images/pixelfx-pixel-dissolve.png",
+      "bytes": 2654070,
+      "sha256": "d7d4578da5740d4c1ead30e4bccb5909804fa3c32900d1c15ccf31c600810a14",
+      "provenance": "pixelfx-transitions"
+    },
+    {
+      "key": "pixelfxStarIris",
+      "type": "texture",
+      "category": "textures",
+      "profile": "standard",
+      "path": "images/pixelfx-star-iris.png",
+      "bytes": 419655,
+      "sha256": "de9c7a241128caaf3f4e87c474acb9a12018b178847ecdccb0d9eaaaea01bcda",
+      "provenance": "pixelfx-transitions"
     }
   ],
   "files": [
@@ -2848,6 +2888,38 @@
       "provenance": "kenney-development-essentials"
     },
     {
+      "path": "images/pixelfx-burn-away.png",
+      "bytes": 2545545,
+      "sha256": "fcf13cd6e5fc822edddc6dcf2d46df8db279008af57c64d9d92b54e55eb6a3fb",
+      "role": "entry",
+      "profile": "standard",
+      "provenance": "pixelfx-transitions"
+    },
+    {
+      "path": "images/pixelfx-pixel-dissolve.png",
+      "bytes": 2654070,
+      "sha256": "d7d4578da5740d4c1ead30e4bccb5909804fa3c32900d1c15ccf31c600810a14",
+      "role": "entry",
+      "profile": "standard",
+      "provenance": "pixelfx-transitions"
+    },
+    {
+      "path": "images/pixelfx-star-iris.png",
+      "bytes": 419655,
+      "sha256": "de9c7a241128caaf3f4e87c474acb9a12018b178847ecdccb0d9eaaaea01bcda",
+      "role": "entry",
+      "profile": "standard",
+      "provenance": "pixelfx-transitions"
+    },
+    {
+      "path": "images/pixelfx-transitions.json",
+      "bytes": 858,
+      "sha256": "f4c43cd7e95fd57c34356fa590e75981f0c87d36de2a13c26ab62097d3ebe449",
+      "role": "entry",
+      "profile": "standard",
+      "provenance": "pixelfx-transitions"
+    },
+    {
       "path": "images/platformer-backgrounds-atlas.json",
       "bytes": 2997,
       "sha256": "26ef600025aa2399f6ab997e8192d7e267ceee8d63db67fb73b7b512f85eaea7",
@@ -3256,6 +3328,14 @@
       "provenance": "music-lofi-rhodes"
     },
     {
+      "path": "licenses/pixelfx.txt",
+      "bytes": 1519,
+      "sha256": "e1ab53a09b5651636f7f36e496ed7b740cbe514acc8b30f09022bf021c61b192",
+      "role": "license",
+      "profile": "standard",
+      "provenance": "pixelfx-transitions"
+    },
+    {
       "path": "licenses/william-hector-war-drums.txt",
       "bytes": 433,
       "sha256": "2f897ca9c1db27fa77ff379f39c6020f476f922646b340aa74f8006738f79b3d",
@@ -3650,6 +3730,15 @@
       "source": "https://opengameart.org/content/monstervania-ghost-land",
       "licenseFile": "licenses/music-action-synth-rock.txt",
       "note": "Original recording, unchanged. Original filename: MonsterVania - Ghost Land.mp3."
+    },
+    "pixelfx-transitions": {
+      "title": "PixelFX scene transitions",
+      "author": "Patch and Hugo Duprez (Sprite Fusion adaptations)",
+      "license": "MIT",
+      "licenseUrl": "https://opensource.org/license/mit",
+      "source": "https://github.com/patch-gg/pixelfx",
+      "licenseFile": "licenses/pixelfx.txt",
+      "note": "Rendered offline to frame atlases from upstream revision a84159688af3ca37a4be05a0d422b94451b2e24e; the generator and vendored sources live in tools/pixelfx-transitions."
     }
   },
   "blocked": [

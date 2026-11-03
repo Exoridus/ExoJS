@@ -37,8 +37,8 @@ describe('profiles: standard and extended are separate deliveries', () => {
   const standard = filesFor(catalog, 'standard');
   const extended = filesFor(catalog, 'extended');
 
-  test('the standard profile with full-length music stays under the 30 MB media budget', () => {
-    expect(bytesOf(standard)).toBeLessThan(30_000_000);
+  test('the standard profile with full-length music stays under the 36 MB media budget', () => {
+    expect(bytesOf(standard)).toBeLessThan(36_000_000);
   });
 
   test('the extended profile contains only the HDR candidate and is not smuggled into standard', () => {
@@ -97,7 +97,7 @@ describe('source layout', () => {
   });
 
   test('atlas image names resolve beside their JSON files', () => {
-    const atlases = catalog.entries.filter(entry => entry.path.startsWith('images/') && entry.path.endsWith('.json'));
+    const atlases = catalog.entries.filter(entry => entry.valueType === 'SpritesheetData');
 
     expect(atlases.length).toBeGreaterThan(0);
 

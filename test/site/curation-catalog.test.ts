@@ -30,6 +30,7 @@ describe('curated curriculum preservation', () => {
     expect(paths.sort()).toEqual(
       [
         ...curation.contracts.map(contract => contract.source),
+        'examples/application-scenes/pixelfx-transitions.ts',
         'examples/application-scenes/transition-gallery.ts',
         'examples/physics/materials-playground.ts',
         'examples/showcase/collect-survive.ts',

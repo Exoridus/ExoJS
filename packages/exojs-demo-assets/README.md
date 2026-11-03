@@ -77,7 +77,7 @@ It copies exactly the standard-profile files listed in `manifest.json` to their 
 
 ## Extended media
 
-The standard profile ships in this package (195 files, under 30 MB, including seven full-length music recordings). The extended HDR10 video candidate does not: it is delivered as a separate archive (`exojs-demo-assets-extended-<version>.zip`) and served from a location you choose.
+The standard profile ships in this package (200 files, under 36 MB, including seven full-length music recordings). The extended HDR10 video candidate does not: it is delivered as a separate archive (`exojs-demo-assets-extended-<version>.zip`) and served from a location you choose.
 
 ```ts
 import type { Scene, Video } from '@codexo/exojs';

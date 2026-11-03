@@ -835,7 +835,7 @@ const assetChecks = async (browser: Browser, origin: string, base: string): Prom
     ).length;
 
     assert(
-      tabs.map(tab => tab.replace(/ \d+$/, '')).join(',') === 'Textures,Spritesheets,Maps,Audio,Video,Fonts',
+      tabs.map(tab => tab.replace(/ \d+$/, '')).join(',') === 'Textures,Spritesheets,Maps,Audio,Video,Fonts,Data',
       `groups: ${tabs.join(', ')}`,
     );
     assert(total === catalog.length - atlases, `the groups list ${total} assets, the catalog has ${catalog.length - atlases}`);
