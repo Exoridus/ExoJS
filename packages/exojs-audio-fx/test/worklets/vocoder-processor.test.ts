@@ -161,6 +161,7 @@ describe('VocoderProcessor DSP', () => {
     { numBands: -1 },
     { numBands: NaN },
     { numBands: Infinity },
+    { numBands: 65 },
     { minHz: 0 },
     { minHz: -80 },
     { minHz: NaN },
@@ -179,15 +180,18 @@ describe('VocoderProcessor DSP', () => {
     expect(() => new Processor({ processorOptions })).toThrow(expect.objectContaining({ name: 'RangeError' }));
   });
 
-  it.each([{ numBands: 1, minHz: 80, maxHz: 80 }, { numBands: 16 }])('keeps accepted filter-bank output finite: %j', processorOptions => {
-    const proc = new Processor({ processorOptions });
-    const carrier = makeSawtooth(110, 1, BLOCK * 4);
-    const modulator = makeSine(80, 1, BLOCK * 4);
-    const output = runVocoder(proc, carrier, modulator, 0.005);
+  it.each([{ numBands: 1, minHz: 80, maxHz: 80 }, { numBands: 16 }, { numBands: 64 }])(
+    'keeps accepted filter-bank output finite: %j',
+    processorOptions => {
+      const proc = new Processor({ processorOptions });
+      const carrier = makeSawtooth(110, 1, BLOCK * 4);
+      const modulator = makeSine(80, 1, BLOCK * 4);
+      const output = runVocoder(proc, carrier, modulator, 0.005);
 
-    expect(output.every(Number.isFinite)).toBe(true);
-    expect(output.some(value => value !== 0)).toBe(true);
-  });
+      expect(output.every(Number.isFinite)).toBe(true);
+      expect(output.some(value => value !== 0)).toBe(true);
+    },
+  );
 
   // ── 1. Silence without modulator ──────────────────────────────────────────
   it('outputs silence when modulator is absent', () => {

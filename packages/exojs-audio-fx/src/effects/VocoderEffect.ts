@@ -7,7 +7,7 @@ export interface VocoderEffectOptions {
   /** Modulator AudioBus - its output drives the spectral envelope.
    *  Typically routed from a microphone or voice sample. */
   modulator: AudioBus;
-  /** Number of frequency bands. More bands = better resolution, more CPU. Default 16. */
+  /** Number of frequency bands, an integer from 1 to 64. More bands = better resolution, more CPU. Default 16. */
   numBands?: number;
   /** Lowest band center frequency in Hz. Default 80. */
   minHz?: number;
@@ -31,7 +31,7 @@ export interface VocoderEffectOptions {
  * at construction; only `wet` and `envelopeSmoothing` are adjustable at
  * runtime.
  *
- * Band count must be a positive safe integer. Frequencies and Q must be finite,
+ * Band count must be an integer from 1 to 64. Frequencies and Q must be finite,
  * with `0 < minHz <= maxHz`, a finite `maxHz / minHz`, and positive Q with a
  * nonzero, finite `1 / (2 * bandQ)`. Invalid settings throw `RangeError` before creating
  * the effect's audio graph. Once the audio context is available, band centers

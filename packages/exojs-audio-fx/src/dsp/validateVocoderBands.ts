@@ -1,6 +1,8 @@
+const MAX_VOCODER_BANDS = 64;
+
 export const validateVocoderBands = (numBands: number, minHz: number, maxHz: number, bandQ: number): void => {
-  if (!Number.isSafeInteger(numBands) || numBands < 1) {
-    throw new RangeError('Vocoder numBands must be a positive safe integer.');
+  if (!Number.isInteger(numBands) || numBands < 1 || numBands > MAX_VOCODER_BANDS) {
+    throw new RangeError(`Vocoder numBands must be an integer from 1 to ${MAX_VOCODER_BANDS}.`);
   }
 
   if (!Number.isFinite(minHz) || minHz <= 0 || !Number.isFinite(maxHz) || maxHz < minHz || !Number.isFinite(maxHz / minHz)) {

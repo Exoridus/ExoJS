@@ -39,6 +39,7 @@ describe('VocoderEffect', () => {
       { numBands: -1 },
       { numBands: NaN },
       { numBands: Infinity },
+      { numBands: 65 },
       { minHz: 0 },
       { minHz: -80 },
       { minHz: NaN },
@@ -61,6 +62,18 @@ describe('VocoderEffect', () => {
           effect.destroy();
         }).toThrow(expect.objectContaining({ name: 'RangeError' }));
         expect(createGain).not.toHaveBeenCalled();
+      } finally {
+        modulator.destroy();
+      }
+    });
+
+    it('accepts the documented maximum of 64 bands', () => {
+      const modulator = makeModulatorBus();
+
+      try {
+        const effect = new VocoderEffect({ modulator, numBands: 64 });
+
+        effect.destroy();
       } finally {
         modulator.destroy();
       }
