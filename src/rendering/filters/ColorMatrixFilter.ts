@@ -101,9 +101,9 @@ export class ColorMatrixFilter extends Filter {
     return this._colorSpace;
   }
 
-  /** The current 4×5 matrix. Assign a new one, or use the conveniences. */
+  /** A copy of the current 4×5 matrix. Assign a new one, or use the conveniences. */
   public get matrix(): ColorMatrixEntries {
-    return this._matrix as unknown as ColorMatrixEntries;
+    return [...this._matrix];
   }
 
   public set matrix(matrix: ColorMatrixEntries) {
