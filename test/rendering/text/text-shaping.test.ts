@@ -164,6 +164,17 @@ describe('layoutText with a browser shaper', () => {
     expect(layout.placements).toHaveLength(layout.lines.length);
   });
 
+  test('an unspaced Thai paragraph wraps at word boundaries without breakWords', () => {
+    const text = 'ภาษาไทยเป็นภาษาที่สวยงาม';
+    const shaper = makeShaper();
+
+    const layout = layoutText(text, style(), { maxWidth: 100, locale: 'th' }, makeProvider(), shaper);
+
+    expect(layout.lines.length).toBeGreaterThan(1);
+    expect(shaper.shaped.join('')).toBe(text);
+    expect(layout.advance.width).toBeLessThanOrEqual(100);
+  });
+
   test('the ellipsis candidate is measured complete, ellipsis included', () => {
     const shaper = makeShaper();
 
