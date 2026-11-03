@@ -1702,7 +1702,7 @@ export class AssetResidency {
   }
 
   private _startBackgroundEntry(entry: QueueEntry): void {
-    if (this._resources.has(entry.asset.key) || this._inFlight.has(entry.asset.key)) {
+    if (this._resources.has(entry.asset.key)) {
       this._backgroundLoaded++;
       this._onBackgroundItemDone();
 
@@ -1711,7 +1711,10 @@ export class AssetResidency {
 
     this._backgroundActive++;
 
-    this._dispatchTracked(entry.asset, entry.options)
+    // An acquisition already in flight is joined, not restarted, and the queue
+    // stays busy until it settles: draining must not report a decode that is
+    // still running as finished.
+    (this._inFlight.get(entry.asset.key) ?? this._dispatchTracked(entry.asset, entry.options))
       .catch(() => {
         /* Failure handled centrally in _onTrackedFailure. */
       })

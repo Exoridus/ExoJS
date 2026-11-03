@@ -696,6 +696,51 @@ describe('Loader.loadContainer', () => {
     }
   });
 
+  test('awaitBackground stays pending while a promoted texture is still decoding inside a container', async () => {
+    let entered!: () => void;
+    let release!: () => void;
+    const enteredDecode = new Promise<void>(resolve => (entered = resolve));
+    const gate = new Promise<void>(resolve => (release = resolve));
+    const container = encodeContainer([{ source: 'ship.png', type: 'texture', bytes: new Uint8Array([1]) }]);
+    const loader = createCoreLoader();
+
+    loader.setConcurrency(0);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(container)),
+    );
+    vi.stubGlobal('createImageBitmap', async () => {
+      entered();
+      await gate;
+
+      return { width: 16, height: 16 };
+    });
+
+    try {
+      void loader.load(Assets.from({ ship: 'ship.png' }), { priority: LoadPriority.Background });
+      const unpacking = loader.loadContainer('pack.exoa');
+
+      await enteredDecode;
+      loader.setConcurrency(1);
+
+      let drained = false;
+      const background = loader.awaitBackground().then(() => {
+        drained = true;
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(drained).toBe(false);
+
+      release();
+      await Promise.all([unpacking, background]);
+      expect(drained).toBe(true);
+    } finally {
+      release();
+      loader.destroy();
+      vi.unstubAllGlobals();
+    }
+  });
+
   test('a get during container texture decoding preserves the container sampler', async () => {
     let entered!: () => void;
     let release!: () => void;
