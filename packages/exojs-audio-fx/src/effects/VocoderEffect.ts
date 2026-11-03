@@ -33,7 +33,7 @@ export interface VocoderEffectOptions {
  *
  * Band count must be a positive safe integer. Frequencies and Q must be finite,
  * with `0 < minHz <= maxHz`, a finite `maxHz / minHz`, and positive Q with a
- * finite `1 / (2 * bandQ)`. Invalid settings throw `RangeError` before creating
+ * nonzero, finite `1 / (2 * bandQ)`. Invalid settings throw `RangeError` before creating
  * the effect's audio graph. Once the audio context is available, band centers
  * must be below its Nyquist frequency or {@link ready} rejects. A single band
  * uses `minHz` as its center.

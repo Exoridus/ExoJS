@@ -49,6 +49,7 @@ describe('VocoderEffect', () => {
       { bandQ: NaN },
       { bandQ: Infinity },
       { bandQ: Number.MIN_VALUE },
+      { bandQ: 1e308 },
       { minHz: Number.MIN_VALUE },
     ])('rejects invalid filter-bank parameters without allocating an effect graph: %j', options => {
       const modulator = makeModulatorBus();

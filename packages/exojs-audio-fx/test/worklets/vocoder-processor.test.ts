@@ -170,6 +170,7 @@ describe('VocoderProcessor DSP', () => {
     { maxHz: SAMPLE_RATE },
     { bandQ: 0 },
     { bandQ: -1 },
+    { bandQ: 1e308 },
     { bandQ: NaN },
     { bandQ: Infinity },
     { bandQ: Number.MIN_VALUE },
