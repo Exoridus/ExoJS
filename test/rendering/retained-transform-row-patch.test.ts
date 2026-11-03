@@ -53,7 +53,7 @@ interface Harness {
 // File-local fake backend (repo convention keeps test harnesses file-local). It
 // hands every capture a bundle that supports the in-place row patch and records
 // which group-local row each patch addressed.
-const createPatchingBackend = (): Harness => {
+const createPatchingBackend = (renderer: unknown = flaggedRenderer): Harness => {
   const renderTarget = new RenderTarget(800, 600, true);
   const events: string[] = [];
   const patches: PatchCall[] = [];
@@ -105,7 +105,7 @@ const createPatchingBackend = (): Harness => {
     rendererRegistry: {
       resolve(drawable: Drawable) {
         if (drawable instanceof RecordableLeaf) {
-          return flaggedRenderer;
+          return renderer;
         }
 
         throw new Error(`no renderer registered for ${drawable.constructor.name}`);
@@ -250,6 +250,43 @@ describe('recorded row base spans nested draws', () => {
 });
 
 describe('automatic render-root representation: incremental transform rows', () => {
+  test.each(['root', 'group'] as const)('a throwing private row patcher drops the %s recording', kind => {
+    const privateRow = new Float32Array([0, 0]);
+    const patchOwnRow = vi.fn(() => {
+      privateRow[0] = 24;
+
+      throw new Error('private row write failed');
+    });
+    const harness = createPatchingBackend({ supportsRetainedBatches: true, _patchOwnTransformRow: patchOwnRow });
+    const root = new Container();
+    const parent = kind === 'group' ? new RetainedContainer() : root;
+    const leaf = new RecordableLeaf('a');
+
+    if (parent !== root) {
+      root.addChild(parent);
+    }
+
+    parent.addChild(leaf);
+
+    reachSpliceTier(root, harness);
+    leaf.setPosition(24, 24);
+    playFrame(root, harness.backend);
+
+    expect(patchOwnRow).toHaveBeenCalledOnce();
+    expect([...privateRow]).toEqual([24, 0]);
+    expect(harness.patches).toEqual([]);
+    expect(harness.events).toContain('flush:a');
+    expect(harness.events).not.toContain('replay:a');
+
+    harness.events.length = 0;
+    playFrame(root, harness.backend);
+    playFrame(root, harness.backend);
+    expect(harness.events).toContain('replay:a');
+
+    root.destroy();
+    harness.backend.destroy();
+  });
+
   test('a nested descendant move patches one row and keeps the splice', () => {
     const harness = createPatchingBackend();
     const root = new Container();
