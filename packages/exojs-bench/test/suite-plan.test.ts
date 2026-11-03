@@ -28,6 +28,25 @@ it('changes plan identity when a workload unit or membership changes', () => {
   expect(computePlanHash('reference', 'rendering', [])).not.toBe(original);
 });
 
+it('hashes workload content independently of order without mutating the workloads', () => {
+  const workload = { scenarioId: 'scene', loadId: 'load', value: 1000, unit: 'nodes' as const, primary: true, extreme: false };
+  const workloads = Object.freeze([
+    workload,
+    { ...workload, scenarioId: 'other' },
+    { ...workload, loadId: 'other' },
+    { ...workload, value: 2000 },
+    { ...workload, unit: 'bodies' as const },
+  ]);
+  const reversed = [...workloads].reverse();
+
+  expect(computePlanHash('reference', 'rendering', workloads)).toBe(computePlanHash('reference', 'rendering', reversed));
+  expect(workloads[0]).toBe(workload);
+  expect(computePlanHash('reference', 'rendering', [workload, workload])).not.toBe(computePlanHash('reference', 'rendering', [workload]));
+  expect(computePlanHash('reference', 'rendering', [{ ...workload, value: 2000 }])).not.toBe(
+    computePlanHash('reference', 'rendering', [workload]),
+  );
+});
+
 /**
  * ExoJS-internal probes: archetypes the published catalog deliberately omits
  * because a competitor arm renders some other scene on them. They must survive
