@@ -1776,7 +1776,7 @@
     {
       "key": "pixelfxTransitionsManifest",
       "type": "json",
-      "category": "transitions",
+      "category": "textures",
       "profile": "standard",
       "path": "pixelfx-transitions/manifest.json",
       "bytes": 834,
@@ -1786,7 +1786,7 @@
     {
       "key": "pixelfxBurnAway",
       "type": "texture",
-      "category": "transitions",
+      "category": "textures",
       "profile": "standard",
       "path": "pixelfx-transitions/burn-away.png",
       "bytes": 2545545,
@@ -1796,7 +1796,7 @@
     {
       "key": "pixelfxPixelDissolve",
       "type": "texture",
-      "category": "transitions",
+      "category": "textures",
       "profile": "standard",
       "path": "pixelfx-transitions/pixel-dissolve.png",
       "bytes": 2654070,
@@ -1806,7 +1806,7 @@
     {
       "key": "pixelfxStarIris",
       "type": "texture",
-      "category": "transitions",
+      "category": "textures",
       "profile": "standard",
       "path": "pixelfx-transitions/star-iris.png",
       "bytes": 419655,

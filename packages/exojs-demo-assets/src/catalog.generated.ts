@@ -346,7 +346,7 @@ export interface DemoAssetDefinitions {
 export type DemoAssetKey = keyof DemoAssetDefinitions;
 
 /** The browsing category a demo asset is listed under. */
-export type DemoAssetCategory = 'textures' | 'maps' | 'technical' | 'backgrounds' | 'spritesheets' | 'inputPrompts' | 'icons' | 'cursors' | 'fonts' | 'sound' | 'soundSprites' | 'music' | 'voice' | 'impulseResponses' | 'video' | 'transitions';
+export type DemoAssetCategory = 'textures' | 'maps' | 'technical' | 'backgrounds' | 'spritesheets' | 'inputPrompts' | 'icons' | 'cursors' | 'fonts' | 'sound' | 'soundSprites' | 'music' | 'voice' | 'impulseResponses' | 'video';
 
 /** The category of every standard demo asset, for browsers and filters. Static data; reading it loads nothing. */
 export const demoAssetCategories: Readonly<Record<DemoAssetKey, DemoAssetCategory>> = Object.freeze({
@@ -510,10 +510,10 @@ export const demoAssetCategories: Readonly<Record<DemoAssetKey, DemoAssetCategor
   musicGlitchMachine: 'music',
   musicDarkIndustrial: 'music',
   musicActionSynthRock: 'music',
-  pixelfxTransitionsManifest: 'transitions',
-  pixelfxBurnAway: 'transitions',
-  pixelfxPixelDissolve: 'transitions',
-  pixelfxStarIris: 'transitions',
+  pixelfxTransitionsManifest: 'textures',
+  pixelfxBurnAway: 'textures',
+  pixelfxPixelDissolve: 'textures',
+  pixelfxStarIris: 'textures',
 });
 
 /** @internal */

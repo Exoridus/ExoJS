@@ -1576,28 +1576,28 @@
       "key": "pixelfxTransitionsManifest",
       "type": "json",
       "path": "pixelfx-transitions/manifest.json",
-      "category": "transitions",
+      "category": "textures",
       "provenance": "pixelfx-transitions"
     },
     {
       "key": "pixelfxBurnAway",
       "type": "texture",
       "path": "pixelfx-transitions/burn-away.png",
-      "category": "transitions",
+      "category": "textures",
       "provenance": "pixelfx-transitions"
     },
     {
       "key": "pixelfxPixelDissolve",
       "type": "texture",
       "path": "pixelfx-transitions/pixel-dissolve.png",
-      "category": "transitions",
+      "category": "textures",
       "provenance": "pixelfx-transitions"
     },
     {
       "key": "pixelfxStarIris",
       "type": "texture",
       "path": "pixelfx-transitions/star-iris.png",
-      "category": "transitions",
+      "category": "textures",
       "provenance": "pixelfx-transitions"
     }
   ],
