@@ -9,7 +9,7 @@ import type { LayoutOptions } from './LayoutOptions';
 import { ShapedTextSource } from './ShapedTextSource';
 import type { ShapingMode } from './shaping';
 import { resolveShaping } from './shaping';
-import { emptyTextLayout, layoutText } from './textLayout';
+import { emptyTextLayout, layoutText, validateLayoutOptions } from './textLayout';
 import type { StyleChangeHint, TextStyleOptions } from './TextStyle';
 import { TextStyle } from './TextStyle';
 import type { TextLayoutResult, TextPageQuads, TextSize } from './types';
@@ -190,6 +190,8 @@ export class Text extends AbstractText {
    * @stable
    */
   public static measure(text: string, options: TextOptions = {}): TextSize {
+    validateLayoutOptions(options);
+
     if (text.length === 0) {
       return { width: 0, height: 0 };
     }

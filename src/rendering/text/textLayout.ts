@@ -1,5 +1,3 @@
-import { assert } from '#core/dev';
-
 import type { LayoutOptions } from './LayoutOptions';
 import { graphemes, graphemeStarts, isTrivialText, textRuns, wordSegments } from './segmentation';
 import type { LineShaper } from './shaping';
@@ -62,6 +60,17 @@ export const emptyTextLayout = (): TextLayoutResult => ({
   ink: { x: 0, y: 0, width: 0, height: 0 },
 });
 
+/** @internal */
+export const validateLayoutOptions = ({ maxLines, tabSize }: LayoutOptions): void => {
+  if (maxLines !== undefined && (!Number.isSafeInteger(maxLines) || maxLines <= 0)) {
+    throw new RangeError('LayoutOptions.maxLines must be a positive safe integer.');
+  }
+
+  if (tabSize !== undefined && (!Number.isFinite(tabSize) || tabSize <= 0)) {
+    throw new RangeError('LayoutOptions.tabSize must be a positive finite number.');
+  }
+};
+
 /**
  * Computes per-glyph quad placements for the given text, style, and layout
  * options.
@@ -97,6 +106,8 @@ export const emptyTextLayout = (): TextLayoutResult => ({
  * Returns the placements alongside both extents the callers need - see
  * {@link TextLayoutResult} for why the advance and the ink are different
  * numbers. Text that places no glyph yields zeroes for both.
+ *
+ * @throws {RangeError} If `maxLines` is not a positive safe integer or `tabSize` is not a positive finite number.
  */
 export const layoutText = (
   text: string,
@@ -105,6 +116,8 @@ export const layoutText = (
   provider: GlyphProvider,
   shaper?: LineShaper,
 ): TextLayoutResult => {
+  validateLayoutOptions(layout);
+
   if (text.length === 0) {
     return emptyTextLayout();
   }
@@ -623,12 +636,7 @@ const _resolveLineCap = (
   overflow: 'visible' | 'clip' | 'ellipsis',
   computedLineHeight: number,
 ): number | null => {
-  let cap: number | null = null;
-
-  if (maxLines !== undefined) {
-    assert(Number.isInteger(maxLines) && maxLines >= 1, 'LayoutOptions.maxLines must be a positive integer.');
-    cap = Math.max(0, Math.floor(maxLines));
-  }
+  let cap: number | null = maxLines ?? null;
 
   if (maxHeight !== undefined && overflow !== 'visible' && computedLineHeight > 0) {
     const fitting = Math.max(0, Math.floor(maxHeight / computedLineHeight));
@@ -656,8 +664,7 @@ const _tabWidthResolver = (tabSize: number | undefined, fontSize: number, provid
     if (resolved < 0) {
       const size = tabSize ?? defaultTabSize;
 
-      assert(Number.isFinite(size) && size > 0, 'LayoutOptions.tabSize must be a positive finite number.');
-      resolved = Math.max(0, size) * provider.getGlyph(' ', fontSize).advance;
+      resolved = size * provider.getGlyph(' ', fontSize).advance;
     }
 
     return resolved;
