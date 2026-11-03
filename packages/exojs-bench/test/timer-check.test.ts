@@ -54,10 +54,11 @@ describe('timerCheckOfRun', () => {
     },
   );
 
-  it('still checks finite durations when other readings are missing or nonfinite', () => {
-    expect(timerCheckOfRun([null, NaN, 0.5, Infinity], COARSE_STEP)).toBe<TimerCheck>('resolved');
+  it('is limited by a finite short reading, and unknown when another reading is missing or nonfinite', () => {
     expect(timerCheckOfRun([null, COARSE_STEP, NaN], COARSE_STEP)).toBe<TimerCheck>('limited');
-    expect(timerCheckOfRun([0, -1], COARSE_STEP)).toBe<TimerCheck>('limited');
+    expect(timerCheckOfRun([null, 0.5], 0.01)).toBe<TimerCheck>('unknown');
+    expect(timerCheckOfRun([NaN, Infinity, 0.5], 0.01)).toBe<TimerCheck>('unknown');
+    expect(timerCheckOfRun([0.5, 0.6], 0.01)).toBe<TimerCheck>('resolved');
   });
 });
 
