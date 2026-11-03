@@ -22,6 +22,26 @@ export interface SpritesheetData {
   animations?: Record<string, string[]>;
 }
 
+const validateAnimation = (
+  name: string,
+  frameNames: readonly string[],
+  frames: ReadonlyMap<string, Rectangle> | ReadonlySet<string>,
+): void => {
+  if (name.trim().length === 0) {
+    throw new Error('Spritesheet animation names must be non-empty strings.');
+  }
+
+  if (frameNames.length === 0) {
+    throw new Error(`Spritesheet animation "${name}" must reference at least one frame.`);
+  }
+
+  for (const frameName of frameNames) {
+    if (!frames.has(frameName)) {
+      throw new Error(`Spritesheet animation "${name}" references missing frame "${frameName}".`);
+    }
+  }
+};
+
 /**
  * Slices a single {@link Texture} into named frames and optional named
  * animation sequences.
@@ -47,9 +67,22 @@ export class Spritesheet {
    * Parse a {@link SpritesheetData} descriptor, populating `frames`,
    * `sprites`, and `animations`. When `keepFrames` is `false` (default),
    * all existing frames and sprites are destroyed and every animation
-   * definition is cleared before parsing.
+   * definition is cleared. Animation definitions are validated before
+   * existing resources are changed.
    */
   public parse(data: SpritesheetData, keepFrames = false): void {
+    if (data.animations) {
+      const frameNames = new Set(keepFrames ? this.frames.keys() : []);
+
+      for (const name of Object.keys(data.frames)) {
+        frameNames.add(name);
+      }
+
+      for (const [name, frames] of Object.entries(data.animations)) {
+        validateAnimation(name, frames, frameNames);
+      }
+    }
+
     if (!keepFrames) {
       this.clear();
     }
@@ -97,19 +130,7 @@ export class Spritesheet {
 
   /** Register an animation sequence as an ordered list of frame names. All referenced frames must already exist. */
   public defineAnimation(name: string, frameNames: readonly string[]): this {
-    if (name.trim().length === 0) {
-      throw new Error('Spritesheet animation names must be non-empty strings.');
-    }
-
-    if (frameNames.length === 0) {
-      throw new Error(`Spritesheet animation "${name}" must reference at least one frame.`);
-    }
-
-    for (const frameName of frameNames) {
-      if (!this.frames.has(frameName)) {
-        throw new Error(`Spritesheet animation "${name}" references missing frame "${frameName}".`);
-      }
-    }
+    validateAnimation(name, frameNames, this.frames);
 
     this.animations.set(name, [...frameNames]);
 
