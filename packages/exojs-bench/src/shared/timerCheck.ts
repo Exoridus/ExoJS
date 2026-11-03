@@ -48,6 +48,10 @@ export const timerCheckOfRun = (durations: ReadonlyArray<number | null>, resolut
   const floor = resolutionMs * MIN_RESOLVED_STEPS;
   const measured = durations.filter((ms): ms is number => ms !== null && Number.isFinite(ms));
 
+  if (measured.length === 0) {
+    return 'unknown';
+  }
+
   return measured.some(ms => ms < floor) ? 'limited' : 'resolved';
 };
 

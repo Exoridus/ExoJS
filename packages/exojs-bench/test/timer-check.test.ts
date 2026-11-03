@@ -46,6 +46,19 @@ describe('timerCheckOfRun', () => {
   it('passes a run whose durations both stand clear of its own step', () => {
     expect(timerCheckOfRun([0.5, 1.5], COARSE_STEP)).toBe<TimerCheck>('resolved');
   });
+
+  it.each([[], [null], [NaN], [Infinity, -Infinity], [null, NaN, Infinity]].map(durations => ({ durations })))(
+    'reports unknown when no finite duration was recorded: $durations',
+    ({ durations }) => {
+      expect(timerCheckOfRun(durations, COARSE_STEP)).toBe<TimerCheck>('unknown');
+    },
+  );
+
+  it('still checks finite durations when other readings are missing or nonfinite', () => {
+    expect(timerCheckOfRun([null, NaN, 0.5, Infinity], COARSE_STEP)).toBe<TimerCheck>('resolved');
+    expect(timerCheckOfRun([null, COARSE_STEP, NaN], COARSE_STEP)).toBe<TimerCheck>('limited');
+    expect(timerCheckOfRun([0, -1], COARSE_STEP)).toBe<TimerCheck>('limited');
+  });
 });
 
 describe('mergeTimerChecks', () => {
