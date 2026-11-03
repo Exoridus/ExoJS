@@ -105,6 +105,8 @@ const makeApp = (
     root?: FakeNode | null;
     pointerPos?: { x: number; y: number } | null;
     view?: View;
+    ui?: FakeNode | null;
+    screenView?: View;
   } = {},
 ) =>
   ({
@@ -112,8 +114,13 @@ const makeApp = (
     height: 600,
     canvas: { width: 800, height: 600 },
     backend: makeBackend(),
-    rendering: { view: opts.view ?? new View(400, 300, 800, 600) },
-    scenes: { currentScene: opts.root !== undefined && opts.root !== null ? { root: opts.root } : null },
+    rendering: {
+      view: opts.view ?? new View(400, 300, 800, 600),
+      screenView: opts.screenView ?? new View(400, 300, 800, 600),
+    },
+    scenes: {
+      currentScene: opts.root != null || opts.ui != null ? { root: opts.root, _peekUI: () => opts.ui ?? null } : null,
+    },
     input: {
       onKeyDown: new Signal<[number]>(),
       getPrimaryPointerPosition: vi.fn(() => (opts.pointerPos !== undefined ? opts.pointerPos : null)),
@@ -133,6 +140,41 @@ const makeApp = (
 // ---------------------------------------------------------------------------
 
 describe('PointerStackLayer', () => {
+  test.each([
+    { zoom: 1, x: 600, y: 400 },
+    { zoom: 2, x: 500, y: 350 },
+  ])('lists UI before world nodes using the screen view at zoom $zoom', ({ zoom, x, y }) => {
+    const front = makeNode({ name: 'UIFront', zIndex: 2 });
+    const back = makeNode({ name: 'UIBack', zIndex: 1 });
+
+    for (const node of [front, back]) {
+      node.contains.mockImplementation((px: number, py: number) => Math.abs(px - x) < 1 && Math.abs(py - y) < 1);
+    }
+
+    const hidden = makeNode({ name: 'HiddenUI', visible: false, containsResult: true });
+    const ui = makeNode({ children: [back, hidden, front] });
+    const world = makeNode({ name: 'WorldTarget', zIndex: 1000 });
+    world.contains.mockImplementation((px: number, py: number) => Math.abs(px - 1200) < 1 && Math.abs(py - 600) < 1);
+    const view = new View(1000, 500, 800, 600);
+    const screenView = new View(400, 300, 800, 600).setZoom(zoom);
+    const layer = new PointerStackLayer(
+      makeApp({ root: makeNode({ children: [world] }), ui, view, screenView, pointerPos: { x: 600, y: 400 } }),
+    );
+
+    layer.update(Time.toSeconds(Time.milliseconds(16)));
+
+    const lines = (layer as unknown as { _lines: Array<{ text: string; visible: boolean }> })._lines;
+    expect(
+      lines
+        .filter(line => line.visible)
+        .slice(2)
+        .map(line => line.text.trim()),
+    ).toEqual(['UIFront — z=2', 'UIBack — z=1', 'WorldTarget — z=1000']);
+    layer.destroy();
+    view.destroy();
+    screenView.destroy();
+  });
+
   test.each([
     { name: 'pan', center: [1000, 500], zoom: 1, rotation: 0, viewport: [0, 0, 1, 1], pointer: [400, 300], world: [1000, 500] },
     { name: 'zoom', center: [400, 300], zoom: 2, rotation: 0, viewport: [0, 0, 1, 1], pointer: [600, 400], world: [500, 350] },
