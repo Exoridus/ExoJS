@@ -49,7 +49,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Internal circular-buffer length in seconds. Compile-time, not runtime. Default 2."
+          "description": "Internal circular-buffer length in seconds. Must be positive and finite, yielding at least one sample at the context sample rate. Compile-time, not runtime. Default 2."
         },
         {
           "name": "density",

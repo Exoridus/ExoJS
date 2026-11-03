@@ -1330,6 +1330,56 @@ describe('BeatDetector', () => {
     });
   });
 
+  describe('worklet option validation', () => {
+    it.each([
+      { minBpm: -1 },
+      { minBpm: 0 },
+      { minBpm: Number.NaN },
+      { minBpm: Number.POSITIVE_INFINITY },
+      { maxBpm: -1 },
+      { maxBpm: Number.NaN },
+      { maxBpm: Number.POSITIVE_INFINITY },
+      { minBpm: 300, maxBpm: 50 },
+      { minBpm: 100, maxBpm: 100 },
+      { hopSize: 0 },
+      { hopSize: -1 },
+      { hopSize: 1.5 },
+      { hopSize: Number.NaN },
+      { hopSize: Number.POSITIVE_INFINITY },
+      { fastTempoWindowSec: 0 },
+      { fastTempoWindowSec: -1 },
+      { fastTempoWindowSec: Number.NaN },
+      { fastTempoWindowSec: Number.POSITIVE_INFINITY },
+      { stableTempoWindowSec: 0 },
+      { stableTempoWindowSec: -1 },
+      { stableTempoWindowSec: Number.NaN },
+      { stableTempoWindowSec: Number.POSITIVE_INFINITY },
+      { fastTempoWindowSec: 8, stableTempoWindowSec: 2.5 },
+      { acfIntervalHops: 0 },
+      { acfIntervalHops: -1 },
+      { acfIntervalHops: 1.5 },
+      { acfIntervalHops: Number.NaN },
+      { acfIntervalHops: Number.POSITIVE_INFINITY },
+      { melBands: 0 },
+      { melBands: -1 },
+      { melBands: 1.5 },
+      { melBands: Number.NaN },
+      { melBands: Number.POSITIVE_INFINITY },
+      { minSettlingMs: -1 },
+      { minSettlingMs: Number.NaN },
+      { minSettlingMs: Number.POSITIVE_INFINITY },
+    ])('rejects invalid analysis options %j before registering a worklet', options => {
+      expect(() => new BeatDetector(options)).toThrow(RangeError);
+      expect(addModuleMock).not.toHaveBeenCalled();
+    });
+
+    it('accepts equal tempo windows and zero settling time', async () => {
+      const detector = new BeatDetector({ fastTempoWindowSec: 2.5, stableTempoWindowSec: 2.5, minSettlingMs: 0 });
+      await detector.ready;
+      detector.destroy();
+    });
+  });
+
   describe('BeatDetector fftSize validation', () => {
     it.each([[1000], [32], [Number.NaN]])('rejects fftSize %s', fftSize => {
       expect(() => new BeatDetector({ fftSize })).toThrow(RangeError);
