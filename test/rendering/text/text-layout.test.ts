@@ -518,6 +518,10 @@ describe('layoutText maxLines', () => {
   test('rejects a maxLines below one', () => {
     expect(() => layoutText('A', capStyle(), { maxLines: 0 }, makeAtlas())).toThrow(/maxLines/);
   });
+
+  test.each([1.5, 2.7])('rejects fractional maxLines %s in development', maxLines => {
+    expect(() => layoutText('A\nB\nC', capStyle(), { maxLines }, makeAtlas())).toThrow(/maxLines must be a positive integer/);
+  });
 });
 
 describe('layoutText ellipsis marker', () => {

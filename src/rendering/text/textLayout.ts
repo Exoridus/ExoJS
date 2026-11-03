@@ -626,7 +626,7 @@ const _resolveLineCap = (
   let cap: number | null = null;
 
   if (maxLines !== undefined) {
-    assert(Number.isFinite(maxLines) && maxLines >= 1, 'LayoutOptions.maxLines must be a positive integer.');
+    assert(Number.isInteger(maxLines) && maxLines >= 1, 'LayoutOptions.maxLines must be a positive integer.');
     cap = Math.max(0, Math.floor(maxLines));
   }
 
