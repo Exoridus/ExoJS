@@ -105,7 +105,10 @@ export class Spritesheet {
    */
   public addFrame(name: string, data: SpritesheetFrame): this {
     this.frames.get(name)?.destroy();
+    this.frames.delete(name);
+
     this.sprites.get(name)?.destroy();
+    this.sprites.delete(name);
 
     const { x, y, w, h } = data.frame;
     const frame = new Rectangle(x, y, w, h);
