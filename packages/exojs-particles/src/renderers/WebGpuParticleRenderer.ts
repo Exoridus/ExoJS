@@ -641,7 +641,13 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
         size: Math.ceil(meshData.byteLength / 4) * 4,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
       });
-      device.queue.writeBuffer(meshBuffer, 0, meshData instanceof Float32Array ? meshData.buffer : meshData, 0, meshData.byteLength);
+      device.queue.writeBuffer(
+        meshBuffer,
+        0,
+        meshData instanceof Float32Array ? meshData.buffer : meshData,
+        meshData instanceof Float32Array ? meshData.byteOffset : 0,
+        meshData.byteLength,
+      );
     }
 
     return {
