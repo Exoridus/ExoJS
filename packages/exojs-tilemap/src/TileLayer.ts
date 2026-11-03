@@ -648,6 +648,11 @@ export class TileLayer {
    */
   public fillRect(x: number, y: number, w: number, h: number, tile: ResolvedTile): void {
     this._checkDestroyed();
+    validateInteger(x, 'x');
+    validateInteger(y, 'y');
+    validateInteger(w, 'w');
+    validateInteger(h, 'h');
+
     const packed = this._validateTileRef(tile);
     let changed = false;
 
@@ -678,6 +683,11 @@ export class TileLayer {
    */
   public clearRect(x: number, y: number, w: number, h: number): void {
     this._checkDestroyed();
+    validateInteger(x, 'x');
+    validateInteger(y, 'y');
+    validateInteger(w, 'w');
+    validateInteger(h, 'h');
+
     let changed = false;
 
     for (let ty = y; ty < y + h; ty++) {
@@ -714,6 +724,11 @@ export class TileLayer {
    * @advanced
    */
   public *tilesInRect(x: number, y: number, w: number, h: number): Generator<{ tx: number; ty: number; tile: ResolvedTile }> {
+    validateInteger(x, 'x');
+    validateInteger(y, 'y');
+    validateInteger(w, 'w');
+    validateInteger(h, 'h');
+
     const startCx = Math.floor(x / this.chunkWidth);
     const endCx = Math.floor((x + w - 1) / this.chunkWidth);
     const startCy = Math.floor(y / this.chunkHeight);

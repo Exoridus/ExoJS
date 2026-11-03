@@ -1279,6 +1279,43 @@ describe('TileLayer', () => {
     expect(() => layer.fillRect(0, 0, 2, 2, {} as unknown as ResolvedTile)).toThrow(/valid ResolvedTile/);
   });
 
+  it.each([
+    [NaN, 0, 1, 1],
+    [0, NaN, 1, 1],
+    [0, 0, NaN, 1],
+    [0, 0, 1, NaN],
+    [0.5, 0, 1, 1],
+    [0, 0.5, 1, 1],
+    [0, 0, 0.5, 1],
+    [0, 0, 1, 0.5],
+    [-Infinity, 0, 1, 1],
+    [0, -Infinity, 1, 1],
+    [0, 0, -Infinity, 1],
+    [0, 0, 1, -Infinity],
+  ])('bulk rectangles reject invalid coordinates before mutation (%s, %s, %s, %s)', (x, y, w, h) => {
+    const layer = new TileLayer({
+      id: 0,
+      name: 'l',
+      width: 8,
+      height: 8,
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [ts],
+    });
+    const ref = { tileset: ts, localTileId: 2, transform: TILE_TRANSFORM_IDENTITY };
+
+    expect(() => layer.fillRect(x, y, w, h, ref)).toThrow(/finite integer/);
+    expect(layer.revision).toBe(0);
+    expect([...layer.loadedChunks()]).toHaveLength(0);
+
+    layer.setTileAt(0, 0, ref);
+
+    expect(() => layer.clearRect(x, y, w, h)).toThrow(/finite integer/);
+    expect(() => [...layer.tilesInRect(x, y, w, h)]).toThrow(/finite integer/);
+    expect(layer.revision).toBe(1);
+    expect(layer.getTileAt(0, 0)).toEqual(ref);
+  });
+
   it('fillRect fills a region', () => {
     const layer = new TileLayer({
       id: 0,
