@@ -1316,6 +1316,20 @@ describe('TileLayer', () => {
     expect(layer.getTileAt(0, 0)).toEqual(ref);
   });
 
+  it.each([
+    [2 ** 53, 0, 2, 1],
+    [0, 2 ** 53, 1, 2],
+    [Number.MAX_SAFE_INTEGER, 0, 1, 1],
+  ])('bulk rectangles reject a rectangle that ends past the safe integer range instead of looping (%s, %s, %s, %s)', (x, y, w, h) => {
+    const layer = new TileLayer({ id: 0, name: 'l', width: 8, height: 8, tileWidth: 16, tileHeight: 16, tilesets: [ts] });
+    const ref = { tileset: ts, localTileId: 2, transform: TILE_TRANSFORM_IDENTITY };
+
+    expect(() => layer.fillRect(x, y, w, h, ref)).toThrow(/safe integer/);
+    expect(() => layer.clearRect(x, y, w, h)).toThrow(/safe integer/);
+    expect(() => [...layer.tilesInRect(x, y, w, h)]).toThrow(/safe integer/);
+    expect(layer.revision).toBe(0);
+  });
+
   it('fillRect fills a region', () => {
     const layer = new TileLayer({
       id: 0,
