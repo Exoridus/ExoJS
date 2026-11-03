@@ -18,9 +18,8 @@ import {
   Text,
   type Texture,
 } from '@codexo/exojs';
+import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { demoPanel, startExample } from '@examples/runtime';
-
-const ASSET_DIRECTORY = 'examples/assets/pixelfx-transitions-fixture';
 
 interface Effect {
   id: string;
@@ -87,9 +86,9 @@ class AtlasSession implements SceneTransitionSession {
     this.elapsed += Math.max(0, delta);
 
     if (this.phase === 'closing') {
-      this.index = Math.min(this.effect.coverStart, Math.floor(this.elapsed * this.manifest.fps));
+      this.index = Math.min(this.effect.coverEnd, Math.floor(this.elapsed * this.manifest.fps));
 
-      if (this.index === this.effect.coverStart) {
+      if (this.index === this.effect.coverEnd) {
         this.phase = 'covering';
       }
     } else {
@@ -220,14 +219,10 @@ const app = new Application({
   clearColor: Color.black,
 });
 await startExample(app, async () => {
-  manifest = await app.loader.load(Asset.type<Manifest>('json', `${ASSET_DIRECTORY}/manifest.json`));
+  manifest = (await app.loader.load(assets.pixelfxTransitionsManifest)) as Manifest;
   const textures = await Promise.all(
-    manifest.effects.map(effect =>
-      app.loader.load(
-        Asset.type('texture', `${ASSET_DIRECTORY}/${effect.file}`, {
-          textureOptions: { scaleMode: ScaleModes.Nearest, generateMipMap: false },
-        }),
-      ),
+    [assets.pixelfxBurnAway, assets.pixelfxPixelDissolve, assets.pixelfxStarIris].map(atlas =>
+      app.loader.load(Asset.type('texture', atlas.source, { textureOptions: { scaleMode: ScaleModes.Nearest, generateMipMap: false } })),
     ),
   );
   transitions = manifest.effects.map((effect, index) => new AtlasTransition(manifest, effect, textures[index]!));

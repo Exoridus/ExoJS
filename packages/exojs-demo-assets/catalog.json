@@ -307,6 +307,15 @@
       "source": "https://opengameart.org/content/monstervania-ghost-land",
       "licenseFile": "licenses/music-action-synth-rock.txt",
       "note": "Original recording, unchanged. Original filename: MonsterVania - Ghost Land.mp3."
+    },
+    "pixelfx-transitions": {
+      "title": "PixelFX scene transitions",
+      "author": "Patch and Hugo Duprez (Sprite Fusion adaptations)",
+      "license": "MIT",
+      "licenseUrl": "https://opensource.org/license/mit",
+      "source": "https://github.com/patch-gg/pixelfx",
+      "licenseFile": "licenses/pixelfx.txt",
+      "note": "Rendered offline to frame atlases from upstream revision a84159688af3ca37a4be05a0d422b94451b2e24e; the generator and vendored sources live in tools/pixelfx-transitions."
     }
   },
   "media": {
@@ -1562,6 +1571,34 @@
       "path": "audio/music-action-synth-rock.mp3",
       "category": "music",
       "provenance": "music-action-synth-rock"
+    },
+    {
+      "key": "pixelfxTransitionsManifest",
+      "type": "json",
+      "path": "pixelfx-transitions/manifest.json",
+      "category": "transitions",
+      "provenance": "pixelfx-transitions"
+    },
+    {
+      "key": "pixelfxBurnAway",
+      "type": "texture",
+      "path": "pixelfx-transitions/burn-away.png",
+      "category": "transitions",
+      "provenance": "pixelfx-transitions"
+    },
+    {
+      "key": "pixelfxPixelDissolve",
+      "type": "texture",
+      "path": "pixelfx-transitions/pixel-dissolve.png",
+      "category": "transitions",
+      "provenance": "pixelfx-transitions"
+    },
+    {
+      "key": "pixelfxStarIris",
+      "type": "texture",
+      "path": "pixelfx-transitions/star-iris.png",
+      "category": "transitions",
+      "provenance": "pixelfx-transitions"
     }
   ],
   "blocked": [

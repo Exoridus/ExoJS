@@ -51,10 +51,14 @@ it('holds a rendered cover for one commit, opens after confirmation, and release
     expect(sprite.frame.x).toBe(640);
     expect(environment.commit).not.toHaveBeenCalled();
     session.update(core.Time.seconds(1));
+    session.render(context);
+    expect(sprite.frame).toMatchObject({ x: 0, y: 180 });
+    expect(environment.commit).not.toHaveBeenCalled();
+    session.update(core.Time.seconds(1));
     expect(environment.commit).toHaveBeenCalledTimes(1);
     session.update(core.Time.seconds(1));
     session.render(context);
-    expect(sprite.frame.x).toBe(640);
+    expect(sprite.frame).toMatchObject({ x: 0, y: 180 });
     environment.committed = true;
     session.update(core.Time.seconds(1));
     session.render(context);

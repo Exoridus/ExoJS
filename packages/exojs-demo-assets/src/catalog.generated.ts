@@ -332,13 +332,21 @@ export interface DemoAssetDefinitions {
   readonly musicDarkIndustrial: LeaflessAsset<AudioStream>;
   /** `audio/music-action-synth-rock.mp3` (2.3 MB). MonsterVania - Ghost Land, CC0-1.0. Load with await `loader.load()`. */
   readonly musicActionSynthRock: LeaflessAsset<AudioStream>;
+  /** `pixelfx-transitions/manifest.json` (1 kB). PixelFX scene transitions, MIT. Load with await `loader.load()`. */
+  readonly pixelfxTransitionsManifest: ValueAsset<unknown>;
+  /** `pixelfx-transitions/burn-away.png` (2.5 MB). PixelFX scene transitions, MIT. Load with `loader.get()` or `await loader.load()`. */
+  readonly pixelfxBurnAway: ResourceAsset<Texture>;
+  /** `pixelfx-transitions/pixel-dissolve.png` (2.7 MB). PixelFX scene transitions, MIT. Load with `loader.get()` or `await loader.load()`. */
+  readonly pixelfxPixelDissolve: ResourceAsset<Texture>;
+  /** `pixelfx-transitions/star-iris.png` (420 kB). PixelFX scene transitions, MIT. Load with `loader.get()` or `await loader.load()`. */
+  readonly pixelfxStarIris: ResourceAsset<Texture>;
 }
 
 /** The name of one standard demo asset. */
 export type DemoAssetKey = keyof DemoAssetDefinitions;
 
 /** The browsing category a demo asset is listed under. */
-export type DemoAssetCategory = 'textures' | 'maps' | 'technical' | 'backgrounds' | 'spritesheets' | 'inputPrompts' | 'icons' | 'cursors' | 'fonts' | 'sound' | 'soundSprites' | 'music' | 'voice' | 'impulseResponses' | 'video';
+export type DemoAssetCategory = 'textures' | 'maps' | 'technical' | 'backgrounds' | 'spritesheets' | 'inputPrompts' | 'icons' | 'cursors' | 'fonts' | 'sound' | 'soundSprites' | 'music' | 'voice' | 'impulseResponses' | 'video' | 'transitions';
 
 /** The category of every standard demo asset, for browsers and filters. Static data; reading it loads nothing. */
 export const demoAssetCategories: Readonly<Record<DemoAssetKey, DemoAssetCategory>> = Object.freeze({
@@ -502,6 +510,10 @@ export const demoAssetCategories: Readonly<Record<DemoAssetKey, DemoAssetCategor
   musicGlitchMachine: 'music',
   musicDarkIndustrial: 'music',
   musicActionSynthRock: 'music',
+  pixelfxTransitionsManifest: 'transitions',
+  pixelfxBurnAway: 'transitions',
+  pixelfxPixelDissolve: 'transitions',
+  pixelfxStarIris: 'transitions',
 });
 
 /** @internal */
@@ -667,6 +679,10 @@ export const buildDemoAssets = (url: (path: string) => string): DemoAssetDefinit
     musicGlitchMachine: Asset.type('music', url('audio/music-glitch-machine.ogg')),
     musicDarkIndustrial: Asset.type('music', url('audio/music-dark-industrial.mp3')),
     musicActionSynthRock: Asset.type('music', url('audio/music-action-synth-rock.mp3')),
+    pixelfxTransitionsManifest: Asset.type('json', url('pixelfx-transitions/manifest.json')),
+    pixelfxBurnAway: Asset.type('texture', url('pixelfx-transitions/burn-away.png')),
+    pixelfxPixelDissolve: Asset.type('texture', url('pixelfx-transitions/pixel-dissolve.png')),
+    pixelfxStarIris: Asset.type('texture', url('pixelfx-transitions/star-iris.png')),
   });
 
 /**
