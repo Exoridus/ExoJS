@@ -8,9 +8,9 @@ import { inflateSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 
 const root = resolve(import.meta.dirname, '../..');
-const assets = resolve(root, 'examples/assets/pixelfx-transitions');
+const assets = resolve(root, 'examples/assets/images');
 const tool = resolve(root, 'tools/pixelfx-transitions');
-const manifest = JSON.parse(readFileSync(resolve(assets, 'manifest.json'), 'utf8'));
+const manifest = JSON.parse(readFileSync(resolve(assets, 'pixelfx-transitions.json'), 'utf8'));
 const measurements = JSON.parse(readFileSync(resolve(tool, 'measurements.json'), 'utf8'));
 
 const decodeAtlas = (png: Buffer) => {
@@ -63,7 +63,7 @@ describe('PixelFX transition assets', () => {
 
   for (const effect of manifest.effects) {
     it(`${effect.id} has transparent endpoints, opaque cover frames and accurate coverage`, () => {
-      expect(effect.file).toBe(`${effect.id}.png`);
+      expect(effect.file).toBe(`pixelfx-${effect.id}.png`);
       expect(effect.label).toBeTypeOf('string');
 
       for (const key of ['frameCount', 'columns', 'rows', 'coverStart', 'coverEnd']) {

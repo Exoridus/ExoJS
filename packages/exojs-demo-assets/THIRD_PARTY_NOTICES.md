@@ -477,6 +477,21 @@ Files:
 - `images/physics-wood-ball.png`
 - `licenses/kenney-physics-assets.txt`
 
+## PixelFX scene transitions
+
+- Author: Patch and Hugo Duprez (Sprite Fusion adaptations)
+- License: MIT (https://opensource.org/license/mit)
+- Source: https://github.com/patch-gg/pixelfx
+- Note: Rendered offline to frame atlases from upstream revision a84159688af3ca37a4be05a0d422b94451b2e24e; the generator and vendored sources live in tools/pixelfx-transitions.
+
+Files:
+
+- `images/pixelfx-burn-away.png`
+- `images/pixelfx-pixel-dissolve.png`
+- `images/pixelfx-star-iris.png`
+- `images/pixelfx-transitions.json`
+- `licenses/pixelfx.txt`
+
 ## Kenney Prototype Textures
 
 - Author: Kenney (kenney.nl)
@@ -516,21 +531,6 @@ Files:
 
 - `images/tiny-dungeon-tiles.png`
 - `licenses/kenney-tiny-dungeon.txt`
-
-## PixelFX scene transitions
-
-- Author: Patch and Hugo Duprez (Sprite Fusion adaptations)
-- License: MIT (https://opensource.org/license/mit)
-- Source: https://github.com/patch-gg/pixelfx
-- Note: Rendered offline to frame atlases from upstream revision a84159688af3ca37a4be05a0d422b94451b2e24e; the generator and vendored sources live in tools/pixelfx-transitions.
-
-Files:
-
-- `licenses/pixelfx.txt`
-- `pixelfx-transitions/burn-away.png`
-- `pixelfx-transitions/manifest.json`
-- `pixelfx-transitions/pixel-dissolve.png`
-- `pixelfx-transitions/star-iris.png`
 
 ## Big Buck Bunny, Sunflower version (60 fps)
 

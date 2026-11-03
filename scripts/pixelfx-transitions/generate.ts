@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 
 const root = resolve(import.meta.dirname, '../..');
 const tool = join(root, 'tools/pixelfx-transitions');
-const output = join(root, 'examples/assets/pixelfx-transitions');
+const output = join(root, 'examples/assets/images');
 const check = process.argv.includes('--check');
 assert(
   process.argv.slice(2).every(arg => arg === '--check'),
@@ -172,7 +172,7 @@ try {
     effects.push({
       id,
       label,
-      file: `${id}.png`,
+      file: `pixelfx-${id}.png`,
       frameCount,
       columns,
       rows,
@@ -206,7 +206,7 @@ try {
       rgbaRunLengthBytes: runCount * 8,
       coverage,
     });
-    emit(join(output, `${id}.png`), png);
+    emit(join(output, `pixelfx-${id}.png`), png);
     emit(
       join(tool, `${id}-contact.png`),
       encodePNG(contactWidth, contactHeight, composite(contact, new Uint8ClampedArray(contactWidth * contactHeight * 4), null)),
@@ -215,7 +215,7 @@ try {
   }
 
   emit(
-    join(output, 'manifest.json'),
+    join(output, 'pixelfx-transitions.json'),
     `${JSON.stringify({
       schema: 1,
       source: { repository: 'https://github.com/patch-gg/pixelfx', revision: 'a84159688af3ca37a4be05a0d422b94451b2e24e', license: 'MIT' },
