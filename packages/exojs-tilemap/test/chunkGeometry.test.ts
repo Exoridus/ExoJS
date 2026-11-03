@@ -126,6 +126,17 @@ describe('buildChunkPages', () => {
     expect(pages[0].quads[0].orient).toBe(orientCode({ flipX: true, flipY: false, diagonal: true }));
   });
 
+  it('keeps a rectangular tile destination unchanged for a diagonal orientation', () => {
+    const tileset = makeTileset('tall', 8, 32, 48, 256, 256);
+    const layer = makeLayer([tileset]);
+    layer.setTileAt(0, 1, { tileset, localTileId: 0, transform: { flipX: true, flipY: false, diagonal: true } });
+
+    const quad = buildChunkPages(layer.getChunk(0, 0)!, [tileset], 32, 32)[0]!.quads[0]!;
+
+    expect([quad.x0, quad.y0, quad.x1, quad.y1]).toEqual([0, 16, 32, 64]);
+    expect(quad.orient).toBe(orientCode({ flipX: true, flipY: false, diagonal: true }));
+  });
+
   it('bottom-left aligns tiles taller than the map cell', () => {
     // 32×48 tiles drawn on a 32px grid extend 16px upward.
     const tileset = makeTileset('tall', 8, 32, 48, 256, 256);

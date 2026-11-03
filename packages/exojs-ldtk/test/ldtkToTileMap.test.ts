@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { LdtkData } from '../src/LdtkData';
 import { LdtkMap } from '../src/LdtkMap';
+import { resolveLdtkLayerParallax } from '../src/ldtkParallax';
 import { ldtkToTileMap } from '../src/ldtkToTileMap';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -378,6 +379,19 @@ describe('ldtkToTileMap', () => {
         ),
       },
     };
+
+    it('uses minimal layer dimensions for unscaled parallax compensation', () => {
+      const data: LdtkData = {
+        ...parallaxData,
+        defs: {
+          ...parallaxData.defs,
+          layers: parallaxData.defs.layers.map(def => (def.uid === 101 ? { ...def, parallaxScaling: false } : def)),
+        },
+      };
+      const layer = { layerDefUid: 101, __cWid: 8, __cHei: 4, __gridSize: 16 };
+
+      expect(resolveLdtkLayerParallax(data, layer)).toMatchObject({ offsetX: -32, offsetY: 8, parallaxScale: 1 });
+    });
 
     it('converts a layer def parallax factor into the runtime TileLayer parallaxX/Y (1 - factor)', () => {
       const result = ldtkToTileMap(parallaxData);

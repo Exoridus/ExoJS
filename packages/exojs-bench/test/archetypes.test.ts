@@ -184,6 +184,13 @@ describe('exojs adapter config axis', () => {
   test('the default stays current', () => {
     expect(createExoJsAdapter().config).toBe('current');
   });
+
+  test('rejects calibration labels that cannot represent a finite ratio', () => {
+    expect(() => createExoJsAdapter(undefined, 'cull-margin-1_0')).toThrow();
+    expect(() => createExoJsAdapter(undefined, 'cull-margin-invalid')).toThrow();
+    expect(() => createExoJsAdapter(undefined, `cull-margin-${'9'.repeat(400)}_1`)).toThrow();
+    expect(createExoJsAdapter(undefined, 'cull-margin-1_8').config).toBe('cull-margin-1_8');
+  });
 });
 
 describe('exojs adapter filter cleanup', () => {

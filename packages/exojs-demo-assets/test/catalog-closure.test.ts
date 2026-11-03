@@ -9,8 +9,19 @@ import { resolve } from 'node:path';
 
 import { bytesOf, filesFor, packageRoot, resolveCatalog, sha256Of } from '../scripts/catalog.ts';
 import { renderAll, renderNotices } from '../scripts/generate.ts';
+import { resolveBaseUrl, urlResolver } from '../src/baseUrl.ts';
 
 const catalog = resolveCatalog();
+
+describe('media base URL', () => {
+  test('normalizes absolute directory URLs and rejects relative bases', () => {
+    expect(urlResolver(resolveBaseUrl('https://example.com/media', 'test'))('images/a.png')).toBe('https://example.com/media/images/a.png');
+    expect(urlResolver(resolveBaseUrl(new URL('https://example.com/media/'), 'test'))('images/a.png')).toBe(
+      'https://example.com/media/images/a.png',
+    );
+    expect(() => resolveBaseUrl('./media', 'test')).toThrow(/not an absolute URL/);
+  });
+});
 
 describe('closure: every published file exists under examples/assets and hashes match', () => {
   test.each(catalog.files.map(file => [file.path, file] as const))('%s', (_path, file) => {

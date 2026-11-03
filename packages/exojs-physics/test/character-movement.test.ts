@@ -9,7 +9,7 @@ import {
   type CharacterMovementOptions,
   CircleShape,
   KinematicMovementComponent,
-  type PhysicsBody,
+  PhysicsBody,
   PhysicsBodyComponent,
   PhysicsWorld,
   PolygonShape,
@@ -108,6 +108,23 @@ const run = (frame: (steps?: number) => void, steps: number, each?: () => void):
 };
 
 describe('CharacterMovementComponent', () => {
+  it('stops walking at another collider on the supporting body', async () => {
+    const { world, spawn, frame } = await setup();
+    const support = world.add(
+      new PhysicsBody({
+        type: 'static',
+        position: { x: 0, y: FLOOR + 10 },
+        colliders: [{ shape: new BoxShape(400, 20) }, { shape: new BoxShape(20, 200), offset: { x: 60, y: -110 } }],
+      }),
+    );
+    const { controls, character, body } = spawn();
+
+    run(frame, 5);
+    expect(character.groundBody).toBe(support);
+    controls.input = 1;
+    run(frame, 30);
+    expect(body.x).toBeLessThan(42);
+  });
   describe('composition', () => {
     it('takes over the movement while enabled and hands it back when disabled', async () => {
       const { spawn, floor, frame } = await setup();

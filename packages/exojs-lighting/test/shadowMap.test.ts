@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { buildShadowRow } from '../src/occluders/shadowMap';
+import { buildShadowRow, buildSunShadowRow } from '../src/occluders/shadowMap';
 
 const bins = 64;
 
@@ -8,6 +8,20 @@ const bins = 64;
 const binOf = (angle: number): number => Math.floor(((angle + Math.PI) / (Math.PI * 2)) * bins) % bins;
 
 const segments = (...values: number[]): Float32Array => new Float32Array(values);
+
+describe('buildSunShadowRow', () => {
+  test('maps strips to the nearest normalized depth and handles degenerate spans', () => {
+    const row = new Float32Array(8);
+    const walls = segments(4, -2, 4, 2, 2, -1, 2, 1);
+
+    buildSunShadowRow(walls, 2, 1, 0, 0, 1, -4, 8, 0, 10, row, 8);
+    expect([...row]).toEqual([1, 1, expect.closeTo(0.4), expect.closeTo(0.2), expect.closeTo(0.2), expect.closeTo(0.4), 1, 1]);
+    buildSunShadowRow(walls, 2, 1, 0, 0, 1, -4, 0, 0, 10, row, 8);
+    expect([...row]).toEqual(Array(8).fill(1));
+    buildSunShadowRow(walls, 2, 1, 0, 0, 1, -4, 8, 0, 0, row, 8);
+    expect([...row]).toEqual(Array(8).fill(1));
+  });
+});
 
 const rowFor = (data: Float32Array, count: number, centerX = 0, centerY = 0, axisCos = 1, axisSin = 0, radius = 100): Float32Array => {
   const row = new Float32Array(bins);

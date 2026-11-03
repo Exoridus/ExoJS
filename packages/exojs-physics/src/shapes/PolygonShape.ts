@@ -198,28 +198,31 @@ const computeNormals = (points: number[]): number[] => {
   return normals;
 };
 
-/** Throw unless every interior turn has the same (CCW) orientation. */
+/** Throw unless every vertex lies strictly left of every non-incident edge. */
 const assertConvex = (points: number[]): void => {
   const count = points.length / 2;
 
   for (let i = 0; i < count; i++) {
     const a = i;
     const b = (i + 1) % count;
-    const c = (i + 2) % count;
     const ax = points[a * 2]!;
     const ay = points[a * 2 + 1]!;
     const bx = points[b * 2]!;
     const by = points[b * 2 + 1]!;
-    const cx = points[c * 2]!;
-    const cy = points[c * 2 + 1]!;
     const e1x = bx - ax;
     const e1y = by - ay;
-    const e2x = cx - bx;
-    const e2y = cy - by;
 
-    // CCW polygon ⇒ every cross product must be ≥ 0 (strictly > 0 for no collinear run).
-    if (e1x * e2y - e1y * e2x <= 0) {
-      throw new RangeError('PolygonShape: vertices are not strictly convex (or contain collinear edges).');
+    for (let c = 0; c < count; c++) {
+      if (c === a || c === b) {
+        continue;
+      }
+
+      const e2x = points[c * 2]! - ax;
+      const e2y = points[c * 2 + 1]! - ay;
+
+      if (e1x * e2y - e1y * e2x <= 0) {
+        throw new RangeError('PolygonShape: vertices are not strictly convex (or contain collinear edges).');
+      }
     }
   }
 };
