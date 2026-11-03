@@ -121,7 +121,8 @@ const readMeshTable = (mesh: Geometry, out: Float32Array | null = null): Float32
 
     if (texcoord !== null) {
       table[target + 2] = readComponent(view, texcoord, vertexStart + texcoord.offset);
-      table[target + 3] = readComponent(view, texcoord, vertexStart + texcoord.offset + componentByteSizes[texcoord.type]);
+      table[target + 3] =
+        texcoord.size > 1 ? readComponent(view, texcoord, vertexStart + texcoord.offset + componentByteSizes[texcoord.type]) : 0;
     } else {
       table[target + 2] = 0;
       table[target + 3] = 0;
