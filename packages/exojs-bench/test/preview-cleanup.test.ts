@@ -34,7 +34,10 @@ vi.mock('../src/rendering/page/gpuFrameTimer', () => ({
 }));
 
 test('retains GPU sample caveats in a probe cell capture', async () => {
-  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as never);
+  const loseContext = vi.fn();
+  const context = { getExtension: vi.fn((name: string) => (name === 'WEBGL_lose_context' ? { loseContext } : null)) };
+
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context as never);
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
     callback(0);
 
@@ -55,6 +58,7 @@ test('retains GPU sample caveats in a probe cell capture', async () => {
 
     expect(result.gpuMsMedian).toBe(1);
     expect(result.errors).toContain('1 disjoint GPU frame(s) discarded');
+    expect(loseContext).toHaveBeenCalledOnce();
   } finally {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
