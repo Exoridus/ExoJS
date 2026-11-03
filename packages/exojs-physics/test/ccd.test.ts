@@ -1,3 +1,4 @@
+import { Container } from '@codexo/exojs';
 import { describe, expect, it } from 'vitest';
 
 import { type SweepHit, sweepProxies } from '../src/collision/sweep';
@@ -27,6 +28,45 @@ const fireAtWall = (bullet: boolean): { world: PhysicsWorld; ball: PhysicsBody }
 };
 
 describe('continuous collision (bullet mode)', () => {
+  it('interpolates the presentation of a CCD-clamped bullet', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, interpolation: true });
+    world.add(new PhysicsBody({ type: 'static', position: { x: 200, y: 0 }, colliders: [{ shape: new BoxShape(4, 800) }] }));
+    const ball = world.add(
+      new PhysicsBody({
+        type: 'dynamic',
+        isBullet: true,
+        position: { x: 55, y: 40 },
+        angle: 0.3,
+        colliders: [{ shape: new CircleShape(6) }],
+      }),
+    );
+    const node = new Container();
+    world.bind(ball, node);
+    ball.linearVelocityX = 6000;
+    ball.linearVelocityY = 1200;
+    ball.angularVelocity = 6;
+    world.step(FRAME);
+
+    world.step(FRAME * 1.5);
+
+    expect(ball.x).toBeGreaterThan(190);
+    expect(ball.x).toBeLessThan(200);
+    expect(ball.previousX).toBeCloseTo(155, 6);
+    expect(ball.previousY).toBeCloseTo(60, 6);
+    expect(ball.previousAngle).toBeCloseTo(0.4, 6);
+    expect(ball.angle).toBeCloseTo(0.5, 6);
+    expect(ball._teleported).toBe(false);
+    expect(node.x).toBeCloseTo((155 + ball.x) / 2, 6);
+    expect(node.y).toBeCloseTo((60 + ball.y) / 2, 6);
+    expect(node.rotation).toBeCloseTo(360 - (0.45 * 180) / Math.PI, 6);
+    const collider = ball.colliders[0]!;
+    expect(collider.aabb.minX).toBeCloseTo(ball.x - 6, 6);
+    expect(collider.aabb.minY).toBeCloseTo(ball.y - 6, 6);
+    expect(world.queryAabb({ minX: 191, minY: ball.y - 1, maxX: 193, maxY: ball.y + 1 })).toContain(collider);
+    world.destroy();
+    node.destroy();
+  });
+
   it.each([
     { density: 1, restitution: 0, sleeping: false },
     { density: 3, restitution: 0, sleeping: false },
