@@ -8,6 +8,7 @@ import { Time } from '#core/units';
 import { PointerStackLayer } from '#debug/PointerStackLayer';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
+import { View } from '#rendering/View';
 
 // Stub the glyph atlas pool so Text construction never touches a real 2D canvas context.
 const fakeGlyph = {
@@ -103,11 +104,15 @@ const makeApp = (
   opts: {
     root?: FakeNode | null;
     pointerPos?: { x: number; y: number } | null;
+    view?: View;
   } = {},
 ) =>
   ({
+    width: 800,
+    height: 600,
     canvas: { width: 800, height: 600 },
     backend: makeBackend(),
+    rendering: { view: opts.view ?? new View(400, 300, 800, 600) },
     scenes: { currentScene: opts.root !== undefined && opts.root !== null ? { root: opts.root } : null },
     input: {
       onKeyDown: new Signal<[number]>(),
@@ -128,6 +133,27 @@ const makeApp = (
 // ---------------------------------------------------------------------------
 
 describe('PointerStackLayer', () => {
+  test.each([
+    { name: 'pan', center: [1000, 500], zoom: 1, rotation: 0, viewport: [0, 0, 1, 1], pointer: [400, 300], world: [1000, 500] },
+    { name: 'zoom', center: [400, 300], zoom: 2, rotation: 0, viewport: [0, 0, 1, 1], pointer: [600, 400], world: [500, 350] },
+    { name: 'rotation', center: [400, 300], zoom: 1, rotation: 90, viewport: [0, 0, 1, 1], pointer: [600, 300], world: [400, 500] },
+    { name: 'viewport', center: [1000, 500], zoom: 1, rotation: 0, viewport: [0.5, 0, 0.5, 1], pointer: [700, 300], world: [1200, 500] },
+  ])('lists world nodes under the pointer with camera $name', ({ center, zoom, rotation, viewport, pointer, world }) => {
+    const view = new View(center[0]!, center[1]!, 800, 600);
+    view.setZoom(zoom).setRotation(rotation).setViewport(viewport[0]!, viewport[1]!, viewport[2]!, viewport[3]!);
+    const target = makeNode({ name: 'WorldTarget' });
+    target.contains.mockImplementation((x: number, y: number) => Math.abs(x - world[0]!) < 1 && Math.abs(y - world[1]!) < 1);
+    const root = makeNode({ children: [target] });
+    const layer = new PointerStackLayer(makeApp({ root, view, pointerPos: { x: pointer[0]!, y: pointer[1]! } }));
+
+    layer.update(Time.toSeconds(Time.milliseconds(16)));
+
+    const lines = (layer as unknown as { _lines: Array<{ text: string; visible: boolean }> })._lines;
+    expect(lines.some(line => line.visible && line.text.includes('WorldTarget'))).toBe(true);
+    layer.destroy();
+    view.destroy();
+  });
+
   test('viewMode is "screen"', () => {
     const layer = new PointerStackLayer(makeApp());
 
@@ -192,9 +218,9 @@ describe('PointerStackLayer', () => {
     layer.render(backend as unknown as Parameters<typeof layer.render>[0]);
 
     // Verify contains was called on the children.
-    expect(nodeA.contains).toHaveBeenCalledWith(100, 100);
-    expect(nodeB.contains).toHaveBeenCalledWith(100, 100);
-    expect(nodeC.contains).toHaveBeenCalledWith(100, 100);
+    expect(nodeA.contains).toHaveBeenCalledWith(expect.closeTo(100, 10), expect.closeTo(100, 10));
+    expect(nodeB.contains).toHaveBeenCalledWith(expect.closeTo(100, 10), expect.closeTo(100, 10));
+    expect(nodeC.contains).toHaveBeenCalledWith(expect.closeTo(100, 10), expect.closeTo(100, 10));
   });
 
   test('stack entries sorted by zIndex descending (highest first)', () => {
@@ -274,7 +300,7 @@ describe('PointerStackLayer', () => {
     // never walked - only the visible sibling contributes to the stack.
     expect(invisibleNode.contains).not.toHaveBeenCalled();
     expect(invisibleChild.contains).not.toHaveBeenCalled();
-    expect(visibleNode.contains).toHaveBeenCalledWith(10, 10);
+    expect(visibleNode.contains).toHaveBeenCalledWith(expect.closeTo(10, 10), expect.closeTo(10, 10));
   });
 
   test('update() called twice reuses the already-built panel', () => {

@@ -146,11 +146,6 @@ export class PointerStackLayer extends DebugLayer {
 
     const { x: sx, y: sy } = pos;
 
-    // The pointer x/y is canvas-relative. InteractionSystem passes this
-    // directly to node.contains(), so we do the same.
-    const worldX = sx;
-    const worldY = sy;
-
     const lines: string[] = [];
 
     lines.push(`Cursor: (${sx.toFixed(0)}, ${sy.toFixed(0)})`);
@@ -161,7 +156,9 @@ export class PointerStackLayer extends DebugLayer {
     const stack: RenderNode[] = [];
 
     if (root) {
-      this._collectContaining(root, worldX, worldY, stack);
+      const world = this._app.rendering.view.screenToWorld(sx, sy, this._app.width, this._app.height);
+
+      this._collectContaining(root, world.x, world.y, stack);
       stack.sort((a, b) => b.zIndex - a.zIndex);
     }
 
