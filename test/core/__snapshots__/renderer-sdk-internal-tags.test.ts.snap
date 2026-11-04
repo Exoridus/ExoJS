@@ -51,7 +51,7 @@ exports[`renderer-sdk barrel > pins all named re-exports including types 1`] = `
   "export { packSnapViewport } from '#rendering/webgpu/snapViewport'",
   "export { reflectComputeBindings, WebGpuComputePipeline, WebGpuStorageBuffer, WebGpuUniformBuffer } from '#rendering/webgpu/compute/index'",
   "export { retainedGroupUniformBytes, type WebGpuRetainedBatchPayload, type WebGpuRetainedBatchReplayer, type WebGpuRetainedGeometryRef, type WebGpuRetainedNodeIndexRange, } from '#rendering/webgpu/retainedGroupResources'",
-  "export { stencilContentDepthStencilState } from '#rendering/webgpu/stencilState'",
+  "export { stencilContentDepthStencilState, WebGpuStencilMode } from '#rendering/webgpu/stencilState'",
   "export { uploadBufferRange, uploadBufferStore, WebGl2RenderBuffer } from '#rendering/webgl2/WebGl2RenderBuffer'",
 ]
 `;

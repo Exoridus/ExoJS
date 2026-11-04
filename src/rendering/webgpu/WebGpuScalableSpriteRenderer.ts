@@ -26,7 +26,7 @@ import commonWgslModule from './shaders/repeating-sprite-common.wgsl';
 import geoPathEntriesModule from './shaders/repeating-sprite-geo-path.wgsl';
 import shaderPathEntriesModule from './shaders/repeating-sprite-shader-path.wgsl';
 import { packSnapViewport } from './snapViewport';
-import { stencilContentDepthStencilState } from './stencilState';
+import { stencilContentDepthStencilState, WebGpuStencilMode } from './stencilState';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { WebGpuPassArena } from './WebGpuPassArena';
 import type { WebGpuActiveRenderPass, WebGpuPassCoordinator } from './WebGpuPassCoordinator';
@@ -548,7 +548,7 @@ export class WebGpuScalableSpriteRenderer
 
       const offset = this._instanceArena.take(batchBytes);
       const instanceBuffer = this._instanceArena.buffer!;
-      const stencil = backend.passCoordinator.stencilActive;
+      const stencil = backend.passCoordinator.stencilMode;
 
       if (drawShader) {
         this._drawShaderBatch(device, backend, active.pass, stencil, instanceBuffer, offset);
@@ -595,7 +595,7 @@ export class WebGpuScalableSpriteRenderer
     device: GPUDevice,
     backend: WebGpuBackend,
     pass: GPURenderPassEncoder,
-    stencil: boolean,
+    stencil: WebGpuStencilMode,
     instanceBuffer: GPUBuffer,
     instanceByteOffset: number,
   ): void {
@@ -646,7 +646,7 @@ export class WebGpuScalableSpriteRenderer
     device: GPUDevice,
     backend: WebGpuBackend,
     pass: GPURenderPassEncoder,
-    stencil: boolean,
+    stencil: WebGpuStencilMode,
     instanceBuffer: GPUBuffer,
     instanceByteOffset: number,
   ): void {
@@ -832,7 +832,7 @@ export class WebGpuScalableSpriteRenderer
       'geo',
       payload.blendMode,
       backend.renderTargetFormat,
-      coordinator.stencilActive,
+      coordinator.stencilMode,
       backend.shouldPremultiplyTextureSample(texture),
     );
     const nativeFrameBindGroup = bundle.getBindGroup(device, this._uniformBindGroupLayout!, false);
@@ -985,10 +985,10 @@ export class WebGpuScalableSpriteRenderer
     kind: 'shader' | 'geo',
     blend: BlendModes,
     format: GPUTextureFormat,
-    stencil: boolean,
+    stencil: WebGpuStencilMode,
     premultiply = false,
   ): GPURenderPipeline {
-    const key = `${kind}:${blend}:${format}:${premultiply ? 'p' : 'a'}:${stencil ? 's' : 'n'}`;
+    const key = `${kind}:${blend}:${format}:${premultiply ? 'p' : 'a'}:${stencil}`;
     const existing = this._pipelines.get(key);
 
     if (existing) {
@@ -1009,7 +1009,7 @@ export class WebGpuScalableSpriteRenderer
     kind: 'shader' | 'geo',
     blend: BlendModes,
     format: GPUTextureFormat,
-    stencil = false,
+    stencil = WebGpuStencilMode.None,
     premultiply = false,
   ): GPURenderPipelineDescriptor {
     if (!this._shaderModule || !this._pipelineLayout) {
@@ -1062,8 +1062,8 @@ export class WebGpuScalableSpriteRenderer
       primitive: { topology: 'triangle-list' },
     };
 
-    if (stencil) {
-      desc.depthStencil = stencilContentDepthStencilState();
+    if (stencil !== WebGpuStencilMode.None) {
+      desc.depthStencil = stencilContentDepthStencilState(stencil === WebGpuStencilMode.Clip);
     }
 
     return desc;
@@ -1074,7 +1074,7 @@ export class WebGpuScalableSpriteRenderer
    * blend-mode × target-format combination this renderer can produce,
    * asynchronously and in parallel. Called from the backend init path so
    * first-frame draws do not block on synchronous WGSL compilation. Only the
-   * no-clip (`:n`) variants are prewarmed; stencil pipelines compile lazily on
+   * no-attachment variants are prewarmed; stencil pipelines compile lazily on
    * the first clipped draw (mirrors the sprite, mesh and text renderers).
    */
   public async prewarmPipelines(formats: readonly GPUTextureFormat[]): Promise<void> {
@@ -1105,7 +1105,7 @@ export class WebGpuScalableSpriteRenderer
     for (const kind of kinds) {
       for (const blendMode of blendModes) {
         for (const format of formats) {
-          const key = `${kind}:${blendMode}:${format}:a:n`;
+          const key = `${kind}:${blendMode}:${format}:a:${WebGpuStencilMode.None}`;
 
           if (this._pipelines.has(key)) {
             continue;

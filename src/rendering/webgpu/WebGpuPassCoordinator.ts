@@ -5,11 +5,12 @@ import { Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { RenderPassCoordinator } from '#rendering/pass/RenderPassCoordinator';
-import type { RenderPassDescriptor, RenderPassLoad } from '#rendering/pass/RenderPassDescriptor';
+import { type RenderPassDescriptor, type RenderPassLoad, StencilAttachmentMode } from '#rendering/pass/RenderPassDescriptor';
 import type { RenderStats } from '#rendering/RenderStats';
 import type { RenderTarget } from '#rendering/RenderTarget';
 import type { View } from '#rendering/View';
 
+import { WebGpuStencilMode } from './stencilState';
 import type { WebGpuTimestampSink } from './WebGpuGpuTimer';
 import { stencilAttachmentFormat, WebGpuStencilClipper } from './WebGpuStencilClipper';
 
@@ -132,6 +133,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   private _stencilConnected = false;
   private _stencilWriteInProgress = false;
   private _depthWritesRequested = false;
+  private _stencilAttachmentRequested = false;
   /**
    * Targets whose depth aspect must be cleared by the next pass that writes
    * depth, because their colour attachment was cleared since the last one.
@@ -245,23 +247,31 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
 
   /**
    * Whether a geometric stencil clip is currently in effect on the active
-   * target. Renderers read this to select a stencil-enabled content pipeline
-   * (matching the depth/stencil attachment {@link acquirePass} adds).
+   * target. An explicitly requested attachment alone does not activate a clip.
    */
   public get stencilActive(): boolean {
     return this._stencilWriteInProgress || this._activeTargetDepth() > 0;
   }
 
+  /** Selects a content pipeline compatible with the requested attachment and active geometric clip. */
+  public get stencilMode(): WebGpuStencilMode {
+    if (this.stencilActive) {
+      return WebGpuStencilMode.Clip;
+    }
+
+    return this._stencilAttachmentRequested ? WebGpuStencilMode.Attachment : WebGpuStencilMode.None;
+  }
+
   /** Current stencil reference value content pipelines must test against. @internal */
   public get stencilReference(): number {
-    return this._stencilRef;
+    return this._stencilWriteInProgress ? this._stencilRef : this._activeTargetDepth();
   }
 
   /**
    * Open (or return the already-open) GPU render pass for the backend's current
    * target/view. Resolves colour load/clear via {@link createColorAttachment},
-   * counts the pass, applies the active scissor, and - when a stencil clip is in
-   * effect - attaches the per-target depth/stencil buffer and sets the reference.
+   * counts the pass, applies the active scissor, and attaches the per-target
+   * depth/stencil buffer when requested or required by a geometric clip.
    */
   public acquirePass(): WebGpuActiveRenderPass {
     if (this._active !== null) {
@@ -269,7 +279,8 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     }
 
     const backend = this._backend;
-    const stencilEnabled = this.stencilActive;
+    const stencilEnabled = this.stencilMode !== WebGpuStencilMode.None;
+    const stencilRef = this.stencilReference;
     const depthWrites = this.depthWritesActive;
     // Descriptor and attachment list are reused: `beginRenderPass` and
     // `createCommandEncoder` read their descriptors synchronously, so neither
@@ -318,7 +329,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     this._applyViewport(pass);
 
     if (stencilEnabled) {
-      pass.setStencilReference(this._stencilRef);
+      pass.setStencilReference(stencilRef);
     }
 
     this._active = {
@@ -328,7 +339,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
       view: backend.view,
       viewUpdateId: backend.view.updateId,
       stencilEnabled,
-      stencilRef: this._stencilRef,
+      stencilRef,
       depthWrites,
     };
 
@@ -368,9 +379,19 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     this._backend.submit(active.encoder.finish());
   }
 
+  private _setStencilAttachmentRequested(requested: boolean): void {
+    if (this._stencilAttachmentRequested !== requested) {
+      // Queued draws must finish with the attachment mode they were recorded for.
+      this._backend.flush();
+      this.endPass();
+      this._stencilAttachmentRequested = requested;
+    }
+  }
+
   public beginPass(descriptor: RenderPassDescriptor): void {
     this._backend.setRenderTarget(descriptor.target);
     this._backend.setView(descriptor.view);
+    this._setStencilAttachmentRequested(descriptor.stencil === StencilAttachmentMode.Enabled);
 
     if (descriptor.load === 'clear') {
       this._backend.clear(descriptor.clearColor ?? undefined);
@@ -380,6 +401,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   public withChildPass(descriptor: RenderPassDescriptor, body: () => void): void {
     const previousTarget = this._backend.renderTarget;
     const previousView = this._backend.view;
+    const previousStencilAttachmentRequested = this._stencilAttachmentRequested;
     // The clear colour is pass state too, and `backend.clear(colour)` writes it
     // through to the persistent one. Without restoring it, a single effect
     // capture -- which clears to transparent black -- silently repaints every
@@ -388,16 +410,19 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     // child passes nest and this is the effect path's hot loop.
     const { r: previousR, g: previousG, b: previousB, a: previousA } = this._backend.clearColor;
 
-    this.beginPass(descriptor);
-
     try {
+      this.beginPass(descriptor);
       body();
     } finally {
-      // setRenderTarget flushes the active renderer on change, which self-closes
-      // its GPU pass, so the child's draws are committed into the child target
-      // before the bind switches back.
+      // Target changes flush before rebinding; a same-target mode change must
+      // also finish the child's queued draws before restoring the attachment.
+      if (this._backend.renderTarget === previousTarget) {
+        this._setStencilAttachmentRequested(previousStencilAttachmentRequested);
+      }
+
       this._backend.setRenderTarget(previousTarget);
       this._backend.setView(previousView);
+      this._stencilAttachmentRequested = previousStencilAttachmentRequested;
       this._backend.setClearColor(this._clearColorScratch.set(previousR, previousG, previousB, previousA));
     }
   }
@@ -536,6 +561,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
    */
   public resetStencil(): void {
     this._depthWritesRequested = false;
+    this._stencilAttachmentRequested = false;
     this._stencilDepths.clear();
     this._stencilStacks.clear();
     this._stencilWriteInProgress = false;
@@ -551,6 +577,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
 
     this._depthClearPending.clear();
     this._depthWritesRequested = false;
+    this._stencilAttachmentRequested = false;
     this._stencilDepths.clear();
     this._stencilStacks.clear();
     this._stencilWriteInProgress = false;

@@ -6,9 +6,8 @@ import type { View } from '#rendering/View';
  * Whether a render pass declares a stencil attachment.
  *
  * WebGL2 applies the flag as the pass's stencil-enable state. The WebGPU
- * coordinator ignores it and derives the depth/stencil attachment from its
- * active-stencil state instead, so a WebGPU pass that needs stencil must
- * enable it through that state.
+ * coordinator attaches a stencil aspect when enabled. Geometric clips
+ * independently require an attachment and restrict draws to the clipped region.
  */
 export enum StencilAttachmentMode {
   None = 0,

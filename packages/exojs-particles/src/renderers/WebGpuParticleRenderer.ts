@@ -7,7 +7,7 @@ import { isSampleableTexture } from '@codexo/exojs/renderer-sdk';
 import { Texture } from '@codexo/exojs/renderer-sdk';
 import { AbstractWebGpuRenderer } from '@codexo/exojs/renderer-sdk';
 import { getWebGpuBlendState } from '@codexo/exojs/renderer-sdk';
-import { stencilContentDepthStencilState } from '@codexo/exojs/renderer-sdk';
+import { stencilContentDepthStencilState, WebGpuStencilMode } from '@codexo/exojs/renderer-sdk';
 
 import type { ParticleSystem } from '#ParticleSystem';
 import { assertVertexGeometryCompatible } from '#renderModes/ParticleBufferLayout';
@@ -390,7 +390,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     // Sized to the pre-split pass totals, not to what remains after it.
     this._ensureUniformCapacity(device, targetUniformSlots);
 
-    const pipeline = this._getPipeline(resources, drawCall.blendMode, backend.renderTargetFormat, coordinator.stencilActive);
+    const pipeline = this._getPipeline(resources, drawCall.blendMode, backend.renderTargetFormat, coordinator.stencilMode);
     const textureBinding = backend.getTextureBinding(drawCall.texture, mode.material.sampler);
     const textureBindGroup = device.createBindGroup({
       layout: this._textureBindGroupLayout!,
@@ -886,9 +886,9 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     resources: ParticleModeResources,
     blendMode: BlendModes,
     format: GPUTextureFormat,
-    stencil: boolean,
+    stencil: WebGpuStencilMode,
   ): GPURenderPipeline {
-    const pipelineKey = `${blendMode}:${format}:${stencil ? 's' : 'n'}`;
+    const pipelineKey = `${blendMode}:${format}:${stencil}`;
     const existingPipeline = resources.pipelines.get(pipelineKey);
 
     if (existingPipeline) {
@@ -923,8 +923,8 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
           : { topology: resources.topology, stripIndexFormat: resources.stripIndexFormat },
     };
 
-    if (stencil) {
-      descriptor.depthStencil = stencilContentDepthStencilState();
+    if (stencil !== WebGpuStencilMode.None) {
+      descriptor.depthStencil = stencilContentDepthStencilState(stencil === WebGpuStencilMode.Clip);
     }
 
     const pipeline = this._device!.createRenderPipeline(descriptor);
