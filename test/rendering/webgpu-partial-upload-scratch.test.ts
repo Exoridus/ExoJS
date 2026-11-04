@@ -45,43 +45,46 @@ describe('WebGPU partial DataTexture upload: packing scratch reuse', () => {
     environment.restore();
   });
 
-  test.each([TextureFormat.R32F, TextureFormat.Rgba32F])('packs foreign-realm %s samples without conversion and reuses scratch', format => {
-    const channels = format === TextureFormat.R32F ? 1 : 4;
-    const data = runInNewContext('new Float32Array(40 * 4 * CHANNELS + 4).subarray(4)', { CHANNELS: channels }) as Float32Array;
+  test.each([TextureFormat.R32F, TextureFormat.Rgba32F] as const)(
+    'packs foreign-realm %s samples without conversion and reuses scratch',
+    format => {
+      const channels = format === TextureFormat.R32F ? 1 : 4;
+      const data = runInNewContext('new Float32Array(40 * 4 * CHANNELS + 4).subarray(4)', { CHANNELS: channels }) as Float32Array;
 
-    for (let index = 0; index < data.length; index++) {
-      data[index] = index / 4 - 20;
-    }
+      for (let index = 0; index < data.length; index++) {
+        data[index] = index / 4 - 20;
+      }
 
-    expect(data).not.toBeInstanceOf(Float32Array);
+      expect(data).not.toBeInstanceOf(Float32Array);
 
-    const texture = new DataTexture({ width: 40, height: 4, format, data });
+      const texture = new DataTexture({ width: 40, height: 4, format, data });
 
-    syncTexture(backend, texture);
-    const fullUploadCount = environment.writeTextureData().length;
+      syncTexture(backend, texture);
+      const fullUploadCount = environment.writeTextureData().length;
 
-    texture.commitRect(1, 1, 20, 2);
-    syncTexture(backend, texture);
+      texture.commitRect(1, 1, 20, 2);
+      syncTexture(backend, texture);
 
-    const packed = environment.writeTextureData()[fullUploadCount] as Float32Array;
-    const expected = [...data.subarray(41 * channels, 61 * channels), ...data.subarray(81 * channels, 101 * channels)];
+      const packed = environment.writeTextureData()[fullUploadCount] as Float32Array;
+      const expected = [...data.subarray(41 * channels, 61 * channels), ...data.subarray(81 * channels, 101 * channels)];
 
-    expect(packed).toBeInstanceOf(Float32Array);
-    expect(Array.from(packed)).toEqual(expected);
+      expect(packed).toBeInstanceOf(Float32Array);
+      expect(Array.from(packed)).toEqual(expected);
 
-    texture.commitRect(1, 1, 2, 2);
-    syncTexture(backend, texture);
-    texture.commitRect(1, 1, 2, 2);
-    syncTexture(backend, texture);
+      texture.commitRect(1, 1, 2, 2);
+      syncTexture(backend, texture);
+      texture.commitRect(1, 1, 2, 2);
+      syncTexture(backend, texture);
 
-    const first = environment.writeTextureData()[fullUploadCount + 1] as Float32Array;
-    const second = environment.writeTextureData()[fullUploadCount + 2] as Float32Array;
+      const first = environment.writeTextureData()[fullUploadCount + 1] as Float32Array;
+      const second = environment.writeTextureData()[fullUploadCount + 2] as Float32Array;
 
-    expect(first.buffer).toBe(packed.buffer);
-    expect(second).toBe(first);
-    expect(Array.from(first.subarray(0, 2 * channels))).toEqual(Array.from(data.subarray(41 * channels, 43 * channels)));
-    texture.destroy();
-  });
+      expect(first.buffer).toBe(packed.buffer);
+      expect(second).toBe(first);
+      expect(Array.from(first.subarray(0, 2 * channels))).toEqual(Array.from(data.subarray(41 * channels, 43 * channels)));
+      texture.destroy();
+    },
+  );
 
   test('repeated same-size partial uploads reuse one packing buffer', () => {
     const texture = new DataTexture({ width: 64, height: 64, format: TextureFormat.Rgba32F });
