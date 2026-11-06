@@ -53,7 +53,7 @@ interface Harness {
 // File-local fake backend (repo convention keeps test harnesses file-local). It
 // hands every capture a bundle that supports the in-place row patch and records
 // which group-local row each patch addressed.
-const createPatchingBackend = (): Harness => {
+const createPatchingBackend = (renderer: unknown = flaggedRenderer): Harness => {
   const renderTarget = new RenderTarget(800, 600, true);
   const events: string[] = [];
   const patches: PatchCall[] = [];
@@ -105,7 +105,7 @@ const createPatchingBackend = (): Harness => {
     rendererRegistry: {
       resolve(drawable: Drawable) {
         if (drawable instanceof RecordableLeaf) {
-          return flaggedRenderer;
+          return renderer;
         }
 
         throw new Error(`no renderer registered for ${drawable.constructor.name}`);
@@ -250,6 +250,162 @@ describe('recorded row base spans nested draws', () => {
 });
 
 describe('automatic render-root representation: incremental transform rows', () => {
+  test.each(['root', 'group'] as const)('a throwing private row patcher drops the %s recording', kind => {
+    const privateRow = new Float32Array([0, 0]);
+    const patchOwnRow = vi.fn(() => {
+      privateRow[0] = 24;
+
+      throw new Error('private row write failed');
+    });
+    const harness = createPatchingBackend({ supportsRetainedBatches: true, _patchOwnTransformRow: patchOwnRow });
+    const root = new Container();
+    const parent = kind === 'group' ? new RetainedContainer() : root;
+    const leaf = new RecordableLeaf('a');
+
+    if (parent !== root) {
+      root.addChild(parent);
+    }
+
+    parent.addChild(leaf);
+
+    reachSpliceTier(root, harness);
+    leaf.setPosition(24, 24);
+    playFrame(root, harness.backend);
+
+    expect(patchOwnRow).toHaveBeenCalledOnce();
+    expect([...privateRow]).toEqual([24, 0]);
+    expect(harness.patches).toEqual([]);
+    expect(harness.events).toContain('flush:a');
+    expect(harness.events).not.toContain('replay:a');
+
+    harness.events.length = 0;
+    playFrame(root, harness.backend);
+    playFrame(root, harness.backend);
+    expect(harness.events).toContain('replay:a');
+
+    root.destroy();
+    harness.backend.destroy();
+  });
+
+  test.each(['root', 'group'] as const)(
+    'a later private row patch failure rebuilds all %s rows after repeated successful patches',
+    kind => {
+      const privateRows = new Map<RenderNode, number[]>();
+      const patched: RenderNode[] = [];
+      let failingNode: RenderNode | null = null;
+      let rowsAtFailure: number[][] = [];
+      const patchOwnRow = vi.fn((node: RenderNode) => {
+        const row = privateRows.get(node)!;
+        const transform = node.getGlobalTransform();
+
+        row[0] = transform.x;
+
+        if (node === failingNode) {
+          rowsAtFailure = [...privateRows.values()].map(value => [...value]);
+
+          throw new Error('private row write failed');
+        }
+
+        row[1] = transform.y;
+        patched.push(node);
+
+        return true;
+      });
+      const harness = createPatchingBackend({ supportsRetainedBatches: true, _patchOwnTransformRow: patchOwnRow });
+      const draw = harness.backend.draw.bind(harness.backend);
+
+      vi.spyOn(harness.backend, 'draw').mockImplementation(drawable => {
+        const transform = drawable.getGlobalTransform();
+
+        privateRows.set(drawable, [transform.x, transform.y]);
+
+        return draw(drawable);
+      });
+
+      const root = new Container();
+      const parent = kind === 'group' ? new RetainedContainer() : root;
+      const leaves = ['a', 'b', 'c', 'd'].map(id => new RecordableLeaf(id));
+      const moveRows = (offset: number): number[][] =>
+        leaves.map((leaf, index) => {
+          const x = offset + index;
+          const y = offset + index + 10;
+
+          leaf.setPosition(x, y);
+
+          return [x, y];
+        });
+
+      if (parent !== root) {
+        root.addChild(parent);
+      }
+
+      parent.addChild(...leaves);
+      reachSpliceTier(root, harness);
+
+      for (const offset of [20, 40, 60]) {
+        const expected = moveRows(offset);
+
+        patched.length = 0;
+        harness.events.length = 0;
+        playFrame(root, harness.backend);
+
+        expect(patched).toEqual(leaves);
+        expect([...privateRows.values()]).toEqual(expected);
+        expect(harness.events).toEqual(['replay:a,b,c,d']);
+      }
+
+      expect(patchOwnRow).toHaveBeenCalledTimes(12);
+      patched.length = 0;
+      harness.events.length = 0;
+      failingNode = leaves[3]!;
+
+      const expected = moveRows(80);
+
+      playFrame(root, harness.backend);
+
+      expect(patchOwnRow).toHaveBeenCalledTimes(16);
+      expect(patched).toEqual(leaves.slice(0, 3));
+      expect(rowsAtFailure).toEqual([
+        [80, 90],
+        [81, 91],
+        [82, 92],
+        [83, 73],
+      ]);
+      expect(harness.patches).toEqual([]);
+      expect(harness.events).toEqual(['flush:a,b,c,d']);
+      expect([...privateRows.values()]).toEqual(expected);
+
+      failingNode = null;
+      harness.events.length = 0;
+      playFrame(root, harness.backend);
+
+      expect([...privateRows.values()]).toEqual(expected);
+      expect(harness.events).toEqual([kind === 'group' ? 'replay:a,b,c,d' : 'flush:a,b,c,d']);
+
+      harness.events.length = 0;
+      playFrame(root, harness.backend);
+
+      expect([...privateRows.values()]).toEqual(expected);
+      expect(harness.events).toEqual(['replay:a,b,c,d']);
+
+      patched.length = 0;
+      harness.events.length = 0;
+
+      const recovered = moveRows(100);
+
+      playFrame(root, harness.backend);
+
+      expect(patchOwnRow).toHaveBeenCalledTimes(20);
+      expect(patched).toEqual(leaves);
+      expect([...privateRows.values()]).toEqual(recovered);
+      expect(harness.patches).toEqual([]);
+      expect(harness.events).toEqual(['replay:a,b,c,d']);
+
+      root.destroy();
+      harness.backend.destroy();
+    },
+  );
+
   test('a nested descendant move patches one row and keeps the splice', () => {
     const harness = createPatchingBackend();
     const root = new Container();

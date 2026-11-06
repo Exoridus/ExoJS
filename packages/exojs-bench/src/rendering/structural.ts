@@ -88,7 +88,7 @@ const WEBGPU_DRAW_METHODS = ['draw', 'drawIndexed', 'drawIndirect', 'drawIndexed
 const WEBGPU_BIND_METHODS = ['setBindGroup'] as const;
 
 /** Queue methods that count as a buffer/texture upload. */
-const WEBGPU_UPLOAD_METHODS = ['writeBuffer', 'writeTexture'] as const;
+const WEBGPU_UPLOAD_METHODS = ['writeBuffer', 'writeTexture', 'copyExternalImageToTexture'] as const;
 
 /**
  * Wraps the WebGPU submission path - `GPUDevice.createCommandEncoder`, each

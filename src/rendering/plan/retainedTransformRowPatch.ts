@@ -82,8 +82,7 @@ export const tryPatchRetainedTransformRow = (
     try {
       return renderer._patchOwnTransformRow(node, bundle, base);
     } catch {
-      // A renderer that declines mid-patch falls through to the generic
-      // shared-transform patch below, the same as one that has no patch at all.
+      return false;
     }
   }
 

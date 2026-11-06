@@ -81,6 +81,27 @@ describe('PolygonShape — convex validation', () => {
     ).toThrow(RangeError);
   });
 
+  it('rejects a self-intersecting star', () => {
+    const vertices = Array.from({ length: 5 }, (_, i) => {
+      const angle = (i * 4 * Math.PI) / 5;
+
+      return { x: Math.cos(angle), y: Math.sin(angle) };
+    });
+
+    expect(() => new PolygonShape(vertices)).toThrow(RangeError);
+    expect(() => new PolygonShape([...vertices].reverse())).toThrow(RangeError);
+  });
+
+  it('accepts a convex polygon at the vertex limit', () => {
+    const vertices = Array.from({ length: 256 }, (_, i) => {
+      const angle = (i * 2 * Math.PI) / 256;
+
+      return { x: Math.cos(angle), y: Math.sin(angle) };
+    });
+
+    expect(new PolygonShape(vertices).count).toBe(256);
+  });
+
   it('rejects a degenerate (collinear) polygon', () => {
     expect(
       () =>

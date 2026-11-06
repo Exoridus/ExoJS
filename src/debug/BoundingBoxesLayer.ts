@@ -1,6 +1,7 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import type { Seconds } from '#core/units';
+import { Rectangle } from '#math/Rectangle';
 import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -119,7 +120,8 @@ export class BoundingBoxesLayer extends DebugLayer {
       return;
     }
 
-    const bounds = node.getBounds();
+    const anchor = node._resolveTransformGroupAnchor();
+    const bounds = anchor === null ? node.getBounds() : node.getBounds().transform(anchor.getWorldTransform(), Rectangle.temp);
 
     // Skip zero-area bounds (defensive).
     if (bounds.width > 0 && bounds.height > 0) {

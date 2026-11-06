@@ -88,6 +88,12 @@ describe('get(Asset.type()) descriptor access', () => {
     expect(loader.get(Asset.type('texture', dynamicPath))).toBeInstanceOf(Texture);
   });
 
+  test('get reports an uninstalled asset type accurately', () => {
+    const loader = createCoreLoader();
+
+    expect(() => loader.get(Asset.type('missing' as never, 'asset.missing'))).toThrow(/No asset type "missing" is installed/);
+  });
+
   test('get(Asset.type()) on a non-leaf resource kind throws with guidance to use load()', () => {
     const loader = createCoreLoader();
 

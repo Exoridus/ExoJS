@@ -58,6 +58,24 @@ describe('applySelection', () => {
     expect(selected.map(entry => entry.nodeCount)).toEqual([250_000, 1_000_000]);
   });
 
+  test('runs repeated node counts once per arm in first-seen order', () => {
+    const nodeCounts = Object.freeze([1_000_000, 250_000, 1_000_000, 250_000]);
+    const cells = [...ladder, cell({ backend: 'webgpu' })];
+    const selected = applySelection(cells, { nodeCounts });
+
+    expect(selected.map(entry => [entry.backend, entry.nodeCount])).toEqual([
+      ['webgl2', 1_000_000],
+      ['webgl2', 250_000],
+      ['webgpu', 1_000_000],
+      ['webgpu', 250_000],
+    ]);
+    expect(nodeCounts).toEqual([1_000_000, 250_000, 1_000_000, 250_000]);
+  });
+
+  test('emits no cells for an empty node-count selection', () => {
+    expect(applySelection(ladder, { nodeCounts: [] })).toEqual([]);
+  });
+
   test('keeps one cell per arm and count when several arms survive', () => {
     const cells = [...ladder, cell({ engine: 'pixi', nodeCount: 1_000 }), cell({ engine: 'pixi', nodeCount: 25_000 })];
 

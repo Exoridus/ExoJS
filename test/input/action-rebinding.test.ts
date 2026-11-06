@@ -628,12 +628,22 @@ describe('rejected rebinds leave the map untouched', () => {
     const moveChannels = [...map.move.channels];
     const lookChannels = [...map.look.channels];
     const moveBinding = map.move.binding;
+    const lookBinding = map.look.binding;
+    const moveSlot = map.move._gamepadSlot;
+    const lookSlot = map.look._gamepadSlot;
 
     expect(() => (map as unknown as { rebind(name: string, binding: unknown): void }).rebind('move', 'ctrl+k')).toThrow(InputBindingError);
     expect(() => (map as unknown as { rebind(name: string, binding: unknown): void }).rebind('look', 'ctrl+k')).toThrow(InputBindingError);
     expect(map.move.binding).toBe(moveBinding);
+    expect(map.look.binding).toBe(lookBinding);
+    expect(map.move._gamepadSlot).toBe(moveSlot);
+    expect(map.look._gamepadSlot).toBe(lookSlot);
     expect([...map.move.channels]).toEqual(moveChannels);
     expect([...map.look.channels]).toEqual(lookChannels);
+  });
+
+  test('axis construction rejects a descriptor for another action kind', () => {
+    expect(() => new AxisAction({ kind: 'button', binding: ['keyboard.space'] } as never)).toThrow(InputBindingError);
   });
 
   test('a batch whose later entry is rejected restores the earlier ones', () => {

@@ -50,6 +50,19 @@ describe('IndexedDbDatabase', () => {
     vi.resetModules();
   });
 
+  test('key-value has distinguishes present null and undefined from missing', async () => {
+    await loadWithFakeIndexedDb();
+    const { IndexedDbKeyValueStore } = await import('#assets/storage/IndexedDbKeyValueStore');
+    const store = new IndexedDbKeyValueStore('presence');
+
+    await store.set('null', null);
+    await store.set('undefined', undefined);
+    await expect(store.has('null')).resolves.toBe(true);
+    await expect(store.has('undefined')).resolves.toBe(true);
+    await expect(store.has('missing')).resolves.toBe(false);
+    store.destroy();
+  });
+
   test('throws when the host does not support IndexedDB', async () => {
     setGlobalIndexedDb(undefined);
     vi.resetModules();

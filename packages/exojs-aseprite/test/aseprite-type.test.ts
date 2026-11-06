@@ -180,6 +180,43 @@ describe('asepriteType - AsepriteFormatError on malformed input', () => {
     );
   });
 
+  it.each(['array', 'hash'])('rejects malformed %s frames before acquiring the image', async layout => {
+    const rect = { x: 0, y: 0, w: 16, h: 16 };
+    const valid = { frame: rect, duration: 100, trimmed: false, spriteSourceSize: rect };
+    const invalidFrames: unknown[] = [
+      null,
+      7,
+      {},
+      { ...valid, frame: null },
+      { ...valid, frame: { ...rect, w: '16' } },
+      { ...valid, duration: undefined },
+      { ...valid, duration: '100' },
+      { ...valid, trimmed: 'false' },
+      { ...valid, spriteSourceSize: null },
+      { ...valid, spriteSourceSize: { ...rect, x: '0' } },
+    ];
+
+    for (const frame of invalidFrames) {
+      const frames = layout === 'array' ? [valid, frame] : { good: valid, bad: frame };
+      const { loadSheet, loaderLoad } = makeContext({ 'doc.json': { frames, meta: { image: 'x.png' } } });
+
+      await expect(loadSheet('doc.json')).rejects.toThrow(AsepriteFormatError);
+      expect(loaderLoad).not.toHaveBeenCalled();
+    }
+  });
+
+  it.each([0, -100])('preserves the duration fallback for %s milliseconds', async duration => {
+    const doc = loadFixture('hero.array.json') as { frames: Array<{ duration: number }> };
+
+    for (const frame of doc.frames) {
+      frame.duration = duration;
+    }
+
+    const sheet = await loadRaw(doc);
+
+    expect(sheet.clips.get('walk')?.frameDurations).toEqual([1 / 12, 1 / 12]);
+  });
+
   it('attaches the source URL and typed name to the thrown error', async () => {
     let caught: unknown;
 

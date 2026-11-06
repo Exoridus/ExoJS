@@ -202,8 +202,7 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
       }
 
       buffer = data;
-    } else {
-      // Float32Array
+    } else if (typedArrayNameDescriptor.get!.call(data) === 'Float32Array') {
       if (!isFloatFormat(format)) {
         throw new Error(`DataTexture format '${format}' requires a Uint8Array, got Float32Array.`);
       }
@@ -215,6 +214,8 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
       }
 
       buffer = data;
+    } else {
+      throw new Error('DataTexture data must be a Uint8Array, Float32Array or ArrayBuffer.');
     }
 
     this.format = format;
@@ -341,3 +342,9 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
 }
 
 const isFloatFormat = (format: DataTextureFormat): boolean => format === TextureFormat.R32F || format === TextureFormat.Rgba32F;
+
+// The intrinsic getter recognizes foreign-realm views without trusting a caller's Symbol.toStringTag.
+const typedArrayNameDescriptor = Object.getOwnPropertyDescriptor(
+  Object.getPrototypeOf(Float32Array.prototype) as object,
+  Symbol.toStringTag,
+)!;

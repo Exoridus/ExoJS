@@ -113,6 +113,17 @@
       "level": "advanced"
     },
     {
+      "slug": "pixelfx-transitions",
+      "path": "application-scenes/pixelfx-transitions.js",
+      "language": "typescript",
+      "title": "PixelFX Transitions",
+      "description": "Switch between two scenes through Burn Away, Pixel Dissolve or Star Iris frame-atlas transitions; the scene commit happens while the screen is fully covered. Press 1-3 to choose an effect, Space or click to replay.",
+      "backend": "core",
+      "tags": ["scene", "scenes", "transition", "pixel-art"],
+      "capabilities": ["pointer", "keyboard"],
+      "level": "advanced"
+    },
+    {
       "slug": "level-loading-and-ownership",
       "path": "tilemap/level-loading-and-ownership.js",
       "language": "typescript",

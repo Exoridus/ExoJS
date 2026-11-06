@@ -1,3 +1,5 @@
+import { runInNewContext } from 'node:vm';
+
 import { Sprite } from '#rendering/sprite/Sprite';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import { Texture } from '#rendering/texture/Texture';
@@ -73,6 +75,21 @@ describe('DataTexture', () => {
   });
 
   describe('validation', () => {
+    test.each([
+      new Float64Array(2),
+      new Uint16Array(8),
+      new Int16Array(8),
+      new Uint32Array(4),
+      new Int32Array(4),
+      new Int8Array(16),
+      new Uint8ClampedArray(16),
+      new DataView(new ArrayBuffer(16)),
+    ])('rejects unsupported data views even when the byte length matches (%s)', data => {
+      expect(() => new DataTexture({ width: 4, height: 1, format: TextureFormat.R32F, data: data as unknown as Float32Array })).toThrow(
+        /Uint8Array, Float32Array or ArrayBuffer/,
+      );
+    });
+
     test('throws on non-positive width', () => {
       expect(() => new DataTexture({ width: 0, height: 4, format: TextureFormat.R8 })).toThrow(/positive integer/);
     });
@@ -107,6 +124,15 @@ describe('DataTexture', () => {
   });
 
   describe('bring-your-own buffer', () => {
+    test('uses a Float32Array from another realm as a zero-copy backing buffer', () => {
+      const data = runInNewContext('new Float32Array([1, 2, 3, 4])') as Float32Array;
+      const tex = new DataTexture({ width: 4, height: 1, format: TextureFormat.R32F, data });
+
+      expect(tex.buffer).toBe(data);
+      expect(tex.buffer[0]).toBe(1);
+      expect(tex.buffer[3]).toBe(4);
+    });
+
     test('uses external Uint8Array as backing buffer (zero-copy)', () => {
       const data = new Uint8Array(16);
       data[0] = 42;

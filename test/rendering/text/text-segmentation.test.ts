@@ -119,6 +119,62 @@ describe('line-break runs', () => {
     expect(runs.map(run => run.text).join('')).toBe('日本語のテキスト');
   });
 
+  test.each([
+    ['Thai', 'ภาษาไทยเป็นภาษาที่สวยงาม', ['ภาษา', 'ไทย', 'เป็น', 'ภาษา', 'ที่', 'สวยงาม']],
+    ['Lao', 'ພາສາລາວເປັນພາສາທີ່ງົດງາມ', ['ພາສາ', 'ລາວ', 'ເປັນ', 'ພາສາ', 'ທີ່', 'ງົດງາມ']],
+    ['Khmer', 'ភាសាខ្មែរជាភាសាដ៏ស្រស់ស្អាត', ['ភាសាខ្មែរ', 'ជា', 'ភាសា', 'ដ៏', 'ស្រស់', 'ស្អាត']],
+    ['Myanmar', 'မြန်မာဘာသာစကားသည်လှပသောဘာသာစကားဖြစ်သည်', ['မြန်မာဘာသာ', 'စကား', 'သည်', 'လှပ', 'သော', 'ဘာသာစကား', 'ဖြစ်သည်']],
+  ])('%s preserves word boundaries for wrapping without spaces', (_script, text, expected) => {
+    expect(runsOf(text)).toEqual(expected.map(part => ({ text: part, whitespace: false })));
+  });
+
+  test.each([
+    ['Thai', 'ภาษา', 'ไทย'],
+    ['Lao', 'ພາສາ', 'ລາວ'],
+    ['Khmer', 'ភាសាខ្មែរ', 'ជា'],
+    ['Myanmar', 'မြန်မာဘာသာ', 'စကား'],
+  ])('%s keeps non-breaking spaces attached to both neighboring words', (_script, left, right) => {
+    for (const space of ['\u00A0', '\u2007', '\u202F', '\uFEFF']) {
+      const text = `${left}${space}${right}`;
+
+      expect(runsOf(text)).toEqual([{ text, whitespace: false }]);
+    }
+  });
+
+  test('a non-breaking space preserves surrounding word and blank boundaries', () => {
+    expect(runsOf('เป็นภาษา\u00A0ไทยเป็น ภาษาไทย')).toEqual([
+      { text: 'เป็น', whitespace: false },
+      { text: 'ภาษา\u00A0ไทย', whitespace: false },
+      { text: 'เป็น', whitespace: false },
+      { text: ' ', whitespace: true },
+      { text: 'ภาษา', whitespace: false },
+      { text: 'ไทย', whitespace: false },
+    ]);
+  });
+
+  test.each([
+    ['ภาษา(ไทย)ภาษา', ['ภาษา', '(ไทย)', 'ภาษา']],
+    ['ภาษา((ไทย))ภาษา', ['ภาษา', '((ไทย))', 'ภาษา']],
+    ['ภาษา«ไทย»ภาษา', ['ภาษา', '«ไทย»', 'ภาษา']],
+    ['ภาษาไทย,ภาษาไทย!', ['ภาษา', 'ไทย,', 'ภาษา', 'ไทย!']],
+    ['ພາສາ(ລາວ)', ['ພາສາ', '(ລາວ)']],
+    ['ភាសាខ្មែរ(ជា)', ['ភាសាខ្មែរ', '(ជា)']],
+    ['မြန်မာဘာသာ(စကား)', ['မြန်မာဘာသာ', '(စကား)']],
+  ])('keeps opening and closing punctuation attached in %s', (text, expected) => {
+    expect(runsOf(text)).toEqual(expected.map(part => ({ text: part, whitespace: false })));
+  });
+
+  test('an apostrophe inside a Latin word between Thai words preserves plain segmentation', () => {
+    expect(runsOf("ภาษาdon'tภาษา")).toEqual([{ text: "ภาษาdon'tภาษา", whitespace: false }]);
+  });
+
+  test.each(['(', '((', '[', '«'])('keeps trailing %s with the preceding word', punctuation => {
+    expect(runsOf(`ภาษาไทย${punctuation}`)).toEqual([
+      { text: 'ภาษา', whitespace: false },
+      { text: `ไทย${punctuation}`, whitespace: false },
+    ]);
+  });
+
   test('an emoji sequence is not a break opportunity', () => {
     expect(runsOf(ZWJ_FAMILY)).toEqual([{ text: ZWJ_FAMILY, whitespace: false }]);
   });

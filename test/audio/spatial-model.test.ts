@@ -235,6 +235,29 @@ describe('elevation - the third axis', () => {
     sound.destroy();
   });
 
+  test('clearing horizontal velocity retains vertical Doppler motion', () => {
+    const panners = spyPanners();
+    const system = new AudioSystem();
+    system.spatial.dopplerFactor = 1;
+    system.spatial.speedOfSound = 1000;
+    const sound = new Sound(createAudioBufferStub());
+    const voice = system.play(sound, { position: { x: 0, y: 0 }, elevation: 100 });
+    const ratios: number[] = [];
+
+    (voice as unknown as { _applyDopplerRate(ratio: number): void })._applyDopplerRate = (ratio: number): void => {
+      ratios.push(ratio);
+    };
+
+    voice.velocity = { x: 0, y: 0, z: 200 };
+    voice.velocity = null;
+    tickSpatial(voice);
+
+    expect(voice.elevationVelocity).toBe(200);
+    expect(ratios.at(-1)).toBeCloseTo(0.8, 5);
+    panners.restore();
+    sound.destroy();
+  });
+
   test('vertical motion produces a Doppler shift', () => {
     const panners = spyPanners();
     const system = new AudioSystem();

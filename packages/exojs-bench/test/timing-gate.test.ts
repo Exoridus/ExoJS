@@ -137,6 +137,14 @@ describe('compareToTimingBaseline', () => {
 });
 
 describe('formatTimingOutcome', () => {
+  test('reports a thinner measurement alongside its baseline sample count', () => {
+    const measured = cell({ archetype: 'static-heavy', cpuMsMedian: 10 });
+    const outcome = compareToTimingBaseline(baselineAt(10), [{ ...measured, spec: { ...measured.spec, timedFrames: 5 } }]);
+
+    expect(formatTimingOutcome(outcome)).toContain('frames 90 -> 5');
+    expect(isTimingFailure(outcome)).toBe(false);
+  });
+
   test('says so when the baseline was not recorded on a confirmed-idle machine', () => {
     const loose = recordTimingBaseline([cell({ archetype: 'static-heavy', cpuMsMedian: 10 })], { ...recorded, confirmedIdle: false });
     const report = formatTimingOutcome(compareToTimingBaseline(loose, [cell({ archetype: 'static-heavy', cpuMsMedian: 10 })]));

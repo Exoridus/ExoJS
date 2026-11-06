@@ -1,6 +1,10 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
+import os from 'node:os';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+import { vi } from 'vitest';
 
 import {
   classifyPrerelease,
@@ -18,6 +22,38 @@ import {
  * version or a pre-release bit that quietly reads "stable" would publish a
  * claim no measurement supports.
  */
+
+test('only infers Windows 10 or 11 from a 10.0 kernel release', async () => {
+  const platform = vi.spyOn(os, 'platform').mockReturnValue('win32');
+  const release = vi.spyOn(os, 'release');
+
+  try {
+    for (const [version, major] of [
+      ['6.1.7601', 0],
+      ['11.0.30000', 0],
+      ['10.0.19045', 10],
+      ['10.0.22621', 11],
+    ] as const) {
+      release.mockReturnValue(version);
+      syncBuiltinESMExports();
+      vi.resetModules();
+      const provenance = await import('../src/shared/provenance');
+
+      expect(provenance.readOsRelease()).toBe(`win32 ${version}`);
+      expect(provenance.readPlatformVersion().major).toBe(major);
+    }
+
+    release.mockReturnValue('6.1.7601');
+    syncBuiltinESMExports();
+    vi.resetModules();
+    const provenance = await import('../src/shared/provenance');
+    expect(provenance.readPlatformVersion(parsePlatformDeclaration('7'))).toMatchObject({ major: 7, source: 'declared' });
+  } finally {
+    platform.mockRestore();
+    release.mockRestore();
+    syncBuiltinESMExports();
+  }
+});
 
 describe('parseRenderingBrowser', () => {
   test('defaults to the documented browser when no selector was given', () => {

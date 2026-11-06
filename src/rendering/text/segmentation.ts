@@ -92,7 +92,7 @@ const _isBreakingSpace = (code: number): boolean =>
   code === TAB ||
   (code >= 0x0a && code <= 0x0d) ||
   code === 0x1680 ||
-  (code >= 0x2000 && code <= 0x200a) ||
+  (code >= 0x2000 && code <= 0x200a && code !== 0x2007) ||
   code === 0x2028 ||
   code === 0x2029 ||
   code === 0x205f ||
@@ -285,7 +285,11 @@ export interface TextRun {
 }
 
 /** Scripts whose text carries no inter-word spaces, so a line may break between any two words. */
-const _unspacedScript = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u;
+const _unspacedScript =
+  /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}]/u;
+
+const _openingPunctuation = /^[\p{Ps}\p{Pi}]+$/u;
+const _nonBreakingCharacter = /[\u{A0}\u{2007}\u{202F}\u{2060}\u{FEFF}]/u;
 
 /** Blank-versus-non-blank runs, which is the whole answer for trivial text. */
 const _blankRuns = (text: string): TextRun[] => {
@@ -318,9 +322,9 @@ const _blankRuns = (text: string): TextRun[] => {
  * locale-aware word segmentation to find the boundaries.
  *
  * A non-whitespace run is the unit wrapping treats as unbreakable, except that
- * runs written in a script with no inter-word spaces (Han, Hiragana, Katakana)
- * are emitted one word at a time, so a Japanese or Chinese line wraps at its
- * own word boundaries rather than overflowing as a single token.
+ * runs written in a script with no inter-word spaces (Han, Hiragana, Katakana,
+ * Thai, Lao, Khmer, Myanmar) are emitted one word at a time, so a line wraps at
+ * its own word boundaries rather than overflowing as a single token.
  *
  * Whitespace runs are kept as their own entries rather than folded into the
  * neighbouring word: the wrapper drops the run it breaks on and preserves the
@@ -336,7 +340,11 @@ export const textRuns = (text: string, locale?: string): TextRun[] => {
   }
 
   const runs: TextRun[] = [];
+  const segments = wordSegments(text, locale);
+  const lastWordEnd = segments.reduce((end, segment) => (segment.wordLike ? segment.end : end), 0);
   let pending: { start: number; end: number; whitespace: boolean } | null = null;
+  let pendingUnspaced = false;
+  let joinNext = false;
 
   const flush = (): void => {
     if (pending !== null) {
@@ -344,25 +352,30 @@ export const textRuns = (text: string, locale?: string): TextRun[] => {
     }
 
     pending = null;
+    pendingUnspaced = false;
   };
 
-  for (const segment of wordSegments(text, locale)) {
+  for (const segment of segments) {
     const body = text.slice(segment.start, segment.end);
     const whitespace = _isBlankRun(body);
-    // A word in an unspaced script must not merge with the word next to it, or
-    // the whole run becomes one unbreakable token.
-    const standalone = !whitespace && _unspacedScript.test(body);
+    const unspaced = segment.wordLike && _unspacedScript.test(body);
+    const opening = _openingPunctuation.test(body);
 
-    if (pending !== null && pending.whitespace === whitespace && !standalone) {
+    const breakBefore =
+      !joinNext &&
+      !_nonBreakingCharacter.test(body[0]!) &&
+      ((segment.wordLike && (unspaced || pendingUnspaced)) || (opening && pendingUnspaced && segment.end < lastWordEnd));
+
+    if (pending !== null && pending.whitespace === whitespace && !breakBefore) {
       pending.end = segment.end;
     } else {
       flush();
       pending = { start: segment.start, end: segment.end, whitespace };
     }
 
-    if (standalone) {
-      flush();
-    }
+    // Delay the break until the next word so trailing punctuation and no-break characters stay attached.
+    pendingUnspaced ||= unspaced;
+    joinNext = opening || _nonBreakingCharacter.test(body.at(-1)!);
   }
 
   flush();

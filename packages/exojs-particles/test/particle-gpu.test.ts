@@ -12,7 +12,7 @@ import { ParticleGpuState } from '../src/gpu/ParticleGpuState';
 import { ParticleModuleKeyCollisionError } from '../src/gpu/ParticleModuleKeyCollisionError';
 import { ApplyForce } from '../src/modules/ApplyForce';
 import { BurstSpawn } from '../src/modules/BurstSpawn';
-import { ColorOverLifetime } from '../src/modules/ColorOverLifetime';
+import { colorLookupSize, ColorOverLifetime } from '../src/modules/ColorOverLifetime';
 import { DeathModule } from '../src/modules/DeathModule';
 import { Drag } from '../src/modules/Drag';
 import { RotateOverLifetime } from '../src/modules/RotateOverLifetime';
@@ -444,6 +444,15 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
 
     expect(env.device.createTexture).toHaveBeenCalledTimes(2);
     expect(env.queue.writeTexture).toHaveBeenCalledTimes(2);
+
+    for (const [descriptor] of vi.mocked(env.device.createTexture).mock.calls) {
+      expect(descriptor.size).toMatchObject({ width: colorLookupSize, height: 1 });
+    }
+
+    for (const [, , layout, size] of vi.mocked(env.queue.writeTexture).mock.calls) {
+      expect(layout.bytesPerRow).toBe(colorLookupSize * 4);
+      expect(size).toMatchObject({ width: colorLookupSize, height: 1 });
+    }
   });
 
   test('GPU mode dispatches compute on every update with non-zero liveCount', () => {

@@ -445,6 +445,7 @@ describe('ChunkStreamer.destroy()', () => {
     const streamer = new ChunkStreamer(layer, makeAlwaysAvailableSource(), view);
     streamer.update();
 
+    expect(layer.getChunk(999, 999)).toBeDefined();
     streamer.destroy();
 
     expect(layer.getChunk(999, 999)).toBeDefined();

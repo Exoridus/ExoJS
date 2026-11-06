@@ -264,6 +264,25 @@ describe('Component on SceneNode (CMP-01)', () => {
     expect(node._componentNodes).toBe(0);
   });
 
+  test('a failed attachment preserves another component attached by its hook', () => {
+    class Sibling extends Component {}
+    const sibling = new Sibling();
+    class Faulty extends Component {
+      protected override onAttach(): void {
+        this.node.addComponent(sibling);
+
+        throw new Error('attach failed');
+      }
+    }
+    const node = new SceneNode();
+    const faulty = new Faulty();
+
+    expect(() => node.addComponent(faulty)).toThrow('attach failed');
+    expect(node.getComponent(Faulty)).toBeNull();
+    expect(node.getComponent(Sibling)).toBe(sibling);
+    expect(sibling.attached).toBe(true);
+  });
+
   test('a thenable from a hook is rejected at runtime for untyped callers', () => {
     class AsyncAttach extends Component {
       protected override onAttach(): void {

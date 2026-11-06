@@ -211,7 +211,7 @@ const WINDOWS_11_MINIMUM_BUILD = 22_000;
 const detectPlatformVersion = (): PlatformVersionStamp => {
   const platform = osPlatform();
   const release = osRelease();
-  const build = platform === 'win32' ? Number.parseInt(release.split('.')[2] ?? '', 10) : Number.NaN;
+  const build = platform === 'win32' && release.startsWith('10.0.') ? Number.parseInt(release.split('.')[2] ?? '', 10) : Number.NaN;
 
   if (Number.isInteger(build)) {
     const major = build >= WINDOWS_11_MINIMUM_BUILD ? 11 : 10;

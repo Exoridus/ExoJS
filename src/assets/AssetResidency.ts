@@ -709,17 +709,7 @@ export class AssetResidency {
       this._abortInFlight(asset);
     }
 
-    const queued = this._backgroundQueue.findIndex(entry => entry.asset.key === key);
-
-    if (queued !== -1) {
-      this._backgroundQueue.splice(queued, 1);
-      // The entry counted towards the queue's total when it was enqueued, and
-      // dropping it is the only way it can leave the queue without completing.
-      // Without this, an awaitBackground() outstanding over the eviction of the
-      // last queued entry never settles, and onProgress stays below its total.
-      this._backgroundTotal--;
-      this._onBackgroundItemDone();
-    }
+    this._dropQueuedBackground(key);
   }
 
   /**
@@ -1460,7 +1450,9 @@ export class AssetResidency {
    * Store a resolved resource under its canonical key: fills every deferred
    * handle / value-ref waiting on the key (multi-handle fill), respects
    * "free on arrival" for a key whose last claim was released mid-fetch, and
-   * registers the canonical reverse (resource -> key) lookup. Called from
+   * registers the canonical reverse (resource -> key) lookup. An explicit
+   * unload during fetch instead fails waiting handles and disposes the result
+   * without storing it. Called from
    * `AssetDecoder`
    * via the `storeResource` callback `Loader`'s constructor wires to this
    * method.
@@ -1629,15 +1621,7 @@ export class AssetResidency {
    * @internal
    */
   public _enqueueBackgroundFetch(asset: CanonicalAsset, options: unknown): void {
-    if (this._resources.has(asset.key)) {
-      return;
-    }
-
-    if (this._inFlight.has(asset.key)) {
-      return;
-    }
-
-    if (this._isQueuedInBackground(asset.key)) {
+    if (this._resources.has(asset.key) || this._inFlight.has(asset.key) || this._isQueuedInBackground(asset.key)) {
       return;
     }
 
@@ -1659,12 +1643,6 @@ export class AssetResidency {
         continue;
       }
 
-      if (this._resources.has(entry.asset.key) || this._inFlight.has(entry.asset.key)) {
-        this._backgroundLoaded++;
-        this._onBackgroundItemDone();
-        continue;
-      }
-
       this._startBackgroundEntry(entry);
     }
   }
@@ -1678,11 +1656,20 @@ export class AssetResidency {
 
     const [entry] = this._backgroundQueue.splice(index, 1);
 
-    if (entry === undefined) {
-      return;
+    if (entry !== undefined) {
+      this._startBackgroundEntry(entry);
     }
+  }
 
-    this._startBackgroundEntry(entry);
+  private _dropQueuedBackground(key: ResourceKey): void {
+    const index = this._backgroundQueue.findIndex(entry => entry.asset.key === key);
+
+    if (index !== -1) {
+      this._backgroundQueue.splice(index, 1);
+      // Dropped work cannot complete, so remove it from the total and settle waiters if the queue drained.
+      this._backgroundTotal--;
+      this._onBackgroundItemDone();
+    }
   }
 
   private _isQueuedInBackground(key: ResourceKey): boolean {
@@ -1715,9 +1702,19 @@ export class AssetResidency {
   }
 
   private _startBackgroundEntry(entry: QueueEntry): void {
+    if (this._resources.has(entry.asset.key)) {
+      this._backgroundLoaded++;
+      this._onBackgroundItemDone();
+
+      return;
+    }
+
     this._backgroundActive++;
 
-    this._dispatchTracked(entry.asset, entry.options)
+    // An acquisition already in flight is joined, not restarted, and the queue
+    // stays busy until it settles: draining must not report a decode that is
+    // still running as finished.
+    (this._inFlight.get(entry.asset.key) ?? this._dispatchTracked(entry.asset, entry.options))
       .catch(() => {
         /* Failure handled centrally in _onTrackedFailure. */
       })
@@ -1784,6 +1781,7 @@ export class AssetResidency {
     }
 
     this._forgetKey(key, liveFetch);
+    this._dropQueuedBackground(key);
   }
 
   /**
@@ -1875,6 +1873,10 @@ export class AssetResidency {
     this._evicted.clear();
     this._requestLog.clear();
     this._dependencyScopes.clear();
+
+    for (const entry of [...this._backgroundQueue]) {
+      this._dropQueuedBackground(entry.asset.key);
+    }
   }
 
   /**

@@ -8,8 +8,6 @@ import { ParticleColorLookup, particleLookupGlsl, particleLookupWgsl, sampleColo
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
 
-const lookupSize = 256;
-
 /**
  * Per-frame, per-particle color sampler. Each live particle's tint is set
  * to the gradient evaluated at the particle's current `elapsed / lifetime`
@@ -82,4 +80,4 @@ color = (colorBytes.a << 24u) | (colorBytes.b << 16u) | (colorBytes.g << 8u) | c
 }
 
 /** Texture width for the gradient lookup table. Exposed for ParticleGpuState. */
-export const colorLookupSize = lookupSize;
+export { lookupSize as colorLookupSize } from './particleLookup';

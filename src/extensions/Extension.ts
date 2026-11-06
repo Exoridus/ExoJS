@@ -100,7 +100,7 @@ export interface Extension {
    * system and every materialised binding already exists, and dependencies
    * listed in {@link Extension.dependencies} are installed first.
    *
-   * Return an {@link ExtensionDisposer} to undo it. The Application holds the
+   * Installation must be synchronous. Return an {@link ExtensionDisposer} to undo it. The Application holds the
    * disposers of everything it installed and runs them in reverse installation
    * order - during {@link Application.destroy}, or, if a later construction
    * step throws, during that constructor's rollback. Return nothing when there

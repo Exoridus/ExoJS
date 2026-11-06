@@ -28,39 +28,38 @@ import beatDetectorWorkletSource from './worklets/beat-detector.worklet.ts?workl
 export type BeatDetectorSource = AudioBus | Voice | MediaStream | AudioNode | null;
 
 export interface BeatDetectorOptions {
-  /** Minimum detectable BPM. Default 50. Keep it below maxBpm; the worklet
-   * assumes a positive finite range and does not validate it. */
+  /** Minimum detectable BPM. Positive and finite, below maxBpm. Default 50. */
   minBpm?: number;
-  /** Maximum detectable BPM. Default 300. Keep it above minBpm. */
+  /** Maximum detectable BPM. Positive and finite, above minBpm. Default 300. */
   maxBpm?: number;
-  /** FFT size for onset detection: an integer power of two of at least 2.
+  /** FFT size for onset detection: an integer power of two of at least 64.
    * Default 2048. */
   fftSize?: number;
-  /** Hop size in samples between successive FFTs. Default 512. */
+  /** Hop size in samples between successive FFTs. Positive safe integer. Default 512. */
   hopSize?: number;
   /**
    * Short tempogram window (seconds) that reacts quickly to a genuine tempo
-   * change. Default 2.5. The tracked tempo follows this FAST window only when it
-   * disagrees with {@link stableTempoWindowSec} consistently over several
+   * change. Positive and finite, at most stableTempoWindowSec. Default 2.5.
+   * The tracked tempo follows this FAST window only when it disagrees with {@link stableTempoWindowSec} consistently over several
    * analysis hops, so a real DJ drift is tracked without making a steady tempo
    * nervous.
    */
   fastTempoWindowSec?: number;
   /**
    * Long tempogram window (seconds) that holds the tempo grid steady against
-   * noise and octave ambiguity. Default 8. Should be ≥ {@link fastTempoWindowSec}
-   * and large enough to hold ≳ 2 periods of the slowest tempo; it also sizes the
+   * noise and octave ambiguity. Positive and finite, at least
+   * {@link fastTempoWindowSec}. Default 8. Should be large enough to hold ≳ 2 periods of the slowest tempo; it also sizes the
    * internal flux ring buffer.
    */
   stableTempoWindowSec?: number;
   /**
-   * Hops between successive autocorrelation (tempogram) recomputations.
+   * Hops between successive autocorrelation (tempogram) recomputations. Positive safe integer.
    * Default 15 (~160 ms at 48 kHz with the default 512-sample hop). Lower values
    * react faster to tempo changes at the cost of more CPU.
    */
   acfIntervalHops?: number;
   /**
-   * Minimum warm-up (ms) before the first beat may be emitted. Default 400.
+   * Minimum warm-up (ms) before the first beat may be emitted. Nonnegative and finite. Default 400.
    * The detector starts hunting a tempo once this much analysis history exists
    * instead of waiting a full slowest-tempo period, so early {@link BeatInfo}
    * beats (tagged `status: 'provisional'`) arrive with low latency for visual
@@ -76,7 +75,7 @@ export interface BeatDetectorOptions {
    * then fires only for `'locked'` beats, matching the pre-provisional behaviour.
    */
   emitProvisionalBeats?: boolean;
-  /** Number of mel filterbank bands. Default 24. */
+  /** Number of mel filterbank bands. Positive safe integer. Default 24. */
   melBands?: number;
   /**
    * When true (default), estimates three- or four-pulse accent cycles and leaves
@@ -328,6 +327,30 @@ export class BeatDetector {
       barPulseHalfLife: options?.barPulseHalfLife ?? 0.3,
       justBeatWindow: options?.justBeatWindow ?? 0.03,
     };
+
+    for (const key of ['minBpm', 'maxBpm', 'fastTempoWindowSec', 'stableTempoWindowSec'] as const) {
+      if (!Number.isFinite(this._options[key]) || this._options[key] <= 0) {
+        throw new RangeError(`BeatDetector ${key} must be positive and finite.`);
+      }
+    }
+
+    for (const key of ['hopSize', 'acfIntervalHops', 'melBands'] as const) {
+      if (!Number.isSafeInteger(this._options[key]) || this._options[key] <= 0) {
+        throw new RangeError(`BeatDetector ${key} must be a positive safe integer.`);
+      }
+    }
+
+    if (this._options.minBpm >= this._options.maxBpm) {
+      throw new RangeError('BeatDetector minBpm must be below maxBpm.');
+    }
+
+    if (this._options.fastTempoWindowSec > this._options.stableTempoWindowSec) {
+      throw new RangeError('BeatDetector stableTempoWindowSec must be at least fastTempoWindowSec.');
+    }
+
+    if (!Number.isFinite(this._options.minSettlingMs) || this._options.minSettlingMs < 0) {
+      throw new RangeError('BeatDetector minSettlingMs must be nonnegative and finite.');
+    }
 
     this.pulseHalfLife = this._options.pulseHalfLife;
     this.barPulseHalfLife = this._options.barPulseHalfLife;

@@ -155,6 +155,44 @@ describe('VocoderProcessor DSP', () => {
     Processor = buildProcessorClass();
   });
 
+  it.each([
+    { numBands: 16.5 },
+    { numBands: 0 },
+    { numBands: -1 },
+    { numBands: NaN },
+    { numBands: Infinity },
+    { numBands: 65 },
+    { minHz: 0 },
+    { minHz: -80 },
+    { minHz: NaN },
+    { maxHz: Infinity },
+    { minHz: 8000, maxHz: 80 },
+    { maxHz: SAMPLE_RATE / 2 },
+    { maxHz: SAMPLE_RATE },
+    { bandQ: 0 },
+    { bandQ: -1 },
+    { bandQ: 1e308 },
+    { bandQ: NaN },
+    { bandQ: Infinity },
+    { bandQ: Number.MIN_VALUE },
+    { minHz: Number.MIN_VALUE },
+  ])('rejects invalid filter-bank parameters before processing: %j', processorOptions => {
+    expect(() => new Processor({ processorOptions })).toThrow(expect.objectContaining({ name: 'RangeError' }));
+  });
+
+  it.each([{ numBands: 1, minHz: 80, maxHz: 80 }, { numBands: 16 }, { numBands: 64 }])(
+    'keeps accepted filter-bank output finite: %j',
+    processorOptions => {
+      const proc = new Processor({ processorOptions });
+      const carrier = makeSawtooth(110, 1, BLOCK * 4);
+      const modulator = makeSine(80, 1, BLOCK * 4);
+      const output = runVocoder(proc, carrier, modulator, 0.005);
+
+      expect(output.every(Number.isFinite)).toBe(true);
+      expect(output.some(value => value !== 0)).toBe(true);
+    },
+  );
+
   // ── 1. Silence without modulator ──────────────────────────────────────────
   it('outputs silence when modulator is absent', () => {
     const proc = new Processor({ processorOptions: { numBands: NUM_BANDS, minHz: 80, maxHz: 8000, bandQ: 4 } });

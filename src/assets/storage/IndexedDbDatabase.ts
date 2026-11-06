@@ -89,15 +89,25 @@ export class IndexedDbDatabase implements Database {
   }
 
   public async load<T = unknown>(type: string, name: string): Promise<T | null> {
+    const record = await this._loadRecord<T>(type, name);
+
+    return record?.data ?? null;
+  }
+
+  /** @internal */
+  public async _has(type: string, name: string): Promise<boolean> {
+    return (await this._loadRecord(type, name)) !== undefined;
+  }
+
+  private async _loadRecord<T>(type: string, name: string): Promise<StoredRecord<T> | undefined> {
     const store = await this._objectStore('read', type, 'readonly', name);
-    const record = await requestResult(store.get(name) as IDBRequest<StoredRecord<T> | undefined>, {
+
+    return requestResult(store.get(name) as IDBRequest<StoredRecord<T> | undefined>, {
       operation: 'read',
       message: 'An error occurred while loading an item.',
       store: type,
       key: name,
     });
-
-    return record?.data ?? null;
   }
 
   public async save(type: string, name: string, data: unknown): Promise<void> {

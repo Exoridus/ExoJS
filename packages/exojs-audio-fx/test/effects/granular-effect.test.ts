@@ -25,6 +25,17 @@ describe('GranularEffect', () => {
   // -------------------------------------------------------------------------
   // 1. Construction with defaults
   // -------------------------------------------------------------------------
+  describe('buffer validation', () => {
+    it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+      'rejects bufferSeconds %s before acquiring audio nodes',
+      bufferSeconds => {
+        const createGain = vi.spyOn(getAudioContext(), 'createGain');
+        expect(() => new GranularEffect({ bufferSeconds })).toThrow(RangeError);
+        expect(createGain).not.toHaveBeenCalled();
+      },
+    );
+  });
+
   describe('construction with defaults', () => {
     it('uses default grainSize of 0.05', () => {
       const filter = new GranularEffect();
