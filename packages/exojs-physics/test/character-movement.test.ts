@@ -880,6 +880,30 @@ describe('CharacterMovementComponent', () => {
       expect(character.velocity.x).toBeCloseTo(120, 6);
     });
 
+    it('keeps riding a platform whose own wall is directly ahead', async () => {
+      const harness = await setup();
+      const node = new Container();
+      const physics = node.addComponent(
+        new PhysicsBodyComponent(harness.world, {
+          type: 'kinematic',
+          position: { x: 0, y: FLOOR + 10 },
+          colliders: [{ shape: new BoxShape(200, 20) }, { shape: new BoxShape(20, 200), offset: { x: 40, y: -110 } }],
+        }),
+      );
+      const drive = node.addComponent(new Drive(physics.body));
+
+      harness.scene.addChild(node);
+
+      const { character, body } = harness.spawn({ position: { x: 21.9, y: REST_Y - 0.05 } });
+
+      harness.frame();
+      drive.vx = 90;
+      run(harness.frame, 60, () => {
+        expect(character.grounded).toBe(true);
+        expect(body.x - physics.body.x).toBeCloseTo(21.9, 3);
+      });
+    });
+
     it('stops at a wall while the platform carries on', async () => {
       const { world, spawn, frame, platform, drive } = await platformSetup();
 
