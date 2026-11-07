@@ -243,9 +243,9 @@ export const deserializeInto = (
 
   const ctx = createDeserializeContext(loader, SERIALIZATION_VERSION, registry);
 
-  container.removeChildren();
-  applyCommonFields(container, data);
-
+  // Read every child before touching the container so a malformed document
+  // throws with the existing subtree still in place.
+  const nodes: RenderNode[] = [];
   const children = data.children;
 
   if (Array.isArray(children)) {
@@ -253,9 +253,16 @@ export const deserializeInto = (
       const childNode = asSerializedNode(child);
 
       if (childNode !== null) {
-        container.addChild(ctx.readNode(childNode) as RenderNode);
+        nodes.push(ctx.readNode(childNode) as RenderNode);
       }
     }
+  }
+
+  container.removeChildren();
+  applyCommonFields(container, data);
+
+  for (const node of nodes) {
+    container.addChild(node);
   }
 };
 

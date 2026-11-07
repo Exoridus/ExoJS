@@ -7,7 +7,7 @@ import { SceneNode } from '#core/SceneNode';
 import { Prefab } from '#core/serialization/Prefab';
 import { defaultSerializationRegistry, registerSerializer, SerializationRegistry } from '#core/serialization/SerializationRegistry';
 import { _resetDefaultSerializers, deserializeTree, serializeTree } from '#core/serialization/serialize';
-import { SERIALIZATION_VERSION, type SerializedNode } from '#core/serialization/types';
+import { SERIALIZATION_VERSION, type SerializedNode, type SerializedScene } from '#core/serialization/types';
 import { Signal } from '#core/Signal';
 import { Time } from '#core/units';
 import { Rectangle } from '#math/Rectangle';
@@ -439,6 +439,23 @@ describe('serialization — Scene entry point', () => {
     const scene = new Scene();
 
     expect(() => scene.deserialize({ version: 999, root: { type: 'Container' } })).toThrow(/newer than/);
+    scene.destroy();
+  });
+
+  it('leaves the existing root subtree intact when a child fails to deserialize', () => {
+    const scene = new Scene();
+    const existing = new Container();
+
+    scene.addChild(existing);
+
+    expect(() =>
+      scene.deserialize({
+        version: SERIALIZATION_VERSION,
+        root: { type: 'Container', children: [{ type: 'Container' }, { type: 'NopeNode' }] },
+      } as SerializedScene),
+    ).toThrow(/No serializer registered for type/);
+
+    expect(scene.root.children).toEqual([existing]);
     scene.destroy();
   });
 });
