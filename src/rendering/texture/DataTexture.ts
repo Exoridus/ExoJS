@@ -182,7 +182,7 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
 
     if (data === undefined) {
       buffer = isFloatFormat(format) ? new Float32Array(expectedBytes / 4) : new Uint8Array(expectedBytes);
-    } else if (data instanceof ArrayBuffer) {
+    } else if (isArrayBuffer(data)) {
       if (data.byteLength !== expectedBytes) {
         throw new Error(
           `DataTexture data byteLength ${data.byteLength} does not match ${width}x${height} ${format} (${expectedBytes} bytes expected).`,
@@ -190,7 +190,7 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
       }
 
       buffer = isFloatFormat(format) ? new Float32Array(data) : new Uint8Array(data);
-    } else if (data instanceof Uint8Array) {
+    } else if (typedArrayNameDescriptor.get!.call(data) === 'Uint8Array') {
       if (isFloatFormat(format)) {
         throw new Error(`DataTexture format '${format}' requires a Float32Array, got Uint8Array.`);
       }
@@ -348,3 +348,16 @@ const typedArrayNameDescriptor = Object.getOwnPropertyDescriptor(
   Object.getPrototypeOf(Float32Array.prototype) as object,
   Symbol.toStringTag,
 )!;
+
+const arrayBufferByteLength = Object.getOwnPropertyDescriptor(ArrayBuffer.prototype, 'byteLength')!;
+
+// The intrinsic getter performs a brand check, so it also accepts foreign-realm buffers and rejects SharedArrayBuffer.
+const isArrayBuffer = (value: unknown): value is ArrayBuffer => {
+  try {
+    arrayBufferByteLength.get!.call(value);
+
+    return true;
+  } catch {
+    return false;
+  }
+};

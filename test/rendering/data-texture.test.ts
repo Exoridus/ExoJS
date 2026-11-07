@@ -133,6 +133,45 @@ describe('DataTexture', () => {
       expect(tex.buffer[3]).toBe(4);
     });
 
+    test('uses a Uint8Array from another realm as a zero-copy backing buffer', () => {
+      const data = runInNewContext('new Uint8Array(16)') as Uint8Array;
+      const tex = new DataTexture({ width: 4, height: 4, format: TextureFormat.R8, data });
+
+      expect(tex.buffer).toBe(data);
+    });
+
+    test('rejects a Uint8Array from another realm for a float format', () => {
+      const data = runInNewContext('new Uint8Array(16)') as Uint8Array;
+
+      expect(() => new DataTexture({ width: 4, height: 1, format: TextureFormat.R32F, data })).toThrow(
+        /requires a Float32Array, got Uint8Array/,
+      );
+    });
+
+    test('wraps an ArrayBuffer from another realm', () => {
+      const bytes = runInNewContext('new ArrayBuffer(16)') as ArrayBuffer;
+      const floats = runInNewContext('new ArrayBuffer(16)') as ArrayBuffer;
+
+      expect(new DataTexture({ width: 4, height: 4, format: TextureFormat.R8, data: bytes }).buffer).toBeInstanceOf(Uint8Array);
+      expect(new DataTexture({ width: 4, height: 1, format: TextureFormat.R32F, data: floats }).buffer.buffer).toBe(floats);
+    });
+
+    test('rejects other typed-array types from another realm', () => {
+      for (const expression of [
+        'new Int8Array(16)',
+        'new Uint8ClampedArray(16)',
+        'new Uint16Array(8)',
+        'new Float64Array(2)',
+        'new DataView(new ArrayBuffer(16))',
+      ]) {
+        const data = runInNewContext(expression) as Uint8Array;
+
+        expect(() => new DataTexture({ width: 4, height: 4, format: TextureFormat.R8, data })).toThrow(
+          /must be a Uint8Array, Float32Array or ArrayBuffer/,
+        );
+      }
+    });
+
     test('uses external Uint8Array as backing buffer (zero-copy)', () => {
       const data = new Uint8Array(16);
       data[0] = 42;
