@@ -176,13 +176,22 @@ export const compareToBaseline = (baseline: GateBaseline, results: readonly Cell
   return { compared, deviations, missing, unknown, unmeasured };
 };
 
-/** Whether an outcome fails the gate. */
+/**
+ * Whether an outcome fails the gate.
+ *
+ * A comparison that compared no cell fails too: an empty baseline would
+ * otherwise be indistinguishable from a clean run.
+ */
 export const isGateFailure = (outcome: GateOutcome): boolean =>
-  outcome.deviations.length > 0 || outcome.missing.length > 0 || outcome.unmeasured.length > 0;
+  outcome.compared === 0 || outcome.deviations.length > 0 || outcome.missing.length > 0 || outcome.unmeasured.length > 0;
 
 /** Human-readable gate report, one line per finding. */
 export const formatGateOutcome = (outcome: GateOutcome): string => {
   const lines: string[] = [];
+
+  if (outcome.compared === 0) {
+    lines.push('FAIL no guarded cell was compared: the baseline holds no cell that this run measured');
+  }
 
   for (const deviation of outcome.deviations) {
     lines.push(`FAIL ${gateCellId(deviation.cell)}: ${deviation.counter} ${String(deviation.expected)} -> ${String(deviation.actual)}`);
