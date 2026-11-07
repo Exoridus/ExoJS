@@ -5,9 +5,10 @@ import type { View } from '#rendering/View';
 /**
  * Whether a render pass declares a stencil attachment.
  *
- * WebGL2 applies the flag as the pass's stencil-enable state. The WebGPU
- * coordinator attaches a stencil aspect when enabled. Geometric clips
- * independently require an attachment and restrict draws to the clipped region.
+ * WebGPU attaches a stencil aspect when enabled. WebGL2 ignores this flag:
+ * its stencil state follows the active target's geometric clip stack.
+ * Geometric clips independently require stencil state and restrict draws
+ * to the clipped region.
  */
 export enum StencilAttachmentMode {
   None = 0,
@@ -34,7 +35,7 @@ export interface RenderPassDescriptor {
   readonly load: RenderPassLoad;
   /** Clear colour used when `load === 'clear'`. `null` keeps the backend's current clear colour. */
   readonly clearColor: Color | null;
-  /** Whether this pass carries a stencil attachment. */
+  /** WebGPU stencil attachment request; ignored by WebGL2. */
   readonly stencil: StencilAttachmentMode;
 }
 

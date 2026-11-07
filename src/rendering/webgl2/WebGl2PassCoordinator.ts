@@ -3,7 +3,7 @@ import type { Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { RenderPassCoordinator } from '#rendering/pass/RenderPassCoordinator';
-import { type RenderPassDescriptor, type RenderPassLoad, StencilAttachmentMode } from '#rendering/pass/RenderPassDescriptor';
+import { type RenderPassDescriptor, type RenderPassLoad } from '#rendering/pass/RenderPassDescriptor';
 import type { RenderTarget } from '#rendering/RenderTarget';
 import type { View } from '#rendering/View';
 
@@ -54,7 +54,6 @@ export interface WebGl2PassBackend {
  */
 export class WebGl2PassCoordinator implements RenderPassCoordinator {
   private readonly _backend: WebGl2PassBackend;
-  private _stencilEnabled = false;
   /**
    * Scratch colour used only to restore the clear colour after a child pass.
    * One per coordinator rather than one per pass: child passes nest, but each
@@ -82,7 +81,6 @@ export class WebGl2PassCoordinator implements RenderPassCoordinator {
   public beginPass(descriptor: RenderPassDescriptor): void {
     this._backend.setRenderTarget(descriptor.target);
     this._backend.setView(descriptor.view);
-    this._stencilEnabled = descriptor.stencil === StencilAttachmentMode.Enabled;
 
     if (descriptor.load === 'clear') {
       this._backend.clear(descriptor.clearColor ?? undefined);
@@ -96,7 +94,6 @@ export class WebGl2PassCoordinator implements RenderPassCoordinator {
   public withChildPass(descriptor: RenderPassDescriptor, body: () => void): void {
     const previousTarget = this._backend.renderTarget;
     const previousView = this._backend.view;
-    const previousStencilEnabled = this._stencilEnabled;
     // The clear colour is pass state too, and `backend.clear(colour)` writes it
     // through to the persistent one. Without restoring it, a single effect
     // capture -- which clears to transparent black -- silently repaints every
@@ -115,7 +112,6 @@ export class WebGl2PassCoordinator implements RenderPassCoordinator {
       // needed here to keep the child's draws out of the restored target.
       this._backend.setRenderTarget(previousTarget);
       this._backend.setView(previousView);
-      this._stencilEnabled = previousStencilEnabled;
       this._backend.setClearColor(this._clearColorScratch.set(previousR, previousG, previousB, previousA));
     }
   }
