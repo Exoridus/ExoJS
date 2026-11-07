@@ -17,6 +17,8 @@
  * `test/rendering/browser/webgl2-data-texture-partial-upload.test.ts`.
  */
 
+import { runInNewContext } from 'node:vm';
+
 import type { Application } from '#core/Application';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import type { Texture } from '#rendering/texture/Texture';
@@ -77,6 +79,46 @@ describe('WebGL2 partial DataTexture upload: full-width fast path', () => {
   afterEach(() => {
     harness.destroy();
   });
+
+  test.each([TextureFormat.R32F, TextureFormat.Rgba32F] as const)(
+    'packs foreign-realm %s samples without conversion and reuses scratch',
+    format => {
+      const channels = format === TextureFormat.R32F ? 1 : 4;
+      const data = runInNewContext('new Float32Array(40 * 4 * CHANNELS + 4).subarray(4)', { CHANNELS: channels }) as Float32Array;
+
+      for (let index = 0; index < data.length; index++) {
+        data[index] = index / 4 - 20;
+      }
+
+      expect(data).not.toBeInstanceOf(Float32Array);
+
+      const texture = new DataTexture({ width: 40, height: 4, format, data });
+
+      syncTexture(harness.backend, texture);
+
+      texture.commitRect(1, 1, 20, 2);
+      syncTexture(harness.backend, texture);
+
+      const packed = harness.calls[0]![8] as Float32Array;
+      const expected = [...data.subarray(41 * channels, 61 * channels), ...data.subarray(81 * channels, 101 * channels)];
+
+      expect(packed).toBeInstanceOf(Float32Array);
+      expect(Array.from(packed)).toEqual(expected);
+
+      texture.commitRect(1, 1, 2, 2);
+      syncTexture(harness.backend, texture);
+      texture.commitRect(1, 1, 2, 2);
+      syncTexture(harness.backend, texture);
+
+      const first = harness.calls[1]![8] as Float32Array;
+      const second = harness.calls[2]![8] as Float32Array;
+
+      expect(first.buffer).toBe(packed.buffer);
+      expect(second).toBe(first);
+      expect(Array.from(first.subarray(0, 2 * channels))).toEqual(Array.from(data.subarray(41 * channels, 43 * channels)));
+      texture.destroy();
+    },
+  );
 
   test('a full-width band is uploaded straight from the texture buffer, without packing', () => {
     const texture = new DataTexture({ width: 8, height: 8, format: TextureFormat.R32F });
