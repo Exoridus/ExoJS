@@ -63,11 +63,15 @@ const isAreaLessPolygon = (shape: Collidable): boolean => {
   const dx = second.x - first.x;
   const dy = second.y - first.y;
 
+  // |cross| > 1e-12 * |d| * |p| with the square roots removed.
+  const threshold = 1e-24 * (dx * dx + dy * dy);
+
   for (const point of points) {
     const px = point.x - first.x;
     const py = point.y - first.y;
+    const cross = dx * py - dy * px;
 
-    if (Math.abs(dx * py - dy * px) > 1e-12 * Math.hypot(dx, dy) * Math.hypot(px, py)) {
+    if (cross * cross > threshold * (px * px + py * py)) {
       return false;
     }
   }
