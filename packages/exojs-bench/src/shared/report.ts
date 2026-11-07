@@ -173,6 +173,22 @@ export const readExistingReport = <TData>(outDir: string, isShape: (value: unkno
 };
 
 /**
+ * Refuses, before anything is measured, a run whose plan identity differs from
+ * the report `outDir` already holds. The same check runs again when the report
+ * is written, but by then the whole matrix has been measured and only the
+ * checkpoint files would survive.
+ */
+export const assertPlanCompatibleWithExisting = (outDir: string, plan: RunPlanMeta): void => {
+  const existing = readExistingReport<{ plan?: RunPlanMeta }>(outDir, isReportShape);
+
+  if (existing !== undefined && !isSamePlan(existing.plan, plan)) {
+    throw new Error(
+      `${join(outDir, 'results.json')} was measured under a different plan identity (existing: ${describePlan(existing.plan)}; this run: ${describePlan(plan)}); refusing to start, because the run would be rejected only after measuring and leave just checkpoint.jsonl and checkpoint.json in ${outDir}. Pass --out=<another directory> or move results.json aside.`,
+    );
+  }
+};
+
+/**
  * Whether a parsed value carries the shape every benchmark report holds: a
  * provenance stamp (an array in the rendering domain, one object in physics),
  * the library arms and the results. The cell and provenance fields themselves

@@ -39,7 +39,7 @@ export interface PhysicsReportData {
   readonly plan?: RunPlanMeta;
 }
 
-/** Ordered columns shared by the CSV and the Markdown table. */
+/** Ordered columns shared by the CSV and the Markdown table; the plan columns are CSV-only. */
 const COLUMNS = [
   'engine',
   'config',
@@ -56,10 +56,9 @@ const COLUMNS = [
   'rayHits',
   'status',
   'note',
-  ...PLAN_CSV_HEADER,
 ] as const;
 
-const toRow = (result: PhysicsCellResult, plan: RunPlanMeta | undefined): string[] => {
+const toRow = (result: PhysicsCellResult): string[] => {
   const { spec, structural } = result;
 
   return [
@@ -78,12 +77,14 @@ const toRow = (result: PhysicsCellResult, plan: RunPlanMeta | undefined): string
     count(structural.rayHits),
     result.status,
     result.note ?? '',
-    ...planCsvFields(plan),
   ];
 };
 
 const toCsv = (data: PhysicsReportData): string =>
-  [COLUMNS.join(','), ...data.results.map(result => toRow(result, data.plan).map(csvField).join(','))].join('\n');
+  [
+    [...COLUMNS, ...PLAN_CSV_HEADER].join(','),
+    ...data.results.map(result => [...toRow(result), ...planCsvFields(data.plan)].map(csvField).join(',')),
+  ].join('\n');
 
 /**
  * Human-readable Markdown: the arm versions and the browser/host provenance
@@ -139,7 +140,7 @@ const toMarkdown = (data: PhysicsReportData): string => {
   lines.push(`| ${COLUMNS.map(() => '---').join(' | ')} |`);
 
   for (const result of data.results) {
-    lines.push(`| ${toRow(result, data.plan).map(markdownCell).join(' | ')} |`);
+    lines.push(`| ${toRow(result).map(markdownCell).join(' | ')} |`);
   }
 
   lines.push('');

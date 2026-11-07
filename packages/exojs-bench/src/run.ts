@@ -13,6 +13,7 @@ import { parseArgs, parsePositiveInt } from './shared/args';
 import { createCheckpointWriter } from './shared/checkpoint';
 import type { PlatformDeclaration } from './shared/provenance';
 import { parsePlatformDeclaration, PLATFORM_DECLARATION_SYNTAX, readPlatformVersion } from './shared/provenance';
+import { assertPlanCompatibleWithExisting } from './shared/report';
 import { printTextTable } from './shared/table';
 import { PHYSICS_LIBRARY_ARMS } from './shared/viteServer';
 import type { RunPlan } from './suite/plan';
@@ -390,6 +391,8 @@ const runRenderingDomain = async (args: Map<string, string>, selector: DomainSel
   // Incremental, crash-safe checkpoint: each cell is persisted the instant it
   // lands (see shared/checkpoint.ts), so a later cell crash - the Pixi-WebGPU
   // probe was the observed one - can never discard the cells already measured.
+  assertPlanCompatibleWithExisting(outDir, plan.meta);
+
   const checkpoint = createCheckpointWriter<CellResult>(outDir, plan.meta);
 
   // `--capture=<dir>`: write each measured cell's final frame there, for
@@ -558,6 +561,8 @@ const runPhysicsDomain = async (args: Map<string, string>, selector: DomainSelec
 
   // Incremental, crash-safe checkpoint: each cell is persisted the instant it
   // lands, reusing the same shared writer the rendering domain uses.
+  assertPlanCompatibleWithExisting(outDir, plan.meta);
+
   const checkpoint = createCheckpointWriter<PhysicsCellResult>(outDir, plan.meta);
 
   const data = await runPhysicsMatrix({

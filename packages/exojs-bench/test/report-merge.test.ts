@@ -12,7 +12,7 @@ import type { ArchetypeId, Backend, CellResult } from '../src/rendering/EngineAd
 import { type ReportData, writeReport } from '../src/rendering/report';
 import { createCheckpointWriter } from '../src/shared/checkpoint';
 import type { ClockReport } from '../src/shared/clock';
-import { csvField, markdownCell, mergeCellResults, mergeLibraries } from '../src/shared/report';
+import { assertPlanCompatibleWithExisting, csvField, markdownCell, mergeCellResults, mergeLibraries } from '../src/shared/report';
 import { computePlanHash, type RunPlanMeta } from '../src/suite/plan';
 
 /**
@@ -475,6 +475,36 @@ describe('run plan identity in the report writers', () => {
     writePhysicsReport(run(planMeta({ domain: 'physics' })), dir);
 
     expect(() => writePhysicsReport(run(planMeta({ domain: 'physics', exploratory: true })), dir)).toThrow(/different plan identity/);
+  });
+
+  test('keeps the plan columns out of the physics Markdown table', () => {
+    const plan = planMeta({ domain: 'physics' });
+
+    writePhysicsReport({ provenance: physicsStamp('151.0'), libraries: [], results: [physicsCell('joints', 1000, 7)], plan }, dir);
+
+    const md = readFileSync(join(dir, 'results.md'), 'utf8');
+    const csvHeader = readFileSync(join(dir, 'results.csv'), 'utf8').split('\n')[0];
+
+    expect(csvHeader).toContain('planHash');
+    expect(md).toContain(`hash=${plan.planHash}`);
+    expect(md).not.toContain('planHash');
+  });
+
+  test('detects a plan conflict before any measurement', () => {
+    writeReport(renderingRun(planMeta()), dir);
+    const before = readFileSync(join(dir, 'results.json'), 'utf8');
+
+    expect(() => assertPlanCompatibleWithExisting(dir, planMeta())).not.toThrow();
+    expect(() => assertPlanCompatibleWithExisting(dir, planMeta({ exploratory: true }))).toThrow(/checkpoint\.jsonl.*--out/);
+    expect(readFileSync(join(dir, 'results.json'), 'utf8')).toBe(before);
+  });
+
+  test('the early check accepts an empty directory and refuses a legacy report', () => {
+    expect(() => assertPlanCompatibleWithExisting(dir, planMeta())).not.toThrow();
+
+    writeReport(renderingRun(undefined), dir);
+
+    expect(() => assertPlanCompatibleWithExisting(dir, planMeta())).toThrow(/no recorded plan/);
   });
 
   test('the checkpoint names its plan in a sidecar and keeps the record files unchanged', () => {
