@@ -226,6 +226,30 @@ describe('internal-target instrumentation', () => {
     expect(recorder.summary()).toEqual([{ kind: 'cache', width: 592, height: 406, count: 1 }]);
   });
 
+  test('forwards the optional format argument to both instrumented methods', () => {
+    const received: unknown[][] = [];
+
+    const record = (...args: unknown[]): unknown => {
+      received.push(args);
+
+      return undefined;
+    };
+
+    const backend = { acquireRenderTexture: record };
+    const node = { _renderPlanEnsureCacheTexture: record };
+    const recorder = createTargetRecorder();
+
+    instrumentAcquireRenderTexture(backend, recorder);
+    instrumentCacheTexture(node, recorder);
+    backend.acquireRenderTexture(8, 4, 'rgba16float' as never);
+    node._renderPlanEnsureCacheTexture(8, 4, 'rgba16float' as never);
+
+    expect(received).toEqual([
+      [8, 4, 'rgba16float'],
+      [8, 4, 'rgba16float'],
+    ]);
+  });
+
   test('restoring puts the original method back, so the probe cannot leak into a later cell', () => {
     const backend = createFakeBackend();
     const recorder = createTargetRecorder();
