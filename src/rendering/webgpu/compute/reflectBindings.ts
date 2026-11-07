@@ -26,27 +26,36 @@ import type { ComputeBinding } from './WebGpuComputePipeline';
  * technically permits nested `/*` `*` `/` comments) - fine for engine-generated shader text,
  * which never nests comments; a hand-authored shader that does would need manual
  * `ComputeBinding[][]` instead.
+ *
+ * Throws when a `@group(...)` declaration is present but not in one of the recognized forms
+ * (for example `var<storage>` without an access mode, or `texture_depth_2d`), rather than
+ * returning a layout that silently omits it.
  */
 export const reflectComputeBindings = (wgsl: string, options?: { nonFilteringResources?: ReadonlySet<string> }): ComputeBinding[][] => {
   const nonFiltering = options?.nonFilteringResources ?? new Set<string>();
   const source = stripComments(wgsl);
   const groups: ComputeBinding[][] = [];
 
+  const recognized = new Set<number>();
+
   const push = (groupIndex: number, binding: ComputeBinding): void => {
     (groups[groupIndex] ??= []).push(binding);
   };
 
   for (const m of source.matchAll(uniformBufferDecl)) {
+    recognized.add(m.index);
     push(Number(m[1]), { kind: 'buffer', binding: Number(m[2]), type: 'uniform' });
   }
 
   for (const m of source.matchAll(storageBufferDecl)) {
+    recognized.add(m.index);
     const readOnly = m[3] === 'read';
 
     push(Number(m[1]), { kind: 'buffer', binding: Number(m[2]), type: readOnly ? 'storage-read' : 'storage' });
   }
 
   for (const m of source.matchAll(samplerDecl)) {
+    recognized.add(m.index);
     const name = m[3]!;
     const comparison = m[4] === 'sampler_comparison';
 
@@ -54,6 +63,7 @@ export const reflectComputeBindings = (wgsl: string, options?: { nonFilteringRes
   }
 
   for (const m of source.matchAll(textureDecl)) {
+    recognized.add(m.index);
     const name = m[3]!;
     const viewDimension = textureViewDimensions.get(m[4]!)!;
     const component = m[5]!;
@@ -67,10 +77,19 @@ export const reflectComputeBindings = (wgsl: string, options?: { nonFilteringRes
   }
 
   for (const m of source.matchAll(storageTextureDecl)) {
+    recognized.add(m.index);
     const viewDimension = storageTextureViewDimensions.get(m[4]!)!;
     const format = m[5] as GPUTextureFormat;
 
     push(Number(m[1]), { kind: 'storageTexture', binding: Number(m[2]), access: storageAccessFor(m[6]!), format, viewDimension });
+  }
+
+  for (const m of source.matchAll(/@group\s*\(/g)) {
+    if (!recognized.has(m.index)) {
+      const declaration = /[^;{]*/.exec(source.slice(m.index))![0].trim().replaceAll(/\s+/g, ' ');
+
+      throw new Error(`reflectComputeBindings: unrecognized resource declaration "${declaration}".`);
+    }
   }
 
   return Array.from({ length: groups.length }, (_, i) => [...(groups[i] ?? [])].sort((a, b) => a.binding - b.binding));
