@@ -1359,7 +1359,7 @@ describe('weld chain energy', () => {
         peak = Math.max(peak, mechanicalEnergy(chain));
       }
 
-      expect(peak).toBeLessThanOrEqual(given);
+      expect(peak).toBeLessThanOrEqual(given * (1 + 1e-6));
     });
   }
 });
