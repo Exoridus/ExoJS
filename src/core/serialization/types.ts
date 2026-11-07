@@ -78,6 +78,11 @@ export interface DeserializeOptions {
    * sources, makes deserialization throw. The callback receives the source
    * resolved against the document base URL and returns `true` to allow it.
    * Documents are untrusted input, so allow only sources you recognise.
+   *
+   * The check inspects the URL only: a same-origin URL that redirects to
+   * another origin is not detected. In a page with an opaque origin (a
+   * sandboxed frame or `file:`) the default refuses every source, relative
+   * paths included.
    */
   readonly allowVideoSource?: (source: URL) => boolean;
 }

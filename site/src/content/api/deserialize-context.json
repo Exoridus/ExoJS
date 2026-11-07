@@ -174,11 +174,15 @@
       "members": [
         {
           "name": "allowVideoSource",
-          "signature": "allowVideoSource: (source: URL) => boolean | undefined",
+          "signature": "allowVideoSource?: (source: URL) => boolean",
           "signatureTokens": [
             {
               "text": "allowVideoSource",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -206,14 +210,6 @@
             },
             {
               "text": "boolean",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "undefined",
               "kind": "keyword"
             }
           ],

@@ -801,8 +801,23 @@ describe('serialization — Video', () => {
       'javascript:alert(1)',
       'blob:https://evil.example/3f2a',
       'http://[',
+      `${origin.replace(/^https?/, m => m.toUpperCase())}@evil.example/clip.mp4`,
+      'HTTPS://evil.example/clip.mp4',
     ])('refuses the source %s by default', src => {
       expect(() => deserializeTree(videoNode(src))).toThrow(/Refused to deserialize a Video/);
+    });
+
+    it('accepts an uppercase scheme on the page origin', () => {
+      const { protocol, host } = location;
+
+      expect(deserializeTree(videoNode(`${protocol.toUpperCase()}//${host}/clip.mp4`))).toBeInstanceOf(Video);
+    });
+
+    it.each(['data:video/mp4;base64,AAAA', 'blob:https://other.example/3f2a'])('lets allowVideoSource approve %s', src => {
+      const allowVideoSource = vi.fn(() => true);
+
+      expect(deserializeTree(videoNode(src), null, undefined, { allowVideoSource })).toBeInstanceOf(Video);
+      expect(allowVideoSource).toHaveBeenCalledTimes(1);
     });
 
     it('refuses a foreign source reached through a prefab or a scene', () => {

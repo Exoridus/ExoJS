@@ -45,7 +45,7 @@ export interface DeserializeContext {
   /** The loader used to resolve asset references, or `null` if none is available. */
   readonly loader: Loader | null;
   /** Caller approval for sources the default policy refuses; see {@link DeserializeOptions.allowVideoSource}. */
-  readonly allowVideoSource: ((source: URL) => boolean) | undefined;
+  readonly allowVideoSource?: ((source: URL) => boolean) | undefined;
   /** Fully deserialize a child node (inverse of {@link SerializeContext.writeNode}). */
   readNode(data: SerializedNode): SceneNode;
   /**

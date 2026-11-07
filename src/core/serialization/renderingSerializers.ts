@@ -485,9 +485,11 @@ const videoSerializer: NodeSerializer<Video> = {
   read(data, ctx) {
     const element = document.createElement('video');
 
-    if (typeof data.src === 'string') {
-      assertVideoSourceAllowed(data.src, ctx);
-      element.src = data.src;
+    const { src } = data;
+
+    if (typeof src === 'string') {
+      assertVideoSourceAllowed(src, ctx);
+      element.src = src;
     }
 
     return new Video(

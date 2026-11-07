@@ -92,6 +92,21 @@ Your own [`SceneNode`](/ExoJS/en/api/scene-node/) subclasses become serializable
 
 Extension packages register their own node types the same way through the `serializers` binding on their `Extension` descriptor.
 
+## Video sources
+
+A serialized document is untrusted input, and restoring a `Video` node starts a network request for its `src`. By default `Scene.deserialize()` and `Prefab.instantiate()` accept only same-origin HTTP(S) and `blob:` sources and throw on anything else, including cross-origin and `data:` URLs. Documents that reference other hosts must opt in per source with `allowVideoSource`, which receives the resolved `URL`:
+
+```ts
+import { Scene, type SerializedScene } from '@codexo/exojs';
+
+declare const scene: Scene;
+declare const document: SerializedScene;
+
+scene.deserialize(document, { allowVideoSource: source => source.hostname === 'cdn.example.com' });
+```
+
+The check looks at the URL only, so it cannot see a same-origin redirect that leads elsewhere.
+
 ## What is not captured
 
 The format deliberately stops at structure:
