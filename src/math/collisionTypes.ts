@@ -32,6 +32,9 @@ export interface Collidable {
    * Compute a full {@link CollisionResponse} between this shape and `target`.
    * Returns `null` in two cases:
    * - the shapes do not overlap, **or**
+   * - either shape is a `Polygon` that encloses no area (empty, fewer than
+   *   three distinct vertices, or collinear vertices), which overlaps nothing
+   *   and also makes {@link intersectsWith} return `false`, **or**
    * - the specific shape-pair combination does not support response generation
    *   (for example `Line` against any shape, or `Ellipse` against a `Point`).
    *
