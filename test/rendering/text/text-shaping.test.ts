@@ -108,6 +108,11 @@ describe('resolveShaping', () => {
     expect(resolveShaping('a‮b', {})).toBe('browser');
   });
 
+  test('a string made only of the Arabic letter mark needs browser shaping', () => {
+    expect(resolveShaping('؜', {})).toBe('browser');
+    expect(resolveShaping('a؜b', {})).toBe('browser');
+  });
+
   test.each([
     ['simple', 'simple'],
     ['browser', 'browser'],
