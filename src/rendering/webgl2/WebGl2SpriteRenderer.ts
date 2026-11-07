@@ -149,6 +149,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   // Custom-material state. Compiled fragment programs are cached per material
   // instance; the current batch's material/base-texture decide when to flush.
   private readonly _customShaders = new Map<AnySpriteMaterial, WebGl2Shader>();
+  private readonly _disposeHooked = new WeakSet<AnySpriteMaterial>();
   // Texture-unit index scratches reused for sampler-uniform binds so the
   // per-batch path stays allocation-free.
   private readonly _slotScratches: Int32Array[] = Array.from({ length: maxBatchTextures }, (_, i) => new Int32Array([i]));
@@ -963,13 +964,22 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
     this._customShaders.set(material, shader);
 
+    // Material cannot unregister callbacks, so hook once per dispose cycle
+    // rather than once per (re)connect.
+    if (this._disposeHooked.has(material)) {
+      return shader;
+    }
+
+    this._disposeHooked.add(material);
+
     material.onDispose(() => {
+      this._disposeHooked.delete(material);
+
       const stored = this._customShaders.get(material);
 
-      if (stored !== undefined) {
-        stored.destroy();
-        this._customShaders.delete(material);
-      }
+      // Evict before releasing so a throwing release cannot leave a destroyed entry cached.
+      this._customShaders.delete(material);
+      stored?.destroy();
     });
 
     return shader;
