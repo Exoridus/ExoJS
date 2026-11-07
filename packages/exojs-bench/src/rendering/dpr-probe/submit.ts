@@ -28,6 +28,8 @@ export interface SubmitRequest {
   readonly url?: string;
   readonly method?: string;
   readonly headers: Readonly<Record<string, string | string[] | undefined>>;
+  /** The connection's local end; `localPort` is the port the server is actually bound to. */
+  readonly socket?: { readonly localPort?: number };
   on(event: 'data', listener: (chunk: Buffer) => void): void;
   on(event: 'end' | 'error', listener: () => void): void;
   destroy(): void;
@@ -46,8 +48,22 @@ const header = (request: SubmitRequest, name: string): string | undefined => {
   return Array.isArray(value) ? value[0] : value;
 };
 
-/** Hostname of a `Host` header value, brackets kept for IPv6 literals. */
-const hostnameOf = (host: string): string => (host.startsWith('[') ? host.slice(0, host.indexOf(']') + 1) : host.split(':')[0]);
+/** Split a `Host` header into hostname (brackets kept for IPv6 literals) and optional port. */
+const parseHost = (host: string): { hostname: string; port: number | undefined } | undefined => {
+  // A Host is authority-only; anything URL parsing would reinterpret (userinfo, path, query) is refused.
+  if (/[\s/#@?\\]/.test(host)) {
+    return undefined;
+  }
+
+  try {
+    // A non-special scheme keeps an explicit default port that http(s) would drop.
+    const { hostname, port } = new URL(`x://${host}`);
+
+    return { hostname: hostname.toLowerCase(), port: port === '' ? undefined : Number(port) };
+  } catch {
+    return undefined;
+  }
+};
 
 /**
  * Decide whether a submit comes from the probe page itself. Returns the HTTP
@@ -58,7 +74,9 @@ const hostnameOf = (host: string): string => (host.startsWith('[') ? host.slice(
  * write. Pinning `Host` to known addresses defeats DNS rebinding (the rebound
  * page then carries an attacker hostname); requiring `Origin` (or, failing
  * that, `Referer`) to equal `<scheme>://<Host>` defeats cross-site form and
- * fetch posts. A non-JSON content type is refused because a cross-site form
+ * fetch posts. The `Host` port must be the port the server is bound to (an
+ * absent port means the scheme default), so a forwarded or spoofed port is
+ * refused. A non-JSON content type is refused because a cross-site form
  * can only send the simple types.
  *
  * Trust model: the LAN is trusted. There is no token, so any device on the
@@ -70,8 +88,13 @@ const refusalStatus = (request: SubmitRequest, options: SubmitPluginOptions): nu
   }
 
   const host = header(request, 'host');
+  const parsed = host === undefined ? undefined : parseHost(host);
 
-  if (host === undefined || !options.allowedHostnames.includes(hostnameOf(host).toLowerCase())) {
+  if (host === undefined || parsed === undefined || !options.allowedHostnames.includes(parsed.hostname)) {
+    return 403;
+  }
+
+  if ((parsed.port ?? (options.scheme === 'https' ? 443 : 80)) !== request.socket?.localPort) {
     return 403;
   }
 
