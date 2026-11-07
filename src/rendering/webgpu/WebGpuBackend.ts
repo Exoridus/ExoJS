@@ -954,6 +954,8 @@ export class WebGpuBackend implements RenderBackend {
       const unbalanced = this._passCoordinatorInstance.unbalancedStencilClips();
 
       if (unbalanced > 0) {
+        // The open pass was recorded with the leaked attachment; end it before the mode resets.
+        this._flushActiveRendererAndEndPass();
         this._passCoordinatorInstance.resetStencil();
 
         throw new Error(`Unbalanced stencil clip stack at end of frame (${unbalanced} unpopped clip(s)).`);
