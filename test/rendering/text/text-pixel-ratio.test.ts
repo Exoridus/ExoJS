@@ -277,7 +277,6 @@ test('production build rejects an invalid pixelRatio instead of treating it as i
   }).outputText;
   const exports: { Text?: typeof Text } = {};
   const modules: Record<string, unknown> = {
-    '#core/dev': { assert: () => undefined },
     './AbstractText': await import('#rendering/text/AbstractText'),
     './GlyphAtlas': await import('#rendering/text/GlyphAtlas'),
     './GlyphAtlasPool': await import('#rendering/text/GlyphAtlasPool'),
