@@ -34,6 +34,7 @@ describe('curated curriculum preservation', () => {
         'examples/application-scenes/transition-gallery.ts',
         'examples/physics/materials-playground.ts',
         'examples/showcase/collect-survive.ts',
+        'examples/showcase/pixel-vfx-gallery.ts',
       ].sort(),
     );
 

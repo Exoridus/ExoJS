@@ -131,7 +131,8 @@ const renderBuilder = (catalog: ResolvedCatalog, name: string, typeName: string,
 };
 
 /** Renders `src/catalog.generated.ts`. */
-export const renderCatalogModule = (catalog: ResolvedCatalog): string => {
+export const renderCatalogModule = (resolved: ResolvedCatalog): string => {
+  const catalog = { ...resolved, entries: resolved.entries.filter(entry => entry.entrypoint === undefined) };
   const standard = catalog.entries.filter(entry => entry.profile === 'standard');
   const categories = [...new Set(standard.map(entry => entry.category))];
   const imports = typeImports(catalog.entries);
@@ -187,7 +188,7 @@ export const renderCatalogModule = (catalog: ResolvedCatalog): string => {
 
 /** Renders `src/standard.generated.ts`. */
 export const renderStandardModule = (catalog: ResolvedCatalog): string => {
-  const standard = catalog.entries.filter(entry => entry.profile === 'standard');
+  const standard = catalog.entries.filter(entry => entry.profile === 'standard' && entry.entrypoint === undefined);
   const imports = valueTypeImports(standard);
   const valueTypeLine = imports.length === 0 ? '' : `import type { ${imports.join(', ')} } from '@codexo/exojs';`;
 
@@ -222,6 +223,31 @@ export const renderStandardModule = (catalog: ResolvedCatalog): string => {
   ].join('\n')}`;
 };
 
+/** Renders the opt-in pixel VFX descriptors without a dependency on the root catalog. */
+export const renderPixelVfxModule = (catalog: ResolvedCatalog): string => {
+  const entries = catalog.entries.filter(entry => entry.entrypoint === 'pixel-vfx');
+  const imports = typeImports(entries);
+
+  return `${[
+    HEADER,
+    ...(imports.length > 0 ? [`import type { ${imports.join(', ')} } from '@codexo/exojs';`] : []),
+    `import { Asset } from '@codexo/exojs';`,
+    '',
+    '/** Pixel VFX media available from the optional `/pixel-vfx` catalog. */',
+    'export interface PixelVfxAssetDefinitions {',
+    ...entries.flatMap(entry => [describe(catalog, entry), `  readonly ${entry.key}: ${descriptorType(entry)};`]),
+    '}',
+    '',
+    '/** Passive descriptors; reading them performs no loading or allocation. */',
+    'export const pixelVfxAssets: PixelVfxAssetDefinitions = Object.freeze({',
+    ...entries.map(
+      entry => `  ${entry.key}: ${urlExpression(entry, path => `new URL(${quote(`../media/${path}`)}, import.meta.url).href`)},`,
+    ),
+    '});',
+    '',
+  ].join('\n')}`;
+};
+
 /** Renders `manifest.json`. */
 export const renderManifest = (catalog: ResolvedCatalog, version: string): string => {
   const profile = (name: DemoAssetProfile): object => {
@@ -241,6 +267,7 @@ export const renderManifest = (catalog: ResolvedCatalog, version: string): strin
         type: entry.type,
         category: entry.category,
         profile: entry.profile,
+        ...(entry.entrypoint === undefined ? {} : { entrypoint: entry.entrypoint }),
         path: entry.path,
         bytes: entry.bytes,
         sha256: entry.sha256,
@@ -315,6 +342,7 @@ const readVersion = (): string => (JSON.parse(readFileSync(resolve(packageRoot, 
 export const renderAll = (catalog: ResolvedCatalog = resolveCatalog()): Record<string, string> => ({
   'src/catalog.generated.ts': renderCatalogModule(catalog),
   'src/standard.generated.ts': renderStandardModule(catalog),
+  'src/pixel-vfx.generated.ts': renderPixelVfxModule(catalog),
   'manifest.json': renderManifest(catalog, readVersion()),
   'THIRD_PARTY_NOTICES.md': renderNotices(catalog, ['standard']),
 });

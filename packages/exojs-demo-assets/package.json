@@ -33,6 +33,11 @@
       "import": "./dist/extended.js",
       "default": "./dist/extended.js"
     },
+    "./pixel-vfx": {
+      "types": "./dist/pixel-vfx.generated.d.ts",
+      "import": "./dist/pixel-vfx.generated.js",
+      "default": "./dist/pixel-vfx.generated.js"
+    },
     "./manifest.json": "./manifest.json",
     "./media/*": "./media/*",
     "./package.json": "./package.json"

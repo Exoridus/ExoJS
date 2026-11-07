@@ -7,7 +7,8 @@
     "paths": {
       "@codexo/exojs": ["../../src/index.ts"],
       "@codexo/exojs-demo-assets": ["./src/index.ts"],
-      "@codexo/exojs-demo-assets/extended": ["./src/extended.ts"]
+      "@codexo/exojs-demo-assets/extended": ["./src/extended.ts"],
+      "@codexo/exojs-demo-assets/pixel-vfx": ["./src/pixel-vfx.generated.ts"]
     }
   },
   "include": ["test/**/*", "scripts/**/*", "../../src/typings.d.ts"],

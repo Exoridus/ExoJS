@@ -43,6 +43,7 @@
                 var particlesEntry;
                 var audioFxEntry;
                 var tiledEntry;
+                var asepriteEntry;
                 var tilemapEntry;
                 var ldtkEntry;
                 var physicsEntry;
@@ -60,6 +61,7 @@
                     particlesEntry = './vendor/exojs/esm/particles/index.js?no-cache=' + noCache;
                     audioFxEntry = './vendor/exojs/esm/audio-fx/index.js?no-cache=' + noCache;
                     tiledEntry = './vendor/exojs-tiled/esm/index.js?no-cache=' + noCache;
+                    asepriteEntry = './vendor/exojs-aseprite/esm/index.js?no-cache=' + noCache;
                     tilemapEntry = './vendor/exojs/esm/tilemap/index.js?no-cache=' + noCache;
                     ldtkEntry = './vendor/exojs-ldtk/esm/index.js?no-cache=' + noCache;
                     physicsEntry = './vendor/exojs/esm/physics/index.js?no-cache=' + noCache;
@@ -79,6 +81,7 @@
                     particlesEntry = cdnBase + 'exojs-particles@' + safeVersion + '/dist/esm/index.js';
                     audioFxEntry = cdnBase + 'exojs-audio-fx@' + safeVersion + '/dist/esm/index.js';
                     tiledEntry = cdnBase + 'exojs-tiled@' + safeVersion + '/dist/esm/index.js';
+                    asepriteEntry = cdnBase + 'exojs-aseprite@' + safeVersion + '/dist/esm/index.js';
                     tilemapEntry = cdnBase + 'exojs-tilemap@' + safeVersion + '/dist/esm/index.js';
                     ldtkEntry = cdnBase + 'exojs-ldtk@' + safeVersion + '/dist/esm/index.js';
                     physicsEntry = cdnBase + 'exojs-physics@' + safeVersion + '/dist/esm/index.js';
@@ -114,6 +117,7 @@
                         '@codexo/exojs-particles': particlesEntry,
                         '@codexo/exojs-audio-fx': audioFxEntry,
                         '@codexo/exojs-tiled': tiledEntry,
+                        '@codexo/exojs-aseprite': asepriteEntry,
                         '@codexo/exojs-tilemap': tilemapEntry,
                         '@codexo/exojs-ldtk': ldtkEntry,
                         '@codexo/exojs-physics': physicsEntry,
@@ -126,6 +130,7 @@
                         // next to itself under vendor/exojs-demo-assets/media/.
                         '@codexo/exojs-demo-assets': './vendor/exojs-demo-assets/esm/index.js?no-cache=' + noCache,
                         '@codexo/exojs-demo-assets/extended': './vendor/exojs-demo-assets/esm/extended.js?no-cache=' + noCache,
+                        '@codexo/exojs-demo-assets/pixel-vfx': './vendor/exojs-demo-assets/esm/pixel-vfx.generated.js?no-cache=' + noCache,
                         '@codexo/exojs-demo-assets/manifest.json': './vendor/exojs-demo-assets/manifest.json?no-cache=' + noCache,
                         '@examples/runtime': './examples/shared/runtime.js?no-cache=' + noCache,
                         '@examples/terrain-noise': './examples/shared/terrain-noise.js?no-cache=' + noCache,

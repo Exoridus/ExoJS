@@ -236,7 +236,10 @@
     "release:bootstrap": "tsx ./scripts/release/run.ts bootstrap",
     "release:registry-plan": "tsx ./scripts/release/run.ts registry-plan",
     "release:notes": "tsx ./scripts/generate-release-notes.ts",
-    "release:changelog": "tsx ./scripts/release/generate-changelog.ts"
+    "release:changelog": "tsx ./scripts/release/generate-changelog.ts",
+    "assets:pixel-vfx:setup": "tsx scripts/pixel-vfx/setup.ts",
+    "assets:pixel-vfx": "tsx scripts/pixel-vfx/build.ts",
+    "assets:pixel-vfx:check": "tsx scripts/pixel-vfx/build.ts --check"
   },
   "license": "MIT",
   "publishConfig": {
@@ -315,6 +318,7 @@
     "@vitest/browser-webdriverio": "^5.0.0",
     "@vitest/coverage-istanbul": "^5.0.2",
     "@webgpu/types": "^0.1.74",
+    "ajv": "8.17.1",
     "esbuild": "^0.28.2",
     "eslint": "~10.11.0",
     "eslint-config-prettier": "^10.1.8",

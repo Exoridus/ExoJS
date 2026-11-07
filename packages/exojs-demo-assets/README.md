@@ -75,9 +75,33 @@ npx exojs-demo-assets-copy ./public/demo-media --clean
 
 It copies exactly the standard-profile files listed in `manifest.json` to their manifest paths and verifies each file against its SHA-256. Served from that directory, the relative references inside maps, LDtk projects and bitmap fonts resolve unchanged. A bundled production build still emits the hashed catalog files described above next to the copy.
 
+## Pixel VFX catalog
+
+Six pixel effects are available from a separate catalog entry point:
+
+```ts
+import { ScaleModes, type Scene } from '@codexo/exojs';
+import { type AsepriteData, AsepriteSheet } from '@codexo/exojs-aseprite';
+import { pixelVfxAssets as assets } from '@codexo/exojs-demo-assets/pixel-vfx';
+
+export const loadMechanicalSparks = async (scene: Scene): Promise<AsepriteSheet> => {
+  const [texture, atlas] = await Promise.all([
+    scene.loader.load(assets.mechanicalSparksImage),
+    scene.loader.load(assets.mechanicalSparksAtlas),
+  ]);
+  texture.setScaleMode(ScaleModes.Nearest).setGenerateMipMap(false);
+
+  return scene.track(AsepriteSheet.parse(atlas as AsepriteData, texture));
+};
+```
+
+Each effect has a transparent PNG and a JSON hash atlas with frame durations and an Aseprite `play` tag. The gallery uses `AsepriteSheet.parse(atlas, texture)` from `@codexo/exojs-aseprite` and ordinary `AnimatedSprite` playback. Loading both descriptors explicitly keeps the pair usable when a bundler renames the files. Set the texture to nearest sampling and disable mipmaps for native pixel review.
+
+The twelve files ship in the standard media profile and copy with `exojs-demo-assets-copy`. Their descriptors are excluded from the package root's `demoAssets` and `createDemoAssets`; importing the root does not add the pixel VFX media to a bundler's asset output. Importing `/pixel-vfx` includes only this catalog's media.
+
 ## Extended media
 
-The standard profile ships in this package (200 files, under 36 MB, including seven full-length music recordings). The extended HDR10 video candidate does not: it is delivered as a separate archive (`exojs-demo-assets-extended-<version>.zip`) and served from a location you choose.
+The standard profile ships in this package (207 files, under 30 MB, including seven full-length music recordings). The extended HDR10 video candidate does not: it is delivered as a separate archive (`exojs-demo-assets-extended-<version>.zip`) and served from a location you choose.
 
 ```ts
 import type { Scene, Video } from '@codexo/exojs';
@@ -118,4 +142,5 @@ The music collection covers contrasting timbres and arrangements. These seven CC
 - `demoAssetCategories: Readonly<Record<DemoAssetKey, DemoAssetCategory>>` – browsing categories.
 - `createDemoAssets(baseUrl: string | URL): DemoAssetDefinitions`
 - `createExtendedDemoAssets(baseUrl: string | URL): ExtendedDemoAssetDefinitions` (from `/extended`)
+- `pixelVfxAssets: PixelVfxAssetDefinitions` - the optional pixel VFX catalog (from `/pixel-vfx`).
 - `./manifest.json` – every shipped file with hash, size, role and provenance.

@@ -12,6 +12,7 @@ examples/shared/runtime.d.ts
 # exact shape and a drift test pins it.
 packages/exojs-demo-assets/src/catalog.generated.ts
 packages/exojs-demo-assets/src/standard.generated.ts
+packages/exojs-demo-assets/src/pixel-vfx.generated.ts
 packages/exojs-demo-assets/manifest.json
 packages/exojs-demo-assets/THIRD_PARTY_NOTICES.md
 
@@ -53,3 +54,5 @@ pnpm-lock.yaml
 site/.api-staging
 src/assets/factories/basis/basis_transcoder.mjs
 src/assets/factories/basis/LICENSE
+# Upstream schema bytes are pinned by tools/pixel-vfx/toolchain.json.
+tools/pixel-vfx/pixelbolt.schema.json

@@ -12,7 +12,7 @@ import { materializeAssetTypes } from '#extensions/materialize';
 class TypeA {}
 class TypeB {}
 
-declare module '#assets/AssetDefinitions' {
+declare module '@codexo/exojs' {
   interface AssetDefinitions {
     withOpts: { resource: unknown; config: { source: string; family?: string; size?: number } };
     noOpts: { resource: unknown; config: { source: string } };

@@ -1573,6 +1573,102 @@
       "provenance": "music-action-synth-rock"
     },
     {
+      "key": "mechanicalSparksImage",
+      "type": "texture",
+      "path": "images/pixel-vfx-mechanical-sparks.png",
+      "category": "pixel-vfx",
+      "provenance": "exojs",
+      "entrypoint": "pixel-vfx"
+    },
+    {
+      "key": "mechanicalSparksAtlas",
+      "type": "json",
+      "path": "images/pixel-vfx-mechanical-sparks.json",
+      "category": "pixel-vfx",
+      "provenance": "exojs",
+      "entrypoint": "pixel-vfx"
+    },
+    {
+      "key": "groundDustImage",
+      "type": "texture",
+      "path": "images/pixel-vfx-ground-dust.png",
+      "category": "pixel-vfx",
+      "provenance": "exojs",
+      "entrypoint": "pixel-vfx"
+    },
+    {
+      "key": "groundDustAtlas",
+      "type": "json",
+      "path": "images/pixel-vfx-ground-dust.json",
+      "category": "pixel-vfx",
+      "provenance": "exojs",
+      "entrypoint": "pixel-vfx"
+    },
+    {
+      "key": "impactBurstImage",
+      "type": "texture",
+      "path": "images/pixel-vfx-impact-burst.png",
+      "category": "pixel-vfx",
+      "provenance": "exojs",
+      "entrypoint": "pixel-vfx"
+    },
+    {
+      "key": "impactBurstAtlas",
+      "type": "json",
+      "path": "images/pixel-vfx-impact-burst.json",
+      "category": "pixel-vfx",
+      "provenance": "exojs",
+      "entrypoint": "pixel-vfx"
+    },
+    {
+      "key": "workshopSmokeImage",
+      "type": "texture",
+      "path": "images/pixel-vfx-workshop-smoke.png",
+      "category": "pixel-vfx",
+      "provenance": "exojs",
+      "entrypoint": "pixel-vfx"
+    },
+    {
+      "key": "workshopSmokeAtlas",
+      "type": "json",
+      "path": "images/pixel-vfx-workshop-smoke.json",
+      "category": "pixel-vfx",
+      "provenance": "exojs",
+      "entrypoint": "pixel-vfx"
+    },
+    {
+      "key": "relicActivationImage",
+      "type": "texture",
+      "path": "images/pixel-vfx-relic-activation.png",
+      "category": "pixel-vfx",
+      "provenance": "exojs",
+      "entrypoint": "pixel-vfx"
+    },
+    {
+      "key": "relicActivationAtlas",
+      "type": "json",
+      "path": "images/pixel-vfx-relic-activation.json",
+      "category": "pixel-vfx",
+      "provenance": "exojs",
+      "entrypoint": "pixel-vfx"
+    },
+    {
+      "key": "energyDischargeImage",
+      "type": "texture",
+      "path": "images/pixel-vfx-energy-discharge.png",
+      "category": "pixel-vfx",
+      "provenance": "exojs",
+      "entrypoint": "pixel-vfx"
+    },
+    {
+      "key": "energyDischargeAtlas",
+      "type": "json",
+      "path": "images/pixel-vfx-energy-discharge.json",
+      "category": "pixel-vfx",
+      "provenance": "exojs",
+      "entrypoint": "pixel-vfx"
+    },
+    {
       "key": "pixelfxTransitionsManifest",
       "type": "json",
       "path": "images/pixelfx-transitions.json",
