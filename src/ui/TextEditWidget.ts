@@ -307,11 +307,11 @@ export abstract class TextEditWidget extends Widget {
 
         return true;
       case Keyboard.Home:
-        this.model.moveCaret('backward', 'line', extend);
+        this._moveToRowEdge('backward', extend);
 
         return true;
       case Keyboard.End:
-        this.model.moveCaret('forward', 'line', extend);
+        this._moveToRowEdge('forward', extend);
 
         return true;
       case Keyboard.Backspace:
@@ -819,6 +819,24 @@ export abstract class TextEditWidget extends Widget {
 
     this.model.setSelection(extend ? this.model.anchor : offset, offset);
     this._goalX = goalX;
+  }
+
+  /**
+   * Move the caret to the start or end of the laid-out row it is on, so a soft
+   * wrap is a line end like a hard break. A caret exactly on a wrap boundary
+   * belongs to the earlier row, as it does for vertical motion.
+   */
+  private _moveToRowEdge(direction: 'backward' | 'forward', extend: boolean): void {
+    if (!this.model.multiline || this.model.maskChar !== null) {
+      this.model.moveCaret(direction, 'line', extend);
+
+      return;
+    }
+
+    const at = this._locate(this.model.focus);
+    const offset = this._offsetAt(at.line, direction === 'backward' ? 0 : Number.MAX_SAFE_INTEGER);
+
+    this.model.setSelection(extend ? this.model.anchor : offset, offset);
   }
 
   /** How many whole line boxes the content area shows - one page of vertical motion. */
