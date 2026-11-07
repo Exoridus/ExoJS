@@ -619,3 +619,37 @@ describe('clone', () => {
     expect(cloned.consumeDirty()).toBe('font');
   });
 });
+
+describe('TextStyle validation', () => {
+  const invalid = [
+    ['fontSize', [0, -1, NaN, Infinity]],
+    ['lineHeight', [0, -1, NaN, Infinity]],
+    ['outlineWidth', [-1, NaN, Infinity]],
+  ] as const;
+
+  for (const [key, values] of invalid) {
+    for (const value of values) {
+      it(`rejects ${key} ${value} in the constructor`, () => {
+        expect(() => new TextStyle({ [key]: value })).toThrow('[ExoJS]');
+        expect(() => new TextStyle({ [key]: value })).toThrow(RangeError);
+      });
+
+      it(`rejects ${key} ${value} in the setter without mutating state`, () => {
+        const style = new TextStyle({ fontSize: 30, lineHeight: 1.5, outlineWidth: 0.2 });
+
+        style.consumeDirty();
+        expect(() => {
+          style[key] = value;
+        }).toThrow(RangeError);
+        expect(style.fontSize).toBe(30);
+        expect(style.lineHeight).toBe(1.5);
+        expect(style.outlineWidth).toBe(0.2);
+        expect(style.consumeDirty()).toBeNull();
+      });
+    }
+  }
+
+  it('accepts a zero outlineWidth', () => {
+    expect(new TextStyle({ outlineWidth: 0 }).outlineWidth).toBe(0);
+  });
+});
