@@ -202,6 +202,9 @@ export class WebGpuGpuTimer implements GpuTimer, WebGpuTimestampSink {
     } catch {
       // A rejected mapping means the device went away or the timer was
       // destroyed underneath it; the buffer must not go back into rotation.
+      // The last sample no longer describes a timer that can still measure.
+      this._lastFrameMs = null;
+
       return;
     }
 
