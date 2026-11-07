@@ -140,7 +140,7 @@ export const confettiExtension: Extension = {
 };
 ```
 
-A renderer implements the [`Renderer`](/ExoJS/en/guide/debugging/custom-renderers/) contract — `connect(backend)`, `disconnect()`, `render(drawable)`, `flush()` — mapping to GPU resource acquisition, release, per-drawable recording, and batch submission.
+A renderer implements the [`Renderer`](/ExoJS/en/guide/debugging/custom-renderers/) contract — `connect(backend)`, `disconnect()`, `render(drawable)`, `flush()`, and optionally `destroy()` — mapping to GPU resource acquisition, release, per-drawable recording, batch submission, and final teardown (called once on registry destruction, after `disconnect()`).
 
 <Callout type="warning" title="Extend the abstract SDK renderers, not the concrete ones">
 Build your renderer by subclassing the abstract base renderers from `@codexo/exojs/renderer-sdk` (`AbstractWebGpuRenderer`, `AbstractWebGl2Renderer` / `AbstractWebGl2BatchedRenderer`) — exactly how the particles and tilemap packages build theirs. The engine's *concrete* renderers (e.g. `WebGl2SpriteRenderer`) are internal, coupled to private data paths, and not part of the SDK surface; subclassing them will break.
