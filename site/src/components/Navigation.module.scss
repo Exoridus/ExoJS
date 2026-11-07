@@ -16,6 +16,7 @@ nav {
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   // No top padding: a sticky heading pins to the padding edge, and entries
   // scrolling past would show through the strip above it.
   padding: 0 0.38rem 0.45rem;
