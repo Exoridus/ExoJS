@@ -329,6 +329,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   private readonly _geometryCache = new Map<Geometry, GeometryCacheEntry>();
   private _textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView }>();
   private readonly _customShaders = new Map<AnyMaterial, CustomShaderResources>();
+  private readonly _disposeHooked = new WeakSet<AnyMaterial>();
 
   private _device: GPUDevice | null = null;
   private _shaderModule: GPUShaderModule | null = null;
@@ -2611,13 +2612,24 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     this._customShaders.set(material, resources);
 
+    // Material cannot unregister callbacks: hook once per dispose cycle, not per (re)connect.
+    if (this._disposeHooked.has(material)) {
+      return resources;
+    }
+
+    this._disposeHooked.add(material);
+
     // When the user calls material.destroy(), evict and release.
     material.onDispose(() => {
+      this._disposeHooked.delete(material);
+
       const r = this._customShaders.get(material);
+
+      // Evict before releasing so a throwing release cannot leave a destroyed entry cached.
+      this._customShaders.delete(material);
 
       if (r !== undefined) {
         this._releaseCustomShaderResources(r);
-        this._customShaders.delete(material);
       }
     });
 
