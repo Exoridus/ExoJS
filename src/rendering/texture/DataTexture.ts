@@ -2,6 +2,7 @@ import { ScaleModes, TextureFormat, WrapModes } from '#rendering/types';
 
 import { Texture } from './Texture';
 import type { TextureColorSpace, TextureOptions } from './TextureOptions';
+import { isArrayBuffer, isUint8Array, typedArrayName } from './typedArrayBrand';
 
 /**
  * Pixel format for {@link DataTexture} - the {@link TextureFormat} subset that
@@ -182,7 +183,7 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
 
     if (data === undefined) {
       buffer = isFloatFormat(format) ? new Float32Array(expectedBytes / 4) : new Uint8Array(expectedBytes);
-    } else if (data instanceof ArrayBuffer) {
+    } else if (isArrayBuffer(data)) {
       if (data.byteLength !== expectedBytes) {
         throw new Error(
           `DataTexture data byteLength ${data.byteLength} does not match ${width}x${height} ${format} (${expectedBytes} bytes expected).`,
@@ -190,7 +191,7 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
       }
 
       buffer = isFloatFormat(format) ? new Float32Array(data) : new Uint8Array(data);
-    } else if (data instanceof Uint8Array) {
+    } else if (isUint8Array(data)) {
       if (isFloatFormat(format)) {
         throw new Error(`DataTexture format '${format}' requires a Float32Array, got Uint8Array.`);
       }
@@ -202,7 +203,7 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
       }
 
       buffer = data;
-    } else if (typedArrayNameDescriptor.get!.call(data) === 'Float32Array') {
+    } else if (typedArrayName(data) === 'Float32Array') {
       if (!isFloatFormat(format)) {
         throw new Error(`DataTexture format '${format}' requires a Uint8Array, got Float32Array.`);
       }
@@ -342,9 +343,3 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
 }
 
 const isFloatFormat = (format: DataTextureFormat): boolean => format === TextureFormat.R32F || format === TextureFormat.Rgba32F;
-
-// The intrinsic getter recognizes foreign-realm views without trusting a caller's Symbol.toStringTag.
-const typedArrayNameDescriptor = Object.getOwnPropertyDescriptor(
-  Object.getPrototypeOf(Float32Array.prototype) as object,
-  Symbol.toStringTag,
-)!;
