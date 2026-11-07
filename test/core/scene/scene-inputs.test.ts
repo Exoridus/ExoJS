@@ -596,6 +596,45 @@ describe('SceneInputs action maps', () => {
     expect(clean.jump.active).toBe(true);
     expect(inputs.popScope(bad)).toBeNull();
   });
+
+  test('one InputScope belongs to exactly one stack until popped, destroyed or rejected', () => {
+    const a = createMapStub().inputs;
+    const b = createMapStub().inputs;
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+    const scope = new InputScope(map);
+    const empty = new InputScope();
+
+    a.pushScope(scope);
+    a.pushScope(empty);
+    expect(() => b.pushScope(scope)).toThrow(/another SceneInputs stack/);
+    expect(() => b.pushScope(empty)).toThrow(/another SceneInputs stack/);
+    expect(b.scopes).toEqual([]);
+    expect(map.attached).toBe(true);
+
+    a.popScope(scope);
+    expect(() => b.pushScope(scope)).not.toThrow();
+    expect(b.scopes).toEqual([scope]);
+
+    a.destroy();
+    expect(() => a.pushScope(empty)).not.toThrow();
+    a.popScope(empty);
+
+    b.destroy();
+    expect(() => a.pushScope(scope)).not.toThrow();
+  });
+
+  test('a rejected push releases scope ownership', () => {
+    const a = createMapStub().inputs;
+    const b = createMapStub().inputs;
+    const direct = new ActionMap({ fire: new ButtonAction(Keyboard.Enter) });
+    const bad = new InputScope(new ActionMap({ run: new ButtonAction(Keyboard.Shift) }));
+
+    a.attach(direct);
+    bad.add(direct);
+    expect(() => a.pushScope(bad)).toThrow(/already attached directly/);
+    bad.remove(direct);
+    expect(() => b.pushScope(bad)).not.toThrow();
+  });
 });
 
 describe('SceneInputs action maps — availability policy (when)', () => {

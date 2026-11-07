@@ -1,3 +1,5 @@
+import type { SceneInputs } from '#core/scene/SceneInputs';
+
 import type { AnyActionMap } from './ActionMap';
 
 /**
@@ -32,6 +34,9 @@ import type { AnyActionMap } from './ActionMap';
  */
 export class InputScope {
   private readonly _maps: AnyActionMap[] = [];
+
+  /** The stack this scope is currently pushed on. @internal */
+  public _host: SceneInputs | undefined = undefined;
 
   /** Rejected construction preserves every map's previous scope membership. */
   public constructor(maps?: AnyActionMap | readonly AnyActionMap[]) {

@@ -101,13 +101,18 @@ export class SceneInputs implements Destroyable {
    * Its maps are attached here and detached on pop, so a scope's maps live and
    * die with their place on the stack.
    *
-   * @throws {Error} If `scope` is already on this stack.
+   * @throws {Error} If `scope` is already on this stack or on another scene's stack, or if one of its maps is already attached directly. A rejected push leaves the scope, the stack and every map unchanged.
    */
   public pushScope(scope: InputScope, options: SceneActionMapOptions = {}): InputScope {
     if (this._scopeLevels.has(scope)) {
       throw new Error('SceneInputs: this InputScope is already on the stack.');
     }
 
+    if (scope._host !== undefined) {
+      throw new Error('SceneInputs: this InputScope is already on another SceneInputs stack. Pop it there first.');
+    }
+
+    scope._host = this;
     this._scopes.push(scope);
     this._scopeLevels.set(scope, new ScopeLevel());
     this._scopeAvailability.set(scope, options.when ?? SceneAvailability.Active);
@@ -148,6 +153,7 @@ export class SceneInputs implements Destroyable {
     }
 
     this._scopes.splice(index, 1);
+    target._host = undefined;
 
     const level = this._scopeLevels.get(target);
 
@@ -518,6 +524,11 @@ export class SceneInputs implements Destroyable {
 
     this._bindings.clear();
     this._base.clear();
+
+    for (const scope of this._scopes) {
+      scope._host = undefined;
+    }
+
     this._scopes.length = 0;
     this._scopeLevels.clear();
     this._scopeAvailability.clear();
