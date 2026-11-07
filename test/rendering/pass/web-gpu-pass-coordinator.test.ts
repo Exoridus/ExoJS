@@ -46,6 +46,7 @@ const createMockBackend = (
     }
   });
   const flush = vi.fn(() => {});
+  const flushPending = vi.fn(() => {});
   const pushScissorRect = vi.fn((_bounds: Rectangle) => {});
   const popScissorRect = vi.fn(() => {});
   const targetHasContent = vi.fn((target: RenderTarget) => contentTargets.has(target));
@@ -78,6 +79,7 @@ const createMockBackend = (
     setView,
     clear,
     flush,
+    flushPending,
     pushScissorRect,
     popScissorRect,
     createColorAttachment,
@@ -96,6 +98,7 @@ const createMockBackend = (
     setView,
     clear,
     flush,
+    flushPending,
     pushScissorRect,
     popScissorRect,
     targetHasContent,
@@ -136,6 +139,117 @@ const installFakeStencil = (coordinator: WebGpuPassCoordinator, fake: FakeStenci
 const geometryStub = {} as unknown as Geometry;
 
 describe('WebGpuPassCoordinator', () => {
+  test('attachment transitions flush pending draws without ending GPU frame timing', () => {
+    const root = new RenderTarget(64, 64, true);
+    const { backend, flush, flushPending } = createMockBackend(root);
+    const coordinator = new WebGpuPassCoordinator(backend);
+
+    try {
+      coordinator.withChildPass(descriptor(root, null, 'load', null, StencilAttachmentMode.Enabled), () => {
+        expect(flush).not.toHaveBeenCalled();
+        expect(flushPending).toHaveBeenCalledOnce();
+      });
+
+      expect(flush).not.toHaveBeenCalled();
+      expect(flushPending).toHaveBeenCalledTimes(2);
+    } finally {
+      root.destroy();
+    }
+  });
+
+  test('an explicit stencil attachment does not activate a geometric clip', () => {
+    const root = new RenderTarget(64, 64, true);
+    const child = new RenderTexture(32, 32);
+    const { backend, beginRenderPass } = createMockBackend(root);
+    const coordinator = new WebGpuPassCoordinator(backend);
+    const stencil = createFakeStencilClipper();
+
+    installFakeStencil(coordinator, stencil);
+
+    try {
+      coordinator.withChildPass(descriptor(child, null, 'clear', null, StencilAttachmentMode.Enabled), () => {
+        const active = coordinator.acquirePass();
+        const attachment = (beginRenderPass.mock.calls.at(-1) as unknown as [GPURenderPassDescriptor])[0].depthStencilAttachment;
+
+        expect(attachment).toBeDefined();
+        expect(attachment?.stencilLoadOp).toBe('load');
+        expect(attachment?.stencilStoreOp).toBe('store');
+        expect(active.stencilEnabled).toBe(true);
+        expect(coordinator.stencilActive).toBe(false);
+        expect(coordinator.stencilReference).toBe(0);
+      });
+      coordinator.endPass();
+
+      expect(coordinator.acquirePass().stencilEnabled).toBe(false);
+    } finally {
+      coordinator.endPass();
+      coordinator.destroyStencil();
+      child.destroy();
+      root.destroy();
+    }
+  });
+
+  test('same-target nested passes restore the attachment mode after an exception', () => {
+    const root = new RenderTarget(64, 64, true);
+    const { backend } = createMockBackend(root);
+    const coordinator = new WebGpuPassCoordinator(backend);
+
+    installFakeStencil(coordinator, createFakeStencilClipper());
+
+    try {
+      coordinator.withChildPass(descriptor(root, null, 'load', null, StencilAttachmentMode.Enabled), () => {
+        const outer = coordinator.acquirePass();
+
+        expect(outer.stencilEnabled).toBe(true);
+        expect(() => {
+          coordinator.withChildPass(descriptor(root, null, 'load', null), () => {
+            expect(coordinator.acquirePass()).not.toBe(outer);
+            expect(coordinator.acquirePass().stencilEnabled).toBe(false);
+
+            throw new Error('child failed');
+          });
+        }).toThrow('child failed');
+
+        expect(coordinator.acquirePass().stencilEnabled).toBe(true);
+        expect(coordinator.stencilActive).toBe(false);
+      });
+
+      expect(coordinator.acquirePass().stencilEnabled).toBe(false);
+    } finally {
+      coordinator.endPass();
+      coordinator.destroyStencil();
+      root.destroy();
+    }
+  });
+
+  test('a parent clip reference survives a child target clip', () => {
+    const root = new RenderTarget(64, 64, true);
+    const child = new RenderTexture(32, 32);
+    const { backend } = createMockBackend(root);
+    const coordinator = new WebGpuPassCoordinator(backend);
+
+    installFakeStencil(coordinator, createFakeStencilClipper());
+
+    try {
+      coordinator.pushStencilClip(geometryStub, new Matrix());
+      coordinator.withChildPass(descriptor(child, null, 'load', null, StencilAttachmentMode.Enabled), () => {
+        expect(coordinator.stencilActive).toBe(false);
+        coordinator.pushStencilClip(geometryStub, new Matrix());
+        coordinator.popStencilClip();
+      });
+      coordinator.endPass();
+
+      expect(coordinator.stencilActive).toBe(true);
+      expect(coordinator.acquirePass().stencilRef).toBe(1);
+      coordinator.popStencilClip();
+    } finally {
+      coordinator.endPass();
+      coordinator.destroyStencil();
+      child.destroy();
+      root.destroy();
+    }
+  });
+
   test('resolveLoad clears a target that has no content yet', () => {
     const root = new RenderTarget(64, 64, true);
     const { backend } = createMockBackend(root);

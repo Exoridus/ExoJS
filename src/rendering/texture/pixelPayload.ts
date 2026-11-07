@@ -1,4 +1,5 @@
 import type { TextureAlphaMode, TextureColorSpace } from './TextureOptions';
+import { isUint8Array } from './typedArrayBrand';
 
 /** One RGBA8 mip level carried directly from an image container or pixel producer. */
 export interface Rgba8TextureLevel {
@@ -50,8 +51,8 @@ export const validateRgba8Payload = ({ levels }: Rgba8TexturePayload): Rgba8Text
 
     const expectedBytes = level.width * level.height * 4;
 
-    if (!(level.data instanceof Uint8Array) || level.data.byteLength !== expectedBytes) {
-      const actualBytes = level.data instanceof Uint8Array ? level.data.byteLength : 'a non-Uint8Array value';
+    if (!isUint8Array(level.data) || level.data.byteLength !== expectedBytes) {
+      const actualBytes = isUint8Array(level.data) ? level.data.byteLength : 'a non-Uint8Array value';
 
       throw new Error(
         `RGBA8 mip level ${index} is ${level.width}x${level.height}, which needs ${expectedBytes} bytes, but carries ${actualBytes}.`,

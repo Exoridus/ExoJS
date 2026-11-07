@@ -1899,6 +1899,12 @@ export class RenderPlanBuilder {
     groupScope.transformNode = fragment.transformNode;
 
     if (innerSet !== null) {
+      // Never pushed, so _popScope's trim does not run: drop what the pooled
+      // slot held from an earlier frame.
+      if (groupScope.entries.length > 0) {
+        groupScope.entries.length = 0;
+      }
+
       groupScope.retainedInstructions = innerSet;
       this._pushGroupEntry(fragment.seq, fragment.zIndex, groupScope);
 

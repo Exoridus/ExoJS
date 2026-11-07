@@ -82,7 +82,7 @@ export {
   type WebGpuRetainedNodeIndexRange,
 } from '#rendering/webgpu/retainedGroupResources';
 export { packSnapViewport } from '#rendering/webgpu/snapViewport';
-export { stencilContentDepthStencilState } from '#rendering/webgpu/stencilState';
+export { stencilContentDepthStencilState, WebGpuStencilMode } from '#rendering/webgpu/stencilState';
 export { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 export { WebGpuPassArena } from '#rendering/webgpu/WebGpuPassArena';
 export type { WebGpuActiveRenderPass } from '#rendering/webgpu/WebGpuPassCoordinator';

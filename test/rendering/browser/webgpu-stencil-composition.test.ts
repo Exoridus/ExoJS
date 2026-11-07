@@ -19,12 +19,16 @@
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import { Matrix } from '#math/Matrix';
 import { Container } from '#rendering/Container';
 import { Geometry } from '#rendering/geometry/Geometry';
+import { StencilAttachmentMode } from '#rendering/pass/RenderPassDescriptor';
 import { RenderingContext } from '#rendering/RenderingContext';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Sprite } from '#rendering/sprite/Sprite';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
+import { WebGpuStencilMode } from '#rendering/webgpu/stencilState';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { readWebGpuPixels } from './_backendSetup';
@@ -113,6 +117,117 @@ const withValidation = async (ctx: { skip: (reason: string) => void }, backend: 
 };
 
 describe('WebGPU stencil composition', () => {
+  test('an explicit attachment accepts ordinary draws without testing stale stencil values', async ctx => {
+    const backend = await setupBackend();
+    const texture = createSolidTexture('#ff0000');
+    const source = new Sprite(texture);
+    const target = new RenderTexture(canvasSize, canvasSize, { depth: true });
+    const output = new Sprite(target);
+    const coordinator = backend.passCoordinator;
+
+    try {
+      await withValidation(ctx, backend, () => {
+        coordinator.withChildPass(
+          { target, view: target.view, load: 'clear', clearColor: Color.black, stencil: StencilAttachmentMode.Enabled },
+          () => {
+            expect(coordinator.acquirePass().stencilEnabled).toBe(true);
+            expect(coordinator.stencilActive).toBe(false);
+            expect(coordinator.stencilMode).toBe(WebGpuStencilMode.Attachment);
+            coordinator.endPass();
+
+            const encoder = backend.device.createCommandEncoder();
+            const pass = encoder.beginRenderPass({
+              colorAttachments: [backend.createColorAttachment()],
+              depthStencilAttachment: {
+                view: backend._getDepthAttachmentView(target),
+                depthReadOnly: true,
+                stencilLoadOp: 'clear',
+                stencilClearValue: 7,
+                stencilStoreOp: 'store',
+              },
+            });
+
+            pass.end();
+            backend.submit(encoder.finish());
+            source.render(backend);
+            backend.flush();
+
+            expect(() => {
+              coordinator.withChildPass(
+                { target, view: target.view, load: 'load', clearColor: null, stencil: StencilAttachmentMode.None },
+                () => {
+                  expect(coordinator.acquirePass().stencilEnabled).toBe(false);
+
+                  throw new Error('child failed');
+                },
+              );
+            }).toThrow('child failed');
+            expect(coordinator.acquirePass().stencilEnabled).toBe(true);
+          },
+        );
+
+        expect(coordinator.stencilMode).toBe(WebGpuStencilMode.None);
+        backend.clear(Color.black);
+        output.render(backend);
+        backend.flush();
+      });
+
+      const pixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(pixel(8, 8), [255, 0, 0, 255]);
+      expectPixelNear(pixel(56, 56), [255, 0, 0, 255]);
+    } finally {
+      output.destroy();
+      source.destroy();
+      target.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('a parent geometric clip survives child stencil work on another target', async ctx => {
+    const backend = await setupBackend();
+    const texture = createSolidTexture('#ff0000');
+    const source = new Sprite(texture);
+    const target = new RenderTexture(canvasSize, canvasSize);
+    const parentClip = createQuadGeometry(0, 0, 32, 64);
+    const childClip = createQuadGeometry(0, 0, 64, 32);
+    const coordinator = backend.passCoordinator;
+
+    try {
+      await withValidation(ctx, backend, () => {
+        backend.clear(Color.black);
+        coordinator.pushStencilClip(parentClip, new Matrix());
+        coordinator.withChildPass(
+          { target, view: target.view, load: 'clear', clearColor: Color.black, stencil: StencilAttachmentMode.Enabled },
+          () => {
+            coordinator.pushStencilClip(childClip, new Matrix());
+            backend.draw(source);
+            backend.flush();
+            coordinator.popStencilClip();
+          },
+        );
+
+        expect(coordinator.stencilReference).toBe(1);
+        backend.draw(source);
+        backend.flush();
+        coordinator.popStencilClip();
+      });
+
+      const pixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(pixel(12, 32), [255, 0, 0, 255]);
+      expectPixelNear(pixel(52, 32), [0, 0, 0, 255]);
+    } finally {
+      source.destroy();
+      target.destroy();
+      texture.destroy();
+      parentClip.destroy();
+      childClip.destroy();
+      backend.destroy();
+    }
+  });
+
   test('clip into a RenderTexture, then sample it back as a Sprite', async ctx => {
     const backend = await setupBackend();
     const context = new RenderingContext(backend);

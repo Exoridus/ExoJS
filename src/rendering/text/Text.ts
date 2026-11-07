@@ -1,5 +1,3 @@
-import { assert } from '#core/dev';
-
 import { AbstractText } from './AbstractText';
 import type { AtlasMode, AtlasPage } from './GlyphAtlas';
 import type { GlyphAtlas } from './GlyphAtlas';
@@ -22,7 +20,9 @@ export type { TextPageQuads };
  * the caller never asked for and hide the typo that produced it.
  */
 const assertPixelRatio = (value: number): number => {
-  assert(Number.isFinite(value) && value > 0, `Text pixelRatio must be a positive finite number (got ${value}).`);
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new RangeError(`Text pixelRatio must be a positive finite number (got ${value}).`);
+  }
 
   return value;
 };

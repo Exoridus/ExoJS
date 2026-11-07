@@ -34,7 +34,7 @@ import {
 } from './retainedGroupResources';
 import textShaderTemplate from './shaders/text.wgsl';
 import { packSnapViewport } from './snapViewport';
-import { stencilContentDepthStencilState } from './stencilState';
+import { stencilContentDepthStencilState, WebGpuStencilMode } from './stencilState';
 import type { WebGpuBackend } from './WebGpuBackend';
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
 import { type WebGpuRetainedCaptureFrame } from './WebGpuRetainedCaptureFrame';
@@ -617,7 +617,7 @@ export class WebGpuTextRenderer
     device.queue.writeBuffer(this._indexBuffer!, indexBase, this._indexData.buffer, 0, flushIndexBytes);
 
     const format = backend.renderTargetFormat;
-    const stencil = coordinator.stencilActive;
+    const stencil = coordinator.stencilMode;
     const frameBindGroup = this._getFrameBindGroup(device);
 
     // The pass survives a renderer switch, so it can still hold another
@@ -722,11 +722,11 @@ export class WebGpuTextRenderer
     for (const shaderType of shaderTypes) {
       for (const format of formats) {
         // Prewarm only the no-clip variant (matches the _getPipeline cache key
-        // for stencil = false); stencil variants compile lazily under a clip.
+        // for stencil = WebGpuStencilMode.None); stencil variants compile lazily under a clip.
         // Likewise only the default blend mode: text away from `Normal` is rare
         // enough that three more compiles per format per mode would cost more
         // than the first draw it saves.
-        const key = `${shaderType}:${BlendModes.Normal}:${format}:n`;
+        const key = `${shaderType}:${BlendModes.Normal}:${format}:${WebGpuStencilMode.None}`;
 
         if (this._pipelines.has(key)) {
           continue;
@@ -1133,8 +1133,13 @@ export class WebGpuTextRenderer
 
   // ── Pipeline helpers ─────────────────────────────────────────────────────
 
-  private _getPipeline(shaderType: ShaderType, blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
-    const key = `${shaderType}:${blendMode}:${format}:${stencil ? 's' : 'n'}`;
+  private _getPipeline(
+    shaderType: ShaderType,
+    blendMode: BlendModes,
+    format: GPUTextureFormat,
+    stencil: WebGpuStencilMode,
+  ): GPURenderPipeline {
+    const key = `${shaderType}:${blendMode}:${format}:${stencil}`;
     const existing = this._pipelines.get(key);
 
     if (existing) {
@@ -1151,7 +1156,7 @@ export class WebGpuTextRenderer
     shaderType: ShaderType,
     blendMode: BlendModes,
     format: GPUTextureFormat,
-    stencil = false,
+    stencil = WebGpuStencilMode.None,
   ): GPURenderPipelineDescriptor {
     let fragEntry: string;
 
@@ -1195,8 +1200,8 @@ export class WebGpuTextRenderer
       primitive: { topology: 'triangle-list' },
     };
 
-    if (stencil) {
-      descriptor.depthStencil = stencilContentDepthStencilState();
+    if (stencil !== WebGpuStencilMode.None) {
+      descriptor.depthStencil = stencilContentDepthStencilState(stencil === WebGpuStencilMode.Clip);
     }
 
     return descriptor;
@@ -1443,7 +1448,7 @@ export class WebGpuTextRenderer
     const active = coordinator.acquirePass();
     const pass = active.pass;
 
-    const nativePipeline = this._getPipeline(data.shaderType, payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive);
+    const nativePipeline = this._getPipeline(data.shaderType, payload.blendMode, backend.renderTargetFormat, coordinator.stencilMode);
 
     const nativeCompatible = backend.colorAttachmentCount === 1;
 

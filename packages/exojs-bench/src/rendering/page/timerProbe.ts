@@ -47,17 +47,18 @@ const SEED = 0xc0ffee;
 
 /**
  * Timestamps a single command encoder may carry. `resolveQuerySet` writes into
- * the destination buffer at a 256-byte-aligned offset, so each encoder is given
- * its own 256-byte slot = 32 timestamps = 16 render passes. The engine opens one
- * pass per encoder on every archetype this probe runs, so the cap is headroom.
+ * the destination buffer at a 256-byte-aligned offset, so each encoder gets its
+ * own 256-byte slot regardless of how few timestamps it holds. The engine opens
+ * one pass per encoder on every archetype this probe runs; a second pass is
+ * headroom, and further passes are left untimed.
  */
-const TIMESTAMPS_PER_ENCODER = 32;
+const TIMESTAMPS_PER_ENCODER = 4;
 /** Bytes one encoder's resolved timestamps occupy (`resolveQuerySet` alignment). */
 const RESOLVE_STRIDE_BYTES = 256;
 /** Encoders whose passes can be timestamped in one run. */
 const MAX_TIMED_ENCODERS = 512;
-/** Timestamp query slots. Reused across encoders; a run that exhausts them stops instrumenting. */
-const QUERY_CAPACITY = 2048;
+/** Timestamp query slots; every timed encoder reserves its own range, so a run that exhausts them stops instrumenting. */
+const QUERY_CAPACITY = MAX_TIMED_ENCODERS * TIMESTAMPS_PER_ENCODER;
 
 /** Frame pacing under test. */
 export type TimerProbeMode =
@@ -332,7 +333,7 @@ interface TimestampRig {
   readonly notes: readonly string[];
 }
 
-const createTimestampRig = (device: GPUDevice): TimestampRig => {
+export const createTimestampRig = (device: GPUDevice): TimestampRig => {
   const notes: string[] = [];
 
   if (!device.features.has('timestamp-query')) {

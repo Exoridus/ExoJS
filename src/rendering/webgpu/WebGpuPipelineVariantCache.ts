@@ -1,10 +1,12 @@
 /// <reference types="@webgpu/types" />
 
+import type { WebGpuStencilMode } from './stencilState';
+
 /**
  * A render-pipeline cache keyed without building a key.
  *
  * Every WebGPU renderer selects its pipeline from the same three inputs - blend
- * mode, target format, and whether a stencil clip is active - and the obvious
+ * mode, target format, and the stencil attachment/clip mode - and the obvious
  * encoding is a template literal (`` `${blendMode}:${format}:${stencil}` ``).
  * That string is built on every draw and thrown away on every draw: measured on
  * the WebGPU allocation harness, the sprite renderer's key alone accounted for
@@ -47,9 +49,9 @@ export class WebGpuPipelineVariantCache<T> {
 }
 
 /**
- * Pack a blend mode and the stencil flag into one variant key. Blend modes are
+ * Pack a blend mode and the stencil mode into one variant key. Blend modes are
  * a small dense enum, so a shift keeps the key a Smi for any conceivable
  * number of them.
  * @internal
  */
-export const pipelineVariantKey = (blendMode: number, stencil: boolean): number => (blendMode << 1) | (stencil ? 1 : 0);
+export const pipelineVariantKey = (blendMode: number, stencil: WebGpuStencilMode): number => (blendMode << 2) | stencil;

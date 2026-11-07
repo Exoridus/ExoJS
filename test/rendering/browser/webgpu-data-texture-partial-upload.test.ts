@@ -66,6 +66,59 @@ const pixelAt = (frame: ArrayLike<number>, x: number, y: number): readonly [numb
 };
 
 describe('WebGPU uploads a partial DataTexture region', () => {
+  test('uploads an inset region from a foreign-realm float buffer', async ctx => {
+    const backend = await createWebGpuTestBackend(CANVAS);
+    const root = new Container();
+    const iframe = document.createElement('iframe');
+
+    document.body.append(iframe);
+
+    const foreign = iframe.contentWindow as Window & typeof globalThis;
+    const data = new foreign.Float32Array(EDGE * EDGE * 4);
+    const texture = new DataTexture({ width: EDGE, height: EDGE, format: TextureFormat.Rgba32F, data });
+
+    for (let index = 0; index < EDGE * EDGE; index++) {
+      data.set([1, 0, 0, 1], index * 4);
+    }
+
+    root.addChild(new Sprite(texture));
+
+    try {
+      expect(data).not.toBeInstanceOf(Float32Array);
+
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
+
+      expect(pixelAt(readWebGpuFrame(backend, CANVAS), 12, 12)).toEqual([...RED]);
+
+      for (let row = 8; row < 16; row++) {
+        for (let column = 8; column < 16; column++) {
+          data.set([0, 0, 1, 1], (row * EDGE + column) * 4);
+        }
+      }
+
+      texture.commitRect(8, 8, 8, 8);
+
+      if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) {
+        return;
+      }
+
+      const frame = readWebGpuFrame(backend, CANVAS);
+
+      expect(pixelAt(frame, 12, 12)).toEqual([...BLUE]);
+      expect(pixelAt(frame, 7, 12)).toEqual([...RED]);
+      expect(pixelAt(frame, 16, 12)).toEqual([...RED]);
+      expect(pixelAt(frame, 12, 7)).toEqual([...RED]);
+      expect(pixelAt(frame, 12, 16)).toEqual([...RED]);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+      iframe.remove();
+    }
+  });
+
   test('an inset region lands at the right origin and leaves the rest untouched', async ctx => {
     const backend = await createWebGpuTestBackend(CANVAS);
     const root = new Container();
