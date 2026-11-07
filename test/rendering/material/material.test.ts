@@ -369,6 +369,25 @@ describe('Material.pipelineKey', () => {
 });
 
 describe('Material.bindKey', () => {
+  test('is not re-derived on repeated reads, only after a binding changes', () => {
+    const material = new MeshMaterial(createMaterialOptions({ textures: { u_noise: new Texture() }, sampler: { ...linearClamp } }));
+    const initial = material.bindKey;
+    const keysSpy = vi.spyOn(Object, 'keys');
+
+    for (let i = 0; i < 100; i++) {
+      expect(material.bindKey).toBe(initial);
+    }
+
+    expect(keysSpy).not.toHaveBeenCalled();
+
+    material.setTexture('u_noise', new Texture());
+
+    expect(material.bindKey).not.toBe(initial);
+    expect(keysSpy).toHaveBeenCalled();
+
+    keysSpy.mockRestore();
+  });
+
   test('is stable across repeated reads without state changes', () => {
     const material = new MeshMaterial(createMaterialOptions());
 
