@@ -396,7 +396,10 @@ export abstract class Material<F extends UniformFields | undefined = undefined, 
           }
 
           this._uniformValues[name] = value;
-          this._bindKeyDirty = true;
+
+          if (textureSlot) {
+            this._bindKeyDirty = true;
+          }
         },
       });
     }

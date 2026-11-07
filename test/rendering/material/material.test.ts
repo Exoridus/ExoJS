@@ -404,6 +404,21 @@ describe('Material.bindKey', () => {
     expect(material.bindKey).toBe(initial);
   });
 
+  test('does not re-derive after repeated scalar uniform updates', () => {
+    const material = new MeshMaterial(createMaterialOptions({ uniforms: { u_time: 0 }, textures: { u_noise: new Texture() } }));
+    const initial = material.bindKey;
+    const keysSpy = vi.spyOn(Object, 'keys');
+
+    for (let i = 1; i <= 50; i++) {
+      material.setUniform('u_time', i);
+      material.uniforms.u_time = i + 0.5;
+      expect(material.bindKey).toBe(initial);
+    }
+
+    expect(keysSpy).not.toHaveBeenCalled();
+    keysSpy.mockRestore();
+  });
+
   test('changes with sampler state, including in-place mutation', () => {
     const material = new MeshMaterial(createMaterialOptions({ sampler: { ...linearClamp } }));
     const initial = material.bindKey;
