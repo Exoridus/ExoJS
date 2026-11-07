@@ -1363,3 +1363,21 @@ describe('weld chain energy', () => {
     });
   }
 });
+
+describe('wheel joint sub-step geometry', () => {
+  it('measures the lateral lock against where the wheel is now, not where the frame started', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const chassis = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new CircleShape(10) }] }));
+    const joint = new WheelJoint({ bodyA: chassis, bodyB: wheel, anchor: { x: 0, y: 0 }, axis: { x: 1, y: 0 } });
+
+    wheel.setTransform({ x: 0, y: 5 });
+    joint._prepare(1 / 240, { biasRate: 10, massScale: 1, impulseScale: 0 });
+
+    // An earlier sub-step already carried the wheel back onto the axis.
+    wheel._deltaPosY = -5;
+    joint._solve(true);
+
+    expect(wheel.linearVelocityY).toBeCloseTo(0, 6);
+  });
+});
