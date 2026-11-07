@@ -1,6 +1,6 @@
-import { describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 
-import { timestampsQuantized } from '../src/rendering/page/timerProbe';
+import { createTimestampRig, timestampsQuantized } from '../src/rendering/page/timerProbe';
 
 const frame = (gpuPassMs: number | null) => ({ gpuPassMs });
 const available = { available: true };
@@ -26,5 +26,35 @@ describe('timestampsQuantized', () => {
   test('is false when a resolved timestamp is finer than 100 microseconds', () => {
     expect(timestampsQuantized(available, [frame(0.1), frame(0.15)])).toBe(false);
     expect(timestampsQuantized(available, [frame(0.041)])).toBe(false);
+  });
+});
+
+describe('createTimestampRig', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  test('times every encoder up to the declared encoder budget', () => {
+    vi.stubGlobal('GPUBufferUsage', { QUERY_RESOLVE: 1, COPY_SRC: 2, COPY_DST: 4, MAP_READ: 8 });
+    const device = {
+      features: new Set(['timestamp-query']),
+      createQuerySet: () => ({}),
+      createBuffer: () => ({}),
+      createCommandEncoder: () => ({
+        beginRenderPass: (_descriptor: object) => ({}),
+        finish: () => ({}),
+        resolveQuerySet: () => undefined,
+      }),
+    };
+    const rig = createTimestampRig(device as never);
+
+    rig.beginFrame(0);
+
+    for (let i = 0; i < 512; i++) {
+      const encoder = device.createCommandEncoder();
+
+      encoder.beginRenderPass({});
+      encoder.finish();
+    }
+
+    expect(rig.notes).toEqual([]);
   });
 });
