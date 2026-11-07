@@ -50,12 +50,14 @@ test('retains GPU sample caveats in a probe cell capture', async () => {
       cell: { scene: 'plain', mode: 'inherit', pixelRatio: 1 } as never,
       backend: 'webgl2',
       host: document.createElement('div'),
+      runId: 7,
       index: 0,
       runStartedAt: 0,
       stage: { width: 64, height: 64 },
       measureMs: 0,
     });
 
+    expect(result.runId).toBe(7);
     expect(result.gpuMsMedian).toBe(1);
     expect(result.errors).toContain('1 disjoint GPU frame(s) discarded');
     expect(loseContext).toHaveBeenCalledOnce();
