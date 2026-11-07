@@ -31,9 +31,7 @@ export class RendererRegistry<Runtime extends RenderBackend> {
     dispose: renderer => {
       renderer.disconnect();
 
-      if ('destroy' in renderer && typeof renderer.destroy === 'function') {
-        (renderer as Renderer<Runtime> & { destroy(): void }).destroy();
-      }
+      renderer.destroy?.();
     },
   });
   private readonly _resolved = new Map<DrawableConstructor, Renderer<Runtime>>();
