@@ -102,3 +102,56 @@ test('failed sprite allocation releases buffers and rebuilds resources on retry'
     vi.unstubAllGlobals();
   }
 });
+
+test('custom material dispose hook is registered once across reconnects and releases once per dispose', () => {
+  const renderer = new WebGpuSpriteRenderer();
+  const internals = renderer as unknown as {
+    _backend: unknown;
+    _customMaterials: Map<unknown, unknown>;
+    _uniformBindGroupLayout: unknown;
+    _customTextureBindGroupLayout: unknown;
+    _buildUserBindGroupLayout: () => unknown;
+    _releaseCustomResources: (resources: unknown) => void;
+    _getOrCreateCustomResources(material: unknown, device: unknown): unknown;
+  };
+  const callbacks: Array<() => void> = [];
+  const material = {
+    shader: { _resolveWgsl: () => 'fn main() {}' },
+    onDispose: (callback: () => void): void => {
+      callbacks.push(callback);
+    },
+  };
+  const device = { createPipelineLayout: () => ({}) };
+  const release = vi.fn();
+
+  const connect = (): void => {
+    internals._backend = { _createShaderModule: () => ({}) };
+    internals._uniformBindGroupLayout = {};
+    internals._customTextureBindGroupLayout = {};
+    internals._buildUserBindGroupLayout = () => ({});
+    internals._releaseCustomResources = release;
+  };
+
+  connect();
+  internals._getOrCreateCustomResources(material, device);
+  internals._customMaterials.clear();
+  connect();
+  internals._getOrCreateCustomResources(material, device);
+
+  expect(callbacks).toHaveLength(1);
+
+  for (const callback of callbacks) {
+    callback();
+  }
+
+  expect(release).toHaveBeenCalledTimes(1);
+
+  callbacks.length = 0;
+  internals._getOrCreateCustomResources(material, device);
+
+  expect(callbacks).toHaveLength(1);
+
+  callbacks[0]!();
+
+  expect(release).toHaveBeenCalledTimes(2);
+});
