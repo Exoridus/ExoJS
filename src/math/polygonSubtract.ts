@@ -34,6 +34,26 @@ interface DirectedEdge {
  * @internal
  */
 export const subtractPolygons = (base: readonly number[], cuts: ReadonlyArray<readonly number[]>): SubtractedPolygon[] => {
+  let originX = Infinity;
+  let originY = Infinity;
+
+  for (let i = 0; i + 1 < base.length; i += 2) {
+    originX = Math.min(originX, base[i]!);
+    originY = Math.min(originY, base[i + 1]!);
+  }
+
+  if (!Number.isFinite(originX) || !Number.isFinite(originY)) {
+    return [];
+  }
+
+  // Tolerances derive from ring extents, so the solve runs relative to the base corner; absolute magnitude would otherwise inflate them.
+  const shifted = (ring: readonly number[]): number[] => ring.map((value, i) => value - (i % 2 === 0 ? originX : originY));
+  const restore = (ring: readonly number[]): number[] => ring.map((value, i) => value + (i % 2 === 0 ? originX : originY));
+
+  return subtractLocal(shifted(base), cuts.map(shifted)).map(({ outer, holes }) => ({ outer: restore(outer), holes: holes.map(restore) }));
+};
+
+const subtractLocal = (base: readonly number[], cuts: ReadonlyArray<readonly number[]>): SubtractedPolygon[] => {
   const rings = [base, ...cuts].map(toPoints);
 
   if (rings[0]!.length < 3 || Math.abs(areaOf(rings[0]!)) === 0) {
@@ -160,7 +180,7 @@ const extentOf = (rings: ReadonlyArray<readonly Point[]>): number => {
     }
   }
 
-  return Math.max(maxX - minX, maxY - minY, Math.abs(minX), Math.abs(minY), Math.abs(maxX), Math.abs(maxY), 1e-12);
+  return Math.max(maxX - minX, maxY - minY, 1e-12);
 };
 
 const insideRing = (x: number, y: number, ring: readonly Point[]): boolean => {

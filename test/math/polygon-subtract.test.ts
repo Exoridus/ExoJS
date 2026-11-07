@@ -268,3 +268,92 @@ describe('subtractPolygons', () => {
     }
   });
 });
+
+describe('subtractPolygons translation invariance', () => {
+  const shift = (ring: Ring, dx: number, dy: number): number[] => ring.map((value, i) => value + (i % 2 === 0 ? dx : dy));
+
+  // Measured relative to each ring's first vertex so the oracle itself does not lose precision far from the origin.
+  const localArea = (ring: Ring): number => {
+    let sum = 0;
+
+    for (let i = 0; i < ring.length; i += 2) {
+      const j = (i + 2) % ring.length;
+
+      sum += (ring[i]! - ring[0]!) * (ring[j + 1]! - ring[1]!) - (ring[j]! - ring[0]!) * (ring[i + 1]! - ring[1]!);
+    }
+
+    return sum / 2;
+  };
+
+  const netArea = (result: ReturnType<typeof subtractPolygons>): number =>
+    result.reduce((sum, polygon) => sum + localArea(polygon.outer) + polygon.holes.reduce((inner, hole) => inner + localArea(hole), 0), 0);
+
+  const triangleArea = (result: ReturnType<typeof subtractPolygons>): number => {
+    let area = 0;
+
+    for (const polygon of result) {
+      const originX = polygon.outer[0]!;
+      const originY = polygon.outer[1]!;
+      const vertices = [...polygon.outer, ...polygon.holes.flat()].map((value, i) => value - (i % 2 === 0 ? originX : originY));
+      const holeStarts: number[] = [];
+      let start = polygon.outer.length / 2;
+
+      for (const hole of polygon.holes) {
+        holeStarts.push(start);
+        start += hole.length / 2;
+      }
+
+      const indices = triangulateWithHoles(vertices, holeStarts);
+
+      for (let t = 0; t < indices.length; t += 3) {
+        const a = indices[t]! * 2;
+        const b = indices[t + 1]! * 2;
+        const c = indices[t + 2]! * 2;
+
+        area +=
+          ((vertices[b]! - vertices[a]!) * (vertices[c + 1]! - vertices[a + 1]!) -
+            (vertices[b + 1]! - vertices[a + 1]!) * (vertices[c]! - vertices[a]!)) /
+          2;
+      }
+    }
+
+    return area;
+  };
+
+  const offsets = [0, 1e6, 1e9];
+
+  test.each(offsets)('a square hole keeps its area at offset %d', offset => {
+    const result = subtractPolygons(shift(rect(0, 0, 10, 10), offset, offset), [shift(rect(3, 3, 4, 4), offset, offset)]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]!.holes).toHaveLength(1);
+    expect(netArea(result)).toBeCloseTo(84, 6);
+    expect(triangleArea(result)).toBeCloseTo(84, 6);
+  });
+
+  test.each(offsets)('overlapping cuts keep their combined area at offset %d', offset => {
+    const result = subtractPolygons(shift(rect(0, 0, 20, 10), offset, -offset), [
+      shift(rect(2, 2, 6, 6), offset, -offset),
+      shift(rect(5, 4, 6, 4), offset, -offset),
+    ]);
+
+    // 200 - (36 + 24 - 3 * 4 overlap)
+    expect(netArea(result)).toBeCloseTo(152, 6);
+    expect(triangleArea(result)).toBeCloseTo(152, 6);
+  });
+
+  test.each(offsets)('a thin cut leaves the remaining area at offset %d', offset => {
+    const result = subtractPolygons(shift(rect(0, 0, 10, 10), offset, offset), [shift(rect(-1, 4, 12, 0.5), offset, offset)]);
+
+    expect(result).toHaveLength(2);
+    expect(netArea(result)).toBeCloseTo(95, 6);
+    expect(triangleArea(result)).toBeCloseTo(95, 6);
+  });
+
+  test.each(offsets)('a cut splitting the base yields two pieces at offset %d', offset => {
+    const result = subtractPolygons(shift(rect(0, 0, 10, 10), offset, offset), [shift(rect(4, -1, 2, 12), offset, offset)]);
+
+    expect(result).toHaveLength(2);
+    expect(netArea(result)).toBeCloseTo(80, 6);
+  });
+});
