@@ -155,3 +155,39 @@ test('custom material dispose hook is registered once across reconnects and rele
 
   expect(release).toHaveBeenCalledTimes(2);
 });
+
+test('a throwing release still drops the cached custom material resources', () => {
+  const renderer = new WebGpuSpriteRenderer();
+  const internals = renderer as unknown as {
+    _backend: unknown;
+    _customMaterials: Map<unknown, unknown>;
+    _uniformBindGroupLayout: unknown;
+    _customTextureBindGroupLayout: unknown;
+    _buildUserBindGroupLayout: () => unknown;
+    _releaseCustomResources: (resources: unknown) => void;
+    _getOrCreateCustomResources(material: unknown, device: unknown): unknown;
+  };
+  const callbacks: Array<() => void> = [];
+  const material = {
+    shader: { _resolveWgsl: () => 'fn main() {}' },
+    onDispose: (callback: () => void): void => {
+      callbacks.push(callback);
+    },
+  };
+  const device = { createPipelineLayout: () => ({}) };
+
+  internals._backend = { _createShaderModule: () => ({}) };
+  internals._uniformBindGroupLayout = {};
+  internals._customTextureBindGroupLayout = {};
+  internals._buildUserBindGroupLayout = () => ({});
+
+  internals._releaseCustomResources = () => {
+    throw new Error('release failed');
+  };
+
+  const first = internals._getOrCreateCustomResources(material, device);
+
+  expect(() => callbacks[0]!()).toThrow('release failed');
+  expect(internals._customMaterials.has(material)).toBe(false);
+  expect(internals._getOrCreateCustomResources(material, device)).not.toBe(first);
+});

@@ -2065,8 +2065,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
         const stored = this._customMaterials.get(material);
 
         if (stored !== undefined) {
-          this._releaseCustomResources(stored);
           this._customMaterials.delete(material);
+          this._releaseCustomResources(stored);
         }
       });
     }
