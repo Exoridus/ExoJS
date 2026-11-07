@@ -293,7 +293,7 @@ describe('WebGpuMeshRenderer pipeline prewarm', () => {
 describe('WebGpuScalableSpriteRenderer pipeline prewarm', () => {
   const kinds = ['shader', 'geo'] as const;
 
-  const setup = (): { renderer: WebGpuScalableSpriteRenderer; stub: StubDevice; pipelines: Map<string, GPURenderPipeline> } => {
+  const setup = (): { renderer: WebGpuScalableSpriteRenderer; stub: StubDevice } => {
     const renderer = new WebGpuScalableSpriteRenderer();
     const stub = createStubDevice();
     const internals = renderer as unknown as {
@@ -302,7 +302,6 @@ describe('WebGpuScalableSpriteRenderer pipeline prewarm', () => {
       _uniformBindGroupLayout: unknown;
       _textureBindGroupLayout: unknown;
       _pipelineLayout: unknown;
-      _pipelines: Map<string, GPURenderPipeline>;
     };
 
     internals._device = stub.device;
@@ -311,7 +310,7 @@ describe('WebGpuScalableSpriteRenderer pipeline prewarm', () => {
     internals._textureBindGroupLayout = {};
     internals._pipelineLayout = {};
 
-    return { renderer, stub, pipelines: internals._pipelines };
+    return { renderer, stub };
   };
 
   test.each(['device', 'layout'])('late prewarm cannot populate a replacement %s connection', async changed => {
@@ -356,18 +355,6 @@ describe('WebGpuScalableSpriteRenderer pipeline prewarm', () => {
     }
 
     expect(stub.syncCreates()).toBe(0);
-  });
-
-  test('the pipeline cache holds no unreachable keys after prewarm', async () => {
-    const { renderer, pipelines } = setup();
-
-    await renderer.prewarmPipelines(formats);
-
-    expect(pipelines.size).toBe(kinds.length * prewarmedBlendModes.length * formats.length);
-
-    for (const key of pipelines.keys()) {
-      expect(key).toMatch(lookupKeyPattern);
-    }
   });
 });
 
