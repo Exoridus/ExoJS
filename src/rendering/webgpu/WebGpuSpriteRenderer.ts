@@ -332,6 +332,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   // Custom-material state. Per-material pipelines/bind groups are cached; the
   // current batch's material/base-texture decide when to flush.
   private readonly _customMaterials = new Map<AnySpriteMaterial, CustomSpriteResources>();
+  // Material.onDispose cannot unregister, so the hook is added once per material
+  // and survives reconnects; it resolves resources through _customMaterials.
+  // destroy() drops all hooks while the material stays usable, so the hook
+  // clears its own entry.
+  private readonly _disposeHooked = new WeakSet<AnySpriteMaterial>();
   private _customTextureBindGroupLayout: GPUBindGroupLayout | null = null;
   private _currentMaterial: AnySpriteMaterial | null = null;
   // Material uniform buffers a draw already recorded into the currently open
@@ -2052,14 +2057,19 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     this._customMaterials.set(material, resources);
 
-    material.onDispose(() => {
-      const stored = this._customMaterials.get(material);
+    if (!this._disposeHooked.has(material)) {
+      this._disposeHooked.add(material);
+      material.onDispose(() => {
+        this._disposeHooked.delete(material);
 
-      if (stored !== undefined) {
-        this._releaseCustomResources(stored);
-        this._customMaterials.delete(material);
-      }
-    });
+        const stored = this._customMaterials.get(material);
+
+        if (stored !== undefined) {
+          this._customMaterials.delete(material);
+          this._releaseCustomResources(stored);
+        }
+      });
+    }
 
     return resources;
   }
