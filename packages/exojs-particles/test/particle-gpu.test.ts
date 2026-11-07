@@ -10,16 +10,22 @@ import { Constant } from '../src/distributions/Constant';
 import { Curve } from '../src/distributions/Curve';
 import { ParticleGpuState } from '../src/gpu/ParticleGpuState';
 import { ParticleModuleKeyCollisionError } from '../src/gpu/ParticleModuleKeyCollisionError';
+import { AlphaFadeOverLifetime } from '../src/modules/AlphaFadeOverLifetime';
 import { ApplyForce } from '../src/modules/ApplyForce';
+import { AttractToPoint } from '../src/modules/AttractToPoint';
 import { BurstSpawn } from '../src/modules/BurstSpawn';
 import { colorLookupSize, ColorOverLifetime } from '../src/modules/ColorOverLifetime';
+import { ColorOverSpeed } from '../src/modules/ColorOverSpeed';
 import { DeathModule } from '../src/modules/DeathModule';
 import { Drag } from '../src/modules/Drag';
+import { OrbitalForce } from '../src/modules/OrbitalForce';
+import { RepelFromPoint } from '../src/modules/RepelFromPoint';
 import { RotateOverLifetime } from '../src/modules/RotateOverLifetime';
 import { ScaleOverLifetime } from '../src/modules/ScaleOverLifetime';
 import { SpawnOnDeath } from '../src/modules/SpawnOnDeath';
 import { Turbulence } from '../src/modules/Turbulence';
 import { UpdateModule } from '../src/modules/UpdateModule';
+import { VelocityOverLifetime } from '../src/modules/VelocityOverLifetime';
 import type { ParticleDeathContext } from '../src/ParticleStorage';
 import { ParticleSystem } from '../src/ParticleSystem';
 import { QuadParticles } from '../src/renderModes/QuadParticles';
@@ -392,6 +398,40 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
     expect(env.shaderSources[0]).toContain('u_ApplyForce');
     expect(env.shaderSources[0]).toContain('u_Drag');
     expect(env.shaderSources[0]).toContain('u_RotateOverLifetime');
+  });
+
+  test('every shipped WGSL module composes a shader that reflectComputeBindings accepts', () => {
+    const env = makeMockDevice();
+    const system = new ParticleSystem(makeTexture(), { capacity: 256, device: env.device });
+    const curve = () =>
+      new Curve([
+        { t: 0, v: 1 },
+        { t: 1, v: 0 },
+      ]);
+    const gradient = () =>
+      new ColorGradient([
+        { t: 0, color: new Color(255, 0, 0, 1) },
+        { t: 1, color: new Color(0, 0, 0, 0) },
+      ]);
+
+    system.addUpdateModule(new ApplyForce(0, 980));
+    system.addUpdateModule(new Drag(0.5));
+    system.addUpdateModule(new RotateOverLifetime(360));
+    system.addUpdateModule(new Turbulence(10));
+    system.addUpdateModule(new AttractToPoint(0, 0, 1));
+    system.addUpdateModule(new RepelFromPoint(0, 0, 1));
+    system.addUpdateModule(new OrbitalForce(0, 0, 1));
+    system.addUpdateModule(new ScaleOverLifetime(curve()));
+    system.addUpdateModule(new VelocityOverLifetime(curve()));
+    system.addUpdateModule(new AlphaFadeOverLifetime(curve()));
+    system.addUpdateModule(new ColorOverLifetime(gradient()));
+    system.addUpdateModule(new ColorOverSpeed(gradient(), 0, 100));
+
+    system._storage.lifetime[system._spawnSlot()] = 10;
+
+    expect(() => system.update(tick(0.016))).not.toThrow();
+    expect(system.gpuMode).toBe(true);
+    expect(env.device.createComputePipeline).toHaveBeenCalledTimes(1);
   });
 
   test('Custom CPU-only module forces CPU mode even when device is passed', () => {
