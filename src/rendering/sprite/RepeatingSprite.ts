@@ -190,6 +190,7 @@ export class RepeatingSprite extends Drawable {
    * **not** trigger a geometry rebuild - the value is forwarded as
    * per-instance data at render time.  On the geometry path
    * (`TextureRegion` source), offset changes mark quads dirty.
+   * Axes in `stretch` mode ignore the offset on both paths.
    */
   public get offsetX(): number {
     return this._offsetX;

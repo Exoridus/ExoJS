@@ -5,7 +5,7 @@ import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rende
 import { colorShaderSourcesWgsl } from '#rendering/colorShaderSources';
 import type { Drawable } from '#rendering/Drawable';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
-import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingPlan';
+import { computeShaderOffset, computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingPlan';
 import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { isSampleableTexture } from '#rendering/texture/deferredTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -387,8 +387,8 @@ export class WebGpuScalableSpriteRenderer
 
     const tilingX = computeShaderTiling(srcW, destW, sprite.modeX, sprite.fitX);
     const tilingY = computeShaderTiling(srcH, destH, sprite.modeY, sprite.fitY);
-    const offsetU = sprite.offsetX / (srcW > 0 ? srcW : 1);
-    const offsetV = sprite.offsetY / (srcH > 0 ? srcH : 1);
+    const offsetU = computeShaderOffset(srcW, sprite.offsetX, sprite.modeX);
+    const offsetV = computeShaderOffset(srcH, sprite.offsetY, sprite.modeY);
     const uvParamY = flipY ? -tilingY : tilingY;
     const uvParamW = flipY ? tilingY + offsetV : offsetV;
 
