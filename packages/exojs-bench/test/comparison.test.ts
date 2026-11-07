@@ -760,9 +760,48 @@ describe('renderComparison', () => {
 
     expect(document).toContain('Test GPU');
     expect(document).toContain('software rasterizer `false`');
-    expect(document).toContain('1000 nodes');
+    expect(document).toContain('| 1000 sprites (');
     expect(document).toContain('leads');
     expect(document).toContain('Omissions');
+  });
+
+  test('publishes per-load rows when no single headline count qualified', () => {
+    const rendering = aggregateRenderingRuns([
+      renderingRun([
+        cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
+        cell({
+          engine: 'pixi',
+          config: 'default',
+          archetype: 'static-heavy',
+          nodeCount: 1_000,
+          cpuMsMedian: 2,
+          drawCalls: 40,
+          status: 'exceeded',
+        }),
+        cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 5_000, cpuMsMedian: 1 }),
+        cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 5_000, cpuMsMedian: 2, drawCalls: 40 }),
+        cell({ engine: 'exojs', archetype: 'text-static', nodeCount: 1_000, cpuMsMedian: 1 }),
+        cell({ engine: 'pixi', config: 'default', archetype: 'text-static', nodeCount: 1_000, cpuMsMedian: 2, drawCalls: 40 }),
+        cell({ engine: 'exojs', archetype: 'text-static', nodeCount: 5_000, cpuMsMedian: 1 }),
+        cell({
+          engine: 'pixi',
+          config: 'default',
+          archetype: 'text-static',
+          nodeCount: 5_000,
+          cpuMsMedian: 2,
+          drawCalls: 40,
+          status: 'exceeded',
+        }),
+      ]),
+    ]);
+    const document = renderComparison({ rendering });
+    const rows = document.split('\n').filter(line => line.startsWith('| `'));
+
+    expect(rendering.backends[0]!.headlineCount).toBeNull();
+    expect(document).not.toContain('No single node count');
+    expect(document).not.toContain('All rows measured at');
+    expect(rows.find(line => line.startsWith('| `static-heavy`'))).toMatch(/^\| `static-heavy` \| 5000 \w+ \(\w+\) \|/);
+    expect(rows.find(line => line.startsWith('| `text-static`'))).toMatch(/^\| `text-static` \| 1000 \w+ \(\w+\) \|/);
   });
 
   test('prints the observed range beside every pooled median', () => {
@@ -848,7 +887,7 @@ describe('renderComparison', () => {
     expect(document).toContain('own body-count ladder');
     expect(document).toContain('rows are not comparable with one another');
     expect(rows).toHaveLength(ladder.length);
-    expect(row).toContain(`| ${String(ladder.at(-1))} |`);
+    expect(row).toContain(`| ${String(ladder.at(-1))} bodies (`);
     expect(row).toContain('20.000 ms');
     expect(row).toContain('over the 16.7 ms frame');
     // The ExoJS arm is inside the frame in the same row, so the mark is per
