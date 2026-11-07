@@ -1,6 +1,6 @@
 import { WebGl2ShaderUniform } from '#rendering/webgl2/WebGl2ShaderUniform';
 
-import { webGl2PrimitiveArrayConstructors, webGl2PrimitiveByteSizeMapping } from './shaderMappings';
+import { webGl2PrimitiveArrayConstructors, webGl2PrimitiveComponentCountMapping } from './shaderMappings';
 
 /**
  * Reflection metadata and an owned GPU buffer for one active GLSL uniform block.
@@ -83,13 +83,13 @@ export class WebGl2ShaderBlock {
       const index = indices[i]!;
       const { type, size, name } = gl.getActiveUniform(program, index)!;
       const arrayConstructor = webGl2PrimitiveArrayConstructors[type];
-      const byteSize = webGl2PrimitiveByteSizeMapping[type];
+      const componentCount = webGl2PrimitiveComponentCountMapping[type];
 
-      if (arrayConstructor === undefined || byteSize === undefined) {
+      if (arrayConstructor === undefined || componentCount === undefined) {
         throw new Error(`Unsupported uniform type ${type} for uniform "${name}".`);
       }
 
-      const data = new arrayConstructor(blockData, offsets[i], byteSize * size);
+      const data = new arrayConstructor(blockData, offsets[i], componentCount * size);
       const uniform = new WebGl2ShaderUniform(index, type, size, name, data);
 
       this._uniforms.set(uniform.propName, uniform);
