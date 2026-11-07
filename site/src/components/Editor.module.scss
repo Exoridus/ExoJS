@@ -155,7 +155,7 @@
     // The viewport under the header, less the column's own padding: the
     // editor stretches to it, so the source is as tall as the screen instead
     // of a fixed box with the rest of the column empty beneath it.
-    min-height: calc(100vh - 64px - 1.2rem);
+    min-height: calc(100vh - 64px - 1.2rem - var(--playground-offset, 0px));
     padding: 0;
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
