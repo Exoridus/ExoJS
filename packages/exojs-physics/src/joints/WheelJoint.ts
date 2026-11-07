@@ -77,6 +77,9 @@ export class WheelJoint extends Joint {
   private _s1 = 0;
   private _s2 = 0;
   private _perpMass = 0;
+  private _rigidBiasRate = 0;
+  private _rigidMassScale = 1;
+  private _rigidImpulseScale = 0;
   private _axialMass = 0;
   private _angularMass = 0;
   private _springBiasRate = 0;
@@ -194,6 +197,9 @@ export class WheelJoint extends Joint {
     this._translation = dx * axisX + dy * axisY;
     this._h = h;
     this._invH = 1 / h;
+    this._rigidBiasRate = rigid.biasRate;
+    this._rigidMassScale = rigid.massScale;
+    this._rigidImpulseScale = rigid.impulseScale;
 
     if (this.hertz > 0) {
       const omega = 2 * Math.PI * this.hertz;
@@ -308,7 +314,9 @@ export class WheelJoint extends Joint {
 
     // Lateral lock (perpendicular, rigid).
     const cdotPerp = this._perpVelocity();
-    const perpImpulse = -this._perpMass * (cdotPerp + (useBias ? 0.2 * this._invH * this._cPerp : 0));
+    const perpImpulse =
+      -this._perpMass * this._rigidMassScale * (cdotPerp + (useBias ? this._rigidBiasRate * this._cPerp : 0)) -
+      this._rigidImpulseScale * this._perpImpulse;
 
     this._perpImpulse += perpImpulse;
     this._applyPerp(perpImpulse);

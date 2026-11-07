@@ -1380,4 +1380,44 @@ describe('wheel joint sub-step geometry', () => {
 
     expect(wheel.linearVelocityY).toBeCloseTo(0, 6);
   });
+
+  it('scales the lateral impulse by massScale and relaxes the accumulated impulse by impulseScale', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const chassis = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new CircleShape(10) }] }));
+    const joint = new WheelJoint({ bodyA: chassis, bodyB: wheel, anchor: { x: 0, y: 0 }, axis: { x: 1, y: 0 } });
+
+    wheel.setTransform({ x: 0, y: 5 });
+    joint._prepare(1 / 240, { biasRate: 10, massScale: 0.5, impulseScale: 0 });
+    joint._solve(true);
+
+    expect(wheel.linearVelocityY).toBeCloseTo(-25, 5);
+
+    joint._prepare(1 / 240, { biasRate: 0, massScale: 1, impulseScale: 0.5 });
+    joint._solve(true);
+
+    expect(wheel.linearVelocityY).toBeCloseTo(12.5, 5);
+  });
+
+  it('applies the lateral bias along the axis of a chassis that has turned during the frame', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const chassis = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(40, 20) }] }));
+    const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new CircleShape(10) }] }));
+    const joint = new WheelJoint({ bodyA: chassis, bodyB: wheel, anchor: { x: 0, y: 0 }, axis: { x: 1, y: 0 } });
+    const angle = 0.3;
+
+    wheel.setTransform({ x: 0, y: 5 });
+    joint._prepare(1 / 240, { biasRate: 10, massScale: 1, impulseScale: 0 });
+
+    chassis._deltaAngle = angle;
+    chassis._deltaCos = Math.cos(angle);
+    chassis._deltaSin = Math.sin(angle);
+    joint._solve(true);
+
+    // The solved lateral velocity cancels the live error exactly: -biasRate * (5 * cos(angle)).
+    const lateral = (wheel.linearVelocityY - chassis.linearVelocityY) * Math.cos(angle) - (wheel.linearVelocityX - chassis.linearVelocityX) * Math.sin(angle);
+    const lever = 5 * Math.sin(angle);
+
+    expect(lateral - lever * chassis.angularVelocity).toBeCloseTo(-10 * 5 * Math.cos(angle), 4);
+  });
 });
