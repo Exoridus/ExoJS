@@ -264,6 +264,17 @@ describe('NavigationAgentComponent', () => {
     expect(Math.floor(node.x / CELL)).toBe(4);
   });
 
+  it('ends unreachable at the edge for a destination outside the space under a snapping search', async () => {
+    const space = GridSpace.from(10, 10, () => 1, { cellSize: CELL });
+    const { node, agent, statuses, runUntil } = await setup({ space, search: { snapToNearest: true } });
+
+    agent.moveTo({ x: 500, y: 15 });
+    runUntil(() => agent.status === 'unreachable');
+
+    expect(Math.floor(node.x / CELL)).toBe(9);
+    expect(statuses).not.toContain('arrived');
+  });
+
   it('works through budget-limited partial routes', async () => {
     const space = GridSpace.from(30, 3, () => 1, { cellSize: CELL });
     const pathfinder = new Pathfinder();
