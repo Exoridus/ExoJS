@@ -50,6 +50,12 @@ describe('S2 asset-access surface (integration)', () => {
     global.fetch = originalFetch;
   });
 
+  test('Assets.from rejects an Asset.type() entry whose type name is not an installed asset type', () => {
+    expect(() => Assets.from({ widget: Asset.type('not-an-installed-type' as unknown as 'json', 'widgets/a.bin') })).toThrow(
+      'No asset type "not-an-installed-type" is installed, so "widgets/a.bin" cannot be materialized.',
+    );
+  });
+
   test('Assets.from mixes a bare path + a bare value path + an Asset.type() descriptor, all usable loader-free', () => {
     const assets = Assets.from({
       ship: 'sprites/ship.png', // bare → Texture (resource leaf)
