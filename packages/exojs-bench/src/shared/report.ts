@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { describePlan, isRunPlanMeta, isSamePlan, type RunPlanMeta } from '../suite/plan';
 import type { LibraryProvenance } from './provenance';
 import type { BaseCellResult } from './result';
 
@@ -110,6 +111,36 @@ export const mergeLibraries = (existing: readonly LibraryProvenance[], incoming:
 };
 
 /**
+ * The plan identity of a merged report.
+ *
+ * Cells measured under different plans, or under a published plan and an
+ * exploratory narrowing of it, answer different questions, so the merge refuses
+ * instead of stamping one identity onto both. Data without a recorded plan only
+ * merges with other such data.
+ */
+export const mergePlan = (existing: RunPlanMeta | undefined, incoming: RunPlanMeta | undefined): RunPlanMeta | undefined => {
+  if (!isSamePlan(existing, incoming)) {
+    throw new Error(
+      `refusing to merge a run into a report with a different plan identity (existing: ${describePlan(existing)}; incoming: ${describePlan(incoming)}); write to a separate output directory or move the existing report aside`,
+    );
+  }
+
+  return incoming;
+};
+
+/** Trailing CSV columns naming the plan every row was measured under; empty for data without a recorded plan. */
+export const PLAN_CSV_HEADER = ['planId', 'planRevision', 'planHash', 'planSuite', 'planExploratory'] as const;
+
+/** The {@link PLAN_CSV_HEADER} values for one row. */
+export const planCsvFields = (plan: RunPlanMeta | undefined): string[] =>
+  plan === undefined
+    ? PLAN_CSV_HEADER.map(() => '')
+    : [plan.planId, String(plan.planRevision), plan.planHash, plan.suite, String(plan.exploratory)];
+
+/** Markdown lines stating the plan identity, or that none was recorded. */
+export const planMarkdownLines = (plan: RunPlanMeta | undefined): string[] => ['## Plan', '', `- ${describePlan(plan)}`, ''];
+
+/**
  * The report `outDir` already holds, parsed and shape-checked, or `undefined`
  * when there is none.
  *
@@ -152,9 +183,10 @@ export const isReportShape = <T>(value: unknown): value is T => {
     return false;
   }
 
-  const record = value as { provenance?: unknown; libraries?: unknown; results?: unknown };
+  const record = value as { provenance?: unknown; libraries?: unknown; results?: unknown; plan?: unknown };
 
   return (
+    (record.plan === undefined || isRunPlanMeta(record.plan)) &&
     (Array.isArray(record.provenance) || (typeof record.provenance === 'object' && record.provenance !== null)) &&
     Array.isArray(record.libraries) &&
     Array.isArray(record.results)

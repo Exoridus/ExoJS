@@ -1,4 +1,5 @@
 import { FRAME_BUDGET_MS } from '../shared/frameBudget';
+import { describePlan } from '../suite/plan';
 import type { AggregatedPhysics, AggregatedRendering } from './aggregate';
 import type { AggregatedCell, AggregatedRow, RunSpread } from './pooled';
 import { NOISE_HIGH, NOISE_LOW, STRUCTURAL_FACTOR } from './verdict';
@@ -141,7 +142,14 @@ const readingRules = (): string[] => [
 
 /** Provenance block for the rendering domain - what a reader needs in order to reject the numbers. */
 const renderingProvenance = (input: RenderingInput): string[] => {
-  const lines = ['## Provenance', '', `Pooled from **${String(input.runs.length)} separate rendering runs**.`, ''];
+  const lines = [
+    '## Provenance',
+    '',
+    `Pooled from **${String(input.runs.length)} separate rendering runs**.`,
+    '',
+    `Plan: ${describePlan(input.plan)}.`,
+    '',
+  ];
 
   for (const [index, run] of input.runs.entries()) {
     lines.push(`Run ${String(index + 1)}:`, '');
@@ -264,6 +272,7 @@ const renderPhysicsBlock = (input: PhysicsInput): string[] => {
 
   const host = input.runs[0]!;
 
+  lines.push(`Plan: ${describePlan(input.plan)}.`, '');
   lines.push(
     `Pooled from **${String(input.runs.length)} separate physics runs** in \`${host.browser} ${host.browserVersion}\` on host \`${host.host.cpu}\` (${String(host.host.cpuCount)} logical), OS \`${host.host.os}\`, fixed step \`${host.fixedDelta.toFixed(6)} s\`, measured \`${input.runs.map(run => run.timestamp).join('`, `')}\`.`,
     '',

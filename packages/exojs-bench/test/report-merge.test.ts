@@ -10,8 +10,10 @@ import { type PhysicsReportData, writePhysicsReport } from '../src/physics/repor
 import type { Provenance } from '../src/rendering/driver';
 import type { ArchetypeId, Backend, CellResult } from '../src/rendering/EngineAdapter';
 import { type ReportData, writeReport } from '../src/rendering/report';
+import { createCheckpointWriter } from '../src/shared/checkpoint';
 import type { ClockReport } from '../src/shared/clock';
 import { csvField, markdownCell, mergeCellResults, mergeLibraries } from '../src/shared/report';
+import { computePlanHash, type RunPlanMeta } from '../src/suite/plan';
 
 /**
  * A clock fine enough that no fixture duration trips the timer check, so a test
@@ -361,5 +363,129 @@ describe('existing report shape', () => {
 
     expect(md).toContain('ADAPTER UNVERIFIED');
     expect(md).toContain('UNTRUSTED (adapter unverified)');
+  });
+});
+
+const planMeta = (overrides: Partial<RunPlanMeta> = {}): RunPlanMeta => ({
+  suite: 'reference',
+  planId: 'exojs-comparison',
+  planRevision: 1,
+  planHash: computePlanHash('reference', 'rendering', []),
+  domain: 'rendering',
+  extreme: false,
+  exploratory: false,
+  ...overrides,
+});
+
+describe('run plan identity in the report writers', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'exojs-bench-plan-'));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  const renderingRun = (plan: RunPlanMeta | undefined, nodeCount = 5000): ReportData => ({
+    provenance: [stamp('webgl2', 't1')],
+    libraries: [],
+    results: [cell({ archetype: 'static-heavy', nodeCount, cpuMsMedian: 1 })],
+    ...(plan !== undefined && { plan }),
+  });
+
+  test('persists the plan in results.json, results.csv and results.md', () => {
+    const plan = planMeta();
+
+    writeReport(renderingRun(plan), dir);
+
+    expect(readJson<ReportData>(dir).plan).toEqual(plan);
+
+    const [header, row] = readFileSync(join(dir, 'results.csv'), 'utf8').split('\n');
+
+    expect(header!.split(',').slice(-5)).toEqual(['planId', 'planRevision', 'planHash', 'planSuite', 'planExploratory']);
+    expect(row!.split(',').slice(-5)).toEqual(['exojs-comparison', '1', plan.planHash, 'reference', 'false']);
+    expect(readFileSync(join(dir, 'results.md'), 'utf8')).toContain(`hash=${plan.planHash}`);
+  });
+
+  test('persists the plan for physics too', () => {
+    const plan = planMeta({ domain: 'physics' });
+
+    writePhysicsReport({ provenance: physicsStamp('151.0'), libraries: [], results: [physicsCell('joints', 1000, 7)], plan }, dir);
+
+    expect(readJson<PhysicsReportData>(dir).plan).toEqual(plan);
+    expect(readFileSync(join(dir, 'results.csv'), 'utf8')).toContain(plan.planHash);
+  });
+
+  test('merges runs of one plan and keeps its identity', () => {
+    writeReport(renderingRun(planMeta()), dir);
+    writeReport(renderingRun(planMeta(), 1000), dir);
+
+    const merged = readJson<ReportData>(dir);
+
+    expect(merged.results).toHaveLength(2);
+    expect(merged.plan).toEqual(planMeta());
+  });
+
+  test('refuses to pool an exploratory run into a published report and leaves the file untouched', () => {
+    writeReport(renderingRun(planMeta()), dir);
+
+    const before = readFileSync(join(dir, 'results.json'), 'utf8');
+
+    expect(() => writeReport(renderingRun(planMeta({ exploratory: true }), 1000), dir)).toThrow(/different plan identity/);
+    expect(readFileSync(join(dir, 'results.json'), 'utf8')).toBe(before);
+  });
+
+  test('refuses a different plan hash or revision', () => {
+    writeReport(renderingRun(planMeta()), dir);
+
+    expect(() => writeReport(renderingRun(planMeta({ planHash: 'other' }), 1000), dir)).toThrow(/different plan identity/);
+    expect(() => writeReport(renderingRun(planMeta({ planRevision: 2 }), 1000), dir)).toThrow(/different plan identity/);
+  });
+
+  test('never relabels a report without a recorded plan as the current plan', () => {
+    writeReport(renderingRun(undefined), dir);
+
+    expect(() => writeReport(renderingRun(planMeta(), 1000), dir)).toThrow(/no recorded plan/);
+    expect(readJson<ReportData>(dir).plan).toBeUndefined();
+  });
+
+  test('still merges two runs that both carry no plan', () => {
+    writeReport(renderingRun(undefined), dir);
+    writeReport(renderingRun(undefined, 1000), dir);
+
+    expect(readJson<ReportData>(dir).results).toHaveLength(2);
+  });
+
+  test('refuses an existing report whose plan field is malformed', () => {
+    writeFileSync(join(dir, 'results.json'), JSON.stringify({ provenance: [], libraries: [], results: [], plan: { suite: 'x' } }));
+
+    expect(() => writeReport(renderingRun(planMeta()), dir)).toThrow(/results\.json/);
+  });
+
+  test('physics merge refuses a different plan', () => {
+    const run = (plan: RunPlanMeta): PhysicsReportData => ({
+      provenance: physicsStamp('151.0'),
+      libraries: [],
+      results: [physicsCell('joints', 1000, 7)],
+      plan,
+    });
+
+    writePhysicsReport(run(planMeta({ domain: 'physics' })), dir);
+
+    expect(() => writePhysicsReport(run(planMeta({ domain: 'physics', exploratory: true })), dir)).toThrow(/different plan identity/);
+  });
+
+  test('the checkpoint names its plan in a sidecar and keeps the record files unchanged', () => {
+    const plan = planMeta();
+    const checkpoint = createCheckpointWriter<CellResult>(dir, plan);
+    const record = cell({ archetype: 'static-heavy', nodeCount: 5000, cpuMsMedian: 1 });
+
+    checkpoint.append(record);
+
+    expect(JSON.parse(readFileSync(join(dir, 'checkpoint.meta.json'), 'utf8'))).toEqual({ formatVersion: 1, plan });
+    expect(JSON.parse(readFileSync(checkpoint.jsonlPath, 'utf8').trim())).toEqual(record);
+    expect(JSON.parse(readFileSync(join(dir, 'checkpoint.json'), 'utf8'))).toEqual([record]);
   });
 });

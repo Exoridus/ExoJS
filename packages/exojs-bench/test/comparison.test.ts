@@ -12,6 +12,7 @@ import type { ArchetypeId, Backend, CellResult } from '../src/rendering/EngineAd
 import type { ReportData } from '../src/rendering/report';
 import type { ClockReport } from '../src/shared/clock';
 import type { TimerCheck } from '../src/shared/timerCheck';
+import type { RunPlanMeta } from '../src/suite/plan';
 
 /**
  * A clock fine enough that no fixture duration trips the timer check, so a test
@@ -867,6 +868,47 @@ describe('renderComparison', () => {
     });
 
     expect(document).toContain('not reportable');
+  });
+});
+
+describe('aggregation of run plan identity', () => {
+  const plan = (overrides: Partial<RunPlanMeta> = {}): RunPlanMeta => ({
+    suite: 'reference',
+    planId: 'exojs-comparison',
+    planRevision: 1,
+    planHash: 'h1',
+    domain: 'rendering',
+    extreme: false,
+    exploratory: false,
+    ...overrides,
+  });
+  const run = (runPlan: RunPlanMeta | undefined): ReportData => ({
+    ...renderingRun([
+      cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
+      cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 2, drawCalls: 40 }),
+    ]),
+    ...(runPlan !== undefined && { plan: runPlan }),
+  });
+
+  test('carries the shared plan into the pooled result and the document', () => {
+    const pooled = aggregateRenderingRuns([run(plan()), run(plan())]);
+
+    expect(pooled.plan).toEqual(plan());
+    expect(renderComparison({ rendering: pooled })).toContain('Plan: exojs-comparison suite=reference rev=1 hash=h1');
+  });
+
+  test('refuses to pool a published run with an exploratory one', () => {
+    expect(() => aggregateRenderingRuns([run(plan()), run(plan({ exploratory: true }))])).toThrow(IncomparableRunsError);
+  });
+
+  test('refuses to pool a run with a recorded plan with one without', () => {
+    expect(() => aggregateRenderingRuns([run(plan()), run(undefined)])).toThrow(/no recorded plan/);
+  });
+
+  test('states that unrecorded data has no plan', () => {
+    const document = renderComparison({ rendering: aggregateRenderingRuns([run(undefined)]) });
+
+    expect(document).toContain('no recorded plan (legacy data)');
   });
 });
 

@@ -390,7 +390,7 @@ const runRenderingDomain = async (args: Map<string, string>, selector: DomainSel
   // Incremental, crash-safe checkpoint: each cell is persisted the instant it
   // lands (see shared/checkpoint.ts), so a later cell crash - the Pixi-WebGPU
   // probe was the observed one - can never discard the cells already measured.
-  const checkpoint = createCheckpointWriter<CellResult>(outDir);
+  const checkpoint = createCheckpointWriter<CellResult>(outDir, plan.meta);
 
   // `--capture=<dir>`: write each measured cell's final frame there, for
   // checking by eye that two arms asked for one scene rendered it. A capture
@@ -438,7 +438,7 @@ const runRenderingDomain = async (args: Map<string, string>, selector: DomainSel
     console.warn('\n!!! SOFTWARE RASTERIZER DETECTED — timings are UNTRUSTED. Fix the launch flags before trusting any number. !!!');
   }
 
-  writeReport(data, outDir);
+  writeReport({ ...data, plan: plan.meta }, outDir);
 
   // Per-cell summary. Grouped by scenario and load so the arms of one row sit
   // under one another: the comparison a reader is after is between arms, and the
@@ -558,7 +558,7 @@ const runPhysicsDomain = async (args: Map<string, string>, selector: DomainSelec
 
   // Incremental, crash-safe checkpoint: each cell is persisted the instant it
   // lands, reusing the same shared writer the rendering domain uses.
-  const checkpoint = createCheckpointWriter<PhysicsCellResult>(outDir);
+  const checkpoint = createCheckpointWriter<PhysicsCellResult>(outDir, plan.meta);
 
   const data = await runPhysicsMatrix({
     browser,
@@ -588,7 +588,7 @@ const runPhysicsDomain = async (args: Map<string, string>, selector: DomainSelec
     );
   }
 
-  writePhysicsReport(data, outDir);
+  writePhysicsReport({ ...data, plan: plan.meta }, outDir);
 
   console.log('\n=== Results ===');
 
