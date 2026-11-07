@@ -17,6 +17,7 @@
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import { Rectangle } from '#math/Rectangle';
 import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -89,6 +90,62 @@ const renderAndValidate = async (ctx: { skip: (reason: string) => void }, backen
 };
 
 describe('WebGPU Graphics solid fill', () => {
+  test('shared live rectangles refresh cached draws and survive one Graphics teardown', async ctx => {
+    const backend = await setupBackend();
+    const source = new Rectangle(8, 8, 16, 32);
+    const first = new Graphics({ fill: Color.red });
+    const second = new Graphics({ fill: Color.blue });
+    const handle = first.addShape(source);
+    second.addShape(source);
+
+    try {
+      for (const graphics of [first, second, first, second]) {
+        if (!(await renderAndValidate(ctx, backend, graphics))) {
+          return;
+        }
+
+        expectPixelNear(readWebGpuPixels(backend, canvasSize)(40, 20), [0, 0, 0, 255]);
+      }
+
+      source.width = 48;
+
+      for (const [graphics, color] of [
+        [first, [255, 0, 0, 255]],
+        [second, [0, 0, 255, 255]],
+      ] as const) {
+        if (!(await renderAndValidate(ctx, backend, graphics))) {
+          return;
+        }
+
+        expectPixelNear(readWebGpuPixels(backend, canvasSize)(40, 20), [...color]);
+      }
+
+      handle.setStyle({ fill: Color.green });
+      const graphics = first;
+
+      if (!(await renderAndValidate(ctx, backend, graphics))) {
+        return;
+      }
+
+      expectPixelNear(readWebGpuPixels(backend, canvasSize)(40, 20), [0, 255, 0, 255]);
+      first.destroy();
+      source.width = 16;
+
+      for (const graphics of [second, second]) {
+        if (!(await renderAndValidate(ctx, backend, graphics))) {
+          return;
+        }
+
+        expectPixelNear(readWebGpuPixels(backend, canvasSize)(40, 20), [0, 0, 0, 255]);
+      }
+    } finally {
+      first.destroy();
+      second.destroy();
+      source.destroy();
+      backend.destroy();
+    }
+  });
+
   test('solid-color rectangle fill renders the fill color inside and the clear color outside', async ctx => {
     const backend = await setupBackend();
     const graphics = new Graphics();
