@@ -310,4 +310,13 @@ export class Geometry {
   public _onDispose(callback: () => void): void {
     this._disposeCallbacks.add(callback);
   }
+
+  /**
+   * Detach a callback registered with `_onDispose`, for a renderer that dropped
+   * its cached entry while the geometry lives on.
+   * @internal
+   */
+  public _offDispose(callback: () => void): void {
+    this._disposeCallbacks.delete(callback);
+  }
 }

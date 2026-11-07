@@ -65,6 +65,21 @@ describe('Slider drag', () => {
     expect(slider.dragging).toBe(false);
   });
 
+  test('ignores a drag while its transform is singular', () => {
+    const { stage, onPointerMove } = makeStage();
+    const slider = new Slider({ width: 200, height: 20, min: 0, max: 1, value: 0 });
+    slider._setStage(stage);
+    slider.onPointerDown.dispatch(pointerDownAt(100, 10));
+    const held = slider.fraction;
+    slider.scale.set(0, 1);
+
+    expect(() => onPointerMove.dispatch(contact(1), 200, 10)).not.toThrow();
+    expect(slider.fraction).toBe(held);
+    slider.scale.set(1, 1);
+    onPointerMove.dispatch(contact(1), 200, 10);
+    expect(slider.fraction).toBe(1);
+  });
+
   test('a second contact neither moves the slider nor ends the drag', () => {
     const { stage, onPointerMove, onPointerUp } = makeStage();
     const slider = new Slider({ width: 200, height: 20, min: 0, max: 1, value: 0 });

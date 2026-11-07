@@ -1,24 +1,89 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
 import { releaseFailedPreview } from '../src/rendering/dpr-probe/previewCleanup';
 
+vi.mock('#core/Application', () => ({
+  Application: class {
+    pixelRatio = 1;
+    backend = { backendType: 'webgl2', acquireRenderTexture() {}, resetStats() {}, clear() {}, flush() {} };
+    rendering = { render() {} };
+
+    async start() {}
+
+    stop() {}
+
+    destroy() {}
+  },
+}));
+vi.mock('../src/rendering/dpr-probe/scenes', () => ({
+  createProbeScene: () => ({ root: {}, cacheNodes: [], textNodes: [], update() {}, dispose() {} }),
+}));
+vi.mock('../src/rendering/page/gpuFrameTimer', () => ({
+  createWebGl2GpuTimer: () => ({
+    available: true,
+    note: '1 disjoint GPU frame(s) discarded',
+    async drainSubmittedWork() {},
+    beginFrame() {},
+    endFrame() {},
+    async collect() {
+      return { frameMs: [1], queueMs: [] };
+    },
+  }),
+  createWebGpuGpuTimer: () => {},
+  noopGpuTimer: {},
+}));
+
+test('retains GPU sample caveats in a probe cell capture', async () => {
+  const loseContext = vi.fn();
+  const context = { getExtension: vi.fn((name: string) => (name === 'WEBGL_lose_context' ? { loseContext } : null)) };
+
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context as never);
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+    callback(0);
+
+    return 0;
+  });
+  const { runProbeCell } = await import('../src/rendering/dpr-probe/runner');
+
+  try {
+    const result = await runProbeCell({
+      cell: { scene: 'plain', mode: 'inherit', pixelRatio: 1 } as never,
+      backend: 'webgl2',
+      host: document.createElement('div'),
+      index: 0,
+      runStartedAt: 0,
+      stage: { width: 64, height: 64 },
+      measureMs: 0,
+    });
+
+    expect(result.gpuMsMedian).toBe(1);
+    expect(result.errors).toContain('1 disjoint GPU frame(s) discarded');
+    expect(loseContext).toHaveBeenCalledOnce();
+  } finally {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  }
+});
+
 describe('releaseFailedPreview', () => {
-  test('undoes instrumentation, disposes the scene and destroys the app', () => {
+  test('undoes instrumentation, disposes the scene and destroys the app', async () => {
     const calls: string[] = [];
 
-    releaseFailedPreview({
+    await releaseFailedPreview({
       restores: [() => calls.push('undo')],
       disposeScene: () => calls.push('scene'),
-      destroyApp: () => calls.push('app'),
+      destroyApp: () => {
+        calls.push('app');
+      },
     });
 
     expect(calls).toEqual(['undo', 'scene', 'app']);
   });
 
-  test('keeps releasing when an earlier step throws, and never obscures the caller error', () => {
+  test('keeps releasing when an earlier step throws, and never obscures the caller error', async () => {
     const calls: string[] = [];
 
-    expect(() =>
+    await expect(
       releaseFailedPreview({
         restores: [
           () => calls.push('undo-1'),
@@ -33,20 +98,24 @@ describe('releaseFailedPreview', () => {
 
           throw new Error('dispose failed');
         },
-        destroyApp: () => calls.push('app'),
+        destroyApp: () => {
+          calls.push('app');
+        },
       }),
-    ).not.toThrow();
+    ).resolves.toBeUndefined();
 
     expect(calls).toEqual(['undo-1', 'undo-2', 'scene', 'app']);
   });
 
-  test('skips the scene when construction never returned', () => {
+  test('skips the scene when construction never returned', async () => {
     const calls: string[] = [];
 
-    releaseFailedPreview({
+    await releaseFailedPreview({
       restores: [],
       disposeScene: null,
-      destroyApp: () => calls.push('app'),
+      destroyApp: () => {
+        calls.push('app');
+      },
     });
 
     expect(calls).toEqual(['app']);

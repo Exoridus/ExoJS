@@ -1,6 +1,10 @@
 import type { MockInstance } from 'vitest';
 
+import { Asset } from '#assets/Asset';
+import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { SvgFactory } from '#assets/factories/SvgFactory';
+import { Loader } from '#assets/Loader';
+import { materializeAssetTypes } from '#extensions/materialize';
 
 import { factoryContext } from './factory-context';
 
@@ -52,6 +56,51 @@ const lastImage = (): HTMLImageElement => {
 };
 
 describe('SvgFactory', () => {
+  test('reacquiring a sized SVG after a cancelled preview retains the requested raster size', async () => {
+    const loader = new Loader();
+    materializeAssetTypes(loader, coreAssetTypes);
+    const descriptor = Asset.type('svg', 'icon-play.svg', { width: 150, height: 150 });
+    const markup = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 3v18l15-9z"/></svg>';
+    const fetchSpy = vi.fn<typeof fetch>().mockImplementation(async () => new Response(markup));
+    vi.stubGlobal('fetch', fetchSpy);
+
+    try {
+      const first = loader.createScope();
+      const initialLoad = first.load(descriptor);
+      await vi.waitFor(() => expect(capturedImages).toHaveLength(1));
+      lastImage().dispatchEvent(new Event('load'));
+      await initialLoad;
+      first.destroy();
+
+      fetchSpy.mockImplementationOnce(
+        (_input, init) =>
+          new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => reject(new DOMException('Cancelled', 'AbortError')), { once: true });
+          }),
+      );
+      const cancelled = loader.createScope();
+      const cancelledLoad = cancelled.load(descriptor);
+      await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
+      cancelled.destroy();
+      await expect(cancelledLoad).rejects.toMatchObject({ name: 'AbortError' });
+
+      const current = loader.createScope();
+      const reloaded = current.load(descriptor);
+      await vi.waitFor(() => expect(capturedImages).toHaveLength(2));
+      lastImage().dispatchEvent(new Event('load'));
+      await reloaded;
+
+      const blob = createObjectUrlSpy.mock.calls.at(-1)?.[0] as Blob;
+      const rasterized = await blob.text();
+
+      expect(rasterized).toContain('width="150"');
+      expect(rasterized).toContain('height="150"');
+      expect(fetchSpy).toHaveBeenCalledTimes(3);
+    } finally {
+      loader.destroy();
+    }
+  });
+
   test('create() resolves with an HTMLImageElement once "load" fires', async () => {
     const factory = new SvgFactory();
 

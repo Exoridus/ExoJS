@@ -9,6 +9,8 @@ import { describe, expect, test, vi } from 'vitest';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { AbstractWebGl2Renderer } from '#rendering/webgl2/AbstractWebGl2Renderer';
 import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
+import { WebGl2MaskCompositor } from '#rendering/webgl2/WebGl2MaskCompositor';
+import { WebGl2MeshRenderer } from '#rendering/webgl2/WebGl2MeshRenderer';
 import { WebGl2OutputPass } from '#rendering/webgl2/WebGl2OutputPass';
 import { WebGl2StencilClipper } from '#rendering/webgl2/WebGl2StencilClipper';
 import { WebGl2TextRenderer } from '#rendering/webgl2/WebGl2TextRenderer';
@@ -198,5 +200,97 @@ describe('WebGl2TextRenderer.flush', () => {
 
     expect(() => renderer.flush()).toThrow('draw failed');
     expect(internals._pendingQuads).toHaveLength(0);
+  });
+});
+
+describe('WebGl2MaskCompositor connection rollback', () => {
+  test.each(['buffer', 'attribute'])('a failed %s setup releases native resources before retry', failure => {
+    const { gl, log } = createGl();
+    const backend = { context: gl, accountant: null } as unknown as WebGl2Backend;
+    const compositor = new WebGl2MaskCompositor();
+    const spy =
+      failure === 'buffer'
+        ? vi.spyOn(gl, 'createBuffer').mockImplementationOnce(() => {
+            throw new Error('setup failed');
+          })
+        : vi.spyOn(WebGl2VertexArrayObject.prototype, 'addAttribute').mockImplementationOnce(() => {
+            throw new Error('setup failed');
+          });
+
+    expect(() => compositor.connect(backend)).toThrow('setup failed');
+    expect(log.leaked('program')).toHaveLength(0);
+    expect(log.leaked('buffer')).toHaveLength(0);
+    expect(log.leaked('vertexArray')).toHaveLength(0);
+    spy.mockRestore();
+    compositor.connect(backend);
+    compositor.disconnect();
+    expect(log.leaked('program')).toHaveLength(0);
+    expect(log.leaked('buffer')).toHaveLength(0);
+    expect(log.leaked('vertexArray')).toHaveLength(0);
+  });
+});
+
+describe('WebGl2MeshRenderer connection rollback', () => {
+  test.each(['buffer', 'vao', 'attribute'])('a failed %s setup releases resources and can reconnect', failure => {
+    const { gl, log } = createGl();
+    const backend = { backendType: RenderBackendType.WebGl2, context: gl, accountant: null } as unknown as WebGl2Backend;
+    const renderer = new WebGl2MeshRenderer();
+    const spy =
+      failure === 'attribute'
+        ? vi.spyOn(WebGl2VertexArrayObject.prototype, 'addAttribute').mockImplementationOnce(() => {
+            throw new Error('setup failed');
+          })
+        : vi.spyOn(gl, failure === 'buffer' ? 'createBuffer' : 'createVertexArray').mockImplementationOnce(() => {
+            throw new Error('setup failed');
+          });
+
+    expect(() => renderer.connect(backend)).toThrow('setup failed');
+    expect(log.leaked('program')).toHaveLength(0);
+    expect(log.leaked('buffer')).toHaveLength(0);
+    expect(log.leaked('vertexArray')).toHaveLength(0);
+    spy.mockRestore();
+    renderer.connect(backend);
+    expect(log.leaked('program')).toHaveLength(1);
+    renderer.disconnect();
+    expect(log.leaked('program')).toHaveLength(0);
+    expect(log.leaked('buffer')).toHaveLength(0);
+    expect(log.leaked('vertexArray')).toHaveLength(0);
+  });
+});
+describe('WebGl2TextRenderer connection rollback', () => {
+  test.each(['buffer', 'attribute', 'texture'])('a failed %s setup releases resources and can reconnect', failure => {
+    const { gl, log } = createGl();
+    const backend = {
+      backendType: RenderBackendType.WebGl2,
+      context: gl,
+      accountant: null,
+      bindRawTexture: vi.fn(),
+    } as unknown as WebGl2Backend;
+    const renderer = new WebGl2TextRenderer();
+
+    const fail = (): never => {
+      throw new Error('setup failed');
+    };
+
+    const spy =
+      failure === 'attribute'
+        ? vi.spyOn(WebGl2VertexArrayObject.prototype, 'addAttribute').mockImplementationOnce(fail)
+        : failure === 'buffer'
+          ? vi.spyOn(gl, 'createBuffer').mockImplementationOnce(fail)
+          : vi.spyOn(gl, 'texImage2D').mockImplementationOnce(fail);
+
+    expect(() => renderer.connect(backend)).toThrow('setup failed');
+    expect(log.leaked('program')).toHaveLength(0);
+    expect(log.leaked('buffer')).toHaveLength(0);
+    expect(log.leaked('vertexArray')).toHaveLength(0);
+    expect(log.leaked('texture')).toHaveLength(0);
+    spy.mockRestore();
+    renderer.connect(backend);
+    expect(log.leaked('program')).toHaveLength(3);
+    renderer.disconnect();
+    expect(log.leaked('program')).toHaveLength(0);
+    expect(log.leaked('buffer')).toHaveLength(0);
+    expect(log.leaked('vertexArray')).toHaveLength(0);
+    expect(log.leaked('texture')).toHaveLength(0);
   });
 });

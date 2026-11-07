@@ -59,7 +59,7 @@ export interface SpatialSmoothingSettings {
   smoothing: number;
   /**
    * Position jump (world units) treated as a teleport: the param snaps with
-   * `setValueAtTime` instead of ramping. Default
+   * `setValueAtTime` instead of ramping. `0` disables automatic teleport detection. Default
    * {@link DEFAULT_TELEPORT_THRESHOLD}.
    *
    * Measured on the **source-to-listener offset**, not on either absolute
@@ -145,7 +145,11 @@ export class SmoothedAudioParam {
       return;
     }
 
-    if (!this._hasWritten || settings.smoothing <= 0 || Math.abs(value - this._last) > settings.teleportThreshold) {
+    if (
+      !this._hasWritten ||
+      settings.smoothing <= 0 ||
+      (settings.teleportThreshold !== 0 && Math.abs(value - this._last) > settings.teleportThreshold)
+    ) {
       param.cancelScheduledValues(now);
       param.setValueAtTime(value, now);
     } else {

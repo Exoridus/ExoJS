@@ -517,7 +517,7 @@ describe('ShaderFilter on WebGL2', () => {
   });
 
   // 10. Texture uniform binds to slot >= 1, sampler uniform = slot index
-  test('texture uniforms in user map bind to slots starting at 1', () => {
+  test.each(['texture', 'render texture'])('binds a raw %s uniform to a texture slot', kind => {
     // Build a mock gl that reports one sampler2D uniform
     const gl = makeGlMock();
     const samplerUniform = { name: 'uExtraTex', type: ShaderPrimitives.Sampler2D, size: 1 };
@@ -551,7 +551,7 @@ describe('ShaderFilter on WebGL2', () => {
 
     canvas.width = 8;
     canvas.height = 8;
-    const extraTex = new Texture(canvas);
+    const extraTex = kind === 'render texture' ? new RenderTexture(8, 8) : new Texture(canvas);
 
     const filter = new ShaderFilter({
       glsl: { fragment: minimalFragSrc },

@@ -235,6 +235,8 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       throw new Error('drawInstancedBatch requires a mesh constructed from a geometry.');
     }
 
+    this.flush();
+
     const backend = this.getBackend();
     const material = mesh.material;
     const shader = material === null ? this._defaultShader : this._getOrCreateCustomShader(material, connection.gl);
@@ -357,70 +359,68 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   protected onConnect(backend: WebGl2Backend): void {
     const gl = backend.context;
 
-    this._defaultShader.connect(createWebGl2ShaderProgram(gl));
-    this._defaultShader.sync();
-
-    // Custom shaders compiled before connect() get connected here too.
-    for (const customShader of this._customShaders.values()) {
-      customShader.connect(createWebGl2ShaderProgram(gl));
-      customShader.sync();
-    }
-
     const buffers = new Map<WebGl2RenderBuffer, { handle: WebGLBuffer; dataByteLength: number }>();
-    const dynamicIndexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, this._indexData, BufferUsage.DynamicDraw).connect(
-      this._createBufferRuntime(gl, buffers),
-      backend.accountant,
-    );
-    // Only the vertex stream is orphaned per upload (see _createBufferRuntime):
-    // that alone keeps every per-draw stream of a flush intact on Firefox's
-    // native-GL path, while orphaning the index and instance streams as well
-    // measurably slows that path down for no further gain.
-    const dynamicVertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._vertexData, BufferUsage.StreamDraw).connect(
-      this._createBufferRuntime(gl, buffers),
-      backend.accountant,
-    );
-    const dynamicNodeIndexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._nodeIndexData, BufferUsage.DynamicDraw).connect(
-      this._createBufferRuntime(gl, buffers),
-      backend.accountant,
-    );
-    const dynamicInstanceBuffer = new WebGl2RenderBuffer(
-      BufferTypes.ArrayBuffer,
-      this._instanceAttributeData,
-      BufferUsage.DynamicDraw,
-    ).connect(this._createBufferRuntime(gl, buffers), backend.accountant);
+    const dynamicIndexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, this._indexData, BufferUsage.DynamicDraw);
+    // Only the vertex stream is orphaned: other streams need no extra storage to preserve draw order.
+    const dynamicVertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._vertexData, BufferUsage.StreamDraw);
+    const dynamicNodeIndexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._nodeIndexData, BufferUsage.DynamicDraw);
+    const dynamicInstanceBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._instanceAttributeData, BufferUsage.DynamicDraw);
+    let dynamicVaoHandle: WebGLVertexArrayObject | null = null;
 
-    const dynamicVaoHandle = gl.createVertexArray();
+    try {
+      this._defaultShader.connect(createWebGl2ShaderProgram(gl));
+      this._defaultShader.sync();
 
-    if (dynamicVaoHandle === null) {
-      throw new Error('Could not create vertex array object.');
-    }
+      // Custom shaders compiled before connect() get connected here too.
+      for (const customShader of this._customShaders.values()) {
+        customShader.connect(createWebGl2ShaderProgram(gl));
+        customShader.sync();
+      }
 
-    const dynamicVao = new WebGl2VertexArrayObject()
-      .addIndex(dynamicIndexBuffer)
-      .addAttribute(dynamicVertexBuffer, this._defaultShader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
-      .addAttribute(dynamicVertexBuffer, this._defaultShader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
-      .addAttribute(dynamicVertexBuffer, this._defaultShader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, vertexStrideBytes, 16)
-      .addAttribute(
+      dynamicIndexBuffer.connect(this._createBufferRuntime(gl, buffers), backend.accountant);
+      dynamicVertexBuffer.connect(this._createBufferRuntime(gl, buffers), backend.accountant);
+      dynamicNodeIndexBuffer.connect(this._createBufferRuntime(gl, buffers), backend.accountant);
+      dynamicInstanceBuffer.connect(this._createBufferRuntime(gl, buffers), backend.accountant);
+
+      dynamicVaoHandle = gl.createVertexArray();
+
+      if (dynamicVaoHandle === null) {
+        throw new Error('Could not create vertex array object.');
+      }
+
+      const nodeIndexAttribute = this._defaultShader.getAttribute('a_nodeIndex');
+      const dynamicVao = new WebGl2VertexArrayObject()
+        .addIndex(dynamicIndexBuffer)
+        .addAttribute(dynamicVertexBuffer, this._defaultShader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
+        .addAttribute(dynamicVertexBuffer, this._defaultShader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
+        .addAttribute(dynamicVertexBuffer, this._defaultShader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, vertexStrideBytes, 16)
+        .addAttribute(dynamicNodeIndexBuffer, nodeIndexAttribute, gl.UNSIGNED_INT, false, Uint32Array.BYTES_PER_ELEMENT, 0, true, 1)
+        .connect(this._createVaoRuntime(gl, dynamicVaoHandle));
+
+      this._connection = {
+        gl,
+        buffers,
+        dynamicVao,
+        dynamicVertexBuffer,
+        dynamicIndexBuffer,
         dynamicNodeIndexBuffer,
-        this._defaultShader.getAttribute('a_nodeIndex'),
-        gl.UNSIGNED_INT,
-        false,
-        Uint32Array.BYTES_PER_ELEMENT,
-        0,
-        true,
-        1,
-      )
-      .connect(this._createVaoRuntime(gl, dynamicVaoHandle));
+        dynamicInstanceBuffer,
+      };
+    } catch (error) {
+      this._defaultShader.destroy();
 
-    this._connection = {
-      gl,
-      buffers,
-      dynamicVao,
-      dynamicVertexBuffer,
-      dynamicIndexBuffer,
-      dynamicNodeIndexBuffer,
-      dynamicInstanceBuffer,
-    };
+      for (const shader of this._customShaders.values()) {
+        shader.destroy();
+      }
+
+      dynamicIndexBuffer.destroy();
+      dynamicVertexBuffer.destroy();
+      dynamicNodeIndexBuffer.destroy();
+      dynamicInstanceBuffer.destroy();
+      gl.deleteVertexArray(dynamicVaoHandle);
+
+      throw error;
+    }
   }
 
   protected onDisconnect(): void {
@@ -436,7 +436,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       customShader.destroy();
     }
 
-    for (const entry of this._geometryCache.values()) {
+    for (const [geometry, entry] of this._geometryCache) {
+      geometry._offDispose(entry.disposeListener);
+
       for (const perLayout of entry.vaos.values()) {
         for (const vao of perLayout.values()) {
           vao.destroy();

@@ -97,6 +97,24 @@ describe('GranularProcessor normalizeGain DSP', () => {
     randomSpy.mockRestore();
   });
 
+  it.each([0, Number.NaN, 0.5 / SAMPLE_RATE])('rejects a buffer that cannot hold one sample (%s seconds)', bufferSeconds => {
+    expect(() => new Processor({ processorOptions: { bufferSeconds } })).toThrow(RangeError);
+  });
+
+  it('processes with a one-sample buffer without producing non-finite output', () => {
+    const processor = new Processor({ processorOptions: { bufferSeconds: 1 / SAMPLE_RATE } });
+    const output = new Float32Array(BLOCK);
+    processor.process([[new Float32Array(BLOCK).fill(1)]], [[output]], {
+      grainSize: [0.05],
+      density: [50],
+      spread: [0.5],
+      pitchMin: [1],
+      pitchMax: [1],
+    });
+    expect(output.every(Number.isFinite)).toBe(true);
+    expect(output.some(value => value > 0)).toBe(true);
+  });
+
   const rmsRatio = (opts: { density: number; grainSize: number; normalizeGain?: boolean }): number => {
     const proc = new Processor({ processorOptions: { bufferSeconds: 2, normalizeGain: opts.normalizeGain ?? false } });
     const n = SAMPLE_RATE * 3;

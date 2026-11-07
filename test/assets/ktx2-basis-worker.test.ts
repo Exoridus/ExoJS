@@ -100,7 +100,7 @@ describe('Basis worker lifecycle', () => {
     runtime.destroy();
   });
 
-  test.each(['worker', 'init', 'message'])('propagates %s failure to every request and terminates', async mode => {
+  test.each(['worker', 'message'])('propagates %s failure to every request and terminates', async mode => {
     vi.stubGlobal('Worker', FakeWorker);
     const runtime = new BasisKtx2Runtime();
     const outcomes = Promise.allSettled([run(runtime), run(runtime)]);
@@ -108,8 +108,6 @@ describe('Basis worker lifecycle', () => {
 
     if (mode === 'worker') {
       worker.onerror?.({ message: 'worker failed', preventDefault() {} } as ErrorEvent);
-    } else if (mode === 'init') {
-      worker.reply({ kind: 'fatal', message: 'WASM init failed' });
     } else {
       worker.onmessageerror?.();
     }
@@ -120,6 +118,25 @@ describe('Basis worker lifecycle', () => {
     ]);
     expect(worker.terminated).toBe(true);
     await expect(run(runtime)).rejects.toThrow(/failed/);
+    runtime.destroy();
+  });
+
+  test('retries worker initialization after a transient failure', async () => {
+    vi.stubGlobal('Worker', FakeWorker);
+    const runtime = new BasisKtx2Runtime();
+    const first = Promise.allSettled([run(runtime), run(runtime)]);
+    FakeWorker.instances[0]!.reply({ kind: 'fatal', message: 'WASM init failed' });
+    expect(await first).toMatchObject([
+      { status: 'rejected', reason: { message: 'WASM init failed' } },
+      { status: 'rejected', reason: { message: 'WASM init failed' } },
+    ]);
+    const second = run(runtime);
+    const worker = FakeWorker.instances[1]!;
+    expect(worker).toBeDefined();
+    worker.reply({ kind: 'ready' });
+    await Promise.resolve();
+    worker.reply({ kind: 'result', id: worker.messages.at(-1)!.id, levels: [] });
+    expect(await second).toEqual([]);
     runtime.destroy();
   });
 

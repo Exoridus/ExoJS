@@ -8,48 +8,9 @@ import { LoadState } from '#core/LoadState';
 import { testAssetType } from './test-asset-type';
 
 /**
- * Hardening coverage for the readiness (`idle`/`loading`/`ready`/`failed`) x
- * residency (`claimed`/`unclaimed`) state model, exercised through the
- * consolidated `Asset.type(...)` / `get()` / `load()` surface Task 4
- * introduced. `AssetResidency`'s own contract is untouched by this task -
- * this test documents existing behavior, it does not extend it.
- *
- * Methodology mirrors the seeded-random-mutation pattern used for
- * scene-graph safety (`test/rendering/container.test.ts`, the "random
- * add/remove/setChildIndex sequences" test): a deterministic seeded PRNG
- * drives a long sequence of random operations against a live `Loader`, and
- * the invariants that must hold regardless of history are re-checked after
- * EVERY step - not just at a handful of hand-picked scenarios. A fixed
- * 3-example test (this file's original draft) cannot reach the interleavings
- * this walk does: claim-then-release-then-reclaim-before-settle, releasing
- * mid-flight, failing then abandoning, settling out of issue order, etc.
- *
- * A synthetic `stub` asset type (not a real `AssetDefinitions` member) is
- * used instead of a built-in type so the fetch itself is fully
- * test-controlled (no network/audio/image decoding to mock) while still
- * exercising the REAL `AssetTypeRegistry`/`AssetResidency`/leaf
- * machinery - the same code every built-in type runs through.
- *
- * Two disjoint key namespaces drive two complementary sub-machines per step,
- * chosen at random by the same PRNG:
- *
- * - "r*" keys - claim/residency, via `_adopt`/`_release` (the `get()`
- *   surface's claim path). Exercises: idle -> loading -> ready/failed,
- *   claim-count > 0 never evicts, refcount-0 evicts a resident payload,
- *   free-on-arrival when the last claim releases mid-fetch.
- * - "l*" keys - store-before-fetch dedup and failure healing, via `load()`
- *   (`AssetResidency._loadSingleAsset`'s identity-based dedup). Exercises:
- *   an already-stored or already-in-flight key never triggers a second
- *   fetch; a failed key's next `load()` retries and can heal to stored.
- *
- * (The `get()`-adopt path does NOT itself retry a `'failed'` handle on
- * re-claim - only the bare-path `get(str)`/`get(Asset.type(value...))`
- * surfaces do, via `_getSeamless`/`_getRef`'s explicit failed-state check;
- * `_adopt`'s branches have no such check. This is a real, unchanged
- * characteristic of `AssetResidency`, not a gap this task introduces or
- * fixes - the "r*" channel's model deliberately does not assert a retry
- * that the implementation does not perform, and the "l*" channel is where
- * failure-healing is actually exercised.)
+ * A seeded operation sequence checks readiness and residency after every step.
+ * One key group exercises claims, release, cancellation and replacement; another
+ * checks stored/in-flight deduplication and failure retries through load().
  */
 
 // ---------------------------------------------------------------------------
@@ -120,7 +81,7 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
   // (verified against AssetDecoder._dispatchFetch), so `pending` always
   // reflects the current in-flight set immediately after a triggering call -
   // no `await` needed between issuing a fetch and observing it here.
-  const pending = new Map<string, { resolve: (h: StubHandle) => void; reject: (e: Error) => void }>();
+  const pending = new Map<string, { resolve: (h: StubHandle) => void; reject: (e: Error) => void; signal: AbortSignal | undefined }>();
 
   loader._installAssetTypes([
     testAssetType<string, StubHandle>({
@@ -131,7 +92,7 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
       create: (_source, context) =>
         new Promise<StubHandle>((resolve, reject) => {
           fetchCount++;
-          pending.set(context.source, { resolve, reject });
+          pending.set(context.source, { resolve, reject, signal: context.signal });
         }),
     }),
   ]);
@@ -231,23 +192,21 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
           const model = ch1.get(key)!;
           const entry = pending.get(key)!;
           pending.delete(key);
-          // Claim state at the moment of arrival - NOT at claim time - is what
-          // decides free-on-arrival: a release can land between issuing
-          // and settling this exact fetch.
-          const claimedAtArrival = model.claims.size > 0;
           const donor = new StubHandle();
           donor.payload = `value:${key}:${step}`;
 
           entry.resolve(donor);
           await flush();
 
-          if (claimedAtArrival) {
+          if (entry.signal?.aborted) {
+            model.ready = false;
+            expect(model.handle!.loadState).toBe(model.claims.size > 0 ? 'loading' : 'failed');
+            expect(model.handle!.payload).toBeNull();
+          } else {
+            expect(model.claims.size).toBeGreaterThan(0);
             model.ready = true;
             expect(model.handle!.loadState).toBe('ready');
             expect(model.handle!.payload).toBe(donor.payload);
-          } else {
-            model.ready = false;
-            expect(model.handle!.loadState).toBe('loading'); // freed on arrival
           }
         }
 
@@ -267,7 +226,7 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
           await flush();
 
           model.ready = false;
-          expect(model.handle!.loadState).toBe('failed');
+          expect(model.handle!.loadState).toBe(entry.signal?.aborted && model.claims.size > 0 ? 'loading' : 'failed');
         }
 
         break;

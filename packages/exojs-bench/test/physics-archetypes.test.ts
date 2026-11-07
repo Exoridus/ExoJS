@@ -146,6 +146,17 @@ describe('joints', () => {
     expect(statics).toHaveLength(Math.ceil(200 / chainLength));
   });
 
+  test('the ray sweep extent covers chains of different lengths', () => {
+    for (const jointChainLength of [2, 100]) {
+      const scene = describePhysicsScene({ ...byId.joints, jointChainLength }, 100, 1);
+
+      for (const body of scene.bodies) {
+        expect(body.x + 8).toBeLessThan(scene.extent.width);
+        expect(body.y + 8).toBeLessThan(scene.extent.height);
+      }
+    }
+  });
+
   test('every joint pins two distinct bodies at a pivot on their shared seam', () => {
     const scene = sceneFor('joints', 200);
 

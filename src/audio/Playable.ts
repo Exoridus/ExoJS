@@ -82,6 +82,7 @@ export interface Voice extends Spatializable {
    *
    * The returned {@link AudioSend} is owned by this voice and torn down with it;
    * remove one early with {@link Voice.removeSend} only to change the routing.
+   * Throws if this voice has already ended, without creating a send.
    */
   addSend(bus: AudioBus, level?: number): AudioSend;
   /** Tear down a send opened on this voice. Idempotent; a send from another voice is ignored. */

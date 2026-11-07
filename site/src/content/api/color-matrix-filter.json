@@ -768,7 +768,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The current 4×5 matrix. Assign a new one, or use the conveniences."
+          "description": "A copy of the current 4×5 matrix. Assign a new one, or use the conveniences."
         }
       ],
       "paragraphs": [],

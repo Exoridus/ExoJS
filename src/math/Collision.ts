@@ -87,6 +87,7 @@ const intersectionLineRect = (line: Line, rectangle: Rectangle): boolean => {
   const bottomRight = { x: x + width, y: y + height };
 
   return (
+    intersectionPointRect(line.fromPosition, rectangle) ||
     intersectionLineLineSegments(line.fromPosition, line.toPosition, topLeft, bottomLeft) ||
     intersectionLineLineSegments(line.fromPosition, line.toPosition, topRight, bottomRight) ||
     intersectionLineLineSegments(line.fromPosition, line.toPosition, topLeft, topRight) ||
@@ -160,6 +161,10 @@ const intersectionLineEllipse = (line: Line, ellipse: Ellipse): boolean => {
 const intersectionLinePoly = (line: Line, polygon: Polygon): boolean => {
   const { x: offsetX, y: offsetY, points } = polygon;
   const len = points.length;
+
+  if (intersectionPointPoly(line.fromPosition, polygon)) {
+    return true;
+  }
 
   for (let i = 0; i < len; i++) {
     // i and (i + 1) % len are valid indices into the length-`len` points array.
@@ -424,13 +429,11 @@ const getCollisionCircleRectangle = (circle: Circle, rect: Rectangle, swap = fal
 
   // Containment flags: A inside B when the rect fully covers the circle,
   // B inside A when the circle fully covers the rect's bounding extent.
-  const halfWidth = rect.width / 2;
-  const halfHeight = rect.height / 2;
-  const minHalf = Math.min(halfWidth, halfHeight);
-  const maxHalf = Math.max(halfWidth, halfHeight);
-  const centerDistance = getDistance(circle.x, circle.y, rect.left + halfWidth, rect.top + halfHeight);
-  const containsA = radius <= minHalf && centerDistance <= minHalf - radius;
-  const containsB = maxHalf <= radius && centerDistance <= radius - maxHalf;
+  const containsA =
+    circle.x - radius >= rect.left && circle.x + radius <= rect.right && circle.y - radius >= rect.top && circle.y + radius <= rect.bottom;
+  const farthestX = Math.max(Math.abs(circle.x - rect.left), Math.abs(circle.x - rect.right));
+  const farthestY = Math.max(Math.abs(circle.y - rect.top), Math.abs(circle.y - rect.bottom));
+  const containsB = farthestX * farthestX + farthestY * farthestY <= radius * radius;
 
   // Natural normal points from the rect surface toward the circle. When the circle
   // center lies inside the rect (distance == 0) fall back to a unit vector

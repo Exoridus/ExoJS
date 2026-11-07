@@ -22,6 +22,6 @@
   },
   // Core's ambient declarations come with its source: the engine reads the
   // compile-time build constants, which are not declared in this package.
-  "include": ["src/**/*", "test/**/*", "../../src/typings.d.ts", "../../src/build-constants.d.ts"],
+  "include": ["src/**/*", "test/**/*", "../../src/typings.d.ts"],
   "exclude": ["dist", "node_modules"]
 }

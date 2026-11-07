@@ -819,14 +819,14 @@ describe('Application lifecycle / getters / sizing', () => {
       expect(app.height).toBe(1200);
     });
 
-    test('rejects a minAspect above the base aspect ratio', async () => {
+    test.each([0, -1, NaN, 2])('rejects invalid minAspect %s', async minAspect => {
       const { Application, ResponsiveCanvasSizing } = await loadHarness();
       const { canvas } = mountedCanvas(600, 600);
 
       expect(
         () =>
           new Application({
-            canvas: { element: canvas, width: 800, height: 600, sizing: new ResponsiveCanvasSizing({ minAspect: 2 }) },
+            canvas: { element: canvas, width: 800, height: 600, sizing: new ResponsiveCanvasSizing({ minAspect }) },
             backend: { type: 'webgl2' },
           }),
       ).toThrow(/minAspect/);

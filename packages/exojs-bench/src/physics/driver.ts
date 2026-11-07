@@ -235,15 +235,22 @@ interface HarnessSession {
 /** Open the harness page and read the arms it could build plus the clock it can time with. */
 const openSession = async (baseUrl: string, browserName: RenderingBrowser): Promise<HarnessSession> => {
   const browser = await launchBrowser(browserName);
-  const page = await browser.newPage();
 
-  await page.goto(baseUrl, { waitUntil: 'load' });
-  await page.waitForFunction(() => typeof globalThis.__runPhysicsCell === 'function');
+  try {
+    const page = await browser.newPage();
 
-  const clock = await page.evaluate(() => globalThis.__physicsClock!());
-  const arms = await page.evaluate(() => globalThis.__physicsArms!());
+    await page.goto(baseUrl, { waitUntil: 'load' });
+    await page.waitForFunction(() => typeof globalThis.__runPhysicsCell === 'function');
 
-  return { browser, page, arms, clock, version: browser.version() };
+    const clock = await page.evaluate(() => globalThis.__physicsClock!());
+    const arms = await page.evaluate(() => globalThis.__physicsArms!());
+
+    return { browser, page, arms, clock, version: browser.version() };
+  } catch (error) {
+    await browser.close().catch(() => undefined);
+
+    throw error;
+  }
 };
 
 /**
@@ -282,22 +289,21 @@ export const runPhysicsMatrix = async (
   const browserName = options.browser ?? DEFAULT_RENDERING_BROWSER;
   const engineVersionSource = readLibraryProvenance([NATIVE_PHYSICS_PACKAGE]);
   const server = await startViteServer(engineVersionSource[0]?.version ?? '0.0.0');
-  const baseUrl = server.resolvedUrls?.local[0];
-
-  if (baseUrl === undefined) {
-    await server.close();
-
-    throw new Error('The physics harness server started without a local URL to drive.');
-  }
-
-  const onCellResult: PhysicsCellResultSink = options.onCellResult ?? ((): void => undefined);
-  const results: PhysicsCellResult[] = [];
-  const timestamp = new Date().toISOString();
-
-  let session = await openSession(baseUrl, browserName);
-  let relaunched = false;
+  let session: HarnessSession | undefined;
 
   try {
+    const baseUrl = server.resolvedUrls?.local[0];
+
+    if (baseUrl === undefined) {
+      throw new Error('The physics harness server started without a local URL to drive.');
+    }
+
+    const onCellResult: PhysicsCellResultSink = options.onCellResult ?? ((): void => undefined);
+    const results: PhysicsCellResult[] = [];
+    const timestamp = new Date().toISOString();
+    let relaunched = false;
+
+    session = await openSession(baseUrl, browserName);
     const { arms } = session;
     let clock = session.clock;
     let available = new Set(arms.filter(arm => arm.available).map(arm => `${arm.engine}/${arm.config}`));
@@ -341,7 +347,9 @@ export const runPhysicsMatrix = async (
         remaining = remaining.slice(1);
         relaunched = true;
 
-        await session.browser.close();
+        const previousSession = session;
+        session = undefined;
+        await previousSession.browser.close();
         session = await openSession(baseUrl, browserName);
 
         // The relaunched page is a new measurement condition: its clock, its
@@ -404,7 +412,10 @@ export const runPhysicsMatrix = async (
 
     return { provenance, libraries, results };
   } finally {
-    await session.browser.close();
-    await server.close();
+    try {
+      await session?.browser.close();
+    } finally {
+      await server.close();
+    }
   }
 };

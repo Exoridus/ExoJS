@@ -61,7 +61,7 @@ class CustomFragmentShaderScene extends Scene {
   init() {
     const app = this.app;
     const { width, height } = app;
-    this.filter = ShaderFilter.from(warpShader);
+    this.filter = this.track(ShaderFilter.from(warpShader));
     this.sprite = new Sprite(this.loader.get(UV_GRID))
       .setAnchor(0.5)
       .setScale(4)

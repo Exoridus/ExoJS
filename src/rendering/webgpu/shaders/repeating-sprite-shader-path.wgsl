@@ -55,5 +55,5 @@ fn shaderVert(input: ShaderVIn, @builtin(vertex_index) vid: u32) -> VOut {
 
 @fragment
 fn shaderFrag(input: VOut) -> @location(0) vec4<f32> {
-    return textureSample(spriteTexture, spriteSampler, input.uv) * input.color;
+    return associateSampledColor(textureSample(spriteTexture, spriteSampler, input.uv), premultiplySample) * input.color;
 }

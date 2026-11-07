@@ -17,18 +17,19 @@ const root = resolve(__dirname, '../..');
 const barrel = readFileSync(resolve(root, 'src/renderer-sdk.ts'), 'utf8');
 
 /** Each `export [type] { a, b as c } from '#path'` of the barrel as [names, source file]. */
-const reExports = (): Array<[string[], string]> =>
-  [...barrel.matchAll(/export\s+(?:type\s+)?\{([^}]*)\}\s+from\s+'#([^']+)'/g)].map(match => {
+const reExports = (input = barrel): Array<[string[], string]> =>
+  [...input.matchAll(/export\s+(?:type\s+)?\{([^}]*)\}\s+from\s+'#([^']+)'/g)].map(match => {
     const names = match[1]
       .split(',')
       .map(
         entry =>
           entry
             .trim()
+            .replace(/^type\s+/, '')
             .split(/\s+as\s+/)[0]
             ?.trim() ?? '',
       )
-      .filter(name => name.length > 0 && !name.startsWith('type '));
+      .filter(name => name.length > 0);
 
     return [names, resolve(root, 'src', `${match[2]}.ts`)];
   });
@@ -46,6 +47,17 @@ const docOf = (source: string, name: string): string | null => {
 };
 
 describe('renderer-sdk barrel', () => {
+  test('includes inline type modifiers in internal checks', () => {
+    const exports = reExports("export { value, type InternalThing } from '#example';");
+    expect(exports[0]![0]).toEqual(['value', 'InternalThing']);
+    expect(docOf('/** @internal */ export interface InternalThing {}', exports[0]![0][1]!)).toContain('@internal');
+  });
+
+  test('pins all named re-exports including types', () => {
+    const exports = [...barrel.matchAll(/export\s+(?:type\s+)?\{[^}]*\}\s+from\s+'#[^']+'/g)].map(match => match[0].replace(/\s+/g, ' '));
+    expect(exports.sort()).toMatchSnapshot();
+  });
+
   test('re-exports nothing the declaration build strips as internal', () => {
     const stripped: string[] = [];
 

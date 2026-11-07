@@ -614,7 +614,7 @@ export default defineConfig([
   // declares them does it in the same file, and a list would fall behind the
   // next one that does.
   {
-    files: ['src/build-constants.d.ts', 'src/typings.d.ts', 'packages/*/src/typings.d.ts'],
+    files: ['src/typings.d.ts', 'packages/*/src/typings.d.ts'],
     rules: {
       '@typescript-eslint/naming-convention': 'off',
     },

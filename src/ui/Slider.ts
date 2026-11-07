@@ -5,7 +5,6 @@ import type { KeyEvent } from '#input/KeyEvent';
 import type { Pointer } from '#input/Pointer';
 import { Keyboard } from '#input/types';
 import { clamp } from '#math/utils';
-import { Vector } from '#math/Vector';
 
 import type { UIWidgetState } from './theme';
 import { Widget } from './Widget';
@@ -71,8 +70,6 @@ export class Slider extends Widget {
    * finger elsewhere must not move this slider or end its drag.
    */
   private _dragPointerId = -1;
-  /** Scratch vector reused while dragging - a pointer move must not allocate. */
-  private readonly _localPoint = new Vector();
 
   private readonly _onGlobalPointerMove = (pointer: Pointer, x: number, y: number): void => {
     if (pointer.id !== this._dragPointerId) {
@@ -212,7 +209,6 @@ export class Slider extends Widget {
     this._track.destroy();
     this._fill.destroy();
     this._thumb.destroy();
-    this._localPoint.destroy();
     super.destroy();
   }
 
@@ -250,7 +246,12 @@ export class Slider extends Widget {
       return;
     }
 
-    const local = this._localPoint.set(x, y).transformInverse(this.getGlobalTransform());
+    const local = this._toLocalPoint(x, y);
+
+    if (local === null) {
+      return;
+    }
+
     const fraction = clamp((local.x - this._thumbSize / 2) / travel, 0, 1);
 
     this._applyValue(this._min + fraction * (this._max - this._min));

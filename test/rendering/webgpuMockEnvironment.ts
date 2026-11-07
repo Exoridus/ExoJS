@@ -95,6 +95,7 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
 
   const pass = {
     setPipeline: (): void => {},
+    setStencilReference: (): void => {},
     setBindGroup: (): void => {},
     setVertexBuffer: (): void => {},
     setIndexBuffer: (_buffer: unknown, format: string, offset = 0): void => {

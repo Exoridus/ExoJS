@@ -365,6 +365,14 @@ export class PhysicsBody {
     }
   }
 
+  /** @internal Correct simulated motion without collapsing the interpolation pair as a teleport would. */
+  public _correctPosition(dx: number, dy: number): void {
+    this.wake();
+    this._transform.x += dx;
+    this._transform.y += dy;
+    this.synchronizeColliders();
+  }
+
   /** World-space centre of mass X (body origin + rotated local centre of mass). */
   public get worldCenterOfMassX(): number {
     return this._transform.x + this._transform.cos * this._comX - this._transform.sin * this._comY;
@@ -400,13 +408,18 @@ export class PhysicsBody {
 
   /**
    * Apply an instantaneous world-space impulse at `(pointX, pointY)` (world
-   * space), changing velocity immediately. Pass both coordinates or neither: an
-   * application point is used only when both are given, and the impulse then
-   * also applies a torque unless rotation is locked or the moment is zero;
-   * otherwise it acts at the centre of mass.
-   * No-op on static/kinematic bodies (infinite mass). Returns `this`.
+   * space), changing velocity immediately. Pass both coordinates or neither.
+   * With neither coordinate, the impulse acts at the centre of mass. With both,
+   * it also applies a torque unless rotation is locked or the moment is zero.
+   * Supplying exactly one coordinate throws `TypeError` before changing velocity
+   * or waking the body, including on static/kinematic bodies.
+   * Valid calls are no-ops on static/kinematic bodies (infinite mass). Returns `this`.
    */
   public applyImpulse(impulseX: number, impulseY: number, pointX?: number, pointY?: number): this {
+    if ((pointX === undefined) !== (pointY === undefined)) {
+      throw new TypeError('PhysicsBody: application point coordinates must both be supplied or both be omitted.');
+    }
+
     if (this.invMass === 0) {
       return this;
     }

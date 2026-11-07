@@ -3,7 +3,7 @@ import type { ReadonlyRectangle } from '#math/Rectangle';
 import { Drawable } from '#rendering/Drawable';
 
 import type { LayoutOptions } from './LayoutOptions';
-import { buildTextPageQuads, emptyTextLayout } from './textLayout';
+import { buildTextPageQuads, emptyTextLayout, validateLayoutOptions } from './textLayout';
 import type { StyleChangeHint, TextStyle } from './TextStyle';
 import { mergeHint } from './TextStyle';
 import type { TextLayoutResult, TextPageQuads, TextSize } from './types';
@@ -49,6 +49,7 @@ export abstract class AbstractText extends Drawable {
 
   protected constructor(text: string, style: TextStyle, layout: LayoutOptions) {
     super();
+    validateLayoutOptions(layout);
     this._text = text;
     this._style = style;
     this._style.onChange.add(this._onStyleChange);
@@ -100,12 +101,15 @@ export abstract class AbstractText extends Drawable {
    * Carries layout keys only. A subclass whose options bag merges style and
    * layout into one flat object (as `TextOptions` does) still reports just the
    * layout half here.
+   *
+   * Assigning an invalid `maxLines` or `tabSize` throws `RangeError` and preserves the previous layout.
    */
   public get layout(): Readonly<LayoutOptions> {
     return this._layout;
   }
 
   public set layout(v: LayoutOptions) {
+    validateLayoutOptions(v);
     this._layout = pickLayoutOptions(v);
     this._markDirty('layout');
   }

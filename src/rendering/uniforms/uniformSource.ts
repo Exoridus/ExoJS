@@ -162,9 +162,20 @@ const isWgslPreambleDirective = (line: string): boolean =>
 const insertAfterPreamble = (source: string, declarations: string, isDirective: (line: string) => boolean): string => {
   const lines = source.split('\n');
   let insertAt = 0;
+  let inBlockComment = false;
 
   for (const [index, line] of lines.entries()) {
     const trimmed = line.trim();
+
+    if (inBlockComment) {
+      inBlockComment = !trimmed.includes('*/');
+      continue;
+    }
+
+    if (trimmed.startsWith('/*')) {
+      inBlockComment = !trimmed.includes('*/');
+      continue;
+    }
 
     if (trimmed.length === 0 || trimmed.startsWith('//')) {
       continue;

@@ -86,6 +86,8 @@ Use `pnpm lanes --base <base>` before the first push to confirm that the expecte
 
 The regular pre-push hook is the final local integration check, not the discovery mechanism for required validation. It may repeat work already performed deliberately. A first push should happen only after the affected contracts are understood and their targeted checks are green.
 
+For visible Playground or rendering changes, capture targeted evidence as described in `CONTRIBUTING.md` (Visual evidence for visible changes): stills for static changes, a short clip for animation, transitions and moving UI, exact frame indices only where the simulation can be stepped deterministically. Keep it untracked under `.workspace/visual-review/current/` and show it in the pull request. Wall-clock captures are not frame-exact proof. Do not sweep the whole gallery or archive a set per commit.
+
 Do not weaken, delete, skip, or baseline a failing test or gate merely to make the change pass without establishing that the expectation itself is wrong.
 
 ## Multi-workstream pull requests and integration

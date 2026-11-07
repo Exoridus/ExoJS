@@ -332,6 +332,14 @@ export interface DemoAssetDefinitions {
   readonly musicDarkIndustrial: LeaflessAsset<AudioStream>;
   /** `audio/music-action-synth-rock.mp3` (2.3 MB). MonsterVania - Ghost Land, CC0-1.0. Load with await `loader.load()`. */
   readonly musicActionSynthRock: LeaflessAsset<AudioStream>;
+  /** `images/pixelfx-transitions.json` (1 kB). PixelFX scene transitions, MIT. Load with await `loader.load()`. */
+  readonly pixelfxTransitionsManifest: ValueAsset<unknown>;
+  /** `images/pixelfx-burn-away.png` (2.5 MB). PixelFX scene transitions, MIT. Load with `loader.get()` or `await loader.load()`. */
+  readonly pixelfxBurnAway: ResourceAsset<Texture>;
+  /** `images/pixelfx-pixel-dissolve.png` (2.7 MB). PixelFX scene transitions, MIT. Load with `loader.get()` or `await loader.load()`. */
+  readonly pixelfxPixelDissolve: ResourceAsset<Texture>;
+  /** `images/pixelfx-star-iris.png` (420 kB). PixelFX scene transitions, MIT. Load with `loader.get()` or `await loader.load()`. */
+  readonly pixelfxStarIris: ResourceAsset<Texture>;
 }
 
 /** The name of one standard demo asset. */
@@ -502,6 +510,10 @@ export const demoAssetCategories: Readonly<Record<DemoAssetKey, DemoAssetCategor
   musicGlitchMachine: 'music',
   musicDarkIndustrial: 'music',
   musicActionSynthRock: 'music',
+  pixelfxTransitionsManifest: 'textures',
+  pixelfxBurnAway: 'textures',
+  pixelfxPixelDissolve: 'textures',
+  pixelfxStarIris: 'textures',
 });
 
 /** @internal */
@@ -667,6 +679,10 @@ export const buildDemoAssets = (url: (path: string) => string): DemoAssetDefinit
     musicGlitchMachine: Asset.type('music', url('audio/music-glitch-machine.ogg')),
     musicDarkIndustrial: Asset.type('music', url('audio/music-dark-industrial.mp3')),
     musicActionSynthRock: Asset.type('music', url('audio/music-action-synth-rock.mp3')),
+    pixelfxTransitionsManifest: Asset.type('json', url('images/pixelfx-transitions.json')),
+    pixelfxBurnAway: Asset.type('texture', url('images/pixelfx-burn-away.png')),
+    pixelfxPixelDissolve: Asset.type('texture', url('images/pixelfx-pixel-dissolve.png')),
+    pixelfxStarIris: Asset.type('texture', url('images/pixelfx-star-iris.png')),
   });
 
 /**

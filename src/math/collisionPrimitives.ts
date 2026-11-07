@@ -222,18 +222,7 @@ const intersectionPointPoly = (point: PointLike, { x: offsetX, y: offsetY, point
   // offset is honoured (the local `points` never carry the offset).
   polygonContainsPoint({ x: point.x - offsetX, y: point.y - offsetY }, points);
 
-const intersectionLineLineSegments = (a1: PointLike, a2: PointLike, b1: PointLike, b2: PointLike): boolean => {
-  const denominator = (a2.x - a1.x) * (b2.y - b1.y) - (b2.x - b1.x) * (a2.y - a1.y);
-
-  if (Math.abs(denominator) <= epsilon) {
-    return false;
-  }
-
-  const uA = ((b2.x - b1.x) * (a1.y - b1.y) - (b2.y - b1.y) * (a1.x - b1.x)) / denominator;
-  const uB = ((a2.x - a1.x) * (a1.y - b1.y) - (a2.y - a1.y) * (a1.x - b1.x)) / denominator;
-
-  return uA >= 0 && uA <= 1 && uB >= 0 && uB <= 1;
-};
+const intersectionLineLineSegments = segmentsIntersect;
 
 const intersectionRectRect = (
   { x: x1, y: y1, width: w1, height: h1 }: RectangleLikeLike,

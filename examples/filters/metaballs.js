@@ -47,8 +47,8 @@ class MetaballsScene extends Scene {
     this.balls = new Graphics();
     this.handle = new Graphics();
     this.points = Array.from({ length: 7 }, (_, i) => ({ a: (i / 7) * Math.PI * 2, r: 120 + (i % 3) * 56 }));
-    this.blur = new BlurFilter({ strength: 6 });
-    this.threshold = new ShaderFilter({ glsl: { fragment: glsl }, wgsl });
+    this.blur = this.track(new BlurFilter({ strength: 6 }));
+    this.threshold = this.track(new ShaderFilter({ glsl: { fragment: glsl }, wgsl }));
     this.panel = demoPanel({
       scene: this,
       controls: {

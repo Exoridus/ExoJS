@@ -23,6 +23,7 @@ import {
   retainedGroupUniformBytes,
   stencilContentDepthStencilState,
   Texture,
+  WebGpuStencilMode,
 } from '@codexo/exojs/renderer-sdk';
 
 import type { TileQuad } from '../chunkGeometry';
@@ -335,10 +336,15 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       const tileFlipY = (q.orient & 2) !== 0;
       const diagonal = (q.orient & 4) !== 0;
 
-      const uA = flipX ? q.u1 : q.u0;
-      const uB = flipX ? q.u0 : q.u1;
-      let vA = tileFlipY ? q.v1 : q.v0;
-      let vB = tileFlipY ? q.v0 : q.v1;
+      // Tiled applies the diagonal transpose before the flips, so the flips act
+      // on destination axes; once the shader swaps the UV corner axes for a
+      // diagonal tile, flipX has to mirror the v range and flipY the u range.
+      const mirrorU = diagonal ? tileFlipY : flipX;
+      const mirrorV = diagonal ? flipX : tileFlipY;
+      const uA = mirrorU ? q.u1 : q.u0;
+      const uB = mirrorU ? q.u0 : q.u1;
+      let vA = mirrorV ? q.v1 : q.v0;
+      let vB = mirrorV ? q.v0 : q.v1;
 
       if (flipYTexture) {
         const swap = vA;
@@ -473,7 +479,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
         const transformBindGroup = this._getOrCreateTransformBindGroup(device, uniformBuffer, storage.buffer);
         const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend, texture);
 
-        const stencil = coordinator.stencilActive;
+        const stencil = coordinator.stencilMode;
         const pipeline = this._getPipeline(blendMode, backend.renderTargetFormat, stencil);
 
         pass.setPipeline(pipeline);
@@ -734,7 +740,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     const active = coordinator.acquirePass();
     const pass = active.pass;
 
-    const nativePipeline = this._getPipeline(payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive);
+    const nativePipeline = this._getPipeline(payload.blendMode, backend.renderTargetFormat, coordinator.stencilMode);
     const nativeFrameBindGroup = bundle.getBindGroup(device, this._uniformBindGroupLayout!, false);
 
     const nativeCompatible = backend.colorAttachmentCount === 1;
@@ -773,8 +779,8 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     backend.stats.drawCalls++;
   }
 
-  private _getPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
-    const key = `${blendMode}:${format}:${stencil ? 's' : 'n'}`;
+  private _getPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: WebGpuStencilMode): GPURenderPipeline {
+    const key = `${blendMode}:${format}:${stencil}`;
     const existing = this._pipelines.get(key);
 
     if (existing) {
@@ -819,8 +825,8 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       },
     };
 
-    if (stencil) {
-      descriptor.depthStencil = stencilContentDepthStencilState();
+    if (stencil !== WebGpuStencilMode.None) {
+      descriptor.depthStencil = stencilContentDepthStencilState(stencil === WebGpuStencilMode.Clip);
     }
 
     const pipeline = this._device.createRenderPipeline(descriptor);

@@ -350,7 +350,9 @@ export class AnimatedSprite extends Sprite {
     const isSameClip = this._currentClipName === name;
     const shouldRestart = options.restart ?? true;
 
-    if (!isSameClip || shouldRestart) {
+    const restart = !isSameClip || shouldRestart;
+
+    if (restart) {
       this._currentClipName = name;
       this._currentFrameIndex = 0;
       this._elapsedFrameTime = seconds(0);
@@ -359,9 +361,6 @@ export class AnimatedSprite extends Sprite {
       // the previous one would otherwise stop an indefinitely-looping clip after
       // the cycle count some earlier call asked for.
       this._repeatOverride = null;
-      // Normalized clips always hold at least one frame.
-      this._applyFrame(clip, 0);
-      this.onFrame.dispatch(name, 0);
     }
 
     if (options.repeat !== undefined) {
@@ -371,11 +370,18 @@ export class AnimatedSprite extends Sprite {
     this._playing = true;
     this._syncSystemRegistration();
 
+    if (restart) {
+      this._applyFrame(clip, 0);
+      this.onFrame.dispatch(name, 0);
+    }
+
     return this;
   }
 
   /** Stop playback and rewind the active clip to frame 0. */
   public stop(): this {
+    const notify = this._playing || this._currentFrameIndex !== 0;
+
     this._playing = false;
     this._elapsedFrameTime = seconds(0);
     this._syncSystemRegistration();
@@ -390,7 +396,10 @@ export class AnimatedSprite extends Sprite {
       this._currentFrameIndex = 0;
       // Guarded non-empty above.
       this._applyFrame(clip, 0);
-      this.onFrame.dispatch(this._currentClipName, 0);
+
+      if (notify) {
+        this.onFrame.dispatch(this._currentClipName, 0);
+      }
     }
 
     return this;

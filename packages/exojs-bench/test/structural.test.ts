@@ -94,6 +94,7 @@ const makeFakeGpu = () => {
       drawIndirect: () => calls.push('drawIndirect'),
       drawIndexedIndirect: () => calls.push('drawIndexedIndirect'),
       setBindGroup: () => calls.push('setBindGroup'),
+      executeBundles: () => calls.push('executeBundles'),
       end: () => calls.push('end'),
     }) as unknown as GPURenderPassEncoder;
 
@@ -110,11 +111,18 @@ const makeFakeGpu = () => {
   const queue = {
     writeBuffer: () => calls.push('writeBuffer'),
     writeTexture: () => calls.push('writeTexture'),
+    copyExternalImageToTexture: () => calls.push('copyExternalImageToTexture'),
     submit: () => calls.push('submit'),
   } as unknown as GPUQueue;
 
   const device = {
     queue,
+    createRenderBundleEncoder: () => ({
+      draw: () => calls.push('bundleDraw'),
+      drawIndexed: () => calls.push('bundleDrawIndexed'),
+      setBindGroup: () => calls.push('bundleSetBindGroup'),
+      finish: () => ({}),
+    }),
     createCommandEncoder: () => {
       calls.push('createCommandEncoder');
 
@@ -128,6 +136,20 @@ const makeFakeGpu = () => {
 };
 
 describe('attachWebGpuProbe', () => {
+  test('counts external image uploads and restores the queue on detach', () => {
+    const device = makeFakeGpu();
+    const probe = attachWebGpuProbe(device);
+    const copy = () =>
+      device.queue.copyExternalImageToTexture({} as GPUCopyExternalImageSourceInfo, {} as GPUCopyExternalImageDestInfo, [1, 1]);
+
+    copy();
+    expect(probe.counters.bufferUploads).toBe(1);
+    probe.detach();
+    copy();
+    expect(probe.counters.bufferUploads).toBe(1);
+    expect(device.calls).toEqual(['copyExternalImageToTexture', 'copyExternalImageToTexture']);
+  });
+
   test('counts draw calls across all draw entry points', () => {
     const device = makeFakeGpu();
     const probe = attachWebGpuProbe(device);
@@ -140,6 +162,30 @@ describe('attachWebGpuProbe', () => {
     pass.drawIndexedIndirect({} as GPUBuffer, 0);
 
     expect(probe.counters.drawCalls).toBe(4);
+    probe.detach();
+  });
+
+  test('counts bundle draws and binds each time the bundle executes', () => {
+    const device = makeFakeGpu();
+    const probe = attachWebGpuProbe(device);
+    const encoder = device.createRenderBundleEncoder({ colorFormats: ['rgba8unorm'] });
+
+    encoder.draw(3);
+    encoder.drawIndexed(6);
+    encoder.setBindGroup(0, {} as GPUBindGroup);
+    const bundle = encoder.finish();
+
+    expect(probe.counters.drawCalls).toBe(0);
+    const pass = device.createCommandEncoder().beginRenderPass({} as GPURenderPassDescriptor);
+
+    pass.executeBundles([bundle, bundle]);
+    expect(probe.counters.drawCalls).toBe(4);
+    expect(probe.counters.textureBinds).toBe(2);
+    probe.reset();
+    pass.executeBundles([bundle]);
+    expect(probe.counters.drawCalls).toBe(2);
+    expect(probe.counters.textureBinds).toBe(1);
+    expect(device.calls.filter(call => call === 'executeBundles')).toHaveLength(2);
     probe.detach();
   });
 

@@ -14,7 +14,6 @@ import { Text } from '#rendering/text/Text';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 import type { TextLayoutResult } from '#rendering/text/types';
 
-import type { TextEditGranularity } from './TextEditingModel';
 import { glyphCount, glyphOffsetAtIndex, graphemeOffsets, TextEditingModel } from './TextEditingModel';
 import type { UIWidgetState } from './theme';
 import { resolveUISkin } from './theme';
@@ -56,15 +55,6 @@ const modifierChannels = new Set<number>([
   Keyboard.MetaLeft,
   Keyboard.MetaRight,
 ]);
-
-/** The granularity a delete asks for; the word modifier wins over the line modifier. */
-const _deleteGranularity = (word: boolean, line: boolean): TextEditGranularity => {
-  if (word) {
-    return 'word';
-  }
-
-  return line ? 'line' : 'character';
-};
 
 /**
  * Base class of the text-editing widgets ({@link TextInput},
@@ -170,7 +160,12 @@ export abstract class TextEditWidget extends Widget {
 
     const x = event.x;
     const y = event.y;
-    const local = this._localPoint.set(x, y).transformInverse(this.getGlobalTransform());
+    const local = this._toLocalPoint(x, y);
+
+    if (local === null) {
+      return;
+    }
+
     const offset = this._offsetAtLocal(local.x, local.y);
     const now = performance.now();
     const isDoublePress =
@@ -199,7 +194,11 @@ export abstract class TextEditWidget extends Widget {
       return;
     }
 
-    const local = this._localPoint.set(x, y).transformInverse(this.getGlobalTransform());
+    const local = this._toLocalPoint(x, y);
+
+    if (local === null) {
+      return;
+    }
 
     this.model.setSelection(this._dragAnchor, this._offsetAtLocal(local.x, local.y));
     this._afterModelChange();
@@ -264,7 +263,7 @@ export abstract class TextEditWidget extends Widget {
 
     const extend = this._shiftDown;
     const word = this._controlDown;
-    const consumed = this._handleEditKeys(channel, extend, word, this._shiftDown);
+    const consumed = this._handleEditKeys(channel, extend, word);
     /* eslint-enable @typescript-eslint/no-unsafe-enum-comparison */
 
     if (consumed) {
@@ -273,7 +272,7 @@ export abstract class TextEditWidget extends Widget {
     }
   }
 
-  private _handleEditKeys(channel: number, extend: boolean, word: boolean, line: boolean): boolean {
+  private _handleEditKeys(channel: number, extend: boolean, word: boolean): boolean {
     // `channel` is a generic numeric input channel (KeyEvent.channel is
     // `number`), intentionally compared against the Keyboard enum constants
     // - see KeyEvent docs.
@@ -316,11 +315,11 @@ export abstract class TextEditWidget extends Widget {
 
         return true;
       case Keyboard.Backspace:
-        this._deleteContent('backward', word, line);
+        this._deleteContent('backward', word);
 
         return true;
       case Keyboard.Delete:
-        this._deleteContent('forward', word, line);
+        this._deleteContent('forward', word);
 
         return true;
       default:
@@ -330,7 +329,6 @@ export abstract class TextEditWidget extends Widget {
   }
 
   private readonly _fieldRect = new Rectangle();
-  private readonly _localPoint = new Vector();
   private readonly _scratchTopLeft = new Vector();
   private readonly _scratchBottomRight = new Vector();
 
@@ -480,7 +478,6 @@ export abstract class TextEditWidget extends Widget {
     this.onChange.destroy();
     this._onSubmit.destroy();
     this._fieldRect.destroy();
-    this._localPoint.destroy();
     this._scratchTopLeft.destroy();
     this._scratchBottomRight.destroy();
     super.destroy();
@@ -675,7 +672,7 @@ export abstract class TextEditWidget extends Widget {
    * Apply the delete a keystroke asks for, unless the transport already
    * reported the same one - see {@link TextEditWidget._hostDeletes}.
    */
-  private _deleteContent(direction: 'backward' | 'forward', word: boolean, line: boolean): void {
+  private _deleteContent(direction: 'backward' | 'forward', word: boolean): void {
     if (this._readOnly) {
       return;
     }
@@ -686,7 +683,7 @@ export abstract class TextEditWidget extends Widget {
       return;
     }
 
-    this.model.deleteContent(direction, _deleteGranularity(word, line));
+    this.model.deleteContent(direction, word ? 'word' : 'character');
   }
 
   private _applyIntent(intent: TextEditIntent): void {

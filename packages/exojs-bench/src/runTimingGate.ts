@@ -88,6 +88,10 @@ const main = async (): Promise<void> => {
       confirmedIdle: idle,
     });
 
+    if (baseline.cells.length === 0) {
+      throw new Error('Cannot update the timing baseline: no cells were measured successfully.');
+    }
+
     mkdirSync(dirname(baselinePath), { recursive: true });
     writeFileSync(baselinePath, `${JSON.stringify(baseline, null, 2)}\n`);
 
@@ -103,6 +107,11 @@ const main = async (): Promise<void> => {
   }
 
   const baseline = JSON.parse(readFileSync(baselinePath, 'utf8')) as TimingBaseline;
+
+  if (baseline.cells.length === 0) {
+    throw new Error('Cannot compare against an empty timing baseline. Re-record it with --update.');
+  }
+
   const recordedOn = Object.values(baseline.recorded.adapters).join(', ');
   const measuredOn = outcome.provenance.map(entry => entry.adapter).join(', ');
 

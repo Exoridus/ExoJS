@@ -1,7 +1,7 @@
 import { Color } from '#core/Color';
 import { BackendTargetPass } from '#rendering/BackendTargetPass';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
 import { createWebGl2ShaderProgram } from '#rendering/webgl2/shaderProgram';
@@ -161,7 +161,7 @@ export class WebGl2ShaderFilterPass {
       const value = this._uniforms[name]!;
       const uniform = shader.getUniform(name);
 
-      if (value instanceof Texture) {
+      if (value instanceof Texture || value instanceof RenderTexture) {
         gl2.bindTexture(value, textureSlot);
         this._slotScratch[0] = textureSlot;
         uniform.setValue(this._slotScratch);

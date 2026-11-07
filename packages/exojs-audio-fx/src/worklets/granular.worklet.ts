@@ -59,6 +59,11 @@ class GranularProcessor extends DisposableProcessor {
       (options as { processorOptions?: { bufferSeconds?: number; normalizeGain?: boolean } } | undefined)?.processorOptions ?? {};
     const bufferSeconds = opts.bufferSeconds ?? 2;
     this._bufferLength = Math.floor(bufferSeconds * sampleRate);
+
+    if (!Number.isSafeInteger(this._bufferLength) || this._bufferLength < 1) {
+      throw new RangeError('GranularProcessor bufferSeconds must produce a positive safe integer sample count.');
+    }
+
     this._buffers = [new Float32Array(this._bufferLength)];
     this._normalizeGain = opts.normalizeGain ?? false;
   }

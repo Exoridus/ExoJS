@@ -97,7 +97,7 @@ export const integer = (args: ParsedArgs, name: string, fallback: number): numbe
 
   const parsed = Number(value);
 
-  if (!Number.isInteger(parsed) || parsed < 0) {
+  if (value.trim() === '' || !Number.isInteger(parsed) || parsed < 0) {
     throw new CliError(`option "--${name}" expects a non-negative integer, got "${value}"`);
   }
 

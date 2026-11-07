@@ -28,7 +28,7 @@ const DEFAULT_HOOKS: Readonly<Record<string, readonly string[]>> = {
 
 /** Options for {@link noAsyncRenderHook}. */
 export interface NoAsyncRenderHookOptions {
-  /** Base class name to the hooks that must stay synchronous in its subclasses. */
+  /** Additional base classes and hooks, or replacements for individual built-in bases. */
   readonly hooks?: Readonly<Record<string, readonly string[]>>;
 }
 
@@ -57,7 +57,7 @@ export const noAsyncRenderHook: Rule.RuleModule = {
   },
   create(context) {
     const options = (context.options[0] ?? {}) as NoAsyncRenderHookOptions;
-    const hooks = options.hooks ?? DEFAULT_HOOKS;
+    const hooks = { ...DEFAULT_HOOKS, ...options.hooks };
 
     const check = (member: FunctionMember & Rule.NodeParentExtension): void => {
       const fn = memberFunction(member);

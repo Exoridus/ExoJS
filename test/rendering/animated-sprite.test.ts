@@ -725,3 +725,34 @@ describe('AnimatedSprite clip registry changes', () => {
     expect(sprite.playing).toBe(false);
   });
 });
+
+test('pause from the initial frame signal remains paused after play returns', () => {
+  const sprite = new AnimatedSprite(null, { walk: { frames: createFrames(), fps: 10 } });
+
+  sprite.onFrame.add(() => sprite.pause());
+  sprite.play('walk');
+  expect(sprite.playing).toBe(false);
+  sprite.update(seconds(500));
+  expect(sprite.currentFrame).toBe(0);
+  sprite.destroy();
+});
+
+test('stop from a frame signal rewinds once without recursively notifying', () => {
+  const sprite = new AnimatedSprite(null, { walk: { frames: createFrames(), fps: 10 } });
+
+  sprite.play('walk');
+  const frames: number[] = [];
+
+  sprite.onFrame.add((_clip, frame) => {
+    frames.push(frame);
+
+    if (frames.length < 5) {
+      sprite.stop();
+    }
+  });
+  sprite.update(seconds(500));
+  expect(frames).toEqual([1, 0]);
+  expect(sprite.playing).toBe(false);
+  expect(sprite.currentFrame).toBe(0);
+  sprite.destroy();
+});

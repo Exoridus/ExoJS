@@ -1,6 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import { ImageFactory } from '#assets/factories/ImageFactory';
+import { ObjectUrlPool } from '#assets/factories/ObjectUrlPool';
 
 import { factoryContext } from './factory-context';
 
@@ -32,6 +33,22 @@ const lastImage = (): HTMLImageElement => {
 
   return image;
 };
+
+describe('ObjectUrlPool', () => {
+  test('revokes outstanding URLs once and leaves individually revoked URLs alone', () => {
+    const revoke = vi.spyOn(URL, 'revokeObjectURL');
+    const pool = new ObjectUrlPool();
+    const first = pool.create(new Blob(['first']));
+    const second = pool.create(new Blob(['second']));
+
+    pool.revoke(first);
+    pool.revokeAll();
+    pool.revokeAll();
+    pool.revoke(second);
+    expect(revoke.mock.calls.map(([url]) => url)).toEqual([first, second]);
+    revoke.mockRestore();
+  });
+});
 
 describe('ImageFactory', () => {
   let createObjectUrlSpy: MockInstance;

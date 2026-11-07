@@ -107,6 +107,18 @@ describe('SmoothedAudioParam', () => {
     expect(p.setTargetAtTime).not.toHaveBeenCalled();
   });
 
+  test('zero teleport threshold retains smoothing for large moves', () => {
+    const p = makeParam();
+    const s = new SmoothedAudioParam();
+    settings.teleportThreshold = 0;
+
+    s.write(p as unknown as AudioParam, 0, 0, settings);
+    s.write(p as unknown as AudioParam, 1000, 0.016, settings);
+
+    expect(p.setValueAtTime).toHaveBeenCalledTimes(1);
+    expect(p.setTargetAtTime).toHaveBeenCalledWith(1000, 0.016, settings.smoothing);
+  });
+
   test('smoothing <= 0 disables ramping — every write snaps', () => {
     const p = makeParam();
     const s = new SmoothedAudioParam();

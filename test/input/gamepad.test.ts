@@ -160,6 +160,26 @@ describe('Gamepad', () => {
     expect(trigger).toHaveBeenCalledTimes(1);
   });
 
+  test('binding a held button does not report a tap on release', () => {
+    const channels = new Float32Array(ChannelSize.Container);
+    const pad = new Gamepad(0, channels);
+    const buttons = [{ value: 1, pressed: true, touched: true }];
+    const native = createNativeGamepad('generic', 0, [1]);
+    (native as unknown as { buttons: unknown }).buttons = buttons;
+    pad._bind(native, buildDefinition());
+    pad.update();
+    const trigger = vi.fn();
+    const binding = pad.onTrigger(GamepadButton.South, trigger);
+    const start = vi.fn();
+    binding.onStart.add(start);
+    pad.update();
+    buttons[0] = { value: 0, pressed: false, touched: false };
+    pad.update();
+
+    expect(start).toHaveBeenCalledOnce();
+    expect(trigger).not.toHaveBeenCalled();
+  });
+
   test('a button value changing between two nonzero values fires neither onButtonDown nor onButtonUp', () => {
     const channels = new Float32Array(ChannelSize.Container);
     const pad = new Gamepad(0, channels);

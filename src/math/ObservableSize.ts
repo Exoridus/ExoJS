@@ -8,7 +8,7 @@ import { Size } from './Size';
  * Batch mutations via `set()` fire at most one callback per call.
  */
 export class ObservableSize extends Size {
-  private readonly _callback: () => void;
+  private _callback: (() => void) | null;
 
   public constructor(callback: () => void, width = 0, height = 0) {
     super(width, height);
@@ -23,7 +23,7 @@ export class ObservableSize extends Size {
   public override set width(width: number) {
     if (this._width !== width) {
       this._width = width;
-      this._callback();
+      this._callback?.();
     }
   }
 
@@ -34,7 +34,7 @@ export class ObservableSize extends Size {
   public override set height(height: number) {
     if (this._height !== height) {
       this._height = height;
-      this._callback();
+      this._callback?.();
     }
   }
 
@@ -46,7 +46,7 @@ export class ObservableSize extends Size {
     if (this._width !== width || this._height !== nextHeight) {
       this._width = width;
       this._height = nextHeight;
-      this._callback();
+      this._callback?.();
     }
 
     return this;
@@ -80,5 +80,9 @@ export class ObservableSize extends Size {
    */
   public override clone(): Size {
     return new Size(this._width, this._height);
+  }
+
+  public override destroy(): void {
+    this._callback = null;
   }
 }

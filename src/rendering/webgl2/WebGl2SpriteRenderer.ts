@@ -149,12 +149,14 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   // Custom-material state. Compiled fragment programs are cached per material
   // instance; the current batch's material/base-texture decide when to flush.
   private readonly _customShaders = new Map<AnySpriteMaterial, WebGl2Shader>();
+  private readonly _disposeHooked = new WeakSet<AnySpriteMaterial>();
   // Texture-unit index scratches reused for sampler-uniform binds so the
   // per-batch path stays allocation-free.
   private readonly _slotScratches: Int32Array[] = Array.from({ length: maxBatchTextures }, (_, i) => new Int32Array([i]));
   // Pinned unit index for the shared transform buffer sampler.
   private readonly _transformUnitScratch: Int32Array = new Int32Array([transformTextureUnit]);
   private readonly _tintUnitScratch: Int32Array = new Int32Array([transformTintTextureUnit]);
+  private readonly _samplePremultiplyMask = new Int32Array(1);
   private _currentMaterial: AnySpriteMaterial | null = null;
   private readonly _retainedPreparedEpoch = new WeakMap<AnySpriteMaterial, number>();
   // Local bounds resolved for the sprite currently being packed. Geometry-mode
@@ -334,12 +336,22 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     backend.bindTexture(store.attributeTexture, slotAttributeTextureUnit);
     backend.bindTexture(store.transformTexture, transformTextureUnit);
     backend.bindTexture(store.tintTexture, transformTintTextureUnit);
-    shader.sync();
-    backend.bindVertexArrayObject(vao);
+    let premultiplyMask = 0;
 
     for (let i = 0; i < store.textures.length; i++) {
-      backend.bindTexture(store.textures[i]!, i);
+      const texture = store.textures[i]!;
+
+      backend.bindTexture(texture, i);
+
+      if (backend.shouldPremultiplyTextureSample(texture)) {
+        premultiplyMask |= 1 << i;
+      }
     }
+
+    this._samplePremultiplyMask[0] = premultiplyMask;
+    shader.getUniform('u_samplePremultiplyMask').setValue(this._samplePremultiplyMask);
+    shader.sync();
+    backend.bindVertexArrayObject(vao);
 
     vao.drawInstanced(4, 0, count, RenderingPrimitives.TriangleStrip);
     backend.stats.batches++;
@@ -376,16 +388,25 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   }
 
   public flush(): void {
+    try {
+      this._flushBatch();
+    } finally {
+      // A rejected batch must not be retried after its target or camera changes.
+      this._instanceCount = 0;
+      this._maxNodeIndex = 0;
+      this._resetSlots();
+      this._currentBlendMode = null;
+      this._currentMaterial = null;
+    }
+  }
+
+  private _flushBatch(): void {
     const backend = this.getBackendOrNull();
     const instanceBuffer = this._instanceBuffer;
     const vao = this._vao;
     const connection = this._connection;
 
     if (this._instanceCount === 0 || backend === null || instanceBuffer === null || vao === null || connection === null) {
-      this._maxNodeIndex = 0;
-      this._currentBlendMode = null;
-      this._resetSlots();
-
       return;
     }
 
@@ -459,12 +480,6 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
         material === null ? null : createRetainedMaterialState(material),
       );
     }
-
-    this._instanceCount = 0;
-    this._maxNodeIndex = 0;
-    this._currentBlendMode = null;
-
-    this._resetSlots();
   }
 
   /**
@@ -949,13 +964,22 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
     this._customShaders.set(material, shader);
 
+    // Material cannot unregister callbacks, so hook once per dispose cycle
+    // rather than once per (re)connect.
+    if (this._disposeHooked.has(material)) {
+      return shader;
+    }
+
+    this._disposeHooked.add(material);
+
     material.onDispose(() => {
+      this._disposeHooked.delete(material);
+
       const stored = this._customShaders.get(material);
 
-      if (stored !== undefined) {
-        stored.destroy();
-        this._customShaders.delete(material);
-      }
+      // Evict before releasing so a throwing release cannot leave a destroyed entry cached.
+      this._customShaders.delete(material);
+      stored?.destroy();
     });
 
     return shader;

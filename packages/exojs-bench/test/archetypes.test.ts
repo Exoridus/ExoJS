@@ -1,3 +1,21 @@
+import { vi } from 'vitest';
+
+import { BlurFilter } from '#rendering/filters/BlurFilter';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
+import { RenderNode } from '#rendering/RenderNode';
+
+vi.mock('#core/Application', () => ({
+  Application: class {
+    rendering = { view: { setCenter() {} } };
+
+    async start() {}
+
+    stop() {}
+
+    destroy() {}
+  },
+}));
+
 import { createExoJsAdapter } from '../src/rendering/adapters/exojs';
 import { ARCHETYPES, buildMatrix, createRng, timedFramesFor, warmupFramesFor } from '../src/rendering/archetypes';
 import type { Backend, EngineAdapter } from '../src/rendering/EngineAdapter';
@@ -165,5 +183,54 @@ describe('exojs adapter config axis', () => {
 
   test('the default stays current', () => {
     expect(createExoJsAdapter().config).toBe('current');
+  });
+
+  test('rejects calibration labels that cannot represent a finite ratio', () => {
+    expect(() => createExoJsAdapter(undefined, 'cull-margin-1_0')).toThrow();
+    expect(() => createExoJsAdapter(undefined, 'cull-margin-invalid')).toThrow();
+    expect(() => createExoJsAdapter(undefined, `cull-margin-${'9'.repeat(400)}_1`)).toThrow();
+    expect(createExoJsAdapter(undefined, 'cull-margin-1_8').config).toBe('cull-margin-1_8');
+  });
+});
+
+describe('exojs adapter filter cleanup', () => {
+  test.each(['fx-blur', 'filter-chain-2'] as const)('destroys %s filters exactly once with either node ownership policy', async id => {
+    const canvas = document.createElement('canvas');
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ fillRect() {}, stroke() {} } as never);
+    vi.stubGlobal(
+      'Path2D',
+      class {
+        moveTo() {}
+
+        lineTo() {}
+      },
+    );
+    const filterType = id === 'fx-blur' ? BlurFilter : ColorMatrixFilter;
+    const destroyFilter = vi.spyOn(filterType.prototype, 'destroy');
+    const originalDestroy = RenderNode.prototype.destroy;
+
+    try {
+      for (const borrowed of [false, true]) {
+        const destroyNode = vi.spyOn(RenderNode.prototype, 'destroy').mockImplementation(function (this: RenderNode) {
+          if (borrowed) {
+            this.filters = [];
+          }
+
+          originalDestroy.call(this);
+        });
+        const adapter = createExoJsAdapter();
+        const spec = ARCHETYPES.find(item => item.id === id)!;
+
+        await adapter.init(canvas, 'webgl2');
+        adapter.buildScene(spec, 1, 1);
+        adapter.teardown();
+        expect(destroyFilter).toHaveBeenCalledTimes(id === 'fx-blur' ? 1 : 2);
+        destroyFilter.mockClear();
+        destroyNode.mockRestore();
+      }
+    } finally {
+      vi.restoreAllMocks();
+      vi.unstubAllGlobals();
+    }
   });
 });

@@ -264,6 +264,33 @@ describe('TileAnimator', () => {
     expect(animator.animatedCellCount).toBe(2);
   });
 
+  it('rescan() does not restore an animated tile the caller removed or replaced', () => {
+    const ts = makeTileset256();
+    ts._setDefinition(0, {
+      animation: [
+        { localTileId: 0, duration: 100 },
+        { localTileId: 1, duration: 100 },
+      ],
+    });
+
+    const layer = makeLayer(ts, 3, 1);
+    setTile(layer, ts, 0, 0, 0);
+    setTile(layer, ts, 1, 0, 0);
+    setTile(layer, ts, 2, 0, 0);
+
+    const animator = new TileAnimator(layer);
+    animator.update(0.15);
+
+    layer.clearTileAt(0, 0);
+    setTile(layer, ts, 1, 0, 9);
+    animator.rescan();
+
+    expect(layer.getTileAt(0, 0)).toBeNull();
+    expect(layer.getTileAt(1, 0)?.localTileId).toBe(9);
+    expect(layer.getTileAt(2, 0)?.localTileId).toBe(0);
+    expect(animator.animatedCellCount).toBe(1);
+  });
+
   it('destroy() drops the cell registry and zeroes the clock', () => {
     const ts = makeTileset256();
     ts._setDefinition(0, {

@@ -3,6 +3,7 @@ import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audi
 import { mediaErrorMessage } from '#core/mediaError';
 import { Signal } from '#core/Signal';
 import type { PlaybackOptions } from '#core/types';
+import { noop } from '#core/utils';
 import { Rectangle } from '#math/Rectangle';
 import { clamp } from '#math/utils';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
@@ -52,7 +53,6 @@ export class Video extends Sprite {
   public readonly onError = new Signal<[error: Error]>();
 
   private readonly _videoElement: HTMLVideoElement;
-  private readonly _duration: number;
   private _volume = 1;
   private _playbackRate = 1;
   private _loop = false;
@@ -83,10 +83,9 @@ export class Video extends Sprite {
   public constructor(videoElement: HTMLVideoElement, playbackOptions?: Partial<PlaybackOptions>, textureOptions?: Partial<TextureOptions>) {
     super(new Texture(videoElement, textureOptions));
 
-    const { duration, volume, playbackRate, loop, muted } = videoElement;
+    const { volume, playbackRate, loop, muted } = videoElement;
 
     this._videoElement = videoElement;
-    this._duration = duration;
     this._volume = volume;
     this._playbackRate = playbackRate;
     this._loop = loop;
@@ -124,8 +123,9 @@ export class Video extends Sprite {
     return this._videoElement;
   }
 
+  /** Media duration in seconds; `NaN` until the element has loaded its metadata. */
   public get duration(): number {
-    return this._duration;
+    return this._videoElement.duration;
   }
 
   /**
@@ -246,17 +246,20 @@ export class Video extends Sprite {
     }
   }
 
-  /** Start video playback. Dispatches `onStart` if the video was paused. Applies `options` before playing. */
+  /**
+   * Start video playback. Applies `options` before playing.
+   *
+   * When the video was paused, `onStart` is dispatched once the element has
+   * actually started playing. A start the browser refuses (autoplay policy) or
+   * one superseded by `pause()` before it begins dispatches nothing.
+   */
   public play(options?: Partial<PlaybackOptions>): this {
     if (options) {
       this.applyOptions(options);
     }
 
     if (this.paused) {
-      // `play()` rejects when an autoplay policy blocks the start; the element
-      // simply stays paused, which callers observe through `paused`.
-      void this._videoElement.play();
-      this.onStart.dispatch();
+      this._videoElement.play().then(this._onPlayStarted, noop);
     }
 
     return this;
@@ -328,6 +331,8 @@ export class Video extends Sprite {
     if (this._audioSetup) {
       const { gainNode, audioContext } = this._audioSetup;
       gainNode.gain.setTargetAtTime(this.muted ? 0 : volume, audioContext.currentTime, 0.01);
+    } else {
+      this._videoElement.volume = Math.min(volume, 1);
     }
 
     return this;
@@ -370,6 +375,8 @@ export class Video extends Sprite {
       if (this._audioSetup) {
         const { gainNode, audioContext } = this._audioSetup;
         gainNode.gain.setTargetAtTime(muted ? 0 : this.volume, audioContext.currentTime, 0.01);
+      } else {
+        this._videoElement.muted = muted;
       }
     }
 
@@ -442,6 +449,12 @@ export class Video extends Sprite {
     this._frameScratch.destroy();
   }
 
+  private readonly _onPlayStarted = (): void => {
+    if (!this.paused) {
+      this.onStart.dispatch();
+    }
+  };
+
   private _onMediaError(): void {
     this.onError.dispatch(new Error(mediaErrorMessage(this._videoElement, 'Video playback failed.')));
   }
@@ -509,6 +522,12 @@ export class Video extends Sprite {
 
     const sourceNode = audioContext.createMediaElementSource(this._videoElement);
     sourceNode.connect(gainNode);
+
+    // Until now the element itself carried volume and mute. Browsers differ in
+    // whether those still attenuate the source node, so neutralize them and
+    // leave the gain node as the only control.
+    this._videoElement.volume = 1;
+    this._videoElement.muted = false;
 
     this._audioSetup = { audioContext, gainNode, sourceNode };
   };

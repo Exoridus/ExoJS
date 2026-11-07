@@ -146,6 +146,23 @@ describe('SoundVoice — Pausable', () => {
     sound.destroy();
   });
 
+  test('pause retains the playhead advanced by rate and detune', () => {
+    const factory = setupSourceSpy();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub());
+    const voice = system.play(sound, { playbackRate: 1.5, detune: 1200 }) as SoundVoice & Pausable;
+
+    setCurrentTime(1);
+    expect(voice.time).toBeCloseTo(3);
+    voice.pause();
+    setCurrentTime(5);
+    expect(voice.time).toBeCloseTo(3);
+    voice.resume();
+    expect(factory.sources[1].start).toHaveBeenCalledWith(0, 3, 7);
+    factory.restore();
+    sound.destroy();
+  });
+
   test('pause() and resume() are idempotent', () => {
     const factory = setupSourceSpy();
     const system = new AudioSystem();

@@ -256,7 +256,7 @@ describe('static-subtree skip: invalidation gates', () => {
     expect(cache).not.toBeNull();
 
     const isCaptureClean = (): boolean =>
-      cache!.isClean(root._contentRevision, root._structureRevision, root._transformRevision, backend.view.updateId, backend);
+      cache!.isClean(root._contentRevision, root._structureRevision, root._transformRevision, backend.view.updateId, backend, backend.view);
 
     expect(isCaptureClean()).toBe(true);
 

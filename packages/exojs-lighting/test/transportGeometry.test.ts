@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { Color, Rectangle } from '@codexo/exojs';
 import { describe, expect, test } from 'vitest';
 
+import { MASK_COARSE, MASK_SUPER } from '../src/backends/maskBlocks';
 import {
   sourceDensity,
   sourceRadius,
@@ -19,6 +20,20 @@ import { PointLight } from '../src/lights/PointLight';
 import { SpotLight } from '../src/lights/SpotLight';
 
 const region = new Rectangle(0, 0, 100, 100);
+
+test('mask hierarchy constants agree across CPU and shader implementations', () => {
+  for (const [name, expected, files] of [
+    ['MASK_COARSE', MASK_COARSE, ['mask-blocks.frag', 'mask-blocks.wgsl', 'transport.frag', 'transport.wgsl']],
+    ['MASK_SUPER', MASK_SUPER, ['mask-superblocks.frag', 'mask-superblocks.wgsl', 'transport.frag', 'transport.wgsl']],
+  ] as const) {
+    for (const file of files) {
+      const source = readFileSync(resolve(__dirname, '../src/backends/shaders', file), 'utf8');
+      const value = new RegExp(`${name}(?:: i32)? = (\\d+)`).exec(source)?.[1];
+
+      expect(Number(value)).toBe(expected);
+    }
+  }
+});
 
 /** A flat segment buffer as `OccluderField` hands one over. */
 const segmentBuffer = (...quads: number[][]): Float32Array => Float32Array.from(quads.flat());

@@ -63,7 +63,7 @@ class DisplacementFilterScene extends Scene {
     const { width, height } = this.app;
 
     this.map = rippleMap();
-    this.ripple = new DisplacementFilter({ map: this.map, scale: 24 });
+    this.ripple = this.track(new DisplacementFilter({ map: this.map, scale: 24 }));
     this.sprite = new Sprite(this.loader.get(SHIP))
       .setAnchor(0.5)
       .setScale(10)

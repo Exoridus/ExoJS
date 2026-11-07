@@ -48,16 +48,24 @@ describe('SceneAudio native graph ownership', () => {
       const gain = audioContext.createGain();
       const disconnect = vi.spyOn(gain, 'disconnect');
       vi.spyOn(audioContext, 'createGain').mockReturnValueOnce(gain);
-      const send = method === 'add' ? voice.addSend(bus) : new AudioSend(audioContext, source, bus, 1);
 
-      if (method === 'adopt') {
-        voice._adoptSend(send);
+      if (method === 'add') {
+        expect(() => voice.addSend(bus)).toThrow('already ended');
+        expect(voice.sends).toHaveLength(0);
+        audio._flushPending();
+        expect(disconnect).not.toHaveBeenCalled();
+
+        return;
       }
+
+      const send = new AudioSend(audioContext, source, bus, 1);
+
+      voice._adoptSend(send);
 
       expect(gain).toBeInstanceOf(GainNode);
       expect(send.destroyed).toBe(true);
       expect(disconnect).toHaveBeenCalledTimes(1);
-      expect(placeholderDisconnect).toHaveBeenCalledTimes(method === 'add' ? 3 : 1);
+      expect(placeholderDisconnect).toHaveBeenCalledTimes(1);
       expect(voice.sends).toHaveLength(0);
       audio._flushPending();
       expect(disconnect).toHaveBeenCalledTimes(1);

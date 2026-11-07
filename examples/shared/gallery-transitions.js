@@ -93,6 +93,7 @@ class GalleryTransitionSession {
   }
   destroy() {
     this.sprite.destroy();
+    this.filter?.destroy();
     this.circle?.destroy();
   }
 }

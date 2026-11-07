@@ -442,6 +442,14 @@ describe('AbstractVector.transform() / transformInverse()', () => {
     expect(v.y).toBe(0 * 3 + 2 * 4 + 20);
   });
 
+  test('transformInverse() rejects a singular matrix without changing the vector', () => {
+    const vector = new Vector(3, 4);
+    const matrix = new Matrix(1, 2, 10, 2, 4, 20);
+
+    expect(() => vector.transformInverse(matrix)).toThrow(RangeError);
+    expect([vector.x, vector.y]).toEqual([3, 4]);
+  });
+
   test('transformInverse() undoes transform() for an invertible matrix', () => {
     const matrix = new Matrix(2, 0, 10, 0, 2, 20);
     const original = new Vector(3, 4);

@@ -65,6 +65,32 @@ beforeEach(() => {
 });
 
 describe('<Scenes> / <Scene> / useActiveScene', () => {
+  it('keeps navigation independent between applications and serializes when returning', async () => {
+    const a = makeApp();
+    const b = makeApp();
+    const view = render(<Tree app={a} active="title" />);
+    await view.findByText('TitleScene');
+    const change = a.scenes.change.getMockImplementation()! as (...args: unknown[]) => unknown;
+    let finish!: () => void;
+    a.scenes.change.mockImplementationOnce(async (...args: unknown[]) => {
+      await new Promise<void>(resolve => {
+        finish = resolve;
+      });
+
+      return change(...args);
+    });
+    view.rerender(<Tree app={a} active="game" />);
+    expect(a.scenes.change).toHaveBeenCalledTimes(1);
+    view.rerender(<Tree app={b} active="title" />);
+    expect(b.start).toHaveBeenCalledTimes(1);
+    await view.findByText('TitleScene');
+    view.rerender(<Tree app={a} active="title" />);
+    expect(a.scenes.change).toHaveBeenCalledTimes(1);
+    finish();
+    await waitFor(() => expect(a.scenes.change).toHaveBeenCalledTimes(2));
+    await view.findByText('TitleScene');
+  });
+
   it('activates the first scene via app.start() (engine stopped) and exposes it through useActiveScene', async () => {
     const app = makeApp();
     const { findByTestId } = render(<Tree app={app} active="title" />);
@@ -78,6 +104,24 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
     const active = await findByTestId('active');
     expect(active.textContent).toBe('TitleScene');
     expect((await findByTestId('hud')).textContent).toBe('title-hud');
+  });
+
+  it('activates a changed declaration for the same active name', async () => {
+    const app = makeApp();
+    const tree = (component: new () => ExoScene): ReactElement => (
+      <ExoContext.Provider value={app as unknown as Application}>
+        <Scenes active="main">
+          <Scene name="main" component={component}>
+            <ActiveProbe />
+          </Scene>
+        </Scenes>
+      </ExoContext.Provider>
+    );
+    const view = render(tree(TitleScene));
+    await view.findByText('TitleScene');
+    view.rerender(tree(GameScene));
+    await view.findByText('GameScene');
+    expect(app.scenes.currentScene).toBeInstanceOf(GameScene);
   });
 
   it('renders only the active scene’s children as the overlay', async () => {
@@ -104,6 +148,31 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
 
     expect((await view.findByTestId('hud')).textContent).toBe('game-hud');
     expect((await view.findByTestId('active')).textContent).toBe('GameScene');
+  });
+
+  it('applies the last active scene after an in-flight switch', async () => {
+    const app = makeApp();
+    const view = render(<Tree app={app} active="title" />);
+    await view.findByText('TitleScene');
+    const change = app.scenes.change.getMockImplementation()! as (...args: unknown[]) => unknown;
+    let finish!: () => void;
+    app.scenes.change.mockImplementationOnce(async (...args: unknown[]) => {
+      await new Promise<void>(resolve => {
+        finish = resolve;
+      });
+
+      return change(...args);
+    });
+    const errors = vi.fn();
+    app.onError.add(errors);
+    view.rerender(<Tree app={app} active="game" />);
+    view.rerender(<Tree app={app} active="title" />);
+    expect(app.scenes.change).toHaveBeenCalledTimes(1);
+    finish();
+    await waitFor(() => expect(app.scenes.change).toHaveBeenCalledTimes(2));
+    await view.findByText('TitleScene');
+    expect(app.scenes.currentScene).toBeInstanceOf(TitleScene);
+    expect(errors).not.toHaveBeenCalled();
   });
 
   it('clears the local HUD overlay (without touching the director) when the active name matches no <Scene>', async () => {

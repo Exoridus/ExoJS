@@ -125,6 +125,7 @@ export const createWebGl2GpuTimer = (gl: WebGL2RenderingContext): GpuFrameTimer 
   const samplesMs: number[] = [];
   let active: WebGLQuery | null = null;
   let failed = false;
+  let disjointCount = 0;
 
   const drain = (): void => {
     while (pending.length > 0) {
@@ -145,6 +146,8 @@ export const createWebGl2GpuTimer = (gl: WebGL2RenderingContext): GpuFrameTimer 
         const elapsedNs = gl.getQueryParameter(query, gl.QUERY_RESULT) as number;
 
         samplesMs.push(elapsedNs / 1e6);
+      } else {
+        disjointCount++;
       }
 
       gl.deleteQuery(query);
@@ -153,8 +156,23 @@ export const createWebGl2GpuTimer = (gl: WebGL2RenderingContext): GpuFrameTimer 
 
   return {
     available: true,
-    // A real hardware GPU-time query: canonical GPU frame time, no caveat needed.
-    note: null,
+    get note(): string | null {
+      const notes: string[] = [];
+
+      if (disjointCount > 0) {
+        notes.push(`${String(disjointCount)} disjoint GPU frame(s) discarded`);
+      }
+
+      if (pending.length > 0) {
+        notes.push(`${String(pending.length)} GPU frame(s) unresolved`);
+      }
+
+      if (failed) {
+        notes.push('GPU timer failed');
+      }
+
+      return notes.length > 0 ? notes.join('; ') : null;
+    },
     async drainSubmittedWork(): Promise<void> {
       // A TIME_ELAPSED query measures only the commands between its own
       // begin/end, so a timed frame's sample structurally cannot absorb work
@@ -169,6 +187,8 @@ export const createWebGl2GpuTimer = (gl: WebGL2RenderingContext): GpuFrameTimer 
         const query = gl.createQuery();
 
         if (query === null) {
+          failed = true;
+
           return;
         }
 
@@ -196,8 +216,14 @@ export const createWebGl2GpuTimer = (gl: WebGL2RenderingContext): GpuFrameTimer 
     async collect(): Promise<GpuFrameSamples> {
       // Results are near-certainly resolved once every timed frame has run;
       // spin-drain with a hard cap so a stuck query can never hang the harness.
-      for (let spins = 0; pending.length > 0 && spins < 10_000; spins++) {
-        drain();
+      if (!failed) {
+        try {
+          for (let spins = 0; pending.length > 0 && spins < 10_000; spins++) {
+            drain();
+          }
+        } catch {
+          failed = true;
+        }
       }
 
       return { frameMs: samplesMs, queueMs: [] };

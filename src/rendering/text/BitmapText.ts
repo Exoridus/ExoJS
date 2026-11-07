@@ -6,7 +6,7 @@ import { AbstractText } from './AbstractText';
 import type { BmFontData } from './BmFont';
 import { type BmFont } from './BmFont';
 import type { LayoutOptions } from './LayoutOptions';
-import { emptyTextLayout, layoutText } from './textLayout';
+import { emptyTextLayout, layoutText, validateLayoutOptions } from './textLayout';
 import type { TextStyleOptions } from './TextStyle';
 import { TextStyle } from './TextStyle';
 import type { GlyphInfo, GlyphProvider, TextLayoutResult, TextLayoutStyle, TextSize } from './types';
@@ -188,6 +188,8 @@ export class BitmapText extends AbstractText {
    * @stable
    */
   public static measure(text: string, font: BmFont, options: BitmapTextOptions = {}): TextSize {
+    validateLayoutOptions(options.layout ?? {});
+
     if (text.length === 0) {
       return { width: 0, height: 0 };
     }

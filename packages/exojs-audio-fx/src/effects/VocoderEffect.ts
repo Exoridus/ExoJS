@@ -1,12 +1,13 @@
 import { type AudioBus, WorkletEffect } from '@codexo/exojs';
 
+import { validateVocoderBands } from '../dsp/validateVocoderBands';
 import vocoderWorkletSource from '../worklets/vocoder.worklet.ts?worklet';
 
 export interface VocoderEffectOptions {
   /** Modulator AudioBus - its output drives the spectral envelope.
    *  Typically routed from a microphone or voice sample. */
   modulator: AudioBus;
-  /** Number of frequency bands. More bands = better resolution, more CPU. Default 16. */
+  /** Number of frequency bands, an integer from 1 to 64. More bands = better resolution, more CPU. Default 16. */
   numBands?: number;
   /** Lowest band center frequency in Hz. Default 80. */
   minHz?: number;
@@ -29,6 +30,13 @@ export interface VocoderEffectOptions {
  * effect. Band count, frequency range, and Q are compile-time parameters set
  * at construction; only `wet` and `envelopeSmoothing` are adjustable at
  * runtime.
+ *
+ * Band count must be an integer from 1 to 64. Frequencies and Q must be finite,
+ * with `0 < minHz <= maxHz`, a finite `maxHz / minHz`, and positive Q with a
+ * nonzero, finite `1 / (2 * bandQ)`. Invalid settings throw `RangeError` before creating
+ * the effect's audio graph. Once the audio context is available, band centers
+ * must be below its Nyquist frequency or {@link ready} rejects. A single band
+ * uses `minHz` as its center.
  */
 export class VocoderEffect extends WorkletEffect {
   // Declared nullable because super() may trigger _onWorkletReady before the
@@ -41,6 +49,12 @@ export class VocoderEffect extends WorkletEffect {
   private _envelopeSmoothing: number;
 
   public constructor(options: VocoderEffectOptions) {
+    const numBands = options.numBands ?? 16;
+    const minHz = options.minHz ?? 80;
+    const maxHz = options.maxHz ?? 8000;
+    const bandQ = options.bandQ ?? 4;
+
+    validateVocoderBands(numBands, minHz, maxHz, bandQ);
     super();
 
     if (!options.modulator) {
@@ -52,10 +66,10 @@ export class VocoderEffect extends WorkletEffect {
     }
 
     this._modulator = options.modulator;
-    this._numBands = options.numBands ?? 16;
-    this._minHz = options.minHz ?? 80;
-    this._maxHz = options.maxHz ?? 8000;
-    this._bandQ = options.bandQ ?? 4;
+    this._numBands = numBands;
+    this._minHz = minHz;
+    this._maxHz = maxHz;
+    this._bandQ = bandQ;
     this._envelopeSmoothing = Math.max(0.0001, Math.min(0.1, options.envelopeSmoothing ?? 0.005));
     this.wet = options.wet ?? 1;
   }
@@ -69,6 +83,10 @@ export class VocoderEffect extends WorkletEffect {
   }
 
   protected override get _workletOptions(): AudioWorkletNodeOptions {
+    if ((this._numBands === 1 ? this._minHz : this._maxHz) >= this._sampleRate / 2) {
+      throw new RangeError('Vocoder band centers must be below the Nyquist frequency.');
+    }
+
     return {
       numberOfInputs: 2,
       numberOfOutputs: 1,

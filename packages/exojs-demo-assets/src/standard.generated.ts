@@ -181,4 +181,8 @@ export const demoAssets: DemoAssetDefinitions = Object.freeze({
   musicGlitchMachine: Asset.type('music', new URL('../media/audio/music-glitch-machine.ogg', import.meta.url).href),
   musicDarkIndustrial: Asset.type('music', new URL('../media/audio/music-dark-industrial.mp3', import.meta.url).href),
   musicActionSynthRock: Asset.type('music', new URL('../media/audio/music-action-synth-rock.mp3', import.meta.url).href),
+  pixelfxTransitionsManifest: Asset.type('json', new URL('../media/images/pixelfx-transitions.json', import.meta.url).href),
+  pixelfxBurnAway: Asset.type('texture', new URL('../media/images/pixelfx-burn-away.png', import.meta.url).href),
+  pixelfxPixelDissolve: Asset.type('texture', new URL('../media/images/pixelfx-pixel-dissolve.png', import.meta.url).href),
+  pixelfxStarIris: Asset.type('texture', new URL('../media/images/pixelfx-star-iris.png', import.meta.url).href),
 });
