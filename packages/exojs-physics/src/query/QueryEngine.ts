@@ -782,16 +782,24 @@ const rayCastSegment = (collider: Collider, ox: number, oy: number, dx: number, 
   };
 };
 
+/** Distance along the ray at which it enters a circle it starts outside of, or `Infinity`. */
+const rayEntersCircle = (ox: number, oy: number, dx: number, dy: number, cx: number, cy: number, radius: number): number => {
+  const mx = ox - cx;
+  const my = oy - cy;
+  const b = mx * dx + my * dy;
+  const discriminant = b * b - (mx * mx + my * my - radius * radius);
+
+  return b > 0 || discriminant < 0 ? Infinity : -b - Math.sqrt(discriminant);
+};
+
 /**
  * Ray against a capsule: the first point along the ray whose distance to the
  * spine equals the radius.
  *
- * Found by scanning for the first sample inside and bisecting the bracket that
- * produced it, rather than by three closed-form feature tests (two caps and the
- * side slab). The distance-to-spine function is continuous and, approaching the
- * capsule from outside, monotone up to the first touch, so the bracket is valid;
- * a fixed 40 bisections put the result far below the engine's contact slop. The
- * cost is a query-path concern only - the solver never runs this.
+ * The capsule is the union of two end circles and the rectangle between them.
+ * The ray starts outside all three, so its first entry into the union is the
+ * smallest of the three entries; each is exact, which a sampled scan is not for
+ * a ray that clips the capsule only near its silhouette.
  */
 const rayCastCapsule = (
   collider: Collider,
@@ -807,75 +815,51 @@ const rayCastCapsule = (
   const ay = spine[1]!;
   const bx = spine[2]!;
   const by = spine[3]!;
-  const radiusSquared = radius * radius;
 
   // An origin already inside the solid has no entry point, matching the circle
   // and polygon paths.
-  if (pointSegmentDistanceSquared(ox, oy, ax, ay, bx, by, _pointScratch) <= radiusSquared) {
+  if (pointSegmentDistanceSquared(ox, oy, ax, ay, bx, by, _pointScratch) <= radius * radius) {
     return null;
   }
 
-  // Bound the scan by where the ray crosses the collider's AABB. `maxDistance`
-  // is routinely Infinity, and the box already carries the capsule's radius, so
-  // this is both finite and tight.
-  const box = collider.aabb;
-  let near = 0;
-  let far = maxDistance;
+  let hi = Math.min(rayEntersCircle(ox, oy, dx, dy, ax, ay, radius), rayEntersCircle(ox, oy, dx, dy, bx, by, radius));
+  const spineLength = Math.hypot(bx - ax, by - ay);
 
-  for (let axis = 0; axis < 2; axis++) {
-    const origin = axis === 0 ? ox : oy;
-    const direction = axis === 0 ? dx : dy;
-    const lo = axis === 0 ? box.minX : box.minY;
-    const hi = axis === 0 ? box.maxX : box.maxY;
+  if (spineLength > 0) {
+    // Entry into the rectangle between the end circles, as a slab test in the
+    // spine's frame: `along` spans [0, length], `across` spans [-radius, radius].
+    const ux = (bx - ax) / spineLength;
+    const uy = (by - ay) / spineLength;
+    const slabs: ReadonlyArray<readonly [number, number, number, number]> = [
+      [(ox - ax) * ux + (oy - ay) * uy, dx * ux + dy * uy, 0, spineLength],
+      [-(ox - ax) * uy + (oy - ay) * ux, -dx * uy + dy * ux, -radius, radius],
+    ];
+    let near = 0;
+    let far = Infinity;
 
-    if (Math.abs(direction) < 1e-12) {
-      if (origin < lo || origin > hi) {
-        return null;
+    for (const [origin, direction, lo, up] of slabs) {
+      if (Math.abs(direction) < 1e-12) {
+        if (origin < lo || origin > up) {
+          far = -Infinity;
+        }
+
+        continue;
       }
 
-      continue;
+      const t0 = (lo - origin) / direction;
+      const t1 = (up - origin) / direction;
+
+      near = Math.max(near, Math.min(t0, t1));
+      far = Math.min(far, Math.max(t0, t1));
     }
 
-    const t0 = (lo - origin) / direction;
-    const t1 = (hi - origin) / direction;
-
-    near = Math.max(near, Math.min(t0, t1));
-    far = Math.min(far, Math.max(t0, t1));
+    if (near <= far) {
+      hi = Math.min(hi, near);
+    }
   }
 
-  if (near > far) {
+  if (!(hi <= maxDistance)) {
     return null;
-  }
-
-  const steps = 32;
-  const stepLength = (far - near) / steps;
-  let entered = -1;
-
-  for (let i = 1; i <= steps; i++) {
-    const t = near + i * stepLength;
-
-    if (pointSegmentDistanceSquared(ox + dx * t, oy + dy * t, ax, ay, bx, by, _pointScratch) <= radiusSquared) {
-      entered = t;
-
-      break;
-    }
-  }
-
-  if (entered < 0) {
-    return null;
-  }
-
-  let lo = entered - stepLength;
-  let hi = entered;
-
-  for (let i = 0; i < 40; i++) {
-    const mid = (lo + hi) / 2;
-
-    if (pointSegmentDistanceSquared(ox + dx * mid, oy + dy * mid, ax, ay, bx, by, _pointScratch) <= radiusSquared) {
-      hi = mid;
-    } else {
-      lo = mid;
-    }
   }
 
   const hitX = ox + dx * hi;
