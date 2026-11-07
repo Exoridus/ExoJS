@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "instantiate",
-          "signature": "instantiate(loader: Loader | null, registry?: SerializationRegistry): SceneNode",
+          "signature": "instantiate(loader: Loader | null, registry?: SerializationRegistry, options?: DeserializeOptions): SceneNode",
           "signatureTokens": [
             {
               "text": "instantiate",
@@ -83,6 +83,26 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DeserializeOptions",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -104,6 +124,11 @@
             {
               "name": "registry",
               "type": "SerializationRegistry",
+              "optional": true
+            },
+            {
+              "name": "options",
+              "type": "DeserializeOptions",
               "optional": true
             }
           ],

@@ -144,7 +144,7 @@
         },
         {
           "name": "deserialize",
-          "signature": "deserialize(data: SerializedScene): this",
+          "signature": "deserialize(data: SerializedScene, options?: DeserializeOptions): this",
           "signatureTokens": [
             {
               "text": "deserialize",
@@ -167,6 +167,26 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DeserializeOptions",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -184,6 +204,11 @@
               "name": "data",
               "type": "SerializedScene",
               "optional": false
+            },
+            {
+              "name": "options",
+              "type": "DeserializeOptions",
+              "optional": true
             }
           ],
           "returnType": "this",
