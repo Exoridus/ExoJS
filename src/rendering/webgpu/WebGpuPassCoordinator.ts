@@ -93,6 +93,8 @@ export interface WebGpuPassBackend {
   setView(view: View | null): unknown;
   clear(color?: Color): unknown;
   flush(): unknown;
+  /** Submits queued draws and ends the open pass without closing the frame GPU timing window. */
+  flushPending(): unknown;
   pushScissorRect(bounds: Rectangle): unknown;
   popScissorRect(): unknown;
   createColorAttachment(index?: number): GPURenderPassColorAttachment;
@@ -382,7 +384,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   private _setStencilAttachmentRequested(requested: boolean): void {
     if (this._stencilAttachmentRequested !== requested) {
       // Queued draws must finish with the attachment mode they were recorded for.
-      this._backend.flush();
+      this._backend.flushPending();
       this.endPass();
       this._stencilAttachmentRequested = requested;
     }

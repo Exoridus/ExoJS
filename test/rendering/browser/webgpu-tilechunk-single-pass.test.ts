@@ -33,6 +33,8 @@ import { Color } from '#core/Color';
 import { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
+import { StencilAttachmentMode } from '#rendering/pass/RenderPassDescriptor';
+import { RetainedContainer } from '#rendering/RetainedContainer';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -140,6 +142,44 @@ const tilePositions = [
 ] as const;
 
 describe('WebGPU tile-chunk single pass', () => {
+  test.for([false, true])('an attachment-only child supports tile chunks (retained=%s)', async (retained, ctx) => {
+    const backend = await setupBackend();
+    const texture = createSolidTexture('#ff0000', tileSize);
+    const root = new Container();
+    const group = retained ? new RetainedContainer() : new Container();
+    const replay = vi.spyOn(backend, 'replayRetainedBatch');
+
+    group.addChild(new TileMapNode(singleTileMap(texture)));
+    root.addChild(group);
+
+    try {
+      for (let frame = 0; frame < 3; frame++) {
+        if (
+          !(await renderGuarded(ctx, backend, () => {
+            backend.resetStats();
+            backend.passCoordinator.withChildPass(
+              { target: null, view: null, load: 'clear', clearColor: Color.black, stencil: StencilAttachmentMode.Enabled },
+              () => root.render(backend),
+            );
+            backend.flush();
+          }))
+        ) {
+          return;
+        }
+
+        expectPixelNear(readWebGpuPixels(backend, canvasSize)(8, 8), [255, 0, 0, 255]);
+      }
+
+      if (retained) {
+        expect(replay).toHaveBeenCalled();
+      }
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
   test('many tile-chunk flushes cost ONE pass and ONE submit, with per-flush pixels correct', async ctx => {
     const backend = await setupBackend();
     const tileTextures: Texture[] = tileColors.map(color => createSolidTexture(color, tileSize));

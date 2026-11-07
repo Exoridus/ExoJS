@@ -46,6 +46,7 @@ const createMockBackend = (
     }
   });
   const flush = vi.fn(() => {});
+  const flushPending = vi.fn(() => {});
   const pushScissorRect = vi.fn((_bounds: Rectangle) => {});
   const popScissorRect = vi.fn(() => {});
   const targetHasContent = vi.fn((target: RenderTarget) => contentTargets.has(target));
@@ -78,6 +79,7 @@ const createMockBackend = (
     setView,
     clear,
     flush,
+    flushPending,
     pushScissorRect,
     popScissorRect,
     createColorAttachment,
@@ -96,6 +98,7 @@ const createMockBackend = (
     setView,
     clear,
     flush,
+    flushPending,
     pushScissorRect,
     popScissorRect,
     targetHasContent,
@@ -136,6 +139,24 @@ const installFakeStencil = (coordinator: WebGpuPassCoordinator, fake: FakeStenci
 const geometryStub = {} as unknown as Geometry;
 
 describe('WebGpuPassCoordinator', () => {
+  test('attachment transitions flush pending draws without ending GPU frame timing', () => {
+    const root = new RenderTarget(64, 64, true);
+    const { backend, flush, flushPending } = createMockBackend(root);
+    const coordinator = new WebGpuPassCoordinator(backend);
+
+    try {
+      coordinator.withChildPass(descriptor(root, null, 'load', null, StencilAttachmentMode.Enabled), () => {
+        expect(flush).not.toHaveBeenCalled();
+        expect(flushPending).toHaveBeenCalledOnce();
+      });
+
+      expect(flush).not.toHaveBeenCalled();
+      expect(flushPending).toHaveBeenCalledTimes(2);
+    } finally {
+      root.destroy();
+    }
+  });
+
   test('an explicit stencil attachment does not activate a geometric clip', () => {
     const root = new RenderTarget(64, 64, true);
     const child = new RenderTexture(32, 32);
