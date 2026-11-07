@@ -73,6 +73,15 @@ export class PrismaticJoint extends Joint {
   private _k22 = 0;
   private _cPerp = 0;
   private _cAngle = 0;
+  private _rAx0 = 0;
+  private _rAy0 = 0;
+  private _rBx0 = 0;
+  private _rBy0 = 0;
+  private _dx0 = 0;
+  private _dy0 = 0;
+  private _axisX0 = 1;
+  private _axisY0 = 0;
+  private _angleError0 = 0;
   private _translation = 0;
   private _axialMass = 0;
   private _h = 0;
@@ -126,17 +135,9 @@ export class PrismaticJoint extends Joint {
       return;
     }
 
-    // World axis + perpendicular (axis is local to body A).
     applyRotation(bodyA.transform, this._localAxisAx, this._localAxisAy, scratch);
-    const axisX = scratch.x;
-    const axisY = scratch.y;
-    const perpX = -axisY;
-    const perpY = axisX;
-
-    this._axisX = axisX;
-    this._axisY = axisY;
-    this._perpX = perpX;
-    this._perpY = perpY;
+    this._axisX0 = scratch.x;
+    this._axisY0 = scratch.y;
 
     applyTransform(bodyA.transform, this._localAnchorAx, this._localAnchorAy, scratch);
     const pAx = scratch.x;
@@ -145,39 +146,13 @@ export class PrismaticJoint extends Joint {
     const pBx = scratch.x;
     const pBy = scratch.y;
 
-    const rAx = pAx - bodyA.worldCenterOfMassX;
-    const rAy = pAy - bodyA.worldCenterOfMassY;
-    const rBx = pBx - bodyB.worldCenterOfMassX;
-    const rBy = pBy - bodyB.worldCenterOfMassY;
-    const dx = pBx - pAx;
-    const dy = pBy - pAy;
-
-    // Jacobian cross terms for the axis (motor/limit) and the perpendicular (lock).
-    this._a1 = (dx + rAx) * axisY - (dy + rAy) * axisX;
-    this._a2 = rBx * axisY - rBy * axisX;
-    this._s1 = (dx + rAx) * perpY - (dy + rAy) * perpX;
-    this._s2 = rBx * perpY - rBy * perpX;
-
-    const mA = bodyA.invMass;
-    const mB = bodyB.invMass;
-    const iA = bodyA.invInertia;
-    const iB = bodyB.invInertia;
-
-    const kAxial = mA + mB + iA * this._a1 * this._a1 + iB * this._a2 * this._a2;
-    this._axialMass = kAxial > 0 ? 1 / kAxial : 0;
-
-    // Perpendicular + angular 2×2 block.
-    this._k11 = mA + mB + iA * this._s1 * this._s1 + iB * this._s2 * this._s2;
-    this._k12 = iA * this._s1 + iB * this._s2;
-    this._k22 = iA + iB;
-
-    if (this._k22 === 0) {
-      this._k22 = 1; // both bodies rotation-locked — keep the block invertible
-    }
-
-    this._cPerp = dx * perpX + dy * perpY;
-    this._cAngle = bodyB.angle - bodyA.angle - this._referenceAngle;
-    this._translation = dx * axisX + dy * axisY;
+    this._rAx0 = pAx - bodyA.worldCenterOfMassX;
+    this._rAy0 = pAy - bodyA.worldCenterOfMassY;
+    this._rBx0 = pBx - bodyB.worldCenterOfMassX;
+    this._rBy0 = pBy - bodyB.worldCenterOfMassY;
+    this._dx0 = pBx - pAx;
+    this._dy0 = pBy - pAy;
+    this._angleError0 = bodyB.angle - bodyA.angle - this._referenceAngle;
     this._h = h;
     this._invH = 1 / h;
     this._biasRate = rigid.biasRate;
@@ -200,6 +175,8 @@ export class PrismaticJoint extends Joint {
       return;
     }
 
+    this._refreshGeometry();
+
     const axial = this._motorImpulse + this._lowerImpulse - this._upperImpulse;
     this._applyBlock(this._perpImpulse, this._angularImpulse);
     this._applyAxial(axial);
@@ -213,6 +190,8 @@ export class PrismaticJoint extends Joint {
 
     const bodyA = this.bodyA;
     const bodyB = this.bodyB;
+
+    this._refreshGeometry();
 
     // Motor along the axis.
     if (this.enableMotor) {
@@ -268,6 +247,61 @@ export class PrismaticJoint extends Joint {
     this._perpImpulse += dPerp;
     this._angularImpulse += dAngle;
     this._applyBlock(dPerp, dAngle);
+  }
+
+  /**
+   * Re-derive the axis, arms, translation, errors and effective masses from the
+   * sub-step's live body state. `_prepare` measures them once per frame, and
+   * every sub-step moves the bodies; a lock driven by the frame-start error
+   * re-corrects what earlier sub-steps already took out.
+   */
+  private _refreshGeometry(): void {
+    const bodyA = this.bodyA;
+    const bodyB = this.bodyB;
+    const cosA = bodyA._deltaCos;
+    const sinA = bodyA._deltaSin;
+    const axisX = this._axisX0 * cosA - this._axisY0 * sinA;
+    const axisY = this._axisX0 * sinA + this._axisY0 * cosA;
+    const perpX = -axisY;
+    const perpY = axisX;
+    const rAx = this._rAx0 * cosA - this._rAy0 * sinA;
+    const rAy = this._rAx0 * sinA + this._rAy0 * cosA;
+    const rBx = this._rBx0 * bodyB._deltaCos - this._rBy0 * bodyB._deltaSin;
+    const rBy = this._rBx0 * bodyB._deltaSin + this._rBy0 * bodyB._deltaCos;
+    const dx = this._dx0 + (bodyB._deltaPosX + rBx - this._rBx0) - (bodyA._deltaPosX + rAx - this._rAx0);
+    const dy = this._dy0 + (bodyB._deltaPosY + rBy - this._rBy0) - (bodyA._deltaPosY + rAy - this._rAy0);
+
+    this._axisX = axisX;
+    this._axisY = axisY;
+    this._perpX = perpX;
+    this._perpY = perpY;
+
+    // Jacobian cross terms for the axis (motor/limit) and the perpendicular (lock).
+    this._a1 = (dx + rAx) * axisY - (dy + rAy) * axisX;
+    this._a2 = rBx * axisY - rBy * axisX;
+    this._s1 = (dx + rAx) * perpY - (dy + rAy) * perpX;
+    this._s2 = rBx * perpY - rBy * perpX;
+
+    const mA = bodyA.invMass;
+    const mB = bodyB.invMass;
+    const iA = bodyA.invInertia;
+    const iB = bodyB.invInertia;
+
+    const kAxial = mA + mB + iA * this._a1 * this._a1 + iB * this._a2 * this._a2;
+    this._axialMass = kAxial > 0 ? 1 / kAxial : 0;
+
+    // Perpendicular + angular 2x2 block.
+    this._k11 = mA + mB + iA * this._s1 * this._s1 + iB * this._s2 * this._s2;
+    this._k12 = iA * this._s1 + iB * this._s2;
+    this._k22 = iA + iB;
+
+    if (this._k22 === 0) {
+      this._k22 = 1; // both bodies rotation-locked - keep the block invertible
+    }
+
+    this._cPerp = dx * perpX + dy * perpY;
+    this._cAngle = this._angleError0 + bodyB._deltaAngle - bodyA._deltaAngle;
+    this._translation = dx * axisX + dy * axisY;
   }
 
   /** Relative velocity projected onto the axis (plus the rotation cross terms). */
