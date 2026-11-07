@@ -75,12 +75,9 @@ export class WeldJoint extends Joint {
   private _rAy = 0;
   private _rBx = 0;
   private _rBy = 0;
-  private _cx = 0;
-  private _cy = 0;
-  private _invK11 = 0;
-  private _invK12 = 0;
-  private _invK22 = 0;
-  private _angleError = 0;
+  private _c0x = 0;
+  private _c0y = 0;
+  private _angleError0 = 0;
   private _effMassAngle = 0;
   private readonly _linear: SoftFactors = { biasRate: 0, massScale: 1, impulseScale: 0 };
   private readonly _angular: SoftFactors = { biasRate: 0, massScale: 1, impulseScale: 0 };
@@ -129,26 +126,11 @@ export class WeldJoint extends Joint {
     this._rAy = pAy - bodyA.worldCenterOfMassY;
     this._rBx = pBx - bodyB.worldCenterOfMassX;
     this._rBy = pBy - bodyB.worldCenterOfMassY;
-    this._cx = pBx - pAx;
-    this._cy = pBy - pAy;
+    this._c0x = pBx - pAx;
+    this._c0y = pBy - pAy;
+    this._angleError0 = bodyB.angle - bodyA.angle - this.referenceAngle;
 
-    const mA = bodyA.invMass;
-    const mB = bodyB.invMass;
-    const iA = bodyA.invInertia;
-    const iB = bodyB.invInertia;
-
-    const k11 = mA + mB + iA * this._rAy * this._rAy + iB * this._rBy * this._rBy;
-    const k12 = -iA * this._rAx * this._rAy - iB * this._rBx * this._rBy;
-    const k22 = mA + mB + iA * this._rAx * this._rAx + iB * this._rBx * this._rBx;
-    const det = k11 * k22 - k12 * k12;
-    const invDet = det !== 0 ? 1 / det : 0;
-
-    this._invK11 = invDet * k22;
-    this._invK12 = -invDet * k12;
-    this._invK22 = invDet * k11;
-
-    this._angleError = bodyB.angle - bodyA.angle - this.referenceAngle;
-    const kAngle = iA + iB;
+    const kAngle = bodyA.invInertia + bodyB.invInertia;
     this._effMassAngle = kAngle > 0 ? 1 / kAngle : 0;
 
     computeSoftFactors(this.linearHertz, this.dampingRatio, h, rigid, this._linear);
@@ -166,7 +148,18 @@ export class WeldJoint extends Joint {
 
     bodyA.angularVelocity -= bodyA.invInertia * this._impulseAngle;
     bodyB.angularVelocity += bodyB.invInertia * this._impulseAngle;
-    this._applyLinearImpulse(this._impulseX, this._impulseY);
+
+    // The accumulated impulse goes in on the arms as they stand now, not as
+    // `_prepare` measured them; otherwise the torque it returns differs from the
+    // one the previous sub-step took out, and the difference is energy.
+    this._applyLinearImpulse(
+      this._impulseX,
+      this._impulseY,
+      this._rAx * bodyA._deltaCos - this._rAy * bodyA._deltaSin,
+      this._rAx * bodyA._deltaSin + this._rAy * bodyA._deltaCos,
+      this._rBx * bodyB._deltaCos - this._rBy * bodyB._deltaSin,
+      this._rBx * bodyB._deltaSin + this._rBy * bodyB._deltaCos,
+    );
   }
 
   /** @internal */
@@ -177,41 +170,63 @@ export class WeldJoint extends Joint {
 
     const bodyA = this.bodyA;
     const bodyB = this.bodyB;
+    const iA = bodyA.invInertia;
+    const iB = bodyB.invInertia;
+
+    // Both locks are measured against the geometry as it stands in this
+    // sub-step; the frame-start error would re-correct what earlier sub-steps
+    // already took out.
+    const angleError = this._angleError0 + bodyB._deltaAngle - bodyA._deltaAngle;
 
     // Angular lock first.
     const cdotAngle = bodyB.angularVelocity - bodyA.angularVelocity;
-    const biasAngle = useBias ? this._angular.biasRate * this._angleError : 0;
+    const biasAngle = useBias ? this._angular.biasRate * angleError : 0;
     const impulseAngle =
       -this._effMassAngle * this._angular.massScale * (cdotAngle + biasAngle) - this._angular.impulseScale * this._impulseAngle;
 
     this._impulseAngle += impulseAngle;
-    bodyA.angularVelocity -= bodyA.invInertia * impulseAngle;
-    bodyB.angularVelocity += bodyB.invInertia * impulseAngle;
+    bodyA.angularVelocity -= iA * impulseAngle;
+    bodyB.angularVelocity += iB * impulseAngle;
 
     // Linear (point) lock.
-    const cdotX = bodyB.linearVelocityX - bodyB.angularVelocity * this._rBy - (bodyA.linearVelocityX - bodyA.angularVelocity * this._rAy);
-    const cdotY = bodyB.linearVelocityY + bodyB.angularVelocity * this._rBx - (bodyA.linearVelocityY + bodyA.angularVelocity * this._rAx);
-    const rhsX = cdotX + (useBias ? this._linear.biasRate * this._cx : 0);
-    const rhsY = cdotY + (useBias ? this._linear.biasRate * this._cy : 0);
-    const solvedX = this._invK11 * rhsX + this._invK12 * rhsY;
-    const solvedY = this._invK12 * rhsX + this._invK22 * rhsY;
+    const rAx = this._rAx * bodyA._deltaCos - this._rAy * bodyA._deltaSin;
+    const rAy = this._rAx * bodyA._deltaSin + this._rAy * bodyA._deltaCos;
+    const rBx = this._rBx * bodyB._deltaCos - this._rBy * bodyB._deltaSin;
+    const rBy = this._rBx * bodyB._deltaSin + this._rBy * bodyB._deltaCos;
+    const cx = this._c0x + (bodyB._deltaPosX + rBx - this._rBx) - (bodyA._deltaPosX + rAx - this._rAx);
+    const cy = this._c0y + (bodyB._deltaPosY + rBy - this._rBy) - (bodyA._deltaPosY + rAy - this._rAy);
+
+    const mA = bodyA.invMass;
+    const mB = bodyB.invMass;
+    const k11 = mA + mB + iA * rAy * rAy + iB * rBy * rBy;
+    const k12 = -iA * rAx * rAy - iB * rBx * rBy;
+    const k22 = mA + mB + iA * rAx * rAx + iB * rBx * rBx;
+    const det = k11 * k22 - k12 * k12;
+    const invDet = det !== 0 ? 1 / det : 0;
+
+    const cdotX = bodyB.linearVelocityX - bodyB.angularVelocity * rBy - (bodyA.linearVelocityX - bodyA.angularVelocity * rAy);
+    const cdotY = bodyB.linearVelocityY + bodyB.angularVelocity * rBx - (bodyA.linearVelocityY + bodyA.angularVelocity * rAx);
+    const rhsX = cdotX + (useBias ? this._linear.biasRate * cx : 0);
+    const rhsY = cdotY + (useBias ? this._linear.biasRate * cy : 0);
+    const solvedX = invDet * (k22 * rhsX - k12 * rhsY);
+    const solvedY = invDet * (k11 * rhsY - k12 * rhsX);
     const impulseX = -this._linear.massScale * solvedX - this._linear.impulseScale * this._impulseX;
     const impulseY = -this._linear.massScale * solvedY - this._linear.impulseScale * this._impulseY;
 
     this._impulseX += impulseX;
     this._impulseY += impulseY;
-    this._applyLinearImpulse(impulseX, impulseY);
+    this._applyLinearImpulse(impulseX, impulseY, rAx, rAy, rBx, rBy);
   }
 
-  private _applyLinearImpulse(jx: number, jy: number): void {
+  private _applyLinearImpulse(jx: number, jy: number, rAx: number, rAy: number, rBx: number, rBy: number): void {
     const bodyA = this.bodyA;
     const bodyB = this.bodyB;
 
     bodyA.linearVelocityX -= bodyA.invMass * jx;
     bodyA.linearVelocityY -= bodyA.invMass * jy;
-    bodyA.angularVelocity -= bodyA.invInertia * (this._rAx * jy - this._rAy * jx);
+    bodyA.angularVelocity -= bodyA.invInertia * (rAx * jy - rAy * jx);
     bodyB.linearVelocityX += bodyB.invMass * jx;
     bodyB.linearVelocityY += bodyB.invMass * jy;
-    bodyB.angularVelocity += bodyB.invInertia * (this._rBx * jy - this._rBy * jx);
+    bodyB.angularVelocity += bodyB.invInertia * (rBx * jy - rBy * jx);
   }
 }
