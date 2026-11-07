@@ -7,7 +7,7 @@ import type { BlendModes } from '#rendering/types';
 
 import { getWebGpuBlendState } from './blendState';
 import compositorShaderSourceModule from './shaders/mask-compositor.wgsl';
-import { stencilContentDepthStencilState } from './stencilState';
+import { stencilContentDepthStencilState, WebGpuStencilMode } from './stencilState';
 import type { WebGpuBackend } from './WebGpuBackend';
 
 /** WGSL source for the mask compositor pipeline. @internal */
@@ -175,7 +175,7 @@ export class WebGpuMaskCompositor {
     // pushes the clip outermost), so the compositor may draw into a
     // stencil-enabled pass. Select the matching pipeline variant - a stencil-free
     // pipeline is incompatible with the pass's depth/stencil attachment.
-    const stencil = manager.passCoordinator.stencilActive;
+    const stencil = manager.passCoordinator.stencilMode;
     const pipeline = this._getOrCreatePipeline(targetFormat, blendMode, stencil);
 
     // The coordinator owns the GPU pass (load/clear resolution, pass count and
@@ -196,8 +196,8 @@ export class WebGpuMaskCompositor {
     manager.passCoordinator.endPass();
   }
 
-  private _getOrCreatePipeline(format: GPUTextureFormat, blendMode: BlendModes, stencil: boolean): GPURenderPipeline {
-    const key = `${format}|${blendMode}|${stencil ? 's' : 'n'}`;
+  private _getOrCreatePipeline(format: GPUTextureFormat, blendMode: BlendModes, stencil: WebGpuStencilMode): GPURenderPipeline {
+    const key = `${format}|${blendMode}|${stencil}`;
     const cached = this._pipelines.get(key);
 
     if (cached !== undefined) {
@@ -237,8 +237,8 @@ export class WebGpuMaskCompositor {
     // Under an active clip the coordinator's pass carries a depth/stencil
     // attachment; test (never write) the stencil so the composite is restricted
     // to the clipped region, mirroring the sprite/mesh content pipelines.
-    if (stencil) {
-      descriptor.depthStencil = stencilContentDepthStencilState();
+    if (stencil !== WebGpuStencilMode.None) {
+      descriptor.depthStencil = stencilContentDepthStencilState(stencil === WebGpuStencilMode.Clip);
     }
 
     const pipeline = device.createRenderPipeline(descriptor);

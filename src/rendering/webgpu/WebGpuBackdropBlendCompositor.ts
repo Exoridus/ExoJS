@@ -7,7 +7,7 @@ import { BlendModes } from '#rendering/types';
 
 import { getWebGpuBlendState } from './blendState';
 import compositorShaderSourceModule from './shaders/backdrop-blend-compositor.wgsl';
-import { stencilContentDepthStencilState } from './stencilState';
+import { stencilContentDepthStencilState, WebGpuStencilMode } from './stencilState';
 import type { WebGpuBackend } from './WebGpuBackend';
 
 /** WGSL source for the backdrop-blend compositor pipeline. @internal */
@@ -329,7 +329,7 @@ export class WebGpuBackdropBlendCompositor {
     // outermost), so the compositor may draw into a stencil-enabled pass. Select
     // the matching pipeline variant - a stencil-free pipeline is incompatible
     // with the pass's depth/stencil attachment.
-    const stencil = manager.passCoordinator.stencilActive;
+    const stencil = manager.passCoordinator.stencilMode;
     const pipeline = this._getOrCreatePipeline(targetFormat, stencil);
 
     // The blend math is in the shader; composite the blended source over the
@@ -351,8 +351,8 @@ export class WebGpuBackdropBlendCompositor {
     manager.passCoordinator.endPass();
   }
 
-  private _getOrCreatePipeline(format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
-    const key = `${format}|${stencil ? 's' : 'n'}`;
+  private _getOrCreatePipeline(format: GPUTextureFormat, stencil: WebGpuStencilMode): GPURenderPipeline {
+    const key = `${format}|${stencil}`;
     const cached = this._pipelines.get(key);
 
     if (cached !== undefined) {
@@ -391,8 +391,8 @@ export class WebGpuBackdropBlendCompositor {
       primitive: { topology: 'triangle-list' },
     };
 
-    if (stencil) {
-      descriptor.depthStencil = stencilContentDepthStencilState();
+    if (stencil !== WebGpuStencilMode.None) {
+      descriptor.depthStencil = stencilContentDepthStencilState(stencil === WebGpuStencilMode.Clip);
     }
 
     const pipeline = device.createRenderPipeline(descriptor);

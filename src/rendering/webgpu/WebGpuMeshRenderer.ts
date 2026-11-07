@@ -31,7 +31,7 @@ import type {
 import meshShaderSourceModule from './shaders/mesh.wgsl';
 import instancedMeshShaderSourceModule from './shaders/mesh-instanced.wgsl';
 import { packSnapViewport } from './snapViewport';
-import { contentDepthStencilState } from './stencilState';
+import { contentDepthStencilState, WebGpuStencilMode } from './stencilState';
 import {
   addUserUniformBuffersInPass,
   applyUserUniformUpload,
@@ -133,14 +133,14 @@ interface MeshPipelineKey {
   readonly format: GPUTextureFormat;
   // Stencil-enabled variant: carries the depth/stencil state matching the
   // attachment the coordinator adds while a geometric clip is active.
-  readonly stencil: boolean;
+  readonly stencil: WebGpuStencilMode;
   readonly depth: MeshDepthMode;
 }
 
 interface InstancedPipelineKey {
   readonly blendMode: BlendModes;
   readonly format: GPUTextureFormat;
-  readonly stencil: boolean;
+  readonly stencil: WebGpuStencilMode;
   readonly depth: MeshDepthMode;
 }
 
@@ -172,9 +172,9 @@ const instanceAttributeBufferLayout = (instances: InstanceDataView): GPUVertexBu
 const meshPipelineCacheKey = (
   blendMode: BlendModes,
   format: GPUTextureFormat,
-  stencil: boolean,
+  stencil: WebGpuStencilMode,
   depth: MeshDepthMode = MeshDepthMode.None,
-): string => `${blendMode}:${format}:${stencil ? 's' : 'n'}:${depth}`;
+): string => `${blendMode}:${format}:${stencil}:${depth}`;
 
 interface GeometryCacheEntry {
   readonly geometry: Geometry;
@@ -620,7 +620,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     const attributeByteOffset = attributeBytes > 0 ? this._uploadInstanceAttributes(instances!, attributeBytes) : 0;
     const renderTargetFormat = backend.renderTargetFormat;
-    const stencil = coordinator.stencilActive;
+    const stencil = coordinator.stencilMode;
     const depth = meshDepthMode(coordinator.depthWritesActive, writesDepth);
     const blendMode = backend.activeDrawCommand?.material.blendMode ?? resolveBlendMode(mesh.blendMode, material);
     // This path builds a single-target pipeline, and `drawInstanced` refuses a
@@ -990,7 +990,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       // coordinator's pass carries a depth/stencil attachment, so the default,
       // static-batch, and custom-material pipelines must all select their
       // stencil-enabled variants to match it.
-      const stencil = backend.passCoordinator.stencilActive;
+      const stencil = backend.passCoordinator.stencilMode;
       const passDepth = depthPass ? MeshDepthMode.Present : MeshDepthMode.None;
 
       let lastShader: AnyMaterial | 'default' | 'instanced' | null = null;
@@ -1238,7 +1238,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         // Prewarm only the no-clip variants; the stencil pipelines are created
         // lazily on the first clipped draw (a rare path not worth the upfront
         // compile cost for every blend-mode × format combination).
-        const key = meshPipelineCacheKey(blendMode, format, false);
+        const key = meshPipelineCacheKey(blendMode, format, WebGpuStencilMode.None);
 
         if (this._pipelines.has(key)) {
           continue;
@@ -1494,7 +1494,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   private _buildPipelineDescriptor(
     blendMode: BlendModes,
     format: GPUTextureFormat,
-    stencil = false,
+    stencil = WebGpuStencilMode.None,
     depth: MeshDepthMode = MeshDepthMode.None,
   ): GPURenderPipelineDescriptor {
     const descriptor: GPURenderPipelineDescriptor = {
@@ -1532,8 +1532,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       },
     };
 
-    if (stencil || depth !== MeshDepthMode.None) {
-      descriptor.depthStencil = contentDepthStencilState(stencil, depth === MeshDepthMode.Write);
+    if (stencil !== WebGpuStencilMode.None || depth !== MeshDepthMode.None) {
+      descriptor.depthStencil = contentDepthStencilState(stencil === WebGpuStencilMode.Clip, depth === MeshDepthMode.Write);
     }
 
     return descriptor;
@@ -1760,7 +1760,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     resources: CustomShaderResources,
     blendMode: BlendModes,
     format: GPUTextureFormat,
-    stencil: boolean,
+    stencil: WebGpuStencilMode,
     instances: InstanceDataView | null,
     depth: MeshDepthMode = MeshDepthMode.None,
   ): GPURenderPipeline {
@@ -1804,8 +1804,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       primitive: { topology: 'triangle-list', cullMode: 'none' },
     };
 
-    if (stencil || depth !== MeshDepthMode.None) {
-      descriptor.depthStencil = contentDepthStencilState(stencil, depth === MeshDepthMode.Write);
+    if (stencil !== WebGpuStencilMode.None || depth !== MeshDepthMode.None) {
+      descriptor.depthStencil = contentDepthStencilState(stencil === WebGpuStencilMode.Clip, depth === MeshDepthMode.Write);
     }
 
     pipeline = this._device!.createRenderPipeline(descriptor);
@@ -2049,7 +2049,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       this._getInstancedPipeline({
         blendMode: payload.blendMode,
         format: backend.renderTargetFormat,
-        stencil: coordinator.stencilActive,
+        stencil: coordinator.stencilMode,
         depth: MeshDepthMode.None,
       }),
     );
@@ -2199,7 +2199,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   private _buildInstancedPipelineDescriptor(
     blendMode: BlendModes,
     format: GPUTextureFormat,
-    stencil = false,
+    stencil = WebGpuStencilMode.None,
     depth: MeshDepthMode = MeshDepthMode.None,
   ): GPURenderPipelineDescriptor {
     const descriptor: GPURenderPipelineDescriptor = {
@@ -2242,8 +2242,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       },
     };
 
-    if (stencil || depth !== MeshDepthMode.None) {
-      descriptor.depthStencil = contentDepthStencilState(stencil, depth === MeshDepthMode.Write);
+    if (stencil !== WebGpuStencilMode.None || depth !== MeshDepthMode.None) {
+      descriptor.depthStencil = contentDepthStencilState(stencil === WebGpuStencilMode.Clip, depth === MeshDepthMode.Write);
     }
 
     return descriptor;
@@ -2750,7 +2750,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     resources: CustomShaderResources,
     blendMode: BlendModes,
     formats: readonly GPUTextureFormat[],
-    stencil: boolean,
+    stencil: WebGpuStencilMode,
     depth: MeshDepthMode = MeshDepthMode.None,
     attachmentModes: readonly BlendModes[] | null = null,
   ): GPURenderPipeline {
@@ -2767,7 +2767,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // `attachmentModes` is deliberately absent from the key: these
     // resources are cached per material, and a material's list is fixed for its
     // lifetime, so it cannot vary within one cache.
-    const cacheKey = `${blendMode}:${formats.join(',')}:${stencil ? 's' : 'n'}:${depth}`;
+    const cacheKey = `${blendMode}:${formats.join(',')}:${stencil}:${depth}`;
     let pipeline = resources.pipelines.get(cacheKey);
 
     if (pipeline === undefined) {
@@ -2807,8 +2807,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       // While a geometric clip is active - or while the target's own depth
       // attachment is bound - the coordinator's pass carries a depth/stencil
       // attachment, and the content pipeline has to declare matching state.
-      if (stencil || depth !== MeshDepthMode.None) {
-        descriptor.depthStencil = contentDepthStencilState(stencil, depth === MeshDepthMode.Write);
+      if (stencil !== WebGpuStencilMode.None || depth !== MeshDepthMode.None) {
+        descriptor.depthStencil = contentDepthStencilState(stencil === WebGpuStencilMode.Clip, depth === MeshDepthMode.Write);
       }
 
       pipeline = this._device!.createRenderPipeline(descriptor);

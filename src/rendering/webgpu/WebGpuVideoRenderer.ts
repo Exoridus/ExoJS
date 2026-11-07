@@ -15,7 +15,7 @@ import { getWebGpuBlendState } from './blendState';
 import spriteDefaultVertexInputWgsl from './shaders/sprite-default-vertex-input.wgsl';
 import spriteDefaultVertexMainWgsl from './shaders/sprite-default-vertex-main.wgsl';
 import { packSnapViewport } from './snapViewport';
-import { stencilContentDepthStencilState } from './stencilState';
+import { stencilContentDepthStencilState, WebGpuStencilMode } from './stencilState';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { WebGpuPassArena } from './WebGpuPassArena';
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
@@ -363,7 +363,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
 
       const storage = backend.getTransformStorageBuffer(needCount);
       const transformBindGroup = this._getOrCreateTransformBindGroup(device, uniformBuffer, storage.buffer, storage.tintBuffer);
-      const stencil = coordinator.stencilActive;
+      const stencil = coordinator.stencilMode;
 
       let pipeline: GPURenderPipeline;
       let textureBindGroup: GPUBindGroup;
@@ -526,7 +526,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
     return this._transformBindGroup;
   }
 
-  private _getFallbackPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
+  private _getFallbackPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: WebGpuStencilMode): GPURenderPipeline {
     const key = pipelineVariantKey(blendMode, stencil);
     const existing = this._fallbackPipelines.get(format, key);
 
@@ -546,8 +546,8 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
       primitive: { topology: 'triangle-list' },
     };
 
-    if (stencil) {
-      descriptor.depthStencil = stencilContentDepthStencilState();
+    if (stencil !== WebGpuStencilMode.None) {
+      descriptor.depthStencil = stencilContentDepthStencilState(stencil === WebGpuStencilMode.Clip);
     }
 
     const pipeline = this._device!.createRenderPipeline(descriptor);
@@ -581,7 +581,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
     }
   }
 
-  private _getExternalPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
+  private _getExternalPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: WebGpuStencilMode): GPURenderPipeline {
     const key = pipelineVariantKey(blendMode, stencil);
     const existing = this._externalPipelines.get(format, key);
 
@@ -601,8 +601,8 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
       primitive: { topology: 'triangle-list' },
     };
 
-    if (stencil) {
-      descriptor.depthStencil = stencilContentDepthStencilState();
+    if (stencil !== WebGpuStencilMode.None) {
+      descriptor.depthStencil = stencilContentDepthStencilState(stencil === WebGpuStencilMode.Clip);
     }
 
     const pipeline = this._device!.createRenderPipeline(descriptor);
