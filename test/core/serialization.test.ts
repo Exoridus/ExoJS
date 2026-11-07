@@ -785,6 +785,46 @@ describe('serialization — Video', () => {
     expect(restored).toBeInstanceOf(Video);
     expect(restored.loop).toBe(true);
   });
+
+  describe('source policy', () => {
+    const videoNode = (src: string): SerializedNode => ({ type: 'Video', src });
+    const origin = location.origin;
+
+    it.each([`${origin}/clip.mp4`, 'clip.mp4', '/media/clip.webm', `blob:${origin}/3f2a`])('accepts the same-origin source %s', src => {
+      expect(deserializeTree(videoNode(src))).toBeInstanceOf(Video);
+    });
+
+    it.each([
+      'https://evil.example/clip.mp4',
+      '//evil.example/clip.mp4',
+      'data:video/mp4;base64,AAAA',
+      'javascript:alert(1)',
+      'blob:https://evil.example/3f2a',
+      'http://[',
+    ])('refuses the source %s by default', src => {
+      expect(() => deserializeTree(videoNode(src))).toThrow(/Refused to deserialize a Video/);
+    });
+
+    it('refuses a foreign source reached through a prefab or a scene', () => {
+      const data = videoNode('https://evil.example/clip.mp4');
+      const container: SerializedNode = { type: 'Container', children: [data] };
+
+      expect(() => Prefab.fromJSON({ version: SERIALIZATION_VERSION, root: container }).instantiate()).toThrow(/Refused/);
+      expect(() => new Scene().deserialize({ version: SERIALIZATION_VERSION, root: container })).toThrow(/Refused/);
+    });
+
+    it('lets allowVideoSource approve a foreign source and receive the resolved URL', () => {
+      const allowVideoSource = vi.fn((url: URL) => url.hostname === 'cdn.example');
+      const container: SerializedNode = { type: 'Container', children: [videoNode('https://cdn.example/clip.mp4')] };
+      const prefab = Prefab.fromJSON({ version: SERIALIZATION_VERSION, root: container });
+
+      expect(() => prefab.instantiate(null, undefined, { allowVideoSource })).not.toThrow();
+      expect(allowVideoSource).toHaveBeenCalledWith(expect.objectContaining({ hostname: 'cdn.example' }));
+
+      expect(() => new Scene().deserialize({ version: SERIALIZATION_VERSION, root: container }, { allowVideoSource })).not.toThrow();
+      expect(() => prefab.instantiate(null, undefined, { allowVideoSource: () => false })).toThrow(/Refused/);
+    });
+  });
 });
 
 describe('serialization — Prefab', () => {

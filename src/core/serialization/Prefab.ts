@@ -3,7 +3,7 @@ import type { SceneNode } from '#core/SceneNode';
 
 import type { SerializationRegistry } from './SerializationRegistry';
 import { deserializeTree, migratePrefab, serializeTree } from './serialize';
-import { SERIALIZATION_VERSION, type SerializedNode, type SerializedPrefab, type SerializeOptions } from './types';
+import { type DeserializeOptions, SERIALIZATION_VERSION, type SerializedNode, type SerializedPrefab, type SerializeOptions } from './types';
 
 /**
  * A reusable, data-driven template captured from a configured scene-graph
@@ -59,9 +59,12 @@ export class Prefab {
    * assets must be pre-loaded into `loader`. Call repeatedly for many instances.
    * Pass `app.serializers` as `registry` to resolve app-scoped (extension)
    * serializers; defaults to the global registry.
+   *
+   * @throws If the prefab holds a `Video` whose source the default policy
+   *   refuses and {@link DeserializeOptions.allowVideoSource} does not approve.
    */
-  public instantiate(loader: Loader | null = null, registry?: SerializationRegistry): SceneNode {
-    return deserializeTree(this._descriptor, loader, registry);
+  public instantiate(loader: Loader | null = null, registry?: SerializationRegistry, options?: DeserializeOptions): SceneNode {
+    return deserializeTree(this._descriptor, loader, registry, options);
   }
 
   /**

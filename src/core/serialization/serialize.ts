@@ -11,7 +11,14 @@ import { registerCoreSerializers } from './coreSerializers';
 import type { DeserializeContext, SerializeContext } from './NodeSerializer';
 import { asObject, asSerializedNode } from './read';
 import { defaultSerializationRegistry, type SerializationRegistry } from './SerializationRegistry';
-import { SERIALIZATION_VERSION, type SerializedNode, type SerializedPrefab, type SerializedScene, type SerializeOptions } from './types';
+import {
+  type DeserializeOptions,
+  SERIALIZATION_VERSION,
+  type SerializedNode,
+  type SerializedPrefab,
+  type SerializedScene,
+  type SerializeOptions,
+} from './types';
 
 // Core serializers register lazily (not as an import side effect) so they
 // survive `sideEffects: false` tree-shaking: the registration is reachable
@@ -80,10 +87,16 @@ const createSerializeContext = (loader: Loader | null, registry: SerializationRe
   return ctx;
 };
 
-const createDeserializeContext = (loader: Loader | null, version: number, registry: SerializationRegistry): DeserializeContext => {
+const createDeserializeContext = (
+  loader: Loader | null,
+  version: number,
+  registry: SerializationRegistry,
+  policy: DeserializeOptions,
+): DeserializeContext => {
   const ctx: DeserializeContext = {
     version,
     loader,
+    allowVideoSource: policy.allowVideoSource,
     readNode: data => readNodeWith(data, ctx, registry),
     resolveAsset: <T>(reference: unknown, type: AssetConstructor<T>): T | null => {
       const request = readAssetReference(reference);
@@ -220,10 +233,11 @@ export const deserializeTree = (
   data: SerializedNode,
   loader: Loader | null = null,
   registry: SerializationRegistry = defaultSerializationRegistry,
+  options: DeserializeOptions = {},
 ): SceneNode => {
   ensureCoreSerializers();
 
-  return readNodeWith(data, createDeserializeContext(loader, SERIALIZATION_VERSION, registry), registry);
+  return readNodeWith(data, createDeserializeContext(loader, SERIALIZATION_VERSION, registry, options), registry);
 };
 
 /**
@@ -238,10 +252,11 @@ export const deserializeInto = (
   data: SerializedNode,
   loader: Loader | null = null,
   registry: SerializationRegistry = defaultSerializationRegistry,
+  options: DeserializeOptions = {},
 ): void => {
   ensureCoreSerializers();
 
-  const ctx = createDeserializeContext(loader, SERIALIZATION_VERSION, registry);
+  const ctx = createDeserializeContext(loader, SERIALIZATION_VERSION, registry, options);
 
   container.removeChildren();
   applyCommonFields(container, data);
