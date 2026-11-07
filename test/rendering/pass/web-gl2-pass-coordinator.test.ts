@@ -212,6 +212,29 @@ describe('WebGl2PassCoordinator', () => {
     }
   });
 
+  test('the descriptor stencil mode does not change the WebGL2 pass; stencil state follows the clip stack', () => {
+    const root = new RenderTarget(64, 64, true);
+    const child = new RenderTexture(32, 32);
+
+    const calls = (mode: StencilAttachmentMode): string[] => {
+      const { backend, setRenderTarget, setView, clear, pushStencilClip } = createMockBackend(root);
+      const coordinator = new WebGl2PassCoordinator(backend);
+
+      coordinator.beginPass(descriptor(child, null, 'clear', null, mode));
+
+      return [setRenderTarget.mock.calls.length, setView.mock.calls.length, clear.mock.calls.length, pushStencilClip.mock.calls.length].map(
+        String,
+      );
+    };
+
+    try {
+      expect(calls(StencilAttachmentMode.Enabled)).toEqual(calls(StencilAttachmentMode.None));
+    } finally {
+      child.destroy();
+      root.destroy();
+    }
+  });
+
   test('pushStencilClip / popStencilClip delegate to the backend', () => {
     const root = new RenderTarget(64, 64, true);
     const { backend, pushStencilClip, popStencilClip } = createMockBackend(root);
