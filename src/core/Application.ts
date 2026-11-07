@@ -621,6 +621,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // which only the frame loop knows and which changes as the loop observes
       // it - so the system reads it rather than being handed a number once.
       this.coroutines._bindFrameTarget(() => this._scheduler.displayFrameSeconds);
+      this.coroutines._bindTimeSource(this.platform);
 
       this._documentVisible = this.platform.documentVisible;
       this._visibilitySubscription = this.platform.onVisibilityChange(visible => {

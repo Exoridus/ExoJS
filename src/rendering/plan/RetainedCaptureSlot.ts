@@ -370,6 +370,8 @@ export class RetainedCaptureSlot {
    * margin, which is what later lets a moved view be judged in O(1).
    */
   public beginCapture(cullRect: ReadonlyRectangle): void {
+    // A failed collect must not validate the old product against the new cull state.
+    this._hasCapture = false;
     this._keptBounds.reset();
     this._keptEmpty = true;
     this._culledDuringCapture = false;

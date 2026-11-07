@@ -895,6 +895,62 @@ describe('collect switch: fallback ladder end-to-end (Task 5)', () => {
     backend.destroy();
   });
 
+  test('a nested spliced scope replayed from a fragment carries no entries left over from its pooled slot', () => {
+    const { backend } = createRecordingBackend();
+    const outerRoot = new Container();
+    const outer = new RetainedContainer();
+    const inner = new RetainedContainer();
+    const dynamic = new RecordableLeaf('d');
+
+    outer.addChild(dynamic);
+    inner.addChild(new RecordableLeaf('b'));
+    outer.addChild(inner);
+    outerRoot.addChild(outer);
+
+    playFrame(outerRoot, backend); // everything captures
+    dynamic.invalidateContent();
+    playFrame(outerRoot, backend); // inner records its set during the outer full collect
+    dynamic.invalidateContent();
+    playFrame(outerRoot, backend); // inner splices inside the outer full collect
+    playFrame(outerRoot, backend); // outer recovery capture holds the spliced inner record
+
+    const { entries, entryCount } = (outer as unknown as FragmentCarrier)._fragment;
+
+    class FragmentReplayer extends Container {
+      public replay = false;
+
+      protected override _collectContent(builder: RenderPlanBuilder): void {
+        if (this.replay) {
+          builder._replayRetainedFragment(entries, entryCount);
+        } else {
+          super._collectContent(builder);
+        }
+      }
+    }
+
+    const filler = new RetainedContainer();
+    const replayer = new FragmentReplayer();
+    const root = new Container();
+
+    filler.addChild(new RecordableLeaf('x'));
+    filler.addChild(new RecordableLeaf('y'));
+    replayer.addChild(filler);
+    root.addChild(replayer);
+
+    buildPlan(root, backend); // the filler's group fills the pooled scope the replay reuses
+    replayer.replay = true;
+
+    const plan = buildPlan(root, backend);
+    const spliced = findGroupEntryFor(plan.passes[0]!.root, inner)!.scope;
+
+    expect(spliced.retainedInstructions).not.toBeNull();
+    expect(spliced.entries).toHaveLength(0);
+
+    root.destroy();
+    outerRoot.destroy();
+    backend.destroy();
+  });
+
   test('a stale bundle generation degrades to entry replay and re-records', () => {
     const { backend, events, bundle } = createRecordingBackend();
     const root = new Container();

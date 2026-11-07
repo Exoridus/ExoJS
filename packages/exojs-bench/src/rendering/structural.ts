@@ -88,11 +88,11 @@ const WEBGPU_DRAW_METHODS = ['draw', 'drawIndexed', 'drawIndirect', 'drawIndexed
 const WEBGPU_BIND_METHODS = ['setBindGroup'] as const;
 
 /** Queue methods that count as a buffer/texture upload. */
-const WEBGPU_UPLOAD_METHODS = ['writeBuffer', 'writeTexture'] as const;
+const WEBGPU_UPLOAD_METHODS = ['writeBuffer', 'writeTexture', 'copyExternalImageToTexture'] as const;
 
 /**
  * Wraps the WebGPU submission path - `GPUDevice.createCommandEncoder`, each
- * encoder's `beginRenderPass`, that pass's draw/bind entry points, and the
+ * encoder's `beginRenderPass`, render bundle recording and execution, draw/bind entry points, and the
  * device queue's upload methods - so every draw/bind/upload is tallied into the
  * same engine-agnostic {@link StructuralCounters} the WebGL2 probe fills, then
  * forwarded unchanged.
@@ -115,6 +115,7 @@ const WEBGPU_UPLOAD_METHODS = ['writeBuffer', 'writeTexture'] as const;
 export const attachWebGpuProbe = (device: GPUDevice): StructuralProbe => {
   const counters: StructuralCounters = { drawCalls: 0, textureBinds: 0, bufferUploads: 0 };
   const restores: Array<() => void> = [];
+  const bundles = new WeakMap<object, { drawCalls: number; textureBinds: number }>();
 
   /** Replace `target[methodName]` with a wrapper that tallies via `bump`, then forwards unchanged. */
   const countOn = (target: Record<string, unknown>, methodName: string, bump: () => void, track: boolean): void => {
@@ -161,6 +162,27 @@ export const attachWebGpuProbe = (device: GPUDevice): StructuralProbe => {
   };
 
   const instrumentPass = (pass: Record<string, unknown>): void => {
+    const executeBundles = pass.executeBundles;
+
+    if (typeof executeBundles === 'function') {
+      pass.executeBundles = function wrapped(this: unknown, ...args: unknown[]) {
+        const executedBundles = Array.isArray(args[0]) ? args[0] : [...(args[0] as Iterable<object>)];
+
+        args[0] = executedBundles;
+
+        for (const bundle of executedBundles) {
+          const counts = bundles.get(bundle);
+
+          if (counts) {
+            counters.drawCalls += counts.drawCalls;
+            counters.textureBinds += counts.textureBinds;
+          }
+        }
+
+        return (executeBundles as (...fnArgs: unknown[]) => unknown).apply(this, args);
+      };
+    }
+
     for (const methodName of WEBGPU_DRAW_METHODS) {
       countOn(pass, methodName, () => (counters.drawCalls += 1), false);
     }
@@ -173,6 +195,26 @@ export const attachWebGpuProbe = (device: GPUDevice): StructuralProbe => {
   const instrumentEncoder = (encoder: Record<string, unknown>): void => {
     wrapReturn(encoder, 'beginRenderPass', pass => instrumentPass(pass as Record<string, unknown>), false);
   };
+
+  wrapReturn(
+    device as unknown as Record<string, unknown>,
+    'createRenderBundleEncoder',
+    result => {
+      const encoder = result as Record<string, unknown>;
+      const counts = { drawCalls: 0, textureBinds: 0 };
+
+      for (const methodName of WEBGPU_DRAW_METHODS) {
+        countOn(encoder, methodName, () => (counts.drawCalls += 1), false);
+      }
+
+      for (const methodName of WEBGPU_BIND_METHODS) {
+        countOn(encoder, methodName, () => (counts.textureBinds += 1), false);
+      }
+
+      wrapReturn(encoder, 'finish', bundle => bundles.set(bundle as object, counts), false);
+    },
+    true,
+  );
 
   wrapReturn(
     device as unknown as Record<string, unknown>,

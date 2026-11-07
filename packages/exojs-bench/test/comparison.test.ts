@@ -310,6 +310,25 @@ describe('buildRenderingComparison', () => {
     cell({ engine: 'pixi', config: 'default', archetype: 'text-static', nodeCount: 5_000, cpuMsMedian: 12.2 }),
   ];
 
+  test('keeps configurations of the same engine distinct and checks each for the headline', () => {
+    const results = [
+      ...fixture(),
+      cell({ engine: 'pixi', config: 'culled', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 7 }),
+      cell({ engine: 'pixi', config: 'culled', archetype: 'static-heavy', nodeCount: 5_000, cpuMsMedian: 9, status: 'exceeded' }),
+    ];
+    const [block] = buildRenderingComparison(results);
+    const row = block!.sections
+      .flatMap(section => section.rows)
+      .find(entry => entry.archetype === 'static-heavy' && entry.count === 1_000)!;
+
+    expect(block!.competitors).toEqual(['pixi', 'pixi (culled)']);
+    expect(row.cells.map(entry => [entry.competitor, entry.competitorMs])).toEqual([
+      ['pixi', 2],
+      ['pixi (culled)', 7],
+    ]);
+    expect(block!.headlineCount).toBe(1_000);
+  });
+
   test('publishes one block per backend measured', () => {
     const blocks = buildRenderingComparison(fixture());
 
@@ -589,6 +608,17 @@ describe('aggregateRenderingRuns', () => {
     expect(() => aggregateRenderingRuns([run(2), wider])).toThrow(/does not measure the same cells/);
   });
 
+  test.each(['warmupFrames', 'timedFrames'] as const)('rejects different rendering %s for the same cell', field => {
+    const original = run(2);
+    const changed = renderingRun(
+      original.results.map((result, index) =>
+        index === 1 ? { ...result, spec: { ...result.spec, [field]: result.spec[field] + 1 } } : result,
+      ),
+    );
+
+    expect(() => aggregateRenderingRuns([original, changed])).toThrow(/sampling budgets/);
+  });
+
   test('rejects runs measured on different GPUs', () => {
     const elsewhere = renderingRun(run(2).results, {
       stamp: { adapter: 'ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Max, Unspecified Version)' },
@@ -662,6 +692,17 @@ describe('aggregatePhysicsRuns', () => {
     expect(pooled.aggregate.competitor).toEqual({ minMs: 1.1, maxMs: 3, ratio: 3 / 1.1 });
     expect(pooled.aggregate.stable).toBe(false);
     expect(pooled.verdict.label).toBe('unstable across runs');
+  });
+
+  test.each(['warmupSteps', 'timedSteps'] as const)('rejects different physics %s for the same cell', field => {
+    const original = run(2);
+    const changed = physicsRun(
+      original.results.map((result, index) =>
+        index === 1 ? { ...result, spec: { ...result.spec, [field]: result.spec[field] + 1 } } : result,
+      ),
+    );
+
+    expect(() => aggregatePhysicsRuns([original, changed])).toThrow(/sampling budgets/);
   });
 
   test('rejects runs measured on different CPUs, which is the physics domain of a different machine', () => {

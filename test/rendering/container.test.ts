@@ -656,7 +656,7 @@ describe('Container.destroy() tears down the whole subtree', () => {
     expect(sibling.destroyed).toBe(true);
   });
 
-  test('a grandchild-held disposable resource is released', () => {
+  test('a grandchild detaches its borrowed filter', () => {
     const root = new Container();
     const branch = new Container();
     const leaf = new DummyDrawable();
@@ -669,9 +669,10 @@ describe('Container.destroy() tears down the whole subtree', () => {
 
     root.destroy();
 
-    // RenderNode.destroy() releases a node's own filters, so this only fires
-    // if the grandchild was genuinely destroyed rather than just unlinked.
-    expect(filterSpy).toHaveBeenCalled();
+    expect(leaf.destroyed).toBe(true);
+    expect(leaf.filters).toHaveLength(0);
+    expect(filterSpy).not.toHaveBeenCalled();
+    filter.destroy();
   });
 
   test('descendants are detached as well as destroyed', () => {

@@ -65,7 +65,7 @@ export class IndexedDbKeyValueStore implements KeyValueStore {
   }
 
   public async has(key: string): Promise<boolean> {
-    return (await this._database.load(this._storeName, key)) !== null;
+    return this._database._has(this._storeName, key);
   }
 
   public async delete(key: string): Promise<boolean> {

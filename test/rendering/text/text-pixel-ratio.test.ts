@@ -265,3 +265,28 @@ describe('Text atlas acquisition', () => {
     expect(requestedRatios()).toEqual([1]);
   });
 });
+
+test('production build rejects an invalid pixelRatio instead of treating it as inherit', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { resolve } = await import('node:path');
+  const { runInNewContext } = await import('node:vm');
+  const ts = (await import('typescript')).default;
+  const source = readFileSync(resolve(import.meta.dirname!, '../../../src/rendering/text/Text.ts'), 'utf8');
+  const code = ts.transpileModule(source.replaceAll('__DEV__', 'false'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const exports: { Text?: typeof Text } = {};
+  const modules: Record<string, unknown> = {
+    './AbstractText': await import('#rendering/text/AbstractText'),
+    './GlyphAtlas': await import('#rendering/text/GlyphAtlas'),
+    './GlyphAtlasPool': await import('#rendering/text/GlyphAtlasPool'),
+    './ShapedTextSource': await import('#rendering/text/ShapedTextSource'),
+    './shaping': await import('#rendering/text/shaping'),
+    './textLayout': await import('#rendering/text/textLayout'),
+    './TextStyle': await import('#rendering/text/TextStyle'),
+  };
+  runInNewContext(code, { exports, require: (id: string) => modules[id], RangeError, Number });
+
+  expect(() => new exports.Text!('Hi', { fontSize: 16, pixelRatio: 0 })).toThrow(/positive finite/);
+  expect(() => new exports.Text!('Hi', { fontSize: 16, pixelRatio: Number.NaN })).toThrow(/positive finite/);
+});

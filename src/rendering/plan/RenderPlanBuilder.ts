@@ -219,6 +219,8 @@ export class RenderPlanBuilder {
 
   public backend!: RenderBackend;
   private _view: View | null = null;
+  /** Monotonic count of content reads of the active view. @internal */
+  public _viewReadVersion = 0;
   /**
    * Effective resolution of the target each enclosing barrier renders into,
    * innermost last. Empty while collecting into the canvas root, whose
@@ -425,6 +427,14 @@ export class RenderPlanBuilder {
     // Builder-internal reads go through `_viewUnobserved` so the machinery that
     // sets a capture up - the cull-rect inflation, the plan's own view field -
     // cannot mark every capture as view-dependent.
+    this._noteViewRead();
+
+    return this._viewUnobserved();
+  }
+
+  /** Propagate a replayed fragment's view dependency to enclosing captures. @internal */
+  public _noteViewRead(): void {
+    this._viewReadVersion++;
     this._trackedRoot?.noteViewRead();
 
     if (this._sourceProducer !== null) {
@@ -434,7 +444,10 @@ export class RenderPlanBuilder {
       // stops being persistent.
       this._sourceViewReaders.add(this._sourceProducer);
     }
+  }
 
+  /** View identity for cache checks without observing a content dependency. @internal */
+  public get _retentionView(): View {
     return this._viewUnobserved();
   }
 
@@ -1886,6 +1899,12 @@ export class RenderPlanBuilder {
     groupScope.transformNode = fragment.transformNode;
 
     if (innerSet !== null) {
+      // Never pushed, so _popScope's trim does not run: drop what the pooled
+      // slot held from an earlier frame.
+      if (groupScope.entries.length > 0) {
+        groupScope.entries.length = 0;
+      }
+
       groupScope.retainedInstructions = innerSet;
       this._pushGroupEntry(fragment.seq, fragment.zIndex, groupScope);
 

@@ -1645,7 +1645,7 @@ export class InteractionSystem {
     if (scope !== null) {
       const coords = this._designToLayerSpace(x, y, this._isUINode(scope));
 
-      if (!isHittable(scope)) {
+      if (!isHittable(scope) || !isWithinAncestorClips(scope, coords.x, coords.y)) {
         return { node: null, x: coords.x, y: coords.y };
       }
 

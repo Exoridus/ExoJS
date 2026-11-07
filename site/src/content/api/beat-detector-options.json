@@ -49,7 +49,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Hops between successive autocorrelation (tempogram) recomputations. Default 15 (~160 ms at 48 kHz with the default 512-sample hop). Lower values react faster to tempo changes at the cost of more CPU."
+          "description": "Hops between successive autocorrelation (tempogram) recomputations. Positive safe integer. Default 15 (~160 ms at 48 kHz with the default 512-sample hop). Lower values react faster to tempo changes at the cost of more CPU."
         },
         {
           "name": "barPulseHalfLife",
@@ -149,7 +149,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Short tempogram window (seconds) that reacts quickly to a genuine tempo change. Default 2.5. The tracked tempo follows this FAST window only when it disagrees with stableTempoWindowSec consistently over several analysis hops, so a real DJ drift is tracked without making a steady tempo nervous."
+          "description": "Short tempogram window (seconds) that reacts quickly to a genuine tempo change. Positive and finite, at most stableTempoWindowSec. Default 2.5. The tracked tempo follows this FAST window only when it disagrees with stableTempoWindowSec consistently over several analysis hops, so a real DJ drift is tracked without making a steady tempo nervous."
         },
         {
           "name": "fftSize",
@@ -174,7 +174,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "FFT size for onset detection: an integer power of two of at least 2. Default 2048."
+          "description": "FFT size for onset detection: an integer power of two of at least 64. Default 2048."
         },
         {
           "name": "hopSize",
@@ -199,7 +199,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Hop size in samples between successive FFTs. Default 512."
+          "description": "Hop size in samples between successive FFTs. Positive safe integer. Default 512."
         },
         {
           "name": "justBeatWindow",
@@ -282,7 +282,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Maximum detectable BPM. Default 300. Keep it above minBpm."
+          "description": "Maximum detectable BPM. Positive and finite, above minBpm. Default 300."
         },
         {
           "name": "melBands",
@@ -307,7 +307,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Number of mel filterbank bands. Default 24."
+          "description": "Number of mel filterbank bands. Positive safe integer. Default 24."
         },
         {
           "name": "minBpm",
@@ -332,7 +332,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Minimum detectable BPM. Default 50. Keep it below maxBpm; the worklet assumes a positive finite range and does not validate it."
+          "description": "Minimum detectable BPM. Positive and finite, below maxBpm. Default 50."
         },
         {
           "name": "minSettlingMs",
@@ -357,7 +357,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Minimum warm-up (ms) before the first beat may be emitted. Default 400. The detector starts hunting a tempo once this much analysis history exists instead of waiting a full slowest-tempo period, so early BeatInfo beats (tagged status: 'provisional') arrive with low latency for visual reactivity. A beat is promoted to status: 'locked' only once the tempo grid is trustworthy (full analysis window + sustained on-grid tracking). Replaces the former settlingMs (default 1500)."
+          "description": "Minimum warm-up (ms) before the first beat may be emitted. Nonnegative and finite. Default 400. The detector starts hunting a tempo once this much analysis history exists instead of waiting a full slowest-tempo period, so early BeatInfo beats (tagged status: 'provisional') arrive with low latency for visual reactivity. A beat is promoted to status: 'locked' only once the tempo grid is trustworthy (full analysis window + sustained on-grid tracking). Replaces the former settlingMs (default 1500)."
         },
         {
           "name": "pulseHalfLife",
@@ -432,7 +432,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Long tempogram window (seconds) that holds the tempo grid steady against noise and octave ambiguity. Default 8. Should be ≥ fastTempoWindowSec and large enough to hold ≳ 2 periods of the slowest tempo; it also sizes the internal flux ring buffer."
+          "description": "Long tempogram window (seconds) that holds the tempo grid steady against noise and octave ambiguity. Positive and finite, at least fastTempoWindowSec. Default 8. Should be large enough to hold ≳ 2 periods of the slowest tempo; it also sizes the internal flux ring buffer."
         }
       ],
       "paragraphs": [],

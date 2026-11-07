@@ -372,12 +372,12 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
 
   public get vertices(): Float32Array {
     if (this._updateVertices) {
-      const { x, y, width, height } = this._textureFrame;
+      const { width, height } = this._textureFrame;
       const offsetX = width / 2;
       const offsetY = height / 2;
 
-      this._vertices[0] = x - offsetX;
-      this._vertices[1] = y - offsetY;
+      this._vertices[0] = 0 - offsetX;
+      this._vertices[1] = 0 - offsetY;
       this._vertices[2] = width - offsetX;
       this._vertices[3] = height - offsetY;
 

@@ -17,6 +17,7 @@ uniform sampler2D u_source;
 uniform float u_sourceFlip;
 uniform sampler2D u_backdrop;
 uniform float u_backdropFlip;
+uniform vec4 u_backdropRect;
 uniform int u_mode;
 // 1.0 when the target is opaque (the on-screen root canvas), whose captured
 // alpha is unreliable — an opaque framebuffer reports backdrop alpha 0, which
@@ -155,7 +156,8 @@ void main(void) {
     vec4 src = texture(u_source, vec2(v_texcoord.x, mix(v_texcoord.y, 1.0 - v_texcoord.y, u_sourceFlip)));
     // An unmirrored capture keeps the framebuffer's bottom-left row order, so its
     // V axis is flipped relative to the source/quad UVs.
-    vec4 dst = texture(u_backdrop, vec2(v_texcoord.x, mix(v_texcoord.y, 1.0 - v_texcoord.y, u_backdropFlip)));
+    vec2 backdropUv = (gl_FragCoord.xy - u_backdropRect.xy) / u_backdropRect.zw;
+    vec4 dst = texture(u_backdrop, vec2(backdropUv.x, mix(backdropUv.y, 1.0 - backdropUv.y, u_backdropFlip)));
 
     float alphaSource = src.a;
     float alphaBackdrop = max(dst.a, u_opaqueBackdrop);

@@ -258,40 +258,48 @@ export class WebGl2TextRenderer
     const gl = backend.context;
     const buffers: TextRendererConnection['buffers'] = new Map();
 
-    this._sdfShader.connect(createWebGl2ShaderProgram(gl));
-    this._msdfShader.connect(createWebGl2ShaderProgram(gl));
-    this._colorShader.connect(createWebGl2ShaderProgram(gl));
-    this._sdfShader.sync();
-    this._msdfShader.sync();
-    this._colorShader.sync();
-    this._pinAtlasSamplerUnits();
+    const indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, this._indexData, BufferUsage.DynamicDraw);
+    const vertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._vertexData, BufferUsage.DynamicDraw);
+    let vaoHandle: WebGLVertexArrayObject | null = null;
 
-    const indexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, this._indexData, BufferUsage.DynamicDraw).connect(
-      this._createBufferRuntime(gl, buffers),
-      backend.accountant,
-    );
-    const vertexBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._vertexData, BufferUsage.DynamicDraw).connect(
-      this._createBufferRuntime(gl, buffers),
-      backend.accountant,
-    );
+    try {
+      this._sdfShader.connect(createWebGl2ShaderProgram(gl));
+      this._msdfShader.connect(createWebGl2ShaderProgram(gl));
+      this._colorShader.connect(createWebGl2ShaderProgram(gl));
+      this._sdfShader.sync();
+      this._msdfShader.sync();
+      this._colorShader.sync();
+      this._pinAtlasSamplerUnits();
 
-    const vaoHandle = gl.createVertexArray();
+      indexBuffer.connect(this._createBufferRuntime(gl, buffers), backend.accountant);
+      vertexBuffer.connect(this._createBufferRuntime(gl, buffers), backend.accountant);
+      vaoHandle = gl.createVertexArray();
 
-    if (vaoHandle === null) {
-      throw new Error('WebGl2TextRenderer: could not create VAO.');
+      if (vaoHandle === null) {
+        throw new Error('WebGl2TextRenderer: could not create VAO.');
+      }
+
+      const vao = new WebGl2VertexArrayObject()
+        .addIndex(indexBuffer, IndexElementTypes.UnsignedInt)
+        .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
+        .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
+        .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_packedNodeSlot'), gl.UNSIGNED_INT, false, vertexStrideBytes, 16, true);
+
+      vao.connect(this._createVaoRuntime(gl, vaoHandle));
+
+      const nodeDataTexture = this._createNodeDataTexture(backend, initialNodeCapacity);
+
+      this._connection = { gl, buffers, vertexBuffer, indexBuffer, vao, nodeDataTexture, nodeDataCapacity: initialNodeCapacity };
+    } catch (error) {
+      this._sdfShader.destroy();
+      this._msdfShader.destroy();
+      this._colorShader.destroy();
+      indexBuffer.destroy();
+      vertexBuffer.destroy();
+      gl.deleteVertexArray(vaoHandle);
+
+      throw error;
     }
-
-    const vao = new WebGl2VertexArrayObject()
-      .addIndex(indexBuffer, IndexElementTypes.UnsignedInt)
-      .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
-      .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
-      .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_packedNodeSlot'), gl.UNSIGNED_INT, false, vertexStrideBytes, 16, true);
-
-    vao.connect(this._createVaoRuntime(gl, vaoHandle));
-
-    const nodeDataTexture = this._createNodeDataTexture(backend, initialNodeCapacity);
-
-    this._connection = { gl, buffers, vertexBuffer, indexBuffer, vao, nodeDataTexture, nodeDataCapacity: initialNodeCapacity };
   }
 
   protected onDisconnect(): void {
@@ -1036,13 +1044,20 @@ export class WebGl2TextRenderer
       throw new Error('WebGl2TextRenderer: could not create node data texture.');
     }
 
-    backend.bindRawTexture(tex);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, nodeTexels, capacity, 0, gl.RGBA, gl.FLOAT, null);
-    backend.bindRawTexture(null);
+    try {
+      backend.bindRawTexture(tex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, nodeTexels, capacity, 0, gl.RGBA, gl.FLOAT, null);
+    } catch (error) {
+      gl.deleteTexture(tex);
+
+      throw error;
+    } finally {
+      backend.bindRawTexture(null);
+    }
 
     return tex;
   }

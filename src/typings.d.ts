@@ -35,6 +35,8 @@ declare module '*?worker' {
   export default content;
 }
 
+// Build-time constants: production builds replace all three identifiers with
+// literals. CONTRIBUTING.md documents the values.
 declare const __DEV__: boolean;
 declare const __VERSION__: string;
 declare const __REVISION__: string;

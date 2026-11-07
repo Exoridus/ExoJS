@@ -63,6 +63,23 @@ describe('exo argument parsing', () => {
     expect(() => integer(args, 'port', 4173)).toThrow('option "--port" expects a non-negative integer, got "eighty"');
   });
 
+  test.each(['', ' ', '\t\n'])('rejects a blank integer value %j', value => {
+    for (const argv of [['--port', value], [`--port=${value}`]]) {
+      const args = parseArgs(argv, portOnly);
+
+      expect(() => integer(args, 'port', 4173)).toThrow(CliError);
+      expect(() => integer(args, 'port', 4173)).toThrow(`option "--port" expects a non-negative integer, got "${value}"`);
+    }
+  });
+
+  test.each([
+    ['0', 0],
+    ['8080', 8080],
+    [' 8080 ', 8080],
+  ])('accepts the explicit integer value %j', (value, expected) => {
+    expect(integer(parseArgs([`--port=${value}`], portOnly), 'port', 4173)).toBe(expected);
+  });
+
   test('falls back when an option is absent', () => {
     const args = parseArgs([], portOnly);
 

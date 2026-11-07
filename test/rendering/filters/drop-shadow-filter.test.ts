@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
 import { Color } from '#core/Color';
 import { srgbToLinear } from '#core/colorTransfer';
@@ -48,6 +48,39 @@ interface ShadowUniformPeek {
 }
 
 describe('DropShadowFilter shadow colour is decoded to linear light', () => {
+  test('returns an independent colour and applies edits only through assignment', () => {
+    const initial = new Color(128, 64, 32, 0.5);
+    const filter = new DropShadowFilter({ color: initial });
+    const invalidateCache = vi.fn();
+    const uColor = (filter as unknown as ShadowUniformPeek)._silhouette.uniforms.uColor;
+    const color = filter.color;
+
+    filter._attachOwner({ invalidateCache });
+    initial.set(0, 0, 0, 0);
+    color.set(255, 128, 64, 0.25);
+
+    expect(filter.color.equals({ r: 128, g: 64, b: 32, a: 0.5 })).toBe(true);
+    expect(uColor.w).toBe(0.5);
+    expect(invalidateCache).not.toHaveBeenCalled();
+
+    filter.color = color;
+
+    expect(filter.color.equals(color)).toBe(true);
+    expect(uColor.x).toBe(1);
+    expect(uColor.y).toBeCloseTo(srgbToLinear(128 / 255), 6);
+    expect(uColor.z).toBeCloseTo(srgbToLinear(64 / 255), 6);
+    expect(uColor.w).toBe(0.25);
+    expect(invalidateCache).toHaveBeenCalledOnce();
+
+    color.set(0, 0, 0, 0);
+    color.destroy();
+    expect(filter.color.equals({ r: 255, g: 128, b: 64, a: 0.25 })).toBe(true);
+    expect(uColor.w).toBe(0.25);
+    expect(invalidateCache).toHaveBeenCalledOnce();
+    filter.destroy();
+    initial.destroy();
+  });
+
   test('the shadow uniform is linear-light, not straight sRGB-normalized', () => {
     const filter = new DropShadowFilter({ color: new Color(128, 0, 0, 0.5) });
     const uColor = (filter as unknown as ShadowUniformPeek)._silhouette.uniforms.uColor;

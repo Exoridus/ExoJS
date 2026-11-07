@@ -146,6 +146,7 @@ export class WebGl2ScalableSpriteRenderer
 
   private readonly _transformUnitScratch = new Int32Array([transformTextureUnit]);
   private readonly _textureUnitScratch = new Int32Array([0]);
+  private readonly _premultiplySampleScratch = new Int32Array(1);
   private _shaderView: unknown = null;
   private _shaderViewId = -1;
   private _geoView: unknown = null;
@@ -442,6 +443,8 @@ export class WebGl2ScalableSpriteRenderer
     backend.bindTransformBufferTexture(transformTextureUnit, this._maxNodeIndex + 1);
     this._shaderPathShader.getUniform('u_texture').setValue(this._textureUnitScratch);
     this._shaderPathShader.getUniform('u_transforms').setValue(this._transformUnitScratch);
+    this._premultiplySampleScratch[0] = texture !== null && backend.shouldPremultiplyTextureSample(texture) ? 1 : 0;
+    this._shaderPathShader.getUniform('u_premultiplySample').setValue(this._premultiplySampleScratch);
     this._shaderPathShader.sync();
 
     backend.bindVertexArrayObject(vao);
@@ -466,11 +469,14 @@ export class WebGl2ScalableSpriteRenderer
       return;
     }
 
-    backend.bindTexture(this._currentTexture, 0);
+    const texture = this._currentTexture;
+    backend.bindTexture(texture, 0);
     backend.setBlendMode(this._currentBlendMode);
     backend.bindTransformBufferTexture(transformTextureUnit, this._maxNodeIndex + 1);
     this._geoPathShader.getUniform('u_texture').setValue(this._textureUnitScratch);
     this._geoPathShader.getUniform('u_transforms').setValue(this._transformUnitScratch);
+    this._premultiplySampleScratch[0] = texture !== null && backend.shouldPremultiplyTextureSample(texture) ? 1 : 0;
+    this._geoPathShader.getUniform('u_premultiplySample').setValue(this._premultiplySampleScratch);
     this._geoPathShader.sync();
 
     backend.bindVertexArrayObject(vao);
@@ -592,7 +598,8 @@ export class WebGl2ScalableSpriteRenderer
     this._stageGeoReplayUniforms(backend);
 
     // In-bounds: the geometry path records exactly one base texture (slot 0).
-    backend.bindTexture(payload.textures[0]!, 0);
+    const texture = payload.textures[0]!;
+    backend.bindTexture(texture, 0);
 
     // The group-owned transform texture replaces the shared frame buffer on the
     // SAME unit/sampler - zero GLSL changes. The next live flush
@@ -601,6 +608,8 @@ export class WebGl2ScalableSpriteRenderer
 
     this._geoPathShader.getUniform('u_texture').setValue(this._textureUnitScratch);
     this._geoPathShader.getUniform('u_transforms').setValue(this._transformUnitScratch);
+    this._premultiplySampleScratch[0] = backend.shouldPremultiplyTextureSample(texture) ? 1 : 0;
+    this._geoPathShader.getUniform('u_premultiplySample').setValue(this._premultiplySampleScratch);
     this._geoPathShader.sync();
 
     backend.bindVertexArrayObject(vao);

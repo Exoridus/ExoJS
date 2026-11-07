@@ -7,7 +7,7 @@ import { BlendModes } from '#rendering/types';
 
 import { getWebGpuBlendState } from './blendState';
 import compositorShaderSourceModule from './shaders/backdrop-blend-compositor.wgsl';
-import { stencilContentDepthStencilState } from './stencilState';
+import { stencilContentDepthStencilState, WebGpuStencilMode } from './stencilState';
 import type { WebGpuBackend } from './WebGpuBackend';
 
 /** WGSL source for the backdrop-blend compositor pipeline. @internal */
@@ -19,7 +19,7 @@ const vertexStrideBytes = 16;
 // 16 floats per mat4x4 projection uniform.
 const projectionUniformBytes = 64;
 
-// mode (u32) + opaqueBackdrop (f32), padded to the 16-byte uniform alignment.
+// mode (u32) + opaqueBackdrop (f32) + capture origin (vec2).
 const blendUniformBytes = 16;
 
 /**
@@ -50,6 +50,7 @@ export class WebGpuBackdropBlendCompositor {
   private readonly _blendData: ArrayBuffer = new ArrayBuffer(blendUniformBytes);
   private readonly _blendModeView: Uint32Array = new Uint32Array(this._blendData, 0, 1);
   private readonly _blendOpaqueView: Float32Array = new Float32Array(this._blendData, 4, 1);
+  private readonly _blendOriginView = new Float32Array(this._blendData, 8, 2);
   private readonly _projectionMatrix: Matrix = new Matrix();
   private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
 
@@ -221,12 +222,22 @@ export class WebGpuBackdropBlendCompositor {
 
     const format = manager.renderTargetFormat;
     const attachment = manager._getAttachmentPixelSize(target);
-    const scaleX = target.root && target.width > 0 ? attachment.width / target.width : 1;
-    const scaleY = target.root && target.height > 0 ? attachment.height / target.height : 1;
-    const ox = Math.max(0, Math.floor(x * scaleX));
-    const oy = Math.max(0, Math.floor(y * scaleY));
-    const cw = Math.max(0, Math.min(Math.round(width * scaleX), attachment.width - ox));
-    const ch = Math.max(0, Math.min(Math.round(height * scaleY), attachment.height - oy));
+    const viewport = manager._snapViewport;
+    const projection = manager.view.getTransform();
+    const originX = viewport.x + ((projection.a * x + projection.b * y + projection.x + 1) * viewport.width) / 2;
+    const originY = viewport.y + ((1 - projection.c * x - projection.d * y - projection.y) * viewport.height) / 2;
+    const dxX = (projection.a * width * viewport.width) / 2;
+    const dyX = (projection.b * height * viewport.width) / 2;
+    const dxY = (-projection.c * width * viewport.height) / 2;
+    const dyY = (-projection.d * height * viewport.height) / 2;
+    const rawX = Math.floor(originX + Math.min(0, dxX) + Math.min(0, dyX));
+    const rawY = Math.floor(originY + Math.min(0, dxY) + Math.min(0, dyY));
+    const captureWidth = Math.max(1, Math.ceil(originX + Math.max(0, dxX) + Math.max(0, dyX)) - rawX);
+    const captureHeight = Math.max(1, Math.ceil(originY + Math.max(0, dxY) + Math.max(0, dyY)) - rawY);
+    const ox = Math.max(0, rawX);
+    const oy = Math.max(0, rawY);
+    const cw = Math.max(0, Math.min(attachment.width, rawX + captureWidth) - ox);
+    const ch = Math.max(0, Math.min(attachment.height, rawY + captureHeight) - oy);
 
     if (cw <= 0 || ch <= 0) {
       return;
@@ -249,6 +260,8 @@ export class WebGpuBackdropBlendCompositor {
     // A root target is a fully covered backdrop only while the canvas composites
     // opaquely; under `alphaMode: 'premultiplied'` its captured alpha is real and
     // must be honoured. Offscreen targets always carry real alpha.
+    this._blendOriginView[0] = ox;
+    this._blendOriginView[1] = oy;
     this._drawBlend(manager, source, backdropView, x, y, width, height, blendMode, target.opaqueDestination);
   }
 
@@ -316,7 +329,7 @@ export class WebGpuBackdropBlendCompositor {
     // outermost), so the compositor may draw into a stencil-enabled pass. Select
     // the matching pipeline variant - a stencil-free pipeline is incompatible
     // with the pass's depth/stencil attachment.
-    const stencil = manager.passCoordinator.stencilActive;
+    const stencil = manager.passCoordinator.stencilMode;
     const pipeline = this._getOrCreatePipeline(targetFormat, stencil);
 
     // The blend math is in the shader; composite the blended source over the
@@ -338,8 +351,8 @@ export class WebGpuBackdropBlendCompositor {
     manager.passCoordinator.endPass();
   }
 
-  private _getOrCreatePipeline(format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
-    const key = `${format}|${stencil ? 's' : 'n'}`;
+  private _getOrCreatePipeline(format: GPUTextureFormat, stencil: WebGpuStencilMode): GPURenderPipeline {
+    const key = `${format}|${stencil}`;
     const cached = this._pipelines.get(key);
 
     if (cached !== undefined) {
@@ -378,8 +391,8 @@ export class WebGpuBackdropBlendCompositor {
       primitive: { topology: 'triangle-list' },
     };
 
-    if (stencil) {
-      descriptor.depthStencil = stencilContentDepthStencilState();
+    if (stencil !== WebGpuStencilMode.None) {
+      descriptor.depthStencil = stencilContentDepthStencilState(stencil === WebGpuStencilMode.Clip);
     }
 
     const pipeline = device.createRenderPipeline(descriptor);

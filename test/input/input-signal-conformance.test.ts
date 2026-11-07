@@ -676,6 +676,47 @@ describe('a throwing listener', () => {
     expect(errors).toEqual([failure]);
   });
 
+  test('a throwing pointer-lock listener reports immediately and preserves later input and platform listeners', async () => {
+    const { app, errors, frame } = await setup();
+    const seen: boolean[] = [];
+    const platformSeen: boolean[] = [];
+    const hostErrors: unknown[] = [];
+    const descriptor = Object.getOwnPropertyDescriptor(document, 'pointerLockElement');
+
+    const captureHostError = (event: ErrorEvent): void => {
+      hostErrors.push(event.error);
+      event.preventDefault();
+    };
+
+    app.input.onPointerLockChange.add(throwOnce('pointer-lock listener'));
+    app.input.onPointerLockChange.add(locked => seen.push(locked));
+    const unsubscribe = app.platform.onPointerLockChange(locked => platformSeen.push(locked));
+    window.addEventListener('error', captureHostError);
+
+    try {
+      Object.defineProperty(document, 'pointerLockElement', { configurable: true, value: app.canvas });
+      document.dispatchEvent(new Event('pointerlockchange'));
+
+      expect(seen).toEqual([true]);
+      expect(platformSeen).toEqual([true]);
+      expect(hostErrors).toEqual([]);
+      expect(errors.map(error => error.message)).toEqual(['pointer-lock listener']);
+
+      frame();
+
+      expect(errors).toHaveLength(1);
+    } finally {
+      unsubscribe();
+      window.removeEventListener('error', captureHostError);
+
+      if (descriptor) {
+        Object.defineProperty(document, 'pointerLockElement', descriptor);
+      } else {
+        Reflect.deleteProperty(document, 'pointerLockElement');
+      }
+    }
+  });
+
   test('a throwing focus listener on a press the host would not focus keeps the press and is reported without failing a frame', async () => {
     const { app, frame, errors } = await setup();
     let downs = 0;
@@ -711,6 +752,81 @@ describe('a throwing listener', () => {
     expect(downs).toBe(1);
     expect(completedFrames).toBe(1);
     expect(errors).toHaveLength(1);
+  });
+
+  test('a failed gamepad poll closes the input window before host events arrive between frames', async () => {
+    const { app, frame, errors } = await setup();
+    const failure = new Error('gamepad poll failed');
+    let completedFrames = 0;
+
+    vi.spyOn(navigator, 'getGamepads').mockImplementationOnce(() => {
+      throw failure;
+    });
+    app.onFrame.add(() => completedFrames++);
+    frame();
+
+    expect(errors).toEqual([failure]);
+    expect(completedFrames).toBe(0);
+
+    app.input.onCanvasFocusChange.add(throwOnce('between-frame focus'));
+    app.canvas.dispatchEvent(new FocusEvent('blur'));
+
+    expect(errors.map(error => error.message)).toEqual(['gamepad poll failed', 'between-frame focus']);
+
+    frame();
+
+    expect(completedFrames).toBe(1);
+    expect(errors).toHaveLength(2);
+  });
+
+  test('a failed action sample reports earlier listener errors without replacing or replaying the sample failure', async () => {
+    const { app, frame, errors } = await setup();
+    const map = app.input.attach(jumpMap());
+    const failure = new Error('action sample failed');
+    let completedFrames = 0;
+
+    app.input.onGamepadConnected.add(throwOnce('connect listener'));
+    vi.spyOn(map, '_update').mockImplementationOnce(() => {
+      throw failure;
+    });
+    app.onFrame.add(() => completedFrames++);
+    padSnapshot = [nativePad(xbox, 0)];
+    frame();
+
+    expect(errors.map(error => error.message)).toEqual(['connect listener', 'action sample failed']);
+    expect(errors[1]).toBe(failure);
+
+    frame();
+
+    expect(completedFrames).toBe(1);
+    expect(errors).toHaveLength(2);
+  });
+
+  test('an unprintable listener failure cannot replace a sampling failure or suppress later error reports', async () => {
+    const { app, frame, errors } = await setup();
+    const map = app.input.attach(jumpMap());
+    const listenerFailure: unknown = Object.create(null);
+    const failure = new Error('action sample failed');
+
+    app.input.onGamepadConnected.add(() => {
+      throw listenerFailure;
+    });
+    app.input.onGamepadConnected.add(throwOnce('later listener'));
+    vi.spyOn(map, '_update').mockImplementationOnce(() => {
+      throw failure;
+    });
+    padSnapshot = [nativePad(xbox, 0)];
+    frame();
+
+    expect(errors).toHaveLength(3);
+    expect(errors[0]).toBeInstanceOf(Error);
+    expect(errors[0]!.cause).toBe(listenerFailure);
+    expect(errors[1]!.message).toBe('later listener');
+    expect(errors[2]).toBe(failure);
+
+    frame();
+
+    expect(errors).toHaveLength(3);
   });
 
   test('a throwing gamepad slot binding keeps the other slot bindings and replays nothing', async () => {

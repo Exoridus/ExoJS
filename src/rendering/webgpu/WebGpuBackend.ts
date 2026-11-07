@@ -954,6 +954,8 @@ export class WebGpuBackend implements RenderBackend {
       const unbalanced = this._passCoordinatorInstance.unbalancedStencilClips();
 
       if (unbalanced > 0) {
+        // The open pass was recorded with the leaked attachment; end it before the mode resets.
+        this._flushActiveRendererAndEndPass();
         this._passCoordinatorInstance.resetStencil();
 
         throw new Error(`Unbalanced stencil clip stack at end of frame (${unbalanced} unpopped clip(s)).`);
@@ -1072,6 +1074,16 @@ export class WebGpuBackend implements RenderBackend {
     assertLiveRenderTarget(nextRenderTarget);
 
     if (this._renderTarget !== nextRenderTarget) {
+      if (isMultiAttachmentTarget(nextRenderTarget) && nextRenderTarget.attachments.length > this.maxColorAttachments) {
+        throw new RenderError({
+          code: 'unsupported-format',
+          backendType: RenderBackendType.WebGpu,
+          message:
+            `This device accepts ${this.maxColorAttachments} colour attachment(s), but the target declares ` +
+            `${nextRenderTarget.attachments.length}. Check backend.maxColorAttachments.`,
+        });
+      }
+
       this._flushActiveRendererAndEndPass();
 
       if (this._renderTarget !== this._rootRenderTarget) {
@@ -1082,16 +1094,6 @@ export class WebGpuBackend implements RenderBackend {
       this._multiAttachmentTarget = isMultiAttachmentTarget(nextRenderTarget);
       this._stats.renderTargetChanges++;
 
-      if (this._multiAttachmentTarget && (nextRenderTarget as MultiRenderTarget).attachments.length > this.maxColorAttachments) {
-        throw new RenderError({
-          code: 'unsupported-format',
-          backendType: RenderBackendType.WebGpu,
-          message:
-            `This device accepts ${this.maxColorAttachments} colour attachment(s), but the target declares ` +
-            `${(nextRenderTarget as MultiRenderTarget).attachments.length}. Check backend.maxColorAttachments.`,
-        });
-      }
-
       if (nextRenderTarget !== this._rootRenderTarget) {
         this._subscribeRenderTarget(nextRenderTarget);
       }
@@ -1101,6 +1103,10 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   public pushScissorRect(bounds: Rectangle): this {
+    if (this._deviceLost || this._device === null) {
+      return this;
+    }
+
     this._flushActiveRendererAndEndPass();
 
     const depth = this._clipDepth;
@@ -1219,7 +1225,7 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   public popScissorRect(): this {
-    if (this._clipDepth === 0) {
+    if (this._deviceLost || this._device === null || this._clipDepth === 0) {
       return this;
     }
 
@@ -1448,8 +1454,14 @@ export class WebGpuBackend implements RenderBackend {
     // Only flush the open batch when the view actually changes. The unconditional
     // flush forced one draw call per render() call (each render() re-applies the
     // same camera view), defeating cross-call batching.
-    if (this._renderTarget.view !== view) {
-      this._flushActiveRendererAndEndPass();
+    try {
+      if (this._renderTarget.view !== view) {
+        this._flushActiveRendererAndEndPass();
+      }
+    } catch (error) {
+      this._passCoordinatorInstance?.discardPass();
+
+      throw error;
     }
 
     this._renderTarget.setView(view);
@@ -3375,7 +3387,7 @@ export class WebGpuBackend implements RenderBackend {
   /**
    * Return a packing scratch view sized exactly `length`, backed by
    * `state.partialUploadScratch` (grown on demand, never shrunk, kind-matched
-   * to `source`). Reusing this buffer across every partial `DataTexture`
+   * to `format`). Reusing this buffer across every partial `DataTexture`
    * upload - instead of allocating a fresh temporary array per sync - is what
    * keeps a barrier-heavy scene's per-frame CPU garbage flat instead of
    * scaling with flush count: each flush's transform (and separate tint) sync
@@ -3394,10 +3406,10 @@ export class WebGpuBackend implements RenderBackend {
    */
   private _acquirePartialUploadScratch(
     state: ManagedWebGpuTextureState,
-    source: Float32Array | Uint8Array,
+    format: DataTextureFormat,
     length: number,
   ): Float32Array | Uint8Array {
-    const isFloat = source instanceof Float32Array;
+    const isFloat = format === TextureFormat.R32F || format === TextureFormat.Rgba32F;
     let scratch = state.partialUploadScratch;
 
     if (scratch === null || scratch.length < length || isFloat !== scratch instanceof Float32Array) {
@@ -3577,7 +3589,7 @@ export class WebGpuBackend implements RenderBackend {
             // so it is the common case rather than a corner one.
             subBuffer = this._acquireContiguousUploadView(state, texture.buffer, region.y * rowChannels, length);
           } else {
-            subBuffer = this._acquirePartialUploadScratch(state, texture.buffer, length);
+            subBuffer = this._acquirePartialUploadScratch(state, format, length);
 
             for (let row = 0; row < region.height; row++) {
               const sourceStart = (region.y + row) * rowChannels + region.x * channels;

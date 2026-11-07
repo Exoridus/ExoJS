@@ -92,7 +92,7 @@ const isWorkerErrorMessage = (message: WorkerResponseMessage): message is Worker
 
 interface PendingRequest {
   readonly resolve: (payload: ChunkPayload | null) => void;
-  readonly reject: (error: Error) => void;
+  readonly reject: (error: unknown) => void;
   readonly cx: number;
   readonly cy: number;
   readonly chunkWidth: number;
@@ -207,7 +207,11 @@ export const createWorkerSampledChunkSource = (
       return;
     }
 
-    entry.resolve(composePayload(message.values, entry));
+    try {
+      entry.resolve(composePayload(message.values, entry));
+    } catch (error) {
+      entry.reject(error);
+    }
   };
 
   worker.onerror = (event: ErrorEvent): void => {

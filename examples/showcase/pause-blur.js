@@ -18,7 +18,7 @@ const PAUSE_FADE_SECONDS = 0.35;
 class GameScene extends Scene {
   sprite;
   time = 0;
-  blur = new BlurFilter({ strength: 0 });
+  blur = this.track(new BlurFilter({ strength: 0 }));
   blurTween = null;
   pausePanel;
   pauseLabel;

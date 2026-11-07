@@ -204,14 +204,7 @@ export class SourceStructureDelta implements SourceDeltaTargets {
 
     // Carrying an unchanged intermediate group would hide a pruned target below it.
     for (const target of seen) {
-      let current: SourceScope | null = target;
-
-      while (current !== null && !this._rederiveTargets.has(current)) {
-        this._rederiveTargets.add(current);
-        const node = sourceScopeNode(current, root);
-        const parent = node === root ? null : node.parent;
-        current = parent === null ? null : source.scopeOfNode(parent);
-      }
+      this._markRederived(source, root, target);
     }
 
     // An uncovered effect change can turn a recorded group into a live barrier.
@@ -221,9 +214,33 @@ export class SourceStructureDelta implements SourceDeltaTargets {
       marked => {
         const scope = source.scopeOfNode(marked);
 
-        return scope === null || this._covers(source, scope, root);
+        if (scope === null) {
+          return true;
+        }
+
+        if (!this._covers(source, scope, root)) {
+          return false;
+        }
+
+        // A nested container with no mark of its own would be carried whole,
+        // leaving the marked item inside it unread.
+        this._markRederived(source, root, scope);
+
+        return true;
       },
     );
+  }
+
+  /** Make the walk re-read `scope` and every scope enclosing it instead of carrying them. */
+  private _markRederived(source: RenderRootSource, root: RenderNode, scope: SourceScope): void {
+    let current: SourceScope | null = scope;
+
+    while (current !== null && !this._rederiveTargets.has(current)) {
+      this._rederiveTargets.add(current);
+      const node = sourceScopeNode(current, root);
+      const parent = node === root ? null : node.parent;
+      current = parent === null ? null : source.scopeOfNode(parent);
+    }
   }
 
   /**

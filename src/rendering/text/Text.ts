@@ -1,5 +1,3 @@
-import { assert } from '#core/dev';
-
 import { AbstractText } from './AbstractText';
 import type { AtlasMode, AtlasPage } from './GlyphAtlas';
 import type { GlyphAtlas } from './GlyphAtlas';
@@ -9,7 +7,7 @@ import type { LayoutOptions } from './LayoutOptions';
 import { ShapedTextSource } from './ShapedTextSource';
 import type { ShapingMode } from './shaping';
 import { resolveShaping } from './shaping';
-import { emptyTextLayout, layoutText } from './textLayout';
+import { emptyTextLayout, layoutText, validateLayoutOptions } from './textLayout';
 import type { StyleChangeHint, TextStyleOptions } from './TextStyle';
 import { TextStyle } from './TextStyle';
 import type { TextLayoutResult, TextPageQuads, TextSize } from './types';
@@ -22,7 +20,9 @@ export type { TextPageQuads };
  * the caller never asked for and hide the typo that produced it.
  */
 const assertPixelRatio = (value: number): number => {
-  assert(Number.isFinite(value) && value > 0, `Text pixelRatio must be a positive finite number (got ${value}).`);
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new RangeError(`Text pixelRatio must be a positive finite number (got ${value}).`);
+  }
 
   return value;
 };
@@ -190,6 +190,8 @@ export class Text extends AbstractText {
    * @stable
    */
   public static measure(text: string, options: TextOptions = {}): TextSize {
+    validateLayoutOptions(options);
+
     if (text.length === 0) {
       return { width: 0, height: 0 };
     }

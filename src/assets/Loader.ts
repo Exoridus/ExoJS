@@ -1163,16 +1163,15 @@ export class Loader {
       const { type, source: src, ...rest } = input._config;
       const opts = Object.keys(rest).length > 0 ? rest : undefined;
 
-      let leaf: object;
+      const leafPolicy = input._assetType?.leaf ?? this._typeRegistry.leafFor(type);
 
-      try {
-        leaf = createLeaf(input._assetType?.leaf ?? this._typeRegistry.leafFor(type), type, src, opts);
-      } catch {
+      if (leafPolicy === 'none') {
         throw new Error(
           `Loader: get() hands out a catalog leaf, and the "${type}" type has none - use load(Asset.type('${type}', ...)) instead.`,
         );
       }
 
+      const leaf = createLeaf(leafPolicy, type, src, opts);
       this._adopt(leaf, claimer);
 
       return leaf;

@@ -33,7 +33,7 @@ class PlayScene extends Scene {
   sheetData;
   panel;
   pauseText;
-  blur = new BlurFilter({ strength: 0 });
+  blur = this.track(new BlurFilter({ strength: 0 }));
   blurTween = null;
   navigating = false;
   orbs = [];

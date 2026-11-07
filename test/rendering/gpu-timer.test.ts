@@ -124,6 +124,17 @@ describe('createWebGl2GpuTimer', () => {
     expect(() => timer.endFrame()).not.toThrow();
     expect(timer.lastFrameMs).toBeNull();
   });
+
+  test('a frame that never ended does not leak its open query into the next frame', () => {
+    const { gl, state } = makeGl();
+    const timer = createWebGl2GpuTimer(gl)!;
+
+    timer.beginFrame();
+    timer.beginFrame();
+
+    expect(state.deleted).toBe(1);
+    expect(state.open).not.toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------

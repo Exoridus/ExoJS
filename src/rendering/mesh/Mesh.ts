@@ -236,7 +236,14 @@ export class Mesh extends Drawable {
   }
 
   public set texture(texture: Texture | RenderTexture | null) {
+    const changed = this._texture !== texture;
+
     this._texture = texture;
+
+    if (changed && texture !== null) {
+      invalidateOnTextureLoad(this, texture as Texture);
+    }
+
     this.invalidateCache();
   }
 

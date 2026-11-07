@@ -41,6 +41,37 @@ const createDevice = (): GPUDevice =>
 describe('mutable particle mesh GPU resources', () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it('uploads only a mesh vertex view on creation and after invalidation', () => {
+    vi.stubGlobal('GPUBufferUsage', { VERTEX: 32, INDEX: 16, COPY_DST: 8 });
+
+    const geometry = new Geometry({
+      attributes: [{ name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 }],
+      vertexData: new Float32Array([0, 0, 16, 0, 0, 16]),
+      stride: 8,
+    });
+    const mode = new MeshParticles({ geometry });
+    const data = new Float32Array([-99, -99, -99, -99, 0, 0, 0, 0, 16, 0, 1, 0, 0, 16, 0, 1, 99]);
+
+    mode.vertexGeometry.vertexData = data.subarray(4, 16);
+
+    const renderer = new WebGpuParticleRenderer() as unknown as RendererInternals;
+    const device = createDevice();
+    const resources = renderer._createResources(mode, mode.material, device);
+    const bytes = (resources.meshBuffer as unknown as BufferDouble).bytes;
+
+    expect(Array.from(new Float32Array(bytes.buffer))).toEqual([0, 0, 0, 0, 16, 0, 1, 0, 0, 16, 0, 1]);
+
+    data[4] = 8;
+    mode.vertexGeometry.invalidate();
+    renderer._syncMeshBuffer(device, resources, mode);
+
+    expect(Array.from(new Float32Array(bytes.buffer))).toEqual([8, 0, 0, 0, 16, 0, 1, 0, 0, 16, 0, 1]);
+
+    renderer._destroyResources(resources);
+    mode.destroy();
+    geometry.destroy();
+  });
+
   it('grows before upload, keeps current nonindexed draw counts and reuses capacity on shrink', () => {
     vi.stubGlobal('GPUBufferUsage', { VERTEX: 32, INDEX: 16, COPY_DST: 8 });
 

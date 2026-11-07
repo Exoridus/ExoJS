@@ -125,6 +125,12 @@ describe('ParticleSystem texture / frame accessors', () => {
     expect(system.textureFrame.width).toBe(8);
   });
 
+  test('quad bounds are centered independently of the frame position', () => {
+    const system = new ParticleSystem(makeTexture(64, 64));
+    system.setTextureFrame(new Rectangle(12, 20, 16, 8));
+    expect(Array.from(system.vertices)).toEqual([-8, -4, 8, 4]);
+  });
+
   test('textureFrame property setter delegates to setTextureFrame', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
 

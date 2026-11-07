@@ -56,6 +56,7 @@ interface RenderPlanPlaybackContext {
   passGroupIndex: number;
   activeGroupTransform: Matrix | null;
   groupTransformDepth: number;
+  groupTransformScratch: Matrix[];
   /**
    * Active retained-capture recorder stack,
    * innermost last. Recorders STACK: a batch flushed (or an inner set
@@ -163,17 +164,17 @@ const groupRunLength = (entries: readonly ScopeEntry[], startIndex: number): num
 
 /** @internal */
 export class RenderPlanPlayer {
-  /** Per-depth scratch matrices for composed group transforms (reused across frames). */
-  private static readonly _groupTransformScratch: Matrix[] = [];
+  /** Active playbacks borrow separate scratch arrays until their hooks finish. */
+  private static readonly _groupTransformPool: Matrix[][] = [];
 
   public static play(plan: RenderPlan, backend: RenderBackend): void {
     const hooks = backend as RenderBackend & RenderPlanPlaybackHooks;
 
     hooks._beginDrawPlan?.(plan.nodeCount);
 
-    try {
-      const context = this._createPlaybackContext();
+    const context = this._createPlaybackContext();
 
+    try {
       for (const pass of plan.passes) {
         if (pass.target !== null && backend.renderTarget !== pass.target) {
           backend.setRenderTarget(pass.target);
@@ -190,14 +191,24 @@ export class RenderPlanPlayer {
         this._playScope(pass.root, backend, hooks, context);
       }
     } finally {
-      hooks._endDrawPlan?.();
+      try {
+        hooks._endDrawPlan?.();
+      } finally {
+        this._groupTransformPool.push(context.groupTransformScratch);
+      }
     }
   }
 
   public static playScope(scope: RenderScope, backend: RenderBackend): void {
     const hooks = backend as RenderBackend & RenderPlanPlaybackHooks;
 
-    this._playScope(scope, backend, hooks, this._createPlaybackContext());
+    const context = this._createPlaybackContext();
+
+    try {
+      this._playScope(scope, backend, hooks, context);
+    } finally {
+      this._groupTransformPool.push(context.groupTransformScratch);
+    }
   }
 
   private static _playScope(
@@ -420,7 +431,7 @@ export class RenderPlanPlayer {
 
         if (transformNode !== null && hooks._setRenderGroupTransform !== undefined) {
           const outer = context.activeGroupTransform;
-          const scratch = (RenderPlanPlayer._groupTransformScratch[context.groupTransformDepth] ??= new Matrix());
+          const scratch = (context.groupTransformScratch[context.groupTransformDepth] ??= new Matrix());
 
           // The boundary node's global transform is relative to the nearest
           // ENCLOSING group (identity-parent convention), so nested
@@ -522,7 +533,7 @@ export class RenderPlanPlayer {
           hooks.replayRetainedBatch?.(instruction);
         } else if (instruction.kind === RetainedInstructionKind.EnterGroup) {
           const outer = context.activeGroupTransform;
-          const scratch = (RenderPlanPlayer._groupTransformScratch[context.groupTransformDepth] ??= new Matrix());
+          const scratch = (context.groupTransformScratch[context.groupTransformDepth] ??= new Matrix());
 
           scratch.copy(instruction.node.getGlobalTransform());
 
@@ -592,6 +603,7 @@ export class RenderPlanPlayer {
       passGroupIndex: 0,
       activeGroupTransform: null,
       groupTransformDepth: 0,
+      groupTransformScratch: this._groupTransformPool.pop() ?? [],
       captureTargets: [],
     };
   }

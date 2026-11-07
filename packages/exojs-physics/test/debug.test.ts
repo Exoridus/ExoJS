@@ -310,6 +310,20 @@ describe('PhysicsDebugDraw over the whole shape set', () => {
    */
   const strokes = () => vi.spyOn(Graphics.prototype, 'lineTo');
 
+  it('draws geometric contacts even when collision filters exclude the pair', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 }, 0, 'dynamic', { filter: { mask: 0 } });
+    colliderAt(world, new BoxShape(10, 10), { x: 8, y: 0 }, 0, 'static');
+    const lines = strokes();
+
+    world.step(FRAME);
+    const backend = (world as unknown as { _backend: { contactGraph: { solidContacts: readonly unknown[] } } })._backend;
+    expect(backend.contactGraph.solidContacts).toHaveLength(0);
+    renderWith(new PhysicsDebugDraw(fakeApp, world, { drawShapes: false, drawContacts: true }));
+
+    expect(lines.mock.calls.length).toBeGreaterThan(0);
+  });
+
   const points = (...coordinates: number[]): PointLike[] => {
     const out: PointLike[] = [];
 

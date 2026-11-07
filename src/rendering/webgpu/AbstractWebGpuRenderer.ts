@@ -21,7 +21,7 @@ import type { WebGpuBackend } from './WebGpuBackend';
  * `connect()` binds the first backend only: while unconnected, a backend of
  * another type throws; a second call while connected is a no-op regardless of
  * its type. `disconnect()` flushes and runs `onDisconnect()` before unbinding;
- * a throw in either leaves the renderer bound.
+ * unbinding completes even if either hook throws. A failed connection can be retried.
  */
 export abstract class AbstractWebGpuRenderer<Target extends Drawable> implements Renderer<WebGpuBackend, Target> {
   public readonly backendType = RenderBackendType.WebGpu;
@@ -38,7 +38,18 @@ export abstract class AbstractWebGpuRenderer<Target extends Drawable> implements
     }
 
     this._backend = backend;
-    this.onConnect(backend);
+
+    try {
+      this.onConnect(backend);
+    } catch (error) {
+      try {
+        this.onDisconnect();
+      } finally {
+        this._backend = null;
+      }
+
+      throw error;
+    }
   }
 
   public disconnect(): void {
@@ -46,9 +57,15 @@ export abstract class AbstractWebGpuRenderer<Target extends Drawable> implements
       return;
     }
 
-    this.flush();
-    this.onDisconnect();
-    this._backend = null;
+    try {
+      this.flush();
+    } finally {
+      try {
+        this.onDisconnect();
+      } finally {
+        this._backend = null;
+      }
+    }
   }
 
   public abstract render(drawable: Target): void;

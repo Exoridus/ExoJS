@@ -37,7 +37,7 @@ class ChromaticAberrationScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uOffset: 0 } });
+    this.filter = this.track(new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uOffset: 0 } }));
     this.sprite = new Sprite(this.loader.get(CHECKER))
       .setAnchor(0.5)
       .setScale(2.6)

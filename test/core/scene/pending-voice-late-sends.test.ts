@@ -7,7 +7,29 @@ import { SceneAudio } from '#core/scene/SceneAudio';
 import { SceneState } from '#core/scene/SceneState';
 
 describe('Cancelled pending voice sends', () => {
-  test.each(['add', 'adopt'] as const)('destroys a send requested after cancellation: %s', method => {
+  test('rejects a new send after cancellation without allocating or reconnecting', () => {
+    const system = new AudioSystem();
+    const sound = new Sound({ duration: 10 } as AudioBuffer);
+    const audio = new SceneAudio({ audio: system } as unknown as Application, () => SceneState.Preparing);
+    const voice = audio.play(sound);
+    voice.stop();
+    const createGain = vi.spyOn(getAudioContext(), 'createGain');
+    const connect = vi.spyOn(voice.output, 'connect');
+
+    try {
+      expect(() => voice.addSend(system.music)).toThrow('already ended');
+      expect(createGain).not.toHaveBeenCalled();
+      expect(connect).not.toHaveBeenCalled();
+      expect(voice.sends).toHaveLength(0);
+    } finally {
+      createGain.mockRestore();
+      audio.destroy();
+      sound.destroy();
+      system.destroy();
+    }
+  });
+
+  test('destroys a send adopted after cancellation', () => {
     const system = new AudioSystem();
     const sound = new Sound({ duration: 10 } as AudioBuffer);
     const audio = new SceneAudio({ audio: system } as unknown as Application, () => SceneState.Preparing);
@@ -17,7 +39,6 @@ describe('Cancelled pending voice sends', () => {
     const source = context.createGain();
     const gain = context.createGain();
     const disconnect = vi.spyOn(gain, 'disconnect');
-    const outputDisconnect = vi.spyOn(voice.output, 'disconnect');
     const outputConnect = vi.spyOn(voice.output, 'connect');
     const play = vi.spyOn(system, 'play');
     voice.stop();
@@ -25,17 +46,11 @@ describe('Cancelled pending voice sends', () => {
     let send: AudioSend;
 
     try {
-      if (method === 'add') {
-        send = voice.addSend(bus);
-        expect(outputConnect).toHaveBeenCalledTimes(1);
-        expect(outputDisconnect).toHaveBeenCalledTimes(3);
-      } else {
-        send = new AudioSend(context, source, bus, 1);
-        const retarget = vi.spyOn(send, '_retarget');
-        voice._adoptSend(send);
-        expect(retarget).not.toHaveBeenCalled();
-        expect(outputConnect).not.toHaveBeenCalled();
-      }
+      send = new AudioSend(context, source, bus, 1);
+      const retarget = vi.spyOn(send, '_retarget');
+      voice._adoptSend(send);
+      expect(retarget).not.toHaveBeenCalled();
+      expect(outputConnect).not.toHaveBeenCalled();
 
       expect(send.destroyed).toBe(true);
       expect(disconnect).toHaveBeenCalledTimes(1);

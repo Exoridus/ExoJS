@@ -155,6 +155,21 @@ const setupPannerSpy = (): { panners: MockPanner[]; restore: () => void } => {
 describe('BaseVoice — post-ended no-ops', () => {
   afterEach(() => vi.restoreAllMocks());
 
+  test('ended voices reject sends before creating audio nodes', () => {
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub());
+    const context = getAudioContext();
+    const voice = system.play(sound);
+    expect(voice.ended).toBe(false);
+    voice.stop();
+    const createGain = vi.spyOn(context, 'createGain');
+
+    expect(() => voice.addSend(system.master)).toThrow('Cannot open an audio send on a voice that has already ended.');
+    expect(createGain).not.toHaveBeenCalled();
+    expect(voice.sends).toHaveLength(0);
+    sound.destroy();
+  });
+
   test('volume setter is a no-op once the voice has ended', () => {
     const system = new AudioSystem(); // before capture, so bus gains are not captured
     const out = captureVoiceOutput();

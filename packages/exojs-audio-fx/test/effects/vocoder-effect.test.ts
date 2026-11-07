@@ -33,6 +33,78 @@ describe('VocoderEffect', () => {
   // 1. Constructor throws if no modulator
   // -------------------------------------------------------------------------
   describe('constructor validation', () => {
+    it.each([
+      { numBands: 16.5 },
+      { numBands: 0 },
+      { numBands: -1 },
+      { numBands: NaN },
+      { numBands: Infinity },
+      { numBands: 65 },
+      { minHz: 0 },
+      { minHz: -80 },
+      { minHz: NaN },
+      { maxHz: Infinity },
+      { minHz: 8000, maxHz: 80 },
+      { bandQ: 0 },
+      { bandQ: -1 },
+      { bandQ: NaN },
+      { bandQ: Infinity },
+      { bandQ: Number.MIN_VALUE },
+      { bandQ: 1e308 },
+      { minHz: Number.MIN_VALUE },
+    ])('rejects invalid filter-bank parameters without allocating an effect graph: %j', options => {
+      const modulator = makeModulatorBus();
+      const createGain = vi.spyOn(getAudioContext(), 'createGain');
+
+      try {
+        expect(() => {
+          const effect = new VocoderEffect({ modulator, ...options });
+          effect.destroy();
+        }).toThrow(expect.objectContaining({ name: 'RangeError' }));
+        expect(createGain).not.toHaveBeenCalled();
+      } finally {
+        modulator.destroy();
+      }
+    });
+
+    it('accepts the documented maximum of 64 bands', () => {
+      const modulator = makeModulatorBus();
+
+      try {
+        const effect = new VocoderEffect({ modulator, numBands: 64 });
+
+        effect.destroy();
+      } finally {
+        modulator.destroy();
+      }
+    });
+
+    it('rejects readiness before creating a worklet whose band centers reach Nyquist', async () => {
+      const modulator = makeModulatorBus();
+      const effect = new VocoderEffect({ modulator, maxHz: getAudioContext().sampleRate / 2 });
+
+      try {
+        await expect(effect.ready).rejects.toThrow(expect.objectContaining({ name: 'RangeError' }));
+        expect(effect['_workletNode']).toBeNull();
+      } finally {
+        effect.destroy();
+        modulator.destroy();
+      }
+    });
+
+    it('accepts a single band whose unused upper bound exceeds Nyquist', async () => {
+      const modulator = makeModulatorBus();
+      const effect = new VocoderEffect({ modulator, numBands: 1, minHz: 80, maxHz: getAudioContext().sampleRate });
+
+      try {
+        await effect.ready;
+        expect(effect['_workletNode']).not.toBeNull();
+      } finally {
+        effect.destroy();
+        modulator.destroy();
+      }
+    });
+
     it('throws if no modulator is provided', () => {
       expect(() => {
         new VocoderEffect({} as never);

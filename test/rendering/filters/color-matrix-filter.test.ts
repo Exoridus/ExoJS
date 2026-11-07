@@ -135,6 +135,18 @@ describe('ColorMatrixFilter conveniences', () => {
 });
 
 describe('ColorMatrixFilter mutation reaches its owners', () => {
+  test('mutating a returned matrix cannot change the stored transform', () => {
+    const filter = new ColorMatrixFilter();
+    const matrix = filter.matrix as number[];
+
+    matrix[0] = 0.5;
+
+    expect(filter.matrix[0]).toBe(1);
+    filter.brightness(2);
+    expectClose(applyMatrix(filter.matrix, [0.2, 0.4, 0.6, 0.8]), [0.4, 0.8, 1.2, 0.8]);
+    filter.destroy();
+  });
+
   test('a convenience invalidates the nodes rendering it', () => {
     const node = new CountingNode();
     const filter = new ColorMatrixFilter();

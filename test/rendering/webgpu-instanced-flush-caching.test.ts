@@ -19,6 +19,7 @@ import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
+import { ScaleModes } from '#rendering/types';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { countLabel, createCanvasTexture, createMockBackend, createMockWebGpuEnvironment } from './webgpuMockEnvironment';
@@ -262,3 +263,37 @@ describe('WebGPU RepeatingSprite flush hot-path caching', () => {
     });
   }
 });
+
+test.each([ScaleModes.Nearest, ScaleModes.NearestMipmapNearest, ScaleModes.NearestMipmapLinear])(
+  'repeating shader samplers follow scale mode and cache each filter separately (%s)',
+  async nearestMode => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const backend = await createMockBackend(environment);
+      const texture = createCanvasTexture();
+      const sprite = new RepeatingSprite(texture, { width: 48, height: 48 });
+      const create = vi.spyOn(backend.device, 'createSampler');
+
+      texture.scaleMode = nearestMode;
+      renderFrame(backend, [sprite]);
+      expect(create.mock.calls.map(call => call[0]).filter(descriptor => descriptor?.label === 'repeating-sprite:sampler')).toEqual([
+        expect.objectContaining({ magFilter: 'nearest', minFilter: 'nearest' }),
+      ]);
+      texture.scaleMode = ScaleModes.Linear;
+      renderFrame(backend, [sprite]);
+      expect(create.mock.calls.map(call => call[0]).filter(descriptor => descriptor?.label === 'repeating-sprite:sampler')).toEqual([
+        expect.objectContaining({ magFilter: 'nearest', minFilter: 'nearest' }),
+        expect.objectContaining({ magFilter: 'linear', minFilter: 'linear' }),
+      ]);
+      texture.scaleMode = nearestMode;
+      renderFrame(backend, [sprite]);
+      expect(create.mock.calls.filter(call => call[0]?.label === 'repeating-sprite:sampler')).toHaveLength(2);
+      sprite.destroy();
+      texture.destroy();
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  },
+);

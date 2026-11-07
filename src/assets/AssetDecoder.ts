@@ -443,7 +443,17 @@ export class AssetDecoder {
         { source: unknown } | undefined;
       const source = unacquired === undefined ? await this._acquireSource(asset, type, signal) : unacquired.source;
 
-      return this._storeResource(asset, await factory.create(source, this._factoryContext(asset, scope, options, signal)));
+      const resource = await factory.create(source, this._factoryContext(asset, scope, options, signal));
+
+      if (signal?.aborted === true) {
+        try {
+          factory.dispose?.(resource);
+        } finally {
+          signal.throwIfAborted();
+        }
+      }
+
+      return this._storeResource(asset, resource);
     } catch (error: unknown) {
       throw this._describeFailure(asset, error);
     }

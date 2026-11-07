@@ -31,7 +31,7 @@ class NoiseVignetteScene extends Scene {
   init() {
     const app = this.app;
     const { width, height } = app;
-    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0, uIntensity: this.intensity } });
+    this.filter = this.track(new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0, uIntensity: this.intensity } }));
     // Fill the whole 16:9 frame so the post effect covers the viewport.
     const texture = this.loader.get(UV_GRID);
     this.sprite = new Sprite(texture).setAnchor(0.5).setPosition(width / 2, height / 2);

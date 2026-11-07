@@ -47,7 +47,7 @@ import spriteDefaultVertexMainWgsl from './shaders/sprite-default-vertex-main.wg
 import spritePersistentBindingsWgsl from './shaders/sprite-persistent-bindings.wgsl';
 import spritePersistentVertexMainWgsl from './shaders/sprite-persistent-vertex-main.wgsl';
 import { packSnapViewport } from './snapViewport';
-import { stencilContentDepthStencilState } from './stencilState';
+import { stencilContentDepthStencilState, WebGpuStencilMode } from './stencilState';
 import {
   addUserUniformBuffersInPass,
   applyUserUniformUpload,
@@ -332,6 +332,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   // Custom-material state. Per-material pipelines/bind groups are cached; the
   // current batch's material/base-texture decide when to flush.
   private readonly _customMaterials = new Map<AnySpriteMaterial, CustomSpriteResources>();
+  // Material.onDispose cannot unregister, so the hook is added once per material
+  // and survives reconnects; it resolves resources through _customMaterials.
+  // destroy() drops all hooks while the material stays usable, so the hook
+  // clears its own entry.
+  private readonly _disposeHooked = new WeakSet<AnySpriteMaterial>();
   private _customTextureBindGroupLayout: GPUBindGroupLayout | null = null;
   private _currentMaterial: AnySpriteMaterial | null = null;
   // Material uniform buffers a draw already recorded into the currently open
@@ -707,7 +712,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     // `firstInstance` selects the segment: the vertex stage reads the order
     // buffer at `instance_index`, which WebGPU defines to include it.
-    pass.setPipeline(this._getPersistentPipeline(store.blendMode, backend.renderTargetFormat, coordinator.stencilActive, device));
+    pass.setPipeline(this._getPersistentPipeline(store.blendMode, backend.renderTargetFormat, coordinator.stencilMode, device));
     pass.setBindGroup(0, store.bindGroup(device, this._persistentBindGroupLayout));
     pass.setBindGroup(1, textureBindGroup);
     pass.setIndexBuffer(this._indexBuffer, 'uint16');
@@ -825,8 +830,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     });
   }
 
-  private _getPersistentPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean, device: GPUDevice): GPURenderPipeline {
-    const key = `${blendMode}:${format}:${stencil ? 's' : 'n'}`;
+  private _getPersistentPipeline(
+    blendMode: BlendModes,
+    format: GPUTextureFormat,
+    stencil: WebGpuStencilMode,
+    device: GPUDevice,
+  ): GPURenderPipeline {
+    const key = `${blendMode}:${format}:${stencil}`;
     const existing = this._persistentPipelines.get(key);
 
     if (existing !== undefined) {
@@ -847,8 +857,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       primitive: { topology: 'triangle-list' },
     };
 
-    if (stencil) {
-      descriptor.depthStencil = stencilContentDepthStencilState();
+    if (stencil !== WebGpuStencilMode.None) {
+      descriptor.depthStencil = stencilContentDepthStencilState(stencil === WebGpuStencilMode.Clip);
     }
 
     const pipeline = device.createRenderPipeline(descriptor);
@@ -944,6 +954,19 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   }
 
   public flush(): void {
+    try {
+      this._flushBatch();
+    } finally {
+      // A rejected batch must not be retried after its target or camera changes.
+      this._instanceCount = 0;
+      this._maxNodeIndex = 0;
+      this._resetSlots();
+      this._currentBlendMode = null;
+      this._currentMaterial = null;
+    }
+  }
+
+  private _flushBatch(): void {
     const backend = this._backend;
     const device = this._device;
     const uniformBuffer = this._uniformBuffer;
@@ -1074,7 +1097,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       const storage = backend.getTransformStorageBuffer(needCount);
       const transformBindGroup = this._getOrCreateTransformBindGroup(device, uniformBuffer, storage.buffer, storage.tintBuffer);
 
-      const stencil = backend.passCoordinator.stencilActive;
+      const stencil = backend.passCoordinator.stencilMode;
 
       if (material === null) {
         const pipeline = this._getPipeline(this._currentBlendMode!, backend.renderTargetFormat, stencil);
@@ -1122,15 +1145,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
         isCustom ? createRetainedMaterialState(this._currentMaterial!) : null,
       );
     }
-
-    // Batch flushes never submit; the backend ends the pass at genuine
-    // boundaries, and the hazard checks above end it early when this batch would
-    // retroactively change data an already-recorded draw reads.
-    this._instanceCount = 0;
-    this._maxNodeIndex = 0;
-    this._resetSlots();
-    this._currentBlendMode = null;
-    this._currentMaterial = null;
   }
 
   /**
@@ -1473,12 +1487,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     const nativePipeline =
       material === null
-        ? this._getPipeline(payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive)
+        ? this._getPipeline(payload.blendMode, backend.renderTargetFormat, coordinator.stencilMode)
         : this._getOrCreateCustomPipeline(
             customResources!,
             payload.blendMode,
             backend.renderTargetFormats,
-            coordinator.stencilActive,
+            coordinator.stencilMode,
             device,
           );
     const nativeFrameBindGroup = bundle.getBindGroup(device, this._uniformBindGroupLayout!, true);
@@ -1586,11 +1600,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     for (const blendMode of blendModes) {
       for (const format of formats) {
-        // Store under the exact key _getPipeline queries. Only the no-clip
-        // (`:n`) variants are prewarmed; the stencil pipelines are created
+        // Store under the exact key _getPipeline queries. Only the no-attachment
+        // variants are prewarmed; the stencil pipelines are created
         // lazily on the first clipped draw (a rare path not worth the upfront
         // compile cost), matching the mesh and text renderers.
-        const pipelineKey = pipelineVariantKey(blendMode, false);
+        const pipelineKey = pipelineVariantKey(blendMode, WebGpuStencilMode.None);
 
         if (this._pipelines.has(format, pipelineKey)) {
           continue;
@@ -1880,7 +1894,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     });
   }
 
-  private _getPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
+  private _getPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: WebGpuStencilMode): GPURenderPipeline {
     const pipelineKey = pipelineVariantKey(blendMode, stencil);
     const existingPipeline = this._pipelines.get(format, pipelineKey);
 
@@ -1899,7 +1913,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     return pipeline;
   }
 
-  private _buildPipelineDescriptor(blendMode: BlendModes, format: GPUTextureFormat, stencil = false): GPURenderPipelineDescriptor {
+  private _buildPipelineDescriptor(
+    blendMode: BlendModes,
+    format: GPUTextureFormat,
+    stencil = WebGpuStencilMode.None,
+  ): GPURenderPipelineDescriptor {
     if (!this._shaderModule || !this._pipelineLayout) {
       throw new Error('Renderer has to be connected first!');
     }
@@ -1955,8 +1973,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       },
     };
 
-    if (stencil) {
-      descriptor.depthStencil = stencilContentDepthStencilState();
+    if (stencil !== WebGpuStencilMode.None) {
+      descriptor.depthStencil = stencilContentDepthStencilState(stencil === WebGpuStencilMode.Clip);
     }
 
     return descriptor;
@@ -1973,7 +1991,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     material: AnySpriteMaterial,
     resources: CustomSpriteResources,
     transformBindGroup: GPUBindGroup,
-    stencil: boolean,
+    stencil: WebGpuStencilMode,
     instanceBuffer: GPUBuffer,
     instanceByteOffset: number,
   ): void {
@@ -2039,14 +2057,19 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     this._customMaterials.set(material, resources);
 
-    material.onDispose(() => {
-      const stored = this._customMaterials.get(material);
+    if (!this._disposeHooked.has(material)) {
+      this._disposeHooked.add(material);
+      material.onDispose(() => {
+        this._disposeHooked.delete(material);
 
-      if (stored !== undefined) {
-        this._releaseCustomResources(stored);
-        this._customMaterials.delete(material);
-      }
-    });
+        const stored = this._customMaterials.get(material);
+
+        if (stored !== undefined) {
+          this._customMaterials.delete(material);
+          this._releaseCustomResources(stored);
+        }
+      });
+    }
 
     return resources;
   }
@@ -2055,14 +2078,14 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     resources: CustomSpriteResources,
     blendMode: BlendModes,
     formats: readonly GPUTextureFormat[],
-    stencil: boolean,
+    stencil: WebGpuStencilMode,
     device: GPUDevice,
   ): GPURenderPipeline {
     // The whole format LIST is part of the key, not just the first format: a
     // pipeline must declare one target per attachment of the pass it runs in, so
     // the same material in a one-attachment and a two-attachment pass needs two
     // pipelines.
-    const cacheKey = `${blendMode}:${formats.join(',')}:${stencil ? 's' : 'n'}`;
+    const cacheKey = `${blendMode}:${formats.join(',')}:${stencil}`;
     const existing = resources.pipelines.get(cacheKey);
 
     if (existing !== undefined) {
@@ -2102,8 +2125,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       },
     };
 
-    if (stencil) {
-      descriptor.depthStencil = stencilContentDepthStencilState();
+    if (stencil !== WebGpuStencilMode.None) {
+      descriptor.depthStencil = stencilContentDepthStencilState(stencil === WebGpuStencilMode.Clip);
     }
 
     const pipeline = device.createRenderPipeline(descriptor);

@@ -269,31 +269,39 @@ export class TileNavigationSpace<Tile = unknown> implements NavigationSpace {
     }
 
     const before = this._grid.revision;
-
-    this._sourceRevision = source.revision;
+    const sourceRevision = source.revision;
+    const cells: Array<{ x: number; y: number; cost: number }> = [];
+    const chunks: Array<{ index: number; chunk: TileNavigationChunk | null; revision: number }> = [];
 
     if (!this._chunked) {
-      this._resample(this._grid.originX, this._grid.originY, this._grid.width, this._grid.height);
+      this._resample(this._grid.originX, this._grid.originY, this._grid.width, this._grid.height, cells);
+    } else {
+      for (let index = 0; index < this._chunks.length; index++) {
+        const chunk = this._chunkAt(index);
+        const revision = chunk?.revision ?? -1;
 
-      return this._grid.revision !== before;
+        if (chunk === this._chunks[index] && revision === this._chunkRevisions[index]) {
+          continue;
+        }
+
+        const cx = this._firstChunkX + (index % this._chunkColumns);
+        const cy = this._firstChunkY + Math.floor(index / this._chunkColumns);
+
+        this._resample(cx * this._chunkWidth, cy * this._chunkHeight, this._chunkWidth, this._chunkHeight, cells);
+        chunks.push({ index, chunk, revision });
+      }
     }
 
-    for (let index = 0; index < this._chunks.length; index++) {
-      const chunk = this._chunkAt(index);
-      const revision = chunk?.revision ?? -1;
+    for (const cell of cells) {
+      this._grid.setCost(cell.x, cell.y, cell.cost);
+    }
 
-      if (chunk === this._chunks[index] && revision === this._chunkRevisions[index]) {
-        continue;
-      }
-
+    for (const { index, chunk, revision } of chunks) {
       this._chunks[index] = chunk;
       this._chunkRevisions[index] = revision;
-
-      const cx = this._firstChunkX + (index % this._chunkColumns);
-      const cy = this._firstChunkY + Math.floor(index / this._chunkColumns);
-
-      this._resample(cx * this._chunkWidth, cy * this._chunkHeight, this._chunkWidth, this._chunkHeight);
     }
+
+    this._sourceRevision = sourceRevision;
 
     return this._grid.revision !== before;
   }
@@ -381,7 +389,7 @@ export class TileNavigationSpace<Tile = unknown> implements NavigationSpace {
   }
 
   /** Re-reads the cells of a rectangle, clipped to the window. */
-  private _resample(x: number, y: number, width: number, height: number): void {
+  private _resample(x: number, y: number, width: number, height: number, cells: Array<{ x: number; y: number; cost: number }>): void {
     const grid = this._grid;
     const minX = Math.max(x, grid.originX);
     const minY = Math.max(y, grid.originY);
@@ -391,7 +399,7 @@ export class TileNavigationSpace<Tile = unknown> implements NavigationSpace {
 
     for (let cellY = minY; cellY < maxY; cellY++) {
       for (let cellX = minX; cellX < maxX; cellX++) {
-        grid.setCost(cellX, cellY, this._cost(source.getTileAt(cellX, cellY), cellX, cellY));
+        cells.push({ x: cellX, y: cellY, cost: this._cost(source.getTileAt(cellX, cellY), cellX, cellY) });
       }
     }
   }

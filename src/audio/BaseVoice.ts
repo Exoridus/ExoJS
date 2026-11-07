@@ -616,15 +616,13 @@ export abstract class BaseVoice implements Voice {
   }
 
   public addSend(bus: AudioBus, level = 1): AudioSend {
+    if (this._ended) {
+      throw new Error('Cannot open an audio send on a voice that has already ended.');
+    }
+
     const send = new AudioSend(this._audioContext, this._output, bus, level);
 
     this._sends.push(send);
-
-    // A send on an already-finished voice is legal but pointless; destroying it
-    // straight away keeps the invariant that a voice's sends never outlive it.
-    if (this._ended) {
-      send.destroy();
-    }
 
     return send;
   }
@@ -765,7 +763,7 @@ export abstract class BaseVoice implements Voice {
     let vy: number;
     // Only ever explicit: a derived velocity comes from the tracked position,
     // and nothing tracks elevation - `follow()` reads a 2D scene node.
-    const vz = this._explicitVelocity ? this._elevationVelocity : 0;
+    const vz = this._elevationVelocity;
 
     if (this._explicitVelocity && this._velocity !== null) {
       vx = this._velocity.x;

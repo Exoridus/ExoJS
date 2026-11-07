@@ -11,7 +11,7 @@ import { isSampleableTexture } from '#rendering/texture/deferredTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { RepeatMode } from '#rendering/texture/repeat';
 import { Texture } from '#rendering/texture/Texture';
-import { BlendModes } from '#rendering/types';
+import { BlendModes, ScaleModes } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
@@ -26,7 +26,7 @@ import commonWgslModule from './shaders/repeating-sprite-common.wgsl';
 import geoPathEntriesModule from './shaders/repeating-sprite-geo-path.wgsl';
 import shaderPathEntriesModule from './shaders/repeating-sprite-shader-path.wgsl';
 import { packSnapViewport } from './snapViewport';
-import { stencilContentDepthStencilState } from './stencilState';
+import { stencilContentDepthStencilState, WebGpuStencilMode } from './stencilState';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { WebGpuPassArena } from './WebGpuPassArena';
 import type { WebGpuActiveRenderPass, WebGpuPassCoordinator } from './WebGpuPassCoordinator';
@@ -548,7 +548,7 @@ export class WebGpuScalableSpriteRenderer
 
       const offset = this._instanceArena.take(batchBytes);
       const instanceBuffer = this._instanceArena.buffer!;
-      const stencil = backend.passCoordinator.stencilActive;
+      const stencil = backend.passCoordinator.stencilMode;
 
       if (drawShader) {
         this._drawShaderBatch(device, backend, active.pass, stencil, instanceBuffer, offset);
@@ -557,6 +557,26 @@ export class WebGpuScalableSpriteRenderer
       }
     } else if (backend.clearRequested) {
       backend.passCoordinator.acquirePass();
+    }
+
+    // Retained recording: while a capture window is open,
+    // hand the exact packed geometry-path bytes of this flush to the backend -
+    // independent of the capture frame's visibility. A single base texture binds to group(1),
+    // so the recorded slot list is one entry. Shader-path batches poison the capture.
+    if (this._geoQuadCount > 0 && backend._retainedCaptureActive && this._currentTexture !== null && this._currentBlendMode !== null) {
+      this._recordTextureScratch[0] = this._currentTexture;
+      backend.recordRetainedBatch(
+        this,
+        this._geoInstData,
+        this._geoQuadCount * geoStrideBytes,
+        this._geoQuadCount,
+        this._currentBlendMode,
+        this._recordTextureScratch,
+        1,
+        null,
+        null,
+        this._geoBatchNodeCount,
+      );
     }
 
     // Batch flushes no longer submit; the backend ends the pass at boundaries.
@@ -575,7 +595,7 @@ export class WebGpuScalableSpriteRenderer
     device: GPUDevice,
     backend: WebGpuBackend,
     pass: GPURenderPassEncoder,
-    stencil: boolean,
+    stencil: WebGpuStencilMode,
     instanceBuffer: GPUBuffer,
     instanceByteOffset: number,
   ): void {
@@ -590,7 +610,7 @@ export class WebGpuScalableSpriteRenderer
 
     const modeX = this._currentModeX ?? 'repeat';
     const modeY = this._currentModeY ?? 'repeat';
-    const sampler = this._getOrCreateSampler(device, modeX, modeY);
+    const sampler = this._getOrCreateSampler(device, modeX, modeY, this._currentTexture.scaleMode);
     // The shader path pairs the resolved texture view with a wrap-mode sampler
     // (not the backend's default), so the cache is keyed on both identities.
     const texView = backend.getTextureBinding(this._currentTexture).view;
@@ -602,7 +622,13 @@ export class WebGpuScalableSpriteRenderer
       'repeating-sprite:texture-bind-group:shader',
     );
 
-    const pipeline = this._getPipeline('shader', this._currentBlendMode, backend.renderTargetFormat, stencil);
+    const pipeline = this._getPipeline(
+      'shader',
+      this._currentBlendMode,
+      backend.renderTargetFormat,
+      stencil,
+      backend.shouldPremultiplyTextureSample(this._currentTexture),
+    );
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, uniformBindGroup);
@@ -620,7 +646,7 @@ export class WebGpuScalableSpriteRenderer
     device: GPUDevice,
     backend: WebGpuBackend,
     pass: GPURenderPassEncoder,
-    stencil: boolean,
+    stencil: WebGpuStencilMode,
     instanceBuffer: GPUBuffer,
     instanceByteOffset: number,
   ): void {
@@ -643,7 +669,13 @@ export class WebGpuScalableSpriteRenderer
       'repeating-sprite:texture-bind-group:geo',
     );
 
-    const pipeline = this._getPipeline('geo', this._currentBlendMode, backend.renderTargetFormat, stencil);
+    const pipeline = this._getPipeline(
+      'geo',
+      this._currentBlendMode,
+      backend.renderTargetFormat,
+      stencil,
+      backend.shouldPremultiplyTextureSample(this._currentTexture),
+    );
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, uniformBindGroup);
@@ -655,27 +687,6 @@ export class WebGpuScalableSpriteRenderer
     backend.passCoordinator.markPassDraws();
     backend.stats.batches++;
     backend.stats.drawCalls++;
-
-    // Retained recording: while a capture window is open,
-    // hand the exact packed geometry-path bytes of this flush to the backend -
-    // byte-identical to what just drew. A single base texture binds to group(1),
-    // so the recorded slot list is one entry. WebGl2Shader-path batches never reach
-    // here (render() poisoned the window if one appeared).
-    if (backend._retainedCaptureActive && this._currentTexture !== null && this._currentBlendMode !== null) {
-      this._recordTextureScratch[0] = this._currentTexture;
-      backend.recordRetainedBatch(
-        this,
-        this._geoInstData,
-        this._geoQuadCount * geoStrideBytes,
-        this._geoQuadCount,
-        this._currentBlendMode,
-        this._recordTextureScratch,
-        1,
-        null,
-        null,
-        this._geoBatchNodeCount,
-      );
-    }
   }
 
   // ── Retained-batch record/replay ──────────────────────────────────────────
@@ -817,7 +828,13 @@ export class WebGpuScalableSpriteRenderer
     const active = coordinator.acquirePass();
     const pass = active.pass;
 
-    const nativePipeline = this._getPipeline('geo', payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive);
+    const nativePipeline = this._getPipeline(
+      'geo',
+      payload.blendMode,
+      backend.renderTargetFormat,
+      coordinator.stencilMode,
+      backend.shouldPremultiplyTextureSample(texture),
+    );
     const nativeFrameBindGroup = bundle.getBindGroup(device, this._uniformBindGroupLayout!, false);
 
     const nativeCompatible = backend.colorAttachmentCount === 1;
@@ -886,8 +903,13 @@ export class WebGpuScalableSpriteRenderer
   // Private helpers
   // -----------------------------------------------------------------------
 
-  private _getOrCreateSampler(device: GPUDevice, modeX: RepeatMode, modeY: RepeatMode): GPUSampler {
-    const key = `${modeX}:${modeY}`;
+  private _getOrCreateSampler(device: GPUDevice, modeX: RepeatMode, modeY: RepeatMode, scaleMode: ScaleModes): GPUSampler {
+    const filter =
+      scaleMode === ScaleModes.Nearest || scaleMode === ScaleModes.NearestMipmapNearest || scaleMode === ScaleModes.NearestMipmapLinear
+        ? 'nearest'
+        : 'linear';
+    const mipmapFilter = scaleMode === ScaleModes.NearestMipmapLinear || scaleMode === ScaleModes.LinearMipmapLinear ? 'linear' : 'nearest';
+    const key = `${modeX}:${modeY}:${scaleMode}`;
     const existing = this._samplers.get(key);
 
     if (existing) {
@@ -898,8 +920,9 @@ export class WebGpuScalableSpriteRenderer
       label: 'repeating-sprite:sampler',
       addressModeU: repeatModeToAddressMode(modeX),
       addressModeV: repeatModeToAddressMode(modeY),
-      magFilter: 'linear',
-      minFilter: 'linear',
+      magFilter: filter,
+      minFilter: filter,
+      mipmapFilter,
     });
     this._samplers.set(key, sampler);
 
@@ -958,8 +981,14 @@ export class WebGpuScalableSpriteRenderer
     return group;
   }
 
-  private _getPipeline(kind: 'shader' | 'geo', blend: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
-    const key = `${kind}:${blend}:${format}:${stencil ? 's' : 'n'}`;
+  private _getPipeline(
+    kind: 'shader' | 'geo',
+    blend: BlendModes,
+    format: GPUTextureFormat,
+    stencil: WebGpuStencilMode,
+    premultiply = false,
+  ): GPURenderPipeline {
+    const key = `${kind}:${blend}:${format}:${premultiply ? 'p' : 'a'}:${stencil}`;
     const existing = this._pipelines.get(key);
 
     if (existing) {
@@ -970,7 +999,7 @@ export class WebGpuScalableSpriteRenderer
       throw new Error('WebGpuScalableSpriteRenderer: not connected.');
     }
 
-    const pipeline = this._device.createRenderPipeline(this._buildPipelineDescriptor(kind, blend, format, stencil));
+    const pipeline = this._device.createRenderPipeline(this._buildPipelineDescriptor(kind, blend, format, stencil, premultiply));
     this._pipelines.set(key, pipeline);
 
     return pipeline;
@@ -980,7 +1009,8 @@ export class WebGpuScalableSpriteRenderer
     kind: 'shader' | 'geo',
     blend: BlendModes,
     format: GPUTextureFormat,
-    stencil = false,
+    stencil = WebGpuStencilMode.None,
+    premultiply = false,
   ): GPURenderPipelineDescriptor {
     if (!this._shaderModule || !this._pipelineLayout) {
       throw new Error('WebGpuScalableSpriteRenderer: not connected.');
@@ -1026,13 +1056,14 @@ export class WebGpuScalableSpriteRenderer
       fragment: {
         module: this._shaderModule,
         entryPoint: isShader ? 'shaderFrag' : 'geoFrag',
+        constants: { premultiplySample: premultiply ? 1 : 0 },
         targets: [{ format, blend: getWebGpuBlendState(blend), writeMask: GPUColorWrite.ALL }],
       },
       primitive: { topology: 'triangle-list' },
     };
 
-    if (stencil) {
-      desc.depthStencil = stencilContentDepthStencilState();
+    if (stencil !== WebGpuStencilMode.None) {
+      desc.depthStencil = stencilContentDepthStencilState(stencil === WebGpuStencilMode.Clip);
     }
 
     return desc;
@@ -1043,7 +1074,7 @@ export class WebGpuScalableSpriteRenderer
    * blend-mode × target-format combination this renderer can produce,
    * asynchronously and in parallel. Called from the backend init path so
    * first-frame draws do not block on synchronous WGSL compilation. Only the
-   * no-clip (`:n`) variants are prewarmed; stencil pipelines compile lazily on
+   * no-attachment variants are prewarmed; stencil pipelines compile lazily on
    * the first clipped draw (mirrors the sprite, mesh and text renderers).
    */
   public async prewarmPipelines(formats: readonly GPUTextureFormat[]): Promise<void> {
@@ -1074,7 +1105,7 @@ export class WebGpuScalableSpriteRenderer
     for (const kind of kinds) {
       for (const blendMode of blendModes) {
         for (const format of formats) {
-          const key = `${kind}:${blendMode}:${format}:n`;
+          const key = `${kind}:${blendMode}:${format}:a:${WebGpuStencilMode.None}`;
 
           if (this._pipelines.has(key)) {
             continue;

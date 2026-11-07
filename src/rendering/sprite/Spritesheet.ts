@@ -1,3 +1,4 @@
+import { invariant } from '#core/dev';
 import { Rectangle } from '#math/Rectangle';
 import type { Texture } from '#rendering/texture/Texture';
 
@@ -21,6 +22,26 @@ export interface SpritesheetData {
   frames: Record<string, SpritesheetFrame>;
   animations?: Record<string, string[]>;
 }
+
+const validateAnimation = (
+  name: string,
+  frameNames: readonly string[],
+  frames: ReadonlyMap<string, Rectangle> | ReadonlySet<string>,
+): void => {
+  if (name.trim().length === 0) {
+    throw new Error('Spritesheet animation names must be non-empty strings.');
+  }
+
+  if (frameNames.length === 0) {
+    throw new Error(`Spritesheet animation "${name}" must reference at least one frame.`);
+  }
+
+  for (const frameName of frameNames) {
+    if (!frames.has(frameName)) {
+      throw new Error(`Spritesheet animation "${name}" references missing frame "${frameName}".`);
+    }
+  }
+};
 
 /**
  * Slices a single {@link Texture} into named frames and optional named
@@ -47,9 +68,22 @@ export class Spritesheet {
    * Parse a {@link SpritesheetData} descriptor, populating `frames`,
    * `sprites`, and `animations`. When `keepFrames` is `false` (default),
    * all existing frames and sprites are destroyed and every animation
-   * definition is cleared before parsing.
+   * definition is cleared. Animation definitions are validated before
+   * existing resources are changed.
    */
   public parse(data: SpritesheetData, keepFrames = false): void {
+    if (data.animations) {
+      const frameNames = new Set(keepFrames ? this.frames.keys() : []);
+
+      for (const name of Object.keys(data.frames)) {
+        frameNames.add(name);
+      }
+
+      for (const [name, frames] of Object.entries(data.animations)) {
+        validateAnimation(name, frames, frameNames);
+      }
+    }
+
     if (!keepFrames) {
       this.clear();
     }
@@ -67,10 +101,14 @@ export class Spritesheet {
 
   /**
    * Register a single frame by name, creating its {@link Rectangle} and pre-configured {@link Sprite}.
-   * A frame already registered under `name` is destroyed and replaced.
+   * A frame already registered under `name` is destroyed and replaced. Animation definitions are preserved.
    */
   public addFrame(name: string, data: SpritesheetFrame): this {
-    this.removeFrame(name);
+    this.frames.get(name)?.destroy();
+    this.frames.delete(name);
+
+    this.sprites.get(name)?.destroy();
+    this.sprites.delete(name);
 
     const { x, y, w, h } = data.frame;
     const frame = new Rectangle(x, y, w, h);
@@ -84,8 +122,22 @@ export class Spritesheet {
     return this;
   }
 
-  /** Destroy and remove a single frame's {@link Rectangle} and {@link Sprite} by name. No-op if the frame does not exist. */
+  /**
+   * Destroy and remove a single frame's {@link Rectangle} and {@link Sprite} by name. No-op if the frame does not exist and no animation definition references the name.
+   * Throws without changing any state or resources if an animation definition references the name, even when the frame is missing.
+   * Remove those definitions from {@link animations} before removing the frame, or use {@link addFrame} to replace it.
+   */
   public removeFrame(name: string): this {
+    const references: string[] = [];
+
+    for (const [animation, frameNames] of this.animations) {
+      if (frameNames.includes(name)) {
+        references.push(`"${animation}"`);
+      }
+    }
+
+    invariant(references.length === 0, `Spritesheet frame "${name}" is referenced by animation(s): ${references.join(', ')}.`);
+
     this.frames.get(name)?.destroy();
     this.frames.delete(name);
 
@@ -97,19 +149,7 @@ export class Spritesheet {
 
   /** Register an animation sequence as an ordered list of frame names. All referenced frames must already exist. */
   public defineAnimation(name: string, frameNames: readonly string[]): this {
-    if (name.trim().length === 0) {
-      throw new Error('Spritesheet animation names must be non-empty strings.');
-    }
-
-    if (frameNames.length === 0) {
-      throw new Error(`Spritesheet animation "${name}" must reference at least one frame.`);
-    }
-
-    for (const frameName of frameNames) {
-      if (!this.frames.has(frameName)) {
-        throw new Error(`Spritesheet animation "${name}" references missing frame "${frameName}".`);
-      }
-    }
+    validateAnimation(name, frameNames, this.frames);
 
     this.animations.set(name, [...frameNames]);
 

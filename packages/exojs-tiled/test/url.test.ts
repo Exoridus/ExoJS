@@ -60,4 +60,9 @@ describe('resolveTiledUrl', () => {
     const imageUrl = resolveTiledUrl('../images/world.png', tsjUrl);
     expect(imageUrl).toBe('maps/images/world.png');
   });
+
+  it('keeps the authority of a protocol-relative base', () => {
+    expect(resolveTiledUrl('tiles.tsj', '//cdn.example.com/maps/level.tmj')).toBe('//cdn.example.com/maps/tiles.tsj');
+    expect(resolveTiledUrl('../img/a.png', '//cdn.example.com/maps/level.tmj')).toBe('//cdn.example.com/img/a.png');
+  });
 });

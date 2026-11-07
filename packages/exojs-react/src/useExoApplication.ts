@@ -42,10 +42,10 @@ const colorKey = (color: Color | undefined): string | undefined =>
  * }
  * ```
  *
- * **Reactivity model.** The Application is recreated only when an *identity*
- * option changes - currently the render `backend` (you cannot hot-swap WebGL2 ↔
- * WebGPU). All other supported options are applied *live* without tearing the
- * app down:
+ * **Reactivity model.** The Application is created when the canvas attaches and
+ * recreated when that element or the render `backend` changes (you cannot
+ * hot-swap WebGL2 and WebGPU). Detaching the canvas destroys the Application.
+ * Other supported options are applied *live* without tearing the app down:
  *
  * - `canvas.width` / `canvas.height` → `app.resize(...)`
  * - `clearColor` → `app.clearColor`
@@ -65,16 +65,18 @@ const colorKey = (color: Color | undefined): string | undefined =>
  * @param options - Application options (the canvas element is the one you render).
  * @param onReady - Called once each time an Application is created.
  * @param onError - Called for every {@link Application.onError} dispatch (async
- *   init/scene-load failures) while an Application exists. Re-subscribed
- *   automatically whenever the Application is (re)created.
+ *   init/scene-load failures) while an Application exists, and for failures
+ *   during asynchronous replacement after teardown. Re-subscribed automatically
+ *   whenever the Application is (re)created.
  */
 export const useExoApplication = (
   options?: ExoApplicationOptions,
   onReady?: (app: Application) => void,
   onError?: (error: unknown) => void,
 ): UseExoApplicationResult => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
   const [app, setApp] = useState<Application | null>(null);
+  const teardownRef = useRef<Promise<unknown> | null>(null);
 
   // Latest onReady without retriggering the lifecycle effect. Updated in an
   // effect (not during render) so the ref-write happens after commit.
@@ -89,39 +91,63 @@ export const useExoApplication = (
     onErrorRef.current = onError;
   });
 
-  // Identity: only the backend type forces a full recreation.
+  // Other option values are captured at creation or synchronized below.
   const backendKey = options?.backend?.type ?? 'auto';
 
-  // ── Lifecycle: create on mount / recreate on backend change ───────────────
+  // Lifecycle follows the attached canvas and backend.
   useEffect(() => {
-    const canvas = canvasRef.current;
-
     if (!canvas) {
       return;
     }
 
-    // Bind to the React-rendered canvas. The engine never removes a canvas it
-    // did not create (Application.destroy leaves it in the DOM), so React stays
-    // the sole owner of the element's lifecycle.
-    const application = new Application({
-      ...options,
-      canvas: { ...options?.canvas, element: canvas },
-    });
+    let cancelled = false;
+    let application: Application | null = null;
 
-    setApp(application);
-    onReadyRef.current?.(application);
+    const create = (): void => {
+      if (cancelled) {
+        return;
+      }
+
+      application = new Application({
+        ...options,
+        canvas: { ...options?.canvas, element: canvas },
+      });
+      setApp(application);
+      onReadyRef.current?.(application);
+    };
+
+    const pending = teardownRef.current;
+
+    if (pending === null) {
+      create();
+    } else {
+      void pending.then(create).catch((error: unknown) => {
+        if (!cancelled) {
+          onErrorRef.current?.(error);
+        }
+      });
+    }
 
     return () => {
-      // A React cleanup function cannot await, and teardown failures already
-      // travel through the application's own error pipeline - so the Promise
-      // is deliberately dropped rather than reported a second time here.
-      void application.destroy();
-      setApp(null);
+      cancelled = true;
+
+      if (application !== null) {
+        const teardown = Promise.resolve(application.destroy());
+        teardownRef.current = teardown;
+        void teardown.then(
+          () => {
+            if (teardownRef.current === teardown) {
+              teardownRef.current = null;
+            }
+          },
+          () => undefined,
+        );
+        setApp(null);
+      }
     };
-    // Recreate only when the backend identity changes; live options are synced
-    // by the effects below. `options` is intentionally read at (re)create time.
+    // `options` is intentionally read at creation; live values are synced below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [backendKey]);
+  }, [backendKey, canvas]);
 
   // ── Live sync: error reporting ─────────────────────────────────────────────
   useEffect(() => {
@@ -160,5 +186,5 @@ export const useExoApplication = (
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app, clearKey]);
 
-  return { app, canvasRef };
+  return { app, canvasRef: setCanvas };
 };

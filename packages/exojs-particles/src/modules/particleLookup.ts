@@ -1,7 +1,7 @@
 import type { ColorGradient } from '#distributions/ColorGradient';
 import type { Curve } from '#distributions/Curve';
 
-const lookupSize = 256;
+export const lookupSize = 256;
 
 export class ParticleCurveLookup {
   private _source: Curve | null = null;
@@ -99,18 +99,18 @@ export const uploadParticleLookup = (
 
 export const particleLookupWgsl = (key: string, name: string): string => `
 fn ${key}_sample(t: f32) -> vec4<f32> {
-    let x = clamp(t, 0.0, 1.0) * 255.0;
+    let x = clamp(t, 0.0, 1.0) * ${String(lookupSize - 1)}.0;
     let lo = i32(floor(x));
     let a = textureLoad(u_${key}_${name}, lo, 0);
-    let b = textureLoad(u_${key}_${name}, min(lo + 1, 255), 0);
+    let b = textureLoad(u_${key}_${name}, min(lo + 1, ${String(lookupSize - 1)}), 0);
     return a + (b - a) * (x - f32(lo));
 }`;
 
 export const particleLookupGlsl = (key: string, name: string): string => `
 vec4 ${key}_sample(float t) {
-    float x = clamp(t, 0.0, 1.0) * 255.0;
+    float x = clamp(t, 0.0, 1.0) * ${String(lookupSize - 1)}.0;
     int lo = int(floor(x));
     vec4 a = texelFetch(u_${key}_${name}, ivec2(lo, 0), 0);
-    vec4 b = texelFetch(u_${key}_${name}, ivec2(min(lo + 1, 255), 0), 0);
+    vec4 b = texelFetch(u_${key}_${name}, ivec2(min(lo + 1, ${String(lookupSize - 1)}), 0), 0);
     return a + (b - a) * (x - float(lo));
 }`;

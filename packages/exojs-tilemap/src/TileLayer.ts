@@ -180,6 +180,18 @@ const validateTileLayerOptions = (options: TileLayerOptions): ResolvedTileLayerO
   return { chunkWidth, chunkHeight, opacity, offsetX, offsetY, parallaxX, parallaxY, parallaxScale };
 };
 
+// An end coordinate past 2^53 stops advancing in the fill loops (`tx++` no longer changes `tx`), so it must be rejected up front.
+const validateRect = (x: number, y: number, w: number, h: number): void => {
+  validateInteger(x, 'x');
+  validateInteger(y, 'y');
+  validateInteger(w, 'w');
+  validateInteger(h, 'h');
+
+  if (!Number.isSafeInteger(x + w) || !Number.isSafeInteger(y + h)) {
+    throw new Error('The rectangle must end at a safe integer coordinate.');
+  }
+};
+
 /**
  * A generic, format-independent tile layer with chunk-first storage.
  *
@@ -648,6 +660,8 @@ export class TileLayer {
    */
   public fillRect(x: number, y: number, w: number, h: number, tile: ResolvedTile): void {
     this._checkDestroyed();
+    validateRect(x, y, w, h);
+
     const packed = this._validateTileRef(tile);
     let changed = false;
 
@@ -678,6 +692,8 @@ export class TileLayer {
    */
   public clearRect(x: number, y: number, w: number, h: number): void {
     this._checkDestroyed();
+    validateRect(x, y, w, h);
+
     let changed = false;
 
     for (let ty = y; ty < y + h; ty++) {
@@ -714,6 +730,8 @@ export class TileLayer {
    * @advanced
    */
   public *tilesInRect(x: number, y: number, w: number, h: number): Generator<{ tx: number; ty: number; tile: ResolvedTile }> {
+    validateRect(x, y, w, h);
+
     const startCx = Math.floor(x / this.chunkWidth);
     const endCx = Math.floor((x + w - 1) / this.chunkWidth);
     const startCy = Math.floor(y / this.chunkHeight);

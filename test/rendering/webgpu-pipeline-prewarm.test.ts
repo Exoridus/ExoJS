@@ -17,8 +17,8 @@
  * renderer's cache no longer is - it keys on `(format, packed variant)` - so
  * its second test asserts the same property behaviourally instead.
  */
-
 import { BlendModes } from '#rendering/types';
+import { WebGpuStencilMode } from '#rendering/webgpu/stencilState';
 import { WebGpuMeshRenderer } from '#rendering/webgpu/WebGpuMeshRenderer';
 import { WebGpuScalableSpriteRenderer } from '#rendering/webgpu/WebGpuScalableSpriteRenderer';
 import { WebGpuSpriteRenderer } from '#rendering/webgpu/WebGpuSpriteRenderer';
@@ -38,10 +38,10 @@ const formats: readonly GPUTextureFormat[] = ['bgra8unorm', 'rgba8unorm'];
 
 // Every stored pipeline key must carry the stencil suffix the lookups append;
 // a key without it can never be found again.
-const lookupKeyPattern = /:(s|n)$/;
+const lookupKeyPattern = /:[012]$/;
 
 // The mesh renderer appends a depth dimension after the stencil one.
-const meshLookupKeyPattern = /:(s|n):\d$/;
+const meshLookupKeyPattern = /:[012]:\d$/;
 
 interface StubDevice {
   readonly device: GPUDevice;
@@ -112,6 +112,25 @@ describe('WebGpuSpriteRenderer pipeline prewarm', () => {
     return { renderer, stub };
   };
 
+  test('attachment-only pipelines neither clip nor share a clipped pipeline', () => {
+    const { renderer, stub } = setup();
+    const createPipeline = vi.spyOn(stub.device, 'createRenderPipeline');
+    const lookup = renderer as unknown as {
+      _getPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: WebGpuStencilMode): GPURenderPipeline;
+    };
+    const plain = lookup._getPipeline(BlendModes.Normal, 'rgba8unorm', WebGpuStencilMode.None);
+    const attachment = lookup._getPipeline(BlendModes.Normal, 'rgba8unorm', WebGpuStencilMode.Attachment);
+    const clipped = lookup._getPipeline(BlendModes.Normal, 'rgba8unorm', WebGpuStencilMode.Clip);
+
+    expect(createPipeline.mock.calls[0]![0].depthStencil).toBeUndefined();
+    expect(createPipeline.mock.calls[1]![0].depthStencil?.stencilFront?.compare).toBe('always');
+    expect(createPipeline.mock.calls[2]![0].depthStencil?.stencilFront?.compare).toBe('equal');
+    expect(attachment).not.toBe(plain);
+    expect(attachment).not.toBe(clipped);
+    expect(lookup._getPipeline(BlendModes.Normal, 'rgba8unorm', WebGpuStencilMode.Attachment)).toBe(attachment);
+    expect(createPipeline).toHaveBeenCalledTimes(3);
+  });
+
   test.each(['device', 'layout'])('late prewarm cannot populate a replacement %s connection', async changed => {
     const { renderer, stub } = setup();
     const finish = delayPrewarm(stub);
@@ -120,7 +139,7 @@ describe('WebGpuSpriteRenderer pipeline prewarm', () => {
     const internal = renderer as unknown as {
       _device: GPUDevice;
       _pipelineLayout: GPUPipelineLayout;
-      _getPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline;
+      _getPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: WebGpuStencilMode): GPURenderPipeline;
     };
 
     if (changed === 'device') {
@@ -131,7 +150,7 @@ describe('WebGpuSpriteRenderer pipeline prewarm', () => {
 
     finish();
     await warming;
-    internal._getPipeline(BlendModes.Normal, formats[0]!, false);
+    internal._getPipeline(BlendModes.Normal, formats[0]!, WebGpuStencilMode.None);
     expect(replacement.syncCreates()).toBe(1);
   });
 
@@ -141,12 +160,12 @@ describe('WebGpuSpriteRenderer pipeline prewarm', () => {
     await renderer.prewarmPipelines(formats);
 
     const lookup = renderer as unknown as {
-      _getPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline;
+      _getPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: WebGpuStencilMode): GPURenderPipeline;
     };
 
     for (const blendMode of prewarmedBlendModes) {
       for (const format of formats) {
-        lookup._getPipeline(blendMode, format, false);
+        lookup._getPipeline(blendMode, format, WebGpuStencilMode.None);
       }
     }
 
@@ -165,18 +184,18 @@ describe('WebGpuSpriteRenderer pipeline prewarm', () => {
     await renderer.prewarmPipelines(formats);
 
     const lookup = renderer as unknown as {
-      _getPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline;
+      _getPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: WebGpuStencilMode): GPURenderPipeline;
     };
 
     for (const blendMode of prewarmedBlendModes) {
       for (const format of formats) {
-        lookup._getPipeline(blendMode, format, false);
+        lookup._getPipeline(blendMode, format, WebGpuStencilMode.None);
       }
     }
 
     expect(stub.syncCreates()).toBe(0);
 
-    lookup._getPipeline(BlendModes.Normal, formats[0]!, true);
+    lookup._getPipeline(BlendModes.Normal, formats[0]!, WebGpuStencilMode.Clip);
 
     expect(stub.syncCreates()).toBe(1);
   });
@@ -219,8 +238,8 @@ describe('WebGpuMeshRenderer pipeline prewarm', () => {
       _device: GPUDevice;
       _pipelineLayout: GPUPipelineLayout;
       _instancedPipelineLayout: GPUPipelineLayout;
-      _getPipeline(key: { blendMode: BlendModes; format: GPUTextureFormat; stencil: boolean }): GPURenderPipeline;
-      _getInstancedPipeline(key: { blendMode: BlendModes; format: GPUTextureFormat; stencil: boolean }): GPURenderPipeline;
+      _getPipeline(key: { blendMode: BlendModes; format: GPUTextureFormat; stencil: WebGpuStencilMode }): GPURenderPipeline;
+      _getInstancedPipeline(key: { blendMode: BlendModes; format: GPUTextureFormat; stencil: WebGpuStencilMode }): GPURenderPipeline;
     };
 
     if (changed === 'device') {
@@ -232,8 +251,8 @@ describe('WebGpuMeshRenderer pipeline prewarm', () => {
 
     finish();
     await warming;
-    internal._getPipeline({ blendMode: BlendModes.Normal, format: formats[0]!, stencil: false });
-    internal._getInstancedPipeline({ blendMode: BlendModes.Normal, format: formats[0]!, stencil: false });
+    internal._getPipeline({ blendMode: BlendModes.Normal, format: formats[0]!, stencil: WebGpuStencilMode.None });
+    internal._getInstancedPipeline({ blendMode: BlendModes.Normal, format: formats[0]!, stencil: WebGpuStencilMode.None });
     expect(replacement.syncCreates()).toBe(2);
   });
 
@@ -243,14 +262,14 @@ describe('WebGpuMeshRenderer pipeline prewarm', () => {
     await renderer.prewarmPipelines(formats);
 
     const lookup = renderer as unknown as {
-      _getPipeline(key: { blendMode: BlendModes; format: GPUTextureFormat; stencil: boolean }): GPURenderPipeline;
-      _getInstancedPipeline(key: { blendMode: BlendModes; format: GPUTextureFormat; stencil: boolean }): GPURenderPipeline;
+      _getPipeline(key: { blendMode: BlendModes; format: GPUTextureFormat; stencil: WebGpuStencilMode }): GPURenderPipeline;
+      _getInstancedPipeline(key: { blendMode: BlendModes; format: GPUTextureFormat; stencil: WebGpuStencilMode }): GPURenderPipeline;
     };
 
     for (const blendMode of prewarmedBlendModes) {
       for (const format of formats) {
-        lookup._getPipeline({ blendMode, format, stencil: false });
-        lookup._getInstancedPipeline({ blendMode, format, stencil: false });
+        lookup._getPipeline({ blendMode, format, stencil: WebGpuStencilMode.None });
+        lookup._getInstancedPipeline({ blendMode, format, stencil: WebGpuStencilMode.None });
       }
     }
 
@@ -303,7 +322,7 @@ describe('WebGpuScalableSpriteRenderer pipeline prewarm', () => {
     const internal = renderer as unknown as {
       _device: GPUDevice;
       _pipelineLayout: GPUPipelineLayout;
-      _getPipeline(kind: 'shader' | 'geo', blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline;
+      _getPipeline(kind: 'shader' | 'geo', blendMode: BlendModes, format: GPUTextureFormat, stencil: WebGpuStencilMode): GPURenderPipeline;
     };
 
     if (changed === 'device') {
@@ -314,8 +333,8 @@ describe('WebGpuScalableSpriteRenderer pipeline prewarm', () => {
 
     finish();
     await warming;
-    internal._getPipeline('shader', BlendModes.Normal, formats[0]!, false);
-    internal._getPipeline('geo', BlendModes.Normal, formats[0]!, false);
+    internal._getPipeline('shader', BlendModes.Normal, formats[0]!, WebGpuStencilMode.None);
+    internal._getPipeline('geo', BlendModes.Normal, formats[0]!, WebGpuStencilMode.None);
     expect(replacement.syncCreates()).toBe(2);
   });
 
@@ -325,13 +344,13 @@ describe('WebGpuScalableSpriteRenderer pipeline prewarm', () => {
     await renderer.prewarmPipelines(formats);
 
     const lookup = renderer as unknown as {
-      _getPipeline(kind: 'shader' | 'geo', blend: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline;
+      _getPipeline(kind: 'shader' | 'geo', blend: BlendModes, format: GPUTextureFormat, stencil: WebGpuStencilMode): GPURenderPipeline;
     };
 
     for (const kind of kinds) {
       for (const blendMode of prewarmedBlendModes) {
         for (const format of formats) {
-          lookup._getPipeline(kind, blendMode, format, false);
+          lookup._getPipeline(kind, blendMode, format, WebGpuStencilMode.None);
         }
       }
     }
@@ -380,7 +399,7 @@ describe('WebGpuTextRenderer pipeline prewarm', () => {
     const internal = renderer as unknown as {
       _device: GPUDevice;
       _pipelineLayout: GPUPipelineLayout;
-      _getPipeline(shaderType: 'sdf', blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline;
+      _getPipeline(shaderType: 'sdf', blendMode: BlendModes, format: GPUTextureFormat, stencil: WebGpuStencilMode): GPURenderPipeline;
     };
 
     if (changed === 'device') {
@@ -391,7 +410,7 @@ describe('WebGpuTextRenderer pipeline prewarm', () => {
 
     finish();
     await warming;
-    internal._getPipeline('sdf', BlendModes.Normal, formats[0]!, false);
+    internal._getPipeline('sdf', BlendModes.Normal, formats[0]!, WebGpuStencilMode.None);
     expect(replacement.syncCreates()).toBe(1);
   });
 
@@ -405,7 +424,7 @@ describe('WebGpuTextRenderer pipeline prewarm', () => {
         shaderType: 'sdf' | 'msdf' | 'color',
         blendMode: BlendModes,
         format: GPUTextureFormat,
-        stencil: boolean,
+        stencil: WebGpuStencilMode,
       ): GPURenderPipeline;
     };
 
@@ -413,7 +432,7 @@ describe('WebGpuTextRenderer pipeline prewarm', () => {
     // asks for on all but a deliberately blended text node.
     for (const shaderType of shaderTypes) {
       for (const format of formats) {
-        lookup._getPipeline(shaderType, BlendModes.Normal, format, false);
+        lookup._getPipeline(shaderType, BlendModes.Normal, format, WebGpuStencilMode.None);
       }
     }
 

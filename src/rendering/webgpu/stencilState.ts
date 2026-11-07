@@ -9,6 +9,13 @@
  */
 export const depthStencilAttachmentFormat: GPUTextureFormat = 'depth24plus-stencil8';
 
+/** Stencil attachment and geometric clipping state for WebGPU content pipelines. */
+export enum WebGpuStencilMode {
+  None = 0,
+  Clip = 1,
+  Attachment = 2,
+}
+
 const stencilContentFace: GPUStencilFaceState = {
   compare: 'equal',
   failOp: 'keep',
@@ -50,5 +57,8 @@ export const contentDepthStencilState = (stencil: boolean, depthWrite: boolean):
   stencilWriteMask: 0,
 });
 
-/** {@link contentDepthStencilState} for a clipped draw that leaves depth alone. */
-export const stencilContentDepthStencilState = (): GPUDepthStencilState => contentDepthStencilState(true, false);
+/**
+ * Leaves depth unchanged. Pass `false` for a stencil attachment without a
+ * geometric clip; the default tests fragments against the pass reference.
+ */
+export const stencilContentDepthStencilState = (stencil = true): GPUDepthStencilState => contentDepthStencilState(stencil, false);

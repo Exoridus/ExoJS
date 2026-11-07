@@ -23,6 +23,7 @@ import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
+import { CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -304,4 +305,29 @@ describe('WebGPU NineSliceSprite', () => {
       backend.destroy();
     }
   });
+});
+
+test('nine-slice geometry associates straight compressed samples with alpha', async ctx => {
+  const backend = await setupBackend();
+  const texture = new Texture(null).setCompressed({
+    format: CompressedTextureFormat.Bc3RgbaUnorm,
+    colorSpace: 'linear-srgb',
+    alphaMode: 'straight',
+    levels: [{ width: 4, height: 4, data: new Uint8Array([128, 128, 0, 0, 0, 0, 0, 0, 0, 248, 0, 248, 0, 0, 0, 0]) }],
+  });
+  const sprite = new NineSliceSprite(texture, { slices: 1, width: 48, height: 48 });
+
+  try {
+    expect(backend.shouldPremultiplyTextureSample(texture)).toBe(true);
+
+    if (!(await renderScene(ctx, backend, sprite))) {
+      return;
+    }
+
+    expectPixelNear(readWebGpuPixels(backend, canvasSize)(24, 24), [188, 0, 0, 255]);
+  } finally {
+    sprite.destroy();
+    texture.destroy();
+    backend.destroy();
+  }
 });

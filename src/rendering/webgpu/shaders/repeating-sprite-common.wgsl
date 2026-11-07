@@ -1,3 +1,5 @@
+override premultiplySample: bool = false;
+
 struct ProjectionUniforms {
     matrix: mat4x4<f32>,
     group: mat4x4<f32>,

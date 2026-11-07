@@ -1284,3 +1284,30 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
     expect(writes.slice(mark)).toHaveLength(0);
   });
 });
+
+test('a fully clipped geometry capture still records content for a visible replay', async () => {
+  const environment = createMockWebGpuEnvironment();
+
+  try {
+    const backend = await createBackend(environment);
+    const texture = createCanvasTexture();
+    const group = new RetainedContainer();
+
+    group.addChild(new NineSliceSprite(texture, { slices: 4, width: 16, height: 16 }));
+    renderFrame(backend, group);
+    const clipped = vi.spyOn(backend, 'getScissorRect').mockReturnValue({ x: 0, y: 0, width: 0, height: 0 });
+
+    renderFrame(backend, group);
+    clipped.mockRestore();
+    const before = environment.draws().length;
+
+    renderFrame(backend, group);
+    expect(environment.draws().slice(before)).toEqual([{ instanceCount: 9 }]);
+    expect(backend.stats.submittedNodes).toBe(1);
+    group.destroy();
+    texture.destroy();
+    backend.destroy();
+  } finally {
+    environment.restore();
+  }
+});

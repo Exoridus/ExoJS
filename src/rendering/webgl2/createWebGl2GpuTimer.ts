@@ -97,6 +97,14 @@ export const createWebGl2GpuTimer = (gl: WebGL2RenderingContext): GpuTimer | nul
       }
 
       try {
+        // Only one TIME_ELAPSED query may be open; a frame that skipped endFrame
+        // would otherwise leak its query and make every later beginQuery fail.
+        if (active !== null) {
+          gl.endQuery(timeElapsedTarget);
+          gl.deleteQuery(active);
+          active = null;
+        }
+
         const query = gl.createQuery();
 
         if (query === null) {
