@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
-import { createTimestampRig, timestampsQuantized } from '../src/rendering/page/timerProbe';
+import { createExoJsAdapter } from '../src/rendering/adapters/exojs';
+import { ARCHETYPES } from '../src/rendering/archetypes';
+import { createTimestampRig, runTimerProbe, timestampsQuantized } from '../src/rendering/page/timerProbe';
+
+vi.mock('../src/rendering/adapters/exojs', () => ({ createExoJsAdapter: vi.fn() }));
 
 const frame = (gpuPassMs: number | null) => ({ gpuPassMs });
 const available = { available: true };
@@ -56,5 +60,38 @@ describe('createTimestampRig', () => {
     }
 
     expect(rig.notes).toEqual([]);
+  });
+});
+
+describe('runTimerProbe setup failure', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  test('restores the requestDevice patch when adapter init throws', async () => {
+    const original = (): void => undefined;
+    const prototype = { requestDevice: original };
+
+    vi.stubGlobal('GPUAdapter', { prototype });
+    vi.mocked(createExoJsAdapter).mockReturnValue({
+      init: () => Promise.reject(new Error('init failed')),
+      teardown: vi.fn(),
+    } as unknown as ReturnType<typeof createExoJsAdapter>);
+
+    await expect(
+      runTimerProbe({
+        archetype: ARCHETYPES[0].id,
+        nodeCount: 1,
+        backend: 'webgpu',
+        config: 'current',
+        warmupFrames: 0,
+        timedFrames: 0,
+        mode: 'pipelined',
+        drainAfterWarmup: false,
+        timestampQueries: true,
+        controls: false,
+        controlSamples: 0,
+      }),
+    ).rejects.toThrow('init failed');
+
+    expect(prototype.requestDevice).toBe(original);
   });
 });

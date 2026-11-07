@@ -716,106 +716,108 @@ export const runTimerProbe = async (spec: TimerProbeSpec): Promise<TimerProbeRes
 
   const notes: string[] = [];
   const restores: Restore[] = [];
-
-  if (spec.timestampQueries && spec.backend === 'webgpu') {
-    restores.push(patchRequestDeviceForTimestamps());
-  }
-
   const canvas = freshCanvas();
   const adapter = createExoJsAdapter(undefined, spec.config);
+  let initialised = false;
 
-  await adapter.init(canvas, spec.backend);
+  // Every global patch is installed inside the try, so a failing setup still restores it.
+  try {
+    if (spec.timestampQueries && spec.backend === 'webgpu') {
+      restores.push(patchRequestDeviceForTimestamps());
+    }
 
-  const device = spec.backend === 'webgpu' ? (adapter.gpuDevice?.() ?? null) : null;
+    await adapter.init(canvas, spec.backend);
+    initialised = true;
 
-  if (spec.backend === 'webgpu' && device === null) {
-    notes.push('no GPUDevice exposed; the queue-completion timeline is absent');
-  }
+    const device = spec.backend === 'webgpu' ? (adapter.gpuDevice?.() ?? null) : null;
 
-  device?.addEventListener('uncapturederror', event => {
-    notes.push(`uncaptured WebGPU error: ${(event as GPUUncapturedErrorEvent).error.message}`);
-  });
+    if (spec.backend === 'webgpu' && device === null) {
+      notes.push('no GPUDevice exposed; the queue-completion timeline is absent');
+    }
 
-  const counters = newFrameCounters();
+    device?.addEventListener('uncapturederror', event => {
+      notes.push(`uncaptured WebGPU error: ${(event as GPUUncapturedErrorEvent).error.message}`);
+    });
 
-  restores.push(
-    patchMethod(
-      DerivedSelectionState.prototype as unknown as Record<string, unknown>,
-      'update',
-      original =>
-        function update(this: DerivedSelectionState, ...args: never[]): unknown {
-          const result = (original as (this: DerivedSelectionState, ...a: never[]) => unknown).apply(this, args);
-
-          counters.selections++;
-          counters.entered += this.enteredCount;
-
-          return result;
-        },
-    ),
-  );
-
-  let epoch = 0;
-
-  if (device !== null) {
-    const queueRecord = (device as unknown as { queue: Record<string, unknown> }).queue;
+    const counters = newFrameCounters();
 
     restores.push(
       patchMethod(
-        queueRecord,
-        'writeBuffer',
+        DerivedSelectionState.prototype as unknown as Record<string, unknown>,
+        'update',
         original =>
-          function writeBuffer(this: unknown, ...args: never[]): unknown {
-            counters.writeBufferBytes += writeBufferBytes(args as readonly unknown[]);
+          function update(this: DerivedSelectionState, ...args: never[]): unknown {
+            const result = (original as (this: DerivedSelectionState, ...a: never[]) => unknown).apply(this, args);
 
-            return (original as (this: unknown, ...a: never[]) => unknown).apply(this, args);
-          },
-      ),
-    );
-
-    restores.push(
-      patchMethod(
-        queueRecord,
-        'submit',
-        original =>
-          function submit(this: unknown, ...args: never[]): unknown {
-            const result = (original as (this: unknown, ...a: never[]) => unknown).apply(this, args);
-            const at = performance.now() - epoch;
-
-            counters.submits++;
-            counters.firstSubmitAt ??= at;
-            counters.lastSubmitAt = at;
+            counters.selections++;
+            counters.entered += this.enteredCount;
 
             return result;
           },
       ),
     );
-  }
 
-  // Control-arm targets. `getContext('webgpu')` returns the context the engine
-  // already configured on this canvas; it never creates a second one.
-  const canvasContext = spec.mode === 'canvas-clear' ? (canvas.getContext('webgpu') as GPUCanvasContext | null) : null;
-  const offscreen =
-    spec.mode === 'offscreen-clear' && device !== null
-      ? device.createTexture({
-          label: 'timer-probe:offscreen',
-          size: { width: STAGE_WIDTH, height: STAGE_HEIGHT },
-          format: navigator.gpu.getPreferredCanvasFormat(),
-          usage: GPUTextureUsage.RENDER_ATTACHMENT,
-        })
-      : null;
+    let epoch = 0;
 
-  const rig = spec.timestampQueries && device !== null ? createTimestampRig(device) : null;
+    if (device !== null) {
+      const queueRecord = (device as unknown as { queue: Record<string, unknown> }).queue;
 
-  if (rig !== null) {
-    restores.push(...rig.restores);
-    notes.push(...rig.notes);
-  }
+      restores.push(
+        patchMethod(
+          queueRecord,
+          'writeBuffer',
+          original =>
+            function writeBuffer(this: unknown, ...args: never[]): unknown {
+              counters.writeBufferBytes += writeBufferBytes(args as readonly unknown[]);
 
-  const frames: TimerFrameRecord[] = [];
-  const doneAt = new Map<number, number>();
-  const pending: Array<Promise<void>> = [];
+              return (original as (this: unknown, ...a: never[]) => unknown).apply(this, args);
+            },
+        ),
+      );
 
-  try {
+      restores.push(
+        patchMethod(
+          queueRecord,
+          'submit',
+          original =>
+            function submit(this: unknown, ...args: never[]): unknown {
+              const result = (original as (this: unknown, ...a: never[]) => unknown).apply(this, args);
+              const at = performance.now() - epoch;
+
+              counters.submits++;
+              counters.firstSubmitAt ??= at;
+              counters.lastSubmitAt = at;
+
+              return result;
+            },
+        ),
+      );
+    }
+
+    // Control-arm targets. `getContext('webgpu')` returns the context the engine
+    // already configured on this canvas; it never creates a second one.
+    const canvasContext = spec.mode === 'canvas-clear' ? (canvas.getContext('webgpu') as GPUCanvasContext | null) : null;
+    const offscreen =
+      spec.mode === 'offscreen-clear' && device !== null
+        ? device.createTexture({
+            label: 'timer-probe:offscreen',
+            size: { width: STAGE_WIDTH, height: STAGE_HEIGHT },
+            format: navigator.gpu.getPreferredCanvasFormat(),
+            usage: GPUTextureUsage.RENDER_ATTACHMENT,
+          })
+        : null;
+
+    const rig = spec.timestampQueries && device !== null ? createTimestampRig(device) : null;
+
+    if (rig !== null) {
+      restores.push(...rig.restores);
+      notes.push(...rig.notes);
+    }
+
+    const frames: TimerFrameRecord[] = [];
+    const doneAt = new Map<number, number>();
+    const pending: Array<Promise<void>> = [];
+
     adapter.buildScene(archetype, spec.nodeCount, SEED);
 
     let frameIndex = 0;
@@ -929,7 +931,9 @@ export const runTimerProbe = async (spec: TimerProbeSpec): Promise<TimerProbeRes
       restore();
     }
 
-    adapter.teardown();
+    if (initialised) {
+      adapter.teardown();
+    }
   }
 };
 
