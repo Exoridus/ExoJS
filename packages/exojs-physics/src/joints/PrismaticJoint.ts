@@ -77,6 +77,9 @@ export class PrismaticJoint extends Joint {
   private _axialMass = 0;
   private _h = 0;
   private _invH = 0;
+  private _biasRate = 0;
+  private _massScale = 1;
+  private _impulseScale = 0;
   private _perpImpulse = 0;
   private _angularImpulse = 0;
   private _motorImpulse = 0;
@@ -113,7 +116,7 @@ export class PrismaticJoint extends Joint {
   }
 
   /** @internal */
-  public override _prepare(h: number, _rigid: JointSoftness): void {
+  public override _prepare(h: number, rigid: JointSoftness): void {
     const bodyA = this.bodyA;
     const bodyB = this.bodyB;
 
@@ -177,6 +180,9 @@ export class PrismaticJoint extends Joint {
     this._translation = dx * axisX + dy * axisY;
     this._h = h;
     this._invH = 1 / h;
+    this._biasRate = rigid.biasRate;
+    this._massScale = rigid.massScale;
+    this._impulseScale = rigid.impulseScale;
 
     if (!this.enableMotor) {
       this._motorImpulse = 0;
@@ -252,12 +258,12 @@ export class PrismaticJoint extends Joint {
     // Perpendicular + angular lock (2×2 block).
     const cdotPerp = this._perpVelocity();
     const cdotAngle = bodyB.angularVelocity - bodyA.angularVelocity;
-    const rhs1 = -(cdotPerp + (useBias ? 0.2 * this._invH * this._cPerp : 0));
-    const rhs2 = -(cdotAngle + (useBias ? 0.2 * this._invH * this._cAngle : 0));
+    const rhs1 = -(cdotPerp + (useBias ? this._biasRate * this._cPerp : 0));
+    const rhs2 = -(cdotAngle + (useBias ? this._biasRate * this._cAngle : 0));
     const det = this._k11 * this._k22 - this._k12 * this._k12;
     const invDet = det !== 0 ? 1 / det : 0;
-    const dPerp = invDet * (this._k22 * rhs1 - this._k12 * rhs2);
-    const dAngle = invDet * (-this._k12 * rhs1 + this._k11 * rhs2);
+    const dPerp = this._massScale * invDet * (this._k22 * rhs1 - this._k12 * rhs2) - this._impulseScale * this._perpImpulse;
+    const dAngle = this._massScale * invDet * (-this._k12 * rhs1 + this._k11 * rhs2) - this._impulseScale * this._angularImpulse;
 
     this._perpImpulse += dPerp;
     this._angularImpulse += dAngle;

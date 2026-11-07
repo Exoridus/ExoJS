@@ -1234,3 +1234,23 @@ describe('revolute chain stability', () => {
     }
   });
 });
+
+describe('prismatic joint softness', () => {
+  it('takes its perpendicular and angular bias from the solver factors it is handed', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    const slider = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+    const joint = new PrismaticJoint({ bodyA: anchor, bodyB: slider, anchor: { x: 0, y: 0 }, axis: { x: 1, y: 0 } });
+
+    slider.setTransform({ x: 0, y: 5 });
+    joint._prepare(1 / 240, { biasRate: 0, massScale: 1, impulseScale: 0 });
+    joint._solve(true);
+
+    expect(slider.linearVelocityY).toBe(0);
+
+    joint._prepare(1 / 240, { biasRate: 10, massScale: 1, impulseScale: 0 });
+    joint._solve(true);
+
+    expect(slider.linearVelocityY).toBeCloseTo(-50, 5);
+  });
+});
