@@ -193,6 +193,11 @@ export abstract class Material<F extends UniformFields | undefined = undefined, 
   private readonly _id: number;
   private readonly _disposeCallbacks = new Set<() => void>();
   private readonly _uniformValues: Record<string, UniformValue>;
+  private _bindKey = 0;
+  private _bindKeyDirty = true;
+  private _bindKeySampler: SamplerOptions | null = null;
+  private _bindKeyScaleMode: SamplerOptions['scaleMode'] | undefined;
+  private _bindKeyWrapMode: SamplerOptions['wrapMode'] | undefined;
   private readonly _textureValues: Record<string, Texture | RenderTexture>;
   private readonly _uniformsView: unknown;
   private readonly _uniformBlocksView: unknown;
@@ -270,7 +275,23 @@ export abstract class Material<F extends UniformFields | undefined = undefined, 
    * sampler state changes; drives bind-group/slot reuse.
    */
   public get bindKey(): number {
-    return deriveBindKey(this._id, this._uniformValues, this._textureValues, this.sampler);
+    const sampler = this.sampler;
+
+    // The sampler is public and mutable in place, so it is revalidated on every read; the binding maps only change through the view setters.
+    if (
+      this._bindKeyDirty ||
+      sampler !== this._bindKeySampler ||
+      sampler?.scaleMode !== this._bindKeyScaleMode ||
+      sampler?.wrapMode !== this._bindKeyWrapMode
+    ) {
+      this._bindKey = deriveBindKey(this._id, this._uniformValues, this._textureValues, sampler);
+      this._bindKeyDirty = false;
+      this._bindKeySampler = sampler;
+      this._bindKeyScaleMode = sampler?.scaleMode;
+      this._bindKeyWrapMode = sampler?.wrapMode;
+    }
+
+    return this._bindKey;
   }
 
   /**
@@ -375,6 +396,10 @@ export abstract class Material<F extends UniformFields | undefined = undefined, 
           }
 
           this._uniformValues[name] = value;
+
+          if (textureSlot) {
+            this._bindKeyDirty = true;
+          }
         },
       });
     }
@@ -396,6 +421,7 @@ export abstract class Material<F extends UniformFields | undefined = undefined, 
           }
 
           this._textureValues[name] = value;
+          this._bindKeyDirty = true;
         },
       });
     }
