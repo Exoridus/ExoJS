@@ -77,12 +77,23 @@ export class WheelJoint extends Joint {
   private _s1 = 0;
   private _s2 = 0;
   private _perpMass = 0;
+  private _rigidBiasRate = 0;
+  private _rigidMassScale = 1;
+  private _rigidImpulseScale = 0;
   private _axialMass = 0;
   private _angularMass = 0;
   private _springBiasRate = 0;
   private _springMassScale = 1;
   private _springImpulseScale = 0;
   private _cPerp = 0;
+  private _rAx0 = 0;
+  private _rAy0 = 0;
+  private _rBx0 = 0;
+  private _rBy0 = 0;
+  private _dx0 = 0;
+  private _dy0 = 0;
+  private _axisX0 = 1;
+  private _axisY0 = 0;
   private _translation = 0;
   private _h = 0;
   private _invH = 0;
@@ -174,10 +185,21 @@ export class WheelJoint extends Joint {
     this._axialMass = kAxial > 0 ? 1 / kAxial : 0;
     this._angularMass = iA + iB > 0 ? 1 / (iA + iB) : 0;
 
+    this._rAx0 = rAx;
+    this._rAy0 = rAy;
+    this._rBx0 = rBx;
+    this._rBy0 = rBy;
+    this._dx0 = dx;
+    this._dy0 = dy;
+    this._axisX0 = axisX;
+    this._axisY0 = axisY;
     this._cPerp = dx * perpX + dy * perpY;
     this._translation = dx * axisX + dy * axisY;
     this._h = h;
     this._invH = 1 / h;
+    this._rigidBiasRate = rigid.biasRate;
+    this._rigidMassScale = rigid.massScale;
+    this._rigidImpulseScale = rigid.impulseScale;
 
     if (this.hertz > 0) {
       const omega = 2 * Math.PI * this.hertz;
@@ -216,6 +238,8 @@ export class WheelJoint extends Joint {
     const bodyA = this.bodyA;
     const bodyB = this.bodyB;
 
+    this._refreshGeometry();
+
     // Rotation motor (angular).
     bodyA.angularVelocity -= bodyA.invInertia * this._motorImpulse;
     bodyB.angularVelocity += bodyB.invInertia * this._motorImpulse;
@@ -232,6 +256,8 @@ export class WheelJoint extends Joint {
 
     const bodyA = this.bodyA;
     const bodyB = this.bodyB;
+
+    this._refreshGeometry();
 
     // Rotation motor - drives the wheel's spin; rotation is otherwise free.
     if (this.enableMotor) {
@@ -288,10 +314,56 @@ export class WheelJoint extends Joint {
 
     // Lateral lock (perpendicular, rigid).
     const cdotPerp = this._perpVelocity();
-    const perpImpulse = -this._perpMass * (cdotPerp + (useBias ? 0.2 * this._invH * this._cPerp : 0));
+    const perpImpulse =
+      -this._perpMass * this._rigidMassScale * (cdotPerp + (useBias ? this._rigidBiasRate * this._cPerp : 0)) -
+      this._rigidImpulseScale * this._perpImpulse;
 
     this._perpImpulse += perpImpulse;
     this._applyPerp(perpImpulse);
+  }
+
+  /**
+   * Re-derive the axis, arms, translation and effective masses from the
+   * sub-step's live body state. `_prepare` measures them once per frame, and
+   * every sub-step moves the bodies; limits and the lateral lock driven by the
+   * frame-start error re-correct what earlier sub-steps already took out.
+   */
+  private _refreshGeometry(): void {
+    const bodyA = this.bodyA;
+    const bodyB = this.bodyB;
+    const cosA = bodyA._deltaCos;
+    const sinA = bodyA._deltaSin;
+    const axisX = this._axisX0 * cosA - this._axisY0 * sinA;
+    const axisY = this._axisX0 * sinA + this._axisY0 * cosA;
+    const perpX = -axisY;
+    const perpY = axisX;
+    const rAx = this._rAx0 * cosA - this._rAy0 * sinA;
+    const rAy = this._rAx0 * sinA + this._rAy0 * cosA;
+    const rBx = this._rBx0 * bodyB._deltaCos - this._rBy0 * bodyB._deltaSin;
+    const rBy = this._rBx0 * bodyB._deltaSin + this._rBy0 * bodyB._deltaCos;
+    const dx = this._dx0 + (bodyB._deltaPosX + rBx - this._rBx0) - (bodyA._deltaPosX + rAx - this._rAx0);
+    const dy = this._dy0 + (bodyB._deltaPosY + rBy - this._rBy0) - (bodyA._deltaPosY + rAy - this._rAy0);
+
+    this._axisX = axisX;
+    this._axisY = axisY;
+    this._perpX = perpX;
+    this._perpY = perpY;
+    this._a1 = (dx + rAx) * axisY - (dy + rAy) * axisX;
+    this._a2 = rBx * axisY - rBy * axisX;
+    this._s1 = (dx + rAx) * perpY - (dy + rAy) * perpX;
+    this._s2 = rBx * perpY - rBy * perpX;
+
+    const mA = bodyA.invMass;
+    const mB = bodyB.invMass;
+    const iA = bodyA.invInertia;
+    const iB = bodyB.invInertia;
+    const kPerp = mA + mB + iA * this._s1 * this._s1 + iB * this._s2 * this._s2;
+    const kAxial = mA + mB + iA * this._a1 * this._a1 + iB * this._a2 * this._a2;
+
+    this._perpMass = kPerp > 0 ? 1 / kPerp : 0;
+    this._axialMass = kAxial > 0 ? 1 / kAxial : 0;
+    this._cPerp = dx * perpX + dy * perpY;
+    this._translation = dx * axisX + dy * axisY;
   }
 
   private _axisVelocity(): number {
