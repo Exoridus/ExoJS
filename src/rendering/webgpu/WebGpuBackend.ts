@@ -1928,7 +1928,16 @@ export class WebGpuBackend implements RenderBackend {
     return !this._needsColorNormalization(texture);
   }
 
-  /** Part of the renderer SDK contract for extension renderers. */
+  /**
+   * The shared transform and tint storage buffers, grown to hold at least
+   * `minCount` slots.
+   *
+   * **The returned record is reused** and rewritten by the next call on this
+   * backend, and a growth destroys the buffers an earlier result named. Bind
+   * its fields where the call is made; copy them if they must outlive it.
+   *
+   * Part of the renderer SDK contract for extension renderers.
+   */
   public getTransformStorageBuffer(minCount: number): {
     readonly buffer: GPUBuffer;
     readonly tintBuffer: GPUBuffer;
