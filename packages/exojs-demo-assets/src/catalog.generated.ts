@@ -7,7 +7,7 @@ import { Asset } from '@codexo/exojs';
  * The standard demo media, one readonly asset descriptor per file.
  *
  * Reading a property only returns its descriptor: nothing is fetched, decoded or
- * allocated until a loader is handed the descriptor. Textures and sounds can be
+ * allocated until a loader is handed the descriptor. Textures, sounds and JSON data can be
  * claimed synchronously with `loader.get()`; video, music, fonts, bitmap fonts and
  * SVG images have no synchronous handle and load with `await loader.load()`.
  */
@@ -38,7 +38,7 @@ export interface DemoAssetDefinitions {
   readonly lightCookieCaustics: ResourceAsset<Texture>;
   /** `images/tiny-dungeon-tiles.png` (5 kB). Kenney Tiny Dungeon, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly tinyDungeonTiles: ResourceAsset<Texture>;
-  /** `maps/tiny-dungeon-map.tmj` (3 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
+  /** `maps/tiny-dungeon-map.tmj` (3 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
   readonly tinyDungeonMap: ValueAsset<unknown>;
   /** `images/ship.png` (4 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
   readonly ship: ResourceAsset<Texture>;
@@ -94,49 +94,49 @@ export interface DemoAssetDefinitions {
   readonly backgroundForest: ResourceAsset<Texture>;
   /** `images/platformer-backgrounds-image.png` (20 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly platformerBackgroundsImage: ResourceAsset<Texture>;
-  /** `images/platformer-backgrounds-atlas.json` (3 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/platformer-backgrounds-atlas.json` (3 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly platformerBackgroundsAtlas: ValueAsset<SpritesheetData>;
   /** `images/platformer-characters-image.png` (70 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly platformerCharactersImage: ResourceAsset<Texture>;
-  /** `images/platformer-characters-atlas.json` (9 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/platformer-characters-atlas.json` (9 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly platformerCharactersAtlas: ValueAsset<SpritesheetData>;
   /** `images/platformer-enemies-image.png` (36 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly platformerEnemiesImage: ResourceAsset<Texture>;
-  /** `images/platformer-enemies-atlas.json` (12 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/platformer-enemies-atlas.json` (12 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly platformerEnemiesAtlas: ValueAsset<SpritesheetData>;
   /** `images/platformer-tiles-image.png` (112 kB). Kenney New Platformer Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly platformerTilesImage: ResourceAsset<Texture>;
-  /** `images/platformer-tiles-atlas.json` (63 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/platformer-tiles-atlas.json` (63 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly platformerTilesAtlas: ValueAsset<SpritesheetData>;
   /** `images/background-elements-image.png` (87 kB). Kenney Background Elements Remastered, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly backgroundElementsImage: ResourceAsset<Texture>;
-  /** `images/background-elements-atlas.json` (14 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/background-elements-atlas.json` (14 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly backgroundElementsAtlas: ValueAsset<SpritesheetData>;
   /** `images/map-pack-image.png` (189 kB). Kenney Map Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly mapPackImage: ResourceAsset<Texture>;
-  /** `images/map-pack-atlas.json` (36 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/map-pack-atlas.json` (36 kB). Kenney spritesheets converted to ExoJS atlas JSON, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly mapPackAtlas: ValueAsset<SpritesheetData>;
   /** `images/map-pack-tilesheet.png` (205 kB). Kenney Map Pack, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly mapPackTilesheet: ResourceAsset<Texture>;
   /** `images/generic-input-prompts-image.png` (7 kB). Kenney Input Prompts, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly genericInputPromptsImage: ResourceAsset<Texture>;
-  /** `images/generic-input-prompts-atlas.json` (7 kB). Kenney Input Prompts, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/generic-input-prompts-atlas.json` (7 kB). Kenney Input Prompts, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly genericInputPromptsAtlas: ValueAsset<SpritesheetData>;
   /** `images/keyboard-mouse-input-prompts-image.png` (31 kB). Kenney Input Prompts, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly keyboardMouseInputPromptsImage: ResourceAsset<Texture>;
-  /** `images/keyboard-mouse-input-prompts-atlas.json` (51 kB). Kenney Input Prompts, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/keyboard-mouse-input-prompts-atlas.json` (51 kB). Kenney Input Prompts, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly keyboardMouseInputPromptsAtlas: ValueAsset<SpritesheetData>;
   /** `images/nintendo-switch-input-prompts-image.png` (24 kB). Kenney Input Prompts, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly nintendoSwitchInputPromptsImage: ResourceAsset<Texture>;
-  /** `images/nintendo-switch-input-prompts-atlas.json` (23 kB). Kenney Input Prompts, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/nintendo-switch-input-prompts-atlas.json` (23 kB). Kenney Input Prompts, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly nintendoSwitchInputPromptsAtlas: ValueAsset<SpritesheetData>;
   /** `images/playstation-series-input-prompts-image.png` (30 kB). Kenney Input Prompts, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly playstationSeriesInputPromptsImage: ResourceAsset<Texture>;
-  /** `images/playstation-series-input-prompts-atlas.json` (28 kB). Kenney Input Prompts, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/playstation-series-input-prompts-atlas.json` (28 kB). Kenney Input Prompts, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly playstationSeriesInputPromptsAtlas: ValueAsset<SpritesheetData>;
   /** `images/xbox-series-input-prompts-image.png` (22 kB). Kenney Input Prompts, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly xboxSeriesInputPromptsImage: ResourceAsset<Texture>;
-  /** `images/xbox-series-input-prompts-atlas.json` (20 kB). Kenney Input Prompts, CC0-1.0. Load with await `loader.load()`. */
+  /** `images/xbox-series-input-prompts-atlas.json` (20 kB). Kenney Input Prompts, CC0-1.0. Load with `loader.get()` or `await loader.load()`. */
   readonly xboxSeriesInputPromptsAtlas: ValueAsset<SpritesheetData>;
   /** `images/icon-play.svg` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
   readonly iconPlay: LeaflessAsset<HTMLImageElement>;
@@ -302,17 +302,17 @@ export interface DemoAssetDefinitions {
   readonly impulseRoom029: ResourceAsset<Sound>;
   /** `audio/impulse-room-030.wav` (94 kB). Adventure Kid Reverb Toolkit, AK-SROOMS small-room impulse responses, CC-BY-4.0. Load with `loader.get()` or `await loader.load()`. */
   readonly impulseRoom030: ResourceAsset<Sound>;
-  /** `maps/isometric-landscape.tmj` (3 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
+  /** `maps/isometric-landscape.tmj` (3 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
   readonly isometricLandscape: ValueAsset<unknown>;
-  /** `maps/drift-fields-map.tmj` (11 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
+  /** `maps/drift-fields-map.tmj` (11 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
   readonly driftFieldsMap: ValueAsset<unknown>;
-  /** `maps/harbor-plaza-map.tmj` (3 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
+  /** `maps/harbor-plaza-map.tmj` (3 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
   readonly harborPlazaMap: ValueAsset<unknown>;
-  /** `maps/harbor-world-project.ldtk` (9 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
+  /** `maps/harbor-world-project.ldtk` (9 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
   readonly harborWorldProject: ValueAsset<unknown>;
-  /** `maps/ownership-workshop-map.tmj` (1 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
+  /** `maps/ownership-workshop-map.tmj` (1 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
   readonly ownershipWorkshopMap: ValueAsset<unknown>;
-  /** `maps/physics-room-map.tmj` (2 kB). ExoJS original work, MIT. Load with await `loader.load()`. */
+  /** `maps/physics-room-map.tmj` (2 kB). ExoJS original work, MIT. Load with `loader.get()` or `await loader.load()`. */
   readonly physicsRoomMap: ValueAsset<unknown>;
   /** `video/high-res.mp4` (4.2 MB). Glass Half, CC-BY-3.0. Load with await `loader.load()`. */
   readonly videoHighRes: LeaflessAsset<Video>;
@@ -332,7 +332,7 @@ export interface DemoAssetDefinitions {
   readonly musicDarkIndustrial: LeaflessAsset<AudioStream>;
   /** `audio/music-action-synth-rock.mp3` (2.3 MB). MonsterVania - Ghost Land, CC0-1.0. Load with await `loader.load()`. */
   readonly musicActionSynthRock: LeaflessAsset<AudioStream>;
-  /** `images/pixelfx-transitions.json` (1 kB). PixelFX scene transitions, MIT. Load with await `loader.load()`. */
+  /** `images/pixelfx-transitions.json` (1 kB). PixelFX scene transitions, MIT. Load with `loader.get()` or `await loader.load()`. */
   readonly pixelfxTransitionsManifest: ValueAsset<unknown>;
   /** `images/pixelfx-burn-away.png` (2.5 MB). PixelFX scene transitions, MIT. Load with `loader.get()` or `await loader.load()`. */
   readonly pixelfxBurnAway: ResourceAsset<Texture>;

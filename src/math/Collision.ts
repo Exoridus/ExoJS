@@ -16,7 +16,7 @@ import {
   intersectionRectRect as intersectionPrimitiveRectRect,
   polygonsIntersect,
 } from './collisionPrimitives';
-import type { Collidable, CollisionResponse } from './collisionTypes';
+import { type Collidable, type CollisionResponse, CollisionType } from './collisionTypes';
 import type { Ellipse } from './Ellipse';
 import { Interval } from './Interval';
 import type { Line } from './Line';
@@ -31,11 +31,64 @@ import { Vector } from './Vector';
  */
 
 /**
+ * Whether `shape` is a polygon that encloses no area: empty, fewer than three
+ * distinct vertices, or all vertices on one line. Such a polygon never
+ * intersects or collides with anything.
+ */
+const isAreaLessPolygon = (shape: Collidable): boolean => {
+  if (shape.collisionType !== CollisionType.Polygon) {
+    return false;
+  }
+
+  const points = (shape as Polygon).points;
+  const first = points[0];
+
+  if (first === undefined) {
+    return true;
+  }
+
+  let second: (typeof points)[number] | undefined;
+
+  for (const point of points) {
+    if (point.x !== first.x || point.y !== first.y) {
+      second = point;
+      break;
+    }
+  }
+
+  if (second === undefined) {
+    return true;
+  }
+
+  const dx = second.x - first.x;
+  const dy = second.y - first.y;
+
+  // |cross| > 1e-12 * |d| * |p| with the square roots removed.
+  const threshold = 1e-24 * (dx * dx + dy * dy);
+
+  for (const point of points) {
+    const px = point.x - first.x;
+    const py = point.y - first.y;
+    const cross = dx * py - dy * px;
+
+    if (cross * cross > threshold * (px * px + py * py)) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+/**
  * Generic SAT (Separating Axis Theorem) boolean intersection test. Tests all
  * edge normals from both shapes and returns `false` as soon as a separating
  * axis is found.
  */
 const intersectionSat = (shapeA: Collidable, shapeB: Collidable): boolean => {
+  if (isAreaLessPolygon(shapeA) || isAreaLessPolygon(shapeB)) {
+    return false;
+  }
+
   const normalsA = shapeA.getNormals();
   const normalsB = shapeB.getNormals();
   const projectionA = new Interval();
@@ -265,7 +318,12 @@ const shouldExcludeMiddleVoronoi = (pointX: number, pointY: number, radius: numb
   return distance > 0 && Math.abs(distance) > radius;
 };
 
-const intersectionCirclePoly = ({ x: cx, y: cy, radius }: Circle, { x: px, y: py, points, edges }: Polygon): boolean => {
+const intersectionCirclePoly = ({ x: cx, y: cy, radius }: Circle, polygon: Polygon): boolean => {
+  if (isAreaLessPolygon(polygon)) {
+    return false;
+  }
+
+  const { x: px, y: py, points, edges } = polygon;
   // Frame transform: the circle centre expressed in the polygon's local space
   // (circle.position - poly.position), matching getCollisionPolygonCircle.
   const circleX = cx - px;
@@ -302,7 +360,7 @@ const intersectionEllipseEllipse = (ellipseA: Ellipse, ellipseB: Ellipse): boole
   polygonsIntersect(buildEllipsePoints(ellipseA), buildEllipsePoints(ellipseB));
 
 const intersectionEllipsePoly = (ellipse: Ellipse, polygon: Polygon): boolean =>
-  polygonsIntersect(buildEllipsePoints(ellipse), buildPolygonWorldPoints(polygon));
+  !isAreaLessPolygon(polygon) && polygonsIntersect(buildEllipsePoints(ellipse), buildPolygonWorldPoints(polygon));
 
 const intersectionPolyPoly = (polygonA: Polygon, polygonB: Polygon): boolean => intersectionSat(polygonA, polygonB);
 
@@ -624,6 +682,10 @@ const getCollisionEllipseCircle = (ellipse: Ellipse, circle: Circle, swap = fals
  * `projectionN` always points from `shapeA` toward `shapeB`.
  */
 const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = false): CollisionResponse | null => {
+  if (isAreaLessPolygon(polygon)) {
+    return null;
+  }
+
   const radius = circle.radius;
   const points = polygon.points;
   const x = circle.x - polygon.x;
@@ -817,6 +879,10 @@ const getCollisionEllipseEllipse = (ellipseA: Ellipse, ellipseB: Ellipse): Colli
  * normals, so ellipse pairs are approximate.
  */
 const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionResponse | null => {
+  if (isAreaLessPolygon(shapeA) || isAreaLessPolygon(shapeB)) {
+    return null;
+  }
+
   const normalsA = shapeA.getNormals();
   const normalsB = shapeB.getNormals();
   // SAT requires at least one edge normal. A degenerate shape (empty polygon,

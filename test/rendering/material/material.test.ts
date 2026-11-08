@@ -369,6 +369,25 @@ describe('Material.pipelineKey', () => {
 });
 
 describe('Material.bindKey', () => {
+  test('is not re-derived on repeated reads, only after a binding changes', () => {
+    const material = new MeshMaterial(createMaterialOptions({ textures: { u_noise: new Texture() }, sampler: { ...linearClamp } }));
+    const initial = material.bindKey;
+    const keysSpy = vi.spyOn(Object, 'keys');
+
+    for (let i = 0; i < 100; i++) {
+      expect(material.bindKey).toBe(initial);
+    }
+
+    expect(keysSpy).not.toHaveBeenCalled();
+
+    material.setTexture('u_noise', new Texture());
+
+    expect(material.bindKey).not.toBe(initial);
+    expect(keysSpy).toHaveBeenCalled();
+
+    keysSpy.mockRestore();
+  });
+
   test('is stable across repeated reads without state changes', () => {
     const material = new MeshMaterial(createMaterialOptions());
 
@@ -383,6 +402,21 @@ describe('Material.bindKey', () => {
     material.setUniform('u_time', 8);
 
     expect(material.bindKey).toBe(initial);
+  });
+
+  test('does not re-derive after repeated scalar uniform updates', () => {
+    const material = new MeshMaterial(createMaterialOptions({ uniforms: { u_time: 0 }, textures: { u_noise: new Texture() } }));
+    const initial = material.bindKey;
+    const keysSpy = vi.spyOn(Object, 'keys');
+
+    for (let i = 1; i <= 50; i++) {
+      material.setUniform('u_time', i);
+      material.uniforms.u_time = i + 0.5;
+      expect(material.bindKey).toBe(initial);
+    }
+
+    expect(keysSpy).not.toHaveBeenCalled();
+    keysSpy.mockRestore();
   });
 
   test('changes with sampler state, including in-place mutation', () => {

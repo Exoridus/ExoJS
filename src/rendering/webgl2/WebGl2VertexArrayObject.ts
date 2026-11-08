@@ -66,7 +66,7 @@ export class WebGl2VertexArrayObject {
     this._drawMode = drawMode;
   }
 
-  public get attributes(): VaoAttribute[] {
+  public get attributes(): readonly VaoAttribute[] {
     return this._attributes;
   }
 

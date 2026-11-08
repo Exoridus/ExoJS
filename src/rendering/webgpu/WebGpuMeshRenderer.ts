@@ -871,7 +871,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
       if (dc.customShader === null) {
         // Default path: CPU-bake transform into vertex positions.
-        this._writeMeshVertices(backend, dc.mesh, dc.vertexByteOffset / vertexStrideBytes, /* bake */ true);
+        this._writeMeshVertices(backend, dc.mesh, dc.vertexByteOffset / vertexStrideBytes);
 
         this._packIndices(dc, dc.indexFormat === 'uint32' ? this._indexStagingU32 : this._indexStagingU16);
 
@@ -1409,74 +1409,60 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   // Default-path helpers
   // ---------------------------------------------------------------------------
 
-  private _writeMeshVertices(backend: WebGpuBackend, mesh: Mesh, vertexStart: number, bake: boolean): void {
+  private _writeMeshVertices(backend: WebGpuBackend, mesh: Mesh, vertexStart: number): void {
     const vertices = mesh.vertices;
     const uvs = mesh.uvs;
     const colors = mesh.colors;
     const vertexCount = mesh.vertexCount;
 
-    if (bake) {
-      // Bake (view * group * globalTransform) into vertex positions on the CPU,
-      // matching the primitive renderer's no-uniforms approach.
-      const groupTransform = backend.renderGroupTransform;
-      const matrix = this._combinedTransform.copy(mesh.getGlobalTransform());
+    // Bake (view * group * globalTransform) into vertex positions on the CPU,
+    // matching the primitive renderer's no-uniforms approach.
+    const groupTransform = backend.renderGroupTransform;
+    const matrix = this._combinedTransform.copy(mesh.getGlobalTransform());
 
-      if (groupTransform !== null) {
-        matrix.combine(groupTransform);
-      }
+    if (groupTransform !== null) {
+      matrix.combine(groupTransform);
+    }
 
-      // The view is post-multiplied straight into the six affine components the
-      // bake needs, instead of through `matrix.combine(view)`. Writing the
-      // product back into the scratch matrix costs ~47 bytes per call in a
-      // browser V8 - nine double field stores - and this runs once per mesh, so
-      // it was 47 KB/frame at a thousand meshes, a third of that frame's total
-      // allocation. The projective row (`e`/`f`/`z`) is not read by the loop
-      // below, so nothing else needs the product. Same formula as
-      // {@link Matrix.combine}; keep the two in step.
-      const view = backend.view.getTransform();
-      const ma = matrix.a;
-      const mb = matrix.b;
-      const mx = matrix.x;
-      const mc = matrix.c;
-      const md = matrix.d;
-      const my = matrix.y;
-      const me = matrix.e;
-      const mf = matrix.f;
-      const mz = matrix.z;
+    // The view is post-multiplied straight into the six affine components the
+    // bake needs, instead of through `matrix.combine(view)`. Writing the
+    // product back into the scratch matrix costs ~47 bytes per call in a
+    // browser V8 - nine double field stores - and this runs once per mesh, so
+    // it was 47 KB/frame at a thousand meshes, a third of that frame's total
+    // allocation. The projective row (`e`/`f`/`z`) is not read by the loop
+    // below, so nothing else needs the product. Same formula as
+    // {@link Matrix.combine}; keep the two in step.
+    const view = backend.view.getTransform();
+    const ma = matrix.a;
+    const mb = matrix.b;
+    const mx = matrix.x;
+    const mc = matrix.c;
+    const md = matrix.d;
+    const my = matrix.y;
+    const me = matrix.e;
+    const mf = matrix.f;
+    const mz = matrix.z;
 
-      const a = ma * view.a + mc * view.b + me * view.x;
-      const b = mb * view.a + md * view.b + mf * view.x;
-      const tx = mx * view.a + my * view.b + mz * view.x;
-      const c = ma * view.c + mc * view.d + me * view.y;
-      const d = mb * view.c + md * view.d + mf * view.y;
-      const ty = mx * view.c + my * view.d + mz * view.y;
+    const a = ma * view.a + mc * view.b + me * view.x;
+    const b = mb * view.a + md * view.b + mf * view.x;
+    const tx = mx * view.a + my * view.b + mz * view.x;
+    const c = ma * view.c + mc * view.d + me * view.y;
+    const d = mb * view.c + md * view.d + mf * view.y;
+    const ty = mx * view.c + my * view.d + mz * view.y;
 
-      // vertices/uvs/colors are sized to vertexCount (×2 for the vec2 attrs);
-      // sourceIndex/i stay within bounds for the whole loop.
-      for (let i = 0; i < vertexCount; i++) {
-        const sourceIndex = i * 2;
-        const targetIndex = (vertexStart + i) * wordsPerVertex;
-        const px = vertices[sourceIndex]!;
-        const py = vertices[sourceIndex + 1]!;
+    // vertices/uvs/colors are sized to vertexCount (×2 for the vec2 attrs);
+    // sourceIndex/i stay within bounds for the whole loop.
+    for (let i = 0; i < vertexCount; i++) {
+      const sourceIndex = i * 2;
+      const targetIndex = (vertexStart + i) * wordsPerVertex;
+      const px = vertices[sourceIndex]!;
+      const py = vertices[sourceIndex + 1]!;
 
-        this._float32View[targetIndex + 0] = a * px + b * py + tx;
-        this._float32View[targetIndex + 1] = c * px + d * py + ty;
-        this._float32View[targetIndex + 2] = uvs !== null ? uvs[sourceIndex]! : 0;
-        this._float32View[targetIndex + 3] = uvs !== null ? uvs[sourceIndex + 1]! : 0;
-        this._uint32View[targetIndex + 4] = colors !== null ? colors[i]! : 0xffffffff;
-      }
-    } else {
-      // Should not happen - default path always bakes. Defensive no-op.
-      // Same bounds reasoning as the bake branch above.
-      for (let i = 0; i < vertexCount; i++) {
-        const sourceIndex = i * 2;
-        const targetIndex = (vertexStart + i) * wordsPerVertex;
-        this._float32View[targetIndex + 0] = vertices[sourceIndex]!;
-        this._float32View[targetIndex + 1] = vertices[sourceIndex + 1]!;
-        this._float32View[targetIndex + 2] = uvs !== null ? uvs[sourceIndex]! : 0;
-        this._float32View[targetIndex + 3] = uvs !== null ? uvs[sourceIndex + 1]! : 0;
-        this._uint32View[targetIndex + 4] = colors !== null ? colors[i]! : 0xffffffff;
-      }
+      this._float32View[targetIndex + 0] = a * px + b * py + tx;
+      this._float32View[targetIndex + 1] = c * px + d * py + ty;
+      this._float32View[targetIndex + 2] = uvs !== null ? uvs[sourceIndex]! : 0;
+      this._float32View[targetIndex + 3] = uvs !== null ? uvs[sourceIndex + 1]! : 0;
+      this._uint32View[targetIndex + 4] = colors !== null ? colors[i]! : 0xffffffff;
     }
   }
 

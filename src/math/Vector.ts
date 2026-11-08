@@ -36,8 +36,8 @@ let temp: Vector | null = null;
 export class Vector extends AbstractVector implements ShapeLike {
   public readonly collisionType: CollisionType = CollisionType.Point;
 
-  public x: number;
-  public y: number;
+  declare public x: number;
+  declare public y: number;
 
   public constructor(x = 0, y = 0) {
     super();
