@@ -1,5 +1,6 @@
 import { Color } from '#core/Color';
 import { srgbToLinear } from '#core/colorTransfer';
+import type { GradientStop } from '#rendering/gradient/Gradient';
 import { LinearGradient } from '#rendering/gradient/LinearGradient';
 import { RadialGradient } from '#rendering/gradient/RadialGradient';
 import { Sprite } from '#rendering/sprite/Sprite';
@@ -162,6 +163,17 @@ describe('Gradient value-object semantics', () => {
           { offset: Number.POSITIVE_INFINITY, color: Color.blue },
         ]),
     ).toThrow('Gradient stop offset must be a finite number.');
+  });
+
+  test('hands out its normalized stops read-only', () => {
+    const gradient = new LinearGradient([
+      { offset: 1, color: Color.blue },
+      { offset: 0, color: Color.red },
+    ]);
+
+    expect(gradient.stops.map(stop => stop.offset)).toEqual([0, 1]);
+    // Writing an offset through the live list would bypass the clamp and sort that sampling relies on.
+    expectTypeOf(gradient.stops).toEqualTypeOf<ReadonlyArray<Readonly<GradientStop>>>();
   });
 
   test('geometry getters expose constructor values without leaking internals', () => {
