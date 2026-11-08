@@ -203,7 +203,7 @@ describe('EditContextTextInput', () => {
     ]);
   });
 
-  test('a canceled composition without a final textupdate commits nothing', () => {
+  test('a canceled composition without a final textupdate currently commits nothing', () => {
     const { edits, compositions } = createBackend();
     const context = lastContext();
 
@@ -215,7 +215,7 @@ describe('EditContextTextInput', () => {
     expect(edits).toEqual([]);
   });
 
-  test.each(['k', 'kan'])('a textupdate after an empty-data composition end is applied as a plain edit (%s)', text => {
+  test.each(['k', 'kan'])('a textupdate outside a composition, after an empty-data composition end, is applied as a plain edit (%s)', text => {
     const { edits, compositions } = createBackend();
     const context = lastContext();
 
