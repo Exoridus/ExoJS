@@ -215,18 +215,21 @@ describe('EditContextTextInput', () => {
     expect(edits).toEqual([]);
   });
 
-  test.each(['k', 'kan'])('a textupdate outside a composition, after an empty-data composition end, is applied as a plain edit (%s)', text => {
-    const { edits, compositions } = createBackend();
-    const context = lastContext();
+  test.each(['k', 'kan'])(
+    'a textupdate outside a composition, after an empty-data composition end, is applied as a plain edit (%s)',
+    text => {
+      const { edits, compositions } = createBackend();
+      const context = lastContext();
 
-    context.emit('compositionstart', {});
-    context.emit('textupdate', { updateRangeStart: 0, updateRangeEnd: 0, text: 'k', selectionStart: 1, selectionEnd: 1 });
-    context.emit('compositionend', { data: '' });
-    context.emit('textupdate', { updateRangeStart: 0, updateRangeEnd: 1, text, selectionStart: text.length, selectionEnd: text.length });
+      context.emit('compositionstart', {});
+      context.emit('textupdate', { updateRangeStart: 0, updateRangeEnd: 0, text: 'k', selectionStart: 1, selectionEnd: 1 });
+      context.emit('compositionend', { data: '' });
+      context.emit('textupdate', { updateRangeStart: 0, updateRangeEnd: 1, text, selectionStart: text.length, selectionEnd: text.length });
 
-    expect(compositions).toEqual([{ phase: 'start' }, { phase: 'update', text: 'k', caret: 1 }, { phase: 'end', text: '' }]);
-    expect(edits).toEqual([{ kind: 'insert', text }]);
-  });
+      expect(compositions).toEqual([{ phase: 'start' }, { phase: 'update', text: 'k', caret: 1 }, { phase: 'end', text: '' }]);
+      expect(edits).toEqual([{ kind: 'insert', text }]);
+    },
+  );
 
   test('a candidate never leaks into the edit signal', () => {
     const { edits } = createBackend();
