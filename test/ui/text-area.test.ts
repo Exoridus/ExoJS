@@ -165,6 +165,21 @@ describe('TextArea', () => {
     expect(field.value).not.toContain('\n');
   });
 
+  test('Home and End address the current wrapped row', () => {
+    const harness = createUIApp();
+    const field = new TextArea({ width: 200, height: 120, value: 'alpha beta gamma delta epsilon' });
+    harness.scene.ui.addChild(field);
+    const secondLine = field.textNode.currentLayout.lines[1]!;
+    const pressSecondLine = (): void => press(harness, field.textNode.x + 25, field.textNode.y + lineBox(field) * 1.5);
+    pressSecondLine();
+
+    keyDown(harness, Keyboard.Home);
+    expect(field.selectionStart).toBe(secondLine.sourceStart);
+    pressSecondLine();
+    keyDown(harness, Keyboard.End);
+    expect(field.selectionStart).toBe(secondLine.sourceEnd);
+  });
+
   test('turning wrapping off puts the whole line back on one row', () => {
     const harness = createUIApp();
     const field = new TextArea({ width: 200, height: 120, value: 'alpha beta gamma delta epsilon', wrap: false });

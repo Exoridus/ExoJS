@@ -38,7 +38,8 @@ export interface TextAreaOptions extends Omit<TextEditWidgetOptions, 'multiline'
  * - `Enter` inserts a line break instead of confirming.
  * - `Up` / `Down` move by line, keeping the column the caret last chose, and
  *   `PageUp` / `PageDown` move by as many lines as the field shows.
- * - `Home` / `End` go to the ends of the current line, not of the value.
+ * - `Home` / `End` go to the ends of the row the caret is on - a soft-wrapped
+ *   row ends where it wraps - not of the value.
  * - The content scrolls to keep the caret visible, and is clipped to the
  *   field. A scrollbar along the right edge shows and drives the vertical
  *   position once the value outgrows the field.
