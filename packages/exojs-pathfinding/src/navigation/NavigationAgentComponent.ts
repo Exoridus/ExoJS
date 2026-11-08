@@ -377,7 +377,12 @@ export class NavigationAgentComponent<Payload = unknown> extends BehaviorCompone
     this._path = result;
     this._plannedRevision = result.revision;
     this._plannedGoalNode = this._nodeAt(goalX, goalY);
-    this._reachesGoal = result.status === 'found' && nodes.length > 0 && nodes[nodes.length - 1] === this._plannedGoalNode;
+    // A destination outside the space is only substituted by its nearest node; standing on that node is not reaching the destination.
+    this._reachesGoal =
+      result.status === 'found' &&
+      nodes.length > 0 &&
+      nodes[nodes.length - 1] === this._plannedGoalNode &&
+      this.space.pointToNode(goalX, goalY) >= 0;
     this._waypoint = result.points.length > 1 ? 1 : 0;
     this._lastPlanTime = this._clock;
     this._pendingSince = -1;
@@ -394,7 +399,8 @@ export class NavigationAgentComponent<Payload = unknown> extends BehaviorCompone
     // do better; failing that, the status turns `blocked` instead of
     // searching again and again from the same spot.
     this._stalled = false;
-    this._stallRetry = stalled;
+    // A replan the component starts itself must not forget that the last window already found the actor stuck.
+    this._stallRetry = stalled || (this._stallRetry && !commanded);
 
     // A budget too small to get past the start leaves nothing to walk, and
     // searching again from the same spot would end the same way.

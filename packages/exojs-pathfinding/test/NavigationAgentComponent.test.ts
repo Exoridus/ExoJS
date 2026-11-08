@@ -264,6 +264,17 @@ describe('NavigationAgentComponent', () => {
     expect(Math.floor(node.x / CELL)).toBe(4);
   });
 
+  it('ends unreachable at the edge for a destination outside the space under a snapping search', async () => {
+    const space = GridSpace.from(10, 10, () => 1, { cellSize: CELL });
+    const { node, agent, statuses, runUntil } = await setup({ space, search: { snapToNearest: true } });
+
+    agent.moveTo({ x: 500, y: 15 });
+    runUntil(() => agent.status === 'unreachable');
+
+    expect(Math.floor(node.x / CELL)).toBe(9);
+    expect(statuses).not.toContain('arrived');
+  });
+
   it('works through budget-limited partial routes', async () => {
     const space = GridSpace.from(30, 3, () => 1, { cellSize: CELL });
     const pathfinder = new Pathfinder();
@@ -365,6 +376,49 @@ describe('NavigationAgentComponent', () => {
     }
 
     expect(agent.status).toBe('blocked');
+  });
+
+  it.each([0, 1, 2, 3, 4, 5, 6])('keeps the stall verdict across revision replans at replan phase offset %i', async offset => {
+    // Each constructed component advances the shared replan phase, so the offset walks the component under test through different phases.
+    const space = GridSpace.from(10, 3, () => 1, { cellSize: CELL });
+
+    for (let i = 0; i < offset; i++) {
+      new NavigationAgentComponent({ space, movement: new NodeMovement(new Container(), 1) });
+    }
+
+    const { movement, agent, frame } = await setup({ space }, center(0, 1));
+
+    movement.frozen = true;
+    agent.moveTo(center(9, 1));
+
+    // The space changes every frame, so a revision replan lands between any two stall windows.
+    for (let i = 0; i < 240 && agent.status !== 'blocked'; i++) {
+      space.setCost(9, 0, space.costAt(9, 0) === 1 ? 2 : 1);
+      frame();
+    }
+
+    expect(agent.status).toBe('blocked');
+  });
+
+  it('gives a commanded replan a fresh stall window', async () => {
+    const space = GridSpace.from(10, 3, () => 1, { cellSize: CELL });
+    const pathfinder = new Pathfinder();
+    const searches = searchesOf(pathfinder);
+    const { movement, agent, frame, runUntil } = await setup({ space, pathfinder }, center(0, 1));
+
+    movement.frozen = true;
+    agent.moveTo(center(9, 1));
+    runUntil(() => searches.mock.calls.length === 2);
+
+    // The component's own stall replan ran; a command must forget that verdict.
+    agent.moveTo(center(8, 1));
+
+    for (let i = 0; i < 30; i++) {
+      frame();
+    }
+
+    expect(agent.status).toBe('navigating');
+    runUntil(() => agent.status === 'blocked');
   });
 
   it('does not search again for an unchanged unreachable destination', async () => {
