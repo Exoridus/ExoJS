@@ -45,7 +45,7 @@ describe('colour fragment stage precision', () => {
     expect(source).not.toMatch(/^precision (?:lowp|mediump) sampler2D;/m);
   });
 
-  test.each(colourFragmentStages.filter(file => !/lit-sprite|tile-chunk|backdrop|normalize|output|blur|bloom/.test(file)))(
+  test.each(colourFragmentStages.filter(file => !/lit-sprite|tile-chunk|backdrop|normalize|blur|bloom/.test(file)))(
     '%s sets the default sampler precision',
     file => {
       expect(readFileSync(join(process.cwd(), file), 'utf8')).toMatch(/^precision highp sampler2D;/m);
