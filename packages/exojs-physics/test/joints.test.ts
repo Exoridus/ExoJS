@@ -1415,7 +1415,9 @@ describe('wheel joint sub-step geometry', () => {
     joint._solve(true);
 
     // The solved lateral velocity cancels the live error exactly: -biasRate * (5 * cos(angle)).
-    const lateral = (wheel.linearVelocityY - chassis.linearVelocityY) * Math.cos(angle) - (wheel.linearVelocityX - chassis.linearVelocityX) * Math.sin(angle);
+    const lateral =
+      (wheel.linearVelocityY - chassis.linearVelocityY) * Math.cos(angle) -
+      (wheel.linearVelocityX - chassis.linearVelocityX) * Math.sin(angle);
     const lever = 5 * Math.sin(angle);
 
     expect(lateral - lever * chassis.angularVelocity).toBeCloseTo(-10 * 5 * Math.cos(angle), 4);
