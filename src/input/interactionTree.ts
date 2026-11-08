@@ -21,7 +21,12 @@ export const bubbleInteractionEvent = (event: InteractionEvent): void => {
   }
 };
 
-const isDescendantOrSelf = (node: RenderNode, root: RenderNode): boolean => {
+/**
+ * Whether `node` is `root` itself or sits anywhere beneath it. Walks up from
+ * `node` rather than down from `root`: the chain up is bounded by the scene's
+ * depth, while a downward walk would visit the whole subtree. @internal
+ */
+export const isDescendantOrSelf = (node: RenderNode, root: RenderNode): boolean => {
   let current: RenderNode | null = node;
 
   while (current !== null) {

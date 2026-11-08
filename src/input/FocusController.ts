@@ -6,6 +6,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { Widget } from '#ui/Widget';
 
 import { GamepadButton } from './GamepadButton';
+import { isDescendantOrSelf } from './interactionTree';
 import { KeyEvent } from './KeyEvent';
 import type { ScopeToken } from './ScopeToken';
 import { Keyboard } from './types';
@@ -149,7 +150,7 @@ export class FocusController implements FocusHooks {
 
     const activeScope = this._activeScopeRoot();
 
-    if (activeScope !== null && !this._isInsideScope(node, activeScope)) {
+    if (activeScope !== null && !isDescendantOrSelf(node, activeScope)) {
       return;
     }
 
@@ -206,7 +207,7 @@ export class FocusController implements FocusHooks {
 
     this._scopeStack.push({ token, root, previousFocus });
 
-    if (previousFocus !== null && this._isOwned(root) && !this._isInsideScope(previousFocus, root)) {
+    if (previousFocus !== null && this._isOwned(root) && !isDescendantOrSelf(previousFocus, root)) {
       this.blur();
     }
   }
@@ -370,7 +371,7 @@ export class FocusController implements FocusHooks {
 
     const focused = this._focused;
 
-    if (focused !== null && !this._isInsideScope(focused, activeScope)) {
+    if (focused !== null && !isDescendantOrSelf(focused, activeScope)) {
       this.blur();
     }
   }
@@ -633,21 +634,6 @@ export class FocusController implements FocusHooks {
     }
   }
 
-  /** Whether `node` is `scopeRoot` itself or lives somewhere in its subtree. */
-  private _isInsideScope(node: RenderNode, scopeRoot: RenderNode): boolean {
-    let current: RenderNode | null = node;
-
-    while (current !== null) {
-      if (current === scopeRoot) {
-        return true;
-      }
-
-      current = current.parent;
-    }
-
-    return false;
-  }
-
   /**
    * Restore whatever was focused before the just-popped scope activated -
    * provided it is still {@link _isFocusEligible eligible} and, if another
@@ -661,7 +647,7 @@ export class FocusController implements FocusHooks {
       previousFocus !== null &&
       this._isOwned(previousFocus) &&
       this._isFocusEligible(previousFocus) &&
-      (activeScope === null || this._isInsideScope(previousFocus, activeScope));
+      (activeScope === null || isDescendantOrSelf(previousFocus, activeScope));
 
     if (canRestore && previousFocus !== null) {
       this.focus(previousFocus);
