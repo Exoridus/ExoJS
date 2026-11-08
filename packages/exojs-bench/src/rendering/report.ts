@@ -8,9 +8,14 @@ import {
   markdownCell,
   mergeCellResults,
   mergeLibraries,
+  mergePlan,
+  PLAN_CSV_HEADER,
+  planCsvFields,
+  planMarkdownLines,
   readExistingReport,
   writeReportArtifacts,
 } from '../shared/report';
+import type { RunPlanMeta } from '../suite/plan';
 import type { Provenance } from './driver';
 import type { Backend, CellResult } from './EngineAdapter';
 
@@ -58,6 +63,8 @@ export interface ReportData {
   readonly libraries: readonly LibraryProvenance[];
   /** One result per matrix cell. */
   readonly results: readonly CellResult[];
+  /** Plan the run was resolved against; absent in data written before plans were recorded. */
+  readonly plan?: RunPlanMeta;
 }
 
 /** True when any provenance stamp reports a software rasterizer. */
@@ -108,9 +115,10 @@ const CSV_HEADER = [
   'hitching',
   'status',
   'note',
+  ...PLAN_CSV_HEADER,
 ] as const;
 
-const toCsvRow = (result: CellResult): string => {
+const toCsvRow = (result: CellResult, plan: RunPlanMeta | undefined): string => {
   const { spec, structural } = result;
   const beyondBudget = beyondFrameBudget(result) ? 'beyond-frame-budget' : '';
   const fields = [
@@ -134,12 +142,13 @@ const toCsvRow = (result: CellResult): string => {
     isHitching(result) ? 'hitching' : '',
     result.status,
     result.note ?? '',
+    ...planCsvFields(plan),
   ];
 
   return fields.map(csvField).join(',');
 };
 
-const toCsv = (data: ReportData): string => [CSV_HEADER.join(','), ...data.results.map(toCsvRow)].join('\n');
+const toCsv = (data: ReportData): string => [CSV_HEADER.join(','), ...data.results.map(result => toCsvRow(result, data.plan))].join('\n');
 
 /**
  * Human-readable Markdown: one provenance block PER BACKEND first (so a reader
@@ -154,6 +163,7 @@ const toMarkdown = (data: ReportData): string => {
   const lines: string[] = [];
 
   lines.push('# Baseline Benchmark Results', '');
+  lines.push(...planMarkdownLines(data.plan));
 
   // Competitor-library provenance first: any "ExoJS vs X" number is only
   // auditable if the reader can see the exact library version it was measured
@@ -303,10 +313,13 @@ export const mergeReportData = (existing: ReportData | undefined, incoming: Repo
     }
   }
 
+  const plan = mergePlan(existing.plan, incoming.plan);
+
   return {
     provenance,
     libraries: mergeLibraries(existing.libraries, incoming.libraries),
     results: mergeCellResults(existing.results, incoming.results),
+    ...(plan !== undefined && { plan }),
   };
 };
 
