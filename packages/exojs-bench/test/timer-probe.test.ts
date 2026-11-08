@@ -78,7 +78,7 @@ describe('runTimerProbe setup failure', () => {
 
     await expect(
       runTimerProbe({
-        archetype: ARCHETYPES[0].id,
+        archetype: ARCHETYPES[0]!.id,
         nodeCount: 1,
         backend: 'webgpu',
         config: 'current',
