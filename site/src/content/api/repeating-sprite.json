@@ -2898,7 +2898,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Horizontal scroll offset in source-pixel units. On the shader path (bare Texture source), changing the offset does **not** trigger a geometry rebuild - the value is forwarded as per-instance data at render time. On the geometry path (TextureRegion source), offset changes mark quads dirty."
+          "description": "Horizontal scroll offset in source-pixel units. On the shader path (bare Texture source), changing the offset does **not** trigger a geometry rebuild - the value is forwarded as per-instance data at render time. On the geometry path (TextureRegion source), offset changes mark quads dirty. Axes in stretch mode ignore the offset on both paths."
         },
         {
           "name": "offsetY",

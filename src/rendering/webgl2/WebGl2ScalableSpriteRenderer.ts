@@ -2,7 +2,7 @@ import { packedGroupChanged } from '#rendering/affinePacking';
 import { colorShaderSourcesGlsl, spliceGlslPrologue } from '#rendering/colorShaderSources';
 import type { Drawable } from '#rendering/Drawable';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
-import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingPlan';
+import { computeShaderOffset, computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingPlan';
 import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { RepeatMode } from '#rendering/texture/repeat';
@@ -263,8 +263,8 @@ export class WebGl2ScalableSpriteRenderer
 
     const tilingX = computeShaderTiling(srcW, destW, sprite.modeX, sprite.fitX);
     const tilingY = computeShaderTiling(srcH, destH, sprite.modeY, sprite.fitY);
-    const offsetU = sprite.offsetX / (srcW > 0 ? srcW : 1);
-    const offsetV = sprite.offsetY / (srcH > 0 ? srcH : 1);
+    const offsetU = computeShaderOffset(srcW, sprite.offsetX, sprite.modeX);
+    const offsetV = computeShaderOffset(srcH, sprite.offsetY, sprite.modeY);
 
     // When flipY, negate tilingY and start from tilingY so V runs top→bottom.
     const uvParamY = flipY ? -tilingY : tilingY;

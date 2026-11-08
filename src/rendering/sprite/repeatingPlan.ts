@@ -98,6 +98,15 @@ export const computeShaderTiling = (srcLen: number, destLen: number, mode: Repea
   return destLen / srcLen;
 };
 
+/**
+ * Compute the normalized UV scroll offset for the standalone shader path.
+ *
+ * `stretch` axes ignore the offset, matching the geometry path.
+ * @internal
+ */
+export const computeShaderOffset = (srcLen: number, offset: number, mode: RepeatMode): number =>
+  mode === 'stretch' ? 0 : offset / (srcLen > 0 ? srcLen : 1);
+
 // ---------------------------------------------------------------------------
 // Geometry-path quad builder
 // ---------------------------------------------------------------------------
