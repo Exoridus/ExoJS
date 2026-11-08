@@ -631,6 +631,24 @@ describe('SpatialZones', () => {
     sound.destroy();
   });
 
+  test('samples each zone once per frame regardless of voice count', () => {
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub());
+    const bus = new AudioBus('zone');
+    const zone = new AudioZone({ shape: new Rectangle(0, 0, 100, 100), bus });
+    const weight = vi.spyOn(zone, 'weightAt');
+    system.zones.add(zone);
+    system.play(sound, { position: { x: 1, y: 1 } });
+    system.play(sound, { position: { x: 2, y: 2 } });
+    system.play(sound, { position: { x: 3, y: 3 } });
+
+    system.preFrame(0.016 as never);
+
+    expect(weight).toHaveBeenCalledOnce();
+    sound.destroy();
+    bus.destroy();
+  });
+
   test('a listener inside a zone opens a send on every spatial voice, and leaving closes it', () => {
     const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
