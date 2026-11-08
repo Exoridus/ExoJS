@@ -858,7 +858,7 @@ const rayCastCapsule = (
     }
   }
 
-  if (!(hi <= maxDistance)) {
+  if (!Number.isFinite(hi) || hi > maxDistance) {
     return null;
   }
 
