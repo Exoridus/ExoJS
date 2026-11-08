@@ -15,6 +15,7 @@
 
 import { afterEach, describe, expect, test } from 'vitest';
 
+import { Color } from '#core/Color';
 import { Geometry } from '#rendering/geometry/Geometry';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
@@ -421,6 +422,31 @@ describe('WebGPU multiple colour attachments', () => {
       backend.flush();
 
       expect(environment.renderPassAttachmentCounts().every(count => count === 1)).toBe(true);
+
+      target.destroy();
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test('decodes the clear color per attachment of a mixed sRGB/UNORM target', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const backend = await createMockBackend(environment);
+      const target = new MultiRenderTarget(16, 16, { formats: [TextureFormat.Rgba8Srgb, TextureFormat.Rgba8, TextureFormat.Rgba8Srgb] });
+      const gray = new Color(128, 128, 128);
+      const linear = new Float32Array(4);
+
+      gray.writeLinear(linear);
+      backend.setRenderTarget(target).clear(gray);
+
+      const clearRed = target.attachments.map((_, index) => (backend.createColorAttachment(index).clearValue as GPUColorDict).r);
+
+      expect(clearRed[0]).toBeCloseTo(linear[0]!, 5);
+      expect(clearRed[1]).toBeCloseTo(128 / 255, 5);
+      expect(clearRed[2]).toBeCloseTo(linear[0]!, 5);
 
       target.destroy();
       backend.destroy();
