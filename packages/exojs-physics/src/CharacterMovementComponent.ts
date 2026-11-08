@@ -508,7 +508,7 @@ export class CharacterMovementComponent extends Component {
     const scratch = this._scratch;
 
     exclude.length = 0;
-    // The whole support body, not just its collider: the carry moves the character rigidly with the body, so its other colliders must not block it.
+    // Exclude the whole support body, not only the support collider: the carry pass moves the character with that body, so a sibling collider (for example the platform's own wall ahead) must not stop the ride.
     exclude.push(support.body);
 
     let startX = 0;
