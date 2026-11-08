@@ -1429,14 +1429,17 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     textureSlot: number,
     backend: WebGl2Backend,
   ): number {
+    // Uniforms the linked program discarded take no slot, so they must not count against the budget.
+    if (!shader.uniforms.has(name)) {
+      return textureSlot;
+    }
+
     if (textureSlot >= maxCustomTextureSlots) {
       throw new Error(`Mesh material requested more than ${maxCustomTextureSlots - 1} texture bindings.`);
     }
 
-    if (shader.uniforms.has(name)) {
-      backend.bindTexture(texture, textureSlot);
-      shader.getUniform(name).setValue(this._slotScratches[textureSlot]!);
-    }
+    backend.bindTexture(texture, textureSlot);
+    shader.getUniform(name).setValue(this._slotScratches[textureSlot]!);
 
     return textureSlot + 1;
   }
