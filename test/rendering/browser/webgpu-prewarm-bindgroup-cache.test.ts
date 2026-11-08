@@ -136,9 +136,17 @@ const countBindGroups = async (device: GPUDevice, prefix: string, run: () => Pro
 };
 
 const pipelineCacheSize = (backend: WebGpuBackend, drawable: Drawable): number => {
-  const renderer = backend.rendererRegistry.resolve(drawable) as unknown as { _pipelines: Map<string, unknown> };
+  const renderer = backend.rendererRegistry.resolve(drawable) as unknown as {
+    _pipelines: { _byFormat: Map<unknown, Map<number, unknown>> };
+  };
 
-  return renderer._pipelines.size;
+  let size = 0;
+
+  for (const variants of renderer._pipelines._byFormat.values()) {
+    size += variants.size;
+  }
+
+  return size;
 };
 
 describe('WebGPU prewarm + flush-path caching (nine-slice / repeating / text)', () => {

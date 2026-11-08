@@ -30,6 +30,7 @@ import { stencilContentDepthStencilState, WebGpuStencilMode } from './stencilSta
 import type { WebGpuBackend } from './WebGpuBackend';
 import { WebGpuPassArena } from './WebGpuPassArena';
 import type { WebGpuActiveRenderPass, WebGpuPassCoordinator } from './WebGpuPassCoordinator';
+import { pipelineVariantKey, WebGpuPipelineVariantCache } from './WebGpuPipelineVariantCache';
 
 // ---------------------------------------------------------------------------
 // Shared WGSL declarations - structs, bindings, and output struct used by
@@ -76,6 +77,20 @@ const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 // ---------------------------------------------------------------------------
 // Sampler address mode helper
 // ---------------------------------------------------------------------------
+
+const repeatModeIndex = (mode: RepeatMode): number => {
+  switch (mode) {
+    case 'stretch':
+      return 0;
+    case 'repeat':
+      return 1;
+    case 'mirror-repeat':
+      return 2;
+  }
+};
+
+const scalablePipelineVariant = (kind: 'shader' | 'geo', blend: BlendModes, stencil: WebGpuStencilMode, premultiply: boolean): number =>
+  pipelineVariantKey(blend, stencil) * 4 + (kind === 'geo' ? 2 : 0) + (premultiply ? 1 : 0);
 
 const repeatModeToAddressMode = (mode: RepeatMode): GPUAddressMode => {
   if (mode === 'repeat') {
@@ -139,8 +154,8 @@ export class WebGpuScalableSpriteRenderer
   private _indexBuffer: GPUBuffer | null = null;
   private _transformBindGroup: GPUBindGroup | null = null;
   private _transformStorageBuf: GPUBuffer | null = null;
-  private readonly _pipelines = new Map<string, GPURenderPipeline>();
-  private readonly _samplers = new Map<string, GPUSampler>();
+  private readonly _pipelines = new WebGpuPipelineVariantCache<GPURenderPipeline>();
+  private readonly _samplers = new Map<number, GPUSampler>();
   // Single-texture group(1) bind groups cached per texture (WeakMap so a
   // short-lived texture does not pin its GPU bind group). The entry stores the
   // resolved view AND sampler it was built from: the view detects a
@@ -909,7 +924,7 @@ export class WebGpuScalableSpriteRenderer
         ? 'nearest'
         : 'linear';
     const mipmapFilter = scaleMode === ScaleModes.NearestMipmapLinear || scaleMode === ScaleModes.LinearMipmapLinear ? 'linear' : 'nearest';
-    const key = `${modeX}:${modeY}:${scaleMode}`;
+    const key = (repeatModeIndex(modeX) * 3 + repeatModeIndex(modeY)) * 0x1000 + (scaleMode - ScaleModes.Nearest);
     const existing = this._samplers.get(key);
 
     if (existing) {
@@ -988,8 +1003,8 @@ export class WebGpuScalableSpriteRenderer
     stencil: WebGpuStencilMode,
     premultiply = false,
   ): GPURenderPipeline {
-    const key = `${kind}:${blend}:${format}:${premultiply ? 'p' : 'a'}:${stencil}`;
-    const existing = this._pipelines.get(key);
+    const variant = scalablePipelineVariant(kind, blend, stencil, premultiply);
+    const existing = this._pipelines.get(format, variant);
 
     if (existing) {
       return existing;
@@ -1000,7 +1015,7 @@ export class WebGpuScalableSpriteRenderer
     }
 
     const pipeline = this._device.createRenderPipeline(this._buildPipelineDescriptor(kind, blend, format, stencil, premultiply));
-    this._pipelines.set(key, pipeline);
+    this._pipelines.set(format, variant, pipeline);
 
     return pipeline;
   }
@@ -1105,16 +1120,16 @@ export class WebGpuScalableSpriteRenderer
     for (const kind of kinds) {
       for (const blendMode of blendModes) {
         for (const format of formats) {
-          const key = `${kind}:${blendMode}:${format}:a:${WebGpuStencilMode.None}`;
+          const variant = scalablePipelineVariant(kind, blendMode, WebGpuStencilMode.None, false);
 
-          if (this._pipelines.has(key)) {
+          if (this._pipelines.has(format, variant)) {
             continue;
           }
 
           promises.push(
             device.createRenderPipelineAsync(this._buildPipelineDescriptor(kind, blendMode, format)).then(pipeline => {
               if (this._device === device && this._pipelineLayout === pipelineLayout) {
-                this._pipelines.set(key, pipeline);
+                this._pipelines.set(format, variant, pipeline);
               }
             }),
           );
