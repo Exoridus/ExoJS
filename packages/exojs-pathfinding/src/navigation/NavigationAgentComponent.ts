@@ -399,7 +399,8 @@ export class NavigationAgentComponent<Payload = unknown> extends BehaviorCompone
     // do better; failing that, the status turns `blocked` instead of
     // searching again and again from the same spot.
     this._stalled = false;
-    this._stallRetry = stalled;
+    // A replan the component starts itself must not forget that the last window already found the actor stuck.
+    this._stallRetry = stalled || (this._stallRetry && !commanded);
 
     // A budget too small to get past the start leaves nothing to walk, and
     // searching again from the same spot would end the same way.
