@@ -197,6 +197,12 @@ export interface InternalTargetRecord {
 
 /** Everything the probe measured for one cell. */
 export interface ProbeCellResult {
+  /**
+   * Which measurement run on this page the cell belongs to. `startOffsetMs` is
+   * relative to the start of that run, so offsets are comparable only within one
+   * `runId`.
+   */
+  readonly runId: number;
   /** Position in the run order - 0-based, ascending, never reused. */
   readonly index: number;
   /** Milliseconds between the start of the whole run and the start of this cell's measured window. */

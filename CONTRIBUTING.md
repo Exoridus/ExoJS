@@ -208,7 +208,7 @@ Three synthetic identifiers (denoted by the `__*__` convention) are statically r
 
 These are **not** application configuration. Normal application environments should use `import.meta.env` or their own configuration mechanism.
 
-The canonical ambient declaration lives in `src/build-constants.d.ts` and is included by every tsconfig in the repository. The build-defines helper (`@codexo/exojs-config/build-defines`) centralises resolution and serialisation.
+The canonical ambient declaration lives in `src/typings.d.ts`; a tsconfig whose program reads the constants must include that file. The build-defines helper (`@codexo/exojs-config/build-defines`) centralises resolution and serialisation.
 
 Release metadata (full revision SHA, creation date, tarball hashes) belongs in `release-manifest.json`. Do not use `.env` as the canonical source of the package version or official revision.
 

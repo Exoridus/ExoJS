@@ -658,7 +658,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The cube edge size (3D only). For 1D this returns the constructor-time size hint."
+          "description": "The cube edge size (3D only), following the LUT most recently supplied to LutFilter.setLut. For 1D this returns the constructor-time size hint."
         }
       ],
       "paragraphs": [],

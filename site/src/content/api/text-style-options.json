@@ -234,7 +234,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Must be a positive finite number; otherwise the constructor and setter throw RangeError."
         },
         {
           "name": "fontStyle",
@@ -392,7 +392,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Multiplier of fontSize for the distance between lines. Default 1.2 - not a pixel value."
+          "description": "Multiplier of fontSize for the distance between lines. Default 1.2 - not a pixel value. Must be a positive finite number, else RangeError."
         },
         {
           "name": "outlineColor",
@@ -442,7 +442,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Outline width in SDF units (0..0.5). 0 disables the outline."
+          "description": "Outline width in SDF units (0..0.5). 0 disables the outline. Must be finite and not negative, else RangeError."
         },
         {
           "name": "shadowAlpha",
