@@ -378,6 +378,49 @@ describe('NavigationAgentComponent', () => {
     expect(agent.status).toBe('blocked');
   });
 
+  it.each([0, 1, 2, 3, 4, 5, 6])('keeps the stall verdict across revision replans at replan phase offset %i', async offset => {
+    // Each constructed agent advances the shared replan phase, so this walks the agent under test through different phases.
+    const space = GridSpace.from(10, 3, () => 1, { cellSize: CELL });
+
+    for (let i = 0; i < offset; i++) {
+      new NavigationAgentComponent({ space, movement: new NodeMovement(new Container(), 1) });
+    }
+
+    const { movement, agent, frame } = await setup({ space }, center(0, 1));
+
+    movement.frozen = true;
+    agent.moveTo(center(9, 1));
+
+    // The space changes every frame, so a revision replan lands between any two stall windows.
+    for (let i = 0; i < 240 && agent.status !== 'blocked'; i++) {
+      space.setCost(9, 0, space.costAt(9, 0) === 1 ? 2 : 1);
+      frame();
+    }
+
+    expect(agent.status).toBe('blocked');
+  });
+
+  it('gives a commanded replan a fresh stall window', async () => {
+    const space = GridSpace.from(10, 3, () => 1, { cellSize: CELL });
+    const pathfinder = new Pathfinder();
+    const searches = searchesOf(pathfinder);
+    const { movement, agent, frame, runUntil } = await setup({ space, pathfinder }, center(0, 1));
+
+    movement.frozen = true;
+    agent.moveTo(center(9, 1));
+    runUntil(() => searches.mock.calls.length === 2);
+
+    // The component's own stall replan ran; a command must forget that verdict.
+    agent.moveTo(center(8, 1));
+
+    for (let i = 0; i < 30; i++) {
+      frame();
+    }
+
+    expect(agent.status).toBe('navigating');
+    runUntil(() => agent.status === 'blocked');
+  });
+
   it('does not search again for an unchanged unreachable destination', async () => {
     const space = GridSpace.from(10, 10, x => (x === 5 ? 0 : 1), { cellSize: CELL });
     const pathfinder = new Pathfinder();
