@@ -71,28 +71,51 @@ interface Corners {
   readonly count: number;
 }
 
-/** Map every vertex onto a corner id shared by everything at the same position. */
+/**
+ * Map every vertex onto the corner id of the first corner within `weld` of it.
+ *
+ * Cells of side `weld` only bucket the search; the neighbouring cells are
+ * probed too, because two vertices closer than `weld` can sit in adjacent cells.
+ */
 const weldCorners = (vertices: Float32Array | readonly number[], weld: number): Corners => {
-  const scale = weld > 0 ? 1 / weld : 1;
-  const byCell = new Map<string, number>();
+  const size = weld > 0 ? weld : 1;
+  const byCell = new Map<string, number[]>();
   const ids = new Int32Array(vertices.length / 2);
   const positions: number[] = [];
 
   for (let index = 0; index < ids.length; index++) {
     const x = vertices[index * 2]!;
     const y = vertices[index * 2 + 1]!;
-    const cell = `${Math.round(x * scale)},${Math.round(y * scale)}`;
-    const existing = byCell.get(cell);
+    const cellX = Math.floor(x / size);
+    const cellY = Math.floor(y / size);
+    let found = -1;
 
-    if (existing === undefined) {
-      const id = positions.length / 2;
-
-      byCell.set(cell, id);
-      positions.push(x, y);
-      ids[index] = id;
-    } else {
-      ids[index] = existing;
+    for (let dy = -1; dy <= 1 && found < 0; dy++) {
+      for (let dx = -1; dx <= 1 && found < 0; dx++) {
+        for (const id of byCell.get(`${cellX + dx},${cellY + dy}`) ?? []) {
+          if (Math.hypot(positions[id * 2]! - x, positions[id * 2 + 1]! - y) < size) {
+            found = id;
+            break;
+          }
+        }
+      }
     }
+
+    if (found < 0) {
+      found = positions.length / 2;
+      positions.push(x, y);
+
+      const key = `${cellX},${cellY}`;
+      const bucket = byCell.get(key);
+
+      if (bucket === undefined) {
+        byCell.set(key, [found]);
+      } else {
+        bucket.push(found);
+      }
+    }
+
+    ids[index] = found;
   }
 
   return {
