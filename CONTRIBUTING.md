@@ -45,6 +45,10 @@ Optional, but useful in a repo with many short-lived branches — prune remote-t
 git config fetch.prune true
 ```
 
+## Reviewed CI-first batch pushes
+
+The regular pre-push hook and complete applicable local validation remain the default. For a batch that has been explicitly authorized by the orchestrator and already passed targeted prevalidation, a single CI-first push may omit the local pre-push re-run. This is not permission to skip tests: verify the remote branch and PR head SHA, wait for the complete required GitHub CI and successful `verdict` for that exact head, and require independent review and merge authorization. See [Reviewed CI-first batch pushes](scripts/ci/VALIDATION.md#reviewed-ci-first-batch-pushes) for the complete contract. Never disable Husky globally.
+
 ## Shader tooling
 
 The WGSL validation gate (`test/rendering/wgsl-naga-validation.test.ts`) shells out to Naga, the WGSL front end of wgpu and therefore of Firefox's WebGPU. It is the only gate that sees WGSL through anything but Tint — the Chromium WebGPU lane is Dawn, and the Firefox WebGPU lane gets no adapter in CI. Naga is not an npm dependency; install the pinned version once:
