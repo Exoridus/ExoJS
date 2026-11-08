@@ -16,6 +16,33 @@ The pre-push hook defaults to `EXOJS_OUTPUT=compact`; set `EXOJS_OUTPUT=normal` 
 
 Vitest 5.0.2 itself returns `vitest:mocks:interceptor` through Vite's `applyToEnvironment` with a `configureServer` hook. Vite 8 warns that the hook on the returned plugin is ignored; Vitest installs its server hook on the enclosing plugin. The warning comes from Vitest's plugin composition and is left visible until upstream fixes it. The React project declares the automatic JSX runtime under OXC, the transformer Vite 8 actually selects, so there is no competing ignored esbuild configuration.
 
+## Reviewed CI-first batch pushes
+
+The **default** is the regular pre-push contract described above, including the complete applicable local completion validation. CI-first is a **per-push exception** for a branch explicitly authorized by the orchestrator after targeted local prevalidation; it is not a default, a global environment setting or a substitute for any required check. Record the authorizer, branch, initial base and head SHAs, affected contracts, commands and results in private `.workspace/` notes. A CI-first push must not be used to bypass known failures, unresolved lane selection, security gates or needed hardware/visual evidence.
+
+Before each authorized push:
+
+1. Identify all affected packages, public surfaces and generated artifacts against `origin/next`; run `pnpm lanes --base origin/next` to inspect the expected coverage. Run targeted tests and gate groups for **each** affected contract, as well as `git diff --check`. If affected contracts are unknown or targeted checks fail, do not authorize the shortcut. Commit using the normal pre-commit hook.
+2. Authorize **this specific branch, commit and push**. Suppress Husky only for the one push process, never globally, in Git configuration or in a long-lived shell session.
+3. Verify the pushed remote ref against `git rev-parse HEAD`, create or update the Draft PR against `next`, and verify `headRefOid` matches the same full SHA. Any discrepancy stops the batch and requires investigation.
+
+For a POSIX shell, where `branch` is the exact checked-out feature branch:
+
+```sh
+branch="$(git branch --show-current)"
+local_sha="$(git rev-parse HEAD)"
+HUSKY=0 git push origin "HEAD:refs/heads/$branch"
+remote_sha="$(git ls-remote origin "refs/heads/$branch" | cut -f1)"
+test "$local_sha" = "$remote_sha" || { echo "Remote SHA mismatch" >&2; exit 1; }
+gh pr view --json headRefOid,baseRefName --jq '{headRefOid,baseRefName}'
+```
+
+Compare `headRefOid` with `local_sha` and `baseRefName` with `next`. A newly pushed branch needs its Draft PR created before `gh pr view`. On PowerShell, scope `$env:HUSKY = '0'` inside a `try`/`finally` around only `git push`, and restore or remove the previous value in `finally`. Do not leave it set in the orchestrator process or child workers.
+
+Once pushed, the complete **required GitHub CI matrix selected for that PR** must run on its exact PR head; only a successful required `verdict`, not partial green jobs or skipped informational rows, satisfies the CI gate. Obtain independent exact-head source review and applicable visual/hardware acceptance, resolve blockers, then obtain merge authorization. If the PR head changes, requalify its checks and review. Merge dependencies in order; reconcile stacked descendants after squash merges. The merge controller must also guard against a concurrently advancing `next`: a green old-head `verdict` alone does not prove the final combined tree is safe, especially with non-strict required checks.
+
+Do not automatically make CI-first PRs Ready or enable Auto-Merge before these criteria are satisfied. Do not change `.husky/`, the CI workflows, branch protection, required status checks, the validation lane table or the existing merge policy as part of this documentation. The future dependency-aware test selector is a **separate** design and must not be used as justification to omit the existing required checks.
+
 ## Diagnose one lane
 
 ```sh
