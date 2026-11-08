@@ -54,6 +54,39 @@ export interface RunPlanMeta {
   readonly exploratory: boolean;
 }
 
+/** Whether a parsed JSON value is a complete {@link RunPlanMeta}. */
+export const isRunPlanMeta = (value: unknown): value is RunPlanMeta => {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const meta = value as Record<string, unknown>;
+
+  return (
+    (meta.suite === 'reference' || meta.suite === 'full') &&
+    meta.planId === 'exojs-comparison' &&
+    typeof meta.planRevision === 'number' &&
+    typeof meta.planHash === 'string' &&
+    (meta.domain === 'rendering' || meta.domain === 'physics') &&
+    typeof meta.extreme === 'boolean' &&
+    typeof meta.exploratory === 'boolean'
+  );
+};
+
+/** One-line statement of a plan identity for reports and error messages. */
+export const describePlan = (meta: RunPlanMeta | undefined): string =>
+  meta === undefined
+    ? 'no recorded plan (legacy data)'
+    : `${meta.planId} suite=${meta.suite} rev=${String(meta.planRevision)} hash=${meta.planHash} domain=${meta.domain} extreme=${String(meta.extreme)} exploratory=${String(meta.exploratory)}`;
+
+/**
+ * Whether two optional plan identities may describe one set of cells. Data
+ * without a recorded plan matches only other data without one, so old cells
+ * are never relabelled as belonging to a current plan.
+ */
+export const isSamePlan = (left: RunPlanMeta | undefined, right: RunPlanMeta | undefined): boolean =>
+  left === undefined || right === undefined ? left === right : describePlan(left) === describePlan(right);
+
 /** A resolved plan: its identity and the workloads it selected. */
 export interface RunPlan {
   readonly meta: RunPlanMeta;

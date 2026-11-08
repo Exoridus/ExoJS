@@ -13,6 +13,7 @@ import { parseArgs, parsePositiveInt } from './shared/args';
 import { createCheckpointWriter } from './shared/checkpoint';
 import type { PlatformDeclaration } from './shared/provenance';
 import { parsePlatformDeclaration, PLATFORM_DECLARATION_SYNTAX, readPlatformVersion } from './shared/provenance';
+import { assertPlanCompatibleWithExisting } from './shared/report';
 import { printTextTable } from './shared/table';
 import { PHYSICS_LIBRARY_ARMS } from './shared/viteServer';
 import type { RunPlan } from './suite/plan';
@@ -390,7 +391,9 @@ const runRenderingDomain = async (args: Map<string, string>, selector: DomainSel
   // Incremental, crash-safe checkpoint: each cell is persisted the instant it
   // lands (see shared/checkpoint.ts), so a later cell crash - the Pixi-WebGPU
   // probe was the observed one - can never discard the cells already measured.
-  const checkpoint = createCheckpointWriter<CellResult>(outDir);
+  assertPlanCompatibleWithExisting(outDir, plan.meta);
+
+  const checkpoint = createCheckpointWriter<CellResult>(outDir, plan.meta);
 
   // `--capture=<dir>`: write each measured cell's final frame there, for
   // checking by eye that two arms asked for one scene rendered it. A capture
@@ -438,7 +441,7 @@ const runRenderingDomain = async (args: Map<string, string>, selector: DomainSel
     console.warn('\n!!! SOFTWARE RASTERIZER DETECTED — timings are UNTRUSTED. Fix the launch flags before trusting any number. !!!');
   }
 
-  writeReport(data, outDir);
+  writeReport({ ...data, plan: plan.meta }, outDir);
 
   // Per-cell summary. Grouped by scenario and load so the arms of one row sit
   // under one another: the comparison a reader is after is between arms, and the
@@ -558,7 +561,9 @@ const runPhysicsDomain = async (args: Map<string, string>, selector: DomainSelec
 
   // Incremental, crash-safe checkpoint: each cell is persisted the instant it
   // lands, reusing the same shared writer the rendering domain uses.
-  const checkpoint = createCheckpointWriter<PhysicsCellResult>(outDir);
+  assertPlanCompatibleWithExisting(outDir, plan.meta);
+
+  const checkpoint = createCheckpointWriter<PhysicsCellResult>(outDir, plan.meta);
 
   const data = await runPhysicsMatrix({
     browser,
@@ -588,7 +593,7 @@ const runPhysicsDomain = async (args: Map<string, string>, selector: DomainSelec
     );
   }
 
-  writePhysicsReport(data, outDir);
+  writePhysicsReport({ ...data, plan: plan.meta }, outDir);
 
   console.log('\n=== Results ===');
 

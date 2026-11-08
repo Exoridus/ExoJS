@@ -80,7 +80,8 @@ const describe = (catalog: ResolvedCatalog, entry: ResolvedEntry): string => {
   const provenance = catalog.source.provenance[entry.provenance]!;
   const size =
     entry.bytes >= 1_000_000 ? `${(entry.bytes / 1_000_000).toFixed(1)} MB` : `${Math.max(1, Math.round(entry.bytes / 1000))} kB`;
-  const loads = entry.type === 'texture' || entry.type === 'sound' ? '`loader.get()` or `await loader.load()`' : 'await `loader.load()`';
+  const loads =
+    RESOURCE_TYPES[entry.type]!.wrapper !== 'LeaflessAsset' ? '`loader.get()` or `await loader.load()`' : 'await `loader.load()`';
   const extra =
     ACQUIRES_TRANSITIVE_FILES.has(entry.type) && entry.transitive.length > 0
       ? ` Also fetches ${entry.transitive.map(path => `\`${path}\``).join(', ')}.`
@@ -149,7 +150,7 @@ export const renderCatalogModule = (catalog: ResolvedCatalog): string => {
         ' * The standard demo media, one readonly asset descriptor per file.',
         ' *',
         ' * Reading a property only returns its descriptor: nothing is fetched, decoded or',
-        ' * allocated until a loader is handed the descriptor. Textures and sounds can be',
+        ' * allocated until a loader is handed the descriptor. Textures, sounds and JSON data can be',
         ' * claimed synchronously with `loader.get()`; video, music, fonts, bitmap fonts and',
         ' * SVG images have no synchronous handle and load with `await loader.load()`.',
       ].join('\n'),

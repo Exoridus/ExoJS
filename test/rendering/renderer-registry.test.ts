@@ -96,6 +96,12 @@ const createRenderer = (): Renderer<RenderBackend, BaseDrawable> => ({
   flush: vi.fn(),
 });
 
+describe('Renderer', () => {
+  it('declares destroy as an optional lifecycle hook', () => {
+    expectTypeOf<Renderer['destroy']>().toEqualTypeOf<(() => void) | undefined>();
+  });
+});
+
 describe('RendererRegistry', () => {
   test('rejects duplicate renderer registration for the same drawable type', () => {
     const registry = new RendererRegistry<RenderBackend>();

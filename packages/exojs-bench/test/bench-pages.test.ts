@@ -53,6 +53,12 @@ describe('DPR probe tool', () => {
   });
 });
 
+describe('harness source encoding', () => {
+  test('contains no raw NUL byte, which makes whole-file tooling treat the module as binary', () => {
+    expect(read('src/rendering/page/harness.ts')).not.toContain('\0');
+  });
+});
+
 describe('held-cell teardown', () => {
   test('the harness clears the held adapter before its teardown can throw', () => {
     const source = read('src/rendering/page/harness.ts');
