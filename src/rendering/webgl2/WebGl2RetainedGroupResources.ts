@@ -412,26 +412,6 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   }
 
   /**
-   * CPU-side vertex re-bake patch, for a renderer that bakes world
-   * positions into its instance bytes rather than reading a shared-transform
-   * row live (Text on WebGL2, the confirmed ANGLE/D3D11 vertex-texel-fetch
-   * workaround). Overwrite `floats.length` words at `wordOffset` in the
-   * instance store and upload just that sub-range. Deliberately does NOT bump
-   * the generation - the recorded byte LAYOUT is unchanged, only the baked
-   * position values move. Out-of-range writes are ignored (a stale patch after
-   * a recapture shrank the store).
-   * @internal
-   */
-  public _patchInstanceWords(wordOffset: number, floats: Float32Array): void {
-    if (this._instanceBuffer === null || wordOffset < 0 || wordOffset + floats.length > this._usedWords) {
-      return;
-    }
-
-    this._instanceFloats.set(floats, wordOffset);
-    this._instanceBuffer.upload(floats, wordOffset * Float32Array.BYTES_PER_ELEMENT);
-  }
-
-  /**
    * Attach the GL context + accountant the device resources are created against.
    * @internal
    */

@@ -55,31 +55,3 @@ export const webGl2PrimitiveArrayConstructors: Record<number, Float32ArrayConstr
 
   [ShaderPrimitives.Sampler2D]: Uint8Array,
 };
-
-export const webGl2PrimitiveTypeNames: Record<number, string> = {
-  [ShaderPrimitives.Float]: 'FLOAT',
-  [ShaderPrimitives.FloatVec2]: 'FLOAT_VEC2',
-  [ShaderPrimitives.FloatVec3]: 'FLOAT_VEC3',
-  [ShaderPrimitives.FloatVec4]: 'FLOAT_VEC4',
-
-  [ShaderPrimitives.Int]: 'INT',
-  [ShaderPrimitives.IntVec2]: 'INT_VEC2',
-  [ShaderPrimitives.IntVec3]: 'INT_VEC3',
-  [ShaderPrimitives.IntVec4]: 'INT_VEC4',
-
-  [ShaderPrimitives.UnsignedInt]: 'UNSIGNED_INT',
-  [ShaderPrimitives.UnsignedIntVec2]: 'UNSIGNED_INT_VEC2',
-  [ShaderPrimitives.UnsignedIntVec3]: 'UNSIGNED_INT_VEC3',
-  [ShaderPrimitives.UnsignedIntVec4]: 'UNSIGNED_INT_VEC4',
-
-  [ShaderPrimitives.Bool]: 'BOOL',
-  [ShaderPrimitives.BoolVec2]: 'BOOL_VEC2',
-  [ShaderPrimitives.BoolVec3]: 'BOOL_VEC3',
-  [ShaderPrimitives.BoolVec4]: 'BOOL_VEC4',
-
-  [ShaderPrimitives.FloatMat2]: 'FLOAT_MAT2',
-  [ShaderPrimitives.FloatMat3]: 'FLOAT_MAT3',
-  [ShaderPrimitives.FloatMat4]: 'FLOAT_MAT4',
-
-  [ShaderPrimitives.Sampler2D]: 'SAMPLER_2D',
-};
