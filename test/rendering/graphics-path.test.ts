@@ -1,3 +1,4 @@
+import { Graphics } from '#rendering/primitives/Graphics';
 import { GraphicsPath, type PathContour } from '#rendering/primitives/GraphicsPath';
 
 const xs = (contour: PathContour): number[] => contour.points.filter((_, index) => index % 2 === 0);
@@ -112,6 +113,33 @@ describe('GraphicsPath', () => {
   describe('arcs', () => {
     test('a zero-sweep arc adds no vertex beyond its start point', () => {
       expect(new GraphicsPath().moveTo(10, 0).arc(0, 0, 10, 0, 0).contours()).toEqual([]);
+    });
+
+    test('a zero-radius arc collapses to its centre and strokes to nothing', () => {
+      const graphics = new Graphics();
+
+      graphics.lineWidth = 2;
+      graphics.drawShape(new GraphicsPath().arc(5, 5, 0, 0, 1));
+
+      expect(new GraphicsPath().arc(5, 5, 0, 0, 1).contours()[0]!.points).toEqual([5, 5, 5, 5]);
+      expect(graphics.children.length).toBe(0);
+    });
+
+    test('a negative radius draws the same arc as its magnitude', () => {
+      expect(new GraphicsPath().arc(0, 0, -10, 0, Math.PI / 2).contours()).toEqual(
+        new GraphicsPath().arc(0, 0, 10, 0, Math.PI / 2).contours(),
+      );
+    });
+
+    test('a full turn in either direction closes back on its start', () => {
+      const clockwise = new GraphicsPath().arc(0, 0, 10, 0, Math.PI * 2).contours()[0]!;
+      const anticlockwise = new GraphicsPath().arc(0, 0, 10, 0, -Math.PI * 2, true).contours()[0]!;
+
+      for (const contour of [clockwise, anticlockwise]) {
+        expect(contour.points.slice(-2)[0]).toBeCloseTo(10, 9);
+        expect(contour.points.slice(-2)[1]).toBeCloseTo(0, 9);
+        expect(Number.isFinite(Math.min(...contour.points))).toBe(true);
+      }
     });
 
     test('sweep clockwise by default and anticlockwise on request', () => {
