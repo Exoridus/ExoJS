@@ -151,10 +151,11 @@ const bytesPerQuery = 8;
 const makeDevice = ({ feature = true }: { feature?: boolean } = {}) => {
   const timestamps: bigint[] = [];
   const submitted: unknown[] = [];
+  const mapping = { fails: false };
 
   const makeBuffer = (): GPUBuffer =>
     ({
-      mapAsync: () => Promise.resolve(),
+      mapAsync: () => (mapping.fails ? Promise.reject(new Error('device lost')) : Promise.resolve()),
       getMappedRange: (offset: number, size: number) => {
         const view = new BigUint64Array(size / bytesPerQuery);
 
@@ -184,7 +185,7 @@ const makeDevice = ({ feature = true }: { feature?: boolean } = {}) => {
     },
   };
 
-  return { device: device as unknown as GPUDevice, timestamps, submitted };
+  return { device: device as unknown as GPUDevice, timestamps, submitted, mapping };
 };
 
 describe('WebGpuGpuTimer', () => {
@@ -250,6 +251,24 @@ describe('WebGpuGpuTimer', () => {
 
     await vi.waitFor(() => expect(timer.lastFrameMs).not.toBeNull());
     expect(timer.lastFrameMs).toBeCloseTo(1.999, 3);
+  });
+
+  test('a rejected readback stops reporting the previous sample', async () => {
+    const { device, timestamps, mapping } = makeDevice();
+    const timer = WebGpuGpuTimer.create(device)!;
+
+    timer.beginFrame();
+    timer.acquirePassWrites();
+    timestamps.push(1_000n, 1_500_000n);
+    timer.endFrame();
+    await vi.waitFor(() => expect(timer.lastFrameMs).not.toBeNull());
+
+    mapping.fails = true;
+    timer.beginFrame();
+    timer.acquirePassWrites();
+    timer.endFrame();
+
+    await vi.waitFor(() => expect(timer.lastFrameMs).toBeNull());
   });
 
   test('an unavailable or non-increasing pair is dropped rather than folded in', async () => {
