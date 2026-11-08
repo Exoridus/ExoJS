@@ -9,7 +9,7 @@
  */
 
 import { AssetCache, type CacheAcquisition } from '#assets/cache/AssetCache';
-import { type AssetCacheError } from '#assets/cache/AssetCacheError';
+import { AssetCacheError } from '#assets/cache/AssetCacheError';
 import { CacheFirstPolicy, NetworkOnlyPolicy } from '#assets/cache/cachePolicies';
 import { serializeCacheRecordKey } from '#assets/cache/CacheRecordKey';
 import { CacheRoute } from '#assets/cache/CacheRoute';
@@ -120,6 +120,22 @@ describe('multi-store reads', () => {
     await expect(cache.resolve(acquisition({ report: error => reported.push(error) }))).resolves.toBe('from-second');
     expect(reported).toHaveLength(1);
     expect(reported[0]!.operation).toBe('read');
+  });
+
+  test('an untyped store failure is reported under the same record key a typed one carries', async () => {
+    const reported: AssetCacheError[] = [];
+
+    first.get.mockRejectedValueOnce(new Error('first is broken'));
+    second.get.mockRejectedValueOnce(
+      new AssetCacheError({ operation: 'read', message: 'second is broken', key: recordKeyOf('com.example.world') }),
+    );
+
+    for (const store of [first, second]) {
+      await AssetCache.from(store).resolve(acquisition({ report: error => reported.push(error) }));
+    }
+
+    expect(reported.map(error => error.key)).toEqual([recordKeyOf('com.example.world'), recordKeyOf('com.example.world')]);
+    expect(reported[0]!.store).toBe('com.example.world');
   });
 
   test('a read where every store missed but one failed is a failure, not a miss', async () => {
