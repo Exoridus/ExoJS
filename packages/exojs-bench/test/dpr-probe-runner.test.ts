@@ -104,7 +104,7 @@ describe('probe teardown', () => {
 
       const run = async (): Promise<void> => {
         if (mode === 'cell') {
-          await runProbeCell({ ...options, cell: options, index: 0, runStartedAt: 0 });
+          await runProbeCell({ ...options, cell: options, runId: 0, index: 0, runStartedAt: 0 });
         } else if (mode === 'failed-preview') {
           await expect(startVisualPreview(options)).rejects.toThrow('scene failed');
         } else {
@@ -137,10 +137,12 @@ describe('probe teardown', () => {
       backend: 'webgl2',
       host,
       stage: { width: 1, height: 1 },
+      runId: 0,
       index: 0,
       runStartedAt: 0,
-    }).then(() => {
+    }).then(result => {
       finished = true;
+      expect(result.runId).toBe(0);
     });
     await vi.waitFor(() => expect(mocks.destroy).toHaveBeenCalled());
     await Promise.resolve();

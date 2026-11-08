@@ -7,9 +7,14 @@ import {
   markdownCell,
   mergeCellResults,
   mergeLibraries,
+  mergePlan,
+  PLAN_CSV_HEADER,
+  planCsvFields,
+  planMarkdownLines,
   readExistingReport,
   writeReportArtifacts,
 } from '../shared/report';
+import type { RunPlanMeta } from '../suite/plan';
 import type { PhysicsProvenance } from './driver';
 import type { PhysicsCellResult } from './PhysicsAdapter';
 
@@ -30,9 +35,11 @@ export interface PhysicsReportData {
   readonly libraries: readonly LibraryProvenance[];
   /** One result per matrix cell. */
   readonly results: readonly PhysicsCellResult[];
+  /** Plan the run was resolved against; absent in data written before plans were recorded. */
+  readonly plan?: RunPlanMeta;
 }
 
-/** Ordered columns shared by the CSV and the Markdown table. */
+/** Ordered columns shared by the CSV and the Markdown table; the plan columns are CSV-only. */
 const COLUMNS = [
   'engine',
   'config',
@@ -74,7 +81,10 @@ const toRow = (result: PhysicsCellResult): string[] => {
 };
 
 const toCsv = (data: PhysicsReportData): string =>
-  [COLUMNS.join(','), ...data.results.map(result => toRow(result).map(csvField).join(','))].join('\n');
+  [
+    [...COLUMNS, ...PLAN_CSV_HEADER].join(','),
+    ...data.results.map(result => [...toRow(result), ...planCsvFields(data.plan)].map(csvField).join(',')),
+  ].join('\n');
 
 /**
  * Human-readable Markdown: the arm versions and the browser/host provenance
@@ -89,6 +99,7 @@ const toMarkdown = (data: PhysicsReportData): string => {
   const lines: string[] = [];
 
   lines.push('# Physics Benchmark Results', '');
+  lines.push(...planMarkdownLines(data.plan));
 
   lines.push('## Arms', '');
 
@@ -144,14 +155,20 @@ const toMarkdown = (data: PhysicsReportData): string => {
  * the whole matrix, and the latest run is the one whose browser and clock
  * produced the newest cells.
  */
-export const mergePhysicsReportData = (existing: PhysicsReportData | undefined, incoming: PhysicsReportData): PhysicsReportData =>
-  existing === undefined
-    ? incoming
-    : {
-        provenance: incoming.provenance,
-        libraries: mergeLibraries(existing.libraries, incoming.libraries),
-        results: mergeCellResults(existing.results, incoming.results),
-      };
+export const mergePhysicsReportData = (existing: PhysicsReportData | undefined, incoming: PhysicsReportData): PhysicsReportData => {
+  if (existing === undefined) {
+    return incoming;
+  }
+
+  const plan = mergePlan(existing.plan, incoming.plan);
+
+  return {
+    provenance: incoming.provenance,
+    libraries: mergeLibraries(existing.libraries, incoming.libraries),
+    results: mergeCellResults(existing.results, incoming.results),
+    ...(plan !== undefined && { plan }),
+  };
+};
 
 /**
  * Writes the three physics report artifacts into `outDir`:

@@ -164,6 +164,18 @@ describe('generated artifacts: no drift against the authored catalog', () => {
     }
   });
 
+  test('"loader.get()" is advertised exactly for the types whose descriptor loader.get() accepts', () => {
+    const module = renderAll(catalog)['src/catalog.generated.ts']!;
+    const docLine = (path: string): string => module.split('\n').find(line => line.startsWith(`  /** \`${path}\` (`))!;
+    const claimable = new Set(['texture', 'sound', 'json']);
+
+    for (const entry of catalog.entries) {
+      const line = docLine(entry.path);
+
+      expect(line.includes('`loader.get()`')).toBe(claimable.has(entry.type));
+    }
+  });
+
   test('"Also fetches" is claimed only by types whose loader loads those files', () => {
     const module = renderAll(catalog)['src/catalog.generated.ts']!;
     const docLine = (path: string): string | undefined =>
