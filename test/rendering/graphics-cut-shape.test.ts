@@ -201,4 +201,25 @@ describe('GraphicsShape.cutShape', () => {
     base.destroy();
     cut.destroy();
   });
+
+  test('moving a cut far from the drawing restores it and moving it back cuts again', () => {
+    const base = new Rectangle(0, 0, 10, 10);
+    const cut = new Rectangle(3, 3, 4, 4);
+    const graphics = new Graphics({ fill: Color.red });
+
+    graphics.addShape(base).cutShape(cut);
+    expect(meshArea(graphics.getChildAt(0))).toBeCloseTo(84);
+
+    cut.x = 1e9;
+    cut.y = 5;
+    expect(meshArea(graphics.getChildAt(0))).toBeCloseTo(100);
+
+    cut.x = 3;
+    cut.y = 3;
+    expect(meshArea(graphics.getChildAt(0))).toBeCloseTo(84);
+
+    graphics.destroy();
+    base.destroy();
+    cut.destroy();
+  });
 });

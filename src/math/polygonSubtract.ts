@@ -60,7 +60,12 @@ const subtractLocal = (base: readonly number[], cuts: ReadonlyArray<readonly num
     return [];
   }
 
-  const cutRings = rings.slice(1).filter(ring => ring.length >= 3 && Math.abs(areaOf(ring)) > 0);
+  const baseBounds = boundsOf(rings[0]!);
+  const margin = extentOf([rings[0]!]) * 1e-3;
+  // Cuts clear of the base cannot change the result and must not inflate the tolerances derived from the extent.
+  const cutRings = rings
+    .slice(1)
+    .filter(ring => ring.length >= 3 && Math.abs(areaOf(ring)) > 0 && overlaps(baseBounds, boundsOf(ring), margin));
   const allRings = [rings[0]!, ...cutRings];
 
   if (cutRings.length === 0) {
@@ -164,6 +169,16 @@ const areaOf = (ring: readonly Point[]): number => {
 
 const orient = (ring: readonly Point[], counterClockwise: boolean): Point[] =>
   areaOf(ring) > 0 === counterClockwise ? [...ring] : [...ring].reverse();
+
+const boundsOf = (ring: readonly Point[]): [number, number, number, number] => [
+  Math.min(...ring.map(p => p.x)),
+  Math.min(...ring.map(p => p.y)),
+  Math.max(...ring.map(p => p.x)),
+  Math.max(...ring.map(p => p.y)),
+];
+
+const overlaps = (a: readonly number[], b: readonly number[], margin: number): boolean =>
+  a[0]! <= b[2]! + margin && b[0]! <= a[2]! + margin && a[1]! <= b[3]! + margin && b[1]! <= a[3]! + margin;
 
 const extentOf = (rings: ReadonlyArray<readonly Point[]>): number => {
   let minX = Infinity;

@@ -357,3 +357,53 @@ describe('subtractPolygons translation invariance', () => {
     expect(netArea(result)).toBeCloseTo(80, 6);
   });
 });
+
+describe('subtractPolygons distant cuts', () => {
+  const base = rect(0, 0, 10, 10);
+  const area = (result: ReturnType<typeof subtractPolygons>): number =>
+    result.reduce((sum, { outer, holes }) => {
+      const ring = (r: Ring): number => {
+        let a = 0;
+
+        for (let i = 0; i < r.length; i += 2) {
+          const j = (i + 2) % r.length;
+
+          a += r[i]! * r[j + 1]! - r[j]! * r[i + 1]!;
+        }
+
+        return a / 2;
+      };
+
+      return sum + ring(outer) + holes.reduce((inner, hole) => inner + ring(hole), 0);
+    }, 0);
+
+  test.each([
+    [1e9, 1e9],
+    [-1e9, 1e9],
+    [1e9, -1e9],
+    [-1e9, -1e9],
+    [1e9, 5],
+    [5, -1e9],
+    [1e4, 1e4],
+  ])('a cut at (%d, %d) leaves the base unchanged', (x, y) => {
+    const result = subtractPolygons(base, [rect(x, y, 4, 4)]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]!.holes).toHaveLength(0);
+    expect(result[0]!.outer).toHaveLength(8);
+    expect(area(result)).toBeCloseTo(100, 9);
+  });
+
+  test('distant cuts do not affect nearby cuts', () => {
+    const result = subtractPolygons(base, [rect(3, 3, 4, 4), rect(1e9, 1e9, 4, 4), rect(-1e9, 2, 4, 4)]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]!.holes).toHaveLength(1);
+    expect(area(result)).toBeCloseTo(84, 9);
+  });
+
+  test('a very large overlapping cut still subtracts correctly', () => {
+    expect(area(subtractPolygons(base, [rect(5, -1e6, 1e6, 2e6)]))).toBeCloseTo(50, 6);
+    expect(subtractPolygons(base, [rect(-1e6, -1e6, 2e6, 2e6)])).toHaveLength(0);
+  });
+});
