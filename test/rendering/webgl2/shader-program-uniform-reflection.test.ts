@@ -61,4 +61,37 @@ describe('WebGL2 uniform reflection', () => {
     expect(shader.uniforms.size).toBe(count);
     expect(shader.uniforms.get('u299')?.index).toBe(299);
   });
+
+  test('a throw during reflection leaves no partial state behind for the retry', () => {
+    const { gl } = createStubContext(2);
+    let uploads = 0;
+    let failOnce = true;
+
+    Object.assign(gl, {
+      getActiveUniform: (_program: WebGLProgram, index: number) => {
+        if (index === 1 && failOnce) {
+          failOnce = false;
+
+          return { name: 'u1', type: -1, size: 1 };
+        }
+
+        return { name: `u${index}`, type: FLOAT, size: 1 };
+      },
+      uniform1f: () => {
+        uploads++;
+      },
+    });
+
+    const shader = new WebGl2Shader('#version 300 es\nvoid main() {}', '#version 300 es\nvoid main() {}');
+
+    shader.connect(createWebGl2ShaderProgram(gl));
+
+    expect(() => shader.sync()).toThrow(/Unsupported uniform type/);
+
+    uploads = 0;
+    shader.sync();
+
+    expect(shader.uniforms.size).toBe(2);
+    expect(uploads).toBe(2);
+  });
 });

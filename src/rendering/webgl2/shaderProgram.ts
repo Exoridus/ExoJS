@@ -145,6 +145,20 @@ export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: st
     pendingShader = shader;
   };
 
+  const releaseReflection = (): void => {
+    for (const block of uniformBlocks) {
+      block.destroy();
+    }
+
+    for (const binding of schemaBlocks) {
+      gl.deleteBuffer(binding.buffer);
+    }
+
+    managedUniforms.length = 0;
+    uniformBlocks.length = 0;
+    schemaBlocks.length = 0;
+  };
+
   const finalize = (): void => {
     if (pendingShader === null || program === null || vertexShader === null || fragmentShader === null) {
       return;
@@ -182,10 +196,17 @@ export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: st
       });
     }
 
-    extractAttributes(gl, program, pendingShader);
-    extractUniforms(gl, program, pendingShader, managedUniforms);
-    extractUniformBlocks(gl, program, uniformBlocks);
-    bindSchemaBlocks(gl, program, pendingShader.uniformBlockData, schemaBlocks);
+    try {
+      extractAttributes(gl, program, pendingShader);
+      extractUniforms(gl, program, pendingShader, managedUniforms);
+      extractUniformBlocks(gl, program, uniformBlocks);
+      bindSchemaBlocks(gl, program, pendingShader.uniformBlockData, schemaBlocks);
+    } catch (error) {
+      // The next bind reflects again from scratch, so partial results must not survive.
+      releaseReflection();
+
+      throw error;
+    }
 
     pendingShader = null;
   };
@@ -253,21 +274,12 @@ export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: st
       gl.deleteShader(fragmentShader);
       gl.deleteProgram(program);
 
-      for (const block of uniformBlocks) {
-        block.destroy();
-      }
-
-      for (const binding of schemaBlocks) {
-        gl.deleteBuffer(binding.buffer);
-      }
+      releaseReflection();
 
       vertexShader = null;
       fragmentShader = null;
       program = null;
       pendingShader = null;
-      managedUniforms.length = 0;
-      uniformBlocks.length = 0;
-      schemaBlocks.length = 0;
 
       shader.disconnect();
     },
