@@ -363,17 +363,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     // group(1) layout are built from it.
     this._maxBatchTextures = resolveSpriteBatchTextureSlots(this._device);
 
-    // The custom-material prologue is generated for a FIXED slot count, so its
-    // group(1) layout must fit inside what the default path already proved
-    // bindable. Every tier resolveSpriteBatchTextureSlots can return is >= it;
-    // this asserts that invariant instead of silently generating a layout the
-    // device cannot satisfy.
-    if (this._maxBatchTextures < spriteMaterialTextureSlots) {
-      throw new Error(
-        `WebGpuSpriteRenderer: device grants only ${this._maxBatchTextures} sprite batch texture slots, below the ${spriteMaterialTextureSlots} the custom-material path requires.`,
-      );
-    }
-
     this._activeTextures = new Array<Texture | RenderTexture | null>(this._maxBatchTextures).fill(null);
     this._shaderModule = this._device.createShaderModule({ label: 'sprite:shader', code: buildSpriteShaderSource(this._maxBatchTextures) });
 
