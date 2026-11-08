@@ -159,10 +159,11 @@ export interface TextStyleOptions {
   fontStyle?: FontStyle;
   /** CSS font-variant-caps. Defaults to `'normal'`. */
   fontVariant?: FontVariant;
+  /** Must be a positive finite number; otherwise the constructor and setter throw `RangeError`. */
   fontSize?: number;
   fillColor?: Color;
   outlineColor?: Color;
-  /** Outline width in SDF units (0..0.5). 0 disables the outline. */
+  /** Outline width in SDF units (0..0.5). 0 disables the outline. Must be finite and not negative, else `RangeError`. */
   outlineWidth?: number;
   align?: TextAlignment;
   /**
@@ -178,7 +179,7 @@ export interface TextStyleOptions {
    * one.
    */
   textTransform?: TextTransform;
-  /** Multiplier of `fontSize` for the distance between lines. Default `1.2` - not a pixel value. */
+  /** Multiplier of `fontSize` for the distance between lines. Default `1.2` - not a pixel value. Must be a positive finite number, else `RangeError`. */
   lineHeight?: number;
   /** Extra pixel gap between lines, added on top of `lineHeight`. */
   leading?: number;
@@ -224,6 +225,23 @@ export interface TextStyleOptions {
    */
   gradient?: TextGradient | null;
 }
+
+// An invalid size yields a CSS font the canvas silently ignores, leaving the previous font active.
+const assertPositive = (name: string, value: number): number => {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new RangeError(`[ExoJS] TextStyle ${name} must be a positive finite number (got ${value}).`);
+  }
+
+  return value;
+};
+
+const assertNonNegative = (name: string, value: number): number => {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new RangeError(`[ExoJS] TextStyle ${name} must be a non-negative finite number (got ${value}).`);
+  }
+
+  return value;
+};
 
 /**
  * Describes how a {@link Text} node renders its string.
@@ -282,13 +300,13 @@ export class TextStyle {
     this._fontWeight = options.fontWeight ?? 'normal';
     this._fontStyle = options.fontStyle ?? 'normal';
     this._fontVariant = options.fontVariant ?? 'normal';
-    this._fontSize = options.fontSize ?? 20;
+    this._fontSize = options.fontSize === undefined ? 20 : assertPositive('fontSize', options.fontSize);
     this._fillColor = options.fillColor ? options.fillColor.clone() : Color.white.clone();
     this._outlineColor = options.outlineColor ? options.outlineColor.clone() : Color.black.clone();
-    this._outlineWidth = options.outlineWidth ?? 0;
+    this._outlineWidth = options.outlineWidth === undefined ? 0 : assertNonNegative('outlineWidth', options.outlineWidth);
     this._align = options.align ?? 'left';
     this._textTransform = options.textTransform ?? 'none';
-    this._lineHeight = options.lineHeight ?? 1.2;
+    this._lineHeight = options.lineHeight === undefined ? 1.2 : assertPositive('lineHeight', options.lineHeight);
     this._leading = options.leading ?? 0;
 
     this._shadowColor = options.shadowColor ? options.shadowColor.clone() : Color.black.clone();
@@ -409,6 +427,8 @@ export class TextStyle {
   }
 
   public set fontSize(v: number) {
+    assertPositive('fontSize', v);
+
     if (this._fontSize === v) {
       return;
     }
@@ -452,6 +472,8 @@ export class TextStyle {
   }
 
   public set lineHeight(v: number) {
+    assertPositive('lineHeight', v);
+
     if (this._lineHeight === v) {
       return;
     }
@@ -505,6 +527,8 @@ export class TextStyle {
   }
 
   public set outlineWidth(v: number) {
+    assertNonNegative('outlineWidth', v);
+
     if (this._outlineWidth === v) {
       return;
     }

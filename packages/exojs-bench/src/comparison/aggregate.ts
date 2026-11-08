@@ -7,6 +7,7 @@ import { exceedsFrameBudget } from '../shared/frameBudget';
 import type { LibraryProvenance, PlatformVersionStamp, PrereleaseStamp } from '../shared/provenance';
 import { mergeTimerChecks } from '../shared/timerCheck';
 import { median } from '../shared/timing';
+import { describePlan, isSamePlan, type RunPlanMeta } from '../suite/plan';
 import type { BackendComparison, ComparisonCell, ComparisonRow, ComparisonSection, ExcludedRow } from './build';
 import { buildPhysicsComparison, buildRenderingComparison } from './build';
 import type { AggregatedBackendComparison, AggregatedCell, AggregatedRow, AggregatedSection, RunSpread } from './pooled';
@@ -70,6 +71,8 @@ export interface AggregatedRendering {
   readonly libraries: readonly LibraryProvenance[];
   /** The pooled comparison, one block per backend. */
   readonly backends: readonly AggregatedBackendComparison[];
+  /** Plan every pooled run was measured under; absent when the runs carry none. */
+  readonly plan?: RunPlanMeta;
 }
 
 /** The physics domain of a reference measurement. */
@@ -80,6 +83,8 @@ export interface AggregatedPhysics {
   readonly libraries: readonly LibraryProvenance[];
   /** The pooled comparison section. */
   readonly section: AggregatedSection;
+  /** Plan every pooled run was measured under; absent when the runs carry none. */
+  readonly plan?: RunPlanMeta;
 }
 
 /** How many examples of a difference an error message names before it stops listing. */
@@ -121,6 +126,24 @@ const requireSameSet = (perRun: ReadonlyArray<readonly string[]>, what: string, 
       domain,
       `${domain} run ${String(index + 1)} does not measure the same ${what} as run 1: ${differences.join('; ')}. Runs pooled into one profile must repeat one measurement, not compare two.`,
     );
+  }
+};
+
+/**
+ * Reject runs measured under different plan identities.
+ *
+ * Mixing a published run with an exploratory one, runs of different suites or
+ * revisions, or recorded and unrecorded data would pool cells that answer
+ * different questions under one claimed plan.
+ */
+const requireSamePlan = (plans: ReadonlyArray<RunPlanMeta | undefined>, domain: string): void => {
+  for (const [index, plan] of plans.entries()) {
+    if (index > 0 && !isSamePlan(plans[0], plan)) {
+      throw new IncomparableRunsError(
+        domain,
+        `${domain} run ${String(index + 1)} was measured under a different plan than run 1 (run 1: ${describePlan(plans[0])}; run ${String(index + 1)}: ${describePlan(plan)}). Runs pooled into one profile must repeat one measurement, not compare two.`,
+      );
+    }
   }
 };
 
@@ -441,6 +464,10 @@ const armKeys = (libraries: readonly LibraryProvenance[]): readonly string[] =>
  */
 export const aggregateRenderingRuns = (runs: readonly ReportData[]): AggregatedRendering => {
   requireRuns(runs, 'rendering');
+  requireSamePlan(
+    runs.map(run => run.plan),
+    'rendering',
+  );
   requireSameMachine(
     runs.map(run => renderingMachine(run.provenance)),
     'machine or browser',
@@ -472,7 +499,12 @@ export const aggregateRenderingRuns = (runs: readonly ReportData[]): AggregatedR
     aggregateBackend(group, runs.length, 'rendering'),
   );
 
-  return { runs: runs.map(run => run.provenance), libraries: runs[0]!.libraries, backends };
+  return {
+    runs: runs.map(run => run.provenance),
+    libraries: runs[0]!.libraries,
+    backends,
+    ...(runs[0]!.plan !== undefined && { plan: runs[0]!.plan }),
+  };
 };
 
 /**
@@ -483,6 +515,10 @@ export const aggregateRenderingRuns = (runs: readonly ReportData[]): AggregatedR
  */
 export const aggregatePhysicsRuns = (runs: readonly PhysicsReportData[]): AggregatedPhysics => {
   requireRuns(runs, 'physics');
+  requireSamePlan(
+    runs.map(run => run.plan),
+    'physics',
+  );
   requireSameMachine(
     runs.map(run => physicsMachine(run.provenance)),
     'machine',
@@ -512,6 +548,7 @@ export const aggregatePhysicsRuns = (runs: readonly PhysicsReportData[]): Aggreg
   return {
     runs: runs.map(run => run.provenance),
     libraries: runs[0]!.libraries,
+    ...(runs[0]!.plan !== undefined && { plan: runs[0]!.plan }),
     section: aggregateSection(
       runs.map(run => buildPhysicsComparison(run.results, run.provenance.clock)),
       runs.length,
