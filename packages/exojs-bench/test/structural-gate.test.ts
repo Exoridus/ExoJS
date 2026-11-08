@@ -106,6 +106,13 @@ describe('compareToBaseline', () => {
     expect(outcome.deviations.map(deviation => deviation.counter)).toEqual(['drawCalls', 'textureBinds', 'bufferUploads']);
   });
 
+  test('does not pass when the baseline and run contain no guarded cells', () => {
+    const outcome = compareToBaseline({ recorded, cells: [] }, []);
+
+    expect(isGateFailure(outcome)).toBe(true);
+    expect(formatGateOutcome(outcome)).toContain('no guarded cell was compared');
+  });
+
   test('fails when a guarded cell is absent, rather than passing by omission', () => {
     const outcome = compareToBaseline(baseline, []);
 
