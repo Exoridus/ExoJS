@@ -178,7 +178,11 @@ export interface ExcludedRow {
 export interface BackendComparison {
   /** Backend these rows were measured on. */
   readonly backend: Backend;
-  /** Node count every row in this block was measured at, or `null` when no single count qualified. */
+  /**
+   * Largest node count present in every comparable archetype's ladder at which every arm produced a valid cell,
+   * or `null` when none qualified. It only selects the legacy WebGL1 rows; every row states its own load, so
+   * `null` does not hide the rows of {@link BackendComparison.sections}.
+   */
   readonly headlineCount: number | null;
   /** Competitor arms present, in a stable order. */
   readonly competitors: readonly string[];

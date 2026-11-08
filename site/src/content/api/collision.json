@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "intersects",
-          "signature": "intersects: { circleCircle: (__namedParameters: Circle, __namedParameters: Circle) => boolean; circleEllipse: (circle: Circle, ellipse: Ellipse) => boolean; circlePoly: (__namedParameters: Circle, __namedParameters: Polygon) => boolean; ellipseEllipse: (ellipseA: Ellipse, ellipseB: Ellipse) => boolean; ellipsePoly: (ellipse: Ellipse, polygon: Polygon) => boolean; lineCircle: (line: Line, circle: Circle) => boolean; lineEllipse: (line: Line, ellipse: Ellipse) => boolean; lineLine: (lineA: Line, lineB: Line) => boolean; linePoly: (line: Line, polygon: Polygon) => boolean; lineRect: (line: Line, rectangle: Rectangle) => boolean; pointCircle: (point: PointLike, circle: Circle) => boolean; pointEllipse: (point: PointLike, ellipse: Ellipse) => boolean; pointLine: (point: PointLike, line: Line, threshold: number) => boolean; pointPoint: (pointA: PointLike, pointB: PointLike, threshold: number) => boolean; pointPoly: (point: PointLike, polygon: Polygon) => boolean; pointRect: (point: PointLike, rectangle: Rectangle) => boolean; polyPoly: (polygonA: Polygon, polygonB: Polygon) => boolean; rectCircle: (__namedParameters: Rectangle, __namedParameters: Circle) => boolean; rectEllipse: (rectangle: Rectangle, ellipse: Ellipse) => boolean; rectPoly: (rectangle: Rectangle, polygon: Polygon) => boolean; rectRect: (rectA: Rectangle, rectB: Rectangle) => boolean }",
+          "signature": "intersects: { circleCircle: (__namedParameters: Circle, __namedParameters: Circle) => boolean; circleEllipse: (circle: Circle, ellipse: Ellipse) => boolean; circlePoly: (__namedParameters: Circle, polygon: Polygon) => boolean; ellipseEllipse: (ellipseA: Ellipse, ellipseB: Ellipse) => boolean; ellipsePoly: (ellipse: Ellipse, polygon: Polygon) => boolean; lineCircle: (line: Line, circle: Circle) => boolean; lineEllipse: (line: Line, ellipse: Ellipse) => boolean; lineLine: (lineA: Line, lineB: Line) => boolean; linePoly: (line: Line, polygon: Polygon) => boolean; lineRect: (line: Line, rectangle: Rectangle) => boolean; pointCircle: (point: PointLike, circle: Circle) => boolean; pointEllipse: (point: PointLike, ellipse: Ellipse) => boolean; pointLine: (point: PointLike, line: Line, threshold: number) => boolean; pointPoint: (pointA: PointLike, pointB: PointLike, threshold: number) => boolean; pointPoly: (point: PointLike, polygon: Polygon) => boolean; pointRect: (point: PointLike, rectangle: Rectangle) => boolean; polyPoly: (polygonA: Polygon, polygonB: Polygon) => boolean; rectCircle: (__namedParameters: Rectangle, __namedParameters: Circle) => boolean; rectEllipse: (rectangle: Rectangle, ellipse: Ellipse) => boolean; rectPoly: (rectangle: Rectangle, polygon: Polygon) => boolean; rectRect: (rectA: Rectangle, rectB: Rectangle) => boolean }",
           "signatureTokens": [
             {
               "text": "intersects",
@@ -177,7 +177,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "__namedParameters",
+              "text": "polygon",
               "kind": "param"
             },
             {

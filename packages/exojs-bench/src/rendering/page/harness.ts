@@ -536,7 +536,7 @@ const disposeHeldCell = (): void => {
 };
 
 /** Registry key uniquely identifying an engine arm by its engine + config labels. */
-const adapterKey = (engine: string, config: string): string => `${engine} ${config}`;
+const adapterKey = (engine: string, config: string): string => `${engine}\0${config}`;
 
 /**
  * Lazily construct the engine arm for one `(engine, config)` pair, caching each

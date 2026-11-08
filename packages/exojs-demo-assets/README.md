@@ -44,7 +44,7 @@ const app = new Application({ scenes: { DemoScene }, canvas: { mount: document.b
 await app.start(DemoScene);
 ```
 
-Reading a property such as `assets.ship` only returns its descriptor. Textures and sounds support `loader.get()` and `await loader.load()`; video, music, fonts, bitmap fonts and SVG images have no synchronous handle and load with `await loader.load()`. The catalog object is frozen and reusable across scenes and applications; claims and payload sharing belong to each loader.
+Reading a property such as `assets.ship` only returns its descriptor. Textures, sounds and JSON data (atlases, maps) support `loader.get()` and `await loader.load()`; video, music, fonts, bitmap fonts and SVG images have no synchronous handle and load with `await loader.load()`. The catalog object is frozen and reusable across scenes and applications; claims and payload sharing belong to each loader.
 
 ## Bundlers
 

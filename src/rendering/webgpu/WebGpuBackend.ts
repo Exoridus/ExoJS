@@ -272,6 +272,7 @@ export class WebGpuBackend implements RenderBackend {
   private _clipDepth = 0;
   /** Scratch for the incoming rect before it is intersected into its slot. */
   private readonly _clipPixelScratch: PixelClipBoundsState = { x: 0, y: 0, width: 0, height: 0 };
+  private _scissorScratch: PixelClipBoundsState | null = null;
   private readonly _clipPointA: Vector = new Vector();
   private readonly _clipPointB: Vector = new Vector();
   private readonly _maskCompositor: WebGpuMaskCompositor = new WebGpuMaskCompositor();
@@ -1264,6 +1265,9 @@ export class WebGpuBackend implements RenderBackend {
     return this;
   }
 
+  /**
+   * Current clip in target pixels, or `null` without an active clip. The returned rect is reused by every call: read it immediately and do not retain it.
+   */
   public getScissorRect(): PixelClipBoundsState | null {
     if (this._clipDepth === 0) {
       return null;
@@ -1274,12 +1278,14 @@ export class WebGpuBackend implements RenderBackend {
     const scaleX = this._renderTarget.root && this._renderTarget.width > 0 ? this._canvas.width / this._renderTarget.width : 1;
     const scaleY = this._renderTarget.root && this._renderTarget.height > 0 ? this._canvas.height / this._renderTarget.height : 1;
 
-    return {
-      x: Math.floor(clip.x * scaleX),
-      y: Math.floor(clip.y * scaleY),
-      width: Math.max(0, Math.round(clip.width * scaleX)),
-      height: Math.max(0, Math.round(clip.height * scaleY)),
-    };
+    const rect = (this._scissorScratch ??= { x: 0, y: 0, width: 0, height: 0 });
+
+    rect.x = Math.floor(clip.x * scaleX);
+    rect.y = Math.floor(clip.y * scaleY);
+    rect.width = Math.max(0, Math.round(clip.width * scaleX));
+    rect.height = Math.max(0, Math.round(clip.height * scaleY));
+
+    return rect;
   }
 
   public getColorFormatCapabilities(format: ColorTextureFormat): ColorFormatCapabilities {
