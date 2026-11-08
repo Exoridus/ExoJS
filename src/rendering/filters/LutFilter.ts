@@ -189,9 +189,10 @@ export class LutFilter extends Filter {
   }
 
   private readonly _mode: LutMode;
-  private readonly _size: number;
+  private _size: number;
   private readonly _colorSpace: LutDomain;
   private readonly _shaderFilter: LutShaderFilter;
+  private readonly _lutSizeUniform: { value: number } | null = null;
   private _lut: Texture;
   /** The identity LUT the constructor created, which this filter owns until a caller supplies another. */
   private _ownedLut: Texture | null = null;
@@ -209,9 +210,17 @@ export class LutFilter extends Filter {
 
     const domain = this._colorSpace === 'srgb' ? 1 : 0;
 
-    this._shaderFilter = is3d
-      ? ShaderFilter.from(lut3dShaderSource, { uniforms: { uDomain: domain, uLutSize: this._size }, textures: { uLut: this._lut } })
-      : ShaderFilter.from(lutRgb1dShaderSource, { uniforms: { uDomain: domain }, textures: { uLut: this._lut } });
+    if (is3d) {
+      const shaderFilter = ShaderFilter.from(lut3dShaderSource, {
+        uniforms: { uDomain: domain, uLutSize: this._size },
+        textures: { uLut: this._lut },
+      });
+
+      this._shaderFilter = shaderFilter;
+      this._lutSizeUniform = shaderFilter.uniforms.uLutSize;
+    } else {
+      this._shaderFilter = ShaderFilter.from(lutRgb1dShaderSource, { uniforms: { uDomain: domain }, textures: { uLut: this._lut } });
+    }
   }
 
   /** The LUT mode this filter was constructed with. */
@@ -224,7 +233,7 @@ export class LutFilter extends Filter {
     return this._colorSpace;
   }
 
-  /** The cube edge size (3D only). For 1D this returns the constructor-time size hint. */
+  /** The cube edge size (3D only), following the LUT most recently supplied to {@link LutFilter.setLut}. For 1D this returns the constructor-time size hint. */
   public get size(): number {
     return this._size;
   }
@@ -250,6 +259,7 @@ export class LutFilter extends Filter {
     assertNumericLut(lut);
 
     this._lut = lut;
+    this._syncCubeSize(lut);
     this._shaderFilter._setTexture('uLut', lut);
 
     if (this._ownedLut !== null && this._ownedLut !== lut) {
@@ -260,6 +270,16 @@ export class LutFilter extends Filter {
     this.invalidate();
 
     return this;
+  }
+
+  private _syncCubeSize(lut: Texture): void {
+    if (this._lutSizeUniform === null) {
+      return;
+    }
+
+    // The cube is N*N wide by N tall, so the height is the edge length the shader indexes with.
+    this._size = Math.max(2, lut.height);
+    this._lutSizeUniform.value = this._size;
   }
 
   public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, resolution = 1): void {

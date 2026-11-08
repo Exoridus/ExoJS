@@ -323,6 +323,7 @@ describe('internal-target pixel accounting', () => {
 
 /** A minimal capture used to pin the serialized shape. */
 const sampleCell: ProbeCellResult = {
+  runId: 0,
   index: 0,
   startOffsetMs: 12.5,
   scene: 'blur',

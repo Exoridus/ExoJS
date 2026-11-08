@@ -38,6 +38,10 @@ export const PERF_RUNS = {
   audio: { summary: 'audio graph benchmark', module: 'test/perf/audio-benchmark.ts' },
   collision: { summary: 'collision benchmark', module: 'test/perf/collision-benchmark.ts' },
   'scene-graph': { summary: 'scene graph benchmark', module: 'test/perf/scene-graph-benchmark.ts' },
+  'graphics-sources': {
+    summary: 'retained rectangle CPU updates and geometry stability',
+    module: 'test/perf/graphics-source-benchmark.ts',
+  },
   interaction: { summary: 'interaction benchmark', module: 'test/perf/interaction-benchmark.ts' },
   'collect-phase': { summary: 'collect phase benchmark', module: 'test/perf/collect-phase-benchmark.ts' },
   profile: { summary: 'profile benchmark', module: 'test/perf/profile-benchmark.ts' },
@@ -48,7 +52,7 @@ export const PERF_RUNS = {
   },
   smoke: {
     summary: 'every in-process benchmark once, for its exit code (the `sync` gate)',
-    runs: ['rendering', 'audio', 'collision', 'scene-graph', 'interaction', 'collect-phase', 'profile'],
+    runs: ['rendering', 'audio', 'collision', 'scene-graph', 'graphics-sources', 'interaction', 'collect-phase', 'profile'],
   },
 
   renderers: { summary: 'structural renderer sweep, full matrix', command: 'tsx test/perf/rendering/run-sweep.ts full' },

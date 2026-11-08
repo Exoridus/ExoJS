@@ -595,6 +595,17 @@ describe('LutFilter.setLut', () => {
     expect(filter.setLut(numeric).lut).toBe(numeric);
   });
 
+  test('a 3D LUT of another cube size updates size and the uLutSize uniform', () => {
+    const filter = new LutFilter({ mode: '3d', size: 17 });
+
+    filter.setLut(LutFilter.identityLut3D(9));
+
+    expect(filter.size).toBe(9);
+    expect(uniformsOf(filter)['uLutSize']?.value).toBe(9);
+
+    filter.destroy();
+  });
+
   test('also updates the shader filter uniform', () => {
     const filter = new LutFilter({ mode: '3d' });
     const replacement = LutFilter.identityLut3D(9);

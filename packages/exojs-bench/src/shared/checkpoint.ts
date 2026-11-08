@@ -1,6 +1,8 @@
 import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
+import type { RunPlanMeta } from '../suite/plan';
+
 /**
  * Incremental, crash-safe result sink for a benchmark run (domain-agnostic).
  *
@@ -14,7 +16,11 @@ import { dirname, join } from 'node:path';
  *  - `checkpoint.json` - the full array rewritten after each cell, a
  *    convenient single-object view of everything gathered so far.
  *
- * Both files live under the run's output directory and are overwritten fresh at
+ * `checkpoint.meta.json` is a sidecar naming the plan the records were measured
+ * under (`plan` is `null` when the run had none), so the line-per-cell files keep
+ * their record shape and stay readable by existing tools.
+ *
+ * All files live under the run's output directory and are overwritten fresh at
  * the start of each run (a stale checkpoint from a previous run must never bleed
  * into a new one). The final `results.{json,csv,md}` are still written by the
  * domain's report writer once the run completes; the checkpoint is the safety
@@ -37,7 +43,7 @@ export interface CheckpointWriter<TRecord> {
  * checkpoint files so a fresh run never inherits stale cells, then persists each
  * appended record immediately (JSONL append + aggregate rewrite).
  */
-export const createCheckpointWriter = <TRecord>(outDir: string): CheckpointWriter<TRecord> => {
+export const createCheckpointWriter = <TRecord>(outDir: string, plan?: RunPlanMeta): CheckpointWriter<TRecord> => {
   mkdirSync(outDir, { recursive: true });
 
   const jsonlPath = join(outDir, 'checkpoint.jsonl');
@@ -48,6 +54,7 @@ export const createCheckpointWriter = <TRecord>(outDir: string): CheckpointWrite
   // still leaves an empty, current-run checkpoint rather than a previous run's.
   writeFileSync(jsonlPath, '');
   writeFileSync(jsonPath, '[]\n');
+  writeFileSync(join(outDir, 'checkpoint.meta.json'), `${JSON.stringify({ formatVersion: 1, plan: plan ?? null }, null, 2)}\n`);
 
   return {
     records,

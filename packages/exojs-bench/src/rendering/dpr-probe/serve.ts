@@ -1,10 +1,11 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { networkInterfaces } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { readEngineVersion, startViteServer } from '../../shared/viteServer';
+import { submitPlugin } from './submit';
 
 /**
  * Serve the manual DPR / internal-render-target probe page so a real phone on
@@ -133,138 +134,6 @@ const ensureCertificate = (addresses: readonly string[]): { key: Buffer; cert: B
 /** Where submitted captures land. Inside the repo's gitignored scratch directory. */
 const CAPTURE_DIR = join(REPO_ROOT, '.workspace', 'probe');
 
-/** Hard cap on a submitted body. A full 32-cell capture is ~30 KB; this is three orders of margin. */
-const MAX_CAPTURE_BYTES = 8 * 1024 * 1024;
-
-/** Reduce a free-text field to something safe to put in a filename. */
-const slug = (value: string): string =>
-  value
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, '-')
-    .replaceAll(/^-+|-+$/g, '')
-    .slice(0, 40);
-
-/** Minimal surface of the Node request the submit middleware consumes. */
-interface SubmitRequest {
-  readonly url?: string;
-  readonly method?: string;
-  on(event: 'data', listener: (chunk: Buffer) => void): void;
-  on(event: 'end' | 'error', listener: () => void): void;
-  destroy(): void;
-}
-
-/** Minimal surface of the Node response the submit middleware writes to. */
-interface SubmitResponse {
-  statusCode: number;
-  setHeader(name: string, value: string): void;
-  end(body: string): void;
-}
-
-/**
- * Mount `POST /submit`, which writes a capture straight into the repository.
- *
- * The alternative is copying 30 KB of JSON off a phone by hand, which is both
- * tedious and lossy. The endpoint exists only on this manually started dev
- * server, never in anything shipped.
- *
- * The filename is derived SERVER-SIDE from the parsed capture (its own
- * timestamp and device label, both slugged) and joined onto a fixed directory -
- * nothing the page sends can steer the write out of {@link CAPTURE_DIR}.
- */
-const submitPlugin = (): unknown => ({
-  name: 'dpr-probe-submit',
-  configureServer(server: {
-    middlewares: { use: (handler: (request: SubmitRequest, response: SubmitResponse, next: () => void) => void) => void };
-  }): void {
-    server.middlewares.use((request, response, next) => {
-      if (request.url !== '/submit' || request.method !== 'POST') {
-        next();
-
-        return;
-      }
-
-      const chunks: Buffer[] = [];
-      let size = 0;
-      let aborted = false;
-
-      const fail = (status: number, message: string): void => {
-        aborted = true;
-        response.statusCode = status;
-        response.setHeader('Content-Type', 'application/json');
-        response.end(JSON.stringify({ error: message }));
-      };
-
-      request.on('data', chunk => {
-        if (aborted) {
-          return;
-        }
-
-        size += chunk.length;
-
-        if (size > MAX_CAPTURE_BYTES) {
-          fail(413, `capture exceeds ${MAX_CAPTURE_BYTES} bytes`);
-          request.destroy();
-
-          return;
-        }
-
-        chunks.push(chunk);
-      });
-
-      request.on('error', () => {
-        aborted = true;
-      });
-
-      request.on('end', () => {
-        if (aborted) {
-          return;
-        }
-
-        const body = Buffer.concat(chunks).toString('utf8');
-        let capture: { schemaVersion?: unknown; timestamp?: unknown; deviceLabel?: unknown; cells?: unknown };
-
-        try {
-          capture = JSON.parse(body) as typeof capture;
-        } catch {
-          fail(400, 'body is not valid JSON');
-
-          return;
-        }
-
-        // Refuse anything that is not recognisably a capture, so a stray POST
-        // cannot litter the directory the report reads from.
-        if (typeof capture.schemaVersion !== 'number' || !Array.isArray(capture.cells)) {
-          fail(422, 'body is not a probe capture (missing schemaVersion / cells)');
-
-          return;
-        }
-
-        const stamp = typeof capture.timestamp === 'string' ? slug(capture.timestamp) : 'no-timestamp';
-        const device =
-          typeof capture.deviceLabel === 'string' && capture.deviceLabel.trim().length > 0 ? slug(capture.deviceLabel) : 'unnamed-device';
-        const target = join(CAPTURE_DIR, `${stamp}-${device}.json`);
-
-        try {
-          mkdirSync(CAPTURE_DIR, { recursive: true });
-          writeFileSync(target, body, 'utf8');
-        } catch (error) {
-          // A throwing listener is outside connect's middleware try/catch and
-          // would terminate the dev server without answering the phone.
-          fail(500, `could not store the capture: ${error instanceof Error ? error.message : String(error)}`);
-
-          return;
-        }
-
-        process.stdout.write(`\n  capture received: ${target}  (${capture.cells.length} cells)\n`);
-
-        response.statusCode = 200;
-        response.setHeader('Content-Type', 'application/json');
-        response.end(JSON.stringify({ path: relative(REPO_ROOT, target).replaceAll('\\', '/') }));
-      });
-    });
-  },
-});
-
 /** Commit the probe is served from, with a `-dirty` suffix when the tree is not clean. */
 const readGitSha = (): string => {
   try {
@@ -295,7 +164,14 @@ const main = async (): Promise<void> => {
     host: '0.0.0.0',
     ...(https !== undefined && { https }),
     extraDefine: { __PROBE_META__: JSON.stringify({ gitSha, engineVersion: version }) },
-    extraPlugins: [submitPlugin()],
+    extraPlugins: [
+      submitPlugin({
+        captureDir: CAPTURE_DIR,
+        repoRoot: REPO_ROOT,
+        scheme: plainHttp ? 'http' : 'https',
+        allowedHostnames: ['localhost', '127.0.0.1', '[::1]', ...candidates.map(candidate => candidate.address)],
+      }),
+    ],
   });
 
   const port = new URL(server.resolvedUrls?.local[0] ?? 'http://127.0.0.1:5173').port;
