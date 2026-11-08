@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 2,
+  "memberCount": 3,
   "counts": {
     "constructors": 0,
-    "methods": 1,
+    "methods": 2,
     "properties": 1,
     "events": 0
   },
@@ -29,6 +29,53 @@
       "id": "methods",
       "title": "Methods",
       "members": [
+        {
+          "name": "cutShape",
+          "signature": "cutShape(cut: GraphicsShapeSource): this",
+          "signatureTokens": [
+            {
+              "text": "cutShape",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "cut",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GraphicsShapeSource",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "cut",
+              "type": "GraphicsShapeSource",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Subtract a borrowed closed shape from this drawing only. Several cuts remove their union. Edits to the cut are live; destroying it drops the cut again. The source and the cut shape themselves are never modified. Throws for a removed drawing, a cut that is already applied, the drawing's own source, and a path with an open subpath."
+        },
         {
           "name": "setStyle",
           "signature": "setStyle(patch: GraphicsAppearancePatch): this",

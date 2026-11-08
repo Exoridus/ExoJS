@@ -17,6 +17,7 @@
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import { Circle } from '#math/Circle';
 import { Rectangle } from '#math/Rectangle';
 import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -142,6 +143,45 @@ describe('WebGPU Graphics solid fill', () => {
       first.destroy();
       second.destroy();
       source.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('cut-outs leave the clear color where the union of cuts covers a live rectangle', async ctx => {
+    const backend = await setupBackend();
+    const source = new Rectangle(8, 8, 48, 48);
+    const hole = new Circle(28, 28, 10);
+    const notch = new Rectangle(40, 40, 24, 24);
+    const graphics = new Graphics({ fill: Color.green });
+
+    graphics.addShape(source).cutShape(hole).cutShape(notch);
+
+    try {
+      if (!(await renderAndValidate(ctx, backend, graphics))) {
+        return;
+      }
+
+      let readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(readPixel(28, 28), [0, 0, 0, 255]);
+      expectPixelNear(readPixel(50, 50), [0, 0, 0, 255]);
+      expectPixelNear(readPixel(12, 12), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(20, 50), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(50, 20), [0, 255, 0, 255]);
+
+      hole.destroy();
+
+      if (!(await renderAndValidate(ctx, backend, graphics))) {
+        return;
+      }
+
+      readPixel = readWebGpuPixels(backend, canvasSize);
+      expectPixelNear(readPixel(28, 28), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(50, 50), [0, 0, 0, 255]);
+    } finally {
+      graphics.destroy();
+      source.destroy();
+      notch.destroy();
       backend.destroy();
     }
   });

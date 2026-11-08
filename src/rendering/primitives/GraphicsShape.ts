@@ -6,8 +6,8 @@ import type { Polygon } from '#math/Polygon';
 import { Rectangle } from '#math/Rectangle';
 import { Mesh } from '#rendering/mesh/Mesh';
 
-import { buildGraphicsFill } from './graphicsGeometry';
-import type { GraphicsPath } from './GraphicsPath';
+import { buildGraphicsCutFill, buildGraphicsFill } from './graphicsGeometry';
+import { GraphicsPath } from './GraphicsPath';
 
 /** Live geometric sources that can be filled. */
 export type GraphicsShapeSource = Rectangle | Circle | Ellipse | Polygon | GraphicsPath;
@@ -30,6 +30,8 @@ export class GraphicsShape {
   private _unsubscribe: (() => void) | null;
   private _hasGeometry: boolean;
   private readonly _mesh: ShapeMesh;
+  private readonly _source: GraphicsShapeSource;
+  private readonly _cuts = new Map<GraphicsShapeSource, () => void>();
 
   /** @internal */
   public constructor(
@@ -38,6 +40,7 @@ export class GraphicsShape {
     options: GraphicsAppearancePatch,
     onSourceDestroyed: () => void,
   ) {
+    this._source = source;
     const data = buildGraphicsFill(source);
     this._hasGeometry = data !== null && data.indices.length > 0;
     this._mesh = new ShapeMesh(this._hasGeometry ? data! : buildRectangle(0, 0, 0, 0));
@@ -47,7 +50,7 @@ export class GraphicsShape {
         return;
       }
 
-      if (source instanceof Rectangle) {
+      if (source instanceof Rectangle && this._cuts.size === 0) {
         const { x, y, width, height } = source;
         const vertices = this._mesh.vertices;
 
@@ -62,14 +65,7 @@ export class GraphicsShape {
         this._mesh.recomputeLocalBounds();
         this._mesh.invalidateContent();
       } else {
-        const updated = buildGraphicsFill(source);
-        this._hasGeometry = updated !== null && updated.indices.length > 0;
-
-        if (this._hasGeometry) {
-          this._mesh.setGeometry(updated!);
-        }
-
-        this._applyAppearance();
+        this._rebuild();
       }
     }, onSourceDestroyed);
     this._applyAppearance();
@@ -84,6 +80,45 @@ export class GraphicsShape {
     return this._unsubscribe === null;
   }
 
+  /**
+   * Subtract a borrowed closed shape from this drawing only. Several cuts remove
+   * their union. Edits to the cut are live; destroying it drops the cut again.
+   * The source and the cut shape themselves are never modified.
+   *
+   * Throws for a removed drawing, a cut that is already applied, the drawing's
+   * own source, and a path with an open subpath.
+   */
+  public cutShape(cut: GraphicsShapeSource): this {
+    if (this._unsubscribe === null) {
+      throw new Error('GraphicsShape has been removed.');
+    }
+
+    if (cut === this._source) {
+      throw new Error('A shape cannot cut itself.');
+    }
+
+    if (this._cuts.has(cut)) {
+      throw new Error('This cut is already applied to the shape.');
+    }
+
+    if (cut instanceof GraphicsPath && cut.contours().some(contour => !contour.closed)) {
+      throw new Error('Cut paths must consist of closed subpaths.');
+    }
+
+    const unsubscribe = cut._subscribeGeometry(
+      () => this._rebuild(),
+      () => {
+        this._cuts.delete(cut);
+        this._rebuild();
+      },
+    );
+
+    this._cuts.set(cut, unsubscribe);
+    this._rebuild();
+
+    return this;
+  }
+
   /** Patch only specified fields. `null` disables the fill. Throws after removal. */
   public setStyle(patch: GraphicsAppearancePatch): this {
     if (this._unsubscribe === null) {
@@ -96,6 +131,22 @@ export class GraphicsShape {
     }
 
     return this;
+  }
+
+  private _rebuild(): void {
+    if (this._unsubscribe === null) {
+      return;
+    }
+
+    const data = this._cuts.size === 0 ? buildGraphicsFill(this._source) : buildGraphicsCutFill(this._source, this._cuts.keys());
+
+    this._hasGeometry = data !== null && data.indices.length > 0;
+
+    if (this._hasGeometry) {
+      this._mesh.setGeometry(data!);
+    }
+
+    this._applyAppearance();
   }
 
   /** @internal */
@@ -113,6 +164,12 @@ export class GraphicsShape {
   public _dispose(): void {
     this._unsubscribe?.();
     this._unsubscribe = null;
+
+    for (const unsubscribe of this._cuts.values()) {
+      unsubscribe();
+    }
+
+    this._cuts.clear();
     this._mesh.destroy();
   }
 }
