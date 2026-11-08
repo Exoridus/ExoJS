@@ -1,4 +1,4 @@
-import { webGl2PrimitiveByteSizeMapping } from '#rendering/webgl2/shaderMappings';
+import { webGl2PrimitiveComponentCountMapping } from '#rendering/webgl2/shaderMappings';
 
 /**
  * Metadata for a single vertex attribute declared in a GLSL vertex shader.
@@ -24,9 +24,9 @@ export class WebGl2ShaderAttribute {
     this.index = index;
     this.name = name;
     this.type = type;
-    // The byte-size mapping is total over the GLSL attribute type GLenums the
+    // The component-count mapping is total over the GLSL attribute type GLenums the
     // driver reports via `gl.getActiveAttrib`.
-    this.size = webGl2PrimitiveByteSizeMapping[type]!;
+    this.size = webGl2PrimitiveComponentCountMapping[type]!;
   }
 
   public destroy(): void {

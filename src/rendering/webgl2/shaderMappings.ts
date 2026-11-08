@@ -1,6 +1,6 @@
 import { ShaderPrimitives } from '#rendering/types';
 
-export const webGl2PrimitiveByteSizeMapping: Record<number, number> = {
+export const webGl2PrimitiveComponentCountMapping: Record<number, number> = {
   [ShaderPrimitives.Float]: 1,
   [ShaderPrimitives.FloatVec2]: 2,
   [ShaderPrimitives.FloatVec3]: 3,

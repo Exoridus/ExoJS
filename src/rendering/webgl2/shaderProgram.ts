@@ -9,7 +9,7 @@ import type { WebGl2Shader, WebGl2ShaderProgram } from '#rendering/webgl2/WebGl2
 import { WebGl2ShaderAttribute } from '#rendering/webgl2/WebGl2ShaderAttribute';
 import { WebGl2ShaderUniform } from '#rendering/webgl2/WebGl2ShaderUniform';
 
-import { webGl2PrimitiveArrayConstructors, webGl2PrimitiveByteSizeMapping } from './shaderMappings';
+import { webGl2PrimitiveArrayConstructors, webGl2PrimitiveComponentCountMapping } from './shaderMappings';
 import { WebGl2ShaderBlock } from './WebGl2ShaderBlock';
 
 type UniformUploadFunction = (gl: WebGL2RenderingContext, location: WebGLUniformLocation, value: TypedArray) => void;
@@ -351,14 +351,14 @@ const extractUniforms = (
     }
 
     const arrayConstructor = webGl2PrimitiveArrayConstructors[info.type];
-    const byteSize = webGl2PrimitiveByteSizeMapping[info.type];
+    const componentCount = webGl2PrimitiveComponentCountMapping[info.type];
     const uploadFn = uniformUploadFunctions[info.type];
 
-    if (arrayConstructor === undefined || byteSize === undefined || uploadFn === undefined) {
+    if (arrayConstructor === undefined || componentCount === undefined || uploadFn === undefined) {
       throw new Error(`Unsupported uniform type ${info.type} for uniform "${info.name}".`);
     }
 
-    const data = new arrayConstructor(byteSize * info.size);
+    const data = new arrayConstructor(componentCount * info.size);
     const uniform = new WebGl2ShaderUniform(index, info.type, info.size, info.name, data);
     const location = gl.getUniformLocation(program, uniform.name);
 
