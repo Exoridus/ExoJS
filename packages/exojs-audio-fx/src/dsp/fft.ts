@@ -58,17 +58,21 @@ export const fft = (real: Float32Array, imag: Float32Array): void => {
     const halfLen = len >> 1;
     const angleStep = (-2 * Math.PI) / len;
 
-    for (let i = 0; i < n; i += len) {
-      for (let k = 0; k < halfLen; k++) {
-        const angle = angleStep * k;
-        const cos = Math.cos(angle);
-        const sin = Math.sin(angle);
-        const re = real[i + k + halfLen]! * cos - imag[i + k + halfLen]! * sin;
-        const im = real[i + k + halfLen]! * sin + imag[i + k + halfLen]! * cos;
-        real[i + k + halfLen] = real[i + k]! - re;
-        imag[i + k + halfLen] = imag[i + k]! - im;
-        real[i + k]! += re;
-        imag[i + k]! += im;
+    // Twiddle-outer order: the trig pair depends on k only, so it is evaluated
+    // halfLen times per stage instead of once per butterfly.
+    for (let k = 0; k < halfLen; k++) {
+      const angle = angleStep * k;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+
+      for (let i = k; i < n; i += len) {
+        const j = i + halfLen;
+        const re = real[j]! * cos - imag[j]! * sin;
+        const im = real[j]! * sin + imag[j]! * cos;
+        real[j] = real[i]! - re;
+        imag[j] = imag[i]! - im;
+        real[i]! += re;
+        imag[i]! += im;
       }
     }
   }
