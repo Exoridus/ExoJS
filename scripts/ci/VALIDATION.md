@@ -30,11 +30,14 @@ For a POSIX shell, where `branch` is the exact checked-out feature branch:
 
 ```sh
 branch="$(git branch --show-current)"
+test -n "$branch" || { echo "Not on a branch" >&2; exit 1; }
 local_sha="$(git rev-parse HEAD)"
-HUSKY=0 git push origin "HEAD:refs/heads/$branch"
+HUSKY=0 git push origin "HEAD:refs/heads/$branch" || exit 1
 remote_sha="$(git ls-remote origin "refs/heads/$branch" | cut -f1)"
 test "$local_sha" = "$remote_sha" || { echo "Remote SHA mismatch" >&2; exit 1; }
-gh pr view --json headRefOid,baseRefName --jq '{headRefOid,baseRefName}'
+# After creating/updating the Draft PR:
+test "$(gh pr view --json headRefOid --jq .headRefOid)" = "$local_sha" || exit 1
+test "$(gh pr view --json baseRefName --jq .baseRefName)" = "next" || exit 1
 ```
 
 Compare `headRefOid` with `local_sha` and `baseRefName` with `next`. A newly pushed branch needs its Draft PR created before `gh pr view`. On PowerShell, scope `$env:HUSKY = '0'` inside a `try`/`finally` around only `git push`, and restore or remove the previous value in `finally`. Do not leave it set in the orchestrator process or child workers.
