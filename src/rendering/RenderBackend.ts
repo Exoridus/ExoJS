@@ -155,6 +155,10 @@ export interface RenderBackend {
    * simply stays `null` and a profiling UI should report the measurement as
    * unavailable rather than retrying.
    *
+   * A WebGPU backend has no device before {@link initialize} resolves: a request
+   * made earlier returns `false`, is kept, and is applied once the device
+   * exists. Ask again after initialization for the capability answer.
+   *
    * Timing is off by default because it allocates GPU query objects and readback
    * buffers, and it costs a timestamp pair per render pass while on. Turn it off
    * again once the profiling UI that asked for it is gone; the call is

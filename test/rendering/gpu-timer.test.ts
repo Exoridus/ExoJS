@@ -8,8 +8,13 @@
  * real device can be asked to produce on demand.
  */
 
+import type { Application } from '#core/Application';
+import { Color } from '#core/Color';
 import { createWebGl2GpuTimer } from '#rendering/webgl2/createWebGl2GpuTimer';
+import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 import { WebGpuGpuTimer } from '#rendering/webgpu/WebGpuGpuTimer';
+
+import { createMockWebGpuEnvironment } from './webgpuMockEnvironment';
 
 // ---------------------------------------------------------------------------
 // WebGL2
@@ -335,5 +340,34 @@ describe('WebGpuGpuTimer', () => {
 
     // Double-destroy must stay safe.
     expect(() => timer.destroy()).not.toThrow();
+  });
+});
+
+describe('WebGpuBackend GPU timing', () => {
+  test('a timing request made before initialize() is applied once the device exists', async () => {
+    const environment = createMockWebGpuEnvironment();
+    const timer = WebGpuGpuTimer.create(makeDevice().device)!;
+    const create = vi.spyOn(WebGpuGpuTimer, 'create').mockReturnValue(timer);
+
+    try {
+      const app = {
+        canvas: environment.canvas,
+        options: { canvas: { width: 16, height: 16 }, clearColor: Color.black },
+      } as unknown as Application;
+      const backend = new WebGpuBackend(app);
+
+      expect(backend.setGpuTimingEnabled(true)).toBe(false);
+
+      await backend.initialize();
+
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(backend.setGpuTimingEnabled(true)).toBe(true);
+      expect(create).toHaveBeenCalledTimes(1);
+
+      backend.destroy();
+    } finally {
+      create.mockRestore();
+      environment.restore();
+    }
   });
 });

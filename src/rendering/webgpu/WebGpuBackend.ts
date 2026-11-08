@@ -2676,6 +2676,11 @@ export class WebGpuBackend implements RenderBackend {
     this.rendererRegistry.connect(this);
     this.resize(this._rootRenderTarget.width, this._rootRenderTarget.height);
 
+    // A request made before the device existed could not create a timer then.
+    if (this._gpuTimingRequested) {
+      this.setGpuTimingEnabled(true);
+    }
+
     // Kick off async pipeline pre-warm for any renderer that supports
     // it. Each renderer creates its full set of (blendMode × format)
     // pipelines via createRenderPipelineAsync in parallel, so the first
