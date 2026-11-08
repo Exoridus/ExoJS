@@ -26,6 +26,10 @@ export class RenderTarget {
    * the WebGL2 on-screen root uses the default framebuffer's stencil (requested
    * at context creation), so the flag only affects offscreen WebGL2 targets.
    *
+   * The flag is never cleared and the stencil storage lives until the target is
+   * destroyed, so a pooled target that was clipped once keeps that memory while
+   * it is reused for non-clip rendering.
+   *
    * The WebGPU backend does not consult this flag: it allocates a separate
    * `depth24plus-stencil8` attachment per clipped target (root included) on
    * demand, sized to the colour attachment's physical pixels.

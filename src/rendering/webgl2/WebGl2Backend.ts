@@ -3579,14 +3579,6 @@ export class WebGl2Backend implements RenderBackend {
         this._syncColorAttachments(state, handles);
       }
 
-      // Reset the on-demand flag for pooled RenderTexture targets, so a
-      // stencil renderbuffer from a previous use does not permanently
-      // consume GPU memory when the target is re-purposed for non-clip
-      // rendering.
-      if (!this._stencilStates.has(target)) {
-        target.needsStencil = false;
-      }
-
       // Keep an existing depth/stencil attachment sized to the (possibly
       // resized) texture so the framebuffer stays complete during non-clip
       // rendering. A target that opted into a sampleable depth attachment
