@@ -9,12 +9,14 @@ export type {
   AssetInput,
   AssetTypeName,
   CatalogEntry,
+  CoreValueAssetKind,
   ExtensionKindMap,
   InferAssetResource,
   InferLoadedEntry,
   KindByPath,
   LeaflessAssetKind,
   LeaflessCatalogEntry,
+  ValueAssetKind,
 } from './AssetDefinitions';
 export type { AssetDependencyScope, AssetFactory, AssetFactoryContext } from './AssetFactory';
 export type { CatalogResourceLeaf, CatalogValueLeaf } from './assetMeta';
