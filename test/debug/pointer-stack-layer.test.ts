@@ -6,6 +6,8 @@
 import { Signal } from '#core/Signal';
 import { Time } from '#core/units';
 import { PointerStackLayer } from '#debug/PointerStackLayer';
+import { Rectangle } from '#math/Rectangle';
+import { Container } from '#rendering/Container';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { View } from '#rendering/View';
@@ -194,6 +196,45 @@ describe('PointerStackLayer', () => {
     expect(lines.some(line => line.visible && line.text.includes('WorldTarget'))).toBe(true);
     layer.destroy();
     view.destroy();
+  });
+
+  test('hit-tests each node of a nested container chain once', () => {
+    const root = new Container();
+    const middle = new Container();
+    const leaf = new Container();
+    leaf.hitArea = new Rectangle(0, 0, 100, 100);
+    root.addChild(middle);
+    middle.addChild(leaf);
+    const contains = vi.spyOn(leaf, 'contains');
+    const layer = new PointerStackLayer(makeApp({ root: root as unknown as FakeNode, pointerPos: { x: 10, y: 10 } }));
+
+    const lines = (layer as unknown as { _buildLines(): string[] })._buildLines();
+
+    expect(contains).toHaveBeenCalledOnce();
+    expect(lines.slice(2)).toEqual(['  Container — z=0', '  Container — z=0', '  Container — z=0']);
+    root.destroy();
+  });
+
+  test('lists a container whose only hit child is hidden, without the hidden child', () => {
+    class Group extends Container {}
+    class Hidden extends Container {}
+    class Missed extends Container {}
+    const root = new Container();
+    const group = new Group();
+    const hidden = new Hidden();
+    const missed = new Missed();
+    hidden.hitArea = new Rectangle(0, 0, 100, 100);
+    hidden.visible = false;
+    missed.hitArea = new Rectangle(500, 500, 10, 10);
+    group.addChild(missed);
+    group.addChild(hidden);
+    root.addChild(group);
+    const layer = new PointerStackLayer(makeApp({ root: root as unknown as FakeNode, pointerPos: { x: 10, y: 10 } }));
+
+    const lines = (layer as unknown as { _buildLines(): string[] })._buildLines();
+
+    expect(lines.slice(2)).toEqual(['  Container — z=0', '  Group — z=0']);
+    root.destroy();
   });
 
   test('viewMode is "screen"', () => {

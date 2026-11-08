@@ -196,21 +196,47 @@ export class PointerStackLayer extends DebugLayer {
     return lines;
   }
 
-  private _collectContaining(node: RenderNode, x: number, y: number, result: RenderNode[]): void {
-    if (!node.visible) {
-      return;
+  /** Collect the visible nodes under the point in pre-order. */
+  private _collectContaining(root: RenderNode, x: number, y: number, result: RenderNode[]): void {
+    const slots: Array<RenderNode | null> = [];
+
+    if (root.visible) {
+      this._collectSubtree(root, x, y, slots);
     }
 
-    if (node.contains(x, y)) {
-      result.push(node);
+    for (const node of slots) {
+      if (node !== null) {
+        result.push(node);
+      }
     }
+  }
 
+  /** Collect the visible subtree under the point into `slots` and return `node.contains(x, y)`. */
+  private _collectSubtree(node: RenderNode, x: number, y: number, slots: Array<RenderNode | null>): boolean {
+    const slot = slots.length;
+    // A plain container hits wherever any child does, so its answer falls out of
+    // the walk below; calling its contains() would walk the same subtree again.
+    const derived = node instanceof Container && node.hitArea === null && node.contains === Container.prototype.contains;
     const container = node as Partial<{ children: RenderNode[] }>;
+    let childHit = false;
+
+    slots.push(node);
 
     if (Array.isArray(container.children)) {
       for (const child of container.children) {
-        this._collectContaining(child, x, y, result);
+        // A hidden child is not listed, but still counts towards its container's hit.
+        const hit: boolean = child.visible ? this._collectSubtree(child, x, y, slots) : derived && !childHit && child.contains(x, y);
+
+        childHit ||= hit;
       }
     }
+
+    const hit = derived ? childHit : node.contains(x, y);
+
+    if (!hit) {
+      slots[slot] = null;
+    }
+
+    return hit;
   }
 }
