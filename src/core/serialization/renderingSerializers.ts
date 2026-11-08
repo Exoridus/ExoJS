@@ -433,7 +433,7 @@ const bitmapTextSerializer: NodeSerializer<BitmapText> = {
 const isSameOriginVideoSource = (url: URL): boolean => {
   const { origin } = url;
 
-  if (origin === 'null' || origin !== location.origin) {
+  if (origin === 'null' || origin !== location.origin || url.username !== '' || url.password !== '') {
     return false;
   }
 

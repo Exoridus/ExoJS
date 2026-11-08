@@ -803,6 +803,8 @@ describe('serialization — Video', () => {
       'http://[',
       `${origin.replace(/^https?/, m => m.toUpperCase())}@evil.example/clip.mp4`,
       'HTTPS://evil.example/clip.mp4',
+      `${location.protocol}//user:pw@${location.host}/clip.mp4`,
+      'file:///clip.mp4',
     ])('refuses the source %s by default', src => {
       expect(() => deserializeTree(videoNode(src))).toThrow(/Refused to deserialize a Video/);
     });
@@ -838,6 +840,14 @@ describe('serialization — Video', () => {
 
       expect(() => new Scene().deserialize({ version: SERIALIZATION_VERSION, root: container }, { allowVideoSource })).not.toThrow();
       expect(() => prefab.instantiate(null, undefined, { allowVideoSource: () => false })).toThrow(/Refused/);
+    });
+
+    it('applies the policy to the ui layer of a scene', () => {
+      const ui: SerializedNode = { type: 'Container', children: [videoNode('https://evil.example/clip.mp4')] };
+      const document = { version: SERIALIZATION_VERSION, root: { type: 'Container' }, ui };
+
+      expect(() => new Scene().deserialize(document)).toThrow(/Refused/);
+      expect(() => new Scene().deserialize(document, { allowVideoSource: () => true })).not.toThrow();
     });
   });
 });

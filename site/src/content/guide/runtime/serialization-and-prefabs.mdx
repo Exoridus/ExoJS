@@ -94,7 +94,7 @@ Extension packages register their own node types the same way through the `seria
 
 ## Video sources
 
-A serialized document is untrusted input, and restoring a `Video` node starts a network request for its `src`. By default `Scene.deserialize()` and `Prefab.instantiate()` accept only same-origin HTTP(S) and `blob:` sources and throw on anything else, including cross-origin and `data:` URLs. Documents that reference other hosts must opt in per source with `allowVideoSource`, which receives the resolved `URL`:
+A serialized document is untrusted input, and restoring a `Video` node starts a network request for its `src`. By default `Scene.deserialize()` and `Prefab.instantiate()` accept only same-origin HTTP(S) and `blob:` sources and throw on anything else, including cross-origin and `data:` URLs. Documents that reference other hosts must opt in per source with `allowVideoSource`, which receives the resolved `URL` and can approve any scheme, including `data:` and `javascript:`, so check the protocol and host yourself:
 
 ```ts
 import { Scene, type SerializedScene } from '@codexo/exojs';
