@@ -115,6 +115,7 @@ const resolveStage = (): StageSize => {
 };
 
 const collected: ProbeCellResult[] = [];
+let nextRunId = 0;
 let busy = false;
 let previewTransition: Promise<void> = Promise.resolve();
 
@@ -494,6 +495,7 @@ const runCells = async (cells: readonly ProbeCell[], measureMs: number, label: s
     visualReadout.textContent = 'preview stopped while measuring — one variant on screen at a time.';
 
     const runStartedAt = performance.now();
+    const runId = nextRunId++;
     const backend = backendRequest();
 
     for (let i = 0; i < cells.length; i++) {
@@ -510,6 +512,7 @@ const runCells = async (cells: readonly ProbeCell[], measureMs: number, label: s
         backend,
         stage: runStage,
         host: stageHost,
+        runId,
         index: collected.length,
         runStartedAt,
         measureMs,

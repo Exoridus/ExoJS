@@ -165,6 +165,8 @@ export interface RunProbeCellOptions {
   readonly stage: StageSize;
   /** DOM element the stage canvas is (re)created inside. */
   readonly host: HTMLElement;
+  /** Identifier of the measurement run this cell belongs to, copied into the result. */
+  readonly runId: number;
   /** Position in the run order, copied into the result. */
   readonly index: number;
   /** `performance.now()` of the whole run's start, for {@link ProbeCellResult.startOffsetMs}. */
@@ -235,7 +237,7 @@ const instrumentCell = (app: Application, scene: ProbeScene): { recorder: Target
  * scene has no internal target", which is the opposite of true.
  */
 export const runProbeCell = async (options: RunProbeCellOptions): Promise<ProbeCellResult> => {
-  const { cell, backend, host, index, runStartedAt, stage } = options;
+  const { cell, backend, host, runId, index, runStartedAt, stage } = options;
   const measureMs = options.measureMs ?? DEFAULT_MEASURE_MS;
   const errors: string[] = [];
   const canvas = freshStageCanvas(host);
@@ -323,6 +325,7 @@ export const runProbeCell = async (options: RunProbeCellOptions): Promise<ProbeC
     const mainPixelCount = backingWidth * backingHeight;
 
     return {
+      runId,
       index,
       startOffsetMs: startedAt - runStartedAt,
       scene: cell.scene,
@@ -356,6 +359,7 @@ export const runProbeCell = async (options: RunProbeCellOptions): Promise<ProbeC
     errors.push(error instanceof Error ? `${error.name}: ${error.message}` : String(error));
 
     return {
+      runId,
       index,
       startOffsetMs: performance.now() - runStartedAt,
       scene: cell.scene,
