@@ -69,4 +69,10 @@ skills-lock.json
 !.husky
 !.husky/**
 
+# Reviewed project Claude skills may be tracked; all other .claude state remains ignored.
+!/.claude/
+/.claude/*
+!/.claude/skills/
+!/.claude/skills/**
+
 /test-results/
