@@ -1234,3 +1234,73 @@ describe('revolute chain stability', () => {
     }
   });
 });
+
+describe('prismatic joint softness', () => {
+  it('takes its perpendicular and angular bias from the solver factors it is handed', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    const slider = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+    const joint = new PrismaticJoint({ bodyA: anchor, bodyB: slider, anchor: { x: 0, y: 0 }, axis: { x: 1, y: 0 } });
+
+    slider.setTransform({ x: 0, y: 5 });
+    joint._prepare(1 / 240, { biasRate: 0, massScale: 1, impulseScale: 0 });
+    joint._solve(true);
+
+    expect(slider.linearVelocityY).toBe(0);
+
+    joint._prepare(1 / 240, { biasRate: 10, massScale: 1, impulseScale: 0 });
+    joint._solve(true);
+
+    expect(slider.linearVelocityY).toBeCloseTo(-50, 5);
+  });
+
+  const setup = (): { slider: PhysicsBody; joint: PrismaticJoint } => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    const slider = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+    const joint = new PrismaticJoint({ bodyA: anchor, bodyB: slider, anchor: { x: 0, y: 0 }, axis: { x: 1, y: 0 } });
+
+    return { slider, joint };
+  };
+
+  it('scales the solved impulse by massScale and relaxes the accumulated impulse by impulseScale', () => {
+    const { slider, joint } = setup();
+
+    slider.setTransform({ x: 0, y: 5 });
+    joint._prepare(1 / 240, { biasRate: 10, massScale: 0.5, impulseScale: 0 });
+    joint._solve(true);
+
+    expect(slider.linearVelocityY).toBeCloseTo(-25, 5);
+
+    joint._prepare(1 / 240, { biasRate: 0, massScale: 1, impulseScale: 0.5 });
+    joint._solve(true);
+
+    expect(slider.linearVelocityY).toBeCloseTo(12.5, 5);
+  });
+
+  it('measures the perpendicular lock against where the slider is now, not where the frame started', () => {
+    const { slider, joint } = setup();
+
+    slider.setTransform({ x: 0, y: 5 });
+    joint._prepare(1 / 240, { biasRate: 10, massScale: 1, impulseScale: 0 });
+
+    // An earlier sub-step already carried the slider back onto the axis.
+    slider._deltaPosY = -5;
+    joint._solve(true);
+
+    expect(slider.linearVelocityY).toBeCloseTo(0, 6);
+  });
+
+  it('measures the angular lock against the rotation accumulated in earlier sub-steps', () => {
+    const { slider, joint } = setup();
+
+    joint._prepare(1 / 240, { biasRate: 10, massScale: 1, impulseScale: 0 });
+
+    slider._deltaAngle = 0.1;
+    slider._deltaCos = Math.cos(0.1);
+    slider._deltaSin = Math.sin(0.1);
+    joint._solve(true);
+
+    expect(slider.angularVelocity).toBeCloseTo(-1, 5);
+  });
+});
