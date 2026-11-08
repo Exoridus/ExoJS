@@ -406,4 +406,16 @@ describe('subtractPolygons distant cuts', () => {
     expect(area(subtractPolygons(base, [rect(5, -1e6, 1e6, 2e6)]))).toBeCloseTo(50, 6);
     expect(subtractPolygons(base, [rect(-1e6, -1e6, 2e6, 2e6)])).toHaveLength(0);
   });
+
+  test('a cut many orders of magnitude larger than the base keeps the base-scale result', () => {
+    const notched = [-1e9, -1e9, 1e9, -1e9, 1e9, 1e9, 6, 1e9, 6, 5, 4, 5, 4, 1e9, -1e9, 1e9];
+    const slanted = [-1e9, -1e9 + 2, 1e9, -1e9, 1e9, 1e9 + 2];
+
+    expect(area(subtractPolygons(base, [rect(5, -1e9, 1e9, 2e9)]))).toBeCloseTo(50, 6);
+    expect(area(subtractPolygons(rect(1e6, 1e6, 10, 10), [rect(1e6 + 5, -1e9, 1e9, 2e9)]))).toBeCloseTo(50, 6);
+    expect(area(subtractPolygons(base, [rect(0.01, -1e9, 1e9, 2e9)]))).toBeCloseTo(0.1, 6);
+    expect(area(subtractPolygons(base, [slanted]))).toBeCloseTo(32, 6);
+    expect(area(subtractPolygons(base, [notched]))).toBeCloseTo(10, 6);
+    expect(subtractPolygons(base, [rect(-1e9, -1e9, 2e9, 2e9)])).toHaveLength(0);
+  });
 });

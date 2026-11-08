@@ -60,12 +60,14 @@ const subtractLocal = (base: readonly number[], cuts: ReadonlyArray<readonly num
     return [];
   }
 
-  const baseBounds = boundsOf(rings[0]!);
   const margin = extentOf([rings[0]!]) * 1e-3;
-  // Cuts clear of the base cannot change the result and must not inflate the tolerances derived from the extent.
+  const [minX, minY, maxX, maxY] = boundsOf(rings[0]!);
+  // Cut geometry beyond the base cannot change the result, but it would inflate the extent-derived tolerances past the base's own features.
   const cutRings = rings
     .slice(1)
-    .filter(ring => ring.length >= 3 && Math.abs(areaOf(ring)) > 0 && overlaps(baseBounds, boundsOf(ring), margin));
+    .filter(ring => ring.length >= 3 && Math.abs(areaOf(ring)) > 0)
+    .map(ring => clipToBox(ring, [minX - margin, minY - margin, maxX + margin, maxY + margin]))
+    .filter(ring => ring.length >= 3 && Math.abs(areaOf(ring)) > 0);
   const allRings = [rings[0]!, ...cutRings];
 
   if (cutRings.length === 0) {
@@ -177,8 +179,48 @@ const boundsOf = (ring: readonly Point[]): [number, number, number, number] => [
   Math.max(...ring.map(p => p.y)),
 ];
 
-const overlaps = (a: readonly number[], b: readonly number[], margin: number): boolean =>
-  a[0]! <= b[2]! + margin && b[0]! <= a[2]! + margin && a[1]! <= b[3]! + margin && b[1]! <= a[3]! + margin;
+/**
+ * Sutherland-Hodgman clip against `[minX, minY, maxX, maxY]`. A concave ring may come back with zero-width
+ * bridges along the box border; they are harmless because even-odd containment cancels them and the border
+ * stays clear of the base.
+ */
+const clipToBox = (ring: readonly Point[], box: readonly number[]): Point[] => {
+  let result = [...ring];
+
+  for (let side = 0; side < 4; side++) {
+    const axis = side % 2 === 0 ? 'x' : 'y';
+    const limit = box[side]!;
+    const keeps = (point: Point): boolean => (side < 2 ? point[axis] >= limit : point[axis] <= limit);
+    const input = result;
+
+    result = [];
+
+    for (let i = 0; i < input.length; i++) {
+      const previous = input[(i + input.length - 1) % input.length]!;
+      const current = input[i]!;
+
+      if (keeps(previous) !== keeps(current)) {
+        const t = (limit - previous[axis]) / (current[axis] - previous[axis]);
+
+        result.push(
+          axis === 'x'
+            ? { x: limit, y: previous.y + (current.y - previous.y) * t }
+            : { x: previous.x + (current.x - previous.x) * t, y: limit },
+        );
+      }
+
+      if (keeps(current)) {
+        result.push(current);
+      }
+    }
+  }
+
+  return result.filter((point, i) => {
+    const previous = result[(i + result.length - 1) % result.length]!;
+
+    return point.x !== previous.x || point.y !== previous.y;
+  });
+};
 
 const extentOf = (rings: ReadonlyArray<readonly Point[]>): number => {
   let minX = Infinity;
