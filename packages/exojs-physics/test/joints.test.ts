@@ -1304,3 +1304,62 @@ describe('prismatic joint softness', () => {
     expect(slider.angularVelocity).toBeCloseTo(-1, 5);
   });
 });
+
+describe('weld chain energy', () => {
+  const WINDOW = 600;
+
+  const cantilever = (links: number, subStepCount: number): { world: PhysicsWorld; chain: readonly PhysicsBody[] } => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY }, subStepCount, enableSleeping: false });
+    const chain: PhysicsBody[] = [];
+    let previous = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 200 } }));
+
+    for (let link = 1; link <= links; link++) {
+      const x = link * 16;
+      const body = world.add(
+        new PhysicsBody({
+          type: 'dynamic',
+          position: { x, y: 200 },
+          colliders: [{ shape: new BoxShape(16, 16), density: 1, filter: { group: -1 } }],
+        }),
+      );
+
+      world.addJoint(new WeldJoint({ bodyA: previous, bodyB: body, anchor: { x: x - 8, y: 200 }, collideConnected: false }));
+      chain.push(body);
+      previous = body;
+    }
+
+    return { world, chain };
+  };
+
+  const mechanicalEnergy = (chain: readonly PhysicsBody[]): number =>
+    chain.reduce(
+      (total, body) =>
+        total +
+        0.5 * body.mass * (body.linearVelocityX * body.linearVelocityX + body.linearVelocityY * body.linearVelocityY) +
+        0.5 * body.inertia * body.angularVelocity * body.angularVelocity -
+        body.mass * GRAVITY * (body.y - 200),
+      0,
+    );
+
+  for (const subStepCount of [2, 4, 8]) {
+    it(`gives a kicked welded arm no energy back at ${String(subStepCount)} sub-steps`, () => {
+      const { world, chain } = cantilever(4, subStepCount);
+      const tip = chain[chain.length - 1]!;
+
+      // Solving a weld against its frame-start arms and error returns more
+      // energy than the kick put in once there are several sub-steps to
+      // disagree about the geometry.
+      tip.linearVelocityY = -600;
+
+      const given = mechanicalEnergy(chain);
+      let peak = -Infinity;
+
+      for (let step = 0; step < WINDOW; step++) {
+        world.step(FRAME);
+        peak = Math.max(peak, mechanicalEnergy(chain));
+      }
+
+      expect(peak).toBeLessThanOrEqual(given * (1 + 1e-6));
+    });
+  }
+});
