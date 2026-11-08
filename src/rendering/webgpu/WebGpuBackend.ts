@@ -334,7 +334,6 @@ export class WebGpuBackend implements RenderBackend {
   private _renderer: Renderer | null = null;
   private _renderGroupTransform: Matrix | null = null;
   private _renderGroupTransformId = 0;
-  private _texture: Texture | RenderTexture | null = null;
   private _clearRequested = false;
   private _hasPresentedFrame = false;
   private readonly _nativeReplayFrame = { id: 0, remainingBuilds: 32 };
@@ -1621,7 +1620,6 @@ export class WebGpuBackend implements RenderBackend {
     this._clearRequested = false;
     this._hasPresentedFrame = false;
     this._deviceLost = false;
-    this._texture = null;
     this._mipmapResources.clear();
     this._textureNormalizer?.reset();
     this._textureNormalizer = null;
@@ -3832,10 +3830,6 @@ export class WebGpuBackend implements RenderBackend {
       this._accountant.free(state.accountedBytes);
       state.accountedBytes = 0;
       this._textureStates.delete(texture);
-    }
-
-    if (this._texture === texture) {
-      this._texture = null;
     }
   }
 
