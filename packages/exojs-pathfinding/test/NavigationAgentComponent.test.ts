@@ -379,7 +379,7 @@ describe('NavigationAgentComponent', () => {
   });
 
   it.each([0, 1, 2, 3, 4, 5, 6])('keeps the stall verdict across revision replans at replan phase offset %i', async offset => {
-    // Each constructed agent advances the shared replan phase, so this walks the agent under test through different phases.
+    // Each constructed component advances the shared replan phase, so the offset walks the component under test through different phases.
     const space = GridSpace.from(10, 3, () => 1, { cellSize: CELL });
 
     for (let i = 0; i < offset; i++) {
