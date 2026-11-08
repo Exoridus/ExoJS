@@ -263,7 +263,8 @@ export class AssetResidency {
   private readonly _everRegisteredHandles = new WeakSet();
 
   private _concurrency = 0;
-  private _backgroundQueue: QueueEntry[] = [];
+  // Keyed for O(1) membership, boost and drop; a Map iterates in insertion order, so draining stays FIFO.
+  private readonly _backgroundQueue = new Map<ResourceKey, QueueEntry>();
   private _backgroundActive = 0;
   private _backgroundTotal = 0;
   private _backgroundLoaded = 0;
@@ -296,7 +297,6 @@ export class AssetResidency {
    * @internal
    */
   public _inspect(): readonly AssetInspection[] {
-    const backgroundKeys = new Set(this._backgroundQueue.map(entry => entry.asset.key));
     const assets = new Map<ResourceKey, CanonicalAsset>();
 
     for (const [key, entry] of this._resources) {
@@ -315,8 +315,8 @@ export class AssetResidency {
       assets.set(key, entry.asset);
     }
 
-    for (const entry of this._backgroundQueue) {
-      assets.set(entry.asset.key, entry.asset);
+    for (const [key, entry] of this._backgroundQueue) {
+      assets.set(key, entry.asset);
     }
 
     const rows: AssetInspection[] = [];
@@ -330,13 +330,13 @@ export class AssetResidency {
       // but a remembered handle identity kept for healing. Reporting those would
       // bury the rows that matter - including the one case this walk exists for,
       // a payload resident with no owner left.
-      if (!stored && !inFlight && !claimed && !backgroundKeys.has(key)) {
+      if (!stored && !inFlight && !claimed && !this._backgroundQueue.has(key)) {
         continue;
       }
 
       // Raw queue membership only - a settled row must never report `background: true`
       // (see below), so this is an INPUT to `state`, not the field's own value.
-      const queuedInBackground = backgroundKeys.has(key);
+      const queuedInBackground = this._backgroundQueue.has(key);
       const handleState = this._inspectHandleState(key, asset.type);
       const state = inspectState({ stored, handleState, queuedInBackground, inFlight });
       const scopes = this._holders(this._claims.get(key)).sort((left, right) => left.id - right.id);
@@ -1091,7 +1091,7 @@ export class AssetResidency {
       return this._acquisitionOptions.get(key);
     }
 
-    const queued = this._backgroundQueue.find(entry => entry.asset.key === key);
+    const queued = this._backgroundQueue.get(key);
 
     return queued === undefined ? fallback : queued.options;
   }
@@ -1621,65 +1621,52 @@ export class AssetResidency {
    * @internal
    */
   public _enqueueBackgroundFetch(asset: CanonicalAsset, options: unknown): void {
-    if (this._resources.has(asset.key) || this._inFlight.has(asset.key) || this._isQueuedInBackground(asset.key)) {
+    if (this._resources.has(asset.key) || this._inFlight.has(asset.key) || this._backgroundQueue.has(asset.key)) {
       return;
     }
 
-    if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
+    if (this._backgroundQueue.size === 0 && this._backgroundActive === 0) {
       this._backgroundLoaded = 0;
       this._backgroundTotal = 0;
     }
 
-    this._backgroundQueue.push({ asset, options });
+    this._backgroundQueue.set(asset.key, { asset, options });
     this._backgroundTotal++;
     this._drainBackground();
   }
 
   private _drainBackground(): void {
-    while (this._backgroundActive < this._concurrency && this._backgroundQueue.length > 0) {
-      const entry = this._backgroundQueue.shift();
-
-      if (!entry) {
-        continue;
+    for (const [key, entry] of this._backgroundQueue) {
+      if (this._backgroundActive >= this._concurrency) {
+        return;
       }
 
+      this._backgroundQueue.delete(key);
       this._startBackgroundEntry(entry);
     }
   }
 
   private _boostFromQueue(key: ResourceKey): void {
-    const index = this._backgroundQueue.findIndex(entry => entry.asset.key === key);
-
-    if (index === -1) {
-      return;
-    }
-
-    const [entry] = this._backgroundQueue.splice(index, 1);
+    const entry = this._backgroundQueue.get(key);
 
     if (entry !== undefined) {
+      this._backgroundQueue.delete(key);
       this._startBackgroundEntry(entry);
     }
   }
 
   private _dropQueuedBackground(key: ResourceKey): void {
-    const index = this._backgroundQueue.findIndex(entry => entry.asset.key === key);
-
-    if (index !== -1) {
-      this._backgroundQueue.splice(index, 1);
+    if (this._backgroundQueue.delete(key)) {
       // Dropped work cannot complete, so remove it from the total and settle waiters if the queue drained.
       this._backgroundTotal--;
       this._onBackgroundItemDone();
     }
   }
 
-  private _isQueuedInBackground(key: ResourceKey): boolean {
-    return this._backgroundQueue.some(entry => entry.asset.key === key);
-  }
-
   private _onBackgroundItemDone(): void {
     this._signals.onProgress.dispatchIsolated(reportAssetObserverFailure, this._backgroundLoaded, this._backgroundTotal);
 
-    if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
+    if (this._backgroundQueue.size === 0 && this._backgroundActive === 0) {
       this._settleBackgroundWaiters();
     }
   }
@@ -1735,7 +1722,7 @@ export class AssetResidency {
     return new Promise<void>(resolve => {
       this._drainBackground();
 
-      if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
+      if (this._backgroundQueue.size === 0 && this._backgroundActive === 0) {
         resolve();
 
         return;
@@ -1874,8 +1861,8 @@ export class AssetResidency {
     this._requestLog.clear();
     this._dependencyScopes.clear();
 
-    for (const entry of [...this._backgroundQueue]) {
-      this._dropQueuedBackground(entry.asset.key);
+    for (const key of [...this._backgroundQueue.keys()]) {
+      this._dropQueuedBackground(key);
     }
   }
 
@@ -2042,7 +2029,7 @@ export class AssetResidency {
     this._evicted.clear();
     this._dependencyScopes.clear();
 
-    this._backgroundQueue.length = 0;
+    this._backgroundQueue.clear();
     this._backgroundActive = 0;
     this._backgroundLoaded = 0;
     this._backgroundTotal = 0;

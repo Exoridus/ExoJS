@@ -440,6 +440,32 @@ describe('AssetResidency', () => {
   });
 
   describe('background queue', () => {
+    test('enqueueing a background fetch does not scan the entries already queued', () => {
+      const { residency, typeRegistry, canonical } = createResidency({ concurrency: 0 });
+      installTypeA(typeRegistry);
+      let queuedKeyReads = 0;
+
+      for (let i = 0; i < 50; i++) {
+        const asset = canonical(TypeA, `entry-${i}.png`);
+        residency._enqueueBackgroundFetch(
+          {
+            ...asset,
+            get key() {
+              queuedKeyReads++;
+
+              return asset.key;
+            },
+          },
+          undefined,
+        );
+      }
+
+      queuedKeyReads = 0;
+      residency._enqueueBackgroundFetch(canonical(TypeA, 'new.png'), undefined);
+
+      expect(queuedKeyReads).toBe(0);
+    });
+
     test('enqueueBackgroundFetch defers the fetch until drained by awaitBackground', async () => {
       const contexts: Array<CacheContext<unknown>> = [];
       const { cache } = createFakeCache(context => (contexts.push(context), 'bg-value'));

@@ -429,13 +429,13 @@ describe('Loader.inspect() snapshot contract', () => {
         _residency: {
           _claims: Map<string, { scopes: Set<LoaderScope>; pending: Map<LoaderScope, Set<unknown>>; asset: unknown }>;
           _resources: Map<string, { asset: unknown; value: unknown }>;
-          _backgroundQueue: Array<{ asset: unknown; options: unknown }>;
+          _backgroundQueue: Map<string, { asset: unknown; options: unknown }>;
         };
       }
     )._residency;
 
     residency._claims.set(asset.key, { scopes: new Set<LoaderScope>([loader.createScope({ name: 'scope' })]), pending: new Map(), asset });
-    residency._backgroundQueue.push({ asset, options: undefined });
+    residency._backgroundQueue.set(asset.key, { asset, options: undefined });
     residency._resources.set(asset.key, { asset, value: {} });
 
     const row = loader.inspect().find(r => r.aliases.includes('bundled.bin'));
