@@ -24,7 +24,7 @@ export class WebGl2ShaderAttribute {
     this.index = index;
     this.name = name;
     this.type = type;
-    // The byte-size mapping is total over the GLSL attribute type GLenums the
+    // The component-count mapping is total over the GLSL attribute type GLenums the
     // driver reports via `gl.getActiveAttrib`.
     this.size = webGl2PrimitiveComponentCountMapping[type]!;
   }
