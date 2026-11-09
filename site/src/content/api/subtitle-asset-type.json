@@ -1,6 +1,6 @@
 {
   "title": "SubtitleAssetType",
-  "description": "WebVTT and SubRip subtitle tracks, parsed into `VTTCue`s. One type reads both: the format is a property of the file, taken from its suffix, and an unrecognised suffix reads as WebVTT.",
+  "description": "WebVTT and SubRip subtitle tracks, parsed into `VTTCue`s. One type reads both: the format is a property of the file, taken from its suffix, and an unrecognised suffix reads as WebVTT. A cue whose timestamps do not parse is skipped rather than failing the track.",
   "symbol": "SubtitleAssetType",
   "kind": "class",
   "subsystem": "assets",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "WebVTT and SubRip subtitle tracks, parsed into `VTTCue`s.",
-        "One type reads both: the format is a property of the file, taken from its suffix, and an unrecognised suffix reads as WebVTT."
+        "One type reads both: the format is a property of the file, taken from its suffix, and an unrecognised suffix reads as WebVTT. A cue whose timestamps do not parse is skipped rather than failing the track."
       ],
       "importLine": "import { SubtitleAssetType } from '@codexo/exojs'",
       "sourceLink": null
