@@ -38,6 +38,9 @@ export interface TextureAssetOptions {
  */
 export class TextureFactory implements AssetFactory<ArrayBuffer, Texture, TextureAssetOptions> {
   private readonly _objectUrls = new ObjectUrlPool();
+  // Only a bitmap this factory decoded may be closed: a texture's source can be
+  // replaced by one its owner still draws from elsewhere.
+  private readonly _decoded = new WeakSet<ImageBitmap>();
   private _basis: BasisKtx2Runtime | undefined;
 
   public async create(source: ArrayBuffer, context: AssetFactoryContext<TextureAssetOptions>): Promise<Texture> {
@@ -53,9 +56,25 @@ export class TextureFactory implements AssetFactory<ArrayBuffer, Texture, Textur
     const image = await decodeImageBlob(blob, this._objectUrls, mode);
     const texture = new Texture(null, textureOptions);
 
+    if (typeof ImageBitmap !== 'undefined' && image instanceof ImageBitmap) {
+      this._decoded.add(image);
+    }
+
     texture._setDecodedImageSource(image, mode === 'data' ? 'none' : 'srgb');
 
     return texture;
+  }
+
+  /**
+   * Closes the bitmap behind a released texture. Every handle sharing the decode
+   * is evicted together with it, so none is left drawing from a closed source.
+   */
+  public dispose(texture: Texture): void {
+    const source = texture.source;
+
+    if (this._decoded.delete(source as ImageBitmap)) {
+      (source as ImageBitmap).close();
+    }
   }
 
   public destroy(): void {

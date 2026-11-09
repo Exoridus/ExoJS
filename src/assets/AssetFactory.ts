@@ -85,6 +85,10 @@ export interface AssetFactory<Source, Resource, Options = undefined> {
    * `document.fonts`, a GPU buffer, a worker. A decoded `AudioBuffer`, a parsed
    * object or a compiled `WebAssembly.Module` needs nothing.
    *
+   * For a type with a seamless leaf, the resource is the handle consumers hold:
+   * it outlives the eviction and is filled again by the next claim, so free what
+   * it holds and leave the handle itself usable.
+   *
    * Must be synchronous, and must tolerate a resource that was already released.
    */
   dispose?(resource: Resource): void;

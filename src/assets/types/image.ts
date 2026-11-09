@@ -83,6 +83,9 @@ export const svgType = new SvgAssetType();
  * decode yields is the browser's choice and is not specified anywhere, so an
  * icon whose exact size matters should be shipped as the single image it is
  * meant to be rather than as a multi-resolution container.
+ *
+ * Releasing the last claim closes the `ImageBitmap` the texture decoded, so a
+ * `source` read from a loaded texture is valid only while that texture is held.
  */
 export class TextureAssetType extends AssetType<ArrayBuffer, Texture, TextureAssetOptions> {
   public readonly id = 'texture';

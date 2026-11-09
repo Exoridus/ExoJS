@@ -204,7 +204,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Releases ONE resource this factory produced, when the loader evicts it at refcount 0. The factory stays alive and keeps serving every other resource it created. Implement it only when a resource owns something the garbage collector cannot reclaim on its own - a media element, a FontFace registered on document.fonts, a GPU buffer, a worker. A decoded AudioBuffer, a parsed object or a compiled WebAssembly.Module needs nothing. Must be synchronous, and must tolerate a resource that was already released."
+          "description": "Releases ONE resource this factory produced, when the loader evicts it at refcount 0. The factory stays alive and keeps serving every other resource it created. Implement it only when a resource owns something the garbage collector cannot reclaim on its own - a media element, a FontFace registered on document.fonts, a GPU buffer, a worker. A decoded AudioBuffer, a parsed object or a compiled WebAssembly.Module needs nothing. For a type with a seamless leaf, the resource is the handle consumers hold: it outlives the eviction and is filled again by the next claim, so free what it holds and leave the handle itself usable. Must be synchronous, and must tolerate a resource that was already released."
         }
       ],
       "paragraphs": [],

@@ -661,6 +661,11 @@ export class AssetResidency {
 
     if (adapter !== undefined && stored !== undefined) {
       const entry = this._deferred.get(key);
+
+      // Before the evict below: it detaches the payload from every handle, after
+      // which the factory could no longer find what it has to free.
+      this._disposeResource(asset, stored);
+
       // Re-arm every live consumer handle in place: the representative AND any
       // co-handle adopted from the stored donor, so a later claim
       // heals them all - not just the canonical one. The stored donor is itself
@@ -750,18 +755,23 @@ export class AssetResidency {
     // branch above for the full reasoning; it applies verbatim here.
     this._inFlight.delete(asset.key);
 
+    this._disposeResource(asset, stored);
+
+    // A disposer may reclaim the key; release only the previous resource's dependencies.
+    if (dependencies !== undefined) {
+      this._releaseScope(dependencies);
+    }
+  }
+
+  /** Hand an evicted payload to its type's `AssetFactory.dispose`; a throwing disposer is logged, never propagated. */
+  private _disposeResource(asset: CanonicalAsset, resource: unknown): void {
     try {
-      this._typeRegistry.getInstalled(asset.type)?.factory.dispose?.(stored);
+      this._typeRegistry.getInstalled(asset.type)?.factory.dispose?.(resource);
     } catch (error) {
       logger.error(`Asset disposer failed for "${asset.source}".`, {
         source: 'assets',
         error: error instanceof Error ? error : new Error(String(error)),
       });
-    } finally {
-      // A disposer may reclaim the key; release only the previous resource's dependencies.
-      if (dependencies !== undefined) {
-        this._releaseScope(dependencies);
-      }
     }
   }
 
