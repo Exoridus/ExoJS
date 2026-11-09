@@ -85,6 +85,15 @@ export class BurstSpawn extends SpawnModule {
     }
   }
 
+  /** @internal - a sub-emission must not consume or reset the frame schedule. */
+  public override _trigger(emitter: ParticleEmitter): void {
+    for (const entry of this.config.schedule) {
+      if (entry.time <= 0) {
+        this._spawnBurst(emitter, entry.count);
+      }
+    }
+  }
+
   /** Restart the schedule from t=0. */
   public reset(): this {
     this._elapsed.length = 0;
