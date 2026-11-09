@@ -1,7 +1,7 @@
 /**
  * W002-05: reproducible in-process Node benchmark of the REAL InputSystem /
- * InteractionSystem pipeline. Temporary evidence fixture: remove before merge
- * after recording the measured numbers in the PR.
+ * InteractionSystem pipeline. Run explicitly via tsx; this performance
+ * benchmark is deliberately not part of the normal unit test suite.
  *
  * "legacy" overrides only the anchored insert/remove and hit-test methods to
  * run the original Set + _beatsBest loop, on the SAME engine binary / runner.
@@ -13,16 +13,15 @@
  * their sum plus mutation work. Net heap deltas are GC-sensitive diagnostics,
  * NOT allocated byte counts.
  */
+import assert from 'node:assert/strict';
 import { performance } from 'node:perf_hooks';
 
-import { expect, test } from 'vitest';
+import type { DynamicAabbTree } from '../../src/math/DynamicAabbTree';
+import { Drawable } from '../../src/rendering/Drawable';
+import type { RenderNode } from '../../src/rendering/RenderNode';
+import { RetainedContainer } from '../../src/rendering/RetainedContainer';
 
-import type { DynamicAabbTree } from '#math/DynamicAabbTree';
-import { Drawable } from '#rendering/Drawable';
-import type { RenderNode } from '#rendering/RenderNode';
-import { RetainedContainer } from '#rendering/RetainedContainer';
-
-import { createInteractionHarness, type InteractionHarness } from '../perf/interaction-harness';
+import { createInteractionHarness, type InteractionHarness } from './interaction-harness';
 
 type Variant = 'legacy' | 'group-tree';
 type Layout = 'single' | 'nested';
@@ -267,7 +266,7 @@ const runCase = (n: number, layout: Layout, workload: Workload, variant: Variant
   return summaries;
 };
 
-test('W002-05 anchored group A/B engine-pipeline benchmark and hit parity', () => {
+const runBenchmark = (): void => {
   const counts = [100, 1000, 10_000];
   const layouts: Layout[] = ['single', 'nested'];
   const workloads: Workload[] = ['static', 'moving', 'churn'];
@@ -282,7 +281,7 @@ test('W002-05 anchored group A/B engine-pipeline benchmark and hit parity', () =
         for (let i = 0; i < legacy.length; i++) {
           const left = legacy[i]!;
           const right = indexed[i]!;
-          expect(right.signature, `hit parity: n=${n}, layout=${layout}, workload=${workload}, mix=${right.mix}`).toBe(left.signature);
+          assert.equal(right.signature, left.signature, `hit parity: n=${n}, layout=${layout}, workload=${workload}, mix=${right.mix}`);
           output.push(left, right);
         }
       }
@@ -325,4 +324,6 @@ test('W002-05 anchored group A/B engine-pipeline benchmark and hit parity', () =
 
   console.log(`W00205_BENCHMARK_META=${JSON.stringify(benchmarkMeta)}`);
   console.log(`W00205_BENCHMARK_TABLE=${JSON.stringify(comparisons)}`);
-}, 900_000);
+};
+
+runBenchmark();
