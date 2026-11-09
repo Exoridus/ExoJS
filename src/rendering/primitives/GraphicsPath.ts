@@ -410,6 +410,19 @@ const dropRepeatedStart = (points: number[]): void => {
   }
 };
 
+// A Bezier stays in its control polygon. Distance to the finite chord bounds
+// deviation even when endpoints coincide or a collinear control point overshoots.
+const distanceToChordSquared = (x: number, y: number, ax: number, ay: number, bx: number, by: number): number => {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lengthSquared = dx * dx + dy * dy;
+  const t = lengthSquared === 0 ? 0 : Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / lengthSquared));
+  const offsetX = x - ax - t * dx;
+  const offsetY = y - ay - t * dy;
+
+  return offsetX * offsetX + offsetY * offsetY;
+};
+
 const flattenQuadratic = (
   out: number[],
   fromX: number,
@@ -421,14 +434,9 @@ const flattenQuadratic = (
   tolerance: number,
   depth: number,
 ): void => {
-  // Deviation of the control point from the chord bounds the curve's own
-  // deviation, so a flat-enough control point means a flat-enough curve.
-  const dx = toX - fromX;
-  const dy = toY - fromY;
-  const cross = Math.abs((cpX - toX) * dy - (cpY - toY) * dx);
-  const chordSq = dx * dx + dy * dy;
+  const distanceSquared = distanceToChordSquared(cpX, cpY, fromX, fromY, toX, toY);
 
-  if (depth >= MAX_SUBDIVISION_DEPTH || cross * cross <= tolerance * tolerance * chordSq) {
+  if (depth >= MAX_SUBDIVISION_DEPTH || distanceSquared <= tolerance * tolerance) {
     out.push(toX, toY);
 
     return;
@@ -458,14 +466,10 @@ const flattenCubic = (
   tolerance: number,
   depth: number,
 ): void => {
-  const dx = toX - fromX;
-  const dy = toY - fromY;
-  const cross1 = Math.abs((cpX1 - toX) * dy - (cpY1 - toY) * dx);
-  const cross2 = Math.abs((cpX2 - toX) * dy - (cpY2 - toY) * dx);
-  const cross = cross1 + cross2;
-  const chordSq = dx * dx + dy * dy;
+  const distance1 = distanceToChordSquared(cpX1, cpY1, fromX, fromY, toX, toY);
+  const distance2 = distanceToChordSquared(cpX2, cpY2, fromX, fromY, toX, toY);
 
-  if (depth >= MAX_SUBDIVISION_DEPTH || cross * cross <= tolerance * tolerance * chordSq) {
+  if (depth >= MAX_SUBDIVISION_DEPTH || Math.max(distance1, distance2) <= tolerance * tolerance) {
     out.push(toX, toY);
 
     return;
