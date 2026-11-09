@@ -45,7 +45,7 @@ export const PERF_RUNS = {
   interaction: { summary: 'interaction benchmark', module: 'test/perf/interaction-benchmark.ts' },
   'interaction:spatial': {
     summary: 'W002-05 anchored group A/B InteractionSystem benchmark',
-    module: 'test/perf/interaction-spatial-index-benchmark.ts',
+    module: 'test/perf/interaction-spatial-index-measure.ts',
   },
   'collect-phase': { summary: 'collect phase benchmark', module: 'test/perf/collect-phase-benchmark.ts' },
   profile: { summary: 'profile benchmark', module: 'test/perf/profile-benchmark.ts' },

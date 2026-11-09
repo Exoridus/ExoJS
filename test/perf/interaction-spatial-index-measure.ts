@@ -1,7 +1,7 @@
 /**
  * W002-05: reproducible in-process Node benchmark of the REAL InputSystem /
  * InteractionSystem pipeline. Run explicitly via tsx; this performance
- * benchmark is deliberately not part of the normal unit test suite.
+ * measurement is deliberately not part of the normal unit or sync-smoke suite.
  *
  * "legacy" overrides only the anchored insert/remove and hit-test methods to
  * run the original Set + _beatsBest loop, on the SAME engine binary / runner.
@@ -291,11 +291,7 @@ const runBenchmark = (): void => {
         for (let i = 0; i < legacy.length; i++) {
           const left = legacy[i]!;
           const right = indexed[i]!;
-          assert.equal(
-            right.signature,
-            left.signature,
-            `hit parity: n=${n}, layout=${layout}, workload=${workload}, mix=${right.mix}`,
-          );
+          assert.equal(right.signature, left.signature, `hit parity: n=${n}, layout=${layout}, workload=${workload}, mix=${right.mix}`);
           output.push(left, right);
         }
       }
