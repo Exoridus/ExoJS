@@ -114,4 +114,19 @@ describe('Sound.play before load', () => {
     }).not.toThrow();
     expect(voice).toBeInstanceOf(NoopVoice);
   });
+
+  test('a sprite handle held across eviction and reload stays playable', () => {
+    const system = new AudioSystem();
+    const sound = new Sound(bufferStub(4));
+    sound.addSprite('hit', { start: 0, end: 1 });
+    const sprite = sound.sprite('hit');
+    const donor = new Sound(bufferStub(4));
+    donor.addSprite('hit', { start: 0, end: 1 });
+
+    sound._evictBuffer();
+    sound._fillFrom(donor);
+
+    expect(sprite.destroyed).toBe(false);
+    expect(system.play(sprite)).not.toBeInstanceOf(NoopVoice);
+  });
 });

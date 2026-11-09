@@ -82,6 +82,32 @@ describe('Sound', () => {
     sound.destroy();
   });
 
+  test('destroy() is a final, idempotent release', () => {
+    const factory = setupSourceFactorySpy();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub());
+
+    sound.addSprite('hit', { start: 0, end: 1 });
+
+    const sprite = sound.sprite('hit');
+    const clip = sound.clip(0.5, 1);
+    const voice = system.play(sound);
+
+    sound.destroy();
+
+    expect(voice.ended).toBe(true);
+    expect(sound.destroyed).toBe(true);
+    expect(sound.audioBuffer).toBeNull();
+    expect(sound.hasSprite('hit')).toBe(false);
+    expect(() => system.play(sound)).toThrow('Cannot play a destroyed Sound');
+    expect(() => system.play(sprite)).toThrow('Cannot play a destroyed Sound');
+    expect(() => system.play(clip)).toThrow('Cannot play a destroyed Sound');
+    expect(() => sound.destroy()).not.toThrow();
+    expect(factory.sources.length).toBe(1);
+
+    factory.restore();
+  });
+
   // system.play(sound, { replace: true }) stops the prior instance before starting a new one.
   test('system.play(sound, { replace: true }) stops prior instance before starting a new one', () => {
     const factory = setupSourceFactorySpy();

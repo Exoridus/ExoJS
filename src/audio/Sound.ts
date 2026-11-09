@@ -115,6 +115,7 @@ export class Sound implements Playable {
    * playing stale audio after the reload.
    */
   private _parent: Sound | null = null;
+  private _destroyed = false;
   /**
    * @internal - load lifecycle, driven by the Loader's seamless pipeline. Only
    * a root sound's is ever driven; a sub-Sound reports its root's state.
@@ -227,6 +228,14 @@ export class Sound implements Playable {
     return this._parent === null ? this._audioBuffer : this._parent._rootBuffer;
   }
 
+  /**
+   * `true` once {@link Sound.destroy} has run on this sound or on the sound it
+   * was cut from. A destroyed sound is not reusable - playing it throws.
+   */
+  public get destroyed(): boolean {
+    return this._destroyed || (this._parent?.destroyed ?? false);
+  }
+
   /** The load lifecycle that governs this sound: its own, or its root's. */
   private get _rootLoadState(): LoadState<Sound> {
     return this._parent === null ? this._loadState : this._parent._rootLoadState;
@@ -305,13 +314,13 @@ export class Sound implements Playable {
 
   /**
    * Replace the whole sprite table. Every sub-{@link Sound} previously handed
-   * out by {@link Sound.sprite} is destroyed - the definitions they were
-   * derived from are gone, so keeping them alive would keep stale windows (and
-   * their voices) playing.
+   * out by {@link Sound.sprite} stops its voices and is forgotten - the
+   * definitions they were derived from are gone, so keeping them would keep
+   * stale windows playing. The next lookup returns a fresh sub-Sound.
    */
   public setSprites(sprites: Readonly<Record<string, AudioSpriteClip>>): this {
     this._sprites.clear();
-    this._destroySpriteSounds();
+    this._releaseSpriteSounds();
 
     for (const [name, clip] of Object.entries(sprites)) {
       this.addSprite(name, clip);
@@ -365,7 +374,7 @@ export class Sound implements Playable {
   }
 
   /**
-   * Remove a sprite definition and destroy the sub-{@link Sound}
+   * Remove a sprite definition and forget the sub-{@link Sound}
    * {@link Sound.sprite} memoized for it, stopping anything it still had
    * playing.
    */
@@ -463,23 +472,34 @@ export class Sound implements Playable {
     return sub;
   }
 
-  /** Destroy and forget the sub-{@link Sound} memoized for `name`, if any. */
+  /** Release and forget the sub-{@link Sound} memoized for `name`, if any. */
   private _dropSpriteSound(name: string): void {
     const sprite = this._spriteSounds.get(name);
 
     if (sprite !== undefined) {
       this._spriteSounds.delete(name);
-      sprite.destroy();
+      sprite._release();
     }
   }
 
-  /** Destroy and forget every memoized sprite sub-{@link Sound}. */
-  private _destroySpriteSounds(): void {
+  /**
+   * Release and forget every memoized sprite sub-{@link Sound}. Released, not
+   * destroyed: an asset reload redefines the sprites in place, and a handle the
+   * caller still holds must stay playable across it.
+   */
+  private _releaseSpriteSounds(): void {
     for (const sprite of this._spriteSounds.values()) {
-      sprite.destroy();
+      sprite._release();
     }
 
     this._spriteSounds.clear();
+  }
+
+  /** Stop every voice and drop the sprite state, leaving the sound playable. */
+  private _release(): void {
+    this._stopAllVoices();
+    this._sprites.clear();
+    this._releaseSpriteSounds();
   }
 
   /**
@@ -525,6 +545,10 @@ export class Sound implements Playable {
    * strategy picks a victim to stop before the new voice starts.
    */
   public createVoice(system: AudioSystem, options: SoundPlayOptions): Voice {
+    if (this.destroyed) {
+      throw new Error('Cannot play a destroyed Sound. Load the asset again to obtain a playable sound.');
+    }
+
     const bus = options.bus ?? system.sound;
 
     // A suspended context's `currentTime` stands still, so `source.start(0, ...)`
@@ -693,10 +717,20 @@ export class Sound implements Playable {
     }
   }
 
+  /**
+   * Stop the voices of this sound and of its {@link Sound.sprite} sounds, and
+   * release the decoded buffer. Final and idempotent: playing this sound, or
+   * a clip or sprite cut from it, throws afterwards. Create or load a new sound
+   * to play the audio again.
+   */
   public destroy(): void {
-    this._stopAllVoices();
-    this._sprites.clear();
-    this._destroySpriteSounds();
+    if (this._destroyed) {
+      return;
+    }
+
+    this._destroyed = true;
+    this._release();
+    this._audioBuffer = null;
   }
 
   private _pruneEndedVoices(): void {
