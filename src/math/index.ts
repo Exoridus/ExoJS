@@ -5,6 +5,7 @@ export type * from './CircleLike';
 // helpers and the `Collision` facade value, so only the facade is re-exported
 // here. The collision TYPES (CollisionType, Collidable, CollisionResponse) come
 // from `./collisionTypes` below. Keep these distinct.
+export type { AbstractVector } from './AbstractVector';
 export { Collision } from './Collision';
 export * from './collisionTypes';
 export * from './DynamicAabbTree';
