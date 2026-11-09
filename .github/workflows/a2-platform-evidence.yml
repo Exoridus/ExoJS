@@ -1,0 +1,42 @@
+name: A2 platform evidence
+
+on:
+  push:
+    branches: [fix/a2-cross-realm-platform]
+
+permissions:
+  contents: read
+
+jobs:
+  evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: source/.worktrees/a2-platform
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: source
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Create linked worktree
+        working-directory: source
+        run: |
+          git check-ignore .worktrees/probe
+          git worktree add .worktrees/a2-platform -b fix/a2-cross-realm-platform "${GITHUB_SHA}"
+          git worktree list --porcelain
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: source/package.json
+          run_install: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: source/.nvmrc
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: source/pnpm-lock.yaml
+      - run: pnpm bootstrap
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Owner-realm Chromium RED
+        run: pnpm exec vitest run --project=browser-core-chromium test/core/browser/cross-realm-platform.test.ts
