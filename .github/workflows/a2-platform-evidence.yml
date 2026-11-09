@@ -13,18 +13,18 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: source/.worktrees/a2-platform
+        working-directory: .worktrees/a2-platform
     steps:
       - uses: actions/checkout@v6
         with:
           path: source
           ref: ${{ github.sha }}
           fetch-depth: 0
-      - name: Create linked worktree
+      - name: Create isolated linked worktree
         working-directory: source
         run: |
-          git check-ignore .worktrees/probe
-          git worktree add .worktrees/a2-platform -b fix/a2-cross-realm-platform "${GITHUB_SHA}"
+          # A sibling worktree prevents Vite/Oxc reading the bootstrap checkout's tsconfig.
+          git worktree add ../.worktrees/a2-platform -b fix/a2-cross-realm-platform "${GITHUB_SHA}"
           git worktree list --porcelain
       - uses: pnpm/action-setup@v6
         with:
