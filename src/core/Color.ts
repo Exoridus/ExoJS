@@ -11,8 +11,9 @@ const toChannel = (value: number): number => clamp(value, 0, 255) | 0;
 // Not `clamp`, and not Math.min/Math.max: both make V8 box every fractional
 // result - one heap number per alpha write, which a per-frame tint animation
 // pays per sprite. Comparisons keep the value unboxed.
+// `!(value >= 0)` also catches NaN, which both plain comparisons would let through.
 const toAlpha = (value: number): number => {
-  if (value < 0) {
+  if (!(value >= 0)) {
     return 0;
   }
 
@@ -40,6 +41,7 @@ const expandShorthand = (digits: string): string => (digits.length > 4 ? digits 
  * are integers in 0..255; alpha is a float in 0..1. Out-of-range values are
  * saturated on assignment (RGB clamped to 0..255 and truncated to an integer,
  * alpha clamped to 0..1) - values outside the range no longer wrap around.
+ * NaN is treated as 0 for every channel, alpha included.
  *
  * The class predefines the eight corners of the RGB cube plus the two
  * transparent ends as shared static instances (`Color.black`, `Color.magenta`,

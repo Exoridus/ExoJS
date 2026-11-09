@@ -63,6 +63,19 @@ describe('Color — channel saturation', () => {
     expect(color.a).toBe(1); // alpha clamped to 0..1
   });
 
+  test('NaN alpha stays finite', () => {
+    const color = new Color(0, 0, 0, Number.NaN);
+
+    expect(color.a).toBe(0);
+
+    color.a = Number.NaN;
+    expect(color.a).toBe(0);
+
+    color.set(Number.NaN, 0, 0, Number.NaN);
+    expect(color.r).toBe(0);
+    expect(color.a).toBe(0);
+  });
+
   test('toRgba/toString reflect the saturated channels', () => {
     const color = new Color(300, 0, 0, 1);
 

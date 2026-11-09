@@ -345,7 +345,7 @@
         },
         {
           "name": "getNormals",
-          "signature": "getNormals(): Vector[]",
+          "signature": "getNormals(): readonly Vector[]",
           "signatureTokens": [
             {
               "text": "getNormals",
@@ -364,6 +364,14 @@
               "kind": "punctuation"
             },
             {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
               "text": "Vector",
               "kind": "type"
             },
@@ -373,8 +381,8 @@
             }
           ],
           "params": [],
-          "returnType": "Vector[]",
-          "description": "Return the outward-facing edge normals used by the SAT solver. The array should be cached and reused across calls."
+          "returnType": "readonly Vector[]",
+          "description": "Cached edge normals; the array is shared with the rectangle, so the view exposes it read-only."
         },
         {
           "name": "intersectsWith",
