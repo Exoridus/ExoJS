@@ -182,3 +182,23 @@ describe('fft against a direct DFT', () => {
     }
   });
 });
+
+describe('fft twiddle factors', () => {
+  it('evaluates each twiddle factor once per stage, not once per butterfly block', () => {
+    const n = FFT_SIZE;
+    const [real, imag] = makeRealImag(n);
+    const cos = vi.spyOn(Math, 'cos');
+    const sin = vi.spyOn(Math, 'sin');
+
+    try {
+      fft(real, imag);
+
+      // n - 1 twiddle pairs across all stages, plus n cosines for the Hann window.
+      expect(sin).toHaveBeenCalledTimes(n - 1);
+      expect(cos).toHaveBeenCalledTimes(n + n - 1);
+    } finally {
+      cos.mockRestore();
+      sin.mockRestore();
+    }
+  });
+});

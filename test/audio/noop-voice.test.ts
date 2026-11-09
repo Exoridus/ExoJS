@@ -1,4 +1,5 @@
 import { AudioBus } from '#audio/AudioBus';
+import { getAudioContext } from '#audio/audioContext';
 import type { AudioEffect } from '#audio/AudioEffect';
 import { AudioSystem } from '#audio/AudioSystem';
 import { NoopVoice } from '#audio/NoopVoice';
@@ -19,9 +20,37 @@ describe('NoopVoice', () => {
     bus.destroy();
   });
 
-  test('output lazily creates a GainNode via the shared AudioContext', () => {
+  test('output before the audio unlock throws without creating an AudioContext', async () => {
+    const OriginalAudioContext = globalThis.AudioContext;
+    let created = 0;
+
+    class CountingAudioContext extends OriginalAudioContext {
+      public constructor(...args: ConstructorParameters<typeof AudioContext>) {
+        super(...args);
+        created++;
+      }
+    }
+
+    vi.resetModules();
+    Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: CountingAudioContext });
+
+    try {
+      const fresh = await import('#audio/NoopVoice');
+      const voice = new fresh.NoopVoice({} as AudioBus);
+
+      expect(() => voice.output).toThrow('before audio is unlocked');
+      expect(created).toBe(0);
+    } finally {
+      Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: OriginalAudioContext });
+      vi.resetModules();
+    }
+  });
+
+  test('output after the audio unlock lazily creates a GainNode via the shared AudioContext', () => {
     const bus = new AudioBus('noop-bus-2');
     const voice = new NoopVoice(bus);
+
+    getAudioContext();
 
     const output = voice.output;
     expect(output).toBeDefined();

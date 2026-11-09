@@ -82,6 +82,94 @@ describe('Sound', () => {
     sound.destroy();
   });
 
+  test('destroy() is a final, idempotent release', () => {
+    const factory = setupSourceFactorySpy();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub());
+
+    sound.addSprite('hit', { start: 0, end: 1 });
+
+    const sprite = sound.sprite('hit');
+    const clip = sound.clip(0.5, 1);
+    const voice = system.play(sound);
+
+    sound.destroy();
+
+    expect(voice.ended).toBe(true);
+    expect(sound.destroyed).toBe(true);
+    expect(sound.audioBuffer).toBeNull();
+    expect(sound.hasSprite('hit')).toBe(false);
+    expect(() => system.play(sound)).toThrow('Cannot play a destroyed Sound');
+    expect(() => system.play(sprite)).toThrow('Cannot play a destroyed Sound');
+    expect(() => system.play(clip)).toThrow('Cannot play a destroyed Sound');
+    expect(() => sound.destroy()).not.toThrow();
+    expect(factory.sources.length).toBe(1);
+
+    factory.restore();
+  });
+
+  test('destroy() finishes root and sprite cleanup before rethrowing an onEnd error', () => {
+    const factory = setupSourceFactorySpy();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
+    sound.addSprite('hit', { start: 0, end: 1 });
+    sound.addSprite('tail', { start: 1, end: 2 });
+
+    const sprite = sound.sprite('hit');
+    const tailSprite = sound.sprite('tail');
+    const clip = sound.clip(0, 1);
+    const first = system.play(sound);
+    const second = system.play(sound);
+    const spriteFirst = system.play(sprite);
+    const spriteSecond = system.play(sprite);
+    const tailVoice = system.play(tailSprite);
+    const firstError = new Error('root onEnd failure');
+    const spriteError = new Error('sprite onEnd failure');
+
+    first.onEnd.add(() => {
+      throw firstError;
+    });
+    spriteFirst.onEnd.add(() => {
+      throw spriteError;
+    });
+
+    expect(factory.sources).toHaveLength(5);
+    expect(() => sound.destroy()).toThrow(firstError);
+
+    // Every voice is stopped, even when an earlier root or sprite callback throws.
+    for (const voice of [first, second, spriteFirst, spriteSecond, tailVoice]) {
+      expect(voice.ended).toBe(true);
+    }
+
+    for (const source of factory.sources) {
+      expect(source.stop).toHaveBeenCalledTimes(1);
+    }
+
+    expect(sound.destroyed).toBe(true);
+    expect(sound.audioBuffer).toBeNull();
+    expect(sound.hasSprite('hit')).toBe(false);
+    expect(sound.hasSprite('tail')).toBe(false);
+    expect((sound as unknown as { _spriteSounds: Map<string, Sound> })._spriteSounds.size).toBe(0);
+    expect(sprite.destroyed).toBe(true);
+    expect(tailSprite.destroyed).toBe(true);
+    expect(clip.destroyed).toBe(true);
+    expect(first.onEnd.count).toBe(0);
+    expect(spriteFirst.onEnd.count).toBe(0);
+    expect(() => system.play(sound)).toThrow('Cannot play a destroyed Sound');
+    expect(() => system.play(sprite)).toThrow('Cannot play a destroyed Sound');
+    expect(() => system.play(tailSprite)).toThrow('Cannot play a destroyed Sound');
+    expect(() => system.play(clip)).toThrow('Cannot play a destroyed Sound');
+
+    // An earlier onEnd failure must never leave destroy() half-completed.
+    expect(() => sound.destroy()).not.toThrow();
+
+    for (const source of factory.sources) {
+      expect(source.stop).toHaveBeenCalledTimes(1);
+    }
+
+    factory.restore();
+  });
+
   // system.play(sound, { replace: true }) stops the prior instance before starting a new one.
   test('system.play(sound, { replace: true }) stops prior instance before starting a new one', () => {
     const factory = setupSourceFactorySpy();

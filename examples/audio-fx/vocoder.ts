@@ -144,7 +144,7 @@ class VocoderScene extends Scene {
 
   override draw(context: RenderingContext): void {
     const app = this.app;
-    const level = this.level.getRms();
+    const level = this.level.getLevel();
 
     this.pulse += (level * 4 - this.pulse) * 0.35;
 

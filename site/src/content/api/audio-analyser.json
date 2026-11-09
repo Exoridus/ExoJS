@@ -187,6 +187,35 @@
           "description": "Return the mean energy of frequency bins in the given Hz range, normalised 0..1. Uses the byte spectrum (0..255), normalised by dividing by 255."
         },
         {
+          "name": "getLevel",
+          "signature": "getLevel(): number",
+          "signatureTokens": [
+            {
+              "text": "getLevel",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "number",
+          "description": "Overall level, 0..1: the mean of the byte spectrum across every bin up to Nyquist, divided by 255. A spectrum average for meters and visualizers, not the RMS of the waveform; it follows the analyser's decibel range and smoothing."
+        },
+        {
           "name": "getLowMidHigh",
           "signature": "getLowMidHigh(): { high: number; low: number; mid: number }",
           "signatureTokens": [
@@ -262,35 +291,6 @@
           "params": [],
           "returnType": "{ high: number; low: number; mid: number }",
           "description": "Return low (0-250 Hz), mid (250-2 kHz), and high (2 k-20 kHz) band energies (0..1 each)."
-        },
-        {
-          "name": "getRms",
-          "signature": "getRms(): number",
-          "signatureTokens": [
-            {
-              "text": "getRms",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "number",
-          "description": "Return overall RMS energy across all bins, normalised 0..1."
         },
         {
           "name": "getSpectrum",

@@ -172,6 +172,58 @@ describe('Sound — pool defaults', () => {
     sound.destroy();
   });
 
+  test('setPoolSize() terminates when an onEnd listener replays the sound', () => {
+    const factory = setupSourceFactory();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
+    let replays = 0;
+    let replaying = true;
+
+    const replay = (): void => {
+      if (!replaying) {
+        return;
+      }
+
+      // Bounds a regression to a test failure instead of a hung worker.
+      if (++replays > 10) {
+        throw new Error('replay limit reached');
+      }
+
+      system.play(sound).onEnd.add(replay);
+    };
+
+    for (let i = 0; i < 3; i++) {
+      system.play(sound).onEnd.add(replay);
+    }
+
+    expect(() => sound.setPoolSize(1)).not.toThrow();
+    expect(replays).toBeGreaterThan(0);
+
+    replaying = false;
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('setPoolSize() stops every evicted voice even when an onEnd listener throws', () => {
+    const factory = setupSourceFactory();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
+    const first = system.play(sound);
+    const second = system.play(sound);
+
+    system.play(sound);
+    first.onEnd.add(() => {
+      throw new Error('listener failure');
+    });
+
+    expect(() => sound.setPoolSize(1)).toThrow('listener failure');
+    expect(first.ended).toBe(true);
+    expect(second.ended).toBe(true);
+
+    factory.restore();
+    sound.destroy();
+  });
+
   // priority getter/setter round-trip
   test('priority setter updates priority', () => {
     const sound = new Sound(createAudioBufferStub());

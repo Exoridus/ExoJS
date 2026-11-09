@@ -51,6 +51,11 @@ export interface Voice extends Spatializable {
    * The voice's output node - the last node before the {@link AudioBus}. A Web
    * Audio interop hook for custom routing or analysis; gameplay code does not
    * need it, and an `AudioAnalyser` accepts the voice itself.
+   *
+   * A voice returned already ended - a play while audio is still locked, or a
+   * start offset past the end - has no graph: its output is an unconnected node,
+   * and reading it before audio is unlocked throws instead of creating the
+   * `AudioContext` ahead of the user gesture.
    * @advanced
    */
   readonly output: AudioNode;

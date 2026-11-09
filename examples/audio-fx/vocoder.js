@@ -112,7 +112,7 @@ class VocoderScene extends Scene {
   }
   draw(context) {
     const app = this.app;
-    const level = this.level.getRms();
+    const level = this.level.getLevel();
     this.pulse += (level * 4 - this.pulse) * 0.35;
     const radius = 70 + Math.min(1, this.pulse) * 60;
     this.gfx.clear();

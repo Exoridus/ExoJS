@@ -360,13 +360,15 @@ describe('AudioAnalyser', () => {
     });
   });
 
-  describe('getRMS', () => {
-    it('returns a number in [0, 1]', () => {
-      const a = new AudioAnalyser();
-      a.source = makeAudioNode();
-      const rms = a.getRms();
-      expect(rms).toBeGreaterThanOrEqual(0);
-      expect(rms).toBeLessThanOrEqual(1);
+  describe('getLevel', () => {
+    it('reports the mean normalised byte spectrum across all bins', () => {
+      const a = new AudioAnalyser({ source: makeAudioNode(), fftSize: 512 });
+      const node = (a as unknown as { _analyser: AnalyserNode })._analyser;
+      vi.spyOn(node, 'getByteFrequencyData').mockImplementation(out => {
+        out.fill(0);
+        out.fill(255, 0, 64);
+      });
+      expect(a.getLevel()).toBeCloseTo(64 / 256, 6);
       a.destroy();
     });
   });
@@ -577,7 +579,7 @@ describe('AudioAnalyser', () => {
         expect(Array.from(floatWave).every(v => v === 0)).toBe(true);
 
         expect(a.getBandEnergy(100, 1000)).toBe(0);
-        expect(a.getRms()).toBe(0);
+        expect(a.getLevel()).toBe(0);
 
         expect(Array.from(a.getSpectrumMel()).every(v => v === 0)).toBe(true);
         expect(Array.from(a.getSpectrumMelFloat()).every(v => v === 0)).toBe(true);

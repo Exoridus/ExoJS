@@ -1121,8 +1121,13 @@ export abstract class BaseVoice implements Voice {
 
     this._system._unregisterVoice(this);
 
-    this.onEnd.dispatch();
-    this.onEnd.destroy();
+    try {
+      this.onEnd.dispatch();
+    } finally {
+      // A throwing listener must not leave its (now inert) Signal retaining
+      // every callback after the voice itself has been fully torn down.
+      this.onEnd.destroy();
+    }
   }
 
   /**

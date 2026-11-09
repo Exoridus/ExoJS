@@ -124,6 +124,38 @@ describe.each([
   });
 });
 
+describe('beat-detector worklet forecast horizon', () => {
+  // A tempo between the tempogram's candidate BPMs, so the tracked period and
+  // the tempogram estimate differ.
+  const { messages } = runDetector(clicktrack(127.3, 20).samples);
+
+  test('every forecast entry lands on the beat the grid later emits', () => {
+    const emitted = beats(messages);
+    let worst = 0;
+    let compared = 0;
+
+    for (const { state, next } of statesBetweenBeats(messages)) {
+      if (state.tempo === 0) {
+        continue;
+      }
+
+      const first = emitted.indexOf(next);
+
+      state.lookahead.forEach((upcoming, i) => {
+        const actual = emitted[first + i];
+
+        if (actual !== undefined) {
+          worst = Math.max(worst, Math.abs(upcoming.audioTime - actual.audioTime));
+          compared++;
+        }
+      });
+    }
+
+    expect(compared).toBeGreaterThan(100);
+    expect(worst).toBeLessThan(0.01);
+  });
+});
+
 describe('beat-detector worklet lookahead revision', () => {
   const { messages } = runDetector(clicktrack(120, 12).samples);
 

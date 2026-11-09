@@ -279,8 +279,13 @@ export class AudioAnalyser {
     };
   }
 
-  /** Return overall RMS energy across all bins, normalised 0..1. */
-  public getRms(): number {
+  /**
+   * Overall level, 0..1: the mean of the byte spectrum across every bin up to
+   * Nyquist, divided by 255. A spectrum average for meters and visualizers, not
+   * the RMS of the waveform; it follows the analyser's decibel range and
+   * smoothing.
+   */
+  public getLevel(): number {
     if (!this._analyser) {
       return 0;
     }

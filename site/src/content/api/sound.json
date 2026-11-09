@@ -6,11 +6,11 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 24,
+  "memberCount": 25,
   "counts": {
     "constructors": 1,
     "methods": 9,
-    "properties": 14,
+    "properties": 15,
     "events": 0
   },
   "sections": [
@@ -347,7 +347,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": ""
+          "description": "Stop the voices of this sound and of its Sound.sprite sounds, and release the decoded buffer. Final and idempotent: playing this sound, or a clip or sprite cut from it, throws afterwards. Create or load a new sound to play the audio again."
         },
         {
           "name": "hasSprite",
@@ -441,7 +441,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Remove a sprite definition and destroy the sub-Sound Sound.sprite memoized for it, stopping anything it still had playing."
+          "description": "Remove a sprite definition and forget the sub-Sound Sound.sprite memoized for it, stopping anything it still had playing."
         },
         {
           "name": "setPoolSize",
@@ -488,7 +488,7 @@
             }
           ],
           "returnType": "this",
-          "description": ""
+          "description": "Shrinking the pool stops the voices over the new capacity, chosen by the pool strategy. A voice started from an onEnd listener of a voice stopped here is admitted by the normal play-time eviction, not trimmed again by this call, so a listener that replays the sound cannot stall it."
         },
         {
           "name": "setSprites",
@@ -567,7 +567,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Replace the whole sprite table. Every sub-Sound previously handed out by Sound.sprite is destroyed - the definitions they were derived from are gone, so keeping them alive would keep stale windows (and their voices) playing."
+          "description": "Replace the whole sprite table. Every sub-Sound previously handed out by Sound.sprite stops its voices and is forgotten - the definitions they were derived from are gone, so keeping them would keep stale windows playing. The next lookup returns a fresh sub-Sound."
         },
         {
           "name": "sprite",
@@ -737,6 +737,27 @@
           "params": [],
           "returnType": null,
           "description": "The underlying decoded audio data, or null for a deferred handle whose payload hasn't finished loading yet. Useful for sharing a single decoded buffer across multiple Sound instances. A Sound.clip / Sound.sprite reports the buffer its root currently holds, so it turns null while the root is evicted and picks the new one up on reload."
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true once Sound.destroy has run on this sound or on the sound it was cut from. A destroyed sound is not reusable - playing it throws."
         },
         {
           "name": "duration",
