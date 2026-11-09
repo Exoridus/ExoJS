@@ -912,6 +912,10 @@ const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionRespo
   let distance: number;
 
   for (const normal of normalsA) {
+    if (normal.x === 0 && normal.y === 0) {
+      continue;
+    }
+
     shapeA.project(normal, projA);
     shapeB.project(normal, projB);
 
@@ -941,6 +945,10 @@ const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionRespo
   }
 
   for (const normal of normalsB) {
+    if (normal.x === 0 && normal.y === 0) {
+      continue;
+    }
+
     shapeA.project(normal, projA);
     shapeB.project(normal, projB);
 
@@ -967,6 +975,12 @@ const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionRespo
       projection.copy(normal);
       flipProjection = projA.min + projA.max > projB.min + projB.max;
     }
+  }
+
+  if (overlap === Infinity) {
+    projection.destroy();
+
+    return null;
   }
 
   if (flipProjection) {
