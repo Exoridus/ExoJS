@@ -308,13 +308,12 @@ export class WebGpuBackend implements RenderBackend {
   private readonly _snapViewportRect = { x: 0, y: 0, width: 0, height: 0 };
   /** Reused record handed out by `_getAttachmentPixelSize` - see the contract there. */
   private readonly _attachmentPixelSize = { width: 0, height: 0 };
-  /** Reused colour attachment + its clear value - see `createColorAttachment`. */
-  private readonly _clearValue = { r: 0, g: 0, b: 0, a: 0 };
   /** Reused scratch for the linear-decoded clear color on an `Rgba8Srgb` target - see `createColorAttachment`. */
   private readonly _clearColorLinearScratch = new Float32Array(4);
+  /** Reused colour attachment + its clear value - see `createColorAttachment`. */
   private readonly _colorAttachment: GPURenderPassColorAttachment = {
     view: undefined as unknown as GPUTextureView,
-    clearValue: this._clearValue,
+    clearValue: { r: 0, g: 0, b: 0, a: 0 },
     loadOp: 'load',
     storeOp: 'store',
   };
@@ -335,7 +334,6 @@ export class WebGpuBackend implements RenderBackend {
   private _renderer: Renderer | null = null;
   private _renderGroupTransform: Matrix | null = null;
   private _renderGroupTransformId = 0;
-  private _texture: Texture | RenderTexture | null = null;
   private _clearRequested = false;
   private _hasPresentedFrame = false;
   private readonly _nativeReplayFrame = { id: 0, remainingBuilds: 32 };
@@ -1622,7 +1620,6 @@ export class WebGpuBackend implements RenderBackend {
     this._clearRequested = false;
     this._hasPresentedFrame = false;
     this._deviceLost = false;
-    this._texture = null;
     this._mipmapResources.clear();
     this._textureNormalizer?.reset();
     this._textureNormalizer = null;
@@ -1684,15 +1681,24 @@ export class WebGpuBackend implements RenderBackend {
 
       this._loadOpForPass = this.passCoordinator.resolveLoad(renderTarget, this._clearRequested);
       this._clearRequested = false;
+    }
 
-      const clearValue = this._clearValue;
+    const attachment = index === 0 ? this._colorAttachment : this._extraAttachment(index);
+
+    attachment.view = view;
+    attachment.loadOp = this._loadOpForPass;
+
+    if (this._loadOpForPass === 'clear') {
+      const clearValue = attachment.clearValue as GPUColorDict;
+      const slotTarget = multi !== null ? multi.attachment(index) : renderTarget;
 
       // An `Rgba8Srgb` attachment write - including a clear - hardware-encodes
       // its input, exactly as a fragment shader output does. `Color`'s RGB
       // fields are sRGB-authored bytes, so an unconverted clear value would be
       // hardware-encoded a SECOND time - decode first so a clear and an
-      // authored draw of the same nominal color agree.
-      if (renderTarget instanceof RenderTexture && renderTarget.format === TextureFormat.Rgba8Srgb) {
+      // authored draw of the same nominal color agree. Resolved per slot: the
+      // attachments of one multi-attachment target may mix formats.
+      if (slotTarget instanceof RenderTexture && slotTarget.format === TextureFormat.Rgba8Srgb) {
         this._clearColor.writeLinear(this._clearColorLinearScratch);
         clearValue.r = this._clearColorLinearScratch[0]!;
         clearValue.g = this._clearColorLinearScratch[1]!;
@@ -1705,11 +1711,6 @@ export class WebGpuBackend implements RenderBackend {
         clearValue.a = this._clearColor.a;
       }
     }
-
-    const attachment = index === 0 ? this._colorAttachment : this._extraAttachment(index);
-
-    attachment.view = view;
-    attachment.loadOp = this._loadOpForPass;
 
     return attachment;
   }
@@ -1725,7 +1726,7 @@ export class WebGpuBackend implements RenderBackend {
 
     const attachment: GPURenderPassColorAttachment = {
       view: undefined as unknown as GPUTextureView,
-      clearValue: this._clearValue,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
       loadOp: 'load',
       storeOp: 'store',
     };
@@ -1927,7 +1928,16 @@ export class WebGpuBackend implements RenderBackend {
     return !this._needsColorNormalization(texture);
   }
 
-  /** Part of the renderer SDK contract for extension renderers. */
+  /**
+   * The shared transform and tint storage buffers, grown to hold at least
+   * `minCount` slots.
+   *
+   * **The returned record is reused** and rewritten by the next call on this
+   * backend, and a growth destroys the buffers an earlier result named. Bind
+   * its fields where the call is made; copy them if they must outlive it.
+   *
+   * Part of the renderer SDK contract for extension renderers.
+   */
   public getTransformStorageBuffer(minCount: number): {
     readonly buffer: GPUBuffer;
     readonly tintBuffer: GPUBuffer;
@@ -2672,6 +2682,11 @@ export class WebGpuBackend implements RenderBackend {
     this._subscribeToDeviceLoss();
     this.rendererRegistry.connect(this);
     this.resize(this._rootRenderTarget.width, this._rootRenderTarget.height);
+
+    // A request made before the device existed could not create a timer then.
+    if (this._gpuTimingRequested) {
+      this.setGpuTimingEnabled(true);
+    }
 
     // Kick off async pipeline pre-warm for any renderer that supports
     // it. Each renderer creates its full set of (blendMode × format)
@@ -3824,10 +3839,6 @@ export class WebGpuBackend implements RenderBackend {
       this._accountant.free(state.accountedBytes);
       state.accountedBytes = 0;
       this._textureStates.delete(texture);
-    }
-
-    if (this._texture === texture) {
-      this._texture = null;
     }
   }
 

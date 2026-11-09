@@ -2226,8 +2226,17 @@ export class WebGl2Backend implements RenderBackend {
 
     this._bindRenderTarget(this._renderTarget);
 
+    let colorBit: number = gl.COLOR_BUFFER_BIT;
+
+    if (this._renderTarget instanceof MultiRenderTarget) {
+      this._clearAttachments(this._renderTarget);
+      colorBit = 0;
+    }
+
     if (this._renderTarget.depthTexture === null) {
-      gl.clear(gl.COLOR_BUFFER_BIT);
+      if (colorBit !== 0) {
+        gl.clear(colorBit);
+      }
 
       return this;
     }
@@ -2239,13 +2248,38 @@ export class WebGl2Backend implements RenderBackend {
       gl.depthMask(true);
     }
 
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.clear(colorBit | gl.DEPTH_BUFFER_BIT);
 
     if (!this._depthWriteEnabled) {
       gl.depthMask(false);
     }
 
     return this;
+  }
+
+  /**
+   * `gl.clear` writes one clear color into every draw buffer, but the
+   * attachments of one multi-attachment target may mix formats, and only the
+   * `Rgba8Srgb` ones need the linear-decoded value - so each slot is cleared on
+   * its own.
+   */
+  private _clearAttachments(target: MultiRenderTarget): void {
+    const gl = this._context;
+    const value = this._clearColorLinearScratch;
+    const color = this._clearColor;
+
+    for (let index = 0; index < target.attachments.length; index++) {
+      if (this._isSrgbTarget(target.attachments[index]!)) {
+        color.writeLinear(value);
+      } else {
+        value[0] = color.r / 255;
+        value[1] = color.g / 255;
+        value[2] = color.b / 255;
+        value[3] = color.a;
+      }
+
+      gl.clearBufferfv(gl.COLOR, index, value);
+    }
   }
 
   /**
@@ -3543,14 +3577,6 @@ export class WebGl2Backend implements RenderBackend {
 
         this._setTextureUnit(previousUnit);
         this._syncColorAttachments(state, handles);
-      }
-
-      // Reset the on-demand flag for pooled RenderTexture targets, so a
-      // stencil renderbuffer from a previous use does not permanently
-      // consume GPU memory when the target is re-purposed for non-clip
-      // rendering.
-      if (!this._stencilStates.has(target)) {
-        target.needsStencil = false;
       }
 
       // Keep an existing depth/stencil attachment sized to the (possibly

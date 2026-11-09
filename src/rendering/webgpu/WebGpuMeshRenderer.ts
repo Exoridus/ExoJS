@@ -796,10 +796,11 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // open pass - from `drawInstancedBatch` or from an earlier flush - still
     // read those exact buffers, and `queue.writeBuffer` lands ahead of the whole
     // submit, so this flush must APPEND at the pass cursors rather than rewrite
-    // from offset 0. Ending the pass is the fallback for the two cases appending
+    // from offset 0. Ending the pass is the fallback for the cases appending
     // cannot cover: a reallocation (which frees the buffer those draws read),
-    // and a custom-material draw (whose per-material buffers are still rewritten
-    // from 0, see phase 3b). Another renderer's draws in the pass are not at
+    // a custom-material draw (whose per-material buffers are still rewritten
+    // from 0, see phase 3b), and an instanced batch whose cached geometry is
+    // re-packed in place. Another renderer's draws in the pass are not at
     // risk here: none of these buffers is shared, and the pass now survives a
     // renderer switch precisely so they can stay.
     const ownDrawsInPass = this._ownDrawsPass !== null && this._ownDrawsPass === coordinator.activePass;
@@ -819,6 +820,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     if (
       ownDrawsInPass &&
       (customDraws > 0 ||
+        this._flushWouldRewriteGeometry() ||
         this._flushAppendWouldGrow(
           targetVertexBytes,
           targetIndexBytes,
@@ -1608,6 +1610,34 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     }
 
     return max;
+  }
+
+  /**
+   * Whether an instanced batch of this flush will re-pack a cached geometry,
+   * which rewrites (and on growth replaces) the buffers an earlier draw in the
+   * open pass may still bind. Walks the same batching decision the draw loop
+   * makes.
+   */
+  private _flushWouldRewriteGeometry(): boolean {
+    for (let i = 0; i < this._drawCallCount; i++) {
+      const batchLength = this._getStaticBatchLength(i);
+
+      if (batchLength < 2) {
+        continue;
+      }
+
+      // A static batch candidate always carries its geometry.
+      const geometry = this._drawCalls[i]!.mesh.geometry!;
+      const cached = this._geometryCache.get(geometry);
+
+      if (cached !== undefined && cached.version !== geometry.version) {
+        return true;
+      }
+
+      i += batchLength - 1;
+    }
+
+    return false;
   }
 
   /** Whether any pending draw of this flush writes depth into the bound target. */

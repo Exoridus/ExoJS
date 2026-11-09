@@ -11,6 +11,7 @@ import { expect, test } from 'vitest';
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
+import { MultiRenderTarget } from '#rendering/MultiRenderTarget';
 import { OutputTransform } from '#rendering/OutputTransform';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -95,6 +96,24 @@ test('WebGL2 accepts an sRGB framebuffer attachment for clear and readback', asy
     backend.setRenderTarget(target).clear();
 
     expect(await backend.readPixels(target, 0, 0, 1, 1)).toEqual(new Uint8ClampedArray([0, 0, 0, 255]));
+  } finally {
+    target.destroy();
+    backend.destroy();
+  }
+});
+
+test('WebGL2 decodes the clear color per attachment of a mixed sRGB/UNORM MultiRenderTarget', async () => {
+  const backend = await createWebGl2TestBackend(2);
+  const target = new MultiRenderTarget(2, 2, { formats: [TextureFormat.Rgba8Srgb, TextureFormat.Rgba8, TextureFormat.Rgba8Srgb] });
+
+  try {
+    backend.setRenderTarget(target).clear(new Color(128, 128, 128));
+
+    for (const attachment of target.attachments) {
+      const [red] = await backend.readPixels(attachment, 0, 0, 1, 1);
+
+      expect(Math.abs(red! - 128)).toBeLessThanOrEqual(1);
+    }
   } finally {
     target.destroy();
     backend.destroy();

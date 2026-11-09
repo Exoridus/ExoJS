@@ -1,6 +1,7 @@
 /// <reference types="@webgpu/types" />
 
-import { Matrix } from '#math/Matrix';
+import type { Matrix } from '#math/Matrix';
+import { packAffineMat4 } from '#rendering/affinePacking';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
@@ -51,7 +52,6 @@ export class WebGpuBackdropBlendCompositor {
   private readonly _blendModeView: Uint32Array = new Uint32Array(this._blendData, 0, 1);
   private readonly _blendOpaqueView: Float32Array = new Float32Array(this._blendData, 4, 1);
   private readonly _blendOriginView = new Float32Array(this._blendData, 8, 2);
-  private readonly _projectionMatrix: Matrix = new Matrix();
   private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
 
   private _device: GPUDevice | null = null;
@@ -431,29 +431,6 @@ export class WebGpuBackdropBlendCompositor {
   }
 
   private _writeProjectionMatrix(viewMatrix: Matrix): void {
-    // Pack the 3x3 affine view matrix into a 4x4 column-major mat4x4 for WGSL.
-    const m = this._projectionMatrix.copy(viewMatrix);
-    const data = this._projectionData;
-
-    // col 0
-    data[0] = m.a;
-    data[1] = m.c;
-    data[2] = 0;
-    data[3] = 0;
-    // col 1
-    data[4] = m.b;
-    data[5] = m.d;
-    data[6] = 0;
-    data[7] = 0;
-    // col 2
-    data[8] = 0;
-    data[9] = 0;
-    data[10] = 1;
-    data[11] = 0;
-    // col 3
-    data[12] = m.x;
-    data[13] = m.y;
-    data[14] = 0;
-    data[15] = 1;
+    packAffineMat4(viewMatrix, this._projectionData);
   }
 }

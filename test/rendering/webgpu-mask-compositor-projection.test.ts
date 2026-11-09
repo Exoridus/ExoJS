@@ -1,10 +1,14 @@
 import { Matrix } from '#math/Matrix';
 import { packAffineMat4 } from '#rendering/affinePacking';
+import { WebGpuBackdropBlendCompositor } from '#rendering/webgpu/WebGpuBackdropBlendCompositor';
 import { WebGpuMaskCompositor } from '#rendering/webgpu/WebGpuMaskCompositor';
 
-describe('WebGpuMaskCompositor projection packing', () => {
-  test('matches packAffineMat4 including the homogeneous row', () => {
-    const compositor = new WebGpuMaskCompositor();
+describe('WebGPU compositor projection packing', () => {
+  test.each([
+    ['WebGpuMaskCompositor', () => new WebGpuMaskCompositor()],
+    ['WebGpuBackdropBlendCompositor', () => new WebGpuBackdropBlendCompositor()],
+  ])('%s matches packAffineMat4 including the homogeneous row', (_name, create) => {
+    const compositor = create();
     const view = new Matrix();
 
     view.a = 2;
