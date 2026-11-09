@@ -65,7 +65,12 @@ export class BurstSpawn extends SpawnModule {
     const repeating = interval !== undefined && Number.isFinite(interval) && interval > 0;
 
     for (let index = 0; index < schedule.length; index++) {
-      const entry = schedule[index]!;
+      const entry = schedule[index];
+
+      if (entry === undefined) {
+        continue;
+      }
+
       const elapsed = (this._elapsed[index] ?? 0) + dt;
       const tolerance = Number.EPSILON * Math.max(Math.abs(elapsed), Math.abs(entry.time), repeating ? interval : 0) * 4;
 

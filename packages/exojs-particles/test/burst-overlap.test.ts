@@ -101,7 +101,7 @@ describe('overlapping burst schedules', () => {
         system.addSpawnModule(
           new BurstSpawn({
             schedule: [{ time: 0, count: 2 }, { time: 2, count: 3 }],
-            interval,
+            ...(interval === undefined ? {} : { interval }),
             lifetime: new Constant(100),
           }),
         );
