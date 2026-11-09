@@ -466,11 +466,11 @@ describe('InteractionSystem: promoted group-local AABB index (W002-05)', () => {
     }
 
     const internals = im as unknown as {
-      _indexedAnchoredGroups: Set<{ tree: { leafCount: number; _validate(): void } }>;
+      _anchoredIndex: { indexed: Set<{ tree: { leafCount: number; _validate(): void } }> };
     };
 
-    expect(internals._indexedAnchoredGroups.size).toBe(1);
-    const indexed = [...internals._indexedAnchoredGroups][0]!;
+    expect(internals._anchoredIndex.indexed.size).toBe(1);
+    const indexed = [...internals._anchoredIndex.indexed][0]!;
     expect(indexed.tree.leafCount).toBe(36);
     indexed.tree._validate();
 
@@ -521,6 +521,7 @@ describe('InteractionSystem: promoted group-local AABB index (W002-05)', () => {
       child.setPosition((i % 6) * 60, Math.floor(i / 6) * 60);
       inner.addChild(child);
       child.interactive = true;
+
       return child;
     });
 
@@ -549,7 +550,7 @@ describe('InteractionSystem: promoted group-local AABB index (W002-05)', () => {
 
     expect(im.nodeAt(150, 140)).toBeNull();
     expect(im.nodeAt(375, 205)).toBe(target);
-    expect((im as unknown as { _indexedAnchoredGroups: Set<unknown> })._indexedAnchoredGroups.size).toBe(1);
+    expect((im as unknown as { _anchoredIndex: { indexed: Set<unknown> } })._anchoredIndex.indexed.size).toBe(1);
 
     sibling.removeChild(target);
     inner.addChild(target);
@@ -559,16 +560,18 @@ describe('InteractionSystem: promoted group-local AABB index (W002-05)', () => {
     for (let i = 1; i < 29; i++) {
       inner.removeChild(children[i]!);
     }
+
     im.preFrame(frameDelta);
     // Eight remaining nodes: demote instead of keeping a sparse tree alive.
-    expect((im as unknown as { _indexedAnchoredGroups: Set<unknown> })._indexedAnchoredGroups.size).toBe(0);
+    expect((im as unknown as { _anchoredIndex: { indexed: Set<unknown> } })._anchoredIndex.indexed.size).toBe(0);
     expect(im.nodeAt(150, 140)).toBe(target);
 
     for (let i = 1; i < 29; i++) {
       inner.addChild(children[i]!);
     }
+
     im.preFrame(frameDelta);
-    expect((im as unknown as { _indexedAnchoredGroups: Set<unknown> })._indexedAnchoredGroups.size).toBe(1);
+    expect((im as unknown as { _anchoredIndex: { indexed: Set<unknown> } })._anchoredIndex.indexed.size).toBe(1);
     expect(im.nodeAt(150, 140)).toBe(target);
 
     im.destroy();

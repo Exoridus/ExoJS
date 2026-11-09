@@ -1,7 +1,6 @@
 import type { Application } from '#core/Application';
 import { logger } from '#core/Logger';
 import { SceneState } from '#core/scene/SceneState';
-import type { SceneNode } from '#core/SceneNode';
 import type { Signal } from '#core/Signal';
 import type { InteractionHooks, Stage } from '#core/Stage';
 import type { Seconds } from '#core/units';
@@ -13,6 +12,7 @@ import type { PlatformAdapter } from '#platform/PlatformAdapter';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 
+import { AnchoredGroupIndex } from './AnchoredGroupIndex';
 import type { ContextMenuRequest } from './ContextMenuRequest';
 import type { FocusDirection, FocusNavigationPolicy } from './FocusController';
 import { FocusController } from './FocusController';
@@ -127,14 +127,6 @@ interface IndexedNode {
   node: RenderNode;
 }
 
-/** Persistent group-local index, promoted only when enough nodes share one anchor. */
-interface AnchoredGroup {
-  readonly anchor: SceneNode;
-  readonly nodes: Set<RenderNode>;
-  tree: DynamicAabbTree<IndexedNode> | null;
-  proxies: Map<RenderNode, number> | null;
-}
-
 // ---------------------------------------------------------------------------
 
 /**
@@ -183,18 +175,9 @@ export class InteractionSystem {
   // would buy is negligible here - unlike the physics broad phase.
   private static readonly _treeMargin = 0;
 
-  // Small transform groups stay on the original linear path. Large groups
-  // use an independent tree in their ANCHOR-LOCAL coordinate space, so moving
-  // a group never reindexes its descendants. The fallback set contains only
-  // nodes of unpromoted groups; a group is either here OR in a local tree.
-  private readonly _anchoredNodes = new Set<RenderNode>();
-  private readonly _anchoredGroups = new Map<SceneNode, AnchoredGroup>();
-  private readonly _nodeAnchor = new Map<RenderNode, SceneNode>();
-  private readonly _indexedAnchoredGroups = new Set<AnchoredGroup>();
-  // Promote only after the linear scan is plausibly more expensive than tree
-  // maintenance; demote well below the promotion threshold to avoid churn.
-  private static readonly _anchorPromoteAt = 32;
-  private static readonly _anchorDemoteAt = 8;
+  // Dense retained groups use an incremental anchor-local tree; sparse groups
+  // remain on the original linear path without tree allocation.
+  private readonly _anchoredIndex = new AnchoredGroupIndex();
 
   // Scratch for inverting a group's world matrix during hit-testing.
   private readonly _anchorInverse = new Matrix();
@@ -558,15 +541,7 @@ export class InteractionSystem {
     this._interactiveNodes.clear();
     this._staleNodes.clear();
     this._proxies.clear();
-    this._anchoredNodes.clear();
-
-    for (const group of this._indexedAnchoredGroups) {
-      group.tree?.destroy();
-    }
-
-    this._indexedAnchoredGroups.clear();
-    this._anchoredGroups.clear();
-    this._nodeAnchor.clear();
+    this._anchoredIndex.destroy();
     this._groupWorldDescendants.clear();
     this._nodeBoundaryGroup.clear();
     this._livePointers.clear();
@@ -866,7 +841,7 @@ export class InteractionSystem {
     // An outer group may move a NESTED anchor. Neither local tree needs
     // reindexing, but a resting pointer must be re-hit-tested at the new
     // position. Mark hover once, without scanning anchored descendants.
-    if (this._nodeAnchor.size > 0) {
+    if (this._anchoredIndex.hasNodes) {
       this._hoverDirty = true;
     }
 
@@ -1737,7 +1712,7 @@ export class InteractionSystem {
     });
 
     // For small groups a single linear scan beats building a tree.
-    for (const node of this._anchoredNodes) {
+    for (const node of this._anchoredIndex.unindexed) {
       if (this._beatsBest(node, bestNode, x, y)) {
         bestNode = node;
       }
@@ -1746,7 +1721,7 @@ export class InteractionSystem {
     // A tree's tight AABBs never change on an ANCHOR move: transform the
     // pointer into the group's local space once instead of updating N leaves.
     // Exact contains, clips and paint-order checks still use WORLD coordinates.
-    for (const group of this._indexedAnchoredGroups) {
+    for (const group of this._anchoredIndex.indexed) {
       const inverse = group.anchor.getWorldTransform().getInverse(this._anchorInverse);
       const groupX = inverse.a * x + inverse.b * y + inverse.x;
       const groupY = inverse.c * x + inverse.d * y + inverse.y;
@@ -1955,7 +1930,7 @@ export class InteractionSystem {
 
     this._interactiveNodes.delete(node);
     this._staleNodes.delete(node);
-    this._removeAnchoredNode(node);
+    this._anchoredIndex.remove(node);
     this._clearGroupMembership(node);
     // Whatever this node was covering is exposed now, so the next flush has
     // to re-resolve hover even if no pointer moves - the `pointerover` half
@@ -2059,7 +2034,7 @@ export class InteractionSystem {
     const anchor = node._resolveTransformGroupAnchor();
 
     if (anchor !== null) {
-      this._insertAnchoredNode(node, anchor);
+      this._anchoredIndex.insert(node, anchor);
 
       if (__DEV__) {
         this._warnAnchoredInteractive(node);
@@ -2089,94 +2064,6 @@ export class InteractionSystem {
 
       descendants.add(node);
       this._nodeBoundaryGroup.set(node, group);
-    }
-  }
-
-  /**
-   * Bucket a node by its nearest live transform-group anchor. Once the bucket
-   * is large enough, promote it to one persistent DynamicAabbTree (margin 0).
-   * All bounds are in anchor-local coordinates, not world coordinates.
-   */
-  private _insertAnchoredNode(node: RenderNode, anchor: SceneNode): void {
-    let group = this._anchoredGroups.get(anchor);
-
-    if (group === undefined) {
-      group = { anchor, nodes: new Set<RenderNode>(), tree: null, proxies: null };
-      this._anchoredGroups.set(anchor, group);
-    }
-
-    group.nodes.add(node);
-    this._nodeAnchor.set(node, anchor);
-
-    if (group.tree !== null) {
-      const bounds = node.getBounds();
-      group.proxies!.set(node, group.tree.insert(bounds.left, bounds.top, bounds.right, bounds.bottom, { node }));
-
-      return;
-    }
-
-    this._anchoredNodes.add(node);
-
-    if (group.nodes.size < InteractionSystem._anchorPromoteAt) {
-      return;
-    }
-
-    const tree = new DynamicAabbTree<IndexedNode>(InteractionSystem._treeMargin);
-    const proxies = new Map<RenderNode, number>();
-
-    for (const member of group.nodes) {
-      const bounds = member.getBounds();
-      proxies.set(member, tree.insert(bounds.left, bounds.top, bounds.right, bounds.bottom, { node: member }));
-      this._anchoredNodes.delete(member);
-    }
-
-    group.tree = tree;
-    group.proxies = proxies;
-    this._indexedAnchoredGroups.add(group);
-  }
-
-  /** Remove one anchored proxy, or demote a tiny group back to the linear set. */
-  private _removeAnchoredNode(node: RenderNode): void {
-    const anchor = this._nodeAnchor.get(node);
-
-    if (anchor === undefined) {
-      return;
-    }
-
-    this._nodeAnchor.delete(node);
-
-    const group = this._anchoredGroups.get(anchor);
-
-    if (group === undefined) {
-      return;
-    }
-
-    group.nodes.delete(node);
-
-    if (group.tree === null) {
-      this._anchoredNodes.delete(node);
-    } else {
-      const proxy = group.proxies!.get(node);
-
-      if (proxy !== undefined) {
-        group.tree.remove(proxy);
-        group.proxies!.delete(node);
-      }
-
-      if (group.nodes.size <= InteractionSystem._anchorDemoteAt) {
-        group.tree.destroy();
-        group.tree = null;
-        group.proxies = null;
-        this._indexedAnchoredGroups.delete(group);
-
-        for (const member of group.nodes) {
-          this._anchoredNodes.add(member);
-        }
-      }
-    }
-
-    if (group.nodes.size === 0) {
-      this._anchoredGroups.delete(anchor);
     }
   }
 
@@ -2245,7 +2132,7 @@ export class InteractionSystem {
       }
 
       this._proxies.delete(node);
-      this._removeAnchoredNode(node);
+      this._anchoredIndex.remove(node);
 
       this._insertNode(node);
     }

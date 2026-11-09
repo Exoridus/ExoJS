@@ -17,9 +17,9 @@ import { performance } from 'node:perf_hooks';
 
 import { expect, test } from 'vitest';
 
-import type { RenderNode } from '#rendering/RenderNode';
 import type { DynamicAabbTree } from '#math/DynamicAabbTree';
 import { Drawable } from '#rendering/Drawable';
+import type { RenderNode } from '#rendering/RenderNode';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 
 import { createInteractionHarness, type InteractionHarness } from '../perf/interaction-harness';
@@ -31,9 +31,11 @@ type Mix = 'hit90' | 'miss90';
 
 interface InternalInteraction {
   _tree: DynamicAabbTree<{ node: RenderNode }> | null;
-  _anchoredNodes: Set<RenderNode>;
-  _insertAnchoredNode(node: RenderNode, anchor: RenderNode): void;
-  _removeAnchoredNode(node: RenderNode): void;
+  _anchoredIndex: {
+    unindexed: Set<RenderNode>;
+    insert(node: RenderNode): void;
+    remove(node: RenderNode): void;
+  };
   _hitTestIndexed(x: number, y: number): RenderNode | null;
   _beatsBest(candidate: RenderNode, best: RenderNode | null, x: number, y: number): boolean;
 }
@@ -59,12 +61,14 @@ interface Summary {
 const useLegacyAnchoredPath = (harness: InteractionHarness): void => {
   const im = harness.interaction as unknown as InternalInteraction;
 
-  im._insertAnchoredNode = (node): void => {
-    im._anchoredNodes.add(node);
+  im._anchoredIndex.insert = (node): void => {
+    im._anchoredIndex.unindexed.add(node);
   };
-  im._removeAnchoredNode = (node): void => {
-    im._anchoredNodes.delete(node);
+
+  im._anchoredIndex.remove = (node): void => {
+    im._anchoredIndex.unindexed.delete(node);
   };
+
   im._hitTestIndexed = (x, y): RenderNode | null => {
     let best: RenderNode | null = null;
 
@@ -74,7 +78,7 @@ const useLegacyAnchoredPath = (harness: InteractionHarness): void => {
       }
     });
 
-    for (const node of im._anchoredNodes) {
+    for (const node of im._anchoredIndex.unindexed) {
       if (im._beatsBest(node, best, x, y)) {
         best = node;
       }
@@ -86,6 +90,7 @@ const useLegacyAnchoredPath = (harness: InteractionHarness): void => {
 
 const quantile = (data: readonly number[], probability: number): number => {
   const sorted = [...data].sort((a, b) => a - b);
+
   return sorted[Math.min(sorted.length - 1, Math.floor((sorted.length - 1) * probability))]!;
 };
 
@@ -316,6 +321,8 @@ test('W002-05 anchored group A/B engine-pipeline benchmark and hit parity', () =
 
   // Deliberately no brittle time-based assertion. Test failure indicates a
   // correctness regression only; go/no-go is the reviewed TOTAL-path data.
-  console.log('W00205_BENCHMARK_META=' + JSON.stringify({ platform: 'node', runtime: process.version, runner: process.platform, arch: process.arch, samples: '24@10k,32@100/1k', queriesPerSample: 20, heap: 'net delta, GC-sensitive, NOT allocations', browserMeasured: false }));
-  console.log('W00205_BENCHMARK_TABLE=' + JSON.stringify(comparisons));
+  const benchmarkMeta = { platform: 'node', runtime: process.version, runner: process.platform, arch: process.arch, samples: '24@10k,32@100/1k', queriesPerSample: 20, heap: 'net delta, GC-sensitive, NOT allocations', browserMeasured: false };
+
+  console.log(`W00205_BENCHMARK_META=${JSON.stringify(benchmarkMeta)}`);
+  console.log(`W00205_BENCHMARK_TABLE=${JSON.stringify(comparisons)}`);
 }, 900_000);
