@@ -360,7 +360,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   // switch, a stencil clip, another renderer) is distinguished automatically.
   private _instancedBatchPass: WebGpuActiveRenderPass | null = null;
   // The open pass this renderer has actually RECORDED draws into - set only
-  // after a draw is encoded, by both the immediate-batch path and `flush()`.
+  // after a draw is encoded by the immediate-batch, flush or retained path.
   // `_instancedBatchPass` alone cannot answer that: it is set when the cursors
   // are bound to a pass, which happens before anything is recorded.
   private _ownDrawsPass: WebGpuActiveRenderPass | null = null;
@@ -2062,6 +2062,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const active = coordinator.acquirePass();
     const pass = active.pass;
 
+    // Replay shares cached geometry with live batches. Associate its draw with
+    // this pass so a later re-pack or disconnect submits those reads first.
+    // Replay does not consume the live stream cursors, but a new pass still
+    // has to retire their previous pass's offsets before live work appends.
+    this._syncInstancedBatchPass(active);
+
     pass.setPipeline(
       this._getInstancedPipeline({
         blendMode: payload.blendMode,
@@ -2077,6 +2083,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     pass.setIndexBuffer(geometry.indexBuffer, geometry.indexFormat);
     pass.drawIndexed(geometry.indexCount, payload.instanceCount);
 
+    this._ownDrawsPass = active;
     state.drawsInPass = active;
     coordinator.markPassDraws();
     backend.stats.batches++;
