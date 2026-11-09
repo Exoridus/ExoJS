@@ -130,6 +130,35 @@ const installGlyphFont = (game: Phaser.Game, scene: Phaser.Scene): void => {
   game.cache.bitmapFont.add(GLYPH_FONT_KEY, entry);
 };
 
+/** Release renderer resources before texture readiness creates its drawing context. */
+const releaseUnreadyRenderer = (renderer: Phaser.Renderer.WebGL.WebGLRenderer | null): void => {
+  if (renderer === null) {
+    return;
+  }
+
+  // Phaser 4.2.1's destroy first reads baseDrawingContext.resize, but that
+  // context does not exist before READY. Perform its remaining resource release
+  // directly, without booting a context or losing the harness-owned WebGL2 one.
+  renderer.canvas.removeEventListener('webglcontextlost', renderer.contextLostHandler as EventListener, false);
+  renderer.canvas.removeEventListener('webglcontextrestored', renderer.contextRestoredHandler as EventListener, false);
+
+  for (const wrappers of [
+    renderer.glBufferWrappers,
+    renderer.glFramebufferWrappers,
+    renderer.glProgramWrappers,
+    renderer.glTextureWrappers,
+  ]) {
+    for (const wrapper of wrappers) {
+      wrapper.destroy();
+    }
+
+    wrappers.length = 0;
+  }
+
+  renderer.removeAllListeners();
+  Object.assign(renderer, { extensions: {}, gl: null, game: null, canvas: null, contextLost: true, spector: null });
+};
+
 export const createPhaserAdapter = (): EngineAdapter => {
   let game: Phaser.Game | null = null;
   let scene: Phaser.Scene | null = null;
@@ -393,7 +422,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
         game.events.emit(Phaser.Core.Events.DESTROY);
         game.events.removeAllListeners();
         // preBoot can capture the game before its renderer has been allocated.
-        (game.renderer as Phaser.Renderer.WebGL.WebGLRenderer | null)?.destroy();
+        releaseUnreadyRenderer(game.renderer as Phaser.Renderer.WebGL.WebGLRenderer | null);
         game.domContainer?.remove();
         game.loop.destroy();
       }
@@ -449,7 +478,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
               context: context as unknown as CanvasRenderingContext2D,
               callbacks: {
                 preBoot: bootingGame => {
-                  // A boot error can prevent the constructor assignment below.
+                  // A boot error can prevent the constructor from returning.
                   // Keep its resource owner available to the failure cleanup.
                   game = bootingGame;
                 },
