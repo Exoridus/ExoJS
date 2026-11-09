@@ -29,6 +29,8 @@ Every profile in `results/` and both baselines were measured before the linear-l
 
 ## Read before changing a comparison
 
+The additive `pnpm bench:competitive` command provides repeated raw-sample acquisitions, a seven-rate dirty-scene experiment, optional GPU/API profiling, long-run scene cycles and local JSON/CSV/Markdown/HTML reports. Read the [competitive methodology](docs/competitive-methodology.md) for commands, measurement boundaries and qualification limits, and the [architecture and historical review](docs/competitive-review.md) for existing work, open integration dependencies and past claims. These outputs remain diagnostic; the command does not publish a machine profile.
+
 The [harness methodology](docs/harness.md) owns measurement regions, pooling, workload selection, fairness, and publication rules. The [adapter contract](src/rendering/adapters/README.md) owns how another rendering library joins the harness. The [results README](results/README.md) owns acquisition and profile provenance. The site reads their generated results; do not copy volatile ratios into unrelated documentation.
 
 Counters can explain a plausible mechanism, but a draw-count difference alone does not prove the cause of a timing difference. Measure the proposed mechanism or identify it as an interpretation. A content hash detects inconsistent profile content; it is not an external attestation that a benchmark was run on the claimed hardware.
