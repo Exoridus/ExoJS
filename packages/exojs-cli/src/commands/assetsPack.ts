@@ -6,6 +6,7 @@ import { containerPackFileName, describeContainerPack, mergeAssetManifest } from
 
 import { type OptionSpec, parseArgs, text } from '../args.js';
 import { CliError } from '../CliError.js';
+import { withAssetManifestLock } from './assetManifestLock.js';
 
 export const ASSETS_USAGE = `Usage: exo assets pack <pack-description> [--manifest <path>]
 
@@ -188,43 +189,48 @@ const writeAddressedPack = (manifestPath: string, outputPath: string, name: stri
     });
   }
 
-  const existing = existsSync(manifestPath) ? readJsonFile(manifestPath, 'asset manifest') : undefined;
-  let document: ReturnType<typeof mergeAssetManifest>;
+  return withAssetManifestLock(manifestPath, token => {
+    // Read only after acquiring ownership, including on recovery from a dead
+    // writer: a pre-lock snapshot can discard another successful update.
+    const existing = existsSync(manifestPath) ? readJsonFile(manifestPath, 'asset manifest') : undefined;
+    let document: ReturnType<typeof mergeAssetManifest>;
 
-  try {
-    document = mergeAssetManifest(existing, name, { file, ...pack });
-  } catch (error: unknown) {
-    throw new CliError(`cannot update "${manifestPath}": ${error instanceof Error ? error.message : String(error)}`, {
-      hint: 'Delete it to write a fresh manifest, or point --manifest at a different path.',
-      cause: error,
-    });
-  }
-
-  writeContainer(packPath, container, packPath);
-
-  // Written beside the manifest and renamed over it: a rename within one
-  // directory is atomic, so an interrupted build leaves the previous manifest
-  // intact rather than a half-written one that addresses no pack at all.
-  const pending = `${manifestPath}.tmp`;
-
-  try {
-    writeFileSync(pending, `${JSON.stringify(document, null, 2)}\n`);
-    renameSync(pending, manifestPath);
-  } catch (error: unknown) {
     try {
-      rmSync(pending, { force: true });
-    } catch {
-      // A cleanup that fails must not replace the diagnosis of what actually
-      // went wrong; the leftover is named by the message below.
+      document = mergeAssetManifest(existing, name, { file, ...pack });
+    } catch (error: unknown) {
+      throw new CliError(`cannot update "${manifestPath}": ${error instanceof Error ? error.message : String(error)}`, {
+        hint: 'Delete it to write a fresh manifest, or point --manifest at a different path.',
+        cause: error,
+      });
     }
 
-    throw new CliError(`cannot write "${manifestPath}" (through "${pending}")`, {
-      hint: 'Create the manifest directory first; the packer does not create it.',
-      cause: error,
-    });
-  }
+    const pending = `${manifestPath}.${token}.tmp`;
+    const pendingPack = `${packPath}.${token}.tmp`;
 
-  return packPath;
+    try {
+      // Stage beside each destination, including when packs live on another
+      // mount. Never truncate an addressed pack an earlier manifest can serve.
+      writeContainer(pendingPack, container, packPath);
+      renameSync(pendingPack, packPath);
+      writeFileSync(pending, `${JSON.stringify(document, null, 2)}\n`, { flag: 'wx' });
+      renameSync(pending, manifestPath);
+    } catch (error: unknown) {
+      throw new CliError(`cannot write "${manifestPath}" (through "${pending}")`, {
+        hint: 'Create the output and manifest directories first and check their permissions.',
+        cause: error,
+      });
+    } finally {
+      for (const temporary of [pending, pendingPack]) {
+        try {
+          rmSync(temporary, { force: true });
+        } catch {
+          // Clean only our own staging files; preserve the publication error.
+        }
+      }
+    }
+
+    return packPath;
+  });
 };
 
 /**

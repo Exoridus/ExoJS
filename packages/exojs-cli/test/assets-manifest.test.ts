@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import fs, { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { runAssetsPack } from '../src/commands/assetsPack';
 
@@ -45,6 +46,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
+  syncBuiltinESMExports();
   process.chdir(originalCwd);
   rmSync(workDir, { recursive: true, force: true });
 });
@@ -204,10 +207,16 @@ describe('exo assets pack --manifest', () => {
 
     const before = readFileSync(join(workDir, 'assets.json'), 'utf8');
 
-    // The manifest is written to a temporary path and renamed over the real
-    // one; a directory in the way of that path is the one way to fail the write
-    // from a test without interrupting the process.
-    mkdirSync(join(workDir, 'assets.json.tmp'));
+    const rename = fs.renameSync;
+    const failedPublish = vi.spyOn(fs, 'renameSync').mockImplementation((source, target) => {
+      if (target === join(workDir, 'assets.json')) {
+        throw Object.assign(new Error('publication denied'), { code: 'EACCES' });
+      }
+
+      rename(source, target);
+    });
+
+    syncBuiltinESMExports();
 
     const args = [
       description({ output: 'level2.exoa', assets: [{ source: 'a.json', type: 'json', file: 'a.json' }] }),
@@ -217,6 +226,40 @@ describe('exo assets pack --manifest', () => {
 
     expect(() => runAssetsPack(args)).toThrow(/cannot write/);
     expect(readFileSync(join(workDir, 'assets.json'), 'utf8')).toBe(before);
+    expect(readdirSync(workDir).filter(name => name.endsWith('.tmp') || name.includes('.lock'))).toEqual([]);
+
+    failedPublish.mockRestore();
+    syncBuiltinESMExports();
+    expect(runAssetsPack(args)).toBe(0);
+    expect(Object.keys(packs())).toEqual(['level1', 'level2']);
+  });
+
+  test('an interrupted pack write never truncates a pack the previous manifest serves', () => {
+    write('a.json', '{"a":1}');
+
+    const value = { output: 'level1.exoa', assets: [{ source: 'a.json', type: 'json', file: 'a.json' }] };
+    const first = packOne(value);
+    const addressed = join(workDir, first.file as string);
+    const beforePack = readFileSync(addressed);
+    const beforeManifest = readFileSync(join(workDir, 'assets.json'), 'utf8');
+    const descriptionPath = description(value);
+    const nativeWrite = fs.writeFileSync;
+
+    vi.spyOn(fs, 'writeFileSync').mockImplementation((file, data, options) => {
+      if (typeof file === 'string' && file.startsWith(`${addressed}.`) && file.endsWith('.tmp')) {
+        nativeWrite(file, new Uint8Array([1, 2, 3]));
+
+        throw Object.assign(new Error('interrupted write'), { code: 'EIO' });
+      }
+
+      nativeWrite(file, data, options);
+    });
+    syncBuiltinESMExports();
+
+    expect(() => runAssetsPack([descriptionPath, '--manifest', join(workDir, 'assets.json')])).toThrow(/cannot write/);
+    expect(readFileSync(addressed)).toEqual(beforePack);
+    expect(readFileSync(join(workDir, 'assets.json'), 'utf8')).toBe(beforeManifest);
+    expect(readdirSync(workDir).filter(name => name.endsWith('.tmp') || name.includes('.lock'))).toEqual([]);
   });
 });
 
