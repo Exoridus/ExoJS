@@ -20,7 +20,6 @@ import type { DynamicAabbTree } from '../../src/math/DynamicAabbTree';
 import { Drawable } from '../../src/rendering/Drawable';
 import type { RenderNode } from '../../src/rendering/RenderNode';
 import { RetainedContainer } from '../../src/rendering/RetainedContainer';
-
 import type { InteractionHarness } from './interaction-harness';
 import { createInteractionHarness } from './interaction-harness';
 
