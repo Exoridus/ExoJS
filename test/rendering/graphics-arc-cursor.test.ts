@@ -63,7 +63,11 @@ describe('normalized arc cursor', () => {
   });
 
   test('keeps zero and opposite-direction whole turns empty', () => {
-    for (const [end, anticlockwise] of [[0, false], [-4 * Math.PI, false], [4 * Math.PI, true]] as const) {
+    for (const [end, anticlockwise] of [
+      [0, false],
+      [-4 * Math.PI, false],
+      [4 * Math.PI, true],
+    ] as const) {
       const path = new GraphicsPath().arc(0, 0, 10, 0, end, anticlockwise);
 
       assert.deepEqual(path.contours(), []);
