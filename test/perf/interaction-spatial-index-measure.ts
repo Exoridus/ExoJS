@@ -22,6 +22,7 @@ import type { RenderNode } from '../../src/rendering/RenderNode';
 import { RetainedContainer } from '../../src/rendering/RetainedContainer';
 import type { InteractionHarness } from './interaction-harness';
 import { createInteractionHarness } from './interaction-harness';
+import { mutateSpatialIndexChurn } from './interaction-spatial-index-workload';
 
 type Variant = 'legacy' | 'group-tree';
 type Layout = 'single' | 'nested';
@@ -196,24 +197,7 @@ const runCase = (n: number, layout: Layout, workload: Workload, variant: Variant
             anchor.setPosition(innerX, innerY);
           }
         } else if (workload === 'churn') {
-          const count = Math.max(1, Math.floor(n / 1000));
-
-          for (let i = 0; i < count; i++) {
-            const id = ((((frame + warmup + 1) * 31 + i * 131) % n) + n) % n;
-            const node = nodes[id]!;
-
-            if ((frame + warmup) % 3 === 0) {
-              node.setPosition((id % columns) * 16 + ((frame + warmup) % 3), Math.floor(id / columns) * 16);
-            } else if ((frame + warmup) % 3 === 1) {
-              anchor.removeChild(node);
-              anchor.addChild(node);
-            } else {
-              anchor.removeChild(node);
-              alternate.addChild(node);
-              alternate.removeChild(node);
-              anchor.addChild(node);
-            }
-          }
+          mutateSpatialIndexChurn(nodes, anchor, alternate, columns, frame + warmup);
         }
 
         const afterMutation = performance.now();
