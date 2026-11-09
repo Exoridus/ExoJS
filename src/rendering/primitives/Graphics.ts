@@ -10,7 +10,7 @@ import {
   buildRoundedRectangle,
   buildStar,
 } from '#math/geometry';
-import { bezierCurveTo, quadraticCurveTo, TAU } from '#math/utils';
+import { bezierCurveTo, quadraticCurveTo } from '#math/utils';
 import { Vector } from '#math/Vector';
 import { Container } from '#rendering/Container';
 import type { Gradient } from '#rendering/gradient/Gradient';
@@ -21,7 +21,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import type { DataTexture } from '#rendering/texture/DataTexture';
 import { ScaleModes, type TextureFormat } from '#rendering/types';
 
-import { tangentArc } from './arcGeometry';
+import { arcSweep, tangentArc } from './arcGeometry';
 
 /**
  * Edge length of the square gradient texture rasterized for gradient paints.
@@ -297,13 +297,7 @@ export class Graphics extends Container {
       return this;
     }
 
-    let sweep = endAngle - startAngle;
-
-    if (!anticlockwise && sweep < 0) {
-      sweep += TAU;
-    } else if (anticlockwise && sweep > 0) {
-      sweep -= TAU;
-    }
+    const sweep = arcSweep(startAngle, endAngle, anticlockwise);
 
     if (sweep === 0) {
       return this;

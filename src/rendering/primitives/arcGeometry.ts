@@ -1,3 +1,5 @@
+import { TAU } from '#math/utils';
+
 interface TangentArc {
   readonly radius: number;
   readonly startX: number;
@@ -60,4 +62,25 @@ export const tangentArc = (
     endAngle: Math.atan2(y1 + outY * distance - centerY, x1 + outX * distance - centerX),
     anticlockwise: !positiveTurn,
   };
+};
+
+/** Signed sweep limited to one turn, with opposite-direction angles wrapped. @internal */
+export const arcSweep = (startAngle: number, endAngle: number, anticlockwise: boolean): number => {
+  const sweep = endAngle - startAngle;
+
+  if (!anticlockwise && sweep >= TAU) {
+    return TAU;
+  }
+
+  if (anticlockwise && sweep <= -TAU) {
+    return -TAU;
+  }
+
+  const wrapped = sweep % TAU;
+
+  if (anticlockwise && wrapped > 0) {
+    return wrapped - TAU;
+  }
+
+  return !anticlockwise && wrapped < 0 ? wrapped + TAU : wrapped;
 };

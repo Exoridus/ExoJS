@@ -1,7 +1,7 @@
 import { ShapeRevision } from '#math/ShapeRevision';
 import { TAU } from '#math/utils';
 
-import { tangentArc } from './arcGeometry';
+import { arcSweep, tangentArc } from './arcGeometry';
 
 /** One flattened subpath produced by {@link GraphicsPath.contours}. */
 export interface PathContour {
@@ -148,9 +148,11 @@ export class GraphicsPath extends ShapeRevision {
       this.lineTo(startX, startY);
     }
 
-    this._push(PathOp.Arc, centerX, centerY, r, startAngle, endAngle, anticlockwise ? 1 : 0);
-    this._currentX = centerX + Math.cos(endAngle) * r;
-    this._currentY = centerY + Math.sin(endAngle) * r;
+    const end = startAngle + arcSweep(startAngle, endAngle, anticlockwise);
+
+    this._push(PathOp.Arc, centerX, centerY, r, startAngle, end, anticlockwise ? 1 : 0);
+    this._currentX = centerX + Math.cos(end) * r;
+    this._currentY = centerY + Math.sin(end) * r;
 
     return this;
   }
@@ -508,25 +510,7 @@ const flattenArc = (
     return;
   }
 
-  let sweep = endAngle - startAngle;
-
-  if (anticlockwise) {
-    while (sweep > 0) {
-      sweep -= TAU;
-    }
-
-    if (sweep < -TAU) {
-      sweep = -TAU;
-    }
-  } else {
-    while (sweep < 0) {
-      sweep += TAU;
-    }
-
-    if (sweep > TAU) {
-      sweep = TAU;
-    }
-  }
+  const sweep = arcSweep(startAngle, endAngle, anticlockwise);
 
   if (sweep === 0) {
     return;
