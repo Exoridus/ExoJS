@@ -85,11 +85,17 @@ export interface AssetFactory<Source, Resource, Options = undefined> {
    * `document.fonts`, a GPU buffer, a worker. A decoded `AudioBuffer`, a parsed
    * object or a compiled `WebAssembly.Module` needs nothing.
    *
-   * For a type with a seamless leaf, the resource is the handle consumers hold:
-   * it outlives the eviction and is filled again by the next claim, so free what
-   * it holds and leave the handle itself usable.
+   * For a type with a seamless leaf, an eviction passes the handle consumers
+   * hold, while it still carries its payload; the leaf's `evict` runs right
+   * after. The handle outlives the eviction and is filled again by the next
+   * claim, so free only what it holds - never destroy the handle itself. A
+   * result that never reached a consumer (its load was cancelled or unloaded
+   * while in flight) is passed here as well, so the same code has to be safe
+   * for both.
    *
    * Must be synchronous, and must tolerate a resource that was already released.
+   * A disposer that throws during an eviction is logged, and the eviction
+   * completes regardless.
    */
   dispose?(resource: Resource): void;
   /**

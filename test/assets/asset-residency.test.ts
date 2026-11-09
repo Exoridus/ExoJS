@@ -235,8 +235,9 @@ describe('AssetResidency', () => {
       expect(adapter.evict).toHaveBeenCalledWith(handle);
     });
 
-    test('evicting a seamless resource disposes it while the handle still holds its payload', () => {
-      const { residency, typeRegistry, canonical } = createResidency();
+    test('evicting a seamless resource disposes it while the handle still holds its payload, and the handle heals again', async () => {
+      const { cache } = createFakeCache(() => 'decoded');
+      const { residency, typeRegistry, canonical } = createResidency({ cache });
       const adapter = createFakeSeamlessAdapter();
       const disposedWhile: string[] = [];
       installTypeA(typeRegistry, { leaf: adapter, dispose: resource => disposedWhile.push(adapter.stateOf(resource as object)) });
@@ -251,6 +252,13 @@ describe('AssetResidency', () => {
 
       expect(disposedWhile).toEqual(['ready']);
       expect(adapter.stateOf(handle)).toBe('loading');
+
+      residency._claim(canonical(TypeA, 'a.png'), scope);
+      await new Promise(r => setTimeout(r, 0));
+
+      expect(adapter.fill).toHaveBeenLastCalledWith(handle, 'decoded');
+      expect(residency._peekResource(canonical(TypeA, 'a.png').key)).toBe(handle);
+      expect(disposedWhile).toEqual(['ready']);
     });
 
     test('claim on an evicted key re-drives the fetch and heals the same handle', async () => {
