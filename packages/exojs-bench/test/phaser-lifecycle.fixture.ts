@@ -72,6 +72,56 @@ const startupResources = (game: Phaser.Game) => ({
   gameListeners: game.events.eventNames().length,
 });
 
+const holdDefaultImages = () => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
+
+  if (descriptor?.set === undefined) {
+    throw new Error('The browser image src setter is unavailable.');
+  }
+
+  const setSource = descriptor.set;
+  const pending: Array<{ image: HTMLImageElement; source: string; loaded: Promise<void> }> = [];
+
+  // Retain the real images and Phaser's real onload handlers. Only starting the
+  // default image loads is delayed until the test releases them.
+  Object.defineProperty(HTMLImageElement.prototype, 'src', {
+    ...descriptor,
+    set(this: HTMLImageElement, source: string): void {
+      if (!source.startsWith('data:image/png;base64,')) {
+        setSource.call(this, source);
+
+        return;
+      }
+
+      const loaded = new Promise<void>((resolve, reject) => {
+        this.addEventListener('load', () => resolve(), { once: true });
+        this.addEventListener('error', () => reject(new Error('The delayed default image failed to load.')), { once: true });
+      });
+
+      pending.push({ image: this, source, loaded });
+    },
+  });
+
+  const restore = (): void => {
+    Object.defineProperty(HTMLImageElement.prototype, 'src', descriptor);
+  };
+
+  return {
+    restore,
+    async release(): Promise<number> {
+      restore();
+
+      for (const entry of pending) {
+        setSource.call(entry.image, entry.source);
+      }
+
+      await Promise.all(pending.map(entry => entry.loaded));
+
+      return pending.length;
+    },
+  };
+};
+
 export const observeRepeatedPickingBuilds = async () => {
   const harness = createHarness();
   const { adapter, canvas } = harness;
@@ -311,14 +361,7 @@ export const observeNeverReadyGame = async () => {
 };
 
 export const observeLateBootImages = async () => {
-  const descriptor = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
-
-  if (descriptor?.set === undefined) {
-    throw new Error('The browser image src setter is unavailable.');
-  }
-
-  const setSource = descriptor.set;
-  const pending: Array<{ image: HTMLImageElement; source: string; loaded: Promise<void> }> = [];
+  const images = holdDefaultImages();
   const lateErrors: string[] = [];
 
   const onError = (event: ErrorEvent): void => {
@@ -328,25 +371,6 @@ export const observeLateBootImages = async () => {
   const harness = createHarness();
   let timer: ReturnType<typeof setTimeout> | undefined;
 
-  // Retain the real images and Phaser's real onload handlers. Only starting the
-  // default image loads is delayed until after the initialization deadline.
-  Object.defineProperty(HTMLImageElement.prototype, 'src', {
-    ...descriptor,
-    set(this: HTMLImageElement, source: string): void {
-      if (!source.startsWith('data:image/png;base64,')) {
-        setSource.call(this, source);
-
-        return;
-      }
-
-      const loaded = new Promise<void>((resolve, reject) => {
-        this.addEventListener('load', () => resolve(), { once: true });
-        this.addEventListener('error', () => reject(new Error('The delayed default image failed to load.')), { once: true });
-      });
-
-      pending.push({ image: this, source, loaded });
-    },
-  });
   window.addEventListener('error', onError);
 
   try {
@@ -371,18 +395,12 @@ export const observeLateBootImages = async () => {
       canvasConnected: harness.canvas.isConnected,
     };
 
-    Object.defineProperty(HTMLImageElement.prototype, 'src', descriptor);
-
-    for (const entry of pending) {
-      setSource.call(entry.image, entry.source);
-    }
-
-    await Promise.all(pending.map(entry => entry.loaded));
+    const loadedImages = await images.release();
     const afterImages = {
       ...startupResources(game),
       sceneManagerBooted: game.scene.isBooted,
       lateErrors,
-      loadedImages: pending.length,
+      loadedImages,
     };
     let recovered = false;
     let teardownError = '';
@@ -404,7 +422,80 @@ export const observeLateBootImages = async () => {
     return { beforeImages, afterImages, recovered, teardownError };
   } finally {
     clearTimeout(timer);
-    Object.defineProperty(HTMLImageElement.prototype, 'src', descriptor);
+    images.restore();
+    window.removeEventListener('error', onError);
+    harness.releaseCanvas();
+  }
+};
+
+export const observeBootFailure = async () => {
+  const images = holdDefaultImages();
+  const harness = createHarness();
+  const prototype = Phaser.Game.prototype as unknown as { boot(this: Phaser.Game): void };
+  const boot = prototype.boot;
+  const lateErrors: string[] = [];
+
+  const onError = (event: ErrorEvent): void => {
+    lateErrors.push(event.message);
+  };
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  prototype.boot = function (this: Phaser.Game): void {
+    boot.call(this);
+
+    throw new Error('Controlled Phaser boot failure.');
+  };
+
+  window.addEventListener('error', onError);
+
+  try {
+    const initialized = harness.adapter.init(harness.canvas, 'webgl2').then(
+      () => ({ initialization: 'resolved', error: '' }),
+      (error: unknown) => ({ initialization: 'rejected', error: error instanceof Error ? error.message : String(error) }),
+    );
+    const game = harness.game;
+    const sources = Object.values(game.textures.list).flatMap(texture => texture.source);
+    const result = await Promise.race([
+      initialized,
+      new Promise<{ initialization: string; error: string }>(resolve => {
+        timer = setTimeout(() => resolve({ initialization: 'pending', error: '' }), 1_000);
+      }),
+    ]);
+    const beforeImages = {
+      ...result,
+      ...startupResources(game),
+      sceneManagerWasBooted: game.scene.isBooted,
+      sourceCount: sources.length,
+      sourcesReleased: sources.every(source => source.glTexture === null && source.image === null),
+      canvasConnected: harness.canvas.isConnected,
+    };
+
+    prototype.boot = boot;
+    const loadedImages = await images.release();
+    const afterImages = {
+      ...startupResources(game),
+      sceneManagerBooted: game.scene.isBooted,
+      lateErrors,
+      loadedImages,
+    };
+    let recovered = false;
+
+    if (result.initialization === 'rejected' && afterImages.inputReleased && afterImages.rendererReleased) {
+      await harness.adapter.init(harness.canvas, 'webgl2');
+      harness.adapter.buildScene(picking, 4, 0xc0ffee);
+      harness.adapter.renderFrame();
+      recovered = !harness.game.loop.running;
+    }
+
+    harness.adapter.teardown();
+    harness.adapter.teardown();
+
+    return { beforeImages, afterImages, recovered };
+  } finally {
+    clearTimeout(timer);
+    prototype.boot = boot;
+    images.restore();
     window.removeEventListener('error', onError);
     harness.releaseCanvas();
   }
