@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-import { GridSpace } from '#spaces/GridSpace';
+import { GridSpace } from '../src/spaces/GridSpace';
 
 const assertUniform = (grid: GridSpace): void => {
   assert.equal(grid.uniformCost, true);
