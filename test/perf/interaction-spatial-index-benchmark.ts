@@ -320,7 +320,16 @@ const runBenchmark = (): void => {
 
   // Deliberately no brittle time-based assertion. Test failure indicates a
   // correctness regression only; go/no-go is the reviewed TOTAL-path data.
-  const benchmarkMeta = { platform: 'node', runtime: process.version, runner: process.platform, arch: process.arch, samples: '24@10k,32@100/1k', queriesPerSample: 20, heap: 'net delta, GC-sensitive, NOT allocations', browserMeasured: false };
+  const benchmarkMeta = {
+    platform: 'node',
+    runtime: process.version,
+    runner: process.platform,
+    arch: process.arch,
+    samples: '24@10k,32@100/1k',
+    queriesPerSample: 20,
+    heap: 'net delta, GC-sensitive, NOT allocations',
+    browserMeasured: false,
+  };
 
   console.log(`W00205_BENCHMARK_META=${JSON.stringify(benchmarkMeta)}`);
   console.log(`W00205_BENCHMARK_TABLE=${JSON.stringify(comparisons)}`);
