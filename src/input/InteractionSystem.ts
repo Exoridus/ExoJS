@@ -12,6 +12,7 @@ import type { PlatformAdapter } from '#platform/PlatformAdapter';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 
+import { AnchoredGroupIndex } from './AnchoredGroupIndex';
 import type { ContextMenuRequest } from './ContextMenuRequest';
 import type { FocusDirection, FocusNavigationPolicy } from './FocusController';
 import { FocusController } from './FocusController';
@@ -174,14 +175,9 @@ export class InteractionSystem {
   // would buy is negligible here - unlike the physics broad phase.
   private static readonly _treeMargin = 0;
 
-  // Interactive nodes ANCHORED to an engaged transform-group boundary
-  // (RetainedContainer): their getBounds()/contains() operate in GROUP-LOCAL
-  // space, so their world extent moves with the group without any bounds
-  // invalidation reaching them. They are deliberately kept OUT of the
-  // world-space tree (whose bounds would go stale on every group move -
-  // the camera-pan flagship case) and hit-tested by a linear scan through
-  // `_containsWorldPoint`, which reads the live group matrix.
-  private readonly _anchoredNodes = new Set<RenderNode>();
+  // Dense retained groups use an incremental anchor-local tree; sparse groups
+  // remain on the original linear path without tree allocation.
+  private readonly _anchoredIndex = new AnchoredGroupIndex();
 
   // Scratch for inverting a group's world matrix during hit-testing.
   private readonly _anchorInverse = new Matrix();
@@ -545,7 +541,7 @@ export class InteractionSystem {
     this._interactiveNodes.clear();
     this._staleNodes.clear();
     this._proxies.clear();
-    this._anchoredNodes.clear();
+    this._anchoredIndex.destroy();
     this._groupWorldDescendants.clear();
     this._nodeBoundaryGroup.clear();
     this._livePointers.clear();
@@ -840,6 +836,13 @@ export class InteractionSystem {
   public _notifyTransformGroupMoved(group: RenderNode): void {
     if (this._rootBindings.destroyed) {
       return;
+    }
+
+    // An outer group may move a NESTED anchor. Neither local tree needs
+    // reindexing, but a resting pointer must be re-hit-tested at the new
+    // position. Mark hover once, without scanning anchored descendants.
+    if (this._anchoredIndex.hasNodes) {
+      this._hoverDirty = true;
     }
 
     const descendants = this._groupWorldDescendants.get(group);
@@ -1708,11 +1711,37 @@ export class InteractionSystem {
       }
     });
 
-    // Group-anchored nodes live outside the tree (see `_anchoredNodes`):
-    // exact hit-test through the live group matrix, same ordering rule.
-    for (const node of this._anchoredNodes) {
+    // For small groups a single linear scan beats building a tree.
+    for (const node of this._anchoredIndex.unindexed) {
       if (this._beatsBest(node, bestNode, x, y)) {
         bestNode = node;
+      }
+    }
+
+    // A tree's tight AABBs never change on an ANCHOR move: transform the
+    // pointer into the group's local space once instead of updating N leaves.
+    // Exact contains, clips and paint-order checks still use WORLD coordinates.
+    for (const group of this._anchoredIndex.indexed) {
+      const inverse = group.anchor.getWorldTransform().getInverse(this._anchorInverse);
+      const groupX = inverse.a * x + inverse.b * y + inverse.x;
+      const groupY = inverse.c * x + inverse.d * y + inverse.y;
+
+      group.tree!.queryPoint(groupX, groupY, indexed => {
+        const node = indexed.node;
+
+        if (this._beatsBest(node, bestNode, x, y)) {
+          bestNode = node;
+        }
+      });
+
+      // A hitArea is mutable, including its shape's coordinates in place.
+      // It may extend OUTSIDE the node's visual getBounds() and thus outside
+      // its local tree proxy. Keep that existing hit-test contract: probe
+      // such nodes live even when the hitArea was assigned after indexing.
+      for (const node of group.nodes) {
+        if (node.hitArea !== null && this._beatsBest(node, bestNode, x, y)) {
+          bestNode = node;
+        }
       }
     }
 
@@ -1901,7 +1930,7 @@ export class InteractionSystem {
 
     this._interactiveNodes.delete(node);
     this._staleNodes.delete(node);
-    this._anchoredNodes.delete(node);
+    this._anchoredIndex.remove(node);
     this._clearGroupMembership(node);
     // Whatever this node was covering is exposed now, so the next flush has
     // to re-resolve hover even if no pointer moves - the `pointerover` half
@@ -2002,8 +2031,10 @@ export class InteractionSystem {
     // tree and the anchored side list, or under a different boundary).
     this._clearGroupMembership(node);
 
-    if (node._resolveTransformGroupAnchor() !== null) {
-      this._anchoredNodes.add(node);
+    const anchor = node._resolveTransformGroupAnchor();
+
+    if (anchor !== null) {
+      this._anchoredIndex.insert(node, anchor);
 
       if (__DEV__) {
         this._warnAnchoredInteractive(node);
@@ -2101,7 +2132,7 @@ export class InteractionSystem {
       }
 
       this._proxies.delete(node);
-      this._anchoredNodes.delete(node);
+      this._anchoredIndex.remove(node);
 
       this._insertNode(node);
     }
