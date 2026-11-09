@@ -10,7 +10,7 @@ import {
   buildRoundedRectangle,
   buildStar,
 } from '#math/geometry';
-import { bezierCurveTo, clamp, quadraticCurveTo, TAU } from '#math/utils';
+import { bezierCurveTo, quadraticCurveTo, TAU } from '#math/utils';
 import { Vector } from '#math/Vector';
 import { Container } from '#rendering/Container';
 import type { Gradient } from '#rendering/gradient/Gradient';
@@ -20,6 +20,8 @@ import { type GraphicsAppearancePatch, GraphicsShape, type GraphicsShapeSource }
 import type { RenderNode } from '#rendering/RenderNode';
 import type { DataTexture } from '#rendering/texture/DataTexture';
 import { ScaleModes, type TextureFormat } from '#rendering/types';
+
+import { tangentArc } from './arcGeometry';
 
 /**
  * Edge length of the square gradient texture rasterized for gradient paints.
@@ -276,57 +278,15 @@ export class Graphics extends Container {
    * when the geometry is degenerate.
    */
   public arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): this {
-    const { x: fromX, y: fromY } = this._currentPoint;
-    const r = Math.abs(radius);
+    const arc = tangentArc(this._currentPoint.x, this._currentPoint.y, x1, y1, x2, y2, radius);
 
-    if (r === 0 || (fromX === x1 && fromY === y1) || (x1 === x2 && y1 === y2)) {
+    if (arc === null) {
       return this.lineTo(x1, y1);
     }
 
-    const inX = x1 - fromX;
-    const inY = y1 - fromY;
-    const outX = x2 - x1;
-    const outY = y2 - y1;
-    const inLen = Math.hypot(inX, inY);
-    const outLen = Math.hypot(outX, outY);
+    this.lineTo(arc.startX, arc.startY);
 
-    if (inLen === 0 || outLen === 0) {
-      return this.lineTo(x1, y1);
-    }
-
-    const inDirX = inX / inLen;
-    const inDirY = inY / inLen;
-    const outDirX = outX / outLen;
-    const outDirY = outY / outLen;
-    const dot = clamp(inDirX * outDirX + inDirY * outDirY, -1, 1);
-    const angle = Math.acos(dot);
-
-    if (angle === 0 || angle === Math.PI) {
-      return this.lineTo(x1, y1);
-    }
-
-    const distanceToTangent = r / Math.tan(angle / 2);
-
-    if (!Number.isFinite(distanceToTangent) || distanceToTangent > inLen || distanceToTangent > outLen) {
-      return this.lineTo(x1, y1);
-    }
-
-    const startX = x1 - inDirX * distanceToTangent;
-    const startY = y1 - inDirY * distanceToTangent;
-    const endX = x1 + outDirX * distanceToTangent;
-    const endY = y1 + outDirY * distanceToTangent;
-    const cross = inDirX * outDirY - inDirY * outDirX;
-    const leftTurn = cross > 0;
-    const normalX = leftTurn ? -inDirY : inDirY;
-    const normalY = leftTurn ? inDirX : -inDirX;
-    const centerX = startX + normalX * r;
-    const centerY = startY + normalY * r;
-    const startAngle = Math.atan2(startY - centerY, startX - centerX);
-    const endAngle = Math.atan2(endY - centerY, endX - centerX);
-
-    this.lineTo(startX, startY);
-
-    return this.drawArc(centerX, centerY, r, startAngle, endAngle, leftTurn);
+    return this.drawArc(arc.centerX, arc.centerY, arc.radius, arc.startAngle, arc.endAngle, arc.anticlockwise);
   }
 
   /** Draw a stroked arc centered at (`x`, `y`) with the given `radius` from `startAngle` to `endAngle` (radians). */

@@ -1,6 +1,8 @@
 import { ShapeRevision } from '#math/ShapeRevision';
 import { TAU } from '#math/utils';
 
+import { tangentArc } from './arcGeometry';
+
 /** One flattened subpath produced by {@link GraphicsPath.contours}. */
 export interface PathContour {
   /** Vertices as a flat `[x0, y0, x1, y1, ...]` array. The closing vertex of a closed contour is not repeated. */
@@ -164,52 +166,11 @@ export class GraphicsPath extends ShapeRevision {
   public arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): this {
     this._ensureSubpath();
 
-    const fromX = this._currentX;
-    const fromY = this._currentY;
-    const r = Math.abs(radius);
+    const arc = tangentArc(this._currentX, this._currentY, x1, y1, x2, y2, radius);
 
-    if (r === 0 || (fromX === x1 && fromY === y1) || (x1 === x2 && y1 === y2)) {
-      return this.lineTo(x1, y1);
-    }
-
-    const inLen = Math.hypot(x1 - fromX, y1 - fromY);
-    const outLen = Math.hypot(x2 - x1, y2 - y1);
-
-    if (inLen === 0 || outLen === 0) {
-      return this.lineTo(x1, y1);
-    }
-
-    const inDirX = (x1 - fromX) / inLen;
-    const inDirY = (y1 - fromY) / inLen;
-    const outDirX = (x2 - x1) / outLen;
-    const outDirY = (y2 - y1) / outLen;
-    const dot = Math.min(1, Math.max(-1, inDirX * outDirX + inDirY * outDirY));
-    const angle = Math.acos(dot);
-
-    if (angle === 0 || angle === Math.PI) {
-      return this.lineTo(x1, y1);
-    }
-
-    const toTangent = r / Math.tan(angle / 2);
-
-    if (!Number.isFinite(toTangent) || toTangent > inLen || toTangent > outLen) {
-      return this.lineTo(x1, y1);
-    }
-
-    const startX = x1 - inDirX * toTangent;
-    const startY = y1 - inDirY * toTangent;
-    const leftTurn = inDirX * outDirY - inDirY * outDirX > 0;
-    const centerX = startX + (leftTurn ? -inDirY : inDirY) * r;
-    const centerY = startY + (leftTurn ? inDirX : -inDirX) * r;
-
-    return this.arc(
-      centerX,
-      centerY,
-      r,
-      Math.atan2(startY - centerY, startX - centerX),
-      Math.atan2(y1 + outDirY * toTangent - centerY, x1 + outDirX * toTangent - centerX),
-      leftTurn,
-    );
+    return arc === null
+      ? this.lineTo(x1, y1)
+      : this.arc(arc.centerX, arc.centerY, arc.radius, arc.startAngle, arc.endAngle, arc.anticlockwise);
   }
 
   /** Add a closed rectangular subpath. */
