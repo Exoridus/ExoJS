@@ -318,6 +318,48 @@ describe('WebGL2 untextured mesh rendering', () => {
     }
   });
 
+  test('the DebugOverlay performance layer releases and re-acquires GPU timing across hide and show', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+
+    class EmptyScene extends Scene {}
+
+    const app = new Application({
+      scenes: { EmptyScene },
+      canvas: { width: 128, height: 128, mount: container },
+      clearColor: Color.black,
+      backend: { type: 'webgl2' },
+      rendering: { webglAttributes: { ...defaultWebGlAttributes } },
+    } as ConstructorParameters<typeof Application>[0]);
+
+    const overlay = new DebugOverlay(app);
+
+    try {
+      await app.start(EmptyScene);
+
+      const backend = app.backend as WebGl2Backend;
+      const setTiming = vi.spyOn(backend, 'setGpuTimingEnabled');
+
+      overlay.layers.performance.visible = true;
+      await vi.waitFor(() => expect(setTiming.mock.calls).toEqual([[true]]));
+      overlay.layers.performance.visible = false;
+
+      expect(backend.stats.gpuFrameTimeMs).toBeNull();
+
+      overlay.layers.performance.visible = true;
+      await vi.waitFor(() => expect(setTiming.mock.calls).toEqual([[true], [false], [true]]));
+      overlay.visible = false;
+
+      expect(setTiming.mock.calls).toEqual([[true], [false], [true], [false]]);
+      expect(backend.stats.gpuFrameTimeMs).toBeNull();
+      expect(overlay.layers.performance.visible).toBe(true);
+    } finally {
+      overlay.destroy();
+      void app.destroy();
+      container.remove();
+    }
+  });
+
   test('a drawRectangle outline strokes ALL four edges (closing segment)', async () => {
     // Regression: shape builders return their perimeter open (first point not
     // repeated), so buildPath treated the outline as an open polyline and the

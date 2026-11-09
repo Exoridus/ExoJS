@@ -564,6 +564,29 @@ describe('DebugOverlay — master visible switch', () => {
     debug.destroy();
   });
 
+  test('visible=false releases GPU timing without touching the layer flags, and visible=true restores it', () => {
+    const app = makeApp();
+    const debug = new DebugOverlay(app);
+    const setTiming = app.backend.setGpuTimingEnabled as ReturnType<typeof vi.fn>;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
+
+    debug.layers.performance.visible = true;
+    app.onFrame.dispatch(fakeTime);
+    debug.visible = false;
+
+    expect(setTiming).toHaveBeenLastCalledWith(false);
+    expect(debug.layers.performance.visible).toBe(true);
+
+    debug.visible = true;
+    app.onFrame.dispatch(fakeTime);
+
+    expect(setTiming.mock.calls).toEqual([[true], [false], [true]]);
+
+    debug.destroy();
+
+    expect(setTiming).toHaveBeenLastCalledWith(false);
+  });
+
   test('restoring visible=true after false resumes rendering', () => {
     const app = makeApp();
     const debug = new DebugOverlay(app);
