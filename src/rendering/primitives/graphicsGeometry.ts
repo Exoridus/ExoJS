@@ -66,10 +66,10 @@ export const buildGraphicsFill = (source: GraphicsShapeSource): MeshGeometryData
 
 /**
  * Closed outline rings of a source as flat (x, y) pairs, tessellated exactly as
- * its fill is. Open path contours are skipped.
+ * its fill is. Only a base fill implicitly closes open path contours.
  * @internal
  */
-export const graphicsSourceRings = (source: GraphicsShapeSource): number[][] => {
+export const graphicsSourceRings = (source: GraphicsShapeSource, closeOpen = false): number[][] => {
   if (source instanceof Rectangle) {
     return source.width !== 0 && source.height !== 0 ? [buildRectangle(source.x, source.y, source.width, source.height).points] : [];
   }
@@ -88,7 +88,7 @@ export const graphicsSourceRings = (source: GraphicsShapeSource): number[][] => 
 
   return source
     .contours()
-    .filter(contour => contour.closed && contour.points.length >= 6)
+    .filter(contour => (closeOpen || contour.closed) && contour.points.length >= 6)
     .map(contour => [...contour.points]);
 };
 
@@ -97,11 +97,11 @@ export const graphicsSourceRings = (source: GraphicsShapeSource): number[][] => 
  * @internal
  */
 export const buildGraphicsCutFill = (source: GraphicsShapeSource, cuts: Iterable<GraphicsShapeSource>): MeshGeometryData | null => {
-  const cutRings = [...cuts].flatMap(graphicsSourceRings);
+  const cutRings = [...cuts].flatMap(cut => graphicsSourceRings(cut));
   const vertices: number[] = [];
   const indices: number[] = [];
 
-  for (const ring of graphicsSourceRings(source)) {
+  for (const ring of graphicsSourceRings(source, true)) {
     for (const polygon of subtractPolygons(ring, cutRings)) {
       const points = [...polygon.outer, ...polygon.holes.flat()];
       const holeStarts: number[] = [];
