@@ -28,6 +28,11 @@
  */
 export abstract class SpawnModule {
   public abstract apply(emitter: ParticleEmitter, dt: number): void;
+  /** @internal - emit immediately; optional to preserve structural custom modules. */
+  public _trigger?(emitter: ParticleEmitter): void {
+    this.apply(emitter, 0);
+  }
+
   /** Optional cleanup hook called from `ParticleSystem.destroy`. */
   public destroy(): void {}
 }
