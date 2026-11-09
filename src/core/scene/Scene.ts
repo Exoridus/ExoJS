@@ -440,19 +440,20 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * the descriptor's children are reconstructed under {@link Scene.root}.
    *
    * Assets referenced by the data must already be loaded into the
-   * application's {@link Loader} (pre-load contract). Older documents are
-   * migrated to the current format; documents newer than the running engine
-   * throw. Returns `this`.
+   * application's {@link Loader} (pre-load contract). Identity-compatible
+   * older documents retain their source version through all node reads;
+   * versions needing a value migration must be transformed first.
+   * Documents newer than the running engine throw. Returns `this`.
    */
   public deserialize(data: SerializedScene): this {
     const migrated = migrate(data);
     const loader = this._app?.loader ?? null;
     const registry = this._app?.serializers;
 
-    deserializeInto(this._root, migrated.root, loader, registry);
+    deserializeInto(this._root, migrated.root, loader, registry, migrated.version);
 
     if (migrated.ui !== undefined) {
-      deserializeInto(this.ui, migrated.ui, loader, registry);
+      deserializeInto(this.ui, migrated.ui, loader, registry, migrated.version);
     }
 
     return this;

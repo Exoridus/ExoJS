@@ -213,24 +213,27 @@ export const serializeTree = (
 
 /**
  * Reconstruct a node subtree from a {@link SerializedNode}. Referenced assets
- * must be pre-loaded into `loader`.
+ * must be pre-loaded into `loader`. When reading a versioned document, pass
+ * its validated source version so nested custom serializers see the same schema.
  * @internal
  */
 export const deserializeTree = (
   data: SerializedNode,
   loader: Loader | null = null,
   registry: SerializationRegistry = defaultSerializationRegistry,
+  version: number = SERIALIZATION_VERSION,
 ): SceneNode => {
   ensureCoreSerializers();
 
-  return readNodeWith(data, createDeserializeContext(loader, SERIALIZATION_VERSION, registry), registry);
+  return readNodeWith(data, createDeserializeContext(loader, version, registry), registry);
 };
 
 /**
  * Rebuild `container`'s contents from `data` in place: clears existing
  * children, applies `data`'s common fields to the container, then deserializes
  * and re-adds its children. Used by {@link Scene.deserialize} to reuse the
- * eagerly-created scene root.
+ * eagerly-created scene root. The validated document version is shared by
+ * every descendant read, including custom serializers.
  * @internal
  */
 export const deserializeInto = (
@@ -238,10 +241,11 @@ export const deserializeInto = (
   data: SerializedNode,
   loader: Loader | null = null,
   registry: SerializationRegistry = defaultSerializationRegistry,
+  version: number = SERIALIZATION_VERSION,
 ): void => {
   ensureCoreSerializers();
 
-  const ctx = createDeserializeContext(loader, SERIALIZATION_VERSION, registry);
+  const ctx = createDeserializeContext(loader, version, registry);
 
   // Read every child before touching the container so a malformed document
   // throws with the existing subtree still in place.
@@ -266,9 +270,23 @@ export const deserializeInto = (
   }
 };
 
+const LAST_IDENTITY_COMPATIBLE_VERSION = 2;
+
 /**
- * Validate and migrate a serialized scene document to the current
- * {@link SERIALIZATION_VERSION}, returning a structurally-sound
+ * Reject a future version bump until its legacy-data transforms exist.
+ * SDF outline/blur values cannot be reinterpreted as logical pixels:
+ * unknown external MSDF ranges, saturated outlines and missing raster
+ * densities have no general lossless conversion.
+ */
+const requireExplicitMigration = (version: number, kind: 'scene' | 'prefab'): void => {
+  if (version < SERIALIZATION_VERSION && SERIALIZATION_VERSION > LAST_IDENTITY_COMPATIBLE_VERSION) {
+    throw new Error(`Cannot deserialize ${kind}: version ${version} needs an explicit migration to version ${SERIALIZATION_VERSION}.`);
+  }
+};
+
+/**
+ * Validate a serialized scene document, retaining its source version until a
+ * real migration can be applied, and return a structurally-sound
  * {@link SerializedScene}.
  *
  * This is the **untrusted top-level boundary**: the parameter is `unknown`
@@ -279,9 +297,9 @@ export const deserializeInto = (
  * dropped (it is optional) rather than thrown.
  *
  * Version 2 widened asset references from a bare source string to also allow
- * a `{ source, options }` object. A version 1 document is already valid
- * version 2 data, so its migration step is the identity. Future version bumps
- * register version→version+1 transforms here.
+ * a `{ source, options }` object. Versions 0/1 remain valid version 2 data,
+ * so they need no conversion. Future versions must transform values before
+ * any serializer reads them; stamping a new version alone is not migration.
  * @internal
  */
 export const migrate = (data: unknown): SerializedScene => {
@@ -303,6 +321,8 @@ export const migrate = (data: unknown): SerializedScene => {
     throw new Error(`Cannot deserialize scene: data version ${version} is newer than the supported version ${SERIALIZATION_VERSION}.`);
   }
 
+  requireExplicitMigration(version, 'scene');
+
   const root = asSerializedNode(scene.root);
 
   if (root === null) {
@@ -315,17 +335,16 @@ export const migrate = (data: unknown): SerializedScene => {
 };
 
 /**
- * Validate and migrate a serialized prefab document to the current
- * {@link SERIALIZATION_VERSION}, returning a structurally-sound
- * {@link SerializedPrefab}.
+ * Validate a serialized prefab document while retaining its source version,
+ * returning a structurally-sound {@link SerializedPrefab}.
  *
  * The prefab counterpart to {@link migrate}, and the same untrusted boundary:
  * {@link Prefab.fromJSON} accepts whatever came off disk or the network. Throws
  * on a non-object document, a version newer than supported, or a missing/invalid
  * root.
  *
- * A version 1 document is valid version 2 data, exactly as for scenes; a
- * future version bump registers its version→version+1 transform in both places.
+ * Versions 0/1 are identity-compatible with version 2, exactly as for scenes.
+ * Future versions must migrate values before constructing nodes.
  * @internal
  */
 export const migratePrefab = (data: unknown): SerializedPrefab => {
@@ -344,6 +363,8 @@ export const migratePrefab = (data: unknown): SerializedPrefab => {
   if (version > SERIALIZATION_VERSION) {
     throw new Error(`Cannot deserialize prefab: data version ${version} is newer than the supported version ${SERIALIZATION_VERSION}.`);
   }
+
+  requireExplicitMigration(version, 'prefab');
 
   const root = asSerializedNode(document.root);
 

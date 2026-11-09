@@ -40,7 +40,7 @@ export interface SerializeContext {
  * so a serializer only constructs the node and sets its type-specific fields.
  */
 export interface DeserializeContext {
-  /** Format version of the document being read (after migration). */
+  /** Validated document version. Remains the source version until an explicit value migration runs. */
   readonly version: number;
   /** The loader used to resolve asset references, or `null` if none is available. */
   readonly loader: Loader | null;
