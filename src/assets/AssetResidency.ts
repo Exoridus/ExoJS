@@ -579,6 +579,10 @@ export class AssetResidency {
       this._claims.set(asset.key, entry);
     }
 
+    if (__DEV__) {
+      this._warnIgnoredOptions(asset, this._optionsFor(asset.key, asset.options), asset.options);
+    }
+
     this._requestLog.record(asset);
 
     return entry;
@@ -1046,8 +1050,6 @@ export class AssetResidency {
     const entry = this._deferred.get(asset.key);
 
     if (stored !== undefined) {
-      this._warnIgnoredOptions(asset, entry?.options, options);
-
       return stored;
     }
 
@@ -1055,8 +1057,6 @@ export class AssetResidency {
       const representative = entry.handles.first();
 
       if (representative !== undefined) {
-        this._warnIgnoredOptions(asset, entry.options, options);
-
         if (adapter.stateOf(representative) === 'failed') {
           adapter.begin(representative);
           this._startFetch(asset, entry.options);
@@ -1077,23 +1077,16 @@ export class AssetResidency {
     return handle;
   }
 
-  /**
-   * Dev-only diagnostic for the first-wins options contract: an existing
-   * instance keeps the options it was created with, so options a later `get()`
-   * asks for are dropped. Warns ONCE per source. Stripped in production.
-   *
-   * Options that take part in identity never reach this: they resolve to their
-   * own key, and therefore to their own instance, so nothing is ignored.
-   */
+  /** Diagnose conflicting shared acquisition options once per canonical key, independently of the acquiring call shape. */
   private _warnIgnoredOptions(asset: CanonicalAsset, existing: unknown, requested: unknown): void {
     if (!__DEV__ || requested === undefined || requested === null || sameOptions(existing, requested)) {
       return;
     }
 
     logger.warn(
-      `Asset "${asset.source}" is already loaded or loading, so the options this get() asked for were ignored - ` +
-        `the first call's options win, and an instance keeps the options it was created with. ` +
-        `Pass the options on the first acquisition, or use an Assets catalog leaf / Asset.type(...) for an independent instance.`,
+      `Asset "${asset.source}" already has a canonical acquisition, so conflicting options were ignored for the shared payload. ` +
+        `The first acquisition's options win. Pass shared acquisition options on that first call; ` +
+        `a catalog or descriptor leaf may retain its own local settings but does not create an independent acquisition.`,
       { source: 'Loader', once: `loader:ignored-options:${asset.key}` },
     );
   }
@@ -1127,8 +1120,6 @@ export class AssetResidency {
       const representative = entry.refs.values().next().value;
 
       if (representative !== undefined) {
-        this._warnIgnoredOptions(asset, entry.options, options);
-
         if (representative.loadState === 'failed') {
           representative._begin();
           this._startFetch(asset, entry.options);

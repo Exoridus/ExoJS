@@ -46,11 +46,14 @@ const fixture = (): { loader: Loader; release(): void } => {
     release = resolve;
   });
 
-  vi.stubGlobal('fetch', vi.fn(async () => {
-    await gate;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => {
+      await gate;
 
-    return new Response(new ArrayBuffer(8));
-  }));
+      return new Response(new ArrayBuffer(8));
+    }),
+  );
 
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
