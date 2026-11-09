@@ -63,6 +63,15 @@ const createHarness = () => {
   };
 };
 
+const startupResources = (game: Phaser.Game) => ({
+  texturesReleased: Object.keys(game.textures.list).length === 0,
+  rendererReleased: (game.renderer as Phaser.Renderer.WebGL.WebGLRenderer).gl === null,
+  inputReleased: game.input.canvas === null && game.input.mouse!.target === null,
+  scaleReleased: game.scale.canvas === null,
+  loopReleased: game.loop.game === null,
+  gameListeners: game.events.eventNames().length,
+});
+
 export const observeRepeatedPickingBuilds = async () => {
   const harness = createHarness();
   const { adapter, canvas } = harness;
@@ -269,12 +278,7 @@ export const observeNeverReadyGame = async () => {
       sceneManagerWasBooted,
       sourceCount: sources.length,
       sourcesReleased: sources.every(source => source.glTexture === null && source.image === null),
-      texturesReleased: Object.keys(game.textures.list).length === 0,
-      rendererReleased: (game.renderer as Phaser.Renderer.WebGL.WebGLRenderer).gl === null,
-      inputReleased: game.input.canvas === null && game.input.mouse!.target === null,
-      scaleReleased: game.scale.canvas === null,
-      loopReleased: game.loop.game === null,
-      gameListeners: game.events.eventNames().length,
+      ...startupResources(game),
       canvasConnected: harness.canvas.isConnected,
     };
 
@@ -302,6 +306,106 @@ export const observeNeverReadyGame = async () => {
     prototype.updatePending = updatePending;
     // The observations include teardown failures. Closing the test-owned canvas
     // must not replace that evidence with a second early-destruction exception.
+    harness.releaseCanvas();
+  }
+};
+
+export const observeLateBootImages = async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
+
+  if (descriptor?.set === undefined) {
+    throw new Error('The browser image src setter is unavailable.');
+  }
+
+  const setSource = descriptor.set;
+  const pending: Array<{ image: HTMLImageElement; source: string; loaded: Promise<void> }> = [];
+  const lateErrors: string[] = [];
+
+  const onError = (event: ErrorEvent): void => {
+    lateErrors.push(event.message);
+  };
+
+  const harness = createHarness();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  // Retain the real images and Phaser's real onload handlers. Only starting the
+  // default image loads is delayed until after the initialization deadline.
+  Object.defineProperty(HTMLImageElement.prototype, 'src', {
+    ...descriptor,
+    set(this: HTMLImageElement, source: string): void {
+      if (!source.startsWith('data:image/png;base64,')) {
+        setSource.call(this, source);
+
+        return;
+      }
+
+      const loaded = new Promise<void>((resolve, reject) => {
+        this.addEventListener('load', () => resolve(), { once: true });
+        this.addEventListener('error', () => reject(new Error('The delayed default image failed to load.')), { once: true });
+      });
+
+      pending.push({ image: this, source, loaded });
+    },
+  });
+  window.addEventListener('error', onError);
+
+  try {
+    const initialized = harness.adapter.init(harness.canvas, 'webgl2').then(
+      () => ({ initialization: 'resolved', error: '' }),
+      (error: unknown) => ({ initialization: 'rejected', error: error instanceof Error ? error.message : String(error) }),
+    );
+    const game = harness.game;
+    const sources = Object.values(game.textures.list).flatMap(texture => texture.source);
+    const result = await Promise.race([
+      initialized,
+      new Promise<{ initialization: string; error: string }>(resolve => {
+        timer = setTimeout(() => resolve({ initialization: 'pending', error: '' }), 11_000);
+      }),
+    ]);
+    const beforeImages = {
+      ...result,
+      ...startupResources(game),
+      sceneManagerWasBooted: game.scene.isBooted,
+      sourceCount: sources.length,
+      sourcesReleased: sources.every(source => source.glTexture === null && source.image === null),
+      canvasConnected: harness.canvas.isConnected,
+    };
+
+    Object.defineProperty(HTMLImageElement.prototype, 'src', descriptor);
+
+    for (const entry of pending) {
+      setSource.call(entry.image, entry.source);
+    }
+
+    await Promise.all(pending.map(entry => entry.loaded));
+    const afterImages = {
+      ...startupResources(game),
+      sceneManagerBooted: game.scene.isBooted,
+      lateErrors,
+      loadedImages: pending.length,
+    };
+    let recovered = false;
+    let teardownError = '';
+
+    if (result.initialization === 'rejected' && afterImages.inputReleased && afterImages.rendererReleased) {
+      await harness.adapter.init(harness.canvas, 'webgl2');
+      harness.adapter.buildScene(picking, 4, 0xc0ffee);
+      harness.adapter.renderFrame();
+      recovered = !harness.game.loop.running;
+    }
+
+    try {
+      harness.adapter.teardown();
+      harness.adapter.teardown();
+    } catch (error) {
+      teardownError = error instanceof Error ? error.message : String(error);
+    }
+
+    return { beforeImages, afterImages, recovered, teardownError };
+  } finally {
+    clearTimeout(timer);
+    Object.defineProperty(HTMLImageElement.prototype, 'src', descriptor);
+    window.removeEventListener('error', onError);
     harness.releaseCanvas();
   }
 };

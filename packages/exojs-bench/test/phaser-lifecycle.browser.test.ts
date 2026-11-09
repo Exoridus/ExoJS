@@ -138,4 +138,31 @@ describe('Phaser adapter lifecycle', () => {
     expect(result.sourceCount).toBeGreaterThan(0);
     expect(result.error).toMatch(/phaser.*(?:initializ|scene).*(?:timed out|timeout)/i);
   }, 60_000);
+
+  test('default image loads completing after initialization times out cannot revive the game', async () => {
+    const result = await page.evaluate(() =>
+      (globalThis as unknown as { phaserLifecycle: BrowserFixture }).phaserLifecycle.observeLateBootImages(),
+    );
+    const released = {
+      texturesReleased: true,
+      rendererReleased: true,
+      inputReleased: true,
+      scaleReleased: true,
+      loopReleased: true,
+      gameListeners: 0,
+    };
+
+    expect(result.beforeImages).toMatchObject({
+      ...released,
+      initialization: 'rejected',
+      sceneManagerWasBooted: false,
+      sourcesReleased: true,
+      canvasConnected: true,
+    });
+    expect(result.beforeImages.sourceCount).toBeGreaterThan(0);
+    expect(result.beforeImages.error).toMatch(/phaser.*(?:initializ|scene).*(?:timed out|timeout)/i);
+    expect(result.afterImages).toMatchObject({ ...released, sceneManagerBooted: false, lateErrors: [] });
+    expect(result.afterImages.loadedImages).toBeGreaterThan(0);
+    expect(result).toMatchObject({ recovered: true, teardownError: '' });
+  }, 60_000);
 });
