@@ -12,11 +12,15 @@ interface NativeContext extends EventTarget {
   updateCharacterBounds(start: number, bounds: DOMRect[]): void;
 }
 
-type RealmWindow = Window & typeof globalThis & {
-  EditContext: new (options?: Record<string, unknown>) => NativeContext;
-};
+type RealmWindow = Window &
+  typeof globalThis & {
+    EditContext: new (options?: Record<string, unknown>) => NativeContext;
+  };
 
-type TransportInternals = { _element: HTMLElement; _context: NativeContext };
+interface TransportInternals {
+  _element: HTMLElement;
+  _context: NativeContext;
+}
 
 let frame: HTMLIFrameElement;
 let ownerDocument: Document;
@@ -72,9 +76,9 @@ test('textarea elements belong to the canvas document and DOM realm', () => {
   const input = keep(new BrowserTextInput(canvas));
   const element = elementOf(input);
 
-  expect(element.ownerDocument).toBe(ownerDocument);
-  expect(element).toBeInstanceOf(ownerWindow.HTMLTextAreaElement);
-  expect(element).not.toBeInstanceOf(HTMLTextAreaElement);
+  expect(element.ownerDocument === ownerDocument).toBe(true);
+  expect(element instanceof ownerWindow.HTMLTextAreaElement).toBe(true);
+  expect(element instanceof HTMLTextAreaElement).toBe(false);
   expect(ownerDocument.body.contains(element)).toBe(true);
   expect(document.body.contains(element)).toBe(false);
 });
@@ -97,7 +101,7 @@ test('textarea focus, keyboard delivery, edits and composition stay in the owner
     input.setHints({ inputMode: 'text', enterKeyHint: 'done' });
     input.focus();
 
-    expect(ownerDocument.activeElement).toBe(element);
+    expect(ownerDocument.activeElement === element).toBe(true);
     expect(input.hostFocused).toBe(true);
     expect(element.selectionStart).toBe(1);
     expect(element.selectionEnd).toBe(2);
@@ -128,7 +132,7 @@ test('textarea focus, keyboard delivery, edits and composition stay in the owner
     ]);
 
     input.blur();
-    expect(ownerDocument.activeElement).toBe(canvas);
+    expect(ownerDocument.activeElement === canvas).toBe(true);
     expect(input.hostFocused).toBe(false);
   } finally {
     unsubscribe();
@@ -162,8 +166,8 @@ test('the factory falls back when only the owner realm lacks EditContext', () =>
   Object.defineProperty(ownerWindow, 'EditContext', { configurable: true, value: undefined });
   const input = keep(platform.createTextInput()!);
 
-  expect(input).toBeInstanceOf(BrowserTextInput);
-  expect(elementOf(input).ownerDocument).toBe(ownerDocument);
+  expect(input instanceof BrowserTextInput).toBe(true);
+  expect(elementOf(input).ownerDocument === ownerDocument).toBe(true);
 });
 
 test('the factory uses native owner EditContext even when the caller realm lacks it', () => {
@@ -172,9 +176,9 @@ test('the factory uses native owner EditContext even when the caller realm lacks
   vi.stubGlobal('EditContext', undefined);
   const input = keep(platform.createTextInput()!);
 
-  expect(input).toBeInstanceOf(EditContextTextInput);
-  expect(contextOf(input)).toBeInstanceOf(OwnerContext);
-  expect(elementOf(input).ownerDocument).toBe(ownerDocument);
+  expect(input instanceof EditContextTextInput).toBe(true);
+  expect(contextOf(input) instanceof OwnerContext).toBe(true);
+  expect(elementOf(input).ownerDocument === ownerDocument).toBe(true);
 });
 
 test('native EditContext uses owner DOMRects and preserves focus and composition signals', () => {
@@ -188,27 +192,33 @@ test('native EditContext uses owner DOMRects and preserves focus and composition
   const compositions = vi.fn();
   const bounds = new Rectangle(4, 6, 90, 20);
 
-  expect(context).toBeInstanceOf(ownerWindow.EditContext);
-  expect(element.ownerDocument).toBe(ownerDocument);
+  expect(context instanceof ownerWindow.EditContext).toBe(true);
+  expect(element.ownerDocument === ownerDocument).toBe(true);
   input.onEdit.add(edits);
   input.onComposition.add(compositions);
   input.setValue('abc', 1, 1);
   input.setBounds(bounds);
   input.setCaretRect(bounds);
-  expect(control.mock.calls[0]![0]).toBeInstanceOf(ownerWindow.DOMRect);
-  expect(selection.mock.calls[0]![0]).toBeInstanceOf(ownerWindow.DOMRect);
+  expect(control.mock.calls[0]![0] instanceof ownerWindow.DOMRect).toBe(true);
+  expect(selection.mock.calls[0]![0] instanceof ownerWindow.DOMRect).toBe(true);
 
   context.dispatchEvent(Object.assign(new ownerWindow.Event('characterboundsupdate'), { rangeStart: 0, rangeEnd: 2 }));
   expect(characters.mock.calls[0]![1]).toHaveLength(2);
-  expect(characters.mock.calls[0]![1][0]).toBeInstanceOf(ownerWindow.DOMRect);
+  expect(characters.mock.calls[0]![1][0] instanceof ownerWindow.DOMRect).toBe(true);
 
   input.focus();
-  expect(ownerDocument.activeElement).toBe(element);
+  expect(ownerDocument.activeElement === element).toBe(true);
   expect(input.hostFocused).toBe(true);
   context.dispatchEvent(new ownerWindow.Event('compositionstart'));
-  context.dispatchEvent(Object.assign(new ownerWindow.Event('textupdate'), {
-    updateRangeStart: 1, updateRangeEnd: 1, text: '漢', selectionStart: 2, selectionEnd: 2,
-  }));
+  context.dispatchEvent(
+    Object.assign(new ownerWindow.Event('textupdate'), {
+      updateRangeStart: 1,
+      updateRangeEnd: 1,
+      text: '漢',
+      selectionStart: 2,
+      selectionEnd: 2,
+    }),
+  );
   input.setValue('not mirrored while composing', 0, 0);
   expect(context.text).toBe('abc');
   expect(edits).not.toHaveBeenCalled();
@@ -219,7 +229,7 @@ test('native EditContext uses owner DOMRects and preserves focus and composition
     { phase: 'end', text: '漢' },
   ]);
   input.blur();
-  expect(ownerDocument.activeElement).toBe(canvas);
+  expect(ownerDocument.activeElement === canvas).toBe(true);
   bounds.destroy();
 });
 
@@ -232,7 +242,7 @@ test('the platform reports its text-focus claim during the canvas blur handoff',
 
   expect(claims).toEqual([true]);
   expect(platform.textInputFocused).toBe(true);
-  expect(ownerDocument.activeElement).toBe(elementOf(input));
+  expect(ownerDocument.activeElement === elementOf(input)).toBe(true);
   input.blur();
   expect(platform.surfaceFocused).toBe(true);
   expect(platform.textInputFocused).toBe(false);
@@ -297,7 +307,11 @@ test.each(['textarea', 'edit-context'])('%s listeners and owner-window listeners
   const key = new ownerWindow.KeyboardEvent('keydown', { code: 'KeyA' });
   const edit = new ownerWindow.InputEvent('beforeinput', { inputType: 'insertText', data: 'x' });
   const update = Object.assign(new ownerWindow.Event('textupdate'), {
-    updateRangeStart: 0, updateRangeEnd: 0, text: 'x', selectionStart: 1, selectionEnd: 1,
+    updateRangeStart: 0,
+    updateRangeEnd: 0,
+    text: 'x',
+    selectionStart: 1,
+    selectionEnd: 1,
   });
   const context = backend === 'edit-context' ? contextOf(input) : null;
 
@@ -326,7 +340,7 @@ test('a document without a window still owns its textarea and does not borrow th
   expect(detachedDocument.defaultView).toBeNull();
   const input = keep(detached.createTextInput()!);
 
-  expect(input).toBeInstanceOf(BrowserTextInput);
-  expect(elementOf(input).ownerDocument).toBe(detachedDocument);
+  expect(input instanceof BrowserTextInput).toBe(true);
+  expect(elementOf(input).ownerDocument === detachedDocument).toBe(true);
   expect(detachedDocument.body.contains(elementOf(input))).toBe(true);
 });
