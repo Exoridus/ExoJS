@@ -46,7 +46,9 @@ const tempPoint = new ObservableVector(null);
  * Same idea as a `readonly T[]`: the object underneath is still the mutable
  * one, the view just does not offer a way to change it.
  */
-export interface ReadonlyRectangle extends Collidable {
+export interface ReadonlyRectangle extends Omit<Collidable, 'getNormals'> {
+  /** Cached edge normals; the array is shared with the rectangle, so the view exposes it read-only. */
+  getNormals(): readonly Vector[];
   readonly x: number;
   readonly y: number;
   readonly width: number;

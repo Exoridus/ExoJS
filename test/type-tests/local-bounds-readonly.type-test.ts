@@ -1,5 +1,6 @@
 import type { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
+import { Vector } from '#math/Vector';
 import type { Drawable } from '#rendering/Drawable';
 
 declare const node: Drawable;
@@ -47,3 +48,10 @@ const mapped: Rectangle = node.getLocalBounds().transform(matrix, Rectangle.temp
 node.setLocalBounds(0, 0, 16, 16);
 
 export { bottom, boxed, copied, height, hit, left, mapped, right, same, top, width, x, y };
+
+// The normals cache is shared with the rectangle, so the view returns it read-only.
+// @ts-expect-error - the cached normals array cannot be resized through the view
+node.getLocalBounds().getNormals().push(new Vector());
+const normals: readonly Vector[] = node.getLocalBounds().getNormals();
+
+export { normals };
