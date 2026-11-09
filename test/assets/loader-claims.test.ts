@@ -166,9 +166,9 @@ describe('refcount / claims', () => {
     const owner = loader.createScope({ name: 'owner' });
     owner.load(Assets.from({ a: 'a.ogg', b: 'b.ogg', c: 'c.ogg' }), { priority: LoadPriority.Background });
 
-    expect(loader['_residency']['_isQueuedInBackground'](loader['_canonicalize'](Sound, 'c.ogg').key)).toBe(true); // still queued behind the cap
+    expect(loader['_residency']['_backgroundQueue'].has(loader['_canonicalize'](Sound, 'c.ogg').key)).toBe(true); // still queued behind the cap
     owner.release(Sound, 'c.ogg');
-    expect(loader['_residency']['_isQueuedInBackground'](loader['_canonicalize'](Sound, 'c.ogg').key)).toBe(false); // dropped at refcount 0
+    expect(loader['_residency']['_backgroundQueue'].has(loader['_canonicalize'](Sound, 'c.ogg').key)).toBe(false); // dropped at refcount 0
   });
 
   test('two distinct claim scopes keep the payload until both release', async () => {

@@ -263,7 +263,8 @@ export class AssetResidency {
   private readonly _everRegisteredHandles = new WeakSet();
 
   private _concurrency = 0;
-  private _backgroundQueue: QueueEntry[] = [];
+  // Keyed for O(1) membership, boost and drop; a Map iterates in insertion order, so draining stays FIFO.
+  private readonly _backgroundQueue = new Map<ResourceKey, QueueEntry>();
   private _backgroundActive = 0;
   private _backgroundTotal = 0;
   private _backgroundLoaded = 0;
@@ -296,7 +297,6 @@ export class AssetResidency {
    * @internal
    */
   public _inspect(): readonly AssetInspection[] {
-    const backgroundKeys = new Set(this._backgroundQueue.map(entry => entry.asset.key));
     const assets = new Map<ResourceKey, CanonicalAsset>();
 
     for (const [key, entry] of this._resources) {
@@ -315,8 +315,8 @@ export class AssetResidency {
       assets.set(key, entry.asset);
     }
 
-    for (const entry of this._backgroundQueue) {
-      assets.set(entry.asset.key, entry.asset);
+    for (const [key, entry] of this._backgroundQueue) {
+      assets.set(key, entry.asset);
     }
 
     const rows: AssetInspection[] = [];
@@ -330,13 +330,13 @@ export class AssetResidency {
       // but a remembered handle identity kept for healing. Reporting those would
       // bury the rows that matter - including the one case this walk exists for,
       // a payload resident with no owner left.
-      if (!stored && !inFlight && !claimed && !backgroundKeys.has(key)) {
+      if (!stored && !inFlight && !claimed && !this._backgroundQueue.has(key)) {
         continue;
       }
 
       // Raw queue membership only - a settled row must never report `background: true`
       // (see below), so this is an INPUT to `state`, not the field's own value.
-      const queuedInBackground = backgroundKeys.has(key);
+      const queuedInBackground = this._backgroundQueue.has(key);
       const handleState = this._inspectHandleState(key, asset.type);
       const state = inspectState({ stored, handleState, queuedInBackground, inFlight });
       const scopes = this._holders(this._claims.get(key)).sort((left, right) => left.id - right.id);
@@ -661,28 +661,12 @@ export class AssetResidency {
 
     if (adapter !== undefined && stored !== undefined) {
       const entry = this._deferred.get(key);
-      // Re-arm every live consumer handle in place: the representative AND any
-      // co-handle adopted from the stored donor, so a later claim
-      // heals them all - not just the canonical one. The stored donor is itself
-      // a member (registered at store time); guard the fallback for the (defensive)
-      // case where no entry exists.
-      let evictedStored = false;
+      const handles = new Set(entry?.handles);
+      const dependencies = this._dependencyScopes.get(key);
 
-      if (entry !== undefined) {
-        for (const handle of entry.handles) {
-          adapter.evict(handle);
-
-          if (handle === stored) {
-            evictedStored = true;
-          }
-        }
-      }
-
-      if (!evictedStored) {
-        adapter.evict(stored);
-      }
-
+      handles.add(stored as object);
       this._resources.delete(key);
+      this._dependencyScopes.delete(key);
 
       // Keep the handles registered (weakly) so the next claim heals them in
       // place; the entry persists from store time, carrying the original options.
@@ -691,7 +675,6 @@ export class AssetResidency {
       }
 
       this._evicted.add(key);
-      this._releaseDependencies(key);
       // A load that just settled may leave a resolved-but-not-yet-cleaned
       // in-flight entry (its `.finally` cleanup is a pending microtask). Drop it
       // so the reclaim's re-fetch starts fresh instead of deduping onto that
@@ -699,6 +682,30 @@ export class AssetResidency {
       // The reclaim's fresh entry is protected from this stale `.finally` by the
       // self-entry identity guard in `_trackInFlight`.
       this._inFlight.delete(key);
+
+      // Publish the new load cycle before calling user code, but keep the old
+      // payload available to its disposer. A synchronous reclaim must observe
+      // a fresh `.loaded`, and the subsequent evict must preserve that promise.
+      for (const handle of handles) {
+        adapter.begin(handle);
+      }
+
+      this._dropQueuedBackground(key);
+      this._disposeResource(asset, stored);
+
+      // Snapshot membership above: handles adopted during disposal already
+      // belong to the replacement and must not be torn down by this eviction.
+      for (const handle of handles) {
+        adapter.evict(handle);
+      }
+
+      // Reentry may have installed a new dependency scope and in-flight fetch.
+      // Release only the old scope, without touching the replacement's maps.
+      if (dependencies !== undefined) {
+        this._releaseScope(dependencies);
+      }
+
+      return;
     } else if (adapter === undefined && this._resources.has(key)) {
       // A value payload may legitimately BE `null`/`undefined` (a JSON `null`, a
       // nullish payload from a `bindAsset`-bound custom type), so this asks the
@@ -750,18 +757,23 @@ export class AssetResidency {
     // branch above for the full reasoning; it applies verbatim here.
     this._inFlight.delete(asset.key);
 
+    this._disposeResource(asset, stored);
+
+    // A disposer may reclaim the key; release only the previous resource's dependencies.
+    if (dependencies !== undefined) {
+      this._releaseScope(dependencies);
+    }
+  }
+
+  /** Hand an evicted payload to its type's `AssetFactory.dispose`; a throwing disposer is logged, never propagated. */
+  private _disposeResource(asset: CanonicalAsset, resource: unknown): void {
     try {
-      this._typeRegistry.getInstalled(asset.type)?.factory.dispose?.(stored);
+      this._typeRegistry.getInstalled(asset.type)?.factory.dispose?.(resource);
     } catch (error) {
       logger.error(`Asset disposer failed for "${asset.source}".`, {
         source: 'assets',
         error: error instanceof Error ? error : new Error(String(error)),
       });
-    } finally {
-      // A disposer may reclaim the key; release only the previous resource's dependencies.
-      if (dependencies !== undefined) {
-        this._releaseScope(dependencies);
-      }
     }
   }
 
@@ -1091,7 +1103,7 @@ export class AssetResidency {
       return this._acquisitionOptions.get(key);
     }
 
-    const queued = this._backgroundQueue.find(entry => entry.asset.key === key);
+    const queued = this._backgroundQueue.get(key);
 
     return queued === undefined ? fallback : queued.options;
   }
@@ -1621,65 +1633,52 @@ export class AssetResidency {
    * @internal
    */
   public _enqueueBackgroundFetch(asset: CanonicalAsset, options: unknown): void {
-    if (this._resources.has(asset.key) || this._inFlight.has(asset.key) || this._isQueuedInBackground(asset.key)) {
+    if (this._resources.has(asset.key) || this._inFlight.has(asset.key) || this._backgroundQueue.has(asset.key)) {
       return;
     }
 
-    if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
+    if (this._backgroundQueue.size === 0 && this._backgroundActive === 0) {
       this._backgroundLoaded = 0;
       this._backgroundTotal = 0;
     }
 
-    this._backgroundQueue.push({ asset, options });
+    this._backgroundQueue.set(asset.key, { asset, options });
     this._backgroundTotal++;
     this._drainBackground();
   }
 
   private _drainBackground(): void {
-    while (this._backgroundActive < this._concurrency && this._backgroundQueue.length > 0) {
-      const entry = this._backgroundQueue.shift();
-
-      if (!entry) {
-        continue;
+    for (const [key, entry] of this._backgroundQueue) {
+      if (this._backgroundActive >= this._concurrency) {
+        return;
       }
 
+      this._backgroundQueue.delete(key);
       this._startBackgroundEntry(entry);
     }
   }
 
   private _boostFromQueue(key: ResourceKey): void {
-    const index = this._backgroundQueue.findIndex(entry => entry.asset.key === key);
-
-    if (index === -1) {
-      return;
-    }
-
-    const [entry] = this._backgroundQueue.splice(index, 1);
+    const entry = this._backgroundQueue.get(key);
 
     if (entry !== undefined) {
+      this._backgroundQueue.delete(key);
       this._startBackgroundEntry(entry);
     }
   }
 
   private _dropQueuedBackground(key: ResourceKey): void {
-    const index = this._backgroundQueue.findIndex(entry => entry.asset.key === key);
-
-    if (index !== -1) {
-      this._backgroundQueue.splice(index, 1);
+    if (this._backgroundQueue.delete(key)) {
       // Dropped work cannot complete, so remove it from the total and settle waiters if the queue drained.
       this._backgroundTotal--;
       this._onBackgroundItemDone();
     }
   }
 
-  private _isQueuedInBackground(key: ResourceKey): boolean {
-    return this._backgroundQueue.some(entry => entry.asset.key === key);
-  }
-
   private _onBackgroundItemDone(): void {
     this._signals.onProgress.dispatchIsolated(reportAssetObserverFailure, this._backgroundLoaded, this._backgroundTotal);
 
-    if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
+    if (this._backgroundQueue.size === 0 && this._backgroundActive === 0) {
       this._settleBackgroundWaiters();
     }
   }
@@ -1735,7 +1734,7 @@ export class AssetResidency {
     return new Promise<void>(resolve => {
       this._drainBackground();
 
-      if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
+      if (this._backgroundQueue.size === 0 && this._backgroundActive === 0) {
         resolve();
 
         return;
@@ -1874,8 +1873,8 @@ export class AssetResidency {
     this._requestLog.clear();
     this._dependencyScopes.clear();
 
-    for (const entry of [...this._backgroundQueue]) {
-      this._dropQueuedBackground(entry.asset.key);
+    for (const key of [...this._backgroundQueue.keys()]) {
+      this._dropQueuedBackground(key);
     }
   }
 
@@ -2042,7 +2041,7 @@ export class AssetResidency {
     this._evicted.clear();
     this._dependencyScopes.clear();
 
-    this._backgroundQueue.length = 0;
+    this._backgroundQueue.clear();
     this._backgroundActive = 0;
     this._backgroundLoaded = 0;
     this._backgroundTotal = 0;

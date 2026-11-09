@@ -9,7 +9,7 @@ import type { TextureSource } from '#core/types';
 import { type Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
-import { get2dContext, getWebGpuContext, type RenderSurface } from '#platform/RenderSurface';
+import { get2dContext, getWebGpuContext, hasDomBrand, type RenderSurface } from '#platform/RenderSurface';
 import { assertLiveRenderTarget, assertLiveTexture } from '#rendering/assertLiveResource';
 import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import type { Drawable } from '#rendering/Drawable';
@@ -4314,8 +4314,7 @@ interface WebGpuDataTextureFormatInfo {
  * kinds qualify; an image, bitmap or video frame does not.
  */
 const isCanvasTextureSource = (source: TextureSource): source is HTMLCanvasElement | OffscreenCanvas =>
-  (typeof HTMLCanvasElement !== 'undefined' && source instanceof HTMLCanvasElement) ||
-  (typeof OffscreenCanvas !== 'undefined' && source instanceof OffscreenCanvas);
+  hasDomBrand(source, 'HTMLCanvasElement') || hasDomBrand(source, 'OffscreenCanvas');
 
 /**
  * Map a {@link RenderTexture} color format to its WebGPU render-target format.

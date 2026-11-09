@@ -1,6 +1,7 @@
 /// <reference types="@webgpu/types" />
 
 import { Matrix } from '#math/Matrix';
+import { hasDomBrand } from '#platform/RenderSurface';
 import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
 import { colorShaderSourcesWgsl } from '#rendering/colorShaderSources';
 import { spriteFragmentMainWgsl, spriteSharedStorageWgsl, spriteVertexCoreWgsl } from '#rendering/sprite/materialSources';
@@ -314,7 +315,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
       // texture requesting a different interpretation - raw data, or already
       // linear content - takes the texture_2d fallback instead, whose
       // format-driven decode (or lack of one) matches its colorSpace.
-      const sourceElement = texture.source instanceof HTMLVideoElement && texture.colorSpace === 'srgb' ? texture.source : null;
+      const sourceElement = hasDomBrand(texture.source, 'HTMLVideoElement') && texture.colorSpace === 'srgb' ? texture.source : null;
       const externalTexture = sourceElement !== null ? this._tryImportExternalTexture(device, sourceElement) : null;
 
       const coordinator = backend.passCoordinator;

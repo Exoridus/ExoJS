@@ -1,5 +1,5 @@
 import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
-import { isDomCanvas, type RenderSurface } from '#platform/RenderSurface';
+import { hasDomBrand, isDomCanvas, type RenderSurface } from '#platform/RenderSurface';
 
 import { assert } from './dev';
 
@@ -32,7 +32,7 @@ export const createDefaultCanvas = (): HTMLCanvasElement => {
  * @internal
  */
 export const isRenderSurface = (value: unknown): value is RenderSurface =>
-  isDomCanvas(value as RenderSurface) || (typeof OffscreenCanvas !== 'undefined' && value instanceof OffscreenCanvas);
+  isDomCanvas(value as RenderSurface) || hasDomBrand(value, 'OffscreenCanvas');
 
 /**
  * Clamp a host device-pixel ratio to the ceiling the auto policy allows, and

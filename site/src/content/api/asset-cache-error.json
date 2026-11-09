@@ -139,7 +139,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Record key, or null when the operation does not target a single record."
+          "description": "Record key as serializeCacheRecordKey spells it - the same string whichever layer reported the failure - or null when the operation does not target a single record."
         },
         {
           "name": "message",

@@ -182,12 +182,12 @@ describe('LoaderScope.release() scope safety', () => {
     const catalog = new Assets({ late: { type: 'texture', source: 'late.png' } });
     owner.load(catalog, { priority: LoadPriority.Background });
 
-    const queue = (loader as unknown as { _residency: { _backgroundQueue: unknown[] } })._residency._backgroundQueue;
-    expect(queue.length).toBe(1);
+    const queue = (loader as unknown as { _residency: { _backgroundQueue: Map<unknown, unknown> } })._residency._backgroundQueue;
+    expect(queue.size).toBe(1);
 
     owner.release(catalog);
 
-    expect(queue.length).toBe(0);
+    expect(queue.size).toBe(0);
   });
 });
 

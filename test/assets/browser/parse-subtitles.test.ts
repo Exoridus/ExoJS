@@ -30,3 +30,14 @@ describe('subtitle positioning with native VTTCue', () => {
     }
   });
 });
+
+describe('malformed cue timings with native VTTCue', () => {
+  test.each([
+    ['vtt', 'WEBVTT\n\nbad --> 00:00:02.000\nBad\n\n00:00:03.000 --> 00:00:04.000\nGood'],
+    ['srt', '1\nbad --> 00:00:02,000\nBad\n\n2\n00:00:03,000 --> 00:00:04,000\nGood'],
+  ] as const)('%s skips a cue whose timing does not parse and keeps the rest', (fmt, text) => {
+    const cues = parseSubtitles({ fmt, text });
+
+    expect(cues.map(cue => [cue.startTime, cue.endTime, cue.text])).toEqual([[3, 4, 'Good']]);
+  });
+});

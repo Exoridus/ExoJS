@@ -235,6 +235,39 @@ describe('AssetResidency', () => {
       expect(adapter.evict).toHaveBeenCalledWith(handle);
     });
 
+    test('evicting a seamless resource disposes it while the handle still holds its payload, and the handle heals again', async () => {
+      const { cache } = createFakeCache(() => 'decoded');
+      const { residency, typeRegistry, canonical } = createResidency({ cache });
+      const adapter = createFakeSeamlessAdapter();
+      const disposedPayloads: unknown[] = [];
+      installTypeA(typeRegistry, { leaf: adapter, dispose: resource => disposedPayloads.push((resource as { payload: unknown }).payload) });
+
+      const scope = new LoaderScope(fakeLoader, 'scope', 'scope');
+      const handle = residency._getSeamless(canonical(TypeA, 'a.png'), adapter) as { payload?: string };
+
+      handle.payload = 'original';
+      vi.mocked(adapter.evict).mockImplementation(resource => {
+        delete (resource as { payload?: string }).payload;
+        adapter.states.set(resource as object, 'loading');
+      });
+      residency._claim(canonical(TypeA, 'a.png'), scope);
+      residency._storeResource(canonical(TypeA, 'a.png'), handle);
+      adapter.fill(handle, handle);
+
+      residency._release(canonical(TypeA, 'a.png').key, scope);
+
+      expect(disposedPayloads).toEqual(['original']);
+      expect(handle.payload).toBeUndefined();
+      expect(adapter.stateOf(handle)).toBe('loading');
+
+      residency._claim(canonical(TypeA, 'a.png'), scope);
+      await new Promise(r => setTimeout(r, 0));
+
+      expect(adapter.fill).toHaveBeenLastCalledWith(handle, 'decoded');
+      expect(residency._peekResource(canonical(TypeA, 'a.png').key)).toBe(handle);
+      expect(disposedPayloads).toEqual(['original']);
+    });
+
     test('claim on an evicted key re-drives the fetch and heals the same handle', async () => {
       const { cache, resolve } = createFakeCache(() => 'decoded');
       const { residency, typeRegistry, canonical } = createResidency({ cache });
@@ -440,6 +473,32 @@ describe('AssetResidency', () => {
   });
 
   describe('background queue', () => {
+    test('enqueueing a background fetch does not scan the entries already queued', () => {
+      const { residency, typeRegistry, canonical } = createResidency({ concurrency: 0 });
+      installTypeA(typeRegistry);
+      let queuedKeyReads = 0;
+
+      for (let i = 0; i < 50; i++) {
+        const asset = canonical(TypeA, `entry-${i}.png`);
+        residency._enqueueBackgroundFetch(
+          {
+            ...asset,
+            get key() {
+              queuedKeyReads++;
+
+              return asset.key;
+            },
+          },
+          undefined,
+        );
+      }
+
+      queuedKeyReads = 0;
+      residency._enqueueBackgroundFetch(canonical(TypeA, 'new.png'), undefined);
+
+      expect(queuedKeyReads).toBe(0);
+    });
+
     test('enqueueBackgroundFetch defers the fetch until drained by awaitBackground', async () => {
       const contexts: Array<CacheContext<unknown>> = [];
       const { cache } = createFakeCache(context => (contexts.push(context), 'bg-value'));

@@ -5,7 +5,17 @@
 // is a strongly typed builder, not a `string`-keyed helper - without it,
 // `Asset.type` would be a regression over the `.of()` statics it replaces.
 
-import { Asset, Json, Loader, type ResourceAsset, type Texture, type ValueAsset } from '@codexo/exojs';
+import {
+  Asset,
+  type CoreValueAssetKind,
+  Json,
+  type LeaflessAssetKind,
+  Loader,
+  type ResourceAsset,
+  type Texture,
+  type ValueAsset,
+  type ValueAssetKind,
+} from '@codexo/exojs';
 
 import { LoadPriority } from '#assets/Loader';
 
@@ -69,5 +79,11 @@ loader.load(Json, 'l.json');
 // @ts-expect-error - registerType takes the string AssetDefinitions discriminator, not a constructor.
 loader.registerType('json', Json);
 
-export type { _LevelIsTyped, _RawJsonUnknown, _ShipIsTexture };
+// (n) the kind sets public signatures are written in are importable by name, so
+// an extension can spell the set its declaration-merged type joins.
+type _JsonIsValueKind = Expect<Equal<Extract<ValueAssetKind, 'json'>, 'json'>>;
+type _CoreValueKindsAreValueKinds = Expect<Equal<Extract<CoreValueAssetKind, ValueAssetKind>, CoreValueAssetKind>>;
+type _VideoIsLeafless = Expect<Equal<Extract<LeaflessAssetKind, 'video'>, 'video'>>;
+
+export type { _CoreValueKindsAreValueKinds, _JsonIsValueKind, _LevelIsTyped, _RawJsonUnknown, _ShipIsTexture, _VideoIsLeafless };
 void Asset;

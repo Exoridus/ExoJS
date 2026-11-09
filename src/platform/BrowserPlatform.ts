@@ -18,10 +18,14 @@ const noGamepads: ReadonlyArray<BrowserGamepad | null> = [];
 
 /**
  * The {@link PlatformAdapter} backed by the browser: a canvas element for the
- * drawing surface, `window` for keyboard and blur, `document` for visibility,
- * `navigator` for gamepads, and `navigator.onLine` plus the `online`/`offline`
- * window events for the network hint. Used automatically by
- * {@link Application} when no adapter was injected.
+ * drawing surface, the canvas's window for keyboard, blur and pixel ratio, its
+ * document for focus, visibility and pointer lock, `navigator` for gamepads, and
+ * `navigator.onLine` plus the `online`/`offline` window events for the network
+ * hint. Used automatically by {@link Application} when no adapter was injected.
+ *
+ * Document and window are the ones that own the canvas, not the globals of the
+ * running script: a canvas inside a same-origin iframe receives its keyboard
+ * focus and events in the iframe's document.
  *
  * Every capability degrades rather than throws when the host does not provide
  * it - pointer capture is rejected by jsdom and by browsers asked to release a
@@ -31,6 +35,8 @@ const noGamepads: ReadonlyArray<BrowserGamepad | null> = [];
  */
 export class BrowserPlatform implements PlatformAdapter {
   private readonly _canvas: HTMLCanvasElement;
+  private readonly _document: Document;
+  private readonly _window: Window & typeof globalThis;
   private readonly _textInputs = new Set<BrowserTextInput | EditContextTextInput>();
   private readonly _subscriptions = new Set<PlatformSubscription>();
   private readonly _visibilityListeners = new Set<(visible: boolean) => void>();
@@ -97,6 +103,10 @@ export class BrowserPlatform implements PlatformAdapter {
 
   public constructor(canvas: HTMLCanvasElement) {
     this._canvas = canvas;
+    this._document = canvas.ownerDocument;
+    // A document without a browsing context (a DOMParser document, a removed
+    // iframe's) has no window of its own; the script's window is the only one left.
+    this._window = (canvas.ownerDocument.defaultView ?? globalThis) as Window & typeof globalThis;
     this._lastVisible = this.documentVisible;
     this._lastPixelRatio = this.devicePixelRatio;
   }
@@ -107,7 +117,7 @@ export class BrowserPlatform implements PlatformAdapter {
   }
 
   public get surfaceFocused(): boolean {
-    return typeof document !== 'undefined' && document.activeElement === this._canvas;
+    return this._document.activeElement === this._canvas;
   }
 
   public get textInputFocused(): boolean {
@@ -129,7 +139,7 @@ export class BrowserPlatform implements PlatformAdapter {
   }
 
   public get documentVisible(): boolean {
-    return typeof document === 'undefined' || document.visibilityState === 'visible';
+    return this._document.visibilityState === 'visible';
   }
 
   public focusSurface(): void {
@@ -150,7 +160,7 @@ export class BrowserPlatform implements PlatformAdapter {
   }
 
   public get devicePixelRatio(): number {
-    const ratio = (globalThis as { devicePixelRatio?: number }).devicePixelRatio;
+    const ratio = (this._window as { devicePixelRatio?: number }).devicePixelRatio;
 
     return typeof ratio === 'number' && ratio > 0 ? ratio : 1;
   }
@@ -199,7 +209,7 @@ export class BrowserPlatform implements PlatformAdapter {
   }
 
   public get pointerLocked(): boolean {
-    return typeof document !== 'undefined' && document.pointerLockElement === this._canvas;
+    return this._document.pointerLockElement === this._canvas;
   }
 
   public lockPointer(): void {
@@ -222,7 +232,7 @@ export class BrowserPlatform implements PlatformAdapter {
     }
 
     try {
-      document.exitPointerLock();
+      this._document.exitPointerLock();
     } catch {
       // A host that reports a lock but has no way to end it.
     }
@@ -317,7 +327,7 @@ export class BrowserPlatform implements PlatformAdapter {
     listener: (event: PlatformWindowEventMap[K]) => void,
     options?: PlatformListenerOptions,
   ): PlatformSubscription {
-    return this._listen(globalThis, type, listener, options);
+    return this._listen(this._window, type, listener, options);
   }
 
   public destroy(): void {
@@ -386,13 +396,13 @@ export class BrowserPlatform implements PlatformAdapter {
    * listener on a query that can never match again.
    */
   private _armPixelRatioQuery(): void {
-    if (this._pixelRatioListeners.size === 0 || typeof matchMedia !== 'function') {
+    if (this._pixelRatioListeners.size === 0 || typeof this._window.matchMedia !== 'function') {
       return;
     }
 
     this._disarmPixelRatioQuery();
 
-    const query = matchMedia(`(resolution: ${this.devicePixelRatio}dppx)`);
+    const query = this._window.matchMedia(`(resolution: ${this.devicePixelRatio}dppx)`);
 
     this._pixelRatioQuery = query;
     query.addEventListener('change', this._pixelRatioHandler);
@@ -404,13 +414,13 @@ export class BrowserPlatform implements PlatformAdapter {
   }
 
   private _bindVisibility(): void {
-    if (this._visibilityBound || typeof document === 'undefined') {
+    if (this._visibilityBound) {
       return;
     }
 
     this._visibilityBound = true;
     this._lastVisible = this.documentVisible;
-    document.addEventListener('visibilitychange', this._visibilityHandler);
+    this._document.addEventListener('visibilitychange', this._visibilityHandler);
   }
 
   private _unbindVisibility(): void {
@@ -419,17 +429,17 @@ export class BrowserPlatform implements PlatformAdapter {
     }
 
     this._visibilityBound = false;
-    document.removeEventListener('visibilitychange', this._visibilityHandler);
+    this._document.removeEventListener('visibilitychange', this._visibilityHandler);
   }
 
   private _bindPointerLock(): void {
-    if (this._pointerLockBound || typeof document === 'undefined') {
+    if (this._pointerLockBound) {
       return;
     }
 
     this._pointerLockBound = true;
     this._lastPointerLocked = this.pointerLocked;
-    document.addEventListener('pointerlockchange', this._pointerLockHandler);
+    this._document.addEventListener('pointerlockchange', this._pointerLockHandler);
   }
 
   private _unbindPointerLock(): void {
@@ -438,6 +448,6 @@ export class BrowserPlatform implements PlatformAdapter {
     }
 
     this._pointerLockBound = false;
-    document.removeEventListener('pointerlockchange', this._pointerLockHandler);
+    this._document.removeEventListener('pointerlockchange', this._pointerLockHandler);
   }
 }

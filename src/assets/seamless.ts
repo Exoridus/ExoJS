@@ -38,13 +38,21 @@ export interface DeferredTextureOptions extends PreSizeOptions {
 export interface SeamlessAdapter<T> {
   /** Create a fresh deferred handle, already in the `'loading'` state. */
   createPlaceholder(options?: unknown): T;
-  /** Re-arm a `'failed'` handle for a retry (`'failed'` → `'loading'`, fresh `.loaded`). */
+  /**
+   * Enter `'loading'` without dropping the payload. A settled handle gets a
+   * fresh `.loaded`; an already-loading handle keeps its pending promise.
+   * Used before disposal as well as when retrying a failed load.
+   */
   begin(handle: T): void;
   /** Transplant the donor's payload into the handle in place and settle `'ready'`. */
   fill(handle: T, donor: T): void;
   /** Show the error payload on the handle and settle `'failed'`. */
   fail(handle: T, error: Error): void;
-  /** Drop the payload back to a placeholder in place (refcount-0 eviction); identity is kept so a later fill heals every consumer. */
+  /**
+   * Drop the payload back to a loading placeholder in place (refcount-0
+   * eviction). Preserve an already-loading handle's pending `.loaded` promise
+   * so a claim made during disposal still settles when the handle heals.
+   */
   evict(handle: T): void;
   /** Current load state of the handle. */
   stateOf(handle: T): LoadStateValue;

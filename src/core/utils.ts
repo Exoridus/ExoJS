@@ -1,5 +1,6 @@
 import { Size } from '#math/Size';
 import type { PlatformEvent } from '#platform/PlatformAdapter';
+import { hasDomBrand } from '#platform/RenderSurface';
 
 import type { TextureSource } from './types';
 
@@ -11,6 +12,7 @@ interface CanvasSourceWithDisplaySize {
 }
 
 const codecNotSupportedPattern = /^no$/;
+const svgNamespace = 'http://www.w3.org/2000/svg';
 
 let internalAudioElement: HTMLAudioElement | null = null;
 let internalCanvasElement: HTMLCanvasElement | null = null;
@@ -200,19 +202,16 @@ export const supportsCodec = (...codecs: string[]): boolean =>
 export const getCanvasSourceSize = (source: CanvasImageSource): Size => {
   const dynamicSource = source as CanvasSourceWithDisplaySize;
 
-  // The `instanceof` checks are guarded on the constructor rather than written
-  // bare: a worker realm defines none of the document element types, and an
-  // unguarded reference to one is a ReferenceError, not a `false`.
-  if (typeof HTMLImageElement !== 'undefined' && source instanceof HTMLImageElement) {
+  if (hasDomBrand(source, 'HTMLImageElement')) {
     return Size.temp.set(source.naturalWidth, source.naturalHeight);
   }
 
-  if (typeof HTMLVideoElement !== 'undefined' && source instanceof HTMLVideoElement) {
+  if (hasDomBrand(source, 'HTMLVideoElement')) {
     return Size.temp.set(source.videoWidth, source.videoHeight);
   }
 
-  if (typeof SVGElement !== 'undefined' && source instanceof SVGElement) {
-    return Size.temp.copy(source.getBoundingClientRect());
+  if ((source as Partial<Element>).namespaceURI === svgNamespace) {
+    return Size.temp.copy((source as SVGElement).getBoundingClientRect());
   }
 
   if (typeof dynamicSource.displayWidth === 'number' && typeof dynamicSource.displayHeight === 'number') {

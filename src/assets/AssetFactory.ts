@@ -12,11 +12,12 @@ import type { LoaderScope } from './LoaderScope';
  * deduplicated font itself has.
  *
  * It is deliberately narrower than the scope backing it: a factory may acquire
- * dependencies, but not release them, tear the scope down, or unpack a
- * container into it. Those decisions belong to whoever owns the resource.
+ * dependencies, but not release them, tear the scope down, open a child scope,
+ * or unpack a container into it. Those decisions belong to whoever owns the
+ * resource.
  * @advanced
  */
-export type AssetDependencyScope = Pick<LoaderScope, 'get' | 'load' | 'createScope'>;
+export type AssetDependencyScope = Pick<LoaderScope, 'get' | 'load'>;
 
 /**
  * What a factory is told about the one resource it is building.
@@ -85,7 +86,19 @@ export interface AssetFactory<Source, Resource, Options = undefined> {
    * `document.fonts`, a GPU buffer, a worker. A decoded `AudioBuffer`, a parsed
    * object or a compiled `WebAssembly.Module` needs nothing.
    *
+   * For a type with a seamless leaf, an eviction passes the handle consumers
+   * hold, while it still carries its payload. Its load state is already
+   * re-armed, so a synchronous claim observes a fresh load cycle; the leaf's
+   * `evict` runs right after and preserves that cycle's pending promise.
+   * The handle outlives the eviction and is filled again by the next
+   * claim, so free only what it holds - never destroy the handle itself. A
+   * result that never reached a consumer (its load was cancelled or unloaded
+   * while in flight) is passed here as well, so the same code has to be safe
+   * for both.
+   *
    * Must be synchronous, and must tolerate a resource that was already released.
+   * A disposer that throws during an eviction is logged, and the eviction
+   * completes regardless.
    */
   dispose?(resource: Resource): void;
   /**
