@@ -692,7 +692,10 @@ export class SystemRegistry implements Destroyable {
 
     for (const [phase, list, implemented] of phases) {
       if (implemented && wants(phase)) {
-        sortRegistrations([...list, registration], this._registrations);
+        const active = list.filter(entry => entry.active);
+
+        active.push(registration);
+        sortRegistrations(active, this._registrations);
       }
     }
   }
