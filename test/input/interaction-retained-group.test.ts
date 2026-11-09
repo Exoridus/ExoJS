@@ -446,3 +446,177 @@ describe('InteractionSystem: hit-testing children of a translated RetainedContai
     scene.root.destroy();
   });
 });
+
+describe('InteractionSystem: promoted group-local AABB index (W002-05)', () => {
+  test('promotes a dense group and preserves z-order, visibility and clipping', () => {
+    const { app, scene } = createApp();
+    const im = new InteractionSystem(app);
+    im.attachRoot(scene.root);
+
+    const group = new RetainedContainer();
+    group.setPosition(100, 50);
+    scene.addChild(group);
+
+    for (let i = 0; i < 36; i++) {
+      const child = makeSprite();
+      child.setPosition((i % 6) * 60, Math.floor(i / 6) * 60);
+      group.addChild(child);
+      child.interactive = true;
+    }
+
+    const internals = im as unknown as {
+      _indexedAnchoredGroups: Set<{ tree: { leafCount: number; _validate(): void } }>;
+    };
+
+    expect(internals._indexedAnchoredGroups.size).toBe(1);
+    const indexed = [...internals._indexedAnchoredGroups][0]!;
+    expect(indexed.tree.leafCount).toBe(36);
+    indexed.tree._validate();
+
+    const lower = makeSprite();
+    const upper = makeSprite();
+    lower.setPosition(420, 420);
+    upper.setPosition(420, 420);
+    lower.zIndex = 1;
+    upper.zIndex = 2;
+    group.addChild(lower);
+    group.addChild(upper);
+    lower.interactive = true;
+    upper.interactive = true;
+
+    expect(im.nodeAt(545, 495)).toBe(upper);
+    lower.zIndex = 3;
+    expect(im.nodeAt(545, 495)).toBe(lower);
+
+    lower.visible = false;
+    expect(im.nodeAt(545, 495)).toBe(upper);
+    upper.visible = false;
+    expect(im.nodeAt(545, 495)).toBeNull();
+    lower.visible = true;
+
+    group.clip = true;
+    group.clipShape = new Rectangle(540, 490, 10, 10);
+    expect(im.nodeAt(545, 495)).toBe(lower);
+    expect(im.nodeAt(560, 495)).toBeNull();
+
+    im.destroy();
+    scene.root.destroy();
+  });
+
+  test('nested groups move without stale proxies and refresh hover at a resting pointer', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionSystem(app);
+    im.attachRoot(scene.root);
+
+    const outer = new RetainedContainer();
+    const inner = new RetainedContainer();
+    outer.setPosition(100, 80);
+    inner.setPosition(25, 35);
+    outer.addChild(inner);
+    scene.addChild(outer);
+
+    const children = Array.from({ length: 36 }, (_, i) => {
+      const child = makeSprite();
+      child.setPosition((i % 6) * 60, Math.floor(i / 6) * 60);
+      inner.addChild(child);
+      child.interactive = true;
+      return child;
+    });
+
+    const target = children[0]!;
+    expect(im.nodeAt(150, 140)).toBe(target);
+
+    dispatchPointer(signals.onPointerMove, { x: 150, y: 140 });
+    im.preFrame(frameDelta);
+    expect(im.getHoveredNode(1)).toBe(target);
+
+    outer.setPosition(300, 180);
+    im.preFrame(frameDelta);
+    expect(im.getHoveredNode(1)).toBeNull();
+    expect(im.nodeAt(350, 240)).toBe(target);
+
+    outer.setPosition(100, 80);
+    im.preFrame(frameDelta);
+    expect(im.getHoveredNode(1)).toBe(target);
+
+    const sibling = new RetainedContainer();
+    sibling.setPosition(250, 100);
+    outer.addChild(sibling);
+    inner.removeChild(target);
+    sibling.addChild(target);
+    im.preFrame(frameDelta);
+
+    expect(im.nodeAt(150, 140)).toBeNull();
+    expect(im.nodeAt(375, 205)).toBe(target);
+    expect((im as unknown as { _indexedAnchoredGroups: Set<unknown> })._indexedAnchoredGroups.size).toBe(1);
+
+    sibling.removeChild(target);
+    inner.addChild(target);
+    im.preFrame(frameDelta);
+    expect(im.nodeAt(150, 140)).toBe(target);
+
+    for (let i = 1; i < 29; i++) {
+      inner.removeChild(children[i]!);
+    }
+    im.preFrame(frameDelta);
+    // Eight remaining nodes: demote instead of keeping a sparse tree alive.
+    expect((im as unknown as { _indexedAnchoredGroups: Set<unknown> })._indexedAnchoredGroups.size).toBe(0);
+    expect(im.nodeAt(150, 140)).toBe(target);
+
+    for (let i = 1; i < 29; i++) {
+      inner.addChild(children[i]!);
+    }
+    im.preFrame(frameDelta);
+    expect((im as unknown as { _indexedAnchoredGroups: Set<unknown> })._indexedAnchoredGroups.size).toBe(1);
+    expect(im.nodeAt(150, 140)).toBe(target);
+
+    im.destroy();
+    scene.root.destroy();
+  });
+
+  test('an actively captured pointer keeps its target through group movement', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionSystem(app);
+    im.attachRoot(scene.root);
+
+    const group = new RetainedContainer();
+    group.setPosition(100, 100);
+    scene.addChild(group);
+
+    for (let i = 0; i < 35; i++) {
+      const child = makeSprite();
+      child.setPosition((i % 7) * 60, Math.floor(i / 7) * 60);
+      group.addChild(child);
+      child.interactive = true;
+    }
+
+    const drag = makeSprite();
+    drag.setPosition(480, 0);
+    drag.draggable = true;
+    group.addChild(drag);
+    drag.interactive = true;
+
+    const onMove = vi.fn();
+    drag.onPointerMove.add(onMove);
+
+    dispatchPointer(signals.onPointerDown, { x: 605, y: 125 });
+    im.preFrame(frameDelta);
+    dispatchPointer(signals.onPointerMove, { x: 645, y: 165 });
+    im.preFrame(frameDelta);
+
+    expect(im.getCapturedNodes()).toContain(drag);
+
+    group.setPosition(-300, 200);
+    dispatchPointer(signals.onPointerMove, { x: 5, y: 5 });
+    im.preFrame(frameDelta);
+    expect(im.getCapturedNodes()).toContain(drag);
+    expect(onMove).toHaveBeenCalled();
+
+    dispatchPointer(signals.onPointerUp, { x: 5, y: 5 });
+    im.preFrame(frameDelta);
+    expect(im.getCapturedNodes()).toHaveLength(0);
+
+    im.destroy();
+    scene.root.destroy();
+  });
+});
