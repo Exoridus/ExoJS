@@ -136,6 +136,7 @@ export class AudioStream implements Playable {
       sourceNode: this._sourceNode,
       loop,
       playbackRate,
+      ...(options._startHeld !== undefined && { startHeld: options._startHeld }),
       ...(options.time !== undefined && { startTime: options.time }),
     });
 
@@ -155,6 +156,7 @@ export class AudioStream implements Playable {
   /** Implements {@link Playable._profileVoice}. @internal */
   public _profileVoice(system: AudioSystem, options: PlayOptions): VoiceProfile {
     return {
+      waitForUnlock: true,
       bus: options.bus ?? system.music,
       pausable: true,
       duration: this.duration,

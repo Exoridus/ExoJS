@@ -1,4 +1,6 @@
+import type { AudioBus } from '#audio/AudioBus';
 import type { AudioGenerator } from '#audio/AudioGenerator';
+import type { AudioSend } from '#audio/AudioSend';
 import type { AudioStream } from '#audio/AudioStream';
 import type { AudioSystem } from '#audio/AudioSystem';
 import type { Loopable, Pausable, Playable, RatePitched, Seekable, Voice } from '#audio/Playable';
@@ -75,6 +77,50 @@ if ('seek' in sceneCustom) {
   // @ts-expect-error An unknown Playable gives no seek promise.
   sceneCustom.seek(1);
 }
+
+// Deferred handles keep the same graph types as active ones. Reading output
+// before a real voice exists throws; it never returns null or a substitute.
+const sceneOutputs: AudioNode[] = [sceneSound.output, sceneStream.output, sceneGenerator.output, sceneCustom.output];
+const soundSend: AudioSend = sceneSound.addSend(sceneSound.bus, 0.5);
+const streamSend: AudioSend = sceneStream.addSend(sceneStream.bus, 0.5);
+const generatorSend: AudioSend = sceneGenerator.addSend(sceneGenerator.bus, 0.5);
+const customSend: AudioSend = sceneCustom.addSend(sceneCustom.bus, 0.5);
+
+for (const send of [soundSend, streamSend, generatorSend, customSend]) {
+  const level: number = send.level;
+  const bus: AudioBus = send.bus;
+  const destroyed: boolean = send.destroyed;
+
+  send.level = level + 0.25;
+  // @ts-expect-error A send level is numeric.
+  send.level = '0.5';
+  // @ts-expect-error A send's target bus is fixed for its lifetime.
+  send.bus = bus;
+  // @ts-expect-error Only destroy() changes the send's destroyed state.
+  send.destroyed = destroyed;
+  send.destroy();
+}
+
+const cachedSoundSends = sceneSound.sends;
+const cachedStreamSends = sceneStream.sends;
+const cachedGeneratorSends = sceneGenerator.sends;
+const cachedCustomSends = sceneCustom.sends;
+const cachedSendViews: ReadonlyArray<readonly AudioSend[]> = [cachedSoundSends, cachedStreamSends, cachedGeneratorSends, cachedCustomSends];
+
+// @ts-expect-error A cached Sound send view cannot be mutated by the caller.
+cachedSoundSends.push(soundSend);
+// @ts-expect-error A cached stream send view cannot be mutated by the caller.
+cachedStreamSends.push(streamSend);
+// @ts-expect-error A cached generator send view cannot be mutated by the caller.
+cachedGeneratorSends.push(generatorSend);
+// @ts-expect-error A cached custom-source send view cannot be mutated by the caller.
+cachedCustomSends.push(customSend);
+// @ts-expect-error The voice owns its send collection.
+sceneStream.sends = [];
+// @ts-expect-error The voice owns its output node.
+sceneStream.output = sceneOutputs[0]!;
+
+void cachedSendViews;
 
 // AudioSystem.play carries the same source-appropriate surface.
 const systemSound = system.play(sound, { replace: true });

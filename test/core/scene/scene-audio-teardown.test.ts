@@ -4,6 +4,7 @@
  * other voice the scene started still has to stop, and the failure has to
  * reach the application's error pipeline exactly once.
  */
+import { getAudioContext } from '#audio/audioContext';
 import type { Voice } from '#audio/Playable';
 import { Sound } from '#audio/Sound';
 import { Application } from '#core/Application';
@@ -72,6 +73,7 @@ const liveVoices = (app: Application): number => (app.audio as unknown as { _voi
 let rafSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
+  getAudioContext();
   rafSpy = vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation(() => 1);
   voices = [];
 });
