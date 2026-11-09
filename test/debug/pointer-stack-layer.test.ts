@@ -233,7 +233,7 @@ describe('PointerStackLayer', () => {
 
     const lines = (layer as unknown as { _buildLines(): string[] })._buildLines();
 
-    expect(lines.slice(2)).toEqual(['  Container — z=0', '  Group — z=0']);
+    expect(lines.slice(2)).toEqual(['  Group — z=0', '  Container — z=0']);
     root.destroy();
   });
 
@@ -304,6 +304,42 @@ describe('PointerStackLayer', () => {
     expect(nodeA.contains).toHaveBeenCalledWith(expect.closeTo(100, 10), expect.closeTo(100, 10));
     expect(nodeB.contains).toHaveBeenCalledWith(expect.closeTo(100, 10), expect.closeTo(100, 10));
     expect(nodeC.contains).toHaveBeenCalledWith(expect.closeTo(100, 10), expect.closeTo(100, 10));
+  });
+
+  test('a high zIndex only orders a node among its siblings, as painting does', () => {
+    const child = makeNode({ name: 'Child', containsResult: true, zIndex: 100 });
+    const parent = makeNode({ name: 'Parent', containsResult: false, zIndex: 0, children: [child] });
+    const sibling = makeNode({ name: 'Sibling', containsResult: true, zIndex: 1 });
+    const root = makeNode({ containsResult: false, children: [parent, sibling] });
+    const layer = new PointerStackLayer(makeApp({ root, pointerPos: { x: 10, y: 10 } }));
+
+    const lines = (layer as unknown as { _buildLines(): string[] })._buildLines();
+
+    expect(lines.slice(2)).toEqual(['  Sibling — z=1', '  Child — z=100']);
+  });
+
+  test('a child is listed above the container it paints over, and later siblings above earlier ones', () => {
+    class Outer extends Container {}
+    class Inner extends Container {}
+    class Before extends Container {}
+    const root = new Container();
+    const before = new Before();
+    const outer = new Outer();
+    const inner = new Inner();
+
+    for (const node of [before, outer, inner]) {
+      node.hitArea = new Rectangle(0, 0, 100, 100);
+    }
+
+    outer.addChild(inner);
+    root.addChild(before);
+    root.addChild(outer);
+    const layer = new PointerStackLayer(makeApp({ root: root as unknown as FakeNode, pointerPos: { x: 10, y: 10 } }));
+
+    const lines = (layer as unknown as { _buildLines(): string[] })._buildLines();
+
+    expect(lines.slice(2)).toEqual(['  Inner — z=0', '  Outer — z=0', '  Before — z=0', '  Container — z=0']);
+    root.destroy();
   });
 
   test('stack entries sorted by zIndex descending (highest first)', () => {
