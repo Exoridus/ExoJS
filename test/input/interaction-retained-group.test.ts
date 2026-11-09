@@ -9,6 +9,7 @@ import type { GamepadButton } from '#input/GamepadButton';
 import type { InputSystem } from '#input/InputSystem';
 import { InteractionSystem } from '#input/InteractionSystem';
 import type { Pointer } from '#input/Pointer';
+import { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Container } from '#rendering/Container';
