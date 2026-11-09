@@ -7,10 +7,20 @@ import { describe, test } from 'vitest';
 
 import { LutFilter } from '#rendering/filters/LutFilter';
 import { DataTexture } from '#rendering/texture/DataTexture';
+import { Texture } from '#rendering/texture/Texture';
 import { TextureFormat } from '#rendering/types';
 
 import { createWebGpuTestBackend, readWebGpuPixels, renderWebGpuEncoded } from './_backendSetup';
-import { CLEAR, expectedProbeOutput, LUT_SCENE_SIZE, lutScene, PROBE_COLOURS, probeLut, SAMPLE_POINT } from './_lutFilterFixture';
+import {
+  CLEAR,
+  expectedProbeOutput,
+  fillCubeLut,
+  LUT_SCENE_SIZE,
+  lutScene,
+  PROBE_COLOURS,
+  probeLut,
+  SAMPLE_POINT,
+} from './_lutFilterFixture';
 import { expectPixelNear } from './_pixels';
 
 describe('LutFilter rgb1d grading (WebGPU)', () => {
@@ -112,4 +122,37 @@ test('3D LUT samples through its paired nonfiltering sampler', async ctx => {
 
 test('RGB-1D LUT samples through its paired nonfiltering sampler', async ctx => {
   await checkNonfilteringLut(ctx, 'rgb1d');
+});
+
+test.for(['owner', 'ancestor'])('a deferred cube payload refreshes its %s cache', async (cache, ctx) => {
+  const backend = await createWebGpuTestBackend(LUT_SCENE_SIZE);
+  const lut = new Texture(null, { colorSpace: 'none', generateMipMap: false });
+  const filter = new LutFilter({ size: 17 }).setLut(lut);
+  const { root, texture } = lutScene('#40a0c0', filter);
+
+  (cache === 'owner' ? root.children[0]! : root).cacheAsTexture = true;
+
+  try {
+    fillCubeLut(lut, 17);
+
+    if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) {
+      return;
+    }
+
+    expectPixelNear(readWebGpuPixels(backend, LUT_SCENE_SIZE)(SAMPLE_POINT, SAMPLE_POINT), [64, 160, 192, 255], 8);
+
+    fillCubeLut(lut, 9, true);
+
+    if (!(await renderWebGpuEncoded(ctx, backend, root, CLEAR))) {
+      return;
+    }
+
+    expectPixelNear(readWebGpuPixels(backend, LUT_SCENE_SIZE)(SAMPLE_POINT, SAMPLE_POINT), [191, 160, 192, 255], 8);
+  } finally {
+    root.destroy();
+    texture.destroy();
+    filter.destroy();
+    lut.destroy();
+    backend.destroy();
+  }
 });
