@@ -261,7 +261,7 @@ describe('Loader seamless get (Texture)', () => {
 
       expect(handle).toBe(loader.get('ship.png', { textureOptions: { scaleMode: ScaleModes.Linear } }));
       expect(warnings).toHaveLength(1);
-      expect(warnings[0]).toContain('the options this get() asked for were ignored');
+      expect(warnings[0]).toContain('conflicting options were ignored for the shared payload');
 
       // Once per source: a repeated conflict is the same mistake, not a new one.
       loader.get('ship.png', { textureOptions: { scaleMode: ScaleModes.Linear } });
