@@ -41,7 +41,7 @@ class VinylRecordScene extends Scene {
   update(delta) {
     // Spin speed is driven by live audio energy, not a constant fallback BPM.
     // Silence → energy 0 → the platter holds perfectly still.
-    const energy = this.analyser.getRms();
+    const energy = this.analyser.getLevel();
     const targetRpm = energy > 0.02 ? 30 + energy * 260 : 0;
     // Ease toward the target so the disc spins up and slows down smoothly.
     this.rpm += (targetRpm - this.rpm) * Math.min(1, delta * 4);

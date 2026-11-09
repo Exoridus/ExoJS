@@ -15,7 +15,7 @@ class BandScene extends Scene {
     // Quick band energy without building a filterbank
     const bass = this.analyser.getBandEnergy(20, 250);
     const { low, mid, high } = this.analyser.getLowMidHigh();
-    const overall = this.analyser.getRms();
+    const overall = this.analyser.getLevel();
   }
   // #endregion guide:spectrum-bands
 }
