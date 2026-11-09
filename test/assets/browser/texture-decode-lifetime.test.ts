@@ -90,7 +90,7 @@ describe('texture decode lifetime', () => {
     expect((reloaded.source as ImageBitmap).width).toBe(4);
   });
 
-  test('a claim inside bitmap disposal heals the same handle and owns a fresh bitmap', async () => {
+  test('a claim inside bitmap disposal heals every handle and owns a fresh bitmap', async () => {
     const first = loader.createScope();
     const next = loader.createScope();
     const other = loader.createScope();
@@ -101,12 +101,14 @@ describe('texture decode lifetime', () => {
     const originalDispose = TextureFactory.prototype.dispose;
     let reclaimed: Texture | undefined;
     let replacement: Promise<Texture> | undefined;
+    let healed: Promise<Texture> | undefined;
     let reclaim = true;
     const dispose = vi.spyOn(TextureFactory.prototype, 'dispose').mockImplementation(function (this: TextureFactory, resource) {
       if (reclaim) {
         reclaim = false;
         reclaimed = next.get(asset);
         replacement = reclaimed.loaded;
+        healed = texture.loaded;
       }
 
       originalDispose.call(this, resource);
@@ -115,21 +117,28 @@ describe('texture decode lifetime', () => {
     try {
       first.release(texture);
 
-      expect(reclaimed).toBe(texture);
-      expect(replacement).not.toBe(oldLoaded);
+      expect(reclaimed).not.toBe(texture);
+      expect(replacement).toBe(reclaimed!.loaded);
+      expect(healed).not.toBe(oldLoaded);
       expect(released.width).toBe(0);
-      await expect(replacement).resolves.toBe(texture);
+      await expect(replacement).resolves.toBe(reclaimed);
+      await expect(healed).resolves.toBe(texture);
 
       const bitmap = texture.source as ImageBitmap;
 
       expect(bitmap).not.toBe(released);
       expect(bitmap.width).toBe(4);
-      expect(other.get(asset)).toBe(texture);
-      next.release(texture);
+      expect(reclaimed!.source).toBe(bitmap);
+      const sibling = other.get(asset);
+
+      expect(sibling.source).toBe(bitmap);
+      next.release(reclaimed!);
       expect(bitmap.width).toBe(4);
-      other.release(texture);
+      other.release(sibling);
       expect(bitmap.width).toBe(0);
       expect(texture.source).toBeNull();
+      expect(reclaimed!.source).toBeNull();
+      expect(sibling.source).toBeNull();
     } finally {
       dispose.mockRestore();
     }

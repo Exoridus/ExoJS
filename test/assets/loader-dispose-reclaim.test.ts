@@ -1,3 +1,4 @@
+import type { ResourceAsset } from '#assets/Asset';
 import { Assets } from '#assets/Assets';
 import { Loader } from '#assets/Loader';
 import { textureSeamlessAdapter } from '#assets/seamless';
@@ -130,8 +131,10 @@ describe('reclaim from a seamless disposer', () => {
 
   test.each([
     ['get', false],
+    ['descriptor', false],
     ['load', false],
     ['get', true],
+    ['descriptor', true],
     ['load', true],
   ] as const)('%s heals every handle and retains replacement dependencies (disposer throws=%s)', async (method, throws) => {
     const loader = new Loader();
@@ -213,6 +216,9 @@ describe('reclaim from a seamless disposer', () => {
         if (method === 'get') {
           reclaimed = next.get('./asset.png', options);
           replacement = reclaimed.loaded;
+        } else if (method === 'descriptor') {
+          reclaimed = next.get(type.asset('./asset.png', options) as ResourceAsset<Texture>);
+          replacement = reclaimed.loaded;
         } else {
           replacement = next.load(type.asset('./asset.png', options));
         }
@@ -227,11 +233,14 @@ describe('reclaim from a seamless disposer', () => {
       if (method === 'get') {
         expect(reclaimed).toBe(handle);
         expect(replacement).not.toBe(initialLoaded);
+      } else if (method === 'descriptor') {
+        expect(reclaimed).not.toBe(handle);
+        expect(replacement).toBe(reclaimed!.loaded);
       }
 
       const concurrent = other.load(type.asset('asset.png', options));
 
-      await expect(replacement).resolves.toBe(handle);
+      await expect(replacement).resolves.toBe(method === 'descriptor' ? reclaimed : handle);
       await expect(concurrent).resolves.toBe(handle);
       expect(attempts).toBe(2);
       expect(seenOptions).toEqual([options, options]);
@@ -240,6 +249,11 @@ describe('reclaim from a seamless disposer', () => {
       expect(sibling.item.loadState).toBe('ready');
       expect(sibling.item.source).toBe(handle.source);
       expect(handle.source).not.toBe(oldSource);
+
+      if (reclaimed !== undefined) {
+        expect(reclaimed.source).toBe(handle.source);
+      }
+
       expect(loader.inspect().find(row => row.aliases.includes('asset.png'))?.claims).toBe(2);
       const shared = loader.inspect().find(row => row.aliases.includes('shared.dat'))!;
 
@@ -254,6 +268,11 @@ describe('reclaim from a seamless disposer', () => {
       other.destroy();
       expect(handle.source).toBeNull();
       expect(sibling.item.source).toBeNull();
+
+      if (reclaimed !== undefined) {
+        expect(reclaimed.source).toBeNull();
+      }
+
       expect(disposed).toHaveLength(2);
       expect(disposedDependencies.sort()).toEqual(['new.dat', 'old.dat', 'shared.dat']);
       expect(loader.inspect()).toHaveLength(0);
