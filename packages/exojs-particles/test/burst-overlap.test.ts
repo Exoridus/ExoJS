@@ -12,7 +12,10 @@ describe('overlapping burst schedules', () => {
       test(`matches absolute event times for interval=${interval}, step=${step}`, () => {
         const texture = new Texture();
         const system = new ParticleSystem(texture, { capacity: 1000, simulation: 'cpu' });
-        const schedule = [{ time: 0, count: 1 }, { time: 2, count: 2 }];
+        const schedule = [
+          { time: 0, count: 1 },
+          { time: 2, count: 2 },
+        ];
 
         try {
           system.addSpawnModule(new BurstSpawn({ schedule, interval, lifetime: new Constant(100) }));
@@ -46,7 +49,10 @@ describe('overlapping burst schedules', () => {
     const texture = new Texture();
     const system = new ParticleSystem(texture, { capacity: 100, simulation: 'cpu' });
     const burst = new BurstSpawn({
-      schedule: [{ time: 0, count: 1 }, { time: 2, count: 2 }],
+      schedule: [
+        { time: 0, count: 1 },
+        { time: 2, count: 2 },
+      ],
       interval: 1,
       lifetime: new Constant(100),
     });
@@ -74,7 +80,10 @@ describe('overlapping burst schedules', () => {
     try {
       system.addSpawnModule(
         new BurstSpawn({
-          schedule: [{ time: 0, count: 1 }, { time: 2, count: 1 }],
+          schedule: [
+            { time: 0, count: 1 },
+            { time: 2, count: 1 },
+          ],
           interval: 1,
           lifetime: new Constant(100),
         }),
@@ -100,7 +109,10 @@ describe('overlapping burst schedules', () => {
       try {
         system.addSpawnModule(
           new BurstSpawn({
-            schedule: [{ time: 0, count: 2 }, { time: 2, count: 3 }],
+            schedule: [
+              { time: 0, count: 2 },
+              { time: 2, count: 3 },
+            ],
             ...(interval === undefined ? {} : { interval }),
             lifetime: new Constant(100),
           }),
@@ -116,14 +128,20 @@ describe('overlapping burst schedules', () => {
   });
 
   test('does not miss a decimal interval boundary after accumulated updates', () => {
-    for (const steps of [[0, 0.3], [0.1, 0.1, 0.1]]) {
+    for (const steps of [
+      [0, 0.3],
+      [0.1, 0.1, 0.1],
+    ]) {
       const texture = new Texture();
       const system = new ParticleSystem(texture, { capacity: 100, simulation: 'cpu' });
 
       try {
         system.addSpawnModule(
           new BurstSpawn({
-            schedule: [{ time: 0, count: 1 }, { time: 0.2, count: 2 }],
+            schedule: [
+              { time: 0, count: 1 },
+              { time: 0.2, count: 2 },
+            ],
             interval: 0.1,
             lifetime: new Constant(100),
           }),

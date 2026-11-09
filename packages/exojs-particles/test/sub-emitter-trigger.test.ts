@@ -82,7 +82,10 @@ describe('sub-emitter burst triggers', () => {
   test('does not consume or reset the scheduled clock on an immediate trigger', () => {
     withSystems((parent, child) => {
       const burst = new BurstSpawn({
-        schedule: [{ time: 0, count: 1 }, { time: 2, count: 3 }],
+        schedule: [
+          { time: 0, count: 1 },
+          { time: 2, count: 3 },
+        ],
         lifetime: new Constant(100),
       });
 
