@@ -5,6 +5,10 @@ import { DIRECTION_X, DIRECTION_Y, SQRT2 } from './gridGeometry';
 import { GridJumpExpansion } from './GridJumpExpansion';
 
 const storedCost = (cost: number): number => {
+  if (!Number.isFinite(cost) || cost <= 0) {
+    return 0;
+  }
+
   const value = Math.fround(cost);
 
   // Classification and the admissible lower bound must describe the Float32

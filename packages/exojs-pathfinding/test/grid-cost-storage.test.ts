@@ -85,4 +85,18 @@ describe('GridSpace Float32 cost storage', () => {
       assertUniform(grid);
     }
   });
+
+  test('does not coerce non-numeric runtime inputs into walkable costs', () => {
+    const values: readonly unknown[] = ['2', 2n, null, undefined, {}, Symbol('cost')];
+
+    for (const value of values) {
+      const cost = value as number;
+      const grid = new GridSpace(2, 1);
+
+      grid.setCost(1, 0, cost);
+      assert.equal(grid.costAt(1, 0), 0);
+      assertUniform(grid);
+      assert.equal(GridSpace.from(2, 1, () => cost).costAt(0, 0), 0);
+    }
+  });
 });
