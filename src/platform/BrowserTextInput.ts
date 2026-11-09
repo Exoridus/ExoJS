@@ -135,7 +135,7 @@ export class BrowserTextInput implements PlatformTextInput {
   public constructor(canvas: HTMLCanvasElement) {
     this._canvas = canvas;
 
-    const element = document.createElement('textarea');
+    const element = canvas.ownerDocument.createElement('textarea');
 
     element.autocomplete = 'off';
     element.setAttribute('autocorrect', 'off');
@@ -168,7 +168,7 @@ export class BrowserTextInput implements PlatformTextInput {
     style.zIndex = '-1';
 
     this._element = element;
-    document.body.append(element);
+    canvas.ownerDocument.body.append(element);
 
     element.addEventListener('beforeinput', this._beforeInput);
     element.addEventListener('compositionstart', this._compositionStart);
@@ -188,7 +188,7 @@ export class BrowserTextInput implements PlatformTextInput {
 
   /** Whether host keyboard focus currently sits on this transport. */
   public get hostFocused(): boolean {
-    return this._claimingFocus || (typeof document !== 'undefined' && document.activeElement === this._element);
+    return this._claimingFocus || this._element.ownerDocument.activeElement === this._element;
   }
 
   /** Whether {@link BrowserTextInput.destroy} has already run. */
@@ -215,7 +215,7 @@ export class BrowserTextInput implements PlatformTextInput {
   }
 
   public blur(): void {
-    if (typeof document !== 'undefined' && document.activeElement === this._element) {
+    if (this._element.ownerDocument.activeElement === this._element) {
       // Hand host focus back to the surface it was borrowed from instead of
       // dropping it on the document: keyboard input would otherwise stop
       // reaching the application until the next press on the surface.
@@ -290,14 +290,16 @@ export class BrowserTextInput implements PlatformTextInput {
    * placement.
    */
   private _applyBounds(): void {
-    if (this._bounds === null || typeof document === 'undefined') {
+    if (this._bounds === null) {
       return;
     }
 
     const canvasRect = this._canvas.getBoundingClientRect();
 
-    this._element.style.left = `${canvasRect.left + this._bounds.x}px`;
-    this._element.style.top = `${canvasRect.top + this._bounds.y}px`;
+    const view = this._element.ownerDocument.defaultView;
+
+    this._element.style.left = `${canvasRect.left + this._bounds.x + (view?.scrollX ?? 0)}px`;
+    this._element.style.top = `${canvasRect.top + this._bounds.y + (view?.scrollY ?? 0)}px`;
     this._element.style.width = `${Math.max(1, this._bounds.width)}px`;
     this._element.style.height = `${Math.max(1, this._bounds.height)}px`;
   }

@@ -54,8 +54,9 @@ interface EditContextGlobal {
   EditContext?: EditContextConstructor;
 }
 
-/** True when `EditContext` is available on this platform. */
-export const editContextSupported = (): boolean => (globalThis as EditContextGlobal).EditContext !== undefined;
+/** True when `EditContext` is available in the requested host realm. */
+export const editContextSupported = (realm: Window | typeof globalThis | null = globalThis): boolean =>
+  (realm as EditContextGlobal | null)?.EditContext !== undefined;
 
 /**
  * The `EditContext` implementation of {@link PlatformTextInput}: the canvas-native
@@ -75,6 +76,7 @@ export class EditContextTextInput implements PlatformTextInput {
   private readonly _context: EditContextLike;
   private readonly _element: HTMLDivElement;
   private readonly _canvas: HTMLCanvasElement;
+  private readonly _window: Window & typeof globalThis;
   private readonly _onEdit = new Signal<[TextEditIntent]>();
   private readonly _onComposition = new Signal<[CompositionState]>();
 
@@ -164,7 +166,7 @@ export class EditContextTextInput implements PlatformTextInput {
     }
 
     const canvasRect = this._canvas.getBoundingClientRect();
-    const dom = new DOMRect(canvasRect.left + rect.x, canvasRect.top + rect.y, rect.width, rect.height);
+    const dom = new this._window.DOMRect(canvasRect.left + rect.x, canvasRect.top + rect.y, rect.width, rect.height);
     const bounds: DOMRect[] = [];
 
     for (let offset = event.rangeStart; offset < event.rangeEnd; offset++) {
@@ -219,18 +221,21 @@ export class EditContextTextInput implements PlatformTextInput {
   public constructor(canvas: HTMLCanvasElement) {
     this._canvas = canvas;
 
-    const Ctor = (globalThis as EditContextGlobal).EditContext;
+    const view = canvas.ownerDocument.defaultView;
+    const Ctor = (view as EditContextGlobal | null)?.EditContext;
 
-    if (Ctor === undefined) {
+    if (view === null || Ctor === undefined) {
       throw new Error('EditContextTextInput requires the EditContext API');
     }
+
+    this._window = view;
 
     // A plain element, never a `<textarea>` or `<input>`: a host refuses to
     // attach an `EditContext` to a natively editable element, which is the
     // whole point of the API - the context replaces the element's editing
     // behaviour rather than riding on top of it. `tabindex` is what makes it
     // focusable at all.
-    const element = document.createElement('div');
+    const element = canvas.ownerDocument.createElement('div');
 
     element.spellcheck = false;
     element.tabIndex = -1;
@@ -253,7 +258,7 @@ export class EditContextTextInput implements PlatformTextInput {
     style.zIndex = '-1';
 
     this._element = element;
-    document.body.append(element);
+    canvas.ownerDocument.body.append(element);
 
     const context = new Ctor({});
 
@@ -279,7 +284,7 @@ export class EditContextTextInput implements PlatformTextInput {
 
   /** Whether host keyboard focus currently sits on this transport. */
   public get hostFocused(): boolean {
-    return this._claimingFocus || (typeof document !== 'undefined' && document.activeElement === this._element);
+    return this._claimingFocus || this._element.ownerDocument.activeElement === this._element;
   }
 
   /** Whether {@link EditContextTextInput.destroy} has already run. */
@@ -306,7 +311,7 @@ export class EditContextTextInput implements PlatformTextInput {
   }
 
   public blur(): void {
-    if (typeof document !== 'undefined' && document.activeElement === this._element) {
+    if (this._element.ownerDocument.activeElement === this._element) {
       // Hand host focus back to the surface it was borrowed from instead of
       // dropping it on the document: keyboard input would otherwise stop
       // reaching the application until the next press on the surface.
@@ -334,7 +339,9 @@ export class EditContextTextInput implements PlatformTextInput {
   public setCaretRect(rect: Rectangle): void {
     this._caretRect = rect.clone();
     const canvasRect = this._canvas.getBoundingClientRect();
-    this._context.updateSelectionBounds(new DOMRect(canvasRect.left + rect.x, canvasRect.top + rect.y, rect.width, rect.height));
+    this._context.updateSelectionBounds(
+      new this._window.DOMRect(canvasRect.left + rect.x, canvasRect.top + rect.y, rect.width, rect.height),
+    );
   }
 
   public setHints(hints: PlatformTextInputHints): void {
@@ -367,18 +374,20 @@ export class EditContextTextInput implements PlatformTextInput {
   }
 
   private _applyBounds(): void {
-    if (this._bounds === null || typeof document === 'undefined') {
+    if (this._bounds === null) {
       return;
     }
 
     const canvasRect = this._canvas.getBoundingClientRect();
 
-    this._element.style.left = `${canvasRect.left + this._bounds.x}px`;
-    this._element.style.top = `${canvasRect.top + this._bounds.y}px`;
+    const view = this._element.ownerDocument.defaultView;
+
+    this._element.style.left = `${canvasRect.left + this._bounds.x + (view?.scrollX ?? 0)}px`;
+    this._element.style.top = `${canvasRect.top + this._bounds.y + (view?.scrollY ?? 0)}px`;
     this._element.style.width = `${Math.max(1, this._bounds.width)}px`;
     this._element.style.height = `${Math.max(1, this._bounds.height)}px`;
 
-    const dom = new DOMRect(
+    const dom = new this._window.DOMRect(
       canvasRect.left + this._bounds.x,
       canvasRect.top + this._bounds.y,
       Math.max(1, this._bounds.width),

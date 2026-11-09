@@ -266,11 +266,9 @@ export class BrowserPlatform implements PlatformAdapter {
    * create the element.
    */
   public createTextInput(): PlatformTextInput | null {
-    if (typeof document === 'undefined') {
-      return null;
-    }
-
-    const input = editContextSupported() ? new EditContextTextInput(this._canvas) : new BrowserTextInput(this._canvas);
+    const input = editContextSupported(this._document.defaultView)
+      ? new EditContextTextInput(this._canvas)
+      : new BrowserTextInput(this._canvas);
 
     this._textInputs.add(input);
 
@@ -303,15 +301,15 @@ export class BrowserPlatform implements PlatformAdapter {
   }
 
   public now(): number {
-    return performance.now();
+    return this._window.performance.now();
   }
 
   public requestFrame(callback: (timestamp: number) => void): number {
-    return requestAnimationFrame(callback);
+    return this._window.requestAnimationFrame(callback);
   }
 
   public cancelFrame(handle: number): void {
-    cancelAnimationFrame(handle);
+    this._window.cancelAnimationFrame(handle);
   }
 
   public onSurfaceEvent<K extends keyof PlatformSurfaceEventMap>(
