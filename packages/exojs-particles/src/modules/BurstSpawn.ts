@@ -46,8 +46,7 @@ export interface BurstSpawnConfig extends ParticleSpawnFields {
 export class BurstSpawn extends SpawnModule {
   public config: BurstSpawnConfig;
 
-  private _elapsed = 0;
-  private _nextIndex = 0;
+  private readonly _elapsed: number[] = [];
   private readonly _vec = new Vector();
   private readonly _color = new Color();
 
@@ -63,32 +62,32 @@ export class BurstSpawn extends SpawnModule {
       return;
     }
 
-    this._elapsed += dt;
+    const repeating = interval !== undefined && Number.isFinite(interval) && interval > 0;
 
-    for (;;) {
-      let next = schedule[this._nextIndex];
+    for (let index = 0; index < schedule.length; index++) {
+      const entry = schedule[index]!;
+      const elapsed = (this._elapsed[index] ?? 0) + dt;
+      const tolerance = Number.EPSILON * Math.max(Math.abs(elapsed), Math.abs(entry.time), repeating ? interval : 0) * 4;
 
-      while (next !== undefined && this._elapsed >= next.time) {
-        this._spawnBurst(emitter, next.count);
-        this._nextIndex++;
-        next = schedule[this._nextIndex];
+      if (!Number.isFinite(elapsed) || elapsed + tolerance < entry.time) {
+        this._elapsed[index] = elapsed;
+
+        continue;
       }
 
-      // A period of zero or less can never be caught up with - the wrap below
-      // would leave the clock where it is and this loop would not terminate.
-      if (interval === undefined || interval <= 0 || this._nextIndex < schedule.length || this._elapsed < interval) {
-        return;
-      }
+      const cycles = repeating ? Math.floor((elapsed - entry.time + tolerance) / interval) + 1 : 1;
 
-      this._elapsed -= interval;
-      this._nextIndex = 0;
+      // Each entry has its own phase: a delayed entry cannot block the start
+      // of a later cycle. Advance before emission, including events dropped
+      // at capacity. All copies sample the same fields, so combine their count.
+      this._elapsed[index] = repeating ? elapsed - cycles * interval : -Infinity;
+      this._spawnBurst(emitter, Math.ceil(entry.count) * cycles);
     }
   }
 
   /** Restart the schedule from t=0. */
   public reset(): this {
-    this._elapsed = 0;
-    this._nextIndex = 0;
+    this._elapsed.length = 0;
 
     return this;
   }
