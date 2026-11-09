@@ -280,9 +280,7 @@ const LAST_IDENTITY_COMPATIBLE_VERSION = 2;
  */
 const requireExplicitMigration = (version: number, kind: 'scene' | 'prefab'): void => {
   if (version < SERIALIZATION_VERSION && SERIALIZATION_VERSION > LAST_IDENTITY_COMPATIBLE_VERSION) {
-    throw new Error(
-      `Cannot deserialize ${kind}: version ${version} needs an explicit migration to version ${SERIALIZATION_VERSION}.`,
-    );
+    throw new Error(`Cannot deserialize ${kind}: version ${version} needs an explicit migration to version ${SERIALIZATION_VERSION}.`);
   }
 };
 
