@@ -575,6 +575,49 @@ describe('InteractionSystem: promoted group-local AABB index (W002-05)', () => {
     scene.root.destroy();
   });
 
+  test('an assigned or in-place edited hitArea can extend outside indexed visual bounds', () => {
+    const { app, scene } = createApp();
+    const im = new InteractionSystem(app);
+    im.attachRoot(scene.root);
+
+    const group = new RetainedContainer();
+    group.setPosition(100, 50);
+    scene.addChild(group);
+
+    for (let i = 0; i < 36; i++) {
+      const child = makeSprite();
+      child.setPosition((i % 6) * 60, Math.floor(i / 6) * 60);
+      group.addChild(child);
+      child.interactive = true;
+    }
+
+    const expanded = makeSprite();
+    expanded.setPosition(500, 500);
+    group.addChild(expanded);
+    expanded.interactive = true;
+
+    // Beyond expanded.getBounds(): group-world (500,450) maps to the
+    // sprite's local (-100,-100). The original anchored scan allowed this.
+    expect(im.nodeAt(500, 450)).toBeNull();
+
+    const shape = new Rectangle(-40, -40, 100, 100);
+    expanded.hitArea = shape;
+    expect(im.nodeAt(500, 450)).toBeNull();
+
+    // No bounds invalidation: hitArea is public and may change in-place.
+    shape.x = -140;
+    shape.y = -140;
+    shape.width = 200;
+    shape.height = 200;
+    expect(im.nodeAt(500, 450)).toBe(expanded);
+
+    expanded.hitArea = null;
+    expect(im.nodeAt(500, 450)).toBeNull();
+
+    im.destroy();
+    scene.root.destroy();
+  });
+
   test('an actively captured pointer keeps its target through group movement', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionSystem(app);
