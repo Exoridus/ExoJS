@@ -10,9 +10,9 @@ import { Container } from '#rendering/Container';
 import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
-import { SDF_RADIUS, Text } from '#rendering/text/Text';
+import { SDF_RADIUS, type Text } from '#rendering/text/Text';
 import { Label } from '#ui/Label';
-import { Panel } from '#ui/Panel';
+import type { Panel } from '#ui/Panel';
 
 const mockAtlas: Partial<GlyphAtlas> = {
   getGlyph: vi.fn(() => ({
@@ -57,6 +57,7 @@ class VersionProbe extends Container {
 }
 
 const observedReadVersions: number[] = [];
+
 const registerProbe = (): void => {
   observedReadVersions.length = 0;
   registerSerializer('VersionProbe', VersionProbe, {
@@ -114,8 +115,8 @@ describe('serialization - source-version context before a style-unit migration',
     const fallbackRadius = nested.children[1] as Text;
     const worldProbe = nested.children[2] as VersionProbe;
     const panel = scene.ui.children[0] as Panel;
-    const label = panel.children.find(child => child instanceof Label) as Label;
-    const uiProbe = panel.children.find(child => child instanceof VersionProbe) as VersionProbe;
+    const label = panel.children.find(child => child instanceof Label)!;
+    const uiProbe = panel.children.find(child => child instanceof VersionProbe)!;
 
     expect(observedReadVersions).toEqual([version, version]);
     expect(text.style.outlineWidth).toBe(0.25);
@@ -132,7 +133,7 @@ describe('serialization - source-version context before a style-unit migration',
     // Scene.serialize() to stamp the current version without rewriting values.
     const saved = scene.serialize();
     expect(saved.version).toBe(SERIALIZATION_VERSION);
-    expect(((saved.root.children as { children: unknown[] }[])[0]?.children[0] as { style: unknown }).style).toEqual({
+    expect(((saved.root.children as Array<{ children: unknown[] }>)[0]?.children[0] as { style: unknown }).style).toEqual({
       outlineWidth: 0.25,
       shadowBlur: 0.75,
     });
