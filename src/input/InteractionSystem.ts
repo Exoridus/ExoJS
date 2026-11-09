@@ -1,6 +1,7 @@
 import type { Application } from '#core/Application';
 import { logger } from '#core/Logger';
 import { SceneState } from '#core/scene/SceneState';
+import type { SceneNode } from '#core/SceneNode';
 import type { Signal } from '#core/Signal';
 import type { InteractionHooks, Stage } from '#core/Stage';
 import type { Seconds } from '#core/units';
@@ -128,7 +129,7 @@ interface IndexedNode {
 
 /** Persistent group-local index, promoted only when enough nodes share one anchor. */
 interface AnchoredGroup {
-  readonly anchor: RenderNode;
+  readonly anchor: SceneNode;
   readonly nodes: Set<RenderNode>;
   tree: DynamicAabbTree<IndexedNode> | null;
   proxies: Map<RenderNode, number> | null;
@@ -187,8 +188,8 @@ export class InteractionSystem {
   // a group never reindexes its descendants. The fallback set contains only
   // nodes of unpromoted groups; a group is either here OR in a local tree.
   private readonly _anchoredNodes = new Set<RenderNode>();
-  private readonly _anchoredGroups = new Map<RenderNode, AnchoredGroup>();
-  private readonly _nodeAnchor = new Map<RenderNode, RenderNode>();
+  private readonly _anchoredGroups = new Map<SceneNode, AnchoredGroup>();
+  private readonly _nodeAnchor = new Map<RenderNode, SceneNode>();
   private readonly _indexedAnchoredGroups = new Set<AnchoredGroup>();
   // Promote only after the linear scan is plausibly more expensive than tree
   // maintenance; demote well below the promotion threshold to avoid churn.
@@ -2086,7 +2087,7 @@ export class InteractionSystem {
    * is large enough, promote it to one persistent DynamicAabbTree (margin 0).
    * All bounds are in anchor-local coordinates, not world coordinates.
    */
-  private _insertAnchoredNode(node: RenderNode, anchor: RenderNode): void {
+  private _insertAnchoredNode(node: RenderNode, anchor: SceneNode): void {
     let group = this._anchoredGroups.get(anchor);
 
     if (group === undefined) {
