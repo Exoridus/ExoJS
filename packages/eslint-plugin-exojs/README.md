@@ -130,6 +130,14 @@ Import specifiers only, matched against the imported name rather than the local 
 
 Flags object and array literals, `new`, per-call closures, and array-returning standard-library calls inside a method named in its `methods` option. It cannot see an allocation behind a helper call and does not try.
 
+Creating a nested function, including a local function declaration, is reported as a per-call closure. Its parameter defaults and body are separate execution: a callback passed to `queueMicrotask`, a timer or a promise reaction therefore produces only the closure diagnostic. The rule inspects a nested function's contents only when it is a non-`async`, non-generator inline function used in one of these synchronous forms:
+
+- A direct immediately invoked function expression, or the exact receiver of an immediately invoked noncomputed `.call` or `.apply`.
+- The first argument to a noncomputed `every`, `filter`, `find`, `findIndex`, `findLast`, `findLastIndex`, `flatMap`, `forEach`, `map`, `reduce`, `reduceRight`, `some`, `sort` or `toSorted` method.
+- The second argument to `Array.from`, or the first argument to `new Promise`.
+
+These callback models match names and argument positions, assuming the synchronous Array/TypedArray contracts for the listed methods; they do not resolve receiver types or shadowed builtins. A custom or lazy iterator method with the same name can therefore be classified as synchronous. Unknown callback APIs, named helper calls, aliases, computed invocation forms and `.bind` remain opaque. Nested `async` and generator functions also remain opaque, including their synchronous portions: the rule does not perform `await`/`yield` control-flow analysis. Their creation still produces a closure diagnostic. An immediate call inside a deferred function stays behind that outer execution boundary.
+
 ## License
 
 MIT
