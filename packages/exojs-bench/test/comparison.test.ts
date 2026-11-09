@@ -964,3 +964,172 @@ describe('renderingMechanism drawless archetypes', () => {
     expect(renderingMechanism(nothing, nothing)).toBeNull();
   });
 });
+
+describe('recorded renderer identity', () => {
+  const measured = (engine: string, adapter: string | null, backend: 'webgl2' | 'webgpu' = 'webgl2'): CellResult => ({
+    ...cell({ engine, archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: engine === 'exojs' ? 1 : 2 }),
+    renderer: { backend, adapter },
+  });
+
+  test('rejects differing observed renderers within one backend even when the first provenance stamp looks valid', () => {
+    const run = renderingRun([measured('exojs', 'Test GPU'), measured('pixi', 'Google SwiftShader')]);
+
+    expect(() => aggregateRenderingRuns([run])).toThrow(/renderer.*disagree/i);
+  });
+
+  test('rejects a later different renderer within the same arm', () => {
+    const later = { ...measured('exojs', 'Other GPU'), spec: { ...measured('exojs', 'Other GPU').spec, nodeCount: 2_000 } };
+    const run = renderingRun([measured('exojs', 'Test GPU'), later, measured('pixi', 'Test GPU')]);
+
+    expect(() => aggregateRenderingRuns([run])).toThrow(/renderer.*disagree/i);
+  });
+
+  test.each([null, undefined, '', ' '])('rejects incomplete renderer evidence (%s) once any cell has observations', adapter => {
+    const missing = cell({ engine: 'pixi', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 2 });
+    const run = renderingRun([measured('exojs', 'Test GPU'), adapter === undefined ? missing : measured('pixi', adapter)]);
+
+    expect(() => aggregateRenderingRuns([run])).toThrow(/renderer.*incomplete/i);
+  });
+
+  test('rejects an observed backend fallback even if every arm fell back together', () => {
+    const run = renderingRun([measured('exojs', 'Test GPU', 'webgpu'), measured('pixi', 'Test GPU', 'webgpu')]);
+
+    expect(() => aggregateRenderingRuns([run])).toThrow(/backend.*fallback/i);
+  });
+
+  test('uses observed devices when comparing repetitions whose summary stamps match', () => {
+    const first = renderingRun([measured('exojs', 'NVIDIA GeForce RTX 4090'), measured('pixi', 'NVIDIA GeForce RTX 4090')]);
+    const second = renderingRun([measured('exojs', 'NVIDIA GeForce RTX 5070 Ti'), measured('pixi', 'NVIDIA GeForce RTX 5070 Ti')]);
+
+    expect(() => aggregateRenderingRuns([first, second])).toThrow(/different machine or browser/);
+  });
+
+  const webgpuRun = (adapter: string): ReportData =>
+    renderingRun(
+      [measured('exojs', adapter, 'webgpu'), measured('pixi', adapter, 'webgpu')].map(result => ({
+        ...result,
+        spec: { ...result.spec, backend: 'webgpu' },
+      })),
+      { stamp: { backend: 'webgpu', adapter } },
+    );
+
+  test('does not collapse real WebGPU identities to their shared vendor across repetitions', () => {
+    const first = webgpuRun('nvidia / ada-lovelace / 0x2684 / NVIDIA GeForce RTX 4090');
+    const second = webgpuRun('nvidia / blackwell / 0x2c05 / NVIDIA GeForce RTX 5070 Ti');
+
+    expect(() => aggregateRenderingRuns([first, second])).toThrow(/different machine or browser/);
+    expect(() => aggregateRenderingRuns([first, first])).not.toThrow();
+  });
+
+  test.each([
+    ['webgl2', 'Apple GPU'],
+    ['webgpu', 'apple / apple / apple / apple'],
+    ['webgl2', 'WebKit WebGL'],
+  ] as const)('refuses a privacy-masked %s renderer as an identified device (%s)', (backend, adapter) => {
+    const run = backend === 'webgpu' ? webgpuRun(adapter) : renderingRun([measured('exojs', adapter), measured('pixi', adapter)]);
+
+    expect(() => aggregateRenderingRuns([run, run])).toThrow(/renderer.*(?:unverified|incomplete)/i);
+  });
+
+  test('keeps consistent observations comparable and accepts legacy files with no cell observations', () => {
+    const observed = renderingRun([measured('exojs', 'Test GPU'), measured('pixi', 'Test GPU')]);
+    const legacy = renderingRun(observed.results.map(({ renderer: _renderer, ...result }) => result));
+
+    expect(() => aggregateRenderingRuns([observed, observed])).not.toThrow();
+    expect(() => aggregateRenderingRuns([legacy, legacy])).not.toThrow();
+  });
+
+  test('rejects a legacy report that explicitly marks its adapter identity as unverified', () => {
+    const run = renderingRun([cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 })], {
+      stamp: { adapterUnverified: true },
+    });
+
+    expect(() => aggregateRenderingRuns([run])).toThrow(/renderer.*incomplete/i);
+  });
+});
+
+describe('legacy renderer identity', () => {
+  const legacyRun = (provenance: readonly Provenance[], backends: readonly Backend[] = ['webgl2']): ReportData => ({
+    ...renderingRun(
+      backends.flatMap(backend => [
+        cell({ engine: 'exojs', backend, archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
+        cell({ engine: 'pixi', backend, archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 2 }),
+      ]),
+    ),
+    provenance,
+  });
+  const webgl = stamp('0.17.0', { adapter: 'NVIDIA GeForce RTX 4090' });
+  const webgpu = stamp('0.17.0', { backend: 'webgpu', adapter: 'nvidia ada-lovelace 0x2684 NVIDIA GeForce RTX 4090' });
+
+  test.each([false, true])('rejects contradictory same-backend stamps without per-cell observations (reversed: %s)', reversed => {
+    const provenance = [webgl, stamp('0.17.0', { adapter: 'NVIDIA GeForce RTX 5070 Ti' })];
+    const run = legacyRun(reversed ? provenance.reverse() : provenance);
+
+    expect(() => aggregateRenderingRuns([run, run])).toThrow(/renderer.*disagree/i);
+  });
+
+  test.each([
+    ['webgl2', 'Apple GPU'],
+    ['webgpu', 'apple apple apple apple'],
+    ['webgl2', 'WebKit WebGL'],
+    ['webgl2', 'unknown renderer'],
+    ['webgl2', 'unidentified-gpu'],
+    ['webgl2', ''],
+    ['webgl2', ' '],
+    ['webgl2', 'no-webgl2-context'],
+    ['webgpu', 'webgpu-adapter (info masked)'],
+    ['webgpu', 'no-webgpu-adapter (requestAdapter returned null)'],
+    ['webgpu', 'no-webgpu-adapter (requestAdapter failed: GPU process exited)'],
+    ['webgpu', 'navigator.gpu is undefined'],
+    ['webgpu', 'nvidia'],
+  ] as const)('rejects a legacy %s report with no identified adapter (%s)', (backend, adapter) => {
+    const run = legacyRun([stamp('0.17.0', { backend, adapter })], [backend]);
+
+    expect(() => aggregateRenderingRuns([run, run])).toThrow(/renderer.*(?:unverified|incomplete)/i);
+  });
+
+  test.each([false, true])('does not let an identified stamp cover an unverified stamp (reversed: %s)', reversed => {
+    const provenance = [webgl, { ...webgl, adapter: 'Apple GPU' }];
+    const run = legacyRun(reversed ? provenance.reverse() : provenance);
+
+    expect(() => aggregateRenderingRuns([run, run])).toThrow(/renderer.*(?:unverified|incomplete)/i);
+  });
+
+  test('rejects missing legacy provenance instead of pooling an unidentified machine', () => {
+    const run = legacyRun([]);
+
+    expect(() => aggregateRenderingRuns([run, run])).toThrow(/renderer.*incomplete/i);
+  });
+
+  test('reports a missing adapter in parsed legacy JSON as incomplete provenance', () => {
+    const run = JSON.parse(JSON.stringify(legacyRun([{ ...webgl, adapter: undefined } as unknown as Provenance]))) as ReportData;
+
+    expect(() => aggregateRenderingRuns([run, run])).toThrow(/renderer.*incomplete/i);
+  });
+
+  test('does not borrow another backend identity when the measured backend has no stamp', () => {
+    const run = legacyRun([webgpu]);
+
+    expect(() => aggregateRenderingRuns([run, run])).toThrow(/renderer.*incomplete/i);
+  });
+
+  test('compares every measured legacy backend instead of only the first stamp', () => {
+    const first = legacyRun([webgl, webgpu], ['webgl2', 'webgpu']);
+    const second = legacyRun([webgl, { ...webgpu, adapter: 'amd rdna3 0x744c AMD Radeon RX 7900 XTX' }], ['webgl2', 'webgpu']);
+
+    expect(() => aggregateRenderingRuns([first, second])).toThrow(/different machine or browser/);
+  });
+
+  test('preserves identified historical data independent of stamp order and identical duplicate stamps', () => {
+    const first = legacyRun([webgl, webgpu], ['webgl2', 'webgpu']);
+    const second = legacyRun([webgpu, webgl, webgl], ['webgl2', 'webgpu']);
+
+    expect(() => aggregateRenderingRuns([first, second])).not.toThrow();
+  });
+
+  test('does not require an identity for an unmeasured backend', () => {
+    const run = legacyRun([webgl, { ...webgpu, adapter: 'no-webgpu-adapter (requestAdapter returned null)' }]);
+
+    expect(() => aggregateRenderingRuns([run, run])).not.toThrow();
+  });
+});

@@ -23,6 +23,7 @@ import {
   WEBGPU_QUEUE_NOTE,
 } from './gpuFrameTimer';
 import { completedCellStatus, shouldRetainHeldScene, shouldTeardownAfterCell } from './holdPolicy';
+import { readCellRenderer } from './renderer';
 
 // Must run before any arm's `init` calls `requestDevice`; a top-level statement
 // in this entry module is the earliest such point. Previously a module-scope
@@ -56,10 +57,9 @@ const freshStageCanvas = (): HTMLCanvasElement => {
   // contexts pile up past the browser's live-context cap (~16) and a later cell's
   // init/renderFrame wedges indefinitely (the observed cell-87 freeze: the excalibur
   // arm's `engine.dispose()` drops references but never loses the GL context, so
-  // each excalibur cell leaked one). Force-lose the PREVIOUS cell's context here -
-  // one cell after it ran, so the driver's post-first-ok-cell provenance read
-  // (`readRendererInPage`) still finds a live context - which deterministically
-  // frees that context's GPU resources regardless of what the arm's teardown did.
+  // each excalibur cell leaked one). Force-lose the PREVIOUS cell's context here,
+  // after its identity was recorded, to deterministically free its GPU resources
+  // regardless of what the arm's teardown did.
   // webgl2 and webgl1 (Phaser renders WebGL1) are both handled; a webgpu cell has
   // no webgl context here and is skipped.
   if (previous instanceof HTMLCanvasElement) {
@@ -489,6 +489,7 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
 
     const result: CellResult = {
       spec,
+      renderer: readCellRenderer(adapter, canvas),
       cpuMsMedian: median(timer.samples),
       cpuMsP95: percentile(timer.samples, 95),
       frameMsMedian,

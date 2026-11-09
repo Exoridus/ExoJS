@@ -448,6 +448,11 @@ export interface StructuralCounters {
  * fields (per-frame CPU + full-frame GPU medians/p95) and structural counters.
  */
 export interface CellResult extends BaseCellResult<CellSpec> {
+  /** Actual live renderer, read before teardown. Absent only in historical results; null fields mean identity was unavailable. */
+  readonly renderer?: {
+    readonly backend: Backend | 'webgl' | null;
+    readonly adapter: string | null;
+  };
   /** Median per-frame CPU time in milliseconds. */
   readonly cpuMsMedian: number;
   /** 95th-percentile per-frame CPU time in milliseconds. */

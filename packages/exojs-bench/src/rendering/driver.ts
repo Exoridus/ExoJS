@@ -91,6 +91,8 @@ export interface Provenance extends BaseProvenance {
    * is false.
    */
   readonly adapterUnverified?: boolean;
+  /** Observed renderer identities disagree, or a measured backend differs from the requested backend. */
+  readonly adapterMismatch?: boolean;
   /**
    * The clock grid the run's FIRST session observed; `null` where no session
    * opened, and on a CPU profile, which probes no clock.
@@ -304,9 +306,9 @@ export const startViteServer = async (version: string): Promise<ViteDevServer> =
  * ignores the attribute dictionary on every subsequent call - calling it here
  * before the engine's own `getContext('webgl2', { ...options, stencil: true })`
  * (see `WebGl2Backend.ts`) would silently give the engine a mismatched
- * context. `runBackend` therefore calls this only after
- * `__runBaselineMatrix` has returned, guaranteeing `#stage` already has the
- * real, correctly-attributed context.
+ * context. The CPU profile reads this after its measured frames and before
+ * disposing the live scene. Matrix cells record their own identity before
+ * teardown instead.
  */
 const readRendererInPage = async (page: import('playwright').Page): Promise<string> =>
   page.evaluate(() => {
@@ -525,6 +527,38 @@ const runCellOrWedge = async (page: import('playwright').Page, spec: CellSpec, h
 /** File stem of one cell's captured frame - the cell's identity, safe for a file name. */
 const captureName = (cell: CellSpec): string => `${cell.backend}-${cell.archetype}-${String(cell.nodeCount)}-${cell.engine}-${cell.config}`;
 
+/** Summarize every measured context without lending the first arm's identity to the remaining arms. */
+const rendererProvenance = (
+  backend: Backend,
+  results: readonly CellResult[],
+  fallback: string,
+): Pick<Provenance, 'adapter' | 'software' | 'adapterUnverified' | 'adapterMismatch'> => {
+  const measured = results.filter(result => result.status !== 'unavailable');
+
+  if (measured.length === 0) {
+    return { adapter: fallback, software: false };
+  }
+
+  const identities = [...new Set(measured.map(result => result.renderer?.adapter).filter((value): value is string => !!value?.trim()))];
+  const incomplete = measured.some(result => !result.renderer?.adapter?.trim() || result.renderer.backend === null);
+  const fallbackBackends = [
+    ...new Set(measured.map(result => result.renderer?.backend).filter(value => value != null && value !== backend)),
+  ];
+  const mismatch = identities.length > 1 || fallbackBackends.length > 0;
+  const labels = [
+    ...(identities.length > 1 ? ['renderer disagreement'] : []),
+    ...(fallbackBackends.length > 0 ? [`backend fallback: requested ${backend}, observed ${fallbackBackends.join(', ')}`] : []),
+    ...(incomplete ? ['renderer identity incomplete'] : []),
+  ];
+
+  return {
+    adapter: [...labels, identities.join(' | ') || fallback].join(': '),
+    software: identities.some(isSoftwareRenderer),
+    ...(incomplete && { adapterUnverified: true }),
+    ...(mismatch && { adapterMismatch: true }),
+  };
+};
+
 /**
  * Runs one backend's cell list, isolating each arm in its OWN browser session and
  * each cell behind a wall-clock timeout. Invokes `onCellResult` after EACH cell so
@@ -539,8 +573,9 @@ const captureName = (cell: CellSpec): string => `${cell.backend}-${cell.archetyp
  * relaunched for remaining cells. Browser launch or page setup can still throw
  * outside that recovery boundary and abort the matrix run.
  *
- * For WebGPU the adapter identity is read once; a null or software adapter emits
- * every cell as `unavailable` rather than measuring a software rasterizer.
+ * WebGPU availability is checked in each browser session; a null or software
+ * adapter emits that session's cells as `unavailable`. The identity recorded
+ * for a measured cell comes from its actual device.
  */
 const runBackend = async (options: {
   baseUrl: string;
@@ -584,11 +619,8 @@ const runBackend = async (options: {
     onCellResult(result);
   };
 
-  // WebGL2 renderer string, captured from `#stage`'s OWN context the
-  // moment the FIRST ok cell has created it. `null` until then; a run with no ok
-  // cell keeps the `no-webgl2-context` provenance below. WebGPU adapter identity is
-  // read once and reused across every arm's session (same GPU, same flags).
-  let renderer: string | null = null;
+  // This probe decides WebGPU availability; measured identity comes from each
+  // cell's own device, since independently launched arms can select differently.
   let webgpuIdentity: WebGpuIdentity | null = null;
   // The first session's grid, kept for the backend's provenance line. It
   // describes the run's conditions and is NOT what qualifies a cell: each cell
@@ -625,7 +657,7 @@ const runBackend = async (options: {
         clock ??= sessionClock;
 
         if (backend === 'webgpu') {
-          webgpuIdentity ??= await readWebGpuAdapter(page, browserName);
+          webgpuIdentity = await readWebGpuAdapter(page, browserName);
 
           if (!webgpuIdentity.usable) {
             for (const cell of remaining) {
@@ -692,10 +724,6 @@ const runBackend = async (options: {
             }
           }
 
-          if (backend === 'webgl2' && renderer === null && outcome.status === 'ok') {
-            renderer = await readRendererInPage(page);
-          }
-
           remaining = remaining.slice(1);
         }
       } finally {
@@ -720,32 +748,26 @@ const runBackend = async (options: {
   const provenance: Provenance =
     backend === 'webgpu'
       ? {
-          adapter: webgpuIdentity?.adapter ?? 'no-webgpu-adapter',
+          ...rendererProvenance(backend, results, webgpuIdentity?.adapter ?? 'no-webgpu-adapter'),
           backend,
           ...platform,
           flags,
           headless: true,
           engineVersion,
           timestamp,
-          // False even for a software adapter: those cells are emitted `unavailable`
-          // (no timings), so nothing here is an untrusted number, and flipping the
-          // honesty bit would wrongly taint the WebGL2 timings. The software identity
-          // is preserved in `adapter` and each cell's note instead.
-          software: false,
           // Resolved sprite-batch slot tier for this adapter, so a slot-sensitive
           // archetype's measured code path is auditable per run. Omitted when no
           // adapter/limits were available (the cells are then `unavailable` anyway).
           ...(typeof webgpuIdentity?.slotTier === 'number' && { slotTier: webgpuIdentity.slotTier }),
         }
       : {
-          adapter: renderer ?? 'no-webgl2-context',
+          ...rendererProvenance(backend, results, 'no-webgl2-context'),
           backend,
           ...platform,
           flags,
           headless: true,
           engineVersion,
           timestamp,
-          software: renderer !== null && isSoftwareRenderer(renderer),
         };
 
   return { provenance, results };
