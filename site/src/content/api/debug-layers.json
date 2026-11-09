@@ -1,0 +1,176 @@
+{
+  "title": "DebugLayers",
+  "description": "Typed map of the built-in diagnostic layers managed by DebugOverlay. Access individual layers to toggle visibility or interact with layer-specific state.",
+  "symbol": "DebugLayers",
+  "kind": "interface",
+  "subsystem": "debug",
+  "importPath": "@codexo/exojs/debug",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Typed map of the built-in diagnostic layers managed by DebugOverlay. Access individual layers to toggle visibility or interact with layer-specific state."
+      ],
+      "importLine": "import { DebugLayers } from '@codexo/exojs/debug'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "assetCache",
+          "signature": "assetCache: AssetCacheLayer",
+          "signatureTokens": [
+            {
+              "text": "assetCache",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetCacheLayer",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "boundingBoxes",
+          "signature": "boundingBoxes: BoundingBoxesLayer",
+          "signatureTokens": [
+            {
+              "text": "boundingBoxes",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BoundingBoxesLayer",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "hitTest",
+          "signature": "hitTest: HitTestLayer",
+          "signatureTokens": [
+            {
+              "text": "hitTest",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HitTestLayer",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "performance",
+          "signature": "performance: PerformanceLayer",
+          "signatureTokens": [
+            {
+              "text": "performance",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PerformanceLayer",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "pointerStack",
+          "signature": "pointerStack: PointerStackLayer",
+          "signatureTokens": [
+            {
+              "text": "pointerStack",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerStackLayer",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "renderPassInspector",
+          "signature": "renderPassInspector: RenderPassInspectorLayer",
+          "signatureTokens": [
+            {
+              "text": "renderPassInspector",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderPassInspectorLayer",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/debug/DebugOverlay.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/debug/DebugOverlay.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/debug/DebugOverlay.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/debug/DebugOverlay.ts"
+}
