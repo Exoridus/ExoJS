@@ -1,0 +1,47 @@
+name: A2 loader evidence
+
+on:
+  push:
+    branches: [fix/a2-loader-option-diagnostics]
+
+permissions:
+  contents: read
+
+jobs:
+  evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: source/.worktrees/a2-loader
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: source
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Create linked worktree
+        working-directory: source
+        run: |
+          git check-ignore .worktrees/probe
+          git worktree add .worktrees/a2-loader -b fix/a2-loader-option-diagnostics "${GITHUB_SHA}"
+          git worktree list --porcelain
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: source/package.json
+          run_install: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: source/.nvmrc
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: source/pnpm-lock.yaml
+      - run: pnpm bootstrap
+      - name: Inspect affected contracts
+        run: |
+          git rev-parse HEAD
+          git grep -n -E 'EXO-01-W009-05|EXO-01-W023-04|EXO-01-W023-06|ignored.options' -- docs src/assets test/assets | head -80 || true
+          pnpm lanes --base fe4fe5a557e5e903d7c4214eaf45a19e0d9c8a8e
+          git diff --check
+      - name: Loader diagnostics RED
+        run: pnpm exec vitest run --project=exojs test/assets/loader-option-diagnostics.test.ts
