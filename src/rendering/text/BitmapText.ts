@@ -22,9 +22,9 @@ export interface BitmapTextOptions extends Omit<TextStyleOptions, 'fontSize'> {
   /** Scale applied uniformly to all glyph metrics. Defaults to 1. */
   scale?: number;
   /**
-   * Set to `true` if the atlas was produced by `msdf-atlas-gen` (MSDF).
-   * Selects the `text-msdf` shader which applies the median SDF formula.
+   * Selects the `text-msdf` shader which applies the RGB median formula.
    * Defaults to `false` (colour/RGBA atlas).
+   * Distance metadata does not select a shader or change TextStyle units.
    *
    * Read once at construction: {@link setFont} replaces the atlas without
    * changing it, so a node switched between colour and MSDF fonts needs a
@@ -138,14 +138,16 @@ export class BmFontAdapter implements GlyphProvider {
 // ── BitmapText ────────────────────────────────────────────────────────────────
 
 /**
- * Text node that renders from an offline-generated atlas - either a BMFont
- * (AngelCode .fnt + .png) or an MSDF atlas (msdf-atlas-gen + .json).
+ * Text node that renders from an offline-generated BMFont atlas (text or
+ * BMFont JSON plus page textures), or manually supplied {@link BmFontData}.
+ * Native msdf-atlas-gen JSON needs conversion to BMFont metrics first.
  *
  * The atlas is pre-built so there is no runtime Canvas 2D rasterisation.
  * All layout features (alignment, word-wrap, justify, leading, breakWords,
  * whiteSpace, letterSpacing) and kerning pairs from the descriptor are fully
- * supported. Outline effects are handled as shader uniforms - no extra draw
- * calls, no atlas rebuilds.
+ * supported. The explicit `msdf` option selects distance rendering; imported
+ * distance metadata is retained on `font.fontData`, without changing effect
+ * units or adding effect support to color glyphs.
  *
  * ## Usage
  *
@@ -251,7 +253,7 @@ export class BitmapText extends AbstractText {
 
   // ── Read-only state ───────────────────────────────────────────────────────
 
-  /** `true` when the atlas was produced by `msdf-atlas-gen`. */
+  /** Whether RGB-median distance rendering was selected at construction. */
   public get msdf(): boolean {
     return this._msdf;
   }

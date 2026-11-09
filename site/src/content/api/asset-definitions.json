@@ -100,7 +100,7 @@
         },
         {
           "name": "bmFont",
-          "signature": "bmFont: { config: { source: string }; resource: BmFont }",
+          "signature": "bmFont: { config: { source: string } & BmFontAssetOptions; resource: BmFont }",
           "signatureTokens": [
             {
               "text": "bmFont",
@@ -141,6 +141,14 @@
             {
               "text": " }",
               "kind": "punctuation"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BmFontAssetOptions",
+              "kind": "type"
             },
             {
               "text": "; ",

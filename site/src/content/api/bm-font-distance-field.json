@@ -1,0 +1,145 @@
+{
+  "title": "BmFontDistanceField",
+  "description": "Numeric encoding of an external distance atlas, independent of text styling.",
+  "symbol": "BmFontDistanceField",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Numeric encoding of an external distance atlas, independent of text styling."
+      ],
+      "importLine": "import { BmFontDistanceField } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "distanceRange",
+          "signature": "distanceRange: null | number",
+          "signatureTokens": [
+            {
+              "text": "distanceRange",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Full encoded distance span in atlas texels, finite and positive, or null when unknown. This is not a radius, padding, font size or effect budget."
+        },
+        {
+          "name": "fieldType",
+          "signature": "fieldType: \"msdf\" | \"mtsdf\" | \"sdf\"",
+          "signatureTokens": [
+            {
+              "text": "fieldType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"msdf\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"mtsdf\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"sdf\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "SDF uses a scalar channel, MSDF an RGB median, and MTSDF also carries true distance in alpha."
+        },
+        {
+          "name": "zeroDistanceValue",
+          "signature": "zeroDistanceValue: null | number",
+          "signatureTokens": [
+            {
+              "text": "zeroDistanceValue",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Encoded sample at zero signed distance, in [0, 1], or null when unknown. When both values are known, signed distance in atlas texels is (sample - zeroDistanceValue) * distanceRange, positive inside the glyph. Symmetric generators use 0.5; an arbitrary external field need not."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/text/BmFont.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/BmFont.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/text/BmFont.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/BmFont.ts"
+}

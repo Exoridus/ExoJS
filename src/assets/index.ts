@@ -115,6 +115,7 @@ export {
   xmlType,
 } from '#assets/types/data';
 export { SubtitleAssetType, subtitleType } from '#assets/types/data';
+export type { BmFontAssetOptions } from '#assets/types/font';
 export { BmFontAssetType, bmFontType, FontAssetType, fontType } from '#assets/types/font';
 export { ImageAssetType, imageType, SvgAssetType, svgType } from '#assets/types/image';
 export { TextureAssetType, textureType } from '#assets/types/image';

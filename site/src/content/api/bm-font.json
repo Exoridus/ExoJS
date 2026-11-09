@@ -138,7 +138,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The parsed descriptor: page names, glyph metrics, kerning pairs and vertical metrics."
+          "description": "The parsed descriptor, including any declared distance encoding and atlas metadata."
         },
         {
           "name": "textures",

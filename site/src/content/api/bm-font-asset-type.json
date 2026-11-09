@@ -1,6 +1,6 @@
 {
   "title": "BmFontAssetType",
-  "description": "AngelCode BMFont descriptors (`.fnt`, text format) together with their page textures. The pages are claimed by the font's own dependency scope rather than by whichever consumer asked for the font: a deduplicated font serves many consumers, and the first of them to release it must not take the pages with it.",
+  "description": "AngelCode BMFont text or BMFont JSON (including the symmetric distanceField extension from msdf-bmfont-xml), together with their page textures. JSON must be requested explicitly as `bmFont`; native msdf-atlas-gen JSON is not this format. A compatible text `distanceField` tag is also accepted. Some text exporters omit it; supply BmFontAssetOptions.distanceField then. The pages are claimed by the font's own dependency scope rather than by whichever consumer asked for the font: a deduplicated font serves many consumers, and the first of them to release it must not take the pages with it.",
   "symbol": "BmFontAssetType",
   "kind": "class",
   "subsystem": "assets",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "AngelCode BMFont descriptors (`.fnt`, text format) together with their page textures.",
+        "AngelCode BMFont text or BMFont JSON (including the symmetric distanceField extension from msdf-bmfont-xml), together with their page textures. JSON must be requested explicitly as `bmFont`; native msdf-atlas-gen JSON is not this format. A compatible text `distanceField` tag is also accepted. Some text exporters omit it; supply BmFontAssetOptions.distanceField then.",
         "The pages are claimed by the font's own dependency scope rather than by whichever consumer asked for the font: a deduplicated font serves many consumers, and the first of them to release it must not take the pages with it."
       ],
       "importLine": "import { BmFontAssetType } from '@codexo/exojs'",
@@ -157,7 +157,7 @@
         },
         {
           "name": "createFactory",
-          "signature": "createFactory(): AssetFactory<BmFontData, BmFont>",
+          "signature": "createFactory(): AssetFactory<BmFontData, BmFont, BmFontAssetOptions>",
           "signatureTokens": [
             {
               "text": "createFactory",
@@ -196,32 +196,36 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BmFontAssetOptions",
+              "kind": "type"
+            },
+            {
               "text": ">",
               "kind": "punctuation"
             }
           ],
           "params": [],
-          "returnType": "AssetFactory<BmFontData, BmFont>",
+          "returnType": "AssetFactory<BmFontData, BmFont, BmFontAssetOptions>",
           "description": "Creates the factory for one application, at install time. Called once per Loader, never per request and never at module import, so loader-local state a factory needs - a worker, a compiled module, a lookup shared across every resource of this type - can be built here and torn down with the loader."
         },
         {
           "name": "resourceIdentity",
-          "signature": "resourceIdentity?(request: AssetRequest<undefined>): string",
+          "signature": "resourceIdentity(__namedParameters: AssetRequest<BmFontAssetOptions>): string",
           "signatureTokens": [
             {
               "text": "resourceIdentity",
               "kind": "name"
             },
             {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
               "text": "(",
               "kind": "punctuation"
             },
             {
-              "text": "request",
+              "text": "__namedParameters",
               "kind": "param"
             },
             {
@@ -237,8 +241,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "undefined",
-              "kind": "keyword"
+              "text": "BmFontAssetOptions",
+              "kind": "type"
             },
             {
               "text": ">",
@@ -259,17 +263,17 @@
           ],
           "params": [
             {
-              "name": "request",
-              "type": "AssetRequest<undefined>",
+              "name": "__namedParameters",
+              "type": "AssetRequest<BmFontAssetOptions>",
               "optional": false
             }
           ],
           "returnType": "string",
-          "description": "The part of a request's identity the source alone does not capture: what makes two requests for one source two DIFFERENT runtime resources. Include every option baked irreversibly into the produced resource - a colour space, a font descriptor, a decoding mode, a runtime interpretation. Exclude load policy (priority, timeout, cancellation) and per-consumer presentation (sampler state, placeholder size): neither changes the resource, and folding them in would build and hold the same resource twice. Never serialize the whole option bag: property order is unstable, control fields would leak in, and the result is unbounded. Select the fields that matter, explicitly. Omit the hook entirely when the source alone identifies the resource."
+          "description": "Explicit interpretations share source bytes but have distinct font resources."
         },
         {
           "name": "sourceIdentity",
-          "signature": "sourceIdentity?(request: AssetRequest<undefined>): string",
+          "signature": "sourceIdentity?(request: AssetRequest<BmFontAssetOptions>): string",
           "signatureTokens": [
             {
               "text": "sourceIdentity",
@@ -300,8 +304,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "undefined",
-              "kind": "keyword"
+              "text": "BmFontAssetOptions",
+              "kind": "type"
             },
             {
               "text": ">",
@@ -323,7 +327,7 @@
           "params": [
             {
               "name": "request",
-              "type": "AssetRequest<undefined>",
+              "type": "AssetRequest<BmFontAssetOptions>",
               "optional": false
             }
           ],
@@ -332,7 +336,7 @@
         },
         {
           "name": "unacquiredSource",
-          "signature": "unacquiredSource?(request: AssetRequest<undefined>, url: string, network: NetworkSnapshot): undefined | { source: BmFontData }",
+          "signature": "unacquiredSource?(request: AssetRequest<BmFontAssetOptions>, url: string, network: NetworkSnapshot): undefined | { source: BmFontData }",
           "signatureTokens": [
             {
               "text": "unacquiredSource",
@@ -363,8 +367,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "undefined",
-              "kind": "keyword"
+              "text": "BmFontAssetOptions",
+              "kind": "type"
             },
             {
               "text": ">",
@@ -442,7 +446,7 @@
           "params": [
             {
               "name": "request",
-              "type": "AssetRequest<undefined>",
+              "type": "AssetRequest<BmFontAssetOptions>",
               "optional": false
             },
             {
