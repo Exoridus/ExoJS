@@ -220,6 +220,7 @@
     "perf": "tsx ./scripts/perf.ts",
     "perf:smoke": "pnpm perf smoke",
     "bench": "pnpm --filter @codexo/exojs-bench bench",
+    "bench:competitive": "pnpm --filter @codexo/exojs-bench bench:competitive",
     "bench:setup": "pnpm --filter @codexo/exojs-bench bench:setup",
     "bench:micro": "vitest bench --run --project=\"exojs (bench)\"",
     "gate:bench:structural": "pnpm --filter @codexo/exojs-bench gate:structural",

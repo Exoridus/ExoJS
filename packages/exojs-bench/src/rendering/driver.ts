@@ -22,6 +22,7 @@ import {
   readOsRelease,
   readPlatformVersion,
 } from '../shared/provenance';
+import { createRng } from '../shared/rng';
 import { raceWithTimeout } from '../shared/timeout';
 import type { ViteDevServer } from '../shared/viteServer';
 import { readEngineVersion, RENDERING_LIBRARY_ARMS, startViteServer as startPageServer } from '../shared/viteServer';
@@ -32,6 +33,7 @@ import type { ArchetypeSpec, Backend, CellResult, CellSpec, EngineAdapter } from
 import { profileProvenance } from './profileProvenance';
 import type { MatrixSelection } from './selection';
 import { applyPlan, applySelection } from './selection';
+import type { MeasurementProfile } from './telemetry';
 import { isScrolling, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from './world';
 
 // Re-exported so the rendering barrel and the CLI keep importing the selection
@@ -424,6 +426,7 @@ export const readWebGpuAdapter = async (
  */
 const unavailableCell = (spec: CellSpec, note: string, clock: ClockReport | null = null): CellResult => ({
   spec,
+  frameTimeSource: 'unavailable',
   cpuMsMedian: 0,
   cpuMsP95: 0,
   frameMsMedian: null,
@@ -486,6 +489,10 @@ const runCellInPage = async (page: import('playwright').Page, spec: CellSpec, ho
  */
 const CELL_TIMEOUT_MS = 60_000;
 
+/** Allows explicitly requested paced samples at 10 Hz plus bounded setup/collection time. */
+export const cellTimeoutMs = (spec: CellSpec): number =>
+  spec.measurement === undefined ? CELL_TIMEOUT_MS : Math.max(CELL_TIMEOUT_MS, spec.timedFrames * 100 + 20_000);
+
 /** Sentinel returned by {@link runCellOrWedge} when a cell exceeds {@link CELL_TIMEOUT_MS}. */
 const CELL_WEDGED = Symbol('cell-wedged');
 
@@ -502,7 +509,7 @@ const CAPTURE_WEDGED = Symbol('capture-wedged');
 const runCellOrWedge = async (page: import('playwright').Page, spec: CellSpec, hold = false): Promise<CellResult | typeof CELL_WEDGED> => {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<typeof CELL_WEDGED>(resolvePromise => {
-    timer = setTimeout(() => resolvePromise(CELL_WEDGED), CELL_TIMEOUT_MS);
+    timer = setTimeout(() => resolvePromise(CELL_WEDGED), cellTimeoutMs(spec));
   });
 
   const run = runCellInPage(page, spec, hold).then(result => {
@@ -644,7 +651,7 @@ const runBackend = async (options: {
             collect(
               unavailableCell(
                 cell,
-                `cell wedged the browser (no result after ${CELL_TIMEOUT_MS}ms — a mid-frame GPU-driver stall the in-page guards cannot interrupt); isolated as unavailable, browser relaunched for the arm's remaining cells`,
+                `cell exceeded its wall-clock deadline (${cellTimeoutMs(cell)}ms); browser scheduling, driver stalls and slow work are not distinguished; isolated as unavailable, browser relaunched for the arm's remaining cells`,
                 sessionClock,
               ),
             );
@@ -672,8 +679,9 @@ const runBackend = async (options: {
             );
 
             if (shot === CAPTURE_WEDGED) {
-              relaunch = true;
-              break;
+              throw new Error(
+                `Screenshot capture timed out for ${captureName(cell)}; acquisition stopped with completed cell evidence preserved.`,
+              );
             }
           }
 
@@ -687,8 +695,9 @@ const runBackend = async (options: {
             );
 
             if (disposed === CAPTURE_WEDGED) {
-              relaunch = true;
-              break;
+              throw new Error(
+                `Held-scene disposal timed out for ${captureName(cell)}; acquisition stopped with completed cell evidence preserved.`,
+              );
             }
           }
 
@@ -1014,6 +1023,16 @@ export interface MatrixCellSelection {
   readonly filter?: Partial<CellSpec>;
   readonly selection?: MatrixSelection;
   readonly timedFramesOverride?: number;
+  readonly sampling?: MatrixSampling;
+}
+
+/** Explicit diagnostic acquisition budgets; repeated cycles share an arm session. */
+export interface MatrixSampling {
+  readonly profile: MeasurementProfile;
+  readonly timedFrames: number;
+  readonly warmupFrames: number;
+  readonly cycles: number;
+  readonly orderSeed: number;
 }
 
 /**
@@ -1030,6 +1049,38 @@ export const resolveMatrixCells = (options: MatrixCellSelection): CellSpec[] => 
   const planned = options.plan ? applyPlan(allCells, options.plan) : allCells;
   const filtered = options.filter ? applyFilter(planned, options.filter) : planned;
   const selected = options.selection ? applySelection(filtered, options.selection) : filtered;
+
+  if (options.sampling !== undefined) {
+    if (options.timedFramesOverride !== undefined) {
+      throw new Error('Use either sampling or timedFramesOverride, not both.');
+    }
+
+    const sampling = options.sampling;
+
+    if (
+      ![sampling.timedFrames, sampling.warmupFrames, sampling.cycles].every(value => Number.isSafeInteger(value) && value > 0) ||
+      !Number.isSafeInteger(sampling.orderSeed)
+    ) {
+      throw new Error('Sampling requires positive integer frame/cycle budgets and an integer order seed.');
+    }
+
+    const ordered = [...selected];
+    const random = createRng(sampling.orderSeed);
+
+    for (let index = ordered.length - 1; index > 0; index--) {
+      const other = Math.floor(random() * (index + 1));
+      [ordered[index], ordered[other]] = [ordered[other]!, ordered[index]!];
+    }
+
+    return Array.from({ length: sampling.cycles }, (_, cycle) =>
+      ordered.map(cell => ({
+        ...cell,
+        timedFrames: sampling.timedFrames,
+        warmupFrames: sampling.warmupFrames,
+        measurement: { profile: sampling.profile, cycle },
+      })),
+    ).flat();
+  }
 
   return options.timedFramesOverride === undefined
     ? selected
@@ -1085,6 +1136,8 @@ export const runMatrix = async (options: {
    * per-node-count frame budgets recorded in the report).
    */
   timedFramesOverride?: number;
+  /** Diagnostic sampling and ordering; never implicitly substituted for the reference plan. */
+  sampling?: MatrixSampling;
   /** Invoked once per completed cell, in order, for incremental checkpointing. */
   onCellResult?: CellResultSink;
   /**
