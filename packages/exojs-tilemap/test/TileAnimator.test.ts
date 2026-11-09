@@ -98,6 +98,101 @@ describe('TileAnimator', () => {
     expect(layer.getTileAt(1, 1)?.localTileId).toBe(5);
   });
 
+  it('animates a definition tile that is not one of its frames', () => {
+    const ts = makeTileset256();
+    ts._setDefinition(3, {
+      animation: [
+        { localTileId: 1, duration: 100 },
+        { localTileId: 2, duration: 100 },
+      ],
+    });
+    const layer = makeLayer(ts, 1, 1);
+    setTile(layer, ts, 0, 0, 3);
+    const animator = new TileAnimator(layer);
+
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(3);
+    animator.update(0.05);
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(1);
+    animator.update(0.1);
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(2);
+    animator.update(0.1);
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(1);
+  });
+
+  it('keeps the definition animation through reset and rescan when its frames have no definition', () => {
+    const ts = makeTileset256();
+    ts._setDefinition(3, {
+      animation: [
+        { localTileId: 1, duration: 100 },
+        { localTileId: 2, duration: 100 },
+      ],
+    });
+    const layer = makeLayer(ts, 2, 1);
+    setTile(layer, ts, 0, 0, 3);
+    const animator = new TileAnimator(layer);
+
+    animator.reset();
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(1);
+    animator.update(0.15);
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(2);
+    setTile(layer, ts, 1, 0, 3);
+    animator.rescan();
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(1);
+    expect(animator.animatedCellCount).toBe(2);
+    expect(animator.elapsedMs).toBe(0);
+    animator.update(0.15);
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(2);
+    expect(layer.getTileAt(1, 0)?.localTileId).toBe(2);
+  });
+
+  it('does not take ownership of a frame tile written by the caller', () => {
+    const ts = makeTileset256();
+    ts._setDefinition(0, {
+      animation: [
+        { localTileId: 0, duration: 100 },
+        { localTileId: 1, duration: 100 },
+      ],
+    });
+    const layer = makeLayer(ts, 1, 1);
+    setTile(layer, ts, 0, 0, 0);
+    const animator = new TileAnimator(layer);
+    animator.update(0.05);
+    setTile(layer, ts, 0, 0, 1);
+    const revision = layer.revision;
+
+    animator.update(0.1);
+    animator.update(0.1);
+    animator.reset();
+    animator.rescan();
+
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(1);
+    expect(layer.revision).toBe(revision);
+    expect(animator.animatedCellCount).toBe(0);
+  });
+
+  it('does not overwrite a caller change to the tile orientation', () => {
+    const ts = makeTileset256();
+    ts._setDefinition(0, {
+      animation: [
+        { localTileId: 0, duration: 100 },
+        { localTileId: 1, duration: 100 },
+      ],
+    });
+    const layer = makeLayer(ts, 1, 1);
+    setTile(layer, ts, 0, 0, 0);
+    const animator = new TileAnimator(layer);
+    animator.update(0.05);
+    layer.setTileAt(0, 0, { localTileId: 0, tileset: ts, transform: { flipX: true, flipY: false, diagonal: false } });
+    const revision = layer.revision;
+
+    animator.update(0.1);
+    animator.reset();
+
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(0);
+    expect(layer.getTileAt(0, 0)?.transform.flipX).toBe(true);
+    expect(layer.revision).toBe(revision);
+  });
+
   it('does not rewrite a cell that stays within the same frame window', () => {
     const ts = makeTileset256();
     ts._setDefinition(0, {

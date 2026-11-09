@@ -8,6 +8,8 @@ interface AnimatedCell {
   readonly tx: number;
   readonly ty: number;
   readonly tileset: TileSet;
+  readonly definitionTileId: number;
+  ownedTileId: number | null;
   readonly transform: TileTransform;
   readonly frames: readonly TileAnimationFrame[];
   /** Cumulative end-time (ms) of each frame, so `cumulative.at(-1) === totalMs`. */
@@ -108,6 +110,7 @@ export class TileAnimator {
         localTileId: frame.localTileId,
         transform: cell.transform,
       });
+      cell.ownedTileId = frame.localTileId;
     }
   }
 
@@ -131,6 +134,7 @@ export class TileAnimator {
         localTileId: frame.localTileId,
         transform: cell.transform,
       });
+      cell.ownedTileId = frame.localTileId;
     }
   }
 
@@ -152,9 +156,24 @@ export class TileAnimator {
 
   /** False once the caller removed or replaced the animated tile, so the animator must not write it back. */
   private _ownsCell(cell: AnimatedCell): boolean {
-    const tile = cell.layer.getTileAt(cell.tx, cell.ty);
+    if (cell.ownedTileId === null) {
+      return false;
+    }
 
-    return !!tile && tile.tileset === cell.tileset && cell.frames.some(frame => frame.localTileId === tile.localTileId);
+    const tile = cell.layer.getTileAt(cell.tx, cell.ty);
+    const owns =
+      tile !== null &&
+      tile.tileset === cell.tileset &&
+      tile.localTileId === cell.ownedTileId &&
+      tile.transform.flipX === cell.transform.flipX &&
+      tile.transform.flipY === cell.transform.flipY &&
+      tile.transform.diagonal === cell.transform.diagonal;
+
+    if (!owns) {
+      cell.ownedTileId = null;
+    }
+
+    return owns;
   }
 
   /** Scan all layers for cells whose tile carries a (multi-frame) animation. */
@@ -166,6 +185,14 @@ export class TileAnimator {
         continue; // unbounded layers are not scanned in v1 — see class doc comment.
       }
 
+      const ownedCells = new Map<number, AnimatedCell>();
+
+      for (const cell of this._cells) {
+        if (cell.layer === layer && this._ownsCell(cell)) {
+          ownedCells.set(cell.ty * layer.width + cell.tx, cell);
+        }
+      }
+
       for (let ty = 0; ty < layer.height; ty++) {
         for (let tx = 0; tx < layer.width; tx++) {
           const tile = layer.getTileAt(tx, ty);
@@ -174,7 +201,9 @@ export class TileAnimator {
             continue;
           }
 
-          const def = tile.tileset.getTileDefinition(tile.localTileId);
+          // A displayed frame need not carry the animation's definition.
+          const definitionTileId = ownedCells.get(ty * layer.width + tx)?.definitionTileId ?? tile.localTileId;
+          const def = tile.tileset.getTileDefinition(definitionTileId);
           const frames = def?.animation;
 
           if (!frames || frames.length < 2) {
@@ -204,6 +233,8 @@ export class TileAnimator {
             tx,
             ty,
             tileset: tile.tileset,
+            definitionTileId,
+            ownedTileId: tile.localTileId,
             transform: tile.transform,
             frames,
             cumulative,
