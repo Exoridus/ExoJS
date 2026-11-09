@@ -147,7 +147,17 @@ const createFixture = (n: number, layout: Layout, variant: Variant): Fixture => 
   harness.firePointer('pointerover', { clientX: 0, clientY: 0 });
   harness.flush();
 
-  return { harness, outer, anchor, alternate, nodes, columns, baseInnerX, baseInnerY, setupMs: performance.now() - started };
+  return {
+    harness,
+    outer,
+    anchor,
+    alternate,
+    nodes,
+    columns,
+    baseInnerX,
+    baseInnerY,
+    setupMs: performance.now() - started,
+  };
 };
 
 const runCase = (n: number, layout: Layout, workload: Workload, variant: Variant): readonly Summary[] => {
@@ -281,7 +291,11 @@ const runBenchmark = (): void => {
         for (let i = 0; i < legacy.length; i++) {
           const left = legacy[i]!;
           const right = indexed[i]!;
-          assert.equal(right.signature, left.signature, `hit parity: n=${n}, layout=${layout}, workload=${workload}, mix=${right.mix}`);
+          assert.equal(
+            right.signature,
+            left.signature,
+            `hit parity: n=${n}, layout=${layout}, workload=${workload}, mix=${right.mix}`,
+          );
           output.push(left, right);
         }
       }
