@@ -146,7 +146,7 @@ describe('SoundFactory - sprite sidecar', () => {
     return factoryContext<SoundAssetOptions>(
       { sprites: sidecar },
       {
-        dependencies: { load, get: vi.fn(), createScope: vi.fn() } as unknown as AssetDependencyScope,
+        dependencies: { load, get: vi.fn() } as unknown as AssetDependencyScope,
       },
     );
   };

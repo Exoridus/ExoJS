@@ -12,11 +12,12 @@ import type { LoaderScope } from './LoaderScope';
  * deduplicated font itself has.
  *
  * It is deliberately narrower than the scope backing it: a factory may acquire
- * dependencies, but not release them, tear the scope down, or unpack a
- * container into it. Those decisions belong to whoever owns the resource.
+ * dependencies, but not release them, tear the scope down, open a child scope,
+ * or unpack a container into it. Those decisions belong to whoever owns the
+ * resource.
  * @advanced
  */
-export type AssetDependencyScope = Pick<LoaderScope, 'get' | 'load' | 'createScope'>;
+export type AssetDependencyScope = Pick<LoaderScope, 'get' | 'load'>;
 
 /**
  * What a factory is told about the one resource it is building.

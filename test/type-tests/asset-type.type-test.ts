@@ -72,6 +72,8 @@ class WorldAssetType extends AssetType<WorldData, World, WorldOptions, string> {
         void context.dependencies.release;
         // @ts-expect-error - nor is destroying it.
         void context.dependencies.destroy;
+        // @ts-expect-error - nor opening a child scope, which could release or be destroyed.
+        void context.dependencies.createScope;
 
         return Promise.resolve({} as World);
       },
