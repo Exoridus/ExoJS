@@ -318,6 +318,33 @@ describe('Stack reactivity', () => {
 });
 
 describe('DockContainer', () => {
+  test('re-flows when an edge child changes its own size during a pass', () => {
+    class GrowingPanel extends Panel {
+      private grown = false;
+
+      public override setSize(width: number, height: number): this {
+        if (width === 200 && !this.grown) {
+          this.grown = true;
+
+          return super.setSize(width, height + 10);
+        }
+
+        return super.setSize(width, height);
+      }
+    }
+    const dock = new DockContainer({ width: 100, height: 100 });
+    const top = new GrowingPanel({ width: 0, height: 20 });
+    const centre = new Panel();
+    dock.dock(top, 'top');
+    dock.dock(centre, 'center');
+
+    dock.setSize(200, 100);
+
+    expect(top.uiHeight).toBe(30);
+    expect(centre.y).toBe(30);
+    expect(centre.uiHeight).toBe(70);
+  });
+
   test('gives each edge its own band and the rest to the centre', () => {
     const dock = new DockContainer({ width: 400, height: 300 });
     const top = new Panel({ width: 0, height: 40 });
