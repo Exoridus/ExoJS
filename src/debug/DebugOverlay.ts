@@ -60,14 +60,12 @@ export interface DebugLayers {
  * without changing individual layer visibility flags.
  */
 export class DebugOverlay {
-  /** Master visibility switch. When false, no layers render regardless of their individual flags. */
-  public visible = true;
-
   /** The built-in diagnostic layers. Toggle each layer's `visible` flag or use the F1-F4/F6/F7 keybindings. */
   public readonly layers: DebugLayers;
 
   private readonly _app: Application;
   private readonly _view: View;
+  private _visible = true;
   private readonly _onFrameHandler: (delta: Seconds) => void;
   private readonly _onResizeHandler: (width: number, height: number) => void;
   /** One per keybinding - held so `destroy()` can release the keys it claimed. */
@@ -104,6 +102,23 @@ export class DebugOverlay {
       app.input.onStart(Keyboard.F6, () => this._toggle(this.layers.renderPassInspector)),
       app.input.onStart(Keyboard.F7, () => this._toggle(this.layers.assetCache)),
     ];
+  }
+
+  /**
+   * Master visibility switch. When false, no layers render regardless of their
+   * individual flags, and layers release what only a drawn layer needs (such
+   * as the performance panel's GPU timing) until it is switched back on.
+   */
+  public get visible(): boolean {
+    return this._visible;
+  }
+
+  public set visible(value: boolean) {
+    this._visible = value;
+
+    for (const layer of Object.values(this.layers) as DebugLayer[]) {
+      layer._setOverlayVisible(value);
+    }
   }
 
   /**

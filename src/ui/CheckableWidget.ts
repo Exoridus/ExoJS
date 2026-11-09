@@ -136,9 +136,15 @@ export abstract class CheckableWidget extends Widget {
       const width = control.width + (labelBounds === null ? 0 : this._labelGap + labelBounds.width);
       const height = Math.max(control.height, labelBounds?.height ?? 0);
 
-      // Straight to the base setter: going through this class's own would flip
-      // the explicit-size flag and freeze the widget at its first measurement.
-      super.setSize(width, height);
+      if (width !== this._uiWidth || height !== this._uiHeight) {
+        // Straight to the base setter: going through this class's own would flip
+        // the explicit-size flag and freeze the widget at its first measurement.
+        // A changed size re-enters this method, which completes the pass at the
+        // new size, so continuing here would place and paint everything twice.
+        super.setSize(width, height);
+
+        return;
+      }
     }
 
     if (this._labelNode !== null && labelBounds !== null) {

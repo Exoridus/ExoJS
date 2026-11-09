@@ -18,9 +18,30 @@ export type DebugLayerViewMode = 'screen' | 'world';
  * and are not loaded unless explicitly imported.
  */
 export abstract class DebugLayer {
-  public visible = false;
+  private _visible = false;
+  private _overlayVisible = true;
 
   public constructor(protected readonly _app: Application) {}
+
+  /** Whether the layer is drawn. Defaults to `false`. */
+  public get visible(): boolean {
+    return this._visible;
+  }
+
+  public set visible(value: boolean) {
+    const wasShown = this._isShown();
+
+    this._visible = value;
+    this._notifyShown(wasShown);
+  }
+
+  /** @internal - applied by {@link DebugOverlay}'s master switch; leaves {@link visible} untouched. */
+  public _setOverlayVisible(value: boolean): void {
+    const wasShown = this._isShown();
+
+    this._overlayVisible = value;
+    this._notifyShown(wasShown);
+  }
 
   /**
    * Whether this layer renders in the scene's world-space view or in a
@@ -48,5 +69,27 @@ export abstract class DebugLayer {
    */
   public destroy(): void {
     // Default: nothing. Subclasses override to release Container subtrees etc.
+  }
+
+  /**
+   * Called when the layer stops or starts being drawn, through its own
+   * {@link visible} flag or the overlay's master switch. Override to release
+   * resources only a drawn layer needs; reacquire them lazily in
+   * {@link update}, which runs only while the layer is drawn.
+   */
+  protected _onShownChanged(_shown: boolean): void {
+    // Default: nothing.
+  }
+
+  private _isShown(): boolean {
+    return this._visible && this._overlayVisible;
+  }
+
+  private _notifyShown(wasShown: boolean): void {
+    const shown = this._isShown();
+
+    if (shown !== wasShown) {
+      this._onShownChanged(shown);
+    }
   }
 }

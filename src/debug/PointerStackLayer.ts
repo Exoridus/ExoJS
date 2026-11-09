@@ -32,8 +32,9 @@ const textColor = Color.white.clone();
 
 /**
  * Debug layer that shows a screen-space panel (top-right corner) listing all
- * RenderNodes under the current pointer position, with UI before world nodes
- * and each layer sorted by zIndex descending.
+ * RenderNodes under the current pointer position, topmost first: UI before
+ * world nodes, and each layer in the order it paints, so a node's `zIndex`
+ * only ranks it among its siblings and a child lists above its container.
  * Screen-space.
  */
 export class PointerStackLayer extends DebugLayer {
@@ -53,7 +54,7 @@ export class PointerStackLayer extends DebugLayer {
   /**
    * Lazily initialize the panel on first call, reposition it to the
    * top-right corner, and populate text lines with the current pointer
-   * stack (up to 10 entries, UI first and descending zIndex within each layer).
+   * stack (up to 10 entries, topmost first).
    */
   public override update(_delta: Seconds): void {
     if (this._root === null) {
@@ -161,7 +162,6 @@ export class PointerStackLayer extends DebugLayer {
       const world = this._app.rendering.view.screenToWorld(sx, sy, this._app.width, this._app.height);
 
       this._collectContaining(root, world.x, world.y, stack);
-      stack.sort((a, b) => b.zIndex - a.zIndex);
     }
 
     const uiRoot = scene?._peekUI();
@@ -171,7 +171,6 @@ export class PointerStackLayer extends DebugLayer {
       const uiStack: RenderNode[] = [];
 
       this._collectContaining(uiRoot, ui.x, ui.y, uiStack);
-      uiStack.sort((a, b) => b.zIndex - a.zIndex);
       stack = [...uiStack, ...stack];
     }
 
@@ -196,21 +195,61 @@ export class PointerStackLayer extends DebugLayer {
     return lines;
   }
 
-  private _collectContaining(node: RenderNode, x: number, y: number, result: RenderNode[]): void {
-    if (!node.visible) {
-      return;
+  /** Collect the visible nodes under the point, topmost first. */
+  private _collectContaining(root: RenderNode, x: number, y: number, result: RenderNode[]): void {
+    const slots: Array<RenderNode | null> = [];
+
+    if (root.visible) {
+      this._collectSubtree(root, x, y, slots);
     }
 
-    if (node.contains(x, y)) {
-      result.push(node);
-    }
+    // The walk visits nodes in the order they paint, so the last one is on top.
+    for (let i = slots.length - 1; i >= 0; i--) {
+      const node = slots[i];
 
-    const container = node as Partial<{ children: RenderNode[] }>;
-
-    if (Array.isArray(container.children)) {
-      for (const child of container.children) {
-        this._collectContaining(child, x, y, result);
+      if (node !== null && node !== undefined) {
+        result.push(node);
       }
     }
+  }
+
+  /** Collect the visible subtree under the point into `slots` and return `node.contains(x, y)`. */
+  private _collectSubtree(node: RenderNode, x: number, y: number, slots: Array<RenderNode | null>): boolean {
+    const slot = slots.length;
+    // A plain container hits wherever any child does, so its answer falls out of
+    // the walk below; calling its contains() would walk the same subtree again.
+    const derived = node instanceof Container && node.hitArea === null && node.contains === Container.prototype.contains;
+    const children = this._childrenInPaintOrder(node);
+    let childHit = false;
+
+    slots.push(node);
+
+    if (children !== null) {
+      for (const child of children) {
+        // A hidden child is not listed, but still counts towards its container's hit.
+        const hit: boolean = child.visible ? this._collectSubtree(child, x, y, slots) : derived && !childHit && child.contains(x, y);
+
+        childHit ||= hit;
+      }
+    }
+
+    const hit = derived ? childHit : node.contains(x, y);
+
+    if (!hit) {
+      slots[slot] = null;
+    }
+
+    return hit;
+  }
+
+  /** A node's children in the order the renderer paints them: stable by `zIndex`, then document order. */
+  private _childrenInPaintOrder(node: RenderNode): readonly RenderNode[] | null {
+    if (node instanceof Container) {
+      return node._childrenInPaintOrder();
+    }
+
+    const children = (node as Partial<{ children: readonly RenderNode[] }>).children;
+
+    return children === undefined ? null : [...children].sort((a, b) => a.zIndex - b.zIndex);
   }
 }

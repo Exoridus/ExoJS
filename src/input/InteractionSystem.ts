@@ -19,7 +19,7 @@ import { isHittable, isWithinAncestorClips, isWithinClip } from './hitTestPredic
 import type { InteractionEventType } from './InteractionEvent';
 import { InteractionEvent } from './InteractionEvent';
 import { InteractionRootBindings } from './InteractionRootBindings';
-import { bubbleInteractionEvent, iterateInteractionSubtree, removeScopesInSubtree } from './interactionTree';
+import { bubbleInteractionEvent, isDescendantOrSelf, iterateInteractionSubtree, removeScopesInSubtree } from './interactionTree';
 import type { Pointer } from './Pointer';
 import { createScopeToken, type ScopeToken } from './ScopeToken';
 
@@ -125,26 +125,6 @@ interface DragState {
 interface IndexedNode {
   node: RenderNode;
 }
-
-/**
- * Whether `node` is `root` itself or sits anywhere beneath it. Walks up from
- * `node` rather than down from `root`: the caller already holds the deep node
- * and the chain up is bounded by the scene's depth, while a downward walk
- * would visit the whole subtree.
- */
-const isSelfOrDescendant = (node: RenderNode, root: RenderNode): boolean => {
-  let current: RenderNode | null = node;
-
-  while (current !== null) {
-    if (current === root) {
-      return true;
-    }
-
-    current = current.parent;
-  }
-
-  return false;
-};
 
 // ---------------------------------------------------------------------------
 
@@ -1696,21 +1676,7 @@ export class InteractionSystem {
   private _isUINode(node: RenderNode): boolean {
     const uiRoot = this._app.scenes.currentScene?._peekUI() ?? null;
 
-    if (uiRoot === null) {
-      return false;
-    }
-
-    let current: RenderNode | null = node;
-
-    while (current !== null) {
-      if (current === uiRoot) {
-        return true;
-      }
-
-      current = current.parent;
-    }
-
-    return false;
+    return uiRoot !== null && isDescendantOrSelf(node, uiRoot);
   }
 
   private _hitTest(x: number, y: number): RenderNode | null {
@@ -2004,7 +1970,7 @@ export class InteractionSystem {
     }
 
     for (const [pointerId, hit] of [...this._lastHit]) {
-      if (!isSelfOrDescendant(hit, root)) {
+      if (!isDescendantOrSelf(hit, root)) {
         continue;
       }
 

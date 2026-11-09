@@ -295,6 +295,64 @@ describe('PerformanceLayer', () => {
       expect(backendOf(app).setGpuTimingEnabled).toHaveBeenLastCalledWith(false);
     });
 
+    test('hiding a shown panel stops GPU timing', () => {
+      const app = makeApp({ gpuTiming: true });
+      const layer = new PerformanceLayer(app);
+
+      layer.visible = true;
+      layer.update(time(16));
+      layer.visible = false;
+
+      expect(backendOf(app).setGpuTimingEnabled).toHaveBeenLastCalledWith(false);
+      layer.destroy();
+    });
+
+    test('hide, show and hide again switch timing off, on and off once each', () => {
+      const app = makeApp({ gpuTiming: true });
+      const layer = new PerformanceLayer(app);
+      const setTiming = backendOf(app).setGpuTimingEnabled;
+
+      layer.visible = true;
+      layer.update(time(16));
+      layer.visible = false;
+      layer.visible = false;
+      layer.visible = true;
+      layer.update(time(16));
+      layer.update(time(16));
+      layer.visible = false;
+
+      expect(setTiming.mock.calls).toEqual([[true], [false], [true], [false]]);
+      layer.destroy();
+    });
+
+    test('a re-shown panel reports the device clock again', () => {
+      const app = makeApp({ gpuTiming: true });
+      const layer = new PerformanceLayer(app);
+
+      layer.visible = true;
+      layer.update(time(16));
+      layer.visible = false;
+      layer.visible = true;
+      backendOf(app).stats.gpuFrameTimeMs = 2;
+      layer.update(time(16));
+
+      expect(internals(layer)._textGpu?.text).toBe('GPU: 2.00ms last');
+      layer.destroy();
+    });
+
+    test('destroy() while hidden does not switch timing off a second time', () => {
+      const app = makeApp({ gpuTiming: true });
+      const layer = new PerformanceLayer(app);
+      const setTiming = backendOf(app).setGpuTimingEnabled;
+
+      layer.visible = true;
+      layer.update(time(16));
+      layer.visible = false;
+      layer.destroy();
+
+      expect(setTiming.mock.calls).toEqual([[true], [false]]);
+    });
+
     test('destroy() before the panel exists asks the backend for nothing', () => {
       const app = makeApp({ gpuTiming: true });
 

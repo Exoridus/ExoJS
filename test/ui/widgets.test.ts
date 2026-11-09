@@ -820,6 +820,21 @@ describe('ProgressBar fill modes', () => {
 });
 
 describe('Checkbox', () => {
+  test('a label change that resizes it lays out and paints once', () => {
+    const checkbox = new Checkbox({ label: 'On' });
+    const labelNode = checkbox.labelNode!;
+    const paint = vi.spyOn(checkbox as unknown as { _paintControl(): void }, '_paintControl');
+    const place = vi.spyOn(labelNode, 'setPosition');
+    const widthBefore = checkbox.uiWidth;
+
+    checkbox.label = 'A much longer label';
+
+    expect(checkbox.uiWidth).toBeGreaterThan(widthBefore);
+    expect(paint).toHaveBeenCalledOnce();
+    expect(place).toHaveBeenCalledOnce();
+    expect(labelNode.y).toBe((checkbox.uiHeight - labelNode.textBounds.height) / 2);
+  });
+
   test('is interactive and focusable and starts unchecked', () => {
     const checkbox = new Checkbox();
 
