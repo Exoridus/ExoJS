@@ -194,6 +194,18 @@ export class LutFilter extends Filter {
   private readonly _shaderFilter: LutShaderFilter;
   private readonly _lutSizeUniform: { value: number } | null = null;
   private _lut: Texture;
+  private _observedLut: Texture | null = null;
+  private readonly _onLutUpdate = (lut: Texture): void => {
+    // A preceding listener can replace or destroy this filter while the old
+    // texture is dispatching its update.
+    if (lut !== this._observedLut) {
+      return;
+    }
+
+    this._syncCubeSize(lut);
+    this.invalidate();
+  };
+
   /** The identity LUT the constructor created, which this filter owns until a caller supplies another. */
   private _ownedLut: Texture | null = null;
 
@@ -221,6 +233,9 @@ export class LutFilter extends Filter {
     } else {
       this._shaderFilter = ShaderFilter.from(lutRgb1dShaderSource, { uniforms: { uDomain: domain }, textures: { uLut: this._lut } });
     }
+
+    this._observedLut = this._lut;
+    this._lut._addUpdateListener(this._onLutUpdate);
   }
 
   /** The LUT mode this filter was constructed with. */
@@ -233,7 +248,7 @@ export class LutFilter extends Filter {
     return this._colorSpace;
   }
 
-  /** The cube edge size (3D only), following the LUT most recently supplied to {@link LutFilter.setLut}. For 1D this returns the constructor-time size hint. */
+  /** The cube edge size (3D only), following the LUT's valid dimensions. Empty or placeholder payloads preserve the current size. For 1D this returns the constructor-time size hint. */
   public get size(): number {
     return this._size;
   }
@@ -245,6 +260,8 @@ export class LutFilter extends Filter {
 
   /**
    * Replace the LUT texture and invalidate cached owners. Returns `this` for chaining.
+   * Later payload updates also invalidate owners and refresh the 3D cube size
+   * once the texture has valid `N*N` by `N` dimensions.
    *
    * The LUT is sampled as numeric data in the filter's own colour domain, so
    * it must resolve to `colorSpace: 'none'`: `'srgb'` storage would apply its
@@ -259,6 +276,13 @@ export class LutFilter extends Filter {
     assertNumericLut(lut);
 
     this._lut = lut;
+
+    if (this._observedLut !== lut) {
+      this._observedLut?._removeUpdateListener(this._onLutUpdate);
+      this._observedLut = lut;
+      lut._addUpdateListener(this._onLutUpdate);
+    }
+
     this._syncCubeSize(lut);
     this._shaderFilter._setTexture('uLut', lut);
 
@@ -277,8 +301,15 @@ export class LutFilter extends Filter {
       return;
     }
 
-    // The cube is N*N wide by N tall, so the height is the edge length the shader indexes with.
-    this._size = Math.max(2, lut.height);
+    const size = lut.height;
+
+    // Empty handles and placeholder images do not describe a cube yet. Keep
+    // the declared size until the payload supplies the N*N by N layout.
+    if (!Number.isInteger(size) || size < 2 || lut.width !== size * size) {
+      return;
+    }
+
+    this._size = size;
     this._lutSizeUniform.value = this._size;
   }
 
@@ -288,6 +319,8 @@ export class LutFilter extends Filter {
   }
 
   public override destroy(): void {
+    this._observedLut?._removeUpdateListener(this._onLutUpdate);
+    this._observedLut = null;
     super.destroy();
     this._shaderFilter.destroy();
     this._ownedLut?.destroy();

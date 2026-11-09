@@ -1,5 +1,6 @@
 import type { Color } from '#core/Color';
 import { LoadState, type LoadStateValue } from '#core/LoadState';
+import { Signal } from '#core/Signal';
 import type { TextureSource } from '#core/types';
 import { getTextureSourceSize } from '#core/utils';
 import { Size } from '#math/Size';
@@ -155,6 +156,7 @@ export class Texture {
   private _isDestroying = false;
   private readonly _destroyListeners: Set<() => void> = new Set<() => void>();
   private readonly _releaseListeners: Set<() => void> = new Set<() => void>();
+  private _updates: Signal<[Texture]> | null = null;
   /** @internal - load lifecycle, driven by the Loader's seamless pipeline. */
   public readonly _loadState = new LoadState<Texture>();
   private _scaleMode: ScaleModes;
@@ -416,7 +418,19 @@ export class Texture {
    * data through paths the base setters don't cover.
    */
   protected _bumpVersion(): void {
-    this._version++;
+    this._touch();
+  }
+
+  /** Observe upload-affecting changes after the payload metadata and dimensions are current. @internal */
+  public _addUpdateListener(listener: (texture: Texture) => void): void {
+    if (!this._isDestroyed) {
+      (this._updates ??= new Signal<[Texture]>()).add(listener);
+    }
+  }
+
+  /** Stop observing upload-affecting changes. @internal */
+  public _removeUpdateListener(listener: (texture: Texture) => void): void {
+    this._updates?.remove(listener);
   }
 
   /**
@@ -599,6 +613,8 @@ export class Texture {
       this._isDestroying = false;
       this._destroyListeners.clear();
       this._releaseListeners.clear();
+      this._updates?.destroy();
+      this._updates = null;
       this._size.destroy();
       this._source = null;
       this._sourceMetadata = null;
@@ -624,8 +640,12 @@ export class Texture {
     }
   }
 
-  private _touch(): void {
+  private _touch(notify = true): void {
     this._version++;
+
+    if (notify && this._updates !== null && this._updates.count > 0) {
+      this._updates.dispatch(this);
+    }
   }
 
   /** Install RGBA8 bytes, replacing a browser or compressed source. */
@@ -803,7 +823,9 @@ export class Texture {
     this._premultiplyAlpha = nextPremultiplyAlpha;
 
     if (touch && (metadataChanged || premultiplyChanged)) {
-      this._touch();
+      // Payload setters still have dimensions to install. Their final touch
+      // notifies consumers only after all of the new payload is observable.
+      this._touch(false);
     }
   }
 

@@ -895,6 +895,7 @@ export default defineConfig([
     files: [
       'packages/exojs-lighting/src/LitMaterial.ts',
       'packages/exojs-lighting/src/backends/FrameLightingBackend.ts',
+      'packages/exojs-lighting/src/backends/normalBatches.ts',
       'packages/exojs-lighting/src/backends/radianceField.ts',
     ],
     rules: {
