@@ -1,5 +1,5 @@
 import type { FrameTimeSource } from '../competitive/metrics';
-import type { GpuFrameSamples } from './page/gpuFrameTimer';
+import type { GpuFrameSamples } from './gpuTiming';
 
 /** Timing disables graphics probes; gpu adds hardware queries; deep adds CPU splits and API counters. */
 export type MeasurementProfile = 'timing' | 'gpu' | 'deep';

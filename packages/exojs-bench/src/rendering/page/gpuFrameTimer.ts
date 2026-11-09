@@ -1,3 +1,7 @@
+import type { GpuFrameSamples, GpuTimingDiagnostics } from '../gpuTiming';
+
+export type { GpuFrameSamples, GpuTimingDiagnostics, GpuTimingSource } from '../gpuTiming';
+
 /**
  * Per-frame GPU-time sources shared by every page this package serves: the
  * Playwright-driven matrix harness (`page/harness.ts`) and the manual DPR probe
@@ -33,34 +37,6 @@ export const WEBGPU_NO_TIMESTAMP_NOTE =
  */
 export const WEBGPU_QUEUE_NOTE =
   'queueMs* = CPU-observed queue-completion intervals (doneAt - max(submitAt, previous doneAt)), from queue.onSubmittedWorkDone. They include scheduling and completion-observation delays, can omit work completed before the observation starts, and do not bound individual frames when callbacks coalesce. They are not GPU execution time';
-
-/** Both series a GPU timer can produce for one cell. */
-export interface GpuFrameSamples {
-  /** Per-frame GPU query-clock intervals (ms). Empty when unavailable. */
-  readonly frameMs: readonly number[];
-  /** WebGPU only: CPU-observed queue-completion intervals (ms), not GPU execution time. */
-  readonly queueMs: readonly number[];
-  /** Timed-window frame indices corresponding to {@link frameMs}. */
-  readonly frameIndices?: readonly number[];
-  /** Timed-window frame indices corresponding to {@link queueMs}. */
-  readonly queueFrameIndices?: readonly number[];
-  /** GPU-query coverage; absent only from older/custom timer implementations. */
-  readonly timing?: GpuTimingDiagnostics;
-}
-
-/** Query scope, independent of whether the browser uses a physical or software adapter. */
-export type GpuTimingSource = 'webgl2-time-elapsed' | 'webgpu-render-pass-timestamps' | 'none';
-
-/** Accounting for every frame offered to a GPU-query timer. */
-export interface GpuTimingDiagnostics {
-  readonly source: GpuTimingSource;
-  readonly status: 'complete' | 'partial' | 'unavailable' | 'failed';
-  readonly attemptedFrames: number;
-  readonly validFrames: number;
-  readonly invalidFrames: number;
-  readonly unresolvedFrames: number;
-  readonly skippedFrames: number;
-}
 
 const timingStatus = (attempted: number, valid: number, failed: boolean): GpuTimingDiagnostics['status'] => {
   if (failed) {
