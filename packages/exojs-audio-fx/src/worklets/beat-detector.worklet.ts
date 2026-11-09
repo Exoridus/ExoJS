@@ -1301,9 +1301,23 @@ class BeatDetectorProcessor extends DisposableProcessor {
     return this._activeTs === '3/4' ? 3 : 4;
   }
 
+  /**
+   * The interval the phase tracker will advance the emitted grid by: the PLL
+   * period, or the ACF period it re-seeds from when the two have drifted apart.
+   * The forecast must use the same value, or it walks away from the beats that
+   * are actually emitted.
+   */
+  private _gridPeriodSamples(): number {
+    const acfIbi = (60 / this._bestBpm) * this._sampleRate;
+    const ibi = this._ibiSamples;
+
+    return ibi <= 0 || Math.abs(ibi - acfIbi) > PLL_RESYNC_FRAC * acfIbi ? acfIbi : ibi;
+  }
+
   private _updateLookahead(lastBeatTime: number): void {
     const lookahead: UpcomingBeatInline[] = [];
-    const beatInterval = 60 / this._bestBpm;
+    const beatInterval = this._gridPeriodSamples() / this._sampleRate;
+    const tempo = 60 / beatInterval;
     const barPos = this._barPosition;
     const barLen = this._barLength;
     this._predictionValidUntilSample = this._lastOnsetSample >= 0 ? this._lastOnsetSample + 2 * this._ibiSamples + this._fftSize : 0;
@@ -1317,7 +1331,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
       const bp = ((barPos + i) % barLen) + 1;
       lookahead.push({
         audioTime: t,
-        tempo: this._bestBpm,
+        tempo,
         isDownbeat: this._meterKnown && bp === 1,
         meterKnown: this._meterKnown,
         beatInBar: bp,
@@ -1360,7 +1374,7 @@ class BeatDetectorProcessor extends DisposableProcessor {
     // and the sync-critical fields stay zero until the detector has a trustworthy locked grid.
     const valid = this._predictionValidUntilSample > this._sampleCount;
     const settled = this._locked && valid;
-    const beatInterval = this._bestBpm > 0 ? 60 / this._bestBpm : 0;
+    const beatInterval = this._bestBpm > 0 ? this._gridPeriodSamples() / this._sampleRate : 0;
 
     // Beat phase is measured in analysed samples, not on the context clock: a
     // source that stops feeding the node freezes the phase where it stood
