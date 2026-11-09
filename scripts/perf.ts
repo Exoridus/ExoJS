@@ -43,6 +43,10 @@ export const PERF_RUNS = {
     module: 'test/perf/graphics-source-benchmark.ts',
   },
   interaction: { summary: 'interaction benchmark', module: 'test/perf/interaction-benchmark.ts' },
+  'interaction:spatial': {
+    summary: 'W002-05 anchored group A/B InteractionSystem benchmark',
+    module: 'test/perf/interaction-spatial-index-benchmark.ts',
+  },
   'collect-phase': { summary: 'collect phase benchmark', module: 'test/perf/collect-phase-benchmark.ts' },
   profile: { summary: 'profile benchmark', module: 'test/perf/profile-benchmark.ts' },
   'profile:gc': {

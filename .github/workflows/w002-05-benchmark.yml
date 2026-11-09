@@ -17,7 +17,7 @@ jobs:
       - uses: ./.github/actions/setup
       - name: W002-05 A/B benchmark and retained group regressions
         run: |
-          pnpm exec tsx test/perf/interaction-spatial-index-benchmark.ts
+          pnpm perf interaction:spatial
           pnpm exec vitest run --project=exojs test/input/interaction-retained-group.test.ts
       - name: Typecheck
         run: pnpm gates typecheck
