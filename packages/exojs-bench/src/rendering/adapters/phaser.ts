@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
+import { raceWithTimeout } from '../../shared/timeout';
 import { phaserCovers } from '../coverage';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
 import { isParticleLifecycle, isParticles, PARTICLE_ALPHA, PARTICLE_LIFETIME, PARTICLE_STEP, particleSeedAt } from '../particles';
@@ -74,6 +75,8 @@ const SCENE_KEY = 'bench';
 const GLYPH_TEXTURE_KEY = `${SCENE_KEY}-glyphs`;
 /** BitmapFont cache key the parsed retro font is registered under. */
 const GLYPH_FONT_KEY = `${SCENE_KEY}-font`;
+/** Bound scene startup, including the asynchronous default texture loads. */
+const INITIALIZATION_TIMEOUT_MS = 10_000;
 
 /**
  * A pre-selected leaf and its resting grid position - the only nodes `mutate`
@@ -343,8 +346,70 @@ export const createPhaserAdapter = (): EngineAdapter => {
 
   /** Drop the picking scene so a rebuild (or teardown) leaks nothing. */
   const releasePicking = (): void => {
+    if (pickingSpec !== null && root !== null) {
+      root.destroy();
+      root = null;
+
+      // The stopped game loop never drains the removals queued by destroy.
+      // Release those input references before another archetype uses the scene.
+      (scene!.input as unknown as { preUpdate(): void }).preUpdate();
+      game!.textures.remove(`${SCENE_KEY}-pick`);
+    }
+
     pickPointer = null;
     pickingSpec = null;
+  };
+
+  const teardown = (): void => {
+    releaseTilemap();
+    releaseParticles();
+    releasePicking();
+
+    if (game !== null) {
+      if (game.scene.isBooted) {
+        // Destruction is normally consumed by the next step. The harness stops
+        // the loop, so consume it now while preserving its shared canvas.
+        game.destroy(false);
+        game.step(0, 0);
+      } else {
+        // Before READY, Phaser 4.2.1's SceneManager and TextureManager destroy
+        // methods assume a system scene and stamp that do not exist yet.
+        // Release the booted resources without starting those missing systems.
+        const textures = game.textures;
+
+        textures.removeAllListeners();
+        // Default-image onload handlers can arrive after this game is released.
+        // They already accept a null result from create, so cancel allocation
+        // only on this disposed manager without changing Phaser's prototype.
+        textures.create = () => null;
+        game.events.off(Phaser.Core.Events.DESTROY, textures.destroy, textures);
+
+        for (const texture of Object.values(textures.list)) {
+          texture.destroy();
+        }
+
+        Phaser.Display.Canvas.CanvasPool.remove(textures);
+        (textures as unknown as { game: null }).game = null;
+        game.events.emit(Phaser.Core.Events.DESTROY);
+        game.events.removeAllListeners();
+        // preBoot can capture the game before its renderer has been allocated.
+        (game.renderer as Phaser.Renderer.WebGL.WebGLRenderer | null)?.destroy();
+        game.domContainer?.remove();
+        game.loop.destroy();
+      }
+
+      game = null;
+    }
+
+    scene = null;
+    root = null;
+    textureKeys = [];
+    mutableLeaves = [];
+    mutableIndices = [];
+    rebuildLeaf = null;
+    churning = false;
+    textUpdating = false;
+    textGlyphs = 0;
   };
 
   return {
@@ -372,48 +437,75 @@ export const createPhaserAdapter = (): EngineAdapter => {
         throw new Error('Phaser requires a WebGL2 context for this arm.');
       }
 
-      await new Promise<void>(resolve => {
-        game = new Phaser.Game({
-          // Force WebGL and pass the already-created WebGL2 context. Phaser's
-          // public type incorrectly calls this CanvasRenderingContext2D, but its
-          // WebGLRenderer reads the value as the renderer context at runtime.
-          type: Phaser.WEBGL,
-          canvas,
-          context: context as unknown as CanvasRenderingContext2D,
-          width: VIEWPORT_WIDTH,
-          height: VIEWPORT_HEIGHT,
-          backgroundColor: '#000000',
-          // Fixed backing store; never let Phaser's Scale Manager resize the
-          // shared harness canvas out from under the fixed 1280x720 viewport.
-          scale: { mode: Phaser.Scale.NONE, autoCenter: Phaser.Scale.NO_CENTER, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT },
-          render: { antialias: false, powerPreference: 'high-performance', clearBeforeRender: true, transparent: false, pixelArt: true },
-          // Silence / disable every subsystem not under test: the boot banner,
-          // audio, and all input listeners. Physics is off by default (no
-          // `physics` config). The render loop is halted below.
-          banner: false,
-          audio: { noAudio: true },
-          // Mouse input stays ON although the harness dispatches no events: the
-          // input plugin is what registers an interactive object, and with it
-          // off the picking archetype's hit test searches an empty list and
-          // reports a very fast nothing. The loop is stopped, so no input is
-          // processed per frame and no other archetype pays for this.
-          input: { keyboard: false, mouse: true, touch: false, gamepad: false },
-          disableContextMenu: true,
-          autoFocus: false,
-          // The scene's `create` fires once the scene reaches RUNNING; resolve
-          // init then (the scene ref is fetched by key afterwards).
-          scene: { key: SCENE_KEY, create: () => resolve() },
-        });
-      });
+      try {
+        const initialized = await raceWithTimeout(
+          new Promise<boolean>(resolve => {
+            game = new Phaser.Game({
+              // Force WebGL and pass the already-created WebGL2 context. Phaser's
+              // public type incorrectly calls this CanvasRenderingContext2D, but its
+              // WebGLRenderer reads the value as the renderer context at runtime.
+              type: Phaser.WEBGL,
+              canvas,
+              context: context as unknown as CanvasRenderingContext2D,
+              callbacks: {
+                preBoot: bootingGame => {
+                  // A boot error can prevent the constructor assignment below.
+                  // Keep its resource owner available to the failure cleanup.
+                  game = bootingGame;
+                },
+              },
+              width: VIEWPORT_WIDTH,
+              height: VIEWPORT_HEIGHT,
+              backgroundColor: '#000000',
+              // Fixed backing store; never let Phaser's Scale Manager resize the
+              // shared harness canvas out from under the fixed 1280x720 viewport.
+              scale: { mode: Phaser.Scale.NONE, autoCenter: Phaser.Scale.NO_CENTER, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT },
+              render: {
+                antialias: false,
+                powerPreference: 'high-performance',
+                clearBeforeRender: true,
+                transparent: false,
+                pixelArt: true,
+              },
+              // Silence / disable every subsystem not under test: the boot banner,
+              // audio, and all input listeners. Physics is off by default (no
+              // `physics` config). The render loop is halted below.
+              banner: false,
+              audio: { noAudio: true },
+              // Mouse input stays ON although the harness dispatches no events: the
+              // input plugin is what registers an interactive object, and with it
+              // off the picking archetype's hit test searches an empty list and
+              // reports a very fast nothing. The loop is stopped, so no input is
+              // processed per frame and no other archetype pays for this.
+              input: { keyboard: false, mouse: true, touch: false, gamepad: false },
+              disableContextMenu: true,
+              autoFocus: false,
+              // The scene's `create` fires once the scene reaches RUNNING; resolve
+              // init then (the scene ref is fetched by key afterwards).
+              scene: { key: SCENE_KEY, create: () => resolve(true) },
+            });
+          }),
+          INITIALIZATION_TIMEOUT_MS,
+          false,
+        );
 
-      // Halt Phaser's own requestAnimationFrame loop; the harness drives frames.
-      game!.loop.stop();
+        if (!initialized) {
+          throw new Error(`Phaser scene initialization timed out after ${INITIALIZATION_TIMEOUT_MS} ms.`);
+        }
 
-      if (game!.context !== context) {
-        throw new Error('Phaser did not retain the injected WebGL2 context.');
+        // Halt Phaser's own requestAnimationFrame loop; the harness drives frames.
+        game!.loop.stop();
+
+        if (game!.context !== context) {
+          throw new Error('Phaser did not retain the injected WebGL2 context.');
+        }
+
+        scene = game!.scene.getScene(SCENE_KEY);
+      } catch (error) {
+        teardown();
+
+        throw error;
       }
-
-      scene = game!.scene.getScene(SCENE_KEY);
     },
 
     buildScene(spec: ArchetypeSpec, nodeCount: number, seed: number): void {
@@ -696,31 +788,6 @@ export const createPhaserAdapter = (): EngineAdapter => {
       renderer.postRender();
     },
 
-    teardown(): void {
-      releaseTilemap();
-      releaseParticles();
-      releasePicking();
-
-      if (game !== null) {
-        // `destroy` only FLAGS pending destruction (normally consumed by the next
-        // game step); since the loop is stopped, drive one explicit `step` - which
-        // runs `runDestroy` immediately when `pendingDestroy` is set - so the
-        // WebGL context and scene are released now rather than leaking across
-        // cells. `removeCanvas: false` keeps the harness-owned canvas in the DOM.
-        game.destroy(false);
-        game.step(0, 0);
-        game = null;
-      }
-
-      scene = null;
-      root = null;
-      textureKeys = [];
-      mutableLeaves = [];
-      mutableIndices = [];
-      rebuildLeaf = null;
-      churning = false;
-      textUpdating = false;
-      textGlyphs = 0;
-    },
+    teardown,
   };
 };
