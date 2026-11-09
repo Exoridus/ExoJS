@@ -4,7 +4,7 @@ import type { Seconds } from '#core/units';
 import type { Vector } from '#math/Vector';
 
 import type { AudioBus } from './AudioBus';
-import { getAudioContext } from './audioContext';
+import { getAudioContext, isAudioContextReady } from './audioContext';
 import type { AudioEffect } from './AudioEffect';
 import type { AudioSend } from './AudioSend';
 import type { DistanceModel, SpatialPoint, Voice } from './Playable';
@@ -34,7 +34,15 @@ export class NoopVoice implements Voice {
   }
 
   public get output(): AudioNode {
-    return (this._output ??= getAudioContext().createGain());
+    if (this._output === null) {
+      if (!isAudioContextReady()) {
+        throw new Error('A voice that has already ended has no output node before audio is unlocked.');
+      }
+
+      this._output = getAudioContext().createGain();
+    }
+
+    return this._output;
   }
 
   public get volume(): number {
