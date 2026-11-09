@@ -5,12 +5,12 @@ on:
     branches: [fix/a2-cross-realm-platform]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   evidence:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 40
     defaults:
       run:
         working-directory: .worktrees/a2-platform
@@ -23,7 +23,6 @@ jobs:
       - name: Create isolated linked worktree
         working-directory: source
         run: |
-          # A sibling worktree prevents Vite/Oxc reading the bootstrap checkout's tsconfig.
           git worktree add ../.worktrees/a2-platform -b fix/a2-cross-realm-platform "${GITHUB_SHA}"
           git worktree list --porcelain
       - uses: pnpm/action-setup@v6
@@ -38,5 +37,97 @@ jobs:
           cache-dependency-path: source/pnpm-lock.yaml
       - run: pnpm bootstrap
       - run: pnpm exec playwright install --with-deps chromium
-      - name: Owner-realm Chromium RED
-        run: pnpm exec vitest run --project=browser-core-chromium test/core/browser/cross-realm-platform.test.ts
+      - name: Keep RED diagnostics from serializing native DOM objects
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('test/core/browser/cross-realm-platform.test.ts')
+          s = p.read_text()
+          s = re.sub(r'expect\(([^\n]+)\)\.not\.toBeInstanceOf\(([^\n]+)\);', r'expect(\1 instanceof \2).toBe(false);', s)
+          s = re.sub(r'expect\(([^\n]+)\)\.toBeInstanceOf\(([^\n]+)\);', r'expect(\1 instanceof \2).toBe(true);', s)
+          s = re.sub(r'expect\(([^\n]+)\)\.toBe\((ownerDocument|element|canvas|detachedDocument|elementOf\(input\))\);', r'expect(\1 === \2).toBe(true);', s)
+          p.write_text(s)
+          PY
+          pnpm exec prettier --write test/core/browser/cross-realm-platform.test.ts
+      - name: Reconfirm Chromium RED against unchanged runtime
+        run: |
+          mkdir -p .workspace
+          set +e
+          pnpm exec vitest run --project=browser-core-chromium test/core/browser/cross-realm-platform.test.ts --reporter=json --outputFile=.workspace/a2-platform-red.json > .workspace/a2-platform-red.log 2>&1
+          status=$?
+          set -e
+          cat .workspace/a2-platform-red.log
+          test "$status" -ne 0
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          r = json.loads(Path('.workspace/a2-platform-red.json').read_text())
+          print('CHROMIUM_RED', {k: r.get(k) for k in ['numTotalTests', 'numFailedTests', 'numPassedTests', 'numRuntimeErrorTestSuites']})
+          assert r['numTotalTests'] == 14 and r['numFailedTests'] == 10 and r['numPassedTests'] == 4
+          assert r.get('numRuntimeErrorTestSuites', 0) == 0
+          PY
+      - name: Apply owner-document and frame-owner correction
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          def replace(s, old, new, count=1):
+              assert s.count(old) == count, (old, s.count(old))
+              return s.replace(old, new)
+          p = Path('src/platform/BrowserPlatform.ts')
+          s = p.read_text()
+          s = replace(s, "if (typeof document === 'undefined') {", 'if (this._document.body === null) {')
+          s = replace(s, 'editContextSupported() ?', 'editContextSupported(this._document.defaultView) ?')
+          s = replace(s, 'return performance.now();', 'return this._window.performance.now();')
+          s = replace(s, 'return requestAnimationFrame(callback);', 'return this._window.requestAnimationFrame(callback);')
+          s = replace(s, '    cancelAnimationFrame(handle);', '    this._window.cancelAnimationFrame(handle);')
+          p.write_text(s)
+          for name, tag in [('BrowserTextInput', 'textarea'), ('EditContextTextInput', 'div')]:
+              p = Path('src/platform/' + name + '.ts')
+              s = p.read_text()
+              s = replace(s, "document.createElement('" + tag + "')", "canvas.ownerDocument.createElement('" + tag + "')")
+              s = replace(s, '    document.body.append(element);', '    canvas.ownerDocument.body.append(element);')
+              s = replace(s, "(typeof document !== 'undefined' && document.activeElement === this._element)", '(this._element.ownerDocument.activeElement === this._element)')
+              s = replace(s, "typeof document !== 'undefined' && document.activeElement === this._element", 'this._element.ownerDocument.activeElement === this._element')
+              s = replace(s, "this._bounds === null || typeof document === 'undefined'", 'this._bounds === null')
+              s = replace(s, '    this._element.style.left = `${canvasRect.left + this._bounds.x}px`;\n    this._element.style.top = `${canvasRect.top + this._bounds.y}px`;', '    const view = this._element.ownerDocument.defaultView;\n\n    this._element.style.left = `${canvasRect.left + this._bounds.x + (view?.scrollX ?? 0)}px`;\n    this._element.style.top = `${canvasRect.top + this._bounds.y + (view?.scrollY ?? 0)}px`;')
+              if name == 'EditContextTextInput':
+                  s = replace(s, '/** True when `EditContext` is available on this platform. */\nexport const editContextSupported = (): boolean => (globalThis as EditContextGlobal).EditContext !== undefined;', '/** True when `EditContext` is available in the requested host realm. */\nexport const editContextSupported = (realm: Window | typeof globalThis | null = globalThis): boolean =>\n  (realm as EditContextGlobal | null)?.EditContext !== undefined;')
+                  s = replace(s, '  private readonly _canvas: HTMLCanvasElement;', '  private readonly _canvas: HTMLCanvasElement;\n  private readonly _window: Window & typeof globalThis;')
+                  s = replace(s, '    const Ctor = (globalThis as EditContextGlobal).EditContext;\n\n    if (Ctor === undefined) {', '    const view = canvas.ownerDocument.defaultView;\n    const Ctor = (view as EditContextGlobal | null)?.EditContext;\n\n    if (view === null || Ctor === undefined) {')
+                  s = replace(s, '    // A plain element, never a `<textarea>` or `<input>`:', '    this._window = view;\n\n    // A plain element, never a `<textarea>` or `<input>`:')
+                  s = replace(s, 'new DOMRect(', 'new this._window.DOMRect(', 3)
+              p.write_text(s)
+          PY
+          pnpm exec eslint src/platform/BrowserPlatform.ts src/platform/BrowserTextInput.ts src/platform/EditContextTextInput.ts test/core/browser/cross-realm-platform.test.ts --fix
+          pnpm exec prettier --write src/platform/BrowserPlatform.ts src/platform/BrowserTextInput.ts src/platform/EditContextTextInput.ts test/core/browser/cross-realm-platform.test.ts
+          git diff --check
+          git diff --stat
+          git diff -- src/platform
+      - name: Chromium GREEN and cross-realm surfaces
+        run: pnpm exec vitest run --project=browser-core-chromium test/core/browser/cross-realm-platform.test.ts test/core/browser/cross-realm-surfaces.test.ts
+      - name: Entire Chromium core suite
+        run: pnpm test:browser:core --reporter=minimal
+      - name: Platform and focus unit regressions
+        run: pnpm exec vitest run --project=exojs test/platform test/input/text-transport-focus.test.ts --reporter=minimal
+      - name: Upload tested candidate blobs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+          for path in ['src/platform/BrowserPlatform.ts', 'src/platform/BrowserTextInput.ts', 'src/platform/EditContextTextInput.ts', 'test/core/browser/cross-realm-platform.test.ts']:
+              data = json.dumps({'content': Path(path).read_text(), 'encoding': 'utf-8'})
+              out = subprocess.check_output(['gh', 'api', '--method', 'POST', 'repos/Exoridus/ExoJS/git/blobs', '--input', '-'], input=data.encode())
+              print('CANDIDATE_BLOB ' + path + ' ' + json.loads(out)['sha'], flush=True)
+          PY
+      - name: Typecheck
+        if: ${{ !cancelled() }}
+        run: pnpm gates typecheck
+      - name: Lint
+        if: ${{ !cancelled() }}
+        run: pnpm gates lint
+      - name: Sync
+        if: ${{ !cancelled() }}
+        run: pnpm gates sync
