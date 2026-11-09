@@ -14,12 +14,11 @@ describe('Cancelled pending voice sends', () => {
     const voice = audio.play(sound);
     voice.stop();
     const createGain = vi.spyOn(getAudioContext(), 'createGain');
-    const connect = vi.spyOn(voice.output, 'connect');
 
     try {
       expect(() => voice.addSend(system.music)).toThrow('already ended');
       expect(createGain).not.toHaveBeenCalled();
-      expect(connect).not.toHaveBeenCalled();
+      expect(() => voice.output).toThrow('output');
       expect(voice.sends).toHaveLength(0);
     } finally {
       createGain.mockRestore();
@@ -39,7 +38,6 @@ describe('Cancelled pending voice sends', () => {
     const source = context.createGain();
     const gain = context.createGain();
     const disconnect = vi.spyOn(gain, 'disconnect');
-    const outputConnect = vi.spyOn(voice.output, 'connect');
     const play = vi.spyOn(system, 'play');
     voice.stop();
     const createGain = vi.spyOn(context, 'createGain').mockReturnValueOnce(gain);
@@ -50,7 +48,7 @@ describe('Cancelled pending voice sends', () => {
       const retarget = vi.spyOn(send, '_retarget');
       voice._adoptSend(send);
       expect(retarget).not.toHaveBeenCalled();
-      expect(outputConnect).not.toHaveBeenCalled();
+      expect(() => voice.output).toThrow('output');
 
       expect(send.destroyed).toBe(true);
       expect(disconnect).toHaveBeenCalledTimes(1);

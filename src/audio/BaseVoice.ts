@@ -224,6 +224,7 @@ export abstract class BaseVoice implements Voice {
     this._tail().disconnect();
     this._bus = bus;
     this._connectOutput();
+    this._reconnectSends();
   }
 
   /**
@@ -637,16 +638,18 @@ export abstract class BaseVoice implements Voice {
    * @internal
    */
   public _adoptSend(send: AudioSend): void {
-    if (this._sends.includes(send)) {
+    if (this._sends.includes(send) || send.destroyed) {
+      return;
+    }
+
+    if (this._ended) {
+      send.destroy();
+
       return;
     }
 
     send._retarget(this._output);
     this._sends.push(send);
-
-    if (this._ended) {
-      send.destroy();
-    }
   }
 
   public removeSend(send: AudioSend): this {
@@ -961,6 +964,7 @@ export abstract class BaseVoice implements Voice {
         const current = this._tail();
         current.disconnect();
         current.connect(node);
+        this._reconnectSends();
       }
     });
   }
@@ -993,6 +997,15 @@ export abstract class BaseVoice implements Voice {
     }
 
     this._connectTail(prev);
+    this._reconnectSends();
+  }
+
+  private _reconnectSends(): void {
+    // Rebuilding the dry chain can disconnect every edge from the output,
+    // including the independently owned parallel taps.
+    for (const send of this._sends) {
+      send._retarget(this._output);
+    }
   }
 
   protected _clearStopTimer(): void {

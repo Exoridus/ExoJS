@@ -102,7 +102,7 @@ voice.stop();                          // stop now and release the voice
 voice.stop(Time.seconds(0.8));         // fade out over 0.8s, then stop
 ```
 
-Every `Voice` carries `volume` (get/set), `fade(to, duration)`, `stop(fade?)`, an `ended` flag, an `onEnd` signal, the bus it routes through (`voice.bus`), and an `output` node you can tap for analysis. Beyond that base, a voice mixes in only the capabilities its backing node actually supports, and the type `play()` returns says which. An `AudioStream` voice always carries them. A `Sound` voice carries the same set, but a skipped play call (audio locked, sound not loaded) returns an already-ended voice without them, so narrow it with an `'x' in voice` check. An `AudioGenerator` voice is pausable and rate-pitched, never seekable:
+Every `Voice` carries `volume` (get/set), `fade(to, duration)`, `stop(fade?)`, an `ended` flag, an `onEnd` signal, the bus it routes through (`voice.bus`), and an `output` hook for native routing or analysis. A pending scene voice has no output node yet; see [Scene-owned deferred playback](#scene-owned-deferred-playback) below. Beyond that base, a voice mixes in only the capabilities its backing node actually supports, and the type `play()` returns says which. An `AudioStream` voice always carries them. A `Sound` voice carries the same set, but a skipped play call (audio locked, sound not loaded) returns an already-ended voice without them, so narrow it with an `'x' in voice` check. An `AudioGenerator` voice is pausable and rate-pitched, never seekable:
 
 ```ts
 import { type Application, AudioStream, Sound } from '@codexo/exojs';
@@ -138,9 +138,21 @@ A `Sound` plays through an `AudioBufferSourceNode`, which can be neither reposit
 
 Because `SoundVoice` is `Pausable`, `scene.audio` freezes buffer sounds along with everything else: a voice registered with `when: 'active'` is silent while the scene is paused, one registered with `when: 'paused'` only while it is, and scene retention silences every tracked voice until the scene is restored. The policy applies from the moment the voice starts, and the scene holds a voice rather than pausing it: `voice.paused` keeps reporting your own `pause()`/`resume()` calls, so a voice you paused yourself stays paused when the scene lets it play again. A voice that cannot pause keeps playing whatever its policy, and a development build warns when you give it one.
 
-`scene.audio.play()` called in `init()`, before the scene is active, returns a stand-in voice right away and starts playback when the scene activates. It is the same handle for the whole playback: `voice.bus` is valid immediately, it carries the capabilities of its source before and after activation, and requests made early are applied when playback starts. `stop()` cancels the start, `pause()` makes it start paused, and `seek(t)` sets the start offset. Activation then plays through `app.audio` under the unlock rules above, so a `Sound` started in `init()` before the first user gesture is still skipped.
-
 For "one voice at a time" scenarios like voice-over lines, `Sound`'s play options also accept a `replace` flag (`app.audio.play(sound, { replace: true })`) that stops all other pooled voices of that sound before starting this one.
+
+### Scene-owned deferred playback
+
+`scene.audio.play()` called before activation, including in `init()`, or while the scene is retained returns a pending voice immediately. The same handle controls playback after activation. Its bus and source capabilities are available immediately; buffering its controls, effects and sends creates no live `AudioContext` or audio nodes. `stop()` cancels playback, `pause()` makes it start paused, and `seek(t)` sets the start offset. Volume, fades, bus changes, spatial controls and other capability writes are also applied when the real voice is created.
+
+Sends supplied through the play options already appear in `voice.sends`, and `addSend()` returns an `AudioSend` handle immediately. Pending level changes and removals are preserved; surviving sends keep their identity when attached to the real voice. A saved reference to `voice.sends` remains a live view through that handoff and later changes. Cancellation destroys the voice's sends before `onEnd` fires. Effects keep their insertion order and remain caller-owned: the voice never destroys them. Ensure an effect's `ready` promise has resolved before it is replayed onto the real voice.
+
+Activation while audio is locked still skips a pending `Sound` or `AudioGenerator` and ends its handle. A pending `AudioStream` keeps waiting for unlock. It then creates the real voice with buffered controls and the scene's current availability policy applied before media playback begins. Suspending the scene before unlock keeps the stream pending until restoration; cancellation or permanent teardown prevents that deferred start. These scene gates apply to pending scene playback; direct `app.audio.play()` retains the unlock behavior described above.
+
+<Callout type="warning" title="Breaking change: pending voice output">
+Reading `voice.output` on a pending scene voice now throws until a real voice has been created. This includes an unlocked but still-dormant scene, and a cancelled voice that never created real playback. An early read never creates a context or placeholder node. After successful materialization, the getter returns the real voice's stable output node.
+
+Move native Web Audio connections out of early setup: wait until the scene is active, audio is unlocked, and its deferred playback has materialized before reading `output`. Start playback from an active scene after unlock when an integration needs a node immediately. Pass the pending handle earlier only to an integration that explicitly supports deferred scene voices. `AudioAnalyser` reads `voice.output` when connecting, so assign its `source` after materialization as well; passing it the pending voice does not defer attachment until scene activation.
+</Callout>
 
 ## Volume and fading
 

@@ -466,7 +466,7 @@
             }
           ],
           "returnType": "AudioSend",
-          "description": "Open a parallel send from this voice's output into bus at level (default 1). The dry path is untouched: the voice keeps playing into its own Voice.bus, and a copy of the same signal additionally reaches bus. Use it for shared ambience processing - one reverb serving many voices - which an insert effect cannot express, because an insert replaces the signal rather than duplicating it. The returned AudioSend is owned by this voice and torn down with it; remove one early with Voice.removeSend only to change the routing. Throws if this voice has already ended, without creating a send."
+          "description": "Open a parallel send from this voice's output into bus at level (default 1). The dry path is untouched: the voice keeps playing into its own Voice.bus, and a copy of the same signal additionally reaches bus. Use it for shared ambience processing - one reverb serving many voices - which an insert effect cannot express, because an insert replaces the signal rather than duplicating it. The returned AudioSend is owned by this voice and torn down with it; remove one early with Voice.removeSend only to change the routing. A scene-deferred voice returns a handle immediately without allocating nodes. Its identity, target and latest level survive activation; removing it or stopping the voice before activation prevents its native connection. Throws if this voice has already ended, without creating a send."
         },
         {
           "name": "fade",
@@ -1101,7 +1101,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The voice's output node - the last node before the AudioBus. A Web Audio interop hook for custom routing or analysis; gameplay code does not need it, and an AudioAnalyser accepts the voice itself. A voice returned already ended - a play while audio is still locked, or a start offset past the end - has no graph: its output is an unconnected node, and reading it before audio is unlocked throws instead of creating the AudioContext ahead of the user gesture."
+          "description": "The voice's stable output node. Engine voices expose their volume gain before occlusion and insert effects. A Web Audio interop hook for custom routing or analysis; gameplay code does not need it. A scene-deferred voice has no output until real playback is created: reading it throws, even after audio unlocks if the scene is still dormant. A cancelled voice that never materialized continues to throw. Reading this property never creates a placeholder or a context for deferred playback. Wait for activation and unlock before connecting native nodes or assigning a deferred voice to an analyser. A voice returned already ended - a play while audio is still locked, or a start offset past the end - has no graph: its output is an unconnected node, and reading it before audio is unlocked throws instead of creating the AudioContext ahead of the user gesture."
         },
         {
           "name": "panningModel",

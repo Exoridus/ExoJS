@@ -48,9 +48,16 @@ export interface Voice extends Spatializable {
   /** Fires once when this voice ends (natural end or {@link Voice.stop}). */
   readonly onEnd: Signal;
   /**
-   * The voice's output node - the last node before the {@link AudioBus}. A Web
-   * Audio interop hook for custom routing or analysis; gameplay code does not
-   * need it, and an `AudioAnalyser` accepts the voice itself.
+   * The voice's stable output node. Engine voices expose their volume gain
+   * before occlusion and insert effects. A Web Audio interop hook for custom
+   * routing or analysis; gameplay code does not need it.
+   *
+   * A scene-deferred voice has no output until real playback is created:
+   * reading it throws, even after audio unlocks if the scene is still dormant.
+   * A cancelled voice that never materialized continues to throw. Reading this
+   * property never creates a placeholder or a context for deferred playback.
+   * Wait for activation and unlock before connecting native nodes or assigning
+   * a deferred voice to an analyser.
    *
    * A voice returned already ended - a play while audio is still locked, or a
    * start offset past the end - has no graph: its output is an unconnected node,
@@ -87,6 +94,9 @@ export interface Voice extends Spatializable {
    *
    * The returned {@link AudioSend} is owned by this voice and torn down with it;
    * remove one early with {@link Voice.removeSend} only to change the routing.
+   * A scene-deferred voice returns a handle immediately without allocating
+   * nodes. Its identity, target and latest level survive activation; removing
+   * it or stopping the voice before activation prevents its native connection.
    * Throws if this voice has already ended, without creating a send.
    */
   addSend(bus: AudioBus, level?: number): AudioSend;
@@ -98,9 +108,8 @@ export interface Voice extends Spatializable {
    * Take ownership of a send opened against a different node, re-pointing it at
    * this voice's output.
    *
-   * Exists for a deferred voice: a scene hands one out before the asset is ready,
-   * so a send opened on it is wired to a placeholder and has to be handed over -
-   * re-creating it would invalidate the handle the caller already holds.
+   * A deferred voice hands over its unbound sends when real playback starts;
+   * re-creating them would invalidate the handles the caller already holds.
    * @internal
    */
   _adoptSend(send: AudioSend): void;
@@ -265,6 +274,8 @@ export interface Spatializable {
  * Per-play overrides passed to {@link AudioSystem.play}.
  */
 export interface PlayOptions {
+  /** @internal A deferred stream starts held until its owner finishes configuration and applies its current policy. */
+  _startHeld?: boolean;
   /** Route this play through a specific {@link AudioBus}. */
   bus?: AudioBus;
   /** Override volume for this play instance. Range [0, 1]. */
@@ -354,6 +365,8 @@ export interface Playable {
  * @internal
  */
 export interface VoiceProfile {
+  /** @internal Keep scene-deferred playback buffered while the audio context is locked. */
+  readonly waitForUnlock?: boolean;
   readonly bus: AudioBus;
   readonly pausable: boolean;
   /** {@link Seekable.duration}, or `null` when the voice will not be {@link Seekable}. */

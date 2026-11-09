@@ -14,6 +14,8 @@ export interface AudioStreamVoiceInit extends BaseVoiceInit {
   playbackRate: number;
   /** Seek offset (seconds) to start at. */
   startTime?: number;
+  /** @internal Start silently until the scene finishes configuring and holding the voice. */
+  startHeld?: boolean;
 }
 
 /**
@@ -67,7 +69,11 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
     }
 
     this._element.addEventListener('ended', this._onEnded);
-    this._startPlayback();
+    this._held = init.startHeld ?? false;
+
+    if (!this._held) {
+      this._startPlayback();
+    }
   }
 
   // -------------------------------------------------------------------------

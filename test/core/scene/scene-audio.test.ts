@@ -85,20 +85,21 @@ const silent = (voice: Voice): boolean => {
 };
 
 describe('Pending voice graph lifetime', () => {
-  test('cancellation releases every placeholder output and send before onEnd', () => {
+  test('cancellation releases every deferred send before onEnd without allocating a graph', () => {
     const system = new AudioSystem();
     const sound = new Sound({ duration: 10 } as AudioBuffer);
     const audio = new SceneAudio({ audio: system } as unknown as Application, () => SceneState.Preparing);
     const play = vi.spyOn(system, 'play');
+    const createGain = vi.spyOn(getAudioContext(), 'createGain');
 
     for (let i = 0; i < 100; i++) {
       const voice = audio.play(sound);
-      const output = vi.spyOn(voice.output, 'disconnect');
+      expect(() => voice.output).toThrow('output');
       const send = voice.addSend(voice.bus);
       const ended = vi.fn(() => {
         expect(send.destroyed).toBe(true);
         expect(voice.sends).toHaveLength(0);
-        expect(output).toHaveBeenCalledTimes(2);
+        expect(createGain).not.toHaveBeenCalled();
       });
       voice.onEnd.add(ended);
       voice.stop();
@@ -111,6 +112,7 @@ describe('Pending voice graph lifetime', () => {
     audio.destroy();
     sound.destroy();
     system.destroy();
+    createGain.mockRestore();
   });
 });
 
@@ -513,6 +515,7 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
 
     beforeEach(() => {
       scope = scopeControl();
+      getAudioContext();
     });
 
     const makeRealSetup = (): { app: Application; sound: Sound; audio: SceneAudio } => {
@@ -597,6 +600,7 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
 
     beforeEach(() => {
       scope = scopeControl();
+      getAudioContext();
     });
 
     const makeRealSetup = (envelope: Envelope | null = null): { app: Application; generator: AudioGenerator; audio: SceneAudio } => {
@@ -1045,12 +1049,14 @@ describe('SceneAudio — deferred voice surface', () => {
       const { system, app } = createRealApp();
       const el = createAudioElementStub();
       const stream = new AudioStream(el);
-      const audio = new SceneAudio(app, () => SceneState.Preparing);
+      let state = SceneState.Preparing;
+      const audio = new SceneAudio(app, () => state);
 
       const voice = asFull(audio.play(stream));
 
       voice.pause();
       setContextState('suspended');
+      state = SceneState.Active;
       audio._flushPending();
 
       setContextState('running');
