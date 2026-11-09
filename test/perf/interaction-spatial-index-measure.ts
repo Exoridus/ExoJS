@@ -199,7 +199,7 @@ const runCase = (n: number, layout: Layout, workload: Workload, variant: Variant
           const count = Math.max(1, Math.floor(n / 1000));
 
           for (let i = 0; i < count; i++) {
-            const id = (((frame + warmup + 1) * 31 + i * 131) % n + n) % n;
+            const id = ((((frame + warmup + 1) * 31 + i * 131) % n) + n) % n;
             const node = nodes[id]!;
 
             if ((frame + warmup) % 3 === 0) {
@@ -221,7 +221,7 @@ const runCase = (n: number, layout: Layout, workload: Workload, variant: Variant
         const afterMaintenance = performance.now();
 
         for (let q = 0; q < queryCount; q++) {
-          const idx = (((frame + warmup + 1) * 97 + q * 23) % n + n) % n;
+          const idx = ((((frame + warmup + 1) * 97 + q * 23) % n) + n) % n;
           const hit = q % 10 < (mix === 'hit90' ? 9 : 1);
           const x = hit ? outerX + innerX + (idx % columns) * 16 + 5 : 3500 + (q % 7) * 2;
           const y = hit ? outerY + innerY + Math.floor(idx / columns) * 16 + 5 : 3500 + (q % 11) * 2;
