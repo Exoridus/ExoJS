@@ -4,6 +4,14 @@ import type { NavigationSpace, PrunedExpansion } from '../types';
 import { DIRECTION_X, DIRECTION_Y, SQRT2 } from './gridGeometry';
 import { GridJumpExpansion } from './GridJumpExpansion';
 
+const storedCost = (cost: number): number => {
+  const value = Math.fround(cost);
+
+  // Classification and the admissible lower bound must describe the Float32
+  // value actually stored, including overflow and underflow at conversion.
+  return Number.isFinite(value) && value > 0 ? value : 0;
+};
+
 /**
  * How diagonal steps are allowed on a {@link GridSpace}.
  *
@@ -103,7 +111,7 @@ export class GridSpace implements NavigationSpace {
     for (let row = 0; row < height; row++) {
       for (let column = 0; column < width; column++) {
         const raw = cost(originX + column, originY + row);
-        const value = Number.isFinite(raw) && raw > 0 ? raw : 0;
+        const value = storedCost(raw);
 
         costs[row * width + column] = value;
 
@@ -187,7 +195,7 @@ export class GridSpace implements NavigationSpace {
       return;
     }
 
-    const value = Number.isFinite(cost) && cost > 0 ? cost : 0;
+    const value = storedCost(cost);
     const previous = this.costs[node]!;
 
     if (value === previous) {
