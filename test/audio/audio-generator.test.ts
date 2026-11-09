@@ -6,6 +6,8 @@ import { AudioGenerator } from '#audio/AudioGenerator';
 import type { AudioGeneratorVoice } from '#audio/AudioGeneratorVoice';
 import { AudioSystem } from '#audio/AudioSystem';
 import { Envelope } from '#audio/Envelope';
+import { NoopVoice } from '#audio/NoopVoice';
+import type { Voice } from '#audio/Playable';
 import { SoundPoolStrategy } from '#audio/Sound';
 import { Time } from '#core/units';
 
@@ -493,6 +495,209 @@ describe('AudioGenerator', () => {
 
     spy.restore();
     gen.destroy();
+  });
+
+  test('a replay from pool eviction keeps the available slot without an unbounded callback loop', () => {
+    const system = new AudioSystem();
+    const spy = setupSpy();
+    const gen = new AudioGenerator({ poolSize: 1 });
+    const replayed: Voice[] = [];
+    let callbacks = 0;
+    let replaying = true;
+
+    const replay = (): void => {
+      if (!replaying) {
+        return;
+      }
+
+      // Turn an unbounded synchronous eviction regression into a test failure.
+      if (++callbacks > 10) {
+        throw new Error('replay limit reached');
+      }
+
+      const voice = system.play(gen);
+      replayed.push(voice);
+      voice.onEnd.add(replay);
+    };
+
+    const first = system.play(gen);
+    first.onEnd.add(replay);
+
+    try {
+      let requested: Voice | undefined;
+
+      expect(() => {
+        requested = system.play(gen, { bus: system.music });
+      }).not.toThrow();
+
+      expect(callbacks).toBe(1);
+      expect(first.ended).toBe(true);
+      expect(requested).toBeInstanceOf(NoopVoice);
+      expect(requested?.ended).toBe(true);
+      expect(requested?.bus).toBe(system.music);
+      expect(replayed).toHaveLength(1);
+      expect(replayed[0]?.ended).toBe(false);
+      expect(spy.oscillators).toHaveLength(2);
+
+      replaying = false;
+      gen.stopAll();
+      expect(replayed[0]?.ended).toBe(true);
+    } finally {
+      replaying = false;
+      gen.destroy();
+      system.destroy();
+      spy.restore();
+    }
+  });
+
+  test('shrinking poolSize finishes when every evicted voice replays the generator', () => {
+    const system = new AudioSystem();
+    const spy = setupSpy();
+    const gen = new AudioGenerator({ poolSize: 3 });
+    const replayed: Voice[] = [];
+    let callbacks = 0;
+    let replaying = true;
+
+    const replay = (): void => {
+      if (!replaying) {
+        return;
+      }
+
+      if (++callbacks > 10) {
+        throw new Error('replay limit reached');
+      }
+
+      const voice = system.play(gen);
+      replayed.push(voice);
+      voice.onEnd.add(replay);
+    };
+
+    const original = [system.play(gen), system.play(gen), system.play(gen)];
+
+    for (const voice of original) {
+      voice.onEnd.add(replay);
+    }
+
+    try {
+      expect(() => {
+        gen.poolSize = 1;
+      }).not.toThrow();
+
+      expect(callbacks).toBeLessThanOrEqual(4);
+      expect(original.every(voice => voice.ended)).toBe(true);
+      expect(replayed.filter(voice => !voice.ended)).toHaveLength(1);
+
+      replaying = false;
+      gen.stopAll();
+      expect(replayed.every(voice => voice.ended)).toBe(true);
+    } finally {
+      replaying = false;
+      gen.destroy();
+      system.destroy();
+      spy.restore();
+    }
+  });
+
+  test('shrinking poolSize stops every selected victim before rethrowing an onEnd error', () => {
+    const system = new AudioSystem();
+    const spy = setupSpy();
+    const gen = new AudioGenerator({ poolSize: 3 });
+    const first = system.play(gen);
+    const second = system.play(gen);
+    const survivor = system.play(gen);
+    const firstError = new Error('first listener failed');
+    const secondError = new Error('second listener failed');
+
+    first.onEnd.add(() => {
+      throw firstError;
+    });
+    second.onEnd.add(() => {
+      throw secondError;
+    });
+
+    try {
+      expect(() => {
+        gen.poolSize = 1;
+      }).toThrow(firstError);
+
+      expect(first.ended).toBe(true);
+      expect(second.ended).toBe(true);
+      expect(survivor.ended).toBe(false);
+    } finally {
+      second.onEnd.clear();
+      gen.destroy();
+      system.destroy();
+      spy.restore();
+    }
+  });
+
+  test('play honors capacity increased by an eviction callback without stopping its new voice', () => {
+    const system = new AudioSystem();
+    const spy = setupSpy();
+    const gen = new AudioGenerator({ poolSize: 1 });
+    let replayed: Voice | undefined;
+    const first = system.play(gen);
+
+    first.onEnd.add(() => {
+      gen.poolSize = 2;
+      replayed = system.play(gen);
+    });
+
+    try {
+      const requested = system.play(gen);
+
+      expect(first.ended).toBe(true);
+      expect(replayed?.ended).toBe(false);
+      expect(requested.ended).toBe(false);
+      expect(spy.oscillators).toHaveLength(3);
+
+      gen.stopAll();
+      expect(replayed?.ended).toBe(true);
+      expect(requested.ended).toBe(true);
+    } finally {
+      gen.destroy();
+      system.destroy();
+      spy.restore();
+    }
+  });
+
+  test.each([false, true])('replay during pool shrinking preserves a silent voice while audible victims remain (held=%s)', held => {
+    const system = new AudioSystem();
+    const spy = setupSpy();
+    const gen = new AudioGenerator({ poolSize: 3 });
+    const silent = system.play(gen) as AudioGeneratorVoice;
+
+    if (held) {
+      silent._setHeld(true);
+    } else {
+      silent.pause();
+    }
+
+    const firstAudible = system.play(gen);
+    const secondAudible = system.play(gen);
+    let replayed: Voice | undefined;
+
+    firstAudible.onEnd.add(() => {
+      replayed = system.play(gen);
+    });
+
+    try {
+      gen.poolSize = 2;
+
+      expect(silent.ended).toBe(false);
+      expect(silent._isHalted).toBe(true);
+      expect(firstAudible.ended).toBe(true);
+      expect(secondAudible.ended).toBe(true);
+      expect(replayed?.ended).toBe(false);
+
+      gen.stopAll();
+      expect(silent.ended).toBe(true);
+      expect(replayed?.ended).toBe(true);
+    } finally {
+      gen.destroy();
+      system.destroy();
+      spy.restore();
+    }
   });
 
   test('poolStrategy setter updates the eviction strategy', () => {

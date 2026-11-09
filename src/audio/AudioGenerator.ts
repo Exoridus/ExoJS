@@ -133,7 +133,8 @@ export class AudioGenerator implements Playable {
    * Snapshots the current synth settings into a new {@link AudioGeneratorVoice}.
    * Returns an already-ended {@link NoopVoice} when the `AudioContext` is still
    * locked by the autoplay policy - oscillators are ephemeral and cannot be
-   * deferred.
+   * deferred. An eviction callback can also fill the available pool slot;
+   * this call then returns an already-ended voice without starting an oscillator.
    */
   public createVoice(system: AudioSystem, options: PlayOptions): Voice {
     const bus = options.bus ?? system.sound;
@@ -147,6 +148,12 @@ export class AudioGenerator implements Playable {
     this._pruneEndedVoices();
 
     this._evictDownTo(this._poolSize - 1);
+
+    // onEnd may have reused the free slot or changed the capacity. Its voices
+    // belong to the pool; chasing them with another eviction can never finish.
+    if (this._activeVoices.length >= this._poolSize) {
+      return new NoopVoice(bus);
+    }
 
     const audioContext = getAudioContext();
     const output = audioContext.createGain();
@@ -218,8 +225,10 @@ export class AudioGenerator implements Playable {
     }
   }
 
-  /** Stop voices, by the configured strategy, until at most `limit` remain. */
+  /** Select and detach excess voices before stopping any of them. */
   private _evictDownTo(limit: number): void {
+    let victims: AudioGeneratorVoice[] | null = null;
+
     while (this._activeVoices.length > limit) {
       const victimIndex = this._pickEvictionVictim();
       const victim = this._activeVoices[victimIndex];
@@ -229,7 +238,35 @@ export class AudioGenerator implements Playable {
       }
 
       this._activeVoices.splice(victimIndex, 1);
-      victim.voice.stop();
+
+      // Ordinary play evicts at most one voice and needs no snapshot allocation.
+      if (victims === null && this._activeVoices.length <= limit) {
+        victim.voice.stop();
+
+        return;
+      }
+
+      (victims ??= []).push(victim.voice);
+    }
+
+    if (victims === null) {
+      return;
+    }
+
+    // Stopping dispatches user callbacks that can replenish the pool. Only
+    // stop the detached victims, including those after a throwing callback.
+    let failure: { error: unknown } | null = null;
+
+    for (const voice of victims) {
+      try {
+        voice.stop();
+      } catch (error) {
+        failure ??= { error };
+      }
+    }
+
+    if (failure !== null) {
+      throw failure.error;
     }
   }
 

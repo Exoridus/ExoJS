@@ -108,6 +108,105 @@ describe('Sound', () => {
     factory.restore();
   });
 
+  describe.each(['root', 'sprite', 'nested clip'] as const)('root destruction during %s eviction', kind => {
+    test.each([false, true])('skips the pending voice without allocating native nodes (replace=%s)', replace => {
+      const factory = setupSourceFactorySpy();
+      const system = new AudioSystem();
+      const root = new Sound(createAudioBufferStub(), { poolSize: 1 });
+      let sound = root;
+
+      if (kind === 'sprite') {
+        root.addSprite('hit', { start: 0, end: 1 });
+        sound = root.sprite('hit');
+      } else if (kind === 'nested clip') {
+        sound = root.clip(0, 1).clip(0.1, 0.5);
+      }
+
+      const first = system.play(sound);
+      const createGain = vi.spyOn(getAudioContext(), 'createGain');
+      first.onEnd.add(() => root.destroy());
+
+      try {
+        const pending = system.play(sound, { replace, bus: system.music });
+
+        expect(root.destroyed).toBe(true);
+        expect(sound.destroyed).toBe(true);
+        expect(root.audioBuffer).toBeNull();
+        expect(first.ended).toBe(true);
+        expect(pending).toBeInstanceOf(NoopVoice);
+        expect(pending.ended).toBe(true);
+        expect(pending.bus).toBe(system.music);
+        expect(factory.sources).toHaveLength(1);
+        expect(createGain).not.toHaveBeenCalled();
+      } finally {
+        system.destroy();
+        root.destroy();
+        factory.restore();
+      }
+    });
+  });
+
+  test.each([false, true])('destroying the sprite during eviction skips its voice and preserves borrowed audio (replace=%s)', replace => {
+    const factory = setupSourceFactorySpy();
+    const system = new AudioSystem();
+    const buffer = createAudioBufferStub();
+    const root = new Sound(buffer, { poolSize: 1 });
+    root.addSprite('hit', { start: 0, end: 1 });
+
+    const sprite = root.sprite('hit');
+    const rootVoice = system.play(root);
+    const first = system.play(sprite);
+    first.onEnd.add(() => sprite.destroy());
+
+    try {
+      const pending = system.play(sprite, { replace });
+
+      expect(sprite.destroyed).toBe(true);
+      expect(root.destroyed).toBe(false);
+      expect(root.audioBuffer).toBe(buffer);
+      expect(rootVoice.ended).toBe(false);
+      expect(first.ended).toBe(true);
+      expect(pending).toBeInstanceOf(NoopVoice);
+      expect(pending.ended).toBe(true);
+      expect(factory.sources).toHaveLength(2);
+
+      rootVoice.stop();
+      expect(system.play(root).ended).toBe(false);
+    } finally {
+      system.destroy();
+      root.destroy();
+      factory.restore();
+    }
+  });
+
+  test.each([false, true])('destroying a separate sprite during eviction leaves root playback available (replace=%s)', replace => {
+    const factory = setupSourceFactorySpy();
+    const system = new AudioSystem();
+    const buffer = createAudioBufferStub();
+    const root = new Sound(buffer, { poolSize: 1 });
+    root.addSprite('hit', { start: 0, end: 1 });
+
+    const sprite = root.sprite('hit');
+    const spriteVoice = system.play(sprite);
+    const first = system.play(root);
+    first.onEnd.add(() => sprite.destroy());
+
+    try {
+      const pending = system.play(root, { replace });
+
+      expect(spriteVoice.ended).toBe(true);
+      expect(root.destroyed).toBe(false);
+      expect(root.audioBuffer).toBe(buffer);
+      expect(first.ended).toBe(true);
+      expect(pending.ended).toBe(false);
+      expect(factory.sources).toHaveLength(3);
+    } finally {
+      system.destroy();
+      root.destroy();
+      factory.restore();
+    }
+  });
+
   test('destroy() finishes root and sprite cleanup before rethrowing an onEnd error', () => {
     const factory = setupSourceFactorySpy();
     const system = new AudioSystem();
