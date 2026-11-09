@@ -1758,6 +1758,16 @@ export class InteractionSystem {
           bestNode = node;
         }
       });
+
+      // A hitArea is mutable, including its shape's coordinates in place.
+      // It may extend OUTSIDE the node's visual getBounds() and thus outside
+      // its local tree proxy. Keep that existing hit-test contract: probe
+      // such nodes live even when the hitArea was assigned after indexing.
+      for (const node of group.nodes) {
+        if (node.hitArea !== null && this._beatsBest(node, bestNode, x, y)) {
+          bestNode = node;
+        }
+      }
     }
 
     return bestNode;
