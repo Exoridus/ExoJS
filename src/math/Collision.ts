@@ -921,7 +921,7 @@ const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionRespo
       return null;
     }
 
-    distance = projA.getOverlap(projB);
+    distance = Math.min(projA.max - projB.min, projB.max - projA.min);
     containsA = projB.containsInterval(projA);
     containsB = projA.containsInterval(projB);
 
@@ -931,10 +931,6 @@ const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionRespo
 
     if (!containsB && shapeBinA) {
       shapeBinA = false;
-    }
-
-    if (containsA || containsB) {
-      distance += Math.min(Math.abs(projA.min - projB.min), Math.abs(projA.max - projB.max));
     }
 
     if (distance < overlap) {
@@ -954,7 +950,7 @@ const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionRespo
       return null;
     }
 
-    distance = projA.getOverlap(projB);
+    distance = Math.min(projA.max - projB.min, projB.max - projA.min);
     containsA = projB.containsInterval(projA);
     containsB = projA.containsInterval(projB);
 
@@ -964,10 +960,6 @@ const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionRespo
 
     if (!containsB && shapeBinA) {
       shapeBinA = false;
-    }
-
-    if (containsA || containsB) {
-      distance += Math.min(Math.abs(projA.min - projB.min), Math.abs(projA.max - projB.max));
     }
 
     if (distance < overlap) {
