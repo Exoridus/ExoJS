@@ -77,7 +77,10 @@ test('measures a DPR cell in Chromium and submits the collected capture as valid
       stageHeight: 360,
     });
     expect(measured.cells).toHaveLength(1);
-    expect(measured.cells[0]).toMatchObject({
+
+    const cell = measured.cells[0]!;
+
+    expect(cell).toMatchObject({
       runId: 0,
       index: 0,
       scene: 'color-filter',
@@ -89,11 +92,59 @@ test('measures a DPR cell in Chromium and submits the collected capture as valid
       backingWidth: 720,
       backingHeight: 720,
       mainPixelCount: 518_400,
-      errors: [],
     });
-    expect(measured.cells[0]!.measuredFrames).toBeGreaterThan(0);
-    expect(measured.cells[0]!.internalTargets.length).toBeGreaterThan(0);
-    expect(measured.cells[0]!.internalToMainPixelRatio).toBeGreaterThan(0);
+    expect(Number.isInteger(cell.measuredFrames)).toBe(true);
+    expect(cell.measuredFrames).toBeGreaterThan(0);
+    expect(cell.measuredMs).toBeGreaterThan(0);
+
+    for (const value of [cell.startOffsetMs, cell.measuredMs, cell.cpuMsMedian, cell.cpuMsP95]) {
+      expect(Number.isFinite(value)).toBe(true);
+      expect(value).toBeGreaterThanOrEqual(0);
+    }
+
+    for (const value of [cell.rafDeltaMsMedian, cell.rafDeltaMsP95]) {
+      if (cell.measuredFrames > 1) {
+        expect(Number.isFinite(value)).toBe(true);
+        expect(value).toBeGreaterThanOrEqual(0);
+      } else {
+        expect(value).toBeNull();
+      }
+    }
+
+    expect(cell.internalTargets.length).toBeGreaterThan(0);
+
+    for (const target of cell.internalTargets) {
+      for (const value of [target.width, target.height, target.count]) {
+        expect(Number.isInteger(value)).toBe(true);
+        expect(value).toBeGreaterThan(0);
+      }
+    }
+
+    expect(Number.isFinite(cell.internalToMainPixelRatio)).toBe(true);
+    expect(cell.internalToMainPixelRatio).toBeGreaterThan(0);
+
+    // Optional hardware queries may be unavailable or unresolved on SwiftShader.
+    // Accept only documented dropped-sample caveats; scene errors still fail.
+    let droppedGpuFrames = 0;
+
+    for (const caveat of cell.errors.flatMap(error => error.split('; '))) {
+      const match = /^([1-9]\d*) (?:disjoint GPU frame\(s\) discarded|GPU frame\(s\) unresolved)$/.exec(caveat);
+
+      expect(match, `Unexpected probe error: ${caveat}`).not.toBeNull();
+      droppedGpuFrames += Number(match![1]);
+    }
+
+    expect(droppedGpuFrames).toBeLessThanOrEqual(cell.measuredFrames);
+    expect(cell.gpuMsMedian === null).toBe(cell.gpuMsP95 === null);
+
+    for (const value of [cell.gpuMsMedian, cell.gpuMsP95]) {
+      if (droppedGpuFrames === cell.measuredFrames) {
+        expect(value).toBeNull();
+      } else if (value !== null) {
+        expect(Number.isFinite(value)).toBe(true);
+        expect(value).toBeGreaterThanOrEqual(0);
+      }
+    }
 
     const responsePromise = page.waitForResponse(response => response.url().endsWith('/submit'));
     await page.locator('#submit-json').click();
@@ -105,6 +156,7 @@ test('measures a DPR cell in Chromium and submits the collected capture as valid
 
     expect(saved).toEqual(serialized);
     expect(saved.cells).toEqual(measured.cells);
+    expect(saved.cells[0]!.errors).toEqual(cell.errors);
     expect(saved.backendSelected).toBe('webgl2');
     expect(saved.gitSha).toBe(gitSha);
     expect(Number.isNaN(Date.parse(saved.timestamp))).toBe(false);
