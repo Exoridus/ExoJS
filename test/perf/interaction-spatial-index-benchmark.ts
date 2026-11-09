@@ -21,7 +21,8 @@ import { Drawable } from '../../src/rendering/Drawable';
 import type { RenderNode } from '../../src/rendering/RenderNode';
 import { RetainedContainer } from '../../src/rendering/RetainedContainer';
 
-import { createInteractionHarness, type InteractionHarness } from './interaction-harness';
+import type { InteractionHarness } from './interaction-harness';
+import { createInteractionHarness } from './interaction-harness';
 
 type Variant = 'legacy' | 'group-tree';
 type Layout = 'single' | 'nested';
