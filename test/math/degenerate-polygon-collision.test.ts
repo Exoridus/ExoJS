@@ -88,3 +88,48 @@ describe('degenerate filled polygons', () => {
     expect(square.collidesWith(new Circle(5, 5, 2))).not.toBeNull();
   });
 });
+
+describe('redundant vertices in filled polygons', () => {
+  test.each([
+    ['closing vertex', [0, 0, 10, 0, 10, 10, 0, 10, 0, 0]],
+    ['first edge', [0, 0, 0, 0, 10, 0, 10, 10, 0, 10]],
+    ['middle edge', [0, 0, 10, 0, 10, 0, 10, 10, 0, 10]],
+  ] as const)('%s does not hide the minimum translation in either operand order', (_label, coordinates) => {
+    for (const reverse of [false, true]) {
+      const polygon = new Polygon(pts(...coordinates));
+      const rectangle = new Rectangle(8, 2, 4, 4);
+      const a = reverse ? rectangle : polygon;
+      const b = reverse ? polygon : rectangle;
+      const response = a.collidesWith(b)!;
+
+      expect(a.intersectsWith(b)).toBe(true);
+      expect(response.overlap).toBeCloseTo(2);
+      expect(response.projectionN.x).toBeCloseTo(reverse ? -1 : 1);
+      expect(response.projectionN.y).toBeCloseTo(0);
+
+      b.x += response.projectionV.x;
+      b.y += response.projectionV.y;
+      expect(a.collidesWith(b)?.overlap ?? 0).toBeCloseTo(0);
+      b.x -= response.projectionV.x;
+      b.y -= response.projectionV.y;
+      a.x -= response.projectionV.x;
+      a.y -= response.projectionV.y;
+      expect(a.collidesWith(b)?.overlap ?? 0).toBeCloseTo(0);
+    }
+  });
+
+  test('directly adding a closing vertex takes effect synchronously through updateGeometry', () => {
+    const polygon = new Polygon(pts(0, 0, 10, 0, 10, 10, 0, 10));
+    const rectangle = new Rectangle(8, 2, 4, 4);
+    expect(polygon.collidesWith(rectangle)!.overlap).toBeCloseTo(2);
+    polygon.points.push(new Vector(0, 0));
+    polygon.updateGeometry();
+
+    expect(polygon.collidesWith(rectangle)!.overlap).toBeCloseTo(2);
+
+    polygon.points[1]!.x = 6;
+    polygon.points[2]!.x = 6;
+    polygon.updateGeometry();
+    expect(polygon.collidesWith(rectangle)).toBeNull();
+  });
+});

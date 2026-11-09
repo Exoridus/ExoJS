@@ -989,6 +989,46 @@ describe('getCollisionSat', () => {
     expect(response!.shapeAinB).toBe(false);
   });
 
+  test.each([
+    [2, 2, 3],
+    [2, 4, 3],
+    [7, 4, 3],
+    [4, 2, 3],
+    [4, 7, 3],
+  ])('containment at (%s, %s) uses the nearest exit depth %s in both operand orders', (x, y, expectedDepth) => {
+    const big = square(0, 0, 10);
+    const small = rect(x, y, 1, 1);
+    const forward = getCollisionSat(big, small)!;
+    const backward = getCollisionSat(small, big)!;
+
+    expect(forward.overlap).toBeCloseTo(expectedDepth);
+    expect(backward.overlap).toBeCloseTo(expectedDepth);
+    expect(forward.shapeBinA).toBe(true);
+    expect(backward.shapeAinB).toBe(true);
+    expect(backward.projectionN.x).toBeCloseTo(-forward.projectionN.x);
+    expect(backward.projectionN.y).toBeCloseTo(-forward.projectionN.y);
+    expect(forward.projectionN.x * (x - 4.5) + forward.projectionN.y * (y - 4.5)).toBeGreaterThan(0);
+
+    for (const reverse of [false, true]) {
+      const shapeA = reverse ? rect(x, y, 1, 1) : square(0, 0, 10);
+      const shapeB = reverse ? square(0, 0, 10) : rect(x, y, 1, 1);
+      const response = reverse ? backward : forward;
+
+      shapeB.x += response.projectionN.x * (expectedDepth - 0.25);
+      shapeB.y += response.projectionN.y * (expectedDepth - 0.25);
+      expect(getCollisionSat(shapeA, shapeB)!.overlap).toBeCloseTo(0.25);
+      shapeB.x += response.projectionN.x * 0.25;
+      shapeB.y += response.projectionN.y * 0.25;
+      expect(getCollisionSat(shapeA, shapeB)?.overlap ?? 0).toBeCloseTo(0);
+
+      const movedA = reverse ? rect(x, y, 1, 1) : square(0, 0, 10);
+      const stationaryB = reverse ? square(0, 0, 10) : rect(x, y, 1, 1);
+      movedA.x -= response.projectionV.x;
+      movedA.y -= response.projectionV.y;
+      expect(getCollisionSat(movedA, stationaryB)?.overlap ?? 0).toBeCloseTo(0);
+    }
+  });
+
   test('works across shape types (rectangle vs polygon)', () => {
     const response = getCollisionSat(rect(0, 0, 10, 10), square(5, 5, 10));
 

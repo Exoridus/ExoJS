@@ -52,14 +52,16 @@ export class ImageLayerNode extends Container {
   private readonly _imageHeight: number;
   private _pixelSnapMode: PixelSnapMode = PixelSnapMode.Geometry;
 
-  // Repeat-coverage cache: the view span and patched origin that last drove a
-  // resize. A static camera pays one comparison per frame and skips the rebuild.
+  // Repeat-coverage cache: the view span, patched origin and effective scale
+  // that last drove a resize. A static camera pays one comparison per frame and skips the rebuild.
   private _covViewX = Number.NaN;
   private _covViewY = Number.NaN;
   private _covViewWidth = Number.NaN;
   private _covViewHeight = Number.NaN;
   private _covOriginX = Number.NaN;
   private _covOriginY = Number.NaN;
+  private _covScaleX = Number.NaN;
+  private _covScaleY = Number.NaN;
 
   public constructor(layer: ImageLayer) {
     super();
@@ -213,7 +215,7 @@ export class ImageLayerNode extends Container {
    * (seamless tiling). Non-repeating axes keep the natural image size at local
    * `0`. Reads `this.x`/`this.y` after the parallax patch, so the pattern anchor
    * follows the parallax-shifted origin. Skips the rebuild when neither the view
-   * span nor the patched origin changed since the last frame.
+   * span, patched origin nor effective scale changed since the last frame.
    */
   private _updateRepeatCoverage(builder: RenderPlanBuilder): void {
     const layer = this._layer;
@@ -228,8 +230,8 @@ export class ImageLayerNode extends Container {
     const originY = this.y;
     // The node's effective scale: parallax scaling has already been folded into it
     // by the caller, and a scale the caller set on the node counts the same.
-    const scaleX = Math.abs(this.scale.x) || 1;
-    const scaleY = Math.abs(this.scale.y) || 1;
+    const scaleX = Number.isFinite(this.scale.x) && this.scale.x !== 0 ? this.scale.x : 1;
+    const scaleY = Number.isFinite(this.scale.y) && this.scale.y !== 0 ? this.scale.y : 1;
 
     if (
       bounds.x === this._covViewX &&
@@ -237,7 +239,9 @@ export class ImageLayerNode extends Container {
       bounds.width === this._covViewWidth &&
       bounds.height === this._covViewHeight &&
       originX === this._covOriginX &&
-      originY === this._covOriginY
+      originY === this._covOriginY &&
+      scaleX === this._covScaleX &&
+      scaleY === this._covScaleY
     ) {
       return;
     }
@@ -248,6 +252,8 @@ export class ImageLayerNode extends Container {
     this._covViewHeight = bounds.height;
     this._covOriginX = originX;
     this._covOriginY = originY;
+    this._covScaleX = scaleX;
+    this._covScaleY = scaleY;
 
     let childX = 0;
     let childY = 0;
@@ -256,8 +262,8 @@ export class ImageLayerNode extends Container {
 
     if (layer.repeatX) {
       const imgW = this._imageWidth;
-      const localViewMin = (bounds.x - originX) / scaleX;
-      const localViewWidth = bounds.width / scaleX;
+      const localViewMin = ((scaleX < 0 ? bounds.x + bounds.width : bounds.x) - originX) / scaleX;
+      const localViewWidth = bounds.width / Math.abs(scaleX);
       const startLocal = Math.floor(localViewMin / imgW) * imgW;
       const periods = Math.ceil((localViewMin + localViewWidth - startLocal) / imgW);
 
@@ -267,8 +273,8 @@ export class ImageLayerNode extends Container {
 
     if (layer.repeatY) {
       const imgH = this._imageHeight;
-      const localViewMin = (bounds.y - originY) / scaleY;
-      const localViewHeight = bounds.height / scaleY;
+      const localViewMin = ((scaleY < 0 ? bounds.y + bounds.height : bounds.y) - originY) / scaleY;
+      const localViewHeight = bounds.height / Math.abs(scaleY);
       const startLocal = Math.floor(localViewMin / imgH) * imgH;
       const periods = Math.ceil((localViewMin + localViewHeight - startLocal) / imgH);
 

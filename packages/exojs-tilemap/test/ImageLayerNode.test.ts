@@ -311,6 +311,65 @@ describe('ImageLayerNode repeat coverage', () => {
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('ImageLayerNode repeat coverage cache', () => {
+  it('recomputes both axes when caller scale changes without a camera change', () => {
+    const node = new ImageLayerNode(makeLayer({ repeatX: true, repeatY: true, parallaxScale: 0.5 }));
+    const builder = mockBuilder({ bounds: { x: 0, y: 0, width: 256, height: 192 } });
+    node.setScale(4, 4);
+    collect(node, builder);
+    expect(spriteOf(node).width).toBe(128);
+    expect(spriteOf(node).height).toBe(128);
+
+    node.setScale(2, 1);
+    collect(node, builder);
+
+    expect(spriteOf(node).width).toBe(256);
+    expect(spriteOf(node).height).toBe(384);
+    expect(node.scale.x).toBe(2);
+    expect(node.scale.y).toBe(1);
+  });
+
+  it('covers the view after either effective scale changes sign', () => {
+    const node = new ImageLayerNode(makeLayer({ repeatX: true, repeatY: true }));
+    const builder = mockBuilder({ bounds: { x: 32, y: 16, width: 160, height: 80 } });
+    node.setScale(2, 2);
+    collect(node, builder);
+    expect(spriteOf(node).x).toBe(0);
+    expect(spriteOf(node).y).toBe(0);
+
+    node.setScale(-2, -2);
+    collect(node, builder);
+
+    const sprite = spriteOf(node);
+    expect(sprite.x).toBe(-128);
+    expect(sprite.width).toBe(128);
+    expect(sprite.y).toBe(-64);
+    expect(sprite.height).toBe(64);
+    expect((sprite.x + sprite.width) * node.scale.x).toBeLessThanOrEqual(32);
+    expect(sprite.x * node.scale.x).toBeGreaterThanOrEqual(192);
+    expect((sprite.y + sprite.height) * node.scale.y).toBeLessThanOrEqual(16);
+    expect(sprite.y * node.scale.y).toBeGreaterThanOrEqual(96);
+  });
+
+  it.each([0, Number.NaN, Infinity, -Infinity])('keeps coverage finite at scale %s and recovers when scale is restored', scale => {
+    const node = new ImageLayerNode(makeLayer({ repeatX: true, repeatY: true }));
+    const builder = mockBuilder({ bounds: { x: 32, y: 16, width: 160, height: 80 } });
+    node.setScale(2, 2);
+    collect(node, builder);
+    node.setScale(scale, scale);
+    collect(node, builder);
+
+    const sprite = spriteOf(node);
+    expect(Number.isFinite(sprite.x)).toBe(true);
+    expect(Number.isFinite(sprite.y)).toBe(true);
+    expect(sprite.width).toBe(192);
+    expect(sprite.height).toBe(128);
+
+    node.setScale(1, 0.5);
+    collect(node, builder);
+    expect(sprite.width).toBe(192);
+    expect(sprite.height).toBe(192);
+  });
+
   it('skips the resize/reposition on a second collect with unchanged view bounds', () => {
     const node = new ImageLayerNode(makeLayer({ texture: fakeTexture(64, 64), offsetX: 10, repeatX: true }));
     const builder = mockBuilder({ bounds: { x: -130, y: 0, width: 300, height: 200 } });
