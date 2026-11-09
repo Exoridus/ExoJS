@@ -1,0 +1,25 @@
+name: W002-05 temporary spatial-index benchmark
+
+# Temporary, branch-only evidence job. Remove this file before the final PR.
+on:
+  push:
+    branches: [fix/u1-spatial-index-perf]
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+      - name: W002-05 A/B benchmark and retained group regressions
+        run: pnpm exec vitest run --project=exojs test/input/spatial-index-perf.test.ts test/input/interaction-retained-group.test.ts
+      - name: Typecheck
+        run: pnpm gates typecheck
+      - name: Lint
+        run: pnpm gates lint
+      - name: Sync
+        run: pnpm gates sync
