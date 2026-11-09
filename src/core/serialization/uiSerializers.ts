@@ -11,6 +11,7 @@ import { Stack } from '#ui/Stack';
 import type { UIFillPatch } from '#ui/theme';
 import { UIRoot } from '#ui/UIRoot';
 
+import { initializeDeserializedNode } from './deserializeOwnership';
 import type { NodeSerializer } from './NodeSerializer';
 import { asSerializedNode } from './read';
 import type { SerializationRegistry } from './SerializationRegistry';
@@ -95,34 +96,35 @@ const panelSerializer: NodeSerializer<Panel> = {
     return out;
   },
   read(data, ctx) {
-    const panel = new Panel(
-      compact({
-        width: num(data.width),
-        height: num(data.height),
-        color: arrayToColor(data.color),
-        borderColor: arrayToColor(data.borderColor),
-        borderWidth: num(data.borderWidth),
-        cornerRadius: num(data.cornerRadius),
-      }),
-    );
-
-    if (data.enabled === false) {
-      panel.enabled = false;
-    }
-
-    const children = data.children;
-
-    if (Array.isArray(children)) {
-      for (const child of children) {
-        const childNode = asSerializedNode(child);
-
-        if (childNode !== null) {
-          panel.addChild(ctx.readNode(childNode) as RenderNode);
+    return initializeDeserializedNode(
+      new Panel(
+        compact({
+          width: num(data.width),
+          height: num(data.height),
+          color: arrayToColor(data.color),
+          borderColor: arrayToColor(data.borderColor),
+          borderWidth: num(data.borderWidth),
+          cornerRadius: num(data.cornerRadius),
+        }),
+      ),
+      panel => {
+        if (data.enabled === false) {
+          panel.enabled = false;
         }
-      }
-    }
 
-    return panel;
+        const children = data.children;
+
+        if (Array.isArray(children)) {
+          for (const child of children) {
+            const childNode = asSerializedNode(child);
+
+            if (childNode !== null) {
+              panel.addChild(ctx.readNode(childNode) as RenderNode);
+            }
+          }
+        }
+      },
+    );
   },
 };
 
@@ -252,35 +254,36 @@ const scrollContainerSerializer: NodeSerializer<ScrollContainer> = {
     return out;
   },
   read(data, ctx) {
-    const scroll = new ScrollContainer(
-      compact({
-        width: num(data.width) ?? 0,
-        height: num(data.height) ?? 0,
-        direction: isScrollDirection(data.direction) ? data.direction : undefined,
-      }),
-    );
-
-    if (data.enabled === false) {
-      scroll.enabled = false;
-    }
-
-    const children = data.children;
-
-    if (Array.isArray(children)) {
-      for (const child of children) {
-        const childNode = asSerializedNode(child);
-
-        if (childNode !== null) {
-          scroll.content.addChild(ctx.readNode(childNode) as RenderNode);
+    return initializeDeserializedNode(
+      new ScrollContainer(
+        compact({
+          width: num(data.width) ?? 0,
+          height: num(data.height) ?? 0,
+          direction: isScrollDirection(data.direction) ? data.direction : undefined,
+        }),
+      ),
+      scroll => {
+        if (data.enabled === false) {
+          scroll.enabled = false;
         }
-      }
-    }
 
-    // After the content exists, so the stored offset clamps against the real
-    // content range instead of a still-empty one.
-    scroll.scrollTo(num(data.scrollX) ?? 0, num(data.scrollY) ?? 0);
+        const children = data.children;
 
-    return scroll;
+        if (Array.isArray(children)) {
+          for (const child of children) {
+            const childNode = asSerializedNode(child);
+
+            if (childNode !== null) {
+              scroll.content.addChild(ctx.readNode(childNode) as RenderNode);
+            }
+          }
+        }
+
+        // After the content exists, so the stored offset clamps against the real
+        // content range instead of a still-empty one.
+        scroll.scrollTo(num(data.scrollX) ?? 0, num(data.scrollY) ?? 0);
+      },
+    );
   },
 };
 
@@ -305,33 +308,34 @@ const stackSerializer: NodeSerializer<Stack> = {
     return out;
   },
   read(data, ctx) {
-    const stack = new Stack(
-      compact({
-        direction: data.direction === 'row' || data.direction === 'column' ? data.direction : undefined,
-        spacing: num(data.spacing),
-        padding: num(data.padding),
-      }),
-    );
-
-    if (data.enabled === false) {
-      stack.enabled = false;
-    }
-
-    const children = data.children;
-
-    if (Array.isArray(children)) {
-      for (const child of children) {
-        const childNode = asSerializedNode(child);
-
-        if (childNode !== null) {
-          stack.addChild(ctx.readNode(childNode) as RenderNode);
+    return initializeDeserializedNode(
+      new Stack(
+        compact({
+          direction: data.direction === 'row' || data.direction === 'column' ? data.direction : undefined,
+          spacing: num(data.spacing),
+          padding: num(data.padding),
+        }),
+      ),
+      stack => {
+        if (data.enabled === false) {
+          stack.enabled = false;
         }
-      }
 
-      stack.layout();
-    }
+        const children = data.children;
 
-    return stack;
+        if (Array.isArray(children)) {
+          for (const child of children) {
+            const childNode = asSerializedNode(child);
+
+            if (childNode !== null) {
+              stack.addChild(ctx.readNode(childNode) as RenderNode);
+            }
+          }
+
+          stack.layout();
+        }
+      },
+    );
   },
 };
 
@@ -360,28 +364,26 @@ const dockContainerSerializer: NodeSerializer<DockContainer> = {
     return out;
   },
   read(data, ctx) {
-    const dock = new DockContainer(compact({ width: num(data.width), height: num(data.height) }));
+    return initializeDeserializedNode(new DockContainer(compact({ width: num(data.width), height: num(data.height) })), dock => {
+      if (data.enabled === false) {
+        dock.enabled = false;
+      }
 
-    if (data.enabled === false) {
-      dock.enabled = false;
-    }
+      const children = data.children;
+      const regions = Array.isArray(data.regions) ? data.regions : [];
 
-    const children = data.children;
-    const regions = Array.isArray(data.regions) ? data.regions : [];
+      if (Array.isArray(children)) {
+        for (let index = 0; index < children.length; index++) {
+          const childNode = asSerializedNode(children[index]);
 
-    if (Array.isArray(children)) {
-      for (let index = 0; index < children.length; index++) {
-        const childNode = asSerializedNode(children[index]);
+          if (childNode !== null) {
+            const region: unknown = regions[index];
 
-        if (childNode !== null) {
-          const region: unknown = regions[index];
-
-          dock.dock(ctx.readNode(childNode) as RenderNode, isDockRegion(region) ? region : 'center');
+            dock.dock(ctx.readNode(childNode) as RenderNode, isDockRegion(region) ? region : 'center');
+          }
         }
       }
-    }
-
-    return dock;
+    });
   },
 };
 
@@ -392,20 +394,19 @@ const uiRootSerializer: NodeSerializer<UIRoot> = {
     return node.children.length > 0 ? { children: node.children.map(child => ctx.writeNode(child)) } : {};
   },
   read(data, ctx) {
-    const root = new UIRoot();
-    const children = data.children;
+    return initializeDeserializedNode(new UIRoot(), root => {
+      const children = data.children;
 
-    if (Array.isArray(children)) {
-      for (const child of children) {
-        const childNode = asSerializedNode(child);
+      if (Array.isArray(children)) {
+        for (const child of children) {
+          const childNode = asSerializedNode(child);
 
-        if (childNode !== null) {
-          root.addChild(ctx.readNode(childNode) as RenderNode);
+          if (childNode !== null) {
+            root.addChild(ctx.readNode(childNode) as RenderNode);
+          }
         }
       }
-    }
-
-    return root;
+    });
   },
 };
 

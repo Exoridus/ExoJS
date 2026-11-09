@@ -8,6 +8,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 
 import { applyCommonFields, writeCommonFields } from './commonFields';
 import { registerCoreSerializers } from './coreSerializers';
+import { destroyFailedRead } from './deserializeOwnership';
 import type { DeserializeContext, SerializeContext } from './NodeSerializer';
 import { asObject, asSerializedNode } from './read';
 import { defaultSerializationRegistry, type SerializationRegistry } from './SerializationRegistry';
@@ -80,11 +81,16 @@ const createSerializeContext = (loader: Loader | null, registry: SerializationRe
   return ctx;
 };
 
-const createDeserializeContext = (loader: Loader | null, version: number, registry: SerializationRegistry): DeserializeContext => {
+const createDeserializeContext = (
+  loader: Loader | null,
+  version: number,
+  registry: SerializationRegistry,
+  provisional: SceneNode[],
+): DeserializeContext => {
   const ctx: DeserializeContext = {
     version,
     loader,
-    readNode: data => readNodeWith(data, ctx, registry),
+    readNode: data => readNodeWith(data, ctx, registry, provisional),
     resolveAsset: <T>(reference: unknown, type: AssetConstructor<T>): T | null => {
       const request = readAssetReference(reference);
 
@@ -146,18 +152,64 @@ const writeNodeWith = (node: SceneNode, ctx: SerializeContext, registry: Seriali
   return out;
 };
 
-const readNodeWith = (data: SerializedNode, ctx: DeserializeContext, registry: SerializationRegistry): SceneNode => {
+const readNodeWith = (
+  data: SerializedNode,
+  ctx: DeserializeContext,
+  registry: SerializationRegistry,
+  provisional: SceneNode[],
+): SceneNode => {
   const entry = registry.resolveByName(data.type);
 
   if (entry === undefined) {
     throw new Error(`No serializer registered for type "${data.type}". Register one via registerSerializer().`);
   }
 
-  const node = entry.serializer.read(data, ctx);
+  const checkpoint = provisional.length;
 
-  applyCommonFields(node, data);
+  try {
+    const node = entry.serializer.read(data, ctx);
 
-  return node;
+    provisional.push(node);
+    applyCommonFields(node, data);
+
+    return node;
+  } catch (error) {
+    // A custom serializer can catch a failed child read and return a fallback.
+    // Roll back this call now without discarding its already-completed siblings.
+    destroyProvisionalReads(provisional, checkpoint);
+
+    throw error;
+  }
+};
+
+const destroyProvisionalReads = (provisional: SceneNode[], checkpoint: number): void => {
+  const failed = provisional.splice(checkpoint);
+
+  // Parents are returned after their descendants. Destroy them first, then
+  // release any completed reads that a failing custom serializer left unattached.
+  for (let index = failed.length - 1; index >= 0; index--) {
+    destroyFailedRead(failed[index]!);
+  }
+};
+
+const readWithOwnership = <T>(
+  loader: Loader | null,
+  version: number,
+  registry: SerializationRegistry,
+  read: (ctx: DeserializeContext) => T,
+): T => {
+  const provisional: SceneNode[] = [];
+  const ctx = createDeserializeContext(loader, version, registry, provisional);
+
+  try {
+    return read(ctx);
+  } catch (error) {
+    destroyProvisionalReads(provisional, 0);
+
+    throw error;
+  } finally {
+    provisional.length = 0;
+  }
 };
 
 const describeNode = (node: SceneNode): string => {
@@ -225,15 +277,62 @@ export const deserializeTree = (
 ): SceneNode => {
   ensureCoreSerializers();
 
-  return readNodeWith(data, createDeserializeContext(loader, version, registry), registry);
+  return readWithOwnership(loader, version, registry, ctx => ctx.readNode(data));
+};
+
+interface ContainerReadTarget {
+  readonly container: Container | (() => Container);
+  readonly data: SerializedNode;
+}
+
+const deserializeTargets = (
+  targets: readonly ContainerReadTarget[],
+  loader: Loader | null,
+  registry: SerializationRegistry,
+  version: number,
+): void => {
+  ensureCoreSerializers();
+
+  const prepared = readWithOwnership(loader, version, registry, ctx => {
+    const childrenByTarget = targets.map(({ data }) => {
+      const nodes: RenderNode[] = [];
+
+      if (Array.isArray(data.children)) {
+        for (const child of data.children) {
+          const childNode = asSerializedNode(child);
+
+          if (childNode !== null) {
+            nodes.push(ctx.readNode(childNode) as RenderNode);
+          }
+        }
+      }
+
+      return nodes;
+    });
+
+    // Lazy scene UI allocation happens only after every subtree has decoded.
+    return targets.map(({ container, data }, index) => ({
+      container: typeof container === 'function' ? container() : container,
+      data,
+      children: childrenByTarget[index]!,
+    }));
+  });
+
+  for (const { container, data, children } of prepared) {
+    container.removeChildren();
+    applyCommonFields(container, data);
+
+    for (const child of children) {
+      container.addChild(child);
+    }
+  }
 };
 
 /**
- * Rebuild `container`'s contents from `data` in place: clears existing
- * children, applies `data`'s common fields to the container, then deserializes
- * and re-adds its children. Used by {@link Scene.deserialize} to reuse the
- * eagerly-created scene root. The validated document version is shared by
- * every descendant read, including custom serializers.
+ * Read all replacement children before changing `container`, then detach the
+ * old children and apply the prepared contents. A read failure destroys the
+ * provisional nodes and leaves the destination unchanged. The validated document
+ * version is shared by every descendant read, including custom serializers.
  * @internal
  */
 export const deserializeInto = (
@@ -243,31 +342,24 @@ export const deserializeInto = (
   registry: SerializationRegistry = defaultSerializationRegistry,
   version: number = SERIALIZATION_VERSION,
 ): void => {
-  ensureCoreSerializers();
+  deserializeTargets([{ container, data }], loader, registry, version);
+};
 
-  const ctx = createDeserializeContext(loader, version, registry);
+/** Prepare both scene trees before replacing either destination. @internal */
+export const deserializeSceneInto = (
+  root: Container,
+  ui: () => Container,
+  data: SerializedScene,
+  loader: Loader | null = null,
+  registry: SerializationRegistry = defaultSerializationRegistry,
+): void => {
+  const targets: ContainerReadTarget[] = [{ container: root, data: data.root }];
 
-  // Read every child before touching the container so a malformed document
-  // throws with the existing subtree still in place.
-  const nodes: RenderNode[] = [];
-  const children = data.children;
-
-  if (Array.isArray(children)) {
-    for (const child of children) {
-      const childNode = asSerializedNode(child);
-
-      if (childNode !== null) {
-        nodes.push(ctx.readNode(childNode) as RenderNode);
-      }
-    }
+  if (data.ui !== undefined) {
+    targets.push({ container: ui, data: data.ui });
   }
 
-  container.removeChildren();
-  applyCommonFields(container, data);
-
-  for (const node of nodes) {
-    container.addChild(node);
-  }
+  deserializeTargets(targets, loader, registry, data.version);
 };
 
 const LAST_IDENTITY_COMPATIBLE_VERSION = 2;

@@ -6,7 +6,7 @@ import { Scene } from '#core/scene/Scene';
 import { SceneNode } from '#core/SceneNode';
 import { Prefab } from '#core/serialization/Prefab';
 import { defaultSerializationRegistry, registerSerializer, SerializationRegistry } from '#core/serialization/SerializationRegistry';
-import { _resetDefaultSerializers, deserializeTree, serializeTree } from '#core/serialization/serialize';
+import { _resetDefaultSerializers, deserializeInto, deserializeTree, serializeTree } from '#core/serialization/serialize';
 import { SERIALIZATION_VERSION, type SerializedNode, type SerializedScene } from '#core/serialization/types';
 import { Signal } from '#core/Signal';
 import { Time } from '#core/units';
@@ -457,6 +457,283 @@ describe('serialization — Scene entry point', () => {
 
     expect(scene.root.children).toEqual([existing]);
     scene.destroy();
+  });
+
+  it('releases staged labels after each failed replacement without changing the existing root', () => {
+    const scene = new Scene();
+    const existing = new Container();
+    const listeners = mockAtlas.onCleared!.count;
+
+    scene.root.name = 'original';
+    scene.addChild(existing);
+
+    try {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        expect(() =>
+          scene.deserialize({
+            version: SERIALIZATION_VERSION,
+            root: { type: 'Container', name: 'replacement', children: [{ type: 'Label', text: 'ABC' }, { type: 'NopeNode' }] },
+          }),
+        ).toThrow(/No serializer registered for type/);
+
+        expect(scene.root.children).toEqual([existing]);
+        expect(scene.root.name).toBe('original');
+        expect(mockAtlas.onCleared!.count).toBe(listeners);
+      }
+    } finally {
+      scene.destroy();
+    }
+  });
+
+  it('preserves both scene trees when reading the UI fails after the world was prepared', () => {
+    const scene = new Scene();
+    const world = new Container();
+    const ui = new Container();
+    const listeners = mockAtlas.onCleared!.count;
+
+    scene.root.addChild(world);
+    scene.ui.addChild(ui);
+    scene.root.x = 7;
+    scene.ui.x = 11;
+
+    try {
+      expect(() =>
+        scene.deserialize({
+          version: SERIALIZATION_VERSION,
+          root: { type: 'Container', x: 70, children: [{ type: 'Label', text: 'world' }] },
+          ui: { type: 'UIRoot', x: 110, children: [{ type: 'Label', text: 'ui' }, { type: 'NopeNode' }] },
+        }),
+      ).toThrow(/No serializer registered for type/);
+
+      expect(scene.root.children).toEqual([world]);
+      expect(scene.ui.children).toEqual([ui]);
+      expect(scene.root.x).toBe(7);
+      expect(scene.ui.x).toBe(11);
+      expect(mockAtlas.onCleared!.count).toBe(listeners);
+    } finally {
+      scene.destroy();
+    }
+  });
+
+  it('does not materialize the UI layer for a document that fails to read', () => {
+    const scene = new Scene();
+    const existing = new Container();
+
+    scene.addChild(existing);
+
+    try {
+      expect(() =>
+        scene.deserialize({
+          version: SERIALIZATION_VERSION,
+          root: { type: 'Container', children: [{ type: 'Container' }] },
+          ui: { type: 'UIRoot', children: [{ type: 'NopeNode' }] },
+        }),
+      ).toThrow(/No serializer registered for type/);
+
+      expect(scene._peekUI()).toBeNull();
+      expect(scene.root.children).toEqual([existing]);
+    } finally {
+      scene.destroy();
+    }
+  });
+});
+
+describe('serialization failure ownership', () => {
+  it('rolls back a failed recursive read even when its caller returns a fallback', () => {
+    const listeners = mockAtlas.onCleared!.count;
+    const failure = new Error('nested read failed');
+    let failedChild: SceneNode | undefined;
+
+    class ReadFailure extends Container {}
+    class Fallback extends Container {}
+
+    registerSerializer('ReadFailure', ReadFailure, {
+      write: () => ({}),
+      read: (_data, ctx) => {
+        failedChild = ctx.readNode({ type: 'Label', text: 'discard' });
+
+        throw failure;
+      },
+    });
+    registerSerializer('Fallback', Fallback, {
+      write: () => ({}),
+      read: (_data, ctx) => {
+        const node = new Fallback();
+
+        node.addChild(ctx.readNode({ type: 'Label', text: 'keep' }) as Label);
+
+        try {
+          ctx.readNode({ type: 'ReadFailure' });
+        } catch (error) {
+          expect(error).toBe(failure);
+        }
+
+        return node;
+      },
+    });
+
+    const fallback = deserializeTree({ type: 'Fallback' }) as Fallback;
+
+    try {
+      expect(failedChild?.destroyed).toBe(true);
+      expect(fallback.children).toHaveLength(1);
+      expect(fallback.children[0]!.destroyed).toBe(false);
+      expect((fallback.children[0] as Label).text).toBe('keep');
+      expect(mockAtlas.onCleared!.count).toBe(listeners + 1);
+    } finally {
+      fallback.destroy();
+    }
+
+    expect(mockAtlas.onCleared!.count).toBe(listeners);
+  });
+
+  it.each(['Container', 'Panel', 'ScrollContainer', 'Stack', 'DockContainer', 'UIRoot'])(
+    'destroys an unfinished %s and its descendants when a nested read fails',
+    type => {
+      const listeners = mockAtlas.onCleared!.count;
+      const failure = new Error('child read failed');
+      const created: Label[] = [];
+      const ancestors: Container[] = [];
+
+      class AllocatedLabel extends Label {}
+      class ReadFailure extends Container {}
+
+      registerSerializer('AllocatedLabel', AllocatedLabel, {
+        write: () => ({}),
+        read: () => {
+          const node = new AllocatedLabel('ABC');
+
+          created.push(node);
+
+          return node;
+        },
+      });
+      registerSerializer('ReadFailure', ReadFailure, {
+        write: () => ({}),
+        read: () => {
+          let parent = created[0]!.parent;
+
+          while (parent !== null) {
+            ancestors.push(parent);
+            parent = parent.parent;
+          }
+
+          throw failure;
+        },
+      });
+
+      expect(() => deserializeTree({ type, children: [{ type: 'AllocatedLabel' }, { type: 'ReadFailure' }] })).toThrow(failure);
+      expect(created).toHaveLength(1);
+      expect(ancestors.length).toBeGreaterThan(0);
+      expect(created[0]!.destroyed).toBe(true);
+      expect(ancestors.every(parent => parent.destroyed)).toBe(true);
+      expect(mockAtlas.onCleared!.count).toBe(listeners);
+    },
+  );
+
+  it('releases a decoded child that Graphics rejects before attaching it', () => {
+    const listeners = mockAtlas.onCleared!.count;
+    let child: Label | undefined;
+
+    class AllocatedLabel extends Label {}
+
+    registerSerializer('AllocatedLabel', AllocatedLabel, {
+      write: () => ({}),
+      read: () => {
+        child = new AllocatedLabel('ABC');
+
+        return child;
+      },
+    });
+
+    expect(() => deserializeTree({ type: 'Graphics', children: [{ type: 'AllocatedLabel' }] })).toThrow(
+      'Graphics can only contain Mesh children.',
+    );
+    expect(child?.destroyed).toBe(true);
+    expect(mockAtlas.onCleared!.count).toBe(listeners);
+  });
+
+  it('preserves the read error and releases every staged sibling when a teardown throws', () => {
+    const failure = new Error('read failed');
+    const created: Container[] = [];
+    const root = new Container();
+
+    class ThrowingCleanup extends Container {
+      public override destroy(): void {
+        super.destroy();
+
+        throw new Error('teardown failed');
+      }
+    }
+
+    class ReadFailure extends Container {}
+
+    registerSerializer('ThrowingCleanup', ThrowingCleanup, {
+      write: () => ({}),
+      read: () => {
+        const node = new ThrowingCleanup();
+
+        created.push(node);
+
+        return node;
+      },
+    });
+    registerSerializer('ReadFailure', ReadFailure, {
+      write: () => ({}),
+      read: () => {
+        throw failure;
+      },
+    });
+
+    try {
+      expect(() =>
+        deserializeInto(root, {
+          type: 'Container',
+          children: [{ type: 'ThrowingCleanup' }, { type: 'ThrowingCleanup' }, { type: 'ReadFailure' }],
+        }),
+      ).toThrow(failure);
+      expect(created.map(node => node.destroyed)).toEqual([true, true]);
+    } finally {
+      root.destroy();
+    }
+  });
+
+  it.each(['tree', 'prefab', 'container'] as const)('cleans up completed recursive reads when a custom serializer throws (%s)', entry => {
+    const listeners = mockAtlas.onCleared!.count;
+    const failure = new Error('custom read failed');
+    const destination = new Container();
+    let child: SceneNode | undefined;
+
+    class ReadFailure extends Container {}
+
+    registerSerializer('ReadFailure', ReadFailure, {
+      write: () => ({}),
+      read: (_data, ctx) => {
+        child = ctx.readNode({ type: 'Label', text: 'ABC' });
+
+        throw failure;
+      },
+    });
+
+    const data: SerializedNode = { type: 'ReadFailure' };
+
+    const attempt = (): void => {
+      if (entry === 'tree') {
+        deserializeTree(data);
+      } else if (entry === 'prefab') {
+        Prefab.fromJSON({ version: SERIALIZATION_VERSION, root: data }).instantiate();
+      } else {
+        deserializeInto(destination, { type: 'Container', children: [data] });
+      }
+    };
+
+    try {
+      expect(attempt).toThrow(failure);
+      expect(child?.destroyed).toBe(true);
+      expect(mockAtlas.onCleared!.count).toBe(listeners);
+    } finally {
+      destination.destroy();
+    }
   });
 });
 
