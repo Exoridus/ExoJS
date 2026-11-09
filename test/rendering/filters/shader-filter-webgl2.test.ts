@@ -27,6 +27,8 @@ import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 // ---------------------------------------------------------------------------
 
 const makeGlMock = (): WebGL2RenderingContext => {
+  const CURRENT_PROGRAM = 0x8b8d;
+  let currentProgram: WebGLProgram | null = null;
   let programId = 1;
   let shaderId = 1;
   let bufferId = 1;
@@ -34,6 +36,7 @@ const makeGlMock = (): WebGL2RenderingContext => {
   let uniformLocation = 1;
 
   return {
+    CURRENT_PROGRAM,
     VERTEX_SHADER: 35633,
     FRAGMENT_SHADER: 35632,
     ARRAY_BUFFER: 34962,
@@ -58,7 +61,16 @@ const makeGlMock = (): WebGL2RenderingContext => {
     compileShader: vi.fn(),
     attachShader: vi.fn(),
     linkProgram: vi.fn(),
-    useProgram: vi.fn(),
+    useProgram: vi.fn((program: WebGLProgram | null) => {
+      currentProgram = program;
+    }),
+    getParameter: vi.fn((parameter: number) => {
+      if (parameter !== CURRENT_PROGRAM) {
+        throw new Error(`Unsupported getParameter query: ${parameter}`);
+      }
+
+      return currentProgram;
+    }),
     deleteShader: vi.fn(),
     deleteProgram: vi.fn(),
     deleteBuffer: vi.fn(),

@@ -154,6 +154,28 @@ describe('WebGL2 program ownership', () => {
     backend.destroy();
   });
 
+  test('steady cached shader binds perform no native queries, program switches or allocations', () => {
+    const { gl, log, backend, createShader } = createHarness();
+    const shader = createShader();
+
+    backend.bindShader(shader);
+    log.reset();
+
+    const query = vi.spyOn(gl, 'getParameter');
+
+    for (let index = 0; index < 10; index++) {
+      backend.bindShader(shader);
+    }
+
+    expect(query).not.toHaveBeenCalled();
+    expect(log.created('program')).toEqual([]);
+    expect(log.created('shader')).toEqual([]);
+    expect(log.events.filter(event => event.op === 'useProgram')).toEqual([]);
+    query.mockRestore();
+    shader.destroy();
+    backend.destroy();
+  });
+
   test('steady shader syncs perform no state queries or resource allocation', () => {
     const { gl, log, backend, createShader } = createHarness();
     const shader = createShader();
