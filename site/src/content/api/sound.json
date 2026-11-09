@@ -488,7 +488,7 @@
             }
           ],
           "returnType": "this",
-          "description": ""
+          "description": "Shrinking the pool stops the voices over the new capacity, chosen by the pool strategy. A voice started from an onEnd listener of a voice stopped here is admitted by the normal play-time eviction, not trimmed again by this call, so a listener that replays the sound cannot stall it."
         },
         {
           "name": "setSprites",

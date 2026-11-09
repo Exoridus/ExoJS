@@ -284,6 +284,12 @@ export class Sound implements Playable {
     }
   }
 
+  /**
+   * Shrinking the pool stops the voices over the new capacity, chosen by the
+   * pool strategy. A voice started from an `onEnd` listener of a voice stopped
+   * here is admitted by the normal play-time eviction, not trimmed again by this
+   * call, so a listener that replays the sound cannot stall it.
+   */
   public setPoolSize(poolSize: number): this {
     const normalizedPoolSize = Math.max(1, Math.floor(poolSize));
 
@@ -770,6 +776,11 @@ export class Sound implements Playable {
   }
 
   private _trimActiveVoices(): void {
+    // Victims are chosen and removed before any is stopped: stopping fires
+    // `onEnd`, and a listener that plays this sound again would otherwise refill
+    // the pool inside the loop and keep it from ever reaching the target size.
+    const victims: Voice[] = [];
+
     while (this._activeVoices.length > this._poolSize) {
       const victimIndex = this._pickEvictionVictim();
       const victim = this._activeVoices[victimIndex];
@@ -779,7 +790,23 @@ export class Sound implements Playable {
       }
 
       this._activeVoices.splice(victimIndex, 1);
-      victim.voice.stop();
+      victims.push(victim.voice);
+    }
+
+    // Every victim is already out of the pool, so each must be stopped even if
+    // an earlier one's listener throws - a skipped one would play on untracked.
+    let failure: { error: unknown } | null = null;
+
+    for (const voice of victims) {
+      try {
+        voice.stop();
+      } catch (error) {
+        failure ??= { error };
+      }
+    }
+
+    if (failure !== null) {
+      throw failure.error;
     }
   }
 }
