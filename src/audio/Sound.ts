@@ -574,6 +574,8 @@ export class Sound implements Playable {
    * Creates one {@link SoundVoice} backed by a single `AudioBufferSourceNode`.
    * Pool limits are enforced: if the pool is full the configured eviction
    * strategy picks a victim to stop before the new voice starts.
+   * If an `onEnd` callback destroys this sound or its parent while stopping a
+   * previous voice, this call returns an already-ended voice.
    */
   public createVoice(system: AudioSystem, options: SoundPlayOptions): Voice {
     if (this.destroyed) {
@@ -701,6 +703,12 @@ export class Sound implements Playable {
           victim.voice.stop();
         }
       }
+    }
+
+    // Stopping a victim dispatches onEnd after createVoice captured the buffer.
+    // The callback may have made this sound or its parent terminal.
+    if (this.destroyed) {
+      return new NoopVoice(bus);
     }
 
     const audioContext = getAudioContext();
