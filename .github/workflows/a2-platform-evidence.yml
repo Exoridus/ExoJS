@@ -76,7 +76,7 @@ jobs:
               return s.replace(old, new)
           p = Path('src/platform/BrowserPlatform.ts')
           s = p.read_text()
-          s = replace(s, "if (typeof document === 'undefined') {", 'if (this._document.body === null) {')
+          s = replace(s, "    if (typeof document === 'undefined') {\n      return null;\n    }\n\n", '')
           s = replace(s, 'editContextSupported() ?', 'editContextSupported(this._document.defaultView) ?')
           s = replace(s, 'return performance.now();', 'return this._window.performance.now();')
           s = replace(s, 'return requestAnimationFrame(callback);', 'return this._window.requestAnimationFrame(callback);')
@@ -87,8 +87,7 @@ jobs:
               s = p.read_text()
               s = replace(s, "document.createElement('" + tag + "')", "canvas.ownerDocument.createElement('" + tag + "')")
               s = replace(s, '    document.body.append(element);', '    canvas.ownerDocument.body.append(element);')
-              s = replace(s, "(typeof document !== 'undefined' && document.activeElement === this._element)", '(this._element.ownerDocument.activeElement === this._element)')
-              s = replace(s, "typeof document !== 'undefined' && document.activeElement === this._element", 'this._element.ownerDocument.activeElement === this._element')
+              s = replace(s, "typeof document !== 'undefined' && document.activeElement === this._element", 'this._element.ownerDocument.activeElement === this._element', 2)
               s = replace(s, "this._bounds === null || typeof document === 'undefined'", 'this._bounds === null')
               s = replace(s, '    this._element.style.left = `${canvasRect.left + this._bounds.x}px`;\n    this._element.style.top = `${canvasRect.top + this._bounds.y}px`;', '    const view = this._element.ownerDocument.defaultView;\n\n    this._element.style.left = `${canvasRect.left + this._bounds.x + (view?.scrollX ?? 0)}px`;\n    this._element.style.top = `${canvasRect.top + this._bounds.y + (view?.scrollY ?? 0)}px`;')
               if name == 'EditContextTextInput':
@@ -123,11 +122,8 @@ jobs:
               print('CANDIDATE_BLOB ' + path + ' ' + json.loads(out)['sha'], flush=True)
           PY
       - name: Typecheck
-        if: ${{ !cancelled() }}
         run: pnpm gates typecheck
       - name: Lint
-        if: ${{ !cancelled() }}
         run: pnpm gates lint
       - name: Sync
-        if: ${{ !cancelled() }}
         run: pnpm gates sync
