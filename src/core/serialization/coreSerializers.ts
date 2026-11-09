@@ -6,6 +6,7 @@ import { Sprite } from '#rendering/sprite/Sprite';
 import { SDF_RADIUS, Text } from '#rendering/text/Text';
 import { Texture } from '#rendering/texture/Texture';
 
+import { initializeDeserializedNode } from './deserializeOwnership';
 import type { NodeSerializer } from './NodeSerializer';
 import { asNumberArray, asSerializedNode, readNumber } from './read';
 import { registerRenderingSerializers } from './renderingSerializers';
@@ -24,20 +25,19 @@ const containerSerializer: NodeSerializer<Container> = {
     return { children: node.children.map(child => ctx.writeNode(child)) };
   },
   read(data, ctx) {
-    const node = new Container();
-    const children = data.children;
+    return initializeDeserializedNode(new Container(), node => {
+      const children = data.children;
 
-    if (Array.isArray(children)) {
-      for (const child of children) {
-        const childNode = asSerializedNode(child);
+      if (Array.isArray(children)) {
+        for (const child of children) {
+          const childNode = asSerializedNode(child);
 
-        if (childNode !== null) {
-          node.addChild(ctx.readNode(childNode) as RenderNode);
+          if (childNode !== null) {
+            node.addChild(ctx.readNode(childNode) as RenderNode);
+          }
         }
       }
-    }
-
-    return node;
+    });
   },
 };
 

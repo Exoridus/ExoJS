@@ -138,6 +138,36 @@ describe('SystemRegistry ordering — before/after', () => {
 
     expect(log).toEqual(['a', 'ok', 'b']);
   });
+
+  test.each(['add-first', 'remove-first'] as const)('ignores an inactive cycle target at the frame boundary (%s)', mutationOrder => {
+    const registry = new SystemRegistry();
+    const log: string[] = [];
+    const a = makeSystem(log, 'a');
+    const b = makeSystem(log, 'b');
+    const removed: System[] = [];
+
+    registry.onRemove.add(system => removed.push(system));
+    registry.add(a, { before: [b] });
+    registry._beginFrame();
+
+    if (mutationOrder === 'add-first') {
+      registry.add(b, { before: [a] });
+      registry.remove(a);
+    } else {
+      registry.remove(a);
+      registry.add(b, { before: [a] });
+    }
+
+    expect(registry.has(a)).toBe(false);
+    expect(() => registry._endFrame()).not.toThrow();
+    expect(registry.has(b)).toBe(true);
+    expect(registry.size).toBe(1);
+    expect(removed).toEqual([a]);
+
+    tick(registry);
+
+    expect(log).toEqual(['b']);
+  });
 });
 
 describe('SystemRegistry.destroy() — a throwing system cannot strand the rest', () => {

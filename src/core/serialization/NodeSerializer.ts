@@ -75,6 +75,9 @@ export interface NodeSerializer<T extends SceneNode = SceneNode> {
    * Construct a fresh node from `data` and set its type-specific fields. The
    * framework applies the common transform/visual fields afterwards, so do not
    * read them here. Recurse into children via {@link DeserializeContext.readNode}.
+   * If construction fails before returning, release the node and resources this
+   * method created. The framework releases nodes returned by recursive reads
+   * when the surrounding read fails.
    */
   read(data: SerializedNode, ctx: DeserializeContext): T;
 }
