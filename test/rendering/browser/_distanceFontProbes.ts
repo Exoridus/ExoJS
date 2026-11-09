@@ -24,6 +24,12 @@ interface AtlasSample {
   readonly rgba: readonly [number, number, number, number];
 }
 
+interface DistanceFontProbe {
+  readonly h: ColorProbeHarness;
+  readonly loader: Loader;
+  readonly materials: SpriteMaterial[];
+}
+
 const loadFont = async (
   loader: Loader,
   page: string,
@@ -75,7 +81,11 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     textures: { u_atlas: texture },
   });
 
-const expectNumericAtlas = async (h: ColorProbeHarness, texture: Texture, samples: readonly AtlasSample[]): Promise<void> => {
+const expectNumericAtlas = async (
+  { h, materials }: DistanceFontProbe,
+  texture: Texture,
+  samples: readonly AtlasSample[],
+): Promise<void> => {
   const raw = new RenderTexture(texture.width, texture.height, { format: TextureFormat.Rgba8 });
 
   texture.setScaleMode(ScaleModes.Nearest);
@@ -86,6 +96,7 @@ const expectNumericAtlas = async (h: ColorProbeHarness, texture: Texture, sample
         const material = channelMaterial(texture, channel);
         const sprite = new Sprite(Texture.white);
 
+        materials.push(material);
         sprite.width = texture.width;
         sprite.height = texture.height;
         sprite.material = material;
@@ -104,8 +115,6 @@ const expectNumericAtlas = async (h: ColorProbeHarness, texture: Texture, sample
           if (!sprite.destroyed) {
             sprite.destroy();
           }
-
-          material.destroy();
         }
       }
     });
@@ -116,33 +125,41 @@ const expectNumericAtlas = async (h: ColorProbeHarness, texture: Texture, sample
 };
 
 export const defineDistanceFontProbes = (title: string, open: OpenColorProbeHarness): void => {
-  const start = async (): Promise<{ h: ColorProbeHarness; loader: Loader }> => {
+  const start = async (): Promise<DistanceFontProbe> => {
     const h = await open(8);
     const loader = new Loader();
+    const materials: SpriteMaterial[] = [];
 
     loader._installAssetTypes([textureType, bmFontType]);
     onTestFinished(() => {
+      // Readback programs belong to the whole probe, including its later color uploads.
+      for (const material of materials) {
+        material.destroy();
+      }
+
       loader.destroy();
       h.destroy();
     });
 
-    return { h, loader };
+    return { h, loader, materials };
   };
 
   describe(`${title}: external distance-font metadata`, () => {
     test('a declared MTSDF atlas preserves independent RGB and low-alpha data through Loader and GPU upload', async () => {
-      const { h, loader } = await start();
+      const probe = await start();
+      const { loader } = probe;
       const font = await loadFont(loader, sentinelPage, 1, 'distanceField fieldType=mtsdf distanceRange=4');
 
       expect(font.fontData.distanceField).toEqual({ fieldType: 'mtsdf', distanceRange: 4, zeroDistanceValue: 0.5 });
       expect(font.textures[0]!.colorSpace).toBe('none');
 
       // This PNG was encoded directly from RGBA bytes, without a canvas round trip.
-      await expectNumericAtlas(h, font.textures[0]!, [{ x: 0, y: 0, rgba: [213, 149, 97, 31] }]);
+      await expectNumericAtlas(probe, font.textures[0]!, [{ x: 0, y: 0, rgba: [213, 149, 97, 31] }]);
     });
 
     test('range 4 and range 16 atlases keep their own encoded samples for identical square geometry', async () => {
-      const { h, loader } = await start();
+      const probe = await start();
+      const { loader } = probe;
       const range4 = await loadFont(loader, `${fixtureRoot}distance-square-range4.png`, 5, 'distanceField fieldType=mtsdf distanceRange=4');
       const range16 = await loadFont(
         loader,
@@ -172,27 +189,29 @@ export const defineDistanceFontProbes = (title: string, open: OpenColorProbeHarn
 
       // Both fixtures encode the square [1.5, 3.5] on each atlas axis.
       // At these texel centers d=-1/+1, so round(255 * (0.5 + d/range)) gives the literals below.
-      await expectNumericAtlas(h, range4.textures[0]!, [
+      await expectNumericAtlas(probe, range4.textures[0]!, [
         { x: 0, y: 2, rgba: [64, 64, 64, 64] },
         { x: 2, y: 2, rgba: [191, 191, 191, 191] },
       ]);
-      await expectNumericAtlas(h, range16.textures[0]!, [
+      await expectNumericAtlas(probe, range16.textures[0]!, [
         { x: 0, y: 2, rgba: [112, 112, 112, 112] },
         { x: 2, y: 2, rgba: [143, 143, 143, 143] },
       ]);
     });
 
     test('a distance declaration without range remains numeric without inferring range from glyph size', async () => {
-      const { h, loader } = await start();
+      const probe = await start();
+      const { loader } = probe;
       const font = await loadFont(loader, sentinelPage, 1, 'distanceField fieldType=mtsdf');
 
       expect(font.fontData.distanceField).toEqual({ fieldType: 'mtsdf', distanceRange: null, zeroDistanceValue: 0.5 });
       expect(font.textures[0]!.colorSpace).toBe('none');
-      await expectNumericAtlas(h, font.textures[0]!, [{ x: 0, y: 0, rgba: [213, 149, 97, 31] }]);
+      await expectNumericAtlas(probe, font.textures[0]!, [{ x: 0, y: 0, rgba: [213, 149, 97, 31] }]);
     });
 
     test('an explicit distance-field override gives a legacy descriptor the numeric atlas route', async () => {
-      const { h, loader } = await start();
+      const probe = await start();
+      const { loader } = probe;
       const font = await loadFont(loader, sentinelPage, 1, '', {
         fieldType: 'mtsdf',
         distanceRange: 16,
@@ -201,11 +220,12 @@ export const defineDistanceFontProbes = (title: string, open: OpenColorProbeHarn
 
       expect(font.fontData.distanceField).toEqual({ fieldType: 'mtsdf', distanceRange: 16, zeroDistanceValue: 0.375 });
       expect(font.textures[0]!.colorSpace).toBe('none');
-      await expectNumericAtlas(h, font.textures[0]!, [{ x: 0, y: 0, rgba: [213, 149, 97, 31] }]);
+      await expectNumericAtlas(probe, font.textures[0]!, [{ x: 0, y: 0, rgba: [213, 149, 97, 31] }]);
     });
 
     test('ordinary bitmap-font and color loads of the same PNG keep sRGB interpretation alongside a distance font', async () => {
-      const { h, loader } = await start();
+      const probe = await start();
+      const { h, loader } = probe;
       const distance = await loadFont(loader, sentinelPage, 1, 'distanceField fieldType=mtsdf distanceRange=4');
       const bitmap = await loadFont(loader, sentinelPage, 1);
       const color = await loader.load(Asset.type('texture', sentinelPage));
@@ -215,7 +235,7 @@ export const defineDistanceFontProbes = (title: string, open: OpenColorProbeHarn
         expect(bitmap.fontData.distanceField).toBeUndefined();
         expect(bitmap.textures[0]!.colorSpace).toBe('srgb');
         expect(color.colorSpace).toBe('srgb');
-        await expectNumericAtlas(h, distance.textures[0]!, [{ x: 0, y: 0, rgba: [213, 149, 97, 31] }]);
+        await expectNumericAtlas(probe, distance.textures[0]!, [{ x: 0, y: 0, rgba: [213, 149, 97, 31] }]);
 
         await h.checked(async () => {
           for (const texture of [bitmap.textures[0]!, color]) {
