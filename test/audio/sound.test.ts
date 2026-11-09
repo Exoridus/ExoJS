@@ -113,13 +113,16 @@ describe('Sound', () => {
     const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
     sound.addSprite('hit', { start: 0, end: 1 });
+    sound.addSprite('tail', { start: 1, end: 2 });
 
     const sprite = sound.sprite('hit');
+    const tailSprite = sound.sprite('tail');
     const clip = sound.clip(0, 1);
     const first = system.play(sound);
     const second = system.play(sound);
     const spriteFirst = system.play(sprite);
     const spriteSecond = system.play(sprite);
+    const tailVoice = system.play(tailSprite);
     const firstError = new Error('root onEnd failure');
     const spriteError = new Error('sprite onEnd failure');
 
@@ -130,11 +133,11 @@ describe('Sound', () => {
       throw spriteError;
     });
 
-    expect(factory.sources).toHaveLength(4);
+    expect(factory.sources).toHaveLength(5);
     expect(() => sound.destroy()).toThrow(firstError);
 
     // Every voice is stopped, even when an earlier root or sprite callback throws.
-    for (const voice of [first, second, spriteFirst, spriteSecond]) {
+    for (const voice of [first, second, spriteFirst, spriteSecond, tailVoice]) {
       expect(voice.ended).toBe(true);
     }
 
@@ -145,11 +148,16 @@ describe('Sound', () => {
     expect(sound.destroyed).toBe(true);
     expect(sound.audioBuffer).toBeNull();
     expect(sound.hasSprite('hit')).toBe(false);
+    expect(sound.hasSprite('tail')).toBe(false);
     expect((sound as unknown as { _spriteSounds: Map<string, Sound> })._spriteSounds.size).toBe(0);
     expect(sprite.destroyed).toBe(true);
+    expect(tailSprite.destroyed).toBe(true);
     expect(clip.destroyed).toBe(true);
+    expect(first.onEnd.count).toBe(0);
+    expect(spriteFirst.onEnd.count).toBe(0);
     expect(() => system.play(sound)).toThrow('Cannot play a destroyed Sound');
     expect(() => system.play(sprite)).toThrow('Cannot play a destroyed Sound');
+    expect(() => system.play(tailSprite)).toThrow('Cannot play a destroyed Sound');
     expect(() => system.play(clip)).toThrow('Cannot play a destroyed Sound');
 
     // An earlier onEnd failure must never leave destroy() half-completed.

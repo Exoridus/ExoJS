@@ -488,18 +488,49 @@ export class Sound implements Playable {
    * caller still holds must stay playable across it.
    */
   private _releaseSpriteSounds(): void {
-    for (const sprite of this._spriteSounds.values()) {
-      sprite._release();
+    // Detach the cache before stopping any sprite: onEnd listeners may reenter
+    // sprite management, and a failed stop must not strand a cached handle.
+    const sprites = [...this._spriteSounds.values()];
+    this._spriteSounds.clear();
+
+    let failure: { error: unknown } | null = null;
+
+    for (const sprite of sprites) {
+      try {
+        sprite._release();
+      } catch (error) {
+        failure ??= { error };
+      }
     }
 
-    this._spriteSounds.clear();
+    if (failure !== null) {
+      throw failure.error;
+    }
   }
 
   /** Stop every voice and drop the sprite state, leaving the sound playable. */
   private _release(): void {
-    this._stopAllVoices();
-    this._sprites.clear();
-    this._releaseSpriteSounds();
+    let failure: { error: unknown } | null = null;
+
+    try {
+      this._stopAllVoices();
+    } catch (error) {
+      failure = { error };
+    } finally {
+      // Listener errors must not skip the rest of the release, including
+      // memoized sprites that have their own independent voice pools.
+      this._sprites.clear();
+
+      try {
+        this._releaseSpriteSounds();
+      } catch (error) {
+        failure ??= { error };
+      }
+    }
+
+    if (failure !== null) {
+      throw failure.error;
+    }
   }
 
   /**
@@ -712,8 +743,20 @@ export class Sound implements Playable {
     const voices = [...this._activeVoices];
     this._activeVoices.length = 0;
 
+    // onEnd is user code. One failing listener must not leave later voices
+    // playing after their pool entries have already been detached.
+    let failure: { error: unknown } | null = null;
+
     for (const pv of voices) {
-      pv.voice.stop();
+      try {
+        pv.voice.stop();
+      } catch (error) {
+        failure ??= { error };
+      }
+    }
+
+    if (failure !== null) {
+      throw failure.error;
     }
   }
 
@@ -729,8 +772,14 @@ export class Sound implements Playable {
     }
 
     this._destroyed = true;
-    this._release();
-    this._audioBuffer = null;
+
+    try {
+      this._release();
+    } finally {
+      // A terminal Sound must never retain its decoded payload, even when
+      // one or several onEnd callbacks throw during the voice teardown.
+      this._audioBuffer = null;
+    }
   }
 
   private _pruneEndedVoices(): void {
