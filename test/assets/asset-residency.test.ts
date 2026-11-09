@@ -239,18 +239,25 @@ describe('AssetResidency', () => {
       const { cache } = createFakeCache(() => 'decoded');
       const { residency, typeRegistry, canonical } = createResidency({ cache });
       const adapter = createFakeSeamlessAdapter();
-      const disposedWhile: string[] = [];
-      installTypeA(typeRegistry, { leaf: adapter, dispose: resource => disposedWhile.push(adapter.stateOf(resource as object)) });
+      const disposedPayloads: unknown[] = [];
+      installTypeA(typeRegistry, { leaf: adapter, dispose: resource => disposedPayloads.push((resource as { payload: unknown }).payload) });
 
       const scope = new LoaderScope(fakeLoader, 'scope', 'scope');
-      const handle = residency._getSeamless(canonical(TypeA, 'a.png'), adapter);
+      const handle = residency._getSeamless(canonical(TypeA, 'a.png'), adapter) as { payload?: string };
+
+      handle.payload = 'original';
+      vi.mocked(adapter.evict).mockImplementation(resource => {
+        delete (resource as { payload?: string }).payload;
+        adapter.states.set(resource as object, 'loading');
+      });
       residency._claim(canonical(TypeA, 'a.png'), scope);
       residency._storeResource(canonical(TypeA, 'a.png'), handle);
       adapter.fill(handle, handle);
 
       residency._release(canonical(TypeA, 'a.png').key, scope);
 
-      expect(disposedWhile).toEqual(['ready']);
+      expect(disposedPayloads).toEqual(['original']);
+      expect(handle.payload).toBeUndefined();
       expect(adapter.stateOf(handle)).toBe('loading');
 
       residency._claim(canonical(TypeA, 'a.png'), scope);
@@ -258,7 +265,7 @@ describe('AssetResidency', () => {
 
       expect(adapter.fill).toHaveBeenLastCalledWith(handle, 'decoded');
       expect(residency._peekResource(canonical(TypeA, 'a.png').key)).toBe(handle);
-      expect(disposedWhile).toEqual(['ready']);
+      expect(disposedPayloads).toEqual(['original']);
     });
 
     test('claim on an evicted key re-drives the fetch and heals the same handle', async () => {

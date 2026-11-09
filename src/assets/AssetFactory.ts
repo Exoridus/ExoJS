@@ -87,8 +87,10 @@ export interface AssetFactory<Source, Resource, Options = undefined> {
    * object or a compiled `WebAssembly.Module` needs nothing.
    *
    * For a type with a seamless leaf, an eviction passes the handle consumers
-   * hold, while it still carries its payload; the leaf's `evict` runs right
-   * after. The handle outlives the eviction and is filled again by the next
+   * hold, while it still carries its payload. Its load state is already
+   * re-armed, so a synchronous claim observes a fresh load cycle; the leaf's
+   * `evict` runs right after and preserves that cycle's pending promise.
+   * The handle outlives the eviction and is filled again by the next
    * claim, so free only what it holds - never destroy the handle itself. A
    * result that never reached a consumer (its load was cancelled or unloaded
    * while in flight) is passed here as well, so the same code has to be safe

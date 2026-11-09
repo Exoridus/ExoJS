@@ -661,33 +661,12 @@ export class AssetResidency {
 
     if (adapter !== undefined && stored !== undefined) {
       const entry = this._deferred.get(key);
+      const handles = new Set(entry?.handles);
+      const dependencies = this._dependencyScopes.get(key);
 
-      // Before the evict below: it detaches the payload from every handle, after
-      // which the factory could no longer find what it has to free.
-      this._disposeResource(asset, stored);
-
-      // Re-arm every live consumer handle in place: the representative AND any
-      // co-handle adopted from the stored donor, so a later claim
-      // heals them all - not just the canonical one. The stored donor is itself
-      // a member (registered at store time); guard the fallback for the (defensive)
-      // case where no entry exists.
-      let evictedStored = false;
-
-      if (entry !== undefined) {
-        for (const handle of entry.handles) {
-          adapter.evict(handle);
-
-          if (handle === stored) {
-            evictedStored = true;
-          }
-        }
-      }
-
-      if (!evictedStored) {
-        adapter.evict(stored);
-      }
-
+      handles.add(stored as object);
       this._resources.delete(key);
+      this._dependencyScopes.delete(key);
 
       // Keep the handles registered (weakly) so the next claim heals them in
       // place; the entry persists from store time, carrying the original options.
@@ -696,7 +675,6 @@ export class AssetResidency {
       }
 
       this._evicted.add(key);
-      this._releaseDependencies(key);
       // A load that just settled may leave a resolved-but-not-yet-cleaned
       // in-flight entry (its `.finally` cleanup is a pending microtask). Drop it
       // so the reclaim's re-fetch starts fresh instead of deduping onto that
@@ -704,6 +682,30 @@ export class AssetResidency {
       // The reclaim's fresh entry is protected from this stale `.finally` by the
       // self-entry identity guard in `_trackInFlight`.
       this._inFlight.delete(key);
+
+      // Publish the new load cycle before calling user code, but keep the old
+      // payload available to its disposer. A synchronous reclaim must observe
+      // a fresh `.loaded`, and the subsequent evict must preserve that promise.
+      for (const handle of handles) {
+        adapter.begin(handle);
+      }
+
+      this._dropQueuedBackground(key);
+      this._disposeResource(asset, stored);
+
+      // Snapshot membership above: handles adopted during disposal already
+      // belong to the replacement and must not be torn down by this eviction.
+      for (const handle of handles) {
+        adapter.evict(handle);
+      }
+
+      // Reentry may have installed a new dependency scope and in-flight fetch.
+      // Release only the old scope, without touching the replacement's maps.
+      if (dependencies !== undefined) {
+        this._releaseScope(dependencies);
+      }
+
+      return;
     } else if (adapter === undefined && this._resources.has(key)) {
       // A value payload may legitimately BE `null`/`undefined` (a JSON `null`, a
       // nullish payload from a `bindAsset`-bound custom type), so this asks the
