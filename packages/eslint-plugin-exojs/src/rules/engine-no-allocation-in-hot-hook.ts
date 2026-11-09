@@ -19,10 +19,12 @@
 // a helper call, and it does not try: the hooks it covers are short by design,
 // and the escape hatch for a genuinely allocation-free helper is that the
 // helper is not this hook.
+// Nested functions report their creation, but their parameters and bodies are
+// separate execution unless an ordinary synchronous inline call is recognized.
 import type { Rule } from 'eslint';
 import type { Node } from 'estree';
 
-import { type FunctionMember, memberFunction, staticKeyName, walk } from '../ast.js';
+import { type FunctionMember, memberFunction, staticKeyName } from '../ast.js';
 
 /** Array-returning calls common enough in this tree to be worth naming. */
 const DEFAULT_ALLOCATING_CALLS = [
@@ -46,6 +48,74 @@ const DEFAULT_ALLOCATING_CALLS = [
   '.toReversed',
   '.toSorted',
 ];
+
+/** Array/TypedArray methods whose first argument is a synchronous callback. */
+const SYNCHRONOUS_CALLBACK_METHODS = new Set([
+  'every',
+  'filter',
+  'find',
+  'findIndex',
+  'findLast',
+  'findLastIndex',
+  'flatMap',
+  'forEach',
+  'map',
+  'reduce',
+  'reduceRight',
+  'some',
+  'sort',
+  'toSorted',
+]);
+
+type NestedFunction = Extract<Node, { type: 'ArrowFunctionExpression' | 'FunctionExpression' | 'FunctionDeclaration' }>;
+
+const isFunction = (node: Node): node is NestedFunction =>
+  node.type === 'ArrowFunctionExpression' || node.type === 'FunctionExpression' || node.type === 'FunctionDeclaration';
+
+/** Syntactic call-site models only; receiver types and bindings are not resolved. */
+const executesInline = (fn: NestedFunction): boolean => {
+  if (fn.type === 'FunctionDeclaration' || fn.async || fn.generator) {
+    return false;
+  }
+
+  const parent = (fn as NestedFunction & Rule.NodeParentExtension).parent;
+
+  if (parent.type === 'CallExpression') {
+    if (parent.callee === fn) {
+      return true;
+    }
+
+    const callee = parent.callee;
+
+    if (callee.type !== 'MemberExpression' || callee.computed || callee.property.type !== 'Identifier') {
+      return false;
+    }
+
+    if (callee.object.type === 'Identifier' && callee.object.name === 'Array' && callee.property.name === 'from') {
+      return parent.arguments[1] === fn;
+    }
+
+    return parent.arguments[0] === fn && SYNCHRONOUS_CALLBACK_METHODS.has(callee.property.name);
+  }
+
+  if (parent.type === 'NewExpression') {
+    return parent.callee.type === 'Identifier' && parent.callee.name === 'Promise' && parent.arguments[0] === fn;
+  }
+
+  if (
+    parent.type === 'MemberExpression' &&
+    parent.object === fn &&
+    !parent.computed &&
+    parent.property.type === 'Identifier' &&
+    (parent.property.name === 'call' || parent.property.name === 'apply')
+  ) {
+    const call = parent.parent;
+
+    return call.type === 'CallExpression' && call.callee === parent;
+  }
+
+  return false;
+};
 
 /** Options for {@link engineNoAllocationInHotHook}. */
 export interface EngineNoAllocationInHotHookOptions {
@@ -117,6 +187,7 @@ export const engineNoAllocationInHotHook: Rule.RuleModule = {
           return 'a `new` expression';
         case 'ArrowFunctionExpression':
         case 'FunctionExpression':
+        case 'FunctionDeclaration':
           return 'a closure created per call';
         default: {
           const name = calleeName(node);
@@ -139,13 +210,31 @@ export const engineNoAllocationInHotHook: Rule.RuleModule = {
         return;
       }
 
-      for (const node of walk(fn.body)) {
+      const visit = (node: Node): void => {
         const what = allocationKind(node);
 
         if (what !== undefined) {
           context.report({ node, messageId: 'allocation', data: { hook, what } });
         }
-      }
+
+        if (isFunction(node) && !executesInline(node)) {
+          // Parameter defaults belong to invocation too. Pruning the whole
+          // function also keeps an inner IIFE behind an outer deferred call.
+          return;
+        }
+
+        for (const key of context.sourceCode.visitorKeys[node.type] ?? []) {
+          const value = (node as unknown as Record<string, unknown>)[key];
+
+          for (const child of Array.isArray(value) ? value : [value]) {
+            if (child !== null && typeof child === 'object' && typeof (child as Node).type === 'string') {
+              visit(child as Node);
+            }
+          }
+        }
+      };
+
+      visit(fn.body);
     };
 
     return {
