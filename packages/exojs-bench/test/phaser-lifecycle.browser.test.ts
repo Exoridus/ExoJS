@@ -59,6 +59,9 @@ describe('Phaser adapter lifecycle', () => {
         pendingInsertion: 0,
         pendingRemoval: 0,
         oldDestroyed: true,
+        textures: ['bench-pick'],
+        oldTexturesDestroyed: true,
+        oldSourcesReleased: true,
       });
       expect(result.queryResults).toHaveLength(100);
     }
@@ -73,7 +76,15 @@ describe('Phaser adapter lifecycle', () => {
       (globalThis as unknown as { phaserLifecycle: BrowserFixture }).phaserLifecycle.observeLeavingPicking(),
     );
 
-    expect(result).toEqual({ containers: 1, interactive: 0, pendingRemoval: 0, oldDestroyed: true, loopRunning: false });
+    expect(result).toMatchObject({ containers: 1, interactive: 0, pendingRemoval: 0, oldDestroyed: true, loopRunning: false });
+  }, 60_000);
+
+  test('leaving a picking scene releases its texture and GPU source', async () => {
+    const result = await page.evaluate(() =>
+      (globalThis as unknown as { phaserLifecycle: BrowserFixture }).phaserLifecycle.observeLeavingPicking(),
+    );
+
+    expect(result).toMatchObject({ pickingTexturePresent: false, textureDestroyed: true, sourceReleased: true });
   }, 60_000);
 
   test('successful initialization retains the context and can repeat after teardown', async () => {
@@ -101,6 +112,30 @@ describe('Phaser adapter lifecycle', () => {
       canvasConnected: true,
       recovered: true,
     });
+    expect(result.error).toMatch(/phaser.*(?:initializ|scene).*(?:timed out|timeout)/i);
+  }, 60_000);
+
+  test('a game that never reaches READY releases its partially booted resources before rejecting', async () => {
+    const result = await page.evaluate(() =>
+      (globalThis as unknown as { phaserLifecycle: BrowserFixture }).phaserLifecycle.observeNeverReadyGame(),
+    );
+
+    expect(result).toMatchObject({
+      initialization: 'rejected',
+      textureLoadReached: true,
+      sceneManagerWasBooted: false,
+      sourcesReleased: true,
+      texturesReleased: true,
+      rendererReleased: true,
+      inputReleased: true,
+      scaleReleased: true,
+      loopReleased: true,
+      gameListeners: 0,
+      canvasConnected: true,
+      recovered: true,
+      teardownError: '',
+    });
+    expect(result.sourceCount).toBeGreaterThan(0);
     expect(result.error).toMatch(/phaser.*(?:initializ|scene).*(?:timed out|timeout)/i);
   }, 60_000);
 });

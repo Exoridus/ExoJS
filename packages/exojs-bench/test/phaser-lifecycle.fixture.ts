@@ -36,6 +36,12 @@ const createHarness = () => {
 
   document.body.append(canvas);
 
+  const releaseCanvas = (): void => {
+    prototype.boot = boot;
+    canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context')?.loseContext();
+    canvas.remove();
+  };
+
   return {
     adapter,
     canvas,
@@ -47,11 +53,13 @@ const createHarness = () => {
       return state.game;
     },
     dispose(): void {
-      prototype.boot = boot;
-      adapter.teardown();
-      canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context')?.loseContext();
-      canvas.remove();
+      try {
+        adapter.teardown();
+      } finally {
+        releaseCanvas();
+      }
     },
+    releaseCanvas,
   };
 };
 
@@ -75,6 +83,8 @@ export const observeRepeatedPickingBuilds = async () => {
     };
 
     const oldObjects: Phaser.GameObjects.GameObject[] = [];
+    const oldTextures: Phaser.Textures.Texture[] = [];
+    const oldSources: Phaser.Textures.TextureSource[] = [];
     const observations = [];
 
     for (const count of [1590, 4, 0, 1590]) {
@@ -92,10 +102,17 @@ export const observeRepeatedPickingBuilds = async () => {
         pendingInsertion: input._pendingInsertion.length,
         pendingRemoval: input._pendingRemoval.length,
         oldDestroyed: oldObjects.every(object => object.scene === undefined && object.input == null),
+        textures: harness.game.textures.getTextureKeys(),
+        oldTexturesDestroyed: oldTextures.every(texture => texture.manager === null && texture.source.length === 0),
+        oldSourcesReleased: oldSources.every(source => source.glTexture === null && source.image === null),
         hits: adapter.pickHits!(),
         queryResults,
       });
       oldObjects.push(container, ...container.list);
+      const texture = harness.game.textures.get('bench-pick');
+
+      oldTextures.push(texture);
+      oldSources.push(...texture.source);
     }
 
     return observations;
@@ -116,6 +133,8 @@ export const observeLeavingPicking = async () => {
     adapter.buildScene(picking, 4, 0xc0ffee);
     const container = scene.children.getAt(0) as Phaser.GameObjects.Container;
     const previous = [container, ...container.list];
+    const texture = harness.game.textures.get('bench-pick');
+    const source = texture.source[0]!;
 
     adapter.buildScene({ ...picking, id: 'static-heavy', category: 'node-scaling', pointerQueriesPerFrame: 0 }, 3, 0xc0ffee);
     adapter.renderFrame();
@@ -125,6 +144,9 @@ export const observeLeavingPicking = async () => {
       interactive: input._list.length,
       pendingRemoval: input._pendingRemoval.length,
       oldDestroyed: previous.every(object => object.scene === undefined && object.input == null),
+      pickingTexturePresent: harness.game.textures.exists('bench-pick'),
+      textureDestroyed: texture.manager === null && texture.source.length === 0,
+      sourceReleased: source.glTexture === null && source.image === null,
       loopRunning: harness.game.loop.running,
     };
   } finally {
@@ -205,5 +227,81 @@ export const observeNeverCreatedScene = async () => {
     clearTimeout(timer);
     prototype.create = create;
     harness.dispose();
+  }
+};
+
+export const observeNeverReadyGame = async () => {
+  const harness = createHarness();
+  const prototype = Phaser.Textures.TextureManager.prototype as unknown as { updatePending(this: Phaser.Textures.TextureManager): void };
+  const updatePending = prototype.updatePending;
+  const sources: Phaser.Textures.TextureSource[] = [];
+  let textureLoadReached = false;
+  let sceneManagerWasBooted = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  // Keep the actual renderer, managers, default textures and DOM listeners;
+  // withhold only the readiness transition that starts scenes and the game loop.
+  prototype.updatePending = function (this: Phaser.Textures.TextureManager): void {
+    textureLoadReached = true;
+    sceneManagerWasBooted = this.game.scene.isBooted;
+    sources.length = 0;
+
+    for (const texture of Object.values(this.list)) {
+      sources.push(...texture.source);
+    }
+  };
+
+  try {
+    const initialized = harness.adapter.init(harness.canvas, 'webgl2').then(
+      () => ({ initialization: 'resolved', error: '' }),
+      (error: unknown) => ({ initialization: 'rejected', error: error instanceof Error ? error.message : String(error) }),
+    );
+    const result = await Promise.race([
+      initialized,
+      new Promise<{ initialization: string; error: string }>(resolve => {
+        timer = setTimeout(() => resolve({ initialization: 'pending', error: '' }), 11_000);
+      }),
+    ]);
+    const game = harness.game;
+    const beforeCleanup = {
+      ...result,
+      textureLoadReached,
+      sceneManagerWasBooted,
+      sourceCount: sources.length,
+      sourcesReleased: sources.every(source => source.glTexture === null && source.image === null),
+      texturesReleased: Object.keys(game.textures.list).length === 0,
+      rendererReleased: (game.renderer as Phaser.Renderer.WebGL.WebGLRenderer).gl === null,
+      inputReleased: game.input.canvas === null && game.input.mouse!.target === null,
+      scaleReleased: game.scale.canvas === null,
+      loopReleased: game.loop.game === null,
+      gameListeners: game.events.eventNames().length,
+      canvasConnected: harness.canvas.isConnected,
+    };
+
+    prototype.updatePending = updatePending;
+    let teardownError = '';
+    let recovered = false;
+
+    if (result.initialization === 'rejected' && beforeCleanup.inputReleased && beforeCleanup.rendererReleased) {
+      await harness.adapter.init(harness.canvas, 'webgl2');
+      harness.adapter.buildScene(picking, 4, 0xc0ffee);
+      harness.adapter.renderFrame();
+      recovered = !harness.game.loop.running;
+    }
+
+    try {
+      harness.adapter.teardown();
+      harness.adapter.teardown();
+    } catch (error) {
+      teardownError = error instanceof Error ? error.message : String(error);
+    }
+
+    return { ...beforeCleanup, recovered, teardownError };
+  } finally {
+    clearTimeout(timer);
+    prototype.updatePending = updatePending;
+    // The observations include teardown failures. Closing the test-owned canvas
+    // must not replace that evidence with a second early-destruction exception.
+    harness.releaseCanvas();
   }
 };
