@@ -12,10 +12,11 @@ From the repository root:
 pnpm bench:competitive --help
 pnpm bench:competitive --list
 pnpm bench:competitive --scenario=B03 --load=all --dry-run
-pnpm bench:competitive --mode=quick --scenario=B03 --software --out=run-smoke
+pnpm bench:competitive --mode=quick --software --out=run-smoke
 pnpm bench:competitive --mode=quick --scenario=B03 --capture --out=run-visual
-pnpm bench:competitive --scenario=B03 --engine=exojs,pixi,phaser --backend=webgl2 --out=run-dirty-cpu --machine="controlled desktop" --driver="record actual driver version" --power="AC, fixed performance policy" --background="idle, monitoring recorded"
-pnpm bench:competitive --scenario=B03 --engine=exojs,pixi --backend=webgpu --profile=gpu --out=run-dirty-gpu --machine="controlled desktop" --driver="record actual driver version" --power="AC, fixed performance policy" --background="idle, monitoring recorded"
+pnpm bench:competitive --mode=focused --scenario=B03 --engine=exojs,pixi,phaser --backend=webgl2 --out=run-dirty-cpu --machine="controlled desktop" --driver="record actual driver version" --power="AC, fixed performance policy" --background="idle, monitoring recorded"
+pnpm bench:competitive --mode=focused --scenario=B03 --engine=exojs,pixi --backend=webgpu --profile=gpu --out=run-dirty-gpu --machine="controlled desktop" --driver="record actual driver version" --power="AC, fixed performance policy" --background="idle, monitoring recorded"
+pnpm bench:competitive --mode=full --out=run-full
 pnpm bench:competitive --mode=deep --scenario=tilemap-edit --runs=7 --out=run-tile-profile
 pnpm bench:competitive --mode=long-run --engine=exojs --scenario=dirty-10,lifecycle-churn --cycles=100 --frames=600 --out=run-lifecycle
 pnpm bench:competitive --report=run-dirty-cpu/competitive.json --out=run-dirty-report
@@ -26,13 +27,17 @@ The root command delegates to the benchmark package, so relative paths resolve t
 
 `--scenario` accepts exact scenario IDs and Bxx groups; B03 expands to seven dirty rates. `--nodes` overrides the catalog load ladder explicitly. Invalid flags, unsupported scenario names and malformed budgets fail before browser startup. `--dry-run` prints the exact capability-gated cells and requested unsupported combinations. Phaser has no selected WebGPU arm. A selection with no runnable cells is not a successful measurement.
 
-| Mode                | Default acquisition                                                                          | Intended interpretation                                                                                      |
-| ------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `quick`             | One fresh process, 2 warmup frames, 5 measured frames, deep instrumentation                  | Functional smoke and separate visual capture; no performance claim. Software rendering is allowed only here. |
-| `standard`          | Seven fresh processes, 90 warmup frames and 300 measured frames per cell, CPU timing profile | Primary repeated CPU acquisition on controlled hardware.                                                     |
-| `deep`              | One process, 90 warmup frames, 300 measured frames, detailed instrumentation                 | Mechanism investigation; request multiple independent runs when comparing costs.                             |
-| `long-run`          | One process, 20 scene cycles per arm, 90 warmup and 600 measured frames per cycle            | Scene recreation, coarse heap trend and stability investigation; cycles are not independent repetitions.     |
-| Report / regression | Reads saved sessions, starts no browser                                                      | Reproducible descriptive analysis and comparison of compatible measured commits.                             |
+| Mode                | Default acquisition                                                                                      | Intended interpretation                                                                                      |
+| ------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `quick`             | One fresh process, three representative scenes, 2 warmup frames, 5 measured frames, CPU timing           | Functional smoke and separate visual capture; no performance claim. Software rendering is allowed only here. |
+| `focused`           | Explicit scenario selection, three fresh processes, 30 warmup frames and 120 measured frames, CPU timing | Targeted development; three repetitions are descriptive and do not support the comparison sign test.         |
+| `full`              | Complete catalog, seven fresh processes, 90 warmup frames and 300 measured frames, deep instrumentation  | Explicit complete campaign with GPU queries, API counters and heap observations.                             |
+| `standard`          | Seven fresh processes, 90 warmup frames and 300 measured frames per cell, CPU timing profile             | Primary repeated CPU acquisition on controlled hardware.                                                     |
+| `deep`              | One process, 90 warmup frames, 300 measured frames, detailed instrumentation                             | Mechanism investigation; request multiple independent runs when comparing costs.                             |
+| `long-run`          | One process, 20 scene cycles per arm, 90 warmup and 600 measured frames per cycle                        | Scene recreation, coarse heap trend and stability investigation; cycles are not independent repetitions.     |
+| Report / regression | Reads saved sessions, starts no browser                                                                  | Reproducible descriptive analysis and comparison of compatible measured commits.                             |
+
+Quick is the default mode and does not install graphics probes, collect heap samples or capture screenshots. Explicit `--profile=gpu` or `--profile=deep` enables detail instrumentation on any mode. Full retains the selected backend and load; request `--backend=webgl2,webgpu --load=all` for both backends and the complete load ladder. The explicit legacy `standard` and `deep` modes retain their sampling budgets.
 
 Frame counts are configurable. The wall-clock warmup duration and actual measured counts are recorded; a capped warmup or aborted cell cannot be admitted as a complete acquisition. Explicit sampling requests receive a bounded driver deadline that accommodates paced rendering down to 10 Hz, plus setup/collection allowance. A deadline failure states that scheduling, slow work and driver stalls have not been distinguished. It does not establish a GPU defect.
 

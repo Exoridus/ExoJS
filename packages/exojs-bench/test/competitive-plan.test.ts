@@ -4,13 +4,28 @@ import { competitiveMatrixOptions, competitivePlan, parseCompetitiveOptions } fr
 import { cellTimeoutMs, resolveMatrixCells } from '../src/rendering/driver';
 
 describe('competitive acquisition plan', () => {
+  test('defaults to a bounded CPU smoke and reserves detailed campaigns for explicit modes', () => {
+    const quick = parseCompetitiveOptions([]);
+    expect(quick.mode).toBe('quick');
+    expect(quick.profile).toBe('timing');
+    expect(quick.scenarios).toEqual(['dirty-0', 'dirty-100', 'lifecycle-churn']);
+    expect(quick.runs).toBe(1);
+    const focused = parseCompetitiveOptions(['--mode=focused', '--scenario=dirty-10']);
+    expect([focused.warmupFrames, focused.frames, focused.runs, focused.profile]).toEqual([30, 120, 3, 'timing']);
+    expect(() => parseCompetitiveOptions(['--mode=focused'])).toThrow(/scenario/);
+    const full = parseCompetitiveOptions(['--mode=full']);
+    expect([full.warmupFrames, full.frames, full.runs, full.profile]).toEqual([90, 300, 7, 'deep']);
+    expect(full.scenarios.length).toBeGreaterThan(quick.scenarios.length);
+    expect(parseCompetitiveOptions(['--mode=quick', '--profile=deep']).profile).toBe('deep');
+  });
+
   test('resolves B03 through the existing capability-gated matrix at identical loads', () => {
     const options = parseCompetitiveOptions(['--scenario=B03', '--backend=webgl2', '--load=low', '--mode=quick']);
     const cells = resolveMatrixCells(competitiveMatrixOptions(options, 0));
     expect(new Set(cells.map(cell => cell.archetype)).size).toBe(7);
     expect(new Set(cells.map(cell => cell.engine))).toEqual(new Set(['exojs', 'pixi', 'phaser']));
     expect(cells.every(cell => cell.nodeCount === 1000 && cell.timedFrames === 5 && cell.warmupFrames === 2)).toBe(true);
-    expect(cells.every(cell => cell.measurement?.profile === 'deep')).toBe(true);
+    expect(cells.every(cell => cell.measurement?.profile === 'timing')).toBe(true);
   });
 
   test('keeps requested unavailable engine/backend combinations visible in the plan', () => {

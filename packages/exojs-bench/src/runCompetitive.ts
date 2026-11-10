@@ -10,20 +10,21 @@ import { resolveMatrixCells } from './rendering/driver';
 const HELP = `Competitive rendering benchmark, using the existing ExoJS benchmark driver.
 
 pnpm bench:competitive --mode=quick --scenario=B03 --software
-pnpm bench:competitive --scenario=B03 --engine=exojs,pixi,phaser --backend=webgl2
-pnpm bench:competitive --scenario=B03 --backend=webgpu --profile=gpu
+pnpm bench:competitive --mode=focused --scenario=B03 --engine=exojs,pixi,phaser --backend=webgl2
+pnpm bench:competitive --mode=focused --scenario=B03 --backend=webgpu --profile=gpu
 pnpm bench:competitive --mode=deep --scenario=tilemap-edit --load=medium
 pnpm bench:competitive --mode=long-run --cycles=20 --engine=exojs
 pnpm bench:competitive --report=path/competitive.json --out=path/report
 pnpm bench:competitive --report=new/competitive.json --baseline=old/competitive.json --out=path/compare
 
---scenario  Comma-separated Bxx groups or exact archetype IDs; --list shows coverage.
---mode      quick | standard (default) | deep | long-run.
+--scenario  Comma-separated Bxx groups or exact archetype IDs; required for focused mode.
+            Quick defaults to dirty-0,dirty-100,lifecycle-churn; full uses the complete catalog.
+--mode      quick (default) | focused | full | standard | deep | long-run.
 --profile   timing | gpu | deep; separate acquisitions quantify instrumentation effects.
 --load      low | medium (default) | high | all. --nodes explicitly overrides loads.
---runs      Independent fresh-process repetitions; standard defaults to 7.
---frames    Timed frames per cell (default 300, quick 5, long-run 600; maximum 3000).
---warmup-frames  Discarded warmup frames (default 90, quick 2).
+--runs      Independent fresh-process repetitions; quick 1, focused 3, full/standard 7.
+--frames    Timed frames per cell (quick 5, focused 120, full/standard/deep 300, long-run 600; maximum 3000).
+--warmup-frames  Discarded warmup frames (quick 2, focused 30, otherwise 90).
 --cycles    Scene create/render/destroy cycles in one arm session (long-run only).
 --engine    exojs,pixi,phaser. --config selects current,retained,default,culled,webgl2.
 --backend   webgl2 (default) | webgpu | webgl2,webgpu.

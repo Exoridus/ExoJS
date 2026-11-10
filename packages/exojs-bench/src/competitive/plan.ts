@@ -11,7 +11,7 @@ import { computePlanHash, PLAN_REVISION, type RunPlan } from '../suite/plan';
 import { COMPETITIVE_GAPS, selectCompetitiveScenarios } from './catalog';
 
 export interface CompetitiveOptions {
-  readonly mode: 'quick' | 'standard' | 'deep' | 'long-run';
+  readonly mode: 'quick' | 'focused' | 'full' | 'standard' | 'deep' | 'long-run';
   readonly profile: MeasurementProfile;
   readonly engines: readonly string[];
   readonly configs: readonly string[];
@@ -67,7 +67,7 @@ const FLAGS = new Set([
   'background',
   'worker',
 ]);
-const MODES = ['quick', 'standard', 'deep', 'long-run'] as const;
+const MODES = ['quick', 'focused', 'full', 'standard', 'deep', 'long-run'] as const;
 
 const list = (name: string, value: string): string[] => {
   const values = value.split(',');
@@ -124,8 +124,12 @@ export const parseCompetitiveOptions = (argv: readonly string[]): CompetitiveOpt
     }
   }
 
-  const mode = oneOf('mode', args.get('mode') ?? 'standard', MODES);
-  const profile = oneOf('profile', args.get('profile') ?? (mode === 'standard' ? 'timing' : 'deep'), ['timing', 'gpu', 'deep'] as const);
+  const mode = oneOf('mode', args.get('mode') ?? 'quick', MODES);
+  const profile = oneOf('profile', args.get('profile') ?? (mode === 'deep' || mode === 'full' || mode === 'long-run' ? 'deep' : 'timing'), [
+    'timing',
+    'gpu',
+    'deep',
+  ] as const);
   const engines = list('engine', args.get('engine') ?? 'exojs,pixi,phaser');
 
   for (const engine of engines) {
@@ -141,7 +145,19 @@ export const parseCompetitiveOptions = (argv: readonly string[]): CompetitiveOpt
   const backends = list('backend', args.get('backend') ?? 'webgl2').map(backend =>
     oneOf('backend', backend, ['webgl2', 'webgpu'] as const),
   );
-  const defaultScenarios = mode === 'long-run' ? ['dirty-10', 'lifecycle-churn'] : undefined;
+
+  if (mode === 'focused' && !args.has('scenario')) {
+    throw new Error('--mode=focused requires an explicit --scenario selection.');
+  }
+
+  const defaultScenarios = {
+    quick: ['dirty-0', 'dirty-100', 'lifecycle-churn'],
+    focused: undefined,
+    full: undefined,
+    standard: undefined,
+    deep: undefined,
+    'long-run': ['dirty-10', 'lifecycle-churn'],
+  }[mode];
   const selected = args.has('scenario') ? list('scenario', args.get('scenario')!) : defaultScenarios;
   const scenarios = selectCompetitiveScenarios(selected).map(scenario => scenario.id);
   const cycles = boundedInteger('cycles', args.get('cycles') ?? (mode === 'long-run' ? '20' : '1'), 1000);
@@ -178,9 +194,21 @@ export const parseCompetitiveOptions = (argv: readonly string[]): CompetitiveOpt
     scenarios,
     load: oneOf('load', args.get('load') ?? (mode === 'quick' ? 'low' : 'medium'), ['low', 'medium', 'high', 'all'] as const),
     ...(args.has('nodes') && { nodes: list('nodes', args.get('nodes')!).map(value => boundedInteger('nodes', value, 1_000_000)) }),
-    frames: boundedInteger('frames', args.get('frames') ?? { quick: '5', standard: '300', deep: '300', 'long-run': '600' }[mode], 3000),
-    warmupFrames: boundedInteger('warmup-frames', args.get('warmup-frames') ?? (mode === 'quick' ? '2' : '90'), 10_000),
-    runs: boundedInteger('runs', args.get('runs') ?? (mode === 'standard' ? '7' : '1'), 100),
+    frames: boundedInteger(
+      'frames',
+      args.get('frames') ?? { quick: '5', focused: '120', full: '300', standard: '300', deep: '300', 'long-run': '600' }[mode],
+      3000,
+    ),
+    warmupFrames: boundedInteger(
+      'warmup-frames',
+      args.get('warmup-frames') ?? { quick: '2', focused: '30', full: '90', standard: '90', deep: '90', 'long-run': '90' }[mode],
+      10_000,
+    ),
+    runs: boundedInteger(
+      'runs',
+      args.get('runs') ?? { quick: '1', focused: '3', full: '7', standard: '7', deep: '1', 'long-run': '1' }[mode],
+      100,
+    ),
     cycles,
     out: args.get('out') ?? 'run-competitive',
     software: args.has('software'),
