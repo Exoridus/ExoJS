@@ -9,8 +9,6 @@ import { compareRunMedians, type FrameTimeSource, type RunComparison, type Sampl
 import type { CompetitiveRun, CompetitiveSession } from './types';
 
 type Qualification = 'NUMERICALLY_QUALIFIED' | 'UNQUALIFIED';
-type ObservedCell = CellResult & { readonly renderer?: { readonly backend: string | null; readonly adapter: string | null } };
-type ObservedTelemetry = CellTelemetry & { readonly structuralTotals?: Readonly<StructuralCounters> | null };
 
 export interface CompetitiveObservation {
   readonly runIndex: number;
@@ -217,7 +215,7 @@ const perFrame = <T extends object>(value: T | null, frames: number): T | null =
     ? null
     : (Object.fromEntries(Object.entries(value).map(([key, count]) => [key, Number(count) / frames])) as T);
 
-const rendererReason = (result: ObservedCell): string | null => {
+const rendererReason = (result: CellResult): string | null => {
   const renderer = result.renderer;
 
   if (renderer === undefined || renderer.adapter === null || renderer.backend === null) {
@@ -261,12 +259,12 @@ const provenanceIdentity = (stamp: Provenance): object => ({
 
 const inspectObservation = (
   run: CompetitiveRun,
-  result: ObservedCell,
+  result: CellResult,
   expected: CellSpec,
   session: CompetitiveSession,
 ): CompetitiveObservation => {
   const reasons: string[] = [];
-  const telemetry = result.telemetry as ObservedTelemetry | undefined;
+  const telemetry = result.telemetry;
   const cpu = safeSummary(telemetry?.cpuMs, 'CPU', reasons);
   const raf = safeSummary(telemetry?.rafMs, 'rAF cadence', reasons);
   const update = safeSummary(telemetry?.updateMs, 'update', reasons);

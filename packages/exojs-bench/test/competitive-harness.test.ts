@@ -50,6 +50,7 @@ describe('competitive harness acquisition', () => {
       getContext: vi.fn(() => {
         expect(rendered).toBe(7);
         expect(tornDown).toBe(false);
+
         return { getExtension: () => null, getParameter: () => 'test renderer' };
       }),
     } as unknown as HTMLCanvasElement;

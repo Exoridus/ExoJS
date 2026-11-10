@@ -26,6 +26,11 @@ test('all three adapters render the deterministic dirty controls and retain raw 
 
   for (const cell of result.results) {
     expect(cell.status).toBe('ok');
+    expect(cell.renderer?.backend).toBe('webgl2');
+    expect(cell.renderer?.adapter).toMatch(/swiftshader|llvmpipe|software/i);
+    expect(result.provenance[0]).toMatchObject({ adapter: cell.renderer!.adapter, software: true });
+    expect(result.provenance[0]!.adapterMismatch).toBeUndefined();
+    expect(result.provenance[0]!.adapterUnverified).toBeUndefined();
     expect(cell.telemetry?.cpuMs).toHaveLength(5);
     expect(cell.telemetry?.rafMs).toHaveLength(4);
     expect(cell.telemetry?.structuralTotals?.drawCalls).toBeGreaterThan(0);

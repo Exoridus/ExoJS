@@ -76,15 +76,16 @@ describe('Phaser adapter lifecycle', () => {
       (globalThis as unknown as { phaserLifecycle: BrowserFixture }).phaserLifecycle.observeLeavingPicking(),
     );
 
-    expect(result).toMatchObject({ containers: 1, interactive: 0, pendingRemoval: 0, oldDestroyed: true, loopRunning: false });
-  }, 60_000);
-
-  test('leaving a picking scene releases its texture and GPU source', async () => {
-    const result = await page.evaluate(() =>
-      (globalThis as unknown as { phaserLifecycle: BrowserFixture }).phaserLifecycle.observeLeavingPicking(),
-    );
-
-    expect(result).toMatchObject({ pickingTexturePresent: false, textureDestroyed: true, sourceReleased: true });
+    expect(result).toMatchObject({
+      containers: 1,
+      interactive: 0,
+      pendingRemoval: 0,
+      oldDestroyed: true,
+      loopRunning: false,
+      pickingTexturePresent: false,
+      textureDestroyed: true,
+      sourceReleased: true,
+    });
   }, 60_000);
 
   test('successful initialization retains the context and can repeat after teardown', async () => {
