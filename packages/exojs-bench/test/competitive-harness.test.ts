@@ -47,12 +47,15 @@ describe('competitive harness acquisition', () => {
     const canvas = {
       width: 1280,
       height: 720,
-      getContext: () => {
-        throw new Error('Timing mode must not inspect graphics contexts.');
-      },
+      getContext: vi.fn(() => {
+        expect(rendered).toBe(7);
+        expect(tornDown).toBe(false);
+        return { getExtension: () => null, getParameter: () => 'test renderer' };
+      }),
     } as unknown as HTMLCanvasElement;
     const result = await runCell(adapter, spec, canvas);
 
+    expect(canvas.getContext).toHaveBeenCalledTimes(1);
     expect(result.status).toBe('ok');
     expect(result.frameTimeSource).toBe('raf-cadence');
     expect(result.telemetry?.cpuMs).toHaveLength(5);
