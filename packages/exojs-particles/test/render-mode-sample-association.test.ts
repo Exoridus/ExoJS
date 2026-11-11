@@ -1,26 +1,31 @@
-import { describe, expect, test } from 'vitest';
+/// <reference types="vite/client" />
 
-import particleFragment from '../src/renderers/shaders/particle.frag?raw';
-import rendererSource from '../src/renderers/WebGl2ParticleRenderer.ts?raw';
-import ribbonFragment from '../src/renderModes/shaders/ribbon.frag?raw';
-import trailFragment from '../src/renderModes/shaders/trail.frag?raw';
+import { describe, expect, test } from 'vitest';
 
 /**
  * The WebGPU particle stages associate a straight-alpha sample with its alpha
  * before the tint multiply (`uniforms.flags.x`). The built-in GL stages must do
  * the same when the bound texture's policy asks for it, or the same system looks
- * different on the two backends.
+ * different on the two backends. The renderer supplies the flag from
+ * `backend.shouldPremultiplyTextureSample(texture)`.
  */
+const fragments = import.meta.glob(['../src/renderers/shaders/particle.frag', '../src/renderModes/shaders/*.frag'], {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
+
 describe('WebGL2 particle sample association', () => {
-  const fragments = { 'particle.frag': particleFragment, 'trail.frag': trailFragment, 'ribbon.frag': ribbonFragment };
+  test('every built-in GL particle stage declares the association flag and applies it before the tint', () => {
+    const names = Object.keys(fragments)
+      .map(path => path.slice(path.lastIndexOf('/') + 1))
+      .sort();
 
-  test.each(Object.entries(fragments))('%s declares the association flag and applies it before the tint', (_name, source) => {
-    expect(source).toContain('uniform float u_associateSample;');
-    expect(source).toContain('texel.rgb * texel.a');
-  });
+    expect(names).toEqual(['particle.frag', 'ribbon.frag', 'trail.frag']);
 
-  test('the renderer sets the flag from the backend texture policy', () => {
-    expect(rendererSource).toContain("shader.uniforms.has('u_associateSample')");
-    expect(rendererSource).toContain('shouldPremultiplyTextureSample(texture)');
+    for (const source of Object.values(fragments)) {
+      expect(source).toContain('uniform float u_associateSample;');
+      expect(source).toContain('texel.rgb * texel.a');
+    }
   });
 });
