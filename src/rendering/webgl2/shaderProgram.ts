@@ -270,6 +270,14 @@ export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: st
     },
 
     destroy: (shader: WebGl2Shader): void => {
+      // Deleting the current program only marks it for deletion. A temporary
+      // pass would capture that handle, finish deleting it when switching away,
+      // then try to restore it. sync() can bind outside the backend cache, so
+      // inspect the actual binding only at this ownership boundary.
+      if (program !== null && gl.getParameter(gl.CURRENT_PROGRAM) === program) {
+        gl.useProgram(null);
+      }
+
       gl.deleteShader(vertexShader);
       gl.deleteShader(fragmentShader);
       gl.deleteProgram(program);
