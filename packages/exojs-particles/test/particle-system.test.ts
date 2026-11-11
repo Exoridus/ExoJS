@@ -1,4 +1,4 @@
-import { Color, type Seconds, Texture, Time } from '@codexo/exojs';
+import { Color, type ReadonlyRectangle, Rectangle, type Seconds, Texture, Time } from '@codexo/exojs';
 
 import { BoxArea } from '../src/distributions/BoxArea';
 import { CircleArea } from '../src/distributions/CircleArea';
@@ -1032,4 +1032,25 @@ describe('emit()', () => {
     expect(() => stale.position.set(1, 2)).toThrow(/earlier emit/);
     expect(() => (stale.lifetime = 5)).toThrow(/earlier emit/);
   });
+
+  test('textureFrame is a read-only view of the system rectangle', () => {
+    const system = new ParticleSystem({ capacity: 1 });
+    const frame: ReadonlyRectangle = system.textureFrame;
+
+    expect(frame).toBe(system.textureFrame);
+
+    system.textureFrame = new Rectangle(0, 0, 8, 8);
+
+    expect(system.textureFrame.width).toBe(8);
+  });
 });
+
+/**
+ * `textureFrame` hands out the live rectangle the vertices, texcoords, bounds
+ * and GPU frame UVs are derived from, so writing through it would leave every
+ * derived cache stale. The setter copies and invalidates; only it may write.
+ */
+export const writeThroughTextureFrame = (system: ParticleSystem): void => {
+  // @ts-expect-error - the shared view cannot be written through
+  system.textureFrame.width = 1;
+};

@@ -1,7 +1,8 @@
-﻿/// <reference types="@webgpu/types" />
+/// <reference types="@webgpu/types" />
 
 import type { Seconds } from '@codexo/exojs';
 import type { Signal } from '@codexo/exojs';
+import type { ReadonlyRectangle } from '@codexo/exojs';
 import { Rectangle } from '@codexo/exojs';
 import { Drawable } from '@codexo/exojs';
 import { logger } from '@codexo/exojs';
@@ -348,11 +349,18 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     this.setTexture(texture);
   }
 
-  public get textureFrame(): Rectangle {
+  /**
+   * The region of the texture this system renders, shared with the system.
+   *
+   * Read-only: the setter copies and invalidates the vertex, texcoord, bounds
+   * and GPU frame-UV caches, so mutating the returned rectangle would leave
+   * every one of them stale.
+   */
+  public get textureFrame(): ReadonlyRectangle {
     return this._textureFrame;
   }
 
-  public set textureFrame(frame: Rectangle) {
+  public set textureFrame(frame: ReadonlyRectangle) {
     this.setTextureFrame(frame);
   }
 
@@ -526,8 +534,8 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     this._refreshGpuFrames();
   }
 
-  public setTextureFrame(frame: Rectangle): this {
-    this._textureFrame.copy(frame);
+  public setTextureFrame(frame: ReadonlyRectangle): this {
+    this._textureFrame.set(frame.x, frame.y, frame.width, frame.height);
     this._updateTexCoords = true;
     this._updateVertices = true;
 
