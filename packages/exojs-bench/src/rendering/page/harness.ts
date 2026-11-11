@@ -8,9 +8,12 @@ import { probeClock } from '../../shared/clock';
 import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
 import { createCpuTimer, median, percentile, shouldAbort } from '../../shared/timing';
 import { createExoJsAdapter } from '../adapters/exojs';
+import { attachWebGlApiMetrics, attachWebGpuApiMetrics, type DetailedApiProbe } from '../apiMetrics';
 import { ARCHETYPES } from '../archetypes';
 import type { CellResult, CellSpec, EngineAdapter, StructuralCounters } from '../EngineAdapter';
 import { attachWebGl2Probe, attachWebGpuProbe, type StructuralProbe } from '../structural';
+import type { HeapSample } from '../telemetry';
+import { readHeapBytes } from '../telemetry';
 import { expectedLayoutRects, isUiLayoutScene, layoutDigest } from '../uiLayout';
 import type { GpuFrameTimer } from './gpuFrameTimer';
 import {
@@ -23,6 +26,7 @@ import {
   WEBGPU_QUEUE_NOTE,
 } from './gpuFrameTimer';
 import { completedCellStatus, shouldRetainHeldScene, shouldTeardownAfterCell } from './holdPolicy';
+import { readCellRenderer } from './renderer';
 
 // Must run before any arm's `init` calls `requestDevice`; a top-level statement
 // in this entry module is the earliest such point. Previously a module-scope
@@ -56,10 +60,9 @@ const freshStageCanvas = (): HTMLCanvasElement => {
   // contexts pile up past the browser's live-context cap (~16) and a later cell's
   // init/renderFrame wedges indefinitely (the observed cell-87 freeze: the excalibur
   // arm's `engine.dispose()` drops references but never loses the GL context, so
-  // each excalibur cell leaked one). Force-lose the PREVIOUS cell's context here -
-  // one cell after it ran, so the driver's post-first-ok-cell provenance read
-  // (`readRendererInPage`) still finds a live context - which deterministically
-  // frees that context's GPU resources regardless of what the arm's teardown did.
+  // each excalibur cell leaked one). Force-lose the PREVIOUS cell's context here,
+  // after its identity was recorded, to deterministically free its GPU resources
+  // regardless of what the arm's teardown did.
   // webgl2 and webgl1 (Phaser renders WebGL1) are both handled; a webgpu cell has
   // no webgl context here and is skipped.
   if (previous instanceof HTMLCanvasElement) {
@@ -198,6 +201,16 @@ const attachProbes = (
   spec: CellSpec,
   canvas: HTMLCanvasElement,
 ): { probe: StructuralProbe; gpuTimer: GpuFrameTimer; structuralNote: string | null } => {
+  if (spec.measurement?.profile === 'timing') {
+    return {
+      probe: noopStructuralProbe,
+      gpuTimer: noopGpuTimer,
+      structuralNote: 'Graphics instrumentation disabled for primary CPU timing.',
+    };
+  }
+
+  const structuralEnabled = spec.measurement?.profile !== 'gpu';
+
   if (spec.backend === 'webgpu') {
     const device = adapter.gpuDevice?.() ?? null;
 
@@ -217,38 +230,37 @@ const attachProbes = (
       };
     }
 
-    return { probe: attachWebGpuProbe(device), gpuTimer: createWebGpuGpuTimer(device), structuralNote: null };
+    return {
+      probe: structuralEnabled ? attachWebGpuProbe(device) : noopStructuralProbe,
+      gpuTimer: createWebGpuGpuTimer(device),
+      structuralNote: structuralEnabled ? null : 'Structural instrumentation disabled for GPU profile.',
+    };
   }
 
   const gl = canvas.getContext('webgl2');
 
   if (gl === null) {
-    // The arm rendered through a plain WebGL context on this canvas, not a WebGL2
-    // one. The Phaser arm is measured as a stock Phaser 4 app: Phaser 4's
-    // WebGLRenderer creates a `'webgl'` (WebGL1) context by default
-    // (`canvas.getContext('webgl')`, WebGLRenderer.js:709), and once a `'webgl'`
-    // context owns the element `getContext('webgl2')` returns null. Degrade
-    // gracefully - the same policy as the WebGPU no-device path: keep the CPU
-    // timing and the rAF frame delta, skip the WebGL2 structural probe (and its
-    // zero-draw self-check, which the non-null `structuralNote` suppresses), and
-    // DISCLOSE why in the cell note. Never fabricate counters, never throw away
-    // the whole run over an arm's WebGL version. Init has already succeeded by
-    // here, so a live context exists; only a canvas with no graphics context at
-    // all is a real bug worth failing.
+    // A canvas already owned by WebGL1 cannot expose a WebGL2 context. Preserve
+    // CPU/cadence observations while explicitly withholding WebGL2 counters;
+    // backend labels alone cannot establish the context an adapter actually used.
     const gl1 = canvas.getContext('webgl');
 
     if (gl1 !== null) {
       return {
         probe: noopStructuralProbe,
         gpuTimer: noopGpuTimer,
-        structuralNote: `structural counters skipped: engine='${spec.engine}' config='${spec.config}' rendered through a WebGL context (Phaser 4 renders WebGL1 via getContext('webgl'), WebGLRenderer.js:709), so the WebGL2 draw-call probe cannot attach — draw/bind/upload structure is omitted for this arm (CPU + rAF frame timing kept)`,
+        structuralNote: `structural counters skipped: engine='${spec.engine}' config='${spec.config}' rendered through a WebGL1 context, so the WebGL2 draw-call probe cannot attach; draw/bind/upload structure is omitted for this arm (CPU + rAF frame timing kept)`,
       };
     }
 
     throw new Error('A WebGL2 context is required on the harness canvas.');
   }
 
-  return { probe: attachWebGl2Probe(gl), gpuTimer: createWebGl2GpuTimer(gl), structuralNote: null };
+  return {
+    probe: structuralEnabled ? attachWebGl2Probe(gl) : noopStructuralProbe,
+    gpuTimer: createWebGl2GpuTimer(gl),
+    structuralNote: structuralEnabled ? null : 'Structural instrumentation disabled for GPU profile.',
+  };
 };
 
 /**
@@ -279,8 +291,19 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
   }
 
   let probe: StructuralProbe | null = null;
+  let cellGpuTimer: GpuFrameTimer | null = null;
+  let detailedProbe: DetailedApiProbe | null = null;
   let completed = false;
   let exceeded = false;
+  const deep = spec.measurement?.profile === 'deep';
+  const heap: HeapSample[] = [];
+  const acquisitionStart = spec.measurement === undefined ? 0 : performance.now();
+
+  const recordHeap = (phase: HeapSample['phase'], frame: number): void => {
+    if (deep) {
+      heap.push({ phase, frame, elapsedMs: performance.now() - acquisitionStart, usedJSHeapBytes: readHeapBytes() });
+    }
+  };
 
   try {
     await adapter.init(canvas, spec.backend);
@@ -290,6 +313,20 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
     const timer = createCpuTimer();
 
     probe = attached.probe;
+    cellGpuTimer = gpuTimer;
+
+    if (deep) {
+      const device = spec.backend === 'webgpu' ? (adapter.gpuDevice?.() ?? null) : null;
+      const gl = spec.backend === 'webgl2' ? (canvas.getContext('webgl2') ?? canvas.getContext('webgl')) : null;
+
+      if (device !== null) {
+        detailedProbe = attachWebGpuApiMetrics(device);
+      } else if (gl !== null) {
+        detailedProbe = attachWebGlApiMetrics(gl);
+      }
+    }
+
+    recordHeap('before-scene', 0);
     adapter.buildScene(archetype, spec.nodeCount, SEED);
 
     // Cross-arm mutation determinism. The comparison across arms is valid
@@ -300,7 +337,8 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
     // differently (the exact failure the fairness contract warns about) fails
     // loudly HERE instead of silently producing an incomparable result. Arms that
     // do not report a signature (optional method) are skipped with a warning.
-    const expectedSignature = mutationSignature(selectMutationIndices(spec.nodeCount, archetype.mutationFraction, SEED));
+    const selectedMutationIndices = selectMutationIndices(spec.nodeCount, archetype.mutationFraction, SEED);
+    const expectedSignature = mutationSignature(selectedMutationIndices);
     const actualSignature = adapter.mutationSignature?.();
 
     if (actualSignature === undefined) {
@@ -318,10 +356,13 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
     // grinding through every warmupFrame, while a normal cell hits its full frame
     // budget long before the deadline.
     const warmupDeadline = performance.now() + WARMUP_BUDGET_MS;
+    const warmupStart = spec.measurement === undefined ? 0 : performance.now();
+    let completedWarmupFrames = 0;
 
     for (let frame = 0; frame < spec.warmupFrames; frame++) {
       adapter.mutate(frame);
       adapter.renderFrame();
+      completedWarmupFrames++;
 
       if (performance.now() >= warmupDeadline) {
         break;
@@ -340,9 +381,21 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
     // WebGL2 hardware query, the rAF-delta fallback) no-op here.
     await gpuTimer.drainSubmittedWork();
 
+    if (spec.measurement?.profile === 'timing' && spec.backend === 'webgpu') {
+      // No frame probe is installed in this profile, but synchronous warmup still queues GPU work.
+      await adapter.gpuDevice?.()?.queue.onSubmittedWorkDone();
+    }
+
+    const warmupElapsedMs = spec.measurement === undefined ? 0 : performance.now() - warmupStart;
+    recordHeap('after-warmup', 0);
+
     probe.reset();
+    detailedProbe?.reset();
 
     const rafDeltasMs: number[] = [];
+    const updateMs: number[] = [];
+    const submissionMs: number[] = [];
+    const measurementStart = performance.now();
     // Set to the human-readable reason the moment the cell aborts, so the two
     // abort paths (single-frame hard cap vs. sustained-median) each explain
     // themselves precisely instead of the note being reconstructed after the fact.
@@ -368,12 +421,24 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
           // opening the query before it does not pollute the GPU sample.
           gpuTimer.beginFrame();
           timer.begin();
+          const updateStart = deep ? performance.now() : 0;
           adapter.mutate(frame);
+          const submissionStart = deep ? performance.now() : 0;
           adapter.renderFrame();
+          const submissionEnd = deep ? performance.now() : 0;
           timer.end();
           gpuTimer.endFrame();
 
+          if (deep) {
+            updateMs.push(submissionStart - updateStart);
+            submissionMs.push(submissionEnd - submissionStart);
+          }
+
           frame++;
+
+          if (deep && frame % 60 === 0) {
+            recordHeap('measurement', frame);
+          }
 
           const lastMs = timer.samples[timer.samples.length - 1]!;
 
@@ -415,6 +480,8 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
     });
 
     const measuredFrames = timer.samples.length;
+    const measurementElapsedMs = performance.now() - measurementStart;
+    recordHeap('after-measurement', measuredFrames);
 
     // Structural-probe self-check. The probe monkeypatches the live graphics
     // context AFTER engine init (the device/context does not exist earlier), so an
@@ -463,14 +530,22 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
 
     const { structural, note: unevenNote } = perFrameStructural(probe.counters, measuredFrames);
 
+    const api = detailedProbe === null ? null : { ...detailedProbe.counters };
+    const structuralTotals = structuralNote === null ? { ...probe.counters } : null;
+    detailedProbe?.detach();
     const gpuSamples = await gpuTimer.collect();
-    const gpuUsable = gpuTimer.available && gpuSamples.frameMs.length > 0;
+    const source = gpuSamples.timing?.source;
+    const gpuUsable =
+      gpuTimer.available &&
+      gpuSamples.frameMs.length > 0 &&
+      (source === 'webgl2-time-elapsed' || source === 'webgpu-render-pass-timestamps');
+    const cadenceSource = rafDeltasMs.length > 0 ? 'raf-cadence' : 'unavailable';
+    const frameTimeSource = gpuUsable ? source : cadenceSource;
     const frameSamplesMs = gpuUsable ? gpuSamples.frameMs : rafDeltasMs;
     const frameMsMedian = frameSamplesMs.length > 0 ? median(frameSamplesMs) : null;
     const frameMsP95 = frameSamplesMs.length > 0 ? percentile(frameSamplesMs, 95) : null;
-    // Second, backend-specific series: WebGPU's queue-occupancy upper bound. It
-    // is reported BESIDE the frame time, never as it - the two measure different
-    // things and only one of them (this one) can see `queue.writeBuffer` cost.
+    // Second, backend-specific series: WebGPU's CPU-observed queue completion interval. It
+    // includes backlog and callback scheduling; it does not isolate upload or GPU execution cost.
     const queueSamplesMs = gpuSamples.queueMs;
     const queueMsMedian = queueSamplesMs.length > 0 ? median(queueSamplesMs) : null;
     const queueMsP95 = queueSamplesMs.length > 0 ? percentile(queueSamplesMs, 95) : null;
@@ -489,6 +564,8 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
 
     const result: CellResult = {
       spec,
+      frameTimeSource,
+      renderer: readCellRenderer(adapter, canvas),
       cpuMsMedian: median(timer.samples),
       cpuMsP95: percentile(timer.samples, 95),
       frameMsMedian,
@@ -499,12 +576,38 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
       clock: pageClock(),
       status: exceeded ? 'exceeded' : 'ok',
       ...(note !== null && { note }),
+      ...(spec.measurement !== undefined && {
+        telemetry: {
+          schemaVersion: 1 as const,
+          profile: spec.measurement.profile,
+          frameTimeSource,
+          cpuMs: timer.samples,
+          updateMs: deep ? updateMs : null,
+          submissionMs: deep ? submissionMs : null,
+          rafMs: rafDeltasMs,
+          gpu: gpuSamples,
+          api,
+          structuralTotals,
+          heap,
+          warmup: { requestedFrames: spec.warmupFrames, completedFrames: completedWarmupFrames, elapsedMs: warmupElapsedMs },
+          measurementElapsedMs,
+          mutation: {
+            nominalFraction: archetype.mutationFraction,
+            selectedCount: selectedMutationIndices.length,
+            signature: expectedSignature,
+            verified: actualSignature === expectedSignature,
+          },
+          viewport: { width: canvas.width, height: canvas.height, dpr: globalThis.devicePixelRatio ?? 1 },
+        },
+      }),
     };
 
     completed = true;
 
     return result;
   } finally {
+    detailedProbe?.detach();
+    cellGpuTimer?.dispose?.();
     probe?.detach();
 
     // A held cell keeps its scene on the canvas so the driver can capture the
@@ -515,6 +618,7 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
     // captured, so it is torn down here rather than retained for nobody.
     if (shouldTeardownAfterCell(hold, completedCellStatus(completed, exceeded))) {
       adapter.teardown();
+      recordHeap('after-teardown', -1);
     }
   }
 };

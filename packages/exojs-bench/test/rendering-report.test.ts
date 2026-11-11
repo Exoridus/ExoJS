@@ -4,6 +4,7 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 
+import type { Provenance } from '../src/rendering/driver';
 import type { CellResult } from '../src/rendering/EngineAdapter';
 import { type ReportData, writeReport } from '../src/rendering/report';
 
@@ -70,5 +71,40 @@ describe('rendering report frame budget mark', () => {
 
     expect(md.split('\n').filter(line => line.startsWith('|'))).toHaveLength(3);
     expect(md).toContain('a b\\|c');
+  });
+
+  test('marks renderer disagreement and preserves each cell observation in the saved report', () => {
+    const results = [
+      { ...cell(1_000, 1), renderer: { backend: 'webgl2' as const, adapter: 'GPU A' } },
+      { ...cell(2_000, 1), renderer: { backend: 'webgl2' as const, adapter: 'GPU B' } },
+    ];
+    const provenance: Provenance = {
+      adapter: 'renderer disagreement: GPU A | GPU B',
+      backend: 'webgl2',
+      browser: 'chromium',
+      browserVersion: 'test',
+      os: 'linux',
+      platformVersion: { major: 13, source: 'declared', evidence: 'test' },
+      prerelease: { value: false, source: 'assumed-stable', evidence: 'test' },
+      flags: [],
+      headless: true,
+      software: false,
+      adapterMismatch: true,
+      clock: null,
+      engineVersion: 'test',
+      timestamp: '2026-11-09T00:00:00.000Z',
+    };
+
+    writeReport({ provenance: [provenance], libraries: [], results }, dir);
+
+    const saved = JSON.parse(readFileSync(join(dir, 'results.json'), 'utf8')) as ReportData;
+    const markdown = readFileSync(join(dir, 'results.md'), 'utf8');
+
+    expect(saved.results.map(result => result.renderer)).toEqual([
+      { backend: 'webgl2', adapter: 'GPU A' },
+      { backend: 'webgl2', adapter: 'GPU B' },
+    ]);
+    expect(markdown).toContain('RENDERER DISAGREEMENT OR BACKEND FALLBACK');
+    expect(markdown).toContain('UNTRUSTED (renderer disagreement or backend fallback)');
   });
 });

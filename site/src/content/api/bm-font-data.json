@@ -1,16 +1,16 @@
 {
   "title": "BmFontData",
-  "description": "Parsed representation of a BMFont (.fnt) descriptor.",
+  "description": "Parsed BMFont text or JSON descriptor. Glyph metrics and distance spans use atlas texels before BitmapText.fontScale.",
   "symbol": "BmFontData",
   "kind": "interface",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 5,
+  "memberCount": 10,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 5,
+    "properties": 10,
     "events": 0
   },
   "sections": [
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Parsed representation of a BMFont (.fnt) descriptor."
+        "Parsed BMFont text or JSON descriptor. Glyph metrics and distance spans use atlas texels before BitmapText.fontScale."
       ],
       "importLine": "import { BmFontData } from '@codexo/exojs'",
       "sourceLink": null
@@ -28,6 +28,56 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "atlasHeight",
+          "signature": "atlasHeight?: number",
+          "signatureTokens": [
+            {
+              "text": "atlasHeight",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Declared page height, or absent when the descriptor does not supply it."
+        },
+        {
+          "name": "atlasWidth",
+          "signature": "atlasWidth?: number",
+          "signatureTokens": [
+            {
+              "text": "atlasWidth",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Declared page width, or absent when the descriptor does not supply it."
+        },
         {
           "name": "base",
           "signature": "base: number",
@@ -89,6 +139,31 @@
           "params": [],
           "returnType": null,
           "description": "Code-point → glyph metrics."
+        },
+        {
+          "name": "distanceField",
+          "signature": "distanceField?: BmFontDistanceField",
+          "signatureTokens": [
+            {
+              "text": "distanceField",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BmFontDistanceField",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Declared distance encoding; absent for an undeclared or ordinary bitmap font."
         },
         {
           "name": "kernings",
@@ -153,6 +228,31 @@
           "description": "Full line height in font units."
         },
         {
+          "name": "padding",
+          "signature": "padding?: BmFontPadding",
+          "signatureTokens": [
+            {
+              "text": "padding",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BmFontPadding",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Authored borders, already included in glyph rectangles; absent means unknown."
+        },
+        {
           "name": "pages",
           "signature": "pages: string[]",
           "signatureTokens": [
@@ -176,6 +276,63 @@
           "params": [],
           "returnType": null,
           "description": "Texture file names for each atlas page (relative paths)."
+        },
+        {
+          "name": "spacing",
+          "signature": "spacing?: { x: number; y: number }",
+          "signatureTokens": [
+            {
+              "text": "spacing",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Declared horizontal/vertical spacing in atlas texels, separate from padding and distance range."
         }
       ],
       "paragraphs": [],

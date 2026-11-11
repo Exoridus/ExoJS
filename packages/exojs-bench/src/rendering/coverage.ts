@@ -40,9 +40,11 @@ import { isScrolling } from './world';
  * - UI layout: Phaser 4 ships no layout engine. `Actions.GridAlign` places
  *   objects once on a fixed raster and `GameObjects.Grid` draws one; neither
  *   re-solves a box when a child resizes.
+ * - Blend changes: the adapter does not apply the scene's blend-mode plateaus.
+ *   Keep these cells absent until a matching per-object path is implemented.
  */
 export const phaserCovers = (spec: ArchetypeSpec): boolean =>
-  !isScrolling(spec) && !usesRenderTargets(spec) && !isUiLayoutScene(spec) && !isLit(spec);
+  !isScrolling(spec) && !usesRenderTargets(spec) && !isUiLayoutScene(spec) && !isLit(spec) && (spec.blendModeCount ?? 1) <= 1;
 
 /**
  * Excalibur 0.32.

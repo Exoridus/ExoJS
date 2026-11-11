@@ -62,6 +62,41 @@ You can also hand the loaded face to the node directly through the `font` style 
 
 Text colours (`fillColor`, outline and shadow colours) are authored sRGB `Color` values, converted to linear light once like every other authored colour. Glyph coverage held in a signed-distance-field atlas is numeric data, not colour, and is never decoded; only colour glyphs rasterized through a canvas are colour. See [Colour pipeline](/ExoJS/en/guide/rendering/color-pipeline/).
 
+### Offline bitmap and distance fonts
+
+[`BitmapText`](/ExoJS/en/api/bitmap-text/) uses a loaded [`BmFont`](/ExoJS/en/api/bm-font/). The `bmFont` asset type accepts AngelCode BMFont text and the BMFont JSON shape emitted by [msdf-bmfont-xml](https://github.com/soimy/msdf-bmfont-xml). Request JSON explicitly as `bmFont`; ordinary `.json` assets keep their usual meaning.
+
+```ts
+import { Asset, BitmapText, type Loader } from '@codexo/exojs';
+
+declare const loader: Loader;
+const font = await loader.load(Asset.type('bmFont', 'fonts/ui.json'));
+const label = new BitmapText('Score: 0', font, { msdf: true });
+```
+
+The supported `distanceField` extension contains `fieldType` (`sdf`, `msdf` or `mtsdf`) and an optional `distanceRange`. It uses the symmetric `msdf-bmfont-xml` convention: the range is the **full span in atlas texels**, with zero distance encoded as 0.5. Range 4 represents approximately -2 through +2 texels; it is not a four-pixel outer radius. A missing range is retained as `null`. The equivalent text tag `distanceField fieldType=msdf distanceRange=4` is also supported, but it is not part of standard BMFont and some text exporters omit it.
+
+For missing or asymmetric encoding metadata, supply an explicit [`BmFontAssetOptions`](/ExoJS/en/api/bm-font-asset-options/) declaration. This replaces the descriptor's distance metadata for that request. For example, an increasing encoding covering -6 through +2 atlas texels has span 8 and zero at 0.75:
+
+```ts
+import { Asset, type Loader } from '@codexo/exojs';
+
+declare const loader: Loader;
+const font = await loader.load(Asset.type('bmFont', 'fonts/custom.fnt', {
+    distanceField: {
+        fieldType: 'mtsdf',
+        distanceRange: 8,
+        zeroDistanceValue: 0.75,
+    },
+}));
+```
+
+Both `distanceRange` and `zeroDistanceValue` accept `null` when unknown; an explicit declaration never infers a radius or assumes symmetry. For known values, signed distance in atlas texels is `(sample - zeroDistanceValue) * distanceRange`, positive inside the glyph. When converting [msdf-atlas-gen metadata](https://github.com/Chlumsky/msdf-atlas-gen), its `distanceRangeMiddle` is a distance, so the normalized zero is `0.5 - distanceRangeMiddle / distanceRange`. Native `msdf-atlas-gen` JSON uses different glyph geometry and is not directly imported; convert its geometry to BMFont metrics first or construct `BmFontData` yourself. PSDF, XML and binary BMFont are not supported by this importer.
+
+Declared distance pages use numeric texture decoding, including the independent alpha distance channel of MTSDF. They are loaded without color conversion or premultiplication; an environment without numeric image decoding reports an error. Ordinary bitmap and color fonts keep the color decoder and its image-element fallback. Fonts sharing a page URL retain separate numeric and color interpretations, and pages remain owned by their font's asset dependency scope.
+
+Read the preserved encoding from `font.fontData.distanceField`. `padding` follows top/right/bottom/left order, `spacing` is separate, `atlasWidth`/`atlasHeight` retain declared dimensions, and each glyph retains its sampled rectangle and optional channel mask. Missing values remain absent. These describe authored data, not a guaranteed effect budget or an inferred larger packing cell. `BitmapText.fontScale` scales glyph metrics; it does not rewrite atlas-texel metadata. The construction-time `msdf` switch remains explicit, and these metadata do not change `TextStyle` units, select a new scalar SDF/MTSDF shader, or make the current shaders consume an asymmetric zero value.
+
 ## Style properties
 
 The visual appearance comes from [`TextStyleOptions`](/ExoJS/en/api/text-style-options/). All properties are optional:

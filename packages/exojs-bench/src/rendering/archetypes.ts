@@ -28,6 +28,10 @@ const TEXT_COUNTS = [200, 1_000, 5_000] as const;
  */
 const DYNAMIC_ALL_COUNTS = [1_000, 10_000, 100_000] as const;
 
+/** Common load ladder for the flat scene's dirty-rate sweep. */
+const DIRTY_RATE_COUNTS = [1_000, 10_000, 25_000] as const;
+const DIRTY_RATES = [0, 1, 10, 25, 50, 75, 100] as const;
+
 /**
  * Layer counts for `fill-layers`. The load is full-screen layers, not scene
  * nodes, so the ladder is three steps of a few dozen rather than thousands: 8 is
@@ -211,6 +215,20 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     mutationFraction: 1,
     cullingEnabled: false,
   },
+  // Keep the scene flat and change only the nominal mutation probability. The
+  // canonical selector uses one seeded threshold draw per leaf, so lower rates
+  // select subsets of higher rates while the realized count can differ from
+  // nodeCount * rate. These IDs preserve the older nested workload definitions.
+  ...DIRTY_RATES.map((rate): ArchetypeSpec => ({
+    id: `dirty-${rate}`,
+    category: 'node-scaling',
+    crossArm: true,
+    nodeCounts: DIRTY_RATE_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: rate / 100,
+    cullingEnabled: false,
+  })),
   {
     id: 'deep-hierarchy',
     category: 'node-scaling',

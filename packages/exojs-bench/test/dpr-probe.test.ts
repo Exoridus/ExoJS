@@ -29,6 +29,7 @@ describe('WebGL GPU timer', () => {
   test('reports a frame when query allocation fails', async () => {
     const gl = {
       getExtension: () => ({ TIME_ELAPSED_EXT: 3, GPU_DISJOINT_EXT: 4 }),
+      getParameter: () => false,
       createQuery: () => null,
     } as unknown as WebGL2RenderingContext;
     const timer = createWebGl2GpuTimer(gl);
@@ -46,6 +47,8 @@ describe('WebGL GPU timer', () => {
       createQuery: () => ({}),
       beginQuery: () => {},
       endQuery: () => {},
+      getParameter: () => false,
+      deleteQuery: () => {},
       getQueryParameter: () => {
         throw new Error('context lost');
       },
@@ -54,7 +57,11 @@ describe('WebGL GPU timer', () => {
 
     timer.beginFrame();
     timer.endFrame();
-    await expect(timer.collect()).resolves.toEqual({ frameMs: [], queueMs: [] });
+    await expect(timer.collect()).resolves.toMatchObject({
+      frameMs: [],
+      queueMs: [],
+      timing: { status: 'failed', attemptedFrames: 1, validFrames: 0, unresolvedFrames: 1 },
+    });
     expect(timer.note).toMatch(/failed/i);
   });
 
@@ -69,20 +76,29 @@ describe('WebGL GPU timer', () => {
       beginQuery: () => {},
       endQuery: () => {},
       getQueryParameter: (_query: unknown, name: number) => (name === 1 ? ready : 1_000_000),
-      getParameter: () => disjoint,
+      getParameter: () => {
+        const observed = disjoint;
+
+        disjoint = false;
+
+        return observed;
+      },
       deleteQuery: () => {},
     } as unknown as WebGL2RenderingContext;
     const timer = createWebGl2GpuTimer(gl);
 
     timer.beginFrame();
     timer.endFrame();
-    disjoint = true;
     timer.beginFrame();
+    disjoint = true;
     timer.endFrame();
     ready = false;
     timer.beginFrame();
     timer.endFrame();
-    expect((await timer.collect()).frameMs).toEqual([1]);
+    const samples = await timer.collect();
+
+    expect(samples.frameMs).toEqual([1]);
+    expect(samples.timing).toMatchObject({ attemptedFrames: 3, validFrames: 1, invalidFrames: 1, unresolvedFrames: 1 });
     expect(timer.note).toMatch(/disjoint/i);
     expect(timer.note).toMatch(/unresolved/i);
   });

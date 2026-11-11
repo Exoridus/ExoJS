@@ -1,0 +1,75 @@
+{
+  "title": "BmFontAssetOptions",
+  "description": "Options for loading an external BMFont descriptor.",
+  "symbol": "BmFontAssetOptions",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for loading an external BMFont descriptor."
+      ],
+      "importLine": "import { BmFontAssetOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "distanceField",
+          "signature": "distanceField?: BmFontDistanceField",
+          "signatureTokens": [
+            {
+              "text": "distanceField",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BmFontDistanceField",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Explicit encoding for exports with missing or different metadata. Replaces the complete descriptor declaration for this request without changing other consumers. Use null for an unknown range or zero value; no radius is inferred. Declared SDF/MSDF/MTSDF pages decode as numeric data."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/types/font.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/font.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/types/font.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/font.ts"
+}

@@ -1,3 +1,4 @@
+import { hardwareGpuMedian } from '../competitive/metrics';
 import { PHYSICS_ARCHETYPES } from '../physics/archetypes';
 import type { PhysicsCellResult } from '../physics/PhysicsAdapter';
 import { ARCHETYPES } from '../rendering/archetypes';
@@ -394,11 +395,11 @@ const buildBackend = (backend: Backend, results: readonly CellResult[]): Backend
             competitor: armLabel(arm),
             referenceMs: reference.cpuMsMedian,
             referenceP95Ms: reference.cpuMsP95,
-            referenceGpuMs: reference.frameMsMedian,
+            referenceGpuMs: hardwareGpuMedian(reference),
             referenceOverFrameBudget: exceedsFrameBudget(reference.cpuMsMedian),
             competitorMs: competitorCell.cpuMsMedian,
             competitorP95Ms: competitorCell.cpuMsP95,
-            competitorGpuMs: competitorCell.frameMsMedian,
+            competitorGpuMs: hardwareGpuMedian(competitorCell),
             competitorOverFrameBudget: exceedsFrameBudget(competitorCell.cpuMsMedian),
             verdict: compareMedians(reference.cpuMsMedian, competitorCell.cpuMsMedian),
             mechanism,
@@ -465,11 +466,11 @@ const buildBackend = (backend: Backend, results: readonly CellResult[]): Backend
           competitor: armLabel(arm),
           referenceMs: reference.cpuMsMedian,
           referenceP95Ms: reference.cpuMsP95,
-          referenceGpuMs: reference.frameMsMedian,
+          referenceGpuMs: hardwareGpuMedian(reference),
           referenceOverFrameBudget: exceedsFrameBudget(reference.cpuMsMedian),
           competitorMs: competitorCell.cpuMsMedian,
           competitorP95Ms: competitorCell.cpuMsP95,
-          competitorGpuMs: competitorCell.frameMsMedian,
+          competitorGpuMs: hardwareGpuMedian(competitorCell),
           competitorOverFrameBudget: exceedsFrameBudget(competitorCell.cpuMsMedian),
           verdict: compareMedians(reference.cpuMsMedian, competitorCell.cpuMsMedian),
           mechanism: null,

@@ -131,7 +131,7 @@ export { Spritesheet } from '#rendering/sprite/Spritesheet';
 export { AbstractText } from '#rendering/text/AbstractText';
 export type { BitmapTextOptions } from '#rendering/text/BitmapText';
 export { BitmapText, BmFontAdapter } from '#rendering/text/BitmapText';
-export type { BmFontChar, BmFontData } from '#rendering/text/BmFont';
+export type { BmFontChar, BmFontData, BmFontDistanceField, BmFontPadding } from '#rendering/text/BmFont';
 export { BmFont } from '#rendering/text/BmFont';
 export type { AtlasMode, AtlasPage } from '#rendering/text/GlyphAtlas';
 export { GlyphAtlas } from '#rendering/text/GlyphAtlas';
