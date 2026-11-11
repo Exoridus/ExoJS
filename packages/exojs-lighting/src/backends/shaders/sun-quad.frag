@@ -7,6 +7,7 @@ flat in vec3 v_toLight;
 flat in float v_shadowRow;
 flat in float v_softness;
 flat in float v_intensity;
+flat in float v_depthSpan;
 
 // One row per shadowed light. A directional light's row is linear rather than
 // polar: bin `i` is a strip across the light's direction, holding how far along
@@ -20,8 +21,8 @@ out vec4 fragColor;
 const int MAX_HALF = 10;
 /** Fraction of the strip range the widest penumbra spans. */
 const float MAX_PENUMBRA = 0.03;
-/** Tolerance, in the row's own units, that keeps an occluder out of its own shadow. */
-const float SHADOW_BIAS = 0.004;
+/** One world unit of clearance, normalized by the directional depth span. */
+const float SHADOW_BIAS_WORLD = 1.0;
 /** Kernel half-width, in strips, at zero softness. See `light-quad.frag`. */
 const float MIN_RADIUS = 1.5;
 
@@ -41,7 +42,7 @@ float depthAt(int strip, int bins, int row) {
  * `light-quad.frag` for why a strip is read as a coverage rather than as a
  * yes or no, and why the slope is the smaller of the two one-sided differences.
  */
-float coverageAt(float here, float previous, float next, float depth) {
+float coverageAt(float here, float previous, float next, float depth, float normalizedBias) {
     float rising = here - previous;
     float falling = next - here;
     // A slope only means something where the blocker distance runs the SAME
@@ -52,7 +53,7 @@ float coverageAt(float here, float previous, float next, float depth) {
     // it, the one place a blocker cannot reach.
     float slope = rising * falling <= 0.0 ? 0.0 : min(abs(rising), abs(falling));
 
-    return clamp(0.5 + (here + SHADOW_BIAS - depth) / max(slope, MIN_SLOPE), 0.0, 1.0);
+    return clamp(0.5 + (here + normalizedBias - depth) / max(slope, MIN_SLOPE), 0.0, 1.0);
 }
 
 float shadowTerm() {
@@ -60,6 +61,7 @@ float shadowTerm() {
         return 1.0;
     }
 
+    float normalizedBias = SHADOW_BIAS_WORLD / max(v_depthSpan, 1.0);
     int bins = textureSize(u_shadow, 0).x;
     int row = int(v_shadowRow);
     float radius = min(MIN_RADIUS + max(0.0, v_softness) * float(bins) * MAX_PENUMBRA, float(MAX_HALF));
@@ -85,7 +87,7 @@ float shadowTerm() {
         float weight = max(0.0, 1.0 - abs(float(strip) - center) / radius);
 
         if (weight > 0.0) {
-            lit += weight * coverageAt(here, previous, next, v_sun.y);
+            lit += weight * coverageAt(here, previous, next, v_sun.y, normalizedBias);
             total += weight;
         }
 
