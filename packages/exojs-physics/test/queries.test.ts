@@ -5,6 +5,7 @@ import type { Collider } from '../src/Collider';
 import type { RayHit } from '../src/index';
 import { BoxShape, CircleShape, PhysicsWorld, PolygonShape } from '../src/index';
 import { QueryEngine } from '../src/query/QueryEngine';
+import { type CollisionFilter, resolveFilterInto } from '../src/types';
 import { colliderAt } from './support';
 
 describe('queries', () => {
@@ -65,6 +66,16 @@ describe('queries', () => {
 
     world.forEachAabbHit({ minX: -10, minY: -10, maxX: 10, maxY: 10 }, undefined, c => visited.push(c));
     expect(visited).toEqual([a]);
+  });
+
+  it('forEachAabbHit normalises a filter into one reused record', () => {
+    const target: CollisionFilter = { category: 0, mask: 0, group: 0 };
+
+    expect(resolveFilterInto({ category: 4 }, target)).toBe(target);
+    expect(target).toEqual({ category: 4, mask: 0xffff, group: 0 });
+
+    expect(resolveFilterInto({ mask: 2 }, target)).toBe(target);
+    expect(target).toEqual({ category: 0x0001, mask: 2, group: 0 });
   });
 
   it('rayCast returns the nearest hit against a box with the entry normal', () => {

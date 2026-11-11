@@ -11,7 +11,7 @@ import { type SweepHit, sweepProxies } from '../collision/sweep';
 import type { PhysicsBody } from '../PhysicsBody';
 import type { AnyShape } from '../shapes/AnyShape';
 import type { ChainShape } from '../shapes/ChainShape';
-import { type CollisionFilter, defaultFilter, resolveFilter, shouldCollide } from '../types';
+import { type CollisionFilter, defaultFilter, resolveFilter, resolveFilterInto, shouldCollide } from '../types';
 import type { SpatialIndex } from './SpatialIndex';
 
 /** Reused sink for the closest-point primitives; queries run sequentially. */
@@ -164,6 +164,11 @@ export class QueryEngine {
   private readonly _scratchHitsForEach: Collider[] = [];
   /** Chains already reported by the running `forEachAabbHit`, so one chain is one callback. */
   private readonly _scratchSeenForEach: Collider[] = [];
+  /**
+   * `forEachAabbHit`'s normalised filter. Private to that method: its callback
+   * may issue other queries, which normalise into their own records.
+   */
+  private readonly _forEachFilter: CollisionFilter = { ...defaultFilter };
   private readonly _scratchAabb: AabbLike = createAabb();
   private readonly _castStart: CastProxy = createCastProxy();
   private readonly _castEnd: CastProxy = createCastProxy();
@@ -252,8 +257,8 @@ export class QueryEngine {
   }
 
   /**
-   * Invoke `callback` for each collider whose AABB overlaps `bounds`. Allocation-free
-   * when no filter is passed; a filter is normalised into one small object per call.
+   * Invoke `callback` for each collider whose AABB overlaps `bounds`. Allocation-free,
+   * including when a filter is supplied: it is normalised into one reused record.
    *
    * NOT re-entrant on itself: `callback` runs mid-traversal over a scratch
    * buffer dedicated to this method, so it may safely call `queryPoint`,
@@ -265,7 +270,7 @@ export class QueryEngine {
    * mirrors `DynamicAabbTree.query()`'s own non-reentrancy contract.
    */
   public forEachAabbHit(bounds: AabbLike, filter: QueryFilter | undefined, callback: (collider: Collider) => void): void {
-    const resolved = filter ? resolveFilter(filter) : null;
+    const resolved = filter ? resolveFilterInto(filter, this._forEachFilter) : null;
     const reported = this._scratchSeenForEach;
 
     reported.length = 0;
