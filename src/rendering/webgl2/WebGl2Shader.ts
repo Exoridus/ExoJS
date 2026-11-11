@@ -47,6 +47,7 @@ export class WebGl2Shader {
   private readonly _vertexSource: string;
   private readonly _fragmentSource: string;
   private _program: WebGl2ShaderProgram | null = null;
+  private _revision = 0;
 
   public constructor(vertexSource: string, fragmentSource: string) {
     this._vertexSource = vertexSource;
@@ -61,13 +62,31 @@ export class WebGl2Shader {
     return this._fragmentSource;
   }
 
+  /** Distinguishes new GPU connections behind the same cached descriptor. @internal */
+  public get _connectionRevision(): number {
+    return this._revision;
+  }
+
   /**
    * Attach a backend GPU program, compile/link it, and populate the attribute and uniform maps.
    * Must be called before {@link bind}, {@link sync}, or accessing {@link attributes}/{@link uniforms}.
    */
   public connect(program: WebGl2ShaderProgram): this {
-    this._program = program;
-    program.initialize(this);
+    if (this._program !== program) {
+      // The old runtime may call disconnect() during teardown, so finish it
+      // before publishing the replacement connection.
+      this.disconnect();
+      this._program = program;
+      this._revision++;
+    }
+
+    try {
+      program.initialize(this);
+    } catch (error) {
+      this.disconnect();
+
+      throw error;
+    }
 
     return this;
   }
@@ -80,6 +99,10 @@ export class WebGl2Shader {
     const program = this._program;
 
     this._program = null;
+
+    if (program !== null) {
+      this._revision++;
+    }
 
     try {
       program?.destroy(this);
