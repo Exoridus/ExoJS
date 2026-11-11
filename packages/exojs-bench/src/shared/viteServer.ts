@@ -1,6 +1,6 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { dirname, resolve } from 'node:path';
+import { dirname, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { srcConditions } from '@codexo/exojs-config/vitest';
@@ -71,11 +71,15 @@ const engineHashImports = () => ({
       return null;
     }
 
-    if (importer !== undefined && EXTENSION_SOURCE_ROOTS.some(root => resolve(importer).startsWith(root))) {
+    if (importer !== undefined && EXTENSION_SOURCE_ROOTS.some(root => resolve(importer).startsWith(`${root}${sep}`))) {
       return null;
     }
 
-    return `${resolve(ENGINE_SRC, source.slice(1))}.ts`;
+    const target = `${resolve(ENGINE_SRC, source.slice(1))}.ts`;
+
+    // Named package imports must reach the package's own imports map, and the
+    // engine wildcard must never claim missing files or paths outside src.
+    return target.startsWith(`${ENGINE_SRC}${sep}`) && statSync(target, { throwIfNoEntry: false })?.isFile() ? target : null;
   },
 });
 

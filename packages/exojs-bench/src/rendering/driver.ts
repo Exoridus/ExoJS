@@ -22,6 +22,7 @@ import {
   readOsRelease,
   readPlatformVersion,
 } from '../shared/provenance';
+import { createRng } from '../shared/rng';
 import { raceWithTimeout } from '../shared/timeout';
 import type { ViteDevServer } from '../shared/viteServer';
 import { readEngineVersion, RENDERING_LIBRARY_ARMS, startViteServer as startPageServer } from '../shared/viteServer';
@@ -32,6 +33,7 @@ import type { ArchetypeSpec, Backend, CellResult, CellSpec, EngineAdapter } from
 import { profileProvenance } from './profileProvenance';
 import type { MatrixSelection } from './selection';
 import { applyPlan, applySelection } from './selection';
+import type { MeasurementProfile } from './telemetry';
 import { isScrolling, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from './world';
 
 // Re-exported so the rendering barrel and the CLI keep importing the selection
@@ -91,6 +93,8 @@ export interface Provenance extends BaseProvenance {
    * is false.
    */
   readonly adapterUnverified?: boolean;
+  /** Observed renderer identities disagree, or a measured backend differs from the requested backend. */
+  readonly adapterMismatch?: boolean;
   /**
    * The clock grid the run's FIRST session observed; `null` where no session
    * opened, and on a CPU profile, which probes no clock.
@@ -304,9 +308,9 @@ export const startViteServer = async (version: string): Promise<ViteDevServer> =
  * ignores the attribute dictionary on every subsequent call - calling it here
  * before the engine's own `getContext('webgl2', { ...options, stencil: true })`
  * (see `WebGl2Backend.ts`) would silently give the engine a mismatched
- * context. `runBackend` therefore calls this only after
- * `__runBaselineMatrix` has returned, guaranteeing `#stage` already has the
- * real, correctly-attributed context.
+ * context. The CPU profile reads this after its measured frames and before
+ * disposing the live scene. Matrix cells record their own identity before
+ * teardown instead.
  */
 const readRendererInPage = async (page: import('playwright').Page): Promise<string> =>
   page.evaluate(() => {
@@ -424,6 +428,7 @@ export const readWebGpuAdapter = async (
  */
 const unavailableCell = (spec: CellSpec, note: string, clock: ClockReport | null = null): CellResult => ({
   spec,
+  frameTimeSource: 'unavailable',
   cpuMsMedian: 0,
   cpuMsP95: 0,
   frameMsMedian: null,
@@ -486,6 +491,10 @@ const runCellInPage = async (page: import('playwright').Page, spec: CellSpec, ho
  */
 const CELL_TIMEOUT_MS = 60_000;
 
+/** Allows explicitly requested paced samples at 10 Hz plus bounded setup/collection time. */
+export const cellTimeoutMs = (spec: CellSpec): number =>
+  spec.measurement === undefined ? CELL_TIMEOUT_MS : Math.max(CELL_TIMEOUT_MS, spec.timedFrames * 100 + 20_000);
+
 /** Sentinel returned by {@link runCellOrWedge} when a cell exceeds {@link CELL_TIMEOUT_MS}. */
 const CELL_WEDGED = Symbol('cell-wedged');
 
@@ -502,7 +511,7 @@ const CAPTURE_WEDGED = Symbol('capture-wedged');
 const runCellOrWedge = async (page: import('playwright').Page, spec: CellSpec, hold = false): Promise<CellResult | typeof CELL_WEDGED> => {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<typeof CELL_WEDGED>(resolvePromise => {
-    timer = setTimeout(() => resolvePromise(CELL_WEDGED), CELL_TIMEOUT_MS);
+    timer = setTimeout(() => resolvePromise(CELL_WEDGED), cellTimeoutMs(spec));
   });
 
   const run = runCellInPage(page, spec, hold).then(result => {
@@ -525,6 +534,38 @@ const runCellOrWedge = async (page: import('playwright').Page, spec: CellSpec, h
 /** File stem of one cell's captured frame - the cell's identity, safe for a file name. */
 const captureName = (cell: CellSpec): string => `${cell.backend}-${cell.archetype}-${String(cell.nodeCount)}-${cell.engine}-${cell.config}`;
 
+/** Summarize every measured context without lending the first arm's identity to the remaining arms. */
+const rendererProvenance = (
+  backend: Backend,
+  results: readonly CellResult[],
+  fallback: string,
+): Pick<Provenance, 'adapter' | 'software' | 'adapterUnverified' | 'adapterMismatch'> => {
+  const measured = results.filter(result => result.status !== 'unavailable');
+
+  if (measured.length === 0) {
+    return { adapter: fallback, software: false };
+  }
+
+  const identities = [...new Set(measured.map(result => result.renderer?.adapter).filter((value): value is string => !!value?.trim()))];
+  const incomplete = measured.some(result => !result.renderer?.adapter?.trim() || result.renderer.backend === null);
+  const fallbackBackends = [
+    ...new Set(measured.map(result => result.renderer?.backend).filter(value => value != null && value !== backend)),
+  ];
+  const mismatch = identities.length > 1 || fallbackBackends.length > 0;
+  const labels = [
+    ...(identities.length > 1 ? ['renderer disagreement'] : []),
+    ...(fallbackBackends.length > 0 ? [`backend fallback: requested ${backend}, observed ${fallbackBackends.join(', ')}`] : []),
+    ...(incomplete ? ['renderer identity incomplete'] : []),
+  ];
+
+  return {
+    adapter: [...labels, identities.join(' | ') || fallback].join(': '),
+    software: identities.some(isSoftwareRenderer),
+    ...(incomplete && { adapterUnverified: true }),
+    ...(mismatch && { adapterMismatch: true }),
+  };
+};
+
 /**
  * Runs one backend's cell list, isolating each arm in its OWN browser session and
  * each cell behind a wall-clock timeout. Invokes `onCellResult` after EACH cell so
@@ -539,8 +580,9 @@ const captureName = (cell: CellSpec): string => `${cell.backend}-${cell.archetyp
  * relaunched for remaining cells. Browser launch or page setup can still throw
  * outside that recovery boundary and abort the matrix run.
  *
- * For WebGPU the adapter identity is read once; a null or software adapter emits
- * every cell as `unavailable` rather than measuring a software rasterizer.
+ * WebGPU availability is checked in each browser session; a null or software
+ * adapter emits that session's cells as `unavailable`. The identity recorded
+ * for a measured cell comes from its actual device.
  */
 const runBackend = async (options: {
   baseUrl: string;
@@ -584,11 +626,8 @@ const runBackend = async (options: {
     onCellResult(result);
   };
 
-  // WebGL2 renderer string, captured from `#stage`'s OWN context the
-  // moment the FIRST ok cell has created it. `null` until then; a run with no ok
-  // cell keeps the `no-webgl2-context` provenance below. WebGPU adapter identity is
-  // read once and reused across every arm's session (same GPU, same flags).
-  let renderer: string | null = null;
+  // This probe decides WebGPU availability; measured identity comes from each
+  // cell's own device, since independently launched arms can select differently.
   let webgpuIdentity: WebGpuIdentity | null = null;
   // The first session's grid, kept for the backend's provenance line. It
   // describes the run's conditions and is NOT what qualifies a cell: each cell
@@ -625,7 +664,7 @@ const runBackend = async (options: {
         clock ??= sessionClock;
 
         if (backend === 'webgpu') {
-          webgpuIdentity ??= await readWebGpuAdapter(page, browserName);
+          webgpuIdentity = await readWebGpuAdapter(page, browserName);
 
           if (!webgpuIdentity.usable) {
             for (const cell of remaining) {
@@ -644,7 +683,7 @@ const runBackend = async (options: {
             collect(
               unavailableCell(
                 cell,
-                `cell wedged the browser (no result after ${CELL_TIMEOUT_MS}ms — a mid-frame GPU-driver stall the in-page guards cannot interrupt); isolated as unavailable, browser relaunched for the arm's remaining cells`,
+                `cell exceeded its wall-clock deadline (${cellTimeoutMs(cell)}ms); browser scheduling, driver stalls and slow work are not distinguished; isolated as unavailable, browser relaunched for the arm's remaining cells`,
                 sessionClock,
               ),
             );
@@ -672,8 +711,9 @@ const runBackend = async (options: {
             );
 
             if (shot === CAPTURE_WEDGED) {
-              relaunch = true;
-              break;
+              throw new Error(
+                `Screenshot capture timed out for ${captureName(cell)}; acquisition stopped with completed cell evidence preserved.`,
+              );
             }
           }
 
@@ -687,13 +727,10 @@ const runBackend = async (options: {
             );
 
             if (disposed === CAPTURE_WEDGED) {
-              relaunch = true;
-              break;
+              throw new Error(
+                `Held-scene disposal timed out for ${captureName(cell)}; acquisition stopped with completed cell evidence preserved.`,
+              );
             }
-          }
-
-          if (backend === 'webgl2' && renderer === null && outcome.status === 'ok') {
-            renderer = await readRendererInPage(page);
           }
 
           remaining = remaining.slice(1);
@@ -720,32 +757,26 @@ const runBackend = async (options: {
   const provenance: Provenance =
     backend === 'webgpu'
       ? {
-          adapter: webgpuIdentity?.adapter ?? 'no-webgpu-adapter',
+          ...rendererProvenance(backend, results, webgpuIdentity?.adapter ?? 'no-webgpu-adapter'),
           backend,
           ...platform,
           flags,
           headless: true,
           engineVersion,
           timestamp,
-          // False even for a software adapter: those cells are emitted `unavailable`
-          // (no timings), so nothing here is an untrusted number, and flipping the
-          // honesty bit would wrongly taint the WebGL2 timings. The software identity
-          // is preserved in `adapter` and each cell's note instead.
-          software: false,
           // Resolved sprite-batch slot tier for this adapter, so a slot-sensitive
           // archetype's measured code path is auditable per run. Omitted when no
           // adapter/limits were available (the cells are then `unavailable` anyway).
           ...(typeof webgpuIdentity?.slotTier === 'number' && { slotTier: webgpuIdentity.slotTier }),
         }
       : {
-          adapter: renderer ?? 'no-webgl2-context',
+          ...rendererProvenance(backend, results, 'no-webgl2-context'),
           backend,
           ...platform,
           flags,
           headless: true,
           engineVersion,
           timestamp,
-          software: renderer !== null && isSoftwareRenderer(renderer),
         };
 
   return { provenance, results };
@@ -1014,6 +1045,16 @@ export interface MatrixCellSelection {
   readonly filter?: Partial<CellSpec>;
   readonly selection?: MatrixSelection;
   readonly timedFramesOverride?: number;
+  readonly sampling?: MatrixSampling;
+}
+
+/** Explicit diagnostic acquisition budgets; repeated cycles share an arm session. */
+export interface MatrixSampling {
+  readonly profile: MeasurementProfile;
+  readonly timedFrames: number;
+  readonly warmupFrames: number;
+  readonly cycles: number;
+  readonly orderSeed: number;
 }
 
 /**
@@ -1030,6 +1071,38 @@ export const resolveMatrixCells = (options: MatrixCellSelection): CellSpec[] => 
   const planned = options.plan ? applyPlan(allCells, options.plan) : allCells;
   const filtered = options.filter ? applyFilter(planned, options.filter) : planned;
   const selected = options.selection ? applySelection(filtered, options.selection) : filtered;
+
+  if (options.sampling !== undefined) {
+    if (options.timedFramesOverride !== undefined) {
+      throw new Error('Use either sampling or timedFramesOverride, not both.');
+    }
+
+    const sampling = options.sampling;
+
+    if (
+      ![sampling.timedFrames, sampling.warmupFrames, sampling.cycles].every(value => Number.isSafeInteger(value) && value > 0) ||
+      !Number.isSafeInteger(sampling.orderSeed)
+    ) {
+      throw new Error('Sampling requires positive integer frame/cycle budgets and an integer order seed.');
+    }
+
+    const ordered = [...selected];
+    const random = createRng(sampling.orderSeed);
+
+    for (let index = ordered.length - 1; index > 0; index--) {
+      const other = Math.floor(random() * (index + 1));
+      [ordered[index], ordered[other]] = [ordered[other]!, ordered[index]!];
+    }
+
+    return Array.from({ length: sampling.cycles }, (_, cycle) =>
+      ordered.map(cell => ({
+        ...cell,
+        timedFrames: sampling.timedFrames,
+        warmupFrames: sampling.warmupFrames,
+        measurement: { profile: sampling.profile, cycle },
+      })),
+    ).flat();
+  }
 
   return options.timedFramesOverride === undefined
     ? selected
@@ -1085,6 +1158,8 @@ export const runMatrix = async (options: {
    * per-node-count frame budgets recorded in the report).
    */
   timedFramesOverride?: number;
+  /** Diagnostic sampling and ordering; never implicitly substituted for the reference plan. */
+  sampling?: MatrixSampling;
   /** Invoked once per completed cell, in order, for incremental checkpointing. */
   onCellResult?: CellResultSink;
   /**

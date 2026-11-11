@@ -190,18 +190,41 @@ const platformIdentity = (os: string, version: PlatformVersionStamp | undefined,
     prerelease?.value === true ? PRERELEASE_SEGMENT : 'shipping',
   ].join('-');
 
+/** Validate a recorded renderer before using it to identify a measured backend. */
+const rendererIdentity = (backend: string, observed: unknown): string => {
+  if (typeof observed !== 'string' || observed.trim().length === 0) {
+    throw new IncomparableRunsError('rendering', `Renderer identity is incomplete for ${backend}; no adapter was recorded.`);
+  }
+
+  const normalized = normalizeGpuAdapter(backend === 'webgpu' ? observed.replaceAll('/', ' ') : observed);
+  const unavailable = /^(?:no-webgl2-context|no-webgpu-adapter|webgpu-adapter|navigator\.gpu is undefined)\b/i.test(observed.trim());
+
+  if (
+    unavailable ||
+    !isIdentifyingPart(normalized) ||
+    ['webkit-webgl', 'mozilla', 'webgl', 'webgl2', 'unknown-renderer', 'unidentified-gpu'].includes(normalized)
+  ) {
+    throw new IncomparableRunsError(
+      'rendering',
+      `Renderer identity is unverified for ${backend}: '${observed}' does not identify a device.`,
+    );
+  }
+
+  // WebGPU joins vendor, architecture, device and description with slashes;
+  // the profile slug's WebGL model parser treats a slash as a driver tail.
+  return backend === 'webgpu' ? observed.trim().toLowerCase() : normalized;
+};
+
 /**
  * The machine and browser a rendering run belongs to.
  *
- * Built from exactly the parts that decide which published profile a run lands
- * in - the GPU the adapter string names, the operating system with its major
- * version, the browser engine - plus whether the platform was pre-release,
- * using the slug's own normalizations. Two runs may therefore pool precisely
- * when they would be written to one file, and a run that would land elsewhere
- * is rejected instead of quietly averaged into this one.
+ * Built from the GPU recorded for every measured backend, the operating system
+ * with its major version, the browser engine, and whether the platform was
+ * pre-release. A filename may use the most specific GPU stamp, but pooling must
+ * verify all backends rather than letting one stamp hide contradictory evidence.
  *
  * Deliberately tolerated, because these move between runs on one machine: the
- * timestamp; the driver, API and device-id tail of an adapter string
+ * timestamp; the driver, API and device-id tail of a WebGL adapter string
  * (`Direct3D11 vs_5_0 ps_5_0`, `(0x00002C05)`), which a driver update rewrites
  * without the GPU changing; and the operating system's patch level. The browser
  * patch version is tolerated too - the checkout pins the browser build, so it
@@ -212,15 +235,76 @@ const platformIdentity = (os: string, version: PlatformVersionStamp | undefined,
  * a beta platform and a run on the shipping one describe different platforms,
  * and pooling them would publish a stable-looking number half of which was not.
  *
- * One limit is inherent and cannot be closed here. Where the browser reports a
- * constant instead of the GPU, the slug names the machine after the CPU model,
- * which only the physics provenance carries; a rendering run therefore
- * identifies its machine no more precisely than that constant does, and two
- * such machines running the same operating system and browser are
- * indistinguishable to this check.
+ * Historical files without per-cell observations use their backend stamps.
+ * Every measured backend needs consistent identifying evidence; a privacy
+ * constant or absent stamp cannot establish that two runs used one machine.
  */
-const renderingMachine = (stamps: readonly Provenance[]): string => {
-  const gpu = stamps.map(stamp => normalizeGpuAdapter(stamp.adapter)).find(isIdentifyingPart) ?? 'unidentified-gpu';
+const renderingMachine = (run: ReportData): string => {
+  const stamps = run.provenance;
+
+  if (stamps.some(stamp => stamp.adapterUnverified === true)) {
+    throw new IncomparableRunsError('rendering', 'Renderer identity is incomplete: a backend is marked adapter-unverified.');
+  }
+
+  if (stamps.some(stamp => stamp.adapterMismatch === true)) {
+    throw new IncomparableRunsError('rendering', 'Renderer identities disagree or a backend fallback was observed.');
+  }
+
+  const measured = run.results.filter(result => result.status === 'ok');
+  const hasObservations = measured.some(result => result.renderer !== undefined);
+  const adapters: string[] = [];
+
+  if (hasObservations) {
+    for (const [backend, cells] of groupBy(measured, result => result.spec.backend)) {
+      if (cells.some(result => !result.renderer?.adapter?.trim() || result.renderer.backend === null)) {
+        throw new IncomparableRunsError(
+          'rendering',
+          `Renderer identity is incomplete for ${backend}; repeat the acquisition with every cell identified.`,
+        );
+      }
+
+      if (cells.some(result => result.renderer!.backend !== backend)) {
+        throw new IncomparableRunsError(
+          'rendering',
+          `Backend fallback was observed for ${backend}; requested and measured backends must agree.`,
+        );
+      }
+
+      const identities = [...new Set(cells.map(result => result.renderer!.adapter!))];
+
+      if (identities.length > 1) {
+        throw new IncomparableRunsError('rendering', `Renderer identities disagree for ${backend}: ${identities.join(' | ')}.`);
+      }
+
+      adapters.push(`${backend}: ${rendererIdentity(backend, identities[0]!)}`);
+    }
+  } else {
+    const byBackend = groupBy(stamps, stamp => stamp.backend);
+    const backends = new Set(measured.length > 0 ? measured.map(result => result.spec.backend) : stamps.map(stamp => stamp.backend));
+
+    if (backends.size === 0) {
+      throw new IncomparableRunsError('rendering', 'Renderer identity is incomplete: no backend provenance was recorded.');
+    }
+
+    for (const backend of backends) {
+      const backendStamps = byBackend.get(backend) ?? [];
+
+      if (backendStamps.length === 0) {
+        throw new IncomparableRunsError('rendering', `Renderer identity is incomplete for ${backend}; no backend stamp was recorded.`);
+      }
+
+      const identities = backendStamps.map(stamp => rendererIdentity(backend, stamp.adapter));
+      const observations = [...new Set(backendStamps.map(stamp => stamp.adapter.trim()))];
+
+      if (observations.length > 1) {
+        throw new IncomparableRunsError('rendering', `Renderer identities disagree for ${backend}: ${observations.join(' | ')}.`);
+      }
+
+      adapters.push(`${backend}: ${identities[0]!}`);
+    }
+  }
+
+  const gpu = adapters.sort().join('; ');
   const first = stamps[0];
 
   return [gpu, platformIdentity(first?.os ?? '', first?.platformVersion, first?.prerelease), first?.browser ?? 'unknown-browser'].join(
@@ -468,11 +552,7 @@ export const aggregateRenderingRuns = (runs: readonly ReportData[]): AggregatedR
     runs.map(run => run.plan),
     'rendering',
   );
-  requireSameMachine(
-    runs.map(run => renderingMachine(run.provenance)),
-    'machine or browser',
-    'rendering',
-  );
+  requireSameMachine(runs.map(renderingMachine), 'machine or browser', 'rendering');
   requireSameEngineVersion(
     runs.map(run => run.provenance.map(stamp => stamp.engineVersion)),
     'rendering',

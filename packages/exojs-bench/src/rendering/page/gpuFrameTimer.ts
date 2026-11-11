@@ -1,52 +1,54 @@
+import type { GpuFrameSamples, GpuTimingDiagnostics } from '../gpuTiming';
+
+export type { GpuFrameSamples, GpuTimingDiagnostics, GpuTimingSource } from '../gpuTiming';
+
 /**
  * Per-frame GPU-time sources shared by every page this package serves: the
  * Playwright-driven matrix harness (`page/harness.ts`) and the manual DPR probe
- * (`dpr-probe/page/probe.ts`). Extracted verbatim from the matrix harness so the
- * two pages cannot drift apart on what "GPU time" means or on which samples are
- * dropped as unmeasurable.
+ * (`dpr-probe/page/probe.ts`). Both pages share measurement scope and sample
+ * validity rules.
  */
 
 /** Note recorded on a cell whose full-frame time came from rAF cadence, not a GPU timer. */
 export const NO_GPU_TIMER_NOTE = 'frame time from rAF delta; no GPU timer';
 
 /**
- * Note recorded on a WebGPU cell whose frame time comes from hardware
+ * Note recorded on a WebGPU cell whose frame time comes from
  * `timestamp-query` writes around the frame's render passes.
  *
  * The exclusion is the load-bearing half: `queue.writeBuffer` is a QUEUE
  * operation, not a command-buffer command, so its device copy never sits inside
- * a render pass and no timestamp pair can bracket it. On an upload-heavy frame
- * that copy is the dominant GPU cost (measured: a 34.5MiB upload frame whose
- * render pass took 0.41ms occupied the queue for 26.7ms). `queueMs*` is the
- * column that sees it.
+ * a render pass. Render-pass timestamp intervals therefore exclude it.
  */
 export const WEBGPU_TIMESTAMP_NOTE =
-  "frame time from hardware timestamp-query around the frame's render passes (render-pass execution only — queue.writeBuffer upload copies are queue operations outside any pass and are NOT included; see queueMs* for a measure that does see them). Not comparable to the WebGL2 hardware query, which brackets the frame's whole GL command stream including uploads";
+  "frame time from WebGPU timestamp-query around the frame's render passes (render-pass execution only; queue.writeBuffer upload copies and commands outside render passes are not included). Not directly comparable to the WebGL2 elapsed query, which brackets the frame's GL command stream including uploads";
 
 /**
  * Note recorded on a WebGPU cell that could not obtain `timestamp-query`, so it
- * has no hardware GPU clock at all. The queue-completion wall clock is
- * deliberately NOT promoted into the gap: it is floored by completion-observation
- * latency (measured at 0.5ms when the frame presents, 3.2ms when it does not,
- * against 0.002ms of actual GPU work), so it cannot stand in for frame time.
+ * has no GPU query clock. Queue-completion observation is a different signal
+ * and cannot fill the missing execution-time sample.
  */
 export const WEBGPU_NO_TIMESTAMP_NOTE =
   'WebGPU device exposes no timestamp-query feature, so this backend has no hardware GPU clock here; frame time falls back to the rAF present cadence and queueMs* is reported separately';
 
 /**
  * Note recorded alongside every WebGPU cell's `queueMs*` pair, stating exactly
- * what that column is and - just as importantly - what its floor is.
+ * what that column observes and why it is not execution time.
  */
 export const WEBGPU_QUEUE_NOTE =
-  "queueMs* = queue occupancy attributed to the frame that caused it (doneAt − max(submitAt, previous doneAt)), from queue.onSubmittedWorkDone. It is an UPPER BOUND on the frame's queue work and carries a completion-observation floor of ~0.5ms (presenting frame) to ~3.2ms (non-presenting), so any value below ~4ms is dominated by observation latency rather than GPU work; read it for large events, never as a small-frame GPU time";
+  'queueMs* = CPU-observed queue-completion intervals (doneAt - max(submitAt, previous doneAt)), from queue.onSubmittedWorkDone. They include scheduling and completion-observation delays, can omit work completed before the observation starts, and do not bound individual frames when callbacks coalesce. They are not GPU execution time';
 
-/** Both series a GPU timer can produce for one cell. */
-export interface GpuFrameSamples {
-  /** Per-frame GPU time (ms) from a hardware clock. Empty when none was wired. */
-  readonly frameMs: readonly number[];
-  /** WebGPU only: per-frame queue-occupancy upper bound (ms). Empty on every other backend. */
-  readonly queueMs: readonly number[];
-}
+const timingStatus = (attempted: number, valid: number, failed: boolean): GpuTimingDiagnostics['status'] => {
+  if (failed) {
+    return 'failed';
+  }
+
+  if (valid === 0) {
+    return 'unavailable';
+  }
+
+  return valid === attempted ? 'complete' : 'partial';
+};
 
 /**
  * Per-frame GPU-time source. `available` is false for the inert fallback used
@@ -70,6 +72,8 @@ export interface GpuFrameTimer {
   endFrame(): void;
   /** Drain/await pending samples and return every series this timer gathered. */
   collect(): Promise<GpuFrameSamples>;
+  /** Release query resources and restore wrappers. Safe after collect or a failed frame. */
+  dispose?(): void;
 }
 
 /** GPU timer used when no timer extension/feature is available: contributes nothing, never fabricates a number. */
@@ -86,7 +90,21 @@ export const noopGpuTimer: GpuFrameTimer = {
     /* no GPU timer wired */
   },
   async collect(): Promise<GpuFrameSamples> {
-    return { frameMs: [], queueMs: [] };
+    return {
+      frameMs: [],
+      queueMs: [],
+      frameIndices: [],
+      queueFrameIndices: [],
+      timing: {
+        source: 'none',
+        status: 'unavailable',
+        attemptedFrames: 0,
+        validFrames: 0,
+        invalidFrames: 0,
+        unresolvedFrames: 0,
+        skippedFrames: 0,
+      },
+    };
   },
 };
 
@@ -96,13 +114,23 @@ interface DisjointTimerExtension {
   readonly GPU_DISJOINT_EXT: number;
 }
 
+const QUERY_POLL_INTERVAL_MS = 4;
+const QUERY_POLL_ATTEMPTS = 250;
+const MAX_PENDING_WEBGL_QUERIES = 128;
+
+/** Cleanup must not turn an unavailable optional timer into a failed CPU measurement. */
+const bestEffort = (operation: () => void): void => {
+  try {
+    operation();
+  } catch {
+    // Device/context loss may make resource cleanup fail too.
+  }
+};
+
 /**
- * A real GPU-time source backed by `EXT_disjoint_timer_query_webgl2` when the
- * context exposes it (browsers gate it behind privacy policy, so it is usually
- * absent - then this returns {@link noopGpuTimer} and the caller uses the rAF
- * delta). One `TIME_ELAPSED` query may be outstanding at a time, so each frame
- * opens a query, closes it, and drains any results that have since resolved;
- * unresolved queries are collected at the end. Every GL call is guarded: any
+ * GPU elapsed queries when `EXT_disjoint_timer_query_webgl2` is exposed.
+ * One `TIME_ELAPSED` query may be active at a time; unresolved queries remain
+ * pending without delaying the measured frame. Every GL call is guarded: any
  * failure disables the timer for the rest of the cell rather than throwing mid
  * frame, so a flaky extension never corrupts the primary CPU metric.
  */
@@ -121,36 +149,80 @@ export const createWebGl2GpuTimer = (gl: WebGL2RenderingContext): GpuFrameTimer 
 
   const timeElapsedTarget = extension.TIME_ELAPSED_EXT;
   const disjointParam = extension.GPU_DISJOINT_EXT;
-  const pending: WebGLQuery[] = [];
+  const pending: Array<{ query: WebGLQuery; frame: number }> = [];
   const samplesMs: number[] = [];
-  let active: WebGLQuery | null = null;
+  const frameIndices: number[] = [];
+  let active: { query: WebGLQuery; frame: number } | null = null;
   let failed = false;
+  let disposed = false;
+  let attemptedFrames = 0;
   let disjointCount = 0;
+  let invalidFrames = 0;
+  let unresolvedFrames = 0;
+  let skippedFrames = 0;
+
+  const discardPending = (): void => {
+    for (const { query } of pending.splice(0)) {
+      bestEffort(() => gl.deleteQuery(query));
+    }
+  };
+
+  const dispose = (): void => {
+    if (disposed) {
+      return;
+    }
+
+    disposed = true;
+
+    if (active !== null) {
+      const { query } = active;
+
+      bestEffort(() => gl.endQuery(timeElapsedTarget));
+      bestEffort(() => gl.deleteQuery(query));
+      active = null;
+      invalidFrames++;
+    }
+
+    unresolvedFrames += pending.length;
+    discardPending();
+  };
+
+  const fail = (): void => {
+    failed = true;
+    dispose();
+  };
 
   const drain = (): void => {
+    // GPU_DISJOINT_EXT describes the interval since the previous read. Reading
+    // it once per query would clear it after the first discarded result and
+    // incorrectly accept other queries from the same interrupted interval.
+    if (gl.getParameter(disjointParam) === true) {
+      disjointCount += pending.length;
+      invalidFrames += pending.length;
+      discardPending();
+
+      return;
+    }
+
     while (pending.length > 0) {
-      const query = pending[0]!;
+      const { query, frame } = pending[0]!;
       const ready = gl.getQueryParameter(query, gl.QUERY_RESULT_AVAILABLE) === true;
 
       if (!ready) {
         return;
       }
 
-      const disjoint = gl.getParameter(disjointParam) === true;
+      const elapsedNs = gl.getQueryParameter(query, gl.QUERY_RESULT) as unknown;
 
-      pending.shift();
-
-      // A disjoint interval means the GPU clock was interrupted (throttle, ctx
-      // switch); the result is meaningless, so drop it rather than record noise.
-      if (!disjoint) {
-        const elapsedNs = gl.getQueryParameter(query, gl.QUERY_RESULT) as number;
-
+      if (typeof elapsedNs === 'number' && Number.isFinite(elapsedNs) && elapsedNs > 0) {
         samplesMs.push(elapsedNs / 1e6);
+        frameIndices.push(frame);
       } else {
-        disjointCount++;
+        invalidFrames++;
       }
 
-      gl.deleteQuery(query);
+      pending.shift();
+      bestEffort(() => gl.deleteQuery(query));
     }
   };
 
@@ -163,8 +235,16 @@ export const createWebGl2GpuTimer = (gl: WebGL2RenderingContext): GpuFrameTimer 
         notes.push(`${String(disjointCount)} disjoint GPU frame(s) discarded`);
       }
 
-      if (pending.length > 0) {
-        notes.push(`${String(pending.length)} GPU frame(s) unresolved`);
+      if (unresolvedFrames > 0) {
+        notes.push(`${String(unresolvedFrames)} GPU frame(s) unresolved`);
+      }
+
+      if (invalidFrames > disjointCount) {
+        notes.push(`${String(invalidFrames - disjointCount)} GPU frame(s) invalid or below timer resolution`);
+      }
+
+      if (skippedFrames > 0) {
+        notes.push(`${String(skippedFrames)} GPU frame(s) skipped because the timer was unavailable or its query queue was full`);
       }
 
       if (failed) {
@@ -179,24 +259,40 @@ export const createWebGl2GpuTimer = (gl: WebGL2RenderingContext): GpuFrameTimer 
       // submitted during warmup. Nothing to wait for.
     },
     beginFrame(): void {
-      if (failed) {
+      const frame = attemptedFrames++;
+
+      if (failed || disposed) {
+        skippedFrames++;
+
         return;
       }
 
       try {
-        const query = gl.createQuery();
+        drain();
 
-        if (query === null) {
-          failed = true;
+        if (pending.length >= MAX_PENDING_WEBGL_QUERIES) {
+          skippedFrames++;
 
           return;
         }
 
-        active = query;
+        const query = gl.createQuery();
+
+        if (query === null) {
+          skippedFrames++;
+          fail();
+
+          return;
+        }
+
+        active = { query, frame };
         gl.beginQuery(timeElapsedTarget, query);
       } catch {
-        failed = true;
-        active = null;
+        if (active === null) {
+          skippedFrames++;
+        }
+
+        fail();
       }
     },
     endFrame(): void {
@@ -210,32 +306,54 @@ export const createWebGl2GpuTimer = (gl: WebGL2RenderingContext): GpuFrameTimer 
         active = null;
         drain();
       } catch {
-        failed = true;
+        fail();
       }
     },
     async collect(): Promise<GpuFrameSamples> {
-      // Results are near-certainly resolved once every timed frame has run;
-      // spin-drain with a hard cap so a stuck query can never hang the harness.
       if (!failed) {
         try {
-          for (let spins = 0; pending.length > 0 && spins < 10_000; spins++) {
+          for (let poll = 0; pending.length > 0 && poll < QUERY_POLL_ATTEMPTS; poll++) {
             drain();
+
+            if (pending.length > 0) {
+              // WebGL query availability cannot change until control returns
+              // to the event loop; a synchronous polling loop cannot progress.
+              await new Promise<void>(resolve => {
+                setTimeout(resolve, QUERY_POLL_INTERVAL_MS);
+              });
+            }
           }
         } catch {
-          failed = true;
+          fail();
         }
       }
 
-      return { frameMs: samplesMs, queueMs: [] };
+      dispose();
+
+      return {
+        frameMs: samplesMs,
+        queueMs: [],
+        frameIndices,
+        queueFrameIndices: [],
+        timing: {
+          source: 'webgl2-time-elapsed',
+          status: timingStatus(attemptedFrames, samplesMs.length, failed),
+          attemptedFrames,
+          validFrames: samplesMs.length,
+          invalidFrames,
+          unresolvedFrames,
+          skippedFrames,
+        },
+      };
     },
+    dispose,
   };
 };
 
 /**
- * Timestamp query slots one cell may consume. A render pass costs two, so this
- * covers 2048 passes across a timed window (120 frames × 17 passes). A cell that
- * exhausts it stops timestamping and says so in its note rather than reporting a
- * silently truncated series.
+ * Two slots per render pass, allocated once per window and never reused while
+ * in flight. Exhaustion skips every affected frame in full without blocking the
+ * measured path or reporting a partial pass sum.
  */
 const TIMESTAMP_QUERY_CAPACITY = 4096;
 
@@ -278,6 +396,25 @@ interface TimestampPass {
   readonly frame: number;
   readonly begin: number;
   readonly end: number;
+  submissions: number;
+  submittedFrame: number | null;
+}
+
+interface TimestampFrame {
+  readonly passes: TimestampPass[];
+  skipped: boolean;
+}
+
+interface TimestampCommands {
+  readonly passes: TimestampPass[];
+  unmeasuredPasses: boolean;
+}
+
+interface TimestampResult {
+  readonly frameMs: number[];
+  readonly frameIndices: number[];
+  readonly timing: GpuTimingDiagnostics;
+  readonly note: string | null;
 }
 
 /**
@@ -298,8 +435,10 @@ const createTimestampSource = (
   device: GPUDevice,
 ): {
   beginFrame(frame: number): void;
+  endFrame(): void;
   endWindow(): void;
-  collect(): Promise<{ frameMs: number[]; note: string | null }>;
+  collect(): Promise<TimestampResult>;
+  dispose(): void;
 } | null => {
   // `features` is mandatory on a real `GPUDevice`; the optional chain covers the
   // degrade path where an arm hands back an object that is not one.
@@ -307,22 +446,67 @@ const createTimestampSource = (
     return null;
   }
 
-  const querySet = device.createQuerySet({ type: 'timestamp', count: TIMESTAMP_QUERY_CAPACITY, label: 'bench:frame-timestamps' });
-  const resolveBuffer = device.createBuffer({
-    size: TIMESTAMP_QUERY_CAPACITY * 8,
-    usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC,
-    label: 'bench:timestamp-resolve',
-  });
-  const readBuffer = device.createBuffer({
-    size: TIMESTAMP_QUERY_CAPACITY * 8,
-    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-    label: 'bench:timestamp-readback',
-  });
-
-  const passes: TimestampPass[] = [];
+  const frames = new Map<number, TimestampFrame>();
+  const commandPasses = new WeakMap<GPUCommandBuffer, TimestampCommands>();
+  const restores: Array<() => void> = [];
+  const releases: Array<() => void> = [];
   let currentFrame = -1;
   let nextQuery = 0;
   let exhausted = false;
+  let conflictingQueries = false;
+  let disposed = false;
+  let collected: Promise<TimestampResult> | null = null;
+
+  const dispose = (): void => {
+    if (disposed) {
+      return;
+    }
+
+    disposed = true;
+    currentFrame = -1;
+
+    for (const restore of restores.splice(0).reverse()) {
+      bestEffort(restore);
+    }
+
+    for (const release of releases.splice(0).reverse()) {
+      bestEffort(release);
+    }
+  };
+
+  let resources: { querySet: GPUQuerySet; resolveBuffer: GPUBuffer; readBuffer: GPUBuffer };
+
+  try {
+    const querySet = device.createQuerySet({ type: 'timestamp', count: TIMESTAMP_QUERY_CAPACITY, label: 'bench:frame-timestamps' });
+
+    releases.push(() => querySet.destroy());
+
+    const resolveBuffer = device.createBuffer({
+      size: TIMESTAMP_QUERY_CAPACITY * 8,
+      usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC,
+      label: 'bench:timestamp-resolve',
+    });
+
+    releases.push(() => resolveBuffer.destroy());
+
+    const readBuffer = device.createBuffer({
+      size: TIMESTAMP_QUERY_CAPACITY * 8,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+      label: 'bench:timestamp-readback',
+    });
+
+    releases.push(
+      () => readBuffer.destroy(),
+      () => readBuffer.unmap(),
+    );
+    resources = { querySet, resolveBuffer, readBuffer };
+  } catch (error) {
+    dispose();
+
+    throw error;
+  }
+
+  const { querySet, resolveBuffer, readBuffer } = resources;
 
   const deviceRecord = device as unknown as Record<string, unknown>;
   const createEncoder = deviceRecord['createCommandEncoder'] as (
@@ -330,171 +514,262 @@ const createTimestampSource = (
     descriptor?: GPUCommandEncoderDescriptor,
   ) => GPUCommandEncoder;
 
-  deviceRecord['createCommandEncoder'] = function createCommandEncoder(
-    this: GPUDevice,
-    descriptor?: GPUCommandEncoderDescriptor,
-  ): GPUCommandEncoder {
+  const wrapEncoder = function createCommandEncoder(this: GPUDevice, descriptor?: GPUCommandEncoderDescriptor): GPUCommandEncoder {
     const encoder = createEncoder.call(this, descriptor);
     const encoderRecord = encoder as unknown as Record<string, unknown>;
     const beginPass = encoderRecord['beginRenderPass'] as (this: GPUCommandEncoder, d: GPURenderPassDescriptor) => GPURenderPassEncoder;
+    const finish = encoder.finish;
+    const commands: TimestampCommands = { passes: [], unmeasuredPasses: false };
 
-    // Every encoder is wrapped, not only the ones inside a timed frame: the
-    // engine REUSES one render-pass descriptor object, so a `timestampWrites`
-    // left on it by the last timed pass would silently follow the descriptor
-    // into warmup/teardown passes and overwrite query values already recorded.
-    // The wrapper therefore always writes the member - the injected pair inside
-    // the window, `undefined` outside it.
     encoderRecord['beginRenderPass'] = function beginRenderPass(
       this: GPUCommandEncoder,
       descriptorArg: GPURenderPassDescriptor,
     ): GPURenderPassEncoder {
-      // Written through an index signature: under `exactOptionalPropertyTypes`
-      // the generated WebGPU types reject assigning `undefined` to the member,
-      // which is exactly what clearing it requires.
-      const record = descriptorArg as unknown as Record<string, unknown>;
+      if (currentFrame < 0 || disposed) {
+        commands.unmeasuredPasses = true;
 
-      if (currentFrame < 0) {
-        record['timestampWrites'] = undefined;
-      } else if (nextQuery + 2 > TIMESTAMP_QUERY_CAPACITY) {
-        exhausted = true;
-        record['timestampWrites'] = undefined;
-      } else {
-        passes.push({ frame: currentFrame, begin: nextQuery, end: nextQuery + 1 });
-        record['timestampWrites'] = {
-          querySet,
-          beginningOfPassWriteIndex: nextQuery,
-          endOfPassWriteIndex: nextQuery + 1,
-        } satisfies GPURenderPassTimestampWrites;
-        nextQuery += 2;
+        return beginPass.call(this, descriptorArg);
       }
 
-      return beginPass.call(this, descriptorArg);
+      const frame = frames.get(currentFrame)!;
+
+      if (nextQuery + 2 > TIMESTAMP_QUERY_CAPACITY || descriptorArg.timestampWrites !== undefined) {
+        frame.skipped = true;
+        conflictingQueries ||= descriptorArg.timestampWrites !== undefined;
+        exhausted ||= nextQuery + 2 > TIMESTAMP_QUERY_CAPACITY;
+        commands.unmeasuredPasses = true;
+
+        return beginPass.call(this, descriptorArg);
+      }
+
+      const pass: TimestampPass = { frame: currentFrame, begin: nextQuery, end: nextQuery + 1, submissions: 0, submittedFrame: null };
+
+      frame.passes.push(pass);
+      commands.passes.push(pass);
+      nextQuery += 2;
+
+      // Descriptors may be reused or frozen. Mutating one would leak our query
+      // indices into later untimed passes or overwrite caller-owned queries.
+      return beginPass.call(this, {
+        ...descriptorArg,
+        timestampWrites: {
+          querySet,
+          beginningOfPassWriteIndex: pass.begin,
+          endOfPassWriteIndex: pass.end,
+        },
+      });
+    };
+
+    encoder.finish = function finishEncoder(this: GPUCommandEncoder, descriptorArg?: GPUCommandBufferDescriptor): GPUCommandBuffer {
+      const buffer = finish.call(this, descriptorArg);
+
+      commandPasses.set(buffer, commands);
+
+      return buffer;
     };
 
     return encoder;
   };
 
+  const submit = device.queue.submit;
+
+  const wrapSubmit = function submitCommands(this: GPUQueue, commandBuffers: Iterable<GPUCommandBuffer>): undefined {
+    const submitted = Array.isArray(commandBuffers) ? commandBuffers : [...commandBuffers];
+
+    submit.call(this, submitted);
+
+    for (const commandBuffer of submitted) {
+      const commands = commandPasses.get(commandBuffer);
+      const frame = frames.get(currentFrame);
+
+      if (frame !== undefined && (commands === undefined || commands.unmeasuredPasses)) {
+        frame.skipped = true;
+      }
+
+      for (const pass of commands?.passes ?? []) {
+        if (frame !== undefined && pass.frame !== currentFrame) {
+          frame.skipped = true;
+        }
+
+        pass.submissions++;
+        pass.submittedFrame = currentFrame;
+      }
+    }
+  };
+
+  try {
+    deviceRecord['createCommandEncoder'] = wrapEncoder;
+    restores.push(() => {
+      if (deviceRecord['createCommandEncoder'] === wrapEncoder) {
+        deviceRecord['createCommandEncoder'] = createEncoder;
+      }
+    });
+    device.queue.submit = wrapSubmit;
+    restores.push(() => {
+      if (device.queue.submit === wrapSubmit) {
+        device.queue.submit = submit;
+      }
+    });
+  } catch (error) {
+    dispose();
+
+    throw error;
+  }
+
+  const collect = async (): Promise<TimestampResult> => {
+    const frameMs: number[] = [];
+    const frameIndices: number[] = [];
+    const notes: string[] = [];
+    let invalidFrames = 0;
+    let skippedFrames = 0;
+    let unresolvedFrames = 0;
+    let failed = false;
+
+    try {
+      if (disposed) {
+        throw new Error('timestamp timer was disposed before collection');
+      }
+
+      let raw = new BigUint64Array(0);
+
+      if (nextQuery > 0) {
+        const encoder = createEncoder.call(device, { label: 'bench:timestamp-resolve-encoder' });
+
+        encoder.resolveQuerySet(querySet, 0, nextQuery, resolveBuffer, 0);
+        encoder.copyBufferToBuffer(resolveBuffer, 0, readBuffer, 0, nextQuery * 8);
+        device.queue.submit([encoder.finish()]);
+
+        await readBuffer.mapAsync(GPUMapMode.READ, 0, nextQuery * 8);
+
+        raw = BigUint64Array.from(new BigUint64Array(readBuffer.getMappedRange(0, nextQuery * 8)));
+        readBuffer.unmap();
+      }
+
+      for (const [frameIndex, frame] of frames) {
+        if (frame.skipped || frame.passes.length === 0) {
+          skippedFrames++;
+
+          continue;
+        }
+
+        let sumMs = 0;
+        let valid = true;
+
+        for (const pass of frame.passes) {
+          const begin = raw[pass.begin]!;
+          const end = raw[pass.end]!;
+
+          // Equal timestamps can be clock quantization, not a disjoint event.
+          // Either way, omitting that pass would bias the sum downward, so only
+          // a complete frame with positive, submitted pass intervals is usable.
+          if (pass.submissions !== 1 || pass.submittedFrame !== frameIndex || begin === 0n || end <= begin) {
+            valid = false;
+            break;
+          }
+
+          sumMs += Number(end - begin) / 1e6;
+        }
+
+        if (valid) {
+          frameIndices.push(frameIndex);
+          frameMs.push(sumMs);
+        } else {
+          invalidFrames++;
+        }
+      }
+    } catch (error) {
+      failed = true;
+      unresolvedFrames = frames.size;
+      notes.push(`timestamp timer failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      dispose();
+    }
+
+    if (exhausted) {
+      notes.push('timestamp query capacity exhausted; every affected frame was omitted in full');
+    }
+
+    if (conflictingQueries) {
+      notes.push('caller-owned timestamp queries preserved; affected frames were omitted');
+    }
+
+    if (invalidFrames > 0) {
+      notes.push(`${invalidFrames} GPU frame(s) discarded for incomplete, invalid or resolution-limited timestamp pairs`);
+    }
+
+    if (skippedFrames > 0) {
+      notes.push(`${skippedFrames} GPU frame(s) had no complete timestamp coverage`);
+    }
+
+    return {
+      frameMs,
+      frameIndices,
+      timing: {
+        source: 'webgpu-render-pass-timestamps',
+        status: timingStatus(frames.size, frameMs.length, failed),
+        attemptedFrames: frames.size,
+        validFrames: frameMs.length,
+        invalidFrames,
+        unresolvedFrames,
+        skippedFrames,
+      },
+      note: notes.length > 0 ? notes.join('; ') : null,
+    };
+  };
+
   return {
     beginFrame(frame: number): void {
       currentFrame = frame;
+      frames.set(frame, { passes: [], skipped: false });
+    },
+    endFrame(): void {
+      currentFrame = -1;
     },
     endWindow(): void {
       currentFrame = -1;
     },
-    async collect(): Promise<{ frameMs: number[]; note: string | null }> {
-      if (passes.length === 0) {
-        return { frameMs: [], note: 'no render pass was timestamped' };
-      }
+    collect(): Promise<TimestampResult> {
+      currentFrame = -1;
 
-      const resolved = nextQuery;
-      const encoder = createEncoder.call(device, { label: 'bench:timestamp-resolve-encoder' });
-
-      encoder.resolveQuerySet(querySet, 0, resolved, resolveBuffer, 0);
-      encoder.copyBufferToBuffer(resolveBuffer, 0, readBuffer, 0, resolved * 8);
-      device.queue.submit([encoder.finish()]);
-
-      await readBuffer.mapAsync(GPUMapMode.READ, 0, resolved * 8);
-
-      // Copied out of the mapped range: `unmap` invalidates the view.
-      const raw = BigUint64Array.from(new BigUint64Array(readBuffer.getMappedRange(0, resolved * 8)));
-
-      readBuffer.unmap();
-
-      // Sum the frame's passes: the GPU may execute them back to back or with
-      // gaps, and only the executed intervals are this frame's GPU work.
-      const perFrame = new Map<number, number>();
-      let dropped = 0;
-
-      for (const pass of passes) {
-        const begin = raw[pass.begin]!;
-        const end = raw[pass.end]!;
-
-        // An unavailable query resolves to zero; a non-increasing pair means the
-        // GPU clock was interrupted. Neither is a measurement - drop it rather
-        // than fold a bogus interval into the frame.
-        if (begin === 0n || end <= begin) {
-          dropped++;
-          continue;
-        }
-
-        perFrame.set(pass.frame, (perFrame.get(pass.frame) ?? 0) + Number(end - begin) / 1e6);
-      }
-
-      const notes: string[] = [];
-
-      if (exhausted) {
-        notes.push(`timestamp query set exhausted after ${passes.length} passes; later frames carry no GPU time`);
-      }
-
-      if (dropped > 0) {
-        notes.push(`${dropped} of ${passes.length} timestamp pairs were unavailable and were dropped`);
-      }
-
-      return {
-        frameMs: [...perFrame.entries()].sort((a, b) => a[0] - b[0]).map(([, value]) => value),
-        note: notes.length > 0 ? notes.join('; ') : null,
-      };
+      return (collected ??= collect());
     },
+    dispose,
   };
 };
 
-/**
- * WebGPU per-frame timing source.
- *
- * Reports TWO series, because no single WebGPU clock is both complete and
- * resolving:
- *
- * 1. `frameMs` - hardware `timestamp-query` around the frame's render passes.
- *    Exact and reproducible (a 1k / 10k / 100k / 1M sweep measured
- *    0.004 / 0.007 / 0.045 / 0.412ms with p95 == median to the third decimal),
- *    but it covers pass EXECUTION only: `queue.writeBuffer` is a queue operation
- *    outside every command buffer, so its device copy cannot be bracketed.
- * 2. `queueMs` - `queue.onSubmittedWorkDone` wall clock, with each frame charged
- *    only the interval after the PREVIOUS frame's observed completion
- *    (`doneAt − max(submitAt, previousDoneAt)`). This is the only signal that
- *    sees upload cost, and the only one that can surface a stall.
- *
- * Why `queueMs` is not the frame time, despite being the historical column: it is
- * floored by when the browser OBSERVES the completion, not by when the GPU
- * finished. Two control arms pin that down - a rAF-paced submit that clears the
- * canvas swapchain (2µs of GPU work) reports 0.50ms, and the identical clear into
- * an offscreen texture reports 3.18ms, because a present flushes the device and
- * nothing else does. Real engine frames land in both regimes, which is why the
- * old `frameMsMedian` was bimodal between ~0.6 and ~3.0ms run to run while the
- * GPU work behind it never changed.
- *
- * Why the attribution and not the raw `doneAt − submitAt`: completion is
- * CUMULATIVE, so a frame slow enough to bunch rAF callbacks makes the frames
- * submitted behind it resolve on its completion. Measured on a 1M-node cell, one
- * 26.7ms event was reported by three consecutive frames as 26.70 / 26.98 /
- * 24.65ms; the attribution reports 26.70 / 1.52 / 1.18, keeping the event on the
- * frame that caused it. The attributed value for a frame queued behind a big one
- * is a LOWER bound on its own work - strictly better than counting the big frame
- * again, and disclosed as such in {@link WEBGPU_QUEUE_NOTE}.
- */
+/** Render-pass query intervals and separate CPU-observed queue-completion intervals. */
 export const createWebGpuGpuTimer = (device: GPUDevice): GpuFrameTimer => {
-  const timestamps = createTimestampSource(device);
+  let timestamps: ReturnType<typeof createTimestampSource> = null;
+  let initializationFailure: string | null = null;
+
+  try {
+    timestamps = createTimestampSource(device);
+  } catch (error) {
+    initializationFailure = `timestamp timer initialization failed: ${error instanceof Error ? error.message : String(error)}`;
+  }
+
   const pending: Array<Promise<void>> = [];
   const completions: Array<{ submittedAt: number; doneAt: number } | undefined> = [];
   let frame = 0;
+  let queueFailures = 0;
   let collectNote: string | null = null;
 
   return {
     available: timestamps !== null,
     get note(): string | null {
-      const base = timestamps === null ? WEBGPU_NO_TIMESTAMP_NOTE : WEBGPU_TIMESTAMP_NOTE;
+      const base = initializationFailure ?? (timestamps === null ? WEBGPU_NO_TIMESTAMP_NOTE : WEBGPU_TIMESTAMP_NOTE);
+      const notes = [base, collectNote, queueFailures > 0 ? `${queueFailures} queue completion observation(s) failed` : null];
 
-      return collectNote === null ? base : `${base}; ${collectNote}`;
+      return notes.filter((note): note is string => note !== null).join('; ');
     },
     async drainSubmittedWork(): Promise<void> {
-      // The measurement boundary, and it still earns its place under the
-      // timestamp timer: a timestamp pair cannot inherit a backlog, but the
-      // `queueMs` series can - the first timed frame's cumulative
-      // `onSubmittedWorkDone` would otherwise resolve after warmup work it never
-      // did (measured: 128.3ms of backlog moved out of a 1M-node cell's window).
-      // It also opens the window on an idle GPU, so the first frames' passes do
-      // not execute against warmup contention.
-      await device.queue.onSubmittedWorkDone();
+      // The first cumulative completion observation must not inherit warmup
+      // backlog. This wait occurs outside the measured frame window.
+      try {
+        await device.queue.onSubmittedWorkDone();
+      } catch {
+        queueFailures++;
+      }
     },
     beginFrame(): void {
       // Opens BEFORE `renderFrame`, so every pass the frame encodes is inside
@@ -502,30 +777,39 @@ export const createWebGpuGpuTimer = (device: GPUDevice): GpuFrameTimer => {
       timestamps?.beginFrame(frame);
     },
     endFrame(): void {
+      timestamps?.endFrame();
+
       // renderFrame has already recorded AND submitted this frame's work.
       const submittedAt = performance.now();
       const index = frame++;
 
-      pending.push(
-        device.queue.onSubmittedWorkDone().then(() => {
-          completions[index] = { submittedAt, doneAt: performance.now() };
-        }),
-      );
+      try {
+        pending.push(
+          device.queue.onSubmittedWorkDone().then(
+            () => {
+              completions[index] = { submittedAt, doneAt: performance.now() };
+            },
+            () => {
+              queueFailures++;
+            },
+          ),
+        );
+      } catch {
+        queueFailures++;
+      }
     },
     async collect(): Promise<GpuFrameSamples> {
-      await Promise.all(pending);
-
       timestamps?.endWindow();
 
+      await Promise.all(pending);
+
       const queueMs: number[] = [];
+      const queueFrameIndices: number[] = [];
       let previousDone: number | null = null;
 
-      // Frame order, not completion order: the queue is FIFO, so frame i's
-      // completion cannot precede frame i-1's, and charging each frame only the
-      // interval past the previous completion partitions the queue's busy time
-      // without double-counting it. Clamped at zero so an out-of-order callback
-      // can never produce a negative sample.
-      for (const completion of completions) {
+      // Partition observed completion intervals without counting overlap twice.
+      // These callback times do not establish per-frame GPU execution bounds.
+      for (const [index, completion] of completions.entries()) {
         if (completion === undefined) {
           continue;
         }
@@ -533,18 +817,36 @@ export const createWebGpuGpuTimer = (device: GPUDevice): GpuFrameTimer => {
         const start = previousDone === null ? completion.submittedAt : Math.max(completion.submittedAt, previousDone);
 
         queueMs.push(Math.max(0, completion.doneAt - start));
+        queueFrameIndices.push(index);
         previousDone = completion.doneAt;
       }
 
       if (timestamps === null) {
-        return { frameMs: [], queueMs };
+        return {
+          frameMs: [],
+          queueMs,
+          frameIndices: [],
+          queueFrameIndices,
+          timing: {
+            source: initializationFailure === null ? 'none' : 'webgpu-render-pass-timestamps',
+            status: initializationFailure === null ? 'unavailable' : 'failed',
+            attemptedFrames: frame,
+            validFrames: 0,
+            invalidFrames: 0,
+            unresolvedFrames: 0,
+            skippedFrames: frame,
+          },
+        };
       }
 
       const resolved = await timestamps.collect();
 
       collectNote = resolved.note;
 
-      return { frameMs: resolved.frameMs, queueMs };
+      return { frameMs: resolved.frameMs, queueMs, frameIndices: resolved.frameIndices, queueFrameIndices, timing: resolved.timing };
+    },
+    dispose(): void {
+      timestamps?.dispose();
     },
   };
 };

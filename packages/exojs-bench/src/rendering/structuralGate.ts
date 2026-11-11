@@ -39,6 +39,13 @@ export const UNGUARDED_ARCHETYPES: Readonly<Partial<Record<ArchetypeId, string>>
     'its fill cost dominates the gate wall clock in software (stacked full-viewport quads are hundreds of millions of shaded pixels per frame) while its draw structure is a single call that static-heavy already guards',
   'fill-layers':
     'the same stacked full-viewport geometry as overdraw, and unguarded for the same reason: enormous fill in software, no draw structure static-heavy does not already guard',
+  'dirty-0': 'independent SwiftShader and hardware counter acquisition at the gate load is pending; no qualified baseline is recorded',
+  'dirty-1': 'independent SwiftShader and hardware counter acquisition at the gate load is pending; no qualified baseline is recorded',
+  'dirty-10': 'independent SwiftShader and hardware counter acquisition at the gate load is pending; no qualified baseline is recorded',
+  'dirty-25': 'independent SwiftShader and hardware counter acquisition at the gate load is pending; no qualified baseline is recorded',
+  'dirty-50': 'independent SwiftShader and hardware counter acquisition at the gate load is pending; no qualified baseline is recorded',
+  'dirty-75': 'independent SwiftShader and hardware counter acquisition at the gate load is pending; no qualified baseline is recorded',
+  'dirty-100': 'independent SwiftShader and hardware counter acquisition at the gate load is pending; no qualified baseline is recorded',
 };
 
 /** Identity of one guarded cell. */

@@ -83,6 +83,10 @@ const untrustedTimingMark = (data: ReportData): string => {
     return ` — ${UNVERIFIED_ADAPTER_MARK}`;
   }
 
+  if (data.provenance.some(entry => entry.adapterMismatch === true)) {
+    return ' — UNTRUSTED (renderer disagreement or backend fallback)';
+  }
+
   return '';
 };
 
@@ -211,6 +215,10 @@ const toMarkdown = (data: ReportData): string => {
 
     if (entry.adapterUnverified === true) {
       lines.push('', `**ADAPTER UNVERIFIED — TIMINGS NOT CONFIRMED HARDWARE FOR ${entry.backend}**`);
+    }
+
+    if (entry.adapterMismatch === true) {
+      lines.push('', `**RENDERER DISAGREEMENT OR BACKEND FALLBACK — TIMINGS NOT COMPARABLE FOR ${entry.backend}**`);
     }
 
     lines.push('');
