@@ -12,7 +12,14 @@ import { destroyFailedRead } from './deserializeOwnership';
 import type { DeserializeContext, SerializeContext } from './NodeSerializer';
 import { asObject, asSerializedNode } from './read';
 import { defaultSerializationRegistry, type SerializationRegistry } from './SerializationRegistry';
-import { SERIALIZATION_VERSION, type SerializedNode, type SerializedPrefab, type SerializedScene, type SerializeOptions } from './types';
+import {
+  type DeserializeOptions,
+  SERIALIZATION_VERSION,
+  type SerializedNode,
+  type SerializedPrefab,
+  type SerializedScene,
+  type SerializeOptions,
+} from './types';
 
 // Core serializers register lazily (not as an import side effect) so they
 // survive `sideEffects: false` tree-shaking: the registration is reachable
@@ -86,10 +93,12 @@ const createDeserializeContext = (
   version: number,
   registry: SerializationRegistry,
   provisional: SceneNode[],
+  policy: DeserializeOptions,
 ): DeserializeContext => {
   const ctx: DeserializeContext = {
     version,
     loader,
+    allowVideoSource: policy.allowVideoSource,
     readNode: data => readNodeWith(data, ctx, registry, provisional),
     resolveAsset: <T>(reference: unknown, type: AssetConstructor<T>): T | null => {
       const request = readAssetReference(reference);
@@ -197,9 +206,10 @@ const readWithOwnership = <T>(
   version: number,
   registry: SerializationRegistry,
   read: (ctx: DeserializeContext) => T,
+  options: DeserializeOptions = {},
 ): T => {
   const provisional: SceneNode[] = [];
-  const ctx = createDeserializeContext(loader, version, registry, provisional);
+  const ctx = createDeserializeContext(loader, version, registry, provisional, options);
 
   try {
     return read(ctx);
@@ -274,10 +284,11 @@ export const deserializeTree = (
   loader: Loader | null = null,
   registry: SerializationRegistry = defaultSerializationRegistry,
   version: number = SERIALIZATION_VERSION,
+  options: DeserializeOptions = {},
 ): SceneNode => {
   ensureCoreSerializers();
 
-  return readWithOwnership(loader, version, registry, ctx => ctx.readNode(data));
+  return readWithOwnership(loader, version, registry, ctx => ctx.readNode(data), options);
 };
 
 interface ContainerReadTarget {
@@ -290,33 +301,40 @@ const deserializeTargets = (
   loader: Loader | null,
   registry: SerializationRegistry,
   version: number,
+  options: DeserializeOptions,
 ): void => {
   ensureCoreSerializers();
 
-  const prepared = readWithOwnership(loader, version, registry, ctx => {
-    const childrenByTarget = targets.map(({ data }) => {
-      const nodes: RenderNode[] = [];
+  const prepared = readWithOwnership(
+    loader,
+    version,
+    registry,
+    ctx => {
+      const childrenByTarget = targets.map(({ data }) => {
+        const nodes: RenderNode[] = [];
 
-      if (Array.isArray(data.children)) {
-        for (const child of data.children) {
-          const childNode = asSerializedNode(child);
+        if (Array.isArray(data.children)) {
+          for (const child of data.children) {
+            const childNode = asSerializedNode(child);
 
-          if (childNode !== null) {
-            nodes.push(ctx.readNode(childNode) as RenderNode);
+            if (childNode !== null) {
+              nodes.push(ctx.readNode(childNode) as RenderNode);
+            }
           }
         }
-      }
 
-      return nodes;
-    });
+        return nodes;
+      });
 
-    // Lazy scene UI allocation happens only after every subtree has decoded.
-    return targets.map(({ container, data }, index) => ({
-      container: typeof container === 'function' ? container() : container,
-      data,
-      children: childrenByTarget[index]!,
-    }));
-  });
+      // Lazy scene UI allocation happens only after every subtree has decoded.
+      return targets.map(({ container, data }, index) => ({
+        container: typeof container === 'function' ? container() : container,
+        data,
+        children: childrenByTarget[index]!,
+      }));
+    },
+    options,
+  );
 
   for (const { container, data, children } of prepared) {
     container.removeChildren();
@@ -341,8 +359,9 @@ export const deserializeInto = (
   loader: Loader | null = null,
   registry: SerializationRegistry = defaultSerializationRegistry,
   version: number = SERIALIZATION_VERSION,
+  options: DeserializeOptions = {},
 ): void => {
-  deserializeTargets([{ container, data }], loader, registry, version);
+  deserializeTargets([{ container, data }], loader, registry, version, options);
 };
 
 /** Prepare both scene trees before replacing either destination. @internal */
@@ -352,6 +371,7 @@ export const deserializeSceneInto = (
   data: SerializedScene,
   loader: Loader | null = null,
   registry: SerializationRegistry = defaultSerializationRegistry,
+  options: DeserializeOptions = {},
 ): void => {
   const targets: ContainerReadTarget[] = [{ container: root, data: data.root }];
 
@@ -359,7 +379,7 @@ export const deserializeSceneInto = (
     targets.push({ container: ui, data: data.ui });
   }
 
-  deserializeTargets(targets, loader, registry, data.version);
+  deserializeTargets(targets, loader, registry, data.version, options);
 };
 
 const LAST_IDENTITY_COMPATIBLE_VERSION = 2;

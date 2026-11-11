@@ -588,6 +588,16 @@ describe('Polygon.destroy()', () => {
     expect(polygon.points.length).toBe(0);
     expect(polygon.edges.length).toBe(0);
   });
+
+  test('a warm normals cache reads as empty after destroy', () => {
+    const polygon = new Polygon([new Vector(0, 0), new Vector(10, 0), new Vector(10, 10)]);
+
+    expect(polygon.getNormals()).toHaveLength(3);
+
+    polygon.destroy();
+
+    expect(polygon.getNormals()).toEqual([]);
+  });
 });
 
 describe('Polygon.temp', () => {
