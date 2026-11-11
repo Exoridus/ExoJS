@@ -154,6 +154,13 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
   private _device: GPUDevice | null = null;
   private _uniformBindGroupLayout: GPUBindGroupLayout | null = null;
   private _textureBindGroupLayout: GPUBindGroupLayout | null = null;
+  /**
+   * Texture bind groups by resolved view and then sampler. The view can be
+   * replaced by an upload on any `getTextureBinding` call, so it is the key
+   * rather than the texture; weak keys let a replaced view collect instead of
+   * pinning every texture ever drawn.
+   */
+  private readonly _textureBindGroups = new WeakMap<GPUTextureView, WeakMap<GPUSampler, GPUBindGroup>>();
   private _pipelineLayout: GPUPipelineLayout | null = null;
   private _uniformBuffer: GPUBuffer | null = null;
   private _uniformBindGroup: GPUBindGroup | null = null;
@@ -331,6 +338,31 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     this._drawCallCount = 0;
   }
 
+  /** The bind group for one resolved (view, sampler) pair, created once. */
+  private _textureBindGroup(device: GPUDevice, view: GPUTextureView, sampler: GPUSampler): GPUBindGroup {
+    let bySampler = this._textureBindGroups.get(view);
+
+    if (bySampler === undefined) {
+      bySampler = new WeakMap();
+      this._textureBindGroups.set(view, bySampler);
+    }
+
+    let bindGroup = bySampler.get(sampler);
+
+    if (bindGroup === undefined) {
+      bindGroup = device.createBindGroup({
+        layout: this._textureBindGroupLayout!,
+        entries: [
+          { binding: 0, resource: view },
+          { binding: 1, resource: sampler },
+        ],
+      });
+      bySampler.set(sampler, bindGroup);
+    }
+
+    return bindGroup;
+  }
+
   /**
    * Append one system's draw at the open pass's cursors and record it, leaving
    * the pass open. Ends (submits) the pass first only where appending cannot
@@ -392,19 +424,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
 
     const pipeline = this._getPipeline(resources, drawCall.blendMode, backend.renderTargetFormat, coordinator.stencilMode);
     const textureBinding = backend.getTextureBinding(drawCall.texture, mode.material.sampler);
-    const textureBindGroup = device.createBindGroup({
-      layout: this._textureBindGroupLayout!,
-      entries: [
-        {
-          binding: 0,
-          resource: textureBinding.view,
-        },
-        {
-          binding: 1,
-          resource: textureBinding.sampler,
-        },
-      ],
-    });
+    const textureBindGroup = this._textureBindGroup(device, textureBinding.view, textureBinding.sampler);
 
     this._writeUniformData(backend, system, drawCall.texture);
 
