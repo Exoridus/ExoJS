@@ -714,11 +714,27 @@ const _ellipsize = (
 
   const clusters = graphemes(line, locale);
 
-  while (clusters.length > 0 && measureLine(`${clusters.join('')}${ellipsis}`) > maxWidth) {
-    clusters.pop();
+  if (measureLine(line + ellipsis) <= maxWidth) {
+    return { text: line + ellipsis, contentLength: line.length };
   }
 
-  const kept = clusters.join('');
+  // Widest prefix that fits next to the marker. Widths grow with the prefix, so
+  // binary search keeps this O(log n) measurements instead of re-measuring the
+  // whole remaining line for every dropped cluster.
+  let low = 0;
+  let high = clusters.length;
+
+  while (low < high) {
+    const mid = (low + high + 1) >> 1;
+
+    if (measureLine(clusters.slice(0, mid).join('') + ellipsis) <= maxWidth) {
+      low = mid;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  const kept = clusters.slice(0, low).join('');
 
   return { text: kept + ellipsis, contentLength: kept.length };
 };

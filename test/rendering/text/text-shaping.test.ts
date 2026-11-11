@@ -226,4 +226,14 @@ describe('layoutText with a browser shaper', () => {
     expect(layout.placements).toHaveLength(2);
     expect(layout.advance.height).toBe(48);
   });
+
+  test('ellipsis truncation measures a logarithmic number of prefixes', () => {
+    const shaper = makeShaper();
+
+    const layout = layoutText('a'.repeat(200), style(), { maxWidth: 40, overflow: 'ellipsis' }, makeProvider(), shaper);
+
+    expect(layout.lines).toHaveLength(1);
+    // 200 clusters + the marker: a linear re-measure would issue ~200 calls.
+    expect(shaper.measured.length).toBeLessThanOrEqual(12);
+  });
 });
