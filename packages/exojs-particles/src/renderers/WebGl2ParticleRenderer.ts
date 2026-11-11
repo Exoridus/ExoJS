@@ -36,6 +36,13 @@ const usageByGeometryUsage: Record<GeometryUsage, BufferUsage> = {
  */
 const integerAttributeTypes = new Set<AttributeType>(['u32', 'i32']);
 
+/**
+ * The `u_associateSample` flag, cached because a system is bound every frame and
+ * a fresh array per bind would allocate on the draw path.
+ */
+const SAMPLE_ASSOCIATED = new Float32Array([1]);
+const SAMPLE_STRAIGHT = new Float32Array([0]);
+
 const resolveAttributeType = (gl: WebGL2RenderingContext, type: AttributeType): number => {
   switch (type) {
     case 'f32':
@@ -195,6 +202,12 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
 
     if (shader.uniforms.has('u_localBounds')) {
       shader.getUniform('u_localBounds').setValue(system.vertices);
+    }
+
+    if (shader.uniforms.has('u_associateSample')) {
+      shader
+        .getUniform('u_associateSample')
+        .setValue(backend.shouldPremultiplyTextureSample(texture) ? SAMPLE_ASSOCIATED : SAMPLE_STRAIGHT);
     }
 
     const simulation = system.glState;
