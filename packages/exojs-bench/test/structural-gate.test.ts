@@ -94,10 +94,10 @@ describe('recordBaseline', () => {
 });
 
 describe('structural count units', () => {
-  test('records explicit baseline schema and per-frame units', () => {
+  test('records explicit baseline schema and per-cell units', () => {
     const baseline = recordBaseline([cell({ archetype: 'static-heavy', drawCalls: 1 })], recorded);
 
-    expect(baseline).toMatchObject({ schemaVersion: 1, countBasis: 'per-frame' });
+    expect(baseline).toMatchObject({ schemaVersion: 1, countBasis: 'per-cell', cells: [{ countBasis: 'per-frame', frames: 3 }] });
   });
 
   test('refuses to record historical results whose count units are unknown', () => {
@@ -181,7 +181,7 @@ describe('compareToBaseline', () => {
   });
 
   test('does not pass when the baseline and run contain no guarded cells', () => {
-    const outcome = compareToBaseline({ schemaVersion: 1, countBasis: 'per-frame', recorded, cells: [] }, []);
+    const outcome = compareToBaseline({ schemaVersion: 1, countBasis: 'per-cell', recorded, cells: [] }, []);
 
     expect(isGateFailure(outcome)).toBe(true);
     expect(formatGateOutcome(outcome)).toContain('no guarded cell was compared');
@@ -245,11 +245,93 @@ describe('the committed baseline', () => {
     }
   });
 
+  test('qualifies both lifecycle baselines without changing their three-frame counters', () => {
+    const lifecycle = baseline.cells.filter(entry => entry.archetype === 'particles-lifecycle');
+
+    expect(lifecycle).toHaveLength(2);
+    expect(lifecycle).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ config: 'current', drawCalls: 6, textureBinds: 12, bufferUploads: 10, countBasis: 'total', frames: 3 }),
+        expect.objectContaining({ config: 'retained', drawCalls: 6, textureBinds: 12, bufferUploads: 10, countBasis: 'total', frames: 3 }),
+      ]),
+    );
+    expect(baseline.cells.filter(entry => entry.countBasis === 'per-frame')).toHaveLength(58);
+  });
   test('records integer counters only - these values do not drift, so a fraction would mean a harness bug', () => {
     for (const entry of baseline.cells) {
       expect(Number.isInteger(entry.drawCalls)).toBe(true);
       expect(Number.isInteger(entry.textureBinds)).toBe(true);
       expect(Number.isInteger(entry.bufferUploads)).toBe(true);
     }
+  });
+});
+
+describe('qualified lifecycle total baselines', () => {
+  const lifecycle = (): CellResult => {
+    const result = cell({ archetype: 'particles-lifecycle', drawCalls: 6, textureBinds: 12, bufferUploads: 10 });
+
+    return {
+      ...result,
+      spec: { ...result.spec, nodeCount: 200 },
+      structuralMeasurement: { schemaVersion: 1, basis: 'total', frames: 3, totals: { ...result.structural } },
+    };
+  };
+
+  const qualifiedBaseline = () => ({
+    schemaVersion: 1 as const,
+    countBasis: 'per-cell' as const,
+    recorded,
+    cells: [
+      {
+        engine: 'exojs',
+        config: 'current',
+        backend: 'webgl2' as const,
+        archetype: 'particles-lifecycle',
+        nodeCount: 200,
+        drawCalls: 6,
+        textureBinds: 12,
+        bufferUploads: 10,
+        countBasis: 'total' as const,
+        frames: 3,
+      },
+    ],
+  });
+
+  test('records the observed three-frame totals without rounding or relabeling them', () => {
+    expect(recordBaseline([lifecycle()], recorded)).toEqual(qualifiedBaseline());
+  });
+
+  test('compares qualified lifecycle totals in the same three-frame window', () => {
+    const outcome = compareToBaseline(qualifiedBaseline(), [lifecycle()]);
+
+    expect(outcome.compared).toBe(1);
+    expect(isGateFailure(outcome)).toBe(false);
+  });
+
+  test('keeps an additional lifecycle upload a counter regression', () => {
+    const result = lifecycle();
+    result.structural.bufferUploads += 1;
+    const changed = { ...result, structuralMeasurement: { ...result.structuralMeasurement!, totals: { ...result.structural } } };
+    const outcome = compareToBaseline(qualifiedBaseline(), [changed]);
+
+    expect(outcome.deviations).toMatchObject([{ counter: 'bufferUploads', expected: 10, actual: 11 }]);
+    expect(isGateFailure(outcome)).toBe(true);
+  });
+
+  test('rejects totals collected over a different frame count', () => {
+    const result = lifecycle();
+    const changed = { ...result, structuralMeasurement: { ...result.structuralMeasurement!, frames: 4 } };
+    const outcome = compareToBaseline(qualifiedBaseline(), [changed]);
+
+    expect(outcome.deviations).toEqual([]);
+    expect(outcome.unmeasured[0]?.note).toContain('frame');
+    expect(isGateFailure(outcome)).toBe(true);
+  });
+
+  test.each([{ countBasis: 'unknown' }, { frames: 0 }, { frames: undefined }])('rejects unknown baseline units or frames: %j', override => {
+    const baseline = qualifiedBaseline();
+    const invalid = { ...baseline, cells: [{ ...baseline.cells[0]!, ...override }] } as unknown as GateBaseline;
+
+    expect(() => compareToBaseline(invalid, [lifecycle()])).toThrow('baseline');
   });
 });

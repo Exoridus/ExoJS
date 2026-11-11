@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "countBasis": "per-frame",
+  "countBasis": "per-cell",
   "recorded": {
     "at": "2026-09-28T03:28:16.870Z",
     "engineVersion": "0.18.0",
@@ -15,7 +15,9 @@
       "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -25,7 +27,9 @@
       "nodeCount": 200,
       "drawCalls": 5,
       "textureBinds": 18,
-      "bufferUploads": 5
+      "bufferUploads": 5,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -35,7 +39,9 @@
       "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
-      "bufferUploads": 1
+      "bufferUploads": 1,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -45,7 +51,9 @@
       "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
-      "bufferUploads": 1
+      "bufferUploads": 1,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -55,7 +63,9 @@
       "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
-      "bufferUploads": 1
+      "bufferUploads": 1,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -65,7 +75,9 @@
       "nodeCount": 200,
       "drawCalls": 3,
       "textureBinds": 15,
-      "bufferUploads": 1
+      "bufferUploads": 1,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -75,7 +87,9 @@
       "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 20,
-      "bufferUploads": 1
+      "bufferUploads": 1,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -85,7 +99,9 @@
       "nodeCount": 200,
       "drawCalls": 6,
       "textureBinds": 30,
-      "bufferUploads": 1
+      "bufferUploads": 1,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -95,7 +111,9 @@
       "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 19,
-      "bufferUploads": 3
+      "bufferUploads": 3,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -105,7 +123,9 @@
       "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 0,
-      "bufferUploads": 12
+      "bufferUploads": 12,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -115,7 +135,9 @@
       "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -125,7 +147,9 @@
       "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
-      "bufferUploads": 4
+      "bufferUploads": 4,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -135,7 +159,9 @@
       "nodeCount": 200,
       "drawCalls": 3,
       "textureBinds": 16,
-      "bufferUploads": 6
+      "bufferUploads": 6,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -145,7 +171,9 @@
       "nodeCount": 200,
       "drawCalls": 3,
       "textureBinds": 16,
-      "bufferUploads": 6
+      "bufferUploads": 6,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -155,7 +183,9 @@
       "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 11,
-      "bufferUploads": 3
+      "bufferUploads": 3,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -165,7 +195,9 @@
       "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 11,
-      "bufferUploads": 3
+      "bufferUploads": 3,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -175,7 +207,9 @@
       "nodeCount": 200,
       "drawCalls": 8,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -185,7 +219,9 @@
       "nodeCount": 200,
       "drawCalls": 8,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -195,7 +231,9 @@
       "nodeCount": 200,
       "drawCalls": 8,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -205,7 +243,9 @@
       "nodeCount": 200,
       "drawCalls": 14,
       "textureBinds": 0,
-      "bufferUploads": 38
+      "bufferUploads": 38,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -215,7 +255,9 @@
       "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -225,7 +267,9 @@
       "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
-      "bufferUploads": 1
+      "bufferUploads": 1,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -235,7 +279,9 @@
       "nodeCount": 200,
       "drawCalls": 6,
       "textureBinds": 12,
-      "bufferUploads": 10
+      "bufferUploads": 10,
+      "countBasis": "total",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -245,7 +291,9 @@
       "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
-      "bufferUploads": 1
+      "bufferUploads": 1,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -255,7 +303,9 @@
       "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -265,7 +315,9 @@
       "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -275,7 +327,9 @@
       "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -285,7 +339,9 @@
       "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
-      "bufferUploads": 1
+      "bufferUploads": 1,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -295,7 +351,9 @@
       "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -305,7 +363,9 @@
       "nodeCount": 200,
       "drawCalls": 0,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -315,7 +375,9 @@
       "nodeCount": 200,
       "drawCalls": 2,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -325,7 +387,9 @@
       "nodeCount": 200,
       "drawCalls": 7,
       "textureBinds": 18,
-      "bufferUploads": 3
+      "bufferUploads": 3,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -335,7 +399,9 @@
       "nodeCount": 200,
       "drawCalls": 16,
       "textureBinds": 0,
-      "bufferUploads": 19
+      "bufferUploads": 19,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -345,7 +411,9 @@
       "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 0,
-      "bufferUploads": 7
+      "bufferUploads": 7,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -355,7 +423,9 @@
       "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 0,
-      "bufferUploads": 7
+      "bufferUploads": 7,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -365,7 +435,9 @@
       "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 15,
-      "bufferUploads": 1
+      "bufferUploads": 1,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -375,7 +447,9 @@
       "nodeCount": 200,
       "drawCalls": 5,
       "textureBinds": 20,
-      "bufferUploads": 1
+      "bufferUploads": 1,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -385,7 +459,9 @@
       "nodeCount": 200,
       "drawCalls": 7,
       "textureBinds": 30,
-      "bufferUploads": 1
+      "bufferUploads": 1,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -395,7 +471,9 @@
       "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 19,
-      "bufferUploads": 3
+      "bufferUploads": 3,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -405,7 +483,9 @@
       "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 0,
-      "bufferUploads": 12
+      "bufferUploads": 12,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -415,7 +495,9 @@
       "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -425,7 +507,9 @@
       "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 0,
-      "bufferUploads": 4
+      "bufferUploads": 4,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -435,7 +519,9 @@
       "nodeCount": 200,
       "drawCalls": 3,
       "textureBinds": 16,
-      "bufferUploads": 6
+      "bufferUploads": 6,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -445,7 +531,9 @@
       "nodeCount": 200,
       "drawCalls": 3,
       "textureBinds": 16,
-      "bufferUploads": 6
+      "bufferUploads": 6,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -455,7 +543,9 @@
       "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 4,
-      "bufferUploads": 3
+      "bufferUploads": 3,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -465,7 +555,9 @@
       "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 4,
-      "bufferUploads": 3
+      "bufferUploads": 3,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -475,7 +567,9 @@
       "nodeCount": 200,
       "drawCalls": 8,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -485,7 +579,9 @@
       "nodeCount": 200,
       "drawCalls": 8,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -495,7 +591,9 @@
       "nodeCount": 200,
       "drawCalls": 8,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -505,7 +603,9 @@
       "nodeCount": 200,
       "drawCalls": 14,
       "textureBinds": 0,
-      "bufferUploads": 38
+      "bufferUploads": 38,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -515,7 +615,9 @@
       "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -525,7 +627,9 @@
       "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
-      "bufferUploads": 1
+      "bufferUploads": 1,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -535,7 +639,9 @@
       "nodeCount": 200,
       "drawCalls": 6,
       "textureBinds": 12,
-      "bufferUploads": 10
+      "bufferUploads": 10,
+      "countBasis": "total",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -545,7 +651,9 @@
       "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -555,7 +663,9 @@
       "nodeCount": 200,
       "drawCalls": 16,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -565,7 +675,9 @@
       "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -575,7 +687,9 @@
       "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 0,
-      "bufferUploads": 12
+      "bufferUploads": 12,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -585,7 +699,9 @@
       "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
-      "bufferUploads": 1
+      "bufferUploads": 1,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -595,7 +711,9 @@
       "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     },
     {
       "engine": "exojs",
@@ -605,7 +723,9 @@
       "nodeCount": 200,
       "drawCalls": 0,
       "textureBinds": 0,
-      "bufferUploads": 0
+      "bufferUploads": 0,
+      "countBasis": "per-frame",
+      "frames": 3
     }
   ]
 }
