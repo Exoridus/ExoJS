@@ -629,7 +629,7 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
     // it did. A segment found on the way overrides both: it is the nearer wall
     // and it carries nothing to re-emit.
     let surface = a + direction * stopped;
-    let onSurface = 1.0 - open;
+    let onSurface = select(1.0 - open, 0.0, rastered.exhausted);
     let cells = uniforms.uGridCells;
     let size = uniforms.uCellSize;
     let lower = uniforms.uGridOrigin;

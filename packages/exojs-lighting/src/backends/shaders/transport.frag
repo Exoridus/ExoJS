@@ -232,7 +232,7 @@ float coneWeight(vec2 axis, vec2 direction, float cosOuter, float cosInner, floa
  * two segments meeting at a corner cannot leak light between them, rather than
  * an epsilon wide enough to swallow a thin wall.
  */
-float segmentHit(vec2 origin, vec2 direction, float limit, vec2 edgeA, vec2 edgeB) {
+float segmentHit(vec2 origin, vec2 direction, vec2 delta, float span, float limit, vec2 edgeA, vec2 edgeB) {
     vec2 edge = edgeB - edgeA;
     vec2 offset = edgeA - origin;
     float denominator = direction.x * edge.y - direction.y * edge.x;
@@ -254,10 +254,21 @@ float segmentHit(vec2 origin, vec2 direction, float limit, vec2 edgeA, vec2 edge
         return entry < min(limit, max(first, last)) ? entry : limit;
     }
 
-    float travel = (offset.x * edge.y - offset.y * edge.x) / denominator;
+    float travelNumerator = offset.x * edge.y - offset.y * edge.x;
+    float travel = travelNumerator / denominator;
     float across = (offset.x * direction.y - offset.y * direction.x) / denominator;
+    bool beforeLimit = travel < limit;
 
-    return travel >= 0.0 && travel < limit && across >= -TRANSPORT_EPSILON && across <= 1.0 + TRANSPORT_EPSILON ? travel : limit;
+    if (limit >= span) {
+        float endpointDenominator = delta.x * edge.y - delta.y * edge.x;
+
+        // Normalising `delta` can move a hit at the half-open endpoint one ULP
+        // inside. Only that endpoint is classified against the original span;
+        // ordinary hit distances retain the path above.
+        beforeLimit = endpointDenominator > 0.0 ? travelNumerator > endpointDenominator : travelNumerator < endpointDenominator;
+    }
+
+    return travel >= 0.0 && beforeLimit && across >= -TRANSPORT_EPSILON && across <= 1.0 + TRANSPORT_EPSILON ? travel : limit;
 }
 
 /** What a walk over the occluder mask found. */
@@ -586,7 +597,7 @@ Transfer traceSegment(vec2 a, vec2 b) {
     // it did. A segment found on the way overrides both: it is the nearer wall
     // and it carries nothing to re-emit.
     vec2 surface = a + direction * stopped;
-    float onSurface = 1.0 - open;
+    float onSurface = rastered.exhausted ? 0.0 : 1.0 - open;
     vec2 cells = uniforms.uGridCells;
     float size = uniforms.uCellSize;
     vec2 lower = uniforms.uGridOrigin;
@@ -657,7 +668,7 @@ Transfer traceSegment(vec2 a, vec2 b) {
             for (int index = 0; index < segmentCount; index++) {
                 int id = int(transportTexel(uIndices, segmentOffset + index).x);
                 vec4 ends = transportTexel(uSegments, id);
-                float hit = segmentHit(a, direction, blocked, ends.xy, ends.zw);
+                float hit = segmentHit(a, direction, delta, span, blocked, ends.xy, ends.zw);
 
                 if (hit >= travelled && hit < blocked) {
                     blocked = hit;
