@@ -55,8 +55,8 @@ const PI: f32 = 3.14159265359;
 const MAX_HALF: i32 = 10;
 /** Fraction of a full turn the widest penumbra spans, before the bin bound above. */
 const MAX_PENUMBRA: f32 = 0.03;
-/** Tolerance, in radii, that keeps an occluder's own surface out of its shadow. */
-const SHADOW_BIAS: f32 = 0.004;
+/** One world unit of clearance, independent of the light's whole reach. */
+const SHADOW_BIAS_WORLD: f32 = 1.0;
 /**
  * Kernel half-width, in bins, at zero softness. The row samples each bin at
  * its centre and is accurate to half a bin, so a kernel narrower than this
@@ -99,7 +99,7 @@ fn depthAt(bin: i32, bins: i32, row: i32) -> f32 {
  * blending two stored distances and comparing once would instead put the edge
  * at a depth neither bin holds, which is a different thing and the wrong one.
  */
-fn coverageAt(here: f32, previous: f32, next: f32, distance: f32) -> f32 {
+fn coverageAt(here: f32, previous: f32, next: f32, distance: f32, normalizedBias: f32) -> f32 {
     let rising = here - previous;
     let falling = next - here;
     // A slope only means something where the blocker distance runs the SAME
@@ -110,7 +110,7 @@ fn coverageAt(here: f32, previous: f32, next: f32, distance: f32) -> f32 {
     // it, the one place a blocker cannot reach.
     let slope = select(min(abs(rising), abs(falling)), 0.0, rising * falling <= 0.0);
 
-    return clamp(0.5 + (here + SHADOW_BIAS - distance) / max(slope, MIN_SLOPE), 0.0, 1.0);
+    return clamp(0.5 + (here + normalizedBias - distance) / max(slope, MIN_SLOPE), 0.0, 1.0);
 }
 
 /**
@@ -134,11 +134,14 @@ fn coverageAt(here: f32, previous: f32, next: f32, distance: f32) -> f32 {
  * source casts, and it does not make the shadow behave like one cast by a
  * disc of that size.
  */
-fn shadowTerm(local: vec2<f32>, distance: f32, shadowRow: f32, softness: f32) -> f32 {
+fn shadowTerm(local: vec2<f32>, distance: f32, shadowRow: f32, softness: f32, reachWorld: f32) -> f32 {
     if (shadowRow < 0.0) {
         return 1.0;
     }
 
+    // The shadow row measures from the light centre over its entire reach.
+    // Line lights include their half-segment in that reach.
+    let normalizedBias = SHADOW_BIAS_WORLD / max(reachWorld, 1.0);
     let bins = i32(textureDimensions(u_shadow, 0).x);
     let row = i32(shadowRow);
     let radius = min(MIN_RADIUS + max(0.0, softness) * f32(bins) * MAX_PENUMBRA, f32(MAX_HALF));
@@ -164,7 +167,7 @@ fn shadowTerm(local: vec2<f32>, distance: f32, shadowRow: f32, softness: f32) ->
         let weight = max(0.0, 1.0 - abs(f32(bin) - center) / radius);
 
         if (weight > 0.0) {
-            lit = lit + weight * coverageAt(here, previous, next, distance);
+            lit = lit + weight * coverageAt(here, previous, next, distance, normalizedBias);
             total = total + weight;
         }
 
@@ -247,7 +250,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
         coneTerm = step(input.cone.x, alignment);
     }
 
-    let shadow = shadowTerm(input.local, length(input.local) / (input.half + 1.0), input.shadowRow, input.softness);
+    let shadow = shadowTerm(input.local, length(input.local) / (input.half + 1.0), input.shadowRow, input.softness, input.surface.x * (input.half + 1.0));
     let surface = surfaceTerm(input.position.xy, input.local, input.surface);
     // The quad spans -1..1 in the light's own frame, which is the cookie's 0..1
     // exactly - so the pattern turns and scales with the light for free, and a
