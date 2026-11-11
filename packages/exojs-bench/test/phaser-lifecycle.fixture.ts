@@ -500,3 +500,40 @@ export const observeBootFailure = async () => {
     harness.releaseCanvas();
   }
 };
+
+export const observeLeavingSprites = async (kind: 'sprites' | 'particles' | 'picking' | 'tilemap') => {
+  const harness = createHarness();
+  const { adapter, canvas } = harness;
+
+  try {
+    await adapter.init(canvas, 'webgl2');
+    const scene = harness.game.scene.getScene('bench');
+    const ordinary: ArchetypeSpec = { ...picking, id: 'static-heavy', category: 'node-scaling', pointerQueriesPerFrame: 0 };
+
+    adapter.buildScene(ordinary, 3, 0xc0ffee);
+    const previousRoot = scene.children.getAt(0) as Phaser.GameObjects.Container;
+    const previousObjects = [previousRoot, ...previousRoot.list];
+    const texture = harness.game.textures.get('bench-tex-0');
+    const sources = [...texture.source];
+    const next: ArchetypeSpec =
+      kind === 'particles'
+        ? { ...ordinary, id: 'particles-draw', particles: 'draw' }
+        : kind === 'picking'
+          ? picking
+          : kind === 'tilemap'
+            ? { ...ordinary, id: 'tilemap-scroll', tilemap: 'scroll' }
+            : ordinary;
+
+    adapter.buildScene(next, 3, 0xc0ffee);
+
+    return {
+      displayRoots: scene.children.length,
+      oldObjectsDestroyed: previousObjects.every(object => object.scene === undefined),
+      oldTextureDestroyed: texture.manager === null && texture.source.length === 0,
+      oldSourcesReleased: sources.every(source => source.glTexture === null && source.image === null),
+      oldRootStillDisplayed: scene.children.exists(previousRoot),
+    };
+  } finally {
+    harness.dispose();
+  }
+};
