@@ -78,12 +78,15 @@ afterAll(() => {
 // ---------------------------------------------------------------------------
 
 const makeWebGl2Backend = (): RenderBackend & WebGl2Backend => {
+  const CURRENT_PROGRAM = 0x8b8d;
+  let currentProgram: WebGLProgram | null = null;
   const root = new RenderTarget(64, 64, true);
   let currentTarget: RenderTarget = root;
   const stats = createRenderStats();
   const onContextLost = new Signal();
 
   const gl = {
+    CURRENT_PROGRAM,
     createProgram: vi.fn(() => ({})),
     createShader: vi.fn(() => ({})),
     createBuffer: vi.fn(() => ({})),
@@ -92,7 +95,16 @@ const makeWebGl2Backend = (): RenderBackend & WebGl2Backend => {
     compileShader: vi.fn(),
     attachShader: vi.fn(),
     linkProgram: vi.fn(),
-    useProgram: vi.fn(),
+    useProgram: vi.fn((program: WebGLProgram | null) => {
+      currentProgram = program;
+    }),
+    getParameter: vi.fn((parameter: number) => {
+      if (parameter !== CURRENT_PROGRAM) {
+        throw new Error(`Unsupported getParameter query: ${parameter}`);
+      }
+
+      return currentProgram;
+    }),
     deleteShader: vi.fn(),
     deleteProgram: vi.fn(),
     deleteBuffer: vi.fn(),

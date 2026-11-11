@@ -1,7 +1,9 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
 import type { WebGl2ColorNormalizationHost } from '#rendering/webgl2/WebGl2TextureNormalizer';
 import { WebGl2TextureNormalizer } from '#rendering/webgl2/WebGl2TextureNormalizer';
+
+import { createFakeWebGl2Context, GlRecorder } from '../perf/rendering/fakeWebGl2';
 
 const TEXTURE0 = 0x84c0;
 const TEXTURE_2D = 0x0de1;
@@ -76,6 +78,7 @@ const createFakeGl = () => {
     getAttribLocation: () => 0,
     createShader: () => ({}),
     createProgram: () => ({}),
+    useProgram: () => {},
     createFramebuffer: () => ({}),
     createBuffer: () => ({}),
     createVertexArray: () => ({}),
@@ -119,6 +122,52 @@ describe('WebGl2TextureNormalizer staging upload', () => {
     expect(fake.textures).toHaveLength(1);
     expect(fake.uploads).toEqual([fake.textures[0], fake.textures[0], fake.textures[0]]);
     expect(fake.bindings.get(TEXTURE0)).toBe(bystander);
+  });
+
+  test('a failed first program setup restores the previous array buffer binding', () => {
+    const gl = createFakeWebGl2Context(new GlRecorder());
+    const buffer = gl.createBuffer();
+    const normalizer = new WebGl2TextureNormalizer(gl, noopHost);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+
+    const allocation = vi.spyOn(gl, 'createVertexArray').mockImplementationOnce(() => null as unknown as WebGLVertexArrayObject);
+
+    try {
+      expect(() => normalizer.normalizePixels(createTarget(2, 2), new Uint8Array(16))).toThrow('colour-normalization vertex array');
+      expect(gl.getParameter(gl.ARRAY_BUFFER_BINDING)).toBe(buffer);
+    } finally {
+      allocation.mockRestore();
+      normalizer.destroy();
+      gl.deleteBuffer(buffer);
+    }
+  });
+
+  test('a warm normalization keeps its query and binding cost and reuses program objects', () => {
+    const { gl } = createFakeGl();
+    const normalizer = new WebGl2TextureNormalizer(gl, noopHost);
+    const query = vi.spyOn(gl, 'getParameter');
+    const bind = vi.spyOn(gl, 'useProgram');
+    const allocate = vi.spyOn(gl, 'createProgram');
+    const target = createTarget(2, 2);
+    const data = new Uint8Array(16);
+
+    normalizer.normalizePixels(target, data);
+    expect(query).toHaveBeenCalledTimes(9);
+    expect(bind).toHaveBeenCalledTimes(2);
+    expect(allocate).toHaveBeenCalledTimes(1);
+    query.mockClear();
+    bind.mockClear();
+    allocate.mockClear();
+
+    for (let index = 0; index < 3; index++) {
+      normalizer.normalizePixels(target, data);
+    }
+
+    expect(query).toHaveBeenCalledTimes(27);
+    expect(bind).toHaveBeenCalledTimes(6);
+    expect(allocate).not.toHaveBeenCalled();
+    normalizer.destroy();
   });
 
   test('reuses the staging texture for repeated same-size image sources', () => {
