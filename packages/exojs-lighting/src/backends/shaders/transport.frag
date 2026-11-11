@@ -265,7 +265,7 @@ float segmentHit(vec2 origin, vec2 direction, vec2 delta, float span, float limi
         // Normalising `delta` can move a hit at the half-open endpoint one ULP
         // inside. Only that endpoint is classified against the original span;
         // ordinary hit distances retain the path above.
-        beforeLimit = endpointDenominator > 0.0 ? travelNumerator > endpointDenominator : travelNumerator < endpointDenominator;
+        beforeLimit = endpointDenominator > 0.0 ? travelNumerator < endpointDenominator : travelNumerator > endpointDenominator;
     }
 
     return travel >= 0.0 && beforeLimit && across >= -TRANSPORT_EPSILON && across <= 1.0 + TRANSPORT_EPSILON ? travel : limit;

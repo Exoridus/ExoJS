@@ -17,7 +17,7 @@ describe('lighting transport shader contracts', () => {
   test('the GLSL walk classifies the far endpoint against the unnormalised span', () => {
     expect(transportGlsl).toContain('float endpointDenominator = delta.x * edge.y - delta.y * edge.x;');
     expect(transportGlsl).toContain(
-      'beforeLimit = endpointDenominator > 0.0 ? travelNumerator > endpointDenominator : travelNumerator < endpointDenominator;',
+      'beforeLimit = endpointDenominator > 0.0 ? travelNumerator < endpointDenominator : travelNumerator > endpointDenominator;',
     );
   });
 
