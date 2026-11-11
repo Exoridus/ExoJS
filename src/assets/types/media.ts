@@ -116,7 +116,12 @@ export class VideoAssetType extends AssetType<MediaAssetSource, Video, VideoAsse
   }
 
   public override resourceIdentity(request: AssetRequest<VideoAssetOptions>): string {
-    return mediaIdentity(request);
+    const base = mediaIdentity(request);
+
+    // The resident video owns its only texture: `colorSpace: 'none'` reads the
+    // bytes as data rather than sRGB, which is a different resource, not sampler
+    // state a consumer can correct. Mirrors TextureAssetType's identity rule.
+    return request.options?.textureOptions?.colorSpace === 'none' ? `${base}|colorSpace=none` : base;
   }
 
   public createFactory(): AssetFactory<MediaAssetSource, Video, VideoAssetOptions> {

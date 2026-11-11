@@ -1,7 +1,9 @@
 import type { MockInstance } from 'vitest';
 
 import { VideoFactory } from '#assets/factories/VideoFactory';
+import { videoType } from '#assets/types/media';
 import type { Texture } from '#rendering/texture/Texture';
+import { ScaleModes } from '#rendering/types';
 import { Video } from '#rendering/video/Video';
 
 import { factoryContext } from './factory-context';
@@ -306,5 +308,21 @@ describe('VideoFactory', () => {
     expect(videoElement.src).not.toContain('blob:');
 
     video.destroy();
+  });
+});
+
+describe('VideoAssetType identity', () => {
+  test('a data colorSpace is part of the resource identity', () => {
+    const plain = videoType.resourceIdentity({ source: 'clip.mp4' });
+    const data = videoType.resourceIdentity({ source: 'clip.mp4', options: { textureOptions: { colorSpace: 'none' } } });
+
+    expect(data).not.toBe(plain);
+  });
+
+  test('ordinary sampler options do not split the shared resident video', () => {
+    const plain = videoType.resourceIdentity({ source: 'clip.mp4' });
+    const nearest = videoType.resourceIdentity({ source: 'clip.mp4', options: { textureOptions: { scaleMode: ScaleModes.Nearest } } });
+
+    expect(nearest).toBe(plain);
   });
 });
