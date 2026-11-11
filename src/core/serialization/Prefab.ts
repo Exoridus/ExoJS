@@ -25,7 +25,10 @@ import { SERIALIZATION_VERSION, type SerializedNode, type SerializedPrefab, type
  * ```
  */
 export class Prefab {
-  private constructor(private readonly _descriptor: SerializedNode) {}
+  private constructor(
+    private readonly _descriptor: SerializedNode,
+    private readonly _version: number = SERIALIZATION_VERSION,
+  ) {}
 
   /**
    * Capture `node`'s subtree as a prefab. Pass the {@link Loader} so texture and
@@ -51,7 +54,9 @@ export class Prefab {
    * newer than this build supports, or has no valid root.
    */
   public static fromJSON(document: unknown): Prefab {
-    return new Prefab(migratePrefab(document).root);
+    const validated = migratePrefab(document);
+
+    return new Prefab(validated.root, validated.version);
   }
 
   /**
@@ -61,15 +66,16 @@ export class Prefab {
    * serializers; defaults to the global registry.
    */
   public instantiate(loader: Loader | null = null, registry?: SerializationRegistry): SceneNode {
-    return deserializeTree(this._descriptor, loader, registry);
+    return deserializeTree(this._descriptor, loader, registry, this._version);
   }
 
   /**
    * The prefab as a versioned, JSON-serialisable document - the standard
-   * `JSON.stringify(prefab)` hook. Treat the returned object as read-only; the
-   * `root` is the live internal descriptor, not a copy.
+   * `JSON.stringify(prefab)` hook. A prefab loaded from an older document
+   * retains its source version until an explicit migration transforms its data.
+   * Treat the result as read-only; `root` is the live descriptor, not a copy.
    */
   public toJSON(): SerializedPrefab {
-    return { version: SERIALIZATION_VERSION, root: this._descriptor };
+    return { version: this._version, root: this._descriptor };
   }
 }

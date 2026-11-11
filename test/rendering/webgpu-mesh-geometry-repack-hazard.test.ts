@@ -8,8 +8,10 @@
 import { Container } from '#rendering/Container';
 import { Geometry } from '#rendering/geometry/Geometry';
 import { Mesh } from '#rendering/mesh/Mesh';
+import { RetainedContainer } from '#rendering/RetainedContainer';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
+import { WebGpuMeshRenderer } from '#rendering/webgpu/WebGpuMeshRenderer';
 
 import { createCanvasTexture, createMockBackend, createMockWebGpuEnvironment } from './webgpuMockEnvironment';
 
@@ -52,6 +54,7 @@ const watchCachedGeometryHazards = (backend: WebGpuBackend): string[] => {
   const createBuffer = device['createBuffer'] as (descriptor: GPUBufferDescriptor) => GPUBuffer;
   const createCommandEncoder = device['createCommandEncoder'] as () => GPUCommandEncoder;
   const writeBuffer = device.queue['writeBuffer'] as (buffer: GPUBuffer, ...rest: unknown[]) => void;
+  const submit = device.queue['submit'] as (buffers: Iterable<GPUCommandBuffer>) => void;
 
   device['createBuffer'] = (descriptor: GPUBufferDescriptor): GPUBuffer => {
     const buffer = createBuffer(descriptor) as unknown as Record<string, unknown>;
@@ -75,6 +78,11 @@ const watchCachedGeometryHazards = (backend: WebGpuBackend): string[] => {
     writeBuffer(buffer, ...rest);
   };
 
+  device.queue['submit'] = (buffers: Iterable<GPUCommandBuffer>): void => {
+    submit(buffers);
+    bound.clear();
+  };
+
   device['createCommandEncoder'] = (): GPUCommandEncoder => {
     const encoder = createCommandEncoder();
 
@@ -82,8 +90,6 @@ const watchCachedGeometryHazards = (backend: WebGpuBackend): string[] => {
       ...encoder,
       beginRenderPass: (descriptor: GPURenderPassDescriptor): GPURenderPassEncoder => {
         const pass = encoder.beginRenderPass(descriptor);
-
-        bound.clear();
 
         return {
           ...pass,
@@ -95,10 +101,6 @@ const watchCachedGeometryHazards = (backend: WebGpuBackend): string[] => {
             bound.add(buffer);
             (pass.setIndexBuffer as (...args: unknown[]) => void)(buffer, ...rest);
           },
-          end: (): void => {
-            bound.clear();
-            pass.end();
-          },
         } as unknown as GPURenderPassEncoder;
       },
     } as unknown as GPUCommandEncoder;
@@ -108,6 +110,131 @@ const watchCachedGeometryHazards = (backend: WebGpuBackend): string[] => {
 };
 
 describe('WebGPU cached mesh geometry re-pack', () => {
+  test('a retained replay is submitted before a live batch re-packs its shared geometry', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const backend = await createMockBackend(environment);
+      const hazards = watchCachedGeometryHazards(backend);
+      const geometry = staticGeometry();
+      const texture = createCanvasTexture();
+      const retained = new RetainedContainer();
+      const live = new Container();
+      const replay = vi.spyOn(WebGpuMeshRenderer.prototype, 'replayRetainedBatch');
+
+      retained.addChild(new Mesh({ geometry, texture }), new Mesh({ geometry, texture }));
+      live.addChild(new Mesh({ geometry, texture }), new Mesh({ geometry, texture }));
+
+      const frame = (between?: () => void): void => {
+        backend.resetStats();
+        retained.render(backend);
+        between?.();
+        live.invalidateContent();
+        live.render(backend);
+        backend.flush();
+      };
+
+      for (let index = 0; index < 3; index++) {
+        frame();
+      }
+
+      hazards.length = 0;
+      replay.mockClear();
+      frame(() => geometry.invalidate());
+
+      expect(replay).toHaveBeenCalledOnce();
+      expect(backend.stats.drawCalls).toBe(2);
+      expect(hazards).toEqual([]);
+
+      retained.destroy();
+      live.destroy();
+      texture.destroy();
+      geometry.destroy();
+      backend.destroy();
+    } finally {
+      vi.restoreAllMocks();
+      environment.restore();
+    }
+  });
+
+  test('unchanged retained geometry and live batches keep sharing one warmed pass', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const backend = await createMockBackend(environment);
+      const geometry = staticGeometry();
+      const texture = createCanvasTexture();
+      const retained = new RetainedContainer();
+      const live = new Container();
+
+      retained.addChild(new Mesh({ geometry, texture }), new Mesh({ geometry, texture }));
+      live.addChild(new Mesh({ geometry, texture }), new Mesh({ geometry, texture }));
+
+      for (let index = 0; index < 6; index++) {
+        const passesBefore = environment.renderPassLabels().length;
+
+        backend.resetStats();
+        retained.render(backend);
+        live.invalidateContent();
+        live.render(backend);
+        backend.flush();
+
+        if (index >= 3) {
+          expect(environment.renderPassLabels().length - passesBefore).toBe(1);
+          expect(backend.stats.drawCalls).toBe(2);
+        }
+      }
+
+      retained.destroy();
+      live.destroy();
+      texture.destroy();
+      geometry.destroy();
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test('disconnect submits a retained replay before destroying its cached geometry', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const backend = await createMockBackend(environment);
+      const hazards = watchCachedGeometryHazards(backend);
+      const geometry = staticGeometry();
+      const texture = createCanvasTexture();
+      const retained = new RetainedContainer();
+      const mesh = new Mesh({ geometry, texture });
+      const replay = vi.spyOn(WebGpuMeshRenderer.prototype, 'replayRetainedBatch');
+
+      retained.addChild(mesh, new Mesh({ geometry, texture }));
+
+      for (let index = 0; index < 3; index++) {
+        backend.resetStats();
+        retained.render(backend);
+        backend.flush();
+      }
+
+      hazards.length = 0;
+      replay.mockClear();
+      backend.resetStats();
+      retained.render(backend);
+      backend.rendererRegistry.resolve(mesh).disconnect();
+      backend.flush();
+
+      expect(replay).toHaveBeenCalledOnce();
+      expect(hazards).toEqual([]);
+
+      retained.destroy();
+      texture.destroy();
+      geometry.destroy();
+      backend.destroy();
+    } finally {
+      vi.restoreAllMocks();
+      environment.restore();
+    }
+  });
+
   test('a re-pack between two flushes ends the pass that already drew the geometry', async () => {
     const environment = createMockWebGpuEnvironment();
 

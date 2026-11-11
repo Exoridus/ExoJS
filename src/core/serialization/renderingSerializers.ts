@@ -13,6 +13,7 @@ import { BmFont } from '#rendering/text/BmFont';
 import { Texture } from '#rendering/texture/Texture';
 import { Video } from '#rendering/video/Video';
 
+import { initializeDeserializedNode } from './deserializeOwnership';
 import type { NodeSerializer } from './NodeSerializer';
 import { asNumberArray, asObject, asSerializedNode, readEnum, REPEAT_FITS, REPEAT_MODES } from './read';
 import type { SerializationRegistry } from './SerializationRegistry';
@@ -176,20 +177,19 @@ const graphicsSerializer: NodeSerializer<Graphics> = {
     return { children: node.children.map(child => ctx.writeNode(child)) };
   },
   read(data, ctx) {
-    const node = new Graphics();
-    const children = data.children;
+    return initializeDeserializedNode(new Graphics(), node => {
+      const children = data.children;
 
-    if (Array.isArray(children)) {
-      for (const child of children) {
-        const childNode = asSerializedNode(child);
+      if (Array.isArray(children)) {
+        for (const child of children) {
+          const childNode = asSerializedNode(child);
 
-        if (childNode !== null) {
-          node.addChild(ctx.readNode(childNode) as RenderNode);
+          if (childNode !== null) {
+            node.addChild(ctx.readNode(childNode) as RenderNode);
+          }
         }
       }
-    }
-
-    return node;
+    });
   },
 };
 

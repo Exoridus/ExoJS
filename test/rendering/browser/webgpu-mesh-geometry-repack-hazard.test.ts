@@ -13,9 +13,11 @@ import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
 import { Geometry } from '#rendering/geometry/Geometry';
 import { Mesh } from '#rendering/mesh/Mesh';
+import { RetainedContainer } from '#rendering/RetainedContainer';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
+import { WebGpuMeshRenderer } from '#rendering/webgpu/WebGpuMeshRenderer';
 
 import { drawWebGpuEncoded, readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
@@ -62,7 +64,7 @@ const writeQuad = (view: DataView, width: number): void => {
 };
 
 describe('WebGPU cached mesh geometry re-pack', () => {
-  test('a re-pack between two flushes leaves the earlier draw on the old vertex data', async ctx => {
+  test.for(['live', 'retained'] as const)('a re-pack leaves an earlier %s draw on the old vertex data', async (mode, ctx) => {
     const canvas = document.createElement('canvas');
 
     canvas.width = canvasSize;
@@ -91,8 +93,9 @@ describe('WebGPU cached mesh geometry re-pack', () => {
     const redTexture = createSolidTexture('#ff0000');
     const blueTexture = createSolidTexture('#0000ff');
     const greenTexture = createSolidTexture('#00ff00', 4);
-    const first = new Container();
+    const first = mode === 'retained' ? new RetainedContainer() : new Container();
     const second = new Container();
+    const replay = vi.spyOn(WebGpuMeshRenderer.prototype, 'replayRetainedBatch');
     const marker = new Sprite(greenTexture);
     const redTop = new Mesh({ geometry, texture: redTexture });
     const redBottom = new Mesh({ geometry, texture: redTexture });
@@ -108,21 +111,29 @@ describe('WebGPU cached mesh geometry re-pack', () => {
 
     // Two meshes on one static geometry form an instanced batch; the sprite
     // switches renderers and flushes that batch into the still-open pass.
-    first.addChild(redTop, redBottom, marker);
+    first.addChild(redTop, redBottom);
     second.addChild(blueTop, blueBottom);
 
     const frame = (between?: () => void): Promise<boolean> =>
       drawWebGpuEncoded(ctx, backend, () => {
         first.render(backend);
+        marker.render(backend);
         between?.();
+        second.invalidateContent();
         second.render(backend);
       });
 
     try {
       // Warm-up frame sizes the shared stream buffers so the measured frame
       // cannot split its pass for a capacity reason that would hide the hazard.
-      await frame();
-      await frame(() => {
+      for (let index = 0; index < 3; index++) {
+        if (!(await frame())) {
+          return;
+        }
+      }
+
+      replay.mockClear();
+      const rendered = await frame(() => {
         // Each mesh packs from its own vertex copy, so narrow all of them.
         for (const mesh of [redTop, redBottom, blueTop, blueBottom]) {
           mesh.vertices[2] = 8;
@@ -132,8 +143,13 @@ describe('WebGPU cached mesh geometry re-pack', () => {
         geometry.invalidate();
       });
 
+      if (!rendered) {
+        return;
+      }
+
       const readPixel = readWebGpuPixels(backend, canvasSize);
 
+      expect(replay).toHaveBeenCalledTimes(mode === 'retained' ? 1 : 0);
       expectPixelNear(readPixel(12, 8), [255, 0, 0, 255]);
       expectPixelNear(readPixel(12, 24), [255, 0, 0, 255]);
       expectPixelNear(readPixel(20, 8), [0, 0, 255, 255]);
@@ -141,11 +157,13 @@ describe('WebGPU cached mesh geometry re-pack', () => {
     } finally {
       first.destroy();
       second.destroy();
+      marker.destroy();
       redTexture.destroy();
       blueTexture.destroy();
       greenTexture.destroy();
       geometry.destroy();
       backend.destroy();
+      replay.mockRestore();
     }
   });
 });

@@ -220,7 +220,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Format version of the document being read (after migration)."
+          "description": "Validated document version. Remains the source version until an explicit value migration runs."
         }
       ],
       "paragraphs": [],

@@ -912,6 +912,10 @@ const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionRespo
   let distance: number;
 
   for (const normal of normalsA) {
+    if (normal.x === 0 && normal.y === 0) {
+      continue;
+    }
+
     shapeA.project(normal, projA);
     shapeB.project(normal, projB);
 
@@ -921,7 +925,7 @@ const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionRespo
       return null;
     }
 
-    distance = projA.getOverlap(projB);
+    distance = Math.min(projA.max - projB.min, projB.max - projA.min);
     containsA = projB.containsInterval(projA);
     containsB = projA.containsInterval(projB);
 
@@ -931,10 +935,6 @@ const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionRespo
 
     if (!containsB && shapeBinA) {
       shapeBinA = false;
-    }
-
-    if (containsA || containsB) {
-      distance += Math.min(Math.abs(projA.min - projB.min), Math.abs(projA.max - projB.max));
     }
 
     if (distance < overlap) {
@@ -945,6 +945,10 @@ const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionRespo
   }
 
   for (const normal of normalsB) {
+    if (normal.x === 0 && normal.y === 0) {
+      continue;
+    }
+
     shapeA.project(normal, projA);
     shapeB.project(normal, projB);
 
@@ -954,7 +958,7 @@ const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionRespo
       return null;
     }
 
-    distance = projA.getOverlap(projB);
+    distance = Math.min(projA.max - projB.min, projB.max - projA.min);
     containsA = projB.containsInterval(projA);
     containsB = projA.containsInterval(projB);
 
@@ -966,15 +970,17 @@ const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionRespo
       shapeBinA = false;
     }
 
-    if (containsA || containsB) {
-      distance += Math.min(Math.abs(projA.min - projB.min), Math.abs(projA.max - projB.max));
-    }
-
     if (distance < overlap) {
       overlap = distance;
       projection.copy(normal);
       flipProjection = projA.min + projA.max > projB.min + projB.max;
     }
+  }
+
+  if (overlap === Infinity) {
+    projection.destroy();
+
+    return null;
   }
 
   if (flipProjection) {

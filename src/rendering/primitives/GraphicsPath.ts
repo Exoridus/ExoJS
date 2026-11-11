@@ -1,6 +1,8 @@
 import { ShapeRevision } from '#math/ShapeRevision';
 import { TAU } from '#math/utils';
 
+import { arcSweep, tangentArc } from './arcGeometry';
+
 /** One flattened subpath produced by {@link GraphicsPath.contours}. */
 export interface PathContour {
   /** Vertices as a flat `[x0, y0, x1, y1, ...]` array. The closing vertex of a closed contour is not repeated. */
@@ -146,9 +148,11 @@ export class GraphicsPath extends ShapeRevision {
       this.lineTo(startX, startY);
     }
 
-    this._push(PathOp.Arc, centerX, centerY, r, startAngle, endAngle, anticlockwise ? 1 : 0);
-    this._currentX = centerX + Math.cos(endAngle) * r;
-    this._currentY = centerY + Math.sin(endAngle) * r;
+    const end = startAngle + arcSweep(startAngle, endAngle, anticlockwise);
+
+    this._push(PathOp.Arc, centerX, centerY, r, startAngle, end, anticlockwise ? 1 : 0);
+    this._currentX = centerX + Math.cos(end) * r;
+    this._currentY = centerY + Math.sin(end) * r;
 
     return this;
   }
@@ -164,52 +168,11 @@ export class GraphicsPath extends ShapeRevision {
   public arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): this {
     this._ensureSubpath();
 
-    const fromX = this._currentX;
-    const fromY = this._currentY;
-    const r = Math.abs(radius);
+    const arc = tangentArc(this._currentX, this._currentY, x1, y1, x2, y2, radius);
 
-    if (r === 0 || (fromX === x1 && fromY === y1) || (x1 === x2 && y1 === y2)) {
-      return this.lineTo(x1, y1);
-    }
-
-    const inLen = Math.hypot(x1 - fromX, y1 - fromY);
-    const outLen = Math.hypot(x2 - x1, y2 - y1);
-
-    if (inLen === 0 || outLen === 0) {
-      return this.lineTo(x1, y1);
-    }
-
-    const inDirX = (x1 - fromX) / inLen;
-    const inDirY = (y1 - fromY) / inLen;
-    const outDirX = (x2 - x1) / outLen;
-    const outDirY = (y2 - y1) / outLen;
-    const dot = Math.min(1, Math.max(-1, inDirX * outDirX + inDirY * outDirY));
-    const angle = Math.acos(dot);
-
-    if (angle === 0 || angle === Math.PI) {
-      return this.lineTo(x1, y1);
-    }
-
-    const toTangent = r / Math.tan(angle / 2);
-
-    if (!Number.isFinite(toTangent) || toTangent > inLen || toTangent > outLen) {
-      return this.lineTo(x1, y1);
-    }
-
-    const startX = x1 - inDirX * toTangent;
-    const startY = y1 - inDirY * toTangent;
-    const leftTurn = inDirX * outDirY - inDirY * outDirX > 0;
-    const centerX = startX + (leftTurn ? -inDirY : inDirY) * r;
-    const centerY = startY + (leftTurn ? inDirX : -inDirX) * r;
-
-    return this.arc(
-      centerX,
-      centerY,
-      r,
-      Math.atan2(startY - centerY, startX - centerX),
-      Math.atan2(y1 + outDirY * toTangent - centerY, x1 + outDirX * toTangent - centerX),
-      leftTurn,
-    );
+    return arc === null
+      ? this.lineTo(x1, y1)
+      : this.arc(arc.centerX, arc.centerY, arc.radius, arc.startAngle, arc.endAngle, arc.anticlockwise);
   }
 
   /** Add a closed rectangular subpath. */
@@ -449,6 +412,19 @@ const dropRepeatedStart = (points: number[]): void => {
   }
 };
 
+// A Bezier stays in its control polygon. Distance to the finite chord bounds
+// deviation even when endpoints coincide or a collinear control point overshoots.
+const distanceToChordSquared = (x: number, y: number, ax: number, ay: number, bx: number, by: number): number => {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lengthSquared = dx * dx + dy * dy;
+  const t = lengthSquared === 0 ? 0 : Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / lengthSquared));
+  const offsetX = x - ax - t * dx;
+  const offsetY = y - ay - t * dy;
+
+  return offsetX * offsetX + offsetY * offsetY;
+};
+
 const flattenQuadratic = (
   out: number[],
   fromX: number,
@@ -460,14 +436,9 @@ const flattenQuadratic = (
   tolerance: number,
   depth: number,
 ): void => {
-  // Deviation of the control point from the chord bounds the curve's own
-  // deviation, so a flat-enough control point means a flat-enough curve.
-  const dx = toX - fromX;
-  const dy = toY - fromY;
-  const cross = Math.abs((cpX - toX) * dy - (cpY - toY) * dx);
-  const chordSq = dx * dx + dy * dy;
+  const distanceSquared = distanceToChordSquared(cpX, cpY, fromX, fromY, toX, toY);
 
-  if (depth >= MAX_SUBDIVISION_DEPTH || cross * cross <= tolerance * tolerance * chordSq) {
+  if (depth >= MAX_SUBDIVISION_DEPTH || distanceSquared <= tolerance * tolerance) {
     out.push(toX, toY);
 
     return;
@@ -497,14 +468,10 @@ const flattenCubic = (
   tolerance: number,
   depth: number,
 ): void => {
-  const dx = toX - fromX;
-  const dy = toY - fromY;
-  const cross1 = Math.abs((cpX1 - toX) * dy - (cpY1 - toY) * dx);
-  const cross2 = Math.abs((cpX2 - toX) * dy - (cpY2 - toY) * dx);
-  const cross = cross1 + cross2;
-  const chordSq = dx * dx + dy * dy;
+  const distance1 = distanceToChordSquared(cpX1, cpY1, fromX, fromY, toX, toY);
+  const distance2 = distanceToChordSquared(cpX2, cpY2, fromX, fromY, toX, toY);
 
-  if (depth >= MAX_SUBDIVISION_DEPTH || cross * cross <= tolerance * tolerance * chordSq) {
+  if (depth >= MAX_SUBDIVISION_DEPTH || Math.max(distance1, distance2) <= tolerance * tolerance) {
     out.push(toX, toY);
 
     return;
@@ -543,25 +510,7 @@ const flattenArc = (
     return;
   }
 
-  let sweep = endAngle - startAngle;
-
-  if (anticlockwise) {
-    while (sweep > 0) {
-      sweep -= TAU;
-    }
-
-    if (sweep < -TAU) {
-      sweep = -TAU;
-    }
-  } else {
-    while (sweep < 0) {
-      sweep += TAU;
-    }
-
-    if (sweep > TAU) {
-      sweep = TAU;
-    }
-  }
+  const sweep = arcSweep(startAngle, endAngle, anticlockwise);
 
   if (sweep === 0) {
     return;

@@ -187,7 +187,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Rebuild this scene's root subtree from a SerializedScene produced by Scene.serialize. Existing root children are removed first, then the descriptor's children are reconstructed under Scene.root. Assets referenced by the data must already be loaded into the application's Loader (pre-load contract). Older documents are migrated to the current format; documents newer than the running engine throw. Returns this."
+          "description": "Rebuild this scene's root and optional UI subtrees from a SerializedScene produced by Scene.serialize. Both trees are read before existing children are detached. If a node cannot be read, provisional nodes are destroyed and the existing scene trees remain unchanged. Assets referenced by the data must already be loaded into the application's Loader (pre-load contract). Identity-compatible older documents retain their source version through all node reads; versions needing a value migration must be transformed first. Documents newer than the running engine throw. Returns this."
         },
         {
           "name": "destroy",

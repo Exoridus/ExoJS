@@ -2,7 +2,7 @@ import type { Application } from '#core/Application';
 import type { ComponentClass } from '#core/Component';
 import type { ComponentQuery } from '#core/ComponentQuery';
 import { DestroyScope } from '#core/DestroyScope';
-import { deserializeInto, migrate, serializeTree } from '#core/serialization/serialize';
+import { deserializeSceneInto, migrate, serializeTree } from '#core/serialization/serialize';
 import { SERIALIZATION_VERSION, type SerializedScene, type SerializeOptions } from '#core/serialization/types';
 import { Signal } from '#core/Signal';
 import type { SystemRegistry } from '#core/SystemRegistry';
@@ -435,25 +435,23 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   }
 
   /**
-   * Rebuild this scene's root subtree from a {@link SerializedScene} produced
-   * by {@link Scene.serialize}. Existing root children are removed first, then
-   * the descriptor's children are reconstructed under {@link Scene.root}.
+   * Rebuild this scene's root and optional UI subtrees from a {@link SerializedScene}
+   * produced by {@link Scene.serialize}. Both trees are read before existing
+   * children are detached. If a node cannot be read, provisional nodes are
+   * destroyed and the existing scene trees remain unchanged.
    *
    * Assets referenced by the data must already be loaded into the
-   * application's {@link Loader} (pre-load contract). Older documents are
-   * migrated to the current format; documents newer than the running engine
-   * throw. Returns `this`.
+   * application's {@link Loader} (pre-load contract). Identity-compatible
+   * older documents retain their source version through all node reads;
+   * versions needing a value migration must be transformed first.
+   * Documents newer than the running engine throw. Returns `this`.
    */
   public deserialize(data: SerializedScene): this {
     const migrated = migrate(data);
     const loader = this._app?.loader ?? null;
     const registry = this._app?.serializers;
 
-    deserializeInto(this._root, migrated.root, loader, registry);
-
-    if (migrated.ui !== undefined) {
-      deserializeInto(this.ui, migrated.ui, loader, registry);
-    }
+    deserializeSceneInto(this._root, () => this.ui, migrated, loader, registry);
 
     return this;
   }

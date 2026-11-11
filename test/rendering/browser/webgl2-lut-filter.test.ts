@@ -12,9 +12,19 @@
 import { describe, expect, test } from 'vitest';
 
 import { LutFilter } from '#rendering/filters/LutFilter';
+import { Texture } from '#rendering/texture/Texture';
 
 import { createWebGl2TestBackend, readWebGl2Pixel, renderWebGl2Encoded } from './_backendSetup';
-import { CLEAR, expectedProbeOutput, LUT_SCENE_SIZE, lutScene, PROBE_COLOURS, probeLut, SAMPLE_POINT } from './_lutFilterFixture';
+import {
+  CLEAR,
+  expectedProbeOutput,
+  fillCubeLut,
+  LUT_SCENE_SIZE,
+  lutScene,
+  PROBE_COLOURS,
+  probeLut,
+  SAMPLE_POINT,
+} from './_lutFilterFixture';
 import { expectPixelNear } from './_pixels';
 
 describe('LutFilter rgb1d grading (WebGL2)', () => {
@@ -104,6 +114,31 @@ test.each(['owner', 'ancestor'])('replacing a LUT refreshes its %s cache', async
     filter.destroy();
     identity.destroy();
     replacement.destroy();
+    backend.destroy();
+  }
+});
+
+test.each(['owner', 'ancestor'])('a deferred cube payload refreshes its %s cache', async cache => {
+  const backend = await createWebGl2TestBackend(LUT_SCENE_SIZE);
+  const lut = new Texture(null, { colorSpace: 'none', generateMipMap: false });
+  const filter = new LutFilter({ size: 17 }).setLut(lut);
+  const { root, texture } = lutScene('#40a0c0', filter);
+
+  (cache === 'owner' ? root.children[0]! : root).cacheAsTexture = true;
+
+  try {
+    fillCubeLut(lut, 17);
+    renderWebGl2Encoded(backend, root, CLEAR);
+    expectPixelNear(readWebGl2Pixel(backend, SAMPLE_POINT, SAMPLE_POINT), [64, 160, 192, 255], 8);
+
+    fillCubeLut(lut, 9, true);
+    renderWebGl2Encoded(backend, root, CLEAR);
+    expectPixelNear(readWebGl2Pixel(backend, SAMPLE_POINT, SAMPLE_POINT), [191, 160, 192, 255], 8);
+  } finally {
+    root.destroy();
+    texture.destroy();
+    filter.destroy();
+    lut.destroy();
     backend.destroy();
   }
 });

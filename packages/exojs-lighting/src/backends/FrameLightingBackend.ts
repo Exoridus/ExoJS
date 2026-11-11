@@ -36,15 +36,13 @@ import { buildShadowRow, buildSunShadowRow } from '../occluders/shadowMap';
 import { pickDebugTexture, releaseDestroyedBatches } from './backendHelpers';
 import { fieldGrid } from './fieldGrid';
 import type { LightingBackend } from './LightingBackend';
+import { acquireNormalBatch, releaseUnusedNormalBatches } from './normalBatches';
 import lightCompositeFragment from './shaders/light-composite.frag';
 import lightCompositeVertex from './shaders/light-composite.vert';
 import lightCompositeWgsl from './shaders/light-composite.wgsl';
 import lightQuadFragment from './shaders/light-quad.frag';
 import lightQuadVertex from './shaders/light-quad.vert';
 import lightQuadWgsl from './shaders/light-quad.wgsl';
-import normalPrepassFragment from './shaders/normal-prepass.frag';
-import normalPrepassVertex from './shaders/normal-prepass.vert';
-import normalPrepassWgsl from './shaders/normal-prepass.wgsl';
 import occluderDebugFragment from './shaders/occluder-debug.frag';
 import occluderDebugVertex from './shaders/occluder-debug.vert';
 import occluderDebugWgsl from './shaders/occluder-debug.wgsl';
@@ -248,6 +246,7 @@ export abstract class FrameLightingBackend implements LightingBackend {
   private readonly _normalTarget: RenderTexture;
   /** One batch per albedo/normal-map pair: a batch binds two textures and draws every surface sharing them. */
   private readonly _normalBatches = new Map<Texture | RenderTexture, Map<Texture, RenderBatch>>();
+  private readonly _inactiveNormalBatches = new Set<RenderBatch>();
   private readonly _normalPass: CallbackRenderPass;
   private readonly _lightPass: CallbackRenderPass;
   private readonly _compositePass: CallbackRenderPass;
@@ -1134,6 +1133,7 @@ ${sunQuadWgsl}`,
     }
 
     this._normalBatches.clear();
+    this._inactiveNormalBatches.clear();
     this._shadowRows.clear();
     this._sunShadowRows.clear();
     this._shadowGeometry.clear();
@@ -1202,6 +1202,8 @@ ${sunQuadWgsl}`,
    * screen-space normal buffer cannot take from the scene graph.
    */
   private _writeSurfaces(surfaces: readonly NormalSurface[]): void {
+    this._inactiveNormalBatches.clear();
+
     for (const byNormal of this._normalBatches.values()) {
       for (const batch of byNormal.values()) {
         batch.clear();
@@ -1213,13 +1215,21 @@ ${sunQuadWgsl}`,
     for (const { drawable, normals } of surfaces) {
       const albedo = drawable.texture;
 
-      if (albedo === null || !drawable.visible) {
+      if (albedo === null || albedo.destroyed || normals.texture.destroyed) {
         continue;
       }
 
-      const box = drawable.getLocalBounds();
+      const box = drawable.visible ? drawable.getLocalBounds() : null;
 
-      if (box.width === 0 || box.height === 0) {
+      if (box === null || box.width === 0 || box.height === 0) {
+        // Visibility can change every frame. Keep a registered pair's existing
+        // material warm, but never allocate a batch just to keep it inactive.
+        const existing = this._normalBatches.get(albedo)?.get(normals.texture);
+
+        if (existing !== undefined) {
+          this._inactiveNormalBatches.add(existing);
+        }
+
         continue;
       }
 
@@ -1258,9 +1268,15 @@ ${sunQuadWgsl}`,
       scratchSurface.a_basis[3] = world.d * greenSign;
 
       assertNumericNormalTexture(normals.texture);
-      this._normalBatch(albedo, normals.texture).add(this._transform, Color.white, scratchSurface);
+      acquireNormalBatch(this._normalBatches, this._normalGeometry, albedo, normals.texture).add(
+        this._transform,
+        Color.white,
+        scratchSurface,
+      );
       written++;
     }
+
+    releaseUnusedNormalBatches(this._normalBatches, this._inactiveNormalBatches);
 
     const describes = written > 0;
 
@@ -1370,54 +1386,6 @@ ${sunQuadWgsl}`,
   /** The normal field the light shader should read: the prepass, or nothing at all. */
   private _boundNormals(): Texture | RenderTexture {
     return this._normalPass.enabled ? this._normalTarget : transparentTexture();
-  }
-
-  /**
-   * The batch for one albedo/normal-map pair, built on first use. Batches are
-   * kept for the backend's life: an atlas pair that was drawn once is drawn
-   * again, and rebuilding a material per frame would recompile nothing but cost
-   * a pipeline lookup on every draw.
-   */
-  private _normalBatch(albedo: Texture | RenderTexture, normalMap: Texture): RenderBatch {
-    let byNormal = this._normalBatches.get(albedo);
-
-    if (byNormal === undefined) {
-      byNormal = new Map();
-      this._normalBatches.set(albedo, byNormal);
-    }
-
-    const existing = byNormal.get(normalMap);
-
-    if (existing !== undefined) {
-      return existing;
-    }
-
-    const material = new MeshMaterial({
-      shader: new Shader({
-        glsl: {
-          vertex: `#version 300 es
-${INSTANCE_TRANSFORM_GLSL}
-${normalPrepassVertex}`,
-          fragment: normalPrepassFragment,
-        },
-        wgsl: `${INSTANCE_TRANSFORM_WGSL}
-${normalPrepassWgsl}`,
-      }),
-      // Declaration order is the group(2) binding order on WebGPU: albedo at
-      // bindings 1/2, normal map at 3/4, matching `normal-prepass.wgsl`.
-      textures: { u_albedo: albedo, u_normalMap: normalMap },
-      blendMode: BlendModes.Normal,
-    });
-    const batch = new RenderBatch(this._normalGeometry, material, {
-      instanceAttributes: [
-        { name: 'a_frame', format: 'float32x4' },
-        { name: 'a_basis', format: 'float32x4' },
-      ],
-    });
-
-    byNormal.set(normalMap, batch);
-
-    return batch;
   }
 
   /** Rasterise this frame's blocking edges, through the field's own view. */

@@ -40,7 +40,7 @@ export interface SerializeContext {
  * so a serializer only constructs the node and sets its type-specific fields.
  */
 export interface DeserializeContext {
-  /** Format version of the document being read (after migration). */
+  /** Validated document version. Remains the source version until an explicit value migration runs. */
   readonly version: number;
   /** The loader used to resolve asset references, or `null` if none is available. */
   readonly loader: Loader | null;
@@ -75,6 +75,9 @@ export interface NodeSerializer<T extends SceneNode = SceneNode> {
    * Construct a fresh node from `data` and set its type-specific fields. The
    * framework applies the common transform/visual fields afterwards, so do not
    * read them here. Recurse into children via {@link DeserializeContext.readNode}.
+   * If construction fails before returning, release the node and resources this
+   * method created. The framework releases nodes returned by recursive reads
+   * when the surrounding read fails.
    */
   read(data: SerializedNode, ctx: DeserializeContext): T;
 }

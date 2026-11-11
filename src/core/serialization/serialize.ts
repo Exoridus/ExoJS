@@ -8,6 +8,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 
 import { applyCommonFields, writeCommonFields } from './commonFields';
 import { registerCoreSerializers } from './coreSerializers';
+import { destroyFailedRead } from './deserializeOwnership';
 import type { DeserializeContext, SerializeContext } from './NodeSerializer';
 import { asObject, asSerializedNode } from './read';
 import { defaultSerializationRegistry, type SerializationRegistry } from './SerializationRegistry';
@@ -80,11 +81,16 @@ const createSerializeContext = (loader: Loader | null, registry: SerializationRe
   return ctx;
 };
 
-const createDeserializeContext = (loader: Loader | null, version: number, registry: SerializationRegistry): DeserializeContext => {
+const createDeserializeContext = (
+  loader: Loader | null,
+  version: number,
+  registry: SerializationRegistry,
+  provisional: SceneNode[],
+): DeserializeContext => {
   const ctx: DeserializeContext = {
     version,
     loader,
-    readNode: data => readNodeWith(data, ctx, registry),
+    readNode: data => readNodeWith(data, ctx, registry, provisional),
     resolveAsset: <T>(reference: unknown, type: AssetConstructor<T>): T | null => {
       const request = readAssetReference(reference);
 
@@ -146,18 +152,64 @@ const writeNodeWith = (node: SceneNode, ctx: SerializeContext, registry: Seriali
   return out;
 };
 
-const readNodeWith = (data: SerializedNode, ctx: DeserializeContext, registry: SerializationRegistry): SceneNode => {
+const readNodeWith = (
+  data: SerializedNode,
+  ctx: DeserializeContext,
+  registry: SerializationRegistry,
+  provisional: SceneNode[],
+): SceneNode => {
   const entry = registry.resolveByName(data.type);
 
   if (entry === undefined) {
     throw new Error(`No serializer registered for type "${data.type}". Register one via registerSerializer().`);
   }
 
-  const node = entry.serializer.read(data, ctx);
+  const checkpoint = provisional.length;
 
-  applyCommonFields(node, data);
+  try {
+    const node = entry.serializer.read(data, ctx);
 
-  return node;
+    provisional.push(node);
+    applyCommonFields(node, data);
+
+    return node;
+  } catch (error) {
+    // A custom serializer can catch a failed child read and return a fallback.
+    // Roll back this call now without discarding its already-completed siblings.
+    destroyProvisionalReads(provisional, checkpoint);
+
+    throw error;
+  }
+};
+
+const destroyProvisionalReads = (provisional: SceneNode[], checkpoint: number): void => {
+  const failed = provisional.splice(checkpoint);
+
+  // Parents are returned after their descendants. Destroy them first, then
+  // release any completed reads that a failing custom serializer left unattached.
+  for (let index = failed.length - 1; index >= 0; index--) {
+    destroyFailedRead(failed[index]!);
+  }
+};
+
+const readWithOwnership = <T>(
+  loader: Loader | null,
+  version: number,
+  registry: SerializationRegistry,
+  read: (ctx: DeserializeContext) => T,
+): T => {
+  const provisional: SceneNode[] = [];
+  const ctx = createDeserializeContext(loader, version, registry, provisional);
+
+  try {
+    return read(ctx);
+  } catch (error) {
+    destroyProvisionalReads(provisional, 0);
+
+    throw error;
+  } finally {
+    provisional.length = 0;
+  }
 };
 
 const describeNode = (node: SceneNode): string => {
@@ -213,24 +265,74 @@ export const serializeTree = (
 
 /**
  * Reconstruct a node subtree from a {@link SerializedNode}. Referenced assets
- * must be pre-loaded into `loader`.
+ * must be pre-loaded into `loader`. When reading a versioned document, pass
+ * its validated source version so nested custom serializers see the same schema.
  * @internal
  */
 export const deserializeTree = (
   data: SerializedNode,
   loader: Loader | null = null,
   registry: SerializationRegistry = defaultSerializationRegistry,
+  version: number = SERIALIZATION_VERSION,
 ): SceneNode => {
   ensureCoreSerializers();
 
-  return readNodeWith(data, createDeserializeContext(loader, SERIALIZATION_VERSION, registry), registry);
+  return readWithOwnership(loader, version, registry, ctx => ctx.readNode(data));
+};
+
+interface ContainerReadTarget {
+  readonly container: Container | (() => Container);
+  readonly data: SerializedNode;
+}
+
+const deserializeTargets = (
+  targets: readonly ContainerReadTarget[],
+  loader: Loader | null,
+  registry: SerializationRegistry,
+  version: number,
+): void => {
+  ensureCoreSerializers();
+
+  const prepared = readWithOwnership(loader, version, registry, ctx => {
+    const childrenByTarget = targets.map(({ data }) => {
+      const nodes: RenderNode[] = [];
+
+      if (Array.isArray(data.children)) {
+        for (const child of data.children) {
+          const childNode = asSerializedNode(child);
+
+          if (childNode !== null) {
+            nodes.push(ctx.readNode(childNode) as RenderNode);
+          }
+        }
+      }
+
+      return nodes;
+    });
+
+    // Lazy scene UI allocation happens only after every subtree has decoded.
+    return targets.map(({ container, data }, index) => ({
+      container: typeof container === 'function' ? container() : container,
+      data,
+      children: childrenByTarget[index]!,
+    }));
+  });
+
+  for (const { container, data, children } of prepared) {
+    container.removeChildren();
+    applyCommonFields(container, data);
+
+    for (const child of children) {
+      container.addChild(child);
+    }
+  }
 };
 
 /**
- * Rebuild `container`'s contents from `data` in place: clears existing
- * children, applies `data`'s common fields to the container, then deserializes
- * and re-adds its children. Used by {@link Scene.deserialize} to reuse the
- * eagerly-created scene root.
+ * Read all replacement children before changing `container`, then detach the
+ * old children and apply the prepared contents. A read failure destroys the
+ * provisional nodes and leaves the destination unchanged. The validated document
+ * version is shared by every descendant read, including custom serializers.
  * @internal
  */
 export const deserializeInto = (
@@ -238,37 +340,45 @@ export const deserializeInto = (
   data: SerializedNode,
   loader: Loader | null = null,
   registry: SerializationRegistry = defaultSerializationRegistry,
+  version: number = SERIALIZATION_VERSION,
 ): void => {
-  ensureCoreSerializers();
+  deserializeTargets([{ container, data }], loader, registry, version);
+};
 
-  const ctx = createDeserializeContext(loader, SERIALIZATION_VERSION, registry);
+/** Prepare both scene trees before replacing either destination. @internal */
+export const deserializeSceneInto = (
+  root: Container,
+  ui: () => Container,
+  data: SerializedScene,
+  loader: Loader | null = null,
+  registry: SerializationRegistry = defaultSerializationRegistry,
+): void => {
+  const targets: ContainerReadTarget[] = [{ container: root, data: data.root }];
 
-  // Read every child before touching the container so a malformed document
-  // throws with the existing subtree still in place.
-  const nodes: RenderNode[] = [];
-  const children = data.children;
-
-  if (Array.isArray(children)) {
-    for (const child of children) {
-      const childNode = asSerializedNode(child);
-
-      if (childNode !== null) {
-        nodes.push(ctx.readNode(childNode) as RenderNode);
-      }
-    }
+  if (data.ui !== undefined) {
+    targets.push({ container: ui, data: data.ui });
   }
 
-  container.removeChildren();
-  applyCommonFields(container, data);
+  deserializeTargets(targets, loader, registry, data.version);
+};
 
-  for (const node of nodes) {
-    container.addChild(node);
+const LAST_IDENTITY_COMPATIBLE_VERSION = 2;
+
+/**
+ * Reject a future version bump until its legacy-data transforms exist.
+ * SDF outline/blur values cannot be reinterpreted as logical pixels:
+ * unknown external MSDF ranges, saturated outlines and missing raster
+ * densities have no general lossless conversion.
+ */
+const requireExplicitMigration = (version: number, kind: 'scene' | 'prefab'): void => {
+  if (version < SERIALIZATION_VERSION && SERIALIZATION_VERSION > LAST_IDENTITY_COMPATIBLE_VERSION) {
+    throw new Error(`Cannot deserialize ${kind}: version ${version} needs an explicit migration to version ${SERIALIZATION_VERSION}.`);
   }
 };
 
 /**
- * Validate and migrate a serialized scene document to the current
- * {@link SERIALIZATION_VERSION}, returning a structurally-sound
+ * Validate a serialized scene document, retaining its source version until a
+ * real migration can be applied, and return a structurally-sound
  * {@link SerializedScene}.
  *
  * This is the **untrusted top-level boundary**: the parameter is `unknown`
@@ -279,9 +389,9 @@ export const deserializeInto = (
  * dropped (it is optional) rather than thrown.
  *
  * Version 2 widened asset references from a bare source string to also allow
- * a `{ source, options }` object. A version 1 document is already valid
- * version 2 data, so its migration step is the identity. Future version bumps
- * register version→version+1 transforms here.
+ * a `{ source, options }` object. Versions 0/1 remain valid version 2 data,
+ * so they need no conversion. Future versions must transform values before
+ * any serializer reads them; stamping a new version alone is not migration.
  * @internal
  */
 export const migrate = (data: unknown): SerializedScene => {
@@ -303,6 +413,8 @@ export const migrate = (data: unknown): SerializedScene => {
     throw new Error(`Cannot deserialize scene: data version ${version} is newer than the supported version ${SERIALIZATION_VERSION}.`);
   }
 
+  requireExplicitMigration(version, 'scene');
+
   const root = asSerializedNode(scene.root);
 
   if (root === null) {
@@ -315,17 +427,16 @@ export const migrate = (data: unknown): SerializedScene => {
 };
 
 /**
- * Validate and migrate a serialized prefab document to the current
- * {@link SERIALIZATION_VERSION}, returning a structurally-sound
- * {@link SerializedPrefab}.
+ * Validate a serialized prefab document while retaining its source version,
+ * returning a structurally-sound {@link SerializedPrefab}.
  *
  * The prefab counterpart to {@link migrate}, and the same untrusted boundary:
  * {@link Prefab.fromJSON} accepts whatever came off disk or the network. Throws
  * on a non-object document, a version newer than supported, or a missing/invalid
  * root.
  *
- * A version 1 document is valid version 2 data, exactly as for scenes; a
- * future version bump registers its version→version+1 transform in both places.
+ * Versions 0/1 are identity-compatible with version 2, exactly as for scenes.
+ * Future versions must migrate values before constructing nodes.
  * @internal
  */
 export const migratePrefab = (data: unknown): SerializedPrefab => {
@@ -344,6 +455,8 @@ export const migratePrefab = (data: unknown): SerializedPrefab => {
   if (version > SERIALIZATION_VERSION) {
     throw new Error(`Cannot deserialize prefab: data version ${version} is newer than the supported version ${SERIALIZATION_VERSION}.`);
   }
+
+  requireExplicitMigration(version, 'prefab');
 
   const root = asSerializedNode(document.root);
 

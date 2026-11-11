@@ -153,7 +153,7 @@
             }
           ],
           "returnType": "Voice",
-          "description": "Implements Playable. Called by AudioSystem.play. Snapshots the current synth settings into a new AudioGeneratorVoice. Returns an already-ended NoopVoice when the AudioContext is still locked by the autoplay policy - oscillators are ephemeral and cannot be deferred."
+          "description": "Implements Playable. Called by AudioSystem.play. Snapshots the current synth settings into a new AudioGeneratorVoice. Returns an already-ended NoopVoice when the AudioContext is still locked by the autoplay policy - oscillators are ephemeral and cannot be deferred. An eviction callback can also fill the available pool slot; this call then returns an already-ended voice without starting an oscillator."
         },
         {
           "name": "destroy",

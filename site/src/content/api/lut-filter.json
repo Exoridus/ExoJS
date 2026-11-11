@@ -371,7 +371,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Replace the LUT texture and invalidate cached owners. Returns this for chaining. The LUT is sampled as numeric data in the filter's own colour domain, so it must resolve to colorSpace: 'none': 'srgb' storage would apply its hardware decode on top of the domain conversion the filter already performs, and 'linear-srgb' still gets colour alpha handling. Use LutFilter.fromImage, a DataTexture, or an image Texture declared colorSpace: 'none'. The check repeats on every LutFilter.apply, so a texture reinterpreted after assignment fails there."
+          "description": "Replace the LUT texture and invalidate cached owners. Returns this for chaining. Later payload updates also invalidate owners and refresh the 3D cube size once the texture has valid N*N by N dimensions. The LUT is sampled as numeric data in the filter's own colour domain, so it must resolve to colorSpace: 'none': 'srgb' storage would apply its hardware decode on top of the domain conversion the filter already performs, and 'linear-srgb' still gets colour alpha handling. Use LutFilter.fromImage, a DataTexture, or an image Texture declared colorSpace: 'none'. The check repeats on every LutFilter.apply, so a texture reinterpreted after assignment fails there."
         },
         {
           "name": "fromImage",
@@ -658,7 +658,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The cube edge size (3D only), following the LUT most recently supplied to LutFilter.setLut. For 1D this returns the constructor-time size hint."
+          "description": "The cube edge size (3D only), following the LUT's valid dimensions. Empty or placeholder payloads preserve the current size. For 1D this returns the constructor-time size hint."
         }
       ],
       "paragraphs": [],
