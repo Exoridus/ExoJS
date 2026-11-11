@@ -68,6 +68,26 @@ export interface SerializeOptions {
 }
 
 /**
+ * Options for {@link Scene.deserialize} and {@link Prefab.instantiate}.
+ */
+export interface DeserializeOptions {
+  /**
+   * Approves a `Video` source the default policy refuses. By default a
+   * serialized video loads only from the page's own origin (HTTP(S), or a
+   * same-origin `blob:` URL); anything else, including cross-origin and `data:`
+   * sources, makes deserialization throw. The callback receives the source
+   * resolved against the document base URL and returns `true` to allow it.
+   * Documents are untrusted input, so allow only sources you recognise.
+   *
+   * The check inspects the URL only: a same-origin URL that redirects to
+   * another origin is not detected. In a page with an opaque origin (a
+   * sandboxed frame or `file:`) the default refuses every source, relative
+   * paths included.
+   */
+  readonly allowVideoSource?: (source: URL) => boolean;
+}
+
+/**
  * Serialized reference to a loaded asset (e.g. a {@link Texture}).
  *
  * Names the request the asset was loaded with, never the asset data: the
