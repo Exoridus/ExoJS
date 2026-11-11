@@ -1990,8 +1990,8 @@ export class WebGpuBackend implements RenderBackend {
     // directly - no flip (unlike WebGL2's bottom-left `gl.viewport`).
     rect.x = Math.floor(vp.x * width);
     rect.y = Math.floor(vp.y * height);
-    rect.width = Math.max(1, Math.round(vp.width * width));
-    rect.height = Math.max(1, Math.round(vp.height * height));
+    rect.width = Math.max(0, Math.round(vp.width * width));
+    rect.height = Math.max(0, Math.round(vp.height * height));
 
     return rect;
   }
