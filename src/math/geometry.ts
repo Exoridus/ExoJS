@@ -265,7 +265,8 @@ export const buildPath = (points: number[], width: number): MeshGeometryData => 
  * triangles than large ones.
  */
 export const buildCircle = (centerX: number, centerY: number, radius: number): MeshGeometryData => {
-  const length = Math.floor(15 * Math.sqrt(radius + radius));
+  const estimate = Math.floor(15 * Math.sqrt(radius + radius));
+  const length = radius > 0 ? Math.max(3, estimate) : estimate;
   const segment = (Math.PI * 2) / length;
   const points: number[] = [];
 
@@ -305,7 +306,8 @@ export const buildCircle = (centerX: number, centerY: number, radius: number): M
  * scales with the sum of the two radii so elongated ellipses remain smooth.
  */
 export const buildEllipse = (centerX: number, centerY: number, radiusX: number, radiusY: number): MeshGeometryData => {
-  const length = Math.floor(15 * Math.sqrt(radiusX + radiusY));
+  const estimate = Math.floor(15 * Math.sqrt(radiusX + radiusY));
+  const length = radiusX > 0 && radiusY > 0 ? Math.max(3, estimate) : estimate;
   const segment = (Math.PI * 2) / length;
   const points: number[] = [];
 
