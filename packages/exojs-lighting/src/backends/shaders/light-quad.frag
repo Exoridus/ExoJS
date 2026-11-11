@@ -40,8 +40,8 @@ const float PI = 3.14159265359;
 const int MAX_HALF = 10;
 /** Fraction of a full turn the widest penumbra spans, before the bin bound above. */
 const float MAX_PENUMBRA = 0.03;
-/** Tolerance, in radii, that keeps an occluder's own surface out of its shadow. */
-const float SHADOW_BIAS = 0.004;
+/** One world unit of clearance, independent of the light's whole reach. */
+const float SHADOW_BIAS_WORLD = 1.0;
 /**
  * Kernel half-width, in bins, at zero softness. The row samples each bin at
  * its centre and is accurate to half a bin, so a kernel narrower than this
@@ -83,7 +83,7 @@ float depthAt(int bin, int bins, int row) {
  * blending two stored distances and comparing once would instead put the edge
  * at a depth neither bin holds, which is a different thing and the wrong one.
  */
-float coverageAt(float here, float previous, float next, float distance) {
+float coverageAt(float here, float previous, float next, float distance, float normalizedBias) {
     float rising = here - previous;
     float falling = next - here;
     // A slope only means something where the blocker distance runs the SAME
@@ -94,7 +94,7 @@ float coverageAt(float here, float previous, float next, float distance) {
     // it, the one place a blocker cannot reach.
     float slope = rising * falling <= 0.0 ? 0.0 : min(abs(rising), abs(falling));
 
-    return clamp(0.5 + (here + SHADOW_BIAS - distance) / max(slope, MIN_SLOPE), 0.0, 1.0);
+    return clamp(0.5 + (here + normalizedBias - distance) / max(slope, MIN_SLOPE), 0.0, 1.0);
 }
 
 /**
@@ -123,6 +123,9 @@ float shadowTerm(float distance) {
         return 1.0;
     }
 
+    // The shadow row measures from the light centre over its entire reach.
+    // Line lights include their half-segment in that reach.
+    float normalizedBias = SHADOW_BIAS_WORLD / max(v_surface.x * (v_half + 1.0), 1.0);
     int bins = textureSize(u_shadow, 0).x;
     int row = int(v_shadowRow);
     float radius = min(MIN_RADIUS + max(0.0, v_softness) * float(bins) * MAX_PENUMBRA, float(MAX_HALF));
@@ -147,7 +150,7 @@ float shadowTerm(float distance) {
         float weight = max(0.0, 1.0 - abs(float(bin) - center) / radius);
 
         if (weight > 0.0) {
-            lit += weight * coverageAt(here, previous, next, distance);
+            lit += weight * coverageAt(here, previous, next, distance, normalizedBias);
             total += weight;
         }
 
