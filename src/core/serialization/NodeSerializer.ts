@@ -2,7 +2,7 @@ import type { AssetConstructor } from '#assets/AssetConstructor';
 import type { Loader } from '#assets/Loader';
 import type { SceneNode } from '#core/SceneNode';
 
-import type { SerializedAssetRef, SerializedNode } from './types';
+import type { DeserializeOptions, SerializedAssetRef, SerializedNode } from './types';
 
 /**
  * Context handed to {@link NodeSerializer.write}. Carries the framework
@@ -44,6 +44,8 @@ export interface DeserializeContext {
   readonly version: number;
   /** The loader used to resolve asset references, or `null` if none is available. */
   readonly loader: Loader | null;
+  /** Caller approval for sources the default policy refuses; see {@link DeserializeOptions.allowVideoSource}. */
+  readonly allowVideoSource?: ((source: URL) => boolean) | undefined;
   /** Fully deserialize a child node (inverse of {@link SerializeContext.writeNode}). */
   readNode(data: SerializedNode): SceneNode;
   /**
