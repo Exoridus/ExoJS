@@ -351,6 +351,10 @@ export class Polygon extends ShapeRevision implements ShapeLike {
       this._cachedNormals = null;
     }
 
+    // The points and edges are gone, so a later getNormals() must rebuild an
+    // empty cache rather than hand back the null it was reset to above.
+    this._normalsDirty = true;
+
     this._position.destroy();
     this._points.length = 0;
     this._edges.length = 0;

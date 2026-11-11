@@ -14,7 +14,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { Video } from '#rendering/video/Video';
 
 import { initializeDeserializedNode } from './deserializeOwnership';
-import type { NodeSerializer } from './NodeSerializer';
+import type { DeserializeContext, NodeSerializer } from './NodeSerializer';
 import { asNumberArray, asObject, asSerializedNode, readEnum, REPEAT_FITS, REPEAT_MODES } from './read';
 import type { SerializationRegistry } from './SerializationRegistry';
 import { compact, deserializeStyleOptions, readLayoutOptions, serializeStyle } from './serializerHelpers';
@@ -427,6 +427,35 @@ const bitmapTextSerializer: NodeSerializer<BitmapText> = {
 // `<video>` element (requires a DOM); the live decode/audio graph is rebuilt by
 // the Video constructor.
 
+// Setting `src` starts a network request, so an untrusted document must not
+// reach it for a foreign origin. An opaque origin ("null", e.g. file: or a
+// sandboxed frame) never matches: "null" === "null" would admit everything.
+const isSameOriginVideoSource = (url: URL): boolean => {
+  const { origin } = url;
+
+  if (origin === 'null' || origin !== location.origin || url.username !== '' || url.password !== '') {
+    return false;
+  }
+
+  return url.protocol === 'http:' || url.protocol === 'https:' || url.protocol === 'blob:';
+};
+
+const assertVideoSourceAllowed = (source: string, ctx: DeserializeContext): void => {
+  let url: URL | null = null;
+
+  try {
+    url = new URL(source, document.baseURI);
+  } catch {
+    // An unparseable source is refused below.
+  }
+
+  if (url === null || !(isSameOriginVideoSource(url) || ctx.allowVideoSource?.(url) === true)) {
+    throw new Error(
+      `Refused to deserialize a Video with source "${source}": only same-origin HTTP(S) and blob: sources are allowed by default. Pass { allowVideoSource } to approve others.`,
+    );
+  }
+};
+
 const videoSerializer: NodeSerializer<Video> = {
   write(node) {
     const out: Record<string, unknown> = { src: node.videoElement.src };
@@ -453,11 +482,14 @@ const videoSerializer: NodeSerializer<Video> = {
 
     return out;
   },
-  read(data) {
+  read(data, ctx) {
     const element = document.createElement('video');
 
-    if (typeof data.src === 'string') {
-      element.src = data.src;
+    const { src } = data;
+
+    if (typeof src === 'string') {
+      assertVideoSourceAllowed(src, ctx);
+      element.src = src;
     }
 
     return new Video(
