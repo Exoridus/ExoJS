@@ -458,6 +458,7 @@ export class WebGl2Backend implements RenderBackend {
   private _renderGroupTransform: Matrix | null = null;
   private _renderGroupTransformId = 0;
   private _shader: WebGl2Shader | null = null;
+  private _shaderConnectionRevision = -1;
   private _blendMode: BlendModes | null = null;
   // What GL currently has bound to TEXTURE_2D on each texture unit, indexed by
   // unit. Keyed on the `WebGLTexture` handle rather than the user-side
@@ -1683,17 +1684,22 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   public bindShader(shader: WebGl2Shader | null): this {
-    if (this._shader !== shader) {
+    const revision = shader?._connectionRevision ?? -1;
+
+    if (this._shader !== shader || this._shaderConnectionRevision !== revision) {
       if (this._shader) {
         this._shader.unbind();
         this._shader = null;
       }
+
+      this._shaderConnectionRevision = -1;
 
       if (shader) {
         shader.bind();
       }
 
       this._shader = shader;
+      this._shaderConnectionRevision = revision;
     }
 
     return this;
@@ -2813,6 +2819,7 @@ export class WebGl2Backend implements RenderBackend {
     this._vao = null;
     this._renderer = null;
     this._shader = null;
+    this._shaderConnectionRevision = -1;
     this._blendMode = null;
     this._attachmentBlendActive = false;
     this._boundHandles.length = 0;
@@ -3049,6 +3056,7 @@ export class WebGl2Backend implements RenderBackend {
     this._textureUnit = 0;
     this._vao = null;
     this._shader = null;
+    this._shaderConnectionRevision = -1;
     this._blendMode = null;
     this._attachmentBlendActive = false;
     this._renderer = null;
@@ -4290,6 +4298,7 @@ export class WebGl2Backend implements RenderBackend {
     // two units it borrowed, and `restoreAfterColorNormalization` records them.
     this._boundFramebuffer = null;
     this._shader = null;
+    this._shaderConnectionRevision = -1;
     this._vao = null;
   }
 
