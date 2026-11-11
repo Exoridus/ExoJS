@@ -27,6 +27,10 @@ describe('structural gate update', () => {
   test.each([
     ['no results', []],
     ['no guarded measurements', [{ spec: { archetype: 'batch-breaking' }, status: 'ok' }]],
+    [
+      'historical counters without units',
+      [{ spec: { archetype: 'static-heavy' }, status: 'ok', structural: { drawCalls: 1, textureBinds: 0, bufferUploads: 0 } }],
+    ],
   ])('does not overwrite the baseline with %s', async (_description, results) => {
     directory = mkdtempSync(join(tmpdir(), 'exo-structural-gate-'));
     const baselinePath = join(directory, 'baseline.json');

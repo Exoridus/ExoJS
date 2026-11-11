@@ -67,6 +67,8 @@ export interface GateBaselineCell extends GateCellKey, StructuralCounters {}
 
 /** The committed baseline file. */
 export interface GateBaseline {
+  readonly schemaVersion: 1;
+  readonly countBasis: 'per-frame';
   /**
    * When and against what the baseline was recorded. Informational only - the
    * gate never compares versions, because a version bump is not a structural
@@ -126,12 +128,49 @@ const keyOf = (result: CellResult): GateCellKey => ({
   nodeCount: result.spec.nodeCount,
 });
 
-/** Turn a run's results into a baseline file, keeping only the guarded, successfully measured cells. */
+const structuralCountProblem = (result: CellResult): string | null => {
+  const measurement = result.structuralMeasurement;
+
+  if (measurement?.schemaVersion !== 1 || measurement.basis !== 'per-frame') {
+    return `structural count basis '${measurement?.basis ?? 'unknown'}' is not supported; the baseline requires schema 1 per-frame counts`;
+  }
+
+  if (typeof measurement.totals !== 'object' || measurement.totals === null) {
+    return 'structural count basis has no raw totals';
+  }
+
+  if (!Number.isSafeInteger(measurement.frames) || measurement.frames <= 0) {
+    return 'structural count basis has no positive measured frame count';
+  }
+
+  for (const counter of ['drawCalls', 'textureBinds', 'bufferUploads'] as const) {
+    const total = measurement.totals[counter];
+    const count = result.structural[counter];
+
+    if (!Number.isSafeInteger(total) || total < 0 || !Number.isSafeInteger(count) || total / measurement.frames !== count) {
+      return `structural count basis does not match the raw ${counter} total and measured frames`;
+    }
+  }
+
+  return null;
+};
+
+/** Record guarded successful cells with qualified per-frame units. Unknown or inconsistent units are rejected. */
 export const recordBaseline = (results: readonly CellResult[], recorded: GateBaseline['recorded']): GateBaseline => ({
+  schemaVersion: 1,
+  countBasis: 'per-frame',
   recorded,
   cells: results
     .filter(result => result.status === 'ok' && isGuarded(result.spec.archetype))
-    .map(result => ({ ...keyOf(result), ...result.structural }))
+    .map(result => {
+      const problem = structuralCountProblem(result);
+
+      if (problem !== null) {
+        throw new Error(`Cannot record ${gateCellId(keyOf(result))}: ${problem}. Reacquire the cell with explicit per-frame counts.`);
+      }
+
+      return { ...keyOf(result), ...result.structural };
+    })
     .sort((left, right) => gateCellId(left).localeCompare(gateCellId(right))),
 });
 
@@ -145,6 +184,10 @@ export const recordBaseline = (results: readonly CellResult[], recorded: GateBas
  * baseline deliberately.
  */
 export const compareToBaseline = (baseline: GateBaseline, results: readonly CellResult[]): GateOutcome => {
+  if (baseline.schemaVersion !== 1 || baseline.countBasis !== 'per-frame') {
+    throw new Error('Unsupported structural baseline schema or count basis. Qualify its units before migrating or re-recording it.');
+  }
+
   const measured = new Map(results.map(result => [gateCellId(keyOf(result)), result]));
   const baselineIds = new Set(baseline.cells.map(gateCellId));
   const deviations: GateDeviation[] = [];
@@ -163,6 +206,14 @@ export const compareToBaseline = (baseline: GateBaseline, results: readonly Cell
 
     if (result.status !== 'ok') {
       unmeasured.push({ ...expected, note: result.note ?? `cell status '${result.status}'` });
+
+      continue;
+    }
+
+    const problem = structuralCountProblem(result);
+
+    if (problem !== null) {
+      unmeasured.push({ ...expected, note: problem });
 
       continue;
     }

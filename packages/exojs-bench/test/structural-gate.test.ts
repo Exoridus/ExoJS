@@ -47,6 +47,16 @@ const cell = (options: {
   queueMsMedian: null,
   queueMsP95: null,
   structural: { drawCalls: options.drawCalls, textureBinds: options.textureBinds ?? 0, bufferUploads: options.bufferUploads ?? 0 },
+  structuralMeasurement: {
+    schemaVersion: 1,
+    basis: 'per-frame',
+    frames: 3,
+    totals: {
+      drawCalls: options.drawCalls * 3,
+      textureBinds: (options.textureBinds ?? 0) * 3,
+      bufferUploads: (options.bufferUploads ?? 0) * 3,
+    },
+  },
   clock: FINE_CLOCK,
   status: options.status ?? 'ok',
   ...(options.note !== undefined && { note: options.note }),
@@ -83,6 +93,70 @@ describe('recordBaseline', () => {
   });
 });
 
+describe('structural count units', () => {
+  test('records explicit baseline schema and per-frame units', () => {
+    const baseline = recordBaseline([cell({ archetype: 'static-heavy', drawCalls: 1 })], recorded);
+
+    expect(baseline).toMatchObject({ schemaVersion: 1, countBasis: 'per-frame' });
+  });
+
+  test('refuses to record historical results whose count units are unknown', () => {
+    const { structuralMeasurement: _measurement, ...historical } = cell({ archetype: 'static-heavy', drawCalls: 1 });
+
+    expect(() => recordBaseline([historical], recorded)).toThrow('structural count basis');
+  });
+
+  test('rejects total counters instead of reporting a per-frame counter regression', () => {
+    const baseline = recordBaseline([cell({ archetype: 'static-heavy', drawCalls: 1 })], recorded);
+    const result = cell({ archetype: 'static-heavy', drawCalls: 4 });
+    const total = {
+      ...result,
+      structuralMeasurement: { schemaVersion: 1 as const, basis: 'total' as const, frames: 3, totals: result.structural },
+    };
+    const outcome = compareToBaseline(baseline, [total]);
+
+    expect(outcome.deviations).toEqual([]);
+    expect(isGateFailure(outcome)).toBe(true);
+    expect(outcome.unmeasured[0]?.note).toContain('total');
+    expect(formatGateOutcome(outcome)).toContain('per-frame');
+  });
+
+  test('does not infer units for a historical result from an evenly divisible value', () => {
+    const baseline = recordBaseline([cell({ archetype: 'static-heavy', drawCalls: 1 })], recorded);
+    const { structuralMeasurement: _measurement, ...historical } = cell({ archetype: 'static-heavy', drawCalls: 1 });
+    const outcome = compareToBaseline(baseline, [historical]);
+
+    expect(isGateFailure(outcome)).toBe(true);
+    expect(outcome.unmeasured[0]?.note).toContain('structural count basis');
+  });
+
+  test.each([{ frames: 0 }, { schemaVersion: 2 }, { totals: null }, { totals: { drawCalls: 4, textureBinds: 0, bufferUploads: 0 } }])(
+    'rejects inconsistent or unsupported measurement metadata: %j',
+    override => {
+      const result = cell({ archetype: 'static-heavy', drawCalls: 1 });
+      const baseline = recordBaseline([result], recorded);
+      const malformed = { ...result, structuralMeasurement: { ...result.structuralMeasurement, ...override } } as unknown as CellResult;
+      const outcome = compareToBaseline(baseline, [malformed]);
+
+      expect(isGateFailure(outcome)).toBe(true);
+      expect(outcome.unmeasured).toHaveLength(1);
+      expect(outcome.deviations).toEqual([]);
+    },
+  );
+
+  test('rejects an unversioned baseline without changing or guessing its counters', () => {
+    const {
+      schemaVersion: _schema,
+      countBasis: _basis,
+      ...historical
+    } = recordBaseline([cell({ archetype: 'static-heavy', drawCalls: 1 })], recorded);
+
+    expect(() => compareToBaseline(historical as GateBaseline, [cell({ archetype: 'static-heavy', drawCalls: 1 })])).toThrow(
+      'baseline schema',
+    );
+  });
+});
+
 describe('compareToBaseline', () => {
   const baseline: GateBaseline = recordBaseline([cell({ archetype: 'static-heavy', drawCalls: 1, bufferUploads: 2 })], recorded);
 
@@ -107,7 +181,7 @@ describe('compareToBaseline', () => {
   });
 
   test('does not pass when the baseline and run contain no guarded cells', () => {
-    const outcome = compareToBaseline({ recorded, cells: [] }, []);
+    const outcome = compareToBaseline({ schemaVersion: 1, countBasis: 'per-frame', recorded, cells: [] }, []);
 
     expect(isGateFailure(outcome)).toBe(true);
     expect(formatGateOutcome(outcome)).toContain('no guarded cell was compared');

@@ -1,4 +1,4 @@
-import { attachWebGl2Probe, attachWebGpuProbe } from '../src/rendering/structural';
+import { attachWebGl2Probe, attachWebGpuProbe, summarizeStructuralCounters } from '../src/rendering/structural';
 
 const makeFakeGl = () => {
   const calls: string[] = [];
@@ -247,5 +247,30 @@ describe('attachWebGpuProbe', () => {
     expect(probe.counters.drawCalls).toBe(0);
     expect(probe.counters.bufferUploads).toBe(0);
     expect(device.calls).toEqual(['createCommandEncoder', 'beginRenderPass', 'draw', 'writeBuffer']);
+  });
+});
+describe('structural count units', () => {
+  test('preserves raw observations when an exact per-frame count can be reported', () => {
+    const totals = { drawCalls: 6, textureBinds: 9, bufferUploads: 3 };
+    const result = summarizeStructuralCounters(totals, 3);
+
+    totals.drawCalls = 0;
+    expect(result.structural).toEqual({ drawCalls: 2, textureBinds: 3, bufferUploads: 1 });
+    expect(result.structuralMeasurement).toEqual({
+      schemaVersion: 1,
+      basis: 'per-frame',
+      frames: 3,
+      totals: { drawCalls: 6, textureBinds: 9, bufferUploads: 3 },
+    });
+    expect(result.note).toBeNull();
+  });
+
+  test('labels uneven observations as totals rather than changing units silently', () => {
+    const totals = { drawCalls: 7, textureBinds: 9, bufferUploads: 3 };
+    const result = summarizeStructuralCounters(totals, 3);
+
+    expect(result.structural).toEqual(totals);
+    expect(result.structuralMeasurement).toMatchObject({ schemaVersion: 1, basis: 'total', frames: 3, totals });
+    expect(result.note).toContain('raw totals');
   });
 });
