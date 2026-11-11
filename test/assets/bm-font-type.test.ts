@@ -1,6 +1,6 @@
 import type { AssetDependencyScope } from '#assets/AssetFactory';
 import { parseBmFontText } from '#assets/factories/parseBmFont';
-import { bmFontType } from '#assets/types/font';
+import { type BmFontAssetOptions, bmFontType } from '#assets/types/font';
 import { Texture } from '#rendering/texture/Texture';
 
 import { factoryContext } from './factory-context';
@@ -172,7 +172,7 @@ describe('bmFontType', () => {
 
     const font = await bmFontType
       .createFactory()
-      .create(fontData, factoryContext(undefined, { source: 'https://example.com/fonts/ui.fnt', dependencies }));
+      .create(fontData, factoryContext<BmFontAssetOptions>(undefined, { source: 'https://example.com/fonts/ui.fnt', dependencies }));
 
     expect(requested).toEqual(['https://example.com/fonts/test.png']);
     expect(font.textures).toHaveLength(1);
@@ -186,7 +186,7 @@ describe('bmFontType', () => {
 
     await bmFontType
       .createFactory()
-      .create(fontData, factoryContext(undefined, { source: 'https://example.com/assets/fonts/ui.fnt', dependencies }));
+      .create(fontData, factoryContext<BmFontAssetOptions>(undefined, { source: 'https://example.com/assets/fonts/ui.fnt', dependencies }));
 
     expect(requested).toEqual(['https://example.com/assets/fonts/test.png']);
   });
@@ -204,7 +204,7 @@ chars count=0
 
     const font = await bmFontType
       .createFactory()
-      .create(fontData, factoryContext(undefined, { source: 'https://example.com/ui.fnt', dependencies }));
+      .create(fontData, factoryContext<BmFontAssetOptions>(undefined, { source: 'https://example.com/ui.fnt', dependencies }));
 
     expect(requested).toEqual(['https://example.com/atlas_0.png', 'https://example.com/atlas_1.png']);
     expect(font.textures).toHaveLength(2);

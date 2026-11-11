@@ -1,6 +1,6 @@
 {
   "title": "BitmapText",
-  "description": "Text node that renders from an offline-generated atlas - either a BMFont (AngelCode .fnt + .png) or an MSDF atlas (msdf-atlas-gen + .json). The atlas is pre-built so there is no runtime Canvas 2D rasterisation. All layout features (alignment, word-wrap, justify, leading, breakWords, whiteSpace, letterSpacing) and kerning pairs from the descriptor are fully supported. Outline effects are handled as shader uniforms - no extra draw calls, no atlas rebuilds. ## Usage ```ts const font = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt')); // BmFont, no setup needed const label = new BitmapText('Score: 0', font, { msdf: true }); scene.addChild(label); label.text = 'Score: 42'; // cheap - marks the geometry stale label.style.align = 'center'; // cheap - same pending pass ``` Mutating any number of properties in the same frame is cheap; the geometry is rebuilt at most once, on demand.",
+  "description": "Text node that renders from an offline-generated BMFont atlas (text or BMFont JSON plus page textures), or manually supplied BmFontData. Native msdf-atlas-gen JSON needs conversion to BMFont metrics first. The atlas is pre-built so there is no runtime Canvas 2D rasterisation. All layout features (alignment, word-wrap, justify, leading, breakWords, whiteSpace, letterSpacing) and kerning pairs from the descriptor are fully supported. The explicit `msdf` option selects distance rendering; imported distance metadata is retained on `font.fontData`, without changing effect units or adding effect support to color glyphs. ## Usage ```ts const font = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt')); // BmFont, no setup needed const label = new BitmapText('Score: 0', font, { msdf: true }); scene.addChild(label); label.text = 'Score: 42'; // cheap - marks the geometry stale label.style.align = 'center'; // cheap - same pending pass ``` Mutating any number of properties in the same frame is cheap; the geometry is rebuilt at most once, on demand.",
   "symbol": "BitmapText",
   "kind": "class",
   "subsystem": "rendering",
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Text node that renders from an offline-generated atlas - either a BMFont (AngelCode .fnt + .png) or an MSDF atlas (msdf-atlas-gen + .json).",
-        "The atlas is pre-built so there is no runtime Canvas 2D rasterisation. All layout features (alignment, word-wrap, justify, leading, breakWords, whiteSpace, letterSpacing) and kerning pairs from the descriptor are fully supported. Outline effects are handled as shader uniforms - no extra draw calls, no atlas rebuilds.",
+        "Text node that renders from an offline-generated BMFont atlas (text or BMFont JSON plus page textures), or manually supplied BmFontData. Native msdf-atlas-gen JSON needs conversion to BMFont metrics first.",
+        "The atlas is pre-built so there is no runtime Canvas 2D rasterisation. All layout features (alignment, word-wrap, justify, leading, breakWords, whiteSpace, letterSpacing) and kerning pairs from the descriptor are fully supported. The explicit `msdf` option selects distance rendering; imported distance metadata is retained on `font.fontData`, without changing effect units or adding effect support to color glyphs.",
         "## Usage",
         "```ts const font = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt')); // BmFont, no setup needed const label = new BitmapText('Score: 0', font, { msdf: true }); scene.addChild(label);",
         "label.text = 'Score: 42'; // cheap - marks the geometry stale label.style.align = 'center'; // cheap - same pending pass ```",
@@ -3067,7 +3067,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true when the atlas was produced by msdf-atlas-gen."
+          "description": "Whether RGB-median distance rendering was selected at construction."
         },
         {
           "name": "origin",

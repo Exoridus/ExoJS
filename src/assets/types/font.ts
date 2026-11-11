@@ -6,10 +6,10 @@ import { binarySourceCodec } from '#assets/AssetSourceCodec';
 import type { AssetRequest } from '#assets/AssetType';
 import { AssetType } from '#assets/AssetType';
 import { type FontAssetOptions, FontFactory } from '#assets/factories/FontFactory';
-import { parseBmFontText } from '#assets/factories/parseBmFont';
+import { parseBmFont } from '#assets/factories/parseBmFont';
 import { FontAsset } from '#assets/tokens';
 import { resolveSubAssetPath } from '#assets/utils';
-import type { BmFontData } from '#rendering/text/BmFont';
+import type { BmFontData, BmFontDistanceField } from '#rendering/text/BmFont';
 import { BmFont } from '#rendering/text/BmFont';
 
 /** Web fonts (WOFF, WOFF2, TTF, OTF) parsed into a loaded `FontFace`. */
@@ -46,16 +46,30 @@ export class FontAssetType extends AssetType<ArrayBuffer, FontFace, FontAssetOpt
   }
 }
 
+/** Options for loading an external BMFont descriptor. */
+export interface BmFontAssetOptions {
+  /**
+   * Explicit encoding for exports with missing or different metadata. Replaces
+   * the complete descriptor declaration for this request without changing
+   * other consumers. Use `null` for an unknown range or zero value; no radius
+   * is inferred. Declared SDF/MSDF/MTSDF pages decode as numeric data.
+   */
+  distanceField?: BmFontDistanceField;
+}
+
 /**
- * AngelCode BMFont descriptors (`.fnt`, text format) together with their page
- * textures.
+ * AngelCode BMFont text or BMFont JSON (including the symmetric distanceField
+ * extension from msdf-bmfont-xml), together with their page textures. JSON must
+ * be requested explicitly as `bmFont`; native msdf-atlas-gen JSON is not this
+ * format. A compatible text `distanceField` tag is also accepted. Some text
+ * exporters omit it; supply {@link BmFontAssetOptions.distanceField} then.
  *
  * The pages are claimed by the font's own dependency scope rather than by
  * whichever consumer asked for the font: a deduplicated font serves many
  * consumers, and the first of them to release it must not take the pages with
  * it.
  */
-export class BmFontAssetType extends AssetType<BmFontData, BmFont, undefined, string> {
+export class BmFontAssetType extends AssetType<BmFontData, BmFont, BmFontAssetOptions, string> {
   public readonly id = 'bmFont';
   public override readonly extensions = ['fnt'];
   public override readonly leaf = 'none';
@@ -63,17 +77,36 @@ export class BmFontAssetType extends AssetType<BmFontData, BmFont, undefined, st
   public override readonly codec: AssetSourceCodec<BmFontData, string> = {
     fromResponse: response => response.text(),
     fromBytes: bytes => Promise.resolve(new TextDecoder().decode(bytes)),
-    decode: stored => Promise.resolve(parseBmFontText(stored)),
+    decode: stored => Promise.resolve(stored).then(parseBmFont),
   };
 
-  public createFactory(): AssetFactory<BmFontData, BmFont> {
+  /** Explicit interpretations share source bytes but have distinct font resources. */
+  public override resourceIdentity({ options }: AssetRequest<BmFontAssetOptions>): string {
+    const field = options?.distanceField;
+
+    return field === undefined ? '' : JSON.stringify([field.fieldType, field.distanceRange, field.zeroDistanceValue]);
+  }
+
+  public createFactory(): AssetFactory<BmFontData, BmFont, BmFontAssetOptions> {
     return {
       async create(source, context) {
+        const override = context.options?.distanceField;
+        const data = override === undefined ? source : { ...source, distanceField: { ...override } };
+        const fieldType = data.distanceField?.fieldType;
+        const numeric = fieldType === 'sdf' || fieldType === 'msdf' || fieldType === 'mtsdf';
         const pages = await Promise.all(
-          source.pages.map(page => context.dependencies.load(Asset.type('texture', resolveSubAssetPath(page, context.source)))),
+          data.pages.map(page =>
+            context.dependencies.load(
+              Asset.type(
+                'texture',
+                resolveSubAssetPath(page, context.source),
+                numeric ? { textureOptions: { colorSpace: 'none' } } : undefined,
+              ),
+            ),
+          ),
         );
 
-        return new BmFont(source, pages);
+        return new BmFont(data, pages);
       },
     };
   }

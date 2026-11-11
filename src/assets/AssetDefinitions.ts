@@ -11,6 +11,7 @@ import type { Asset, LeaflessAsset, ResourceAsset, ValueAsset } from './Asset';
 import type { CatalogResourceLeaf, CatalogValueLeaf } from './assetMeta';
 import type { AssetRef } from './AssetRef';
 import type { DecodedImage } from './factories/ImageFactory';
+import type { BmFontAssetOptions } from './types/font';
 
 /**
  * Every built-in asset type, keyed by its id, plus whatever extension packages
@@ -22,7 +23,7 @@ import type { DecodedImage } from './factories/ImageFactory';
  * every type that ships no seamless adapter (see {@link ValueAssetKind}).
  */
 export interface AssetDefinitions {
-  bmFont: { resource: BmFont; config: { source: string } };
+  bmFont: { resource: BmFont; config: { source: string } & BmFontAssetOptions };
   texture: { resource: Texture; config: { source: string; mimeType?: string; textureOptions?: Partial<TextureOptions> } };
   sound: {
     resource: Sound;
