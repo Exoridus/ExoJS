@@ -714,27 +714,15 @@ const _ellipsize = (
 
   const clusters = graphemes(line, locale);
 
-  if (measureLine(line + ellipsis) <= maxWidth) {
-    return { text: line + ellipsis, contentLength: line.length };
+  let end = line.length;
+
+  // Contextual shaping can make a longer prefix narrower, so candidates must
+  // be checked from longest to shortest rather than with a binary search.
+  while (clusters.length > 0 && measureLine(line.slice(0, end) + ellipsis) > maxWidth) {
+    end -= clusters.pop()!.length;
   }
 
-  // Widest prefix that fits next to the marker. Widths grow with the prefix, so
-  // binary search keeps this O(log n) measurements instead of re-measuring the
-  // whole remaining line for every dropped cluster.
-  let low = 0;
-  let high = clusters.length;
-
-  while (low < high) {
-    const mid = (low + high + 1) >> 1;
-
-    if (measureLine(clusters.slice(0, mid).join('') + ellipsis) <= maxWidth) {
-      low = mid;
-    } else {
-      high = mid - 1;
-    }
-  }
-
-  const kept = clusters.slice(0, low).join('');
+  const kept = line.slice(0, end);
 
   return { text: kept + ellipsis, contentLength: kept.length };
 };

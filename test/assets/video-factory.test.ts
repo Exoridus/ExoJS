@@ -3,6 +3,7 @@ import type { MockInstance } from 'vitest';
 import { VideoFactory } from '#assets/factories/VideoFactory';
 import { videoType } from '#assets/types/media';
 import type { Texture } from '#rendering/texture/Texture';
+import type { TextureOptions } from '#rendering/texture/TextureOptions';
 import { ScaleModes } from '#rendering/types';
 import { Video } from '#rendering/video/Video';
 
@@ -312,6 +313,31 @@ describe('VideoFactory', () => {
 });
 
 describe('VideoAssetType identity', () => {
+  test.each<Partial<TextureOptions>>([
+    { flipY: true },
+    { colorSpace: 'linear-srgb' },
+    { alphaMode: 'premultiplied' },
+    { premultiplyAlpha: false },
+    { generateMipMap: false },
+  ])('texture interpretation belongs to the resident video identity: %j', textureOptions => {
+    const plain = videoType.resourceIdentity({ source: 'clip.mp4' });
+    const configured = videoType.resourceIdentity({ source: 'clip.mp4', options: { textureOptions } });
+
+    expect(configured).not.toBe(plain);
+  });
+
+  test('explicit default texture options retain the default identity', () => {
+    const plain = videoType.resourceIdentity({ source: 'clip.mp4' });
+    const configured = videoType.resourceIdentity({
+      source: 'clip.mp4',
+      options: {
+        textureOptions: { flipY: false, colorSpace: 'srgb', alphaMode: 'straight', premultiplyAlpha: true, generateMipMap: true },
+      },
+    });
+
+    expect(configured).toBe(plain);
+  });
+
   test('a data colorSpace is part of the resource identity', () => {
     const plain = videoType.resourceIdentity({ source: 'clip.mp4' });
     const data = videoType.resourceIdentity({ source: 'clip.mp4', options: { textureOptions: { colorSpace: 'none' } } });

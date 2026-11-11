@@ -10,6 +10,7 @@ import { soundSeamlessAdapter } from '#assets/seamless';
 import { AudioStream } from '#audio/AudioStream';
 import { Sound } from '#audio/Sound';
 import { type NetworkSnapshot } from '#core/Connectivity';
+import { Texture } from '#rendering/texture/Texture';
 import { Video } from '#rendering/video/Video';
 
 /**
@@ -116,12 +117,19 @@ export class VideoAssetType extends AssetType<MediaAssetSource, Video, VideoAsse
   }
 
   public override resourceIdentity(request: AssetRequest<VideoAssetOptions>): string {
-    const base = mediaIdentity(request);
+    const texture = request.options?.textureOptions;
+    const colorSpace = texture?.colorSpace ?? 'srgb';
 
-    // The resident video owns its only texture: `colorSpace: 'none'` reads the
-    // bytes as data rather than sRGB, which is a different resource, not sampler
-    // state a consumer can correct. Mirrors TextureAssetType's identity rule.
-    return request.options?.textureOptions?.colorSpace === 'none' ? `${base}|colorSpace=none` : base;
+    // One resident Video owns one texture, so consumers cannot override its
+    // interpretation or upload state independently as they can its sampler.
+    return JSON.stringify([
+      mediaIdentity(request),
+      colorSpace,
+      texture?.alphaMode ?? 'straight',
+      texture?.premultiplyAlpha ?? colorSpace !== 'none',
+      texture?.generateMipMap ?? Texture.defaultOptions.generateMipMap,
+      texture?.flipY ?? Texture.defaultOptions.flipY,
+    ]);
   }
 
   public createFactory(): AssetFactory<MediaAssetSource, Video, VideoAssetOptions> {

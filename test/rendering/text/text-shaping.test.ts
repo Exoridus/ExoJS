@@ -227,13 +227,38 @@ describe('layoutText with a browser shaper', () => {
     expect(layout.advance.height).toBe(48);
   });
 
-  test('ellipsis truncation measures a logarithmic number of prefixes', () => {
+  test('ellipsis truncation measures the shaped candidate including its marker', () => {
     const shaper = makeShaper();
 
-    const layout = layoutText('a'.repeat(200), style(), { maxWidth: 40, overflow: 'ellipsis' }, makeProvider(), shaper);
+    const layout = layoutText(
+      'a'.repeat(200),
+      style(),
+      { maxWidth: 40, maxLines: 1, overflow: 'ellipsis', shaping: 'browser' },
+      makeProvider(),
+      shaper,
+    );
 
     expect(layout.lines).toHaveLength(1);
-    // 200 clusters + the marker: a linear re-measure would issue ~200 calls.
-    expect(shaper.measured.length).toBeLessThanOrEqual(12);
+    expect(shaper.measured).toContain('aaa…');
+    expect(shaper.shaped).toEqual(['aaa…']);
+    expect(layout.lines[0]?.sourceEnd).toBe(3);
+  });
+
+  test('ellipsis keeps the longest fitting prefix when shaped widths decrease', () => {
+    const shaper = makeShaper();
+    const widths: Record<string, number> = { 'a…': 30, 'ab…': 48, 'abc…': 38 };
+
+    shaper.measureLine = line => widths[line] ?? 75;
+
+    const layout = layoutText(
+      'abcd',
+      style(),
+      { maxWidth: 40, maxLines: 1, overflow: 'ellipsis', shaping: 'browser' },
+      makeProvider(),
+      shaper,
+    );
+
+    expect(shaper.shaped).toEqual(['abc…']);
+    expect(layout.lines[0]?.sourceEnd).toBe(3);
   });
 });

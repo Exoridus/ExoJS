@@ -11,6 +11,7 @@ const transportWgsl = shader('../src/backends/shaders/transport.wgsl');
 describe('lighting transport shader contracts', () => {
   test('the composite reads the HDR light field at highp, like the stages that produce it', () => {
     expect(composite).toContain('precision highp float;');
+    expect(composite).toContain('precision highp sampler2D;');
     expect(composite).not.toContain('precision mediump float;');
   });
 
