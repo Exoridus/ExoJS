@@ -3,7 +3,7 @@ import type { ComponentClass } from '#core/Component';
 import type { ComponentQuery } from '#core/ComponentQuery';
 import { DestroyScope } from '#core/DestroyScope';
 import { deserializeSceneInto, migrate, serializeTree } from '#core/serialization/serialize';
-import { SERIALIZATION_VERSION, type SerializedScene, type SerializeOptions } from '#core/serialization/types';
+import { type DeserializeOptions, SERIALIZATION_VERSION, type SerializedScene, type SerializeOptions } from '#core/serialization/types';
 import { Signal } from '#core/Signal';
 import type { SystemRegistry } from '#core/SystemRegistry';
 import type { Destroyable, Synchronous } from '#core/types';
@@ -445,13 +445,17 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * older documents retain their source version through all node reads;
    * versions needing a value migration must be transformed first.
    * Documents newer than the running engine throw. Returns `this`.
+   *
+   * @throws If the document holds a `Video` whose source the default policy
+   *   (same-origin only) refuses and {@link DeserializeOptions.allowVideoSource}
+   *   does not approve.
    */
-  public deserialize(data: SerializedScene): this {
+  public deserialize(data: SerializedScene, options?: DeserializeOptions): this {
     const migrated = migrate(data);
     const loader = this._app?.loader ?? null;
     const registry = this._app?.serializers;
 
-    deserializeSceneInto(this._root, () => this.ui, migrated, loader, registry);
+    deserializeSceneInto(this._root, () => this.ui, migrated, loader, registry, options);
 
     return this;
   }

@@ -1079,6 +1079,71 @@ describe('serialization — Video', () => {
     expect(restored).toBeInstanceOf(Video);
     expect(restored.loop).toBe(true);
   });
+
+  describe('source policy', () => {
+    const videoNode = (src: string): SerializedNode => ({ type: 'Video', src });
+    const origin = location.origin;
+
+    it.each([`${origin}/clip.mp4`, 'clip.mp4', '/media/clip.webm', `blob:${origin}/3f2a`])('accepts the same-origin source %s', src => {
+      expect(deserializeTree(videoNode(src))).toBeInstanceOf(Video);
+    });
+
+    it.each([
+      'https://evil.example/clip.mp4',
+      '//evil.example/clip.mp4',
+      'data:video/mp4;base64,AAAA',
+      'javascript:alert(1)',
+      'blob:https://evil.example/3f2a',
+      'http://[',
+      `${origin.replace(/^https?/, m => m.toUpperCase())}@evil.example/clip.mp4`,
+      'HTTPS://evil.example/clip.mp4',
+      `${location.protocol}//user:pw@${location.host}/clip.mp4`,
+      'file:///clip.mp4',
+    ])('refuses the source %s by default', src => {
+      expect(() => deserializeTree(videoNode(src))).toThrow(/Refused to deserialize a Video/);
+    });
+
+    it('accepts an uppercase scheme on the page origin', () => {
+      const { protocol, host } = location;
+
+      expect(deserializeTree(videoNode(`${protocol.toUpperCase()}//${host}/clip.mp4`))).toBeInstanceOf(Video);
+    });
+
+    it.each(['data:video/mp4;base64,AAAA', 'blob:https://other.example/3f2a'])('lets allowVideoSource approve %s', src => {
+      const allowVideoSource = vi.fn(() => true);
+
+      expect(deserializeTree(videoNode(src), null, undefined, SERIALIZATION_VERSION, { allowVideoSource })).toBeInstanceOf(Video);
+      expect(allowVideoSource).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuses a foreign source reached through a prefab or a scene', () => {
+      const data = videoNode('https://evil.example/clip.mp4');
+      const container: SerializedNode = { type: 'Container', children: [data] };
+
+      expect(() => Prefab.fromJSON({ version: SERIALIZATION_VERSION, root: container }).instantiate()).toThrow(/Refused/);
+      expect(() => new Scene().deserialize({ version: SERIALIZATION_VERSION, root: container })).toThrow(/Refused/);
+    });
+
+    it('lets allowVideoSource approve a foreign source and receive the resolved URL', () => {
+      const allowVideoSource = vi.fn((url: URL) => url.hostname === 'cdn.example');
+      const container: SerializedNode = { type: 'Container', children: [videoNode('https://cdn.example/clip.mp4')] };
+      const prefab = Prefab.fromJSON({ version: SERIALIZATION_VERSION, root: container });
+
+      expect(() => prefab.instantiate(null, undefined, { allowVideoSource })).not.toThrow();
+      expect(allowVideoSource).toHaveBeenCalledWith(expect.objectContaining({ hostname: 'cdn.example' }));
+
+      expect(() => new Scene().deserialize({ version: SERIALIZATION_VERSION, root: container }, { allowVideoSource })).not.toThrow();
+      expect(() => prefab.instantiate(null, undefined, { allowVideoSource: () => false })).toThrow(/Refused/);
+    });
+
+    it('applies the policy to the ui layer of a scene', () => {
+      const ui: SerializedNode = { type: 'Container', children: [videoNode('https://evil.example/clip.mp4')] };
+      const document = { version: SERIALIZATION_VERSION, root: { type: 'Container' }, ui };
+
+      expect(() => new Scene().deserialize(document)).toThrow(/Refused/);
+      expect(() => new Scene().deserialize(document, { allowVideoSource: () => true })).not.toThrow();
+    });
+  });
 });
 
 describe('serialization — Prefab', () => {

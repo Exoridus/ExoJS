@@ -124,7 +124,14 @@ export type { DeserializeContext, NodeSerializer, SerializeContext } from '#core
 export { Prefab } from '#core/serialization/Prefab';
 export type { SceneNodeConstructor } from '#core/serialization/SerializationRegistry';
 export { registerSerializer, SerializationRegistry } from '#core/serialization/SerializationRegistry';
-export type { SerializedAssetRef, SerializedNode, SerializedPrefab, SerializedScene, SerializeOptions } from '#core/serialization/types';
+export type {
+  DeserializeOptions,
+  SerializedAssetRef,
+  SerializedNode,
+  SerializedPrefab,
+  SerializedScene,
+  SerializeOptions,
+} from '#core/serialization/types';
 export { SERIALIZATION_VERSION } from '#core/serialization/types';
 export { CanvasSizing, type CanvasSizingContext, type CanvasSizingHostMetrics, type CanvasSizingMetrics } from '#core/sizing/CanvasSizing';
 export { CappedResolutionCanvasSizing } from '#core/sizing/CappedResolutionCanvasSizing';
