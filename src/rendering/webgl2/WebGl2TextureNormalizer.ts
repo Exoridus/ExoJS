@@ -230,13 +230,16 @@ export class WebGl2TextureNormalizer {
       enabled[index] = gl.isEnabled(capabilities[index]!) ? 1 : 0;
     }
 
-    // After the captures: building the program leaves the vertex array and array
-    // buffer unbound, which would otherwise be recorded as what the caller had.
-    const program = this._ensureProgram();
+    let attached = false;
 
     try {
+      // Setup changes the array-buffer and VAO bindings even when it fails.
+      // Keep it inside the same restore boundary as the upload and draw.
+      const program = this._ensureProgram();
+
       gl.bindFramebuffer(gl.FRAMEBUFFER, this._framebuffer);
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, target.destination, target.level);
+      attached = true;
       gl.useProgram(program);
       gl.bindVertexArray(this._quadArray);
       // The level is written in full, so blending would mix the normalized texel
@@ -272,6 +275,12 @@ export class WebGl2TextureNormalizer {
 
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, quadVertexCount);
     } finally {
+      // Setup can fail before our framebuffer is bound. Detaching in that
+      // case would remove the caller's color attachment instead.
+      if (attached) {
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, null, 0);
+      }
+
       this._restore(
         previousFramebuffer,
         previousViewport,
@@ -299,10 +308,6 @@ export class WebGl2TextureNormalizer {
    * Put the context back the way the pass found it, then ask the backend to
    * re-establish whatever its own caches still describe.
    *
-   * The attachment is detached while the pass's OWN framebuffer is still bound -
-   * it lives on that framebuffer, not on whatever was bound before - and only
-   * then is the previous framebuffer restored.
-   *
    * The borrowed unit's texture binding is restored too, and it is the one
    * omission that is not merely a cache inconsistency. The staging texture
    * replaced the destination on that unit, and the upload path applies its
@@ -329,7 +334,6 @@ export class WebGl2TextureNormalizer {
   ): void {
     const gl = this._gl;
 
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, null, 0);
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
     gl.useProgram(program);
     gl.bindVertexArray(array);

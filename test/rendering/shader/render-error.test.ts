@@ -29,16 +29,19 @@ const VERTEX_SHADER = 0x8b31;
 const FRAGMENT_SHADER = 0x8b30;
 const COMPILE_STATUS = 0x8b81;
 const LINK_STATUS = 0x8b82;
+const CURRENT_PROGRAM = 0x8b8d;
 
 /** Minimal WebGL2 mock covering the createWebGl2ShaderProgram surface. */
 const createMockGl = (options: MockGlOptions = {}): WebGL2RenderingContext => {
   const shaderTypes = new Map<object, number>();
+  let currentProgram: WebGLProgram | null = null;
 
   const gl = {
     VERTEX_SHADER,
     FRAGMENT_SHADER,
     COMPILE_STATUS,
     LINK_STATUS,
+    CURRENT_PROGRAM,
     ACTIVE_ATTRIBUTES: 0x8b89,
     ACTIVE_UNIFORMS: 0x8b86,
     ACTIVE_UNIFORM_BLOCKS: 0x8a36,
@@ -74,7 +77,16 @@ const createMockGl = (options: MockGlOptions = {}): WebGL2RenderingContext => {
     }),
     getProgramInfoLog: vi.fn(() => options.programInfoLog ?? null),
     getActiveUniforms: vi.fn(() => []),
-    useProgram: vi.fn(),
+    useProgram: vi.fn((program: WebGLProgram | null) => {
+      currentProgram = program;
+    }),
+    getParameter: vi.fn((parameter: number) => {
+      if (parameter !== CURRENT_PROGRAM) {
+        throw new Error(`Unsupported getParameter query: ${parameter}`);
+      }
+
+      return currentProgram;
+    }),
     deleteShader: vi.fn(),
     deleteProgram: vi.fn(),
   };
