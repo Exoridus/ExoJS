@@ -332,18 +332,18 @@ export class Sprite extends Drawable {
       return;
     }
 
-    void this._healOnTextureLoad(texture);
+    const spriteRef = new WeakRef(this);
+    const loaded = texture._loadState?.whenReady(texture) ?? texture.loaded;
+
+    void loaded.then(
+      ready => spriteRef.deref()?._healOnTextureLoad(ready),
+      () => undefined,
+    );
   }
 
-  private async _healOnTextureLoad(texture: Texture): Promise<void> {
-    try {
-      await texture.loaded;
-    } catch {
-      return; // failed load shows Texture.missing; nothing to heal
-    }
-
+  private _healOnTextureLoad(texture: Texture): void {
     // Guard against a texture swap or destroy between scheduling and resolution.
-    if (this._texture !== texture || this.destroyed) {
+    if (this._texture !== texture || this.destroyed || texture.destroyed) {
       return;
     }
 
