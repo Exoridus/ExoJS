@@ -97,7 +97,7 @@ interface WebGpuConnection {
 export class WebGpuShaderFilterPass {
   /** One redirect pass, re-pointed per application - see {@link BackendTargetPass.retarget}. */
   private readonly _pass: BackendTargetPass = new BackendTargetPass(backend => this._run(backend));
-  /** `vec2<f32>` padded to the buffer's 16 bytes, reused so a frame allocates none. */
+  /** `vec2<f32>` padded to the buffer's 16 bytes, reused to avoid a per-apply resolution array. */
   private readonly _resolutionScratch = new Float32Array(4);
 
   /** The one WGSL module, carrying both entry points. */
@@ -145,9 +145,8 @@ export class WebGpuShaderFilterPass {
 
     this._ensureConnected(gpuBackend, output);
 
-    // Staged on the instance rather than captured: the pass object and its body
-    // are built once per filter, so a filtered node costs no allocation per
-    // frame - which it did while both were rebuilt inside every `apply`.
+    // Staged on the instance rather than captured so each application reuses the
+    // pass object and callback.
     this._passInput = input;
     this._passOutput = output;
 
