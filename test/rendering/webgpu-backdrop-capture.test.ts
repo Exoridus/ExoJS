@@ -205,7 +205,9 @@ test('backdrop growth stays within GPU maximum texture dimensions', () => {
     internals._ensureBackdrop(device, 100, 96, 'rgba8unorm');
     const withinLimit = internals._ensureBackdrop(device, 120, 110, 'rgba8unorm');
 
-    expect(created).toEqual([{ width: 100, height: 96 }, { width: 128, height: 128 }]);
+    expect(created).toHaveLength(2);
+    expect(created[0]).toEqual({ width: 100, height: 96 });
+    expect(created[1]).toEqual({ width: 128, height: 128 });
     expect(internals._ensureBackdrop(device, 128, 128, 'rgba8unorm')).toBe(withinLimit);
     expect(createTexture).toHaveBeenCalledTimes(2);
   } finally {
