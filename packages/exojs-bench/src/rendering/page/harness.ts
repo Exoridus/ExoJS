@@ -10,8 +10,8 @@ import { createCpuTimer, median, percentile, shouldAbort } from '../../shared/ti
 import { createExoJsAdapter } from '../adapters/exojs';
 import { attachWebGlApiMetrics, attachWebGpuApiMetrics, type DetailedApiProbe } from '../apiMetrics';
 import { ARCHETYPES } from '../archetypes';
-import type { CellResult, CellSpec, EngineAdapter, StructuralCounters } from '../EngineAdapter';
-import { attachWebGl2Probe, attachWebGpuProbe, type StructuralProbe } from '../structural';
+import type { CellResult, CellSpec, EngineAdapter } from '../EngineAdapter';
+import { attachWebGl2Probe, attachWebGpuProbe, type StructuralProbe, summarizeStructuralCounters } from '../structural';
 import type { HeapSample } from '../telemetry';
 import { readHeapBytes } from '../telemetry';
 import { expectedLayoutRects, isUiLayoutScene, layoutDigest } from '../uiLayout';
@@ -148,28 +148,6 @@ const HARD_FRAME_BUDGET_MS = FRAME_BUDGET_MS * 10;
 let probedClock: ClockReport | null = null;
 
 const pageClock = (): ClockReport => (probedClock ??= probeClock());
-
-/**
- * Reduce accumulated structural totals to per-frame figures. Draw/bind/upload
- * counts are usually steady-state per frame, so an even division is expected;
- * a remainder is surfaced as raw totals plus a note rather than reported as a
- * fractional per-frame figure.
- */
-const perFrameStructural = (totals: StructuralCounters, frames: number): { structural: StructuralCounters; note: string | null } => {
-  const draws = totals.drawCalls / frames;
-  const binds = totals.textureBinds / frames;
-  const uploads = totals.bufferUploads / frames;
-  const even = Number.isInteger(draws) && Number.isInteger(binds) && Number.isInteger(uploads);
-
-  if (even) {
-    return { structural: { drawCalls: draws, textureBinds: binds, bufferUploads: uploads }, note: null };
-  }
-
-  return {
-    structural: { drawCalls: totals.drawCalls, textureBinds: totals.textureBinds, bufferUploads: totals.bufferUploads },
-    note: `structural counters did not divide evenly over ${frames} frame(s); raw totals reported`,
-  };
-};
 
 /**
  * Structural probe used when no graphics handle can be wrapped (a WebGPU arm
@@ -528,7 +506,7 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
       }
     }
 
-    const { structural, note: unevenNote } = perFrameStructural(probe.counters, measuredFrames);
+    const { structural, structuralMeasurement, note: unevenNote } = summarizeStructuralCounters(probe.counters, measuredFrames);
 
     const api = detailedProbe === null ? null : { ...detailedProbe.counters };
     const structuralTotals = structuralNote === null ? { ...probe.counters } : null;
@@ -573,6 +551,7 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
       queueMsMedian,
       queueMsP95,
       structural,
+      structuralMeasurement,
       clock: pageClock(),
       status: exceeded ? 'exceeded' : 'ok',
       ...(note !== null && { note }),

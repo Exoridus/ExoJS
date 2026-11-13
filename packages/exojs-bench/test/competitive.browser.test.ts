@@ -34,6 +34,8 @@ test('all three adapters render the deterministic dirty controls and retain raw 
     expect(cell.telemetry?.cpuMs).toHaveLength(5);
     expect(cell.telemetry?.rafMs).toHaveLength(4);
     expect(cell.telemetry?.structuralTotals?.drawCalls).toBeGreaterThan(0);
+    expect(cell.structuralMeasurement).toMatchObject({ schemaVersion: 1, frames: 5 });
+    expect(cell.structuralMeasurement?.totals).toEqual(cell.telemetry?.structuralTotals);
     expect(cell.telemetry?.viewport).toEqual({ width: 1280, height: 720, dpr: 1 });
     const fraction = cell.spec.archetype === 'dirty-0' ? 0 : 1;
     expect(cell.telemetry?.mutation).toMatchObject({

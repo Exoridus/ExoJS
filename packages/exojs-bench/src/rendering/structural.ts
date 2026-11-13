@@ -1,4 +1,4 @@
-import type { StructuralCounters } from './EngineAdapter';
+import type { StructuralCounters, StructuralMeasurement } from './EngineAdapter';
 
 /** Live handle on the structural counters gathered from a wrapped graphics context. */
 export interface StructuralProbe {
@@ -241,5 +241,25 @@ export const attachWebGpuProbe = (device: GPUDevice): StructuralProbe => {
         restore();
       }
     },
+  };
+};
+
+/** Preserve the raw totals and disclose whether the report contains exact per-frame counts or whole-window totals. */
+export const summarizeStructuralCounters = (
+  totals: StructuralCounters,
+  frames: number,
+): { structural: StructuralCounters; structuralMeasurement: StructuralMeasurement; note: string | null } => {
+  const perFrame = {
+    drawCalls: totals.drawCalls / frames,
+    textureBinds: totals.textureBinds / frames,
+    bufferUploads: totals.bufferUploads / frames,
+  };
+  const even = Object.values(perFrame).every(Number.isInteger);
+  const raw = { ...totals };
+
+  return {
+    structural: even ? perFrame : raw,
+    structuralMeasurement: { schemaVersion: 1, basis: even ? 'per-frame' : 'total', frames, totals: raw },
+    note: even ? null : `structural counters did not divide evenly over ${frames} frame(s); raw totals reported`,
   };
 };
