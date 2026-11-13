@@ -5,7 +5,7 @@ import type { OccluderField } from '../occluders/OccluderField';
 import { FrameLightingBackend, type FrameLightingBackendOptions } from './FrameLightingBackend';
 import { MASK_COARSE, MaskBlocks } from './maskBlocks';
 import { RadianceField, type RadianceFieldOptions } from './radianceField';
-import { transportTableWidth } from './transportGeometry';
+import { transportCellBlocks, transportTableWidth } from './transportGeometry';
 import { TransportTextures } from './transportTextures';
 
 const scratchRegion = new Rectangle();
@@ -115,7 +115,13 @@ export class RadianceBackend extends FrameLightingBackend {
     this._setWalkMaskEnabled(rasterMask);
 
     this._fieldView.getBounds(scratchRegion);
-    this._transport.build(occluders.segments, occluders.count, lights, scratchRegion, Math.max(this._maskTexel() * MASK_COARSE, 1));
+    this._transport.build(
+      occluders.segments,
+      occluders.count,
+      lights,
+      scratchRegion,
+      Math.max(this._maskTexel() * MASK_COARSE * transportCellBlocks(occluders.count), 1),
+    );
 
     const grid = this._transport.grid;
 

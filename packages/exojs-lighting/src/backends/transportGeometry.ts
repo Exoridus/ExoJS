@@ -34,6 +34,20 @@ const EMITTER_TEXELS = 3;
 /** Width of the segment, emitter and index tables, in texels. */
 const TABLE_WIDTH = 256;
 
+/** Segments above which the transport grid uses finer cells, because coarse cells would hold too many of them. */
+const DENSE_SEGMENT_COUNT = 256;
+
+/**
+ * Transport grid cell edge, in mask blocks, for a scene of `segmentCount`
+ * segments.
+ *
+ * A cell decides which primitives a ray tests and never whether one is hit, so
+ * the choice cannot change the lit result. Coarse cells keep the grid and its
+ * walk short on sparse geometry; dense geometry overfills them, so it takes
+ * finer cells.
+ */
+export const transportCellBlocks = (segmentCount: number): number => (segmentCount > DENSE_SEGMENT_COUNT ? 4 : 8);
+
 /** Smallest world extent a grid cell may have, so a degenerate view cannot divide by zero. */
 const MIN_CELL = 1e-3;
 
