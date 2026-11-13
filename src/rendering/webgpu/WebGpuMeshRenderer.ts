@@ -750,6 +750,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // the CPU staging arrays stay flush-local and only the GPU buffers carry the
     // whole pass.
     let defaultVertices = 0;
+    let defaultDrawCalls = 0;
     // Byte cursor, not an element count: two draws in one flush may carry
     // different index widths, so element arithmetic cannot express the layout.
     let defaultIndexBytes = 0;
@@ -766,12 +767,21 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     for (let i = 0; i < this._drawCallCount; i++) {
       const dc = this._drawCalls[i] as { -readonly [K in keyof MeshDrawCall]: MeshDrawCall[K] };
+      const batchLength = this._getStaticBatchLength(i);
+
+      // Instanced draws bind cached geometry and their own uniforms, so they
+      // must not reserve space in the CPU-baked streams.
+      if (batchLength >= 2) {
+        i += batchLength - 1;
+        continue;
+      }
 
       if (dc.customShader === null) {
         dc.vertexByteOffset = defaultVertices * vertexStrideBytes;
         dc.indexByteOffset = defaultIndexBytes;
         defaultVertices += dc.vertexCount;
         defaultIndexBytes += alignIndexBytes(dc.indexCount, dc.indexFormat);
+        defaultDrawCalls++;
       } else {
         const vCursor = customVertexCursors.get(dc.customShader) ?? 0;
         const iCursor = customIndexCursors.get(dc.customShader) ?? 0;
@@ -785,7 +795,6 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // Default-path uniform buffer holds (tint vec4 + flags vec4) per draw call;
     // each custom-shader resource manages its own.
     const customDraws = this._totalCustomDraws();
-    const defaultDrawCalls = this._drawCallCount - customDraws;
     const defaultVertexBytes = defaultVertices * vertexStrideBytes;
     // Upper bounds: not every draw call becomes an instanced batch, and each
     // instanced batch takes one uniform slot plus one node index per instance.
@@ -870,6 +879,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     for (let i = 0; i < this._drawCallCount; i++) {
       // i < _drawCallCount, and slots 0.._drawCallCount-1 are always populated.
       const dc = this._drawCalls[i]!;
+      const batchLength = this._getStaticBatchLength(i);
+
+      if (batchLength >= 2) {
+        i += batchLength - 1;
+        continue;
+      }
 
       if (dc.customShader === null) {
         // Default path: CPU-bake transform into vertex positions.
@@ -1076,7 +1091,6 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
               );
             }
 
-            defaultDrawCursor += batchLength;
             instancedDrawCursor++;
             i += batchLength - 1;
             continue;
