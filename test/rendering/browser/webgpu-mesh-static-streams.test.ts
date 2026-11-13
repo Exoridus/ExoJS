@@ -8,7 +8,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { createWebGpuTestBackend, drawWebGpuEncoded, readWebGpuPixels } from './_backendSetup';
 import { expectPixelNear } from './_pixels';
 
-test.each([false, true])('live static batches preserve geometry and tint slots across a renderer switch: %s', async (split, ctx) => {
+test.for([false, true])('live static batches preserve geometry and tint slots across a renderer switch: %s', async (split, ctx) => {
   const backend = await createWebGpuTestBackend(96);
   const geometry = new Geometry({
     attributes: [{ name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 }],
