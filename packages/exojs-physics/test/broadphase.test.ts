@@ -195,3 +195,75 @@ describe('AabbTreeBroadPhase', () => {
     expect(out.every(pair => pair.a === other || pair.b === other)).toBe(true);
   });
 });
+
+describe('sync early-out', () => {
+  const boxesAt = (world: PhysicsWorld, count: number): Collider[] => {
+    const colliders: Collider[] = [];
+
+    for (let i = 0; i < count; i++) {
+      colliders.push(colliderAt(world, new BoxShape(10, 10), { x: i * 40, y: 0 }));
+    }
+
+    return colliders;
+  };
+
+  const spyOnAabbReads = (collider: Collider) => vi.spyOn(Object.getPrototypeOf(collider) as { readonly aabb: unknown }, 'aabb', 'get');
+
+  it('does not re-read any AABB when nothing has moved since the last sync', () => {
+    const world = new PhysicsWorld();
+    const colliders = boxesAt(world, 8);
+    const broadPhase = new AabbTreeBroadPhase();
+
+    broadPhase.sync(colliders);
+
+    const reads = spyOnAabbReads(colliders[0]!);
+
+    try {
+      for (let i = 0; i < 10; i++) {
+        broadPhase.sync(colliders);
+      }
+
+      expect(reads).not.toHaveBeenCalled();
+    } finally {
+      reads.mockRestore();
+    }
+  });
+
+  it('re-walks after a collider is moved', () => {
+    const world = new PhysicsWorld();
+    const colliders = boxesAt(world, 4);
+    const broadPhase = new AabbTreeBroadPhase();
+
+    broadPhase.sync(colliders);
+    colliders[0]!.body!.setTransform({ x: 500, y: 500 });
+
+    const reads = spyOnAabbReads(colliders[0]!);
+
+    try {
+      broadPhase.sync(colliders);
+
+      expect(reads).toHaveBeenCalled();
+    } finally {
+      reads.mockRestore();
+    }
+  });
+
+  it('re-walks after the collider set grows', () => {
+    const world = new PhysicsWorld();
+    const colliders = boxesAt(world, 2);
+    const broadPhase = new AabbTreeBroadPhase();
+
+    broadPhase.sync(colliders);
+    colliders.push(colliderAt(world, new BoxShape(10, 10), { x: 80, y: 0 }));
+
+    const reads = spyOnAabbReads(colliders[0]!);
+
+    try {
+      broadPhase.sync(colliders);
+
+      expect(reads).toHaveBeenCalled();
+    } finally {
+      reads.mockRestore();
+    }
+  });
+});

@@ -45,6 +45,18 @@ describe('queries', () => {
     expect(world.queryPoint({ x: 50, y: 50 })).toEqual([]);
   });
 
+  it('sees a collider moved after the spatial index was last synced', () => {
+    const world = new PhysicsWorld();
+    const box = colliderAt(world, new BoxShape(20, 20), { x: 0, y: 0 });
+
+    expect(world.queryPoint({ x: 0, y: 0 })).toEqual([box]);
+
+    box.body!.setTransform({ x: 100, y: 100 });
+
+    expect(world.queryPoint({ x: 0, y: 0 })).toEqual([]);
+    expect(world.queryPoint({ x: 100, y: 100 })).toEqual([box]);
+  });
+
   it('queryAabb supports the fresh-array and caller-owned out forms', () => {
     const world = new PhysicsWorld();
     const a = colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 });
