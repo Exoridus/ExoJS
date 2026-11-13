@@ -83,6 +83,11 @@ test.each([false, true])('live static batches preserve geometry and tint slots a
         const pixel = readWebGpuPixels(backend, 96);
 
         expect(backend.stats.drawCalls).toBe(split ? 7 : 3);
+
+        if (split && frame === 2) {
+          expect(backend.stats.renderPasses).toBe(1);
+        }
+
         expectPixelNear(pixel(6, 6), [255, 0, 0, 255]);
         expectPixelNear(pixel(26, 6), [0, 255, 0, 255]);
         expectPixelNear(pixel(46, 6), [0, 255, 0, 255]);
