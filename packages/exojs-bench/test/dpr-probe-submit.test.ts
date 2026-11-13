@@ -218,3 +218,43 @@ describe('dpr-probe POST /submit over real TLS', () => {
     expect(await tlsPost({ ...tlsGood(), Origin: 'https://evil.example' })).toBe(403);
   });
 });
+
+describe('dpr-probe oversized HTTP submits', () => {
+  test.each([true, false])('delivers a complete JSON 413 with Content-Length=%s', async contentLength => {
+    const files = readdirSync(dir);
+    const body = Buffer.alloc(16 * 1024 * 1024, 32);
+    const response = await new Promise<{ status: number; contentType: string | undefined; body: string; complete: boolean }>(
+      (resolve, reject) => {
+        const req = httpRequest(
+          {
+            host: '127.0.0.1',
+            port,
+            path: '/submit',
+            method: 'POST',
+            headers: { ...good(), ...(contentLength ? { 'Content-Length': body.length } : { 'Transfer-Encoding': 'chunked' }) },
+          },
+          res => {
+            let text = '';
+
+            res.setEncoding('utf8');
+            res.on('data', chunk => (text += chunk));
+            res.on('error', reject);
+            res.on('end', () =>
+              resolve({ status: res.statusCode ?? 0, contentType: res.headers['content-type'], body: text, complete: res.complete }),
+            );
+          },
+        );
+
+        req.setTimeout(3000, () => req.destroy(new Error('Oversized submit did not finish.')));
+        req.on('error', reject);
+        req.end(body);
+      },
+    );
+
+    expect(response.status).toBe(413);
+    expect(response.contentType).toBe('application/json');
+    expect(response.complete).toBe(true);
+    expect(JSON.parse(response.body)).toEqual({ error: 'capture exceeds 8388608 bytes' });
+    expect(readdirSync(dir)).toEqual(files);
+  });
+});

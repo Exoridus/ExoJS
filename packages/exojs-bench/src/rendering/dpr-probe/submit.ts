@@ -166,8 +166,9 @@ export const submitPlugin = (options: SubmitPluginOptions): unknown => ({
         size += chunk.length;
 
         if (size > MAX_CAPTURE_BYTES) {
+          // Drain further chunks without retaining them; closing a socket with unread data can reset the JSON response.
+          chunks.length = 0;
           fail(413, `capture exceeds ${MAX_CAPTURE_BYTES} bytes`);
-          request.destroy();
 
           return;
         }
