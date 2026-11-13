@@ -136,3 +136,51 @@ test.each([
     }
   },
 );
+
+test('an animated capture region reallocates the backdrop only when it outgrows it', () => {
+  vi.stubGlobal('GPUTextureUsage', { COPY_DST: 1, TEXTURE_BINDING: 2 });
+  const created: Array<{ width: number; height: number }> = [];
+  const createTexture = vi.fn(({ size }: { size: { width: number; height: number } }) => {
+    created.push({ ...size });
+
+    return { createView: () => ({}), destroy: vi.fn() };
+  });
+  const compositor = new WebGpuBackdropBlendCompositor();
+  const internals = compositor as unknown as {
+    _device: unknown;
+    _ensureBackdrop(device: unknown, width: number, height: number, format: string): unknown;
+  };
+  const device = { createTexture };
+
+  internals._device = device;
+
+  try {
+    const views: unknown[] = [];
+
+    for (let frame = 0; frame < 60; frame++) {
+      views.push(internals._ensureBackdrop(device, 40 + frame * 2, 30, 'rgba8unorm'));
+    }
+
+    // The first allocation is exact, later ones step up instead of following
+    // every single-pixel change of an animated region.
+    expect(created[0]).toEqual({ width: 40, height: 30 });
+    expect(created.length).toBeLessThan(10);
+
+    // A region the current allocation already covers reuses its view.
+    expect(internals._ensureBackdrop(device, 41, 30, 'rgba8unorm')).toBe(views.at(-1));
+
+    // A different target format still needs its own texture.
+    const beforeFormatChange = created.length;
+
+    internals._ensureBackdrop(device, 41, 30, 'bgra8unorm');
+
+    expect(created.length).toBe(beforeFormatChange + 1);
+
+    for (const size of created) {
+      expect(size.width).toBeGreaterThanOrEqual(40);
+      expect(size.height).toBeGreaterThanOrEqual(30);
+    }
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
