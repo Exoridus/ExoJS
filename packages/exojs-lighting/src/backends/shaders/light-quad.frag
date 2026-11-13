@@ -16,7 +16,7 @@ flat in float v_half;
 // One row per shadowed light: the distance to the nearest occluder along each
 // angular bin, as a fraction of the light's radius. A row index below zero
 // means this light sees no occluder at all.
-uniform sampler2D u_shadow;
+uniform highp sampler2D u_shadow;
 // The normal prepass, in screen space at this target's own size. Alpha is
 // coverage: zero means nothing described a surface there.
 uniform sampler2D u_normal;
