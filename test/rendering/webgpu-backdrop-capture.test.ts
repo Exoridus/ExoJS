@@ -150,7 +150,7 @@ test('an animated capture region reallocates the backdrop only when it outgrows 
     _device: unknown;
     _ensureBackdrop(device: unknown, width: number, height: number, format: string): unknown;
   };
-  const device = { createTexture };
+  const device = { createTexture, limits: { maxTextureDimension2D: 8192 } };
 
   internals._device = device;
 
@@ -181,6 +181,34 @@ test('an animated capture region reallocates the backdrop only when it outgrows 
       expect(size.height).toBeGreaterThanOrEqual(30);
     }
   } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+
+test('backdrop growth stays within GPU maximum texture dimensions', () => {
+  vi.stubGlobal('GPUTextureUsage', { COPY_DST: 1, TEXTURE_BINDING: 2 });
+  const created: Array<{ width: number; height: number }> = [];
+  const createTexture = vi.fn(({ size }: { size: { width: number; height: number } }) => {
+    created.push({ ...size });
+
+    return { createView: () => ({}), destroy: vi.fn() };
+  });
+  const device = { createTexture, limits: { maxTextureDimension2D: 128 } };
+  const compositor = new WebGpuBackdropBlendCompositor();
+  const internals = compositor as unknown as {
+    _ensureBackdrop(device: unknown, width: number, height: number, format: string): unknown;
+  };
+
+  try {
+    internals._ensureBackdrop(device, 100, 96, 'rgba8unorm');
+    const withinLimit = internals._ensureBackdrop(device, 120, 110, 'rgba8unorm');
+
+    expect(created).toEqual([{ width: 100, height: 96 }, { width: 128, height: 128 }]);
+    expect(internals._ensureBackdrop(device, 128, 128, 'rgba8unorm')).toBe(withinLimit);
+    expect(createTexture).toHaveBeenCalledTimes(2);
+  } finally {
+    compositor.disconnect();
     vi.unstubAllGlobals();
   }
 });
