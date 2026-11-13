@@ -185,7 +185,6 @@ test('an animated capture region reallocates the backdrop only when it outgrows 
   }
 });
 
-
 test('backdrop growth stays within GPU maximum texture dimensions', () => {
   vi.stubGlobal('GPUTextureUsage', { COPY_DST: 1, TEXTURE_BINDING: 2 });
   const created: Array<{ width: number; height: number }> = [];
