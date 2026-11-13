@@ -275,8 +275,11 @@ export class WebGpuBackdropBlendCompositor {
       // normalises its sample coordinates by `textureDimensions`, so the
       // captured region stays correct in the top-left corner of a larger
       // allocation, and the copy still transfers exactly `width` x `height`.
-      const allocatedWidth = Math.max(width, Math.ceil(this._backdropWidth * 1.5));
-      const allocatedHeight = Math.max(height, Math.ceil(this._backdropHeight * 1.5));
+      // Growing beyond the device limit would invalidate an otherwise legal
+      // capture near the maximum texture size (e.g. 6K -> 7K on an 8K device).
+      const maxDimension = device.limits.maxTextureDimension2D;
+      const allocatedWidth = Math.min(maxDimension, Math.max(width, Math.ceil(this._backdropWidth * 1.5)));
+      const allocatedHeight = Math.min(maxDimension, Math.max(height, Math.ceil(this._backdropHeight * 1.5)));
 
       this._backdropTexture?.destroy();
       this._backdropTexture = device.createTexture({
