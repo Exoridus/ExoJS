@@ -712,13 +712,20 @@ export class RenderingContext implements DrawContext {
     const mesh = (this._immediateMesh ??= new ImmediateMesh());
 
     // Set the view first: setView now only flushes when the view actually changes
-    // (not unconditionally). Correctness here rests on (a) the trailing flush()
+    // (not unconditionally). Correctness here rests on (a) the trailing pass submission
     // below - so a later drawGeometry cannot observe this pooled mesh through a
     // still-deferred draw - and (b) any renderer switch flushing its pending batch.
     this._backend.setView(view);
     mesh.configure(geometry, transform, material, options.tint ?? null);
     this._backend.draw(mesh);
-    this._backend.flush();
+
+    const backend = this._backend as RenderBackend & { flushPending?: () => unknown };
+
+    if (backend.flushPending) {
+      backend.flushPending();
+    } else {
+      backend.flush();
+    }
   }
 
   /**

@@ -1534,7 +1534,7 @@ export class WebGl2Backend implements RenderBackend {
     height: number,
     dataType: PixelDataType = 'uint8',
   ): Promise<PixelArray> {
-    this.flush();
+    this.flushPending();
 
     const gl = this._context;
     const rows = createPixelArray(width * height * 4, dataType);
@@ -2332,8 +2332,18 @@ export class WebGl2Backend implements RenderBackend {
     return this;
   }
 
-  public flush(): this {
+  /**
+   * Submit queued draws without ending the frame's GPU timing window.
+   * @internal
+   */
+  public flushPending(): this {
     this._flushActiveRenderer();
+
+    return this;
+  }
+
+  public flush(): this {
+    this.flushPending();
 
     if (this._gpuTimer !== null) {
       this._gpuTimer.endFrame();

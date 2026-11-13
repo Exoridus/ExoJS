@@ -32,7 +32,7 @@ export interface WebGl2PassBackend {
   setRenderTarget(target: RenderTarget | null): unknown;
   setView(view: View | null): unknown;
   clear(color?: Color): unknown;
-  flush(): unknown;
+  flushPending(): unknown;
   pushScissorRect(bounds: Rectangle): unknown;
   popScissorRect(): unknown;
   pushStencilClip(shape: Geometry, transform: Matrix): unknown;
@@ -88,7 +88,7 @@ export class WebGl2PassCoordinator implements RenderPassCoordinator {
   }
 
   public endPass(): void {
-    this._backend.flush();
+    this._backend.flushPending();
   }
 
   public withChildPass(descriptor: RenderPassDescriptor, body: () => void): void {
