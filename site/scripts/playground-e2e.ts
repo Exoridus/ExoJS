@@ -772,6 +772,12 @@ const widgetLabChecks = async (browser: Browser, origin: string, base: string): 
     await check('widget lab keeps Tab and Space inside the canvas', async () => {
       await clickNode('widgets.button');
       await page.keyboard.press('Tab');
+      // Focus moves on the next input frame; a Space sent before it lands is delivered to the button.
+      await waitFor(
+        () => read<string>('widgets.checkbox.state'),
+        state => state === 'focused',
+        'Tab focus on the checkbox',
+      );
       await page.keyboard.press('Space');
       await waitFor(() => read<boolean>('widgets.checkbox.checked'), Boolean, 'Space on the focused checkbox');
     });
@@ -2076,7 +2082,7 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
       const helper = tabs.getByRole('button', { name: 'runtime.ts Editable' });
       await page.locator('.monaco-editor').scrollIntoViewIfNeeded();
       await page.locator('.monaco-editor .overflow-guard').click({ position: { x: 350, y: 110 } });
-      await page.keyboard.press('Control+End');
+      await page.keyboard.press(endOfDocumentKey);
       await page.keyboard.type('\n(window as any).__fileTabRun = "entry";');
       diagnostics.mark('entry-edited');
       const before = await page.evaluate<{ source: string; position: unknown; scroll: number; uri: string }>(`(() => {
@@ -2099,7 +2105,7 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
         'Copy uses the visible helper',
       );
       await page.locator('.monaco-editor .overflow-guard').click({ position: { x: 350, y: 110 } });
-      await page.keyboard.press('Control+End');
+      await page.keyboard.press(endOfDocumentKey);
       await page.keyboard.type('\n(window as any).__helperRun = "edited";');
       diagnostics.mark('helper-edited');
       await page.getByRole('button', { name: 'Run', exact: true }).click();
@@ -2124,7 +2130,7 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
         'Entry content and view survive the tab switch',
       );
       await page.locator('.monaco-editor .overflow-guard').click({ position: { x: 350, y: 110 } });
-      await page.keyboard.press('Control+End');
+      await page.keyboard.press(endOfDocumentKey);
       await page.keyboard.type('\n(window as any).__fileTabRun = "changed";');
       diagnostics.mark('entry-changed');
       await page.getByRole('button', { name: 'File options', exact: true }).click();
@@ -2274,6 +2280,9 @@ const fileTabChecks = async (browser: Browser, origin: string, base: string): Pr
     }
   });
 };
+
+/** The editor's go-to-end-of-document chord: macOS has no Control+End binding in the editor. */
+const endOfDocumentKey = process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End';
 
 const main = async (): Promise<void> => {
   const build = options.origin ? resolveSiteChannel(process.env) : readSiteBuildManifest(distDir);
