@@ -714,11 +714,15 @@ const _ellipsize = (
 
   const clusters = graphemes(line, locale);
 
-  while (clusters.length > 0 && measureLine(`${clusters.join('')}${ellipsis}`) > maxWidth) {
-    clusters.pop();
+  let end = line.length;
+
+  // Contextual shaping can make a longer prefix narrower, so candidates must
+  // be checked from longest to shortest rather than with a binary search.
+  while (clusters.length > 0 && measureLine(line.slice(0, end) + ellipsis) > maxWidth) {
+    end -= clusters.pop()!.length;
   }
 
-  const kept = clusters.join('');
+  const kept = line.slice(0, end);
 
   return { text: kept + ellipsis, contentLength: kept.length };
 };
