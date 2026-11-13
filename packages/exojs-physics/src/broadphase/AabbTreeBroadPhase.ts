@@ -3,6 +3,7 @@ import { DynamicAabbTree } from '@codexo/exojs';
 
 import { aabbOverlap } from '../Aabb';
 import type { Collider } from '../Collider';
+import { currentAabbRevision } from '../Collider';
 import { pairKey } from '../ContactGraph';
 import type { SpatialIndex } from '../query/SpatialIndex';
 import { sortInPlace } from '../sort';
@@ -78,6 +79,16 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
   private _emitTarget: CandidatePair[] | null = null;
   private _emitLength = -1;
 
+  /**
+   * The collider AABB revision and collider count this index was last synced at.
+   * Equal revision, count and source list mean no collider has entered, left or
+   * moved since the last sync. Different lists with the same count must still
+   * be visited, even when no AABB has been rewritten.
+   */
+  private _syncRevision = -1;
+  private _syncedCount = -1;
+  private _syncedSource: readonly Collider[] | null = null;
+
   private readonly _onNeighborFound = (payload: Collider, proxy: number): void => {
     if (proxy === this._syncingProxy) {
       return;
@@ -140,8 +151,22 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
    * Insert every not-yet-tracked collider and reinsert every moved one (the
    * `computePairs` phase-1 loop, extracted so {@link queryAabb} callers can
    * force it independently of a full detection pass - see {@link SpatialIndex.sync}).
+   *
+   * Returns immediately when no collider AABB has been rewritten and the same
+   * list object has the same length as on the last call. Passing a different
+   * list forces a visit, even if the global revision and length match.
    */
   public sync(colliders: readonly Collider[]): void {
+    const revision = currentAabbRevision();
+
+    if (revision === this._syncRevision && colliders.length === this._syncedCount && colliders === this._syncedSource) {
+      return;
+    }
+
+    this._syncRevision = revision;
+    this._syncedCount = colliders.length;
+    this._syncedSource = colliders;
+
     for (const collider of colliders) {
       this._sync(collider);
     }
@@ -170,6 +195,10 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
 
   /** Drop `collider`'s leaf and every pair referencing it. Called when a collider is destroyed. */
   public removeCollider(collider: Collider): void {
+    // A removal the next `sync` may not see as a count change (one collider
+    // destroyed and another added in the same frame) still has to re-walk.
+    this._syncRevision = -1;
+
     if (collider._treeProxy === -1) {
       return;
     }
@@ -203,6 +232,9 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
     this._pairs.clear();
     this._emitStale = true;
     this._emitTarget = null;
+    this._syncRevision = -1;
+    this._syncedCount = -1;
+    this._syncedSource = null;
   }
 
   private _sync(collider: Collider): void {

@@ -26,6 +26,18 @@ const worldVertexCount = (shape: AnyShape): number => {
   }
 };
 
+/**
+ * Counts every collider AABB write in the process. A broad phase caches the
+ * value it last synchronised at, so it can tell a repeat sync over unchanged
+ * geometry - the common case when many queries follow one step - from one that
+ * still has work, without walking the collider list to find out.
+ * @internal
+ */
+let aabbRevision = 0;
+
+/** @internal */
+export const currentAabbRevision = (): number => aabbRevision;
+
 /** Construction options for a collider. */
 export interface ColliderOptions {
   /** The collision geometry. */
@@ -209,6 +221,7 @@ export class Collider {
   public synchronize(bodyTransform: Transform): void {
     const world = composeTransforms(bodyTransform, this._localTransform, this._worldTransform);
 
+    aabbRevision++;
     this._treeDirty = true;
 
     switch (this.shape.type) {
