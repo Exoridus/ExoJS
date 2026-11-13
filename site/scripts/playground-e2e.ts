@@ -771,8 +771,9 @@ const widgetLabChecks = async (browser: Browser, origin: string, base: string): 
 
     await check('widget lab keeps Tab and Space inside the canvas', async () => {
       await clickNode('widgets.button');
+      // The canvas handles input on its next frame, so the click's focus and the Tab's traversal each have to land before the next key is sent.
+      await waitFor(() => read<boolean>('widgets.button.focused'), Boolean, 'focus on the clicked button');
       await page.keyboard.press('Tab');
-      // Focus moves on the next input frame; a Space sent before it lands is delivered to the button.
       await waitFor(
         () => read<string>('widgets.checkbox.state'),
         state => state === 'focused',
