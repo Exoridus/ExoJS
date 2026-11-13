@@ -453,6 +453,36 @@ const installCoreAndParticleRenderers = (backend: WebGpuBackend, renderingOption
 };
 
 describe('WebGpuBackend', () => {
+  test.each([
+    [0.5, 0, 0, 1, 100, 0, 0, 100],
+    [0, 0.5, 1, 0, 0, 50, 200, 0],
+    [1, 0, 0, 1, 200, 0, 0, 100],
+    [0, 0, 0.002, 0.004, 0, 0, 0, 0],
+    [-0.25, 0, 1, 1, -50, 0, 200, 100],
+  ])(
+    'snap viewport preserves (%s, %s, %s, %s) in device pixels',
+    async (x, y, width, height, expectedX, expectedY, expectedWidth, expectedHeight) => {
+      const environment = createMockWebGpuEnvironment();
+
+      environment.canvas.width = 200;
+      environment.canvas.height = 100;
+
+      const manager = new WebGpuBackend({ canvas: environment.canvas, options: {} } as Application);
+      const view = new View(100, 50, 200, 100).setViewport(x, y, width, height);
+
+      try {
+        await manager.initialize();
+        manager.setView(view);
+
+        expect(manager._snapViewport).toEqual({ x: expectedX, y: expectedY, width: expectedWidth, height: expectedHeight });
+      } finally {
+        manager.destroy();
+        view.destroy();
+        environment.restore();
+      }
+    },
+  );
+
   test('destroy during pipeline prewarm rejects initialization without repopulating renderer caches', async () => {
     const environment = createMockWebGpuEnvironment();
     const adapter = (await navigator.gpu.requestAdapter())!;

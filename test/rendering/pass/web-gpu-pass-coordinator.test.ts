@@ -531,6 +531,29 @@ describe('WebGpuPassCoordinator', () => {
     }
   });
 
+  test.each([
+    [0.5, 0, 0, 1, 100, 0, 0, 100],
+    [0, 0.5, 1, 0, 0, 50, 200, 0],
+    [0.5, 0.5, 0, 0, 100, 50, 0, 0],
+    [1, 0, 0, 1, 200, 0, 0, 100],
+    [0, 1, 1, 0, 0, 100, 200, 0],
+    [0, 0, 0.002, 0.004, 0, 0, 0, 0],
+    [-0.25, 0, 1, 1, -50, 0, 200, 100],
+  ])('preserves viewport (%s, %s, %s, %s) in device pixels', (x, y, width, height, expectedX, expectedY, expectedWidth, expectedHeight) => {
+    const root = new RenderTarget(200, 100, true);
+    const { backend, passEncoder } = createMockBackend(root);
+    const coordinator = new WebGpuPassCoordinator(backend);
+
+    try {
+      root.view.setViewport(x, y, width, height);
+      coordinator.acquirePass();
+
+      expect(passEncoder.setViewport).toHaveBeenCalledWith(expectedX, expectedY, expectedWidth, expectedHeight, 0, 1);
+    } finally {
+      root.destroy();
+    }
+  });
+
   test('acquirePass skips setViewport for the default full (0,0,1,1) viewport', () => {
     const root = new RenderTarget(200, 100, true);
     const { backend, passEncoder } = createMockBackend(root);
