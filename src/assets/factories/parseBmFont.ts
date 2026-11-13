@@ -3,26 +3,43 @@ import type { BmFontChar, BmFontData, BmFontDistanceField } from '#rendering/tex
 
 // ── Parser helpers ────────────────────────────────────────────────────────────
 
+// Attribute names are a fixed set of literals in this parser, so the patterns are
+// interned: a 300-glyph descriptor made ~3900 `new RegExp` allocations for the same
+// few dozen sources. V8 caches the compiled program per source, so this saves the
+// objects, not the compilation.
+const patterns = new Map<string, RegExp>();
+
+const pattern = (source: string): RegExp => {
+  let compiled = patterns.get(source);
+
+  if (compiled === undefined) {
+    compiled = new RegExp(source);
+    patterns.set(source, compiled);
+  }
+
+  return compiled;
+};
+
 const intVal = (line: string, key: string): number => {
-  const match = new RegExp(`\\b${key}=(-?\\d+)`).exec(line);
+  const match = pattern(`\\b${key}=(-?\\d+)`).exec(line);
 
   return match?.[1] !== undefined ? parseInt(match[1], 10) : 0;
 };
 
 const strVal = (line: string, key: string): string => {
-  const match = new RegExp(`\\b${key}="([^"]*)"`).exec(line);
+  const match = pattern(`\\b${key}="([^"]*)"`).exec(line);
 
   if (match?.[1] !== undefined) {
     return match[1];
   }
 
-  const bare = new RegExp(`\\b${key}=(\\S+)`).exec(line);
+  const bare = pattern(`\\b${key}=(\\S+)`).exec(line);
 
   return bare?.[1] ?? '';
 };
 
 const attribute = (line: string, key: string): string | undefined => {
-  const match = new RegExp(`(?:^|\\s)${key}=(?:"([^"]*)"|([^\\s]*))`).exec(line);
+  const match = pattern(`(?:^|\\s)${key}=(?:"([^"]*)"|([^\\s]*))`).exec(line);
 
   return match?.[1] ?? match?.[2];
 };
