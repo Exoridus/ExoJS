@@ -229,6 +229,25 @@ describe('sync early-out', () => {
     }
   });
 
+  it('visits a different same-length collider list without any new AABB writes', () => {
+    const world = new PhysicsWorld();
+    const [first, second] = boxesAt(world, 2);
+    const broadPhase = new AabbTreeBroadPhase();
+
+    broadPhase.sync([first!]);
+    const reads = spyOnAabbReads(second!);
+
+    try {
+      broadPhase.sync([second!]);
+
+      expect(reads).toHaveBeenCalled();
+      expect(second!._treeProxy).not.toBe(-1);
+    } finally {
+      reads.mockRestore();
+      broadPhase.destroy();
+    }
+  });
+
   it('re-walks after a collider is moved', () => {
     const world = new PhysicsWorld();
     const colliders = boxesAt(world, 4);
