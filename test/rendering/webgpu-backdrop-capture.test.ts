@@ -197,8 +197,10 @@ test('backdrop growth stays within GPU maximum texture dimensions', () => {
   const device = { createTexture, limits: { maxTextureDimension2D: 128 } };
   const compositor = new WebGpuBackdropBlendCompositor();
   const internals = compositor as unknown as {
+    _device: unknown;
     _ensureBackdrop(device: unknown, width: number, height: number, format: string): unknown;
   };
+  internals._device = device;
 
   try {
     internals._ensureBackdrop(device, 100, 96, 'rgba8unorm');
