@@ -57,6 +57,21 @@ const floatsEqual = (left: Float32Array, right: Float32Array, count: number): bo
   return true;
 };
 
+/** Whether two resource lists are the same objects in the same order. */
+const sameResources = (left: readonly unknown[], right: readonly unknown[]): boolean => {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  for (let index = 0; index < left.length; index++) {
+    if (left[index] !== right[index]) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
 /** Returns true when the value is a texture (goes into a bind group, not a UBO). */
 const isTextureValue = (value: ShaderFilterUniformValue): value is Texture | RenderTexture =>
   value instanceof Texture ||
@@ -97,7 +112,7 @@ interface WebGpuConnection {
 export class WebGpuShaderFilterPass {
   /** One redirect pass, re-pointed per application - see {@link BackendTargetPass.retarget}. */
   private readonly _pass: BackendTargetPass = new BackendTargetPass(backend => this._run(backend));
-  /** `vec2<f32>` padded to the buffer's 16 bytes, reused so a frame allocates none. */
+  /** `vec2<f32>` padded to the buffer's 16 bytes, reused to avoid a per-apply resolution array. */
   private readonly _resolutionScratch = new Float32Array(4);
 
   /** The one WGSL module, carrying both entry points. */
@@ -113,6 +128,19 @@ export class WebGpuShaderFilterPass {
   /** The textures the running pass reads from and writes to, staged by {@link apply}. */
   private _passInput: RenderTexture | null = null;
   private _passOutput: RenderTexture | null = null;
+  /**
+   * Group 0's inputs are the connection's fixed buffers plus the input texture's
+   * view, so it is a pure function of that view: a chain re-reading one texture -
+   * or one node filtered every frame - would otherwise build the same bind group
+   * again for every pass.
+   */
+  private _autoBinding: { readonly view: GPUTextureView; readonly group: GPUBindGroup } | null = null;
+  /**
+   * Group 1's inputs are the uniform buffers and the bound texture/sampler views.
+   * `keys` records exactly those, in binding order, so a pass either reuses the
+   * group or rebuilds it - never rebuilds an identical one.
+   */
+  private _userBinding: { readonly keys: readonly unknown[]; readonly group: GPUBindGroup } | null = null;
   /**
    * Whether the two per-pass uniform buffers already hold what this pass would
    * write, and the packed bytes the user buffer was last given.
@@ -145,9 +173,8 @@ export class WebGpuShaderFilterPass {
 
     this._ensureConnected(gpuBackend, output);
 
-    // Staged on the instance rather than captured: the pass object and its body
-    // are built once per filter, so a filtered node costs no allocation per
-    // frame - which it did while both were rebuilt inside every `apply`.
+    // Staged on the instance rather than captured so each application reuses the
+    // pass object and callback.
     this._passInput = input;
     this._passOutput = output;
 
@@ -170,6 +197,53 @@ export class WebGpuShaderFilterPass {
     this._resolutionWritten = false;
     this._userUniformWritten = false;
     this._blockRevisions.length = 0;
+    this._autoBinding = null;
+    this._userBinding = null;
+  }
+
+  /**
+   * Group 0 for `view`, rebuilt only when the input texture's view changed (a
+   * recreated GPU texture, or a different link in a filter chain).
+   */
+  private _autoBindGroupFor(device: GPUDevice, conn: WebGpuConnection, view: GPUTextureView): GPUBindGroup {
+    const cached = this._autoBinding;
+
+    if (cached !== null && cached.view === view) {
+      return cached.group;
+    }
+
+    const group = device.createBindGroup({
+      layout: conn.autoBindGroupLayout,
+      entries: [
+        { binding: 0, resource: { buffer: conn.resolutionBuffer } },
+        { binding: 1, resource: view },
+        { binding: 2, resource: conn.sampler },
+        { binding: 3, resource: { buffer: conn.orientationBuffer } },
+      ],
+    });
+
+    this._autoBinding = { view, group };
+
+    return group;
+  }
+
+  /**
+   * Group 1 for `entries`, rebuilt only when one of the resource identities in
+   * `keys` changed. A uniform buffer keeps its identity while it is only written
+   * to, so a warm pass reuses its group.
+   */
+  private _userBindGroupFor(conn: WebGpuConnection, entries: GPUBindGroupEntry[], keys: readonly unknown[]): GPUBindGroup {
+    const cached = this._userBinding;
+
+    if (cached !== null && sameResources(cached.keys, keys)) {
+      return cached.group;
+    }
+
+    const group = conn.device.createBindGroup({ layout: conn.userBindGroupLayout, entries });
+
+    this._userBinding = { keys, group };
+
+    return group;
   }
 
   /** The pass body - see {@link _pass}. */
@@ -199,15 +273,7 @@ export class WebGpuShaderFilterPass {
     // hardware-decoded linear color ShaderFilter's color contract promises -
     // no sRGB view is chosen or manually decoded here.
     const inputBinding = gpu.getTextureBinding(input);
-    const autoBindGroup = device.createBindGroup({
-      layout: conn.autoBindGroupLayout,
-      entries: [
-        { binding: 0, resource: { buffer: conn.resolutionBuffer } },
-        { binding: 1, resource: inputBinding.view },
-        { binding: 2, resource: conn.sampler },
-        { binding: 3, resource: { buffer: conn.orientationBuffer } },
-      ],
-    });
+    const autoBindGroup = this._autoBindGroupFor(device, conn, inputBinding.view);
 
     // ---- Build user bind group (group 1) ----
     const userBindGroup = this._buildUserBindGroup(gpu, conn);
@@ -490,6 +556,9 @@ export class WebGpuShaderFilterPass {
   private _buildUserBindGroup(backend: WebGpuBackend, conn: WebGpuConnection): GPUBindGroup {
     const device = conn.device;
     const entries: GPUBindGroupEntry[] = [];
+    // Resource identities in binding order, so a pass with unchanged inputs can
+    // reach for the group it already built instead of making an identical one.
+    const keys: unknown[] = [];
     const blocks = this._bindings.blocks;
 
     if (blocks.length > 0) {
@@ -513,11 +582,12 @@ export class WebGpuShaderFilterPass {
         }
 
         entries.push({ binding: index, resource: { buffer } });
+        keys.push(buffer);
       }
 
-      this._pushTextureEntries(backend, entries, blocks.length);
+      this._pushTextureEntries(backend, entries, keys, blocks.length);
 
-      return device.createBindGroup({ layout: conn.userBindGroupLayout, entries });
+      return this._userBindGroupFor(conn, entries, keys);
     }
 
     // ---- Collect scalar uniforms and marshal into a UBO ----
@@ -590,6 +660,7 @@ export class WebGpuShaderFilterPass {
         binding: 0,
         resource: { buffer },
       });
+      keys.push(buffer);
     } else {
       // No scalar uniforms - still need binding 0 to satisfy the layout.
       // Create a minimal 16-byte dummy buffer if needed.
@@ -602,24 +673,24 @@ export class WebGpuShaderFilterPass {
         binding: 0,
         resource: { buffer: conn.userUniformBuffers[0] },
       });
+      keys.push(conn.userUniformBuffers[0]);
     }
 
-    this._pushTextureEntries(backend, entries, 1);
+    this._pushTextureEntries(backend, entries, keys, 1);
 
-    return device.createBindGroup({
-      layout: conn.userBindGroupLayout,
-      entries,
-    });
+    return this._userBindGroupFor(conn, entries, keys);
   }
 
   /** Append one texture/sampler pair per bound texture, starting at `bindingIndex`. */
-  private _pushTextureEntries(backend: WebGpuBackend, entries: GPUBindGroupEntry[], bindingIndex: number): void {
+  private _pushTextureEntries(backend: WebGpuBackend, entries: GPUBindGroupEntry[], keys: unknown[], bindingIndex: number): void {
     for (const texture of this._collectTextures()) {
       const binding = backend.getTextureBinding(texture);
 
       entries.push({ binding: bindingIndex, resource: binding.view });
+      keys.push(binding.view);
       bindingIndex++;
       entries.push({ binding: bindingIndex, resource: binding.sampler });
+      keys.push(binding.sampler);
       bindingIndex++;
     }
   }

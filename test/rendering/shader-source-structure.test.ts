@@ -59,6 +59,14 @@ const CHUNKS: ReadonlyMap<string, ChunkRole> = new Map([
     'cascade-gather-transport.frag',
     { opens: false, entry: true, reason: 'the receiver reconstruction, composed onto the preamble and the operator' },
   ],
+  [
+    'cascade-gather-transport-normals.frag',
+    {
+      opens: false,
+      entry: true,
+      reason: 'the receiver reconstruction shaded against the normal prepass, composed onto the preamble and the operator',
+    },
+  ],
 ]);
 
 interface ShaderEntry {

@@ -9,6 +9,7 @@ import {
   sourceDensity,
   sourceRadius,
   TransportCapacityError,
+  transportCellBlocks,
   transportChannels,
   transportEmitterTexels,
   TransportGeometry,
@@ -508,5 +509,13 @@ describe('TransportGeometry', () => {
       expect(tables.cellSize).toBeGreaterThan(8);
       expect(segmentsAt(tables, 0, 0)).toEqual([0]);
     });
+  });
+});
+
+describe('transportCellBlocks', () => {
+  test('uses coarse cells for sparse geometry and finer cells once it is dense', () => {
+    expect(transportCellBlocks(0)).toBe(8);
+    expect(transportCellBlocks(256)).toBe(8);
+    expect(transportCellBlocks(257)).toBe(4);
   });
 });

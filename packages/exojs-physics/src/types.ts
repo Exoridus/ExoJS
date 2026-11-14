@@ -34,12 +34,21 @@ export const defaultFilter: Readonly<CollisionFilter> = Object.freeze({
   group: 0,
 });
 
+/**
+ * Normalise `filter` into `target`, so a hot path can reuse one record instead
+ * of allocating a filter per query. Returns `target` for chaining.
+ */
+export const resolveFilterInto = (filter: Partial<CollisionFilter> | undefined, target: CollisionFilter): CollisionFilter => {
+  target.category = filter?.category ?? defaultFilter.category;
+  target.mask = filter?.mask ?? defaultFilter.mask;
+  target.group = filter?.group ?? defaultFilter.group;
+
+  return target;
+};
+
 /** Normalise a partial filter against {@link defaultFilter}. */
-export const resolveFilter = (filter?: Partial<CollisionFilter>): CollisionFilter => ({
-  category: filter?.category ?? defaultFilter.category,
-  mask: filter?.mask ?? defaultFilter.mask,
-  group: filter?.group ?? defaultFilter.group,
-});
+export const resolveFilter = (filter?: Partial<CollisionFilter>): CollisionFilter =>
+  resolveFilterInto(filter, { category: defaultFilter.category, mask: defaultFilter.mask, group: defaultFilter.group });
 
 /**
  * Decide whether two filters permit a collision/overlap. Implements the

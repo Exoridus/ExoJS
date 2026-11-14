@@ -33,7 +33,7 @@ const createMockBackend = (root: RenderTarget) => {
       clearColor.copy(color);
     }
   });
-  const flush = vi.fn(() => {});
+  const flushPending = vi.fn(() => {});
   const pushScissorRect = vi.fn((_bounds: Rectangle) => {});
   const popScissorRect = vi.fn(() => {});
   const pushStencilClip = vi.fn((_shape: Geometry, _transform: Matrix) => {});
@@ -51,7 +51,7 @@ const createMockBackend = (root: RenderTarget) => {
     setRenderTarget,
     setView,
     clear,
-    flush,
+    flushPending,
     pushScissorRect,
     popScissorRect,
     pushStencilClip,
@@ -65,7 +65,7 @@ const createMockBackend = (root: RenderTarget) => {
     clear,
     clearColor,
     setClearColor,
-    flush,
+    flushPending,
     pushScissorRect,
     popScissorRect,
     pushStencilClip,
@@ -182,13 +182,13 @@ describe('WebGl2PassCoordinator', () => {
 
   test('endPass flushes the active renderer', () => {
     const root = new RenderTarget(64, 64, true);
-    const { backend, flush } = createMockBackend(root);
+    const { backend, flushPending } = createMockBackend(root);
     const coordinator = new WebGl2PassCoordinator(backend);
 
     try {
       coordinator.endPass();
 
-      expect(flush).toHaveBeenCalledTimes(1);
+      expect(flushPending).toHaveBeenCalledTimes(1);
     } finally {
       root.destroy();
     }

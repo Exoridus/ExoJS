@@ -234,6 +234,32 @@ describe('browser text shaping (WebGL2)', () => {
     text.destroy();
   });
 
+  test('Arabic ellipsis preserves the longest prefix measured by the canvas shaper', () => {
+    const value = 'بلاب';
+    const ctx = measureCtx('normal 48px sans-serif', 'rtl');
+    const maxWidth = (ctx.measureText('بل…').width + ctx.measureText('بلا…').width) / 2;
+    let expectedEnd = value.length;
+
+    while (expectedEnd > 0 && ctx.measureText(`${value.slice(0, expectedEnd)}…`).width > maxWidth) {
+      expectedEnd--;
+    }
+
+    const text = new Text(`${value}\nmore`, {
+      fontFamily: 'sans-serif',
+      fontSize: 48,
+      direction: 'rtl',
+      shaping: 'browser',
+      maxWidth,
+      maxLines: 1,
+      overflow: 'ellipsis',
+    });
+
+    expect(text.currentLayout.lines[0]?.sourceEnd).toBe(expectedEnd);
+    expect(text.currentLayout.advance.width).toBeLessThanOrEqual(maxWidth);
+
+    text.destroy();
+  });
+
   test('measuring contextual text allocates no shaped resource', () => {
     const size = Text.measure(ARABIC, { fontSize: 24 });
 

@@ -248,8 +248,53 @@ const intersectionRectCircle = ({ x: rx, y: ry, width, height }: Rectangle, { x:
   return getDistance(cx, cy, distX, distY) <= radius;
 };
 
+// Every ellipse/circle query below builds a 16+-point approximation and then
+// tests every edge pair, and the broad phase hands over the non-overlapping pair
+// far more often than an overlapping one. The approximations are inscribed in the
+// true outlines, so disjoint extents of the true shapes prove the approximations
+// cannot touch either - these pre-checks only ever reject a separated pair.
+const rectCannotReachEllipse = ({ x, y, width, height }: Rectangle, ellipse: Ellipse): boolean =>
+  Math.max(x, x + width) < ellipse.x - ellipse.rx ||
+  Math.min(x, x + width) > ellipse.x + ellipse.rx ||
+  Math.max(y, y + height) < ellipse.y - ellipse.ry ||
+  Math.min(y, y + height) > ellipse.y + ellipse.ry;
+
+/** Whether `circle` is far enough from `ellipse`'s extent that they cannot touch. */
+const circleCannotReachEllipse = ({ x, y, radius }: Circle, ellipse: Ellipse): boolean => {
+  const dx = Math.max(Math.abs(x - ellipse.x) - ellipse.rx, 0);
+  const dy = Math.max(Math.abs(y - ellipse.y) - ellipse.ry, 0);
+
+  return dx * dx + dy * dy > radius * radius;
+};
+
+/** Whether two ellipses' extents are disjoint. */
+const ellipsesCannotReach = (left: Ellipse, right: Ellipse): boolean =>
+  Math.abs(left.x - right.x) > left.rx + right.rx || Math.abs(left.y - right.y) > left.ry + right.ry;
+
+/** Whether `polygon`'s world extent is clear of `ellipse`'s. */
+const polygonCannotReachEllipse = ({ x, y, points }: Polygon, ellipse: Ellipse): boolean => {
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+
+  for (const point of points) {
+    minX = Math.min(minX, point.x);
+    minY = Math.min(minY, point.y);
+    maxX = Math.max(maxX, point.x);
+    maxY = Math.max(maxY, point.y);
+  }
+
+  return (
+    maxX + x < ellipse.x - ellipse.rx ||
+    minX + x > ellipse.x + ellipse.rx ||
+    maxY + y < ellipse.y - ellipse.ry ||
+    minY + y > ellipse.y + ellipse.ry
+  );
+};
+
 const intersectionRectEllipse = (rectangle: Rectangle, ellipse: Ellipse): boolean =>
-  polygonsIntersect(buildRectanglePoints(rectangle), buildEllipsePoints(ellipse));
+  !rectCannotReachEllipse(rectangle, ellipse) && polygonsIntersect(buildRectanglePoints(rectangle), buildEllipsePoints(ellipse));
 
 const intersectionRectPoly = (rectangle: Rectangle, polygon: Polygon): boolean => intersectionSat(rectangle, polygon);
 
@@ -257,7 +302,7 @@ const intersectionCircleCircle = ({ x: x1, y: y1, radius: r1 }: Circle, { x: x2,
   getDistance(x1, y1, x2, y2) <= r1 + r2;
 
 const intersectionCircleEllipse = (circle: Circle, ellipse: Ellipse): boolean =>
-  polygonsIntersect(buildCirclePoints(circle), buildEllipsePoints(ellipse));
+  !circleCannotReachEllipse(circle, ellipse) && polygonsIntersect(buildCirclePoints(circle), buildEllipsePoints(ellipse));
 
 const shouldExcludeLeftVoronoi = (
   circleX: number,
@@ -357,10 +402,12 @@ const intersectionCirclePoly = ({ x: cx, y: cy, radius }: Circle, polygon: Polyg
 };
 
 const intersectionEllipseEllipse = (ellipseA: Ellipse, ellipseB: Ellipse): boolean =>
-  polygonsIntersect(buildEllipsePoints(ellipseA), buildEllipsePoints(ellipseB));
+  !ellipsesCannotReach(ellipseA, ellipseB) && polygonsIntersect(buildEllipsePoints(ellipseA), buildEllipsePoints(ellipseB));
 
 const intersectionEllipsePoly = (ellipse: Ellipse, polygon: Polygon): boolean =>
-  !isAreaLessPolygon(polygon) && polygonsIntersect(buildEllipsePoints(ellipse), buildPolygonWorldPoints(polygon));
+  !isAreaLessPolygon(polygon) &&
+  !polygonCannotReachEllipse(polygon, ellipse) &&
+  polygonsIntersect(buildEllipsePoints(ellipse), buildPolygonWorldPoints(polygon));
 
 const intersectionPolyPoly = (polygonA: Polygon, polygonB: Polygon): boolean => intersectionSat(polygonA, polygonB);
 

@@ -105,7 +105,11 @@ fn fragmentMain(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32
 
     if (uniforms.uMerge < 0.5) {
         let walked = traceSegment(near, origin + heading * uniforms.uRange.y);
-        let gave = select(vec3<f32>(0.0), bounced(walked.surface, heading), walked.rastered > 0.5);
+        var gave = vec3<f32>(0.0);
+
+        if (walked.rastered > 0.5) {
+            gave = bounced(walked.surface, heading);
+        }
 
         // The top of the chain: what got through here reached the sky, and a
         // directional light is what the sky holds.
@@ -141,7 +145,11 @@ fn fragmentMain(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32
         // A stretch that ended on a drawable carries what that drawable gives
         // back; one that ended on an outline carries only what it collected.
         let along = normalize(coarseOrigin + heading * uniforms.uRange.y - near);
-        let gave = select(vec3<f32>(0.0), bounced(walked.surface, along), walked.rastered > 0.5);
+        var gave = vec3<f32>(0.0);
+
+        if (walked.rastered > 0.5) {
+            gave = bounced(walked.surface, along);
+        }
 
         total = total + bilinear(weight, index) * (walked.radiance + gave + walked.transmittance * coarseRay(corner, direction, tile));
     }

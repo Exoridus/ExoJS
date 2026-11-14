@@ -154,8 +154,8 @@ export interface FrameLightingBackendOptions {
  * The trade against the forward renderer is the one that matters for a lit
  * scene: light no longer costs a loop iteration per fragment per light, so
  * there is no light cap, and the accumulated field is a texture a shadow term
- * can be folded into. What it gives up is normal mapping - the light target
- * has no surface normals to shade against, because the frame it multiplies is
+ * can be folded into. Normal mapping comes from a prepass over the registered
+ * surfaces instead of from the sprite stage, because the frame it multiplies is
  * already flat.
  *
  * Local lights batch by cookie texture: one instanced draw per distinct
@@ -446,8 +446,20 @@ ${sunQuadWgsl}`,
       this._app.framePasses.addPass(this._filler.pass);
     }
 
+    // The radiance gather reads the normals while it builds the light field, so
+    // the prepass has to be ahead of the cascades; the quads read them in the
+    // light pass, after the field passes.
+    if (this._cascading) {
+      this._app.framePasses.addPass(this._normalPass);
+    }
+
     this._attachFieldPasses();
-    this._app.framePasses.addPass(this._normalPass).addPass(this._lightPass).addPass(this._compositePass);
+
+    if (!this._cascading) {
+      this._app.framePasses.addPass(this._normalPass);
+    }
+
+    this._app.framePasses.addPass(this._lightPass).addPass(this._compositePass);
 
     if (this._postPass !== null) {
       this._app.framePasses.addPass(this._postPass);
@@ -515,15 +527,11 @@ ${sunQuadWgsl}`,
   }
 
   /**
-   * The light quads shade against the prepass; a walk does not. Radiance
-   * carries a direction per probe ray but the gather averages a probe's rays
-   * into one arriving colour, so there is no incident direction left at a
-   * fragment for a normal to be measured against - and running the prepass
-   * anyway would draw a screen-sized target nothing reads.
+   * Both of this renderer's modes shade against the prepass: the light quads
+   * measure each light's direction against it, and the radiance gather weights
+   * the finest cascade's four directions by it.
    */
-  public get readsSurfaces(): boolean {
-    return !this._cascading;
-  }
+  public readonly readsSurfaces = true;
 
   public get activeLightCount(): number {
     return this._activeCount;
@@ -653,7 +661,7 @@ ${sunQuadWgsl}`,
   }
 
   public publish(lights: readonly Light[], ambient: Color, occluders: OccluderField, surfaces: readonly NormalSurface[]): void {
-    this._writeSurfaces(this.readsSurfaces ? surfaces : []);
+    this._writeSurfaces(surfaces);
     this._resize();
     this._followCamera();
     this._ambient.copy(ambient);
@@ -1293,6 +1301,7 @@ ${sunQuadWgsl}`,
 
       this._sunMaterial.setTexture('u_normal', this._boundNormals());
       this._compositeMaterial.setTexture('u_light', this._debugTexture(this._debug));
+      this._shadeAgainstNormals(describes ? this._normalTarget : null);
     }
 
     this._surfaceCount = written;
@@ -1381,6 +1390,11 @@ ${sunQuadWgsl}`,
       this._fieldView.width / Math.max(1, this._maskTarget.width),
       this._fieldView.height / Math.max(1, this._maskTarget.height),
     );
+  }
+
+  /** Hand a walk the prepass while it describes a surface, or take it back with `null`. */
+  protected _shadeAgainstNormals(_normals: RenderTexture | null): void {
+    // The light quads read the prepass in their own pass and have nothing to bind.
   }
 
   /** The normal field the light shader should read: the prepass, or nothing at all. */

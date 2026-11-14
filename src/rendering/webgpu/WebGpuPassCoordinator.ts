@@ -618,8 +618,8 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     const { width, height } = this._backend._getAttachmentPixelSize(this._backend.renderTarget);
     const x = Math.floor(vp.x * width);
     const y = Math.floor(vp.y * height);
-    const w = Math.max(1, Math.round(vp.width * width));
-    const h = Math.max(1, Math.round(vp.height * height));
+    const w = Math.max(0, Math.round(vp.width * width));
+    const h = Math.max(0, Math.round(vp.height * height));
 
     pass.setViewport(x, y, w, h, 0, 1);
   }

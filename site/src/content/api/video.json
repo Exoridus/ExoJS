@@ -1,6 +1,6 @@
 {
   "title": "Video",
-  "description": "Renders an `HTMLVideoElement` as a live texture on a Sprite. `Video` wraps a video element, manages playback (play/pause/stop/seek, volume, loop, playback rate), and keeps the underlying Texture in sync with the decoded video frame stream. Collecting a visible video node compares `currentTime` against the last one seen, and `requestVideoFrameCallback`, where the browser has it, marks a new frame as soon as it is presented. Audio is routed through the Web Audio API gain node and can be directed to any AudioBus. Frames are uploaded as sRGB colour, like any other browser image source, so the video is SDR content. The engine has no HDR video path: an HDR clip reaches it as whatever SDR frames the browser hands over.",
+  "description": "Renders an `HTMLVideoElement` as a live texture on a Sprite. `Video` wraps a video element, manages playback (play/pause/stop/seek, volume, loop, playback rate), and keeps the underlying Texture in sync with the decoded video frame stream. Presented-frame callbacks invalidate new frames when delivered; until then, visible collection polls the playback clock. Native `timeupdate` events remain a fallback if frame callbacks stop arriving. Audio is routed through the Web Audio API gain node and can be directed to any AudioBus. Frames are uploaded as sRGB colour, like any other browser image source, so the video is SDR content. The engine has no HDR video path: an HDR clip reaches it as whatever SDR frames the browser hands over.",
   "symbol": "Video",
   "kind": "class",
   "subsystem": "rendering",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Renders an `HTMLVideoElement` as a live texture on a Sprite.",
-        "`Video` wraps a video element, manages playback (play/pause/stop/seek, volume, loop, playback rate), and keeps the underlying Texture in sync with the decoded video frame stream. Collecting a visible video node compares `currentTime` against the last one seen, and `requestVideoFrameCallback`, where the browser has it, marks a new frame as soon as it is presented. Audio is routed through the Web Audio API gain node and can be directed to any AudioBus.",
+        "`Video` wraps a video element, manages playback (play/pause/stop/seek, volume, loop, playback rate), and keeps the underlying Texture in sync with the decoded video frame stream. Presented-frame callbacks invalidate new frames when delivered; until then, visible collection polls the playback clock. Native `timeupdate` events remain a fallback if frame callbacks stop arriving. Audio is routed through the Web Audio API gain node and can be directed to any AudioBus.",
         "Frames are uploaded as sRGB colour, like any other browser image source, so the video is SDR content. The engine has no HDR video path: an HDR clip reaches it as whatever SDR frames the browser hands over."
       ],
       "importLine": "import { Video } from '@codexo/exojs'",

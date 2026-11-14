@@ -232,7 +232,7 @@ float coneWeight(vec2 axis, vec2 direction, float cosOuter, float cosInner, floa
  * two segments meeting at a corner cannot leak light between them, rather than
  * an epsilon wide enough to swallow a thin wall.
  */
-float segmentHit(vec2 origin, vec2 direction, float limit, vec2 edgeA, vec2 edgeB) {
+float segmentHit(vec2 origin, vec2 direction, vec2 delta, float span, float limit, vec2 edgeA, vec2 edgeB) {
     vec2 edge = edgeB - edgeA;
     vec2 offset = edgeA - origin;
     float denominator = direction.x * edge.y - direction.y * edge.x;
@@ -254,10 +254,21 @@ float segmentHit(vec2 origin, vec2 direction, float limit, vec2 edgeA, vec2 edge
         return entry < min(limit, max(first, last)) ? entry : limit;
     }
 
-    float travel = (offset.x * edge.y - offset.y * edge.x) / denominator;
+    float travelNumerator = offset.x * edge.y - offset.y * edge.x;
+    float travel = travelNumerator / denominator;
     float across = (offset.x * direction.y - offset.y * direction.x) / denominator;
+    bool beforeLimit = travel < limit;
 
-    return travel >= 0.0 && travel < limit && across >= -TRANSPORT_EPSILON && across <= 1.0 + TRANSPORT_EPSILON ? travel : limit;
+    if (limit >= span) {
+        float endpointDenominator = delta.x * edge.y - delta.y * edge.x;
+
+        // Normalising `delta` can move a hit at the half-open endpoint one ULP
+        // inside. Only that endpoint is classified against the original span;
+        // ordinary hit distances retain the path above.
+        beforeLimit = endpointDenominator > 0.0 ? travelNumerator < endpointDenominator : travelNumerator > endpointDenominator;
+    }
+
+    return travel >= 0.0 && beforeLimit && across >= -TRANSPORT_EPSILON && across <= 1.0 + TRANSPORT_EPSILON ? travel : limit;
 }
 
 /** What a walk over the occluder mask found. */
@@ -351,6 +362,22 @@ bool superblockHolds(ivec2 block, vec2 blocks) {
 }
 
 /**
+ * Narrows the parameter window `(entry, leave)` of a stretch to the interval
+ * `lo..hi` on one axis, and reports in `z` a stretch that runs parallel to the
+ * axis outside it.
+ */
+vec3 clipAxis(float start, float run, float lo, float hi, vec2 window) {
+    if (abs(run) < TRANSPORT_EPSILON) {
+        return vec3(window, (start < lo || start > hi) ? 1.0 : 0.0);
+    }
+
+    float first = (lo - start) / run;
+    float last = (hi - start) / run;
+
+    return vec3(max(window.x, min(first, last)), min(window.y, max(first, last)), 0.0);
+}
+
+/**
  * Where the rasterised occluders first block the stretch from `a` to `b`.
  *
  * A texel blocks as a whole: the walk stops where it crosses into one, which
@@ -371,27 +398,23 @@ MaskHit maskHit(vec2 a, vec2 b) {
 
     vec2 origin = maskPlace(a);
     vec2 delta = maskPlace(b) - origin;
-    float entry = 0.0;
-    float leave = 1.0;
-
     // Clipped to the mask, in fractions of the stretch, for the reason the
     // cell walk is: the step bound is taken from the grid's size and only
     // holds for a stretch that does not approach it from outside.
-    for (int axis = 0; axis < 2; axis++) {
-        if (abs(delta[axis]) < TRANSPORT_EPSILON) {
-            if (origin[axis] < 0.0 || origin[axis] > cells[axis]) {
-                return MaskHit(1.0, 0.0, false);
-            }
+    vec3 clipX = clipAxis(origin.x, delta.x, 0.0, cells.x, vec2(0.0, 1.0));
 
-            continue;
-        }
-
-        float first = -origin[axis] / delta[axis];
-        float last = (cells[axis] - origin[axis]) / delta[axis];
-
-        entry = max(entry, min(first, last));
-        leave = min(leave, max(first, last));
+    if (clipX.z > 0.5) {
+        return MaskHit(1.0, 0.0, false);
     }
+
+    vec3 clipY = clipAxis(origin.y, delta.y, 0.0, cells.y, clipX.xy);
+
+    if (clipY.z > 0.5) {
+        return MaskHit(1.0, 0.0, false);
+    }
+
+    float entry = clipY.x;
+    float leave = clipY.y;
 
     if (leave <= entry) {
         return MaskHit(1.0, 0.0, false);
@@ -586,36 +609,33 @@ Transfer traceSegment(vec2 a, vec2 b) {
     // it did. A segment found on the way overrides both: it is the nearer wall
     // and it carries nothing to re-emit.
     vec2 surface = a + direction * stopped;
-    float onSurface = 1.0 - open;
+    float onSurface = rastered.exhausted ? 0.0 : 1.0 - open;
     vec2 cells = uniforms.uGridCells;
     float size = uniforms.uCellSize;
     vec2 lower = uniforms.uGridOrigin;
     vec2 upper = lower + cells * size;
-    float entry = 0.0;
     // A rasterised wall inside the stretch ends it even where it stands
     // outside the grid: the grid holds what emits, the mask what blocks.
-    float leave = min(span, stopped);
-
+    //
     // Clipped to the grid before it is walked. Outside the grid there is
     // nothing to find, and a stretch beginning far away would otherwise spend
     // its whole step budget crossing cells that do not exist - which is also
     // what makes the bound below hold for any input rather than only for a
     // stretch that starts inside.
-    for (int axis = 0; axis < 2; axis++) {
-        if (abs(direction[axis]) < TRANSPORT_EPSILON) {
-            if (a[axis] < lower[axis] || a[axis] > upper[axis]) {
-                return Transfer(vec3(0.0), open, rastered.visited, rastered.exhausted, surface, onSurface);
-            }
+    vec3 clipX = clipAxis(a.x, direction.x, lower.x, upper.x, vec2(0.0, min(span, stopped)));
 
-            continue;
-        }
-
-        float first = (lower[axis] - a[axis]) / direction[axis];
-        float last = (upper[axis] - a[axis]) / direction[axis];
-
-        entry = max(entry, min(first, last));
-        leave = min(leave, max(first, last));
+    if (clipX.z > 0.5) {
+        return Transfer(vec3(0.0), open, rastered.visited, rastered.exhausted, surface, onSurface);
     }
+
+    vec3 clipY = clipAxis(a.y, direction.y, lower.y, upper.y, clipX.xy);
+
+    if (clipY.z > 0.5) {
+        return Transfer(vec3(0.0), open, rastered.visited, rastered.exhausted, surface, onSurface);
+    }
+
+    float entry = clipY.x;
+    float leave = clipY.y;
 
     if (leave <= entry) {
         return Transfer(vec3(0.0), open, rastered.visited, rastered.exhausted, surface, onSurface);
@@ -657,7 +677,7 @@ Transfer traceSegment(vec2 a, vec2 b) {
             for (int index = 0; index < segmentCount; index++) {
                 int id = int(transportTexel(uIndices, segmentOffset + index).x);
                 vec4 ends = transportTexel(uSegments, id);
-                float hit = segmentHit(a, direction, blocked, ends.xy, ends.zw);
+                float hit = segmentHit(a, direction, delta, span, blocked, ends.xy, ends.zw);
 
                 if (hit >= travelled && hit < blocked) {
                     blocked = hit;

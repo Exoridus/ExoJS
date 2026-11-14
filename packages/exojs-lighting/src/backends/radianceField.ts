@@ -165,6 +165,11 @@ export class RadianceField {
 
   private readonly _options: RadianceFieldOptions;
   private readonly _target: RenderTexture;
+  /**
+   * Unweighted incoming radiance for the next frame's bounce. Only allocated
+   * when normal shading would otherwise corrupt the display target as history.
+   */
+  private _bounceHistory: RenderTexture | null = null;
   /** What the camera drew before the light was applied: the albedo a bounce is tinted by. */
   private readonly _frame: RenderTexture;
   /** World to clip as the camera saw it when the light field was last GATHERED. */
@@ -186,6 +191,9 @@ export class RadianceField {
   private _transportCascade: ShaderFilter<typeof cascadeUniforms & typeof transportUniforms & typeof transportBounceUniforms> | null = null;
   /** The receiver reconstruction over the same walk: a fragment reaches its probes or it does not. */
   private _transportGather: ShaderFilter<typeof gatherUniforms & typeof transportUniforms> | null = null;
+  /** The same reconstruction shaded against the normal prepass, built once a surface describes one. */
+  private _normalGather: ShaderFilter<typeof gatherUniforms & typeof transportUniforms> | null = null;
+  private _normals: RenderTexture | null = null;
   private _walk: TransportBinding | null = null;
   private _walkRevision = -1;
   private _levels = 1;
@@ -283,11 +291,52 @@ export class RadianceField {
 
     this._transportCascade?.destroy();
     this._transportGather?.destroy();
+    this._normalGather?.destroy();
+    this._normalGather = null;
     this._transportCascade = ShaderFilter.from(transportCascadeShader(cascadeUniforms), {
-      textures: { ...binding.textures, uFrame: this._frame, uHistory: this._target },
+      textures: { ...binding.textures, uFrame: this._frame, uHistory: this._bounceHistory ?? this._target },
     });
     this._transportGather = ShaderFilter.from(transportGatherShader(gatherUniforms), { textures: { ...binding.textures } });
     this._walkRevision = binding.revision;
+    this._buildNormalGather();
+  }
+
+  /**
+   * Shade the gathered light against `normals`, or stop with `null`.
+   *
+   * While bound, the gather reads the finest level's directions instead of
+   * their mean, and the average pass over that level is skipped. Without it the
+   * frame is exactly what it was.
+   */
+  public useNormals(normals: RenderTexture | null): void {
+    const needsSeparateHistory = normals !== null && this._options.bounce > 0;
+
+    if (needsSeparateHistory !== (this._bounceHistory !== null)) {
+      // The old display may have been normal-shaded. Invalidate one bounce
+      // frame rather than treating that output as incoming radiance.
+      this.invalidateHistory();
+
+      const oldHistory = this._bounceHistory;
+
+      this._bounceHistory = needsSeparateHistory
+        ? new RenderTexture(1, 1, { format: this._target.format, scaleMode: this._target.scaleMode })
+        : null;
+      this._transportCascade?._setTexture('uHistory', this._bounceHistory ?? this._target);
+      oldHistory?.destroy();
+    }
+
+    this._normals = normals;
+    this._buildNormalGather();
+  }
+
+  private _buildNormalGather(): void {
+    if (this._normals === null || this._normalGather !== null || this._walk === null || this._transportGather === null) {
+      return;
+    }
+
+    this._normalGather = ShaderFilter.from(transportGatherShader(gatherUniforms, true), {
+      textures: { ...this._walk.textures, uNormal: this._normals },
+    });
   }
 
   /**
@@ -322,6 +371,7 @@ export class RadianceField {
     // axis and doubling the directions per axis leaves the product alone.
     this._chain[0].setSize(this._probesX * 2, this._probesY * 2);
     this._chain[1].setSize(this._probesX, this._probesY);
+    this._bounceHistory?.setSize(this._target.width, this._target.height);
 
     const walking = this._walk;
 
@@ -332,16 +382,24 @@ export class RadianceField {
 
     this._writeSun();
 
-    if (this._transportGather !== null) {
-      const gather = this._transportGather.uniforms;
+    const ambientRgb = radianceColorRgb(ambient);
+
+    for (const [filter, tile] of [
+      [this._transportGather, 1],
+      [this._normalGather, 2],
+    ] as const) {
+      if (filter === null) {
+        continue;
+      }
+
+      const gather = filter.uniforms;
 
       gather.uToWorld.set(toWorld.a, toWorld.b, toWorld.c, toWorld.d);
       gather.uWorldOffset.set(toWorld.x, toWorld.y);
       gather.uOrigin.set(bounds.left, bounds.top);
       gather.uProbes.set(this._probesX, this._probesY);
       gather.uSpacing.set(spacing);
-      gather.uTile.set(1);
-      const ambientRgb = radianceColorRgb(ambient);
+      gather.uTile.set(tile);
       gather.uAmbient.set(ambientRgb.r, ambientRgb.g, ambientRgb.b);
 
       if (walking !== null) {
@@ -373,11 +431,9 @@ export class RadianceField {
   }
 
   /**
-   * Forget the gathered light field.
-   *
-   * The bounce reads it as the previous frame's answer, and a target that has
-   * just been resized or has never been written holds whatever the driver
-   * left there. The next frame bounces nothing and the one after it resumes.
+   * Invalidate the previous frame's unweighted incoming radiance, stored in
+   * the display target only when normal shading does not require its own
+   * history. Resized or unwritten targets cannot be sampled for bounce.
    */
   public invalidateHistory(): void {
     this._history = false;
@@ -412,6 +468,8 @@ export class RadianceField {
     this._above.destroy();
     this._transportCascade?.destroy();
     this._transportGather?.destroy();
+    this._normalGather?.destroy();
+    this._bounceHistory?.destroy();
     this._emitterCount = 0;
     this._sun = null;
   }
@@ -497,6 +555,7 @@ export class RadianceField {
       return;
     }
 
+    const shaded = this._normals !== null ? this._normalGather : null;
     let source = this._above;
 
     for (let level = this._levels - 1; level >= 0; level--) {
@@ -514,13 +573,34 @@ export class RadianceField {
       // level, the more directions it has and the narrower each one is.
       cascade.uniforms.uCone.set(Math.tan(Math.PI / (tile * tile)));
       cascade.apply(backend, source, raw);
+
+      // Shading against normals reads the finest level's directions as they
+      // are, so their mean is not taken.
+      if (level === 0 && shaded !== null) {
+        break;
+      }
+
       this._average.uniforms.uTile.set(tile);
       this._average.apply(backend, raw, compact);
 
       source = compact;
     }
 
-    gather.apply(backend, source, this._target);
+    if (shaded !== null) {
+      if (this._bounceHistory !== null) {
+        // The normal gather consumes the raw four directions, while bounce
+        // needs the ordinary unweighted average of those same directions. The
+        // cascades are not repeated, but the plain gather walks from each
+        // fragment to its four probes again.
+        this._average.uniforms.uTile.set(2);
+        this._average.apply(backend, raw, compact);
+        gather.apply(backend, compact, this._bounceHistory);
+      }
+
+      shaded.apply(backend, raw, this._target);
+    } else {
+      gather.apply(backend, source, this._target);
+    }
 
     // The light field now holds this frame, so the camera it was gathered
     // through becomes what the next bounce reprojects from - and only now is

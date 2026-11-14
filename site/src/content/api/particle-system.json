@@ -2466,7 +2466,7 @@
         },
         {
           "name": "setTextureFrame",
-          "signature": "setTextureFrame(frame: Rectangle): this",
+          "signature": "setTextureFrame(frame: ReadonlyRectangle): this",
           "signatureTokens": [
             {
               "text": "setTextureFrame",
@@ -2485,7 +2485,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Rectangle",
+              "text": "ReadonlyRectangle",
               "kind": "type"
             },
             {
@@ -2504,7 +2504,7 @@
           "params": [
             {
               "name": "frame",
-              "type": "Rectangle",
+              "type": "ReadonlyRectangle",
               "optional": false
             }
           ],
@@ -3754,7 +3754,7 @@
         },
         {
           "name": "textureFrame",
-          "signature": "textureFrame: Rectangle",
+          "signature": "textureFrame: ReadonlyRectangle",
           "signatureTokens": [
             {
               "text": "textureFrame",
@@ -3765,13 +3765,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "Rectangle",
+              "text": "ReadonlyRectangle",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "The region of the texture this system renders, shared with the system. Read-only: the setter copies and invalidates the vertex, texcoord, bounds and GPU frame-UV caches, so mutating the returned rectangle would leave every one of them stale."
         },
         {
           "name": "tint",

@@ -731,6 +731,98 @@ describe('Video', () => {
       video.destroy();
     });
 
+    test('uses delivered frame callbacks instead of the continuously advancing playback clock', () => {
+      const mockVideo = createMockVideoElement({ width: 64, height: 32, withFrameCallback: true });
+      const video = new Video(mockVideo.element);
+      const builder = createBuilder() as unknown as RenderPlanBuilder;
+      const handler = mockVideo.requestVideoFrameCallback!.mock.calls[0]![0] as (now: number, metadata: unknown) => void;
+
+      handler(0, {});
+      video.collect(builder);
+      const sourceSpy = vi.spyOn(video.texture!, 'updateSource');
+      const revision = video._contentRevision;
+
+      for (let frame = 1; frame <= 10; frame++) {
+        mockVideo.element.currentTime = frame / 144;
+        video.collect(builder);
+      }
+
+      expect(sourceSpy).not.toHaveBeenCalled();
+      expect(video._contentRevision).toBe(revision);
+
+      handler(100, {});
+      video.collect(builder);
+      video.collect(builder);
+      expect(sourceSpy).toHaveBeenCalledTimes(1);
+      expect(video._contentRevision).not.toBe(revision);
+      video.destroy();
+    });
+
+    test.each([false, true])('polls playback until a frame callback actually arrives (supported: %s)', withFrameCallback => {
+      const mockVideo = createMockVideoElement({ width: 64, height: 32, withFrameCallback });
+      const video = new Video(mockVideo.element);
+      const builder = createBuilder() as unknown as RenderPlanBuilder;
+
+      video.collect(builder);
+      const sourceSpy = vi.spyOn(video.texture!, 'updateSource');
+      mockVideo.element.currentTime = 1;
+      video.collect(builder);
+      expect(sourceSpy).toHaveBeenCalledTimes(1);
+      video.destroy();
+    });
+
+    test('keeps timeupdate recovery when previously delivered callbacks stop', () => {
+      const mockVideo = createMockVideoElement({ width: 64, height: 32, withFrameCallback: true });
+      const video = new Video(mockVideo.element);
+      const builder = createBuilder() as unknown as RenderPlanBuilder;
+      const handler = mockVideo.requestVideoFrameCallback!.mock.calls[0]![0] as (now: number, metadata: unknown) => void;
+
+      handler(0, {});
+      video.collect(builder);
+      const sourceSpy = vi.spyOn(video.texture!, 'updateSource');
+      const revision = video._contentRevision;
+
+      mockVideo.element.currentTime = 2;
+      mockVideo.element.dispatchEvent(new Event('timeupdate'));
+      expect(video._contentRevision).not.toBe(revision);
+      video.collect(builder);
+      expect(sourceSpy).toHaveBeenCalledTimes(1);
+      video.destroy();
+    });
+
+    test('returns to playback polling when an external media load empties the element', () => {
+      const mockVideo = createMockVideoElement({ width: 64, height: 32, withFrameCallback: true });
+      const video = new Video(mockVideo.element);
+      const builder = createBuilder() as unknown as RenderPlanBuilder;
+      const handler = mockVideo.requestVideoFrameCallback!.mock.calls[0]![0] as (now: number, metadata: unknown) => void;
+
+      handler(0, {});
+      video.collect(builder);
+      const sourceSpy = vi.spyOn(video.texture!, 'updateSource');
+      mockVideo.element.dispatchEvent(new Event('emptied'));
+      mockVideo.element.currentTime = 1;
+      video.collect(builder);
+      expect(sourceSpy).toHaveBeenCalledTimes(1);
+      video.destroy();
+    });
+
+    test('refreshes a paused seek through the next presented-frame callback', () => {
+      const mockVideo = createMockVideoElement({ width: 64, height: 32, withFrameCallback: true });
+      const video = new Video(mockVideo.element);
+      const builder = createBuilder() as unknown as RenderPlanBuilder;
+      const handler = mockVideo.requestVideoFrameCallback!.mock.calls[0]![0] as (now: number, metadata: unknown) => void;
+
+      handler(0, {});
+      video.collect(builder);
+      const sourceSpy = vi.spyOn(video.texture!, 'updateSource');
+      mockVideo.setPaused(true);
+      video.currentTime = 3;
+      handler(100, {});
+      video.collect(builder);
+      expect(sourceSpy).toHaveBeenCalledTimes(1);
+      video.destroy();
+    });
+
     test('skips the texture refresh while invisible', () => {
       const mockVideo = createMockVideoElement();
       const video = new Video(mockVideo.element);

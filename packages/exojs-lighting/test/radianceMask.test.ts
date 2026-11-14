@@ -19,25 +19,25 @@ interface RadianceInternals {
   readonly maskBlocks: { readonly pass: { readonly enabled: boolean } };
 }
 
-const fakeApp = (): LightingHost =>
+const fakeApp = (size = 64): LightingHost =>
   ({
     framePasses: new RenderPipeline(),
-    frameTexture: new RenderTexture(64, 64),
+    frameTexture: new RenderTexture(size, size),
     onResize: new Signal(),
     rendering: {
       supportsColorFormat: (): boolean => true,
       view: {
-        center: { x: 32, y: 32 },
-        width: 64,
-        height: 64,
+        center: { x: size / 2, y: size / 2 },
+        width: size,
+        height: size,
         rotation: 0,
-        getBounds: (): Rectangle => new Rectangle(0, 0, 64, 64),
+        getBounds: (): Rectangle => new Rectangle(0, 0, size, size),
         getTransform: (): Matrix => new Matrix(),
         getInverseTransform: (): Matrix => new Matrix(),
       },
     },
-    width: 64,
-    height: 64,
+    width: size,
+    height: size,
   }) as unknown as LightingHost;
 
 describe('radiance raster mask', () => {
@@ -84,8 +84,9 @@ describe('radiance raster mask', () => {
     expect(backend._radiance._walk?.maskHeight).toBeGreaterThan(1);
     expect(backend._radiance._walk?.blocksWidth).toBeGreaterThan(1);
     expect(backend._radiance._walk?.blocksHeight).toBeGreaterThan(1);
-    expect(backend._radiance._walk?.superblocksWidth).toBeGreaterThan(1);
-    expect(backend._radiance._walk?.superblocksHeight).toBeGreaterThan(1);
+    // The field is four superblocks across, so one sprite already makes it dense.
+    expect(backend._radiance._walk?.superblocksWidth).toBe(0);
+    expect(backend._radiance._walk?.superblocksHeight).toBe(0);
 
     raster = false;
     lighting.update();
@@ -100,6 +101,46 @@ describe('radiance raster mask', () => {
       superblocksWidth: 0,
       superblocksHeight: 0,
     });
+
+    lighting.destroy();
+    texture.destroy();
+  });
+
+  test('binds the superblock level while the raster geometry is sparse and drops it once it is dense', () => {
+    const app = fakeApp(1024);
+    const lighting = new RadianceLighting(app, { ambient: Color.black });
+    const backend = lighting.backend as unknown as RadianceInternals;
+    const texture = Texture.fromColor(Color.white, 1);
+    const sprites = Array.from({ length: 400 }, (_, index) => {
+      const sprite = new Sprite(texture);
+
+      sprite.setPosition((index % 20) * 50 + 8, Math.floor(index / 20) * 50 + 8);
+      sprite.setScale(24, 24);
+
+      return sprite;
+    });
+
+    let count = 4;
+
+    lighting.add(new PointLight({ radius: 48 })).setPosition(32, 32);
+    lighting.occludeFrom({
+      collect(_bounds, out): void {
+        for (let index = 0; index < count; index++) {
+          out.addDrawable(sprites[index]!);
+        }
+      },
+    });
+
+    lighting.update();
+
+    expect(backend._radiance._walk?.superblocksWidth).toBeGreaterThan(1);
+    expect(backend._radiance._walk?.blocksWidth).toBeGreaterThan(1);
+
+    count = 400;
+    lighting.update();
+
+    expect(backend._radiance._walk?.superblocksWidth).toBe(0);
+    expect(backend._radiance._walk?.blocksWidth).toBeGreaterThan(1);
 
     lighting.destroy();
     texture.destroy();

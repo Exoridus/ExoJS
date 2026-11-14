@@ -28,10 +28,10 @@ type FrameCallbackVideoElement = HTMLVideoElement &
  *
  * `Video` wraps a video element, manages playback (play/pause/stop/seek,
  * volume, loop, playback rate), and keeps the underlying {@link Texture}
- * in sync with the decoded video frame stream. Collecting a visible video node
- * compares `currentTime` against the last one seen, and
- * `requestVideoFrameCallback`, where the browser has it, marks a new frame as
- * soon as it is presented.
+ * in sync with the decoded video frame stream. Presented-frame callbacks
+ * invalidate new frames when delivered; until then, visible collection polls
+ * the playback clock. Native `timeupdate` events remain a fallback if frame
+ * callbacks stop arriving.
  * Audio is routed through the Web Audio API gain node and can be directed to
  * any {@link AudioBus}.
  *
@@ -69,6 +69,10 @@ export class Video extends Sprite {
    */
   private readonly _frameScratch = new Rectangle();
   private _lastVideoTime = Number.NaN;
+  private _hasPresentedFrame = false;
+  private readonly _onEmptiedHandler = (): void => {
+    this._hasPresentedFrame = false;
+  };
   private _videoFrameCallbackHandle: number | null = null;
   private readonly _onMetadataHandler: () => void;
   private readonly _onResizeHandler: () => void;
@@ -102,6 +106,7 @@ export class Video extends Sprite {
     }
 
     this._videoElement.addEventListener('timeupdate', this._onTimeUpdateHandler);
+    this._videoElement.addEventListener('emptied', this._onEmptiedHandler);
     this._videoElement.addEventListener('error', this._onErrorHandler);
 
     if (playbackOptions) {
@@ -432,6 +437,7 @@ export class Video extends Sprite {
     this._videoElement.removeEventListener('loadedmetadata', this._onMetadataHandler);
     this._videoElement.removeEventListener('resize', this._onResizeHandler);
     this._videoElement.removeEventListener('timeupdate', this._onTimeUpdateHandler);
+    this._videoElement.removeEventListener('emptied', this._onEmptiedHandler);
     this._videoElement.removeEventListener('error', this._onErrorHandler);
     this._cancelVideoFrameCallback();
 
@@ -466,6 +472,7 @@ export class Video extends Sprite {
   }
 
   private _onVideoFrame(_now: number, _metadata: unknown): void {
+    this._hasPresentedFrame = true;
     this._videoFrameCallbackHandle = null;
     this._textureDirty = true;
     this.invalidateContent();
@@ -473,6 +480,10 @@ export class Video extends Sprite {
   }
 
   private _markTextureDirtyOnPlaybackAdvance(): void {
+    if (this._hasPresentedFrame) {
+      return;
+    }
+
     const currentTime = this._videoElement.currentTime;
 
     if (this._lastVideoTime !== currentTime) {

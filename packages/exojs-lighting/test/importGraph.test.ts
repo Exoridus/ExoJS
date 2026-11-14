@@ -90,6 +90,7 @@ const walkOnly = [
   'backends/shaders/angular-average.frag',
   'backends/shaders/cascade-transport.frag',
   'backends/shaders/cascade-gather-transport.frag',
+  'backends/shaders/cascade-gather-transport-normals.frag',
   'backends/shaders/mask-blocks.frag',
 ] as const;
 

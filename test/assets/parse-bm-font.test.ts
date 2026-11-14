@@ -68,3 +68,50 @@ char id=65 x=0 y=0 width=10 height=14 xoffset=0 yoffset=0 xadvance=12 page=1
     expect(parseBmFontText(descriptor('')).pages).toEqual([]);
   });
 });
+
+describe('parseBmFontText attribute patterns', () => {
+  // One char line costs ~15 attribute lookups, so a 200-glyph descriptor used to
+  // compile a few thousand identical RegExps before it returned.
+  const glyphs = (count: number): string => {
+    const lines = [
+      'info face="Demo" size=32 padding=0,0,0,0 spacing=1,1',
+      'common lineHeight=40 base=32 scaleW=512 scaleH=512 pages=1',
+      'page id=0 file="demo.png"',
+    ];
+
+    for (let id = 32; id < 32 + count; id++) {
+      lines.push(`char id=${id} x=${id % 32} y=${Math.floor(id / 32)} width=20 height=30 xoffset=1 yoffset=2 xadvance=22 page=0 chnl=15`);
+    }
+
+    return lines.join('\n');
+  };
+
+  const countRegExpConstructions = (run: () => void): number => {
+    const RealRegExp = globalThis.RegExp;
+    let constructed = 0;
+
+    globalThis.RegExp = new Proxy(RealRegExp, {
+      construct(target, args, newTarget) {
+        constructed++;
+
+        return Reflect.construct(target, args, newTarget);
+      },
+    }) as RegExpConstructor;
+
+    try {
+      run();
+    } finally {
+      globalThis.RegExp = RealRegExp;
+    }
+
+    return constructed;
+  };
+
+  test('compiles no pattern when the same descriptor shape is parsed twice', () => {
+    const text = glyphs(200);
+
+    parseBmFontText(text);
+
+    expect(countRegExpConstructions(() => parseBmFontText(text))).toBe(0);
+  });
+});

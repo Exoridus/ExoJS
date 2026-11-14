@@ -296,3 +296,62 @@ describe('Ellipse', () => {
     });
   });
 });
+
+describe('approximated intersection pre-checks', () => {
+  // Each ellipse approximation costs one sin/cos pair per point, so a rejected
+  // pair must be decided before any point exists.
+  const withoutTrig = (run: () => boolean): boolean => {
+    const cos = vi.spyOn(Math, 'cos');
+    const sin = vi.spyOn(Math, 'sin');
+
+    try {
+      const result = run();
+
+      expect(cos).not.toHaveBeenCalled();
+      expect(sin).not.toHaveBeenCalled();
+
+      return result;
+    } finally {
+      cos.mockRestore();
+      sin.mockRestore();
+    }
+  };
+
+  test('a separated ellipse pair is decided without building an approximation', () => {
+    const left = new Ellipse(0, 0, 20, 10);
+    const right = new Ellipse(200, 200, 20, 10);
+
+    expect(withoutTrig(() => left.intersectsWith(right))).toBe(false);
+  });
+
+  test('a separated circle is decided without building an approximation', () => {
+    const circle = new Circle(0, 0, 5);
+
+    expect(withoutTrig(() => circle.intersectsWith(new Ellipse(100, 100, 20, 10)))).toBe(false);
+  });
+
+  test('a separated rectangle and polygon are decided without building an approximation', () => {
+    const ellipse = new Ellipse(0, 0, 20, 10);
+
+    expect(withoutTrig(() => ellipse.intersectsWith(new Rectangle(300, 300, 10, 10)))).toBe(false);
+    expect(withoutTrig(() => ellipse.intersectsWith(square(300, 300, 10)))).toBe(false);
+  });
+
+  test('extents that only touch are still tested exactly', () => {
+    // Bounds meet at a single corner, so nothing proves separation and the
+    // approximation must decide - which reports no overlap.
+    const left = new Ellipse(0, 0, 10, 10);
+    const right = new Ellipse(20, 20, 10, 10);
+
+    expect(left.intersectsWith(right)).toBe(false);
+  });
+
+  test('overlapping extents still intersect', () => {
+    const left = new Ellipse(0, 0, 10, 10);
+
+    expect(left.intersectsWith(new Ellipse(12, 0, 10, 10))).toBe(true);
+    expect(left.intersectsWith(new Circle(12, 0, 4))).toBe(true);
+    expect(left.intersectsWith(new Rectangle(9, -1, 4, 2))).toBe(true);
+    expect(left.intersectsWith(square(9, -1, 4))).toBe(true);
+  });
+});

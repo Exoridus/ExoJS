@@ -175,6 +175,23 @@ export const createPhaserAdapter = (): EngineAdapter => {
   /** Characters per text leaf of the built archetype; `0` when it has no text. */
   let textGlyphs = 0;
 
+  const releaseSprites = (): void => {
+    root?.destroy();
+    root = null;
+
+    for (const key of textureKeys) {
+      game?.textures.remove(key);
+    }
+
+    textureKeys = [];
+    mutableLeaves = [];
+    mutableIndices = [];
+    rebuildLeaf = null;
+    churning = false;
+    textUpdating = false;
+    textGlyphs = 0;
+  };
+
   /** The tilemap scene's layer and map, or `null` for every other archetype. */
   let tileLayer: Phaser.Tilemaps.TilemapGPULayer | null = null;
   let tileMap: Phaser.Tilemaps.Tilemap | null = null;
@@ -393,6 +410,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
     releaseTilemap();
     releaseParticles();
     releasePicking();
+    releaseSprites();
 
     if (game !== null) {
       if (game.scene.isBooted) {
@@ -431,14 +449,6 @@ export const createPhaserAdapter = (): EngineAdapter => {
     }
 
     scene = null;
-    root = null;
-    textureKeys = [];
-    mutableLeaves = [];
-    mutableIndices = [];
-    rebuildLeaf = null;
-    churning = false;
-    textUpdating = false;
-    textGlyphs = 0;
   };
 
   return {
@@ -545,6 +555,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
       releaseTilemap();
       releaseParticles();
       releasePicking();
+      releaseSprites();
 
       if (isParticles(spec)) {
         buildParticleScene(spec, nodeCount);
@@ -567,8 +578,6 @@ export const createPhaserAdapter = (): EngineAdapter => {
       }
 
       const textures = game.textures;
-
-      textureKeys = [];
 
       for (let t = 0; t < spec.textureCount; t++) {
         const key = `${SCENE_KEY}-tex-${t}`;

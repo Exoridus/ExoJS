@@ -1,14 +1,15 @@
-import { Rectangle, TextureFormat } from '@codexo/exojs';
+import { Rectangle, type RenderTexture, TextureFormat } from '@codexo/exojs';
 
 import type { Light } from '../lights/Light';
 import type { OccluderField } from '../occluders/OccluderField';
 import { FrameLightingBackend, type FrameLightingBackendOptions } from './FrameLightingBackend';
-import { MASK_COARSE, MaskBlocks } from './maskBlocks';
+import { MASK_COARSE, MASK_SUPER, MaskBlocks, SUPERBLOCK_DENSE_OCCUPANCY, superblockOccupancy } from './maskBlocks';
 import { RadianceField, type RadianceFieldOptions } from './radianceField';
-import { transportTableWidth } from './transportGeometry';
+import { transportCellBlocks, transportTableWidth } from './transportGeometry';
 import { TransportTextures } from './transportTextures';
 
 const scratchRegion = new Rectangle();
+const scratchBounds = new Rectangle();
 
 /**
  * The options back, or a refusal.
@@ -115,7 +116,19 @@ export class RadianceBackend extends FrameLightingBackend {
     this._setWalkMaskEnabled(rasterMask);
 
     this._fieldView.getBounds(scratchRegion);
-    this._transport.build(occluders.segments, occluders.count, lights, scratchRegion, Math.max(this._maskTexel() * MASK_COARSE, 1));
+
+    const useSuperblocks =
+      rasterMask &&
+      superblockOccupancy(occluders.drawables, scratchBounds, scratchRegion, this._maskTexel() * MASK_COARSE * MASK_SUPER) <
+        SUPERBLOCK_DENSE_OCCUPANCY;
+
+    this._transport.build(
+      occluders.segments,
+      occluders.count,
+      lights,
+      scratchRegion,
+      Math.max(this._maskTexel() * MASK_COARSE * transportCellBlocks(occluders.count), 1),
+    );
 
     const grid = this._transport.grid;
 
@@ -139,8 +152,8 @@ export class RadianceBackend extends FrameLightingBackend {
       maskHeight: rasterMask ? this._maskTarget.height : 0,
       blocksWidth: rasterMask ? this._blocks.texture.width : 0,
       blocksHeight: rasterMask ? this._blocks.texture.height : 0,
-      superblocksWidth: rasterMask ? this._blocks.superTexture.width : 0,
-      superblocksHeight: rasterMask ? this._blocks.superTexture.height : 0,
+      superblocksWidth: useSuperblocks ? this._blocks.superTexture.width : 0,
+      superblocksHeight: useSuperblocks ? this._blocks.superTexture.height : 0,
       tableWidth: transportTableWidth,
     });
   }
@@ -155,6 +168,10 @@ export class RadianceBackend extends FrameLightingBackend {
 
   protected override _invalidateWalkHistory(): void {
     this._radiance.invalidateHistory();
+  }
+
+  protected override _shadeAgainstNormals(normals: RenderTexture | null): void {
+    this._radiance.useNormals(normals);
   }
 
   protected override _syncWalk(cascading: boolean, rasterMask: boolean): void {

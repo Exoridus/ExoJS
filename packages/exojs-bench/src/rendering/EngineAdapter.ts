@@ -453,6 +453,14 @@ export interface StructuralCounters {
   bufferUploads: number;
 }
 
+/** Units and raw observations behind a cell's reported structural counters. */
+export interface StructuralMeasurement {
+  readonly schemaVersion: 1;
+  readonly basis: 'per-frame' | 'total';
+  readonly frames: number;
+  readonly totals: Readonly<StructuralCounters>;
+}
+
 /**
  * Measured outcome for a single matrix cell. Extends the domain-agnostic
  * {@link BaseCellResult} (spec/status/note) with the rendering-specific timing
@@ -487,6 +495,8 @@ export interface CellResult extends BaseCellResult<CellSpec> {
   readonly queueMsP95: number | null;
   /** Structural draw-call counters gathered while measuring this cell. */
   readonly structural: StructuralCounters;
+  /** Absent on historical results, whose counter units must not be inferred from their values. */
+  readonly structuralMeasurement?: StructuralMeasurement;
   /**
    * What the clock of the page this cell was measured in resolved to, or `null`
    * where no page produced the cell.

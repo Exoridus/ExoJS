@@ -68,8 +68,9 @@ export class WebGpuBackdropBlendCompositor {
   private _blendBindGroup: GPUBindGroup | null = null;
   private _backdropSampler: GPUSampler | null = null;
 
-  // Compositor-owned capture target, re-allocated when the region size or the
-  // target format changes (see class doc for why a pooled RT cannot be used).
+  // Compositor-owned capture target, re-allocated when the region outgrows it or
+  // the target format changes (see the class doc for why a pooled RT cannot be
+  // used). It may be larger than the captured region - see `_ensureBackdrop`.
   private _backdropTexture: GPUTexture | null = null;
   private _backdropView: GPUTextureView | null = null;
   private _backdropWidth = 0;
@@ -266,22 +267,30 @@ export class WebGpuBackdropBlendCompositor {
   }
 
   private _ensureBackdrop(device: GPUDevice, width: number, height: number, format: GPUTextureFormat): GPUTextureView {
-    if (
-      this._backdropTexture === null ||
-      this._backdropWidth !== width ||
-      this._backdropHeight !== height ||
-      this._backdropFormat !== format
-    ) {
+    if (this._backdropTexture === null || this._backdropFormat !== format || this._backdropWidth < width || this._backdropHeight < height) {
+      // Grow in steps rather than to the exact request. An animated region -
+      // the case this capture exists for - changes its pixel extent every
+      // frame, and destroying plus recreating a GPU texture to gain one row
+      // costs more than the unused rows the step leaves behind. The shader
+      // normalises its sample coordinates by `textureDimensions`, so the
+      // captured region stays correct in the top-left corner of a larger
+      // allocation, and the copy still transfers exactly `width` x `height`.
+      // Growing beyond the device limit would invalidate an otherwise legal
+      // capture near the maximum texture size (e.g. 6K -> 7K on an 8K device).
+      const maxDimension = device.limits.maxTextureDimension2D;
+      const allocatedWidth = Math.min(maxDimension, Math.max(width, Math.ceil(this._backdropWidth * 1.5)));
+      const allocatedHeight = Math.min(maxDimension, Math.max(height, Math.ceil(this._backdropHeight * 1.5)));
+
       this._backdropTexture?.destroy();
       this._backdropTexture = device.createTexture({
         label: 'backdrop-blend:texture',
-        size: { width, height },
+        size: { width: allocatedWidth, height: allocatedHeight },
         format,
         usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING,
       });
       this._backdropView = this._backdropTexture.createView();
-      this._backdropWidth = width;
-      this._backdropHeight = height;
+      this._backdropWidth = allocatedWidth;
+      this._backdropHeight = allocatedHeight;
       this._backdropFormat = format;
     }
 

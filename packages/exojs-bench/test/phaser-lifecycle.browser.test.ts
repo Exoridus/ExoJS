@@ -71,6 +71,25 @@ describe('Phaser adapter lifecycle', () => {
     expect(results[3]!.queryResults).toEqual(results[0]!.queryResults);
   }, 60_000);
 
+  test.each(['sprites', 'particles', 'picking', 'tilemap'] as const)(
+    'rebuilding an ordinary sprite scene as %s releases its previous ownership',
+    async kind => {
+      const result = await page.evaluate(
+        kind => (globalThis as unknown as { phaserLifecycle: BrowserFixture }).phaserLifecycle.observeLeavingSprites(kind),
+        kind,
+      );
+
+      expect(result).toMatchObject({
+        displayRoots: 1,
+        oldObjectsDestroyed: true,
+        oldTextureDestroyed: true,
+        oldSourcesReleased: true,
+        oldRootStillDisplayed: false,
+      });
+    },
+    60_000,
+  );
+
   test('leaving a picking scene releases its input objects with the game loop stopped', async () => {
     const result = await page.evaluate(() =>
       (globalThis as unknown as { phaserLifecycle: BrowserFixture }).phaserLifecycle.observeLeavingPicking(),

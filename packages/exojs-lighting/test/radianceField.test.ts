@@ -1,5 +1,5 @@
-import { Color, RenderTexture, TextureFormat, View } from '@codexo/exojs';
-import { describe, expect, test } from 'vitest';
+import { Color, type PassContext, RenderTexture, TextureFormat, View } from '@codexo/exojs';
+import { describe, expect, test, vi } from 'vitest';
 
 import { RadianceField, type TransportBinding } from '../src/backends/radianceField';
 import { PointLight } from '../src/lights/PointLight';
@@ -50,12 +50,12 @@ const bindingFor = (revision: number, cells: number): TransportBinding => ({
   tableWidth: 256,
 });
 
-const fieldWith = (): RadianceField =>
+const fieldWith = (bounce = 0): RadianceField =>
   new RadianceField(new RenderTexture(64, 64, { format: TextureFormat.Rgba16F }), new RenderTexture(64, 64), {
     probeSpacing: 2,
     cascades: 2,
     interval: 1,
-    bounce: 0,
+    bounce,
   });
 
 /** What both walking filters must be told, and where each term comes from. */
@@ -188,6 +188,109 @@ describe('RadianceField transport wiring', () => {
     expect(Number.isFinite(sun.w)).toBe(true);
     expect(sun.w * Math.max(1, colour.x, colour.y, colour.z)).toBeLessThanOrEqual(65504);
 
+    field.destroy();
+  });
+
+  test('separates incoming bounce history from normal-mapped display light', () => {
+    const field = fieldWith(0.9);
+    const view = new View(32, 32, 64, 64);
+    const fieldView = new View(32, 32, 80, 80);
+    const normals = new RenderTexture(64, 64);
+    const display = field['_target'];
+    const cascadeHistory = (): RenderTexture | undefined =>
+      (
+        field['_transportCascade'] as unknown as {
+          _bindings: { textures: Record<string, RenderTexture> };
+        }
+      )._bindings.textures['uHistory'];
+
+    field.useTransport(bindingFor(1, 9));
+    field.update(view, fieldView, 1, Color.black);
+
+    expect(field['_bounceHistory']).toBeNull();
+    expect(cascadeHistory()).toBe(display);
+
+    field.useNormals(normals);
+    const history = field['_bounceHistory'];
+
+    expect(history).not.toBeNull();
+    expect(history).not.toBe(display);
+    expect(cascadeHistory()).toBe(history);
+    expect(field['_history']).toBe(false);
+
+    field.update(view, fieldView, 1, Color.black);
+    expect([history!.width, history!.height]).toEqual([display.width, display.height]);
+    expect(field['_transportCascade']!.uniforms.uHistoryValid.value).toBe(0);
+
+    const calls: Array<{ stage: string; output: RenderTexture }> = [];
+    const filters = [
+      ['cascade', field['_transportCascade']],
+      ['average', field['_average']],
+      ['plain', field['_transportGather']],
+      ['shaded', field['_normalGather']],
+    ] as const;
+    const spies = filters.map(([stage, filter]) =>
+      vi.spyOn(filter!, 'apply').mockImplementation((_backend, _input, output) => {
+        calls.push({ stage, output });
+      }),
+    );
+
+    field['_build']({ backend: {} } as unknown as PassContext);
+
+    // Two cascades, each exactly once. The extra unweighted average and gather
+    // write history without ever overriding the normal-weighted display.
+    expect(calls.map(call => call.stage)).toEqual(['cascade', 'average', 'cascade', 'average', 'plain', 'shaded']);
+    expect(calls.find(call => call.stage === 'plain')?.output).toBe(history);
+    expect(calls.find(call => call.stage === 'shaded')?.output).toBe(display);
+    expect(field['_history']).toBe(true);
+
+    field.update(view, fieldView, 1, Color.black);
+    expect(field['_transportCascade']!.uniforms.uHistoryValid.value).toBe(1);
+
+    field.useNormals(null);
+
+    // Switching back must not treat last frame's normal-shaded display as
+    // unweighted incoming radiance. One feedback frame is invalidated.
+    expect(field['_bounceHistory']).toBeNull();
+    expect(cascadeHistory()).toBe(display);
+    expect(field['_history']).toBe(false);
+    expect(history!.destroyed).toBe(true);
+
+    calls.length = 0;
+    field.update(view, fieldView, 1, Color.black);
+    expect(field['_transportCascade']!.uniforms.uHistoryValid.value).toBe(0);
+    field['_build']({ backend: {} } as unknown as PassContext);
+
+    expect(calls.map(call => call.stage)).toEqual(['cascade', 'average', 'cascade', 'average', 'plain']);
+    expect(calls.find(call => call.stage === 'plain')?.output).toBe(display);
+
+    for (const spy of spies) {
+      spy.mockRestore();
+    }
+
+    normals.destroy();
+    field.destroy();
+  });
+
+  test('keeps the previous fast gather and memory usage when bounce is disabled', () => {
+    const field = fieldWith(0);
+    const normals = new RenderTexture(64, 64);
+
+    field.useTransport(bindingFor(1, 9));
+    field.useNormals(normals);
+    field.update(new View(32, 32, 64, 64), new View(32, 32, 80, 80), 1, Color.black);
+
+    expect(field['_bounceHistory']).toBeNull();
+    expect(field['_normalGather']).not.toBeNull();
+    expect(
+      (
+        field['_transportCascade'] as unknown as {
+          _bindings: { textures: Record<string, RenderTexture> };
+        }
+      )._bindings.textures['uHistory'],
+    ).toBe(field['_target']);
+
+    normals.destroy();
     field.destroy();
   });
 });

@@ -12,7 +12,7 @@ flat in float v_depthSpan;
 // One row per shadowed light. A directional light's row is linear rather than
 // polar: bin `i` is a strip across the light's direction, holding how far along
 // the light the nearest occluder in that strip sits.
-uniform sampler2D u_shadow;
+uniform highp sampler2D u_shadow;
 uniform sampler2D u_normal;
 
 out vec4 fragColor;
