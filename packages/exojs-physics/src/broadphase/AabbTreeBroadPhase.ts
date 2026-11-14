@@ -163,13 +163,14 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
       return;
     }
 
-    this._syncRevision = revision;
-    this._syncedCount = colliders.length;
-    this._syncedSource = colliders;
-
     for (const collider of colliders) {
       this._sync(collider);
     }
+
+    // Recorded only after the walk: a throwing collider must leave the next call to retry, not skip.
+    this._syncRevision = revision;
+    this._syncedCount = colliders.length;
+    this._syncedSource = colliders;
   }
 
   /** Colliders whose AABB overlaps `aabb`. Writes into `out` (cleared first) and returns it. */

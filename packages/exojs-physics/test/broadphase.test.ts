@@ -285,4 +285,67 @@ describe('sync early-out', () => {
       reads.mockRestore();
     }
   });
+  it('retries an interrupted sync instead of treating it as complete', () => {
+    const world = new PhysicsWorld();
+    const colliders = boxesAt(world, 3);
+    const broadPhase = new AabbTreeBroadPhase();
+    const reads = spyOnAabbReads(colliders[0]!);
+
+    reads.mockImplementationOnce(() => {
+      throw new Error('aabb read failed');
+    });
+
+    try {
+      expect(() => broadPhase.sync(colliders)).toThrow('aabb read failed');
+      reads.mockRestore();
+
+      broadPhase.sync(colliders);
+
+      expect(colliders.map(collider => collider._treeProxy)).not.toContain(-1);
+    } finally {
+      reads.mockRestore();
+      broadPhase.destroy();
+    }
+  });
+  it('reaches the complete, duplicate-free state when a sync is interrupted midway and retried', () => {
+    const world = new PhysicsWorld();
+    const colliders: Collider[] = [];
+
+    for (let i = 0; i < 5; i++) {
+      colliders.push(colliderAt(world, new BoxShape(10, 10), { x: i * 8, y: 0 }));
+    }
+
+    const broadPhase = new AabbTreeBroadPhase();
+    const out: CandidatePair[] = [];
+
+    // The third collider fails after two were inserted and before two were seen.
+    Object.defineProperty(colliders[2]!, 'aabb', {
+      configurable: true,
+      get: () => {
+        throw new Error('aabb read failed');
+      },
+    });
+
+    try {
+      expect(() => broadPhase.computePairs(colliders, out)).toThrow('aabb read failed');
+    } finally {
+      delete (colliders[2] as { aabb?: unknown }).aabb;
+    }
+
+    broadPhase.computePairs(colliders, out);
+
+    const proxies = colliders.map(collider => collider._treeProxy);
+    const visited: Collider[] = [];
+
+    broadPhase.queryAabb({ minX: -1e6, minY: -1e6, maxX: 1e6, maxY: 1e6 }, visited);
+
+    expect(new Set(proxies).size).toBe(colliders.length);
+    expect(proxies).not.toContain(-1);
+    expect(visited).toHaveLength(colliders.length);
+    expect(new Set(visited).size).toBe(colliders.length);
+    expect(out.map(key)).toEqual([...new Set(out.map(key))]);
+    expect(new Set(out.map(key))).toEqual(bruteForcePairs(colliders));
+
+    broadPhase.destroy();
+  });
 });
