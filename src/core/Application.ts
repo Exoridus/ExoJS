@@ -963,9 +963,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * The color-managed working target's storage format: `Rgba16F` when
    * `rendering.color.workingFormat` asked for `'hdr'` (validated against the
    * backend's actual capability in {@link initializeBackend}), `Rgba8Srgb`
-   * otherwise.
+   * otherwise. Every engine-owned texture that holds a frame on its way to the
+   * output transform takes this format, so storage never clamps or requantizes
+   * what the working target already carries.
+   * @internal
    */
-  private _workingColorFormat(): TextureFormat.Rgba8Srgb | TextureFormat.Rgba16F {
+  public _workingColorFormat(): TextureFormat.Rgba8Srgb | TextureFormat.Rgba16F {
     return workingColorTextureFormat(this.options.rendering?.color?.workingFormat ?? 'sdr');
   }
 

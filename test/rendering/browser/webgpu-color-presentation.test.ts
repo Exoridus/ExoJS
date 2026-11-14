@@ -17,6 +17,8 @@ import { Application } from '#core/Application';
 import type { ApplicationOptions } from '#core/application/ApplicationOptions';
 import { Color } from '#core/Color';
 import { Scene } from '#core/scene/Scene';
+import { CrossFadeSceneTransition } from '#core/scene/transitions/CrossFadeSceneTransition';
+import { seconds } from '#core/units';
 import { Container } from '#rendering/Container';
 import { FilterPass } from '#rendering/FilterPass';
 import { Graphics } from '#rendering/primitives/Graphics';
@@ -421,6 +423,75 @@ const describeBackend = (backend: BackendChoice): void => {
       expectPixelNear(read(16, 16), [halfCoverage, halfCoverage, halfCoverage, 255], 1);
       back.destroy();
       front.destroy();
+    });
+
+    // A transition captures the outgoing and the current scene into textures and
+    // draws them back; those captures are working storage like the frame target
+    // itself, so the frame must look the same with a transition running.
+    const runTransition = async (fill: DrawFn, options: Partial<ApplicationOptions>): Promise<readonly [RgbaTuple, RgbaTuple]> => {
+      class FromScene extends Scene {
+        public override draw(context: RenderingContext): void {
+          fill(context, app);
+        }
+      }
+
+      class ToScene extends FromScene {}
+
+      const app: ApplicationType = new Application({
+        backend: { type: backend },
+        clearColor: Color.black,
+        hello: false,
+        canvas: { width: size, height: size, pixelRatio: 1 },
+        scenes: { FromScene, ToScene },
+        ...options,
+        rendering: { ...options.rendering, webglAttributes: { antialias: false, preserveDrawingBuffer: true, depth: false } },
+      } as ApplicationOptions);
+
+      live.push(app);
+      await app.start(FromScene);
+      app.update();
+
+      const before = readCanvas(app)(16, 16);
+      const navigation = app.scenes.change(ToScene, { transition: new CrossFadeSceneTransition({ duration: seconds(60) }) });
+
+      // Let the incoming scene load and the session commit, then hold mid-fade.
+      for (let frame = 0; frame < 20 && app.scenes.currentScene instanceof ToScene === false; frame++) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+
+      app.update();
+
+      const during = readCanvas(app)(16, 16);
+
+      void navigation.catch(() => undefined);
+
+      return [before, during];
+    };
+
+    test('CS19 an HDR frame keeps its tone-mapped color while a transition captures it', async ctx => {
+      if (backend === 'webgl2' && !document.createElement('canvas').getContext('webgl2')?.getExtension('EXT_color_buffer_float')) {
+        // eslint-disable-next-line vitest/no-disabled-tests -- runtime guard: capability, not a failure
+        ctx.skip('no Rgba16F render-target support');
+      }
+
+      const nodes = [0, 1, 2, 3].map(() => solid(Color.white, 0, 0, size, size, BlendModes.Additive));
+      const [before, during] = await runTransition(context => nodes.forEach(node => context.render(node)), {
+        rendering: { color: { workingFormat: 'hdr', toneMapping: 'reinhard' } },
+      });
+      const expected = encodedByte(4 / 5);
+
+      expectPixelNear(before, [expected, expected, expected, 255], 1);
+      expectPixelNear(during, before, 1);
+      nodes.forEach(node => node.destroy());
+    });
+
+    test('CS20 an SDR dark tone keeps its precision while a transition captures it', async () => {
+      const node = solid(new Color(8, 8, 8, 1));
+      const [before, during] = await runTransition(context => context.render(node), {});
+
+      expectPixelNear(before, [8, 8, 8, 255], 1);
+      expectPixelNear(during, before, 1);
+      node.destroy();
     });
 
     test('CS17 an sRGB texture is decoded and a data texture is not', async () => {
