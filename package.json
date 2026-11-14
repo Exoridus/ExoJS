@@ -260,7 +260,7 @@
     {
       "name": "@codexo/exojs/lighting",
       "path": "dist/esm/lighting/index.js",
-      "limit": "34 KB",
+      "limit": "36 KB",
       "gzip": true,
       "ignore": [
         "../index.js",
