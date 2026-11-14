@@ -29,6 +29,8 @@ Every profile in `results/` and both baselines were measured before the linear-l
 
 ## Read before changing a comparison
 
+The ExoJS competitive adapter now measures the working-target render **and** the real output transform (including final sRGB encoding) in each `renderFrame()`; older runs captured a direct-to-canvas path that omitted presentation. Their CPU/GPU timing and draw counters are **not comparable** to color-correct runs. Keep historical profiles and structural baselines as evidence, and requalify new runs with their engine commit, visual evidence, and measurement boundary rather than rewriting earlier results.
+
 The additive `pnpm bench:competitive` command provides repeated raw-sample acquisitions, a seven-rate dirty-scene experiment, optional GPU/API profiling, long-run scene cycles and local JSON/CSV/Markdown/HTML reports. Read the [competitive methodology](docs/competitive-methodology.md) for commands, measurement boundaries and qualification limits, and the [architecture and historical review](docs/competitive-review.md) for existing work, open integration dependencies and past claims. These outputs remain diagnostic; the command does not publish a machine profile.
 
 The [harness methodology](docs/harness.md) owns measurement regions, pooling, workload selection, fairness, and publication rules. The [adapter contract](src/rendering/adapters/README.md) owns how another rendering library joins the harness. The [results README](results/README.md) owns acquisition and profile provenance. The site reads their generated results; do not copy volatile ratios into unrelated documentation.
