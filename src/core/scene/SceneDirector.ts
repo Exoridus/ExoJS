@@ -5,6 +5,7 @@ import { Signal } from '#core/Signal';
 import type { Seconds } from '#core/units';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import type { ColorTextureFormat } from '#rendering/types';
 
 import { prepareSceneScope } from './prepareSceneScope';
 import { Scene } from './Scene';
@@ -2082,20 +2083,25 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * only, resized live if the canvas resizes mid-session - a frozen
    * `outgoingFrame: 'snapshot'` is deliberately never resized: the
    * same snapshot texture is used for the entire session and never reallocated.
+   *
+   * Both textures hold the frame on its way to the output transform, so they
+   * take the application's working color format: an eight-bit linear capture
+   * would clamp an HDR frame at display white and requantize an SDR one's dark
+   * tones for exactly as long as the transition runs.
    */
   private _provisionTransitionResources(_context: SceneTransitionContext, requirements: SceneTransitionRequirements): TransitionResources {
-    const width = this._app.canvas.width;
-    const height = this._app.canvas.height;
+    const { width, height } = this._app.canvas;
+    const format = this._app._workingColorFormat();
 
     const outgoingSnapshot =
       requirements.outgoingFrame === 'snapshot' && this._activeScope !== null
-        ? this._captureOutgoingSnapshot(this._activeScope, width, height)
+        ? this._captureOutgoingSnapshot(this._activeScope, width, height, format)
         : null;
 
     let currentTexture: RenderTexture | null = null;
 
     try {
-      currentTexture = requirements.currentFrame === 'texture' ? this._app.backend.acquireRenderTexture(width, height) : null;
+      currentTexture = requirements.currentFrame === 'texture' ? this._app.backend.acquireRenderTexture(width, height, format) : null;
     } catch (error) {
       if (outgoingSnapshot !== null) {
         this._app.backend.releaseRenderTexture(outgoingSnapshot);
@@ -2152,8 +2158,8 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /** Captures the outgoing world and systems; screen UI stays above transition and frame effects. */
-  private _captureOutgoingSnapshot(scope: SceneScope, width: number, height: number): RenderTexture {
-    const snapshot = this._app.backend.acquireRenderTexture(width, height);
+  private _captureOutgoingSnapshot(scope: SceneScope, width: number, height: number, format: ColorTextureFormat): RenderTexture {
+    const snapshot = this._app.backend.acquireRenderTexture(width, height, format);
 
     try {
       this._app.rendering._renderSurfaceInto(snapshot, this._app.clearColor, () => scope.draw(this._app.rendering, false));

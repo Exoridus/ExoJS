@@ -18,6 +18,7 @@ import { type Seconds, Time } from '#core/units';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderingContext } from '#rendering/RenderingContext';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { type ColorTextureFormat, TextureFormat } from '#rendering/types';
 
 import { createRenderBackendDouble } from './render-backend-double';
 
@@ -210,10 +211,10 @@ const createHarness = (options: SceneTransitionConformanceOptions): ConformanceH
   const textures: BackendCounters = { acquired: 0, released: 0 };
   const backend: RenderBackend = {
     ...createRenderBackendDouble(),
-    acquireRenderTexture(textureWidth: number, textureHeight: number) {
+    acquireRenderTexture(textureWidth: number, textureHeight: number, format?: ColorTextureFormat) {
       textures.acquired++;
 
-      return new RenderTexture(textureWidth, textureHeight);
+      return new RenderTexture(textureWidth, textureHeight, format !== undefined ? { format } : undefined);
     },
     releaseRenderTexture(texture: RenderTexture) {
       textures.released++;
@@ -235,6 +236,7 @@ const createHarness = (options: SceneTransitionConformanceOptions): ConformanceH
     canvas: { width, height } as HTMLCanvasElement,
     onResize: new Signal<[number, number, Application]>(),
     clearColor: Color.black,
+    _workingColorFormat: () => TextureFormat.Rgba8Srgb,
     tweens: new TweenSystem(),
     loader: { _releaseScope: () => {} },
     interaction: { attachRoot: () => {}, detachRoot: () => {} },

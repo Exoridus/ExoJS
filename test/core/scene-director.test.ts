@@ -43,6 +43,7 @@ import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { TextureFormat } from '#rendering/types';
 
 interface InputSystemStub {
   readonly onKeyDown: Signal<[number]>;
@@ -121,6 +122,7 @@ const createApplicationStub = (): ApplicationStub => {
     canvas: { width: 320, height: 180 } as HTMLCanvasElement,
     onResize: new Signal<[number, number, Application]>(),
     clearColor: Color.black,
+    _workingColorFormat: () => TextureFormat.Rgba8Srgb,
     rendering: {
       backend: backendMock,
       render: vi.fn(),
@@ -1998,7 +2000,7 @@ describe('SceneDirector — transition resource provisioning', () => {
 
     expect(app.rendering._renderSurfaceInto).toHaveBeenCalled();
     expect(drawSpy).toHaveBeenCalledTimes(1); // drawn via the redirect, not straight to canvas
-    expect(app.backend.acquireRenderTexture).toHaveBeenCalledWith(app.canvas.width, app.canvas.height);
+    expect(app.backend.acquireRenderTexture).toHaveBeenCalledWith(app.canvas.width, app.canvas.height, TextureFormat.Rgba8Srgb);
 
     environmentRef?.commit();
     tick(manager, app);
