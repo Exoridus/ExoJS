@@ -7,6 +7,7 @@ import { Color } from '#core/Color';
 import type { Seconds } from '#core/units';
 import { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
+import { BackendTargetPass } from '#rendering/BackendTargetPass';
 import { CallbackRenderPass } from '#rendering/CallbackRenderPass';
 import { Container } from '#rendering/Container';
 import { BlurFilter } from '#rendering/filters/BlurFilter';
@@ -19,6 +20,7 @@ import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { RenderBatch } from '#rendering/RenderBatch';
 import { RenderNodePass } from '#rendering/RenderNodePass';
+import { OutputTransform } from '#rendering/OutputTransform';
 import { RenderPipeline } from '#rendering/RenderPipeline';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 import { Shader } from '#rendering/shader/Shader';
@@ -28,7 +30,7 @@ import { Text } from '#rendering/text/Text';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
-import { BlendModes } from '#rendering/types';
+import { BlendModes, TextureFormat } from '#rendering/types';
 import { View } from '#rendering/View';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 import { Stack } from '#ui/Stack';
@@ -313,14 +315,13 @@ const buildViewGrid = (count: number): View[] => {
  * Drives the public {@link Application} API - the production path, which
  * registers the core renderers via `materializeRendererBindings` during
  * construction - rather than constructing a backend directly, so the benchmark
- * measures the code a user would actually run. A single frame is produced by
- * the same two calls the production render phase issues (`rendering.render(node)`
- * then `backend.flush()`), driven explicitly so the harness owns frame cadence
- * instead of the engine's `requestAnimationFrame` loop.
+ * measures the code a user would actually run. The harness controls cadence,
+ * but every measured frame renders into the same sRGB working format as an
+ * Application frame, then uses the production OutputTransform to present it.
+ * This includes the final sRGB encode and its GPU work in the measured frame.
  *
- * Supports both the `'webgl2'` and `'webgpu'` backends; the per-frame call
- * sequence (`resetStats(); clear(); rendering.render(root); flush()`) is
- * identical on both, so only {@link init} branches on the backend type.
+ * Supports both the `'webgl2'` and `'webgpu'` backends with identical frame
+ * semantics; only {@link init} branches on backend selection.
  */
 /**
  * Which ExoJS arm this adapter represents: today's default path, the Slice-2
@@ -393,6 +394,9 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
   }
 
   let app: Application | null = null;
+  /** Adapter-owned working target; the ordinary Application manages its equivalent privately. */
+  let presentationTarget: RenderTexture | null = null;
+  let presentationTransform: OutputTransform | null = null;
   let root: Container | null = null;
   let filters: Filter[] = [];
   let textures: Texture[] = [];
@@ -478,8 +482,10 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
    * hand-rolled `render({ target })` sequence is being compared against.
    */
   const buildComposite = (sceneRoot: Container, strength: number): void => {
-    const capture = new RenderTexture(VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
-    const bloom = new RenderTexture(Math.round(VIEWPORT_WIDTH * BLOOM_DOWNSCALE), Math.round(VIEWPORT_HEIGHT * BLOOM_DOWNSCALE));
+    const capture = new RenderTexture(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, { format: TextureFormat.Rgba8Srgb });
+    const bloom = new RenderTexture(Math.round(VIEWPORT_WIDTH * BLOOM_DOWNSCALE), Math.round(VIEWPORT_HEIGHT * BLOOM_DOWNSCALE), {
+      format: TextureFormat.Rgba8Srgb,
+    });
     // A single blur from the full-size capture into the half-size target is both
     // the downsample and the blur: the filter sizes its sweep to the OUTPUT, so
     // the wide kernel runs over a quarter of the fragments.
@@ -1003,6 +1009,48 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
     pickingSpec = null;
   };
 
+  /** Reused per frame: no callback/descriptor allocation in the timed region. */
+  const drawWorkingFrame = new BackendTargetPass(() => {
+    if (app === null) {
+      throw new Error('renderFrame was called before init.');
+    }
+
+    // Direct-batch work has no scene tree by design.
+    if (batches.length > 0) {
+      for (const batch of batches) {
+        app.rendering.drawBatch(batch);
+      }
+
+      return;
+    }
+
+    if (root === null) {
+      throw new Error('renderFrame was called before buildScene.');
+    }
+
+    if (litLighting !== null) {
+      litLighting.update();
+      app.framePasses.execute(app.rendering);
+
+      return;
+    }
+
+    // This archetype draws its scene through its own multipass pipeline.
+    if (compositePipeline !== null) {
+      compositePipeline.execute(app.rendering);
+
+      return;
+    }
+
+    if (views.length > 0) {
+      for (const view of views) {
+        app.rendering.render(root, { view });
+      }
+    } else {
+      app.rendering.render(root);
+    }
+  });
+
   return {
     engine: 'exojs',
     config,
@@ -1034,14 +1082,15 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         extensions: [tilemapExtension, particlesExtension],
       });
 
-      // Boot the full production init path (awaits the backend's async
-      // initialize), then halt the engine's rAF loop so the harness drives
-      // frames explicitly via `renderFrame`. No scene target: the harness owns
-      // its own `root` container and renders it directly through
-      // `app.rendering.render(root)`, so the director never needs a scene.
+      // Initialize the production backend, then leave frame cadence to the
+      // harness. An adapter-owned target/output transform performs the same
+      // presentation stages as Application._drawFrame without adding a public
+      // engine API or an unrelated scene-update loop to measured work.
       await instance.start();
       instance.stop();
 
+      presentationTarget = new RenderTexture(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, { format: instance._workingColorFormat() });
+      presentationTransform = new OutputTransform(instance.options.rendering?.color);
       app = instance;
     },
 
@@ -1538,69 +1587,21 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
     },
 
     renderFrame(): void {
-      if (app === null) {
-        throw new Error('renderFrame was called before buildScene.');
+      if (app === null || presentationTarget === null || presentationTransform === null) {
+        throw new Error('renderFrame was called before init.');
       }
 
       const backend = app.backend;
 
-      // Exactly the production render phase: reset the frame-scoped stats /
-      // transform buffer, clear, render the tree once (or once per
-      // `split-screen` view - see `buildScene`/`views`), flush the batch.
+      // Clear and draw in the same color-managed working format as Application,
+      // regardless of scene archetype (direct, lit, multipass or batch).
       backend.resetStats();
-      backend.clear();
+      backend.execute(drawWorkingFrame.retarget(presentationTarget, presentationTarget.view, Color.black));
+      backend.resolveRenderTarget(presentationTarget);
 
-      // `instanced-batch`: one explicit submission per batch, no scene walk.
-      // The trailing flush below is what ends the frame - drawBatch leaves the
-      // backend's pass open so consecutive calls share one submit, which is the
-      // property this archetype exists to measure.
-      if (batches.length > 0) {
-        for (const batch of batches) {
-          app.rendering.drawBatch(batch);
-        }
-
-        backend.flush();
-
-        return;
-      }
-
-      if (root === null) {
-        throw new Error('renderFrame was called before buildScene.');
-      }
-
-      // The lit scenes publish this frame's lights and then play the frame slot,
-      // which draws the field into the frame texture and lights it - the
-      // application's own order, assembled from the same passes.
-      if (litLighting !== null) {
-        litLighting.update();
-        app.framePasses.execute(app.rendering);
-        backend.flush();
-
-        return;
-      }
-
-      // `composite`: the bloom stack renders the frame itself (capture, blur,
-      // direct draw, additive overlay), so the ordinary single render below
-      // would be a fifth, redundant scene walk.
-      if (compositePipeline !== null) {
-        compositePipeline.execute(app.rendering);
-        backend.flush();
-
-        return;
-      }
-
-      if (views.length > 0) {
-        // Multi-view replay: each additional view re-issues the retained
-        // group's ALREADY-RECORDED instruction set with its own view/viewport,
-        // not a fresh per-view scene walk - the property `split-screen` exists
-        // to exercise (see the retained-containers guide).
-        for (const view of views) {
-          app.rendering.render(root, { view });
-        }
-      } else {
-        app.rendering.render(root);
-      }
-
+      // This is part of the measured frame. Simply recoloring screenshots would
+      // produce misleading speed/counter comparisons against Pixi and Phaser.
+      presentationTransform.present(backend, presentationTarget, false, Color.black);
       backend.flush();
     },
 
@@ -1654,8 +1655,13 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       textUpdating = false;
       textGlyphs = 0;
 
+      presentationTransform?.destroy();
+      presentationTransform = null;
+      presentationTarget?.destroy();
+      presentationTarget = null;
+
       if (app !== null) {
-        app.destroy();
+        void app.destroy();
         app = null;
       }
     },
