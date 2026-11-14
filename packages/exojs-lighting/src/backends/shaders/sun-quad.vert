@@ -13,7 +13,6 @@ flat out vec3 v_toLight;
 flat out float v_shadowRow;
 flat out float v_softness;
 flat out float v_intensity;
-flat out float v_depthSpan;
 
 void main() {
     gl_Position = vec4(exoInstanceClipPosition(a_position, a_nodeIndex), 0.0, 1.0);
@@ -32,6 +31,4 @@ void main() {
     v_shadowRow = a_sun.w;
     v_intensity = a_beam.x;
     v_softness = a_beam.y;
-    // Normalize world-space clearance by the depth span stored in the row.
-    v_depthSpan = a_range.w;
 }

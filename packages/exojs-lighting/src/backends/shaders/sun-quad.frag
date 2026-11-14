@@ -7,7 +7,6 @@ flat in vec3 v_toLight;
 flat in float v_shadowRow;
 flat in float v_softness;
 flat in float v_intensity;
-flat in float v_depthSpan;
 
 // One row per shadowed light. A directional light's row is linear rather than
 // polar: bin `i` is a strip across the light's direction, holding how far along
@@ -21,8 +20,12 @@ out vec4 fragColor;
 const int MAX_HALF = 10;
 /** Fraction of the strip range the widest penumbra spans. */
 const float MAX_PENUMBRA = 0.03;
-/** One world unit of clearance, normalized by the directional depth span. */
-const float SHADOW_BIAS_WORLD = 1.0;
+/**
+ * Clearance that keeps an occluder's lit face out of its own shadow, in
+ * fragments along the light. See `light-quad.frag`. The rows are `R32F`, so
+ * their own rounding stays far below a fragment.
+ */
+const float SHADOW_CLEARANCE = 0.75;
 /** Kernel half-width, in strips, at zero softness. See `light-quad.frag`. */
 const float MIN_RADIUS = 1.5;
 
@@ -38,11 +41,12 @@ float depthAt(int strip, int bins, int row) {
 }
 
 /**
- * How much of one strip's own width the light reaches past `depth`. See
+ * How much of one strip's own width the light reaches past `threshold`, the
+ * fragment's depth less its clearance. See
  * `light-quad.frag` for why a strip is read as a coverage rather than as a
  * yes or no, and why the slope is the smaller of the two one-sided differences.
  */
-float coverageAt(float here, float previous, float next, float depth, float normalizedBias) {
+float coverageAt(float here, float previous, float next, float threshold) {
     float rising = here - previous;
     float falling = next - here;
     // A slope only means something where the blocker distance runs the SAME
@@ -53,15 +57,14 @@ float coverageAt(float here, float previous, float next, float depth, float norm
     // it, the one place a blocker cannot reach.
     float slope = rising * falling <= 0.0 ? 0.0 : min(abs(rising), abs(falling));
 
-    return clamp(0.5 + (here + normalizedBias - depth) / max(slope, MIN_SLOPE), 0.0, 1.0);
+    return clamp(0.5 + (here - threshold) / max(slope, MIN_SLOPE), 0.0, 1.0);
 }
 
-float shadowTerm() {
+float shadowTerm(float threshold) {
     if (v_shadowRow < 0.0) {
         return 1.0;
     }
 
-    float normalizedBias = SHADOW_BIAS_WORLD / max(v_depthSpan, 1.0);
     int bins = textureSize(u_shadow, 0).x;
     int row = int(v_shadowRow);
     float radius = min(MIN_RADIUS + max(0.0, v_softness) * float(bins) * MAX_PENUMBRA, float(MAX_HALF));
@@ -87,7 +90,7 @@ float shadowTerm() {
         float weight = max(0.0, 1.0 - abs(float(strip) - center) / radius);
 
         if (weight > 0.0) {
-            lit += weight * coverageAt(here, previous, next, v_sun.y, normalizedBias);
+            lit += weight * coverageAt(here, previous, next, threshold);
             total += weight;
         }
 
@@ -115,5 +118,5 @@ float surfaceTerm() {
 void main() {
     // No falloff and no cone: a source at no particular distance reaches
     // everything its quad covers, equally.
-    fragColor = vec4(v_tint.rgb * (v_intensity * shadowTerm() * surfaceTerm()), 1.0);
+    fragColor = vec4(v_tint.rgb * (v_intensity * shadowTerm(v_sun.y - SHADOW_CLEARANCE * fwidth(v_sun.y)) * surfaceTerm()), 1.0);
 }

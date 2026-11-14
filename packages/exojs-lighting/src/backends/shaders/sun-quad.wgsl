@@ -21,7 +21,6 @@ struct VertexOutput {
     @location(3) @interpolate(flat) shadowRow: f32,
     @location(4) @interpolate(flat) softness: f32,
     @location(5) @interpolate(flat) intensity: f32,
-    @location(6) @interpolate(flat) depthSpan: f32,
 };
 
 // One row per shadowed light. A directional light's row is linear rather than
@@ -36,8 +35,8 @@ struct VertexOutput {
 const MAX_HALF: i32 = 10;
 /** Fraction of the strip range the widest penumbra spans. */
 const MAX_PENUMBRA: f32 = 0.03;
-/** One world unit of clearance, normalized by the directional depth span. */
-const SHADOW_BIAS_WORLD: f32 = 1.0;
+/** Clearance that keeps an occluder's lit face out of its own shadow, in fragments along the light. See `sun-quad.frag`. */
+const SHADOW_CLEARANCE: f32 = 0.75;
 /** Kernel half-width, in strips, at zero softness. See `light-quad.wgsl`. */
 const MIN_RADIUS: f32 = 1.5;
 
@@ -53,11 +52,12 @@ fn depthAt(strip: i32, bins: i32, row: i32) -> f32 {
 }
 
 /**
- * How much of one strip's own width the light reaches past `depth`. See
+ * How much of one strip's own width the light reaches past `threshold`, the
+ * fragment's depth less its clearance. See
  * `light-quad.wgsl` for why a strip is read as a coverage rather than as a
  * yes or no, and why the slope is the smaller of the two one-sided differences.
  */
-fn coverageAt(here: f32, previous: f32, next: f32, depth: f32, normalizedBias: f32) -> f32 {
+fn coverageAt(here: f32, previous: f32, next: f32, threshold: f32) -> f32 {
     let rising = here - previous;
     let falling = next - here;
     // A slope only means something where the blocker distance runs the SAME
@@ -68,15 +68,14 @@ fn coverageAt(here: f32, previous: f32, next: f32, depth: f32, normalizedBias: f
     // it, the one place a blocker cannot reach.
     let slope = select(min(abs(rising), abs(falling)), 0.0, rising * falling <= 0.0);
 
-    return clamp(0.5 + (here + normalizedBias - depth) / max(slope, MIN_SLOPE), 0.0, 1.0);
+    return clamp(0.5 + (here - threshold) / max(slope, MIN_SLOPE), 0.0, 1.0);
 }
 
-fn shadowTerm(sun: vec2<f32>, shadowRow: f32, softness: f32, depthSpan: f32) -> f32 {
+fn shadowTerm(sun: vec2<f32>, threshold: f32, shadowRow: f32, softness: f32) -> f32 {
     if (shadowRow < 0.0) {
         return 1.0;
     }
 
-    let normalizedBias = SHADOW_BIAS_WORLD / max(depthSpan, 1.0);
     let bins = i32(textureDimensions(u_shadow, 0).x);
     let row = i32(shadowRow);
     let radius = min(MIN_RADIUS + max(0.0, softness) * f32(bins) * MAX_PENUMBRA, f32(MAX_HALF));
@@ -103,7 +102,7 @@ fn shadowTerm(sun: vec2<f32>, shadowRow: f32, softness: f32, depthSpan: f32) -> 
         let weight = max(0.0, 1.0 - abs(f32(strip) - center) / radius);
 
         if (weight > 0.0) {
-            lit = lit + weight * coverageAt(here, previous, next, sun.y, normalizedBias);
+            lit = lit + weight * coverageAt(here, previous, next, threshold);
             total = total + weight;
         }
 
@@ -146,7 +145,6 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     output.shadowRow = input.sun.w;
     output.intensity = input.beam.x;
     output.softness = input.beam.y;
-    output.depthSpan = input.range.w;
 
     return output;
 }
@@ -155,7 +153,8 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     // No falloff and no cone: a source at no particular distance reaches
     // everything its quad covers, equally.
-    let shadow = shadowTerm(input.sun, input.shadowRow, input.softness, input.depthSpan);
+    // Taken while control flow is still uniform; see `sun-quad.frag`.
+    let shadow = shadowTerm(input.sun, input.sun.y - SHADOW_CLEARANCE * fwidth(input.sun.y), input.shadowRow, input.softness);
     let surface = surfaceTerm(input.position.xy, input.toLight);
 
     return vec4<f32>(input.tint.rgb * (input.intensity * shadow * surface), 1.0);
