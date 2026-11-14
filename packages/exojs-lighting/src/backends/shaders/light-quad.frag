@@ -40,8 +40,15 @@ const float PI = 3.14159265359;
 const int MAX_HALF = 10;
 /** Fraction of a full turn the widest penumbra spans, before the bin bound above. */
 const float MAX_PENUMBRA = 0.03;
-/** Tolerance, in radii, that keeps an occluder's own surface out of its shadow. */
-const float SHADOW_BIAS = 0.004;
+/**
+ * Clearance that keeps an occluder's lit face out of its own shadow, in
+ * fragments along the ray. The fragment samples at its centre, so half of one
+ * reaches the face from any fragment the face crosses; the rest settles a face
+ * lying exactly on a fragment boundary, a tile edge, towards lit. Measured in
+ * fragments rather than in world units or radii, the gap it can open behind a
+ * contact stays under one fragment at any light reach and camera zoom.
+ */
+const float SHADOW_CLEARANCE = 0.75;
 /**
  * Kernel half-width, in bins, at zero softness. The row samples each bin at
  * its centre and is accurate to half a bin, so a kernel narrower than this
@@ -63,7 +70,8 @@ float depthAt(int bin, int bins, int row) {
 }
 
 /**
- * How much of one bin's own angular width the light reaches past `distance`.
+ * How much of one bin's own angular width the light reaches past `threshold`,
+ * the fragment's distance less the clearance its own lit face is owed.
  *
  * A bin holds a single blocker distance, so comparing against that alone makes
  * the whole bin flip at once and a kernel of such comparisons has no more
@@ -83,7 +91,7 @@ float depthAt(int bin, int bins, int row) {
  * blending two stored distances and comparing once would instead put the edge
  * at a depth neither bin holds, which is a different thing and the wrong one.
  */
-float coverageAt(float here, float previous, float next, float distance) {
+float coverageAt(float here, float previous, float next, float threshold) {
     float rising = here - previous;
     float falling = next - here;
     // A slope only means something where the blocker distance runs the SAME
@@ -94,12 +102,12 @@ float coverageAt(float here, float previous, float next, float distance) {
     // it, the one place a blocker cannot reach.
     float slope = rising * falling <= 0.0 ? 0.0 : min(abs(rising), abs(falling));
 
-    return clamp(0.5 + (here + SHADOW_BIAS - distance) / max(slope, MIN_SLOPE), 0.0, 1.0);
+    return clamp(0.5 + (here - threshold) / max(slope, MIN_SLOPE), 0.0, 1.0);
 }
 
 /**
- * `distance` is the RADIAL distance from the light's own position, as a
- * fraction of the light's whole reach - the frame the polar rows were built in.
+ * `threshold` comes from the RADIAL distance from the light's own position, as
+ * a fraction of the light's whole reach - the frame the polar rows were built in.
  * The falloff term measures to the segment instead, which is a different
  * quantity for a line light and the same one for every other shape.
  *
@@ -118,7 +126,7 @@ float coverageAt(float here, float previous, float next, float distance) {
  * source casts, and it does not make the shadow behave like one cast by a
  * disc of that size.
  */
-float shadowTerm(float distance) {
+float shadowTerm(float threshold) {
     if (v_shadowRow < 0.0) {
         return 1.0;
     }
@@ -147,7 +155,7 @@ float shadowTerm(float distance) {
         float weight = max(0.0, 1.0 - abs(float(bin) - center) / radius);
 
         if (weight > 0.0) {
-            lit += weight * coverageAt(here, previous, next, distance);
+            lit += weight * coverageAt(here, previous, next, threshold);
             total += weight;
         }
 
@@ -205,6 +213,16 @@ void main() {
     // exactly - so the pattern turns and scales with the light for free, and a
     // premultiplied texel that is transparent contributes nothing.
     vec3 cookie = texture(u_cookie, vec2(v_local.x / (v_half + 1.0), v_local.y) * 0.5 + 0.5).rgb;
+    float radial = length(v_local) / (v_half + 1.0);
+    // How far the radial distance runs across this fragment: the light target's
+    // own footprint in the row's units, whatever the light's reach, the camera's
+    // zoom and turn, or the target's resolution.
+    float clearance = SHADOW_CLEARANCE * fwidth(radial);
+    // A stored distance can have rounded towards the light by its format's
+    // relative precision, which a far blocker in a half-float row turns into a
+    // step of its own. Dividing that out of the fragment's side, once, is the
+    // comparison against every stored distance widened by it.
+    float threshold = (radial - clearance) / (1.0 + uniforms.u_shadowPrecision);
 
-    fragColor = vec4(v_tint.rgb * cookie * (falloff * falloff * coneTerm * v_intensity * shadowTerm(length(v_local) / (v_half + 1.0)) * surfaceTerm()), 1.0);
+    fragColor = vec4(v_tint.rgb * cookie * (falloff * falloff * coneTerm * v_intensity * shadowTerm(threshold) * surfaceTerm()), 1.0);
 }

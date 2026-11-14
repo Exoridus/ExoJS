@@ -28,10 +28,11 @@ import { INSTANCE_TRANSFORM_GLSL } from '#rendering/shader/instanceContract';
 import { resolveTransformTextureGlsl } from '#rendering/shader/transformTextureLayout';
 import { composeSpriteMaterialFragmentGlsl } from '#rendering/sprite/materialSources';
 import { composeTextAtlasFragmentGlsl } from '#rendering/text/atlasTextureSlots';
+import { buildUniformSchemaLayout } from '#rendering/uniforms/uniformSchema';
 import { generateGlslUniformDeclarations, withGlslUniformDeclarations } from '#rendering/uniforms/uniformSource';
 
 import { galleryDissolveShader } from '../../../examples/shared/gallery-transitions';
-import { lightCompositeShader } from '../../../packages/exojs-lighting/src/backends/FrameLightingBackend';
+import { lightCompositeShader, lightQuadUniforms } from '../../../packages/exojs-lighting/src/backends/FrameLightingBackend';
 import { cascadeUniforms, gatherUniforms } from '../../../packages/exojs-lighting/src/backends/radianceField';
 import { shadowMarchShader } from '../../../packages/exojs-lighting/src/backends/shadowMarch';
 import {
@@ -105,6 +106,7 @@ const generatedUniformBlocks: ReadonlyMap<string, string> = new Map([
   ['angular-average.frag', generateGlslUniformDeclarations(angularAverageShader.uniformSchema!)],
   ['shadow-march.frag', generateGlslUniformDeclarations(shadowMarchShader.uniformSchema!)],
   ['light-composite.frag', generateGlslUniformDeclarations(lightCompositeShader.uniformSchema!)],
+  ['light-quad.frag', generateGlslUniformDeclarations(buildUniformSchemaLayout(lightQuadUniforms, undefined)!)],
 ]);
 
 /**

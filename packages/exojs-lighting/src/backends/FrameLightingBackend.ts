@@ -66,6 +66,22 @@ export const lightCompositeShader = new Shader({
   wgsl: `${INSTANCE_TRANSFORM_WGSL}\n${lightCompositeWgsl}`,
 });
 
+/**
+ * What the light quads read besides their instances and textures.
+ * @internal
+ */
+export const lightQuadUniforms = { u_shadowPrecision: UniformType.Float } as const;
+
+type LightQuadMaterial = MeshMaterial<typeof lightQuadUniforms>;
+
+/**
+ * How far a distance stored in a half-float shadow row can have rounded,
+ * relative to itself: half a unit in the last of its ten mantissa bits. The
+ * `R32F` rows round some ten thousand times finer, below anything a fragment
+ * resolves, and are read as exact.
+ */
+const halfFloatRounding = 2 ** -11;
+
 /** Cone cosine that no direction can fail, which is how a point light says "no cone". */
 const noCone = -1;
 /** Shadow row a light without occluders in reach carries: the shader reads it as "nothing blocks". */
@@ -624,7 +640,7 @@ ${sunQuadWgsl}`,
     this._syncMask();
 
     for (const batch of this._lightBatches.values()) {
-      batch.material?.setTexture('u_shadow', this._boundShadows());
+      this._bindShadows(batch.material as LightQuadMaterial);
     }
   }
 
@@ -1324,6 +1340,7 @@ ${sunQuadWgsl}`,
 
     const material = new MeshMaterial({
       shader: new Shader({
+        uniforms: lightQuadUniforms,
         glsl: { vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${lightQuadVertex}`, fragment: lightQuadFragment },
         wgsl: `${INSTANCE_TRANSFORM_WGSL}\n${lightQuadWgsl}`,
       }),
@@ -1333,6 +1350,9 @@ ${sunQuadWgsl}`,
       textures: { u_shadow: this._boundShadows(), u_normal: this._boundNormals(), u_cookie: cookie },
       blendMode: BlendModes.Additive,
     });
+
+    this._bindShadows(material);
+
     const batch = new RenderBatch(this._lightGeometry, material, {
       instanceAttributes: [
         { name: 'a_light', format: 'float32x4' },
@@ -1349,6 +1369,12 @@ ${sunQuadWgsl}`,
   /** The polar rows the light shader should read: the marched atlas, or the walked ones. */
   private _boundShadows(): DataTexture<TextureFormat.R32F> | RenderTexture {
     return this.shadowFiller === 'gpu' ? this._filler!.texture : this._shadowMap;
+  }
+
+  /** Point a light material at the bound rows, and at how finely their format stores a distance. */
+  private _bindShadows(material: LightQuadMaterial): void {
+    material.setTexture('u_shadow', this._boundShadows());
+    material.uniforms.u_shadowPrecision.set(this.shadowFiller === 'gpu' ? halfFloatRounding : 0);
   }
 
   /**
@@ -1538,7 +1564,7 @@ ${sunQuadWgsl}`,
     this._sunShadowMap = new DataTexture({ width: this._shadowResolution, height: rows, format: TextureFormat.R32F });
 
     for (const batch of this._lightBatches.values()) {
-      batch.material?.setTexture('u_shadow', this._boundShadows());
+      this._bindShadows(batch.material as LightQuadMaterial);
     }
 
     this._sunMaterial.setTexture('u_shadow', this._sunShadowMap);

@@ -55,8 +55,8 @@ const PI: f32 = 3.14159265359;
 const MAX_HALF: i32 = 10;
 /** Fraction of a full turn the widest penumbra spans, before the bin bound above. */
 const MAX_PENUMBRA: f32 = 0.03;
-/** Tolerance, in radii, that keeps an occluder's own surface out of its shadow. */
-const SHADOW_BIAS: f32 = 0.004;
+/** Clearance that keeps an occluder's lit face out of its own shadow, in fragments along the ray. See `light-quad.frag`. */
+const SHADOW_CLEARANCE: f32 = 0.75;
 /**
  * Kernel half-width, in bins, at zero softness. The row samples each bin at
  * its centre and is accurate to half a bin, so a kernel narrower than this
@@ -79,7 +79,8 @@ fn depthAt(bin: i32, bins: i32, row: i32) -> f32 {
 }
 
 /**
- * How much of one bin's own angular width the light reaches past `distance`.
+ * How much of one bin's own angular width the light reaches past `threshold`,
+ * the fragment's distance less the clearance its own lit face is owed.
  *
  * A bin holds a single blocker distance, so comparing against that alone makes
  * the whole bin flip at once and a kernel of such comparisons has no more
@@ -99,7 +100,7 @@ fn depthAt(bin: i32, bins: i32, row: i32) -> f32 {
  * blending two stored distances and comparing once would instead put the edge
  * at a depth neither bin holds, which is a different thing and the wrong one.
  */
-fn coverageAt(here: f32, previous: f32, next: f32, distance: f32) -> f32 {
+fn coverageAt(here: f32, previous: f32, next: f32, threshold: f32) -> f32 {
     let rising = here - previous;
     let falling = next - here;
     // A slope only means something where the blocker distance runs the SAME
@@ -110,12 +111,12 @@ fn coverageAt(here: f32, previous: f32, next: f32, distance: f32) -> f32 {
     // it, the one place a blocker cannot reach.
     let slope = select(min(abs(rising), abs(falling)), 0.0, rising * falling <= 0.0);
 
-    return clamp(0.5 + (here + SHADOW_BIAS - distance) / max(slope, MIN_SLOPE), 0.0, 1.0);
+    return clamp(0.5 + (here - threshold) / max(slope, MIN_SLOPE), 0.0, 1.0);
 }
 
 /**
- * `distance` is the RADIAL distance from the light's own position, as a
- * fraction of the light's whole reach - the frame the polar rows were built in.
+ * `threshold` comes from the RADIAL distance from the light's own position, as
+ * a fraction of the light's whole reach - the frame the polar rows were built in.
  * The falloff term measures to the segment instead, which is a different
  * quantity for a line light and the same one for every other shape.
  *
@@ -134,7 +135,7 @@ fn coverageAt(here: f32, previous: f32, next: f32, distance: f32) -> f32 {
  * source casts, and it does not make the shadow behave like one cast by a
  * disc of that size.
  */
-fn shadowTerm(local: vec2<f32>, distance: f32, shadowRow: f32, softness: f32) -> f32 {
+fn shadowTerm(local: vec2<f32>, threshold: f32, shadowRow: f32, softness: f32) -> f32 {
     if (shadowRow < 0.0) {
         return 1.0;
     }
@@ -164,7 +165,7 @@ fn shadowTerm(local: vec2<f32>, distance: f32, shadowRow: f32, softness: f32) ->
         let weight = max(0.0, 1.0 - abs(f32(bin) - center) / radius);
 
         if (weight > 0.0) {
-            lit = lit + weight * coverageAt(here, previous, next, distance);
+            lit = lit + weight * coverageAt(here, previous, next, threshold);
             total = total + weight;
         }
 
@@ -222,6 +223,14 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
+    let radial = length(input.local) / (input.half + 1.0);
+    // How far the radial distance runs across this fragment; see
+    // `light-quad.frag`. Taken first, while control flow is still uniform.
+    let clearance = SHADOW_CLEARANCE * fwidth(radial);
+    // Rounding of the stored distance, divided out of the fragment's side once;
+    // see `light-quad.frag`.
+    let threshold = (radial - clearance) / (1.0 + uniforms.u_shadowPrecision);
+
     // Distance to the segment, not to the centre: folding `x` onto the segment
     // first is what turns the disc into a capsule, and a zero half-length
     // leaves the disc exactly as it was.
@@ -247,7 +256,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
         coneTerm = step(input.cone.x, alignment);
     }
 
-    let shadow = shadowTerm(input.local, length(input.local) / (input.half + 1.0), input.shadowRow, input.softness);
+    let shadow = shadowTerm(input.local, threshold, input.shadowRow, input.softness);
     let surface = surfaceTerm(input.position.xy, input.local, input.surface);
     // The quad spans -1..1 in the light's own frame, which is the cookie's 0..1
     // exactly - so the pattern turns and scales with the light for free, and a
