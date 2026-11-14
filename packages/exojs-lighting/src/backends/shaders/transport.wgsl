@@ -388,6 +388,22 @@ fn superblockHolds(block: vec2<i32>, blocks: vec2<f32>) -> bool {
 }
 
 /**
+ * Narrows the parameter window `(entry, leave)` of a stretch to the interval
+ * `lo..hi` on one axis, and reports in `z` a stretch that runs parallel to the
+ * axis outside it.
+ */
+fn clipAxis(start: f32, run: f32, lo: f32, hi: f32, window: vec2<f32>) -> vec3<f32> {
+    if (abs(run) < TRANSPORT_EPSILON) {
+        return vec3<f32>(window, select(0.0, 1.0, start < lo || start > hi));
+    }
+
+    let first = (lo - start) / run;
+    let last = (hi - start) / run;
+
+    return vec3<f32>(max(window.x, min(first, last)), min(window.y, max(first, last)), 0.0);
+}
+
+/**
  * Where the rasterised occluders first block the stretch from `a` to `b`.
  *
  * A texel blocks as a whole: the walk stops where it crosses into one, which
@@ -408,31 +424,23 @@ fn maskHit(a: vec2<f32>, b: vec2<f32>) -> MaskHit {
 
     let origin = maskPlace(a);
     let delta = maskPlace(b) - origin;
-    var entry = 0.0;
-    var leave = 1.0;
-    // Copied into variables because the clip below indexes them.
-    var run = delta;
-    var start = origin;
-    var grid = cells;
-
     // Clipped to the mask, in fractions of the stretch, for the reason the
     // cell walk is: the step bound is taken from the grid's size and only
     // holds for a stretch that does not approach it from outside.
-    for (var axis = 0; axis < 2; axis = axis + 1) {
-        if (abs(run[axis]) < TRANSPORT_EPSILON) {
-            if (start[axis] < 0.0 || start[axis] > grid[axis]) {
-                return MaskHit(1.0, 0.0, false);
-            }
+    let clipX = clipAxis(origin.x, delta.x, 0.0, cells.x, vec2<f32>(0.0, 1.0));
 
-            continue;
-        }
-
-        let first = -start[axis] / run[axis];
-        let last = (grid[axis] - start[axis]) / run[axis];
-
-        entry = max(entry, min(first, last));
-        leave = min(leave, max(first, last));
+    if (clipX.z > 0.5) {
+        return MaskHit(1.0, 0.0, false);
     }
+
+    let clipY = clipAxis(origin.y, delta.y, 0.0, cells.y, clipX.xy);
+
+    if (clipY.z > 0.5) {
+        return MaskHit(1.0, 0.0, false);
+    }
+
+    let entry = clipY.x;
+    let leave = clipY.y;
 
     if (leave <= entry) {
         return MaskHit(1.0, 0.0, false);
@@ -634,36 +642,28 @@ fn traceSegment(a: vec2<f32>, b: vec2<f32>) -> Transfer {
     let size = uniforms.uCellSize;
     let lower = uniforms.uGridOrigin;
     let upper = lower + cells * size;
-    var entry = 0.0;
     // A rasterised wall inside the stretch ends it even where it stands
     // outside the grid: the grid holds what emits, the mask what blocks.
-    var leave = min(span, stopped);
-    // Copied into variables because the clip below indexes them.
-    var ray = direction;
-    var start = a;
-    var low = lower;
-    var high = upper;
-
+    //
     // Clipped to the grid before it is walked. Outside the grid there is
     // nothing to find, and a stretch beginning far away would otherwise spend
     // its whole step budget crossing cells that do not exist - which is also
     // what makes the bound on MAX_CELL_STEPS hold for any input rather than
     // only for a stretch that starts inside.
-    for (var axis = 0; axis < 2; axis = axis + 1) {
-        if (abs(ray[axis]) < TRANSPORT_EPSILON) {
-            if (start[axis] < low[axis] || start[axis] > high[axis]) {
-                return Transfer(vec3<f32>(0.0), open, rastered.visited, rastered.exhausted, surface, onSurface);
-            }
+    let clipX = clipAxis(a.x, direction.x, lower.x, upper.x, vec2<f32>(0.0, min(span, stopped)));
 
-            continue;
-        }
-
-        let first = (low[axis] - start[axis]) / ray[axis];
-        let last = (high[axis] - start[axis]) / ray[axis];
-
-        entry = max(entry, min(first, last));
-        leave = min(leave, max(first, last));
+    if (clipX.z > 0.5) {
+        return Transfer(vec3<f32>(0.0), open, rastered.visited, rastered.exhausted, surface, onSurface);
     }
+
+    let clipY = clipAxis(a.y, direction.y, lower.y, upper.y, clipX.xy);
+
+    if (clipY.z > 0.5) {
+        return Transfer(vec3<f32>(0.0), open, rastered.visited, rastered.exhausted, surface, onSurface);
+    }
+
+    let entry = clipY.x;
+    let leave = clipY.y;
 
     if (leave <= entry) {
         return Transfer(vec3<f32>(0.0), open, rastered.visited, rastered.exhausted, surface, onSurface);
