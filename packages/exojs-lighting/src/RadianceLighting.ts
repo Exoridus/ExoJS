@@ -57,9 +57,10 @@ export interface RadianceLightingOptions extends FrameLightingOptions {
  *
  * It does NOT make a scene look the way {@link LightmapLighting} makes it look,
  * and it is the only renderer whose cost is per probe rather than per light.
- * Registered normal surfaces are recorded and ignored: the gather averages a
- * probe's rays into one arriving colour, which leaves no incident direction for
- * a normal to be measured against.
+ * Registered normal surfaces are shaded against: the gather weights the
+ * finest cascade's four directions by what each surface takes of them (see
+ * {@link Lighting.normalsFrom}). Without a registered surface the gather is the
+ * unweighted mean and nothing about the frame changes.
  *
  * The host is required and is the first argument, and the scene the system
  * belongs to goes in {@link LightingOptions.scene}. Float render targets are

@@ -186,6 +186,9 @@ export class RadianceField {
   private _transportCascade: ShaderFilter<typeof cascadeUniforms & typeof transportUniforms & typeof transportBounceUniforms> | null = null;
   /** The receiver reconstruction over the same walk: a fragment reaches its probes or it does not. */
   private _transportGather: ShaderFilter<typeof gatherUniforms & typeof transportUniforms> | null = null;
+  /** The same reconstruction shaded against the normal prepass, built once a surface describes one. */
+  private _normalGather: ShaderFilter<typeof gatherUniforms & typeof transportUniforms> | null = null;
+  private _normals: RenderTexture | null = null;
   private _walk: TransportBinding | null = null;
   private _walkRevision = -1;
   private _levels = 1;
@@ -283,11 +286,36 @@ export class RadianceField {
 
     this._transportCascade?.destroy();
     this._transportGather?.destroy();
+    this._normalGather?.destroy();
+    this._normalGather = null;
     this._transportCascade = ShaderFilter.from(transportCascadeShader(cascadeUniforms), {
       textures: { ...binding.textures, uFrame: this._frame, uHistory: this._target },
     });
     this._transportGather = ShaderFilter.from(transportGatherShader(gatherUniforms), { textures: { ...binding.textures } });
     this._walkRevision = binding.revision;
+    this._buildNormalGather();
+  }
+
+  /**
+   * Shade the gathered light against `normals`, or stop with `null`.
+   *
+   * While bound, the gather reads the finest level's directions instead of
+   * their mean, and the average pass over that level is skipped. Without it the
+   * frame is exactly what it was.
+   */
+  public useNormals(normals: RenderTexture | null): void {
+    this._normals = normals;
+    this._buildNormalGather();
+  }
+
+  private _buildNormalGather(): void {
+    if (this._normals === null || this._normalGather !== null || this._walk === null || this._transportGather === null) {
+      return;
+    }
+
+    this._normalGather = ShaderFilter.from(transportGatherShader(gatherUniforms, true), {
+      textures: { ...this._walk.textures, uNormal: this._normals },
+    });
   }
 
   /**
@@ -332,16 +360,24 @@ export class RadianceField {
 
     this._writeSun();
 
-    if (this._transportGather !== null) {
-      const gather = this._transportGather.uniforms;
+    const ambientRgb = radianceColorRgb(ambient);
+
+    for (const [filter, tile] of [
+      [this._transportGather, 1],
+      [this._normalGather, 2],
+    ] as const) {
+      if (filter === null) {
+        continue;
+      }
+
+      const gather = filter.uniforms;
 
       gather.uToWorld.set(toWorld.a, toWorld.b, toWorld.c, toWorld.d);
       gather.uWorldOffset.set(toWorld.x, toWorld.y);
       gather.uOrigin.set(bounds.left, bounds.top);
       gather.uProbes.set(this._probesX, this._probesY);
       gather.uSpacing.set(spacing);
-      gather.uTile.set(1);
-      const ambientRgb = radianceColorRgb(ambient);
+      gather.uTile.set(tile);
       gather.uAmbient.set(ambientRgb.r, ambientRgb.g, ambientRgb.b);
 
       if (walking !== null) {
@@ -497,6 +533,7 @@ export class RadianceField {
       return;
     }
 
+    const shaded = this._normals !== null ? this._normalGather : null;
     let source = this._above;
 
     for (let level = this._levels - 1; level >= 0; level--) {
@@ -514,13 +551,24 @@ export class RadianceField {
       // level, the more directions it has and the narrower each one is.
       cascade.uniforms.uCone.set(Math.tan(Math.PI / (tile * tile)));
       cascade.apply(backend, source, raw);
+
+      // Shading against normals reads the finest level's directions as they
+      // are, so their mean is not taken.
+      if (level === 0 && shaded !== null) {
+        break;
+      }
+
       this._average.uniforms.uTile.set(tile);
       this._average.apply(backend, raw, compact);
 
       source = compact;
     }
 
-    gather.apply(backend, source, this._target);
+    if (shaded !== null) {
+      shaded.apply(backend, raw, this._target);
+    } else {
+      gather.apply(backend, source, this._target);
+    }
 
     // The light field now holds this frame, so the camera it was gathered
     // through becomes what the next bounce reprojects from - and only now is

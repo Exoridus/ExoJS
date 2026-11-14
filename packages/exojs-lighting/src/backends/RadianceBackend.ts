@@ -1,4 +1,4 @@
-import { Rectangle, TextureFormat } from '@codexo/exojs';
+import { Rectangle, type RenderTexture, TextureFormat } from '@codexo/exojs';
 
 import type { Light } from '../lights/Light';
 import type { OccluderField } from '../occluders/OccluderField';
@@ -161,6 +161,10 @@ export class RadianceBackend extends FrameLightingBackend {
 
   protected override _invalidateWalkHistory(): void {
     this._radiance.invalidateHistory();
+  }
+
+  protected override _shadeAgainstNormals(normals: RenderTexture | null): void {
+    this._radiance.useNormals(normals);
   }
 
   protected override _syncWalk(cascading: boolean, rasterMask: boolean): void {
