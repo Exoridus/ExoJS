@@ -319,6 +319,8 @@ describe('Sound', () => {
     expect(sound.volume).toBe(0.5);
     expect(sound.loop).toBe(false);
     expect(sound.playbackRate).toBe(1);
+    expect(loud.volume).toBe(1);
+    expect(quiet.volume).toBe(0.25);
     expect(loud.loop).toBe(true);
     expect(quiet.loop).toBe(false);
     expect(loud.playbackRate).toBe(2);
