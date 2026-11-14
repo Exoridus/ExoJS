@@ -60,7 +60,10 @@ export interface RadianceLightingOptions extends FrameLightingOptions {
  * Registered normal surfaces are shaded against: the gather weights the
  * finest cascade's four directions by what each surface takes of them (see
  * {@link Lighting.normalsFrom}). Without a registered surface the gather is the
- * unweighted mean and nothing about the frame changes.
+ * unweighted mean and nothing about the frame changes. With bounce enabled,
+ * a separate unweighted gather supplies the feedback history while the normal
+ * gather shades the display; this requires an extra target and reconstruction
+ * only when both bounce and normal surfaces are active.
  *
  * The host is required and is the first argument, and the scene the system
  * belongs to goes in {@link LightingOptions.scene}. Float render targets are

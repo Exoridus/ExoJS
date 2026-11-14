@@ -165,6 +165,11 @@ export class RadianceField {
 
   private readonly _options: RadianceFieldOptions;
   private readonly _target: RenderTexture;
+  /**
+   * Unweighted incoming radiance for the next frame's bounce. Only allocated
+   * when normal shading would otherwise corrupt the display target as history.
+   */
+  private _bounceHistory: RenderTexture | null = null;
   /** What the camera drew before the light was applied: the albedo a bounce is tinted by. */
   private readonly _frame: RenderTexture;
   /** World to clip as the camera saw it when the light field was last GATHERED. */
@@ -289,7 +294,7 @@ export class RadianceField {
     this._normalGather?.destroy();
     this._normalGather = null;
     this._transportCascade = ShaderFilter.from(transportCascadeShader(cascadeUniforms), {
-      textures: { ...binding.textures, uFrame: this._frame, uHistory: this._target },
+      textures: { ...binding.textures, uFrame: this._frame, uHistory: this._bounceHistory ?? this._target },
     });
     this._transportGather = ShaderFilter.from(transportGatherShader(gatherUniforms), { textures: { ...binding.textures } });
     this._walkRevision = binding.revision;
@@ -304,6 +309,22 @@ export class RadianceField {
    * frame is exactly what it was.
    */
   public useNormals(normals: RenderTexture | null): void {
+    const needsSeparateHistory = normals !== null && this._options.bounce > 0;
+
+    if (needsSeparateHistory !== (this._bounceHistory !== null)) {
+      // The old display may have been normal-shaded. Invalidate one bounce
+      // frame rather than treating that output as incoming radiance.
+      this.invalidateHistory();
+
+      const oldHistory = this._bounceHistory;
+
+      this._bounceHistory = needsSeparateHistory
+        ? new RenderTexture(1, 1, { format: this._target.format, scaleMode: this._target.scaleMode })
+        : null;
+      this._transportCascade?._setTexture('uHistory', this._bounceHistory ?? this._target);
+      oldHistory?.destroy();
+    }
+
     this._normals = normals;
     this._buildNormalGather();
   }
@@ -350,6 +371,7 @@ export class RadianceField {
     // axis and doubling the directions per axis leaves the product alone.
     this._chain[0].setSize(this._probesX * 2, this._probesY * 2);
     this._chain[1].setSize(this._probesX, this._probesY);
+    this._bounceHistory?.setSize(this._target.width, this._target.height);
 
     const walking = this._walk;
 
@@ -409,11 +431,9 @@ export class RadianceField {
   }
 
   /**
-   * Forget the gathered light field.
-   *
-   * The bounce reads it as the previous frame's answer, and a target that has
-   * just been resized or has never been written holds whatever the driver
-   * left there. The next frame bounces nothing and the one after it resumes.
+   * Invalidate the previous frame's unweighted incoming radiance, stored in
+   * the display target only when normal shading does not require its own
+   * history. Resized or unwritten targets cannot be sampled for bounce.
    */
   public invalidateHistory(): void {
     this._history = false;
@@ -448,6 +468,8 @@ export class RadianceField {
     this._above.destroy();
     this._transportCascade?.destroy();
     this._transportGather?.destroy();
+    this._normalGather?.destroy();
+    this._bounceHistory?.destroy();
     this._emitterCount = 0;
     this._sun = null;
   }
@@ -565,6 +587,15 @@ export class RadianceField {
     }
 
     if (shaded !== null) {
+      if (this._bounceHistory !== null) {
+        // The normal gather consumes the raw four directions, while bounce
+        // needs the ordinary unweighted average of those same directions.
+        // This extra reconstruction repeats no transport walks or cascades.
+        this._average.uniforms.uTile.set(2);
+        this._average.apply(backend, raw, compact);
+        gather.apply(backend, compact, this._bounceHistory);
+      }
+
       shaded.apply(backend, raw, this._target);
     } else {
       gather.apply(backend, source, this._target);
