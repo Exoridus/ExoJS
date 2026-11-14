@@ -21,5 +21,6 @@ This is **not** simply a presentation draw. The root canvas in the historical di
 - These counters are an **ExoJS-only** software-rasterizer regression baseline, not a comparison against PixiJS/Phaser and not GPU timings.
 - `drawCalls`, `textureBinds`, `bufferUploads` retain exact integer gates, with no relaxation.
 - The existing 58 per-frame + 2 three-frame-total cell bases and all 60 guarded cells remain unchanged.
+- Browser bloom qualification compares the unfiltered **same white input** scene with the unchanged strict pixel thresholds; separately, both blur paths must increase at least 1,000 pixels. Their blurred brightness is **not** asserted pixel-identical, because the two libraries perform blur in different intermediate color representations. The first post-presentation run correctly surfaced a maximum 80-code-value mismatch in the old absolute bloom comparison. This is a recorded cross-engine limitation, not proof of an ExoJS output-encode defect.
 - Hardware color/pixel parity for representative workloads on WebGL2 and WebGPU, independently known Pixi tilemap issues and the Phaser high-load limit remain separately qualified.
 - Publication-quality cross-engine performance claims require new hardware acquisitions with appropriate version, adapter, display and profile provenance.
