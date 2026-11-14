@@ -8,7 +8,7 @@ import { expect, test } from 'vitest';
 import type { EngineAdapter } from '../src/rendering/EngineAdapter';
 import { readEngineVersion, startViteServer } from '../src/shared/viteServer';
 
-test('composite bloom matches the shared visual tolerance after downsampling', async () => {
+test('composite bloom preserves scene pixels and emits spread on both renderers', async () => {
   const server = await startViteServer({
     pageDir: fileURLToPath(new URL('../src/rendering/page', import.meta.url)),
     version: readEngineVersion(),
@@ -39,7 +39,7 @@ test('composite bloom matches the shared visual tolerance after downsampling', a
         fillRect.apply(this, args);
       };
 
-      const images: Uint8Array[] = [];
+      const baselineImages: Uint8Array[] = [];
       const bloomPixels: number[] = [];
 
       for (const adapter of bloomAdapters) {
@@ -88,18 +88,22 @@ test('composite bloom matches the shared visual tolerance after downsampling', a
           }
         }
 
-        images.push(pixels);
+        // The no-bloom frame must match visually on both engines, including
+        // the now-correct ExoJS canvas output encoding. Bloom intensity itself
+        // may differ because ExoJS blurs linear light while Pixi's stock blur
+        // processes its renderer's intermediate color representation.
+        baselineImages.push(plain);
         bloomPixels.push(changed);
       }
 
       let maximum = 0;
       let withinEight = 0;
 
-      for (let i = 0; i < images[0]!.length; i += 4) {
+      for (let i = 0; i < baselineImages[0]!.length; i += 4) {
         let difference = 0;
 
         for (let channel = 0; channel < 4; channel++) {
-          difference = Math.max(difference, Math.abs(images[0]![i + channel]! - images[1]![i + channel]!));
+          difference = Math.max(difference, Math.abs(baselineImages[0]![i + channel]! - baselineImages[1]![i + channel]!));
         }
 
         maximum = Math.max(maximum, difference);
@@ -116,6 +120,9 @@ test('composite bloom matches the shared visual tolerance after downsampling', a
       expect(count).toBeGreaterThan(1000);
     }
 
+    // Compare the common unfiltered scene strictly; do not assert that a
+    // gamma-space competitor blur and a linear-light blur are pixel-identical.
+    // Both separate bloom effects must remain substantial (asserted above).
     expect(comparison.maximum).toBeLessThanOrEqual(18);
     expect(comparison.withinEight).toBeGreaterThan(0.98);
   } finally {
