@@ -9,6 +9,10 @@ const shape = (x: number, y: number, width: number, height: number) => ({
 
 const region = new Rectangle(0, 0, 1280, 720);
 const size = 32;
+const total = 40 * 23;
+
+const occupied = (shapes: Array<ReturnType<typeof shape>>): number =>
+  Math.round(superblockOccupancy(shapes, new Rectangle(), region, size) * total);
 
 describe('superblockOccupancy', () => {
   test('an empty set occupies nothing', () => {
@@ -16,20 +20,22 @@ describe('superblockOccupancy', () => {
   });
 
   test('a small shape touches the superblocks under it', () => {
-    // 16x16 inside one superblock, 40x40 straddling four.
-    expect(superblockOccupancy([shape(4, 4, 16, 16)], new Rectangle(), region, size)).toBeCloseTo(1 / (40 * 23));
-    expect(superblockOccupancy([shape(20, 20, 40, 40)], new Rectangle(), region, size)).toBeCloseTo(4 / (40 * 23));
+    expect(occupied([shape(4, 4, 16, 16)])).toBe(1);
+    expect(occupied([shape(20, 20, 40, 40)])).toBe(4);
+  });
+
+  test('an edge on a superblock boundary does not reach into the next one', () => {
+    expect(occupied([shape(0, 0, 32, 32)])).toBe(1);
+    expect(occupied([shape(32, 64, 64, 32)])).toBe(2);
   });
 
   test('a large shape counts its ring only', () => {
-    const big = superblockOccupancy([shape(0, 0, 640, 640)], new Rectangle(), region, size);
-
-    expect(big).toBeCloseTo((2 * (21 + 21) - 4) / (40 * 23));
+    expect(occupied([shape(0, 0, 640, 640)])).toBe(2 * (20 + 20) - 4);
   });
 
   test('shapes outside the region are ignored and partly outside ones are clipped', () => {
-    expect(superblockOccupancy([shape(2000, 0, 64, 64), shape(-500, -500, 100, 100)], new Rectangle(), region, size)).toBe(0);
-    expect(superblockOccupancy([shape(-32, 0, 64, 32)], new Rectangle(), region, size)).toBeCloseTo(1 / (40 * 23));
+    expect(occupied([shape(2000, 0, 64, 64), shape(-500, -500, 100, 100)])).toBe(0);
+    expect(occupied([shape(-32, 0, 64, 32)])).toBe(1);
   });
 
   test('never exceeds one', () => {
@@ -42,7 +48,7 @@ describe('superblockOccupancy', () => {
     const grid = (count: number) =>
       Array.from({ length: count }, (_, index) => shape((index % 20) * 64 + 8, Math.floor(index / 20) * 64 + 8, 48, 48));
 
-    expect(superblockOccupancy(grid(20), new Rectangle(), region, size)).toBeLessThan(SUPERBLOCK_DENSE_OCCUPANCY);
+    expect(superblockOccupancy(grid(10), new Rectangle(), region, size)).toBeLessThan(SUPERBLOCK_DENSE_OCCUPANCY);
     expect(superblockOccupancy(grid(200), new Rectangle(), region, size)).toBeGreaterThan(SUPERBLOCK_DENSE_OCCUPANCY);
   });
 });

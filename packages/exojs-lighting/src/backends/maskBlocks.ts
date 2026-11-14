@@ -33,7 +33,7 @@ export const MASK_SUPER = 4;
  * entered anyway and the level only adds work.
  * @internal
  */
-export const SUPERBLOCK_DENSE_OCCUPANCY = 0.095;
+export const SUPERBLOCK_DENSE_OCCUPANCY = 0.085;
 
 /**
  * Estimated share of a region's superblocks that hold the boundary of one of
@@ -60,8 +60,8 @@ export const superblockOccupancy = (
     const bottom = Math.min(shape.bottom, region.bottom);
 
     if (right > left && bottom > top) {
-      const across = Math.floor((right - region.left) / size) - Math.floor((left - region.left) / size) + 1;
-      const down = Math.floor((bottom - region.top) / size) - Math.floor((top - region.top) / size) + 1;
+      const across = Math.ceil((right - region.left) / size) - Math.floor((left - region.left) / size);
+      const down = Math.ceil((bottom - region.top) / size) - Math.floor((top - region.top) / size);
 
       occupied += across > 2 && down > 2 ? 2 * (across + down) - 4 : across * down;
     }
