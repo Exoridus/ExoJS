@@ -3,6 +3,7 @@ import type { MockInstance } from 'vitest';
 import { getAudioContext } from '#audio/audioContext';
 import { AudioSystem } from '#audio/AudioSystem';
 import { NoopVoice } from '#audio/NoopVoice';
+import type { Loopable, RatePitched, Voice } from '#audio/Playable';
 import { Sound } from '#audio/Sound';
 
 interface MockBufferSourceNode {
@@ -302,6 +303,32 @@ describe('Sound', () => {
     for (const src of factory.sources) {
       expect(src.stop).not.toHaveBeenCalled();
     }
+
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('voices of one sound keep their own play options and never rewrite the sound defaults', () => {
+    const factory = setupSourceFactorySpy();
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub(), { poolSize: 3, volume: 0.5, loop: false, playbackRate: 1 });
+
+    const loud = system.play(sound, { volume: 1, loop: true, playbackRate: 2 }) as Voice & Loopable & RatePitched;
+    const quiet = system.play(sound, { volume: 0.25 }) as Voice & Loopable & RatePitched;
+
+    expect(sound.volume).toBe(0.5);
+    expect(sound.loop).toBe(false);
+    expect(sound.playbackRate).toBe(1);
+    expect(loud.loop).toBe(true);
+    expect(quiet.loop).toBe(false);
+    expect(loud.playbackRate).toBe(2);
+    expect(quiet.playbackRate).toBe(1);
+
+    quiet.stop();
+
+    expect(quiet.ended).toBe(true);
+    expect(loud.ended).toBe(false);
+    expect(factory.sources[0]!.stop).not.toHaveBeenCalled();
 
     factory.restore();
     sound.destroy();
