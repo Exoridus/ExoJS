@@ -198,9 +198,11 @@ describe('RadianceField transport wiring', () => {
     const normals = new RenderTexture(64, 64);
     const display = field['_target'];
     const cascadeHistory = (): RenderTexture | undefined =>
-      (field['_transportCascade'] as unknown as {
-        _bindings: { textures: Record<string, RenderTexture> };
-      })._bindings.textures['uHistory'];
+      (
+        field['_transportCascade'] as unknown as {
+          _bindings: { textures: Record<string, RenderTexture> };
+        }
+      )._bindings.textures['uHistory'];
 
     field.useTransport(bindingFor(1, 9));
     field.update(view, fieldView, 1, Color.black);
@@ -265,6 +267,7 @@ describe('RadianceField transport wiring', () => {
     for (const spy of spies) {
       spy.mockRestore();
     }
+
     normals.destroy();
     field.destroy();
   });
@@ -280,13 +283,14 @@ describe('RadianceField transport wiring', () => {
     expect(field['_bounceHistory']).toBeNull();
     expect(field['_normalGather']).not.toBeNull();
     expect(
-      (field['_transportCascade'] as unknown as {
-        _bindings: { textures: Record<string, RenderTexture> };
-      })._bindings.textures['uHistory'],
+      (
+        field['_transportCascade'] as unknown as {
+          _bindings: { textures: Record<string, RenderTexture> };
+        }
+      )._bindings.textures['uHistory'],
     ).toBe(field['_target']);
 
     normals.destroy();
     field.destroy();
   });
-
 });
