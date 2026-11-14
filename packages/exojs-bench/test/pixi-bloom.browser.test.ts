@@ -41,6 +41,9 @@ test('composite bloom preserves scene pixels and emits spread on both renderers'
 
       const baselineImages: Uint8Array[] = [];
       const bloomPixels: number[] = [];
+      const darkenedPixels: number[] = [];
+      const changedAlphaPixels: number[] = [];
+      const repeatedFrameMismatchPixels: number[] = [];
 
       for (const adapter of bloomAdapters) {
         const captures: Uint8Array[] = [];
@@ -71,6 +74,28 @@ test('composite bloom preserves scene pixels and emits spread on both renderers'
             gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
             const pixels = new Uint8Array(1280 * 720 * 4);
             gl.readPixels(0, 0, 1280, 720, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+            // An additive post-process must not accumulate across identical,
+            // separately cleared frames. Compare after the next full render,
+            // not merely after re-reading the same framebuffer.
+            adapter.renderFrame();
+            gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+            const repeated = new Uint8Array(pixels.length);
+            gl.readPixels(0, 0, 1280, 720, gl.RGBA, gl.UNSIGNED_BYTE, repeated);
+            let mismatched = 0;
+
+            for (let i = 0; i < pixels.length; i += 4) {
+              if (
+                Math.abs(pixels[i]! - repeated[i]!) > 2 ||
+                Math.abs(pixels[i + 1]! - repeated[i + 1]!) > 2 ||
+                Math.abs(pixels[i + 2]! - repeated[i + 2]!) > 2 ||
+                Math.abs(pixels[i + 3]! - repeated[i + 3]!) > 2
+              ) {
+                mismatched++;
+              }
+            }
+
+            repeatedFrameMismatchPixels.push(mismatched);
             captures.push(pixels);
           } finally {
             adapter.teardown();
@@ -81,10 +106,27 @@ test('composite bloom preserves scene pixels and emits spread on both renderers'
 
         const [plain, pixels] = captures as [Uint8Array, Uint8Array];
         let changed = 0;
+        let darkened = 0;
+        let alphaChanged = 0;
 
         for (let i = 0; i < pixels.length; i += 4) {
           if (pixels[i]! > plain[i]! + 8) {
             changed++;
+          }
+
+          // This archetype adds a blurred copy of the scene. It must not
+          // darken the underlying image or silently change canvas opacity.
+          // Allow two code values for rasterization/quantization noise.
+          if (
+            pixels[i]! < plain[i]! - 2 ||
+            pixels[i + 1]! < plain[i + 1]! - 2 ||
+            pixels[i + 2]! < plain[i + 2]! - 2
+          ) {
+            darkened++;
+          }
+
+          if (pixels[i + 3] !== plain[i + 3]) {
+            alphaChanged++;
           }
         }
 
@@ -94,6 +136,8 @@ test('composite bloom preserves scene pixels and emits spread on both renderers'
         // processes its renderer's intermediate color representation.
         baselineImages.push(plain);
         bloomPixels.push(changed);
+        darkenedPixels.push(darkened);
+        changedAlphaPixels.push(alphaChanged);
       }
 
       let maximum = 0;
@@ -113,12 +157,25 @@ test('composite bloom preserves scene pixels and emits spread on both renderers'
         }
       }
 
-      return { maximum, withinEight: withinEight / (1280 * 720), bloomPixels };
+      return {
+        maximum,
+        withinEight: withinEight / (1280 * 720),
+        bloomPixels,
+        darkenedPixels,
+        changedAlphaPixels,
+        repeatedFrameMismatchPixels,
+      };
     });
 
     for (const count of comparison.bloomPixels) {
       expect(count).toBeGreaterThan(1000);
     }
+
+    // Both engines must preserve the original scene under additive bloom and
+    // reproduce the same frame after a second render, without feedback trails.
+    expect(comparison.darkenedPixels).toEqual([0, 0]);
+    expect(comparison.changedAlphaPixels).toEqual([0, 0]);
+    expect(comparison.repeatedFrameMismatchPixels).toEqual([0, 0, 0, 0]);
 
     // Compare the common unfiltered scene strictly; do not assert that a
     // gamma-space competitor blur and a linear-light blur are pixel-identical.
