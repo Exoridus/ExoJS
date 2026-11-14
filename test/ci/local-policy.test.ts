@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { GATE_GROUPS } from '../../scripts/ci/gate-groups.ts';
-import { parseLocalLaneOptions, selectLocalLanes } from '../../scripts/ci/local-lanes.ts';
+import { needsDist, parseLocalLaneOptions, selectLocalLanes } from '../../scripts/ci/local-lanes.ts';
 import { selectLocalPolicy } from '../../scripts/ci/local-policy.ts';
 import { effectiveLanes, selectAreas } from '../../scripts/ci/select-lanes.ts';
 
@@ -101,5 +101,19 @@ describe('local validation policy', () => {
     expect(lanesFor('packages/exojs-audio-fx/src/AudioFx.ts').map(lane => lane.id)).toEqual(['unit', 'audio']);
     expect(lanesFor('vitest.config.ts').find(lane => lane.id === 'unit')?.run).toContain('pnpm test && pnpm test:alloc');
     expect(lanesFor('unexpected/new.kind').map(lane => lane.id)).toContain('webgpu');
+  });
+
+  it('brings dist up to date before the first lane only when a selected lane reads it', () => {
+    const all = (file: string) => selectLocalLanes(effectiveLanes(selectAreas([file])), parseLocalLaneOptions([]), [file]);
+
+    // The site gates and the example smoke read dist; a stale or missing build
+    // would otherwise fail them after every lane ahead of them had run.
+    expect(
+      all('site/src/pages/index.astro')
+        .filter(lane => lane.dist)
+        .map(lane => lane.id),
+    ).toEqual(['site', 'smoke']);
+    expect(needsDist(all('src/rendering/Renderer.ts'))).toBe(true);
+    expect(needsDist(all('README.md'))).toBe(false);
   });
 });

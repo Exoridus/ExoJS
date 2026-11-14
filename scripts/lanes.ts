@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { laneTimeoutMinutes } from './ci/lanes.ts';
-import { parseLocalLaneOptions, selectLocalLanes } from './ci/local-lanes.ts';
+import { DIST_PREFLIGHT, needsDist, parseLocalLaneOptions, selectLocalLanes } from './ci/local-lanes.ts';
 import { effectiveLanes, type LaneAreas, selectAreas } from './ci/select-lanes.ts';
 import { atLeastOutputMode, readOutputOptions } from './lib/output.ts';
 import { runCommand, type RunCommandResult } from './lib/run-command.ts';
@@ -62,6 +62,7 @@ const main = async (): Promise<void> => {
   const files = options.all || options.only ? [] : changedFiles(options.base);
   const areas = options.all || options.only ? ALL_AREAS : selectAreas(files);
   const selected = selectLocalLanes(effectiveLanes(areas), options, files);
+  const distPreflight = needsDist(selected);
   const diagnostic = options.only !== undefined || options.quick;
   const scope = options.only
     ? `diagnostic subset: ${options.only.join(', ')}`
@@ -71,6 +72,10 @@ const main = async (): Promise<void> => {
 
   if (!options.run || outputOptions.mode !== 'silent') {
     process.stdout.write(`lanes: ${scope}\n`);
+
+    if (distPreflight) {
+      process.stdout.write(`  dist (before the first lane): ${DIST_PREFLIGHT}\n`);
+    }
 
     for (const lane of selected) {
       process.stdout.write(`  ${lane.id}: ${lane.run} (limit ${laneTimeoutMinutes(lane)}m)\n`);
@@ -126,7 +131,23 @@ const main = async (): Promise<void> => {
       lock = await waitForValidationLock(process.cwd(), controller.signal, onWait);
     }
 
-    for (const lane of selected) {
+    if (distPreflight) {
+      const result = await runCommand({
+        label: 'dist',
+        command: DIST_PREFLIGHT,
+        signal: controller.signal,
+        output: outputOptions.mode,
+      });
+
+      results.push({ id: 'dist', result });
+      retainLock ||= result.cleanupError !== undefined;
+
+      if (result.status !== 0 || interrupted !== 0) {
+        status = interrupted || result.status;
+      }
+    }
+
+    for (const lane of status === 0 ? selected : []) {
       if (controller.signal.aborted) {
         status = interrupted;
         break;
@@ -148,7 +169,7 @@ const main = async (): Promise<void> => {
       }
     }
 
-    completed = status === 0 && results.length === selected.length;
+    completed = status === 0 && results.length === selected.length + (distPreflight ? 1 : 0);
   } catch (error) {
     if (!controller.signal.aborted) {
       throw error;

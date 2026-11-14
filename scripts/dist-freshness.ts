@@ -34,11 +34,14 @@ export interface BuildUnit {
  */
 const TOOLING_PACKAGES = new Set(['exojs-build', 'exojs-config', 'exojs-bench', 'exojs-examples', 'exojs-cli']);
 
+/** Name of the Core build unit, which every dist consumer reads. */
+export const CORE_UNIT = '@codexo/exojs';
+
 /** Core plus every runtime extension package, whether or not it has been built. */
 export const collectBuildUnits = (): BuildUnit[] => {
   const units: BuildUnit[] = [
     {
-      name: '@codexo/exojs',
+      name: CORE_UNIT,
       sourceDirs: coreSourceRoots(repoRoot),
       distDir: join(repoRoot, 'dist'),
       built: existsSync(join(repoRoot, 'dist', 'esm', 'index.js')),

@@ -11,14 +11,25 @@ export interface LocalLaneOptions {
   only?: string[];
 }
 
-const SITE_LANE: Lane = { id: 'site', stage: 'gates', when: 'siteBuild', run: 'pnpm gates site', local: 'gate' };
+const SITE_LANE: Lane = { id: 'site', stage: 'gates', when: 'siteBuild', run: 'pnpm gates site', local: 'gate', dist: true };
 const SMOKE_LANE: Lane = {
   id: 'smoke',
   stage: 'verify',
   when: 'exampleSmoke',
   run: 'pnpm site:build && pnpm test:examples:smoke --sample && pnpm test:playground:e2e',
   local: 'browser',
+  dist: true,
 };
+
+/**
+ * Brings dist up to date when a selected lane reads it, before the first lane
+ * runs: a missing or stale build then costs its build time up front instead of
+ * failing the dist lane after every other lane has already run.
+ */
+export const DIST_PREFLIGHT = 'tsx scripts/check-dist-fresh.ts --rebuild';
+
+/** Whether any of `lanes` reads the built dist rather than the sources. */
+export const needsDist = (lanes: readonly Lane[]): boolean => lanes.some(lane => lane.dist === true);
 const eligible = (lane: Lane): boolean => lane.stage !== 'verify' && !lane.ciOnly;
 const available = (): Lane[] => [...LANES.filter(eligible), SITE_LANE, SMOKE_LANE];
 
