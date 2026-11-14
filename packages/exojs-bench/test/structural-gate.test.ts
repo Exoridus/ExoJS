@@ -245,14 +245,14 @@ describe('the committed baseline', () => {
     }
   });
 
-  test('qualifies both lifecycle baselines without changing their three-frame counters', () => {
+  test('qualifies both lifecycle baselines with the measured presentation-inclusive counters', () => {
     const lifecycle = baseline.cells.filter(entry => entry.archetype === 'particles-lifecycle');
 
     expect(lifecycle).toHaveLength(2);
     expect(lifecycle).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ config: 'current', drawCalls: 6, textureBinds: 12, bufferUploads: 10, countBasis: 'total', frames: 3 }),
-        expect.objectContaining({ config: 'retained', drawCalls: 6, textureBinds: 12, bufferUploads: 10, countBasis: 'total', frames: 3 }),
+        expect.objectContaining({ config: 'current', drawCalls: 9, textureBinds: 27, bufferUploads: 10, countBasis: 'total', frames: 3 }),
+        expect.objectContaining({ config: 'retained', drawCalls: 9, textureBinds: 27, bufferUploads: 10, countBasis: 'total', frames: 3 }),
       ]),
     );
     expect(baseline.cells.filter(entry => entry.countBasis === 'per-frame')).toHaveLength(58);
