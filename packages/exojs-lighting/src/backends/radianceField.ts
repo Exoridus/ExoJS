@@ -589,8 +589,9 @@ export class RadianceField {
     if (shaded !== null) {
       if (this._bounceHistory !== null) {
         // The normal gather consumes the raw four directions, while bounce
-        // needs the ordinary unweighted average of those same directions.
-        // This extra reconstruction repeats no transport walks or cascades.
+        // needs the ordinary unweighted average of those same directions. The
+        // cascades are not repeated, but the plain gather walks from each
+        // fragment to its four probes again.
         this._average.uniforms.uTile.set(2);
         this._average.apply(backend, raw, compact);
         gather.apply(backend, compact, this._bounceHistory);
