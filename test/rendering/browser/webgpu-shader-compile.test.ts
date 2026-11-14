@@ -77,6 +77,7 @@ interface ShaderEntry {
 // the composition is the only whole program there is to compile.
 const composedCascade = transportCascadeShader(cascadeUniforms);
 const composedGather = transportGatherShader(gatherUniforms);
+const composedNormalGather = transportGatherShader(gatherUniforms, true);
 
 const shaders: readonly ShaderEntry[] = [
   { name: 'WebGpuBackend mipmap pipeline', source: mipmapWgsl },
@@ -121,6 +122,10 @@ const shaders: readonly ShaderEntry[] = [
   { name: 'lighting shadow march (generated uniform block)', source: shadowMarchShader._resolveWgsl(filterUniformGroup)! },
   { name: 'lighting radiance cascade (composed, generated uniform block)', source: composedCascade._resolveWgsl(filterUniformGroup)! },
   { name: 'lighting radiance gather (composed, generated uniform block)', source: composedGather._resolveWgsl(filterUniformGroup)! },
+  {
+    name: 'lighting radiance gather with normals (composed, generated uniform block)',
+    source: composedNormalGather._resolveWgsl(filterUniformGroup)!,
+  },
 ];
 
 // On the software (SwiftShader) adapter the WebGPU device can drop

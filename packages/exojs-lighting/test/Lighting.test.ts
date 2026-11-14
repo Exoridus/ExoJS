@@ -526,7 +526,7 @@ describe('Lighting', () => {
     expect(lighting.stopNormals(drawable)).toBe(false);
   });
 
-  test('radiance records a registered surface and takes no normals from it', () => {
+  test('radiance takes normals from a registered surface and draws the prepass ahead of the cascades', () => {
     const app = fakeApp();
     const lighting = new RadianceLighting(app, { ambient: Color.black });
     const drawable = {
@@ -540,12 +540,14 @@ describe('Lighting', () => {
     lighting.normalsFrom(drawable, new NormalMap(Texture.fromColor(Color.white, 1, { colorSpace: 'none' })));
     lighting.update();
 
-    // The gather averages a probe's rays into one arriving colour, so there is
-    // no incident direction a normal could be measured against. The surface
-    // stays registered - a renderer switch would read it - and no prepass is
-    // drawn for it.
     expect(lighting.surfaces).toHaveLength(1);
-    expect(lighting.activeSurfaceCount).toBe(0);
+    expect(lighting.activeSurfaceCount).toBe(1);
+
+    // The gather reads the normals while it builds the light field.
+    const labels = [...app.framePasses].map(pass => pass.label);
+
+    expect(labels.indexOf('lighting:normals')).toBeGreaterThanOrEqual(0);
+    expect(labels.indexOf('lighting:normals')).toBeLessThan(labels.indexOf('lighting:cascades'));
 
     lighting.destroy();
   });

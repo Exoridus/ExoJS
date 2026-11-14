@@ -255,7 +255,8 @@ export abstract class Lighting {
   /**
    * Surfaces the last frame actually took normals from. Lower than
    * {@link surfaces} when some are hidden or carry no texture, and zero under
-   * every renderer but `lightmap`. See {@link normalsFrom}.
+   * `forward`, which takes its normals from {@link LitMaterial}. See
+   * {@link normalsFrom}.
    */
   public get activeSurfaceCount(): number {
     return this._backend.activeSurfaceCount;
@@ -370,14 +371,18 @@ export abstract class Lighting {
    * lighting.normalsFrom(crate, new NormalMap(crateNormals));
    * ```
    *
-   * Only `lightmap` reads these. `forward` shades inside the sprite stage and
-   * takes its normals from {@link LitMaterial} instead, and `radiance` gathers
-   * each probe's rays into one arriving colour, which leaves no incident
-   * direction at a fragment for a normal to be measured against - under both,
-   * registering a surface is recorded and ignored, and
-   * {@link activeSurfaceCount} stays at zero. Nothing is required of a
-   * drawable that is not registered: it is lit as a plane, which is what the
-   * renderer already assumed of everything.
+   * `lightmap` and `radiance` read these. `forward` shades inside the sprite
+   * stage and takes its normals from {@link LitMaterial} instead, so under it
+   * registering a surface is recorded and ignored, and {@link activeSurfaceCount}
+   * stays at zero. Under `radiance` the finest cascade's four directions are
+   * weighted by what the surface takes of each, as if every ray arrived at a
+   * fixed elevation over the plane: a flat normal keeps exactly the light it had
+   * without normals, a tilted one takes more from the directions it faces, and
+   * ambient and bounce are not changed by it. With four directions the light
+   * direction is resolved coarsely, so a strongly tilted normal shades with a
+   * harder edge than under `lightmap`. Nothing is required of a drawable that is
+   * not registered: it is lit as a plane, which is what the renderer already
+   * assumed of everything.
    *
    * The drawable and the source are the caller's; the system only reads them.
    * Registering the same drawable twice replaces its source rather than

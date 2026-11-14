@@ -22,7 +22,7 @@ npm install --save-exact @codexo/exojs @codexo/exojs-lighting
 | --- | --- | --- |
 | `ForwardLighting` | Per-sprite material lighting, including authored normals. | Each lit fragment considers the active lights; the light count is capacity-bounded. It does not cast the screen-space shadows of the other models. |
 | `LightmapLighting` | Lights and registered shadows over a composed frame. | It owns frame passes and offscreen targets. Normal mapping uses registered surfaces in a prepass. |
-| `RadianceLighting` | Light propagation and source-sized penumbrae through occluding geometry. | It samples a radiance field, needs a renderable float target, and has different visual and cost characteristics. It does not use the lightmap normal prepass. |
+| `RadianceLighting` | Light propagation and source-sized penumbrae through occluding geometry. | It samples a radiance field, needs a renderable float target, and has different visual and cost characteristics. Registered normal surfaces are shaded against, with the finest cascade's four directions as the only angular resolution. |
 
 Start with the simplest model that produces the required image. A large number of lights is not free in any model: collection, geometry, field resolution, transport, and pixel work still cost time even when there is no fixed light-count cap.
 
@@ -50,7 +50,7 @@ Use the lighting debug views to inspect the collected occluders and their raster
 
 ## Normal maps
 
-Forward lighting reads normals from a `LitMaterial`; lightmap lighting uses `normalsFrom` to register a drawable and its normal source. Without a registered normal source, the lightmap path lights that surface without the normal prepass contribution. A normal map changes surface response; it does not create occluding geometry.
+Forward lighting reads normals from a `LitMaterial`; lightmap and radiance lighting use `normalsFrom` to register a drawable and its normal source. Without a registered normal source, those paths light that surface without the normal prepass contribution. Radiance weights the four directions the finest cascade holds by what the surface takes of each, as if every ray arrived at a fixed elevation over the plane, so a flat normal keeps the light it had without normals and ambient and bounce are not changed by the weighting; the light direction is resolved coarsely, so a strongly tilted normal shades with a harder edge than under lightmap. A normal map changes surface response; it does not create occluding geometry.
 
 The default authored convention is OpenGL-style tangent space: red points right, green points toward the top of the image, and blue points out of the sprite plane. For a DirectX-style asset, declare `new NormalMap(texture, { convention: 'directx' })`. Flipping the green channel is not the same operation as flipping the texture vertically, and neither changes the engine's y-down world coordinates.
 
@@ -60,7 +60,7 @@ Colour and data stay separate throughout. Albedo textures are ordinary sRGB colo
 
 Use the same atlas layout for albedo and normals. A material binding is shared by the sprites using that material, so a second atlas generally needs its own corresponding material. `AlphaNormals` derives surface detail from a silhouette; it cannot reconstruct interior detail that the alpha channel does not contain.
 
-The lightmap normal prepass stores one normal per covered pixel. Overlapping registered surfaces resolve by registration order within that prepass, not by an inferred full scene ordering. Test layered surfaces rather than assuming that a single normal buffer describes every overlap.
+The normal prepass of the lightmap and radiance models stores one normal per covered pixel. Overlapping registered surfaces resolve by registration order within that prepass, not by an inferred full scene ordering. Test layered surfaces rather than assuming that a single normal buffer describes every overlap.
 
 <ExamplePreview chapter="lighting" slug="lightmap-normals" />
 

@@ -119,6 +119,7 @@ const generatedUniformBlocks: ReadonlyMap<string, string> = new Map([
  */
 const composedCascade = transportCascadeShader(cascadeUniforms);
 const composedGather = transportGatherShader(gatherUniforms);
+const composedNormalGather = transportGatherShader(gatherUniforms, true);
 const composedFragments: ReadonlyMap<string, string> = new Map([
   [
     'cascade-transport.frag',
@@ -127,6 +128,10 @@ const composedFragments: ReadonlyMap<string, string> = new Map([
   [
     'cascade-gather-transport.frag',
     withGlslUniformDeclarations(composedGather.glsl!.fragment, generateGlslUniformDeclarations(composedGather.uniformSchema!)),
+  ],
+  [
+    'cascade-gather-transport-normals.frag',
+    withGlslUniformDeclarations(composedNormalGather.glsl!.fragment, generateGlslUniformDeclarations(composedNormalGather.uniformSchema!)),
   ],
   // Neither the chunk nor the preamble has a body of its own; the cascade's
   // composition is the smallest whole program that contains them.
