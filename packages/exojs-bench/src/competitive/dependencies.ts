@@ -1,9 +1,6 @@
 import { type LibraryProvenance, readLibraryProvenance } from '../shared/provenance';
 
-/**
- * The rendering competitor workspace is intentionally outside the root pnpm
- * workspace. A normal install is not equivalent to bench:setup.
- */
+/** Packages each competitive engine imports in the benchmark page. */
 const COMPETITOR_PACKAGES: Readonly<Record<string, readonly string[]>> = {
   pixi: ['pixi.js', '@pixi/tilemap', '@pixi/layout'],
   phaser: ['phaser'],
@@ -13,12 +10,9 @@ export const requiredCompetitivePackages = (engines: readonly string[]): string[
   [...new Set(engines.flatMap(engine => COMPETITOR_PACKAGES[engine] ?? []))].sort();
 
 /**
- * Diagnostic only. Node's require-condition resolution can reject ESM-only
- * packages that Vite imports successfully. A negative result is not proof that
- * the package is absent, especially when pnpm uses Windows directory junctions.
- *
- * The browser's per-cell dynamic import is authoritative. Never block a
- * benchmark or recommend reinstalling based solely on this metadata lookup.
+ * The required competitor packages whose installed manifest is missing or
+ * unreadable. Competitors are devDependencies of this package, so a hit means
+ * the workspace install is incomplete.
  */
 export const inspectCompetitiveDependencies = (
   engines: readonly string[],

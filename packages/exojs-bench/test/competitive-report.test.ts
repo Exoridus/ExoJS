@@ -148,7 +148,6 @@ const run = (runIndex: number, cells: readonly ObservedCell[]): CompetitiveRun =
     dirty: false,
     trackedDiffSha256: 'c'.repeat(64),
     workspaceLockSha256: 'd'.repeat(64),
-    competitorLockSha256: 'e'.repeat(64),
   },
   host: {
     os: 'linux 6.8',
@@ -443,7 +442,7 @@ describe('competitive report evidence', () => {
     expect(comparison.status).toBe('DIAGNOSTIC_ONLY');
     expect(comparison.cells[0]!.exploratory!.ratio).toBe(1);
     expect(compareCompetitiveSessions(baseline, { ...current, protocolHash: 'changed' }).cells[0]!.exploratory).toBeNull();
-    const changedLock = mapRuns(current, value => ({ ...value, source: { ...value.source, competitorLockSha256: '9'.repeat(64) } }));
+    const changedLock = mapRuns(current, value => ({ ...value, source: { ...value.source, workspaceLockSha256: '9'.repeat(64) } }));
     expect(compareCompetitiveSessions(baseline, changedLock).cells[0]!.exploratory).toBeNull();
   });
 });

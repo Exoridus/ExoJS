@@ -37,7 +37,6 @@ const STYLE_FILES = [
   'packages/*/*.config.ts',
   'packages/create-exo-app/templates/**/*.ts',
   'packages/create-exo-app/bin/*.js',
-  'packages/exojs-bench/competitors/*.ts',
 ];
 
 export default defineConfig([
@@ -1076,7 +1075,6 @@ export default defineConfig([
       'eslint.config.ts',
       'scripts/**/*.{ts,mts,cts}',
       'scripts/**/*.mjs',
-      'packages/exojs-bench/competitors/*.ts',
       'packages/create-exo-app/bin/*.js',
       // The demo-assets generators and archive/copy tooling are Node scripts
       // that belong to no package TypeScript program (the package tsconfigs
@@ -1331,7 +1329,7 @@ export default defineConfig([
   // ship to consumers, and report progress on stdout by design - `no-console`
   // is the wrong rule here, not a violation to silence per-line.
   {
-    files: ['scripts/**/*.ts', 'packages/exojs-bench/competitors/*.ts', '*.config.ts'],
+    files: ['scripts/**/*.ts', '*.config.ts'],
     rules: {
       'no-console': 'off',
     },

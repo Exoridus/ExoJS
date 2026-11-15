@@ -294,74 +294,25 @@ export interface LibraryProvenance {
   readonly resolvedFrom: string;
 }
 
+const BENCH_NODE_MODULES = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', 'node_modules');
+
 /**
- * The benchmark's isolated competitor workspace is linked directly into its
- * node_modules by bench:setup (including Windows directory junctions). Reading
- * package.json from that explicit directory avoids Node's require-conditions
- * resolver, which cannot resolve import-only ESM packages even though Vite can.
- *
- * Keep this as a filesystem check, not a claim that the module can be loaded:
- * the browser adapter remains the authoritative runtime test.
+ * The package's manifest inside this package's own `node_modules`, read by path.
+ * Packages that hide `./package.json` behind an `exports` map, or that are
+ * import-only ESM, cannot be found through `require.resolve`.
  */
-/**
- * tsx/esm and the benchmark's package scripts do not necessarily resolve source
- * URLs from the same location. Both the source-relative path and pnpm's package
- * working directory are valid candidates. Keep directory existence as the
- * source of truth; do not infer installation from require.resolve().
- */
-const SOURCE_BENCH_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const BENCH_ROOT_CANDIDATES = [
-  ...new Set([SOURCE_BENCH_ROOT, process.cwd(), resolve(process.cwd(), 'packages', 'exojs-bench')]),
-];
-const BENCH_ROOT = BENCH_ROOT_CANDIDATES.find(root => existsSync(resolve(root, 'competitors', 'package.json'))) ?? SOURCE_BENCH_ROOT;
-const BENCH_NODE_MODULES = resolve(BENCH_ROOT, 'node_modules');
-const COMPETITOR_NODE_MODULES = resolve(BENCH_ROOT, 'competitors', 'node_modules');
-
-/** Evidence for a local diagnosis; intentionally not part of published machine provenance. */
-export const competitorInstallDiagnostics = (name: string): string =>
-  BENCH_ROOT_CANDIDATES.map(root => {
-    const packageDir = resolve(root, 'competitors', 'node_modules', name);
-    const manifest = resolve(packageDir, 'package.json');
-    const link = resolve(root, 'node_modules', name);
-
-    return `${root}: isolated-dir=${String(existsSync(packageDir))}, manifest=${String(existsSync(manifest))}, linked-dir=${String(existsSync(link))}`;
-  }).join(' | ');
-
-export const linkedPackageManifest = (name: string, modulesDirectory: string = BENCH_NODE_MODULES): string | null => {
+export const installedPackageManifest = (name: string, modulesDirectory: string = BENCH_NODE_MODULES): string | null => {
   const manifest = resolve(modulesDirectory, name, 'package.json');
 
   return existsSync(manifest) ? manifest : null;
 };
 
-/**
- * Direct, read-only access to the separately pinned competitor installation.
- * This remains valid even if Node cannot follow a Windows junction or an
- * import-only exports map. The browser must still successfully import the arm.
- */
-export const isolatedCompetitorDirectory = (
-  name: string,
-  modulesDirectory: string = COMPETITOR_NODE_MODULES,
-): string | null => {
-  const directory = resolve(modulesDirectory, name);
-
-  // The installer checked the package directory before creating the junction.
-  // If a package manifest is inaccessible on Windows, keep the actual existing
-  // directory available for Vite to resolve (and report its own import error).
-  return existsSync(directory) ? directory : null;
-};
-
 /** The manifest path of an installed package, resolved through its exports map. */
 const defaultManifestPath = (name: string): string => {
-  const linked = linkedPackageManifest(name);
+  const installed = installedPackageManifest(name);
 
-  if (linked !== null) {
-    return linked;
-  }
-
-  const isolated = isolatedCompetitorDirectory(name);
-
-  if (isolated !== null) {
-    return resolve(isolated, 'package.json');
+  if (installed !== null) {
+    return installed;
   }
 
   const nodeRequire = createRequire(import.meta.url);

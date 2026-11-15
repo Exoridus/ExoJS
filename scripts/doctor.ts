@@ -152,12 +152,12 @@ const checks: Check[] = [
     name: 'bench competitors',
     required: false,
     run: () => {
-      const linked = existsSync(join(repoRoot, 'packages', 'exojs-bench', 'node_modules', 'pixi.js', 'package.json'));
+      const installed = existsSync(join(repoRoot, 'packages', 'exojs-bench', 'node_modules', 'pixi.js', 'package.json'));
 
       return {
-        ok: linked,
-        detail: linked ? 'linked' : 'not linked - the benchmark competitor arms and the bench typecheck cannot run',
-        fix: linked ? undefined : 'pnpm bench:setup',
+        ok: installed,
+        detail: installed ? 'installed' : 'not installed - the benchmark competitor arms and the bench typecheck cannot run',
+        fix: installed ? undefined : 'pnpm install',
       };
     },
   },

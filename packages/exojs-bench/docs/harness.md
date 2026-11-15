@@ -293,12 +293,12 @@ Three different things live in this package, and CI treats them differently.
 
 **The harness's own tests** (`test/`) exercise the profile contract, the slug, the signature, the run pooling and the archetype definitions. They need none of the competitor libraries - the adapters that import those are loaded by `import()` inside the benchmark page, never by a test - so they run in the ordinary `pnpm test` project list on every push, like any other package.
 
-**The typecheck** does need the competitors: the adapters are typed against their APIs, which is exactly what catches an upstream change on a version bump. `pnpm typecheck:bench` installs them first. It runs in the path-gated `bench` CI lane, alongside the structural gate, whenever a change touches this package, the rendering source or the baselines.
+**The typecheck** does need the competitors: the adapters are typed against their APIs, which is exactly what catches an upstream change on a version bump. `pnpm typecheck:bench` runs it. It runs in the path-gated `bench` CI lane, alongside the structural gate, whenever a change touches this package, the rendering source or the baselines.
 
 **Measurements** never run in CI. A shared runner is neither idle nor a known machine, and a number it produced would carry provenance nobody can reproduce. Reference profiles are measured by hand on an idle machine and committed as signed files - see `results/README.md`.
 
 ## The competitor install and the supply-chain gate
 
-`bench:setup` runs `pnpm install --dir competitors --frozen-lockfile`. The `competitors/` directory is its own workspace root (it carries a `pnpm-workspace.yaml`), which does two things: a plain root `pnpm install` never resolves or downloads anything in it, so a contributor who never benchmarks pays nothing for ~235MB of libraries whose only purpose is being compared against; and the install applies the same `minimumReleaseAge` quarantine the repository workspace enforces, so a version bump here is held back exactly as long as any other dependency. The lockfile is frozen in both CI and local use: a new version enters through a reviewed lockfile change, not through an install.
+The competitor libraries are exact-version devDependencies of this package and are installed, locked and quarantined like every other dependency: the single root `pnpm-lock.yaml` pins them, the `minimumReleaseAge` supply-chain gate holds a version bump back as long as any other dependency, and a new version enters through a reviewed lockfile change.
 
-`pnpm doctor` reports whether the competitors are linked.
+`pnpm doctor` reports whether the competitors are installed.
