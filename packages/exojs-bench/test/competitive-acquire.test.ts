@@ -134,6 +134,39 @@ describe('competitive acquisition source identity', () => {
     expect(checkpointed()).toEqual(result);
   });
 
+  test('stops a session after one repetition if a selected competitor has no successful cells', async () => {
+    options = parseCompetitiveOptions([
+      '--mode=quick',
+      '--scenario=dirty-10',
+      '--engine=exojs,pixi',
+      '--config=current,default',
+      '--frames=3',
+      '--warmup-frames=2',
+      `--out=${join(directory, 'output')}`,
+    ]);
+    const pixi: CellResult = {
+      ...result,
+      spec: { ...result.spec, engine: 'pixi', config: 'default' },
+      status: 'unavailable',
+      note: 'Failed to fetch dynamically imported module: /src/rendering/adapters/pixi.ts',
+    };
+    const resultWithFailure: MatrixOutcome = { ...outcome, results: [result, pixi] };
+    mocks.runMatrix.mockImplementation(async (request: Parameters<typeof runMatrix>[0]) => {
+      for (const cell of resultWithFailure.results) {
+        request.onCellResult?.(cell);
+      }
+
+      return resultWithFailure;
+    });
+
+    const measured = await acquireCompetitiveRun(options, 0);
+
+    expect(measured.error).toMatch(/pixi.*Failed to fetch dynamically imported module/s);
+    expect(measured.outcome?.results).toHaveLength(2);
+    expect(saved().error).toBe(measured.error);
+    expect(readFileSync(join(options.out, 'run-001/cells.jsonl'), 'utf8')).toContain('"status":"unavailable"');
+  });
+
   test('preserves the original acquisition failure and checkpoint when source identity also changes', async () => {
     mocks.runMatrix.mockImplementation(async (request: Parameters<typeof runMatrix>[0]) => {
       request.onCellResult?.(result);
