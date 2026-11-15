@@ -12,10 +12,10 @@
 // tsconfig.scripts.json program for that reason; node strips its types, so keep
 // the syntax erasable.
 import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const competitorsDir = fileURLToPath(new URL('.', import.meta.url));
+const competitorsNodeModules = fileURLToPath(new URL('./node_modules/', import.meta.url));
 const benchNodeModules = fileURLToPath(new URL('../node_modules/', import.meta.url));
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { dependencies?: Record<string, string> };
 const names = Object.keys(pkg.dependencies ?? {});
@@ -26,11 +26,13 @@ if (names.length === 0) {
 }
 
 for (const name of names) {
-  const target = `${competitorsDir}node_modules/${name}`;
-  const link = `${benchNodeModules}${name}`;
+  const target = resolve(competitorsNodeModules, name);
+  const link = resolve(benchNodeModules, name);
 
-  if (!existsSync(target)) {
-    console.error(`[bench:setup] ${name} was not installed into competitors/node_modules -- did the install step fail?`);
+  // A directory existing is insufficient: a broken pnpm layout may produce a
+  // junction to an empty folder and still print "linked" successfully.
+  if (!existsSync(resolve(target, 'package.json'))) {
+    console.error(`[bench:setup] Invalid package installation: ${target} has no readable package.json for ${name}.`);
     process.exitCode = 1;
     continue;
   }
@@ -38,5 +40,12 @@ for (const name of names) {
   mkdirSync(dirname(link), { recursive: true });
   rmSync(link, { recursive: true, force: true });
   symlinkSync(target, link, 'junction');
-  console.log(`[bench:setup] linked ${name} -> competitors/node_modules/${name}`);
+
+  if (!existsSync(resolve(link, 'package.json'))) {
+    console.error(`[bench:setup] Broken junction for ${name}: ${link} -> ${target} (package.json could not be opened).`);
+    process.exitCode = 1;
+    continue;
+  }
+
+  console.log(`[bench:setup] verified ${name}: ${link} -> ${target}`);
 }
