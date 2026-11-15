@@ -5,7 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { srcConditions } from '@codexo/exojs-config/vitest';
 
-import { readLibraryProvenance } from './provenance';
+import { isolatedCompetitorDirectory, readLibraryProvenance } from './provenance';
 
 /** Minimal surface of the programmatic Vite dev server the callers consume. */
 export interface ViteDevServer {
@@ -128,6 +128,25 @@ const resolvableCompetitors = (arms: readonly string[]): string[] =>
   readLibraryProvenance(arms)
     .filter(library => !['not-installed', 'unreadable', 'unknown'].includes(library.version))
     .map(library => library.name);
+
+/**
+ * Resolve the pinned competitor packages from their actual isolated install,
+ * without relying on Node's require-condition resolution or Windows junctions.
+ * Exact aliases are optional: a non-installed arm must remain unavailable,
+ * never replaced with a different library version from the root workspace.
+ */
+const competitorModules = (arms: readonly string[]): string[] =>
+  [...new Set([...arms, ...(arms.includes('pixi.js') ? ['@pixi/layout', '@pixi/tilemap', 'yoga-layout'] : [])])];
+
+export const isolatedCompetitorAliases = (
+  arms: readonly string[],
+  lookup: (name: string) => string | null = isolatedCompetitorDirectory,
+): Array<{ find: string; replacement: string }> =>
+  competitorModules(arms).flatMap(name => {
+    const directory = lookup(name);
+
+    return directory === null ? [] : [{ find: name, replacement: directory.replaceAll('\\', '/') }];
+  });
 
 /**
  * Load Vite through the copy vitest already depends on. Vite is not a direct
@@ -288,7 +307,11 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     // `.vert`/`.frag`/`.wgsl` specifiers carry their extension and are handled by
     // `realShaderPlugin`'s transform.
     resolve: {
-      alias: [...SOURCE_PACKAGE_ALIASES, { find: /^#(.*)\.(vert|frag|wgsl)$/, replacement: `${ENGINE_SRC}/$1.$2` }],
+      alias: [
+        ...SOURCE_PACKAGE_ALIASES,
+        ...isolatedCompetitorAliases(libraryArms),
+        { find: /^#(.*)\.(vert|frag|wgsl)$/, replacement: `${ENGINE_SRC}/$1.$2` },
+      ],
       conditions: srcConditions,
     },
     ssr: { resolve: { conditions: srcConditions } },
@@ -304,7 +327,7 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     // (see `resolvableCompetitors`) rather than crashing the optimizer. Engine
     // source still resolves to local `.ts` files via the `#*` alias and is never
     // pre-bundled.
-    optimizeDeps: { noDiscovery: true, include: resolvableCompetitors(libraryArms) },
+    optimizeDeps: { noDiscovery: true, include: resolvableCompetitors(competitorModules(libraryArms)) },
     define: {
       __DEV__: String(ENGINE_DEV_BUILD),
       __VERSION__: JSON.stringify(version),
