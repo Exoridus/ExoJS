@@ -99,14 +99,39 @@ export const acquireCompetitiveRun = async (options: CompetitiveOptions, runInde
       ...(captureDir !== undefined && { captureDir }),
       onCellResult: result => {
         appendFileSync(resolve(out, 'cells.jsonl'), `${JSON.stringify(result)}\n`);
+        // Always surface the failure in the terminal. The full original note
+        // is also stored in cells.jsonl for debugging without console truncation.
+        const reason =
+          result.status === 'unavailable'
+            ? ` | reason: ${(result.note ?? 'no reason reported').replaceAll('\\n', ' ').slice(0, 500)}`
+            : '';
+
         console.log(
-          `[competitive] run ${runIndex + 1}/${options.runs}: ${result.spec.engine}/${result.spec.config} ${result.spec.backend} ${result.spec.archetype} n=${result.spec.nodeCount} cycle=${result.spec.measurement?.cycle ?? 0}: ${result.status}`,
+          `[competitive] run ${runIndex + 1}/${options.runs}: ${result.spec.engine}/${result.spec.config} ${result.spec.backend} ${result.spec.archetype} n=${result.spec.nodeCount} cycle=${result.spec.measurement?.cycle ?? 0}: ${result.status}${reason}`,
         );
       },
     });
 
     if (!outcome.results.some(result => result.status === 'ok')) {
       error = 'No selected cell completed; unavailable cells remain diagnostic evidence.';
+    }
+
+    // One successful arm does not salvage a cross-engine comparison if a
+    // selected competitor failed *all* of its cells. End the acquisition after
+    // this repetition instead of producing six more unusable duplicates.
+    const measuredEngines = new Set(outcome.results.map(result => result.spec.engine));
+    const missingEngines = [...measuredEngines].filter(
+      engine => !outcome!.results.some(result => result.spec.engine === engine && result.status === 'ok'),
+    );
+
+    if (missingEngines.length > 0) {
+      const notes = missingEngines.map(engine => {
+        const failure = outcome!.results.find(result => result.spec.engine === engine && result.status === 'unavailable');
+
+        return `${engine}: ${failure?.note ?? 'no success and no error detail'}`;
+      });
+
+      error = `One or more selected engines produced zero successful cells; further repetitions were stopped. ${notes.join(' | ')}`;
     }
 
     if (options.cycles === 1) {
