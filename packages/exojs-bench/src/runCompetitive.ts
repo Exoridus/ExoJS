@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 
 import { acquireCompetitiveRun, acquireCompetitiveSession, readCompetitiveSession } from './competitive/acquire';
 import { COMPETITIVE_GAPS, COMPETITIVE_SCENARIOS, selectCompetitiveScenarios } from './competitive/catalog';
+import { selectCompetitiveAcquisitionDestination } from './competitive/outputDirectory';
 import { competitiveMatrixOptions, competitivePlan, competitiveProtocolHash, parseCompetitiveOptions } from './competitive/plan';
 import { compareCompetitiveSessions, writeCompetitiveReport } from './competitive/report';
 import { resolveMatrixCells } from './rendering/driver';
@@ -34,7 +35,7 @@ pnpm bench:competitive --report=new/competitive.json --baseline=old/competitive.
 --platform  Existing harness declaration syntax, for example --platform=11 or --platform=27-beta.
 --software --capture  Functional/visual quick-mode checks only; never hardware performance.
 --dry-run   Resolve the exact capability-gated matrix without a browser or output.
---out       Fresh acquisition directory; existing results are never overwritten.
+--out       Optional explicit output directory (refuses overwrite). Without --out, selects a fresh run-competitive[-NNN] directory.
 
 All output is diagnostic until hardware identity, equivalence, independent repetitions,
 clock resolution and visual evidence are qualified. Missing GPU timing is not estimated.
@@ -109,9 +110,10 @@ const main = async (): Promise<void> => {
     return;
   }
 
-  const session = await acquireCompetitiveSession(options, argv);
-  writeCompetitiveReport(session, resolve(options.out));
-  console.log(`Diagnostic results written to ${resolve(options.out)}. No automatic publication or performance gate.`);
+  const destination = selectCompetitiveAcquisitionDestination(options, argv);
+  const session = await acquireCompetitiveSession(destination.options, destination.workerArgs);
+  writeCompetitiveReport(session, resolve(destination.options.out));
+  console.log(`Diagnostic results written to ${resolve(destination.options.out)}. No automatic publication or performance gate.`);
 
   if (
     session.runs.length !== options.runs ||
