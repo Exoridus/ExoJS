@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSyn
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
-import { linkedPackageManifest, readLibraryProvenance } from '../src/shared/provenance';
+import { isolatedCompetitorDirectory, linkedPackageManifest, readLibraryProvenance } from '../src/shared/provenance';
 
 describe('linked competitor manifest resolution', () => {
   let workspace: string;
@@ -48,6 +48,16 @@ describe('linked competitor manifest resolution', () => {
 
     expect(profile).toEqual([{ name, version, resolvedFrom: manifestPath }]);
     expect(JSON.parse(readFileSync(manifestPath!, 'utf8'))).toMatchObject({ name, version });
+  });
+
+  test('uses the isolated pinned installation when the benchmark link is absent', () => {
+    const modules = join(workspace, 'competitors', 'node_modules');
+    const packageDir = join(modules, '@pixi', 'layout');
+    mkdirSync(packageDir, { recursive: true });
+    writeFileSync(join(packageDir, 'package.json'), '{"name":"@pixi/layout","version":"3.2.1","type":"module"}');
+
+    expect(isolatedCompetitorDirectory('@pixi/layout', modules)).toBe(packageDir);
+    expect(isolatedCompetitorDirectory('pixi.js', modules)).toBeNull();
   });
 
   test('unlinked packages remain absent instead of being declared installed', () => {
