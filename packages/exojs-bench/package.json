@@ -5,7 +5,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "bench:setup": "pnpm install --dir competitors --frozen-lockfile && node competitors/link.ts",
+    "bench:setup": "cd competitors && pnpm install --frozen-lockfile && node link.ts",
     "bench": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/run.ts",
     "bench:competitive": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/runCompetitive.ts",
     "bench:reference": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/run.ts --suite=reference --domain=all",
