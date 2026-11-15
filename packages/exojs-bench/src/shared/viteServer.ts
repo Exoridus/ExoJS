@@ -5,6 +5,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { srcConditions } from '@codexo/exojs-config/vitest';
 
+import { readLibraryProvenance } from './provenance';
+
 /** Minimal surface of the programmatic Vite dev server the callers consume. */
 export interface ViteDevServer {
   listen: () => Promise<unknown>;
@@ -122,19 +124,10 @@ export const readEngineVersion = (): string => {
  * crashing esbuild's optimizer at server startup - an ExoJS-only run then needs
  * none of the competitor deps present.
  */
-const resolvableCompetitors = (arms: readonly string[]): string[] => {
-  const nodeRequire = createRequire(import.meta.url);
-
-  return arms.filter(name => {
-    try {
-      nodeRequire.resolve(name);
-
-      return true;
-    } catch {
-      return false;
-    }
-  });
-};
+const resolvableCompetitors = (arms: readonly string[]): string[] =>
+  readLibraryProvenance(arms)
+    .filter(library => !['not-installed', 'unreadable', 'unknown'].includes(library.version))
+    .map(library => library.name);
 
 /**
  * Load Vite through the copy vitest already depends on. Vite is not a direct
