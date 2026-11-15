@@ -4,7 +4,9 @@ The competitive command extends the existing rendering matrix, scene definitions
 
 ## Reproduce an acquisition
 
-Use a clean checkout, the repository's supported Node and pnpm versions, and the lockfiles. Complete `pnpm bootstrap:dev` and install the Playwright Chromium browser using `pnpm exec playwright install chromium` if bootstrap has not provisioned it. Keep competitor installation in `packages/exojs-bench/competitors`; `bench:setup` installs and links the pinned versions. Do not install floating competitor versions in the root workspace.
+Use a clean checkout, the repository's supported Node and pnpm versions, and the lockfiles. Complete `pnpm bootstrap:dev` and install the Playwright Chromium browser using `pnpm exec playwright install chromium` if bootstrap has not provisioned it. **Before a cross-engine run, invoke `pnpm --filter @codexo/exojs-bench bench:setup` once on each machine.** This installs and links the pinned `pixi.js`, `@pixi/tilemap`, `@pixi/layout`, and Phaser packages from the isolated `packages/exojs-bench/competitors` workspace. A normal root `pnpm install` does not install them. Do not install floating competitor versions in the root workspace.
+
+The competitive command now preflights all packages needed by the selected engines **before any benchmark output is written**. If a selected competitor is missing/unreadable it exits with the exact package names and the one-time setup command instead of returning dozens of meaningless `unavailable` cells. Other adapter failures still record their full `note` in `run-NNN/cells.jsonl` and print a shortened reason directly in the console. If one requested engine has no successful cell in a completed repetition, subsequent independent repetitions are aborted; already captured evidence is preserved for diagnosis.
 
 From the repository root:
 
