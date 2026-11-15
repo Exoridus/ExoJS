@@ -103,7 +103,7 @@ export const acquireCompetitiveRun = async (options: CompetitiveOptions, runInde
         // is also stored in cells.jsonl for debugging without console truncation.
         const reason =
           result.status === 'unavailable'
-            ? ` | reason: ${(result.note ?? 'no reason reported').replaceAll('\\n', ' ').slice(0, 500)}`
+            ? ` | reason: ${(result.note ?? 'no reason reported').replaceAll(String.fromCharCode(10), ' ').slice(0, 500)}`
             : '';
 
         console.log(
