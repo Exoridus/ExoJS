@@ -279,9 +279,13 @@ describe('competitive report evidence', () => {
     expect(analysis.comparisons[0]!.exploratory).toBeNull();
   });
 
-  test.each(['machine', 'driver', 'power', 'background'] as const)('rejects an UNRECORDED %s declaration', field => {
+  test.each(
+    (['UNRECORDED', 'UNVERIFIED'] as const).flatMap(value =>
+      (['machine', 'driver', 'power', 'background'] as const).map(field => ({ value, field })),
+    ),
+  )('rejects a $value $field declaration', ({ value, field }) => {
     const original = session();
-    const changed = mapRuns(original, value => ({ ...value, host: { ...value.host, [field]: 'UNRECORDED' } }));
+    const changed = mapRuns(original, run => ({ ...run, host: { ...run.host, [field]: value } }));
     const analysis = analyzeCompetitiveSession(changed);
 
     expect(analysis.cells.every(entry => entry.qualification === 'UNQUALIFIED')).toBe(true);
