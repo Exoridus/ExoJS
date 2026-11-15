@@ -65,8 +65,7 @@ describe('competitive host provenance probes', () => {
 
   test('rejects malformed Windows driver payload and incomplete macOS builds', () => {
     const malformedWindows: HostCommand = () => '{not json';
-    const incompleteMac: HostCommand = (program, args) =>
-      program === 'sw_vers' && args[0] === '-productVersion' ? '27.0' : null;
+    const incompleteMac: HostCommand = (program, args) => (program === 'sw_vers' && args[0] === '-productVersion' ? '27.0' : null);
 
     expect(probeHost('win32', malformedWindows).driver).toBe('UNVERIFIED');
     expect(probeHost('darwin', incompleteMac).driver).toBe('UNVERIFIED');
