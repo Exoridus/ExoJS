@@ -28,7 +28,7 @@ pnpm bench:competitive --report=new/competitive.json --baseline=old/competitive.
 --warmup-frames  Discarded warmup frames (quick 2, focused 30, otherwise 90).
 --cycles    Scene create/render/destroy cycles in one arm session (long-run only).
 --engine    exojs,pixi,phaser. --config selects current,retained,default,culled,webgl2.
---backend   webgl2 (default) | webgpu | webgl2,webgpu.
+--backend   webgl2 | webgpu | webgl2,webgpu. Standard/full default to both; other modes default to webgl2.
 --machine --driver --power --background  Optional overrides; host identity, Windows driver and power plan,
                                          or macOS OS-build proxy and power state are probed automatically.
                                          Background-idle status cannot be verified automatically.
