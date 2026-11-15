@@ -4,7 +4,9 @@ The competitive command extends the existing rendering matrix, scene definitions
 
 ## Reproduce an acquisition
 
-Use a clean checkout, the repository's supported Node and pnpm versions, and the lockfiles. Complete `pnpm bootstrap:dev` and install the Playwright Chromium browser using `pnpm exec playwright install chromium` if bootstrap has not provisioned it. Keep competitor installation in `packages/exojs-bench/competitors`; `bench:setup` installs and links the pinned versions. Do not install floating competitor versions in the root workspace.
+Use a clean checkout, the repository's supported Node and pnpm versions, and the lockfile. Complete `pnpm bootstrap:dev`, which also installs the Playwright Chromium browser. The pinned competitor libraries (`pixi.js`, `@pixi/tilemap`, `@pixi/layout`, Phaser and the others) are devDependencies of `@codexo/exojs-bench` and arrive with the ordinary workspace install; there is no separate setup step.
+
+Before measuring, the competitive command checks that the packages required by the selected engines are installed and stops with an instruction to run `pnpm install` if they are not. The adapter import in the benchmark page remains the authoritative runtime check: failed cells record their complete `note` in `run-NNN/cells.jsonl` and print a shortened reason directly in the console. If one requested engine has no successful cell in a completed repetition, subsequent independent repetitions are aborted; already captured evidence is preserved for diagnosis.
 
 From the repository root:
 
@@ -14,8 +16,8 @@ pnpm bench:competitive --list
 pnpm bench:competitive --scenario=B03 --load=all --dry-run
 pnpm bench:competitive --mode=quick --software --out=run-smoke
 pnpm bench:competitive --mode=quick --scenario=B03 --capture --out=run-visual
-pnpm bench:competitive --mode=focused --scenario=B03 --engine=exojs,pixi,phaser --backend=webgl2 --out=run-dirty-cpu --machine="controlled desktop" --driver="record actual driver version" --power="AC, fixed performance policy" --background="idle, monitoring recorded"
-pnpm bench:competitive --mode=focused --scenario=B03 --engine=exojs,pixi --backend=webgpu --profile=gpu --out=run-dirty-gpu --machine="controlled desktop" --driver="record actual driver version" --power="AC, fixed performance policy" --background="idle, monitoring recorded"
+pnpm bench:competitive --mode=focused --scenario=B03 --engine=exojs,pixi,phaser --backend=webgl2 --out=run-dirty-cpu
+pnpm bench:competitive --mode=focused --scenario=B03 --engine=exojs,pixi --backend=webgpu --profile=gpu --out=run-dirty-gpu
 pnpm bench:competitive --mode=full --out=run-full
 pnpm bench:competitive --mode=deep --scenario=tilemap-edit --runs=7 --out=run-tile-profile
 pnpm bench:competitive --mode=long-run --engine=exojs --scenario=dirty-10,lifecycle-churn --cycles=100 --frames=600 --out=run-lifecycle
@@ -23,7 +25,11 @@ pnpm bench:competitive --report=run-dirty-cpu/competitive.json --out=run-dirty-r
 pnpm bench:competitive --report=run-after/competitive.json --baseline=run-before/competitive.json --out=run-regression
 ```
 
-The root command delegates to the benchmark package, so relative paths resolve there. Use fresh `run-*` directories, which the repository already ignores, or absolute paths. Acquisition refuses to overwrite existing evidence. Report-only output can be regenerated from the raw session. In PowerShell, quote comma-containing arguments. Supply `--platform` in the existing harness syntax where automatic platform detection needs an operator declaration. The example declarations above are placeholders, not hardware evidence; replace them with the actual conditions. All four declarations default to `UNRECORDED`, which disqualifies comparisons.
+The root command delegates to the benchmark package, so relative paths resolve there. Use fresh `run-*` directories, which the repository already ignores, or absolute paths. Acquisition refuses to overwrite existing evidence. Report-only output can be regenerated from the raw session. In PowerShell, quote comma-containing arguments. Supply `--platform` in the existing harness syntax where automatic platform release/prerelease identification needs an operator declaration.
+
+**Host metadata is now collected without mandatory manual version fields:** the acquisition records the CPU, RAM, operating system, Node, git and lockfile identities automatically. The browser records the actual renderer/adapter and browser version. On Windows, the host probe queries installed display-driver names/versions and the active power plan using system tools. On macOS, where a standalone GPU driver version is not exposed, it records the exact `sw_vers` product version and build as an explicitly labelled graphics-stack proxy; `pmset` records the live power source and low-power setting when available. These values are saved in each `run-NNN/acquisition.json`. Absent, inaccessible or malformed system-tool outputs remain `UNVERIFIED`, not fabricated. GPU adapter provenance must still be examined when more than one Windows display driver is installed.
+
+The runner **cannot prove that competing background applications were absent throughout the measurement**. Unless the operator voluntarily supplies a controlled-condition declaration such as `--background="idle (verified by operator)"`, the field remains `UNVERIFIED`, and numerical comparison qualification remains withheld even though the timings, telemetry and reports are retained. `--machine`, `--driver`, `--power` and `--background` are optional overrides, never required just to run a benchmark. An override is a declaration, not a measured fact; it must be accurate. Historical evidence is never silently relabelled.
 
 `--scenario` accepts exact scenario IDs and Bxx groups; B03 expands to seven dirty rates. `--nodes` overrides the catalog load ladder explicitly. Invalid flags, unsupported scenario names and malformed budgets fail before browser startup. `--dry-run` prints the exact capability-gated cells and requested unsupported combinations. Phaser has no selected WebGPU arm. A selection with no runnable cells is not a successful measurement.
 
@@ -36,6 +42,8 @@ The root command delegates to the benchmark package, so relative paths resolve t
 | `deep`              | One process, 90 warmup frames, 300 measured frames, detailed instrumentation                             | Mechanism investigation; request multiple independent runs when comparing costs.                             |
 | `long-run`          | One process, 20 scene cycles per arm, 90 warmup and 600 measured frames per cycle                        | Scene recreation, coarse heap trend and stability investigation; cycles are not independent repetitions.     |
 | Report / regression | Reads saved sessions, starts no browser                                                                  | Reproducible descriptive analysis and comparison of compatible measured commits.                             |
+
+Without `--backend`, `standard` and `full` select **both WebGL2 and WebGPU** for ExoJS/Pixi; Phaser is included on WebGL2 only. A requested `--backend=webgl2` always restricts every engine to WebGL2. The other modes default to WebGL2 unless explicitly given `--backend=webgl2,webgpu`. When `--out` is omitted, acquisition chooses a fresh `run-competitive`, `run-competitive-001`, etc. directory instead of overwriting an earlier run; explicitly selected `--out` paths still refuse overwrite.
 
 Quick is the default mode and does not install graphics probes, collect heap samples or capture screenshots. Explicit `--profile=gpu` or `--profile=deep` enables detail instrumentation on any mode. Full retains the selected backend and load; request `--backend=webgl2,webgpu --load=all` for both backends and the complete load ladder. The explicit legacy `standard` and `deep` modes retain their sampling budgets.
 

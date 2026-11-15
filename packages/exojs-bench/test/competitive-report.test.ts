@@ -148,7 +148,6 @@ const run = (runIndex: number, cells: readonly ObservedCell[]): CompetitiveRun =
     dirty: false,
     trackedDiffSha256: 'c'.repeat(64),
     workspaceLockSha256: 'd'.repeat(64),
-    competitorLockSha256: 'e'.repeat(64),
   },
   host: {
     os: 'linux 6.8',
@@ -279,9 +278,13 @@ describe('competitive report evidence', () => {
     expect(analysis.comparisons[0]!.exploratory).toBeNull();
   });
 
-  test.each(['machine', 'driver', 'power', 'background'] as const)('rejects an UNRECORDED %s declaration', field => {
+  test.each(
+    (['UNRECORDED', 'UNVERIFIED'] as const).flatMap(value =>
+      (['machine', 'driver', 'power', 'background'] as const).map(field => ({ value, field })),
+    ),
+  )('rejects a $value $field declaration', ({ value, field }) => {
     const original = session();
-    const changed = mapRuns(original, value => ({ ...value, host: { ...value.host, [field]: 'UNRECORDED' } }));
+    const changed = mapRuns(original, run => ({ ...run, host: { ...run.host, [field]: value } }));
     const analysis = analyzeCompetitiveSession(changed);
 
     expect(analysis.cells.every(entry => entry.qualification === 'UNQUALIFIED')).toBe(true);
@@ -439,7 +442,7 @@ describe('competitive report evidence', () => {
     expect(comparison.status).toBe('DIAGNOSTIC_ONLY');
     expect(comparison.cells[0]!.exploratory!.ratio).toBe(1);
     expect(compareCompetitiveSessions(baseline, { ...current, protocolHash: 'changed' }).cells[0]!.exploratory).toBeNull();
-    const changedLock = mapRuns(current, value => ({ ...value, source: { ...value.source, competitorLockSha256: '9'.repeat(64) } }));
+    const changedLock = mapRuns(current, value => ({ ...value, source: { ...value.source, workspaceLockSha256: '9'.repeat(64) } }));
     expect(compareCompetitiveSessions(baseline, changedLock).cells[0]!.exploratory).toBeNull();
   });
 });

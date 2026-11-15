@@ -51,10 +51,6 @@
     "noUncheckedIndexedAccess": false,
     "exactOptionalPropertyTypes": false
   },
-  // `competitors/link.ts` is bench SETUP rather than bench code: it imports only
-  // `node:` built-ins and runs before the competitor install exists, so it
-  // belongs to this always-checked tooling program rather than to the bench
-  // package's own, which cannot be type-checked without that install.
   "include": [
     "scripts/**/*.ts",
     "scripts/**/*.mts",
@@ -63,8 +59,7 @@
     "*.config.ts",
     "packages/exojs-config/**/*.js",
     "packages/create-exo-app/bin/*.js",
-    "packages/exojs-demo-assets/bin/*.js",
-    "packages/exojs-bench/competitors/*.ts"
+    "packages/exojs-demo-assets/bin/*.js"
   ],
   "exclude": [
     // Consumer programs for `verify:declaration-semantics`, not repository code.

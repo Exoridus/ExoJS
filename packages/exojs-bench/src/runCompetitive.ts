@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 
 import { acquireCompetitiveRun, acquireCompetitiveSession, readCompetitiveSession } from './competitive/acquire';
 import { COMPETITIVE_GAPS, COMPETITIVE_SCENARIOS, selectCompetitiveScenarios } from './competitive/catalog';
+import { inspectCompetitiveDependencies } from './competitive/dependencies';
+import { selectCompetitiveAcquisitionDestination } from './competitive/outputDirectory';
 import { competitiveMatrixOptions, competitivePlan, competitiveProtocolHash, parseCompetitiveOptions } from './competitive/plan';
 import { compareCompetitiveSessions, writeCompetitiveReport } from './competitive/report';
 import { resolveMatrixCells } from './rendering/driver';
@@ -27,12 +29,15 @@ pnpm bench:competitive --report=new/competitive.json --baseline=old/competitive.
 --warmup-frames  Discarded warmup frames (quick 2, focused 30, otherwise 90).
 --cycles    Scene create/render/destroy cycles in one arm session (long-run only).
 --engine    exojs,pixi,phaser. --config selects current,retained,default,culled,webgl2.
---backend   webgl2 (default) | webgpu | webgl2,webgpu.
---machine --driver --power --background  Operator declarations, recorded verbatim.
+--backend   webgl2 | webgpu | webgl2,webgpu. Standard/full default to both; other modes default to webgl2.
+--machine --driver --power --background  Optional overrides; host identity, Windows driver and power plan,
+                                         or macOS OS-build proxy and power state are probed automatically.
+                                         Background-idle status cannot be verified automatically.
 --platform  Existing harness declaration syntax, for example --platform=11 or --platform=27-beta.
 --software --capture  Functional/visual quick-mode checks only; never hardware performance.
 --dry-run   Resolve the exact capability-gated matrix without a browser or output.
---out       Fresh acquisition directory; existing results are never overwritten.
+--out       Optional explicit output directory (refuses overwrite). Without --out, selects a fresh run-competitive[-NNN] directory.
+            Competitor metadata is advisory; actual browser loading determines availability.
 
 All output is diagnostic until hardware identity, equivalence, independent repetitions,
 clock resolution and visual evidence are qualified. Missing GPU timing is not estimated.
@@ -96,6 +101,17 @@ const main = async (): Promise<void> => {
     return;
   }
 
+  const unresolved = inspectCompetitiveDependencies(options.engines);
+
+  if (unresolved.length > 0) {
+    console.error(
+      `[competitive] Competitor packages are not installed: ${unresolved.map(item => item.name).join(', ')}. Run pnpm install in the repository root and retry.`,
+    );
+    process.exitCode = 1;
+
+    return;
+  }
+
   if (options.worker !== undefined) {
     const run = await acquireCompetitiveRun(options, options.worker);
 
@@ -107,9 +123,10 @@ const main = async (): Promise<void> => {
     return;
   }
 
-  const session = await acquireCompetitiveSession(options, argv);
-  writeCompetitiveReport(session, resolve(options.out));
-  console.log(`Diagnostic results written to ${resolve(options.out)}. No automatic publication or performance gate.`);
+  const destination = selectCompetitiveAcquisitionDestination(options, argv);
+  const session = await acquireCompetitiveSession(destination.options, destination.workerArgs);
+  writeCompetitiveReport(session, resolve(destination.options.out));
+  console.log(`Diagnostic results written to ${resolve(destination.options.out)}. No automatic publication or performance gate.`);
 
   if (
     session.runs.length !== options.runs ||

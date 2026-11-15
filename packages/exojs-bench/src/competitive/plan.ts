@@ -142,7 +142,11 @@ export const parseCompetitiveOptions = (argv: readonly string[]): CompetitiveOpt
     oneOf('config', config, ['current', 'retained', 'default', 'culled', 'webgl2']);
   }
 
-  const backends = list('backend', args.get('backend') ?? 'webgl2').map(backend =>
+  // Complete comparison modes cover both actual hardware rendering backends.
+  // The capability-gated matrix omits Phaser/WebGPU because Phaser has no arm.
+  // Quick/focused/deep/long-run retain WebGL2 by default for targeted runs.
+  const defaultBackends = mode === 'standard' || mode === 'full' ? 'webgl2,webgpu' : 'webgl2';
+  const backends = list('backend', args.get('backend') ?? defaultBackends).map(backend =>
     oneOf('backend', backend, ['webgl2', 'webgpu'] as const),
   );
 

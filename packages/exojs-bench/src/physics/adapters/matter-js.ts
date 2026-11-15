@@ -58,8 +58,7 @@ import { describePhysicsScene } from './scene';
  *   users do not have.
  *
  * `matter-js` is a CommonJS default export loaded lazily via dynamic `import()`.
- * A checkout that never ran `bench:setup` has the library unlinked and the
- * import rejects; the harness records the arm as unavailable with that reason
+ * If the library is not installed the import rejects; the harness records the arm as unavailable with that reason
  * rather than omitting it, so a missing arm is visible in the matrix.
  */
 

@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { arch as osArch, cpus, platform as osPlatform, release as osRelease } from 'node:os';
 import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /**
  * Domain-agnostic provenance primitives.
@@ -293,8 +294,27 @@ export interface LibraryProvenance {
   readonly resolvedFrom: string;
 }
 
+const BENCH_NODE_MODULES = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', 'node_modules');
+
+/**
+ * The package's manifest inside this package's own `node_modules`, read by path.
+ * Packages that hide `./package.json` behind an `exports` map, or that are
+ * import-only ESM, cannot be found through `require.resolve`.
+ */
+export const installedPackageManifest = (name: string, modulesDirectory: string = BENCH_NODE_MODULES): string | null => {
+  const manifest = resolve(modulesDirectory, name, 'package.json');
+
+  return existsSync(manifest) ? manifest : null;
+};
+
 /** The manifest path of an installed package, resolved through its exports map. */
 const defaultManifestPath = (name: string): string => {
+  const installed = installedPackageManifest(name);
+
+  if (installed !== null) {
+    return installed;
+  }
+
   const nodeRequire = createRequire(import.meta.url);
 
   try {

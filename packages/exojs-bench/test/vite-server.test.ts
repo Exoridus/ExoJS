@@ -48,6 +48,12 @@ const resolvedId = async (source: string, importer: string): Promise<string | un
   (await server.environments.client.pluginContainer.resolveId(source, importer))?.id;
 const vitePath = (path: string): string => path.replaceAll('\\', '/');
 
+describe('competitor module resolution', () => {
+  test.each(['pixi.js', 'phaser', '@pixi/layout', '@pixi/tilemap'])('resolves the installed %s from a benchmark adapter', async name => {
+    expect(await resolvedId(name, BENCH_IMPORTER)).toMatch(/node_modules/);
+  });
+});
+
 describe('benchmark engine source resolution', () => {
   test('resolves a known engine module for benchmark adapters', async () => {
     expect(await resolvedId('#core/Clock', BENCH_IMPORTER)).toBe(vitePath(resolve(ROOT, 'src/core/Clock.ts')));

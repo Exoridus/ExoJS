@@ -1,12 +1,13 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { cpus, platform, release, totalmem } from 'node:os';
+import { arch, cpus, platform, release, totalmem } from 'node:os';
 import { resolve } from 'node:path';
 
 import { resolveMatrixCells, runMatrix, SOFTWARE_LAUNCH_FLAGS } from '../rendering/driver';
 import { writeReport } from '../rendering/report';
 import { parsePlatformDeclaration } from '../shared/provenance';
+import { probeHost } from './hostProbe';
 import { competitiveMatrixOptions, type CompetitiveOptions, competitivePlan, competitiveProtocolHash } from './plan';
 import type { CompetitiveRun, CompetitiveSession, HostDeclaration, SourceStamp } from './types';
 
@@ -22,21 +23,30 @@ const sourceStamp = (): SourceStamp => {
     dirty: git('status', '--porcelain').length > 0,
     trackedDiffSha256: sha256(execFileSync('git', ['diff', '--binary', 'HEAD'])),
     workspaceLockSha256: sha256(readFileSync(resolve(root, 'pnpm-lock.yaml'))),
-    competitorLockSha256: sha256(readFileSync(resolve(root, 'packages/exojs-bench/competitors/pnpm-lock.yaml'))),
   };
 };
 
-const hostStamp = (options: CompetitiveOptions): HostDeclaration => ({
-  os: `${platform()} ${release()}`,
-  cpu: cpus()[0]?.model ?? 'UNAVAILABLE',
-  logicalCpus: cpus().length,
-  totalMemoryBytes: totalmem(),
-  nodeVersion: process.version,
-  machine: options.machine,
-  driver: options.driver,
-  power: options.power,
-  background: options.background,
-});
+const hostStamp = (options: CompetitiveOptions): HostDeclaration => {
+  const hostPlatform = platform();
+  const cpu = cpus()[0]?.model ?? 'UNAVAILABLE';
+  const probe = probeHost(hostPlatform);
+
+  return {
+    os: `${hostPlatform} ${release()}`,
+    cpu,
+    logicalCpus: cpus().length,
+    totalMemoryBytes: totalmem(),
+    nodeVersion: process.version,
+    // A stable, non-identifying hardware description. Never record a hostname,
+    // serial number or local path merely to distinguish machines.
+    machine: options.machine === 'UNRECORDED' ? `${hostPlatform}/${arch()}: ${cpu}; RAM ${totalmem()} bytes` : options.machine,
+    driver: options.driver === 'UNRECORDED' ? probe.driver : options.driver,
+    power: options.power === 'UNRECORDED' ? probe.power : options.power,
+    // A system probe cannot attest that no competing GPU application was
+    // active throughout a benchmark. Missing evidence must remain explicit.
+    background: options.background === 'UNRECORDED' ? 'UNVERIFIED' : options.background,
+  };
+};
 
 const writeJson = (path: string, value: unknown): void => writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
 const runDirectory = (out: string, index: number): string => resolve(out, `run-${String(index + 1).padStart(3, '0')}`);
@@ -88,14 +98,39 @@ export const acquireCompetitiveRun = async (options: CompetitiveOptions, runInde
       ...(captureDir !== undefined && { captureDir }),
       onCellResult: result => {
         appendFileSync(resolve(out, 'cells.jsonl'), `${JSON.stringify(result)}\n`);
+        // Always surface the failure in the terminal. The full original note
+        // is also stored in cells.jsonl for debugging without console truncation.
+        const reason =
+          result.status === 'unavailable'
+            ? ` | reason: ${(result.note ?? 'no reason reported').replaceAll(String.fromCharCode(10), ' ').slice(0, 500)}`
+            : '';
+
         console.log(
-          `[competitive] run ${runIndex + 1}/${options.runs}: ${result.spec.engine}/${result.spec.config} ${result.spec.backend} ${result.spec.archetype} n=${result.spec.nodeCount} cycle=${result.spec.measurement?.cycle ?? 0}: ${result.status}`,
+          `[competitive] run ${runIndex + 1}/${options.runs}: ${result.spec.engine}/${result.spec.config} ${result.spec.backend} ${result.spec.archetype} n=${result.spec.nodeCount} cycle=${result.spec.measurement?.cycle ?? 0}: ${result.status}${reason}`,
         );
       },
     });
 
     if (!outcome.results.some(result => result.status === 'ok')) {
       error = 'No selected cell completed; unavailable cells remain diagnostic evidence.';
+    }
+
+    // One successful arm does not salvage a cross-engine comparison if a
+    // selected competitor failed *all* of its cells. End the acquisition after
+    // this repetition instead of producing six more unusable duplicates.
+    const measuredEngines = new Set(outcome.results.map(result => result.spec.engine));
+    const missingEngines = [...measuredEngines].filter(
+      engine => !outcome!.results.some(result => result.spec.engine === engine && result.status === 'ok'),
+    );
+
+    if (missingEngines.length > 0) {
+      const notes = missingEngines.map(engine => {
+        const failure = outcome!.results.find(result => result.spec.engine === engine && result.status === 'unavailable');
+
+        return `${engine}: ${failure?.note ?? 'no success and no error detail'}`;
+      });
+
+      error = `One or more selected engines produced zero successful cells; further repetitions were stopped. ${notes.join(' | ')}`;
     }
 
     if (options.cycles === 1) {

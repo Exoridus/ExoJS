@@ -5,6 +5,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { srcConditions } from '@codexo/exojs-config/vitest';
 
+import { readLibraryProvenance } from './provenance';
+
 /** Minimal surface of the programmatic Vite dev server the callers consume. */
 export interface ViteDevServer {
   listen: () => Promise<unknown>;
@@ -118,23 +120,19 @@ export const readEngineVersion = (): string => {
 /**
  * The subset of `arms` actually resolvable from this package, so Vite's
  * `optimizeDeps.include` only pre-bundles competitors that are present. A
- * competitor left unlinked (no `bench:setup`) is simply omitted rather than
+ * competitor that is not installed is simply omitted rather than
  * crashing esbuild's optimizer at server startup - an ExoJS-only run then needs
  * none of the competitor deps present.
  */
-const resolvableCompetitors = (arms: readonly string[]): string[] => {
-  const nodeRequire = createRequire(import.meta.url);
+const resolvableCompetitors = (arms: readonly string[]): string[] =>
+  readLibraryProvenance(arms)
+    .filter(library => !['not-installed', 'unreadable', 'unknown'].includes(library.version))
+    .map(library => library.name);
 
-  return arms.filter(name => {
-    try {
-      nodeRequire.resolve(name);
-
-      return true;
-    } catch {
-      return false;
-    }
-  });
-};
+/** Pixi's layout and tilemap extensions (and layout's yoga) are pre-bundled with it. */
+const competitorModules = (arms: readonly string[]): string[] => [
+  ...new Set([...arms, ...(arms.includes('pixi.js') ? ['@pixi/layout', '@pixi/tilemap', 'yoga-layout'] : [])]),
+];
 
 /**
  * Load Vite through the copy vitest already depends on. Vite is not a direct
@@ -307,11 +305,11 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     // pre-bundling, the browser's native ESM loader rejects them ("does not
     // provide an export named 'default'"). Explicitly `include` each RESOLVABLE
     // competitor so esbuild pre-bundles it and its CJS deps with interop, WITHOUT
-    // scanning the engine graph. A competitor that is not linked is omitted here
+    // scanning the engine graph. A competitor that is not installed is omitted here
     // (see `resolvableCompetitors`) rather than crashing the optimizer. Engine
     // source still resolves to local `.ts` files via the `#*` alias and is never
     // pre-bundled.
-    optimizeDeps: { noDiscovery: true, include: resolvableCompetitors(libraryArms) },
+    optimizeDeps: { noDiscovery: true, include: resolvableCompetitors(competitorModules(libraryArms)) },
     define: {
       __DEV__: String(ENGINE_DEV_BUILD),
       __VERSION__: JSON.stringify(version),
