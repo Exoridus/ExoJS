@@ -28,7 +28,9 @@ pnpm bench:competitive --report=new/competitive.json --baseline=old/competitive.
 --cycles    Scene create/render/destroy cycles in one arm session (long-run only).
 --engine    exojs,pixi,phaser. --config selects current,retained,default,culled,webgl2.
 --backend   webgl2 (default) | webgpu | webgl2,webgpu.
---machine --driver --power --background  Operator declarations, recorded verbatim.
+--machine --driver --power --background  Optional overrides; host identity, Windows driver and power plan,
+                                         or macOS OS-build proxy and power state are probed automatically.
+                                         Background-idle status cannot be verified automatically.
 --platform  Existing harness declaration syntax, for example --platform=11 or --platform=27-beta.
 --software --capture  Functional/visual quick-mode checks only; never hardware performance.
 --dry-run   Resolve the exact capability-gated matrix without a browser or output.
