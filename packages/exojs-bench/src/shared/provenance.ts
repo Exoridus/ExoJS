@@ -303,9 +303,29 @@ export interface LibraryProvenance {
  * Keep this as a filesystem check, not a claim that the module can be loaded:
  * the browser adapter remains the authoritative runtime test.
  */
-const BENCH_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+/**
+ * tsx/esm and the benchmark's package scripts do not necessarily resolve source
+ * URLs from the same location. Both the source-relative path and pnpm's package
+ * working directory are valid candidates. Keep directory existence as the
+ * source of truth; do not infer installation from require.resolve().
+ */
+const SOURCE_BENCH_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const BENCH_ROOT_CANDIDATES = [
+  ...new Set([SOURCE_BENCH_ROOT, process.cwd(), resolve(process.cwd(), 'packages', 'exojs-bench')]),
+];
+const BENCH_ROOT = BENCH_ROOT_CANDIDATES.find(root => existsSync(resolve(root, 'competitors', 'package.json'))) ?? SOURCE_BENCH_ROOT;
 const BENCH_NODE_MODULES = resolve(BENCH_ROOT, 'node_modules');
 const COMPETITOR_NODE_MODULES = resolve(BENCH_ROOT, 'competitors', 'node_modules');
+
+/** Evidence for a local diagnosis; intentionally not part of published machine provenance. */
+export const competitorInstallDiagnostics = (name: string): string =>
+  BENCH_ROOT_CANDIDATES.map(root => {
+    const packageDir = resolve(root, 'competitors', 'node_modules', name);
+    const manifest = resolve(packageDir, 'package.json');
+    const link = resolve(root, 'node_modules', name);
+
+    return `${root}: isolated-dir=${String(existsSync(packageDir))}, manifest=${String(existsSync(manifest))}, linked-dir=${String(existsSync(link))}`;
+  }).join(' | ');
 
 export const linkedPackageManifest = (name: string, modulesDirectory: string = BENCH_NODE_MODULES): string | null => {
   const manifest = resolve(modulesDirectory, name, 'package.json');
@@ -324,7 +344,10 @@ export const isolatedCompetitorDirectory = (
 ): string | null => {
   const directory = resolve(modulesDirectory, name);
 
-  return existsSync(resolve(directory, 'package.json')) ? directory : null;
+  // The installer checked the package directory before creating the junction.
+  // If a package manifest is inaccessible on Windows, keep the actual existing
+  // directory available for Vite to resolve (and report its own import error).
+  return existsSync(directory) ? directory : null;
 };
 
 /** The manifest path of an installed package, resolved through its exports map. */
