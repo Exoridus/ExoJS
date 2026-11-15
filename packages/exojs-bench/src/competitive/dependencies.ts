@@ -1,4 +1,4 @@
-import { readLibraryProvenance, type LibraryProvenance } from '../shared/provenance';
+import { type LibraryProvenance, readLibraryProvenance } from '../shared/provenance';
 
 /**
  * The rendering competitor workspace is intentionally outside the root pnpm
