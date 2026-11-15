@@ -7,3 +7,7 @@ packages:
   - .
 
 minimumReleaseAge: 4320
+
+# pnpm 11 may incorrectly skip materializing a locked standalone install.
+# This workspace is opt-in; validate its dependencies on every explicit setup.
+optimisticRepeatInstall: false
