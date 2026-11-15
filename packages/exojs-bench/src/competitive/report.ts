@@ -105,7 +105,7 @@ const qualification = (reasons: readonly string[]): Qualification => (reasons.le
 const same = (values: readonly string[]): boolean => new Set(values).size <= 1;
 const known = (value: string): boolean =>
   value.trim().length > 0 &&
-  !/^(?:unknown|unavailable|undeclared|unrecorded|not[- ](?:declared|installed)|unreadable|n\/?a)$/i.test(value.trim());
+  !/^(?:unknown|unavailable|undeclared|unrecorded|unverified|not[- ](?:declared|installed)|unreadable|n\/?a)$/i.test(value.trim());
 
 const inspectSession = (session: CompetitiveSession): string[] => {
   const issues: string[] = [];
