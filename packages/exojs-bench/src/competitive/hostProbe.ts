@@ -81,7 +81,13 @@ const macDriver = (read: HostCommand): string => {
   const version = read('sw_vers', ['-productVersion']);
   const build = read('sw_vers', ['-buildVersion']);
 
-  if (version === null || build === null || !/^\d{1,3}(?:\.\d{1,3}){0,3}$/.test(version) || !/^[\w.]+$/.test(build)) {
+  const versionParts = version?.split('.') ?? [];
+  const validVersion =
+    versionParts.length > 0 &&
+    versionParts.length <= 4 &&
+    versionParts.every(part => part.length > 0 && part.length <= 3 && /^[0-9]+$/.test(part));
+
+  if (!validVersion || build === null || !/^[\w.]+$/.test(build)) {
     return 'UNVERIFIED';
   }
 
