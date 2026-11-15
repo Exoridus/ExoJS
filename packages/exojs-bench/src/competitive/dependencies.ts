@@ -13,33 +13,28 @@ export const requiredCompetitivePackages = (engines: readonly string[]): string[
   [...new Set(engines.flatMap(engine => COMPETITOR_PACKAGES[engine] ?? []))].sort();
 
 /**
- * Reject missing/broken competitor installations BEFORE writing an acquisition
- * directory or launching browsers. Otherwise every affected cell becomes
- * "unavailable" and the full seven-repetition campaign runs pointlessly.
+ * Diagnostic only. Node's require-condition resolution can reject ESM-only
+ * packages that Vite imports successfully. A negative result is not proof that
+ * the package is absent, especially when pnpm uses Windows directory junctions.
  *
- * The resolution probe is injectable so tests do not require installed
- * competitors or network access.
+ * The browser's per-cell dynamic import is authoritative. Never block a
+ * benchmark or recommend reinstalling based solely on this metadata lookup.
  */
-export const assertCompetitiveDependencies = (
+export const inspectCompetitiveDependencies = (
   engines: readonly string[],
   read: (names: readonly string[]) => LibraryProvenance[] = readLibraryProvenance,
-): void => {
+): LibraryProvenance[] => {
   const required = requiredCompetitivePackages(engines);
 
   if (required.length === 0) {
-    return;
+    return [];
   }
 
   const installed = new Map(read(required).map(entry => [entry.name, entry]));
-  const missing = required.filter(name => {
-    const version = installed.get(name)?.version;
 
-    return version === undefined || ['not-installed', 'unreadable', 'unknown'].includes(version);
+  return required.flatMap(name => {
+    const record = installed.get(name) ?? { name, version: 'not-installed', resolvedFrom: '' };
+
+    return ['not-installed', 'unreadable', 'unknown'].includes(record.version) ? [record] : [];
   });
-
-  if (missing.length > 0) {
-    throw new Error(
-      `Competitor dependencies are missing or unreadable: ${missing.join(', ')}. Run "pnpm --filter @codexo/exojs-bench bench:setup" once from the repository root, then restart the benchmark. A regular "pnpm install" does not install this separate competitor workspace. No benchmark evidence directory was created for this attempt.`,
-    );
-  }
 };
