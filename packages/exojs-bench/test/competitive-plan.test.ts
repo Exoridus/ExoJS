@@ -19,6 +19,27 @@ describe('competitive acquisition plan', () => {
     expect(parseCompetitiveOptions(['--mode=quick', '--profile=deep']).profile).toBe('deep');
   });
 
+  test('standard and full modes automatically select both GPU backends, while explicit selectors are respected', () => {
+    const standard = parseCompetitiveOptions(['--mode=standard']);
+    const full = parseCompetitiveOptions(['--mode=full']);
+    const quick = parseCompetitiveOptions([]);
+    const restricted = parseCompetitiveOptions(['--mode=standard', '--backend=webgl2']);
+
+    expect(standard.backends).toEqual(['webgl2', 'webgpu']);
+    expect(full.backends).toEqual(['webgl2', 'webgpu']);
+    expect(quick.backends).toEqual(['webgl2']);
+    expect(restricted.backends).toEqual(['webgl2']);
+
+    const cells = resolveMatrixCells(competitiveMatrixOptions({
+      ...standard,
+      scenarios: ['dirty-0'],
+      load: 'low',
+    }, 0));
+
+    expect(new Set(cells.filter(cell => cell.backend === 'webgpu').map(cell => cell.engine))).toEqual(new Set(['exojs', 'pixi']));
+    expect(new Set(cells.filter(cell => cell.backend === 'webgl2').map(cell => cell.engine))).toEqual(new Set(['exojs', 'pixi', 'phaser']));
+  });
+
   test('resolves B03 through the existing capability-gated matrix at identical loads', () => {
     const options = parseCompetitiveOptions(['--scenario=B03', '--backend=webgl2', '--load=low', '--mode=quick']);
     const cells = resolveMatrixCells(competitiveMatrixOptions(options, 0));
