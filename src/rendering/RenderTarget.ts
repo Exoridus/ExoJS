@@ -52,6 +52,17 @@ export class RenderTarget {
   public opaqueDestination = false;
 
   /**
+   * Set by the backend while this frame's last full-target clear of this
+   * target was opaque, and dropped at the next frame or storage change - see
+   * `markClearCoverage` for the targets that qualify. Every
+   * fixed-function blend mode composites alpha source-over or preserves it,
+   * and the backdrop compositor writes source-over coverage too, so nothing
+   * drawn after such a clear can lower a pixel's alpha below 1.
+   * @internal
+   */
+  public _opaqueContent = false;
+
+  /**
    * Samples per pixel this target's colour attachment is rendered at. `1`
    * everywhere except an engine-owned working target an antialias request was
    * honored for - see `RenderingApplicationOptions.webglAttributes`.
@@ -323,5 +334,6 @@ export class RenderTarget {
 
   protected _touch(): void {
     this._version++;
+    this._opaqueContent = false;
   }
 }
