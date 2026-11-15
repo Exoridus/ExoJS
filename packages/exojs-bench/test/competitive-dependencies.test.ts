@@ -10,12 +10,7 @@ describe('competitive dependency metadata diagnostic', () => {
   test('checks only packages required by the selected engines', () => {
     expect(requiredCompetitivePackages(['exojs'])).toEqual([]);
     expect(requiredCompetitivePackages(['exojs', 'pixi'])).toEqual(['@pixi/layout', '@pixi/tilemap', 'pixi.js']);
-    expect(requiredCompetitivePackages(['pixi', 'phaser', 'pixi'])).toEqual([
-      '@pixi/layout',
-      '@pixi/tilemap',
-      'phaser',
-      'pixi.js',
-    ]);
+    expect(requiredCompetitivePackages(['pixi', 'phaser', 'pixi'])).toEqual(['@pixi/layout', '@pixi/tilemap', 'phaser', 'pixi.js']);
 
     const read = vi.fn(installed);
     expect(inspectCompetitiveDependencies(['exojs'], read)).toEqual([]);
@@ -38,11 +33,8 @@ describe('competitive dependency metadata diagnostic', () => {
   );
 
   test('records missing scoped-package metadata without blocking browser import', () => {
-    const read = (names: readonly string[]): LibraryProvenance[] =>
-      installed(names.filter(name => name !== '@pixi/layout'));
+    const read = (names: readonly string[]): LibraryProvenance[] => installed(names.filter(name => name !== '@pixi/layout'));
 
-    expect(inspectCompetitiveDependencies(['pixi'], read)).toEqual([
-      { name: '@pixi/layout', version: 'not-installed', resolvedFrom: '' },
-    ]);
+    expect(inspectCompetitiveDependencies(['pixi'], read)).toEqual([{ name: '@pixi/layout', version: 'not-installed', resolvedFrom: '' }]);
   });
 });
