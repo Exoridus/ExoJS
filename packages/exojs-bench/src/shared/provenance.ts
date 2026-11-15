@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { arch as osArch, cpus, platform as osPlatform, release as osRelease } from 'node:os';
 import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /**
  * Domain-agnostic provenance primitives.
@@ -293,8 +294,31 @@ export interface LibraryProvenance {
   readonly resolvedFrom: string;
 }
 
+/**
+ * The benchmark's isolated competitor workspace is linked directly into its
+ * node_modules by bench:setup (including Windows directory junctions). Reading
+ * package.json from that explicit directory avoids Node's require-conditions
+ * resolver, which cannot resolve import-only ESM packages even though Vite can.
+ *
+ * Keep this as a filesystem check, not a claim that the module can be loaded:
+ * the browser adapter remains the authoritative runtime test.
+ */
+const BENCH_NODE_MODULES = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', 'node_modules');
+
+export const linkedPackageManifest = (name: string, modulesDirectory: string = BENCH_NODE_MODULES): string | null => {
+  const manifest = resolve(modulesDirectory, name, 'package.json');
+
+  return existsSync(manifest) ? manifest : null;
+};
+
 /** The manifest path of an installed package, resolved through its exports map. */
 const defaultManifestPath = (name: string): string => {
+  const linked = linkedPackageManifest(name);
+
+  if (linked !== null) {
+    return linked;
+  }
+
   const nodeRequire = createRequire(import.meta.url);
 
   try {
