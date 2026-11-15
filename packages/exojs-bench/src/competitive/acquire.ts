@@ -23,7 +23,6 @@ const sourceStamp = (): SourceStamp => {
     dirty: git('status', '--porcelain').length > 0,
     trackedDiffSha256: sha256(execFileSync('git', ['diff', '--binary', 'HEAD'])),
     workspaceLockSha256: sha256(readFileSync(resolve(root, 'pnpm-lock.yaml'))),
-    competitorLockSha256: sha256(readFileSync(resolve(root, 'packages/exojs-bench/competitors/pnpm-lock.yaml'))),
   };
 };
 

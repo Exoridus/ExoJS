@@ -5,7 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { srcConditions } from '@codexo/exojs-config/vitest';
 
-import { isolatedCompetitorDirectory, readLibraryProvenance } from './provenance';
+import { readLibraryProvenance } from './provenance';
 
 /** Minimal surface of the programmatic Vite dev server the callers consume. */
 export interface ViteDevServer {
@@ -120,7 +120,7 @@ export const readEngineVersion = (): string => {
 /**
  * The subset of `arms` actually resolvable from this package, so Vite's
  * `optimizeDeps.include` only pre-bundles competitors that are present. A
- * competitor left unlinked (no `bench:setup`) is simply omitted rather than
+ * competitor that is not installed is simply omitted rather than
  * crashing esbuild's optimizer at server startup - an ExoJS-only run then needs
  * none of the competitor deps present.
  */
@@ -129,24 +129,10 @@ const resolvableCompetitors = (arms: readonly string[]): string[] =>
     .filter(library => !['not-installed', 'unreadable', 'unknown'].includes(library.version))
     .map(library => library.name);
 
-/**
- * Resolve the pinned competitor packages from their actual isolated install,
- * without relying on Node's require-condition resolution or Windows junctions.
- * Exact aliases are optional: a non-installed arm must remain unavailable,
- * never replaced with a different library version from the root workspace.
- */
-const competitorModules = (arms: readonly string[]): string[] =>
-  [...new Set([...arms, ...(arms.includes('pixi.js') ? ['@pixi/layout', '@pixi/tilemap', 'yoga-layout'] : [])])];
-
-export const isolatedCompetitorAliases = (
-  arms: readonly string[],
-  lookup: (name: string) => string | null = isolatedCompetitorDirectory,
-): Array<{ find: string; replacement: string }> =>
-  competitorModules(arms).flatMap(name => {
-    const directory = lookup(name);
-
-    return directory === null ? [] : [{ find: name, replacement: directory.replaceAll('\\', '/') }];
-  });
+/** Pixi's layout and tilemap extensions (and layout's yoga) are pre-bundled with it. */
+const competitorModules = (arms: readonly string[]): string[] => [
+  ...new Set([...arms, ...(arms.includes('pixi.js') ? ['@pixi/layout', '@pixi/tilemap', 'yoga-layout'] : [])]),
+];
 
 /**
  * Load Vite through the copy vitest already depends on. Vite is not a direct
@@ -276,13 +262,11 @@ export interface StartViteServerOptions {
    * optimizer cost of the other domain's libraries.
    */
   readonly libraryArms?: readonly string[];
-  /** Test-only package installation resolver for the isolated competitor workspace. */
-  readonly competitorLookup?: (name: string) => string | null;
 }
 
 /** Starts a programmatic Vite dev server rooted at a harness page directory. */
 export const startViteServer = async (options: StartViteServerOptions): Promise<ViteDevServer> => {
-  const { pageDir, version, host = '127.0.0.1', https, extraDefine, extraPlugins = [], libraryArms = LIBRARY_ARMS, competitorLookup } = options;
+  const { pageDir, version, host = '127.0.0.1', https, extraDefine, extraPlugins = [], libraryArms = LIBRARY_ARMS } = options;
   const vite = await loadVite();
   const server = await vite.createServer({
     configFile: false,
@@ -309,11 +293,7 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     // `.vert`/`.frag`/`.wgsl` specifiers carry their extension and are handled by
     // `realShaderPlugin`'s transform.
     resolve: {
-      alias: [
-        ...SOURCE_PACKAGE_ALIASES,
-        ...isolatedCompetitorAliases(libraryArms, competitorLookup),
-        { find: /^#(.*)\.(vert|frag|wgsl)$/, replacement: `${ENGINE_SRC}/$1.$2` },
-      ],
+      alias: [...SOURCE_PACKAGE_ALIASES, { find: /^#(.*)\.(vert|frag|wgsl)$/, replacement: `${ENGINE_SRC}/$1.$2` }],
       conditions: srcConditions,
     },
     ssr: { resolve: { conditions: srcConditions } },
@@ -325,7 +305,7 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     // pre-bundling, the browser's native ESM loader rejects them ("does not
     // provide an export named 'default'"). Explicitly `include` each RESOLVABLE
     // competitor so esbuild pre-bundles it and its CJS deps with interop, WITHOUT
-    // scanning the engine graph. A competitor that is not linked is omitted here
+    // scanning the engine graph. A competitor that is not installed is omitted here
     // (see `resolvableCompetitors`) rather than crashing the optimizer. Engine
     // source still resolves to local `.ts` files via the `#*` alias and is never
     // pre-bundled.

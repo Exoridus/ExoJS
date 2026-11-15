@@ -163,9 +163,7 @@ const inspectSession = (session: CompetitiveSession): string[] => {
         run.source.dirty ||
         !/^[\da-f]{40,64}$/i.test(run.source.commit) ||
         !/^[\da-f]{40,64}$/i.test(run.source.tree) ||
-        [run.source.trackedDiffSha256, run.source.workspaceLockSha256, run.source.competitorLockSha256].some(
-          hash => !/^[\da-f]{64}$/i.test(hash),
-        ),
+        [run.source.trackedDiffSha256, run.source.workspaceLockSha256].some(hash => !/^[\da-f]{64}$/i.test(hash)),
     )
   ) {
     issues.push('Source inputs are dirty or incompletely identified.');

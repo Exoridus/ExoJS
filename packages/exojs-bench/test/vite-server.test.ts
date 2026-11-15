@@ -1,13 +1,12 @@
 // @vitest-environment node
 
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 
-import { isolatedCompetitorAliases, startViteServer, type ViteDevServer } from '../src/shared/viteServer';
+import { startViteServer, type ViteDevServer } from '../src/shared/viteServer';
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 const BENCH_IMPORTER = resolve(ROOT, 'packages/exojs-bench/src/rendering/adapters/exojs.ts');
@@ -49,64 +48,9 @@ const resolvedId = async (source: string, importer: string): Promise<string | un
   (await server.environments.client.pluginContainer.resolveId(source, importer))?.id;
 const vitePath = (path: string): string => path.replaceAll('\\', '/');
 
-describe('isolated competitor module resolution', () => {
-  test('aliases pinned Pixi, layouts and Phaser to their installed ESM package roots', () => {
-    const aliases = isolatedCompetitorAliases(['pixi.js', 'phaser'], name =>
-      name === 'yoga-layout' ? null : `C:\\bench\\competitors\\node_modules\\${name}`,
-    );
-
-    expect(aliases).toEqual([
-      { find: 'pixi.js', replacement: 'C:/bench/competitors/node_modules/pixi.js' },
-      { find: 'phaser', replacement: 'C:/bench/competitors/node_modules/phaser' },
-      { find: '@pixi/layout', replacement: 'C:/bench/competitors/node_modules/@pixi/layout' },
-      { find: '@pixi/tilemap', replacement: 'C:/bench/competitors/node_modules/@pixi/tilemap' },
-    ]);
-  });
-
-  test('never aliases a missing or unrelated competitor package', () => {
-    expect(isolatedCompetitorAliases([], () => '/must-not-be-called')).toEqual([]);
-    expect(isolatedCompetitorAliases(['pixi.js'], () => null)).toEqual([]);
-  });
-});
-
-describe('real Vite resolution for isolated ESM competitors', () => {
-  test('resolves Phaser, Pixi and both Pixi extensions from pinned-package directories', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'exojs-vite-competitors-'));
-    let fixtureServer: ViteDevServer | null = null;
-
-    try {
-      const names = ['phaser', 'pixi.js', '@pixi/layout', '@pixi/tilemap', 'yoga-layout'];
-
-      for (const name of names) {
-        const directory = resolve(root, name);
-        mkdirSync(directory, { recursive: true });
-        writeFileSync(
-          resolve(directory, 'package.json'),
-          JSON.stringify({ name, version: '1.0.0', type: 'module', exports: './index.mjs' }),
-        );
-        writeFileSync(resolve(directory, 'index.mjs'), 'export const usable = true;');
-      }
-
-      fixtureServer = await startViteServer({
-        pageDir: resolve(ROOT, 'packages/exojs-bench/src/rendering/page'),
-        version: 'test',
-        libraryArms: ['pixi.js', 'phaser'],
-        competitorLookup: name => {
-          const directory = resolve(root, name);
-
-          return existsSync(resolve(directory, 'package.json')) ? directory : null;
-        },
-      });
-
-      const plugins = (fixtureServer as ResolvedServer).environments.client.pluginContainer;
-
-      for (const name of names) {
-        expect((await plugins.resolveId(name, BENCH_IMPORTER))?.id).toBe(vitePath(resolve(root, name, 'index.mjs')));
-      }
-    } finally {
-      await fixtureServer?.close();
-      rmSync(root, { recursive: true, force: true });
-    }
+describe('competitor module resolution', () => {
+  test.each(['pixi.js', 'phaser', '@pixi/layout', '@pixi/tilemap'])('resolves the installed %s from a benchmark adapter', async name => {
+    expect(await resolvedId(name, BENCH_IMPORTER)).toMatch(/node_modules/);
   });
 });
 

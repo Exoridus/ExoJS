@@ -8,7 +8,6 @@ import { selectCompetitiveAcquisitionDestination } from './competitive/outputDir
 import { competitiveMatrixOptions, competitivePlan, competitiveProtocolHash, parseCompetitiveOptions } from './competitive/plan';
 import { compareCompetitiveSessions, writeCompetitiveReport } from './competitive/report';
 import { resolveMatrixCells } from './rendering/driver';
-import { competitorInstallDiagnostics } from './shared/provenance';
 
 const HELP = `Competitive rendering benchmark, using the existing ExoJS benchmark driver.
 
@@ -102,19 +101,15 @@ const main = async (): Promise<void> => {
     return;
   }
 
-  // A package may load through Vite's ESM resolver even if a Node preflight
-  // cannot resolve its metadata (notably junctions and import-only exports on
-  // Windows). Never discard a potentially valid benchmark based on that probe.
   const unresolved = inspectCompetitiveDependencies(options.engines);
 
   if (unresolved.length > 0) {
-    if (options.worker === undefined) {
-      for (const item of unresolved) {
-        console.warn(
-          `[competitive] Unverified dependency metadata for ${item.name} (${item.version}): ${competitorInstallDiagnostics(item.name)}. Browser import will decide availability.`,
-        );
-      }
-    }
+    console.error(
+      `[competitive] Competitor packages are not installed: ${unresolved.map(item => item.name).join(', ')}. Run pnpm install in the repository root and retry.`,
+    );
+    process.exitCode = 1;
+
+    return;
   }
 
   if (options.worker !== undefined) {

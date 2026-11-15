@@ -87,8 +87,8 @@ const CLOCK_PROBE_ITERATIONS = 200_000;
  *
  * Each arm's ADAPTER MODULE is imported dynamically rather than at the top of
  * this file, because the adapter is where the competitor library's bare
- * specifier lives. A specifier the dev server cannot resolve - the state of a
- * checkout that never ran `bench:setup` - fails that module, and a static import
+ * specifier lives. A specifier the dev server cannot resolve - for example an
+ * uninstalled competitor - fails that module, and a static import
  * would take the whole harness page down with it, leaving no page to report from.
  * Loading each adapter on demand turns that into one rejected arm carrying the
  * loader's own message.

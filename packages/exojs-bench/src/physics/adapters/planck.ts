@@ -61,8 +61,8 @@ import { describePhysicsScene } from './scene';
  *   solid behaviour. The sweep the archetype casts starts outside the geometry,
  *   so the two agree on it.
  *
- * `planck` is loaded lazily via dynamic `import()`. A checkout that never ran
- * `bench:setup` has the library unlinked and the import rejects; the harness
+ * `planck` is loaded lazily via dynamic `import()`. If the library is not
+ * installed the import rejects; the harness
  * records the arm as unavailable with that reason rather than omitting it.
  */
 

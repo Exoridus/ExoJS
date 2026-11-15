@@ -176,7 +176,7 @@ export const buildProfileDocument = (sources: ProfileSources): BenchProfileDocum
 
   if (missing.length > 0) {
     throw new Error(
-      `Cannot write a profile from a run with unresolved arms (${missing.map(library => library.name).join(', ')}). Run bench:setup and re-measure, so every published cell has a version behind it.`,
+      `Cannot write a profile from a run with unresolved arms (${missing.map(library => library.name).join(', ')}). Install the dependencies and re-measure, so every published cell has a version behind it.`,
     );
   }
 

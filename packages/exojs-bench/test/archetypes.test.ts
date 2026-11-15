@@ -8,6 +8,12 @@ vi.mock('#core/Application', () => ({
   Application: class {
     rendering = { view: { setCenter() {} } };
 
+    options = {};
+
+    _workingColorFormat() {
+      return 'rgba8-srgb';
+    }
+
     async start() {}
 
     stop() {}

@@ -8,7 +8,6 @@ export interface SourceStamp {
   readonly dirty: boolean;
   readonly trackedDiffSha256: string;
   readonly workspaceLockSha256: string;
-  readonly competitorLockSha256: string;
 }
 
 export interface HostDeclaration {

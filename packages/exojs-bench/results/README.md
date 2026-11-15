@@ -7,9 +7,9 @@ This directory preserves the published, machine-specific rendering and physics p
 Set up the repository with `pnpm bootstrap:dev`, then run the complete reference workload three times in separate invocations:
 
 ```sh
-pnpm --filter @codexo/exojs-bench bench:reference --out run-1
-pnpm --filter @codexo/exojs-bench bench:reference --out run-2
-pnpm --filter @codexo/exojs-bench bench:reference --out run-3
+pnpm bench:reference --out run-1
+pnpm bench:reference --out run-2
+pnpm bench:reference --out run-3
 ```
 
 Output paths are relative to the benchmark package. On macOS and Linux, supply `--platform=<major>[-beta]` with the actual OS release; the browser cannot reliably report the required major version. Windows detection uses the harness's supported platform signals. A missing or assumed platform value is not equivalent to a verified stable release.

@@ -14,12 +14,12 @@ From the repository root:
 
 ```sh
 pnpm bootstrap:dev
-pnpm --filter @codexo/exojs-bench bench:reference --out run-1
-pnpm --filter @codexo/exojs-bench bench:reference --out run-2
-pnpm --filter @codexo/exojs-bench bench:reference --out run-3
+pnpm bench:reference --out run-1
+pnpm bench:reference --out run-2
+pnpm bench:reference --out run-3
 ```
 
-Use the platform declaration required by your host, as described in the [results instructions](results/README.md). Each invocation is independent; three repetitions inside one warmed process are not the same acquisition procedure. Competitor dependencies live in the benchmark's private competitor workspace, separate from the public runtime packages.
+Use the platform declaration required by your host, as described in the [results instructions](results/README.md). Each invocation is independent; three repetitions inside one warmed process are not the same acquisition procedure. Competitor libraries are devDependencies of the benchmark package and never reach the public runtime packages.
 
 [Publish a machine profile](results/README.md) only after the required runs pass compatibility and provenance checks. Diagnostic runs with a narrowed workload are useful locally but do not become an unrestricted published profile merely by changing their filename.
 

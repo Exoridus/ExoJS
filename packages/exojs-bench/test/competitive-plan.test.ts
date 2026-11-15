@@ -42,9 +42,7 @@ describe('competitive acquisition plan', () => {
     );
 
     expect(new Set(cells.filter(cell => cell.backend === 'webgpu').map(cell => cell.engine))).toEqual(new Set(['exojs', 'pixi']));
-    expect(new Set(cells.filter(cell => cell.backend === 'webgl2').map(cell => cell.engine))).toEqual(
-      new Set(['exojs', 'pixi', 'phaser']),
-    );
+    expect(new Set(cells.filter(cell => cell.backend === 'webgl2').map(cell => cell.engine))).toEqual(new Set(['exojs', 'pixi', 'phaser']));
   });
 
   test('resolves B03 through the existing capability-gated matrix at identical loads', () => {
