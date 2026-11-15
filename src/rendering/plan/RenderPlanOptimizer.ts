@@ -2,11 +2,16 @@ import type { MaterialKey } from '#rendering/material/MaterialKey';
 import { forcesBatchFlush } from '#rendering/material/MaterialKey';
 
 import type { DrawCommand } from './renderCommand';
-import { RenderEntryKind } from './renderCommand';
+import { RenderEntryKind, resolveDrawBounds } from './renderCommand';
 import type { RenderPlan } from './RenderPlan';
 import type { DrawScopeEntry, GroupScope, ScopeEntry } from './RenderScope';
 
-const aabbOverlap = (a: DrawCommand, b: DrawCommand): boolean => a.minX < b.maxX && a.maxX > b.minX && a.minY < b.maxY && a.maxY > b.minY;
+const aabbOverlap = (a: DrawCommand, b: DrawCommand): boolean => {
+  resolveDrawBounds(a);
+  resolveDrawBounds(b);
+
+  return a.minX < b.maxX && a.maxX > b.minX && a.minY < b.maxY && a.maxY > b.minY;
+};
 
 /** @internal */
 export class RenderPlanOptimizer {

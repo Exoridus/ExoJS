@@ -1478,6 +1478,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       maxX: 0,
       maxY: 0,
       groupIndex: 0,
+      boundsStale: false,
     };
   }
 }

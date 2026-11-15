@@ -570,7 +570,7 @@ describe('automatic render-root representation: incremental transform rows', () 
     harness.backend.destroy();
   });
 
-  test('a move on the entry-replay tier refreshes the record AABB the optimizer reorders on', () => {
+  test('a move on the entry-replay tier flags the record AABB the optimizer re-reads before reordering', () => {
     const harness = createPatchingBackend();
     const root = new Container();
     const leaf = new RecordableLeaf('a');
@@ -583,8 +583,7 @@ describe('automatic render-root representation: incremental transform rows', () 
 
     const record = root._retainedRootRepresentation().fragment.recordedDraw(leaf);
 
-    expect(record?.minX).toBe(100);
-    expect(record?.maxX).toBe(116);
+    expect(record?.boundsStale).toBe(true);
     expect(harness.patches).toEqual([]); // live transforms, nothing to patch
 
     root.destroy();

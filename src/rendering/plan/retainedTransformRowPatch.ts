@@ -158,23 +158,16 @@ export const isUnder = (node: RenderNode, ancestor: RenderNode): boolean => {
 };
 
 /**
- * Rewrite a moved node's snapshotted screen AABB in its captured draw record.
- * A record whose extent is one move out of date is not a rendering error by
- * itself - the replay re-derives nothing from it - but the optimizer reads it to
- * decide whether a batch run may be reordered past an intervening draw, and a
- * stale extent can hide a real overlap.
+ * Flag a moved node's snapshotted screen AABB in its captured draw record as
+ * out of date. Nothing re-derives from the extent during replay; only the
+ * optimizer's reorder-safety test reads it, and only for a scope that mixes
+ * pipelines, so it re-reads the live bounds on demand instead of every moved
+ * node paying for a bounds recompute each frame.
  */
-const refreshRetainedDrawBounds = (node: RenderNode, record: RetainedFragmentDraw | undefined): void => {
-  if (record === undefined) {
-    return;
+const markRetainedDrawBoundsStale = (record: RetainedFragmentDraw | undefined): void => {
+  if (record !== undefined) {
+    record.boundsStale = true;
   }
-
-  const bounds = node.getBounds();
-
-  record.minX = bounds.left;
-  record.minY = bounds.top;
-  record.maxX = bounds.right;
-  record.maxY = bounds.bottom;
 };
 
 /**
@@ -215,9 +208,9 @@ export const reconcileRetainedTransformRows = (
     // tier) or the fragment sits on entry replay. Both re-read each node's live
     // transform, so there is no row to patch. Only the RECORD's snapshotted
     // screen AABB is stale, and the optimizer's reorder-safety test reads it -
-    // refresh those and report the moves as accounted for.
-    const complete = forEachMovedNode(fragment, owns, (node, record) => {
-      refreshRetainedDrawBounds(node, record);
+    // flag those and report the moves as accounted for.
+    const complete = forEachMovedNode(fragment, owns, (_node, record) => {
+      markRetainedDrawBoundsStale(record);
 
       return true;
     });
@@ -250,7 +243,7 @@ export const reconcileRetainedTransformRows = (
   const patchableBundle = bundle as PatchableRetainedGroupBundle;
 
   const patched = forEachMovedNode(fragment, owns, (node, record) => {
-    refreshRetainedDrawBounds(node, record);
+    markRetainedDrawBoundsStale(record);
 
     return isEligible(node) && tryPatchRetainedTransformRow(node, record, patchableBundle, backend, base);
   });
