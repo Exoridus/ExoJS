@@ -117,11 +117,7 @@ test('composite bloom preserves scene pixels and emits spread on both renderers'
           // This archetype adds a blurred copy of the scene. It must not
           // darken the underlying image or silently change canvas opacity.
           // Allow two code values for rasterization/quantization noise.
-          if (
-            pixels[i]! < plain[i]! - 2 ||
-            pixels[i + 1]! < plain[i + 1]! - 2 ||
-            pixels[i + 2]! < plain[i + 2]! - 2
-          ) {
+          if (pixels[i]! < plain[i]! - 2 || pixels[i + 1]! < plain[i + 1]! - 2 || pixels[i + 2]! < plain[i + 2]! - 2) {
             darkened++;
           }
 
