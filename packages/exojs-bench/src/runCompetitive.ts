@@ -8,6 +8,7 @@ import { selectCompetitiveAcquisitionDestination } from './competitive/outputDir
 import { competitiveMatrixOptions, competitivePlan, competitiveProtocolHash, parseCompetitiveOptions } from './competitive/plan';
 import { compareCompetitiveSessions, writeCompetitiveReport } from './competitive/report';
 import { resolveMatrixCells } from './rendering/driver';
+import { competitorInstallDiagnostics } from './shared/provenance';
 
 const HELP = `Competitive rendering benchmark, using the existing ExoJS benchmark driver.
 
@@ -107,9 +108,13 @@ const main = async (): Promise<void> => {
   const unresolved = inspectCompetitiveDependencies(options.engines);
 
   if (unresolved.length > 0) {
-    console.warn(
-      `[competitive] Dependency metadata probe could not establish ${unresolved.map(item => `${item.name} (${item.version}; ${item.resolvedFrom || 'no path'})`).join(', ')}. Continuing to the browser adapter; actual errors will be recorded in cells.jsonl.`,
-    );
+    if (options.worker === undefined) {
+      for (const item of unresolved) {
+        console.warn(
+          `[competitive] Unverified dependency metadata for ${item.name} (${item.version}): ${competitorInstallDiagnostics(item.name)}. Browser import will decide availability.`,
+        );
+      }
+    }
   }
 
   if (options.worker !== undefined) {
