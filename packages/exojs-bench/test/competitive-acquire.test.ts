@@ -16,6 +16,7 @@ vi.mock('node:child_process', async importOriginal => ({
   ...(await importOriginal<typeof import('node:child_process')>()),
   execFileSync: mocks.git,
 }));
+vi.mock('../src/competitive/hostProbe', () => ({ probeHost: () => ({ driver: 'UNVERIFIED', power: 'UNVERIFIED' }) }));
 vi.mock('../src/rendering/driver', () => ({ runMatrix: mocks.runMatrix, SOFTWARE_LAUNCH_FLAGS: [] }));
 vi.mock('../src/rendering/report', () => ({ writeReport: mocks.writeReport }));
 
