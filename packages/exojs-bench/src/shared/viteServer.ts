@@ -276,11 +276,13 @@ export interface StartViteServerOptions {
    * optimizer cost of the other domain's libraries.
    */
   readonly libraryArms?: readonly string[];
+  /** Test-only package installation resolver for the isolated competitor workspace. */
+  readonly competitorLookup?: (name: string) => string | null;
 }
 
 /** Starts a programmatic Vite dev server rooted at a harness page directory. */
 export const startViteServer = async (options: StartViteServerOptions): Promise<ViteDevServer> => {
-  const { pageDir, version, host = '127.0.0.1', https, extraDefine, extraPlugins = [], libraryArms = LIBRARY_ARMS } = options;
+  const { pageDir, version, host = '127.0.0.1', https, extraDefine, extraPlugins = [], libraryArms = LIBRARY_ARMS, competitorLookup } = options;
   const vite = await loadVite();
   const server = await vite.createServer({
     configFile: false,
@@ -309,7 +311,7 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     resolve: {
       alias: [
         ...SOURCE_PACKAGE_ALIASES,
-        ...isolatedCompetitorAliases(libraryArms),
+        ...isolatedCompetitorAliases(libraryArms, competitorLookup),
         { find: /^#(.*)\.(vert|frag|wgsl)$/, replacement: `${ENGINE_SRC}/$1.$2` },
       ],
       conditions: srcConditions,
