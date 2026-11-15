@@ -337,8 +337,9 @@ const describeBackend = (backend: BackendChoice): void => {
 
       const i = (16 * size + 16) * 4;
 
-      // Straight-alpha ImageData: white at half coverage.
-      expect([frame.data[i], frame.data[i + 1], frame.data[i + 2], frame.data[i + 3]]).toEqual([255, 255, 255, 128]);
+      // Straight-alpha ImageData: white at half coverage. Half coverage is 127.5
+      // in eight bits, which adapters round either way.
+      expectPixelNear([frame.data[i]!, frame.data[i + 1]!, frame.data[i + 2]!, frame.data[i + 3]!], [255, 255, 255, 128], 1);
       node.destroy();
     });
 
