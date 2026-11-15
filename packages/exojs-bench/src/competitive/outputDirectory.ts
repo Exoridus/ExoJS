@@ -26,7 +26,7 @@ export const selectCompetitiveAcquisitionDestination = (
     options.dryRun ||
     options.help ||
     options.list ||
-    argv.some(argument => argument.startsWith('--out='))
+    argv.some(argument => argument === '--out' || argument.startsWith('--out='))
   ) {
     return { options, workerArgs: argv };
   }
