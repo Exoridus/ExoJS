@@ -376,7 +376,7 @@ export class RenderPlanBuilder {
     // falls back for one that reports nothing usable.
     const destination = backend.renderTarget as RenderTarget | undefined;
 
-    this._rootDestinationOpaque = destination?.opaqueDestination === true;
+    this._rootDestinationOpaque = destination?.opaqueDestination === true || destination?._opaqueContent === true;
     this._plan.reset();
     this._rewindPools();
     this._viewCullSuppression = 0;

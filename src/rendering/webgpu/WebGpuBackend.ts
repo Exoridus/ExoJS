@@ -56,7 +56,7 @@ import {
 } from '#rendering/texture/CompressedTextureFormat';
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
 import { DepthTexture } from '#rendering/texture/DepthTexture';
-import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { markClearCoverage, releaseOpaqueContent, RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { type SamplerOptions, samplerStateKey } from '#rendering/texture/TextureOptions';
 import type { BlendModes, ColorTextureFormat } from '#rendering/types';
@@ -335,6 +335,17 @@ export class WebGpuBackend implements RenderBackend {
   private _renderGroupTransform: Matrix | null = null;
   private _renderGroupTransformId = 0;
   private _clearRequested = false;
+  /**
+   * The colour a pending {@link clear} request was made with. A clear only
+   * executes as the load op of the next pass, and the persistent clear colour
+   * can change before that pass opens - a child pass restores its parent's
+   * colour on exit - so the request keeps its own.
+   */
+  private readonly _requestedClearColor = new Color();
+  /** The clear colour the pass being opened resolves against - see {@link _requestedClearColor}. */
+  private _passClearColor: Color = this._clearColor;
+  /** Targets whose `_opaqueContent` this frame set - dropped again at the next frame start. */
+  private readonly _opaqueClearedTargets: RenderTarget[] = [];
   private _hasPresentedFrame = false;
   private readonly _nativeReplayFrame = { id: 0, remainingBuilds: 32 };
   private readonly _stats: RenderStats = createRenderStats();
@@ -651,6 +662,7 @@ export class WebGpuBackend implements RenderBackend {
     // previously reset per render() call in _beginDrawPlan).
     this._getTransformStorage().buffer.begin();
     this._gpuTimer?.beginFrame();
+    releaseOpaqueContent(this._opaqueClearedTargets);
 
     // Frame start rather than frame end: a map never settles in the task that
     // requested it, so polling here is what lets a read requested in one
@@ -1492,6 +1504,9 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     this._clearRequested = true;
+    this._requestedClearColor.copy(this._clearColor);
+    // A load-op clear always covers the whole attachment; scissor never applies.
+    markClearCoverage(this._renderTarget, this._clearColor.a >= 1, this._opaqueClearedTargets);
 
     return this;
   }
@@ -1625,6 +1640,7 @@ export class WebGpuBackend implements RenderBackend {
     this._textureNormalizer = null;
     this._renderTarget = this._rootRenderTarget;
     this._clearColor.destroy();
+    this._requestedClearColor.destroy();
     this._rootRenderTarget.destroy();
 
     // Last, so every buffer/texture destroy above still ran against a live
@@ -1680,6 +1696,7 @@ export class WebGpuBackend implements RenderBackend {
       }
 
       this._loadOpForPass = this.passCoordinator.resolveLoad(renderTarget, this._clearRequested);
+      this._passClearColor = this._clearRequested ? this._requestedClearColor : this._clearColor;
       this._clearRequested = false;
     }
 
@@ -1691,6 +1708,7 @@ export class WebGpuBackend implements RenderBackend {
     if (this._loadOpForPass === 'clear') {
       const clearValue = attachment.clearValue as GPUColorDict;
       const slotTarget = multi !== null ? multi.attachment(index) : renderTarget;
+      const clearColor = this._passClearColor;
 
       // An `Rgba8Srgb` attachment write - including a clear - hardware-encodes
       // its input, exactly as a fragment shader output does. `Color`'s RGB
@@ -1699,16 +1717,16 @@ export class WebGpuBackend implements RenderBackend {
       // authored draw of the same nominal color agree. Resolved per slot: the
       // attachments of one multi-attachment target may mix formats.
       if (slotTarget instanceof RenderTexture && slotTarget.format === TextureFormat.Rgba8Srgb) {
-        this._clearColor.writeLinear(this._clearColorLinearScratch);
+        clearColor.writeLinear(this._clearColorLinearScratch);
         clearValue.r = this._clearColorLinearScratch[0]!;
         clearValue.g = this._clearColorLinearScratch[1]!;
         clearValue.b = this._clearColorLinearScratch[2]!;
         clearValue.a = this._clearColorLinearScratch[3]!;
       } else {
-        clearValue.r = this._clearColor.r / 255;
-        clearValue.g = this._clearColor.g / 255;
-        clearValue.b = this._clearColor.b / 255;
-        clearValue.a = this._clearColor.a;
+        clearValue.r = clearColor.r / 255;
+        clearValue.g = clearColor.g / 255;
+        clearValue.b = clearColor.b / 255;
+        clearValue.a = clearColor.a;
       }
     }
 

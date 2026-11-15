@@ -240,5 +240,42 @@ export class RenderTexture extends RenderTarget {
 
   private _touchTexture(): void {
     this._textureVersion++;
+    this._opaqueContent = false;
   }
 }
+
+/**
+ * Record what a clear of `target` just did to its coverage (see
+ * `RenderTarget._opaqueContent`). Only a single-attachment texture whose
+ * storage clamps to `[0, 1]` qualifies: the fixed-function Multiply shortcut
+ * that coverage unlocks multiplies unclamped values, while the backdrop
+ * compositor clamps them first, so over a float target the two disagree even
+ * at full coverage. The root target is left alone - its content is the
+ * presented canvas, which the browser may reset between frames, and its own
+ * `opaqueDestination` already answers for an alpha-less canvas.
+ * @internal
+ */
+export const markClearCoverage = (target: RenderTarget, opaque: boolean, cleared: RenderTarget[]): void => {
+  if (!(target instanceof RenderTexture) || (target.format !== TextureFormat.Rgba8 && target.format !== TextureFormat.Rgba8Srgb)) {
+    return;
+  }
+
+  if (opaque && !target._opaqueContent) {
+    cleared.push(target);
+  }
+
+  target._opaqueContent = opaque;
+};
+
+/**
+ * Drop every frame-scoped coverage fact {@link markClearCoverage} recorded:
+ * content kept from an earlier frame is not provably still the cleared one.
+ * @internal
+ */
+export const releaseOpaqueContent = (cleared: RenderTarget[]): void => {
+  for (const target of cleared) {
+    target._opaqueContent = false;
+  }
+
+  cleared.length = 0;
+};

@@ -65,7 +65,7 @@ import type { CompressedTextureFormat } from '#rendering/texture/CompressedTextu
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
 import { DepthTexture } from '#rendering/texture/DepthTexture';
 import { isFullyOpaqueLevel } from '#rendering/texture/pixelPayload';
-import { RenderTexture } from '#rendering/texture/RenderTexture';
+import { markClearCoverage, releaseOpaqueContent, RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { type SamplerOptions, samplerStateKey } from '#rendering/texture/TextureOptions';
 import { TransformBuffer } from '#rendering/TransformBuffer';
@@ -390,6 +390,8 @@ export class WebGl2Backend implements RenderBackend {
    */
   private readonly _clipPixelStack: PixelClipBoundsState[] = [];
   private _clipDepth = 0;
+  /** Targets whose `_opaqueContent` this frame set - dropped again at the next frame start. */
+  private readonly _opaqueClearedTargets: RenderTarget[] = [];
   /** Scratch for the incoming rect before it is intersected into its slot. */
   private readonly _clipPixelScratch: PixelClipBoundsState = { x: 0, y: 0, width: 0, height: 0 };
   private readonly _clipPointA: Vector = new Vector();
@@ -710,6 +712,7 @@ export class WebGl2Backend implements RenderBackend {
     // previously reset per render() call in _beginDrawPlan).
     this._transformBuffer.begin();
     this._gpuTimer?.beginFrame();
+    releaseOpaqueContent(this._opaqueClearedTargets);
 
     // Frame start rather than frame end: a fence never signals in the task
     // that created it, so polling here is what lets a read requested in one
@@ -2231,6 +2234,8 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     this._bindRenderTarget(this._renderTarget);
+    // A scissored clear leaves the pixels outside the clip as they were.
+    markClearCoverage(this._renderTarget, this._clearColor.a >= 1 && this._clipDepth === 0, this._opaqueClearedTargets);
 
     let colorBit: number = gl.COLOR_BUFFER_BIT;
 
