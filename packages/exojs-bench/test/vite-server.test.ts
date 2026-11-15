@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 
-import { startViteServer, type ViteDevServer } from '../src/shared/viteServer';
+import { isolatedCompetitorAliases, startViteServer, type ViteDevServer } from '../src/shared/viteServer';
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 const BENCH_IMPORTER = resolve(ROOT, 'packages/exojs-bench/src/rendering/adapters/exojs.ts');
@@ -47,6 +47,26 @@ afterAll(async () => {
 const resolvedId = async (source: string, importer: string): Promise<string | undefined> =>
   (await server.environments.client.pluginContainer.resolveId(source, importer))?.id;
 const vitePath = (path: string): string => path.replaceAll('\\', '/');
+
+describe('isolated competitor module resolution', () => {
+  test('aliases pinned Pixi, layouts and Phaser to their installed ESM package roots', () => {
+    const aliases = isolatedCompetitorAliases(['pixi.js', 'phaser'], name =>
+      name === 'yoga-layout' ? null : `C:\\bench\\competitors\\node_modules\\${name}`,
+    );
+
+    expect(aliases).toEqual([
+      { find: 'pixi.js', replacement: 'C:/bench/competitors/node_modules/pixi.js' },
+      { find: 'phaser', replacement: 'C:/bench/competitors/node_modules/phaser' },
+      { find: '@pixi/layout', replacement: 'C:/bench/competitors/node_modules/@pixi/layout' },
+      { find: '@pixi/tilemap', replacement: 'C:/bench/competitors/node_modules/@pixi/tilemap' },
+    ]);
+  });
+
+  test('never aliases a missing or unrelated competitor package', () => {
+    expect(isolatedCompetitorAliases([], () => '/must-not-be-called')).toEqual([]);
+    expect(isolatedCompetitorAliases(['pixi.js'], () => null)).toEqual([]);
+  });
+});
 
 describe('benchmark engine source resolution', () => {
   test('resolves a known engine module for benchmark adapters', async () => {
