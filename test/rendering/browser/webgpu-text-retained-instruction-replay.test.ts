@@ -326,6 +326,17 @@ describe('WebGPU renderer matrix: Text retained instruction replay cells', () =>
 
       expect(fragmentOf(scene.group).instructions?.hasRecording).toBe(true);
 
+      // A poisoned set still reports a recording; only an actual replay proves
+      // the re-record took.
+      const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
+
+      if (!(await renderScene(ctx, backend, scene.root))) {
+        return;
+      }
+
+      expect(replaySpy).toHaveBeenCalled();
+      replaySpy.mockRestore();
+
       const ink = inkProbe(readCanvas(backend));
 
       expect(ink).not.toEqual([0, 0, 0, 255]);
