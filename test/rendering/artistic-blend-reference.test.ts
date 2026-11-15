@@ -34,7 +34,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 import { markClearCoverage, releaseOpaqueContent, RenderTexture } from '#rendering/texture/RenderTexture';
-import { blendModeNeedsBackdrop, BlendModes, TextureFormat } from '#rendering/types';
+import { blendModeNeedsBackdrop, BlendModes, type ColorTextureFormat, TextureFormat } from '#rendering/types';
 
 import { createRenderBackendDouble } from '../support/render-backend-double';
 import { ADVANCED_BLEND_MODES, type Rgb, w3cBlend } from './browser/_blendReference';
@@ -356,11 +356,14 @@ describe('backdrop blend routing by destination coverage', () => {
       return texture;
     };
 
-    test.each([TextureFormat.Rgba8, TextureFormat.Rgba8Srgb])('an opaque clear of a %s texture keeps the fixed-function path', format => {
-      expect(multiplyRoutes(cleared(new RenderTexture(64, 64, { format })))).toEqual([]);
-    });
+    test.each<ColorTextureFormat>([TextureFormat.Rgba8, TextureFormat.Rgba8Srgb])(
+      'an opaque clear of a %s texture keeps the fixed-function path',
+      format => {
+        expect(multiplyRoutes(cleared(new RenderTexture(64, 64, { format })))).toEqual([]);
+      },
+    );
 
-    test.each([TextureFormat.Rgba16F, TextureFormat.Rgba32F])(
+    test.each<ColorTextureFormat>([TextureFormat.Rgba16F, TextureFormat.Rgba32F])(
       'an opaque clear of a %s texture still composites: the compositor clamps what the shortcut would not',
       format => {
         expect(multiplyRoutes(cleared(new RenderTexture(64, 64, { format })))).toEqual([BlendModes.Multiply]);
