@@ -104,6 +104,8 @@ describe('competitive acquisition source identity', () => {
     const run = await acquireCompetitiveRun(options, 0);
 
     expect(run.error).toBeNull();
+    expect(run.host.machine).not.toBe('UNRECORDED');
+    expect(run.host.background).toBe('UNVERIFIED');
     expect(run.sourceAfter).toEqual(run.source);
     expect(run.outcome).toEqual(outcome);
     expect(saved()).toEqual(run);
