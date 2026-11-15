@@ -1,119 +1,40 @@
 # ExoJS agent instructions
 
-## Project
+## Orientation
 
-ExoJS is a TypeScript-first browser 2D runtime for games and interactive apps.
+ExoJS is a TypeScript-first 2D browser runtime. Core (`@codexo/exojs`) is at the repository root; optional extensions, integrations, tools, and benchmarks live in `packages/`.
 
-Core (`@codexo/exojs`) lives at the repository root. Official extensions, integrations, tooling, and benchmarks live under `packages/`.
+Read relevant code and tests first, then only the guidance needed for the task. Use [CONTRIBUTING](CONTRIBUTING.md) for repository conventions, API changes, imports, distribution, and PR/visual-review workflow. Read package-local docs when changing that package. Do not preload unrelated documents.
 
-Preserve package boundaries and keep Core independent from optional extensions.
+`.workspace/` contains private, untracked research, reviews, evidence, and working notes, not authoritative source or public references. Promote enduring conclusions into the appropriate tracked documentation; never link private paths or notes from committed files.
 
-## Working context
+## Engineering ownership
 
-Inspect the code and tests relevant to the task first. Do not read large repository documents by default.
+Act as a responsible long-term maintainer. Own the correctness, maintainability, performance, and architectural consistency of the result, not merely the requested diff. Fix root causes and directly affected callers, edge cases, and regressions. Reuse existing abstractions; prefer the smallest complete, maintainable solution over the smallest diff. Do not expand into unrelated cleanup, speculative features, or unrequested product changes. Existing contracts, validation rules, and approval boundaries take precedence.
 
-Use `CONTRIBUTING.md` when a task touches repository conventions such as imports, package boundaries, distribution, build constants, or public API conventions. Read package-local documentation when working inside that package.
+## Architecture and public contracts
 
-Prose is written in long lines: pull request descriptions, guides, `docs/`, READMEs, commit bodies. Break a line at the end of a paragraph or where the break carries meaning, never at a column width. Commits are their Conventional Commits subject (with `!` for a breaking change); the detail goes into the pull request description, which the changelog links to and does not copy.
+- Core must not depend on optional extensions. Use public package entry points, preserve opt-in and side-effect-free extension behavior, and avoid global registries or hidden cross-package ownership.
+- Treat exports, TypeScript contracts, serialization, defaults, failures, and observable runtime behavior as public API decisions. Optimize for callers: inference, discovery, lifetime/ownership, compatibility, tree-shaking, guides, examples, and reference docs.
+- Preserve WebGL2/WebGPU parity where supported. For hot rendering, input, audio, scene-graph, and allocation paths, respect lifetime/allocation constraints; measure material performance changes rather than optimizing speculatively.
+- Keep code and JSDoc concise and caller-oriented. Comments explain non-obvious invariants, safety, ownership, or compatibility, not obvious code. Never put task IDs, PR/commit/branch history, private paths, or agent narratives in source/API docs. Developer-facing documentation is English with ASCII punctuation unless technical notation requires otherwise.
 
-`.workspace/` is private working context, not repository authority. Plans, research, reviews, and temporary design artifacts belong there by default. Agents may use relevant files there as context, but they are not part of the repository, public architecture, or API contract. Never reference them from committed source, tests, documentation, or generated public artifacts. Do not commit `.workspace/` content unless explicitly requested.
+## Validation
 
-If a decision becomes a durable public or architectural contract, promote the relevant conclusion to an appropriate tracked repository document rather than referencing `.workspace/` from source.
+- During iteration, run narrow tests and gates: named test files, affected package typechecks, or one `pnpm gates` group (`typecheck`, `lint`, `sync`, `site`). Diagnose a failing check narrowly; do not launch full suites just to discover failures.
+- Before the first push, identify all affected contracts, including generated artifacts, package exports, shaders, examples, browser/backend parity, and documentation where relevant. Check the predicted lanes with `pnpm lanes --base <base>`, run targeted prerequisites, and use `git diff --check`.
+- Before a completion push, or after repairing CI, run the full **applicable** local CI contract for the final tree, including required gates, builds, tests, generated checks, and browser suites. If code changes afterward, revalidate the changed final tree. State checks that cannot be reproduced locally.
+- The regular pre-push hook remains the integration check. The only bypass is an explicitly authorized, prevalidated CI-first batch under [CI validation policy](scripts/ci/VALIDATION.md); it never waives required CI, review, or merge approval. Do not globally disable Husky or weaken tests/gates to make them pass.
+- For visible Playground/rendering changes, provide focused current evidence according to [CONTRIBUTING](CONTRIBUTING.md): stills for static states, short clips for motion, exact frame claims only for deterministic steps. Keep captures untracked under `.workspace/visual-review/current/`.
 
-## Architecture and package boundaries
+## Pull requests and parallel work
 
-- Keep Core independent from official extension packages.
-- Cross-package dependencies use public package entry points.
-- Follow the repository import policy in `CONTRIBUTING.md`; do not reach into another package's private source.
-- Keep extensions opt-in and side-effect-free unless an existing contract explicitly requires otherwise.
-- Do not introduce global registries or hidden cross-package ownership.
-- Treat public exports, runtime behavior, serialized values, and TypeScript contracts as API decisions rather than implementation details.
+- Base independent branches/worktrees on current `origin/next`; target `next`. Give each shared source or generated output a single writer. Group related small fixes, but do not stack unrelated work.
+- For real dependencies, use supported GitHub native stacks when appropriate (inspect `gh stack --help`), keeping each PR's diff, CI, review, and squash merge distinct. If a parent was squash-merged, reconcile descendants without replaying merged commits. Inspect remote heads before any necessary rewrite; use explicit `--force-with-lease=<ref>:<expected-sha>`.
+- Preserve review, CI, visual acceptance, verdict, and exact-PR merge authorization. Do not introduce merge queues, change branch protection, relax gates, or alter the squash policy without a separate decision.
 
-## Public API and developer experience
+## Worktrees, storage, and reporting
 
-Optimize public APIs for callers, not internal implementation convenience.
-
-Before changing a public API, consider:
-
-- type inference and discoverability;
-- lifecycle and ownership semantics;
-- defaults and failure behavior;
-- tree-shaking and package boundaries;
-- compatibility with existing callers;
-- guide/example/API-reference impact.
-
-Do not expose internal machinery merely to make an implementation easier.
-
-## Source comments and API documentation
-
-Prefer self-explanatory code.
-
-Add inline comments only for non-obvious correctness or safety requirements, invariants, lifecycle/ordering constraints, compatibility workarounds, or intentional deviations from normal practice. Explain why the obvious implementation would be wrong, not what the code visibly does.
-
-Treat JSDoc as concise user-facing API documentation. Write from the caller's perspective in neutral prose suitable for direct reuse in an API reference or developer guide. Document only behavior, contracts, constraints, important side effects, ownership/lifetime rules, and non-obvious edge cases callers need to know.
-
-Do not restate names, types, signatures, return types, or obvious behavior. Internal implementation commentary should be minimal even when JSDoc syntax is used for tooling.
-
-Never put development provenance in source comments or API documentation: tasks, commits, issues/PRs, branches/worktrees, conversation or agent history, private workspace references, or machine-specific paths. Preserve durable technical rationale only.
-
-Developer-facing source documentation is English and uses ASCII punctuation; non-ASCII characters are allowed only when technically meaningful.
-
-## Performance and correctness
-
-Do not optimize speculatively.
-
-For hot rendering, input, audio, scene-graph, or allocation paths, preserve existing allocation and lifetime constraints and measure changes when performance is materially affected.
-
-Do not trade correctness or API clarity for an unmeasured optimization.
-
-Keep WebGL2/WebGPU behavior aligned where the feature is expected to support both backends.
-
-## Tests and validation
-
-During iteration, run the smallest relevant validation:
-
-- named test files, never a whole Vitest project;
-- a single gate group (`pnpm gates typecheck` / `lint` / `sync` / `site`), never `pnpm gates all`;
-- the affected package's typecheck.
-
-Never run a full test project or the full gate set to find out what a change broke. Re-run only the check that was red, on the files that were red.
-
-In the regular local-first workflow, before a final push intended to complete a pull request, and after fixing a CI failure, run the complete applicable local CI validation on the final code state. This completion run is separate from narrow iteration: include every required gate group, test project, build, generated-file check, package/site verification and browser interaction suite. A successful targeted retry alone is not completion evidence. Determine the full contract against the pull request base, not only the last incremental push. Reproduce any checkout, operating-system or backend difference exposed by CI; explicitly report checks that cannot run locally. If code changes after this run, repeat the completion validation before the final push.
-
-Before the first push, identify the complete validation contract affected by the change and run targeted checks for every affected surface. Do not rely on the push hook to discover missing validation responsibilities. This includes, where applicable, generated API/reference artifacts, central shader inventories and compile tests, source/generated example synchronization, public export/package verification, documentation generation, and package-specific browser or parity tests.
-
-Use `pnpm lanes --base <base>` before the first push to confirm that the expected repository lanes match the surfaces you identified. Run the targeted prerequisite checks needed to establish those contracts, then run `git diff --check`.
-
-The regular pre-push hook is the final local integration check, not the discovery mechanism for required validation. It may repeat work already performed deliberately. A first push should happen only after the affected contracts are understood and their targeted checks are green.
-
-The sole exception to the local completion run and regular pre-push hook is an explicitly authorized, targeted-prevalidated CI-first batch push; see `scripts/ci/VALIDATION.md` (Reviewed CI-first batch pushes). It does not waive any required GitHub CI, exact-head verification, independent review, visual acceptance, `verdict` or merge authorization. Never set `HUSKY=0` globally or for an unauthorized push.
-
-For visible Playground or rendering changes, capture targeted evidence as described in `CONTRIBUTING.md` (Visual evidence for visible changes): stills for static changes, a short clip for animation, transitions and moving UI, exact frame indices only where the simulation can be stepped deterministically. Keep it untracked under `.workspace/visual-review/current/` and show it in the pull request. Wall-clock captures are not frame-exact proof. Do not sweep the whole gallery or archive a set per commit.
-
-Do not weaken, delete, skip, or baseline a failing test or gate merely to make the change pass without establishing that the expectation itself is wrong.
-
-## Multi-workstream pull requests and integration
-
-For substantial multi-agent or multi-subsystem work, decide the PR dependency graph before implementation. Give independent changes separate branches and worktrees from the same current `origin/next` base, open independent PRs against `next`, and run their CI concurrently. Do not make unrelated fixes a linear stack simply to group a sprint. Give shared files and generated artifacts one writer. Group tightly coupled small fixes into one coherent PR with logical commits.
-
-When a PR genuinely depends on another, prefer GitHub's native stacked pull requests over manually chaining feature-branch bases. Inspect the installed CLI with `gh stack --help` rather than assuming commands exist; use the supported `gh stack init`, `gh stack submit` and `gh stack merge` lifecycle where available. Preserve existing PRs when adopting a stack, keep each level's diff limited to its own changes, and verify required CI and review for every actual PR head before a coordinated merge. Continue to squash each PR by default, consistent with the changelog policy. Do not bypass required checks or merge-authorization requirements.
-
-If a lower PR was squash-merged separately, first reconcile descendant commits against the new `next` history (for example, with `git rebase --onto`) so previously merged commits are not proposed again. Inspect the previous remote SHA before any necessary history rewrite and use an explicit `--force-with-lease=<ref>:<expected-sha>`; do not disturb unrelated worktrees or saved work. Reuse prior validation only when the tested tree remains provably equivalent, and still obtain the required checks on the final PR heads and integration result.
-
-Record workstream ownership, dependencies, proof, PRs and remaining blockers in private `.workspace/` notes. Do not enable a merge queue, change branch protections, relax CI, or change the squash policy without a separate explicit decision.
-
-## Worktree layout, caches and lifecycle
-
-Create local linked Git worktrees under `<repository-root>/.worktrees/<short-descriptive-name>/` by default. Use `.worktrees/` for separate source checkouts, and `.workspace/` for untracked logs, audit evidence, handoffs and scratch data; do not put new worktrees under `.workspace/`, arbitrary sibling folders or cloud/session directories. The root ignore rules already exclude dot-directories. Use short collision-free names. An external or noncanonical path is acceptable when required by isolated filesystems, Windows path lengths or incompatible tooling; record the reason in private session notes.
-
-Each checkout owns its writable `node_modules/`, root and package `dist/`, site builds, generated outputs, local tool caches, test reports and browser-test artifacts. Reuse the pnpm content-addressable store and supported read-only/download caches where compatible, but do not point multiple active worktrees at the same writable `node_modules/`, `dist/`, site output, test results or lock directory. Do not assume junctions or symlinks are safe sharing: inspect their targets, dependency graph and build freshness before linking, measuring or deleting anything. A cached or copied result from another checkout is not validation evidence unless its inputs and generated artifacts match the tested commit.
-
-Before cleaning, moving or removing any worktree, use `git worktree list --porcelain` and inspect its actual Git metadata, branch, HEAD, dirty state, unpublished commits, PR status, locks and active editor, agent, build and test processes. Preserve active and PR-open worktrees and useful warm builds; never automatically delete build outputs after a push. For merged and inactive worktrees, first confirm the desired commits are on the remote and preserve needed evidence in `.workspace/`, then remove with `git worktree remove` without force and verify the remaining worktree metadata. Prefer `git worktree move` for safe migration of inactive noncanonical worktrees; never move the primary checkout. `git worktree prune --dry-run` only inspects stale administrative entries and does not reclaim build files.
-
-Measure apparent and reclaimable disk usage separately, accounting for pnpm store hardlinks, shared targets and junctions without following them into unrelated folders. `pnpm doctor` already reports known artifact/cache categories, and `pnpm clean:artifacts` removes scoped regenerable outputs; inspect paths and active ownership before using it. `pnpm clean:all`, broad recursive deletion, force worktree removal, branch deletion, clearing shared caches, or clearing another agent's validation lane lock are never routine cleanup. Investigate lock ownership and active processes before treating a lane lock as orphaned. Prefer a compact private inventory and measured benefit over a new cleanup framework.
-
-## Scope
-
-Keep changes scoped to the requested problem. Local cleanup is appropriate when necessary for the change or when touching an immediately adjacent violation; do not turn a bounded task into repository-wide cleanup.
-
-Final reports should be concise: summarize the change, validation performed, and any remaining limitation.
+- Put linked worktrees in `.worktrees/<short-name>/` and untracked working evidence in `.workspace/`. Each checkout owns writable `node_modules/`, `dist/`, generated output, browser artifacts, and lane locks. Share only safe immutable/content-addressed caches; do not share writable artifacts through links.
+- Never clean or relocate an active or PR-open worktree just because a push completed. Before removal inspect `git worktree list --porcelain`, dirty/unpublished state, locks, current processes, and remote/PR status. Preserve evidence; remove merged inactive worktrees through Git without force. Do not delete shared caches, force-remove worktrees, or run broad cleanup as routine maintenance. Use `pnpm doctor` and narrowly scoped `pnpm clean:artifacts` only after checking ownership.
+- Use English Conventional Commits subjects, concise factual PR descriptions, and short final reports that identify changes, verification, and limitations.
