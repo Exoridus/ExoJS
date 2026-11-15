@@ -303,12 +303,28 @@ export interface LibraryProvenance {
  * Keep this as a filesystem check, not a claim that the module can be loaded:
  * the browser adapter remains the authoritative runtime test.
  */
-const BENCH_NODE_MODULES = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', 'node_modules');
+const BENCH_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const BENCH_NODE_MODULES = resolve(BENCH_ROOT, 'node_modules');
+const COMPETITOR_NODE_MODULES = resolve(BENCH_ROOT, 'competitors', 'node_modules');
 
 export const linkedPackageManifest = (name: string, modulesDirectory: string = BENCH_NODE_MODULES): string | null => {
   const manifest = resolve(modulesDirectory, name, 'package.json');
 
   return existsSync(manifest) ? manifest : null;
+};
+
+/**
+ * Direct, read-only access to the separately pinned competitor installation.
+ * This remains valid even if Node cannot follow a Windows junction or an
+ * import-only exports map. The browser must still successfully import the arm.
+ */
+export const isolatedCompetitorDirectory = (
+  name: string,
+  modulesDirectory: string = COMPETITOR_NODE_MODULES,
+): string | null => {
+  const directory = resolve(modulesDirectory, name);
+
+  return existsSync(resolve(directory, 'package.json')) ? directory : null;
 };
 
 /** The manifest path of an installed package, resolved through its exports map. */
@@ -317,6 +333,12 @@ const defaultManifestPath = (name: string): string => {
 
   if (linked !== null) {
     return linked;
+  }
+
+  const isolated = isolatedCompetitorDirectory(name);
+
+  if (isolated !== null) {
+    return resolve(isolated, 'package.json');
   }
 
   const nodeRequire = createRequire(import.meta.url);
