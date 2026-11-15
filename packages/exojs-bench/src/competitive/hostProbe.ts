@@ -72,7 +72,7 @@ const windowsPower = (read: HostCommand): string => {
 
   // The GUID is locale-independent. Record the plan, but do not claim that
   // the current AC/DC source can be inferred from the active power plan.
-  const match = /([\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12})/i.exec(output);
+  const match = /([\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12})/i.exec(output);
 
   return match === null ? 'UNVERIFIED' : `Windows active power scheme ${match[1]}; AC/DC source not established`;
 };
@@ -81,7 +81,7 @@ const macDriver = (read: HostCommand): string => {
   const version = read('sw_vers', ['-productVersion']);
   const build = read('sw_vers', ['-buildVersion']);
 
-  if (version === null || build === null || !/^\d+(?:\.\d+)*$/.test(version) || !/^[\w.]+$/.test(build)) {
+  if (version === null || build === null || !/^\d{1,3}(?:\.\d{1,3}){0,3}$/.test(version) || !/^[\w.]+$/.test(build)) {
     return 'UNVERIFIED';
   }
 
