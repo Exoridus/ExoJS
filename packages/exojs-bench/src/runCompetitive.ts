@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 
 import { acquireCompetitiveRun, acquireCompetitiveSession, readCompetitiveSession } from './competitive/acquire';
 import { COMPETITIVE_GAPS, COMPETITIVE_SCENARIOS, selectCompetitiveScenarios } from './competitive/catalog';
+import { assertCompetitiveDependencies } from './competitive/dependencies';
 import { selectCompetitiveAcquisitionDestination } from './competitive/outputDirectory';
 import { competitiveMatrixOptions, competitivePlan, competitiveProtocolHash, parseCompetitiveOptions } from './competitive/plan';
 import { compareCompetitiveSessions, writeCompetitiveReport } from './competitive/report';
@@ -36,6 +37,7 @@ pnpm bench:competitive --report=new/competitive.json --baseline=old/competitive.
 --software --capture  Functional/visual quick-mode checks only; never hardware performance.
 --dry-run   Resolve the exact capability-gated matrix without a browser or output.
 --out       Optional explicit output directory (refuses overwrite). Without --out, selects a fresh run-competitive[-NNN] directory.
+            Missing competitor packages fail early; run "pnpm --filter @codexo/exojs-bench bench:setup" once.
 
 All output is diagnostic until hardware identity, equivalence, independent repetitions,
 clock resolution and visual evidence are qualified. Missing GPU timing is not estimated.
@@ -98,6 +100,10 @@ const main = async (): Promise<void> => {
 
     return;
   }
+
+  // Check the separately installed competitor workspace before creating any
+  // measured evidence or starting the first of seven expensive repetitions.
+  assertCompetitiveDependencies(options.engines);
 
   if (options.worker !== undefined) {
     const run = await acquireCompetitiveRun(options, options.worker);
