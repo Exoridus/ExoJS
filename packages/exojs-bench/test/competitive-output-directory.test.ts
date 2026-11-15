@@ -25,10 +25,7 @@ describe('competitive output selection', () => {
     expect(selected.workerArgs).toEqual([...args, '--out=run-competitive']);
   });
 
-  test.each([
-    ['--out=run-custom'],
-    ['--out', 'run-custom'],
-  ])('does not replace an explicitly requested output path: %s', (...tokens) => {
+  test.each([['--out=run-custom'], ['--out', 'run-custom']])('does not replace an explicitly requested output path: %s', (...tokens) => {
     const args = ['--mode=standard', ...tokens];
     const options = parseCompetitiveOptions(args);
     const exists = vi.fn(() => true);
@@ -40,12 +37,7 @@ describe('competitive output selection', () => {
   });
 
   test('does not select independently in workers, report, dry-run or help mode', () => {
-    for (const args of [
-      ['--worker=0'],
-      ['--report=run-competitive/competitive.json'],
-      ['--dry-run'],
-      ['--help'],
-    ]) {
+    for (const args of [['--worker=0'], ['--report=run-competitive/competitive.json'], ['--dry-run'], ['--help']]) {
       const options = parseCompetitiveOptions(args);
       const exists = vi.fn(() => true);
       const selected = selectCompetitiveAcquisitionDestination(options, args, exists);
