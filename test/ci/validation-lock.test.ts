@@ -20,7 +20,18 @@ const git = (cwd: string, ...args: string[]): void => {
 let root: string;
 let lockPath: string;
 
+// A git hook runs with `GIT_DIR` and friends set; left in place they would point
+// the throwaway repository below, and the lock it resolves, at the real checkout.
+const savedGitEnv = new Map<string, string>();
+
 beforeEach(() => {
+  for (const [key, value] of Object.entries(process.env)) {
+    if (key.startsWith('GIT_') && value !== undefined) {
+      savedGitEnv.set(key, value);
+      delete process.env[key];
+    }
+  }
+
   root = realpathSync(mkdtempSync(join(tmpdir(), 'exojs-lock-')));
   git(root, 'init', '-q');
   git(root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '--allow-empty', '-m', 'init');
@@ -29,6 +40,12 @@ beforeEach(() => {
 
 afterEach(() => {
   rmSync(root, { recursive: true, force: true });
+
+  for (const [key, value] of savedGitEnv) {
+    process.env[key] = value;
+  }
+
+  savedGitEnv.clear();
 });
 
 const writeOwner = (record: Record<string, unknown>): void => {
