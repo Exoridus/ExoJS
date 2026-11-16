@@ -1,7 +1,7 @@
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { Mesh } from '#rendering/mesh/Mesh';
-import { type DrawCommand, RenderEntryKind } from '#rendering/plan/renderCommand';
+import { type DrawCommand, RenderEntryKind, resolveDrawBounds } from '#rendering/plan/renderCommand';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import type { GroupScope } from '#rendering/plan/RenderScope';
@@ -280,6 +280,8 @@ describe('static-subtree skip: invalidation gates', () => {
 
     leaf.setPosition(500, 500); // still likely in view at 800x600, bounds still change
     const draws = collectDraws(root, backend);
+
+    resolveDrawBounds(draws[0]!);
 
     expect(draws[0]!.minX).toBe(500);
 

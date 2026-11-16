@@ -43,6 +43,7 @@ const createSlot = (): MutableRetainedDrawSlot => ({
   seq: 0,
   zIndex: 0,
   material: createEmptyMaterialKey(),
+  boundsStale: false,
   minX: 0,
   minY: 0,
   maxX: 0,

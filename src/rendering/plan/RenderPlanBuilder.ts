@@ -1037,6 +1037,7 @@ export class RenderPlanBuilder {
     // The stored extent is the drawable's own, unchanged - the same argument
     // the query just made. Asking the node again would resolve its parent chain
     // a second time for an answer already in hand.
+    command.boundsStale = false;
     command.minX = minX;
     command.minY = minY;
     command.maxX = maxX;
@@ -1682,6 +1683,7 @@ export class RenderPlanBuilder {
     // walk would coalesce on it before optimize() runs).
     command.groupIndex = undefined;
     command.material = this._materialForDraw(drawable);
+    command.boundsStale = false;
     command.minX = bounds.left;
     command.minY = bounds.top;
     command.maxX = bounds.right;
@@ -1777,6 +1779,7 @@ export class RenderPlanBuilder {
     // record-time snapshot before the replacement capture is produced.
     command.material =
       slot.drawable === this._captureNode || slot.material.ownMaterial ? this._materialForDraw(slot.drawable) : slot.material;
+    command.boundsStale = slot.boundsStale === true;
     command.minX = slot.minX;
     command.minY = slot.minY;
     command.maxX = slot.maxX;
@@ -2036,6 +2039,7 @@ export class RenderPlanBuilder {
       zIndex: 0,
       material: undefined as unknown as DrawCommand['material'],
       groupIndex: undefined,
+      boundsStale: false,
       minX: 0,
       minY: 0,
       maxX: 0,

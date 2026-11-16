@@ -16,6 +16,7 @@ export interface RetainedDrawData {
   readonly seq: number;
   readonly zIndex: number;
   readonly material: MaterialKey;
+  readonly boundsStale?: boolean;
   readonly minX: number;
   readonly minY: number;
   readonly maxX: number;
@@ -34,6 +35,8 @@ export interface MutableRetainedDrawData {
   seq: number;
   zIndex: number;
   readonly material: MaterialKey;
+  /** The AABB below predates a move of {@link drawable}; see `DrawCommand.boundsStale`. */
+  boundsStale?: boolean;
   minX: number;
   minY: number;
   maxX: number;
@@ -122,7 +125,7 @@ export const releasePooledDrawables = <T extends { drawable: Drawable }>(pool: R
 };
 
 /**
- * Copy the eight fields every captured draw shares - the drawable, its
+ * Copy the nine fields every captured draw shares - the drawable, its
  * `(zIndex, seq)` placement, its material key and its snapshotted screen AABB -
  * out of a live command into a pooled record.
  *
@@ -136,6 +139,7 @@ export const copyRetainedDrawData = (target: MutableRetainedDrawData, command: D
   target.seq = command.seq;
   target.zIndex = command.zIndex;
   copyMaterialKeyInto(target.material, command.material);
+  target.boundsStale = command.boundsStale === true;
   target.minX = command.minX;
   target.minY = command.minY;
   target.maxX = command.maxX;

@@ -200,16 +200,18 @@ const EXPECTED = {
   // the recorded batches still splice, so the walk stays at ONE visit.
   //
   // Re-pinned from collect 1001 / inView 1001 / gt 8022 / mk 1000, which was the
-  // full re-collect this frame used to pay. The residual globalTransform (2082 vs
+  // full re-collect this frame used to pay. The residual globalTransform (2062 vs
   // the static row's 2) is the reconcile itself: each moved node resolves its own
-  // matrix for the patched row plus the bounds refresh, and the invalidation
-  // cascade resolves a few ancestors - O(k), not O(n). If `collect` climbs back
+  // matrix for the patched row, and the invalidation cascade resolves a few
+  // ancestors - O(k), not O(n). The record's screen bounds are re-read lazily by
+  // the optimizer, so a single-material frame like this one pays no bounds
+  // refresh. If `collect` climbs back
   // toward 1001, the row patch stopped engaging and every moving scene regressed
   // to a full rebuild.
   mutate10: {
     collect: 1,
     inView: 1,
-    globalTransform: 2082,
+    globalTransform: 2062,
     materialKey: 0,
     submittedNodes: 1000,
     culledNodes: 0,
