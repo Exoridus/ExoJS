@@ -1392,6 +1392,27 @@ void test('structured batch arguments keep metacharacters and sentinel variables
   }
 });
 
+void test('format gate file names with spaces and shell specials reach the child unchanged', async () => {
+  const files = [
+    'src/with space.ts',
+    "src/it's.ts",
+    'src/a&b.ts',
+    'src/100%.ts',
+    'src/!bang!.ts',
+    'src/caret^name.ts',
+    'src/(paren)[bracket].ts',
+    'src/semi;comma,name.ts',
+    'src/\u00E4\u00F6\u00FC-\u65E5\u672C.ts',
+    'src/ leading.ts',
+    'C:\\path with spaces\\file.ts',
+  ];
+  const args = ['exec', 'prettier', '--check', '--ignore-unknown', '--no-error-on-unmatched-pattern', '--', ...files];
+
+  assert.deepEqual(await runArguments(args, { pnpmAlias: true }), args);
+  assert.deepEqual(await runArguments(args), args);
+  assert.deepEqual(await runArguments(args, { executableOnly: true }), args);
+});
+
 void test('raw shell command strings retain their interpretation', async () => {
   const cwd = directory();
   const script = join(cwd, 'raw-arguments.mjs');
