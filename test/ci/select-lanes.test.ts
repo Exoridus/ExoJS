@@ -538,6 +538,21 @@ describe('CI lane selection — site data gates the unit lane', () => {
     expect(lanes.browserWebgl2).toBe(false);
   });
 
+  it('a committed bench profile validates and builds the site without booting the example catalog', () => {
+    const { areas, lanes } = decide('packages/exojs-bench/results/rtx-5070-ti-windows-11-chromium.json');
+    expect(areas.exampleCatalog).toBe(false);
+    expect(lanes.exampleSmoke).toBe(false);
+    // The site renders the profile, so the build still has to see it.
+    expect(lanes.siteBuild).toBe(true);
+    expect(lanes.unit).toBe(true);
+  });
+
+  it('runtime package code still runs the example catalog', () => {
+    expect(decide('packages/exojs-particles/src/ParticleSystem.ts').lanes.exampleSmoke).toBe(true);
+    expect(decide('packages/exojs-demo-assets/package.json').lanes.exampleSmoke).toBe(true);
+    expect(decide('packages/exojs-bench/src/rendering/adapters/exojs.ts').lanes.exampleSmoke).toBe(true);
+  });
+
   it('a site library change runs the unit lane, without pulling in the rest of engine', () => {
     const { areas, lanes } = decide('site/src/lib/bench-cards.ts');
     expect(areas.siteData).toBe(true);
