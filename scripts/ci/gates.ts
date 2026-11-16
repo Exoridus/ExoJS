@@ -27,6 +27,7 @@
  */
 import { readOutputOptions } from '../lib/output.ts';
 import { runCommand } from '../lib/run-command.ts';
+import { chunkFiles, formatRangeFiles, selectFormatScope } from './format-scope.ts';
 import { FAST_GATES, GATE_GROUP_NAMES, GATE_GROUPS, type GateGroup, orderGates } from './gate-groups.ts';
 import { changedFilesBetween, selectLocalPolicy } from './local-policy.ts';
 
@@ -50,6 +51,9 @@ if (requested !== 'all' && !isAffected && !groupNames.includes(requested as Gate
 const selected = requested === 'all' || isAffected ? groupNames : [requested as GateGroup];
 let scripts: readonly string[] = selected.flatMap(group => GATE_GROUPS[group]);
 let packageTypechecks: readonly string[] = [];
+/** Set when a pushed range lets the format gate check only the files it touched. */
+let formatFiles: readonly string[] | undefined;
+let formatSkipped = false;
 
 if (isAffected) {
   const [base, head] = outputOptions.argv.slice(1);
@@ -58,6 +62,14 @@ if (isAffected) {
     const policy = selectLocalPolicy(base && head ? changedFilesBetween(base, head) : []);
     scripts = policy.gates;
     packageTypechecks = policy.packageTypechecks;
+
+    // Only a resolved range narrows the format gate; the catch below keeps the whole-repository check.
+    if (base && head && scripts.includes('format:check')) {
+      const scope = selectFormatScope(formatRangeFiles(base, head));
+
+      formatSkipped = scope.mode === 'skip';
+      formatFiles = scope.mode === 'files' ? scope.files : undefined;
+    }
   } catch {
     // A missing or invalid range must run the complete static contract.
     scripts = orderGates(groupNames.flatMap(group => GATE_GROUPS[group]));
@@ -79,8 +91,40 @@ if (outputOptions.mode !== 'silent') {
   );
 }
 
+/** `format:check` restricted to the files of the pushed range; same Prettier, config and ignore files as the full gate. */
+const runSelectiveFormat = async (files: readonly string[]): Promise<number> => {
+  for (const chunk of chunkFiles(files)) {
+    const result = await runCommand({
+      label: 'gates-format:check(changed)',
+      command: 'pnpm',
+      args: ['exec', 'prettier', '--check', '--ignore-unknown', '--no-error-on-unmatched-pattern', '--', ...chunk],
+      output: outputOptions.mode,
+    });
+
+    if (result.status !== 0) {
+      return result.status;
+    }
+  }
+
+  return 0;
+};
+
 const main = async (): Promise<void> => {
   for (const script of scripts) {
+    if (script === 'format:check' && (formatFiles || formatSkipped)) {
+      if (outputOptions.mode === 'normal' || outputOptions.mode === 'verbose') {
+        console.log(`\n=== prettier --check on ${formatFiles?.length ?? 0} changed file(s) ===\n`);
+      }
+
+      const status = formatFiles ? await runSelectiveFormat(formatFiles) : 0;
+
+      if (status !== 0) {
+        process.exit(status);
+      }
+
+      continue;
+    }
+
     if (outputOptions.mode === 'normal' || outputOptions.mode === 'verbose') {
       console.log(`\n=== pnpm ${script} ===\n`);
     }
