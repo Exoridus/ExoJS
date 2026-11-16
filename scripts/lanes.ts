@@ -197,6 +197,8 @@ const main = async (): Promise<void> => {
         lock?.release();
         checkoutLock?.release();
       } else {
+        lock?.retain();
+        checkoutLock?.retain();
         process.stderr.write(
           `lanes: cleanup was incomplete; inspect the owned processes before removing ${lock?.path ?? checkoutLock!.path}.\n`,
         );
