@@ -28,6 +28,9 @@ const SMOKE_LANE: Lane = {
  */
 export const DIST_PREFLIGHT = 'tsx scripts/check-dist-fresh.ts --rebuild';
 
+/** The dependency-free supervisor tests the CI `unit` lane runs before its Vitest projects. */
+const NODE_TESTS = 'node --test test/ci/validation.node.ts test/ci/qualify.node.ts';
+
 /** Whether any of `lanes` reads the built dist rather than the sources. */
 export const needsDist = (lanes: readonly Lane[]): boolean => lanes.some(lane => lane.dist === true);
 const eligible = (lane: Lane): boolean => lane.stage !== 'verify' && !lane.ciOnly;
@@ -100,10 +103,13 @@ export const selectLocalLanes = (effective: EffectiveLanes, options: LocalLaneOp
         siteBuild: true,
         exampleSmoke: true,
       }
-    : effective;
+    : policy.nodeTests
+      ? { ...effective, unit: true } // `.husky/` is outside every CI area, yet `test/ci` reads the hooks
+      : effective;
   const unitCommand = policy.fullUnit
     ? undefined
     : [
+        policy.nodeTests ? NODE_TESTS : '',
         policy.unitProjects.length
           ? `pnpm exec vitest run ${policy.unitProjects.map(project => `--project=${project}`).join(' ')}${policy.unitFilter ? ` ${policy.unitFilter}` : ''}`
           : '',
