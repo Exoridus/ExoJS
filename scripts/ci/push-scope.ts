@@ -43,7 +43,7 @@ export const pushScope = (changedFiles: readonly string[]): PushScope => {
 };
 
 const changedFilesBetween = (base: string, head: string): string[] =>
-  execFileSync('git', ['diff', '--name-only', `${base}..${head}`], { encoding: 'utf8' }).split('\n');
+  execFileSync('git', ['diff', '--name-only', '--no-renames', `${base}..${head}`], { encoding: 'utf8' }).split('\n');
 
 const main = (): void => {
   const [base, head] = process.argv.slice(2);

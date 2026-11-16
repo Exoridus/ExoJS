@@ -272,3 +272,49 @@ describe('CI tooling scope', () => {
     });
   });
 });
+
+describe('dependency-aware core tests', () => {
+  const unitCommand = (...files: string[]): string =>
+    selectLocalLanes(effectiveLanes(selectAreas(files)), parseLocalLaneOptions(['--base', 'origin/HEAD']), files).find(
+      lane => lane.id === 'unit',
+    )!.run;
+
+  it('narrows the core project for an engine-only change, keeping tests that read untracked input', () => {
+    const command = unitCommand('src/math/Vector.ts');
+
+    expect(selectLocalPolicy(['src/math/Vector.ts']).relatedCore).toBe(true);
+    expect(command).toContain('--project=exojs --passWithNoTests --changed=');
+    expect(command).toContain('test/rendering/multi-attachment-guard.test.ts');
+    expect(command).not.toMatch(/vitest run --project=exojs( |$)(?!--passWithNoTests)(?!test\/)/);
+  });
+
+  it('narrows a test-only change the same way', () => {
+    expect(selectLocalPolicy(['test/math/vector.test.ts']).relatedCore).toBe(true);
+  });
+
+  it.each([
+    ['a module that was removed', ['src/math/DefinitelyNotThere.ts']],
+    ['a declaration file', ['src/globals.d.ts']],
+    ['an engine change together with a site change', ['src/math/Vector.ts', 'site/src/lib/x.ts']],
+    ['an engine change together with an example', ['src/math/Vector.ts', 'examples/basic/sprite.ts']],
+    ['an engine change together with a root config', ['src/math/Vector.ts', 'vitest.config.ts']],
+    ['an engine change together with an unknown file', ['src/math/Vector.ts', 'mystery.bin']],
+    ['an engine change together with CI tooling', ['src/math/Vector.ts', 'scripts/ci/gates.ts']],
+    ['a lockfile', ['pnpm-lock.yaml']],
+  ])('keeps the whole core project for %s', (_name, files) => {
+    expect(selectLocalPolicy(files).relatedCore).toBe(false);
+  });
+
+  it('keeps the other test projects whole while narrowing the core project', () => {
+    const policy = selectLocalPolicy(['src/index.ts']);
+
+    expect(policy.relatedCore).toBe(true);
+    expect(policy.unitProjects).toContain('exojs-particles');
+    expect(unitCommand('src/index.ts')).toMatch(/--project=exojs-particles/);
+  });
+
+  it('never narrows the full-unit fallback', () => {
+    expect(selectLocalPolicy([]).relatedCore).toBe(false);
+    expect(unitCommand('vitest.config.ts')).not.toContain('--changed');
+  });
+});
