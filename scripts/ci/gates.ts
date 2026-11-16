@@ -27,7 +27,7 @@
  */
 import { readOutputOptions } from '../lib/output.ts';
 import { runCommand } from '../lib/run-command.ts';
-import { GATE_GROUP_NAMES, GATE_GROUPS, type GateGroup } from './gate-groups.ts';
+import { FAST_GATES, GATE_GROUP_NAMES, GATE_GROUPS, type GateGroup, orderGates } from './gate-groups.ts';
 import { changedFilesBetween, selectLocalPolicy } from './local-policy.ts';
 
 const groupNames = GATE_GROUP_NAMES;
@@ -39,16 +39,19 @@ if (!requested) {
   process.exit(2);
 }
 
-if (requested !== 'all' && requested !== 'affected' && !groupNames.includes(requested as GateGroup)) {
-  console.error(`Unknown gate group '${requested}'. Known groups: all, affected, ${groupNames.join(', ')}`);
+const AFFECTED_MODES = ['affected', 'affected-fast', 'affected-rest'];
+const isAffected = AFFECTED_MODES.includes(requested);
+
+if (requested !== 'all' && !isAffected && !groupNames.includes(requested as GateGroup)) {
+  console.error(`Unknown gate group '${requested}'. Known groups: all, affected, affected-fast, affected-rest, ${groupNames.join(', ')}`);
   process.exit(2);
 }
 
-const selected = requested === 'all' || requested === 'affected' ? groupNames : [requested as GateGroup];
+const selected = requested === 'all' || isAffected ? groupNames : [requested as GateGroup];
 let scripts: readonly string[] = selected.flatMap(group => GATE_GROUPS[group]);
 let packageTypechecks: readonly string[] = [];
 
-if (requested === 'affected') {
+if (isAffected) {
   const [base, head] = outputOptions.argv.slice(1);
 
   try {
@@ -57,13 +60,22 @@ if (requested === 'affected') {
     packageTypechecks = policy.packageTypechecks;
   } catch {
     // A missing or invalid range must run the complete static contract.
-    scripts = groupNames.flatMap(group => GATE_GROUPS[group]);
+    scripts = orderGates(groupNames.flatMap(group => GATE_GROUPS[group]));
+  }
+
+  // The pre-push hook runs `affected-fast`, rebuilds dist only if needed, then
+  // `affected-rest`; together they equal `affected`.
+  if (requested === 'affected-fast') {
+    scripts = scripts.filter(script => FAST_GATES.includes(script));
+    packageTypechecks = [];
+  } else if (requested === 'affected-rest') {
+    scripts = scripts.filter(script => !FAST_GATES.includes(script));
   }
 }
 
 if (outputOptions.mode !== 'silent') {
   console.log(
-    `Running ${scripts.length + packageTypechecks.length} gate(s) from ${requested === 'affected' ? 'pushed paths' : `group(s): ${selected.join(', ')}`}\n`,
+    `Running ${scripts.length + packageTypechecks.length} gate(s) from ${isAffected ? 'pushed paths' : `group(s): ${selected.join(', ')}`}\n`,
   );
 }
 

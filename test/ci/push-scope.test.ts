@@ -79,7 +79,18 @@ describe('pre-push ref handling', () => {
 
   it('passes the selected previous remote SHA to both static gates and test lanes', () => {
     expect(hook).toContain('node scripts/ci/push-range.ts "$push_head_sha" "${push_base_sha:-$null_sha}"');
-    expect(hook).toContain('npm run gates -- affected "$lane_base" "$push_head_sha"');
+    expect(hook).toContain('npm run gates -- affected-fast "$lane_base" "$push_head_sha"');
+    expect(hook).toContain('npm run gates -- affected-rest "$lane_base" "$push_head_sha"');
     expect(hook).toContain('npm run lanes -- --run --tests-only --base "$lane_base"');
+  });
+
+  it('runs the cheap gates before the dist rebuild, and the rest after it', () => {
+    const fast = hook.indexOf('affected-fast');
+    const rebuild = hook.indexOf('check-dist-fresh.ts --rebuild');
+    const rest = hook.indexOf('affected-rest');
+
+    expect(fast).toBeGreaterThan(-1);
+    expect(fast).toBeLessThan(rebuild);
+    expect(rebuild).toBeLessThan(rest);
   });
 });

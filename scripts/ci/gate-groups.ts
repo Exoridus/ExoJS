@@ -20,17 +20,19 @@ export const GATE_GROUPS = {
     'typecheck:test',
     'typecheck:scripts',
   ],
+  // Cheapest first (seconds each), `lint:all` last (about a minute), so a
+  // trivial failure surfaces before the expensive ESLint pass starts.
   lint: [
-    'lint:all',
-    'lint:source-hygiene',
-    'lint:inline-source',
-    'lint:file-symbols',
     'lint:changelog',
-    'lint:config-paths',
-    'lint:js-files',
     'lint:shaders',
     'verify:bench-results',
+    'lint:file-symbols',
+    'lint:config-paths',
+    'lint:js-files',
+    'lint:inline-source',
+    'lint:source-hygiene',
     'format:check',
+    'lint:all',
   ],
   // `perf:smoke` runs the benchmarks for their EXIT CODE, not their numbers -
   // a shared runner measures nothing meaningful. Every one of these executes
@@ -49,3 +51,27 @@ export type GateGroup = keyof typeof GATE_GROUPS;
 
 /** Group names in run order, which is also the order `gates all` uses. */
 export const GATE_GROUP_NAMES = Object.keys(GATE_GROUPS) as GateGroup[];
+
+/**
+ * Gates that read only tracked files: none needs the built `dist`, a browser or
+ * a compiler, and each finishes in seconds. A selection runs these first, ahead
+ * of any `dist` rebuild, so a formatting or hygiene failure is reported before
+ * the expensive work starts.
+ */
+export const FAST_GATES: readonly string[] = [
+  'lint:changelog',
+  'lint:shaders',
+  'verify:bench-results',
+  'lint:file-symbols',
+  'lint:config-paths',
+  'lint:js-files',
+  'lint:inline-source',
+  'lint:source-hygiene',
+  'format:check',
+];
+
+/** Stable ordering for a gate selection: the fast gates first, everything else in the given order. */
+export const orderGates = (names: readonly string[]): string[] => [
+  ...FAST_GATES.filter(name => names.includes(name)),
+  ...names.filter(name => !FAST_GATES.includes(name)),
+];

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { GATE_GROUPS } from '../../scripts/ci/gate-groups.ts';
+import { GATE_GROUPS, orderGates } from '../../scripts/ci/gate-groups.ts';
 import { needsDist, parseLocalLaneOptions, selectLocalLanes } from '../../scripts/ci/local-lanes.ts';
 import { selectLocalPolicy } from '../../scripts/ci/local-policy.ts';
 import { effectiveLanes, selectAreas } from '../../scripts/ci/select-lanes.ts';
@@ -74,7 +74,7 @@ describe('local validation policy', () => {
   it('keeps global and unknown paths broad', () => {
     for (const file of ['vitest.config.ts', 'scripts/ci/lanes.ts', '.github/workflows/ci.yml', 'unexpected/new.kind']) {
       const policy = selectLocalPolicy([file]);
-      expect(policy.gates).toEqual(Object.values(GATE_GROUPS).flat());
+      expect(policy.gates).toEqual(orderGates(Object.values(GATE_GROUPS).flat()));
       expect(policy.fullUnit).toBe(true);
       expect(policy.browser).toContain('webgl');
       expect(policy.browser).toContain('webgpu');
