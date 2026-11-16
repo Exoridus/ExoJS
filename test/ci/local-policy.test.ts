@@ -1,8 +1,11 @@
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, relative } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { GATE_GROUPS, orderGates } from '../../scripts/ci/gate-groups.ts';
 import { needsDist, parseLocalLaneOptions, selectLocalLanes } from '../../scripts/ci/local-lanes.ts';
-import { selectLocalPolicy } from '../../scripts/ci/local-policy.ts';
+import { CI_TOOLING_FILES, isCiTooling, selectLocalPolicy } from '../../scripts/ci/local-policy.ts';
 import { effectiveLanes, selectAreas } from '../../scripts/ci/select-lanes.ts';
 
 const lanesFor = (file: string) => {
@@ -72,7 +75,7 @@ describe('local validation policy', () => {
   });
 
   it('keeps global and unknown paths broad', () => {
-    for (const file of ['vitest.config.ts', 'scripts/ci/lanes.ts', '.github/workflows/ci.yml', 'unexpected/new.kind']) {
+    for (const file of ['vitest.config.ts', 'scripts/ci/browser-profiles.ts', '.github/workflows/ci.yml', 'unexpected/new.kind']) {
       const policy = selectLocalPolicy([file]);
       expect(policy.gates).toEqual(orderGates(Object.values(GATE_GROUPS).flat()));
       expect(policy.fullUnit).toBe(true);
@@ -115,5 +118,157 @@ describe('local validation policy', () => {
     ).toEqual(['site', 'smoke']);
     expect(needsDist(all('src/rendering/Renderer.ts'))).toBe(true);
     expect(needsDist(all('README.md'))).toBe(false);
+  });
+});
+
+describe('CI tooling scope', () => {
+  const tooling = [
+    'scripts/ci/gates.ts',
+    'scripts/ci/local-policy.ts',
+    'scripts/ci/select-lanes.ts',
+    'scripts/lib/validation-lock.ts',
+    'scripts/lanes.ts',
+    'test/ci/local-policy.test.ts',
+    '.husky/pre-push',
+  ];
+
+  it.each(tooling)('runs only the tooling checks for %s', file => {
+    const policy = selectLocalPolicy([file]);
+
+    expect(policy.fullUnit).toBe(false);
+    expect(policy.browser).toEqual([]);
+    expect(policy.smoke).toBe(false);
+    expect(policy.bench).toBe(false);
+    expect(policy.allocation).toBe(false);
+    expect(policy.physicsPerf).toBe(false);
+    expect(policy.needsDist).toBe(false);
+    expect(policy.nodeTests).toBe(true);
+    expect(policy.gates).toEqual(expect.arrayContaining(['typecheck:scripts', 'typecheck:test', 'lint', 'format:check']));
+    expect(policy.gates).not.toContain('typecheck:site');
+    expect(policy.unitFilter).toContain('test/ci');
+  });
+
+  it('runs the tooling tests for a hook change, which no CI area selects', () => {
+    expect(lanesFor('.husky/pre-push').map(lane => lane.id)).toEqual(['unit']);
+  });
+
+  it('keeps the README example suite for the file that exports its path list', () => {
+    expect(selectLocalPolicy(['scripts/ci/select-lanes.ts']).unitFilter).toBe('test/ci test/site/readme-examples');
+    expect(selectLocalPolicy(['scripts/ci/gates.ts']).unitFilter).toBe('test/ci');
+  });
+
+  it('selects lanes without browser, bench or smoke work, and runs the supervisor tests', () => {
+    const lanes = lanesFor('scripts/ci/gate-groups.ts');
+
+    expect(lanes.map(lane => lane.id)).toEqual(['unit']);
+    expect(lanes[0]?.run).toBe(
+      'node --test test/ci/validation.node.ts test/ci/qualify.node.ts && pnpm exec vitest run --project=exojs test/ci',
+    );
+  });
+
+  it.each([
+    'scripts/ci/browser-profiles.ts',
+    'scripts/ci/file-progress-reporter.ts',
+    'scripts/ci/verify-esm-importmap.ts',
+    'scripts/ci/bundle-size-summary.ts',
+    'scripts/ci/brand-new-script.ts',
+    'scripts/lib/output.ts',
+    'scripts/lib/module-specifiers.ts',
+    'scripts/build.ts',
+    'vitest.config.ts',
+    '.github/workflows/ci.yml',
+    '.husky/unknown-hook',
+    'package.json',
+  ])('keeps %s on the broad selection', file => {
+    const policy = selectLocalPolicy([file]);
+
+    expect(policy.fullUnit).toBe(true);
+    expect(policy.browser).toContain('webgpu');
+    expect(isCiTooling(file)).toBe(false);
+  });
+
+  it('falls back to the broad selection for a tooling change mixed with an unknown file', () => {
+    expect(selectLocalPolicy(['scripts/ci/gates.ts', 'unexpected/new.kind']).fullUnit).toBe(true);
+  });
+
+  it('adds engine checks when tooling is combined with an engine change, never dropping either', () => {
+    const policy = selectLocalPolicy(['scripts/ci/gates.ts', 'src/rendering/Renderer.ts']);
+
+    expect(policy.browser).toEqual(expect.arrayContaining(['webgl', 'webgpu']));
+    expect(policy.unitFilter).toBeUndefined();
+    expect(policy.nodeTests).toBe(true);
+    expect(policy.gates).toEqual(expect.arrayContaining(['typecheck:scripts', 'typecheck', 'docs:api:check']));
+  });
+
+  it('does not weaken the selection of the other scopes', () => {
+    expect(selectLocalPolicy(['src/rendering/Renderer.ts']).nodeTests).toBe(false);
+    expect(selectLocalPolicy(['README.md']).unitFilter).toBe('test/site');
+  });
+
+  describe('importer proof', () => {
+    const root = process.cwd();
+    const skip = new Set(['node_modules', 'dist', '.git', '.workspace', '.worktrees', 'test-results', '.cache']);
+
+    const sources = (dir: string): string[] =>
+      readdirSync(dir).flatMap(name => {
+        if (skip.has(name)) {
+          return [];
+        }
+
+        const path = join(dir, name);
+
+        try {
+          if (statSync(path).isDirectory()) {
+            return sources(path);
+          }
+        } catch {
+          return [];
+        }
+
+        return /\.(ts|tsx|js|mjs|cjs|astro)$/.test(name) ? [path] : [];
+      });
+
+    const files = ['src', 'packages', 'site', 'examples', 'test', 'scripts'].flatMap(dir => sources(join(root, dir)));
+    files.push(join(root, 'vitest.config.ts'));
+
+    // `readme-examples` reads the README path list `select-lanes.ts` exports; the tooling scope runs it.
+    const knownConsumers = new Map([['scripts/ci/select-lanes.ts', ['test/site/readme-examples.test.ts']]]);
+
+    // Specifiers are resolved against the importing file, so an unrelated module that merely shares a basename does not count.
+    const importSpecifier = /(?:from\s+|import\s*\(\s*|import\s+)['"]([^'"]+)['"]/g;
+
+    const imports = (file: string): string[] => {
+      const base = join(file, '..');
+
+      let text: string;
+
+      try {
+        text = readFileSync(file, 'utf8');
+      } catch {
+        // Other test files create and remove scratch sources while this suite scans in parallel.
+        return [];
+      }
+
+      return [...text.matchAll(importSpecifier)]
+        .map(match => match[1]!)
+        .filter(specifier => specifier.startsWith('.'))
+        .map(specifier =>
+          relative(root, join(base, specifier))
+            .replaceAll('\\', '/')
+            .replace(/\.(ts|js)$/, ''),
+        );
+    };
+
+    it.each([...CI_TOOLING_FILES].filter(file => file.endsWith('.ts')))('%s is imported only by tooling and its own tests', tool => {
+      const target = tool.replace(/\.ts$/, '');
+      const importers = files
+        .map(file => ({ file, path: relative(root, file).replaceAll('\\', '/') }))
+        .filter(({ path }) => path !== tool && !isCiTooling(path))
+        .filter(({ path }) => !(knownConsumers.get(tool) ?? []).includes(path))
+        .filter(({ file }) => imports(file).includes(target))
+        .map(({ path }) => path);
+
+      expect(importers).toEqual([]);
+    });
   });
 });

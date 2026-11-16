@@ -39,6 +39,8 @@ export interface LocalPolicy {
   allocation: boolean;
   physicsPerf: boolean;
   needsDist: boolean;
+  /** Run the dependency-free supervisor tests (`node --test`) that the unit lane starts with. */
+  nodeTests: boolean;
 }
 
 interface PackageManifest {
@@ -133,12 +135,68 @@ const affectedPackages = (name: string): PackageManifest[] => {
 const hasUnitProject = (manifest: PackageManifest): boolean =>
   manifest.directory.startsWith('exojs-') && existsSync(resolve('packages', manifest.directory, 'test'));
 
+/**
+ * Validation tooling that no engine, extension, example or site code reaches:
+ * every importer of these files is `test/ci`, another file in this set, or an
+ * entry point named in `package.json` or a workflow. A change to them can only
+ * break the validation scripts and their own tests, which the tooling scope
+ * runs. Deliberately absent, because something else imports them:
+ * `browser-profiles.ts` and `file-progress-reporter.ts` (`vitest.config.ts`,
+ * hence every test project), `bundle-size-summary.ts` and
+ * `verify-esm-importmap.ts` (build and release checks), `scripts/lib/output.ts`
+ * (`verify-publish.ts`), and anything new - an
+ * unlisted file under `scripts/ci/` stays global.
+ */
+export const CI_TOOLING_FILES: ReadonlySet<string> = new Set([
+  ...[
+    'browser-probe',
+    'capability',
+    'gate-groups',
+    'gates',
+    'lanes',
+    'local-lanes',
+    'local-policy',
+    'push-range',
+    'push-scope',
+    'qualify',
+    'select-lanes',
+    'trust',
+    'verdict',
+  ].map(name => `scripts/ci/${name}.ts`),
+  ...['process-tree', 'run-command', 'validation-lock'].map(name => `scripts/lib/${name}.ts`),
+  'scripts/lib/stop-process-tree.ps1',
+  'scripts/lanes.ts',
+]);
+
+export const isCiTooling = (file: string): boolean =>
+  CI_TOOLING_FILES.has(file) ||
+  file.startsWith('test/ci/') ||
+  file === '.husky/pre-push' ||
+  file === '.husky/pre-commit' ||
+  file === '.husky/commit-msg';
+
+/** Static gates for a tooling change: scripts and tests typecheck, lint and format, plus the hygiene checks that read tracked files. */
+const TOOLING_GATES = [
+  'typecheck:scripts',
+  'typecheck:test',
+  'lint',
+  'lint:source-hygiene',
+  'lint:file-symbols',
+  'lint:config-paths',
+  'lint:js-files',
+  'format:check',
+];
+
+/** Test files that import tooling, besides `test/ci`: `select-lanes.ts` exports the README list `readme-examples` reads. */
+const toolingTestFilters = (file: string): string[] =>
+  file === 'scripts/ci/select-lanes.ts' ? ['test/ci', 'test/site/readme-examples'] : ['test/ci'];
+
 const isGlobal = (file: string): boolean =>
   file === 'package.json' ||
   file === 'pnpm-lock.yaml' ||
   file === 'pnpm-workspace.yaml' ||
   file === 'vitest.config.ts' ||
-  file.startsWith('scripts/ci/') ||
+  (file.startsWith('scripts/ci/') && !isCiTooling(file)) ||
   file.startsWith('.github/workflows/') ||
   file.startsWith('packages/exojs-config/') ||
   /^tsconfig\..*\.json$/.test(file);
@@ -154,6 +212,7 @@ const emptyPolicy = (): LocalPolicy => ({
   allocation: false,
   physicsPerf: false,
   needsDist: false,
+  nodeTests: false,
 });
 
 /** Local pre-push selection. Unknown files take the complete policy; CI keeps its own authoritative matrix. */
@@ -166,6 +225,8 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
   const typechecks = new Set<string>();
   let broad = files.length === 0;
   let siteOnlyUnits = true;
+  let siteUnits = false;
+  const toolingFilters = new Set<string>();
 
   const add = (...names: string[]): void => {
     for (const name of names) {
@@ -179,9 +240,18 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
       continue;
     }
 
-    if (file === 'README.md' || CHECKED_README_PATHS.includes(file)) {
+    if (isCiTooling(file)) {
+      add(...TOOLING_GATES);
+      projects.add('exojs');
+      policy.nodeTests = true;
+
+      for (const filter of toolingTestFilters(file)) {
+        toolingFilters.add(filter);
+      }
+    } else if (file === 'README.md' || CHECKED_README_PATHS.includes(file)) {
       add('format:check');
       projects.add('exojs');
+      siteUnits = true;
     } else if (/\.mdx?$/.test(file) || /(^|\/)LICENSE$/.test(file)) {
       add('format:check');
 
@@ -189,6 +259,7 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
         add('typecheck:guides', 'typecheck:site');
         add('format:check');
         projects.add('exojs');
+        siteUnits = true;
         policy.needsDist = true;
       }
     } else if (file.startsWith('src/')) {
@@ -285,6 +356,7 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
     } else if (file.startsWith('examples/')) {
       add('typecheck:examples', 'examples:sync:check', 'assets:compact:check', ...SITE_GATES);
       projects.add('exojs');
+      siteUnits = true;
       policy.smoke = true;
       policy.needsDist = true;
     } else if (file.startsWith('site/')) {
@@ -294,10 +366,12 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
       if (file.startsWith('site/src/content/')) {
         add('typecheck:guides');
         projects.add('exojs');
+        siteUnits = true;
       }
 
       if (file.startsWith('site/src/lib/')) {
         projects.add('exojs');
+        siteUnits = true;
       }
 
       if (file.startsWith('site/src/pages/') || file.startsWith('site/src/components/') || file === 'site/scripts/smoke-examples.ts') {
@@ -329,6 +403,7 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
       allocation: true,
       physicsPerf: true,
       needsDist: true,
+      nodeTests: true,
     };
   }
 
@@ -340,7 +415,7 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
   policy.unitProjects = [...projects].sort();
 
   if (siteOnlyUnits && policy.unitProjects.length === 1 && policy.unitProjects[0] === 'exojs') {
-    policy.unitFilter = 'test/site';
+    policy.unitFilter = [...(siteUnits ? ['test/site'] : []), ...toolingFilters].join(' ');
   }
 
   policy.browser = [...browsers];
