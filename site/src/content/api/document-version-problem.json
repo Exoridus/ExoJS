@@ -1,0 +1,79 @@
+{
+  "title": "DocumentVersionProblem",
+  "description": "Why a document version was refused.",
+  "symbol": "DocumentVersionProblem",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Why a document version was refused."
+      ],
+      "importLine": "import { DocumentVersionProblem } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "DocumentVersionProblem",
+          "signature": "\"discontinued\" | \"invalid\" | \"newer\"",
+          "signatureTokens": [
+            {
+              "text": "\"discontinued\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"invalid\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"newer\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/document/documentErrors.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/document/documentErrors.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/document/documentErrors.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/document/documentErrors.ts"
+}

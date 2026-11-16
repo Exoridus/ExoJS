@@ -1,0 +1,6 @@
+{
+  "$type": "atlas",
+  "$version": 2,
+  "pages": [{ "$type": "texture", "source": "ui.png" }],
+  "frames": [{ "name": "button", "page": 0, "x": 0, "y": 0, "width": 32, "height": 16 }]
+}
