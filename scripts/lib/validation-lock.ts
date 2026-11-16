@@ -111,7 +111,10 @@ const describeOwner = (state: LockOwnerState): string => {
 };
 
 /** Reserve shared test resources or one checkout's outputs. Stale locks are never silently stolen. */
-export const acquireValidationLock = (cwd: string, scope: LockScope = 'repository'): { path: string; release: () => void } => {
+export const acquireValidationLock = (
+  cwd: string,
+  scope: LockScope = 'repository',
+): { path: string; release: () => void; retain: () => void } => {
   const path = resolveLockPath(cwd, scope);
   const token = randomUUID();
   let fd: number;
@@ -148,26 +151,36 @@ export const acquireValidationLock = (cwd: string, scope: LockScope = 'repositor
 
   let released = false;
 
+  const release = (): void => {
+    if (released) {
+      return;
+    }
+
+    released = true;
+    process.removeListener('exit', release);
+
+    try {
+      const owner = JSON.parse(readFileSync(path, 'utf8')) as { token?: string };
+
+      if (owner.token === token) {
+        unlinkSync(path);
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw error;
+      }
+    }
+  };
+
+  // `process.exit` and uncaught exceptions skip the caller's `finally`; signals are handled by the callers.
+  process.once('exit', release);
+
   return {
     path,
-    release: () => {
-      if (released) {
-        return;
-      }
-
-      released = true;
-
-      try {
-        const owner = JSON.parse(readFileSync(path, 'utf8')) as { token?: string };
-
-        if (owner.token === token) {
-          unlinkSync(path);
-        }
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-          throw error;
-        }
-      }
+    release,
+    /** Keep the lock past process exit, for an owner whose cleanup could not be confirmed. */
+    retain: () => {
+      process.removeListener('exit', release);
     },
   };
 };

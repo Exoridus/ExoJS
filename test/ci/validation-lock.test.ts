@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -213,5 +214,40 @@ describe('waiting', () => {
     ).rejects.toThrow();
     expect(messages[0]).toContain('still running');
     held.release();
+  });
+});
+
+describe('exit safety net', () => {
+  const run = (body: string): void => {
+    const child = spawnSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '-e',
+        `import { acquireValidationLock } from ${JSON.stringify(pathToFileURL(join(process.cwd(), 'scripts/lib/validation-lock.ts')).href)};
+const lock = acquireValidationLock(${JSON.stringify(root)});
+console.log('held');
+${body}`,
+      ],
+      { encoding: 'utf8' },
+    );
+
+    // A child that never took the lock would make every assertion below vacuous.
+    expect(`${child.stdout}${child.stderr}`).toContain('held');
+  };
+
+  it('releases the lock when the owner calls process.exit', () => {
+    run('process.exit(3);');
+    expect(existsSync(lockPath)).toBe(false);
+  });
+
+  it('releases the lock after an uncaught exception', () => {
+    run("throw new Error('boom');");
+    expect(existsSync(lockPath)).toBe(false);
+  });
+
+  it('keeps a retained lock past exit', () => {
+    run('lock.retain(); process.exit(0);');
+    expect(existsSync(lockPath)).toBe(true);
   });
 });
