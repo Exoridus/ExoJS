@@ -201,9 +201,15 @@ export default defineConfig({
       "import { read } from './helper-chain.ts';\nimport { it } from 'vitest';\nit('t', () => void read);\n",
     );
     // A -> B -> A cycle: A also reaches a file reader via U. A shared false cache would lose B.
-    write('test/helper-cycle-a.ts', "import { b } from './helper-cycle-b.ts';\nimport { raw } from './helper-cycle-untracked.ts';\nexport const a = () => b() + raw();\n");
+    write(
+      'test/helper-cycle-a.ts',
+      "import { b } from './helper-cycle-b.ts';\nimport { raw } from './helper-cycle-untracked.ts';\nexport const a = () => b() + raw();\n",
+    );
     write('test/helper-cycle-b.ts', "import { a } from './helper-cycle-a.ts';\nexport const b = () => a();\n");
-    write('test/helper-cycle-untracked.ts', "import { readFileSync } from 'node:fs';\nexport const raw = () => readFileSync('src/leaf.ts', 'utf8');\n");
+    write(
+      'test/helper-cycle-untracked.ts',
+      "import { readFileSync } from 'node:fs';\nexport const raw = () => readFileSync('src/leaf.ts', 'utf8');\n",
+    );
     write('test/a-cycle.test.ts', "import { a } from './helper-cycle-a.ts';\nimport { it } from 'vitest';\nit('cycle A', () => void a);\n");
     write('test/b-cycle.test.ts', "import { b } from './helper-cycle-b.ts';\nimport { it } from 'vitest';\nit('cycle B', () => void b);\n");
     write('src/unrelated.ts', 'export const unrelated = 1;\n');
