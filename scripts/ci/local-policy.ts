@@ -3,10 +3,10 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { GATE_GROUPS } from './gate-groups.ts';
+import { GATE_GROUPS, orderGates } from './gate-groups.ts';
 import { CHECKED_README_PATHS } from './select-lanes.ts';
 
-const ALL_GATES = Object.values(GATE_GROUPS).flat();
+const ALL_GATES = orderGates(Object.values(GATE_GROUPS).flat());
 const ALL_BROWSER = ['webgl', 'webgpu', 'audio', 'tilemap'] as const;
 const CORE_GATES = [
   'typecheck',
@@ -332,7 +332,10 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
     };
   }
 
-  policy.gates = [...ALL_GATES.filter(name => gates.has(name)), ...[...gates].filter(name => !ALL_GATES.some(gate => gate === name))];
+  policy.gates = orderGates([
+    ...ALL_GATES.filter(name => gates.has(name)),
+    ...[...gates].filter(name => !ALL_GATES.some(gate => gate === name)),
+  ]);
   policy.packageTypechecks = [...typechecks].sort();
   policy.unitProjects = [...projects].sort();
 

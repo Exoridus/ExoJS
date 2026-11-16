@@ -283,6 +283,12 @@ const isExampleCatalogPath = (file: string): boolean => {
     return true;
   }
 
+  // Published benchmark profiles are measured data: the site renders them, but
+  // no example imports or executes them.
+  if (file.startsWith('packages/exojs-bench/results/')) {
+    return false;
+  }
+
   if (file.startsWith('packages/')) {
     return true;
   }

@@ -79,6 +79,11 @@ if [ "$is_branch_push" = "1" ]; then
             npm run verify:bench-results || exit 1
             ;;
         *)
+            # Cheap tracked-file gates first: a formatting or hygiene failure is
+            # reported before any dist rebuild or compiler run starts.
+            echo "[pre-push] fast static validation"
+            npm run gates -- affected-fast "$lane_base" "$push_head_sha" || exit 1
+
             # Dist consumers need the current build before their gates run.
             needs_dist=$(node scripts/ci/local-policy.ts --needs-dist "$lane_base" "$push_head_sha") || exit 1
             if [ "$needs_dist" = "true" ]; then
@@ -87,7 +92,7 @@ if [ "$is_branch_push" = "1" ]; then
             fi
 
             echo "[pre-push] static validation"
-            npm run gates -- affected "$lane_base" "$push_head_sha" || exit 1
+            npm run gates -- affected-rest "$lane_base" "$push_head_sha" || exit 1
 
             if [ -n "$lane_base" ]; then
                 echo "[pre-push] running the test lanes this push requires"
