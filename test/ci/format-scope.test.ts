@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -9,6 +10,11 @@ import { chunkFiles, FORMAT_CONFIG_FILES, formatRangeFiles, selectFormatScope } 
 import { runCommand } from '../../scripts/lib/run-command.ts';
 
 const present = (): boolean => true;
+const prettierCli = fileURLToPath(import.meta.resolve('prettier/bin/prettier.cjs'));
+const posixNames = [
+  ['a tab', 'src/tab\tname.ts'],
+  ['a newline', 'src/line\nbreak.ts'],
+];
 
 describe('format scope selection', () => {
   it('checks exactly the changed files that still exist', () => {
@@ -180,8 +186,6 @@ describe('pushed range', () => {
     ['leading and trailing space', 'src/ padded .ts'],
     ['quote and dollar', "src/it's $HOME.ts"],
     ['shell metacharacters', 'src/a&b;c(d).ts'],
-    ['a tab', 'src/tab\tname.ts'],
-    ['a newline', 'src/line\nbreak.ts'],
   ])('reports a file with %s in its name exactly as it is on disk', (_name, file) => {
     write(file, 'export const n = 1;\n');
     git('add', '-A');
@@ -189,6 +193,30 @@ describe('pushed range', () => {
 
     expect(formatRangeFiles('HEAD~1', 'HEAD', root)).toEqual([file]);
     expect(scope()).toEqual({ mode: 'files', files: [file] });
+  });
+
+  // Windows cannot create control-character filenames, but Git trees can still contain them.
+  it.skipIf(process.platform === 'win32').each(posixNames)('reports a file with %s in its name on POSIX', (_name, file) => {
+    write(file, 'export const n = 1;\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'awkward');
+
+    expect(formatRangeFiles('HEAD~1', 'HEAD', root)).toEqual([file]);
+    expect(scope()).toEqual({ mode: 'files', files: [file] });
+  });
+
+  it('reads NUL-separated control-character paths without checking them out', () => {
+    const blob = git('rev-parse', 'HEAD:src/b.ts').trim();
+    const files = posixNames.map(([, file]) => file.slice('src/'.length)).sort();
+    const tree = execFileSync('git', ['mktree', '-z'], {
+      cwd: root,
+      encoding: 'utf8',
+      input: git('ls-tree', '-z', 'HEAD') + files.map(file => `100644 blob ${blob}\t${file}\0`).join(''),
+    }).trim();
+    const commit = git('commit-tree', tree, '-p', 'HEAD', '-m', 'control characters').trim();
+
+    expect(formatRangeFiles('HEAD', commit, root)).toEqual(files);
+    expect(selectFormatScope(formatRangeFiles('HEAD', commit, root), present)).toEqual({ mode: 'files', files });
   });
 
   it('reports the new awkward path of a rename and omits the old one', () => {
@@ -241,12 +269,22 @@ describe('pushed range', () => {
 describe('selective prettier invocation', () => {
   let root: string;
 
-  const check = (...files: string[]): number =>
-    spawnSync(
-      join(process.cwd(), 'node_modules/.bin/prettier'),
-      ['--check', '--ignore-unknown', '--no-error-on-unmatched-pattern', '--', ...files],
+  const check = (...files: string[]): number | null => {
+    const result = spawnSync(
+      process.execPath,
+      [prettierCli, '--check', '--ignore-unknown', '--no-error-on-unmatched-pattern', '--', ...files],
       { cwd: root, encoding: 'utf8' },
-    ).status ?? -1;
+    );
+
+    expect({ error: result.error, signal: result.signal, stdout: result.stdout, stderr: result.stderr }).toMatchObject({
+      error: undefined,
+      signal: null,
+      stdout: expect.any(String),
+      stderr: expect.any(String),
+    });
+
+    return result.status;
+  };
 
   beforeEach(() => {
     root = realpathSync(mkdtempSync(join(tmpdir(), 'exojs-prettier-')));
@@ -289,7 +327,7 @@ describe('selective prettier invocation', () => {
       runCommand({
         label: 'format-smoke',
         command: process.execPath,
-        args: [join(process.cwd(), 'node_modules/prettier/bin/prettier.cjs'), '--check', '--ignore-unknown', '--', ...files],
+        args: [prettierCli, '--check', '--ignore-unknown', '--', ...files],
         cwd: root,
         output: 'silent',
       });
