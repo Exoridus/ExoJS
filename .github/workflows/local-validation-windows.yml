@@ -13,12 +13,15 @@ on:
       - 'scripts/ci/local-lanes.ts'
       - 'scripts/ci/select-lanes.ts'
       - 'scripts/ci/format-scope.ts'
+      - 'scripts/ci/related-tests.ts'
+      - 'scripts/ci/local-policy.ts'
       - 'scripts/ci/qualify.ts'
       - 'scripts/ci/capability.ts'
       - 'scripts/ci/browser-*.ts'
       - 'test/ci/validation.node.ts'
       - 'test/ci/qualify.node.ts'
       - 'test/ci/format-scope.test.ts'
+      - 'test/ci/related-tests.test.ts'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -38,12 +41,15 @@ on:
       - 'scripts/ci/local-lanes.ts'
       - 'scripts/ci/select-lanes.ts'
       - 'scripts/ci/format-scope.ts'
+      - 'scripts/ci/related-tests.ts'
+      - 'scripts/ci/local-policy.ts'
       - 'scripts/ci/qualify.ts'
       - 'scripts/ci/capability.ts'
       - 'scripts/ci/browser-*.ts'
       - 'test/ci/validation.node.ts'
       - 'test/ci/qualify.node.ts'
       - 'test/ci/format-scope.test.ts'
+      - 'test/ci/related-tests.test.ts'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -73,5 +79,5 @@ jobs:
       - name: Check process ownership, cancellation and lane execution
         run: node --test test/ci/validation.node.ts test/ci/qualify.node.ts
       - uses: ./.github/actions/setup
-      - name: Check format scope and the real Prettier CLI
-        run: pnpm exec vitest run --project exojs test/ci/format-scope.test.ts
+      - name: Check format scope and related-test CLI selection
+        run: pnpm exec vitest run --project exojs test/ci/format-scope.test.ts test/ci/related-tests.test.ts

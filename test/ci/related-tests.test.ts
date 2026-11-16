@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -16,6 +17,7 @@ import {
 import { changedFiles } from '../../scripts/lanes.ts';
 
 const present = (): boolean => true;
+const vitestCli = fileURLToPath(new URL('./vitest.mjs', import.meta.resolve('vitest/package.json')));
 
 const codeLines = (file: string): string =>
   readFileSync(file, 'utf8')
@@ -134,12 +136,16 @@ describe('graph selection against a throwaway project', () => {
     write(file, `${spawnSync('git', ['show', `HEAD:${file}`], { cwd: root, encoding: 'utf8' }).stdout}\n\n`);
 
     const run = spawnSync(
-      join(process.cwd(), 'node_modules/.bin/vitest'),
-      ['list', '--filesOnly', '--changed', '--config', join(root, 'vitest.config.ts'), '--root', root],
+      process.execPath,
+      [vitestCli, 'list', '--filesOnly', '--changed', '--config', join(root, 'vitest.config.ts'), '--root', root],
       { cwd: root, encoding: 'utf8' },
     );
 
-    expect(run.status === 0 ? 'ok' : run.stderr).toBe('ok');
+    expect({ error: run.error, status: run.status, signal: run.signal, stdout: run.stdout, stderr: run.stderr }).toMatchObject({
+      error: undefined,
+      status: 0,
+      signal: null,
+    });
 
     return run.stdout
       .split(/\r?\n/)
@@ -247,9 +253,7 @@ export default defineConfig({
   });
 
   it('follows a transitive import chain, a re-export barrel and an alias from a leaf module', () => {
-    expect(selectAfterTouching('src/leaf.ts')).toEqual(
-      ['test/alias.test.ts', 'test/reexport.test.ts', 'test/transitive.test.ts'].map(file => join(root, file).slice(root.length + 1)),
-    );
+    expect(selectAfterTouching('src/leaf.ts')).toEqual(['test/alias.test.ts', 'test/reexport.test.ts', 'test/transitive.test.ts']);
   });
 
   it('follows a literal dynamic import', () => {
