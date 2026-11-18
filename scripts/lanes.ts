@@ -12,8 +12,8 @@ import { runCommand, type RunCommandResult } from './lib/run-command.ts';
 import { type acquireValidationLock, waitForValidationLock } from './lib/validation-lock.ts';
 
 /** Lists the affected lanes; --run executes them. --only <id[,id]> is a diagnostic subset, never full validation. */
-const git = (...args: string[]): string => {
-  const result = spawnSync('git', args, { encoding: 'utf8', timeout: 30_000 });
+const git = (cwd: string, ...args: string[]): string => {
+  const result = spawnSync('git', args, { cwd, encoding: 'utf8', timeout: 30_000 });
 
   if (result.status !== 0) {
     throw new Error(`git ${args.join(' ')} failed: ${result.stderr || result.error?.message}`);
@@ -28,16 +28,20 @@ const lines = (output: string): string[] =>
     .map(line => line.trim())
     .filter(Boolean);
 
-const changedFiles = (base: string): string[] => {
-  const mergeBase = spawnSync('git', ['merge-base', base, 'HEAD'], { encoding: 'utf8', timeout: 30_000 });
+/**
+ * Renames are reported as a deletion plus an addition: with rename detection a
+ * moved file lists only its new path, and the vanished original would go unseen.
+ */
+export const changedFiles = (base: string, cwd = process.cwd()): string[] => {
+  const mergeBase = spawnSync('git', ['merge-base', base, 'HEAD'], { cwd, encoding: 'utf8', timeout: 30_000 });
   const from = mergeBase.status === 0 ? mergeBase.stdout.trim() : base;
 
   return [
     ...new Set([
-      ...lines(git('diff', '--name-only', from, 'HEAD')),
-      ...lines(git('diff', '--name-only', 'HEAD')),
-      ...lines(git('diff', '--name-only', '--cached')),
-      ...lines(git('ls-files', '--others', '--exclude-standard')),
+      ...lines(git(cwd, 'diff', '--name-only', '--no-renames', from, 'HEAD')),
+      ...lines(git(cwd, 'diff', '--name-only', '--no-renames', 'HEAD')),
+      ...lines(git(cwd, 'diff', '--name-only', '--no-renames', '--cached')),
+      ...lines(git(cwd, 'ls-files', '--others', '--exclude-standard')),
     ]),
   ];
 };

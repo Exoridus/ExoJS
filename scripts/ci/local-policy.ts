@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { GATE_GROUPS, orderGates } from './gate-groups.ts';
+import { isRelatedEligible } from './related-tests.ts';
 import { CHECKED_README_PATHS } from './select-lanes.ts';
 
 const ALL_GATES = orderGates(Object.values(GATE_GROUPS).flat());
@@ -41,6 +42,8 @@ export interface LocalPolicy {
   needsDist: boolean;
   /** Run the dependency-free supervisor tests (`node --test`) that the unit lane starts with. */
   nodeTests: boolean;
+  /** Run the core project's tests that the import graph (or an untracked input) ties to the change, not the whole project. */
+  relatedCore: boolean;
 }
 
 interface PackageManifest {
@@ -159,6 +162,7 @@ export const CI_TOOLING_FILES: ReadonlySet<string> = new Set([
     'push-range',
     'push-scope',
     'qualify',
+    'related-tests',
     'select-lanes',
     'trust',
     'verdict',
@@ -213,6 +217,7 @@ const emptyPolicy = (): LocalPolicy => ({
   physicsPerf: false,
   needsDist: false,
   nodeTests: false,
+  relatedCore: false,
 });
 
 /** Local pre-push selection. Unknown files take the complete policy; CI keeps its own authoritative matrix. */
@@ -404,6 +409,7 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
       physicsPerf: true,
       needsDist: true,
       nodeTests: true,
+      relatedCore: false,
     };
   }
 
@@ -413,6 +419,7 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
   ]);
   policy.packageTypechecks = [...typechecks].sort();
   policy.unitProjects = [...projects].sort();
+  policy.relatedCore = projects.has('exojs') && !files.some(isCiTooling) && isRelatedEligible(files);
 
   if (siteOnlyUnits && policy.unitProjects.length === 1 && policy.unitProjects[0] === 'exojs') {
     policy.unitFilter = [...(siteUnits ? ['test/site'] : []), ...toolingFilters].join(' ');
@@ -423,8 +430,9 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
   return policy;
 };
 
-export const changedFilesBetween = (base: string, head: string): string[] =>
-  execFileSync('git', ['diff', '--name-only', `${base}..${head}`], { encoding: 'utf8' })
+/** Renames count as a deletion plus an addition, so the vanished original path is seen. */
+export const changedFilesBetween = (base: string, head: string, cwd?: string): string[] =>
+  execFileSync('git', ['diff', '--name-only', '--no-renames', `${base}..${head}`], { encoding: 'utf8', cwd })
     .split(/\r?\n/)
     .filter(Boolean);
 

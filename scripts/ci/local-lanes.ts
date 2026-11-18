@@ -1,5 +1,8 @@
+import { spawnSync } from 'node:child_process';
+
 import { type Lane, LANES, selectLanes } from './lanes.ts';
 import { selectLocalPolicy } from './local-policy.ts';
+import { relatedCoreCommands } from './related-tests.ts';
 import type { EffectiveLanes } from './select-lanes.ts';
 
 export interface LocalLaneOptions {
@@ -30,6 +33,13 @@ export const DIST_PREFLIGHT = 'tsx scripts/check-dist-fresh.ts --rebuild';
 
 /** The dependency-free supervisor tests the CI `unit` lane runs before its Vitest projects. */
 const NODE_TESTS = 'node --test test/ci/validation.node.ts test/ci/qualify.node.ts';
+
+/** The fork point Vitest's change detection diffs against; an unresolvable ref is passed through, which only widens the selection. */
+const mergeBase = (base: string): string => {
+  const result = spawnSync('git', ['merge-base', base, 'HEAD'], { encoding: 'utf8', timeout: 30_000 });
+
+  return result.status === 0 ? result.stdout.trim() : base;
+};
 
 /** Whether any of `lanes` reads the built dist rather than the sources. */
 export const needsDist = (lanes: readonly Lane[]): boolean => lanes.some(lane => lane.dist === true);
@@ -106,13 +116,15 @@ export const selectLocalLanes = (effective: EffectiveLanes, options: LocalLaneOp
     : policy.nodeTests
       ? { ...effective, unit: true } // `.husky/` is outside every CI area, yet `test/ci` reads the hooks
       : effective;
+  const wholeProjects = policy.relatedCore ? policy.unitProjects.filter(project => project !== 'exojs') : policy.unitProjects;
   const unitCommand = policy.fullUnit
     ? undefined
     : [
         policy.nodeTests ? NODE_TESTS : '',
-        policy.unitProjects.length
-          ? `pnpm exec vitest run ${policy.unitProjects.map(project => `--project=${project}`).join(' ')}${policy.unitFilter ? ` ${policy.unitFilter}` : ''}`
+        wholeProjects.length
+          ? `pnpm exec vitest run ${wholeProjects.map(project => `--project=${project}`).join(' ')}${policy.unitFilter ? ` ${policy.unitFilter}` : ''}`
           : '',
+        ...(policy.relatedCore ? relatedCoreCommands(mergeBase(options.base)) : []),
         policy.allocation ? 'pnpm test:alloc' : '',
         policy.physicsPerf ? 'pnpm test:physics-perf' : '',
       ]
