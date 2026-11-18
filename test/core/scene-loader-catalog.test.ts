@@ -70,7 +70,7 @@ describe('SceneLoader catalog adopt', () => {
     expect(assets.ship.loadState).toBe('ready');
 
     const key = loader['_canonicalize'](Texture, 'ship.png').key;
-    expect(loader['_residency']['_claims'].get(key)?.scopes.size).toBe(1);
+    expect(loader.inspect().find(row => row.canonicalKey === key)?.claims).toBe(1);
 
     sceneLoader.destroy();
     // last claim gone → evicted (payload dropped, identity kept, back to 'loading')
