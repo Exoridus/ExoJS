@@ -70,11 +70,14 @@ type ChainAt<Versions extends readonly unknown[], Version extends number> = Vers
   ? readonly [MigrationStep<Current, Next, Version, Increment<Version>>, ...ChainAt<[Next, ...Rest], Increment<Version>>]
   : readonly [];
 
-type ChainFrom<Versions extends readonly unknown[], Min extends number, Index extends number> = Index extends Min
-  ? ChainAt<Versions, Index>
-  : Versions extends readonly [unknown, ...infer Rest]
-    ? ChainFrom<Rest, Min, Increment<Index>>
-    : VersionRegisterError<`minVersion ${Min} is not a version of this register`>;
+type ChainFrom<Versions extends readonly unknown[], Min extends number, Index extends number> = Versions extends readonly [
+  unknown,
+  ...infer Rest,
+]
+  ? Index extends Min
+    ? ChainAt<Versions, Index>
+    : ChainFrom<Rest, Min, Increment<Index>>
+  : VersionRegisterError<`minVersion ${Min} is not a version of this register`>;
 
 /**
  * The exact migration tuple a version register requires, from `Min` (default:

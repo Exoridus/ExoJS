@@ -146,6 +146,24 @@ describe('a versioned document through Loader, AssetDecoder and AssetCache', () 
     loader.destroy();
   });
 
+  test('keeps the typed invalid-version cause through the loader', async () => {
+    serve('{"$type":"atlas","$version":{"toString":0}}');
+    const type = new AtlasAssetType();
+    const loader = createLoader(new AssetCache({ stores: createCacheStoreDouble() }), type as never);
+
+    try {
+      const error = await load(loader, type).catch((caught: unknown) => caught);
+      expect(error).toBeInstanceOf(AssetDecodeError);
+      const codecError = (error as AssetDecodeError).cause;
+      expect(codecError).toBeInstanceOf(AssetDecodeError);
+      const versionError = (codecError as AssetDecodeError).cause;
+      expect(versionError).toBeInstanceOf(DocumentVersionError);
+      expect(versionError).toMatchObject({ reason: 'invalid', found: { toString: 0 } });
+    } finally {
+      loader.destroy();
+    }
+  });
+
   test('reads a document from container bytes exactly as from a response', async () => {
     const codec = new DocumentCodec(atlasHistoryAt(3));
     const bytes = new TextEncoder().encode(text('atlas-v2')).buffer;

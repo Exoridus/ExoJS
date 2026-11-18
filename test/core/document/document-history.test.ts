@@ -103,6 +103,15 @@ describe('DocumentHistory.read', () => {
     expect(error).toMatchObject({ reason: 'invalid' });
   });
 
+  test('preserves an invalid version that cannot be converted to a primitive', () => {
+    const version = { toString: 0 };
+    const error = catchError(() => current().read({ $type: 'atlas', $version: version }));
+
+    expect(error).toBeInstanceOf(DocumentVersionError);
+    expect(error).toHaveProperty('reason', 'invalid');
+    expect((error as DocumentVersionError).found).toBe(version);
+  });
+
   test('refuses a foreign $type and a non-object input', () => {
     expect(() => current().read({ $type: 'sprite', $version: 3 })).toThrow(TypeError);
     expect(() => current().read({ $version: 3 })).toThrow(/got undefined/);
@@ -269,6 +278,17 @@ describe('DocumentHistory construction', () => {
     expect(problemsOf({ id: 'a', version: 0, parser: noParser })).toEqual(['version must be a positive integer, got 0']);
     expect(problemsOf({ id: 'a', version: 1.5, minVersion: -1, parser: noParser })).toHaveLength(2);
     expect(problemsOf({ id: 'a', version: 2, minVersion: 3, parser: noParser })).toEqual(['minVersion 3 is newer than version 2']);
+  });
+
+  test('reports graph problems without coercing invalid version values', () => {
+    const invalid = { toString: 0 } as unknown as number;
+    expect(problemsOf({ id: 'a', version: invalid, minVersion: invalid, parser: noParser })).toEqual([
+      'version must be a positive integer, got object',
+      'minVersion must be a positive integer, got object',
+    ]);
+    expect(problemsOf({ id: 'a', version: 2, migrations: [step(invalid, 2)], parser: noParser })).toContain(
+      'Object: from/to must be positive integers, got object->2',
+    );
   });
 
   test('rejects migrations without literal integer bounds or without a migrate method', () => {

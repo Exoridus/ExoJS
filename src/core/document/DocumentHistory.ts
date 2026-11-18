@@ -1,4 +1,4 @@
-import { DocumentMigrationError, DocumentSchemaError, DocumentVersionError } from './documentErrors';
+import { describeVersion, DocumentMigrationError, DocumentSchemaError, DocumentVersionError } from './documentErrors';
 import type { DocumentParser } from './DocumentParser';
 import type { Migration } from './Migration';
 
@@ -34,11 +34,11 @@ const inspectVersionGraph = (options: Pick<DocumentHistoryOptions<object>, 'vers
   const problems: string[] = [];
 
   if (!isVersion(version)) {
-    problems.push(`version must be a positive integer, got ${String(version)}`);
+    problems.push(`version must be a positive integer, got ${describeVersion(version)}`);
   }
 
   if (!isVersion(minVersion)) {
-    problems.push(`minVersion must be a positive integer, got ${String(minVersion)}`);
+    problems.push(`minVersion must be a positive integer, got ${describeVersion(minVersion)}`);
   }
 
   if (problems.length > 0) {
@@ -60,7 +60,7 @@ const inspectVersionGraph = (options: Pick<DocumentHistoryOptions<object>, 'vers
     }
 
     if (!isVersion(from) || !isVersion(to)) {
-      problems.push(`${name}: from/to must be positive integers, got ${String(from)}->${String(to)}`);
+      problems.push(`${name}: from/to must be positive integers, got ${describeVersion(from)}->${describeVersion(to)}`);
       continue;
     }
 

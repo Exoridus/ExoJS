@@ -59,6 +59,16 @@ export const olderDocument: Latest<Versions> = { pages: [] };
 
 export const complete = [new V1ToV2(), new V2ToV3()] as const satisfies MigrationChain<Versions>;
 export const discontinued = [new V2ToV3()] as const satisfies MigrationChain<Versions, 2>;
+export const atCurrent = [] as const satisfies MigrationChain<Versions, 3>;
+// @ts-expect-error - the register ends at version 3.
+export const aboveCurrent = [] as const satisfies MigrationChain<Versions, 4>;
+
+const incompatibleInput = { from: 1, to: 2, migrate: (document: DocV3): DocV2 => document } as const;
+const incompatibleOutput = { from: 1, to: 2, migrate: (document: DocV1): DocV1 => document } as const;
+// @ts-expect-error - the step cannot accept a version 1 document.
+export const wrongInput = [incompatibleInput, new V2ToV3()] as const satisfies MigrationChain<Versions>;
+// @ts-expect-error - the step returns version 1, which has no pages.
+export const wrongOutput = [incompatibleOutput, new V2ToV3()] as const satisfies MigrationChain<Versions>;
 
 // @ts-expect-error - a gap: nothing migrates version 2 to 3.
 export const gap = [new V1ToV2()] as const satisfies MigrationChain<Versions>;
