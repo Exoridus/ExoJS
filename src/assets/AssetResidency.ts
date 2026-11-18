@@ -129,6 +129,8 @@ export class AssetResidency {
 
   // ── Refcount / claims ───────────────────────────────────────────────────────
   private readonly _claims = new Map<ResourceKey, ClaimEntry>();
+  // Keys a scope may hold, so releasing a scope never walks the whole claim map. May name keys the scope no longer holds; never omits one it does.
+  private readonly _scopeKeys = new Map<LoaderScope, Set<ResourceKey>>();
   // The scope that owns whatever sub-assets a key's own load pulled in. Owned by
   // the PARENT KEY, never by whichever consumer happened to start the fetch: a
   // deduped load serves many consumers, and the first one to release must not
@@ -366,6 +368,7 @@ export class AssetResidency {
    */
   public _claim(asset: CanonicalAsset, claimer: LoaderScope): void {
     this._claimEntry(asset).scopes.add(claimer);
+    this._indexScopeKey(claimer, asset.key);
     this._refetchIfEvicted(asset);
   }
 
@@ -387,6 +390,7 @@ export class AssetResidency {
     }
 
     open.add(participation);
+    this._indexScopeKey(claimer, asset.key);
     this._refetchIfEvicted(asset);
 
     return participation;
@@ -499,6 +503,7 @@ export class AssetResidency {
     // none of them can turn back into a claim when it settles.
     entry.scopes.delete(claimer);
     entry.pending.delete(claimer);
+    this._scopeKeys.get(claimer)?.delete(key);
 
     if (!this._isHeld(entry)) {
       this._claims.delete(key);
@@ -513,17 +518,17 @@ export class AssetResidency {
    * @internal
    */
   public _releaseScope(claimer: LoaderScope): void {
-    const held: ResourceKey[] = [];
+    const held = this._scopeKeys.get(claimer);
 
-    for (const [key, entry] of this._claims) {
-      if (entry.scopes.has(claimer) || entry.pending.has(claimer)) {
-        held.push(key);
-      }
-    }
+    this._scopeKeys.delete(claimer);
 
-    for (const key of held) {
+    for (const key of held ?? []) {
       this._release(key, claimer);
     }
+  }
+
+  private _indexScopeKey(scope: LoaderScope, key: ResourceKey): void {
+    this._scopeKeys.set(scope, (this._scopeKeys.get(scope) ?? new Set<ResourceKey>()).add(key));
   }
 
   /**
@@ -936,6 +941,7 @@ export class AssetResidency {
       }
 
       this._claimEntry(asset).scopes.add(claimer);
+      this._indexScopeKey(claimer, asset.key);
 
       return;
     }
@@ -1783,6 +1789,7 @@ export class AssetResidency {
     }
 
     this._claims.clear();
+    this._scopeKeys.clear();
     this._evicted.clear();
     this._requestLog.clear();
     this._dependencyScopes.clear();
@@ -1955,6 +1962,7 @@ export class AssetResidency {
     this._deferred.clear();
     this._refs.clear();
     this._claims.clear();
+    this._scopeKeys.clear();
     this._evicted.clear();
     this._dependencyScopes.clear();
 
