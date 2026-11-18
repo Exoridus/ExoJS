@@ -15,8 +15,7 @@
  *                   consumer
  *   engine-strict   the engine's own profile - `noUncheckedIndexedAccess`,
  *                   `exactOptionalPropertyTypes`, `noUnusedLocals` - scoped to
- *                   the loader/catalog overloads, which are the surface where
- *                   those options change inference
+ *                   loader/catalog overloads and document version contracts
  *
  * They live here rather than as one root tsconfig per profile because a profile
  * is a run mode, not a program the repository owns: three near-identical files
@@ -77,7 +76,7 @@ const PROFILES: readonly Profile[] = [
   },
   {
     name: 'engine-strict',
-    proves: 'the loader/catalog overloads under the engine profile',
+    proves: 'loader/catalog overloads and document versions under the engine profile',
     config: {
       extends: './tsconfig.json',
       compilerOptions: {
@@ -89,6 +88,7 @@ const PROFILES: readonly Profile[] = [
         paths: { '@codexo/exojs': ['./src/index.ts'] },
       },
       include: [
+        'test/type-tests/document-versions.type-test.ts',
         'test/type-tests/loader-catalog-input.type-test.ts',
         'test/type-tests/loader-catalog-leaf.type-test.ts',
         'src/typings.d.ts',

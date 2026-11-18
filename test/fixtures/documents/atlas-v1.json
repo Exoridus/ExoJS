@@ -1,0 +1,1 @@
+{ "$type": "atlas", "$version": 1, "image": "ui.png", "frames": { "button": { "x": 0, "y": 0, "w": 32, "h": 16 } } }

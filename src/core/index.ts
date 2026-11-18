@@ -59,6 +59,16 @@ export type {
   WebGpuBackendConfig,
 } from '#core/application/ApplicationOptions';
 export { onAppInitialized } from '#core/application/devHooks';
+export {
+  DocumentMigrationError,
+  DocumentSchemaError,
+  DocumentVersionError,
+  type DocumentVersionProblem,
+} from '#core/document/documentErrors';
+export { DocumentHistory, type DocumentHistoryOptions, type VersionedDocument } from '#core/document/DocumentHistory';
+export type { DocumentParser } from '#core/document/DocumentParser';
+export type { CurrentVersion, Latest, MigrationChain, MigrationStep, VersionRegisterError } from '#core/document/documentVersions';
+export type { Migration } from '#core/document/Migration';
 export type {
   PhasedSceneTransitionOptions,
   SceneTransitionPhaseContext,

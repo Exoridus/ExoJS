@@ -1,0 +1,133 @@
+{
+  "title": "MigrationStep",
+  "description": "One step of a register's chain, bound to its version numbers and document types. `migrate` is a property so its parameter is checked contravariantly: a migration written for a later document cannot fill an earlier slot.",
+  "symbol": "MigrationStep",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One step of a register's chain, bound to its version numbers and document types. `migrate` is a property so its parameter is checked contravariantly: a migration written for a later document cannot fill an earlier slot."
+      ],
+      "importLine": "import { MigrationStep } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "from",
+          "signature": "from: FromVersion",
+          "signatureTokens": [
+            {
+              "text": "from",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FromVersion",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "migrate",
+          "signature": "migrate: (document: From) => To",
+          "signatureTokens": [
+            {
+              "text": "migrate",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "document",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "From",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "To",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "to",
+          "signature": "to: ToVersion",
+          "signatureTokens": [
+            {
+              "text": "to",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ToVersion",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/document/documentVersions.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/document/documentVersions.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/document/documentVersions.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/document/documentVersions.ts"
+}

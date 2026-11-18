@@ -42,6 +42,7 @@ export { cacheApiBlockStore, DEFAULT_BLOCK_CACHE_NAME } from './container/contai
 export type { ContainerReaderOptions } from './container/ContainerReader';
 export { ContainerReader } from './container/ContainerReader';
 export { coreAssetTypes } from './coreAssetTypes';
+export { DocumentCodec } from './DocumentCodec';
 export type {
   AssetIdentity,
   InferLoadedMap,
