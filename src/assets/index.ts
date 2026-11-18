@@ -19,10 +19,12 @@ export type {
   ValueAssetKind,
 } from './AssetDefinitions';
 export type { AssetDependencyScope, AssetFactory, AssetFactoryContext } from './AssetFactory';
+export type { AssetLoadGroup, AssetLoadHandle, LoadedAssetGroup } from './assetLoadGroup';
 export type { CatalogResourceLeaf, CatalogValueLeaf } from './assetMeta';
 export type { AssetNetworkErrorOptions } from './AssetNetworkError';
 export { AssetNetworkError } from './AssetNetworkError';
 export { AssetRef } from './AssetRef';
+export type { AssetReference } from './AssetReference';
 export type { AssetInspection, AssetOwnerInspection, AssetSizeStats, AssetStats, AssetTypeStats } from './AssetResidency';
 export type { AnyAssets, InferAssetsEntries } from './Assets';
 export { Assets } from './Assets';
@@ -31,6 +33,8 @@ export { binarySourceCodec, jsonSourceCodec, textSourceCodec } from './AssetSour
 export type { AssetStatus } from './AssetStatus';
 export type { AnyAssetType, AssetDescriptor, AssetLeaf, AssetOptionsArgument, AssetRequest } from './AssetType';
 export { AssetType } from './AssetType';
+export type { AssetTypeDefinition, AssetTypeDefinitionEntry, DocumentAssetTypeDefinition } from './AssetTypes';
+export { AssetTypes } from './AssetTypes';
 export type { AssetVariant, AssetVariantProfile } from './AssetVariantSet';
 export { AssetVariantSet } from './AssetVariantSet';
 export type { AssetLocator, ResourceKey, SourceKey } from './canonicalKey';

@@ -97,7 +97,7 @@ afterEach(() => resetDefaultGlyphAtlasPool());
 afterEach(_resetDefaultSerializers);
 
 /**
- * Minimal {@link Loader} stand-in implementing only the two methods the
+ * Minimal {@link Loader} stand-in implementing the methods the
  * serialization context calls - keeps the round-trip tests free of real asset
  * loading while exercising the exact asset-reference wiring.
  */
@@ -111,7 +111,10 @@ const fakeLoader = (entries: ReadonlyArray<{ type: Loadable; source: string; res
     _assetReference(resource: object) {
       const hit = entries.find(entry => entry.resource === resource);
 
-      return hit ? { kind: 'request', source: hit.source } : null;
+      return hit ? { kind: 'request', $type: hit.type === BmFont ? 'bmFont' : 'texture', source: hit.source } : null;
+    },
+    _matchesAssetType(type: Loadable, id: string) {
+      return id === (type === BmFont ? 'bmFont' : 'texture');
     },
     _peekResource(type: Loadable, source: string) {
       const hit = entries.find(entry => entry.type === type && entry.source === source);
@@ -231,11 +234,11 @@ describe('serialization — Sprite', () => {
     const data = serializeTree(sprite, loader);
 
     expect(data.type).toBe('Sprite');
-    expect(data.texture).toBe('hero.png');
+    expect(data.texture).toEqual({ $type: 'texture', source: 'hero.png' });
     expect(data.tint).toEqual([255, 0, 0, 0.5]);
     expect(data.blendMode).toBe(BlendModes.Additive);
 
-    const restored = deserializeTree(data, loader) as Sprite;
+    const restored = deserializeTree(data, loader, undefined, 2) as Sprite;
 
     expect(restored.texture).toBe(texture);
     expect(restored.tint.r).toBe(255);
@@ -254,7 +257,7 @@ describe('serialization — Sprite', () => {
     const data = serializeTree(sprite, loader);
     expect(data.frame).toEqual([32, 0, 32, 32]);
 
-    const restored = deserializeTree(data, loader) as Sprite;
+    const restored = deserializeTree(data, loader, undefined, 2) as Sprite;
     expect(restored.textureFrame.x).toBe(32);
     expect(restored.textureFrame.width).toBe(32);
   });
@@ -390,7 +393,7 @@ describe('serialization — default-registry reset', () => {
 
 describe('serialization — errors & version', () => {
   it('stamps the current version on a serialized scene shape', () => {
-    expect(SERIALIZATION_VERSION).toBe(2);
+    expect(SERIALIZATION_VERSION).toBe(3);
   });
 
   it('throws on an unknown type during deserialize', () => {
@@ -830,7 +833,7 @@ describe('serialization — NineSliceSprite', () => {
     const data = serializeTree(ns, loader);
 
     expect(data.type).toBe('NineSliceSprite');
-    expect(data.texture).toBe('panel.png');
+    expect(data.texture).toEqual({ $type: 'texture', source: 'panel.png' });
     expect(data.slices).toEqual({ top: 16, bottom: 16, left: 16, right: 16 });
     expect(data.width).toBe(100);
 
@@ -978,7 +981,7 @@ describe('serialization — anchor', () => {
     expect(data.anchorX).toBe(0.5);
     expect(data.anchorY).toBe(0.25);
 
-    const restored = deserializeTree(data, loader) as Sprite;
+    const restored = deserializeTree(data, loader, undefined, 2) as Sprite;
 
     expect(restored.anchor.x).toBe(0.5);
     expect(restored.anchor.y).toBe(0.25);
@@ -1048,7 +1051,7 @@ describe('serialization — BitmapText', () => {
     const data = serializeTree(bitmapText, loader);
 
     expect(data.type).toBe('BitmapText');
-    expect(data.font).toBe('ui.fnt');
+    expect(data.font).toEqual({ $type: 'bmFont', source: 'ui.fnt' });
     expect(data.msdf).toBe(true);
     expect(data.scale).toBe(2);
 

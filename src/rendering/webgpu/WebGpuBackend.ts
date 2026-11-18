@@ -131,6 +131,7 @@ interface ManagedWebGpuTextureState {
   hasContent: boolean;
   /** GPU bytes currently booked for this texture's storage with the resource accountant. */
   accountedBytes: number;
+  sharedBitmap?: SharedWebGpuBitmap;
   /**
    * Reusable packing buffer for a partial `DataTexture` upload (see
    * `_syncTexture`'s partial branch), sized to the largest region packed so
@@ -166,6 +167,18 @@ interface ManagedWebGpuTextureState {
    * 1000-flush frame.
    */
   binding: { view: GPUTextureView; sampler: GPUSampler };
+}
+
+interface SharedWebGpuBitmap {
+  readonly bitmap: ImageBitmap;
+  readonly texture: GPUTexture;
+  readonly view: GPUTextureView;
+  readonly format: GPUTextureFormat;
+  readonly mipLevelCount: number;
+  readonly normalize: boolean;
+  readonly accountedBytes: number;
+  owners: number;
+  uploaded: boolean;
 }
 
 interface PixelClipBoundsState {
@@ -250,6 +263,7 @@ export class WebGpuBackend implements RenderBackend {
     Texture | RenderTexture,
     ManagedWebGpuTextureState
   >();
+  private _sharedBitmaps = new WeakMap<ImageBitmap, Set<SharedWebGpuBitmap>>();
   private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
   private readonly _textureReleaseHandlers: Map<Texture, () => void> = new Map<Texture, () => void>();
   /**
@@ -2883,6 +2897,7 @@ export class WebGpuBackend implements RenderBackend {
     this._textureDestroyHandlers.clear();
     this._textureReleaseHandlers.clear();
     this._textureStates.clear();
+    this._sharedBitmaps = new WeakMap();
     this._samplers.clear();
 
     // Recycled RenderTexture pool: drop entries - their backing GPUTexture
@@ -3287,68 +3302,111 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   private _getTextureState(texture: Texture | RenderTexture): ManagedWebGpuTextureState {
-    let state = this._textureStates.get(texture);
+    const existing = this._textureStates.get(texture);
 
-    if (!state) {
-      const format = this._getGpuTextureFormat(texture);
-      const gpuTexture = this.device.createTexture({
-        label: 'backend:texture',
-        size: {
-          width: Math.max(texture.width, 1),
-          height: Math.max(texture.height, 1),
-        },
-        format,
-        mipLevelCount: this._getMipLevelCount(texture),
-        usage: this._getTextureUsage(texture),
-      });
-
-      const mipLevelCount = this._getMipLevelCount(texture);
-
-      const view = gpuTexture.createView();
-      const nonFilterable = this.isNonFilterableTexture(texture);
-      const samplerKey = this._samplerKey(texture.scaleMode, texture.wrapMode, nonFilterable);
-      const sampler = this._getSampler(texture.scaleMode, texture.wrapMode, nonFilterable);
-
-      state = {
-        texture: gpuTexture,
-        view,
-        sampler,
-        samplerKey,
-        version: -1,
-        width: texture.width,
-        height: texture.height,
-        mipLevelCount,
-        format,
-        hasContent: false,
-        accountedBytes: 0,
-        partialUploadScratch: null,
-        partialUploadView: null,
-        contiguousUploadView: null,
-        binding: { view, sampler },
-      };
-
-      state.accountedBytes = this._accountant.reallocate(0, this._estimateTextureBytes(texture, mipLevelCount));
-
-      const destroyHandler = (): void => {
-        this._evictTexture(texture);
-      };
-
-      texture.addDestroyListener(destroyHandler);
-      this._textureDestroyHandlers.set(texture, destroyHandler);
-
-      if (texture instanceof Texture) {
-        const releaseHandler = (): void => {
-          this._evictTexture(texture, false);
-        };
-
-        texture.addReleaseListener(releaseHandler);
-        this._textureReleaseHandlers.set(texture, releaseHandler);
-      }
-
-      this._textureStates.set(texture, state);
+    if (existing !== undefined) {
+      return existing;
     }
 
+    const state = this._createTextureState(texture);
+
+    if (!this._textureDestroyHandlers.has(texture)) {
+      const destroyHandler = (): void => this._evictTexture(texture);
+      texture.addDestroyListener(destroyHandler);
+      this._textureDestroyHandlers.set(texture, destroyHandler);
+    }
+
+    if (texture instanceof Texture) {
+      const releaseHandler = (): void => this._evictTexture(texture, false);
+      texture.addReleaseListener(releaseHandler);
+      this._textureReleaseHandlers.set(texture, releaseHandler);
+    }
+
+    this._textureStates.set(texture, state);
+
     return state;
+  }
+
+  private _createTextureState(texture: Texture | RenderTexture): ManagedWebGpuTextureState {
+    const format = this._getGpuTextureFormat(texture);
+    const mipLevelCount = this._getMipLevelCount(texture);
+    const bitmap = texture instanceof Texture ? texture._decodedAssetBitmap : null;
+    const shareable = bitmap !== null && bitmap.width > 0 && bitmap.width === texture.width && bitmap.height === texture.height;
+    const normalize = shareable && texture instanceof Texture && this._needsColorNormalization(texture);
+    let variants = shareable ? this._sharedBitmaps.get(bitmap) : undefined;
+    let sharedBitmap: SharedWebGpuBitmap | undefined;
+
+    if (variants !== undefined) {
+      for (const entry of variants) {
+        if (entry.format === format && entry.mipLevelCount === mipLevelCount && entry.normalize === normalize) {
+          sharedBitmap = entry;
+
+          break;
+        }
+      }
+    }
+
+    const gpuTexture =
+      sharedBitmap?.texture ??
+      this.device.createTexture({
+        label: 'backend:texture',
+        size: { width: Math.max(texture.width, 1), height: Math.max(texture.height, 1) },
+        format,
+        mipLevelCount,
+        usage: this._getTextureUsage(texture),
+      });
+    const view = sharedBitmap?.view ?? gpuTexture.createView();
+    const accountedBytes =
+      sharedBitmap === undefined ? this._accountant.reallocate(0, this._estimateTextureBytes(texture, mipLevelCount)) : 0;
+
+    if (shareable && sharedBitmap === undefined) {
+      if (variants === undefined) {
+        variants = new Set();
+        this._sharedBitmaps.set(bitmap, variants);
+      }
+
+      sharedBitmap = { bitmap, texture: gpuTexture, view, format, mipLevelCount, normalize, accountedBytes, owners: 0, uploaded: false };
+      variants.add(sharedBitmap);
+    }
+
+    const nonFilterable = this.isNonFilterableTexture(texture);
+    const sampler = this._getSampler(texture.scaleMode, texture.wrapMode, nonFilterable);
+
+    if (sharedBitmap !== undefined) {
+      sharedBitmap.owners++;
+    }
+
+    return {
+      texture: gpuTexture,
+      view,
+      sampler,
+      samplerKey: this._samplerKey(texture.scaleMode, texture.wrapMode, nonFilterable),
+      version: -1,
+      width: texture.width,
+      height: texture.height,
+      mipLevelCount,
+      format,
+      hasContent: false,
+      accountedBytes: sharedBitmap === undefined ? accountedBytes : 0,
+      partialUploadScratch: null,
+      partialUploadView: null,
+      contiguousUploadView: null,
+      binding: { view, sampler },
+      ...(sharedBitmap === undefined ? {} : { sharedBitmap }),
+    };
+  }
+
+  private _freeTextureStorage(state: ManagedWebGpuTextureState): void {
+    const shared = state.sharedBitmap;
+
+    if (shared === undefined) {
+      state.texture.destroy();
+      this._accountant.free(state.accountedBytes);
+    } else if (--shared.owners === 0) {
+      this._sharedBitmaps.get(shared.bitmap)?.delete(shared);
+      shared.texture.destroy();
+      this._accountant.free(shared.accountedBytes);
+    }
   }
 
   /**
@@ -3538,10 +3596,30 @@ export class WebGpuBackend implements RenderBackend {
       texture.compressed === null &&
       (texture.source === null || texture.width === 0 || texture.height === 0);
 
-    const state = this._getTextureState(texture);
+    let state = this._getTextureState(texture);
     const compressedPayload = compressedPayloadOf(texture);
     const textureVersion = texture instanceof RenderTexture ? texture.textureVersion : texture.version;
     const mipLevelCount = this._getMipLevelCount(texture);
+    const shared = state.sharedBitmap;
+
+    if (
+      shared !== undefined &&
+      texture instanceof Texture &&
+      state.version !== textureVersion &&
+      (shared.bitmap !== texture._decodedAssetBitmap ||
+        shared.bitmap.width !== texture.width ||
+        shared.bitmap.height !== texture.height ||
+        shared.mipLevelCount !== mipLevelCount ||
+        shared.format !== this._getGpuTextureFormat(texture) ||
+        shared.normalize !== this._needsColorNormalization(texture))
+    ) {
+      // A descriptor's upload settings can change independently of the other owners.
+      const previous = state;
+      state = this._createTextureState(texture);
+      this._textureStates.set(texture, state);
+      this._freeTextureStorage(previous);
+    }
+
     this._assertTextureFilterable(texture, texture.scaleMode);
     const nonFilterable = this.isNonFilterableTexture(texture);
     const samplerKey = this._samplerKey(texture.scaleMode, texture.wrapMode, nonFilterable);
@@ -3551,7 +3629,9 @@ export class WebGpuBackend implements RenderBackend {
       state.sampler = this._getSampler(texture.scaleMode, texture.wrapMode, nonFilterable);
     }
 
-    if (!awaitingSource && state.version !== textureVersion) {
+    if (state.sharedBitmap?.uploaded === true) {
+      state.version = textureVersion;
+    } else if (!awaitingSource && state.version !== textureVersion) {
       const gpuFormat = this._getGpuTextureFormat(texture);
 
       if (
@@ -3776,6 +3856,10 @@ export class WebGpuBackend implements RenderBackend {
       }
 
       state.version = textureVersion;
+
+      if (state.sharedBitmap !== undefined) {
+        state.sharedBitmap.uploaded = true;
+      }
     }
 
     return state;
@@ -3853,9 +3937,7 @@ export class WebGpuBackend implements RenderBackend {
         this._flushActiveRendererAndEndPass();
       }
 
-      state.texture.destroy();
-      this._accountant.free(state.accountedBytes);
-      state.accountedBytes = 0;
+      this._freeTextureStorage(state);
       this._textureStates.delete(texture);
     }
   }

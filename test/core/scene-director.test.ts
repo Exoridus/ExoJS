@@ -34,6 +34,7 @@ import {
   type SceneTransitionSession,
 } from '#core/scene/SceneTransition';
 import type { SceneConstructor } from '#core/scene/sceneTypes';
+import { LoadingSceneTransition } from '#core/scene/transitions/LoadingSceneTransition';
 import { Signal } from '#core/Signal';
 import { type Seconds, Time } from '#core/units';
 import type { Gamepad } from '#input/Gamepad';
@@ -126,6 +127,7 @@ const createApplicationStub = (): ApplicationStub => {
     rendering: {
       backend: backendMock,
       render: vi.fn(),
+      screenView: backendMock.view,
       _renderSurfaceInto: vi.fn((_target: RenderTexture, _clear: unknown, draw: () => void) => draw()),
     },
     backend: backendMock,
@@ -1747,6 +1749,141 @@ describe('SceneDirector — unload', () => {
 // to a macrotask. `commit()` only sets a flag; a tick() must drive
 // _checkCommitRequested first, then settle() lets the switch finish.
 const settle = (): Promise<void> => new Promise<void>(resolve => setTimeout(resolve, 0));
+
+describe('LoadingSceneTransition', () => {
+  test('draws and releases its default overlay during the first scene change', async () => {
+    const app = createApplicationStub();
+    const Target = makeSceneClass();
+    const manager = new SceneDirector(app, { target: Target });
+    const navigation = manager.change(Target, { transition: new LoadingSceneTransition() });
+
+    manager._renderTransition(app.rendering);
+    const root = app.rendering.render.mock.lastCall?.[0] as Container;
+    const overlay = root.children[0] as Container;
+    const [background, bar] = overlay.children;
+    expect(background?.scale).toMatchObject({ x: 320, y: 180 });
+    expect(bar?.scale.x).toBeGreaterThan(0);
+
+    await navigation;
+    expect(root.destroyed).toBe(true);
+    expect(manager.currentScene).toBeInstanceOf(Target);
+  });
+
+  test('renders a session overlay while preparation is pending and reports only the incoming scope', async () => {
+    const app = createApplicationStub();
+    const child = new Container();
+    const overlay = new Container();
+    overlay.addChild(child);
+    const destroy = vi.spyOn(overlay, 'destroy');
+    const update = vi.fn();
+    const createOverlay = vi.fn(() => ({ node: overlay, update }));
+    const transition = new LoadingSceneTransition({ createOverlay });
+    let finishLoad!: () => void;
+    let incomingLoader!: Scene['loader'];
+    const First = makeSceneClass();
+    const Second = makeSceneClass({
+      load() {
+        incomingLoader = this.loader;
+        this.loader.onLoadProgress.dispatch(1, 3, 'incoming');
+
+        return new Promise<void>(resolve => {
+          finishLoad = resolve;
+        });
+      },
+    });
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+    const navigation = manager.change(Second, { transition });
+    expect(incomingLoader).toBeUndefined();
+    manager._renderTransition(app.rendering);
+    await settle();
+
+    expect(manager.currentScene).toBeInstanceOf(First);
+    expect(incomingLoader.onLoadProgress.count).toBe(1);
+    manager.currentScene?.loader.onLoadProgress.dispatch(7, 8, 'outgoing');
+    manager._renderTransition(app.rendering);
+    expect(update.mock.lastCall?.[2]).toEqual({ loaded: 1, total: 3 });
+    expect(app.rendering.render).toHaveBeenCalledWith(overlay.parent, { view: app.rendering.screenView });
+    expect(createOverlay).toHaveBeenCalledTimes(1);
+
+    finishLoad();
+    await navigation;
+    expect(manager.currentScene).toBeInstanceOf(Second);
+    expect(destroy).toHaveBeenCalledTimes(1);
+    expect(child.destroyed).toBe(true);
+    expect(incomingLoader.onLoadProgress.count).toBe(0);
+  });
+
+  test.each(['abort', 'failure'] as const)('releases the overlay and the progress subscription on %s', async mode => {
+    const app = createApplicationStub();
+    const overlay = new Container();
+    const destroy = vi.spyOn(overlay, 'destroy');
+    const transition = new LoadingSceneTransition({ createOverlay: () => ({ node: overlay }) });
+    const error = new Error(mode);
+    let endLoad!: () => void;
+    let loader!: Scene['loader'];
+    const Target = makeSceneClass({
+      load() {
+        loader = this.loader;
+
+        return new Promise<void>((resolve, reject) => {
+          endLoad = mode === 'abort' ? resolve : () => reject(error);
+        });
+      },
+    });
+    const manager = new SceneDirector(app, { target: Target });
+    const navigation = manager.change(Target, { transition });
+    const failure = navigation.catch((cause: unknown) => cause);
+
+    manager._renderTransition(app.rendering);
+    await settle();
+    expect(loader.onLoadProgress.count).toBe(1);
+
+    if (mode === 'abort') {
+      expect(manager._abortInFlightNavigation(error)).toBe(true);
+    }
+
+    endLoad();
+    expect(await failure).toBe(error);
+    expect(destroy).toHaveBeenCalledTimes(1);
+    expect(loader.onLoadProgress.count).toBe(0);
+    expect(manager.currentScene).toBeNull();
+  });
+
+  test('concurrent navigations cannot take ownership of the same overlay', async () => {
+    const app = createApplicationStub();
+    const Target = makeSceneClass();
+    const first = new SceneDirector(app, { target: Target });
+    const second = new SceneDirector(createApplicationStub(), { target: Target });
+    const node = new Container();
+    const transition = new LoadingSceneTransition({ createOverlay: () => ({ node }) });
+    const navigation = first.change(Target, { transition });
+
+    await expect(second.change(Target, { transition })).rejects.toThrow(/fresh, detached node/);
+    expect(node.destroyed).toBe(false);
+
+    first._renderTransition(app.rendering);
+    await navigation;
+    expect(node.destroyed).toBe(true);
+  });
+
+  test('does not take ownership of an existing scene root', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+    await manager.change(First);
+    const scene = manager.currentScene;
+    const node = scene!.root;
+    const transition = new LoadingSceneTransition({ createOverlay: () => ({ node }) });
+
+    expect(node.parent).toBeNull();
+    await expect(manager.change(Second, { transition })).rejects.toThrow(/fresh, detached node/);
+    expect(manager.currentScene).toBe(scene);
+    expect(node.destroyed).toBe(false);
+  });
+});
 
 describe('SceneDirector — transition session driving', () => {
   test('a transitioned change() does not switch until the session calls environment.commit()', async () => {

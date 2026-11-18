@@ -245,6 +245,30 @@ describe('DocumentHistory construction', () => {
     expect(() => new DocumentHistory({ id: 'a', parser: noParser })).not.toThrow();
   });
 
+  test('accepts a structural migration without a constructor', () => {
+    const migration = Object.assign(Object.create(null) as object, step(5, 6));
+
+    expect(() => new DocumentHistory({ id: 'a', version: 6, minVersion: 5, migrations: [migration], parser: noParser })).not.toThrow();
+  });
+
+  test('does not inspect an overridden migration constructor', () => {
+    const migration = {
+      ...step(1, 2),
+      get constructor(): never {
+        throw new Error('not part of the migration contract');
+      },
+    };
+
+    expect(() => new DocumentHistory({ id: 'a', version: 2, migrations: [migration], parser: noParser })).not.toThrow();
+  });
+
+  test('reports an empty migration array entry as a schema problem', () => {
+    const migrations = new Array<Migration<never, unknown>>(2);
+    migrations[1] = step(2, 3);
+
+    expect(problemsOf({ id: 'a', version: 3, migrations, parser: noParser })).toContain('Migration: an entry must be an object');
+  });
+
   test('reports every problem of a broken graph at once and registers nothing', () => {
     const problems = problemsOf({
       id: 'a',
@@ -278,6 +302,13 @@ describe('DocumentHistory construction', () => {
     expect(problemsOf({ id: 'a', version: 0, parser: noParser })).toEqual(['version must be a positive integer, got 0']);
     expect(problemsOf({ id: 'a', version: 1.5, minVersion: -1, parser: noParser })).toHaveLength(2);
     expect(problemsOf({ id: 'a', version: 2, minVersion: 3, parser: noParser })).toEqual(['minVersion 3 is newer than version 2']);
+  });
+
+  test('reports a sparse large graph without enumerating missing versions', () => {
+    expect(problemsOf({ id: 'a', version: Number.MAX_SAFE_INTEGER, parser: noParser })).toEqual([
+      `missing migrations from version 1 through ${Number.MAX_SAFE_INTEGER - 1}`,
+    ]);
+    expect(problemsOf({ id: 'a', version: Number.MAX_SAFE_INTEGER + 1, parser: noParser })[0]).toMatch(/positive integer/);
   });
 
   test('reports graph problems without coercing invalid version values', () => {

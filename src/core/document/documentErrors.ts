@@ -1,7 +1,7 @@
 /** Why a document version was refused. */
 export type DocumentVersionProblem = 'newer' | 'discontinued' | 'invalid';
 
-export const describeVersion = (value: unknown): string =>
+export const describeDocumentValue = (value: unknown): string =>
   (typeof value === 'object' && value !== null) || typeof value === 'function' ? typeof value : String(value);
 
 /**
@@ -42,7 +42,7 @@ export class DocumentVersionError extends Error {
       invalid: 'is not a positive integer',
     }[reason];
 
-    super(`Document of type "${typeId}": version ${describeVersion(found)} ${detail} (supported: ${minVersion} to ${version}).`);
+    super(`Document of type "${typeId}": version ${describeDocumentValue(found)} ${detail} (supported: ${minVersion} to ${version}).`);
     this.name = 'DocumentVersionError';
     this.typeId = typeId;
     this.reason = reason;

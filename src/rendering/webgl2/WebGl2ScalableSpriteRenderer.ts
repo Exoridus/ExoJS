@@ -454,8 +454,7 @@ export class WebGl2ScalableSpriteRenderer
     backend.stats.batches++;
     backend.stats.drawCalls++;
 
-    // Unbind sampler so subsequent draws use the texture's own wrap params.
-    gl.bindSampler(0, null);
+    backend.unbindMaterialSampler(0);
 
     this._shaderQuadCount = 0;
   }

@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 34,
+  "memberCount": 35,
   "counts": {
     "constructors": 1,
     "methods": 13,
-    "properties": 16,
+    "properties": 17,
     "events": 4
   },
   "sections": [
@@ -212,7 +212,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Rebuild this scene's root and optional UI subtrees from a SerializedScene produced by Scene.serialize. Both trees are read before existing children are detached. If a node cannot be read, provisional nodes are destroyed and the existing scene trees remain unchanged. Assets referenced by the data must already be loaded into the application's Loader (pre-load contract). Identity-compatible older documents retain their source version through all node reads; versions needing a value migration must be transformed first. Documents newer than the running engine throw. Returns this."
+          "description": "Rebuild this scene's root and optional UI subtrees from a SerializedScene produced by Scene.serialize. Both trees are read before existing children are detached. If a node cannot be read, provisional nodes are destroyed and the existing scene trees remain unchanged. Assets referenced by the data must already be loaded into the application's Loader when their serializer uses DeserializeContext.resolveAsset. Serializers using DeserializeContext.resolve reserve deferred handles under the scene's asset scope without fetching. Older documents retain their source version through all node reads. Documents newer than the running engine throw. Returns this."
         },
         {
           "name": "destroy",
@@ -862,6 +862,147 @@
           "params": [],
           "returnType": null,
           "description": "The Application this scene is attached to. The framework attaches a scene before any lifecycle hook (load/init/update/draw) runs, so scene code can read this.app inside those hooks without a null guard - consistent with Scene.inputs/Scene.tweens/Scene.loader. Throws if accessed before the scene is attached (e.g. in a constructor). Use Scene.attached for the rare \"is it attached yet?\" check that must not throw."
+        },
+        {
+          "name": "assets",
+          "signature": "assets: { createScope: (options?: LoaderScopeOptions) => LoaderScope; load: (input: Input, options?: LoadOptions) => LoadingQueue<LoadedAssetGroup<Input>> }",
+          "signatureTokens": [
+            {
+              "text": "assets",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "createScope",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoaderScopeOptions",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoaderScope",
+              "kind": "type"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "load",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "input",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Input",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadOptions",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadingQueue",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadedAssetGroup",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Input",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The assets owned by this scene, released when the scene ends."
         },
         {
           "name": "attached",

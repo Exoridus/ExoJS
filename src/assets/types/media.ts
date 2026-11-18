@@ -6,6 +6,7 @@ import { type MediaAssetOptions, type MediaAssetSource } from '#assets/factories
 import { type MusicAssetOptions, MusicFactory } from '#assets/factories/MusicFactory';
 import { type SoundAssetOptions, SoundFactory } from '#assets/factories/SoundFactory';
 import { type VideoAssetOptions, VideoFactory } from '#assets/factories/VideoFactory';
+import { stableJson } from '#assets/portableData';
 import { soundSeamlessAdapter } from '#assets/seamless';
 import { AudioStream } from '#audio/AudioStream';
 import { Sound } from '#audio/Sound';
@@ -149,6 +150,25 @@ export class SoundAssetType extends AssetType<ArrayBuffer, Sound, SoundAssetOpti
   public override readonly leaf = soundSeamlessAdapter;
   public override readonly _token: AssetConstructor = Sound;
   public override readonly codec: AssetSourceCodec<ArrayBuffer> = binarySourceCodec;
+
+  public override resourceIdentity(request: AssetRequest<SoundAssetOptions>): string {
+    const sprites = request.options?.sprites;
+
+    if (sprites === undefined) {
+      return '';
+    }
+
+    if (typeof sprites === 'string') {
+      return stableJson(sprites);
+    }
+
+    // A resident Sound supplies the sprite table to its handles.
+    const clips = Object.entries(sprites);
+
+    return clips.length === 0
+      ? ''
+      : stableJson(Object.fromEntries(clips.map(([name, { start, end, loop }]) => [name, [start, end, loop ?? false]])));
+  }
 
   public createFactory(): AssetFactory<ArrayBuffer, Sound, SoundAssetOptions> {
     return new SoundFactory();

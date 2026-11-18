@@ -1,3 +1,4 @@
+import { releaseNodeReadAssets } from '#core/serialization/deserializeOwnership';
 import type { AbstractVector } from '#math/AbstractVector';
 import { Bounds } from '#math/Bounds';
 import type { Circle } from '#math/Circle';
@@ -891,6 +892,7 @@ export class SceneNode implements Collidable {
     // is released, so their teardown hooks can still read it.
     const componentErrors = this._destroyComponents();
 
+    releaseNodeReadAssets(this);
     this._transform.destroy();
     this._position.destroy();
     this._scale.destroy();

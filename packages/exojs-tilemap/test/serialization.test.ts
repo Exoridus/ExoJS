@@ -11,7 +11,8 @@ import { tileMapNodeSerializer } from '../src/tilemapSerializers';
 const fakeLoader = (map: TileMap, source: string): Loader =>
   ({
     keyFor: (resource: object) => (resource === map ? { type: TileMap, source } : null),
-    _assetReference: (resource: object) => (resource === map ? { kind: 'request', source } : null),
+    _assetReference: (resource: object) => (resource === map ? { kind: 'request', $type: 'tileMap', source } : null),
+    _matchesAssetType: (type: Loadable, id: string) => type === TileMap && id === 'tileMap',
     _peekResource: (type: Loadable, source_: string) => (type === TileMap && source_ === source ? map : null),
   }) as unknown as Loader;
 
@@ -39,7 +40,7 @@ describe('tilemap serialization', () => {
 
     expect(data.version).toBe(SERIALIZATION_VERSION);
     expect(data.root.type).toBe('TileMapNode');
-    expect(data.root.map).toBe('world.tmj');
+    expect(data.root.map).toEqual({ $type: 'tileMap', source: 'world.tmj' });
     expect(data.root.pixelSnapMode).toBe('position');
 
     const restored = Prefab.fromJSON(data).instantiate(loader) as TileMapNode;

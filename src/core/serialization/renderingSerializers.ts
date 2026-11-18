@@ -401,7 +401,7 @@ const bitmapTextSerializer: NodeSerializer<BitmapText> = {
     return out;
   },
   read(data, ctx) {
-    const font = ctx.resolveAsset(typeof data.font === 'string' ? data.font : null, BmFont);
+    const font = ctx.resolveAsset(data.font, BmFont);
 
     if (font === null) {
       throw new Error('BitmapText deserialize requires its BmFont to be pre-loaded into the Loader.');

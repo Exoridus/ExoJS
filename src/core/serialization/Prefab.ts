@@ -36,7 +36,7 @@ export class Prefab {
    * as `registry` to resolve app-scoped (extension) serializers; defaults to the
    * global registry.
    *
-   * @throws If a node in the subtree carries components, unless
+   * @throws If a node in the subtree carries an unregistered component, unless
    *   {@link SerializeOptions.omitComponents} is set - a prefab never drops
    *   them silently.
    */
@@ -61,7 +61,10 @@ export class Prefab {
 
   /**
    * Instantiate a fresh, independent copy of the captured subtree. Referenced
-   * assets must be pre-loaded into `loader`. Call repeatedly for many instances.
+   * assets must be pre-loaded into `loader` for serializers using
+   * {@link DeserializeContext.resolveAsset}. Serializers using
+   * {@link DeserializeContext.resolve} reserve deferred handles with the loader.
+   * Call repeatedly for many instances.
    * Pass `app.serializers` as `registry` to resolve app-scoped (extension)
    * serializers; defaults to the global registry.
    *

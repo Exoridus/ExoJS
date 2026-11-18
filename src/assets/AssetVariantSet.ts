@@ -1,5 +1,8 @@
 import type { CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 
+import { defaultImageFormats } from './assetVariantCapabilities';
+import { expandVariantPattern } from './expandVariantPattern';
+
 /**
  * What the running device can accept, as variant rules see it.
  *
@@ -19,6 +22,11 @@ export interface AssetVariantProfile {
   readonly textureFormats: readonly CompressedTextureFormat[];
   /** Device pixels per logical unit the application renders at. */
   readonly resolution: number;
+  /**
+   * Supported lowercase raster extensions for inline format groups. If omitted,
+   * the set accepts PNG, JPEG and GIF. Candidate order breaks ties at one density.
+   */
+  readonly imageFormats?: readonly string[];
 }
 
 /**
@@ -37,6 +45,8 @@ export interface AssetVariant {
   readonly textureFormat?: CompressedTextureFormat;
   /** Eligible only when the profile renders at this density or higher. */
   readonly resolution?: number;
+  /** Eligible only when the profile supports this lowercase raster file extension. */
+  readonly imageFormat?: string;
 }
 
 /** The profile a set starts on: nothing confirmed, logical density. */
@@ -56,9 +66,10 @@ const conservativeProfile: AssetVariantProfile = Object.freeze({ textureFormats:
  * candidates therefore get different cache entries instead of one entry whose
  * contents depend on who wrote it last.
  *
- * A source with no rule resolves to itself. Nothing is registered by default,
- * so an application that never calls {@link define} pays one map lookup per
- * load and nothing else.
+ * Inline sources such as `hero@{1,2,3}x.{png,webp}` choose a literal texture
+ * file without probing the network. Either group may be omitted. An explicit
+ * rule for the same source takes precedence. Other sources resolve to
+ * themselves when no rule is defined.
  *
  * @example
  * ```ts
@@ -109,16 +120,16 @@ export class AssetVariantSet {
     return this;
   }
 
-  /** Drop the rule for `source`, so it resolves to itself again. */
+  /** Drop the explicit rule for `source`. Inline candidates still apply. */
   public undefine(source: string): this {
     this._rules.delete(source);
 
     return this;
   }
 
-  /** The candidates declared for `source`, or `undefined`. */
+  /** The declared or expanded candidates for `source`, or `undefined`. */
   public candidates(source: string): readonly AssetVariant[] | undefined {
-    return this._rules.get(source);
+    return this._rules.get(source) ?? expandVariantPattern(source);
   }
 
   /** Forget every rule. The profile is left alone - it describes the device, not the content. */
@@ -137,17 +148,34 @@ export class AssetVariantSet {
    * transfer cost, and a project that wants density to dominate simply declares
    * only the candidates it wants chosen.
    *
-   * Returns `source` unchanged when it has no rule, and when it has one whose
-   * candidates are all ineligible.
+   * Returns `source` unchanged when it has no rule or inline group, and when
+   * an explicit rule has no eligible candidates. An inline source must have an
+   * eligible candidate and may expand to at most 256 files.
    */
   public resolve(source: string): string {
-    const candidates = this._rules.get(source);
+    return this._resolveCandidate(source)?.source ?? source;
+  }
+
+  /** Keep the selected density together with the physical source. @internal */
+  public _resolveCandidate(source: string): AssetVariant | undefined {
+    const rule = this._rules.get(source);
+    const candidates = rule ?? expandVariantPattern(source);
 
     if (candidates === undefined) {
-      return source;
+      return undefined;
     }
 
-    const { textureFormats, resolution } = this._profile;
+    const best = this._select(candidates);
+
+    if (best === undefined && rule === undefined) {
+      throw new Error(`No eligible asset variant for "${source}" with this profile.`);
+    }
+
+    return best;
+  }
+
+  private _select(candidates: readonly AssetVariant[]): AssetVariant | undefined {
+    const { textureFormats, resolution, imageFormats = defaultImageFormats } = this._profile;
     // An uncompressed candidate ranks behind every supported format rather than
     // ahead of an unsupported one, so `length` (not -1) is its rank.
     const uncompressedRank = textureFormats.length;
@@ -157,6 +185,10 @@ export class AssetVariantSet {
 
     for (const candidate of candidates) {
       if (candidate.resolution !== undefined && candidate.resolution > resolution) {
+        continue;
+      }
+
+      if (candidate.imageFormat !== undefined && !imageFormats.includes(candidate.imageFormat)) {
         continue;
       }
 
@@ -179,6 +211,6 @@ export class AssetVariantSet {
       }
     }
 
-    return best?.source ?? source;
+    return best;
   }
 }

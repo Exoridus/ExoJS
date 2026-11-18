@@ -16,6 +16,7 @@ import { serializeCacheRecordKey } from '#assets/cache/CacheRecordKey';
 import { DocumentCodec } from '#assets/DocumentCodec';
 import { Loader } from '#assets/Loader';
 import { DocumentVersionError } from '#core/document/documentErrors';
+import { DocumentHistory } from '#core/document/DocumentHistory';
 import { materializeAssetTypes } from '#extensions/materialize';
 
 import { type Atlas, AtlasAssetType, atlasHistoryAt } from './atlas-document-pilot';
@@ -162,6 +163,34 @@ describe('a versioned document through Loader, AssetDecoder and AssetCache', () 
     } finally {
       loader.destroy();
     }
+  });
+
+  test.each([
+    ['an object that cannot be converted to a primitive', { toString: 0 }],
+    [
+      'an Error with an unreadable message',
+      Object.defineProperty(new Error(), 'message', {
+        get: () => {
+          throw new Error('unreadable');
+        },
+      }),
+    ],
+  ])('preserves a custom parser error with %s', async (_, cause) => {
+    const codec = new DocumentCodec(
+      new DocumentHistory({
+        id: 'atlas',
+        parser: {
+          parse() {
+            // eslint-disable-next-line @typescript-eslint/only-throw-error -- Extension callbacks can throw any value at runtime.
+            throw cause;
+          },
+        },
+      }),
+    );
+
+    const error = await codec.decode('{"$type":"atlas","$version":1}').catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(AssetDecodeError);
+    expect((error as AssetDecodeError).cause).toBe(cause);
   });
 
   test('reads a document from container bytes exactly as from a response', async () => {

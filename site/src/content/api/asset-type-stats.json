@@ -145,11 +145,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/AssetResidency.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetResidency.ts"
+        "label": "src/assets/inspectAssetState.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/inspectAssetState.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/AssetResidency.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetResidency.ts"
+  "sourcePath": "src/assets/inspectAssetState.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/inspectAssetState.ts"
 }

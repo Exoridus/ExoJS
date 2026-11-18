@@ -1,3 +1,4 @@
+import type { LoadingProgress } from '#assets/LoadingQueue';
 import type { Seconds } from '#core/units';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -46,6 +47,8 @@ export interface SceneTransitionEnvironment {
   readonly commitRequested: boolean;
   /** `true` once the atomic commit boundary has actually been crossed. Live view. */
   readonly committed: boolean;
+  /** Latest foreground asset counts from the incoming scene's own loader, if it has reported any. */
+  readonly loadingProgress?: Pick<LoadingProgress, 'loaded' | 'total'> | undefined;
   /**
    * Request the scene switch. May be called synchronously from
    * `createSession()`, `update()`, or `render()`. Exactly once per session -

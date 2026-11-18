@@ -3599,7 +3599,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The asset types every Application installs. The set is fixed at build time and cannot be added to or replaced at runtime: a type an application brings of its own is installed alongside these, on that application only. Their ids are short rather than reverse-DNS because the engine owns them, and because they double as the cache namespaces a persistent store writes under. A type is listed unconditionally even where the browser API behind it may be absent. Constructing the type touches nothing; only loading an asset of it does, and a missing API should fail that load rather than silently make the type unknown - which is what a conditional list did, leaving the type-level suffix table claiming a type the runtime had never installed."
+          "description": "The asset types every Application installs. An application can add its own definitions and replace a constructor-bound factory before its first request. Their ids are short rather than reverse-DNS because the engine owns them, and because they double as the cache namespaces a persistent store writes under. A type is listed unconditionally even where the browser API behind it may be absent. Constructing the type touches nothing; only loading an asset of it does, and a missing API should fail that load rather than silently make the type unknown - which is what a conditional list did, leaving the type-level suffix table claiming a type the runtime had never installed."
         },
         {
           "name": "csvType",
@@ -4052,7 +4052,7 @@
         },
         {
           "name": "SERIALIZATION_VERSION",
-          "signature": "SERIALIZATION_VERSION: 2",
+          "signature": "SERIALIZATION_VERSION: 3",
           "signatureTokens": [
             {
               "text": "SERIALIZATION_VERSION",
@@ -4063,7 +4063,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "2",
+              "text": "3",
               "kind": "keyword"
             }
           ],

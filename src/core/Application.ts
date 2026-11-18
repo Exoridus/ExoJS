@@ -1,7 +1,11 @@
 import { AnimationSystem } from '#animation/AnimationSystem';
 import { TweenSystem } from '#animation/TweenSystem';
+import type { AssetLoadGroup, AssetLoadHandle, LoadedAssetGroup } from '#assets/assetLoadGroup';
+import type { AssetTypes } from '#assets/AssetTypes';
+import { probeAssetImageFormats } from '#assets/assetVariantCapabilities';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
+import type { LoadingQueue } from '#assets/LoadingQueue';
 import { AudioSystem } from '#audio/AudioSystem';
 import { ApplicationErrorReporter, maxConsecutiveFrameErrors, type RecentErrorEntry } from '#core/application/ApplicationErrorReporter';
 import {
@@ -234,6 +238,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   public readonly connectivity: Connectivity;
   public readonly loader: Loader;
+  /** Defines the asset types this application can load. */
+  public readonly assets: AssetTypes;
   public readonly input: InputSystem;
   /** @internal Fixed-step clock behind every action's `tick` view - see {@link InputTickClock}. */
   public readonly _inputTickClock = new InputTickClock();
@@ -592,8 +598,14 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._snapshot = buildSnapshot([...(appSettings.extensions ?? [])]);
 
       this.loader = constructed.track(new Loader(this.options.loader));
+      this.assets = this.loader._assetTypes;
 
       materializeAssetTypes(this.loader, [...coreAssetTypes, ...this._snapshot.assets]);
+
+      for (const definition of appSettings.assetTypes ?? []) {
+        this.assets._define(definition);
+      }
+
       materializeSerializerBindings(this.serializers, this._snapshot.serializers);
 
       this._backendType = resolveBackendType(this.options.backend);
@@ -1536,6 +1548,21 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     }
   }
 
+  /** Loads a handle or a group into application ownership. The queue exposes progress and can be cancelled. */
+  public load<const Input extends AssetLoadGroup>(input: Input): LoadingQueue<LoadedAssetGroup<Input>>;
+  public load<const Items extends readonly [AssetLoadHandle, AssetLoadHandle, ...AssetLoadHandle[]]>(
+    ...items: Items
+  ): LoadingQueue<LoadedAssetGroup<Items>>;
+  public load(...input: readonly unknown[]): LoadingQueue<unknown> {
+    return this.loader._loadHandleGroup(input.length === 1 ? input[0] : input);
+  }
+
+  /** Preloads assets at background priority. Demand joins and promotes the same request. */
+  public loadBackground<const Input extends AssetLoadGroup>(input: Input): LoadingQueue<LoadedAssetGroup<Input>>;
+  public loadBackground(input: unknown): LoadingQueue<unknown> {
+    return this.loader._loadHandleGroup(input, undefined, true);
+  }
+
   /**
    * Halt the per-frame loop, unload the active scene, and stop the active
    * + frame clocks. Leaves backend, input, audio, etc. intact - call
@@ -2187,14 +2214,17 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   private async initializeBackend(): Promise<void> {
+    const imageFormats = this.loader.variants.profile.imageFormats ?? probeAssetImageFormats();
+
     try {
       await this._backend.initialize();
+      const formats = await imageFormats;
 
       if (this._destroyPromise !== null) {
         return;
       }
 
-      this.publishAssetVariantProfile();
+      this.publishAssetVariantProfile(formats);
       this._validateWorkingColorFormatCapability();
     } catch (error) {
       if (this._destroyPromise !== null || this.options.backend?.type !== 'auto' || this._backendType !== 'webgpu') {
@@ -2226,12 +2256,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._rendering.resize(this._geometry.width, this._geometry.height);
 
       await this._backend.initialize();
+      const formats = await imageFormats;
 
       if (this._destroyPromise !== null) {
         return;
       }
 
-      this.publishAssetVariantProfile();
+      this.publishAssetVariantProfile(formats);
       this._validateWorkingColorFormatCapability();
     }
   }
@@ -2253,10 +2284,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * and a profile left over from the abandoned attempt would offer files the live
    * backend refuses.
    */
-  private publishAssetVariantProfile(): void {
+  private publishAssetVariantProfile(imageFormats: readonly string[]): void {
     this.loader.variants.profile = {
       textureFormats: this._backend.supportedTextureFormats,
       resolution: this._backend.rootResolution,
+      imageFormats,
     };
   }
 }

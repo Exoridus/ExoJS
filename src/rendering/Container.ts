@@ -1,3 +1,4 @@
+import type { LoaderScope } from '#assets/LoaderScope';
 import type { Component } from '#core/Component';
 import type { ComponentAnchor, ComponentRuntime } from '#core/ComponentRuntime';
 import { invariant } from '#core/dev';
@@ -31,6 +32,7 @@ import { RenderNode } from './RenderNode';
  */
 export class Container extends RenderNode {
   private readonly _childList: RenderNode[] = [];
+  private _assetScope: LoaderScope | null = null;
   private _retainedPlan: RetainedPlanCache | null = null;
   private _childrenView: readonly RenderNode[] | null = null;
   private _paintChildrenView: readonly RenderNode[] | null = null;
@@ -316,6 +318,11 @@ export class Container extends RenderNode {
     this._invalidateBoundsCascade();
 
     child._setStage(this._stage);
+
+    if (this._assetScope !== null) {
+      child._setAssetScope(this._assetScope);
+    }
+
     this._stage?.interaction._notifyNodeAdded(child);
 
     if (child._componentNodes > 0) {
@@ -487,8 +494,14 @@ export class Container extends RenderNode {
       try {
         child._setStage(null);
       } finally {
-        if (child._componentNodes > 0) {
-          this._releaseComponents(child, runtime);
+        try {
+          if (this._assetScope !== null) {
+            child._setAssetScope(null);
+          }
+        } finally {
+          if (child._componentNodes > 0) {
+            this._releaseComponents(child, runtime);
+          }
         }
       }
     }
@@ -612,6 +625,23 @@ export class Container extends RenderNode {
   private _releaseComponents(child: RenderNode, runtime: ComponentRuntime | null): void {
     this._adjustComponentNodes(-child._componentNodes);
     runtime?.detachSubtree(child);
+  }
+
+  public override _setAssetScope(scope: LoaderScope | null): void {
+    if (this._assetScope === scope) {
+      return;
+    }
+
+    this._assetScope = scope;
+
+    for (const child of this._childList) {
+      child._setAssetScope(scope);
+    }
+  }
+
+  /** @internal */
+  public _getAssetScope(): LoaderScope | null {
+    return this._assetScope;
   }
 
   /** @internal - propagate the owning stage down the whole subtree. */

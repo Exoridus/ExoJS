@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 5,
+  "memberCount": 7,
   "counts": {
     "constructors": 0,
-    "methods": 2,
-    "properties": 3,
+    "methods": 3,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -74,6 +74,126 @@
           ],
           "returnType": "SceneNode",
           "description": "Fully deserialize a child node (inverse of SerializeContext.writeNode)."
+        },
+        {
+          "name": "resolve",
+          "signature": "resolve(reference: unknown, type: AssetConstructor<T>): CatalogResourceLeaf<T> | CatalogValueLeaf<T> | null",
+          "signatureTokens": [
+            {
+              "text": "resolve",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "reference",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetConstructor",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CatalogResourceLeaf",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CatalogValueLeaf",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "reference",
+              "type": "unknown",
+              "optional": false
+            },
+            {
+              "name": "type",
+              "type": "AssetConstructor<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "CatalogResourceLeaf<T> | CatalogValueLeaf<T> | null",
+          "description": "Resolve a reference to a resource handle or value reference without fetching it. Equal references share a handle within this document read. The reader owns the handle's claim; pass the handle to its loader to load the payload. Returns null for a missing reference or loader."
         },
         {
           "name": "resolveAsset",
@@ -161,7 +281,7 @@
             }
           ],
           "returnType": "T | null",
-          "description": "Resolve a serialized asset reference back to a loaded resource of type, or null if the reference is missing, malformed, or names an asset that was not pre-loaded (a one-time warning is emitted in the not-loaded case). Accepts both reference forms, so a version 1 document's bare source strings keep resolving."
+          "description": "Resolve a serialized asset reference back to a loaded resource of type, or null if the reference is missing, malformed, or names an asset that was not pre-loaded (a one-time warning is emitted in the not-loaded case). Accepts a typed reference, an older source/options record, or a version 1 document's bare source string."
         }
       ],
       "paragraphs": [],
@@ -216,6 +336,111 @@
           "params": [],
           "returnType": null,
           "description": "Caller approval for sources the default policy refuses; see DeserializeOptions.allowVideoSource."
+        },
+        {
+          "name": "link",
+          "signature": "link: (reference: unknown, type: LocalTarget<T>, assign: (target: T) => void) => void",
+          "signatureTokens": [
+            {
+              "text": "link",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "reference",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LocalTarget",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "assign",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Links to a document-local object after all embedded objects are constructed."
         },
         {
           "name": "loader",

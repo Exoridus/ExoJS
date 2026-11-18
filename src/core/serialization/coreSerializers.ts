@@ -1,3 +1,6 @@
+import { readAssetReference } from '#assets/AssetReference';
+import { createLeaf } from '#assets/catalogLeaf';
+import { textureSeamlessAdapter } from '#assets/seamless';
 import { logger } from '#core/Logger';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
@@ -7,7 +10,7 @@ import { SDF_RADIUS, Text } from '#rendering/text/Text';
 import { Texture } from '#rendering/texture/Texture';
 
 import { initializeDeserializedNode } from './deserializeOwnership';
-import type { NodeSerializer } from './NodeSerializer';
+import type { DeserializeContext, NodeSerializer } from './NodeSerializer';
 import { asNumberArray, asSerializedNode, readNumber } from './read';
 import { registerRenderingSerializers } from './renderingSerializers';
 import type { SerializationRegistry } from './SerializationRegistry';
@@ -43,6 +46,20 @@ const containerSerializer: NodeSerializer<Container> = {
 
 // ── Sprite ─────────────────────────────────────────────────────────────────
 
+const readSpriteTexture = (value: unknown, ctx: DeserializeContext): Texture | null => {
+  const reference = ctx.version >= 3 ? readAssetReference(value) : null;
+
+  if (reference === null || !('$type' in reference) || typeof reference.$type !== 'string') {
+    return ctx.resolveAsset(value, Texture);
+  }
+
+  if (reference.$type !== 'texture') {
+    throw new TypeError(`Cannot read Sprite texture "${reference.source}" of type "${reference.$type}".`);
+  }
+
+  return createLeaf(textureSeamlessAdapter, reference.$type, reference.source, reference.options, true) as Texture;
+};
+
 const spriteSerializer: NodeSerializer<Sprite> = {
   write(node, ctx) {
     const out: Record<string, unknown> = {};
@@ -74,7 +91,7 @@ const spriteSerializer: NodeSerializer<Sprite> = {
     return out;
   },
   read(data, ctx) {
-    const texture = ctx.resolveAsset(data.texture, Texture);
+    const texture = readSpriteTexture(data.texture, ctx);
     const sprite = new Sprite(texture);
     const frame = asNumberArray(data.frame);
 

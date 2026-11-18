@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 4,
+  "memberCount": 5,
   "counts": {
     "constructors": 0,
     "methods": 1,
-    "properties": 3,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -128,6 +128,59 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "loadingProgress",
+          "signature": "loadingProgress?: Pick<LoadingProgress, \"loaded\" | \"total\">",
+          "signatureTokens": [
+            {
+              "text": "loadingProgress",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Pick",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadingProgress",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"loaded\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"total\"",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Latest foreground asset counts from the incoming scene's own loader, if it has reported any."
         }
       ],
       "paragraphs": [],

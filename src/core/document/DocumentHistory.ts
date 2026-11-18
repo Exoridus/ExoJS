@@ -1,4 +1,4 @@
-import { describeVersion, DocumentMigrationError, DocumentSchemaError, DocumentVersionError } from './documentErrors';
+import { describeDocumentValue, DocumentMigrationError, DocumentSchemaError, DocumentVersionError } from './documentErrors';
 import type { DocumentParser } from './DocumentParser';
 import type { Migration } from './Migration';
 
@@ -25,7 +25,7 @@ export interface DocumentHistoryOptions<Document extends object> {
   readonly parser: DocumentParser<Document>;
 }
 
-const isVersion = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value >= 1;
+const isVersion = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value >= 1;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -34,11 +34,11 @@ const inspectVersionGraph = (options: Pick<DocumentHistoryOptions<object>, 'vers
   const problems: string[] = [];
 
   if (!isVersion(version)) {
-    problems.push(`version must be a positive integer, got ${describeVersion(version)}`);
+    problems.push(`version must be a positive integer, got ${describeDocumentValue(version)}`);
   }
 
   if (!isVersion(minVersion)) {
-    problems.push(`minVersion must be a positive integer, got ${describeVersion(minVersion)}`);
+    problems.push(`minVersion must be a positive integer, got ${describeDocumentValue(minVersion)}`);
   }
 
   if (problems.length > 0) {
@@ -52,15 +52,23 @@ const inspectVersionGraph = (options: Pick<DocumentHistoryOptions<object>, 'vers
   const seen = new Set<number>();
 
   for (const migration of migrations) {
+    if ((typeof migration !== 'object' || migration === null) && typeof migration !== 'function') {
+      problems.push('Migration: an entry must be an object');
+      continue;
+    }
+
     const { from, to } = migration;
-    const name = migration.constructor.name;
+    const prototype = Reflect.getPrototypeOf(migration);
+    const constructor: unknown = prototype === null ? undefined : Object.getOwnPropertyDescriptor(prototype, 'constructor')?.value;
+    const label: unknown = typeof constructor === 'function' ? Object.getOwnPropertyDescriptor(constructor, 'name')?.value : undefined;
+    const name = typeof label === 'string' ? label : 'Migration';
 
     if (typeof migration.migrate !== 'function') {
       problems.push(`${name}: has no migrate() method`);
     }
 
     if (!isVersion(from) || !isVersion(to)) {
-      problems.push(`${name}: from/to must be positive integers, got ${describeVersion(from)}->${describeVersion(to)}`);
+      problems.push(`${name}: from/to must be positive integers, got ${describeDocumentValue(from)}->${describeDocumentValue(to)}`);
       continue;
     }
 
@@ -81,11 +89,29 @@ const inspectVersionGraph = (options: Pick<DocumentHistoryOptions<object>, 'vers
     }
   }
 
-  for (let from = minVersion; from < version; from++) {
-    if (!seen.has(from)) {
-      problems.push(`no migration from version ${from} to ${from + 1}`);
+  if (problems.length === 0 && seen.size === version - minVersion) {
+    return problems;
+  }
+
+  let missingFrom = minVersion;
+
+  const reportMissing = (until: number): void => {
+    if (until === missingFrom + 1) {
+      problems.push(`no migration from version ${missingFrom} to ${until}`);
+    } else if (until > missingFrom) {
+      problems.push(`missing migrations from version ${missingFrom} through ${until - 1}`);
+    }
+  };
+
+  // A broken graph can span many versions without containing a single step.
+  for (const from of [...seen].sort((left, right) => left - right)) {
+    if (from >= minVersion && from < version) {
+      reportMissing(from);
+      missingFrom = from + 1;
     }
   }
+
+  reportMissing(version);
 
   return problems;
 };

@@ -7,6 +7,7 @@ import type { RenderingContext } from '#rendering/RenderingContext';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { ColorTextureFormat } from '#rendering/types';
 
+import { DirectorTransitionEnvironment } from './DirectorTransitionEnvironment';
 import { prepareSceneScope } from './prepareSceneScope';
 import { Scene } from './Scene';
 import { SceneTransitionLifecycleError } from './sceneErrors';
@@ -25,7 +26,6 @@ import { SceneState } from './SceneState';
 import type {
   SceneTransition,
   SceneTransitionContext,
-  SceneTransitionEnvironment,
   SceneTransitionFrame,
   SceneTransitionRequirements,
   SceneTransitionSession,
@@ -85,42 +85,6 @@ interface TransitionResources {
   readonly outgoingSnapshot: RenderTexture | null;
   readonly currentTexture: RenderTexture | null;
   readonly release: () => void;
-}
-
-/** @internal Director-owned implementation of {@link SceneTransitionEnvironment}. Not exported. */
-class DirectorTransitionEnvironment implements SceneTransitionEnvironment {
-  public readonly context: SceneTransitionContext;
-  private _commitRequested = false;
-  private _committed = false;
-
-  public constructor(context: SceneTransitionContext) {
-    this.context = context;
-  }
-
-  public get commitRequested(): boolean {
-    return this._commitRequested;
-  }
-
-  public get committed(): boolean {
-    return this._committed;
-  }
-
-  public commit(): void {
-    if (this._commitRequested) {
-      if (__DEV__) {
-        throw new SceneTransitionLifecycleError('commit-reentrant');
-      }
-
-      return;
-    }
-
-    this._commitRequested = true;
-  }
-
-  /** @internal Called by the Director once the atomic commit boundary is actually crossed. */
-  public _markCommitted(): void {
-    this._committed = true;
-  }
 }
 
 /**
@@ -415,6 +379,10 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         let newScope: SceneScope | null;
 
         try {
+          if (claimedEntry !== null) {
+            this._activeEnvironment?._watchLoadingProgress(claimedEntry.scope.loader);
+          }
+
           newScope = claimedEntry !== null ? await this._awaitClaimedPreload(claimedEntry) : await this._prepareScene(scene, data);
         } finally {
           if (this._preparingScene === scene) {
@@ -1611,6 +1579,10 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       this.onStateChange.dispatchIsolated(error => this._reportLifecycleError(error), previous, next, scene as Scene),
     ),
   ): Promise<SceneScope<Data> | null> {
+    if (this._preparingScene === scene) {
+      this._activeEnvironment?._watchLoadingProgress(scope.loader);
+    }
+
     return prepareSceneScope(scope, data);
   }
 
@@ -2038,6 +2010,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     // makes this the single, atomic ownership handoff: any re-entrant or
     // later same-tick call now short-circuits.
     this._activeSession = null;
+    this._activeEnvironment?._stopWatchingLoadingProgress();
     this._activeEnvironment = null;
     this._sessionAction = null;
     this._sessionSettle = null;

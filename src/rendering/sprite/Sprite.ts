@@ -1,3 +1,4 @@
+import type { LoaderScope } from '#assets/LoaderScope';
 import { invariant } from '#core/dev';
 import { Interval } from '#math/Interval';
 import { Rectangle } from '#math/Rectangle';
@@ -8,7 +9,7 @@ import type { AnySpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { RenderNode } from '#rendering/RenderNode';
 import { invalidateOnTextureLoad } from '#rendering/texture/deferredTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
-import type { Texture } from '#rendering/texture/Texture';
+import { Texture } from '#rendering/texture/Texture';
 
 /**
  * Internal dirty-flag bitmask used by {@link Sprite} to lazily recompute
@@ -48,7 +49,9 @@ export enum SpriteFlags {
  */
 export class Sprite extends Drawable {
   private _texture: Texture | RenderTexture | null = null;
+  declare private _textureClaim: LoaderScope | undefined;
   private _textureFrame: Rectangle = new Rectangle();
+  private _frameResolution = 1;
   /**
    * Scratch rectangle for {@link resetTextureFrame}. `setTextureFrame` reads
    * its `frame` argument again after re-entering node code (bounds/origin
@@ -83,19 +86,19 @@ export class Sprite extends Drawable {
   private _normalsBuiltAtVersion = -1;
 
   /**
-   * Create a sprite for `texture`, or an empty one when the argument is omitted
+   * Create a sprite for `texture` or an asset path, or an empty one when the argument is omitted
    * or `null` - a textureless sprite draws nothing until {@link setTexture} is
    * called, which is the intended way to build a sprite whose texture is still
    * loading.
    */
-  public constructor(texture: Texture | RenderTexture | null = null) {
+  public constructor(texture: Texture | RenderTexture | string | null = null) {
     super();
 
     // Mark vertices and normals dirty from the start.
     this.flags.addMask(SpriteFlags.Vertices | SpriteFlags.Normals);
 
     if (texture !== null) {
-      this.setTexture(texture);
+      this.setTexture(typeof texture === 'string' ? new Texture(texture) : texture);
     }
   }
 
@@ -177,7 +180,7 @@ export class Sprite extends Drawable {
   private _pendingHeight: number | null = null;
 
   public get width(): number {
-    return Math.abs(this.scale.x) * this._textureFrame.width;
+    return (Math.abs(this.scale.x) * this._textureFrame.width) / this._frameResolution;
   }
 
   public set width(value: number) {
@@ -193,11 +196,11 @@ export class Sprite extends Drawable {
     }
 
     this._pendingWidth = null;
-    this.scale.x = value / this._textureFrame.width;
+    this.scale.x = (value * this._frameResolution) / this._textureFrame.width;
   }
 
   public get height(): number {
-    return Math.abs(this.scale.y) * this._textureFrame.height;
+    return (Math.abs(this.scale.y) * this._textureFrame.height) / this._frameResolution;
   }
 
   public set height(value: number) {
@@ -208,7 +211,7 @@ export class Sprite extends Drawable {
     }
 
     this._pendingHeight = null;
-    this.scale.y = value / this._textureFrame.height;
+    this.scale.y = (value * this._frameResolution) / this._textureFrame.height;
   }
 
   /**
@@ -304,6 +307,7 @@ export class Sprite extends Drawable {
 
     if (this._texture !== texture) {
       this._texture = texture;
+      this._syncTextureClaim(this.parent?._getAssetScope() ?? null);
 
       if (texture !== null) {
         this.resetTextureFrame();
@@ -318,6 +322,34 @@ export class Sprite extends Drawable {
     }
 
     return this;
+  }
+
+  public override _setAssetScope(scope: LoaderScope | null): void {
+    this._syncTextureClaim(scope);
+  }
+
+  private _syncTextureClaim(scope: LoaderScope | null): void {
+    const previous = this._textureClaim;
+
+    if (previous !== undefined) {
+      this._textureClaim = undefined;
+      previous.destroy();
+    }
+
+    const texture = scope !== null && this._texture instanceof Texture ? this._texture._pathAsset() : null;
+
+    if (scope !== null && texture !== null) {
+      const claim = scope.createScope();
+
+      try {
+        claim.get(texture);
+        this._textureClaim = claim;
+      } catch (error) {
+        claim.destroy();
+
+        throw error;
+      }
+    }
   }
 
   /**
@@ -374,6 +406,8 @@ export class Sprite extends Drawable {
       if (height !== null) {
         this.height = height;
       }
+    } else if (this._frameResolution !== texture._assetResolution) {
+      this.setTextureFrame(this._textureFrame, false);
     }
   }
 
@@ -401,18 +435,21 @@ export class Sprite extends Drawable {
 
     this._textureFrame.copy(frame);
     this.flags.addMask(SpriteFlags.TextureCoords);
-    this.setLocalBounds(0, 0, frame.width, frame.height);
+    this._frameResolution = this._texture instanceof Texture ? this._texture._assetResolution : 1;
+    const logicalWidth = frame.width / this._frameResolution;
+    const logicalHeight = frame.height / this._frameResolution;
+    this.setLocalBounds(0, 0, logicalWidth, logicalHeight);
 
     // Sizing against an empty frame is skipped rather than assigned: the size
     // setters hold what they cannot express yet, and a zero from this internal
     // path is the absence of a size, not a caller asking for one.
     if (resetSize) {
       if (frame.width !== 0) {
-        this.width = frame.width;
+        this.width = logicalWidth;
       }
 
       if (frame.height !== 0) {
-        this.height = frame.height;
+        this.height = logicalHeight;
       }
     } else {
       if (width !== 0) {

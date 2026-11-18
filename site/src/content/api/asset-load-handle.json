@@ -1,0 +1,83 @@
+{
+  "title": "AssetLoadHandle",
+  "description": "A path-backed asset handle or a catalog leaf with a loader-owned readiness promise.",
+  "symbol": "AssetLoadHandle",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A path-backed asset handle or a catalog leaf with a loader-owned readiness promise."
+      ],
+      "importLine": "import { AssetLoadHandle } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "loaded",
+          "signature": "loaded: PromiseLike<unknown>",
+          "signatureTokens": [
+            {
+              "text": "loaded",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PromiseLike",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/assetLoadGroup.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/assetLoadGroup.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/assetLoadGroup.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/assetLoadGroup.ts"
+}

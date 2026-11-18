@@ -6,10 +6,10 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 24,
+  "memberCount": 25,
   "counts": {
     "constructors": 0,
-    "methods": 17,
+    "methods": 18,
     "properties": 3,
     "events": 4
   },
@@ -1164,6 +1164,102 @@
           ],
           "returnType": "Promise<void>",
           "description": "Unpacks an asset container (.exoa) and claims every entry under THIS scope, so the container's assets share this scope's lifetime rather than getting one of their own. An unpack that fails partway leaves the claims it already registered on this scope: the successful entries stay resident until released, or until the scope is destroyed. Loader.loadContainer creates and owns its scope instead, so it releases those partial claims itself. See Loader.loadContainer for the format and identity contract."
+        },
+        {
+          "name": "loadGroup",
+          "signature": "loadGroup(input: Input, options?: LoadOptions): LoadingQueue<LoadedAssetGroup<Input>>",
+          "signatureTokens": [
+            {
+              "text": "loadGroup",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "input",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Input",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadingQueue",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadedAssetGroup",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Input",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "input",
+              "type": "Input",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "LoadOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "LoadingQueue<LoadedAssetGroup<Input>>",
+          "description": "Loads path-backed handles into this scope and preserves array, tuple, and object shape."
         },
         {
           "name": "release",

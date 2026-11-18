@@ -1,9 +1,12 @@
+import type { AssetConstructor } from './AssetConstructor';
+import type { AssetReference } from './AssetReference';
 import type { AssetTypeRegistry } from './AssetTypeRegistry';
 import type { CanonicalAsset, ResourceKey } from './canonicalKey';
 import { stableJson, toPortableData } from './portableData';
 
 /** One logical request that resolved to a key, as a saved document can repeat it. */
 interface LogicalRequest {
+  readonly type: AssetConstructor;
   /** The source the caller wrote, before variant selection. */
   readonly source: string;
   /** The identity-relevant options, as data; absent when the source alone identifies the resource. */
@@ -17,9 +20,7 @@ interface LogicalRequest {
  * it came from, or why there is no single honest answer.
  * @internal
  */
-export type AssetReferenceLookup =
-  | { readonly kind: 'request'; readonly source: string; readonly options?: Readonly<Record<string, unknown>> }
-  | { readonly kind: 'error'; readonly message: string };
+export type AssetReferenceLookup = ({ readonly kind: 'request' } & AssetReference) | { readonly kind: 'error'; readonly message: string };
 
 /**
  * The requests that resolved to each canonical key: every source string, for
@@ -80,11 +81,21 @@ export class AssetRequestLog {
    * several distinct ones resolved to it or the one cannot be written as data,
    * or `fallback` as a bare source when no request was recorded.
    */
-  public lookup(key: ResourceKey, fallback: string | undefined): AssetReferenceLookup | null {
-    const requests = [...(this._requests.get(key)?.values() ?? [])];
+  public lookup(
+    key: ResourceKey,
+    fallback: Pick<CanonicalAsset, 'type' | 'source'> | undefined,
+    resource: object,
+    donor: unknown,
+    authoredSource?: string,
+  ): AssetReferenceLookup | null {
+    const candidates = [...(this._requests.get(key)?.values() ?? [])];
+    const matching = authoredSource === undefined ? candidates : candidates.filter(candidate => candidate.source === authoredSource);
+    const requests = matching.length === 0 ? candidates : matching;
 
     if (requests.length === 0) {
-      return fallback === undefined ? null : { kind: 'request', source: fallback };
+      return fallback === undefined
+        ? null
+        : { kind: 'request', $type: this._typeRegistry._typeIdentity(fallback.type), source: fallback.source };
     }
 
     if (requests.length > 1) {
@@ -104,9 +115,12 @@ export class AssetRequestLog {
       return { kind: 'error', message: request.unportable };
     }
 
-    return request.options === undefined
-      ? { kind: 'request', source: request.source }
-      : { kind: 'request', source: request.source, options: request.options };
+    const options = this._typeRegistry._persistedOptions(request.type, resource, request.options, donor);
+    const $type = this._typeRegistry._typeIdentity(request.type);
+
+    return options === undefined
+      ? { kind: 'request', $type, source: request.source }
+      : { kind: 'request', $type, source: request.source, options };
   }
 
   public delete(key: ResourceKey): void {
@@ -130,22 +144,28 @@ export class AssetRequestLog {
       `${this._typeRegistry._identityDiscriminator(type, source, candidate) ?? ''}\u{0}${this._typeRegistry._sourceDiscriminator(type, source, candidate) ?? ''}`;
 
     if (options === undefined || options === null) {
-      return { source: requested };
+      return { type, source: requested };
     }
 
     const full = identity(options);
 
     if (full === identity(undefined)) {
-      return { source: requested };
+      return { type, source: requested };
     }
 
     const portable = toPortableData(options);
 
     if (portable !== null && typeof portable === 'object' && !Array.isArray(portable) && identity(portable) === full) {
-      return { source: requested, options: portable as Record<string, unknown> };
+      const original = portable as Record<string, unknown>;
+      const projected = this._typeRegistry._persistedOptions(type, undefined, original);
+
+      const referenceOptions = projected !== undefined && projected !== original && identity(projected) === full ? projected : original;
+
+      return { type, source: requested, options: referenceOptions };
     }
 
     return {
+      type,
       source: requested,
       unportable: `"${requested}" was loaded with options its type's identity depends on that cannot be written as data (functions, class instances or other non-JSON values).`,
     };
