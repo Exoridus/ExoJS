@@ -331,9 +331,8 @@ export class Container extends RenderNode {
 
     child._setStage(this._stage);
 
-    if (this._assetScope !== null) {
-      child._setAssetScope(this._assetScope);
-    }
+    // Unconditional: a child that kept its claim through a failed same-scope move must drop it when it lands in an unscoped container.
+    child._setAssetScope(this._assetScope);
 
     this._stage?.interaction._notifyNodeAdded(child);
 

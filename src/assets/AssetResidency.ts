@@ -522,9 +522,7 @@ export class AssetResidency {
 
     this._scopeKeys.delete(claimer);
 
-    for (const key of held ?? []) {
-      this._release(key, claimer);
-    }
+    held?.forEach(key => this._release(key, claimer));
   }
 
   private _indexScopeKey(scope: LoaderScope, key: ResourceKey): void {
@@ -1810,6 +1808,10 @@ export class AssetResidency {
    * handle) - only a SETTLED key's handles are forgotten here.
    */
   private _forgetKey(key: ResourceKey, liveFetch: boolean): void {
+    for (const scope of this._holders(this._claims.get(key))) {
+      this._scopeKeys.get(scope)?.delete(key);
+    }
+
     this._claims.delete(key);
     this._evicted.delete(key);
     this._releaseDependencies(key);
