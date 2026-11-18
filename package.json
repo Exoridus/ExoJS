@@ -208,6 +208,7 @@
     "verify:external-consumers": "tsx ./scripts/release/external-consumers.ts",
     "docs:api:generate": "pnpm --filter @codexo/exojs-examples build:api",
     "docs:api:check": "tsx scripts/check-api-docs-sync.ts",
+    "docs:history:check": "node scripts/check-document-history.ts",
     "assets:compact": "tsx scripts/compact-example-assets.ts --write",
     "assets:compact:check": "tsx scripts/compact-example-assets.ts",
     "examples:sync:check": "tsx scripts/check-examples-sync.ts",

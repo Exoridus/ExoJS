@@ -18,6 +18,7 @@ const CORE_GATES = [
   'lint:file-symbols',
   'format:check',
   'docs:api:check',
+  'docs:history:check',
 ];
 const PACKAGE_GATES = ['lint', 'lint:source-hygiene', 'lint:file-symbols', 'format:check', 'docs:api:check'];
 const SITE_GATES = ['typecheck:site', 'typecheck:site-scripts', 'lint:site', 'format:check'];
@@ -220,6 +221,30 @@ const emptyPolicy = (): LocalPolicy => ({
   relatedCore: false,
 });
 
+const historyInputs = (): Set<string> => {
+  const files = new Set(['document-history.lock.json']);
+
+  if (existsSync('document-history.lock.json')) {
+    try {
+      const entries = JSON.parse(readFileSync('document-history.lock.json', 'utf8')) as unknown;
+
+      if (Array.isArray(entries)) {
+        for (const entry of entries as Array<{ declaration?: unknown; fixture?: unknown } | null>) {
+          for (const path of [entry?.declaration, entry?.fixture]) {
+            if (typeof path === 'string') {
+              files.add(path.replaceAll('\\', '/'));
+            }
+          }
+        }
+      }
+    } catch {
+      // The history gate reports invalid lock input when the lock itself changes.
+    }
+  }
+
+  return files;
+};
+
 /** Local pre-push selection. Unknown files take the complete policy; CI keeps its own authoritative matrix. */
 export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy => {
   const files = changedFiles.map(file => String(file).replaceAll('\\', '/').trim()).filter(Boolean);
@@ -232,6 +257,7 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
   let siteOnlyUnits = true;
   let siteUnits = false;
   const toolingFilters = new Set<string>();
+  const documents = historyInputs();
 
   const add = (...names: string[]): void => {
     for (const name of names) {
@@ -240,6 +266,10 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
   };
 
   for (const file of files) {
+    if (documents.has(file)) {
+      add('docs:history:check');
+    }
+
     if (isGlobal(file)) {
       broad = true;
       continue;

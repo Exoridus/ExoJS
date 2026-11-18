@@ -16,6 +16,10 @@ The pre-push hook defaults to `EXOJS_OUTPUT=compact`; set `EXOJS_OUTPUT=normal` 
 
 Vitest 5.0.2 itself returns `vitest:mocks:interceptor` through Vite's `applyToEnvironment` with a `configureServer` hook. Vite 8 warns that the hook on the returned plugin is ignored; Vitest installs its server hook on the enclosing plugin. The warning comes from Vitest's plugin composition and is left visible until upstream fixes it. The React project declares the automatic JSX runtime under OXC, the transformer Vite 8 actually selects, so there is no competing ignored esbuild configuration.
 
+## Document history
+
+`pnpm docs:history:check` verifies the versioned declarations and JSON fixtures listed in `document-history.lock.json` against the target branch. A published type ID and version stay in the lock with their original declaration, fixture and hash. The hash includes referenced type aliases and interfaces in the same source file; keep owned frozen document shapes in that file. Add a new declaration and fixture for a schema change, then append their lock entry. CI uses the exact pull request base or push predecessor, and fetches `next` for manual runs. To check against another local ref explicitly, run `pnpm docs:history:check <ref>`.
+
 ## Reviewed CI-first batch pushes
 
 The **default** is the regular pre-push contract described above, including the complete applicable local completion validation. CI-first is a **per-push exception** for a branch explicitly authorized by the orchestrator after targeted local prevalidation; it is not a default, a global environment setting or a substitute for any required check. Record the authorizer, branch, initial base and head SHAs, affected contracts, commands and results in private `.workspace/` notes. A CI-first push must not be used to bypass known failures, unresolved lane selection, security gates or needed hardware/visual evidence.
