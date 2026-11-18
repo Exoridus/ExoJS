@@ -70,6 +70,18 @@ test.for(['webgl2', 'webgpu'] as const)('path sprites heal and render on %s afte
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(fetch.mock.calls[0]?.[0]).toBe('hero.png');
 
+    const solo = new Sprite('solo.png');
+    const lane = new Container();
+    root.addChild(lane);
+    root.addChild(solo);
+    await expect.poll(() => (solo.texture as Texture).source).not.toBeNull();
+    lane.addChild(solo);
+    root.addChild(solo);
+    expect((solo.texture as Texture).source).not.toBeNull();
+    await new Promise<void>(resolve => setTimeout(resolve, 50));
+    expect(fetch.mock.calls.map(([path]) => path)).toEqual(['hero.png', 'solo.png']);
+    solo.destroy();
+
     expect(original).toBeInstanceOf(Texture);
     first?.destroy();
     expect((original as Texture | null)?.source).not.toBeNull();
@@ -86,7 +98,7 @@ test.for(['webgl2', 'webgpu'] as const)('path sprites heal and render on %s afte
     root.addChild(retry);
     await expect(texture.loaded).resolves.toBe(texture);
     expect(retry.texture).toBe(texture);
-    expect(fetch.mock.calls.map(([path]) => path)).toEqual(['hero.png', 'retry.png', 'retry.png']);
+    expect(fetch.mock.calls.map(([path]) => path)).toEqual(['hero.png', 'solo.png', 'retry.png', 'retry.png']);
   } finally {
     await app.destroy();
     fetch.mockRestore();

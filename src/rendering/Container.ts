@@ -33,6 +33,7 @@ import { RenderNode } from './RenderNode';
 export class Container extends RenderNode {
   private readonly _childList: RenderNode[] = [];
   private _assetScope: LoaderScope | null = null;
+  private _scopeKeptFor: RenderNode | null = null;
   private _retainedPlan: RetainedPlanCache | null = null;
   private _childrenView: readonly RenderNode[] | null = null;
   private _paintChildrenView: readonly RenderNode[] | null = null;
@@ -298,11 +299,22 @@ export class Container extends RenderNode {
         preserved = source !== null && source === this._componentRuntime(false) ? source : null;
       }
 
-      // A plain removal still goes through the public method, so a subclass that overrides it keeps seeing reparents.
-      if (preserved === null) {
-        child.parent.removeChild(child);
-      } else {
-        child.parent._detachChild(child, preserved);
+      const source = child.parent;
+
+      // Moving within one asset scope must not release the child's claims: the last release evicts and refetches the asset.
+      if (source._assetScope !== null && source._assetScope === this._assetScope) {
+        source._scopeKeptFor = child;
+      }
+
+      try {
+        // A plain removal still goes through the public method, so a subclass that overrides it keeps seeing reparents.
+        if (preserved === null) {
+          source.removeChild(child);
+        } else {
+          source._detachChild(child, preserved);
+        }
+      } finally {
+        source._scopeKeptFor = null;
       }
     }
 
@@ -495,7 +507,7 @@ export class Container extends RenderNode {
         child._setStage(null);
       } finally {
         try {
-          if (this._assetScope !== null) {
+          if (this._assetScope !== null && this._scopeKeptFor !== child) {
             child._setAssetScope(null);
           }
         } finally {

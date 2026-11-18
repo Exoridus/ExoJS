@@ -50,6 +50,8 @@ export enum SpriteFlags {
 export class Sprite extends Drawable {
   private _texture: Texture | RenderTexture | null = null;
   declare private _textureClaim: LoaderScope | undefined;
+  declare private _claimedScope: LoaderScope | null | undefined;
+  declare private _claimedAsset: object | null | undefined;
   private _textureFrame: Rectangle = new Rectangle();
   private _frameResolution = 1;
   /**
@@ -329,27 +331,32 @@ export class Sprite extends Drawable {
   }
 
   private _syncTextureClaim(scope: LoaderScope | null): void {
-    const previous = this._textureClaim;
-
-    if (previous !== undefined) {
-      this._textureClaim = undefined;
-      previous.destroy();
-    }
-
     const texture = scope !== null && this._texture instanceof Texture ? this._texture._pathAsset() : null;
 
+    if (scope === (this._claimedScope ?? null) && texture === (this._claimedAsset ?? null)) {
+      return;
+    }
+
+    const previous = this._textureClaim;
+    let claim: LoaderScope | undefined;
+
+    // The new claim is taken before the old one is released: when both name the same asset, releasing first would evict and refetch it.
     if (scope !== null && texture !== null) {
-      const claim = scope.createScope();
+      claim = scope.createScope();
 
       try {
         claim.get(texture);
-        this._textureClaim = claim;
       } catch (error) {
         claim.destroy();
 
         throw error;
       }
     }
+
+    this._textureClaim = claim;
+    this._claimedScope = claim === undefined ? null : scope;
+    this._claimedAsset = claim === undefined ? null : texture;
+    previous?.destroy();
   }
 
   /**
