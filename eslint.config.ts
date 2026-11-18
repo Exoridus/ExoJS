@@ -1,7 +1,7 @@
 import { globSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { collectDeprecatedExports, exoEngineRulesConfig, exoRulesConfig } from '@codexo/eslint-plugin-exojs';
+import { collectDeprecatedExports, exoEngineRulesConfig, exoPlugin, exoRulesConfig } from '@codexo/eslint-plugin-exojs';
 import { coreInternalDirs, createImportBoundaries } from '@codexo/exojs-config/eslint';
 import { languageBaselineConfig, nodeToolingConfig } from '@codexo/exojs-config/eslint/base';
 import { typeAwareCorrectnessRules } from '@codexo/exojs-config/eslint/correctness';
@@ -408,6 +408,18 @@ export default defineConfig([
   // must not still be imported from `src/` or from a package that ships beside
   // it. Consumers choose the tier that fits their own migration.
   ...exoRulesConfig({ files: ['src/**/*.ts', 'packages/exojs-*/src/**/*.ts'], deprecatedApi, tier: 'strict' }),
+
+  // Document migrations are opt-in per file by syntax, so the rules can cover
+  // every TypeScript file that may declare a versioned document.
+  {
+    files: ['src/**/*.ts', 'packages/exojs-*/src/**/*.ts', 'test/**/*.ts'],
+    plugins: { exojs: exoPlugin },
+    rules: {
+      'exojs/migration-step': 'error',
+      'exojs/migration-purity': 'error',
+      'exojs/migration-chain': 'error',
+    },
+  },
 
   // The engine-internal rules (`exojs-engine/*`), over the engine only. They
   // enforce promises this repository's own doc comments make and reach no

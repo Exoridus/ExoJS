@@ -46,6 +46,16 @@ test('history protects local type declarations a frozen version references trans
   );
 });
 
+test('history rejects frozen versions whose shape depends on something outside the file', () => {
+  const hash = (source: string): string => documentVersionHash(source, 'AtlasV1', fixture);
+
+  expect(() => hash("import type { Page } from './page'; export interface AtlasV1 { pages: Page[]; }")).toThrow(/not a type declared/);
+  expect(() => hash("import * as Shapes from './shapes'; export interface AtlasV1 { page: Shapes.Page; }")).toThrow(/not a type declared/);
+  expect(() => hash('enum Kind { A } export interface AtlasV1 { kind: Kind; }')).toThrow(/not a type declared/);
+  expect(() => hash('declare const page: object; export interface AtlasV1 { page: typeof page; }')).toThrow(/typeof/);
+  expect(() => hash('export interface AtlasV1 { tags: Readonly<Record<string, string>>; }')).not.toThrow();
+});
+
 test('hosted and local validation select history checks for lock and registered fixture changes', () => {
   for (const path of ['document-history.lock.json', 'test/fixtures/documents/atlas-v2.json']) {
     expect(planCi({ eventName: 'pull_request', changedFiles: [path], refName: 'document-history' }).gates).toContainEqual(

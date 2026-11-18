@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { isAbsolute, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import ts from 'typescript';
 
@@ -38,8 +39,32 @@ export const documentVersionHash = (source: string, name: string, fixture: strin
   const file = ts.createSourceFile('document.ts', source, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS);
   const locals = new Map<string, Array<ts.InterfaceDeclaration | ts.TypeAliasDeclaration>>();
   const used = new Map<string, ts.InterfaceDeclaration | ts.TypeAliasDeclaration>();
+  const outside = new Set<string>();
 
   for (const declaration of file.statements) {
+    if (ts.isImportDeclaration(declaration)) {
+      const clause = declaration.importClause;
+
+      if (clause?.name !== undefined) {
+        outside.add(clause.name.text);
+      }
+
+      if (clause?.namedBindings !== undefined) {
+        if (ts.isNamespaceImport(clause.namedBindings)) {
+          outside.add(clause.namedBindings.name.text);
+        } else {
+          for (const element of clause.namedBindings.elements) {
+            outside.add(element.name.text);
+          }
+        }
+      }
+    } else if (
+      (ts.isClassDeclaration(declaration) || ts.isEnumDeclaration(declaration) || ts.isModuleDeclaration(declaration)) &&
+      declaration.name
+    ) {
+      outside.add(declaration.name.text);
+    }
+
     if (!ts.isInterfaceDeclaration(declaration) && !ts.isTypeAliasDeclaration(declaration)) {
       continue;
     }
@@ -69,10 +94,25 @@ export const documentVersionHash = (source: string, name: string, fixture: strin
     used.set(id, declaration);
 
     const visit = (node: ts.Node): void => {
-      const reference = ts.isTypeReferenceNode(node) ? node.typeName : ts.isExpressionWithTypeArguments(node) ? node.expression : undefined;
+      if (ts.isTypeQueryNode(node)) {
+        throw new Error(`Frozen document ${name} must not use typeof queries.`);
+      }
 
-      if (reference !== undefined && ts.isIdentifier(reference) && locals.has(reference.text)) {
-        capture(reference.text);
+      const reference = ts.isTypeReferenceNode(node) ? node.typeName : ts.isExpressionWithTypeArguments(node) ? node.expression : undefined;
+      let root: ts.Node | undefined = reference;
+
+      while (root !== undefined && (ts.isQualifiedName(root) || ts.isPropertyAccessExpression(root))) {
+        root = ts.isQualifiedName(root) ? root.left : root.expression;
+      }
+
+      if (root !== undefined && ts.isIdentifier(root)) {
+        if (outside.has(root.text)) {
+          throw new Error(`Frozen document ${name} references ${root.text}, which is not a type declared in the same file.`);
+        }
+
+        if (reference === root && locals.has(root.text)) {
+          capture(root.text);
+        }
       }
 
       ts.forEachChild(node, visit);
@@ -163,7 +203,7 @@ export const verifyDocumentHistory = (before: unknown, after: unknown, read: (pa
   return failures;
 };
 
-if (import.meta.main) {
+if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const root = resolve(import.meta.dirname, '..');
 
   const read = (file: string): string => {
@@ -178,8 +218,11 @@ if (import.meta.main) {
   };
 
   const git = (...args: string[]): string => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
-  const ref = process.argv[2] ?? process.env.EXOJS_DOCUMENT_HISTORY_BASE ?? 'origin/next';
-  const base = git('rev-parse', '--verify', '--end-of-options', `${ref}^{commit}`).trim();
+  const ref = process.argv[2] ?? process.env.EXOJS_DOCUMENT_HISTORY_BASE;
+  const base =
+    ref === undefined
+      ? git('merge-base', 'HEAD', 'origin/next').trim()
+      : git('rev-parse', '--verify', '--end-of-options', `${ref}^{commit}`).trim();
   const previous =
     git('ls-tree', '--name-only', base, '--', lockPath).trim() === '' ? [] : (JSON.parse(git('show', `${base}:${lockPath}`)) as unknown);
   const failures = verifyDocumentHistory(previous, JSON.parse(read(lockPath)) as unknown, read);
