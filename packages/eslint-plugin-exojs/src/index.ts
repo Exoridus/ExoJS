@@ -25,6 +25,7 @@
 // have to widen into the same generic problem `unbound-method` already owns.
 import type { Linter } from 'eslint';
 
+import { migrationChain, migrationPurity, migrationStep } from './rules/document-migrations.js';
 import { engineNoAllocationInHotHook } from './rules/engine-no-allocation-in-hot-hook.js';
 import { noAsyncRenderHook } from './rules/no-async-render-hook.js';
 import { noAsyncUpdate } from './rules/no-async-update.js';
@@ -41,6 +42,9 @@ import { requireSuperDestroy } from './rules/require-super-destroy.js';
  */
 export const exoPlugin = {
   rules: {
+    'migration-chain': migrationChain,
+    'migration-purity': migrationPurity,
+    'migration-step': migrationStep,
     'no-async-render-hook': noAsyncRenderHook,
     'no-async-update': noAsyncUpdate,
     'no-deprecated-api': noDeprecatedApi,

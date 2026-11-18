@@ -62,6 +62,10 @@ const deprecatedApi = collectDeprecatedExports(globSync('**/*.d.ts', { cwd: engi
 
 ## Rules
 
+### Document migrations
+
+Use `exojs/migration-step`, `exojs/migration-purity`, and `exojs/migration-chain` on files that declare versioned documents. The first rule checks named steps such as `AtlasV1ToV2` for literal bounds and synchronous migration bodies. The second looks for external runtime state and direct input or instance mutation. The third checks literal migration chains passed to `new DocumentHistory(...)`. Dynamic chains still receive runtime validation. Set `pattern` to change the class-name pattern, preserving the two version capture groups. `migration-purity` also accepts a `runtimeImports` list of prohibited import prefixes.
+
 ### `exojs/no-async-update`
 
 Flags `async preFrame` / `fixedUpdate` / `update` / `draw` / `postFrame` / `render` on a class, a class field or an object literal.

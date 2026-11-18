@@ -1,0 +1,26 @@
+[
+  {
+    "type": "atlas",
+    "version": 1,
+    "name": "AtlasDocumentV1",
+    "declaration": "test/assets/atlas-document-pilot.ts",
+    "fixture": "test/fixtures/documents/atlas-v1.json",
+    "sha256": "ecab733b8f55e0dfbf43e82826b128869d2b6d94503fcb4524227679b948844a"
+  },
+  {
+    "type": "atlas",
+    "version": 2,
+    "name": "AtlasDocumentV2",
+    "declaration": "test/assets/atlas-document-pilot.ts",
+    "fixture": "test/fixtures/documents/atlas-v2.json",
+    "sha256": "5f8e59e648ad21fb2cba7ee2fcec1677646ed7323c1443845c8f0bd0840c7085"
+  },
+  {
+    "type": "atlas",
+    "version": 3,
+    "name": "AtlasDocumentV3",
+    "declaration": "test/assets/atlas-document-pilot.ts",
+    "fixture": "test/fixtures/documents/atlas-v3.json",
+    "sha256": "44e7921c09dd269c980f99414aac0d3dc767d1ee52e3be855c358a034b7c0756"
+  }
+]
