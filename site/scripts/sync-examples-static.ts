@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { renderRuntimeDts } from '../../scripts/generate-examples-runtime-dts.ts';
-import { transpileTypescriptExamples } from '../../scripts/transpile-examples.ts';
+import { generateExamples } from '../../scripts/transpile-examples.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -90,13 +90,11 @@ const collapseImportLists = (dir: string): void => {
 const run = async (): Promise<void> => {
   ensureSource(sourceExamplesDir);
 
-  // Transpile TypeScript examples to JavaScript before copying so the
-  // generated .js files are included in the public/examples snapshot.
-  const transpiled = await transpileTypescriptExamples(sourceExamplesDir);
+  // The generated .js files are Git-ignored; produce them before copying so the
+  // public/examples snapshot carries the executable form.
+  const { sources, written, pruned } = await generateExamples(sourceExamplesDir);
 
-  if (transpiled > 0) {
-    console.log(`[examples:sync] Transpiled ${transpiled} TypeScript example(s) to JavaScript`);
-  }
+  console.log(`[examples:sync] ${sources} example source(s), ${written} generated, ${pruned} pruned`);
 
   // The Playground editor resolves `@examples/runtime` through a declaration
   // file it fetches from the served snapshot, so the shared helper kit needs one

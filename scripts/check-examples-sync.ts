@@ -1,115 +1,93 @@
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { findFiles, isTranspiledExampleSource, transpileExampleSource } from './transpile-examples.ts';
+import {
+  findFiles,
+  findOrphanedOutputs,
+  generatedOutputPath,
+  isTranspiledExampleSource,
+  transpileExampleSource,
+} from './transpile-examples.ts';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const repoRoot = path.resolve(__dirname, '..');
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const examplesDir = path.resolve(repoRoot, 'examples');
-const tmpDir = path.resolve(repoRoot, '.workspace', 'tmp-examples-check');
 
 const green = (s: string): string => `\x1B[32m${s}\x1B[0m`;
 const red = (s: string): string => `\x1B[31m${s}\x1B[0m`;
 
-// The generator always emits LF; a Windows checkout may have normalized the
-// committed files to CRLF (core.autocrlf). Compare content, not bytes, so a
-// line-ending-only difference never triggers a false positive.
+// The generator always emits LF; a stale file written by an older checkout may
+// carry CRLF. Compare content, not bytes.
 const normalizeNewlines = (content: string): string => content.replace(/\r\n/g, '\n');
 
-const toDisplayPath = (relPath: string): string => `examples/${relPath.split(path.sep).join('/')}`;
+const display = (file: string): string => path.relative(repoRoot, file).split(path.sep).join('/');
 
-// Only files carrying the generator's header are ours to police - a few
-// example `.js` files (e.g. examples/shared/runtime.js) are hand-authored
-// with no `.ts` source and must not be flagged as stale.
-const isGeneratedJs = (filePath: string): boolean => {
-  const fd = fs.openSync(filePath, 'r');
+const trackedOutputs = (): string[] =>
+  execFileSync('git', ['ls-files', '-z', '--', 'examples'], { cwd: repoRoot, encoding: 'utf8' })
+    .split('\0')
+    .filter(file => file.endsWith('.js'));
+
+const catalogSources = (): string[] => {
+  const catalog = JSON.parse(fs.readFileSync(path.join(examplesDir, 'examples.json'), 'utf8')) as Record<string, Array<{ path: string }>>;
+
+  return Object.values(catalog).flatMap(entries => entries.map(entry => path.join(examplesDir, entry.path.replace(/\.js$/, '.ts'))));
+};
+
+const problems: string[] = [];
+
+// The `.ts` is the only versioned source. A tracked `.js` would shadow it again.
+for (const file of trackedOutputs()) {
+  problems.push(`${file} is tracked; example .js files are generated build output`);
+}
+
+const tsFiles = findFiles(examplesDir, isTranspiledExampleSource);
+const present = new Set(tsFiles);
+
+for (const source of catalogSources()) {
+  if (!present.has(source)) {
+    problems.push(`${display(source)} is listed in examples.json but does not exist`);
+  }
+}
+
+// Generation must succeed for every source, give the same bytes twice, and
+// match any output already on disk. A missing output is not an error: the
+// files are generated on demand and a clean checkout has none.
+for (const tsFile of tsFiles) {
+  const source = fs.readFileSync(tsFile, 'utf8');
+  let first: string;
 
   try {
-    const prefix = Buffer.alloc('// Auto-generated from '.length);
-    fs.readSync(fd, prefix, 0, prefix.length, 0);
-
-    return prefix.toString('utf8') === '// Auto-generated from ';
-  } finally {
-    fs.closeSync(fd);
-  }
-};
-
-const main = async (): Promise<void> => {
-  console.log('Checking example .js/.ts synchronization...\n');
-
-  fs.rmSync(tmpDir, { recursive: true, force: true });
-  fs.mkdirSync(tmpDir, { recursive: true });
-
-  console.log('Regenerating example .js files in a scratch directory...');
-
-  const tsFiles = findFiles(examplesDir, isTranspiledExampleSource);
-  const expectedJsRelPaths = new Set<string>();
-  const diffs: string[] = [];
-
-  for (const tsFile of tsFiles) {
-    const relJs = path.relative(examplesDir, tsFile).replace(/\.ts$/, '.js');
-    expectedJsRelPaths.add(relJs);
-
-    const committedPath = path.join(examplesDir, relJs);
-    const generated = await transpileExampleSource(fs.readFileSync(tsFile, 'utf8'), tsFile);
-
-    // Materialize the regenerated output in the scratch directory so a
-    // failing run leaves something diffable on disk, not just a verdict.
-    const scratchPath = path.join(tmpDir, relJs);
-    fs.mkdirSync(path.dirname(scratchPath), { recursive: true });
-    fs.writeFileSync(scratchPath, generated, 'utf8');
-
-    if (!fs.existsSync(committedPath)) {
-      diffs.push(`  + ${toDisplayPath(relJs)} (missing)`);
-      continue;
-    }
-
-    const committed = fs.readFileSync(committedPath, 'utf8');
-
-    if (normalizeNewlines(committed) !== normalizeNewlines(generated)) {
-      diffs.push(`  ~ ${toDisplayPath(relJs)}`);
-    }
+    first = await transpileExampleSource(source, tsFile);
+  } catch (error) {
+    problems.push(`${display(tsFile)} does not generate: ${error instanceof Error ? error.message : String(error)}`);
+    continue;
   }
 
-  // Catch the reverse case too: a committed generated .js whose .ts source
-  // was removed (or renamed) but the stale output was left behind.
-  const allJsFiles = findFiles(examplesDir, name => name.endsWith('.js'));
-
-  for (const jsFile of allJsFiles) {
-    const relJs = path.relative(examplesDir, jsFile);
-
-    if (expectedJsRelPaths.has(relJs)) {
-      continue;
-    }
-
-    if (!isGeneratedJs(jsFile)) {
-      continue;
-    }
-
-    diffs.push(`  - ${toDisplayPath(relJs)} (stale — no matching .ts source)`);
+  if (first !== (await transpileExampleSource(source, tsFile))) {
+    problems.push(`${display(tsFile)} generates different output on a second run`);
+    continue;
   }
 
-  console.log('\nComparing regenerated output against committed content...');
+  const output = generatedOutputPath(tsFile);
 
-  fs.rmSync(tmpDir, { recursive: true, force: true });
+  if (fs.existsSync(output) && normalizeNewlines(fs.readFileSync(output, 'utf8')) !== first) {
+    problems.push(`${display(output)} is stale; run \`pnpm examples:generate\``);
+  }
+}
 
-  if (diffs.length > 0) {
-    console.log(red(`Example .js files are out of sync with their .ts sources — ${diffs.length} file(s) differ:`));
+for (const orphan of findOrphanedOutputs(examplesDir)) {
+  problems.push(`${display(orphan)} has no .ts source; run \`pnpm examples:generate\` to remove it`);
+}
 
-    for (const d of diffs) {
-      console.log(d);
-    }
+if (problems.length > 0) {
+  console.log(red(`Example generation check failed (${problems.length}):`));
 
-    console.log(
-      red('\nRun `pnpm --filter @codexo/exojs-examples examples:sync` to regenerate, then commit the changed examples/**/*.js files.'),
-    );
-    process.exit(1);
+  for (const problem of problems) {
+    console.log(`  ${problem}`);
   }
 
-  console.log(green('\nExample .js files are in sync with their .ts sources.'));
-  process.exit(0);
-};
+  process.exit(1);
+}
 
-void main();
+console.log(green(`${tsFiles.length} example sources generate deterministically; no tracked or orphaned .js files.`));

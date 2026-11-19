@@ -27,12 +27,11 @@
   // helper kit and the playground-only globals (`window.assets`,
   // `__EXAMPLE_META__`).
   //
-  // The generated `.js` siblings are NOT in this program. They are transpiled
-  // from the `.ts` beside them by `examples:sync` and committed so a release
-  // bundle ships the catalog in both languages; type-checking a mechanical
-  // transpile of an already-checked source finds nothing its source does not.
-  // `examples:sync:check` is what guards them, and it compares them against
-  // that source rather than against the engine.
+  // The generated `.js` siblings are NOT in this program. They are Git-ignored
+  // transpiles of the `.ts` beside them (`examples:generate`); type-checking a
+  // mechanical transpile of an already-checked source finds nothing its source
+  // does not. `examples:sync:check` verifies that they generate
+  // deterministically.
   //
   // One `.js` is named individually because it is not that:
   // `worker-streamed-terrain.js` is the only example whose generation is not a

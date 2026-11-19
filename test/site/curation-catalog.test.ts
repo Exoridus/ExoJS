@@ -39,7 +39,6 @@ describe('curated curriculum preservation', () => {
 
     for (const contract of curation.contracts) {
       expect(fs.existsSync(contract.source)).toBe(true);
-      expect(fs.existsSync(contract.source.replace(/\.ts$/, '.js'))).toBe(true);
     }
 
     expect(

@@ -244,8 +244,8 @@ const isTilemapWorkerPath = (file: string): boolean => {
  * every catalog entry in headless Chromium.
  *
  * Nothing else in CI executes an example. `typecheck:examples` compiles the
- * sources, `examples:sync:check` compares the generated `.js` twins against
- * them, and the site build only has to render the pages that link them - an
+ * sources, `examples:sync:check` proves they generate deterministically, and
+ * the site build only has to render the pages that link them - an
  * example whose scene throws on start passes all three and still ships a black
  * canvas.
  *
@@ -272,8 +272,8 @@ const isExampleCatalogPath = (file: string): boolean => {
     return true;
   }
 
-  // The catalog sources, their generated `.js` twins, the example assets, and
-  // `examples.json` - the manifest the harness iterates.
+  // The catalog sources, the example assets, and `examples.json` - the
+  // manifest the harness iterates.
   if (file.startsWith('examples/')) {
     return true;
   }
