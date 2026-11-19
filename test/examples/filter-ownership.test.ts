@@ -69,6 +69,7 @@ const loadScene = (path: string): FilterScene => {
             : Exo.Texture.empty,
       },
     },
+    assets: { value: { load: async (asset: unknown) => asset } },
     inputs: { value: { attach() {}, onTrigger() {}, onActive() {}, onStop() {} } },
   });
 
