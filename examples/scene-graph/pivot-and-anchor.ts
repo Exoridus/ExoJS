@@ -5,12 +5,11 @@ import {
   Graphics,
   Keyboard,
   Rectangle,
-  type RenderingContext,
   Scene,
   type Seconds,
   Sprite,
   Text,
-  type Texture,
+  Texture,
 } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { demoPanel, startExample } from '@examples/runtime';
@@ -21,7 +20,7 @@ const VARIANTS = [
   { label: 'Origin (78, -8)', anchor: [0.5, 0.5], origin: [78, -8] },
 ] as const;
 class PivotAndAnchorScene extends Scene {
-  private texture!: Texture;
+  private readonly texture = new Texture(assets.platformerTilesImage.source);
   private sprites: Sprite[] = [];
   private labels: Text[] = [];
   private readonly overlay = new Graphics();
@@ -30,7 +29,7 @@ class PivotAndAnchorScene extends Scene {
   private angle = 0;
 
   override async load(): Promise<void> {
-    this.texture = await this.loader.load(assets.platformerTilesImage);
+    await this.assets.load(this.texture);
   }
 
   override init(): void {
@@ -101,10 +100,6 @@ class PivotAndAnchorScene extends Scene {
     this.panel.status(
       `${this.playing ? 'Running' : 'Paused'} | angle ${(((this.angle % 360) + 360) % 360).toFixed(0)}° | bounds are derived`,
     );
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 
   override destroy(): void {

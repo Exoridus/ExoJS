@@ -14,6 +14,7 @@ import {
   SceneState,
   Spritesheet,
   SystemOrder,
+  Texture,
   VectorAction,
   View,
 } from '@codexo/exojs';
@@ -133,6 +134,7 @@ export abstract class TopDownScene extends Scene {
   private _camera!: View;
   private _status!: Label;
   private _characterData!: SpritesheetData;
+  private readonly _charactersTexture = new Texture('characters.png');
   private _doorProbe!: BoxShape;
   private readonly _doors: DoorState[] = [];
   private readonly _scenery = new Container();
@@ -168,7 +170,7 @@ export abstract class TopDownScene extends Scene {
   public override async load(): Promise<void> {
     this._characterData = (await this.loader.load(Asset.type('json', 'characters.json'))) as SpritesheetData;
 
-    await this.loader.load(Asset.type('texture', 'characters.png'));
+    await this.assets.load(this._charactersTexture);
     this._map = await this.loadMap();
   }
 
@@ -341,7 +343,7 @@ export abstract class TopDownScene extends Scene {
   }
 
   private _dressPlayer(): void {
-    const characters = new Spritesheet(this.loader.get('characters.png'), this._characterData);
+    const characters = new Spritesheet(this._charactersTexture, this._characterData);
     const sprite = characters.getFrameSprite('character_green_front').setAnchor(0.5);
 
     sprite.width = PLAYER_RADIUS * 2;

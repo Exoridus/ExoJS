@@ -32,7 +32,7 @@ class GameScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    this.sprite = new Sprite(this.loader.get(assets.ship))
+    this.sprite = new Sprite(assets.ship.source)
       .setAnchor(0.5)
       .setScale(2)
       .setPosition(width * 0.72, height / 2);

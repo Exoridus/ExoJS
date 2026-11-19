@@ -1,6 +1,17 @@
 {
   "start-here": [
     {
+      "slug": "lazy-sprite",
+      "path": "getting-started/lazy-sprite.js",
+      "language": "typescript",
+      "title": "Lazy Sprite from a Path",
+      "description": "Construct a Sprite from a file path and add it to the scene: it loads on first use and fills in place. Watch each texture move from idle to ready, and a missing file report its failure.",
+      "backend": "core",
+      "featured": true,
+      "tags": ["scene", "sprite", "assets", "loading"],
+      "level": "intro"
+    },
+    {
       "slug": "hello-world",
       "path": "getting-started/hello-world.js",
       "language": "typescript",
@@ -89,6 +100,58 @@
       "tags": ["loader", "assets", "sprite"],
       "level": "intermediate",
       "capabilities": ["keyboard"]
+    },
+    {
+      "slug": "explicit-preload",
+      "path": "application-scenes/explicit-preload.js",
+      "language": "typescript",
+      "title": "Explicit Preloading",
+      "description": "Preload six textures through the scene loader with live progress and cancellation, then build sprites from their real sizes.",
+      "backend": "core",
+      "tags": ["assets", "loading", "progress", "cancellation"],
+      "level": "intermediate"
+    },
+    {
+      "slug": "shared-texture-ownership",
+      "path": "sprites-textures/shared-texture-ownership.js",
+      "language": "typescript",
+      "title": "Shared Textures and Ownership",
+      "description": "Two textures and two scenes name one file. Watch the claim count follow the scenes while each texture keeps its own sampler. Space switches scenes.",
+      "backend": "core",
+      "tags": ["assets", "texture", "ownership", "sampling"],
+      "level": "intermediate",
+      "capabilities": ["keyboard"]
+    },
+    {
+      "slug": "loading-transition",
+      "path": "application-scenes/loading-transition.js",
+      "language": "typescript",
+      "title": "Loading Transition",
+      "description": "Cover a scene change with a custom progress overlay while the incoming scene preloads. Space enters the level, Escape returns.",
+      "backend": "core",
+      "tags": ["scene", "transition", "loading", "progress"],
+      "level": "intermediate",
+      "capabilities": ["keyboard"]
+    },
+    {
+      "slug": "typed-custom-assets",
+      "path": "application-scenes/typed-custom-assets.js",
+      "language": "typescript",
+      "title": "Typed Custom Assets",
+      "description": "Register a validated palette asset type with assetTypes, load it through a typed descriptor, and see an invalid document rejected.",
+      "backend": "core",
+      "tags": ["assets", "custom-type", "validation"],
+      "level": "advanced"
+    },
+    {
+      "slug": "prefab-format-3",
+      "path": "scene-graph/prefab-format-3.js",
+      "language": "typescript",
+      "title": "Prefab Format 3",
+      "description": "Capture a prefab with a typed asset reference and instantiate it next to an older version 2 document.",
+      "backend": "core",
+      "tags": ["scene", "prefab", "serialization", "assets"],
+      "level": "advanced"
     },
     {
       "slug": "pause-blur",

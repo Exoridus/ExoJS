@@ -14,7 +14,7 @@ class BoundingBoxesScene extends Scene {
     const step = (width - 2 * margin) / (count - 1);
 
     this.sprites = Array.from({ length: count }, (_, i) => {
-      const sprite = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setScale(0.8);
+      const sprite = new Sprite(assets.ship.source).setAnchor(0.5).setScale(0.8);
       sprite.setPosition(margin + i * step, height / 2 + Math.sin(i) * 80);
       // The boundingBoxes layer walks the SCENE GRAPH (scene.root), so
       // the sprites must be attached to it - nodes that are only passed

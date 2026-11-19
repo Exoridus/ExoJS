@@ -1,4 +1,4 @@
-import { Application, Color, Ease, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, type Tween } from '@codexo/exojs';
+import { Application, Color, Ease, FixedResolutionCanvasSizing, Scene, Sprite, type Tween } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 // A closed loop of waypoints expressed as fractions of the canvas so the path
@@ -23,7 +23,8 @@ class TweenFromArrayScene extends Scene {
     const { width, height } = app;
 
     this.waypoints = waypointFractions.map(({ fx, fy }) => ({ x: fx * width, y: fy * height }));
-    this.sprite = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setPosition(this.waypoints[0].x, this.waypoints[0].y);
+    this.sprite = new Sprite(assets.ship.source).setAnchor(0.5).setPosition(this.waypoints[0].x, this.waypoints[0].y);
+    this.root.addChild(this.sprite);
     this.buildPath();
   }
 
@@ -51,10 +52,6 @@ class TweenFromArrayScene extends Scene {
       this.buildPath();
     });
     first!.start();
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.sprite);
   }
 }
 

@@ -19,7 +19,7 @@ class PauseResumeScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    this.sprite = new Sprite(this.loader.get(assets.ship));
+    this.sprite = new Sprite(assets.ship.source);
     this.sprite.setAnchor(0.5);
     this.sprite.setPosition(width / 2, height / 2);
 
