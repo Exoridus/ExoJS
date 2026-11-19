@@ -208,8 +208,8 @@ export abstract class CheckableWidget extends Widget {
     this._refreshState();
   };
 
-  private readonly _onPointerDown = (): void => {
-    if (this.effectiveEnabled) {
+  private readonly _onPointerDown = (event: InteractionEvent): void => {
+    if (this.effectiveEnabled && (event.button === undefined || event.button === 0)) {
       this._setSkinState('pressed');
     }
   };
@@ -218,8 +218,8 @@ export abstract class CheckableWidget extends Widget {
     this._refreshState();
   };
 
-  private readonly _onTap = (): void => {
-    if (this.effectiveEnabled) {
+  private readonly _onTap = (event: InteractionEvent): void => {
+    if (this.effectiveEnabled && (event.button === undefined || event.button === 0)) {
       this.toggle();
     }
   };
