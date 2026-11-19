@@ -64,7 +64,15 @@ export class InteractionEvent {
   private _stopped = false;
   private _defaultPrevented = false;
 
-  public constructor(type: InteractionEventType, target: RenderNode, pointer: Pointer, x: number, y: number, button = -1, buttons = pointer.buttons) {
+  public constructor(
+    type: InteractionEventType,
+    target: RenderNode,
+    pointer: Pointer,
+    x: number,
+    y: number,
+    button = -1,
+    buttons = pointer.buttons,
+  ) {
     this.type = type;
     this.target = target;
     this.currentTarget = target;
