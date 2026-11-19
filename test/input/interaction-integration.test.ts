@@ -483,11 +483,7 @@ describe('pointer button snapshots and secondary taps', () => {
     h.fire('pointerup', { clientX: 10, clientY: 10, button: 2, buttons: 0 });
     flush(h);
 
-    expect(seen).toEqual([
-      ['down', 2, 2, 0],
-      ['up', 2, 0, 0],
-      ['tap', 2, 0, 0],
-    ]);
+    expect(seen).toEqual([['down', 2, 2, 0], ['up', 2, 0, 0], ['tap', 2, 0, 0]]);
 
     h.im.destroy();
   });
