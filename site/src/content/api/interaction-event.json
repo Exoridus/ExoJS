@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(type: InteractionEventType, target: RenderNode, pointer: Pointer, x: number, y: number, button?: number, buttons?: number): InteractionEvent",
+          "signature": "new(type: InteractionEventType, target: RenderNode, pointer: Pointer, x: number, y: number, button: number, buttons: number): InteractionEvent",
           "signatureTokens": [
             {
               "text": "new",
@@ -126,10 +126,6 @@
               "kind": "param"
             },
             {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
               "text": ": ",
               "kind": "punctuation"
             },
@@ -144,10 +140,6 @@
             {
               "text": "buttons",
               "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -199,12 +191,12 @@
             {
               "name": "button",
               "type": "number",
-              "optional": true
+              "optional": false
             },
             {
               "name": "buttons",
               "type": "number",
-              "optional": true
+              "optional": false
             }
           ],
           "returnType": "InteractionEvent",
