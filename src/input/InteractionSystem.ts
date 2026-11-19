@@ -1194,7 +1194,9 @@ export class InteractionSystem {
             const tapHit = this._resolvePhase(phaseX, phaseY, this._currentCapture(id));
 
             if (tapHit.node === pressTarget) {
-              bubbleInteractionEvent(new InteractionEvent('pointertap', pressTarget, pointer, tapHit.x, tapHit.y, entry.button, entry.buttons));
+              bubbleInteractionEvent(
+                new InteractionEvent('pointertap', pressTarget, pointer, tapHit.x, tapHit.y, entry.button, entry.buttons),
+              );
             }
           }
 
