@@ -69,7 +69,7 @@ class DropdownRow extends Widget {
     this.onPointerOver.add(() => this.setHighlighted(true));
     this.onPointerOut.add(() => this.setHighlighted(false));
     this.onPointerTap.add(event => {
-      if event.button === 0 {
+      if (event.button === 0) {
         this.onPick.dispatch(this);
       }
     });
