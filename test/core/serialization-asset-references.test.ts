@@ -433,6 +433,18 @@ describe('asset references keep their interpretation', () => {
 });
 
 describe('asset references keep the logical source', () => {
+  test('a path-backed texture no scope has claimed yet still serializes its source and sampler', () => {
+    const loader = createCoreLoader();
+
+    expect(serializeTree(new Sprite(new Texture('hero.png')), loader).texture).toEqual({ $type: 'texture', source: 'hero.png' });
+    expect(serializeTree(new Sprite(new Texture('hero.png', { scaleMode: ScaleModes.Nearest })), loader).texture).toEqual({
+      $type: 'texture',
+      source: 'hero.png',
+      options: { textureOptions: { scaleMode: ScaleModes.Nearest, wrapMode: WrapModes.ClampToEdge } },
+    });
+    loader.destroy();
+  });
+
   test('a live handle keeps its authored variant alias when another logical source shares its payload', async () => {
     const loader = createCoreLoader();
     loader.variants.define('hero@{1,2}x.png', [{ source: 'hero.png' }]);

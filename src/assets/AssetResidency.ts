@@ -1907,12 +1907,11 @@ export class AssetResidency {
   public _referenceFor(resource: object): AssetReferenceLookup | null {
     const loaded = this._resourceKeys.get(resource);
     const key = loaded?.key ?? this._handleKeys.get(resource);
+    const meta = _readMeta(resource);
 
     if (key === undefined) {
-      return null;
+      return meta?.live === true ? this._requestLog.declared(meta, resource) : null;
     }
-
-    const meta = _readMeta(resource);
 
     return this._requestLog.lookup(key, loaded, resource, this._resources.get(key)?.value, meta?.live === true ? meta.src : undefined);
   }

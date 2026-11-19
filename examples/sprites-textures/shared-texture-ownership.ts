@@ -22,12 +22,12 @@ class FirstScene extends Scene {
 
     crisp
       .setAnchor(0.5)
-      .setScale(4)
-      .setPosition(this.app.width * 0.3, 340);
+      .setScale(3)
+      .setPosition(this.app.width * 0.3, 400);
     smooth
       .setAnchor(0.5)
-      .setScale(4)
-      .setPosition(this.app.width * 0.7, 340);
+      .setScale(3)
+      .setPosition(this.app.width * 0.7, 400);
     this.status.setPosition(80, 60);
     this.root.addChild(crisp, smooth, this.status);
     this.inputs.onTrigger(Keyboard.Space, () => {
@@ -47,8 +47,8 @@ class SecondScene extends Scene {
     // The first scene has ended and released its claims; this scene's own claim keeps the image resident.
     const sprite = new Sprite(source)
       .setAnchor(0.5)
-      .setScale(4)
-      .setPosition(this.app.width / 2, 340);
+      .setScale(3)
+      .setPosition(this.app.width / 2, 400);
 
     this.status.setPosition(80, 60);
     this.root.addChild(sprite, this.status);

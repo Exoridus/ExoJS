@@ -38,7 +38,13 @@ const paletteParser: DocumentParser<PaletteDocument> = {
 };
 
 const paletteFactory: AssetFactory<PaletteDocument, Palette> = {
-  create: document => Promise.resolve(new Palette(document.name, document.colors.map(Color.fromCss))),
+  create: document =>
+    Promise.resolve(
+      new Palette(
+        document.name,
+        document.colors.map(color => Color.fromCss(color)),
+      ),
+    ),
 };
 
 // Declaring the type here makes Asset.type('palette', ...) return a typed Palette asset.
@@ -55,6 +61,17 @@ const dataUrl = (document: object): string =>
 const sunset = dataUrl({ name: 'Sunset', colors: ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93'] });
 const broken = dataUrl({ name: 'Broken', colors: [1, 2, 3] });
 
+// The loader wraps the parser error; the root cause is the readable part.
+const rootCause = (error: unknown): string => {
+  let current = error;
+
+  while (current instanceof Error && current.cause !== undefined) {
+    current = current.cause;
+  }
+
+  return current instanceof Error ? current.message : String(current);
+};
+
 class PaletteScene extends Scene {
   private readonly swatches = this.track(new Graphics());
   private readonly status = this.track(new Text('', { fillColor: Color.white, fontSize: 24 }));
@@ -69,7 +86,7 @@ class PaletteScene extends Scene {
     try {
       await this.loader.load(Asset.type('palette', broken));
     } catch (error) {
-      this.rejection = error instanceof Error ? error.message : String(error);
+      this.rejection = rootCause(error);
     }
   }
 
