@@ -4,6 +4,7 @@ description: 'Package custom renderers, asset handlers, and node serializers as 
 ---
 
 import Callout from '../../../components/Callout.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # Authoring extensions
 
@@ -213,6 +214,14 @@ const app = new Application({ extensions: [confettiExtension] });
 ```
 
 From here, add real bindings: subclass an abstract SDK renderer for your `Drawable` type (see [Custom renderers](/ExoJS/en/guide/debugging/custom-renderers/)), wire it into a `RendererBinding`, keep the package root side-effect-free, and pin the peer range. The result installs and activates exactly like the official extensions.
+
+## Custom asset types
+
+An application, or an extension through its descriptor, defines an asset type with a class, a stable `type` string and a factory. Pass `assetTypes` to the `Application` or call `app.assets.define()`:
+
+<SourceSnippet source="examples/guides/model-b-plus/custom-type.ts" region="custom-type" language="ts" title="Define an asset type" />
+
+Built-in types use the same definition shape. A type id belongs to one class and a class has one active definition. Give each application its own factory instance, because the application that owns it destroys it. A format with versions adds a `parser` (runtime validation of untrusted data) and, optionally, `version`, `minVersion` and `migrations`; a migration receives an older document body and returns the next version, and a document newer than the runtime reads is rejected before any migration runs. Persisted references use the type id, so renaming it breaks saved data.
 
 ## Where to go next
 

@@ -11,6 +11,8 @@ A catalog names the resources used by a feature without deciding when they are l
 
 Read [Loading and resource lifetimes](/ExoJS/en/guide/assets/loading-and-resources/) first. For one asset, an individual descriptor is sufficient; a catalog becomes useful when a feature has several named inputs.
 
+A catalog suits named, typed groups that several scenes share. For a single texture, sprite or sound, constructing it from a path (`new Sprite('hero.png')`, or `app.load(new Texture('hero.png'))` to preload) is shorter; see [Migrating to path-based assets](/ExoJS/en/guide/assets/migrating-to-model-b-plus/). Both forms share one resident resource per file.
+
 ## Declare once, acquire through an owner
 
 <SourceSnippet source="examples/guides/loading-and-resources/catalogs.ts" region="catalog-definition" language="ts" title="A reusable definition with a texture and decoded data" />

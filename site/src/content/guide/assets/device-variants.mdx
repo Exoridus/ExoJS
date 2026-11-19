@@ -31,6 +31,10 @@ The order is the engine's own preference ranking and is identical on both backen
 The list comes from the initialized backend. Before `app.initialize()` resolves there is no device to ask, and the answer is the empty one.
 </Callout>
 
+## Naming candidates in the path
+
+A path-backed texture can list its candidates inline: `new Texture('hero@{1,2,3}x.{webp,png}')` expands to the concrete files, and the runtime chooses by the display resolution and by the image formats the browser decodes. The logical source stays the pattern you wrote, so a saved scene stays portable, and a variant never changes the texture's logical size. Use `loader.variants` below when the candidate list, compressed texture formats or conditions need to be declared once for many names.
+
 ## Declaring the variants
 
 `loader.variants` maps one **logical source** - the name your code keeps using - to an ordered list of candidates:

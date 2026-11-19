@@ -79,6 +79,12 @@ Choose the backend by capability: [`WebStorageStore`](/ExoJS/en/api/web-storage-
 A saved scene stores asset references as loader keys, not the assets themselves. The referenced textures and other assets must already be loaded into the app's `Loader` before you call `deserialize`, or restoration fails on the missing keys.
 </Callout>
 
+## Format 3 and typed asset references
+
+Scenes and prefabs now write `version: 3`. A texture is stored as a typed reference, `{ "$type": "texture", "source": "hero.png", "options": { ... } }`, which also keeps persistable settings such as the sampler. Nodes in one document can point at each other with local `$id` and `$ref` links. Documents written by earlier versions (a plain string or `{ source, options }`) still read unchanged. Instantiating a prefab reserves its assets under the owning scene without fetching them; they load when the instance is used.
+
+Asset types you register with `assetTypes` or `app.assets.define()` are saved under their `type` string, so choose one that you can keep stable. See [Migrating to path-based assets](/ExoJS/en/guide/assets/migrating-to-model-b-plus/).
+
 ## Custom node types
 
 Your own [`SceneNode`](/ExoJS/en/api/scene-node/) subclasses become serializable by registering a serializer with [`registerSerializer`](/ExoJS/en/api/serialization-registry/). The framework writes the common transform/visual fields and the type tag; your serializer only handles its own fields.

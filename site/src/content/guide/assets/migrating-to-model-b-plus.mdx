@@ -1,0 +1,89 @@
+---
+title: 'Migrating to path-based assets'
+description: 'Replace descriptor-and-loader boilerplate with path-backed Texture, Sprite and Sound, app.load, assetTypes and scene format 3, and keep the loader APIs where they still fit.'
+---
+
+import SourceSnippet from '../../../components/SourceSnippet.astro';
+import TryIt from '../../../components/TryIt.astro';
+
+# Migrating to path-based assets
+
+The common case is now one line: construct a `Sprite`, `Texture` or `Sound` from a path and add it to a scene. The runtime loads it when the scene needs it, shares it with every other user of the same file, and releases it with the scene that used it. Nothing here removes the loader, loader scopes, catalogs or descriptors. They remain the right tool for the cases listed [at the end of this page](#when-to-keep-the-loader-apis), and existing code keeps working unchanged.
+
+## A lazy sprite
+
+<SourceSnippet source="examples/guides/model-b-plus/migration.ts" region="before-lazy" language="ts" title="Before: await the texture, then build the sprite" />
+
+<SourceSnippet source="examples/guides/model-b-plus/migration.ts" region="after-lazy" language="ts" title="After: the sprite names its file" />
+
+`new Sprite('hero.png')` creates an idle, path-backed texture. It starts loading when the sprite joins a scene tree, draws as empty until the image arrives, and fills in place: the same `Sprite` and `Texture` objects become ready, so nothing has to be reassigned. A failed load is reported through the texture's `loaded` promise and the loader's `onError`.
+
+The sprite only loads once a scene owns it. A sprite that is never added to a scene tree, or that is only handed to `context.render()` from `draw()`, has no owner to load for. Add it to the scene (`this.root.addChild(...)`) or preload its texture explicitly as shown below.
+
+<SourceSnippet source="examples/guides/model-b-plus/lazy-sprite.ts" region="lazy-sprite" language="ts" title="The whole application" />
+
+## Preload what you need
+
+Layout or gameplay that needs real dimensions or a decoded value should wait for it. `this.assets.load()` inside a scene and `app.load()` on the application accept one handle, several handles, an array or an object and resolve to the same shape holding the loaded values. The scene form gives the scene ownership; the application form keeps the assets resident until the application is destroyed:
+
+<SourceSnippet source="examples/guides/model-b-plus/preload.ts" region="preload" language="ts" title="Preload in the scene's load hook" />
+
+Both return a `LoadingQueue`: await it, read `progress`, subscribe to `onProgress`, or call `cancel()`.
+
+<SourceSnippet source="examples/guides/model-b-plus/preload.ts" region="progress" language="ts" title="Progress" />
+
+`app.loadBackground()` loads at low priority. Using the same asset later promotes the pending request instead of starting a second one:
+
+<SourceSnippet source="examples/guides/model-b-plus/preload.ts" region="background" language="ts" title="Prefetch the next level" />
+
+## Ownership
+
+An asset lives as long as something that uses it does.
+
+- A path sprite added to a scene belongs to that scene's loader scope and is released when the scene ends.
+- Assets loaded through `this.assets.load()` belong to that scene, those loaded through `app.load()` to the application, which keeps them resident until it is destroyed.
+- Two owners of one file share one decoded resource. Releasing one owner never evicts the file while another still holds it. Each `Texture` keeps its own sampler options, so a nearest-filtered and a linear-filtered `Texture` of the same file do not interfere.
+
+Replacing a sprite releases its old claim immediately:
+
+<SourceSnippet source="examples/guides/model-b-plus/migration.ts" region="after-ownership" language="ts" title="Swap a sprite" />
+
+Do not call `texture.destroy()` on a path-backed texture that a scene owns; let the scene release it.
+
+## Your own asset types
+
+Register a type per application, either at construction or later with `app.assets.define()`. The `type` string is the stable name stored in saved scenes. The factory receives the decoded source; a codec chooses how the response is read.
+
+<SourceSnippet source="examples/guides/model-b-plus/custom-type.ts" region="custom-type" language="ts" title="Register a type at startup" />
+
+<SourceSnippet source="examples/guides/model-b-plus/custom-type.ts" region="define-later" language="ts" title="Or define it later" />
+
+A type id belongs to one class, and a class has one active definition. Defining the same class and id again before its first request replaces the factory. Give each application its own factory instance. A versioned, migrating document type adds a `parser`, `version` and `migrations`; see [Authoring extensions](/ExoJS/en/guide/debugging/authoring-extensions/).
+
+## Scenes and prefabs: format 3
+
+Saved scenes and prefabs write typed references and still read older files. A texture reference is `{ "$type": "texture", "source": "hero.png", "options": { ... } }` and keeps persistable options such as the sampler. Format 2 documents (a plain string or `{ source, options }`) keep loading. See [Serialization and prefabs](/ExoJS/en/guide/runtime/serialization-and-prefabs/).
+
+## Loading transitions
+
+`LoadingSceneTransition` covers the screen while the incoming scene loads and removes the overlay as soon as the switch commits. There is no fixed delay. The overlay is a render tree built per navigation, and it receives the incoming scene's progress:
+
+<SourceSnippet source="examples/guides/model-b-plus/transition.ts" region="loading-transition" language="ts" title="A custom progress overlay" />
+
+## Variants
+
+A path may name its candidates: `'hero@{1,2,3}x.{webp,png}'` expands to concrete files, and the runtime picks one by display resolution and by the formats the browser supports. The logical source stays the pattern you wrote, so saved scenes remain portable. See [Device variants](/ExoJS/en/guide/assets/device-variants/).
+
+## When to keep the loader APIs
+
+Prefer the path form for textures, sprites and sounds. Keep the loader, scopes and descriptors for:
+
+- **Streamed or non-handle assets.** Music, video, fonts, bitmap fonts and JSON data have no synchronous placeholder: `await this.loader.load(...)`.
+- **Several owners with different lifetimes.** A streamed level or dialog with its own `createScope()` that you destroy explicitly.
+- **Named groups.** An `Assets.from()` catalog that several scenes share.
+- **Per-asset options** that a path alone cannot express, through `Asset.type('texture', path, options)`.
+- **Cache policy and diagnostics.** `cacheSource()`, `peek()` and the request log.
+
+The demo-asset package exposes the same files both ways: `demoAssets.ship` is a descriptor for the loader, and `demoAssets.ship.source` is the path for `new Sprite(...)`.
+
+<TryIt examples={['getting-started/game-loop', 'application-scenes/loading-screen', 'tilemap/level-loading-and-ownership']} api={['application', 'sprite', 'texture', 'loading-queue', 'loading-scene-transition']} />

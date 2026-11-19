@@ -53,7 +53,7 @@ my-game/
 
 `src/main.ts` creates the application, registers the scene class, mounts the canvas, and awaits `app.start(MainScene)`. `src/scenes/MainScene.ts` holds the objects, frame updates, and drawing. The next chapter explains both files using the maintained template source.
 
-Keep asset files under `public/assets/` when you want them served unchanged. `public/` is not part of the URL: `public/assets/hero.png` is requested as `assets/hero.png`. A loader `basePath` can supply the common directory; do not repeat it in individual asset paths. Deployment under a subdirectory needs the base-path treatment in [Deployment](/ExoJS/en/guide/shipping/deployment/).
+Keep asset files under `public/assets/` when you want them served unchanged. `public/` is not part of the URL: `public/assets/hero.png` is requested as `assets/hero.png`. A loader `basePath` can supply the common directory; do not repeat it in individual asset paths. A path then names the file directly: `new Sprite('hero.png')` loads it when the scene first needs it, as [Migrating to path-based assets](/ExoJS/en/guide/assets/migrating-to-model-b-plus/) explains. Deployment under a subdirectory needs the base-path treatment in [Deployment](/ExoJS/en/guide/shipping/deployment/).
 
 ## Production build
 
