@@ -49,7 +49,8 @@ declare module '@codexo/exojs' {
 }
 // #endregion guide:custom-palette-type
 
-const dataUrl = (document: unknown): string => `data:application/json,${encodeURIComponent(JSON.stringify(document))}`;
+const dataUrl = (document: object): string =>
+  `data:application/json,${encodeURIComponent(JSON.stringify({ $type: 'palette', $version: 1, ...document }))}`;
 
 const sunset = dataUrl({ name: 'Sunset', colors: ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93'] });
 const broken = dataUrl({ name: 'Broken', colors: [1, 2, 3] });
