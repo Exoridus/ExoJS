@@ -216,7 +216,7 @@ describe('Button', () => {
     const handler = vi.fn();
 
     button.onClick.add(handler);
-    button.onPointerTap.dispatch({} as never);
+    button.onPointerTap.dispatch({ button: 0 } as never);
 
     expect(handler).toHaveBeenCalledTimes(1);
   });
@@ -262,11 +262,11 @@ describe('Button', () => {
   test('pointer-down sets the pressed state only while enabled', () => {
     const button = new Button();
 
-    button.onPointerDown.dispatch({} as never); // enabled -> pressed + redraw
+    button.onPointerDown.dispatch({ button: 0 } as never); // enabled -> pressed + redraw
     button.onPointerUp.dispatch({} as never); // -> refreshState
 
     button.enabled = false;
-    expect(() => button.onPointerDown.dispatch({} as never)).not.toThrow(); // disabled -> no-op
+    expect(() => button.onPointerDown.dispatch({ button: 0 } as never)).not.toThrow(); // disabled -> no-op
   });
 
   test('a disabled button ignores a pointer tap (onClick not dispatched)', () => {
@@ -275,7 +275,7 @@ describe('Button', () => {
 
     button.onClick.add(handler);
     button.enabled = false;
-    button.onPointerTap.dispatch({} as never);
+    button.onPointerTap.dispatch({ button: 0 } as never);
 
     expect(handler).not.toHaveBeenCalled();
   });
@@ -305,7 +305,7 @@ describe('Button', () => {
     expect(button.interactive).toBe(false);
 
     button.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Enter, button));
-    button.onPointerTap.dispatch({} as never);
+    button.onPointerTap.dispatch({ button: 0 } as never);
     expect(handler).not.toHaveBeenCalled();
   });
 
@@ -323,7 +323,7 @@ describe('Button', () => {
     expect(button.effectiveEnabled).toBe(true);
     expect(button.interactive).toBe(true);
 
-    button.onPointerTap.dispatch({} as never);
+    button.onPointerTap.dispatch({ button: 0 } as never);
     expect(handler).toHaveBeenCalledTimes(1);
   });
 });
@@ -848,7 +848,7 @@ describe('Checkbox', () => {
     const handler = vi.fn();
 
     checkbox.onChange.add(handler);
-    checkbox.onPointerTap.dispatch({} as never);
+    checkbox.onPointerTap.dispatch({ button: 0 } as never);
 
     expect(checkbox.checked).toBe(true);
     expect(handler).toHaveBeenCalledWith(true, checkbox);
@@ -876,7 +876,7 @@ describe('Checkbox', () => {
 
     checkbox.enabled = false;
     checkbox.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Enter, checkbox));
-    checkbox.onPointerTap.dispatch({} as never);
+    checkbox.onPointerTap.dispatch({ button: 0 } as never);
 
     expect(checkbox.checked).toBe(false);
     expect(checkbox.interactive).toBe(false);
@@ -1017,7 +1017,7 @@ describe('Toggle', () => {
     const handler = vi.fn();
 
     toggle.onChange.add(handler);
-    toggle.onPointerTap.dispatch({} as never);
+    toggle.onPointerTap.dispatch({ button: 0 } as never);
 
     expect(toggle.checked).toBe(true);
     expect(handler).toHaveBeenCalledTimes(1);
