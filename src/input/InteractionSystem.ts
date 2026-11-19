@@ -972,7 +972,7 @@ export class InteractionSystem {
       return;
     }
 
-    journal.push({ kind, pointer, x, y, button, buttons, tap: false };
+    journal.push({ kind, pointer, x, y, button, buttons, tap: false });
     this._dirty = true;
   }
 
