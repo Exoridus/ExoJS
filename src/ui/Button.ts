@@ -265,8 +265,8 @@ export class Button extends Widget {
     this._refreshState();
   };
 
-  private readonly _onPointerDown = (): void => {
-    if (this.effectiveEnabled) {
+  private readonly _onPointerDown = (event: InteractionEvent): void => {
+    if (this.effectiveEnabled && (event.button === undefined || event.button === 0)) {
       this._setSkinState('pressed');
     }
   };
@@ -275,8 +275,8 @@ export class Button extends Widget {
     this._refreshState();
   };
 
-  private readonly _activate = (): void => {
-    if (this.effectiveEnabled) {
+  private readonly _activate = (event: InteractionEvent): void => {
+    if (this.effectiveEnabled && (event.button === undefined || event.button === 0)) {
       this.onClick.dispatch(this);
     }
   };
