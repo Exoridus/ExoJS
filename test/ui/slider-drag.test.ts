@@ -41,7 +41,7 @@ const makeStage = (): { stage: Stage } & PointerSignals => {
   return { stage: { interaction, focus, app }, ...signals };
 };
 
-const pointerDownAt = (x: number, y: number, id = 1): InteractionEvent => ({ x, y, pointer: { id } }) as unknown as InteractionEvent;
+const pointerDownAt = (x: number, y: number, id = 1): InteractionEvent => ({ x, y, button: 0, buttons: 1, pointer: { id } }) as unknown as InteractionEvent;
 
 const contact = (id: number): Pointer => ({ id }) as Pointer;
 
