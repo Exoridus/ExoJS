@@ -139,17 +139,18 @@ describe('RenderNode and SceneNode contract', () => {
     // Adding a RenderNode subclass is allowed.
     container.addChild(drawable);
 
-    // The line below is a compile error in TypeScript; we keep it as a
-    // ts-expect-error sentinel so the constraint cannot be silently
-    // weakened in a future refactor.
+    // The call below is a compile error in TypeScript; the ts-expect-error
+    // sentinel keeps the constraint from being silently weakened in a future
+    // refactor. It is never executed: a bare SceneNode is not a RenderNode and
+    // a runtime guard for that cast is deliberately not part of the contract.
     const bareNode = new SceneNode();
-    // @ts-expect-error - Container.addChild requires a RenderNode, not a bare SceneNode.
-    container.addChild(bareNode);
 
-    // Runtime fallback: even though the cast went through above, the bare
-    // SceneNode lacks a render() method, so traversal would throw on the
-    // missing call. We do not exercise render() here because the contract
-    // we are protecting is the type-level one.
+    const addBare = (): void => {
+      // @ts-expect-error - Container.addChild requires a RenderNode, not a bare SceneNode.
+      container.addChild(bareNode);
+    };
+
+    void addBare;
     bareNode.destroy();
     container.destroy();
   });
