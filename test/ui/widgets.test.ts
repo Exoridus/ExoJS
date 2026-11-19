@@ -1631,3 +1631,52 @@ describe('Dropdown item replacement', () => {
     expect(label.text).toBe('High');
   });
 });
+
+describe('primary-only pointer activation', () => {
+  it('does not activate a Button for secondary taps', () => {
+    const button = new Button();
+    const clicked = vi.fn();
+
+    button.onClick.add(clicked);
+    button.onPointerDown.dispatch({ button: 2 } as never);
+    expect(button.state).not.toBe('pressed');
+    button.onPointerTap.dispatch({ button: 2 } as never);
+    expect(clicked).not.toHaveBeenCalled();
+
+    button.onPointerTap.dispatch({ button: 0 } as never);
+    expect(clicked).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not toggle Checkbox or Toggle for secondary taps', () => {
+    for (const widget of [new Checkbox(), new Toggle()]) {
+      widget.onPointerTap.dispatch({ button: 2 } as never);
+      expect(widget.checked).toBe(false);
+
+      widget.onPointerTap.dispatch({ button: 0 } as never);
+      expect(widget.checked).toBe(true);
+    }
+  });
+
+  it('does not open a Dropdown for a secondary tap', () => {
+    const dropdown = new Dropdown({ items: [{ label: 'First', value: 1 }] });
+
+    dropdown.onPointerTap.dispatch({ button: 2, target: dropdown } as never);
+    expect(dropdown.isOpen).toBe(false);
+
+    dropdown.onPointerTap.dispatch({ button: 0, target: dropdown } as never);
+    expect(dropdown.isOpen).toBe(true);
+    dropdown.destroy();
+  });
+
+  it('does not begin a Slider drag with a secondary mouse button', () => {
+    const slider = new Slider();
+    const pointer = { id: 1 };
+
+    slider.onPointerDown.dispatch({ button: 2, pointer, x: 10, y: 10 } as never);
+    expect(slider.dragging).toBe(false);
+
+    slider.onPointerDown.dispatch({ button: 0, pointer, x: 10, y: 10 } as never);
+    expect(slider.dragging).toBe(true);
+    slider.destroy();
+  });
+});
