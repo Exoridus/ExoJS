@@ -1,6 +1,7 @@
 import { Registry } from '#core/Registry';
 import type { SceneNode } from '#core/SceneNode';
 
+import { ComponentTypeRegistry } from './ComponentTypeRegistry';
 import type { NodeSerializer } from './NodeSerializer';
 
 /**
@@ -46,6 +47,9 @@ const walkPrototype = (ctor: SceneNodeConstructor): SceneNodeConstructor | null 
  * {@link defaultSerializationRegistry}.
  */
 export class SerializationRegistry {
+  /** Component serializers apply only to this registry, without fallback. */
+  public readonly components = new ComponentTypeRegistry();
+
   // Exact-match store: the prototype-chain walk lives in `resolveByNode`, which
   // has to interleave it with the fallback chain rather than exhaust either one
   // first. See that method's doc comment.
@@ -147,6 +151,7 @@ export class SerializationRegistry {
   public clear(): void {
     this._byName.clear();
     this._byCtor.destroy();
+    this.components._clear();
   }
 }
 

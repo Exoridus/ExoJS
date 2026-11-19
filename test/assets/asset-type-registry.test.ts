@@ -30,6 +30,58 @@ const type = (spec: {
   });
 
 describe('AssetTypeRegistry', () => {
+  test('replaces a definition before use, preserving its stable id and updating suffix ownership', () => {
+    const registry = new AssetTypeRegistry();
+    const destroy = vi.fn();
+    const first = type({ id: 'a', token: TypeA, extensions: ['old', 'same'], destroy });
+    const replacement = type({ id: 'a', token: TypeA, extensions: ['same', 'new'] });
+
+    registry.define(first);
+    registry.define(replacement);
+
+    expect(registry.getInstalled(TypeA)?.type).toBe(replacement);
+    expect(registry.resolveTypeName('a')).toBe(TypeA);
+    expect(registry.resolveExtensionType('old')).toBeUndefined();
+    expect(registry.resolveExtensionType('same')).toBe('a');
+    expect(registry.resolveExtensionType('new')).toBe('a');
+    expect(destroy).toHaveBeenCalledOnce();
+    registry.destroy();
+    expect(destroy).toHaveBeenCalledOnce();
+  });
+
+  test('rejects conflicting or already-used definitions without replacing the original', () => {
+    const registry = new AssetTypeRegistry();
+    const original = type({ id: 'a', token: TypeA, extensions: ['kept'] });
+
+    registry.define(original);
+    registry.define(type({ id: 'b', token: TypeB, extensions: ['owned'] }));
+
+    expect(() => registry.define(type({ id: 'a', token: TypeB }))).toThrow();
+    expect(() => registry.define(type({ id: 'changed', token: TypeA }))).toThrow();
+    expect(() => registry.define(type({ id: 'a', token: TypeA, extensions: ['owned'] }))).toThrow();
+    registry.markUsed(TypeA);
+    expect(() => registry.define(type({ id: 'a', token: TypeA }))).toThrow(/already in use/);
+    expect(registry.getInstalled(TypeA)?.type).toBe(original);
+    expect(registry.resolveExtensionType('kept')).toBe('a');
+    registry.destroy();
+  });
+
+  test('keeps a shared factory alive until its last definition is gone', () => {
+    const registry = new AssetTypeRegistry();
+    const shared = { create: async (source: string) => source, destroy: vi.fn() };
+    const createFactory = () => shared;
+    registry.define(Object.assign(type({ id: 'a', token: TypeA }), { createFactory }));
+    registry.define(Object.assign(type({ id: 'b', token: TypeB }), { createFactory }));
+
+    registry.markUsed(TypeB);
+    registry.define(type({ id: 'a', token: TypeA }));
+
+    expect(registry.getInstalled(TypeB)?.factory).toBe(shared);
+    expect(shared.destroy).not.toHaveBeenCalled();
+    registry.destroy();
+    expect(shared.destroy).toHaveBeenCalledOnce();
+  });
+
   test('a factory teardown failure still destroys every factory and clears the registry once', () => {
     const registry = new AssetTypeRegistry();
     const failure = new Error('factory teardown failed');
@@ -286,6 +338,31 @@ describe('AssetTypeRegistry.registerType', () => {
 describe('AssetTypeRegistry.installAll atomicity', () => {
   const factoryType = (id: string, createFactory: () => unknown, extensions: readonly string[] = []): never =>
     ({ id, extensions, leaf: 'ref', createFactory }) as never;
+
+  test('a failed set never destroys a borrowed factory or destroys a new shared factory twice', () => {
+    const registry = new AssetTypeRegistry();
+    const existing = { create: async () => 1, destroy: vi.fn() };
+    const pending = { create: async () => 2, destroy: vi.fn() };
+    registry.installAll([factoryType('existing', () => existing)]);
+
+    const failing = factoryType('failing', () => {
+      throw new Error('factory failed');
+    });
+
+    expect(() =>
+      registry.installAll([
+        factoryType('other-existing', () => existing),
+        factoryType('first', () => pending),
+        factoryType('second', () => pending),
+        failing,
+      ]),
+    ).toThrow('factory failed');
+    expect(existing.destroy).not.toHaveBeenCalled();
+    expect(pending.destroy).toHaveBeenCalledOnce();
+    registry.installAll([factoryType('another-existing', () => existing)]);
+    registry.destroy();
+    expect(existing.destroy).toHaveBeenCalledOnce();
+  });
 
   test('a throwing factory leaves the registry as it was and destroys the factories already created, once', () => {
     const registry = new AssetTypeRegistry();

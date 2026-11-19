@@ -1,10 +1,13 @@
 import { Asset } from '#assets/Asset';
+import { Assets } from '#assets/Assets';
 import { binarySourceCodec } from '#assets/AssetSourceCodec';
 import { AssetType } from '#assets/AssetType';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
+import { TextureFactory } from '#assets/factories/TextureFactory';
 import { Loader } from '#assets/Loader';
 import { logger } from '#core/Logger';
 import { SceneNode } from '#core/SceneNode';
+import { Prefab } from '#core/serialization/Prefab';
 import { registerSerializer } from '#core/serialization/SerializationRegistry';
 import { _resetDefaultSerializers, deserializeTree, migrate, serializeTree } from '#core/serialization/serialize';
 import { SERIALIZATION_VERSION, type SerializedNode } from '#core/serialization/types';
@@ -12,7 +15,11 @@ import { materializeAssetTypes } from '#extensions/materialize';
 import { Container } from '#rendering/Container';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
-import type { Texture } from '#rendering/texture/Texture';
+import { Texture } from '#rendering/texture/Texture';
+import { ScaleModes, WrapModes } from '#rendering/types';
+
+import legacyScene from '../fixtures/scene-asset-references-v2.json';
+import typedScene from '../fixtures/scene-asset-references-v3.json';
 
 const createCoreLoader = (resolution = 1): Loader => {
   const loader = new Loader({ basePath: '/' });
@@ -54,6 +61,280 @@ const textures = (node: SceneNode): Array<Texture | RenderTexture | null> =>
   (node as Container).children.map(child => (child as Sprite).texture);
 
 describe('asset references keep their interpretation', () => {
+  test('format 3 Sprite demands its typed texture only after scene attachment', async () => {
+    const loader = createCoreLoader();
+    const owner = loader.createScope();
+    const prefab = Prefab.fromJSON({
+      version: 3,
+      root: {
+        type: 'Container',
+        children: [
+          {
+            type: 'Sprite',
+            texture: { $type: 'texture', source: 'hero.png', options: { textureOptions: { scaleMode: ScaleModes.Nearest } } },
+          },
+        ],
+      },
+    });
+    const root = prefab.instantiate(loader) as Container;
+    const sprite = root.children[0] as Sprite;
+
+    expect(global.fetch).not.toHaveBeenCalled();
+    const texture = sprite.texture as Texture;
+    expect(texture).toBeInstanceOf(Texture);
+    expect(texture.scaleMode).toBe(ScaleModes.Nearest);
+
+    root._setAssetScope(owner);
+    await expect(texture.loaded).resolves.toBe(texture);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(sprite.texture).toBe(texture);
+    expect(texture.source).not.toBeNull();
+
+    root._setAssetScope(null);
+    expect(texture.source).toBeNull();
+    owner.destroy();
+    loader.destroy();
+  });
+
+  test('format 3 writes a typed reference even when no options are needed', async () => {
+    const loader = createCoreLoader();
+    const texture = await loader.load(Asset.type('texture', 'hero.png'));
+    const tree = new Container();
+    tree.addChild(new Sprite(texture));
+
+    const saved = { version: SERIALIZATION_VERSION, root: serializeTree(tree, loader) };
+
+    expect(saved).toEqual(typedScene);
+
+    const older = migrate(legacyScene);
+    expect(older.version).toBe(2);
+    expect(textures(deserializeTree(older.root, loader, undefined, older.version))).toEqual([texture]);
+
+    const prefab = Prefab.fromJSON(legacyScene);
+
+    expect(prefab.toJSON()).toEqual(legacyScene);
+    expect(textures(prefab.instantiate(loader))).toEqual([texture]);
+  });
+
+  test('resolve claims without a fetch, shares identical references and heals on explicit scoped load', async () => {
+    const loader = createCoreLoader();
+    const owner = loader.createScope();
+    let handle: unknown;
+    let distinct: Texture | null = null;
+
+    class LazyProbe extends SceneNode {}
+
+    registerSerializer('LazyProbe', LazyProbe, {
+      write: () => ({}),
+      read: (data, ctx) => {
+        expect(handle).toBeUndefined();
+        handle = ctx.resolve(data.texture, Texture);
+        expect(ctx.resolve({ source: 'hero.png', $type: 'texture' }, Texture)).toBe(handle);
+        const nearest = ctx.resolve(
+          { source: 'hero.png', $type: 'texture', options: { textureOptions: { scaleMode: ScaleModes.Nearest } } },
+          Texture,
+        );
+
+        if (!(nearest instanceof Texture)) {
+          throw new Error('Expected a texture handle');
+        }
+
+        distinct = nearest;
+
+        return new LazyProbe();
+      },
+    });
+
+    deserializeTree({ type: 'LazyProbe', texture: { $type: 'texture', source: 'hero.png' } }, loader, undefined, 3, undefined, owner);
+
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(handle).toBeInstanceOf(Texture);
+    const texture = handle as Texture;
+    expect(texture.source).toBeNull();
+
+    expect(await owner.load('hero.png')).toBe(texture);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(texture.source).not.toBeNull();
+    expect(distinct).not.toBe(texture);
+    expect(distinct).toMatchObject({ scaleMode: ScaleModes.Nearest, source: texture.source });
+
+    owner.destroy();
+    expect(texture.source).toBeNull();
+    loader.destroy();
+  });
+
+  test.each([
+    ['missing-type', /hero\.png.*missing-type/],
+    ['image', /image.*texture|texture.*image/],
+  ])('lazy resolution refuses a %s reference before any network request', ($type, message) => {
+    const loader = createCoreLoader();
+
+    class LazyProbe extends SceneNode {}
+
+    registerSerializer('LazyProbe', LazyProbe, {
+      write: () => ({}),
+      read: (data, ctx) => {
+        ctx.resolve({ $type: 'texture', source: 'provisional.png' }, Texture);
+        ctx.resolve(data.texture, Texture);
+
+        return new LazyProbe();
+      },
+    });
+
+    expect(() => deserializeTree({ type: 'LazyProbe', texture: { $type, source: 'hero.png' } }, loader)).toThrow(message);
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(loader.inspect()).toEqual([]);
+  });
+
+  test.each([{}, { mimeType: 'image/png' }])('two texture handles keep their own sampler while sharing a decode (%j)', async options => {
+    const loader = createCoreLoader();
+    const first = { scaleMode: ScaleModes.Nearest, wrapMode: WrapModes.Repeat };
+    const second = { scaleMode: ScaleModes.Linear, wrapMode: WrapModes.MirroredRepeat };
+    const catalog = Assets.from({
+      first: { type: 'texture', source: 'hero.png', ...options, textureOptions: first },
+      second: { type: 'texture', source: 'hero.png', ...options, textureOptions: second },
+    });
+    const preload = loader.createScope();
+
+    await preload.load(catalog);
+
+    expect(catalog.first).not.toBe(catalog.second);
+    expect(catalog.first.source).toBe(catalog.second.source);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(global.createImageBitmap).toHaveBeenCalledTimes(1);
+
+    const tree = new Container();
+    tree.addChild(new Sprite(catalog.first), new Sprite(catalog.second));
+    const document = serializeTree(tree, loader);
+    const saved = (document.children as SerializedNode[]).map(child => child.texture);
+
+    expect(saved).toEqual([
+      { $type: 'texture', source: 'hero.png', options: { ...options, textureOptions: first } },
+      { $type: 'texture', source: 'hero.png', options: { ...options, textureOptions: second } },
+    ]);
+
+    const restored = deserializeTree(document, loader, undefined, 2) as Container;
+    const a = restored.children[0] as Sprite;
+    const b = restored.children[1] as Sprite;
+    const [firstTexture, secondTexture] = textures(restored);
+
+    expect(firstTexture).not.toBe(secondTexture);
+    expect(firstTexture).toMatchObject(first);
+    expect(secondTexture).toMatchObject(second);
+    expect(serializeTree(restored, loader)).toEqual(document);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    const source = catalog.first.source;
+    preload.destroy();
+    expect(firstTexture?.source).toBe(source);
+    expect(secondTexture?.source).toBe(source);
+    a.destroy();
+    expect(secondTexture?.source).toBe(source);
+    b.destroy();
+    expect(loader.inspect()).toEqual([]);
+
+    restored.destroy();
+    tree.destroy();
+    loader.destroy();
+  });
+
+  test('replacing the built-in Texture factory preserves per-handle sampler serialization', async () => {
+    const loader = createCoreLoader();
+    loader._assetTypes.define(Texture, { type: 'texture', loader: new TextureFactory() });
+    const textureOptions = { scaleMode: ScaleModes.Nearest, wrapMode: WrapModes.Repeat };
+    const catalog = Assets.from({ hero: { type: 'texture', source: 'hero.png', textureOptions } });
+
+    try {
+      await loader.load(catalog);
+      expect(serializeTree(new Sprite(catalog.hero), loader).texture).toEqual({
+        $type: 'texture',
+        source: 'hero.png',
+        options: { textureOptions },
+      });
+    } finally {
+      loader.destroy();
+    }
+  });
+
+  test('a typed reference resolves only when its type matches the serialized field', async () => {
+    const loader = createCoreLoader();
+    const texture = await loader.load('hero.png');
+    const root: SerializedNode = {
+      type: 'Container',
+      children: [
+        { type: 'Sprite', texture: { $type: 'texture', source: 'hero.png' } },
+        { type: 'Sprite', texture: { $type: 'sound', source: 'hero.png' } },
+      ],
+    };
+
+    expect(textures(deserializeTree(root, loader, undefined, 2))).toEqual([texture, null]);
+
+    loader.destroy();
+  });
+
+  test('a default sampler is saved explicitly when the resident payload has a different sampler', async () => {
+    const loader = createCoreLoader();
+    const nearest = { scaleMode: ScaleModes.Nearest, wrapMode: WrapModes.Repeat };
+    const defaults = { scaleMode: Texture.defaultOptions.scaleMode, wrapMode: Texture.defaultOptions.wrapMode };
+    await loader.load(Asset.type('texture', 'hero.png', { textureOptions: nearest }));
+    const catalog = Assets.from({ hero: { type: 'texture', source: 'hero.png' } });
+
+    try {
+      await loader.load(catalog);
+      const saved = serializeTree(new Sprite(catalog.hero), loader);
+      expect(saved.texture).toEqual({ $type: 'texture', source: 'hero.png', options: { textureOptions: defaults } });
+      const sprite = deserializeTree(saved, loader, undefined, 2) as Sprite;
+      expect(sprite.texture).toMatchObject(defaults);
+      sprite.destroy();
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    } finally {
+      loader.destroy();
+    }
+  });
+
+  test('a failed serializer releases its preloaded sampler lease without releasing the preload', async () => {
+    class FailingNode extends SceneNode {}
+
+    const loader = createCoreLoader();
+    const preload = loader.createScope();
+    const error = new Error('Failed after reading texture');
+    let leased: Texture | null = null;
+    registerSerializer('FailingNode', FailingNode, {
+      write: () => ({}),
+      read: (data, ctx) => {
+        leased = ctx.resolveAsset(data.texture, Texture);
+
+        throw error;
+      },
+    });
+
+    try {
+      await preload.load('hero.png');
+      const texture = { source: 'hero.png', options: { textureOptions: { scaleMode: ScaleModes.Nearest } } };
+      expect(() => deserializeTree({ type: 'FailingNode', texture }, loader)).toThrow(error);
+      expect(leased).toMatchObject({ destroyed: true });
+      expect(loader.inspect()).toMatchObject([{ claims: 1 }]);
+      preload.destroy();
+      expect(loader.inspect()).toEqual([]);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    } finally {
+      loader.destroy();
+    }
+  });
+
+  test('treats a legacy null textureOptions record as absent alongside MIME identity', async () => {
+    const loader = createCoreLoader();
+    const options = { mimeType: 'image/png', textureOptions: null } as unknown as { mimeType: string };
+
+    try {
+      const texture = await loader.load(Asset.type('texture', 'hero.png', options));
+      const document = { type: 'Sprite', texture: { source: 'hero.png', options } };
+      expect((deserializeTree(document, loader) as Sprite).texture).toBe(texture);
+    } finally {
+      loader.destroy();
+    }
+  });
+
   test('two textures of one source with different identity options round-trip to their own texture', async () => {
     const loader = createCoreLoader();
     const plain = await loader.load(Asset.type('texture', 'hero.png'));
@@ -65,7 +346,7 @@ describe('asset references keep their interpretation', () => {
     tree.addChild(new Sprite(plain), new Sprite(data));
 
     const serialized = serializeTree(tree, loader);
-    const restored = deserializeTree(JSON.parse(JSON.stringify(serialized)) as SerializedNode, loader);
+    const restored = deserializeTree(JSON.parse(JSON.stringify(serialized)) as SerializedNode, loader, undefined, 2);
 
     const [restoredPlain, restoredData] = textures(restored);
 
@@ -74,9 +355,12 @@ describe('asset references keep their interpretation', () => {
 
     const [plainRef, dataRef] = ((serialized.children ?? []) as SerializedNode[]).map(child => child.texture);
 
-    // A reference that needs no options keeps the compact string form.
-    expect(plainRef).toBe('hero.png');
-    expect(dataRef).toEqual({ source: 'hero.png', options: { mimeType: 'image/png', textureOptions: { colorSpace: 'none' } } });
+    expect(plainRef).toEqual({ $type: 'texture', source: 'hero.png' });
+    expect(dataRef).toEqual({
+      $type: 'texture',
+      source: 'hero.png',
+      options: { mimeType: 'image/png', textureOptions: { colorSpace: 'none' } },
+    });
   });
 
   test('a reference whose asset was not pre-loaded still resolves to null with a diagnostic', async () => {
@@ -91,7 +375,7 @@ describe('asset references keep their interpretation', () => {
 
     await target.load(Asset.type('texture', 'hero.png'));
 
-    const restored = deserializeTree(serialized, target);
+    const restored = deserializeTree(serialized, target, undefined, 2);
 
     expect(textures(restored)).toEqual([null]);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('hero.png'), expect.objectContaining({ source: 'serialize' }));
@@ -103,11 +387,11 @@ describe('asset references keep their interpretation', () => {
     const legacy = migrate({ version: 1, root: { type: 'Container', children: [{ type: 'Sprite', texture: 'hero.png' }] } });
 
     expect(legacy.version).toBe(1);
-    expect(textures(deserializeTree(legacy.root, loader))[0]).toBe(texture);
+    expect(textures(deserializeTree(legacy.root, loader, undefined, legacy.version))[0]).toBe(texture);
   });
 
   test('documents are written with the current format version', () => {
-    expect(SERIALIZATION_VERSION).toBe(2);
+    expect(SERIALIZATION_VERSION).toBe(3);
     expect(() => migrate({ version: SERIALIZATION_VERSION + 1, root: { type: 'Container' } })).toThrow(/newer than the supported version/);
   });
 
@@ -149,6 +433,24 @@ describe('asset references keep their interpretation', () => {
 });
 
 describe('asset references keep the logical source', () => {
+  test('a live handle keeps its authored variant alias when another logical source shares its payload', async () => {
+    const loader = createCoreLoader();
+    loader.variants.define('hero@{1,2}x.png', [{ source: 'hero.png' }]);
+
+    const explicit = await loader.load('hero.png');
+    const handle = new Texture('hero@{1,2}x.png');
+    const leaf = handle._pathAsset();
+
+    expect(leaf).not.toBeNull();
+    loader.get(leaf!);
+    await handle.loaded;
+
+    expect(handle.source).toBe(explicit.source);
+    expect(serializeTree(new Sprite(handle), loader).texture).toEqual({ $type: 'texture', source: 'hero@{1,2}x.png' });
+    expect(() => serializeTree(new Sprite(explicit), loader)).toThrow(/more than one logical source/);
+    loader.destroy();
+  });
+
   const defineTerrain = (loader: Loader): void => {
     loader.variants.define('terrain.png', [{ source: 'terrain@2x.png', resolution: 2 }, { source: 'terrain.png' }]);
   };
@@ -171,8 +473,8 @@ describe('asset references keep the logical source', () => {
 
     const serialized = serializeTree(tree, highDensity);
 
-    expect((serialized.children as SerializedNode[])[0]?.texture).toBe('terrain.png');
-    expect(textures(deserializeTree(serialized, lowDensity))[0]).toBe(plain);
+    expect((serialized.children as SerializedNode[])[0]?.texture).toEqual({ $type: 'texture', source: 'terrain.png' });
+    expect(textures(deserializeTree(serialized, lowDensity, undefined, 2))[0]).toBe(plain);
   });
 
   test('one resource reached through two logical sources is reported, not written as whichever came first', async () => {
@@ -201,6 +503,6 @@ describe('asset references keep the logical source', () => {
     const tree = new Container();
     tree.addChild(new Sprite(texture));
 
-    expect((serializeTree(tree, loader).children as SerializedNode[])[0]?.texture).toBe('hero.png');
+    expect((serializeTree(tree, loader).children as SerializedNode[])[0]?.texture).toEqual({ $type: 'texture', source: 'hero.png' });
   });
 });

@@ -1,6 +1,6 @@
 {
   "title": "AssetVariantSet",
-  "description": "Per-device selection between several files that stand for one logical asset. Without this layer a path is a path: one URL, one set of bytes, on every device. That is the wrong shape for two things a real project needs - a texture shipped once per compressed format family (no GPU supports them all) and once per display density - because the choice can only be made where the device is known, which is at load time. Selection happens before the source is canonicalized, so asset identity is keyed on the file that was actually chosen. Two devices picking different candidates therefore get different cache entries instead of one entry whose contents depend on who wrote it last. A source with no rule resolves to itself. Nothing is registered by default, so an application that never calls define pays one map lookup per load and nothing else.",
+  "description": "Per-device selection between several files that stand for one logical asset. Without this layer a path is a path: one URL, one set of bytes, on every device. That is the wrong shape for two things a real project needs - a texture shipped once per compressed format family (no GPU supports them all) and once per display density - because the choice can only be made where the device is known, which is at load time. Selection happens before the source is canonicalized, so asset identity is keyed on the file that was actually chosen. Two devices picking different candidates therefore get different cache entries instead of one entry whose contents depend on who wrote it last. Inline sources such as `hero@{1,2,3}x.{png,webp}` choose a literal texture file without probing the network. Either group may be omitted. An explicit rule for the same source takes precedence. Other sources resolve to themselves when no rule is defined.",
   "symbol": "AssetVariantSet",
   "kind": "class",
   "subsystem": "assets",
@@ -22,7 +22,7 @@
         "Per-device selection between several files that stand for one logical asset.",
         "Without this layer a path is a path: one URL, one set of bytes, on every device. That is the wrong shape for two things a real project needs - a texture shipped once per compressed format family (no GPU supports them all) and once per display density - because the choice can only be made where the device is known, which is at load time.",
         "Selection happens before the source is canonicalized, so asset identity is keyed on the file that was actually chosen. Two devices picking different candidates therefore get different cache entries instead of one entry whose contents depend on who wrote it last.",
-        "A source with no rule resolves to itself. Nothing is registered by default, so an application that never calls define pays one map lookup per load and nothing else."
+        "Inline sources such as `hero@{1,2,3}x.{png,webp}` choose a literal texture file without probing the network. Either group may be omitted. An explicit rule for the same source takes precedence. Other sources resolve to themselves when no rule is defined."
       ],
       "importLine": "import { AssetVariantSet } from '@codexo/exojs'",
       "sourceLink": null
@@ -134,7 +134,7 @@
             }
           ],
           "returnType": "readonly AssetVariant[] | undefined",
-          "description": "The candidates declared for source, or undefined."
+          "description": "The declared or expanded candidates for source, or undefined."
         },
         {
           "name": "clear",
@@ -290,7 +290,7 @@
             }
           ],
           "returnType": "string",
-          "description": "The source a load of source should actually fetch. Among the eligible candidates the one carrying the most preferred compressed format wins, then the highest density, then the earliest declared. Format outranks density deliberately: it is what decides VRAM and transfer cost, and a project that wants density to dominate simply declares only the candidates it wants chosen. Returns source unchanged when it has no rule, and when it has one whose candidates are all ineligible."
+          "description": "The source a load of source should actually fetch. Among the eligible candidates the one carrying the most preferred compressed format wins, then the highest density, then the earliest declared. Format outranks density deliberately: it is what decides VRAM and transfer cost, and a project that wants density to dominate simply declares only the candidates it wants chosen. Returns source unchanged when it has no rule or inline group, and when an explicit rule has no eligible candidates. An inline source must have an eligible candidate and may expand to at most 256 files."
         },
         {
           "name": "undefine",
@@ -337,7 +337,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Drop the rule for source, so it resolves to itself again."
+          "description": "Drop the explicit rule for source. Inline candidates still apply."
         }
       ],
       "paragraphs": [],

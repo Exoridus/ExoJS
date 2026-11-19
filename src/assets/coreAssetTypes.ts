@@ -13,9 +13,8 @@ import { normalizeExtension } from './extensions';
 /**
  * The asset types every {@link Application} installs.
  *
- * The set is fixed at build time and cannot be added to or replaced at runtime:
- * a type an application brings of its own is installed alongside these, on that
- * application only. Their ids are short rather than reverse-DNS because the
+ * An application can add its own definitions and replace a constructor-bound
+ * factory before its first request. Their ids are short rather than reverse-DNS because the
  * engine owns them, and because they double as the cache namespaces a
  * persistent store writes under.
  *

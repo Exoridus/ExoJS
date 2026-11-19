@@ -5,10 +5,11 @@ import type { Destroyable } from '#core/types';
 import type { Asset, ResourceAsset, ValueAsset } from './Asset';
 import type { AssetConstructor } from './AssetConstructor';
 import type { CatalogEntry, KindByPath, LeafForPath, ResourceForKind } from './AssetDefinitions';
+import type { AssetLoadGroup, LoadedAssetGroup } from './assetLoadGroup';
 import type { CatalogResourceLeaf, CatalogValueLeaf } from './assetMeta';
 import type { Assets, InferAssetsProperties } from './Assets';
 import { LoadBatch } from './LoadBatch';
-import type { InferLoadedMap, LoadContainerOptions, Loader, LoadOptions } from './Loader';
+import { type InferLoadedMap, type LoadContainerOptions, type Loader, type LoadOptions, LoadPriority } from './Loader';
 import type { LoadingQueue } from './LoadingQueue';
 
 /**
@@ -198,6 +199,14 @@ export class LoaderScope implements Destroyable {
     this._assertLive('load');
 
     return this._loader._loadClaimed(this, arg0, arg1);
+  }
+
+  /** Loads path-backed handles into this scope and preserves array, tuple, and object shape. */
+  public loadGroup<const Input extends AssetLoadGroup>(input: Input, options?: LoadOptions): LoadingQueue<LoadedAssetGroup<Input>>;
+  public loadGroup(input: unknown, options?: LoadOptions): LoadingQueue<unknown> {
+    this._assertLive('loadGroup');
+
+    return this._loader._loadHandleGroup(input, this, options?.priority === LoadPriority.Background);
   }
 
   /**

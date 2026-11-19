@@ -8,6 +8,7 @@ import { verifyPackBytes, verifyPackLength } from '#assets/container/containerIn
 import { ContainerReader } from '#assets/container/ContainerReader';
 import type { Connectivity } from '#core/Connectivity';
 import { Signal } from '#core/Signal';
+import { Texture } from '#rendering/texture/Texture';
 
 import { type Asset, AssetImpl, type ResourceAsset, type ValueAsset } from './Asset';
 import type { AssetConstructor } from './AssetConstructor';
@@ -35,6 +36,7 @@ import {
 import { _normalizeEntry, type Assets, AssetsImpl, type InferAssetsProperties } from './Assets';
 import type { AnyAssetType } from './AssetType';
 import { AssetTypeRegistry } from './AssetTypeRegistry';
+import { AssetTypes } from './AssetTypes';
 import { AssetVariantSet } from './AssetVariantSet';
 import {
   type AssetLocator,
@@ -222,6 +224,8 @@ export interface LoadManifestOptions {
  */
 export class Loader {
   private readonly _typeRegistry = new AssetTypeRegistry();
+  /** @internal */
+  public readonly _assetTypes = new AssetTypes(this._typeRegistry);
   private readonly _decoder: AssetDecoder;
   private readonly _residency: AssetResidency;
   private _destroyed = false;
@@ -282,7 +286,8 @@ export class Loader {
     // two devices share one cache entry whose contents depend on which of them
     // filled it, and would leave a reference the asset itself carries resolving
     // against a path that was never loaded.
-    const selected = this.variants.resolve(source);
+    const variant = this.variants._resolveCandidate(source);
+    const selected = variant?.source ?? source;
     const locator = canonicalizeSource(this._decoder.basePath, selected);
     // The resource discriminator is deliberately absent from the source key: two
     // resources that differ only in how one download is interpreted must resolve
@@ -303,6 +308,7 @@ export class Loader {
       type,
       source: selected,
       requested: source,
+      ...(variant?.resolution !== undefined && { variantResolution: variant.resolution }),
       ...(options !== undefined && { options }),
     };
   }
@@ -402,6 +408,7 @@ export class Loader {
    * so no caller can drop an app-lifetime claim another consumer relies on.
    */
   private readonly _appScope = new LoaderScope(this, 'app', '(app)');
+  private _liveLoadScope: LoaderScope | undefined;
 
   /** Aggregate foreground progress across every scope. Each scope also reports its own. */
   private readonly _batch = new LoadBatch(this);
@@ -703,6 +710,11 @@ export class Loader {
       return { entry, asset: this._canonicalize(type, entry.source, entry.options) };
     });
 
+    // A new definition cannot switch the codec after these entries have been keyed.
+    for (const { asset } of resolved) {
+      this._typeRegistry.markUsed(asset.type);
+    }
+
     // Reading happens before anything touches residency. It is the only
     // asynchronous step in the unpack, and the claim/inject loop below must run
     // without an await between the in-flight check and the injection it guards -
@@ -861,6 +873,62 @@ export class Loader {
 
   public load(arg0: unknown, arg1?: unknown): LoadingQueue<unknown> {
     return this._loadClaimed(this._appScope, arg0, arg1);
+  }
+
+  /** @internal */
+  public _loadHandleGroup(input: unknown, claimer?: LoaderScope, background = false): LoadingQueue<unknown> {
+    if (this._destroyed) {
+      throw new Error('Cannot load an asset group after the loader is destroyed.');
+    }
+
+    const single = _readMeta(input) !== undefined;
+    const array = Array.isArray(input);
+    let candidates: Array<[string | symbol, unknown]>;
+
+    if (single) {
+      candidates = [['0', input]];
+    } else if (array) {
+      candidates = Array.from(input, (leaf: unknown, index) => [String(index), leaf]);
+    } else {
+      const prototype: unknown = typeof input === 'object' && input !== null ? Object.getPrototypeOf(input) : undefined;
+
+      if (prototype !== Object.prototype && prototype !== null) {
+        throw new TypeError('Expected an asset handle, an array of asset handles, or a plain object of asset handles.');
+      }
+
+      const record = input as Record<string | symbol, unknown>;
+      candidates = Reflect.ownKeys(record)
+        .filter(key => Object.getOwnPropertyDescriptor(record, key)?.enumerable === true)
+        .map(key => [key, record[key]]);
+    }
+
+    const entries = candidates.map(([key, leaf], index): [string, object] => {
+      if (_readMeta(leaf) === undefined) {
+        throw new TypeError(`The asset at "${String(key)}" must be a path-backed asset handle or a catalog leaf.`);
+      }
+
+      return [String(index), leaf as object];
+    });
+    claimer ??= this._liveLoadScope ??= new LoaderScope(this, 'app', '(live assets)');
+    const participations = this._adoptAll(entries, claimer, background);
+
+    return this._createAdoptedQueue(
+      claimer,
+      entries,
+      participations,
+      results => {
+        if (single) {
+          return results.get('0');
+        }
+
+        if (array) {
+          return entries.map(([key]) => results.get(key));
+        }
+
+        return Object.fromEntries(candidates.map(([key], index) => [key, results.get(String(index))]));
+      },
+      !background,
+    );
   }
 
   /**
@@ -1424,6 +1492,89 @@ export class Loader {
     return this._residency._peekResource(this._canonicalize(type, source, options).key);
   }
 
+  /** Give a serialized sampler a handle of its own, using only a resident payload. @internal */
+  public _leaseTextureView(
+    source: string,
+    options: Readonly<Record<string, unknown>>,
+  ): { readonly texture: Texture; readonly release: () => void } | null {
+    if (this._destroyed) {
+      return null;
+    }
+
+    const { key } = this._canonicalize(Texture, source, options);
+
+    if (!(this._residency._peekResource(key) instanceof Texture)) {
+      return null;
+    }
+
+    const texture = createLeaf(this._typeRegistry.getSeamlessAdapter(Texture), 'texture', source, options) as Texture;
+    const scope = this.createScope();
+
+    const release = (): void => {
+      this._residency._forgetDeferredHandle(key, texture);
+
+      try {
+        texture.destroy();
+      } finally {
+        scope.destroy();
+      }
+    };
+
+    try {
+      this._adopt(texture, scope);
+
+      return { texture, release };
+    } catch (error) {
+      release();
+
+      throw error;
+    }
+  }
+
+  /** @internal */
+  public _matchesAssetType(type: AssetConstructor, id: string): boolean {
+    return this._typeRegistry.resolveTypeName(id) === type;
+  }
+
+  /** @internal */
+  public _referenceType(type: AssetConstructor, source: string, id?: string): string {
+    if (id !== undefined && !this._typeRegistry.hasAssetType(id)) {
+      throw new Error(`Cannot resolve asset "${source}": no asset type "${id}" is installed.`);
+    }
+
+    const expected = this._typeRegistry._typeIdentity(type);
+
+    if (id !== undefined && id !== expected) {
+      throw new TypeError(`Cannot resolve asset "${source}" of type "${id}" as "${expected}".`);
+    }
+
+    return expected;
+  }
+
+  /** @internal */
+  public _createReferenceLeaf<T>(id: string, source: string, options?: unknown): CatalogResourceLeaf<T> | CatalogValueLeaf<T> {
+    return createLeaf(this._typeRegistry.leafFor(id), id, source, options) as CatalogResourceLeaf<T> | CatalogValueLeaf<T>;
+  }
+
+  /** Reserve only after reading succeeds so a rejected document cannot leave claims. @internal */
+  public _reserveReferenceLeaves(leaves: ReadonlyMap<string, object>, owner: LoaderScope = this._appScope): void {
+    if (leaves.size === 0) {
+      return;
+    }
+
+    const scope = owner.createScope();
+
+    try {
+      for (const leaf of leaves.values()) {
+        this._residency._adopt(leaf, scope, false, undefined, true);
+      }
+    } catch (error) {
+      scope.destroy();
+
+      throw error;
+    }
+  }
+
   // -----------------------------------------------------------------------
   // Configuration
   // -----------------------------------------------------------------------
@@ -1531,15 +1682,16 @@ export class Loader {
     }
 
     this._destroyed = true;
+    this._assetTypes._close();
 
     // Order matters: factory teardown must run after store teardown (via
     // this._decoder.destroy()). Pending handles still need their registered adapters
     // while residency settles them, before factory teardown clears the registry.
     const errors: unknown[] = [];
 
-    for (const stage of [this._decoder, this._residency, this._typeRegistry]) {
+    for (const stage of [this._liveLoadScope, this._decoder, this._residency, this._typeRegistry]) {
       try {
-        stage.destroy();
+        stage?.destroy();
       } catch (error) {
         errors.push(error);
       }
@@ -1711,42 +1863,71 @@ export class Loader {
     entries: Array<[string, object]>,
     participations: readonly ClaimParticipation[],
     buildResult: (results: Map<string, unknown>) => T,
+    foreground = true,
   ): LoadingQueue<T> {
     const results = new Map<string, unknown>();
     let notifyFn: ((success: boolean) => void) | null = null;
+    let cancellation: DOMException | undefined;
+    let rejectCancelled!: (reason: DOMException) => void;
+    const cancelled = new Promise<never>((_resolve, reject) => {
+      rejectCancelled = reject;
+    });
 
     const itemPromises = entries.map(([alias, leaf], index) => {
       const src = _readMeta(leaf)?.src ?? alias;
       const participation = participations[index];
-      this._onFgBatchStart(claimer, alias, src);
+
+      if (foreground) {
+        this._onFgBatchStart(claimer, alias, src);
+      }
+
       const loaded = (leaf as { loaded: Promise<unknown> }).loaded;
 
-      return loaded.then(
-        value => {
-          if (participation !== undefined) {
-            this._residency._settleParticipation(participation);
-          }
+      const failItem = (error: unknown): never => {
+        if (participation !== undefined) {
+          this._residency._settleParticipation(participation);
+        }
 
-          results.set(alias, value);
-          notifyFn?.(true);
-          this._onFgBatchSettled(claimer, alias, true);
-        },
-        (error: unknown) => {
-          if (participation !== undefined) {
-            this._residency._settleParticipation(participation);
-          }
+        notifyFn?.(false);
 
-          notifyFn?.(false);
+        if (foreground) {
           this._onFgBatchSettled(claimer, alias, false, this._settleError(error));
+        }
 
-          throw error;
-        },
-      );
+        throw error;
+      };
+
+      return Promise.race([loaded, cancelled]).then(value => {
+        if (cancellation !== undefined) {
+          return failItem(cancellation);
+        }
+
+        if (participation !== undefined) {
+          this._residency._settleParticipation(participation);
+        }
+
+        results.set(alias, value);
+        notifyFn?.(true);
+
+        if (foreground) {
+          this._onFgBatchSettled(claimer, alias, true);
+        }
+      }, failItem);
     });
 
     const promise = Promise.all(itemPromises).then(() => buildResult(results));
 
-    const queue = new LoadingQueue<T>(promise, entries.length, () => this._cancelParticipations(participations));
+    const queue = new LoadingQueue<T>(promise, entries.length, () => {
+      cancellation = new DOMException('This operation was aborted', 'AbortError');
+
+      try {
+        this._cancelParticipations(participations);
+      } finally {
+        if (entries.length > 0) {
+          rejectCancelled(cancellation);
+        }
+      }
+    });
     notifyFn = queue._notifyItem.bind(queue);
 
     return queue;

@@ -212,6 +212,7 @@ export class WebGl2TextureNormalizer {
     gl.activeTexture(gl.TEXTURE0);
 
     const unitZeroBinding = gl.getParameter(gl.TEXTURE_BINDING_2D) as WebGLTexture | null;
+    const unitZeroSampler = (gl.getParameter(gl.SAMPLER_BINDING) as WebGLSampler | null | undefined) ?? null;
 
     gl.activeTexture(typeof previousUnit === 'number' ? previousUnit : gl.TEXTURE0);
 
@@ -256,6 +257,10 @@ export class WebGl2TextureNormalizer {
       gl.viewport(0, 0, target.width, target.height);
       gl.activeTexture(gl.TEXTURE0);
 
+      if (unitZeroSampler !== null) {
+        gl.bindSampler(0, null);
+      }
+
       upload(gl);
 
       // The upload wrote through the staging texture and the draw samples it,
@@ -279,6 +284,10 @@ export class WebGl2TextureNormalizer {
       // case would remove the caller's color attachment instead.
       if (attached) {
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, null, 0);
+      }
+
+      if (unitZeroSampler !== null) {
+        gl.bindSampler(0, unitZeroSampler);
       }
 
       this._restore(

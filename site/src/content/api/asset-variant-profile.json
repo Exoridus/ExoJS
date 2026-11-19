@@ -6,11 +6,11 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 2,
+  "memberCount": 3,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 2,
+    "properties": 3,
     "events": 0
   },
   "sections": [
@@ -29,6 +29,43 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "imageFormats",
+          "signature": "imageFormats?: readonly string[]",
+          "signatureTokens": [
+            {
+              "text": "imageFormats",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Supported lowercase raster extensions for inline format groups. If omitted, the set accepts PNG, JPEG and GIF. Candidate order breaks ties at one density."
+        },
         {
           "name": "resolution",
           "signature": "resolution: number",

@@ -283,6 +283,19 @@ export abstract class AssetType<Source, Resource, Options = undefined, Stored = 
   public sourceIdentity?(request: AssetRequest<Options>): string;
 
   /**
+   * Projects a loaded handle's presentation options into a saved reference.
+   * Keep options that affect source or resource identity unchanged. With no
+   * handle, return the options used to distinguish logical requests, omitting
+   * the fields that depend on the handle. Only return JSON-compatible data.
+   * A resident donor can supply the presentation a bare reference would inherit.
+   */
+  public persistedOptions?(
+    resource: Resource | undefined,
+    options: Readonly<Record<string, unknown>> | undefined,
+    donor?: Resource,
+  ): Readonly<Record<string, unknown>> | undefined;
+
+  /**
    * A typed, loadable descriptor for one asset of this type.
    *
    * The resource and option types come from the type instance, so a custom type

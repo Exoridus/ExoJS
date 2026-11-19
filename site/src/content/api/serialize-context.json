@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 4,
+  "memberCount": 5,
   "counts": {
     "constructors": 0,
-    "methods": 2,
+    "methods": 3,
     "properties": 2,
     "events": 0
   },
@@ -97,7 +97,54 @@
             }
           ],
           "returnType": "SerializedAssetRef | null",
-          "description": "Resolve a loaded asset object to the reference it was loaded under, or null for runtime-created / unkeyed resources (a one-time warning is emitted in that case). Store the result as it is; hand it back to DeserializeContext.resolveAsset unchanged."
+          "description": "Resolve a loaded asset object to the reference it was loaded under, or null for runtime-created / unkeyed resources (a one-time warning is emitted in that case). Store the result as it is; hand it back to DeserializeContext.resolveAsset or DeserializeContext.resolve unchanged."
+        },
+        {
+          "name": "local",
+          "signature": "local(value: object): LocalReference",
+          "signatureTokens": [
+            {
+              "text": "local",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LocalReference",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "value",
+              "type": "object",
+              "optional": false
+            }
+          ],
+          "returnType": "LocalReference",
+          "description": "Writes a reference to a node or component embedded elsewhere in this document."
         },
         {
           "name": "writeNode",

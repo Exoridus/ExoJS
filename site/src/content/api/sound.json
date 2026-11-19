@@ -33,7 +33,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(audioBuffer: AudioBuffer | null, options: SoundOptions): Sound",
+          "signature": "new(source: AudioBuffer | null | string, options: SoundOptions): Sound",
           "signatureTokens": [
             {
               "text": "new",
@@ -44,7 +44,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "audioBuffer",
+              "text": "source",
               "kind": "param"
             },
             {
@@ -61,6 +61,14 @@
             },
             {
               "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
               "kind": "keyword"
             },
             {
@@ -94,8 +102,8 @@
           ],
           "params": [
             {
-              "name": "audioBuffer",
-              "type": "AudioBuffer | null",
+              "name": "source",
+              "type": "AudioBuffer | null | string",
               "optional": false
             },
             {
@@ -105,7 +113,7 @@
             }
           ],
           "returnType": "Sound",
-          "description": ""
+          "description": "A path creates an idle handle. An owning loader fills it when the sound is needed."
         }
       ],
       "paragraphs": [],

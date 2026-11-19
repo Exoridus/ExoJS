@@ -11,7 +11,7 @@ import type { AssetLeaf } from './AssetType';
  * returning a handle that could never settle.
  * @internal
  */
-export const createLeaf = (leaf: AssetLeaf<unknown> | undefined, kind: string, src: string, opts?: unknown): object => {
+export const createLeaf = (leaf: AssetLeaf<unknown> | undefined, kind: string, src: string, opts?: unknown, live = false): object => {
   if (leaf === undefined) {
     throw new Error(`No asset type "${kind}" is installed, so "${src}" cannot be materialized.`);
   }
@@ -42,7 +42,7 @@ export const createLeaf = (leaf: AssetLeaf<unknown> | undefined, kind: string, s
 
   placeholder._loadState.markIdle(); // idle until adopted (overrides createPlaceholder's 'loading')
 
-  return _stampMeta(placeholder as object, { kind, src, opts });
+  return _stampMeta(placeholder as object, live ? { kind, src, opts, live: true } : { kind, src, opts });
 };
 
 // Leaf -> the owner token of the loader that first claimed it. Keyed weakly by

@@ -1,3 +1,4 @@
+import type { LoaderScope } from '#assets/LoaderScope';
 import { Color } from '#core/Color';
 import { DirtyChannel } from '#core/nodeDirtyIndex';
 import { SceneNode } from '#core/SceneNode';
@@ -759,6 +760,11 @@ export abstract class RenderNode extends SceneNode {
       previous.releaseConsumer();
       next.retainConsumer();
     }
+  }
+
+  /** Propagates scene asset ownership independently of active rendering. @internal */
+  public _setAssetScope(_scope: LoaderScope | null): void {
+    // Overridden by nodes that own asset claims.
   }
 
   /** Part of the renderer SDK contract for extension renderers. */

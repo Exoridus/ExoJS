@@ -6,8 +6,10 @@ import { Loader } from '#assets/Loader';
 import type { LoaderScope } from '#assets/LoaderScope';
 import type { LoadingQueue } from '#assets/LoadingQueue';
 import { Json } from '#assets/tokens';
+import { Application } from '#core/Application';
 import { logger } from '#core/Logger';
 import { materializeAssetTypes } from '#extensions/materialize';
+import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes } from '#rendering/types';
 
@@ -16,7 +18,6 @@ import { createBuiltinLeaf } from './builtin-leaf';
 /** Loader with all core asset bindings (mirrors createCoreLoader in loader-seamless.test.ts / asset-ref.test.ts). */
 const createCoreLoader = (): Loader => {
   const loader = new Loader();
-  const owner = loader.createScope({ name: 'owner' });
   materializeAssetTypes(loader, coreAssetTypes);
 
   return loader;
@@ -188,6 +189,151 @@ describe('Loader._adopt', () => {
     expect(warnSpy).not.toHaveBeenCalled();
 
     warnSpy.mockRestore();
+  });
+
+  test('a live load group preserves tuple and plain object results with one fetch', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+    const a = createBuiltinLeaf('texture', 'hero.png') as Texture;
+    const b = createBuiltinLeaf('texture', 'hero.png') as Texture;
+
+    try {
+      const queue = loader._loadHandleGroup([a, b]);
+      expect(queue.progress.total).toBe(2);
+      await expect(queue).resolves.toEqual([a, b]);
+      const key = Symbol('a');
+      await expect(loader._loadHandleGroup({ a, [key]: b })).resolves.toEqual({ a, [key]: b });
+      await expect(loader._loadHandleGroup(a)).resolves.toBe(a);
+      expect(queue.progress).toEqual({ total: 2, loaded: 2, pending: 0, failed: 0 });
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    } finally {
+      loader.destroy();
+    }
+  });
+
+  test('Application.load claims a group and releases it at application destruction', async () => {
+    mockFetchImage();
+    const app = new Application({ backend: { type: 'webgpu' }, hello: false });
+    const a = createBuiltinLeaf('texture', 'hero.png') as Texture;
+    const b = createBuiltinLeaf('texture', 'hero.png') as Texture;
+    let payload: Texture['source'];
+
+    try {
+      await expect(app.load(a, b)).resolves.toEqual([a, b]);
+      payload = a.source;
+      expect(payload).not.toBeNull();
+      expect(b.source).toBe(payload);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    } finally {
+      await app.destroy();
+    }
+
+    expect(a.source).not.toBe(payload);
+    expect(b.source).not.toBe(payload);
+    await expect(a.loaded).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
+  test('live aliases can share pixels while retaining their logical frame sizes', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+    loader.variants.profile = { textureFormats: [], resolution: 2 };
+    const physical = new Texture('hero@2x.png');
+    const logical = new Texture('hero@{1,2}x.png');
+    const sprite = new Sprite(logical);
+
+    try {
+      await loader._loadHandleGroup([physical, logical]);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(logical.source).toBe(physical.source);
+      expect(logical.width).toBe(4);
+      expect(logical.logicalWidth).toBe(2);
+      expect(physical.logicalWidth).toBe(4);
+      expect(sprite.width).toBe(2);
+      expect(sprite.textureFrame.width).toBe(4);
+      expect(sprite.getLocalBounds().width).toBe(2);
+    } finally {
+      sprite.destroy();
+      loader.destroy();
+    }
+  });
+
+  test('cancelling a live load group leaves a sibling claim on the same handle in flight', async () => {
+    const loader = createCoreLoader();
+    const a = createBuiltinLeaf('texture', 'hero.png') as Texture;
+    let complete!: (response: Response) => void;
+    global.fetch = vi.fn(
+      () =>
+        new Promise<Response>(resolve => {
+          complete = resolve;
+        }),
+    );
+
+    try {
+      const abandoned = loader._loadHandleGroup([a]);
+      const wanted = loader._loadHandleGroup([a]);
+      abandoned.cancel();
+      await expect(abandoned).rejects.toMatchObject({ name: 'AbortError' });
+      await vi.waitFor(() => expect(complete).toBeDefined());
+      complete(new Response(new ArrayBuffer(8)));
+      await expect(wanted).resolves.toEqual([a]);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    } finally {
+      loader.destroy();
+    }
+  });
+
+  test.each(['texture', 'text'] as const)('foreground demand promotes a parked %s without counting it twice', async kind => {
+    if (kind === 'texture') {
+      mockFetchImage();
+    } else {
+      global.fetch = vi.fn(async () => new Response('hero'));
+    }
+
+    const loader = createCoreLoader().setConcurrency(0);
+    const scope = loader.createScope();
+    const asset = createBuiltinLeaf(kind, kind === 'texture' ? 'hero.png' : 'hero.txt');
+    const foreground = vi.fn();
+    scope.onLoadStart.add(foreground);
+
+    try {
+      const background = loader._loadHandleGroup([asset], scope, true);
+      const startsBeforeDemand = foreground.mock.calls.length;
+      expect(global.fetch).not.toHaveBeenCalled();
+      const demand = loader._loadHandleGroup([asset], scope);
+      const finished = Promise.all([background, demand]);
+      void finished.catch(() => undefined);
+      await vi.waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1), { timeout: 500 });
+      const expected = kind === 'texture' ? asset : 'hero';
+      await expect(finished).resolves.toEqual([[expected], [expected]]);
+      expect(startsBeforeDemand).toBe(0);
+      expect(foreground).toHaveBeenCalledTimes(1);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    } finally {
+      scope.destroy();
+      loader.destroy();
+    }
+  });
+
+  test('cancels a pending group for an already resident handle without releasing another owner', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+    const owner = loader.createScope();
+    const other = loader.createScope();
+    const asset = createBuiltinLeaf('texture', 'hero.png') as Texture;
+
+    try {
+      await loader._loadHandleGroup([asset], owner);
+      const queued = loader._loadHandleGroup([asset], other);
+      queued.cancel();
+      await expect(queued).rejects.toMatchObject({ name: 'AbortError' });
+      expect(queued.progress.loaded).toBe(0);
+      expect(asset.ready).toBe(true);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    } finally {
+      other.destroy();
+      owner.destroy();
+      loader.destroy();
+    }
   });
 
   test('duplicate source, two handles with DIFFERENT textureOptions: one fetch, independent per-handle samplers', async () => {

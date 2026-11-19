@@ -168,6 +168,8 @@ interface ManagedTextureState {
   height: number;
   /** GPU bytes currently booked for this texture's storage (0 until first upload). */
   accountedBytes: number;
+  sharedBitmap?: SharedWebGlBitmap;
+  sampler?: WebGLSampler;
   /**
    * Reusable packing buffer for a partial `DataTexture` upload (see
    * `_syncTexture`'s partial branch), sized to the largest region packed so
@@ -179,6 +181,16 @@ interface ManagedTextureState {
    * for `rgba8`/`r8`) and never changes for a given texture instance.
    */
   partialUploadScratch: Float32Array | Uint8Array | null;
+}
+
+interface SharedWebGlBitmap {
+  readonly bitmap: ImageBitmap;
+  readonly format: number;
+  readonly generateMipMap: boolean;
+  readonly premultiply: boolean;
+  readonly normalize: boolean;
+  readonly storage: ManagedTextureState;
+  owners: number;
 }
 
 /**
@@ -364,6 +376,7 @@ export class WebGl2Backend implements RenderBackend {
     Texture | RenderTexture,
     ManagedTextureState
   >();
+  private readonly _sharedBitmaps = new WeakMap<ImageBitmap, Set<SharedWebGlBitmap>>();
   private readonly _renderTargetStates: Map<RenderTarget, ManagedRenderTargetState> = new Map<RenderTarget, ManagedRenderTargetState>();
   /**
    * Bind state for depth attachments sampled as textures. Separate from
@@ -374,7 +387,7 @@ export class WebGl2Backend implements RenderBackend {
   private _depthWriteEnabled = false;
   private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
   private readonly _textureReleaseHandlers: Map<Texture, () => void> = new Map<Texture, () => void>();
-  /** Context-local base-texture sampler overrides shared by custom materials. */
+  /** Context-local samplers for shared texture storage and material overrides. */
   private readonly _materialSamplers = new Map<number, WebGLSampler>();
   private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
   private readonly _renderTexturePool: RenderTexturePool = new RenderTexturePool();
@@ -468,6 +481,8 @@ export class WebGl2Backend implements RenderBackend {
   // `Texture` a brand new handle - can never match a stale slot. A hole
   // (`undefined`) means "unit never touched", which reads as a miss and binds.
   private readonly _boundHandles: Array<WebGLTexture | null> = [];
+  private readonly _defaultSamplers: Array<WebGLSampler | null> = [];
+  private readonly _samplerOverrides: boolean[] = [];
   private _textureUnit = 0;
   private _vao: WebGl2VertexArrayObject | null = null;
   private _clearColor: Color = new Color();
@@ -1715,6 +1730,7 @@ export class WebGl2Backend implements RenderBackend {
 
     if (texture === null) {
       this._bindTextureHandle(null);
+      this._setDefaultSampler(null);
 
       return this;
     }
@@ -1722,7 +1738,9 @@ export class WebGl2Backend implements RenderBackend {
     // `_syncTexture` performs the bind itself (through the same per-unit cache)
     // because its parameter and upload calls act on whatever is bound to the
     // active unit - binding a second time here would only duplicate GL work.
-    this._syncTexture(texture);
+    const state = this._syncTexture(texture);
+
+    this._setDefaultSampler(state.sampler ?? null);
 
     return this;
   }
@@ -1752,6 +1770,13 @@ export class WebGl2Backend implements RenderBackend {
 
   /** Bind a material's base-texture sampler override to one texture unit. Part of the renderer SDK contract for extension renderers. */
   public bindMaterialSampler(options: SamplerOptions, unit: number): this {
+    this._context.bindSampler(unit, this._getSampler(options));
+    this._samplerOverrides[unit] = true;
+
+    return this;
+  }
+
+  private _getSampler(options: SamplerOptions): WebGLSampler {
     const key = samplerStateKey(options.scaleMode, options.wrapMode);
     let sampler = this._materialSamplers.get(key);
 
@@ -1771,14 +1796,13 @@ export class WebGl2Backend implements RenderBackend {
       sampler = created;
     }
 
-    this._context.bindSampler(unit, sampler);
-
-    return this;
+    return sampler;
   }
 
   /** Restore a texture unit to its texture-owned sampler state. Part of the renderer SDK contract for extension renderers. */
   public unbindMaterialSampler(unit: number): this {
-    this._context.bindSampler(unit, null);
+    this._context.bindSampler(unit, this._defaultSamplers[unit] ?? null);
+    this._samplerOverrides[unit] = false;
 
     return this;
   }
@@ -1819,6 +1843,7 @@ export class WebGl2Backend implements RenderBackend {
    */
   public bindRawTexture(handle: WebGLTexture | null): this {
     this._bindTextureHandle(handle);
+    this._setDefaultSampler(null);
 
     return this;
   }
@@ -2096,6 +2121,18 @@ export class WebGl2Backend implements RenderBackend {
       this._textureUnit = unit;
 
       gl.activeTexture(gl.TEXTURE0 + unit);
+    }
+  }
+
+  private _setDefaultSampler(sampler: WebGLSampler | null): void {
+    const unit = this._textureUnit;
+
+    if ((this._defaultSamplers[unit] ?? null) !== sampler) {
+      this._defaultSamplers[unit] = sampler;
+
+      if (this._samplerOverrides[unit] !== true) {
+        this._context.bindSampler(unit, sampler);
+      }
     }
   }
 
@@ -2838,6 +2875,8 @@ export class WebGl2Backend implements RenderBackend {
     this._blendMode = null;
     this._attachmentBlendActive = false;
     this._boundHandles.length = 0;
+    this._defaultSamplers.length = 0;
+    this._samplerOverrides.length = 0;
     this._boundFramebuffer = null;
 
     if (this._readbackFramebuffer !== null) {
@@ -3068,6 +3107,8 @@ export class WebGl2Backend implements RenderBackend {
     this._boundFramebuffer = null;
     this._readbackFramebuffer = null;
     this._boundHandles.length = 0;
+    this._defaultSamplers.length = 0;
+    this._samplerOverrides.length = 0;
     this._textureUnit = 0;
     this._vao = null;
     this._shader = null;
@@ -3250,8 +3291,58 @@ export class WebGl2Backend implements RenderBackend {
       });
     }
 
-    const state: ManagedTextureState = {
-      handle: this._createTextureHandle(),
+    const state = this._newTextureState(texture);
+    this._textureStates.set(texture, state);
+
+    return state;
+  }
+
+  private _newTextureState(texture: Texture | RenderTexture): ManagedTextureState {
+    if (texture instanceof Texture) {
+      const bitmap = texture._decodedAssetBitmap;
+
+      if (bitmap !== null && bitmap.width > 0 && bitmap.width === texture.width && bitmap.height === texture.height) {
+        let variants = this._sharedBitmaps.get(bitmap);
+        let shared: SharedWebGlBitmap | undefined;
+
+        if (variants === undefined) {
+          variants = new Set();
+          this._sharedBitmaps.set(bitmap, variants);
+        } else {
+          for (const entry of variants) {
+            if (this._matchesBitmapStorage(entry, texture)) {
+              shared = entry;
+
+              break;
+            }
+          }
+        }
+
+        if (shared === undefined) {
+          shared = {
+            bitmap,
+            format: this._managedColorInternalFormat(texture),
+            generateMipMap: texture.generateMipMap,
+            premultiply: texture.premultiplyAlpha,
+            normalize: this._needsColorNormalization(texture),
+            storage: this._newTextureStorage(this._createTextureHandle()),
+            owners: 0,
+          };
+          variants.add(shared);
+        }
+
+        shared.owners++;
+
+        return { ...this._newTextureStorage(shared.storage.handle), sharedBitmap: shared };
+      }
+    }
+
+    return this._newTextureStorage(this._createTextureHandle());
+  }
+
+  private _newTextureStorage(handle: WebGLTexture): ManagedTextureState {
+    return {
+      handle,
       samplerKey: -1,
       version: -1,
       width: 0,
@@ -3259,10 +3350,18 @@ export class WebGl2Backend implements RenderBackend {
       accountedBytes: 0,
       partialUploadScratch: null,
     };
+  }
 
-    this._textureStates.set(texture, state);
-
-    return state;
+  private _matchesBitmapStorage(shared: SharedWebGlBitmap, texture: Texture): boolean {
+    return (
+      shared.bitmap === texture._decodedAssetBitmap &&
+      shared.bitmap.width === texture.width &&
+      shared.bitmap.height === texture.height &&
+      shared.generateMipMap === texture.generateMipMap &&
+      shared.premultiply === texture.premultiplyAlpha &&
+      shared.format === this._managedColorInternalFormat(texture) &&
+      shared.normalize === this._needsColorNormalization(texture)
+    );
   }
 
   private _subscribeToDestroy<T extends DestroyListenable>(descriptor: T, handlers: Map<T, () => void>, handler: () => void): void {
@@ -3379,12 +3478,27 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     if (state) {
-      this._context.deleteTexture(state.handle);
-      this._forgetTextureHandle(state.handle);
-      this._accountant.free(state.accountedBytes);
-      state.accountedBytes = 0;
+      this._freeTextureStorage(state);
       this._textureStates.delete(texture);
     }
+  }
+
+  private _freeTextureStorage(state: ManagedTextureState): void {
+    const shared = state.sharedBitmap;
+    let storage = state;
+
+    if (shared !== undefined) {
+      if (--shared.owners !== 0) {
+        return;
+      }
+
+      this._sharedBitmaps.get(shared.bitmap)?.delete(shared);
+      storage = shared.storage;
+    }
+
+    this._context.deleteTexture(storage.handle);
+    this._forgetTextureHandle(storage.handle);
+    this._accountant.free(storage.accountedBytes);
   }
 
   private _bindRenderTarget(target: RenderTarget): void {
@@ -3898,12 +4012,40 @@ export class WebGl2Backend implements RenderBackend {
       return this._syncDepthTexture(texture);
     }
 
-    const state = this._getTextureState(texture);
+    let state = this._getTextureState(texture);
     const version = texture instanceof RenderTexture ? texture.textureVersion : texture.version;
+
+    if (
+      state.sharedBitmap !== undefined &&
+      state.version !== version &&
+      texture instanceof Texture &&
+      !this._matchesBitmapStorage(state.sharedBitmap, texture)
+    ) {
+      const previous = state;
+      state = this._newTextureState(texture);
+      this._textureStates.set(texture, state);
+      this._freeTextureStorage(previous);
+    }
 
     this._bindTextureHandle(state.handle);
 
     const samplerKey = samplerStateKey(texture.scaleMode, texture.wrapMode);
+    const shared = state.sharedBitmap;
+
+    if (shared !== undefined) {
+      if (state.samplerKey !== samplerKey) {
+        state.sampler = this._getSampler(texture);
+        state.samplerKey = samplerKey;
+      }
+
+      if (shared.storage.version === -1) {
+        this._syncTextureUpload(texture, shared.storage, version);
+      }
+
+      state.version = version;
+
+      return state;
+    }
 
     if (state.samplerKey !== samplerKey) {
       this._applySamplerParameters(texture, state, samplerKey);

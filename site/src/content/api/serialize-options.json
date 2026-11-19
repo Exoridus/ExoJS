@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Components are not part of the serialized format, so serializing a tree whose nodes carry any throws by default rather than writing a document that silently lacks them. Set this to write the tree's visual data alone: structure, transforms, visuals and asset references, with every component left out. Restoring such a document yields nodes without components."
+          "description": "Components without a registry entry are refused by default. Set this to write the tree's visual data alone: structure, transforms, visuals and asset references, with every component left out. Restoring such a document yields nodes without components."
         }
       ],
       "paragraphs": [],

@@ -1,7 +1,9 @@
 import type { AssetConstructor } from '#assets/AssetConstructor';
+import type { CatalogResourceLeaf, CatalogValueLeaf } from '#assets/assetMeta';
 import type { Loader } from '#assets/Loader';
 import type { SceneNode } from '#core/SceneNode';
 
+import type { LocalReference, LocalReferenceReader } from './localReferences';
 import type { DeserializeOptions, SerializedAssetRef, SerializedNode } from './types';
 
 /**
@@ -21,11 +23,13 @@ export interface SerializeContext {
    * type-specific fields. Use this from container-like serializers to recurse.
    */
   writeNode(node: SceneNode): SerializedNode;
+  /** Writes a reference to a node or component embedded elsewhere in this document. */
+  local(value: object): LocalReference;
   /**
    * Resolve a loaded asset object to the reference it was loaded under, or
    * `null` for runtime-created / unkeyed resources (a one-time warning is
    * emitted in that case). Store the result as it is; hand it back to
-   * {@link DeserializeContext.resolveAsset} unchanged.
+   * {@link DeserializeContext.resolveAsset} or {@link DeserializeContext.resolve} unchanged.
    *
    * @throws If no single honest reference exists: the asset was reached through
    *   several logical sources, or through options a document cannot carry.
@@ -48,14 +52,25 @@ export interface DeserializeContext {
   readonly allowVideoSource?: ((source: URL) => boolean) | undefined;
   /** Fully deserialize a child node (inverse of {@link SerializeContext.writeNode}). */
   readNode(data: SerializedNode): SceneNode;
+  /** Links to a document-local object after all embedded objects are constructed. */
+  readonly link: LocalReferenceReader['link'];
   /**
    * Resolve a serialized asset reference back to a loaded resource of `type`,
    * or `null` if the reference is missing, malformed, or names an asset that
    * was not pre-loaded (a one-time warning is emitted in the not-loaded case).
-   * Accepts both reference forms, so a version 1 document's bare source strings
-   * keep resolving.
+   * Accepts a typed reference, an older source/options record, or a version 1
+   * document's bare source string.
    */
   resolveAsset<T>(reference: unknown, type: AssetConstructor<T>): T | null;
+  /**
+   * Resolve a reference to a resource handle or value reference without fetching
+   * it. Equal references share a handle within this document read. The reader
+   * owns the handle's claim; pass the handle to its loader to load the payload.
+   *
+   * Returns `null` for a missing reference or loader.
+   * @throws If the named type is unknown, incompatible, or has no synchronous handle.
+   */
+  resolve<T>(reference: unknown, type: AssetConstructor<T>): CatalogResourceLeaf<T> | CatalogValueLeaf<T> | null;
 }
 
 /**
@@ -69,8 +84,8 @@ export interface DeserializeContext {
 export interface NodeSerializer<T extends SceneNode = SceneNode> {
   /**
    * Return the type-specific fields for `node` as a JSON-serialisable record.
-   * Do **not** include the `type` tag or common transform/visual fields - the
-   * framework adds those. Recurse into children via {@link SerializeContext.writeNode}.
+   * The framework supplies the `type` tag, common fields, components and local
+   * identities. Recurse into children via {@link SerializeContext.writeNode}.
    */
   write(node: T, ctx: SerializeContext): Record<string, unknown>;
   /**

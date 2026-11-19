@@ -1,0 +1,92 @@
+{
+  "title": "Serializer",
+  "description": "Writes the current document body for a runtime value. The document frame supplies its own type and version. Return only the persisted fields and leave runtime state out of the document.",
+  "symbol": "Serializer",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Writes the current document body for a runtime value.",
+        "The document frame supplies its own type and version. Return only the persisted fields and leave runtime state out of the document."
+      ],
+      "importLine": "import { Serializer } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "serialize",
+          "signature": "serialize: (value: Value) => Document",
+          "signatureTokens": [
+            {
+              "text": "serialize",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Value",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Document",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/serialization/Serializer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/Serializer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/serialization/Serializer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/Serializer.ts"
+}

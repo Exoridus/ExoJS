@@ -1,3 +1,4 @@
+import { _stampMeta } from '#assets/assetMeta';
 import { LoadState, type LoadStateValue } from '#core/LoadState';
 import { logger } from '#core/Logger';
 import { clamp } from '#math/utils';
@@ -54,9 +55,9 @@ export interface SoundOptions {
   poolStrategy?: SoundPoolStrategy;
   priority?: number;
   /**
-   * Sprite map, applied through {@link Sound.setSprites}. Each clip is validated
-   * against the sound's buffer, so a bufferless (deferred) sound rejects every
-   * definition - add sprites after `loaded` has settled instead.
+   * Sprite map, validated against the sound's buffer. A path-backed sound
+   * validates these clips when it loads. For a sound constructed without a
+   * buffer or path, add clips through {@link Sound.setSprites} once it has a buffer.
    */
   sprites?: Readonly<Record<string, AudioSpriteClip>>;
   /** Default volume for voices created from this sound. Range [0, 1]. Default: 1. */
@@ -274,8 +275,9 @@ export class Sound implements Playable {
     this._priority = value;
   }
 
-  public constructor(audioBuffer: AudioBuffer | null = null, options: SoundOptions = {}) {
-    this._audioBuffer = audioBuffer;
+  /** A path creates an idle handle. An owning loader fills it when the sound is needed. */
+  public constructor(source: AudioBuffer | string | null = null, options: SoundOptions = {}) {
+    this._audioBuffer = typeof source === 'string' ? null : source;
 
     const { poolSize, poolStrategy, priority, sprites, volume, loop, playbackRate, muted } = options;
 
@@ -288,7 +290,11 @@ export class Sound implements Playable {
     this._poolStrategy = poolStrategy ?? SoundPoolStrategy.FirstInFirstOut;
     this._priority = priority ?? 0;
 
-    if (sprites) {
+    if (typeof source === 'string') {
+      this._loadState.markIdle();
+      const playbackOptions = { volume, loop, playbackRate, muted };
+      _stampMeta(this, { kind: 'sound', src: source, opts: { playbackOptions, poolSize, sprites } });
+    } else if (sprites) {
       this.setSprites(sprites);
     }
   }

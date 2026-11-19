@@ -70,6 +70,8 @@ export interface CanonicalAsset {
   readonly source: string;
   /** The logical source the caller wrote, before variant selection. */
   readonly requested?: string;
+  /** Display density of the selected file. It does not participate in identity. */
+  readonly variantResolution?: number;
   /** The option bag of the request, as the caller passed it. */
   readonly options?: unknown;
 }

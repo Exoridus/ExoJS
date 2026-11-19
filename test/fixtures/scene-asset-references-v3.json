@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "root": {
+    "type": "Container",
+    "children": [{ "type": "Sprite", "texture": { "$type": "texture", "source": "hero.png" } }]
+  }
+}

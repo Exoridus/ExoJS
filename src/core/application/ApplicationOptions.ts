@@ -1,3 +1,4 @@
+import type { AssetTypeDefinitionEntry } from '#assets/AssetTypes';
 import type { LoaderOptions } from '#assets/Loader';
 import type { Color } from '#core/Color';
 import type { Connectivity } from '#core/Connectivity';
@@ -240,15 +241,12 @@ export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry
    */
   displayFrameTime?: number;
   /**
-   * Extension selection - the only way an Application is equipped.
+   * Extension selection for an application.
    *
    * `undefined` or `[]` → Core only. `[a, b, ...]` → Core plus exactly these.
    *
-   * There is no global registry to fall back on: what an application can do is
-   * decided here, at its construction, and nowhere else. That is what lets two
-   * Applications in one process hold different extension sets - an editor next
-   * to its runtime preview, two canvases with different renderers, a test that
-   * must not see what a neighbouring test installed.
+   * The selection belongs to this application alone. An editor and its
+   * runtime preview, for example, can use different extensions in one process.
    *
    * ```ts
    * import { tilemapExtension } from '@codexo/exojs-tilemap';
@@ -259,6 +257,8 @@ export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry
    * Materialised once at construction.
    */
   extensions?: readonly Extension[];
+  /** Asset types to define on this application, in declaration order. */
+  assetTypes?: readonly AssetTypeDefinitionEntry[];
   /**
    * Registry of navigable {@link Scene} constructors, keyed by a name used
    * for diagnostics (shown in {@link UnregisteredSceneError} messages and

@@ -481,6 +481,7 @@ export class AssetDecoder {
       throw this._typeRegistry._missingTypeError(asset.type);
     }
 
+    this._typeRegistry.markUsed(asset.type);
     const { type } = installed;
 
     // Deliberately unwrapped. The "Failed to load X from Y" envelope belongs to

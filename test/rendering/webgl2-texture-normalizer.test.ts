@@ -153,7 +153,7 @@ describe('WebGl2TextureNormalizer staging upload', () => {
     const data = new Uint8Array(16);
 
     normalizer.normalizePixels(target, data);
-    expect(query).toHaveBeenCalledTimes(9);
+    expect(query).toHaveBeenCalledTimes(10);
     expect(bind).toHaveBeenCalledTimes(2);
     expect(allocate).toHaveBeenCalledTimes(1);
     query.mockClear();
@@ -164,7 +164,7 @@ describe('WebGl2TextureNormalizer staging upload', () => {
       normalizer.normalizePixels(target, data);
     }
 
-    expect(query).toHaveBeenCalledTimes(27);
+    expect(query).toHaveBeenCalledTimes(30);
     expect(bind).toHaveBeenCalledTimes(6);
     expect(allocate).not.toHaveBeenCalled();
     normalizer.destroy();

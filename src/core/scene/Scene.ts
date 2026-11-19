@@ -2,8 +2,9 @@ import type { Application } from '#core/Application';
 import type { ComponentClass } from '#core/Component';
 import type { ComponentQuery } from '#core/ComponentQuery';
 import { DestroyScope } from '#core/DestroyScope';
-import { deserializeSceneInto, migrate, serializeTree } from '#core/serialization/serialize';
-import { type DeserializeOptions, SERIALIZATION_VERSION, type SerializedScene, type SerializeOptions } from '#core/serialization/types';
+import { destroyFailedRead } from '#core/serialization/deserializeOwnership';
+import { deserializeSceneInto, migrate, serializeSceneTrees } from '#core/serialization/serialize';
+import type { DeserializeOptions, SerializedScene, SerializeOptions } from '#core/serialization/types';
 import { Signal } from '#core/Signal';
 import type { SystemRegistry } from '#core/SystemRegistry';
 import type { Destroyable, Synchronous } from '#core/types';
@@ -221,6 +222,11 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
     return this._requireScope('loader').loader;
   }
 
+  /** The assets owned by this scene, released when the scene ends. */
+  public get assets(): SceneLoader['assets'] {
+    return this.loader.assets;
+  }
+
   /**
    * Scene-bound input facade. Bindings created via `this.inputs.onTrigger(...)`
    * etc. are automatically unbound when the scene ends permanently - no manual
@@ -324,6 +330,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   }
 
   private _ui: UIRoot | null = null;
+  private _pendingUI: UIRoot | null = null;
 
   /**
    * Scene-bound UI layer, rendered screen-fixed on top of the scene content
@@ -337,21 +344,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * keyboard input route to them ahead of the world layer.
    */
   public get ui(): UIRoot {
-    if (this._ui === null) {
-      if (this._destroyScope.destroyed) {
-        throw new Error('Scene.ui is unavailable after the scene was destroyed.');
-      }
-
-      this._ui = this._destroyScope.track(this._anchorComponents(new UIRoot()));
-
-      // If the scene is already active (its root carries a stage), bind the UI
-      // layer now; otherwise the director attaches it when the scene activates.
-      if (this._root._getStage() !== null) {
-        this._app?.interaction.attachUIRoot(this._ui);
-      }
-    }
-
-    return this._ui;
+    return this._ui ?? this._pendingUI ?? this._publishUI(this._createUI());
   }
 
   /** @internal - the UI layer if materialized, else `null` (no lazy allocation). */
@@ -417,21 +410,15 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * resolve to their {@link Loader} source keys. Reattach behaviour in code
    * after {@link Scene.deserialize}.
    *
-   * @throws If a node under the root or UI layer carries components, unless
-   *   {@link SerializeOptions.omitComponents} is set - a save never drops them
-   *   silently.
+   * @throws If a descendant carries an unregistered component, or a component
+   *   is attached to the root or UI layer itself. Use
+   *   {@link SerializeOptions.omitComponents} to omit all components.
    */
   public serialize(options?: SerializeOptions): SerializedScene {
     const loader = this._app?.loader ?? null;
     const registry = this._app?.serializers;
-    const data: SerializedScene = { version: SERIALIZATION_VERSION, root: serializeTree(this._root, loader, registry, options) };
-    const ui = this._peekUI();
 
-    if (ui !== null) {
-      data.ui = serializeTree(ui, loader, registry, options);
-    }
-
-    return data;
+    return serializeSceneTrees(this._root, this._peekUI(), loader, registry, options);
   }
 
   /**
@@ -441,9 +428,11 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * destroyed and the existing scene trees remain unchanged.
    *
    * Assets referenced by the data must already be loaded into the
-   * application's {@link Loader} (pre-load contract). Identity-compatible
-   * older documents retain their source version through all node reads;
-   * versions needing a value migration must be transformed first.
+   * application's {@link Loader} when their serializer uses
+   * {@link DeserializeContext.resolveAsset}. Serializers using
+   * {@link DeserializeContext.resolve} reserve deferred handles under the
+   * scene's asset scope without fetching. Older documents retain their
+   * source version through all node reads.
    * Documents newer than the running engine throw. Returns `this`.
    *
    * @throws If the document holds a `Video` whose source the default policy
@@ -455,7 +444,35 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
     const loader = this._app?.loader ?? null;
     const registry = this._app?.serializers;
 
-    deserializeSceneInto(this._root, () => this.ui, migrated, loader, registry, options);
+    // Links must resolve to the actual UI root even before it joins the scene.
+    const pending = this._pendingUI;
+    const candidate =
+      this._ui === null && pending === null && migrated.version >= 3 && migrated.ui !== undefined && Object.hasOwn(migrated.ui, '$id')
+        ? this._createUI()
+        : null;
+    const ui = this._ui ?? pending ?? candidate ?? (() => this.ui);
+    this._pendingUI = pending ?? candidate;
+
+    try {
+      deserializeSceneInto(
+        this._root,
+        ui,
+        migrated,
+        loader,
+        registry,
+        options,
+        this._scope?.loader,
+        candidate === null ? undefined : () => this._publishUI(candidate),
+      );
+    } catch (error) {
+      if (candidate !== null && this._ui !== candidate) {
+        destroyFailedRead(candidate);
+      }
+
+      throw error;
+    } finally {
+      this._pendingUI = pending;
+    }
 
     return this;
   }
@@ -604,6 +621,8 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   public _attach(app: Application, scope: SceneScope<Data>): void {
     this._app = app as ApplicationOf<AppLike>;
     this._scope = scope;
+    this._root._setAssetScope(scope.loader);
+    this._ui?._setAssetScope(scope.loader);
   }
 
   /**
@@ -662,8 +681,29 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   /** Make `container` the top of a component tree belonging to this scene. */
   private _anchorComponents<C extends Container>(container: C): C {
     container._setComponentAnchor({ componentRuntime: create => this._scope?.componentRuntime(create) ?? null });
+    container._setAssetScope(this._scope?.loader ?? null);
 
     return container;
+  }
+
+  private _createUI(): UIRoot {
+    if (this._destroyScope.destroyed) {
+      throw new Error('Scene.ui is unavailable after the scene was destroyed.');
+    }
+
+    return this._anchorComponents(new UIRoot());
+  }
+
+  private _publishUI(root: UIRoot): UIRoot {
+    this._ui = this._destroyScope.track(root);
+
+    // The director binds inactive scenes on activation. Active scenes must
+    // bind here, before adding children so they inherit the UI stage.
+    if (this._root._getStage() !== null) {
+      this._app?.interaction.attachUIRoot(root);
+    }
+
+    return root;
   }
 
   private _requireScope(name: string): SceneScope<Data> {

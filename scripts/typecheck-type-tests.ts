@@ -88,9 +88,12 @@ const PROFILES: readonly Profile[] = [
         paths: { '@codexo/exojs': ['./src/index.ts'] },
       },
       include: [
+        'test/type-tests/asset-type-definitions.type-test.ts',
+        'test/type-tests/document-asset-definitions.type-test.ts',
         'test/type-tests/document-versions.type-test.ts',
         'test/type-tests/loader-catalog-input.type-test.ts',
         'test/type-tests/loader-catalog-leaf.type-test.ts',
+        'test/type-tests/live-load-group.type-test.ts',
         'src/typings.d.ts',
       ],
     },

@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 45,
+  "memberCount": 47,
   "counts": {
     "constructors": 1,
     "methods": 16,
-    "properties": 28,
+    "properties": 30,
     "events": 0
   },
   "sections": [
@@ -35,7 +35,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(source: TextureSource, options?: Partial<TextureOptions>): Texture",
+          "signature": "new(source: TextureSource | string, options?: Partial<TextureOptions>): Texture",
           "signatureTokens": [
             {
               "text": "new",
@@ -56,6 +56,14 @@
             {
               "text": "TextureSource",
               "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
             },
             {
               "text": ", ",
@@ -105,7 +113,7 @@
           "params": [
             {
               "name": "source",
-              "type": "TextureSource",
+              "type": "TextureSource | string",
               "optional": false
             },
             {
@@ -115,7 +123,7 @@
             }
           ],
           "returnType": "Texture",
-          "description": ""
+          "description": "A path stays idle until a scene uses this texture or a loader claims it."
         }
       ],
       "paragraphs": [],
@@ -1302,6 +1310,48 @@
           "params": [],
           "returnType": null,
           "description": "Load lifecycle of this texture. Directly constructed textures are 'ready'; deferred handles returned by loader.get('hero.png') / loader.get(Asset.type('texture', src)) start 'loading' and become 'ready' once the payload fills in, or 'failed' (showing the Texture.missing checker) when the load errors."
+        },
+        {
+          "name": "logicalHeight",
+          "signature": "logicalHeight: number",
+          "signatureTokens": [
+            {
+              "text": "logicalHeight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Height in logical units, after accounting for the density of a selected asset variant."
+        },
+        {
+          "name": "logicalWidth",
+          "signature": "logicalWidth: number",
+          "signatureTokens": [
+            {
+              "text": "logicalWidth",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Width in logical units, after accounting for the density of a selected asset variant."
         },
         {
           "name": "mipLevelCount",

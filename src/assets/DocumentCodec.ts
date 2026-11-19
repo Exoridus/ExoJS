@@ -1,3 +1,4 @@
+import { describeDocumentValue } from '#core/document/documentErrors';
 import type { DocumentHistory } from '#core/document/DocumentHistory';
 
 import { AssetDecodeError } from './AssetDecodeError';
@@ -49,7 +50,17 @@ export class DocumentCodec<Document extends object> implements AssetSourceCodec<
     try {
       return Promise.resolve(this._history.read(JSON.parse(stored)));
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
+      let reason = describeDocumentValue(error);
+
+      try {
+        const message = error instanceof Error ? error.message : undefined;
+
+        if (typeof message === 'string') {
+          reason = message;
+        }
+      } catch {
+        // An extension can throw a value whose prototype or message getter throws.
+      }
 
       return Promise.reject(
         new AssetDecodeError({

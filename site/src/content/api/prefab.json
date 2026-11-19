@@ -133,7 +133,7 @@
             }
           ],
           "returnType": "SceneNode",
-          "description": "Instantiate a fresh, independent copy of the captured subtree. Referenced assets must be pre-loaded into loader. Call repeatedly for many instances. Pass app.serializers as registry to resolve app-scoped (extension) serializers; defaults to the global registry."
+          "description": "Instantiate a fresh, independent copy of the captured subtree. Referenced assets must be pre-loaded into loader for serializers using DeserializeContext.resolveAsset. Serializers using DeserializeContext.resolve reserve deferred handles with the loader. Call repeatedly for many instances. Pass app.serializers as registry to resolve app-scoped (extension) serializers; defaults to the global registry."
         },
         {
           "name": "toJSON",

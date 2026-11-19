@@ -1,3 +1,4 @@
+import { _readMeta, _stampMeta, type CatalogResourceLeaf } from '#assets/assetMeta';
 import type { Color } from '#core/Color';
 import { LoadState, type LoadStateValue } from '#core/LoadState';
 import { Signal } from '#core/Signal';
@@ -148,6 +149,7 @@ export class Texture {
 
   private _version = 0;
   private _source: TextureSource = null;
+  private _assetBitmap: ImageBitmap | null = null;
   private _sourceMetadata: DecodedImageMetadata | null = null;
   private _pixels: Rgba8TexturePayload | null = null;
   private _compressed: CompressedTexturePayload | null = null;
@@ -174,7 +176,8 @@ export class Texture {
     mipLevelCount: 0,
   });
 
-  public constructor(source: TextureSource = null, options?: Partial<TextureOptions>) {
+  /** A path stays idle until a scene uses this texture or a loader claims it. */
+  public constructor(source: TextureSource | string = null, options?: Partial<TextureOptions>) {
     const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = {
       ...Texture.defaultOptions,
       ...options,
@@ -190,10 +193,26 @@ export class Texture {
     this._requestedAlphaMode = options?.alphaMode;
     this._applyResolvedMetadata(this._resolveMetadata(null, null, null), false);
 
-    if (source !== null) {
+    if (typeof source === 'string') {
+      this._loadState.markIdle();
+      _stampMeta(this, {
+        kind: 'texture',
+        src: source,
+        live: true,
+        opts: options === undefined ? undefined : { textureOptions: { ...options } },
+      });
+    } else if (source !== null) {
       this.setSource(source);
     }
   }
+
+  /** @internal */
+  public _pathAsset(): CatalogResourceLeaf<Texture> | null {
+    return _readMeta(this)?.live === true ? (this as unknown as CatalogResourceLeaf<Texture>) : null;
+  }
+
+  /** The chosen asset's pixels per logical unit. Does not affect upload dimensions. @internal */
+  public _assetResolution = 1;
 
   public get source(): TextureSource {
     return this._source;
@@ -201,6 +220,11 @@ export class Texture {
 
   public set source(source: TextureSource) {
     this.setSource(source);
+  }
+
+  /** Immutable bitmap owned by the asset decoder and shared by its handles. @internal */
+  public get _decodedAssetBitmap(): ImageBitmap | null {
+    return this._assetBitmap;
   }
 
   /** RGBA8 payload this texture uploads instead of a browser source, or `null`. */
@@ -285,6 +309,7 @@ export class Texture {
     this.releaseGpu();
     this._compressed = compressed;
     this._source = null;
+    this._assetBitmap = null;
     this._sourceMetadata = null;
     this._pixels = null;
     this._applyResolvedMetadata(metadata);
@@ -316,6 +341,16 @@ export class Texture {
 
   public set height(height: number) {
     this.setSize(this.width, height);
+  }
+
+  /** Width in logical units, after accounting for the density of a selected asset variant. */
+  public get logicalWidth(): number {
+    return this.width / this._assetResolution;
+  }
+
+  /** Height in logical units, after accounting for the density of a selected asset variant. */
+  public get logicalHeight(): number {
+    return this.height / this._assetResolution;
   }
 
   public get scaleMode(): ScaleModes {
@@ -516,7 +551,9 @@ export class Texture {
 
   /** Installs a factory-decoded source whose conversion and alpha behavior were selected before decoding. @internal */
   public _setDecodedImageSource(source: TextureSource, colorSpace: TextureColorSpace): this {
-    return this._setSource(source, { colorSpace, alphaMode: 'straight' });
+    const bitmap = typeof ImageBitmap !== 'undefined' && source instanceof ImageBitmap ? source : null;
+
+    return this._setSource(source, { colorSpace, alphaMode: 'straight' }, bitmap);
   }
 
   /** Installs a visible failure source without changing the handle's declared interpretation. @internal */
@@ -534,17 +571,18 @@ export class Texture {
       return this.setCompressed(donor.compressed);
     }
 
-    return this._setSource(donor.source, donor._sourceMetadata ?? browserImageMetadata);
+    return this._setSource(donor.source, donor._sourceMetadata ?? browserImageMetadata, donor._assetBitmap);
   }
 
-  private _setSource(source: TextureSource, sourceMetadata: DecodedImageMetadata): this {
-    if (this._source !== source || this._pixels !== null || this._compressed !== null) {
+  private _setSource(source: TextureSource, sourceMetadata: DecodedImageMetadata, assetBitmap: ImageBitmap | null = null): this {
+    if (this._source !== source || this._assetBitmap !== assetBitmap || this._pixels !== null || this._compressed !== null) {
       const metadata = this._resolveMetadata(source, null, null, sourceMetadata);
 
       this._validateResolvedMetadata(metadata);
 
       this.releaseGpu();
       this._source = source;
+      this._assetBitmap = assetBitmap;
       this._sourceMetadata = source === null ? null : sourceMetadata;
       // A pixel source and a compressed payload are two answers to the same
       // question, and the backends pick the compressed one - so leaving a stale
@@ -617,6 +655,7 @@ export class Texture {
       this._updates = null;
       this._size.destroy();
       this._source = null;
+      this._assetBitmap = null;
       this._sourceMetadata = null;
       this._pixels = null;
       this._compressed = null;
@@ -674,6 +713,7 @@ export class Texture {
 
     this.releaseGpu();
     this._source = null;
+    this._assetBitmap = null;
     this._sourceMetadata = null;
     this._pixels = pixels;
     this._compressed = null;

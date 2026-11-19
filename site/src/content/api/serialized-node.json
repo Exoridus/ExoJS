@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 2,
+  "memberCount": 3,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 2,
+    "properties": 3,
     "events": 0
   },
   "sections": [
@@ -30,6 +30,43 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "components",
+          "signature": "components?: readonly SerializedComponent[]",
+          "signatureTokens": [
+            {
+              "text": "components",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SerializedComponent",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Versioned component values attached to this node."
+        },
         {
           "name": "name",
           "signature": "name?: string",

@@ -7,6 +7,8 @@ export interface AssetMeta {
   readonly kind: AssetTypeName;
   readonly src: string;
   readonly opts?: unknown;
+  /** Whether a scene should claim this handle when it enters the scene graph. */
+  readonly live?: true;
 }
 
 /** Symbol under which {@link AssetMeta} rides on a handle-hybrid leaf. */

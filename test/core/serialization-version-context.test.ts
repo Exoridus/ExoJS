@@ -73,75 +73,78 @@ const registerProbe = (): void => {
 };
 
 describe('serialization - source-version context before a style-unit migration', () => {
-  it.each([0, 1, SERIALIZATION_VERSION])('passes scene version %i to nested world and UI serializers without changing styles', version => {
-    registerProbe();
+  it.each([0, 1, 2, SERIALIZATION_VERSION])(
+    'passes scene version %i to nested world and UI serializers without changing styles',
+    version => {
+      registerProbe();
 
-    const document = deepFreeze({
-      version,
-      root: {
-        type: 'Container',
-        children: [
-          {
-            type: 'Container',
-            children: [
-              { type: 'Text', text: 'legacy', sdfRadius: 16, style: { outlineWidth: 0.25, shadowBlur: 0.75 } },
-              { type: 'Text', text: 'default SDF radius', style: { outlineWidth: 4 } },
-              { type: 'VersionProbe', payload: { style: { outlineWidth: 4, shadowBlur: 0.8 }, arbitrary: true } },
-            ],
-          },
-        ],
-      },
-      ui: {
-        type: 'UIRoot',
-        children: [
-          {
-            type: 'Panel',
-            width: 120,
-            height: 70,
-            children: [
-              { type: 'Label', text: 'HUD', style: { outlineWidth: 0.125, shadowBlur: 0.5 } },
-              { type: 'VersionProbe', payload: { style: { outlineWidth: 9 }, custom: 'unchanged' } },
-            ],
-          },
-        ],
-      },
-    });
+      const document = deepFreeze({
+        version,
+        root: {
+          type: 'Container',
+          children: [
+            {
+              type: 'Container',
+              children: [
+                { type: 'Text', text: 'legacy', sdfRadius: 16, style: { outlineWidth: 0.25, shadowBlur: 0.75 } },
+                { type: 'Text', text: 'default SDF radius', style: { outlineWidth: 4 } },
+                { type: 'VersionProbe', payload: { style: { outlineWidth: 4, shadowBlur: 0.8 }, arbitrary: true } },
+              ],
+            },
+          ],
+        },
+        ui: {
+          type: 'UIRoot',
+          children: [
+            {
+              type: 'Panel',
+              width: 120,
+              height: 70,
+              children: [
+                { type: 'Label', text: 'HUD', style: { outlineWidth: 0.125, shadowBlur: 0.5 } },
+                { type: 'VersionProbe', payload: { style: { outlineWidth: 9 }, custom: 'unchanged' } },
+              ],
+            },
+          ],
+        },
+      });
 
-    const scene = new Scene();
-    scene.deserialize(document);
+      const scene = new Scene();
+      scene.deserialize(document);
 
-    const nested = scene.root.children[0] as Container;
-    const text = nested.children[0] as Text;
-    const fallbackRadius = nested.children[1] as Text;
-    const worldProbe = nested.children[2] as VersionProbe;
-    const panel = scene.ui.children[0] as Panel;
-    const label = panel.children.find(child => child instanceof Label)!;
-    const uiProbe = panel.children.find(child => child instanceof VersionProbe)!;
+      const nested = scene.root.children[0] as Container;
+      const text = nested.children[0] as Text;
+      const fallbackRadius = nested.children[1] as Text;
+      const worldProbe = nested.children[2] as VersionProbe;
+      const panel = scene.ui.children[0] as Panel;
+      const label = panel.children.find(child => child instanceof Label)!;
+      const uiProbe = panel.children.find(child => child instanceof VersionProbe)!;
 
-    expect(observedReadVersions).toEqual([version, version]);
-    expect(text.style.outlineWidth).toBe(0.25);
-    expect(text.style.shadowBlur).toBe(0.75);
-    expect(text.sdfRadius).toBe(16);
-    expect(fallbackRadius.style.outlineWidth).toBe(4);
-    expect(fallbackRadius.sdfRadius).toBe(SDF_RADIUS);
-    expect(label.textStyleOverrides?.outlineWidth).toBe(0.125);
-    expect(label.textStyleOverrides?.shadowBlur).toBe(0.5);
-    expect(worldProbe.payload).toEqual({ style: { outlineWidth: 4, shadowBlur: 0.8 }, arbitrary: true });
-    expect(uiProbe.payload).toEqual({ style: { outlineWidth: 9 }, custom: 'unchanged' });
+      expect(observedReadVersions).toEqual([version, version]);
+      expect(text.style.outlineWidth).toBe(0.25);
+      expect(text.style.shadowBlur).toBe(0.75);
+      expect(text.sdfRadius).toBe(16);
+      expect(fallbackRadius.style.outlineWidth).toBe(4);
+      expect(fallbackRadius.sdfRadius).toBe(SDF_RADIUS);
+      expect(label.textStyleOverrides?.outlineWidth).toBe(0.125);
+      expect(label.textStyleOverrides?.shadowBlur).toBe(0.5);
+      expect(worldProbe.payload).toEqual({ style: { outlineWidth: 4, shadowBlur: 0.8 }, arbitrary: true });
+      expect(uiProbe.payload).toEqual({ style: { outlineWidth: 9 }, custom: 'unchanged' });
 
-    // Only existing v0/v1 -> v2 identity compatibility allows a fresh
-    // Scene.serialize() to stamp the current version without rewriting values.
-    const saved = scene.serialize();
-    expect(saved.version).toBe(SERIALIZATION_VERSION);
-    expect(((saved.root.children as Array<{ children: unknown[] }>)[0]?.children[0] as { style: unknown }).style).toEqual({
-      outlineWidth: 0.25,
-      shadowBlur: 0.75,
-    });
-    expect(document.root.children[0]?.children[0]?.style).toEqual({ outlineWidth: 0.25, shadowBlur: 0.75 });
-    scene.destroy();
-  });
+      // Only existing v0/v1 -> v2 identity compatibility allows a fresh
+      // Scene.serialize() to stamp the current version without rewriting values.
+      const saved = scene.serialize();
+      expect(saved.version).toBe(SERIALIZATION_VERSION);
+      expect(((saved.root.children as Array<{ children: unknown[] }>)[0]?.children[0] as { style: unknown }).style).toEqual({
+        outlineWidth: 0.25,
+        shadowBlur: 0.75,
+      });
+      expect(document.root.children[0]?.children[0]?.style).toEqual({ outlineWidth: 0.25, shadowBlur: 0.75 });
+      scene.destroy();
+    },
+  );
 
-  it.each([0, 1, SERIALIZATION_VERSION])('retains prefab version %i across fromJSON/toJSON and repeated instantiation', version => {
+  it.each([0, 1, 2, SERIALIZATION_VERSION])('retains prefab version %i across fromJSON/toJSON and repeated instantiation', version => {
     registerProbe();
 
     const source = deepFreeze({
@@ -185,7 +188,7 @@ describe('serialization - source-version context before a style-unit migration',
   });
 
   it('validates versioned scene and prefab frames without mutating or relabeling legacy styles', () => {
-    for (const version of [0, 1, SERIALIZATION_VERSION]) {
+    for (const version of [0, 1, 2, SERIALIZATION_VERSION]) {
       const data = deepFreeze({
         version,
         root: { type: 'Text', style: { outlineWidth: 4, shadowBlur: 0.9 } },
