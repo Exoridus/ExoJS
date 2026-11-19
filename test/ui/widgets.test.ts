@@ -1438,14 +1438,14 @@ describe('Dropdown', () => {
   test('a tap opens the list and highlights the selection', () => {
     const dropdown = new Dropdown({ items, selectedIndex: 1 });
 
-    dropdown.onPointerTap.dispatch(new InteractionEvent('pointertap', dropdown, makePointer(10, 10), 10, 10));
+    dropdown.onPointerTap.dispatch(new InteractionEvent('pointertap', dropdown, makePointer(10, 10), 10, 10, 0, 0));
 
     expect(dropdown.isOpen).toBe(true);
     expect(dropdown.highlightedIndex).toBe(1);
     expect(dropdown.listNode.visible).toBe(true);
     expect(dropdown.state).toBe('pressed');
 
-    dropdown.onPointerTap.dispatch(new InteractionEvent('pointertap', dropdown, makePointer(10, 10), 10, 10));
+    dropdown.onPointerTap.dispatch(new InteractionEvent('pointertap', dropdown, makePointer(10, 10), 10, 10, 0, 0));
     expect(dropdown.isOpen).toBe(false);
   });
 
