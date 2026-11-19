@@ -1829,7 +1829,7 @@
         },
         {
           "name": "onPointerCancel",
-          "signature": "onPointerCancel: Signal<[pointer, x, y]>",
+          "signature": "onPointerCancel: Signal<[pointer, x, y, button, buttons]>",
           "signatureTokens": [
             {
               "text": "onPointerCancel",
@@ -1872,6 +1872,22 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "button",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "buttons",
+              "kind": "type"
+            },
+            {
               "text": "]",
               "kind": "punctuation"
             },
@@ -1886,7 +1902,7 @@
         },
         {
           "name": "onPointerDown",
-          "signature": "onPointerDown: Signal<[pointer, x, y]>",
+          "signature": "onPointerDown: Signal<[pointer, x, y, button, buttons]>",
           "signatureTokens": [
             {
               "text": "onPointerDown",
@@ -1929,6 +1945,22 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "button",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "buttons",
+              "kind": "type"
+            },
+            {
               "text": "]",
               "kind": "punctuation"
             },
@@ -1943,7 +1975,7 @@
         },
         {
           "name": "onPointerEnter",
-          "signature": "onPointerEnter: Signal<[pointer, x, y]>",
+          "signature": "onPointerEnter: Signal<[pointer, x, y, button, buttons]>",
           "signatureTokens": [
             {
               "text": "onPointerEnter",
@@ -1986,6 +2018,22 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "button",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "buttons",
+              "kind": "type"
+            },
+            {
               "text": "]",
               "kind": "punctuation"
             },
@@ -2000,7 +2048,7 @@
         },
         {
           "name": "onPointerLeave",
-          "signature": "onPointerLeave: Signal<[pointer, x, y]>",
+          "signature": "onPointerLeave: Signal<[pointer, x, y, button, buttons]>",
           "signatureTokens": [
             {
               "text": "onPointerLeave",
@@ -2040,6 +2088,22 @@
             },
             {
               "text": "y",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "button",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "buttons",
               "kind": "type"
             },
             {
@@ -2098,7 +2162,7 @@
         },
         {
           "name": "onPointerMove",
-          "signature": "onPointerMove: Signal<[pointer, x, y]>",
+          "signature": "onPointerMove: Signal<[pointer, x, y, button, buttons]>",
           "signatureTokens": [
             {
               "text": "onPointerMove",
@@ -2141,6 +2205,22 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "button",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "buttons",
+              "kind": "type"
+            },
+            {
               "text": "]",
               "kind": "punctuation"
             },
@@ -2155,7 +2235,7 @@
         },
         {
           "name": "onPointerSwipe",
-          "signature": "onPointerSwipe: Signal<[pointer, x, y]>",
+          "signature": "onPointerSwipe: Signal<[pointer, x, y, button, buttons]>",
           "signatureTokens": [
             {
               "text": "onPointerSwipe",
@@ -2198,6 +2278,22 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "button",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "buttons",
+              "kind": "type"
+            },
+            {
               "text": "]",
               "kind": "punctuation"
             },
@@ -2212,7 +2308,7 @@
         },
         {
           "name": "onPointerTap",
-          "signature": "onPointerTap: Signal<[pointer, x, y]>",
+          "signature": "onPointerTap: Signal<[pointer, x, y, button, buttons]>",
           "signatureTokens": [
             {
               "text": "onPointerTap",
@@ -2255,6 +2351,22 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "button",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "buttons",
+              "kind": "type"
+            },
+            {
               "text": "]",
               "kind": "punctuation"
             },
@@ -2269,7 +2381,7 @@
         },
         {
           "name": "onPointerUp",
-          "signature": "onPointerUp: Signal<[pointer, x, y]>",
+          "signature": "onPointerUp: Signal<[pointer, x, y, button, buttons]>",
           "signatureTokens": [
             {
               "text": "onPointerUp",
@@ -2309,6 +2421,22 @@
             },
             {
               "text": "y",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "button",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "buttons",
               "kind": "type"
             },
             {
