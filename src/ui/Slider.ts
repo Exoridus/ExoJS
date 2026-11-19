@@ -268,7 +268,7 @@ export class Slider extends Widget {
   };
 
   private readonly _onPointerDown = (event: InteractionEvent): void => {
-    if (!this.effectiveEnabled) {
+    if (!this.effectiveEnabled || (event.button !== undefined && event.button !== 0)) {
       return;
     }
 
