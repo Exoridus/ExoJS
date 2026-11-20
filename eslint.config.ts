@@ -1326,14 +1326,6 @@ export default defineConfig([
     },
   },
 
-  // Allow console only in the dedicated debug-layer inspector example
-  {
-    files: ['examples/debug-layer/signal-bus-inspector.js'],
-    rules: {
-      'no-console': 'error',
-    },
-  },
-
   // Build/release tooling and root config files. These run under Node, never
   // ship to consumers, and report progress on stdout by design - `no-console`
   // is the wrong rule here, not a violation to silence per-line.
