@@ -5,6 +5,8 @@ packages/*/dist
 # Assembled from examples/assets by the demo-assets build and archive scripts.
 packages/exojs-demo-assets/media/
 packages/exojs-demo-assets/archives/
+# Generated from each example .ts by `pnpm examples:generate`; the .ts is the only source.
+examples/**/*.js
 coverage
 __screenshots__
 npm-debug.log*

@@ -50,7 +50,7 @@ class MouseAndPointerScene extends Scene {
     this.pointer = { x: width / 2, y: height / 2 };
     this.previous = { x: width / 2, y: height / 2 };
 
-    this.ship = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setPosition(width / 2, height / 2);
+    this.ship = new Sprite(assets.ship.source).setAnchor(0.5).setPosition(width / 2, height / 2);
     this.ship.interactive = true;
     this.ship.draggable = true;
     this.root.addChild(this.ship);

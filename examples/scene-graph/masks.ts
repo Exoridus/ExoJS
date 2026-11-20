@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, Rectangle, type RenderingContext, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Rectangle, Scene, Sprite, Texture } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { choice, demoPanel, startExample } from '@examples/runtime';
 
@@ -11,7 +11,10 @@ class MasksScene extends Scene {
   private panel!: ReturnType<typeof demoPanel<typeof controls>>;
 
   override async load(): Promise<void> {
-    this.sprite = new Sprite(await this.loader.load(assets.backgroundPlatformerHills)).setAnchor(0.5);
+    const hills = new Texture(assets.backgroundPlatformerHills.source);
+
+    await this.assets.load(hills);
+    this.sprite = new Sprite(hills).setAnchor(0.5);
   }
 
   override init(): void {
@@ -66,10 +69,6 @@ class MasksScene extends Scene {
     }
 
     this.panel.status('Click the image to change its mask');
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.root);
   }
 
   override destroy(): void {

@@ -1,13 +1,4 @@
-import {
-  Application,
-  Color,
-  FixedResolutionCanvasSizing,
-  Graphics,
-  type RenderingContext,
-  Scene,
-  Sprite,
-  type Texture,
-} from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Sprite, Texture } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
@@ -18,12 +9,17 @@ class RectanglesCollisionScene extends Scene {
   private boxA!: Sprite;
   private boxB!: Sprite;
   private overlap!: Graphics;
+  private readonly ramp = new Texture(assets.hueRamp.source);
   private hud!: ReturnType<typeof mountControls>;
+
+  override async load(): Promise<void> {
+    await this.assets.load(this.ramp);
+  }
 
   override init(): void {
     const app = this.app;
     const { width, height } = app;
-    const texture = this.loader.get(assets.hueRamp);
+    const texture = this.ramp;
 
     // Two axis-aligned rectangles (no rotation) so collision is a true AABB
     // test. Explicit width/height drive the sprite scale; anchor 0.5 keeps the
@@ -40,6 +36,7 @@ class RectanglesCollisionScene extends Scene {
     this.addChild(this.boxB);
 
     this.overlap = new Graphics();
+    this.addChild(this.overlap);
 
     this.hud = mountControls({ status: 'No overlap' });
   }
@@ -79,12 +76,6 @@ class RectanglesCollisionScene extends Scene {
     } else {
       this.hud.setStatus('No overlap');
     }
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.boxA);
-    context.render(this.boxB);
-    context.render(this.overlap);
   }
 }
 

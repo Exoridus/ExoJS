@@ -5,7 +5,7 @@ import path from 'node:path';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
-import { findFiles, isTranspiledExampleSource, transpileExampleSource } from '../../scripts/transpile-examples';
+import { isTranspiledExampleSource, transpileExampleSource } from '../../scripts/transpile-examples';
 
 // Runs in the node environment: the generator bundles `?worker` imports with
 // esbuild, which rejects the jsdom TextEncoder.
@@ -17,7 +17,7 @@ const examplesDir = path.join(process.cwd(), 'examples');
 // committed files to CRLF (core.autocrlf), which must not count as drift.
 const normalizeNewlines = (content: string): string => content.replace(/\r\n/g, '\n');
 
-describe('example .js/.ts sync drift guard', () => {
+describe('example generation', () => {
   it('lets the preview viewport own the canvas geometry without a second fixed stage transform', () => {
     const shell = readText('site/public/preview.html');
     expect(shell).not.toContain('scale(var(--preview-scale');
@@ -41,29 +41,6 @@ describe('example .js/.ts sync drift guard', () => {
     expect(readText('site/public/preview.html')).toContain(
       "'./worker-streamed-terrain.worker.ts?worker': './examples/tilemap/worker-streamed-terrain.worker.js?no-cache='",
     );
-  });
-  it('every generated examples/**/*.js matches its .ts source (run `pnpm --filter @codexo/exojs-examples examples:sync`)', async () => {
-    const tsFiles = findFiles(examplesDir, isTranspiledExampleSource);
-    const drifted: string[] = [];
-
-    for (const tsFile of tsFiles) {
-      const relJs = path.relative(examplesDir, tsFile).replace(/\.ts$/, '.js');
-      const jsFile = path.join(examplesDir, relJs);
-      const generated = await transpileExampleSource(fs.readFileSync(tsFile, 'utf8'), tsFile);
-
-      if (!fs.existsSync(jsFile)) {
-        drifted.push(`examples/${relJs.split(path.sep).join('/')} (missing)`);
-        continue;
-      }
-
-      const committed = fs.readFileSync(jsFile, 'utf8');
-
-      if (normalizeNewlines(committed) !== normalizeNewlines(generated)) {
-        drifted.push(`examples/${relJs.split(path.sep).join('/')}`);
-      }
-    }
-
-    expect(drifted).toEqual([]);
   });
 });
 

@@ -4,6 +4,7 @@ description: 'The scene-transition lifecycle contract from the inside: what the 
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import TryIt from '../../../components/TryIt.astro';
 import Callout from '../../../components/Callout.astro';
 
@@ -12,6 +13,14 @@ import Callout from '../../../components/Callout.astro';
 The stock transitions — [`FadeSceneTransition`](/ExoJS/en/api/fade-scene-transition/), [`CrossFadeSceneTransition`](/ExoJS/en/api/cross-fade-scene-transition/), [`SlideSceneTransition`](/ExoJS/en/api/slide-scene-transition/) — cover most projects. When your game needs its own look for a scene change, you write a [`SceneTransition`](/ExoJS/en/api/scene-transition/) yourself. The rules are few, but they are not optional: the director enforces them at runtime and aborts the navigation when one is broken.
 
 This chapter is that contract, in order, with a complete transition built against it.
+
+## When you only need a loading screen
+
+If the goal is to cover a scene change while the incoming scene loads, use [`LoadingSceneTransition`](/ExoJS/en/api/loading-scene-transition/) instead of writing a session. It shows an overlay immediately, hands it the incoming scene's loading progress, and removes it the moment the switch commits, with no fixed delay. The overlay is a render tree you build per navigation:
+
+<SourceSnippet source="examples/guides/model-b-plus/transition.ts" region="loading-transition" language="ts" title="A progress bar overlay" />
+
+The transition may be reused across navigations; each navigation owns and destroys its own overlay. Write a full `SceneTransition` when the effect itself, not the wait, is the point.
 
 ## Definition and session
 

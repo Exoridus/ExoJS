@@ -235,6 +235,17 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         apiLinks: ['loader', 'texture'],
       },
       {
+        path: 'assets/migrating-to-model-b-plus',
+        level: 'intermediate',
+        learningGoals: [
+          'Replace descriptor and await boilerplate with path-backed Sprite, Texture and Sound',
+          'Preload with app.load, register custom asset types, and know which loader APIs still fit',
+        ],
+        prerequisites: ['assets/loading-and-resources'],
+        examples: ['getting-started/game-loop', 'application-scenes/loading-screen'],
+        apiLinks: ['application', 'sprite', 'texture', 'loading-queue', 'loading-scene-transition'],
+      },
+      {
         path: 'assets/asset-catalogs',
         level: 'intermediate',
         learningGoals: [

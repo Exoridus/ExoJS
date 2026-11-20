@@ -15,13 +15,14 @@ describe('runnable curriculum preservation', () => {
     expect(paths.size).toBe(entries.length);
 
     for (const entry of entries) {
-      expect(existsSync(`examples/${entry.path}`)).toBe(true);
+      // The catalog addresses generated .js, but clean checkouts only track the .ts sources.
+      expect(existsSync(`examples/${entry.path.replace(/\.js$/, '.ts')}`)).toBe(true);
     }
 
     for (const contract of catalog.contracts) {
       const path = contract.source.replace(/^examples\//, '').replace(/\.ts$/, '.js');
       expect(paths.has(path)).toBe(true);
-      expect(existsSync(`examples/${path}`)).toBe(true);
+      expect(existsSync(contract.source)).toBe(true);
 
       for (const destination of contract.destinations) {
         expect(existsSync(destination)).toBe(true);

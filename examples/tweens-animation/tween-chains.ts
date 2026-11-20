@@ -1,14 +1,4 @@
-import {
-  Application,
-  Color,
-  Ease,
-  FixedResolutionCanvasSizing,
-  Graphics,
-  type RenderingContext,
-  Scene,
-  Sprite,
-  type Tween,
-} from '@codexo/exojs';
+import { Application, Color, Ease, FixedResolutionCanvasSizing, Graphics, Scene, Sprite, type Tween } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { mountControls } from '@examples/runtime';
 
@@ -36,7 +26,8 @@ class TweenSequencesScene extends Scene {
       this.path.drawLine(points[i].x, points[i].y, next.x, next.y);
     }
 
-    this.sprite = new Sprite(this.loader.get(assets.ship)).setAnchor(0.5).setPosition(points[0].x, points[0].y);
+    this.sprite = new Sprite(assets.ship.source).setAnchor(0.5).setPosition(points[0].x, points[0].y);
+    this.root.addChild(this.path, this.sprite);
     this.hud = mountControls({ status: 'Leg 1 / 4' });
 
     this.steps = points
@@ -56,11 +47,6 @@ class TweenSequencesScene extends Scene {
 
     this.steps.at(-1)!.onComplete(() => this.steps[0].start());
     this.steps[0].start();
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.path);
-    context.render(this.sprite);
   }
 
   override destroy(): void {

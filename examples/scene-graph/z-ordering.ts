@@ -1,14 +1,4 @@
-import {
-  Application,
-  Color,
-  Container,
-  FixedResolutionCanvasSizing,
-  Keyboard,
-  type RenderingContext,
-  Scene,
-  Sprite,
-  Text,
-} from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Keyboard, Scene, Sprite, Text, Texture } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class ZOrderingScene extends Scene {
@@ -19,7 +9,7 @@ class ZOrderingScene extends Scene {
   override init(): void {
     const app = this.app;
     const { width, height } = app;
-    const texture = this.loader.get(assets.ship);
+    const texture = new Texture(assets.ship.source);
 
     this.group = new Container();
     this.label = new Text('Press 1, 2, 3 — front: 3 (blue)', { fillColor: Color.white, fontSize: 18 });
@@ -38,6 +28,7 @@ class ZOrderingScene extends Scene {
 
       return sprite;
     });
+    this.root.addChild(this.group, this.label);
 
     this.inputs.onTrigger(Keyboard.One, () => this.setFront(0));
     this.inputs.onTrigger(Keyboard.Two, () => this.setFront(1));
@@ -50,11 +41,6 @@ class ZOrderingScene extends Scene {
     });
     const names = ['1 (red)', '2 (green)', '3 (blue)'];
     this.label.text = `Press 1, 2, 3 — front: ${names[index]}`;
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.group);
-    context.render(this.label);
   }
 }
 

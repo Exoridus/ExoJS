@@ -16,7 +16,7 @@ class PointerAndHittestScene extends Scene {
     this.sprites = [];
 
     for (let i = 0; i < 3; i++) {
-      const sprite = new Sprite(this.loader.get(assets.ship))
+      const sprite = new Sprite(assets.ship.source)
         .setAnchor(0.5)
         .setScale(2.4)
         .setPosition(width / 2 - 45 + i * 45, height / 2);

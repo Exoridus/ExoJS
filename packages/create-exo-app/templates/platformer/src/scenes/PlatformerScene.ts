@@ -12,6 +12,7 @@ import {
   Sprite,
   Spritesheet,
   SystemOrder,
+  Texture,
   View,
 } from '@codexo/exojs';
 import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs/physics';
@@ -103,6 +104,8 @@ export class PlatformerScene extends Scene {
   private _characters!: Spritesheet;
   private _tileData!: SpritesheetData;
   private _characterData!: SpritesheetData;
+  private readonly _tilesTexture = new Texture('platformer-tiles.png');
+  private readonly _charactersTexture = new Texture('platformer-characters.png');
 
   public get player(): Player {
     return this._player;
@@ -112,13 +115,12 @@ export class PlatformerScene extends Scene {
     this._tileData = (await this.loader.load(Asset.type('json', 'platformer-tiles.json'))) as SpritesheetData;
     this._characterData = (await this.loader.load(Asset.type('json', 'platformer-characters.json'))) as SpritesheetData;
 
-    await this.loader.load(Asset.type('texture', 'platformer-tiles.png'));
-    await this.loader.load(Asset.type('texture', 'platformer-characters.png'));
+    await this.assets.load([this._tilesTexture, this._charactersTexture]);
   }
 
   public override init(): void {
-    this._tiles = new Spritesheet(this.loader.get('platformer-tiles.png'), this._tileData);
-    this._characters = new Spritesheet(this.loader.get('platformer-characters.png'), this._characterData);
+    this._tiles = new Spritesheet(this._tilesTexture, this._tileData);
+    this._characters = new Spritesheet(this._charactersTexture, this._characterData);
 
     // Registering the world as a system hands it to the engine's fixed-timestep
     // scheduler, which steps it right after this scene's own fixedUpdate(). A

@@ -1,4 +1,4 @@
-import { Asset, TextureRegion } from '@codexo/exojs';
+import { Texture, TextureRegion } from '@codexo/exojs';
 import { ObjectKind, ObjectLayer, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, type TileMapObject, TileSet } from '@codexo/exojs/tilemap';
 
 import { cellAt, COLUMNS, DOOR_TILE, findMarker, FLOOR_TILE, ROWS, TILE, WALL_TILE } from '../level';
@@ -30,9 +30,8 @@ const wholeTile: TileMapObject = {
  */
 export class ProceduralMapScene extends TopDownScene {
   protected override async loadMap(): Promise<TileMap> {
-    // Awaited for the texture itself rather than a `loader.get()` handle:
-    // `TileSet` needs a region with real dimensions.
-    const texture = await this.loader.load(Asset.type('texture', 'map-pack.png'));
+    // Awaited so the texture has real dimensions: `TileSet` needs a region.
+    const texture = await this.assets.load(new Texture('map-pack.png'));
     const tileset = new TileSet({
       name: 'map-pack',
       texture: new TextureRegion(texture, { x: 0, y: 0, width: texture.width, height: texture.height }),

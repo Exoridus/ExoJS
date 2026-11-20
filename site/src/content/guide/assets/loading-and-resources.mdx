@@ -11,6 +11,16 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 Loading answers two questions: **when is a value usable, and who keeps it alive?** The loader handles acquisition and decoding. A loader scope holds claims that keep the resulting resources resident.
 
+## The short path: construct from a path
+
+For textures, sprites and sounds the common case needs no loader call. A path-backed object is idle until a scene uses it, loads on first use, fills in place, and is released with the scene that owns it:
+
+<SourceSnippet source="examples/guides/model-b-plus/lazy-sprite.ts" region="lazy-sprite" language="ts" title="A lazy sprite" />
+
+When something must be ready first, preload it with `app.load(...)`, which takes one handle, several, an array or an object and returns a `LoadingQueue` with progress and cancellation. [Migrating to path-based assets](/ExoJS/en/guide/assets/migrating-to-model-b-plus/) shows the before and after, ownership rules and custom asset types. The rest of this page covers the loader and scope APIs underneath, which stay available for streamed media, shared lifetimes, per-asset options and caching.
+
+## Scope the owner explicitly
+
 Use `this.loader` inside a scene for scene-owned resources. Use `this.app.loader` only for resources that should survive until the application ends. For a streamed level, dialog, or preview with a shorter lifetime, create a child scope and destroy it when that activity ends.
 
 ## Await a required resource

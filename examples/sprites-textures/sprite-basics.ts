@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Seconds, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, type Seconds, Sprite } from '@codexo/exojs';
 import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 
 class SpriteBasicsScene extends Scene {
@@ -11,11 +11,12 @@ class SpriteBasicsScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    this.ship = new Sprite(this.loader.get(assets.ship));
+    this.ship = new Sprite(assets.ship.source);
     this.ship.setPosition((width / 2) | 0, (height / 2) | 0);
     this.ship.setAnchor(0.5);
     this.ship.setScale(3);
     this.ship.setTint(this.tint);
+    this.root.addChild(this.ship);
   }
 
   override update(delta: Seconds): void {
@@ -39,10 +40,6 @@ class SpriteBasicsScene extends Scene {
     const alpha = 0.6 + Math.sin(this.elapsed * 2) * 0.4;
     this.tint.a = alpha;
     this.ship.setTint(this.tint);
-  }
-
-  override draw(context: RenderingContext): void {
-    context.render(this.ship);
   }
 }
 

@@ -34,12 +34,17 @@ describe('curated curriculum preservation', () => {
         'examples/application-scenes/transition-gallery.ts',
         'examples/physics/materials-playground.ts',
         'examples/showcase/collect-survive.ts',
+        'examples/application-scenes/explicit-preload.ts',
+        'examples/application-scenes/loading-transition.ts',
+        'examples/application-scenes/typed-custom-assets.ts',
+        'examples/getting-started/lazy-sprite.ts',
+        'examples/scene-graph/prefab-format-3.ts',
+        'examples/sprites-textures/shared-texture-ownership.ts',
       ].sort(),
     );
 
     for (const contract of curation.contracts) {
       expect(fs.existsSync(contract.source)).toBe(true);
-      expect(fs.existsSync(contract.source.replace(/\.ts$/, '.js'))).toBe(true);
     }
 
     expect(

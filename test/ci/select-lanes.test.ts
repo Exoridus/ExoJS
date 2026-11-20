@@ -375,8 +375,8 @@ describe('CI lane selection - example-smoke lane', () => {
     expect(lanes.unit).toBe(true);
   });
 
-  it('the generated `.js` twin and the catalog manifest run the lane too', () => {
-    expect(decide('examples/input/key-rebinding.js').lanes.exampleSmoke).toBe(true);
+  it('an example source and the catalog manifest run the lane', () => {
+    expect(decide('examples/input/key-rebinding.ts').lanes.exampleSmoke).toBe(true);
     expect(decide('examples/examples.json').lanes.exampleSmoke).toBe(true);
   });
 

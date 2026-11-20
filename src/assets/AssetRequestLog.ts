@@ -1,4 +1,5 @@
 import type { AssetConstructor } from './AssetConstructor';
+import type { AssetMeta } from './assetMeta';
 import type { AssetReference } from './AssetReference';
 import type { AssetTypeRegistry } from './AssetTypeRegistry';
 import type { CanonicalAsset, ResourceKey } from './canonicalKey';
@@ -121,6 +122,20 @@ export class AssetRequestLog {
     return options === undefined
       ? { kind: 'request', $type, source: request.source }
       : { kind: 'request', $type, source: request.source, options };
+  }
+
+  /** The reference a path-backed resource declares before any scope has claimed it, or null when its type is not installed. */
+  public declared(meta: AssetMeta, resource: object): AssetReferenceLookup | null {
+    const token = this._typeRegistry.resolveTypeName(meta.kind);
+
+    if (token === undefined) {
+      return null;
+    }
+
+    const options = this._typeRegistry._persistedOptions(token, resource, meta.opts as Readonly<Record<string, unknown>> | undefined);
+    const $type = this._typeRegistry._typeIdentity(token);
+
+    return options === undefined ? { kind: 'request', $type, source: meta.src } : { kind: 'request', $type, source: meta.src, options };
   }
 
   public delete(key: ResourceKey): void {

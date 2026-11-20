@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 
+import ts from 'typescript';
 import { describe, expect, it, vi } from 'vitest';
 
 import { SceneNode } from '#core/SceneNode';
@@ -21,7 +22,9 @@ describe('executable teaching contracts', () => {
   });
 
   it('reports completed frame cost after draw and flush, rather than a reset statistic', () => {
-    const source = readFileSync('examples/scene-graph/retained-container.js', 'utf8');
+    const source = ts.transpileModule(readFileSync('examples/scene-graph/retained-container.ts', 'utf8'), {
+      compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+    }).outputText;
     const sceneSource = source.slice(source.indexOf('class RetainedContainerScene'), source.indexOf('const app = new Application'));
     const stats = { frameTimeMs: 0, submittedNodes: 5760 };
     const phases: Array<{ postFrame(): void }> = [];
