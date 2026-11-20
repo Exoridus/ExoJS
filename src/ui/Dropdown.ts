@@ -68,7 +68,11 @@ class DropdownRow extends Widget {
     this.cursor = 'pointer';
     this.onPointerOver.add(() => this.setHighlighted(true));
     this.onPointerOut.add(() => this.setHighlighted(false));
-    this.onPointerTap.add(() => this.onPick.dispatch(this));
+    this.onPointerTap.add(event => {
+      if (event.button === 0) {
+        this.onPick.dispatch(this);
+      }
+    });
   }
 
   /** Whether this row is the one an Enter would pick. */
@@ -479,7 +483,7 @@ export class Dropdown<T = string> extends Widget {
   };
 
   private readonly _onTap = (event: InteractionEvent): void => {
-    if (this.effectiveEnabled && event.target === this) {
+    if (this.effectiveEnabled && event.button === 0 && event.target === this) {
       this.toggle();
     }
   };

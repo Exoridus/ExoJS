@@ -624,3 +624,28 @@ describe('context menu policy', () => {
     allowed.im.destroy();
   });
 });
+
+describe('pointer button snapshot signals', () => {
+  it('hands raw listeners the original phase mask, independent of the final Pointer state', () => {
+    fire(canvas, 'pointerover', { clientX: 10, clientY: 10 });
+    im.preFrame(0 as never);
+
+    const seen: Array<[string, number | undefined, number | undefined, number]> = [];
+
+    im.onPointerDown.add((pointer, _x, _y, button, buttons) => {
+      seen.push(['down', button, buttons, pointer.buttons]);
+    });
+    im.onPointerUp.add((pointer, _x, _y, button, buttons) => {
+      seen.push(['up', button, buttons, pointer.buttons]);
+    });
+
+    fire(canvas, 'pointerdown', { clientX: 10, clientY: 10, button: 2, buttons: 2 });
+    fire(canvas, 'pointerup', { clientX: 10, clientY: 10, button: 2, buttons: 0 });
+    im.preFrame(0 as never);
+
+    expect(seen).toEqual([
+      ['down', 2, 2, 0],
+      ['up', 2, 0, 0],
+    ]);
+  });
+});

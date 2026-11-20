@@ -131,6 +131,9 @@ export interface PlatformPointerEvent extends PlatformEvent {
   readonly tiltY: number;
   readonly twist: number;
   readonly pressure: number;
+  /** Changed button in this exact platform phase, or -1 for motion without a button change. */
+  readonly button?: number;
+  /** Held-button mask immediately after this phase. */
   readonly buttons: number;
   readonly isPrimary: boolean;
   /**

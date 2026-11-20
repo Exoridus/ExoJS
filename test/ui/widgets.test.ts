@@ -216,7 +216,7 @@ describe('Button', () => {
     const handler = vi.fn();
 
     button.onClick.add(handler);
-    button.onPointerTap.dispatch({} as never);
+    button.onPointerTap.dispatch({ button: 0 } as never);
 
     expect(handler).toHaveBeenCalledTimes(1);
   });
@@ -262,11 +262,11 @@ describe('Button', () => {
   test('pointer-down sets the pressed state only while enabled', () => {
     const button = new Button();
 
-    button.onPointerDown.dispatch({} as never); // enabled -> pressed + redraw
+    button.onPointerDown.dispatch({ button: 0 } as never); // enabled -> pressed + redraw
     button.onPointerUp.dispatch({} as never); // -> refreshState
 
     button.enabled = false;
-    expect(() => button.onPointerDown.dispatch({} as never)).not.toThrow(); // disabled -> no-op
+    expect(() => button.onPointerDown.dispatch({ button: 0 } as never)).not.toThrow(); // disabled -> no-op
   });
 
   test('a disabled button ignores a pointer tap (onClick not dispatched)', () => {
@@ -275,7 +275,7 @@ describe('Button', () => {
 
     button.onClick.add(handler);
     button.enabled = false;
-    button.onPointerTap.dispatch({} as never);
+    button.onPointerTap.dispatch({ button: 0 } as never);
 
     expect(handler).not.toHaveBeenCalled();
   });
@@ -305,7 +305,7 @@ describe('Button', () => {
     expect(button.interactive).toBe(false);
 
     button.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Enter, button));
-    button.onPointerTap.dispatch({} as never);
+    button.onPointerTap.dispatch({ button: 0 } as never);
     expect(handler).not.toHaveBeenCalled();
   });
 
@@ -323,7 +323,7 @@ describe('Button', () => {
     expect(button.effectiveEnabled).toBe(true);
     expect(button.interactive).toBe(true);
 
-    button.onPointerTap.dispatch({} as never);
+    button.onPointerTap.dispatch({ button: 0 } as never);
     expect(handler).toHaveBeenCalledTimes(1);
   });
 });
@@ -848,7 +848,7 @@ describe('Checkbox', () => {
     const handler = vi.fn();
 
     checkbox.onChange.add(handler);
-    checkbox.onPointerTap.dispatch({} as never);
+    checkbox.onPointerTap.dispatch({ button: 0 } as never);
 
     expect(checkbox.checked).toBe(true);
     expect(handler).toHaveBeenCalledWith(true, checkbox);
@@ -876,7 +876,7 @@ describe('Checkbox', () => {
 
     checkbox.enabled = false;
     checkbox.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Enter, checkbox));
-    checkbox.onPointerTap.dispatch({} as never);
+    checkbox.onPointerTap.dispatch({ button: 0 } as never);
 
     expect(checkbox.checked).toBe(false);
     expect(checkbox.interactive).toBe(false);
@@ -1017,7 +1017,7 @@ describe('Toggle', () => {
     const handler = vi.fn();
 
     toggle.onChange.add(handler);
-    toggle.onPointerTap.dispatch({} as never);
+    toggle.onPointerTap.dispatch({ button: 0 } as never);
 
     expect(toggle.checked).toBe(true);
     expect(handler).toHaveBeenCalledTimes(1);
@@ -1438,14 +1438,14 @@ describe('Dropdown', () => {
   test('a tap opens the list and highlights the selection', () => {
     const dropdown = new Dropdown({ items, selectedIndex: 1 });
 
-    dropdown.onPointerTap.dispatch(new InteractionEvent('pointertap', dropdown, makePointer(10, 10), 10, 10));
+    dropdown.onPointerTap.dispatch(new InteractionEvent('pointertap', dropdown, makePointer(10, 10), 10, 10, 0, 0));
 
     expect(dropdown.isOpen).toBe(true);
     expect(dropdown.highlightedIndex).toBe(1);
     expect(dropdown.listNode.visible).toBe(true);
     expect(dropdown.state).toBe('pressed');
 
-    dropdown.onPointerTap.dispatch(new InteractionEvent('pointertap', dropdown, makePointer(10, 10), 10, 10));
+    dropdown.onPointerTap.dispatch(new InteractionEvent('pointertap', dropdown, makePointer(10, 10), 10, 10, 0, 0));
     expect(dropdown.isOpen).toBe(false);
   });
 
@@ -1629,5 +1629,54 @@ describe('Dropdown item replacement', () => {
     ]);
 
     expect(label.text).toBe('High');
+  });
+});
+
+describe('primary-only pointer activation', () => {
+  it('does not activate a Button for secondary taps', () => {
+    const button = new Button();
+    const clicked = vi.fn();
+
+    button.onClick.add(clicked);
+    button.onPointerDown.dispatch({ button: 2 } as never);
+    expect(button.state).not.toBe('pressed');
+    button.onPointerTap.dispatch({ button: 2 } as never);
+    expect(clicked).not.toHaveBeenCalled();
+
+    button.onPointerTap.dispatch({ button: 0 } as never);
+    expect(clicked).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not toggle Checkbox or Toggle for secondary taps', () => {
+    for (const widget of [new Checkbox(), new Toggle()]) {
+      widget.onPointerTap.dispatch({ button: 2 } as never);
+      expect(widget.checked).toBe(false);
+
+      widget.onPointerTap.dispatch({ button: 0 } as never);
+      expect(widget.checked).toBe(true);
+    }
+  });
+
+  it('does not open a Dropdown for a secondary tap', () => {
+    const dropdown = new Dropdown({ items: [{ label: 'First', value: 1 }] });
+
+    dropdown.onPointerTap.dispatch({ button: 2, target: dropdown } as never);
+    expect(dropdown.isOpen).toBe(false);
+
+    dropdown.onPointerTap.dispatch({ button: 0, target: dropdown } as never);
+    expect(dropdown.isOpen).toBe(true);
+    dropdown.destroy();
+  });
+
+  it('does not begin a Slider drag with a secondary mouse button', () => {
+    const slider = new Slider();
+    const pointer = { id: 1 };
+
+    slider.onPointerDown.dispatch({ button: 2, pointer, x: 10, y: 10 } as never);
+    expect(slider.dragging).toBe(false);
+
+    slider.onPointerDown.dispatch({ button: 0, pointer, x: 10, y: 10 } as never);
+    expect(slider.dragging).toBe(true);
+    slider.destroy();
   });
 });

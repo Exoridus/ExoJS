@@ -100,6 +100,9 @@ interface PointerJournalEntry {
   readonly flag: PointerStateFlag;
   readonly x: number;
   readonly y: number;
+  /** Button and held-button mask from this phase, not from the live Pointer. */
+  readonly button: number;
+  readonly buttons: number;
   /** `Up` only: whether this release closed an actual press (not a stray `pointerup`). */
   readonly closedPress: boolean;
   /** `Up` only: the press excursion accumulated during the press THIS release closed. */
@@ -292,14 +295,14 @@ export class InputSystem {
    * (see {@link Pointer.position}'s doc comment); use the `x`/`y` parameters
    * for the position a specific phase actually happened at.
    */
-  public readonly onPointerEnter = new Signal<[pointer: Pointer, x: number, y: number]>();
-  public readonly onPointerLeave = new Signal<[pointer: Pointer, x: number, y: number]>();
-  public readonly onPointerDown = new Signal<[pointer: Pointer, x: number, y: number]>();
-  public readonly onPointerMove = new Signal<[pointer: Pointer, x: number, y: number]>();
-  public readonly onPointerUp = new Signal<[pointer: Pointer, x: number, y: number]>();
-  public readonly onPointerTap = new Signal<[pointer: Pointer, x: number, y: number]>();
-  public readonly onPointerSwipe = new Signal<[pointer: Pointer, x: number, y: number]>();
-  public readonly onPointerCancel = new Signal<[pointer: Pointer, x: number, y: number]>();
+  public readonly onPointerEnter = new Signal<[pointer: Pointer, x: number, y: number, button?: number, buttons?: number]>();
+  public readonly onPointerLeave = new Signal<[pointer: Pointer, x: number, y: number, button?: number, buttons?: number]>();
+  public readonly onPointerDown = new Signal<[pointer: Pointer, x: number, y: number, button?: number, buttons?: number]>();
+  public readonly onPointerMove = new Signal<[pointer: Pointer, x: number, y: number, button?: number, buttons?: number]>();
+  public readonly onPointerUp = new Signal<[pointer: Pointer, x: number, y: number, button?: number, buttons?: number]>();
+  public readonly onPointerTap = new Signal<[pointer: Pointer, x: number, y: number, button?: number, buttons?: number]>();
+  public readonly onPointerSwipe = new Signal<[pointer: Pointer, x: number, y: number, button?: number, buttons?: number]>();
+  public readonly onPointerCancel = new Signal<[pointer: Pointer, x: number, y: number, button?: number, buttons?: number]>();
   /**
    * Fires once per frame in which the wheel moved, with the accumulated
    * offset for that frame. `deltaY` is the usual scroll axis; `deltaX`
@@ -1318,7 +1321,7 @@ export class InputSystem {
     if (existing !== undefined) {
       existing.handleEnter(event);
       this._recordPointerChanges(existing);
-      this._pushPointerPhase(existing, PointerStateFlag.Over, existing.x, existing.y);
+      this._pushPointerPhase(existing, PointerStateFlag.Over, existing.x, existing.y, false, 0, event.button ?? -1, event.buttons);
 
       return;
     }
@@ -1333,7 +1336,7 @@ export class InputSystem {
 
     this.pointers.set(event.pointerId, pointer);
     this._recordPointerChanges(pointer);
-    this._pushPointerPhase(pointer, PointerStateFlag.Over, pointer.x, pointer.y);
+    this._pushPointerPhase(pointer, PointerStateFlag.Over, pointer.x, pointer.y, false, 0, event.button ?? -1, event.buttons);
   }
 
   private handlePointerLeave(event: PlatformPointerEvent): void {
@@ -1346,7 +1349,7 @@ export class InputSystem {
     pointer.handleLeave(event);
     this._recordPointerChanges(pointer);
     this.gestureRecognizer.onPointerLeave(pointer);
-    this._pushPointerPhase(pointer, PointerStateFlag.Leave, pointer.x, pointer.y);
+    this._pushPointerPhase(pointer, PointerStateFlag.Leave, pointer.x, pointer.y, false, 0, event.button ?? -1, event.buttons);
   }
 
   private handlePointerDown(event: PlatformPointerEvent): void {
@@ -1367,7 +1370,7 @@ export class InputSystem {
     // the press - with every drag built on it - would never end.
     this.platform.capturePointer(event.pointerId);
     this.gestureRecognizer.onPointerDown(pointer);
-    this._pushPointerPhase(pointer, PointerStateFlag.Down, pointer.x, pointer.y);
+    this._pushPointerPhase(pointer, PointerStateFlag.Down, pointer.x, pointer.y, false, 0, event.button ?? 0, event.buttons);
 
     stopEvent(event);
   }
@@ -1381,7 +1384,7 @@ export class InputSystem {
 
     pointer.handleMove(event);
     this._recordPointerChanges(pointer);
-    this._pushPointerPhase(pointer, PointerStateFlag.Move, pointer.x, pointer.y);
+    this._pushPointerPhase(pointer, PointerStateFlag.Move, pointer.x, pointer.y, false, 0, event.button ?? -1, event.buttons);
     this.gestureRecognizer.onPointerMove(pointer, this.pointerDistanceThreshold);
   }
 
@@ -1396,7 +1399,7 @@ export class InputSystem {
 
     this._recordPointerChanges(pointer);
     this.gestureRecognizer.onPointerUp(pointer);
-    this._pushPointerPhase(pointer, PointerStateFlag.Up, pointer.x, pointer.y, closedPress, maxDistance);
+    this._pushPointerPhase(pointer, PointerStateFlag.Up, pointer.x, pointer.y, closedPress, maxDistance, event.button ?? 0, event.buttons);
 
     stopEvent(event);
   }
@@ -1411,7 +1414,7 @@ export class InputSystem {
     pointer.handleCancel(event);
     this._recordPointerChanges(pointer);
     this.gestureRecognizer.onPointerCancel(pointer);
-    this._pushPointerPhase(pointer, PointerStateFlag.Cancel, pointer.x, pointer.y);
+    this._pushPointerPhase(pointer, PointerStateFlag.Cancel, pointer.x, pointer.y, false, 0, event.button ?? -1, event.buttons);
   }
 
   /**
@@ -1423,7 +1426,16 @@ export class InputSystem {
    * into the latest - several platform moves in a row for one pointer are
    * never individually meaningful.
    */
-  private _pushPointerPhase(pointer: Pointer, flag: PointerStateFlag, x: number, y: number, closedPress = false, maxDistance = 0): void {
+  private _pushPointerPhase(
+    pointer: Pointer,
+    flag: PointerStateFlag,
+    x: number,
+    y: number,
+    closedPress = false,
+    maxDistance = 0,
+    button = -1,
+    buttons = pointer.buttons,
+  ): void {
     const { journal } = this;
     const lastIndex = journal.length - 1;
     const last = journal[lastIndex];
@@ -1435,12 +1447,12 @@ export class InputSystem {
       last.flag === PointerStateFlag.Move &&
       last.pointer === pointer
     ) {
-      journal[lastIndex] = { kind: 'pointer', pointer, flag, x, y, closedPress: false, maxDistance: 0 };
+      journal[lastIndex] = { kind: 'pointer', pointer, flag, x, y, button, buttons, closedPress: false, maxDistance: 0 };
 
       return;
     }
 
-    journal.push({ kind: 'pointer', pointer, flag, x, y, closedPress, maxDistance });
+    journal.push({ kind: 'pointer', pointer, flag, x, y, button, buttons, closedPress, maxDistance });
   }
 
   /**
@@ -1865,38 +1877,38 @@ export class InputSystem {
 
       switch (entry.flag) {
         case PointerStateFlag.Over:
-          this.onPointerEnter.dispatchIsolated(this.reportListenerError, pointer, x, y);
+          this.onPointerEnter.dispatchIsolated(this.reportListenerError, pointer, x, y, entry.button, entry.buttons);
           break;
 
         case PointerStateFlag.Down:
-          this.onPointerDown.dispatchIsolated(this.reportListenerError, pointer, x, y);
+          this.onPointerDown.dispatchIsolated(this.reportListenerError, pointer, x, y, entry.button, entry.buttons);
           break;
 
         case PointerStateFlag.Move:
-          this.onPointerMove.dispatchIsolated(this.reportListenerError, pointer, x, y);
+          this.onPointerMove.dispatchIsolated(this.reportListenerError, pointer, x, y, entry.button, entry.buttons);
           break;
 
         case PointerStateFlag.Up:
-          this.onPointerUp.dispatchIsolated(this.reportListenerError, pointer, x, y);
+          this.onPointerUp.dispatchIsolated(this.reportListenerError, pointer, x, y, entry.button, entry.buttons);
 
           // A press that travelled far and came back is a swipe, not a tap -
           // hence THIS press's own accumulated maximum, not the release distance.
           if (entry.closedPress) {
             if (entry.maxDistance < this.pointerDistanceThreshold) {
-              this.onPointerTap.dispatchIsolated(this.reportListenerError, pointer, x, y);
+              this.onPointerTap.dispatchIsolated(this.reportListenerError, pointer, x, y, entry.button, entry.buttons);
             } else {
-              this.onPointerSwipe.dispatchIsolated(this.reportListenerError, pointer, x, y);
+              this.onPointerSwipe.dispatchIsolated(this.reportListenerError, pointer, x, y, entry.button, entry.buttons);
             }
           }
 
           break;
 
         case PointerStateFlag.Cancel:
-          this.onPointerCancel.dispatchIsolated(this.reportListenerError, pointer, x, y);
+          this.onPointerCancel.dispatchIsolated(this.reportListenerError, pointer, x, y, entry.button, entry.buttons);
           break;
 
         case PointerStateFlag.Leave:
-          this.onPointerLeave.dispatchIsolated(this.reportListenerError, pointer, x, y);
+          this.onPointerLeave.dispatchIsolated(this.reportListenerError, pointer, x, y, entry.button, entry.buttons);
           break;
 
         default:

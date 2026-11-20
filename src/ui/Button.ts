@@ -1,5 +1,6 @@
 import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
+import type { InteractionEvent } from '#input/InteractionEvent';
 import type { KeyEvent } from '#input/KeyEvent';
 import { Keyboard } from '#input/types';
 import { Text } from '#rendering/text/Text';
@@ -265,8 +266,8 @@ export class Button extends Widget {
     this._refreshState();
   };
 
-  private readonly _onPointerDown = (): void => {
-    if (this.effectiveEnabled) {
+  private readonly _onPointerDown = (event: InteractionEvent): void => {
+    if (this.effectiveEnabled && event.button === 0) {
       this._setSkinState('pressed');
     }
   };
@@ -275,8 +276,8 @@ export class Button extends Widget {
     this._refreshState();
   };
 
-  private readonly _activate = (): void => {
-    if (this.effectiveEnabled) {
+  private readonly _activate = (event: InteractionEvent): void => {
+    if (this.effectiveEnabled && event.button === 0) {
       this.onClick.dispatch(this);
     }
   };

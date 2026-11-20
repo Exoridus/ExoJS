@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 16,
+  "memberCount": 17,
   "counts": {
     "constructors": 0,
     "methods": 2,
-    "properties": 14,
+    "properties": 15,
     "events": 0
   },
   "sections": [
@@ -96,6 +96,31 @@
       "title": "Properties",
       "members": [
         {
+          "name": "button",
+          "signature": "button?: number",
+          "signatureTokens": [
+            {
+              "text": "button",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Changed button in this exact platform phase, or -1 for motion without a button change."
+        },
+        {
           "name": "buttons",
           "signature": "buttons: number",
           "signatureTokens": [
@@ -114,7 +139,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Held-button mask immediately after this phase."
         },
         {
           "name": "clientX",

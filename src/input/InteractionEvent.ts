@@ -57,16 +57,30 @@ export class InteractionEvent {
   public readonly x: number;
   /** See {@link InteractionEvent.x}. */
   public readonly y: number;
+  /** Button changed in this event: 0=primary, 1=auxiliary, 2=secondary, -1=no change. */
+  public readonly button: number;
+  /** Mask of held buttons for this event, immutable even if the Pointer has since changed. */
+  public readonly buttons: number;
   private _stopped = false;
   private _defaultPrevented = false;
 
-  public constructor(type: InteractionEventType, target: RenderNode, pointer: Pointer, x: number, y: number) {
+  public constructor(
+    type: InteractionEventType,
+    target: RenderNode,
+    pointer: Pointer,
+    x: number,
+    y: number,
+    button = -1,
+    buttons = pointer.buttons,
+  ) {
     this.type = type;
     this.target = target;
     this.currentTarget = target;
     this.pointer = pointer;
     this.x = x;
     this.y = y;
+    this.button = button;
+    this.buttons = buttons;
   }
 
   public get propagationStopped(): boolean {

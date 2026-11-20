@@ -74,6 +74,9 @@ interface InteractionJournalEntry {
   readonly pointer: Pointer;
   readonly x: number;
   readonly y: number;
+  /** Frozen button and held-button mask for this phase. */
+  readonly button: number;
+  readonly buttons: number;
   /**
    * `Up` only. `InputSystem` dispatches `onPointerUp` then, synchronously
    * and immediately after, conditionally `onPointerTap` - nothing else runs
@@ -861,16 +864,16 @@ export class InteractionSystem {
   // Signal handlers - only enqueue flags, never hit-test
   // ---------------------------------------------------------------------------
 
-  private _handlePointerDown(pointer: Pointer, x: number, y: number): void {
-    this._enqueuePhase(pointer, InteractionPhaseKind.Down, x, y);
+  private _handlePointerDown(pointer: Pointer, x: number, y: number, button = 0, buttons = pointer.buttons): void {
+    this._enqueuePhase(pointer, InteractionPhaseKind.Down, x, y, button, buttons);
   }
 
-  private _handlePointerMove(pointer: Pointer, x: number, y: number): void {
-    this._enqueuePhase(pointer, InteractionPhaseKind.Move, x, y);
+  private _handlePointerMove(pointer: Pointer, x: number, y: number, button = -1, buttons = pointer.buttons): void {
+    this._enqueuePhase(pointer, InteractionPhaseKind.Move, x, y, button, buttons);
   }
 
-  private _handlePointerUp(pointer: Pointer, x: number, y: number): void {
-    this._enqueuePhase(pointer, InteractionPhaseKind.Up, x, y);
+  private _handlePointerUp(pointer: Pointer, x: number, y: number, button = 0, buttons = pointer.buttons): void {
+    this._enqueuePhase(pointer, InteractionPhaseKind.Up, x, y, button, buttons);
   }
 
   /**
@@ -942,7 +945,7 @@ export class InteractionSystem {
    * own entry. Matched by `pointer.id` rather than object identity - the same
    * correlation key every other per-pointer map in this class already uses.
    */
-  private _enqueuePhase(pointer: Pointer, kind: InteractionPhaseKind, x: number, y: number): void {
+  private _enqueuePhase(pointer: Pointer, kind: InteractionPhaseKind, x: number, y: number, button = -1, buttons = pointer.buttons): void {
     if (this._rootBindings.destroyed) {
       return;
     }
@@ -963,13 +966,13 @@ export class InteractionSystem {
       last.kind === InteractionPhaseKind.Move &&
       last.pointer.id === pointer.id
     ) {
-      journal[lastIndex] = { kind, pointer, x, y, tap: false };
+      journal[lastIndex] = { kind, pointer, x, y, button, buttons, tap: false };
       this._dirty = true;
 
       return;
     }
 
-    journal.push({ kind, pointer, x, y, tap: false });
+    journal.push({ kind, pointer, x, y, button, buttons, tap: false });
     this._dirty = true;
   }
 
@@ -1094,7 +1097,7 @@ export class InteractionSystem {
           const { node: hit, x, y } = this._resolvePhase(phaseX, phaseY, this._currentCapture(id));
 
           if (hit !== null) {
-            const event = new InteractionEvent('pointerdown', hit, pointer, x, y);
+            const event = new InteractionEvent('pointerdown', hit, pointer, x, y, entry.button, entry.buttons);
 
             bubbleInteractionEvent(event);
 
@@ -1143,7 +1146,7 @@ export class InteractionSystem {
           // destroyed the dragged node - which IS `hit` while a drag is
           // active, since _resolvePhase short-circuits to the captured node.
           if (hit !== null && this._isLive(hit)) {
-            bubbleInteractionEvent(new InteractionEvent('pointermove', hit, pointer, x, y));
+            bubbleInteractionEvent(new InteractionEvent('pointermove', hit, pointer, x, y, entry.button, entry.buttons));
           }
 
           this._dispatchDragTick(id, pointer, x, y);
@@ -1163,7 +1166,7 @@ export class InteractionSystem {
           const { node: hit, x, y } = this._resolvePhase(phaseX, phaseY, this._currentCapture(id));
 
           if (hit !== null && this._isLive(hit)) {
-            bubbleInteractionEvent(new InteractionEvent('pointerup', hit, pointer, x, y));
+            bubbleInteractionEvent(new InteractionEvent('pointerup', hit, pointer, x, y, entry.button, entry.buttons));
           }
 
           this._completeDrag(id, pointer, x, y);
@@ -1191,7 +1194,9 @@ export class InteractionSystem {
             const tapHit = this._resolvePhase(phaseX, phaseY, this._currentCapture(id));
 
             if (tapHit.node === pressTarget) {
-              bubbleInteractionEvent(new InteractionEvent('pointertap', pressTarget, pointer, tapHit.x, tapHit.y));
+              bubbleInteractionEvent(
+                new InteractionEvent('pointertap', pressTarget, pointer, tapHit.x, tapHit.y, entry.button, entry.buttons),
+              );
             }
           }
 
@@ -1202,7 +1207,7 @@ export class InteractionSystem {
           const { node: hit, x, y } = this._resolvePhase(phaseX, phaseY, this._currentCapture(id));
 
           if (hit !== null && this._isLive(hit)) {
-            bubbleInteractionEvent(new InteractionEvent('contextmenu', hit, pointer, x, y));
+            bubbleInteractionEvent(new InteractionEvent('contextmenu', hit, pointer, x, y, entry.button, entry.buttons));
           }
 
           break;
