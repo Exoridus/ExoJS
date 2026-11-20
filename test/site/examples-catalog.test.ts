@@ -14,8 +14,7 @@ const examplesDir = join(process.cwd(), 'examples');
 
 // Catalog routes are generated .js paths; only their TypeScript sources are tracked.
 // The generation contract is verified separately by examples:sync:check.
-const hasSource = (jsPath: string): boolean =>
-  jsPath.endsWith('.js') && existsSync(join(examplesDir, jsPath.replace(/\.js$/, '.ts')));
+const hasSource = (jsPath: string): boolean => jsPath.endsWith('.js') && existsSync(join(examplesDir, jsPath.replace(/\.js$/, '.ts')));
 
 const entries = Object.entries(EXAMPLES_CATALOG).flatMap(([category, list]) => list.map(entry => ({ ...entry, category })));
 
