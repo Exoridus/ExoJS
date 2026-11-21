@@ -58,7 +58,7 @@ export class Label extends Widget {
    */
   public setTextStyle(style: TextStyleOptions | null): this {
     const next = style === null ? null : Object.freeze({ ...this._textStyle, ...style });
-    assertSkinSetTextEffects(themeSkinSet(this.theme, 'label'), next, this._text, this._skinState);
+    assertSkinSetTextEffects(themeSkinSet(this.theme, 'label'), next, this._text);
 
     this._textStyle = next;
     this._applyTextStyle(true);
@@ -67,7 +67,7 @@ export class Label extends Widget {
   }
 
   protected override _validateTheme(theme: UITheme): void {
-    assertSkinSetTextEffects(themeSkinSet(theme, 'label'), this._textStyle, this._text, this._skinState);
+    assertSkinSetTextEffects(themeSkinSet(theme, 'label'), this._textStyle, this._text);
   }
 
   protected override _relayout(): void {

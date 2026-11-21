@@ -419,20 +419,17 @@ const assertSkinTextEffects = (options: TextStyleOptions): TextStyle => {
 };
 
 /** @internal */
-export const assertSkinSetTextEffects = (
-  set: UISkinSet,
-  override?: TextStyleOptions | null,
-  node?: Text | null,
-  state: UIWidgetState = 'normal',
-): void => {
-  const activeSkin = resolveUISkin(set, state);
+export const assertSkinSetTextEffects = (set: UISkinSet, override?: TextStyleOptions | null, node?: Text | null): void => {
+  const seen = new Set<TextStyleOptions>();
 
-  for (const stateSkin of Object.values(set)) {
-    const style = assertSkinTextEffects(override == null ? stateSkin.text : { ...stateSkin.text, ...override });
-
-    if (stateSkin === activeSkin) {
-      node?._assertStyleFits(style);
+  for (const { text } of Object.values(set)) {
+    if (seen.has(text)) {
+      continue;
     }
+
+    seen.add(text);
+    const style = assertSkinTextEffects(override == null ? text : { ...text, ...override });
+    node?._assertStyleFits(style);
   }
 };
 

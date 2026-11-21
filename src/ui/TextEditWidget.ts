@@ -492,8 +492,8 @@ export abstract class TextEditWidget extends Widget {
   }
 
   protected override _validateTheme(theme: UITheme): void {
-    assertSkinSetTextEffects(themeSkinSet(theme, 'textFieldSurface'), this._textStyle, this._textNode, this._skinState);
-    assertSkinSetTextEffects(themeSkinSet(theme, 'placeholder'), null, this._placeholderNode, this._skinState);
+    assertSkinSetTextEffects(themeSkinSet(theme, 'textFieldSurface'), this._textStyle, this._textNode);
+    assertSkinSetTextEffects(themeSkinSet(theme, 'placeholder'), null, this._placeholderNode);
   }
 
   protected override _relayout(): void {

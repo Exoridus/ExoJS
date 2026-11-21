@@ -261,7 +261,7 @@ export class Button extends Widget {
    */
   public setTextStyle(style: TextStyleOptions | null): this {
     const next = style === null ? null : Object.freeze({ ...this._textStyle, ...style });
-    assertSkinSetTextEffects(themeSkinSet(this.theme, 'button'), next, this._label, this._skinState);
+    assertSkinSetTextEffects(themeSkinSet(this.theme, 'button'), next, this._label);
 
     this._textStyle = next;
     this._appliedText = null;
@@ -332,7 +332,7 @@ export class Button extends Widget {
   }
 
   protected override _validateTheme(theme: UITheme): void {
-    assertSkinSetTextEffects(themeSkinSet(theme, 'button'), this._textStyle, this._label, this._skinState);
+    assertSkinSetTextEffects(themeSkinSet(theme, 'button'), this._textStyle, this._label);
   }
 
   protected override _repaint(): void {

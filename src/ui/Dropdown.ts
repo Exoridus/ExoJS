@@ -89,7 +89,7 @@ class DropdownRow extends Widget {
   }
 
   protected override _validateTheme(theme: UITheme): void {
-    assertSkinSetTextEffects(themeSkinSet(theme, 'dropdownItem'), this._textStyle, this._text, this._skinState);
+    assertSkinSetTextEffects(themeSkinSet(theme, 'dropdownItem'), this._textStyle, this._text);
   }
 
   protected override _repaint(): void {
@@ -296,7 +296,7 @@ export class Dropdown<T = string> extends Widget {
   }
 
   protected override _validateTheme(theme: UITheme): void {
-    assertSkinSetTextEffects(themeSkinSet(theme, 'button'), this._textStyle, this._label, this._skinState);
+    assertSkinSetTextEffects(themeSkinSet(theme, 'button'), this._textStyle, this._label);
   }
 
   protected override _repaint(): void {

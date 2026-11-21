@@ -137,7 +137,7 @@ export abstract class CheckableWidget extends Widget {
   protected abstract _paintControl(): void;
 
   protected override _validateTheme(theme: UITheme): void {
-    assertSkinSetTextEffects(themeSkinSet(theme, this._textRole()), this._textStyle, this._labelNode, this._skinState);
+    assertSkinSetTextEffects(themeSkinSet(theme, this._textRole()), this._textStyle, this._labelNode);
   }
 
   protected override _relayout(): void {

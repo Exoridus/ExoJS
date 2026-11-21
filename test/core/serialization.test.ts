@@ -440,7 +440,7 @@ describe('serialization — Scene entry point', () => {
 
   it.each([undefined, 0, 1, 2, 3])('rejects scene and prefab format %s before reading nodes', version => {
     const data = { version, root: { type: 'Container', children: [{ type: 'Text', style: { outlineWidth: 0.5 } }] } };
-    expect(() => new Scene().deserialize(data)).toThrow(/requires version 4/);
+    expect(() => new Scene().deserialize(data as Parameters<Scene['deserialize']>[0])).toThrow(/requires version 4/);
     expect(() => Prefab.fromJSON(data)).toThrow(/requires version 4/);
   });
 

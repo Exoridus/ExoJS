@@ -202,13 +202,13 @@ export const runEffectUnitSuite = (backendName: string, driver: EffectBackendDri
   });
 
   describe(`${backendName} widget label fill alignment`, () => {
-    test('rejects a theme whose active glyph cannot fit without changing siblings', () => {
+    test.for(['normal', 'hover'] as const)('rejects a theme whose %s glyph cannot fit without changing siblings', state => {
       const root = new UIRoot();
       const first = new Button({ label: 'Start' });
       const second = new Button({ label: 'Play' }).setTextStyle({ fontFamily: 'monospace' });
       root.addChild(first, second);
       const previous = root.theme;
-      const patch = createUITheme({ button: { normal: { text: { fontSize: 2000, outlineWidth: 24 } } } });
+      const patch = createUITheme({ button: { [state]: { text: { fontSize: 2000, outlineWidth: 24 } } } });
 
       try {
         expect(() => {
