@@ -73,6 +73,19 @@ describe('AsepriteSheet.parse — array form', () => {
     const sheet = AsepriteSheet.parse(arrayData, texture);
     expect(sheet.spritesheet.texture).toBe(texture);
   });
+
+  it('keeps finite unit-density canvas metadata when direct parsing receives an empty texture', () => {
+    const texture = new Texture();
+    const sheet = AsepriteSheet.parse(arrayData, texture);
+    const sprite = sheet.createAnimatedSprite().setAnchor(0.5).play('walk');
+
+    expect(sheet.clips.get('walk')!.sourceSize).toEqual({ width: 16, height: 16 });
+    expect(sprite.origin.x).toBe(8);
+    expect(sprite.origin.y).toBe(8);
+    sprite.destroy();
+    sheet.destroy();
+    texture.destroy();
+  });
 });
 
 // ── AsepriteSheet.parse - clips from frameTags ─────────────────────────────────
@@ -293,6 +306,83 @@ describe('AsepriteSheet.parse — per-frame durations', () => {
 // ── AsepriteSheet.parse - trimmed-frame offsets ─────────────────────────────────
 
 describe('AsepriteSheet.parse — trimmed-frame offsets', () => {
+  it.each([
+    { resolution: 1, size: 128, originX: 64, originY: 96, offsetX: 58, offsetY: 86 },
+    { resolution: 2, size: 64, originX: 32, originY: 48, offsetX: 29, offsetY: 43 },
+  ])('preserves the authored canvas across trimmed and untrimmed tags at resolution $resolution', expected => {
+    const data: AsepriteData = {
+      frames: [
+        {
+          duration: 100,
+          frame: { x: 0, y: 0, w: 12, h: 10 },
+          rotated: false,
+          trimmed: true,
+          sourceSize: { w: 128, h: 128 },
+          spriteSourceSize: { x: 58, y: 86, w: 12, h: 10 },
+        },
+        {
+          duration: 100,
+          frame: { x: 12, y: 0, w: 20, h: 12 },
+          rotated: false,
+          trimmed: true,
+          sourceSize: { w: 128, h: 128 },
+          spriteSourceSize: { x: 54, y: 84, w: 20, h: 12 },
+        },
+        {
+          duration: 100,
+          frame: { x: 32, y: 0, w: 128, h: 128 },
+          rotated: false,
+          trimmed: false,
+          sourceSize: { w: 128, h: 128 },
+          spriteSourceSize: { x: 0, y: 0, w: 128, h: 128 },
+        },
+      ],
+      meta: {
+        app: 'aseprite',
+        version: '1.3',
+        image: 'x.png',
+        format: 'RGBA8888',
+        size: { w: 160, h: 128 },
+        scale: '1',
+        frameTags: [
+          { name: 'idle', from: 0, to: 0, direction: 'forward' },
+          { name: 'walk', from: 1, to: 1, direction: 'forward' },
+          { name: 'full', from: 2, to: 2, direction: 'forward' },
+        ],
+      },
+    };
+    const texture = newTexture();
+
+    texture.width = 160;
+    texture.height = 128;
+    texture._assetResolution = expected.resolution;
+
+    const sheet = AsepriteSheet.parse(data, texture);
+    const sprite = sheet.createAnimatedSprite().setAnchor(0.5, 0.75).setScale(2);
+
+    sprite.play('idle');
+
+    expect(sprite.origin.x).toBe(expected.originX);
+    expect(sprite.origin.y).toBe(expected.originY);
+    expect(sprite.getLocalBounds().x).toBe(expected.offsetX);
+    expect(sprite.getLocalBounds().y).toBe(expected.offsetY);
+
+    for (const name of ['walk', 'full', 'idle']) {
+      sprite.play(name);
+
+      expect(sprite.origin.x).toBe(expected.originX);
+      expect(sprite.origin.y).toBe(expected.originY);
+      expect(sprite.scale.x).toBe(2);
+      expect(sprite.scale.y).toBe(2);
+      expect(sheet.clips.get(name)!.sourceSize).toEqual({ width: expected.size, height: expected.size });
+    }
+
+    expect(sheet.clips.get('full')!.frameOffsets).toBeUndefined();
+    sprite.destroy();
+    sheet.destroy();
+    texture.destroy();
+  });
+
   it('populates frameOffsets from spriteSourceSize when any frame in the tag is trimmed', () => {
     const data: AsepriteData = {
       frames: [

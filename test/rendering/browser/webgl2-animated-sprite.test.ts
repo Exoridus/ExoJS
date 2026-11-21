@@ -11,6 +11,8 @@
  * Run via:  pnpm test:browser:webgl
  */
 
+import { page, server } from 'vitest/browser';
+
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Rectangle } from '#math/Rectangle';
@@ -97,6 +99,67 @@ const createSpritesheetTexture = (colors: readonly string[], size = cellSize): T
 // ---------------------------------------------------------------------------
 
 describe('WebGL2 AnimatedSprite — frame-region UV swap', () => {
+  test('trimmed clip changes preserve the authored foot position and pixel scale', async () => {
+    const backend = await createBackend();
+    const canvas = backend.context.canvas as HTMLCanvasElement;
+    const atlas = document.createElement('canvas');
+
+    document.body.append(canvas);
+
+    atlas.width = 32;
+    atlas.height = 12;
+
+    const context = atlas.getContext('2d')!;
+
+    context.fillStyle = '#ff0000';
+    context.fillRect(0, 0, 12, 10);
+    context.fillStyle = '#0000ff';
+    context.fillRect(12, 0, 20, 12);
+
+    const texture = new Texture(atlas);
+    const sprite = new AnimatedSprite(texture, {
+      idle: {
+        frames: [new Rectangle(0, 0, 12, 10)],
+        frameOffsets: [{ x: 58, y: 86 }],
+        sourceSize: { width: 128, height: 128 },
+      },
+      walk: {
+        frames: [new Rectangle(12, 0, 20, 12)],
+        frameOffsets: [{ x: 54, y: 84 }],
+        sourceSize: { width: 128, height: 128 },
+      },
+    })
+      .setAnchor(0.5, 0.75)
+      .setPosition(32, 40)
+      .setScale(2);
+
+    try {
+      sprite.play('idle');
+      render(backend, sprite);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 38), [255, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 14, 30), [0, 0, 0, 255]);
+      await page.screenshot({
+        element: canvas,
+        path: `../../../.workspace/visual-review/current/trim-idle-frame-0-webgl2-${server.browser}.png`,
+      });
+
+      sprite.play('walk');
+      render(backend, sprite);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 38), [0, 0, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 14, 30), [0, 0, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 41), [0, 0, 0, 255]);
+      await page.screenshot({
+        element: canvas,
+        path: `../../../.workspace/visual-review/current/trim-walk-frame-0-webgl2-${server.browser}.png`,
+      });
+    } finally {
+      sprite.destroy();
+      texture.destroy();
+      backend.destroy();
+      canvas.remove();
+    }
+  });
+
   test('frame 0 samples the first spritesheet cell', async () => {
     const backend = await createBackend();
     const texture = createSpritesheetTexture(['#ff0000', '#0000ff']);

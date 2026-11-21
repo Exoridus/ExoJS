@@ -302,6 +302,7 @@ const animatedSpriteSerializer: NodeSerializer<AnimatedSprite> = {
         repeat: clip.repeat,
         frameDurations: clip.frameDurations ? [...clip.frameDurations] : undefined,
         frameOffsets: clip.frameOffsets ? clip.frameOffsets.map(offset => [offset.x, offset.y]) : undefined,
+        sourceSize: clip.sourceSize ? [clip.sourceSize.width, clip.sourceSize.height] : undefined,
       });
     }
 
@@ -349,8 +350,10 @@ const animatedSpriteSerializer: NodeSerializer<AnimatedSprite> = {
               return { x: values[0] ?? 0, y: values[1] ?? 0 };
             })
           : undefined;
+        const size = asNumberArray(clip.sourceSize);
+        const sourceSize = size === null ? undefined : { width: size[0] ?? 0, height: size[1] ?? 0 };
 
-        clips[name] = compact({ frames, fps: num(clip.fps), repeat: num(clip.repeat), frameDurations, frameOffsets });
+        clips[name] = compact({ frames, fps: num(clip.fps), repeat: num(clip.repeat), frameDurations, frameOffsets, sourceSize });
       }
     }
 

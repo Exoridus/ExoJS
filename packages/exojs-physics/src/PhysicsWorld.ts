@@ -600,7 +600,7 @@ export class PhysicsWorld implements BodyOwner {
    * If binding fails, the newly created body and collider are destroyed with the usual callback deferral.
    *
    * When `options.position`/`options.angle` are omitted, the body starts at
-   * `node`'s current WORLD position/rotation (via `getWorldTransform()`,
+   * `node`'s current WORLD position pivot/rotation (including its origin and
    * composed through any transform-group boundary) rather than `(0, 0)` -
    * otherwise a body attached to an already-placed node would visibly "teleport"
    * to the origin on the next step. Pass `position`/`angle` explicitly to override.

@@ -1487,9 +1487,9 @@ export class InteractionSystem {
    * Map a pointer position into the space `node.position` is expressed in.
    * The dragged node's coordinates are parent-local, while the pointer arrives
    * in world (or screen, for UI) space; without this a node under a scaled,
-   * rotated or offset parent drifts away from the cursor. Under an engaged
-   * transform group the chain is group-local, so the point is rebased through
-   * the anchor first, exactly as {@link _containsWorldPoint} does.
+   * rotated or offset parent drifts away from the cursor. The parent's world
+   * transform already includes every retained boundary, so its inverse maps
+   * the pointer directly into the node's parent-local position space.
    */
   private _toParentLocal(node: RenderNode, x: number, y: number): { x: number; y: number } {
     const parent = node.parent;
@@ -1498,22 +1498,11 @@ export class InteractionSystem {
       return { x, y };
     }
 
-    let localX = x;
-    let localY = y;
-    const anchor = node._resolveTransformGroupAnchor();
-
-    if (anchor !== null) {
-      const toGroup = anchor.getWorldTransform().getInverse(this._anchorInverse);
-
-      localX = toGroup.a * x + toGroup.b * y + toGroup.x;
-      localY = toGroup.c * x + toGroup.d * y + toGroup.y;
-    }
-
     const inverse = parent.getWorldTransform().getInverse(this._dragInverse);
 
     return {
-      x: inverse.a * localX + inverse.b * localY + inverse.x,
-      y: inverse.c * localX + inverse.d * localY + inverse.y,
+      x: inverse.a * x + inverse.b * y + inverse.x,
+      y: inverse.c * x + inverse.d * y + inverse.y,
     };
   }
 
@@ -1830,29 +1819,9 @@ export class InteractionSystem {
     return out;
   }
 
-  /**
-   * World-correct point containment: `node.contains` expects coordinates in
-   * the node's OWN global space, which under an engaged transform-group
-   * boundary ({@link RetainedContainer}) is group-local, not world. Resolve
-   * the node's live anchor and map the world-space pointer into group space
-   * through the inverse of the anchor's world matrix first; without an
-   * anchor this is a plain `contains`. Resolving live (instead of trusting
-   * index-time state) keeps boundary engage/disengage flips correct.
-   */
+  /** Narrow-phase containment always receives world coordinates, including retained children. */
   private _containsWorldPoint(node: RenderNode, x: number, y: number): boolean {
-    const anchor = node._resolveTransformGroupAnchor();
-
-    if (anchor === null) {
-      return node.contains(x, y);
-    }
-
-    const inverse = anchor.getWorldTransform().getInverse(this._anchorInverse);
-    // Same forward-map convention as AbstractVector.transform / SceneNode.contains:
-    // p' = [[a, b], [c, d]] · p + (x, y).
-    const groupX = inverse.a * x + inverse.b * y + inverse.x;
-    const groupY = inverse.c * x + inverse.d * y + inverse.y;
-
-    return node.contains(groupX, groupY);
+    return node.contains(x, y);
   }
 
   /**

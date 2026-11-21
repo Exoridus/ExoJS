@@ -18,7 +18,7 @@ ExoJS audio splits cleanly into two halves: **assets** are pure data descriptors
 |---|---|---|
 | Backing | Decoded `AudioBuffer` | `HTMLAudioElement` (streamed) |
 | Best for | Short SFX, UI sounds, footstep pools | Background tracks, ambient loops, radio, long audio |
-| Seekable voice | No | Yes — `voice.seek(t)` / `voice.time` |
+| Seekable voice | Yes for a live `SoundVoice`; narrow the possibly ended result with `'seek' in voice`. | Yes: `voice.seek(t)` / `voice.time`. |
 | Concurrent voices | Yes — `poolSize` controls the pool | No — one playhead, one active voice |
 | Default bus | `app.audio.sound` | `app.audio.music` |
 
@@ -26,7 +26,7 @@ Use `Sound` when you need many overlapping instances of the same short clip. Use
 
 ## Loading and playing
 
-Both types are loaded through the `Loader`, like textures, then played through `app.audio`:
+Preload both sources through the scene loader, then start scene-owned playback through `this.audio`. A path-backed `Sound` still needs an explicit load: neither `app.audio.play` nor `scene.audio.play` acquires its payload. Asset readiness and browser audio unlock are separate prerequisites:
 
 <SourceSnippet
   source="examples/guides/audio-basics/audio-scene.ts"
@@ -67,7 +67,7 @@ application.audio.onUnlock.add(() => application.audio.play(music, { loop: true 
 - Subscribe while audio is already unlocked and the handler runs right away (on a microtask). A scene loaded mid-session behaves like one loaded at startup.
 - Subscribe while audio is locked and it waits for the next unlock. That includes a **re**-lock: an iOS audio-session interruption or a bfcache restore drops the context back to `suspended`, and a handler registered inside that window still fires when audio returns.
 - A handler that has already run is never fired again by a later unlock — looping music started here does not stack a second copy after every interruption.
-- `remove()` cancels a pending handler either way, so a scene can subscribe in `init` and clean up in `unload`. Nothing fires once the owning `Application` is destroyed.
+- `remove()` cancels a pending handler either way, so a scene can subscribe in `init` and clean up in `destroy`. This also covers failed or cancelled preparation paths where `unload` is skipped. Nothing fires once the owning `Application` is destroyed.
 
 Check `app.audio.locked` to know whether the gesture has happened yet, and gate one-shot effects on it:
 
@@ -136,7 +136,7 @@ if ('seek' in soundVoice) {
 A `Sound` plays through an `AudioBufferSourceNode`, which can be neither repositioned nor halted in place. `pause()` therefore reads the playhead and throws the source away; `resume()` starts a fresh one at exactly that offset. The offset is sample-exact, but the restart is not phase-continuous — on sustained tonal material (a held pad, a synth drone) the seam can be audible as a small click. Percussive and ambient material hides it. An `AudioStream` has no such caveat: the media element really does freeze.
 </Callout>
 
-Because `SoundVoice` is `Pausable`, `scene.audio` freezes buffer sounds along with everything else: a voice registered with `when: 'active'` is silent while the scene is paused, one registered with `when: 'paused'` only while it is, and scene retention silences every tracked voice until the scene is restored. The policy applies from the moment the voice starts, and the scene holds a voice rather than pausing it: `voice.paused` keeps reporting your own `pause()`/`resume()` calls, so a voice you paused yourself stays paused when the scene lets it play again. A voice that cannot pause keeps playing whatever its policy, and a development build warns when you give it one.
+Because `SoundVoice` is `Pausable`, `scene.audio` freezes buffer sounds along with everything else: a voice registered with `when: SceneAvailability.Active` is silent while the scene is paused, one registered with `when: SceneAvailability.Paused` only while it is, and scene retention silences every tracked voice until the scene is restored. The policy applies from the moment the voice starts, and the scene holds a voice rather than pausing it: `voice.paused` keeps reporting your own `pause()`/`resume()` calls, so a voice you paused yourself stays paused when the scene lets it play again. A voice that cannot pause keeps playing whatever its policy, and a development build warns when you give it one.
 
 For "one voice at a time" scenarios like voice-over lines, `Sound`'s play options also accept a `replace` flag (`app.audio.play(sound, { replace: true })`) that stops all other pooled voices of that sound before starting this one.
 

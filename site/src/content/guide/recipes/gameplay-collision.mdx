@@ -11,7 +11,17 @@ import Callout from '../../../components/Callout.astro';
 
 ExoJS provides a geometry-based collision system built on shape primitives and the Separating Axis Theorem (SAT). Every shape implements the `Collidable` interface, giving you three levels of collision query: boolean overlap (`intersectsWith`), penetration response (`collidesWith`), and point containment (`contains`). A [`Quadtree`](/ExoJS/en/api/quadtree/) provides spatial partitioning for broad-phase culling when you have many objects.
 
-This is not a physics engine — there are no rigid bodies, no friction, no constraint solvers. It answers "are these two things touching?" and "how far do I push them apart?" You build physics, overlap triggers, and hit detection on top.
+These Core geometry queries do not simulate rigid bodies, friction, or constraints. The optional `@codexo/exojs/physics` subpath provides those simulation features. It answers "are these two things touching?" and "how far do I push them apart?" You build physics, overlap triggers, and hit detection on top.
+
+## Enemies and physics sensors
+
+Use a scene-owned PhysicsWorld when enemies participate in simulation or sensor events. This complete program loads round artwork for a controllable wooden player and stationary metal enemies, then uses component-owned bodies and a single sensor dispatcher. Install the demo-assets package, click or tab to the mounted canvas, and move with WASD.
+
+<SourceSnippet source="examples/guides/gameplay-collision/enemy-sensors.ts" region="enemy-sensors" language="ts" title="Mutual collision masks, collider identity, damage, and despawn" />
+
+Both masks admit the other category. Sensors report an enter without blocking motion. The map uses collider identity and removes its entry before node destruction; the component removes/destroys its body with that node. The world and its signal live in the same scene, so teardown ends the subscription. A handler attached to a longer-lived application world must instead be explicitly removed by its scene. For many enemies, keep one dispatcher rather than one world listener per enemy.
+
+Events occur per collider pair. This recipe has one collider per actor; a multi-collider player needs an explicit damage/overlap deduplication rule. Do not rely on a final exit callback at world destruction. [Physics and scene ownership](/ExoJS/en/guide/physics/physics-basics/#collision-filters) defines the group overrides, defaults, query behavior, and the distinction between a binding and body ownership.
 
 ## The shape primitives
 

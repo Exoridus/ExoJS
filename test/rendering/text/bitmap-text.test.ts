@@ -3,10 +3,12 @@
  * (alignment, word-wrap, kerning, leading) and builds correct page quads.
  */
 
+import { Color } from '#core/Color';
 import { logger } from '#core/Logger';
 import type { BmFontData } from '#rendering/text/BitmapText';
 import { BitmapText, BmFontAdapter } from '#rendering/text/BitmapText';
 import { BmFont } from '#rendering/text/BmFont';
+import { TextStyle } from '#rendering/text/TextStyle';
 import type { Texture } from '#rendering/texture/Texture';
 
 // ---------------------------------------------------------------------------
@@ -181,6 +183,104 @@ describe('BitmapText', () => {
     text.style.leading = 8;
 
     expect(text.pageQuads[0]).not.toBe(afterFirst);
+  });
+
+  test.each([
+    [0, 1, 2],
+    [2, 0, 1],
+  ])('shared styles update every reader in order %j', (...order) => {
+    const style = new TextStyle();
+    const texts = [new BitmapText('A', makeFont()), new BitmapText('A', makeFont()), new BitmapText('A', makeFont())];
+
+    for (const text of texts) {
+      text.style = style;
+      expect(text.textBounds.height).toBeCloseTo(19.2);
+    }
+
+    const before = layoutPasses();
+
+    style.fillColor = Color.red;
+    style.lineHeight = 2;
+
+    expect(layoutPasses()).toBe(before);
+
+    texts[order[0]]!.getLocalBounds();
+    void texts[order[1]]!.pageQuads;
+    void texts[order[2]]!.currentLayout;
+
+    for (const text of texts) {
+      expect(text.style).toBe(style);
+      expect(text.textBounds.height).toBe(32);
+    }
+
+    expect(layoutPasses()).toBe(before + 3);
+
+    for (const text of texts) {
+      text.syncDirty();
+      text.getLocalBounds();
+      text.destroy();
+    }
+
+    expect(layoutPasses()).toBe(before + 3);
+  });
+
+  test('a late shared-style reader retains its layout change after another reader sees a paint change', () => {
+    const style = new TextStyle();
+    const first = new BitmapText('A', makeFont());
+    const late = new BitmapText('A', makeFont());
+
+    first.style = style;
+    late.style = style;
+    first.syncDirty();
+    late.syncDirty();
+
+    const before = layoutPasses();
+
+    style.lineHeight = 2;
+    expect(first.textBounds.height).toBe(32);
+
+    const firstQuads = first.pageQuads;
+    const firstRevision = first._contentRevision;
+    const lateRevision = late._contentRevision;
+
+    style.fillColor = Color.red;
+
+    expect(first._contentRevision).toBeGreaterThan(firstRevision);
+    expect(late._contentRevision).toBeGreaterThan(lateRevision);
+    expect(first.pageQuads).toBe(firstQuads);
+    expect(late.textBounds.height).toBe(32);
+    expect(layoutPasses()).toBe(before + 2);
+
+    first.destroy();
+    late.destroy();
+  });
+
+  test('replacing one shared style detaches that reader while the remaining reader still updates', () => {
+    const shared = new TextStyle();
+    const replacement = new TextStyle({ lineHeight: 3 });
+    const first = new BitmapText('A', makeFont());
+    const second = new BitmapText('A', makeFont());
+
+    first.style = shared;
+    second.style = shared;
+    first.syncDirty();
+    second.syncDirty();
+    first.style = replacement;
+
+    expect(first.textBounds.height).toBe(48);
+
+    const quads = first.pageQuads;
+    const revision = first._contentRevision;
+
+    shared.lineHeight = 2;
+    shared.consumeDirty();
+
+    expect(first.pageQuads).toBe(quads);
+    expect(first._contentRevision).toBe(revision);
+    expect(second.textBounds.height).toBe(32);
+
+    first.destroy();
+    second.destroy();
   });
 
   // BitmapText used to lay text out inside every setter and in

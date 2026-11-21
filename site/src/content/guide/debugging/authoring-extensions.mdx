@@ -8,7 +8,7 @@ import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # Authoring extensions
 
-The [Custom renderers chapter](/ExoJS/en/guide/debugging/custom-renderers/) showed how to register a custom renderer against one running `Application`. An **extension** packages that same work — plus custom asset handlers and node serializers — into a single immutable descriptor you can publish as an npm package and drop into any project. This is exactly how the official `@codexo/exojs-particles`, `@codexo/exojs-tiled`, `@codexo/exojs-tilemap` packages plug into the core. Physics, pathfinding, and lighting are constructed directly instead; an optional package does not necessarily contribute an extension descriptor.
+The [Custom renderers chapter](/ExoJS/en/guide/debugging/custom-renderers/) showed how to register a custom renderer against one running `Application`. An **extension** packages that same work — plus custom asset handlers and node serializers — into a single immutable descriptor you can publish as an npm package and drop into any project. The built-in `@codexo/exojs/particles` and `@codexo/exojs/tilemap` subpaths and the separately published `@codexo/exojs-tiled` adapter use this descriptor mechanism. Physics, pathfinding, and lighting are constructed directly instead; an optional package does not necessarily contribute an extension descriptor.
 
 The model is deliberately small and **add-only**: an extension can only *contribute* capabilities (a new drawable type's renderer, a new asset type, a new serializable node). It never patches or replaces core behaviour. The core ships nothing extension-specific — an `Application` understands your drawable or asset type only once its extension is active.
 
@@ -151,7 +151,7 @@ A serializer binding follows the same shape — a descriptor plus a factory. An 
 
 ## Packaging policy
 
-Study how `@codexo/exojs-particles` is set up — the official packages all follow the same shape.
+For a separately published adapter, study `@codexo/exojs-tiled`. Built-in runtime modules such as `@codexo/exojs/particles` instead ship inside Core; their private workspace implementations are not separate npm products.
 
 **One entry point, no side effects.** The package root exports the descriptor and the public API and does nothing else — importing it must not change any application's behaviour. There is no registration module, because there is nothing global to register into; the consumer decides by passing the descriptor to the application that should have it.
 

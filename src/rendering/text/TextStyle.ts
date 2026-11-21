@@ -244,20 +244,25 @@ const assertNonNegative = (name: string, value: number): number => {
 };
 
 /**
- * Describes how a {@link Text} node renders its string.
+ * Describes how {@link Text} and {@link BitmapText} render their strings.
+ * Assign the same instance to multiple nodes' `style` properties to share it;
+ * each node observes changes independently and rebuilds on its next read.
  *
  * Every setter marks the style dirty with a {@link StyleChangeHint} so that
- * the owning node can batch-rebuild efficiently on the next frame:
- * - `'tint'`  - only updates `Mesh.tint`, no atlas work
+ * nodes can batch-rebuild efficiently:
+ * - `'tint'`  - render state only, no layout or atlas work
  * - `'layout'` - rebuilds the glyph mesh, reuses cached atlas glyphs
  * - `'font'`  - atlas lookup + full mesh rebuild
  *
- * Call {@link consumeDirty} at the start of each frame to get the accumulated
- * hint and clear the flag.
+ * {@link consumeDirty} reads and clears the public dirty cycle without
+ * acknowledging changes on behalf of any node.
  */
 export class TextStyle {
   private _dirty = false;
   private _pendingHint: StyleChangeHint = 'tint';
+  private _changeRevision = 1;
+  private _fontRevision = 1;
+  private _layoutRevision = 0;
 
   /** Fires once per dirty cycle when any property changes. */
   public readonly onChange = new Signal();
@@ -332,7 +337,8 @@ export class TextStyle {
    * Returns the accumulated {@link StyleChangeHint} and clears the dirty flag,
    * or `null` if nothing has changed since the last call.
    *
-   * Call this once per frame from the owning node's layout pass.
+   * Text nodes track their own revisions, so consuming this hint cannot hide
+   * a change from another node sharing the style.
    */
   public consumeDirty(): StyleChangeHint | null {
     if (!this._dirty) {
@@ -346,7 +352,33 @@ export class TextStyle {
     return hint;
   }
 
+  /** @internal - shared readers keep their own last observed revision. */
+  public get _revision(): number {
+    return this._changeRevision;
+  }
+
+  /** @internal - the heaviest change since one reader's last pass, independent of consumeDirty(). */
+  public _hintSince(revision: number): StyleChangeHint | null {
+    if (revision === this._changeRevision) {
+      return null;
+    }
+
+    if (revision < this._fontRevision) {
+      return 'font';
+    }
+
+    return revision < this._layoutRevision ? 'layout' : 'tint';
+  }
+
   private _markDirty(hint: StyleChangeHint): void {
+    const revision = ++this._changeRevision;
+
+    if (hint === 'font') {
+      this._fontRevision = revision;
+    } else if (hint === 'layout') {
+      this._layoutRevision = revision;
+    }
+
     this._pendingHint = mergeHint(this._pendingHint, hint);
 
     if (!this._dirty) {

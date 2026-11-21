@@ -117,6 +117,65 @@ const renderScene = async (ctx: { skip: (reason: string) => void }, backend: Web
 // ---------------------------------------------------------------------------
 
 describe('WebGPU AnimatedSprite — frame-region UV swap', () => {
+  test('trimmed clip changes preserve the authored foot position and pixel scale', async ctx => {
+    const backend = await setupBackend();
+    const atlas = document.createElement('canvas');
+
+    atlas.width = 32;
+    atlas.height = 12;
+
+    const context = atlas.getContext('2d')!;
+
+    context.fillStyle = '#ff0000';
+    context.fillRect(0, 0, 12, 10);
+    context.fillStyle = '#0000ff';
+    context.fillRect(12, 0, 20, 12);
+
+    const texture = new Texture(atlas);
+    const sprite = new AnimatedSprite(texture, {
+      idle: {
+        frames: [new Rectangle(0, 0, 12, 10)],
+        frameOffsets: [{ x: 58, y: 86 }],
+        sourceSize: { width: 128, height: 128 },
+      },
+      walk: {
+        frames: [new Rectangle(12, 0, 20, 12)],
+        frameOffsets: [{ x: 54, y: 84 }],
+        sourceSize: { width: 128, height: 128 },
+      },
+    })
+      .setAnchor(0.5, 0.75)
+      .setPosition(32, 40)
+      .setScale(2);
+
+    try {
+      sprite.play('idle');
+
+      if (!(await renderScene(ctx, backend, sprite))) {
+        return;
+      }
+
+      let readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(readPixel(32, 38), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(14, 30), [0, 0, 0, 255]);
+      sprite.play('walk');
+
+      if (!(await renderScene(ctx, backend, sprite))) {
+        return;
+      }
+
+      readPixel = readWebGpuPixels(backend, canvasSize);
+      expectPixelNear(readPixel(32, 38), [0, 0, 255, 255]);
+      expectPixelNear(readPixel(14, 30), [0, 0, 255, 255]);
+      expectPixelNear(readPixel(32, 41), [0, 0, 0, 255]);
+    } finally {
+      sprite.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
   test('frame 0 samples the first spritesheet cell', async ctx => {
     const backend = await setupBackend();
 

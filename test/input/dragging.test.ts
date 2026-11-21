@@ -19,6 +19,7 @@ import { Rectangle } from '#math/Rectangle';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
+import { RetainedContainer } from '#rendering/RetainedContainer';
 
 import { frameDelta } from '../support/frame-delta';
 
@@ -271,6 +272,74 @@ describe('tap after drag', () => {
 });
 
 describe('parent-local positioning', () => {
+  it.each([
+    { name: 'ordinary', create: () => new Container() },
+    { name: 'retained', create: () => new RetainedContainer() },
+  ])('keeps the grab offset under a rotated, scaled $name parent', ({ create }) => {
+    const { scene, signals, im } = createApp();
+    const parent = create();
+    const node = new Drawable();
+
+    parent.setPosition(100, 200);
+    parent.setRotation(90);
+    parent.setScale(2, 3);
+    node.setPosition(10, 20);
+    node.setLocalBounds(0, 0, 100, 40);
+    node.interactive = true;
+    node.draggable = true;
+    parent.addChild(node);
+    scene.addChild(parent);
+
+    try {
+      // Grab local (5,5): parent-local (15,25), then world (175,170).
+      dispatchPointer(signals.onPointerDown, 175, 170);
+      im.preFrame(frameDelta);
+      // Move to parent-local (25,35), retaining the same local grab point.
+      dispatchPointer(signals.onPointerMove, 205, 150, 36);
+      im.preFrame(frameDelta);
+
+      expect(im.getCapturedNodes()).toContain(node);
+      expect(node.x).toBeCloseTo(20);
+      expect(node.y).toBeCloseTo(30);
+    } finally {
+      im.destroy();
+      scene.root.destroy();
+    }
+  });
+
+  it('keeps the captured grab point when a retained ancestor moves during the drag', () => {
+    const { scene, signals, im } = createApp();
+    const group = new RetainedContainer();
+    const node = new Drawable();
+
+    group.setPosition(100, 40);
+    node.setPosition(10, 20);
+    node.setLocalBounds(0, 0, 100, 40);
+    node.interactive = true;
+    node.draggable = true;
+    group.addChild(node);
+    scene.addChild(group);
+
+    try {
+      // Grab local (20,10), start dragging, then move the group's origin.
+      dispatchPointer(signals.onPointerDown, 130, 70);
+      im.preFrame(frameDelta);
+      dispatchPointer(signals.onPointerMove, 170, 90, 45);
+      im.preFrame(frameDelta);
+      expect([node.x, node.y]).toEqual([50, 40]);
+
+      group.setPosition(200, 40);
+      dispatchPointer(signals.onPointerMove, 190, 90, 64);
+      im.preFrame(frameDelta);
+
+      // Pointer is now parent-local (-10,50), less the unchanged grab offset.
+      expect([node.x, node.y]).toEqual([-30, 40]);
+    } finally {
+      im.destroy();
+      scene.root.destroy();
+    }
+  });
+
   it('tracks the pointer under a translated parent', () => {
     const { scene, signals, im } = createApp();
     const parent = new Container();

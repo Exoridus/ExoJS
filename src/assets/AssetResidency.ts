@@ -12,7 +12,7 @@ import { AssetRef } from './AssetRef';
 import { type AssetReferenceLookup, AssetRequestLog } from './AssetRequestLog';
 import type { AssetTypeRegistry } from './AssetTypeRegistry';
 import type { CanonicalAsset, ResourceKey } from './canonicalKey';
-import { _bindLeaves as bindCatalogLeaves } from './catalogLeaf';
+import { _assertLeafOwner, _bindLeaves as bindCatalogLeaves, _foreignBindingRevision } from './catalogLeaf';
 import { failPendingAssets } from './failPendingAssets';
 import { type AssetInspection, type AssetSizeStats, type AssetStats, inspectState } from './inspectAssetState';
 import type { LoaderScope } from './LoaderScope';
@@ -182,24 +182,10 @@ export class AssetResidency {
   public _inspect(): readonly AssetInspection[] {
     const assets = new Map<ResourceKey, CanonicalAsset>();
 
-    for (const [key, entry] of this._resources) {
-      assets.set(key, entry.asset);
-    }
-
-    for (const [key, entry] of this._claims) {
-      assets.set(key, entry.asset);
-    }
-
-    for (const [key, entry] of this._deferred) {
-      assets.set(key, entry.asset);
-    }
-
-    for (const [key, entry] of this._refs) {
-      assets.set(key, entry.asset);
-    }
-
-    for (const [key, entry] of this._backgroundQueue) {
-      assets.set(key, entry.asset);
+    for (const entries of [this._resources, this._claims, this._deferred, this._refs, this._backgroundQueue]) {
+      for (const [key, entry] of entries) {
+        assets.set(key, entry.asset);
+      }
     }
 
     const rows: AssetInspection[] = [];
@@ -678,6 +664,16 @@ export class AssetResidency {
    */
   public _bindLeaves(leaves: Iterable<object>): void {
     bindCatalogLeaves(leaves, this._leafOwner);
+  }
+
+  /** Validate a prospective claim without changing the handle or its owner. @internal */
+  public _assertLeafOwner(leaf: object): void {
+    _assertLeafOwner(leaf, this._leafOwner);
+  }
+
+  /** First bindings outside this residency invalidate ownership preflights. @internal */
+  public get _ownershipRevision(): number {
+    return _foreignBindingRevision(this._leafOwner);
   }
 
   /**

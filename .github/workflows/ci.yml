@@ -199,6 +199,16 @@ jobs:
           include-hidden-files: true
           if-no-files-found: ignore
 
+      - name: Keep focused visual review evidence
+        if: ${{ !cancelled() && (matrix.id == 'webgl' || matrix.id == 'webgpu' || matrix.id == 'firefox') }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-review-${{ matrix.id }}
+          path: .workspace/visual-review/current/
+          retention-days: 7
+          include-hidden-files: true
+          if-no-files-found: ignore
+
       - if: ${{ matrix.junit && !cancelled() }}
         uses: codecov/codecov-action@v7
         with:

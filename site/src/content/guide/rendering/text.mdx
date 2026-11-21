@@ -13,6 +13,27 @@ import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 `Text` is a [`Drawable`](/ExoJS/en/api/drawable/) (via [`AbstractText`](/ExoJS/en/api/abstract-text/)), not a [`Container`](/ExoJS/en/api/container/): it carries the full transform, tint, blend mode, pixel-snap, filter, and mask surface of any other drawable, but it holds no children of its own. Nest it inside a `Container` when you need to group it with other nodes.
 
+## Choose a font path
+
+`Text` and `BitmapText` already share `AbstractText`, layout concepts, and renderer infrastructure. `BmFont` is a resource containing metrics and atlas pages, not another text node.
+
+| Path | Construction and size | Layout and style capabilities | Readiness and lifetime |
+| --- | --- | --- | --- |
+| System font | `new Text(text, { fontFamily, fontSize })`; font size is logical pixels. | Flat layout options; runtime SDF effects, gradients and decorations. Browser-shaped/color runs have their own rendering path. | The family must exist in the host; glyph atlases are shared runtime caches. |
+| Web font | `new Text(text, { font: loadedFace, fontSize })` or its registered family. | Same Text API; await the face before dimensions-dependent layout. | Load a `font` descriptor in the intended scope; the loader owns that FontFace registration. |
+| Bitmap/color atlas | `new BitmapText(text, loadedFont, { scale, layout })`. | Baked glyph metrics and character coverage, tint/gradient; no distance-field outline or underline/strikethrough. | Preload BmFont and its pages. Font `scale`/`fontScale` scales the baked metrics. |
+| RGB MSDF atlas | The same BitmapText constructor with `msdf: true`. | RGB median distance rendering around zero 0.5; distance outline/shadow effects. | A compatible loaded atlas is required; imported metadata alone does not select a mode. |
+
+BitmapText's font comes from its second constructor argument. Inherited `font`, `fontFamily`, `fontWeight`, `fontStyle`, and `fontVariant` style fields do not replace the baked font or synthesize glyph variants. Use `scale`/`fontScale` for baked metrics rather than treating them as a new runtime font size. Text's `outlineWidth` remains a normalized distance threshold (0 to 0.5), not a pixel width; the same numeric threshold can look different across atlases, scales, and distance ranges. Shadow offsets are logical pixels and `shadowBlur` is a normalized softness value.
+
+## System, web, and bitmap fonts in one scene
+
+The complete program below loads a web font and an ordinary RGBA bitmap font from `@codexo/exojs-demo-assets`, mounts its canvas, and builds the nodes only after readiness. The web-font title uses gradient, outline, and shadow; the bitmap score uses the effects its atlas supports. Install the demo-assets package alongside Core.
+
+<SourceSnippet source="examples/guides/text/font-types.ts" region="font-types" language="ts" title="Three real font sources and their supported effects" />
+
+The scene owns loader claims and nodes. A loader-managed FontFace is removed from the browser font set when its owning payload is disposed; another scope's claim can keep it alive. A FontFace registered directly by Text has a different lifetime, and shared glyph-atlas caches are not evicted merely because a scene ends. Prefer loader-managed fonts for deterministic loading/failure handling; do not describe scene teardown as clearing every global font cache.
+
 ## A minimal text node
 
 ```ts
@@ -36,6 +57,8 @@ label.style.fontSize = 32;            // re-lays out the glyphs on the next draw
 label.style.fillColor = new Color(0xff6347); // shader-side colour only — no atlas work
 ```
 
+Styles can be deliberately shared by assigning the same `TextStyle` to several nodes. Each node observes layout/font changes independently; measuring one text does not consume another's invalidation. Pure fill/tint changes remain shader work rather than forcing every reader to re-layout.
+
 ## Font loading
 
 System fonts (Arial, Times New Roman, etc.) work immediately. For custom web fonts, load one via `Asset.type('font', ...)` in the scene's `load` hook — fonts aren't a seamless type, so a bare path isn't enough; an explicit descriptor is required even for a literal path, and `family` is a required option:
@@ -58,7 +81,7 @@ You can also hand the loaded face to the node directly through the `font` style 
   title="examples/guides/text/custom-font.ts"
 />
 
-`font` takes precedence over `fontFamily` when both are set.
+`font` takes precedence over `fontFamily` when both are set. Direct face loading inside Text can fall back while pending and does not provide the same caller-facing load/error queue as the loader. Await loader loading when a failed font must prevent activation or layout must use final metrics.
 
 Text colours (`fillColor`, outline and shadow colours) are authored sRGB `Color` values, converted to linear light once like every other authored colour. Glyph coverage held in a signed-distance-field atlas is numeric data, not colour, and is never decoded; only colour glyphs rasterized through a canvas are colour. See [Colour pipeline](/ExoJS/en/guide/rendering/color-pipeline/).
 
@@ -96,6 +119,18 @@ Both `distanceRange` and `zeroDistanceValue` accept `null` when unknown; an expl
 Declared distance pages use numeric texture decoding, including the independent alpha distance channel of MTSDF. They are loaded without color conversion or premultiplication; an environment without numeric image decoding reports an error. Ordinary bitmap and color fonts keep the color decoder and its image-element fallback. Fonts sharing a page URL retain separate numeric and color interpretations, and pages remain owned by their font's asset dependency scope.
 
 Read the preserved encoding from `font.fontData.distanceField`. `padding` follows top/right/bottom/left order, `spacing` is separate, `atlasWidth`/`atlasHeight` retain declared dimensions, and each glyph retains its sampled rectangle and optional channel mask. Missing values remain absent. These describe authored data, not a guaranteed effect budget or an inferred larger packing cell. `BitmapText.fontScale` scales glyph metrics; it does not rewrite atlas-texel metadata. The construction-time `msdf` switch remains explicit, and these metadata do not change `TextStyle` units, select a new scalar SDF/MTSDF shader, or make the current shaders consume an asymmetric zero value.
+
+### Import support is not shader support
+
+| Font data | Import / numeric preservation | Current rendering path |
+| --- | --- | --- |
+| Runtime Text SDF | Generated by Text's glyph rasterizer. | Scalar SDF rendering for runtime glyphs. |
+| External RGB MSDF with symmetric zero 0.5 | BMFont-compatible geometry and declared numeric distance pages are preserved. | `BitmapText(..., { msdf: true })` uses the RGB median path. |
+| External scalar SDF | Distance metadata/pages can be preserved. | No automatic external scalar-SDF selection through the current `msdf` boolean. |
+| MTSDF | Metadata and the independent alpha distance channel can be preserved. | The RGB MSDF path does not consume the independent alpha distance as full MTSDF rendering. |
+| Asymmetric/unknown range or zero | Explicit values or null remain data. | Current external MSDF shaders use zero 0.5; preserved asymmetric metadata does not change that shader contract. |
+
+Use the RGB-MSDF loading example above only with compatible atlas data. Import tests that preserve an MTSDF channel establish data integrity, not support for every distance-field effect. These import capabilities do not change TextStyle units.
 
 ## Style properties
 

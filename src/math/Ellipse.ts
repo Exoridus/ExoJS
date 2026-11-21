@@ -152,7 +152,7 @@ export class Ellipse extends ShapeRevision implements ShapeLike {
   public intersectsWith(target: Collidable): boolean {
     switch (target.collisionType) {
       case CollisionType.SceneNode:
-        return intersectionRectEllipse((target as SceneNode).getBounds(), this);
+        return intersectionRectEllipse((target as SceneNode)._getWorldBounds(), this);
       case CollisionType.Rectangle:
         return intersectionRectEllipse(target as Rectangle, this);
       case CollisionType.Polygon:
@@ -173,7 +173,7 @@ export class Ellipse extends ShapeRevision implements ShapeLike {
   public collidesWith(target: Collidable): CollisionResponse | null {
     switch (target.collisionType) {
       case CollisionType.SceneNode:
-        return getCollisionEllipseRectangle(this, (target as SceneNode).getBounds());
+        return getCollisionEllipseRectangle(this, (target as SceneNode)._getWorldBounds());
       case CollisionType.Rectangle:
         return getCollisionEllipseRectangle(this, target as Rectangle);
       case CollisionType.Circle:

@@ -34,8 +34,9 @@ const retainedDiagnosticThreshold = 108;
  * the recording can be reconciled, and recaptures otherwise.
  *
  * Trade-offs of the group-local space convention: descendants
- * resolve group-relative transforms, so hit-testing/`getBounds()` inside the
- * group are group-local; per-child view culling is disabled inside the group
+ * resolve group-relative transforms and `getBounds()` inside the group stays
+ * group-local; public containment and collision queries use world coordinates.
+ * Per-child view culling is disabled inside the group
  * (the group is culled as a whole); particle-extension drawables bake their own
  * transforms and are not group-transform-aware. `PixelSnapMode.Position` IS
  * group-aware - the shader applies the group matrix before rounding the composed

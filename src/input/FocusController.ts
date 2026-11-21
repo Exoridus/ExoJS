@@ -111,7 +111,9 @@ export class FocusController implements FocusHooks {
     this._onKeyUpHandler = this._handleKeyUp.bind(this);
 
     this._onGamepadButtonDownHandler = (_pad, button): void => {
-      this._handleDirectionalChannel(button.channel);
+      if (!this._isGated()) {
+        this._handleDirectionalChannel(button.channel);
+      }
     };
 
     app.input.onKeyDown.add(this._onKeyDownHandler);

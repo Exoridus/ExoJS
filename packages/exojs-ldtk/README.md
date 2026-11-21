@@ -5,10 +5,10 @@ Load LDtk projects into ExoJS's format-neutral tilemap and world runtime. Use an
 ## Install and activate
 
 ```sh
-npm install --save-exact @codexo/exojs @codexo/exojs-tilemap @codexo/exojs-ldtk
+npm install --save-exact @codexo/exojs @codexo/exojs-ldtk
 ```
 
-Core and the tilemap runtime are peer dependencies. `ldtkExtension` depends on `tilemapExtension`, so selecting the adapter installs both its loading capability and the generic tile renderer.
+Core is a peer dependency and includes the tilemap runtime. `ldtkExtension` depends on `tilemapExtension`, so selecting the adapter installs both its loading capability and the generic tile renderer.
 
 ```ts
 import { Application, Scene } from '@codexo/exojs';
@@ -49,7 +49,7 @@ The project runtime supplies level ownership, not the game's streaming policy. C
 
 Tile rendering, entity spawning, IntGrid collision, and pathfinding are separate uses of authored data. A visible layer does not create a physics body automatically. `createLdtkIntGridCellSource` exposes cell data for the tilemap-physics bridge when that is the intended collision source.
 
-A loader-acquired map and its texture dependencies remain claim-owned. `LdtkMap.destroy()` releases its owned runtime maps, not arbitrary scene nodes or shared loader textures. Remove displaying nodes at their owner boundary and release asset claims through their scope. Import the format-neutral rendering nodes, including `TileMapNode`, from `@codexo/exojs-tilemap`; the adapter owns LDtk loading and conversion.
+A loader-acquired map and its texture dependencies remain claim-owned. `LdtkMap.destroy()` releases its owned runtime maps, not arbitrary scene nodes or shared loader textures. Remove displaying nodes at their owner boundary and release asset claims through their scope. Import the format-neutral rendering nodes, including `TileMapNode`, from `@codexo/exojs/tilemap`; the adapter owns LDtk loading and conversion.
 
 ## Documentation
 

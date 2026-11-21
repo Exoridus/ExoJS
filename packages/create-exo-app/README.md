@@ -30,6 +30,8 @@ Only ExoJS packages move together. Vite, TypeScript and the rest of the build to
 
 Availability follows the scaffolder version you run. The repository's `next` branch can contain a template that is not yet in an older npm release. A specialized template includes more systems; it is not a prerequisite for using the engine.
 
+The [sprite and animation recipe](https://exoridus.github.io/ExoJS/en/guide/rendering/animation/#a-complete-sprite-and-animation-scene) is a small asset-backed next step after `minimal`. The [preload and scene-switch recipe](https://exoridus.github.io/ExoJS/en/guide/assets/migrating-to-model-b-plus/#a-complete-preload-and-scene-switch-workflow) separates data preparation, activation, browser audio unlock, and cleanup without another manager layer.
+
 ## Locate the application code
 
 `src/main.ts` creates the application, registers scene classes, mounts the canvas, and awaits startup. Scene behavior lives in `src/scenes/`. Files under `public/assets/` are served unchanged; `public/` is not part of their request URL.

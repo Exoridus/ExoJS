@@ -9,7 +9,17 @@ import TryIt from '../../../components/TryIt.astro';
 
 # Character movement
 
-A platformer character is a kinematic body that should behave as if it had weight: it stands on the ground, walks up gentle slopes and over small steps, falls when there is nothing below it, and rides whatever it stands on. [`CharacterMovementComponent`](/ExoJS/en/api/character-movement-component/) in `@codexo/exojs-physics` provides that physical behaviour. What the character is _allowed_ to do — when it may jump, how often, whether it can drop through a platform — stays in your game code.
+A platformer character is a kinematic body that should behave as if it had weight: it stands on the ground, walks up gentle slopes and over small steps, falls when there is nothing below it, and rides whatever it stands on. [`CharacterMovementComponent`](/ExoJS/en/api/character-movement-component/) in `@codexo/exojs/physics` provides that physical behaviour. What the character is _allowed_ to do — when it may jump, how often, whether it can drop through a platform — stays in your game code.
+
+## Idle, walk, and jump in one scene
+
+This complete application loads the shipped character atlas, mounts the canvas, and composes the existing body, motor, and character components. Install `@codexo/exojs-demo-assets` alongside Core; click or tab to the canvas, walk with A/D, and jump with Space or gamepad South.
+
+<SourceSnippet source="examples/guides/character-movement/animated-character.ts" region="animated-character" language="ts" title="Fixed-step controls, grounded state, and named animation clips" />
+
+The clip priority is airborne first, then walking intent, then idle. `play` normally restarts a clip, so it is called only when `currentClip` changes. Use actual movement velocity instead of input intent when walking into a wall should display idle. Animation is registered with `SceneAvailability.Active`; physics, inputs, nodes, and assets have the scene's lifetime. The capsule deliberately fits the visible body inside transparent atlas padding rather than the whole cell. Jump count, coyote time, and buffering remain project rules.
+
+The `platformer` starter demonstrates the other valid approach: a dynamic body with a ground ray and direct frame selection. Choose dynamic simulation when forces/contact response should drive the player; choose this kinematic character path for motor-controlled slopes, steps, and grounding. Neither requires another Actor or state-controller abstraction.
 
 ## Three layers, one authority
 
