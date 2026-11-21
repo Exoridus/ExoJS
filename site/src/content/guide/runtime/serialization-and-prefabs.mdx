@@ -81,7 +81,7 @@ A saved scene stores asset references as loader keys, not the assets themselves.
 
 ## Format 3 and typed asset references
 
-Scenes and prefabs now write `version: 3`. A texture is stored as a typed reference, `{ "$type": "texture", "source": "hero.png", "options": { ... } }`, which also keeps persistable settings such as the sampler. Nodes in one document can point at each other with local `$id` and `$ref` links. Documents written by earlier versions (a plain string or `{ source, options }`) still read unchanged. Instantiating a prefab reserves its assets under the owning scene without fetching them; they load when the instance is used.
+Scenes and prefabs write `version: 4`. A texture is stored as a typed reference, `{ "$type": "texture", "source": "hero.png", "options": { ... } }`, which also keeps persistable settings such as the sampler. Nodes in one document can point at each other with local `$id` and `$ref` links. Re-export documents from earlier versions with text effects expressed in logical pixels. Instantiating a prefab reserves its assets under the owning scene without fetching them; they load when the instance is used.
 
 Asset types you register with `assetTypes` or `app.assets.define()` are saved under their `type` string, so choose one that you can keep stable. See [Migrating to path-based assets](/ExoJS/en/guide/assets/migrating-to-model-b-plus/).
 

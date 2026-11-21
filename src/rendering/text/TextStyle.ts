@@ -255,6 +255,14 @@ const assertNonNegative = (name: string, value: number): number => {
   return value;
 };
 
+const assertFinite = (name: string, value: number): number => {
+  if (!Number.isFinite(value)) {
+    throw new RangeError(`TextStyle.${name} must be finite (got ${value}).`);
+  }
+
+  return value;
+};
+
 /**
  * Describes how a {@link Text} node renders its string.
  *
@@ -274,6 +282,9 @@ const assertNonNegative = (name: string, value: number): number => {
  * the style unchanged.
  */
 export class TextStyle {
+  private _revision = 1;
+  private _fontRevision = 1;
+  private _layoutRevision = 0;
   private _dirty = false;
   private _pendingHint: StyleChangeHint = 'tint';
 
@@ -285,6 +296,7 @@ export class TextStyle {
   private _effectHosts: TextEffectHost[] | null = null;
 
   private _fontFamily: FontFamily;
+  private _fontFace: FontFace | null;
   private _fontWeight: FontWeight;
   private _fontStyle: FontStyle;
   private _fontVariant: FontVariant;
@@ -317,7 +329,8 @@ export class TextStyle {
   public constructor(options: TextStyleOptions = {}) {
     const explicitFace = typeof FontFace !== 'undefined' && options.font instanceof FontFace ? options.font : null;
 
-    this._fontFamily = explicitFace ? explicitFace.family : (options.fontFamily ?? 'Arial');
+    this._fontFace = explicitFace;
+    this._fontFamily = explicitFace?.family ?? options.fontFamily ?? 'Arial';
 
     this._fontWeight = options.fontWeight ?? 'normal';
     this._fontStyle = options.fontStyle ?? 'normal';
@@ -332,9 +345,9 @@ export class TextStyle {
     this._leading = options.leading ?? 0;
 
     this._shadowColor = options.shadowColor ? options.shadowColor.clone() : Color.black.clone();
-    this._shadowOffsetX = options.shadowOffsetX ?? 0;
-    this._shadowOffsetY = options.shadowOffsetY ?? 0;
-    this._shadowAlpha = options.shadowAlpha ?? 0;
+    this._shadowOffsetX = assertFinite('shadowOffsetX', options.shadowOffsetX ?? 0);
+    this._shadowOffsetY = assertFinite('shadowOffsetY', options.shadowOffsetY ?? 0);
+    this._shadowAlpha = assertFinite('shadowAlpha', options.shadowAlpha ?? 0);
     this._shadowBlur = options.shadowBlur === undefined ? 0 : assertNonNegative('shadowBlur', options.shadowBlur);
 
     this._underline = options.underline ?? false;
@@ -354,7 +367,7 @@ export class TextStyle {
    * Returns the accumulated {@link StyleChangeHint} and clears the dirty flag,
    * or `null` if nothing has changed since the last call.
    *
-   * Call this once per frame from the owning node's layout pass.
+   * Each attached text node observes changes independently of this dirty cycle.
    */
   public consumeDirty(): StyleChangeHint | null {
     if (!this._dirty) {
@@ -412,7 +425,33 @@ export class TextStyle {
     }
   }
 
+  /** @internal */
+  public get _changeRevision(): number {
+    return this._revision;
+  }
+
+  /** @internal */
+  public _hintSince(revision: number): StyleChangeHint | null {
+    if (revision === this._revision) {
+      return null;
+    }
+
+    if (revision < this._fontRevision) {
+      return 'font';
+    }
+
+    return revision < this._layoutRevision ? 'layout' : 'tint';
+  }
+
   private _markDirty(hint: StyleChangeHint): void {
+    const revision = ++this._revision;
+
+    if (hint === 'font') {
+      this._fontRevision = revision;
+    } else if (hint === 'layout') {
+      this._layoutRevision = revision;
+    }
+
     this._pendingHint = mergeHint(this._pendingHint, hint);
 
     if (!this._dirty) {
@@ -426,25 +465,29 @@ export class TextStyle {
   /**
    * CSS font-family this style resolves glyphs through.
    *
-   * Assigning a `FontFace` stores only its family: nothing here registers the
-   * face with `document.fonts`, so pass a loaded face as
-   * {@link TextStyleOptions.font} when constructing the node to have `Text`
-   * register and await it. The family alone still selects an already
-   * registered face.
+   * Assign a `FontFace` to let attached `Text` nodes register and load it.
+   * A family name selects a face already available to the browser.
    */
   public get fontFamily(): FontFamily {
     return this._fontFamily;
   }
 
   public set fontFamily(v: FontFace | FontFamily) {
-    const family = typeof FontFace !== 'undefined' && v instanceof FontFace ? v.family : (v as FontFamily);
+    const face = typeof FontFace !== 'undefined' && v instanceof FontFace ? v : null;
+    const family = face?.family ?? (v as FontFamily);
 
-    if (this._fontFamily === family) {
+    if (this._fontFamily === family && this._fontFace === face) {
       return;
     }
 
     this._fontFamily = family;
+    this._fontFace = face;
     this._markDirty('font');
+  }
+
+  /** @internal */
+  public get _face(): FontFace | null {
+    return this._fontFace;
   }
 
   public get fontWeight(): FontWeight {
@@ -621,6 +664,8 @@ export class TextStyle {
   }
 
   public set shadowOffsetX(v: number) {
+    assertFinite('shadowOffsetX', v);
+
     if (this._shadowOffsetX === v) {
       return;
     }
@@ -636,6 +681,8 @@ export class TextStyle {
   }
 
   public set shadowOffsetY(v: number) {
+    assertFinite('shadowOffsetY', v);
+
     if (this._shadowOffsetY === v) {
       return;
     }
@@ -651,6 +698,8 @@ export class TextStyle {
   }
 
   public set shadowAlpha(v: number) {
+    assertFinite('shadowAlpha', v);
+
     if (this._shadowAlpha === v) {
       return;
     }
@@ -798,6 +847,7 @@ export class TextStyle {
     if (style !== this) {
       this._preflightEffects(style._outlineWidth, style._shadowAlpha, style._shadowOffsetX, style._shadowOffsetY, style._shadowBlur);
       this._fontFamily = style._fontFamily;
+      this._fontFace = style._fontFace;
       this._fontWeight = style._fontWeight;
       this._fontStyle = style._fontStyle;
       this._fontVariant = style._fontVariant;
@@ -830,6 +880,7 @@ export class TextStyle {
   public clone(): TextStyle {
     const s = new TextStyle();
     s._fontFamily = this._fontFamily;
+    s._fontFace = this._fontFace;
     s._fontWeight = this._fontWeight;
     s._fontStyle = this._fontStyle;
     s._fontVariant = this._fontVariant;

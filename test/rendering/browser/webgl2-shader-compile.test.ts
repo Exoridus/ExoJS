@@ -199,7 +199,7 @@ const composeRuntimeSource = (name: string, source: string): string => {
 ${INSTANCE_TRANSFORM_GLSL}
 ${filled}`
     : name.startsWith('text-') && name.endsWith('.frag')
-      ? composeTextAtlasFragmentGlsl(filled)
+      ? composeTextAtlasFragmentGlsl(filled, name !== 'text-color.frag')
       : name === 'lit-sprite.frag'
         ? composeSpriteMaterialFragmentGlsl(filled)
         : filled;

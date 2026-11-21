@@ -74,7 +74,10 @@ export const buildOutlineScene = (testCase: EdgeCase, phase: Phase = defaultPhas
     outlineWidth: testCase.outlineWidth,
   });
 
-  text.setPosition(16 + phase.deviceOffset / testCase.surfaceRatio, 8);
+  text.setPosition(
+    Math.max(16, testCase.outlineWidth + 8) + phase.deviceOffset / testCase.surfaceRatio,
+    Math.max(8, testCase.outlineWidth + 4),
+  );
   text.setScale(testCase.scale);
   root.addChild(text);
 

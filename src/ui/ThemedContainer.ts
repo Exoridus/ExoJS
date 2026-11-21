@@ -28,13 +28,7 @@ export abstract class ThemedContainer extends Container {
 
   /** The nearest themed ancestor's theme, or the built-in default when this node has none. */
   protected _resolveInheritedTheme(): UITheme {
-    for (let current = this.parent; current !== null; current = current.parent) {
-      if (current instanceof ThemedContainer) {
-        return current.theme;
-      }
-    }
-
-    return defaultUITheme;
+    return resolveThemeAt(this.parent);
   }
 
   /** Push a theme refresh into every themed descendant. */
@@ -43,7 +37,40 @@ export abstract class ThemedContainer extends Container {
       cascadeThemeInto(child);
     }
   }
+
+  /** @internal - prepare this subtree's theme before any widget applies it. */
+  public _prepareInheritedTheme(_inherited: UITheme, _apply: Array<() => void>): void {
+    // A UIRoot owns its theme independently of its ancestors.
+  }
+
+  /** @internal */
+  protected _prepareChildThemes(theme: UITheme, apply: Array<() => void>): void {
+    for (const child of this.children) {
+      prepareThemeInto(child, theme, apply);
+    }
+  }
 }
+
+const prepareThemeInto = (node: RenderNode, inherited: UITheme, apply: Array<() => void>): void => {
+  if (node instanceof ThemedContainer) {
+    node._prepareInheritedTheme(inherited, apply);
+  } else if (node instanceof Container) {
+    for (const child of node.children) {
+      prepareThemeInto(child, inherited, apply);
+    }
+  }
+};
+
+/** Resolve the theme a child at this parent would inherit. @internal */
+export const resolveThemeAt = (parent: Container | null): UITheme => {
+  for (let current = parent; current !== null; current = current.parent) {
+    if (current instanceof ThemedContainer) {
+      return current.theme;
+    }
+  }
+
+  return defaultUITheme;
+};
 
 /**
  * Push a theme refresh into `node`: directly if it is themed, or forwarded to

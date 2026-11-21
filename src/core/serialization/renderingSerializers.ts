@@ -18,7 +18,6 @@ import type { DeserializeContext, NodeSerializer } from './NodeSerializer';
 import { asNumberArray, asObject, asSerializedNode, readEnum, REPEAT_FITS, REPEAT_MODES } from './read';
 import type { SerializationRegistry } from './SerializationRegistry';
 import { compact, deserializeStyleOptions, readLayoutOptions, serializeStyle } from './serializerHelpers';
-import { migrateLegacyTextEffects, textEffectPixelVersion } from './textEffectMigration';
 
 // ── Small helpers ────────────────────────────────────────────────────────────
 
@@ -411,11 +410,7 @@ const bitmapTextSerializer: NodeSerializer<BitmapText> = {
     const layout = readLayoutOptions(data.layout);
     const msdf = data.msdf === true;
     const scale = num(data.scale);
-    let style = deserializeStyleOptions(data.style);
-
-    if (style !== undefined && ctx.version < textEffectPixelVersion) {
-      style = migrateLegacyTextEffects(style, { kind: 'bmFont', fontData: font.fontData, fontScale: scale ?? 1, msdf }, ctx.version);
-    }
+    const style = deserializeStyleOptions(data.style);
 
     return new BitmapText(
       typeof data.text === 'string' ? data.text : '',

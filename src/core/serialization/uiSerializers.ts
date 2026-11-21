@@ -16,7 +16,6 @@ import type { NodeSerializer } from './NodeSerializer';
 import { asSerializedNode } from './read';
 import type { SerializationRegistry } from './SerializationRegistry';
 import { arrayToColor, colorToArray, compact, deserializeStyleOptions, serializeStyleOptions } from './serializerHelpers';
-import { legacySdfRadius, migrateLegacyTextEffects, textEffectPixelVersion } from './textEffectMigration';
 
 const num = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
 
@@ -62,13 +61,8 @@ const labelSerializer: NodeSerializer<Label> = {
 
     return out;
   },
-  read(data, ctx) {
-    let style = deserializeStyleOptions(data.style);
-
-    // The values were drawn by the label's Text at the radius of their time.
-    if (style !== undefined && ctx.version < textEffectPixelVersion) {
-      style = migrateLegacyTextEffects(style, { kind: 'sdf', sdfRadius: legacySdfRadius, colorGlyphs: false }, ctx.version);
-    }
+  read(data) {
+    const style = deserializeStyleOptions(data.style);
 
     const label = new Label(typeof data.text === 'string' ? data.text : '', style);
 

@@ -16,6 +16,8 @@ Core includes retained UI widgets. You do not need an extra package for buttons,
 
 Widgets start with a shared dark theme, system typography, and mint accents for focus and values. No stylesheet or image pack is required. Set `scene.ui.theme = createUITheme(...)` to customize the layer, or use a widget's theme overrides for a local variation. Theme changes apply to existing labels as well as backgrounds; the surrounding website's CSS does not determine the native widget theme. The [Widget Lab](/ExoJS/en/tools/widget-lab/) shows every control in both the default and the site theme, with their interaction, disabled, popup and teardown behavior.
 
+Buttons center their visible glyph fill in the widget. Theme insets define the content rectangle, so unequal insets shift its center. Text styles and asynchronously loaded font faces update placement automatically.
+
 ## Build a small HUD
 
 This complete scene renders only UI, so it does not need a world `draw` hook:

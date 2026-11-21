@@ -83,17 +83,11 @@ export const sdfEffectCapability = (sdfRadius: number): TextEffectCapability => 
   zero: 0.5,
 });
 
-/**
- * Reach tiers, in logical pixels, a `Text` without an explicit `sdfRadius`
- * chooses from. A node starts at the first tier and only ever moves up, to the
- * first tier covering the effects its style asks for, so most text keeps the
- * finest field and an animated effect re-rasterizes at most once per tier.
- * @internal
- */
-export const textReachTiers: readonly number[] = [4, 8, 16, 32];
-
-/** Largest reach an automatic `Text` can grow to. @internal */
-export const textMaxAutoReach: number = textReachTiers[textReachTiers.length - 1]!;
+// R8 has 255 intervals across [-reach, +reach]. Keep the quantization step
+// at or below one logical pixel (at most half a pixel of rounding error).
+export const textMaxAutoReach = 255 / 2;
+export const autoTextEffectCapability = sdfEffectCapability(textMaxAutoReach);
+const textReachTiers: readonly number[] = [4, 8, 16, 32, 64, textMaxAutoReach];
 
 /**
  * Logical pixels of outward reach, antialiasing reserve included, needed to

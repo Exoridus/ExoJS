@@ -6,8 +6,7 @@ export type SerializedComponent = VersionedDocument & { readonly $id?: number };
 
 /**
  * Current scene-serialization format version. Written into every
- * {@link SerializedScene} and checked on deserialize so saved data can outlive
- * the code that produced it (see the migration chain in `migrate`).
+ * {@link SerializedScene} and {@link SerializedPrefab}. Both readers require this version.
  */
 export const SERIALIZATION_VERSION = 4;
 

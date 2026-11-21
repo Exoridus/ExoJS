@@ -4069,7 +4069,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Current scene-serialization format version. Written into every SerializedScene and checked on deserialize so saved data can outlive the code that produced it (see the migration chain in migrate)."
+          "description": "Current scene-serialization format version. Written into every SerializedScene and SerializedPrefab. Both readers require this version."
         },
         {
           "name": "soundType",

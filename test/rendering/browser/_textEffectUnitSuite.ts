@@ -9,6 +9,12 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { getDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { Text } from '#rendering/text/Text';
 import { TextEffectError } from '#rendering/text/TextEffectError';
+import { Button } from '#ui/Button';
+import { Checkbox } from '#ui/Checkbox';
+import { Dropdown } from '#ui/Dropdown';
+import { createUITheme } from '#ui/theme';
+import { Toggle } from '#ui/Toggle';
+import { UIRoot } from '#ui/UIRoot';
 
 import type { EdgeCase, Frame } from './_textEffectUnits';
 import {
@@ -152,43 +158,154 @@ export const runEffectUnitSuite = (backendName: string, driver: EffectBackendDri
   describe(`${backendName} automatic reach`, () => {
     // No sdfRadius anywhere: an ordinary outline just works, and the visible
     // width holds across the tiers the node moves through.
-    test.for([1, 2])('outline 1, 2, 4, 8 and 16 px with no configuration at surface ratio %i', async (surfaceRatio, ctx) => {
-      const session = await driver.open(effectCanvasSize, surfaceRatio);
-      const rows: string[] = [];
-      const failures: string[] = [];
+    test.for(surfaceRatios)(
+      'outline 1, 2, 4, 8, 12, 16, 24 and 48 px with no configuration at surface ratio %i',
+      async (surfaceRatio, ctx) => {
+        const session = await driver.open(effectCanvasSize, surfaceRatio);
+        const rows: string[] = [];
+        const failures: string[] = [];
 
-      try {
-        for (const outlineWidth of [1, 2, 4, 8, 16]) {
-          const testCase: EdgeCase = { outlineWidth, surfaceRatio, scale: 1 };
-          const phaseMeans: number[] = [];
+        try {
+          for (const outlineWidth of [1, 2, 4, 8, 12, 16, 24, 48]) {
+            const testCase: EdgeCase = { outlineWidth, surfaceRatio, scale: 1 };
+            const phaseMeans: number[] = [];
 
-          for (const phase of phases) {
-            const { root, text } = buildOutlineScene(testCase, phase);
-            const frame = await session.draw(root, ctx);
+            for (const phase of phases) {
+              const { root, text } = buildOutlineScene(testCase, phase);
+              const frame = await session.draw(root, ctx);
 
-            text.destroy();
+              text.destroy();
 
-            if (frame === null) {
-              return;
+              if (frame === null) {
+                return;
+              }
+
+              phaseMeans.push(measureOutlineWidth(frame, effectCanvasSize, testCase).mean);
             }
 
-            phaseMeans.push(measureOutlineWidth(frame, effectCanvasSize, testCase).mean);
+            const summary = summarize(phaseMeans, outlineWidth);
+
+            rows.push(`auto w${outlineWidth}: mean ${summary.mean.toFixed(3)} MAE ${summary.mae.toFixed(3)}`);
+
+            if (!judgeWidth(summary, outlineWidth, surfaceRatio, surfaceRatio)) {
+              failures.push(rows[rows.length - 1]!);
+            }
           }
+        } finally {
+          session.close();
+          console.info(`[${backendName} automatic reach, surface ratio ${surfaceRatio}]\n${rows.join('\n')}`);
+        }
 
-          const summary = summarize(phaseMeans, outlineWidth);
+        expect(failures.join('\n')).toBe('');
+      },
+    );
+  });
 
-          rows.push(`auto w${outlineWidth}: mean ${summary.mean.toFixed(3)} MAE ${summary.mae.toFixed(3)}`);
+  describe(`${backendName} widget label fill alignment`, () => {
+    test('rejects a theme whose active glyph cannot fit without changing siblings', () => {
+      const root = new UIRoot();
+      const first = new Button({ label: 'Start' });
+      const second = new Button({ label: 'Play' }).setTextStyle({ fontFamily: 'monospace' });
+      root.addChild(first, second);
+      const previous = root.theme;
+      const patch = createUITheme({ button: { normal: { text: { fontSize: 2000, outlineWidth: 24 } } } });
 
-          if (!judgeWidth(summary, outlineWidth, surfaceRatio, surfaceRatio)) {
-            failures.push(rows[rows.length - 1]!);
+      try {
+        expect(() => {
+          root.theme = patch;
+        }).toThrow(/atlas page/);
+        expect(root.theme).toBe(previous);
+        expect(first.theme).toBe(previous);
+        expect(second.theme).toBe(previous);
+        expect(first.labelNode.style.fontSize).toBe(16);
+      } finally {
+        root.destroy();
+      }
+    });
+
+    test.for(surfaceRatios)('keeps rendered text centered through layout and asynchronous font changes at DPR %i', async (ratio, ctx) => {
+      const size = effectCanvasSize;
+      const session = await driver.open(size, ratio);
+      const root = new UIRoot();
+      const button = new Button({ width: 144, height: 68, label: 'Start', textColor: new Color(0, 255, 0) });
+      const face = new FontFace(
+        `ExoWidgetFont${ratio}`,
+        `url("${new URL('../../../examples/assets/fonts/font-kenney-future.ttf', import.meta.url)}")`,
+      );
+
+      const expectCenter = async (centerX: number, centerY: number): Promise<void> => {
+        const frame = await session.draw(root, ctx);
+
+        if (frame === null) {
+          return;
+        }
+
+        let left = size;
+        let top = size;
+        let right = -1;
+        let bottom = -1;
+
+        for (let y = 0; y < size; y++) {
+          for (let x = 0; x < size; x++) {
+            if (frame[(y * size + x) * 4 + 1]! >= 128) {
+              left = Math.min(left, x);
+              top = Math.min(top, y);
+              right = Math.max(right, x);
+              bottom = Math.max(bottom, y);
+            }
           }
         }
-      } finally {
-        session.close();
-        console.info(`[${backendName} automatic reach, surface ratio ${surfaceRatio}]\n${rows.join('\n')}`);
-      }
 
-      expect(failures.join('\n')).toBe('');
+        expect(right).toBeGreaterThan(left);
+        expect(bottom).toBeGreaterThan(top);
+        // Pixel centers bracket the glyph's continuous extent at each edge.
+        expect(Math.abs((left + right + 1) / (2 * ratio) - centerX)).toBeLessThanOrEqual(1);
+        expect(Math.abs((top + bottom + 1) / (2 * ratio) - centerY)).toBeLessThanOrEqual(1);
+      };
+
+      try {
+        root.addChild(button);
+        button.setPosition(8, 8);
+        await expectCenter(80, 42);
+
+        button.label = 'New game\nPlay again';
+        button.setSize(128, 94);
+        button.setTextStyle({ fontSize: 20, fontFamily: 'Georgia', fontWeight: 'bold', fontStyle: 'italic', lineHeight: 1.6 });
+        await expectCenter(72, 55);
+
+        button.setTheme({ button: { normal: { insets: { left: 16, right: 4, top: 12, bottom: 4 } } } });
+        await expectCenter(78, 59);
+
+        button.label = 'WWW';
+        button.labelNode.style.fontFamily = face;
+        button.labelNode.style.fontWeight = 'normal';
+        button.labelNode.style.fontStyle = 'normal';
+        const fallback = button.labelNode.textBounds.width;
+        expect(face.status).toBe('loading');
+        await expectCenter(78, 59);
+
+        await face.loaded;
+        await expectCenter(78, 59);
+        expect(button.labelNode.textBounds.width).not.toBe(fallback);
+
+        for (const widget of [
+          new Checkbox({ label: 'Checkbox' }),
+          new Toggle({ label: 'Toggle' }),
+          new Dropdown({ items: [{ label: 'Dropdown', value: 1 }], selectedIndex: 0 }),
+        ]) {
+          root.addChild(widget);
+          const label = widget.children.find(node => node instanceof Text)!;
+          label.style.fontSize = 26;
+          await session.draw(root, ctx);
+          const ink = label._fillBounds;
+          expect(label.y + ink.y + ink.height / 2).toBeCloseTo(widget.uiHeight / 2);
+          widget.destroy();
+        }
+      } finally {
+        document.fonts.delete(face);
+        root.destroy();
+        session.close();
+      }
     });
   });
 

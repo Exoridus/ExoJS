@@ -627,39 +627,28 @@ export const deserializeSceneInto = (
   deserializeTargets(targets, loader, registry, data.version, options, owner, publishUI);
 };
 
-/**
- * Newest version whose values every reader migrates. Raising
- * {@link SERIALIZATION_VERSION} past it without adding the matching reader
- * transforms fails here instead of misreading older documents.
- */
-const LAST_MIGRATED_VERSION = 4;
-
-const requireMigrationPath = (version: number, kind: 'scene' | 'prefab'): void => {
-  if (version < SERIALIZATION_VERSION && SERIALIZATION_VERSION > LAST_MIGRATED_VERSION) {
-    throw new Error(`Cannot deserialize ${kind}: version ${version} needs an explicit migration to version ${SERIALIZATION_VERSION}.`);
+const requireDocumentVersion = (version: unknown, kind: 'scene' | 'prefab'): number => {
+  if (
+    version === undefined ||
+    (typeof version === 'number' && Number.isInteger(version) && version >= 0 && version < SERIALIZATION_VERSION)
+  ) {
+    throw new Error(
+      `Cannot deserialize ${kind}: format ${version ?? 0} requires version ${SERIALIZATION_VERSION}. Re-export the document with text effects in logical pixels.`,
+    );
   }
+
+  if (typeof version !== 'number' || !Number.isInteger(version) || version < 0) {
+    throw new Error(`Cannot deserialize ${kind}: data version must be a non-negative integer.`);
+  }
+
+  if (version > SERIALIZATION_VERSION) {
+    throw new Error(`Cannot deserialize ${kind}: data version ${version} is newer than the supported version ${SERIALIZATION_VERSION}.`);
+  }
+
+  return version;
 };
 
-/**
- * Validate a serialized scene document, retaining its source version until a
- * real migration can be applied, and return a structurally-sound
- * {@link SerializedScene}.
- *
- * This is the **untrusted top-level boundary**: the parameter is `unknown`
- * because a save file / cloud document is not guaranteed to match the type. The
- * frame (`version`/`root`/`ui`) is validated here so downstream `deserialize*`
- * paths can rely on `root` being a real node. Throws on a non-object document,
- * a version newer than supported, or a missing/invalid root; an invalid `ui` is
- * dropped (it is optional) rather than thrown.
- *
- * Versions 0 through 3 differ in how asset references are framed; version 4
- * states text outline and shadow lengths in logical pixels. The document is
- * returned unchanged with its source version, and each node reader migrates
- * older values before constructing its node (`Text`, `BitmapText` and `Label`
- * convert the old distance-field thresholds). Future changes to existing
- * values need the same: a reader transform keyed on the source version.
- * @internal
- */
+/** Validate the current scene format before reading nodes. An invalid optional UI node is ignored. @internal */
 export const migrate = (data: unknown): SerializedScene => {
   const scene = asObject(data);
 
@@ -667,20 +656,7 @@ export const migrate = (data: unknown): SerializedScene => {
     throw new Error('Cannot deserialize scene: the document is not an object.');
   }
 
-  const version: unknown = scene.version === undefined ? 0 : scene.version;
-
-  // A fractional, negative or non-numeric version would skip every migration
-  // step while still being published as the document's version.
-  if (typeof version !== 'number' || !Number.isInteger(version) || version < 0) {
-    throw new Error(`Cannot deserialize scene: data version ${String(version)} is not a non-negative integer.`);
-  }
-
-  if (version > SERIALIZATION_VERSION) {
-    throw new Error(`Cannot deserialize scene: data version ${version} is newer than the supported version ${SERIALIZATION_VERSION}.`);
-  }
-
-  requireMigrationPath(version, 'scene');
-
+  const version = requireDocumentVersion(scene.version, 'scene');
   const root = asSerializedNode(scene.root);
 
   if (root === null) {
@@ -692,19 +668,7 @@ export const migrate = (data: unknown): SerializedScene => {
   return ui !== null ? { version, root, ui } : { version, root };
 };
 
-/**
- * Validate a serialized prefab document while retaining its source version,
- * returning a structurally-sound {@link SerializedPrefab}.
- *
- * The prefab counterpart to {@link migrate}, and the same untrusted boundary:
- * {@link Prefab.fromJSON} accepts whatever came off disk or the network. Throws
- * on a non-object document, a version newer than supported, or a missing/invalid
- * root.
- *
- * Versions 0 through 3 migrate exactly as for scenes, in the node readers,
- * every time the prefab is instantiated; the stored document is not rewritten.
- * @internal
- */
+/** Validate the current prefab format before reading nodes. @internal */
 export const migratePrefab = (data: unknown): SerializedPrefab => {
   const document = asObject(data);
 
@@ -712,18 +676,7 @@ export const migratePrefab = (data: unknown): SerializedPrefab => {
     throw new Error('Cannot deserialize prefab: the document is not an object.');
   }
 
-  const version: unknown = document.version === undefined ? 0 : document.version;
-
-  if (typeof version !== 'number' || !Number.isInteger(version) || version < 0) {
-    throw new Error(`Cannot deserialize prefab: data version ${String(version)} is not a non-negative integer.`);
-  }
-
-  if (version > SERIALIZATION_VERSION) {
-    throw new Error(`Cannot deserialize prefab: data version ${version} is newer than the supported version ${SERIALIZATION_VERSION}.`);
-  }
-
-  requireMigrationPath(version, 'prefab');
-
+  const version = requireDocumentVersion(document.version, 'prefab');
   const root = asSerializedNode(document.root);
 
   if (root === null) {

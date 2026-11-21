@@ -111,6 +111,14 @@ export interface SolidTexel {
   readonly v: number;
 }
 
+/** Bounds of visible glyph fill, in logical pixels. @internal */
+export interface GlyphFillBounds {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
 /**
  * Provider of per-character glyph metrics, consumed by {@link layoutText}.
  *
@@ -178,6 +186,8 @@ export type GlyphKey = string;
  * Cached glyph data stored in an atlas page after rasterization.
  */
 export interface GlyphInfo {
+  /** Fill bounds relative to the quad. Null marks a whitespace raster. @internal */
+  readonly fill?: GlyphFillBounds | null;
   /** Atlas X position (pixels, top-left of slot). */
   readonly x: number;
   /** Atlas Y position (pixels, top-left of slot). */
@@ -231,6 +241,8 @@ export interface TextSize {
  * these glyphs actually cover", padding, outline reach and all.
  */
 export interface TextLayoutResult {
+  /** Union of visible fill and decoration geometry, before effects. @internal */
+  readonly fill?: GlyphFillBounds;
   /** Per-glyph quad placements in local text space. */
   readonly placements: readonly GlyphPlacement[];
   /**

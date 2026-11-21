@@ -77,8 +77,7 @@ export class Prefab {
 
   /**
    * The prefab as a versioned, JSON-serialisable document - the standard
-   * `JSON.stringify(prefab)` hook. A prefab loaded from an older document
-   * retains its source version until an explicit migration transforms its data.
+   * `JSON.stringify(prefab)` hook.
    * Treat the result as read-only; `root` is the live descriptor, not a copy.
    */
   public toJSON(): SerializedPrefab {

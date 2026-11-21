@@ -151,7 +151,7 @@
           ],
           "params": [],
           "returnType": "StyleChangeHint | null",
-          "description": "Returns the accumulated StyleChangeHint and clears the dirty flag, or null if nothing has changed since the last call. Call this once per frame from the owning node's layout pass."
+          "description": "Returns the accumulated StyleChangeHint and clears the dirty flag, or null if nothing has changed since the last call. Each attached text node observes changes independently of this dirty cycle."
         },
         {
           "name": "copy",
@@ -362,7 +362,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "CSS font-family this style resolves glyphs through. Assigning a FontFace stores only its family: nothing here registers the face with document.fonts, so pass a loaded face as TextStyleOptions.font when constructing the node to have Text register and await it. The family alone still selects an already registered face."
+          "description": "CSS font-family this style resolves glyphs through. Assign a FontFace to let attached Text nodes register and load it. A family name selects a face already available to the browser."
         },
         {
           "name": "fontKey",

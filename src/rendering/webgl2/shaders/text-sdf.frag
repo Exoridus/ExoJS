@@ -9,12 +9,13 @@
 // workstation.
 precision highp float;
 
-uniform sampler2D u_nodeData;  // RGBA32F per-node data (see WebGl2TextRenderer)
+uniform highp sampler2D u_nodeData;  // RGBA32F per-node data (see WebGl2TextRenderer)
 uniform vec2      u_pageSize;  // atlas page size in px (for shadow UV conversion)
 
 flat in int   v_nodeIndex;
 flat in uint  v_decoration;
 flat in vec4  v_pxAxes;
+flat in vec4  v_tileUv;
      in vec2  v_texcoord;
      in vec2  v_gradUV;
 
@@ -69,6 +70,17 @@ vec4 evalTextGradient(int ni, int stopCount, float t) {
   return prevColor;
 }
 
+// Keep bilinear taps on this tile, including shifted shadows and normal estimates.
+vec2 tileSampleUv(vec2 uv) {
+  vec2 halfTexel = min(0.5 / u_pageSize, (v_tileUv.zw - v_tileUv.xy) * 0.5);
+
+  return clamp(uv, v_tileUv.xy + halfTexel, v_tileUv.zw - halfTexel);
+}
+
+float sampleField(vec2 uv) {
+  return sampleBase(v_textureSlot, tileSampleUv(uv)).r;
+}
+
 void main(void) {
   int ni = v_nodeIndex;
 
@@ -95,7 +107,7 @@ void main(void) {
   float fieldScale   = tShadow2.w;
   float zero         = tGradAxis.w;
 
-  float sd = sampleBase(v_textureSlot, v_texcoord).r;
+  float sd = sampleField(v_texcoord);
   // Evaluated before any branch: a derivative needs every fragment of the quad.
   float derivativeAa = max(fwidth(sd) * 0.5, 0.0001);
 
@@ -134,8 +146,8 @@ void main(void) {
     // extra taps cost nothing on the isotropic path.
     if (abs(densityY - densityX) > 0.001 * max(densityX, densityY)) {
       vec2  texel = 1.0 / u_pageSize;
-      float sdU = sampleBase(v_textureSlot, v_texcoord + vec2(texel.x, 0.0)).r;
-      float sdV = sampleBase(v_textureSlot, v_texcoord + vec2(0.0, texel.y)).r;
+      float sdU = sampleField(v_texcoord + vec2(texel.x, 0.0));
+      float sdV = sampleField(v_texcoord + vec2(0.0, texel.y));
       vec2  grad = vec2(sdU - sd, sdV - sd);
       float gradLength = length(grad);
 
@@ -164,7 +176,10 @@ void main(void) {
   // is an authored half-width in logical pixels. It widens the edge, never
   // sharpens it.
   float shadowSoft = max(aa, blurField);
-  float shadowSd   = sampleBase(v_textureSlot, v_texcoord - shadowOffset).r;
+  vec2 shadowUv = v_texcoord - shadowOffset;
+  float shadowSd = shadowAlpha > 0.0 && all(greaterThanEqual(shadowUv, v_tileUv.xy)) && all(lessThanEqual(shadowUv, v_tileUv.zw))
+    ? sampleField(shadowUv)
+    : 0.0;
   float shadow     = smoothstep(max(zero - shadowSoft, 0.0), min(zero + shadowSoft, 1.0), shadowSd)
                      * shadowAlpha * (1.0 - fill) * (1.0 - outline);
 

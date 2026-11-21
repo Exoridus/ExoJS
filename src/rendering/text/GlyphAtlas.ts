@@ -61,17 +61,11 @@ const solidBlockSize = 4;
  * the same way and need the same block on whichever of them a node draws from.
  * @internal
  */
-export const claimSolidTexel = (
-  allocate: (w: number, h: number) => { page: AtlasPage; slot: { x: number; y: number } },
-  margin = 0,
-): SolidTexel => {
-  // In a distance-field page every glyph keeps its ink one field reach inside
-  // its tile, which is what stops a shadow sample that strays across a tile
-  // edge from reading a neighbour's ink. The solid block is ink to its edge,
-  // so it needs the same empty margin around it.
-  const { page, slot } = allocate(solidBlockSize + 2 * margin, solidBlockSize + 2 * margin);
-  const x = slot.x + margin;
-  const y = slot.y + margin;
+export const claimSolidTexel = (allocate: (w: number, h: number) => { page: AtlasPage; slot: { x: number; y: number } }): SolidTexel => {
+  const {
+    page,
+    slot: { x, y },
+  } = allocate(solidBlockSize, solidBlockSize);
 
   page.fillSolid(x, y, solidBlockSize, solidBlockSize);
   page.uploadDirtyRegion();
@@ -102,6 +96,10 @@ class ShelfPacker {
   }
 
   public insert(width: number, height: number): { x: number; y: number } | null {
+    if (width > this._width) {
+      return null;
+    }
+
     for (const shelf of this._shelves) {
       if (shelf.height >= height && shelf.cursorX + width <= this._width) {
         const x = shelf.cursorX;
@@ -492,10 +490,7 @@ export class GlyphAtlas implements GlyphProvider {
   }
 
   public getSolidTexel(): SolidTexel {
-    return (this._solidTexel ??= claimSolidTexel(
-      (w, h) => this._allocateSlot(w, h, 'solid', 0),
-      this._mode === 'sdf' ? this._rasterSpan.buffer : 0,
-    ));
+    return (this._solidTexel ??= claimSolidTexel((w, h) => this._allocateSlot(w, h, 'solid', 0)));
   }
 
   public clear(): void {
@@ -559,6 +554,7 @@ export class GlyphAtlas implements GlyphProvider {
         buffer: this._rasterSpan.buffer,
         radius: this._rasterSpan.radius,
         cutoff: 0.5,
+        maxTileSize: this._pageSize,
       });
       this._sdfInstances.set(rasterFontSize, instance);
     }
@@ -568,7 +564,7 @@ export class GlyphAtlas implements GlyphProvider {
 
   private _rasterizeSdf(char: string, size: number, key: GlyphKey): GlyphInfo {
     const ratio = this._pixelRatio;
-    const result = this._getSdf(this._rasterFontSize(size)).draw(char);
+    const result = this._getSdf(this._rasterFontSize(size)).draw(char, ratio);
 
     const { page, slot } = this._allocateSlot(result.width, result.height, char, size);
     page.writeSdf(result.data, slot.x, slot.y, result.width, result.height);
@@ -580,6 +576,15 @@ export class GlyphAtlas implements GlyphProvider {
       // Slot origin and UVs stay in ATLAS TEXELS - they address the raster grid.
       // Everything else is divided back into logical pixels, which is the space
       // the quad, the cursor and the node's bounds live in.
+      fill:
+        result.fill === null
+          ? null
+          : {
+              x: result.fill.x / ratio,
+              y: result.fill.y / ratio,
+              width: result.fill.width / ratio,
+              height: result.fill.height / ratio,
+            },
       width: result.width / ratio,
       height: result.height / ratio,
       // Not `result.glyphAdvance`: the advance is a logical typographic number
@@ -594,8 +599,8 @@ export class GlyphAtlas implements GlyphProvider {
       uvBottom: (slot.y + result.height) / ps,
       // Shift the quad left/up by the SDF buffer so the glyph content aligns
       // with the logical cursor position (bearing = −buffer on both axes).
-      xBearing: -result.glyphLeft / ratio,
-      yBearing: -result.glyphTop / ratio,
+      xBearing: result.xBearing / ratio,
+      yBearing: result.yBearing / ratio,
     };
 
     this._cache.set(key, info);

@@ -1,7 +1,0 @@
-{
-  "version": 2,
-  "root": {
-    "type": "Container",
-    "children": [{ "type": "Sprite", "texture": { "source": "hero.png", "options": {} } }]
-  }
-}

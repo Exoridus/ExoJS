@@ -56,7 +56,7 @@ const nodeFloats = textNodeDataFloats;
 const rowsPerPatchBlock = 16;
 
 // Per-vertex layout (20 bytes): pos f32x2 + uv f32x2 + packed node/atlas u32
-const vertexStrideBytes = 20;
+const vertexStrideBytes = 28;
 const vertexStrideWords = vertexStrideBytes / 4;
 // Word offset of the per-vertex node index within one vertex.
 const nodeIndexWord = 4;
@@ -498,6 +498,9 @@ export class WebGpuTextRenderer
           this._float32View[w + 1] = vertices[vp + 1]!;
           this._float32View[w + 2] = uvs[vp]!;
           this._float32View[w + 3] = uvs[vp + 1]!;
+          const opposite = (v ^ 2) * 2;
+          this._float32View[w + 5] = uvs[opposite]!;
+          this._float32View[w + 6] = uvs[opposite + 1]!;
           // Four vertices per quad, so the flag is read once per quad.
           this._uint32View[w + 4] = packTextNodeAtlasSlot(nodeIndex, atlasSlot, decorations[v >> 2] === 1);
         }
@@ -859,7 +862,8 @@ export class WebGpuTextRenderer
     // Before the layout pass, not after: this is what a node with no explicit
     // `pixelRatio` inherits, and the pass it drives is the one that resolves
     // which atlas the node rasterizes into.
-    node._setSurfacePixelRatio(this.getBackend().surfacePixelRatio);
+    const backend = this.getBackend();
+    node._setSurfacePixelRatio(backend.surfacePixelRatio, backend.maxTextureSize);
     node.syncDirty();
     const { pageQuads, textPages: pages } = node;
 
@@ -1173,6 +1177,7 @@ export class WebGpuTextRenderer
               { shaderLocation: 0, offset: 0, format: 'float32x2' },
               { shaderLocation: 1, offset: 8, format: 'float32x2' },
               { shaderLocation: 2, offset: 16, format: 'uint32' },
+              { shaderLocation: 3, offset: 20, format: 'float32x2' },
             ],
           },
         ],

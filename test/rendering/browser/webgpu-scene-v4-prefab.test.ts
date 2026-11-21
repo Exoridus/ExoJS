@@ -12,7 +12,7 @@ import { ScaleModes, WrapModes } from '#rendering/types';
 import { webGpuAvailable } from './_backendSetup';
 
 test.for(['webgl2', 'webgpu'] as const)(
-  'V3 Prefab lazily renders its tagged texture with the saved sampler on %s',
+  'Format 4 prefab lazily renders its tagged texture with the saved sampler on %s',
   async (type, context) => {
     if (type === 'webgpu' && !(await webGpuAvailable())) {
       context.skip('no WebGPU adapter');
@@ -31,7 +31,7 @@ test.for(['webgl2', 'webgpu'] as const)(
       source: 'hero.png',
       options: { textureOptions: { scaleMode: ScaleModes.Nearest, wrapMode: WrapModes.Repeat } },
     };
-    const prefab = Prefab.fromJSON({ version: 3, root: { type: 'Container', children: [{ type: 'Sprite', texture: taggedTexture }] } });
+    const prefab = Prefab.fromJSON({ version: 4, root: { type: 'Container', children: [{ type: 'Sprite', texture: taggedTexture }] } });
 
     class MainScene extends Scene {}
 

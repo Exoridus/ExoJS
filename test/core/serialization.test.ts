@@ -438,6 +438,12 @@ describe('serialization — Scene entry point', () => {
     scene.destroy();
   });
 
+  it.each([undefined, 0, 1, 2, 3])('rejects scene and prefab format %s before reading nodes', version => {
+    const data = { version, root: { type: 'Container', children: [{ type: 'Text', style: { outlineWidth: 0.5 } }] } };
+    expect(() => new Scene().deserialize(data)).toThrow(/requires version 4/);
+    expect(() => Prefab.fromJSON(data)).toThrow(/requires version 4/);
+  });
+
   it('rejects a document newer than the supported version', () => {
     const scene = new Scene();
 
@@ -1194,7 +1200,8 @@ describe('serialization — Prefab', () => {
 
   it('rejects a document that is not a valid prefab frame', () => {
     // The pre-version bare-descriptor form is no longer accepted: it has no root.
-    expect(() => Prefab.fromJSON({ type: 'Container' })).toThrow(/no valid root node/);
+    expect(() => Prefab.fromJSON({ type: 'Container' })).toThrow(/requires version 4/);
+    expect(() => Prefab.fromJSON({ version: SERIALIZATION_VERSION })).toThrow(/no valid root node/);
     expect(() => Prefab.fromJSON(null)).toThrow(/not an object/);
   });
 });

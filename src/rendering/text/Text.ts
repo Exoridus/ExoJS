@@ -9,10 +9,10 @@ import type { ShapingMode } from './shaping';
 import { resolveShaping } from './shaping';
 import type { TextEffectCapability } from './textEffects';
 import {
+  autoTextEffectCapability,
   colorGlyphEffectCapability,
   requiredTextEffectReach,
   sdfEffectCapability,
-  textMaxAutoReach,
   textReachTierFor,
 } from './textEffects';
 import { emptyTextLayout, layoutText, validateLayoutOptions } from './textLayout';
@@ -34,6 +34,10 @@ const assertPixelRatio = (value: number): number => {
 
   return value;
 };
+
+// Track the typeface cache that has actually seen each loaded face. A face
+// registered by the caller may already have fallback glyphs in that cache.
+const refreshedFaces = new WeakMap<FontFace, { pool: ReturnType<typeof getDefaultGlyphAtlasPool>; variants: Set<string> }>();
 
 const assertSdfRadius = (value: number): number => {
   if (!Number.isFinite(value) || value <= 0) {
@@ -63,7 +67,7 @@ export interface TextOptions extends TextStyleOptions, LayoutOptions {
   /**
    * Fixes the distance-field reach in logical pixels: how far outside each
    * glyph the atlas tile and its field extend. Omit it for the usual case -
-   * the reach is then chosen automatically from 4, 8, 16 and 32 pixels as the
+   * the reach is then chosen automatically in tiers starting at 4 pixels as the
    * style asks for outlines and shadows, never shrinks, and costs nothing for
    * text without large effects.
    *
@@ -159,7 +163,7 @@ export class Text extends AbstractText {
   protected readonly _effectContext = 'Text';
   private _atlas: GlyphAtlas | null = null;
   private _destroyed = false;
-  private _faceLoadVersion = 0;
+  private _watchedFace: FontFace | null = null;
 
   /** Node-owned raster of the browser-shaped lines, or `null` while this node draws shared glyphs. */
   private _shapedSource: ShapedTextSource | null = null;
@@ -193,6 +197,7 @@ export class Text extends AbstractText {
    * before it has ever been drawn still has a defined, non-global answer.
    */
   private _surfacePixelRatio = 1;
+  private _surfaceMaxTextureSize: number | undefined;
 
   public constructor(text: string, options: TextOptions = {}) {
     super(text, new TextStyle(options), options);
@@ -203,11 +208,7 @@ export class Text extends AbstractText {
     this._effectCapability = this._colorGlyphs ? colorGlyphEffectCapability : sdfEffectCapability(this._sdfRadius);
     this._attachEffectHost();
 
-    const face = this._extractFace(options);
-
-    if (face !== null) {
-      void this._loadFace(face);
-    }
+    this._watchFace();
   }
 
   /**
@@ -258,15 +259,7 @@ export class Text extends AbstractText {
 
   public set style(v: TextStyle | TextStyleOptions) {
     this._replaceStyle(v instanceof TextStyle ? v : new TextStyle(v));
-    this._faceLoadVersion++;
-
-    if (!(v instanceof TextStyle)) {
-      const face = this._extractFace(v);
-
-      if (face !== null) {
-        void this._loadFace(face);
-      }
-    }
+    this._watchFace();
   }
 
   /**
@@ -293,18 +286,59 @@ export class Text extends AbstractText {
     return this._explicitSdfRadius;
   }
 
+  /** Check atlas fit for a prospective widget style without changing this text. @internal */
+  public _assertStyleFits(style: TextStyle): void {
+    if (this._text.length === 0) {
+      return;
+    }
+
+    const reach = this._explicitSdfRadius ?? this._autoReachFor(this._sdfRadius, style);
+    const previous = this._style;
+
+    if (
+      this._atlas !== null &&
+      this._shapingMode === 'simple' &&
+      reach === this._sdfRadius &&
+      previous.fontFamily === style.fontFamily &&
+      previous.fontSize === style.fontSize &&
+      previous.fontStyle === style.fontStyle &&
+      previous.fontWeight === style.fontWeight &&
+      previous.fontVariant === style.fontVariant &&
+      previous.textTransform === style.textTransform &&
+      previous.underline === style.underline &&
+      previous.strikethrough === style.strikethrough
+    ) {
+      return;
+    }
+
+    // The preview uses the real raster density and layout. Simple glyphs
+    // populate the shared atlas the widget will use when the theme commits.
+    const preview = new Text(this._text, {
+      ...this._layout,
+      colorGlyphs: this._colorGlyphs,
+      pixelRatio: this.rasterPixelRatio,
+      sdfRadius: reach,
+    });
+    preview._surfaceMaxTextureSize = this._surfaceMaxTextureSize;
+
+    try {
+      preview._replaceStyle(style);
+      preview._runLayout('font');
+    } finally {
+      preview.destroy();
+    }
+  }
+
   protected override _effectCeiling(): TextEffectCapability {
     if (this._colorGlyphs || this._explicitSdfRadius !== undefined) {
       return this._effectCapability;
     }
 
-    return sdfEffectCapability(textMaxAutoReach);
+    return autoTextEffectCapability;
   }
 
   /** The smallest automatic tier at or above `current` that covers the attached style. */
-  private _autoReachFor(current: number): number {
-    const style = this._style;
-
+  private _autoReachFor(current: number, style = this._style): number {
     return textReachTierFor(
       current,
       requiredTextEffectReach(style.outlineWidth, style.shadowAlpha, style.shadowOffsetX, style.shadowOffsetY, style.shadowBlur),
@@ -313,6 +347,10 @@ export class Text extends AbstractText {
 
   protected override _consumePendingHint(): StyleChangeHint | null {
     const hint = super._consumePendingHint();
+
+    if (hint === 'font') {
+      this._watchFace();
+    }
 
     if (hint === null || this._colorGlyphs || this._explicitSdfRadius !== undefined) {
       return hint;
@@ -386,7 +424,16 @@ export class Text extends AbstractText {
    * override records the value but keeps rasterizing at its own.
    * @internal
    */
-  public _setSurfacePixelRatio(pixelRatio: number): void {
+  public _setSurfacePixelRatio(pixelRatio: number, maxTextureSize = this._surfaceMaxTextureSize): void {
+    if (maxTextureSize !== this._surfaceMaxTextureSize) {
+      this._surfaceMaxTextureSize = maxTextureSize;
+
+      if (this._shapedSource !== null && maxTextureSize !== undefined) {
+        this._releaseShapedSource();
+        this._markDirty('layout');
+      }
+    }
+
     const next = Number.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : 1;
 
     if (this._surfacePixelRatio === next) {
@@ -445,7 +492,6 @@ export class Text extends AbstractText {
 
   public override destroy(): void {
     this._destroyed = true;
-    this._faceLoadVersion++;
     this._atlas?.onCleared.remove(this._onAtlasCleared);
     this._atlas = null;
     this._releaseShapedSource();
@@ -454,32 +500,28 @@ export class Text extends AbstractText {
 
   // ── Private ──────────────────────────────────────────────────────────────
 
-  /** Extract a {@link FontFace} from raw style options, or return null. */
-  private _extractFace(opts: TextStyleOptions): FontFace | null {
-    if (typeof FontFace === 'undefined') {
-      return null;
+  private _watchFace(): void {
+    const face = this._style._face;
+
+    if (face === this._watchedFace) {
+      return;
     }
 
-    if (opts.font instanceof FontFace) {
-      return opts.font;
-    }
+    this._watchedFace = face;
 
-    return null;
+    if (face !== null) {
+      void this._loadFace(face);
+    }
   }
 
   /**
    * Register `face` with `document.fonts` if needed, await its load, then
    * clear the typeface's measurements and rasters, then rebuild geometry.
-   *
-   * Uses a version counter to discard stale loads when the style is replaced
-   * before the previous face finishes loading.
    */
   private async _loadFace(face: FontFace): Promise<void> {
     if (typeof document === 'undefined' || !document.fonts) {
       return;
     }
-
-    const version = ++this._faceLoadVersion;
 
     if (!document.fonts.has(face)) {
       document.fonts.add(face);
@@ -491,21 +533,25 @@ export class Text extends AbstractText {
       return;
     }
 
-    if (this._destroyed || version !== this._faceLoadVersion) {
+    if (this._destroyed || this._style._face !== face) {
       return;
     }
 
-    // Not `Text._acquireAtlas(...).clear()`: before this node's first collection
-    // `rasterPixelRatio` resolves through the surface-ratio default of 1
-    // (`_surfacePixelRatio`), which can disagree with the ratio the node will
-    // actually rasterize at once it is drawn. Clearing by ratio would clear
-    // the wrong atlas and leave the one this node uses holding fallback-font
-    // tiles indefinitely; clearing the whole variant reaches every ratio.
-    getDefaultGlyphAtlasPool().clearVariant({
-      family: this._style.fontFamily,
-      fontStyle: this._style.fontStyle,
-      fontWeight: this._style.fontWeight,
-    });
+    const pool = getDefaultGlyphAtlasPool();
+    const font = this._style.fontKey;
+    const variant = `${this._style.fontStyle}:${this._style.fontWeight}`;
+    let refreshed = refreshedFaces.get(face);
+
+    if (refreshed?.pool !== pool) {
+      refreshed = { pool, variants: new Set() };
+      refreshedFaces.set(face, refreshed);
+    }
+
+    if (!refreshed.variants.has(variant)) {
+      refreshed.variants.add(variant);
+      pool.clearVariant(font);
+    }
+
     this._markDirty('font');
   }
 
@@ -579,6 +625,7 @@ export class Text extends AbstractText {
       mode,
       sdfRadius: this._sdfRadius,
       pixelRatio,
+      ...(this._surfaceMaxTextureSize !== undefined && { maxTileSize: this._surfaceMaxTextureSize }),
       direction,
       letterSpacing,
     });

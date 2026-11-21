@@ -37,6 +37,19 @@ export abstract class AbstractText extends Drawable {
   private _lastLayout: TextLayoutResult | null = null;
   /** Heaviest change awaiting a layout pass, or `null` when settled. */
   private _pendingHint: StyleChangeHint | null = 'font';
+  private _styleRevision = 0;
+
+  /** Called after new metrics and quads have been published, so an owning widget can read them. @internal */
+  public _onLayout: (() => void) | null = null;
+
+  /** Visible fill geometry, excluding padding and effects. @internal */
+  public get _fillBounds(): TextLayoutResult['ink'] {
+    this.syncDirty();
+
+    const layout = this._lastLayout;
+
+    return layout?.fill ?? { x: 0, y: 0, width: layout?.advance.width ?? 0, height: layout?.advance.height ?? 0 };
+  }
 
   /**
    * Stamps the node content-dirty when the attached style is mutated IN PLACE.
@@ -55,6 +68,7 @@ export abstract class AbstractText extends Drawable {
     validateLayoutOptions(layout);
     this._text = text;
     this._style = style;
+    this._styleRevision = 0;
     this._style.onChange.add(this._onStyleChange);
     // Copied, not aliased: the caller keeps its own options object and may
     // well go on mutating it, which must not silently re-flow this node.
@@ -213,12 +227,14 @@ export abstract class AbstractText extends Drawable {
     // width has to re-derive its origin - otherwise a centred label drifts
     // left as it grows. Mirrors what Sprite does when it switches sub-frame.
     this._updateOrigin();
+    this._onLayout?.();
   }
 
   public override destroy(): void {
     this._style.onChange.remove(this._onStyleChange);
     this._style._removeEffectHost(this);
     this._pageQuads = [];
+    this._onLayout = null;
     super.destroy();
   }
 
@@ -305,6 +321,7 @@ export abstract class AbstractText extends Drawable {
     this._style.onChange.remove(this._onStyleChange);
     this._style._removeEffectHost(this);
     this._style = style;
+    this._styleRevision = 0;
     this._style.onChange.add(this._onStyleChange);
     this._style._addEffectHost(this);
     this._markDirty('font');
@@ -339,14 +356,14 @@ export abstract class AbstractText extends Drawable {
   protected abstract readonly _effectContext: string;
 
   /**
-   * Take the heaviest pending hint and settle the node, folding in whatever
-   * the attached {@link TextStyle} has latched since the last pass. A style
-   * carries its own dirty flag because it is mutated in place rather than
-   * assigned, so polling it here is what makes `label.style.align = ...` land.
+   * Rearm the style's change signal without acknowledging any other node's revision.
    */
   protected _consumePendingHint(): StyleChangeHint | null {
     const own = this._pendingHint;
-    const style = this._style.consumeDirty();
+    const style = this._style._hintSince(this._styleRevision);
+
+    this._styleRevision = this._style._changeRevision;
+    this._style.consumeDirty();
 
     this._pendingHint = null;
 

@@ -1,7 +1,7 @@
 import { Text } from '#rendering/text/Text';
-import { TextEffectError } from '#rendering/text/TextEffectError';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 
+import { assertSkinSetTextEffects, themeSkinSet, type UITheme } from './theme';
 import { Widget } from './Widget';
 
 /**
@@ -24,8 +24,9 @@ export class Label extends Widget {
     this._textStyle = Object.keys(style).length > 0 ? Object.freeze({ ...style }) : null;
     this._appliedText = this._skin('label').text;
     this._text = new Text(text, { ...this._appliedText, ...this._textStyle });
+    this._text._onLayout = this._syncSize;
     this.addChild(this._text);
-    this._syncSize();
+    this._text.syncDirty();
   }
 
   public get text(): string {
@@ -35,7 +36,7 @@ export class Label extends Widget {
   public set text(value: string) {
     if (this._text.text !== value) {
       this._text.text = value;
-      this._syncSize();
+      this._text.syncDirty();
     }
   }
 
@@ -52,23 +53,21 @@ export class Label extends Widget {
   /**
    * Override text style on top of the skin's; `null` returns to it. The label
    * is re-measured, so its layout size follows the new style. An outline or
-   * shadow the text node cannot draw throws {@link TextEffectError} and keeps
+   * shadow the text node cannot draw throws a text effect error and keeps
    * the previous overrides.
    */
   public setTextStyle(style: TextStyleOptions | null): this {
     const next = style === null ? null : Object.freeze({ ...this._textStyle, ...style });
-    // Checked before committing: a stored override the node rejects would
-    // throw again on every later relayout.
-    const issue = this._text.checkEffects({ ...this._skin('label').text, ...next });
-
-    if (issue !== null) {
-      throw new TextEffectError(issue, 'Label');
-    }
+    assertSkinSetTextEffects(themeSkinSet(this.theme, 'label'), next, this._text, this._skinState);
 
     this._textStyle = next;
     this._applyTextStyle(true);
 
     return this;
+  }
+
+  protected override _validateTheme(theme: UITheme): void {
+    assertSkinSetTextEffects(themeSkinSet(theme, 'label'), this._textStyle, this._text, this._skinState);
   }
 
   protected override _relayout(): void {
@@ -90,12 +89,12 @@ export class Label extends Widget {
 
     this._appliedText = skinText;
     this._text.style = { ...skinText, ...this._textStyle };
-    this._syncSize();
+    this._text.syncDirty();
   }
 
-  private _syncSize(): void {
+  private readonly _syncSize = (): void => {
     const bounds = this._text.textBounds;
 
     this.setSize(bounds.width, bounds.height);
-  }
+  };
 }

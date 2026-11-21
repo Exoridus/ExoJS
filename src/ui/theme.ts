@@ -1,9 +1,10 @@
 import { Color } from '#core/Color';
 import type { AnimatedSpriteClipDefinition } from '#rendering/sprite/AnimatedSprite';
 import type { NineSliceInsets, NineSliceModes } from '#rendering/sprite/nineSlice';
+import type { Text } from '#rendering/text/Text';
 import { TextEffectError } from '#rendering/text/TextEffectError';
-import { checkTextEffectValues, sdfEffectCapability, textMaxAutoReach } from '#rendering/text/textEffects';
-import type { TextStyleOptions } from '#rendering/text/TextStyle';
+import { autoTextEffectCapability, checkTextEffectValues } from '#rendering/text/textEffects';
+import { TextStyle, type TextStyleOptions } from '#rendering/text/TextStyle';
 import type { Texture } from '#rendering/texture/Texture';
 import type { TextureRegion } from '#rendering/texture/TextureRegion';
 
@@ -397,20 +398,41 @@ export const resolveUISkin = (set: UISkinSet, state: UIWidgetState): UISkin => s
 /**
  * Reject a skin text style whose outline or shadow no label could draw, at the
  * moment the skin is applied rather than when a widget first lays out with it.
- * Measured against the most an automatically sized `Text` can reach.
+ * @internal
  */
-const assertSkinTextEffects = (text: TextStyleOptions): void => {
+const assertSkinTextEffects = (options: TextStyleOptions): TextStyle => {
+  const text = new TextStyle(options);
   const issue = checkTextEffectValues(
-    sdfEffectCapability(textMaxAutoReach),
-    text.outlineWidth ?? 0,
-    text.shadowAlpha ?? 0,
-    text.shadowOffsetX ?? 0,
-    text.shadowOffsetY ?? 0,
-    text.shadowBlur ?? 0,
+    autoTextEffectCapability,
+    text.outlineWidth,
+    text.shadowAlpha,
+    text.shadowOffsetX,
+    text.shadowOffsetY,
+    text.shadowBlur,
   );
 
   if (issue !== null) {
     throw new TextEffectError(issue, 'UI skin text style');
+  }
+
+  return text;
+};
+
+/** @internal */
+export const assertSkinSetTextEffects = (
+  set: UISkinSet,
+  override?: TextStyleOptions | null,
+  node?: Text | null,
+  state: UIWidgetState = 'normal',
+): void => {
+  const activeSkin = resolveUISkin(set, state);
+
+  for (const stateSkin of Object.values(set)) {
+    const style = assertSkinTextEffects(override == null ? stateSkin.text : { ...stateSkin.text, ...override });
+
+    if (stateSkin === activeSkin) {
+      node?._assertStyleFits(style);
+    }
   }
 };
 

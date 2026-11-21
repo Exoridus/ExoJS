@@ -147,8 +147,8 @@
       "slug": "prefab-format-3",
       "path": "scene-graph/prefab-format-3.js",
       "language": "typescript",
-      "title": "Prefab Format 3",
-      "description": "Capture a prefab with a typed asset reference and instantiate it next to an older version 2 document.",
+      "title": "Prefab Format 4",
+      "description": "Capture a prefab with a typed asset reference and instantiate it next to a saved format 4 document.",
       "backend": "core",
       "tags": ["scene", "prefab", "serialization", "assets"],
       "level": "advanced"

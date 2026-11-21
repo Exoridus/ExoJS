@@ -57,7 +57,7 @@ test.for(['webgl2', 'webgpu'] as const)(
       source: 'variant@{1,2}x.{webp,png}',
       options: { textureOptions: { scaleMode: ScaleModes.Nearest, wrapMode: WrapModes.Repeat } },
     };
-    const prefab = Prefab.fromJSON({ version: 3, root: { type: 'Sprite', texture: textureReference } });
+    const prefab = Prefab.fromJSON({ version: 4, root: { type: 'Sprite', texture: textureReference } });
     const parser = new AtlasParser();
     const parse = vi.spyOn(parser, 'parse');
     let demand!: Sprite;

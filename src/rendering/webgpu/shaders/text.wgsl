@@ -17,6 +17,7 @@ struct VertexInput {
     @location(0) position  : vec2<f32>,
     @location(1) texcoord  : vec2<f32>,
     @location(2) packedNodeSlot : u32,
+    @location(3) oppositeTexcoord : vec2<f32>,
 };
 
 struct VertexOutput {
@@ -27,6 +28,7 @@ struct VertexOutput {
     @location(3) @interpolate(flat) textureSlot : u32,
     @location(4) @interpolate(flat) pxAxes : vec4<f32>,
     @location(5) @interpolate(flat) decoration : u32,
+    @location(6) @interpolate(flat) tileUv : vec4<f32>,
 };
 
 @vertex
@@ -91,6 +93,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     var out: VertexOutput;
     out.clipPos  = clipPos;
     out.texcoord = input.texcoord;
+    out.tileUv = vec4<f32>(min(input.texcoord, input.oppositeTexcoord), max(input.texcoord, input.oppositeTexcoord));
     out.gradUV   = gradUV;
     out.nodeIdx  = ni;
     out.textureSlot = input.packedNodeSlot >> {{atlasSlotShift}}u;
@@ -156,8 +159,9 @@ fn median3(r: f32, g: f32, b: f32) -> f32 {
 
 // The signed distance a texel encodes: the red channel of the runtime SDF, the
 // median of three channels for an MSDF atlas.
-fn sampleField(slot: u32, uv: vec2<f32>, uvDx: vec2<f32>, uvDy: vec2<f32>, msdf: bool) -> f32 {
-    let texel = sampleTexture(slot, uv, uvDx, uvDy);
+fn sampleField(slot: u32, uv: vec2<f32>, msdf: bool, tileUv: vec4<f32>, pageSize: vec2<f32>) -> f32 {
+    let halfTexel = min(0.5 / pageSize, (tileUv.zw - tileUv.xy) * 0.5);
+    let texel = sampleAtlasBaseLevel(slot, clamp(uv, tileUv.xy + halfTexel, tileUv.zw - halfTexel));
 
     if (msdf) {
         return median3(texel.r, texel.g, texel.b);
@@ -188,9 +192,7 @@ fn shadeDistanceField(in: VertexOutput, msdf: bool) -> vec4<f32> {
     let fieldScale   = tShadow2.w;
     let zero         = tGradAxis.w;
 
-    let uvDx = dpdx(in.texcoord);
-    let uvDy = dpdy(in.texcoord);
-    let sd   = sampleField(in.textureSlot, in.texcoord, uvDx, uvDy, msdf);
+    let sd   = sampleField(in.textureSlot, in.texcoord, msdf, in.tileUv, pageSize);
 
     // The edge fades over one DEVICE pixel: the field moves by `fieldScale` per
     // local unit, so the width follows from the transform; the derivative is the
@@ -208,8 +210,8 @@ fn shadeDistanceField(in: VertexOutput, msdf: bool) -> vec4<f32> {
 
         if (abs(densityY - densityX) > 0.001 * max(densityX, densityY)) {
             let texel = 1.0 / pageSize;
-            let sdU = sampleField(in.textureSlot, in.texcoord + vec2<f32>(texel.x, 0.0), uvDx, uvDy, msdf);
-            let sdV = sampleField(in.textureSlot, in.texcoord + vec2<f32>(0.0, texel.y), uvDx, uvDy, msdf);
+            let sdU = sampleField(in.textureSlot, in.texcoord + vec2<f32>(texel.x, 0.0), msdf, in.tileUv, pageSize);
+            let sdV = sampleField(in.textureSlot, in.texcoord + vec2<f32>(0.0, texel.y), msdf, in.tileUv, pageSize);
             let grad = vec2<f32>(sdU - sd, sdV - sd);
             let gradLength = length(grad);
 
@@ -224,7 +226,11 @@ fn shadeDistanceField(in: VertexOutput, msdf: bool) -> vec4<f32> {
     }
     let fill = smoothstep(zero - aa, zero + aa, sd);
 
-    let shadowSd = sampleField(in.textureSlot, in.texcoord - shadowOffset, uvDx, uvDy, msdf);
+    let shadowUv = in.texcoord - shadowOffset;
+    var shadowSd = 0.0;
+    if (shadowAlpha > 0.0 && all(shadowUv >= in.tileUv.xy) && all(shadowUv <= in.tileUv.zw)) {
+        shadowSd = sampleField(in.textureSlot, shadowUv, msdf, in.tileUv, pageSize);
+    }
 
     let outlineEdge = zero - outlineField;
     let outline = select(0.0,

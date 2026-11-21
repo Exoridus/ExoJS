@@ -156,7 +156,7 @@ An effect is requested by `outlineWidth > 0` or `shadowAlpha > 0`; offsets and b
 
 | Glyphs | Outline and shadow | Reach |
 |--------|--------------------|-------|
-| `Text` (runtime SDF) | Supported | Chosen automatically up to 32 logical pixels; an explicit `sdfRadius` fixes it |
+| `Text` (runtime SDF) | Supported | Chosen automatically; an explicit `sdfRadius` fixes it |
 | `Text` with `colorGlyphs: true` | Not supported (`'no-distance-field'`) | Fill and tint only; RGBA content is kept |
 | `BitmapText` without `msdf` | Not supported (`'no-distance-field'`) | Fill and tint only; RGBA content is kept |
 | `BitmapText` with `msdf` and declared range, zero value and padding | Supported | `min(zeroDistanceValue × distanceRange, padding) × fontScale` |
@@ -165,7 +165,9 @@ An effect is requested by `outlineWidth > 0` or `shadowAlpha > 0`; offsets and b
 
 One logical pixel of the reach is kept for the antialiased edge, so `outlineWidth` — and, for a shadow, the larger of `|shadowOffsetX|` and `|shadowOffsetY|` plus `shadowBlur` — may use the reach minus one.
 
-You normally do not choose the reach. A `Text` starts at 4 pixels and, when its style asks for more, moves to the first of 8, 16 or 32 that covers it: `outlineWidth: 4` just works. The reach only ever grows, so text without large effects keeps the finest distance field and the smallest atlas tiles, and an animated effect re-rasterizes at most once per tier. `text.maxEffectExtent` reports what the node can still reach (31 for an automatic one); a request beyond the largest tier is rejected with `'insufficient-effect-capacity'`, never clamped. `Label` and `Button` draw through the same automatic `Text`, so widgets and plain text share one contract.
+Runtime SDF text starts with 4 pixels of reach and grows to 8, 16, 32, 64 or 127.5 when effects need more. For example, `outlineWidth: 4` selects an 8-pixel field. Growth switches to a new atlas tier. A smaller effect reuses the current tier, and text using the same typeface, tier and raster density shares rasterized glyphs. `Label` and `Button` use the same sizing.
+
+At the largest automatic tier, the R8 distance field has one logical pixel per quantization step. An explicit larger radius trades away that precision. Each glyph tile gains `2 × ceil(sdfRadius × rasterPixelRatio)` texels along both dimensions, so more reach reduces the number of tiles that fit in a 1024 × 1024 page (1 MiB for the R8 pixels per page). Very large fonts, densities and effects can exceed the space available for a single glyph tile.
 
 Pass `sdfRadius` to fix the reach instead. It then also becomes a hard limit that never grows - useful to pin atlas memory. A larger reach costs atlas space for the wider tile padding, and because the 8-bit field spreads over twice the reach, it coarsens glyph edges under strong magnification, which is why the reach is not simply set to the maximum.
 
@@ -177,10 +179,10 @@ const title = new Text('Game Over', { fontSize: 64, outlineColor: Color.black, o
 title.style.shadowAlpha = 0.6;
 title.style.shadowOffsetX = 6; // fits: the node moves to the 8px tier
 
-const issue = title.checkEffects({ shadowAlpha: 0.6, shadowOffsetX: 40 });
+const issue = title.checkEffects({ shadowAlpha: 0.6, shadowOffsetX: 200 });
 
 if (issue !== null) {
-    console.warn(issue.reason, issue.required, issue.available); // 'insufficient-effect-capacity', 41, 32
+    console.warn(issue.reason, issue.required, issue.available); // 'insufficient-effect-capacity', 201, 127.5
 }
 
 try {
@@ -193,11 +195,11 @@ try {
 }
 ```
 
-Every operation that could produce an undrawable combination validates it synchronously and leaves everything unchanged when it fails: the constructor, assigning `text.style`, mutating a style in place — including a style shared by several nodes, which has to fit all of them — `TextStyle.copy()`, `BitmapText.setFont()`, `BitmapText.fontScale`, `Label.setTextStyle()` and `Button.setTextStyle()`, UI theme and skin text styles (when `createUITheme` or `setTheme` applies them, not when a widget first lays out) and deserialization. Rendering never throws for an effect.
+Every operation that could produce an undrawable combination validates it synchronously and leaves everything unchanged when it fails: the constructor, assigning `text.style`, mutating a style in place — including a style shared by several nodes, which has to fit all of them — `TextStyle.copy()`, `BitmapText.setFont()`, `BitmapText.fontScale`, `Label.setTextStyle()` and `Button.setTextStyle()`, UI theme and skin text styles (when `createUITheme` or `setTheme` applies them, not when a widget first lays out) and deserialization. The effect setter rejects values that exceed the field budget.
 
 Widths are exact in the antialiasing guarantee domain: once an effect covers at least two device pixels on screen, the measured width matches the request to within a fraction of a raster pixel. Narrower than that, the half-pixel fades of the effect edge and the glyph edge merge and a one-device-pixel outline reads somewhat thinner. Under strong minification the outer fade narrows instead of tinting the tile around each glyph.
 
-Scenes and prefabs saved before serialization version 4 stored these lengths as distance-field thresholds. They are converted on load by reproducing where the old renderer drew each edge: an outline of `u` becomes `min(u, 0.5) × sdfRadius` pixels, a blur of `b` becomes `b × 0.1 × sdfRadius` pixels (a `Text` that omitted `sdfRadius` is converted with the radius of 8 it was drawn with, and then sizes its reach automatically), and an MSDF `BitmapText` uses its declared range and `fontScale`. Effects on colour glyphs never rendered and are switched off; an active effect on an MSDF font without a declared range has no pixel meaning and fails to load with a `TextEffectError`.
+Scene and prefab format 4 stores effect lengths in logical pixels. Re-export documents from versions 0 through 3 with the desired pixel lengths before loading them.
 
 ### Underline and strikethrough
 

@@ -16,7 +16,7 @@ import type { TextLayoutResult } from '#rendering/text/types';
 
 import { glyphCount, glyphOffsetAtIndex, graphemeOffsets, TextEditingModel } from './TextEditingModel';
 import type { UIWidgetState } from './theme';
-import { resolveUISkin } from './theme';
+import { assertSkinSetTextEffects, resolveUISkin, themeSkinSet, type UITheme } from './theme';
 import { Widget } from './Widget';
 import { WidgetBackground } from './WidgetBackground';
 
@@ -489,6 +489,11 @@ export abstract class TextEditWidget extends Widget {
     this._syncTextNode();
     this._updatePlaceholderVisibility();
     this._paintOverlays();
+  }
+
+  protected override _validateTheme(theme: UITheme): void {
+    assertSkinSetTextEffects(themeSkinSet(theme, 'textFieldSurface'), this._textStyle, this._textNode, this._skinState);
+    assertSkinSetTextEffects(themeSkinSet(theme, 'placeholder'), null, this._placeholderNode, this._skinState);
   }
 
   protected override _relayout(): void {

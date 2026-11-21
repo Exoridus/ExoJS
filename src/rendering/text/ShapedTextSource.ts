@@ -1,3 +1,5 @@
+import { WEBGPU_DEFAULT_MAX_TEXTURE_DIMENSION_2D } from '#rendering/webgpu/storageLimits';
+
 import { applyCanvasTextState } from './canvasTextState';
 import type { AtlasMode } from './GlyphAtlas';
 import { AtlasPage, claimSolidTexel, SDF_RADIUS, sdfRasterSpan } from './GlyphAtlas';
@@ -47,6 +49,8 @@ export interface ShapedTextSourceOptions {
   mode?: AtlasMode;
   sdfRadius?: number;
   pixelRatio?: number;
+  /** Upper bound on page dimensions in the current renderer. @internal */
+  maxTileSize?: number;
   direction?: 'ltr' | 'rtl';
   letterSpacing?: number;
 }
@@ -79,6 +83,7 @@ export class ShapedTextSource implements LineShaper {
   private readonly _mode: AtlasMode;
   private readonly _sdfRadius: number;
   private readonly _pixelRatio: number;
+  private readonly _maxTileSize: number;
   private readonly _rasterSpan: { buffer: number; radius: number };
   private readonly _direction: 'ltr' | 'rtl';
   private readonly _letterSpacing: number;
@@ -102,6 +107,7 @@ export class ShapedTextSource implements LineShaper {
     this._mode = options.mode ?? 'sdf';
     this._sdfRadius = options.sdfRadius ?? SDF_RADIUS;
     this._pixelRatio = options.pixelRatio ?? 1;
+    this._maxTileSize = options.maxTileSize ?? WEBGPU_DEFAULT_MAX_TEXTURE_DIMENSION_2D;
     this._direction = options.direction ?? 'ltr';
     this._letterSpacing = options.letterSpacing ?? 0;
     // The distance field has to grow with the raster grid or its reach would
@@ -155,10 +161,7 @@ export class ShapedTextSource implements LineShaper {
    * different texture entirely.
    */
   public getSolidTexel(): SolidTexel {
-    return (this._solidTexel ??= claimSolidTexel(
-      (w, h) => this._allocateSlot(w, h, 'solid', 0),
-      this._mode === 'sdf' ? this._rasterSpan.buffer : 0,
-    ));
+    return (this._solidTexel ??= claimSolidTexel((w, h) => this._allocateSlot(w, h, 'solid', 0)));
   }
 
   public shapeLine(line: string, fontSize: number): GlyphInfo {
@@ -209,6 +212,7 @@ export class ShapedTextSource implements LineShaper {
         buffer: this._rasterSpan.buffer,
         radius: this._rasterSpan.radius,
         cutoff: 0.5,
+        maxTileSize: this._maxTileSize,
         direction: this._direction,
         letterSpacing: this._letterSpacing * this._pixelRatio,
       });
@@ -220,7 +224,7 @@ export class ShapedTextSource implements LineShaper {
 
   private _rasterizeSdf(line: string, fontSize: number): GlyphInfo {
     const ratio = this._pixelRatio;
-    const result = this._getSdf(this._rasterFontSize(fontSize)).draw(line);
+    const result = this._getSdf(this._rasterFontSize(fontSize)).draw(line, ratio);
     const { page, slot } = this._allocateSlot(result.width, result.height, line, fontSize);
 
     page.writeSdf(result.data, slot.x, slot.y, result.width, result.height);
@@ -228,6 +232,15 @@ export class ShapedTextSource implements LineShaper {
     return {
       x: slot.x,
       y: slot.y,
+      fill:
+        result.fill === null
+          ? null
+          : {
+              x: result.fill.x / ratio,
+              y: result.fill.y / ratio,
+              width: result.fill.width / ratio,
+              height: result.fill.height / ratio,
+            },
       width: result.width / ratio,
       height: result.height / ratio,
       // The logical measurement, not the raster one: layout has to break in the
@@ -239,8 +252,8 @@ export class ShapedTextSource implements LineShaper {
       uvTop: slot.y / page.height,
       uvRight: (slot.x + result.width) / page.width,
       uvBottom: (slot.y + result.height) / page.height,
-      xBearing: -result.glyphLeft / ratio,
-      yBearing: -result.glyphTop / ratio,
+      xBearing: result.xBearing / ratio,
+      yBearing: result.yBearing / ratio,
     };
   }
 
@@ -309,6 +322,12 @@ export class ShapedTextSource implements LineShaper {
     // A page is sized to hold the line that overflowed the previous ones, so a
     // single long line always fits rather than failing the way a fixed-size
     // glyph page does.
+    if (w > this._maxTileSize || h > this._maxTileSize) {
+      throw new RangeError(
+        `ShapedTextSource: ${w}x${h}px tile at pixelRatio ${this._pixelRatio} exceeds the ${this._maxTileSize}px atlas page.`,
+      );
+    }
+
     const page = this._addPage(Math.max(defaultPageWidth, w), Math.max(defaultPageHeight, h));
     const slot = page.insert(w, h);
 

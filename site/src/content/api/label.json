@@ -3094,7 +3094,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Override text style on top of the skin's; null returns to it. The label is re-measured, so its layout size follows the new style. An outline or shadow the text node cannot draw throws TextEffectError and keeps the previous overrides."
+          "description": "Override text style on top of the skin's; null returns to it. The label is re-measured, so its layout size follows the new style. An outline or shadow the text node cannot draw throws a text effect error and keeps the previous overrides."
         },
         {
           "name": "setTheme",

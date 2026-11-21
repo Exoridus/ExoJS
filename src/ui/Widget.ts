@@ -4,7 +4,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 
 import type { UISkin, UITheme, UIThemePatch, UIThemeRole, UIWidgetState } from './theme';
 import { createUITheme, resolveUISkin, themeSkinSet } from './theme';
-import { ThemedContainer } from './ThemedContainer';
+import { resolveThemeAt, ThemedContainer } from './ThemedContainer';
 import type { UIRoot } from './UIRoot';
 
 /** Anchor position of a widget within its container's box. */
@@ -111,18 +111,12 @@ export abstract class Widget extends ThemedContainer {
    * change is never paint-only.
    */
   public setTheme(patch: UIThemePatch | null): this {
-    const previous = this._themePatch;
-
+    const apply: Array<() => void> = [];
+    this._prepareTheme(this._resolveInheritedTheme(), patch, apply);
     this._themePatch = patch;
 
-    try {
-      this._refreshTheme(true);
-    } catch (error) {
-      // A theme the skins reject (a text effect no label can draw) must not
-      // stay stored and fail again on every later refresh.
-      this._themePatch = previous;
-
-      throw error;
+    for (const commit of apply) {
+      commit();
     }
 
     return this;
@@ -316,29 +310,43 @@ export abstract class Widget extends ThemedContainer {
     // Overridden by interactive subclasses (e.g. Button dimming).
   }
 
-  /**
-   * @internal - re-resolve {@link ThemedContainer.theme} from the nearest
-   * themed ancestor and this widget's own overrides, then push the same
-   * recompute into every themed descendant.
-   */
+  /** @internal */
   public override _refreshTheme(force = false): void {
+    const apply: Array<() => void> = [];
     const inherited = this._resolveInheritedTheme();
 
-    if (!force && inherited === this._inheritedTheme) {
-      return;
+    if (force) {
+      this._prepareTheme(inherited, this._themePatch, apply);
+    } else {
+      this._prepareInheritedTheme(inherited, apply);
     }
 
-    this._inheritedTheme = inherited;
-
-    const next = this._themePatch === null ? inherited : createUITheme(this._themePatch, inherited);
-
-    if (next === this._theme && !force) {
-      return;
+    for (const commit of apply) {
+      commit();
     }
+  }
 
-    this._theme = next;
-    this._onThemeChanged();
-    this._cascadeTheme();
+  /** @internal */
+  public override _prepareInheritedTheme(inherited: UITheme, apply: Array<() => void>): void {
+    if (inherited !== this._inheritedTheme) {
+      this._prepareTheme(inherited, this._themePatch, apply);
+    }
+  }
+
+  /** Validate widget-specific text overrides against the prospective theme. @internal */
+  protected _validateTheme(_theme: UITheme): void {
+    // Widgets without text overrides only use the theme factory validation.
+  }
+
+  private _prepareTheme(inherited: UITheme, patch: UIThemePatch | null, apply: Array<() => void>): void {
+    const next = patch === null ? inherited : createUITheme(patch, inherited);
+    this._validateTheme(next);
+    apply.push(() => {
+      this._inheritedTheme = inherited;
+      this._theme = next;
+      this._onThemeChanged();
+    });
+    this._prepareChildThemes(next, apply);
   }
 
   /**
@@ -399,9 +407,15 @@ export abstract class Widget extends ThemedContainer {
    * being touched.
    */
   public override _setParent(parent: Container | null): void {
+    const apply: Array<() => void> = [];
+    this._prepareInheritedTheme(resolveThemeAt(parent), apply);
     super._setParent(parent);
+
+    for (const commit of apply) {
+      commit();
+    }
+
     this._refreshEffectiveEnabled();
-    this._refreshTheme();
   }
 
   public override destroy(): void {

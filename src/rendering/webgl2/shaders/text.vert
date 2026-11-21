@@ -11,15 +11,18 @@ layout(location = 0) in vec2  a_position;   // local-space quad corner
 layout(location = 1) in vec2  a_texcoord;
 layout(location = 2) in uint a_packedNodeSlot; // bits 0..22 = node row, bit 23 = decoration, bits 24..31 = atlas slot
 
+layout(location = 3) in vec2 a_oppositeTexcoord;
+
 uniform mat3 u_projection;
 uniform mat3 u_group;
 uniform vec4 u_viewport;
-uniform sampler2D u_nodeData;
+uniform highp sampler2D u_nodeData;
 
 flat out int   v_nodeIndex;
 flat out uint  v_textureSlot;
 flat out uint  v_decoration;
 flat out vec4  v_pxAxes;
+flat out vec4  v_tileUv;
      out vec2  v_texcoord;
      out vec2  v_gradUV;
 
@@ -79,6 +82,7 @@ void main(void) {
 
     gl_Position = vec4(clip, 0.0, 1.0);
     v_texcoord  = a_texcoord;
+    v_tileUv    = vec4(min(a_texcoord, a_oppositeTexcoord), max(a_texcoord, a_oppositeTexcoord));
     v_nodeIndex = ni;
     v_pxAxes    = vec4(unitClipX * u_viewport.zw * 0.5, unitClipY * u_viewport.zw * 0.5);
     v_textureSlot = a_packedNodeSlot >> 24u;

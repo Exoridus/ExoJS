@@ -163,6 +163,8 @@ describe('runtime SDF capacity', () => {
       [{ outlineWidth: 8 }, 16],
       [{ shadowAlpha: 1, shadowOffsetX: 9, shadowBlur: 2 }, 16],
       [{ outlineWidth: 31 }, 32],
+      [{ outlineWidth: 48 }, 64],
+      [{ outlineWidth: 96 }, 127.5],
     ])('%j needs a reach of %i', (options, reach) => {
       expect(new Text('H', options).sdfRadius).toBe(reach);
     });
@@ -201,8 +203,8 @@ describe('runtime SDF capacity', () => {
     });
 
     test('rejects what even the largest tier cannot reach', () => {
-      expect(catchEffectError(() => new Text('H', { outlineWidth: 32 })).available).toBe(32);
-      expect(new Text('H').maxEffectExtent).toBe(31);
+      expect(catchEffectError(() => new Text('H', { outlineWidth: 127 })).available).toBe(127.5);
+      expect(new Text('H').maxEffectExtent).toBe(126.5);
     });
 
     test('an explicit radius is a hard limit that never grows', () => {

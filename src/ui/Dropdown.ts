@@ -9,7 +9,7 @@ import { Text } from '#rendering/text/Text';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 
 import type { UIWidgetState } from './theme';
-import { resolveUISkin } from './theme';
+import { assertSkinSetTextEffects, resolveUISkin, themeSkinSet, type UITheme } from './theme';
 import { UIRoot } from './UIRoot';
 import { Widget } from './Widget';
 import { type UIBackgroundNode, WidgetBackground } from './WidgetBackground';
@@ -62,6 +62,7 @@ class DropdownRow extends Widget {
     this._textStyle = style;
     this._appliedText = this._skin('dropdownItem').text;
     this._text = new Text(label, { ...this._appliedText, ...style });
+    this._text._onLayout = this._positionText;
     this.addChild(this._text);
 
     this.interactive = true;
@@ -87,6 +88,10 @@ class DropdownRow extends Widget {
     }
   }
 
+  protected override _validateTheme(theme: UITheme): void {
+    assertSkinSetTextEffects(themeSkinSet(theme, 'dropdownItem'), this._textStyle, this._text, this._skinState);
+  }
+
   protected override _repaint(): void {
     const text = this._skin('dropdownItem').text;
 
@@ -105,9 +110,10 @@ class DropdownRow extends Widget {
     this._positionText();
   }
 
-  private _positionText(): void {
-    this._text.setPosition(this._padding, (this._uiHeight - this._text.textBounds.height) / 2);
-  }
+  private readonly _positionText = (): void => {
+    const fill = this._text._fillBounds;
+    this._text.setPosition(this._padding - fill.x, (this._uiHeight - fill.height) / 2 - fill.y);
+  };
 
   public override destroy(): void {
     this.onPick.destroy();
@@ -171,6 +177,7 @@ export class Dropdown<T = string> extends Widget {
 
     this._appliedText = resolveUISkin(this.theme.button, 'normal').text;
     this._label = new Text(this._labelText(), { ...this._appliedText, align: 'left', ...this._textStyle });
+    this._label._onLayout = this._positionLabel;
     this.addChild(this._label);
     this.addChild(this._arrow);
 
@@ -288,6 +295,10 @@ export class Dropdown<T = string> extends Widget {
     return this._list;
   }
 
+  protected override _validateTheme(theme: UITheme): void {
+    assertSkinSetTextEffects(themeSkinSet(theme, 'button'), this._textStyle, this._label, this._skinState);
+  }
+
   protected override _repaint(): void {
     const text = resolveUISkin(this.theme.button, this._skinState).text;
 
@@ -325,9 +336,10 @@ export class Dropdown<T = string> extends Widget {
     }
   }
 
-  private _positionLabel(): void {
-    this._label.setPosition(this._padding, (this._uiHeight - this._label.textBounds.height) / 2);
-  }
+  private readonly _positionLabel = (): void => {
+    const fill = this._label._fillBounds;
+    this._label.setPosition(this._padding - fill.x, (this._uiHeight - fill.height) / 2 - fill.y);
+  };
 
   protected override _onEnabledChanged(effectiveEnabled: boolean): void {
     this.interactive = effectiveEnabled;
