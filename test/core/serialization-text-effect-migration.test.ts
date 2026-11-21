@@ -48,7 +48,7 @@ describe('legacy runtime SDF styles', () => {
 
   test('effects colour glyphs never drew are switched off instead of becoming visible', () => {
     const migrated = migrateLegacyTextEffects(
-      { outlineWidth: 0.2, shadowAlpha: 0.7, shadowOffsetX: 2, fillColor: undefined },
+      { outlineWidth: 0.2, shadowAlpha: 0.7, shadowOffsetX: 2 },
       { kind: 'sdf', sdfRadius: 8, colorGlyphs: true },
       3,
     );
@@ -101,6 +101,16 @@ describe('legacy BitmapText styles', () => {
 
     expect(run).toThrow(TextEffectError);
     expect(run).toThrow(/version 3 document.*outline.*distance range/);
+  });
+
+  test('a zero value that encodes no outward distance is invalid-range, as for a live node', () => {
+    expect(() =>
+      migrateLegacyTextEffects(
+        { outlineWidth: 0.1 },
+        { kind: 'bmFont', fontData: fontData({ fieldType: 'msdf', distanceRange: 8, zeroDistanceValue: 0 }), fontScale: 1, msdf: true },
+        3,
+      ),
+    ).toThrow(/unusable distance range/);
   });
 
   test('inactive lengths without a pixel meaning reset to zero rather than being reread as pixels', () => {

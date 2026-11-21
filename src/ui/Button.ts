@@ -4,6 +4,7 @@ import type { InteractionEvent } from '#input/InteractionEvent';
 import type { KeyEvent } from '#input/KeyEvent';
 import { Keyboard } from '#input/types';
 import { Text } from '#rendering/text/Text';
+import { TextEffectError } from '#rendering/text/TextEffectError';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 
 import type { UIBackground, UIBackgroundInput, UIBackgroundOptions, UIFillPatch, UIWidgetState } from './theme';
@@ -246,10 +247,21 @@ export class Button extends Widget {
 
   /**
    * Override label text style on top of the skin's; `null` returns to it.
-   * Layout-invalidating - the label is re-measured and re-centered.
+   * Layout-invalidating - the label is re-measured and re-centered. An
+   * outline or shadow the label cannot draw throws {@link TextEffectError} and
+   * keeps the previous overrides.
    */
   public setTextStyle(style: TextStyleOptions | null): this {
-    this._textStyle = style === null ? null : Object.freeze({ ...this._textStyle, ...style });
+    const next = style === null ? null : Object.freeze({ ...this._textStyle, ...style });
+    // Checked now rather than at the deferred apply: a stored override the
+    // label rejects would otherwise throw from every later layout pass.
+    const issue = this._label.checkEffects({ ...resolveUISkin(this.theme.button, this._skinState).text, ...next });
+
+    if (issue !== null) {
+      throw new TextEffectError(issue, 'Button');
+    }
+
+    this._textStyle = next;
     this._appliedText = null;
     this._invalidateLayout();
 

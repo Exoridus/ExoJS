@@ -13,6 +13,7 @@ import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { Text } from '#rendering/text/Text';
+import { TextEffectError } from '#rendering/text/TextEffectError';
 import type { GlyphInfo } from '#rendering/text/types';
 import type { Texture } from '#rendering/texture/Texture';
 import { Button } from '#ui/Button';
@@ -131,6 +132,21 @@ describe('text style overrides', () => {
       }).toThrow(TypeError);
       expect(widget.textStyleOverrides?.fontSize).toBe(20);
     }
+  });
+});
+
+describe('text effect overrides', () => {
+  it('rejects an override the label cannot draw and keeps the previous one', () => {
+    const label = new Label('abc').setTextStyle({ outlineWidth: 2 });
+    const button = new Button({ label: 'ok' }).setTextStyle({ outlineWidth: 2 });
+
+    for (const widget of [label, button]) {
+      expect(() => widget.setTextStyle({ outlineWidth: 50 })).toThrow(TextEffectError);
+      expect(widget.textStyleOverrides?.outlineWidth).toBe(2);
+    }
+
+    // The rejected override never reaches a later layout pass.
+    expect(() => label.textNode.syncDirty()).not.toThrow();
   });
 });
 

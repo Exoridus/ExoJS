@@ -65,7 +65,7 @@ export const migrateLegacyTextEffects = (options: TextStyleOptions, source: Lega
   const range = fontData.distanceField?.distanceRange ?? null;
   const zero = fontData.distanceField?.zeroDistanceValue ?? null;
 
-  if (range === null || zero === null || !(range > 0 && Number.isFinite(range)) || !(zero >= 0 && zero <= 1)) {
+  if (range === null || zero === null || !(range > 0 && Number.isFinite(range)) || !(zero > 0 && zero < 1)) {
     if (outlineActive || shadowActive) {
       throw new TextEffectError(
         {

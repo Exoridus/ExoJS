@@ -1,4 +1,5 @@
 import { Text } from '#rendering/text/Text';
+import { TextEffectError } from '#rendering/text/TextEffectError';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 
 import { Widget } from './Widget';
@@ -50,10 +51,21 @@ export class Label extends Widget {
 
   /**
    * Override text style on top of the skin's; `null` returns to it. The label
-   * is re-measured, so its layout size follows the new style.
+   * is re-measured, so its layout size follows the new style. An outline or
+   * shadow the text node cannot draw throws {@link TextEffectError} and keeps
+   * the previous overrides.
    */
   public setTextStyle(style: TextStyleOptions | null): this {
-    this._textStyle = style === null ? null : Object.freeze({ ...this._textStyle, ...style });
+    const next = style === null ? null : Object.freeze({ ...this._textStyle, ...style });
+    // Checked before committing: a stored override the node rejects would
+    // throw again on every later relayout.
+    const issue = this._text.checkEffects({ ...this._skin('label').text, ...next });
+
+    if (issue !== null) {
+      throw new TextEffectError(issue, 'Label');
+    }
+
+    this._textStyle = next;
     this._applyTextStyle(true);
 
     return this;

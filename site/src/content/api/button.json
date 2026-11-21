@@ -3330,7 +3330,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Override label text style on top of the skin's; null returns to it. Layout-invalidating - the label is re-measured and re-centered."
+          "description": "Override label text style on top of the skin's; null returns to it. Layout-invalidating - the label is re-measured and re-centered. An outline or shadow the label cannot draw throws TextEffectError and keeps the previous overrides."
         },
         {
           "name": "setTheme",

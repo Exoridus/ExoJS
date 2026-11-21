@@ -86,52 +86,49 @@ describe('WebGL2 / WebGPU effect parity', () => {
     return [frames[0]!, frames[1]!];
   };
 
-  test.each([1, 2, 3])(
-    'outline and shadow scenes match pixel for pixel within tolerance at surface ratio %i',
-    async (surfaceRatio, ctx) => {
-      const gl = await webGl2Driver.open(effectCanvasSize, surfaceRatio);
-      const gpu = await webGpuDriver.open(effectCanvasSize, surfaceRatio);
-      const report: string[] = [];
+  test.for([1, 2, 3])('outline and shadow scenes match pixel for pixel within tolerance at surface ratio %i', async (surfaceRatio, ctx) => {
+    const gl = await webGl2Driver.open(effectCanvasSize, surfaceRatio);
+    const gpu = await webGpuDriver.open(effectCanvasSize, surfaceRatio);
+    const report: string[] = [];
 
-      try {
-        const scenes: Array<[string, () => { root: RenderNode; text: { destroy(): void } }, number | null]> = [
-          ['outline 2 R8 s1', () => buildOutlineScene({ outlineWidth: 2, sdfRadius: 8, surfaceRatio, scale: 1 }), 2],
-          ['outline 4 R16 s2', () => buildOutlineScene({ outlineWidth: 4, sdfRadius: 16, surfaceRatio, scale: 2 }), 4],
-          ['outline 1 R4 s0.5', () => buildOutlineScene({ outlineWidth: 1, sdfRadius: 4, surfaceRatio, scale: 0.5 }), null],
-          ['shadow 4 blur 1', () => buildShadowScene({ offsetX: 4, blur: 1, surfaceRatio, scale: 1 }), null],
-        ];
+    try {
+      const scenes: Array<[string, () => { root: RenderNode; text: { destroy(): void } }, number | null]> = [
+        ['outline 2 R8 s1', () => buildOutlineScene({ outlineWidth: 2, sdfRadius: 8, surfaceRatio, scale: 1 }), 2],
+        ['outline 4 R16 s2', () => buildOutlineScene({ outlineWidth: 4, sdfRadius: 16, surfaceRatio, scale: 2 }), 4],
+        ['outline 1 R4 s0.5', () => buildOutlineScene({ outlineWidth: 1, sdfRadius: 4, surfaceRatio, scale: 0.5 }), null],
+        ['shadow 4 blur 1', () => buildShadowScene({ offsetX: 4, blur: 1, surfaceRatio, scale: 1 }), null],
+      ];
 
-        for (const [name, build, outlineWidth] of scenes) {
-          const frames = await drawBoth(ctx, [gl, gpu], build);
+      for (const [name, build, outlineWidth] of scenes) {
+        const frames = await drawBoth(ctx, [gl, gpu], build);
 
-          if (frames === null) {
-            return;
-          }
-
-          const difference = frameDifference(frames[0], frames[1]);
-
-          report.push(`${name}: MAE ${difference.mae.toFixed(4)} P99 ${difference.p99} max ${difference.max}`);
-
-          // Both stages compute the edge from the transform, never from a
-          // hardware derivative, so the remaining difference is filtering and
-          // rasterization rounding on edge pixels only.
-          expect(difference.mae).toBeLessThan(0.5);
-          expect(difference.p99).toBeLessThanOrEqual(2);
-
-          if (outlineWidth !== null) {
-            const testCase = { outlineWidth, sdfRadius: 8, surfaceRatio, scale: name.endsWith('s2') ? 2 : 1 };
-            const glWidth = measureOutlineWidth(frames[0], effectCanvasSize, testCase).mean;
-            const gpuWidth = measureOutlineWidth(frames[1], effectCanvasSize, testCase).mean;
-
-            report.push(`  visible width GL ${glWidth.toFixed(3)} GPU ${gpuWidth.toFixed(3)}`);
-            expect(Math.abs(glWidth - gpuWidth)).toBeLessThan(0.1);
-          }
+        if (frames === null) {
+          return;
         }
-      } finally {
-        gl.close();
-        gpu.close();
-        console.info(`[effect parity, surface ratio ${surfaceRatio}]\n${report.join('\n')}`);
+
+        const difference = frameDifference(frames[0], frames[1]);
+
+        report.push(`${name}: MAE ${difference.mae.toFixed(4)} P99 ${difference.p99} max ${difference.max}`);
+
+        // Both stages compute the edge from the transform, never from a
+        // hardware derivative, so the remaining difference is filtering and
+        // rasterization rounding on edge pixels only.
+        expect(difference.mae).toBeLessThan(0.5);
+        expect(difference.p99).toBeLessThanOrEqual(2);
+
+        if (outlineWidth !== null) {
+          const testCase = { outlineWidth, sdfRadius: 8, surfaceRatio, scale: name.endsWith('s2') ? 2 : 1 };
+          const glWidth = measureOutlineWidth(frames[0], effectCanvasSize, testCase).mean;
+          const gpuWidth = measureOutlineWidth(frames[1], effectCanvasSize, testCase).mean;
+
+          report.push(`  visible width GL ${glWidth.toFixed(3)} GPU ${gpuWidth.toFixed(3)}`);
+          expect(Math.abs(glWidth - gpuWidth)).toBeLessThan(0.1);
+        }
       }
-    },
-  );
+    } finally {
+      gl.close();
+      gpu.close();
+      console.info(`[effect parity, surface ratio ${surfaceRatio}]\n${report.join('\n')}`);
+    }
+  });
 });
