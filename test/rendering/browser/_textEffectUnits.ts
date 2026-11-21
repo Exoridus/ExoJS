@@ -30,7 +30,8 @@ export type Frame = Uint8Array | Uint8ClampedArray;
 
 export interface EdgeCase {
   readonly outlineWidth: number;
-  readonly sdfRadius: number;
+  /** Omitted: the node chooses its reach automatically. */
+  readonly sdfRadius?: number;
   readonly surfaceRatio: number;
   readonly scale: number;
 }
@@ -67,7 +68,7 @@ export const buildOutlineScene = (testCase: EdgeCase, phase: Phase = defaultPhas
   const text = new Text('H', {
     fontFamily: 'sans-serif',
     fontSize: phase.fontSize,
-    sdfRadius: testCase.sdfRadius,
+    ...(testCase.sdfRadius !== undefined && { sdfRadius: testCase.sdfRadius }),
     fillColor: fill,
     outlineColor,
     outlineWidth: testCase.outlineWidth,

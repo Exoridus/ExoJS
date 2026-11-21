@@ -8,10 +8,16 @@ import { ShapedTextSource } from './ShapedTextSource';
 import type { ShapingMode } from './shaping';
 import { resolveShaping } from './shaping';
 import type { TextEffectCapability } from './textEffects';
-import { colorGlyphEffectCapability, sdfEffectCapability } from './textEffects';
+import {
+  colorGlyphEffectCapability,
+  requiredTextEffectReach,
+  sdfEffectCapability,
+  textMaxAutoReach,
+  textReachTierFor,
+} from './textEffects';
 import { emptyTextLayout, layoutText, validateLayoutOptions } from './textLayout';
 import type { StyleChangeHint, TextStyleOptions } from './TextStyle';
-import { TextStyle } from './TextStyle';
+import { mergeHint, TextStyle } from './TextStyle';
 import type { TextLayoutResult, TextPageQuads, TextSize } from './types';
 
 export type { TextPageQuads };
@@ -55,16 +61,19 @@ export interface TextOptions extends TextStyleOptions, LayoutOptions {
    */
   colorGlyphs?: boolean;
   /**
-   * Distance-field reach in logical pixels: how far outside each glyph the
-   * atlas tile and its distance field extend. It bounds the effects the node
-   * can draw - `outlineWidth`, and a shadow's larger offset axis plus its blur,
-   * may each use `sdfRadius - 1` logical pixels, the last one being reserved
-   * for the antialiased edge ({@link Text.maxEffectExtent}). Larger values cost
-   * atlas space roughly in proportion to the padded tile area, and the 8-bit
-   * field spreads over twice the reach, so edges get coarser under strong
-   * magnification; choose the reach the effects need. Never changes on an
-   * animated style. Defaults to {@link SDF_RADIUS} (4). Must be a positive
-   * finite number, else `RangeError`. Construction-only.
+   * Fixes the distance-field reach in logical pixels: how far outside each
+   * glyph the atlas tile and its field extend. Omit it for the usual case -
+   * the reach is then chosen automatically from 4, 8, 16 and 32 pixels as the
+   * style asks for outlines and shadows, never shrinks, and costs nothing for
+   * text without large effects.
+   *
+   * An explicit value is a hard limit instead: `outlineWidth`, and a shadow's
+   * larger offset axis plus its blur, may each use `sdfRadius - 1` logical
+   * pixels (one is reserved for the antialiased edge), and anything larger is
+   * rejected. Use it to pin atlas memory or to pre-size a node whose effects
+   * animate across tiers. The 8-bit field spreads over twice the reach, so a
+   * larger reach gives coarser edges under strong magnification. Must be a
+   * positive finite number, else `RangeError`. Construction-only.
    */
   sdfRadius?: number;
   /**
@@ -145,6 +154,7 @@ export interface TextOptions extends TextStyleOptions, LayoutOptions {
 export class Text extends AbstractText {
   private _colorGlyphs: boolean;
   private _sdfRadius: number;
+  private readonly _explicitSdfRadius: number | undefined;
   private _effectCapability: TextEffectCapability;
   protected readonly _effectContext = 'Text';
   private _atlas: GlyphAtlas | null = null;
@@ -187,7 +197,8 @@ export class Text extends AbstractText {
   public constructor(text: string, options: TextOptions = {}) {
     super(text, new TextStyle(options), options);
     this._colorGlyphs = options.colorGlyphs ?? false;
-    this._sdfRadius = options.sdfRadius === undefined ? SDF_RADIUS : assertSdfRadius(options.sdfRadius);
+    this._explicitSdfRadius = options.sdfRadius === undefined ? undefined : assertSdfRadius(options.sdfRadius);
+    this._sdfRadius = this._explicitSdfRadius ?? this._autoReachFor(SDF_RADIUS);
     this._pixelRatio = options.pixelRatio === undefined ? 0 : assertPixelRatio(options.pixelRatio);
     this._effectCapability = this._colorGlyphs ? colorGlyphEffectCapability : sdfEffectCapability(this._sdfRadius);
     this._attachEffectHost();
@@ -268,12 +279,57 @@ export class Text extends AbstractText {
   }
 
   /**
-   * Distance-field reach in logical pixels this node's glyphs are rasterized
-   * with; see {@link TextOptions.sdfRadius}. Nodes with different radii use
-   * separate atlas instances.
+   * Distance-field reach in logical pixels this node's glyphs are currently
+   * rasterized with; see {@link TextOptions.sdfRadius}. Grows on its own while
+   * no explicit radius was given. Nodes with different radii use separate
+   * atlas instances.
    */
   public get sdfRadius(): number {
     return this._sdfRadius;
+  }
+
+  /** The radius passed at construction, or `undefined` when it is chosen automatically. @internal */
+  public get _explicitRadius(): number | undefined {
+    return this._explicitSdfRadius;
+  }
+
+  protected override _effectCeiling(): TextEffectCapability {
+    if (this._colorGlyphs || this._explicitSdfRadius !== undefined) {
+      return this._effectCapability;
+    }
+
+    return sdfEffectCapability(textMaxAutoReach);
+  }
+
+  /** The smallest automatic tier at or above `current` that covers the attached style. */
+  private _autoReachFor(current: number): number {
+    const style = this._style;
+
+    return textReachTierFor(
+      current,
+      requiredTextEffectReach(style.outlineWidth, style.shadowAlpha, style.shadowOffsetX, style.shadowOffsetY, style.shadowBlur),
+    );
+  }
+
+  protected override _consumePendingHint(): StyleChangeHint | null {
+    const hint = super._consumePendingHint();
+
+    if (hint === null || this._colorGlyphs || this._explicitSdfRadius !== undefined) {
+      return hint;
+    }
+
+    const reach = this._autoReachFor(this._sdfRadius);
+
+    if (reach === this._sdfRadius) {
+      return hint;
+    }
+
+    // A larger tier is a different atlas: the glyph source has to be re-resolved
+    // before the next draw reads the new field scale.
+    this._sdfRadius = reach;
+    this._effectCapability = sdfEffectCapability(reach);
+
+    return mergeHint(hint, 'font');
   }
 
   /** @internal */

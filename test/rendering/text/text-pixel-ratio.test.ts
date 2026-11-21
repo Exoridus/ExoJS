@@ -284,6 +284,7 @@ test('production build rejects an invalid pixelRatio instead of treating it as i
     './shaping': await import('#rendering/text/shaping'),
     './textLayout': await import('#rendering/text/textLayout'),
     './TextStyle': await import('#rendering/text/TextStyle'),
+    './textEffects': await import('#rendering/text/textEffects'),
   };
   runInNewContext(code, { exports, require: (id: string) => modules[id], RangeError, Number });
 

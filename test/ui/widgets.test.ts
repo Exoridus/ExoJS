@@ -148,6 +148,27 @@ describe('text effect overrides', () => {
     // The rejected override never reaches a later layout pass.
     expect(() => label.textNode.syncDirty()).not.toThrow();
   });
+
+  it('a widget draws ordinary pixel effects without configuring a reach', () => {
+    const label = new Label('abc').setTextStyle({ outlineWidth: 4, shadowAlpha: 0.5, shadowOffsetX: 6, shadowOffsetY: 6 });
+
+    expect(label.textStyleOverrides?.outlineWidth).toBe(4);
+    expect(label.textNode.maxEffectExtent).toBe(31);
+  });
+
+  it('rejects a skin text style no label could draw when the theme is applied, and keeps the previous theme', () => {
+    const text = { outlineWidth: 64 };
+
+    expect(() => createUITheme({ label: { normal: { text } } })).toThrow(TextEffectError);
+
+    const panel = new Panel();
+    const before = panel.theme;
+
+    expect(() => panel.setTheme({ label: { normal: { text } } })).toThrow(TextEffectError);
+    expect(panel.themeOverrides).toBeNull();
+    expect(panel.theme).toBe(before);
+    expect(() => panel.setTheme({ label: { normal: { text: { outlineWidth: 6 } } } })).not.toThrow();
+  });
 });
 
 describe('Panel', () => {

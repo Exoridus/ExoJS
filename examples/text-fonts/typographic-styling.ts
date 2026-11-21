@@ -27,9 +27,7 @@ const controls = {
 
 class TextLayoutScene extends Scene {
   private panel!: ReturnType<typeof demoPanel<typeof controls>>;
-  // The shadow offset grows with the panel scale, so the title reserves a
-  // wider distance-field reach than the default 4 logical pixels.
-  private readonly title = this.track(new Text('Plain', { fillColor: new Color(37, 49, 43), sdfRadius: 16 }));
+  private readonly title = this.track(new Text('Plain', { fillColor: new Color(37, 49, 43) }));
   private readonly body = this.track(new Text(paragraph, { fillColor: new Color(37, 49, 43), lineHeight: 1.5 }));
   private readonly guide = this.track(new Graphics());
   private readonly handle = document.createElement('button');

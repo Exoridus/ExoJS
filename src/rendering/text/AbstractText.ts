@@ -230,7 +230,7 @@ export abstract class AbstractText extends Drawable {
    * distance field.
    */
   public get maxEffectExtent(): number {
-    const capability = this._textEffectCapability();
+    const capability = this._effectCeiling();
 
     return capability.reason === null ? Math.max(0, capability.outward - textEffectAntialiasReserve) : 0;
   }
@@ -243,7 +243,7 @@ export abstract class AbstractText extends Drawable {
    */
   public checkEffects(style: TextStyle | TextStyleOptions = this._style): TextEffectIssue | null {
     return checkTextEffectValues(
-      this._textEffectCapability(),
+      this._effectCeiling(),
       style.outlineWidth ?? 0,
       style.shadowAlpha ?? 0,
       style.shadowOffsetX ?? 0,
@@ -260,7 +260,7 @@ export abstract class AbstractText extends Drawable {
     shadowOffsetY: number,
     shadowBlur: number,
   ): TextEffectIssue | null {
-    return checkTextEffectValues(this._textEffectCapability(), outlineWidth, shadowAlpha, shadowOffsetX, shadowOffsetY, shadowBlur);
+    return checkTextEffectValues(this._effectCeiling(), outlineWidth, shadowAlpha, shadowOffsetX, shadowOffsetY, shadowBlur);
   }
 
   /**
@@ -269,6 +269,14 @@ export abstract class AbstractText extends Drawable {
    * @internal
    */
   public abstract _textEffectCapability(): TextEffectCapability;
+
+  /**
+   * The most this node can ever draw: what the capability checks measure
+   * against. A node whose capability can still grow reports where it stops.
+   */
+  protected _effectCeiling(): TextEffectCapability {
+    return this._textEffectCapability();
+  }
 
   // ── Protected ────────────────────────────────────────────────────────────
 
@@ -291,7 +299,7 @@ export abstract class AbstractText extends Drawable {
    */
   protected _replaceStyle(style: TextStyle): void {
     if (style !== this._style) {
-      this._assertEffects(this._textEffectCapability(), style);
+      this._assertEffects(this._effectCeiling(), style);
     }
 
     this._style.onChange.remove(this._onStyleChange);
@@ -307,7 +315,7 @@ export abstract class AbstractText extends Drawable {
    * call this once their glyph source is known, at the end of construction.
    */
   protected _attachEffectHost(): void {
-    this._assertEffects(this._textEffectCapability(), this._style);
+    this._assertEffects(this._effectCeiling(), this._style);
     this._style._addEffectHost(this);
   }
 

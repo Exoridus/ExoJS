@@ -9,10 +9,13 @@
  */
 
 import { Color } from '#core/Color';
+import { Signal } from '#core/Signal';
 import { BitmapText } from '#rendering/text/BitmapText';
 import type { BmFontData } from '#rendering/text/BmFont';
 import { BmFont } from '#rendering/text/BmFont';
 import { SDF_RADIUS } from '#rendering/text/GlyphAtlas';
+import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
+import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { Text } from '#rendering/text/Text';
 import { TextEffectError } from '#rendering/text/TextEffectError';
 import {
@@ -98,12 +101,114 @@ describe('runtime SDF capacity', () => {
   test('the capacity is independent of the raster pixel ratio and the font size', () => {
     for (const pixelRatio of [1, 2, 3]) {
       for (const fontSize of [9, 24, 96]) {
-        const text = new Text('H', { pixelRatio, fontSize, outlineWidth: SDF_RADIUS - textEffectAntialiasReserve });
+        const text = new Text('H', { pixelRatio, fontSize, sdfRadius: 6, outlineWidth: 5 });
 
-        expect(text.maxEffectExtent).toBe(SDF_RADIUS - textEffectAntialiasReserve);
+        expect(text.maxEffectExtent).toBe(5);
         text.destroy();
       }
     }
+  });
+
+  describe('automatic reach', () => {
+    // Layout reads glyph metrics from the pool, never a canvas.
+    const atlasRequests: number[] = [];
+    const glyph = {
+      x: 0,
+      y: 0,
+      width: 8,
+      height: 16,
+      advance: 10,
+      ascent: 13,
+      page: 0,
+      uvLeft: 0,
+      uvTop: 0,
+      uvRight: 0.01,
+      uvBottom: 0.02,
+    };
+    const mockAtlas = {
+      getGlyph: () => glyph,
+      pages: [],
+      mode: 'sdf',
+      clear: () => undefined,
+      onCleared: new Signal(),
+    };
+
+    beforeEach(() => {
+      atlasRequests.length = 0;
+      resetDefaultGlyphAtlasPool({
+        getAtlas: (_font: unknown, _mode: unknown, radius: number) => {
+          atlasRequests.push(radius);
+
+          return mockAtlas;
+        },
+        getMetrics: () => ({ getGlyph: () => glyph, advance: () => 10, clear: () => undefined }),
+      } as unknown as GlyphAtlasPool);
+    });
+    afterEach(() => resetDefaultGlyphAtlasPool());
+
+    test('plain text keeps the finest tier, which is the default reach', () => {
+      expect(new Text('H').sdfRadius).toBe(SDF_RADIUS);
+      expect(new Text('H', { outlineWidth: 3 }).sdfRadius).toBe(4);
+    });
+
+    test('an outline of 4 px works without configuration and picks the next tier', () => {
+      const text = new Text('H', { outlineWidth: 4 });
+
+      expect(text.style.outlineWidth).toBe(4);
+      expect(text.sdfRadius).toBe(8);
+    });
+
+    test.each([
+      [{ outlineWidth: 7 }, 8],
+      [{ outlineWidth: 8 }, 16],
+      [{ shadowAlpha: 1, shadowOffsetX: 9, shadowBlur: 2 }, 16],
+      [{ outlineWidth: 31 }, 32],
+    ])('%j needs a reach of %i', (options, reach) => {
+      expect(new Text('H', options).sdfRadius).toBe(reach);
+    });
+
+    test('grows when the style later asks for more, and never shrinks', () => {
+      const text = new Text('H');
+
+      text.syncDirty();
+      text.style.outlineWidth = 6;
+      text.syncDirty();
+      expect(text.sdfRadius).toBe(8);
+
+      text.style.outlineWidth = 12;
+      text.syncDirty();
+      expect(text.sdfRadius).toBe(16);
+
+      text.style.outlineWidth = 1;
+      text.syncDirty();
+      expect(text.sdfRadius).toBe(16);
+
+      // Each tier is one atlas request; an animation inside a tier asks for none.
+      for (let i = 0; i < 20; i++) {
+        text.style.outlineWidth = 2 + (i % 5);
+        text.syncDirty();
+      }
+
+      expect(atlasRequests).toEqual([4, 8, 16]);
+    });
+
+    test('a style replacement grows it too', () => {
+      const text = new Text('H');
+
+      text.style = { shadowAlpha: 1, shadowOffsetX: 5 };
+      text.syncDirty();
+      expect(text.sdfRadius).toBe(8);
+    });
+
+    test('rejects what even the largest tier cannot reach', () => {
+      expect(catchEffectError(() => new Text('H', { outlineWidth: 32 })).available).toBe(32);
+      expect(new Text('H').maxEffectExtent).toBe(31);
+    });
+
+    test('an explicit radius is a hard limit that never grows', () => {
+      expect(catchEffectError(() => new Text('H', { sdfRadius: 4, outlineWidth: 4 })).reason).toBe('insufficient-effect-capacity');
+      expect(new Text('H', { sdfRadius: 4 }).maxEffectExtent).toBe(3);
+    });
   });
 
   test('a shadow needs its larger offset axis plus its blur inside the reach', () => {

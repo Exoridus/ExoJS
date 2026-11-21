@@ -131,7 +131,7 @@ describe('WebGL2 / WebGPU effect parity', () => {
           // One step of the 8-bit field is 2 × sdfRadius / 255 logical pixels;
           // the backends' samplers may round the filtered value one step apart
           // on each edge of the measured band.
-          expect(Math.abs(glWidth - gpuWidth)).toBeLessThanOrEqual((4 * measure.sdfRadius) / 255);
+          expect(Math.abs(glWidth - gpuWidth)).toBeLessThanOrEqual((4 * (measure.sdfRadius ?? 4)) / 255);
         }
       }
     } finally {

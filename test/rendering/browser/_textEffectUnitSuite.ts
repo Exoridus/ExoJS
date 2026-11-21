@@ -149,6 +149,49 @@ export const runEffectUnitSuite = (backendName: string, driver: EffectBackendDri
     });
   });
 
+  describe(`${backendName} automatic reach`, () => {
+    // No sdfRadius anywhere: an ordinary outline just works, and the visible
+    // width holds across the tiers the node moves through.
+    test.for([1, 2])('outline 1, 2, 4, 8 and 16 px with no configuration at surface ratio %i', async (surfaceRatio, ctx) => {
+      const session = await driver.open(effectCanvasSize, surfaceRatio);
+      const rows: string[] = [];
+      const failures: string[] = [];
+
+      try {
+        for (const outlineWidth of [1, 2, 4, 8, 16]) {
+          const testCase: EdgeCase = { outlineWidth, surfaceRatio, scale: 1 };
+          const phaseMeans: number[] = [];
+
+          for (const phase of phases) {
+            const { root, text } = buildOutlineScene(testCase, phase);
+            const frame = await session.draw(root, ctx);
+
+            text.destroy();
+
+            if (frame === null) {
+              return;
+            }
+
+            phaseMeans.push(measureOutlineWidth(frame, effectCanvasSize, testCase).mean);
+          }
+
+          const summary = summarize(phaseMeans, outlineWidth);
+
+          rows.push(`auto w${outlineWidth}: mean ${summary.mean.toFixed(3)} MAE ${summary.mae.toFixed(3)}`);
+
+          if (!judgeWidth(summary, outlineWidth, surfaceRatio, surfaceRatio)) {
+            failures.push(rows[rows.length - 1]!);
+          }
+        }
+      } finally {
+        session.close();
+        console.info(`[${backendName} automatic reach, surface ratio ${surfaceRatio}]\n${rows.join('\n')}`);
+      }
+
+      expect(failures.join('\n')).toBe('');
+    });
+  });
+
   describe(`${backendName} shadow offset and blur are logical pixels`, () => {
     test.each(surfaceRatios)('the shadow overhangs the glyph by its offset at surface ratio %i', async surfaceRatio => {
       const session = await driver.open(effectCanvasSize, surfaceRatio);

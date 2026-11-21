@@ -6,7 +6,7 @@ import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Sprite } from '#rendering/sprite/Sprite';
-import { SDF_RADIUS, Text } from '#rendering/text/Text';
+import { Text } from '#rendering/text/Text';
 import { Texture } from '#rendering/texture/Texture';
 
 import { initializeDeserializedNode } from './deserializeOwnership';
@@ -126,8 +126,8 @@ const textSerializer: NodeSerializer<Text> = {
       out.colorGlyphs = true;
     }
 
-    if (node.sdfRadius !== SDF_RADIUS) {
-      out.sdfRadius = node.sdfRadius;
+    if (node._explicitRadius !== undefined) {
+      out.sdfRadius = node._explicitRadius;
     }
 
     return out;
@@ -136,7 +136,7 @@ const textSerializer: NodeSerializer<Text> = {
     const layout = readLayoutOptions(data.layout);
     const colorGlyphs = data.colorGlyphs === true;
     const legacy = ctx.version < textEffectPixelVersion;
-    const sdfRadius = readNumber(data, 'sdfRadius') ?? (legacy ? legacySdfRadius : undefined);
+    const sdfRadius = readNumber(data, 'sdfRadius');
     let style = deserializeStyleOptions(data.style);
 
     if (style !== undefined && legacy) {

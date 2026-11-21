@@ -83,6 +83,60 @@ export const sdfEffectCapability = (sdfRadius: number): TextEffectCapability => 
   zero: 0.5,
 });
 
+/**
+ * Reach tiers, in logical pixels, a `Text` without an explicit `sdfRadius`
+ * chooses from. A node starts at the first tier and only ever moves up, to the
+ * first tier covering the effects its style asks for, so most text keeps the
+ * finest field and an animated effect re-rasterizes at most once per tier.
+ * @internal
+ */
+export const textReachTiers: readonly number[] = [4, 8, 16, 32];
+
+/** Largest reach an automatic `Text` can grow to. @internal */
+export const textMaxAutoReach: number = textReachTiers[textReachTiers.length - 1]!;
+
+/**
+ * Logical pixels of outward reach, antialiasing reserve included, needed to
+ * draw the given effects; `0` when none is requested. NaN needs infinite reach
+ * so it is rejected rather than ignored.
+ * @internal
+ */
+export const requiredTextEffectReach = (
+  outlineWidth: number,
+  shadowAlpha: number,
+  shadowOffsetX: number,
+  shadowOffsetY: number,
+  shadowBlur: number,
+): number => {
+  let required = 0;
+
+  if (outlineWidth > 0) {
+    required = outlineWidth + textEffectAntialiasReserve;
+  }
+
+  if (shadowAlpha > 0) {
+    required = Math.max(required, Math.max(Math.abs(shadowOffsetX), Math.abs(shadowOffsetY)) + shadowBlur + textEffectAntialiasReserve);
+  }
+
+  return Number.isNaN(required) ? Number.POSITIVE_INFINITY : required;
+};
+
+/**
+ * The tier an automatic node should use: `current` or, when the requested
+ * effects need more, the first larger tier that covers them (the largest tier
+ * when nothing does - the capability check reports that case).
+ * @internal
+ */
+export const textReachTierFor = (current: number, required: number): number => {
+  for (const tier of textReachTiers) {
+    if (tier >= current && tier >= required) {
+      return tier;
+    }
+  }
+
+  return Math.max(current, textMaxAutoReach);
+};
+
 const isUnitInterior = (value: number): boolean => Number.isFinite(value) && value > 0 && value < 1;
 
 /**

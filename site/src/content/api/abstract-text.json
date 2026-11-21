@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 105,
+  "memberCount": 106,
   "counts": {
     "constructors": 1,
-    "methods": 48,
+    "methods": 49,
     "properties": 42,
     "events": 14
   },
@@ -261,6 +261,35 @@
           "params": [],
           "returnType": "StyleChangeHint | null",
           "description": "Take the heaviest pending hint and settle the node, folding in whatever the attached TextStyle has latched since the last pass. A style carries its own dirty flag because it is mutated in place rather than assigned, so polling it here is what makes label.style.align = ... land."
+        },
+        {
+          "name": "_effectCeiling",
+          "signature": "_effectCeiling(): TextEffectCapability",
+          "signatureTokens": [
+            {
+              "text": "_effectCeiling",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextEffectCapability",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "TextEffectCapability",
+          "description": "The most this node can ever draw: what the capability checks measure against. A node whose capability can still grow reports where it stops."
         },
         {
           "name": "_markDirty",

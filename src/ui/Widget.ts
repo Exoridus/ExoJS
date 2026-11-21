@@ -111,8 +111,19 @@ export abstract class Widget extends ThemedContainer {
    * change is never paint-only.
    */
   public setTheme(patch: UIThemePatch | null): this {
+    const previous = this._themePatch;
+
     this._themePatch = patch;
-    this._refreshTheme(true);
+
+    try {
+      this._refreshTheme(true);
+    } catch (error) {
+      // A theme the skins reject (a text effect no label can draw) must not
+      // stay stored and fail again on every later refresh.
+      this._themePatch = previous;
+
+      throw error;
+    }
 
     return this;
   }

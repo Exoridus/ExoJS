@@ -1,6 +1,8 @@
 import { Color } from '#core/Color';
 import type { AnimatedSpriteClipDefinition } from '#rendering/sprite/AnimatedSprite';
 import type { NineSliceInsets, NineSliceModes } from '#rendering/sprite/nineSlice';
+import { TextEffectError } from '#rendering/text/TextEffectError';
+import { checkTextEffectValues, sdfEffectCapability, textMaxAutoReach } from '#rendering/text/textEffects';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 import type { Texture } from '#rendering/texture/Texture';
 import type { TextureRegion } from '#rendering/texture/TextureRegion';
@@ -392,11 +394,37 @@ export const themeSkinSet = (theme: UITheme, role: UIThemeRole): UISkinSet => th
 /** The skin a state paints with, falling back to `normal` where undefined. */
 export const resolveUISkin = (set: UISkinSet, state: UIWidgetState): UISkin => set[state] ?? set.normal;
 
-const mergeSkin = (base: UISkin, patch: UISkinPatch): UISkin => ({
-  background: patch.background ?? base.background,
-  text: patch.text ?? base.text,
-  insets: patch.insets ?? base.insets,
-});
+/**
+ * Reject a skin text style whose outline or shadow no label could draw, at the
+ * moment the skin is applied rather than when a widget first lays out with it.
+ * Measured against the most an automatically sized `Text` can reach.
+ */
+const assertSkinTextEffects = (text: TextStyleOptions): void => {
+  const issue = checkTextEffectValues(
+    sdfEffectCapability(textMaxAutoReach),
+    text.outlineWidth ?? 0,
+    text.shadowAlpha ?? 0,
+    text.shadowOffsetX ?? 0,
+    text.shadowOffsetY ?? 0,
+    text.shadowBlur ?? 0,
+  );
+
+  if (issue !== null) {
+    throw new TextEffectError(issue, 'UI skin text style');
+  }
+};
+
+const mergeSkin = (base: UISkin, patch: UISkinPatch): UISkin => {
+  if (patch.text !== undefined) {
+    assertSkinTextEffects(patch.text);
+  }
+
+  return {
+    background: patch.background ?? base.background,
+    text: patch.text ?? base.text,
+    insets: patch.insets ?? base.insets,
+  };
+};
 
 const mergeSkinSet = (base: UISkinSet, patch: UISkinSetPatch): UISkinSet => {
   const merged: { normal: UISkin } & Partial<Record<Exclude<UIWidgetState, 'normal'>, UISkin>> = { ...base };
