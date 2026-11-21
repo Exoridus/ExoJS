@@ -393,7 +393,7 @@ describe('serialization — default-registry reset', () => {
 
 describe('serialization — errors & version', () => {
   it('stamps the current version on a serialized scene shape', () => {
-    expect(SERIALIZATION_VERSION).toBe(3);
+    expect(SERIALIZATION_VERSION).toBe(4);
   });
 
   it('throws on an unknown type during deserialize', () => {

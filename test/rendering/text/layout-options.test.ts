@@ -16,6 +16,8 @@ import type { LayoutOptions } from '#rendering/text/LayoutOptions';
 import * as segmentation from '#rendering/text/segmentation';
 import { ShapedTextSource } from '#rendering/text/ShapedTextSource';
 import * as shaping from '#rendering/text/shaping';
+import { TextEffectError } from '#rendering/text/TextEffectError';
+import * as textEffects from '#rendering/text/textEffects';
 import type { GlyphInfo, GlyphProvider, TextLayoutStyle } from '#rendering/text/types';
 
 const loadModule = <T>(file: string, dev: boolean, dependencies: Record<string, unknown>): T => {
@@ -70,6 +72,8 @@ describe.each([false, true])('layout option validation (__DEV__=%s)', dev => {
     './segmentation': segmentation,
     './ShapedTextSource': { ShapedTextSource },
     './shaping': shaping,
+    './textEffects': textEffects,
+    './TextEffectError': { TextEffectError },
   };
   const load = <T>(name: string): T => loadModule<T>(`rendering/text/${name}.ts`, dev, dependencies);
 

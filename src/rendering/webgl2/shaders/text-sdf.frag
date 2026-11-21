@@ -74,11 +74,11 @@ void main(void) {
 
   // texel 2: fillColor
   // texel 3: outlineColor
-  // texel 4: (outlineMin, shadowAlpha, shadowBlur, gradientStopCount)
-  //          outlineMin = 0.5 → disabled; outlineMin < 0.5 → enabled
+  // texel 4: (outlineField, shadowAlpha, shadowBlurField, gradientStopCount)
+  //          effect lengths already in field units; outlineField = 0 → no outline
   // texel 5: shadowColor
-  // texel 6: (shadowOffX_px, shadowOffY_px, decorationOverride, sdfRadius_logical)
-  // texel 7: (gradAxisX, gradAxisY, gradBias, 0)
+  // texel 6: (shadowOffX_texels, shadowOffY_texels, decorationOverride, fieldScale)
+  // texel 7: (gradAxisX, gradAxisY, gradBias, fieldZero)
   // texels 10-19: gradient stop colours and offsets
   vec4 tFill    = decodeAuthoredColor(texelFetch(u_nodeData, ivec2(2, ni), 0));
   vec4 tOutline = decodeAuthoredColor(texelFetch(u_nodeData, ivec2(3, ni), 0));
@@ -87,27 +87,31 @@ void main(void) {
   vec4 tShadow2 = texelFetch(u_nodeData, ivec2(6, ni), 0);
   vec4 tGradAxis = texelFetch(u_nodeData, ivec2(7, ni), 0);
 
-  float outlineMin   = tParams.x;
+  float outlineField = tParams.x;
   float shadowAlpha  = tParams.y;
-  float blur         = tParams.z;
+  float blurField    = tParams.z;
   int   gradStops    = int(tParams.w + 0.5);
   vec2  shadowOffset = tShadow2.xy / u_pageSize;
+  float fieldScale   = tShadow2.w;
+  float zero         = tGradAxis.w;
 
-  float sd   = sampleBase(v_textureSlot, v_texcoord).r;
+  float sd = sampleBase(v_textureSlot, v_texcoord).r;
+  // Evaluated before any branch: a derivative needs every fragment of the quad.
+  float derivativeAa = max(fwidth(sd) * 0.5, 0.0001);
 
   // Antialiasing width, measured against the PROJECTED pixel footprint rather
   // than fixed in field units. A constant cannot be right everywhere at once: it
   // renders a hard, aliased step wherever the glyph is dense and a multi-pixel
   // smear wherever it is magnified.
   //
-  // The field moves by 1/sdfRadius per LOCAL unit — the atlas density cancels,
+  // The field moves by `fieldScale` per LOCAL unit — the atlas density cancels,
   // because a denser atlas packs proportionally more texels into the same local
-  // extent — so `1 / (radius * density)` is how far it moves across one device
+  // extent — so `fieldScale / density` is how far it moves across one device
   // pixel, and half of that puts a half-pixel of fade on either side of the
   // threshold. `fwidth` would answer the same question, but with an
   // implementation-defined derivative that makes the GLSL and WGSL stages
   // disagree on the ramp; it stays as the fallback for an atlas whose field
-  // scale is unknown (an MSDF atlas carries no distance range).
+  // scale is unknown.
   //
   // `density` is the device pixels one local unit covers ALONG THE EDGE'S OWN
   // NORMAL. Under a similarity transform every direction shares one density and
@@ -117,14 +121,13 @@ void main(void) {
   // anisotropy ratio. The normal comes from the field itself — a forward
   // difference over one atlas texel — because the glyph quad maps local space to
   // UV with an axis-aligned positive scale, so a direction is the same in both.
-  float radius = tShadow2.w;
   vec2  axisX  = v_pxAxes.xy;
   vec2  axisY  = v_pxAxes.zw;
   float densityX = length(axisX);
   float densityY = length(axisY);
-  float aa;
+  float aa = derivativeAa;
 
-  if (radius > 0.0 && densityX > 0.0) {
+  if (fieldScale > 0.0 && densityX > 0.0) {
     float density = densityX;
 
     // Flat per node, so the branch is coherent across the whole draw and the two
@@ -143,23 +146,26 @@ void main(void) {
       }
     }
 
-    aa = max(0.5 / (radius * density), 0.0001);
-  } else {
-    aa = max(fwidth(sd) * 0.5, 0.0001);
+    aa = max(0.5 * fieldScale / density, 0.0001);
   }
 
-  float fill = smoothstep(0.5 - aa, 0.5 + aa, sd);
+  float fill = smoothstep(zero - aa, zero + aa, sd);
 
-  float outline = outlineMin < 0.5
-    ? smoothstep(outlineMin - aa, outlineMin + aa, sd) * (1.0 - fill)
+  // Every effect edge sits at a field value: its distance outside the glyph edge
+  // times the field scale. The outer fade never starts below zero, where the
+  // field saturates at the end of its reach: under heavy minification an
+  // unclamped ramp would tint the whole saturated tile margin.
+  float outlineEdge = zero - outlineField;
+  float outline = outlineField > 0.0
+    ? smoothstep(max(outlineEdge - aa, 0.0), outlineEdge + aa, sd) * (1.0 - fill)
     : 0.0;
 
   // The shadow is the one edge allowed to be softer than a pixel: `shadowBlur`
-  // is an authored look, stated in field units so it covers the same logical
-  // distance at every raster density. It widens the edge, never sharpens it.
-  float shadowSoft = max(aa, blur);
+  // is an authored half-width in logical pixels. It widens the edge, never
+  // sharpens it.
+  float shadowSoft = max(aa, blurField);
   float shadowSd   = sampleBase(v_textureSlot, v_texcoord - shadowOffset).r;
-  float shadow     = smoothstep(0.5 - shadowSoft, 0.5 + shadowSoft, shadowSd)
+  float shadow     = smoothstep(max(zero - shadowSoft, 0.0), min(zero + shadowSoft, 1.0), shadowSd)
                      * shadowAlpha * (1.0 - fill) * (1.0 - outline);
 
   vec4 fillColor;

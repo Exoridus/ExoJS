@@ -15,6 +15,7 @@ import { asNumberArray, asSerializedNode, readNumber } from './read';
 import { registerRenderingSerializers } from './renderingSerializers';
 import type { SerializationRegistry } from './SerializationRegistry';
 import { compact, deserializeStyleOptions, readLayoutOptions, serializeStyle } from './serializerHelpers';
+import { migrateLegacyTextEffects, textEffectPixelVersion } from './textEffectMigration';
 import { registerUiSerializers } from './uiSerializers';
 
 // ── Container ────────────────────────────────────────────────────────────────
@@ -131,16 +132,23 @@ const textSerializer: NodeSerializer<Text> = {
 
     return out;
   },
-  read(data) {
+  read(data, ctx) {
     const layout = readLayoutOptions(data.layout);
+    const colorGlyphs = data.colorGlyphs === true;
+    const sdfRadius = readNumber(data, 'sdfRadius');
+    let style = deserializeStyleOptions(data.style);
+
+    if (style !== undefined && ctx.version < textEffectPixelVersion) {
+      style = migrateLegacyTextEffects(style, { kind: 'sdf', sdfRadius: sdfRadius ?? SDF_RADIUS, colorGlyphs }, ctx.version);
+    }
 
     return new Text(
       typeof data.text === 'string' ? data.text : '',
       compact({
-        ...deserializeStyleOptions(data.style),
+        ...style,
         ...layout,
-        colorGlyphs: data.colorGlyphs === true,
-        sdfRadius: readNumber(data, 'sdfRadius'),
+        colorGlyphs,
+        sdfRadius,
       }),
     );
   },

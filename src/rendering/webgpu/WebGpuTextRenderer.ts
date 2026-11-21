@@ -40,20 +40,11 @@ import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
 import { type WebGpuRetainedCaptureFrame } from './WebGpuRetainedCaptureFrame';
 import { WebGpuRetainedGroupBundle } from './WebGpuRetainedGroupBundle';
 
-// ── Node data layout (identical to WebGl2TextRenderer) ───────────────────────
+// ── Node data layout ────────────────────────────────────────────────────────
 //
-// Storage buffer: array<vec4<f32>> - 10 entries per node.
-//
-// [ni*10+0]: (a,  c,  0,  tx)   transform col 0+2
-// [ni*10+1]: (b,  d,  0,  ty)   transform col 1+2
-// [ni*10+2]: (r,  g,  b,  a )   fillColor
-// [ni*10+3]: (r,  g,  b,  a )   outlineColor
-// [ni*10+4]: (outlineMin, shadowAlpha, shadowBlur, gradientEnabled)
-// [ni*10+5]: (r,  g,  b,  a )   shadowColor
-// [ni*10+6]: (shadowOffX_px, shadowOffY_px, gradientVertical, sdfRadius_logical)
-// [ni*10+7]: (r,  g,  b,  a )   gradientTop
-// [ni*10+8]: (r,  g,  b,  a )   gradientBottom
-// [ni*10+9]: (minX, minY, w, h) text block bounds
+// Storage buffer: array<vec4<f32>>, `textNodeDataTexels` entries per node,
+// byte-identical to WebGl2TextRenderer's data texture rows. The layout is
+// documented once, at `packTextNodeData` in `#rendering/text/nodeDataPacker`.
 
 const nodeFloats = textNodeDataFloats;
 

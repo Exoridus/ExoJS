@@ -3,8 +3,11 @@ import type { ReadonlyRectangle } from '#math/Rectangle';
 import { Drawable } from '#rendering/Drawable';
 
 import type { LayoutOptions } from './LayoutOptions';
+import { TextEffectError } from './TextEffectError';
+import type { TextEffectCapability, TextEffectIssue } from './textEffects';
+import { checkTextEffectValues, textEffectAntialiasReserve } from './textEffects';
 import { buildTextPageQuads, emptyTextLayout, validateLayoutOptions } from './textLayout';
-import type { StyleChangeHint, TextStyle } from './TextStyle';
+import type { StyleChangeHint, TextEffectHost, TextStyle, TextStyleOptions } from './TextStyle';
 import { mergeHint } from './TextStyle';
 import type { TextLayoutResult, TextPageQuads, TextSize } from './types';
 
@@ -22,7 +25,7 @@ import type { TextLayoutResult, TextPageQuads, TextSize } from './types';
  * - {@link Text} - runtime Canvas 2D / SDF rasterization
  * - {@link BitmapText}  - offline pre-built atlas (BMFont / MSDF)
  */
-export abstract class AbstractText extends Drawable {
+export abstract class AbstractText extends Drawable implements TextEffectHost {
   protected _text: string;
   protected _style: TextStyle;
   protected _layout: LayoutOptions;
@@ -214,9 +217,58 @@ export abstract class AbstractText extends Drawable {
 
   public override destroy(): void {
     this._style.onChange.remove(this._onStyleChange);
+    this._style._removeEffectHost(this);
     this._pageQuads = [];
     super.destroy();
   }
+
+  // ── Effects ──────────────────────────────────────────────────────────────
+
+  /**
+   * Largest outline width, or shadow offset plus blur, this node can draw, in
+   * logical pixels of its local space. `0` when its glyphs have no usable
+   * distance field.
+   */
+  public get maxEffectExtent(): number {
+    const capability = this._textEffectCapability();
+
+    return capability.reason === null ? Math.max(0, capability.outward - textEffectAntialiasReserve) : 0;
+  }
+
+  /**
+   * The first outline or shadow in `style` this node cannot draw, or `null`.
+   *
+   * Answers what assigning the style would throw as a {@link TextEffectError},
+   * without throwing. Defaults to the attached style.
+   */
+  public checkEffects(style: TextStyle | TextStyleOptions = this._style): TextEffectIssue | null {
+    return checkTextEffectValues(
+      this._textEffectCapability(),
+      style.outlineWidth ?? 0,
+      style.shadowAlpha ?? 0,
+      style.shadowOffsetX ?? 0,
+      style.shadowOffsetY ?? 0,
+      style.shadowBlur ?? 0,
+    );
+  }
+
+  /** @internal */
+  public _checkEffectValues(
+    outlineWidth: number,
+    shadowAlpha: number,
+    shadowOffsetX: number,
+    shadowOffsetY: number,
+    shadowBlur: number,
+  ): TextEffectIssue | null {
+    return checkTextEffectValues(this._textEffectCapability(), outlineWidth, shadowAlpha, shadowOffsetX, shadowOffsetY, shadowBlur);
+  }
+
+  /**
+   * What this node's glyph source can encode. Read by the renderers on every
+   * repack, so implementations return a cached object.
+   * @internal
+   */
+  public abstract _textEffectCapability(): TextEffectCapability;
 
   // ── Protected ────────────────────────────────────────────────────────────
 
@@ -238,11 +290,45 @@ export abstract class AbstractText extends Drawable {
    * it so the replaced style stops driving this node.
    */
   protected _replaceStyle(style: TextStyle): void {
+    if (style !== this._style) {
+      this._assertEffects(this._textEffectCapability(), style);
+    }
+
     this._style.onChange.remove(this._onStyleChange);
+    this._style._removeEffectHost(this);
     this._style = style;
     this._style.onChange.add(this._onStyleChange);
+    this._style._addEffectHost(this);
     this._markDirty('font');
   }
+
+  /**
+   * Validate the constructor's style and start constraining it. Subclasses
+   * call this once their glyph source is known, at the end of construction.
+   */
+  protected _attachEffectHost(): void {
+    this._assertEffects(this._textEffectCapability(), this._style);
+    this._style._addEffectHost(this);
+  }
+
+  /** Throws when `capability` cannot draw the effects of `style`; changes nothing. */
+  protected _assertEffects(capability: TextEffectCapability, style: TextStyle): void {
+    const found = checkTextEffectValues(
+      capability,
+      style.outlineWidth,
+      style.shadowAlpha,
+      style.shadowOffsetX,
+      style.shadowOffsetY,
+      style.shadowBlur,
+    );
+
+    if (found !== null) {
+      throw new TextEffectError(found, this._effectContext);
+    }
+  }
+
+  /** Name reported by {@link TextEffectError} messages; survives minification. */
+  protected abstract readonly _effectContext: string;
 
   /**
    * Take the heaviest pending hint and settle the node, folding in whatever

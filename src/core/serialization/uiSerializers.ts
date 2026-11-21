@@ -1,4 +1,5 @@
 import type { RenderNode } from '#rendering/RenderNode';
+import { SDF_RADIUS } from '#rendering/text/GlyphAtlas';
 import { Button } from '#ui/Button';
 import type { DockRegion } from '#ui/DockContainer';
 import { DockContainer } from '#ui/DockContainer';
@@ -16,6 +17,7 @@ import type { NodeSerializer } from './NodeSerializer';
 import { asSerializedNode } from './read';
 import type { SerializationRegistry } from './SerializationRegistry';
 import { arrayToColor, colorToArray, compact, deserializeStyleOptions, serializeStyleOptions } from './serializerHelpers';
+import { migrateLegacyTextEffects, textEffectPixelVersion } from './textEffectMigration';
 
 const num = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
 
@@ -61,8 +63,15 @@ const labelSerializer: NodeSerializer<Label> = {
 
     return out;
   },
-  read(data) {
-    const label = new Label(typeof data.text === 'string' ? data.text : '', deserializeStyleOptions(data.style));
+  read(data, ctx) {
+    let style = deserializeStyleOptions(data.style);
+
+    // A Label draws through a default runtime Text.
+    if (style !== undefined && ctx.version < textEffectPixelVersion) {
+      style = migrateLegacyTextEffects(style, { kind: 'sdf', sdfRadius: SDF_RADIUS, colorGlyphs: false }, ctx.version);
+    }
+
+    const label = new Label(typeof data.text === 'string' ? data.text : '', style);
 
     if (data.enabled === false) {
       label.enabled = false;

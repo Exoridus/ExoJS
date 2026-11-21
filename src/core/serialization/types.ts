@@ -9,7 +9,7 @@ export type SerializedComponent = VersionedDocument & { readonly $id?: number };
  * {@link SerializedScene} and checked on deserialize so saved data can outlive
  * the code that produced it (see the migration chain in `migrate`).
  */
-export const SERIALIZATION_VERSION = 3;
+export const SERIALIZATION_VERSION = 4;
 
 /**
  * Plain-old-JSON description of a single scene-graph node.

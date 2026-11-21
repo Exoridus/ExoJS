@@ -72,10 +72,15 @@ const registerProbe = (): void => {
   });
 };
 
-describe('serialization - source-version context before a style-unit migration', () => {
-  it.each([0, 1, 2, SERIALIZATION_VERSION])(
-    'passes scene version %i to nested world and UI serializers without changing styles',
+/** Pixel value of a legacy outline / blur, reproducing where the old field-unit shader drew the edge. */
+const legacyOutlinePx = (outline: number, sdfRadius: number): number => Math.min(outline, 0.5) * sdfRadius;
+const legacyBlurPx = (blur: number, sdfRadius: number): number => blur * 0.1 * sdfRadius;
+
+describe('serialization - source-version context and text effect unit migration', () => {
+  it.each([0, 1, 2, 3, SERIALIZATION_VERSION])(
+    'passes scene version %i to nested world and UI serializers and migrates only built-in text styles',
     version => {
+      const legacy = version < 4;
       registerProbe();
 
       const document = deepFreeze({
@@ -120,61 +125,71 @@ describe('serialization - source-version context before a style-unit migration',
       const label = panel.children.find(child => child instanceof Label)!;
       const uiProbe = panel.children.find(child => child instanceof VersionProbe)!;
 
+      const textOutline = legacy ? legacyOutlinePx(0.25, 16) : 0.25;
+      const textBlur = legacy ? legacyBlurPx(0.75, 16) : 0.75;
+
       expect(observedReadVersions).toEqual([version, version]);
-      expect(text.style.outlineWidth).toBe(0.25);
-      expect(text.style.shadowBlur).toBe(0.75);
+      expect(text.style.outlineWidth).toBeCloseTo(textOutline, 12);
+      expect(text.style.shadowBlur).toBeCloseTo(textBlur, 12);
       expect(text.sdfRadius).toBe(16);
+      // A saturated legacy outline (0.5 and above) becomes the width the old
+      // field could actually show: half the default radius.
       expect(fallbackRadius.style.outlineWidth).toBe(4);
       expect(fallbackRadius.sdfRadius).toBe(SDF_RADIUS);
-      expect(label.textStyleOverrides?.outlineWidth).toBe(0.125);
-      expect(label.textStyleOverrides?.shadowBlur).toBe(0.5);
+      expect(label.textStyleOverrides?.outlineWidth).toBeCloseTo(legacy ? legacyOutlinePx(0.125, SDF_RADIUS) : 0.125, 12);
+      expect(label.textStyleOverrides?.shadowBlur).toBeCloseTo(legacy ? legacyBlurPx(0.5, SDF_RADIUS) : 0.5, 12);
+      // Custom serializers receive their payload untouched; migrating it is theirs.
       expect(worldProbe.payload).toEqual({ style: { outlineWidth: 4, shadowBlur: 0.8 }, arbitrary: true });
       expect(uiProbe.payload).toEqual({ style: { outlineWidth: 9 }, custom: 'unchanged' });
 
-      // Only existing v0/v1 -> v2 identity compatibility allows a fresh
-      // Scene.serialize() to stamp the current version without rewriting values.
+      // Re-saving writes the live pixel values under the current version; the
+      // source document is never rewritten.
       const saved = scene.serialize();
       expect(saved.version).toBe(SERIALIZATION_VERSION);
-      expect(((saved.root.children as Array<{ children: unknown[] }>)[0]?.children[0] as { style: unknown }).style).toEqual({
-        outlineWidth: 0.25,
-        shadowBlur: 0.75,
-      });
+      const savedStyle = ((saved.root.children as Array<{ children: unknown[] }>)[0]?.children[0] as { style: Record<string, number> })
+        .style;
+      expect(savedStyle.outlineWidth).toBeCloseTo(textOutline, 12);
+      expect(savedStyle.shadowBlur).toBeCloseTo(textBlur, 12);
       expect(document.root.children[0]?.children[0]?.style).toEqual({ outlineWidth: 0.25, shadowBlur: 0.75 });
       scene.destroy();
     },
   );
 
-  it.each([0, 1, 2, SERIALIZATION_VERSION])('retains prefab version %i across fromJSON/toJSON and repeated instantiation', version => {
-    registerProbe();
+  it.each([0, 1, 2, 3, SERIALIZATION_VERSION])(
+    'retains prefab version %i across fromJSON/toJSON and migrates on every instantiation',
+    version => {
+      registerProbe();
+      const legacy = version < 4;
 
-    const source = deepFreeze({
-      version,
-      root: {
-        type: 'Container',
-        children: [
-          { type: 'Text', text: 'badge', style: { outlineWidth: 0.25, shadowBlur: 0.6 } },
-          { type: 'VersionProbe', payload: { style: { outlineWidth: 4 }, kind: 'custom' } },
-        ],
-      },
-    });
-    const prefab = Prefab.fromJSON(source);
-    const firstSave = prefab.toJSON();
-    const restored = Prefab.fromJSON(firstSave);
+      const source = deepFreeze({
+        version,
+        root: {
+          type: 'Container',
+          children: [
+            { type: 'Text', text: 'badge', style: { outlineWidth: 0.25, shadowBlur: 0.6 } },
+            { type: 'VersionProbe', payload: { style: { outlineWidth: 4 }, kind: 'custom' } },
+          ],
+        },
+      });
+      const prefab = Prefab.fromJSON(source);
+      const firstSave = prefab.toJSON();
+      const restored = Prefab.fromJSON(firstSave);
 
-    expect(firstSave.version).toBe(version);
-    expect(restored.toJSON().version).toBe(version);
+      expect(firstSave.version).toBe(version);
+      expect(restored.toJSON().version).toBe(version);
 
-    for (const instance of [prefab.instantiate(), prefab.instantiate(), restored.instantiate()]) {
-      const children = (instance as Container).children;
-      expect((children[0] as Text).style.outlineWidth).toBe(0.25);
-      expect((children[0] as Text).style.shadowBlur).toBe(0.6);
-      expect((children[1] as VersionProbe).payload).toEqual({ style: { outlineWidth: 4 }, kind: 'custom' });
-    }
+      for (const instance of [prefab.instantiate(), prefab.instantiate(), restored.instantiate()]) {
+        const children = (instance as Container).children;
+        expect((children[0] as Text).style.outlineWidth).toBeCloseTo(legacy ? legacyOutlinePx(0.25, SDF_RADIUS) : 0.25, 12);
+        expect((children[0] as Text).style.shadowBlur).toBeCloseTo(legacy ? legacyBlurPx(0.6, SDF_RADIUS) : 0.6, 12);
+        expect((children[1] as VersionProbe).payload).toEqual({ style: { outlineWidth: 4 }, kind: 'custom' });
+      }
 
-    expect(observedReadVersions).toEqual([version, version, version]);
-    expect(prefab.toJSON().version).toBe(version);
-    expect(source.root.children[0]?.style).toEqual({ outlineWidth: 0.25, shadowBlur: 0.6 });
-  });
+      expect(observedReadVersions).toEqual([version, version, version]);
+      expect(prefab.toJSON().version).toBe(version);
+      expect(source.root.children[0]?.style).toEqual({ outlineWidth: 0.25, shadowBlur: 0.6 });
+    },
+  );
 
   it('uses the current version for a freshly captured prefab and bare-node reads by default', () => {
     registerProbe();
@@ -188,7 +203,7 @@ describe('serialization - source-version context before a style-unit migration',
   });
 
   it('validates versioned scene and prefab frames without mutating or relabeling legacy styles', () => {
-    for (const version of [0, 1, 2, SERIALIZATION_VERSION]) {
+    for (const version of [0, 1, 2, 3, SERIALIZATION_VERSION]) {
       const data = deepFreeze({
         version,
         root: { type: 'Text', style: { outlineWidth: 4, shadowBlur: 0.9 } },

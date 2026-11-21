@@ -259,6 +259,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "TextAsset",
   "TextAssetType",
   "TextEditWidget",
+  "TextEffectError",
   "TextInput",
   "TextStyle",
   "Texture",

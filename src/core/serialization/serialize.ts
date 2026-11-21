@@ -627,16 +627,15 @@ export const deserializeSceneInto = (
   deserializeTargets(targets, loader, registry, data.version, options, owner, publishUI);
 };
 
-const LAST_IDENTITY_COMPATIBLE_VERSION = 3;
-
 /**
- * Reject a future version bump until its legacy-data transforms exist.
- * SDF outline/blur values cannot be reinterpreted as logical pixels:
- * unknown external MSDF ranges, saturated outlines and missing raster
- * densities have no general lossless conversion.
+ * Newest version whose values every reader migrates. Raising
+ * {@link SERIALIZATION_VERSION} past it without adding the matching reader
+ * transforms fails here instead of misreading older documents.
  */
-const requireExplicitMigration = (version: number, kind: 'scene' | 'prefab'): void => {
-  if (version < SERIALIZATION_VERSION && SERIALIZATION_VERSION > LAST_IDENTITY_COMPATIBLE_VERSION) {
+const LAST_MIGRATED_VERSION = 4;
+
+const requireMigrationPath = (version: number, kind: 'scene' | 'prefab'): void => {
+  if (version < SERIALIZATION_VERSION && SERIALIZATION_VERSION > LAST_MIGRATED_VERSION) {
     throw new Error(`Cannot deserialize ${kind}: version ${version} needs an explicit migration to version ${SERIALIZATION_VERSION}.`);
   }
 };
@@ -653,9 +652,12 @@ const requireExplicitMigration = (version: number, kind: 'scene' | 'prefab'): vo
  * a version newer than supported, or a missing/invalid root; an invalid `ui` is
  * dropped (it is optional) rather than thrown.
  *
- * Versions 0 through 3 differ in how asset references are framed. The readers
- * understand all of them without rewriting type-specific node payloads.
- * Future changes to existing values require a migration before node reads.
+ * Versions 0 through 3 differ in how asset references are framed; version 4
+ * states text outline and shadow lengths in logical pixels. The document is
+ * returned unchanged with its source version, and each node reader migrates
+ * older values before constructing its node (`Text`, `BitmapText` and `Label`
+ * convert the old distance-field thresholds). Future changes to existing
+ * values need the same: a reader transform keyed on the source version.
  * @internal
  */
 export const migrate = (data: unknown): SerializedScene => {
@@ -677,7 +679,7 @@ export const migrate = (data: unknown): SerializedScene => {
     throw new Error(`Cannot deserialize scene: data version ${version} is newer than the supported version ${SERIALIZATION_VERSION}.`);
   }
 
-  requireExplicitMigration(version, 'scene');
+  requireMigrationPath(version, 'scene');
 
   const root = asSerializedNode(scene.root);
 
@@ -699,8 +701,8 @@ export const migrate = (data: unknown): SerializedScene => {
  * on a non-object document, a version newer than supported, or a missing/invalid
  * root.
  *
- * Versions 0 through 3 are identity-compatible, exactly as for scenes.
- * Future versions must migrate values before constructing nodes.
+ * Versions 0 through 3 migrate exactly as for scenes, in the node readers,
+ * every time the prefab is instantiated; the stored document is not rewritten.
  * @internal
  */
 export const migratePrefab = (data: unknown): SerializedPrefab => {
@@ -720,7 +722,7 @@ export const migratePrefab = (data: unknown): SerializedPrefab => {
     throw new Error(`Cannot deserialize prefab: data version ${version} is newer than the supported version ${SERIALIZATION_VERSION}.`);
   }
 
-  requireExplicitMigration(version, 'prefab');
+  requireMigrationPath(version, 'prefab');
 
   const root = asSerializedNode(document.root);
 

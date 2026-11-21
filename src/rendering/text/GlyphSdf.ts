@@ -5,9 +5,9 @@
  * Euclidean Distance Transform (Felzenszwalb & Huttenlocher, 2012) to
  * produce a single-channel R8 SDF buffer.
  *
- * Output encoding: 128/255 ≈ 0.502 is the glyph edge. Values above 0.5
- * are inside the glyph, values below 0.5 are outside. The range encoded
- * by the SDF extends `radius` pixels beyond the geometric edge.
+ * Output encoding: 127.5/255 = 0.5 is the glyph edge. Values above 0.5
+ * are inside the glyph, values below 0.5 are outside. With `cutoff = 0.5`
+ * the field saturates `radius / 2` pixels on either side of the edge.
  *
  * Compatible with `cutoff = 0.5` in the shader's `smoothstep(0.5 − soft, 0.5 + soft, sd)`.
  */
@@ -36,8 +36,9 @@ export interface GlyphSdfOptions {
    */
   buffer?: number;
   /**
-   * EDT search radius. Values above `radius` pixels from the edge are
-   * clamped. Must be ≥ `buffer` for full-range SDF coverage.
+   * Distance span, in pixels, the 0..1 output range is normalised over:
+   * the value moves by `1 / radius` per pixel and saturates `radius × cutoff`
+   * pixels inside and `radius × (1 − cutoff)` pixels outside the edge.
    * Defaults to `buffer`.
    */
   radius?: number;

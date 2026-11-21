@@ -6,6 +6,8 @@ import { AbstractText } from './AbstractText';
 import type { BmFontData } from './BmFont';
 import { type BmFont } from './BmFont';
 import type { LayoutOptions } from './LayoutOptions';
+import type { TextEffectCapability } from './textEffects';
+import { bmFontEffectCapability } from './textEffects';
 import { emptyTextLayout, layoutText, validateLayoutOptions } from './textLayout';
 import type { TextStyleOptions } from './TextStyle';
 import { TextStyle } from './TextStyle';
@@ -24,7 +26,13 @@ export interface BitmapTextOptions extends Omit<TextStyleOptions, 'fontSize'> {
   /**
    * Selects the `text-msdf` shader which applies the RGB median formula.
    * Defaults to `false` (colour/RGBA atlas).
-   * Distance metadata does not select a shader or change TextStyle units.
+   *
+   * Outlines and shadows need the font's declared `distanceField` range and
+   * zero value plus its glyph `padding` ({@link BmFontData}); their outward
+   * reach is the smaller of the encoded range outside the edge and the
+   * padding, times {@link BitmapText.fontScale}. Without that metadata the font
+   * draws fill only and an outline or visible shadow throws
+   * {@link TextEffectError}. A colour atlas never draws them.
    *
    * Read once at construction: {@link setFont} replaces the atlas without
    * changing it, so a node switched between colour and MSDF fonts needs a
@@ -145,9 +153,10 @@ export class BmFontAdapter implements GlyphProvider {
  * The atlas is pre-built so there is no runtime Canvas 2D rasterisation.
  * All layout features (alignment, word-wrap, justify, leading, breakWords,
  * whiteSpace, letterSpacing) and kerning pairs from the descriptor are fully
- * supported. The explicit `msdf` option selects distance rendering; imported
- * distance metadata is retained on `font.fontData`, without changing effect
- * units or adding effect support to color glyphs.
+ * supported. The explicit `msdf` option selects distance rendering; the
+ * font's declared distance metadata then sizes outline and shadow lengths,
+ * which are logical pixels of the node's local space exactly as for
+ * {@link Text}. Colour glyphs draw fill and tint only.
  *
  * ## Usage
  *
@@ -169,6 +178,8 @@ export class BitmapText extends AbstractText {
   private _fontScale: number;
   private _msdf: boolean;
   private _adapter: BmFontAdapter;
+  private _effectCapability: TextEffectCapability;
+  protected readonly _effectContext = 'BitmapText';
 
   public constructor(text: string, font: BmFont, options: BitmapTextOptions = {}) {
     super(text, new TextStyle(options), options.layout ?? {});
@@ -176,6 +187,8 @@ export class BitmapText extends AbstractText {
     this._fontScale = options.scale ?? 1;
     this._msdf = options.msdf ?? false;
     this._adapter = new BmFontAdapter(font.fontData, font.textures, this._fontScale);
+    this._effectCapability = bmFontEffectCapability(font.fontData, this._fontScale, this._msdf);
+    this._attachEffectHost();
   }
 
   /**
@@ -236,7 +249,12 @@ export class BitmapText extends AbstractText {
     this._replaceStyle(v instanceof TextStyle ? v : new TextStyle(v));
   }
 
-  /** Scale factor applied to all glyph metrics from the font descriptor. */
+  /**
+   * Scale factor applied to all glyph metrics from the font descriptor. Effect
+   * lengths stay in local logical pixels, so the distance-field capacity
+   * scales with it; a scale whose capacity cannot hold the current style's
+   * effects throws {@link TextEffectError} and changes nothing.
+   */
   public get fontScale(): number {
     return this._fontScale;
   }
@@ -246,6 +264,10 @@ export class BitmapText extends AbstractText {
       return;
     }
 
+    const capability = bmFontEffectCapability(this._font.fontData, v, this._msdf);
+
+    this._assertEffects(capability, this._style);
+    this._effectCapability = capability;
     this._fontScale = v;
     this._adapter = new BmFontAdapter(this._font.fontData, this._font.textures, v);
     this._markDirty('font');
@@ -270,11 +292,24 @@ export class BitmapText extends AbstractText {
 
   // ── Font replacement ──────────────────────────────────────────────────────
 
-  /** Replace the font and mark the geometry stale. */
+  /**
+   * Replace the font and mark the geometry stale. Throws
+   * {@link TextEffectError} and keeps the current font when the new one cannot
+   * draw the current style's effects.
+   */
   public setFont(font: BmFont): void {
+    const capability = bmFontEffectCapability(font.fontData, this._fontScale, this._msdf);
+
+    this._assertEffects(capability, this._style);
+    this._effectCapability = capability;
     this._font = font;
     this._adapter = new BmFontAdapter(font.fontData, font.textures, this._fontScale);
     this._markDirty('font');
+  }
+
+  /** @internal */
+  public _textEffectCapability(): TextEffectCapability {
+    return this._effectCapability;
   }
 
   // ── Private ──────────────────────────────────────────────────────────────

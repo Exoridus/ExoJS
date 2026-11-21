@@ -96,7 +96,7 @@ describe('asset references keep their interpretation', () => {
     loader.destroy();
   });
 
-  test('format 3 writes a typed reference even when no options are needed', async () => {
+  test('the current format writes the typed reference format 3 introduced', async () => {
     const loader = createCoreLoader();
     const texture = await loader.load(Asset.type('texture', 'hero.png'));
     const tree = new Container();
@@ -104,7 +104,8 @@ describe('asset references keep their interpretation', () => {
 
     const saved = { version: SERIALIZATION_VERSION, root: serializeTree(tree, loader) };
 
-    expect(saved).toEqual(typedScene);
+    // Version 4 changed only text effect units; the asset reference shape is format 3's.
+    expect(saved).toEqual({ ...typedScene, version: SERIALIZATION_VERSION });
 
     const older = migrate(legacyScene);
     expect(older.version).toBe(2);
@@ -391,7 +392,7 @@ describe('asset references keep their interpretation', () => {
   });
 
   test('documents are written with the current format version', () => {
-    expect(SERIALIZATION_VERSION).toBe(3);
+    expect(SERIALIZATION_VERSION).toBe(4);
     expect(() => migrate({ version: SERIALIZATION_VERSION + 1, root: { type: 'Container' } })).toThrow(/newer than the supported version/);
   });
 

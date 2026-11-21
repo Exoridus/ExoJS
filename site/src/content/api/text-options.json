@@ -102,7 +102,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Use a colour-glyph (emoji) atlas + the text-color shader. Construction-only."
+          "description": "Use a colour-glyph (emoji) atlas + the text-color shader. Construction-only. Colour glyphs keep their RGBA content and draw fill/tint only: an outline or visible shadow throws TextEffectError with 'no-distance-field'."
         },
         {
           "name": "decorationColor",
@@ -676,7 +676,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Outline width in SDF units (0..0.5). 0 disables the outline. Must be finite and not negative, else RangeError."
+          "description": "Outline extent outside the glyph edge, in logical pixels of the node's local space. 0 disables the outline. Must be finite and not negative, else RangeError; a width the node cannot draw throws TextEffectError."
         },
         {
           "name": "overflow",
@@ -767,7 +767,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "SDF buffer radius in pixels. Construction-only."
+          "description": "Distance-field reach in logical pixels: how far outside each glyph the atlas tile and its distance field extend. It bounds the effects the node can draw - outlineWidth, and a shadow's larger offset axis plus its blur, may each use sdfRadius - 1 logical pixels, the last one being reserved for the antialiased edge (Text.maxEffectExtent). Larger values cost atlas space roughly in proportion to the padded tile area and never change on an animated style. Defaults to SDF_RADIUS. Must be a positive finite number, else RangeError. Construction-only."
         },
         {
           "name": "shadowAlpha",
@@ -792,7 +792,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Shadow opacity (0..1). 0 disables the shadow."
+          "description": "Shadow opacity (0..1). 0 disables the shadow; offsets and blur only matter above it."
         },
         {
           "name": "shadowBlur",
@@ -817,7 +817,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Shadow blur softness (0..1). Larger values soften the shadow edge."
+          "description": "Half-width of the shadow's soft edge in logical pixels of the node's local space: the shadow fades from full strength shadowBlur pixels inside the offset glyph edge to nothing shadowBlur pixels outside it. A smooth ramp, not a Gaussian. 0 keeps a crisp, antialiased edge. Must be finite and not negative, else RangeError."
         },
         {
           "name": "shadowColor",
@@ -867,7 +867,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Horizontal shadow offset in pixels."
+          "description": "Horizontal shadow offset in logical pixels of the node's local space."
         },
         {
           "name": "shadowOffsetY",
@@ -892,7 +892,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Vertical shadow offset in pixels."
+          "description": "Vertical shadow offset in logical pixels of the node's local space."
         },
         {
           "name": "shaping",

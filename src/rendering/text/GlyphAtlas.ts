@@ -18,12 +18,25 @@ import type { FontVariantKey, GlyphInfo, GlyphKey, GlyphProvider, SolidTexel, Te
 export type AtlasMode = 'sdf' | 'color';
 
 /**
- * SDF buffer radius in logical pixels - the maximum distance outside a glyph
- * that the SDF field encodes. Determines the maximum usable outline/shadow
- * reach. Exported so applications can import this constant when computing
- * shader uniforms.
+ * Default distance-field reach in logical pixels: how far outside each glyph
+ * the runtime SDF tile and its field extend. Outline widths and shadow
+ * offset-plus-blur may use this minus one logical pixel of antialiasing
+ * reserve (see `Text` `sdfRadius`).
  */
 export const SDF_RADIUS = 8;
+
+/**
+ * Raster parameters for a distance field that ends exactly `sdfRadius` logical
+ * pixels outside the glyph: the tile padding covers that reach, and the field
+ * spans twice it so its zero lands on the padding's outer edge. Not rounded:
+ * the shader derives the field scale from the logical radius alone, so the
+ * normalisation has to match it exactly at any ratio.
+ * @internal
+ */
+export const sdfRasterSpan = (sdfRadius: number, pixelRatio: number): { buffer: number; radius: number } => ({
+  buffer: Math.max(1, Math.ceil(sdfRadius * pixelRatio)),
+  radius: 2 * sdfRadius * pixelRatio,
+});
 
 const glyphPadding = 2;
 
@@ -44,16 +57,25 @@ const solidBlockSize = 4;
  * the same way and need the same block on whichever of them a node draws from.
  * @internal
  */
-export const claimSolidTexel = (allocate: (w: number, h: number) => { page: AtlasPage; slot: { x: number; y: number } }): SolidTexel => {
-  const { page, slot } = allocate(solidBlockSize, solidBlockSize);
+export const claimSolidTexel = (
+  allocate: (w: number, h: number) => { page: AtlasPage; slot: { x: number; y: number } },
+  margin = 0,
+): SolidTexel => {
+  // In a distance-field page every glyph keeps its ink one field reach inside
+  // its tile, which is what stops a shadow sample that strays across a tile
+  // edge from reading a neighbour's ink. The solid block is ink to its edge,
+  // so it needs the same empty margin around it.
+  const { page, slot } = allocate(solidBlockSize + 2 * margin, solidBlockSize + 2 * margin);
+  const x = slot.x + margin;
+  const y = slot.y + margin;
 
-  page.fillSolid(slot.x, slot.y, solidBlockSize, solidBlockSize);
+  page.fillSolid(x, y, solidBlockSize, solidBlockSize);
   page.uploadDirtyRegion();
 
   return {
     page: page.index,
-    u: (slot.x + solidBlockSize / 2) / page.width,
-    v: (slot.y + solidBlockSize / 2) / page.height,
+    u: (x + solidBlockSize / 2) / page.width,
+    v: (y + solidBlockSize / 2) / page.height,
   };
 };
 
@@ -356,7 +378,7 @@ export class GlyphAtlas implements GlyphProvider {
   private readonly _mode: AtlasMode;
   private readonly _sdfRadius: number;
   private readonly _pixelRatio: number;
-  private readonly _rasterSdfRadius: number;
+  private readonly _rasterSpan: { buffer: number; radius: number };
   private readonly _metrics: GlyphMetrics;
 
   /**
@@ -406,7 +428,7 @@ export class GlyphAtlas implements GlyphProvider {
     // The SDF buffer has to grow with the raster grid, or the encoded distance
     // field would reach `sdfRadius / pixelRatio` LOGICAL pixels past the glyph
     // and an outline or shadow would silently shorten as the ratio rises.
-    this._rasterSdfRadius = Math.max(1, Math.round(sdfRadius * pixelRatio));
+    this._rasterSpan = sdfRasterSpan(sdfRadius, pixelRatio);
     // A variant measured elsewhere hands its metrics in so every atlas of the
     // same typeface answers with the same advances; a standalone atlas measures
     // for itself.
@@ -433,9 +455,9 @@ export class GlyphAtlas implements GlyphProvider {
   }
 
   /**
-   * SDF buffer radius in LOGICAL pixels - the outline/shadow reach this atlas
-   * can encode. Independent of {@link pixelRatio}: the raster buffer grows with
-   * the ratio so the logical reach stays put.
+   * Distance-field reach in LOGICAL pixels: tile padding and field both end this
+   * far outside each glyph. Independent of {@link pixelRatio}: the raster buffer
+   * grows with the ratio so the logical reach stays put.
    */
   public get sdfRadius(): number {
     return this._sdfRadius;
@@ -466,7 +488,10 @@ export class GlyphAtlas implements GlyphProvider {
   }
 
   public getSolidTexel(): SolidTexel {
-    return (this._solidTexel ??= claimSolidTexel((w, h) => this._allocateSlot(w, h, 'solid', 0)));
+    return (this._solidTexel ??= claimSolidTexel(
+      (w, h) => this._allocateSlot(w, h, 'solid', 0),
+      this._mode === 'sdf' ? this._rasterSpan.buffer : 0,
+    ));
   }
 
   public clear(): void {
@@ -527,8 +552,8 @@ export class GlyphAtlas implements GlyphProvider {
         fontWeight: this._font.fontWeight ?? 'normal',
         fontStyle: this._font.fontStyle ?? 'normal',
         fontVariant: this._font.fontVariant ?? 'normal',
-        buffer: this._rasterSdfRadius,
-        radius: this._rasterSdfRadius,
+        buffer: this._rasterSpan.buffer,
+        radius: this._rasterSpan.radius,
         cutoff: 0.5,
       });
       this._sdfInstances.set(rasterFontSize, instance);

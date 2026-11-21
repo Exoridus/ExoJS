@@ -1,6 +1,6 @@
 import { applyCanvasTextState } from './canvasTextState';
 import type { AtlasMode } from './GlyphAtlas';
-import { AtlasPage, claimSolidTexel, SDF_RADIUS } from './GlyphAtlas';
+import { AtlasPage, claimSolidTexel, SDF_RADIUS, sdfRasterSpan } from './GlyphAtlas';
 import { GlyphSdf } from './GlyphSdf';
 import type { ShapedTextMetrics } from './ShapedTextMetrics';
 import type { LineShaper } from './shaping';
@@ -79,7 +79,7 @@ export class ShapedTextSource implements LineShaper {
   private readonly _mode: AtlasMode;
   private readonly _sdfRadius: number;
   private readonly _pixelRatio: number;
-  private readonly _rasterSdfRadius: number;
+  private readonly _rasterSpan: { buffer: number; radius: number };
   private readonly _direction: 'ltr' | 'rtl';
   private readonly _letterSpacing: number;
 
@@ -107,7 +107,7 @@ export class ShapedTextSource implements LineShaper {
     // The distance field has to grow with the raster grid or its reach would
     // shrink to `sdfRadius / pixelRatio` logical pixels, silently shortening
     // every outline and shadow as the density rises.
-    this._rasterSdfRadius = Math.max(1, Math.round(this._sdfRadius * this._pixelRatio));
+    this._rasterSpan = sdfRasterSpan(this._sdfRadius, this._pixelRatio);
   }
 
   /** The pages the current layout's lines were rasterized into. */
@@ -155,7 +155,10 @@ export class ShapedTextSource implements LineShaper {
    * different texture entirely.
    */
   public getSolidTexel(): SolidTexel {
-    return (this._solidTexel ??= claimSolidTexel((w, h) => this._allocateSlot(w, h, 'solid', 0)));
+    return (this._solidTexel ??= claimSolidTexel(
+      (w, h) => this._allocateSlot(w, h, 'solid', 0),
+      this._mode === 'sdf' ? this._rasterSpan.buffer : 0,
+    ));
   }
 
   public shapeLine(line: string, fontSize: number): GlyphInfo {
@@ -203,8 +206,8 @@ export class ShapedTextSource implements LineShaper {
         fontWeight: this._font.fontWeight ?? 'normal',
         fontStyle: this._font.fontStyle ?? 'normal',
         fontVariant: this._font.fontVariant ?? 'normal',
-        buffer: this._rasterSdfRadius,
-        radius: this._rasterSdfRadius,
+        buffer: this._rasterSpan.buffer,
+        radius: this._rasterSpan.radius,
         cutoff: 0.5,
         direction: this._direction,
         letterSpacing: this._letterSpacing * this._pixelRatio,

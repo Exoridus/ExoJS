@@ -4,6 +4,8 @@ import { Signal } from '#core/Signal';
 import type { GradientStop } from '#rendering/gradient/Gradient';
 
 import { cssFontString } from './canvasTextState';
+import { TextEffectError } from './TextEffectError';
+import type { TextEffectIssue } from './textEffects';
 import type { FontStyle, FontVariant, FontVariantKey, TextAlignment, TextTransform } from './types';
 
 /**
@@ -163,7 +165,11 @@ export interface TextStyleOptions {
   fontSize?: number;
   fillColor?: Color;
   outlineColor?: Color;
-  /** Outline width in SDF units (0..0.5). 0 disables the outline. Must be finite and not negative, else `RangeError`. */
+  /**
+   * Outline extent outside the glyph edge, in logical pixels of the node's
+   * local space. `0` disables the outline. Must be finite and not negative,
+   * else `RangeError`; a width the node cannot draw throws {@link TextEffectError}.
+   */
   outlineWidth?: number;
   align?: TextAlignment;
   /**
@@ -187,13 +193,19 @@ export interface TextStyleOptions {
   // ── Shadow ────────────────────────────────────────────────────────────────
   /** Drop-shadow color. */
   shadowColor?: Color;
-  /** Horizontal shadow offset in pixels. */
+  /** Horizontal shadow offset in logical pixels of the node's local space. */
   shadowOffsetX?: number;
-  /** Vertical shadow offset in pixels. */
+  /** Vertical shadow offset in logical pixels of the node's local space. */
   shadowOffsetY?: number;
-  /** Shadow opacity (0..1). 0 disables the shadow. */
+  /** Shadow opacity (0..1). 0 disables the shadow; offsets and blur only matter above it. */
   shadowAlpha?: number;
-  /** Shadow blur softness (0..1). Larger values soften the shadow edge. */
+  /**
+   * Half-width of the shadow's soft edge in logical pixels of the node's local
+   * space: the shadow fades from full strength `shadowBlur` pixels inside the
+   * offset glyph edge to nothing `shadowBlur` pixels outside it. A smooth ramp,
+   * not a Gaussian. `0` keeps a crisp, antialiased edge. Must be finite and not
+   * negative, else `RangeError`.
+   */
   shadowBlur?: number;
 
   // ── Decorations ───────────────────────────────────────────────────────────
@@ -254,6 +266,12 @@ const assertNonNegative = (name: string, value: number): number => {
  *
  * Call {@link consumeDirty} at the start of each frame to get the accumulated
  * hint and clear the flag.
+ *
+ * Outline and shadow lengths are logical pixels in the local space of the node
+ * drawing the style, so they scale with node and camera transforms and not
+ * with the canvas pixel ratio. While a style is attached to text nodes, a
+ * change no attached node can draw throws {@link TextEffectError} and leaves
+ * the style unchanged.
  */
 export class TextStyle {
   private _dirty = false;
@@ -261,6 +279,10 @@ export class TextStyle {
 
   /** Fires once per dirty cycle when any property changes. */
   public readonly onChange = new Signal();
+
+  // An array, not a Set: preflight runs on every effect setter, which an
+  // animated style calls each frame, and iterating a Set allocates.
+  private _effectHosts: TextEffectHost[] | null = null;
 
   private _fontFamily: FontFamily;
   private _fontWeight: FontWeight;
@@ -313,7 +335,7 @@ export class TextStyle {
     this._shadowOffsetX = options.shadowOffsetX ?? 0;
     this._shadowOffsetY = options.shadowOffsetY ?? 0;
     this._shadowAlpha = options.shadowAlpha ?? 0;
-    this._shadowBlur = options.shadowBlur ?? 0;
+    this._shadowBlur = options.shadowBlur === undefined ? 0 : assertNonNegative('shadowBlur', options.shadowBlur);
 
     this._underline = options.underline ?? false;
     this._strikethrough = options.strikethrough ?? false;
@@ -344,6 +366,50 @@ export class TextStyle {
     this._pendingHint = 'tint';
 
     return hint;
+  }
+
+  /**
+   * Register a node whose effect capacity every later effect change must fit.
+   * @internal
+   */
+  public _addEffectHost(host: TextEffectHost): void {
+    const hosts = (this._effectHosts ??= []);
+
+    if (!hosts.includes(host)) {
+      hosts.push(host);
+    }
+  }
+
+  /** @internal */
+  public _removeEffectHost(host: TextEffectHost): void {
+    const index = this._effectHosts?.indexOf(host) ?? -1;
+
+    if (index >= 0) {
+      this._effectHosts!.splice(index, 1);
+    }
+  }
+
+  /** Throws before any field changes when an attached node cannot draw the candidate effect values. */
+  private _preflightEffects(
+    outlineWidth: number,
+    shadowAlpha: number,
+    shadowOffsetX: number,
+    shadowOffsetY: number,
+    shadowBlur: number,
+  ): void {
+    const hosts = this._effectHosts;
+
+    if (hosts === null) {
+      return;
+    }
+
+    for (let i = 0; i < hosts.length; i++) {
+      const found = hosts[i]!._checkEffectValues(outlineWidth, shadowAlpha, shadowOffsetX, shadowOffsetY, shadowBlur);
+
+      if (found !== null) {
+        throw new TextEffectError(found, 'TextStyle');
+      }
+    }
   }
 
   private _markDirty(hint: StyleChangeHint): void {
@@ -521,7 +587,7 @@ export class TextStyle {
     this._markDirty('tint');
   }
 
-  /** Outline width in SDF units (0..0.5). `0` disables the outline. */
+  /** Outline extent outside the glyph edge in local logical pixels. `0` disables the outline. */
   public get outlineWidth(): number {
     return this._outlineWidth;
   }
@@ -533,6 +599,7 @@ export class TextStyle {
       return;
     }
 
+    this._preflightEffects(v, this._shadowAlpha, this._shadowOffsetX, this._shadowOffsetY, this._shadowBlur);
     this._outlineWidth = v;
     this._markDirty('tint');
   }
@@ -548,6 +615,7 @@ export class TextStyle {
     this._markDirty('tint');
   }
 
+  /** Horizontal shadow offset in local logical pixels. */
   public get shadowOffsetX(): number {
     return this._shadowOffsetX;
   }
@@ -557,10 +625,12 @@ export class TextStyle {
       return;
     }
 
+    this._preflightEffects(this._outlineWidth, this._shadowAlpha, v, this._shadowOffsetY, this._shadowBlur);
     this._shadowOffsetX = v;
     this._markDirty('tint');
   }
 
+  /** Vertical shadow offset in local logical pixels. */
   public get shadowOffsetY(): number {
     return this._shadowOffsetY;
   }
@@ -570,6 +640,7 @@ export class TextStyle {
       return;
     }
 
+    this._preflightEffects(this._outlineWidth, this._shadowAlpha, this._shadowOffsetX, v, this._shadowBlur);
     this._shadowOffsetY = v;
     this._markDirty('tint');
   }
@@ -584,19 +655,24 @@ export class TextStyle {
       return;
     }
 
+    this._preflightEffects(this._outlineWidth, v, this._shadowOffsetX, this._shadowOffsetY, this._shadowBlur);
     this._shadowAlpha = v;
     this._markDirty('tint');
   }
 
+  /** Half-width of the shadow's soft edge in local logical pixels. */
   public get shadowBlur(): number {
     return this._shadowBlur;
   }
 
   public set shadowBlur(v: number) {
+    assertNonNegative('shadowBlur', v);
+
     if (this._shadowBlur === v) {
       return;
     }
 
+    this._preflightEffects(this._outlineWidth, this._shadowAlpha, this._shadowOffsetX, this._shadowOffsetY, v);
     this._shadowBlur = v;
     this._markDirty('tint');
   }
@@ -713,9 +789,14 @@ export class TextStyle {
 
   // ── Clone / copy ────────────────────────────────────────────────────────
 
-  /** Copy all properties from `style` into this instance and return `this`. */
+  /**
+   * Copy all properties from `style` into this instance and return `this`.
+   * Throws {@link TextEffectError} without copying anything when a node this
+   * style is attached to cannot draw the incoming effects.
+   */
   public copy(style: TextStyle): this {
     if (style !== this) {
+      this._preflightEffects(style._outlineWidth, style._shadowAlpha, style._shadowOffsetX, style._shadowOffsetY, style._shadowBlur);
       this._fontFamily = style._fontFamily;
       this._fontWeight = style._fontWeight;
       this._fontStyle = style._fontStyle;
@@ -776,4 +857,18 @@ export class TextStyle {
 
     return s;
   }
+}
+
+/**
+ * A node that constrains the effect values of the styles attached to it.
+ * @internal
+ */
+export interface TextEffectHost {
+  _checkEffectValues(
+    outlineWidth: number,
+    shadowAlpha: number,
+    shadowOffsetX: number,
+    shadowOffsetY: number,
+    shadowBlur: number,
+  ): TextEffectIssue | null;
 }

@@ -15,7 +15,7 @@ class BasicTextScene extends Scene {
       align: 'left',
       fillColor: Color.white,
       outlineColor: Color.black,
-      outlineWidth: 0.2,
+      outlineWidth: 1.5,
       fontSize: 25,
       fontFamily: 'Kenney Future',
     });

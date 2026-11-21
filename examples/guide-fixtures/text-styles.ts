@@ -22,12 +22,14 @@ class TextStylesScene extends Scene {
         angle: 90,
       },
       outlineColor: new Color(45, 62, 105),
-      outlineWidth: 0.25,
+      outlineWidth: 2,
       shadowColor: Color.black,
       shadowAlpha: 0.65,
       shadowOffsetX: 7,
       shadowOffsetY: 8,
-      shadowBlur: 0.5,
+      shadowBlur: 0.4,
+      // The 8px offset plus blur needs more than the default 8px reach.
+      sdfRadius: 10,
     });
     title.setAnchor(0.5).setPosition(width / 2, 175);
     this.labels.push(title);
