@@ -236,6 +236,9 @@ interface Region {
 const rendered = async (app: Application, id: string, regions: readonly Region[]): Promise<void> => {
   const canvas = canvasOf(app);
 
+  // CDP element screenshots temporarily resize Chromium's surface. Keep stills
+  // outside a motion recording so its fixed canvas crop remains valid.
+  expect(canvas.hasAttribute('data-guide-motion')).toBe(false);
   await expect.element(canvas).toBeVisible();
   const bounds = canvas.getBoundingClientRect();
 
@@ -317,13 +320,15 @@ describe('actual guide workflows on WebGL2', { concurrent: false }, () => {
       await frames(app, 12);
       expect(animated.currentFrame).toBe(pausedFrame);
       expect(changed).not.toHaveBeenCalled();
-      await rendered(app, 'sprite-animation-paused', [still.getBounds(), animated.getBounds()]);
       await observe('paused', 650);
       await userEvent.keyboard('p');
       await expect.poll(() => scene.paused, poll).toBe(false);
       await expect.poll(() => changed.mock.calls.length, poll).toBeGreaterThan(0);
       await observe('resumed', 650);
     });
+    await userEvent.keyboard('p');
+    await expect.poll(() => scene.paused, poll).toBe(true);
+    await rendered(app, 'sprite-animation-paused', [still.getBounds(), animated.getBounds()]);
   }, 30_000);
 
   test('sprite movement keeps the artwork at its pivot and collides with the real obstacle', async () => {
@@ -405,11 +410,14 @@ describe('actual guide workflows on WebGL2', { concurrent: false }, () => {
     await click(app, save);
     await expect.poll(() => status.text, poll).toBe('Enter a name first.');
     await click(app, field);
+    // Canvas clicks are frame-batched; native typing needs widget and host focus.
+    await expect.poll(() => field.focused && app.platform.textInputFocused, poll).toBe(true);
     await userEvent.keyboard('Grace{Tab}');
     await expect.poll(() => save.focused, poll).toBe(true);
     await userEvent.keyboard('{Enter}');
     await expect.poll(() => status.text, poll).toBe('Saved: Grace');
     await click(app, field);
+    await expect.poll(() => field.focused && app.platform.textInputFocused, poll).toBe(true);
     await userEvent.keyboard('[ControlLeft>][KeyA][/ControlLeft]Bea');
     await expect.poll(() => field.value, poll).toBe('Bea');
     await expect.poll(() => [field.selectionStart, field.selectionEnd], poll).toEqual([3, 3]);

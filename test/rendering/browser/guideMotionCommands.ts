@@ -175,7 +175,9 @@ export const startGuideMotion = async (context: BrowserCommandContext, id: Guide
           metadata.pageScaleFactor !== 1 ||
           metadata.offsetTop !== 0
         ) {
-          throw new Error('Guide screencast dimensions changed; the canvas crop would be ambiguous.');
+          throw new Error(
+            `Guide screencast dimensions changed; the canvas crop would be ambiguous. Expected ${JSON.stringify(viewport)}, received ${JSON.stringify(metadata)}.`,
+          );
         }
 
         const file = `frame-${String(capture.frames.length).padStart(4, '0')}.jpg`;
@@ -231,6 +233,12 @@ export const stopGuideMotion = async (
   captures.delete(ctx.page);
   await stopStream(capture);
   const { frames, directory, crop } = capture;
+  let captureError: string | null = null;
+
+  if (capture.error !== undefined) {
+    captureError = capture.error instanceof Error ? capture.error.message : 'Guide capture failed with a non-Error rejection.';
+  }
+
   const manifest = {
     guide: capture.id,
     browser: 'chromium',
@@ -240,6 +248,7 @@ export const stopGuideMotion = async (
     timing: 'wall-clock observation, not deterministic simulation frames',
     outcome,
     outcomeScope: 'recorded interaction only; the CI report owns the final test result',
+    captureError,
     startedAt: capture.startedAt,
     stoppedAt: capture.stoppedAt,
     crop,

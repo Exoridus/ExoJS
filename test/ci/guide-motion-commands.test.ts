@@ -43,11 +43,11 @@ const fixture = (root: string, browser = 'chromium') => {
     iframe: { locator },
   } as unknown as BrowserCommandContext;
 
-  const emit = (timestamp: number): void => {
+  const emit = (timestamp: number, metadata: Partial<Frame['metadata']> = {}): void => {
     listener?.({
       data: Buffer.from(`frame at ${timestamp}`).toString('base64'),
       sessionId: 7,
-      metadata: { timestamp, deviceWidth: 1280, deviceHeight: 720, pageScaleFactor: 1, offsetTop: 0 },
+      metadata: { timestamp, deviceWidth: 1280, deviceHeight: 720, pageScaleFactor: 1, offsetTop: 0, ...metadata },
     });
   };
 
@@ -138,6 +138,28 @@ describe('focused guide motion capture', () => {
       true,
     );
     expect(await stopGuideMotion(capture.context, [], 'failed')).toBeNull();
+  });
+
+  it.each([
+    ['deviceWidth', 800],
+    ['deviceHeight', 450],
+    ['pageScaleFactor', 2],
+    ['offsetTop', 16],
+  ])('rejects changed %s and retains the actual geometry in its failure evidence', async (field, value) => {
+    const capture = fixture(root);
+
+    await startGuideMotion(capture.context, 'sprite-animation');
+    capture.emit(100);
+    capture.emit(100.2, { [field]: value });
+    await expect(stopGuideMotion(capture.context, [], 'completed')).rejects.toThrow('Guide screencast dimensions changed');
+    const directory = resolve(root, '.workspace/visual-review/current/guide-sprite-animation-webgl2-chromium-motion');
+    const manifest = JSON.parse(readFileSync(resolve(directory, 'capture.json'), 'utf8'));
+
+    expect(manifest.captureError).toContain(`"${field}":${value}`);
+    expect(manifest.frames).toHaveLength(1);
+    expect(capture.session.send.mock.calls.filter(([method]) => method === 'Page.screencastFrameAck')).toHaveLength(2);
+    expect(capture.session.detach).toHaveBeenCalledOnce();
+    expect(execFileSync).not.toHaveBeenCalled();
   });
 
   it('detaches a session if Chromium rejects starting the stream', async () => {

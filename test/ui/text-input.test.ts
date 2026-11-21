@@ -3,6 +3,7 @@ import { Keyboard } from '#input/types';
 import type { Rectangle } from '#math/Rectangle';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 import type { PlatformTextInput } from '#platform/PlatformTextInput';
+import { Button } from '#ui/Button';
 import { TextInput } from '#ui/TextInput';
 
 import { frameDelta } from '../support/frame-delta';
@@ -17,6 +18,85 @@ const nativeKey = (eventType: 'keydown' | 'keyup', code: string): KeyboardEvent 
 };
 
 describe('TextInput', () => {
+  test('a canvas click needs the interaction frame before native typing reaches the field', () => {
+    const { scene, im } = createUIApp(null, true);
+    const app = scene.app;
+    const canvas = app.canvas as HTMLCanvasElement;
+    const field = new TextInput({ width: 200, height: 36 });
+    const save = new Button({ label: 'Save', width: 100, height: 36 });
+
+    canvas.width = 800;
+    canvas.height = 600;
+    canvas.tabIndex = 0;
+    document.body.append(canvas);
+    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 800, 600));
+    Object.assign(app, { _backingStoreToLogical: (x: number, y: number) => ({ x, y }) });
+    save.y = 100;
+    scene.ui.addChild(field, save);
+    field.focus();
+    save.focus();
+
+    const typeAtHostFocus = (text: string): void => {
+      for (const char of text) {
+        const target = document.activeElement!;
+        const code = `Key${char.toUpperCase()}`;
+        const down = new KeyboardEvent('keydown', { code, key: char, bubbles: true, cancelable: true });
+
+        target.dispatchEvent(down);
+
+        // jsdom has no native editing default. A real browser produces
+        // beforeinput only when the key actually reaches an editable host.
+        if (!down.defaultPrevented && target instanceof HTMLTextAreaElement) {
+          target.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertText', data: char, bubbles: true, cancelable: true }));
+        }
+
+        target.dispatchEvent(new KeyboardEvent('keyup', { code, key: char, bubbles: true }));
+      }
+    };
+
+    try {
+      for (const eventType of ['pointerover', 'pointerdown', 'pointerup']) {
+        canvas.dispatchEvent(
+          new PointerEvent(eventType, {
+            pointerId: 1,
+            pointerType: 'mouse',
+            isPrimary: true,
+            clientX: 100,
+            clientY: 18,
+            buttons: eventType === 'pointerdown' ? 1 : 0,
+            bubbles: true,
+          }),
+        );
+      }
+
+      expect(field.focused).toBe(false);
+      expect(app.platform.textInputFocused).toBe(false);
+      expect(document.activeElement).toBe(canvas);
+      typeAtHostFocus('Grac');
+      expect(field.value).toBe('');
+      app.input.preFrame(frameDelta);
+      expect(field.focused).toBe(false);
+      im.preFrame(frameDelta);
+      app.input._finishInteractionFrame();
+      expect(field.focused).toBe(true);
+      expect(app.platform.textInputFocused).toBe(true);
+      expect(document.activeElement).toBe(transportTextarea());
+      typeAtHostFocus('e');
+      expect(field.value).toBe('e');
+
+      field.value = '';
+      typeAtHostFocus('Grace');
+      app.input.preFrame(frameDelta);
+      im.preFrame(frameDelta);
+      app.input._finishInteractionFrame();
+      expect(field.value).toBe('Grace');
+      expect([field.selectionStart, field.selectionEnd]).toEqual([5, 5]);
+      expect(transportTextarea().value).toBe('Grace');
+    } finally {
+      canvas.remove();
+    }
+  });
+
   test.each(['deleteContentBackward', 'insertFromPaste'])(
     'native textarea %s honors selection before the engine shortcut frame',
     inputType => {
