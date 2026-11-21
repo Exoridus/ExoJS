@@ -986,6 +986,11 @@ export class Container extends RenderNode {
     return false;
   }
 
+  /** Child aggregates use a conservative world AABB; childless local geometry keeps its oriented box. @internal */
+  public override _isWorldAligned(): boolean {
+    return this._childList.length > 0 || super._isWorldAligned();
+  }
+
   /**
    * Keep the child aggregate when lifting container bounds into world space.
    * A rotated aggregate remains a conservative AABB, as in {@link getBounds}.

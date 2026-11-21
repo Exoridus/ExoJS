@@ -1,6 +1,7 @@
+import { Loader } from '#assets/Loader';
 import type { Application } from '#core/Application';
 import { Scene } from '#core/scene/Scene';
-import type { SceneScope } from '#core/scene/SceneScope';
+import { SceneScope } from '#core/scene/SceneScope';
 import { SceneState } from '#core/scene/SceneState';
 import { Signal } from '#core/Signal';
 import type { Seconds } from '#core/units';
@@ -64,17 +65,20 @@ const mockAtlas: Partial<GlyphAtlas> = {
   onCleared: new Signal(),
 };
 const mockPool = { getAtlas: vi.fn(() => mockAtlas) };
+const cleanups: Array<() => void> = [];
 
 beforeEach(() => {
   resetDefaultGlyphAtlasPool(mockPool as unknown as GlyphAtlasPool);
 });
 afterEach(() => {
+  for (const cleanup of cleanups.splice(0)) {
+    cleanup();
+  }
+
   resetDefaultGlyphAtlasPool();
 
-  // Each focused field lazily creates a hidden <textarea> transport; the widget
-  // only removes it on destroy(). Tests build a fresh field per case and never
-  // destroy it, so clear any leftovers to keep `querySelector('textarea')`
-  // pointing at the field under test.
+  // A test may detach a field before scene cleanup. Remove any transport left
+  // by such a field so querySelector('textarea') still selects the next fixture.
   document.body.querySelectorAll('textarea').forEach(element => element.remove());
 });
 
@@ -120,8 +124,10 @@ export const createUIApp = (platform: unknown = null): Harness => {
     platform: platform ?? new BrowserPlatform(canvas),
     width: 800,
     height: 600,
+    loader: new Loader(),
     input: signals as unknown as InputSystem,
     onFrame: new Signal<[Seconds]>(),
+    onError: new Signal<[Error]>(),
     focus: null as FocusController | null,
     interaction: null as InteractionSystem | null,
     rendering: {
@@ -140,7 +146,16 @@ export const createUIApp = (platform: unknown = null): Harness => {
 
   app.focus = new FocusController(typed);
   app.interaction = new InteractionSystem(typed);
-  scene._attach(typed, {} as unknown as SceneScope<void>);
+  const scope = new SceneScope(typed, scene);
+
+  cleanups.push(() => {
+    scope.destroyFailedActivation();
+    app.interaction?.destroy();
+    app.focus?.destroy();
+    app.loader.destroy();
+    app.onFrame.destroy();
+    app.onError.destroy();
+  });
   app.interaction.attachRoot(scene.root);
 
   return { scene, im: app.interaction, signals };

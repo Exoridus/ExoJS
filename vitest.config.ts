@@ -531,6 +531,7 @@ export default defineConfig({
         test: {
           name: 'browser-webgl-chromium',
           globals: true,
+          globalSetup: ['./test/rendering/browser/_setup-demo-media.ts'],
           setupFiles: renderingBrowserSetupFiles,
           include: ['test/rendering/browser/webgl2-*.test.ts'],
           // `--use-angle=swiftshader` renders on the CPU, so several Chromium
@@ -584,6 +585,7 @@ export default defineConfig({
         test: {
           name: 'browser-webgl-firefox',
           globals: true,
+          globalSetup: ['./test/rendering/browser/_setup-demo-media.ts'],
           setupFiles: renderingBrowserSetupFiles,
           include: ['test/rendering/browser/webgl2-*.test.ts'],
           // Firefox serves WebGL for every file from one GPU process, so

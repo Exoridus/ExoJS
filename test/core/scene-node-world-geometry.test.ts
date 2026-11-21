@@ -228,6 +228,112 @@ test('world collision bounds preserve an ordinary container aggregate inside a r
   expect([container.getBounds().x, container.getBounds().y]).toEqual([20, 30]);
 });
 
+describe.each([
+  { name: 'ordinary parent', makeParent: () => new Container() },
+  { name: 'retained parent', makeParent: () => new RetainedContainer() },
+])('rotated aggregate queries under $name', ({ makeParent }) => {
+  describe.each([
+    { name: 'ordinary aggregate', makeAggregate: () => new Container() },
+    { name: 'retained aggregate', makeAggregate: () => new RetainedContainer() },
+  ])('$name', ({ makeAggregate }) => {
+    test.each(['inherited', 'own'])('uses child aggregate bounds with %s rotation in both operand orders', rotation => {
+      const parent = makeParent();
+      const aggregate = makeAggregate();
+      const leaf = new Drawable();
+      const rectangle = new Rectangle(108, 98, 4, 4);
+      const circle = new Circle(110, 100, 2);
+      const polygon = new Polygon([new Vector(108, 98), new Vector(112, 98), new Vector(110, 102)]);
+
+      owned.push(parent, rectangle, circle, polygon);
+      parent.setPosition(100, 100);
+      (rotation === 'inherited' ? parent : aggregate).setRotation(45);
+      leaf.setLocalBounds(-10, -10, 20, 20);
+      aggregate.addChild(leaf);
+      parent.addChild(aggregate);
+
+      const bounds = aggregate.getBounds();
+      const renderBounds = [bounds.x, bounds.y, bounds.width, bounds.height];
+
+      expect(aggregate.contains(110, 100)).toBe(true);
+      expect(rectangle.intersectsWith(leaf)).toBe(true);
+
+      for (const probe of [rectangle, circle, polygon]) {
+        expect(aggregate.intersectsWith(probe)).toBe(true);
+        expect(probe.intersectsWith(aggregate)).toBe(true);
+        expect(aggregate.collidesWith(probe)).not.toBeNull();
+        expect(probe.collidesWith(aggregate)).not.toBeNull();
+      }
+
+      expect(aggregate.getBounds()).toBe(bounds);
+      expect([bounds.x, bounds.y, bounds.width, bounds.height]).toEqual(renderBounds);
+
+      parent.setPosition(200, 100);
+
+      for (const probe of [rectangle, circle, polygon]) {
+        expect(aggregate.intersectsWith(probe)).toBe(false);
+        expect(probe.intersectsWith(aggregate)).toBe(false);
+        expect(aggregate.collidesWith(probe)).toBeNull();
+        expect(probe.collidesWith(aggregate)).toBeNull();
+      }
+    });
+  });
+
+  test('keeps a translated child in the aggregate while leaf queries retain oriented precision', () => {
+    const parent = makeParent();
+    const aggregate = new Container();
+    const leaf = new Drawable();
+    const inside = new Rectangle(112, 98, 4, 4);
+    const corner = new Rectangle(122, 112, 1, 1);
+
+    owned.push(parent, inside, corner);
+    parent.setPosition(100, 100);
+    aggregate.setRotation(45);
+    leaf.setPosition(10 * Math.SQRT1_2, 10 * Math.SQRT1_2);
+    leaf.setLocalBounds(-10, -10, 20, 20);
+    aggregate.addChild(leaf);
+    parent.addChild(aggregate);
+
+    // The child's world centre is (110,100), away from the container's origin.
+    expect(aggregate.contains(114, 100)).toBe(true);
+    expect(aggregate.intersectsWith(inside)).toBe(true);
+    expect(inside.intersectsWith(aggregate)).toBe(true);
+    expect(aggregate.collidesWith(inside)).not.toBeNull();
+    expect(inside.collidesWith(aggregate)).not.toBeNull();
+
+    // The aggregate is conservative; the drawable still rejects the diamond's empty corner.
+    expect(aggregate.intersectsWith(corner)).toBe(true);
+    expect(corner.intersectsWith(aggregate)).toBe(true);
+    expect(leaf.intersectsWith(corner)).toBe(false);
+    expect(corner.intersectsWith(leaf)).toBe(false);
+    expect(leaf.collidesWith(corner)).toBeNull();
+    expect(corner.collidesWith(leaf)).toBeNull();
+    expect(aggregate.contains(122, 112)).toBe(false);
+  });
+});
+
+test.each([
+  { name: 'ordinary container', makeNode: () => new Container() },
+  { name: 'retained container', makeNode: () => new RetainedContainer() },
+])('a childless $name with its own local extent keeps oriented collision geometry', ({ makeNode }) => {
+  const node = makeNode();
+  const inside = new Rectangle(108, 98, 4, 4);
+  const corner = new Rectangle(112, 112, 1, 1);
+
+  owned.push(node, inside, corner);
+  node.setLocalBounds(-10, -10, 20, 20);
+  node.setPosition(100, 100);
+  node.setRotation(45);
+
+  expect(node.intersectsWith(inside)).toBe(true);
+  expect(inside.intersectsWith(node)).toBe(true);
+  expect(node.collidesWith(inside)).not.toBeNull();
+  expect(inside.collidesWith(node)).not.toBeNull();
+  expect(node.intersectsWith(corner)).toBe(false);
+  expect(corner.intersectsWith(node)).toBe(false);
+  expect(node.collidesWith(corner)).toBeNull();
+  expect(corner.collidesWith(node)).toBeNull();
+});
+
 test('an unclipped retained ScrollContainer checks its viewport and child union in the same world space', () => {
   const group = new RetainedContainer();
   const scroll = new ScrollContainer({ width: 40, height: 20, scrollbars: 'never' });

@@ -37,6 +37,15 @@ vi.mock(import('#core/application/backendSelection'), async importOriginal => ({
 const applications: Application[] = [];
 const errors: string[] = [];
 const poll = { timeout: 10_000, interval: 20 };
+const previousViewport = { width: window.innerWidth, height: window.innerHeight };
+
+beforeAll(async () => {
+  await page.viewport(960, 640);
+});
+
+afterAll(async () => {
+  await page.viewport(previousViewport.width, previousViewport.height);
+});
 
 beforeEach(() => {
   errors.length = 0;
@@ -168,6 +177,16 @@ interface Region {
 
 /** Read actual rendered pixels, then save the live canvas through the existing browser provider. */
 const rendered = async (app: Application, id: string, regions: readonly Region[]): Promise<void> => {
+  const canvas = canvasOf(app);
+
+  await expect.element(canvas).toBeVisible();
+  const bounds = canvas.getBoundingClientRect();
+
+  expect(bounds.left).toBeGreaterThanOrEqual(0);
+  expect(bounds.top).toBeGreaterThanOrEqual(0);
+  expect(bounds.right).toBeLessThanOrEqual(window.innerWidth);
+  expect(bounds.bottom).toBeLessThanOrEqual(window.innerHeight);
+
   const { width, height } = app;
   const target = app.backend.acquireRenderTexture(width, height);
 
@@ -196,7 +215,9 @@ const rendered = async (app: Application, id: string, regions: readonly Region[]
         }
       }
 
-      expect(painted, `painted pixels in ${JSON.stringify(region)}`).toBeGreaterThan(16);
+      const { x, y, width: regionWidth, height: regionHeight } = region;
+
+      expect(painted, `painted pixels in [${x}, ${y}, ${regionWidth}, ${regionHeight}]`).toBeGreaterThan(16);
     }
   } finally {
     app.backend.releaseRenderTexture(target);
@@ -204,7 +225,7 @@ const rendered = async (app: Application, id: string, regions: readonly Region[]
 
   const path = `../../../.workspace/visual-review/current/guide-${id}-webgl2-${server.browser}.png`;
 
-  await page.screenshot({ element: canvasOf(app), path });
+  await page.screenshot({ element: canvas, path });
   console.info('guide visual evidence', {
     guide: id,
     browser: server.browser,
