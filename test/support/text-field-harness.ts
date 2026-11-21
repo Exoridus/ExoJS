@@ -9,7 +9,7 @@ import type { ContextMenuRequest } from '#input/ContextMenuRequest';
 import { FocusController } from '#input/FocusController';
 import type { Gamepad } from '#input/Gamepad';
 import type { GamepadButton } from '#input/GamepadButton';
-import type { InputSystem } from '#input/InputSystem';
+import { InputSystem } from '#input/InputSystem';
 import { InteractionSystem } from '#input/InteractionSystem';
 import type { Pointer } from '#input/Pointer';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
@@ -101,7 +101,8 @@ export interface Harness {
   };
 }
 
-export const createUIApp = (platform: unknown = null): Harness => {
+/** Native mode uses DOM events and scene.app.input; the default exposes direct signal controls. */
+export const createUIApp = (platform: unknown = null, nativeInput = false): Harness => {
   const canvas = document.createElement('canvas');
   const signals = {
     onPointerEnter: new Signal<[Pointer]>(),
@@ -124,6 +125,7 @@ export const createUIApp = (platform: unknown = null): Harness => {
     platform: platform ?? new BrowserPlatform(canvas),
     width: 800,
     height: 600,
+    options: { input: {} },
     loader: new Loader(),
     input: signals as unknown as InputSystem,
     onFrame: new Signal<[Seconds]>(),
@@ -144,7 +146,14 @@ export const createUIApp = (platform: unknown = null): Harness => {
   };
   const typed = app as unknown as Application;
 
-  app.focus = new FocusController(typed);
+  if (nativeInput) {
+    app.input = new InputSystem(typed);
+  }
+
+  if (!nativeInput) {
+    app.focus = new FocusController(typed);
+  }
+
   app.interaction = new InteractionSystem(typed);
   const scope = new SceneScope(typed, scene);
 
@@ -152,6 +161,11 @@ export const createUIApp = (platform: unknown = null): Harness => {
     scope.destroyFailedActivation();
     app.interaction?.destroy();
     app.focus?.destroy();
+
+    if (nativeInput) {
+      app.input.destroy();
+    }
+
     app.loader.destroy();
     app.onFrame.destroy();
     app.onError.destroy();

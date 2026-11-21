@@ -25,15 +25,17 @@ const deleteTypes = new Map<string, { direction: 'backward' | 'forward'; granula
  * real-sized element positioned over the drawing surface, focused so the
  * host's keyboard and IME attach to it.
  *
- * `beforeinput` is the source of truth, never `keydown`: the browser has
- * already turned key combinations into semantic edits (`deleteWordBackward`,
- * `insertFromPaste`, `historyUndo`), which would be layout-dependent to
- * reconstruct from key codes. Every mapped event is cancelled - the element
+ * The widget synchronizes its editing commands before a native key default.
+ * Other edits arrive through `beforeinput`, already expressed as semantic
+ * edits (`deleteWordBackward`, `insertFromPaste`, `historyUndo`). Every mapped event is cancelled - the element
  * is a transport and its own value is never authoritative - except
  * `deleteByCut`, whose clipboard write must survive; the value divergence it
  * causes heals on the next {@link BrowserTextInput.setValue}.
  */
 export class BrowserTextInput implements PlatformTextInput {
+  /** @internal */
+  public readonly _synchronousKeyboard = true;
+
   private readonly _element: HTMLTextAreaElement;
   private readonly _canvas: HTMLCanvasElement;
   private readonly _onEdit = new Signal<[TextEditIntent]>();
@@ -70,6 +72,7 @@ export class BrowserTextInput implements PlatformTextInput {
 
     const insert = insertTypes.has(type) || type === 'insertCompositionText';
     const del = deleteTypes.get(type) ?? null;
+    const range = { start: this._element.selectionStart, end: this._element.selectionEnd };
 
     if (insert) {
       event.preventDefault();
@@ -84,14 +87,14 @@ export class BrowserTextInput implements PlatformTextInput {
         text = event.data ?? '';
       }
 
-      this._onEdit.dispatch({ kind: 'insert', text, ...(type === 'insertFromPaste' && { source: 'paste' as const }) });
+      this._onEdit.dispatch({ kind: 'insert', text, range, ...(type === 'insertFromPaste' && { source: 'paste' as const }) });
 
       return;
     }
 
     if (del !== null) {
       event.preventDefault();
-      this._onEdit.dispatch({ kind: 'deleteContent', direction: del.direction, granularity: del.granularity });
+      this._onEdit.dispatch({ kind: 'deleteContent', direction: del.direction, granularity: del.granularity, range });
 
       return;
     }
@@ -108,7 +111,7 @@ export class BrowserTextInput implements PlatformTextInput {
       // Left uncanceled so the browser writes the selection to the
       // clipboard. The native value edit is corrected by the next
       // `setValue`, which mirrors the model over it.
-      this._onEdit.dispatch({ kind: 'deleteContent', direction: 'backward', granularity: 'character' });
+      this._onEdit.dispatch({ kind: 'deleteContent', direction: 'backward', granularity: 'character', range });
     }
   };
 

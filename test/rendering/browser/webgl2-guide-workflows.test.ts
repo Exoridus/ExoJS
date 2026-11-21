@@ -10,7 +10,7 @@
  * captures ownership for assertions and teardown.
  */
 import { CharacterMovementComponent, PhysicsBodyComponent } from '@codexo/exojs/physics';
-import { page, server, userEvent } from 'vitest/browser';
+import { commands, page, server, userEvent } from 'vitest/browser';
 
 import { Sound } from '#audio/Sound';
 import { Application } from '#core/Application';
@@ -28,6 +28,8 @@ import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { Button } from '#ui/Button';
 import { Label } from '#ui/Label';
 import { TextInput } from '#ui/TextInput';
+
+import type { GuideMotionId, GuideMotionObservation } from './guideMotionCommands';
 
 vi.mock(import('#core/application/backendSelection'), async importOriginal => ({
   ...(await importOriginal()),
@@ -168,6 +170,61 @@ const hold = async (keys: readonly string[], action: () => Promise<void>): Promi
   }
 };
 
+type ObserveMotion = (label: string, milliseconds?: number) => Promise<void>;
+const motionCommands = commands as unknown as {
+  startGuideMotion: (id: GuideMotionId) => Promise<boolean>;
+  stopGuideMotion: (observations: readonly GuideMotionObservation[], outcome: 'completed' | 'failed') => Promise<string | null>;
+};
+
+/** Extra viewing time is opt-in; ordinary runs keep the original interactions. */
+const withMotion = async (app: Application, id: GuideMotionId, action: (observe: ObserveMotion) => Promise<void>): Promise<void> => {
+  const canvas = canvasOf(app);
+  const previous = canvas.getAttribute('data-guide-motion');
+  const observations: GuideMotionObservation[] = [];
+  let recording = false;
+  let completed = false;
+  const failures: unknown[] = [];
+
+  try {
+    canvas.setAttribute('data-guide-motion', id);
+    recording = server.browser === 'chromium' && (await motionCommands.startGuideMotion(id));
+    await action(async (label, milliseconds = 0) => {
+      if (recording) {
+        observations.push({ label, timestamp: Date.now() / 1000 });
+
+        if (milliseconds > 0) {
+          await new Promise(resolve => setTimeout(resolve, milliseconds));
+        }
+      }
+    });
+    completed = true;
+  } catch (error) {
+    failures.push(error);
+  }
+
+  try {
+    if (recording) {
+      await motionCommands.stopGuideMotion(observations, completed ? 'completed' : 'failed');
+    }
+  } catch (error) {
+    failures.push(error);
+  } finally {
+    if (previous === null) {
+      canvas.removeAttribute('data-guide-motion');
+    } else {
+      canvas.setAttribute('data-guide-motion', previous);
+    }
+  }
+
+  if (failures.length > 1) {
+    throw new AggregateError(failures, 'Guide interaction and motion capture both failed.');
+  }
+
+  if (failures.length === 1) {
+    throw failures[0];
+  }
+};
+
 interface Region {
   x: number;
   y: number;
@@ -247,21 +304,26 @@ describe('actual guide workflows on WebGL2', { concurrent: false }, () => {
     expect(animated).toBeInstanceOf(AnimatedSprite);
     expect((still.texture as Texture).ready).toBe(true);
     expect((animated.texture as Texture).ready).toBe(true);
-    await userEvent.click(canvasOf(app));
-    const changed = vi.fn();
-    animated.onFrame.add(changed);
-    await expect.poll(() => changed.mock.calls.length, poll).toBeGreaterThan(0);
-    await userEvent.keyboard('p');
-    await expect.poll(() => scene.paused, poll).toBe(true);
-    const pausedFrame = animated.currentFrame;
-    changed.mockClear();
-    await frames(app, 12);
-    expect(animated.currentFrame).toBe(pausedFrame);
-    expect(changed).not.toHaveBeenCalled();
-    await rendered(app, 'sprite-animation-paused', [still.getBounds(), animated.getBounds()]);
-    await userEvent.keyboard('p');
-    await expect.poll(() => scene.paused, poll).toBe(false);
-    await expect.poll(() => changed.mock.calls.length, poll).toBeGreaterThan(0);
+    await withMotion(app, 'sprite-animation', async observe => {
+      await userEvent.click(canvasOf(app));
+      const changed = vi.fn();
+      animated.onFrame.add(changed);
+      await expect.poll(() => changed.mock.calls.length, poll).toBeGreaterThan(0);
+      await observe('playing', 650);
+      await userEvent.keyboard('p');
+      await expect.poll(() => scene.paused, poll).toBe(true);
+      const pausedFrame = animated.currentFrame;
+      changed.mockClear();
+      await frames(app, 12);
+      expect(animated.currentFrame).toBe(pausedFrame);
+      expect(changed).not.toHaveBeenCalled();
+      await rendered(app, 'sprite-animation-paused', [still.getBounds(), animated.getBounds()]);
+      await observe('paused', 650);
+      await userEvent.keyboard('p');
+      await expect.poll(() => scene.paused, poll).toBe(false);
+      await expect.poll(() => changed.mock.calls.length, poll).toBeGreaterThan(0);
+      await observe('resumed', 650);
+    });
   }, 30_000);
 
   test('sprite movement keeps the artwork at its pivot and collides with the real obstacle', async () => {
@@ -298,22 +360,28 @@ describe('actual guide workflows on WebGL2', { concurrent: false }, () => {
     await expect.poll(() => character.grounded && visual.currentClip === 'idle', poll).toBe(true);
     const landedY = visual.y;
     await rendered(app, 'animated-character-grounded', [visual.getBounds()]);
-    await userEvent.click(canvasOf(app));
-    const beforeX = visual.x;
+    await withMotion(app, 'animated-character', async observe => {
+      await userEvent.click(canvasOf(app));
+      const beforeX = visual.x;
 
-    await hold(['KeyD'], async () => {
-      await expect.poll(() => visual.x, poll).toBeGreaterThan(beforeX + 20);
-      expect(visual.currentClip).toBe('walk');
+      await observe('idle', 400);
+      await hold(['KeyD'], async () => {
+        await expect.poll(() => visual.x, poll).toBeGreaterThan(beforeX + 20);
+        expect(visual.currentClip).toBe('walk');
+        await observe('walking', 650);
+      });
+      await hold(['Space'], async () => {
+        await expect.poll(() => visual.y, poll).toBeLessThan(landedY - 10);
+        expect(character.grounded).toBe(false);
+        expect(visual.currentClip).toBe('jump');
+        await observe('jumping');
+      });
+      await expect.poll(() => character.grounded && visual.currentClip === 'idle', poll).toBe(true);
+      expect(visual.y).toBeCloseTo(landedY, 0);
+      expect(visual.scale.x).toBe(0.5);
+      expect(visual.scale.y).toBe(0.5);
+      await observe('landed and idle', 650);
     });
-    await hold(['Space'], async () => {
-      await expect.poll(() => visual.y, poll).toBeLessThan(landedY - 10);
-      expect(character.grounded).toBe(false);
-      expect(visual.currentClip).toBe('jump');
-    });
-    await expect.poll(() => character.grounded && visual.currentClip === 'idle', poll).toBe(true);
-    expect(visual.y).toBeCloseTo(landedY, 0);
-    expect(visual.scale.x).toBe(0.5);
-    expect(visual.scale.y).toBe(0.5);
   }, 30_000);
 
   test('name form edits through the browser transport and validates Enter, click and Tab activation', async () => {
@@ -329,7 +397,11 @@ describe('actual guide workflows on WebGL2', { concurrent: false }, () => {
     await userEvent.keyboard('Ada{Enter}');
     await expect.poll(() => status.text, poll).toBe('Saved: Ada');
     expect(field.value).toBe('Ada');
-    await userEvent.keyboard('{Control>}a{/Control}{Backspace}');
+    // Several physical keys can arrive before one engine frame. Keep the
+    // selection shortcut and deletion in one uninterrupted native sequence.
+    await userEvent.keyboard('[ControlLeft>][KeyA][/ControlLeft][Backspace]');
+    await expect.poll(() => field.value, poll).toBe('');
+    await expect.poll(() => [field.selectionStart, field.selectionEnd], poll).toEqual([0, 0]);
     await click(app, save);
     await expect.poll(() => status.text, poll).toBe('Enter a name first.');
     await click(app, field);
@@ -337,6 +409,12 @@ describe('actual guide workflows on WebGL2', { concurrent: false }, () => {
     await expect.poll(() => save.focused, poll).toBe(true);
     await userEvent.keyboard('{Enter}');
     await expect.poll(() => status.text, poll).toBe('Saved: Grace');
+    await click(app, field);
+    await userEvent.keyboard('[ControlLeft>][KeyA][/ControlLeft]Bea');
+    await expect.poll(() => field.value, poll).toBe('Bea');
+    await expect.poll(() => [field.selectionStart, field.selectionEnd], poll).toEqual([3, 3]);
+    await userEvent.keyboard('{Enter}');
+    await expect.poll(() => status.text, poll).toBe('Saved: Bea');
   }, 30_000);
 
   test('scene navigation preloads without audio and activates loaded assets only on entry', async () => {
@@ -346,16 +424,42 @@ describe('actual guide workflows on WebGL2', { concurrent: false }, () => {
     const play = vi.spyOn(app.audio, 'play');
 
     await rendered(app, 'scene-navigation-menu', [button(menu, 'Preload level').getBounds(), button(menu, 'Enter level').getBounds()]);
-    await click(app, button(menu, 'Preload level'));
+    const canvas = canvasOf(app);
+    const preloadGestures: boolean[] = [];
+
+    const recordPreloadGesture = (event: PointerEvent): void => {
+      if (event.target === canvas) {
+        preloadGestures.push(event.isTrusted);
+      }
+    };
+
+    canvas.ownerDocument.addEventListener('pointerdown', recordPreloadGesture, true);
+
+    try {
+      await click(app, button(menu, 'Preload level'));
+    } finally {
+      canvas.ownerDocument.removeEventListener('pointerdown', recordPreloadGesture, true);
+    }
+
+    expect(preloadGestures).toEqual([true]);
     await expect.poll(() => status.text, poll).toBe('Ready. Enter the level when you want.');
     expect(currentScene(app)).toBe(menu);
     expect(play).not.toHaveBeenCalled();
     expect(app.loader.inspect().some(row => row.type === Texture && row.state === 'ready')).toBe(true);
     expect(app.loader.inspect().some(row => row.type === Sound && row.state === 'ready')).toBe(true);
-    await click(app, button(menu, 'Enter level'));
-    await expect.poll(() => app.scenes.currentScene?.constructor.name, poll).toBe('LevelScene');
-    await expect.poll(() => app.scenes._transitionGateOpen, poll).toBe(false);
-    await expect.poll(() => play.mock.calls.length, poll).toBe(1);
+    // Decoding can finish with no live audio device. Require the real gesture
+    // to leave audio usable, then prove preload stays silent even after unlock.
+    await expect.poll(() => app.audio.locked, poll).toBe(false);
+    expect(play).not.toHaveBeenCalled();
+    await withMotion(app, 'scene-navigation', async observe => {
+      await observe('menu ready', 500);
+      await observe('entering level');
+      await click(app, button(menu, 'Enter level'));
+      await expect.poll(() => app.scenes.currentScene?.constructor.name, poll).toBe('LevelScene');
+      await expect.poll(() => app.scenes._transitionGateOpen, poll).toBe(false);
+      await expect.poll(() => play.mock.calls.length, poll).toBe(1);
+      await observe('level active', 650);
+    });
     const level = currentScene(app);
     const hero = level.root.children[0] as Sprite;
 
@@ -406,9 +510,15 @@ describe('actual guide workflows on WebGL2', { concurrent: false }, () => {
       { x: 350, y: 270, width: 100, height: 80 },
       { x: 0, y: 50, width: 800, height: 100 },
     ]);
-    await userEvent.click(canvasOf(app));
-    await hold(['KeyD'], async () => {
-      await expect.poll(() => scene.player.x, poll).toBeGreaterThan(500);
+    await withMotion(app, 'parallax', async observe => {
+      await userEvent.click(canvasOf(app));
+      await observe('camera at rest', 400);
+      await hold(['KeyD'], async () => {
+        await observe('moving right');
+        await expect.poll(() => scene.player.x, poll).toBeGreaterThan(500);
+        await observe('layers moving', 650);
+      });
+      await observe('camera settling', 650);
     });
     app.scenes.pause();
     await frames(app, 2);
