@@ -15,7 +15,7 @@ import { asNumberArray, asSerializedNode, readNumber } from './read';
 import { registerRenderingSerializers } from './renderingSerializers';
 import type { SerializationRegistry } from './SerializationRegistry';
 import { compact, deserializeStyleOptions, readLayoutOptions, serializeStyle } from './serializerHelpers';
-import { migrateLegacyTextEffects, textEffectPixelVersion } from './textEffectMigration';
+import { legacySdfRadius, migrateLegacyTextEffects, textEffectPixelVersion } from './textEffectMigration';
 import { registerUiSerializers } from './uiSerializers';
 
 // ── Container ────────────────────────────────────────────────────────────────
@@ -135,11 +135,12 @@ const textSerializer: NodeSerializer<Text> = {
   read(data, ctx) {
     const layout = readLayoutOptions(data.layout);
     const colorGlyphs = data.colorGlyphs === true;
-    const sdfRadius = readNumber(data, 'sdfRadius');
+    const legacy = ctx.version < textEffectPixelVersion;
+    const sdfRadius = readNumber(data, 'sdfRadius') ?? (legacy ? legacySdfRadius : undefined);
     let style = deserializeStyleOptions(data.style);
 
-    if (style !== undefined && ctx.version < textEffectPixelVersion) {
-      style = migrateLegacyTextEffects(style, { kind: 'sdf', sdfRadius: sdfRadius ?? SDF_RADIUS, colorGlyphs }, ctx.version);
+    if (style !== undefined && legacy) {
+      style = migrateLegacyTextEffects(style, { kind: 'sdf', sdfRadius: sdfRadius ?? legacySdfRadius, colorGlyphs }, ctx.version);
     }
 
     return new Text(

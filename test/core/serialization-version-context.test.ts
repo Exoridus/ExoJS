@@ -4,6 +4,7 @@ import { Scene } from '#core/scene/Scene';
 import { Prefab } from '#core/serialization/Prefab';
 import { registerSerializer } from '#core/serialization/SerializationRegistry';
 import { _resetDefaultSerializers, deserializeTree, migrate, migratePrefab } from '#core/serialization/serialize';
+import { legacySdfRadius } from '#core/serialization/textEffectMigration';
 import { SERIALIZATION_VERSION } from '#core/serialization/types';
 import { Signal } from '#core/Signal';
 import { Container } from '#rendering/Container';
@@ -92,7 +93,7 @@ describe('serialization - source-version context and text effect unit migration'
               type: 'Container',
               children: [
                 { type: 'Text', text: 'legacy', sdfRadius: 16, style: { outlineWidth: 0.25, shadowBlur: 0.75 } },
-                { type: 'Text', text: 'default SDF radius', style: { outlineWidth: 4 } },
+                { type: 'Text', text: 'default SDF radius', style: { outlineWidth: legacy ? 4 : 3 } },
                 { type: 'VersionProbe', payload: { style: { outlineWidth: 4, shadowBlur: 0.8 }, arbitrary: true } },
               ],
             },
@@ -133,11 +134,12 @@ describe('serialization - source-version context and text effect unit migration'
       expect(text.style.shadowBlur).toBeCloseTo(textBlur, 12);
       expect(text.sdfRadius).toBe(16);
       // A saturated legacy outline (0.5 and above) becomes the width the old
-      // field could actually show: half the default radius.
-      expect(fallbackRadius.style.outlineWidth).toBe(4);
-      expect(fallbackRadius.sdfRadius).toBe(SDF_RADIUS);
-      expect(label.textStyleOverrides?.outlineWidth).toBeCloseTo(legacy ? legacyOutlinePx(0.125, SDF_RADIUS) : 0.125, 12);
-      expect(label.textStyleOverrides?.shadowBlur).toBeCloseTo(legacy ? legacyBlurPx(0.5, SDF_RADIUS) : 0.5, 12);
+      // field could actually show: half the radius of its time, which an
+      // omitted legacy radius keeps.
+      expect(fallbackRadius.style.outlineWidth).toBe(legacy ? 4 : 3);
+      expect(fallbackRadius.sdfRadius).toBe(legacy ? legacySdfRadius : SDF_RADIUS);
+      expect(label.textStyleOverrides?.outlineWidth).toBeCloseTo(legacy ? legacyOutlinePx(0.125, legacySdfRadius) : 0.125, 12);
+      expect(label.textStyleOverrides?.shadowBlur).toBeCloseTo(legacy ? legacyBlurPx(0.5, legacySdfRadius) : 0.5, 12);
       // Custom serializers receive their payload untouched; migrating it is theirs.
       expect(worldProbe.payload).toEqual({ style: { outlineWidth: 4, shadowBlur: 0.8 }, arbitrary: true });
       expect(uiProbe.payload).toEqual({ style: { outlineWidth: 9 }, custom: 'unchanged' });
@@ -180,8 +182,8 @@ describe('serialization - source-version context and text effect unit migration'
 
       for (const instance of [prefab.instantiate(), prefab.instantiate(), restored.instantiate()]) {
         const children = (instance as Container).children;
-        expect((children[0] as Text).style.outlineWidth).toBeCloseTo(legacy ? legacyOutlinePx(0.25, SDF_RADIUS) : 0.25, 12);
-        expect((children[0] as Text).style.shadowBlur).toBeCloseTo(legacy ? legacyBlurPx(0.6, SDF_RADIUS) : 0.6, 12);
+        expect((children[0] as Text).style.outlineWidth).toBeCloseTo(legacy ? legacyOutlinePx(0.25, legacySdfRadius) : 0.25, 12);
+        expect((children[0] as Text).style.shadowBlur).toBeCloseTo(legacy ? legacyBlurPx(0.6, legacySdfRadius) : 0.6, 12);
         expect((children[1] as VersionProbe).payload).toEqual({ style: { outlineWidth: 4 }, kind: 'custom' });
       }
 

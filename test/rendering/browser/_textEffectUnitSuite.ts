@@ -237,17 +237,18 @@ export const runEffectUnitSuite = (backendName: string, driver: EffectBackendDri
       // its 50 % point on the offset edge, independent of the node scale.
       //
       // The absolute ramp also carries the distance field's own error: the
-      // transform under-reads distances in the first raster pixel or so inside
-      // an antialiased canvas edge, which widens the inner half of the ramp.
-      // That error does not depend on the blur, so the growth from blur 1 to
-      // blur 2 isolates the semantics, and the absolute width only has to
-      // stay within that one-raster-pixel allowance.
+      // transform misplaces distances in the first raster pixel or so on either
+      // side of an antialiased canvas edge, by an amount and sign that depend
+      // on the platform's glyph rasterizer. That error does not depend on the
+      // blur, so the growth from blur 1 to blur 2 isolates the semantics, and
+      // the absolute width only has to stay within a one-raster-pixel
+      // allowance in either direction.
       const byKey = new Map(results.map(result => [result.key, result]));
 
       for (const { key, blur, ramp, overhang } of results) {
         expect(overhang, `${key} 50 % point`).toBeGreaterThan(3 - 0.3);
         expect(overhang, `${key} 50 % point`).toBeLessThan(3 + 0.3);
-        expect(ramp, `${key} ramp`).toBeGreaterThan(1.216 * blur - 0.35);
+        expect(ramp, `${key} ramp`).toBeGreaterThan(1.216 * blur - 0.35 - 1 / surfaceRatio);
         expect(ramp, `${key} ramp`).toBeLessThan(1.216 * blur + 0.35 + 1 / surfaceRatio);
       }
 
@@ -339,7 +340,7 @@ export const runEffectUnitSuite = (backendName: string, driver: EffectBackendDri
 
       try {
         // Pack `I`, then the solid block right after it in the same shelf.
-        const decorated = new Text('I', { fontFamily: 'sans-serif', fontSize: 40, underline: true });
+        const decorated = new Text('I', { fontFamily: 'sans-serif', fontSize: 40, sdfRadius: 8, underline: true });
 
         decorated.syncDirty();
 
@@ -359,6 +360,7 @@ export const runEffectUnitSuite = (backendName: string, driver: EffectBackendDri
           shadowColor: new Color(0, 0, 255),
           shadowAlpha: 1,
           shadowOffsetX: -7,
+          sdfRadius: 8,
         });
 
         text.setPosition(60, 20);

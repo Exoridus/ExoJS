@@ -28,7 +28,7 @@ class TextStylesScene extends Scene {
       shadowOffsetX: 7,
       shadowOffsetY: 8,
       shadowBlur: 0.4,
-      // The 8px offset plus blur needs more than the default 8px reach.
+      // The 8px offset plus blur needs more than the default 4px reach.
       sdfRadius: 10,
     });
     title.setAnchor(0.5).setPosition(width / 2, 175);

@@ -60,8 +60,10 @@ export interface TextOptions extends TextStyleOptions, LayoutOptions {
    * can draw - `outlineWidth`, and a shadow's larger offset axis plus its blur,
    * may each use `sdfRadius - 1` logical pixels, the last one being reserved
    * for the antialiased edge ({@link Text.maxEffectExtent}). Larger values cost
-   * atlas space roughly in proportion to the padded tile area and never change
-   * on an animated style. Defaults to {@link SDF_RADIUS}. Must be a positive
+   * atlas space roughly in proportion to the padded tile area, and the 8-bit
+   * field spreads over twice the reach, so edges get coarser under strong
+   * magnification; choose the reach the effects need. Never changes on an
+   * animated style. Defaults to {@link SDF_RADIUS} (4). Must be a positive
    * finite number, else `RangeError`. Construction-only.
    */
   sdfRadius?: number;

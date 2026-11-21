@@ -17,6 +17,8 @@ class StrokeAndShadowScene extends Scene {
       shadowOffsetX: 6,
       shadowOffsetY: 6,
       shadowBlur: 0.3,
+      // The 6px shadow offset needs more than the default 4px reach.
+      sdfRadius: 8,
     });
     this.title.setAnchor(0.5, 0.5);
     this.title.setPosition(width / 2, height / 2);

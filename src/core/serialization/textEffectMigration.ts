@@ -7,6 +7,14 @@ import type { TextStyleOptions } from '#rendering/text/TextStyle';
 export const textEffectPixelVersion = 4;
 
 /**
+ * The `Text` distance-field radius documents before {@link textEffectPixelVersion}
+ * meant when they omitted it. A legacy node keeps it, so its capacity and
+ * converted widths match what it drew.
+ * @internal
+ */
+export const legacySdfRadius = 8;
+
+/**
  * How a node drew its effects before {@link textEffectPixelVersion}.
  * @internal
  */

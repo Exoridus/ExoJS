@@ -22,8 +22,12 @@ export type AtlasMode = 'sdf' | 'color';
  * the runtime SDF tile and its field extend. Outline widths and shadow
  * offset-plus-blur may use this minus one logical pixel of antialiasing
  * reserve (see `Text` `sdfRadius`).
+ *
+ * Kept small on purpose: the 8-bit field spans twice the reach, so every
+ * extra pixel of reach coarsens the edge of every glyph, which shows on
+ * magnified text where a sampler filters at 8-bit output precision.
  */
-export const SDF_RADIUS = 8;
+export const SDF_RADIUS = 4;
 
 /**
  * Raster parameters for a distance field that ends exactly `sdfRadius` logical

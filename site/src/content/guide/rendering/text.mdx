@@ -156,14 +156,14 @@ An effect is requested by `outlineWidth > 0` or `shadowAlpha > 0`; offsets and b
 
 | Glyphs | Outline and shadow | Reach |
 |--------|--------------------|-------|
-| `Text` (runtime SDF) | Supported | `sdfRadius` logical pixels (default 8) |
+| `Text` (runtime SDF) | Supported | `sdfRadius` logical pixels (default 4) |
 | `Text` with `colorGlyphs: true` | Not supported (`'no-distance-field'`) | Fill and tint only; RGBA content is kept |
 | `BitmapText` without `msdf` | Not supported (`'no-distance-field'`) | Fill and tint only; RGBA content is kept |
 | `BitmapText` with `msdf` and declared range, zero value and padding | Supported | `min(zeroDistanceValue × distanceRange, padding) × fontScale` |
 | `BitmapText` with `msdf` but missing metadata | Not supported (`'unknown-range'`) | Fill only |
 | `BitmapText` with `msdf` and unusable metadata | Not supported (`'invalid-range'`) | Fill only |
 
-One logical pixel of the reach is kept for the antialiased edge, so `outlineWidth` — and, for a shadow, the larger of `|shadowOffsetX|` and `|shadowOffsetY|` plus `shadowBlur` — may use the reach minus one. `text.maxEffectExtent` reports that number. A larger request is rejected with `'insufficient-effect-capacity'`, never clamped; build the node with a larger `sdfRadius` instead. The radius is construction-only and part of the atlas identity, so an animated effect never re-rasterizes glyphs; a larger radius costs atlas space for the wider tile padding.
+One logical pixel of the reach is kept for the antialiased edge, so `outlineWidth` — and, for a shadow, the larger of `|shadowOffsetX|` and `|shadowOffsetY|` plus `shadowBlur` — may use the reach minus one. `text.maxEffectExtent` reports that number. A larger request is rejected with `'insufficient-effect-capacity'`, never clamped; build the node with a larger `sdfRadius` instead. The radius is construction-only and part of the atlas identity, so an animated effect never re-rasterizes glyphs. Choose the reach the effects need: a larger radius costs atlas space for the wider tile padding, and because the 8-bit field spreads over twice the reach, it also coarsens glyph edges under strong magnification.
 
 ```ts
 import { Color, Text, TextEffectError } from '@codexo/exojs';
@@ -193,7 +193,7 @@ Every operation that could produce an undrawable combination validates it synchr
 
 Widths are exact in the antialiasing guarantee domain: once an effect covers at least two device pixels on screen, the measured width matches the request to within a fraction of a raster pixel. Narrower than that, the half-pixel fades of the effect edge and the glyph edge merge and a one-device-pixel outline reads somewhat thinner. Under strong minification the outer fade narrows instead of tinting the tile around each glyph.
 
-Scenes and prefabs saved before serialization version 4 stored these lengths as distance-field thresholds. They are converted on load by reproducing where the old renderer drew each edge: an outline of `u` becomes `min(u, 0.5) × sdfRadius` pixels, a blur of `b` becomes `b × 0.1 × sdfRadius` pixels, and an MSDF `BitmapText` uses its declared range and `fontScale`. Effects on colour glyphs never rendered and are switched off; an active effect on an MSDF font without a declared range has no pixel meaning and fails to load with a `TextEffectError`.
+Scenes and prefabs saved before serialization version 4 stored these lengths as distance-field thresholds. They are converted on load by reproducing where the old renderer drew each edge: an outline of `u` becomes `min(u, 0.5) × sdfRadius` pixels, a blur of `b` becomes `b × 0.1 × sdfRadius` pixels (a `Text` that omitted `sdfRadius` keeps the radius of 8 it was drawn with), and an MSDF `BitmapText` uses its declared range and `fontScale`. Effects on colour glyphs never rendered and are switched off; an active effect on an MSDF font without a declared range has no pixel meaning and fails to load with a `TextEffectError`.
 
 ### Underline and strikethrough
 

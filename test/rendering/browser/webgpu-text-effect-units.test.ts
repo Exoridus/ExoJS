@@ -16,7 +16,7 @@ import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { makeTestApp, makeTestCanvas, readWebGl2Frame, readWebGpuFrame, renderWebGl2Once, renderWebGpuOnce } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
-import type { Frame } from './_textEffectUnits';
+import type { EdgeCase, Frame } from './_textEffectUnits';
 import { buildOutlineScene, buildShadowScene, effectCanvasSize, frameDifference, measureOutlineWidth } from './_textEffectUnits';
 import type { EffectBackendDriver, EffectBackendSession } from './_textEffectUnitSuite';
 import { runEffectUnitSuite } from './_textEffectUnitSuite';
@@ -92,14 +92,21 @@ describe('WebGL2 / WebGPU effect parity', () => {
     const report: string[] = [];
 
     try {
-      const scenes: Array<[string, () => { root: RenderNode; text: { destroy(): void } }, number | null]> = [
-        ['outline 2 R8 s1', () => buildOutlineScene({ outlineWidth: 2, sdfRadius: 8, surfaceRatio, scale: 1 }), 2],
-        ['outline 4 R16 s2', () => buildOutlineScene({ outlineWidth: 4, sdfRadius: 16, surfaceRatio, scale: 2 }), 4],
-        ['outline 1 R4 s0.5', () => buildOutlineScene({ outlineWidth: 1, sdfRadius: 4, surfaceRatio, scale: 0.5 }), null],
-        ['shadow 4 blur 1', () => buildShadowScene({ offsetX: 4, blur: 1, surfaceRatio, scale: 1 }), null],
+      const outline = (outlineWidth: number, sdfRadius: number, scale: number): EdgeCase => ({
+        outlineWidth,
+        sdfRadius,
+        surfaceRatio,
+        scale,
+      });
+      // `measure` names the outline cases whose visible width is compared too.
+      const scenes: Array<{ name: string; build: () => { root: RenderNode; text: { destroy(): void } }; measure?: EdgeCase }> = [
+        { name: 'outline 2 R8 s1', build: () => buildOutlineScene(outline(2, 8, 1)), measure: outline(2, 8, 1) },
+        { name: 'outline 4 R16 s2', build: () => buildOutlineScene(outline(4, 16, 2)), measure: outline(4, 16, 2) },
+        { name: 'outline 1 R4 s0.5', build: () => buildOutlineScene(outline(1, 4, 0.5)) },
+        { name: 'shadow 4 blur 1', build: () => buildShadowScene({ offsetX: 4, blur: 1, surfaceRatio, scale: 1, sdfRadius: 8 }) },
       ];
 
-      for (const [name, build, outlineWidth] of scenes) {
+      for (const { name, build, measure } of scenes) {
         const frames = await drawBoth(ctx, [gl, gpu], build);
 
         if (frames === null) {
@@ -116,13 +123,15 @@ describe('WebGL2 / WebGPU effect parity', () => {
         expect(difference.mae).toBeLessThan(0.5);
         expect(difference.p99).toBeLessThanOrEqual(2);
 
-        if (outlineWidth !== null) {
-          const testCase = { outlineWidth, sdfRadius: 8, surfaceRatio, scale: name.endsWith('s2') ? 2 : 1 };
-          const glWidth = measureOutlineWidth(frames[0], effectCanvasSize, testCase).mean;
-          const gpuWidth = measureOutlineWidth(frames[1], effectCanvasSize, testCase).mean;
+        if (measure !== undefined) {
+          const glWidth = measureOutlineWidth(frames[0], effectCanvasSize, measure).mean;
+          const gpuWidth = measureOutlineWidth(frames[1], effectCanvasSize, measure).mean;
 
           report.push(`  visible width GL ${glWidth.toFixed(3)} GPU ${gpuWidth.toFixed(3)}`);
-          expect(Math.abs(glWidth - gpuWidth)).toBeLessThan(0.1);
+          // One step of the 8-bit field is 2 × sdfRadius / 255 logical pixels;
+          // the backends' samplers may round the filtered value one step apart
+          // on each edge of the measured band.
+          expect(Math.abs(glWidth - gpuWidth)).toBeLessThanOrEqual((4 * measure.sdfRadius) / 255);
         }
       }
     } finally {

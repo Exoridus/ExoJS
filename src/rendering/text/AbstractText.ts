@@ -7,7 +7,7 @@ import { TextEffectError } from './TextEffectError';
 import type { TextEffectCapability, TextEffectIssue } from './textEffects';
 import { checkTextEffectValues, textEffectAntialiasReserve } from './textEffects';
 import { buildTextPageQuads, emptyTextLayout, validateLayoutOptions } from './textLayout';
-import type { StyleChangeHint, TextEffectHost, TextStyle, TextStyleOptions } from './TextStyle';
+import type { StyleChangeHint, TextStyle, TextStyleOptions } from './TextStyle';
 import { mergeHint } from './TextStyle';
 import type { TextLayoutResult, TextPageQuads, TextSize } from './types';
 
@@ -25,7 +25,7 @@ import type { TextLayoutResult, TextPageQuads, TextSize } from './types';
  * - {@link Text} - runtime Canvas 2D / SDF rasterization
  * - {@link BitmapText}  - offline pre-built atlas (BMFont / MSDF)
  */
-export abstract class AbstractText extends Drawable implements TextEffectHost {
+export abstract class AbstractText extends Drawable {
   protected _text: string;
   protected _style: TextStyle;
   protected _layout: LayoutOptions;

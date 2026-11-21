@@ -43,7 +43,8 @@ export const textEffectAntialiasReserve = 1;
 
 /**
  * What a node's glyph source can encode, in the node's local logical pixels.
- * @internal
+ * Not part of the public entry point; declared here because protected text
+ * node members name it.
  */
 export interface TextEffectCapability {
   /** `null` when outlines and shadows can be drawn within {@link outward}. */
