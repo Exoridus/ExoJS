@@ -57,6 +57,13 @@ describe('related-test eligibility', () => {
   it('keeps the whole project when a module was deleted or renamed away', () => {
     expect(isRelatedEligible(['src/math/Vector.ts', 'src/math/Gone.ts'], file => file !== 'src/math/Gone.ts')).toBe(false);
   });
+
+  it.each(['src/Größe.ts', 'src/space name.ts', 'src/tab\tname.ts', 'src/new\nline.ts', 'src/back\\slash.ts', 'src/quote"name.ts'])(
+    'does not pass %s to native Vitest Git discovery',
+    file => {
+      expect(isRelatedEligible([file], present)).toBe(false);
+    },
+  );
 });
 
 describe('tests that read input the graph cannot see', () => {

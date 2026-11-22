@@ -28,7 +28,11 @@ const DECLARATION = /\.d\.ts$/;
  */
 export const isRelatedEligible = (files: readonly string[], exists: (file: string) => boolean = existsSync): boolean =>
   files.length > 0 &&
-  files.every(file => /^(src|test)\//.test(file) && GRAPH_EXTENSIONS.test(file) && !DECLARATION.test(file) && exists(file));
+  files.every(
+    file =>
+      // Native Vitest --changed reads newline-delimited Git output without unquoting it.
+      /^[\w./-]+$/.test(file) && /^(src|test)\//.test(file) && GRAPH_EXTENSIONS.test(file) && !DECLARATION.test(file) && exists(file),
+  );
 
 /** Constructs through which a test consumes files or modules the import graph does not record. */
 const UNTRACKED_INPUT = [
