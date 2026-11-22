@@ -43,7 +43,14 @@ export interface AffectedCommandOptions {
 }
 
 /** One discovery and execution pass; file paths remain inside the NUL-safe Git reader and Vite graph. */
-export const affectedTestCommand = ({ base, projects, name, full = false, serial = false, committed = false }: AffectedCommandOptions): string => {
+export const affectedTestCommand = ({
+  base,
+  projects,
+  name,
+  full = false,
+  serial = false,
+  committed = false,
+}: AffectedCommandOptions): string => {
   if ((!COMMIT.test(base.ref) && !(base.ref === 'HEAD' && base.full)) || !/^[a-z][a-z\d-]*$/i.test(name)) {
     throw new Error('Affected-test commands require a verified base and a fixed report name.');
   }
