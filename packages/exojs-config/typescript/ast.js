@@ -14,7 +14,7 @@ import {
   isTypeAliasDeclaration,
   isVariableStatement,
 } from '@typescript/native/ast/is';
-import { SyntaxKind } from '@typescript/native/ast';
+import { getLeadingCommentRanges, SyntaxKind } from '@typescript/native/ast';
 import { API } from '@typescript/native/sync';
 
 /** @type {API | undefined} */
@@ -59,5 +59,6 @@ export {
   isTemplateExpression,
   isTypeAliasDeclaration,
   isVariableStatement,
+  getLeadingCommentRanges,
   SyntaxKind,
 };
