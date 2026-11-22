@@ -178,6 +178,8 @@ test('destroying a current custom material survives the first color normalizatio
     expect(gl.getError(), 'resource cleanup').toBe(gl.NO_ERROR);
   } finally {
     objects.restore();
+    // Inspected after backend.destroy(), then released by the owning test.
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
   }
 });
 
@@ -215,5 +217,9 @@ test('binding a reconnected shader descriptor selects its replacement program wi
     backend.destroy();
   }
 
-  expect(gl.getError(), 'reconnected shader cleanup').toBe(gl.NO_ERROR);
+  try {
+    expect(gl.getError(), 'reconnected shader cleanup').toBe(gl.NO_ERROR);
+  } finally {
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+  }
 });
