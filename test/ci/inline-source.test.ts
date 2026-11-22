@@ -22,7 +22,6 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
  */
 const REPO_ROOT = resolve(__dirname, '../..');
 const SCANNER = 'scripts/check-inline-source.ts';
-const TSX_CLI = join('node_modules', 'tsx', 'dist', 'cli.mjs');
 const FIXTURE_DIRECTORY = 'test/ci/__inline-source-fixtures__';
 /**
  * WebGl2Shader detection is scoped to engine-owned code, so a shader fixture only
@@ -92,7 +91,7 @@ const fixturePath = (name: string): string => `${SHADER_CASES.has(name) ? SHADER
 /** Runs the scanner over one fixture; returns its combined output, or null when it passed. */
 const scan = (name: string): string | null => {
   try {
-    execFileSync('node', [TSX_CLI, SCANNER, fixturePath(name)], { cwd: REPO_ROOT, encoding: 'utf8', stdio: 'pipe' });
+    execFileSync(process.execPath, ['--import', 'tsx', SCANNER, fixturePath(name)], { cwd: REPO_ROOT, encoding: 'utf8', stdio: 'pipe' });
 
     return null;
   } catch (error) {
