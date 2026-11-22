@@ -160,6 +160,42 @@ describe('affected-test execution adapter with real Vitest', () => {
     expect(executions()[0].files).toEqual([expect.objectContaining({ ...selectedFile, state: 'failed' })]);
   });
 
+  it.each([true, false])('records complete selected execution for a workspace project with extends=%s', inherit => {
+    write(
+      'vitest.config.mjs',
+      `export default { cacheDir: '.cache/vite', test: { projects: [{ extends: ${String(inherit)}, test: { name: 'fixture', include: ['test/*.test.ts'], maxWorkers: 1, fileParallelism: false } }] } };\n`,
+    );
+    commit();
+
+    const result = run();
+
+    expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: '' });
+    expect(readReport()).toMatchObject({ success: true, numTotalTests: 1, numPassedTests: 1 });
+    expect(executions()).toHaveLength(1);
+    expect(executions()[0]).toMatchObject({
+      inventoryValidated: true,
+      selectedInventoryComplete: true,
+      selected: [selectedFile],
+      omitted: [unrelatedFile],
+      files: [expect.objectContaining({ ...selectedFile, state: 'passed' })],
+    });
+    expect(existsSync(join(root, '.workspace/affected-tests/results'))).toBe(false);
+  });
+
+  it('fails if another reporter removes the selected execution observer', () => {
+    write(
+      'discard-reporters.mjs',
+      'export default class { onInit(context) { this.context = context; } onTestRunStart() { this.context.reporters = []; } }\n',
+    );
+    commit();
+
+    const result = run(plan(), ['--reporter=./discard-reporters.mjs']);
+
+    expect(result.status).toBe(1);
+    expect(`${result.stdout}\n${result.stderr}`).toContain('did not record its complete inventory receipt');
+    expect(executions()).toEqual([]);
+  });
+
   it('emits successful zero-test JUnit evidence for a proven empty selection', () => {
     const document = plan();
 

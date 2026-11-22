@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { configDefaults } from 'vitest/config';
 import {
   createVitest,
   parseCLI,
@@ -206,6 +207,7 @@ const main = async (args: string[]): Promise<number> => {
   let selected: TestFile[] = [];
   let interrupted = 0;
   let hasShadowReporter = false;
+  let executionRecorded = false;
   const cancellation = new AbortController();
 
   const cancel = (code: number): void => {
@@ -265,42 +267,44 @@ const main = async (args: string[]): Promise<number> => {
       if (!complete) {
         throw new Error('Selected test execution did not complete its exact specification inventory');
       }
+
+      executionRecorded = true;
     },
   };
 
   const stopWatchingCancellation = watchAffectedCancellation(cancel);
 
   try {
-    context = await createVitest(
-      { ...native.options, watch: false, run: true },
-      {
-        plugins: [
-          {
-            name: 'exojs:affected-selected-execution',
-            enforce: 'post',
-            configureVitest({ vitest }) {
-              const reporters = vitest.config.reporters;
-              const retained = reporters.filter(
-                reporter =>
-                  !(
-                    Array.isArray(reporter) &&
-                    typeof reporter[0] === 'string' &&
-                    (resolve(root, reporter[0]) === shadowReporterPath || resolve(process.cwd(), reporter[0]) === shadowReporterPath)
-                  ),
-              );
+    const options = { ...native.options, watch: false, run: true };
 
-              hasShadowReporter ||= retained.length !== reporters.length;
+    // Keep CLI reporters, but install the combined list through the global
+    // config hook. Workspace/browser projects can have a separate Vite server
+    // that does not inherit an inline configureVitest plugin.
+    delete options.reporter;
+    context = await createVitest(options, {
+      plugins: [
+        {
+          name: 'exojs:affected-selected-execution',
+          enforce: 'post',
+          config(configuration) {
+            const configured = native.options.reporter ?? configuration.test?.reporters ?? configDefaults.reporters;
+            const reporters = Array.isArray(configured) ? configured : [configured];
+            const retained = reporters.filter(reporter => {
+              const name = typeof reporter === 'string' ? reporter : Array.isArray(reporter) ? reporter[0] : undefined;
+              const shadow =
+                typeof name === 'string' &&
+                (resolve(root, name) === shadowReporterPath || resolve(process.cwd(), name) === shadowReporterPath);
 
-              reporters.splice(0, reporters.length, ...retained);
+              hasShadowReporter ||= shadow;
 
-              if (!reporters.includes(executionReporter)) {
-                reporters.push(executionReporter);
-              }
-            },
+              return !shadow && reporter !== executionReporter;
+            });
+
+            configuration.test = { ...configuration.test, reporters: [...retained, executionReporter] };
           },
-        ],
-      },
-    );
+        },
+      ],
+    });
 
     if (realpathSync(context.config.root) !== realpathSync(root)) {
       throw new Error('The Vitest root differs from the pinned checkout; pass its root explicitly');
@@ -361,6 +365,10 @@ const main = async (args: string[]): Promise<number> => {
     const result = await context.runTestSpecifications(exact, false);
 
     assertAffectedPlanCheckout(document, root, true);
+
+    if (!executionRecorded) {
+      throw new Error('Selected test execution did not record its complete inventory receipt');
+    }
 
     if (result.unhandledErrors.length) {
       throw new Error(`Selected execution reported ${String(result.unhandledErrors.length)} unhandled error(s)`);
