@@ -1,16 +1,16 @@
 {
   "title": "AssetTypeDefinition",
-  "description": "An application-owned factory and the source representation it consumes.",
+  "description": "An application-owned asset definition and the source representation it consumes.",
   "symbol": "AssetTypeDefinition",
-  "kind": "interface",
+  "kind": "type",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 0,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 6,
+    "properties": 0,
     "events": 0
   },
   "sections": [
@@ -19,188 +19,101 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "An application-owned factory and the source representation it consumes."
+        "An application-owned asset definition and the source representation it consumes."
       ],
       "importLine": "import { AssetTypeDefinition } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
-      "id": "properties",
-      "title": "Properties",
+      "id": "definition",
+      "title": "Definition",
       "members": [
         {
-          "name": "codec",
-          "signature": "codec?: AssetSourceCodec<NoInfer<Source>, Stored>",
+          "name": "AssetTypeDefinition",
+          "signature": "AssetTypeDefinitionBase<Resource, Source, Stored> & { read?: never } & AssetFactorySpec<Resource, Source, Options>",
           "signatureTokens": [
             {
-              "text": "codec",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AssetSourceCodec",
+              "text": "AssetTypeDefinitionBase",
               "kind": "type"
             },
             {
               "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "NoInfer",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Source",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Stored",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "extensions",
-          "signature": "extensions?: readonly string[]",
-          "signatureTokens": [
-            {
-              "text": "extensions",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "readonly",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": "[]",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "layout",
-          "signature": "layout?: CacheLayout<NoInfer<Stored>>",
-          "signatureTokens": [
-            {
-              "text": "layout",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "CacheLayout",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "NoInfer",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Stored",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Increase its version if an updated codec changes the stored representation."
-        },
-        {
-          "name": "loader",
-          "signature": "loader: AssetFactory<Source, Resource, Options>",
-          "signatureTokens": [
-            {
-              "text": "loader",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AssetFactory",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Source",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
               "kind": "punctuation"
             },
             {
               "text": "Resource",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Source",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Stored",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "read",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetFactorySpec",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Resource",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Source",
               "kind": "type"
             },
             {
@@ -214,104 +127,6 @@
             {
               "text": ">",
               "kind": "punctuation"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "serializer",
-          "signature": "serializer?: Serializer<NoInfer<Resource>, NoInfer<Source> & object>",
-          "signatureTokens": [
-            {
-              "text": "serializer",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Serializer",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "NoInfer",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Resource",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "NoInfer",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Source",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": " & ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "object",
-              "kind": "keyword"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Writes the current document body when this asset has a persisted form."
-        },
-        {
-          "name": "type",
-          "signature": "type: string",
-          "signatureTokens": [
-            {
-              "text": "type",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
             }
           ],
           "params": [],

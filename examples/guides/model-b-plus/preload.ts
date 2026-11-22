@@ -1,4 +1,14 @@
-import { type Application, Keyboard, Scene, SceneAvailability, Sound, Sprite, Texture, type Voice } from '@codexo/exojs';
+import {
+  type Application,
+  Keyboard,
+  LoadPriority,
+  Scene,
+  SceneAvailability,
+  type Sound,
+  Sprite,
+  type Texture,
+  type Voice,
+} from '@codexo/exojs';
 
 // #region guide:preload
 class GameScene extends Scene {
@@ -7,10 +17,7 @@ class GameScene extends Scene {
   private themeVoice: Voice | null = null;
 
   override async load(): Promise<void> {
-    const { hero, theme } = await this.assets.load({
-      hero: new Texture('hero.png'),
-      theme: new Sound('theme.ogg'),
-    });
+    const { hero, theme } = await this.assets.load({ hero: 'hero.png', theme: 'theme.ogg' });
 
     this.hero = hero;
     this.theme = theme;
@@ -30,7 +37,7 @@ class GameScene extends Scene {
 
 // #region guide:progress
 export const preloadWithProgress = async (app: Application, onChange: (fraction: number) => void): Promise<void> => {
-  const queue = app.load([new Texture('level-1.png'), new Texture('level-2.png')]);
+  const queue = app.assets.load(['level-1.png', 'level-2.png']);
 
   queue.onProgress.add(({ loaded, total }) => onChange(total === 0 ? 0 : loaded / total));
 
@@ -40,7 +47,7 @@ export const preloadWithProgress = async (app: Application, onChange: (fraction:
 
 // #region guide:background
 export const warmNextLevel = (app: Application): void => {
-  void app.loadBackground([new Texture('level-3.png')]).catch(error => {
+  void app.assets.load('level-3.png', { priority: LoadPriority.Background }).catch((error: unknown) => {
     console.error('Next level prefetch failed', error);
   });
 };

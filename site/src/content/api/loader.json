@@ -6,10 +6,10 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 40,
+  "memberCount": 37,
   "counts": {
     "constructors": 1,
-    "methods": 28,
+    "methods": 25,
     "properties": 3,
     "events": 8
   },
@@ -1102,77 +1102,6 @@
         },
         {
           "name": "load",
-          "signature": "load(asset: Asset<T>): LoadingQueue<T>",
-          "signatureTokens": [
-            {
-              "text": "load",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "asset",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Asset",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "T",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "LoadingQueue",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "T",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [
-            {
-              "name": "asset",
-              "type": "Asset<T>",
-              "optional": false
-            }
-          ],
-          "returnType": "LoadingQueue<T>",
-          "description": "Fetches and processes one or more assets. Every accepted input normalizes to the same canonical descriptor shape ({ type, source }) before dispatch: - **Path string** - normalized by suffix through the app-local registerType override, then the type that claimed the suffix (basename-only, longest-suffix-first). Only suffixes of a type that hands out a catalog leaf are accepted at compile time; a type that hands out none (bmFont, font, svg, image, music, video) must be named explicitly with Asset.type(...). - **Asset<T>** - an explicit descriptor from Asset.type(...). - **Assets<M>** - a typed catalog from Assets.from(...); keys become aliases. - **A catalog leaf** - an Assets.from() property, adopted and resolved. (The inline record-catalog form { alias: { type, source } } is no longer a public overload - build catalogs with Assets.from(...); a runtime record fallback is retained only for internal multi-alias plumbing.) In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Handler/fetch failures reject the returned queue and are also dispatched through onError. Invalid inputs or missing bindings throw synchronously before a queue is created. Per-asset options ride on the Asset.type(type, source, options) descriptor (or the extra fields of a config object)."
-        },
-        {
-          "name": "load",
           "signature": "load(assets: Assets<M>, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>",
           "signatureTokens": [
             {
@@ -1277,11 +1206,11 @@
             }
           ],
           "returnType": "LoadingQueue<InferLoadedMap<M>>",
-          "description": "Fetches and processes one or more assets. Every accepted input normalizes to the same canonical descriptor shape ({ type, source }) before dispatch: - **Path string** - normalized by suffix through the app-local registerType override, then the type that claimed the suffix (basename-only, longest-suffix-first). Only suffixes of a type that hands out a catalog leaf are accepted at compile time; a type that hands out none (bmFont, font, svg, image, music, video) must be named explicitly with Asset.type(...). - **Asset<T>** - an explicit descriptor from Asset.type(...). - **Assets<M>** - a typed catalog from Assets.from(...); keys become aliases. - **A catalog leaf** - an Assets.from() property, adopted and resolved. (The inline record-catalog form { alias: { type, source } } is no longer a public overload - build catalogs with Assets.from(...); a runtime record fallback is retained only for internal multi-alias plumbing.) In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Handler/fetch failures reject the returned queue and are also dispatched through onError. Invalid inputs or missing bindings throw synchronously before a queue is created. Per-asset options ride on the Asset.type(type, source, options) descriptor (or the extra fields of a config object)."
+          "description": "Loads one asset or a group of assets into application ownership and returns an awaitable queue with progress and cancellation. Accepts a path whose suffix names its type, a handle (new Texture(path), a catalog leaf), a descriptor, an explicitly typed request ([Video, 'intro.mp4']), or an array, tuple or named object of those. A group resolves to the same shape with every entry replaced by its loaded value; a handle heals in place as well. An Assets catalog resolves to a new map of its finished values. In-flight and resident assets are shared: loading the same request again joins the existing fetch. Invalid input throws synchronously before any work starts; fetch and decode failures reject the queue and are also reported through onError. Claims made here last until the loader is destroyed; prefer a scene's or a child scope's load for shorter lifetimes. With priority: LoadPriority.Background the fetches go through the background queue, and a later foreground request promotes them. Background loading needs a type with a placeholder, so it rejects streamed media and other types without one."
         },
         {
           "name": "load",
-          "signature": "load(leaf: CatalogValueLeaf<T>, options?: LoadOptions): LoadingQueue<T>",
+          "signature": "load(input: Input & ValidatedAssetLoadInput<Input>, options?: LoadOptions): LoadingQueue<LoadedAssets<Input>>",
           "signatureTokens": [
             {
               "text": "load",
@@ -1292,7 +1221,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "leaf",
+              "text": "input",
               "kind": "param"
             },
             {
@@ -1300,7 +1229,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "CatalogValueLeaf",
+              "text": "Input",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ValidatedAssetLoadInput",
               "kind": "type"
             },
             {
@@ -1308,7 +1245,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "T",
+              "text": "Input",
               "kind": "type"
             },
             {
@@ -1352,8 +1289,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "T",
+              "text": "LoadedAssets",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Input",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ">",
@@ -1362,8 +1311,8 @@
           ],
           "params": [
             {
-              "name": "leaf",
-              "type": "CatalogValueLeaf<T>",
+              "name": "input",
+              "type": "Input & ValidatedAssetLoadInput<Input>",
               "optional": false
             },
             {
@@ -1372,247 +1321,8 @@
               "optional": true
             }
           ],
-          "returnType": "LoadingQueue<T>",
-          "description": "Fetches and processes one or more assets. Every accepted input normalizes to the same canonical descriptor shape ({ type, source }) before dispatch: - **Path string** - normalized by suffix through the app-local registerType override, then the type that claimed the suffix (basename-only, longest-suffix-first). Only suffixes of a type that hands out a catalog leaf are accepted at compile time; a type that hands out none (bmFont, font, svg, image, music, video) must be named explicitly with Asset.type(...). - **Asset<T>** - an explicit descriptor from Asset.type(...). - **Assets<M>** - a typed catalog from Assets.from(...); keys become aliases. - **A catalog leaf** - an Assets.from() property, adopted and resolved. (The inline record-catalog form { alias: { type, source } } is no longer a public overload - build catalogs with Assets.from(...); a runtime record fallback is retained only for internal multi-alias plumbing.) In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Handler/fetch failures reject the returned queue and are also dispatched through onError. Invalid inputs or missing bindings throw synchronously before a queue is created. Per-asset options ride on the Asset.type(type, source, options) descriptor (or the extra fields of a config object)."
-        },
-        {
-          "name": "load",
-          "signature": "load(leaf: CatalogResourceLeaf<T>, options?: LoadOptions): LoadingQueue<T>",
-          "signatureTokens": [
-            {
-              "text": "load",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "leaf",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "CatalogResourceLeaf",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "T",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "LoadOptions",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "LoadingQueue",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "T",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [
-            {
-              "name": "leaf",
-              "type": "CatalogResourceLeaf<T>",
-              "optional": false
-            },
-            {
-              "name": "options",
-              "type": "LoadOptions",
-              "optional": true
-            }
-          ],
-          "returnType": "LoadingQueue<T>",
-          "description": "Fetches and processes one or more assets. Every accepted input normalizes to the same canonical descriptor shape ({ type, source }) before dispatch: - **Path string** - normalized by suffix through the app-local registerType override, then the type that claimed the suffix (basename-only, longest-suffix-first). Only suffixes of a type that hands out a catalog leaf are accepted at compile time; a type that hands out none (bmFont, font, svg, image, music, video) must be named explicitly with Asset.type(...). - **Asset<T>** - an explicit descriptor from Asset.type(...). - **Assets<M>** - a typed catalog from Assets.from(...); keys become aliases. - **A catalog leaf** - an Assets.from() property, adopted and resolved. (The inline record-catalog form { alias: { type, source } } is no longer a public overload - build catalogs with Assets.from(...); a runtime record fallback is retained only for internal multi-alias plumbing.) In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Handler/fetch failures reject the returned queue and are also dispatched through onError. Invalid inputs or missing bindings throw synchronously before a queue is created. Per-asset options ride on the Asset.type(type, source, options) descriptor (or the extra fields of a config object)."
-        },
-        {
-          "name": "load",
-          "signature": "load(path: [KindByPath<S>] extends [never] ? never : S): LoadingQueue<ResourceForKind<KindByPath<S>>>",
-          "signatureTokens": [
-            {
-              "text": "load",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "path",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "KindByPath",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "S",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "extends",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "never",
-              "kind": "keyword"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": " ? ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "never",
-              "kind": "keyword"
-            },
-            {
-              "text": " : ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "S",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "LoadingQueue",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ResourceForKind",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "KindByPath",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "S",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [
-            {
-              "name": "path",
-              "type": "[KindByPath<S>] extends [never] ? never : S",
-              "optional": false
-            }
-          ],
-          "returnType": "LoadingQueue<ResourceForKind<KindByPath<S>>>",
-          "description": "Fetches an asset by path, normalizing the suffix to an AssetDefinitions type before dispatch. Resolution is basename-only and longest-suffix-first (hero.aseprite.json tries aseprite.json before json), and consults the app-local registerType override, then the type that claimed the suffix. Only suffixes a catalog can also materialize are accepted at compile time (ExtensionKindMap, the map to augment by declaration merging). Types that hand out no leaf (bmFont, font, svg, image, music, video) and unclaimed suffixes are rejected here; name them with load(Asset.type(type, path)) instead. The runtime is more lenient than the types, for untyped callers: a font suffix an installed type claims still loads, and the family the font type otherwise requires defaults to the file's base name (ui/Inter.woff2 registers Inter). A descriptor never gets that default: Asset.type('font', path) and fontType.asset(path) require family, and a load of one without it rejects. ts const texture = await loader.load('image/hero.png'); // Texture const level = await loader.load('data/level.json'); // unknown const font = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt')); // BmFont "
+          "returnType": "LoadingQueue<LoadedAssets<Input>>",
+          "description": "Loads one asset or a group of assets into application ownership and returns an awaitable queue with progress and cancellation. Accepts a path whose suffix names its type, a handle (new Texture(path), a catalog leaf), a descriptor, an explicitly typed request ([Video, 'intro.mp4']), or an array, tuple or named object of those. A group resolves to the same shape with every entry replaced by its loaded value; a handle heals in place as well. An Assets catalog resolves to a new map of its finished values. In-flight and resident assets are shared: loading the same request again joins the existing fetch. Invalid input throws synchronously before any work starts; fetch and decode failures reject the queue and are also reported through onError. Claims made here last until the loader is destroyed; prefer a scene's or a child scope's load for shorter lifetimes. With priority: LoadPriority.Background the fetches go through the background queue, and a later foreground request promotes them. Background loading needs a type with a placeholder, so it rejects streamed media and other types without one."
         },
         {
           "name": "loadContainer",
