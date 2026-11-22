@@ -69,10 +69,16 @@ const main = async (): Promise<void> => {
         ? changedFilesBetween(options.base, options.head)
         : changedFiles(options.base);
 
-  // A provably empty *pushed commit range* needs no tests, even if the
-  // checkout contains unrelated edits (which are not part of this push).
-  if (options.prePush && options.head !== undefined && files.length === 0) {
-    process.stdout.write('lanes: no committed files changed in pushed range; no test lanes needed.\n');
+  // A resolved empty diff needs no tests. Manual diagnostics deliberately
+  // include dirty and untracked files; pre-push compares committed inputs only.
+  // An unresolvable Git range throws rather than being treated as empty, while
+  // explicit --all and --only commands are never skipped.
+  if (!options.all && options.only === undefined && files.length === 0) {
+    process.stdout.write(
+      options.prePush && options.head !== undefined
+        ? 'lanes: no committed files changed in pushed range; no test lanes needed.\n'
+        : 'lanes: no files changed in the selected range; no test lanes needed.\n',
+    );
 
     return;
   }
