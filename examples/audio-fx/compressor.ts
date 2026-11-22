@@ -1,9 +1,9 @@
 import {
   Application,
-  type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
+  type Music,
   type RenderingContext,
   Scene,
   Text,
@@ -14,7 +14,7 @@ import { demoAssets as assets } from '@codexo/exojs-demo-assets';
 import { choice, demoPanel, slider, toggle } from '@examples/runtime';
 
 class CompressorScene extends Scene {
-  private music!: AudioStream;
+  private music!: Music;
   private voice!: Voice;
   private compressor!: CompressorEffect;
   private meter = new Graphics();

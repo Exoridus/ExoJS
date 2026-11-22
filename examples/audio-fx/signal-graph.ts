@@ -2,10 +2,10 @@ import {
   Application,
   type AudioBus,
   type AudioEffect,
-  type AudioStream,
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
+  type Music,
   type RenderingContext,
   Scene,
   type Seconds,
@@ -69,7 +69,7 @@ const measure = (samples: Float32Array): { peak: number; rms: number } => {
 };
 
 class SignalGraphScene extends Scene {
-  private music!: AudioStream;
+  private music!: Music;
   private impact!: Sound;
   private musicVoice!: Voice;
   private musicPlaying = true;
