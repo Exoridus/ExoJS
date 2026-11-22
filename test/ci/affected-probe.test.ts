@@ -42,8 +42,8 @@ describe('diagnostic replay after complete shadow qualification', () => {
     expect(makeAffectedProbe(plan, [audit([first]), audit([second])], 'AnimatedSprite').selections[0]?.tests).toEqual([first]);
   });
 
-  it.each([[], [audit([first])]])('rejects missing full-inventory evidence %#', audits => {
-    expect(() => makeAffectedProbe(plan, audits, 'AnimatedSprite')).toThrow();
+  it.each([{ audits: [] }, { audits: [audit([first])] }])('rejects missing full-inventory evidence %#', ({ audits }) => {
+    expect(() => makeAffectedProbe(plan, audits, 'AnimatedSprite')).toThrow('does not cover the complete scenario inventory');
   });
 
   it.each([

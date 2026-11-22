@@ -20,7 +20,7 @@ describe('independent example smoke runners', () => {
     const shards = ['1/3', '2/3', '3/3'].map(shard => selectSmokeShard(entries, shard));
     const paths = shards.flat().map(entry => entry.path);
 
-    expect(paths.toSorted()).toEqual(entries.map(entry => entry.path).toSorted());
+    expect([...paths].sort()).toEqual(entries.map(entry => entry.path).sort());
     expect(new Set(paths).size).toBe(entries.length);
     expect(Math.max(...shards.map(shard => shard.length)) - Math.min(...shards.map(shard => shard.length))).toBeLessThanOrEqual(1);
 
@@ -33,7 +33,7 @@ describe('independent example smoke runners', () => {
     const sample = entries.filter((_entry, index) => index % 7 === 0);
     const union = [...selectSmokeShard(sample, '1/2'), ...selectSmokeShard(sample, '2/2')];
 
-    expect(union.map(entry => entry.path).toSorted()).toEqual(sample.map(entry => entry.path).toSorted());
+    expect(union.map(entry => entry.path).sort()).toEqual(sample.map(entry => entry.path).sort());
   });
 
   it.each(['', '1', '0/3', '4/3', '1/0', '-1/3', '1.5/3', '1/3x', '1/9007199254740992', '1/4'])(
