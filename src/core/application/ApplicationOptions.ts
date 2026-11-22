@@ -137,6 +137,14 @@ export interface RenderingApplicationOptions {
   /** WebGL2 sprite renderer batch size. Ignored by WebGPU. */
   spriteRendererBatchSize?: number;
   /**
+   * Explicitly lose the WebGL2 context after all backend resources have been
+   * destroyed. Default: true when ExoJS created the canvas, false for a
+   * caller-provided canvas, whose last frame and reusable context belong to
+   * its owner. Enable for a provided canvas only if its pixels and context
+   * are no longer needed. Ignored by WebGPU.
+   */
+  releaseWebGl2ContextOnDestroy?: boolean;
+  /**
    * The application's output transform - exposure and the HDR-to-SDR mapping
    * applied once, at the end of every frame. See {@link OutputTransformOptions}.
    */
