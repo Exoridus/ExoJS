@@ -12,11 +12,11 @@ const configPath = resolve(process.cwd(), 'scripts/ci/oxlint-react-shadow.json')
 const oxlintBin = resolve(dirname(manifest), 'bin/oxlint');
 const fixtures = [
   {
-    id: 'react/rules-of-hooks',
+    id: 'react-hooks/rules-of-hooks',
     invalid: "import { useState } from 'react'; function App({ enabled }) { if (enabled) { useState(0); } return null; }",
   },
   {
-    id: 'react/exhaustive-deps',
+    id: 'react-hooks/exhaustive-deps',
     invalid: "import { useEffect } from 'react'; function App(props) { useEffect(() => { console.log(props.name); }, []); return null; }",
   },
   {
