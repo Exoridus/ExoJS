@@ -148,7 +148,7 @@
   &[data-action='refresh'] {
     background: var(--accent-soft);
     border-color: var(--accent-line);
-    color: var(--accent);
+    color: var(--fg);
   }
 
   &:disabled {

@@ -20,15 +20,13 @@
     font-size: 1.125rem;
     line-height: 1.25;
     letter-spacing: -0.025em;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
   }
 }
 
 .example-heading {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   min-height: 2.75rem;
   gap: var(--s-3);
 }
@@ -48,9 +46,7 @@
   color: var(--fg-muted);
   font-size: var(--text-sm);
   line-height: 1.5;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .learning-links {
@@ -61,7 +57,7 @@
   white-space: nowrap;
 
   a {
-    color: var(--accent);
+    color: var(--fg);
     text-decoration: none;
 
     &:hover {
@@ -198,6 +194,7 @@
   padding: 1.2rem;
   background: rgb(0 0 0 / 0.75);
   backdrop-filter: blur(2px);
+  color: #f4f6f8;
 }
 
 .unavailable-icon {
@@ -209,7 +206,7 @@
   font-size: 0.82rem;
   line-height: 1.55;
   text-align: center;
-  color: var(--fg-muted);
+  color: inherit;
 }
 
 .error-panel {
@@ -291,7 +288,7 @@
     // The viewport under the header, less the column's own padding: the
     // editor stretches to it, so the source is as tall as the screen instead
     // of a fixed box with the rest of the column empty beneath it.
-    min-height: calc(100vh - 64px - 1.2rem);
+    min-height: calc(100dvh - var(--playground-chrome-height, 64px) - 1.2rem);
     padding: 0;
     display: grid;
     grid-template:
@@ -410,6 +407,15 @@
     padding: var(--s-2) var(--s-3);
   }
 
+  .example-heading {
+    flex-wrap: wrap;
+    gap: var(--s-2);
+
+    h1 {
+      flex-basis: 100%;
+    }
+  }
+
   .example-context {
     flex-wrap: wrap;
     row-gap: var(--s-1);
@@ -420,8 +426,9 @@
     order: 1;
   }
 
-  .example-context > .learning-links {
-    display: none;
+  .learning-links {
+    flex-wrap: wrap;
+    white-space: normal;
   }
 
   .view-tabs {
@@ -439,7 +446,7 @@
       font: inherit;
 
       &[aria-selected='true'] {
-        color: var(--accent);
+        color: var(--fg);
         background: var(--accent-soft);
         border-color: var(--accent-line);
       }
