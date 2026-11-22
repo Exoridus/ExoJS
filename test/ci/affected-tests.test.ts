@@ -606,6 +606,31 @@ export default {
     expect(selection.fallbackReasons.join(' ')).toMatch(/watch.*leaf\.ts/i);
   });
 
+  it('retains orphan watches when another project in the same environment imports the input', async () => {
+    write(
+      'vitest.config.ts',
+      `export default {
+  plugins: [{ name: 'orphan-reader', enforce: 'pre', resolveId(id) {
+    if (id.endsWith('/unrelated.ts')) this.addWatchFile(${JSON.stringify(join(root, 'src/leaf.ts'))});
+  } }],
+  test: { projects: [
+    { extends: true, test: { name: 'ordinary', include: ['test/related.test.ts'] } },
+    { extends: true, test: { name: 'orphan', include: ['test/unrelated.test.ts'] } },
+  ] },
+};\n`,
+    );
+    const initialized = await initialize();
+    const specifications = await initialized.globTestSpecifications();
+    expect(new Set(specifications.map(spec => spec.project.vite.environments.ssr)).size).toBe(1);
+
+    const selection = await selectAffectedTests(initialized, ['src/leaf.ts']);
+
+    expect(selection.mode).toBe('full');
+    expect(selection.tests).toHaveLength(2);
+    expect(selection.tests).toHaveLength(selection.inventory.length);
+    expect(selection.fallbackReasons.join(' ')).toMatch(/watch input has no resolved dependency edge.*leaf\.ts/i);
+  });
+
   it('matches module-owned watch aliases through native filesystem identity', () => {
     const alias = legacyAlias();
     write('src/include.frag', 'void included() {}');

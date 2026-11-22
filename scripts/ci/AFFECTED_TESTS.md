@@ -43,6 +43,8 @@ Vite resolves imports, re-exports, workspace packages, aliases, literal dynamic 
 
 Missing or deleted inputs, global configuration, build and generator inputs, untraceable plugin watch dependencies, graph errors and uncertain paths retain the full project inventory with an explicit reason. Failure to discover the inventory itself is an error. An unknown inventory is never reported as a successful empty selection.
 
+Vite projects can share an environment and its aggregate plugin watch set. A module-owned `?raw` import in one project can therefore cause another project's ownership check to retain the full inventory; the WebGL2 Sprite shader scenario currently reaches this conservative fallback. Fresh-context tracing identifies Vite's raw asset loader as the watch source, rather than a shader-plugin startup reader. Accepting any importer across the shared environment would also accept an unrelated project's ordinary import when a plugin has registered an unattributed watch. The same-environment orphan-watch regression protects that distinction, so shader selection remains full until watch ownership can be proven without weakening it.
+
 Markdown contributes its own consumers without turning an otherwise resolvable source change into an unconditional full run. Some tests deliberately read documentation or scan the repository; those conservative consumers remain selected.
 
 ## CI shadow evidence
