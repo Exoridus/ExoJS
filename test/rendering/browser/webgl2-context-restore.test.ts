@@ -39,7 +39,7 @@ import { expectPixelNear } from './_pixels';
 
 const canvasSize = 64;
 
-const createBackend = async (): Promise<WebGl2Backend> => {
+const createBackend = async (options: { suppliedCanvas?: boolean; releaseContext?: boolean } = {}): Promise<WebGl2Backend> => {
   const canvas = document.createElement('canvas');
 
   canvas.width = canvasSize;
@@ -52,9 +52,10 @@ const createBackend = async (): Promise<WebGl2Backend> => {
     canvas,
     options: {
       clearColor: Color.black,
-      canvas: { width: canvasSize, height: canvasSize },
+      canvas: { width: canvasSize, height: canvasSize, ...(options.suppliedCanvas ? { element: canvas } : {}) },
       rendering: {
         debug: false,
+        ...(options.releaseContext !== undefined ? { releaseWebGl2ContextOnDestroy: options.releaseContext } : {}),
         webglAttributes: {
           antialias: false,
           preserveDrawingBuffer: true,
@@ -246,5 +247,30 @@ describe('WebGL2 real context lose/restore', () => {
       texture.destroy();
       backend.destroy();
     }
+  });
+  test('destroy releases an owned WebGL2 context at the end and is idempotent', async () => {
+    const backend = await createBackend();
+    const context = backend.context;
+    expect(context.isContextLost()).toBe(false);
+
+    backend.destroy();
+    expect(context.isContextLost()).toBe(true);
+    expect(() => backend.destroy()).not.toThrow();
+  });
+
+  test('caller-supplied canvas retains context unless terminal release is enabled', async () => {
+    const borrowedBackend = await createBackend({ suppliedCanvas: true });
+    const borrowedContext = borrowedBackend.context;
+
+    borrowedBackend.destroy();
+    expect(borrowedContext.isContextLost()).toBe(false);
+    // The fixture now owns this borrowed canvas and must release it itself.
+    borrowedContext.getExtension('WEBGL_lose_context')?.loseContext();
+
+    const releasedBackend = await createBackend({ suppliedCanvas: true, releaseContext: true });
+    const releasedContext = releasedBackend.context;
+
+    releasedBackend.destroy();
+    expect(releasedContext.isContextLost()).toBe(true);
   });
 });
