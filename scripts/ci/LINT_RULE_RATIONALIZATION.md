@@ -6,41 +6,41 @@ This **does not approve blanket removal** of rules. The inventory reports **513*
 
 ## Residual inventory by family
 
-| Family               | Rules   |
+| Family               |   Rules |
 | -------------------- | ------: |
-| `unicorn`            | 89      |
-| `@eslint-react`      | 76      |
-| `astro`              | 43      |
-| `react-hooks`        | 16      |
-| `security`           | 11      |
-| `@typescript-eslint` | 9       |
-| `exojs`              | 9       |
-| `eslint-core`        | 9       |
-| `@stylistic`         | 4       |
-| `simple-import-sort` | 2       |
-| `unused-imports`     | 2       |
-| `exojs-engine`       | 1       |
-| `vitest`             | 1       |
+| `unicorn`            |      89 |
+| `@eslint-react`      |      76 |
+| `astro`              |      43 |
+| `react-hooks`        |      16 |
+| `security`           |      11 |
+| `@typescript-eslint` |       9 |
+| `exojs`              |       9 |
+| `eslint-core`        |       9 |
+| `@stylistic`         |       4 |
+| `simple-import-sort` |       2 |
+| `unused-imports`     |       2 |
+| `exojs-engine`       |       1 |
+| `vitest`             |       1 |
 | **Total**            | **272** |
 
 ## First-pass dispositions (baseline classifications)
 
-| Review action                         | Rules   |
+| Review action                         |   Rules |
 | ------------------------------------- | ------: |
-| `retain-react-correctness`            | 57      |
-| `retain-correctness`                  | 48      |
-| `style-value-review`                  | 44      |
-| `retain-template-guard`               | 42      |
-| `react-overlap-review`                | 18      |
-| `legacy-react-relevance-review`       | 17      |
-| `native-divergence-review`            | 17      |
-| `oxlint-js-plugin-probe`              | 10      |
-| `retain-security`                     | 7       |
-| `security-scope-review`               | 4       |
-| `compiler-or-style-redundancy-review` | 3       |
-| `single-owner-review`                 | 2       |
-| `retain-or-port`                      | 2       |
-| `retain-custom-restriction`           | 1       |
+| `retain-react-correctness`            |      57 |
+| `retain-correctness`                  |      48 |
+| `style-value-review`                  |      44 |
+| `retain-template-guard`               |      42 |
+| `react-overlap-review`                |      18 |
+| `legacy-react-relevance-review`       |      17 |
+| `native-divergence-review`            |      17 |
+| `oxlint-js-plugin-probe`              |      10 |
+| `retain-security`                     |       7 |
+| `security-scope-review`               |       4 |
+| `compiler-or-style-redundancy-review` |       3 |
+| `single-owner-review`                 |       2 |
+| `retain-or-port`                      |       2 |
+| `retain-custom-restriction`           |       1 |
 | **Total**                             | **272** |
 
 ## What to prune, and what must survive
