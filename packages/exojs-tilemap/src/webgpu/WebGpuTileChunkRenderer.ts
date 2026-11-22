@@ -103,10 +103,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
   // Cache ordered atlas combinations, not individual atlases. Every lookup
   // resolves live bindings first so dirty texture uploads still happen. A
   // bounded LRU avoids pinning old world/level textures indefinitely.
-  private _textureBindGroups = new Map<
-    string,
-    { group: GPUBindGroup; views: GPUTextureView[]; samplers: GPUSampler[]; mask: number }
-  >();
+  private _textureBindGroups = new Map<string, { group: GPUBindGroup; views: GPUTextureView[]; samplers: GPUSampler[]; mask: number }>();
   private _textureIds = new WeakMap<Texture | RenderTexture, number>();
   private _nextTextureId = 1;
 
@@ -452,8 +449,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       (ownDrawsInPass && (projectionChanged || (willDraw && targetInstanceBytes > this._instanceBufferCapacity))) ||
       (willDraw &&
         coordinator.passHasDraws &&
-        (textures.some(texture => backend.textureUploadWouldMutate(texture)) ||
-          backend.transformStorageWouldGrow(this._maxNodeIndex + 1)))
+        (textures.some(texture => backend.textureUploadWouldMutate(texture)) || backend.transformStorageWouldGrow(this._maxNodeIndex + 1)))
     ) {
       coordinator.endPass();
     }
@@ -656,10 +652,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     const entries: GPUBindGroupEntry[] = [];
 
     for (let slot = 0; slot < TILE_TEXTURE_SLOTS; slot++) {
-      entries.push(
-        { binding: slot, resource: views[slot]! },
-        { binding: TILE_TEXTURE_SLOTS + slot, resource: samplers[slot]! },
-      );
+      entries.push({ binding: slot, resource: views[slot]! }, { binding: TILE_TEXTURE_SLOTS + slot, resource: samplers[slot]! });
     }
 
     entries.push({ binding: TILE_TEXTURE_SLOTS * 2, resource: { buffer: this._sampleAlphaBuffers[mask]! } });
