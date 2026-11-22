@@ -87,6 +87,21 @@ The current `astro check` and Astro build catch compilation and TypeScript error
 
 Review the 4 legacy Astro API rules and `astro/valid-compile` using independently failing fixtures in `astro check` before retiring them. Do not add a new runtime package or build a one-off template parser to force removal of the small remaining ESLint/Astro island. When native Astro template support actually lands, compare complete diagnostics and switch in one scoped change.
 
+## Package and CSS ownership (architecture decision)
+
+Current `next` authored stylesheet inventory: **23 SCSS files, all under `site/src`**; no tracked standalone CSS/SCSS/SASS/LESS stylesheets in the engine, extensions, benchmarks or package scaffolds. Source-level CSS still exists as HTML `<style>` blocks in **six `create-exo-app` templates**, **two benchmark HTML harnesses**, and as DOM/CSS strings in `src/core/devErrorOverlay.ts` and `src/rendering/text/HTMLText.ts`. React's `ExoCanvas.tsx` uses typed inline `style` props. A CSS content-type mapping in the CLI is not a stylesheet.
+
+**Ownership target:**
+
+- `src/` and `packages/exojs-*/`: Oxlint plus native type-aware rules and ExoJS custom rules; TypeScript compiler and existing build/test gates stay independent of the linter
+- `packages/exojs-react/`: Oxlint's native React, Hooks and JSX accessibility policy, with explicit, tested exceptions for its imperative React bridge
+- `site/`: Oxlint for React/TSX/script code when validated; ESLint only for true Astro-template diagnostics; Stylelint for all authored SCSS/Astro style blocks; Oxfmt for formatting
+- `packages/create-exo-app/templates/` and `packages/exojs-bench/`: preserve minimal HTML/inline-CSS validation with existing template, build and smoke tests; do not add a workspace-wide Stylelint dependency just for eight small HTML sources
+
+**One implementation, two front ends:** The existing published `@codexo/eslint-plugin-exojs` package owns all nine public and one engine-internal ESTree rule implementation. Its optional `./oxlint` and `./oxlint-engine` entries added in this PR reuse those implementations; no second plugin package or third-party custom plugin is introduced. The private `@codexo/exojs-config` remains the intended owner of shared repository policy/presets. The `lint:exojs:shadow` command checks the compiled Oxlint entrypoints without changing normal lint ownership. A future neutral package name can be considered if standalone **Oxlint-only npm consumers** need to avoid the legacy ESLint peer and type declarations, but a premature second published package would duplicate maintenance.
+
+**Rollout gate:** Do not remove the root ESLint execution just because Oxlint can load the custom plugin. Existing type-aware context and remaining correctness rules must be accounted for; the new native CLI smoke is opt-in pending red/green parity, repository diagnostics and Windows qualification. No change here implies that all 513 historical rules are safely covered by Oxlint.
+
 ## ExoJS plugin adapter
 
 The opt-in `@codexo/eslint-plugin-exojs/oxlint` and `/oxlint-engine` entries reuse the exact existing ESTree-based rules with Oxlint-compatible default exports and explicit `meta.name`. No ExoJS rules are removed, no default lint runner is changed, and no native ownership is transferred in this PR. Unit tests cover export identity and namespace isolation; a real Oxlint CLI smoke checks a representative violation and clean control for each rule against ESLint. This does **not** prove complete semantic parity. Production enablement requires:

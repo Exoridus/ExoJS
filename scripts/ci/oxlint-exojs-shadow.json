@@ -1,0 +1,43 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "jsPlugins": [
+    "../../packages/eslint-plugin-exojs/dist/esm/oxlint.js",
+    "../../packages/eslint-plugin-exojs/dist/esm/oxlint-engine.js"
+  ],
+  "categories": {
+    "correctness": "off",
+    "suspicious": "off",
+    "pedantic": "off",
+    "perf": "off",
+    "style": "off",
+    "restriction": "off",
+    "nursery": "off"
+  },
+  "rules": {
+    "exojs/migration-chain": "error",
+    "exojs/migration-purity": "error",
+    "exojs/migration-step": "error",
+    "exojs/no-async-render-hook": "error",
+    "exojs/no-async-update": "error",
+    "exojs/no-self-enabled-check": "error",
+    "exojs/no-unregistered-system": "error",
+    "exojs/require-super-destroy": "error",
+    "exojs-engine/no-allocation-in-hot-hook": [
+      "error",
+      {
+        "methods": [
+          "getOutputBounds",
+          "_notifyEnclosingRetainedGroup"
+        ]
+      }
+    ]
+  },
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/test/**",
+    "**/examples/**",
+    "**/legacy/**",
+    "**/*.min.*"
+  ]
+}
