@@ -27,7 +27,7 @@ describe('tilemap colour contract', () => {
   });
 
   test('the WGSL tile fragment stage keeps its existing sample-alpha association', () => {
-    expect(tileShaderWgsl).toContain('select(sample.rgb, sample.rgb * sample.a, sampleAlpha.x != 0.0)');
+    expect(tileShaderWgsl).toContain('select(sample.rgb, sample.rgb * sample.a, sampleAlpha[input.textureSlot] != 0.0)');
     expect(tileShaderWgsl).toContain('return vec4<f32>(rgb, sample.a) * input.color;');
   });
 });
