@@ -29,7 +29,7 @@ export interface Lane {
   ciRun?: string;
   /** Replaces `ciRun` when the run collects coverage (pushes to a long-lived branch). */
   coverageRun?: string;
-  /** Playwright browser to install on the runner. */
+  /** Playwright browser to install with its host dependencies, including Xvfb. */
   browser?: 'chromium' | 'firefox';
   /** Extra apt packages the runner needs. */
   apt?: readonly string[];
@@ -174,7 +174,6 @@ export const LANES: readonly Lane[] = [
       },
     ),
     browser: 'chromium',
-    apt: ['xvfb'],
     local: 'browser',
     junit: true,
     timeoutMinutes: 30,
@@ -234,7 +233,6 @@ export const LANES: readonly Lane[] = [
       },
     ),
     browser: 'firefox',
-    apt: ['xvfb'],
     local: 'browser',
     ciOnly: true,
     junit: true,
