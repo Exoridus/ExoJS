@@ -128,6 +128,7 @@ const main = async (): Promise<void> => {
   const page = await browser.newPage({ viewport, deviceScaleFactor: dpr });
   const consoleLines: string[] = [];
   const captures: Array<{ name: string; elapsedMs: number; renderer: unknown }> = [];
+  let servedBuild: unknown = null;
 
   if (values.renderer === 'webgl2') {
     await page.addInitScript("Object.defineProperty(Navigator.prototype, 'gpu', { configurable: true, value: undefined });");
@@ -141,6 +142,12 @@ const main = async (): Promise<void> => {
   page.on('pageerror', error => consoleLines.push(`[pageerror] ${String(error)}`));
 
   try {
+    const manifest = await page.request.get(`${host}${SITE_BASE}/site-build.json`);
+
+    if (manifest.ok()) {
+      servedBuild = await manifest.json();
+    }
+
     await page.goto(`${host}${SITE_BASE}/en/playground/?version=current&example=${encodeURIComponent(example)}`, {
       waitUntil: 'domcontentloaded',
     });
@@ -201,6 +208,7 @@ const main = async (): Promise<void> => {
         {
           sourceSha,
           dirty,
+          servedBuild,
           example,
           viewport,
           dpr,
