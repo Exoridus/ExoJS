@@ -51,8 +51,18 @@ const memberName = (node: ts.Node): string | undefined => {
   return undefined;
 };
 
-const cssCanLoad = (value: ts.Expression | undefined): boolean =>
-  !value || !ts.isStringLiteralLike(value) || /(?:url|(?:-webkit-)?image-set)\s*\(|@import/i.test(value.text);
+// These value grammars cannot contain external resources, even when supplied
+// dynamically. Keep unknown properties, custom properties and whole styles
+// conservative; a value such as var(--image) can otherwise hide a URL.
+const CSS_VALUE_ONLY = new Set(['color', 'imagerendering', 'touchaction', 'width', 'height']);
+
+const cssCanLoad = (value: ts.Expression | undefined, property?: string): boolean => {
+  if (property && !property.startsWith('--') && CSS_VALUE_ONLY.has(property.replaceAll('-', '').toLowerCase())) {
+    return false;
+  }
+
+  return !value || !ts.isStringLiteralLike(value) || /(?:url|(?:-webkit-)?image-set)\s*\(|@import/i.test(value.text);
+};
 
 interface SourceInputs {
   readonly hazards: string[];
@@ -143,7 +153,7 @@ const sourceInputs = (file: string): SourceInputs => {
 
       if (
         (property && ['src', 'srcset', 'href', 'poster', 'innerhtml', 'outerhtml'].includes(property)) ||
-        (style && cssCanLoad(node.right))
+        (style && cssCanLoad(node.right, property))
       ) {
         hazards.add(`A DOM or CSS ${property ?? 'computed property'} assignment can load an asset outside the import graph.`);
       }
@@ -184,7 +194,15 @@ const sourceInputs = (file: string): SourceInputs => {
           }
         }
       } else if (call && ['setProperty', 'insertRule', 'addRule', 'replaceSync'].includes(method)) {
-        reads = cssCanLoad(call.arguments[method === 'setProperty' || method === 'addRule' ? 1 : 0]);
+        const property =
+          method === 'setProperty' &&
+          (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) &&
+          memberName(node.expression) === 'style' &&
+          call.arguments[0] &&
+          ts.isStringLiteralLike(call.arguments[0])
+            ? call.arguments[0].text
+            : undefined;
+        reads = cssCanLoad(call.arguments[method === 'setProperty' || method === 'addRule' ? 1 : 0], property);
       }
 
       if (reads) {

@@ -225,8 +225,11 @@ describe('affected tests from the Vite graph', () => {
     ['a dynamic attribute', "const attribute = 'src'; element.setAttribute(attribute, '/src/photo.svg');"],
     ['an aliased attribute setter', "const assign = element.setAttribute.bind(element); assign('src', '/src/photo.svg');"],
     ['a CSS background image', "element.style.backgroundImage = 'url(/src/photo.svg)';"],
+    ['a dynamic CSS image', 'element.style.backgroundImage = assetPath;'],
+    ['an unknown CSS property', 'element.style[property] = value;'],
     ['a computed CSS property', "element.style['backgroundImage'] = 'url(/src/photo.svg)';"],
     ['a CSS property setter', "element.style.setProperty('background-image', 'url(/src/photo.svg)');"],
+    ['a dynamic custom property', "element.style.setProperty('--color', value);"],
     ['CSS text', "element.style.cssText = 'background: url(/src/photo.svg)';"],
     ['a stylesheet rule', "sheet.insertRule('body { background: url(/src/photo.svg) }');"],
     ['HTML content', 'element.innerHTML = \'<img src="/src/photo.svg">\';'],
@@ -255,6 +258,21 @@ describe('affected tests from the Vite graph', () => {
     test('test/nonreader.test.ts', "import { value } from './helper.ts';", 'void value');
 
     expect((await select('src/photo.svg')).tests.map(entry => entry.file)).toEqual(['test/asset.test.ts']);
+  });
+
+  it.each([
+    'element.style.color = value;',
+    'element.style.imageRendering = value;',
+    'element.style.touchAction = value;',
+    'element.style.width = value;',
+    "element.style['height'] = value;",
+    "element.style.setProperty('color', value);",
+    "element.style.setProperty('image-rendering', value);",
+  ])('does not treat a CSS property whose grammar cannot load assets as a hidden reader: %s', async body => {
+    write('test/helper.ts', `export const value = (element, value) => { ${body} };\n`);
+    test('test/nonreader.test.ts', "import { value } from './helper.ts';", 'void value');
+
+    expect((await select('src/leaf.ts')).tests.map(entry => entry.file)).toEqual(['test/related.test.ts']);
   });
 
   it('does not collapse a shared test file across distinct projects', async () => {
