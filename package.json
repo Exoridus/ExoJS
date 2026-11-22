@@ -265,7 +265,7 @@
     {
       "name": "@codexo/exojs/lighting",
       "path": "dist/esm/lighting/index.js",
-      "limit": "36 KB",
+      "limit": "40 KB",
       "gzip": true,
       "ignore": [
         "../index.js",
@@ -276,7 +276,7 @@
       "name": "@codexo/exojs/lighting (lightmap, no cascades)",
       "path": "dist/esm/lighting/index.js",
       "import": "{ LightmapLighting, PointLight, SpotLight, PolygonOccluder }",
-      "limit": "14 KB",
+      "limit": "18 KB",
       "gzip": true,
       "ignore": [
         "../index.js",

@@ -66,14 +66,14 @@ export interface ContactProfile {
 
 export const contactCanvasSize = 256;
 
-interface ContactHost {
+export interface ContactHost {
   readonly app: Application;
   readonly context: RenderingContext;
   render(lighting: LightmapLighting): Promise<Uint8Array | Uint8ClampedArray | null>;
   destroy(): void;
 }
 
-const createHost = async (kind: ContactBackend): Promise<ContactHost> => {
+export const createContactHost = async (kind: ContactBackend): Promise<ContactHost> => {
   const size = contactCanvasSize;
   const canvas = document.createElement('canvas');
 
@@ -188,7 +188,7 @@ const createLight = (scene: ContactScene): Light => {
  * the light's axis. `null` when the backend dropped the device.
  */
 export const measureContact = async (kind: ContactBackend, scene: ContactScene): Promise<ContactProfile | null> => {
-  const host = await createHost(kind);
+  const host = await createContactHost(kind);
   const size = contactCanvasSize;
   const unit = 1 / scene.pixelsPerUnit;
   const worldSize = size * unit;

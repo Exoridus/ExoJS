@@ -28,16 +28,17 @@ export interface FrameLightingOptions extends LightingOptions {
    */
   readonly fieldMargin?: number;
   /**
-   * Angular bins in each light's shadow map. A bin is the finest shadow edge
-   * the renderer can resolve, so a large light on a high-resolution canvas
-   * wants more of them; the cost is linear in the light count. Defaults to
-   * `256`, clamped to 8..4096. A non-finite value throws.
+   * Angular bins in each light's shadow map. Silhouettes, faces and corners
+   * keep their exact place within a bin, so edges sit where the geometry puts
+   * them, move smoothly with it, and a hard edge is drawn to the pixel at any
+   * resolution. The cost of building and uploading the rows is linear in the
+   * bins and the light count. Defaults to `256`, clamped to 8..4096. A
+   * non-finite value throws.
    *
-   * It trades against how wide a penumbra can get. The shadow filter samples
-   * every bin under its kernel and spends at most 21 fetches doing it, so the
-   * widest kernel is ten bins either side - three percent of a turn at the
-   * default, and proportionally less as the resolution rises. Raising this
-   * sharpens the hard edge rather than widening the softest one.
+   * It bounds how wide a penumbra can get. The shadow filter reads every bin
+   * under its widest kernel and caps that kernel at ten bins either side -
+   * three percent of a turn at the default, and proportionally less as the
+   * resolution rises. Each bin is 32 bytes of row to build and upload.
    */
   readonly shadowResolution?: number;
   /**
