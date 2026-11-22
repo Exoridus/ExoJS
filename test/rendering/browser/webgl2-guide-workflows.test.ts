@@ -40,8 +40,10 @@ const applications: Application[] = [];
 const errors: string[] = [];
 const poll = { timeout: 10_000, interval: 20 };
 const previousViewport = { width: window.innerWidth, height: window.innerHeight };
+const mediaCommands = commands as unknown as { prepareGuideMedia: () => Promise<void> };
 
 beforeAll(async () => {
+  await mediaCommands.prepareGuideMedia();
   await page.viewport(960, 640);
 });
 

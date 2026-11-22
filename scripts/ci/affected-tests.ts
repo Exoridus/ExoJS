@@ -29,7 +29,7 @@ const MODULE = /\.(?:[cm]?[jt]sx?|json|vert|frag|glsl|wgsl)$/;
 const CONTENT = /\.mdx?$|(?:^|\/)LICENSE$/;
 const CONTENT_QUERY = /[?&](?:raw|url)(?:[=&]|$)/;
 const GLOBAL =
-  /(?:^|\/)(?:package\.json|[^/]*lock[^/]*\.(?:json|ya?ml)|tsconfig[^/]*\.json|[^/]*\.config\.[^/]+)$|^(?:scripts|\.github)\/|^packages\/exojs-(?:build|config)\/|^packages\/exojs-cli\/src\/commands\/assetsPack\.ts$|(?:^|\/)(?:dist|generated)\//;
+  /(?:^|\/)(?:package\.json|[^/]*lock[^/]*\.(?:json|ya?ml)|tsconfig[^/]*\.json|[^/]*\.config\.[^/]+)$|^(?:scripts|\.github)\/(?!.*\.mdx?$)|^packages\/exojs-(?:build|config)\/|^packages\/exojs-cli\/src\/commands\/assetsPack\.ts$|(?:^|\/)(?:dist|generated)\//;
 const SOURCE_TREE = /^(?:src|test|examples)\/|^packages\/[^/]+\/(?:src|test)\/|^site\/src\//;
 const VITEST_ROOT = realpathSync(fileURLToPath(new URL('../', import.meta.resolve('vitest'))));
 const STARTUP_WATCH_FILES = new WeakMap<DevEnvironment, Promise<readonly string[]>>();
@@ -79,11 +79,17 @@ const sourceInputs = (file: string): SourceInputs => {
   const hazards = new Set<string>();
   const imports = new Set<string>();
 
-  const module = (specifier: string): void => {
+  const module = (specifier: string, commands = false): void => {
     imports.add(specifier);
 
     if (/^(?:node:)?(?:fs(?:\/|$)|child_process$|module$)/.test(specifier)) {
       hazards.add(`Reads files or resolves runtime inputs through ${specifier}.`);
+    }
+
+    if (specifier === 'vitest/browser' && commands) {
+      // Browser commands execute Node callbacks registered by configuration.
+      // Their filesystem inputs cannot be inferred from the browser graph.
+      hazards.add('Browser commands may read Node-side inputs outside the browser module graph.');
     }
   };
 
@@ -220,16 +226,29 @@ const sourceInputs = (file: string): SourceInputs => {
         bindings.elements.every(binding => binding.isTypeOnly);
 
       if (!typesOnly) {
-        module(node.moduleSpecifier.text);
+        module(
+          node.moduleSpecifier.text,
+          Boolean(
+            node.importClause?.name ||
+            (bindings &&
+              (ts.isNamespaceImport(bindings) ||
+                bindings.elements.some(binding => !binding.isTypeOnly && (binding.propertyName ?? binding.name).text === 'commands'))),
+          ),
+        );
       }
     } else if (ts.isExportDeclaration(node) && !node.isTypeOnly && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
-      module(node.moduleSpecifier.text);
+      module(
+        node.moduleSpecifier.text,
+        !node.exportClause ||
+          ts.isNamespaceExport(node.exportClause) ||
+          node.exportClause.elements.some(binding => !binding.isTypeOnly && (binding.propertyName ?? binding.name).text === 'commands'),
+      );
     } else if (ts.isCallExpression(node)) {
       if (node.expression.kind === ts.SyntaxKind.ImportKeyword) {
         const argument = node.arguments[0];
 
         if (argument && (ts.isStringLiteral(argument) || ts.isNoSubstitutionTemplateLiteral(argument))) {
-          module(argument.text);
+          module(argument.text, true);
         } else {
           hazards.add('Loads a module through a nonliteral dynamic import.');
         }

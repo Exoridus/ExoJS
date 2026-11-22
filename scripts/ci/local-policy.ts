@@ -200,13 +200,15 @@ const TOOLING_GATES = [
 const toolingTestFilters = (file: string): string[] =>
   file === 'scripts/ci/select-lanes.ts' ? ['test/ci', 'test/site/readme-examples'] : ['test/ci'];
 
+const isInfrastructureDocumentation = (file: string): boolean => /\.mdx?$/.test(file) && !/(?:^|\/)(?:dist|generated)\//.test(file);
+
 const isGlobal = (file: string): boolean =>
   file === 'package.json' ||
   file === 'pnpm-lock.yaml' ||
   file === 'pnpm-workspace.yaml' ||
   file === 'vitest.config.ts' ||
-  (file.startsWith('scripts/ci/') && !isCiTooling(file)) ||
-  file.startsWith('.github/workflows/') ||
+  (((file.startsWith('scripts/ci/') && !isCiTooling(file)) || file.startsWith('.github/workflows/')) &&
+    !isInfrastructureDocumentation(file)) ||
   file.startsWith('packages/exojs-config/') ||
   file.startsWith('packages/exojs-build/') ||
   file === 'packages/exojs-cli/src/commands/assetsPack.ts' ||

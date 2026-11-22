@@ -369,6 +369,19 @@ describe('dependency-aware workspace tests', () => {
     expect(selectLocalPolicy(files).gates).toContain('format:check');
   });
 
+  it.each(['scripts/ci/VALIDATION.md', '.github/workflows/README.md'])(
+    'keeps infrastructure documentation %s with the ordinary graph inputs',
+    documentation => {
+      const files = ['src/rendering/sprite/AnimatedSprite.ts', documentation];
+      const policy = selectLocalPolicy(files);
+
+      expect(policy.relatedTests).toBe(true);
+      expect(policy.fullUnit).toBe(false);
+      expect(policy.gates).toContain('format:check');
+      expect(unitCommand(...files)).not.toContain('--full');
+    },
+  );
+
   it.each(['README.md', 'site/src/content/guide/sprites.mdx'])(
     'adds the content tests for %s without widening the engine tests',
     documentation => {
@@ -392,6 +405,7 @@ describe('dependency-aware workspace tests', () => {
     ['an engine change together with a root config', ['src/math/Vector.ts', 'vitest.config.ts']],
     ['an engine change together with an unknown file', ['src/math/Vector.ts', 'mystery.bin']],
     ['an engine change together with CI tooling', ['src/math/Vector.ts', 'scripts/ci/gates.ts']],
+    ['generated infrastructure content', ['src/math/Vector.ts', 'scripts/ci/generated/template.md']],
     ['a lockfile', ['pnpm-lock.yaml']],
   ])('keeps the whole core project for %s', (_name, files) => {
     expect(selectLocalPolicy(files).relatedTests).toBe(false);

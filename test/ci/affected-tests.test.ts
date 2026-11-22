@@ -83,6 +83,40 @@ describe('affected tests from the Vite graph', () => {
     expect((await select('src/Größe.ts')).tests.map(entry => entry.file)).toEqual(['test/unicode.test.ts']);
   });
 
+  it.each([
+    ['named commands', "import { commands } from 'vitest/browser'; export const use = () => commands.readFile('src/media.txt');"],
+    ['aliased commands', "import { commands as remote } from 'vitest/browser'; export const use = () => remote.readFile('src/media.txt');"],
+    [
+      'namespace commands',
+      "import * as browser from 'vitest/browser'; export const use = () => browser.commands.readFile('src/media.txt');",
+    ],
+    ['dynamic namespace', "export const use = () => import('vitest/browser');"],
+    ['template dynamic namespace', 'export const use = () => import(`vitest/browser`);'],
+    ['named re-export', "export { commands as use } from 'vitest/browser';"],
+    ['namespace re-export', "export * as use from 'vitest/browser';"],
+    ['star re-export', "export * from 'vitest/browser';"],
+  ])('retains Node-side browser input readers through %s', async (_name, source) => {
+    write('src/media.txt', 'media');
+    write('src/remote.ts', source);
+    test('test/commands.test.ts', "import * as remote from '../src/remote.ts';", 'void remote');
+    test('test/raw.test.ts', "import value from '../src/media.txt?raw';", "expect(value).toBe('media')");
+
+    const selection = await select('src/media.txt');
+
+    expect(selection.mode).toBe('related');
+    expect(selection.tests.map(entry => entry.file)).toEqual(['test/commands.test.ts', 'test/raw.test.ts']);
+    expect(selection.tests[0]?.reasons).toContainEqual(
+      expect.objectContaining({ kind: 'untracked', detail: expect.stringContaining('Browser commands') }),
+    );
+  });
+
+  it('keeps browser page helpers and type-only command imports eligible for narrowing', async () => {
+    write('src/page.ts', "import { page, type commands } from 'vitest/browser'; export const view = () => page;\n");
+    test('test/page.test.ts', "import { view } from '../src/page.ts';", 'void view');
+
+    expect((await select('src/leaf.ts')).tests.map(entry => entry.file)).toEqual(['test/related.test.ts']);
+  });
+
   it('matches a raw import by its resolved file rather than its query module id', async () => {
     write('src/message.txt', 'hello\n');
     test('test/raw.test.ts', "import value from '../src/message.txt?raw';", "expect(value).toBe('hello\\n')");
@@ -400,10 +434,27 @@ export default {
     expect(selection.fallbackReasons.join(' ')).toMatch(/watch.*leaf\.ts/i);
   });
 
+  it.each(['scripts/ci/README.md', '.github/notes.mdx'])('keeps mixed source and %s readers in the graph', async file => {
+    write(file, 'project guidance');
+    test('test/doc-import.test.ts', `import value from '../${file}?raw';`, "expect(value).toBe('project guidance')");
+    test(
+      'test/doc-read.test.ts',
+      `import { readFileSync } from 'node:fs'; const value = () => readFileSync('${file}', 'utf8');`,
+      'void value',
+    );
+
+    const selection = await select('src/leaf.ts', file);
+
+    expect(selection.mode).toBe('related');
+    expect(selection.tests.map(entry => entry.file)).toEqual(['test/doc-import.test.ts', 'test/doc-read.test.ts', 'test/related.test.ts']);
+  });
+
   it.each([
     'vitest.config.ts',
     'package.json',
     'scripts/generate.ts',
+    'scripts/generated/template.md',
+    '.github/workflows/ci.yml',
     'packages/exojs-build/src/shaderPlugin.ts',
     'packages/exojs-build/src/assetContainer.ts',
     'packages/exojs-config/src/generated-plugin.ts',
