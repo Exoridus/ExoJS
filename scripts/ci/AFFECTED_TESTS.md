@@ -41,6 +41,8 @@ The `affected-tests-<lane>` Actions artifact contains the plan and observed resu
 
 Required checks, JUnit skip-budget reports, qualification preflights, deadlines and `verdict` remain independent of the proposed subsets. Manual/full qualification and release validation continue to execute the complete required inventories. Shadow data alone does not authorize reducing a lane.
 
+For a controlled CI measurement, add `ci:affected-probe` before a milestone push. After each required full Unit/WebGPU run succeeds, the workflow verifies the complete matching shadow audits and replays the AnimatedSprite unit or WebGPU Core subset. These are additional diagnostic executions, with separate execution JSON and JUnit outside the skip budget. They use the same checkout and runner after its full run, so their caches are warm; report discovery, execution and full-lane wall times separately. A full-qualification request disables these optional probes.
+
 ## Qualify the final candidate
 
 Add the `ci:full` label before the final PR push. The next CI event for that exact head requests every lane, coverage, release preparation and consumer checks, plus the entire example catalog. It bypasses dependency selection and PR smoke sampling. Adding the label by itself does not start or cancel a run. Keep the PR as a draft until the required checks on the final combined head are green; a subsequent source or base-branch change needs fresh qualification.

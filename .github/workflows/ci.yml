@@ -228,6 +228,30 @@ jobs:
           EXOJS_GUIDE_MOTION: ${{ matrix.id == 'webgl' && needs.plan.outputs.guideMotion == 'true' && '1' || '0' }}
           EXOJS_VISUAL_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
+      # Optional measurement after the required full run. Its plan is accepted
+      # only when the exact scenario has complete successful shadow evidence.
+      # Probe JUnit stays outside test-results so it cannot duplicate the budget.
+      - name: Measure an audited affected subset
+        if: >-
+          success() && github.event_name == 'pull_request' &&
+          contains(github.event.pull_request.labels.*.name, 'ci:affected-probe') &&
+          needs.plan.outputs.fullQualification != 'true' &&
+          (matrix.id == 'unit' || matrix.id == 'webgpu')
+        env:
+          AFFECTED_LANE: ${{ matrix.id }}
+        shell: bash
+        run: |
+          probe=".workspace/affected-tests/probe-${AFFECTED_LANE}.json"
+          node scripts/ci/affected-probe.ts --plan "$EXOJS_AFFECTED_PLAN" --results .workspace/affected-tests/results --scenario AnimatedSprite --output "$probe"
+          export EXOJS_AFFECTED_PLAN="$probe"
+          export EXOJS_AFFECTED_MODE=enforce
+          export EXOJS_AFFECTED_EXECUTION_DIR=.workspace/affected-tests/probe-execution
+          if [ "$AFFECTED_LANE" = unit ]; then
+            time EXOJS_REQUIRE_NAGA=1 node scripts/run-tests.ts --project='exojs*' --project=rendering-perf --reporter=minimal --reporter=junit --outputFile.junit=.workspace/affected-tests/probe-unit.junit.xml
+          else
+            time EXOJS_WEBGPU_CI_HEADED=1 xvfb-run -a pnpm qualify --row 'Diagnostic / AnimatedSprite WebGPU' --preflight chromium-webgpu --requires webgpu-device --timeout 15 -- node scripts/ci/affected-run.ts --project=browser-webgpu --reporter=minimal --reporter=junit --outputFile.junit=.workspace/affected-tests/probe-webgpu.junit.xml
+          fi
+
       - name: Keep dependency-selection evidence
         if: ${{ !cancelled() && github.event_name == 'pull_request' && matrix.affectedProjects[0] != null && needs.plan.outputs.fullQualification != 'true' }}
         uses: actions/upload-artifact@v7

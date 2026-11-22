@@ -132,6 +132,18 @@ describe('affected-test CI shadow contract', () => {
     expect(shadow).toContain('include-hidden-files: true');
     expect(shadow).toContain('if-no-files-found: error');
   });
+
+  it('measures subsets only after successful full execution and keeps their reports outside the skip budget', () => {
+    const probe = shadow.slice(shadow.indexOf('- name: Measure an audited affected subset'));
+
+    expect(shadow.indexOf('run: ${{ matrix.run }}')).toBeLessThan(shadow.indexOf('- name: Measure an audited affected subset'));
+    expect(probe).toContain('success()');
+    expect(probe).toContain("'ci:affected-probe'");
+    expect(probe).toContain('affected-probe.ts --plan');
+    expect(probe).toContain('--results .workspace/affected-tests/results');
+    expect(probe).toContain('--outputFile.junit=.workspace/affected-tests/probe-unit.junit.xml');
+    expect(probe).not.toContain('--outputFile.junit=./test-results/');
+  });
 });
 
 describe('plan for a push to a long-lived branch', () => {

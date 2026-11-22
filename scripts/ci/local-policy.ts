@@ -154,8 +154,10 @@ const hasUnitProject = (manifest: PackageManifest): boolean =>
 export const CI_TOOLING_FILES: ReadonlySet<string> = new Set([
   ...[
     'affected-plan',
+    'affected-probe',
     'affected-range',
     'affected-reporter',
+    'affected-run',
     'affected-tests',
     'browser-probe',
     'capability',
