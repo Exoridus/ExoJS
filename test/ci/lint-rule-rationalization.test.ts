@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 const rows = (path: string): string[] => {
   const text = readFileSync(resolve(process.cwd(), path), 'utf8');
+
   return text.trimEnd().split('\n').slice(1);
 };
 
