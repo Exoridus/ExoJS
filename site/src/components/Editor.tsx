@@ -324,10 +324,6 @@ export const Editor = ({
 
   const onRendererStatus = useCallback((status: ExampleRendererStatus | null): void => {
     setRendererStatus(status);
-
-    if (status?.phase === 'failed') {
-      setRunStatus('error');
-    }
   }, []);
 
   const onExecutionStatus = useCallback(
@@ -386,7 +382,9 @@ export const Editor = ({
   const availability = getExampleAvailability(activeExample);
   const editorLanguage = activeExample?.language === 'typescript' ? 'typescript' : 'javascript';
   const displayPath = getDisplayPath(activeExample);
-  const runMessage = getRunMessage(runStatus, dirty, Boolean(rendererStatus?.actual));
+  // Renderer recovery is independent of the stored compile/module outcome.
+  const feedbackStatus = rendererStatus?.phase === 'failed' && runStatus !== 'compiling' ? 'error' : runStatus;
+  const runMessage = getRunMessage(feedbackStatus, dirty, Boolean(rendererStatus?.actual));
 
   const sidebarToggle =
     showSidebarToggle && !sidebarOpen ? <SidebarToggle open={sidebarOpen} toggleRef={sidebarToggleRef} onToggle={onToggleSidebar} /> : null;
@@ -477,11 +475,11 @@ export const Editor = ({
               </a>
             )}
           </div>
-          <div className={css(styles, 'run-feedback')} data-run-status={runStatus}>
+          <div className={css(styles, 'run-feedback')} data-run-status={feedbackStatus}>
             <p role="status" aria-live="polite">
               {runMessage}
             </p>
-            {activeView === 'code' && (runStatus === 'updated' || runStatus === 'running') && (
+            {activeView === 'code' && (feedbackStatus === 'updated' || feedbackStatus === 'running') && (
               <button type="button" onClick={showDemo}>
                 Show demo
               </button>

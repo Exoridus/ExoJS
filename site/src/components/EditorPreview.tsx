@@ -629,6 +629,7 @@ const installPreviewErrorHandlers = (
 
   iframeWindow.onerror = (message, _source, _lineno, _colno, error) => {
     const previewError = createPreviewErrorEntry(error, message);
+    reportError(previewError);
 
     if (isRecoverablePreviewError(previewError.summary)) {
       blankPreviewSurface(iframeBody);
@@ -636,7 +637,6 @@ const installPreviewErrorHandlers = (
       return true;
     }
 
-    reportError(previewError);
     renderExecutionError(iframeBody);
 
     return true;
@@ -644,6 +644,7 @@ const installPreviewErrorHandlers = (
 
   iframeWindow.onunhandledrejection = (event: PromiseRejectionEvent) => {
     const previewError = createPreviewErrorEntry(event.reason);
+    reportError(previewError);
 
     if (isRecoverablePreviewError(previewError.summary)) {
       event.preventDefault();
@@ -653,7 +654,6 @@ const installPreviewErrorHandlers = (
     }
 
     event.preventDefault();
-    reportError(previewError);
     renderExecutionError(iframeBody);
   };
 };

@@ -2074,6 +2074,94 @@ const headerChecks = async (browser: Browser, origin: string, base: string): Pro
     }
   });
 
+  await check('experience: renderer recovery preserves the actual Run outcome', async () => {
+    const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
+    await context.addInitScript(`(() => {
+      Object.defineProperty(Navigator.prototype, 'gpu', { configurable: true, value: undefined });
+      localStorage.setItem('exo-playground-layout', 'split');
+    })()`);
+    const page = await context.newPage();
+    watchPage(page);
+
+    try {
+      await page.goto(`${origin}${base}/en/playground/?example=getting-started/hello-world`, { waitUntil: 'domcontentloaded' });
+      const frame = await previewFrame(page);
+      await frame.waitForFunction('window.__EXAMPLE_RENDERER_STATUS__?.actual === "webgl2"');
+      await frame.evaluate(`(() => {
+        const gl = document.querySelector('canvas').getContext('webgl2');
+        window.__rendererRecovery = gl.getExtension('WEBGL_lose_context');
+        if (!window.__rendererRecovery) throw new Error('WEBGL_lose_context is unavailable');
+        window.__rendererRecovery.loseContext();
+      })()`);
+      await frame.waitForFunction('window.__EXAMPLE_RENDERER_STATUS__?.phase === "failed"');
+      await frame.evaluate('window.__rendererRecovery.restoreContext()');
+      await frame.waitForFunction('window.__EXAMPLE_RENDERER_STATUS__?.actual === "webgl2"');
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      assert(
+        (await page.locator('[data-run-status]').getAttribute('data-run-status')) === 'idle',
+        'renderer recovery left a false Run failure',
+      );
+
+      await frame.evaluate('window.__rendererRecovery.loseContext()');
+      await frame.waitForFunction('window.__EXAMPLE_RENDERER_STATUS__?.phase === "failed"');
+      await frame.evaluate(`new Promise(resolve => {
+        window.addEventListener('error', event => {
+          if (event.message.includes('RENDERER_RECOVERY_RUNTIME_ERROR')) resolve();
+        }, { once: true });
+        setTimeout(() => { throw new Error('RENDERER_RECOVERY_RUNTIME_ERROR'); }, 0);
+      })`);
+      await frame.evaluate('window.__rendererRecovery.restoreContext()');
+      await frame.waitForFunction('window.__EXAMPLE_RENDERER_STATUS__?.actual === "webgl2"');
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      assert(
+        (await page.locator('[data-run-status]').getAttribute('data-run-status')) === 'error',
+        'renderer recovery cleared a real execution error',
+      );
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await context.close();
+    }
+  });
+
+  await check('experience: renderer startup failure remains visible', async () => {
+    const context = await browser.newContext();
+    await context.addInitScript(`(() => {
+      Object.defineProperty(Navigator.prototype, 'gpu', { configurable: true, value: undefined });
+      const getContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (kind, ...args) {
+        return kind.includes('webgl') ? null : getContext.call(this, kind, ...args);
+      };
+    })()`);
+    const page = await context.newPage();
+    watchPage(page);
+
+    try {
+      await page.goto(`${origin}${base}/en/playground/?example=getting-started/hello-world`, { waitUntil: 'domcontentloaded' });
+      const frame = await previewFrame(page);
+      await page.locator('[data-run-status="error"]').waitFor();
+      await frame.locator('body[data-preview-blanked]').waitFor();
+      await setOutputOpen(page, true);
+      await waitFor(
+        () => outputEntries(page),
+        entries => entries.some(entry => entry.kind === 'exception' && /webgl/i.test(entry.text)),
+        'reported renderer startup exception',
+      );
+      assert(
+        (await page.getByRole('button', { name: 'Show demo', exact: true }).count()) === 0,
+        'startup failure was presented as updated',
+      );
+    } catch (error) {
+      await reportFailure(page, error);
+
+      throw error;
+    } finally {
+      await context.close();
+    }
+  });
+
   await check('experience: navigation dialogs contain focus and restore their opener', async () => {
     for (const width of [900, 390]) {
       const context = await browser.newContext({ viewport: { width, height: 900 } });
