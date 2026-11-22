@@ -318,6 +318,8 @@ export class View {
 
   /**
    * Track a scene node or world position each frame.
+   * A node target uses its local `(0, 0)` transformed into world space,
+   * including its anchor/pixel-origin compensation.
    * The view center is interpolated towards the target using the `lerp` factor.
    * Call {@link clearFollow} to stop tracking.
    */
@@ -739,7 +741,7 @@ export class View {
     let targetY: number;
 
     if (this._followTarget instanceof SceneNode) {
-      const m = this._followTarget.getGlobalTransform();
+      const m = this._followTarget.getWorldTransform();
       targetX = m.x + this._followOffsetX;
       targetY = m.y + this._followOffsetY;
     } else {

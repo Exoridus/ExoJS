@@ -7,6 +7,9 @@ import { Matrix } from '#math/Matrix';
 import { Polygon } from '#math/Polygon';
 import { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
+import { Container } from '#rendering/Container';
+import { Drawable } from '#rendering/Drawable';
+import { RetainedContainer } from '#rendering/RetainedContainer';
 
 describe('Vector construction', () => {
   test('defaults to (0, 0)', () => {
@@ -53,15 +56,22 @@ describe('Vector.copy()', () => {
 });
 
 describe('Vector.intersectsWith()', () => {
-  test('dispatches to SceneNode handling via getBounds()', () => {
-    const point = new Vector(5, 5);
-    const fakeSceneNode = {
-      collisionType: CollisionType.SceneNode,
-      getBounds: (): Rectangle => new Rectangle(0, 0, 10, 10),
-    };
+  test.each([
+    { name: 'ordinary', Parent: Container },
+    { name: 'retained', Parent: RetainedContainer },
+  ])('dispatches to SceneNode world bounds under an $name parent', ({ Parent }) => {
+    const parent = new Parent().setPosition(100, 100);
+    const node = new Drawable().setLocalBounds(0, 0, 10, 10);
 
-    expect(point.intersectsWith(fakeSceneNode as never)).toBe(true);
-    expect(new Vector(50, 50).intersectsWith(fakeSceneNode as never)).toBe(false);
+    parent.addChild(node);
+
+    try {
+      expect(new Vector(105, 105).intersectsWith(node)).toBe(true);
+      expect(new Vector(150, 150).intersectsWith(node)).toBe(false);
+      expect(new Vector(5, 5).intersectsWith(node)).toBe(false);
+    } finally {
+      parent.destroy();
+    }
   });
 
   test('dispatches to Rectangle handling', () => {

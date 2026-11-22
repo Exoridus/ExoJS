@@ -219,7 +219,7 @@ export class Circle extends ShapeRevision implements ShapeLike {
   public intersectsWith(target: Collidable): boolean {
     switch (target.collisionType) {
       case CollisionType.SceneNode:
-        return intersectionRectCircle((target as SceneNode).getBounds(), this);
+        return intersectionRectCircle((target as SceneNode)._getWorldBounds(), this);
       case CollisionType.Rectangle:
         return intersectionRectCircle(target as Rectangle, this);
       case CollisionType.Polygon:
@@ -240,7 +240,7 @@ export class Circle extends ShapeRevision implements ShapeLike {
   public collidesWith(target: Collidable): CollisionResponse | null {
     switch (target.collisionType) {
       case CollisionType.SceneNode:
-        return getCollisionCircleRectangle(this, (target as SceneNode).getBounds());
+        return getCollisionCircleRectangle(this, (target as SceneNode)._getWorldBounds());
       case CollisionType.Rectangle:
         return getCollisionCircleRectangle(this, target as Rectangle);
       case CollisionType.Polygon:

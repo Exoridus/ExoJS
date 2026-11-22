@@ -29,7 +29,9 @@ Use `context.view` for the scene's normal view or pass a dedicated view to a dra
 
 ## Follow a world-space target
 
-A view can follow an object with `x` and `y` coordinates. Those values must describe the intended world point. Following a deeply parented node's local position as though it were world position produces an incorrect camera target.
+A view can follow a plain object with world-space `x`/`y`, or a `SceneNode`. For a SceneNode, `View.follow` uses `getWorldTransform()` and follows the transformed local `(0, 0)` origin, including RetainedContainer boundaries. This is not automatically the position pivot of an anchored sprite. Follow an origin-free parent Container when its position is the desired target.
+
+`getGlobalTransform()` can stop at a retained render-group boundary and is not a universal synonym for world coordinates. `getWorldTransform()` composes the full chain. Its translation transforms the local origin; to obtain the node's position pivot, transform `node.origin` with that matrix. Public `contains`, `intersectsWith`, and `collidesWith` queries use world geometry, while render-group bounds/caches keep their own space.
 
 For smoothing, keep a separate world-space camera target and move it toward the subject in `update`. A frame-rate-aware exponential weight is `1 - Math.exp(-response * delta)`; unlike an unbounded `response * delta` weight, it does not overshoot simply because one frame was long. The [camera-follow recipe](/ExoJS/en/guide/recipes/camera-follow-and-parallax/) combines follow and parallax without changing the subject's simulated position.
 

@@ -169,6 +169,8 @@ export class SceneNode implements Collidable {
    * {@link RetainedContainer} pay only the null field.
    */
   private _worldTransform: Matrix | null = null;
+  /** World-space query bounds, allocated only when queried below a transform-group boundary. */
+  protected _worldBounds: Rectangle | null = null;
   /**
    * Stamp identifying the current content AND identity of the matrix returned
    * by {@link getWorldTransform}. Consumers caching a composition against this
@@ -540,6 +542,23 @@ export class SceneNode implements Collidable {
     return out === undefined ? bounds : out.copy(bounds);
   }
 
+  /**
+   * Transform the local extent into world space for collision consumers.
+   * Transforming a group-local AABB again would inflate rotated bounds. The
+   * no-arg result is owned by this node: collision responses may retain it, so a shared
+   * scratch rectangle would let an unrelated query overwrite their shapes.
+   * @internal
+   */
+  public _getWorldBounds(out?: Rectangle): Rectangle {
+    const anchor = this._resolveTransformGroupAnchor();
+
+    if (anchor === null) {
+      return this.getBounds(out);
+    }
+
+    return this.getLocalBounds().transform(this.getWorldTransform(), out ?? (this._worldBounds ??= new Rectangle()));
+  }
+
   public updateBounds(): this {
     this._bounds.reset().addRect(this.getLocalBounds(), this.getGlobalTransform());
 
@@ -720,22 +739,22 @@ export class SceneNode implements Collidable {
   }
 
   public getNormals(): Vector[] {
-    return this._isWorldAligned() ? this.getBounds().getNormals() : this._orientedBoundsPolygon().getNormals();
+    return this._isWorldAligned() ? this._getWorldBounds().getNormals() : this._orientedBoundsPolygon().getNormals();
   }
 
   public project(axis: Vector, result: Interval = new Interval()): Interval {
-    return this._isWorldAligned() ? this.getBounds().project(axis, result) : this._orientedBoundsPolygon().project(axis, result);
+    return this._isWorldAligned() ? this._getWorldBounds().project(axis, result) : this._orientedBoundsPolygon().project(axis, result);
   }
 
   /**
    * The node's oriented bounding box: the four local-bounds corners under the
-   * global transform, as a {@link Polygon}. Used by the SAT collision path so a
+   * world transform, as a {@link Polygon}. Used by the SAT collision path so a
    * rotated node tests its true oriented axes instead of the loose AABB. Built
    * lazily and refreshed in place; only ever reached for non-axis-aligned nodes.
    */
   private _orientedBoundsPolygon(): Polygon {
     const bounds = this.getLocalBounds();
-    const matrix = this.getGlobalTransform();
+    const matrix = this.getWorldTransform();
 
     orientedCorners[0]!.set(bounds.left, bounds.top).transform(matrix);
     orientedCorners[1]!.set(bounds.right, bounds.top).transform(matrix);
@@ -746,23 +765,21 @@ export class SceneNode implements Collidable {
   }
 
   /**
-   * Whether the node's *world* box is axis-aligned - its own and every inherited
-   * rotation/skew compose to a transform that maps axes to axes (a multiple of
-   * 90°, no shear). When true the AABB equals the oriented box, so the cheaper
-   * AABB collision/hit-test path is exact; otherwise the oriented-quad SAT path
-   * is used. Unlike {@link isAlignedBox} (this node's own rotation only), this
-   * accounts for a rotated ancestor.
+   * Whether the world box is axis-aligned, so its AABB equals its oriented box.
+   * Unlike {@link isAlignedBox}, this includes inherited rotation and skew,
+   * including transforms across retained boundaries.
+   * @internal
    */
-  private _isWorldAligned(): boolean {
-    const matrix = this.getGlobalTransform();
+  public _isWorldAligned(): boolean {
+    const world = this.getWorldTransform();
     const epsilon = 1e-9;
 
-    return (Math.abs(matrix.b) < epsilon && Math.abs(matrix.c) < epsilon) || (Math.abs(matrix.a) < epsilon && Math.abs(matrix.d) < epsilon);
+    return (Math.abs(world.b) < epsilon && Math.abs(world.c) < epsilon) || (Math.abs(world.a) < epsilon && Math.abs(world.d) < epsilon);
   }
 
   public intersectsWith(target: Collidable): boolean {
     if (this._isWorldAligned()) {
-      return this.getBounds().intersectsWith(target);
+      return this._getWorldBounds().intersectsWith(target);
     }
 
     switch (target.collisionType) {
@@ -773,13 +790,13 @@ export class SceneNode implements Collidable {
       case CollisionType.Polygon:
         return intersectionSat(this, target);
       case CollisionType.Circle:
-        return intersectionRectCircle(this.getBounds(), target as Circle);
+        return intersectionRectCircle(this._getWorldBounds(), target as Circle);
       case CollisionType.Ellipse:
-        return intersectionRectEllipse(this.getBounds(), target as Ellipse);
+        return intersectionRectEllipse(this._getWorldBounds(), target as Ellipse);
       case CollisionType.Line:
-        return intersectionLineRect(target as Line, this.getBounds());
+        return intersectionLineRect(target as Line, this._getWorldBounds());
       case CollisionType.Point:
-        return intersectionPointRect(target as Vector, this.getBounds());
+        return intersectionPointRect(target as Vector, this._getWorldBounds());
       default:
         return false;
     }
@@ -787,7 +804,7 @@ export class SceneNode implements Collidable {
 
   public collidesWith(target: Collidable): CollisionResponse | null {
     if (this._isWorldAligned()) {
-      return this.getBounds().collidesWith(target);
+      return this._getWorldBounds().collidesWith(target);
     }
 
     switch (target.collisionType) {
@@ -809,17 +826,17 @@ export class SceneNode implements Collidable {
    *
    * For world-axis-aligned nodes (own and inherited rotation a multiple of 90°
    * and no skew) the AABB equals the oriented box, so the cheap
-   * {@link getBounds} test is exact. For rotated or skewed nodes the point is
-   * mapped back into local space with the inverse of the global transform and
+   * world-bounds test is exact. For rotated or skewed nodes the point is
+   * mapped back into local space with the inverse of the world transform and
    * tested against the untransformed {@link getLocalBounds} - i.e. a true
    * oriented-box test. This is the exact inverse of the forward map that
-   * {@link getBounds} and the renderer use to place the node's corners, so
+   * the renderer uses, including any retained group transform, so
    * picking matches the rendered quad instead of over-reporting hits in the
    * empty AABB corners of a rotated node.
    */
   public contains(x: number, y: number): boolean {
     if (this._isWorldAligned()) {
-      return this.getBounds().contains(x, y);
+      return this._getWorldBounds().contains(x, y);
     }
 
     const local = this._toLocalPoint(x, y);
@@ -830,7 +847,7 @@ export class SceneNode implements Collidable {
   /**
    * Map the world-space point `(x, y)` back into this node's own local space -
    * the space {@link getLocalBounds} and every local-space shape are expressed
-   * in - or `null` when the node's global transform is singular (a zero scale
+   * in - or `null` when the node's world transform is singular (a zero scale
    * collapses it, so no world point maps back).
    *
    * The result is a shared scratch vector overwritten by the next call on any
@@ -840,7 +857,7 @@ export class SceneNode implements Collidable {
    * @internal
    */
   protected _toLocalPoint(x: number, y: number): Vector | null {
-    const matrix = this.getGlobalTransform();
+    const matrix = this.getWorldTransform();
     const determinant = matrix.a * matrix.d - matrix.b * matrix.c;
 
     if (determinant === 0) {
@@ -901,6 +918,7 @@ export class SceneNode implements Collidable {
 
     this._globalTransform.destroy();
     this._worldTransform?.destroy();
+    this._worldBounds?.destroy();
     this._worldAnchor = null;
     this._localBounds.destroy();
     this._bounds.destroy();

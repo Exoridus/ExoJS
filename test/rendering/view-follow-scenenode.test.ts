@@ -1,5 +1,7 @@
 import { SceneNode } from '#core/SceneNode';
 import { Container } from '#rendering/Container';
+import { RetainedContainer } from '#rendering/RetainedContainer';
+import { Sprite } from '#rendering/sprite/Sprite';
 import { View } from '#rendering/View';
 
 describe('View.follow(SceneNode)', () => {
@@ -43,6 +45,78 @@ describe('View.follow(SceneNode)', () => {
 
     expect(view.center.x).toBeCloseTo(120);
     expect(view.center.y).toBeCloseTo(130);
+  });
+
+  test('follow composes translation through nested retained groups', () => {
+    const view = new View(0, 0, 200, 200);
+    const outer = new RetainedContainer();
+    const inner = new RetainedContainer();
+    const child = new Container();
+
+    outer.setPosition(100, 100);
+    inner.setPosition(10, 20);
+    child.setPosition(20, 30);
+    outer.addChild(inner);
+    inner.addChild(child);
+    view.follow(child);
+    view.update(1 / 60);
+
+    expect(view.center.x).toBe(130);
+    expect(view.center.y).toBe(150);
+    expect([child.getGlobalTransform().x, child.getGlobalTransform().y]).toEqual([20, 30]);
+
+    outer.setPosition(200, 300);
+    view.update(1 / 60);
+
+    expect(view.center.x).toBe(230);
+    expect(view.center.y).toBe(350);
+
+    view.destroy();
+    outer.destroy();
+  });
+
+  test.each([
+    { name: 'ordinary', create: () => new Container() },
+    { name: 'retained', create: () => new RetainedContainer() },
+  ])('follow applies world offsets and lerp after a rotated, scaled $name parent', ({ create }) => {
+    const view = new View(0, 0, 200, 200);
+    const parent = create();
+    const child = new Container();
+
+    parent.setPosition(100, 100);
+    parent.setRotation(90);
+    parent.setScale(2, 3);
+    child.setPosition(20, 30);
+    parent.addChild(child);
+    view.follow(child, { lerp: 0.5, offsetX: 5, offsetY: -10 });
+    view.update(1 / 60);
+
+    // World target (190,60), offset (5,-10), then halfway from the original center.
+    expect(view.center.x).toBeCloseTo(97.5);
+    expect(view.center.y).toBeCloseTo(25);
+
+    view.destroy();
+    parent.destroy();
+  });
+
+  test('follow preserves the local-origin target for an anchored sprite inside a retained group', () => {
+    const view = new View(0, 0, 200, 200);
+    const group = new RetainedContainer();
+    const child = new Sprite();
+
+    group.setPosition(100, 100);
+    child.setLocalBounds(0, 0, 128, 32);
+    child.anchor.set(0.5, 0.5);
+    child.setPosition(100, 200);
+    group.addChild(child);
+    view.follow(child);
+    view.update(1 / 60);
+
+    expect(view.center.x).toBe(136);
+    expect(view.center.y).toBe(284);
+
+    view.destroy();
+    group.destroy();
   });
 
   test('switching follow target from nodeA to nodeB works', () => {

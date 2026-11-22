@@ -264,6 +264,43 @@ describe('Text', () => {
     expect(text.style).toBe(style);
   });
 
+  test('all shared-style readers acquire a changed font even after another reader consumes it', () => {
+    const style = new TextStyle({ fontSize: 16 });
+    const first = new Text('Hi');
+    const late = new Text('Hi');
+    const changedAtlas: Partial<GlyphAtlas> = {
+      ...mockAtlas,
+      getGlyph: () => ({ ...fixedGlyphInfo, advance: 20 }),
+      onCleared: new Signal(),
+    };
+
+    first.style = style;
+    late.style = style;
+    expect(first.textBounds.width).toBe(20);
+    expect(late.textBounds.width).toBe(20);
+
+    mockPool.getAtlas.mockReturnValue(changedAtlas);
+
+    try {
+      style.fontFamily = 'Georgia';
+      expect(first.textBounds.width).toBe(40);
+
+      // The late reader still owes a font lookup, even though the latest
+      // globally pending change now only requires layout.
+      style.lineHeight = 2;
+
+      expect(late.textBounds.width).toBe(40);
+      expect(late.textBounds.height).toBe(32);
+      expect(late.atlas).toBe(changedAtlas);
+      expect(first.style).toBe(style);
+      expect(late.style).toBe(style);
+    } finally {
+      mockPool.getAtlas.mockReturnValue(mockAtlas);
+      first.destroy();
+      late.destroy();
+    }
+  });
+
   test('constructor with TextStyleOptions creates a TextStyle', () => {
     const text = new Text('Hi', { fontSize: 24, align: 'right' });
 

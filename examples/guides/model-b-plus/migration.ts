@@ -26,8 +26,14 @@ class ModernScene extends Scene {
 export const swapHero = (scene: Scene, current: Sprite): Sprite => {
   const next = new Sprite('hero-damaged.png');
 
-  scene.root.removeChild(current);
-  scene.root.addChild(next);
+  try {
+    scene.root.addChild(next);
+  } catch (error) {
+    next.destroy();
+
+    throw error;
+  }
+
   current.destroy();
 
   return next;

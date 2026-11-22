@@ -132,11 +132,11 @@ Each clip still exposes an `fps` derived from the per-frame `duration` values As
 - A tag whose frames are all 100 ms produces **10 fps**; mixed durations are averaged (100/200/300 ms → 200 ms → **5 fps**).
 - When every frame duration in the tag is zero, the clip falls back to **12 fps**.
 
-`fps` alone can't represent uneven timing, though — an artist holding one "impact" frame twice as long as the rest would get flattened to a single average interval. Each clip therefore also carries `frameDurations`, a per-frame hold-time array (`AnimatedSpriteClipDefinition.frameDurations`) taken directly from Aseprite's per-frame `duration` field. When present, `frameDurations` is authoritative during playback; `fps` is retained only as a display-only average. A non-positive frame duration falls back to the tag's average, the same degenerate case the `fps` calculation itself guards against.
+`fps` alone can't represent uneven timing, though — an artist holding one "impact" frame twice as long as the rest would get flattened to a single average interval. Each clip therefore also carries `frameDurations`, a per-frame hold-time array (`AnimatedSpriteClipDefinition.frameDurations`) converted from Aseprite's millisecond `duration` field to seconds. When present, `frameDurations` is authoritative during playback; `fps` is retained only as a display-only average. A non-positive frame duration falls back to the tag's average, the same degenerate case the `fps` calculation itself guards against.
 
 ```ts
 sheet.clips.get('walk').fps;             // 5 — display-only average
-sheet.clips.get('walk').frameDurations;  // [100, 200, 300] — authoritative per-frame hold times
+sheet.clips.get('walk').frameDurations;  // [0.1, 0.2, 0.3] - authoritative hold times in seconds
 ```
 
 Frame indices in a tag that fall outside the frame array are skipped, and a tag whose entire (expanded) range is out of bounds produces no clip.
@@ -147,7 +147,9 @@ Exporting with Aseprite's *Trim* option removes transparent padding from each fr
 
 When any frame in a tag is trimmed, `AsepriteSheet.parse()` populates `AnimatedSpriteClipDefinition.frameOffsets` with each frame's `spriteSourceSize` `{x, y}` — its trimmed content's offset within the untrimmed canvas. `AnimatedSprite` applies that offset as a local translation on top of the sprite's own position/origin as it advances frames, keeping every frame anchored to the same point instead of jittering. `frameOffsets` is omitted entirely for tags with no trimmed frames, so untrimmed sheets are unaffected.
 
-This is transparent — nothing to opt into beyond exporting with *Trim* enabled in Aseprite and consuming clips the normal way through `createAnimatedSprite()` or `sheet.clips`.
+When the exported frames provide their original canvas size, each imported tag also carries `sourceSize: { width, height }` in local logical pixels. With this metadata an anchor uses the same authored canvas across tags, and the node keeps its scale as frames change. Source sizes and trim offsets are converted together by the already-loaded texture's resolution. Older exports missing the canvas metadata retain their raw trim offsets and inferred-size behavior, including at higher texture resolutions. Raw editor/slice metadata always retains source-pixel units. The importer's texture dependency is ready before clips are built.
+
+Older or hand-authored clips without `sourceSize` keep the inferred-canvas fallback. Different trimmed tags can then infer different extents and shift a normalized anchor. Add the original canvas size to each clip where known. For old data that cannot supply it, use `setAnchor(0)` followed by an explicit pixel `setOrigin(x, y)` for the authored pivot, or export uniformly untrimmed frames. Do not repeatedly infer gameplay collider geometry from the currently visible trimmed frame. The [animation guide](/ExoJS/en/guide/rendering/animation/#per-frame-timing-and-offsets) describes the optional metadata and compatibility fallback.
 
 ## Slices
 
@@ -174,7 +176,7 @@ hitbox?.center; // nine-slice centre relative to the bounds, when set
 hitbox?.data;   // the slice's user data from the editor
 ```
 
-Slice rectangles are in pixels of the untrimmed sprite canvas — the space a sprite from `createAnimatedSprite()` lays out trimmed frames in through `frameOffsets` — so a hitbox stays aligned however a frame was trimmed. Subtract the sprite's origin to place it in node-local coordinates. The sheet never turns slices into colliders or UI on its own; deciding what a slice means stays with your code.
+Slice rectangles retain source pixels of the untrimmed sprite canvas. For metadata-bearing clips, convert their coordinates and dimensions to logical units before combining them with `sourceSize` or origin values. A loaded, nonempty texture's source-to-logical scale is `texture.logicalWidth / texture.width`, with the analogous ratio for height. Transform a logical canvas point with `sprite.getWorldTransform()` to reach world space; that matrix already applies origin, scale, and rotation. Do not subtract the per-frame trim offset: the crop is positioned inside the authored canvas, and subtracting it would introduce jitter. For pivot-relative physics offsets, subtract the origin once and account for the chosen visual scale; the sprite transform does not resize colliders. The sheet never turns slices into colliders or UI on its own; deciding what a slice means stays with your code.
 
 `sheet.tags` keeps each frame tag with the editor colour and user data that clips do not carry.
 
@@ -184,7 +186,7 @@ Slice rectangles are in pixels of the untrimmed sprite canvas — the space a sp
 
 ## Texture ownership
 
-The packed image an `AsepriteSheet` uses is loaded through the `Loader` and owned by the **loader cache**. `AsepriteSheet.destroy()` releases the underlying `Spritesheet` frames; release the shared texture through the loader's own unload path when nothing else needs it.
+The scope that loads an `AsepriteSheet` owns its claim, and the sheet's dependency scope claims the packed image. Scene teardown releases a scene-owned sheet claim; other owners can keep the shared sheet or texture resident. Let the loader dispose a loader-owned sheet and release its dependency claim when no owner remains. Do not manually destroy the shared texture or sheet to remove one character. If you construct a sheet yourself with `AsepriteSheet.parse`, you own its frame resources and call `sheet.destroy()` when finished; that does not replace ownership of the texture supplied to the parser.
 
 ## Where to look next
 

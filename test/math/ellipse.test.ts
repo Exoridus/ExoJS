@@ -1,17 +1,19 @@
 import { Circle } from '#math/Circle';
 import type { Collidable } from '#math/collisionTypes';
-import { CollisionType } from '#math/collisionTypes';
 import { Ellipse } from '#math/Ellipse';
 import { Interval } from '#math/Interval';
 import { Line } from '#math/Line';
 import { Polygon } from '#math/Polygon';
 import { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
+import { Container } from '#rendering/Container';
+import { Drawable } from '#rendering/Drawable';
+import { RetainedContainer } from '#rendering/RetainedContainer';
 
-// A minimal stand-in for a SceneNode, which Ellipse only ever accesses through
-// `collisionType` + `getBounds()` in its intersectsWith()/collidesWith() switches.
-const fakeSceneNode = (bounds: Rectangle): Collidable =>
-  ({ collisionType: CollisionType.SceneNode, getBounds: () => bounds }) as unknown as Collidable;
+const nodeParents = [
+  { name: 'ordinary', Parent: Container },
+  { name: 'retained', Parent: RetainedContainer },
+];
 
 // A Collidable with a collisionType outside the known enum, to exercise the
 // `default` branch of the intersectsWith()/collidesWith() switches.
@@ -192,10 +194,18 @@ describe('Ellipse', () => {
   });
 
   describe('intersectsWith()', () => {
-    test('SceneNode branch delegates to the rectangle bounds', () => {
-      const ellipse = new Ellipse(5, 5, 3, 3);
+    test.each(nodeParents)('SceneNode branch uses world bounds under an $name parent', ({ Parent }) => {
+      const parent = new Parent().setPosition(100, 100);
+      const node = new Drawable().setLocalBounds(0, 0, 10, 10);
 
-      expect(ellipse.intersectsWith(fakeSceneNode(new Rectangle(0, 0, 10, 10)))).toBe(true);
+      parent.addChild(node);
+
+      try {
+        expect(new Ellipse(105, 105, 3, 3).intersectsWith(node)).toBe(true);
+        expect(new Ellipse(5, 5, 3, 3).intersectsWith(node)).toBe(false);
+      } finally {
+        parent.destroy();
+      }
     });
 
     test('Rectangle branch', () => {
@@ -242,12 +252,21 @@ describe('Ellipse', () => {
   });
 
   describe('collidesWith()', () => {
-    test('SceneNode branch delegates to the rectangle bounds', () => {
-      const ellipse = new Ellipse(-1, 5, 3, 3);
-      const response = ellipse.collidesWith(fakeSceneNode(new Rectangle(0, 0, 10, 10)));
+    test.each(nodeParents)('SceneNode branch uses world bounds under an $name parent', ({ Parent }) => {
+      const parent = new Parent().setPosition(100, 100);
+      const node = new Drawable().setLocalBounds(0, 0, 10, 10);
 
-      expect(response).not.toBeNull();
-      expect(response!.overlap).toBeCloseTo(2);
+      parent.addChild(node);
+
+      try {
+        const response = new Ellipse(99, 105, 3, 3).collidesWith(node);
+
+        expect(response).not.toBeNull();
+        expect(response!.overlap).toBeCloseTo(2);
+        expect(new Ellipse(-1, 5, 3, 3).collidesWith(node)).toBeNull();
+      } finally {
+        parent.destroy();
+      }
     });
 
     test('Rectangle branch', () => {

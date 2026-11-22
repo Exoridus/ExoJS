@@ -10,6 +10,7 @@ import { configDefaults, defineConfig, type Plugin } from 'vitest/config';
 import { CHROMIUM_WEBGL2_ARGS, CHROMIUM_WEBGPU_ARGS, FIREFOX_WEBGL2_PREFS } from './scripts/ci/browser-profiles.ts';
 import { fileProgressReporterPlugin } from './scripts/ci/file-progress-reporter.ts';
 import { emitAllocationRecord, startHeapSampling, stopHeapSampling } from './test/perf/webgpu/heapSamplingCommands.ts';
+import { startGuideMotion, stopGuideMotion } from './test/rendering/browser/guideMotionCommands.ts';
 import { resetParityEvidence, writeParityEvidence } from './test/rendering/parity/evidenceSink.ts';
 
 // Note: Vite alias matching uses longest-first order. Subpath aliases must come
@@ -531,6 +532,7 @@ export default defineConfig({
         test: {
           name: 'browser-webgl-chromium',
           globals: true,
+          globalSetup: ['./test/rendering/browser/_setup-demo-media.ts'],
           setupFiles: renderingBrowserSetupFiles,
           include: ['test/rendering/browser/webgl2-*.test.ts'],
           // `--use-angle=swiftshader` renders on the CPU, so several Chromium
@@ -546,6 +548,7 @@ export default defineConfig({
           browser: {
             ...browserDefaults,
             enabled: true,
+            commands: { startGuideMotion, stopGuideMotion },
             headless: webgl2Headless,
             provider: playwright({
               launchOptions: { channel: 'chromium', args: [...CHROMIUM_WEBGL2_ARGS] },
@@ -584,6 +587,7 @@ export default defineConfig({
         test: {
           name: 'browser-webgl-firefox',
           globals: true,
+          globalSetup: ['./test/rendering/browser/_setup-demo-media.ts'],
           setupFiles: renderingBrowserSetupFiles,
           include: ['test/rendering/browser/webgl2-*.test.ts'],
           // Firefox serves WebGL for every file from one GPU process, so

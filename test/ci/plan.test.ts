@@ -293,8 +293,9 @@ describe('the matrix entries carry what the setup action needs', () => {
 
   it('names the browser and the apt packages per lane', () => {
     const byId = Object.fromEntries(plan.test.map(entry => [entry.id, entry]));
+    expect(byId['webgl']).toMatchObject({ browser: 'chromium', apt: 'ffmpeg' });
     expect(byId['webgpu']).toMatchObject({ browser: 'chromium', apt: '' });
-    expect(byId['firefox']).toMatchObject({ browser: 'firefox', apt: '' });
+    expect(byId['firefox']).toMatchObject({ browser: 'firefox', apt: 'pulseaudio pulseaudio-utils' });
     expect(byId['unit']).toMatchObject({ browser: '', apt: '', naga: true });
   });
 

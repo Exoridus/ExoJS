@@ -8,12 +8,12 @@ import ExamplePreview from '../../../components/ExamplePreview.astro';
 
 # Physics and scene ownership
 
-Use `@codexo/exojs-physics` when gameplay needs rigid bodies, contact response, joints, or queries against a simulated world. For a pointer hit test or a few geometric overlap checks, [Gameplay collision](/ExoJS/en/guide/recipes/gameplay-collision/) may be sufficient.
+Use `@codexo/exojs/physics` when gameplay needs rigid bodies, contact response, joints, or queries against a simulated world. For a pointer hit test or a few geometric overlap checks, [Gameplay collision](/ExoJS/en/guide/recipes/gameplay-collision/) may be sufficient.
 
-The physics package is a library and a system, not an application extension descriptor. Install it alongside Core, construct a `PhysicsWorld`, and give that world an owner. There is no physics registration import to activate globally.
+The physics package is a library and a system, not an application extension descriptor. It ships inside Core; construct a `PhysicsWorld`, and give that world an owner. There is no physics registration import to activate globally.
 
 ```sh
-npm install --save-exact @codexo/exojs @codexo/exojs-physics
+npm install --save-exact @codexo/exojs
 ```
 
 ## A complete falling-box scene
@@ -25,6 +25,14 @@ This scene creates its own geometry, so no external assets are needed:
 `this.systems.add(world, ...)` lets the scene's system registry drive and destroy the world. `world.attach` creates a body and collider and binds the node to the simulated transform. The scene root owns the visible graphics. Those are separate ownership relationships even though one helper connects them.
 
 Do not also call `world.step()` from `update` or `fixedUpdate` in this setup. A second call would step the same world twice.
+
+## A sprite with collision-aware movement
+
+This complete program awaits the demo ball texture, fits a circle to its visible 70 x 70 artwork, and moves it against a visible static circle. The scene owns the world; each PhysicsBodyComponent owns its node's body membership and destruction. All bound nodes are direct children of an untransformed scene root.
+
+<SourceSnippet source="examples/guides/physics-basics/sprite-movement.ts" region="sprite-movement" language="ts" title="Ready artwork, a component-owned collider, and fixed-step movement" />
+
+Install `@codexo/exojs-demo-assets` for the media, click or tab to the canvas, and use WASD. The texture is loaded before reading its width. This circular artwork makes a radius from width appropriate; a padded atlas frame or an irregular sprite needs an authored inset, offset, or other shape. Visual scale does not resize collider geometry. The [animated character recipe](/ExoJS/en/guide/physics/character-movement/#idle-walk-and-jump-in-one-scene) shows an explicit inset capsule and offset.
 
 ## Choose one clock
 
@@ -56,9 +64,17 @@ Keep the visual node's origin aligned with the collider's intended origin. The e
 
 <SourceSnippet source="examples/guides/physics-basics/body-component.ts" region="body-component" language="ts" title="Bodies owned by their nodes" />
 
-Pass the world explicitly; the component never looks one up. Without a `position`, the body starts at the node's world position. `scene.query(PhysicsBodyComponent)` lists every node that carries one, including disabled components whose bodies are out of the world, and `node.getComponent(PhysicsBodyComponent)?.body` reaches the body from gameplay code.
+Pass the world explicitly; the component never looks one up. Without a `position`, the body starts at the node's world position pivot: its origin transformed by the full world matrix. An anchor therefore does not shift the body to the image's top-left corner. An explicit body position takes precedence. `scene.query(PhysicsBodyComponent)` lists every node that carries one, including disabled components whose bodies are out of the world, and `node.getComponent(PhysicsBodyComponent)?.body` reaches the body from gameplay code.
 
 A component-managed body cannot take part in a joint yet, mouse joints included. Use `world.add` and `world.bind` for bodies that need joints. `world.attach`, `world.add` and `world.bind` remain available whenever you want to manage a body's lifetime yourself, and `world.remove(body)` takes a body out of the simulation without destroying it.
+
+| Binding choice | What it creates/owns | When the node ends |
+| --- | --- | --- |
+| `world.attach(node, definition)` | Creates a world-owned body and collider, and a body-to-node binding. | The link is removed; the body stays in the world until explicitly removed/destroyed or the world ends. |
+| `world.add(body)` then `world.bind(body, node)` | The caller constructs the body; the world owns its simulation membership and binding. | Ending the binding does not destroy the body. This is the path for jointed bodies. |
+| `node.addComponent(new PhysicsBodyComponent(world, options))` | The component owns the body and couples membership to enable/disable. | Destroying the node/component destroys the body; disable preserves it for reactivation. |
+
+Choose one binding path per node. `world.remove(body)` removes membership without destroying a manually managed body. Component-managed membership belongs to the component, so do not separately add/remove that body.
 
 ## Coordinates, units, and rotation
 
@@ -66,7 +82,7 @@ The world uses the coordinate units you choose. In a pixel-based scene, velocity
 
 Positions use the scene's y-down convention, but rotation interfaces differ: physics angles are **radians**, with positive rotation clockwise on screen; scene-node rotation is **degrees**, with positive rotation counterclockwise on screen. The built-in node binding converts both the unit and sign. A manual binding needs the same conversion, not just multiplication by `180 / Math.PI`.
 
-The normal workflow is to use `bind` or `attach` instead of copying transforms yourself. Test unusual parent transforms and offsets deliberately; a body's world transform is not interchangeable with a node's local transform under an arbitrary parent.
+The normal workflow is to use `bind` or `attach` instead of copying transforms yourself. Keep bound nodes world-space-rooted: the binding writes the body's world pose into the node's local position/rotation. A translated, rotated, or scaled parent is not compensated, and retained-group and transformed-parent limits remain. Own-node skew is unsupported. The initial world-pivot calculation does not expand those ongoing binding limits. Put visual offsets and decoration on an unbound child when needed.
 
 ## Smooth presentation without changing simulation
 
@@ -80,9 +96,37 @@ Use sensors for regions that report overlap without physical response. Use colli
 
 A contact modifier changes contact policy, not the existence of the entire gameplay event system. For one-way platforms or conditional material behavior, see [Joints and contact behavior](/ExoJS/en/guide/physics/joints-and-dynamics/).
 
+### Collision filters
+
+| Field | Default | Rule |
+| --- | --- | --- |
+| `category` | `0x0001` | Bits describing this collider. |
+| `mask` | `0xffff` | Categories this collider accepts; the default covers the low 16 bits. |
+| `group` | `0` | Equal positive groups override the masks to permit a pair; equal negative groups reject it. Zero or unequal groups use the mask rule. |
+| `isSensor` | `false` | A sensor reports overlap without contact impulses. |
+
+With no equal nonzero group override, both `(a.mask & b.category) !== 0` and `(b.mask & a.category) !== 0` must hold. Use project constants such as `const Layer = { player: 1 << 0, enemy: 1 << 1, world: 1 << 2 } as const`; no string-layer registry is needed. See [the enemy sensor recipe](/ExoJS/en/guide/recipes/gameplay-collision/#enemies-and-physics-sensors) for both sides of the filter and a single collider-to-gameplay dispatcher.
+
+Events describe collider pairs. A multi-collider player may need a per-body overlap count or another explicit deduplication rule. Removing a collider produces its exit on a subsequent step, but destroying the world is not a guaranteed final stream of exit callbacks. Remove gameplay state at its ownership boundary rather than waiting for one last exit event.
+
+### Query contracts
+
+Omitting a query filter accepts every category. Passing a partial filter, including only `{ mask }`, fills missing fields with the collider defaults and applies the same **mutual** filter rule; it is not a one-sided layer scan. Ordinary point, AABB, ray, and overlap queries can return sensors. `shapeCast` excludes them by default.
+
+| Question | API | Results and boundaries |
+| --- | --- | --- |
+| What contains this world point? | `queryPoint(point, filter?)` | Fresh collider array. |
+| Which AABBs overlap a world region? | `queryAabb(bounds, filter?, out?)` | Reuses/clears an optional output array; candidates are not an exact shape-overlap result. |
+| Can I visit those candidates without an array? | `forEachAabbHit(bounds, filter, callback)` | Reuses scratch storage; the callback must not recursively call this method on the same world. Other query methods use separate buffers. |
+| What exactly overlaps this shape? | `overlapShape(shape, position, filter?, angle?)` | Fresh collider array; angle is radians. |
+| What lies along a line of sight? | `rayCast` / `rayCastAll` | A finite nonzero direction is normalized internally. `maxDistance` is in world units; rays ignore solid shapes containing the origin. `rayCastAll` can reuse an output array and sorts by distance. |
+| What blocks a translation? | `shapeCast(shape, position, displacement, options?, out?)` | First hit or null; translation only, with optional output hit, self-exclusion, filter, and `includeSensors`. It is not a rotating sweep. |
+
+Shape casts reject segment/chain inputs because those do not enclose area. They can report an initial overlap at fraction zero; movement out of an overlap or along its surface is treated separately. Reuse output buffers only after finishing the consumer of the previous result. See the [`PhysicsWorld` reference](/ExoJS/en/api/physics-world/) for the exact argument order and hit fields.
+
 ## Level geometry and teardown
 
-`@codexo/exojs-tilemap-physics` connects authored tile geometry to static bodies and streamed chunk lifetimes. Rendering a tilemap does not automatically create collision. Keep the physics bridge synchronized before the corresponding simulation step and release streamed colliders with their level owner.
+`@codexo/exojs/tilemap-physics` connects authored tile geometry to static bodies and streamed chunk lifetimes. Rendering a tilemap does not automatically create collision. Keep the physics bridge synchronized before the corresponding simulation step and release streamed colliders with their level owner.
 
 When the scene ends, its system registry destroys the registered world and its scene graph destroys the visible nodes. External listeners, application-owned worlds, or raw references retained by another subsystem still need their own lifetime decision. Do not keep a scene-owned body as a valid gameplay handle after its world has ended.
 

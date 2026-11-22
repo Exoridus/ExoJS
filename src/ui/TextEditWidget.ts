@@ -1,6 +1,8 @@
 import type { Application } from '#core/Application';
+import { SceneState } from '#core/scene/SceneState';
 import { Signal } from '#core/Signal';
 import type { Seconds } from '#core/units';
+import type { TextEditKeyCapture } from '#input/InputSystem';
 import type { InteractionEvent } from '#input/InteractionEvent';
 import type { KeyEvent } from '#input/KeyEvent';
 import type { Pointer } from '#input/Pointer';
@@ -54,6 +56,19 @@ const modifierChannels = new Set<number>([
   Keyboard.ControlRight,
   Keyboard.MetaLeft,
   Keyboard.MetaRight,
+]);
+
+const editingChannels = new Set<number>([
+  Keyboard.Left,
+  Keyboard.Right,
+  Keyboard.Up,
+  Keyboard.Down,
+  Keyboard.PageUp,
+  Keyboard.PageDown,
+  Keyboard.Home,
+  Keyboard.End,
+  Keyboard.Backspace,
+  Keyboard.Delete,
 ]);
 
 /**
@@ -122,6 +137,7 @@ export abstract class TextEditWidget extends Widget {
    */
   private _hostDeletes = 0;
   private _hostLineBreaks = 0;
+  private _textKeyCapture: TextEditKeyCapture | null = null;
   private _wrap = false;
   /** The wrap width already pushed into the text node; `-1` for "not wrapping". */
   private _appliedWrapWidth = -1;
@@ -235,6 +251,14 @@ export abstract class TextEditWidget extends Widget {
     // `number`), intentionally compared against the Keyboard enum constants
     // - see KeyEvent docs.
     /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison -- widening casts are redundant here, so the suppression is the only honest option */
+    if (this._stage?.app?.input._keyEventTextEditTarget != null) {
+      // This exact command already ran for its capture-time field (or the
+      // native IME). A later focus transfer must not apply it to another one.
+      event.preventDefault();
+
+      return;
+    }
+
     if (channel === Keyboard.Enter) {
       event.preventDefault();
 
@@ -272,7 +296,7 @@ export abstract class TextEditWidget extends Widget {
     }
   }
 
-  private _handleEditKeys(channel: number, extend: boolean, word: boolean): boolean {
+  private _handleEditKeys(channel: number, extend: boolean, word: boolean, shortcut = this._shortcutDown): boolean {
     // `channel` is a generic numeric input channel (KeyEvent.channel is
     // `number`), intentionally compared against the Keyboard enum constants
     // - see KeyEvent docs.
@@ -323,7 +347,7 @@ export abstract class TextEditWidget extends Widget {
 
         return true;
       default:
-        return this._applyShortcut(channel);
+        return this._applyShortcut(channel, shortcut, extend);
     }
     /* eslint-enable @typescript-eslint/no-unsafe-enum-comparison */
   }
@@ -470,6 +494,7 @@ export abstract class TextEditWidget extends Widget {
   }
 
   public override destroy(): void {
+    this._releaseTextKeyCapture();
     this._stopBlink();
     this._stopPointerDrag();
     this._seam?.destroy();
@@ -616,12 +641,25 @@ export abstract class TextEditWidget extends Widget {
     }
 
     this._bindSeam();
+
+    if (app !== null && this._seam?._synchronousKeyboard === true) {
+      const capture: TextEditKeyCapture = {
+        owner: this,
+        mode: channel => this._capturedKeyMode(app, channel),
+        handle: (channel, shift, control, shortcut) => this._applyCapturedKey(channel, shift, control, shortcut),
+      };
+
+      this._textKeyCapture = capture;
+      app.input._textEditKeyCapture = capture;
+    }
+
     this._invalidatePaint();
     this._syncSeam();
     this._seam?.focus();
   }
 
   private _loseEditFocus(): void {
+    this._releaseTextKeyCapture();
     this._stopBlink();
     // A modifier released while another node holds focus is never seen here,
     // so anything still held has to be forgotten rather than left latched.
@@ -634,6 +672,82 @@ export abstract class TextEditWidget extends Widget {
     this._syncSeam();
     this._seam?.destroy();
     this._seam = null;
+  }
+
+  private _releaseTextKeyCapture(): void {
+    const input = this._blinkApp?.input;
+
+    if (input?._textEditKeyCapture === this._textKeyCapture) {
+      input._textEditKeyCapture = null;
+    }
+
+    this._textKeyCapture = null;
+  }
+
+  private _canAcceptHostInput(app: Application): boolean {
+    const state = app.scenes.state;
+
+    return (
+      !this.destroyed &&
+      this.focused &&
+      this.focusable &&
+      this.visible &&
+      this.effectiveEnabled &&
+      this._stage?.app === app &&
+      (state === null || state === SceneState.Active) &&
+      !app.scenes._transitionGateOpen
+    );
+  }
+
+  private _capturedKeyMode(app: Application, channel: number): 'edit' | 'native' | null {
+    if (!this._canAcceptHostInput(app)) {
+      return null;
+    }
+
+    const values = app.input._actionSample().values;
+    const control = values[Keyboard.Control] !== 0;
+    const alt = values[Keyboard.Alt] !== 0;
+    const meta = values[Keyboard.Meta] !== 0;
+
+    /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison -- channels are generic numeric input channels */
+    const shortcut = (control || meta) && (channel === Keyboard.A || channel === Keyboard.Z || channel === Keyboard.Y);
+    const editing =
+      editingChannels.has(channel) || (channel === Keyboard.Enter && (this.model.multiline || this.model.composing)) || shortcut;
+
+    if (!editing) {
+      return null;
+    }
+
+    if (
+      this.model.composing ||
+      (alt && shortcut) ||
+      ((control || alt || meta || values[Keyboard.Shift] !== 0) && (channel === Keyboard.Backspace || channel === Keyboard.Delete))
+    ) {
+      return 'native';
+    }
+
+    return 'edit';
+    /* eslint-enable @typescript-eslint/no-unsafe-enum-comparison */
+  }
+
+  private _applyCapturedKey(channel: number, shift: boolean, control: boolean, shortcut: boolean): void {
+    this._hostDeletes = 0;
+    this._hostLineBreaks = 0;
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- channels are generic numeric input channels
+      if (channel === Keyboard.Enter) {
+        if (!this._readOnly) {
+          this.model.insert('\n');
+        }
+      } else {
+        this._handleEditKeys(channel, shift, control, shortcut);
+      }
+    } finally {
+      if (!this.destroyed) {
+        this._afterModelChange();
+      }
+    }
   }
 
   private _stopBlink(): void {
@@ -688,8 +802,23 @@ export abstract class TextEditWidget extends Widget {
 
   private _applyIntent(intent: TextEditIntent): void {
     this._goalX = null;
+    const app = this._stage?.app;
+
+    if (this._seam?._synchronousKeyboard === true && (app === undefined || !this._canAcceptHostInput(app))) {
+      this._syncSeam();
+
+      return;
+    }
+
+    const range = intent.kind === 'insert' || intent.kind === 'deleteContent' ? intent.range : undefined;
+
+    if (range !== undefined && (range.start !== this.model.selectionStart || range.end !== this.model.selectionEnd)) {
+      this.model.setSelection(range.start, range.end);
+    }
 
     if (this._readOnly) {
+      this._afterModelChange();
+
       return;
     }
 
@@ -704,6 +833,7 @@ export abstract class TextEditWidget extends Widget {
         break;
       case 'deleteContent':
         this.model.deleteContent(intent.direction, intent.granularity);
+
         this._hostDeletes++;
         break;
       case 'historyUndo':
@@ -717,12 +847,12 @@ export abstract class TextEditWidget extends Widget {
     this._afterModelChange();
   }
 
-  private _applyShortcut(channel: number): boolean {
+  private _applyShortcut(channel: number, shortcut: boolean, shift: boolean): boolean {
     // `channel` is a generic numeric input channel (KeyEvent.channel is
     // `number`), intentionally compared against the Keyboard enum constants
     // - see KeyEvent docs.
     /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison -- widening casts are redundant here, so the suppression is the only honest option */
-    if (!this._shortcutDown) {
+    if (!shortcut) {
       return false;
     }
 
@@ -741,7 +871,11 @@ export abstract class TextEditWidget extends Widget {
     }
 
     if (channel === Keyboard.Z) {
-      this.model.undo();
+      if (shift) {
+        this.model.redo();
+      } else {
+        this.model.undo();
+      }
 
       return true;
     }

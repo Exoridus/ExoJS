@@ -34,6 +34,8 @@ export abstract class AbstractText extends Drawable {
   private _lastLayout: TextLayoutResult | null = null;
   /** Heaviest change awaiting a layout pass, or `null` when settled. */
   private _pendingHint: StyleChangeHint | null = 'font';
+  /** Each node observes a shared style independently of every other reader. */
+  private _styleRevision = 0;
 
   /**
    * Stamps the node content-dirty when the attached style is mutated IN PLACE.
@@ -240,20 +242,22 @@ export abstract class AbstractText extends Drawable {
   protected _replaceStyle(style: TextStyle): void {
     this._style.onChange.remove(this._onStyleChange);
     this._style = style;
+    this._styleRevision = 0;
     this._style.onChange.add(this._onStyleChange);
     this._markDirty('font');
   }
 
   /**
-   * Take the heaviest pending hint and settle the node, folding in whatever
-   * the attached {@link TextStyle} has latched since the last pass. A style
-   * carries its own dirty flag because it is mutated in place rather than
-   * assigned, so polling it here is what makes `label.style.align = ...` land.
+   * Settle this node's own changes and its observed style revision. Clearing
+   * the style's public dirty cycle rearms onChange; it must not erase a
+   * layout or font change that another node sharing the style has yet to read.
    */
   protected _consumePendingHint(): StyleChangeHint | null {
     const own = this._pendingHint;
-    const style = this._style.consumeDirty();
+    const style = this._style._hintSince(this._styleRevision);
 
+    this._styleRevision = this._style._revision;
+    this._style.consumeDirty();
     this._pendingHint = null;
 
     if (own === null) {

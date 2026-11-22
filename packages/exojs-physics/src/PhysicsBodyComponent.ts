@@ -19,7 +19,7 @@ import type { PhysicsWorld } from './PhysicsWorld';
  * The body exists from construction, so {@link body} can be configured before
  * the node enters a scene. Unless `options.position` or `options.angle` is
  * given, the first activation places the body at the node's current world
- * position or rotation. The node must be world-space-rooted, as for
+ * position pivot or rotation, including its anchor/pixel origin. The node must be world-space-rooted, as for
  * {@link PhysicsWorld.bind}; the body keeps writing world coordinates to the
  * node, so moving it under a transformed parent is not corrected.
  *

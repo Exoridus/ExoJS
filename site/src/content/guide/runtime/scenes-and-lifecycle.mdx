@@ -25,7 +25,7 @@ Register scene classes in `ApplicationOptions.scenes` and await `app.start(YourS
 | `fixedUpdate(delta)` | Gameplay on the fixed clock: movement and commands a physics world or other fixed-step system consumes. Read held actions as values and presses through `action.tick`. |
 | `update(delta)` | Variable-rate work: camera, animation, UI state and other presentation. |
 | `draw(context)` | Only when the scene needs control over rendering. The default renders the scene's root. |
-| `async unload()` | Await scene-specific shutdown work after a successfully activated scene ends permanently. |
+| `async unload()` | Await scene-specific shutdown work after a scene that completed preparation ends permanently, including a ready preload that never activated. |
 | `destroy()` | Synchronous cleanup of objects or external subscriptions owned by your code. |
 
 `this.app`, `this.loader`, `this.inputs`, `this.systems`, and the other scene-bound services are unavailable during construction. They are available after attachment, including in `load`, `init`, and teardown hooks. A scene's activation-data type is the first `Scene` generic; the same activation data reaches `load` and `init`.
@@ -83,7 +83,22 @@ These are different operations:
 
 Await navigation when subsequent work depends on its result, and handle a rejected navigation promise at the initiating boundary. A transition changes the presentation of the handoff; it does not remove loading or failure semantics. [Custom transitions](/ExoJS/en/guide/runtime/writing-your-own-transition/) explains the definition/session boundary when the built-in transitions are insufficient.
 
-Ordinary pause stops scene updates and scene systems while allowing the scene to draw. Scene-bound services also have availability policies. In particular, `this.tweens` is **scene-owned**, but its default `when: 'always'` continues during ordinary pause. Choose an active-only policy for gameplay motion and an always or paused policy deliberately for a pause interface.
+Ordinary pause stops scene updates and scene systems while allowing the scene to draw. Scene-bound services also have availability policies. In particular, `this.tweens` is **scene-owned**, but its default `when: SceneAvailability.Always` continues during ordinary pause. Choose an active-only policy for gameplay motion and an always or paused policy deliberately for a pause interface.
+
+| Subsystem | Ordinary pause default | Retention and permanent teardown |
+| --- | --- | --- |
+| Scene hooks, behaviours, scene systems | `update` and `fixedUpdate` stop; `draw` and the UI pass continue. | Retention suspends; teardown destroys owned systems/nodes. |
+| Components | Stay enabled and present in queries; behaviour hooks stop ticking. | Retention disables, restoration enables; node destruction destroys components. |
+| `scene.interaction` observations/scopes | `SceneAvailability.Always`: pause UI can keep receiving interaction. | Suspended until restoration; observations/scopes release at teardown. |
+| `scene.inputs` bindings and action maps | `SceneAvailability.Active`: input stops. | Suspended until restoration; bindings/maps detach on teardown. |
+| `scene.animations` | `SceneAvailability.Always`: playback continues. | Suspended until restoration; registrations end with the scene. |
+| `scene.tweens` | `SceneAvailability.Always`: playback continues. | Suspended until restoration; scene-owned tweens stop on teardown. |
+| `scene.coroutines` | `SceneAvailability.Always`: scheduling continues. | Suspended until restoration; generators are cancelled on teardown. |
+| `scene.audio` | `SceneAvailability.Always`: voices continue. | Tracked pausable voices are held while retained and stopped at teardown. |
+| `scene.loader` / `scene.assets` | Loading and claims continue; pause is not cancellation. | Claims survive retention and release on permanent teardown. |
+| `app` systems, playback, and assets | Independent of the scene's pause policy. | Survive the scene; the application or an explicit owner cleans them up. |
+
+Use the exported `SceneAvailability` enum in TypeScript. `Active` runs only during play, `Paused` only during ordinary pause, and `Always` in both. None makes a preparing or retained scene active. Audio availability can only hold voices with pause support; unsupported voices keep playing and development builds warn. Register an `AnimatedSprite` with `this.animations.add(sprite, { when: SceneAvailability.Active })` when scene-owned gameplay pause must stop it.
 
 A policy applies from the moment a tween, animation, sound or coroutine starts: an active-only tween started while the scene is paused waits for resume, and a paused-only one started during play waits for the next pause. The scene's availability is kept apart from your own playback calls, so a tween you pause yourself stays paused when the scene resumes, and one you resume yourself during a pause still waits for the scene. Retention suspension is a separate boundary: it suspends scene-bound activity until restoration.
 
@@ -91,9 +106,11 @@ A policy applies from the moment a tween, animation, sound or coroutine starts: 
 
 The engine cleans up the scene graph, UI, and scene-bound services independently of your `destroy()` override. You do **not** need `super.destroy()` to preserve that internal cleanup. Scene-owned loader claims release automatically; manually unloading every texture in `unload` is neither necessary nor a substitute for choosing the correct owner.
 
-Use `this.track(resource)` for a `Destroyable` your scene creates outside those automatically owned facilities. Tracked resources are destroyed in reverse registration order. External DOM listeners, timers, observers, and resources acquired directly at application scope still need an explicit ownership decision.
+Use `this.track(resource)` for a `Destroyable` your scene creates outside those automatically owned facilities. Tracked resources are destroyed in reverse registration order. `track` manages destruction only; it does not acquire assets for a detached render node. External DOM listeners, timers, observers, and resources acquired directly at application scope still need an explicit ownership decision.
 
-Do not make `unload` the only place that releases partially initialized work: it is not the successful-shutdown hook of a scene that never completed activation. Register ownership when acquiring resources, and use `lifecycleSignal` for cancellable asynchronous work. Scene teardown aborts that signal before unloading. An unrelated promise that ignores cancellation can still finish later; it must not then mutate a scene that has ended.
+When a scene that reached `Ready` ends permanently, scene availability ends and `lifecycleSignal` aborts before `unload`. This also applies when discarding a ready preload that never became active. After that async hook settles, the engine destroys scene systems and playback/input/interaction services, detaches automatic root/UI observations, invokes your synchronous `destroy` hook, and destroys tracked resources and scene nodes. Loader claims release last. Each stage is guarded so a failing earlier cleanup does not skip later owners. Do not destroy loader-owned textures or call the loader scope's teardown from either hook. Use `unload` for additional async work and `destroy` to remove external subscriptions; internal cleanup does not depend on calling `super.destroy()`.
+
+Do not make `unload` the only place that releases partially initialized work: failed or cancelled preparation that never reached `Ready` skips it. Register ownership when acquiring resources, and use `lifecycleSignal` for cancellable asynchronous work. Scene teardown aborts that signal before unloading. An unrelated promise that ignores cancellation can still finish later; it must not then mutate a scene that has ended.
 
 A navigation or preload cancelled while `load` is still pending aborts the same signal. Once `load` settles, such a scene is torn down without running `init` or `unload`; its `destroy` still runs, and so does the cleanup of everything it registered with its scene services.
 

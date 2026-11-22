@@ -52,6 +52,7 @@ export class Sprite extends Drawable {
   declare private _textureClaim: LoaderScope | undefined;
   declare private _claimedScope: LoaderScope | null | undefined;
   declare private _claimedAsset: object | null | undefined;
+  private _textureClaimRevision = 0;
   private _textureFrame: Rectangle = new Rectangle();
   private _frameResolution = 1;
   /**
@@ -217,8 +218,9 @@ export class Sprite extends Drawable {
   }
 
   /**
-   * World-space corner positions of the sprite quad, computed lazily from the
-   * current transform and texture frame. Layout: [x0,y0, x1,y1, x2,y2, x3,y3]
+   * Rendering-space corner positions of the sprite quad: world space normally,
+   * group-local space below a retained transform boundary. Computed lazily from
+   * the current transform and texture frame. Layout: [x0,y0, x1,y1, x2,y2, x3,y3]
    * (TL, TR, BR, BL). Cached until the transform is invalidated.
    */
   public get vertices(): Float32Array {
@@ -308,8 +310,9 @@ export class Sprite extends Drawable {
     );
 
     if (this._texture !== texture) {
-      this._texture = texture;
-      this._syncTextureClaim(this.parent?._getAssetScope() ?? null);
+      if (!this._syncTextureClaim(this.parent?._getAssetScope() ?? null, texture, true)) {
+        return this;
+      }
 
       if (texture !== null) {
         this.resetTextureFrame();
@@ -330,11 +333,24 @@ export class Sprite extends Drawable {
     this._syncTextureClaim(scope);
   }
 
-  private _syncTextureClaim(scope: LoaderScope | null): void {
-    const texture = scope !== null && this._texture instanceof Texture ? this._texture._pathAsset() : null;
+  public override _validateAssetScope(scope: LoaderScope | null): void {
+    const asset = this._texture instanceof Texture ? this._texture._pathAsset() : null;
+
+    if (scope !== null && asset !== null) {
+      scope._assertLeafOwner(asset);
+    }
+  }
+
+  private _syncTextureClaim(scope: LoaderScope | null, nextTexture = this._texture, publishTexture = false): boolean {
+    const texture = scope !== null && nextTexture instanceof Texture ? nextTexture._pathAsset() : null;
+    const revision = ++this._textureClaimRevision;
 
     if (scope === (this._claimedScope ?? null) && texture === (this._claimedAsset ?? null)) {
-      return;
+      if (publishTexture) {
+        this._texture = nextTexture;
+      }
+
+      return true;
     }
 
     const previous = this._textureClaim;
@@ -353,10 +369,25 @@ export class Sprite extends Drawable {
       }
     }
 
+    // Acquisition may run application callbacks. A newer swap, detach or destroy
+    // owns the final state; abandon this claim instead of publishing stale work.
+    if (revision !== this._textureClaimRevision || (this.destroyed && claim !== undefined)) {
+      claim?.destroy();
+
+      return false;
+    }
+
     this._textureClaim = claim;
     this._claimedScope = claim === undefined ? null : scope;
     this._claimedAsset = claim === undefined ? null : texture;
+
+    if (publishTexture) {
+      this._texture = nextTexture;
+    }
+
     previous?.destroy();
+
+    return revision === this._textureClaimRevision;
   }
 
   /**
@@ -503,6 +534,10 @@ export class Sprite extends Drawable {
    * computed from `vertices`. Used by the SAT collision system.
    */
   public override getNormals(): Vector[] {
+    if (this._resolveTransformGroupAnchor() !== null) {
+      return super.getNormals();
+    }
+
     // Read vertices first: the getter settles the world-transform version and
     // rebuilds the quad if an ancestor moved, so the version compare below
     // sees the up-to-date value.
@@ -549,6 +584,10 @@ export class Sprite extends Drawable {
    * scalar interval. Used by the SAT collision system.
    */
   public override project(axis: Vector, result: Interval = new Interval()): Interval {
+    if (this._resolveTransformGroupAnchor() !== null) {
+      return super.project(axis, result);
+    }
+
     // vertices is a fixed 8-element Float32Array (4 corners).
     const v = this.vertices;
     const x1 = v[0]!;
@@ -575,11 +614,11 @@ export class Sprite extends Drawable {
    * A {@link RenderNode.hitArea} replaces the quad test entirely.
    */
   public override contains(x: number, y: number): boolean {
-    if (this.hitArea !== null) {
+    if (this.hitArea !== null || this._resolveTransformGroupAnchor() !== null) {
       return super.contains(x, y);
     }
 
-    if (this.isAlignedBox) {
+    if (this._isWorldAligned()) {
       return this.getBounds().contains(x, y);
     }
 
@@ -619,6 +658,7 @@ export class Sprite extends Drawable {
   }
 
   public override destroy(): void {
+    this._textureClaimRevision++;
     super.destroy();
 
     if (this._normals !== null) {

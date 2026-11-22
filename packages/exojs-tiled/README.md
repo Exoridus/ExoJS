@@ -1,14 +1,14 @@
 # @codexo/exojs-tiled
 
-Load Tiled JSON maps into ExoJS's format-neutral tilemap runtime. Use this adapter for `.tmj` maps and their tilesets; use `@codexo/exojs-tilemap` alone for maps created directly in code.
+Load Tiled JSON maps into ExoJS's format-neutral tilemap runtime. Use this adapter for `.tmj` maps and their tilesets; use `@codexo/exojs/tilemap` alone for maps created directly in code.
 
 ## Install
 
 ```sh
-npm install --save-exact @codexo/exojs @codexo/exojs-tilemap @codexo/exojs-tiled
+npm install --save-exact @codexo/exojs @codexo/exojs-tiled
 ```
 
-Core and the tilemap runtime are peer dependencies. Install them explicitly and keep them on the adapter's compatible release line.
+Core is a peer dependency and includes the tilemap runtime. Install Core and this adapter on compatible release lines.
 
 ## Load and render a map
 
@@ -44,7 +44,7 @@ The adapter reads JSON (`.tmj` / `.tsj` / `.tj` templates), not Tiled's XML expo
 
 Tileset resources acquired through the loader have loader-managed claims and dependencies. Do not manually destroy a shared tileset texture to unload one map. Give the map a scene or shorter-lived loader scope, and clean up the scene nodes that display it before releasing their required resources.
 
-`TileMap`, `TileMapNode`, `TileMapView`, and the other runtime re-exports are the same bindings as in `@codexo/exojs-tilemap`, not independent adapter-specific classes.
+`TileMap`, `TileMapNode`, `TileMapView`, and the other runtime re-exports are the same bindings as in `@codexo/exojs/tilemap`, not independent adapter-specific classes.
 
 ## Isometric maps
 

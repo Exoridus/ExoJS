@@ -5,6 +5,7 @@ import type { AssetFactoryContext } from '@codexo/exojs';
 import { Asset, Texture } from '@codexo/exojs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { AsepriteArrayData } from '../src/AsepriteData';
 import { AsepriteSheet } from '../src/AsepriteSheet';
 import { AsepriteFormatError, asepriteType } from '../src/asepriteType';
 
@@ -118,6 +119,46 @@ describe('asepriteType - array fixture', () => {
     expect(sheet.spritesheet.frames.size).toBe(3);
   });
 
+  it('uses the loaded texture density when a deferred dependency settles', async () => {
+    const fixture = loadFixture('hero.array.json') as AsepriteArrayData;
+    const data = {
+      ...fixture,
+      frames: fixture.frames.map(frame => ({
+        ...frame,
+        trimmed: true,
+        sourceSize: { w: 128, h: 128 },
+        spriteSourceSize: { ...frame.spriteSourceSize, x: 58, y: 86 },
+      })),
+    };
+    const { loadSheet, loaderLoad } = makeContext({ 'sprites/hero.json': data });
+    let resolveTexture!: (texture: Texture) => void;
+    const dependency = new Promise<Texture>(resolve => {
+      resolveTexture = resolve;
+    });
+
+    loaderLoad.mockReturnValueOnce(dependency);
+
+    const loading = loadSheet('sprites/hero.json');
+    const texture = new Texture();
+
+    await Promise.resolve();
+    texture.width = 48;
+    texture.height = 16;
+    texture._assetResolution = 2;
+    resolveTexture(texture);
+
+    const sheet = await loading;
+    const sprite = sheet.createAnimatedSprite().setAnchor(0.5, 0.75).play('walk');
+
+    expect(sprite.origin.x).toBe(32);
+    expect(sprite.origin.y).toBe(48);
+    expect(sprite.getLocalBounds().x).toBe(29);
+    expect(sprite.getLocalBounds().y).toBe(43);
+    sprite.destroy();
+    sheet.destroy();
+    texture.destroy();
+  });
+
   it('resolves a relative image ref against an absolute (scheme-qualified) source URL', async () => {
     const { loadSheet, loaderLoad } = makeContext({ 'https://cdn.example.com/sprites/hero.json': loadFixture('hero.array.json') });
     await loadSheet('https://cdn.example.com/sprites/hero.json');
@@ -215,6 +256,59 @@ describe('asepriteType - AsepriteFormatError on malformed input', () => {
     const sheet = await loadRaw(doc);
 
     expect(sheet.clips.get('walk')?.frameDurations).toEqual([1 / 12, 1 / 12]);
+  });
+
+  it.each([null, { w: 0, h: 16 }, { w: 16, h: -1 }, { w: '16', h: 16 }])(
+    'rejects invalid sourceSize %j before acquiring the image',
+    async sourceSize => {
+      const fixture = loadFixture('hero.array.json') as AsepriteArrayData;
+      const data = { ...fixture, frames: fixture.frames.map(frame => ({ ...frame, sourceSize })) };
+      const { loadSheet, loaderLoad } = makeContext({ 'doc.json': data });
+
+      await expect(loadSheet('doc.json')).rejects.toThrow(AsepriteFormatError);
+      expect(loaderLoad).not.toHaveBeenCalled();
+    },
+  );
+
+  it('continues to load older input without sourceSize using the legacy frame extent', async () => {
+    const fixture = loadFixture('hero.array.json') as AsepriteArrayData;
+    const frames = fixture.frames.map(({ sourceSize: _sourceSize, ...frame }) => frame);
+    const sheet = await loadRaw({ ...fixture, frames });
+    const sprite = sheet.createAnimatedSprite().setAnchor(0.5).play('walk');
+
+    expect(sprite.origin.x).toBe(8);
+    expect(sprite.origin.y).toBe(8);
+    expect(sheet.clips.get('walk')!.sourceSize).toBeUndefined();
+    sprite.destroy();
+    sheet.destroy();
+  });
+
+  it.each([1, 2])('preserves legacy trimmed offsets without sourceSize at resolution %s', async resolution => {
+    const fixture = loadFixture('hero.array.json') as AsepriteArrayData;
+    const frames = fixture.frames.map(({ sourceSize: _sourceSize, ...frame }) => ({
+      ...frame,
+      trimmed: true,
+      spriteSourceSize: { ...frame.spriteSourceSize, x: 58, y: 86 },
+    }));
+    const { loadSheet, loaderLoad } = makeContext({ 'doc.json': { ...fixture, frames } });
+    const texture = new Texture();
+
+    texture.width = 48;
+    texture.height = 16;
+    texture._assetResolution = resolution;
+    loaderLoad.mockResolvedValueOnce(texture);
+
+    const sheet = await loadSheet('doc.json');
+    const sprite = sheet.createAnimatedSprite().setAnchor(0.5).play('walk');
+
+    expect(sheet.clips.get('walk')!.sourceSize).toBeUndefined();
+    expect(sprite.origin.x).toBe(37);
+    expect(sprite.origin.y).toBe(51);
+    expect(sprite.getLocalBounds().x).toBe(58);
+    expect(sprite.getLocalBounds().y).toBe(86);
+    sprite.destroy();
+    sheet.destroy();
+    texture.destroy();
   });
 
   it('attaches the source URL and typed name to the thrown error', async () => {

@@ -48,22 +48,23 @@ describe('BrowserTextInput hints', () => {
 
 describe('BrowserTextInput editing', () => {
   test.each([
-    ['insertText', { kind: 'insert', text: 'x' }],
-    ['insertCompositionText', { kind: 'insert', text: 'x' }],
-    ['insertFromPaste', { kind: 'insert', text: 'x', source: 'paste' }],
-    ['insertLineBreak', { kind: 'insert', text: '\n' }],
-    ['deleteContentBackward', { kind: 'deleteContent', direction: 'backward', granularity: 'character' }],
-    ['deleteContentForward', { kind: 'deleteContent', direction: 'forward', granularity: 'character' }],
-    ['deleteWordBackward', { kind: 'deleteContent', direction: 'backward', granularity: 'word' }],
-    ['deleteWordForward', { kind: 'deleteContent', direction: 'forward', granularity: 'word' }],
-    ['deleteSoftLineBackward', { kind: 'deleteContent', direction: 'backward', granularity: 'line' }],
-    ['deleteSoftLineForward', { kind: 'deleteContent', direction: 'forward', granularity: 'line' }],
+    ['insertText', { kind: 'insert', text: 'x', range: { start: 1, end: 2 } }],
+    ['insertCompositionText', { kind: 'insert', text: 'x', range: { start: 1, end: 2 } }],
+    ['insertFromPaste', { kind: 'insert', text: 'x', source: 'paste', range: { start: 1, end: 2 } }],
+    ['insertLineBreak', { kind: 'insert', text: '\n', range: { start: 1, end: 2 } }],
+    ['deleteContentBackward', { kind: 'deleteContent', direction: 'backward', granularity: 'character', range: { start: 1, end: 2 } }],
+    ['deleteContentForward', { kind: 'deleteContent', direction: 'forward', granularity: 'character', range: { start: 1, end: 2 } }],
+    ['deleteWordBackward', { kind: 'deleteContent', direction: 'backward', granularity: 'word', range: { start: 1, end: 2 } }],
+    ['deleteWordForward', { kind: 'deleteContent', direction: 'forward', granularity: 'word', range: { start: 1, end: 2 } }],
+    ['deleteSoftLineBackward', { kind: 'deleteContent', direction: 'backward', granularity: 'line', range: { start: 1, end: 2 } }],
+    ['deleteSoftLineForward', { kind: 'deleteContent', direction: 'forward', granularity: 'line', range: { start: 1, end: 2 } }],
     ['historyUndo', { kind: 'historyUndo' }],
     ['historyRedo', { kind: 'historyRedo' }],
   ] as const)('%s emits one intent and cancels the host edit', (inputType, expected) => {
     const backend = new BrowserTextInput(document.createElement('canvas'));
     const listener = vi.fn();
     backend.onEdit.add(listener);
+    backend.setValue('abc', 1, 2);
     const event = new InputEvent('beforeinput', { inputType, data: 'x', cancelable: true });
 
     transportElement().dispatchEvent(event);

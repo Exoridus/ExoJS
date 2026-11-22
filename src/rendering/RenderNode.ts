@@ -29,6 +29,13 @@ import type { ColorTextureFormat, TargetResolution } from './types';
 import { BlendModes, isAdvancedBlendMode, TextureFormat } from './types';
 import { View } from './View';
 
+/** One synchronous, already-preflighted asset scope propagation. @internal */
+export interface AssetScopeValidation {
+  readonly scope: LoaderScope;
+  readonly ownershipRevision: number;
+  readonly revisions: Map<RenderNode, number>;
+}
+
 /**
  * The cache sprite, described structurally so this module never imports the
  * `Sprite` class (that edge would close a runtime cycle). `Drawable` is folded
@@ -763,7 +770,12 @@ export abstract class RenderNode extends SceneNode {
   }
 
   /** Propagates scene asset ownership independently of active rendering. @internal */
-  public _setAssetScope(_scope: LoaderScope | null): void {
+  public _setAssetScope(_scope: LoaderScope | null, _validation?: AssetScopeValidation): void {
+    // Overridden by nodes that own asset claims.
+  }
+
+  /** Check a prospective owner before a scene-tree mutation publishes any changes. @internal */
+  public _validateAssetScope(_scope: LoaderScope | null, _validation?: AssetScopeValidation): void {
     // Overridden by nodes that own asset claims.
   }
 

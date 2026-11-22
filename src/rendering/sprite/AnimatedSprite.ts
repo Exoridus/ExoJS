@@ -38,6 +38,17 @@ export interface AnimatedSpriteClipDefinition {
    * it, differently-trimmed frames would jitter around their own top-left.
    */
   readonly frameOffsets?: ReadonlyArray<{ readonly x: number; readonly y: number }>;
+  /**
+   * Original untrimmed canvas in local (pre-scale) logical pixels. Anchors use
+   * this box, and frame changes preserve the sprite's scale so differently
+   * cropped frames retain their authored proportions. Both dimensions must
+   * be positive and finite.
+   *
+   * When omitted, clips with offsets infer a canvas from their frame extents;
+   * other clips anchor to each frame. These legacy clips keep their rendered
+   * width and height when the frame changes.
+   */
+  readonly sourceSize?: { readonly width: number; readonly height: number };
 }
 
 /** Per-call options passed to {@link AnimatedSprite.play}. */
@@ -57,14 +68,10 @@ interface NormalizedAnimatedSpriteClip {
   readonly frameDurations: readonly Seconds[] | null;
   readonly frameOffsets: ReadonlyArray<{ readonly x: number; readonly y: number }> | null;
   readonly repeat: number;
-  /**
-   * The clip's untrimmed source canvas, or `null` for a clip without
-   * {@link AnimatedSpriteClipDefinition.frameOffsets} (nothing was trimmed, so
-   * the frame rectangle IS the layout box). Computed once at
-   * {@link AnimatedSprite.addClip} time; see
-   * {@link AnimatedSprite._updateOrigin} for how it is derived and why.
-   */
+  /** Authored canvas, kept distinct so legacy clips do not acquire new metadata on serialization. */
   readonly sourceSize: { readonly width: number; readonly height: number } | null;
+  /** Legacy offset-plus-frame extent, computed once when no authored canvas is available. */
+  readonly inferredSourceSize: { readonly width: number; readonly height: number } | null;
 }
 
 const defaultClipFps = 12;
@@ -248,7 +255,19 @@ export class AnimatedSprite extends Sprite {
 
     let sourceSize: { width: number; height: number } | null = null;
 
-    if (frameOffsets !== null) {
+    if (clip.sourceSize !== undefined) {
+      const { width, height } = clip.sourceSize;
+
+      if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
+        throw new RangeError(`AnimatedSprite clip "${name}" sourceSize must have positive finite width and height.`);
+      }
+
+      sourceSize = { width, height };
+    }
+
+    let inferredSourceSize: { width: number; height: number } | null = null;
+
+    if (sourceSize === null && frameOffsets !== null) {
       let width = 0;
       let height = 0;
 
@@ -261,7 +280,7 @@ export class AnimatedSprite extends Sprite {
         height = Math.max(height, offset.y + frame.height);
       }
 
-      sourceSize = { width, height };
+      inferredSourceSize = { width, height };
     }
 
     this._clips.set(name, {
@@ -271,6 +290,7 @@ export class AnimatedSprite extends Sprite {
       frameOffsets,
       repeat,
       sourceSize,
+      inferredSourceSize,
     });
 
     return this;
@@ -278,7 +298,7 @@ export class AnimatedSprite extends Sprite {
 
   /**
    * Returns the registered clips as serializable definitions (frames as
-   * {@link Rectangle}s, `fps`, `repeat`, and `frameDurations`/`frameOffsets`
+   * {@link Rectangle}s, `fps`, `repeat`, and `frameDurations`/`frameOffsets`/`sourceSize`
    * when the clip has them). Used by scene serialization to read back clip
    * state the normalized internal store no longer exposes directly.
    * @internal
@@ -296,6 +316,7 @@ export class AnimatedSprite extends Sprite {
         repeat: clip.repeat,
         ...(clip.frameDurations ? { frameDurations: [...clip.frameDurations] } : {}),
         ...(clip.frameOffsets ? { frameOffsets: clip.frameOffsets.map(offset => ({ x: offset.x, y: offset.y })) } : {}),
+        ...(clip.sourceSize ? { sourceSize: { ...clip.sourceSize } } : {}),
       };
     }
 
@@ -642,26 +663,14 @@ export class AnimatedSprite extends Sprite {
    * of the animation. The pivot has to stand still, which means measuring
    * against a box that is constant for the whole clip.
    *
-   * A clip carries no explicit untrimmed size, so the box is derived from the
-   * frames themselves: `width = max(offset.x + frame.width)` and
-   * `height = max(offset.y + frame.height)` over every frame, anchored at the
-   * local origin `(0, 0)` - the point the offsets are expressed relative to.
-   * That is the smallest canvas every frame of the clip fits on, it is
-   * computed once per clip in {@link addClip}, and it is identical for
-   * every frame index. It can under-report an authored canvas whose right or
-   * bottom edge is empty in every single frame; nothing in the frame data can
-   * distinguish that case, and the pivot stays stable either way.
-   *
-   * A clip WITHOUT `frameOffsets` is not trimmed, so its frame rectangle is
-   * its layout box and the base implementation already measures the right
-   * thing. It is used unchanged there - deriving a clip-wide box would be
-   * actively wrong for it, because such a clip keeps its rendered pixel size
-   * across differently-sized frames (see {@link _applyFrame}) and the
-   * per-frame extent is what maps onto that constant rendered box.
+   * The authored {@link AnimatedSpriteClipDefinition.sourceSize} includes
+   * transparent right/bottom padding that no crop can recover. Older clips
+   * retain their offset-plus-frame estimate, computed once in {@link addClip};
+   * a clip with neither canvas metadata nor offsets keeps its per-frame box.
    */
   protected override _updateOrigin(): void {
     const clip = this._currentClipName !== null ? this._clips.get(this._currentClipName) : undefined;
-    const sourceSize = clip?.sourceSize;
+    const sourceSize = clip?.sourceSize ?? clip?.inferredSourceSize;
 
     if (!sourceSize) {
       super._updateOrigin();
@@ -684,16 +693,13 @@ export class AnimatedSprite extends Sprite {
    */
   private _applyFrame(clip: NormalizedAnimatedSpriteClip, frameIndex: number): void {
     // In-bounds by every call site's own guard.
-    if (this._hasAppliedFrame) {
-      // Frame-to-frame advance: keep the current pixel size so differently
-      // sized frames don't visibly pop.
+    if (this._hasAppliedFrame && clip.sourceSize === null) {
+      // Legacy clips retain their rendered size across differently sized frames.
       this.setTextureFrame(clip.frames[frameIndex]!, false);
     } else {
-      // First application: the sprite still shows the full source texture
-      // (usually the whole atlas), so "keep the pixel size" would inflate the
-      // scale by atlasSize/frameSize and the sprite would render blown up far
-      // beyond the canvas. Snap the logical size to the frame instead - while
-      // preserving the user's scale, which `resetSize` would reset to 1.
+      // The first frame must not inherit the full atlas size. An authored
+      // canvas also keeps this scale on subsequent frames: holding the crop's
+      // width constant would stretch differently trimmed parts of the artwork.
       const scaleX = this.scale.x;
       const scaleY = this.scale.y;
       this.setTextureFrame(clip.frames[frameIndex]!, true);

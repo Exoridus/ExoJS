@@ -302,7 +302,7 @@ export class Polygon extends ShapeRevision implements ShapeLike {
   public intersectsWith(target: Collidable): boolean {
     switch (target.collisionType) {
       case CollisionType.SceneNode:
-        return intersectionRectPoly((target as SceneNode).getBounds(), this);
+        return intersectionRectPoly((target as SceneNode)._getWorldBounds(), this);
       case CollisionType.Rectangle:
         return intersectionRectPoly(target as Rectangle, this);
       case CollisionType.Polygon:

@@ -65,14 +65,15 @@ export const editContextSupported = (realm: Window | typeof globalThis | null = 
  *
  * `EditContext` lacks `beforeinput`'s semantic `inputType`: a `textupdate`
  * carries only the old range, the new text and the new selection. So the
- * backend diffs the mirrored buffer against the update and forwards the
- * smallest intent the model can apply. Word and line deletion are therefore
- * driven from the widget's key handler (which knows the granularity), leaving
- * this backend with character-level `textupdate`s for plain deletes. Inserts,
- * paste, cut and IME composition all arrive here as `textupdate`/`composition*`
- * and are forwarded unchanged.
+ * backend forwards the authoritative UTF-16 replacement range. Caret and
+ * selection navigation are owned by the widget: it synchronizes them before
+ * the browser computes an edit, clipboard selection or composition start.
+ * Clipboard and composition events retain their native paths.
  */
 export class EditContextTextInput implements PlatformTextInput {
+  /** @internal */
+  public readonly _synchronousKeyboard = true;
+
   private readonly _context: EditContextLike;
   private readonly _element: HTMLDivElement;
   private readonly _canvas: HTMLCanvasElement;
@@ -117,9 +118,11 @@ export class EditContextTextInput implements PlatformTextInput {
     const inserted = event.text.length;
 
     if (inserted > 0) {
-      // Insert or replace: the widget applies it over its own selection, which
-      // mirrors the range the platform replaced, so a plain `insert` is exact.
-      this._onEdit.dispatch({ kind: 'insert', text: event.text });
+      this._onEdit.dispatch({
+        kind: 'insert',
+        text: event.text,
+        range: { start: event.updateRangeStart, end: event.updateRangeEnd },
+      });
 
       return;
     }
@@ -128,11 +131,16 @@ export class EditContextTextInput implements PlatformTextInput {
       // Pure deletion. A platform collapses the selection to the START of the
       // range it removed, so the post-update selection cannot say which side
       // of the caret that range sat on - only the caret before the update can.
-      // Granularity is always character: word and line deletes are intercepted
-      // by the widget key handler before they reach here.
+      // The explicit range also covers word and selection deletes requested
+      // by native editing services without a physical keyboard command.
       const direction = event.updateRangeEnd === this._selectionEnd ? 'backward' : 'forward';
 
-      this._onEdit.dispatch({ kind: 'deleteContent', direction, granularity: 'character' });
+      this._onEdit.dispatch({
+        kind: 'deleteContent',
+        direction,
+        granularity: 'character',
+        range: { start: event.updateRangeStart, end: event.updateRangeEnd },
+      });
 
       return;
     }
@@ -198,7 +206,12 @@ export class EditContextTextInput implements PlatformTextInput {
     event.clipboardData?.setData('text/plain', selected);
 
     if (event.type === 'cut') {
-      this._onEdit.dispatch({ kind: 'deleteContent', direction: 'backward', granularity: 'character' });
+      this._onEdit.dispatch({
+        kind: 'deleteContent',
+        direction: 'backward',
+        granularity: 'character',
+        range: { start: this._context.selectionStart, end: this._context.selectionEnd },
+      });
     }
   };
 
@@ -214,7 +227,12 @@ export class EditContextTextInput implements PlatformTextInput {
     const text = event.clipboardData?.getData('text/plain') ?? '';
 
     if (text !== '') {
-      this._onEdit.dispatch({ kind: 'insert', text, source: 'paste' });
+      this._onEdit.dispatch({
+        kind: 'insert',
+        text,
+        source: 'paste',
+        range: { start: this._context.selectionStart, end: this._context.selectionEnd },
+      });
     }
   };
 
