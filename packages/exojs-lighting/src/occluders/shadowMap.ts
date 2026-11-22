@@ -41,8 +41,8 @@ const shadowDirections = (bins: number): Float64Array => {
 };
 
 /**
- * Texels per angular bin of a polar shadow row: what the light shader reads
- * from each `RGBA32F` texel.
+ * Floats per angular bin of a polar shadow row: the channels of the `RGBA32F`
+ * texel the light shader reads for it.
  * @internal
  */
 export const shadowRowStride = 4;
@@ -79,7 +79,10 @@ const coverageEpsilon = 1e-6;
  * The covered part keeps the silhouette where the geometry puts it.
  *
  * Two occluders that each cover part of the same bin merge into one span at
- * the nearer distance, so only a gap narrower than a bin between them is lost.
+ * the nearer distance where their parts touch or overlap. Where a gap
+ * separates them, the nearer keeps its part and the farther one is counted
+ * over the rest of the bin, which shadows that gap beyond the farther
+ * distance but never lets light past either.
  *
  * Segments outside the light's circle are skipped, so the cost of a light is
  * the occluders it can actually see.
@@ -201,7 +204,10 @@ const coverBin = (row: Float32Array, texel: number, distance: number, low: numbe
     return;
   }
 
-  if (row[texel + 2]! <= row[texel + 1]!) {
+  const spanLow = row[texel + 1]!;
+  const spanHigh = row[texel + 2]!;
+
+  if (spanHigh <= spanLow) {
     row[texel] = distance;
     row[texel + 1] = low;
     row[texel + 2] = high;
@@ -209,9 +215,26 @@ const coverBin = (row: Float32Array, texel: number, distance: number, low: numbe
     return;
   }
 
-  row[texel] = Math.min(row[texel]!, distance);
-  row[texel + 1] = Math.min(row[texel + 1]!, low);
-  row[texel + 2] = Math.max(row[texel + 2]!, high);
+  // The stored span is rounded to 32 bits, so two faces meeting at a corner
+  // may not compare as touching exactly.
+  if (low <= spanHigh + coverageEpsilon && high >= spanLow - coverageEpsilon) {
+    row[texel] = Math.min(row[texel]!, distance);
+    row[texel + 1] = Math.min(spanLow, low);
+    row[texel + 2] = Math.max(spanHigh, high);
+
+    return;
+  }
+
+  // Apart, so one span would also cover the gap between them at the nearer
+  // distance. The farther part joins the rest of the bin instead.
+  if (distance < row[texel]!) {
+    row[texel + 3] = row[texel]!;
+    row[texel] = distance;
+    row[texel + 1] = low;
+    row[texel + 2] = high;
+  } else {
+    row[texel + 3] = distance;
+  }
 };
 
 /** Whether a segment comes within `radius` of the light-space origin. */
@@ -280,8 +303,8 @@ const wrapSigned = (angle: number): number => {
  * where nothing blocks, so a fragment shallower than the stored depth is lit.
  *
  * `depthMin` and `depthSpan` put the depth into `0..1` over the same region the
- * strips cover, which is what lets one `R32F` atlas hold polar and linear rows
- * side by side.
+ * strips cover, which is what lets every sun share one `R32F` atlas whatever
+ * the extent of its own strips.
  *
  * Both axes are given as unit vectors: `(alongX, alongY)` is the direction the
  * light travels, `(acrossX, acrossY)` is perpendicular to it.

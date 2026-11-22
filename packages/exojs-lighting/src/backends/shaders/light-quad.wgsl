@@ -187,9 +187,14 @@ fn shadowTerm(local: vec2<f32>, threshold: f32, shadowRow: f32, softness: f32) -
         if (mass > 0.0) {
             // A partial blocker has no neighbour to read a slope from: across
             // its own silhouette the distance jumps to whatever lies behind.
-            let covered = select(0.0, tentMass(low + here.g, low + here.b, center, radius), here.b > here.g);
+            var covered = 0.0;
 
-            lit = lit + covered * coverageAt(here.r, here.r, here.r, threshold) + (mass - covered) * coverageAt(here.a, previous, next.a, threshold);
+            if (here.b > here.g) {
+                covered = tentMass(low + here.g, low + here.b, center, radius);
+                lit = lit + covered * coverageAt(here.r, here.r, here.r, threshold);
+            }
+
+            lit = lit + (mass - covered) * coverageAt(here.a, previous, next.a, threshold);
             total = total + mass;
         }
 

@@ -35,8 +35,9 @@ void main() {
         return;
     }
 
-    // Bin centres, the same ones the CPU builder samples at, so the two agree
-    // to within the step rather than to within half a bin plus a step.
+    // Bin centres, where the CPU builder measures a bin an occluder covers
+    // whole. The march cannot tell a partly covered bin, so its silhouettes
+    // stay accurate to half a bin plus a step.
     float angle = -PI + (float(bin) + 0.5) * (2.0 * PI / uniforms.uBins);
     vec2 local = vec2(cos(angle), sin(angle));
     // The rows are built in the light's own frame, so the bin's direction has to

@@ -15,7 +15,7 @@ import { describe, expect, test } from 'vitest';
 
 import { Color } from '#core/Color';
 
-import { type ContactBackend, contactCanvasSize, createContactHost } from './_lightmapContact';
+import { type ContactBackend, contactCanvasSize, type ContactHost, createContactHost } from './_lightmapContact';
 
 const bins = 64;
 const binWidth = (Math.PI * 2) / bins;
@@ -81,8 +81,7 @@ const sample = (frame: Uint8Array | Uint8ClampedArray, x: number, y: number): nu
  * Where along the arc the light falls to half way between lit and shadowed, as
  * an offset from the silhouette in pixels. `null` when the device was dropped.
  */
-const edgeOffset = async (backend: ContactBackend, scene: SilhouetteScene): Promise<number | null> => {
-  const host = await createContactHost(backend);
+const edgeOffset = async (host: ContactHost, scene: SilhouetteScene): Promise<number | null> => {
   const lighting = new LightmapLighting(host.app, { ambient: Color.black, lightResolution: 1, shadowResolution: bins });
 
   lighting.add(createLight(scene));
@@ -124,25 +123,29 @@ const edgeOffset = async (backend: ContactBackend, scene: SilhouetteScene): Prom
     throw new Error('the profile never crossed half way');
   } finally {
     lighting.destroy();
-    host.destroy();
   }
 };
 
 /** The silhouette walked across one bin, starting just inside it. */
 const walk = async (backend: ContactBackend, scene: Omit<SilhouetteScene, 'angle'>, first: number): Promise<number[] | null> => {
+  const host = await createContactHost(backend);
   const offsets: number[] = [];
 
-  for (let step = 0; step < steps; step++) {
-    const offset = await edgeOffset(backend, { ...scene, angle: first + ((step + 0.25) / steps) * binWidth });
+  try {
+    for (let step = 0; step < steps; step++) {
+      const offset = await edgeOffset(host, { ...scene, angle: first + ((step + 0.25) / steps) * binWidth });
 
-    if (offset === null) {
-      return null;
+      if (offset === null) {
+        return null;
+      }
+
+      offsets.push(offset);
     }
 
-    offsets.push(offset);
+    return offsets;
+  } finally {
+    host.destroy();
   }
-
-  return offsets;
 };
 
 /**

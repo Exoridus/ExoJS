@@ -27,8 +27,9 @@ fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
         return vec4<f32>(1.0, 0.0, 0.0, 1.0);
     }
 
-    // Bin centres, the same ones the CPU builder samples at, so the two agree
-    // to within the step rather than to within half a bin plus a step.
+    // Bin centres, where the CPU builder measures a bin an occluder covers
+    // whole. The march cannot tell a partly covered bin, so its silhouettes
+    // stay accurate to half a bin plus a step.
     let angle = -PI + (f32(bin) + 0.5) * (2.0 * PI / uniforms.uBins);
     let local = vec2<f32>(cos(angle), sin(angle));
     // The rows are built in the light's own frame, so the bin's direction has to

@@ -76,7 +76,7 @@ export class ShadowMarchFiller {
   public constructor(mask: RenderTexture, bins: number) {
     this._mask = mask;
     this._bins = bins;
-    // Half-float rather than the CPU filler's `R32F`: a normalized distance
+    // Half-float rather than the CPU filler's `RGBA32F`: a normalized distance
     // needs the range and not the mantissa, and `Rgba16F` is the only float
     // format both backends render into without a device feature.
     this._atlas = new RenderTexture(bins, 1, { format: TextureFormat.Rgba16F, scaleMode: ScaleModes.Nearest });

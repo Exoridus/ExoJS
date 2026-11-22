@@ -177,9 +177,14 @@ float shadowTerm(float threshold) {
         if (mass > 0.0) {
             // A partial blocker has no neighbour to read a slope from: across
             // its own silhouette the distance jumps to whatever lies behind.
-            float covered = here.b > here.g ? tentMass(low + here.g, low + here.b, center, radius) : 0.0;
+            float covered = 0.0;
 
-            lit += covered * coverageAt(here.r, here.r, here.r, threshold) + (mass - covered) * coverageAt(here.a, previous, next.a, threshold);
+            if (here.b > here.g) {
+                covered = tentMass(low + here.g, low + here.b, center, radius);
+                lit += covered * coverageAt(here.r, here.r, here.r, threshold);
+            }
+
+            lit += (mass - covered) * coverageAt(here.a, previous, next.a, threshold);
             total += mass;
         }
 

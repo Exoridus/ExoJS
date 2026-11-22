@@ -153,4 +153,41 @@ describe('buildShadowRow', () => {
     expect(fullAt(row, bins / 2)).toBeCloseTo(0.3, 2);
     expect(partial === null || partial[0] <= fullAt(row, bins / 2)).toBe(true);
   });
+  test('two parts with a gap between them keep the nearer one and count the farther over the rest', () => {
+    const near = segments(20, -20, 20, 20 * Math.tan(insideFirstBin(0.3)));
+    const far = segments(90, 90 * Math.tan(insideFirstBin(0.7)), 90, 60);
+    const row = rowFor(new Float32Array([...far, ...near]), 2);
+    const partial = partialAt(row, bins / 2);
+
+    expect(partial).toEqual([expect.closeTo(0.2, 2), 0, expect.closeTo(0.3, 5)]);
+    expect(fullAt(row, bins / 2)).toBeCloseTo(0.9, 2);
+  });
+
+  test('a wall across the seam behind the light covers its end bins only in part', () => {
+    // Behind the light, from just past -pi round to just short of pi.
+    const row = rowFor(segments(-40, -40 * Math.tan(1.3 * binWidth), -40, 40 * Math.tan(2.6 * binWidth)), 1);
+
+    expect(fullAt(row, 0)).toBeCloseTo(0.4, 2);
+    expect(fullAt(row, bins - 1)).toBeCloseTo(0.4, 2);
+    expect(fullAt(row, bins - 2)).toBeCloseTo(0.4, 2);
+    expect(partialAt(row, 1)).toEqual([expect.closeTo(40 / Math.cos(1.3 * binWidth) / 100, 4), 0, expect.closeTo(0.3, 5)]);
+    expect(partialAt(row, bins - 3)).toEqual([expect.closeTo(40 / Math.cos(2.5 * binWidth) / 100, 4), expect.closeTo(0.4, 5), 1]);
+  });
+
+  test('a turned box around the light, its corners inside bins, leaves no part of any bin open', () => {
+    const turn = 0.13;
+    const corners = [
+      [30, 30],
+      [-30, 30],
+      [-30, -30],
+      [30, -30],
+    ].map(([x, y]) => [x! * Math.cos(turn) - y! * Math.sin(turn), x! * Math.sin(turn) + y! * Math.cos(turn)] as const);
+    const box = new Float32Array(corners.flatMap((corner, index) => [...corner, ...corners[(index + 1) % 4]!]));
+    const row = rowFor(box, 4);
+
+    for (let bin = 0; bin < bins; bin++) {
+      expect(fullAt(row, bin), `bin ${bin}`).toBeLessThan(1);
+      expect(partialAt(row, bin), `bin ${bin}`).toBeNull();
+    }
+  });
 });
