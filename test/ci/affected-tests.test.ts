@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -149,15 +149,18 @@ describe('affected tests from the Vite graph', () => {
   });
 
   it('traverses a query worker through its resolved source and child imports', async () => {
-    write('src/worker-leaf.ts', 'export const value = 1;\n');
-    write('src/task.ts', "import { value } from './worker-leaf.ts';\nself.onmessage = () => self.postMessage(value);\n");
-    test('test/worker.test.ts', "import Worker from '../src/task.ts?worker';", "expect(typeof Worker).toBe('function')");
+    const fixtures = new URL('../core/browser/fixtures/', import.meta.url);
+    write('src/inline-worker-math.ts', readFileSync(new URL('inline-worker-math.ts', fixtures), 'utf8'));
+    write('src/task.worker.ts', readFileSync(new URL('inline-worker-echo.worker.ts', fixtures), 'utf8'));
+    test('test/worker.test.ts', "import Worker from '../src/task.worker.ts?worker';", "expect(typeof Worker).toBe('function')");
 
-    const selection = await select('src/worker-leaf.ts');
+    const selection = await select('src/inline-worker-math.ts');
 
     expect(selection.mode).toBe('related');
     expect(selection.tests.map(entry => entry.file)).toEqual(['test/worker.test.ts']);
-    expect(selection.tests[0]?.reasons).toContainEqual(expect.objectContaining({ kind: 'dependency', change: 'src/worker-leaf.ts' }));
+    expect(selection.tests[0]?.reasons).toContainEqual(
+      expect.objectContaining({ kind: 'dependency', change: 'src/inline-worker-math.ts' }),
+    );
   });
 
   it('follows a workspace alias through a realpath-resolved symlink', async () => {
