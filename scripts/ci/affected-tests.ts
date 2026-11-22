@@ -31,7 +31,9 @@ const CONTENT_QUERY = /[?&](?:raw|url)(?:[=&]|$)/;
 const GLOBAL =
   /(?:^|\/)(?:package\.json|[^/]*lock[^/]*\.(?:json|ya?ml)|tsconfig[^/]*\.json|[^/]*\.config\.[^/]+)$|^(?:scripts|\.github)\/(?!.*\.mdx?$)|^packages\/exojs-(?:build|config)\/|^packages\/exojs-cli\/src\/commands\/assetsPack\.ts$|(?:^|\/)(?:dist|generated)\//;
 const SOURCE_TREE = /^(?:src|test|examples)\/|^packages\/[^/]+\/(?:src|test)\/|^site\/src\//;
-const VITEST_ROOT = realpathSync(fileURLToPath(new URL('../', import.meta.resolve('vitest'))));
+// JavaScript realpath preserves Windows 8.3 spellings that Vite can mix with
+// native long names. Use native identity for every existing filesystem input.
+const VITEST_ROOT = realpathSync.native(fileURLToPath(new URL('../', import.meta.resolve('vitest'))));
 const STARTUP_WATCH_FILES = new WeakMap<DevEnvironment, Promise<readonly string[]>>();
 
 const portable = (file: string): string => file.split(sep).join('/');
@@ -558,8 +560,11 @@ const sourceInputs = (file: string): SourceInputs => {
  */
 export const selectAffectedTests = async (context: Vitest, changedFiles: readonly string[]): Promise<AffectedTestSelection> => {
   const started = performance.now();
-  const root = realpathSync(context.config.root);
+  const root = realpathSync.native(context.config.root);
   const display = (file: string): string => portable(relative(root, file));
+  // Keep Vitest's logical execution names distinct when symlinked test files
+  // share a physical dependency identity.
+  const specificationPath = (spec: TestSpecification): string => portable(relative(context.config.root, spec.moduleId));
   const specifications = await context.globTestSpecifications();
 
   if (specifications.length === 0) {
@@ -569,7 +574,7 @@ export const selectAffectedTests = async (context: Vitest, changedFiles: readonl
   const keys = new Map<string, { project: string; file: string }>();
 
   for (const spec of specifications) {
-    const entry = { project: spec.project.name, file: display(spec.moduleId) };
+    const entry = { project: spec.project.name, file: specificationPath(spec) };
     keys.set(JSON.stringify([entry.project, entry.file]), entry);
   }
 
@@ -614,7 +619,7 @@ export const selectAffectedTests = async (context: Vitest, changedFiles: readonl
         throw new Error('not a regular file');
       }
 
-      const canonical = realpathSync(absolute);
+      const canonical = realpathSync.native(absolute);
 
       if (display(canonical).startsWith('../') || isAbsolute(display(canonical))) {
         fallbackReasons.push(`The input resolves outside the repository: ${file}`);
@@ -640,7 +645,7 @@ export const selectAffectedTests = async (context: Vitest, changedFiles: readonl
   const observedFiles = new Set<string>();
 
   const keep = (spec: TestSpecification, reason: AffectedTestReason): void => {
-    const file = display(spec.moduleId);
+    const file = specificationPath(spec);
     const key = JSON.stringify([spec.project.name, file]);
     let entry = selected.get(key);
 
@@ -676,7 +681,14 @@ export const selectAffectedTests = async (context: Vitest, changedFiles: readonl
         // Vite normally runs shared startup hooks in the client environment.
         // Reusing a context must not reclassify earlier module-owned inputs.
         for (const watched of await startup) {
-          const change = changed.get(realpathSync(resolve(project.config.root, watched)));
+          const canonical = realpathSync.native(resolve(project.config.root, watched));
+          const local = display(canonical);
+
+          if (local.startsWith('../') || isAbsolute(local)) {
+            return full([`A plugin startup watch input resolves outside the repository: ${local}`]);
+          }
+
+          const change = changed.get(canonical);
 
           if (change) {
             return full([`A plugin startup watch input has no dependency owner: ${change}`]);
@@ -708,7 +720,7 @@ export const selectAffectedTests = async (context: Vitest, changedFiles: readonl
       const queued = new Set<EnvironmentModuleNode>();
       const queue: EnvironmentModuleNode[] = [];
       const nodePath = (node: EnvironmentModuleNode): string =>
-        node.file && isAbsolute(node.file) ? display(node.file) : (node.id ?? node.url).replaceAll('\0', '<virtual>');
+        node.file && isAbsolute(node.file) ? display(realpathSync.native(node.file)) : (node.id ?? node.url).replaceAll('\0', '<virtual>');
 
       const enqueue = (node: EnvironmentModuleNode): void => {
         if (!queued.has(node)) {
@@ -755,7 +767,7 @@ export const selectAffectedTests = async (context: Vitest, changedFiles: readonl
         if (!node.file || !isAbsolute(node.file) || node.file.includes('\0')) {
           hazards.set(node, 'A virtual module can read inputs outside the filesystem graph.');
         } else {
-          const canonical = realpathSync(node.file);
+          const canonical = realpathSync.native(node.file);
           const local = display(canonical);
           const external = local.startsWith('../') || isAbsolute(local) || /(?:^|\/)node_modules\//.test(local);
 
@@ -831,7 +843,7 @@ export const selectAffectedTests = async (context: Vitest, changedFiles: readonl
       // Refuse a changed watch input without an attributed edge, even if another
       // project happens to import the same file normally.
       for (const watched of environment.pluginContainer.watchFiles) {
-        const canonical = realpathSync(resolve(project.config.root, watched));
+        const canonical = realpathSync.native(resolve(project.config.root, watched));
         const change = changed.get(canonical);
         const nodes = byFile.get(canonical);
 
@@ -860,7 +872,7 @@ export const selectAffectedTests = async (context: Vitest, changedFiles: readonl
               keep(spec, {
                 ...reason,
                 kind: 'setup',
-                path: uniquePath([...path, display(spec.moduleId)]),
+                path: uniquePath([...path, specificationPath(spec)]),
                 detail: `Project setup depends on this input. ${reason.detail}`,
               });
             }

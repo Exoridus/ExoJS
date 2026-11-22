@@ -8,13 +8,14 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createVitest, type Vitest } from 'vitest/node';
 
-import { selectAffectedTests } from '../../scripts/ci/affected-tests.ts';
+import { type AffectedTestSelection, selectAffectedTests } from '../../scripts/ci/affected-tests.ts';
 
 const repository = process.cwd();
 const vitestCli = fileURLToPath(new URL('./vitest.mjs', import.meta.resolve('vitest/package.json')));
 
 describe('affected tests from the Vite graph', () => {
   let root: string;
+  let aliasRoot: string | undefined;
   let context: Vitest | undefined;
 
   const write = (file: string, content: string): void => {
@@ -32,6 +33,50 @@ describe('affected tests from the Vite graph', () => {
   };
 
   const select = async (...files: string[]) => selectAffectedTests(await initialize(), files);
+
+  const legacyAlias = (): string => {
+    aliasRoot = mkdtempSync(join(tmpdir(), 'exojs-affected-alias-'));
+    const alias = join(aliasRoot, 'SHORT~1');
+    symlinkSync(root, alias, process.platform === 'win32' ? 'junction' : 'dir');
+
+    return alias;
+  };
+
+  const selectWithLegacyAlias = (alias: string, files: string[], contextRoot = root): AffectedTestSelection => {
+    // Windows JS realpath preserves 8.3 components while native realpath expands
+    // them. Isolate that distinction in a child so Vite and the selector can see
+    // both spellings without changing the parent test runner's filesystem API.
+    write(
+      'select.mjs',
+      `import fs from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
+import { resolve, sep } from 'node:path';
+const original = fs.realpathSync;
+const alias = ${JSON.stringify(alias)};
+fs.realpathSync = Object.assign((file, ...options) => {
+  const absolute = typeof file === 'string' ? resolve(file) : undefined;
+  return absolute && (absolute === alias || absolute.startsWith(alias + sep))
+    ? absolute
+    : original(file, ...options);
+}, { native: original.native });
+syncBuiltinESMExports();
+const { createVitest } = await import('vitest/node');
+const { selectAffectedTests } = await import(${JSON.stringify(new URL('../../scripts/ci/affected-tests.ts', import.meta.url).href)});
+const context = await createVitest({ root: ${JSON.stringify(contextRoot)}, config: ${JSON.stringify(join(root, 'vitest.config.ts'))}, watch: false });
+try {
+  console.log('SELECTION=' + JSON.stringify(await selectAffectedTests(context, ${JSON.stringify(files)})));
+} finally {
+  await context.close();
+}
+`,
+    );
+    const run = spawnSync(process.execPath, [join(root, 'select.mjs')], { cwd: root, encoding: 'utf8', timeout: 15_000 });
+    expect({ code: run.status, error: run.error, stderr: run.stderr }).toMatchObject({ code: 0, error: undefined });
+    const result = run.stdout.split('\n').find(line => line.startsWith('SELECTION='));
+    expect({ result, stdout: run.stdout, stderr: run.stderr }).toMatchObject({ result: expect.any(String) });
+
+    return JSON.parse(result!.slice('SELECTION='.length)) as AffectedTestSelection;
+  };
 
   beforeEach(() => {
     root = realpathSync(mkdtempSync(join(tmpdir(), 'exojs-affected-')));
@@ -55,6 +100,11 @@ describe('affected tests from the Vite graph', () => {
     await context?.close();
     context = undefined;
     rmSync(root, { recursive: true, force: true });
+
+    if (aliasRoot) {
+      rmSync(aliasRoot, { recursive: true, force: true });
+      aliasRoot = undefined;
+    }
   });
 
   it('follows aliases, re-exports and literal dynamic imports without executing tests', async () => {
@@ -554,6 +604,126 @@ export default {
     expect(selection.mode).toBe('full');
     expect(selection.tests).toHaveLength(selection.inventory.length);
     expect(selection.fallbackReasons.join(' ')).toMatch(/watch.*leaf\.ts/i);
+  });
+
+  it('matches module-owned watch aliases through native filesystem identity', () => {
+    const alias = legacyAlias();
+    write('src/include.frag', 'void included() {}');
+    write('src/shader.frag', 'void main() {}');
+    write(
+      'vitest.config.ts',
+      `export default {
+  resolve: { preserveSymlinks: true },
+  plugins: [{ name: 'shader', transform(code, id) {
+    if (id.endsWith('/shader.frag')) this.addWatchFile(${JSON.stringify(join(alias, 'src/include.frag'))});
+    return id.endsWith('.frag') ? { code: 'export default ' + JSON.stringify(code), map: null } : undefined;
+  } }],
+  test: { name: 'unit', include: ['test/**/*.test.ts'] },
+};\n`,
+    );
+    test('test/shader.test.ts', "import value from '../src/shader.frag';", 'void value');
+    test('test/include.test.ts', "import value from '../src/include.frag?raw';", 'void value');
+
+    const selection = selectWithLegacyAlias(alias, ['src/include.frag']);
+
+    expect(selection.mode).toBe('related');
+    expect(selection.tests.map(entry => entry.file)).toEqual(['test/include.test.ts', 'test/shader.test.ts']);
+    expect(selection.tests.find(entry => entry.file === 'test/shader.test.ts')?.reasons).toContainEqual(
+      expect.objectContaining({ kind: 'dependency', path: ['src/include.frag', 'src/shader.frag', 'test/shader.test.ts'] }),
+    );
+  });
+
+  it('widens for startup watch aliases that name a changed input', () => {
+    const alias = legacyAlias();
+    write(
+      'vitest.config.ts',
+      `export default {
+  plugins: [{ name: 'global-reader', buildStart() { this.addWatchFile(${JSON.stringify(join(alias, 'src/leaf.ts'))}); } }],
+  test: { name: 'unit', include: ['test/**/*.test.ts'] },
+};\n`,
+    );
+
+    const selection = selectWithLegacyAlias(alias, ['src/leaf.ts']);
+
+    expect(selection.mode).toBe('full');
+    expect(selection.tests).toHaveLength(selection.inventory.length);
+    expect(selection.fallbackReasons.join(' ')).toMatch(/watch.*leaf\.ts/i);
+  });
+
+  it('keeps the inventory and dependency reasons relative to an aliased context root', () => {
+    const alias = legacyAlias();
+    const selection = selectWithLegacyAlias(alias, ['src/leaf.ts'], alias);
+
+    expect(selection.mode).toBe('related');
+    expect(selection.tests.map(entry => entry.file)).toEqual(['test/related.test.ts']);
+    expect(selection.tests[0]?.reasons).toContainEqual(
+      expect.objectContaining({ kind: 'dependency', path: ['src/leaf.ts', 'src/barrel.ts', 'test/related.test.ts'] }),
+    );
+    expect(selection.inventory.map(entry => entry.file)).toEqual(['test/related.test.ts', 'test/unrelated.test.ts']);
+  });
+
+  it('preserves distinct Vitest specification names that share a physical test file', async () => {
+    test('test/originals/input.test.ts', "import { value } from '../../src/leaf.ts';");
+    symlinkSync(join(root, 'test/originals'), join(root, 'test/copies'), process.platform === 'win32' ? 'junction' : 'dir');
+    write(
+      'vitest.config.ts',
+      `export default {
+  resolve: { preserveSymlinks: true },
+  test: { name: 'unit', include: ['test/originals/**/*.test.ts', 'test/copies/**/*.test.ts'] },
+};\n`,
+    );
+
+    const selection = await select('src/leaf.ts');
+    const names = ['test/copies/input.test.ts', 'test/originals/input.test.ts'];
+
+    expect(selection.mode).toBe('related');
+    expect(selection.inventory.map(entry => entry.file)).toEqual(names);
+    expect(selection.tests.map(entry => entry.file)).toEqual(names);
+  });
+
+  it('widens for a real external startup watch instead of treating it as a repository input', async () => {
+    aliasRoot = mkdtempSync(join(tmpdir(), 'exojs-affected-external-'));
+    const external = join(aliasRoot, 'external.frag');
+    writeFileSync(external, 'external shader input');
+    write(
+      'vitest.config.ts',
+      `export default {
+  plugins: [{ name: 'external-reader', buildStart() { this.addWatchFile(${JSON.stringify(external)}); } }],
+  test: { name: 'unit', include: ['test/**/*.test.ts'] },
+};\n`,
+    );
+
+    const selection = await select('src/leaf.ts');
+
+    expect(selection.mode).toBe('full');
+    expect(selection.tests).toHaveLength(selection.inventory.length);
+    expect(selection.fallbackReasons.join(' ')).toMatch(/external|outside.*repository/i);
+  });
+
+  it('retains the importer of a real external module watch', async () => {
+    aliasRoot = mkdtempSync(join(tmpdir(), 'exojs-affected-external-'));
+    const external = join(aliasRoot, 'external.frag');
+    writeFileSync(external, 'external shader input');
+    write('src/shader.frag', 'void main() {}');
+    write(
+      'vitest.config.ts',
+      `export default {
+  plugins: [{ name: 'shader', transform(code, id) {
+    if (id.endsWith('/shader.frag')) this.addWatchFile(${JSON.stringify(external)});
+    return id.endsWith('.frag') ? { code: 'export default ' + JSON.stringify(code), map: null } : undefined;
+  } }],
+  test: { name: 'unit', include: ['test/**/*.test.ts'] },
+};\n`,
+    );
+    test('test/shader.test.ts', "import value from '../src/shader.frag';", 'void value');
+
+    const selection = await select('src/leaf.ts');
+
+    expect(selection.mode).toBe('related');
+    expect(selection.tests.map(entry => entry.file)).toEqual(['test/related.test.ts', 'test/shader.test.ts']);
+    expect(selection.tests.find(entry => entry.file === 'test/shader.test.ts')?.reasons).toContainEqual(
+      expect.objectContaining({ kind: 'untracked', detail: expect.stringMatching(/external.*external\.frag/i) }),
+    );
   });
 
   it.each(['scripts/ci/README.md', '.github/notes.mdx'])('keeps mixed source and %s readers in the graph', async file => {
