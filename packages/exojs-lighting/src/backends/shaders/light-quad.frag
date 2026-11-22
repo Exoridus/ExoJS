@@ -358,7 +358,8 @@ void main() {
     // comparison against every stored distance widened by it.
     float threshold = (radial - clearance) / (1.0 + uniforms.u_shadowPrecision);
     // The fragment's own angular size, the narrowest a shadow edge can be drawn without aliasing.
-    float footprint = max(length(dFdx(v_local)), length(dFdy(v_local))) / max(length(v_local), 1e-6);
+    float pixelSpan = max(length(dFdx(v_local)), length(dFdy(v_local)));
+    float footprint = pixelSpan / max(length(v_local), 1e-6);
 
     // A finite line is a source with multiple emission positions, not one
     // point at its centre. The four consecutive shadow rows were traced from
@@ -368,7 +369,6 @@ void main() {
     float shadow = 1.0;
 
     if (v_half > 0.0 && v_shadowRow >= 0.0) {
-        float pixelSpan = max(length(dFdx(v_local)), length(dFdy(v_local)));
         float sourceReach = 1.0 + 2.0 * v_half;
         float sampleClearance = uniforms.u_shadowClearance * pixelSpan / sourceReach;
         float sum = 0.0;
