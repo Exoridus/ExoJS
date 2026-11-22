@@ -138,7 +138,10 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
   // ── Retained-batch replay state ───────────────────────────────────────────
   private readonly _stagedReplayGroupData = new Float32Array(16);
   // Retained bundles snapshot the same ordered texture slots as the live draw.
-  private readonly _recordTextures: Array<Texture | RenderTexture | null> = Array.from({ length: TILE_TEXTURE_SLOTS }, (): Texture | RenderTexture | null => null);
+  private readonly _recordTextures: Array<Texture | RenderTexture | null> = Array.from(
+    { length: TILE_TEXTURE_SLOTS },
+    (): Texture | RenderTexture | null => null,
+  );
 
   protected onConnect(backend: WebGpuBackend): void {
     if (this._device) {
