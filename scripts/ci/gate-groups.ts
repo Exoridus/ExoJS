@@ -32,6 +32,7 @@ export const GATE_GROUPS = {
     'lint:inline-source',
     'lint:source-hygiene',
     'format:check',
+    'lint:react:shadow',
     'lint:all',
   ],
   // `perf:smoke` runs the benchmarks for their EXIT CODE, not their numbers -
