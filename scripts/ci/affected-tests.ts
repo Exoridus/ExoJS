@@ -27,6 +27,7 @@ export interface AffectedTestSelection {
 const CODE = /\.[cm]?[jt]sx?$/;
 const MODULE = /\.(?:[cm]?[jt]sx?|json|vert|frag|glsl|wgsl)$/;
 const CONTENT = /\.mdx?$|(?:^|\/)LICENSE$/;
+const CONTENT_QUERY = /[?&](?:raw|url)(?:[=&]|$)/;
 const GLOBAL =
   /(?:^|\/)(?:package\.json|[^/]*lock[^/]*\.(?:json|ya?ml)|tsconfig[^/]*\.json|[^/]*\.config\.[^/]+)$|^(?:scripts|\.github)\/|^packages\/exojs-(?:build|config)\/|^packages\/exojs-cli\/src\/commands\/assetsPack\.ts$|(?:^|\/)(?:dist|generated)\//;
 const SOURCE_TREE = /^(?:src|test|examples)\/|^packages\/[^/]+\/(?:src|test)\/|^site\/src\//;
@@ -374,6 +375,8 @@ export const selectAffectedTests = async (context: Vitest, changedFiles: readonl
       }
 
       for (const node of queue) {
+        const contentOnly = CONTENT_QUERY.test(node.id ?? '');
+
         if (!node.file || !isAbsolute(node.file) || node.file.includes('\0')) {
           hazards.set(node, 'A virtual module can read inputs outside the filesystem graph.');
         } else {
@@ -399,7 +402,7 @@ export const selectAffectedTests = async (context: Vitest, changedFiles: readonl
             await load(node.id ?? node.url);
           }
 
-          let inputs = sourceCache.get(canonical);
+          let inputs: SourceInputs | undefined = contentOnly ? { hazards: [], imports: [] } : sourceCache.get(canonical);
 
           if (!inputs) {
             inputs = sourceInputs(canonical);
@@ -438,6 +441,13 @@ export const selectAffectedTests = async (context: Vitest, changedFiles: readonl
         }
 
         for (const dependency of node.importedModules) {
+          // Raw/URL imports expose bytes, not the source's runtime imports.
+          // Their same-file watch node is already represented by this node.file.
+          // A separate executable importer still enqueues the ordinary module.
+          if (contentOnly && dependency.file === node.file) {
+            continue;
+          }
+
           edge(dependency, node);
         }
       }

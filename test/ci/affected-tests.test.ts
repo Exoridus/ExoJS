@@ -93,6 +93,29 @@ describe('affected tests from the Vite graph', () => {
     expect(selection.tests.map(entry => entry.file)).toEqual(['test/raw.test.ts']);
   });
 
+  it('treats raw TypeScript as text without resolving the imports inside its contents', async () => {
+    write('src/example.ts', "import { missing } from '@external/playground';\nexport const value = missing;\n");
+    test('test/raw-source.test.ts', "import value from '../src/example.ts?raw';", 'void value');
+
+    const selection = await select('src/example.ts');
+
+    expect(selection.mode).toBe('related');
+    expect(selection.tests.map(entry => entry.file)).toEqual(['test/raw-source.test.ts']);
+    expect(selection.tests[0]?.reasons).toContainEqual(expect.objectContaining({ kind: 'dependency', change: 'src/example.ts' }));
+  });
+
+  it('still inspects an executable import when the same source is also imported raw', async () => {
+    write('src/example.ts', "import { missing } from '@external/playground';\nexport const value = missing;\n");
+    test('test/raw-source.test.ts', "import value from '../src/example.ts?raw';", 'void value');
+    test('test/executable-source.test.ts', "import { value } from '../src/example.ts';", 'void value');
+
+    const selection = await select('src/example.ts');
+
+    expect(selection.mode).toBe('full');
+    expect(selection.tests).toHaveLength(selection.inventory.length);
+    expect(selection.fallbackReasons.join(' ')).toMatch(/graph|resolve|transform/i);
+  });
+
   it('preserves module-owned watch attribution across scenarios in one context', async () => {
     write('src/message.txt', 'hello\n');
     test('test/raw.test.ts', "import value from '../src/message.txt?raw';", 'void value');
