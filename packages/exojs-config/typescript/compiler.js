@@ -97,6 +97,7 @@ export const runTypeScriptCompiler = (args, options = {}) => {
     cwd: options.cwd,
     stdio: options.stdio ?? 'inherit',
     encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
   });
   if (result.error) throw result.error;
   return { status: result.status ?? 1, output: `${result.stdout ?? ''}${result.stderr ?? ''}` };
