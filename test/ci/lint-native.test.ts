@@ -186,13 +186,15 @@ export default [
 
   it('preserves used suppressions and rejects unused suppressions with full ESLint', () => {
     write('src/entry.ts', '// eslint-disable-next-line no-debugger\ndebugger;\n');
-    expect(run().status).toBe(0);
-    write('src/entry.ts', '// eslint-disable-next-line no-debugger\nexport const value = 1;\n');
+    write('src/unused-disable.ts', '// eslint-disable-next-line no-debugger\nexport const value = 1;\n');
 
     const result = run();
 
     expect(result.status).toBe(1);
+    expect(result.stdout).toContain('=== lint: engine');
+    expect(result.stdout).toContain(join('src', 'unused-disable.ts'));
     expect(result.stdout).toContain('Unused eslint-disable directive');
+    expect(result.stdout).not.toContain(join('src', 'entry.ts'));
     assertCleaned();
   });
 
