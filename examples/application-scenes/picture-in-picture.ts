@@ -22,10 +22,10 @@ class PictureInPictureScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    this.sprite = new Sprite(this.loader.get(assets.ship));
+    this.sprite = this.track(new Sprite(this.loader.get(assets.ship)));
 
-    this.mainView = new View(0, 0, width, height);
-    this.pipView = new View(0, 0, width * 0.3, height * 0.3).setViewport(0.68, 0.04, 0.28, 0.28);
+    this.mainView = this.track(new View(0, 0, width, height));
+    this.pipView = this.track(new View(0, 0, width * 0.3, height * 0.3)).setViewport(0.68, 0.04, 0.28, 0.28);
     // Zoom < 1 zooms OUT (a larger visible world area maps into the same
     // small viewport) - a minimap needs to show more of the scene than the
     // main view, not less, so the tracked sprite reads as a small icon.
@@ -33,7 +33,7 @@ class PictureInPictureScene extends Scene {
 
     this.sprite.setAnchor(0.5).setPosition(-280, 0);
 
-    this.frame = new Graphics();
+    this.frame = this.track(new Graphics());
     this.frame.lineWidth = 3;
     this.frame.lineColor = Color.white;
     this.frame.drawRectangle(width * 0.68, height * 0.04, width * 0.28, height * 0.28);

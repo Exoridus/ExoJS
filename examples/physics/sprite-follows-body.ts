@@ -8,6 +8,7 @@ import {
   Rectangle,
   type RenderingContext,
   Scene,
+  SceneState,
   Sprite,
   Spritesheet,
   type SpritesheetData,
@@ -29,12 +30,16 @@ class SpriteFollowsBodyScene extends Scene {
   private readonly dragLine = new Graphics();
   private grabPoint = { x: 0, y: 0 };
   private releasing = false;
-  private readonly hint = new Text('Drag, release to throw | C: colliders', { fillColor: Color.white, fontSize: 15 }).setAnchor(0.5, 1);
+  private readonly hint = new Text('Grab a crate. Drag, then release to throw.', { fillColor: Color.white, fontSize: 15 }).setAnchor(
+    0.5,
+    1,
+  );
   private characters!: SpritesheetData;
   private tiles!: SpritesheetData;
   private dragJoint: MouseJoint | null = null;
   private dragPointer: number | null = null;
   private interacted = false;
+  private readonly grabHint = this.track(new Text('Drag me', { fillColor: new Color(160, 237, 216), fontSize: 15 })).setAnchor(0.5, 1);
   private showColliders = false;
 
   override async load(): Promise<void> {
@@ -139,10 +144,11 @@ class SpriteFollowsBodyScene extends Scene {
     // Native release/blur must remove the joint even outside the input surface.
     window.addEventListener('pointerup', this.onWindowEnd);
     window.addEventListener('blur', this.endDrag);
+    this.onSuspend.add(this.endDrag);
   }
 
   private readonly onDown = (pointer: Pointer, x: number, y: number): void => {
-    if (this.dragPointer !== null) {
+    if (this.state !== SceneState.Active || this.dragPointer !== null) {
       return;
     }
 
@@ -218,6 +224,8 @@ class SpriteFollowsBodyScene extends Scene {
 
     const scale = unitsPerCssPixel(this.app, this.app.canvas as HTMLCanvasElement);
     this.hint.setScale(Math.min(scale, this.app.width / 340)).setPosition(this.app.width / 2, this.app.height - 8 * scale);
+    const crate = this.objects[1]!;
+    this.grabHint.setScale(scale).setPosition(crate.position.x, crate.getBounds().top - 12 * scale);
   }
 
   override draw(context: RenderingContext): void {
@@ -240,6 +248,7 @@ class SpriteFollowsBodyScene extends Scene {
     }
 
     if (!this.interacted) {
+      context.render(this.grabHint);
       context.render(this.hint, { view: context.screenView });
     }
   }
@@ -257,7 +266,6 @@ class SpriteFollowsBodyScene extends Scene {
     this.sheets.forEach(sheet => sheet.clear());
     this.hint.destroy();
     this.dragLine.destroy();
-    super.destroy();
   }
 }
 const app = new Application({

@@ -470,7 +470,7 @@
       "description": "One loaded spritesheet character with adjustable FPS, Play/Pause and a live frame index. Space pauses or resumes.",
       "backend": "core",
       "tags": ["animation", "sprite"],
-      "capabilities": ["keyboard"],
+      "capabilities": [],
       "level": "intermediate"
     },
     {
@@ -482,7 +482,7 @@
       "backend": "core",
       "featured": true,
       "tags": ["animation", "tween"],
-      "capabilities": ["keyboard", "pointer"],
+      "capabilities": ["pointer"],
       "level": "intro"
     },
     {
@@ -537,7 +537,7 @@
       "backend": "core",
       "featured": true,
       "tags": ["animation", "audio", "scene"],
-      "capabilities": ["pointer", "keyboard", "audio"],
+      "capabilities": ["pointer", "audio"],
       "level": "intermediate"
     }
   ],
@@ -714,7 +714,7 @@
       "path": "render-targets/water-mirror.js",
       "language": "typescript",
       "title": "Water Reflection and Distortion",
-      "description": "Capture and flip a live reflection, then drag horizontally across the water to change the strength of its scrolling displacement map (left is calm, right is strong).",
+      "description": "Compare a live subject with its transparent, vertically flipped render-texture capture over a stable water surface. Pause motion, choose Calm or Ripples, or drag across the water to change displacement strength.",
       "backend": "core",
       "tags": ["fx", "rendering", "displacement", "pointer"],
       "capabilities": ["pointer"],
@@ -725,10 +725,10 @@
       "path": "sprites-textures/video-drawable.js",
       "language": "typescript",
       "title": "Play a Video Texture",
-      "description": "Play, pause and seek an existing video after an explicit gesture and inspect load, media and teardown states. Muted SDR video. Play explicitly; clip changes preserve pause, seek and loop.",
+      "description": "Choose one of two existing videos, then explicitly play, pause and seek while inspecting load and media states. Muted SDR video; keys 1 and 2 select clips, and clip changes preserve pause, seek and loop.",
       "backend": "core",
       "tags": ["sprite", "rendering"],
-      "capabilities": ["pointer", "keyboard"],
+      "capabilities": ["pointer"],
       "level": "advanced"
     },
     {
@@ -863,7 +863,7 @@
       "path": "showcase/audio-reactive-particles.js",
       "language": "typescript",
       "title": "Audio Reactive Particles",
-      "description": "Particles driven by the music: low-band energy sets how many spawn and high-band energy how wide they spread, so silence stays still; detected beats recolour the stream.",
+      "description": "Start the music, then compare bass-driven particle density and treble-driven spread using the live band meters. Pause, mute, or swap the band roles; detected beats change colour. Silence produces no new particles.",
       "backend": "core",
       "featured": true,
       "tags": ["audio", "reactive", "particles"],
@@ -1184,11 +1184,11 @@
       "path": "tilemap/tiled-infinite-map.js",
       "language": "typescript",
       "title": "Streaming Tile Worlds",
-      "description": "Explore a streamed world and inspect resident chunk boundaries and ownership. WASD, arrows or left stick pan; cyan outlines are resident chunks.",
+      "description": "Explore an authored island with Home and Explore, or pan freely with WASD, arrows or a stick. Cyan outlines mark loaded ground chunks; the readout distinguishes visible content from the resident cache. Blue areas contain no authored tiles.",
       "backend": "core",
       "tags": ["tilemap", "tiled", "streaming"],
       "level": "advanced",
-      "capabilities": ["keyboard"]
+      "capabilities": ["pointer"]
     },
     {
       "slug": "worker-streamed-terrain",
@@ -1222,7 +1222,7 @@
       "backend": "core",
       "featured": true,
       "tags": ["physics", "binding", "pointer", "joints"],
-      "capabilities": ["pointer", "keyboard"],
+      "capabilities": ["pointer"],
       "level": "intermediate"
     },
     {

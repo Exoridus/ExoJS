@@ -88,11 +88,6 @@ class BitmapTextBasicScene extends Scene {
     context.render(this.counter);
     this.labels.forEach(label => context.render(label));
   }
-
-  override destroy(): void {
-    this.panel?.dispose();
-    super.destroy();
-  }
 }
 
 const app = new Application({

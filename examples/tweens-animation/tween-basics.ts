@@ -10,6 +10,7 @@ import {
   type RenderingContext,
   Scene,
   SceneAvailability,
+  SceneState,
   type Sprite,
   Spritesheet,
   Text,
@@ -47,6 +48,10 @@ class InteractiveTweensScene extends Scene {
   private target = { x: 0.5, y: 0.5 };
   private bounds = { x: 0, y: 0, width: 1, height: 1 };
   private readonly onPointerDown = (_pointer: unknown, x: number, y: number): void => {
+    if (this.state !== SceneState.Active) {
+      return;
+    }
+
     const box = this.bounds;
 
     if (x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height) {
@@ -59,6 +64,11 @@ class InteractiveTweensScene extends Scene {
       this.loader.load(assets.platformerCharactersImage),
       this.loader.load(assets.platformerCharactersAtlas),
     ]);
+
+    if (this.lifecycleSignal.aborted) {
+      return;
+    }
+
     const sheet = new Spritesheet(texture, data);
 
     this.track({
@@ -222,8 +232,6 @@ class InteractiveTweensScene extends Scene {
 
   override destroy(): void {
     this.app.input.onPointerDown.remove(this.onPointerDown);
-    this.panel?.dispose();
-    super.destroy();
   }
 }
 
