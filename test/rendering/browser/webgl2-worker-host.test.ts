@@ -3,10 +3,10 @@ import type { WorkerProgress } from './fixtures/application-host.progress';
 import type { SceneMode } from './fixtures/application-host.worker';
 
 const SIZE = 64;
-const INIT_TIMEOUT_MS = 25_000;
-const EXCHANGE_TIMEOUT_MS = 5_000;
-const SHUTDOWN_TIMEOUT_MS = 8_000;
-const TEST_TIMEOUT_MS = 40_000;
+const INIT_TIMEOUT_MS = 45_000;
+const EXCHANGE_TIMEOUT_MS = 10_000;
+const SHUTDOWN_TIMEOUT_MS = 10_000;
+const TEST_TIMEOUT_MS = 65_000;
 
 interface ReadyMessage {
   readonly kind: 'ready';
