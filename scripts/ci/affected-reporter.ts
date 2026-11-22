@@ -222,7 +222,7 @@ export default class AffectedReporter implements Reporter {
 
     this._plan = undefined;
 
-    if (path === undefined) {
+    if (!path) {
       return;
     }
 

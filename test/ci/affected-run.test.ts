@@ -241,6 +241,16 @@ describe('affected-test execution adapter with real Vitest', () => {
     expect(executions()).toEqual([]);
   });
 
+  it.each([adapter, runner])('executes the full native inventory after discovery clears the plan: %s', command => {
+    const result = run(null, [], { EXOJS_AFFECTED_MODE: '', EXOJS_AFFECTED_PLAN: '' }, command);
+
+    expect(result.status).toBe(1);
+    expect(readFileSync(join(root, '.workspace/results.xml'), 'utf8')).toMatch(/<testsuites[^>]*tests="2"[^>]*failures="1"/);
+    expect(result.stderr).toContain('expected 1 to be 2');
+    expect(executions()).toEqual([]);
+    expect(existsSync(join(root, '.workspace/affected-tests/results'))).toBe(false);
+  });
+
   it('requires a plan when enforcement is explicitly enabled', () => {
     const result = run(null, [], { EXOJS_AFFECTED_PLAN: undefined });
 
