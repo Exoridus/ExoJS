@@ -13,7 +13,7 @@
  * Run via:  pnpm test:browser:webgl
  */
 
-import type { Application } from '#core/Application';
+import { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
 import { OutputTransform } from '#rendering/OutputTransform';
@@ -272,5 +272,26 @@ describe('WebGL2 real context lose/restore', () => {
 
     releasedBackend.destroy();
     expect(releasedContext.isContextLost()).toBe(true);
+  });
+  test('Application uses original canvas ownership when choosing terminal context loss', async () => {
+    const owned = new Application({ backend: { type: 'webgl2' }, hello: false, canvas: { width: 64, height: 64 } });
+    const ownedContext = (owned.backend as WebGl2Backend).context;
+    await owned.destroy();
+    expect(ownedContext.isContextLost()).toBe(true);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    document.body.append(canvas);
+    const borrowed = new Application({ backend: { type: 'webgl2' }, hello: false, canvas: { element: canvas, width: 64, height: 64 } });
+    const borrowedContext = (borrowed.backend as WebGl2Backend).context;
+
+    try {
+      await borrowed.destroy();
+      expect(borrowedContext.isContextLost()).toBe(false);
+    } finally {
+      borrowedContext.getExtension('WEBGL_lose_context')?.loseContext();
+      canvas.remove();
+    }
   });
 });
