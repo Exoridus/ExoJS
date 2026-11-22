@@ -20,7 +20,7 @@ describe.skipIf(process.platform === 'win32')('pre-push command dispatch', () =>
       encoding: 'utf8',
     }).trim();
 
-  const runHook = (remote: string) => {
+  const runHook = (remote: string, options: { mode?: 'fast' | 'full'; remoteRef?: string } = {}) => {
     const log = join(root, 'commands.log');
     // Keep the real hook, Git range and policy. Only expensive gate/lane/build
     // processes are replaced at their command boundary.
@@ -40,8 +40,13 @@ node() {
       ],
       {
         cwd: root,
-        env: { ...environment, PRE_PUSH_HOOK: join(repository, '.husky/pre-push'), PRE_PUSH_CALL_LOG: log },
-        input: `refs/heads/topic ${head} refs/heads/topic ${remote}\n`,
+        env: {
+          ...environment,
+          EXOJS_PRE_PUSH_MODE: options.mode ?? '',
+          PRE_PUSH_HOOK: join(repository, '.husky/pre-push'),
+          PRE_PUSH_CALL_LOG: log,
+        },
+        input: `refs/heads/topic ${head} ${options.remoteRef ?? 'refs/heads/topic'} ${remote}\n`,
         encoding: 'utf8',
         timeout: 15_000,
       },
@@ -79,8 +84,16 @@ node() {
     rmSync(root, { recursive: true, force: true });
   });
 
-  it('runs both static phases and explicitly selects pre-push lanes for the verified range', () => {
-    const { calls } = runHook(base);
+  it('runs only fast tracked-file gates on ordinary feature pushes by default', () => {
+    const { calls, output } = runHook(base);
+
+    expect(calls).toEqual([['npm', 'run', 'gates', '--', 'affected-fast', base, head]]);
+    expect(output).toContain('CI-first');
+    expect(output).toContain('Draft PR');
+  });
+
+  it('preserves the previous complete local validation path on explicit opt-in', () => {
+    const { calls } = runHook(base, { mode: 'full' });
 
     expect(calls).toEqual([
       ['npm', 'run', 'gates', '--', 'affected-fast', base, head],
@@ -89,8 +102,24 @@ node() {
     ]);
   });
 
-  it('retains the build preflight and all lanes when no initial range resolves', () => {
+  it.each(['refs/heads/main', 'refs/heads/next'])('always runs complete local checks when pushing directly to %s', remoteRef => {
+    const { calls } = runHook(base, { mode: 'fast', remoteRef });
+
+    expect(calls).toEqual([
+      ['npm', 'run', 'gates', '--', 'affected-fast', base, head],
+      ['npm', 'run', 'gates', '--', 'affected-rest', base, head],
+      ['npm', 'run', 'lanes', '--', '--run', '--tests-only', '--pre-push', '--base', base],
+    ]);
+  });
+
+  it('does not turn an unresolved feature-branch base into a full local suite', () => {
     const { calls } = runHook('0'.repeat(40));
+
+    expect(calls).toEqual([['npm', 'run', 'gates', '--', 'affected-fast', '', head]]);
+  });
+
+  it('preserves fail-closed exhaustive verification for an unresolved full-mode range', () => {
+    const { calls } = runHook('0'.repeat(40), { mode: 'full' });
 
     expect(calls).toEqual([
       ['npm', 'run', 'gates', '--', 'affected-fast', '', head],
