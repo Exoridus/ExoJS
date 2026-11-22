@@ -209,16 +209,16 @@ vec2 binTerm(int bin, float low, vec4 texel, int bins, int row, float threshold,
  * radians, sets the narrowest: half of it either side antialiases a hard edge
  * without lighting the fragment behind it.
  */
-float shadowTerm(float threshold, float footprint) {
-    if (v_shadowRow < 0.0) {
+float shadowTerm(vec2 rayLocal, float shadowRow, float threshold, float footprint) {
+    if (shadowRow < 0.0) {
         return 1.0;
     }
 
     int bins = textureSize(u_shadow, 0).x / 2;
-    int row = int(v_shadowRow);
+    int row = int(shadowRow);
     float narrowest = clamp(0.5 * footprint * float(bins) / (2.0 * PI), 0.02, float(MAX_HALF));
     float widest = clamp(narrowest + max(0.0, v_softness) * float(bins) * MAX_PENUMBRA, narrowest, float(MAX_HALF));
-    float angle = (atan(v_local.y, v_local.x) + PI) / (2.0 * PI) * float(bins) - 0.5;
+    float angle = (atan(rayLocal.y, rayLocal.x) + PI) / (2.0 * PI) * float(bins) - 0.5;
     // Bin `i` spans `i - 0.5 .. i + 0.5` here, so these are the bins the tent
     // touches. Everything after is measured from `base`: a bin index in the
     // thousands leaves too few bits for a fraction of a bin.
@@ -360,5 +360,39 @@ void main() {
     // The fragment's own angular size, the narrowest a shadow edge can be drawn without aliasing.
     float footprint = max(length(dFdx(v_local)), length(dFdy(v_local))) / max(length(v_local), 1e-6);
 
-    fragColor = vec4(v_tint.rgb * cookie * (falloff * falloff * coneTerm * v_intensity * shadowTerm(threshold, footprint) * surfaceTerm()), 1.0);
+    // A finite line is a source with multiple emission positions, not one
+    // point at its centre. The four consecutive shadow rows were traced from
+    // [-.75,-.25,.25,.75] of its half-length. For each ray, compare its OWN
+    // distance to the blockers in that row; averaging the old central-angle
+    // shadow would not move the silhouette with the source.
+    float shadow = 1.0;
+
+    if (v_half > 0.0 && v_shadowRow >= 0.0) {
+        float pixelSpan = max(length(dFdx(v_local)), length(dFdy(v_local)));
+        float sourceReach = 1.0 + 2.0 * v_half;
+        float sampleClearance = uniforms.u_shadowClearance * pixelSpan / sourceReach;
+        float sum = 0.0;
+        float weights = 0.0;
+
+        for (int sampleIndex = 0; sampleIndex < 4; sampleIndex++) {
+            float offset = v_half * ((float(sampleIndex) - 1.5) * 0.5);
+            vec2 ray = v_local - vec2(offset, 0.0);
+            float rayDistance = length(ray);
+            float sampleThreshold = (rayDistance / sourceReach - sampleClearance) / (1.0 + uniforms.u_shadowPrecision);
+            float sampleFootprint = pixelSpan / max(rayDistance, 1e-6);
+            // Inverse-square weighting avoids distant parts of a long line
+            // dominating the shadow where only the near segment illuminates.
+            float weight = 1.0 / (1.0 + rayDistance * rayDistance);
+
+            sum += weight * shadowTerm(ray, v_shadowRow + float(sampleIndex), sampleThreshold, sampleFootprint);
+            weights += weight;
+        }
+
+        shadow = sum / max(weights, 1e-6);
+    } else {
+        // Exact legacy path for point/spot and unshadowed lights.
+        shadow = shadowTerm(v_local, v_shadowRow, threshold, footprint);
+    }
+
+    fragColor = vec4(v_tint.rgb * cookie * (falloff * falloff * coneTerm * v_intensity * shadow * surfaceTerm()), 1.0);
 }
