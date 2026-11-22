@@ -93,6 +93,25 @@ describe('affected tests from the Vite graph', () => {
     expect(selection.tests.map(entry => entry.file)).toEqual(['test/raw.test.ts']);
   });
 
+  it.each(['vert', 'frag', 'glsl', 'wgsl', 'json'])('follows a changed .%s module through its configured loader', async extension => {
+    write(`src/data.${extension}`, extension === 'json' ? '{"value":1}' : 'void main() {}');
+    write(
+      'vitest.config.ts',
+      `export default {
+  plugins: [{ name: 'shader-text', transform(code, id) {
+    return /\\.(vert|frag|glsl|wgsl)$/.test(id) ? { code: 'export default ' + JSON.stringify(code), map: null } : undefined;
+  } }],
+  test: { name: 'unit', include: ['test/**/*.test.ts'] },
+};\n`,
+    );
+    test('test/data.test.ts', `import value from '../src/data.${extension}';`, 'void value');
+
+    const selection = await select(`src/data.${extension}`);
+
+    expect(selection.mode).toBe('related');
+    expect(selection.tests.map(entry => entry.file)).toEqual(['test/data.test.ts']);
+  });
+
   it('treats raw TypeScript as text without resolving the imports inside its contents', async () => {
     write('src/example.ts', "import { missing } from '@external/playground';\nexport const value = missing;\n");
     test('test/raw-source.test.ts', "import value from '../src/example.ts?raw';", 'void value');

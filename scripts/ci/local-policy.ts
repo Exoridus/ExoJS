@@ -43,8 +43,8 @@ export interface LocalPolicy {
   needsDist: boolean;
   /** Run the dependency-free supervisor tests (`node --test`) that the unit lane starts with. */
   nodeTests: boolean;
-  /** Run the core project's tests that the import graph (or an untracked input) ties to the change, not the whole project. */
-  relatedCore: boolean;
+  /** Discover affected files across the normal workspace unit inventory; uncertain changes keep it full. */
+  relatedTests: boolean;
 }
 
 interface PackageManifest {
@@ -208,6 +208,8 @@ const isGlobal = (file: string): boolean =>
   (file.startsWith('scripts/ci/') && !isCiTooling(file)) ||
   file.startsWith('.github/workflows/') ||
   file.startsWith('packages/exojs-config/') ||
+  file.startsWith('packages/exojs-build/') ||
+  file === 'packages/exojs-cli/src/commands/assetsPack.ts' ||
   /^tsconfig\..*\.json$/.test(file);
 
 const emptyPolicy = (): LocalPolicy => ({
@@ -222,7 +224,7 @@ const emptyPolicy = (): LocalPolicy => ({
   physicsPerf: false,
   needsDist: false,
   nodeTests: false,
-  relatedCore: false,
+  relatedTests: false,
 });
 
 const historyInputs = (): Set<string> => {
@@ -443,7 +445,7 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
       physicsPerf: true,
       needsDist: true,
       nodeTests: true,
-      relatedCore: false,
+      relatedTests: false,
     };
   }
 
@@ -452,16 +454,15 @@ export const selectLocalPolicy = (changedFiles: readonly string[]): LocalPolicy 
     ...[...gates].filter(name => !ALL_GATES.some(gate => gate === name)),
   ]);
   policy.packageTypechecks = [...typechecks].sort();
-  policy.unitProjects = [...projects].sort();
-  // Content contributes its own gates/tests without invalidating the runtime graph.
-  // Readers outside the import graph are still retained by relatedCoreCommands.
+  // Runtime consumers include workspace extensions even when no package
+  // manifest names a Core subpath. Vite determines which files can observe it.
+  policy.unitProjects = !siteOnlyUnits && projects.size > 0 ? ['exojs*', 'rendering-perf'] : [...projects].sort();
+  // Content contributes its own gates and its readers remain in the graph plan.
   const graphInputs = files.filter(file => !/\.mdx?$/.test(file) && !/(^|\/)LICENSE$/.test(file));
-  policy.relatedCore = projects.has('exojs') && !files.some(isCiTooling) && isRelatedEligible(graphInputs);
+  policy.relatedTests = !siteOnlyUnits && projects.size > 0 && !files.some(isCiTooling) && isRelatedEligible(graphInputs);
 
   if (siteOnlyUnits && policy.unitProjects.length === 1 && policy.unitProjects[0] === 'exojs') {
     policy.unitFilter = [...(siteUnits ? ['test/site'] : []), ...toolingFilters].join(' ');
-  } else if (policy.relatedCore && siteUnits) {
-    policy.unitFilter = 'test/site';
   }
 
   policy.browser = [...browsers];

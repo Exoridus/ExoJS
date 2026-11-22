@@ -1,8 +1,6 @@
-import { spawnSync } from 'node:child_process';
-
 import { type Lane, LANES, selectLanes } from './lanes.ts';
 import { selectLocalPolicy } from './local-policy.ts';
-import { relatedCoreCommands } from './related-tests.ts';
+import { affectedTestCommand, resolveRelatedBase } from './related-tests.ts';
 import type { EffectiveLanes } from './select-lanes.ts';
 
 export interface LocalLaneOptions {
@@ -33,13 +31,6 @@ export const DIST_PREFLIGHT = 'tsx scripts/check-dist-fresh.ts --rebuild';
 
 /** The dependency-free supervisor tests the CI `unit` lane runs before its Vitest projects. */
 const NODE_TESTS = 'node --test test/ci/validation.node.ts test/ci/qualify.node.ts';
-
-/** The fork point Vitest's change detection diffs against; an unresolvable ref is passed through, which only widens the selection. */
-const mergeBase = (base: string): string => {
-  const result = spawnSync('git', ['merge-base', base, 'HEAD'], { encoding: 'utf8', timeout: 30_000 });
-
-  return result.status === 0 ? result.stdout.trim() : base;
-};
 
 /** Whether any of `lanes` reads the built dist rather than the sources. */
 export const needsDist = (lanes: readonly Lane[]): boolean => lanes.some(lane => lane.dist === true);
@@ -116,20 +107,21 @@ export const selectLocalLanes = (effective: EffectiveLanes, options: LocalLaneOp
     : policy.nodeTests
       ? { ...effective, unit: true } // `.husky/` is outside every CI area, yet `test/ci` reads the hooks
       : effective;
-  const wholeProjects = policy.relatedCore ? policy.unitProjects.filter(project => project !== 'exojs') : policy.unitProjects;
-  const unitCommand = policy.fullUnit
-    ? undefined
-    : [
-        policy.nodeTests ? NODE_TESTS : '',
-        wholeProjects.length
-          ? `pnpm exec vitest run ${wholeProjects.map(project => `--project=${project}`).join(' ')}${policy.unitFilter && !policy.relatedCore ? ` ${policy.unitFilter}` : ''}`
-          : '',
-        ...(policy.relatedCore ? relatedCoreCommands(mergeBase(options.base), '.', policy.unitFilter?.split(' ')) : []),
-        policy.allocation ? 'pnpm test:alloc' : '',
-        policy.physicsPerf ? 'pnpm test:physics-perf' : '',
-      ]
-        .filter(Boolean)
-        .join(' && ');
+  const base = resolveRelatedBase(options.base);
+  const full = policy.fullUnit || !policy.relatedTests;
+  const unitProjects = policy.fullUnit ? ['exojs*', 'rendering-perf'] : policy.unitProjects;
+  const unitCommand = [
+    policy.nodeTests ? NODE_TESTS : '',
+    unitProjects.length
+      ? policy.unitFilter
+        ? `pnpm exec vitest run ${unitProjects.map(project => `--project=${project}`).join(' ')} ${policy.unitFilter}`
+        : affectedTestCommand({ base, projects: unitProjects, name: 'unit', full })
+      : '',
+    policy.allocation ? 'pnpm test:alloc' : '',
+    policy.physicsPerf ? 'pnpm test:physics-perf' : '',
+  ]
+    .filter(Boolean)
+    .join(' && ');
 
   return [
     ...selectLanes(selectedEffective, false).filter(eligible),
@@ -141,7 +133,32 @@ export const selectLocalLanes = (effective: EffectiveLanes, options: LocalLaneOp
     )
     .filter(lane => lane.id !== 'smoke' || policy.smoke)
     .filter(lane => lane.id !== 'unit' || policy.fullUnit || unitCommand !== '')
-    .map(lane => (lane.id === 'unit' && unitCommand ? { ...lane, run: unitCommand } : lane))
+    .map(lane => {
+      if (lane.id === 'unit' && unitCommand) {
+        return { ...lane, run: unitCommand };
+      }
+
+      if (lane.stage === 'test' && lane.affectedProjects?.length) {
+        return {
+          ...lane,
+          // Keep the existing separate invocations and their order. Combining
+          // projects could change the browser's runtime concurrency contract.
+          run: lane.affectedProjects
+            .map((project, index) =>
+              affectedTestCommand({
+                base,
+                projects: [project],
+                name: `${lane.id}-${index}`,
+                full,
+                serial: lane.id === 'webgpu' && index === 0,
+              }),
+            )
+            .join(' && '),
+        };
+      }
+
+      return lane;
+    })
     .filter(lane => !(options.quick && lane.local === 'browser'))
     .filter(lane => !(options.testsOnly && lane.local === 'gate'));
 };
