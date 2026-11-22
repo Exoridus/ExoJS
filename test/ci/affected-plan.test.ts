@@ -149,6 +149,16 @@ describe('affected-test execution through the real Vitest API', () => {
     expect(plan().selections[0]!.tests.map(test => test.file)).toEqual(['test/leaf.test.ts']);
   });
 
+  it('succeeds when a complete nonempty inventory proves an unreferenced source has no affected tests', () => {
+    write('src/unreferenced.ts', 'export const unused = 1;\n');
+    const result = run('--run');
+
+    expect({ status: result.status, stderr: result.stderr }).toMatchObject({ status: 0 });
+    expect(plan().selections[0]!.mode).toBe('related');
+    expect(plan().selections[0]!.inventory).toHaveLength(2);
+    expect(plan().selections[0]!.tests).toEqual([]);
+  });
+
   it('runs every test when full qualification is requested', () => {
     write('src/leaf.ts', 'export const value = 1;\n\n');
     const result = run('--full', '--run');

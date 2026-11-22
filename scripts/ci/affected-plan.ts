@@ -207,6 +207,12 @@ const main = async (): Promise<void> => {
         throw new Error('The selected test inventory changed before execution. Run full qualification.');
       }
 
+      // The selector has already proved a complete, nonempty inventory. Only
+      // its known-empty result may opt out of Vitest's missing-tests failure.
+      if (specifications.length === 0) {
+        context.config.passWithNoTests = true;
+      }
+
       const result = await context.runTestSpecifications(specifications, false);
 
       if (result.unhandledErrors.length > 0 || result.testModules.some(testModule => testModule.state() === 'failed')) {
