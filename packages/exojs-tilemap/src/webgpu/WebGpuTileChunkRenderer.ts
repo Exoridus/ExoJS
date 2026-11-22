@@ -28,7 +28,7 @@ import {
 
 import type { TileQuad } from '../chunkGeometry';
 import type { TileChunkNode } from '../TileChunkNode';
-import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../tileWord';
+import { TILE_DIAGONAL_BIT, TILE_ROW_MASK, TILE_TEXTURE_SLOTS, TILE_TEXTURE_SLOT_SHIFT } from '../tileWord';
 import tileShaderTemplate from './shaders/tile-chunk.wgsl';
 
 const instanceStrideBytes = 32;
@@ -39,7 +39,11 @@ const initialBatchCapacity = 256;
 const indicesPerInstance = 6;
 const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 
-const tileShaderSource = `${colorShaderSourcesWgsl}${fillShaderSource(tileShaderTemplate, { tileRowMask: TILE_ROW_MASK, tileDiagonalBit: TILE_DIAGONAL_BIT })}`;
+const tileShaderSource = `${colorShaderSourcesWgsl}${fillShaderSource(tileShaderTemplate, {
+  tileRowMask: TILE_ROW_MASK,
+  tileDiagonalBit: TILE_DIAGONAL_BIT,
+  tileTextureSlotShift: TILE_TEXTURE_SLOT_SHIFT,
+})}`;
 
 /**
  * Instanced WebGPU renderer for {@link TileChunkNode}, the parity counterpart of
@@ -96,14 +100,15 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
   private _instanceFloat32 = new Float32Array(this._instanceData);
   private _instanceUint32 = new Uint32Array(this._instanceData);
   private readonly _pipelines = new Map<string, GPURenderPipeline>();
-  // group(1) texture bind groups cached per texture (mirrors the sprite/
-  // nine-slice renderers): resolving `backend.getTextureBinding` is what
-  // syncs a dirty/mutated texture's content to the GPU, so it must run every
-  // flush/replay even when the bind group itself is served from cache.
-  private _textureBindGroups = new WeakMap<
-    Texture | RenderTexture,
-    { group: GPUBindGroup; view: GPUTextureView; sampler: GPUSampler; premultiply: boolean }
+  // Cache ordered atlas combinations, not individual atlases. Every lookup
+  // resolves live bindings first so dirty texture uploads still happen. A
+  // bounded LRU avoids pinning old world/level textures indefinitely.
+  private _textureBindGroups = new Map<
+    string,
+    { group: GPUBindGroup; views: GPUTextureView[]; samplers: GPUSampler[]; mask: number }
   >();
+  private _textureIds = new WeakMap<Texture | RenderTexture, number>();
+  private _nextTextureId = 1;
 
   private _quadIndex = 0;
   private _maxNodeIndex = 0;
@@ -115,7 +120,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
   private _batchNodeCount = 0;
   private _nodeBooked = false;
   private _currentBlendMode: BlendModes | null = null;
-  private _currentTexture: Texture | null = null;
+  private readonly _textures: Texture[] = [];
 
   // ── Pass-scoped write cursor ──────────────────────────────────────────────
   // `flush()` no longer ends the pass, so consecutive flushes record into ONE
@@ -135,9 +140,8 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
 
   // ── Retained-batch replay state ───────────────────────────────────────────
   private readonly _stagedReplayGroupData = new Float32Array(16);
-  // Reused single-slot texture list handed to the backend at record time; a
-  // tile chunk batch always binds exactly one tileset texture (slot 0).
-  private readonly _recordTextures: Array<Texture | RenderTexture | null> = [null];
+  // Retained bundles snapshot the same ordered texture slots as the live draw.
+  private readonly _recordTextures: Array<Texture | RenderTexture | null> = Array(TILE_TEXTURE_SLOTS).fill(null);
 
   protected onConnect(backend: WebGpuBackend): void {
     if (this._device) {
@@ -156,9 +160,17 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
 
     this._textureBindGroupLayout = this._device.createBindGroupLayout({
       entries: [
-        { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
-        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
-        { binding: 2, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+        ...Array.from({ length: TILE_TEXTURE_SLOTS }, (_, binding) => ({
+          binding,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: { sampleType: 'float' as const },
+        })),
+        ...Array.from({ length: TILE_TEXTURE_SLOTS }, (_, index) => ({
+          binding: TILE_TEXTURE_SLOTS + index,
+          visibility: GPUShaderStage.FRAGMENT,
+          sampler: { type: 'filtering' as const },
+        })),
+        { binding: TILE_TEXTURE_SLOTS * 2, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
       ],
     });
 
@@ -171,9 +183,16 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
-    for (const premultiply of [0, 1]) {
+    // Each slot may have a different premultiplication contract. One immutable
+    // 16-byte uniform buffer per four-bit mask avoids writes during open passes.
+    for (let mask = 0; mask < 1 << TILE_TEXTURE_SLOTS; mask++) {
       const buffer = this._device.createBuffer({ size: 16, usage: GPUBufferUsage.UNIFORM, mappedAtCreation: true });
-      new Float32Array(buffer.getMappedRange())[0] = premultiply;
+      const flags = new Float32Array(buffer.getMappedRange());
+
+      for (let slot = 0; slot < TILE_TEXTURE_SLOTS; slot++) {
+        flags[slot] = (mask & (1 << slot)) !== 0 ? 1 : 0;
+      }
+
       buffer.unmap();
       this._sampleAlphaBuffers.push(buffer);
     }
@@ -213,10 +232,9 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     this._transformStorageBuffer = null;
     // Bind groups belong to the (possibly lost) device; drop the cache so
     // reconnect rebuilds them against the fresh device.
-    this._textureBindGroups = new WeakMap<
-      Texture | RenderTexture,
-      { group: GPUBindGroup; view: GPUTextureView; sampler: GPUSampler; premultiply: boolean }
-    >();
+    this._textureBindGroups.clear();
+    this._textureIds = new WeakMap<Texture | RenderTexture, number>();
+    this._nextTextureId = 1;
     this._uniformBuffer = null;
     this._pipelineLayout = null;
     this._textureBindGroupLayout = null;
@@ -236,7 +254,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     this._batchNodeCount = 0;
     this._nodeBooked = false;
     this._currentBlendMode = null;
-    this._currentTexture = null;
+    this._textures.length = 0;
     this._writtenView = null;
     this._writtenViewUpdateId = -1;
     this._hasWrittenProjection = false;
@@ -294,19 +312,22 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     }
 
     const blendModeChanged = this._currentBlendMode !== null && blendMode !== this._currentBlendMode;
-    const textureChanged = this._currentTexture !== null && texture !== this._currentTexture;
-    // Overflowing the CPU staging array flushes the accumulated run rather than
-    // growing it. The GPU buffer is NOT what this asks about: it now carries
-    // every flush in the pass, so flushing frees no room there - its capacity is
-    // resolved in `flush()` against the pass total.
+    const slotOverflow = this._textures.length === TILE_TEXTURE_SLOTS && !this._textures.includes(texture);
+    // Overflowing CPU staging flushes the pending run; the pass-scoped GPU
+    // buffer still appends each flush without overwriting prior draws.
     const willExceed = this._quadIndex + quads.length > this._instanceStagingCapacity && this._instanceStagingCapacity > 0;
 
-    if ((blendModeChanged || textureChanged || willExceed) && this._quadIndex > 0) {
+    if ((blendModeChanged || slotOverflow || willExceed) && this._quadIndex > 0) {
       this.flush();
     }
 
     this._currentBlendMode = blendMode;
-    this._currentTexture = texture;
+    let textureSlot = this._textures.indexOf(texture);
+
+    if (textureSlot < 0) {
+      textureSlot = this._textures.push(texture) - 1;
+    }
+
     backend.setBlendMode(blendMode);
 
     this._ensureStagingCapacity(this._quadIndex + quads.length);
@@ -360,7 +381,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       u32[idx + 4] = uMin | (vMin << 16);
       u32[idx + 5] = uMax | (vMax << 16);
       u32[idx + 6] = tintRgba;
-      u32[idx + 7] = (diagonal ? baseWord | TILE_DIAGONAL_BIT : baseWord) >>> 0;
+      u32[idx + 7] = (baseWord | (diagonal ? TILE_DIAGONAL_BIT : 0) | (textureSlot << TILE_TEXTURE_SLOT_SHIFT)) >>> 0;
 
       this._quadIndex++;
     }
@@ -403,10 +424,10 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     const coordinator = backend.passCoordinator;
     // Aliased as consts so the `willDraw` predicate narrows them for the draw
     // block below (the same narrowing the inlined condition used to provide).
-    const texture = this._currentTexture;
+    const textures = this._textures;
     const blendMode = this._currentBlendMode;
     const indexBuffer = this._indexBuffer;
-    const willDraw = this._quadIndex > 0 && !maskClipsAll && texture !== null && blendMode !== null && indexBuffer !== null;
+    const willDraw = this._quadIndex > 0 && !maskClipsAll && textures.length > 0 && blendMode !== null && indexBuffer !== null;
 
     const flushBytes = this._quadIndex * instanceStrideBytes;
     // Sized for everything this pass has taken SO FAR plus this flush, captured
@@ -431,7 +452,8 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       (ownDrawsInPass && (projectionChanged || (willDraw && targetInstanceBytes > this._instanceBufferCapacity))) ||
       (willDraw &&
         coordinator.passHasDraws &&
-        (backend.textureUploadWouldMutate(texture) || backend.transformStorageWouldGrow(this._maxNodeIndex + 1)))
+        (textures.some(texture => backend.textureUploadWouldMutate(texture)) ||
+          backend.transformStorageWouldGrow(this._maxNodeIndex + 1)))
     ) {
       coordinator.endPass();
     }
@@ -477,7 +499,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
 
         const storage = backend.getTransformStorageBuffer(this._maxNodeIndex + 1);
         const transformBindGroup = this._getOrCreateTransformBindGroup(device, uniformBuffer, storage.buffer);
-        const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend, texture);
+        const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend, textures);
 
         const stencil = coordinator.stencilMode;
         const pipeline = this._getPipeline(blendMode, backend.renderTargetFormat, stencil);
@@ -505,10 +527,11 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     // recorded data IS the drawn data, byte-identical by construction.
     // Recorded regardless of the live visibility decision above (mask/
     // scissor), since visibility is re-evaluated live at replay. A batch
-    // always binds a single tileset texture (slot 0); pixel snapping is
-    // resolved live at replay from the bundle's group UBO.
-    if (this._quadIndex > 0 && backend._retainedCaptureActive && blendMode !== null && texture !== null) {
-      this._recordTextures[0] = texture;
+    // bind the ordered atlas table; pixel snapping is replayed from the UBO.
+    if (this._quadIndex > 0 && backend._retainedCaptureActive && blendMode !== null && textures.length > 0) {
+      for (let slot = 0; slot < textures.length; slot++) {
+        this._recordTextures[slot] = textures[slot]!;
+      }
       backend.recordRetainedBatch(
         this,
         this._instanceData,
@@ -516,7 +539,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
         this._quadIndex,
         blendMode,
         this._recordTextures,
-        1,
+        textures.length,
         null,
         null,
         this._batchNodeCount,
@@ -531,7 +554,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     this._maxNodeIndex = 0;
     this._batchNodeCount = 0;
     this._currentBlendMode = null;
-    this._currentTexture = null;
+    this._textures.length = 0;
   }
 
   /**
@@ -636,10 +659,10 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       // field; the diagonal-flip bit must survive untouched or tile
       // orientation corrupts.
       const word = words[i]!;
-      const diagonal = word & TILE_DIAGONAL_BIT;
+      const flags = word & ~TILE_ROW_MASK;
       const row = word & TILE_ROW_MASK;
 
-      words[i] = (diagonal | ((row - base) & TILE_ROW_MASK)) >>> 0;
+      words[i] = (flags | ((row - base) & TILE_ROW_MASK)) >>> 0;
     }
   }
 
@@ -693,10 +716,8 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       }
     }
 
-    // Resolve the single tileset texture LIVE through the texture bind-group
-    // cache (syncs dirty content, adopts refreshed views/samplers). The
-    // recorded batch always has exactly one texture (slot 0).
-    const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend, payload.textures[0]!);
+    // Resolve every recorded atlas slot live, including changed views/samplers.
+    const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend, payload.textures);
 
     // Group UBO: skip the write while (view, updateId, group bytes) match
     // what the buffer holds; guard the double-replay aliasing case first.
