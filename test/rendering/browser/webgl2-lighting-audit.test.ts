@@ -38,6 +38,7 @@ import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { wireCoreRenderers } from './_coreRenderers';
+import { describeLightmapSilhouettes } from './_lightmapSilhouetteSuite';
 
 const canvasSize = 128;
 
@@ -1002,3 +1003,5 @@ describe('the cascade merge along a lit edge', () => {
     expect(Math.max(...row), `${shown}`).toBeLessThanOrEqual(1);
   }, 30_000);
 });
+
+describeLightmapSilhouettes('webgl2');
