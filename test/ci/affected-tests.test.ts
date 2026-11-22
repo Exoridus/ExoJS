@@ -192,6 +192,21 @@ try {
     );
   });
 
+  it('retains a FontFace reader when another test already imports the changed font', async () => {
+    write('src/example.woff2', 'font fixture');
+    test('test/asset.test.ts', "import value from '../src/example.woff2?url';", 'void value');
+    write('src/font.ts', "export const load = () => new FontFace('Example', 'url(/src/example.woff2)').load();\n");
+    test('test/font.test.ts', "import { load } from '../src/font.ts';", 'void load');
+
+    const selection = await select('src/example.woff2');
+
+    expect(selection.mode).toBe('related');
+    expect(selection.tests.map(entry => entry.file)).toEqual(['test/asset.test.ts', 'test/font.test.ts']);
+    expect(selection.tests.find(entry => entry.file === 'test/font.test.ts')?.reasons).toContainEqual(
+      expect.objectContaining({ kind: 'untracked', path: ['src/font.ts', 'test/font.test.ts'] }),
+    );
+  });
+
   it('retains non-code modules whose transformed runtime can read hidden inputs', async () => {
     write('src/photo.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>');
     write('src/view.asset-reader', 'load /src/photo.svg');

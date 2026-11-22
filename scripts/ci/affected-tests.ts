@@ -381,6 +381,7 @@ const sourceInputs = (file: string): SourceInputs => {
         'EventSource',
         'Image',
         'Audio',
+        'FontFace',
       ].includes(node.text)
     ) {
       hazards.add(`May read dynamic input through ${node.text}, including an alias.`);
