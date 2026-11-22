@@ -8,8 +8,10 @@ import { Rectangle } from '#math/Rectangle';
 import { clamp } from '#math/utils';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { Sprite } from '#rendering/sprite/Sprite';
-import { Texture } from '#rendering/texture/Texture';
+import { FrameTexture } from '#rendering/texture/FrameTexture';
 import type { TextureOptions } from '#rendering/texture/TextureOptions';
+
+import { VideoTexture } from './VideoTexture';
 
 interface VideoAudioSetup {
   readonly audioContext: AudioContext;
@@ -17,21 +19,15 @@ interface VideoAudioSetup {
   readonly sourceNode: MediaElementAudioSourceNode;
 }
 
-type FrameCallbackVideoElement = HTMLVideoElement &
-  Partial<{
-    requestVideoFrameCallback: (callback: (now: number, metadata: unknown) => void) => number;
-    cancelVideoFrameCallback: (handle: number) => void;
-  }>;
-
 /**
  * Renders an `HTMLVideoElement` as a live texture on a {@link Sprite}.
  *
  * `Video` wraps a video element, manages playback (play/pause/stop/seek,
- * volume, loop, playback rate), and keeps the underlying {@link Texture}
- * in sync with the decoded video frame stream. Presented-frame callbacks
- * invalidate new frames when delivered; until then, visible collection polls
- * the playback clock. Native `timeupdate` events remain a fallback if frame
- * callbacks stop arriving.
+ * volume, loop, playback rate), and draws its {@link VideoTexture}. Each
+ * presented frame is uploaded once, the next time the video renders; a paused
+ * video uploads nothing. Share {@link texture} with a `Mesh` or another sprite
+ * to draw the same frames elsewhere without a second upload; the video owns
+ * that texture and destroys it with itself.
  * Audio is routed through the Web Audio API gain node and can be directed to
  * any {@link AudioBus}.
  *
@@ -59,7 +55,8 @@ export class Video extends Sprite {
   private _muted = false;
   private _bus: AudioBus | null = null;
   private _audioSetup: VideoAudioSetup | null = null;
-  private _textureDirty = true;
+  private _frameWidth = 0;
+  private _frameHeight = 0;
   /**
    * Scratch rectangle for {@link updateTexture}. `setTextureFrame` reads its
    * `frame` argument again after re-entering node code (bounds/origin
@@ -68,16 +65,10 @@ export class Video extends Sprite {
    * instance.
    */
   private readonly _frameScratch = new Rectangle();
-  private _lastVideoTime = Number.NaN;
-  private _hasPresentedFrame = false;
-  private readonly _onEmptiedHandler = (): void => {
-    this._hasPresentedFrame = false;
+  private readonly _onFrameHandler = (): void => {
+    this.invalidateContent();
+    this.updateTexture();
   };
-  private _videoFrameCallbackHandle: number | null = null;
-  private readonly _onMetadataHandler: () => void;
-  private readonly _onResizeHandler: () => void;
-  private readonly _onVideoFrameHandler: (now: number, metadata: unknown) => void;
-  private readonly _onTimeUpdateHandler: () => void;
   private readonly _onErrorHandler: () => void;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {
     onAudioContextReady.remove(this._onAudioContextReady);
@@ -85,7 +76,7 @@ export class Video extends Sprite {
   };
 
   public constructor(videoElement: HTMLVideoElement, playbackOptions?: Partial<PlaybackOptions>, textureOptions?: Partial<TextureOptions>) {
-    super(new Texture(videoElement, textureOptions));
+    super(new VideoTexture(videoElement, textureOptions));
 
     const { volume, playbackRate, loop, muted } = videoElement;
 
@@ -94,19 +85,8 @@ export class Video extends Sprite {
     this._playbackRate = playbackRate;
     this._loop = loop;
     this._muted = muted;
-    this._onMetadataHandler = this._onVideoMetadataUpdated.bind(this);
-    this._onResizeHandler = this._onVideoMetadataUpdated.bind(this);
-    this._onVideoFrameHandler = this._onVideoFrame.bind(this);
-    this._onTimeUpdateHandler = this._onTimeUpdate.bind(this);
     this._onErrorHandler = this._onMediaError.bind(this);
-
-    if (this._videoElement.videoWidth === 0 || this._videoElement.videoHeight === 0) {
-      this._videoElement.addEventListener('loadedmetadata', this._onMetadataHandler);
-      this._videoElement.addEventListener('resize', this._onResizeHandler);
-    }
-
-    this._videoElement.addEventListener('timeupdate', this._onTimeUpdateHandler);
-    this._videoElement.addEventListener('emptied', this._onEmptiedHandler);
+    (this.texture as VideoTexture).frameSource.onFrame.add(this._onFrameHandler);
     this._videoElement.addEventListener('error', this._onErrorHandler);
 
     if (playbackOptions) {
@@ -121,7 +101,6 @@ export class Video extends Sprite {
 
     // Initialize frame bounds early when metadata is already available.
     this.updateTexture();
-    this._requestVideoFrameCallback();
   }
 
   public get videoElement(): HTMLVideoElement {
@@ -391,7 +370,6 @@ export class Video extends Sprite {
   /** @internal */
   public override collect(builder: RenderPlanBuilder, seq?: number): void {
     if (this.visible) {
-      this._markTextureDirtyOnPlaybackAdvance();
       this.updateTexture();
     }
 
@@ -399,47 +377,45 @@ export class Video extends Sprite {
   }
 
   /**
-   * Upload the current video frame to the GPU texture if the frame is dirty
-   * and the video dimensions are known. Called automatically by `render`;
-   * also safe to call manually when the video is paused on a specific frame.
+   * Syncs the texture with the current video frame and fits the sprite to a
+   * changed video size. Called automatically when the video renders; the
+   * upload itself happens when a renderer binds the texture.
    */
   public override updateTexture(): this {
     const texture = this.texture;
 
-    if (!texture || !this._videoElement) {
+    if (!texture || texture.destroyed) {
       return this;
     }
 
-    if (this._videoElement.videoWidth === 0 || this._videoElement.videoHeight === 0) {
-      return this;
+    if (texture instanceof FrameTexture) {
+      texture.sync();
     }
 
-    if (!this._textureDirty) {
-      return this;
+    const { width, height } = texture;
+
+    if (width > 0 && height > 0 && (width !== this._frameWidth || height !== this._frameHeight)) {
+      const preserveSize = this.textureFrame.width > 0 && this.textureFrame.height > 0;
+
+      this._frameWidth = width;
+      this._frameHeight = height;
+      this.setTextureFrame(this._frameScratch.set(0, 0, width, height), !preserveSize);
     }
-
-    const preserveSize = this.textureFrame.width > 0 && this.textureFrame.height > 0;
-
-    texture.updateSource();
-
-    if (texture.width > 0 && texture.height > 0) {
-      this.setTextureFrame(this._frameScratch.set(0, 0, texture.width, texture.height), !preserveSize);
-    }
-
-    this._textureDirty = false;
 
     return this;
   }
 
   public override destroy(): void {
+    const texture = this.texture;
+
     super.destroy();
     this.stop();
-    this._videoElement.removeEventListener('loadedmetadata', this._onMetadataHandler);
-    this._videoElement.removeEventListener('resize', this._onResizeHandler);
-    this._videoElement.removeEventListener('timeupdate', this._onTimeUpdateHandler);
-    this._videoElement.removeEventListener('emptied', this._onEmptiedHandler);
     this._videoElement.removeEventListener('error', this._onErrorHandler);
-    this._cancelVideoFrameCallback();
+
+    // The video owns the texture it created; a texture swapped in later belongs to the caller.
+    if (texture instanceof VideoTexture && texture.videoElement === this._videoElement) {
+      texture.destroy();
+    }
 
     onAudioContextReady.remove(this._onAudioContextReady);
 
@@ -463,60 +439,6 @@ export class Video extends Sprite {
 
   private _onMediaError(): void {
     this.onError.dispatch(new Error(mediaErrorMessage(this._videoElement, 'Video playback failed.')));
-  }
-
-  private _onVideoMetadataUpdated(): void {
-    this._textureDirty = true;
-    this.invalidateContent();
-    this.updateTexture();
-  }
-
-  private _onVideoFrame(_now: number, _metadata: unknown): void {
-    this._hasPresentedFrame = true;
-    this._videoFrameCallbackHandle = null;
-    this._textureDirty = true;
-    this.invalidateContent();
-    this._requestVideoFrameCallback();
-  }
-
-  private _markTextureDirtyOnPlaybackAdvance(): void {
-    if (this._hasPresentedFrame) {
-      return;
-    }
-
-    const currentTime = this._videoElement.currentTime;
-
-    if (this._lastVideoTime !== currentTime) {
-      this._lastVideoTime = currentTime;
-      this._textureDirty = true;
-      this.invalidateContent();
-    }
-  }
-
-  private _onTimeUpdate(): void {
-    this._textureDirty = true;
-    this.invalidateContent();
-  }
-
-  private _requestVideoFrameCallback(): void {
-    const frameCallbackVideo = this._videoElement as FrameCallbackVideoElement;
-
-    if (!frameCallbackVideo.requestVideoFrameCallback || this._videoFrameCallbackHandle !== null) {
-      return;
-    }
-
-    this._videoFrameCallbackHandle = frameCallbackVideo.requestVideoFrameCallback(this._onVideoFrameHandler);
-  }
-
-  private _cancelVideoFrameCallback(): void {
-    const frameCallbackVideo = this._videoElement as FrameCallbackVideoElement;
-
-    if (!frameCallbackVideo.cancelVideoFrameCallback || this._videoFrameCallbackHandle === null) {
-      return;
-    }
-
-    frameCallbackVideo.cancelVideoFrameCallback(this._videoFrameCallbackHandle);
-    this._videoFrameCallbackHandle = null;
   }
 
   private readonly setupWithAudioContext = (audioContext: AudioContext): void => {

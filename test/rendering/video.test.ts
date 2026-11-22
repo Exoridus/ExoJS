@@ -5,6 +5,7 @@ import { getAudioContext, onAudioContextReady } from '#audio/audioContext';
 import type { Rectangle } from '#math/Rectangle';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { Video } from '#rendering/video/Video';
+import { VideoTexture } from '#rendering/video/VideoTexture';
 import { View } from '#rendering/View';
 
 // ---------------------------------------------------------------------------
@@ -226,14 +227,12 @@ describe('Video', () => {
       video.destroy();
     });
 
-    test('does not register metadata listeners when dimensions are already known at construction', () => {
+    test('fits the frame to dimensions already known at construction', () => {
       const mockVideo = createMockVideoElement({ width: 64, height: 32 });
-      const addEventListenerSpy = vi.spyOn(mockVideo.element, 'addEventListener');
 
       const video = new Video(mockVideo.element);
 
-      expect(addEventListenerSpy).not.toHaveBeenCalledWith('loadedmetadata', expect.anything());
-      expect(addEventListenerSpy).not.toHaveBeenCalledWith('resize', expect.anything());
+      expect(video.texture).toBeInstanceOf(VideoTexture);
       expect(video.textureFrame.width).toBe(64);
       expect(video.textureFrame.height).toBe(32);
 
@@ -904,21 +903,6 @@ describe('Video', () => {
       video.destroy();
     });
 
-    test('a second registration attempt while a callback is already pending is a no-op', () => {
-      const mockVideo = createMockVideoElement({ withFrameCallback: true });
-      const video = new Video(mockVideo.element);
-
-      expect(mockVideo.requestVideoFrameCallback).toHaveBeenCalledTimes(1);
-
-      // Re-entering the private scheduling method directly while a callback
-      // handle is already outstanding must not schedule a second one.
-      (video as unknown as { _requestVideoFrameCallback(): void })._requestVideoFrameCallback();
-
-      expect(mockVideo.requestVideoFrameCallback).toHaveBeenCalledTimes(1);
-
-      video.destroy();
-    });
-
     test('cancels the pending frame callback on destroy', () => {
       const mockVideo = createMockVideoElement({ withFrameCallback: true });
       const video = new Video(mockVideo.element);
@@ -926,20 +910,6 @@ describe('Video', () => {
       video.destroy();
 
       expect(mockVideo.cancelVideoFrameCallback).toHaveBeenCalledTimes(1);
-    });
-
-    test('a second cancel attempt once already cancelled is a no-op', () => {
-      const mockVideo = createMockVideoElement({ withFrameCallback: true });
-      const video = new Video(mockVideo.element);
-
-      (video as unknown as { _cancelVideoFrameCallback(): void })._cancelVideoFrameCallback();
-      expect(mockVideo.cancelVideoFrameCallback).toHaveBeenCalledTimes(1);
-
-      // Handle is already null - a second cancel call must not call through again.
-      (video as unknown as { _cancelVideoFrameCallback(): void })._cancelVideoFrameCallback();
-      expect(mockVideo.cancelVideoFrameCallback).toHaveBeenCalledTimes(1);
-
-      video.destroy();
     });
   });
 
@@ -964,7 +934,7 @@ describe('Video', () => {
       const revisionBeforeFrame = video._contentRevision;
 
       // Simulate the requestVideoFrameCallback firing with a new decoded frame.
-      (video as unknown as { _onVideoFrame: (now: number, metadata: unknown) => void })._onVideoFrame(0, {});
+      (video.texture as VideoTexture).frameSource.onFrame.dispatch();
 
       expect(video._contentRevision).not.toBe(revisionBeforeFrame);
 

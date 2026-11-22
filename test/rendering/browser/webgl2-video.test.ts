@@ -28,8 +28,11 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
+import { Mesh } from '#rendering/mesh/Mesh';
 import type { RenderNode } from '#rendering/RenderNode';
+import { Sprite } from '#rendering/sprite/Sprite';
 import { Video } from '#rendering/video/Video';
+import { VideoTexture } from '#rendering/video/VideoTexture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { readWebGl2Pixel } from './_backendSetup';
@@ -131,6 +134,79 @@ describe('WebGL2 Video — solid color frame', () => {
     } finally {
       root.destroy();
       videoSprite.destroy();
+      fixture.dispose();
+      backend.destroy();
+    }
+  });
+});
+
+describe('WebGL2 VideoTexture', () => {
+  afterEach(() => {
+    disposeAllVideoFixtures();
+    vi.restoreAllMocks();
+  });
+
+  test('a VideoTexture draws in an ordinary Sprite and in a Mesh', async () => {
+    const fixture = await createSolidColorVideo('#00ff00', 16);
+    const backend = await createBackend();
+    const texture = new VideoTexture(fixture.video);
+    const root = new Container();
+    const sprite = new Sprite(texture);
+    const mesh = new Mesh({
+      vertices: new Float32Array([32, 32, 56, 32, 56, 56, 32, 32, 56, 56, 32, 56]),
+      uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1]),
+      texture,
+    });
+
+    try {
+      sprite.setPosition(4, 4);
+      root.addChild(sprite, mesh);
+      render(backend, root);
+
+      expectPixelNear(readWebGl2Pixel(backend, 10, 10), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 44, 44), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 60, 4), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      sprite.destroy();
+      mesh.destroy();
+      texture.destroy();
+      fixture.dispose();
+      backend.destroy();
+    }
+  });
+
+  test('two consumers of one VideoTexture upload the frame once, and an unchanged frame not again', async () => {
+    const fixture = await createSolidColorVideo('#0000ff', 16);
+    const backend = await createBackend();
+    const texture = new VideoTexture(fixture.video);
+    const root = new Container();
+    const a = new Sprite(texture);
+    const b = new Sprite(texture);
+    const proto = WebGL2RenderingContext.prototype;
+    const isVideo = (args: unknown[]): boolean => args.includes(fixture.video);
+    const image = vi.spyOn(proto, 'texImage2D');
+    const sub = vi.spyOn(proto, 'texSubImage2D');
+    const uploads = (): number => [...image.mock.calls, ...sub.mock.calls].filter(call => isVideo(call)).length;
+
+    try {
+      fixture.video.pause();
+      b.setPosition(32, 32);
+      root.addChild(a, b);
+      render(backend, root);
+
+      expect(uploads()).toBe(1);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), [0, 0, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 40), [0, 0, 255, 255]);
+
+      render(backend, root);
+
+      expect(uploads()).toBe(1);
+    } finally {
+      root.destroy();
+      a.destroy();
+      b.destroy();
+      texture.destroy();
       fixture.dispose();
       backend.destroy();
     }
