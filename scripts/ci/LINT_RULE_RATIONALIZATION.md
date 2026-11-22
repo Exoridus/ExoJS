@@ -45,27 +45,19 @@ This **does not approve blanket removal** of rules. The inventory reports **513*
 
 ## What to prune, and what must survive
 
-- **High-confidence audit candidates, not yet deletions:** optional style and
-modernity preferences; parts of old class-component policy where all configured React code is function-based; overlapping `@eslint-react` vs `react-hooks` diagnostics; old API-specific security checks in projects that do not use those frameworks. Even a rule with zero current warnings may guard against future regressions, so check deliberately invalid fixtures before deletion.
-- **Do not drop correctness safeguards:** asynchronous engine-hook guards,
-missed `super.destroy()`, allocation restrictions, unsafe Promise handling, lifecycle rules, rendering correctness, DOM security, accessibility, unused import protection, and TypeScript/React type-aware rules without verified equivalents.
-- **Do not conflate availability with value:** the 240 rules marked
-`retain: unavailable natively` can potentially use Oxlint's JS plugin API, even when Rust equivalents do not exist. Source-specific parser and TypeScript program behavior must be checked independently.
-- **Oxfmt is not Stylelint:** Oxfmt owns formatting. Stylelint remains responsible
-for SCSS/CSS and Astro `<style>` correctness, custom-property validation and selector rules. Oxlint does not replace CSS/SCSS rule evaluation.
+- **High-confidence audit candidates, not yet deletions:** optional style and modernity preferences; parts of old class-component policy where all configured React code is function-based; overlapping `@eslint-react` vs `react-hooks` diagnostics; old API-specific security checks in projects that do not use those frameworks. Even a rule with zero current warnings may guard against future regressions, so check deliberately invalid fixtures before deletion.
+- **Do not drop correctness safeguards:** asynchronous engine-hook guards, missed `super.destroy()`, allocation restrictions, unsafe Promise handling, lifecycle rules, rendering correctness, DOM security, accessibility, unused import protection, and TypeScript/React type-aware rules without verified equivalents.
+- **Do not conflate availability with value:** the 240 rules marked `retain: unavailable natively` can potentially use Oxlint's JS plugin API, even when Rust equivalents do not exist. Source-specific parser and TypeScript program behavior must be checked independently.
+- **Oxfmt is not Stylelint:** Oxfmt owns formatting. Stylelint remains responsible for SCSS/CSS and Astro `<style>` correctness, custom-property validation and selector rules. Oxlint does not replace CSS/SCSS rule evaluation.
 
 ## ExoJS plugin adapter
 
 The opt-in `@codexo/eslint-plugin-exojs/oxlint` and `/oxlint-engine` entries reuse the exact existing ESTree-based rules with Oxlint-compatible default exports and explicit `meta.name`. No ExoJS rules are removed, no default lint runner is changed, and no native ownership is transferred in this PR. Unit tests cover export identity and namespace isolation; a real Oxlint CLI smoke checks a representative violation and clean control for each rule against ESLint. This does **not** prove complete semantic parity. Production enablement requires:
 
-1. Compare all ten rules against ESLint on their positive/negative fixtures,
-including option variants, diagnostic position, errors, directives and TypeScript files.
-2. Exercise the plugin through Oxlint's real binary under Node 24 on Linux and
-Windows; the JS-plugin API remains experimental.
-3. Test performance and all reported-failure identities on the full repository,
-including fallback and external consumer configurations.
-4. Only then update `scripts/lint-native-policy.json` and the native ownership
-planner to admit verified cases. Always retain an ESLint fallback for mismatches and unsupported contexts.
+1. Compare all ten rules against ESLint on their positive/negative fixtures, including option variants, diagnostic position, errors, directives and TypeScript files.
+2. Exercise the plugin through Oxlint's real binary under Node 24 on Linux and Windows; the JS-plugin API remains experimental.
+3. Test performance and all reported-failure identities on the full repository, including fallback and external consumer configurations.
+4. Only then update `scripts/lint-native-policy.json` and the native ownership planner to admit verified cases. Always retain an ESLint fallback for mismatches and unsupported contexts.
 
 ## Gating an actual removal
 
@@ -73,8 +65,6 @@ For every `style-value-review`, `legacy-react-relevance-review`, `react-overlap-
 
 ### Related evidence
 
-- [Oxc evaluation](OXC_EVALUATION.md): 513-rule inventory, known mismatch
-findings, TS path alias miss, directive and project-boundary risks.
+- [Oxc evaluation](OXC_EVALUATION.md): 513-rule inventory, known mismatch findings, TS path alias miss, directive and project-boundary risks.
 - [Original coverage CSV](lint-rule-coverage.csv): resolved rule and options.
-- [Oxlint JS plugin API](https://oxc.rs/docs/guide/usage/linter/js-plugins):
-alpha, ESLint-compatible for syntactic ESTree plugins; custom parsers and type-aware JS rules remain unsupported.
+- [Oxlint JS plugin API](https://oxc.rs/docs/guide/usage/linter/js-plugins): alpha, ESLint-compatible for syntactic ESTree plugins; custom parsers and type-aware JS rules remain unsupported.
