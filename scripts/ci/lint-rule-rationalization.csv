@@ -129,7 +129,7 @@ astro/no-exports-from-components,retain: unavailable natively,175,false,retain-t
 astro/no-prerender-export-outside-pages,retain: unavailable natively,175,false,retain-template-guard,Astro template/accessibility diagnostics have no verified equivalent in the Oxlint script-only parser
 astro/no-set-html-directive,retain: unavailable natively,87,false,retain-template-guard,Astro template/accessibility diagnostics have no verified equivalent in the Oxlint script-only parser
 astro/no-unused-define-vars-in-style,retain: unavailable natively,175,false,retain-template-guard,Astro template/accessibility diagnostics have no verified equivalent in the Oxlint script-only parser
-astro/prefer-class-list-directive,retain: unavailable natively,87,false,style-value-review,Astro style convention; determine whether formatter and authoring policy justify retaining
+astro/prefer-class-list-directive,retain: unavailable natively,87,false,retired-to-agents-style-guidance,Stylistic preference for Astro class:list; documented in site/AGENTS.md and not promoted to a required CI correctness rule.
 astro/valid-compile,retain: unavailable natively,87,false,retain-template-guard,Astro template/accessibility diagnostics have no verified equivalent in the Oxlint script-only parser
 exojs-engine/no-allocation-in-hot-hook,retain: unavailable natively,602,false,oxlint-js-plugin-probe,Project-specific engine correctness; keep all rules; run actual CLI parity and mutation fixtures
 exojs/migration-chain,retain: unavailable natively,2310,false,oxlint-js-plugin-probe,Project-specific engine correctness; keep all rules; run actual CLI parity and mutation fixtures

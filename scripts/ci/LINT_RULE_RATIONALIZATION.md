@@ -52,15 +52,16 @@ This **does not approve blanket removal** of rules. The inventory reports **513*
 
 ## First policy simplification after triage
 
-The original 513-rule inventory stays as a historical baseline. This branch retires three ESLint-only policies while keeping the native and fallback gates intact:
+The original 513-rule inventory stays as a historical baseline. This branch retires four ESLint-only policies while keeping the native and fallback gates intact:
 
 | Rule | Decision | Reason |
 | --- | --- | --- |
 | `no-dupe-args` | Retire | Strict ESM syntax already rejects duplicate parameter names |
 | `no-octal` | Retire | Strict ESM syntax rejects legacy octal literals |
 | `no-undef-init` | Retire | Style-only, no correctness check removed |
+| `astro/prefer-class-list-directive` | Retire | Authoring preference moved to `site/AGENTS.md`; no correctness check removed |
 
-Node's module parser is exercised by `test/ci/lint-retirement-syntax.test.ts` for the first two. `no-undef-init` is intentionally retired as a style choice, not described as a compiler diagnostic. Regenerate current lint-rule totals after integration; do not rewrite #1131's historical baseline.
+Node's module parser is exercised by `test/ci/lint-retirement-syntax.test.ts` for the first two. `no-undef-init` and `astro/prefer-class-list-directive` are intentionally retired as style choices, not described as a compiler diagnostic. Regenerate current lint-rule totals after integration; do not rewrite #1131's historical baseline.
 
 **Unicorn is not wholesale disposable:** It contains runtime and performance rules as well as style preferences. For example, `unicorn/no-for-each` currently protects allocation-sensitive code; exceptions for `Map.forEach` in specific hot paths are deliberate. Further retirement needs a rule-by-rule decision.
 
@@ -75,6 +76,16 @@ The React package already has its own ESLint scope, while the site's React islan
 Oxlint parses the `<script>` blocks of `.astro` files, **not their full markup templates**. A community Rust/NAPI port, [`oxlint-plugins`](https://github.com/ubugeeei-prod/oxlint-plugins), tracks 7 of 20 `eslint-plugin-astro` rules, including `no-set-html-directive` and `prefer-class-list-directive`. It does **not** implement `astro/valid-compile` and does not solve Astro template parsing or markup accessibility. The community package currently identifies itself as version `0.0.0`; publication and production compatibility remain unverified. [Oxlint's compatibility table](https://oxc.rs/compatibility.html) explicitly states that template linting is not yet supported.
 
 Consequently Astro template linting remains with `eslint-plugin-astro`, Astro's compiler/checker, and the current JSX accessibility rules. Oxfmt continues formatting Astro and Stylelint continues checking CSS/SCSS and Astro `<style>` blocks. An Oxlint Astro script-block pass may be added without disabling template diagnostics; the community port is suitable only for a separate experimental probe until end-to-end parity exists.
+
+## Astro accessibility: no new dependencies
+
+A rule-by-rule inventory is recorded in [`astro-template-rule-audit.csv`](astro-template-rule-audit.csv). The existing site policy includes **43 Astro rules**, of which **31** are **generic JSX accessibility rules applied to Astro templates** and **12** concern Astro semantics, deprecations, compilation, or style. Only the single style-only rule `astro/prefer-class-list-directive` is retired in this change, with its authoring preference moved to [`site/AGENTS.md`](../../site/AGENTS.md).
+
+Oxlint already implements many `jsx-a11y` rules natively on JSX/TSX. These rules cannot simply be enabled on raw `.astro` HTML: Oxlint's framework parser only checks `<script>` blocks, not Astro markup. Calling this 31-rule overlap "parity" would leave missing `alt`, `label`, and keyboard semantics unguarded. The existing `eslint-plugin-astro` template parser and `jsx-a11y-x` provider are already installed; no extra community plugin is required.
+
+The current `astro check` and Astro build catch compilation and TypeScript errors, and Astro's `Image` component demands `alt`, but a plain HTML `<img>` need not provide `alt` for the compiler to succeed. Therefore compiler gates do **not** replace the static template accessibility rules. Importantly, advice in `AGENTS.md` helps agents author good markup, but is not a deterministic regression gate. It may replace subjective style rules, not high-value accessibility or injection checks.
+
+Review the 4 legacy Astro API rules and `astro/valid-compile` using independently failing fixtures in `astro check` before retiring them. Do not add a new runtime package or build a one-off template parser to force removal of the small remaining ESLint/Astro island. When native Astro template support actually lands, compare complete diagnostics and switch in one scoped change.
 
 ## ExoJS plugin adapter
 
