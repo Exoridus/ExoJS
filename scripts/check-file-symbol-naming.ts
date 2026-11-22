@@ -101,7 +101,7 @@ const readSurface = (absolutePath: string): Surface =>
     const otherValues: string[] = [];
 
     const isExported = (statement: (typeof source.statements)[number]): boolean => {
-      const annotated = statement as typeof statement & { modifiers?: readonly { kind: number }[] };
+      const annotated = statement as typeof statement & { modifiers?: ReadonlyArray<{ kind: number }> };
 
       return annotated.modifiers?.some(modifier => modifier.kind === SyntaxKind.ExportKeyword) ?? false;
     };

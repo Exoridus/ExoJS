@@ -276,7 +276,10 @@ const isGenerated = (source: string): boolean => GENERATED_BANNER.test(source.sp
  */
 type NativeSourceFile = Parameters<Parameters<typeof withNativeSourceFile>[2]>[0];
 type NativeAstNode = ReturnType<NativeSourceFile['getChildren']>[number];
-type CommentSpan = { pos: number; end: number };
+interface CommentSpan {
+  readonly pos: number;
+  readonly end: number;
+}
 
 const collectComments = (sourceFile: NativeSourceFile, source: string): CommentSpan[] => {
   const seen = new Set<number>();
