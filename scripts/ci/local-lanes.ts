@@ -139,7 +139,13 @@ export const planLocalLanes = (effective: EffectiveLanes, options: LocalLaneOpti
     : policy.nodeTests
       ? { ...effective, unit: true } // `.husky/` is outside every CI area, yet `test/ci` reads the hooks
       : effective;
-  const base = resolveRelatedBase(options.base);
+  // The hook passes a verified previous remote SHA (or nearest integration
+  // merge base). Do not re-merge-base it against checkout HEAD: that could
+  // reintroduce older unrelated commits into the selected test graph.
+  const base =
+    options.prePush && options.head !== undefined && /^[a-f\d]{40}$|^[a-f\d]{64}$/i.test(options.base)
+      ? { ref: options.base, full: false }
+      : resolveRelatedBase(options.base);
   const full = policy.fullUnit || !policy.relatedTests;
   const unitProjects = policy.fullUnit ? ['exojs*', 'rendering-perf'] : policy.unitProjects;
   const unitCommand = [
