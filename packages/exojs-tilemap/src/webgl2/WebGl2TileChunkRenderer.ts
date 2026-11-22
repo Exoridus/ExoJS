@@ -85,7 +85,10 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
   private readonly _transformUnitScratch: Int32Array = new Int32Array([transformTextureUnit]);
   private readonly _samplerUnits: Int32Array[] = Array.from({ length: TILE_TEXTURE_SLOTS }, (_, index) => new Int32Array([index]));
   // Retained replay carries the same ordered texture slots as the live batch.
-  private readonly _recordTextures: Array<Texture | RenderTexture | null> = Array.from({ length: TILE_TEXTURE_SLOTS }, (): Texture | RenderTexture | null => null);
+  private readonly _recordTextures: Array<Texture | RenderTexture | null> = Array.from(
+    { length: TILE_TEXTURE_SLOTS },
+    (): Texture | RenderTexture | null => null,
+  );
 
   private _quadIndex = 0;
   private _maxNodeIndex = 0;
