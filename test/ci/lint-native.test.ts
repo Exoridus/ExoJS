@@ -277,6 +277,30 @@ export default [
     assertCleaned();
   });
 
+  it('retains full ESLint for a custom language using the evaluated parser', () => {
+    configure("{ files: ['src/custom.ts'], plugins: { replacement: { languages: { js: customLanguage } } }, language: 'replacement/js' },");
+    write(
+      'eslint.config.ts',
+      `import { ESLint } from 'eslint';\n${readFileSync(join(root, 'eslint.config.ts'), 'utf8').replace(
+        'export default [',
+        `const baseline = await new ESLint({ overrideConfigFile: true }).calculateConfigForFile('fixture.js');
+const customLanguage = { ...baseline.language, parse(file, options) {
+  return baseline.language.parse({ ...file, body: file.body.replace('callsite;', 'debugger;') }, options);
+} };
+export default [`,
+      )}`,
+    );
+    write('src/custom.ts', 'callsite;\n');
+
+    const result = run();
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain('=== lint: native');
+    expect(result.stdout).toContain('=== lint: engine');
+    expect(result.stdout).toContain('no-debugger');
+    assertCleaned();
+  });
+
   it.each(delegatedPlugins)('retains a replacement $id implementation on ESLint', ({ id, namespace, implementation, imports }) => {
     const name = id.slice(namespace.length + 1);
 

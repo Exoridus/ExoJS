@@ -34,6 +34,7 @@ interface NativeGroup {
 }
 
 interface NativeImplementations {
+  language: { instance: unknown; parse: unknown; createSourceCode: unknown };
   parser: { instance: unknown; parse: unknown; parseForESLint: unknown };
   rules: Map<string, { namespace: string; plugin: unknown; rule: unknown; create: unknown }>;
 }
@@ -102,18 +103,20 @@ export const nativeVersionsMatch = (expected: NativePolicy = policy): boolean =>
 /** Capture evaluated implementations before configuration can replace a plugin or rule. */
 const nativeImplementations = async (): Promise<NativeImplementations | null> => {
   try {
-    const [{ default: tseslint }, { default: unicorn }, { default: vitest }] = await Promise.all([
+    const [{ default: tseslint }, { default: unicorn }, { default: vitest }, baseline] = await Promise.all([
       import('typescript-eslint'),
       import('eslint-plugin-unicorn'),
       // This pinned plugin has distinct ESM/CJS implementations. Shared ESLint
       // configuration imports its ESM entry; a different layout keeps full ESLint.
       import(pathToFileURL(resolve(toolingRoot, 'packages/exojs-config/node_modules/@vitest/eslint-plugin/dist/index.mjs')).href),
+      new ESLint({ cwd: toolingRoot, overrideConfigFile: true }).calculateConfigForFile(resolve(toolingRoot, 'lint-native.js')),
     ]);
+    const language: unknown = baseline?.language;
     const parser: unknown = tseslint.parser;
     const plugins: Record<string, unknown> = { '@typescript-eslint': tseslint.plugin, unicorn, vitest };
     const rules: NativeImplementations['rules'] = new Map();
 
-    if (!isRecord(parser)) {
+    if (!isRecord(language) || !isRecord(parser)) {
       return null;
     }
 
@@ -130,6 +133,7 @@ const nativeImplementations = async (): Promise<NativeImplementations | null> =>
     }
 
     return {
+      language: { instance: language, parse: language.parse, createSourceCode: language.createSourceCode },
       parser: { instance: parser, parse: parser.parse, parseForESLint: parser.parseForESLint },
       rules,
     };
@@ -184,6 +188,7 @@ export const nativeRulesForConfig = (
   implementations: NativeImplementations,
   expected: NativePolicy = policy,
 ): NativeGroup | null => {
+  const languageImplementation: unknown = config.language;
   const language = config.languageOptions;
   const parser = language?.parser as { meta?: { name?: string; version?: string }; parse?: unknown; parseForESLint?: unknown } | undefined;
   const parserOptions = language?.parserOptions;
@@ -192,6 +197,10 @@ export const nativeRulesForConfig = (
     config.processor ||
     config.linterOptions?.noInlineConfig ||
     (config.settings && Object.keys(config.settings).length > 0) ||
+    languageImplementation !== implementations.language.instance ||
+    !isRecord(languageImplementation) ||
+    languageImplementation.parse !== implementations.language.parse ||
+    languageImplementation.createSourceCode !== implementations.language.createSourceCode ||
     parser !== implementations.parser.instance ||
     parser?.parse !== implementations.parser.parse ||
     parser?.parseForESLint !== implementations.parser.parseForESLint ||
