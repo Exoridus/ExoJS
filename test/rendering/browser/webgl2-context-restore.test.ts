@@ -248,6 +248,7 @@ describe('WebGL2 real context lose/restore', () => {
       backend.destroy();
     }
   });
+
   test('destroy releases an owned WebGL2 context at the end and is idempotent', async () => {
     const backend = await createBackend();
     const context = backend.context;
@@ -258,6 +259,21 @@ describe('WebGL2 real context lose/restore', () => {
     expect(() => backend.destroy()).not.toThrow();
   });
 
+  test('terminal context release survives a late resource cleanup failure', async () => {
+    const backend = await createBackend();
+    const context = backend.context;
+    const pool = Reflect.get(backend, '_renderTexturePool') as { destroy(): void };
+    const brokenCleanup = vi.spyOn(pool, 'destroy').mockImplementation(() => {
+      throw new Error('injected pool cleanup failure');
+    });
+
+    try {
+      expect(() => backend.destroy()).toThrow('injected pool cleanup failure');
+      expect(context.isContextLost()).toBe(true);
+    } finally {
+      brokenCleanup.mockRestore();
+    }
+  });
   test('caller-supplied canvas retains context unless terminal release is enabled', async () => {
     const borrowedBackend = await createBackend({ suppliedCanvas: true });
     const borrowedContext = borrowedBackend.context;
@@ -273,6 +289,7 @@ describe('WebGL2 real context lose/restore', () => {
     releasedBackend.destroy();
     expect(releasedContext.isContextLost()).toBe(true);
   });
+
   test('Application uses original canvas ownership when choosing terminal context loss', async () => {
     const owned = new Application({ backend: { type: 'webgl2' }, hello: false, canvas: { width: 64, height: 64 } });
     const ownedContext = (owned.backend as WebGl2Backend).context;
