@@ -172,6 +172,42 @@ describe('Lighting', () => {
     expect(buffer[cone + 3]).toBe(-1);
   });
 
+  test('forward packs a line as a rotated capsule, not a point with the whole reach', () => {
+    const lighting = new ForwardLighting({ maxLights: 1 });
+    const line = lighting.add(new LineLight({ length: 40, radius: 12, height: 16 }));
+
+    line.setPosition(32, 24);
+    lighting.update();
+
+    const buffer = textureOf(lighting).buffer;
+    const position = slot(lighting, 0, 0);
+    const shape = slot(lighting, 2, 0);
+
+    // The row-0 radius is measured from the segment. Its total bounding
+    // radius would have been 12 + 20 = 32, which is wrong for a fragment.
+    expect(buffer[position]).toBe(32);
+    expect(buffer[position + 1]).toBe(24);
+    expect(buffer[position + 2]).toBe(12);
+    expect(buffer[shape]).toBeCloseTo(1, 5);
+    expect(buffer[shape + 1]).toBeCloseTo(0, 5);
+    expect(buffer[shape + 2]).toBe(-2);
+    expect(buffer[shape + 3]).toBe(20);
+
+    line.rotation = 90;
+    lighting.update();
+    expect(buffer[shape]).toBeCloseTo(0, 5);
+    expect(buffer[shape + 1]).toBeCloseTo(-1, 5);
+    expect(buffer[shape + 2]).toBe(-2);
+    expect(buffer[shape + 3]).toBe(20);
+
+    line.length = 0;
+    lighting.update();
+    expect(buffer[shape + 3]).toBe(0);
+    expect(textureOf(lighting).height).toBe(3);
+
+    lighting.destroy();
+  });
+
   test('a spot light aims along its own rotation and fades across its cone softness', () => {
     const lighting = new ForwardLighting({ maxLights: 1 });
     const spot = lighting.add(new SpotLight({ angle: 60, coneSoftness: 0.5 }));
