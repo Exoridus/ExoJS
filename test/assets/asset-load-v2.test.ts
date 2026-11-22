@@ -226,6 +226,37 @@ describe('asset owners', () => {
     expect(claimsOf(loader, 'config.json')).toBe(0);
   });
 
+  test('release preserves the symbol-key contract of load for named records', async () => {
+    const loader = createLoader();
+    const scope = loader.createScope();
+    const symbol = Symbol('hero');
+    const group = { [symbol]: 'hero.png' } as const;
+
+    await scope.load(group);
+    expect(claimsOf(loader, 'hero.png')).toBe(1);
+
+    scope.release(group);
+    expect(claimsOf(loader, 'hero.png')).toBe(0);
+    scope.destroy();
+    loader.destroy();
+  });
+
+  test('a named alias called type is not mistaken for an asset descriptor on release', async () => {
+    const loader = createLoader();
+    const scope = loader.createScope();
+    const named = { type: 'hero.png', data: [Texture, 'data.png'] } as const;
+
+    await scope.load(named);
+    expect(claimsOf(loader, 'hero.png')).toBe(1);
+    expect(claimsOf(loader, 'data.png')).toBe(1);
+
+    scope.release(named);
+    expect(claimsOf(loader, 'hero.png')).toBe(0);
+    expect(claimsOf(loader, 'data.png')).toBe(0);
+    scope.destroy();
+    loader.destroy();
+  });
+
   test('two applications load the same path independently', async () => {
     const first = createLoader();
     const second = createLoader();
