@@ -158,7 +158,10 @@ const initialize = async (message: InitMessage): Promise<void> => {
       backend: { type: 'webgl2' },
       scenes: { main: WorkerScene },
       canvas: { element: message.surface, width: message.size, height: message.size, pixelRatio: 1 },
-      rendering: { webglAttributes: { antialias: false, preserveDrawingBuffer: true, depth: false } },
+      rendering: {
+        releaseContext: true,
+        webglAttributes: { antialias: false, preserveDrawingBuffer: true, depth: false },
+      },
     });
     app = application;
     application.input.onPointerDown.add((_pointer, x, y) => void pointerPositions.push({ x, y }));
@@ -218,12 +221,10 @@ const shutdown = async (): Promise<void> => {
   try {
     if (app !== null) {
       const gl = (app.backend as WebGl2Backend).context;
-      const loseContext = gl.getExtension('WEBGL_lose_context');
 
+      // This fixture owns the worker lifetime, so the Application's explicit
+      // releaseContext policy must lose the transferred context itself.
       await app.destroy();
-
-      // The transferred canvas stays alive until the host receives the shutdown reply.
-      loseContext?.loseContext();
       contextLost = gl.isContextLost();
 
       const outcome = app.destroyOutcome;

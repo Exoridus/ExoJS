@@ -347,6 +347,10 @@ describe('WebGL2 GLSL shader sources', () => {
     gl = context;
   });
 
+  afterAll(() => {
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
+  });
+
   test('imports the real shader sources', () => {
     // A loader that returned a placeholder instead of the file would surface
     // here as empty strings rather than as a driver error further down.

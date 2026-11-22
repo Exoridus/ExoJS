@@ -71,6 +71,8 @@ describe('WebGPU uploads a canvas-sourced texture whose canvas is not 2D', () =>
     } finally {
       root.destroy();
       backend.destroy();
+      // The source canvas was test-owned; its WebGL context must not survive.
+      canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context')?.loseContext();
     }
   });
 });

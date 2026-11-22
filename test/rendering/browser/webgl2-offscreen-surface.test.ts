@@ -103,6 +103,7 @@ describe('an application given an OffscreenCanvas on the main thread', () => {
     const app = new Application({
       hello: false,
       backend: { type: 'webgl2' },
+      rendering: { releaseContext: true },
       canvas: {
         element: surface,
         width: SIZE,
@@ -145,6 +146,7 @@ describe('an application given an OffscreenCanvas on the main thread', () => {
         new Application({
           hello: false,
           backend: { type: 'webgl2' },
+          rendering: { releaseContext: true },
           canvas: { element: surface, width: SIZE, height: SIZE, sizing: new ResponsiveCanvasSizing() },
         }),
     ).toThrow(/OffscreenCanvas/);
@@ -155,6 +157,7 @@ describe('an application given an OffscreenCanvas on the main thread', () => {
     const app = new Application({
       hello: false,
       backend: { type: 'webgl2' },
+      rendering: { releaseContext: true },
       canvas: { element: surface, width: SIZE, height: SIZE, pixelRatio: 2, sizing: new ManualCanvasSizing() },
     });
 

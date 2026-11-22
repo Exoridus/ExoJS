@@ -68,7 +68,8 @@ const snapshotBindings = (gl: WebGL2RenderingContext) => ({
 test('destroying a current custom material survives the first color normalization and repeated uploads', async () => {
   const size = 4;
   const canvas = makeTestCanvas(size);
-  const app = makeTestApp(canvas, size);
+  // This regression inspects the live GL error state after backend teardown.
+  const app = makeTestApp(canvas, size, undefined, false);
   const gl = canvas.getContext('webgl2', {
     ...app.options.rendering?.webglAttributes,
     alpha: false,
@@ -177,11 +178,14 @@ test('destroying a current custom material survives the first color normalizatio
     expect(gl.getError(), 'resource cleanup').toBe(gl.NO_ERROR);
   } finally {
     objects.restore();
+    // Inspected after backend.destroy(), then released by the owning test.
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
   }
 });
 
 test('binding a reconnected shader descriptor selects its replacement program without an extra sync', async () => {
-  const backend = await createWebGl2TestBackend(4);
+  // The final GL error check intentionally needs a live, caller-owned context.
+  const backend = await createWebGl2TestBackend(4, undefined, false);
   const gl = backend.context;
   const shader = new WebGl2Shader(
     '#version 300 es\nvoid main() { gl_Position = vec4(0.0); }',
@@ -213,5 +217,9 @@ test('binding a reconnected shader descriptor selects its replacement program wi
     backend.destroy();
   }
 
-  expect(gl.getError(), 'reconnected shader cleanup').toBe(gl.NO_ERROR);
+  try {
+    expect(gl.getError(), 'reconnected shader cleanup').toBe(gl.NO_ERROR);
+  } finally {
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+  }
 });

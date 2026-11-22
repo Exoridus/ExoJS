@@ -237,6 +237,11 @@ describe('an application hosted in a worker', () => {
     expect(ready.offscreenCanvas).toBe(true);
     expect(ready.offscreenWebgl2).toBe(true);
     expect(ready.webgl2).toBe(true);
+
+    // The real backend has already acquired a WebGL2 context. Its observed
+    // success must satisfy Capabilities.ready without two new scratch contexts.
+    const createdContexts = progress.filter(event => event.phase === 'webgl2-context' && event.edge === 'start');
+    expect(createdContexts).toHaveLength(1);
     expect(ready.pointer).toBe(false);
     expect(ready.audio).toBe(false);
     expect(ready.devicePixelRatio).toBe(1);

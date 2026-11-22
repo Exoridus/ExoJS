@@ -574,7 +574,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
           // what travels is a per-acquisition snapshot rather than this object.
           connectivity: this.connectivity,
         },
-        rendering: resolveRenderingOptions(renderingOptions),
+        rendering: resolveRenderingOptions({
+          ...renderingOptions,
+          // The resolved canvas.element is always present; the original
+          // ownership decision is the only reliable default for terminal GL release.
+          releaseContext: renderingOptions.releaseContext ?? this._ownsCanvas,
+        }),
         input: {
           gamepadDefinitions: inputOptions.gamepadDefinitions ?? [...defaultInputSettings.gamepadDefinitions],
           gamepadSlotStrategy: inputOptions.gamepadSlotStrategy ?? defaultInputSettings.gamepadSlotStrategy,
