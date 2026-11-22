@@ -3,7 +3,8 @@ import { type Color, DataTexture, type Filter, FilterPass, TextureFormat } from 
 import type { LightingDebugView, LightingQuality } from '../Lighting';
 import type { LightingHost } from '../LightingHost';
 import { type Light } from '../lights/Light';
-import { lightHeight, lightRadius } from '../lights/reach';
+import { LineLight } from '../lights/LineLight';
+import { lightFalloff, lightHalfLength, lightHeight, lightRadius } from '../lights/reach';
 import { SpotLight } from '../lights/SpotLight';
 import type { LightingBackend } from './LightingBackend';
 
@@ -13,6 +14,8 @@ const rows = 3;
 const channels = 4;
 /** Cone cosine that no direction can fail, which is how a point light says "no cone". */
 const noCone = -1;
+/** A sentinel outside the legal cone-cosine range: row 2 describes a segment. */
+const lineShape = -2;
 
 /**
  * Write `color`'s RGB into `buffer` at `offset..offset+2`, decoded to linear
@@ -55,8 +58,11 @@ export interface ForwardBackendOptions {
  * ambient term travel in the texture, a material that samples it needs no
  * per-frame uniform update, and any number of materials share one system.
  *
- * A point light writes `cosOuter = cosInner = -1`, which no direction fails, so
- * the shader applies the same cone term to every light and never branches.
+ * A point light writes `cosOuter = cosInner = -1`, which no direction fails.
+ * A line light writes `cosOuter = -2` and stores its axis in `(dirX, dirY)`
+ * and half-length in `cosInner`. Its row-0 radius is the falloff measured from
+ * the nearest point of the segment. This reuses the existing three rows and
+ * avoids an extra texture fetch per lit fragment.
  *
  * The cap is the price of shading in one draw: every lit fragment walks every
  * light. It is the floor renderer, for hosts where a G-buffer is not worth its
@@ -179,7 +185,9 @@ export class ForwardBackend implements LightingBackend {
         continue;
       }
 
-      const radius = lightRadius(light);
+      // A line's falloff is measured from the segment, not from its centre.
+      // Its larger bounding radius remains available to scene culling.
+      const radius = light instanceof LineLight ? lightFalloff(light) : lightRadius(light);
 
       if (radius <= 0) {
         continue;
@@ -215,6 +223,19 @@ export class ForwardBackend implements LightingBackend {
 }
 
 const writeCone = (buffer: Float32Array, offset: number, light: Light): void => {
+  if (light instanceof LineLight) {
+    light.getWorldDirection(scratchDirection);
+
+    const magnitude = Math.hypot(scratchDirection.x, scratchDirection.y);
+
+    buffer[offset] = magnitude > 0 ? scratchDirection.x / magnitude : 1;
+    buffer[offset + 1] = magnitude > 0 ? scratchDirection.y / magnitude : 0;
+    buffer[offset + 2] = lineShape;
+    buffer[offset + 3] = lightHalfLength(light);
+
+    return;
+  }
+
   if (!(light instanceof SpotLight)) {
     buffer[offset] = 0;
     buffer[offset + 1] = 0;
