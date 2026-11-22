@@ -8,10 +8,12 @@ import type { Loopable, Pausable, RatePitched, Seekable } from './Playable';
 /** Construction parameters for {@link AudioStreamVoice}. */
 export interface AudioStreamVoiceInit extends BaseVoiceInit {
   element: HTMLMediaElement;
-  /** The element's `MediaElementAudioSourceNode` (owned by the {@link AudioStream}). */
+  /** The element's `MediaElementAudioSourceNode` (owned by the {@link MediaAudio}). */
   sourceNode: MediaElementAudioSourceNode;
   loop: boolean;
   playbackRate: number;
+  /** Whether the source currently allows moving the playhead. */
+  canSeek?: () => boolean;
   /** Seek offset (seconds) to start at. */
   startTime?: number;
   /** @internal Start silently until the scene finishes configuring and holding the voice. */
@@ -19,8 +21,8 @@ export interface AudioStreamVoiceInit extends BaseVoiceInit {
 }
 
 /**
- * Active playback handle for one {@link AudioStream} play call, backed by the
- * stream's `HTMLMediaElement` + `MediaElementAudioSourceNode`. Because the
+ * Active playback handle for one {@link MediaAudio} play call, backed by its
+ * `HTMLMediaElement` + `MediaElementAudioSourceNode`. Because the
  * element owns a single playhead, a stream has one active voice at a time -
  * starting a new voice stops the previous one.
  *
@@ -41,6 +43,7 @@ export interface AudioStreamVoiceInit extends BaseVoiceInit {
 export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, Loopable, RatePitched {
   private readonly _element: HTMLMediaElement;
   private readonly _sourceNode: MediaElementAudioSourceNode;
+  private readonly _canSeek: () => boolean;
   private _detune = 0;
   /**
    * User-facing base playback rate, cached independently of what's actually
@@ -58,13 +61,14 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
 
     this._element = init.element;
     this._sourceNode = init.sourceNode;
+    this._canSeek = init.canSeek ?? ((): boolean => true);
     this._sourceNode.connect(this._output);
 
     this._element.loop = init.loop;
     this._basePlaybackRate = init.playbackRate;
     this._element.playbackRate = init.playbackRate;
 
-    if (init.startTime !== undefined) {
+    if (init.startTime !== undefined && this._canSeek()) {
       this._element.currentTime = Math.max(0, init.startTime);
     }
 
@@ -92,8 +96,9 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
     this.seek(value);
   }
 
+  /** Ignored after the voice ended, and while the source has no seekable range (a live stream). */
   public seek(t: number): void {
-    if (this._ended) {
+    if (this._ended || !this._canSeek()) {
       return;
     }
 

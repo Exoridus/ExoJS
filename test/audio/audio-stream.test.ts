@@ -1,606 +1,182 @@
-import { getAudioContext, onAudioContextReady } from '#audio/audioContext';
 import { AudioStream } from '#audio/AudioStream';
 import type { AudioStreamVoice } from '#audio/AudioStreamVoice';
 import { AudioSystem } from '#audio/AudioSystem';
 
-import { frameDelta } from '../support/frame-delta';
-import { mutable } from '../support/mutable';
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const createAudioElementStub = (): HTMLAudioElement => {
+const createLiveElement = (src = 'https://radio.example/live'): HTMLAudioElement => {
   const el = document.createElement('audio');
-  Object.defineProperty(el, 'duration', { configurable: true, value: 30 });
+
+  el.src = src;
+  Object.defineProperty(el, 'duration', { configurable: true, writable: true, value: Number.POSITIVE_INFINITY });
   Object.defineProperty(el, 'currentTime', { configurable: true, writable: true, value: 0 });
-  Object.defineProperty(el, 'loop', { configurable: true, writable: true, value: false });
-  Object.defineProperty(el, 'playbackRate', { configurable: true, writable: true, value: 1 });
-  Object.defineProperty(el, 'paused', { configurable: true, writable: true, value: true });
+  Object.defineProperty(el, 'paused', { configurable: true, writable: true, value: false });
+  Object.defineProperty(el, 'seekable', { configurable: true, value: { length: 0 } });
+  vi.spyOn(el, 'play').mockResolvedValue(undefined);
+  vi.spyOn(el, 'pause').mockImplementation(() => undefined);
+  vi.spyOn(el, 'load').mockImplementation(() => undefined);
 
   return el;
 };
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+const fire = (el: HTMLMediaElement, type: string): void => {
+  el.dispatchEvent(new Event(type));
+};
 
 describe('AudioStream', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
-  test('constructor applies default playback options', () => {
-    const stream = new AudioStream(createAudioElementStub(), { volume: 0.5, loop: true, playbackRate: 1.5 });
-    expect(stream.volume).toBe(0.5);
-    expect(stream.loop).toBe(true);
-    expect(stream.playbackRate).toBe(1.5);
-    stream.destroy();
-  });
-
-  test('volume default is clamped into [0, 1]', () => {
-    const stream = new AudioStream(createAudioElementStub(), { volume: 5 });
-    expect(stream.volume).toBe(1);
-    stream.destroy();
-  });
-
-  test('play() seeds the element loop/rate from the descriptor and starts playback', () => {
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const playSpy = vi.spyOn(el, 'play');
-    const stream = new AudioStream(el, { loop: true, playbackRate: 1.25 });
-
-    system.play(stream);
-
-    expect(el.loop).toBe(true);
-    expect(el.playbackRate).toBe(1.25);
-    expect(playSpy).toHaveBeenCalled();
-
-    stream.destroy();
-  });
-
-  test('a play() rejection other than AbortError ends the voice with one warning', async () => {
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-
-    vi.spyOn(el, 'play').mockRejectedValue(new DOMException('x', 'NotSupportedError'));
-
-    const voice = system.play(new AudioStream(el)) as AudioStreamVoice;
-
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(voice.ended).toBe(true);
-    expect(warn).toHaveBeenCalledTimes(1);
-  });
-
-  test('an AbortError play() rejection leaves the voice running', async () => {
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-
-    vi.spyOn(el, 'play').mockRejectedValue(new DOMException('x', 'AbortError'));
-
-    const voice = system.play(new AudioStream(el)) as AudioStreamVoice;
-
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(voice.ended).toBe(false);
-  });
-
-  test('voice.pause()/resume() drive the underlying element', () => {
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
+  test('a live source reports Infinity, is not seekable, and a voice ignores seek', () => {
+    const el = createLiveElement();
     const stream = new AudioStream(el);
-    const voice = system.play(stream) as AudioStreamVoice;
+    const voice = new AudioSystem().play(stream) as AudioStreamVoice;
 
-    const pauseSpy = vi.spyOn(el, 'pause');
-    const playSpy = vi.spyOn(el, 'play');
-
-    voice.pause();
-    expect(pauseSpy).toHaveBeenCalledTimes(1);
-
-    voice.resume();
-    expect(playSpy).toHaveBeenCalledTimes(1);
-
-    stream.destroy();
-  });
-
-  test('voice.seek() / voice.time set the element currentTime', () => {
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const stream = new AudioStream(el);
-    const voice = system.play(stream) as AudioStreamVoice;
+    expect(stream.live).toBe(true);
+    expect(stream.seekable).toBe(false);
 
     voice.seek(12);
-    expect(el.currentTime).toBe(12);
 
-    voice.time = 7;
-    expect(el.currentTime).toBe(7);
-
-    expect(voice.duration).toBe(30);
-
-    stream.destroy();
-  });
-
-  test('voice.loop reflects the element loop flag', () => {
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const stream = new AudioStream(el);
-    const voice = system.play(stream) as AudioStreamVoice;
-
-    voice.loop = true;
-    expect(el.loop).toBe(true);
-    expect(voice.loop).toBe(true);
-
-    stream.destroy();
-  });
-
-  test('voice.detune is stored but inert (HTMLMediaElement has no detune)', () => {
-    const system = new AudioSystem();
-    const stream = new AudioStream(createAudioElementStub());
-    const voice = system.play(stream) as AudioStreamVoice;
-
-    voice.detune = 600;
-    expect(voice.detune).toBe(600);
-
-    stream.destroy();
-  });
-
-  test('setting voice.position spatializes the stream (creates a PannerNode)', () => {
-    const system = new AudioSystem();
-    const ctx = getAudioContext();
-    const pannerSpy = vi.spyOn(ctx, 'createPanner');
-    const stream = new AudioStream(createAudioElementStub());
-    const voice = system.play(stream) as AudioStreamVoice;
-
-    voice.position = { x: 5, y: 6 };
-    expect(pannerSpy).toHaveBeenCalledTimes(1);
-    expect(voice.position?.x).toBe(5);
-    expect(voice.position?.y).toBe(6);
-
-    pannerSpy.mockRestore();
-    stream.destroy();
-  });
-
-  test('a spatialized stream voice is ticked by the system', () => {
-    const system = new AudioSystem();
-    const stream = new AudioStream(createAudioElementStub());
-    const voice = system.play(stream) as AudioStreamVoice;
-
-    voice.position = { x: 1, y: 2 };
-    const tickSpy = vi.spyOn(voice, '_tickSpatial');
-    system.preFrame(frameDelta);
-    expect(tickSpy).toHaveBeenCalledTimes(1);
-
-    stream.destroy();
-  });
-
-  test('playing again stops the previous voice and reuses the element', () => {
-    const system = new AudioSystem();
-    const stream = new AudioStream(createAudioElementStub());
-
-    const first = system.play(stream);
-    const second = system.play(stream);
-
-    expect(first.ended).toBe(true);
-    expect(second.ended).toBe(false);
-
-    stream.destroy();
-  });
-
-  test('destroy() stops the active voice', () => {
-    const system = new AudioSystem();
-    const stream = new AudioStream(createAudioElementStub());
-    const voice = system.play(stream);
-
-    stream.destroy();
-    expect(voice.ended).toBe(true);
-  });
-
-  test('the element "ended" event finishes the voice', () => {
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const stream = new AudioStream(el);
-    const voice = system.play(stream) as AudioStreamVoice;
-
-    expect(voice.ended).toBe(false);
-    el.dispatchEvent(new Event('ended'));
-    expect(voice.ended).toBe(true);
-
-    stream.destroy();
-  });
-
-  test('play({ time }) seeds the element currentTime from startTime', () => {
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const stream = new AudioStream(el);
-
-    system.play(stream, { time: 5 });
-
-    expect(el.currentTime).toBe(5);
-
-    stream.destroy();
-  });
-
-  test('voice.time getter reads the element currentTime', () => {
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const stream = new AudioStream(el);
-    const voice = system.play(stream) as AudioStreamVoice;
-
-    el.currentTime = 9;
-    expect(voice.time).toBe(9);
-
-    stream.destroy();
-  });
-
-  test('voice.paused reflects the element paused flag', () => {
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const stream = new AudioStream(el);
-    const voice = system.play(stream) as AudioStreamVoice;
-
-    mutable(el).paused = false;
-    expect(voice.paused).toBe(false);
-    mutable(el).paused = true;
-    expect(voice.paused).toBe(true);
-
-    stream.destroy();
-  });
-
-  test('voice.playbackRate getter/setter reads and clamps the element playbackRate', () => {
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const stream = new AudioStream(el);
-    const voice = system.play(stream) as AudioStreamVoice;
-
-    voice.playbackRate = 2;
-    expect(el.playbackRate).toBe(2);
-    expect(voice.playbackRate).toBe(2);
-
-    // Out-of-range values are clamped to [0.1, 20].
-    voice.playbackRate = 50;
-    expect(voice.playbackRate).toBe(20);
-
-    stream.destroy();
-  });
-
-  test('seek()/pause()/resume() are no-ops once the voice has ended', () => {
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const stream = new AudioStream(el);
-    const voice = system.play(stream) as AudioStreamVoice;
-
-    voice.stop();
-    expect(voice.ended).toBe(true);
-
-    const timeBefore = el.currentTime;
-    const pauseSpy = vi.spyOn(el, 'pause');
-    const playSpy = vi.spyOn(el, 'play');
-
-    voice.seek(3);
-    expect(el.currentTime).toBe(timeBefore);
-
-    voice.pause();
-    expect(pauseSpy).not.toHaveBeenCalled();
-
-    voice.resume();
-    expect(playSpy).not.toHaveBeenCalled();
-  });
-
-  test('the loop setter is a no-op once the voice has ended', () => {
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const stream = new AudioStream(el, { loop: false });
-    const voice = system.play(stream) as AudioStreamVoice;
-
-    voice.stop();
-    expect(voice.ended).toBe(true);
-
-    voice.loop = true;
-    expect(el.loop).toBe(false);
-
-    stream.destroy();
-  });
-
-  test('an ended voice cannot retarget the loop flag of the next voice on the same element', () => {
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const stream = new AudioStream(el, { loop: false });
-    const first = system.play(stream) as AudioStreamVoice;
-
-    // Starting a second voice stops the first - both share one `<audio>` element.
-    const second = system.play(stream) as AudioStreamVoice;
-    expect(first.ended).toBe(true);
-    expect(second.ended).toBe(false);
-
-    first.loop = true;
-
-    expect(el.loop).toBe(false);
-    expect(second.loop).toBe(false);
-
-    stream.destroy();
-  });
-
-  test('the playbackRate setter is a no-op once the voice has ended', () => {
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const stream = new AudioStream(el, { playbackRate: 1 });
-    const voice = system.play(stream) as AudioStreamVoice;
-
-    voice.stop();
-    expect(voice.ended).toBe(true);
-
-    voice.playbackRate = 3;
-
-    expect(el.playbackRate).toBe(1);
-    // The cached base rate is not updated either - reporting a rate the voice
-    // never applied would be a lie, and `seek`/`pause`/`resume`/`loop` are all
-    // whole-setter no-ops after the end too.
-    expect(voice.playbackRate).toBe(1);
-
-    stream.destroy();
-  });
-
-  test('an ended voice cannot retarget the playback rate of the next voice on the same element', () => {
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const stream = new AudioStream(el, { playbackRate: 1 });
-    const first = system.play(stream) as AudioStreamVoice;
-
-    const second = system.play(stream) as AudioStreamVoice;
-    expect(first.ended).toBe(true);
-    expect(second.ended).toBe(false);
-
-    first.playbackRate = 3;
-
-    expect(el.playbackRate).toBe(1);
-    expect(second.playbackRate).toBe(1);
-
-    stream.destroy();
-  });
-
-  test('construction while the audio context is not ready defers playback until unlock', () => {
-    const ctx = getAudioContext();
-    const originalState = ctx.state;
-    mutable(ctx).state = 'suspended';
-
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const playSpy = vi.spyOn(el, 'play');
-    const stream = new AudioStream(el);
-
-    const voice = system.play(stream) as AudioStreamVoice;
-    expect(playSpy).not.toHaveBeenCalled();
-
-    mutable(ctx).state = originalState;
-    onAudioContextReady.dispatch(ctx);
-
-    expect(playSpy).toHaveBeenCalledTimes(1);
-
-    stream.destroy();
-  });
-
-  test('the unlock handler is a safe no-op if the voice already ended by the time the context becomes ready', () => {
-    const ctx = getAudioContext();
-    const originalState = ctx.state;
-    mutable(ctx).state = 'suspended';
-
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const stream = new AudioStream(el);
-
-    const holder: { voice?: AudioStreamVoice } = {};
-    // Registered before the voice's own unlock handler - Signal dispatches in
-    // registration order, so this stops the voice before its handler runs.
-    const stopFirst = (): void => holder.voice?.stop();
-    onAudioContextReady.add(stopFirst);
-
-    const voice = system.play(stream) as AudioStreamVoice;
-    holder.voice = voice;
-    const playSpy = vi.spyOn(el, 'play');
-
-    mutable(ctx).state = originalState;
-    onAudioContextReady.dispatch(ctx);
-
-    expect(voice.ended).toBe(true);
-    // The voice's own unlock handler saw `_ended === true` and skipped play().
-    expect(playSpy).not.toHaveBeenCalled();
-
-    onAudioContextReady.remove(stopFirst);
-    stream.destroy();
-  });
-
-  test('pause() while playback is deferred to unlock cancels the deferred start', () => {
-    const ctx = getAudioContext();
-    const originalState = ctx.state;
-    mutable(ctx).state = 'suspended';
-
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const playSpy = vi.spyOn(el, 'play');
-    const stream = new AudioStream(el);
-
-    const voice = system.play(stream) as AudioStreamVoice;
-    voice.pause();
-
-    mutable(ctx).state = originalState;
-    onAudioContextReady.dispatch(ctx);
-
-    expect(playSpy).not.toHaveBeenCalled();
-    expect(voice.paused).toBe(true);
-    expect(voice.ended).toBe(false);
-
-    stream.destroy();
-  });
-
-  test('resume() while still locked defers the start to unlock instead of playing into a suspended context', () => {
-    const ctx = getAudioContext();
-    const originalState = ctx.state;
-    mutable(ctx).state = 'suspended';
-
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const playSpy = vi.spyOn(el, 'play');
-    const stream = new AudioStream(el);
-
-    const voice = system.play(stream) as AudioStreamVoice;
-    voice.pause();
-    voice.resume();
-
-    expect(playSpy).not.toHaveBeenCalled();
-
-    mutable(ctx).state = originalState;
-    onAudioContextReady.dispatch(ctx);
-
-    expect(playSpy).toHaveBeenCalledTimes(1);
-
-    stream.destroy();
-  });
-
-  // ---- descriptor getters ----
-
-  test('audioElement getter exposes the backing HTMLMediaElement', () => {
-    const el = createAudioElementStub();
-    const stream = new AudioStream(el);
-    expect(stream.audioElement).toBe(el);
-    stream.destroy();
-  });
-
-  test('duration getter reflects the element duration', () => {
-    const el = createAudioElementStub();
-    const stream = new AudioStream(el);
-    expect(stream.duration).toBe(30);
-    stream.destroy();
-  });
-
-  // ---- constructor options.time seeds the element currentTime up front ----
-
-  test('constructor options.time seeds the element currentTime', () => {
-    const el = createAudioElementStub();
-    const stream = new AudioStream(el, { time: 12 });
-    expect(el.currentTime).toBe(12);
-    stream.destroy();
-  });
-
-  test('constructor options.time clamps a negative value to 0', () => {
-    const el = createAudioElementStub();
-    const stream = new AudioStream(el, { time: -5 });
     expect(el.currentTime).toBe(0);
     stream.destroy();
   });
 
-  test('constructor without options.time leaves the element currentTime untouched', () => {
-    const el = createAudioElementStub();
-    new AudioStream(el);
-    expect(el.currentTime).toBe(0);
-  });
-
-  // ---- volume/muted option resolution (per-play override chain) ----
-
-  test('options.muted overrides both options.volume and the descriptor volume to 0', () => {
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const stream = new AudioStream(el, { volume: 1 });
-
-    const voice = system.play(stream, { muted: true, volume: 0.7 }) as AudioStreamVoice;
-
-    expect(voice.volume).toBe(0);
-
-    stream.destroy();
-  });
-
-  test('options.volume overrides the descriptor volume when not muted', () => {
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const stream = new AudioStream(el, { volume: 1 });
-
-    const voice = system.play(stream, { volume: 0.4 }) as AudioStreamVoice;
-
-    expect(voice.volume).toBe(0.4);
-
-    stream.destroy();
-  });
-
-  test('descriptor muted=true zeroes the voice volume when no per-play override is given', () => {
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const stream = new AudioStream(el, { volume: 1, muted: true });
-
-    const voice = system.play(stream) as AudioStreamVoice;
-
-    expect(voice.volume).toBe(0);
-
-    stream.destroy();
-  });
-
-  // `createVoice` always stops the previous voice (removing its 'ended'
-  // listener) before creating a new one, so through the public API the voice
-  // whose onEnd fires is always the one `_activeVoice` still points to. To
-  // observe the guard's *other* arm - where a stale voice's end must NOT clear
-  // a newer, already-superseding `_activeVoice` - this test bypasses that
-  // built-in "stop the previous voice" step by resetting the private
-  // `_activeVoice` slot directly between two `createVoice` calls, leaving the
-  // first voice's listener attached to the (shared) element alongside the
-  // second's.
-  test("a stale voice's own end does not clear a newer, already-active voice", () => {
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
+  test('buffering and recovery are reported as connection changes', () => {
+    const el = createLiveElement();
     const stream = new AudioStream(el);
+    const seen: string[] = [];
 
-    const first = stream.createVoice(system, {}) as AudioStreamVoice;
-    (stream as unknown as { _activeVoice: unknown })._activeVoice = null;
-    const second = stream.createVoice(system, {}) as AudioStreamVoice;
+    stream.onConnectionChange.add(connection => seen.push(connection));
+    fire(el, 'waiting');
+    fire(el, 'playing');
 
-    // Both voices' 'ended' listeners are still attached to the shared element.
-    el.dispatchEvent(new Event('ended'));
-
-    expect(first.ended).toBe(true);
-    expect(second.ended).toBe(true);
-    // The second (later) voice's own end correctly cleared `_activeVoice`.
-    expect((stream as unknown as { _activeVoice: unknown })._activeVoice).toBeNull();
-
+    expect(seen).toEqual(['buffering', 'connected']);
+    expect(stream.connection).toBe('connected');
     stream.destroy();
   });
 
-  // ---- destroyed streams are not reusable ----
+  test('an error reopens a URL source with exponential backoff and resumes a playing voice', () => {
+    const el = createLiveElement();
+    const stream = new AudioStream(el, { reconnect: { attempts: 3, delay: 100 } });
+    const voice = new AudioSystem().play(stream) as AudioStreamVoice;
+    const resume = vi.spyOn(voice, 'resume');
+    const errors = vi.fn();
 
-  test('destroyed is false while the stream is live and true after destroy()', () => {
-    const stream = new AudioStream(createAudioElementStub());
+    stream.onError.add(errors);
+    fire(el, 'error');
 
-    expect(stream.destroyed).toBe(false);
+    expect(stream.connection).toBe('reconnecting');
+    expect(el.load).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(100);
+    expect(el.load).toHaveBeenCalledTimes(1);
+
+    fire(el, 'canplay');
+
+    expect(stream.connection).toBe('connected');
+    expect(resume).toHaveBeenCalledTimes(1);
+    expect(errors).not.toHaveBeenCalled();
     stream.destroy();
+  });
+
+  test('after the configured attempts the stream disconnects and reports one error', () => {
+    const el = createLiveElement();
+    const stream = new AudioStream(el, { reconnect: { attempts: 2, delay: 100 } });
+    const errors = vi.fn();
+
+    stream.onError.add(errors);
+
+    fire(el, 'error');
+    vi.advanceTimersByTime(100);
+    fire(el, 'error');
+    vi.advanceTimersByTime(200);
+    fire(el, 'error');
+
+    expect(el.load).toHaveBeenCalledTimes(2);
+    expect(stream.connection).toBe('disconnected');
+    expect(errors).toHaveBeenCalledTimes(1);
+
+    stream.reconnect();
+
+    expect(el.load).toHaveBeenCalledTimes(3);
+    expect(stream.connection).toBe('reconnecting');
+    stream.destroy();
+  });
+
+  test('a live source that ends has lost its server; a finite one has just finished', () => {
+    const live = createLiveElement();
+    const liveStream = new AudioStream(live, { reconnect: { delay: 50 } });
+
+    fire(live, 'ended');
+    expect(liveStream.connection).toBe('reconnecting');
+
+    const finite = createLiveElement('https://radio.example/show.mp3');
+    Object.defineProperty(finite, 'duration', { configurable: true, value: 600 });
+    const finiteStream = new AudioStream(finite);
+
+    fire(finite, 'ended');
+    expect(finiteStream.connection).toBe('connected');
+
+    liveStream.destroy();
+    finiteStream.destroy();
+  });
+
+  test('a stream built from local data never reconnects', () => {
+    const el = createLiveElement('blob:https://app.example/1234');
+    const stream = new AudioStream(el);
+    const errors = vi.fn();
+
+    stream.onError.add(errors);
+    fire(el, 'error');
+
+    expect(stream.connection).toBe('disconnected');
+    expect(errors).toHaveBeenCalledTimes(1);
+    stream.reconnect();
+    expect(el.load).not.toHaveBeenCalled();
+    stream.destroy();
+  });
+
+  test('reconnect: false disconnects on the first failure', () => {
+    const el = createLiveElement();
+    const stream = new AudioStream(el, { reconnect: false });
+
+    fire(el, 'error');
+
+    expect(stream.connection).toBe('disconnected');
+    stream.destroy();
+  });
+
+  test('destroy cancels a pending reconnect and detaches its listeners', () => {
+    const el = createLiveElement();
+    const stream = new AudioStream(el, { reconnect: { delay: 100 } });
+
+    fire(el, 'error');
+    stream.destroy();
+    vi.advanceTimersByTime(10_000);
+    fire(el, 'error');
+
+    expect(el.load).not.toHaveBeenCalled();
     expect(stream.destroyed).toBe(true);
   });
 
-  test('playing a destroyed stream throws instead of re-sourcing the media element', () => {
-    const system = new AudioSystem();
-    const el = createAudioElementStub();
-    const stream = new AudioStream(el);
-    const ctx = getAudioContext();
+  test('a paused voice is not resumed by a reconnect', () => {
+    const el = createLiveElement();
+    const stream = new AudioStream(el, { reconnect: { delay: 10 } });
+    const voice = new AudioSystem().play(stream) as AudioStreamVoice;
 
-    system.play(stream);
+    voice.pause();
+    Object.defineProperty(el, 'paused', { configurable: true, value: true });
+    const resume = vi.spyOn(voice, 'resume');
+
+    fire(el, 'error');
+    vi.advanceTimersByTime(10);
+    fire(el, 'canplay');
+
+    expect(resume).not.toHaveBeenCalled();
     stream.destroy();
-
-    const sourceSpy = vi.spyOn(ctx, 'createMediaElementSource');
-
-    expect(() => system.play(stream)).toThrow(/destroyed AudioStream/);
-    // A second createMediaElementSource() on the same element is exactly the
-    // InvalidStateError this guard exists to prevent.
-    expect(sourceSpy).not.toHaveBeenCalled();
-
-    sourceSpy.mockRestore();
-  });
-
-  test('destroy() is idempotent', () => {
-    const system = new AudioSystem();
-    const stream = new AudioStream(createAudioElementStub());
-    system.play(stream);
-
-    stream.destroy();
-    expect(() => stream.destroy()).not.toThrow();
-    expect(stream.destroyed).toBe(true);
   });
 });

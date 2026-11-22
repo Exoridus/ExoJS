@@ -1,193 +1,221 @@
-import { mediaErrorMessage } from '#core/mediaError';
 import { Signal } from '#core/Signal';
 import type { PlaybackOptions } from '#core/types';
-import { clamp } from '#math/utils';
 
-import { getAudioContext } from './audioContext';
-import { AudioStreamVoice } from './AudioStreamVoice';
-import type { AudioSystem } from './AudioSystem';
-import type { Playable, PlayOptions, Voice, VoiceProfile } from './Playable';
-import { seedVoiceFromPlayOptions, seedVoiceSends } from './spatialOptions';
+import { MediaAudio } from './MediaAudio';
 
 /**
- * Streaming long-form audio backed by an `HTMLAudioElement` - background
- * tracks, voice-over, **and internet radio** (same mechanism, low CPU/RAM).
- * Decoded lazily via the browser's media pipeline, so memory cost scales with
- * the decode buffer rather than total duration.
+ * Connection health of an {@link AudioStream}, independent of whether a voice is
+ * playing.
  *
- * `AudioStream` is a **data descriptor**: it holds the media element and default
- * playback parameters but does not play itself. Playback is driven by
- * `AudioSystem.play(stream, options)`, which returns an {@link AudioStreamVoice}
- * for fine-grained control (pause/resume, seek, loop, rate, volume, spatial).
- *
- * Because an `HTMLAudioElement` has a single playhead, a stream has **one active
- * voice at a time** - playing again stops the previous voice. Routes through the
- * system's `music` bus by default (override via {@link PlayOptions.bus}).
- *
- * Use {@link Sound} for short, frequently-triggered clips that benefit from
- * pre-decoded `AudioBuffer` storage and pooled overlapping playback.
+ * - `'connected'`: media data arrives.
+ * - `'buffering'`: the source is slow; playback waits for data.
+ * - `'reconnecting'`: the connection broke and the stream is reopening it.
+ * - `'disconnected'`: the connection is gone and no reconnect is pending.
  */
-export class AudioStream implements Playable {
+export type AudioStreamConnection = 'connected' | 'buffering' | 'reconnecting' | 'disconnected';
+
+/** Automatic reconnection after a broken connection. */
+export interface AudioStreamReconnectOptions {
+  /** Attempts before the stream gives up and reports `'disconnected'`. Default 5. */
+  readonly attempts?: number;
+  /** Delay before the first attempt in milliseconds; each further attempt doubles it. Default 1000. */
+  readonly delay?: number;
+}
+
+/** Construction options for {@link AudioStream}. */
+export interface AudioStreamOptions extends Partial<PlaybackOptions> {
   /**
-   * Dispatched when the media fails after the asset was already usable - a
-   * transfer that breaks mid-playback, or a decode error further into the file.
-   *
-   * A failure BEFORE the asset becomes ready fails the load instead, and is
-   * reported by `Loader.onError`; this signal is the runtime counterpart, so
-   * one load never appears to fail twice.
+   * Reopens the source after the connection breaks. Only a source streamed from
+   * a URL can be reopened; a stream built from local data never reconnects.
+   * `false` disables it.
    */
-  public readonly onError = new Signal<[error: Error]>();
+  readonly reconnect?: AudioStreamReconnectOptions | false;
+}
 
-  private readonly _audioElement: HTMLMediaElement;
+const DEFAULT_ATTEMPTS = 5;
+const DEFAULT_DELAY = 1000;
 
-  /** Default volume applied to new voices. Range [0, 1]. */
-  public volume: number;
-  /** Default loop flag applied to new voices. */
-  public loop: boolean;
-  /** Default playback rate applied to new voices. */
-  public playbackRate: number;
-  /** Default muted flag (starts a voice at volume 0). */
-  public muted: boolean;
+/**
+ * A live or unbounded audio source, such as internet radio.
+ *
+ * Readiness means playback can start: a live source never finishes
+ * downloading. Its duration may be `Infinity`, seeking is only available when
+ * the source reports a seekable range, and the connection can break and
+ * recover while the stream exists. {@link connection} and
+ * {@link onConnectionChange} report that health separately from playback.
+ *
+ * When the connection breaks - a network error, or the server ending the
+ * response of a live source - a URL-backed stream reopens the URL with
+ * exponential backoff, and a voice that was playing resumes once data arrives.
+ * After the configured attempts it reports `'disconnected'` and dispatches
+ * {@link onError}. {@link reconnect} starts a new round manually.
+ *
+ * Load it with `assets.load([AudioStream, 'https://radio.example/stream'])`.
+ * Use {@link Music} for a finite track.
+ */
+export class AudioStream extends MediaAudio {
+  /** Dispatched whenever {@link connection} changes. */
+  public readonly onConnectionChange = new Signal<[connection: AudioStreamConnection]>();
 
-  private _sourceNode: MediaElementAudioSourceNode | null = null;
-  private _activeVoice: AudioStreamVoice | null = null;
-  private _destroyed = false;
-  private readonly _onErrorHandler = (): void => {
-    this.onError.dispatch(new Error(mediaErrorMessage(this._audioElement, 'Audio playback failed.')));
+  private _connection: AudioStreamConnection = 'connected';
+  private readonly _source: string | undefined;
+  private readonly _attempts: number;
+  private readonly _delay: number;
+  private _attempt = 0;
+  private _timer: ReturnType<typeof setTimeout> | undefined;
+  private _resumeAfterReconnect = false;
+
+  private readonly _onPlaying = (): void => {
+    this._attempt = 0;
+    this._setConnection('connected');
   };
 
-  public constructor(audioElement: HTMLAudioElement, options?: Partial<PlaybackOptions>) {
-    this._audioElement = audioElement;
-    this._audioElement.addEventListener('error', this._onErrorHandler);
-    this.volume = clamp(options?.volume ?? 1, 0, 1);
-    this.loop = options?.loop ?? false;
-    this.playbackRate = clamp(options?.playbackRate ?? 1, 0.1, 20);
-    this.muted = options?.muted ?? false;
-
-    if (options?.time !== undefined) {
-      this._audioElement.currentTime = Math.max(0, options.time);
+  private readonly _onCanPlay = (): void => {
+    if (this._connection !== 'disconnected') {
+      this._attempt = 0;
+      this._setConnection('connected');
     }
+
+    if (this._resumeAfterReconnect) {
+      this._resumeAfterReconnect = false;
+      this._voice?.resume();
+    }
+  };
+
+  private readonly _onWaiting = (): void => {
+    if (this._connection === 'connected') {
+      this._setConnection('buffering');
+    }
+  };
+
+  private readonly _onEnded = (): void => {
+    // A finite file that ends has simply finished; a live source that ends lost its server.
+    if (!Number.isFinite(this._audioElement.duration)) {
+      this._connectionLost(new Error('The audio stream ended unexpectedly.'));
+    }
+  };
+
+  /**
+   * @param audioElement - An element already pointed at its source.
+   * @param options - Default playback settings and the reconnect policy.
+   */
+  public constructor(audioElement: HTMLAudioElement, options?: AudioStreamOptions) {
+    super(audioElement, options);
+
+    const reconnect = options?.reconnect;
+    const src = audioElement.currentSrc || audioElement.src;
+
+    // An object URL reads local data: reopening it cannot repair anything.
+    this._source = reconnect === false || src === '' || src.startsWith('blob:') ? undefined : src;
+    this._attempts = reconnect === false ? 0 : Math.max(0, reconnect?.attempts ?? DEFAULT_ATTEMPTS);
+    this._delay = reconnect === false ? 0 : Math.max(0, reconnect?.delay ?? DEFAULT_DELAY);
+
+    audioElement.addEventListener('playing', this._onPlaying);
+    audioElement.addEventListener('canplay', this._onCanPlay);
+    audioElement.addEventListener('waiting', this._onWaiting);
+    audioElement.addEventListener('stalled', this._onWaiting);
+    audioElement.addEventListener('ended', this._onEnded);
   }
 
-  /** The backing `HTMLAudioElement`. */
-  public get audioElement(): HTMLMediaElement {
-    return this._audioElement;
+  /** The current connection health. */
+  public get connection(): AudioStreamConnection {
+    return this._connection;
   }
 
-  /** Total media duration in seconds (`NaN` until metadata has loaded). */
-  public get duration(): number {
-    return this._audioElement.duration;
+  /** `true` when the source reports no finite duration. */
+  public get live(): boolean {
+    return !Number.isFinite(this._audioElement.duration);
+  }
+
+  /** `true` only while the source reports a finite seekable range. */
+  public get seekable(): boolean {
+    return !this.live && this._audioElement.seekable.length > 0;
   }
 
   /**
-   * `true` once {@link AudioStream.destroy} has run. A destroyed stream is not
-   * reusable - playing it throws. Load the asset again to get a fresh stream.
+   * Reopens the source now and restarts the attempt count. A voice that was
+   * playing resumes once data arrives. Does nothing for a stream built from
+   * local data or after {@link destroy}.
    */
-  public get destroyed(): boolean {
-    return this._destroyed;
-  }
-
-  /**
-   * Implements {@link Playable}. Called by {@link AudioSystem.play}.
-   *
-   * Stops any previously active voice (a stream has a single playhead), then
-   * starts a fresh {@link AudioStreamVoice}.
-   *
-   * Throws on a destroyed stream. The check is unconditional, not `__DEV__`-only:
-   * `createMediaElementSource()` may be called exactly once per media element,
-   * and the second call raises `InvalidStateError` in the browser - a hard,
-   * hard-to-trace runtime failure that a production build must not walk into.
-   */
-  public createVoice(system: AudioSystem, options: PlayOptions): Voice {
-    if (this._destroyed) {
-      throw new Error(
-        'Cannot play a destroyed AudioStream. `destroy()` releases the MediaElementAudioSourceNode that is ' +
-          'permanently bound to the backing media element, and the Web Audio API allows only one such node per ' +
-          'element — re-sourcing it would throw InvalidStateError. Load the asset again to obtain a fresh stream.',
-      );
-    }
-
-    const bus = options.bus ?? system.music;
-    const audioContext = getAudioContext();
-
-    if (this._activeVoice !== null && !this._activeVoice.ended) {
-      this._activeVoice.stop();
-    }
-
-    // The MediaElementAudioSourceNode is 1:1 with the element - create it once.
-    if (this._sourceNode === null) {
-      this._sourceNode = audioContext.createMediaElementSource(this._audioElement);
-    } else {
-      this._sourceNode.disconnect();
-    }
-
-    const output = audioContext.createGain();
-    const loop = options.loop ?? this.loop;
-    const playbackRate = clamp(options.playbackRate ?? this.playbackRate, 0.1, 20);
-    const volume = clamp(options.muted ? 0 : (options.volume ?? (this.muted ? 0 : this.volume)), 0, 1);
-
-    const voice = new AudioStreamVoice({
-      audioContext,
-      output,
-      bus,
-      system,
-      volume,
-      element: this._audioElement,
-      sourceNode: this._sourceNode,
-      loop,
-      playbackRate,
-      ...(options._startHeld !== undefined && { startHeld: options._startHeld }),
-      ...(options.time !== undefined && { startTime: options.time }),
-    });
-
-    seedVoiceFromPlayOptions(voice, options);
-    seedVoiceSends(voice, options);
-
-    this._activeVoice = voice;
-    voice.onEnd.add((): void => {
-      if (this._activeVoice === voice) {
-        this._activeVoice = null;
-      }
-    });
-
-    return voice;
-  }
-
-  /** Implements {@link Playable._profileVoice}. @internal */
-  public _profileVoice(system: AudioSystem, options: PlayOptions): VoiceProfile {
-    return {
-      waitForUnlock: true,
-      bus: options.bus ?? system.music,
-      pausable: true,
-      duration: this.duration,
-      loop: options.loop ?? this.loop,
-      playbackRate: clamp(options.playbackRate ?? this.playbackRate, 0.1, 20),
-      detune: 0,
-    };
-  }
-
-  /**
-   * Stop the active voice and release the media graph. Terminal: the stream
-   * cannot be played again afterwards (see {@link AudioStream.destroyed}).
-   */
-  public destroy(): void {
-    if (this._destroyed) {
+  public reconnect(): void {
+    if (this.destroyed || this._source === undefined) {
       return;
     }
 
-    this._destroyed = true;
-    this._audioElement.removeEventListener('error', this._onErrorHandler);
+    this._attempt = 0;
+    this._clearTimer();
+    this._reopen();
+  }
 
-    if (this._activeVoice !== null) {
-      this._activeVoice.stop();
-      this._activeVoice = null;
+  public override destroy(): void {
+    if (this.destroyed) {
+      return;
     }
 
-    if (this._sourceNode !== null) {
-      this._sourceNode.disconnect();
-      this._sourceNode = null;
+    this._clearTimer();
+
+    const element = this._audioElement;
+
+    element.removeEventListener('playing', this._onPlaying);
+    element.removeEventListener('canplay', this._onCanPlay);
+    element.removeEventListener('waiting', this._onWaiting);
+    element.removeEventListener('stalled', this._onWaiting);
+    element.removeEventListener('ended', this._onEnded);
+    super.destroy();
+    this.onConnectionChange.destroy();
+  }
+
+  protected override _onMediaError(error: Error): void {
+    this._connectionLost(error);
+  }
+
+  private _connectionLost(error: Error): void {
+    if (this.destroyed) {
+      return;
     }
 
-    this.onError.destroy();
+    if (this._source === undefined || this._attempt >= this._attempts) {
+      this._clearTimer();
+      this._setConnection('disconnected');
+      super._onMediaError(error);
+
+      return;
+    }
+
+    if (this._timer !== undefined) {
+      return;
+    }
+
+    const delay = this._delay * 2 ** this._attempt;
+
+    this._attempt++;
+    this._setConnection('reconnecting');
+    this._timer = setTimeout(() => {
+      this._timer = undefined;
+      this._reopen();
+    }, delay);
+  }
+
+  private _reopen(): void {
+    const voice = this._voice;
+
+    this._resumeAfterReconnect = voice !== null && !voice.ended && !voice.paused;
+    this._setConnection('reconnecting');
+    this._audioElement.src = this._source!;
+    this._audioElement.load();
+  }
+
+  private _setConnection(connection: AudioStreamConnection): void {
+    if (this._connection !== connection) {
+      this._connection = connection;
+      this.onConnectionChange.dispatch(connection);
+    }
+  }
+
+  private _clearTimer(): void {
+    if (this._timer !== undefined) {
+      clearTimeout(this._timer);
+      this._timer = undefined;
+    }
   }
 }

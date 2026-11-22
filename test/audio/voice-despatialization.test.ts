@@ -12,10 +12,10 @@ import { getAudioContext } from '#audio/audioContext';
 import { AudioGenerator } from '#audio/AudioGenerator';
 import type { AudioGeneratorVoice } from '#audio/AudioGeneratorVoice';
 import { AudioInput } from '#audio/AudioInput';
-import { AudioStream } from '#audio/AudioStream';
 import type { AudioStreamVoice } from '#audio/AudioStreamVoice';
 import { AudioSystem } from '#audio/AudioSystem';
 import type { InputVoice } from '#audio/InputVoice';
+import { Music } from '#audio/Music';
 import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
 
@@ -244,7 +244,7 @@ describe('Real de-spatialization — each concrete voice reconnects directly exa
     const pannerSpy = setupPannerSpy();
     const sourceSpy = setupMediaElementSourceSpy();
     const el = createAudioElementStub();
-    const stream = new AudioStream(el);
+    const stream = new Music(el);
 
     const voice = system.play(stream) as AudioStreamVoice;
     const output = gainSpy.gains[0];

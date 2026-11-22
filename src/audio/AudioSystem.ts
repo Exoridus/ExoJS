@@ -7,9 +7,9 @@ import { getAudioContext, isAudioContextReady, onAudioContextReady } from './aud
 import type { AudioGenerator } from './AudioGenerator';
 import type { AudioInput } from './AudioInput';
 import { AudioListener } from './AudioListener';
-import type { AudioStream } from './AudioStream';
 import type { SpatialVoice } from './BaseVoice';
 import { InputVoice } from './InputVoice';
+import type { MediaAudio } from './MediaAudio';
 import type { Loopable, Pausable, Playable, PlayOptions, RatePitched, Seekable, Voice } from './Playable';
 import type { Sound, SoundPlayOptions } from './Sound';
 import { createSpatialSmoothingSettings, type SpatialSmoothingSettings } from './spatialSmoothing';
@@ -310,7 +310,7 @@ export class AudioSystem {
    * gesture has resumed the AudioContext yet.
    *
    * What a play call does while locked depends on the asset: an
-   * {@link AudioStream} is deferred and starts on the gesture, because a media
+   * {@link MediaAudio} is deferred and starts on the gesture, because a media
    * element owns its own playhead and can simply be told to play later. A
    * {@link Sound} or an {@link AudioGenerator} is **skipped** - it returns an
    * already-ended voice and never makes a sound. Neither can be deferred
@@ -368,7 +368,7 @@ export class AudioSystem {
    * While audio is still locked by the browser's autoplay policy
    * ({@link AudioSystem.locked}), a {@link Sound} or {@link AudioGenerator}
    * play call is a **no-op**: it returns an already-ended voice and warns once.
-   * An {@link AudioStream} is deferred and starts on the unlock gesture. Start
+   * An {@link MediaAudio} is deferred and starts on the unlock gesture. Start
    * the former from {@link AudioSystem.onUnlock}:
    *
    * ```ts
@@ -378,7 +378,7 @@ export class AudioSystem {
    * Throws once the system has been destroyed - see {@link AudioSystem.destroy}.
    *
    * The return type names the capabilities the source supports. An
-   * {@link AudioStream} always yields a {@link Seekable}, {@link Pausable},
+   * {@link MediaAudio} always yields a {@link Seekable}, {@link Pausable},
    * {@link Loopable}, {@link RatePitched} voice. A {@link Sound} yields the same
    * surface, or an already-ended voice without capabilities when the play call
    * is skipped (locked, not loaded, offset past the end), so narrow it with a
@@ -391,7 +391,7 @@ export class AudioSystem {
    * @returns A {@link Voice} handle for the new instance.
    */
   public play(source: Sound, options?: SoundPlayOptions): Voice | (Voice & Seekable & Pausable & Loopable & RatePitched);
-  public play(source: AudioStream, options?: PlayOptions): Voice & Seekable & Pausable & Loopable & RatePitched;
+  public play(source: MediaAudio, options?: PlayOptions): Voice & Seekable & Pausable & Loopable & RatePitched;
   public play(source: AudioGenerator, options?: PlayOptions): Voice | (Voice & Pausable & RatePitched);
   public play(source: Playable, options?: PlayOptions): Voice;
   public play(source: Playable, options?: PlayOptions): Voice {

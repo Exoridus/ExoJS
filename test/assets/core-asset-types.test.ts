@@ -1,5 +1,6 @@
 import { builtinLeaf, builtinTypeForExtension, builtinTypeForPath, coreAssetTypes } from '#assets/coreAssetTypes';
 import { AudioStream } from '#audio/AudioStream';
+import { Music } from '#audio/Music';
 import { Sound } from '#audio/Sound';
 import { BmFont } from '#rendering/text/BmFont';
 import { Texture } from '#rendering/texture/Texture';
@@ -22,6 +23,7 @@ describe('coreAssetTypes', () => {
       'texture',
       'sound',
       'music',
+      'audioStream',
       'video',
       'json',
       'text',
@@ -48,7 +50,8 @@ describe('coreAssetTypes', () => {
 
     expect(tokenOf('texture')).toBe(Texture);
     expect(tokenOf('sound')).toBe(Sound);
-    expect(tokenOf('music')).toBe(AudioStream);
+    expect(tokenOf('music')).toBe(Music);
+    expect(tokenOf('audioStream')).toBe(AudioStream);
     expect(tokenOf('video')).toBe(Video);
     expect(tokenOf('bmFont')).toBe(BmFont);
   });

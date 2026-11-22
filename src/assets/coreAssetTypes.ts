@@ -3,7 +3,7 @@ import { subtitleType } from '#assets/types/data';
 import { bmFontType, fontType } from '#assets/types/font';
 import { imageType, svgType } from '#assets/types/image';
 import { textureType } from '#assets/types/image';
-import { musicType, videoType } from '#assets/types/media';
+import { audioStreamType, musicType, videoType } from '#assets/types/media';
 import { soundType } from '#assets/types/media';
 
 import type { AssetTypeName } from './AssetDefinitions';
@@ -28,6 +28,7 @@ export const coreAssetTypes: readonly AnyAssetType[] = Object.freeze([
   textureType,
   soundType,
   musicType,
+  audioStreamType,
   videoType,
   jsonType,
   textType,

@@ -3,7 +3,7 @@ import { isAudioContextReady, onAudioContextReady } from '#audio/audioContext';
 import type { AudioEffect } from '#audio/AudioEffect';
 import type { AudioGenerator } from '#audio/AudioGenerator';
 import { AudioSend } from '#audio/AudioSend';
-import type { AudioStream } from '#audio/AudioStream';
+import type { MediaAudio } from '#audio/MediaAudio';
 import type {
   DistanceModel,
   Loopable,
@@ -975,7 +975,7 @@ class PendingVoice implements Voice {
  *
  * `bus` reports the bus the voice will route into from the moment `play()`
  * returns. The stand-in carries the capability mixins of the voice its source
- * starts - {@link Sound} and {@link AudioStream}: `Seekable`, `Pausable`,
+ * starts - {@link Sound} and {@link MediaAudio}: `Seekable`, `Pausable`,
  * `Loopable`, `RatePitched`; {@link AudioGenerator}: `Pausable`, `RatePitched`;
  * any other {@link Playable}: none - so a `'seek' in voice` check answers the
  * same before and after activation. Requests made before activation are
@@ -989,7 +989,7 @@ class PendingVoice implements Voice {
  *
  * At activation, a {@link Sound} or {@link AudioGenerator} follows the
  * {@link AudioSystem.locked} skip rule and the stand-in ends, dispatching
- * `onEnd`. A deferred {@link AudioStream} stays buffered until audio unlocks
+ * `onEnd`. A deferred {@link MediaAudio} stays buffered until audio unlocks
  * and the scene is active. Suspension before unlock waits for restoration;
  * cancellation or destruction prevents the deferred start. A stream starts
  * held until its buffered configuration and the current scene policy have
@@ -1064,13 +1064,13 @@ export class SceneAudio implements Destroyable {
    * never be scheduled); a production build returns an inert, already-
    * `ended` stand-in rather than crashing a teardown path.
    *
-   * The return type follows {@link AudioSystem.play}: an {@link AudioStream}
+   * The return type follows {@link AudioSystem.play}: an {@link MediaAudio}
    * voice always carries its capabilities, a {@link Sound} or
    * {@link AudioGenerator} voice is narrowed with a capability check because
    * the play call may yield an already-ended voice without them.
    */
   public play(source: Sound, options?: SceneAudioPlayOptions): Voice | (Voice & Seekable & Pausable & Loopable & RatePitched);
-  public play(source: AudioStream, options?: SceneAudioPlayOptions): Voice & Seekable & Pausable & Loopable & RatePitched;
+  public play(source: MediaAudio, options?: SceneAudioPlayOptions): Voice & Seekable & Pausable & Loopable & RatePitched;
   public play(source: AudioGenerator, options?: SceneAudioPlayOptions): Voice | (Voice & Pausable & RatePitched);
   public play(source: Playable, options?: SceneAudioPlayOptions): Voice;
   public play(source: Playable, options: SceneAudioPlayOptions = {}): Voice {
